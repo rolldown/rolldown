@@ -8,8 +8,8 @@ use crate::{Bundler, dev::dev_context::SharedDevContext};
 
 pub struct BundlingTask {
   pub bundler: Arc<Mutex<Bundler>>,
-  // Empty changed files mean full build instead of incremental build
   pub changed_files: IndexSet<PathBuf>,
+  pub require_full_rebuild: bool,
   pub dev_data: SharedDevContext,
   pub ensure_latest_build: bool,
 }
@@ -21,14 +21,19 @@ impl BundlingTask {
     let mut build_status = if build_delay > 0 {
       loop {
         tokio::time::sleep(Duration::from_millis(build_delay)).await;
-        let mut build_status = self.dev_data.status.lock().await;
-        if build_status.changed_files.is_empty() {
+        let mut build_status = self.dev_data.state.lock().await;
+        if build_status.changed_files.is_empty() && !build_status.require_full_rebuild {
           break build_status;
         }
-        self.changed_files.append(&mut build_status.changed_files);
+        if build_status.require_full_rebuild {
+          self.require_full_rebuild = true;
+        } else {
+          self.changed_files.append(&mut build_status.changed_files);
+        }
+        drop(build_status);
       }
     } else {
-      self.dev_data.status.lock().await
+      self.dev_data.state.lock().await
     };
 
     tracing::trace!("`BuildStatus` is in building with changed files: {:#?}", self.changed_files);
@@ -45,7 +50,7 @@ impl BundlingTask {
     match build_result {
       Ok(()) => {}
       Err(_) => {
-        let mut build_status = self.dev_data.status.lock().await;
+        let mut build_status = self.dev_data.state.lock().await;
         build_status.try_to_idle().expect("FIXME: Should not unwrap here");
       }
     }
@@ -53,16 +58,26 @@ impl BundlingTask {
 
   async fn build_inner(&self) -> BuildResult<()> {
     let mut bundler = self.bundler.lock().await;
-    let changed_files = self.changed_files.iter().map(|p| p.to_string_lossy().into()).collect();
+    let changed_files = if self.require_full_rebuild {
+      vec![]
+    } else {
+      self.changed_files.iter().map(|p| p.to_string_lossy().into()).collect()
+    };
     let scan_output = bundler.scan(changed_files).await?;
     let _bundle_output = bundler.bundle_write(scan_output).await?;
 
     let mut build_status = loop {
-      let mut build_status = self.dev_data.status.lock().await;
-      if !self.ensure_latest_build || build_status.changed_files.is_empty() {
+      let mut build_status = self.dev_data.state.lock().await;
+      if !self.ensure_latest_build
+        || (build_status.changed_files.is_empty() && !build_status.require_full_rebuild)
+      {
         break build_status;
       }
-      let changed_files = mem::take(&mut build_status.changed_files);
+
+      let mut changed_files = mem::take(&mut build_status.changed_files);
+      if build_status.require_full_rebuild {
+        changed_files.clear();
+      }
       drop(build_status);
       let changed_files = changed_files.iter().map(|p| p.to_string_lossy().into()).collect();
       let scan_output = bundler.scan(changed_files).await?;

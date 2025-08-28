@@ -12,8 +12,9 @@ use crate::{
   Bundler, BundlerBuilder,
   dev::{
     build_driver::{BuildDriver, SharedBuildDriver},
+    build_state_machine::BuildStateMachine,
     dev_context::{DevContext, PinBoxSendStaticFuture, SharedDevContext},
-    dev_options::{DevOptions, NormalizedDevOptions, normalize_dev_options},
+    dev_options::{DevOptions, normalize_dev_options},
     watcher_event_service::WatcherEventService,
   },
 };
@@ -29,8 +30,6 @@ pub struct DevEngine<W> {
   watched_files: FxDashSet<ArcStr>,
   watch_service_state: Mutex<WatchServiceState>,
   ctx: SharedDevContext,
-  #[allow(dead_code)]
-  options: NormalizedDevOptions,
 }
 
 impl<W: Watcher + Send + 'static> DevEngine<W> {
@@ -39,13 +38,17 @@ impl<W: Watcher + Send + 'static> DevEngine<W> {
   }
 
   pub fn with_bundler(bundler: Arc<Mutex<Bundler>>, options: DevOptions) -> BuildResult<Self> {
-    let ctx = Arc::new(DevContext::default());
+    let normalized_options = normalize_dev_options(options);
+
+    let ctx = Arc::new(DevContext {
+      state: Mutex::new(BuildStateMachine::new()),
+      options: normalized_options,
+    });
     let build_driver = Arc::new(BuildDriver::new(bundler, Arc::clone(&ctx)));
 
-    let watcher_event_service = WatcherEventService::new(Arc::clone(&build_driver));
+    let watcher_event_service =
+      WatcherEventService::new(Arc::clone(&build_driver), Arc::clone(&ctx));
     let watcher = W::new(watcher_event_service.create_event_handler())?;
-
-    let normalized_options = normalize_dev_options(options);
 
     Ok(Self {
       build_driver,
@@ -56,7 +59,6 @@ impl<W: Watcher + Send + 'static> DevEngine<W> {
         handle: None,
       }),
       ctx,
-      options: normalized_options,
     })
   }
 
@@ -68,13 +70,7 @@ impl<W: Watcher + Send + 'static> DevEngine<W> {
       return;
     }
 
-    if let Some(build_process_future) =
-      self.build_driver.schedule_build(vec![]).await.expect("FIXME: Handle the error")
-    {
-      build_process_future.await;
-    } else {
-      self.ctx.ensure_current_build_finish().await;
-    }
+    self.build_driver.ensure_latest_build().await.expect("FIXME: Should not fail");
 
     if let Some(watcher_service) = watch_service_state.service.take() {
       let join_handle = tokio::spawn(watcher_service.run());

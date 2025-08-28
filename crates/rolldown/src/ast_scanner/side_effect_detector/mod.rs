@@ -1,6 +1,7 @@
 use crate::ast_scanner::side_effect_detector::utils::{
   extract_member_expr_chain, is_primitive_literal,
 };
+use bitflags::bitflags;
 use oxc::ast::ast::{
   self, Argument, ArrayExpressionElement, AssignmentTarget, BindingPatternKind, CallExpression,
   ChainElement, Expression, IdentifierReference, PropertyKey, UnaryOperator,
@@ -19,15 +20,25 @@ use utils::{
 
 use self::utils::{PrimitiveType, known_primitive_type};
 
+bitflags! {
+  #[derive(Debug, Clone, Copy)]
+  pub struct SideEffectDetectorFlatOptions: u8 {
+    const IgnoreAnnotations = 1 << 0;
+    const JsxPreserve = 1 << 1;
+    const IsManualPureFunctionsEmpty = 1 << 2;
+    /// If the flag is set, it means the `treeshake.property_read_side_effects` is `Always`.
+    /// Otherwise, it is `False`.
+    const PropertyReadSideEffects = 1 << 3;
+  }
+}
+
 mod utils;
 
 /// Detect if a statement "may" have side effect.
 pub struct SideEffectDetector<'a> {
   pub scope: &'a AstScopes,
-  pub ignore_annotations: bool,
-  pub jsx_preserve: bool,
   options: &'a SharedNormalizedBundlerOptions,
-  is_manual_pure_functions_empty: bool,
+  flags: SideEffectDetectorFlatOptions,
 }
 
 impl<'a> SideEffectDetector<'a> {
@@ -37,17 +48,47 @@ impl<'a> SideEffectDetector<'a> {
     jsx_preserve: bool,
     options: &'a SharedNormalizedBundlerOptions,
   ) -> Self {
-    Self {
-      scope,
-      ignore_annotations,
-      jsx_preserve,
-      options,
-      is_manual_pure_functions_empty: options.treeshake.manual_pure_functions().is_none(),
-    }
+    let mut flags = SideEffectDetectorFlatOptions::empty();
+    flags.set(SideEffectDetectorFlatOptions::IgnoreAnnotations, ignore_annotations);
+    flags.set(SideEffectDetectorFlatOptions::JsxPreserve, jsx_preserve);
+    flags.set(
+      SideEffectDetectorFlatOptions::IsManualPureFunctionsEmpty,
+      options.treeshake.manual_pure_functions().is_none(),
+    );
+    flags.set(
+      SideEffectDetectorFlatOptions::PropertyReadSideEffects,
+      matches!(
+        options.treeshake.property_read_side_effects(),
+        rolldown_common::PropertyReadSideEffects::Always
+      ),
+    );
+
+    Self { scope, options, flags }
   }
 
+  #[inline]
   fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
     self.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
+  }
+
+  #[inline]
+  fn ignore_annotations(&self) -> bool {
+    self.flags.contains(SideEffectDetectorFlatOptions::IgnoreAnnotations)
+  }
+
+  #[inline]
+  fn jsx_preserve(&self) -> bool {
+    self.flags.contains(SideEffectDetectorFlatOptions::JsxPreserve)
+  }
+
+  #[inline]
+  fn is_manual_pure_functions_empty(&self) -> bool {
+    self.flags.contains(SideEffectDetectorFlatOptions::IsManualPureFunctionsEmpty)
+  }
+
+  #[inline]
+  fn property_read_side_effects(&self) -> bool {
+    self.flags.contains(SideEffectDetectorFlatOptions::PropertyReadSideEffects)
   }
 
   fn detect_side_effect_of_property_key(
@@ -136,10 +177,7 @@ impl<'a> SideEffectDetector<'a> {
       return false.into();
     }
 
-    let property_read_side_effects = matches!(
-      self.options.treeshake.property_read_side_effects(),
-      rolldown_common::PropertyReadSideEffects::Always
-    );
+    let property_read_side_effects = self.property_read_side_effects();
 
     let mut side_effects_detail = SideEffectDetail::empty();
     let max_len = 3;
@@ -252,7 +290,7 @@ impl<'a> SideEffectDetector<'a> {
     //   return StmtSideEffect::Unknown;
     // }
 
-    let is_pure = !self.ignore_annotations && expr.pure;
+    let is_pure = !self.ignore_annotations() && expr.pure;
     if is_pure {
       // Even it is pure, we also wants to know if the callee has access global var
       // But we need to ignore the `Unknown` flag, since it is already marked as `pure`.
@@ -274,7 +312,7 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn is_expr_manual_pure_functions(&self, expr: &'a Expression) -> bool {
-    if self.is_manual_pure_functions_empty {
+    if self.is_manual_pure_functions_empty() {
       return false;
     }
     // `is_manual_pure_functions_empty` is false, so `manual_pure_functions` is `Some`.
@@ -533,7 +571,7 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::V8IntrinsicExpression(_) => true.into(),
 
       Expression::JSXElement(_) | Expression::JSXFragment(_) => {
-        if self.jsx_preserve {
+        if self.jsx_preserve() {
           return true.into();
         }
         unreachable!("jsx should be transpiled")
@@ -614,10 +652,7 @@ impl<'a> SideEffectDetector<'a> {
               // the built-in side-effect free array iterator.
               BindingPatternKind::ObjectPattern(_) => {
                 // Object destructuring only has side effects when property_read_side_effects is Always
-                if matches!(
-                  self.options.treeshake.property_read_side_effects(),
-                  rolldown_common::PropertyReadSideEffects::Always
-                ) {
+                if self.property_read_side_effects() {
                   true.into()
                 } else {
                   declarator
@@ -697,7 +732,6 @@ impl<'a> SideEffectDetector<'a> {
     detail
   }
 
-  #[inline]
   fn detect_side_effect_of_identifier(&self, ident_ref: &IdentifierReference) -> SideEffectDetail {
     let mut detail = SideEffectDetail::empty();
     detail.set(SideEffectDetail::GlobalVarAccess, self.is_unresolved_reference(ident_ref));

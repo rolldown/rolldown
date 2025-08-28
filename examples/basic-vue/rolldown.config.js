@@ -1,5 +1,10 @@
 import { defineConfig } from 'rolldown';
 
 export default defineConfig({
-  input: './index.js',
+  input: './index.ts',
+  transform: {
+    typescript: {
+      onlyRemoveTypeImports: true
+    }
+  }
 });

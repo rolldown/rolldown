@@ -11,7 +11,7 @@ use oxc::transformer_plugins::{
 };
 
 use rolldown_common::NormalizedBundlerOptions;
-use rolldown_ecmascript::{EcmaAst, WithMutFields};
+use rolldown_ecmascript::{EcmaAst, ToSourceString, WithMutFields};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 
 use crate::types::oxc_parse_type::OxcParseType;
@@ -68,6 +68,7 @@ impl PreProcessEcmaAst {
         scoping
       }
     });
+
     // Transform TypeScript and jsx.
     // Note: Currently, oxc_transform supports es syntax up to ES2024 (unicode-sets-regex).
     if !matches!(parsed_type, OxcParseType::Js)
@@ -75,6 +76,7 @@ impl PreProcessEcmaAst {
     {
       let ret = ast.program.with_mut(|fields| {
         let transform_options = &bundle_options.transform_options;
+        dbg!(&transform_options.typescript.only_remove_type_imports);
 
         Transformer::new(fields.allocator, Path::new(path), transform_options)
           .build_with_scoping(scoping, fields.program)

@@ -4,7 +4,7 @@ export default defineConfig({
   input: './index.ts',
   transform: {
     typescript: {
-      onlyRemoveTypeImports: true
-    }
-  }
+      onlyRemoveTypeImports: true,
+    },
+  },
 });

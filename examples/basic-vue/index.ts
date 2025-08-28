@@ -1,2 +1,1 @@
-import { type T01 } from '@shared/types'
-
+import { type T01 } from '@shared/types';

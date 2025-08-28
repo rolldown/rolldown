@@ -8,15 +8,15 @@ use oxc::ast_visit::VisitMut;
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_plugin::{
-  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, HookUsage, Plugin,
-  PluginContext,
+  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookRenderChunkOutput, HookResolveIdArgs,
+  HookResolveIdOutput, HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn,
+  HookUsage, Plugin, PluginContext,
 };
 
 use self::ast_visit::BuildImportAnalysisVisitor;
 
 const PRELOAD_HELPER_ID: &str = "\0vite/preload-helper.js";
-
+const IS_MODERN_FLAG: &str = "__VITE_IS_MODERN__";
 #[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct BuildImportAnalysisPlugin {
@@ -69,6 +69,28 @@ impl Plugin for BuildImportAnalysisPlugin {
     Ok(ast)
   }
 
+  async fn render_chunk(
+    &self,
+    _ctx: &PluginContext,
+    args: &rolldown_plugin::HookRenderChunkArgs<'_>,
+  ) -> rolldown_plugin::HookRenderChunkReturn {
+    let code = args.code.clone();
+    let format = args.options.format;
+    let modern_str = format!("{}", format.is_esm());
+    let modern = modern_str.as_str();
+    let modern_padding_str =
+      format!("{}{}", modern, " ".repeat(IS_MODERN_FLAG.len() - modern.len()));
+    let modern_padding = modern_padding_str.as_str();
+
+    if !code.contains(IS_MODERN_FLAG) {
+      return Ok(None);
+    } else {
+      Ok(Some(HookRenderChunkOutput {
+        code: code.replace(IS_MODERN_FLAG, modern_padding),
+        map: None,
+      }))
+    }
+  }
   fn register_hook_usage(&self) -> HookUsage {
     HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst
   }

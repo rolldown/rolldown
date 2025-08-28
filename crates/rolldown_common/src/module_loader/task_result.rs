@@ -10,7 +10,7 @@ use rustc_hash::FxHashMap;
 
 pub struct NormalModuleTaskResult {
   pub module: Module,
-  pub ecma_related: Option<EcmaRelated>,
+  pub ecma_related: EcmaRelated,
   pub resolved_deps: IndexVec<ImportRecordIdx, ResolvedId>,
   pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub warnings: Vec<BuildDiagnostic>,

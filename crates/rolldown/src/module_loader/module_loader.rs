@@ -336,10 +336,7 @@ impl<'a> ModuleLoader<'a> {
             warnings,
           } = *task_result;
           all_warnings.extend(warnings);
-          let mut dynamic_import_rec_exports_usage = ecma_related
-            .as_mut()
-            .map(|item| std::mem::take(&mut item.dynamic_import_rec_exports_usage))
-            .unwrap_or_default();
+          let dynamic_import_rec_exports_usage = &mut ecma_related.dynamic_import_rec_exports_usage;
 
           let mut import_records: IndexVec<ImportRecordIdx, rolldown_common::ResolvedImportRecord> =
             IndexVec::with_capacity(raw_import_records.len());
@@ -409,10 +406,9 @@ impl<'a> ModuleLoader<'a> {
           module.set_import_records(import_records);
 
           let module_idx = module.idx();
-          if let Some(EcmaRelated { ast, symbols, .. }) = ecma_related {
-            *self.intermediate_normal_modules.index_ecma_ast.get_mut(module_idx) = Some(ast);
-            self.symbol_ref_db.store_local_db(module_idx, symbols);
-          }
+          let EcmaRelated { ast, symbols, .. } = ecma_related;
+          *self.intermediate_normal_modules.index_ecma_ast.get_mut(module_idx) = Some(ast);
+          self.symbol_ref_db.store_local_db(module_idx, symbols);
 
           if user_defined_entry_ids.contains(&module_idx) {
             module.as_normal_mut().expect("should be normal module ").is_user_defined_entry = true;

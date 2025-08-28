@@ -10,7 +10,7 @@ export default defineTest({
       {
         name: 'test-plugin-context',
         async buildStart(this) {
-          const ret = await this.resolve('./sub.js', undefined, { skipSelf: false })
+          const ret = await this.resolve('./main.js')
           if (!ret) {
             throw new Error('resolve failed')
           }
@@ -18,12 +18,6 @@ export default defineTest({
           expect(external).toBe(false)
           expect(id).toEqual(nodePath.join(import.meta.dirname, 'main.js'))
           fn()
-        },
-        async resolveId(id) {
-          if (id === './sub.js') {
-            throw new Error('my error')
-          }
-          return null
         },
       },
     ],

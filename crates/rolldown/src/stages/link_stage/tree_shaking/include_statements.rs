@@ -94,7 +94,7 @@ impl LinkStage<'_> {
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
       std::mem::take(&mut self.entries).into_iter().partition(|item| item.kind.is_user_defined());
     user_defined_entries.iter().filter(|entry| entry.kind.is_user_defined()).for_each(|entry| {
-      let module = match &self.module_table[entry.id] {
+      let module = match &self.module_table[entry.idx] {
         Module::Normal(module) => module,
         Module::External(_module) => {
           // Case: import('external').
@@ -102,7 +102,7 @@ impl LinkStage<'_> {
         }
       };
       context.bailout_cjs_tree_shaking_modules.insert(module.idx);
-      let meta = &self.metas[entry.id];
+      let meta = &self.metas[entry.idx];
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
         |(symbol_ref, _came_from_cjs)| {
           if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
@@ -122,20 +122,20 @@ impl LinkStage<'_> {
     let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
 
     dynamic_entries.retain(|entry| {
-      if !cycled_idx.contains(&entry.id) {
+      if !cycled_idx.contains(&entry.idx) {
         if let Some(item) = self.is_dynamic_entry_alive(entry, context.is_included_vec) {
           unused_record_idxs.extend(item);
           return false;
         }
       }
-      let module = match &self.module_table[entry.id] {
+      let module = match &self.module_table[entry.idx] {
         Module::Normal(module) => module,
         Module::External(_module) => {
           // Case: import('external').
           return true;
         }
       };
-      let meta = &self.metas[entry.id];
+      let meta = &self.metas[entry.idx];
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
         |(symbol_ref, _came_from_cjs)| {
           if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
@@ -257,7 +257,7 @@ impl LinkStage<'_> {
   ) -> FxHashSet<ModuleIdx> {
     let mut graph: DiGraphMap<ModuleIdx, ()> = DiGraphMap::new();
     for entry in dynamic_entries.iter() {
-      let mut entry_module_idx = entry.id;
+      let mut entry_module_idx = entry.idx;
       let cur = entry_module_idx;
       if graph.contains_node(cur) {
         continue;
@@ -284,7 +284,7 @@ impl LinkStage<'_> {
     // We only need to ensure the relative order of those none cycled dynamic entries are correct, rest of them
     // we just bailout them
     dynamic_entries.sort_by_key(|item| {
-      idx_to_order_map.get(&item.id).map_or(Reverse(usize::MAX), |&order| Reverse(order))
+      idx_to_order_map.get(&item.idx).map_or(Reverse(usize::MAX), |&order| Reverse(order))
     });
     cycled_dynamic_entries
   }
@@ -336,7 +336,7 @@ impl LinkStage<'_> {
       EntryPointKind::UserDefined | EntryPointKind::EmittedUserDefined => true,
       EntryPointKind::DynamicImport => {
         let is_dynamic_imported_module_exports_unused =
-          self.dynamic_import_exports_usage_map.get(&item.id).is_some_and(
+          self.dynamic_import_exports_usage_map.get(&item.idx).is_some_and(
             |item| matches!(item, DynamicImportExportsUsage::Partial(set) if set.is_empty()),
           );
 

@@ -52,6 +52,7 @@ pub struct ExperimentalOptions {
   pub chunk_modules_order: Option<ChunkModulesOrderBy>,
   pub on_demand_wrapping: Option<bool>,
   pub transform_hires_sourcemap: Option<SourcemapHires>,
+  pub lazy_barrel: Option<bool>,
 }
 
 impl ExperimentalOptions {
@@ -87,5 +88,9 @@ impl ExperimentalOptions {
 
   pub fn is_attach_debug_info_full(&self) -> bool {
     self.attach_debug_info.is_some_and(|info| info.is_full())
+  }
+
+  pub fn is_lazy_barrel_enabled(&self) -> bool {
+    self.lazy_barrel.unwrap_or(false)
   }
 }

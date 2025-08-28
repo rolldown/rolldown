@@ -75,6 +75,7 @@ pub async fn create_ecma_view(
     dummy_record_set,
     constant_export_map,
     import_attribute_map,
+    barrel_info,
   } = scanner.scan(ast.program())?;
   named_exports.extend(commonjs_exports);
 
@@ -137,7 +138,7 @@ pub async fn create_ecma_view(
     import_attribute_map,
   };
 
-  let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage };
+  let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage, barrel_info };
   Ok(CreateEcmaViewReturn { ecma_view, ecma_related, raw_import_records })
 }
 

@@ -29,4 +29,5 @@ pub struct EcmaRelated {
   pub ast: EcmaAst,
   pub symbols: SymbolRefDbForModule,
   pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
+  pub barrel_info: Option<crate::BarrelInfo>,
 }

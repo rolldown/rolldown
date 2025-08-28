@@ -890,6 +890,12 @@
               "type": "null"
             }
           ]
+        },
+        "lazyBarrel": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

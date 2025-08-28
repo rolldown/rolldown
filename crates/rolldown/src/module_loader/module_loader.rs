@@ -1,3 +1,4 @@
+use super::barrel_optimizer::BarrelOptimizer;
 use super::external_module_task::ExternalModuleTask;
 use super::module_task::{ModuleTask, ModuleTaskOwner};
 use super::runtime_module_task::RuntimeModuleTask;
@@ -17,8 +18,8 @@ use rolldown_common::{
   EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult,
   HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImporterRecord, Module, ModuleId,
   ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult, PreserveEntrySignatures,
-  RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx,
-  SymbolRef, SymbolRefDb, SymbolRefDbForModule,
+  RUNTIME_MODULE_KEY, RawImportRecord, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult,
+  StmtInfoIdx, SymbolRef, SymbolRefDb, SymbolRefDbForModule,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -105,6 +106,7 @@ pub struct ModuleLoader<'a> {
   is_full_scan: bool,
   new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
   cache: &'a mut ScanStageCache,
+  barrel_optimizer: BarrelOptimizer,
 }
 
 pub struct ModuleLoaderOutput {
@@ -134,6 +136,112 @@ impl Drop for ModuleLoader<'_> {
 }
 
 impl<'a> ModuleLoader<'a> {
+  #[allow(clippy::unused_self)]
+  /// Analyze what is imported from a module
+  fn analyze_import_usage(
+    &self,
+    module: &Module,
+    rec_idx: ImportRecordIdx,
+    raw_rec: &RawImportRecord,
+  ) -> (Vec<ArcStr>, bool, bool) {
+    // Check if it's an export * - needs everything from the barrel
+    let is_export_star = raw_rec.meta.contains(ImportRecordMeta::IsExportStar);
+    if is_export_star {
+      return (vec![], true, false);
+    }
+
+    // Get the module's scan result to find named imports
+    let ecma_view = module.as_normal().map(|m| &m.ecma_view);
+    if ecma_view.is_none() {
+      // Not a normal module, can't analyze imports
+      return (vec![], false, false);
+    }
+
+    let ecma_view = ecma_view.unwrap();
+
+    // Collect all imported names from this specific import record
+    let mut requested_names = Vec::new();
+    let mut is_namespace = false;
+    let mut is_default = false;
+
+    // Check for namespace imports (import * as ns from '...')
+    // Look for star imports in named_imports
+    let has_namespace = ecma_view
+      .named_imports
+      .values()
+      .any(|import| import.record_id == rec_idx && import.imported.is_star());
+
+    if has_namespace {
+      // Check if there are also other named imports
+      let has_named_imports = ecma_view
+        .named_imports
+        .values()
+        .any(|import| import.record_id == rec_idx && !import.imported.is_star());
+
+      if !has_named_imports {
+        // Pure namespace import
+        return (vec![], true, false);
+      }
+    }
+
+    // Look through all named imports to find ones from this import record
+    for named_import in ecma_view.named_imports.values() {
+      if named_import.record_id == rec_idx {
+        match &named_import.imported {
+          rolldown_common::Specifier::Star => {
+            // import * as name from '...'
+            is_namespace = true;
+          }
+          rolldown_common::Specifier::Literal(name) => {
+            // Check if it's the default import
+            if name == "default" {
+              is_default = true;
+            } else {
+              // Regular named import
+              requested_names.push(ArcStr::from(name.as_str()));
+            }
+          }
+        }
+      }
+    }
+
+    // If we found a namespace import, return that
+    if is_namespace {
+      return (vec![], true, false);
+    }
+
+    // Check for default imports from import meta
+    if raw_rec.meta.contains(ImportRecordMeta::IsPlainImport)
+      && requested_names.is_empty()
+      && !is_default
+    {
+      // Might be import defaultName from '...' without explicit "default"
+      // Check if there's a symbol that references this import but isn't in named_imports
+      // This typically happens with default imports
+
+      // Look for symbols that use this import record
+      for stmt_info in &ecma_view.stmt_infos.infos {
+        if stmt_info.import_records.contains(&rec_idx) {
+          // Check if this is a default import pattern
+          // This is a heuristic - in production, would need more precise AST analysis
+          if stmt_info.declared_symbols.len() == 1 && requested_names.is_empty() {
+            is_default = true;
+            break;
+          }
+        }
+      }
+    }
+
+    tracing::debug!(
+      "Import analysis for {:?}: names={:?}, namespace={}, default={}",
+      raw_rec.module_request,
+      requested_names,
+      is_namespace,
+      is_default
+    );
+
+    (requested_names, is_namespace, is_default)
+  }
   pub fn new(
     fs: OsFileSystem,
     options: SharedOptions,
@@ -186,6 +294,9 @@ impl<'a> ModuleLoader<'a> {
 
     let symbol_ref_db = SymbolRefDb::new(options.transform_options.is_jsx_preserve());
 
+    // Initialize barrel optimizer based on experimental options
+    let barrel_optimizer = BarrelOptimizer::new(options.experimental.is_lazy_barrel_enabled());
+
     Ok(Self {
       tx,
       rx,
@@ -198,6 +309,7 @@ impl<'a> ModuleLoader<'a> {
       is_full_scan,
       new_added_modules_from_partial_scan: FxIndexSet::default(),
       cache,
+      barrel_optimizer,
     })
   }
 
@@ -343,6 +455,50 @@ impl<'a> ModuleLoader<'a> {
 
           let mut import_records: IndexVec<ImportRecordIdx, rolldown_common::ResolvedImportRecord> =
             IndexVec::with_capacity(raw_import_records.len());
+
+          // First pass: check for barrel imports and process them
+          let mut barrel_imports_to_process = Vec::new();
+          for ((rec_idx, raw_rec), resolved_id) in
+            raw_import_records.iter_enumerated().zip(&resolved_deps)
+          {
+            if let Some(idx) = self.cache.module_id_to_idx.get(&resolved_id.id) {
+              if let VisitState::Seen(module_idx) = idx
+                && self.barrel_optimizer.is_barrel_module(*module_idx)
+              {
+                // Collect barrel imports for processing
+                barrel_imports_to_process.push((rec_idx, *module_idx, raw_rec));
+              }
+            }
+          }
+
+          // Process barrel imports to determine what needs to be loaded
+          let mut barrel_skip_decisions = FxHashMap::default();
+          for (rec_idx, barrel_idx, raw_rec) in barrel_imports_to_process {
+            // Analyze what's actually imported from this barrel
+            let (requested_names, is_namespace, is_default) =
+              self.analyze_import_usage(&module, rec_idx, raw_rec);
+
+            // Process the barrel import to get required sub-imports
+            let required_imports = self.barrel_optimizer.process_barrel_imports(
+              barrel_idx,
+              &requested_names,
+              is_namespace,
+              is_default,
+            );
+
+            // Store which imports should be loaded for this barrel
+            barrel_skip_decisions.insert(barrel_idx, required_imports.clone());
+
+            tracing::info!(
+              "Barrel optimization for {:?}: requested names={:?}, namespace={}, default={}, loading {} of all imports",
+              raw_rec.module_request,
+              requested_names,
+              is_namespace,
+              is_default,
+              required_imports.len()
+            );
+          }
+
           for ((rec_idx, mut raw_rec), resolved_id) in
             raw_import_records.into_iter_enumerated().zip(resolved_deps)
           {
@@ -361,6 +517,8 @@ impl<'a> ModuleLoader<'a> {
                 normal_module.stable_id.as_str().into(),
                 raw_rec.span,
               );
+
+              // Spawn the task but check if it's a barrel module
               self.try_spawn_new_task(
                 resolved_id,
                 Some(owner),
@@ -409,7 +567,116 @@ impl<'a> ModuleLoader<'a> {
           module.set_import_records(import_records);
 
           let module_idx = module.idx();
-          if let Some(EcmaRelated { ast, symbols, .. }) = ecma_related {
+
+          // Check if this module is a barrel file and register it with the optimizer
+          if let Some(EcmaRelated { ast, symbols, barrel_info, .. }) = ecma_related {
+            // Check if module qualifies as a barrel file
+            if let Some(info) = barrel_info {
+              // Only apply barrel optimization to modules without side effects (like Rspack)
+              let is_side_effect_free = if let Some(normal_module) = module.as_normal() {
+                !normal_module.ecma_view.side_effects.has_side_effects()
+              } else {
+                false
+              };
+
+              if is_side_effect_free && info.is_barrel_file() {
+                // Register as barrel module
+                tracing::debug!("Detected side-effect-free barrel file: {:?}", module.id());
+                self.barrel_optimizer.register_barrel_module(module_idx);
+
+                // Collect export mappings
+                if let Some(normal_module) = module.as_normal() {
+                  // Analyze the barrel's exports to understand what each import provides
+                  let ecma_view = &normal_module.ecma_view;
+
+                  // Build a map of which exports come from which imports
+                  for (import_idx, import_record) in normal_module.import_records.iter_enumerated()
+                  {
+                    let is_star = import_record.meta.contains(ImportRecordMeta::IsExportStar);
+                    let mut export_names = Vec::new();
+
+                    // For each named export in the barrel, check if it's re-exported from this import
+                    for (export_name, local_export) in &ecma_view.named_exports {
+                      // Check if this is a re-export via named_imports
+                      // This handles: import { foo } from './module'; export { foo };
+                      let specifier = local_export.referenced;
+                      // Look for the import that provides this symbol
+                      for named_import in ecma_view.named_imports.values() {
+                        if named_import.record_id == import_idx {
+                          match &named_import.imported {
+                            rolldown_common::Specifier::Literal(imported_name) => {
+                              // Check if this import provides the export
+                              if imported_name.as_str() == export_name.as_str()
+                                || named_import.imported_as == specifier
+                              {
+                                export_names.push(ArcStr::from(export_name.as_str()));
+                              }
+                            }
+                            rolldown_common::Specifier::Star => {
+                              // Star imports can provide any export
+                              if is_star {
+                                export_names.push(ArcStr::from(export_name.as_str()));
+                              }
+                            }
+                          }
+                        }
+                      }
+
+                      // Also check via statement info
+                      // This handles direct re-exports: export { foo } from './module'
+                      for stmt_info in &ecma_view.stmt_infos.infos {
+                        if stmt_info.import_records.contains(&import_idx) {
+                          // Check if this statement declares this export
+                          if stmt_info.declared_symbols.iter().any(|tagged_ref| match tagged_ref {
+                            rolldown_common::TaggedSymbolRef::Normal(sym_ref)
+                            | rolldown_common::TaggedSymbolRef::LinkOnly(sym_ref) => {
+                              *sym_ref == specifier
+                            }
+                          }) {
+                            export_names.push(ArcStr::from(export_name.as_str()));
+                          }
+                        }
+                      }
+                    }
+
+                    // For star exports, we track them separately
+                    // They will be resolved dynamically when needed
+                    if is_star && export_names.is_empty() {
+                      tracing::debug!(
+                        "Barrel has star export from {:?}",
+                        import_record.module_request
+                      );
+                    }
+
+                    let imported_module_idx = Some(import_record.resolved_module);
+
+                    self.barrel_optimizer.add_barrel_import(
+                      module_idx,
+                      import_idx,
+                      export_names.clone(),
+                      is_star,
+                      imported_module_idx,
+                    );
+
+                    if !export_names.is_empty() {
+                      tracing::debug!(
+                        "Barrel import {:?} provides exports: {:?}",
+                        import_record.module_request,
+                        export_names
+                      );
+                    }
+                  }
+
+                  tracing::info!(
+                    "Barrel module {:?} registered with {} imports, {} named exports",
+                    module.id(),
+                    normal_module.import_records.len(),
+                    ecma_view.named_exports.len()
+                  );
+                }
+              }
+            }
+
             *self.intermediate_normal_modules.index_ecma_ast.get_mut(module_idx) = Some(ast);
             self.symbol_ref_db.store_local_db(module_idx, symbols);
           }

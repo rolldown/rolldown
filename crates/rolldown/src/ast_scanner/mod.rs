@@ -58,6 +58,8 @@ pub struct ScanResult {
   /// module
   pub named_imports: FxIndexMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<CompactStr, LocalExport>,
+  /// Barrel file detection information
+  pub barrel_info: Option<rolldown_common::BarrelInfo>,
   /// Used to store all exports in commonjs module, why not reuse `named_exports`?
   /// Because It is legal to use commonjs exports syntax in a es module, here is an example:
   /// ```js
@@ -167,6 +169,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let result = ScanResult {
       named_imports: FxIndexMap::default(),
       named_exports: FxHashMap::default(),
+      barrel_info: None,
       stmt_infos: StmtInfos::new(),
       import_records: IndexVec::new(),
       default_export_ref,
@@ -227,7 +230,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.scope_stack.iter().rev().all(|flag| flag.is_top())
   }
 
+  #[allow(clippy::too_many_lines)]
   pub fn scan(mut self, program: &Program<'ast>) -> BuildResult<ScanResult> {
+    // Initialize barrel info if optimization is enabled
+    if self.options.experimental.is_lazy_barrel_enabled() {
+      self.result.barrel_info = Some(rolldown_common::BarrelInfo::new());
+    }
+
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
 
@@ -298,6 +307,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
 
     self.result.exports_kind = exports_kind;
+
+    // Update barrel info with final exports kind
+    if let Some(ref mut info) = self.result.barrel_info {
+      info.exports_kind = exports_kind;
+    }
 
     // If some commonjs module facade exports was used locally, we need to explicitly mark them as
     // has side effects, so that they should not be removed in linking stage.
@@ -564,6 +578,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   fn scan_export_all_decl(&mut self, decl: &ExportAllDeclaration) {
+    // Track re-exports for barrel file detection
+    if let Some(ref mut info) = self.result.barrel_info {
+      info.reexport_count += 1;
+    }
     let id = self.add_import_record(
       decl.source.value.as_str(),
       ImportKind::Import,
@@ -590,6 +608,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration) {
     if let Some(source) = &decl.source {
+      // Track re-exports for barrel file detection
+      if let Some(ref mut info) = self.result.barrel_info {
+        info.reexport_count += 1;
+      }
       let record_id = self.add_import_record(
         source.value.as_str(),
         ImportKind::Import,

@@ -75,6 +75,17 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         self.current_stmt_info.debug_label = Some(stmt.to_source_string());
       }
 
+      // Track barrel file characteristics
+      if let Some(ref mut barrel_info) = self.result.barrel_info {
+        // Check if statement is a module declaration (import/export)
+        let is_module_decl = stmt.as_module_declaration().is_some();
+
+        if !is_module_decl {
+          // If it's not an import/export statement, mark as having other code
+          barrel_info.has_other_statements = true;
+        }
+      }
+
       self.visit_statement(stmt);
       if self.current_stmt_info.side_effect.intersects(
         SideEffectDetail::Unknown

@@ -5510,6 +5510,10 @@ expression: output
 - index-!~{001}~.js => index-DRnPso5Y.js
 - rolldown_hmr-!~{002}~.js => rolldown_hmr-h3ThDu7r.js
 
+# tests/rolldown/topics/hmr/no-accept-outside-circular
+
+- main-!~{000}~.js => main-DQro9Nzn.js
+
 # tests/rolldown/topics/hmr/no_boundary_reload
 
 - main-!~{000}~.js => main-DgJD8HMG.js

@@ -1,7 +1,10 @@
 use rolldown_watcher::FileChangeResult;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 
-use crate::dev::{build_driver::SharedBuildDriver, watcher_event_handler::WatcherEventHandler};
+use crate::dev::{
+  build_driver::SharedBuildDriver, dev_context::SharedDevContext,
+  watcher_event_handler::WatcherEventHandler,
+};
 
 pub enum WatcherEventServiceMsg {
   FileChange(FileChangeResult),
@@ -14,12 +17,13 @@ pub struct WatcherEventService {
   pub build_driver: SharedBuildDriver,
   pub rx: WatcherEventServiceRx,
   pub tx: WatcherEventServiceTx,
+  pub ctx: SharedDevContext,
 }
 
 impl WatcherEventService {
-  pub fn new(ctx: SharedBuildDriver) -> Self {
+  pub fn new(build_driver: SharedBuildDriver, ctx: SharedDevContext) -> Self {
     let (tx, rx) = unbounded_channel::<WatcherEventServiceMsg>();
-    Self { build_driver: ctx, rx, tx }
+    Self { build_driver, ctx, rx, tx }
   }
 
   pub fn create_event_handler(&self) -> WatcherEventHandler {
@@ -44,7 +48,10 @@ impl WatcherEventService {
               })
               .collect::<Vec<_>>();
 
-            self.build_driver.schedule_build(changed_files).await.expect("FIXME: Handle the error");
+            self.build_driver.register_changed_files(changed_files).await;
+            if self.ctx.options.eager_rebuild {
+              self.build_driver.schedule_build_if_stale().await.expect("Should handle the error");
+            }
           }
           Err(e) => {
             eprintln!("notify error: {e:?}");

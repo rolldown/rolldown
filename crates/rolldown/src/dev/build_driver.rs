@@ -25,39 +25,61 @@ impl BuildDriver {
     Self { bundler, ctx }
   }
 
-  pub async fn schedule_build(
-    &self,
-    changed_paths: Vec<PathBuf>,
-  ) -> BuildResult<Option<BuildProcessFuture>> {
-    let mut build_state = self.ctx.status.lock().await;
-    if build_state.is_busy() {
+  pub async fn register_changed_files(&self, paths: Vec<PathBuf>) {
+    tracing::trace!("Register changed files: {:?}", paths);
+    let mut build_state = self.ctx.state.lock().await;
+    build_state.changed_files.extend(paths);
+  }
+
+  /// Schedule a build to consume pending changed files.
+  pub async fn schedule_build_if_stale(&self) -> BuildResult<Option<BuildProcessFuture>> {
+    tracing::trace!("Start scheduling a build to consume pending changed files");
+    let mut build_state = self.ctx.state.lock().await;
+    tracing::trace!("Start scheduling a build to consume pending changed files2");
+    if let Some(building_future) = build_state.is_busy_then_future().cloned() {
+      tracing::trace!("A build is running, return the future immediately");
+      drop(build_state);
+      // If there's build running, it will be responsible to handle new changed files.
+      // So, we only need to wait for the latest build to finish.
+      Ok(Some(building_future))
+    } else if build_state.require_full_rebuild || !build_state.changed_files.is_empty() {
       tracing::trace!(
-        "Bailout due to building({}) or delaying({}) with changed files: {:#?}",
-        build_state.is_building(),
-        build_state.is_delaying(),
-        build_state.changed_files,
+        "Schedule a build to consume pending changed files due to {:?} or {:?}",
+        build_state.require_full_rebuild,
+        build_state.changed_files
       );
-      build_state.changed_files.extend(changed_paths);
-      return Ok(None);
+      // Note: Full rebuild and incremental build both clear changed files.
+      let changed_files = mem::take(&mut build_state.changed_files);
+
+      let bundling_task = BundlingTask {
+        bundler: Arc::clone(&self.bundler),
+        changed_files,
+        require_full_rebuild: build_state.require_full_rebuild,
+        dev_data: Arc::clone(&self.ctx),
+        ensure_latest_build: true,
+      };
+
+      let bundling_future = (Box::pin(bundling_task.exec()) as PinBoxSendStaticFuture).shared();
+      tokio::spawn(bundling_future.clone());
+
+      build_state.try_to_delaying(bundling_future.clone())?;
+      drop(build_state);
+
+      Ok(Some(bundling_future))
+    } else {
+      tracing::trace!(
+        "Nothing to do due to {:?} or {:?}",
+        build_state.require_full_rebuild,
+        build_state.changed_files
+      );
+      Ok(None)
     }
+  }
 
-    let mut batched_changed_files = mem::take(&mut build_state.changed_files);
-    batched_changed_files.extend(changed_paths);
-
-    let bundling_task = BundlingTask {
-      bundler: Arc::clone(&self.bundler),
-      changed_files: batched_changed_files,
-      dev_data: Arc::clone(&self.ctx),
-      ensure_latest_build: true,
-    };
-
-    let bundling_future = (Box::pin(bundling_task.exec()) as PinBoxSendStaticFuture).shared();
-    tokio::spawn(bundling_future.clone());
-
-    tracing::trace!("BuildStatus is in debouncing");
-    build_state.try_to_delaying(bundling_future.clone())?;
-    drop(build_state);
-
-    Ok(Some(bundling_future))
+  pub async fn ensure_latest_build(&self) -> BuildResult<()> {
+    if let Some(future) = self.schedule_build_if_stale().await? {
+      future.await;
+    }
+    Ok(())
   }
 }

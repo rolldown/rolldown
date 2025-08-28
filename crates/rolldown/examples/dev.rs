@@ -13,9 +13,11 @@ async fn main() {
     experimental: Some(ExperimentalOptions { incremental_build: Some(true), ..Default::default() }),
     ..Default::default()
   });
-  let dev_engine =
-    DevEngine::<rolldown_watcher::NotifyWatcher>::new(bundler_builder, DevOptions::default())
-      .unwrap();
+  let dev_engine = DevEngine::<rolldown_watcher::NotifyWatcher>::new(
+    bundler_builder,
+    DevOptions { eager_rebuild: Some(true), ..Default::default() },
+  )
+  .unwrap();
   dev_engine.run().await;
   dev_engine.wait_for_close().await;
 }

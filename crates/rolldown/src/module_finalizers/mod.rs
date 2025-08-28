@@ -778,7 +778,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               _ => {
                 // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-
                 // `init_xxx`
                 let wrap_ref_expr = self.finalized_expr_for_symbol_ref(
                   importee_linking_info.wrapper_ref.unwrap(),
@@ -1034,7 +1033,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             match &self.ctx.modules[rec.resolved_module] {
               Module::Normal(importee) => {
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                if matches!(importee_linking_info.wrap_kind(), WrapKind::Esm) {
+                if matches!(importee_linking_info.wrap_kind(), WrapKind::Esm)
+                // If it is a inner concatenated module, we should not call its wrapper here
+                  && !matches!(
+                    importee_linking_info.concatenated_wrapped_module_kind,
+                    ConcatenateWrappedModuleKind::Inner
+                  )
+                {
                   let wrapper_ref_name =
                     self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
                   program.body.push(self.snippet.call_expr_stmt(wrapper_ref_name));

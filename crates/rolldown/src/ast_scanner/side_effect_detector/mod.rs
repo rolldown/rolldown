@@ -135,21 +135,71 @@ impl<'a> SideEffectDetector<'a> {
     if self.is_expr_manual_pure_functions(expr.object()) {
       return false.into();
     }
-    // MemberExpression is considered having side effect by default, unless it's some builtin global variables.
-    let Some((ref_id, chains)) = extract_member_expr_chain(expr, 3) else {
-      return true.into();
+
+    let property_read_side_effects = matches!(
+      self.options.treeshake.property_read_side_effects(),
+      rolldown_common::PropertyReadSideEffects::Always
+    );
+
+    let mut side_effects_detail = SideEffectDetail::empty();
+    let max_len = 3;
+    let mut chains = vec![];
+    let mut cur = match expr {
+      ast::MemberExpression::ComputedMemberExpression(computed_expr) => {
+        if let ast::Expression::StringLiteral(ref str) = computed_expr.expression {
+          chains.push(str.value);
+        } else {
+          side_effects_detail |= self.detect_side_effect_of_expr(&computed_expr.expression);
+        }
+        &computed_expr.object
+      }
+      ast::MemberExpression::StaticMemberExpression(static_expr) => {
+        chains.push(static_expr.property.name);
+        &static_expr.object
+      }
+      ast::MemberExpression::PrivateFieldExpression(_) => return true.into(),
     };
-    // If the global variable is override, we considered it has side effect.
-    if !self.scope.is_unresolved(ref_id) {
-      return true.into();
+
+    // extract_rest_member_expr_chain
+    loop {
+      match cur {
+        ast::Expression::StaticMemberExpression(expr) => {
+          cur = &expr.object;
+          chains.push(expr.property.name);
+        }
+        ast::Expression::ComputedMemberExpression(computed_expr) => {
+          if let ast::Expression::StringLiteral(ref str) = computed_expr.expression {
+            chains.push(str.value);
+          } else {
+            side_effects_detail |= self.detect_side_effect_of_expr(&computed_expr.expression);
+          }
+          cur = &computed_expr.object;
+        }
+        ast::Expression::Identifier(ident_ref) => {
+          chains.push(ident_ref.name);
+          chains.reverse();
+          side_effects_detail
+            .set(SideEffectDetail::GlobalVarAccess, self.is_unresolved_reference(ident_ref));
+          break;
+        }
+        _ => break,
+      }
+      if chains.len() >= max_len && property_read_side_effects {
+        return true.into();
+      }
     }
-    SideEffectDetail::GlobalVarAccess
-      | (match chains.len() {
-        2 => !is_side_effect_free_member_expr_of_len_two(&chains),
-        3 => !is_side_effect_free_member_expr_of_len_three(&chains),
-        _ => true,
-      })
-      .into()
+
+    if !property_read_side_effects {
+      return side_effects_detail;
+    }
+
+    side_effects_detail |= (match chains.len() {
+      2 => !is_side_effect_free_member_expr_of_len_two(&chains),
+      3 => !is_side_effect_free_member_expr_of_len_three(&chains),
+      _ => true,
+    })
+    .into();
+    side_effects_detail
   }
 
   fn detect_side_effect_of_assignment_target(&self, expr: &AssignmentTarget) -> SideEffectDetail {
@@ -562,7 +612,21 @@ impl<'a> SideEffectDetector<'a> {
               // Destructuring the initializer has no side effects if the
               // initializer is an array, since we assume the iterator is then
               // the built-in side-effect free array iterator.
-              BindingPatternKind::ObjectPattern(_) => true.into(),
+              BindingPatternKind::ObjectPattern(_) => {
+                // Object destructuring only has side effects when property_read_side_effects is Always
+                if matches!(
+                  self.options.treeshake.property_read_side_effects(),
+                  rolldown_common::PropertyReadSideEffects::Always
+                ) {
+                  true.into()
+                } else {
+                  declarator
+                    .init
+                    .as_ref()
+                    .map(|init| self.detect_side_effect_of_expr(init))
+                    .unwrap_or(false.into())
+                }
+              }
               BindingPatternKind::ArrayPattern(pat) => {
                 for p in &pat.elements {
                   if p.as_ref().is_some_and(|pat| {

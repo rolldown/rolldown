@@ -323,6 +323,7 @@ where
         manual_pure_functions: None,
         unknown_global_side_effects: None,
         commonjs: Some(true),
+        property_read_side_effects: None,
       }))
     }
     Some(Value::Object(obj)) => {
@@ -369,12 +370,28 @@ where
           _ => Err(serde::de::Error::custom("manualPureFunctions should be a `Vec<String>`")),
         },
       )?;
+      // Use string to make deserialization logic easier
+      let property_read_side_effects = obj.get("propertyReadSideEffects").map_or_else(
+        || Ok(None),
+        |v| match v {
+          Value::String(s) if s == "always" => {
+            Ok(Some(types::treeshake::PropertyReadSideEffects::Always))
+          }
+          Value::String(s) if s == "false" => {
+            Ok(Some(types::treeshake::PropertyReadSideEffects::False))
+          }
+          _ => {
+            Err(serde::de::Error::custom("propertyReadSideEffects should be 'false' or 'always'"))
+          }
+        },
+      )?;
       Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions {
         module_side_effects,
         annotations,
         manual_pure_functions: Some(manual_pure_functions),
         unknown_global_side_effects,
         commonjs,
+        property_read_side_effects,
       }))
     }
     _ => Err(serde::de::Error::custom("treeshake should be a boolean or an object")),

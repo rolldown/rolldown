@@ -8,6 +8,17 @@ use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::{Deserialize, Deserializer};
 
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(
+  feature = "deserialize_bundler_options",
+  derive(Deserialize, JsonSchema),
+  serde(rename_all = "camelCase")
+)]
+pub enum PropertyReadSideEffects {
+  Always,
+  False,
+}
+
 #[derive(Debug, Clone)]
 #[cfg_attr(
   feature = "deserialize_bundler_options",
@@ -49,6 +60,14 @@ impl NormalizedTreeshakeOptions {
 
   pub fn commonjs(&self) -> bool {
     self.as_ref().and_then(|item| item.commonjs).unwrap_or(false)
+  }
+  /// By default we assume property reads have side effects
+  #[inline]
+  pub fn property_read_side_effects(&self) -> PropertyReadSideEffects {
+    self
+      .as_ref()
+      .and_then(|opt| opt.property_read_side_effects)
+      .unwrap_or(PropertyReadSideEffects::Always)
   }
 
   // TODO: optimize this
@@ -165,6 +184,7 @@ pub struct InnerOptions {
   pub manual_pure_functions: Option<FxHashSet<String>>,
   pub unknown_global_side_effects: Option<bool>,
   pub commonjs: Option<bool>,
+  pub property_read_side_effects: Option<PropertyReadSideEffects>,
 }
 
 impl Default for InnerOptions {
@@ -175,6 +195,7 @@ impl Default for InnerOptions {
       manual_pure_functions: None,
       unknown_global_side_effects: None,
       commonjs: None,
+      property_read_side_effects: None,
     }
   }
 }
@@ -199,7 +220,10 @@ impl From<&NormalizedTreeshakeOptions> for oxc::minifier::TreeShakeOptions {
       manual_pure_functions: value
         .manual_pure_functions()
         .map_or(default.manual_pure_functions, |set| set.iter().cloned().collect::<Vec<_>>()),
-      property_read_side_effects: default.property_read_side_effects,
+      property_read_side_effects: match value.property_read_side_effects() {
+        PropertyReadSideEffects::Always => oxc::minifier::PropertyReadSideEffects::All,
+        PropertyReadSideEffects::False => oxc::minifier::PropertyReadSideEffects::None,
+      },
       unknown_global_side_effects: value.unknown_global_side_effects(),
     }
   }

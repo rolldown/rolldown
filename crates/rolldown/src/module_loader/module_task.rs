@@ -212,7 +212,7 @@ impl ModuleTask {
 
     let result = ModuleLoaderMsg::NormalModuleDone(Box::new(NormalModuleTaskResult {
       module: module.into(),
-      ecma_related: Some(ecma_related),
+      ecma_related,
       resolved_deps,
       raw_import_records,
       warnings,

@@ -79,19 +79,19 @@ impl Plugin for BuildImportAnalysisPlugin {
     let modern_str = format!("{}", format.is_esm());
     let modern = modern_str.as_str();
     let modern_padding_str =
-      format!("{}{}", modern, " ".repeat(IS_MODERN_FLAG.len() - modern.len()));
+      format!("{}{}", modern, " ".repeat(IS_MODERN_FLAG.len().saturating_sub(modern.len())));
     let modern_padding = modern_padding_str.as_str();
 
-    if !code.contains(IS_MODERN_FLAG) {
-      return Ok(None);
-    } else {
+    if code.contains(IS_MODERN_FLAG) {
       Ok(Some(HookRenderChunkOutput {
         code: code.replace(IS_MODERN_FLAG, modern_padding),
         map: None,
       }))
+    } else {
+      Ok(None)
     }
   }
   fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst
+    HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst | HookUsage::RenderChunk
   }
 }

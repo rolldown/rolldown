@@ -77,7 +77,7 @@ impl GenerateStage<'_> {
           continue;
         };
         let matched_entry =
-          self.link_output.entries.iter().find(|entry_point| entry_point.id == module.idx);
+          self.link_output.entries.iter().find(|entry_point| entry_point.idx == module.idx);
         if !module.is_included() {
           continue;
         }
@@ -609,7 +609,7 @@ impl GenerateStage<'_> {
       let count: u32 = entry_index.try_into().expect("Too many entries, u32 overflowed.");
       let mut bits = BitSet::new(entries_len);
       bits.set_bit(count);
-      let Module::Normal(module) = &self.link_output.module_table[entry_point.id] else {
+      let Module::Normal(module) = &self.link_output.module_table[entry_point.idx] else {
         continue;
       };
 
@@ -651,7 +651,7 @@ impl GenerateStage<'_> {
             meta
           },
           bit: count,
-          module: entry_point.id,
+          module: entry_point.idx,
         },
         input_base.clone(),
         preserve_entry_signature,
@@ -670,7 +670,7 @@ impl GenerateStage<'_> {
       }
 
       bits_to_chunk.insert(bits, chunk_idx);
-      entry_module_to_entry_chunk.insert(entry_point.id, chunk_idx);
+      entry_module_to_entry_chunk.insert(entry_point.idx, chunk_idx);
     }
   }
 
@@ -684,7 +684,7 @@ impl GenerateStage<'_> {
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
     self.link_output.entries.iter().enumerate().for_each(|(i, entry_point)| {
       self.determine_reachable_modules_for_entry(
-        entry_point.id,
+        entry_point.idx,
         i.try_into().expect("Too many entries, u32 overflowed."),
         index_splitting_info,
       );
@@ -911,10 +911,10 @@ impl GenerateStage<'_> {
       })
       .collect::<FxHashMap<ModuleIdx, ChunkIdx>>();
     for entry in self.link_output.entries.iter().filter(|item| item.kind.is_user_defined()) {
-      let Some(entry_chunk_idx) = chunk_graph.module_to_chunk[entry.id] else {
+      let Some(entry_chunk_idx) = chunk_graph.module_to_chunk[entry.idx] else {
         continue;
       };
-      let mut q = VecDeque::from_iter([entry.id]);
+      let mut q = VecDeque::from_iter([entry.idx]);
       let mut visited = FxHashSet::default();
       while let Some(cur) = q.pop_front() {
         if visited.contains(&cur) {

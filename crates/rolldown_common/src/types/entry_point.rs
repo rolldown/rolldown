@@ -7,7 +7,7 @@ use crate::{ModuleIdx, StmtInfoIdx};
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct EntryPoint {
   pub name: Option<ArcStr>,
-  pub id: ModuleIdx,
+  pub idx: ModuleIdx,
   pub kind: EntryPointKind,
   /// emitted chunk specified filename, used to generate chunk filename
   pub file_name: Option<ArcStr>,

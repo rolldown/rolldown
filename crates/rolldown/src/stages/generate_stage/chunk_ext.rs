@@ -59,7 +59,7 @@ impl ChunkDebugExt for Chunk {
           .enumerate()
           .filter_map(|(index, entry_point)| {
             if bits.has_bit(index.try_into().unwrap()) {
-              let entry_module = &link_output.module_table[entry_point.id];
+              let entry_module = &link_output.module_table[entry_point.idx];
               Some(entry_module.stable_id().to_string())
             } else {
               None

@@ -3986,7 +3986,7 @@ expression: output
 # tests/rolldown/function/experimental/strict_execution_order/on_demand_wrapping
 
 - dynamic-!~{001}~.js => dynamic-BhqYqd04.js
-- main-!~{000}~.js => main-CJX4hrCK.js
+- main-!~{000}~.js => main-Cs9FeXr-.js
 - dynamic-!~{002}~.js => dynamic-DKjUd_a-.js
 
 # tests/rolldown/function/experimental/strict_execution_order/react-like

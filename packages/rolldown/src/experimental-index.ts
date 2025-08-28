@@ -1,5 +1,6 @@
 export { dev } from './api/dev';
 export { DevEngine } from './api/dev/dev-engine';
+export type { DevOptions } from './api/dev/dev-options';
 export { experimental_scan as scan } from './api/experimental';
 export {
   isolatedDeclaration,

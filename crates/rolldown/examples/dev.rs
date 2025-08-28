@@ -1,3 +1,4 @@
+use rolldown::dev::DevOptions;
 use rolldown::{BundlerBuilder, BundlerOptions, DevEngine, ExperimentalOptions};
 use sugar_path::SugarPath;
 
@@ -12,7 +13,9 @@ async fn main() {
     experimental: Some(ExperimentalOptions { incremental_build: Some(true), ..Default::default() }),
     ..Default::default()
   });
-  let dev_engine = DevEngine::<rolldown_watcher::NotifyWatcher>::new(bundler_builder).unwrap();
+  let dev_engine =
+    DevEngine::<rolldown_watcher::NotifyWatcher>::new(bundler_builder, DevOptions::default())
+      .unwrap();
   dev_engine.run().await;
   dev_engine.wait_for_close().await;
 }

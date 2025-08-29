@@ -388,6 +388,14 @@ impl Bundler {
       });
     }
   }
+
+  pub fn take_cache(&mut self) -> ScanStageCache {
+    std::mem::take(&mut self.cache)
+  }
+
+  pub fn set_cache(&mut self, cache: ScanStageCache) {
+    self.cache = cache;
+  }
 }
 
 struct CacheGuard<'a> {

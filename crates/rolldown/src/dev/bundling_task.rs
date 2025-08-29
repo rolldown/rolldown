@@ -4,7 +4,7 @@ use indexmap::IndexSet;
 use rolldown_error::BuildResult;
 use tokio::sync::Mutex;
 
-use crate::{Bundler, dev::dev_context::SharedDevContext};
+use crate::{Bundler, dev::dev_context::SharedDevContext, types::scan_stage_cache::ScanStageCache};
 
 pub struct BundlingTask {
   pub bundler: Arc<Mutex<Bundler>>,
@@ -12,6 +12,7 @@ pub struct BundlingTask {
   pub require_full_rebuild: bool,
   pub dev_data: SharedDevContext,
   pub ensure_latest_build: bool,
+  pub cache: Option<ScanStageCache>,
 }
 
 impl BundlingTask {
@@ -44,20 +45,24 @@ impl BundlingTask {
     self.build().await;
   }
 
-  async fn build(self) {
+  async fn build(mut self) {
     let build_result = self.build_inner().await;
 
     match build_result {
       Ok(()) => {}
       Err(_) => {
         let mut build_status = self.dev_data.state.lock().await;
+        let mut bundler = self.bundler.lock().await;
+        build_status.cache = Some(bundler.take_cache());
         build_status.try_to_idle().expect("FIXME: Should not unwrap here");
       }
     }
   }
 
-  async fn build_inner(&self) -> BuildResult<()> {
+  async fn build_inner(&mut self) -> BuildResult<()> {
     let mut bundler = self.bundler.lock().await;
+    bundler.set_cache(self.cache.take().unwrap_or_default());
+
     let changed_files = if self.require_full_rebuild {
       vec![]
     } else {
@@ -83,6 +88,7 @@ impl BundlingTask {
       let scan_output = bundler.scan(changed_files).await?;
       let _bundle_output = bundler.bundle_write(scan_output).await?;
     };
+    build_status.cache = Some(bundler.take_cache());
     tracing::trace!(
       "`BuildStatus` finished building with changed files: {:#?}",
       self.changed_files

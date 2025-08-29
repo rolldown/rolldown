@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-const node_assert = __toESM(require("node:assert"));
-const node_util = __toESM(require("node:util"));
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+let node_util = require("node:util");
+node_util = __toESM(node_util);
 
 //#region ../../../../../../../node_modules/.pnpm/util-deprecate@1.0.2/node_modules/util-deprecate/node.js
 var require_node = /* @__PURE__ */ __commonJS({ "../../../../../../../node_modules/.pnpm/util-deprecate@1.0.2/node_modules/util-deprecate/node.js": ((exports, module) => {

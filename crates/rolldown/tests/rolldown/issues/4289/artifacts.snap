@@ -121,7 +121,8 @@ Object.defineProperty(exports, 'default', {
 
 ```js
 const require_chunk = require('./chunk.js');
-const node_assert = require_chunk.__toESM(require("node:assert"));
+let node_assert = require("node:assert");
+node_assert = require_chunk.__toESM(node_assert);
 
 //#region non-node-mode.js
 async function main$2() {

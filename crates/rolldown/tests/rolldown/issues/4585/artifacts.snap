@@ -7,7 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-const node_process = __toESM(require("node:process"));
+let node_process = require("node:process");
+node_process = __toESM(node_process);
 
 //#region lib.js
 var VFile = class {

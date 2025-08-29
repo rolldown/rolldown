@@ -41,6 +41,18 @@ pub static RE_IIFE: LazyLock<Regex> = std::sync::LazyLock::new(|| {
   .unwrap()
 });
 
+static AT_IMPORT_RE: LazyLock<Regex> = std::sync::LazyLock::new(|| {
+  Regex::new(r#"@import(?:\s*(?:url\([^)]*\)|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')[^;]*|[^;]*);"#)
+    .unwrap()
+});
+
+static AT_CHARSET_RE: LazyLock<Regex> = std::sync::LazyLock::new(|| {
+  Regex::new(r#"@charset(?:\s*(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*').*?|[^;]*);"#).unwrap()
+});
+
+static MULTI_LINE_COMMENTS_RE: LazyLock<Regex> =
+  std::sync::LazyLock::new(|| Regex::new(r"\/\*[^*]*\*+(?:[^/*][^*]*\*+)*\/").unwrap());
+
 pub fn extract_index(id: &str) -> Option<&str> {
   let s = id.split_once("&index=")?.1;
   let end = s.as_bytes().iter().take_while(|b| b.is_ascii_digit()).count();
@@ -398,6 +410,37 @@ impl ViteCssPostPlugin {
   #[allow(clippy::unused_async)]
   pub async fn finalize_css(&self, _content: String) -> String {
     todo!()
+  }
+
+  pub fn hoist_at_rules(css: String) -> String {
+    let mut magic_string = None;
+
+    let mut css_without_comments = css.clone();
+    let bytes = unsafe { css_without_comments.as_bytes_mut() };
+    for matched in MULTI_LINE_COMMENTS_RE.find_iter(&css) {
+      bytes[matched.range()].fill(b' ');
+    }
+
+    for matched in AT_IMPORT_RE.find_iter(&css_without_comments) {
+      let s = magic_string.get_or_insert_with(|| string_wizard::MagicString::new(&css));
+      s.remove(matched.start(), matched.end());
+      s.append_left(0, matched.as_str());
+    }
+
+    let mut found_charset = false;
+    for matched in AT_CHARSET_RE.find_iter(&css_without_comments) {
+      let s = magic_string.get_or_insert_with(|| string_wizard::MagicString::new(&css));
+      s.remove(matched.start(), matched.end());
+      if !found_charset {
+        s.prepend(matched.as_str());
+        found_charset = true;
+      }
+    }
+
+    match magic_string {
+      Some(s) => s.to_string(),
+      None => css,
+    }
   }
 
   pub async fn get_css_asset_dir_name(

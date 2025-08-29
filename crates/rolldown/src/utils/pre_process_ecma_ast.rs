@@ -16,7 +16,6 @@ use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 
 use crate::types::oxc_parse_type::OxcParseType;
 
-use super::ecma_visitors::EnsureSpanUniqueness;
 use super::parse_to_ecma_ast::ParseToEcmaAstResult;
 use super::tweak_ast_for_scanning::PreProcessor;
 
@@ -134,10 +133,6 @@ impl PreProcessEcmaAst {
     ast.program.with_mut(|fields| {
       let mut pre_processor = PreProcessor::new(fields.allocator, bundle_options.keep_names);
       pre_processor.visit_program(fields.program);
-    });
-
-    ast.program.with_mut(|fields| {
-      EnsureSpanUniqueness::new().visit_program(fields.program);
     });
 
     // NOTE: Recreate semantic data because AST is changed in the transformations above.

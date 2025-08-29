@@ -3,11 +3,12 @@ use oxc::allocator::{Address, Allocator, TakeIn};
 use oxc::ast::NONE;
 use oxc::ast::ast::{self, BindingPatternKind, Declaration, ImportOrExportKind, Statement};
 use oxc::ast_visit::{VisitMut, walk_mut};
-use oxc::span::{SPAN, Span};
+use oxc::span::{GetSpanMut, SPAN, Span};
 use rolldown_ecmascript_utils::{AstSnippet, StatementExt};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.
+/// This also ensures span uniqueness in the AST.
 pub struct PreProcessor<'ast> {
   snippet: AstSnippet<'ast>,
   /// used to store none_hoisted statements.
@@ -15,6 +16,9 @@ pub struct PreProcessor<'ast> {
   keep_names: bool,
   statement_stack: Vec<Address>,
   statement_replace_map: FxHashMap<Address, Vec<Statement<'ast>>>,
+  // Fields for span uniqueness
+  visited_spans: FxHashSet<Span>,
+  next_unique_span_start: u32,
 }
 
 impl<'ast> PreProcessor<'ast> {
@@ -25,7 +29,26 @@ impl<'ast> PreProcessor<'ast> {
       keep_names,
       statement_stack: vec![],
       statement_replace_map: FxHashMap::default(),
+      visited_spans: FxHashSet::from_iter([SPAN]),
+      next_unique_span_start: 1,
     }
+  }
+
+  fn ensure_uniqueness(&mut self, span: &mut Span) {
+    if self.visited_spans.contains(span) {
+      *span = self.generate_unique_span();
+    }
+    self.visited_spans.insert(*span);
+  }
+
+  fn generate_unique_span(&mut self) -> Span {
+    let mut span_candidate = Span::new(self.next_unique_span_start, self.next_unique_span_start);
+    while self.visited_spans.contains(&span_candidate) {
+      self.next_unique_span_start += 1;
+      span_candidate = Span::new(self.next_unique_span_start, self.next_unique_span_start);
+    }
+    debug_assert!(span_candidate.is_empty());
+    span_candidate
   }
 
   /// split `var a = 1, b = 2;` into `var a = 1; var b = 2;`
@@ -66,6 +89,9 @@ impl<'ast> PreProcessor<'ast> {
 
 impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
+    // Initialize next_unique_span_start for span uniqueness
+    self.next_unique_span_start = program.span.end + 1;
+
     let original_body = program.body.take_in(self.snippet.alloc());
     program.body.reserve_exact(original_body.len());
     self.top_level_stmt_temp_storage = Vec::with_capacity(
@@ -174,6 +200,40 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
     {
       let rewritten = self.split_var_declaration(var_decl, Some(named_decl.span));
       self.statement_replace_map.insert(self.statement_stack.last().copied().unwrap(), rewritten);
+    }
+  }
+
+  // Span uniqueness visitor methods
+  fn visit_module_declaration(&mut self, it: &mut ast::ModuleDeclaration<'ast>) {
+    self.ensure_uniqueness(it.span_mut());
+    walk_mut::walk_module_declaration(self, it);
+  }
+
+  fn visit_import_expression(&mut self, it: &mut ast::ImportExpression<'ast>) {
+    self.ensure_uniqueness(it.span_mut());
+    walk_mut::walk_import_expression(self, it);
+  }
+
+  fn visit_this_expression(&mut self, it: &mut ast::ThisExpression) {
+    self.ensure_uniqueness(it.span_mut());
+    walk_mut::walk_this_expression(self, it);
+  }
+
+  fn visit_call_expression(&mut self, it: &mut ast::CallExpression<'ast>) {
+    if it.callee.is_specific_id("require") && it.arguments.len() == 1 {
+      self.ensure_uniqueness(it.span_mut());
+    }
+    walk_mut::walk_call_expression(self, it);
+  }
+
+  fn visit_new_expression(&mut self, it: &mut ast::NewExpression<'ast>) {
+    self.ensure_uniqueness(it.span_mut());
+    walk_mut::walk_new_expression(self, it);
+  }
+
+  fn visit_identifier_reference(&mut self, it: &mut ast::IdentifierReference<'ast>) {
+    if it.name == "require" {
+      self.ensure_uniqueness(it.span_mut());
     }
   }
 

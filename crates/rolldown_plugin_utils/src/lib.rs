@@ -29,7 +29,7 @@ pub use is_special_query::is_special_query;
 pub use join_url_segments::join_url_segments;
 pub use public_file_to_built_url::{PublicAssetUrlCache, PublicFileToBuiltUrlEnv};
 pub use remove_special_query::remove_special_query;
-pub use render_asset_url_in_js::{RenderAssetUrlInJsEnv, RenderAssetUrlInJsEnvConfig};
+pub use render_asset_url_in_js::RenderAssetUrlInJsEnv;
 pub use strip_bom::strip_bom;
 pub use to_output_file_path::{
   AssetUrlResult, RenderBuiltUrl, RenderBuiltUrlConfig, RenderBuiltUrlRet, ToOutputFilePathEnv,

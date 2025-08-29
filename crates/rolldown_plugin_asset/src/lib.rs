@@ -6,9 +6,8 @@ use derive_more::Debug;
 use rolldown_common::{ModuleType, Output, side_effects::HookSideEffects};
 use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_plugin_utils::{
-  AssetCache, FileToUrlEnv, PublicAssetUrlCache, RenderAssetUrlInJsEnv,
-  RenderAssetUrlInJsEnvConfig, RenderBuiltUrl, UsizeOrFunction, check_public_file,
-  find_special_query,
+  AssetCache, FileToUrlEnv, PublicAssetUrlCache, RenderAssetUrlInJsEnv, RenderBuiltUrl,
+  ToOutputFilePathEnv, UsizeOrFunction, check_public_file, find_special_query,
 };
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter::StringOrRegex, url::clean_url};
 use serde_json::Value;
@@ -134,16 +133,15 @@ impl Plugin for AssetPlugin {
     let env = RenderAssetUrlInJsEnv {
       ctx,
       code: &args.code,
-      chunk_filename: &args.chunk.filename,
-      config: RenderAssetUrlInJsEnvConfig {
+      is_worker: self.is_worker,
+      env: &ToOutputFilePathEnv {
         is_ssr: self.is_ssr,
-        is_worker: self.is_worker,
+        host_id: &args.chunk.filename,
         url_base: &self.url_base,
         decoded_base: &self.decoded_base,
         render_built_url: self.render_built_url.as_deref(),
       },
     };
-
     // TODO: consider using `MagicString` later
     Ok(
       env

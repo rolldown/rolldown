@@ -2,7 +2,7 @@ pub mod build_state;
 use build_state::{BuildBuildingState, BuildDelayingState, BuildState};
 use rolldown_error::BuildResult;
 
-use crate::dev::dev_context::BuildProcessFuture;
+use crate::{dev::dev_context::BuildProcessFuture, types::scan_stage_cache::ScanStageCache};
 use indexmap::IndexSet;
 use std::path::PathBuf;
 use tracing;
@@ -11,12 +11,18 @@ use tracing;
 pub struct BuildStateMachine<State = BuildState> {
   pub changed_files: IndexSet<PathBuf>,
   pub require_full_rebuild: bool,
+  pub cache: Option<ScanStageCache>,
   pub state: State,
 }
 
 impl BuildStateMachine<BuildState> {
   pub fn new() -> Self {
-    Self { changed_files: IndexSet::new(), require_full_rebuild: true, state: BuildState::Idle }
+    Self {
+      changed_files: IndexSet::new(),
+      require_full_rebuild: true,
+      state: BuildState::Idle,
+      cache: None,
+    }
   }
 
   pub fn is_busy(&self) -> bool {

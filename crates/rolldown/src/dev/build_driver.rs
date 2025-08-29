@@ -57,6 +57,7 @@ impl BuildDriver {
         require_full_rebuild: build_state.require_full_rebuild,
         dev_data: Arc::clone(&self.ctx),
         ensure_latest_build: true,
+        cache: build_state.cache.take(),
       };
 
       let bundling_future = (Box::pin(bundling_task.exec()) as PinBoxSendStaticFuture).shared();

@@ -100,7 +100,9 @@ impl BuildDriver {
     let mut hmr_manager = bundler.create_hmr_manager(cache);
     let updates = hmr_manager.compute_hmr_update_for_file_changes(changed_files).await?;
     build_state.cache = Some(hmr_manager.input.cache);
-    if let Some(on_hmr_updates) = self.ctx.options.on_hmr_updates.as_ref() { on_hmr_updates(updates); }
+    if let Some(on_hmr_updates) = self.ctx.options.on_hmr_updates.as_ref() {
+      on_hmr_updates(updates);
+    }
 
     Ok(())
   }

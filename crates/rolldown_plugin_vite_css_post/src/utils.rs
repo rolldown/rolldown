@@ -1,4 +1,5 @@
 use std::{
+  borrow::Cow,
   path::{Path, PathBuf},
   sync::{Arc, LazyLock},
 };
@@ -9,13 +10,15 @@ use rolldown_common::{
 };
 use rolldown_plugin::{HookRenderChunkArgs, PluginContext};
 use rolldown_plugin_utils::{
-  RenderAssetUrlInJsEnv, RenderAssetUrlInJsEnvConfig, RenderBuiltUrlConfig, ToOutputFilePathEnv,
+  AssetUrlItem, AssetUrlIter, AssetUrlResult, PublicAssetUrlCache, RenderAssetUrlInJsEnv,
+  RenderAssetUrlInJsEnvConfig, RenderBuiltUrlConfig, ToOutputFilePathEnv,
   constants::{
     CSSBundleName, CSSChunkCache, CSSEntriesCache, CSSStyles, PureCSSChunks, ViteMetadata,
   },
   create_to_import_meta_url_based_relative_runtime,
   css::is_css_request,
   get_chunk_original_name,
+  uri::encode_uri_path,
 };
 use rolldown_utils::{futures::block_on_spawn_all, url::clean_url};
 use string_wizard::MagicString;
@@ -29,6 +32,7 @@ pub const DEFAULT_CSS_BUNDLE_NAME: &str = "style.css";
 pub static RE_UMD: LazyLock<Regex> = std::sync::LazyLock::new(|| {
   Regex::new(r#"\}\)\((?:this,\s*)?function\([^()]*\)\s*\{(?:\s*"use strict";)?"#).unwrap()
 });
+
 pub static RE_IIFE: LazyLock<Regex> = std::sync::LazyLock::new(|| {
   Regex::new(
     r#"(?:(?:const|var)\s+\S+\s*=\s*|^|\n)\(?function\([^()]*\)\s*\{(?:\s*"use strict";)?"#,
@@ -99,6 +103,8 @@ impl ViteCssPostPlugin {
 
         let content = self
           .resolve_asset_urls_in_css(
+            ctx,
+            args,
             style.to_owned(),
             &css_asset_name,
             &args.options.asset_filenames,
@@ -186,7 +192,13 @@ impl ViteCssPostPlugin {
         );
 
         let content = self
-          .resolve_asset_urls_in_css(css_chunk, &css_asset_name, &args.options.asset_filenames)
+          .resolve_asset_urls_in_css(
+            ctx,
+            args,
+            css_chunk,
+            &css_asset_name,
+            &args.options.asset_filenames,
+          )
           .await?;
         let content = self.finalize_css(content).await;
 
@@ -266,6 +278,8 @@ impl ViteCssPostPlugin {
         args.chunk.filename.clone(),
         self
           .resolve_asset_urls_in_css(
+            ctx,
+            args,
             css_chunk,
             &self.get_css_bundle_name(ctx)?,
             &args.options.asset_filenames,
@@ -280,6 +294,8 @@ impl ViteCssPostPlugin {
   #[allow(clippy::unused_async, unused_variables)]
   pub async fn resolve_asset_urls_in_css(
     &self,
+    ctx: &PluginContext,
+    args: &HookRenderChunkArgs<'_>,
     css_chunk: String,
     css_asset_name: &str,
     css_file_names: &AssetFilenamesOutputOption,
@@ -290,9 +306,104 @@ impl ViteCssPostPlugin {
       None
     };
 
-    // TODO: replace asset url and public url
+    let to_relative = |filename: &Path, host_id: &Path| {
+      let relative_path = filename.relative(css_asset_dirname.as_ref().unwrap());
+      let relative_path = relative_path.to_slash_lossy();
+      if relative_path.starts_with('.') {
+        AssetUrlResult::WithoutRuntime(relative_path.into_owned())
+      } else {
+        AssetUrlResult::WithoutRuntime(rolldown_utils::concat_string!("./", relative_path))
+      }
+    };
 
-    Ok(css_chunk)
+    let mut magic_string = None;
+    for item in AssetUrlIter::from(css_chunk.as_str()).into_asset_url_iter() {
+      let s = magic_string.get_or_insert_with(|| string_wizard::MagicString::new(&css_chunk));
+      match item {
+        AssetUrlItem::Asset((range, reference_id, postfix)) => {
+          let filename = ctx.get_file_name(reference_id)?;
+          let filename = if let Some(postfix) = postfix {
+            Cow::Owned(rolldown_utils::concat_string!(filename, postfix))
+          } else {
+            Cow::Borrowed(filename.as_str())
+          };
+
+          let vite_meta_data = ctx.meta().get::<ViteMetadata>().unwrap_or_else(|| {
+            let value = Arc::new(ViteMetadata::default());
+            ctx.meta().insert(Arc::<ViteMetadata>::clone(&value));
+            value
+          });
+          vite_meta_data.imported_assets.insert(clean_url(&filename).into());
+
+          let env = ToOutputFilePathEnv {
+            url_base: &self.url_base,
+            decoded_base: &self.decoded_base,
+            render_built_url: self.render_built_url.as_deref(),
+            render_built_url_config: RenderBuiltUrlConfig {
+              r#type: "asset",
+              is_ssr: self.is_ssr,
+              host_id: &args.chunk.filename,
+              host_type: "css",
+            },
+          };
+
+          s.update(
+            range.start,
+            range.end,
+            encode_uri_path(
+              env.to_output_file_path(&filename, to_relative).await?.to_asset_url_in_css_or_html(),
+            ),
+          );
+        }
+        AssetUrlItem::PublicAsset((range, hash)) => {
+          let cache = ctx
+            .meta()
+            .get::<PublicAssetUrlCache>()
+            .ok_or_else(|| anyhow::anyhow!("PublicAssetUrlCache missing"))?;
+
+          let public_url = cache
+            .0
+            .get(hash)
+            .ok_or_else(|| {
+              anyhow::anyhow!("Can't find the cache of {}", &css_chunk[range.clone()])
+            })?
+            .to_string();
+
+          let env = ToOutputFilePathEnv {
+            url_base: &self.url_base,
+            decoded_base: &self.decoded_base,
+            render_built_url: self.render_built_url.as_deref(),
+            render_built_url_config: RenderBuiltUrlConfig {
+              r#type: "public",
+              is_ssr: self.is_ssr,
+              host_id: &args.chunk.filename,
+              host_type: "css",
+            },
+          };
+
+          let relative_path = ctx.cwd().relative(css_asset_dirname.as_ref().unwrap());
+          let relative_path = relative_path.to_slash_lossy();
+
+          s.update(
+            range.start,
+            range.end,
+            encode_uri_path(
+              env
+                .to_output_file_path(&public_url, |filename: &Path, host_id: &Path| {
+                  AssetUrlResult::WithoutRuntime(rolldown_utils::concat_string!(
+                    relative_path,
+                    public_url
+                  ))
+                })
+                .await?
+                .to_asset_url_in_css_or_html(),
+            ),
+          );
+        }
+      }
+    }
+
+    Ok(if let Some(magic_string) = magic_string { magic_string.to_string() } else { css_chunk })
   }
 
   #[allow(clippy::unused_async)]

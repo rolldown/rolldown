@@ -22,6 +22,7 @@ impl TypedMapKey for ViteImportGlob {
   type Value = ViteImportGlobValue;
 }
 
+// TODO: should bind with chunk
 #[derive(Debug, Default)]
 pub struct ViteMetadata {
   pub imported_assets: FxDashSet<ArcStr>,

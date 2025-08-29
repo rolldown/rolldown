@@ -50,29 +50,41 @@ impl AssetUrlResult {
 }
 
 pub struct ToOutputFilePathEnv<'a> {
+  pub is_ssr: bool,
+  pub host_id: &'a str,
   pub url_base: &'a str,
   pub decoded_base: &'a str,
   pub render_built_url: Option<&'a RenderBuiltUrl>,
-  pub render_built_url_config: RenderBuiltUrlConfig<'a>,
 }
 
 impl ToOutputFilePathEnv<'_> {
   pub async fn to_output_file_path(
     &self,
     filename: &str,
+    host_type: &str,
+    is_public_asset: bool,
     to_relative: impl Fn(&Path, &Path) -> AssetUrlResult,
   ) -> anyhow::Result<AssetUrlResult> {
     let mut relative = self.url_base.is_empty() || self.url_base == "./";
     if let Some(render_built_url) = self.render_built_url {
-      if let Some(result) = render_built_url(filename, &self.render_built_url_config).await? {
+      if let Some(result) = render_built_url(
+        filename,
+        &RenderBuiltUrlConfig {
+          is_ssr: self.is_ssr,
+          host_id: self.host_id,
+          r#type: if is_public_asset { "public" } else { "asset" },
+          host_type,
+        },
+      )
+      .await?
+      {
         match result {
           Either::Left(result) => return Ok(AssetUrlResult::WithoutRuntime(result)),
           Either::Right(result) => {
             if let Some(runtime) = result.runtime {
-              if matches!(self.render_built_url_config.host_type, "css" | "html") {
+              if matches!(host_type, "css" | "html") {
                 return Err(anyhow::anyhow!(
-                  "The `{{ runtime: '{runtime}' }}` is not supported for assets in {} files: {filename}",
-                  self.render_built_url_config.host_type
+                  "The `{{ runtime: '{runtime}' }}` is not supported for assets in {host_type} files: {filename}"
                 ));
               }
               return Ok(AssetUrlResult::WithRuntime(runtime));
@@ -84,8 +96,8 @@ impl ToOutputFilePathEnv<'_> {
         }
       }
     }
-    Ok(if relative && !self.render_built_url_config.is_ssr {
-      to_relative(filename.as_path(), self.render_built_url_config.host_id.as_path())
+    Ok(if relative && !self.is_ssr {
+      to_relative(filename.as_path(), self.host_id.as_path())
     } else {
       AssetUrlResult::WithoutRuntime(join_url_segments(self.decoded_base, filename).into_owned())
     })

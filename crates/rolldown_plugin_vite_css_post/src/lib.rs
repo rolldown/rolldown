@@ -6,7 +6,7 @@ use cow_utils::CowUtils;
 use rolldown_common::{ModuleType, side_effects::HookSideEffects};
 use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plugin};
 use rolldown_plugin_utils::{
-  RenderBuiltUrl,
+  RenderBuiltUrl, ToOutputFilePathEnv,
   constants::{CSSChunkCache, CSSModuleCache, CSSStyles, HTMLProxyResult, PureCSSChunks},
   css::is_css_request,
   data_to_esm, find_special_query, is_special_query,
@@ -156,10 +156,21 @@ impl Plugin for ViteCssPostPlugin {
       }
     }
 
-    let mut magic_string = None;
+    let ctx = utils::FinalizedContext {
+      plugin_ctx: ctx,
+      args,
+      env: &ToOutputFilePathEnv {
+        is_ssr: self.is_ssr,
+        host_id: &args.chunk.filename,
+        url_base: &self.url_base,
+        decoded_base: &self.decoded_base,
+        render_built_url: self.render_built_url.as_deref(),
+      },
+    };
 
-    self.finalize_vite_css_urls(ctx, args, &styles, &mut magic_string).await?;
-    self.finalize_css_chunk(ctx, args, css_chunk, is_pure_css_chunk, &mut magic_string).await?;
+    let mut magic_string = None;
+    self.finalize_vite_css_urls(&ctx, &styles, &mut magic_string).await?;
+    self.finalize_css_chunk(&ctx, css_chunk, is_pure_css_chunk, &mut magic_string).await?;
 
     Ok(magic_string.map(|magic_string| HookRenderChunkOutput {
       code: magic_string.to_string(),

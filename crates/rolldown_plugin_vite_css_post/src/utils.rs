@@ -1,5 +1,6 @@
 use std::{
   borrow::Cow,
+  ops::Deref,
   path::{Path, PathBuf},
   sync::{Arc, LazyLock},
 };
@@ -11,7 +12,7 @@ use rolldown_common::{
 use rolldown_plugin::{HookRenderChunkArgs, PluginContext};
 use rolldown_plugin_utils::{
   AssetUrlItem, AssetUrlIter, AssetUrlResult, PublicAssetUrlCache, RenderAssetUrlInJsEnv,
-  RenderAssetUrlInJsEnvConfig, RenderBuiltUrlConfig, ToOutputFilePathEnv,
+  ToOutputFilePathEnv,
   constants::{
     CSSBundleName, CSSChunkCache, CSSEntriesCache, CSSStyles, PureCSSChunks, ViteMetadata,
   },
@@ -46,48 +47,49 @@ pub fn extract_index(id: &str) -> Option<&str> {
   (end > 0).then_some(&s[..end])
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Default)]
 pub struct UrlEmitTasks {
   pub range: (usize, usize),
   pub replacement: String,
 }
 
+pub struct FinalizedContext<'a, 'b, 'c> {
+  pub plugin_ctx: &'a PluginContext,
+  pub env: &'a ToOutputFilePathEnv<'b>,
+  pub args: &'a HookRenderChunkArgs<'c>,
+}
+
+impl Deref for FinalizedContext<'_, '_, '_> {
+  type Target = PluginContext;
+
+  fn deref(&self) -> &Self::Target {
+    self.plugin_ctx
+  }
+}
+
 impl ViteCssPostPlugin {
   pub async fn finalize_vite_css_urls<'a>(
     &self,
-    ctx: &PluginContext,
-    args: &'a HookRenderChunkArgs<'_>,
+    ctx: &FinalizedContext<'a, '_, '_>,
     css_styles: &CSSStyles,
     magic_string: &mut Option<MagicString<'a>>,
   ) -> anyhow::Result<()> {
-    let mut css_url_iter = args.code.match_indices("__VITE_CSS_URL__").peekable();
+    let mut css_url_iter = ctx.args.code.match_indices("__VITE_CSS_URL__").peekable();
     if css_url_iter.peek().is_some() {
       let vite_metadata = ctx.meta().get::<ViteMetadata>().expect("ViteMetadata missing");
-      let env = ToOutputFilePathEnv {
-        url_base: &self.url_base,
-        decoded_base: &self.decoded_base,
-        render_built_url: self.render_built_url.as_deref(),
-        render_built_url_config: RenderBuiltUrlConfig {
-          r#type: "asset",
-          is_ssr: self.is_ssr,
-          host_id: &args.chunk.filename,
-          host_type: "js",
-        },
-      };
       let tasks = css_url_iter.map(async |(index, _)| {
         let start = index + "__VITE_CSS_URL__".len();
-        let Some(pos) = args.code[start..].find("__") else {
+        let Some(pos) = ctx.args.code[start..].find("__") else {
           return Err(anyhow::anyhow!(
             "Invalid __VITE_CSS_URL__ in '{}', expected '__VITE_CSS_URL__<base64>__'",
-            args.chunk.name
+            ctx.args.chunk.name
           ));
         };
 
         let id = unsafe {
           String::from_utf8_unchecked(
             base64_simd::STANDARD
-              .decode_to_vec(&args.code[start..start + pos])
+              .decode_to_vec(&ctx.args.code[start..start + pos])
               .map_err(|_| anyhow::anyhow!("Invalid base64 in '__VITE_CSS_URL__'"))?,
           )
         };
@@ -104,10 +106,9 @@ impl ViteCssPostPlugin {
         let content = self
           .resolve_asset_urls_in_css(
             ctx,
-            args,
             style.to_owned(),
             &css_asset_name,
-            &args.options.asset_filenames,
+            &ctx.args.options.asset_filenames,
           )
           .await?;
         let content = self.finalize_css(content).await;
@@ -124,9 +125,12 @@ impl ViteCssPostPlugin {
         let filename = ctx.get_file_name(&reference_id)?;
         vite_metadata.imported_assets.insert(clean_url(&reference_id).into());
 
-        let url = env
+        let url = ctx
+          .env
           .to_output_file_path(
             &filename,
+            "js",
+            false,
             create_to_import_meta_url_based_relative_runtime(ctx.options().format, self.is_worker),
           )
           .await?;
@@ -135,7 +139,7 @@ impl ViteCssPostPlugin {
       });
 
       let magic_string =
-        magic_string.get_or_insert_with(|| string_wizard::MagicString::new(&args.code));
+        magic_string.get_or_insert_with(|| string_wizard::MagicString::new(&ctx.args.code));
       for task in block_on_spawn_all(tasks).await {
         let UrlEmitTasks { range: (start, end), replacement } = task?;
         magic_string.update(start, end, replacement);
@@ -147,8 +151,7 @@ impl ViteCssPostPlugin {
   #[allow(clippy::too_many_lines)]
   pub async fn finalize_css_chunk<'a>(
     &self,
-    ctx: &PluginContext,
-    args: &'a HookRenderChunkArgs<'_>,
+    ctx: &FinalizedContext<'a, '_, '_>,
     css_chunk: String,
     is_pure_css_chunk: bool,
     magic_string: &mut Option<MagicString<'a>>,
@@ -157,23 +160,24 @@ impl ViteCssPostPlugin {
       return Ok(());
     }
 
-    if is_pure_css_chunk && args.options.format.is_esm_or_cjs() {
+    if is_pure_css_chunk && ctx.args.options.format.is_esm_or_cjs() {
       ctx
         .meta()
         .get::<PureCSSChunks>()
         .expect("PureCSSChunks missing")
         .inner
-        .insert(args.chunk.filename.clone());
+        .insert(ctx.args.chunk.filename.clone());
     }
 
     if self.css_code_split {
-      if args.options.format.is_esm_or_cjs() && !args.chunk.filename.contains("-legacy") {
-        let css_asset_path = PathBuf::from(args.chunk.name.as_str()).with_extension("css");
+      if ctx.args.options.format.is_esm_or_cjs() && !ctx.args.chunk.filename.contains("-legacy") {
+        let css_asset_path = PathBuf::from(ctx.args.chunk.name.as_str()).with_extension("css");
         // if facadeModuleId doesn't exist or doesn't have a CSS extension,
         // that means a JS entry file imports a CSS file.
         // in this case, only use the filename for the CSS chunk name like JS chunks.
-        let css_asset_name = if args.chunk.is_entry
-          && args
+        let css_asset_name = if ctx.args.chunk.is_entry
+          && ctx
+            .args
             .chunk
             .facade_module_id
             .as_ref()
@@ -187,17 +191,16 @@ impl ViteCssPostPlugin {
         let original_file_name = get_chunk_original_name(
           ctx.cwd(),
           self.is_legacy,
-          &args.chunk.name,
-          args.chunk.facade_module_id.as_ref(),
+          &ctx.args.chunk.name,
+          ctx.args.chunk.facade_module_id.as_ref(),
         );
 
         let content = self
           .resolve_asset_urls_in_css(
             ctx,
-            args,
             css_chunk,
             &css_asset_name,
-            &args.options.asset_filenames,
+            &ctx.args.options.asset_filenames,
           )
           .await?;
         let content = self.finalize_css(content).await;
@@ -218,7 +221,7 @@ impl ViteCssPostPlugin {
           .imported_assets
           .insert(ctx.get_file_name(&reference_id)?);
 
-        if args.chunk.is_entry && is_pure_css_chunk {
+        if ctx.args.chunk.is_entry && is_pure_css_chunk {
           ctx
             .meta()
             .get::<CSSEntriesCache>()
@@ -227,18 +230,21 @@ impl ViteCssPostPlugin {
             .insert(reference_id);
         }
       } else if self.is_client {
-        let injection_point = match args.options.format {
+        let injection_point = match ctx.args.options.format {
           OutputFormat::Esm => {
-            if args.code.starts_with("#!") {
-              args.code.find('\n').unwrap_or(0)
+            if ctx.args.code.starts_with("#!") {
+              ctx.args.code.find('\n').unwrap_or(0)
             } else {
               0
             }
           }
           OutputFormat::Iife | OutputFormat::Umd => {
-            let regex =
-              if matches!(args.options.format, OutputFormat::Iife) { &RE_IIFE } else { &RE_UMD };
-            let Some(m) = regex.find(&args.code) else {
+            let regex = if matches!(ctx.args.options.format, OutputFormat::Iife) {
+              &RE_IIFE
+            } else {
+              &RE_UMD
+            };
+            let Some(m) = regex.find(&ctx.args.code) else {
               return Err(anyhow::anyhow!("Injection point for inlined CSS not found"));
             };
             m.end()
@@ -249,18 +255,8 @@ impl ViteCssPostPlugin {
         };
 
         let content = serde_json::to_string(&self.finalize_css(css_chunk).await)?;
-        let env = RenderAssetUrlInJsEnv {
-          ctx,
-          code: &content,
-          chunk_filename: &args.chunk.filename,
-          config: RenderAssetUrlInJsEnvConfig {
-            is_ssr: self.is_ssr,
-            is_worker: self.is_worker,
-            url_base: &self.url_base,
-            decoded_base: &self.decoded_base,
-            render_built_url: self.render_built_url.as_deref(),
-          },
-        };
+        let env =
+          RenderAssetUrlInJsEnv { ctx, env: ctx.env, code: &content, is_worker: self.is_worker };
 
         let css_string = env.render_asset_url_in_js().await?.unwrap_or(content);
         let inject_code = rolldown_utils::concat_string!(
@@ -270,19 +266,18 @@ impl ViteCssPostPlugin {
         );
 
         magic_string
-          .get_or_insert_with(|| string_wizard::MagicString::new(&args.code))
+          .get_or_insert_with(|| string_wizard::MagicString::new(&ctx.args.code))
           .append_right(injection_point, inject_code);
       }
     } else {
       ctx.meta().get::<CSSChunkCache>().expect("CSSChunkCache missing").inner.insert(
-        args.chunk.filename.clone(),
+        ctx.args.chunk.filename.clone(),
         self
           .resolve_asset_urls_in_css(
             ctx,
-            args,
             css_chunk,
             &self.get_css_bundle_name(ctx)?,
-            &args.options.asset_filenames,
+            &ctx.args.options.asset_filenames,
           )
           .await?,
       );
@@ -294,8 +289,7 @@ impl ViteCssPostPlugin {
   #[allow(clippy::unused_async, unused_variables)]
   pub async fn resolve_asset_urls_in_css(
     &self,
-    ctx: &PluginContext,
-    args: &HookRenderChunkArgs<'_>,
+    ctx: &FinalizedContext<'_, '_, '_>,
     css_chunk: String,
     css_asset_name: &str,
     css_file_names: &AssetFilenamesOutputOption,
@@ -336,22 +330,21 @@ impl ViteCssPostPlugin {
           vite_meta_data.imported_assets.insert(clean_url(&filename).into());
 
           let env = ToOutputFilePathEnv {
+            is_ssr: self.is_ssr,
+            host_id: &ctx.args.chunk.filename,
             url_base: &self.url_base,
             decoded_base: &self.decoded_base,
             render_built_url: self.render_built_url.as_deref(),
-            render_built_url_config: RenderBuiltUrlConfig {
-              r#type: "asset",
-              is_ssr: self.is_ssr,
-              host_id: &args.chunk.filename,
-              host_type: "css",
-            },
           };
 
           s.update(
             range.start,
             range.end,
             encode_uri_path(
-              env.to_output_file_path(&filename, to_relative).await?.to_asset_url_in_css_or_html(),
+              env
+                .to_output_file_path(&filename, "css", false, to_relative)
+                .await?
+                .to_asset_url_in_css_or_html(),
             ),
           );
         }
@@ -370,15 +363,11 @@ impl ViteCssPostPlugin {
             .to_string();
 
           let env = ToOutputFilePathEnv {
+            is_ssr: self.is_ssr,
+            host_id: &ctx.args.chunk.filename,
             url_base: &self.url_base,
             decoded_base: &self.decoded_base,
             render_built_url: self.render_built_url.as_deref(),
-            render_built_url_config: RenderBuiltUrlConfig {
-              r#type: "public",
-              is_ssr: self.is_ssr,
-              host_id: &args.chunk.filename,
-              host_type: "css",
-            },
           };
 
           let relative_path = ctx.cwd().relative(css_asset_dirname.as_ref().unwrap());
@@ -389,7 +378,7 @@ impl ViteCssPostPlugin {
             range.end,
             encode_uri_path(
               env
-                .to_output_file_path(&public_url, |filename: &Path, host_id: &Path| {
+                .to_output_file_path(&public_url, "css", true, |filename: &Path, host_id: &Path| {
                   AssetUrlResult::WithoutRuntime(rolldown_utils::concat_string!(
                     relative_path,
                     public_url

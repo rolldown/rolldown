@@ -2,12 +2,11 @@ use std::sync::Arc;
 
 use rolldown_utils::url::clean_url;
 
-use crate::{
-  PublicAssetUrlCache, ToOutputFilePathInJSEnv,
+use super::{
+  PublicAssetUrlCache, ToOutputFilePathEnv,
   constants::ViteMetadata,
-  to_output_file_path_in_js::{AssetUrlResult, RenderBuiltUrl, RenderBuiltUrlConfig},
+  to_output_file_path::{RenderBuiltUrl, RenderBuiltUrlConfig},
   to_relative_runtime_path::create_to_import_meta_url_based_relative_runtime,
-  uri::encode_uri_path,
 };
 
 pub struct RenderAssetUrlInJsEnvConfig<'a> {
@@ -102,7 +101,7 @@ impl RenderAssetUrlInJsEnv<'_> {
         continue;
       };
 
-      let env = ToOutputFilePathInJSEnv {
+      let env = ToOutputFilePathEnv {
         url_base: self.config.url_base,
         decoded_base: self.config.decoded_base,
         render_built_url: self.config.render_built_url,
@@ -115,7 +114,7 @@ impl RenderAssetUrlInJsEnv<'_> {
       };
 
       let url = env
-        .to_output_file_path_in_js(
+        .to_output_file_path(
           &filename,
           create_to_import_meta_url_based_relative_runtime(
             self.ctx.options().format,
@@ -126,15 +125,7 @@ impl RenderAssetUrlInJsEnv<'_> {
 
       let code = code.get_or_insert_with(|| String::with_capacity(self.code.len()));
       code.push_str(&self.code[..last]);
-      match url {
-        AssetUrlResult::WithRuntime(v) => {
-          code.push_str(&rolldown_utils::concat_string!("\"+", v, "+\""));
-        }
-        AssetUrlResult::WithoutRuntime(v) => {
-          let string = serde_json::to_string(&encode_uri_path(v))?;
-          code.push_str(&string[1..string.len() - 1]);
-        }
-      }
+      code.push_str(&url.to_asset_url_in_js()?);
       last = end;
     }
 

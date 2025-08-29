@@ -1,12 +1,26 @@
-import {
+import fs from 'node:fs';
+import path from 'node:path'
+import assert from 'node:assert'
+
+import type {
   RolldownOutput as RollupOutput,
   OutputChunk as RolldownOutputChunk,
   OutputAsset as RolldownOutputAsset,
 } from 'rolldown'
-import nodePath from 'node:path'
-import assert from 'node:assert'
-import { workspaceRoot } from '@rolldown/testing'
 
+/**
+ * @description
+ * - Get the absolute path to the root of the workspace. The root is always the directory containing the root `Cargo.toml`, `package.json`, `pnpm-workspace.yaml` etc.
+ * - `workspaceRoot('packages')` equals to `path.resolve(workspaceRoot(), 'packages')`
+ */
+export function workspaceRoot(...joined: string[]) {
+  return path.resolve(import.meta.dirname, '../../../..', ...joined);
+}
+
+assert(
+  fs.existsSync(workspaceRoot('pnpm-workspace.yaml')),
+  `${workspaceRoot('pnpm-workspace.yaml')} does not exist`,
+);
 export function getOutputChunkNames(output: RollupOutput) {
   return output.output
     .filter((chunk) => chunk.type === 'chunk')
@@ -52,7 +66,7 @@ export function testsDir(...joined: string[]) {
   return projectDir('tests', ...joined)
 }
 
-assert.deepEqual(testsDir().split(nodePath.sep).slice(-4), [
+assert.deepEqual(testsDir().split(path.sep).slice(-4), [
   'rolldown',
   'packages',
   'rolldown',

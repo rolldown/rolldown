@@ -21,7 +21,6 @@
     { "path": "./packages/rolldown" },
     { "path": "./packages/rolldown/tests" },
     { "path": "./packages/rollup-tests" },
-    { "path": "./packages/testing" },
     { "path": "./packages/test-dev-server" },
     { "path": "./packages/vite-tests" }
   ]

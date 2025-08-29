@@ -132,7 +132,6 @@ pub use crate::{
   types::asset_meta::{InstantiationKind, SourcemapAssetMeta},
   types::ast_scope_idx::AstScopeIdx,
   types::ast_scopes::AstScopes,
-  types::bundler_file_system::BundlerFileSystem,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
   types::concatenate_wrapped_module::{
@@ -163,8 +162,7 @@ pub use crate::{
   types::module_info::ModuleInfo,
   types::module_namespace_included_reason::ModuleNamespaceIncludedReason,
   types::module_render_output::ModuleRenderOutput,
-  types::module_table::{IndexExternalModules, IndexModules, ModuleTable},
-  types::module_view::ModuleView,
+  types::module_table::{IndexModules, ModuleTable},
   types::named_export::LocalExport,
   types::named_import::{NamedImport, Specifier},
   types::namespace_alias::NamespaceAlias,

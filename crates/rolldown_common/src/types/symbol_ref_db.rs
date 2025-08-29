@@ -143,6 +143,12 @@ impl SymbolRefDb {
   }
 
   #[must_use]
+  pub fn with_inner(mut self, inner: IndexVec<ModuleIdx, Option<SymbolRefDbForModule>>) -> Self {
+    self.inner = inner;
+    self
+  }
+
+  #[must_use]
   pub fn clone_without_scoping(&self) -> SymbolRefDb {
     let mut vec = IndexVec::with_capacity(self.inner.len());
     for inner in &self.inner {

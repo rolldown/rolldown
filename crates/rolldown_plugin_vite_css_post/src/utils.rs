@@ -9,15 +9,13 @@ use rolldown_common::{
 };
 use rolldown_plugin::{HookRenderChunkArgs, PluginContext};
 use rolldown_plugin_utils::{
-  AssetUrlResult, RenderAssetUrlInJsEnv, RenderAssetUrlInJsEnvConfig, RenderBuiltUrlConfig,
-  ToOutputFilePathInJSEnv,
+  RenderAssetUrlInJsEnv, RenderAssetUrlInJsEnvConfig, RenderBuiltUrlConfig, ToOutputFilePathEnv,
   constants::{
     CSSBundleName, CSSChunkCache, CSSEntriesCache, CSSStyles, PureCSSChunks, ViteMetadata,
   },
   create_to_import_meta_url_based_relative_runtime,
   css::is_css_request,
   get_chunk_original_name,
-  uri::encode_uri_path,
 };
 use rolldown_utils::{futures::block_on_spawn_all, url::clean_url};
 use string_wizard::MagicString;
@@ -62,7 +60,7 @@ impl ViteCssPostPlugin {
     let mut css_url_iter = args.code.match_indices("__VITE_CSS_URL__").peekable();
     if css_url_iter.peek().is_some() {
       let vite_metadata = ctx.meta().get::<ViteMetadata>().expect("ViteMetadata missing");
-      let env = ToOutputFilePathInJSEnv {
+      let env = ToOutputFilePathEnv {
         url_base: &self.url_base,
         decoded_base: &self.decoded_base,
         render_built_url: self.render_built_url.as_deref(),
@@ -121,21 +119,13 @@ impl ViteCssPostPlugin {
         vite_metadata.imported_assets.insert(clean_url(&reference_id).into());
 
         let url = env
-          .to_output_file_path_in_js(
+          .to_output_file_path(
             &filename,
             create_to_import_meta_url_based_relative_runtime(ctx.options().format, self.is_worker),
           )
           .await?;
 
-        let replacement = match url {
-          AssetUrlResult::WithRuntime(v) => rolldown_utils::concat_string!("\"+", v, "+\""),
-          AssetUrlResult::WithoutRuntime(v) => {
-            let string = serde_json::to_string(&encode_uri_path(v))?;
-            string[1..string.len() - 1].to_owned()
-          }
-        };
-
-        Ok(UrlEmitTasks { range: (index, index + pos + 2), replacement })
+        Ok(UrlEmitTasks { range: (index, index + pos + 2), replacement: url.to_asset_url_in_js()? })
       });
 
       let magic_string =

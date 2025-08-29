@@ -10,7 +10,7 @@ mod public_file_to_built_url;
 mod remove_special_query;
 mod render_asset_url_in_js;
 mod strip_bom;
-mod to_output_file_path_in_js;
+mod to_output_file_path;
 mod to_relative_runtime_path;
 
 pub mod constants;
@@ -29,7 +29,7 @@ pub use public_file_to_built_url::{PublicAssetUrlCache, PublicFileToBuiltUrlEnv}
 pub use remove_special_query::remove_special_query;
 pub use render_asset_url_in_js::{RenderAssetUrlInJsEnv, RenderAssetUrlInJsEnvConfig};
 pub use strip_bom::strip_bom;
-pub use to_output_file_path_in_js::{
-  AssetUrlResult, RenderBuiltUrl, RenderBuiltUrlConfig, RenderBuiltUrlRet, ToOutputFilePathInJSEnv,
+pub use to_output_file_path::{
+  AssetUrlResult, RenderBuiltUrl, RenderBuiltUrlConfig, RenderBuiltUrlRet, ToOutputFilePathEnv,
 };
 pub use to_relative_runtime_path::create_to_import_meta_url_based_relative_runtime;

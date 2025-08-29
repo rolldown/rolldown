@@ -4,7 +4,7 @@ use cow_utils::CowUtils as _;
 use rolldown_common::OutputFormat;
 use sugar_path::SugarPath as _;
 
-use crate::to_output_file_path_in_js::AssetUrlResult;
+use super::to_output_file_path::AssetUrlResult;
 
 const CURRENT_SCRIPT_URL_OR_BASE_URI: &str = "typeof document === 'undefined' ? location.href : document.currentScript && document.currentScript.tagName.toUpperCase() === 'SCRIPT' && document.currentScript.src || document.baseURI";
 

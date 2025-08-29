@@ -96,7 +96,7 @@ impl RenderAssetUrlInJsEnv<'_> {
           .ok_or_else(|| anyhow::anyhow!("Can't find the cache of {}", &self.code[start..end]))?
           .to_string();
 
-        (end, filename, "js")
+        (end, filename, "public")
       } else {
         continue;
       };

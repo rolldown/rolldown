@@ -24,7 +24,6 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@actions/core": "^1.11.1",
     "@oxc-node/core": "catalog:",
     "@oxc-project/runtime": "catalog:",
     "@types/node": "24.3.0",

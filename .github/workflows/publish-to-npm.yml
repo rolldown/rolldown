@@ -104,25 +104,14 @@ jobs:
           find ./packages/ -type d -maxdepth 1 -exec cp LICENSE {} \;
           find ./packages/ -type d -maxdepth 1 -exec cp THIRD-PARTY-LICENSE {} \;
 
-      - name: Set Publishing Config
-        run: pnpm config set '//registry.npmjs.org/:_authToken' "${NPM_TOKEN}"
-        env:
-          NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
-
       - name: Publish(Dry Run)
         run: |
           pnpm publish -r --tag latest --dry-run --no-git-checks
-        env:
-          NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish
         run: |
+          npm install -g npm
           pnpm publish -r --tag latest --no-git-checks
-        env:
-          NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
 
   release:
     needs: [check, publish]

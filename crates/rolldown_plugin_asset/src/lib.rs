@@ -3,7 +3,7 @@ mod utils;
 use std::{borrow::Cow, sync::Arc};
 
 use derive_more::Debug;
-use rolldown_common::{ModuleType, Output, side_effects::HookSideEffects};
+use rolldown_common::{ModuleType, Output, SourceMapType, side_effects::HookSideEffects};
 use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_plugin_utils::{
   AssetCache, FileToUrlEnv, PublicAssetUrlCache, RenderAssetUrlInJsEnv,
@@ -12,6 +12,7 @@ use rolldown_plugin_utils::{
 };
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter::StringOrRegex, url::clean_url};
 use serde_json::Value;
+use string_wizard::SourceMapOptions;
 
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Default)]
@@ -144,13 +145,26 @@ impl Plugin for AssetPlugin {
       },
     };
 
-    // TODO: consider using `MagicString` later
-    Ok(
-      env
-        .render_asset_url_in_js()
-        .await?
-        .map(|code| rolldown_plugin::HookRenderChunkOutput { code, map: None }),
-    )
+    Ok(env.render_asset_url_in_js().await?.map(|code| {
+      let magic_string = string_wizard::MagicString::new(code);
+      let sourcemap = ctx.options().sourcemap.as_ref();
+      rolldown_plugin::HookRenderChunkOutput {
+        code: magic_string.to_string(),
+        map: match sourcemap {
+          None => None,
+          Some(enable_sourcemap) => match enable_sourcemap {
+            SourceMapType::File | SourceMapType::Inline => {
+              Some(magic_string.source_map(SourceMapOptions {
+                hires: string_wizard::Hires::Boundary,
+                include_content: true,
+                source: args.chunk.filename.as_str().into(),
+              }))
+            }
+            SourceMapType::Hidden => None,
+          },
+        },
+      }
+    }))
   }
 
   async fn generate_bundle(

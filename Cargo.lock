@@ -2979,6 +2979,7 @@ dependencies = [
  "rolldown_plugin_utils",
  "rolldown_utils",
  "serde_json",
+ "string_wizard",
 ]
 
 [[package]]

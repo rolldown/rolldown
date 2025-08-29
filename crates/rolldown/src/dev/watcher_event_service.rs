@@ -1,3 +1,4 @@
+use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_watcher::FileChangeResult;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 
@@ -38,20 +39,32 @@ impl WatcherEventService {
       match msg {
         WatcherEventServiceMsg::FileChange(file_change_result) => match file_change_result {
           Ok(batched_events) => {
-            let changed_files = batched_events
-              .into_iter()
-              .flat_map(|batched_event| match &batched_event.detail.kind {
-                notify::EventKind::Modify(_modify_kind) => batched_event.detail.paths,
-                _ => {
-                  vec![]
-                }
-              })
-              .collect::<Vec<_>>();
+            // TODO: using a IndexSet here will cause changes like [a.js, b.js, a.js] to be [a.js, b.js].
+            // Not sure if we want this behavior for hmr scenario.
+            let mut changed_files = FxIndexSet::default();
+            batched_events.into_iter().for_each(|batched_event| match &batched_event.detail.kind {
+              notify::EventKind::Modify(_modify_kind) => {
+                changed_files.extend(batched_event.detail.paths);
+              }
+              _ => {}
+            });
 
-            self.build_driver.register_changed_files(changed_files).await;
+            self
+              .build_driver
+              .register_changed_files(changed_files.clone().into_iter().collect())
+              .await;
             if self.ctx.options.eager_rebuild {
               self.build_driver.schedule_build_if_stale().await.expect("Should handle the error");
             }
+
+            let changed_files =
+              changed_files.into_iter().map(|file| file.to_string_lossy().to_string()).collect();
+
+            self
+              .build_driver
+              .generate_hmr_updates(changed_files)
+              .await
+              .expect("Should handle the error");
           }
           Err(e) => {
             eprintln!("notify error: {e:?}");

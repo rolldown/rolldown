@@ -283,6 +283,16 @@ impl Bundler {
     &self.plugin_driver.watch_files
   }
 
+  pub fn create_hmr_manager(&self, cache: ScanStageCache) -> HmrManager {
+    HmrManager::new(HmrManagerInput {
+      fs: self.fs.clone(),
+      options: Arc::clone(&self.options),
+      resolver: Arc::clone(&self.resolver),
+      plugin_driver: Arc::clone(&self.plugin_driver),
+      cache,
+    })
+  }
+
   pub async fn generate_hmr_patch(
     &mut self,
     changed_files: Vec<String>,

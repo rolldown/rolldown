@@ -1,9 +1,12 @@
+use std::sync::Arc;
+
 use rolldown::dev::DevOptions;
 use rolldown::{BundlerBuilder, BundlerOptions, DevEngine, ExperimentalOptions};
 use sugar_path::SugarPath;
 
 // RD_LOG=rolldown::dev=trace cargo run --example dev
 
+#[expect(clippy::print_stdout)]
 #[tokio::main]
 async fn main() {
   let bundler_builder = BundlerBuilder::default().with_options(BundlerOptions {
@@ -15,7 +18,12 @@ async fn main() {
   });
   let dev_engine = DevEngine::<rolldown_watcher::NotifyWatcher>::new(
     bundler_builder,
-    DevOptions { eager_rebuild: Some(true), ..Default::default() },
+    DevOptions {
+      eager_rebuild: Some(false),
+      on_hmr_updates: Some(Arc::new(|updates| {
+        println!("HMR updates: {updates:#?}");
+      })),
+    },
   )
   .unwrap();
   dev_engine.run().await;

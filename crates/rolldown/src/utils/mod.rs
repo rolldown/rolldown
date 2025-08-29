@@ -1,7 +1,6 @@
 pub mod apply_inner_plugins;
 pub mod augment_chunk_hash;
 pub mod chunk;
-pub mod ecma_visitors;
 pub mod load_entry_module;
 pub mod load_source;
 pub mod normalize_transform_options;

@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region node_modules/foo/foo.js
+const foo$2 = 1;
+
+//#endregion
+//#region node_modules/foo/a.js
+console.log("should be included");
+var foo$1 = foo$2;
+
+//#endregion
+//#region node_modules/foo/index.js
+var foo = foo$1;
+
+//#endregion
+//#region main.js
+console.log(foo);
+
+//#endregion
+```

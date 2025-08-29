@@ -17,10 +17,9 @@ export { class_default as default };
 ```js
 //#region default.js
 const foo = 42;
-var default_default = foo;
 
 //#endregion
-export { default_default as default };
+export { foo as default };
 ```
 ## function.js
 
@@ -37,11 +36,11 @@ export { func as default };
 
 ```js
 import class_default from "./class.js";
-import default_default from "./default.js";
+import foo from "./default.js";
 import func from "./function.js";
 
 //#region main.js
-console.log(class_default, default_default, func);
+console.log(class_default, foo, func);
 
 //#endregion
 ```

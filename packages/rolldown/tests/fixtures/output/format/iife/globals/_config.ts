@@ -42,10 +42,10 @@ export default defineTest({
       node_path = __toESM(node_path);
 
       //#region main.js
-      var main_default = node_path.join;
+      var join = node_path.join;
 
       //#endregion
-      return main_default;
+      return join;
       })(path);"
     `)
   },

@@ -1,0 +1,6 @@
+{
+  "config": {
+    "format": "cjs",
+    "external": ["external"]
+  }
+}

@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+let external = require("external");
+external = __toESM(external);
+
+exports.readFileSync = external.readFileSync;
+Object.keys(external).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return external[k]; }
+  });
+});
+
+```

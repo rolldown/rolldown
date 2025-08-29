@@ -7,7 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-const fs = __toESM(require("fs"));
+let fs = require("fs");
+fs = __toESM(fs);
 
 //#region entry.js
 console.log(fs, fs.readFileSync, fs.default);

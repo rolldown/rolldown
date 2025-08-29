@@ -7,7 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 const require_share$1 = require('./share.js');
-const node_assert = require_share$1.__toESM(require("node:assert"));
+let node_assert = require("node:assert");
+node_assert = require_share$1.__toESM(node_assert);
 
 //#region main1.js
 var import_share = /* @__PURE__ */ require_share$1.__toESM(require_share$1.require_share());
@@ -19,7 +20,8 @@ node_assert.default.equal((0, import_share.share)(), 1);
 
 ```js
 const require_share$1 = require('./share.js');
-const node_assert = require_share$1.__toESM(require("node:assert"));
+let node_assert = require("node:assert");
+node_assert = require_share$1.__toESM(node_assert);
 
 //#region main2.js
 var import_share = /* @__PURE__ */ require_share$1.__toESM(require_share$1.require_share());

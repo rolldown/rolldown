@@ -7,7 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-const zod = __toESM(require("zod"));
+let zod = require("zod");
+zod = __toESM(zod);
 
 //#region main.js
 console.log(zod.z);

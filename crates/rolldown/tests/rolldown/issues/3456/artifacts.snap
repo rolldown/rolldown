@@ -20,7 +20,8 @@ Variant: [format: Cjs]
 
 ```js
 // HIDDEN [rolldown:runtime]
-const external = __toESM(require("external"));
+let external = require("external");
+external = __toESM(external);
 
 exports["\n\"\\'"] = external["\n\"\\'"];
 ```

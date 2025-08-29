@@ -142,14 +142,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 require("a_nowrap");
-const b_nowrap = __toESM(require("b_nowrap"));
-const d_WRAP = __toESM(require("d_WRAP"));
-const e_WRAP = __toESM(require("e_WRAP"));
-const f_WRAP = __toESM(require("f_WRAP"));
-const g_WRAP = __toESM(require("g_WRAP"));
-const h_WRAP = __toESM(require("h_WRAP"));
-const i_WRAP = __toESM(require("i_WRAP"));
-const j_WRAP = __toESM(require("j_WRAP"));
+let b_nowrap = require("b_nowrap");
+b_nowrap = __toESM(b_nowrap);
+let d_WRAP = require("d_WRAP");
+d_WRAP = __toESM(d_WRAP);
+let e_WRAP = require("e_WRAP");
+e_WRAP = __toESM(e_WRAP);
+let f_WRAP = require("f_WRAP");
+f_WRAP = __toESM(f_WRAP);
+let g_WRAP = require("g_WRAP");
+g_WRAP = __toESM(g_WRAP);
+let h_WRAP = require("h_WRAP");
+h_WRAP = __toESM(h_WRAP);
+let i_WRAP = require("i_WRAP");
+i_WRAP = __toESM(i_WRAP);
+let j_WRAP = require("j_WRAP");
+j_WRAP = __toESM(j_WRAP);
 
 //#region entry.js
 (0, b_nowrap.b)();

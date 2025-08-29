@@ -5867,6 +5867,10 @@ expression: output
 
 - main-!~{000}~.js => main-Djw0f4KQ.js
 
+# tests/rolldown/tree_shaking/property_write_side_effects
+
+- main-!~{000}~.js => main-DsAhrmpa.js
+
 # tests/rolldown/tree_shaking/pure_annotation
 
 - main-!~{000}~.js => main-CPLcFEro.js

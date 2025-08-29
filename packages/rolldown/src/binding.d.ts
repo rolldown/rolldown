@@ -2014,6 +2014,11 @@ export declare enum BindingPropertyReadSideEffects {
   False = 1
 }
 
+export declare enum BindingPropertyWriteSideEffects {
+  Always = 0,
+  False = 1
+}
+
 export interface BindingRenderBuiltUrlConfig {
   ssr: boolean
   type: 'asset' | 'public'
@@ -2085,7 +2090,8 @@ export interface BindingTreeshake {
   manualPureFunctions?: ReadonlyArray<string>
   unknownGlobalSideEffects?: boolean
   commonjs?: boolean
-  propertyReadSideEffects?: false | 'always'
+  propertyReadSideEffects?: BindingPropertyReadSideEffects
+  propertyWriteSideEffects?: BindingPropertyWriteSideEffects
 }
 
 export interface BindingVitePluginCustom {

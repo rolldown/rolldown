@@ -5494,7 +5494,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/import_meta_hot_accept
 
-- main-!~{000}~.js => main-BJBQmZJO.js
+- main-!~{000}~.js => main-DQ9Ayfx4.js
 
 # tests/rolldown/topics/hmr/issue_5149
 

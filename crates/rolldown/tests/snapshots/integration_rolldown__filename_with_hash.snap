@@ -5390,6 +5390,10 @@ expression: output
 
 - main-!~{000}~.js => main-B89Pmjkg.js
 
+# tests/rolldown/topics/cjs_module_lexer_compat/import_and_reexport
+
+- main-!~{000}~.js => main-BTFDcswM.js
+
 # tests/rolldown/topics/css/align_vite
 
 - main-!~{000}~.js => main-X654ryY_.js

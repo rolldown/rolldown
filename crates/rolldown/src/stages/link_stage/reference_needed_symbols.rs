@@ -5,11 +5,11 @@ use rolldown_common::{
   OutputFormat, ResolvedImportRecord, RuntimeHelper, StmtInfoMeta, SymbolRefDb, TaggedSymbolRef,
   WrapKind, side_effects::DeterminedSideEffects,
 };
+#[cfg(not(target_family = "wasm"))]
+use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   concat_string,
-  rayon::{
-    IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
-  },
+  rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
 
 use super::LinkStage;

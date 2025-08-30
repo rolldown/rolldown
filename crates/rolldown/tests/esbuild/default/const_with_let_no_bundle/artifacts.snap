@@ -7,16 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.js
-const a = 1;
-console.log(a);
-{
-	const b = 2;
-	console.log(b);
-}
-{
-	const b = 3;
-	unknownFn(b);
-}
+console.log(1);
+console.log(2);
+unknownFn(3);
 for (const c = x;;) console.log(c);
 for (const d in x) console.log(d);
 for (const e of x) console.log(e);

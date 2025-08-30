@@ -14,8 +14,7 @@ let value = 123;
 
 //#endregion
 //#region entry.ts
-var value_copy = import_exports.value;
-let foo = value_copy;
+let foo = import_exports.value;
 console.log(foo);
 
 //#endregion

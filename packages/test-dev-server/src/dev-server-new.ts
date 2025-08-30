@@ -7,6 +7,7 @@ import * as rolldown from 'rolldown';
 import { dev, DevEngine } from 'rolldown/experimental';
 import serveStatic from 'serve-static';
 import { WebSocket, WebSocketServer } from 'ws';
+import { HmrInvalidateMessage } from './types/client-message.js';
 import { NormalizedDevOptions } from './types/normalized-dev-options.js';
 import { HmrUpdateMessage } from './types/server-message.js';
 import { createDevServerPlugin } from './utils/create-dev-server-plugin.js';
@@ -26,6 +27,7 @@ class DevServer {
   wsServer = new WebSocketServer({ server: this.server });
   #sockets = new Set<WebSocket>();
   #devOptions?: NormalizedDevOptions;
+  #devEngine?: DevEngine;
 
   constructor() {}
 
@@ -51,6 +53,7 @@ class DevServer {
         this.handleHmrUpdates(updates);
       },
     });
+    this.#devEngine = devEngine;
     this.#prepareHttpServerAfterCreateDevEngine(devEngine);
     await devEngine.run();
     this.#readyHttpServer();
@@ -72,11 +75,11 @@ class DevServer {
       ws.on('close', () => {
         // TODO: handle close
       });
-      ws.on('message', (rawData) => {
+      ws.on('message', async (rawData) => {
         const clientMessage = decodeClientMessage(rawData);
         switch (clientMessage.type) {
           case 'hmr:invalidate':
-            // TODO: support `hmr:invalidate`
+            await this.#handleHmrInvalidate(this.#devEngine!, clientMessage);
             break;
         }
       });
@@ -184,6 +187,17 @@ class DevServer {
           )
         }`,
       );
+    }
+  }
+
+  async #handleHmrInvalidate(
+    devEngine: DevEngine,
+    msg: HmrInvalidateMessage,
+  ): Promise<void> {
+    console.log('Invalidating...');
+    if (this.#sockets.size > 0) {
+      const output = await devEngine.invalidate(msg.moduleId);
+      this.sendUpdateToClient(output);
     }
   }
 }

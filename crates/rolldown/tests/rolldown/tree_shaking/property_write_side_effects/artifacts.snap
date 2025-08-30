@@ -7,23 +7,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region constants.js
-const settings = {
-	theme: "light",
-	language: "fr"
-};
 const temp = {};
 
 //#endregion
 //#region main.js
-settings.theme = "dark";
-settings["language"] = "en";
 o.foo = 100;
 temp["bar"] = 200;
 console.log(temp);
 const key = Math.random() > .5 ? "a" : "b";
 const config = {};
 config.option = true;
-const merged = { ...settings };
 var main_default = { config };
 
 //#endregion

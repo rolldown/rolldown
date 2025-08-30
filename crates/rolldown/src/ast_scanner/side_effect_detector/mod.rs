@@ -479,10 +479,12 @@ impl<'a> SideEffectDetector<'a> {
               self.detect_side_effect_of_property_key(&prop.key, prop.computed)
                 | self.detect_side_effect_of_expr(&prop.value)
             }
-            ast::ObjectPropertyKind::SpreadProperty(_) => {
-              // ...[expression] is considered as having side effect.
-              // see crates/rolldown/tests/fixtures/rollup/object-spread-side-effect
-              true.into()
+            // refer https://github.com/rollup/rollup/blob/f7633942/src/ast/nodes/SpreadElement.ts#L32
+            ast::ObjectPropertyKind::SpreadProperty(res) => {
+              if self.property_read_side_effects() {
+                return true.into();
+              }
+              self.detect_side_effect_of_expr(&res.argument)
             }
           };
           if detail.has_side_effect() {

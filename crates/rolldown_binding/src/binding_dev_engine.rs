@@ -76,4 +76,14 @@ impl BindingDevEngine {
     self.inner.ensure_latest_build().await.expect("Should handle this error");
     Ok(())
   }
+
+  #[napi]
+  pub async fn invalidate(
+    &self,
+    caller: String,
+    first_invalidated_by: Option<String>,
+  ) -> napi::Result<()> {
+    self.inner.invalidate(caller, first_invalidated_by).await.expect("Should handle this error");
+    Ok(())
+  }
 }

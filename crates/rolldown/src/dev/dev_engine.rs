@@ -112,6 +112,15 @@ impl<W: Watcher + Send + 'static> DevEngine<W> {
   pub async fn ensure_current_build_finish(&self) {
     self.ctx.ensure_current_build_finish().await;
   }
+
+  pub async fn invalidate(
+    &self,
+    caller: String,
+    first_invalidated_by: Option<String>,
+  ) -> BuildResult<()> {
+    self.build_driver.invalidate(caller, first_invalidated_by).await?;
+    Ok(())
+  }
 }
 
 impl<T> Deref for DevEngine<T> {

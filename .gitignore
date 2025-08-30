@@ -179,4 +179,4 @@ crates/rolldown_debug_action/bindings/**
 
 # AI config
 .claude
-CLAUDE.md
+CLAUDE.local.md

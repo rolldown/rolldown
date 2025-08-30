@@ -383,6 +383,7 @@ const OnwarnSchema = v.pipe(
 const HmrSchema = v.union([
   v.boolean(),
   v.strictObject({
+    new: v.optional(v.boolean()),
     port: v.optional(v.number()),
     host: v.optional(v.string()),
     implement: v.optional(v.string()),

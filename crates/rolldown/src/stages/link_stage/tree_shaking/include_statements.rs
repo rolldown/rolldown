@@ -33,7 +33,6 @@ bitflags::bitflags! {
     }
 }
 
-/// [SymbolIncludeReason]
 struct Context<'a> {
   modules: &'a IndexModules,
   symbols: &'a SymbolRefDb,
@@ -596,6 +595,25 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: Symbol
         include_statement(ctx, module, stmt_info_id);
       },
     );
+  }
+  if matches!(
+    ctx.options.treeshake.property_write_side_effects(),
+    rolldown_common::PropertyWriteSideEffects::False
+  ) {
+    ctx.modules[symbol_ref.owner].as_normal().inspect(|module| {
+      module
+        .stmt_infos
+        .symbol_ref_to_referenced_stmt_idx()
+        .get(&symbol_ref)
+        .as_ref()
+        .map(|item| item.as_slice())
+        .unwrap_or(&[])
+        .iter()
+        .copied()
+        .for_each(|stmt_info_id| {
+          include_statement(ctx, module, stmt_info_id);
+        });
+    });
   }
 }
 

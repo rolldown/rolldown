@@ -508,7 +508,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { minify, Severity, ParseResult, ExportExportNameKind, ExportImportNameKind, ExportLocalNameKind, ImportNameKind, parseAsync, parseSync, rawTransferSupported, ResolverFactory, EnforceExtension, ModuleType, sync, HelperMode, isolatedDeclaration, moduleRunnerTransform, transform, BindingBundleEndEventData, BindingBundleErrorEventData, BindingBundler, BindingBundlerImpl, BindingCallableBuiltinPlugin, BindingChunkingContext, BindingDevEngine, BindingHmrOutput, BindingModuleInfo, BindingNormalizedOptions, BindingOutputAsset, BindingOutputChunk, BindingOutputs, BindingPluginContext, BindingRenderedChunk, BindingRenderedChunkMeta, BindingRenderedModule, BindingTransformPluginContext, BindingWatcher, BindingWatcherChangeData, BindingWatcherEvent, ParallelJsPluginRegistry, TraceSubscriberGuard, BindingAttachDebugInfo, BindingBuiltinPluginName, BindingChunkModuleOrderBy, BindingJsx, BindingLogLevel, BindingPluginOrder, BindingPropertyReadSideEffects, FilterTokenKind, initTraceSubscriber, registerPlugins, shutdownAsyncRuntime, startAsyncRuntime, JsWatcher } = nativeBinding
+const { minify, Severity, ParseResult, ExportExportNameKind, ExportImportNameKind, ExportLocalNameKind, ImportNameKind, parseAsync, parseSync, rawTransferSupported, ResolverFactory, EnforceExtension, ModuleType, sync, HelperMode, isolatedDeclaration, moduleRunnerTransform, transform, BindingBundleEndEventData, BindingBundleErrorEventData, BindingBundler, BindingBundlerImpl, BindingCallableBuiltinPlugin, BindingChunkingContext, BindingDevEngine, BindingHmrOutput, BindingModuleInfo, BindingNormalizedOptions, BindingOutputAsset, BindingOutputChunk, BindingOutputs, BindingPluginContext, BindingRenderedChunk, BindingRenderedChunkMeta, BindingRenderedModule, BindingTransformPluginContext, BindingWatcher, BindingWatcherChangeData, BindingWatcherEvent, ParallelJsPluginRegistry, TraceSubscriberGuard, BindingAttachDebugInfo, BindingBuiltinPluginName, BindingChunkModuleOrderBy, BindingJsx, BindingLogLevel, BindingPluginOrder, BindingPropertyReadSideEffects, BindingPropertyWriteSideEffects, FilterTokenKind, initTraceSubscriber, registerPlugins, shutdownAsyncRuntime, startAsyncRuntime, JsWatcher } = nativeBinding
 export { minify }
 export { Severity }
 export { ParseResult }
@@ -557,6 +557,7 @@ export { BindingJsx }
 export { BindingLogLevel }
 export { BindingPluginOrder }
 export { BindingPropertyReadSideEffects }
+export { BindingPropertyWriteSideEffects }
 export { FilterTokenKind }
 export { initTraceSubscriber }
 export { registerPlugins }

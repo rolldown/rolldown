@@ -324,6 +324,7 @@ where
         unknown_global_side_effects: None,
         commonjs: Some(true),
         property_read_side_effects: None,
+        property_write_side_effects: None,
       }))
     }
     Some(Value::Object(obj)) => {
@@ -385,6 +386,20 @@ where
           }
         },
       )?;
+      let property_write_side_effects = obj.get("propertyWriteSideEffects").map_or_else(
+        || Ok(None),
+        |v| match v {
+          Value::String(s) if s == "always" => {
+            Ok(Some(types::treeshake::PropertyWriteSideEffects::Always))
+          }
+          Value::String(s) if s == "false" => {
+            Ok(Some(types::treeshake::PropertyWriteSideEffects::False))
+          }
+          _ => {
+            Err(serde::de::Error::custom("propertyWriteSideEffects should be 'false' or 'always'"))
+          }
+        },
+      )?;
       Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions {
         module_side_effects,
         annotations,
@@ -392,6 +407,7 @@ where
         unknown_global_side_effects,
         commonjs,
         property_read_side_effects,
+        property_write_side_effects,
       }))
     }
     _ => Err(serde::de::Error::custom("treeshake should be a boolean or an object")),

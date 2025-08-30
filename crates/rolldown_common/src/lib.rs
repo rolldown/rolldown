@@ -76,7 +76,7 @@ pub mod bundler_options {
       transform_options::{JsxPreset, TransformOptions},
       treeshake::{
         InnerOptions, ModuleSideEffects, ModuleSideEffectsRule, PropertyReadSideEffects,
-        TreeshakeOptions,
+        PropertyWriteSideEffects, TreeshakeOptions,
       },
       watch_option::{NotifyOption, OnInvalidate, WatchOption},
     },

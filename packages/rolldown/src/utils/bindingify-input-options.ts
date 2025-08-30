@@ -3,6 +3,8 @@ import {
   BindingChunkModuleOrderBy,
   BindingJsx,
   BindingLogLevel,
+  BindingPropertyReadSideEffects,
+  BindingPropertyWriteSideEffects,
 } from '../binding';
 import type {
   BindingDeferSyncScanData,
@@ -407,6 +409,28 @@ function bindingifyTreeshakeOptions(
     unknownGlobalSideEffects: config.unknownGlobalSideEffects,
     commonjs: config.commonjs,
   };
+  switch (config.propertyReadSideEffects) {
+    case 'always':
+      normalizedConfig.propertyReadSideEffects =
+        BindingPropertyReadSideEffects.Always;
+      break;
+    case false:
+      normalizedConfig.propertyReadSideEffects =
+        BindingPropertyReadSideEffects.False;
+      break;
+    default:
+  }
+  switch (config.propertyWriteSideEffects) {
+    case 'always':
+      normalizedConfig.propertyWriteSideEffects =
+        BindingPropertyWriteSideEffects.Always;
+      break;
+    case false:
+      normalizedConfig.propertyWriteSideEffects =
+        BindingPropertyWriteSideEffects.False;
+      break;
+    default:
+  }
   if (config.moduleSideEffects === undefined) {
     normalizedConfig.moduleSideEffects = true;
   } else if (config.moduleSideEffects === 'no-external') {

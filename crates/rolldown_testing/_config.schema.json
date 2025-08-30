@@ -808,11 +808,28 @@
               "type": "null"
             }
           ]
+        },
+        "propertyWriteSideEffects": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PropertyWriteSideEffects"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
     },
     "PropertyReadSideEffects": {
+      "type": "string",
+      "enum": [
+        "always",
+        "false"
+      ]
+    },
+    "PropertyWriteSideEffects": {
       "type": "string",
       "enum": [
         "always",

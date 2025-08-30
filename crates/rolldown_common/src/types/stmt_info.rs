@@ -12,6 +12,10 @@ pub struct StmtInfos {
   pub infos: IndexVec<StmtInfoIdx, StmtInfo>,
   // only for top level symbols
   symbol_ref_to_declared_stmt_idx: FxHashMap<SymbolRef, Vec<StmtInfoIdx>>,
+  /// When `PropertyWriteSideEffects` is `false`, property write access stmt should be included
+  /// when the top level symbol is included.
+  /// Since they are rarely used, we box it to reduce the size of `StmtInfos`.
+  symbol_ref_to_referenced_stmt_idx: Box<FxHashMap<SymbolRef, Vec<StmtInfoIdx>>>,
 }
 
 impl StmtInfos {
@@ -21,6 +25,7 @@ impl StmtInfos {
     Self {
       infos: IndexVec::from_iter([StmtInfo::default()]),
       symbol_ref_to_declared_stmt_idx: FxHashMap::default(),
+      symbol_ref_to_referenced_stmt_idx: Box::new(FxHashMap::default()),
     }
   }
 
@@ -45,6 +50,13 @@ impl StmtInfos {
   pub fn declare_symbol_for_stmt(&mut self, id: StmtInfoIdx, symbol_ref: TaggedSymbolRef) {
     self.infos[id].declared_symbols.push(symbol_ref);
     self.symbol_ref_to_declared_stmt_idx.entry(symbol_ref.inner()).or_default().push(id);
+  }
+
+  /// # Panic
+  /// Caller should guarantee the stmt is included in `stmts` before, or it will panic.
+  #[inline]
+  pub fn reference_stmt_for_symbol_id(&mut self, id: StmtInfoIdx, symbol_ref: SymbolRef) {
+    self.symbol_ref_to_referenced_stmt_idx.entry(symbol_ref).or_default().push(id);
   }
 
   pub fn get_namespace_stmt_info(&self) -> &StmtInfo {
@@ -75,6 +87,10 @@ impl StmtInfos {
     &self,
   ) -> impl Iterator<Item = (StmtInfoIdx, &StmtInfo)> {
     self.infos.iter_enumerated().skip(1)
+  }
+
+  pub fn symbol_ref_to_referenced_stmt_idx(&self) -> &FxHashMap<SymbolRef, Vec<StmtInfoIdx>> {
+    &self.symbol_ref_to_referenced_stmt_idx
   }
 }
 

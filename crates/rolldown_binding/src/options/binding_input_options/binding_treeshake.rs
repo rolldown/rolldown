@@ -19,6 +19,13 @@ pub enum BindingPropertyReadSideEffects {
   False,
 }
 
+#[napi]
+#[derive(Debug)]
+pub enum BindingPropertyWriteSideEffects {
+  Always,
+  False,
+}
+
 pub type BindingModuleSideEffects = Either4<
   bool,
   HashSet<String, FxBuildHasher>,
@@ -39,8 +46,8 @@ pub struct BindingTreeshake {
   pub manual_pure_functions: Option<FxHashSet<String>>,
   pub unknown_global_side_effects: Option<bool>,
   pub commonjs: Option<bool>,
-  #[napi(ts_type = "false | 'always'")]
   pub property_read_side_effects: Option<BindingPropertyReadSideEffects>,
+  pub property_write_side_effects: Option<BindingPropertyWriteSideEffects>,
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -89,6 +96,11 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
       BindingPropertyReadSideEffects::False => rolldown::PropertyReadSideEffects::False,
     });
 
+    let property_write_side_effects = value.property_write_side_effects.map(|v| match v {
+      BindingPropertyWriteSideEffects::Always => rolldown::PropertyWriteSideEffects::Always,
+      BindingPropertyWriteSideEffects::False => rolldown::PropertyWriteSideEffects::False,
+    });
+
     Ok(Self::Option(InnerOptions {
       module_side_effects,
       annotations: value.annotations,
@@ -97,6 +109,7 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
       // By default disable commonjs tree shake, since it is not stable
       commonjs: value.commonjs,
       property_read_side_effects,
+      property_write_side_effects,
     }))
   }
 

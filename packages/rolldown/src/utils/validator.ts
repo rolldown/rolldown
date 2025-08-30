@@ -325,6 +325,9 @@ const TreeshakingOptionsSchema = v.union([
     propertyReadSideEffects: v.optional(
       v.union([v.literal(false), v.literal('always')]),
     ),
+    propertyWriteSideEffects: v.optional(
+      v.union([v.literal(false), v.literal('always')]),
+    ),
   }),
 ]);
 

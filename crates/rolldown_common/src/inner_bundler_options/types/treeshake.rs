@@ -19,6 +19,17 @@ pub enum PropertyReadSideEffects {
   False,
 }
 
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(
+  feature = "deserialize_bundler_options",
+  derive(Deserialize, JsonSchema),
+  serde(rename_all = "camelCase")
+)]
+pub enum PropertyWriteSideEffects {
+  Always,
+  False,
+}
+
 #[derive(Debug, Clone)]
 #[cfg_attr(
   feature = "deserialize_bundler_options",
@@ -68,6 +79,15 @@ impl NormalizedTreeshakeOptions {
       .as_ref()
       .and_then(|opt| opt.property_read_side_effects)
       .unwrap_or(PropertyReadSideEffects::Always)
+  }
+
+  /// By default we assume property writes have side effects
+  #[inline]
+  pub fn property_write_side_effects(&self) -> PropertyWriteSideEffects {
+    self
+      .as_ref()
+      .and_then(|opt| opt.property_write_side_effects)
+      .unwrap_or(PropertyWriteSideEffects::Always)
   }
 
   // TODO: optimize this
@@ -185,6 +205,7 @@ pub struct InnerOptions {
   pub unknown_global_side_effects: Option<bool>,
   pub commonjs: Option<bool>,
   pub property_read_side_effects: Option<PropertyReadSideEffects>,
+  pub property_write_side_effects: Option<PropertyWriteSideEffects>,
 }
 
 impl Default for InnerOptions {
@@ -196,6 +217,7 @@ impl Default for InnerOptions {
       unknown_global_side_effects: None,
       commonjs: None,
       property_read_side_effects: None,
+      property_write_side_effects: None,
     }
   }
 }
@@ -224,6 +246,11 @@ impl From<&NormalizedTreeshakeOptions> for oxc::minifier::TreeShakeOptions {
         PropertyReadSideEffects::Always => oxc::minifier::PropertyReadSideEffects::All,
         PropertyReadSideEffects::False => oxc::minifier::PropertyReadSideEffects::None,
       },
+      // TODO: Add property_write_side_effects when oxc::minifier supports it
+      // property_write_side_effects: match value.property_write_side_effects() {
+      //   PropertyWriteSideEffects::Always => oxc::minifier::PropertyWriteSideEffects::All,
+      //   PropertyWriteSideEffects::False => oxc::minifier::PropertyWriteSideEffects::None,
+      // },
       unknown_global_side_effects: value.unknown_global_side_effects(),
     }
   }

@@ -50,8 +50,10 @@ Object.defineProperty(exports, 'shared', {
 (2:0) "function " --> (3:0) "function "
 (2:9) "main() " --> (3:9) "main() "
 (2:16) "{\n" --> (3:16) "{\n"
-(3:2) "shared();\n" --> (4:0) "\trequire_shared.shared();\n"
-(6:0) "main()\n" --> (6:0) "main();\n"
+(3:2) "shared()" --> (4:0) "\trequire_shared.shared()"
+(3:10) ";\n" --> (4:24) ";\n"
+(6:0) "main()" --> (6:0) "main()"
+(6:6) "\n" --> (6:6) ";\n"
 
 - ../shared.js
 (0:0) "export function " --> (2:0) "function "
@@ -59,5 +61,6 @@ Object.defineProperty(exports, 'shared', {
 (0:25) "{\n" --> (2:18) "{\n"
 (1:2) "console." --> (3:0) "\tconsole."
 (1:10) "trace(" --> (3:9) "trace("
-(1:16) "\"shared\")\n" --> (3:15) "\"shared\");\n"
+(1:16) "\"shared\")" --> (3:15) "\"shared\")"
+(1:25) "\n" --> (3:24) ";\n"
 ```

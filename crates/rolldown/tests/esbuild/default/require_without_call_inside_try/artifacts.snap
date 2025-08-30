@@ -10,8 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 try {
 	oldLocale = globalLocale._abbr;
-	var aliasedRequire = __require;
-	aliasedRequire("./locale/" + name);
+	__require("./locale/" + name);
 	getSetGlobalLocale(oldLocale);
 } catch (e) {}
 

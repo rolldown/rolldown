@@ -8,10 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region entry.js
-(() => {
-	const req = __require;
-	req("./entry");
-})();
+var require_entry = /* @__PURE__ */ __commonJS({ "entry.js": (() => {
+	require_entry();
+}) });
 
 //#endregion
+export default require_entry();
+
 ```

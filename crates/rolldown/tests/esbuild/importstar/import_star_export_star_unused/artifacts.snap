@@ -9,8 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 //#region entry.js
-let foo = 234;
-assert.equal(foo, 234);
+assert.equal(234, 234);
 
 //#endregion
 ```

@@ -19,5 +19,6 @@ console.log("beta version 1.0.0");
 - ../input.js
 (0:0) "console." --> (1:0) "console."
 (0:8) "log(" --> (1:8) "log("
-(0:12) "'BUILD version BUILD_VERSION');\n" --> (1:12) "\"beta version 1.0.0\");\n"
+(0:12) "'BUILD version BUILD_VERSION')" --> (1:12) "\"beta version 1.0.0\")"
+(0:42) ";\n" --> (1:33) ";\n"
 ```

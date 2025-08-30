@@ -12,10 +12,7 @@ var firstLevelVar = "var";
 var firstLevelConst = "const";
 var FirstLevelClass = class {};
 console.log(firstLevelLet, firstLevelVar, firstLevelConst, new FirstLevelClass());
-{
-	let shouldNotBeSubstitutedLet = "let";
-	console.log(shouldNotBeSubstitutedLet);
-}
+console.log("let");
 function second_level() {
 	let secondLevelLet = "let";
 	var secondLevelVar = "var";

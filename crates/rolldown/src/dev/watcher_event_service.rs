@@ -39,6 +39,7 @@ impl WatcherEventService {
       match msg {
         WatcherEventServiceMsg::FileChange(file_change_result) => match file_change_result {
           Ok(batched_events) => {
+            tracing::debug!(target: "hmr", "Received batched events: {:#?}", batched_events);
             // TODO: using a IndexSet here will cause changes like [a.js, b.js, a.js] to be [a.js, b.js].
             // Not sure if we want this behavior for hmr scenario.
             let mut changed_files = FxIndexSet::default();

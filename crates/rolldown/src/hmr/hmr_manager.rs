@@ -98,6 +98,12 @@ impl HmrManager {
     invalidate_caller: String,
     first_invalidated_by: Option<String>,
   ) -> BuildResult<HmrUpdate> {
+    tracing::debug!(
+      target: "hmr",
+      "compute_update_for_calling_invalidate: caller: {:?}, first_invalidated_by: {:?}",
+      invalidate_caller,
+      first_invalidated_by,
+    );
     let module_idx = self
       .module_idx_by_stable_id
       .get(&invalidate_caller)
@@ -140,6 +146,7 @@ impl HmrManager {
     &mut self,
     changed_file_paths: Vec<String>,
   ) -> BuildResult<Vec<HmrUpdate>> {
+    tracing::debug!(target: "hmr", "compute_hmr_update_for_file_changes: {:?}", changed_file_paths);
     let mut changed_modules = FxIndexSet::default();
     for changed_file_path in changed_file_paths {
       let changed_file_path = ArcStr::from(changed_file_path);

@@ -82,8 +82,9 @@ impl BindingDevEngine {
     &self,
     caller: String,
     first_invalidated_by: Option<String>,
-  ) -> napi::Result<()> {
-    self.inner.invalidate(caller, first_invalidated_by).await.expect("Should handle this error");
-    Ok(())
+  ) -> napi::Result<BindingHmrUpdate> {
+    let update =
+      self.inner.invalidate(caller, first_invalidated_by).await.expect("Should handle this error");
+    Ok(BindingHmrUpdate::from(update))
   }
 }

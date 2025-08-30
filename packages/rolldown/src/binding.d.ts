@@ -1287,7 +1287,7 @@ export declare class BindingDevEngine {
   run(): Promise<void>
   ensureCurrentBuildFinish(): Promise<void>
   ensureLatestBuild(): Promise<void>
-  invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<void>
+  invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<BindingHmrUpdate>
 }
 
 export declare class BindingHmrOutput {

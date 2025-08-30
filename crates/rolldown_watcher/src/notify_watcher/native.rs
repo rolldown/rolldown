@@ -1,13 +1,14 @@
 use std::time::Duration;
 
 use crate::{EventHandler, Watcher, event::Event};
-use notify::RecommendedWatcher;
+use notify::PollWatcher;
 use notify_debouncer_full::{
-  DebounceEventHandler, DebounceEventResult, Debouncer, RecommendedCache, new_debouncer,
+  DebounceEventHandler, DebounceEventResult, Debouncer, RecommendedCache, new_debouncer_opt,
 };
 use rolldown_error::{BuildResult, ResultExt};
 
-pub type NotifyWatcher = Debouncer<RecommendedWatcher, RecommendedCache>;
+// FIXME: hyf0 should use recommended watcher instead of poll watcher
+pub type NotifyWatcher = Debouncer<PollWatcher, RecommendedCache>;
 pub struct DebounceEventHandlerAdapter<T: EventHandler>(T);
 
 impl<T> DebounceEventHandler for DebounceEventHandlerAdapter<T>
@@ -26,10 +27,16 @@ impl Watcher for NotifyWatcher {
   where
     Self: Sized,
   {
-    Ok(
-      new_debouncer(Duration::from_millis(10), None, DebounceEventHandlerAdapter(event_handler))
-        .map_err_to_unhandleable()?,
+    let inner = new_debouncer_opt::<_, PollWatcher, RecommendedCache>(
+      Duration::from_millis(10),
+      None,
+      DebounceEventHandlerAdapter(event_handler),
+      RecommendedCache::new(),
+      notify::Config::default().with_poll_interval(Duration::from_millis(100)),
     )
+    .map_err_to_unhandleable()?;
+
+    Ok(inner)
   }
 
   fn watch(

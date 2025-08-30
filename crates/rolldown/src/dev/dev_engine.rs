@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ops::Deref, sync::Arc};
 
 use arcstr::ArcStr;
 use futures::{FutureExt, future::Shared};
@@ -114,8 +114,10 @@ impl<W: Watcher + Send + 'static> DevEngine<W> {
   }
 }
 
-impl<W> Drop for DevEngine<W> {
-  fn drop(&mut self) {
-    tracing::trace!("DevEngine dropped");
+impl<T> Deref for DevEngine<T> {
+  type Target = BuildDriver;
+
+  fn deref(&self) -> &Self::Target {
+    &self.build_driver
   }
 }

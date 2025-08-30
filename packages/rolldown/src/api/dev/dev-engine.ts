@@ -52,4 +52,8 @@ export class DevEngine {
     this.#cachedBuildFinishPromise = promise;
     return promise;
   }
+
+  async ensureLatestBuild(): Promise<void> {
+    await this.#inner.ensureLatestBuild();
+  }
 }

@@ -261,7 +261,7 @@ impl Bundler {
 
     self.merge_immutable_fields_for_cache(link_stage_output.symbol_db);
 
-    if self.options.is_hmr_enabled() {
+    if self.options.is_legacy_hmr_enabled() {
       self.hmr_manager = Some(HmrManager::new(HmrManagerInput {
         fs: self.fs.clone(),
         options: Arc::clone(&self.options),

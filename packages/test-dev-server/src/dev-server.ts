@@ -44,8 +44,8 @@ export class DevServer {
           `Websocket connection closed. Current live connections: ${this.numberOfLiveConnections}`,
         );
       });
-      ws.on('message', (message) => {
-        const clientMessage = decodeClientMessage(message.toString());
+      ws.on('message', (rawData) => {
+        const clientMessage = decodeClientMessage(rawData);
         switch (clientMessage.type) {
           case 'hmr:invalidate':
             this.handleHmrInvalidate(this.build, clientMessage);

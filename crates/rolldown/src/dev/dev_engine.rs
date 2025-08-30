@@ -5,7 +5,7 @@ use futures::{FutureExt, future::Shared};
 use rolldown_common::HmrUpdate;
 use rolldown_error::BuildResult;
 use rolldown_utils::dashmap::FxDashSet;
-use rolldown_watcher::Watcher;
+use rolldown_watcher::{DynWatcher, NotifyWatcher, Watcher, WatcherExt};
 use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
@@ -25,15 +25,15 @@ pub struct WatchServiceState {
   handle: Option<Shared<PinBoxSendStaticFuture<()>>>,
 }
 
-pub struct DevEngine<W> {
+pub struct DevEngine {
   build_driver: SharedBuildDriver,
-  watcher: Mutex<W>,
+  watcher: Mutex<DynWatcher>,
   watched_files: FxDashSet<ArcStr>,
   watch_service_state: Mutex<WatchServiceState>,
   ctx: SharedDevContext,
 }
 
-impl<W: Watcher + Send + 'static> DevEngine<W> {
+impl DevEngine {
   pub fn new(bundler_builder: BundlerBuilder, options: DevOptions) -> BuildResult<Self> {
     Self::with_bundler(Arc::new(Mutex::new(bundler_builder.build())), options)
   }
@@ -49,7 +49,8 @@ impl<W: Watcher + Send + 'static> DevEngine<W> {
 
     let watcher_event_service =
       WatcherEventService::new(Arc::clone(&build_driver), Arc::clone(&ctx));
-    let watcher = W::new(watcher_event_service.create_event_handler())?;
+    let watcher =
+      NotifyWatcher::new(watcher_event_service.create_event_handler())?.into_dyn_watcher();
 
     Ok(Self {
       build_driver,
@@ -123,7 +124,7 @@ impl<W: Watcher + Send + 'static> DevEngine<W> {
   }
 }
 
-impl<T> Deref for DevEngine<T> {
+impl Deref for DevEngine {
   type Target = BuildDriver;
 
   fn deref(&self) -> &Self::Target {

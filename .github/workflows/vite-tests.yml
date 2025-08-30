@@ -19,7 +19,6 @@ on:
       - 'pnpm-workspace.yaml'
       - '!packages/bench/**'
       - '!packages/debug/**'
-      - '!packages/testing/**'
   workflow_dispatch:
 
 concurrency:

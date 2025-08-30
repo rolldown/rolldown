@@ -23,6 +23,7 @@ async fn main() {
       on_hmr_updates: Some(Arc::new(|updates| {
         println!("HMR updates: {updates:#?}");
       })),
+      ..Default::default()
     },
   )
   .unwrap();

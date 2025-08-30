@@ -49,8 +49,28 @@ impl DevEngine {
 
     let watcher_event_service =
       WatcherEventService::new(Arc::clone(&build_driver), Arc::clone(&ctx));
-    let watcher =
-      NotifyWatcher::new(watcher_event_service.create_event_handler())?.into_dyn_watcher();
+
+    let watcher = {
+      #[cfg(not(target_family = "wasm"))]
+      {
+        use rolldown_watcher::DebouncedPollWatcher;
+        if ctx.options.use_polling {
+          DebouncedPollWatcher::with_poll_interval(
+            watcher_event_service.create_event_handler(),
+            ctx.options.poll_interval,
+          )?
+          .into_dyn_watcher()
+        } else {
+          <NotifyWatcher as Watcher>::new(watcher_event_service.create_event_handler())?.into_dyn_watcher()
+        }
+      }
+      #[cfg(target_family = "wasm")]
+      {
+        // For WASM, always use NotifyWatcher (which is PollWatcher in WASM)
+        // Use the Watcher trait implementation
+        <NotifyWatcher as Watcher>::new(watcher_event_service.create_event_handler())?.into_dyn_watcher()
+      }
+    };
 
     Ok(Self {
       build_driver,

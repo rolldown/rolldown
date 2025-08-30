@@ -1,18 +1,16 @@
 use napi_derive::napi;
 use std::sync::Arc;
 
-use napi::{Env, threadsafe_function::ThreadsafeFunctionCallMode};
-use rolldown_watcher::NotifyWatcher;
-
 use crate::binding_bundler_impl::{BindingBundlerImpl, BindingBundlerOptions};
 use crate::binding_dev_options::BindingDevOptions;
 use crate::types::binding_hmr_output::BindingHmrUpdate;
 use crate::types::js_callback::JsCallback;
 use napi::bindgen_prelude::FnArgs;
+use napi::{Env, threadsafe_function::ThreadsafeFunctionCallMode};
 
 #[napi]
 pub struct BindingDevEngine {
-  inner: rolldown::DevEngine<NotifyWatcher>,
+  inner: rolldown::DevEngine,
   _session_id: Arc<str>,
   _session: rolldown_debug::Session,
   #[allow(dead_code)]

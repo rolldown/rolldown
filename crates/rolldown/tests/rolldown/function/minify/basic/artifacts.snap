@@ -15,11 +15,13 @@ import e from"node:assert";e.equal(`index.js`,`index.js`),e.equal(`shared.js`,`s
 ```
 - ../main.js
 (3:0) "assert." --> (0:27) "e."
-(3:7) "equal(" --> (0:29) "equal("
-(3:13) "a, " --> (0:35) "`index.js`,"
-(3:16) "'index.js')\n" --> (0:46) "`index.js`),"
+(3:7) "equal(a, 'index.js')\n" --> (0:29) "equal("
+(2:10) "'index.js'\n" --> (0:35) "`index.js`,"
+(3:16) "'index.js')" --> (0:46) "`index.js`)"
+(3:27) "\n" --> (0:57) ","
 (4:0) "assert." --> (0:58) "e."
 (4:7) "equal(" --> (0:60) "equal("
 (4:13) "a2, " --> (0:66) "`shared.js`,"
-(4:17) "'shared.js')\n" --> (0:78) "`shared.js`);\n"
+(4:17) "'shared.js')" --> (0:78) "`shared.js`)"
+(4:29) "\n" --> (0:90) ";\n"
 ```

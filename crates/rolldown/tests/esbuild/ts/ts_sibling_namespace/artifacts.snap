@@ -25,10 +25,9 @@ export { x };
 //#region enum.ts
 let x;
 (function(_x) {
-	let y$1 = /* @__PURE__ */ function(y$2) {
-		return y$2;
+	_x.y = /* @__PURE__ */ function(y$1) {
+		return y$1;
 	}({});
-	_x.y = y$1;
 })(x || (x = {}));
 (function(_x2) {
 	_x2.z = y;

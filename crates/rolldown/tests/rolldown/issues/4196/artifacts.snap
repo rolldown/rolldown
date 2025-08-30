@@ -7,12 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region main.js
-let a = 1;
-console.log(a);
+console.log(1);
 function main_default() {
-	const a$1 = 2;
 	console.log({
-		a: a$1,
+		a: 2,
 		NaN: NaN
 	});
 }

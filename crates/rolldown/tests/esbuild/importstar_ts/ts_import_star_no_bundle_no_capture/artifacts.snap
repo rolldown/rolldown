@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,8 +9,7 @@ snapshot_kind: text
 import * as ns from "./foo";
 
 //#region entry.ts
-let foo = 234;
-console.log(ns.foo, ns.foo, foo);
+console.log(ns.foo, ns.foo, 234);
 
 //#endregion
 ```

@@ -9,19 +9,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region nested-number.ts
 let foo;
 (function(_foo) {
-	let x = /* @__PURE__ */ function(x$1) {
-		x$1[x$1["y"] = 0] = "y";
-		x$1[x$1["yy"] = 0] = "yy";
-		return x$1;
+	_foo.x = /* @__PURE__ */ function(x) {
+		x[x["y"] = 0] = "y";
+		x[x["yy"] = 0] = "yy";
+		return x;
 	}({});
-	_foo.x = x;
 })(foo || (foo = {}));
 (function(_foo2) {
-	let x = /* @__PURE__ */ function(x$1) {
-		x$1[x$1["z"] = 1] = "z";
-		return x$1;
+	_foo2.x = /* @__PURE__ */ function(x) {
+		x[x["z"] = 1] = "z";
+		return x;
 	}({});
-	_foo2.x = x;
 })(foo || (foo = {}));
 (function(_foo3) {
 	let x;
@@ -40,21 +38,19 @@ export { foo };
 //#region nested-propagation.ts
 let n;
 (function(_n) {
-	let a$1 = /* @__PURE__ */ function(a$2) {
-		a$2[a$2["b"] = 100] = "b";
-		return a$2;
+	_n.a = /* @__PURE__ */ function(a$1) {
+		a$1[a$1["b"] = 100] = "b";
+		return a$1;
 	}({});
-	_n.a = a$1;
 })(n || (n = {}));
 (function(_n2) {
-	let x = /* @__PURE__ */ function(x$1) {
-		x$1[x$1["c"] = n.a.b] = "c";
-		x$1[x$1["d"] = x$1.c * 2] = "d";
-		x$1[x$1["e"] = x$1.d ** 2] = "e";
-		x$1[x$1["f"] = x$1["e"] / 4] = "f";
-		return x$1;
+	_n2.x = /* @__PURE__ */ function(x) {
+		x[x["c"] = n.a.b] = "c";
+		x[x["d"] = x.c * 2] = "d";
+		x[x["e"] = x.d ** 2] = "e";
+		x[x["f"] = x["e"] / 4] = "f";
+		return x;
 	}({});
-	_n2.x = x;
 })(n || (n = {}));
 (function(_n3) {
 	let x = /* @__PURE__ */ function(x$1) {
@@ -74,19 +70,17 @@ export { n };
 //#region nested-string.ts
 let foo;
 (function(_foo) {
-	let x = /* @__PURE__ */ function(x$1) {
-		x$1["y"] = "a";
-		x$1["yy"] = "a";
-		return x$1;
+	_foo.x = /* @__PURE__ */ function(x) {
+		x["y"] = "a";
+		x["yy"] = "a";
+		return x;
 	}({});
-	_foo.x = x;
 })(foo || (foo = {}));
 (function(_foo2) {
-	let x = /* @__PURE__ */ function(x$1) {
-		x$1["z"] = "a";
-		return x$1;
+	_foo2.x = /* @__PURE__ */ function(x) {
+		x["z"] = "a";
+		return x;
 	}({});
-	_foo2.x = x;
 })(foo || (foo = {}));
 (function(_foo3) {
 	let x;

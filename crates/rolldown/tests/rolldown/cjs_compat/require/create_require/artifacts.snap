@@ -9,9 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { createRequire } from "node:module";
 
 //#region main.js
-const require = createRequire(import.meta.url);
-const assert = require("node:assert");
-assert.equal(1, 1);
+createRequire(import.meta.url)("node:assert").equal(1, 1);
 
 //#endregion
 ```

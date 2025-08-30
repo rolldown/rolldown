@@ -123,7 +123,7 @@ impl ViteCssPostPlugin {
             &ctx.args.options.asset_filenames,
           )
           .await?;
-        let content = self.finalize_css(content).await;
+        let content = self.finalize_css(content).await?;
 
         let reference_id = ctx
           .emit_file_async(EmittedAsset {
@@ -215,7 +215,7 @@ impl ViteCssPostPlugin {
             &ctx.args.options.asset_filenames,
           )
           .await?;
-        let content = self.finalize_css(content).await;
+        let content = self.finalize_css(content).await?;
 
         let reference_id = ctx
           .emit_file_async(EmittedAsset {
@@ -266,7 +266,7 @@ impl ViteCssPostPlugin {
           }
         };
 
-        let content = serde_json::to_string(&self.finalize_css(css_chunk).await)?;
+        let content = serde_json::to_string(&self.finalize_css(css_chunk).await?)?;
         let env =
           RenderAssetUrlInJsEnv { ctx, env: ctx.env, code: &content, is_worker: self.is_worker };
 
@@ -298,7 +298,6 @@ impl ViteCssPostPlugin {
     Ok(())
   }
 
-  #[allow(clippy::unused_async, unused_variables)]
   pub async fn resolve_asset_urls_in_css(
     &self,
     ctx: &FinalizedContext<'_, '_, '_>,
@@ -312,7 +311,7 @@ impl ViteCssPostPlugin {
       None
     };
 
-    let to_relative = |filename: &Path, host_id: &Path| {
+    let to_relative = |filename: &Path, _host_id: &Path| {
       let relative_path = filename.relative(css_asset_dirname.as_ref().unwrap());
       let relative_path = relative_path.to_slash_lossy();
       if relative_path.starts_with('.') {
@@ -390,7 +389,7 @@ impl ViteCssPostPlugin {
             range.end,
             encode_uri_path(
               env
-                .to_output_file_path(&public_url, "css", true, |filename: &Path, host_id: &Path| {
+                .to_output_file_path(&public_url, "css", true, |_: &Path, _: &Path| {
                   AssetUrlResult::WithoutRuntime(rolldown_utils::concat_string!(
                     relative_path,
                     public_url
@@ -407,29 +406,42 @@ impl ViteCssPostPlugin {
     Ok(if let Some(magic_string) = magic_string { magic_string.to_string() } else { css_chunk })
   }
 
-  #[allow(clippy::unused_async)]
-  pub async fn finalize_css(&self, _content: String) -> String {
-    todo!()
+  pub async fn finalize_css(&self, mut content: String) -> anyhow::Result<String> {
+    // hoist external @imports and @charset to the top of the CSS chunk per spec (#1845 and #6333)
+    if content.contains("@import") || content.contains("@charset") {
+      content = Self::hoist_at_rules(&content);
+    }
+    // TODO: Maybe we should use internal lightningcss minify
+    if let Some(css_minify) = &self.css_minify {
+      content = (css_minify)(content).await?;
+    }
+    // inject an additional string to generate a different hash for https://github.com/vitejs/vite/issues/18038
+    //
+    // pre-5.4.3, we generated CSS link tags without crossorigin attribute and generated an hash without
+    // this string
+    // in 5.4.3, we added crossorigin attribute to the generated CSS link tags but that made chromium browsers
+    // to block the CSSs from loading due to chromium's weird behavior
+    // (https://www.hacksoft.io/blog/handle-images-cors-error-in-chrome, https://issues.chromium.org/issues/40381978)
+    // to avoid that happening, we inject an additional string so that a different hash is generated
+    // for the same CSS content
+    Ok(rolldown_utils::concat_string!(content, "/*$vite$:1*/"))
   }
 
-  pub fn hoist_at_rules(css: String) -> String {
-    let mut magic_string = None;
-
-    let mut css_without_comments = css.clone();
+  pub fn hoist_at_rules(css: &str) -> String {
+    let mut css_without_comments = css.to_owned();
     let bytes = unsafe { css_without_comments.as_bytes_mut() };
-    for matched in MULTI_LINE_COMMENTS_RE.find_iter(&css) {
+    for matched in MULTI_LINE_COMMENTS_RE.find_iter(css) {
       bytes[matched.range()].fill(b' ');
     }
 
+    let mut s = string_wizard::MagicString::new(css);
     for matched in AT_IMPORT_RE.find_iter(&css_without_comments) {
-      let s = magic_string.get_or_insert_with(|| string_wizard::MagicString::new(&css));
       s.remove(matched.start(), matched.end());
       s.append_left(0, matched.as_str());
     }
 
     let mut found_charset = false;
     for matched in AT_CHARSET_RE.find_iter(&css_without_comments) {
-      let s = magic_string.get_or_insert_with(|| string_wizard::MagicString::new(&css));
       s.remove(matched.start(), matched.end());
       if !found_charset {
         s.prepend(matched.as_str());
@@ -437,10 +449,7 @@ impl ViteCssPostPlugin {
       }
     }
 
-    match magic_string {
-      Some(s) => s.to_string(),
-      None => css,
-    }
+    s.to_string()
   }
 
   pub async fn get_css_asset_dir_name(

@@ -1,6 +1,6 @@
 mod utils;
 
-use std::{borrow::Cow, sync::Arc};
+use std::{borrow::Cow, pin::Pin, sync::Arc};
 
 use cow_utils::CowUtils;
 use rolldown_common::{ModuleType, side_effects::HookSideEffects};
@@ -14,6 +14,9 @@ use rolldown_plugin_utils::{
 use rolldown_utils::{url::clean_url, xxhash::xxhash_with_base};
 use string_wizard::SourceMapOptions;
 
+pub type CSSMinifyFn =
+  dyn Fn(String) -> Pin<Box<(dyn Future<Output = anyhow::Result<String>> + Send)>> + Send + Sync;
+
 #[allow(clippy::struct_excessive_bools)]
 #[derive(derive_more::Debug)]
 pub struct ViteCssPostPlugin {
@@ -22,13 +25,14 @@ pub struct ViteCssPostPlugin {
   pub is_worker: bool,
   pub is_legacy: bool,
   pub is_client: bool,
-  pub css_minify: bool,
   pub css_code_split: bool,
   pub sourcemap: bool,
   pub assets_dir: String,
   pub url_base: String,
   pub decoded_base: String,
   pub lib_css_filename: Option<String>,
+  #[debug(skip)]
+  pub css_minify: Option<Arc<CSSMinifyFn>>,
   #[debug(skip)]
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
 }
@@ -95,7 +99,7 @@ impl Plugin for ViteCssPostPlugin {
     };
 
     let code = if inlined {
-      if self.css_minify {
+      if self.css_minify.is_some() {
         todo!()
       }
       rolldown_utils::concat_string!("export default ", serde_json::to_string(&css)?)
@@ -118,7 +122,6 @@ impl Plugin for ViteCssPostPlugin {
     }))
   }
 
-  #[allow(unused_assignments, unused_variables, clippy::too_many_lines)]
   async fn render_chunk(
     &self,
     ctx: &rolldown_plugin::PluginContext,

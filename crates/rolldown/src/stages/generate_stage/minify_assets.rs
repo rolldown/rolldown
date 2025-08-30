@@ -25,6 +25,7 @@ impl GenerateStage<'_> {
       MinifyOptions::Enabled(options) => (true, options),
     };
     let remove_whitespace = compress;
+    let allocator_pool = oxc::allocator::AllocatorPool::new(rayon::current_num_threads());
     assets.par_iter_mut().try_for_each(|asset| -> anyhow::Result<()> {
       if test_d_ts_pattern(&asset.filename) {
         return Ok(());
@@ -48,8 +49,10 @@ impl GenerateStage<'_> {
             ..CodegenOptions::default()
           };
 
+          let allocator_guard = allocator_pool.get();
           // TODO: Do we need to ensure `asset.filename` to be absolute path?
           let (minified_content, new_map) = EcmaCompiler::dce_or_minify(
+            &allocator_guard,
             asset.content.try_as_inner_str()?,
             options.format.source_type().with_jsx(true),
             asset.map.is_some(),

@@ -10,8 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 try {
 	throw "FAIL";
 } catch (t) {
-	var t = "PASS";
-	assert.strictEqual(t, "PASS");
+	assert.strictEqual("PASS", "PASS");
 }
 let a = 1;
 let def = "PASS2";

@@ -48,7 +48,7 @@ impl HmrManagerInput {
 }
 
 pub struct HmrManager {
-  input: HmrManagerInput,
+  pub(crate) input: HmrManagerInput,
   module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
   module_idx_by_stable_id: FxHashMap<String, ModuleIdx>,
   next_hmr_patch_id: u32,

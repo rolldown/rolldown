@@ -61,14 +61,16 @@ impl DevEngine {
           )?
           .into_dyn_watcher()
         } else {
-          <NotifyWatcher as Watcher>::new(watcher_event_service.create_event_handler())?.into_dyn_watcher()
+          <NotifyWatcher as Watcher>::new(watcher_event_service.create_event_handler())?
+            .into_dyn_watcher()
         }
       }
       #[cfg(target_family = "wasm")]
       {
         // For WASM, always use NotifyWatcher (which is PollWatcher in WASM)
         // Use the Watcher trait implementation
-        <NotifyWatcher as Watcher>::new(watcher_event_service.create_event_handler())?.into_dyn_watcher()
+        <NotifyWatcher as Watcher>::new(watcher_event_service.create_event_handler())?
+          .into_dyn_watcher()
       }
     };
 

@@ -2,6 +2,7 @@ use std::{mem, path::PathBuf, sync::Arc};
 
 use futures::FutureExt;
 
+use rolldown_common::HmrUpdate;
 use rolldown_error::BuildResult;
 use tokio::sync::Mutex;
 
@@ -105,5 +106,29 @@ impl BuildDriver {
     }
 
     Ok(())
+  }
+
+  pub async fn invalidate(
+    &self,
+    caller: String,
+    first_invalidated_by: Option<String>,
+  ) -> BuildResult<HmrUpdate> {
+    let mut build_state = loop {
+      let build_state = self.ctx.state.lock().await;
+      if let Some(building_future) = build_state.is_busy_then_future().cloned() {
+        drop(build_state);
+        building_future.await;
+      } else {
+        break build_state;
+      }
+    };
+
+    let bundler = self.bundler.lock().await;
+    let cache = build_state.cache.take().expect("Should never be none here");
+    let mut hmr_manager = bundler.create_hmr_manager(cache);
+    let update =
+      hmr_manager.compute_update_for_calling_invalidate(caller, first_invalidated_by).await?;
+    build_state.cache = Some(hmr_manager.input.cache);
+    Ok(update)
   }
 }

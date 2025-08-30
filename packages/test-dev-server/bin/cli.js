@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import('../dist/index.js').then(({ serve, serveNew }) => {
-  if (process.env.USE_NEW_DEV_SERVER) {
-    serveNew();
+import('../dist/index.js').then(({ serveLegacy, serve }) => {
+  if (process.env.USE_LEGACY) {
+    serveLegacy();
   } else {
     serve();
   }

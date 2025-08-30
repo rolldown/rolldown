@@ -1,4 +1,4 @@
-import { BindingDevEngine } from '../../binding';
+import { BindingDevEngine, type BindingHmrUpdate } from '../../binding';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
@@ -55,5 +55,12 @@ export class DevEngine {
 
   async ensureLatestBuild(): Promise<void> {
     await this.#inner.ensureLatestBuild();
+  }
+
+  async invalidate(
+    file: string,
+    firstInvalidatedBy?: string,
+  ): Promise<BindingHmrUpdate> {
+    return this.#inner.invalidate(file, firstInvalidatedBy);
   }
 }

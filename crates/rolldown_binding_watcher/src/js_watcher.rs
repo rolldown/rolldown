@@ -2,7 +2,7 @@ use crate::js_watcher_options::JsWatcherOptions;
 use napi::{Env, threadsafe_function::ThreadsafeFunctionCallMode};
 use napi_derive::napi;
 use rolldown_error::BuildResult;
-use rolldown_watcher::{RecursiveMode, Watcher};
+use rolldown_watcher::{RecursiveMode, Watcher, WatcherConfig};
 
 #[napi]
 pub struct JsWatcher {
@@ -19,6 +19,16 @@ impl JsWatcher {
 
 impl Watcher for JsWatcher {
   fn new<F: rolldown_watcher::EventHandler>(_event_handler: F) -> BuildResult<Self>
+  where
+    Self: Sized,
+  {
+    todo!("FIXME: JsWatcher doesn't support such constructor")
+  }
+
+  fn with_config<F: rolldown_watcher::EventHandler>(
+    _event_handler: F,
+    _config: WatcherConfig,
+  ) -> BuildResult<Self>
   where
     Self: Sized,
   {

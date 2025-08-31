@@ -2,10 +2,14 @@ use notify::RecursiveMode;
 use rolldown_error::BuildResult;
 use std::path::Path;
 
-use crate::EventHandler;
+use crate::{EventHandler, WatcherConfig};
 
 pub trait Watcher {
   fn new<F: EventHandler>(event_handler: F) -> BuildResult<Self>
+  where
+    Self: Sized;
+
+  fn with_config<F: EventHandler>(event_handler: F, config: WatcherConfig) -> BuildResult<Self>
   where
     Self: Sized;
 

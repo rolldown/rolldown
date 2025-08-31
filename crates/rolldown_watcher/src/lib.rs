@@ -6,6 +6,7 @@ mod event_handler;
 mod recommended_watcher;
 mod utils;
 mod watcher;
+mod watcher_config;
 mod watcher_ext;
 
 #[cfg(not(target_family = "wasm"))]
@@ -21,6 +22,7 @@ pub use debounced_recommended_watcher::DebouncedRecommendedWatcher;
 pub use crate::{event::EventResult as FileChangeResult, event_handler::EventHandler};
 pub use notify::RecursiveMode;
 pub use recommended_watcher::RecommendedWatcher;
+pub use watcher_config::WatcherConfig;
 pub use {watcher::Watcher, watcher_ext::WatcherExt};
 
 pub type DynWatcher = Box<dyn Watcher + Send + 'static>;

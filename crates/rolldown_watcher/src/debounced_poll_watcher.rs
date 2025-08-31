@@ -1,6 +1,4 @@
-use std::time::Duration;
-
-use crate::{EventHandler, Watcher, utils::DebounceEventHandlerAdapter};
+use crate::{EventHandler, Watcher, WatcherConfig, utils::DebounceEventHandlerAdapter};
 use notify::PollWatcher;
 use notify_debouncer_full::{Debouncer, RecommendedCache, new_debouncer_opt};
 use rolldown_error::{BuildResult, ResultExt};
@@ -9,30 +7,28 @@ use rolldown_error::{BuildResult, ResultExt};
 // `RecommendedWatcher` might be  `PollWatcher` in some platforms and this will cause a compile error of duplicate implementation.
 pub struct DebouncedPollWatcher(Debouncer<PollWatcher, RecommendedCache>);
 
-impl DebouncedPollWatcher {
-  pub fn with_poll_interval<F: EventHandler>(
-    event_handler: F,
-    poll_interval_ms: u64,
-  ) -> BuildResult<Self> {
-    let inner = new_debouncer_opt::<_, PollWatcher, RecommendedCache>(
-      Duration::from_millis(10),
-      None,
-      DebounceEventHandlerAdapter(event_handler),
-      RecommendedCache::new(),
-      notify::Config::default().with_poll_interval(Duration::from_millis(poll_interval_ms)),
-    )
-    .map_err_to_unhandleable()?;
-
-    Ok(Self(inner))
-  }
-}
-
 impl Watcher for DebouncedPollWatcher {
   fn new<F: EventHandler>(event_handler: F) -> BuildResult<Self>
   where
     Self: Sized,
   {
-    Self::with_poll_interval(event_handler, 100)
+    Self::with_config(event_handler, WatcherConfig::default())
+  }
+
+  fn with_config<F: EventHandler>(event_handler: F, config: WatcherConfig) -> BuildResult<Self>
+  where
+    Self: Sized,
+  {
+    let inner = new_debouncer_opt::<_, PollWatcher, RecommendedCache>(
+      config.debounce_delay_duration(),
+      None,
+      DebounceEventHandlerAdapter(event_handler),
+      RecommendedCache::new(),
+      config.to_notify_config(),
+    )
+    .map_err_to_unhandleable()?;
+
+    Ok(Self(inner))
   }
 
   fn watch(

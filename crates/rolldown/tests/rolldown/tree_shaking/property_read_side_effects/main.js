@@ -3,9 +3,17 @@ import { API_ENDPOINTS, someObject } from './constants.js'
 API_ENDPOINTS.USERS // Should be tree-shaken when propertyReadSideEffects: false
 API_ENDPOINTS['POSTS'] // Should be tree-shaken when propertyReadSideEffects: false
 
-function test() {}
+function test() {
+  console.log('test function called');
+}
 API_ENDPOINTS[unknown] // Should not be tree-shaken when propertyReadSideEffects: false
-API_ENDPOINTS[test] // Should be tree-shaken when propertyReadSideEffects: false
+API_ENDPOINTS[test]; // Should be tree-shaken when propertyReadSideEffects: false
+
+(/*#__PURE__*/test()).a.b.c; // Should be tree-shaken when propertyReadSideEffects: false
+test().a.b.c; // Should not be tree-shaken when propertyReadSideEffects: false
+
+(/*#__PURE__*/test())?.a?.b.c; // Should be tree-shaken when propertyReadSideEffects: false
+test()?.a?.b.c; // Should not be tree-shaken when propertyReadSideEffects: false
 
 // Object destructuring tests
 const { a, b } = someObject // Should be tree-shaken when propertyReadSideEffects: false

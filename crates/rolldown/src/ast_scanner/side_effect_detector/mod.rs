@@ -308,8 +308,10 @@ impl<'a> SideEffectDetector<'a> {
             .set(SideEffectDetail::GlobalVarAccess, self.is_unresolved_reference(ident_ref));
           break;
         }
-        // TODO: handle call expression like: obj().prop
-        _ => break,
+        _ => {
+          *side_effects_detail |= self.detect_side_effect_of_expr(cur);
+          break;
+        }
       }
       if chains.len() >= max_len && property_access_side_effects {
         *side_effects_detail = true.into();
@@ -664,7 +666,6 @@ impl<'a> SideEffectDetector<'a> {
           PropertyAccessFlag::Read,
         ),
       },
-
       Expression::TaggedTemplateExpression(expr) => {
         (!self.is_expr_manual_pure_functions(&expr.tag)).into()
       }

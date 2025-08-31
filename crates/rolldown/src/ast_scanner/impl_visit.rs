@@ -18,7 +18,7 @@ use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
 
-use crate::ast_scanner::cjs_ast_analyzer::CommonJsAstType;
+use crate::ast_scanner::{TraverseState, cjs_ast_analyzer::CommonJsAstType};
 
 use super::{
   AstScanner, cjs_ast_analyzer::CjsGlobalAssignmentType, side_effect_detector::SideEffectDetector,
@@ -45,6 +45,26 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     self.visit_path.pop();
   }
 
+  fn visit_simple_assignment_target(&mut self, it: &ast::SimpleAssignmentTarget<'ast>) {
+    if matches!(
+      self.options.treeshake.property_write_side_effects(),
+      rolldown_common::PropertyWriteSideEffects::False
+    ) && self.is_valid_tla_scope()
+    {
+      match it {
+        ast::SimpleAssignmentTarget::ComputedMemberExpression(_)
+        | ast::SimpleAssignmentTarget::StaticMemberExpression(_) => {
+          let pre = self.traverse_state;
+          self.traverse_state.insert(TraverseState::RootSymbolReferenceStmtInfoId);
+          walk::walk_simple_assignment_target(self, it);
+          self.traverse_state = pre;
+          return;
+        }
+        _ => {}
+      }
+    }
+    walk::walk_simple_assignment_target(self, it);
+  }
   fn visit_program(&mut self, program: &ast::Program<'ast>) {
     self.enter_scope(
       {
@@ -449,6 +469,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         }
         if !is_inserted_before {
           self.add_referenced_symbol(root_symbol_id);
+        }
+
+        if self.traverse_state.contains(TraverseState::RootSymbolReferenceStmtInfoId) {
+          // Since `0` is always namespace object stmt info
+          self.result.stmt_infos.reference_stmt_for_symbol_id(
+            self.current_stmt_info.stmt_idx.unwrap() + 1,
+            root_symbol_id,
+          );
         }
 
         self.check_import_assign(ident_ref, root_symbol_id.symbol);

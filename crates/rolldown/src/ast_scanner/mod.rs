@@ -109,6 +109,15 @@ pub struct ScanResult {
   pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
 }
 
+bitflags::bitflags! {
+    #[derive(Debug, Clone, Copy)]
+    struct TraverseState: u8 {
+        /// If this flag is set, all top level symbol id during traverse should be inserted into
+        /// [`rolldown_common::types::stmt_info::StmtInfos::symbol_ref_to_referenced_stmt_idx`]
+        const RootSymbolReferenceStmtInfoId = 1;
+    }
+}
+
 pub struct AstScanner<'me, 'ast> {
   idx: ModuleIdx,
   source: &'me ArcStr,
@@ -135,6 +144,7 @@ pub struct AstScanner<'me, 'ast> {
   /// Used in commonjs module it self
   self_used_cjs_named_exports: FxHashSet<CompactStr>,
   allocator: &'ast oxc::allocator::Allocator,
+  traverse_state: TraverseState,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -215,6 +225,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       top_level_this_expr_set: FxHashSet::default(),
       is_nested_this_inside_class: false,
       self_used_cjs_named_exports: FxHashSet::from_iter(["__esModule".into()]),
+      traverse_state: TraverseState::empty(),
     }
   }
 

@@ -7,7 +7,9 @@ use rolldown_common::{ModuleType, side_effects::HookSideEffects};
 use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plugin};
 use rolldown_plugin_utils::{
   RenderBuiltUrl, ToOutputFilePathEnv,
-  constants::{CSSChunkCache, CSSModuleCache, CSSStyles, HTMLProxyResult, PureCSSChunks},
+  constants::{
+    CSSChunkCache, CSSModuleCache, CSSStyles, HTMLProxyResult, PureCSSChunks, ViteMetadata,
+  },
   css::is_css_request,
   data_to_esm, find_special_query, is_special_query,
 };
@@ -183,6 +185,23 @@ impl Plugin for ViteCssPostPlugin {
           ..Default::default()
         })
       }),
+    }))
+  }
+
+  async fn augment_chunk_hash(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    _chunk: Arc<rolldown_common::RollupRenderedChunk>,
+  ) -> rolldown_plugin::HookAugmentChunkHashReturn {
+    Ok(ctx.meta().get::<ViteMetadata>().and_then(|vite_metadata| {
+      (!vite_metadata.imported_assets.is_empty()).then(|| {
+        let capacity = vite_metadata.imported_assets.iter().fold(0, |acc, s| acc + s.len());
+        let mut hash = String::with_capacity(capacity);
+        for asset in vite_metadata.imported_assets.iter() {
+          hash.push_str(&asset);
+        }
+        hash
+      })
     }))
   }
 }

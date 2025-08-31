@@ -48,7 +48,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_simple_assignment_target(&mut self, it: &ast::SimpleAssignmentTarget<'ast>) {
-    if self.flags.property_write_side_effects_false()
+    if !self.flags.property_write_side_effects()
       && self.traverse_state.contains(TraverseState::TopLevel)
     {
       match it {

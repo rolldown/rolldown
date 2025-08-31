@@ -44,7 +44,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use std::borrow::Cow;
 use sugar_path::SugarPath;
 
-use self::side_effect_detector::SideEffectDetectorFlatOptions;
+use self::side_effect_detector::ScannerFlatOptions;
 use crate::SharedOptions;
 
 // TODO: Not sure if this necessary to match the module request.
@@ -142,7 +142,7 @@ pub struct AstScanner<'me, 'ast> {
   dynamic_import_usage_info: DynamicImportUsageInfo,
   ignore_comment: &'static str,
   // Cached flag fields from options to avoid repeated function calls
-  flags: SideEffectDetectorFlatOptions,
+  flags: ScannerFlatOptions,
   /// "top level" `this` AstNode range in source code
   top_level_this_expr_set: FxHashSet<Span>,
   /// A flag to resolve `this` appear with propertyKey in class
@@ -165,7 +165,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     comments: &'me oxc::allocator::Vec<'me, Comment>,
     options: &'me SharedOptions,
     allocator: &'ast oxc::allocator::Allocator,
-    flags: SideEffectDetectorFlatOptions,
+    flags: ScannerFlatOptions,
   ) -> Self {
     let root_scope_id = scoping.root_scope_id();
     let mut symbol_ref_db = SymbolRefDbForModule::new(scoping, idx, root_scope_id);

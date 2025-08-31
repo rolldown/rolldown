@@ -10,7 +10,7 @@ use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSe
 use sugar_path::SugarPath;
 
 use crate::{
-  ast_scanner::{AstScanner, ScanResult, side_effect_detector::SideEffectDetectorFlatOptions},
+  ast_scanner::{AstScanner, ScanResult, side_effect_detector::ScannerFlatOptions},
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
   utils::parse_to_ecma_ast::{ParseToEcmaAstResult, parse_to_ecma_ast},
 };
@@ -37,7 +37,7 @@ pub async fn create_ecma_view(
   let repr_name = module_id.as_path().representative_file_name();
   let repr_name = legitimize_identifier_name(&repr_name);
 
-  let flags = SideEffectDetectorFlatOptions::from_shared_options(ctx.options);
+  let flags = ScannerFlatOptions::from_shared_options(ctx.options);
   let scanner = AstScanner::new(
     ctx.module_index,
     scoping,

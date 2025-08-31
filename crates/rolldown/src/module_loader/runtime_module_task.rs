@@ -19,7 +19,7 @@ use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  ast_scanner::{AstScanner, ScanResult, side_effect_detector::SideEffectDetectorFlatOptions},
+  ast_scanner::{AstScanner, ScanResult, side_effect_detector::ScannerFlatOptions},
   utils::tweak_ast_for_scanning::PreProcessor,
 };
 
@@ -181,7 +181,7 @@ impl RuntimeModuleTask {
 
     let scoping = ast.make_scoping();
     let facade_path = RUNTIME_MODULE_ID;
-    let flags = SideEffectDetectorFlatOptions::from_shared_options(&self.ctx.options);
+    let flags = ScannerFlatOptions::from_shared_options(&self.ctx.options);
     let scanner = AstScanner::new(
       self.module_idx,
       scoping,

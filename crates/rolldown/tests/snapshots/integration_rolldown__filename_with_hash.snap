@@ -5869,7 +5869,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/property_write_side_effects
 
-- main-!~{000}~.js => main-D1s4AeGL.js
+- main-!~{000}~.js => main-CMCvP65r.js
 
 # tests/rolldown/tree_shaking/pure_annotation
 

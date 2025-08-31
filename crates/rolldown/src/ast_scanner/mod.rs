@@ -115,6 +115,9 @@ bitflags::bitflags! {
         /// If this flag is set, all top level symbol id during traverse should be inserted into
         /// [`rolldown_common::types::stmt_info::StmtInfos::symbol_ref_to_referenced_stmt_idx`]
         const RootSymbolReferenceStmtInfoId = 1;
+        /// If current position all parent scopes are block scope or top level scope.
+        /// A cache state of [AstScanner::is_valid_tla_scope]
+        const TopLevel = 1 << 1;
     }
 }
 
@@ -230,8 +233,48 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   /// if current visit path is top level
+  /// including such scenario:
+  /// ```js
+  /// class T {
+  ///   [foo]() {}
+  /// }
+  /// class A {
+  ///   static {
+  ///     foo;
+  ///   }
+  /// }
+  ///
+  /// foo;
+  /// {
+  ///   foo;
+  /// }
+  /// ```
+  pub fn is_top_level(&self) -> bool {
+    self.scope_stack.iter().rev().all(|flag| {
+      flag.intersects(ScopeFlags::Top | ScopeFlags::StrictMode | ScopeFlags::ClassStaticBlock)
+        || flag.is_empty()
+    })
+  }
+
+  /// including such scenario:
+  /// ```js
+  /// class T {
+  ///   [await foo]() {}
+  /// }
+  ///
+  /// await foo;
+  /// {
+  ///   await foo;
+  /// }
+  /// for await (const let value of list) {
+  /// }
+  /// ```
   pub fn is_valid_tla_scope(&self) -> bool {
-    self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top())
+    self
+      .scope_stack
+      .iter()
+      .rev()
+      .all(|flag| flag.intersects(ScopeFlags::Top | ScopeFlags::StrictMode) || flag.is_block())
   }
 
   pub fn is_root_scope(&self) -> bool {

@@ -15,7 +15,8 @@ export const obj = {
 
 export const counter = {
   value: 0,
-  count: 0
+  count: 0,
+  another: 0
 }
 
 export const temp = {}

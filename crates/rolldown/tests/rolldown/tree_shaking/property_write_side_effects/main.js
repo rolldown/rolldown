@@ -12,7 +12,18 @@ console.log(temp)
 
 // Property updates that should be tree-shaken when propertyWriteSideEffects: false
 counter.value++ // Should be tree-shaken
-++counter.count // Should be tree-shaken
+class T {
+  static {
+    ++counter.count // Should not be tree-shaken, since `counter` is used
+  }
+}
+
+class A {
+  [counter.another++] = 123 // Should not be tree-shaken, since `counter` is used
+}
+
+console.log(counter)
+
 obj.prop-- // Should be tree-shaken
 --obj.other // Should be tree-shaken
 

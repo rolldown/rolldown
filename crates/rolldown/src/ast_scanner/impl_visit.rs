@@ -31,10 +31,12 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     _scope_id: &std::cell::Cell<Option<oxc::semantic::ScopeId>>,
   ) {
     self.scope_stack.push(flags);
+    self.traverse_state.set(TraverseState::TopLevel, self.is_top_level());
   }
 
   fn leave_scope(&mut self) {
     self.scope_stack.pop();
+    self.traverse_state.set(TraverseState::TopLevel, self.is_top_level());
   }
 
   fn enter_node(&mut self, kind: oxc::ast::AstKind<'ast>) {
@@ -49,7 +51,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     if matches!(
       self.options.treeshake.property_write_side_effects(),
       rolldown_common::PropertyWriteSideEffects::False
-    ) && self.is_valid_tla_scope()
+    ) && self.traverse_state.contains(TraverseState::TopLevel)
     {
       match it {
         ast::SimpleAssignmentTarget::ComputedMemberExpression(_)
@@ -196,7 +198,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_return_statement(&mut self, stmt: &ast::ReturnStatement<'ast>) {
     // Top-level return statements are only valid in CommonJS modules
-    if self.is_valid_tla_scope() {
+    if self.traverse_state.contains(TraverseState::TopLevel) {
       self.result.ast_usage.insert(EcmaModuleAstUsage::TopLevelReturn);
     }
     walk::walk_return_statement(self, stmt);

@@ -5,7 +5,7 @@ use futures::{FutureExt, future::Shared};
 use rolldown_common::HmrUpdate;
 use rolldown_error::BuildResult;
 use rolldown_utils::dashmap::FxDashSet;
-use rolldown_watcher::{DynWatcher, NotifyWatcher, Watcher, WatcherExt};
+use rolldown_watcher::{DynWatcher, Watcher, WatcherExt};
 use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
@@ -53,7 +53,7 @@ impl DevEngine {
     let watcher = {
       #[cfg(not(target_family = "wasm"))]
       {
-        use rolldown_watcher::DebouncedPollWatcher;
+        use rolldown_watcher::{DebouncedPollWatcher, DebouncedRecommendedWatcher};
         if ctx.options.use_polling {
           DebouncedPollWatcher::with_poll_interval(
             watcher_event_service.create_event_handler(),
@@ -61,16 +61,16 @@ impl DevEngine {
           )?
           .into_dyn_watcher()
         } else {
-          <NotifyWatcher as Watcher>::new(watcher_event_service.create_event_handler())?
+          DebouncedRecommendedWatcher::new(watcher_event_service.create_event_handler())?
             .into_dyn_watcher()
         }
       }
       #[cfg(target_family = "wasm")]
       {
+        use rolldown_watcher::RecommendedWatcher;
         // For WASM, always use NotifyWatcher (which is PollWatcher in WASM)
         // Use the Watcher trait implementation
-        <NotifyWatcher as Watcher>::new(watcher_event_service.create_event_handler())?
-          .into_dyn_watcher()
+        RecommendedWatcher::new(watcher_event_service.create_event_handler())?.into_dyn_watcher()
       }
     };
 

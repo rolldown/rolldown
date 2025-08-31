@@ -7,6 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region constants.js
+const counter = {
+	value: 0,
+	count: 0,
+	another: 0
+};
 const temp = {};
 
 //#endregion
@@ -14,6 +19,14 @@ const temp = {};
 o.foo = 100;
 temp["bar"] = 200;
 console.log(temp);
+counter.value++;
+var T = class {
+	static {
+		++counter.count;
+	}
+};
+counter.another++;
+console.log(counter);
 const key = Math.random() > .5 ? "a" : "b";
 const config = {};
 config.option = true;

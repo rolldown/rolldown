@@ -28,7 +28,7 @@ struct DeferUpdateInfo {
   record_meta_pairs: Vec<(ImportRecordIdx, ImportRecordMeta)>,
 }
 impl LinkStage<'_> {
-  #[allow(clippy::collapsible_if, clippy::too_many_lines)]
+  #[expect(clippy::collapsible_if, clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn reference_needed_symbols(&mut self) {
     // Since each module only access its own symbol ref db, we use zip rather than a Mutex to

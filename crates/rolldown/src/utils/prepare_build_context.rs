@@ -94,7 +94,7 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> Vec<BuildDiagnosti
   warnings
 }
 
-#[allow(clippy::too_many_lines)] // This function is long, but it's mostly just mapping values
+#[expect(clippy::too_many_lines)] // This function is long, but it's mostly just mapping values
 pub fn prepare_build_context(mut raw_options: crate::BundlerOptions) -> PrepareBuildContext {
   let warnings = verify_raw_options(&raw_options);
 

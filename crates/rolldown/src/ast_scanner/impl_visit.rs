@@ -388,7 +388,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// visit `Class` of declaration
-  #[allow(clippy::unused_self)]
+  #[expect(clippy::unused_self)]
   pub fn get_class_id(&self, class: &ast::Class<'ast>) -> Option<SymbolId> {
     let id = class.id.as_ref()?;
     let symbol_id = *id.symbol_id.get().unpack_ref();

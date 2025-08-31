@@ -31,14 +31,14 @@ oxc_index::define_index_type! {
 }
 
 impl ModuleGroup {
-  #[allow(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here
+  #[expect(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here
   pub fn add_module(&mut self, module_idx: ModuleIdx, module_table: &ModuleTable) {
     if self.modules.insert(module_idx) {
       self.sizes += module_table[module_idx].size() as f64;
     }
   }
 
-  #[allow(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here
+  #[expect(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here
   pub fn remove_module(&mut self, module_idx: ModuleIdx, module_table: &ModuleTable) {
     if self.modules.remove(&module_idx) {
       self.sizes -= module_table[module_idx].size() as f64;
@@ -48,7 +48,7 @@ impl ModuleGroup {
 }
 
 impl GenerateStage<'_> {
-  #[allow(
+  #[expect(
     clippy::too_many_lines,
     clippy::cast_precision_loss,
     clippy::cast_sign_loss,

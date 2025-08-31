@@ -20,7 +20,6 @@ pub enum CommonJsAstType {
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
-  #[allow(clippy::too_many_lines)]
   pub fn cjs_ast_analyzer(&mut self, ty: &CjsGlobalAssignmentType) -> Option<CommonJsAstType> {
     match ty {
       CjsGlobalAssignmentType::ModuleExportsAssignment => {

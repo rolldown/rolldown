@@ -102,7 +102,7 @@ fn update_module_default_export_info(
   module.stmt_infos.declare_symbol_for_stmt(idx, TaggedSymbolRef::Normal(default_symbol_ref));
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 /// return true if the json is a ObjectExpression
 fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -> bool {
   let module = &mut link_staged.module_table[module_idx];
@@ -206,7 +206,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   let original_symbol_ref_db = std::mem::take(link_staged.symbols.local_db_mut(module_idx));
   let (_, facade_scope) = original_symbol_ref_db.ast_scopes.into_inner();
   // recreate semantic data
-  #[allow(clippy::cast_possible_truncation)]
+  #[expect(clippy::cast_possible_truncation)]
   let scoping = ecma_ast.make_symbol_table_and_scope_tree_with_semantic_builder(
     SemanticBuilder::new().with_scope_tree_child_ids(true).with_stats(Stats {
       nodes: declaration_binding_names.len().next_power_of_two() as u32,

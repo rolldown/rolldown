@@ -31,7 +31,8 @@ const Internal = () => /* @__PURE__ */ h(p, null, " Test 2 ");
 
 //#endregion
 //#region app.jsx
-render(/* @__PURE__ */ h(() => /* @__PURE__ */ h(p, null, " ", /* @__PURE__ */ h(Internal, null), " T "), null), document.getElementById("app"));
+const App = () => /* @__PURE__ */ h(p, null, " ", /* @__PURE__ */ h(Internal, null), " T ");
+render(/* @__PURE__ */ h(App, null), document.getElementById("app"));
 
 //#endregion
 ```

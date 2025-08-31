@@ -2,6 +2,7 @@ use oxc::{
   codegen::{self, CodegenOptions, CommentOptions},
   minifier::{CompressOptions, MinifierOptions},
 };
+use oxc_allocator::AllocatorPool;
 use rolldown_common::{LegalComments, MinifyOptions, NormalizedBundlerOptions};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::BuildResult;
@@ -25,7 +26,7 @@ impl GenerateStage<'_> {
       MinifyOptions::Enabled(options) => (true, options),
     };
     let remove_whitespace = compress;
-    let allocator_pool = oxc::allocator::AllocatorPool::new(rayon::current_num_threads());
+    let allocator_pool = AllocatorPool::new(rayon::current_num_threads());
     assets.par_iter_mut().try_for_each(|asset| -> anyhow::Result<()> {
       if test_d_ts_pattern(&asset.filename) {
         return Ok(());

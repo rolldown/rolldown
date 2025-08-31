@@ -137,7 +137,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
 
 #[napi_derive::napi(object)]
 #[derive(Debug)]
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 pub struct BindingViteResolvePluginResolveOptions {
   pub is_build: bool,
   pub is_production: bool,

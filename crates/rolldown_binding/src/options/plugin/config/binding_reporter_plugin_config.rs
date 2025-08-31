@@ -2,7 +2,7 @@ use rolldown_plugin_reporter::ReporterPlugin;
 
 #[napi_derive::napi(object)]
 #[derive(Debug, Default)]
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 pub struct BindingReporterPluginConfig {
   pub is_tty: bool,
   pub is_lib: bool,

@@ -116,7 +116,7 @@ fn normalize_globals_option(
   })
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 pub fn normalize_binding_options(
   input_options: crate::options::BindingInputOptions,
   output_options: crate::options::BindingOutputOptions,

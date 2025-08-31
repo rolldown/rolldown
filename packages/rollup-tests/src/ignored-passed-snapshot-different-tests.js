@@ -100,6 +100,14 @@ module.exports = [
     "rollup@form@undefined-default-export: handles default exporting undefined",
     "rollup@form@unmodified-default-exports-function-argument: passing unbound default export to function cannot rebind it",
     "rollup@form@yield-expression@missing-space: Inserts space when simplifying yield expression without space",
+    // Passed. different code due to inlining
+    "rollup@form@assignment-to-exports: declares updated variable in ES output (#755)@generates es",
+    "rollup@form@deep-properties-access: handles deeply nested property accesses",
+    "rollup@form@deep-properties: handles deeply nested properties",
+    "rollup@form@handles-async-await: properly handles exporting async functions",
+    "rollup@form@recursive-computed-members: handle recursive computed member access",
+    "rollup@form@recursive-multi-expressions: handles recursive multi-expressions",
+    "rollup@form@reexport-star-deshadow: Star reexports scope deshadowing@generates es",
 
     // Test is passed. Class related, `class A` -> `var A = class`
     "rollup@form@use-class-name-in-static-block: use the original class name instead of renderName in class body@generates es",

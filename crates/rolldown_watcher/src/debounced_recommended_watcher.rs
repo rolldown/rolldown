@@ -1,6 +1,4 @@
-use std::time::Duration;
-
-use crate::{EventHandler, Watcher, utils::DebounceEventHandlerAdapter};
+use crate::{EventHandler, Watcher, WatcherConfig, utils::DebounceEventHandlerAdapter};
 use notify::RecommendedWatcher;
 use notify_debouncer_full::{Debouncer, RecommendedCache, new_debouncer_opt};
 use rolldown_error::{BuildResult, ResultExt};
@@ -14,12 +12,19 @@ impl Watcher for DebouncedRecommendedWatcher {
   where
     Self: Sized,
   {
+    Self::with_config(event_handler, WatcherConfig::default())
+  }
+
+  fn with_config<F: EventHandler>(event_handler: F, config: WatcherConfig) -> BuildResult<Self>
+  where
+    Self: Sized,
+  {
     let inner = new_debouncer_opt::<_, RecommendedWatcher, RecommendedCache>(
-      Duration::from_millis(10),
+      config.debounce_delay_duration(),
       None,
       DebounceEventHandlerAdapter(event_handler),
       RecommendedCache::new(),
-      notify::Config::default(),
+      config.to_notify_config(),
     )
     .map_err_to_unhandleable()?;
 

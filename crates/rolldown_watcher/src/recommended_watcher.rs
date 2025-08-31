@@ -1,7 +1,5 @@
-use crate::{EventHandler, Watcher, utils::NotifyEventHandlerAdapter};
-use notify::{
-  Config, RecommendedWatcher as NotifyRecommendedWatcher, Watcher as NotifyWatcherTrait,
-};
+use crate::{EventHandler, Watcher, WatcherConfig, utils::NotifyEventHandlerAdapter};
+use notify::{RecommendedWatcher as NotifyRecommendedWatcher, Watcher as NotifyWatcherTrait};
 use rolldown_error::{BuildResult, ResultExt};
 
 /// Will use the ideal watcher under the hood based on the platform.
@@ -12,9 +10,16 @@ impl Watcher for RecommendedWatcher {
   where
     Self: Sized,
   {
+    Self::with_config(event_handler, WatcherConfig::default())
+  }
+
+  fn with_config<F: EventHandler>(event_handler: F, config: WatcherConfig) -> BuildResult<Self>
+  where
+    Self: Sized,
+  {
     let watcher = <NotifyRecommendedWatcher as NotifyWatcherTrait>::new(
       NotifyEventHandlerAdapter(event_handler),
-      Config::default(),
+      config.to_notify_config(),
     )
     .map_err_to_unhandleable()?;
 

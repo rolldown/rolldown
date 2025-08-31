@@ -109,7 +109,7 @@ impl BindingBundlerImpl {
       move |env, outputs| {
         let chunk_size = outputs.chunk_len();
         // 16mb per chunk, it's just a hint, so it doesn't need to be accurate
-        #[allow(clippy::cast_possible_wrap)]
+        #[expect(clippy::cast_possible_wrap)]
         let memory_consumption = chunk_size as i64 * 1024 * 1024 * 16;
         memory_adjustment.fetch_add(memory_consumption, Ordering::Relaxed);
         env.adjust_external_memory(memory_consumption)?;
@@ -185,7 +185,7 @@ impl BindingBundlerImpl {
 }
 
 impl BindingBundlerImpl {
-  #[allow(clippy::significant_drop_tightening)]
+  #[expect(clippy::significant_drop_tightening)]
   pub async fn scan_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.lock().await;
     let output = Self::handle_result(bundler_core.scan(vec![]).await, bundler_core.options());
@@ -204,7 +204,7 @@ impl BindingBundlerImpl {
     Ok(vec![].into())
   }
 
-  #[allow(clippy::significant_drop_tightening)]
+  #[expect(clippy::significant_drop_tightening)]
   pub async fn write_impl(bundler: Arc<Mutex<NativeBundler>>) -> napi::Result<BindingOutputs> {
     let mut bundler_core = bundler.lock().await;
 
@@ -220,7 +220,7 @@ impl BindingBundlerImpl {
     Ok(outputs.assets.into())
   }
 
-  #[allow(clippy::significant_drop_tightening)]
+  #[expect(clippy::significant_drop_tightening)]
   pub async fn generate_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.lock().await;
 
@@ -236,7 +236,7 @@ impl BindingBundlerImpl {
     Ok(bundle_output.assets.into())
   }
 
-  #[allow(clippy::significant_drop_tightening)]
+  #[expect(clippy::significant_drop_tightening)]
   pub async fn close_impl(&self) -> napi::Result<()> {
     let mut bundler_core = self.inner.lock().await;
 

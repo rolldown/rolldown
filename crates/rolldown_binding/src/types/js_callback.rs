@@ -114,7 +114,7 @@ where
   Ret: 'static + Send + FromNapiValue,
   napi::Either<napi::Either<Promise<Ret>, Ret>, UnknownReturnValue>: FromNapiValue,
 {
-  #[allow(clippy::manual_async_fn)]
+  #[expect(clippy::manual_async_fn)]
   fn await_call(&self, args: Args) -> impl Future<Output = Result<Ret, napi::Error>> + Send {
     async move {
       match self.call_async(args).await? {

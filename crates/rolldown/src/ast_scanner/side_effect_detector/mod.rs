@@ -32,7 +32,7 @@ bitflags! {
 
 bitflags! {
   #[derive(Debug, Clone, Copy)]
-  pub struct SideEffectDetectorFlatOptions: u8 {
+  pub struct ScannerFlatOptions: u16 {
     const IgnoreAnnotations = 1 << 0;
     const JsxPreserve = 1 << 1;
     const IsManualPureFunctionsEmpty = 1 << 2;
@@ -42,6 +42,107 @@ bitflags! {
     /// If the flag is set, it means the `treeshake.property_write_side_effects` is `Always`.
     /// Otherwise, it is `False`.
     const PropertyWriteSideEffects = 1 << 4;
+    /// If set, ESM import/export syntax should be preserved in the output.
+    /// Usage: `!self.options.format.keep_esm_import_export_syntax()`
+    const KeepEsmImportExportSyntax = 1 << 5;
+    /// If set, the format should call runtime require function.
+    /// Usage: `self.options.format.should_call_runtime_require()`
+    const ShouldCallRuntimeRequire = 1 << 6;
+    /// If set, polyfill require for ESM format when targeting Node platform.
+    /// Usage: `self.options.polyfill_require_for_esm_format_with_node_platform()`
+    const PolyfillRequireForEsmFormatWithNodePlatform = 1 << 7;
+    /// If set, new URL() calls with string literal and import.meta.url should be resolved to assets.
+    /// Usage: `self.options.experimental.is_resolve_new_url_to_asset_enabled()`
+    const ResolveNewUrlToAssetEnabled = 1 << 8;
+    /// If set, inline const optimization is enabled.
+    /// Usage: `self.options.optimization.is_inline_const_enabled()`
+    const InlineConstEnabled = 1 << 9;
+  }
+}
+
+impl ScannerFlatOptions {
+  pub fn from_shared_options(options: &SharedNormalizedBundlerOptions) -> Self {
+    let mut flags = Self::empty();
+    flags.set(Self::IgnoreAnnotations, !options.treeshake.annotations());
+    flags.set(Self::JsxPreserve, options.transform_options.is_jsx_preserve());
+    flags
+      .set(Self::IsManualPureFunctionsEmpty, options.treeshake.manual_pure_functions().is_none());
+    flags.set(
+      Self::PropertyReadSideEffects,
+      matches!(
+        options.treeshake.property_read_side_effects(),
+        rolldown_common::PropertyReadSideEffects::Always
+      ),
+    );
+    flags.set(
+      Self::PropertyWriteSideEffects,
+      matches!(
+        options.treeshake.property_write_side_effects(),
+        rolldown_common::PropertyWriteSideEffects::Always
+      ),
+    );
+    flags.set(Self::KeepEsmImportExportSyntax, options.format.keep_esm_import_export_syntax());
+    flags.set(Self::ShouldCallRuntimeRequire, options.format.should_call_runtime_require());
+    flags.set(
+      Self::PolyfillRequireForEsmFormatWithNodePlatform,
+      options.polyfill_require_for_esm_format_with_node_platform(),
+    );
+    flags.set(
+      Self::ResolveNewUrlToAssetEnabled,
+      options.experimental.is_resolve_new_url_to_asset_enabled(),
+    );
+    flags.set(Self::InlineConstEnabled, options.optimization.is_inline_const_enabled());
+    flags
+  }
+
+  #[inline]
+  pub fn ignore_annotations(self) -> bool {
+    self.contains(Self::IgnoreAnnotations)
+  }
+
+  #[inline]
+  pub fn jsx_preserve(self) -> bool {
+    self.contains(Self::JsxPreserve)
+  }
+
+  #[inline]
+  pub fn is_manual_pure_functions_empty(self) -> bool {
+    self.contains(Self::IsManualPureFunctionsEmpty)
+  }
+
+  #[inline]
+  pub fn property_read_side_effects(self) -> bool {
+    self.contains(Self::PropertyReadSideEffects)
+  }
+
+  #[inline]
+  pub fn property_write_side_effects(self) -> bool {
+    self.contains(Self::PropertyWriteSideEffects)
+  }
+
+  #[inline]
+  pub fn keep_esm_import_export_syntax(self) -> bool {
+    self.contains(Self::KeepEsmImportExportSyntax)
+  }
+
+  #[inline]
+  pub fn should_call_runtime_require(self) -> bool {
+    self.contains(Self::ShouldCallRuntimeRequire)
+  }
+
+  #[inline]
+  pub fn polyfill_require_for_esm_format_with_node_platform(self) -> bool {
+    self.contains(Self::PolyfillRequireForEsmFormatWithNodePlatform)
+  }
+
+  #[inline]
+  pub fn resolve_new_url_to_asset_enabled(self) -> bool {
+    self.contains(Self::ResolveNewUrlToAssetEnabled)
+  }
+
+  #[inline]
+  pub fn inline_const_enabled(self) -> bool {
+    self.contains(Self::InlineConstEnabled)
   }
 }
 
@@ -51,69 +152,21 @@ mod utils;
 pub struct SideEffectDetector<'a> {
   pub scope: &'a AstScopes,
   options: &'a SharedNormalizedBundlerOptions,
-  flags: SideEffectDetectorFlatOptions,
+  flags: ScannerFlatOptions,
 }
 
 impl<'a> SideEffectDetector<'a> {
   pub fn new(
     scope: &'a AstScopes,
-    ignore_annotations: bool,
-    jsx_preserve: bool,
+    flags: ScannerFlatOptions,
     options: &'a SharedNormalizedBundlerOptions,
   ) -> Self {
-    let mut flags = SideEffectDetectorFlatOptions::empty();
-    flags.set(SideEffectDetectorFlatOptions::IgnoreAnnotations, ignore_annotations);
-    flags.set(SideEffectDetectorFlatOptions::JsxPreserve, jsx_preserve);
-    flags.set(
-      SideEffectDetectorFlatOptions::IsManualPureFunctionsEmpty,
-      options.treeshake.manual_pure_functions().is_none(),
-    );
-    flags.set(
-      SideEffectDetectorFlatOptions::PropertyReadSideEffects,
-      matches!(
-        options.treeshake.property_read_side_effects(),
-        rolldown_common::PropertyReadSideEffects::Always
-      ),
-    );
-    flags.set(
-      SideEffectDetectorFlatOptions::PropertyWriteSideEffects,
-      matches!(
-        options.treeshake.property_write_side_effects(),
-        rolldown_common::PropertyWriteSideEffects::Always
-      ),
-    );
-
     Self { scope, options, flags }
   }
 
   #[inline]
   fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
     self.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
-  }
-
-  #[inline]
-  fn ignore_annotations(&self) -> bool {
-    self.flags.contains(SideEffectDetectorFlatOptions::IgnoreAnnotations)
-  }
-
-  #[inline]
-  fn jsx_preserve(&self) -> bool {
-    self.flags.contains(SideEffectDetectorFlatOptions::JsxPreserve)
-  }
-
-  #[inline]
-  fn is_manual_pure_functions_empty(&self) -> bool {
-    self.flags.contains(SideEffectDetectorFlatOptions::IsManualPureFunctionsEmpty)
-  }
-
-  #[inline]
-  fn property_read_side_effects(&self) -> bool {
-    self.flags.contains(SideEffectDetectorFlatOptions::PropertyReadSideEffects)
-  }
-
-  #[inline]
-  fn property_write_side_effects(&self) -> bool {
-    self.flags.contains(SideEffectDetectorFlatOptions::PropertyWriteSideEffects)
   }
 
   fn detect_side_effect_of_property_key(
@@ -204,10 +257,10 @@ impl<'a> SideEffectDetector<'a> {
   ) -> SideEffectDetail {
     let mut property_access_side_effects = false;
     if property_access_kind.contains(PropertyAccessFlag::Read) {
-      property_access_side_effects |= self.property_read_side_effects();
+      property_access_side_effects |= self.flags.property_read_side_effects();
     }
     if property_access_kind.contains(PropertyAccessFlag::Write) {
-      property_access_side_effects |= self.property_write_side_effects();
+      property_access_side_effects |= self.flags.property_write_side_effects();
     }
 
     let mut side_effects_detail = SideEffectDetail::empty();
@@ -237,10 +290,10 @@ impl<'a> SideEffectDetector<'a> {
   ) -> SideEffectDetail {
     let mut property_access_side_effects = false;
     if property_access_kind.contains(PropertyAccessFlag::Read) {
-      property_access_side_effects |= self.property_read_side_effects();
+      property_access_side_effects |= self.flags.property_read_side_effects();
     }
     if property_access_kind.contains(PropertyAccessFlag::Write) {
-      property_access_side_effects |= self.property_write_side_effects();
+      property_access_side_effects |= self.flags.property_write_side_effects();
     }
 
     let mut side_effects_detail = SideEffectDetail::empty();
@@ -351,14 +404,14 @@ impl<'a> SideEffectDetector<'a> {
               && member_expr.static_property_name().is_some()
             {
               SideEffectDetail::PureCjs
-            } else if self.property_write_side_effects() {
+            } else if self.flags.property_write_side_effects() {
               true.into()
             } else {
               self.detect_side_effect_of_member_expr(member_expr, PropertyAccessFlag::Write)
             }
           }
           _ => {
-            if self.property_write_side_effects() {
+            if self.flags.property_write_side_effects() {
               true.into()
             } else {
               self.detect_side_effect_of_member_expr(member_expr, PropertyAccessFlag::Write)
@@ -395,7 +448,7 @@ impl<'a> SideEffectDetector<'a> {
     //   return StmtSideEffect::Unknown;
     // }
 
-    let is_pure = !self.ignore_annotations() && expr.pure;
+    let is_pure = !self.flags.ignore_annotations() && expr.pure;
     if is_pure {
       // Even it is pure, we also wants to know if the callee has access global var
       // But we need to ignore the `Unknown` flag, since it is already marked as `pure`.
@@ -417,7 +470,7 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn is_expr_manual_pure_functions(&self, expr: &'a Expression) -> bool {
-    if self.is_manual_pure_functions_empty() {
+    if self.flags.is_manual_pure_functions_empty() {
       return false;
     }
     // `is_manual_pure_functions_empty` is false, so `manual_pure_functions` is `Some`.
@@ -483,7 +536,7 @@ impl<'a> SideEffectDetector<'a> {
             }
             // refer https://github.com/rollup/rollup/blob/f7633942/src/ast/nodes/SpreadElement.ts#L32
             ast::ObjectPropertyKind::SpreadProperty(res) => {
-              if self.property_read_side_effects() {
+              if self.flags.property_read_side_effects() {
                 return true.into();
               }
               self.detect_side_effect_of_expr(&res.argument)
@@ -673,7 +726,7 @@ impl<'a> SideEffectDetector<'a> {
         // Handle update expressions like obj.prop++ or obj[prop]++
         match &expr.argument {
           ast::SimpleAssignmentTarget::StaticMemberExpression(static_member_expr) => {
-            if self.property_write_side_effects() {
+            if self.flags.property_write_side_effects() {
               true.into()
             } else {
               // If property_write_side_effects is false, we consider property updates
@@ -697,7 +750,7 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::V8IntrinsicExpression(_) => true.into(),
 
       Expression::JSXElement(_) | Expression::JSXFragment(_) => {
-        if self.jsx_preserve() {
+        if self.flags.jsx_preserve() {
           return true.into();
         }
         unreachable!("jsx should be transpiled")
@@ -778,7 +831,7 @@ impl<'a> SideEffectDetector<'a> {
               // the built-in side-effect free array iterator.
               BindingPatternKind::ObjectPattern(_) => {
                 // Object destructuring only has side effects when property_read_side_effects is Always
-                if self.property_read_side_effects() {
+                if self.flags.property_read_side_effects() {
                   true.into()
                 } else {
                   declarator
@@ -1017,7 +1070,7 @@ mod test {
   use rolldown_common::{AstScopes, NormalizedBundlerOptions, SideEffectDetail};
   use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 
-  use crate::ast_scanner::side_effect_detector::SideEffectDetector;
+  use super::{ScannerFlatOptions, SideEffectDetector};
 
   fn get_statements_side_effect(code: &str) -> bool {
     let source_type = SourceType::tsx();
@@ -1026,15 +1079,12 @@ mod test {
     let scoping = semantic.into_scoping();
     let ast_scopes = AstScopes::new(scoping);
 
+    let options = Arc::new(NormalizedBundlerOptions::default());
+    let flags = ScannerFlatOptions::from_shared_options(&options);
     ast.program().body.iter().any(|stmt| {
-      SideEffectDetector::new(
-        &ast_scopes,
-        false,
-        false,
-        &Arc::new(NormalizedBundlerOptions::default()),
-      )
-      .detect_side_effect_of_stmt(stmt)
-      .has_side_effect()
+      SideEffectDetector::new(&ast_scopes, flags, &options)
+        .detect_side_effect_of_stmt(stmt)
+        .has_side_effect()
     })
   }
 
@@ -1045,18 +1095,14 @@ mod test {
     let scoping = semantic.into_scoping();
     let ast_scopes = AstScopes::new(scoping);
 
+    let options = Arc::new(NormalizedBundlerOptions::default());
+    let flags = ScannerFlatOptions::from_shared_options(&options);
     ast
       .program()
       .body
       .iter()
       .map(|stmt| {
-        SideEffectDetector::new(
-          &ast_scopes,
-          false,
-          false,
-          &Arc::new(NormalizedBundlerOptions::default()),
-        )
-        .detect_side_effect_of_stmt(stmt)
+        SideEffectDetector::new(&ast_scopes, flags, &options).detect_side_effect_of_stmt(stmt)
       })
       .collect_vec()
   }

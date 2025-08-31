@@ -88,7 +88,6 @@ pub struct Chunk {
 }
 
 impl Chunk {
-  #[allow(clippy::too_many_arguments)]
   pub fn new(
     name: Option<ArcStr>,
     file_name: Option<ArcStr>,

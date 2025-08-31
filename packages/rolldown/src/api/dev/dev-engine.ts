@@ -23,6 +23,8 @@ export class DevEngine {
 
     const bindingDevOptions = {
       onHmrUpdates: devOptions.onHmrUpdates,
+      usePolling: devOptions.usePolling,
+      pollInterval: devOptions.pollInterval,
     };
 
     const inner = new BindingDevEngine(

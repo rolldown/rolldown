@@ -7,4 +7,6 @@ use napi_derive::napi;
 pub struct BindingDevOptions {
   #[napi(ts_type = "undefined | ((updates: BindingHmrUpdate[]) => void | Promise<void>)")]
   pub on_hmr_updates: Option<JsCallback<FnArgs<(Vec<BindingHmrUpdate>,)>, ()>>,
+  pub use_polling: Option<bool>,
+  pub poll_interval: Option<u32>,
 }

@@ -215,7 +215,6 @@ impl Bundler {
     Ok(output)
   }
 
-  #[allow(clippy::missing_transmute_annotations, clippy::needless_pass_by_ref_mut)]
   async fn bundle_up(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
@@ -427,7 +426,6 @@ impl Drop for CacheGuard<'_> {
 }
 
 fn _test_bundler() {
-  #[allow(clippy::needless_pass_by_value)]
   fn assert_send(_foo: impl Send) {}
   let mut bundler = Bundler::new(BundlerOptions::default());
   let write_fut = bundler.write();

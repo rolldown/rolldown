@@ -13,7 +13,7 @@ use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 
 use super::task_context::TaskContext;
 
-#[allow(clippy::rc_buffer)]
+#[expect(clippy::rc_buffer)]
 pub struct ExternalModuleTask {
   ctx: Arc<TaskContext>,
   module_idx: ModuleIdx,
@@ -22,7 +22,7 @@ pub struct ExternalModuleTask {
   // The module is asserted to be this specific module type.
 }
 
-#[allow(clippy::rc_buffer)]
+#[expect(clippy::rc_buffer)]
 impl ExternalModuleTask {
   pub fn new(
     ctx: Arc<TaskContext>,

@@ -717,7 +717,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ))
   }
 
-  #[allow(clippy::too_many_lines, clippy::collapsible_else_if)]
+  #[expect(clippy::too_many_lines)]
   fn try_rewrite_global_require_call(
     &self,
     call_expr: &mut ast::CallExpression<'ast>,
@@ -854,7 +854,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     None
   }
 
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   fn try_rewrite_inline_dynamic_import_expr(
     &self,
     import_expr: &ImportExpression<'ast>,
@@ -999,7 +999,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     None
   }
 
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   fn remove_unused_top_level_stmt(&mut self, program: &mut ast::Program<'ast>) -> usize {
     let mut last_import_stmt_idx = None;
 

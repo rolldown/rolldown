@@ -587,7 +587,7 @@ struct BindImportsAndExportsContext<'a> {
 }
 
 impl BindImportsAndExportsContext<'_> {
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   fn match_imports_with_exports(&mut self, module_id: ModuleIdx) {
     let Module::Normal(module) = &self.index_modules[module_id] else {
       return;
@@ -793,7 +793,7 @@ impl BindImportsAndExportsContext<'_> {
     }
   }
 
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   fn match_import_with_export(
     &mut self,
     index_modules: &IndexModules,

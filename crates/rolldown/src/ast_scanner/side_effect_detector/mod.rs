@@ -460,7 +460,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   fn detect_side_effect_of_expr(&self, expr: &Expression) -> SideEffectDetail {
     match expr {
       Expression::BooleanLiteral(_)
@@ -872,7 +872,7 @@ impl<'a> SideEffectDetector<'a> {
     detail
   }
 
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   pub fn detect_side_effect_of_stmt(&self, stmt: &ast::Statement) -> SideEffectDetail {
     use oxc::ast::ast::Statement;
     match stmt {

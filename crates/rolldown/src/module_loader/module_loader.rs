@@ -200,7 +200,7 @@ impl<'a> ModuleLoader<'a> {
     })
   }
 
-  #[allow(clippy::rc_buffer)]
+  #[expect(clippy::rc_buffer)]
   fn try_spawn_new_task(
     &mut self,
     resolved_id: ResolvedId,
@@ -245,7 +245,7 @@ impl<'a> ModuleLoader<'a> {
     idx
   }
 
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn fetch_modules(
     &mut self,

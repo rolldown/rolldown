@@ -31,7 +31,6 @@ type IndexImportsFromOtherChunks =
   IndexVec<ChunkIdx, FxHashMap<ChunkIdx, Vec<CrossChunkImportItem>>>;
 
 impl GenerateStage<'_> {
-  #[allow(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn compute_cross_chunk_links(&mut self, chunk_graph: &mut ChunkGraph) {
     let mut index_chunk_depended_symbols: IndexChunkDependedSymbols =
@@ -144,7 +143,7 @@ impl GenerateStage<'_> {
 
   /// - Assign each symbol to the chunk it belongs to
   /// - Collect all referenced symbols and consider them potential imports
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   fn collect_depended_symbols(
     &mut self,
     chunk_graph: &ChunkGraph,
@@ -322,7 +321,7 @@ impl GenerateStage<'_> {
 
   /// - Filter out depended symbols to come from other chunks
   /// - Mark exports of importee chunks
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   fn compute_chunk_imports(
     &self,
     chunk_graph: &ChunkGraph,
@@ -353,7 +352,6 @@ impl GenerateStage<'_> {
             is_dynamic_imported
               || !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
           };
-          #[allow(clippy::nonminimal_bool)]
           if needs_export_entry_signatures {
             // If the entry point is external, we don't need to compute exports.
             let meta = &self.link_output.metas[module_idx];

@@ -33,7 +33,7 @@ use crate::{
 use super::GenerateStage;
 
 impl GenerateStage<'_> {
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   pub async fn render_chunk_to_assets(
     &mut self,
     chunk_graph: &ChunkGraph,
@@ -260,7 +260,7 @@ impl GenerateStage<'_> {
           .map(|&module_idx| match self.link_output.module_table[module_idx].as_normal() {
             Some(module) => {
               let ast = self.link_output.ast_table[module.idx].as_ref().expect("should have ast");
-              #[allow(clippy::bool_to_int_with_if)]
+              #[expect(clippy::bool_to_int_with_if)]
               let initial_indent = if matches!(
                 self.link_output.metas[module_idx].concatenated_wrapped_module_kind,
                 ConcatenateWrappedModuleKind::None

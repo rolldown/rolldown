@@ -16,7 +16,7 @@ use crate::{
 
 use super::utils::render_chunk_directives;
 
-#[allow(clippy::needless_pass_by_value)]
+#[expect(clippy::needless_pass_by_value)]
 pub fn render_esm<'code>(
   ctx: &GenerateContext<'_>,
   addon_render_context: AddonRenderContext<'code>,
@@ -91,7 +91,7 @@ pub fn render_esm<'code>(
   source_joiner
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn render_chunk_content<'code>(
   ctx: &GenerateContext<'_>,
   module_sources: &'code [RenderedModuleSource],

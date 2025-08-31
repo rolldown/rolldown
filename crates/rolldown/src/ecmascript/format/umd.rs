@@ -22,7 +22,7 @@ use super::utils::{
   render_factory_parameters, render_modules_with_peek_runtime_module_at_first,
 };
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 pub async fn render_umd<'code>(
   ctx: &GenerateContext<'_>,
   addon_render_context: AddonRenderContext<'code>,

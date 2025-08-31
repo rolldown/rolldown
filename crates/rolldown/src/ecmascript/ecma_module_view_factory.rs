@@ -21,7 +21,7 @@ pub struct CreateEcmaViewReturn {
   pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 pub async fn create_ecma_view(
   ctx: &mut CreateModuleContext<'_>,
   args: CreateModuleViewArgs,

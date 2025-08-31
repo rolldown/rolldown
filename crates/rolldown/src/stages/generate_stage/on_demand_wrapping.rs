@@ -48,7 +48,7 @@ impl GenerateStage<'_> {
   /// - A commonjs module, a commonjs module can't not be safely eager eval.
   /// - A es module required by other module
   /// - All reachable modules of a boundary module in current chunk.
-  #[allow(unused)]
+  #[expect(unused)]
   fn inline_entry_chunk_wrapping(&mut self, chunk: &Chunk) {
     // All modules in entry chunk must be reachable from a entry module.
     let mut boundary_module = chunk
@@ -101,7 +101,6 @@ impl GenerateStage<'_> {
     }
   }
 
-  #[allow(unused)]
   fn expand_boundary(
     &self,
     boundary_modules: &mut FxHashSet<ModuleIdx>,

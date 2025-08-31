@@ -1,4 +1,4 @@
-#![allow(clippy::ignore_without_reason)]
+#![expect(clippy::ignore_without_reason)]
 use std::fmt::Write as _;
 use std::path::{Component, PathBuf};
 
@@ -13,7 +13,7 @@ use testing_macros::fixture;
 
 mod rolldown;
 
-#[allow(clippy::needless_pass_by_value)]
+#[expect(clippy::needless_pass_by_value)]
 #[fixture("./tests/rolldown/**/_config.json")]
 fn fixture_with_config(config_path: PathBuf) {
   Fixture::new(config_path.parent().unwrap()).run_integration_test();

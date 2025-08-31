@@ -47,7 +47,7 @@ pub async fn resolve_id(
   .await
 }
 
-#[allow(clippy::too_many_lines, clippy::too_many_arguments)]
+#[expect(clippy::too_many_lines, clippy::too_many_arguments)]
 pub async fn resolve_dependencies(
   self_resolved_id: &ResolvedId,
   options: &SharedOptions,

@@ -31,7 +31,7 @@ use crate::{
   utils::process_code_and_sourcemap::process_code_and_sourcemap,
 };
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 #[tracing::instrument(level = "debug", skip_all)]
 pub async fn finalize_assets(
   chunk_graph: &ChunkGraph,

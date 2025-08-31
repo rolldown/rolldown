@@ -299,7 +299,7 @@ impl BuildDiagnostic {
     Self::new_inner(PreferBuiltinFeature { builtin_feature, plugin_name })
   }
 
-  #[allow(clippy::cast_possible_truncation)]
+  #[expect(clippy::cast_possible_truncation)]
   pub fn json_parse(
     filename: ArcStr,
     source: ArcStr,

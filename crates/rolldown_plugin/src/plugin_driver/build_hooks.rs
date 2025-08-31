@@ -130,7 +130,7 @@ impl PluginDriver {
     Ok(None)
   }
 
-  #[allow(deprecated)]
+  #[expect(deprecated)]
   // Only for rollup compatibility
   pub async fn resolve_dynamic_import(
     &self,

@@ -23,7 +23,6 @@ pub struct LogEntry<'a> {
   pub compressed_size: Option<usize>,
 }
 
-#[allow(clippy::cast_precision_loss)]
 pub fn display_size(size: usize) -> String {
   let (quotient, remainder) = (size / 1000, (size % 1000) / 10);
   format!("{}.{:02} kB", quotient.to_formatted_string(&Locale::en), remainder)

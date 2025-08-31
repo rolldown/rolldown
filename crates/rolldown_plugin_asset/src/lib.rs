@@ -12,7 +12,7 @@ use rolldown_plugin_utils::{
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter::StringOrRegex, url::clean_url};
 use serde_json::Value;
 
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 #[derive(Debug, Default)]
 pub struct AssetPlugin {
   pub is_lib: bool,

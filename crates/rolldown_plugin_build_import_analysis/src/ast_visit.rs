@@ -14,7 +14,7 @@ use super::PRELOAD_HELPER_ID;
 
 const PRELOAD_METHOD: &str = "__vitePreload";
 
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 pub struct BuildImportAnalysisVisitor<'a> {
   pub snippet: AstSnippet<'a>,
   pub scope_stack: Vec<ScopeFlags>,

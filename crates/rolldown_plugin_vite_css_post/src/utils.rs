@@ -160,7 +160,7 @@ impl ViteCssPostPlugin {
     Ok(())
   }
 
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   pub async fn finalize_css_chunk<'a>(
     &self,
     ctx: &FinalizedContext<'a, '_, '_>,

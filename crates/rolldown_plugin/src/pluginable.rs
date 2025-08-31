@@ -241,7 +241,7 @@ impl<T: Plugin> Pluginable for T {
     Plugin::resolve_id_meta(self)
   }
 
-  #[allow(deprecated)]
+  #[expect(deprecated)]
   async fn call_resolve_dynamic_import(
     &self,
     ctx: &PluginContext,

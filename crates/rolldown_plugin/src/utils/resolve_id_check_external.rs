@@ -14,7 +14,7 @@ use crate::__inner::resolve_id_with_plugins;
 
 use super::resolve_id_with_plugins::is_data_url;
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub async fn resolve_id_check_external(
   resolver: &Resolver,
   plugin_driver: &PluginDriver,

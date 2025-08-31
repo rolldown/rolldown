@@ -99,8 +99,8 @@ impl Plugin for ViteCssPostPlugin {
     };
 
     let code = if inlined {
-      if self.css_minify.is_some() {
-        todo!()
+      if let Some(ref css_minify) = self.css_minify {
+        css = Cow::Owned(css_minify(css.into_owned()).await?);
       }
       rolldown_utils::concat_string!("export default ", serde_json::to_string(&css)?)
     } else {

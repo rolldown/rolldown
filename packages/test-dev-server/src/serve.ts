@@ -2,12 +2,12 @@ import connect from 'connect';
 import http from 'node:http';
 import * as rolldown from 'rolldown';
 import { WebSocketServer } from 'ws';
-import { DevServer } from './dev-server.js';
+import { DevServer } from './dev-server-legacy.js';
 import { createDevServerPlugin } from './utils/create-dev-server-plugin.js';
 import { loadDevConfig } from './utils/load-dev-config.js';
 import { normalizeDevOptions } from './utils/normalize-dev-options.js';
 
-export async function serve(): Promise<void> {
+export async function serveLegacy(): Promise<void> {
   console.log('Starting dev server...');
   const devConfig = await loadDevConfig();
 

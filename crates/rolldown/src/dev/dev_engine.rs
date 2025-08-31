@@ -2,6 +2,7 @@ use std::{ops::Deref, sync::Arc};
 
 use arcstr::ArcStr;
 use futures::{FutureExt, future::Shared};
+use rolldown_common::HmrUpdate;
 use rolldown_error::BuildResult;
 use rolldown_utils::dashmap::FxDashSet;
 use rolldown_watcher::Watcher;
@@ -111,6 +112,14 @@ impl<W: Watcher + Send + 'static> DevEngine<W> {
 
   pub async fn ensure_current_build_finish(&self) {
     self.ctx.ensure_current_build_finish().await;
+  }
+
+  pub async fn invalidate(
+    &self,
+    caller: String,
+    first_invalidated_by: Option<String>,
+  ) -> BuildResult<HmrUpdate> {
+    self.build_driver.invalidate(caller, first_invalidated_by).await
   }
 }
 

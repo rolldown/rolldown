@@ -90,7 +90,8 @@ function main() {
             hmrEditFile.path,
             'utf-8',
           );
-          await nodeFsPromise.writeFile(hmrEditFile.targetPath, newContent);
+          await sensibleTimeoutInSeconds(0.2); // Make sure the poll-based watcher could detect the change (poll interval is 100ms)
+          nodeFs.writeFileSync(hmrEditFile.targetPath, newContent);
           console.log(
             `📝 Written content to: ${hmrEditFile.targetPath}`,
           );
@@ -104,6 +105,8 @@ function main() {
           console.log(
             `✅ Successfully triggered HMR ${hmrEditFile.targetPath}`,
           );
+          // Wait a bit before the next change to ensure the watcher is ready
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
 
         const catchRunningArtifactProcess = runningArtifactProcess.catch(

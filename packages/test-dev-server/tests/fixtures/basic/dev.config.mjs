@@ -4,7 +4,9 @@ export default defineDevConfig({
   build: {
     input: 'src/main.js',
     experimental: {
-      hmr: true,
+      hmr: {
+        new: true,
+      },
     },
     platform: 'node',
     treeshake: false,

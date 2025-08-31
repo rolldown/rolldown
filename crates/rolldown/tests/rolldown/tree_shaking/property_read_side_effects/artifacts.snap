@@ -22,7 +22,12 @@ const someObject = {
 
 //#endregion
 //#region main.js
+function test() {
+	console.log("test function called");
+}
 API_ENDPOINTS[unknown];
+test().a.b.c;
+test()?.a?.b.c;
 const { d } = console.log("side effect") || someObject;
 const { e } = (() => {
 	console.log("effect");

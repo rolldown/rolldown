@@ -12,7 +12,8 @@ import assert from "assert";
 let foo;
 ({foo} = { foo: "bar" });
 assert.strictEqual(foo, "bar");
-({foo} = { foo: "baz" });
+const assign = () => ({foo} = { foo: "baz" });
+assign();
 assert.strictEqual(foo, "baz");
 
 //#endregion

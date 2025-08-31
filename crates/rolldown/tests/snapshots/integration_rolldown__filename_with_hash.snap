@@ -901,7 +901,7 @@ expression: output
 
 # tests/esbuild/default/import_re_export_es6_issue149
 
-- app-!~{000}~.js => app-ldhYNRBr.js
+- app-!~{000}~.js => app-Bjy2_wTe.js
 
 # tests/esbuild/default/import_relative_as_package
 
@@ -2483,11 +2483,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-B_a5CIX3.js
+- entry-!~{000}~.js => entry-DgPR-obH.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-B_a5CIX3.js
+- entry-!~{000}~.js => entry-DgPR-obH.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2550,7 +2550,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-CDTzx4WV.js
+- entry-!~{000}~.js => entry-BO57o_Oj.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -2734,7 +2734,7 @@ expression: output
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
-- entry-!~{000}~.js => entry-DR8QIFfX.js
+- entry-!~{000}~.js => entry-CsLOj4bA.js
 
 # tests/esbuild/lower/lower_using_unsupported_async
 
@@ -5058,11 +5058,11 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_merge_decorator_metadata
 
-- main-!~{000}~.js => main-CwjwzZWP.js
+- main-!~{000}~.js => main-DwTPCMQX.js
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-Hs3_eDY5.js
+- main-!~{000}~.js => main-D4mAwsAD.js
 
 # tests/rolldown/resolve/wildcard_alias
 
@@ -5997,6 +5997,6 @@ expression: output
 
 # tests/rollup/simplify-with-destructuring
 
-- main-!~{000}~.js => main-C_18VTgq.js
+- main-!~{000}~.js => main-DQKq1liX.js
 
 ```

@@ -1,9 +1,16 @@
 mod utils;
 
-use std::{borrow::Cow, pin::Pin, sync::Arc};
+use std::{
+  borrow::Cow,
+  pin::Pin,
+  sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+  },
+};
 
 use cow_utils::CowUtils;
-use rolldown_common::{ModuleType, side_effects::HookSideEffects};
+use rolldown_common::{ModuleType, Output, StrOrBytes, side_effects::HookSideEffects};
 use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plugin};
 use rolldown_plugin_utils::{
   RenderBuiltUrl, ToOutputFilePathEnv,
@@ -37,6 +44,8 @@ pub struct ViteCssPostPlugin {
   pub css_minify: Option<Arc<CSSMinifyFn>>,
   #[debug(skip)]
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
+  // internal state
+  pub has_emitted: AtomicBool,
 }
 
 impl Plugin for ViteCssPostPlugin {
@@ -48,11 +57,12 @@ impl Plugin for ViteCssPostPlugin {
     HookUsage::Transform | HookUsage::RenderChunk
   }
 
-  async fn build_start(
+  async fn render_start(
     &self,
     ctx: &rolldown_plugin::PluginContext,
-    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
+    _args: &rolldown_plugin::HookRenderStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
+    self.has_emitted.store(false, Ordering::Relaxed);
     ctx.meta().insert(Arc::new(CSSChunkCache::default()));
     ctx.meta().insert(Arc::new(PureCSSChunks::default()));
     Ok(())
@@ -203,5 +213,43 @@ impl Plugin for ViteCssPostPlugin {
         hash
       })
     }))
+  }
+
+  async fn generate_bundle(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    // to avoid emitting duplicate assets for modern build and legacy build
+    if self.is_legacy {
+      return Ok(());
+    }
+    // extract as single css bundle if no codesplit
+    if !self.css_code_split && !self.has_emitted.load(Ordering::Relaxed) {
+      todo!();
+    }
+    // remove empty css chunks and their imports
+    if let Some(pure_css_chunks) = ctx.meta().get::<PureCSSChunks>()
+      && !pure_css_chunks.inner.is_empty()
+    {
+      todo!();
+    }
+    let mut bundle_iter = args.bundle.iter_mut();
+    while let Some(Output::Asset(asset)) = bundle_iter.next()
+      && asset.filename.ends_with(".css")
+    {
+      if let StrOrBytes::Str(ref s) = asset.source {
+        let Cow::Owned(source) = s.cow_replace(utils::VITE_HASH_UPDATE_MARKER, "") else {
+          continue;
+        };
+        *asset = Arc::new(rolldown_common::OutputAsset {
+          names: asset.names.clone(),
+          source: StrOrBytes::Str(source),
+          filename: asset.filename.clone(),
+          original_file_names: asset.original_file_names.clone(),
+        });
+      }
+    }
+    Ok(())
   }
 }

@@ -5,7 +5,6 @@ use crate::{TestMeta, config_variant::ConfigVariant};
 
 #[derive(Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-#[allow(clippy::struct_excessive_bools, clippy::pub_underscore_fields)]
 pub struct TestConfig {
   #[serde(default)]
   pub config: rolldown_common::BundlerOptions,

@@ -17,7 +17,7 @@ use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use sugar_path::SugarPath;
 
 #[derive(Debug)]
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 pub struct ReporterPlugin {
   assets_dir: String,
   is_lib: bool,
@@ -34,7 +34,7 @@ pub struct ReporterPlugin {
 }
 
 impl ReporterPlugin {
-  #[allow(clippy::fn_params_excessive_bools)]
+  #[expect(clippy::fn_params_excessive_bools)]
   pub fn new(
     is_tty: bool,
     should_log_info: bool,
@@ -155,7 +155,7 @@ impl Plugin for ReporterPlugin {
     Ok(None)
   }
 
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   async fn write_bundle(
     &self,
     _ctx: &PluginContext,

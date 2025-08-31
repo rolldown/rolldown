@@ -18,7 +18,7 @@ use oxc_resolver::{
 };
 
 #[derive(Debug)]
-#[allow(dead_code, clippy::struct_field_names)]
+#[expect(clippy::struct_field_names)]
 pub struct Resolver<T: FileSystem = OsFileSystem> {
   cwd: PathBuf,
   default_resolver: ResolverGeneric<T>,
@@ -41,7 +41,7 @@ impl<F: FileSystem> Resolver<F> {
 }
 
 impl<F: FileSystem> Resolver<F> {
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   pub fn new(
     fs: F,
     cwd: PathBuf,

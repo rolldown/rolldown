@@ -5,7 +5,6 @@ use crate::utils::true_by_default;
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-#[allow(clippy::struct_excessive_bools, clippy::pub_underscore_fields)]
 pub struct ExtendedTests {
   /// Run the test case with `minifyInternalExports` enabled in addition to the default config.
   #[serde(default = "true_by_default")]

@@ -18,7 +18,7 @@ pub trait BindingPropertyExt<'ast> {
 }
 
 impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   fn into_assignment_target_property(
     self,
     alloc: &'ast Allocator,

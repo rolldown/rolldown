@@ -14,7 +14,7 @@ pub use crate::source::{Source, SourceMapSource};
 use rolldown_utils::rustc_hash::FxHashMapExt;
 
 // <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>
-#[allow(clippy::cast_possible_truncation)]
+#[expect(clippy::cast_possible_truncation)]
 pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
   debug_assert!(sourcemap_chain.len() > 1);
   if sourcemap_chain.len() == 1 {

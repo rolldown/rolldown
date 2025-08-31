@@ -28,7 +28,7 @@ impl BitSet {
     }
   }
   // It is safe to convert `usize` to `u32` here because we ensure that the bitset is created with a maximum bit count that fits within `u32`.
-  #[allow(clippy::cast_possible_truncation)]
+  #[expect(clippy::cast_possible_truncation)]
   pub fn index_of_one(&self) -> Vec<u32> {
     let mut result = Vec::new();
     for (i, &e) in self.entries.iter().enumerate() {

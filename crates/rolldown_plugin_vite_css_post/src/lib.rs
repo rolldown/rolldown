@@ -26,7 +26,7 @@ use string_wizard::SourceMapOptions;
 pub type CSSMinifyFn =
   dyn Fn(String) -> Pin<Box<(dyn Future<Output = anyhow::Result<String>> + Send)>> + Send + Sync;
 
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 #[derive(derive_more::Debug)]
 pub struct ViteCssPostPlugin {
   pub is_lib: bool,

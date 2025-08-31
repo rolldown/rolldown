@@ -15,7 +15,6 @@ enum Case {
   SnakeCase,
 }
 
-#[allow(clippy::zero_sized_map_values)]
 #[derive(Deserialize, Debug)]
 struct LsLintConfig {
   ignore: Vec<String>,

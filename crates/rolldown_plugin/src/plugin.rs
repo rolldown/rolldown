@@ -220,7 +220,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn generate_bundle(
     &self,
     _ctx: &PluginContext,
-    _args: &mut HookGenerateBundleArgs,
+    _args: &mut HookGenerateBundleArgs<'_>,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
     async { Ok(()) }
   }

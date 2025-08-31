@@ -2,7 +2,7 @@ use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
 
 #[napi_derive::napi(object)]
 #[derive(Debug, Default)]
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 pub struct BindingBuildImportAnalysisPluginConfig {
   pub preload_code: String,
   pub insert_preload: bool,

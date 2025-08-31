@@ -33,7 +33,7 @@ use crate::{
   TransformOptions,
 };
 
-#[allow(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
+#[expect(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
 #[derive(Debug)]
 pub struct NormalizedBundlerOptions {
   // --- Input
@@ -110,7 +110,7 @@ pub struct NormalizedBundlerOptions {
 
 // This is only used for testing
 impl Default for NormalizedBundlerOptions {
-  #[allow(clippy::default_trait_access)]
+  #[expect(clippy::default_trait_access)]
   fn default() -> Self {
     Self {
       input: Default::default(),

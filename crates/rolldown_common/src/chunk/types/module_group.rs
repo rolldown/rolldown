@@ -17,7 +17,7 @@ impl ModuleGroup {
 
   #[cfg(debug_assertions)]
   #[track_caller]
-  #[allow(clippy::print_stdout)]
+  #[expect(clippy::print_stdout)]
   pub fn debug_module_group(&self, module_table: &ModuleTable) {
     let caller = std::panic::Location::caller();
     println!("[{}:{}] Debugging module group:", caller.file(), caller.line());

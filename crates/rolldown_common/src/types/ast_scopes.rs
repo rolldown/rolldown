@@ -69,7 +69,7 @@ impl AstScopes {
     self.scoping.get_resolved_references(symbol_id)
   }
 
-  #[allow(clippy::cast_possible_truncation)]
+  #[expect(clippy::cast_possible_truncation)]
   pub fn create_facade_root_symbol_ref(&mut self, name: &str) -> SymbolId {
     assert!(
       self.facade_scoping.next_symbol_id > self.facade_scoping.minimum_symbol_id.index() as u32,

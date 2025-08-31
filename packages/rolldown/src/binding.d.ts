@@ -1286,6 +1286,7 @@ export declare class BindingDevEngine {
   constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
   run(): Promise<void>
   ensureCurrentBuildFinish(): Promise<void>
+  ensureLatestBuild(): Promise<void>
 }
 
 export declare class BindingHmrOutput {
@@ -1603,6 +1604,7 @@ export interface BindingExperimentalHmrOptions {
   host?: string
   port?: number
   implement?: string
+  new?: boolean
 }
 
 export interface BindingExperimentalOptions {

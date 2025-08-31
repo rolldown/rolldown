@@ -954,6 +954,12 @@
             "string",
             "null"
           ]
+        },
+        "new": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

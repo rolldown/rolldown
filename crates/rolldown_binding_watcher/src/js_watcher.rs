@@ -25,7 +25,10 @@ impl Watcher for JsWatcher {
     todo!("FIXME: JsWatcher doesn't support such constructor")
   }
 
-  fn with_config<F: rolldown_watcher::EventHandler>(_event_handler: F, _config: WatcherConfig) -> BuildResult<Self>
+  fn with_config<F: rolldown_watcher::EventHandler>(
+    _event_handler: F,
+    _config: WatcherConfig,
+  ) -> BuildResult<Self>
   where
     Self: Sized,
   {

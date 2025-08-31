@@ -59,7 +59,6 @@ rolldown_plugin_web_worker_post = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_tracing = { workspace = true }
 rolldown_utils = { workspace = true }
-rolldown_watcher = { workspace = true }
 rustc-hash = { workspace = true }
 tracing = { workspace = true }
 url = { workspace = true }

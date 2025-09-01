@@ -102,15 +102,15 @@ jobs:
       os: ${{ matrix.target }}
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
-  # browser-test:
-  # needs: changes
-  # strategy:
-  # matrix:
-  # target: [ubuntu-latest, macos-latest, windows-latest]
-  # uses: ./.github/workflows/reusable-browser-test.yml
-  # with:
-  # os: ${{ matrix.target }}
-  # changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+  browser-test:
+    needs: changes
+    strategy:
+      matrix:
+        target: [ubuntu-latest, macos-latest, windows-latest]
+    uses: ./.github/workflows/reusable-browser-test.yml
+    with:
+      os: ${{ matrix.target }}
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   pluginutils-test:
     name: Pluginutils Test

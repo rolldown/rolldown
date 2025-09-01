@@ -68,9 +68,11 @@ pub fn find_hash_placeholders<'a>(
   results
 }
 
-const CHARS: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$";
-const FREQUENT_CHARS: &[u8] = b"etnriaoscludfpmhg_vybxSCwTEDOkAjMNPFILRzBVHUWGKqJYXZQ$1024368579";
 const BASE: u32 = 64;
+const CHARS: &[u8; BASE as usize] =
+  b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$";
+const FREQUENT_CHARS: &[u8; BASE as usize] =
+  b"etnriaoscludfpmhg_vybxSCwTEDOkAjMNPFILRzBVHUWGKqJYXZQ$1024368579";
 
 pub fn to_base64(value: u32) -> String {
   to_base64_common(value, CHARS)
@@ -79,7 +81,8 @@ pub fn to_base64(value: u32) -> String {
 pub fn to_base64_on_frequent_chars(value: u32) -> String {
   to_base64_common(value, FREQUENT_CHARS)
 }
-pub fn to_base64_common(mut value: u32, chars: &[u8]) -> String {
+
+pub fn to_base64_common(mut value: u32, chars: &[u8; BASE as usize]) -> String {
   let mut buffer = vec![];
 
   loop {

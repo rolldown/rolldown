@@ -34,7 +34,7 @@ impl ChunkGraph {
     }
   }
 
-  #[allow(unused)]
+  #[expect(unused)]
   pub fn sorted_chunks(&self) -> impl Iterator<Item = &Chunk> {
     self.sorted_chunk_idx_vec.iter().map(move |&id| &self.chunk_table.chunks[id])
   }

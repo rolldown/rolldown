@@ -59,7 +59,7 @@ impl TransformPlugin {
     JsxRefreshFilter::False
   }
 
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   pub fn get_modified_transform_options(
     &self,
     ctx: &SharedTransformPluginContext,

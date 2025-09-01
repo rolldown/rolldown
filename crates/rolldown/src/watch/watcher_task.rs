@@ -90,7 +90,7 @@ impl WatcherTask {
             .join(bundler.options.file.as_ref().unwrap_or(&bundler.options.out_dir))
             .to_string_lossy()
             .to_string(),
-          #[allow(clippy::cast_possible_truncation)]
+          #[expect(clippy::cast_possible_truncation)]
           duration: start_time.elapsed().as_millis() as u32,
           result: Arc::clone(&self.bundler),
         })))?;

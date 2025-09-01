@@ -1,13 +1,22 @@
 mod utils;
 
-use std::{borrow::Cow, pin::Pin, sync::Arc};
+use std::{
+  borrow::Cow,
+  pin::Pin,
+  sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+  },
+};
 
 use cow_utils::CowUtils;
-use rolldown_common::{ModuleType, side_effects::HookSideEffects};
+use rolldown_common::{ModuleType, Output, StrOrBytes, side_effects::HookSideEffects};
 use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plugin};
 use rolldown_plugin_utils::{
   RenderBuiltUrl, ToOutputFilePathEnv,
-  constants::{CSSChunkCache, CSSModuleCache, CSSStyles, HTMLProxyResult, PureCSSChunks},
+  constants::{
+    CSSChunkCache, CSSModuleCache, CSSStyles, HTMLProxyResult, PureCSSChunks, ViteMetadata,
+  },
   css::is_css_request,
   data_to_esm, find_special_query, is_special_query,
 };
@@ -17,7 +26,7 @@ use string_wizard::SourceMapOptions;
 pub type CSSMinifyFn =
   dyn Fn(String) -> Pin<Box<(dyn Future<Output = anyhow::Result<String>> + Send)>> + Send + Sync;
 
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 #[derive(derive_more::Debug)]
 pub struct ViteCssPostPlugin {
   pub is_lib: bool,
@@ -35,6 +44,8 @@ pub struct ViteCssPostPlugin {
   pub css_minify: Option<Arc<CSSMinifyFn>>,
   #[debug(skip)]
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
+  // internal state
+  pub has_emitted: AtomicBool,
 }
 
 impl Plugin for ViteCssPostPlugin {
@@ -46,11 +57,12 @@ impl Plugin for ViteCssPostPlugin {
     HookUsage::Transform | HookUsage::RenderChunk
   }
 
-  async fn build_start(
+  async fn render_start(
     &self,
     ctx: &rolldown_plugin::PluginContext,
-    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
+    _args: &rolldown_plugin::HookRenderStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
+    self.has_emitted.store(false, Ordering::Relaxed);
     ctx.meta().insert(Arc::new(CSSChunkCache::default()));
     ctx.meta().insert(Arc::new(PureCSSChunks::default()));
     Ok(())
@@ -184,5 +196,60 @@ impl Plugin for ViteCssPostPlugin {
         })
       }),
     }))
+  }
+
+  async fn augment_chunk_hash(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    _chunk: Arc<rolldown_common::RollupRenderedChunk>,
+  ) -> rolldown_plugin::HookAugmentChunkHashReturn {
+    Ok(ctx.meta().get::<ViteMetadata>().and_then(|vite_metadata| {
+      (!vite_metadata.imported_assets.is_empty()).then(|| {
+        let capacity = vite_metadata.imported_assets.iter().fold(0, |acc, s| acc + s.len());
+        let mut hash = String::with_capacity(capacity);
+        for asset in vite_metadata.imported_assets.iter() {
+          hash.push_str(&asset);
+        }
+        hash
+      })
+    }))
+  }
+
+  async fn generate_bundle(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    // to avoid emitting duplicate assets for modern build and legacy build
+    if self.is_legacy {
+      return Ok(());
+    }
+    // extract as single css bundle if no codesplit
+    if !self.css_code_split && !self.has_emitted.load(Ordering::Relaxed) {
+      todo!();
+    }
+    // remove empty css chunks and their imports
+    if let Some(pure_css_chunks) = ctx.meta().get::<PureCSSChunks>()
+      && !pure_css_chunks.inner.is_empty()
+    {
+      todo!();
+    }
+    let mut bundle_iter = args.bundle.iter_mut();
+    while let Some(Output::Asset(asset)) = bundle_iter.next()
+      && asset.filename.ends_with(".css")
+    {
+      if let StrOrBytes::Str(ref s) = asset.source {
+        let Cow::Owned(source) = s.cow_replace(utils::VITE_HASH_UPDATE_MARKER, "") else {
+          continue;
+        };
+        *asset = Arc::new(rolldown_common::OutputAsset {
+          names: asset.names.clone(),
+          source: StrOrBytes::Str(source),
+          filename: asset.filename.clone(),
+          original_file_names: asset.original_file_names.clone(),
+        });
+      }
+    }
+    Ok(())
   }
 }

@@ -74,7 +74,6 @@ pub struct BindingModules {
   pub keys: Vec<String>,
 }
 
-#[allow(clippy::cast_possible_truncation)]
 impl From<&rolldown_common::Modules> for BindingModules {
   fn from(modules: &rolldown_common::Modules) -> Self {
     let values = modules.values.iter().map(|x| BindingRenderedModule::new(Arc::clone(x))).collect();

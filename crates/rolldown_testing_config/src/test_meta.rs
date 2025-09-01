@@ -5,7 +5,7 @@ use crate::{extended_tests::ExtendedTests, utils::true_by_default};
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-#[allow(clippy::struct_excessive_bools, clippy::pub_underscore_fields)]
+#[expect(clippy::struct_excessive_bools, clippy::pub_underscore_fields)]
 pub struct TestMeta {
   #[serde(default = "true_by_default")]
   /// If `false`, the compiled artifacts won't be executed, but `_test.mjs` will be still executed if exists.

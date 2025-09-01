@@ -609,7 +609,7 @@ impl<'ast> AstSnippet<'ast> {
   // If interop is None, using `require_foo()`
   // If interop is babel, using __toESM(require_foo())
   // If interop is node, using __toESM(require_foo(), 1)
-  #[allow(clippy::needless_pass_by_value)]
+  #[expect(clippy::needless_pass_by_value)]
   pub fn to_esm_call_with_interop(
     &self,
     to_esm_fn_name: PassedStr,
@@ -629,7 +629,6 @@ impl<'ast> AstSnippet<'ast> {
 
   // If `node_mode` is true, using `__toESM(expr, 1)`
   // If `node_mode` is false, using `__toESM(expr)`
-  #[allow(clippy::needless_pass_by_value)]
   pub fn wrap_with_to_esm(
     &self,
     to_esm_fn_expr: Expression<'ast>,

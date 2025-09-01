@@ -5,7 +5,7 @@ use crate::{
   types::plugin_idx::PluginIdx,
 };
 
-#[allow(clippy::struct_field_names)] // Allow all fields to have the same prefix `order_by_`
+#[expect(clippy::struct_field_names)] // Allow all fields to have the same prefix `order_by_`
 #[derive(Clone)]
 pub struct PluginHookOrders {
   pub order_by_build_start_meta: Vec<PluginIdx>,

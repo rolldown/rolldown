@@ -54,7 +54,7 @@ struct Context<'a> {
 }
 
 impl LinkStage<'_> {
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(&mut self) {
     let mut is_included_vec: IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>> = self
@@ -194,7 +194,7 @@ impl LinkStage<'_> {
           }
           let any_included =
             stmt_info_idxs.iter().any(|stmt_info_idx| is_included_vec[module.idx][*stmt_info_idx]);
-          #[allow(clippy::cast_possible_truncation)]
+          #[expect(clippy::cast_possible_truncation)]
           // It is alright, since the `RuntimeHelper` is a bitmask and the index is guaranteed to be less than 32.
           normalized_runtime_helper
             .set(RuntimeHelper::from_bits(1 << index as u32).unwrap(), any_included);

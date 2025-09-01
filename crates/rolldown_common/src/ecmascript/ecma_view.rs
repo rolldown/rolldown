@@ -36,7 +36,7 @@ pub enum ThisExprReplaceKind {
 }
 
 #[inline]
-#[allow(clippy::implicit_hasher)]
+#[expect(clippy::implicit_hasher)]
 pub fn generate_replace_this_expr_map(
   set: &FxHashSet<Span>,
   kind: ThisExprReplaceKind,

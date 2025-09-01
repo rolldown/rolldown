@@ -41,7 +41,7 @@ use super::{
   types::binding_builtin_plugin_name::BindingBuiltinPluginName,
 };
 
-#[allow(clippy::pub_underscore_fields)]
+#[expect(clippy::pub_underscore_fields)]
 #[napi(object)]
 pub struct BindingBuiltinPlugin<'a> {
   #[napi(js_name = "__name")]
@@ -61,7 +61,7 @@ impl std::fmt::Debug for BindingBuiltinPlugin<'_> {
 impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
   type Error = napi::Error;
 
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
       BindingBuiltinPluginName::Alias => {

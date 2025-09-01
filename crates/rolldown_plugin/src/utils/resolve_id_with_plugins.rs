@@ -17,7 +17,7 @@ pub fn is_data_url(s: &str) -> bool {
   s.trim_start().starts_with("data:")
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub async fn resolve_id_with_plugins(
   resolver: &Resolver,
   plugin_driver: &PluginDriver,

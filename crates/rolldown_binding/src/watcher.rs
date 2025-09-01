@@ -19,7 +19,7 @@ pub struct BindingNotifyOption {
 }
 
 impl From<BindingNotifyOption> for rolldown_common::NotifyOption {
-  #[allow(clippy::cast_lossless)]
+  #[expect(clippy::cast_lossless)]
   fn from(value: BindingNotifyOption) -> Self {
     Self {
       poll_interval: value.poll_interval.map(|m| Duration::from_millis(m as u64)),

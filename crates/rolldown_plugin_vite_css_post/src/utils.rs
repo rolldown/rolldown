@@ -27,6 +27,7 @@ use sugar_path::SugarPath;
 
 use crate::ViteCssPostPlugin;
 
+pub const VITE_HASH_UPDATE_MARKER: &str = "/*$vite$:1*/";
 pub const DEFAULT_CSS_BUNDLE_NAME: &str = "style.css";
 
 // TODO: improve below logic
@@ -160,7 +161,7 @@ impl ViteCssPostPlugin {
     Ok(())
   }
 
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   pub async fn finalize_css_chunk<'a>(
     &self,
     ctx: &FinalizedContext<'a, '_, '_>,
@@ -424,7 +425,7 @@ impl ViteCssPostPlugin {
     // (https://www.hacksoft.io/blog/handle-images-cors-error-in-chrome, https://issues.chromium.org/issues/40381978)
     // to avoid that happening, we inject an additional string so that a different hash is generated
     // for the same CSS content
-    Ok(rolldown_utils::concat_string!(content, "/*$vite$:1*/"))
+    Ok(rolldown_utils::concat_string!(content, VITE_HASH_UPDATE_MARKER))
   }
 
   pub fn hoist_at_rules(css: &str) -> String {

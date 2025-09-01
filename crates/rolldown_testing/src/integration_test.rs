@@ -76,7 +76,6 @@ impl IntegrationTest {
     self.run_with_plugins(options, vec![]).await;
   }
 
-  #[allow(clippy::unnecessary_debug_formatting)]
   pub async fn run_with_plugins(&self, options: BundlerOptions, plugins: Vec<SharedPluginable>) {
     self
       .run_multiple(
@@ -87,7 +86,7 @@ impl IntegrationTest {
   }
 
   #[expect(clippy::too_many_lines)]
-  #[allow(clippy::unnecessary_debug_formatting)]
+  #[expect(clippy::unnecessary_debug_formatting)]
   pub async fn run_multiple(
     &self,
     multiple_options: Vec<NamedBundlerOptions>,
@@ -681,7 +680,7 @@ impl IntegrationTest {
 
     let output = node_command.output().unwrap();
 
-    #[allow(clippy::print_stdout)]
+    #[expect(clippy::print_stdout)]
     if !output.status.success() {
       let stdout_utf8 = std::str::from_utf8(&output.stdout).unwrap();
       let stderr_utf8 = std::str::from_utf8(&output.stderr).unwrap();

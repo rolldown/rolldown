@@ -14,7 +14,7 @@ use rolldown_utils::concat_string;
 
 use super::utils::{render_chunk_directives, render_modules_with_peek_runtime_module_at_first};
 
-#[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
+#[expect(clippy::needless_pass_by_value)]
 pub fn render_cjs<'code>(
   ctx: &GenerateContext<'_>,
   addon_render_context: AddonRenderContext<'code>,

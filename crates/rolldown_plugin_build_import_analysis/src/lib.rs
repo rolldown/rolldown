@@ -18,7 +18,6 @@ use self::ast_visit::BuildImportAnalysisVisitor;
 const PRELOAD_HELPER_ID: &str = "\0vite/preload-helper.js";
 
 #[derive(Debug)]
-#[allow(clippy::struct_excessive_bools)]
 pub struct BuildImportAnalysisPlugin {
   pub preload_code: ArcStr,
   pub insert_preload: bool,

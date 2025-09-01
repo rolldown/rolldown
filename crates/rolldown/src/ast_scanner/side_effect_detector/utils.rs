@@ -38,7 +38,7 @@ fn merged_known_primitive_types(
   PrimitiveType::Mixed
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 pub fn known_primitive_type(scope: &AstScopes, expr: &Expression) -> PrimitiveType {
   match expr {
     Expression::NullLiteral(_) => PrimitiveType::Null,

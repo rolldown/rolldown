@@ -40,7 +40,7 @@ enum CombineChunkRet {
 pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
 
 impl GenerateStage<'_> {
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate_chunks(&mut self) -> BuildResult<ChunkGraph> {
     let entries_len: u32 =
@@ -246,7 +246,7 @@ impl GenerateStage<'_> {
     Ok(chunk_graph)
   }
 
-  #[allow(clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   pub fn ensure_lazy_module_initialization_order(&self, chunk_graph: &mut ChunkGraph) {
     if self.options.experimental.strict_execution_order.unwrap_or_default() {
       // If `strict_execution_order` is enabled, the lazy module initialization order is already

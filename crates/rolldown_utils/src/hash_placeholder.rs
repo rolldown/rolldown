@@ -71,23 +71,13 @@ pub fn find_hash_placeholders<'a>(
 const BASE: u32 = 64;
 const CHARS: &[u8; BASE as usize] =
   b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$";
-const FREQUENT_CHARS: &[u8; BASE as usize] =
-  b"etnriaoscludfpmhg_vybxSCwTEDOkAjMNPFILRzBVHUWGKqJYXZQ$1024368579";
 
-pub fn to_base64(value: u32) -> String {
-  to_base64_common(value, CHARS)
-}
-
-pub fn to_base64_on_frequent_chars(value: u32) -> String {
-  to_base64_common(value, FREQUENT_CHARS)
-}
-
-pub fn to_base64_common(mut value: u32, chars: &[u8; BASE as usize]) -> String {
+pub fn to_base64(mut value: u32) -> String {
   let mut buffer = vec![];
 
   loop {
     let current_digit = value % BASE;
-    buffer.push(chars[current_digit as usize]);
+    buffer.push(CHARS[current_digit as usize]);
     value /= BASE;
 
     if value == 0 {

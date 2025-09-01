@@ -13,7 +13,6 @@ use rolldown_common::{
   RUNTIME_HELPER_NAMES, SymbolRef, WrapKind,
 };
 use rolldown_utils::concat_string;
-use rolldown_utils::hash_placeholder::to_base64_on_frequent_chars;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::IntoParallelIterator;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
@@ -520,11 +519,7 @@ impl GenerateStage<'_> {
           let mut export_name: CompactStr;
           loop {
             named_index += 1;
-            export_name = to_base64_on_frequent_chars(named_index).into();
-            if export_name.starts_with('1') {
-              named_index += 9 * 64u32.pow(u32::try_from(export_name.len() - 1).unwrap());
-              continue;
-            }
+            export_name = generate_minified_names(named_index).into();
             if !used_names.contains(&export_name) {
               break;
             }
@@ -593,4 +588,28 @@ impl GenerateStage<'_> {
       }
     }
   }
+}
+
+// The same implementation with https://github.com/oxc-project/oxc/blob/crates_v0.86.0/crates/oxc_mangler/src/base54.rs#L30-L31
+const FIRST_BASE: u32 = 54;
+const REST_BASE: u32 = 64;
+const FREQUENT_CHARS: &[u8; REST_BASE as usize] =
+  b"etnriaoscludfpmhg_vybxSCwTEDOkAjMNPFILRzBVHUWGKqJYXZQ$1024368579";
+
+fn generate_minified_names(mut value: u32) -> String {
+  let mut buffer = vec![];
+
+  // Base 54 at first because these are the usable first characters in JavaScript identifiers
+  let byte = FREQUENT_CHARS[(value % FIRST_BASE) as usize];
+  buffer.push(byte);
+  value /= FIRST_BASE;
+
+  while value > 0 {
+    let byte = FREQUENT_CHARS[(value % REST_BASE) as usize];
+    buffer.push(byte);
+    value /= REST_BASE;
+  }
+  buffer.reverse();
+  // SAFETY: `buffer` is base64 characters, it is valid utf8 characters
+  unsafe { String::from_utf8_unchecked(buffer) }
 }

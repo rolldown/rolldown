@@ -52,7 +52,6 @@ pub struct FileEmitter {
   files: FxDashMap<ArcStr, OutputAsset>,
   chunks: FxDashMap<ArcStr, Arc<EmittedChunk>>,
   base_reference_id: AtomicUsize,
-  #[allow(dead_code)]
   options: Arc<NormalizedBundlerOptions>,
   /// Mark the files that have been emitted to bundle.
   emitted_files: FxDashSet<ArcStr>,

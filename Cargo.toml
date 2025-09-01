@@ -15,6 +15,7 @@ repository = "https://github.com/rolldown/rolldown"
 #   - https://doc.rust-lang.org/stable/cargo/reference/manifest.html#the-lints-section
 
 # --- restriction https://doc.rust-lang.org/clippy/usage.html#clippyrestriction
+allow_attributes = "deny"
 dbg_macro = "deny"
 print_stdout = "deny"
 

@@ -4310,9 +4310,9 @@ expression: output
 
 # tests/rolldown/function/minify_internal_exports/basic
 
-- main-!~{000}~.js => main-Dlg1NF9r.js
-- main2-!~{001}~.js => main2-CEYgtBPX.js
-- internal-!~{002}~.js => internal-DjTmYc72.js
+- main-!~{000}~.js => main-aDVOlA2o.js
+- main2-!~{001}~.js => main2-BIq1qucT.js
+- internal-!~{002}~.js => internal-CRPD6hcY.js
 
 # tests/rolldown/function/module_types/asset
 

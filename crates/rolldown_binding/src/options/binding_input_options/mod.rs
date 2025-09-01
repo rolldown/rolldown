@@ -14,7 +14,7 @@ use binding_debug_options::BindingDebugOptions;
 use binding_make_absolute_externals_relative::BindingMakeAbsoluteExternalsRelative;
 use binding_optimization::BindingOptimization;
 use derive_more::Debug;
-use napi::bindgen_prelude::FnArgs;
+use napi::bindgen_prelude::{FnArgs, Promise};
 use napi_derive::napi;
 use rustc_hash::FxBuildHasher;
 use std::collections::HashMap;
@@ -33,7 +33,7 @@ use crate::types::{
   binding_log::BindingLog, binding_log_level::BindingLogLevel, js_callback::JsCallback,
 };
 
-pub type BindingOnLog = Option<JsCallback<FnArgs<(String, BindingLog)>, ()>>;
+pub type BindingOnLog = Option<JsCallback<FnArgs<(String, BindingLog)>, Promise<()>>>;
 
 #[napi(object, object_to_js = false)]
 #[derive(Default, Debug)]
@@ -75,7 +75,7 @@ pub struct BindingInputOptions<'env> {
   pub platform: Option<String>,
   pub log_level: BindingLogLevel,
   #[debug(skip)]
-  #[napi(ts_type = "(logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void")]
+  #[napi(ts_type = "(logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => Promise<void>")]
   pub on_log: BindingOnLog,
   // extra
   pub cwd: String,
@@ -110,4 +110,5 @@ pub struct BindingInputOptions<'env> {
   pub preserve_entry_signatures: Option<BindingPreserveEntrySignatures>,
   pub optimization: Option<BindingOptimization>,
   pub context: Option<String>,
+  pub tsconfig: Option<String>,
 }

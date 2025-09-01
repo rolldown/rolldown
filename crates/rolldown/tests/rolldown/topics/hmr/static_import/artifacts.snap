@@ -6,29 +6,91 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+import assert from "node:assert";
+
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
-//#region exist-dep-cjs.js
-var require_exist_dep_cjs = /* @__PURE__ */ __commonJS({ "exist-dep-cjs.js": ((exports, module) => {
-	const exist_dep_cjs_hot = __rolldown_runtime__.createModuleHotContext("exist-dep-cjs.js");
-	__rolldown_runtime__.registerModule("exist-dep-cjs.js", module);
-	exports.value = "exist-cjs";
+//#region modules/dep-cjs.js
+var require_dep_cjs = /* @__PURE__ */ __commonJS({ "modules/dep-cjs.js": ((exports, module) => {
+	const dep_cjs_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-cjs.js");
+	__rolldown_runtime__.registerModule("modules/dep-cjs.js", module);
+	exports.value = "cjs";
 }) });
 
 //#endregion
-//#region exist-dep-esm.js
-var import_exist_dep_cjs = /* @__PURE__ */ __toESM(require_exist_dep_cjs());
-var exist_dep_esm_exports = {};
-__export(exist_dep_esm_exports, { value: () => value });
-const exist_dep_esm_hot = __rolldown_runtime__.createModuleHotContext("exist-dep-esm.js");
-__rolldown_runtime__.registerModule("exist-dep-esm.js", { exports: exist_dep_esm_exports });
-const value = "exist-esm";
+//#region modules/dep-esm.js
+var import_dep_cjs = /* @__PURE__ */ __toESM(require_dep_cjs());
+var dep_esm_exports = {};
+__export(dep_esm_exports, { value: () => value$1 });
+const dep_esm_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-esm.js");
+__rolldown_runtime__.registerModule("modules/dep-esm.js", { exports: dep_esm_exports });
+const value$1 = "esm";
+
+//#endregion
+//#region modules/dep-cjs-default.js
+var require_dep_cjs_default = /* @__PURE__ */ __commonJS({ "modules/dep-cjs-default.js": ((exports, module) => {
+	const dep_cjs_default_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-cjs-default.js");
+	__rolldown_runtime__.registerModule("modules/dep-cjs-default.js", module);
+	module.exports = "cjs-default";
+}) });
+
+//#endregion
+//#region modules/dep-esm-default.js
+var import_dep_cjs_default = /* @__PURE__ */ __toESM(require_dep_cjs_default());
+var dep_esm_default_exports = {};
+__export(dep_esm_default_exports, { default: () => dep_esm_default_default });
+const dep_esm_default_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-esm-default.js");
+__rolldown_runtime__.registerModule("modules/dep-esm-default.js", { exports: dep_esm_default_exports });
+var dep_esm_default_default = "esm-default";
+
+//#endregion
+//#region modules/dep-cjs-named.js
+var require_dep_cjs_named = /* @__PURE__ */ __commonJS({ "modules/dep-cjs-named.js": ((exports, module) => {
+	const dep_cjs_named_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-cjs-named.js");
+	__rolldown_runtime__.registerModule("modules/dep-cjs-named.js", module);
+	exports.named = "cjs-named";
+}) });
+
+//#endregion
+//#region modules/dep-esm-named.js
+var import_dep_cjs_named = /* @__PURE__ */ __toESM(require_dep_cjs_named());
+var dep_esm_named_exports = {};
+__export(dep_esm_named_exports, { named: () => named });
+const dep_esm_named_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-esm-named.js");
+__rolldown_runtime__.registerModule("modules/dep-esm-named.js", { exports: dep_esm_named_exports });
+const named = "esm-named";
+
+//#endregion
+//#region modules/dep-cjs-namespace.js
+var require_dep_cjs_namespace = /* @__PURE__ */ __commonJS({ "modules/dep-cjs-namespace.js": ((exports, module) => {
+	const dep_cjs_namespace_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-cjs-namespace.js");
+	__rolldown_runtime__.registerModule("modules/dep-cjs-namespace.js", module);
+	module.exports = { value: "cjs-namespace" };
+}) });
+
+//#endregion
+//#region modules/dep-esm-namespace.js
+var import_dep_cjs_namespace = /* @__PURE__ */ __toESM(require_dep_cjs_namespace());
+var dep_esm_namespace_exports = {};
+__export(dep_esm_namespace_exports, { value: () => value });
+const dep_esm_namespace_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-esm-namespace.js");
+__rolldown_runtime__.registerModule("modules/dep-esm-namespace.js", { exports: dep_esm_namespace_exports });
+const value = "esm-namespace";
 
 //#endregion
 //#region hmr.js
 var hmr_exports = {};
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+assert.strictEqual(import_dep_cjs_default.default, "cjs-default");
+assert.strictEqual(dep_esm_default_default, "esm-default");
+assert.strictEqual(import_dep_cjs_named.named, "cjs-named");
+assert.strictEqual(named, "esm-named");
+assert.deepStrictEqual(import_dep_cjs_namespace, {
+	value: "cjs-namespace",
+	default: { value: "cjs-namespace" }
+});
+assert.deepStrictEqual(dep_esm_namespace_exports, { value: "esm-namespace" });
 hmr_hot.accept((mod) => {
 	if (mod) {
 		console.log(".hmr", mod.foo);
@@ -49,6 +111,7 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 ```js
 //#region hmr.js
+import * as import_node_assert_00 from "node:assert";
 var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var __rolldown_exports__ = {};
@@ -57,10 +120,25 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 		require_new_dep_cjs_1();
 		init_new_dep_esm_2();
 		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
-		var import_exist_dep_cjs_00 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("exist-dep-cjs.js"));
-		var import_exist_dep_esm_01 = __rolldown_runtime__.loadExports("exist-dep-esm.js");
-		var import_new_dep_cjs_02 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("new-dep-cjs.js"));
-		var import_new_dep_esm_03 = __rolldown_runtime__.loadExports("new-dep-esm.js");
+		var import_dep_cjs_01 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("modules/dep-cjs.js"));
+		var import_dep_esm_02 = __rolldown_runtime__.loadExports("modules/dep-esm.js");
+		var import_dep_cjs_default_03 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("modules/dep-cjs-default.js"));
+		var import_dep_esm_default_04 = __rolldown_runtime__.loadExports("modules/dep-esm-default.js");
+		var import_dep_cjs_named_05 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("modules/dep-cjs-named.js"));
+		var import_dep_esm_named_06 = __rolldown_runtime__.loadExports("modules/dep-esm-named.js");
+		var import_dep_cjs_namespace_07 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("modules/dep-cjs-namespace.js"));
+		var import_dep_esm_namespace_08 = __rolldown_runtime__.loadExports("modules/dep-esm-namespace.js");
+		var import_new_dep_cjs_09 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("modules/new-dep-cjs.js"));
+		var import_new_dep_esm_010 = __rolldown_runtime__.loadExports("modules/new-dep-esm.js");
+		import_node_assert_00.default.strictEqual(import_dep_cjs_default_03.default, "cjs-default");
+		import_node_assert_00.default.strictEqual(import_dep_esm_default_04.default, "esm-default");
+		import_node_assert_00.default.strictEqual(import_dep_cjs_named_05.named, "cjs-named");
+		import_node_assert_00.default.strictEqual(import_dep_esm_named_06.named, "esm-named");
+		import_node_assert_00.default.deepStrictEqual(import_dep_cjs_namespace_07, {
+			value: "cjs-namespace",
+			default: { value: "cjs-namespace" }
+		});
+		import_node_assert_00.default.deepStrictEqual(import_dep_esm_namespace_08, { value: "esm-namespace" });
 		hot_hmr.accept((mod) => {
 			if (mod) {
 				console.log(".hmr", mod.foo);
@@ -70,30 +148,30 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 }));
 
 //#endregion
-//#region new-dep-cjs.js
+//#region modules/new-dep-cjs.js
 var require_new_dep_cjs_1 = __rolldown_runtime__.createCjsInitializer((function(__rolldown_exports__, __rolldown_module__) {
 	try {
-		__rolldown_runtime__.registerModule("new-dep-cjs.js", __rolldown_module__);
-		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext("new-dep-cjs.js");
+		__rolldown_runtime__.registerModule("modules/new-dep-cjs.js", __rolldown_module__);
+		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext("modules/new-dep-cjs.js");
 		__rolldown_exports__.value = "new-cjs";
 	} finally {}
 }));
 
 //#endregion
-//#region new-dep-esm.js
+//#region modules/new-dep-esm.js
 var init_new_dep_esm_2 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var __rolldown_exports__ = {};
 		__rolldown_runtime__.__export(__rolldown_exports__, { value: () => value });
-		__rolldown_runtime__.registerModule("new-dep-esm.js", { exports: __rolldown_exports__ });
-		const hot_new_dep_esm = __rolldown_runtime__.createModuleHotContext("new-dep-esm.js");
+		__rolldown_runtime__.registerModule("modules/new-dep-esm.js", { exports: __rolldown_exports__ });
+		const hot_new_dep_esm = __rolldown_runtime__.createModuleHotContext("modules/new-dep-esm.js");
 		const value = "new-esm";
 	} finally {}
 }));
 
 //#endregion
 init_hmr_0()
-__rolldown_runtime__.applyUpdates(['hmr.js']);
+__rolldown_runtime__.applyUpdates([['hmr.js', 'hmr.js']]);
 ```
 ## Meta
 

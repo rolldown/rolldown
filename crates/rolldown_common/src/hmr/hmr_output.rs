@@ -9,6 +9,7 @@ pub struct HmrPatch {
   pub hmr_boundaries: Vec<HmrBoundaryOutput>,
 }
 
+#[derive(Debug)]
 pub enum HmrUpdate {
   Patch(HmrPatch),
   FullReload {

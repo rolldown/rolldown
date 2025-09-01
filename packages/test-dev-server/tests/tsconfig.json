@@ -6,6 +6,5 @@
     "rootDir": "./",
     "allowJs": true,
     "isolatedDeclarations": false
-  },
-  "references": [{ "path": "../../testing" }]
+  }
 }

@@ -41,7 +41,8 @@ Variant: [format: Cjs]
 ```js
 Object.defineProperty(exports, '__esModule', { value: true });
 // HIDDEN [rolldown:runtime]
-const assert = __toESM(require("assert"));
+let assert = require("assert");
+assert = __toESM(assert);
 
 //#region main.js
 const foo = "foo";

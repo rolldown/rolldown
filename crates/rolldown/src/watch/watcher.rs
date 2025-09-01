@@ -1,6 +1,6 @@
 use crate::watch::event::{BundleEvent, WatcherChangeData, WatcherEvent};
 use arcstr::ArcStr;
-use notify::{Config, RecommendedWatcher, Watcher as NotifyWatcher, event::ModifyKind};
+use notify::{Config, RecommendedWatcher, Watcher as _, event::ModifyKind};
 use rolldown_common::{NotifyOption, WatcherChangeKind};
 use rolldown_error::BuildResult;
 use rolldown_utils::dashmap::FxDashSet;

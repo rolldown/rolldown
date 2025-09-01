@@ -9,23 +9,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 //#region shared.js
-let count$1 = 0;
+let count = 0;
 function reset() {
-	count$1 = 0;
+	count = 0;
 }
 function inc() {
-	count$1 += 1;
+	count += 1;
 }
-var count = count$1;
+var shared_default = count;
 
 //#endregion
 //#region async-entry.js
 reset();
-assert.strictEqual(count, 0);
-assert.strictEqual(count, count);
+assert.strictEqual(shared_default, 0);
+assert.strictEqual(shared_default, shared_default);
 inc();
-assert.strictEqual(count, 0);
-assert.strictEqual(count, count);
+assert.strictEqual(shared_default, 0);
+assert.strictEqual(shared_default, shared_default);
 
 //#endregion
 ```

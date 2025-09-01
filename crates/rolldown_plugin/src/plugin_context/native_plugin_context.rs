@@ -160,6 +160,7 @@ impl NativePluginContextImpl {
       let on_log = on_log.clone();
       let log = log.into_log(Some(self.plugin_name.to_string()));
       rolldown_utils::futures::spawn(async move {
+        // FIXME: should collect error happened here and cause the build to fail later
         let _ = on_log.call(level, log).await;
       });
     }

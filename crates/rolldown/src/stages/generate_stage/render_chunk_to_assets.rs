@@ -137,6 +137,7 @@ impl GenerateStage<'_> {
     Ok(BundleOutput { assets: output, warnings })
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
   async fn instantiate_chunks(
     &self,
     chunk_graph: &ChunkGraph,

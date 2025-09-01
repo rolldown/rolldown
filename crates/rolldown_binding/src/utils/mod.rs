@@ -1,19 +1,34 @@
-use napi::Env;
-use rolldown_tracing::try_init_tracing;
+mod normalize_binding_transform_options;
+
 pub mod minify_options_conversion;
 pub mod napi_error;
 pub mod normalize_binding_options;
 
-pub fn try_init_custom_trace_subscriber(napi_env: Env) {
-  let maybe_guard = try_init_tracing();
-  if let Some(guard) = maybe_guard {
-    napi_env
-      .add_env_cleanup_hook(guard, |flush_guard| {
-        // flush_guard.flush();
-        drop(flush_guard);
-      })
-      .expect("Should able to initialize cleanup for custom trace subscriber");
+use std::any::Any;
+
+use napi_derive::napi;
+use rolldown_tracing::try_init_tracing;
+
+pub use normalize_binding_transform_options::normalize_binding_transform_options;
+
+#[napi]
+pub struct TraceSubscriberGuard {
+  guard: Option<Box<dyn Any + Send>>,
+}
+
+#[napi]
+impl TraceSubscriberGuard {
+  #[napi]
+  pub fn close(&mut self) {
+    self.guard.take();
   }
+}
+
+#[napi]
+pub fn init_trace_subscriber() -> Option<TraceSubscriberGuard> {
+  let maybe_guard = try_init_tracing();
+  let guard = maybe_guard?;
+  Some(TraceSubscriberGuard { guard: Some(guard) })
 }
 
 pub fn handle_result<T>(result: anyhow::Result<T>) -> napi::Result<T> {

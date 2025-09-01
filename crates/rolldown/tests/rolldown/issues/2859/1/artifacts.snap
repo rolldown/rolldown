@@ -60,7 +60,8 @@ exports.foo = foo;
 
 ```js
 // HIDDEN [rolldown:runtime]
-const assert = __toESM(require("assert"));
+let assert = require("assert");
+assert = __toESM(assert);
 
 //#region main.js
 Promise.resolve().then(() => require("./lib.js")).then((exports$1) => assert.default.deepStrictEqual({ ...exports$1 }, {

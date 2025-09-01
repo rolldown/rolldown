@@ -29,13 +29,13 @@ fn init_entry_point_stmt_info(
   }
 
   let normalized_entry_signature =
-    normalize_preserve_entry_signature(overrode_preserve_entry_signature_map, options, entry.id);
+    normalize_preserve_entry_signature(overrode_preserve_entry_signature_map, options, entry.idx);
 
   if !matches!(normalized_entry_signature, PreserveEntrySignatures::False) || is_dynamic_imported {
     referenced_symbols.extend(
       meta
         .referenced_canonical_exports_symbols(
-          entry.id,
+          entry.idx,
           entry.kind,
           dynamic_import_exports_usage_map,
           true,
@@ -54,7 +54,7 @@ impl LinkStage<'_> {
       |ecma_module| {
         let linking_info = &mut self.metas[ecma_module.idx];
 
-        if let Some(entry) = self.entries.iter().find(|entry| entry.id == ecma_module.idx) {
+        if let Some(entry) = self.entries.iter().find(|entry| entry.idx == ecma_module.idx) {
           init_entry_point_stmt_info(
             linking_info,
             entry,

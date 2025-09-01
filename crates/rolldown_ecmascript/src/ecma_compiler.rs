@@ -99,7 +99,9 @@ impl EcmaCompiler {
       .build(ast.program())
   }
 
+  #[expect(clippy::too_many_arguments)]
   pub fn dce_or_minify(
+    allocator: &Allocator,
     source_text: &str,
     source_type: SourceType,
     enable_sourcemap: bool,
@@ -108,13 +110,12 @@ impl EcmaCompiler {
     minify_options: MinifierOptions,
     codegen_options: CodegenOptions,
   ) -> (String, Option<SourceMap>) {
-    let allocator = Allocator::default();
-    let mut program = Parser::new(&allocator, source_text, source_type).parse().program;
+    let mut program = Parser::new(allocator, source_text, source_type).parse().program;
     let minifier = Minifier::new(minify_options);
     let ret = if compress {
-      minifier.minify(&allocator, &mut program)
+      minifier.minify(allocator, &mut program)
     } else {
-      minifier.dce(&allocator, &mut program)
+      minifier.dce(allocator, &mut program)
     };
     let ret = Codegen::new()
       .with_options(CodegenOptions {

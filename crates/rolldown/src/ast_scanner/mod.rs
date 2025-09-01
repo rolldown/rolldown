@@ -1,5 +1,5 @@
 mod cjs_ast_analyzer;
-mod const_eval;
+pub mod const_eval;
 pub mod dynamic_import;
 mod hmr;
 pub mod impl_visit;
@@ -109,6 +109,18 @@ pub struct ScanResult {
   pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
 }
 
+bitflags::bitflags! {
+    #[derive(Debug, Clone, Copy)]
+    struct TraverseState: u8 {
+        /// If this flag is set, all top level symbol id during traverse should be inserted into
+        /// [`rolldown_common::types::stmt_info::StmtInfos::symbol_ref_to_referenced_stmt_idx`]
+        const RootSymbolReferenceStmtInfoId = 1;
+        /// If current position all parent scopes are block scope or top level scope.
+        /// A cache state of [AstScanner::is_valid_tla_scope]
+        const TopLevel = 1 << 1;
+    }
+}
+
 pub struct AstScanner<'me, 'ast> {
   idx: ModuleIdx,
   source: &'me ArcStr,
@@ -135,6 +147,7 @@ pub struct AstScanner<'me, 'ast> {
   /// Used in commonjs module it self
   self_used_cjs_named_exports: FxHashSet<CompactStr>,
   allocator: &'ast oxc::allocator::Allocator,
+  traverse_state: TraverseState,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -215,12 +228,53 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       top_level_this_expr_set: FxHashSet::default(),
       is_nested_this_inside_class: false,
       self_used_cjs_named_exports: FxHashSet::from_iter(["__esModule".into()]),
+      traverse_state: TraverseState::empty(),
     }
   }
 
   /// if current visit path is top level
+  /// including such scenario:
+  /// ```js
+  /// class T {
+  ///   [foo]() {}
+  /// }
+  /// class A {
+  ///   static {
+  ///     foo;
+  ///   }
+  /// }
+  ///
+  /// foo;
+  /// {
+  ///   foo;
+  /// }
+  /// ```
+  pub fn is_top_level(&self) -> bool {
+    self.scope_stack.iter().rev().all(|flag| {
+      flag.intersects(ScopeFlags::Top | ScopeFlags::StrictMode | ScopeFlags::ClassStaticBlock)
+        || flag.is_empty()
+    })
+  }
+
+  /// including such scenario:
+  /// ```js
+  /// class T {
+  ///   [await foo]() {}
+  /// }
+  ///
+  /// await foo;
+  /// {
+  ///   await foo;
+  /// }
+  /// for await (const let value of list) {
+  /// }
+  /// ```
   pub fn is_valid_tla_scope(&self) -> bool {
-    self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top())
+    self
+      .scope_stack
+      .iter()
+      .rev()
+      .all(|flag| flag.intersects(ScopeFlags::Top | ScopeFlags::StrictMode) || flag.is_block())
   }
 
   pub fn is_root_scope(&self) -> bool {
@@ -642,10 +696,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               if let BindingPatternKind::BindingIdentifier(ref binding) = decl.id.kind
                 && let Some(value) = self.extract_constant_value_from_expr(decl.init.as_ref())
               {
-                self
-                  .result
-                  .constant_export_map
-                  .insert(binding.symbol_id(), ConstExportMeta::new(value, false));
+                self.add_constant_symbol(binding.symbol_id(), ConstExportMeta::new(value, false));
               }
             });
           }
@@ -677,25 +728,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
     use oxc::ast::ast::ExportDefaultDeclarationKind;
     let local_binding_for_default_export = match &decl.declaration {
-      ast::ExportDefaultDeclarationKind::Identifier(id) => {
-        if let Some(symbol_id) = self.resolve_symbol_from_reference(id) {
-          let scoping = self.result.symbol_ref_db.ast_scopes.scoping();
-          let symbol_id_span = scoping.symbol_span(symbol_id);
-          if scoping.get_resolved_references(symbol_id).any(Reference::is_write)
-            // See https://github.com/rollup/rollup/blob/061a0387/test/function/samples/default-export-before-declaration
-            || (id.span.is_unspanned() || symbol_id_span.is_unspanned() || symbol_id_span.start > id.span.start)
-          {
-            let symbol_name = scoping.symbol_name(symbol_id).to_string();
-            self
-              .result
-              .symbol_ref_db
-              .set_symbol_name(self.result.default_export_ref.symbol, &symbol_name);
-          } else {
-            self.result.default_export_ref.symbol = symbol_id;
-          }
-        }
-        None
-      }
+      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
         fn_decl.id.as_ref().map(|id| {
           let symbol_id = rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id(id);
@@ -711,13 +744,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         })
       }
       ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
-      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
     };
     let (reference, span) = local_binding_for_default_export
       .unwrap_or((self.result.default_export_ref.symbol, Span::default()));
 
     if let Some(v) = self.extract_constant_value_from_expr(decl.declaration.as_expression()) {
-      self.result.constant_export_map.insert(reference, ConstExportMeta::new(v, false));
+      self.add_constant_symbol(reference, ConstExportMeta::new(v, false));
     }
 
     self.declare_normal_symbol_ref(reference);
@@ -911,6 +943,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ast: oxc::ast::AstBuilder::new(self.allocator),
       scope: self.result.symbol_ref_db.scoping(),
       constant_map: &self.result.constant_export_map,
+      overrode_get_constant_value_from_reference_id: None,
     }
   }
 
@@ -922,6 +955,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return None;
     }
     expr.and_then(|expr| try_extract_const_literal(&self.create_constant_eval_ctx(), expr))
+  }
+
+  pub fn add_constant_symbol(&mut self, symbol_id: SymbolId, value: ConstExportMeta) {
+    let is_mutated = !self.result.symbol_ref_db.ast_scopes.is_facade_symbol(symbol_id)
+      && self.result.symbol_ref_db.scoping().symbol_is_mutated(symbol_id);
+    if is_mutated {
+      return;
+    }
+    self.result.constant_export_map.insert(symbol_id, value);
   }
 }
 

@@ -33,13 +33,13 @@ bitflags::bitflags! {
     }
 }
 
-/// [SymbolIncludeReason]
 struct Context<'a> {
   modules: &'a IndexModules,
   symbols: &'a SymbolRefDb,
   is_included_vec: &'a mut IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
   is_module_included_vec: &'a mut IndexVec<ModuleIdx, bool>,
   tree_shaking: bool,
+  inline_const_smart: bool,
   runtime_id: ModuleIdx,
   metas: &'a LinkingMetadataVec,
   used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
@@ -87,12 +87,13 @@ impl LinkStage<'_> {
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
       may_partial_namespace: false,
       module_namespace_included_reason: &mut module_namespace_included_reason,
+      inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
     };
 
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
       std::mem::take(&mut self.entries).into_iter().partition(|item| item.kind.is_user_defined());
     user_defined_entries.iter().filter(|entry| entry.kind.is_user_defined()).for_each(|entry| {
-      let module = match &self.module_table[entry.id] {
+      let module = match &self.module_table[entry.idx] {
         Module::Normal(module) => module,
         Module::External(_module) => {
           // Case: import('external').
@@ -100,7 +101,7 @@ impl LinkStage<'_> {
         }
       };
       context.bailout_cjs_tree_shaking_modules.insert(module.idx);
-      let meta = &self.metas[entry.id];
+      let meta = &self.metas[entry.idx];
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
         |(symbol_ref, _came_from_cjs)| {
           if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
@@ -120,20 +121,20 @@ impl LinkStage<'_> {
     let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
 
     dynamic_entries.retain(|entry| {
-      if !cycled_idx.contains(&entry.id) {
+      if !cycled_idx.contains(&entry.idx) {
         if let Some(item) = self.is_dynamic_entry_alive(entry, context.is_included_vec) {
           unused_record_idxs.extend(item);
           return false;
         }
       }
-      let module = match &self.module_table[entry.id] {
+      let module = match &self.module_table[entry.idx] {
         Module::Normal(module) => module,
         Module::External(_module) => {
           // Case: import('external').
           return true;
         }
       };
-      let meta = &self.metas[entry.id];
+      let meta = &self.metas[entry.idx];
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
         |(symbol_ref, _came_from_cjs)| {
           if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
@@ -255,7 +256,7 @@ impl LinkStage<'_> {
   ) -> FxHashSet<ModuleIdx> {
     let mut graph: DiGraphMap<ModuleIdx, ()> = DiGraphMap::new();
     for entry in dynamic_entries.iter() {
-      let mut entry_module_idx = entry.id;
+      let mut entry_module_idx = entry.idx;
       let cur = entry_module_idx;
       if graph.contains_node(cur) {
         continue;
@@ -282,7 +283,7 @@ impl LinkStage<'_> {
     // We only need to ensure the relative order of those none cycled dynamic entries are correct, rest of them
     // we just bailout them
     dynamic_entries.sort_by_key(|item| {
-      idx_to_order_map.get(&item.id).map_or(Reverse(usize::MAX), |&order| Reverse(order))
+      idx_to_order_map.get(&item.idx).map_or(Reverse(usize::MAX), |&order| Reverse(order))
     });
     cycled_dynamic_entries
   }
@@ -334,7 +335,7 @@ impl LinkStage<'_> {
       EntryPointKind::UserDefined | EntryPointKind::EmittedUserDefined => true,
       EntryPointKind::DynamicImport => {
         let is_dynamic_imported_module_exports_unused =
-          self.dynamic_import_exports_usage_map.get(&item.id).is_some_and(
+          self.dynamic_import_exports_usage_map.get(&item.idx).is_some_and(
             |item| matches!(item, DynamicImportExportsUsage::Partial(set) if set.is_empty()),
           );
 
@@ -409,6 +410,7 @@ impl LinkStage<'_> {
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
       may_partial_namespace: false,
       module_namespace_included_reason,
+      inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
     };
 
     for helper in depended_runtime_helper {
@@ -521,6 +523,7 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: Symbol
 
   if let Some(v) = ctx.constant_symbol_map.get(&canonical_ref)
     && !include_kind.contains(SymbolIncludeReason::EntryExport)
+    && !ctx.inline_const_smart
     && !v.commonjs_export
   {
     // If the symbol is a constant value and it is not a commonjs module export , we don't need to include it since it would be always inline
@@ -592,6 +595,25 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: Symbol
         include_statement(ctx, module, stmt_info_id);
       },
     );
+  }
+  if matches!(
+    ctx.options.treeshake.property_write_side_effects(),
+    rolldown_common::PropertyWriteSideEffects::False
+  ) {
+    ctx.modules[symbol_ref.owner].as_normal().inspect(|module| {
+      module
+        .stmt_infos
+        .symbol_ref_to_referenced_stmt_idx()
+        .get(&symbol_ref)
+        .as_ref()
+        .map(|item| item.as_slice())
+        .unwrap_or(&[])
+        .iter()
+        .copied()
+        .for_each(|stmt_info_id| {
+          include_statement(ctx, module, stmt_info_id);
+        });
+    });
   }
 }
 

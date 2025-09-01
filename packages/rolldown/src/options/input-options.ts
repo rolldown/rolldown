@@ -68,10 +68,50 @@ export type HmrOptions = boolean | {
   host?: string;
   port?: number;
   implement?: string;
+  new?: boolean;
 };
 
 export type OptimizationOptions = {
-  inlineConst?: boolean;
+  /**
+   * Inline imported constant values during bundling instead of preserving variable references.
+   *
+   * When enabled, constant values from imported modules will be inlined at their usage sites,
+   * potentially reducing bundle size and improving runtime performance by eliminating variable lookups.
+   * **options**:
+   * - `true`: equivalent to `{ mode: 'all', pass: 1 }`, enabling constant inlining for all eligible constants with a single pass.
+   * - `false`: Disable constant inlining
+   * - `{ mode: 'smart' | 'all', pass?: number }`:
+   *   - `mode: 'smart'`: Only inline constants in specific scenarios where it is likely to reduce bundle size and improve performance.
+   *     Smart mode inlines constants in these specific scenarios:
+   *     1. `if (test) {} else {}` - condition expressions in if statements
+   *     2. `test ? a : b` - condition expressions in ternary operators
+   *     3. `test1 || test2` - logical OR expressions
+   *     4. `test1 && test2` - logical AND expressions
+   *     5. `test1 ?? test2` - nullish coalescing expressions
+   *  - `mode: 'all'`: Inline all imported constants wherever they are used.
+   *  - `pass`: Number of passes to perform for inlining constants.
+   *
+   * **example**
+   * ```js
+   * // Input files:
+   * // constants.js
+   * export const API_URL = 'https://api.example.com';
+   *
+   * // main.js
+   * import { API_URL } from './constants.js';
+   * console.log(API_URL);
+   *
+   * // With inlineConst: true, the bundled output becomes:
+   * console.log('https://api.example.com');
+   *
+   * // Instead of:
+   * const API_URL = 'https://api.example.com';
+   * console.log(API_URL);
+   * ```
+   *
+   * @default false
+   */
+  inlineConst?: boolean | { mode?: 'all' | 'smart'; pass?: number };
 };
 
 export type AttachDebugOptions = 'none' | 'simple' | 'full';
@@ -113,6 +153,9 @@ export interface InputOptions {
     mainFiles?: string[];
     modules?: string[];
     symlinks?: boolean;
+    /**
+     * @deprecated Use the top-level `tsconfig` option instead.
+     */
     tsconfigFilename?: string;
   };
   cwd?: string;
@@ -350,6 +393,17 @@ export interface InputOptions {
     | 'exports-only';
   optimization?: OptimizationOptions;
   context?: string;
+  /**
+   * Allows you to specify where to find the TypeScript configuration file.
+   *
+   * You may provide:
+   * - a relative path to the configuration file. It will be resolved relative to cwd.
+   * - an absolute path to the configuration file.
+   *
+   * When a tsconfig path is specified, the module resolver will respect `compilerOptions.paths` from the specified `tsconfig.json`,
+   * and the tsconfig options will be merged with the top-level `transform` options, with the `transform` options taking precedence.
+   */
+  tsconfig?: string;
 }
 
 interface OverwriteInputOptionsForCli {

@@ -35,7 +35,7 @@ function foo() {
 }
 
 var import_dynamic, a;
-var init_main = __esm({"main.js": () => {
+var init_main = __esm({"main.js": (() => {
 //#region sideeffects.js
 	globalThis.a = 2;
 
@@ -50,7 +50,7 @@ var init_main = __esm({"main.js": () => {
 	console.log(`mod.foo: `, foo);
 
 //#endregion
-}});
+})});
 
 init_main();
 ```

@@ -1,0 +1,40 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region constants.js
+const API_ENDPOINTS = {
+	USERS: "/api/users",
+	POSTS: "/api/posts"
+};
+const someObject = {
+	a: 1,
+	b: 2,
+	c: 3,
+	d: 4,
+	e: 5,
+	nested: { deep: "value" }
+};
+
+//#endregion
+//#region main.js
+function test() {
+	console.log("test function called");
+}
+API_ENDPOINTS[unknown];
+test().a.b.c;
+test()?.a?.b.c;
+const { d } = console.log("side effect") || someObject;
+const { e } = (() => {
+	console.log("effect");
+	return someObject;
+})();
+var main_default = {};
+
+//#endregion
+export { main_default as default };
+```

@@ -1,4 +1,4 @@
-import { BuiltinPlugin } from './utils';
+import { BuiltinPlugin, createBuiltinPlugin } from './utils';
 
 type AliasPluginAlias = {
   find: string | RegExp;
@@ -11,5 +11,5 @@ type AliasPluginConfig = {
 };
 
 export function aliasPlugin(config: AliasPluginConfig): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:alias', config);
+  return createBuiltinPlugin('builtin:alias', config);
 }

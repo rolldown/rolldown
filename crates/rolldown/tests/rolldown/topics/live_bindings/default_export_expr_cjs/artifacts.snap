@@ -9,17 +9,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 Object.defineProperty(exports, '__esModule', { value: true });
 
 //#region main.js
-let count$1 = 0;
+let count = 0;
 function reset() {
-	count$1 = 0;
+	count = 0;
 }
 function inc() {
-	count$1 += 1;
+	count += 1;
 }
-var count = count$1;
+var main_default = count;
 
 //#endregion
-exports.default = count;
+exports.default = main_default;
 exports.inc = inc;
 exports.reset = reset;
 ```

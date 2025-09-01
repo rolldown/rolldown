@@ -5,5 +5,5 @@ mod resolver;
 
 pub use crate::resolver::{ResolveReturn, Resolver};
 
-pub use oxc_resolver::ResolveError;
+pub use oxc_resolver::{ResolveError, TsConfig};
 pub use rolldown_common::bundler_options::ResolveOptions;

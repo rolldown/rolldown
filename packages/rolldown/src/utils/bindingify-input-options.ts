@@ -3,6 +3,8 @@ import {
   BindingChunkModuleOrderBy,
   BindingJsx,
   BindingLogLevel,
+  BindingPropertyReadSideEffects,
+  BindingPropertyWriteSideEffects,
 } from '../binding';
 import type {
   BindingDeferSyncScanData,
@@ -11,7 +13,7 @@ import type {
   BindingInjectImportNamespace,
   BindingInputOptions,
 } from '../binding';
-import { BuiltinPlugin } from '../builtin-plugin/utils';
+import { BuiltinPlugin, isBuiltinPlugin } from '../builtin-plugin/utils';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
@@ -47,8 +49,8 @@ export function bindingifyInputOptions(
     if ('_parallel' in plugin) {
       return undefined;
     }
-    if (plugin instanceof BuiltinPlugin) {
-      return bindingifyBuiltInPlugin(plugin);
+    if (isBuiltinPlugin(plugin)) {
+      return bindingifyBuiltInPlugin(plugin as BuiltinPlugin);
     }
     return bindingifyPlugin(
       plugin,
@@ -77,7 +79,8 @@ export function bindingifyInputOptions(
     platform: inputOptions.platform,
     shimMissingExports: inputOptions.shimMissingExports,
     logLevel: bindingifyLogLevel(logLevel),
-    onLog,
+    // convert to async function to handle errors thrown in onLog
+    onLog: async (level, log) => onLog(level, log),
     // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned
     // Because it is hard to represent Enum in napi, ref: https://github.com/napi-rs/napi-rs/issues/507
     // So we use `undefined | NormalizedTreeshakingOptions` (or Option<NormalizedTreeshakingOptions> in rust side), to represent `false | NormalizedTreeshakingOptions`
@@ -120,6 +123,7 @@ export function bindingifyInputOptions(
     ),
     optimization: inputOptions.optimization,
     context: inputOptions.context,
+    tsconfig: inputOptions.resolve?.tsconfigFilename ?? inputOptions.tsconfig,
   };
 }
 
@@ -149,7 +153,7 @@ function bindingifyAttachDebugInfo(
   }
 }
 
-export function bindingifyExternal(
+function bindingifyExternal(
   external: InputOptions['external'],
 ): BindingInputOptions['external'] {
   if (external) {
@@ -405,6 +409,28 @@ function bindingifyTreeshakeOptions(
     unknownGlobalSideEffects: config.unknownGlobalSideEffects,
     commonjs: config.commonjs,
   };
+  switch (config.propertyReadSideEffects) {
+    case 'always':
+      normalizedConfig.propertyReadSideEffects =
+        BindingPropertyReadSideEffects.Always;
+      break;
+    case false:
+      normalizedConfig.propertyReadSideEffects =
+        BindingPropertyReadSideEffects.False;
+      break;
+    default:
+  }
+  switch (config.propertyWriteSideEffects) {
+    case 'always':
+      normalizedConfig.propertyWriteSideEffects =
+        BindingPropertyWriteSideEffects.Always;
+      break;
+    case false:
+      normalizedConfig.propertyWriteSideEffects =
+        BindingPropertyWriteSideEffects.False;
+      break;
+    default:
+  }
   if (config.moduleSideEffects === undefined) {
     normalizedConfig.moduleSideEffects = true;
   } else if (config.moduleSideEffects === 'no-external') {

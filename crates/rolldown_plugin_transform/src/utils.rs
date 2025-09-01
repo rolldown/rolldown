@@ -3,11 +3,11 @@ use std::path::{Path, PathBuf};
 use itertools::Either;
 use memchr::memmem;
 use oxc::{span::SourceType, transformer::TransformOptions};
-use rolldown_common::ModuleType;
+use rolldown_common::{JsxOptions, ModuleType};
 use rolldown_plugin::SharedTransformPluginContext;
 use rolldown_utils::{pattern_filter::filter as pattern_filter, url::clean_url};
 
-use crate::{JsxOptions, TransformPlugin};
+use super::TransformPlugin;
 
 pub enum JsxRefreshFilter {
   None,
@@ -74,22 +74,12 @@ impl TransformPlugin {
     let source_type = if is_jsx_refresh_lang {
       SourceType::mjs()
     } else {
-      match self.transform_options.lang.as_deref().or(ext) {
+      match ext {
         Some("js" | "cjs" | "mjs") => SourceType::mjs(),
         Some("jsx") => SourceType::jsx(),
         Some("ts" | "cts" | "mts") => SourceType::ts(),
         Some("tsx") => SourceType::tsx(),
-        None | Some(_) => {
-          let message = if let Some(lang) = &self.transform_options.lang {
-            anyhow::anyhow!("Invalid value for `transformOptions.lang`: `{lang}`.")
-          } else {
-            anyhow::anyhow!(
-              "Failed to detect the lang of {id}. Please specify `transformOptions.lang`."
-            )
-          };
-
-          return Err(message);
-        }
+        None | Some(_) => Err(anyhow::anyhow!("Failed to detect the lang of {id}."))?,
       }
     };
 
@@ -209,31 +199,32 @@ impl TransformPlugin {
         // | true                 | remove                 | -                    | -                     |
         // | true                 | preserve, error        | true                 | true                  |
         let mut typescript = transform_options.typescript.unwrap_or_default();
-        typescript.only_remove_type_imports = if compiler_options.verbatim_module_syntax.is_some() {
-          compiler_options.verbatim_module_syntax
-        } else if compiler_options.preserve_value_imports.is_some()
-          || compiler_options.imports_not_used_as_values.is_some()
-        {
-          let preserve_value_imports = compiler_options.preserve_value_imports.unwrap_or(false);
-          let imports_not_used_as_values =
-            compiler_options.imports_not_used_as_values.as_deref().unwrap_or("remove");
-          if !preserve_value_imports && imports_not_used_as_values == "remove" {
-            Some(true)
-          } else if preserve_value_imports
-            && (imports_not_used_as_values == "preserve" || imports_not_used_as_values == "error")
+        if typescript.only_remove_type_imports.is_none() {
+          if compiler_options.verbatim_module_syntax.is_some() {
+            typescript.only_remove_type_imports = compiler_options.verbatim_module_syntax;
+          } else if compiler_options.preserve_value_imports.is_some()
+            || compiler_options.imports_not_used_as_values.is_some()
           {
-            Some(false)
-          } else {
-            // warnings.push(
-            //   `preserveValueImports=${preserveValueImports} + importsNotUsedAsValues=${importsNotUsedAsValues} is not supported by oxc.` +
-            //     'Please migrate to the new verbatimModuleSyntax option.',
-            // )
-            Some(false)
+            let preserve_value_imports = compiler_options.preserve_value_imports.unwrap_or(false);
+            let imports_not_used_as_values =
+              compiler_options.imports_not_used_as_values.as_deref().unwrap_or("remove");
+            typescript.only_remove_type_imports = if !preserve_value_imports
+              && imports_not_used_as_values == "remove"
+            {
+              Some(true)
+            } else if preserve_value_imports
+              && (imports_not_used_as_values == "preserve" || imports_not_used_as_values == "error")
+            {
+              Some(false)
+            } else {
+              // warnings.push(
+              //   `preserveValueImports=${preserveValueImports} + importsNotUsedAsValues=${importsNotUsedAsValues} is not supported by oxc.` +
+              //     'Please migrate to the new verbatimModuleSyntax option.',
+              // )
+              Some(false)
+            };
           }
-        } else {
-          Some(false)
-        };
-        transform_options.typescript = Some(typescript);
+        }
 
         let disable_use_define_for_class_fields = !compiler_options
           .use_define_for_class_fields
@@ -241,35 +232,11 @@ impl TransformPlugin {
 
         let mut assumptions = transform_options.assumptions.unwrap_or_default();
         assumptions.set_public_class_fields = Some(disable_use_define_for_class_fields);
+        typescript.remove_class_fields_without_initializer =
+          Some(disable_use_define_for_class_fields);
+
+        transform_options.typescript = Some(typescript);
         transform_options.assumptions = Some(assumptions);
-
-        // set target to es2021 or lower to enable class property transforms
-        // https://github.com/oxc-project/oxc/issues/6735#issuecomment-2513866362
-        if disable_use_define_for_class_fields {
-          let target = if let Some(target) = transform_options.target {
-            let mut target = match target {
-              Either::Left(t) => t.split(',').map(String::from).collect(),
-              Either::Right(t) => t,
-            };
-
-            if let Some(target) =
-              target.iter_mut().find(|t| t.len() > 2 && t[..2].eq_ignore_ascii_case("es"))
-            {
-              let reset = &target[2..];
-              if reset.eq_ignore_ascii_case("next")
-                || reset.parse::<usize>().is_ok_and(|x| x > 2021)
-              {
-                *target = String::from("es2021");
-              }
-            } else {
-              target.push(String::from("es2021"));
-            }
-            Either::Right(target)
-          } else {
-            Either::Left(String::from("es2021"))
-          };
-          transform_options.target = Some(target);
-        }
       }
     }
 

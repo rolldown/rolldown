@@ -46,7 +46,7 @@ function foo() {
 }
 
 var dep_default;
-var init_main = __esm({"main.js": () => {
+var init_main = __esm({"main.js": (() => {
 //#region dep.js
 	dep_default = /* @__PURE__ */ foo();
 
@@ -55,7 +55,7 @@ var init_main = __esm({"main.js": () => {
 	nodeAssert.strictEqual(globalThis.value, 1);
 
 //#endregion
-}});
+})});
 
 init_main();
 export { dep_default as dep };

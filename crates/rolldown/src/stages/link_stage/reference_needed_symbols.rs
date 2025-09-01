@@ -1,13 +1,15 @@
-use std::{ptr::addr_of, sync::Mutex};
+use std::ptr::addr_of;
 
 use rolldown_common::{
   ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
-  OutputFormat, ResolvedImportRecord, RuntimeHelper, StmtInfoMeta, TaggedSymbolRef, WrapKind,
-  side_effects::DeterminedSideEffects,
+  OutputFormat, ResolvedImportRecord, RuntimeHelper, StmtInfoMeta, SymbolRefDb, TaggedSymbolRef,
+  WrapKind, side_effects::DeterminedSideEffects,
 };
+#[cfg(not(target_family = "wasm"))]
+use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   concat_string,
-  rayon::{IntoParallelRefIterator, ParallelIterator},
+  rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
 
 use super::LinkStage;
@@ -22,19 +24,29 @@ fn is_external_dynamic_import(
     && record.resolved_module != module_idx
 }
 
+struct DeferUpdateInfo {
+  record_meta_pairs: Vec<(ImportRecordIdx, ImportRecordMeta)>,
+}
 impl LinkStage<'_> {
   #[allow(clippy::collapsible_if, clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn reference_needed_symbols(&mut self) {
-    let symbols = Mutex::new(&mut self.symbols);
+    // Since each module only access its own symbol ref db, we use zip rather than a Mutex to
+    // access the symbol db in parallel.
+    let old_symbol_db = std::mem::take(&mut self.symbols);
+    let mut symbols_inner = old_symbol_db.into_inner();
     let keep_names = self.options.keep_names;
     let commonjs_treeshake = self.options.treeshake.commonjs();
-    let record_meta_update_pending_pairs_list = self
+
+    let defer_update_info_list = self
       .module_table
       .modules
       .par_iter()
-      .filter_map(Module::as_normal)
-      .map(|importer| {
+      .zip(symbols_inner.par_iter_mut())
+      .filter_map(|(module, symbol_db)| module.as_normal().map(|importer| (importer, symbol_db)))
+      .map(|(importer, symbol_ref_for_module)| {
+        let symbol_db =
+          symbol_ref_for_module.as_mut().expect("normal module should have symbol db");
         let mut record_meta_pairs: Vec<(ImportRecordIdx, ImportRecordMeta)> = vec![];
         let importer_idx = importer.idx;
         // safety: No race conditions here:
@@ -77,8 +89,8 @@ impl LinkStage<'_> {
                     let is_reexport_all = rec.meta.contains(ImportRecordMeta::IsExportStar);
                     if is_reexport_all {
                       // export * from 'external' would be just removed. So it references nothing.
-                      rec.namespace_ref.set_name(
-                        &mut symbols.lock().unwrap(),
+                      symbol_db.ast_scopes.set_symbol_name(
+                        rec.namespace_ref.symbol,
                         &concat_string!("import_", &importee.identifier_name),
                       );
                     } else {
@@ -120,7 +132,14 @@ impl LinkStage<'_> {
                         if is_reexport_all {
                           let meta = &self.metas[importee.idx];
                           if meta.has_dynamic_exports {
-                            *importer_side_effect = DeterminedSideEffects::Analyzed(true);
+                            unsafe {
+                              // Avoid rustc false positive dead store optimization, https://cran.r-project.org/web/packages/rco/vignettes/opt-dead-store.html
+                              // same below
+                              std::ptr::write_volatile(
+                                importer_side_effect,
+                                DeterminedSideEffects::Analyzed(true),
+                              );
+                            }
                             stmt_info.side_effect = true.into();
                             stmt_info.meta.insert(StmtInfoMeta::ReExportDynamicExports);
                             depended_runtime_helper_map[RuntimeHelper::ReExport.bit_index()]
@@ -132,7 +151,12 @@ impl LinkStage<'_> {
                       }
                       WrapKind::Cjs => {
                         if is_reexport_all {
-                          *importer_side_effect = DeterminedSideEffects::Analyzed(true);
+                          unsafe {
+                            std::ptr::write_volatile(
+                              importer_side_effect,
+                              DeterminedSideEffects::Analyzed(true),
+                            );
+                          }
                           stmt_info.side_effect = true.into();
                           // Turn `export * from 'bar_cjs'` into `__reExport(foo_exports, __toESM(require_bar_cjs()))`
                           // Reference to `require_bar_cjs`
@@ -158,8 +182,8 @@ impl LinkStage<'_> {
                           depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
                             .push(stmt_info_idx);
                           symbols_to_be_declared.push((rec.namespace_ref, stmt_info_idx));
-                          rec.namespace_ref.set_name(
-                            &mut symbols.lock().unwrap(),
+                          symbol_db.ast_scopes.set_symbol_name(
+                            rec.namespace_ref.symbol,
                             &concat_string!("import_", importee.repr_name),
                           );
                         }
@@ -177,7 +201,13 @@ impl LinkStage<'_> {
                           // This branch means this module contains code like `export * from './some-wrapped-module.js'`.
                           // We need to mark this module as having side effects, so it could be included forcefully and
                           // responsible for generating `init_xxx_dep` calls to ensure deps got initialized correctly.
-                          *importer_side_effect = DeterminedSideEffects::Analyzed(true);
+
+                          unsafe {
+                            std::ptr::write_volatile(
+                              importer_side_effect,
+                              DeterminedSideEffects::Analyzed(true),
+                            );
+                          }
                         }
                         if is_reexport_all && importee_linking_info.has_dynamic_exports {
                           // Turn `export * from 'bar_esm'` into `init_bar_esm();__reExport(foo_exports, bar_esm_exports);`
@@ -266,19 +296,23 @@ impl LinkStage<'_> {
         symbols_to_be_declared.into_iter().for_each(|(symbol_ref, idx)| {
           stmt_infos.declare_symbol_for_stmt(idx, TaggedSymbolRef::Normal(symbol_ref));
         });
-
-        (importer_idx, record_meta_pairs)
+        (importer_idx, DeferUpdateInfo { record_meta_pairs })
       })
       .collect::<Vec<_>>();
 
     // merge import_record.meta
-    for (module_idx, record_meta_pairs) in record_meta_update_pending_pairs_list {
+    // Since `par_iter + collect` could ensure the order of items is the same as original,
+    // we could just push items in order here.
+    for (module_idx, defer_update_info) in defer_update_info_list {
       let Some(module) = self.module_table[module_idx].as_normal_mut() else {
         continue;
       };
-      for (rec_id, meta) in record_meta_pairs {
+      for (rec_id, meta) in defer_update_info.record_meta_pairs {
         module.import_records[rec_id].meta |= meta;
       }
     }
+
+    self.symbols =
+      SymbolRefDb::new(self.options.transform_options.is_jsx_preserve()).with_inner(symbols_inner);
   }
 }

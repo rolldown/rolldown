@@ -1,20 +1,40 @@
 mod utils;
 
-use std::borrow::Cow;
+use std::{borrow::Cow, pin::Pin, sync::Arc};
 
 use cow_utils::CowUtils;
 use rolldown_common::{ModuleType, side_effects::HookSideEffects};
-use rolldown_plugin::{HookTransformOutput, HookUsage, Plugin};
+use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plugin};
 use rolldown_plugin_utils::{
-  constants::{CSSModuleCache, CSSStyles, HTMLProxyResult},
+  RenderBuiltUrl, ToOutputFilePathEnv,
+  constants::{CSSChunkCache, CSSModuleCache, CSSStyles, HTMLProxyResult, PureCSSChunks},
   css::is_css_request,
   data_to_esm, find_special_query, is_special_query,
 };
 use rolldown_utils::{url::clean_url, xxhash::xxhash_with_base};
+use string_wizard::SourceMapOptions;
 
-#[derive(Debug)]
+pub type CSSMinifyFn =
+  dyn Fn(String) -> Pin<Box<(dyn Future<Output = anyhow::Result<String>> + Send)>> + Send + Sync;
+
+#[allow(clippy::struct_excessive_bools)]
+#[derive(derive_more::Debug)]
 pub struct ViteCssPostPlugin {
-  css_minify: bool,
+  pub is_lib: bool,
+  pub is_ssr: bool,
+  pub is_worker: bool,
+  pub is_legacy: bool,
+  pub is_client: bool,
+  pub css_code_split: bool,
+  pub sourcemap: bool,
+  pub assets_dir: String,
+  pub url_base: String,
+  pub decoded_base: String,
+  pub lib_css_filename: Option<String>,
+  #[debug(skip)]
+  pub css_minify: Option<Arc<CSSMinifyFn>>,
+  #[debug(skip)]
+  pub render_built_url: Option<Arc<RenderBuiltUrl>>,
 }
 
 impl Plugin for ViteCssPostPlugin {
@@ -23,7 +43,17 @@ impl Plugin for ViteCssPostPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::Transform
+    HookUsage::Transform | HookUsage::RenderChunk
+  }
+
+  async fn build_start(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    ctx.meta().insert(Arc::new(CSSChunkCache::default()));
+    ctx.meta().insert(Arc::new(PureCSSChunks::default()));
+    Ok(())
   }
 
   async fn transform(
@@ -69,8 +99,8 @@ impl Plugin for ViteCssPostPlugin {
     };
 
     let code = if inlined {
-      if self.css_minify {
-        todo!()
+      if let Some(ref css_minify) = self.css_minify {
+        css = Cow::Owned(css_minify(css.into_owned()).await?);
       }
       rolldown_utils::concat_string!("export default ", serde_json::to_string(&css)?)
     } else {
@@ -89,6 +119,70 @@ impl Plugin for ViteCssPostPlugin {
       side_effects: Some(side_effects),
       module_type: Some(ModuleType::Js),
       ..Default::default()
+    }))
+  }
+
+  async fn render_chunk(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    args: &rolldown_plugin::HookRenderChunkArgs<'_>,
+  ) -> rolldown_plugin::HookRenderChunkReturn {
+    // Empty if it's a dynamic chunk with only a CSS import
+    // Example -> `import('./style.css')` with no other code
+    let is_js_chunk_empty = args.code.is_empty() && !args.chunk.is_entry;
+    let styles = ctx.meta().get::<CSSStyles>().expect("CSSStyles missing");
+    let mut is_pure_css_chunk = args.chunk.exports.is_empty();
+    let mut css_chunk = String::new();
+    for module_id in &args.chunk.module_ids {
+      let id = module_id.resource_id().as_str();
+      if let Some(css) = styles.inner.get(id) {
+        // `?transform-only` is used for ?url and shouldn't be included in normal CSS chunks
+        if find_special_query(id, b"transform-only").is_some() {
+          continue;
+        }
+
+        // TODO: implement cssScopeTo
+        // https://github.com/vitejs/rolldown-vite/blob/c35ec68d/packages/vite/src/node/plugins/css.ts#L661-L667
+        // const cssScopeTo = this.getModuleInfo(id)?.meta?.vite?.cssScopeTo
+        // if (cssScopeTo && !isCssScopeToRendered(cssScopeTo, renderedModules)) {
+        //   continue
+        // }
+
+        if rolldown_plugin_utils::css::is_css_module(id) {
+          is_pure_css_chunk = false;
+        }
+
+        css_chunk.push_str(css.as_str());
+      } else if !is_js_chunk_empty {
+        // If the chunk has other JS code, it is not a pure CSS chunk
+        is_pure_css_chunk = false;
+      }
+    }
+
+    let ctx = utils::FinalizedContext {
+      plugin_ctx: ctx,
+      args,
+      env: &ToOutputFilePathEnv {
+        is_ssr: self.is_ssr,
+        host_id: &args.chunk.filename,
+        url_base: &self.url_base,
+        decoded_base: &self.decoded_base,
+        render_built_url: self.render_built_url.as_deref(),
+      },
+    };
+
+    let mut magic_string = None;
+    self.finalize_vite_css_urls(&ctx, &styles, &mut magic_string).await?;
+    self.finalize_css_chunk(&ctx, css_chunk, is_pure_css_chunk, &mut magic_string).await?;
+
+    Ok(magic_string.map(|magic_string| HookRenderChunkOutput {
+      code: magic_string.to_string(),
+      map: self.sourcemap.then(|| {
+        magic_string.source_map(SourceMapOptions {
+          hires: string_wizard::Hires::Boundary,
+          ..Default::default()
+        })
+      }),
     }))
   }
 }

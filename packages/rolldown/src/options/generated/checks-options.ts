@@ -73,4 +73,10 @@ export interface ChecksOptions {
    * @default true
    */
   configurationFieldConflict?: boolean;
+
+  /**
+   * Whether to emit warning when detecting prefer builtin feature
+   * @default true
+   */
+  preferBuiltinFeature?: boolean;
 }

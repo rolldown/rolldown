@@ -19,7 +19,8 @@ Object.defineProperty(exports, '__toESM', {
 
 ```js
 const require_chunk = require('./chunk.js');
-const node_path = require_chunk.__toESM(require("node:path"));
+let node_path = require("node:path");
+node_path = require_chunk.__toESM(node_path);
 
 //#region main.js
 var main_default = node_path.default.join;
@@ -31,7 +32,8 @@ module.exports = main_default;
 
 ```js
 const require_chunk = require('./chunk.js');
-const node_fs = require_chunk.__toESM(require("node:fs"));
+let node_fs = require("node:fs");
+node_fs = require_chunk.__toESM(node_fs);
 
 //#region main2.js
 var main2_default = node_fs.default.existsSync;

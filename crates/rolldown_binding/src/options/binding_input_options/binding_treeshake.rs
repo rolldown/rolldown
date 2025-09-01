@@ -3,6 +3,7 @@ use rustc_hash::{FxBuildHasher, FxHashSet};
 use std::{collections::HashSet, sync::Arc};
 
 use napi::bindgen_prelude::{Either4, FnArgs};
+use napi_derive::napi;
 use rolldown::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule};
 use rolldown_utils::js_regex::HybridRegex;
 
@@ -10,6 +11,20 @@ use crate::{
   types::js_callback::{JsCallback, JsCallbackExt},
   types::js_regex::JsRegExp,
 };
+
+#[napi]
+#[derive(Debug)]
+pub enum BindingPropertyReadSideEffects {
+  Always,
+  False,
+}
+
+#[napi]
+#[derive(Debug)]
+pub enum BindingPropertyWriteSideEffects {
+  Always,
+  False,
+}
 
 pub type BindingModuleSideEffects = Either4<
   bool,
@@ -31,6 +46,8 @@ pub struct BindingTreeshake {
   pub manual_pure_functions: Option<FxHashSet<String>>,
   pub unknown_global_side_effects: Option<bool>,
   pub commonjs: Option<bool>,
+  pub property_read_side_effects: Option<BindingPropertyReadSideEffects>,
+  pub property_write_side_effects: Option<BindingPropertyWriteSideEffects>,
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -74,6 +91,16 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
       }
     };
 
+    let property_read_side_effects = value.property_read_side_effects.map(|v| match v {
+      BindingPropertyReadSideEffects::Always => rolldown::PropertyReadSideEffects::Always,
+      BindingPropertyReadSideEffects::False => rolldown::PropertyReadSideEffects::False,
+    });
+
+    let property_write_side_effects = value.property_write_side_effects.map(|v| match v {
+      BindingPropertyWriteSideEffects::Always => rolldown::PropertyWriteSideEffects::Always,
+      BindingPropertyWriteSideEffects::False => rolldown::PropertyWriteSideEffects::False,
+    });
+
     Ok(Self::Option(InnerOptions {
       module_side_effects,
       annotations: value.annotations,
@@ -81,6 +108,8 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
       unknown_global_side_effects: value.unknown_global_side_effects,
       // By default disable commonjs tree shake, since it is not stable
       commonjs: value.commonjs,
+      property_read_side_effects,
+      property_write_side_effects,
     }))
   }
 

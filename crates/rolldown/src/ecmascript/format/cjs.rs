@@ -128,19 +128,27 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
 
       if ctx.link_output.used_symbol_refs.contains(&importee.namespace_ref) {
         let external_module_symbol_name = &ctx.chunk.canonical_names[&importee.namespace_ref];
-        s.push_str("const ");
-        s.push_str(external_module_symbol_name);
-        s.push_str(" = ");
-
-        let to_esm_fn_name = ctx.finalized_string_pattern_for_symbol_ref(
-          ctx.link_output.runtime.resolve_symbol("__toESM"),
-          ctx.chunk_idx,
-          &ctx.chunk.canonical_names,
+        // generate code like:
+        // let external_module_symbol_name = require("external-module");
+        // external_module_symbol_name = __toESM(external_module_symbol_name);
+        let require_external = concat_string!(
+          "let ",
+          external_module_symbol_name,
+          " = ",
+          require_path_str,
+          ";\n",
+          external_module_symbol_name,
+          " = ",
+          ctx.finalized_string_pattern_for_symbol_ref(
+            ctx.link_output.runtime.resolve_symbol("__toESM"),
+            ctx.chunk_idx,
+            &ctx.chunk.canonical_names,
+          ),
+          "(",
+          external_module_symbol_name,
+          ");\n"
         );
-        s.push_str(&to_esm_fn_name);
-        s.push('(');
-        s.push_str(&require_path_str);
-        s.push_str(");\n");
+        s.push_str(&require_external);
       } else if importee.side_effects.has_side_effects() {
         s.push_str(&require_path_str);
         s.push_str(";\n");

@@ -10,7 +10,7 @@ import { __esm } from "./rolldown-runtime.js";
 import { init_foo } from "./test.js";
 
 
-var init_main = __esm({"main.js": () => {
+var init_main = __esm({"main.js": (() => {
 //#region setup.js
 	globalThis.globalValue = "foo";
 
@@ -19,7 +19,7 @@ var init_main = __esm({"main.js": () => {
 	init_foo();
 
 //#endregion
-}});
+})});
 
 init_main();
 ```

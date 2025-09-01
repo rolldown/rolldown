@@ -284,6 +284,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warning when detecting configuration field conflict',
     ),
   ),
+  preferBuiltinFeature: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warning when detecting prefer builtin feature',
+    ),
+  ),
 });
 
 const MinifyOptionsSchema = v.strictObject({
@@ -305,7 +311,6 @@ const ResolveOptionsSchema = v.strictObject({
   mainFiles: v.optional(v.array(v.string())),
   modules: v.optional(v.array(v.string())),
   symlinks: v.optional(v.boolean()),
-  tsconfigFilename: v.optional(v.string()),
   yarnPnp: v.optional(v.boolean()),
 });
 
@@ -317,12 +322,25 @@ const TreeshakingOptionsSchema = v.union([
     manualPureFunctions: v.optional(v.array(v.string())),
     unknownGlobalSideEffects: v.optional(v.boolean()),
     commonjs: v.optional(v.boolean()),
+    propertyReadSideEffects: v.optional(
+      v.union([v.literal(false), v.literal('always')]),
+    ),
+    propertyWriteSideEffects: v.optional(
+      v.union([v.literal(false), v.literal('always')]),
+    ),
   }),
 ]);
 
 const OptimizationOptionsSchema = v.strictObject({
   inlineConst: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([
+      v.boolean(),
+      v.literal('smart'),
+      v.strictObject({
+        mode: v.optional(v.union([v.literal('all'), v.literal('smart')])),
+        pass: v.optional(v.number()),
+      }),
+    ])),
     v.description('Enable crossmodule constant inlining'),
   ),
   pifeForModuleWrappers: v.pipe(
@@ -368,6 +386,7 @@ const OnwarnSchema = v.pipe(
 const HmrSchema = v.union([
   v.boolean(),
   v.strictObject({
+    new: v.optional(v.boolean()),
     port: v.optional(v.number()),
     host: v.optional(v.string()),
     implement: v.optional(v.string()),
@@ -493,6 +512,10 @@ const InputOptionsSchema = v.strictObject({
       v.literal('exports-only'),
       v.literal(false),
     ])),
+  ),
+  tsconfig: v.pipe(
+    v.optional(v.string()),
+    v.description('Path to the tsconfig.json file.'),
   ),
 });
 
@@ -930,14 +953,28 @@ export function validateCliOptions<T>(options: T): [T, string[]?] {
   ];
 }
 
-type HelperMsgRecord = Record<string, { ignored?: boolean; msg?: string }>;
-
+type HelperMsgRecord = Record<
+  string,
+  { ignored?: boolean; issueMsg?: string; help?: string }
+>;
 const inputHelperMsgRecord: HelperMsgRecord = {
-  output: { ignored: true }, // Ignore the output key
+  output: { ignored: true },
+  'resolve.tsconfigFilename': {
+    issueMsg:
+      'It is deprecated. Please use the top-level `tsconfig` option instead.',
+  },
 };
 const outputHelperMsgRecord: HelperMsgRecord = {};
 
 export function validateOption<T>(key: 'input' | 'output', options: T): void {
+  if (typeof options !== 'object') {
+    throw new Error(
+      `Invalid ${key} options. Expected an Object but received ${
+        JSON.stringify(options)
+      }.`,
+    );
+  }
+
   if (globalThis.process?.env?.ROLLUP_TEST) return;
   let parsed = v.safeParse(
     key === 'input' ? InputOptionsSchema : OutputOptionsSchema,
@@ -947,8 +984,8 @@ export function validateOption<T>(key: 'input' | 'output', options: T): void {
   if (!parsed.success) {
     const errors = parsed.issues
       .map((issue) => {
-        const issuePaths = issue.path!.map((path) => path.key);
         let issueMsg = issue.message;
+        const issuePaths = issue.path!.map((path) => path.key);
         // For issue in union type, ref https://valibot.dev/guides/unions/
         // - the received is not matched with the all the sub typing
         // - one sub typing is matched, but it is has issue, we need to find the matched sub issue
@@ -970,13 +1007,18 @@ export function validateOption<T>(key: 'input' | 'output', options: T): void {
         if (helper && helper.ignored) {
           return '';
         }
-        return `- For the "${stringPath}". ${issueMsg}. ${
-          helper ? helper.msg : ''
-        }`;
+        return `- For the "${stringPath}". ${
+          helper?.issueMsg ||
+          issueMsg + '.'
+        } ${helper?.help ? `\n  Help: ${helper.help}` : ''}`;
       })
       .filter(Boolean);
     if (errors.length) {
-      console.warn(`Warning validate ${key} options.\n` + errors.join('\n'));
+      console.warn(
+        `\x1b[33mWarning: Invalid ${key} options (${errors.length} issue${
+          errors.length === 1 ? '' : 's'
+        } found)\n${errors.join('\n')}\x1b[0m`,
+      );
     }
   }
 }

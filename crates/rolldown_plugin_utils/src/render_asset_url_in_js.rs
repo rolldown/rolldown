@@ -2,26 +2,15 @@ use std::sync::Arc;
 
 use rolldown_utils::url::clean_url;
 
-use crate::{
-  PublicAssetUrlCache, ToOutputFilePathInJSEnv,
-  constants::ViteMetadata,
-  to_output_file_path_in_js::{AssetUrlResult, RenderBuiltUrl, RenderBuiltUrlConfig},
+use super::{
+  PublicAssetUrlCache, ToOutputFilePathEnv, constants::ViteMetadata,
   to_relative_runtime_path::create_to_import_meta_url_based_relative_runtime,
-  uri::encode_uri_path,
 };
-
-pub struct RenderAssetUrlInJsEnvConfig<'a> {
-  pub is_ssr: bool,
-  pub is_worker: bool,
-  pub url_base: &'a str,
-  pub decoded_base: &'a str,
-  pub render_built_url: Option<&'a RenderBuiltUrl>,
-}
 
 pub struct RenderAssetUrlInJsEnv<'a> {
   pub code: &'a str,
-  pub chunk_filename: &'a str,
-  pub config: RenderAssetUrlInJsEnvConfig<'a>,
+  pub is_worker: bool,
+  pub env: &'a ToOutputFilePathEnv<'a>,
   pub ctx: &'a rolldown_plugin::PluginContext,
 }
 
@@ -39,7 +28,7 @@ impl RenderAssetUrlInJsEnv<'_> {
     let mut code = None;
     for (start, _) in vite_asset_iter {
       last = start;
-      let (end, filename, r#type) = if self.code[start + 13..].starts_with('_') {
+      let (end, filename, is_public_asset) = if self.code[start + 13..].starts_with('_') {
         let start = start + 14;
         let Some((reference_id, mut end)) =
           self.code[start..].find(|c: char| !c.is_alphanumeric() && c != '&').and_then(|i| {
@@ -58,7 +47,7 @@ impl RenderAssetUrlInJsEnv<'_> {
           value
         });
 
-        vite_meta_data.imported_assets.insert(clean_url(&file).to_string());
+        vite_meta_data.imported_assets.insert(clean_url(&file).into());
 
         let postfix = self.code[end..].starts_with("$_").then(|| {
           self.code[end + 2..].find("__").map_or("", |i| {
@@ -74,7 +63,7 @@ impl RenderAssetUrlInJsEnv<'_> {
           file.to_string()
         };
 
-        (end, filename, "asset")
+        (end, filename, false)
       } else if self.code[start + 13..].starts_with("PUBLIC__") {
         let start = start + 21;
         let Some((hash, end)) = self.code[start..].find("__").and_then(|i| {
@@ -97,44 +86,27 @@ impl RenderAssetUrlInJsEnv<'_> {
           .ok_or_else(|| anyhow::anyhow!("Can't find the cache of {}", &self.code[start..end]))?
           .to_string();
 
-        (end, filename, "js")
+        (end, filename, true)
       } else {
         continue;
       };
 
-      let env = ToOutputFilePathInJSEnv {
-        url_base: self.config.url_base,
-        decoded_base: self.config.decoded_base,
-        render_built_url: self.config.render_built_url,
-        render_built_url_config: RenderBuiltUrlConfig {
-          r#type,
-          is_ssr: self.config.is_ssr,
-          host_id: self.chunk_filename,
-          host_type: "js",
-        },
-      };
-
-      let url = env
-        .to_output_file_path_in_js(
+      let url = self
+        .env
+        .to_output_file_path(
           &filename,
+          "js",
+          is_public_asset,
           create_to_import_meta_url_based_relative_runtime(
             self.ctx.options().format,
-            self.config.is_worker,
+            self.is_worker,
           ),
         )
         .await?;
 
       let code = code.get_or_insert_with(|| String::with_capacity(self.code.len()));
       code.push_str(&self.code[..last]);
-      match url {
-        AssetUrlResult::WithRuntime(v) => {
-          code.push_str(&rolldown_utils::concat_string!("\"+", v, "+\""));
-        }
-        AssetUrlResult::WithoutRuntime(v) => {
-          let string = serde_json::to_string(&encode_uri_path(v))?;
-          code.push_str(&string[1..string.len() - 1]);
-        }
-      }
+      code.push_str(&url.to_asset_url_in_js()?);
       last = end;
     }
 

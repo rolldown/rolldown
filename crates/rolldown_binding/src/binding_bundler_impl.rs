@@ -12,10 +12,7 @@ use crate::{
     binding_hmr_output::{BindingGenerateHmrPatchReturn, BindingHmrOutput},
     binding_outputs::BindingOutputs,
   },
-  utils::{
-    handle_result, normalize_binding_options::normalize_binding_options,
-    try_init_custom_trace_subscriber,
-  },
+  utils::{handle_result, normalize_binding_options::normalize_binding_options},
 };
 use napi::{
   Env,
@@ -55,13 +52,10 @@ impl ObjectFinalize for BindingBundlerImpl {
 impl BindingBundlerImpl {
   #[cfg_attr(target_family = "wasm", allow(unused))]
   pub fn new(
-    env: Env,
     option: BindingBundlerOptions,
     session: rolldown_debug::Session,
     build_count: u32,
   ) -> napi::Result<Self> {
-    try_init_custom_trace_subscriber(env);
-
     let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;
 
     #[cfg(not(target_family = "wasm"))]
@@ -88,7 +82,8 @@ impl BindingBundlerImpl {
       .with_options(ret.bundler_options)
       .with_plugins(ret.plugins)
       .with_build_count(build_count)
-      .with_session(session);
+      .with_session(session)
+      .with_disable_tracing_setup(true);
 
     Ok(Self {
       inner: Arc::new(Mutex::new(bundler_builder.build())),
@@ -197,7 +192,9 @@ impl BindingBundlerImpl {
 
     match output {
       Ok(output) => {
-        Self::handle_warnings(output.warnings, bundler_core.options()).await;
+        if let Err(err) = Self::handle_warnings(output.warnings, bundler_core.options()).await {
+          return Ok(Self::handle_errors(vec![err.into()], bundler_core.options()));
+        }
       }
       Err(outputs) => {
         return Ok(outputs);
@@ -216,7 +213,9 @@ impl BindingBundlerImpl {
       Err(errs) => return Ok(Self::handle_errors(errs.into_vec(), bundler_core.options())),
     };
 
-    Self::handle_warnings(outputs.warnings, bundler_core.options()).await;
+    if let Err(err) = Self::handle_warnings(outputs.warnings, bundler_core.options()).await {
+      return Ok(Self::handle_errors(vec![err.into()], bundler_core.options()));
+    }
 
     Ok(outputs.assets.into())
   }
@@ -230,7 +229,9 @@ impl BindingBundlerImpl {
       Err(errs) => return Ok(Self::handle_errors(errs.into_vec(), bundler_core.options())),
     };
 
-    Self::handle_warnings(bundle_output.warnings, bundler_core.options()).await;
+    if let Err(err) = Self::handle_warnings(bundle_output.warnings, bundler_core.options()).await {
+      return Ok(Self::handle_errors(vec![err.into()], bundler_core.options()));
+    }
 
     Ok(bundle_output.assets.into())
   }
@@ -262,10 +263,12 @@ impl BindingBundlerImpl {
     result.map_err(|e| Self::handle_errors(e.into_vec(), options))
   }
 
-  #[allow(clippy::print_stdout, unused_must_use)]
-  async fn handle_warnings(warnings: Vec<BuildDiagnostic>, options: &NormalizedBundlerOptions) {
+  async fn handle_warnings(
+    warnings: Vec<BuildDiagnostic>,
+    options: &NormalizedBundlerOptions,
+  ) -> anyhow::Result<()> {
     if options.log_level == Some(LogLevel::Silent) {
-      return;
+      return Ok(());
     }
     if let Some(on_log) = options.on_log.as_ref() {
       for warning in filter_out_disabled_diagnostics(warnings, &options.checks) {
@@ -282,8 +285,9 @@ impl BindingBundlerImpl {
               plugin: None,
             },
           )
-          .await;
+          .await?;
       }
     }
+    Ok(())
   }
 }

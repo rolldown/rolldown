@@ -311,10 +311,7 @@
           ]
         },
         "minify": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "$ref": "#/$defs/SimpleMinifyOptions"
         },
         "define": {
           "type": [
@@ -498,6 +495,12 @@
           ]
         },
         "context": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tsconfig": {
           "type": [
             "string",
             "null"
@@ -740,12 +743,6 @@
             "null"
           ]
         },
-        "tsconfigFilename": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
         "yarnPnp": {
           "type": [
             "boolean",
@@ -801,9 +798,43 @@
             "boolean",
             "null"
           ]
+        },
+        "propertyReadSideEffects": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PropertyReadSideEffects"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "propertyWriteSideEffects": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PropertyWriteSideEffects"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
+    },
+    "PropertyReadSideEffects": {
+      "type": "string",
+      "enum": [
+        "always",
+        "false"
+      ]
+    },
+    "PropertyWriteSideEffects": {
+      "type": "string",
+      "enum": [
+        "always",
+        "false"
+      ]
     },
     "ExperimentalOptions": {
       "type": "object",
@@ -923,6 +954,12 @@
             "string",
             "null"
           ]
+        },
+        "new": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -979,6 +1016,17 @@
             "boolean"
           ],
           "additionalProperties": false
+        }
+      ]
+    },
+    "SimpleMinifyOptions": {
+      "description": "A simple minify option that can be either a boolean or a string, used for rolldown rust testing.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string"
         }
       ]
     },
@@ -1230,6 +1278,12 @@
             "boolean",
             "null"
           ]
+        },
+        "preferBuiltinFeature": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -1342,10 +1396,14 @@
       "type": "object",
       "properties": {
         "inlineConst": {
-          "description": "TODO: make the inline_const option more fine grained, e.g. `inline_const: false | true |\n\"on-demand\"`.\nInline constant everywhere not always generate smaller bundle, e.g.\n```js\n// index.js\nimport {long_string} from './foo.js'\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\n// foo.js\nexport const long_string = 'this is a very long string that will be inlined everywhere';\n```",
-          "type": [
-            "boolean",
-            "null"
+          "description": "Inline constant everywhere not always generate smaller bundle, e.g.\n```js\n// index.js\nimport {long_string} from './foo.js'\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\n// foo.js\nexport const long_string = 'this is a very long string that will be inlined everywhere';\n```\n\nOptions:\n- `None`: Use default behavior (false)\n- `Some(InlineConstOption::Bool(false))`: Disable inlining\n- `Some(InlineConstOption::Bool(true))`: Inline everywhere\n- `Some(InlineConstOption::Config({ mode: Some(Smart), .. }))`: Only inline when the output is speculated to be smaller\n- `Some(InlineConstOption::Config({ mode: Some(All), pass: n }))`: Inline everywhere with n passes",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InlineConstOption"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "pifeForModuleWrappers": {
@@ -1357,6 +1415,45 @@
         }
       },
       "additionalProperties": false
+    },
+    "InlineConstOption": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/InlineConstConfig"
+        }
+      ]
+    },
+    "InlineConstConfig": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InlineConstMode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pass": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "InlineConstMode": {
+      "type": "string",
+      "enum": [
+        "all",
+        "smart"
+      ]
     },
     "ConfigVariant": {
       "type": "object",
@@ -1445,6 +1542,28 @@
           ]
         },
         "profilerNames": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "pifeForModuleWrappers": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "inlineConst": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InlineConstOption"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "topLevelVar": {
           "type": [
             "boolean",
             "null"

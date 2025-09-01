@@ -36,7 +36,7 @@ impl LinkStage<'_> {
       .entries
       .iter()
       .rev()
-      .map(|entry| Status::ToBeExecuted(entry.id))
+      .map(|entry| Status::ToBeExecuted(entry.idx))
       .chain(iter::once(Status::ToBeExecuted(self.runtime.id())))
       .collect::<Vec<_>>();
 

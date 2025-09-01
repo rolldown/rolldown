@@ -1,14 +1,14 @@
 use std::borrow::Cow;
 
-use rolldown_common::{ImportKind, IsExternal, ResolvedExternal};
+use rolldown_common::{ImportKind, ResolvedExternal, is_existing_node_builtin_modules};
 use rolldown_plugin::{HookLoadOutput, HookResolveIdOutput, HookUsage, Plugin};
-use rolldown_utils::concat_string;
+use rolldown_utils::{concat_string, pattern_filter::StringOrRegex};
 
 const CJS_EXTERNAL_FACADE_PREFIX: &str = "builtin:esm-external-require-";
 
 #[derive(Debug, Default)]
 pub struct EsmExternalRequirePlugin {
-  pub external: IsExternal,
+  pub external: Vec<StringOrRegex>,
 }
 
 impl Plugin for EsmExternalRequirePlugin {
@@ -17,7 +17,11 @@ impl Plugin for EsmExternalRequirePlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::ResolveId | HookUsage::Load
+    if self.external.is_empty() {
+      HookUsage::empty()
+    } else {
+      HookUsage::ResolveId | HookUsage::Load
+    }
   }
 
   async fn resolve_id(
@@ -33,9 +37,12 @@ impl Plugin for EsmExternalRequirePlugin {
       }));
     }
 
-    if self.external.call(args.specifier, args.importer, false).await? {
-      // TODO(shulaoda): Maybe we should follow
-      // https://github.com/rolldown/rolldown/blob/70ab86b7/crates/rolldown_plugin/src/utils/resolve_id_check_external.rs#L31-L33
+    let is_external = self.external.iter().any(|v| match v {
+      StringOrRegex::String(string) => string == args.specifier,
+      StringOrRegex::Regex(regex) => regex.matches(args.specifier),
+    });
+
+    if is_external {
       if !ctx.options().format.is_esm() || args.kind != ImportKind::Require {
         return Ok(Some(HookResolveIdOutput {
           id: args.specifier.into(),
@@ -59,7 +66,13 @@ impl Plugin for EsmExternalRequirePlugin {
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
     Ok(args.id.strip_prefix(CJS_EXTERNAL_FACADE_PREFIX).map(|module_id| {
-      let code = concat_string!("import * as m from '", module_id, "';module.exports = m;");
+      let code = concat_string!(
+        "import * as m from '",
+        module_id,
+        "';module.exports = ",
+        if is_existing_node_builtin_modules(module_id) { "m.default" } else { "{ ...m }" },
+        ";"
+      );
       HookLoadOutput { code: code.into(), ..Default::default() }
     }))
   }

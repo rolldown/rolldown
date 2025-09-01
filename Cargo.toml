@@ -80,6 +80,7 @@ collapsible_if = "allow"
 criterion2 = { version = "3.0.0", default-features = false }
 css-module-lexer = "0.0.15"
 rolldown = { version = "0.1.0", path = "./crates/rolldown" }
+rolldown_binding_watcher = { version = "0.1.0", path = "./crates/rolldown_binding_watcher" }
 rolldown_common = { version = "0.1.0", path = "./crates/rolldown_common" }
 rolldown_debug = { version = "0.1.0", path = "./crates/rolldown_debug" }
 rolldown_debug_action = { version = "0.1.0", path = "./crates/rolldown_debug_action" }
@@ -119,12 +120,13 @@ rolldown_testing = { version = "0.1.0", path = "./crates/rolldown_testing" }
 rolldown_testing_config = { version = "0.1.0", path = "./crates/rolldown_testing_config" }
 rolldown_tracing = { version = "0.1.0", path = "./crates/rolldown_tracing" }
 rolldown_utils = { version = "0.1.0", path = "./crates/rolldown_utils" }
+rolldown_watcher = { version = "0.1.0", path = "./crates/rolldown_watcher" }
 rolldown_workspace = { version = "0.1.0", path = "./crates/rolldown_workspace" }
 
 anyhow = "1.0.98"
 append-only-vec = "0.1.7"
 arcstr = { version = "1.2.0", default-features = false }
-ariadne = { package = "rolldown-ariadne", version = "0.5.2" }
+ariadne = { package = "rolldown-ariadne", version = "0.5.3" }
 async-channel = "2.3.1"
 async-scoped = "0.9.0"
 async-trait = "0.1.88"
@@ -149,18 +151,19 @@ insta = "1.43.1"
 itertools = "0.14.0"
 itoa = "1.0.15"
 json-strip-comments = "1.0.4"
-jsonschema = { version = "0.32.0", default-features = false }
+jsonschema = { version = "0.33.0", default-features = false }
 memchr = "2.7.4"
 mimalloc-safe = "0.1.52"
 mime = "0.3.17"
 nom = "8.0.0"
 notify = "8.1.0"
+notify-debouncer-full = "0.6.0"
 num-bigint = "0.4.6"
 num-format = "0.4"
 owo-colors = "4.2.2"
 percent-encoding = "2.3.1"
 petgraph = "0.8.1"
-phf = "0.12.0"
+phf = "0.13.0"
 rayon = "1.10.0"
 regex = "1.11.1"
 regress = "0.10.3"
@@ -211,8 +214,8 @@ oxc_traverse = { version = "0.82.3" }
 # Versions must be relaxed for usage in oxc.
 # Please update with `cargo update oxc_resolver oxc_resolver_napi oxc_sourcemap oxc_index oxc-browserslist`
 oxc_index = { version = "3", features = ["rayon", "serde"] } # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver = { version = "11.5.0", features = ["package_json_raw_json_api", "yarn_pnp"] } # https://github.com/oxc-project/oxc-resolver
-oxc_resolver_napi = { version = "11.5.0", default-features = false, features = ["yarn_pnp"] }
+oxc_resolver = { version = "11.7.0", features = ["package_json_raw_json_api", "yarn_pnp"] } # https://github.com/oxc-project/oxc-resolver
+oxc_resolver_napi = { version = "11.7.0", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "4" } # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.dev]

@@ -1,12 +1,12 @@
 pub mod apply_inner_plugins;
 pub mod augment_chunk_hash;
 pub mod chunk;
-pub mod ecma_visitors;
 pub mod load_entry_module;
 pub mod load_source;
-pub mod normalize_options;
+pub mod normalize_transform_options;
 pub mod parse_to_ecma_ast;
 pub mod pre_process_ecma_ast;
+pub mod prepare_build_context;
 pub mod process_code_and_sourcemap;
 pub mod renamer;
 pub mod render_chunks;

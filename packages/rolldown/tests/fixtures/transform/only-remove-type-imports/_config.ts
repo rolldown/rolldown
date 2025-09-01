@@ -5,6 +5,7 @@ import { getOutputChunk } from 'rolldown-tests/utils'
 export default defineTest({
   config: {
     input: 'main.ts',
+    tsconfig: 'tsconfig.json',
     transform: {
       typescript: {
         onlyRemoveTypeImports: true,

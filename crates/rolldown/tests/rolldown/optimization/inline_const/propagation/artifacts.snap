@@ -6,12 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
 function main() {
-	if (false) console.warn("I expected this warning to be removed in the final bundle.");
 	console.log("BAR");
 }
-
-//#endregion
 export { main };
+
 ```

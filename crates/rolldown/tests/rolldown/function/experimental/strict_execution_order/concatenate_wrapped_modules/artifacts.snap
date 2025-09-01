@@ -54,7 +54,7 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 
 var foo_inner_default;
-var init_main = __esm({"main.js": () => {
+var init_main = __esm({"main.js": (() => {
 //#region setup.js
 	globalThis.globalValue = "foo";
 
@@ -71,7 +71,7 @@ var init_main = __esm({"main.js": () => {
 	assert.equal(foo_inner_default.foo, "foo");
 
 //#endregion
-}});
+})});
 
 init_main();
 ```

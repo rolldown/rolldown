@@ -11,6 +11,7 @@ const mdRender = await createMarkdownRenderer(
 );
 
 interface Input {
+  id: number;
   name: string;
   comment?: {
     summary: { kind: string; text: string }[];
@@ -21,6 +22,7 @@ interface Input {
     declaration?: {
       children?: Input[];
     };
+    target?: number;
     elementType?: {
       type?: (string & 'reflection') | 'array';
       declaration?: Input;
@@ -39,28 +41,56 @@ export interface OptionsDoc {
   outputOptions: NormalizedItem;
 }
 
-function normalizeDocJson(input: Input): NormalizedItem {
+function normalizeDocJson(
+  input: Input,
+  map: Record<number, Input>,
+): NormalizedItem {
   if (input?.type?.type === 'reflection') {
     return {
       name: input.name,
       jsdoc: input.comment?.summary.map((x) => x.text).join('') ?? undefined,
-      children: input.type.declaration?.children?.map(normalizeDocJson) ??
+      children: input.type.declaration?.children?.map((input) => {
+        return normalizeDocJson(input, map);
+      }) ??
         undefined,
     };
   } else if (input?.type?.type === 'array') {
     return {
       name: input.name,
       jsdoc: input.comment?.summary.map((x) => x.text).join('') ?? undefined,
-      children:
-        input.type.elementType?.declaration?.children?.map(normalizeDocJson) ??
-          undefined,
+      children: input.type.elementType?.declaration?.children?.map((input) => {
+        return normalizeDocJson(input, map);
+      }, map) ??
+        undefined,
     };
   } else {
+    if (input?.type?.type === 'reference') {
+      if (input?.type?.target && map[input?.type?.target]) {
+        return normalizeDocJson({
+          ...map[input?.type?.target],
+          name: input.name,
+        }, map);
+      }
+    }
     return {
       name: input.name,
       jsdoc: input.comment?.summary.map((x) => x.text).join('') ?? undefined,
-      children: input.children?.map(normalizeDocJson) ?? undefined,
+      children: input.children?.map((input) => {
+        return normalizeDocJson(input, map);
+      }) ?? undefined,
     };
+  }
+}
+
+// Pre scan all type definitions to handle type reference
+function extractSymbolMap(input: Input, object: Record<number, Input>) {
+  if (input.id) {
+    object[input.id] = input;
+  }
+  if (input.children) {
+    for (const child of input.children) {
+      extractSymbolMap(child, object);
+    }
   }
 }
 
@@ -78,7 +108,9 @@ export default defineLoader({
       { with: { type: 'json' } }
     );
 
-    const normalized = normalizeDocJson(docJson);
+    const symbolMap = {};
+    extractSymbolMap(docJson, symbolMap);
+    const normalized = normalizeDocJson(docJson, symbolMap);
 
     const output: OptionsDoc = {
       inputOptions: normalized

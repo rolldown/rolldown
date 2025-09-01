@@ -403,7 +403,7 @@ var init_trigger_dep_11 = __rolldown_runtime__.createEsmInitializer((function() 
 
 //#endregion
 init_main_10()
-__rolldown_runtime__.applyUpdates(['main.js']);
+__rolldown_runtime__.applyUpdates([['main.js', 'main.js']]);
 ```
 ## Meta
 

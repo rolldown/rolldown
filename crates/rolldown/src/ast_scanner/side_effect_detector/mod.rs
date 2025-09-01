@@ -1,6 +1,7 @@
 use crate::ast_scanner::side_effect_detector::utils::{
   extract_member_expr_chain, is_primitive_literal,
 };
+use bitflags::bitflags;
 use oxc::ast::ast::{
   self, Argument, ArrayExpressionElement, AssignmentTarget, BindingPatternKind, CallExpression,
   ChainElement, Expression, IdentifierReference, PropertyKey, UnaryOperator,
@@ -19,15 +20,38 @@ use utils::{
 
 use self::utils::{PrimitiveType, known_primitive_type};
 
+bitflags! {
+  #[derive(Debug, Clone, Copy)]
+  /// Property could be read and write at the same time, so we need to distinguish them. e.g.
+  /// For a UpdateExpr `obj.prop++`, it is both read and write.
+  pub struct PropertyAccessFlag: u8 {
+    const Read = 1 << 0;
+    const Write = 1 << 1;
+  }
+}
+
+bitflags! {
+  #[derive(Debug, Clone, Copy)]
+  pub struct SideEffectDetectorFlatOptions: u8 {
+    const IgnoreAnnotations = 1 << 0;
+    const JsxPreserve = 1 << 1;
+    const IsManualPureFunctionsEmpty = 1 << 2;
+    /// If the flag is set, it means the `treeshake.property_read_side_effects` is `Always`.
+    /// Otherwise, it is `False`.
+    const PropertyReadSideEffects = 1 << 3;
+    /// If the flag is set, it means the `treeshake.property_write_side_effects` is `Always`.
+    /// Otherwise, it is `False`.
+    const PropertyWriteSideEffects = 1 << 4;
+  }
+}
+
 mod utils;
 
 /// Detect if a statement "may" have side effect.
 pub struct SideEffectDetector<'a> {
   pub scope: &'a AstScopes,
-  pub ignore_annotations: bool,
-  pub jsx_preserve: bool,
   options: &'a SharedNormalizedBundlerOptions,
-  is_manual_pure_functions_empty: bool,
+  flags: SideEffectDetectorFlatOptions,
 }
 
 impl<'a> SideEffectDetector<'a> {
@@ -37,17 +61,59 @@ impl<'a> SideEffectDetector<'a> {
     jsx_preserve: bool,
     options: &'a SharedNormalizedBundlerOptions,
   ) -> Self {
-    Self {
-      scope,
-      ignore_annotations,
-      jsx_preserve,
-      options,
-      is_manual_pure_functions_empty: options.treeshake.manual_pure_functions().is_none(),
-    }
+    let mut flags = SideEffectDetectorFlatOptions::empty();
+    flags.set(SideEffectDetectorFlatOptions::IgnoreAnnotations, ignore_annotations);
+    flags.set(SideEffectDetectorFlatOptions::JsxPreserve, jsx_preserve);
+    flags.set(
+      SideEffectDetectorFlatOptions::IsManualPureFunctionsEmpty,
+      options.treeshake.manual_pure_functions().is_none(),
+    );
+    flags.set(
+      SideEffectDetectorFlatOptions::PropertyReadSideEffects,
+      matches!(
+        options.treeshake.property_read_side_effects(),
+        rolldown_common::PropertyReadSideEffects::Always
+      ),
+    );
+    flags.set(
+      SideEffectDetectorFlatOptions::PropertyWriteSideEffects,
+      matches!(
+        options.treeshake.property_write_side_effects(),
+        rolldown_common::PropertyWriteSideEffects::Always
+      ),
+    );
+
+    Self { scope, options, flags }
   }
 
+  #[inline]
   fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
     self.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
+  }
+
+  #[inline]
+  fn ignore_annotations(&self) -> bool {
+    self.flags.contains(SideEffectDetectorFlatOptions::IgnoreAnnotations)
+  }
+
+  #[inline]
+  fn jsx_preserve(&self) -> bool {
+    self.flags.contains(SideEffectDetectorFlatOptions::JsxPreserve)
+  }
+
+  #[inline]
+  fn is_manual_pure_functions_empty(&self) -> bool {
+    self.flags.contains(SideEffectDetectorFlatOptions::IsManualPureFunctionsEmpty)
+  }
+
+  #[inline]
+  fn property_read_side_effects(&self) -> bool {
+    self.flags.contains(SideEffectDetectorFlatOptions::PropertyReadSideEffects)
+  }
+
+  #[inline]
+  fn property_write_side_effects(&self) -> bool {
+    self.flags.contains(SideEffectDetectorFlatOptions::PropertyWriteSideEffects)
   }
 
   fn detect_side_effect_of_property_key(
@@ -131,25 +197,144 @@ impl<'a> SideEffectDetector<'a> {
       .into()
   }
 
-  fn detect_side_effect_of_member_expr(&self, expr: &ast::MemberExpression) -> SideEffectDetail {
+  fn detect_side_effect_of_computed_member_expr<'b>(
+    &self,
+    expr: &'b ast::ComputedMemberExpression<'a>,
+    property_access_kind: PropertyAccessFlag,
+  ) -> SideEffectDetail {
+    let mut property_access_side_effects = false;
+    if property_access_kind.contains(PropertyAccessFlag::Read) {
+      property_access_side_effects |= self.property_read_side_effects();
+    }
+    if property_access_kind.contains(PropertyAccessFlag::Write) {
+      property_access_side_effects |= self.property_write_side_effects();
+    }
+
+    let mut side_effects_detail = SideEffectDetail::empty();
+    let max_len = 3;
+    let mut chains = vec![];
+    if let ast::Expression::StringLiteral(ref str) = expr.expression {
+      chains.push(str.value);
+    } else {
+      side_effects_detail |= self.detect_side_effect_of_expr(&expr.expression);
+    }
+    let cur = &expr.object;
+    self.common_member_chain_processing(
+      property_access_side_effects,
+      &mut side_effects_detail,
+      max_len,
+      &mut chains,
+      cur,
+      property_access_kind,
+    );
+    side_effects_detail
+  }
+
+  fn detect_side_effect_of_static_member_expr<'b>(
+    &self,
+    expr: &'b ast::StaticMemberExpression<'a>,
+    property_access_kind: PropertyAccessFlag,
+  ) -> SideEffectDetail {
+    let mut property_access_side_effects = false;
+    if property_access_kind.contains(PropertyAccessFlag::Read) {
+      property_access_side_effects |= self.property_read_side_effects();
+    }
+    if property_access_kind.contains(PropertyAccessFlag::Write) {
+      property_access_side_effects |= self.property_write_side_effects();
+    }
+
+    let mut side_effects_detail = SideEffectDetail::empty();
+    let max_len = 3;
+    let mut chains = vec![expr.property.name];
+    let cur = &expr.object;
+    self.common_member_chain_processing(
+      property_access_side_effects,
+      &mut side_effects_detail,
+      max_len,
+      &mut chains,
+      cur,
+      property_access_kind,
+    );
+    side_effects_detail
+  }
+
+  fn detect_side_effect_of_member_expr(
+    &self,
+    expr: &ast::MemberExpression,
+    property_access_kind: PropertyAccessFlag,
+  ) -> SideEffectDetail {
     if self.is_expr_manual_pure_functions(expr.object()) {
       return false.into();
     }
-    // MemberExpression is considered having side effect by default, unless it's some builtin global variables.
-    let Some((ref_id, chains)) = extract_member_expr_chain(expr, 3) else {
-      return true.into();
-    };
-    // If the global variable is override, we considered it has side effect.
-    if !self.scope.is_unresolved(ref_id) {
-      return true.into();
+
+    match expr {
+      ast::MemberExpression::ComputedMemberExpression(computed_expr) => {
+        self.detect_side_effect_of_computed_member_expr(computed_expr, property_access_kind)
+      }
+      ast::MemberExpression::StaticMemberExpression(static_expr) => {
+        self.detect_side_effect_of_static_member_expr(static_expr, property_access_kind)
+      }
+      ast::MemberExpression::PrivateFieldExpression(_) => true.into(),
     }
-    SideEffectDetail::GlobalVarAccess
-      | (match chains.len() {
-        2 => !is_side_effect_free_member_expr_of_len_two(&chains),
-        3 => !is_side_effect_free_member_expr_of_len_three(&chains),
-        _ => true,
-      })
-      .into()
+  }
+
+  fn common_member_chain_processing(
+    &self,
+    property_access_side_effects: bool,
+    side_effects_detail: &mut SideEffectDetail,
+    max_len: usize,
+    chains: &mut Vec<ast::Atom<'a>>,
+    mut cur: &Expression<'a>,
+    property_access_flag: PropertyAccessFlag,
+  ) {
+    loop {
+      match cur {
+        ast::Expression::StaticMemberExpression(expr) => {
+          cur = &expr.object;
+          chains.push(expr.property.name);
+        }
+        ast::Expression::ComputedMemberExpression(computed_expr) => {
+          if let ast::Expression::StringLiteral(ref str) = computed_expr.expression {
+            chains.push(str.value);
+          } else {
+            *side_effects_detail |= self.detect_side_effect_of_expr(&computed_expr.expression);
+          }
+          cur = &computed_expr.object;
+        }
+        ast::Expression::Identifier(ident_ref) => {
+          chains.push(ident_ref.name);
+          chains.reverse();
+          side_effects_detail
+            .set(SideEffectDetail::GlobalVarAccess, self.is_unresolved_reference(ident_ref));
+          break;
+        }
+        _ => {
+          *side_effects_detail |= self.detect_side_effect_of_expr(cur);
+          break;
+        }
+      }
+      if chains.len() >= max_len && property_access_side_effects {
+        *side_effects_detail = true.into();
+        return;
+      }
+    }
+
+    if property_access_flag.contains(PropertyAccessFlag::Write)
+      && side_effects_detail.contains(SideEffectDetail::GlobalVarAccess)
+    {
+      // If it is a write operation on a global variable, we consider it has side effect.
+      *side_effects_detail |= true.into();
+      return;
+    }
+    if !property_access_side_effects {
+      return;
+    }
+    *side_effects_detail |= (match chains.len() {
+      2 => !is_side_effect_free_member_expr_of_len_two(chains),
+      3 => !is_side_effect_free_member_expr_of_len_three(chains),
+      _ => true,
+    })
+    .into();
   }
 
   fn detect_side_effect_of_assignment_target(&self, expr: &AssignmentTarget) -> SideEffectDetail {
@@ -166,11 +351,19 @@ impl<'a> SideEffectDetector<'a> {
               && member_expr.static_property_name().is_some()
             {
               SideEffectDetail::PureCjs
-            } else {
+            } else if self.property_write_side_effects() {
               true.into()
+            } else {
+              self.detect_side_effect_of_member_expr(member_expr, PropertyAccessFlag::Write)
             }
           }
-          _ => true.into(),
+          _ => {
+            if self.property_write_side_effects() {
+              true.into()
+            } else {
+              self.detect_side_effect_of_member_expr(member_expr, PropertyAccessFlag::Write)
+            }
+          }
         }
       }
 
@@ -202,7 +395,7 @@ impl<'a> SideEffectDetector<'a> {
     //   return StmtSideEffect::Unknown;
     // }
 
-    let is_pure = !self.ignore_annotations && expr.pure;
+    let is_pure = !self.ignore_annotations() && expr.pure;
     if is_pure {
       // Even it is pure, we also wants to know if the callee has access global var
       // But we need to ignore the `Unknown` flag, since it is already marked as `pure`.
@@ -224,7 +417,7 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn is_expr_manual_pure_functions(&self, expr: &'a Expression) -> bool {
-    if self.is_manual_pure_functions_empty {
+    if self.is_manual_pure_functions_empty() {
       return false;
     }
     // `is_manual_pure_functions_empty` is false, so `manual_pure_functions` is `Some`.
@@ -288,10 +481,12 @@ impl<'a> SideEffectDetector<'a> {
               self.detect_side_effect_of_property_key(&prop.key, prop.computed)
                 | self.detect_side_effect_of_expr(&prop.value)
             }
-            ast::ObjectPropertyKind::SpreadProperty(_) => {
-              // ...[expression] is considered as having side effect.
-              // see crates/rolldown/tests/fixtures/rollup/object-spread-side-effect
-              true.into()
+            // refer https://github.com/rollup/rollup/blob/f7633942/src/ast/nodes/SpreadElement.ts#L32
+            ast::ObjectPropertyKind::SpreadProperty(res) => {
+              if self.property_read_side_effects() {
+                return true.into();
+              }
+              self.detect_side_effect_of_expr(&res.argument)
             }
           };
           if detail.has_side_effect() {
@@ -307,9 +502,8 @@ impl<'a> SideEffectDetector<'a> {
         }
         _ => self.detect_side_effect_of_expr(&unary_expr.argument),
       },
-      oxc::ast::match_member_expression!(Expression) => {
-        self.detect_side_effect_of_member_expr(expr.to_member_expression())
-      }
+      oxc::ast::match_member_expression!(Expression) => self
+        .detect_side_effect_of_member_expr(expr.to_member_expression(), PropertyAccessFlag::Read),
       Expression::ClassExpression(cls) => self.detect_side_effect_of_class(cls),
       // Accessing global variables considered as side effect.
       Expression::Identifier(ident) => self.detect_side_effect_of_identifier(ident),
@@ -467,23 +661,43 @@ impl<'a> SideEffectDetector<'a> {
         ChainElement::TSNonNullExpression(expr) => {
           self.detect_side_effect_of_expr(&expr.expression)
         }
-        match_member_expression!(ChainElement) => {
-          self.detect_side_effect_of_member_expr(expr.expression.to_member_expression())
-        }
+        match_member_expression!(ChainElement) => self.detect_side_effect_of_member_expr(
+          expr.expression.to_member_expression(),
+          PropertyAccessFlag::Read,
+        ),
       },
-
       Expression::TaggedTemplateExpression(expr) => {
         (!self.is_expr_manual_pure_functions(&expr.tag)).into()
+      }
+      Expression::UpdateExpression(expr) => {
+        // Handle update expressions like obj.prop++ or obj[prop]++
+        match &expr.argument {
+          ast::SimpleAssignmentTarget::StaticMemberExpression(static_member_expr) => {
+            if self.property_write_side_effects() {
+              true.into()
+            } else {
+              // If property_write_side_effects is false, we consider property updates
+              // as side-effect-free
+
+              self.detect_side_effect_of_static_member_expr(
+                static_member_expr,
+                PropertyAccessFlag::all(),
+              )
+            }
+          }
+          ast::SimpleAssignmentTarget::ComputedMemberExpression(computed_expr) => self
+            .detect_side_effect_of_computed_member_expr(computed_expr, PropertyAccessFlag::all()),
+          _ => true.into(),
+        }
       }
       Expression::Super(_)
       | Expression::AwaitExpression(_)
       | Expression::ImportExpression(_)
-      | Expression::UpdateExpression(_)
       | Expression::YieldExpression(_)
       | Expression::V8IntrinsicExpression(_) => true.into(),
 
       Expression::JSXElement(_) | Expression::JSXFragment(_) => {
-        if self.jsx_preserve {
+        if self.jsx_preserve() {
           return true.into();
         }
         unreachable!("jsx should be transpiled")
@@ -562,7 +776,18 @@ impl<'a> SideEffectDetector<'a> {
               // Destructuring the initializer has no side effects if the
               // initializer is an array, since we assume the iterator is then
               // the built-in side-effect free array iterator.
-              BindingPatternKind::ObjectPattern(_) => true.into(),
+              BindingPatternKind::ObjectPattern(_) => {
+                // Object destructuring only has side effects when property_read_side_effects is Always
+                if self.property_read_side_effects() {
+                  true.into()
+                } else {
+                  declarator
+                    .init
+                    .as_ref()
+                    .map(|init| self.detect_side_effect_of_expr(init))
+                    .unwrap_or(false.into())
+                }
+              }
               BindingPatternKind::ArrayPattern(pat) => {
                 for p in &pat.elements {
                   if p.as_ref().is_some_and(|pat| {
@@ -633,7 +858,6 @@ impl<'a> SideEffectDetector<'a> {
     detail
   }
 
-  #[inline]
   fn detect_side_effect_of_identifier(&self, ident_ref: &IdentifierReference) -> SideEffectDetail {
     let mut detail = SideEffectDetail::empty();
     detail.set(SideEffectDetail::GlobalVarAccess, self.is_unresolved_reference(ident_ref));

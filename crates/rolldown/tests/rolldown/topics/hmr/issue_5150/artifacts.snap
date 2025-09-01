@@ -148,7 +148,7 @@ var init_messenger_3 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 init_messenger_3()
-__rolldown_runtime__.applyUpdates(['messenger.js']);
+__rolldown_runtime__.applyUpdates([['messenger.js', 'messenger.js']]);
 ```
 ## Meta
 

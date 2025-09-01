@@ -9,12 +9,32 @@ type BindingCallableBuiltinPluginLike = {
   [K in keyof BindingCallableBuiltinPlugin]: BindingCallableBuiltinPlugin[K];
 };
 
+const BuiltinClassSymbol: symbol = Symbol.for('__RolldownBuiltinPlugin__');
+
+// eslint-disable @typescript-eslint/no-unsafe-declaration-merging
 export class BuiltinPlugin {
   constructor(
     public name: BindingBuiltinPluginName,
     // NOTE: has `_` to avoid conflict with `options` hook
     public _options?: unknown,
-  ) {}
+  ) {
+    this[BuiltinClassSymbol] = true;
+  }
+}
+
+export function isBuiltinPlugin(obj: any): obj is BuiltinPlugin {
+  return obj && obj[BuiltinClassSymbol] === true;
+}
+
+export interface BuiltinPlugin {
+  [BuiltinClassSymbol]: boolean;
+}
+
+export function createBuiltinPlugin(
+  name: BindingBuiltinPluginName,
+  options?: unknown,
+): BuiltinPlugin {
+  return new BuiltinPlugin(name, options);
 }
 
 export function makeBuiltinPluginCallable(

@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region main.js
+var Example = class Example {
+	static {
+		this.prop = new Example("bar");
+		assert.strictEqual(Example.prop.foo, "bar");
+	}
+	constructor(foo) {
+		this.foo = foo;
+	}
+};
+
+//#endregion
+```
+---
+
+Variant: [top_level_var: true]
+
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region main.js
+var Example = class Example {
+	static {
+		this.prop = new Example("bar");
+		assert.strictEqual(Example.prop.foo, "bar");
+	}
+	constructor(foo) {
+		this.foo = foo;
+	}
+};
+
+//#endregion
+```

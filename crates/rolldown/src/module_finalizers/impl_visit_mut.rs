@@ -1,5 +1,6 @@
 use itertools::Itertools;
 use oxc::allocator::FromIn;
+use oxc::ast::AstType;
 use oxc::span::{Atom, CompactStr};
 use oxc::{
   allocator::{self, IntoIn, TakeIn},
@@ -20,6 +21,7 @@ use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
 
 use crate::hmr::utils::HmrAstBuilder;
+use crate::module_finalizers::TraverseState;
 
 use super::ScopeHoistingFinalizer;
 
@@ -30,12 +32,53 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     _scope_id: &std::cell::Cell<Option<oxc::semantic::ScopeId>>,
   ) {
     self.scope_stack.push(flags);
-    self.is_top_level = self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top());
+    self.state.set(
+      TraverseState::IsTopLevel,
+      self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top()),
+    );
   }
 
   fn leave_scope(&mut self) {
     self.scope_stack.pop();
-    self.is_top_level = self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top());
+    self.state.set(
+      TraverseState::IsTopLevel,
+      self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top()),
+    );
+  }
+
+  fn visit_if_statement(&mut self, it: &mut ast::IfStatement<'ast>) {
+    let kind = AstType::IfStatement;
+    self.enter_node(kind);
+    self.visit_span(&mut it.span);
+    let pre = self.state;
+    self.state.insert(TraverseState::SmartInlineConst);
+    self.visit_expression(&mut it.test);
+    self.state = pre;
+    self.visit_statement(&mut it.consequent);
+    if let Some(alternate) = &mut it.alternate {
+      self.visit_statement(alternate);
+    }
+    self.leave_node(kind);
+  }
+
+  fn visit_conditional_expression(&mut self, it: &mut ast::ConditionalExpression<'ast>) {
+    let kind = AstType::ConditionalExpression;
+    self.enter_node(kind);
+    self.visit_span(&mut it.span);
+    let pre = self.state;
+    self.state.insert(TraverseState::SmartInlineConst);
+    self.visit_expression(&mut it.test);
+    self.state = pre;
+    self.visit_expression(&mut it.consequent);
+    self.visit_expression(&mut it.alternate);
+    self.leave_node(kind);
+  }
+
+  fn visit_logical_expression(&mut self, it: &mut ast::LogicalExpression<'ast>) {
+    let pre = self.state;
+    self.state.insert(TraverseState::SmartInlineConst);
+    walk_mut::walk_logical_expression(self, it);
+    self.state = pre;
   }
 
   #[allow(clippy::too_many_lines)]
@@ -300,7 +343,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     walk_mut::walk_statement(self, it);
     // transform top level `var a = 1, b = 1;` to `a = 1, b = 1`
     // for `__esm(() => {})` wrapping VariableDeclaration hoist
-    if self.is_top_level
+    if self.state.contains(TraverseState::IsTopLevel)
       && self.ctx.needs_hosted_top_level_binding
       && let ast::Statement::VariableDeclaration(decl) = it
     {
@@ -563,7 +606,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
   fn visit_for_statement_init(&mut self, it: &mut ast::ForStatementInit<'ast>) {
     walk_mut::walk_for_statement_init(self, it);
-    if self.is_top_level
+    if self.state.contains(TraverseState::IsTopLevel)
       && self.ctx.needs_hosted_top_level_binding
       && let ast::ForStatementInit::VariableDeclaration(decl) = it
     {

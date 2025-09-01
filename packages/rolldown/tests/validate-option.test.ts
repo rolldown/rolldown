@@ -21,11 +21,11 @@ test('validate input option', async () => {
       hmr: {}
     }
   })
-  expect(consoleSpy).toHaveBeenCalledWith(`Warning validate input options.
+  expect(consoleSpy).toHaveBeenCalledWith(`\x1b[33mWarning: Invalid input options (4 issues found)
 - For the "input". Invalid type: Expected (string | Array | Object) but received 1. 
 - For the "resolve.foo". Invalid key: Expected never but received "foo". 
 - For the "watch.chokidar". The "watch.chokidar" option is deprecated, please use "watch.notify" instead of it. 
-- For the "foo". Invalid key: Expected never but received "foo". `)
+- For the "foo". Invalid key: Expected never but received "foo". \x1b[0m`)
 })
 
 test('validate output option', async () => {
@@ -39,8 +39,8 @@ test('validate output option', async () => {
     foo: 'bar',
     hoistTransitiveImports: false
   })
-  expect(consoleSpy).toHaveBeenCalledWith(`Warning validate output options.
-- For the "foo". Invalid key: Expected never but received "foo". `)
+  expect(consoleSpy).toHaveBeenCalledWith(`\x1b[33mWarning: Invalid output options (1 issue found)
+- For the "foo". Invalid key: Expected never but received "foo". \x1b[0m`)
 })
 
 test('give a warning for hoistTransitiveImports: true', async () => {
@@ -53,6 +53,6 @@ test('give a warning for hoistTransitiveImports: true', async () => {
       // @ts-ignore  invalid value
       hoistTransitiveImports: true
     })
-    expect(consoleSpy).toHaveBeenCalledWith(`Warning validate output options.
-- For the "hoistTransitiveImports". The 'true' value is not supported. `)
+    expect(consoleSpy).toHaveBeenCalledWith(`\x1b[33mWarning: Invalid output options (1 issue found)
+- For the "hoistTransitiveImports". The 'true' value is not supported. \x1b[0m`)
 })

@@ -1,6 +1,6 @@
 use rolldown_common::{
-  BundlerOptions, ExperimentalOptions, OutputExports, OutputFormat, PreserveEntrySignatures,
-  TreeshakeOptions,
+  BundlerOptions, ExperimentalOptions, InlineConstOption, OptimizationOption, OutputExports,
+  OutputFormat, PreserveEntrySignatures, TreeshakeOptions, deserialize_inline_const,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -22,6 +22,10 @@ pub struct ConfigVariant {
   pub minify_internal_exports: Option<bool>,
   pub on_demand_wrapping: Option<bool>,
   pub profiler_names: Option<bool>,
+  pub pife_for_module_wrappers: Option<bool>,
+  #[serde(deserialize_with = "deserialize_inline_const", default)]
+  pub inline_const: Option<InlineConstOption>,
+  pub top_level_var: Option<bool>,
   // --- non-bundler options are start with `_`
   /// Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]
@@ -73,6 +77,23 @@ impl ConfigVariant {
     if let Some(profiler_names) = &self.profiler_names {
       config.profiler_names = Some(*profiler_names);
     }
+    if let Some(top_level_var) = &self.top_level_var {
+      config.top_level_var = Some(*top_level_var);
+    }
+
+    if let Some(pife_for_module_wrappers) = &self.pife_for_module_wrappers {
+      config.optimization = Some(OptimizationOption {
+        pife_for_module_wrappers: Some(*pife_for_module_wrappers),
+        ..config.optimization.unwrap_or_default()
+      });
+    }
+
+    if let Some(inline_const) = &self.inline_const {
+      config.optimization = Some(OptimizationOption {
+        inline_const: Some(inline_const.clone()),
+        ..config.optimization.unwrap_or_default()
+      });
+    }
     config
   }
 
@@ -105,11 +126,20 @@ impl ConfigVariant {
     if let Some(on_demand_wrapping) = &self.on_demand_wrapping {
       fields.push(format!("on_demand_wrapping: {on_demand_wrapping:?}"));
     }
+    if let Some(pife_for_module_wrappers) = &self.pife_for_module_wrappers {
+      fields.push(format!("pife_for_module_wrappers: {pife_for_module_wrappers:?}"));
+    }
     if let Some(profiler_names) = &self.profiler_names {
       fields.push(format!("profiler_names: {profiler_names:?}"));
     }
     if let Some(entry_filenames) = &self.entry_filenames {
       fields.push(format!("entry_filenames: {entry_filenames:?}"));
+    }
+    if let Some(top_level_var) = &self.top_level_var {
+      fields.push(format!("top_level_var: {top_level_var:?}"));
+    }
+    if let Some(inline_const) = &self.inline_const {
+      fields.push(format!("inline_const: {inline_const:?}"));
     }
     let mut result = String::new();
     self.config_name.as_ref().inspect(|config_name| {

@@ -1,4 +1,4 @@
-use oxc::ast::ast::{BindingPatternKind, ClassType};
+use bitflags::bitflags;
 use oxc::semantic::ScopeFlags;
 use oxc::{
   allocator::{self, Allocator, Box as ArenaBox, CloneIn, Dummy, IntoIn, TakeIn},
@@ -35,6 +35,19 @@ use crate::hmr::utils::HmrAstBuilder;
 mod hmr;
 mod rename;
 
+bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct TraverseState: u8 {
+        const IsTopLevel = 1;
+        /// - `if (test) {} else {}`
+        /// - test ? a : b
+        /// - test1 || test2
+        /// - test1 && test2
+        /// - test1 ?? test2
+        const SmartInlineConst = 1 << 1;
+    }
+}
+
 /// Finalizer for emitting output code with scope hoisting.
 pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub ctx: ScopeHoistingFinalizerContext<'me>,
@@ -44,7 +57,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub comments: oxc::allocator::Vec<'ast, Comment>,
   pub generated_init_esm_importee_ids: FxHashSet<ModuleIdx>,
   pub scope_stack: Vec<ScopeFlags>,
-  pub is_top_level: bool,
+  pub state: TraverseState,
   pub top_level_var_bindings: FxIndexSet<Atom<'ast>>,
 }
 
@@ -222,7 +235,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       canonical_symbol = self.ctx.symbol_db.get(canonical_ref);
     }
     if let Some(meta) = self.ctx.constant_value_map.get(&canonical_ref) {
-      return meta.value.to_expression(AstBuilder::new(self.alloc));
+      if !self.ctx.options.optimization.is_inline_const_smart_mode()
+        || self.state.contains(TraverseState::SmartInlineConst)
+      {
+        return meta.value.to_expression(AstBuilder::new(self.alloc));
+      }
     }
 
     let mut expr = if self.ctx.modules[canonical_ref.owner].is_external() {
@@ -761,7 +778,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               _ => {
                 // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-
                 // `init_xxx`
                 let wrap_ref_expr = self.finalized_expr_for_symbol_ref(
                   importee_linking_info.wrapper_ref.unwrap(),
@@ -1017,7 +1033,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             match &self.ctx.modules[rec.resolved_module] {
               Module::Normal(importee) => {
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                if matches!(importee_linking_info.wrap_kind(), WrapKind::Esm) {
+                if matches!(importee_linking_info.wrap_kind(), WrapKind::Esm)
+                // If it is a inner concatenated module, we should not call its wrapper here
+                  && !matches!(
+                    importee_linking_info.concatenated_wrapped_module_kind,
+                    ConcatenateWrappedModuleKind::Inner
+                  )
+                {
                   let wrapper_ref_name =
                     self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
                   program.body.push(self.snippet.call_expr_stmt(wrapper_ref_name));
@@ -1126,14 +1148,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           use ast::ExportDefaultDeclarationKind;
           let default_decl_span = default_decl.span;
           match &mut default_decl.declaration {
-            // Special case: when exporting an identifier that's already the default export symbol
-            ast::ExportDefaultDeclarationKind::Identifier(id)
-              if self.scope.scoping().get_reference(id.reference_id()).symbol_id().is_some_and(
-                |symbol_id| symbol_id == self.ctx.module.default_export_ref.symbol,
-              ) =>
-            {
-              // "let a = ..;export default a" => "let a = ..;" (no transformation needed)
-              return;
+            decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
+              let expr = decl.to_expression_mut();
+              // "export default foo;" => "var default = foo;"
+              let canonical_name_for_default_export_ref =
+                self.canonical_name_for(self.ctx.module.default_export_ref);
+              top_stmt = self
+                .snippet
+                .var_decl_stmt(canonical_name_for_default_export_ref, expr.take_in(self.alloc));
             }
             ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
               // "export default function() {}" => "function default() {}"
@@ -1159,15 +1181,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               let mut class = class.as_mut().take_in(self.alloc);
               class.span = default_decl_span;
               top_stmt = ast::Statement::ClassDeclaration(ArenaBox::new_in(class, self.alloc));
-            }
-            decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
-              let expr = decl.to_expression_mut();
-              // "export default foo;" => "var default = foo;"
-              let canonical_name_for_default_export_ref =
-                self.canonical_name_for(self.ctx.module.default_export_ref);
-              top_stmt = self
-                .snippet
-                .var_decl_stmt(canonical_name_for_default_export_ref, expr.take_in(self.alloc));
             }
             _ => {}
           }
@@ -1206,39 +1219,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             }
           }
           if let Statement::ClassDeclaration(class_decl) = &mut top_stmt {
-            // If it's a class declaration, we need to transform it to a variable declaration whose rhs is a `class {}`
-            let class_name = class_decl.id.take().expect("Class declaration should have an id");
-            let class_id = self.snippet.builder.binding_pattern(
-              BindingPatternKind::BindingIdentifier(self.snippet.builder.alloc(class_name)),
-              NONE,
-              false,
-            );
-            let expr = self.snippet.builder.expression_class(
-              SPAN,
-              ClassType::ClassExpression,
-              class_decl.decorators.take_in(self.alloc),
-              None,
-              class_decl.type_parameters.take(),
-              class_decl.super_class.take(),
-              class_decl.super_type_arguments.take(),
-              class_decl.implements.take_in(self.alloc),
-              class_decl.body.take_in(self.alloc),
-              class_decl.r#abstract,
-              class_decl.declare,
-            );
-            let decl = self.snippet.builder.alloc_variable_declaration(
-              SPAN,
-              VariableDeclarationKind::Var,
-              self.snippet.builder.vec1(self.snippet.builder.variable_declarator(
-                SPAN,
-                VariableDeclarationKind::Var,
-                class_id,
-                Some(expr),
-                false,
-              )),
-              false,
-            );
-            top_stmt = Statement::VariableDeclaration(decl);
+            if let Some(mut decl) = self.get_transformed_class_decl(class_decl) {
+              top_stmt = Statement::from(decl.take_in(self.alloc));
+            }
           }
         }
         program.body.push(top_stmt);

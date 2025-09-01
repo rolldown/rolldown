@@ -1,0 +1,80 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+// HIDDEN [rolldown:hmr]
+//#region c.js
+var c_exports = {};
+__export(c_exports, { c: () => c });
+const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
+__rolldown_runtime__.registerModule("c.js", { exports: c_exports });
+const c = "c";
+assert.strictEqual(c, "c");
+c_hot.accept((nextExports) => {
+	assert.strictEqual(nextExports.c, "c");
+});
+
+//#endregion
+//#region b.js
+var b_exports = {};
+__export(b_exports, { b: () => b });
+const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
+__rolldown_runtime__.registerModule("b.js", { exports: b_exports });
+const b = { c };
+
+//#endregion
+//#region a.js
+var a_exports = {};
+__export(a_exports, { a: () => a });
+const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
+__rolldown_runtime__.registerModule("a.js", { exports: a_exports });
+const a = { b };
+
+//#endregion
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+assert.strictEqual(a.b.c, "c");
+
+//#endregion
+```
+# HMR Step 0
+
+## Code
+
+```js
+//#region c.js
+import * as import_node_assert_00 from "node:assert";
+var init_c_0 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, { c: () => c });
+		__rolldown_runtime__.registerModule("c.js", { exports: __rolldown_exports__ });
+		const hot_c = __rolldown_runtime__.createModuleHotContext("c.js");
+		var import_b_01 = __rolldown_runtime__.loadExports("b.js");
+		const c = "cc";
+		import_node_assert_00.default.strictEqual(c, "cc");
+		hot_c.accept((nextExports) => {
+			import_node_assert_00.default.strictEqual(nextExports.c, "cc");
+		});
+	} finally {}
+}));
+
+//#endregion
+init_c_0()
+__rolldown_runtime__.applyUpdates([['c.js', 'c.js']]);
+```
+## Meta
+
+- update type: patch
+### Hmr Boundaries
+
+- boundary: c.js, accepted_via: c.js

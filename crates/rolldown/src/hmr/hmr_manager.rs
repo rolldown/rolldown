@@ -48,9 +48,10 @@ impl HmrManagerInput {
 }
 
 pub struct HmrManager {
-  input: HmrManagerInput,
+  pub(crate) input: HmrManagerInput,
   module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
   module_idx_by_stable_id: FxHashMap<String, ModuleIdx>,
+  next_hmr_patch_id: u32,
 }
 
 impl Deref for HmrManager {
@@ -87,7 +88,7 @@ impl HmrManager {
       .iter()
       .map(|m| (m.stable_id().to_string(), m.idx()))
       .collect();
-    Self { input, module_idx_by_abs_path, module_idx_by_stable_id }
+    Self { input, module_idx_by_abs_path, module_idx_by_stable_id, next_hmr_patch_id: 0 }
   }
 
   /// Compute hmr update caused by `import.meta.hot.invalidate()`.
@@ -97,6 +98,12 @@ impl HmrManager {
     invalidate_caller: String,
     first_invalidated_by: Option<String>,
   ) -> BuildResult<HmrUpdate> {
+    tracing::debug!(
+      target: "hmr",
+      "compute_update_for_calling_invalidate: caller: {:?}, first_invalidated_by: {:?}",
+      invalidate_caller,
+      first_invalidated_by,
+    );
     let module_idx = self
       .module_idx_by_stable_id
       .get(&invalidate_caller)
@@ -139,6 +146,7 @@ impl HmrManager {
     &mut self,
     changed_file_paths: Vec<String>,
   ) -> BuildResult<Vec<HmrUpdate>> {
+    tracing::debug!(target: "hmr", "compute_hmr_update_for_file_changes: {:?}", changed_file_paths);
     let mut changed_modules = FxIndexSet::default();
     for changed_file_path in changed_file_paths {
       let changed_file_path = ArcStr::from(changed_file_path);
@@ -372,7 +380,7 @@ impl HmrManager {
     }
 
     hmr_prerequisites.boundaries.iter().for_each(|boundary| {
-      let init_fn_name = &module_idx_to_init_fn_name[&boundary.boundary];
+      let init_fn_name = &module_idx_to_init_fn_name[&boundary.accepted_via];
       source_joiner.append_source(format!("{init_fn_name}()"));
     });
 
@@ -382,8 +390,9 @@ impl HmrManager {
         .boundaries
         .iter()
         .map(|boundary| {
-          let module = &self.module_table().modules[boundary.boundary];
-          format!("'{}'", module.stable_id())
+          let boundary_mod = &self.module_table().modules[boundary.boundary];
+          let accepted_via = &self.module_table().modules[boundary.accepted_via];
+          format!("['{}', '{}']", boundary_mod.stable_id(), accepted_via.stable_id())
         })
         .collect::<Vec<_>>()
         .join(",")
@@ -391,10 +400,8 @@ impl HmrManager {
 
     let (mut code, mut map) = source_joiner.join();
 
-    let filename = format!(
-      "{}.js",
-      std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()
-    );
+    let filename = format!("hmr_patch_{}.js", self.next_hmr_patch_id,);
+    self.next_hmr_patch_id += 1;
 
     let file_dir = self.options.cwd.as_path().join(&self.options.out_dir);
 
@@ -484,7 +491,7 @@ impl HmrManager {
       };
 
       if importer.can_accept_hmr_dependency_for(&module.id) {
-        modules_to_be_updated.insert(importer_idx);
+        modules_to_be_updated.insert(module_idx);
         hmr_boundaries.insert(HmrBoundary { boundary: importer_idx, accepted_via: module_idx });
         continue;
       }

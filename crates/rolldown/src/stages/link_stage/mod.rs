@@ -29,6 +29,7 @@ use super::scan_stage::NormalizedScanStageOutput;
 mod bind_imports_and_exports;
 mod compute_tla;
 mod create_exports_for_ecma_modules;
+mod cross_module_inline_const;
 mod determine_module_exports_kind;
 mod generate_lazy_export;
 mod patch_module_dependencies;
@@ -108,8 +109,9 @@ impl<'a> LinkStage<'a> {
       .extract_if(0.., |item| !matches!(item.kind, EntryPointKind::UserDefined))
       .collect_vec();
 
-    rest
-      .sort_by_cached_key(|item| (item.kind, scan_stage_output.module_table.modules[item.id].id()));
+    rest.sort_by_cached_key(|item| {
+      (item.kind, scan_stage_output.module_table.modules[item.idx].id())
+    });
 
     scan_stage_output.entry_points.extend(rest);
 
@@ -171,6 +173,7 @@ impl<'a> LinkStage<'a> {
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();
     self.reference_needed_symbols();
+    self.cross_module_inline_const();
     self.include_statements();
     self.patch_module_dependencies();
 

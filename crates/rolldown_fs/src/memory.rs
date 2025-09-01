@@ -130,7 +130,7 @@ mod tests {
   use std::path::Path;
 
   #[test]
-  pub fn test_memory_file_system() -> Result<(), String> {
+  fn test_memory_file_system() -> Result<(), String> {
     let index_path = "/index.js".to_string();
     let index_content = "const value = 1;".to_string();
     let initial_files = [(&index_path, &index_content)];

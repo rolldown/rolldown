@@ -19,6 +19,10 @@ pub mod bundler_options {
     checks_options::ChecksOptions,
     runtime_helper::{RUNTIME_HELPER_NAMES, RuntimeHelper},
   };
+
+  #[cfg(feature = "deserialize_bundler_options")]
+  pub use crate::inner_bundler_options::types::optimization::deserialize_inline_const;
+
   pub use crate::inner_bundler_options::{
     BundlerOptions,
     types::{
@@ -43,11 +47,14 @@ pub mod bundler_options {
       log_level::LogLevel,
       make_absolute_externals_relative::MakeAbsoluteExternalsRelative,
       mark_module_loaded::MarkModuleLoaded,
-      minify_options::{MinifyOptions, MinifyOptionsObject, RawMinifyOptions},
+      minify_options::{MinifyOptions, RawMinifyOptions},
       module_type::ModuleType,
       normalized_bundler_options::{NormalizedBundlerOptions, SharedNormalizedBundlerOptions},
       on_log::{Log, LogWithoutPlugin, OnLog},
-      optimization::{OptimizationOption, normalize_optimization_option},
+      optimization::{
+        InlineConstConfig, InlineConstMode, InlineConstOption, OptimizationOption,
+        normalize_optimization_option,
+      },
       output_exports::OutputExports,
       output_format::OutputFormat,
       output_option::{
@@ -61,8 +68,16 @@ pub mod bundler_options {
       sourcemap_ignore_list::SourceMapIgnoreList,
       sourcemap_path_transform::SourceMapPathTransform,
       target::ESTarget,
+      transform_option::{
+        CompilerAssumptions, DecoratorOptions, Either, IsolatedDeclarationsOptions, JsxOptions,
+        PluginsOptions, ReactRefreshOptions, StyledComponentsOptions,
+        TransformOptions as BundlerTransformOptions, TypeScriptOptions,
+      },
       transform_options::{JsxPreset, TransformOptions},
-      treeshake::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule, TreeshakeOptions},
+      treeshake::{
+        InnerOptions, ModuleSideEffects, ModuleSideEffectsRule, PropertyReadSideEffects,
+        PropertyWriteSideEffects, TreeshakeOptions,
+      },
       watch_option::{NotifyOption, OnInvalidate, WatchOption},
     },
   };
@@ -117,7 +132,6 @@ pub use crate::{
   types::asset_meta::{InstantiationKind, SourcemapAssetMeta},
   types::ast_scope_idx::AstScopeIdx,
   types::ast_scopes::AstScopes,
-  types::bundler_file_system::BundlerFileSystem,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
   types::concatenate_wrapped_module::{
@@ -148,8 +162,7 @@ pub use crate::{
   types::module_info::ModuleInfo,
   types::module_namespace_included_reason::ModuleNamespaceIncludedReason,
   types::module_render_output::ModuleRenderOutput,
-  types::module_table::{IndexExternalModules, IndexModules, ModuleTable},
-  types::module_view::ModuleView,
+  types::module_table::{IndexModules, ModuleTable},
   types::named_export::LocalExport,
   types::named_import::{NamedImport, Specifier},
   types::namespace_alias::NamespaceAlias,

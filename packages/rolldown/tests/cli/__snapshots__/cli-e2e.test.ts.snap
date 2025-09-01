@@ -34,6 +34,7 @@ OPTIONS
   --checks.missing-global-name Whether to emit warning when detecting missing global name.
   --checks.missing-name-option-for-iife-export Whether to emit warning when detecting missing name option for iife export.
   --checks.mixed-export       Whether to emit warning when detecting mixed export.
+  --checks.prefer-builtin-feature Whether to emit warning when detecting prefer builtin feature.
   --checks.unresolved-entry   Whether to emit warning when detecting unresolved entry.
   --checks.unresolved-import  Whether to emit warning when detecting unresolved import.
   --chunk-file-names <name>   Name pattern for emitted secondary chunks.
@@ -64,7 +65,7 @@ OPTIONS
   --no-external-live-bindings Disable external live bindings.
   --no-preserve-entry-signatures Avoid facade chunks for entry points.
   --no-treeshake              Disable treeshaking.
-  --optimization.inline-const Enable crossmodule constant inlining.
+  --optimization.inline-const <optimization.inline-const>Enable crossmodule constant inlining.
   --optimization.pife-for-module-wrappers Use PIFE pattern for module wrappers.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --polyfill-require          Disable require polyfill injection.
@@ -93,6 +94,7 @@ OPTIONS
   --transform.typescript.jsx-pragma-frag <transform.typescript.jsx-pragma-frag>.
   --transform.typescript.only-remove-type-imports .
   --transform.typescript.rewrite-import-extensions <transform.typescript.rewrite-import-extensions>.
+  --tsconfig <tsconfig>       Path to the tsconfig.json file.
   --virtual-dirname <virtual-dirname>.
 
 EXAMPLES

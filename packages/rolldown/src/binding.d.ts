@@ -1282,6 +1282,14 @@ export declare class BindingChunkingContext {
   getModuleInfo(moduleId: string): BindingModuleInfo | null
 }
 
+export declare class BindingDevEngine {
+  constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
+  run(): Promise<void>
+  ensureCurrentBuildFinish(): Promise<void>
+  ensureLatestBuild(): Promise<void>
+  invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<BindingHmrUpdate>
+}
+
 export declare class BindingHmrOutput {
   get patch(): BindingHmrUpdate | null
   get errors(): Array<Error | BindingError>
@@ -1432,6 +1440,10 @@ export declare class ParallelJsPluginRegistry {
   constructor(workerCount: number)
 }
 
+export declare class TraceSubscriberGuard {
+  close(): void
+}
+
 export interface AliasItem {
   find: string
   replacements: Array<string>
@@ -1532,6 +1544,7 @@ export interface BindingChecksOptions {
   importIsUndefined?: boolean
   emptyImportMeta?: boolean
   configurationFieldConflict?: boolean
+  preferBuiltinFeature?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -1552,6 +1565,12 @@ export interface BindingDeferSyncScanData {
   /** ModuleId */
   id: string
   sideEffects?: boolean | 'no-treeshake'
+}
+
+export interface BindingDevOptions {
+  onHmrUpdates?: undefined | ((updates: BindingHmrUpdate[]) => void | Promise<void>)
+  usePolling?: boolean
+  pollInterval?: number
 }
 
 export interface BindingDynamicImportVarsPluginConfig {
@@ -1581,13 +1600,14 @@ export interface BindingError {
 }
 
 export interface BindingEsmExternalRequirePluginConfig {
-  external?: (source: string, importer: string | undefined, isResolved: boolean) => boolean
+  external: Array<BindingStringOrRegex>
 }
 
 export interface BindingExperimentalHmrOptions {
   host?: string
   port?: number
   implement?: string
+  new?: boolean
 }
 
 export interface BindingExperimentalOptions {
@@ -1677,6 +1697,11 @@ export interface BindingHookResolveIdOutput {
   external?: BindingResolvedExternal
   normalizeExternalId?: boolean
   moduleSideEffects?: boolean | 'no-treeshake'
+  /**
+   * @internal Used to store package json path resolved by oxc resolver,
+   * we could get the related package json object via the path string.
+   */
+  packageJsonPath?: string | null
 }
 
 export type BindingHookSideEffects =
@@ -1707,6 +1732,11 @@ export interface BindingInjectImportNamespace {
   from: string
 }
 
+export interface BindingInlineConstConfig {
+  mode?: string
+  pass?: number
+}
+
 export interface BindingInputItem {
   name?: string
   import: string
@@ -1720,7 +1750,7 @@ export interface BindingInputOptions {
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
   logLevel: BindingLogLevel
-  onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void
+  onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => Promise<void>
   cwd: string
   treeshake?: BindingTreeshake
   moduleTypes?: Record<string, string>
@@ -1742,6 +1772,7 @@ export interface BindingInputOptions {
   preserveEntrySignatures?: BindingPreserveEntrySignatures
   optimization?: BindingOptimization
   context?: string
+  tsconfig?: string
 }
 
 export interface BindingIsolatedDeclarationPluginConfig {
@@ -1837,7 +1868,7 @@ export interface BindingNotifyOption {
 }
 
 export interface BindingOptimization {
-  inlineConst?: boolean
+  inlineConst?: boolean | BindingInlineConstConfig
   pifeForModuleWrappers?: boolean
 }
 
@@ -1886,6 +1917,7 @@ export interface BindingOxcRuntimePluginConfig {
 
 export interface BindingPluginContextResolvedId {
   id: string
+  packageJsonPath?: string
   external: boolean | 'absolute' | 'relative'
   moduleSideEffects?: boolean | 'no-treeshake'
 }
@@ -1982,6 +2014,16 @@ export type BindingPreserveEntrySignatures =
   | { type: 'Bool', field0: boolean }
   | { type: 'String', field0: string }
 
+export declare enum BindingPropertyReadSideEffects {
+  Always = 0,
+  False = 1
+}
+
+export declare enum BindingPropertyWriteSideEffects {
+  Always = 0,
+  False = 1
+}
+
 export interface BindingRenderBuiltUrlConfig {
   ssr: boolean
   type: 'asset' | 'public'
@@ -2025,7 +2067,6 @@ export interface BindingResolveOptions {
   mainFiles?: Array<string>
   modules?: Array<string>
   symlinks?: boolean
-  tsconfigFilename?: string
   yarnPnp?: boolean
 }
 
@@ -2054,6 +2095,8 @@ export interface BindingTreeshake {
   manualPureFunctions?: ReadonlyArray<string>
   unknownGlobalSideEffects?: boolean
   commonjs?: boolean
+  propertyReadSideEffects?: BindingPropertyReadSideEffects
+  propertyWriteSideEffects?: BindingPropertyWriteSideEffects
 }
 
 export interface BindingVitePluginCustom {
@@ -2122,6 +2165,8 @@ export type FilterTokenKind =  'Id'|
 'QueryKey'|
 'QueryValue';
 
+export declare function initTraceSubscriber(): TraceSubscriberGuard | null
+
 export interface JsChangedOutputs {
   deleted: Set<string>
   changes: Record<string, JsOutputChunk | JsOutputAsset>
@@ -2180,4 +2225,12 @@ export declare function startAsyncRuntime(): void
 
 export interface ViteImportGlobMeta {
   isSubImportsPattern?: boolean
+}
+export declare class JsWatcher {
+  constructor(options: JsWatcherOptions)
+}
+
+export interface JsWatcherOptions {
+  watch: ((err: Error | null, arg: string) => any)
+  unwatch: ((err: Error | null, arg: string) => any)
 }

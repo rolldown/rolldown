@@ -7,7 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-const node_path = __toESM(require("node:path"));
+let node_path = require("node:path");
+node_path = __toESM(node_path);
 
 module.exports = node_path.default;
 ```

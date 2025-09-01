@@ -100,6 +100,11 @@ impl AstScopes {
   }
 
   #[inline]
+  pub fn is_facade_symbol(&self, symbol_id: SymbolId) -> bool {
+    symbol_id.index() >= self.facade_scoping.minimum_symbol_id.index()
+  }
+
+  #[inline]
   pub fn real_symbol_length(&self) -> usize {
     self.scoping.symbols_len()
   }

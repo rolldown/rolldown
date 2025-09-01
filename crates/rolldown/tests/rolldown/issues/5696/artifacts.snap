@@ -6,13 +6,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+//#region bar.jsx
+const Bar = () => <div>Bar</div>;
+var Bar_default = Bar;
+
+//#endregion
 //#region foo.jsx
 const Foo = () => <div>Foo</div>;
-const Bar = Foo;
+var Foo_default = () => Foo();
 
 //#endregion
 //#region main.jsx
-console.log(<><Foo /><Bar /></>);
+console.log(<><Bar_default /><Foo /><Foo_default /></>);
 
 //#endregion
 ```

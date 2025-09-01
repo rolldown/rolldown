@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Warning: "default" is not exported by "foo.ts".
+   ╭─[ main.ts:1:8 ]
+   │
+ 1 │ import dc_def, { bar as dc } from "./foo";
+   │        ───┬──  
+   │           ╰──── Missing export
+   │ 
+   │ Note: This diagnostic might be a false positive when importing from TypeScript files. TypeScript type-only exports and imports are stripped during transformation, which may cause actual
+   │         exports to appear missing.
+───╯
+
+```
+# Assets
+
+## main.js
+
+```js
+//#region foo.ts
+let bar = 123;
+
+//#endregion
+//#region main.ts
+var main_default = [dc_def, bar];
+
+//#endregion
+export { main_default as default };
+```

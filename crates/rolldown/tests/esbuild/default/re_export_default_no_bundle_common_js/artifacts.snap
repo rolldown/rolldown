@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-const foo = __toESM(require("./foo"));
-const bar = __toESM(require("./bar"));
+let foo = require("./foo");
+foo = __toESM(foo);
+let bar = require("./bar");
+bar = __toESM(bar);
 
 Object.defineProperty(exports, 'bar', {
   enumerable: true,

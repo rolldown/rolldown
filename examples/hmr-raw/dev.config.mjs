@@ -4,7 +4,10 @@ export default defineDevConfig({
   build: {
     input: 'src/main.js',
     experimental: {
-      hmr: true,
+      hmr: {
+        new: true,
+      },
+      incrementalBuild: true,
       strictExecutionOrder: true,
     },
     treeshake: false,

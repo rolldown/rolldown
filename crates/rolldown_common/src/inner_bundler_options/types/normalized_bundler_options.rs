@@ -14,7 +14,6 @@ use super::advanced_chunks_options::AdvancedChunksOptions;
 use super::experimental_options::ExperimentalOptions;
 use super::legal_comments::LegalComments;
 use super::minify_options::MinifyOptions;
-use super::optimization::OptimizationOption;
 use super::output_option::{
   AssetFilenamesOutputOption, ChunkFilenamesOutputOption, PreserveEntrySignatures,
 };
@@ -26,6 +25,7 @@ use super::{
   output_option::AddonOutputOption, platform::Platform, source_map_type::SourceMapType,
   sourcemap_ignore_list::SourceMapIgnoreList, sourcemap_path_transform::SourceMapPathTransform,
 };
+use crate::inner_bundler_options::types::optimization::NormalizedOptimizationConfig;
 use crate::{
   DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
   HashCharacters, InjectImport, InputItem, InvalidateJsSideCache, LogLevel,
@@ -101,10 +101,11 @@ pub struct NormalizedBundlerOptions {
   pub preserve_modules_root: Option<String>,
   pub preserve_entry_signatures: PreserveEntrySignatures,
   pub debug: bool,
-  pub optimization: OptimizationOption,
+  pub optimization: NormalizedOptimizationConfig,
   pub top_level_var: bool,
   pub minify_internal_exports: bool,
   pub context: String,
+  pub tsconfig: Option<PathBuf>,
 }
 
 // This is only used for testing
@@ -171,10 +172,11 @@ impl Default for NormalizedBundlerOptions {
       preserve_modules_root: Default::default(),
       preserve_entry_signatures: PreserveEntrySignatures::default(),
       debug: false,
-      optimization: OptimizationOption::default(),
+      optimization: NormalizedOptimizationConfig::default(),
       top_level_var: false,
       minify_internal_exports: Default::default(),
       context: Default::default(),
+      tsconfig: Default::default(),
     }
   }
 }
@@ -192,6 +194,14 @@ impl NormalizedBundlerOptions {
 
   pub fn is_hmr_enabled(&self) -> bool {
     self.experimental.hmr.is_some()
+  }
+
+  pub fn is_legacy_hmr_enabled(&self) -> bool {
+    self
+      .experimental
+      .hmr
+      .as_ref()
+      .is_some_and(|hmr| hmr.new.is_none() || hmr.new.is_some_and(|new| !new))
   }
 
   /// make sure the `polyfill_require` is only valid for `esm` format with `node` platform

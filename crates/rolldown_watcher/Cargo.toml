@@ -1,0 +1,17 @@
+[package]
+name = "rolldown_watcher"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+notify = { workspace = true }
+rolldown_error = { workspace = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+notify-debouncer-full = { workspace = true }
+
+[lints]
+workspace = true

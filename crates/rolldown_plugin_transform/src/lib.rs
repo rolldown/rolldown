@@ -1,4 +1,3 @@
-mod types;
 mod utils;
 
 use std::borrow::Cow;
@@ -10,15 +9,11 @@ use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions};
 use oxc::parser::Parser;
 use oxc::semantic::SemanticBuilder;
 use oxc::transformer::Transformer;
-use rolldown_common::ModuleType;
+use rolldown_common::{BundlerTransformOptions, ModuleType};
 use rolldown_error::{BuildDiagnostic, Severity};
 use rolldown_plugin::{HookUsage, Plugin, SharedTransformPluginContext};
-use rolldown_utils::concat_string;
-use rolldown_utils::{pattern_filter::StringOrRegex, stabilize_id::stabilize_id, url::clean_url};
-
-pub use types::{
-  CompilerAssumptions, DecoratorOptions, IsolatedDeclarationsOptions, JsxOptions,
-  ReactRefreshOptions, TransformOptions, TypeScriptOptions,
+use rolldown_utils::{
+  concat_string, pattern_filter::StringOrRegex, stabilize_id::stabilize_id, url::clean_url,
 };
 
 #[derive(Debug, Default)]
@@ -30,7 +25,7 @@ pub struct TransformPlugin {
   pub jsx_inject: Option<String>,
   pub is_server_consumer: bool,
   pub sourcemap: bool,
-  pub transform_options: TransformOptions,
+  pub transform_options: BundlerTransformOptions,
 }
 
 /// only handle ecma like syntax, `jsx`,`tsx`,`ts`

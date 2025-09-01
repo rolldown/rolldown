@@ -6,9 +6,7 @@
         "runtime": "classic"
       }
     },
-    "resolve": {
-      "tsconfigFilename": "tsconfig.json"
-    }
+    "tsconfig": "tsconfig.json"
   },
   "expectExecuted": false
 }

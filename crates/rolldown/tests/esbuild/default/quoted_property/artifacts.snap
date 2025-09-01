@@ -7,7 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-const ext = __toESM(require("ext"));
+let ext = require("ext");
+ext = __toESM(ext);
 
 //#region entry.js
 console.log(ext.mustBeUnquoted, ext["mustBeQuoted"]);

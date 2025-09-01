@@ -261,7 +261,7 @@ impl Bundler {
 
     self.merge_immutable_fields_for_cache(link_stage_output.symbol_db);
 
-    if self.options.is_hmr_enabled() {
+    if self.options.is_legacy_hmr_enabled() {
       self.hmr_manager = Some(HmrManager::new(HmrManagerInput {
         fs: self.fs.clone(),
         options: Arc::clone(&self.options),
@@ -281,6 +281,16 @@ impl Bundler {
 
   pub fn get_watch_files(&self) -> &Arc<FxDashSet<ArcStr>> {
     &self.plugin_driver.watch_files
+  }
+
+  pub fn create_hmr_manager(&self, cache: ScanStageCache) -> HmrManager {
+    HmrManager::new(HmrManagerInput {
+      fs: self.fs.clone(),
+      options: Arc::clone(&self.options),
+      resolver: Arc::clone(&self.resolver),
+      plugin_driver: Arc::clone(&self.plugin_driver),
+      cache,
+    })
   }
 
   pub async fn generate_hmr_patch(
@@ -387,6 +397,14 @@ impl Bundler {
         file: self.options.file.clone(),
       });
     }
+  }
+
+  pub fn take_cache(&mut self) -> ScanStageCache {
+    std::mem::take(&mut self.cache)
+  }
+
+  pub fn set_cache(&mut self, cache: ScanStageCache) {
+    self.cache = cache;
   }
 }
 

@@ -8,7 +8,7 @@ use rolldown_ecmascript::{
   CJS_EXPORTS_REF_ATOM, CJS_MODULE_REF_ATOM, CJS_ROLLDOWN_EXPORTS_REF,
   CJS_ROLLDOWN_EXPORTS_REF_ATOM, CJS_ROLLDOWN_MODULE_REF_ATOM,
 };
-use rolldown_ecmascript_utils::{ExpressionExt, quote_expr, quote_stmts};
+use rolldown_ecmascript_utils::ExpressionExt;
 
 use crate::hmr::{hmr_ast_finalizer::HmrAstFinalizer, utils::HmrAstBuilder};
 
@@ -34,15 +34,15 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     let mut try_block =
       self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());
 
-    let dependencies_init_fns = self
+    let dependencies_init_fn_stmts: Vec<_> = self
       .dependencies
       .iter()
       .filter_map(|dep| self.affected_module_idx_to_init_fn_name.get(dep))
-      .map(|fn_name| format!("{fn_name}();"))
-      .collect::<Vec<_>>()
-      .join("\n");
-
-    let dependencies_init_fn_stmts = quote_stmts(self.alloc, dependencies_init_fns.as_str());
+      .map(|fn_name| {
+        let call_expr = self.snippet.call_expr_expr(fn_name);
+        self.snippet.builder.statement_expression(SPAN, call_expr)
+      })
+      .collect();
 
     let runtime_module_register = self.generate_runtime_module_register_for_hmr(ctx.scoping());
 
@@ -176,6 +176,14 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     node.body.push(ast::Statement::VariableDeclaration(var_decl));
   }
 
+  fn enter_call_expression(
+    &mut self,
+    node: &mut ast::CallExpression<'ast>,
+    _ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    self.rewrite_hot_accept_call_deps(node);
+  }
+
   fn exit_expression(
     &mut self,
     node: &mut oxc::ast::ast::Expression<'ast>,
@@ -185,10 +193,10 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       // Rewrite this to `undefined` or `exports`
       if self.module.exports_kind.is_commonjs() {
         // Rewrite this to `exports`
-        *node = quote_expr(self.alloc, CJS_ROLLDOWN_EXPORTS_REF);
+        *node = self.snippet.id_ref_expr(CJS_ROLLDOWN_EXPORTS_REF, SPAN);
       } else {
         // Rewrite this to `undefined`
-        *node = quote_expr(self.alloc, "void 0");
+        *node = self.snippet.void_zero();
       }
     }
 
@@ -213,14 +221,6 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     self.try_rewrite_dynamic_import(node);
     self.try_rewrite_require(node, ctx);
     self.rewrite_import_meta_hot(node);
-  }
-
-  fn exit_call_expression(
-    &mut self,
-    node: &mut ast::CallExpression<'ast>,
-    _ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
-  ) {
-    self.rewrite_hot_accept_call_deps(node);
   }
 }
 

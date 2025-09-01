@@ -90,7 +90,8 @@ exports.foo = foo;
 
 ```js
 // HIDDEN [rolldown:runtime]
-const bar = __toESM(require("bar"));
+let bar = require("bar");
+bar = __toESM(bar);
 
 //#region import-in-cjs.js
 exports.foo = bar.foo;

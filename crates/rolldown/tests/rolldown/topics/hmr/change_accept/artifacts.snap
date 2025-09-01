@@ -1,0 +1,101 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+// HIDDEN [rolldown:hmr]
+//#region child.js
+var child_exports = {};
+__export(child_exports, { foo: () => foo });
+const child_hot = __rolldown_runtime__.createModuleHotContext("child.js");
+__rolldown_runtime__.registerModule("child.js", { exports: child_exports });
+const foo = 0;
+
+//#endregion
+//#region parent.js
+var parent_exports = {};
+const parent_hot = __rolldown_runtime__.createModuleHotContext("parent.js");
+__rolldown_runtime__.registerModule("parent.js", { exports: parent_exports });
+parent_hot.accept("child.js", () => {
+	globalThis.oldAcceptWasCalled = true;
+});
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+	assert(!globalThis.oldAcceptWasCalled);
+});
+
+//#endregion
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+main_hot.accept("parent.js", () => {});
+
+//#endregion
+```
+# HMR Step 0
+
+## Code
+
+```js
+//#region parent.js
+import * as import_node_assert_00 from "node:assert";
+var init_parent_0 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, {});
+		__rolldown_runtime__.registerModule("parent.js", { exports: __rolldown_exports__ });
+		const hot_parent = __rolldown_runtime__.createModuleHotContext("parent.js");
+		var import_child_01 = __rolldown_runtime__.loadExports("child.js");
+		hot_parent.accept("child.js", () => {
+			globalThis.newAcceptWasCalled = true;
+		});
+		process.on("beforeExit", (code) => {
+			if (code !== 0) return;
+			import_node_assert_00.default(globalThis.newAcceptWasCalled);
+		});
+	} finally {}
+}));
+
+//#endregion
+init_parent_0()
+__rolldown_runtime__.applyUpdates([['main.js', 'parent.js']]);
+```
+## Meta
+
+- update type: patch
+### Hmr Boundaries
+
+- boundary: main.js, accepted_via: parent.js
+# HMR Step 1
+
+## Code
+
+```js
+//#region child.js
+var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, { foo: () => foo });
+		__rolldown_runtime__.registerModule("child.js", { exports: __rolldown_exports__ });
+		const hot_child = __rolldown_runtime__.createModuleHotContext("child.js");
+		const foo = 1;
+	} finally {}
+}));
+
+//#endregion
+init_child_0()
+__rolldown_runtime__.applyUpdates([['parent.js', 'child.js']]);
+```
+## Meta
+
+- update type: patch
+### Hmr Boundaries
+
+- boundary: parent.js, accepted_via: child.js

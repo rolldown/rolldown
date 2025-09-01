@@ -3,7 +3,7 @@
   "description": "Rollup in Rust",
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@10.14.0",
+  "packageManager": "pnpm@10.15.0",
   "engines": {
     "node": ">=18.20.3"
   },
@@ -24,7 +24,6 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@actions/core": "^1.11.1",
     "@oxc-node/core": "catalog:",
     "@oxc-project/runtime": "catalog:",
     "@types/node": "24.3.0",

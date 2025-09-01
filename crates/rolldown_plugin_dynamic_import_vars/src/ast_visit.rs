@@ -4,12 +4,15 @@ use cow_utils::CowUtils;
 use oxc::{
   ast::{
     AstBuilder, NONE,
-    ast::{Argument, Expression, ImportOrExportKind, PropertyKind, Statement},
+    ast::{
+      Argument, Expression, ImportOrExportKind, PropertyKind, Statement, TemplateElementValue,
+    },
   },
   ast_visit::{VisitMut, walk_mut},
   span::SPAN,
   syntax::number::NumberBase,
 };
+use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use sugar_path::SugarPath as _;
 
 use super::DYNAMIC_IMPORT_HELPER;
@@ -24,6 +27,7 @@ struct DynamicImportRequest<'a> {
 }
 
 pub struct DynamicImportVarsVisit<'ast, 'b> {
+  pub ctx: &'b PluginContext,
   pub source_text: &'ast str,
   pub ast_builder: AstBuilder<'ast>,
   pub root: &'b Path,
@@ -57,8 +61,14 @@ impl<'ast> DynamicImportVarsVisit<'ast, '_> {
             return false;
           }
 
-          // TODO(shulaoda): handle this error
-          let glob = template_literal_to_glob(source).unwrap();
+          let glob = match template_literal_to_glob(source) {
+            Ok(glob) => glob,
+            Err(error) => {
+              self.ctx.warn(LogWithoutPlugin { message: error.to_string(), ..Default::default() });
+              return false;
+            }
+          };
+
           if memchr::memchr(b'*', glob.as_bytes()).is_none() || should_ignore(&glob) {
             return false;
           }
@@ -90,9 +100,14 @@ impl<'ast> DynamicImportVarsVisit<'ast, '_> {
       let Some(index) = memchr::memchr(b'*', glob.as_bytes()) else {
         return false;
       };
+
+      let mut raw_value = None;
       if &glob[..index] != source.quasis[0].value.raw {
+        raw_value = Some(TemplateElementValue {
+          raw: source.quasis[0].value.raw,
+          cooked: source.quasis[0].value.cooked.take(),
+        });
         source.quasis[0].value.raw = self.ast_builder.atom(&glob[..index]);
-        source.quasis[0].value.cooked = None;
       }
 
       let glob = glob.cow_replace("**", "*");
@@ -103,8 +118,17 @@ impl<'ast> DynamicImportVarsVisit<'ast, '_> {
         let index = glob[index..].find('?').map_or(glob.len(), |i| i + index);
 
         let (glob, query) = glob.split_at(index);
+        let glob = match to_valid_glob(glob, source_text) {
+          Ok(glob) => glob,
+          Err(error) => {
+            self.ctx.warn(LogWithoutPlugin { message: error.to_string(), ..Default::default() });
+            if let Some(raw_value) = raw_value {
+              source.quasis[0].value = raw_value;
+            }
+            return false;
+          }
+        };
 
-        let glob = to_valid_glob(glob, source_text).unwrap();
         let params = (!query.is_empty())
           .then_some(DynamicImportRequest { query, import: has_special_query_param(query) });
 

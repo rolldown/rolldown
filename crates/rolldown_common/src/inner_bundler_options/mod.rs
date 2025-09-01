@@ -25,6 +25,8 @@ use serde::{Deserialize, Deserializer};
 #[cfg(feature = "deserialize_bundler_options")]
 use serde_json::Value;
 use types::experimental_options::ExperimentalOptions;
+#[cfg(feature = "deserialize_bundler_options")]
+use types::minify_options::SimpleMinifyOptions;
 
 use self::types::treeshake::TreeshakeOptions;
 use self::types::{
@@ -36,7 +38,8 @@ use self::types::{
 };
 
 use crate::{
-  ChecksOptions, ChunkFilenamesOutputOption, ModuleType, SourceMapIgnoreList, TransformOptions,
+  BundlerTransformOptions, ChecksOptions, ChunkFilenamesOutputOption, ModuleType,
+  SourceMapIgnoreList,
 };
 
 pub mod types;
@@ -163,7 +166,7 @@ pub struct BundlerOptions {
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(deserialize_with = "deserialize_minify", default),
-    schemars(with = "Option<bool>")
+    schemars(with = "SimpleMinifyOptions")
   )]
   pub minify: Option<RawMinifyOptions>,
   #[cfg_attr(
@@ -184,7 +187,7 @@ pub struct BundlerOptions {
     serde(deserialize_with = "deserialize_transform_options", default),
     schemars(with = "Option<FxHashMap<String, Value>>")
   )]
-  pub transform: Option<TransformOptions>,
+  pub transform: Option<BundlerTransformOptions>,
   pub watch: Option<WatchOption>,
   pub legal_comments: Option<LegalComments>,
   pub polyfill_require: Option<bool>,
@@ -223,21 +226,7 @@ pub struct BundlerOptions {
   pub top_level_var: Option<bool>,
   pub minify_internal_exports: Option<bool>,
   pub context: Option<String>,
-}
-
-impl BundlerOptions {
-  /// # Panic
-  /// 1. If `cwd` is not set.
-  ///
-  /// This method is used to sync the path after the `cwd` is set,
-  /// so make sure to call this method after the cwd is canonicalized
-  pub fn canonicalize_option_path(&mut self) {
-    if let Some(resolve) = self.resolve.as_mut() {
-      resolve.tsconfig_filename = resolve.tsconfig_filename.as_ref().map(|tsconfig_filename| {
-        self.cwd.as_ref().unwrap().join(tsconfig_filename).to_string_lossy().to_string()
-      });
-    }
-  }
+  pub tsconfig: Option<String>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]
@@ -305,8 +294,16 @@ fn deserialize_minify<'de, D>(deserializer: D) -> Result<Option<RawMinifyOptions
 where
   D: Deserializer<'de>,
 {
-  let deserialized = Option::<bool>::deserialize(deserializer)?;
-  Ok(deserialized.map(From::from))
+  let deserialized = Option::<SimpleMinifyOptions>::deserialize(deserializer)?;
+  match deserialized {
+    Some(SimpleMinifyOptions::Boolean(false)) => Ok(Some(RawMinifyOptions::Bool(false))),
+    Some(SimpleMinifyOptions::Boolean(true)) => Ok(Some(RawMinifyOptions::Bool(true))),
+    Some(SimpleMinifyOptions::String(value)) if value == "dceOnly" => {
+      Ok(Some(RawMinifyOptions::DeadCodeEliminationOnly))
+    }
+    None => Ok(None),
+    _ => unreachable!("Unexpected value for minify {:?}", deserialized),
+  }
 }
 
 #[cfg(feature = "deserialize_bundler_options")]
@@ -326,6 +323,8 @@ where
         manual_pure_functions: None,
         unknown_global_side_effects: None,
         commonjs: Some(true),
+        property_read_side_effects: None,
+        property_write_side_effects: None,
       }))
     }
     Some(Value::Object(obj)) => {
@@ -372,12 +371,43 @@ where
           _ => Err(serde::de::Error::custom("manualPureFunctions should be a `Vec<String>`")),
         },
       )?;
+      // Use string to make deserialization logic easier
+      let property_read_side_effects = obj.get("propertyReadSideEffects").map_or_else(
+        || Ok(None),
+        |v| match v {
+          Value::String(s) if s == "always" => {
+            Ok(Some(types::treeshake::PropertyReadSideEffects::Always))
+          }
+          Value::String(s) if s == "false" => {
+            Ok(Some(types::treeshake::PropertyReadSideEffects::False))
+          }
+          _ => {
+            Err(serde::de::Error::custom("propertyReadSideEffects should be 'false' or 'always'"))
+          }
+        },
+      )?;
+      let property_write_side_effects = obj.get("propertyWriteSideEffects").map_or_else(
+        || Ok(None),
+        |v| match v {
+          Value::String(s) if s == "always" => {
+            Ok(Some(types::treeshake::PropertyWriteSideEffects::Always))
+          }
+          Value::String(s) if s == "false" => {
+            Ok(Some(types::treeshake::PropertyWriteSideEffects::False))
+          }
+          _ => {
+            Err(serde::de::Error::custom("propertyWriteSideEffects should be 'false' or 'always'"))
+          }
+        },
+      )?;
       Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions {
         module_side_effects,
         annotations,
         manual_pure_functions: Some(manual_pure_functions),
         unknown_global_side_effects,
         commonjs,
+        property_read_side_effects,
+        property_write_side_effects,
       }))
     }
     _ => Err(serde::de::Error::custom("treeshake should be a boolean or an object")),
@@ -387,40 +417,30 @@ where
 #[cfg(feature = "deserialize_bundler_options")]
 fn deserialize_transform_options<'de, D>(
   deserializer: D,
-) -> Result<Option<TransformOptions>, D::Error>
+) -> Result<Option<BundlerTransformOptions>, D::Error>
 where
   D: Deserializer<'de>,
 {
-  use std::str::FromStr;
-
-  use oxc::transformer::{ESTarget, EnvOptions, JsxOptions, JsxRuntime};
+  use itertools::Either;
   use serde_json::Value;
 
-  use crate::JsxPreset;
+  use crate::bundler_options::JsxOptions;
 
   let value = Option::<Value>::deserialize(deserializer)?;
   match value {
     Some(Value::Object(obj)) => {
-      let mut transform_options = TransformOptions::default();
+      let mut transform_options = BundlerTransformOptions::default();
       for (k, v) in obj {
         match k.as_str() {
           "target" => {
             let target = v
               .as_str()
               .ok_or_else(|| serde::de::Error::custom("transform.target should be a string"))?;
-            transform_options.es_target = ESTarget::from_str(target).map_err(|err| {
-              serde::de::Error::custom(format!(
-                "transform.target should be a valid es target. {err}"
-              ))
-            })?;
-            transform_options.env = EnvOptions::from_target(target).unwrap();
+            transform_options.target = Some(Either::Left(target.to_string()));
           }
           "jsx" => {
-            let jsx = match v {
-              Value::String(str) if str == "preserve" => {
-                transform_options.jsx_preset = JsxPreset::Preserve;
-                JsxOptions::disable()
-              }
+            transform_options.jsx = match v {
+              Value::String(str) if str == "preserve" => Some(Either::Left(str)),
               Value::Object(obj) => {
                 let mut default_jsx_option = JsxOptions::default();
                 for (k, v) in obj {
@@ -430,8 +450,9 @@ where
                         serde::de::Error::custom("jsx.runtime should be a string")
                       })?;
                       match runtime {
-                        "classic" => default_jsx_option.runtime = JsxRuntime::Classic,
-                        "automatic" => default_jsx_option.runtime = JsxRuntime::Automatic,
+                        "classic" | "automatic" => {
+                          default_jsx_option.runtime = Some(runtime.to_owned());
+                        }
                         _ => {
                           return Err(serde::de::Error::custom(format!(
                             "unknown jsx runtime: {runtime}",
@@ -443,30 +464,30 @@ where
                       let import_source = v.as_str().ok_or_else(|| {
                         serde::de::Error::custom("jsx.importSource should be a string")
                       })?;
-                      default_jsx_option.import_source = Some(import_source.to_string());
+                      default_jsx_option.import_source = Some(import_source.to_owned());
                     }
                     "development" => {
                       let development = v.as_bool().ok_or_else(|| {
                         serde::de::Error::custom("jsx.development should be a boolean")
                       })?;
-                      default_jsx_option.development = development;
+                      default_jsx_option.development = Some(development);
                     }
                     "pragma" => {
                       let pragma = v
                         .as_str()
                         .ok_or_else(|| serde::de::Error::custom("jsx.pragma should be a string"))?;
-                      default_jsx_option.pragma = Some(pragma.to_string());
+                      default_jsx_option.pragma = Some(pragma.to_owned());
                     }
                     "pragmaFrag" => {
                       let pragma_frag = v.as_str().ok_or_else(|| {
                         serde::de::Error::custom("jsx.pragmaFrag should be a string")
                       })?;
-                      default_jsx_option.pragma_frag = Some(pragma_frag.to_string());
+                      default_jsx_option.pragma_frag = Some(pragma_frag.to_owned());
                     }
                     _ => return Err(serde::de::Error::custom(format!("unknown jsx option: {k}",))),
                   }
                 }
-                default_jsx_option
+                Some(Either::Right(default_jsx_option))
               }
               _ => {
                 return Err(serde::de::Error::custom(
@@ -474,7 +495,6 @@ where
                 ));
               }
             };
-            transform_options.jsx = jsx;
           }
           _ => return Err(serde::de::Error::custom(format!("unknown transform option: {k}",))),
         }

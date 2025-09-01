@@ -6,6 +6,10 @@ ignore = "git diff --quiet 'HEAD^' HEAD ./docs ./packages/rolldown"
 from = "/about/"
 to = "/guide/"
 
+[[redirects]]
+from = "/guide/plugin-development"
+to = "/plugins/"
+
 # https://github.com/okineadev/vitepress-plugin-llms#netlify
 [[redirects]]
 from = "/*.txt"

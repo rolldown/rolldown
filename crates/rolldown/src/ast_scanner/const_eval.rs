@@ -1,7 +1,7 @@
 use oxc::{
   ast::ast::Expression,
   minifier::PropertyReadSideEffects,
-  semantic::{IsGlobalReference, Scoping, SymbolId},
+  semantic::{IsGlobalReference, ReferenceId, Scoping, SymbolId},
 };
 use oxc_ecmascript::{
   GlobalContext,
@@ -15,6 +15,9 @@ pub struct ConstEvalCtx<'me, 'ast: 'me> {
   pub ast: oxc::ast::AstBuilder<'ast>,
   pub scope: &'me Scoping,
   pub constant_map: &'me FxHashMap<SymbolId, ConstExportMeta>,
+  pub overrode_get_constant_value_from_reference_id: Option<
+    &'me dyn Fn(ReferenceId) -> Option<oxc_ecmascript::constant_evaluation::ConstantValue<'ast>>,
+  >,
 }
 
 impl<'ast> ConstantEvaluationCtx<'ast> for ConstEvalCtx<'_, 'ast> {
@@ -32,6 +35,11 @@ impl<'ast> GlobalContext<'ast> for ConstEvalCtx<'_, 'ast> {
     &self,
     reference_id: oxc::semantic::ReferenceId,
   ) -> Option<oxc_ecmascript::constant_evaluation::ConstantValue<'ast>> {
+    // If there is an override function, return the result produced by the overrode function
+    // whatever.
+    if let Some(f) = self.overrode_get_constant_value_from_reference_id {
+      return f(reference_id);
+    }
     let reference = self.scope.get_reference(reference_id);
     let symbol_id = reference.symbol_id()?;
     let v = self.constant_map.get(&symbol_id)?;

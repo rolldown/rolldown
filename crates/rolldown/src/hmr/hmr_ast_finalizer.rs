@@ -15,9 +15,7 @@ use rolldown_common::{
   ExternalModule, ImportRecordIdx, IndexModules, Module, ModuleIdx, NormalModule,
 };
 use rolldown_ecmascript::CJS_REQUIRE_REF_ATOM;
-use rolldown_ecmascript_utils::{
-  AstSnippet, BindingIdentifierExt, ExpressionExt, quote_expr, quote_stmt,
-};
+use rolldown_ecmascript_utils::{AstSnippet, BindingIdentifierExt, ExpressionExt};
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -476,8 +474,11 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       Module::Normal(importee) => self.module.interop(importee),
       Module::External(_) => None,
     };
-    let call_expr =
-      quote_expr(self.alloc, format!("__rolldown_runtime__.loadExports({id:?});",).as_str());
+    let call_expr = self.snippet.call_expr_with_arg_expr(
+      self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports"),
+      self.snippet.string_literal_expr(id, SPAN),
+      false,
+    );
 
     let stmt = self.snippet.variable_declarator_require_call_stmt(
       binding_name,
@@ -500,10 +501,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let module_request = &importee.id;
 
     // import * as [binding_name] from 'external';
-    let stmt = quote_stmt(
-      self.alloc,
-      format!("import * as {binding_name} from '{module_request}';",).as_str(),
-    );
+    let stmt = self.snippet.import_star_stmt(module_request, binding_name);
 
     self.generated_static_import_stmts_from_external.insert(importee.idx, stmt);
   }
@@ -521,9 +519,10 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     let self_exports = self.module_exports_name();
 
-    let call_expr = quote_expr(
-      self.alloc,
-      format!("__rolldown_runtime__.__reExport({self_exports}, {binding_name});",).as_str(),
+    let call_expr = self.snippet.call_expr_with_2arg_expr(
+      self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "__reExport"),
+      self.snippet.id_ref_expr(self_exports, SPAN),
+      self.snippet.id_ref_expr(binding_name, SPAN),
     );
 
     Some(ast::Statement::ExpressionStatement(
@@ -556,10 +555,10 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     arg_obj_expr.properties.extend(self.named_exports.iter().map(|(exported, named_export)| {
       let expr = if let Some(local_binding) = self.import_bindings.get(&named_export.local_binding)
       {
-        quote_expr(self.alloc, local_binding)
+        self.snippet.id_ref_expr(local_binding, SPAN)
       } else {
         let name = scoping.symbol_name(named_export.local_binding);
-        quote_expr(self.alloc, name)
+        self.snippet.id_ref_expr(name, SPAN)
       };
       self.snippet.object_property_kind_object_property(exported, expr, false)
     }));
@@ -686,7 +685,8 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       && id_ref.is_global_reference(scoping)
       && !ctx.parent().is_call_expression()
     {
-      *it = quote_expr(self.alloc, "__rolldown_runtime__.loadExports");
+      *it =
+        self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports");
     }
 
     // Rewrite `require(...)` to `(require_xxx(), __rolldown_runtime__.loadExports())` or keep it as is for external module importee.
@@ -718,17 +718,23 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let init_fn_name = &self.affected_module_idx_to_init_fn_name[importee_idx];
 
     if is_importee_cjs {
-      *it = quote_expr(
-        self.alloc,
-        format!("({}(), __rolldown_runtime__.loadExports('{}'))", init_fn_name, importee.stable_id)
-          .as_str(),
+      *it = self.snippet.seq2_in_paren_expr(
+        self.snippet.call_expr_expr(init_fn_name),
+        self.snippet.call_expr_with_arg_expr(
+          self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports"),
+          self.snippet.string_literal_expr(&importee.stable_id, SPAN),
+          false,
+        ),
       );
     } else {
       // hyf0 TODO: handle esm importee
-      *it = quote_expr(
-        self.alloc,
-        format!("({}(), __rolldown_runtime__.loadExports('{}'))", init_fn_name, importee.stable_id)
-          .as_str(),
+      *it = self.snippet.seq2_in_paren_expr(
+        self.snippet.call_expr_expr(init_fn_name),
+        self.snippet.call_expr_with_arg_expr(
+          self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports"),
+          self.snippet.string_literal_expr(&importee.stable_id, SPAN),
+          false,
+        ),
       );
     }
   }

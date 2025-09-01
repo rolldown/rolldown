@@ -1,5 +1,3 @@
-mod utils;
-
 use std::{future::Future, pin::Pin, sync::Arc};
 
 use rolldown_plugin::{HookLoadOutput, HookTransformOutput, HookUsage, LogWithoutPlugin, Plugin};
@@ -76,7 +74,7 @@ impl Plugin for ViteCssPlugin {
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
     if is_css_request(args.id) && find_special_query(args.id, b"url").is_some() {
-      if utils::is_css_module(args.id) {
+      if rolldown_plugin_utils::css::is_css_module(args.id) {
         return Err(anyhow::anyhow!(
           "?url is not supported with CSS modules. (tried to import '{}')",
           args.id

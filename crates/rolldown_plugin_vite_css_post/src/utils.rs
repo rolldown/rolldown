@@ -2,12 +2,14 @@ use std::{
   borrow::Cow,
   ops::Deref,
   path::{Path, PathBuf},
-  sync::{Arc, LazyLock},
+  sync::{Arc, LazyLock, atomic::Ordering},
 };
 
+use arcstr::ArcStr;
 use regex::Regex;
 use rolldown_common::{
-  AssetFilenamesOutputOption, EmittedAsset, OutputFormat, RollupPreRenderedAsset,
+  AssetFilenamesOutputOption, EmittedAsset, Output, OutputChunk, OutputFormat,
+  RollupPreRenderedAsset,
 };
 use rolldown_plugin::{HookRenderChunkArgs, PluginContext};
 use rolldown_plugin_utils::{
@@ -21,7 +23,8 @@ use rolldown_plugin_utils::{
   get_chunk_original_name,
   uri::encode_uri_path,
 };
-use rolldown_utils::{futures::block_on_spawn_all, url::clean_url};
+use rolldown_utils::{futures::block_on_spawn_all, indexmap::FxIndexSet, url::clean_url};
+use rustc_hash::{FxHashMap, FxHashSet};
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
 
@@ -522,5 +525,196 @@ impl ViteCssPostPlugin {
       ctx.meta().insert(Arc::new(CSSBundleName(css_bundle_name.clone())));
       css_bundle_name
     })
+  }
+
+  pub async fn emit_non_codesplit_css_bundle(
+    &self,
+    ctx: &PluginContext,
+    bundle: &mut [Output],
+  ) -> anyhow::Result<()> {
+    if !self.css_code_split && !self.has_emitted.load(Ordering::Relaxed) {
+      fn collect(
+        ctx: &PluginContext,
+        chunk: &OutputChunk,
+        bundle: &FxHashMap<ArcStr, Arc<OutputChunk>>,
+        collected: &mut FxHashSet<ArcStr>,
+        dynamic_imports: &mut FxIndexSet<ArcStr>,
+        extracted_css: &mut String,
+      ) {
+        if collected.contains(&chunk.filename) {
+          return;
+        }
+        collected.insert(chunk.filename.clone());
+        // First collect all styles from the synchronous imports (lowest priority)
+        chunk.imports.iter().for_each(|name| {
+          if let Some(chunk) = bundle.get(name) {
+            collect(ctx, chunk, bundle, collected, dynamic_imports, extracted_css);
+          }
+        });
+        // Save dynamic imports in deterministic order to add the styles later (to have the highest priority)
+        chunk.dynamic_imports.iter().for_each(|name| {
+          dynamic_imports.insert(name.clone());
+        });
+        // Then collect the styles of the current chunk (might overwrite some styles from previous imports)
+        if let Some(css_chunk) = ctx
+          .meta()
+          .get::<CSSChunkCache>()
+          .expect("CSSChunkCache is missing")
+          .inner
+          .get(&Into::<ArcStr>::into(&chunk.preliminary_filename))
+        {
+          extracted_css.push_str(&css_chunk);
+        }
+      }
+
+      let chunks = bundle
+        .iter()
+        .filter_map(|output| match output {
+          Output::Chunk(chunk) => Some((chunk.filename.clone(), Arc::clone(chunk))),
+          Output::Asset(_) => None,
+        })
+        .collect::<FxHashMap<_, _>>();
+
+      let mut extracted_css = String::new();
+      let mut collected = FxHashSet::default();
+      let mut dynamic_imports = FxIndexSet::default();
+      // The bundle is guaranteed to be deterministic, if not then we have a bug in rollup.
+      // So we use it to ensure a deterministic order of styles
+      let mut bundle_iter = bundle.iter();
+      while let Some(Output::Chunk(chunk)) = bundle_iter.next()
+        && chunk.is_entry
+      {
+        collect(ctx, chunk, &chunks, &mut collected, &mut dynamic_imports, &mut extracted_css);
+      }
+      // Now collect the dynamic chunks, this is done last to have the styles overwrite the previous ones
+      while let imports = std::mem::take(&mut dynamic_imports)
+        && !imports.is_empty()
+      {
+        for name in imports {
+          if let Some(chunk) = chunks.get(&name) {
+            collect(ctx, chunk, &chunks, &mut collected, &mut dynamic_imports, &mut extracted_css);
+          }
+        }
+      }
+
+      if !extracted_css.is_empty() {
+        self.has_emitted.store(true, Ordering::Relaxed);
+        ctx
+          .emit_file_async(rolldown_common::EmittedAsset {
+            name: Some(self.get_css_bundle_name(ctx)?),
+            // this file is an implicit entry point, use `style.css` as the original file name
+            // this name is also used as a key in the manifest
+            original_file_name: Some("style.css".to_owned()),
+            source: self.finalize_css(extracted_css).await?.into(),
+            ..Default::default()
+          })
+          .await?;
+      }
+    }
+    Ok(())
+  }
+
+  pub fn prune_pure_css_chunks(
+    &self,
+    ctx: &PluginContext,
+    args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
+  ) {
+    if let Some(pure_css_chunks) = ctx.meta().get::<PureCSSChunks>()
+      && !pure_css_chunks.inner.is_empty()
+    {
+      let mut pure_css_chunk_names = Vec::with_capacity(pure_css_chunks.inner.len());
+
+      let mut bundle_iter = args.bundle.iter();
+      while let Some(Output::Chunk(chunk)) = bundle_iter.next() {
+        if pure_css_chunks.inner.contains(chunk.preliminary_filename.as_str()) {
+          pure_css_chunk_names.push(chunk.filename.clone());
+        }
+      }
+
+      // TODO: improve below regex logic
+      let empty_chunk_re = LazyLock::new(|| {
+        let empty_chunk_files = pure_css_chunk_names
+          .iter()
+          .filter_map(|file| {
+            Path::new(file.as_str()).file_name().and_then(|v| v.to_str().map(regex::escape))
+          })
+          .collect::<Vec<_>>()
+          .join("|");
+
+        Regex::new(&if args.options.format.is_esm() {
+          rolldown_utils::concat_string!(
+            r#"\\bimport\\s*["'][^"']*(?:"#,
+            empty_chunk_files,
+            r#")["'];"#
+          )
+        } else {
+          rolldown_utils::concat_string!(
+            r#"(\\b|,\\s*)require\\(\\s*["'\`][^"'\`]*(?:"#,
+            empty_chunk_files,
+            r#")["'\`]\\)(;|,)"#
+          )
+        })
+        .unwrap()
+      });
+
+      for output in args.bundle.iter_mut() {
+        if let Output::Chunk(chunk) = output {
+          let mut chunk_imports_pure_css_chunk = false;
+          let mut new_chunk = (**chunk).clone();
+          // remove pure css chunk from other chunk's imports, and also
+          // register the emitted CSS files under the importer chunks instead.
+          new_chunk.imports = new_chunk
+            .imports
+            .into_iter()
+            .filter(|file| {
+              if pure_css_chunk_names.contains(file) {
+                // TODO: get special file chunk metadata
+                let cache = ctx.meta().get::<ViteMetadata>().expect("ViteMetadata is missing");
+                cache.imported_assets.iter().for_each(|file| {
+                  ctx
+                    .meta()
+                    .get::<ViteMetadata>()
+                    .expect("ViteMetadata is missing")
+                    .imported_assets
+                    .insert(file.clone());
+                });
+                chunk_imports_pure_css_chunk = true;
+                return false;
+              }
+              true
+            })
+            .collect::<Vec<_>>();
+          if chunk_imports_pure_css_chunk {
+            new_chunk.code = empty_chunk_re
+              .replace_all(&chunk.code, |captures: &regex::Captures<'_>| {
+                let len = captures.get(0).unwrap().len();
+                if args.options.format.is_esm() {
+                  return format!("/* empty css {:<width$}*/", "", width = len.saturating_sub(15));
+                }
+                if let Some(p2) = captures.get(2)
+                  && p2.as_str() == ";"
+                {
+                  return format!(";/* empty css {:<width$}*/", "", width = len.saturating_sub(16));
+                }
+                let p1 = captures.get(1).map_or("", |m| m.as_str());
+                format!(
+                  "{p1}/* empty css {:<width$}*/",
+                  "",
+                  width = len.saturating_sub(15 + p1.len())
+                )
+              })
+              .into_owned();
+          }
+          *chunk = Arc::new(new_chunk);
+        }
+      }
+
+      // TODO: Verify this change (not set `removedPureCssFilesCache`)
+      args.bundle.retain(|output| !match output {
+        Output::Chunk(chunk) => pure_css_chunk_names.contains(&chunk.filename),
+        Output::Asset(asset) => pure_css_chunk_names
+          .contains(&rolldown_utils::concat_string!(asset.filename, ".map").into()),
+      });
+    }
   }
 }

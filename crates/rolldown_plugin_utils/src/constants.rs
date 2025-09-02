@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arcstr::ArcStr;
 
 use rolldown_plugin::typedmap::TypedMapKey;
@@ -22,10 +24,25 @@ impl TypedMapKey for ViteImportGlob {
   type Value = ViteImportGlobValue;
 }
 
-// TODO: should bind with chunk
+#[derive(Debug, Default)]
+pub struct ChunkMetadata {
+  pub imported_css: FxDashSet<ArcStr>,
+  pub imported_assets: FxDashSet<ArcStr>,
+}
+
 #[derive(Debug, Default)]
 pub struct ViteMetadata {
-  pub imported_assets: FxDashSet<ArcStr>,
+  pub inner: FxDashMap<ArcStr, Arc<ChunkMetadata>>,
+}
+
+impl ViteMetadata {
+  pub fn get(&self, key: &ArcStr) -> Option<Arc<ChunkMetadata>> {
+    self.inner.get(key).map(|v| v.clone())
+  }
+
+  pub fn get_or_insert_default(&self, key: ArcStr) -> Arc<ChunkMetadata> {
+    self.inner.entry(key).or_insert_with(|| Arc::new(ChunkMetadata::default())).clone()
+  }
 }
 
 #[derive(Debug, Default)]

@@ -92,7 +92,6 @@ impl ViteCssPostPlugin {
   ) -> anyhow::Result<()> {
     let mut css_url_iter = ctx.args.code.match_indices("__VITE_CSS_URL__").peekable();
     if css_url_iter.peek().is_some() {
-      let vite_metadata = ctx.meta().get::<ViteMetadata>().expect("ViteMetadata missing");
       let tasks = css_url_iter.map(async |(index, _)| {
         let start = index + "__VITE_CSS_URL__".len();
         let Some(pos) = ctx.args.code[start..].find("__") else {
@@ -139,7 +138,10 @@ impl ViteCssPostPlugin {
           .await?;
 
         let filename = ctx.get_file_name(&reference_id)?;
-        vite_metadata.imported_assets.insert(clean_url(&reference_id).into());
+        let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
+        let chunk_metadata = vite_metadata.get_or_insert_default(ctx.env.host_id.into());
+
+        chunk_metadata.imported_assets.insert(clean_url(&reference_id).into());
 
         let url = ctx
           .env
@@ -230,12 +232,10 @@ impl ViteCssPostPlugin {
           })
           .await?;
 
-        ctx
-          .meta()
-          .get::<ViteMetadata>()
-          .expect("ViteMetadata missing")
-          .imported_assets
-          .insert(ctx.get_file_name(&reference_id)?);
+        let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
+        let chunk_metadata = vite_metadata.get_or_insert_default(ctx.env.host_id.into());
+
+        chunk_metadata.imported_assets.insert(ctx.get_file_name(&reference_id)?);
 
         if ctx.args.chunk.is_entry && is_pure_css_chunk {
           ctx
@@ -337,12 +337,10 @@ impl ViteCssPostPlugin {
             Cow::Borrowed(filename.as_str())
           };
 
-          let vite_meta_data = ctx.meta().get::<ViteMetadata>().unwrap_or_else(|| {
-            let value = Arc::new(ViteMetadata::default());
-            ctx.meta().insert(Arc::<ViteMetadata>::clone(&value));
-            value
-          });
-          vite_meta_data.imported_assets.insert(clean_url(&filename).into());
+          let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
+          let chunk_metadata = vite_metadata.get_or_insert_default(ctx.env.host_id.into());
+
+          chunk_metadata.imported_assets.insert(clean_url(&filename).into());
 
           let env = ToOutputFilePathEnv {
             is_ssr: self.is_ssr,
@@ -656,57 +654,65 @@ impl ViteCssPostPlugin {
         })
         .unwrap()
       });
-
-      for output in args.bundle.iter_mut() {
-        if let Output::Chunk(chunk) = output {
-          let mut chunk_imports_pure_css_chunk = false;
-          let mut new_chunk = (**chunk).clone();
-          // remove pure css chunk from other chunk's imports, and also
-          // register the emitted CSS files under the importer chunks instead.
-          new_chunk.imports = new_chunk
-            .imports
-            .into_iter()
-            .filter(|file| {
-              if pure_css_chunk_names.contains(file) {
-                // TODO: get special file chunk metadata
-                let cache = ctx.meta().get::<ViteMetadata>().expect("ViteMetadata is missing");
-                cache.imported_assets.iter().for_each(|file| {
-                  ctx
-                    .meta()
-                    .get::<ViteMetadata>()
-                    .expect("ViteMetadata is missing")
-                    .imported_assets
-                    .insert(file.clone());
-                });
-                chunk_imports_pure_css_chunk = true;
-                return false;
+      let chunks = args
+        .bundle
+        .iter()
+        .filter_map(|output| match output {
+          Output::Chunk(chunk) => Some((chunk.filename.clone(), Arc::clone(chunk))),
+          Output::Asset(_) => None,
+        })
+        .collect::<FxHashMap<_, _>>();
+      let mut bundle_iter = args.bundle.iter_mut();
+      while let Some(Output::Chunk(chunk)) = bundle_iter.next() {
+        let mut chunk_imports_pure_css_chunk = false;
+        let mut new_chunk = (**chunk).clone();
+        // remove pure css chunk from other chunk's imports, and also
+        // register the emitted CSS files under the importer chunks instead.
+        let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
+        let chunk_metadata =
+          vite_metadata.get_or_insert_default(chunk.preliminary_filename.as_str().into());
+        new_chunk.imports = new_chunk
+          .imports
+          .into_iter()
+          .filter(|file| {
+            if pure_css_chunk_names.contains(file) {
+              let chunk = &chunks[file];
+              let file_metadata =
+                vite_metadata.get(&chunk.preliminary_filename.as_str().into()).unwrap();
+              file_metadata.imported_css.iter().for_each(|file| {
+                chunk_metadata.imported_css.insert(file.clone());
+              });
+              file_metadata.imported_assets.iter().for_each(|file| {
+                chunk_metadata.imported_assets.insert(file.clone());
+              });
+              chunk_imports_pure_css_chunk = true;
+              return false;
+            }
+            true
+          })
+          .collect::<Vec<_>>();
+        if chunk_imports_pure_css_chunk {
+          new_chunk.code = empty_chunk_re
+            .replace_all(&chunk.code, |captures: &regex::Captures<'_>| {
+              let len = captures.get(0).unwrap().len();
+              if args.options.format.is_esm() {
+                return format!("/* empty css {:<width$}*/", "", width = len.saturating_sub(15));
               }
-              true
+              if let Some(p2) = captures.get(2)
+                && p2.as_str() == ";"
+              {
+                return format!(";/* empty css {:<width$}*/", "", width = len.saturating_sub(16));
+              }
+              let p1 = captures.get(1).map_or("", |m| m.as_str());
+              format!(
+                "{p1}/* empty css {:<width$}*/",
+                "",
+                width = len.saturating_sub(15 + p1.len())
+              )
             })
-            .collect::<Vec<_>>();
-          if chunk_imports_pure_css_chunk {
-            new_chunk.code = empty_chunk_re
-              .replace_all(&chunk.code, |captures: &regex::Captures<'_>| {
-                let len = captures.get(0).unwrap().len();
-                if args.options.format.is_esm() {
-                  return format!("/* empty css {:<width$}*/", "", width = len.saturating_sub(15));
-                }
-                if let Some(p2) = captures.get(2)
-                  && p2.as_str() == ";"
-                {
-                  return format!(";/* empty css {:<width$}*/", "", width = len.saturating_sub(16));
-                }
-                let p1 = captures.get(1).map_or("", |m| m.as_str());
-                format!(
-                  "{p1}/* empty css {:<width$}*/",
-                  "",
-                  width = len.saturating_sub(15 + p1.len())
-                )
-              })
-              .into_owned();
-          }
-          *chunk = Arc::new(new_chunk);
+            .into_owned();
         }
+        *chunk = Arc::new(new_chunk);
       }
 
       // TODO: Verify this change (not set `removedPureCssFilesCache`)

@@ -18,4 +18,14 @@ impl PluginContextMeta {
   pub fn get<T: Any + Send + Sync>(&self) -> Option<Arc<T>> {
     self.inner.get(&TypeId::of::<T>()).and_then(|v| v.clone().downcast::<T>().ok())
   }
+
+  pub fn get_or_insert_default<T: Any + Send + Sync + Default>(&self) -> Arc<T> {
+    self
+      .inner
+      .entry(TypeId::of::<T>())
+      .or_insert_with(|| Arc::new(T::default()))
+      .clone()
+      .downcast::<T>()
+      .expect("PluginContextMeta: type mismatch for inserted value")
+  }
 }

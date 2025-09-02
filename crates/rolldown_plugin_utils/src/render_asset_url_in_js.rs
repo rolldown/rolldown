@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use rolldown_utils::url::clean_url;
 
 use super::{
@@ -40,13 +38,10 @@ impl RenderAssetUrlInJsEnv<'_> {
         };
 
         let file = self.ctx.get_file_name(reference_id)?;
-        let vite_meta_data = self.ctx.meta().get::<ViteMetadata>().unwrap_or_else(|| {
-          let value = Arc::new(ViteMetadata::default());
-          self.ctx.meta().insert(Arc::<ViteMetadata>::clone(&value));
-          value
-        });
+        let vite_metadata = self.ctx.meta().get_or_insert_default::<ViteMetadata>();
+        let chunk_metadata = vite_metadata.get_or_insert_default(self.env.host_id.into());
 
-        vite_meta_data.imported_assets.insert(clean_url(&file).into());
+        chunk_metadata.imported_assets.insert(clean_url(&file).into());
 
         let postfix = self.code[end..].starts_with("$_").then(|| {
           self.code[end + 2..].find("__").map_or("", |i| {

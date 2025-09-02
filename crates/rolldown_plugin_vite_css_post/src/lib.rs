@@ -201,16 +201,18 @@ impl Plugin for ViteCssPostPlugin {
   async fn augment_chunk_hash(
     &self,
     ctx: &rolldown_plugin::PluginContext,
-    _chunk: Arc<rolldown_common::RollupRenderedChunk>,
+    chunk: Arc<rolldown_common::RollupRenderedChunk>,
   ) -> rolldown_plugin::HookAugmentChunkHashReturn {
     Ok(ctx.meta().get::<ViteMetadata>().and_then(|vite_metadata| {
-      (!vite_metadata.imported_assets.is_empty()).then(|| {
-        let capacity = vite_metadata.imported_assets.iter().fold(0, |acc, s| acc + s.len());
-        let mut hash = String::with_capacity(capacity);
-        for asset in vite_metadata.imported_assets.iter() {
-          hash.push_str(&asset);
-        }
-        hash
+      vite_metadata.get(&chunk.filename).and_then(|metadata| {
+        (!metadata.imported_assets.is_empty()).then(|| {
+          let capacity = metadata.imported_assets.iter().fold(0, |acc, s| acc + s.len());
+          let mut hash = String::with_capacity(capacity);
+          for asset in metadata.imported_assets.iter() {
+            hash.push_str(&asset);
+          }
+          hash
+        })
       })
     }))
   }

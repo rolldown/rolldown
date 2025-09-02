@@ -60,23 +60,23 @@ jobs:
 
       - run: just build native release
 
-  # release-build-wasi:
-# strategy:
-# matrix:
-# os: [ubuntu-latest, macos-latest, windows-latest]
-# name: Warmup for release build with WASI target
-# runs-on: ${{ matrix.os }}
-# steps:
-# - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+  release-build-wasi:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    name: Warmup for release build with WASI target
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
-# - name: Setup Rust
-# uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
-# with:
-# cache-key: release-build-wasi
-# save-cache: ${{ github.ref_name == 'main' }}
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
+        with:
+          cache-key: release-build-wasi
+          save-cache: ${{ github.ref_name == 'main' }}
 
-# - name: Add WASI target
-# run: rustup target add wasm32-wasip1-threads
+      - name: Add WASI target
+        run: rustup target add wasm32-wasip1-threads
 
-# - run: cargo check --release --workspace
-# - run: cargo test --release --workspace --no-run
+      - run: cargo check --release --workspace
+      - run: cargo test --release --workspace --no-run

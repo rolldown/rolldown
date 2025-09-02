@@ -65,6 +65,8 @@ where
 }
 
 // --- TODO(hyf0): These errors are only for compatibility with legacy code. They should be replaced with more specific errors.
+// NOTE: Using #[allow] instead of #[expect] because NapiError is only used with certain feature flags
+#[allow(clippy::allow_attributes)] // Exemption: conditional usage based on features
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct NapiError;

@@ -3219,6 +3219,7 @@ name = "rolldown_plugin_vite_css_post"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arcstr",
  "base64-simd",
  "cow-utils",
  "derive_more",
@@ -3227,6 +3228,7 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_utils",
+ "rustc-hash",
  "serde_json",
  "string_wizard",
  "sugar_path",

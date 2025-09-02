@@ -10,10 +10,13 @@ use std::{
   },
 };
 
+use arcstr::ArcStr;
 use cow_utils::CowUtils;
 use regex::{Regex, escape};
-use rolldown_common::{ModuleType, Output, StrOrBytes, side_effects::HookSideEffects};
-use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plugin};
+use rolldown_common::{ModuleType, Output, OutputChunk, StrOrBytes, side_effects::HookSideEffects};
+use rolldown_plugin::{
+  HookRenderChunkOutput, HookTransformOutput, HookUsage, Plugin, PluginContext,
+};
 use rolldown_plugin_utils::{
   RenderBuiltUrl, ToOutputFilePathEnv,
   constants::{
@@ -22,7 +25,8 @@ use rolldown_plugin_utils::{
   css::is_css_request,
   data_to_esm, find_special_query, is_special_query,
 };
-use rolldown_utils::{url::clean_url, xxhash::xxhash_with_base};
+use rolldown_utils::{indexmap::FxIndexSet, url::clean_url, xxhash::xxhash_with_base};
+use rustc_hash::{FxHashMap, FxHashSet};
 use string_wizard::SourceMapOptions;
 
 pub type CSSMinifyFn =
@@ -229,7 +233,85 @@ impl Plugin for ViteCssPostPlugin {
     }
     // extract as single css bundle if no codesplit
     if !self.css_code_split && !self.has_emitted.load(Ordering::Relaxed) {
-      todo!();
+      fn collect(
+        ctx: &PluginContext,
+        chunk: &OutputChunk,
+        bundle: &FxHashMap<ArcStr, Arc<OutputChunk>>,
+        collected: &mut FxHashSet<ArcStr>,
+        dynamic_imports: &mut FxIndexSet<ArcStr>,
+        extracted_css: &mut String,
+      ) {
+        if collected.contains(&chunk.filename) {
+          return;
+        }
+        collected.insert(chunk.filename.clone());
+        // First collect all styles from the synchronous imports (lowest priority)
+        chunk.imports.iter().for_each(|name| {
+          if let Some(chunk) = bundle.get(name) {
+            collect(ctx, chunk, bundle, collected, dynamic_imports, extracted_css);
+          }
+        });
+        // Save dynamic imports in deterministic order to add the styles later (to have the highest priority)
+        chunk.dynamic_imports.iter().for_each(|name| {
+          dynamic_imports.insert(name.clone());
+        });
+        // Then collect the styles of the current chunk (might overwrite some styles from previous imports)
+        if let Some(css_chunk) = ctx
+          .meta()
+          .get::<CSSChunkCache>()
+          .expect("CSSChunkCache is missing")
+          .inner
+          .get(&Into::<ArcStr>::into(&chunk.preliminary_filename))
+        {
+          extracted_css.push_str(&css_chunk);
+        }
+      }
+
+      let bundle = args
+        .bundle
+        .iter()
+        .filter_map(|output| match output {
+          Output::Chunk(chunk) => Some((chunk.filename.clone(), Arc::clone(chunk))),
+          Output::Asset(_) => None,
+        })
+        .collect::<FxHashMap<_, _>>();
+
+      let mut extracted_css = String::new();
+      let mut collected = FxHashSet::default();
+      let mut dynamic_imports = FxIndexSet::default();
+      // The bundle is guaranteed to be deterministic, if not then we have a bug in rollup.
+      // So we use it to ensure a deterministic order of styles
+      let mut bundle_iter = args.bundle.iter();
+      while let Some(Output::Chunk(chunk)) = bundle_iter.next()
+        && chunk.is_entry
+      {
+        collect(ctx, chunk, &bundle, &mut collected, &mut dynamic_imports, &mut extracted_css);
+      }
+      // Now collect the dynamic chunks, this is done last to have the styles overwrite the previous ones
+      while let imports = std::mem::take(&mut dynamic_imports)
+        && !imports.is_empty()
+      {
+        for name in imports {
+          if let Some(chunk) = bundle.get(&name) {
+            collect(ctx, chunk, &bundle, &mut collected, &mut dynamic_imports, &mut extracted_css);
+          }
+        }
+      }
+
+      if !extracted_css.is_empty() {
+        self.has_emitted.store(true, Ordering::Relaxed);
+        extracted_css = self.finalize_css(extracted_css).await?;
+        ctx
+          .emit_file_async(rolldown_common::EmittedAsset {
+            name: Some(self.get_css_bundle_name(ctx)?),
+            // this file is an implicit entry point, use `style.css` as the original file name
+            // this name is also used as a key in the manifest
+            original_file_name: Some("style.css".to_owned()),
+            source: self.finalize_css(extracted_css).await?.into(),
+            ..Default::default()
+          })
+          .await?;
+      }
     }
     // remove empty css chunks and their imports
     if let Some(pure_css_chunks) = ctx.meta().get::<PureCSSChunks>()
@@ -270,8 +352,7 @@ impl Plugin for ViteCssPostPlugin {
         .unwrap()
       });
 
-      let bundle_iter = args.bundle.iter_mut();
-      for output in bundle_iter {
+      for output in args.bundle.iter_mut() {
         if let Output::Chunk(chunk) = output {
           let mut chunk_imports_pure_css_chunk = false;
           let mut new_chunk = (**chunk).clone();

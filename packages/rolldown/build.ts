@@ -124,6 +124,9 @@ function withShared(
       isBrowserBuild && removeBuiltModules(),
       options.plugins,
     ],
+    treeshake: {
+      moduleSideEffects: ['signal-exit'],
+    },
   };
 }
 

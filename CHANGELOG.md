@@ -1,4 +1,120 @@
 
+## [1.0.0-beta.35] - 2025-09-05
+
+### 🚀 Features
+
+- rolldown_plugin_vite_css_post: attch vite metadata to chunks (#6011) by @shulaoda
+- rolldown_plugin_vite_css_post: emit a single CSS asset for non–code-split builds (#6005) by @shulaoda
+- rolldown_plugin_vite_css_post: align empty CSS chunk removal logic (#6004) by @shulaoda
+- use frequent characters first for internal export names (#5524) by @AliceLanniste
+- rolldown_plugin_vite_css_post: align partial `generateBundle` logic (#5987) by @shulaoda
+- rolldown_plugin_vite_css_post: align `augmentChunkHash` logic (#5986) by @shulaoda
+- rolldown_watcher: introduce `WatcherConfig` for configurable watcher parameters (#5991) by @hyf0
+- dev: support `import.meta.invalidate` and migrate tests (#5979) by @hyf0
+- dev: adapt `TestDevServer` with `DevEngine` (#5976) by @hyf0
+- propertyWriteSideEffects (#5977) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: complete `transform` logic (#5985) by @shulaoda
+- dev: generate hmr updates for file changes (#5961) by @hyf0
+- rolldown_plugin_vite_css_post: complete `finalize_css` (#5974) by @shulaoda
+- dev: manage cache by `DevEngine` (#5960) by @hyf0
+- rolldown_plugin_vite_css_post: align `hoist_at_rules` (#5967) by @shulaoda
+- rolldown_plugin_vte_css_post: complete `resolve_asset_urls_in_css` (#5958) by @shulaoda
+- rolldown_plugin_utils: support common `to_output_file_path` (#5956) by @shulaoda
+- dev: default to not eager rebuild (#5949) by @hyf0
+- treeshake.propertyReadSideEffects (#5945) by @IWANABETHATGUY
+- improve error message for `this.resolve` and `this.load` (#5596) by @sapphi-red
+- dev: accept `onHmrUpdates` callback (#5942) by @hyf0
+- rolldown_plugin_vite_css_post: align partial `resolve_asset_urls_in_css` (#5929) by @shulaoda
+- mark `__export` runtime helper as pure (#5926) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: extract `finalize_css_chunk` (#5916) by @shulaoda
+- implement inlineConst.pass (#5912) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: align partial legacy logic (#5915) by @shulaoda
+- add inlineConst.pass options  (#5911) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: align partial css code split logic (#5906) by @shulaoda
+- inlineConst: safe (#5899) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- rolldown: don't cleanup for browser build (#6024) by @sxzz
+- propertyWriteSideEffects for toplevel staticClassBlock (#5989) by @IWANABETHATGUY
+- handle `obj().prop` when `propertyReadSideEffects: false` (#5988) by @IWANABETHATGUY
+- handle objectSpread when `treeshake.propertyReadSideEffects` is enabled (#5981) by @IWANABETHATGUY
+- __toESM function breaking ES module imports (#5966) by @IWANABETHATGUY
+- merge `typescript.onlyRemoveTypeImports` correctly (#5962) by @shulaoda
+- should not generate `init_mod` when record is a ExportAllDeclaration and importee is a inner concatenate module (#5952) by @IWANABETHATGUY
+- use symbol existance to detect if a plugin is BuiltinPlugin (#5940) by @IWANABETHATGUY
+- handle errors thrown in `onLog` and `onwarn` options (#5931) by @sapphi-red
+- `replace_plugin` does not work as expected with .ts config (#5920) by @IWANABETHATGUY
+- `replace_plugin` support primitive values replacement  (#5921) by @IWANABETHATGUY
+- node 20 test version (#5918) by @IWANABETHATGUY
+- trigger trace subscriber cleanup on Node.js side (#5913) by @sapphi-red
+- add friendly deprecation warning for `resolve.tsconfigFilename` (#5908) by @shulaoda
+- inlineConst inlines a var (#5903) by @IWANABETHATGUY
+- types: omit `sourcemap` property from `MinifyOptions` correctly (#5892) by @sapphi-red
+
+### 🚜 Refactor
+
+- hmr: process changed files in one update (#6013) by @hyf0
+- rolldown_plugin_vite_css_post: improve (#6006) by @shulaoda
+- migrate remaining crates from #[allow] to #[expect] attributes (#6002) by @hyf0
+- crates/rolldown_common: migrate from #[allow] to #[expect] attributes (#6001) by @hyf0
+- crates/rolldown_binding: migrate from #[allow] to #[expect] attributes (#6000) by @hyf0
+- crates/rolldown: migrate from #[allow] to #[expect] attributes (#5999) by @hyf0
+- extract all options usage in `impl_visit.rs` into `FlatOptionsFlag` (#5992) by @IWANABETHATGUY
+- rolldown_watcher: distinguish debounced and non-debounced watchers (#5990) by @hyf0
+- dev: only use poll-based watch if required (#5984) by @hyf0
+- dev: use dynamic dispatch watcher (#5982) by @hyf0
+- improve plugin logic relate to `to_output_file_path` (#5959) by @shulaoda
+- make reference_needed_symbols lock free (#5964) by @IWANABETHATGUY
+- tweak module loader code (#5950) by @shulaoda
+- use less memory to store frequently accessed options field (#5948) by @IWANABETHATGUY
+- make `ecma_related` in `NormalModuleTaskResult` non-optional (#5947) by @shulaoda
+- dev: replace `BuildStatus` with `BuildStateMachine` (#5927) by @hyf0
+- rename `inlineConst: 'safe'` to `inlineConst: 'smart'` (#5909) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- add redirect for old plugin development page link (#5963) by @TheAlexLichter
+
+### ⚡ Performance
+
+- rolldown: use allocator pool when minifying chunks (#5978) by @Boshen
+- merge two `PreProcessor` and `EnsureSpanUniqueness` (#5968) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- cjs module lexer for named import external with cjs format (#5970) by @IWANABETHATGUY
+- hmr: import.meta.hot?.accept case (#5935) by @sapphi-red
+- hmr: accept outside circular case (#5938) by @sapphi-red
+- hmr: no accept outside circular dependencies case (#5937) by @sapphi-red
+- hmr: self accept within circular dependencies case (#5936) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update crate-ci/typos action to v1.36.2 (#6015) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to ^0.16.0 (#6023) by @renovate[bot]
+- ci: re-enable WASM tests in CI workflows (#6007) by @hyf0
+- deps: update crate-ci/typos action to v1.35.8 (#6012) by @renovate[bot]
+- clippy: enable allow_attributes lint and migrate to #[expect] (#6008) by @hyf0
+- remove unmaintained AGENTS.md file (#6009) by @hyf0
+- deps: update github-actions (#5993) by @renovate[bot]
+- fix `knip` warnings and remove redundant `@rolldown/testing` (#5973) by @shulaoda
+- deps: update dependency rolldown-plugin-dts to v0.15.10 (#5925) by @renovate[bot]
+- deps: update rust crate tracing-subscriber to v0.3.20 [security] (#5972) by @renovate[bot]
+- fix wasi build failed (#5969) by @shulaoda
+- deps: update crate-ci/typos action to v1.35.7 (#5965) by @renovate[bot]
+- remove redundant code (#5943) by @shulaoda
+- npm trusted publisher (#5953) by @Brooooooklyn
+- deps: update crate-ci/typos action to v1.35.6 (#5957) by @renovate[bot]
+- Revert "feat: mark `__export` runtime helper as pure (#5926)" (#5928) by @IWANABETHATGUY
+- deps: update dependency rolldown-plugin-dts to v0.15.10 (#5900) by @renovate[bot]
+- validator: improve the diagnostic message (#5919) by @shulaoda
+- add more tracing instrumentation (#5914) by @sapphi-red
+- add proper error message when passing unexpected minify options in rust test (#5905) by @IWANABETHATGUY
+- deps: update dependency tsdown to v0.14.2 (#5901) by @renovate[bot]
+- add automatic issue closing (#5895) by @shulaoda
+
+
 ## [1.0.0-beta.34] - 2025-08-25
 
 ### 💥 BREAKING CHANGES

@@ -26,36 +26,22 @@
   "bin": {
     "rolldown": "./bin/cli.mjs"
   },
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.cts",
+  "types": "./dist/index.d.mts",
   "exports": {
     ".": {
       "browser": "./dist/index.browser.mjs",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "default": "./dist/index.mjs"
     },
-    "./config": {
-      "import": "./dist/config.mjs",
-      "require": "./dist/config.cjs"
-    },
+    "./config": "./dist/config.mjs",
     "./experimental": {
       "browser": "./dist/experimental-index.browser.mjs",
-      "import": "./dist/experimental-index.mjs",
-      "require": "./dist/experimental-index.cjs"
+      "default": "./dist/experimental-index.mjs"
     },
-    "./filter": {
-      "import": "./dist/filter-index.mjs",
-      "require": "./dist/filter-index.cjs"
-    },
-    "./parallelPlugin": {
-      "import": "./dist/parallel-plugin.mjs",
-      "require": "./dist/parallel-plugin.cjs"
-    },
-    "./parseAst": {
-      "import": "./dist/parse-ast-index.mjs",
-      "require": "./dist/parse-ast-index.cjs"
-    },
+    "./filter": "./dist/filter-index.mjs",
+    "./parallelPlugin": "./dist/parallel-plugin.mjs",
+    "./parseAst": "./dist/parse-ast-index.mjs",
     "./package.json": "./package.json"
   },
   "publishConfig": {

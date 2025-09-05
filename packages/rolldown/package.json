@@ -27,41 +27,36 @@
   "bin": {
     "rolldown": "./bin/cli.mjs"
   },
-  "main": "./dist/index.cjs",
-  "types": "./dist/index.d.cts",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "exports": {
     ".": {
       "dev": "./src/index.ts",
-      "require": "./dist/index.cjs",
-      "import": "./dist/index.mjs"
+      "default": "./dist/index.mjs"
     },
     "./config": {
       "dev": "./src/config.ts",
-      "require": "./dist/config.cjs",
-      "import": "./dist/config.mjs"
+      "default": "./dist/config.mjs"
     },
     "./experimental": {
       "dev": "./src/experimental-index.ts",
-      "require": "./dist/experimental-index.cjs",
-      "import": "./dist/experimental-index.mjs"
+      "default": "./dist/experimental-index.mjs"
     },
     "./experimental/runtime-types": {
       "types": "./dist/experimental-runtime-types.d.ts"
     },
     "./filter": {
       "dev": "./src/filter-index.ts",
-      "require": "./dist/filter-index.cjs",
-      "import": "./dist/filter-index.mjs"
+      "default": "./dist/filter-index.mjs"
     },
     "./parallelPlugin": {
       "dev": "./src/parallel-plugin.ts",
-      "require": "./dist/parallel-plugin.cjs",
-      "import": "./dist/parallel-plugin.mjs"
+      "default": "./dist/parallel-plugin.mjs"
     },
     "./parseAst": {
       "dev": "./src/parse-ast-index.ts",
-      "require": "./dist/parse-ast-index.cjs",
-      "import": "./dist/parse-ast-index.mjs"
+      "default": "./dist/parse-ast-index.mjs"
     },
     "./package.json": "./package.json"
   },
@@ -72,30 +67,12 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public",
     "exports": {
-      ".": {
-        "import": "./dist/index.mjs",
-        "require": "./dist/index.cjs"
-      },
-      "./config": {
-        "import": "./dist/config.mjs",
-        "require": "./dist/config.cjs"
-      },
-      "./experimental": {
-        "import": "./dist/experimental-index.mjs",
-        "require": "./dist/experimental-index.cjs"
-      },
-      "./filter": {
-        "import": "./dist/filter-index.mjs",
-        "require": "./dist/filter-index.cjs"
-      },
-      "./parallelPlugin": {
-        "import": "./dist/parallel-plugin.mjs",
-        "require": "./dist/parallel-plugin.cjs"
-      },
-      "./parseAst": {
-        "import": "./dist/parse-ast-index.mjs",
-        "require": "./dist/parse-ast-index.cjs"
-      },
+      ".": "./dist/index.mjs",
+      "./config": "./dist/config.mjs",
+      "./experimental": "./dist/experimental-index.mjs",
+      "./filter": "./dist/filter-index.mjs",
+      "./parallelPlugin": "./dist/parallel-plugin.mjs",
+      "./parseAst": "./dist/parse-ast-index.mjs",
       "./package.json": "./package.json"
     }
   },
@@ -178,5 +155,8 @@
     "typedoc": "^0.28.0",
     "typescript": "^5.7.3",
     "valibot": "1.1.0"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
   }
 }

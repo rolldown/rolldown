@@ -11,14 +11,12 @@
   "publishConfig": {
     "access": "public"
   },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    }
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist"
@@ -32,5 +30,9 @@
     "picomatch": "^4.0.2",
     "tsdown": "catalog:",
     "vitest": "^3.0.1"
+  },
+  "tsdown": {
+    "exports": true,
+    "fixedExtension": true
   }
 }

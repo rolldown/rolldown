@@ -11,8 +11,8 @@ const isCI = !!process.env.CI;
 const isReleasingCI = !!process.env.RELEASING;
 const __dirname = nodePath.join(fileURLToPath(import.meta.url), '..');
 
-// In `@rolldown/browser`, there will be three builds:
-// - CJS and ESM for Node (used in StackBlitz / WebContainers)
+// In `@rolldown/browser`, there will be two builds:
+// - ESM for Node (used in StackBlitz / WebContainers)
 // - ESM for browser bundlers (used in Vite and running in the browser)
 const isBrowserPkg = !!process.env.BROWSER_PKG;
 
@@ -38,24 +38,6 @@ const configs: BuildOptions[] = [
       format: 'esm',
       entryFileNames: `[name].mjs`,
       chunkFileNames: `shared/[name]-[hash].mjs`,
-    },
-  }),
-  withShared({
-    plugins: [shimImportMeta(), patchBindingJs()],
-    output: {
-      dir: outputDir,
-      format: 'cjs',
-      entryFileNames: '[name].cjs',
-      chunkFileNames: 'shared/[name]-[hash].cjs',
-    },
-  }),
-  withShared({
-    plugins: [dts({ emitDtsOnly: true })],
-    output: {
-      dir: outputDir,
-      format: 'esm',
-      entryFileNames: '[name].cjs',
-      chunkFileNames: 'shared/[name]-[hash].cjs',
     },
   }),
 ];
@@ -112,7 +94,6 @@ function withShared(
     external: [
       /rolldown-binding\..*\.node/,
       /@rolldown\/binding-.*/,
-      /\.\/rolldown-binding\.wasi\.cjs/,
       ...Object.keys(pkgJson.dependencies ?? {}),
     ],
     define: {
@@ -171,24 +152,6 @@ function removeBuiltModules(): Plugin {
           return { id, external: true, moduleSideEffects: false };
         }
         throw new Error(`Unresolved module: ${id} from ${importer}`);
-      },
-    },
-  };
-}
-
-function shimImportMeta(): Plugin {
-  return {
-    name: 'shim-import-meta',
-    transform: {
-      filter: {
-        code: {
-          include: ['import.meta.resolve'],
-        },
-      },
-      handler(code, id) {
-        if (id.endsWith('.ts') && code.includes('import.meta.resolve')) {
-          return code.replace('import.meta.resolve', 'undefined');
-        }
       },
     },
   };

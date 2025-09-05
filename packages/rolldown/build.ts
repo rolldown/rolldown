@@ -11,7 +11,7 @@ const isCI = !!process.env.CI;
 const isReleasingCI = !!process.env.RELEASING;
 const __dirname = nodePath.join(fileURLToPath(import.meta.url), '..');
 
-// In `@rolldown/browser`, there will be three builds:
+// In `@rolldown/browser`, there will be two builds:
 // - ESM for Node (used in StackBlitz / WebContainers)
 // - ESM for browser bundlers (used in Vite and running in the browser)
 const isBrowserPkg = !!process.env.BROWSER_PKG;

@@ -511,6 +511,12 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
+  packages/test-dev-server/tests/fixtures/multiple-edits:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
   packages/vite-tests:
     devDependencies:
       '@oxc-node/cli':

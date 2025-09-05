@@ -1,0 +1,13 @@
+{
+  "name": "basic-hmr",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "serve"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@rolldown/test-dev-server": "workspace:*"
+  }
+}

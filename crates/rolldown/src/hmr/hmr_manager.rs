@@ -167,19 +167,9 @@ impl HmrManager {
       return Ok(vec![HmrUpdate::Noop]);
     }
 
-    let mut updates = vec![];
-    for changed_module_idx in changed_modules.iter().copied() {
-      // Note: We can't batch all changed modules into one update, because each change might contain edits to `import.meta.hot.accept()`.
-      // Editing `import.meta.hot.accept()` will change the HMR boundary relationships.
-      //
-      // We need to ensure each change can observe the possible edit behavior of the previous change. If we don't do this, we might
-      // cause a successful HMR process to fail.
-      let stale_modules = FxIndexSet::from_iter([changed_module_idx]);
-      let update = self.compute_hmr_update(&stale_modules, &changed_modules, None).await?;
-      updates.push(update);
-    }
+    let update = self.compute_hmr_update(&changed_modules, &changed_modules, None).await?;
 
-    Ok(updates)
+    Ok(vec![update])
   }
 
   #[expect(clippy::too_many_lines)]

@@ -84,5 +84,13 @@ impl Fixture {
         ..Default::default()
       });
     }
+    if meta.extended_tests.minify && options.minify.is_none() {
+      config_variants.push(ConfigVariant {
+        config_name: Some("extended-minify".to_string()),
+        minify: Some(true),
+        snapshot: Some(false),
+        ..Default::default()
+      });
+    }
   }
 }

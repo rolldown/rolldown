@@ -9,6 +9,9 @@ pub struct ExtendedTests {
   /// Run the test case with `minifyInternalExports` enabled in addition to the default config.
   #[serde(default = "true_by_default")]
   pub minify_internal_exports: bool,
+  /// Run the test case with `minify` enabled in addition to the default config.
+  #[serde(default)]
+  pub minify: bool,
 }
 
 impl Default for ExtendedTests {

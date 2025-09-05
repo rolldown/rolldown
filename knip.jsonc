@@ -87,5 +87,8 @@
     "packages/test-dev-server/tests/fixtures/invalidation": {
       "entry": ["dev.config.mjs", "src/*.js"], // no @rolldown/test-dev-server plugin
     },
+    "packages/test-dev-server/tests/fixtures/multiple-edits": {
+      "entry": ["dev.config.mjs", "src/*.js"], // no @rolldown/test-dev-server plugin
+    },
   },
 }

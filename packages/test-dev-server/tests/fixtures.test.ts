@@ -108,7 +108,9 @@ function main() {
             10 * 1000,
           );
           console.log(
-            `✅ Successfully triggered HMR for step ${step} with ${hmrEdits}`,
+            `✅ Successfully triggered HMR for step ${step} with ${
+              JSON.stringify(hmrEdits, null, 2)
+            }`,
           );
         }
 

@@ -2,10 +2,9 @@ import { execa, ExecaError } from 'execa';
 import glob from 'fast-glob';
 import killPort from 'kill-port';
 import nodeFs from 'node:fs';
-import nodeFsPromise from 'node:fs/promises';
 import nodePath from 'node:path';
 import { afterAll, beforeAll, describe, test } from 'vitest';
-import { removeDirSync, sensibleTimeoutInSeconds } from './src/utils';
+import { removeDirSync, sensibleTimeoutInMs } from './src/utils';
 
 function main() {
   const fixturesPath = nodePath.resolve(__dirname, 'fixtures');
@@ -78,35 +77,39 @@ function main() {
         );
 
         // Wait for the Node.js process to start
-        await sensibleTimeoutInSeconds(1);
+        await sensibleTimeoutInMs(1000);
 
         console.log('🔄 Collecting HMR edit files...');
         const hmrEditFiles = await collectHmrEditFiles(tmpProjectPath);
 
         console.log('🔄 Processing HMR edit files...');
-        for (const [index, hmrEditFile] of hmrEditFiles.entries()) {
-          console.log(`🔄 Processing HMR edit file: ${hmrEditFile.path}`);
-          const newContent = await nodeFsPromise.readFile(
-            hmrEditFile.path,
-            'utf-8',
-          );
-          await sensibleTimeoutInSeconds(0.2); // Make sure the poll-based watcher could detect the change (poll interval is 100ms)
-          nodeFs.writeFileSync(hmrEditFile.targetPath, newContent);
+        for (const [index, [step, hmrEdits]] of hmrEditFiles.entries()) {
+          // Make sure the poll-based watcher could detect the change (poll interval is 100ms)
+          // Files in the same step will be edited in the same timeframe.
+          await sensibleTimeoutInMs(200);
+          for (const hmrEdit of hmrEdits) {
+            console.log(
+              `🔄 Processing HMR edit file: step ${step} - ${hmrEdit.replacementPath}`,
+            );
+            const newContent = nodeFs.readFileSync(
+              hmrEdit.replacementPath,
+              'utf-8',
+            );
+            nodeFs.writeFileSync(hmrEdit.targetPath, newContent);
+            console.log(
+              `📝 Written content to: ${hmrEdit.targetPath}`,
+            );
+          }
           console.log(
-            `📝 Written content to: ${hmrEditFile.targetPath}`,
-          );
-          console.log(
-            `⏳ Waiting for HMR to be triggered... ${hmrEditFile.targetPath}`,
+            `⏳ Waiting for HMR to be triggered for step ${step}`,
           );
           await ensurePathExists(
             nodePath.join(tmpProjectPath, `ok-${index}`),
             10 * 1000,
           );
           console.log(
-            `✅ Successfully triggered HMR ${hmrEditFile.targetPath}`,
+            `✅ Successfully triggered HMR for step ${step} with ${hmrEdits}`,
           );
-          // Wait a bit before the next change to ensure the watcher is ready
-          await new Promise(resolve => setTimeout(resolve, 200));
         }
 
         const catchRunningArtifactProcess = runningArtifactProcess.catch(
@@ -177,14 +180,14 @@ function ensurePathExists(path: string, timeout = 6 * 1000) {
 main();
 
 interface HmrEditFile {
-  path: string;
+  replacementPath: string;
   targetPath: string;
   step: number;
 }
 
 async function collectHmrEditFiles(
   projectPath: string,
-): Promise<HmrEditFile[]> {
+) {
   const hmrEditFiles = await glob(
     nodePath.join(projectPath, '/src/**/*.hmr-*.*'),
     {
@@ -192,14 +195,14 @@ async function collectHmrEditFiles(
       absolute: true,
     },
   );
-  const files = hmrEditFiles.map((path): HmrEditFile => {
+  const files = hmrEditFiles.map((replacementPath): HmrEditFile => {
     // path: /xxx/xxx/example.hmr-1.js
 
     // .js
-    const ext = nodePath.extname(path);
+    const ext = nodePath.extname(replacementPath);
 
     // example.hmr-1
-    const basenameWithoutExt = nodePath.basename(path, ext);
+    const basenameWithoutExt = nodePath.basename(replacementPath, ext);
 
     // 1
     const step = parseInt(basenameWithoutExt.slice(
@@ -213,16 +216,24 @@ async function collectHmrEditFiles(
 
     // /xxx/xxx/example.js
     const targetPath = nodePath.join(
-      nodePath.dirname(path),
+      nodePath.dirname(replacementPath),
       originalBasename,
     ) + ext;
 
     return {
-      path,
+      replacementPath,
       targetPath,
       step: step,
     };
   });
-
-  return files.sort((a, b) => a.step - b.step);
+  // Group files by step (Map.groupBy is not available in Node 20)
+  const filesByStep = new Map<number, HmrEditFile[]>();
+  for (const file of files) {
+    const stepFiles = filesByStep.get(file.step) || [];
+    stepFiles.push(file);
+    filesByStep.set(file.step, stepFiles);
+  }
+  const stepFiles = [...filesByStep.entries()];
+  stepFiles.sort(([aStep], [bStep]) => aStep - bStep);
+  return stepFiles;
 }

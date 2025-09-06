@@ -1529,6 +1529,12 @@
             }
           ]
         },
+        "minify": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "minifyInternalExports": {
           "type": [
             "boolean",
@@ -1592,6 +1598,11 @@
           "description": "Run the test case with `minifyInternalExports` enabled in addition to the default config.",
           "type": "boolean",
           "default": true
+        },
+        "minify": {
+          "description": "Run the test case with `minify` enabled in addition to the default config.",
+          "type": "boolean",
+          "default": false
         }
       },
       "additionalProperties": false

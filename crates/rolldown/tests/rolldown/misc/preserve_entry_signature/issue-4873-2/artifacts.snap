@@ -37,8 +37,7 @@ function dy(path) {
 		case "./bar.js": return import("./bar.js");
 	}
 }
-let view = "foo";
-const { msg } = await dy(`./${view}.js`);
+const { msg } = await dy(`./foo.js`);
 console.log(msg);
 import(`https://localhost`).catch((mod) => {
 	console.log(mod);

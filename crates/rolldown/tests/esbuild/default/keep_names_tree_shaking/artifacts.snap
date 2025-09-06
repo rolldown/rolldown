@@ -9,12 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 function fnStmtKeep() {}
 x = fnStmtKeep;
-let fnExprKeep = function keep() {};
-x = fnExprKeep;
+x = function keep() {};
 var clsStmtKeep = class {};
 new clsStmtKeep();
-let clsExprKeep = class keep {};
-new clsExprKeep();
+new class keep {}();
 
 //#endregion
 ```

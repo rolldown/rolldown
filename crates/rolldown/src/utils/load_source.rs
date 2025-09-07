@@ -9,6 +9,7 @@ use rolldown_sourcemap::SourceMap;
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
+#[expect(clippy::too_many_arguments)]
 pub async fn load_source<Fs: FileSystem>(
   plugin_driver: &PluginDriver,
   resolved_id: &ResolvedId,
@@ -17,6 +18,7 @@ pub async fn load_source<Fs: FileSystem>(
   side_effects: &mut Option<HookSideEffects>,
   options: &NormalizedBundlerOptions,
   asserted_module_type: Option<&ModuleType>,
+  is_read_from_disk: &mut bool,
 ) -> anyhow::Result<(StrOrBytes, ModuleType)> {
   let (maybe_source, maybe_module_type) =
     match plugin_driver.load(&HookLoadArgs { id: &resolved_id.id }).await? {
@@ -46,6 +48,9 @@ pub async fn load_source<Fs: FileSystem>(
     if is_type_conflicted {
       // TODO: emit a warning about the type conflict
     }
+  }
+  if maybe_source.is_some() {
+    *is_read_from_disk = false;
   }
 
   match (maybe_source, maybe_module_type) {

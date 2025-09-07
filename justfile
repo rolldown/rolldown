@@ -139,8 +139,10 @@ lint-repo:
 # --- `build` series commands aim to provide a easy way to build the project.
 
 
-# Shortcut for `just build-rolldown`.
+
+# Build both `@rolldown/pluginutils` and rolldown
 build: build-pluginutils build-rolldown
+
 
 
 # Only build `rolldown` located in `packages/rolldown` itself without triggering building binding `crates/rolldown_binding`.

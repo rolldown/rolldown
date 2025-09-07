@@ -19,9 +19,10 @@ export function removeDirSync(path: string) {
   }
 }
 
-export function sensibleTimeoutInSeconds(seconds: number) {
-  const ms = seconds * 1000;
-  return new Promise((rsl) => {
-    setTimeout(rsl, process.env.CI ? ms * 3 : ms);
+export function sensibleTimeoutInMs(ms: number) {
+  const actualMs = process.env.CI ? ms * 5 : ms;
+
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, actualMs);
   });
 }

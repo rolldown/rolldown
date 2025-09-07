@@ -61,7 +61,7 @@ jobs:
         run: pnpm --filter bench run bench-ci
 
       - name: Show/Update benchmark result
-        uses: benchmark-action/github-action-benchmark@d48d326b4ca9ba73ca0cd0d59f108f9e02a381c7 # v1.20.4
+        uses: benchmark-action/github-action-benchmark@4bdcce38c94cec68da58d012ac24b7b1155efe8b # v1.20.7
         with:
           name: 'Node Benchmark'
           # What benchmark tool the output.txt came from

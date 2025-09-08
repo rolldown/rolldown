@@ -90,6 +90,7 @@ impl MinifyOptions {
 }
 
 /// A simple minify option that can be either a boolean or a string, used for rolldown rust testing.
+#[cfg(feature = "deserialize_bundler_options")]
 #[cfg_attr(
   feature = "deserialize_bundler_options",
   derive(Deserialize, JsonSchema),

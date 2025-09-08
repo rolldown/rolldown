@@ -30,8 +30,9 @@ impl BindingDevEngine {
     let session = rolldown_debug::Session::dummy();
 
     let on_hmr_updates_callback = dev_options.as_ref().and_then(|opts| opts.on_hmr_updates.clone());
-    let use_polling = dev_options.as_ref().and_then(|opts| opts.use_polling);
-    let poll_interval = dev_options.and_then(|opts| opts.poll_interval);
+    let watch_options = dev_options.as_ref().and_then(|opts| opts.watch.as_ref());
+    let use_polling = watch_options.and_then(|watch| watch.use_polling);
+    let poll_interval = watch_options.and_then(|watch| watch.poll_interval);
 
     // If callback is provided, wrap it to convert Vec<HmrUpdate> to Vec<BindingHmrUpdate>
     let on_hmr_updates = on_hmr_updates_callback.map(|js_callback| {
@@ -42,10 +43,18 @@ impl BindingDevEngine {
       }) as OnHmrUpdatesCallback
     });
 
+    let dev_watch_options = if use_polling.is_some() || poll_interval.is_some() {
+      Some(rolldown::dev::dev_options::DevWatchOptions {
+        use_polling,
+        poll_interval: poll_interval.map(u64::from),
+      })
+    } else {
+      None
+    };
+
     let rolldown_dev_options = rolldown::dev::dev_options::DevOptions {
-      use_polling,
-      poll_interval: poll_interval.map(u64::from),
       on_hmr_updates,
+      watch: dev_watch_options,
       ..Default::default()
     };
 

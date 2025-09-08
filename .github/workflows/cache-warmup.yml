@@ -58,7 +58,7 @@ jobs:
       - name: Setup Node For Development
         uses: ./.github/actions/setup-node
 
-      - run: just build native release
+      - run: just build-rolldown-release
 
   release-build-wasi:
     strategy:

@@ -76,7 +76,7 @@ jobs:
         with:
           tools: just
           cache-key: debug-build
-          components: clippy
+          components: clippy rustfmt
 
       - run: just lint-rust
 

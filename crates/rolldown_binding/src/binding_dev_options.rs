@@ -4,9 +4,14 @@ use napi::bindgen_prelude::FnArgs;
 use napi_derive::napi;
 
 #[napi(object, object_to_js = false)]
+pub struct BindingDevWatchOptions {
+  pub use_polling: Option<bool>,
+  pub poll_interval: Option<u32>,
+}
+
+#[napi(object, object_to_js = false)]
 pub struct BindingDevOptions {
   #[napi(ts_type = "undefined | ((updates: BindingHmrUpdate[]) => void | Promise<void>)")]
   pub on_hmr_updates: Option<JsCallback<FnArgs<(Vec<BindingHmrUpdate>,)>, ()>>,
-  pub use_polling: Option<bool>,
-  pub poll_interval: Option<u32>,
+  pub watch: Option<BindingDevWatchOptions>,
 }

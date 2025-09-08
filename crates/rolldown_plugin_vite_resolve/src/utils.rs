@@ -61,10 +61,6 @@ pub fn can_externalize_file(file_path: &str) -> bool {
   ext.is_empty() || ext == "js" || ext == "mjs" || ext == "cjs"
 }
 
-pub fn is_in_node_modules(id: &str) -> bool {
-  id.contains("node_modules")
-}
-
 /// path.resolve normalizes the leading slashes to a single slash
 pub fn normalize_leading_slashes(specifier: &str) -> &str {
   let trimmed = specifier.trim_start_matches('/');

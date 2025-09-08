@@ -5,8 +5,8 @@ use crate::{
   file_url::file_url_str_to_path_and_postfix,
   resolver::{self, AdditionalOptions, Resolvers},
   utils::{
-    BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, is_bare_import, is_in_node_modules,
-    is_windows_drive_path, normalize_leading_slashes, normalize_path,
+    BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, is_bare_import, is_windows_drive_path,
+    normalize_leading_slashes, normalize_path,
   },
 };
 use anyhow::anyhow;
@@ -292,7 +292,7 @@ impl Plugin for ViteResolvePlugin {
       let result = resolver.resolve_bare_import(&id, args.importer, external, &self.dedupe)?;
       if let Some(mut result) = result {
         if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier {
-          if !scan && is_in_node_modules(&result.id) {
+          if !scan && rolldown_plugin_utils::is_in_node_modules(Path::new(result.id.as_str())) {
             let finalized = finalize_bare_specifier(&result.id, &id, args.importer)
               .await?
               .map(Into::into)

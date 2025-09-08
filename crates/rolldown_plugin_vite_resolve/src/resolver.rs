@@ -480,7 +480,7 @@ impl TsconfigResolver {
 
   pub fn load_nearest_tsconfig(&self, path: &Path) -> Option<PathBuf> {
     // don't load tsconfig for paths in node_modules like esbuild does
-    if is_in_node_modules(path) {
+    if rolldown_plugin_utils::is_in_node_modules(path) {
       return None;
     }
 
@@ -525,8 +525,4 @@ impl TsconfigResolver {
     self.inner.clear_cache();
     self.tsconfig_dir_existence.clear();
   }
-}
-
-fn is_in_node_modules(id: &Path) -> bool {
-  id.components().any(|comp| comp.as_os_str() == "node_modules")
 }

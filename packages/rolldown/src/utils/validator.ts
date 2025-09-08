@@ -328,9 +328,14 @@ const MangleOptionsSchema = v.strictObject({
   debug: v.optional(v.boolean()),
 });
 
+const CodegenOptionsSchema = v.strictObject({
+  removeWhitespace: v.optional(v.boolean()),
+});
+
 const MinifyOptionsSchema = v.strictObject({
   compress: v.optional(v.union([v.boolean(), CompressOptionsSchema])),
   mangle: v.optional(v.union([v.boolean(), MangleOptionsSchema])),
+  codegen: v.optional(v.union([v.boolean(), CodegenOptionsSchema])),
 });
 
 const ResolveOptionsSchema = v.strictObject({

@@ -18,14 +18,15 @@ impl GenerateStage<'_> {
     options: &NormalizedBundlerOptions,
     assets: &mut AssetVec,
   ) -> BuildResult<()> {
-    let (compress, minify_option) = match &options.minify {
+    let (compress, minify_option, remove_whitespace) = match &options.minify {
       MinifyOptions::Disabled => return Ok(()),
-      MinifyOptions::DeadCodeEliminationOnly => {
-        (false, &MinifierOptions { mangle: None, compress: Some(CompressOptions::default()) })
-      }
-      MinifyOptions::Enabled(options) => (true, options),
+      MinifyOptions::DeadCodeEliminationOnly => (
+        false,
+        &MinifierOptions { mangle: None, compress: Some(CompressOptions::default()) },
+        false,
+      ),
+      MinifyOptions::Enabled((options, remove_whitespace)) => (true, options, *remove_whitespace),
     };
-    let remove_whitespace = compress;
     let allocator_pool = AllocatorPool::new(rayon::current_num_threads());
     assets.par_iter_mut().try_for_each(|asset| -> anyhow::Result<()> {
       if test_d_ts_pattern(&asset.filename) {

@@ -313,7 +313,7 @@ const CompressOptionsSchema = v.strictObject({
   ])),
   dropConsole: v.optional(v.boolean()),
   dropDebugger: v.optional(v.boolean()),
-  keepNames: v.optional(v.union([v.boolean(), CompressOptionsKeepNamesSchema])),
+  keepNames: v.optional(CompressOptionsKeepNamesSchema),
   unused: v.optional(v.union([v.boolean(), v.literal('keep_assign')])),
 });
 

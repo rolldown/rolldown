@@ -7,6 +7,8 @@ use napi_derive::napi;
 pub struct BindingDevWatchOptions {
   pub use_polling: Option<bool>,
   pub poll_interval: Option<u32>,
+  pub use_debounce: Option<bool>,
+  pub debounce_duration: Option<u32>,
 }
 
 #[napi(object, object_to_js = false)]

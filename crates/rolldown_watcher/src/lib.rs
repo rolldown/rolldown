@@ -10,6 +10,11 @@ mod watcher_config;
 mod watcher_ext;
 
 #[cfg(not(target_family = "wasm"))]
+mod poll_watcher;
+#[cfg(not(target_family = "wasm"))]
+pub use poll_watcher::PollWatcher;
+
+#[cfg(not(target_family = "wasm"))]
 mod debounced_poll_watcher;
 #[cfg(not(target_family = "wasm"))]
 pub use debounced_poll_watcher::DebouncedPollWatcher;

@@ -1576,6 +1576,8 @@ export interface BindingDevOptions {
 export interface BindingDevWatchOptions {
   usePolling?: boolean
   pollInterval?: number
+  useDebounce?: boolean
+  debounceDuration?: number
 }
 
 export interface BindingDynamicImportVarsPluginConfig {

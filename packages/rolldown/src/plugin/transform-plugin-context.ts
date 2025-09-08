@@ -79,6 +79,10 @@ export class TransformPluginContextImpl extends PluginContextImpl {
   public getCombinedSourcemap(): SourceMap {
     return JSON.parse(this.inner.getCombinedSourcemap());
   }
+
+  public addWatchFile(id: string): void {
+    this.inner.addWatchFile(id);
+  }
 }
 
 function _assert() {

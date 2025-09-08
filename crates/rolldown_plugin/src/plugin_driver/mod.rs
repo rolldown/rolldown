@@ -13,7 +13,7 @@ use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ModuleId, ModuleInfo, ModuleLoaderMsg, SharedFileEmitter, SharedModuleInfoDashMap,
+  ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, SharedFileEmitter, SharedModuleInfoDashMap,
   SharedNormalizedBundlerOptions,
 };
 use rolldown_resolver::Resolver;
@@ -39,6 +39,8 @@ pub struct PluginDriver {
   pub file_emitter: SharedFileEmitter,
   pub watch_files: Arc<FxDashSet<ArcStr>>,
   pub modules: SharedModuleInfoDashMap,
+  /// Transform dependencies per module, tracked during transform hooks
+  pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
 }
 
@@ -84,6 +86,7 @@ impl PluginDriver {
         file_emitter: Arc::clone(file_emitter),
         watch_files,
         modules,
+        transform_dependencies: Arc::new(DashMap::default()),
         tx,
         options: Arc::clone(options),
       }
@@ -93,6 +96,7 @@ impl PluginDriver {
   pub fn clear(&self) {
     self.watch_files.clear();
     self.modules.clear();
+    self.transform_dependencies.clear();
     self.file_emitter.clear();
   }
 
@@ -132,6 +136,16 @@ impl PluginDriver {
 
   pub fn plugins(&self) -> &IndexPluginable {
     &self.plugins
+  }
+
+  pub fn add_transform_dependency(&self, module_idx: ModuleIdx, dependency: &str) {
+    let dependency = ArcStr::from(dependency);
+
+    self
+      .transform_dependencies
+      .entry(module_idx)
+      .or_insert_with(|| Arc::new(FxDashSet::default()))
+      .insert(dependency);
   }
 }
 

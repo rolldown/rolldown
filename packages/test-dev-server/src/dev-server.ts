@@ -64,7 +64,7 @@ class DevServer {
         this.handleHmrUpdates(updates);
       },
       usePolling: true,
-      pollInterval: 100,
+      pollInterval: 50,
     });
     this.#devEngine = devEngine;
     this.#prepareHttpServerAfterCreateDevEngine(devEngine);

@@ -1413,6 +1413,7 @@ export declare class BindingRenderedModule {
 export declare class BindingTransformPluginContext {
   getCombinedSourcemap(): string
   inner(): BindingPluginContext
+  addWatchFile(file: string): void
 }
 
 export declare class BindingWatcher {

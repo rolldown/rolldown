@@ -264,6 +264,7 @@ impl ModuleTask {
         let source = transform_source(
           &self.ctx.plugin_driver,
           &self.resolved_id,
+          self.module_idx,
           source,
           sourcemap_chain,
           hook_side_effects,

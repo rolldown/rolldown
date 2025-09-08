@@ -1569,6 +1569,10 @@ export interface BindingDeferSyncScanData {
 
 export interface BindingDevOptions {
   onHmrUpdates?: undefined | ((updates: BindingHmrUpdate[]) => void | Promise<void>)
+  watch?: BindingDevWatchOptions
+}
+
+export interface BindingDevWatchOptions {
   usePolling?: boolean
   pollInterval?: number
 }

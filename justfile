@@ -1,183 +1,219 @@
 set windows-shell := ["powershell"]
 set shell := ["bash", "-cu"]
 
-alias dt := debug-test
+alias dt := t-run
 
 _default:
-    just --list -u
+  just --list -u
 
 setup:
-    just check-setup-prerequisites
-    # Rust related setup
-    cargo install cargo-binstall
-    cargo binstall cargo-insta cargo-deny cargo-shear typos-cli -y
-    # Node.js related setup
-    corepack enable
-    pnpm install
-    just setup-submodule
-    just setup-bench
-    @echo "✅✅✅ Setup complete!"
+  just check-setup-prerequisites
+  # Rust related setup
+  cargo install cargo-binstall
+  cargo binstall cargo-insta cargo-deny cargo-shear typos-cli -y
+  # Node.js related setup
+  corepack enable
+  pnpm install
+  just setup-submodule
+  just setup-bench
+  @echo "✅✅✅ Setup complete!"
 
 setup-submodule:
-    git submodule update --init
+  git submodule update --init
 
 setup-bench:
-    node --import @oxc-node/core/register ./scripts/misc/setup-benchmark-input/index.js
+  node --import @oxc-node/core/register ./scripts/misc/setup-benchmark-input/index.js
 
 # Update the submodule to the latest commit
 update-submodule:
-    git submodule update --init
+  git submodule update --init
 
-# `roll` command almost run all ci checks locally. It's useful to run this before pushing your changes.
+# --- `roll` series commands will run all relevant commands in one go.
 
-roll: roll-rust roll-node roll-repo
+# Run all relevant commands.
+roll: pnpm-install roll-rust roll-node roll-repo
 
-roll-rust: pnpm-install check-rust test-rust lint-rust
+# Run all relevant commands for Rust.
+roll-rust: pnpm-install test-rust lint-rust
 
-roll-node: test-node check-node lint-node
+# Run all relevant commands for Node.js.
+roll-node: test-node lint-node
 
+# Run all relevant commands for the repository.
 roll-repo: lint-repo
 
-# CHECKING
-
-check: check-rust check-node
-
-check-rust:
-    cargo ck
-
-check-node:
-    pnpm type-check
-
-# run tests for both Rust and Node.js
+# --- `test` series commands aim to run tests and update snapshots automatically.
 test: test-rust test-node update-generated-code
 
-# run all tests and update snapshot
+# Update snapshots both for Rust and Node.js tests.
 test-update:
-    just test-rust
-    just test-node all --update
+  just test-rust # Rust tests will update snapshots automatically.
+  just test-node --update
 
+# Update snapshots for Node.js tests.
+test-update-node:
+  just test-node --update
+
+# Run Rust tests.
 test-rust: pnpm-install
-    cargo test --workspace --exclude rolldown_binding
+  cargo test --workspace --exclude rolldown_binding
 
-update-generated-code:
-    cargo run --bin generator
+# Run Node.js tests for Rolldown.
+test-node-rolldown *args="": build-rolldown
+  just t-node-rolldown {{ args }}
 
-# Supported presets: all, rolldown, rollup
-test-node preset="all" *args="": _build-native-debug
-    just _test-node-{{ preset }} {{ args }}
+# Run Rollup's test suite to check Rolldown's behaviors.
+test-node-rollup *args="": build-rolldown
+  just t-node-rollup {{ args }}
 
-test-node-only preset="all" *args="":
-    just _test-node-{{ preset }} {{ args }}
-
-# alias for only run rolldown node tests without building
-test-node-rolldown *args="":
-    just _test-node-rolldown {{ args }}
-
-_test-node-all *args="":
-    just _test-node-rolldown {{ args }}
-    # We run rollup tests separately to have a clean output.
-    pnpm run --filter rollup-tests test
-
-_test-node-rolldown *args:
-    pnpm run --filter rolldown-tests test:main {{ args }}
-    pnpm run --filter rolldown-tests test:watcher {{ args }}
-
-_test-node-rollup command="":
-    pnpm run --filter rollup-tests test{{ command }}
-
-_test-node-vite:
-    pnpm run --filter vite-tests test
+# Run both Rolldown's tests and Rollup's test suite.
+test-node *args="": build-rolldown
+  just test-node-rolldown {{ args }}
+  just test-node-rollup
 
 test-node-hmr *args:
-    just build
-    pnpm run --filter @rolldown/test-dev-server-tests build
-    pnpm run --filter @rolldown/test-dev-server-tests test {{ args }}
+  just build
+  pnpm run --filter @rolldown/test-dev-server-tests build
+  pnpm run --filter @rolldown/test-dev-server-tests test {{ args }}
+
+# Run Vite's test suite to check Rolldown's behaviors.
+test-vite: # We don't use `test-node-vite` because it's not expected to run in `just test-node`.
+  pnpm run --filter vite-tests test
+
+# --- `t` series commands provide scenario-specific shortcut commands for testing compared to `test` series commands.
+
+# Run both Rolldown's tests and Rollup's test suite without building Rolldown.
+t-node: t-node-rolldown t-node-rollup
+
+# Run Rolldown's tests without building Rolldown.
+t-node-rolldown *args="":
+  pnpm run --filter rolldown-tests test:main {{ args }}
+  pnpm run --filter rolldown-tests test:watcher {{ args }}
+
+# Run Rollup's test suite without building Rolldown.
+t-node-rollup command="":
+  pnpm run --filter rollup-tests test{{ command }}
+
+# Run specific rust test without enabling extended tests.
+t-run *args:
+  NEEDS_EXTENDED=false cargo run-fixture {{ args }}
+
+# --- `fix` series commands aim to fix fixable issues.
 
 # Fix formatting issues both for Rust, Node.js and all files in the repository
-fmt: fmt-rust fmt-repo
+fix: fix-rust fix-node fix-repo
 
-fmt-rust:
-    cargo fmt --all -- --emit=files
-    -cargo shear --fix # omit exit status with `-`
+# Fix formatting, linting and code fixing issues for Rust files.
+fix-rust:
+  cargo fmt --all -- --emit=files
+  -cargo shear --fix # omit exit status with `-`
+  cargo fix --allow-dirty --allow-staged
 
-fmt-repo:
-    pnpm run fmt
+# Fix linting issues for Node.js files.
+fix-node:
+  pnpm lint-code -- --fix
 
-# Lint the codebase
+# Fix formatting issues for all files except Rust files.
+fix-repo:
+  pnpm run fmt
+
+
+# --- `lint` series commands aim to catch linting and type checking issues.
+
 lint: lint-rust lint-node lint-repo
 
 lint-rust:
-    cargo clippy --workspace --all-targets -- --deny warnings
+  cargo check --workspace --all-features --all-targets --locked
+  cargo clippy --workspace --all-targets -- --deny warnings
 
 lint-node:
-    pnpm lint-code
-    pnpm lint-knip
+  pnpm lint-code
+  pnpm type-check
+  pnpm lint-knip
 
 lint-repo:
-    typos
-    cargo ls-lint
+  typos # Check if the spelling is correct.
+  cargo ls-lint # Check if the file names are correct.
+  dprint check # Check if files are formatted correctly.
 
-# Fix formatting and some linting issues
-fix: fix-rust fix-repo
+# --- `build` series commands aim to provide a easy way to build the project.
 
-fix-rust:
-    just fmt-rust
-    cargo fix --allow-dirty --allow-staged
 
-fix-repo:
-    pnpm lint-code -- --fix
-    just fmt-repo
 
-# Support `just build [native|browser] [debug|release]`
-build target="native" mode="debug": build-pluginutils
-    pnpm run --filter rolldown build-{{ target }}:{{ mode }}
+# Build both `@rolldown/pluginutils` and rolldown
+build: build-pluginutils build-rolldown
 
-build-profile: build-pluginutils
-    pnpm run --filter rolldown build-native:profile
 
-build-memory-profile: build-pluginutils
-    pnpm run --filter rolldown build-native:memory-profile
 
-_build-native-debug:
-    just build native debug
+# Only build `rolldown` located in `packages/rolldown` itself without triggering building binding `crates/rolldown_binding`.
+build-glue:
+  pnpm run --filter rolldown build-js-glue
 
-# This command is used to build the js side code only.
-build-js-glue:
-    pnpm run --filter rolldown build-js-glue
+# Build `rolldown` located in `packages/rolldown` itself and its binding.
+build-rolldown:
+  pnpm run --filter rolldown build-native:debug
 
-# This will build the package `@rolldown/browser`.
-build-browser mode="debug":
-    pnpm run --filter "@rolldown/browser" build:{{ mode }}
+# Build `rolldown` located in `packages/rolldown` itself and its binding in release mode.
+build-rolldown-release:
+  pnpm run --filter rolldown build-native:release
 
-# This will build the package `@rolldown/pluginutils`.
+# Build `rolldown` located in `packages/rolldown` itself and its binding in profile mode.
+build-rolldown-profile:
+  pnpm run --filter rolldown build-native:profile
+
+build-rolldown-memory-profile:
+  pnpm run --filter rolldown build-native:memory-profile
+
+# Build `@rolldown/browser` located in `packages/browser` itself and its binding.
+build-browser:
+  pnpm run --filter rolldown build-browser:debug
+
+# Build `@rolldown/browser` located in `packages/browser` itself and its binding in release mode.
+build-browser-release:
+  pnpm run --filter rolldown build-browser:release
+
+# Build `@rolldown/pluginutils` located in `packages/pluginutils`.
 build-pluginutils:
-    pnpm run --filter "@rolldown/pluginutils" build
+  pnpm run --filter "@rolldown/pluginutils" build
 
-run *args:
-    pnpm rolldown {{ args }}
+# Build `@rolldown/test-dev-server` located in `packages/test-dev-server`.
+build-test-dev-server:
+  pnpm run --filter @rolldown/test-dev-server build
 
-# BENCHING
+# --- `bench` series commands aim to provide a easy way to run benchmarks.
 
 bench-rust:
-    cargo bench -p bench
+  cargo bench -p bench
 
 bench-node:
-    pnpm --filter bench run bench
+  pnpm --filter bench run bench
 
 bench-node-par:
-    pnpm --filter bench exec node ./benches/par.js
+  pnpm --filter bench exec node ./benches/par.js
 
-# RELEASING
+
+# --- Misc
 
 bump-packages *args:
-    node --import @oxc-node/core/register ./scripts/misc/bump-version.js {{ args }}
+  node --import @oxc-node/core/register ./scripts/misc/bump-version.js {{ args }}
 
 check-setup-prerequisites:
-    node ./scripts/misc/setup-prerequisites/node.js
+  node ./scripts/misc/setup-prerequisites/node.js
 
+# Trigger pnpm install. This is used the ensure up-to-date dependencies before running any commands.
 pnpm-install:
-    pnpm install
+  pnpm install
 
-# Run rust tests without extended tests
-debug-test *args:
-    NEEDS_EXTENDED=false cargo run-fixture {{ args }}
+# Regenerate auto-generated code files from templates (must run after core changes).
+# This generates:
+# - Runtime helper definitions (crates/rolldown_common/src/generated/runtime_helper.rs)
+# - Check options (crates/rolldown_common/src/generated/checks_options.rs + TypeScript equivalents)
+# - Hook usage tracking (crates/rolldown_plugin/src/generated/hook_usage.rs + TypeScript equivalent)
+# - Event kind switching logic (crates/rolldown_error/src/generated/event_kind_switcher.rs)
+update-generated-code:
+  cargo run --bin generator
+
+# Run the `rolldown` cli using node.
+run *args:
+  pnpm rolldown {{ args }}
+  

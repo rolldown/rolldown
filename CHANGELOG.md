@@ -1,4 +1,57 @@
 
+## [1.0.0-beta.36] - 2025-09-08
+
+### 💥 BREAKING CHANGES
+
+- drop CJS format, increase minimum required node (#6025) by @sxzz
+
+### 🚀 Features
+
+- rolldown_plugin_reporter: statically imported dynamic import warning (#6065) by @shulaoda
+- rolldown_plugin_reporter: warn large chunks (#6063) by @shulaoda
+- rolldown: oxc v0.87.0 (#5975) by @Boshen
+
+### 🐛 Bug Fixes
+
+- allow keeping whitespace while enabling minify (#5893) by @sapphi-red
+- dev/watch: build connection between file in `this.addWatchFile` and currently transformed module during transform hook (#6048) by @hyf0
+- validator of `output.minify` (#6062) by @IWANABETHATGUY
+- codspeed rust benchmark ci (#6052) by @IWANABETHATGUY
+- just command in ci (#6045) by @IWANABETHATGUY
+- watch: only consider files read from disk are able to watch (#6037) by @hyf0
+
+### 🚜 Refactor
+
+- dev: introduce `DevWatchOptions` for enhanced file watching configuration (#6057) by @hyf0
+- unify to use `is_in_node_modules` from `rolldown_plugin_utils` (#6066) by @shulaoda
+
+### 🧪 Testing
+
+- rust: ensure unused pure function call got treeshaked (#4524) by @hyf0
+- hmr: tweak improper test (#6034) by @hyf0
+- hmr: add test of editing multiple files in the same timeframe (#6029) by @hyf0
+- hmr: support to edit multiple files in the same timeframe (#6014) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance rust crates (#6003) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5995) by @renovate[bot]
+- add auto-assign PR workflow for organization members (#6058) by @IWANABETHATGUY
+- fix benchmark-node workflow (#6060) by @IWANABETHATGUY
+- adding `test-node-rolldown-only` just command (#6055) by @IWANABETHATGUY
+- just commands in ci (#6056) by @IWANABETHATGUY
+- run test ci when `justfile` is changed (#6049) by @IWANABETHATGUY
+- remove unused warning for conditional compiled`SimplifyMinifyOptions` (#6047) by @IWANABETHATGUY
+- remove auto approval ci (#6051) by @IWANABETHATGUY
+- adding rustfmt components for `repo-validation` (#6053) by @IWANABETHATGUY
+- repo: check format/style in `just lint-rust` (#6050) by @hyf0
+- repo/ai: refine `justfile` (#6038) by @hyf0
+- repo/ai: add `AGENTS.md` and `CLAUDE.md` (#6039) by @hyf0
+- deps: update github-actions (major) (#6041) by @renovate[bot]
+- deps: update github-actions (#6040) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.16.1 (#6035) by @renovate[bot]
+
+
 ## [1.0.0-beta.35] - 2025-09-05
 
 ### 🚀 Features

@@ -78,8 +78,6 @@ jobs:
           cache-key: debug-build
           components: clippy
 
-      - run: just check-rust
-
       - run: just lint-rust
 
   cargo-test:

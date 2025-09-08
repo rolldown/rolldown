@@ -51,7 +51,7 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Build Native Rolldown
-        run: just build native debug
+        run: just build-rolldown
 
       - name: Run Vite Tests
         run: pnpm run --filter vite-tests test

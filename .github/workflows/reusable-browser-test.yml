@@ -39,7 +39,7 @@ jobs:
         run: rustup target add wasm32-wasip1-threads
 
       - name: Build Browser Rolldown
-        run: just build browser release
+        run: just build-browser-release
 
       - name: Build Node Packages
         run: pnpm --filter rolldown build-node

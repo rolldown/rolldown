@@ -150,11 +150,11 @@ build-glue:
   pnpm run --filter rolldown build-js-glue
 
 # Build `rolldown` located in `packages/rolldown` itself and its binding.
-build-rolldown:
+build-rolldown: build-pluginutils
   pnpm run --filter rolldown build-native:debug
 
 # Build `rolldown` located in `packages/rolldown` itself and its binding in release mode.
-build-rolldown-release:
+build-rolldown-release: build-pluginutils
   pnpm run --filter rolldown build-native:release
 
 # Build `rolldown` located in `packages/rolldown` itself and its binding in profile mode.
@@ -165,12 +165,12 @@ build-rolldown-memory-profile:
   pnpm run --filter rolldown build-native:memory-profile
 
 # Build `@rolldown/browser` located in `packages/browser` itself and its binding.
-build-browser:
-  pnpm run --filter rolldown build-browser:debug
+build-browser: build-pluginutils
+  pnpm run --filter "@rolldown/browser" build:debug
 
 # Build `@rolldown/browser` located in `packages/browser` itself and its binding in release mode.
-build-browser-release:
-  pnpm run --filter rolldown build-browser:release
+build-browser-release: build-pluginutils
+  pnpm run --filter "@rolldown/browser" build:release
 
 # Build `@rolldown/pluginutils` located in `packages/pluginutils`.
 build-pluginutils:

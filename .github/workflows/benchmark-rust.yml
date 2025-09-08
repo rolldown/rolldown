@@ -54,6 +54,7 @@ jobs:
         with:
           run: cargo codspeed run -p bench
           token: ${{ secrets.CODSPEED_TOKEN }}
+          mode: 'instrumentation'
         env:
           # ensure that `root_dir()` from `crates/rolldown_testing/src/workspace.rs` works during the benchmark
           # see https://github.com/adriencaccia/rolldown/pull/1 for explanation

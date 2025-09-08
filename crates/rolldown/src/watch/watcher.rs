@@ -1,6 +1,9 @@
 use crate::watch::event::{BundleEvent, WatcherChangeData, WatcherEvent};
 use arcstr::ArcStr;
-use notify::{Config, RecommendedWatcher, Watcher as _, event::ModifyKind};
+#[cfg(not(target_family = "wasm"))]
+use notify::Watcher as _;
+use notify::{Config, RecommendedWatcher, event::ModifyKind};
+
 use rolldown_common::{NotifyOption, WatcherChangeKind};
 use rolldown_error::BuildResult;
 use rolldown_utils::dashmap::FxDashSet;

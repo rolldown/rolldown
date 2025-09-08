@@ -37,9 +37,10 @@ body = """
 {%- endif -%}
 
 {%- if commits | filter(attribute="breaking", value=true) | length != 0 -%}
-  ### 💥 BREAKING CHANGES{% raw %}\n\n{% endraw -%}
+  > [!warning]
+  > ### 💥 BREAKING CHANGES{% raw %}\n\n{% endraw -%}
   {%- for commit in commits | filter(attribute="breaking", value=true) -%}
-     {{ self::print_commit(commit=commit) }}
+     {{> self::print_commit(commit=commit) }}
   {%- endfor -%}\
   {% raw %}\n{% endraw -%}
 {%- endif -%}

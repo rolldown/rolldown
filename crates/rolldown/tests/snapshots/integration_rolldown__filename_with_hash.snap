@@ -4582,6 +4582,10 @@ expression: output
 - main2-!~{001}~.js => main2-onjTZtFY.js
 - chunk-!~{002}~.js => chunk-Dqp1o9pS.js
 
+# tests/rolldown/issues/3245
+
+- main-!~{000}~.js => main-Fv4vYntb.js
+
 # tests/rolldown/issues/3367
 
 - main-!~{000}~.js => main-DD7krNgO.js

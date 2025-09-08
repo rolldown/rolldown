@@ -122,7 +122,9 @@ fix-repo:
 
 lint: lint-rust lint-node lint-repo
 
+# Linting formatting, syntax and linting issues for Rust files.
 lint-rust:
+  cargo fmt --all --check
   cargo check --workspace --all-features --all-targets --locked
   cargo clippy --workspace --all-targets -- --deny warnings
 

@@ -37,7 +37,7 @@ jobs:
 
       - run: cargo check --workspace
       - run: cargo test --workspace --no-run
-      - run: just build native debug
+      - run: just build-rolldown
 
   release-build:
     strategy:

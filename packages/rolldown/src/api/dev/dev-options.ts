@@ -18,7 +18,7 @@ export interface DevWatchOptions {
   useDebounce?: boolean;
   /**
    * Debounce duration in milliseconds (only used when useDebounce is true).
-   * @default 100
+   * @default 10
    */
   debounceDuration?: number;
 }

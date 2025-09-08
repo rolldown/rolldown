@@ -333,10 +333,15 @@ pub fn normalize_binding_options(
             Err(napi::Error::new(napi::Status::InvalidArg, "Invalid minify option"))
           }
         }
-        napi::bindgen_prelude::Either3::C(opts) => Ok(RawMinifyOptions::Object(
+        napi::bindgen_prelude::Either3::C(opts) => Ok(RawMinifyOptions::Object((
           oxc::minifier::MinifierOptions::try_from(&opts)
             .map_err(|_| napi::Error::new(napi::Status::InvalidArg, "Invalid minify option"))?,
-        )),
+          match &opts.codegen {
+            None => true,
+            Some(Either::A(bool)) => *bool,
+            Some(Either::B(codegen_opts)) => codegen_opts.remove_whitespace.unwrap_or(true),
+          },
+        ))),
       })
       .transpose()?,
     extend: output_options.extend,

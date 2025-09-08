@@ -6,13 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.86.0/node_modules/@oxc-project/runtime/src/helpers/esm/decorateMetadata.js
+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.87.0/node_modules/@oxc-project/runtime/src/helpers/esm/decorateMetadata.js
 function __decorateMetadata(k, v) {
 	if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 }
 
 //#endregion
-//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.86.0/node_modules/@oxc-project/runtime/src/helpers/esm/decorate.js
+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.87.0/node_modules/@oxc-project/runtime/src/helpers/esm/decorate.js
 function __decorate(decorators, target, key, desc) {
 	var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
 	if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);

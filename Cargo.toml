@@ -204,13 +204,13 @@ napi-build = { version = "2.2.2" }
 napi-derive = { version = "3.0.0", default-features = false, features = ["type-def"] }
 
 # oxc crates with the same version
-oxc = { version = "0.86.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
-oxc_allocator = { version = "0.86.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.86.0" }
-oxc_minify_napi = { version = "0.86.0" }
-oxc_parser_napi = { version = "0.86.0" }
-oxc_transform_napi = { version = "0.86.0" }
-oxc_traverse = { version = "0.86.0" }
+oxc = { version = "0.87.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
+oxc_allocator = { version = "0.87.0", features = ["pool"] }
+oxc_ecmascript = { version = "0.87.0" }
+oxc_minify_napi = { version = "0.87.0" }
+oxc_parser_napi = { version = "0.87.0" }
+oxc_transform_napi = { version = "0.87.0" }
+oxc_traverse = { version = "0.87.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

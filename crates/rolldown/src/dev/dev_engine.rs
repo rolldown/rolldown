@@ -122,10 +122,6 @@ impl DevEngine {
     // let mut watched_paths = watcher.paths_mut();
     for watch_file in watch_files.iter() {
       let watch_file = &*watch_file;
-      // FIXME: invalid file should be filtered by rolldown. This is a workaround.
-      if !watch_file.as_path().is_absolute() {
-        continue;
-      }
       tracing::trace!("watch file: {:?}", watch_file);
       if self.watched_files.contains(watch_file) {
         continue;

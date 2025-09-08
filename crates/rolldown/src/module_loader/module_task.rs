@@ -85,9 +85,6 @@ impl ModuleTask {
   async fn run_inner(&mut self) -> BuildResult<()> {
     let id = ModuleId::new(&self.resolved_id.id);
 
-    // Add watch files for watcher recover if build errors occurred.
-    self.ctx.plugin_driver.watch_files.insert(self.resolved_id.id.clone());
-
     self.ctx.plugin_driver.set_module_info(
       &id,
       Arc::new(ModuleInfo {
@@ -104,7 +101,6 @@ impl ModuleTask {
 
     let mut sourcemap_chain = vec![];
     let mut hook_side_effects = self.resolved_id.side_effects.take();
-
     let (mut source, module_type) =
       self.load_source_without_cache(&mut sourcemap_chain, &mut hook_side_effects).await?;
 
@@ -230,6 +226,7 @@ impl ModuleTask {
     sourcemap_chain: &mut Vec<rolldown_sourcemap::SourceMap>,
     hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,
   ) -> BuildResult<(StrOrBytes, ModuleType)> {
+    let mut is_read_from_disk = true;
     let result = load_source(
       &self.ctx.plugin_driver,
       &self.resolved_id,
@@ -238,8 +235,14 @@ impl ModuleTask {
       hook_side_effects,
       &self.ctx.options,
       self.asserted_module_type.as_ref(),
+      &mut is_read_from_disk,
     )
     .await;
+    if is_read_from_disk {
+      // - Only add watch files for files read from disk.
+      // - Add watch files as early as possible for we might be able to recover from build errors.
+      self.ctx.plugin_driver.watch_files.insert(self.resolved_id.id.clone());
+    }
     let (source, mut module_type) = result.map_err(|err| {
       BuildDiagnostic::unloadable_dependency(
         self.resolved_id.debug_id(self.ctx.options.cwd.as_path()).into(),

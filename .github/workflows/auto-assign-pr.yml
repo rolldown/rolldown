@@ -1,0 +1,53 @@
+name: 'Auto Assign PR'
+
+permissions: {}
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  auto-assign:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Check Organization Membership
+        id: check-membership
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            try {
+              // Check if PR author is a member of the rolldown organization
+              const { data: membership } = await github.rest.orgs.checkPublicMembershipForUser({
+                org: 'rolldown',
+                username: context.payload.pull_request.user.login
+              });
+
+              // If we get here without error, the user is a member
+              core.setOutput('is_member', 'true');
+            } catch (error) {
+              // If 404 or 302, user is not a member
+              if (error.status === 404 || error.status === 302) {
+                core.setOutput('is_member', 'false');
+                console.log(`User ${context.payload.pull_request.user.login} is not a member of rolldown organization`);
+              } else {
+                // Re-throw other errors
+                throw error;
+              }
+            }
+
+      - name: Assign PR Author
+        if: steps.check-membership.outputs.is_member == 'true'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              assignees: [context.payload.pull_request.user.login]
+            });
+            console.log(`Assigned PR #${context.payload.pull_request.number} to ${context.payload.pull_request.user.login}`);

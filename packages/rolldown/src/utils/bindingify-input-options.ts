@@ -13,7 +13,7 @@ import type {
   BindingInjectImportNamespace,
   BindingInputOptions,
 } from '../binding';
-import { BuiltinPlugin, isBuiltinPlugin } from '../builtin-plugin/utils';
+import { BuiltinPlugin } from '../builtin-plugin/utils';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
@@ -49,7 +49,7 @@ export function bindingifyInputOptions(
     if ('_parallel' in plugin) {
       return undefined;
     }
-    if (isBuiltinPlugin(plugin)) {
+    if (plugin instanceof BuiltinPlugin) {
       return bindingifyBuiltInPlugin(plugin as BuiltinPlugin);
     }
     return bindingifyPlugin(

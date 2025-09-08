@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { oxcRuntimePlugin } from '../builtin-plugin/constructors';
-import { BuiltinPlugin, isBuiltinPlugin } from '../builtin-plugin/utils';
+import { BuiltinPlugin } from '../builtin-plugin/utils';
 import { ENUMERATED_INPUT_PLUGIN_HOOK_NAMES } from '../constants/plugin';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN } from '../log/logging';
@@ -41,7 +41,7 @@ export function normalizePlugins<T extends RolldownPlugin>(
     if ('_parallel' in plugin) {
       continue;
     }
-    if (isBuiltinPlugin(plugin)) {
+    if (plugin instanceof BuiltinPlugin) {
       continue;
     }
     if (!plugin.name) {

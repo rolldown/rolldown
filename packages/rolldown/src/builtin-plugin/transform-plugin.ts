@@ -1,4 +1,4 @@
-import { BuiltinPlugin, createBuiltinPlugin } from './utils';
+import { BuiltinPlugin } from './utils';
 
 import type { BindingTransformPluginConfig } from '../binding';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
@@ -28,5 +28,5 @@ export function transformPlugin(config?: TransformPluginConfig): BuiltinPlugin {
       jsxRefreshExclude: normalizedStringOrRegex(config.jsxRefreshExclude),
     };
   }
-  return createBuiltinPlugin('builtin:transform', config);
+  return new BuiltinPlugin('builtin:transform', config);
 }

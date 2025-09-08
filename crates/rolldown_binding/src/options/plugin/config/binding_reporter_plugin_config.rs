@@ -9,6 +9,7 @@ pub struct BindingReporterPluginConfig {
   pub assets_dir: String,
   pub chunk_limit: u32,
   pub should_log_info: bool,
+  pub warn_large_chunks: bool,
   pub report_compressed_size: bool,
 }
 
@@ -21,6 +22,7 @@ impl From<BindingReporterPluginConfig> for ReporterPlugin {
       config.report_compressed_size,
       config.assets_dir,
       config.is_lib,
+      config.warn_large_chunks,
     )
   }
 }

@@ -2050,6 +2050,7 @@ export interface BindingReporterPluginConfig {
   assetsDir: string
   chunkLimit: number
   shouldLogInfo: boolean
+  warnLargeChunks: boolean
   reportCompressedSize: boolean
 }
 

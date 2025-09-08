@@ -22,6 +22,7 @@ pub struct ReporterPlugin {
   assets_dir: String,
   is_lib: bool,
   is_tty: bool,
+  warn_large_chunks: bool,
   should_log_info: bool,
   chunk_limit: usize,
   chunk_count: AtomicU32,
@@ -42,12 +43,14 @@ impl ReporterPlugin {
     report_compressed_size: bool,
     assets_dir: String,
     is_lib: bool,
+    warn_large_chunks: bool,
   ) -> Self {
     Self {
       assets_dir,
       is_lib,
       is_tty,
       should_log_info,
+      warn_large_chunks,
       chunk_limit,
       chunk_count: AtomicU32::new(0),
       compressed_count: AtomicU32::new(0),
@@ -158,11 +161,10 @@ impl Plugin for ReporterPlugin {
   #[expect(clippy::too_many_lines)]
   async fn write_bundle(
     &self,
-    _ctx: &PluginContext,
+    ctx: &PluginContext,
     args: &mut rolldown_plugin::HookWriteBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
-    // TODO(shulaoda): support this warning
-    // <https://github.com/vitejs/rolldown-vite/blob/9865a3a/packages/vite/src/node/plugins/reporter.ts#L255-L269>
+    let mut has_large_chunks = false;
     if self.should_log_info {
       let mut longest = 0;
       let mut biggest_size = 0;
@@ -298,6 +300,7 @@ impl Plugin for ReporterPlugin {
 
           let size = utils::display_size(log_entry.size);
           if group == utils::AssetGroup::JS && log_entry.size.div_ceil(1000) > self.chunk_limit {
+            has_large_chunks = true;
             let _ = write!(&mut info, "\x1b[1m\x1b[33m{size:>size_pad$}\x1b[39m\x1b[22m");
           } else {
             let _ = write!(&mut info, "\x1b[1m\x1b[2m{size:>size_pad$}\x1b[22m\x1b[22m");
@@ -316,6 +319,21 @@ impl Plugin for ReporterPlugin {
           utils::log_info(&info);
         }
       }
+    } else if self.warn_large_chunks {
+      has_large_chunks = args.bundle.iter().any(|output| {
+        if let rolldown_common::Output::Chunk(chunk) = output {
+          chunk.code.len().div_ceil(1000) > self.chunk_limit
+        } else {
+          false
+        }
+      });
+    }
+    if self.warn_large_chunks && has_large_chunks {
+      let message = format!(
+        "\x1b[1m\x1b[33m\n(!) Some chunks are larger than {} kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+        itoa::Buffer::new().format(self.chunk_limit),
+      );
+      ctx.warn(rolldown_common::LogWithoutPlugin { message, ..Default::default() });
     }
     Ok(())
   }

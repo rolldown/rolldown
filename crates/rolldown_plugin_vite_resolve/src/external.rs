@@ -1,13 +1,14 @@
 use std::{path::Path, sync::Arc};
 
 use dashmap::DashMap;
+use rolldown_plugin_utils::is_in_node_modules;
 use rolldown_utils::{dashmap::FxDashMap, pattern_filter::StringOrRegex};
 use rustc_hash::FxHashSet;
 
 use crate::{
   builtin::BuiltinChecker,
   resolver::Resolver,
-  utils::{can_externalize_file, get_npm_package_name, is_bare_import, is_in_node_modules},
+  utils::{can_externalize_file, get_npm_package_name, is_bare_import},
   utils_filter::UtilsFilter,
 };
 
@@ -146,7 +147,7 @@ impl ExternalDecider {
           Some(result) => result,
           _ => return false,
         };
-        if !configured_as_external && !is_in_node_modules(&resolved.id) {
+        if !configured_as_external && !is_in_node_modules(Path::new(resolved.id.as_str())) {
           return false;
         }
         can_externalize_file(&resolved.id)

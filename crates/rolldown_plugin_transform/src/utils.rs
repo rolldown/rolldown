@@ -246,7 +246,7 @@ impl TransformPlugin {
 
 fn find_tsconfig_json_for_file(path: &Path) -> Option<PathBuf> {
   // don't load tsconfig for paths in node_modules like esbuild
-  if is_in_node_modules(path) {
+  if rolldown_plugin_utils::is_in_node_modules(path) {
     return None;
   }
 
@@ -263,10 +263,6 @@ fn find_tsconfig_json_for_file(path: &Path) -> Option<PathBuf> {
   }
 
   None
-}
-
-fn is_in_node_modules(id: &Path) -> bool {
-  id.components().any(|comp| comp.as_os_str() == "node_modules")
 }
 
 fn is_use_define_for_class_fields(target: Option<&str>) -> bool {

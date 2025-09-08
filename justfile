@@ -62,6 +62,11 @@ test-rust: pnpm-install
 test-node-rolldown *args="": build-rolldown
   just t-node-rolldown {{ args }}
 
+# Run Node.js tests for Rolldown without building Rolldown.
+# This command is still useful until we have advanced caching util.
+test-node-rolldown-only  *args="":
+  just t-node-rolldown {{ args }}
+
 # Run Rollup's test suite to check Rolldown's behaviors.
 test-node-rollup *args="": build-rolldown
   just t-node-rollup {{ args }}

@@ -408,6 +408,9 @@
             }
           ]
         },
+        "comments": {
+          "$ref": "#/$defs/CommentOptions"
+        },
         "polyfillRequire": {
           "type": [
             "boolean",
@@ -1339,6 +1342,40 @@
           "const": "inline"
         }
       ]
+    },
+    "CommentOptions": {
+      "type": "object",
+      "properties": {
+        "normal": {
+          "description": "Print normal comments that do not have special meanings.\n\nAt present only statement level comments are printed.\n\nDefault is `true`.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "jsdoc": {
+          "description": "Print jsdoc comments.\n\n* jsdoc: `/** jsdoc */`\n\nDefault is `true`.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "annotation": {
+          "description": "Print annotation comments.\n\n* pure: `/* #__PURE__ */` and `/* #__NO_SIDE_EFFECTS__ */`\n* webpack: `/* webpackChunkName */`\n* vite: `/* @vite-ignore */`\n* coverage: `v8 ignore`, `c8 ignore`, `node:coverage`, `istanbul ignore`\n\nDefault is `true`.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "legal": {
+          "description": "Print legal comments.\n\n* starts with `//!` or `/*!`.\n* contains `/* @license */` or `/* @preserve */`\n\nDefault is `true` (maps to LegalComments::Inline).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
     },
     "MakeAbsoluteExternalsRelative": {
       "oneOf": [

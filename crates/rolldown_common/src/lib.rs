@@ -32,6 +32,7 @@ pub mod bundler_options {
       attach_debug_info::AttachDebugInfo,
       chunk_import_map::ChunkImportMap,
       chunk_modules_order::ChunkModulesOrderBy,
+      comment_options::CommentOptions,
       debug_options::DebugOptions,
       defer_sync_scan_data_option::DeferSyncScanDataOption,
       es_module_flag::EsModuleFlag,

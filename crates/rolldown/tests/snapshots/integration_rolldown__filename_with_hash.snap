@@ -4803,6 +4803,10 @@ expression: output
 - main2-!~{001}~.js => main2-ILuIavua.js
 - main2-!~{002}~.js => main2-BJUOpbWL.js
 
+# tests/rolldown/misc/comments/basic
+
+- main-!~{000}~.js => main-DLnbV_j3.js
+
 # tests/rolldown/misc/common_js_min
 
 - main-!~{000}~.js => main-DXiWDywg.js

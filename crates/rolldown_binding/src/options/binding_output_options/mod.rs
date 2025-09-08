@@ -1,4 +1,5 @@
 pub mod binding_advanced_chunks_options;
+pub mod binding_comment_options;
 mod binding_pre_rendered_asset;
 mod binding_pre_rendered_chunk;
 use binding_pre_rendered_asset::BindingPreRenderedAsset;
@@ -9,6 +10,7 @@ use napi_derive::napi;
 use rustc_hash::FxHashMap;
 
 use binding_advanced_chunks_options::BindingAdvancedChunksOptions;
+use binding_comment_options::BindingCommentOptions;
 use binding_pre_rendered_chunk::PreRenderedChunk;
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
@@ -118,6 +120,7 @@ pub struct BindingOutputOptions<'env> {
   pub advanced_chunks: Option<BindingAdvancedChunksOptions>,
   #[napi(ts_type = "'none' | 'inline'")]
   pub legal_comments: Option<String>,
+  pub comment_options: Option<BindingCommentOptions>,
   pub polyfill_require: Option<bool>,
   pub preserve_modules: Option<bool>,
   pub virtual_dirname: Option<String>,

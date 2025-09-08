@@ -2,6 +2,7 @@ pub mod advanced_chunks_options;
 pub mod attach_debug_info;
 pub mod chunk_import_map;
 pub mod chunk_modules_order;
+pub mod comment_options;
 pub mod debug_options;
 pub mod defer_sync_scan_data_option;
 pub mod es_module_flag;

@@ -25,5 +25,6 @@ console.log(first, second, third);
 (1:8) "log(" --> (2:8) "log("
 (1:12) "condition, " --> (2:12) "first, "
 (1:23) "exprIfTrue, " --> (2:19) "second, "
-(1:35) "exprIfFalse);\n" --> (2:27) "third);\n"
+(1:35) "exprIfFalse)" --> (2:27) "third)"
+(1:47) ";\n" --> (2:33) ";\n"
 ```

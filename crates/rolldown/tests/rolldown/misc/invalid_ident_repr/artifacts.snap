@@ -12,13 +12,12 @@ import assert from "node:assert";
 //#region 1aaa.js
 var _1aaa_exports = {};
 __export(_1aaa_exports, { default: () => _1aaa_default });
-const a$1 = "shared.js";
-var _1aaa_default = a$1;
+const a = "shared.js";
+var _1aaa_default = a;
 
 //#endregion
 //#region main.js
-const a = "index.js";
-assert.equal(a, "index.js");
+assert.equal("index.js", "index.js");
 console.log(_1aaa_exports);
 
 //#endregion

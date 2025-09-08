@@ -7,8 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region input.js
-const one = 1;
-console.log(one);
+console.log(1);
 
 //#endregion
 //# sourceMappingURL=input.js.map
@@ -18,10 +17,8 @@ console.log(one);
 
 ```
 - ../input.js
-(0:0) "const " --> (1:0) "const "
-(0:6) "one = " --> (1:6) "one = "
-(0:12) "require('one');\n" --> (1:12) "1;\n"
-(2:0) "console." --> (2:0) "console."
-(2:8) "log(" --> (2:8) "log("
-(2:12) "one);\n" --> (2:12) "one);\n"
+(2:0) "console." --> (1:0) "console."
+(2:8) "log(one);\n" --> (1:8) "log("
+(0:12) "require('one');\n" --> (1:12) "1)"
+(2:16) ";\n" --> (1:14) ";\n"
 ```

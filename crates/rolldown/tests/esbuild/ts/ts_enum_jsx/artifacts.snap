@@ -37,11 +37,10 @@ let x;
 (function(_x) {
 	let y;
 	(function(_y) {
-		let Foo = /* @__PURE__ */ function(Foo$1) {
-			Foo$1["Div"] = "div";
-			return Foo$1;
+		_y.Foo = /* @__PURE__ */ function(Foo) {
+			Foo["Div"] = "div";
+			return Foo;
 		}({});
-		_y.Foo = Foo;
 	})(y || (y = _x.y || (_x.y = {})));
 })(x || (x = {}));
 (function(_x2) {
@@ -61,11 +60,10 @@ let x;
 (function(_x) {
 	let y;
 	(function(_y) {
-		let React$1 = /* @__PURE__ */ function(React$2) {
-			React$2["Fragment"] = "div";
-			return React$2;
+		_y.React = /* @__PURE__ */ function(React$1) {
+			React$1["Fragment"] = "div";
+			return React$1;
 		}({});
-		_y.React = React$1;
 	})(y || (y = _x.y || (_x.y = {})));
 })(x || (x = {}));
 (function(_x2) {

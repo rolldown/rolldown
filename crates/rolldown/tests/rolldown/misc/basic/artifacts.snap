@@ -13,8 +13,7 @@ const a = "shared.js";
 
 //#endregion
 //#region main.js
-const a$1 = "index.js";
-assert.equal(a$1, "index.js");
+assert.equal("index.js", "index.js");
 assert.equal(a, "shared.js");
 
 //#endregion
@@ -29,15 +28,14 @@ assert.equal(a, "shared.js");
 (0:6) "a = " --> (3:6) "a = "
 (0:10) "'shared.js'\n" --> (3:10) "\"shared.js\";\n"
 - ../main.js
-(2:0) "const " --> (7:0) "const "
-(2:6) "a = " --> (7:6) "a$1 = "
-(2:10) "'index.js'\n" --> (7:12) "\"index.js\";\n"
-(3:0) "assert." --> (8:0) "assert."
-(3:7) "equal(" --> (8:7) "equal("
-(3:13) "a, " --> (8:13) "a$1, "
-(3:16) "'index.js')\n" --> (8:18) "\"index.js\");\n"
-(4:0) "assert." --> (9:0) "assert."
-(4:7) "equal(" --> (9:7) "equal("
-(4:13) "a2, " --> (9:13) "a, "
-(4:17) "'shared.js')\n" --> (9:16) "\"shared.js\");\n"
+(3:0) "assert." --> (7:0) "assert."
+(3:7) "equal(a, 'index.js')\n" --> (7:7) "equal("
+(2:10) "'index.js'\n" --> (7:13) "\"index.js\", "
+(3:16) "'index.js')" --> (7:25) "\"index.js\")"
+(3:27) "\n" --> (7:36) ";\n"
+(4:0) "assert." --> (8:0) "assert."
+(4:7) "equal(" --> (8:7) "equal("
+(4:13) "a2, " --> (8:13) "a, "
+(4:17) "'shared.js')" --> (8:16) "\"shared.js\")"
+(4:29) "\n" --> (8:28) ";\n"
 ```

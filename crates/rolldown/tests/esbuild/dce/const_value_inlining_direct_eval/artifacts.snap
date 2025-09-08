@@ -45,10 +45,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region nested-eval.js
-(() => {
-	const x = 1;
-	console.log(x, eval("x"));
-})();
+console.log(1, eval("x"));
 
 //#endregion
 ```
@@ -56,10 +53,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region nested-no-eval.js
-(() => {
-	const x = 1;
-	console.log(x, evil("x"));
-})();
+console.log(1, evil("x"));
 
 //#endregion
 ```
@@ -67,8 +61,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region top-level-eval.js
-const x = 1;
-console.log(x, eval("x"));
+console.log(1, eval("x"));
 
 //#endregion
 ```
@@ -76,8 +69,7 @@ console.log(x, eval("x"));
 
 ```js
 //#region top-level-no-eval.js
-const x = 1;
-console.log(x, evil("x"));
+console.log(1, evil("x"));
 
 //#endregion
 ```

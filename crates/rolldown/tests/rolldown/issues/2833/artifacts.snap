@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region main.js
 {
 	const path = "./foo.js";
+	window.foo;
 	import(path);
 }
 

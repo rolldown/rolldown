@@ -13,8 +13,7 @@ const a = "a.js";
 
 //#endregion
 //#region main.js
-const a$1 = "index.js";
-assert.equal(a$1, "index.js");
+assert.equal("index.js", "index.js");
 assert.equal(a, "a.js");
 
 //#endregion

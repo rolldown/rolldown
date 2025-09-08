@@ -46,6 +46,7 @@ impl BindingCallableBuiltinPlugin {
         UniqueArc::new(vec![]).weak_ref(),
         ArcStr::default(),
         ArcStr::default(),
+        rolldown_common::ModuleIdx::new(0),
       )),
     })
   }

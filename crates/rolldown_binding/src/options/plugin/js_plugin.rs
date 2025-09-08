@@ -190,7 +190,6 @@ impl Plugin for JsPlugin {
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     let Some(cb) = &self.transform else { return Ok(None) };
-
     // Custom field have higher priority, it will override the default filter
     if let Some(ref v) = self.filter_expr_cache.transform {
       if !filter_exprs_interpreter(

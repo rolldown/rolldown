@@ -81,13 +81,7 @@
     "scripts": {
       "entry": ["misc/**"],
     },
-    "packages/test-dev-server/tests/fixtures/edit": {
-      "entry": ["dev.config.mjs", "src/*.js"], // no @rolldown/test-dev-server plugin
-    },
-    "packages/test-dev-server/tests/fixtures/invalidation": {
-      "entry": ["dev.config.mjs", "src/*.js"], // no @rolldown/test-dev-server plugin
-    },
-    "packages/test-dev-server/tests/fixtures/multiple-edits": {
+    "packages/test-dev-server/tests/fixtures/*": {
       "entry": ["dev.config.mjs", "src/*.js"], // no @rolldown/test-dev-server plugin
     },
   },

@@ -45,6 +45,14 @@ function main() {
   const fixtureNames = nodeFs.readdirSync(fixturesPath);
   describe('fixtures', () => {
     for (const fixtureName of fixtureNames) {
+      // Skip if it's not a valid fixture
+      if (
+        !nodeFs.existsSync(
+          nodePath.join(fixturesPath, fixtureName, 'package.json'),
+        )
+      ) {
+        continue;
+      }
       test.sequential(`fixture: ${fixtureName}`, async () => {
         const projectName = fixtureName;
         const tmpProjectPath = nodePath.join(

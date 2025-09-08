@@ -2,7 +2,7 @@ use std::{ops::Deref, sync::Arc};
 
 use crate::PluginContext;
 use arcstr::ArcStr;
-use rolldown_common::SourcemapHires;
+use rolldown_common::{ModuleIdx, SourcemapHires};
 use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
 use rolldown_utils::unique_arc::WeakRef;
 use string_wizard::{MagicString, SourceMapOptions};
@@ -13,6 +13,7 @@ pub struct TransformPluginContext {
   sourcemap_chain: WeakRef<Vec<SourceMap>>,
   original_code: ArcStr,
   id: ArcStr,
+  module_idx: ModuleIdx,
 }
 
 impl TransformPluginContext {
@@ -21,8 +22,9 @@ impl TransformPluginContext {
     sourcemap_chain: WeakRef<Vec<SourceMap>>,
     original_code: ArcStr,
     id: ArcStr,
+    module_idx: ModuleIdx,
   ) -> Self {
-    Self { inner, sourcemap_chain, original_code, id }
+    Self { inner, sourcemap_chain, original_code, id, module_idx }
   }
 
   pub fn get_combined_sourcemap(&self) -> SourceMap {
@@ -52,6 +54,18 @@ impl TransformPluginContext {
       include_content: true,
       source: self.id.as_str().into(),
     })
+  }
+
+  pub fn add_watch_file(&self, file: &str) {
+    // Call the parent method to add to global watch files
+    self.inner.add_watch_file(file);
+
+    // Also add to this module's transform dependencies
+    if let crate::PluginContext::Native(ctx) = &self.inner {
+      if let Some(plugin_driver) = ctx.plugin_driver.upgrade() {
+        plugin_driver.add_transform_dependency(self.module_idx, file);
+      }
+    }
   }
 }
 

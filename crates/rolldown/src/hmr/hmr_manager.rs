@@ -150,8 +150,18 @@ impl HmrManager {
     let mut changed_modules = FxIndexSet::default();
     for changed_file_path in changed_file_paths {
       let changed_file_path = ArcStr::from(changed_file_path);
+      // Check if the file itself is a module
       if let Some(module_idx) = self.module_idx_by_abs_path.get(&changed_file_path) {
         changed_modules.insert(*module_idx);
+      }
+
+      // Check if any modules have this file as a transform dependency
+      for entry in self.plugin_driver.transform_dependencies.iter() {
+        let module_idx = *entry.key();
+        let deps = entry.value();
+        if deps.contains(&changed_file_path) {
+          changed_modules.insert(module_idx);
+        }
       }
     }
 

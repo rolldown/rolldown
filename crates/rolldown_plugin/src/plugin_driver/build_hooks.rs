@@ -218,6 +218,7 @@ impl PluginDriver {
   pub async fn transform(
     &self,
     id: &str,
+    module_idx: rolldown_common::ModuleIdx,
     original_code: String,
     sourcemap_chain: &mut Vec<SourceMap>,
     side_effects: &mut Option<HookSideEffects>,
@@ -246,6 +247,7 @@ impl PluginDriver {
             plugin_sourcemap_chain.weak_ref(),
             code.as_str().into(),
             id.into(),
+            module_idx,
           )),
           &HookTransformArgs { id, code: &code, module_type: &*module_type },
         )

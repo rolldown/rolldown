@@ -292,10 +292,45 @@ const ChecksOptionsSchema = v.strictObject({
   ),
 });
 
+const CompressOptionsKeepNamesSchema = v.strictObject({
+  function: v.optional(v.boolean()),
+  class: v.optional(v.boolean()),
+});
+
+const CompressOptionsSchema = v.strictObject({
+  target: v.optional(v.union([
+    v.literal('esnext'),
+    v.literal('es2015'),
+    v.literal('es2016'),
+    v.literal('es2017'),
+    v.literal('es2018'),
+    v.literal('es2019'),
+    v.literal('es2020'),
+    v.literal('es2021'),
+    v.literal('es2022'),
+    v.literal('es2023'),
+    v.literal('es2024'),
+  ])),
+  dropConsole: v.optional(v.boolean()),
+  dropDebugger: v.optional(v.boolean()),
+  keepNames: v.optional(CompressOptionsKeepNamesSchema),
+  unused: v.optional(v.union([v.boolean(), v.literal('keep_assign')])),
+});
+
+const MangleOptionsKeepNamesSchema = v.strictObject({
+  function: v.optional(v.boolean()),
+  class: v.optional(v.boolean()),
+});
+
+const MangleOptionsSchema = v.strictObject({
+  toplevel: v.optional(v.boolean()),
+  keepNames: v.optional(v.union([v.boolean(), MangleOptionsKeepNamesSchema])),
+  debug: v.optional(v.boolean()),
+});
+
 const MinifyOptionsSchema = v.strictObject({
-  mangle: v.optional(v.boolean()),
-  compress: v.optional(v.boolean()),
-  removeWhitespace: v.optional(v.boolean()),
+  compress: v.optional(v.union([v.boolean(), CompressOptionsSchema])),
+  mangle: v.optional(v.union([v.boolean(), MangleOptionsSchema])),
 });
 
 const ResolveOptionsSchema = v.strictObject({

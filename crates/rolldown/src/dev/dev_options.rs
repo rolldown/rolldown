@@ -42,6 +42,6 @@ pub fn normalize_dev_options(options: DevOptions) -> NormalizedDevOptions {
     use_polling: watch_options.use_polling.unwrap_or(false),
     poll_interval: watch_options.poll_interval.unwrap_or(100),
     use_debounce: watch_options.use_debounce.unwrap_or(true),
-    debounce_duration: watch_options.debounce_duration.unwrap_or(100),
+    debounce_duration: watch_options.debounce_duration.unwrap_or(10),
   }
 }

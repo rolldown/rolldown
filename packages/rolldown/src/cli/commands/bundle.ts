@@ -3,7 +3,7 @@ import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { onExit } from 'signal-exit';
 import { version } from '../../../package.json';
-import type { ConfigExport, RolldownOutput } from '../..';
+import type { RolldownOptions, RolldownOutput } from '../..';
 import { rolldown } from '../../api/rolldown';
 import { watch as rolldownWatch } from '../../api/watch';
 import { getClearScreenFunction } from '../../utils/clear-screen';
@@ -15,6 +15,7 @@ import { logger } from '../logger';
 export async function bundleWithConfig(
   configPath: string,
   cliOptions: NormalizedCliOptions,
+  rawArgs: Record<string, any> = {},
 ): Promise<void> {
   if (cliOptions.watch) {
     process.env.ROLLUP_WATCH = 'true';
@@ -28,11 +29,16 @@ export async function bundleWithConfig(
     process.exit(1);
   }
 
+  // If config is a function, call it with raw command line arguments
+  const resolvedConfig = typeof config === 'function'
+    ? await config(rawArgs)
+    : config;
+
   // TODO: Could add more validation/diagnostics here to emit a nice error message
   if (cliOptions.watch) {
-    await watchInner(config, cliOptions);
+    await watchInner(resolvedConfig, cliOptions);
   } else {
-    await bundleInner(config, cliOptions);
+    await bundleInner(resolvedConfig, cliOptions);
   }
 }
 
@@ -70,7 +76,7 @@ export async function bundleWithCliOptions(
 }
 
 async function watchInner(
-  config: ConfigExport,
+  config: RolldownOptions | RolldownOptions[],
   cliOptions: NormalizedCliOptions,
 ) {
   let normalizedConfig = arraify(config).map((option) => {
@@ -142,7 +148,7 @@ async function watchInner(
 }
 
 async function bundleInner(
-  config: ConfigExport,
+  config: RolldownOptions | RolldownOptions[],
   cliOptions: NormalizedCliOptions,
 ) {
   const startTime = performance.now();

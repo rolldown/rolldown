@@ -95,6 +95,7 @@ import type { ModuleInfo } from './types/module-info';
 import type { TreeshakingOptions } from './types/module-side-effects';
 import type { OutputBundle } from './types/output-bundle';
 import type { RolldownOptions } from './types/rolldown-options';
+import type { RolldownOptionsFunction } from './types/rolldown-options-function';
 import type {
   OutputAsset,
   OutputChunk,
@@ -173,6 +174,7 @@ export type {
   RolldownFileStats,
   RolldownFsModule,
   RolldownOptions,
+  RolldownOptionsFunction,
   RolldownOutput,
   RolldownPlugin,
   RolldownPluginOption,

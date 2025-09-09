@@ -66,7 +66,9 @@ export const options: {
   }),
 );
 
-export function parseCliArguments(): NormalizedCliOptions {
+export function parseCliArguments(): NormalizedCliOptions & {
+  rawArgs: Record<string, any>;
+} {
   const { values, tokens, positionals } = parseArgs({
     options,
     tokens: true,
@@ -75,9 +77,9 @@ export function parseCliArguments(): NormalizedCliOptions {
     strict: false,
   });
 
-  tokens
+  let invalid_options = tokens
     .filter((token) => token.kind === 'option')
-    .forEach((option) => {
+    .map((option) => {
       let negative = false;
       if (option.name.startsWith('no-')) {
         // stripe `no-` prefix
@@ -93,11 +95,8 @@ export function parseCliArguments(): NormalizedCliOptions {
       option.name = kebabCaseToCamelCase(option.name);
       let originalType = flattenedSchema[option.name];
       if (!originalType) {
-        logger.error(
-          `Invalid option: ${option.rawName}. We will ignore this option.`,
-        );
-        // We will refuse to handle the invalid option, as it may cause unexpected behavior.
-        process.exit(1);
+        // Return the summary of invalid option.
+        return { name: option.name, value: option.value };
       }
       let type = getSchemaType(originalType);
       if (type === 'string' && typeof option.value !== 'string') {
@@ -157,7 +156,35 @@ export function parseCliArguments(): NormalizedCliOptions {
           writable: true,
         });
       }
+    }).filter((item) => {
+      return item !== undefined;
     });
 
-  return normalizeCliOptions(values, positionals as string[]);
+  invalid_options.sort((a, b) => {
+    return a.name.localeCompare(b.name);
+  });
+
+  if (invalid_options.length !== 0) {
+    let single = invalid_options.length === 1;
+    logger.warn(
+      `Option \`${invalid_options.map(item => item.name).join(',')}\` ${
+        single ? 'is' : 'are'
+      } unrecognized. We will ignore ${single ? 'this' : 'those'} option${
+        single ? '' : 's'
+      }.`,
+    );
+  }
+
+  let rawArgs = {
+    ...values,
+    ...invalid_options.reduce((acc, cur) => {
+      acc[cur.name] = cur.value;
+      return acc;
+    }, Object.create(null)),
+  };
+  const normalizedOptions = normalizeCliOptions(
+    values,
+    positionals as string[],
+  );
+  return { ...normalizedOptions, rawArgs };
 }

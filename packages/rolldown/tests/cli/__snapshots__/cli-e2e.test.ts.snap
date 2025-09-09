@@ -312,6 +312,13 @@ exports[`config > should resolve rolldown.config.cjs 1`] = `
 "
 `;
 
+exports[`config > should support custom cli arguments 1`] = `
+"Option \`customArg\` is unrecognized. We will ignore this option.
+<DIR>/index.js  chunk │ size: 0.14 kB
+
+"
+`;
+
 exports[`watch cli > should allow multiply output + call options hook once + call outputOptions hook 1`] = `
 "called options hook
 called output options hook

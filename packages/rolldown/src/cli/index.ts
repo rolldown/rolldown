@@ -6,10 +6,10 @@ import { showHelp } from './commands/help';
 import { logger } from './logger';
 
 async function main() {
-  const cliOptions = parseCliArguments();
+  const { rawArgs, ...cliOptions } = parseCliArguments();
 
   if (cliOptions.config || cliOptions.config === '') {
-    await bundleWithConfig(cliOptions.config, cliOptions);
+    await bundleWithConfig(cliOptions.config, cliOptions, rawArgs);
     return;
   }
 

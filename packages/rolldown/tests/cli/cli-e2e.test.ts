@@ -214,6 +214,18 @@ describe('config', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot()
   })
 
+
+  it('should support custom cli arguments', async () => {
+    const cwd = cliFixturesDir('cli-with-custom-args')
+
+    const status = await $({
+      cwd,
+    })`rolldown -c rolldown.config.js --customArg=customValue`
+    expect(status.exitCode).toBe(0)
+    expect(cleanStdout(status.stdout)).toMatchSnapshot()
+  })
+
+
   it('should allow multiply output + call options hook once  + call outputOptions hook', async () => {
     const cwd = cliFixturesDir('config-multiply-output-with-options-hooks')
     const status = await $({

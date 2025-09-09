@@ -37,11 +37,11 @@ describe('plugin type compatibility', () => {
     expectTypeOf(plugin).toEqualTypeOf<RolldownRawPlugin | { name: string }>()
 
     const buildS = undefined
-    // @ts-expect-error -- only known properties should be allowed
     defineConfig({
       plugins: [
         {
           name: 'test',
+          // @ts-expect-error -- only known properties should be allowed
           buildS
           //    ^ input suggestion should work here
         }

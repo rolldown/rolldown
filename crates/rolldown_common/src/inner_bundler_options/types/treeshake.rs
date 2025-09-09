@@ -70,7 +70,7 @@ impl NormalizedTreeshakeOptions {
   }
 
   pub fn commonjs(&self) -> bool {
-    self.as_ref().and_then(|item| item.commonjs).unwrap_or(false)
+    self.as_ref().and_then(|item| item.commonjs).unwrap_or(true)
   }
   /// By default we assume property reads have side effects
   #[inline]

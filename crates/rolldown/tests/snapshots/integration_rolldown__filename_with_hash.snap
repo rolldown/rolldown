@@ -1754,11 +1754,11 @@ expression: output
 
 # tests/esbuild/importstar/export_other_common_js
 
-- entry-!~{000}~.js => entry-B8363NMa.js
+- entry-!~{000}~.js => entry-B2ukMHzE.js
 
 # tests/esbuild/importstar/export_other_nested_common_js
 
-- entry-!~{000}~.js => entry-udQrMJcp.js
+- entry-!~{000}~.js => entry-Boorl4b6.js
 
 # tests/esbuild/importstar/export_self_and_import_self_common_js
 
@@ -3571,7 +3571,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_multiple_cjs_named_import
 
-- main-!~{000}~.js => main-C4OWpIxJ.js
+- main-!~{000}~.js => main-CY_waB3R.js
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_reexport_cjs_default
 

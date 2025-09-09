@@ -106,7 +106,6 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
       annotations: value.annotations,
       manual_pure_functions: value.manual_pure_functions,
       unknown_global_side_effects: value.unknown_global_side_effects,
-      // By default disable commonjs tree shake, since it is not stable
       commonjs: value.commonjs,
       property_read_side_effects,
       property_write_side_effects,

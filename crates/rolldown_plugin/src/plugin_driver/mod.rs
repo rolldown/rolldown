@@ -18,6 +18,7 @@ use rolldown_common::{
 };
 use rolldown_resolver::Resolver;
 use rolldown_utils::dashmap::FxDashSet;
+use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
 use crate::{
@@ -139,7 +140,7 @@ impl PluginDriver {
   }
 
   pub fn add_transform_dependency(&self, module_idx: ModuleIdx, dependency: &str) {
-    let dependency = ArcStr::from(dependency);
+    let dependency = ArcStr::from(dependency.to_slash().unwrap());
 
     self
       .transform_dependencies

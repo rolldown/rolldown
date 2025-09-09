@@ -22,6 +22,7 @@ use rolldown_utils::{
   rayon::{IntoParallelIterator, ParallelIterator},
 };
 use rustc_hash::{FxHashMap, FxHashSet};
+use sugar_path::SugarPath;
 
 use crate::{
   SharedOptions, SharedResolver, hmr::hmr_ast_finalizer::HmrAstFinalizer,
@@ -77,7 +78,7 @@ impl HmrManager {
       .iter()
       .filter_map(|m| m.as_normal())
       .map(|m| {
-        let filename = m.id.resource_id().clone();
+        let filename = m.id.resource_id().to_slash().unwrap().into();
         let module_idx = m.idx;
         (filename, module_idx)
       })
@@ -149,7 +150,7 @@ impl HmrManager {
     tracing::debug!(target: "hmr", "compute_hmr_update_for_file_changes: {:?}", changed_file_paths);
     let mut changed_modules = FxIndexSet::default();
     for changed_file_path in changed_file_paths {
-      let changed_file_path = ArcStr::from(changed_file_path);
+      let changed_file_path = ArcStr::from(changed_file_path.to_slash().unwrap());
       // Check if the file itself is a module
       if let Some(module_idx) = self.module_idx_by_abs_path.get(&changed_file_path) {
         changed_modules.insert(*module_idx);

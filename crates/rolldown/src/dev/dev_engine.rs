@@ -112,12 +112,12 @@ impl DevEngine {
     })
   }
 
-  pub async fn run(&self) {
+  pub async fn run(&self) -> BuildResult<()> {
     let mut watch_service_state = self.watch_service_state.lock().await;
 
     if watch_service_state.service.is_none() {
       // The watcher service is already running.
-      return;
+      return Ok(());
     }
 
     self.build_driver.ensure_latest_build().await.expect("FIXME: Should not fail");
@@ -136,16 +136,17 @@ impl DevEngine {
     let watch_files = bundler.get_watch_files();
 
     let mut watcher = self.watcher.lock().await;
-    // let mut watched_paths = watcher.paths_mut();
+    let mut paths_mut = watcher.paths_mut();
     for watch_file in watch_files.iter() {
-      let watch_file = &*watch_file;
+      let watch_file = &**watch_file;
       tracing::trace!("watch file: {:?}", watch_file);
-      if self.watched_files.contains(watch_file) {
-        continue;
+      if !self.watched_files.contains(watch_file) {
+        self.watched_files.insert(watch_file.to_string().into());
+        paths_mut.add(watch_file.as_path(), notify::RecursiveMode::NonRecursive)?;
       }
-      self.watched_files.insert(watch_file.clone());
-      watcher.watch(watch_file.as_path(), notify::RecursiveMode::NonRecursive).unwrap();
     }
+    paths_mut.commit()?;
+    Ok(())
   }
 
   pub async fn wait_for_close(&self) {

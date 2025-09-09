@@ -27,6 +27,6 @@ async fn main() {
     },
   )
   .unwrap();
-  dev_engine.run().await;
+  dev_engine.run().await.unwrap();
   dev_engine.wait_for_close().await;
 }

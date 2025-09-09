@@ -74,7 +74,7 @@ impl BindingDevEngine {
 
   #[napi]
   pub async fn run(&self) -> napi::Result<()> {
-    self.inner.run().await;
+    self.inner.run().await.map_err(|_e| napi::Error::from_reason("Failed to run dev engine"))?;
     Ok(())
   }
 

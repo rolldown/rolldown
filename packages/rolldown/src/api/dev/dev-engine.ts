@@ -63,6 +63,19 @@ export class DevEngine {
     await this.#inner.ensureLatestBuild();
   }
 
+  /**
+   * Returns true if a new build is scheduled.
+   */
+  async scheduleBuildIfStale(): Promise<boolean> {
+    const scheduled = await this.#inner.scheduleBuildIfStale();
+    if (scheduled) {
+      // don't wait here as we want to return the result without waiting the actual build
+      scheduled.wait().catch(() => {});
+      return true;
+    }
+    return false;
+  }
+
   async invalidate(
     file: string,
     firstInvalidatedBy?: string,

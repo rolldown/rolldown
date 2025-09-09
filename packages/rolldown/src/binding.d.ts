@@ -1287,6 +1287,7 @@ export declare class BindingDevEngine {
   run(): Promise<void>
   ensureCurrentBuildFinish(): Promise<void>
   ensureLatestBuild(): Promise<void>
+  scheduleBuildIfStale(): Promise<ScheduledBuild | null>
   invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<BindingHmrUpdate>
 }
 
@@ -1439,6 +1440,10 @@ export declare class ParallelJsPluginRegistry {
   id: number
   workerCount: number
   constructor(workerCount: number)
+}
+
+export declare class ScheduledBuild {
+  wait(): Promise<void>
 }
 
 export declare class TraceSubscriberGuard {

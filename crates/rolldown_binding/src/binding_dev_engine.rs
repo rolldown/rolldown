@@ -1,5 +1,6 @@
 use napi_derive::napi;
 use rolldown::dev::OnHmrUpdatesCallback;
+use rolldown::dev::dev_context::BuildProcessFuture;
 use std::sync::Arc;
 
 use crate::binding_bundler_impl::{BindingBundlerImpl, BindingBundlerOptions};
@@ -94,6 +95,14 @@ impl BindingDevEngine {
   }
 
   #[napi]
+  pub async fn schedule_build_if_stale(&self) -> Option<ScheduledBuild> {
+    let result = self.inner.schedule_build_if_stale().await.expect("Should handle this error");
+    result.and_then(|(future, already_scheduled)| {
+      (!already_scheduled).then(|| ScheduledBuild { future })
+    })
+  }
+
+  #[napi]
   pub async fn invalidate(
     &self,
     caller: String,
@@ -102,5 +111,19 @@ impl BindingDevEngine {
     let update =
       self.inner.invalidate(caller, first_invalidated_by).await.expect("Should handle this error");
     Ok(BindingHmrUpdate::from(update))
+  }
+}
+
+#[napi]
+pub struct ScheduledBuild {
+  future: BuildProcessFuture,
+}
+
+#[napi]
+impl ScheduledBuild {
+  #[napi]
+  pub async fn wait(&self) -> napi::Result<()> {
+    self.future.clone().await;
+    Ok(())
   }
 }

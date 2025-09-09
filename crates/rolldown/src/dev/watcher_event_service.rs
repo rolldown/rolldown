@@ -9,6 +9,7 @@ use crate::dev::{
 
 pub enum WatcherEventServiceMsg {
   FileChange(FileChangeResult),
+  Close,
 }
 
 pub type WatcherEventServiceTx = UnboundedSender<WatcherEventServiceMsg>;
@@ -29,6 +30,10 @@ impl WatcherEventService {
 
   pub fn create_event_handler(&self) -> WatcherEventHandler {
     WatcherEventHandler { service_tx: self.tx.clone() }
+  }
+
+  pub fn tx(&self) -> &WatcherEventServiceTx {
+    &self.tx
   }
 
   pub async fn run(mut self) {
@@ -71,6 +76,9 @@ impl WatcherEventService {
             eprintln!("notify error: {e:?}");
           }
         },
+        WatcherEventServiceMsg::Close => {
+          break;
+        }
       }
     }
   }

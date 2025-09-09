@@ -1,9 +1,15 @@
-use std::{ops::Deref, sync::Arc};
+use std::{
+  ops::Deref,
+  sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+  },
+};
 
 use arcstr::ArcStr;
 use futures::{FutureExt, future::Shared};
 use rolldown_common::HmrUpdate;
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildResult, ResultExt};
 use rolldown_utils::dashmap::FxDashSet;
 use rolldown_watcher::{DynWatcher, Watcher, WatcherConfig, WatcherExt};
 use sugar_path::SugarPath;
@@ -16,7 +22,7 @@ use crate::{
     build_state_machine::BuildStateMachine,
     dev_context::{DevContext, PinBoxSendStaticFuture, SharedDevContext},
     dev_options::{DevOptions, normalize_dev_options},
-    watcher_event_service::WatcherEventService,
+    watcher_event_service::{WatcherEventService, WatcherEventServiceMsg, WatcherEventServiceTx},
   },
 };
 
@@ -30,7 +36,9 @@ pub struct DevEngine {
   watcher: Mutex<DynWatcher>,
   watched_files: FxDashSet<ArcStr>,
   watch_service_state: Mutex<WatchServiceState>,
+  watch_service_tx: WatcherEventServiceTx,
   ctx: SharedDevContext,
+  is_closed: AtomicBool,
 }
 
 impl DevEngine {
@@ -104,11 +112,13 @@ impl DevEngine {
       build_driver,
       watcher: Mutex::new(watcher),
       watched_files: FxDashSet::default(),
+      watch_service_tx: watcher_event_service.tx().clone(),
       watch_service_state: Mutex::new(WatchServiceState {
         service: Some(watcher_event_service),
         handle: None,
       }),
       ctx,
+      is_closed: AtomicBool::new(false),
     })
   }
 
@@ -166,6 +176,36 @@ impl DevEngine {
     first_invalidated_by: Option<String>,
   ) -> BuildResult<HmrUpdate> {
     self.build_driver.invalidate(caller, first_invalidated_by).await
+  }
+
+  pub async fn close(&self) -> BuildResult<()> {
+    if self.is_closed.swap(true, Ordering::SeqCst) {
+      return Ok(());
+    }
+    // Stop the watcher service
+    self.watch_service_tx.send(WatcherEventServiceMsg::Close).map_err_to_unhandleable()?;
+
+    // Remove all watched files
+    if !self.watched_files.is_empty() {
+      let mut watcher = self.watcher.lock().await;
+      let mut paths_mut = watcher.paths_mut();
+      for watched_file in self.watched_files.iter() {
+        paths_mut.remove(watched_file.as_path())?;
+      }
+      paths_mut.commit()?;
+      self.watched_files.clear();
+    }
+
+    // Wait for the watcher service to stop
+    let mut watch_service_state = self.watch_service_state.lock().await;
+    if let Some(handle) = watch_service_state.handle.take() {
+      let timeout_duration = tokio::time::Duration::from_secs(2);
+      if let Err(e) = tokio::time::timeout(timeout_duration, handle).await {
+        return Err(anyhow::format_err!("Watcher service didn't stop within timeout: {e:?}"))?;
+      }
+    }
+    tracing::debug!("DevEngine cleanup completed");
+    Ok(())
   }
 }
 

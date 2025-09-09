@@ -4,8 +4,6 @@ use rolldown::dev::DevOptions;
 use rolldown::{BundlerBuilder, BundlerOptions, DevEngine, ExperimentalOptions};
 use sugar_path::SugarPath;
 
-// RD_LOG=rolldown::dev=trace cargo run --example dev
-
 #[expect(clippy::print_stdout)]
 #[tokio::main]
 async fn main() {
@@ -27,6 +25,20 @@ async fn main() {
     },
   )
   .unwrap();
+
+  println!("Starting DevEngine...");
   dev_engine.run().await.unwrap();
-  dev_engine.wait_for_close().await;
+
+  // Demonstrate the close method: run for 10 seconds then close
+  println!("DevEngine running, will close automatically after 10 seconds...");
+
+  // Wait for 10 seconds
+  tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+
+  println!("10 seconds elapsed, closing DevEngine...");
+
+  // Call the close method to clean up resources
+  dev_engine.close().await.unwrap();
+
+  println!("DevEngine closed successfully!");
 }

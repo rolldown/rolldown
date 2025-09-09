@@ -6,16 +6,13 @@ use rolldown_common::BundlerOptions;
 use rolldown_testing::bundler_options_presets::{multi_duplicated_symbol, rome_ts, threejs};
 
 fn items() -> Vec<(&'static str, BundlerOptions)> {
-  let mut result = vec![
+  vec![
     ("threejs", threejs()),
     ("rome_ts", rome_ts()),
     ("multi-duplicated-top-level-symbol", multi_duplicated_symbol()),
-  ];
-  #[cfg(not(feature = "codspeed"))]
-  {
-    result.push(("threejs10x", rolldown_testing::bundler_options_presets::threejs10x()));
-  }
-  result
+    #[cfg(not(feature = "codspeed"))]
+    ("threejs10x", rolldown_testing::bundler_options_presets::threejs10x()),
+  ]
 }
 
 fn criterion_benchmark(c: &mut Criterion) {

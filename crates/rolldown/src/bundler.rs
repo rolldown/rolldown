@@ -300,7 +300,7 @@ impl Bundler {
       .hmr_manager
       .as_mut()
       .expect("HMR manager is not initialized")
-      .compute_hmr_update_for_file_changes(changed_files)
+      .compute_hmr_update_for_file_changes(&changed_files)
       .await?;
 
     Ok(updates)

@@ -20,7 +20,7 @@ async fn main() {
     bundler_builder,
     DevOptions {
       eager_rebuild: Some(false),
-      on_hmr_updates: Some(Arc::new(|updates| {
+      on_hmr_updates: Some(Arc::new(|updates, _changed_files| {
         println!("HMR updates: {updates:#?}");
       })),
       ..Default::default()

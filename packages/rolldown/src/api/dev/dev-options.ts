@@ -24,6 +24,9 @@ export interface DevWatchOptions {
 }
 
 export interface DevOptions {
-  onHmrUpdates?: (updates: BindingHmrUpdate[]) => void | Promise<void>;
+  onHmrUpdates?: (
+    updates: BindingHmrUpdate[],
+    changedFiles: string[],
+  ) => void | Promise<void>;
   watch?: DevWatchOptions;
 }

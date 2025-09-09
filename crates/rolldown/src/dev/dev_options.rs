@@ -1,7 +1,7 @@
 use rolldown_common::HmrUpdate;
 use std::sync::Arc;
 
-pub type OnHmrUpdatesCallback = Arc<dyn Fn(Vec<HmrUpdate>) + Send + Sync>;
+pub type OnHmrUpdatesCallback = Arc<dyn Fn(Vec<HmrUpdate>, Vec<String>) + Send + Sync>;
 
 pub type SharedNormalizedDevOptions = Arc<NormalizedDevOptions>;
 

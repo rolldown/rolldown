@@ -38,10 +38,13 @@ impl BindingDevEngine {
 
     // If callback is provided, wrap it to convert Vec<HmrUpdate> to Vec<BindingHmrUpdate>
     let on_hmr_updates = on_hmr_updates_callback.map(|js_callback| {
-      Arc::new(move |updates: Vec<rolldown_common::HmrUpdate>| {
+      Arc::new(move |updates: Vec<rolldown_common::HmrUpdate>, changed_files: Vec<String>| {
         let binding_updates: Vec<BindingHmrUpdate> =
           updates.into_iter().map(BindingHmrUpdate::from).collect();
-        js_callback.call(FnArgs { data: (binding_updates,) }, ThreadsafeFunctionCallMode::Blocking);
+        js_callback.call(
+          FnArgs { data: (binding_updates, changed_files) },
+          ThreadsafeFunctionCallMode::Blocking,
+        );
       }) as OnHmrUpdatesCallback
     });
 

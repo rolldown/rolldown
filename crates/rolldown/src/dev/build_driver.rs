@@ -99,10 +99,10 @@ impl BuildDriver {
     let bundler = self.bundler.lock().await;
     let cache = build_state.cache.take().expect("Should never be none here");
     let mut hmr_manager = bundler.create_hmr_manager(cache);
-    let updates = hmr_manager.compute_hmr_update_for_file_changes(changed_files).await?;
+    let updates = hmr_manager.compute_hmr_update_for_file_changes(&changed_files).await?;
     build_state.cache = Some(hmr_manager.input.cache);
     if let Some(on_hmr_updates) = self.ctx.options.on_hmr_updates.as_ref() {
-      on_hmr_updates(updates);
+      on_hmr_updates(updates, changed_files);
     }
 
     Ok(())

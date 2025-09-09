@@ -1569,7 +1569,7 @@ export interface BindingDeferSyncScanData {
 }
 
 export interface BindingDevOptions {
-  onHmrUpdates?: undefined | ((updates: BindingHmrUpdate[]) => void | Promise<void>)
+  onHmrUpdates?: undefined | ((updates: BindingHmrUpdate[], changedFiles: string[]) => void | Promise<void>)
   watch?: BindingDevWatchOptions
 }
 

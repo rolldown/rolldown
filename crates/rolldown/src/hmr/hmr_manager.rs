@@ -144,7 +144,7 @@ impl HmrManager {
 
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
-    changed_file_paths: Vec<String>,
+    changed_file_paths: &[String],
   ) -> BuildResult<Vec<HmrUpdate>> {
     tracing::debug!(target: "hmr", "compute_hmr_update_for_file_changes: {:?}", changed_file_paths);
     let mut changed_modules = FxIndexSet::default();

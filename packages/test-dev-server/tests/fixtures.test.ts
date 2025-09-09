@@ -92,8 +92,11 @@ function main() {
 
         console.log('🔄 Processing HMR edit files...');
         for (const [index, [step, hmrEdits]] of hmrEditFiles.entries()) {
-          // Make sure the poll-based watcher could detect the change (poll interval is 100ms)
-          // Files in the same step will be edited in the same timeframe.
+          // Refer to `packages/test-dev-server/src/utils/get-dev-watch-options-for-ci.ts`
+          // We used a poll-based and debounced watcher in CI, so we need to wait for at least max(poll interval 50ms, debounce duration 200ms) to
+          // - Make sure different steps are not debounced together
+          // - Make sure changes are detected individually for different steps
+          // - Make sure changes in the same step are detected together
           await sensibleTimeoutInMs(200);
           for (const hmrEdit of hmrEdits) {
             console.log(

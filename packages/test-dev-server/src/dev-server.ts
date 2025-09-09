@@ -12,6 +12,7 @@ import { NormalizedDevOptions } from './types/normalized-dev-options.js';
 import { HmrUpdateMessage } from './types/server-message.js';
 import { createDevServerPlugin } from './utils/create-dev-server-plugin.js';
 import { decodeClientMessage } from './utils/decode-client-message.js';
+import { getDevWatchOptionsForCi } from './utils/get-dev-watch-options-for-ci.js';
 import { loadDevConfig } from './utils/load-dev-config.js';
 import { normalizeDevOptions } from './utils/normalize-dev-options.js';
 
@@ -63,10 +64,7 @@ class DevServer {
       onHmrUpdates: (updates) => {
         this.handleHmrUpdates(updates);
       },
-      watch: {
-        usePolling: true,
-        pollInterval: 50,
-      },
+      watch: getDevWatchOptionsForCi(),
     });
     this.#devEngine = devEngine;
     this.#prepareHttpServerAfterCreateDevEngine(devEngine);

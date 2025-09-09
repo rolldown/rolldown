@@ -1,4 +1,8 @@
-use std::{mem, path::PathBuf, sync::Arc};
+use std::{
+  mem,
+  path::PathBuf,
+  sync::{Arc, atomic::AtomicU32},
+};
 
 use futures::FutureExt;
 
@@ -19,11 +23,12 @@ pub type SharedBuildDriver = Arc<BuildDriver>;
 pub struct BuildDriver {
   pub bundler: Arc<Mutex<Bundler>>,
   pub ctx: SharedDevContext,
+  next_hmr_patch_id: Arc<AtomicU32>,
 }
 
 impl BuildDriver {
   pub fn new(bundler: Arc<Mutex<Bundler>>, ctx: SharedDevContext) -> Self {
-    Self { bundler, ctx }
+    Self { bundler, ctx, next_hmr_patch_id: Arc::new(AtomicU32::new(0)) }
   }
 
   pub async fn register_changed_files(&self, paths: Vec<PathBuf>) {
@@ -100,7 +105,7 @@ impl BuildDriver {
 
     let bundler = self.bundler.lock().await;
     let cache = build_state.cache.take().expect("Should never be none here");
-    let mut hmr_manager = bundler.create_hmr_manager(cache);
+    let mut hmr_manager = bundler.create_hmr_manager(cache, Arc::clone(&self.next_hmr_patch_id));
     let updates = hmr_manager.compute_hmr_update_for_file_changes(&changed_files).await?;
     build_state.cache = Some(hmr_manager.input.cache);
     if let Some(on_hmr_updates) = self.ctx.options.on_hmr_updates.as_ref() {
@@ -127,7 +132,7 @@ impl BuildDriver {
 
     let bundler = self.bundler.lock().await;
     let cache = build_state.cache.take().expect("Should never be none here");
-    let mut hmr_manager = bundler.create_hmr_manager(cache);
+    let mut hmr_manager = bundler.create_hmr_manager(cache, Arc::clone(&self.next_hmr_patch_id));
     let update =
       hmr_manager.compute_update_for_calling_invalidate(caller, first_invalidated_by).await?;
     build_state.cache = Some(hmr_manager.input.cache);

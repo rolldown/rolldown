@@ -1,6 +1,9 @@
 use std::{
   ops::{Deref, DerefMut},
-  sync::Arc,
+  sync::{
+    Arc,
+    atomic::{AtomicU32, Ordering},
+  },
 };
 
 use arcstr::ArcStr;
@@ -36,6 +39,7 @@ pub struct HmrManagerInput {
   pub resolver: SharedResolver,
   pub plugin_driver: SharedPluginDriver,
   pub cache: ScanStageCache,
+  pub next_hmr_patch_id: Arc<AtomicU32>,
 }
 
 impl HmrManagerInput {
@@ -52,7 +56,6 @@ pub struct HmrManager {
   pub(crate) input: HmrManagerInput,
   module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
   module_idx_by_stable_id: FxHashMap<String, ModuleIdx>,
-  next_hmr_patch_id: u32,
 }
 
 impl Deref for HmrManager {
@@ -89,7 +92,7 @@ impl HmrManager {
       .iter()
       .map(|m| (m.stable_id().to_string(), m.idx()))
       .collect();
-    Self { input, module_idx_by_abs_path, module_idx_by_stable_id, next_hmr_patch_id: 0 }
+    Self { input, module_idx_by_abs_path, module_idx_by_stable_id }
   }
 
   /// Compute hmr update caused by `import.meta.hot.invalidate()`.
@@ -401,8 +404,8 @@ impl HmrManager {
 
     let (mut code, mut map) = source_joiner.join();
 
-    let filename = format!("hmr_patch_{}.js", self.next_hmr_patch_id,);
-    self.next_hmr_patch_id += 1;
+    let hmr_patch_id = self.next_hmr_patch_id.fetch_add(1, Ordering::Relaxed);
+    let filename = format!("hmr_patch_{hmr_patch_id}.js");
 
     let file_dir = self.options.cwd.as_path().join(&self.options.out_dir);
 

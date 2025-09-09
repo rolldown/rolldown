@@ -7,7 +7,7 @@ use oxc::{
       ObjectPropertyKind, PropertyKind, Statement, VariableDeclarationKind,
     },
   },
-  span::{Atom, CompactStr, SPAN, Span},
+  span::{Atom, CompactStr, GetSpanMut, SPAN, Span},
   syntax::identifier,
 };
 use rolldown_common::{EcmaModuleAstUsage, Interop};
@@ -63,45 +63,39 @@ impl<'ast> AstSnippet<'ast> {
     names: &[CompactStr],
     span: Span,
   ) -> ast::Expression<'ast> {
-    match names {
-      [] => object,
-      _ => {
-        let prop_name = names[names.len() - 1].as_str();
-        let object = self.member_expr_or_ident_ref(object, &names[0..names.len() - 1], span);
-        if identifier::is_identifier_name(prop_name) {
-          ast::Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
-            span,
-            object,
-            self.id_name(prop_name, span),
-            false,
-          ))
-        } else {
-          ast::Expression::ComputedMemberExpression(self.builder.alloc_computed_member_expression(
-            span,
-            object,
-            self.builder.expression_string_literal(span, self.builder.atom(prop_name), None),
-            false,
-          ))
-        }
-      }
+    let mut cur = object;
+    for name in names {
+      cur = if identifier::is_identifier_name(name) {
+        ast::Expression::from(self.builder.member_expression_static(
+          SPAN,
+          cur,
+          self.id_name(name, SPAN),
+          false,
+        ))
+      } else {
+        ast::Expression::from(self.builder.member_expression_computed(
+          SPAN,
+          cur,
+          self.builder.expression_string_literal(SPAN, self.builder.atom(name), None),
+          false,
+        ))
+      };
     }
+    *cur.span_mut() = span;
+    cur
   }
 
   /// The props of `foo_exports.value.a` is `["value", "a"]`, here convert it to `(void 0).a`
+  #[inline]
   pub fn member_expr_with_void_zero_object(
     &self,
     names: &[CompactStr],
     span: Span,
   ) -> ast::Expression<'ast> {
-    if names.len() == 1 {
+    if names.is_empty() {
       self.void_zero()
     } else {
-      ast::Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
-        span,
-        self.member_expr_with_void_zero_object(&names[0..names.len() - 1], span),
-        self.id_name(names[names.len() - 1].as_str(), span),
-        false,
-      ))
+      self.member_expr_or_ident_ref(self.void_zero(), &names[1..], span)
     }
   }
 

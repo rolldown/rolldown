@@ -30,7 +30,7 @@ jobs:
         uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
         with:
           tools: just
-          cache-key: release-build-wasi
+          cache-key: debug-build-wasi
 
       - name: Setup Node
         uses: ./.github/actions/setup-node
@@ -39,7 +39,7 @@ jobs:
         run: rustup target add wasm32-wasip1-threads
 
       - name: Build Browser Rolldown
-        run: just build-browser-release
+        run: just build-browser
 
       - name: Build Node Packages
         run: pnpm --filter rolldown build-node

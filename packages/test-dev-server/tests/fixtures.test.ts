@@ -202,7 +202,8 @@ async function collectHmrEditFiles(
   projectPath: string,
 ) {
   const hmrEditFiles = await glob(
-    nodePath.join(projectPath, '/src/**/*.hmr-*.*'),
+    glob.convertPathToPattern(nodePath.join(projectPath, './src')) +
+      '/**/*.hmr-*.*',
     {
       ignore: ['**/node_modules/**', '**/dist/**'],
       absolute: true,

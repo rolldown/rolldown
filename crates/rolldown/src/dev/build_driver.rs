@@ -33,7 +33,9 @@ impl BuildDriver {
   }
 
   /// Schedule a build to consume pending changed files.
-  pub async fn schedule_build_if_stale(&self) -> BuildResult<Option<BuildProcessFuture>> {
+  pub async fn schedule_build_if_stale(
+    &self,
+  ) -> BuildResult<Option<(BuildProcessFuture, /* already scheduled */ bool)>> {
     tracing::trace!("Start scheduling a build to consume pending changed files");
     let mut build_state = self.ctx.state.lock().await;
     tracing::trace!("Start scheduling a build to consume pending changed files2");
@@ -42,7 +44,7 @@ impl BuildDriver {
       drop(build_state);
       // If there's build running, it will be responsible to handle new changed files.
       // So, we only need to wait for the latest build to finish.
-      Ok(Some(building_future))
+      Ok(Some((building_future, true)))
     } else if build_state.require_full_rebuild || !build_state.changed_files.is_empty() {
       tracing::trace!(
         "Schedule a build to consume pending changed files due to {:?} or {:?}",
@@ -67,7 +69,7 @@ impl BuildDriver {
       build_state.try_to_delaying(bundling_future.clone())?;
       drop(build_state);
 
-      Ok(Some(bundling_future))
+      Ok(Some((bundling_future, false)))
     } else {
       tracing::trace!(
         "Nothing to do due to {:?} or {:?}",
@@ -79,7 +81,7 @@ impl BuildDriver {
   }
 
   pub async fn ensure_latest_build(&self) -> BuildResult<()> {
-    if let Some(future) = self.schedule_build_if_stale().await? {
+    if let Some((future, _)) = self.schedule_build_if_stale().await? {
       future.await;
     }
     Ok(())

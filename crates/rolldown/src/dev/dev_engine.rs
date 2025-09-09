@@ -49,25 +49,42 @@ impl DevEngine {
 
     let watcher_event_service =
       WatcherEventService::new(Arc::clone(&build_driver), Arc::clone(&ctx));
-    let watcher_config =
-      WatcherConfig { poll_interval: ctx.options.poll_interval, ..Default::default() };
+    let watcher_config = WatcherConfig {
+      poll_interval: ctx.options.poll_interval,
+      debounce_delay: ctx.options.debounce_duration,
+    };
 
     let watcher = {
       #[cfg(not(target_family = "wasm"))]
       {
-        use rolldown_watcher::{DebouncedPollWatcher, DebouncedRecommendedWatcher};
-        if ctx.options.use_polling {
-          DebouncedPollWatcher::with_config(
+        use rolldown_watcher::{
+          DebouncedPollWatcher, DebouncedRecommendedWatcher, PollWatcher, RecommendedWatcher,
+        };
+
+        match (ctx.options.use_polling, ctx.options.use_debounce) {
+          // Polling + no debounce = PollWatcher
+          (true, false) => {
+            PollWatcher::with_config(watcher_event_service.create_event_handler(), watcher_config)?
+              .into_dyn_watcher()
+          }
+          // Polling + debounce = DebouncedPollWatcher
+          (true, true) => DebouncedPollWatcher::with_config(
             watcher_event_service.create_event_handler(),
             watcher_config,
           )?
-          .into_dyn_watcher()
-        } else {
-          DebouncedRecommendedWatcher::with_config(
+          .into_dyn_watcher(),
+          // No polling + no debounce = RecommendedWatcher
+          (false, false) => RecommendedWatcher::with_config(
             watcher_event_service.create_event_handler(),
             watcher_config,
           )?
-          .into_dyn_watcher()
+          .into_dyn_watcher(),
+          // No polling + debounce = DebouncedRecommendedWatcher
+          (false, true) => DebouncedRecommendedWatcher::with_config(
+            watcher_event_service.create_event_handler(),
+            watcher_config,
+          )?
+          .into_dyn_watcher(),
         }
       }
       #[cfg(target_family = "wasm")]

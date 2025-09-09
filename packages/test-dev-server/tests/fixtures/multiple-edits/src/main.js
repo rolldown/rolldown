@@ -5,8 +5,10 @@ export { value as fooValue } from './foo';
 
 if (import.meta.hot) {
   import.meta.hot.accept((newExports) => {
-    assert.equal(newExports.fooValue, 'edited-foo');
-    assert.equal(newExports.barValue, 'edited-bar');
+    assert.deepEqual(newExports, {
+      fooValue: 'edited-foo',
+      barValue: 'edited-bar',
+    });
     nodeFs.writeFileSync('./ok-0', '');
   });
 }

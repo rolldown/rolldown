@@ -3735,6 +3735,10 @@ expression: output
 
 - main-!~{000}~.js => main-B-6QqlpX.js
 
+# tests/rolldown/errors/missing_export_reexport_type
+
+- main-!~{000}~.js => main-Cwb0sONg.js
+
 # tests/rolldown/errors/missing_export_ts
 
 - main-!~{000}~.js => main-BJyCdokI.js

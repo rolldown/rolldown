@@ -13,8 +13,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │        ───┬──  
    │           ╰──── Missing export
    │ 
-   │ Note: This diagnostic might be a false positive when importing from TypeScript files. TypeScript type-only exports and imports are stripped during transformation, which may cause actual
-   │         exports to appear missing.
+   │ Note: If you meant to import a type rather than a value, make sure to add the `type` modifier (e.g. `import { type Foo } from './foo'`).
 ───╯
 
 ```

@@ -1,0 +1,40 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Warning: "Bar" is not exported by "bar.ts".
+   ╭─[ main.ts:3:10 ]
+   │
+ 3 │ import { Bar } from './bar.ts'
+   │          ─┬─  
+   │           ╰─── Missing export
+   │ 
+   │ Note: If you meant to import a type rather than a value, make sure to add the `type` modifier (e.g. `import { type Foo } from './bar.ts'`).
+───╯
+
+```
+## MISSING_EXPORT
+
+```text
+[MISSING_EXPORT] Warning: "Foo" is not exported by "foo.ts".
+   ╭─[ main.ts:1:10 ]
+   │
+ 1 │ export { Foo } from './foo.ts'
+   │          ─┬─  
+   │           ╰─── Missing export
+   │ 
+   │ Note: If you meant to import a type rather than a value, make sure to add the `type` modifier (e.g. `import { type Foo } from './foo.ts'`).
+───╯
+
+```
+# Assets
+
+## main.js
+
+```js
+export { Bar, Foo };
+```

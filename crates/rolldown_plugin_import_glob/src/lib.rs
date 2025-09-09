@@ -33,6 +33,8 @@ impl Plugin for ImportGlobPlugin {
     ctx: &PluginContext,
     mut args: HookTransformAstArgs<'_>,
   ) -> HookTransformAstReturn {
+    let mut visitor_errors = Vec::new();
+
     args.ast.program.with_mut(|fields| {
       let id = args.id.to_slash_lossy();
       let root = self.config.root.as_ref().map(PathBuf::from);
@@ -48,13 +50,25 @@ impl Plugin for ImportGlobPlugin {
         restore_query_extension: self.config.restore_query_extension,
         current: 0,
         import_decls: ast_builder.vec(),
+        errors: vec![],
       };
-
       visitor.visit_program(fields.program);
+      visitor_errors.extend(visitor.errors);
       if !visitor.import_decls.is_empty() {
         fields.program.body.extend(visitor.import_decls);
       }
     });
+
+    if !visitor_errors.is_empty() {
+      let errors = visitor_errors
+        .iter()
+        .map(|error| error.to_diagnostic().with_kind(self.name().into_owned()).to_color_string())
+        .collect::<Vec<String>>()
+        .join("\n\n");
+
+      return Err(anyhow::anyhow!("\n{errors}"));
+    }
+
     Ok(args.ast)
   }
 

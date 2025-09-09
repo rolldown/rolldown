@@ -3,6 +3,7 @@ use std::fmt::Write as _;
 use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 use std::sync::Arc;
 
+use arcstr::ArcStr;
 use oxc::ast::NONE;
 use oxc::ast::ast::{
   Argument, ArrayExpressionElement, Expression, FormalParameterKind, ImportOrExportKind,
@@ -11,6 +12,7 @@ use oxc::ast::ast::{
 use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::span::{SPAN, Span};
 use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_error::{BuildDiagnostic, DiagnosableArcstr, EventKind};
 use rolldown_plugin::PluginContext;
 use rolldown_plugin_utils::constants::{ViteImportGlob, ViteImportGlobValue};
 use sugar_path::SugarPath;
@@ -23,6 +25,7 @@ pub struct GlobImportVisit<'ast, 'a> {
   pub restore_query_extension: bool,
   pub current: usize,
   pub import_decls: oxc::allocator::Vec<'ast, Statement<'ast>>,
+  pub errors: Vec<BuildDiagnostic>,
 }
 
 impl<'ast> VisitMut<'ast> for GlobImportVisit<'ast, '_> {
@@ -361,7 +364,7 @@ impl GlobImportVisit<'_, '_> {
     dir: &Path,
     root: &Path,
     base: Option<&str>,
-  ) -> PathWithGlob<'a> {
+  ) -> Result<PathWithGlob<'a>, BuildDiagnostic> {
     let dir = if let Some(base) = base {
       if let Some(base) = base.strip_prefix('/') { root.join(base) } else { dir.join(base) }
     } else {
@@ -391,15 +394,23 @@ impl GlobImportVisit<'_, '_> {
         };
         let path = Path::new(id.as_ref());
         if path.is_absolute() && path.starts_with(root) {
-          return PathWithGlob::new(id.to_string(), glob);
+          return Ok(PathWithGlob::new(id.to_string(), glob));
         }
       }
-      panic!(
-        "Invalid glob pattern: {glob} (resolved: '{}'), it must start with '/' or './'.",
-        self.id
-      );
+
+      return Err(BuildDiagnostic::resolve_error(
+        ArcStr::from(self.id),
+        ArcStr::from(self.id),
+        DiagnosableArcstr::String(ArcStr::from(glob)),
+        format!(
+          "Invalid glob pattern: {glob} (resolved: '{}'), it must start with '/' or './'.",
+          self.id
+        ),
+        EventKind::UnresolvedImport,
+        None,
+      ));
     };
-    PathWithGlob::new(absolute_glob.normalize().to_string_lossy().into_owned(), glob)
+    Ok(PathWithGlob::new(absolute_glob.normalize().to_string_lossy().into_owned(), glob))
   }
 
   fn relative_path(&self, path: &Path, to: Option<&Path>) -> String {
@@ -444,7 +455,7 @@ impl GlobImportVisit<'_, '_> {
 
   #[expect(clippy::too_many_lines)]
   fn eval_glob_expr(
-    &self,
+    &mut self,
     arg: &Argument,
     files: &mut Vec<ImportGlobFileData>,
     options: &ImportGlobOptions,
@@ -466,14 +477,15 @@ impl GlobImportVisit<'_, '_> {
     match arg {
       Argument::StringLiteral(str) => {
         if let Some(glob) = str.value.strip_prefix('!') {
-          negated_globs.push(self.to_absolute_glob(glob, dir, root, options.base.as_deref()));
+          match self.to_absolute_glob(glob, dir, root, options.base.as_deref()) {
+            Ok(path) => negated_globs.push(path),
+            Err(e) => self.errors.push(e),
+          }
         } else {
-          positive_globs.push(self.to_absolute_glob(
-            &str.value,
-            dir,
-            root,
-            options.base.as_deref(),
-          ));
+          match self.to_absolute_glob(&str.value, dir, root, options.base.as_deref()) {
+            Ok(path) => positive_globs.push(path),
+            Err(e) => self.errors.push(e),
+          }
           if !str.value.starts_with('.') {
             is_relative = false;
           }
@@ -483,14 +495,15 @@ impl GlobImportVisit<'_, '_> {
         for expr in &array_expr.elements {
           if let ArrayExpressionElement::StringLiteral(str) = expr {
             if let Some(glob) = str.value.strip_prefix('!') {
-              negated_globs.push(self.to_absolute_glob(glob, dir, root, options.base.as_deref()));
+              match self.to_absolute_glob(glob, dir, root, options.base.as_deref()) {
+                Ok(path) => negated_globs.push(path),
+                Err(e) => self.errors.push(e),
+              }
             } else {
-              positive_globs.push(self.to_absolute_glob(
-                &str.value,
-                dir,
-                root,
-                options.base.as_deref(),
-              ));
+              match self.to_absolute_glob(&str.value, dir, root, options.base.as_deref()) {
+                Ok(path) => positive_globs.push(path),
+                Err(e) => self.errors.push(e),
+              }
               if !str.value.starts_with('.') {
                 is_relative = false;
               }

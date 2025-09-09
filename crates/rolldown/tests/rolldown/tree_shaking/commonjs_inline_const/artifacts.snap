@@ -1,0 +1,87 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+//#region src/basic_ns/index.js
+var require_basic_ns = /* @__PURE__ */ __commonJS({ "src/basic_ns/index.js": ((exports) => {
+	exports.a = "basic-a";
+}) });
+
+//#endregion
+//#region src/basic_ref_with_named_default/index.js
+var require_basic_ref_with_named_default = /* @__PURE__ */ __commonJS({ "src/basic_ref_with_named_default/index.js": ((exports) => {
+	exports.a = "basic-ref-with-named-default-a";
+}) });
+
+//#endregion
+//#region src/export_star_from_cjs/cjs.js
+var require_cjs$2 = /* @__PURE__ */ __commonJS({ "src/export_star_from_cjs/cjs.js": ((exports) => {
+	exports.a = "export-star-from-cjs-a";
+}) });
+
+//#endregion
+//#region src/export_star_from_cjs/index.js
+var import_basic_ref_with_named_default = /* @__PURE__ */ __toESM(require_basic_ref_with_named_default());
+var import_basic_ns = /* @__PURE__ */ __toESM(require_basic_ns());
+var export_star_from_cjs_exports = {};
+__reExport(export_star_from_cjs_exports, /* @__PURE__ */ __toESM(require_cjs$2()));
+
+//#endregion
+//#region src/named_import_export_star_from_cjs/cjs.js
+var require_cjs$1 = /* @__PURE__ */ __commonJS({ "src/named_import_export_star_from_cjs/cjs.js": ((exports) => {
+	exports.a = "named-import-export-star-from-cjs-a";
+}) });
+
+//#endregion
+//#region src/named_import_export_star_from_cjs/index.js
+var named_import_export_star_from_cjs_exports = {};
+__reExport(named_import_export_star_from_cjs_exports, /* @__PURE__ */ __toESM(require_cjs$1()));
+
+//#endregion
+//#region src/nested_export_star_from_cjs/cjs.js
+var require_cjs = /* @__PURE__ */ __commonJS({ "src/nested_export_star_from_cjs/cjs.js": ((exports) => {
+	exports.a = "nested-export-star-from-cjs-a";
+}) });
+
+//#endregion
+//#region src/nested_export_star_from_cjs/reexport.js
+var reexport_exports = {};
+__reExport(reexport_exports, /* @__PURE__ */ __toESM(require_cjs()));
+
+//#endregion
+//#region src/indirect_common_js/lib.js
+var require_lib = /* @__PURE__ */ __commonJS({ "src/indirect_common_js/lib.js": ((exports) => {
+	exports.a = "react-like-a";
+}) });
+
+//#endregion
+//#region src/indirect_common_js/index.js
+var require_indirect_common_js = /* @__PURE__ */ __commonJS({ "src/indirect_common_js/index.js": ((exports, module) => {
+	module.exports = require_lib();
+}) });
+
+//#endregion
+//#region main.js
+var import_indirect_common_js = /* @__PURE__ */ __toESM(require_indirect_common_js());
+assert.equal("basic-a", "basic-a");
+assert.equal("basic-a".startsWith("b"), true);
+assert.equal("basic-ref-with-named-default-a", "basic-ref-with-named-default-a");
+assert.equal("basic-ref-with-named-default-a".startsWith("b"), true);
+assert.equal("export-star-from-cjs-a", "export-star-from-cjs-a");
+assert.equal("export-star-from-cjs-a", "export-star-from-cjs-a");
+assert.equal(named_import_export_star_from_cjs_exports.a, "named-import-export-star-from-cjs-a");
+assert.equal(named_import_export_star_from_cjs_exports.a.startsWith("n"), true);
+assert.equal("nested-export-star-from-cjs-a", "nested-export-star-from-cjs-a");
+assert.equal("nested-export-star-from-cjs-a".startsWith("n"), true);
+assert.equal("react-like-a", "react-like-a");
+assert.equal("react-like-a".startsWith("r"), true);
+
+//#endregion
+```

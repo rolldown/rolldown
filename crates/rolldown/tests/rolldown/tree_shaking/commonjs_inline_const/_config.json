@@ -1,0 +1,10 @@
+{
+  "config": {
+    "treeshake": {
+      "commonjs": true
+    },
+    "optimization": {
+      "inlineConst": true
+    }
+  }
+}

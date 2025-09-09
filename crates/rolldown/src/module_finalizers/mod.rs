@@ -639,20 +639,29 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         ..
       }) => object_ref
         .map(|object_ref| {
-          if let Some(export_meta) =
-            target_commonjs_exported_symbol_meta.and_then(|target_commonjs_exported_symbol_meta| {
+          let mut is_inlined_commonjs_export = false;
+          let object_ref_expr = if let Some(export_meta) = target_commonjs_exported_symbol_meta
+            .and_then(|target_commonjs_exported_symbol_meta| {
               self.ctx.constant_value_map.get(&target_commonjs_exported_symbol_meta.0)
-            })
-          {
-            return export_meta.value.to_expression(AstBuilder::new(self.alloc));
-          }
-          let object_ref_expr = self.finalized_expr_for_symbol_ref(
-            object_ref,
-            false,
-            target_commonjs_exported_symbol_meta
-              .is_some_and(|(_symbol, is_exports_default)| !is_exports_default),
-          );
-          self.snippet.member_expr_or_ident_ref(object_ref_expr, props, span)
+            }) {
+            is_inlined_commonjs_export = true;
+            export_meta.value.to_expression(AstBuilder::new(self.alloc))
+          } else {
+            self.finalized_expr_for_symbol_ref(
+              object_ref,
+              false,
+              target_commonjs_exported_symbol_meta
+                .is_some_and(|(_symbol, is_exports_default)| !is_exports_default),
+            )
+          };
+          self.snippet.member_expr_or_ident_ref(
+            object_ref_expr,
+            // For commonjs member_expr resolving, the resolved ref is always namespace_alias,
+            // so the props actually include the exported name, when inline member_expr access of commonjs exported
+            // symbol, we should skip the first prop
+            &props[usize::from(is_inlined_commonjs_export)..],
+            span,
+          )
         })
         .or_else(|| Some(self.snippet.member_expr_with_void_zero_object(props, span))),
       _ => {

@@ -9,7 +9,7 @@ use std::{
 use arcstr::ArcStr;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
-  HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, Module, ModuleIdx, ModuleTable,
+  HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, Module, ModuleIdx, ModuleTable, ScanMode,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_ecmascript_utils::AstSnippet;
@@ -236,17 +236,18 @@ impl HmrManager {
         })
         .collect::<Vec<_>>();
 
+      let fetch_mode = ScanMode::Partial(modules_to_be_refetched);
+
       let mut module_loader = ModuleLoader::new(
         self.fs.clone(),
         Arc::clone(&self.options),
         Arc::clone(&self.resolver),
         Arc::clone(&self.plugin_driver),
         &mut self.cache,
-        false,
+        fetch_mode.is_full(),
       )?;
 
-      let module_loader_output =
-        module_loader.fetch_modules(vec![], &modules_to_be_refetched).await?;
+      let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
 
       // We manually impl `Drop` for `ModuleLoader` to avoid missing assign `importers` to
       // `self.cache`, but rustc is not smart enough to infer actually we don't touch it in `drop`

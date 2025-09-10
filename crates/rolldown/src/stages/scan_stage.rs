@@ -21,6 +21,40 @@ use crate::{
   utils::load_entry_module::load_entry_module,
 };
 
+/// Resolve `InputOptions.input`
+#[tracing::instrument(target = "devtool", level = "debug", skip_all)]
+pub async fn resolve_user_defined_entries(
+  options: &SharedOptions,
+  resolver: &SharedResolver,
+  plugin_driver: &SharedPluginDriver,
+) -> BuildResult<Vec<(Option<ArcStr>, ResolvedId)>> {
+  let resolved_ids = join_all(options.input.iter().map(|input_item| async move {
+    let resolved = load_entry_module(resolver, plugin_driver, &input_item.import, None).await;
+
+    resolved.map(|info| (input_item.name.as_ref().map(Into::into), info))
+  }))
+  .await;
+
+  let mut ret = Vec::with_capacity(options.input.len());
+
+  let mut errors = vec![];
+
+  for resolve_id in resolved_ids {
+    match resolve_id {
+      Ok(item) => {
+        ret.push(item);
+      }
+      Err(e) => errors.push(e),
+    }
+  }
+
+  if !errors.is_empty() {
+    Err(errors)?;
+  }
+
+  Ok(ret)
+}
+
 pub struct ScanStage {
   options: SharedOptions,
   plugin_driver: SharedPluginDriver,
@@ -116,16 +150,23 @@ impl ScanStage {
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
   pub async fn scan(
     &self,
-    mode: ScanMode,
+    mode: ScanMode<ArcStr>,
     cache: &mut ScanStageCache,
   ) -> BuildResult<ScanStageOutput> {
+    let fetch_mode = match mode {
+      ScanMode::Full => ScanMode::Full,
+      ScanMode::Partial(changed_ids) => {
+        ScanMode::Partial(self.resolve_absolute_path(&changed_ids).await?)
+      }
+    };
+
     let mut module_loader = ModuleLoader::new(
       self.fs.clone(),
       Arc::clone(&self.options),
       Arc::clone(&self.resolver),
       Arc::clone(&self.plugin_driver),
       cache,
-      mode.is_full(),
+      fetch_mode.is_full(),
     )?;
 
     // For `pluginContext.emitFile` with `type: chunk`, support it at buildStart hook.
@@ -137,21 +178,11 @@ impl ScanStage {
 
     self.plugin_driver.build_start(&self.options).await?;
 
-    let user_entries = match mode {
-      ScanMode::Full => self.resolve_user_defined_entries().await?,
-      ScanMode::Partial(_) => vec![],
-    };
-
-    let changed_resolved_ids = match mode {
-      ScanMode::Full => vec![],
-      ScanMode::Partial(changed_ids) => self.resolve_absolute_path(&changed_ids).await?,
-    };
-
     // For `await pluginContext.load`, if support it at buildStart hook, it could be caused stuck.
     self.plugin_driver.set_context_load_modules_tx(Some(module_loader.tx.clone())).await;
 
-    let module_loader_output =
-      module_loader.fetch_modules(user_entries, &changed_resolved_ids).await?;
+    let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
+
     let ModuleLoaderOutput {
       module_table,
       entry_points,
@@ -182,39 +213,6 @@ impl ScanStage {
       overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids,
     })
-  }
-
-  /// Resolve `InputOptions.input`
-  #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
-  async fn resolve_user_defined_entries(&self) -> BuildResult<Vec<(Option<ArcStr>, ResolvedId)>> {
-    let resolver = &self.resolver;
-    let plugin_driver = &self.plugin_driver;
-
-    let resolved_ids = join_all(self.options.input.iter().map(|input_item| async move {
-      let resolved = load_entry_module(resolver, plugin_driver, &input_item.import, None).await;
-
-      resolved.map(|info| (input_item.name.as_ref().map(Into::into), info))
-    }))
-    .await;
-
-    let mut ret = Vec::with_capacity(self.options.input.len());
-
-    let mut errors = vec![];
-
-    for resolve_id in resolved_ids {
-      match resolve_id {
-        Ok(item) => {
-          ret.push(item);
-        }
-        Err(e) => errors.push(e),
-      }
-    }
-
-    if !errors.is_empty() {
-      Err(errors)?;
-    }
-
-    Ok(ret)
   }
 
   /// Make sure the passed `ids` is all absolute path

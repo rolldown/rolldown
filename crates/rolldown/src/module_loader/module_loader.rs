@@ -12,7 +12,7 @@ use rolldown_common::{
   EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult,
   HybridIndexVec, ImportKind, ImportRecordMeta, ImporterRecord, Module, ModuleId, ModuleIdx,
   ModuleLoaderMsg, ModuleType, NormalModuleTaskResult, PreserveEntrySignatures, RUNTIME_MODULE_KEY,
-  ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, SymbolRef, SymbolRefDb,
+  ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, ScanMode, SymbolRef, SymbolRefDb,
   SymbolRefDbForModule,
 };
 use rolldown_ecmascript::EcmaAst;
@@ -27,6 +27,7 @@ use tracing::Instrument;
 
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 use crate::module_loader::task_context::TaskContext;
+use crate::stages::scan_stage::resolve_user_defined_entries;
 use crate::types::scan_stage_cache::ScanStageCache;
 use crate::utils::load_entry_module::load_entry_module;
 use crate::{SharedOptions, SharedResolver};
@@ -144,10 +145,16 @@ impl<'a> ModuleLoader<'a> {
     cache: &'a mut ScanStageCache,
     is_full_scan: bool,
   ) -> BuildResult<Self> {
+    if is_full_scan {
+      // TODO: drop the cache in another thread
+      // Since we may also run a full fetch in hmr mode when multiple files changed at the same time, we need to clear the cache
+      // if we are in full scan mode
+      std::mem::take(cache);
+    }
+
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
     let (tx, rx) = tokio::sync::mpsc::channel(1024);
-
     let shared_context = Arc::new(TaskContext {
       fs,
       resolver,
@@ -245,15 +252,34 @@ impl<'a> ModuleLoader<'a> {
     idx
   }
 
+  /// For `fetch_modules` we may want support three scenarios:
+  /// - Full scan mode in none watch mode, scan all modules from user defined entries.
+  /// - Partial scan mode, scan the changed modules, it maybe none initial
+  /// build in incremental watch mode
+  /// - Full scan mode in watch mode, scan all modules from user defined entries, it maybe first
+  /// time build in watch mode or edgecase in HMR(User update `node_modules` too much modules are
+  /// updated at same time, patch them one by one is not efficient, so we do full scan directly)
+  ///
   #[expect(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn fetch_modules(
     &mut self,
-    user_defined_entries: Vec<(Option<ArcStr>, ResolvedId)>,
-    changed_resolved_ids: &[ResolvedId],
+    fetch_mode: ScanMode<ResolvedId>,
   ) -> BuildResult<ModuleLoaderOutput> {
     let mut errors = vec![];
     let mut all_warnings: Vec<BuildDiagnostic> = vec![];
+
+    let user_defined_entries = match fetch_mode {
+      ScanMode::Full => {
+        resolve_user_defined_entries(
+          &self.options,
+          &self.shared_context.resolver,
+          &self.shared_context.plugin_driver,
+        )
+        .await?
+      }
+      ScanMode::Partial(_) => vec![],
+    };
 
     let entries_count = user_defined_entries.len() + /* runtime */ 1;
     self.intermediate_normal_modules.modules.reserve(entries_count);
@@ -281,8 +307,10 @@ impl<'a> ModuleLoader<'a> {
       });
     }
 
-    // Incremental partial rebuild files
-    for resolved_id in changed_resolved_ids {
+    // If it is in partial scan mode, we need to invalidate the changed modules
+    // and re-fetch them, do nothing in full scan mode
+    //
+    for resolved_id in fetch_mode.iter() {
       let resolved_id = resolved_id.clone();
       if let Entry::Occupied(mut occ) = self.cache.module_id_to_idx.entry(resolved_id.id.clone()) {
         let idx = occ.get().idx();
@@ -678,7 +706,7 @@ impl<'a> ModuleLoader<'a> {
     // if it is in incremental mode, we skip the runtime module, since it is always there
     // so use a dummy runtime_brief as a placeholder
     let runtime = if self.is_full_scan {
-      tracing::debug!("changed_resolved_ids: {changed_resolved_ids:#?}");
+      tracing::debug!("changed_resolved_ids: {fetch_mode:#?}");
       runtime_brief.expect("Failed to find runtime module. This should not happen")
     } else {
       RuntimeModuleBrief::dummy()

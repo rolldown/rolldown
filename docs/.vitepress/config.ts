@@ -15,6 +15,10 @@ const sharedSidebar = [
       { text: 'Getting Started', link: '/guide/getting-started.md' },
       { text: 'Notable Features', link: '/guide/features.md' },
       {
+        text: 'Deployment',
+        link: '/guide/deployment.md',
+      },
+      {
         text: 'Troubleshooting',
         link: '/guide/troubleshooting.md',
       },

@@ -18,7 +18,8 @@ async fn main() {
     shim_missing_exports: Some(true), // Need this due rome is not written with `isolatedModules: true`
     tsconfig: Some(root.join("tmp/bench/rome/src/tsconfig.json").to_str().unwrap().to_string()),
     ..Default::default()
-  });
+  })
+  .expect("Failed to create bundler");
 
   let _result = bundler.write().await.unwrap();
 }

@@ -45,11 +45,14 @@ pub struct Bundler {
 }
 
 impl Bundler {
-  pub fn new(options: BundlerOptions) -> Self {
+  pub fn new(options: BundlerOptions) -> BuildResult<Self> {
     BundlerBuilder::default().with_options(options).build()
   }
 
-  pub fn with_plugins(options: BundlerOptions, plugins: Vec<SharedPluginable>) -> Self {
+  pub fn with_plugins(
+    options: BundlerOptions,
+    plugins: Vec<SharedPluginable>,
+  ) -> BuildResult<Self> {
     BundlerBuilder::default().with_options(options).with_plugins(plugins).build()
   }
 }
@@ -436,10 +439,10 @@ impl Drop for CacheGuard<'_> {
 
 fn _test_bundler() {
   fn assert_send(_foo: impl Send) {}
-  let mut bundler = Bundler::new(BundlerOptions::default());
+  let mut bundler = Bundler::new(BundlerOptions::default()).expect("Failed to create bundler");
   let write_fut = bundler.write();
   assert_send(write_fut);
-  let mut bundler = Bundler::new(BundlerOptions::default());
+  let mut bundler = Bundler::new(BundlerOptions::default()).expect("Failed to create bundler");
   let generate_fut = bundler.generate();
   assert_send(generate_fut);
 }

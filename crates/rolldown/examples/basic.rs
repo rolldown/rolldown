@@ -15,7 +15,8 @@ async fn main() {
     cwd: Some(workspace::crate_dir("rolldown").join("./examples/basic").normalize()),
     sourcemap: Some(SourceMapType::File),
     ..Default::default()
-  });
+  })
+  .expect("Failed to create bundler");
 
   let _result = bundler.write().await.unwrap();
 }

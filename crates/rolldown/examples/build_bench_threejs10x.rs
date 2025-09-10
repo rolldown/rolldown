@@ -16,7 +16,8 @@ async fn main() {
     cwd: Some(project_root.join("examples")),
     sourcemap: Some(SourceMapType::File),
     ..Default::default()
-  });
+  })
+  .expect("Failed to create bundler");
 
   let _result = bundler.write().await.unwrap();
 }

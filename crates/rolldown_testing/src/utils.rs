@@ -9,7 +9,7 @@ pub fn assert_bundled(options: BundlerOptions) {
     .build()
     .expect("Failed building the Runtime")
     .block_on(async move {
-      let mut bundler = rolldown::Bundler::new(options);
+      let mut bundler = rolldown::Bundler::new(options).expect("Failed to create bundler");
       bundler.generate().await
     });
   assert!(result.is_ok(), "Failed to bundle.");

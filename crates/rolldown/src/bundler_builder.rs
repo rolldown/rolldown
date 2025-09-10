@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rolldown_common::{FileEmitter, NormalizedBundlerOptions};
-use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
+use rolldown_error::{BuildDiagnostic, BuildResult, EventKindSwitcher};
 use rolldown_plugin::{__inner::SharedPluginable, PluginDriver};
 use rustc_hash::FxHashMap;
 
@@ -24,14 +24,14 @@ pub struct BundlerBuilder {
 }
 
 impl BundlerBuilder {
-  pub fn build(mut self) -> Bundler {
+  pub fn build(mut self) -> BuildResult<Bundler> {
     let session = self.session.unwrap_or_else(rolldown_debug::Session::dummy);
 
     let maybe_guard =
       if self.disable_tracing_setup { None } else { rolldown_tracing::try_init_tracing() };
 
     let PrepareBuildContext { fs, resolver, options, mut warnings } =
-      prepare_build_context(self.options);
+      prepare_build_context(self.options)?;
 
     Self::check_prefer_builtin_feature(self.plugins.as_slice(), &options, &mut warnings);
 
@@ -39,7 +39,7 @@ impl BundlerBuilder {
 
     let file_emitter = Arc::new(FileEmitter::new(Arc::clone(&options)));
 
-    Bundler {
+    Ok(Bundler {
       closed: false,
       plugin_driver: PluginDriver::new_shared(self.plugins, &resolver, &file_emitter, &options),
       file_emitter,
@@ -52,7 +52,7 @@ impl BundlerBuilder {
       hmr_manager: None,
       session,
       build_count: self.build_count,
-    }
+    })
   }
 
   fn check_prefer_builtin_feature(

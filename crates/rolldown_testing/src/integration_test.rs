@@ -58,7 +58,7 @@ impl IntegrationTest {
   pub async fn bundle(&self, mut options: BundlerOptions) -> BuildResult<BundleOutput> {
     self.apply_test_defaults(&mut options);
 
-    let mut bundler = Bundler::new(options);
+    let mut bundler = Bundler::new(options)?;
 
     if self.test_meta.write_to_disk {
       if bundler.options().out_dir.as_path().is_dir() {
@@ -123,7 +123,8 @@ impl IntegrationTest {
         named_options.options.dir.as_ref().map_or("dist", |v| v)
       );
 
-      let mut bundler = Bundler::with_plugins(named_options.options, plugins.clone());
+      let mut bundler = Bundler::with_plugins(named_options.options, plugins.clone())
+        .expect("Failed to create bundler");
 
       let debug_title = named_options.description.clone().unwrap_or_else(String::new);
 

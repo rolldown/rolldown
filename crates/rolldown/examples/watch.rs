@@ -14,7 +14,8 @@ async fn main() {
 
     experimental: Some(ExperimentalOptions { incremental_build: Some(true), ..Default::default() }),
     ..Default::default()
-  });
+  })
+  .expect("Failed to create bundler");
   let watcher = Watcher::new(vec![Arc::new(Mutex::new(bundler))], None).unwrap();
   watcher.start().await;
 }

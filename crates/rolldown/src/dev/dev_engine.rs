@@ -35,7 +35,7 @@ pub struct DevEngine {
 
 impl DevEngine {
   pub fn new(bundler_builder: BundlerBuilder, options: DevOptions) -> BuildResult<Self> {
-    Self::with_bundler(Arc::new(Mutex::new(bundler_builder.build())), options)
+    Self::with_bundler(Arc::new(Mutex::new(bundler_builder.build()?)), options)
   }
 
   pub fn with_bundler(bundler: Arc<Mutex<Bundler>>, options: DevOptions) -> BuildResult<Self> {

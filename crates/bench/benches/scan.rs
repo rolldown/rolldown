@@ -22,7 +22,8 @@ fn criterion_benchmark(c: &mut Criterion) {
     .for_each(|item| {
       group.bench_function(format!("scan@{}", item.name), move |b| {
         b.to_async(tokio::runtime::Runtime::new().unwrap()).iter(|| async {
-          let mut rolldown_bundler = rolldown::Bundler::new(item.options.clone());
+          let mut rolldown_bundler =
+            rolldown::Bundler::new(item.options.clone()).expect("Failed to create bundler");
           let _output = rolldown_bundler.scan(vec![]).await.expect("should not failed in scan");
         });
       });

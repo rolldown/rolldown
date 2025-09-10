@@ -85,8 +85,19 @@ impl BindingBundlerImpl {
       .with_session(session)
       .with_disable_tracing_setup(true);
 
+    // TODO: improve the following error message
+    let bundler = bundler_builder.build().map_err(|err| {
+      napi::Error::new(
+        napi::Status::GenericFailure,
+        format!(
+          "Failed to create bundler:\n{}",
+          err.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n")
+        ),
+      )
+    })?;
+
     Ok(Self {
-      inner: Arc::new(Mutex::new(bundler_builder.build())),
+      inner: Arc::new(Mutex::new(bundler)),
       memory_adjustment: Arc::new(AtomicI64::new(0)),
     })
   }

@@ -236,7 +236,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
     if let Some(meta) = self.ctx.constant_value_map.get(&canonical_ref) {
       if !self.ctx.options.optimization.is_inline_const_smart_mode()
-        || self.state.contains(TraverseState::SmartInlineConst)
+        || (self.state.contains(TraverseState::SmartInlineConst) || meta.safe_to_inline)
       {
         return meta.value.to_expression(AstBuilder::new(self.alloc));
       }

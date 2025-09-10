@@ -1,16 +1,12 @@
 {
   "config": {
-    "minify": "dceOnly",
-    "define": {
-      "process.env.NODE_ENV": "\"production\""
-    }
-  },
-  "configVariants": [
-    {
-      "_configName": "smart-inline-const",
+    "optimization": {
       "inlineConst": {
         "mode": "smart"
       }
+    },
+    "define": {
+      "process.env.NODE_ENV": "\"production\""
     }
-  ]
+  }
 }

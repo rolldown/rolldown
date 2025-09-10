@@ -634,7 +634,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     match self.ctx.linking_info.resolved_member_expr_refs.get(&span) {
       Some(MemberExprRefResolution {
         resolved: object_ref,
-        props,
+        prop_and_related_span_list: props,
         target_commonjs_exported_symbol: target_commonjs_exported_symbol_meta,
         ..
       }) => object_ref

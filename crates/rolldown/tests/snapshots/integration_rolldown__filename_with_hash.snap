@@ -5112,6 +5112,11 @@ expression: output
 - assets/main.js => assets/main.js
 - assets/main.js.map
 
+# tests/rolldown/sourcemap/issue_6099
+
+- main-!~{000}~.js => main-CJ_LmJ_O.js
+- main-CJ_LmJ_O.js.map
+
 # tests/rolldown/sourcemap/live_binding
 
 - main1-!~{000}~.js => main1-DuhB17iW.js

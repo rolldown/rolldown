@@ -413,13 +413,12 @@ impl LinkStage<'_> {
                 let mut is_namespace_ref =
                   canonical_ref_owner.namespace_object_ref == canonical_ref;
                 let mut cursor = 0;
-                while cursor < member_expr_ref.props.len() && is_namespace_ref {
-                  let name = &member_expr_ref.props[cursor];
+                while cursor < member_expr_ref.prop_and_span_list.len() && is_namespace_ref {
+                  let (name, _related_span) = &member_expr_ref.prop_and_span_list[cursor];
                   let meta = &self.metas[canonical_ref_owner.idx];
-                  let export_symbol =
-                    meta.resolved_exports.get(&CompactStr::new(name)).and_then(|resolved_export| {
-                      (!resolved_export.came_from_cjs).then_some(resolved_export)
-                    });
+                  let export_symbol = meta.resolved_exports.get(name).and_then(|resolved_export| {
+                    (!resolved_export.came_from_cjs).then_some(resolved_export)
+                  });
                   let Some(export_symbol) = export_symbol else {
                     // when we try to resolve `a.b.c`, and found that `b` is not exported by module
                     // that `a` pointed to, convert the `a.b.c` into `void 0` if module `a` do not
@@ -429,7 +428,8 @@ impl LinkStage<'_> {
                         member_expr_ref.span,
                         MemberExprRefResolution {
                           resolved: None,
-                          props: member_expr_ref.props[cursor..].to_vec(),
+                          prop_and_related_span_list: member_expr_ref.prop_and_span_list[cursor..]
+                            .to_vec(),
                           depended_refs: vec![],
                           target_commonjs_exported_symbol: None,
                         },
@@ -455,7 +455,8 @@ impl LinkStage<'_> {
                       member_expr_ref.span,
                       MemberExprRefResolution {
                         resolved: None,
-                        props: member_expr_ref.props[cursor..].to_vec(),
+                        prop_and_related_span_list: member_expr_ref.prop_and_span_list[cursor..]
+                          .to_vec(),
                         depended_refs: vec![],
                         target_commonjs_exported_symbol: None,
                       },
@@ -484,7 +485,7 @@ impl LinkStage<'_> {
                 // import record namespace, which may reference a export in commonjs module.
                 // TODO: we could record if a module could potential reference a cjs symbol
                 // so that we could skip this step.
-                if cursor < member_expr_ref.props.len() {
+                if cursor < member_expr_ref.prop_and_span_list.len() {
                   let maybe_namespace = depended_refs
                     .last()
                     .copied()
@@ -517,14 +518,16 @@ impl LinkStage<'_> {
                       .and_then(|idx| {
                         self.metas[*idx]
                           .resolved_exports
-                          .get(member_expr_ref.props[cursor].as_str())
+                          .get(&member_expr_ref.prop_and_span_list[cursor].0)
                           .and_then(|resolved_export| {
                             resolved_export.came_from_cjs.then_some(resolved_export)
                           })
                       })
                   {
-                    target_commonjs_exported_symbol =
-                      Some((m.symbol_ref, member_expr_ref.props[cursor] == "default"));
+                    target_commonjs_exported_symbol = Some((
+                      m.symbol_ref,
+                      member_expr_ref.prop_and_span_list[cursor].0 == "default",
+                    ));
                     depended_refs.push(m.symbol_ref);
                   }
                 }
@@ -545,7 +548,8 @@ impl LinkStage<'_> {
                     member_expr_ref.span,
                     MemberExprRefResolution {
                       resolved: Some(canonical_ref),
-                      props: member_expr_ref.props[cursor..].to_vec(),
+                      prop_and_related_span_list: member_expr_ref.prop_and_span_list[cursor..]
+                        .to_vec(),
                       depended_refs,
                       target_commonjs_exported_symbol,
                     },

@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region cjs.js
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports) => {
+	exports.version = "1.0.0";
+	Object.defineProperty(exports, "version", { get() {
+		throw new Error("see stacktrace");
+	} });
+}) });
+
+//#endregion
+//#region main.js
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
+const foo = import_cjs.version.startsWith("1");
+console.log(foo);
+
+//#endregion
+//# sourceMappingURL=main.js.map
+```
+
+# Sourcemap Visualizer
+
+```
+- ../cjs.js
+(0:0) "exports." --> (28:0) "\texports."
+(0:8) "version = " --> (28:9) "version = "
+(0:18) "\"1.0.0\"\n" --> (28:19) "\"1.0.0\";\n"
+(1:0) "Object." --> (29:0) "\tObject."
+(1:7) "defineProperty(" --> (29:8) "defineProperty("
+(1:22) "exports, " --> (29:23) "exports, "
+(1:31) "'version', " --> (29:32) "\"version\", "
+(1:42) "{\n" --> (29:43) "{ "
+(2:2) "get() " --> (29:45) "get() "
+(2:8) "{\n" --> (29:51) "{\n"
+(3:4) "throw " --> (30:0) "\t\tthrow "
+(3:10) "new " --> (30:8) "new "
+(3:14) "Error(" --> (30:12) "Error("
+(3:20) "'see stacktrace')" --> (30:18) "\"see stacktrace\")"
+(3:37) "\n" --> (30:35) ";\n"
+(5:1) ")" --> (31:4) ")"
+(5:2) "\n" --> (31:5) ";\n"
+- ../main.js
+(2:0) "const " --> (37:0) "const "
+(2:6) "foo = mod." --> (37:6) "foo = import_cjs."
+(2:16) "version." --> (37:23) "version."
+(2:24) "startsWith(" --> (37:31) "startsWith("
+(2:35) "\"1\")" --> (37:42) "\"1\")"
+(2:39) "\n" --> (37:46) ";\n"
+(3:0) "console." --> (38:0) "console."
+(3:8) "log(" --> (38:8) "log("
+(3:12) "foo)" --> (38:12) "foo)"
+(3:16) "\n" --> (38:16) ";\n"
+```

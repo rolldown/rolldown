@@ -418,7 +418,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               }
               None => match self.try_extract_parent_static_member_expr_chain(1) {
                 Some((_span, prop)) => {
-                  self.self_used_cjs_named_exports.insert(prop[0].as_str().into());
+                  self.self_used_cjs_named_exports.insert(prop[0].0.clone());
                 }
                 _ => {
                   self.result.ast_usage.insert(EcmaModuleAstUsage::UnknownExportsRead);

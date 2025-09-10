@@ -60,23 +60,23 @@ impl<'ast> AstSnippet<'ast> {
   pub fn member_expr_or_ident_ref(
     &self,
     object: ast::Expression<'ast>,
-    names: &[CompactStr],
+    name_and_span_list: &[(CompactStr, Span)],
     span: Span,
   ) -> ast::Expression<'ast> {
     let mut cur = object;
-    for name in names {
+    for (name, related_span) in name_and_span_list {
       cur = if identifier::is_identifier_name(name) {
         ast::Expression::from(self.builder.member_expression_static(
           SPAN,
           cur,
-          self.id_name(name, SPAN),
+          self.id_name(name, *related_span),
           false,
         ))
       } else {
         ast::Expression::from(self.builder.member_expression_computed(
           SPAN,
           cur,
-          self.builder.expression_string_literal(SPAN, self.builder.atom(name), None),
+          self.builder.expression_string_literal(*related_span, self.builder.atom(name), None),
           false,
         ))
       };
@@ -89,13 +89,13 @@ impl<'ast> AstSnippet<'ast> {
   #[inline]
   pub fn member_expr_with_void_zero_object(
     &self,
-    names: &[CompactStr],
+    name_and_span_list: &[(CompactStr, Span)],
     span: Span,
   ) -> ast::Expression<'ast> {
-    if names.is_empty() {
+    if name_and_span_list.is_empty() {
       self.void_zero()
     } else {
-      self.member_expr_or_ident_ref(self.void_zero(), &names[1..], span)
+      self.member_expr_or_ident_ref(self.void_zero(), &name_and_span_list[1..], span)
     }
   }
 

@@ -841,13 +841,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   pub fn add_member_expr_reference(
     &mut self,
     object_ref: SymbolRef,
-    props: Vec<CompactStr>,
+    prop_and_span_list: Vec<(CompactStr, Span)>,
     span: Span,
   ) {
     self
       .current_stmt_info
       .referenced_symbols
-      .push(MemberExprRef::new(object_ref, props, span).into());
+      .push(MemberExprRef::new(object_ref, prop_and_span_list, span).into());
   }
 
   fn is_root_symbol(&self, symbol_id: SymbolId) -> bool {
@@ -891,19 +891,19 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   pub fn try_extract_parent_static_member_expr_chain(
     &self,
     max_len: usize,
-  ) -> Option<(Span, Vec<CompactStr>)> {
+  ) -> Option<(Span, Vec<(CompactStr, Span)>)> {
     let mut span = SPAN;
     let mut props = vec![];
     for ancestor_ast in self.visit_path.iter().rev().take(max_len) {
       match ancestor_ast {
         AstKind::StaticMemberExpression(expr) => {
           span = ancestor_ast.span();
-          props.push(expr.property.name.as_str().into());
+          props.push((expr.property.name.as_str().into(), expr.property.span()));
         }
         AstKind::ComputedMemberExpression(expr) => {
           if let Some(name) = expr.static_property_name() {
             span = ancestor_ast.span();
-            props.push(name.into());
+            props.push((name.into(), expr.expression.span()));
           } else {
             break;
           }

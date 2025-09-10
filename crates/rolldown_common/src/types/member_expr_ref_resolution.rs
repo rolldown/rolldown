@@ -1,4 +1,4 @@
-use oxc::span::CompactStr;
+use oxc::span::{CompactStr, Span};
 
 use crate::SymbolRef;
 
@@ -11,8 +11,8 @@ pub struct MemberExprRefResolution {
   /// console.log(ns.nonExistExport)
   /// ```
   pub resolved: Option<SymbolRef>,
-  /// Used to store "foo", "bar" for `ns.foo.bar`.
-  pub props: Vec<CompactStr>,
+  /// Used to store "foo", "bar" for `ns.foo.bar` and their related span.
+  pub prop_and_related_span_list: Vec<(CompactStr, Span)>,
   /// If you want to include the `resolved` symbol, these are depended symbols that need to be included together to ensure correct runtime behaviors.
   pub depended_refs: Vec<SymbolRef>,
   /// The barrel exports from commonjs is different from es module.

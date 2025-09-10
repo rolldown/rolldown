@@ -68,14 +68,16 @@ export class DevEngine {
   /**
    * Returns true if a new build is scheduled.
    */
-  async scheduleBuildIfStale(): Promise<boolean> {
+  async scheduleBuildIfStale(): Promise<
+    'scheduled' | 'alreadyScheduled' | undefined
+  > {
     const scheduled = await this.#inner.scheduleBuildIfStale();
     if (scheduled) {
       // don't wait here as we want to return the result without waiting the actual build
       scheduled.wait().catch(() => {});
-      return true;
+      return scheduled.alreadyScheduled() ? 'alreadyScheduled' : 'scheduled';
     }
-    return false;
+    return undefined;
   }
 
   async invalidate(

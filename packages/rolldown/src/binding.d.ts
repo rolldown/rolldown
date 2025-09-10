@@ -1444,6 +1444,7 @@ export declare class ParallelJsPluginRegistry {
 
 export declare class ScheduledBuild {
   wait(): Promise<void>
+  alreadyScheduled(): boolean
 }
 
 export declare class TraceSubscriberGuard {

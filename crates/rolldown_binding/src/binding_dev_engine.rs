@@ -104,9 +104,7 @@ impl BindingDevEngine {
   #[napi]
   pub async fn schedule_build_if_stale(&self) -> Option<ScheduledBuild> {
     let result = self.inner.schedule_build_if_stale().await.expect("Should handle this error");
-    result.and_then(|(future, already_scheduled)| {
-      (!already_scheduled).then(|| ScheduledBuild { future })
-    })
+    result.map(|(future, already_scheduled)| ScheduledBuild { future, already_scheduled })
   }
 
   #[napi]
@@ -124,6 +122,7 @@ impl BindingDevEngine {
 #[napi]
 pub struct ScheduledBuild {
   future: BuildProcessFuture,
+  already_scheduled: bool,
 }
 
 #[napi]
@@ -132,5 +131,10 @@ impl ScheduledBuild {
   pub async fn wait(&self) -> napi::Result<()> {
     self.future.clone().await;
     Ok(())
+  }
+
+  #[napi]
+  pub fn already_scheduled(&self) -> bool {
+    self.already_scheduled
   }
 }

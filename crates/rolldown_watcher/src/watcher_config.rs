@@ -20,6 +20,13 @@ pub struct WatcherConfig {
   ///
   /// ⚠️Only take effect for poll-based watchers.
   pub compare_contents_for_polling: bool,
+
+  /// Tick rate for debounced watchers (in milliseconds).
+  /// Controls how frequently the debouncer checks for events to process.
+  /// When None, the debouncer will auto-select an appropriate tick rate (1/4 of the debounce duration).
+  ///
+  /// ⚠️Only take effect for debounced watchers.
+  pub debounce_tick_rate: Option<u64>,
 }
 
 impl Default for WatcherConfig {
@@ -29,6 +36,7 @@ impl Default for WatcherConfig {
       // Chokidar's default poll interval is 100ms
       poll_interval: 100,
       compare_contents_for_polling: false,
+      debounce_tick_rate: None,
     }
   }
 }
@@ -40,6 +48,10 @@ impl WatcherConfig {
 
   pub fn poll_interval_duration(&self) -> Duration {
     Duration::from_millis(self.poll_interval)
+  }
+
+  pub fn debounce_tick_rate(&self) -> Option<Duration> {
+    self.debounce_tick_rate.map(Duration::from_millis)
   }
 
   pub fn to_notify_config(&self) -> notify::Config {

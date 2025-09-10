@@ -38,6 +38,7 @@ impl BindingDevEngine {
     let debounce_duration = watch_options.and_then(|watch| watch.debounce_duration);
     let compare_contents_for_polling =
       watch_options.and_then(|watch| watch.compare_contents_for_polling);
+    let debounce_tick_rate = watch_options.and_then(|watch| watch.debounce_tick_rate);
 
     // If callback is provided, wrap it to convert Vec<HmrUpdate> to Vec<BindingHmrUpdate>
     let on_hmr_updates = on_hmr_updates_callback.map(|js_callback| {
@@ -56,6 +57,7 @@ impl BindingDevEngine {
       || use_debounce.is_some()
       || debounce_duration.is_some()
       || compare_contents_for_polling.is_some()
+      || debounce_tick_rate.is_some()
     {
       Some(rolldown::dev::dev_options::DevWatchOptions {
         use_polling,
@@ -63,6 +65,7 @@ impl BindingDevEngine {
         use_debounce,
         debounce_duration: debounce_duration.map(u64::from),
         compare_contents_for_polling,
+        debounce_tick_rate: debounce_tick_rate.map(u64::from),
       })
     } else {
       None

@@ -27,6 +27,13 @@ export interface DevWatchOptions {
    * @default false
    */
   compareContentsForPolling?: boolean;
+  /**
+   * Tick rate in milliseconds for debounced watchers (only used when useDebounce is true).
+   * Controls how frequently the debouncer checks for events to process.
+   * When not specified, the debouncer will auto-select an appropriate tick rate (1/4 of the debounce duration).
+   * @default undefined (auto-select)
+   */
+  debounceTickRate?: number;
 }
 
 export interface DevOptions {

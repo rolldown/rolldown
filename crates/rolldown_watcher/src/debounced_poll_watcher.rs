@@ -21,7 +21,7 @@ impl Watcher for DebouncedPollWatcher {
   {
     let inner = new_debouncer_opt::<_, PollWatcher, RecommendedCache>(
       config.debounce_delay_duration(),
-      None,
+      config.debounce_tick_rate(),
       DebounceEventHandlerAdapter(event_handler),
       RecommendedCache::new(),
       config.to_notify_config(),

@@ -53,6 +53,7 @@ impl DevEngine {
       poll_interval: ctx.options.poll_interval,
       debounce_delay: ctx.options.debounce_duration,
       compare_contents_for_polling: ctx.options.compare_contents_for_polling,
+      debounce_tick_rate: ctx.options.debounce_tick_rate,
     };
 
     let watcher = {

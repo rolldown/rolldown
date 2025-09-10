@@ -17,6 +17,8 @@ pub struct DevWatchOptions {
   pub debounce_duration: Option<u64>,
   /// Whether to compare file contents for poll-based watchers (only used when use_polling is true)
   pub compare_contents_for_polling: Option<bool>,
+  /// Tick rate in milliseconds for debounced watchers (only used when use_debounce is true)
+  pub debounce_tick_rate: Option<u64>,
 }
 
 #[derive(Default)]
@@ -36,6 +38,7 @@ pub struct NormalizedDevOptions {
   pub use_debounce: bool,
   pub debounce_duration: u64,
   pub compare_contents_for_polling: bool,
+  pub debounce_tick_rate: Option<u64>,
 }
 
 pub fn normalize_dev_options(options: DevOptions) -> NormalizedDevOptions {
@@ -48,5 +51,6 @@ pub fn normalize_dev_options(options: DevOptions) -> NormalizedDevOptions {
     use_debounce: watch_options.use_debounce.unwrap_or(true),
     debounce_duration: watch_options.debounce_duration.unwrap_or(10),
     compare_contents_for_polling: watch_options.compare_contents_for_polling.unwrap_or(false),
+    debounce_tick_rate: watch_options.debounce_tick_rate,
   }
 }

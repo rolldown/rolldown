@@ -1584,6 +1584,7 @@ export interface BindingDevWatchOptions {
   useDebounce?: boolean
   debounceDuration?: number
   compareContentsForPolling?: boolean
+  debounceTickRate?: number
 }
 
 export interface BindingDynamicImportVarsPluginConfig {

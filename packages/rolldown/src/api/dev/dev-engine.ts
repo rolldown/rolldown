@@ -29,6 +29,7 @@ export class DevEngine {
         useDebounce: devOptions.watch.useDebounce,
         debounceDuration: devOptions.watch.debounceDuration,
         compareContentsForPolling: devOptions.watch.compareContentsForPolling,
+        debounceTickRate: devOptions.watch.debounceTickRate,
       },
     };
 

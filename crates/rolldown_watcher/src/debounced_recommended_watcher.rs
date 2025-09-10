@@ -21,7 +21,7 @@ impl Watcher for DebouncedRecommendedWatcher {
   {
     let inner = new_debouncer_opt::<_, RecommendedWatcher, RecommendedCache>(
       config.debounce_delay_duration(),
-      None,
+      config.debounce_tick_rate(),
       DebounceEventHandlerAdapter(event_handler),
       RecommendedCache::new(),
       config.to_notify_config(),

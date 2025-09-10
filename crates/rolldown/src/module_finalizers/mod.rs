@@ -328,18 +328,76 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   #[expect(clippy::too_many_lines)]
   fn generate_declaration_of_module_namespace_object(&self) -> Vec<ast::Statement<'ast>> {
+    let module_namespace_included_reason = self.ctx.linking_info.module_namespace_included_reason;
+    let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
+      && if module_namespace_included_reason.contains(ModuleNamespaceIncludedReason::Unknown) {
+        true
+      } else if module_namespace_included_reason
+        .contains(ModuleNamespaceIncludedReason::ReExportExternalModule)
+      {
+        // If the module namespace is only used to reexport external module,
+        // then we need to ensure if it is still has dynamic exports after flatten entry level
+        // external module, see `find_entry_level_external_module`
+        self.ctx.linking_info.has_dynamic_exports
+      } else {
+        false
+      };
+
+    if !is_namespace_referenced {
+      return vec![];
+    }
+
     let binding_name_for_namespace_object_ref =
       self.canonical_name_for(self.ctx.module.namespace_object_ref);
-    // construct `var [binding_name_for_namespace_object_ref] = {}`
-    let decl_stmt = self.snippet.var_decl_stmt(
-      binding_name_for_namespace_object_ref,
-      ast::Expression::ObjectExpression(ArenaBox::new_in(
-        ObjectExpression::dummy(self.alloc),
-        self.alloc,
-      )),
-    );
 
-    let has_exports = self.ctx.linking_info.canonical_exports(false).next().is_some();
+    // construct `{ prop_name: () => returned, ... }`
+    let mut arg_obj_expr = ast::ObjectExpression::dummy(self.alloc);
+
+    arg_obj_expr.properties.extend(self.ctx.linking_info.canonical_exports(false).map(
+      |(export, resolved_export)| {
+        // prop_name: () => returned
+        let prop_name = export;
+        let returned = self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
+        ast::ObjectPropertyKind::ObjectProperty(
+          ast::ObjectProperty {
+            key: if is_validate_identifier_name(prop_name) {
+              ast::PropertyKey::StaticIdentifier(
+                self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
+              )
+            } else {
+              ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
+            },
+            value: self.snippet.only_return_arrow_expr(returned),
+            ..ast::ObjectProperty::dummy(self.alloc)
+          }
+          .into_in(self.alloc),
+        )
+      },
+    ));
+
+    // if there is no export, we should generate `var ns = {}` instead of `var ns = __export({}, {})`
+    // else construct `__export(ns_name, { prop_name: () => returned, ... })`
+    let module_namespace_rhs = if arg_obj_expr.properties.is_empty() {
+      Expression::ObjectExpression(self.builder().alloc(arg_obj_expr))
+    } else {
+      self.snippet.builder.expression_call(
+        SPAN,
+        self.finalized_expr_for_runtime_symbol("__export"),
+        NONE,
+        self.snippet.builder.vec_from_array([
+          ast::Argument::from(ast::Expression::ObjectExpression(ArenaBox::new_in(
+            ObjectExpression::dummy(self.alloc),
+            self.alloc,
+          ))),
+          ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc)),
+        ]),
+        false,
+      )
+    };
+
+    // construct `var [binding_name_for_namespace_object_ref] = __export(...)`
+    let decl_stmt =
+      self.snippet.var_decl_stmt(binding_name_for_namespace_object_ref, module_namespace_rhs);
 
     let export_all_externals_rec_ids = &self.ctx.linking_info.star_exports_from_external_modules;
 
@@ -412,50 +470,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
     }
 
-    if !has_exports {
-      let mut ret = vec![decl_stmt];
-      ret.extend(re_export_external_stmts.unwrap_or_default());
-      return ret;
-    }
-
-    // construct `{ prop_name: () => returned, ... }`
-    let mut arg_obj_expr = ast::ObjectExpression::dummy(self.alloc);
-
-    arg_obj_expr.properties.extend(self.ctx.linking_info.canonical_exports(false).map(
-      |(export, resolved_export)| {
-        // prop_name: () => returned
-        let prop_name = export;
-        let returned = self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
-        ast::ObjectPropertyKind::ObjectProperty(
-          ast::ObjectProperty {
-            key: if is_validate_identifier_name(prop_name) {
-              ast::PropertyKey::StaticIdentifier(
-                self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
-              )
-            } else {
-              ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
-            },
-            value: self.snippet.only_return_arrow_expr(returned),
-            ..ast::ObjectProperty::dummy(self.alloc)
-          }
-          .into_in(self.alloc),
-        )
-      },
-    ));
-
-    // construct `__export(ns_name, { prop_name: () => returned, ... })`
-    let export_call_expr = self.snippet.builder.expression_call(
-      SPAN,
-      self.finalized_expr_for_runtime_symbol("__export"),
-      NONE,
-      self.snippet.builder.vec_from_array([
-        ast::Argument::from(self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN)),
-        ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc)),
-      ]),
-      false,
-    );
-    let export_call_stmt = self.snippet.builder.statement_expression(SPAN, export_call_expr);
-    let mut ret = vec![decl_stmt, export_call_stmt];
+    let mut ret = vec![decl_stmt];
     ret.extend(re_export_external_stmts.unwrap_or_default());
 
     ret

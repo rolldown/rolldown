@@ -18,8 +18,7 @@ var init_lib = __esm({ "lib.js": (() => {
 
 //#endregion
 //#region cjs.js
-var cjs_exports = {};
-__export(cjs_exports, { default: () => cjs_default });
+var cjs_exports = __export({}, { default: () => cjs_default });
 var cjs_default;
 var init_cjs = __esm({ "cjs.js": (() => {
 	init_lib();

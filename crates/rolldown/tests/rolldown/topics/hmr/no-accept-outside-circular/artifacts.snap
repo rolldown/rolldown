@@ -11,24 +11,21 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region c.js
-var c_exports = {};
-__export(c_exports, { c: () => c });
+var c_exports = __export({}, { c: () => c });
 const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
 __rolldown_runtime__.registerModule("c.js", { exports: c_exports });
 const c = "c";
 
 //#endregion
 //#region b.js
-var b_exports = {};
-__export(b_exports, { b: () => b });
+var b_exports = __export({}, { b: () => b });
 const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
 __rolldown_runtime__.registerModule("b.js", { exports: b_exports });
 const b = { c };
 
 //#endregion
 //#region a.js
-var a_exports = {};
-__export(a_exports, { a: () => a });
+var a_exports = __export({}, { a: () => a });
 const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
 __rolldown_runtime__.registerModule("a.js", { exports: a_exports });
 const a = { b };

@@ -8,8 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region a.js
-var a_exports = {};
-__export(a_exports, { abc: () => abc });
+var a_exports = __export({}, { abc: () => abc });
 const abc = void 0;
 
 //#endregion

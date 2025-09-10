@@ -10,8 +10,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 // HIDDEN [rolldown:runtime]
 
 //#region main.js
-var main_exports = {};
-__export(main_exports, {
+var main_exports = __export({}, {
 	default: () => main_default,
 	foo: () => foo
 });

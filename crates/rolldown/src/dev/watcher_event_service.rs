@@ -31,6 +31,7 @@ impl WatcherEventService {
     WatcherEventHandler { service_tx: self.tx.clone() }
   }
 
+  #[expect(clippy::print_stdout)]
   pub async fn run(mut self) {
     while let Some(msg) = {
       tracing::trace!("`BuildService` is waiting for messages.");
@@ -40,6 +41,9 @@ impl WatcherEventService {
         WatcherEventServiceMsg::FileChange(file_change_result) => match file_change_result {
           Ok(batched_events) => {
             tracing::debug!(target: "hmr", "Received batched events: {:#?}", batched_events);
+            if option_env!("CI").is_some() {
+              println!("[WatcherEventService]: Received batched events: {batched_events:#?}");
+            }
             // TODO: using a IndexSet here will cause changes like [a.js, b.js, a.js] to be [a.js, b.js].
             // Not sure if we want this behavior for hmr scenario.
             let mut changed_files = FxIndexSet::default();

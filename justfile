@@ -76,9 +76,10 @@ test-node *args="": build-rolldown
   just test-node-rolldown {{ args }}
   just test-node-rollup
 
-test-node-hmr *args:
-  just build
-  pnpm run --filter @rolldown/test-dev-server-tests build
+test-node-hmr *args: build build-test-dev-server
+  test-node-hmr-only {{ args }}
+
+test-node-hmr-only *args:
   pnpm run --filter @rolldown/test-dev-server-tests test {{ args }}
 
 # Run Vite's test suite to check Rolldown's behaviors.

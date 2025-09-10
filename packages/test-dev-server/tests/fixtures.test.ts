@@ -10,16 +10,17 @@ function main() {
   const fixturesPath = nodePath.resolve(__dirname, 'fixtures');
   const tmpFixturesPath = nodePath.resolve(__dirname, 'tmp/fixtures');
 
-  async function updateNodeModules() {
+  async function updateNodeModules(showOutput = true) {
     await execa('pnpm install --no-frozen-lockfile', {
       cwd: fixturesPath,
       shell: true,
-      stdio: 'inherit',
+      stdio: showOutput ? 'inherit' : ['pipe', 'pipe', 'inherit'],
     });
   }
 
+  console.log(`🔄 - Cleaning up ${tmpFixturesPath} directory...`);
   removeDirSync(tmpFixturesPath);
-  // Copy project to temp directory. Remember to filter out `node_modules` and `dist` directories
+  console.log(`🔄 - Copying projects to ${tmpFixturesPath} directory...`);
   nodeFs.mkdirSync(tmpFixturesPath, { recursive: true });
   nodeFs.cpSync(fixturesPath, tmpFixturesPath, {
     recursive: true,
@@ -29,16 +30,17 @@ function main() {
   });
 
   beforeAll(async () => {
+    console.log(`🔄 - Updating node_modules...`);
     await updateNodeModules();
   }, 30 * 1000);
 
   afterAll(async () => {
     if (!process.env.CI) {
-      console.log('🔄 - Cleaning up tmp/fixtures directory...');
-      console.log('🔄 - Resetting node_modules...');
+      console.log(`🔄 - Cleaning up ${tmpFixturesPath} directory...`);
       removeDirSync(tmpFixturesPath);
-      await updateNodeModules();
-      console.log('✅ - Cleanup completed');
+      console.log(`🔄 - Resetting node_modules...`);
+      await updateNodeModules(false);
+      console.log(`✅ - Cleanup completed`);
     }
   }, 30 * 1000);
 
@@ -60,10 +62,20 @@ function main() {
           projectName,
         );
 
-        await killPort(3000).catch(err =>
-          console.debug(`kill-port: ${err?.message}`)
-        ); // Kill any process running on port 3000
+        console.log(`🔄 - Killing any process running on port 3000...`);
+        try {
+          await killPort(3000);
+        } catch (err) {
+          if (
+            err instanceof Error && err.message.includes('No process running')
+          ) {
+            console.log(`🔄 - No process running on port 3000`);
+          } else {
+            throw err;
+          }
+        }
 
+        console.log(`🔄 - Starting dev server...`);
         const devServeProcess = execa('pnpm serve', {
           cwd: tmpProjectPath,
           shell: true,
@@ -74,24 +86,43 @@ function main() {
           },
         });
 
-        await ensurePathExists(nodePath.join(tmpProjectPath, 'dist/main.js'));
+        await waitForPathExists(nodePath.join(tmpProjectPath, 'dist/main.js'));
 
         const nodeScriptPath = nodePath.join(tmpProjectPath, 'dist/main.js');
 
-        console.log('🔄 Starting Node.js process: ', nodeScriptPath);
+        //   let inject_script_url =
+        //   format!("data:text/javascript,{}", urlencoding::encode(&globals_injection));
+        // node_command.arg("--import");
+
+        const initOkFilePath = nodePath.join(tmpProjectPath, 'ok-init');
+
+        const injectCode = encodeURIComponent(`
+            import __nodeFs__ from 'node:fs';
+            __nodeFs__.writeFileSync('ok-init', '');
+          `.trim());
+
+        console.log(`🔄 Starting Node.js process: ${nodeScriptPath}`);
+        console.log(
+          `node ${nodeScriptPath} --import data:text/javascript,${injectCode}`,
+        );
         const runningArtifactProcess = execa(
-          `node ${nodeScriptPath}`,
-          { cwd: tmpProjectPath, shell: true, stdio: 'inherit' },
+          'node',
+          ['--import', `data:text/javascript,${injectCode}`, nodeScriptPath],
+          { cwd: tmpProjectPath, stdio: 'inherit' },
         );
 
         // Wait for the Node.js process to start
-        await sensibleTimeoutInMs(1000);
+        await waitForPathExists(initOkFilePath);
 
-        console.log('🔄 Collecting HMR edit files...');
         const hmrEditFiles = await collectHmrEditFiles(tmpProjectPath);
 
-        console.log('🔄 Processing HMR edit files...');
         for (const [index, [step, hmrEdits]] of hmrEditFiles.entries()) {
+          console.log(
+            `🔄 Processing HMR edit files for step ${step} with edits: ${
+              JSON.stringify(hmrEdits, null, 2)
+            }`,
+          );
+
           // Refer to `packages/test-dev-server/src/utils/get-dev-watch-options-for-ci.ts`
           // We used a poll-based and debounced watcher in CI, so we need to wait for at least max(poll interval 50ms, debounce duration 200ms) to
           // - Make sure different steps are not debounced together
@@ -99,30 +130,21 @@ function main() {
           // - Make sure changes in the same step are detected together
           await sensibleTimeoutInMs(200);
           for (const hmrEdit of hmrEdits) {
-            console.log(
-              `🔄 Processing HMR edit file: step ${step} - ${hmrEdit.replacementPath}`,
-            );
             const newContent = nodeFs.readFileSync(
               hmrEdit.replacementPath,
               'utf-8',
             );
+            console.log(`🔄 Writing content to: ${hmrEdit.targetPath}`);
             nodeFs.writeFileSync(hmrEdit.targetPath, newContent);
-            console.log(
-              `📝 Written content to: ${hmrEdit.targetPath}`,
-            );
           }
           console.log(
             `⏳ Waiting for HMR to be triggered for step ${step}`,
           );
-          await ensurePathExists(
+          await waitForPathExists(
             nodePath.join(tmpProjectPath, `ok-${index}`),
             10 * 1000,
           );
-          console.log(
-            `✅ Successfully triggered HMR for step ${step} with ${
-              JSON.stringify(hmrEdits, null, 2)
-            }`,
-          );
+          console.log(`✅ HMR triggered for step ${step}`);
         }
 
         const catchRunningArtifactProcess = runningArtifactProcess.catch(
@@ -157,14 +179,15 @@ function main() {
   });
 }
 
-function ensurePathExists(path: string, timeout = 6 * 1000) {
+function waitForPathExists(path: string, timeout = 6 * 1000) {
+  console.log(`🔄 - Waiting for path ${path} to exist...`);
   const startTime = Date.now();
   const isTimeout = () => Date.now() - startTime > timeout;
   return new Promise<void>((resolve, reject) => {
     function check() {
       try {
         nodeFs.accessSync(path);
-        console.debug(`Path ${path} exists`);
+        console.log(`✅ - Path ${path} exists`);
         resolve();
       } catch (err) {
         if (isTimeout()) {
@@ -182,7 +205,7 @@ function ensurePathExists(path: string, timeout = 6 * 1000) {
             ),
           );
         } else {
-          setTimeout(check, 250);
+          setTimeout(check, 100);
         }
       }
     }

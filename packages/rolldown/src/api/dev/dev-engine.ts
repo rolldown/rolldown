@@ -28,6 +28,7 @@ export class DevEngine {
         pollInterval: devOptions.watch.pollInterval,
         useDebounce: devOptions.watch.useDebounce,
         debounceDuration: devOptions.watch.debounceDuration,
+        compareContentsForPolling: devOptions.watch.compareContentsForPolling,
       },
     };
 

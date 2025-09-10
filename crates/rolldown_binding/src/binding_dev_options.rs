@@ -9,6 +9,7 @@ pub struct BindingDevWatchOptions {
   pub poll_interval: Option<u32>,
   pub use_debounce: Option<bool>,
   pub debounce_duration: Option<u32>,
+  pub compare_contents_for_polling: Option<bool>,
 }
 
 #[napi(object, object_to_js = false)]

@@ -15,6 +15,8 @@ pub struct DevWatchOptions {
   pub use_debounce: Option<bool>,
   /// Debounce duration in milliseconds (only used when use_debounce is true)
   pub debounce_duration: Option<u64>,
+  /// Whether to compare file contents for poll-based watchers (only used when use_polling is true)
+  pub compare_contents_for_polling: Option<bool>,
 }
 
 #[derive(Default)]
@@ -25,6 +27,7 @@ pub struct DevOptions {
   pub watch: Option<DevWatchOptions>,
 }
 
+#[expect(clippy::struct_excessive_bools)]
 pub struct NormalizedDevOptions {
   pub on_hmr_updates: Option<OnHmrUpdatesCallback>,
   pub eager_rebuild: bool,
@@ -32,6 +35,7 @@ pub struct NormalizedDevOptions {
   pub poll_interval: u64,
   pub use_debounce: bool,
   pub debounce_duration: u64,
+  pub compare_contents_for_polling: bool,
 }
 
 pub fn normalize_dev_options(options: DevOptions) -> NormalizedDevOptions {
@@ -43,5 +47,6 @@ pub fn normalize_dev_options(options: DevOptions) -> NormalizedDevOptions {
     poll_interval: watch_options.poll_interval.unwrap_or(100),
     use_debounce: watch_options.use_debounce.unwrap_or(true),
     debounce_duration: watch_options.debounce_duration.unwrap_or(10),
+    compare_contents_for_polling: watch_options.compare_contents_for_polling.unwrap_or(false),
   }
 }

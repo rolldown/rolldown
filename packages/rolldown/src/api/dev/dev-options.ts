@@ -21,6 +21,12 @@ export interface DevWatchOptions {
    * @default 10
    */
   debounceDuration?: number;
+  /**
+   * Whether to compare file contents for poll-based watchers (only used when usePolling is true).
+   * When enabled, poll watchers will check file contents to determine if they actually changed.
+   * @default false
+   */
+  compareContentsForPolling?: boolean;
 }
 
 export interface DevOptions {

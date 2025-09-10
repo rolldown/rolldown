@@ -52,6 +52,7 @@ impl DevEngine {
     let watcher_config = WatcherConfig {
       poll_interval: ctx.options.poll_interval,
       debounce_delay: ctx.options.debounce_duration,
+      compare_contents_for_polling: ctx.options.compare_contents_for_polling,
     };
 
     let watcher = {

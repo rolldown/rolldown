@@ -1,4 +1,66 @@
 
+## [1.0.0-beta.37] - 2025-09-10
+
+### 🚀 Features
+
+- partial align with const inline strategy with oxc in smart mode (#6126) by @IWANABETHATGUY
+- dev: use PathsMut for non-debounced RecommendedWatcher (#6120) by @sapphi-red
+- dev: return whether the build is already scheduled from `scheduleBuildIfStale` method (#6116) by @sapphi-red
+- handle errors from `BundlerBuilder#build` (#6104) by @shulaoda
+- add debounceTickRate option for debounced watchers (#6113) by @hyf0
+- support full build in `incrementalBuild` mode (#6098) by @IWANABETHATGUY
+- add compare_contents_for_polling option to dev watcher (#6108) by @hyf0
+- dev: add `scheduleBuildIfStale` method to DevEngine (#6087) by @sapphi-red
+- dev: return changed files in onHmrUpdates callback (#6086) by @sapphi-red
+- support function config with custom CLI arguments (#6076) by @IWANABETHATGUY
+- improve `MISSING_EXPORT` warning to suggest `type` modifier (#6085) by @sapphi-red
+- crates/rolldown_watcher: introduce `PathsMut` to batch watch/unwatch behaviors (#6075) by @hyf0
+- enable `treeshake.commonjs` by default (#6072) by @IWANABETHATGUY
+- dev: add debounce control and PollWatcher support to DevWatchOptions (#6070) by @hyf0
+
+### 🐛 Bug Fixes
+
+- use kqueue for file watch on mac (#6124) by @sapphi-red
+- use patched notify for better file change event debouncing (#6125) by @sapphi-red
+- support passing all js primitive value for `alias` plugin (#6123) by @IWANABETHATGUY
+- track spans in member expression properties for accurate sourcemaps (#6100) by @IWANABETHATGUY
+- correctly handle inlined CommonJS exports in member expressions (#6090) by @IWANABETHATGUY
+- dev: ensure patch file names to be unique (#6096) by @sapphi-red
+- dev: normalize slash on Windows before comparing paths (#6095) by @sapphi-red
+- dev/watch: debounce duration should default to 10 (#6078) by @hyf0
+
+### 🚜 Refactor
+
+- simplify `__export` runtime helper to create target object internally (#6114) by @IWANABETHATGUY
+- simplify module_namespace construction second try (#6118) by @IWANABETHATGUY
+- simplify module_namespace construction (#5939) by @IWANABETHATGUY
+- optimize member expression creation in AstSnippet (#6091) by @IWANABETHATGUY
+- test-dev-server: sensible watcher configuration for CI env (#6077) by @hyf0
+
+### 🧪 Testing
+
+- dev: apply HMR edits on Windows (#6094) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- Revert "chore: adjust breaking change template of cliff (#6069)" (#6130) by @IWANABETHATGUY
+- test-dev-server: improve hmr test configuration (#6115) by @hyf0
+- deps: update dependency rolldown-plugin-dts to v0.16.2 (#6128) by @renovate[bot]
+- Revert "refactor: simplify module_namespace construction (#5939)" (#6117) by @IWANABETHATGUY
+- test-dev-server: optimize test log output (#6107) by @hyf0
+- enable compare_contents_for_polling and update poll interval for CI test-dev-server (#6110) by @hyf0
+- deps: update dependency vite to v7.1.5 [security] (#6111) by @renovate[bot]
+- fix warnings reported by `just lint` (#6105) by @shulaoda
+- deps: update dependency tsdown to v0.15.0 (#6102) by @renovate[bot]
+- use debug builds for browser tests in CI (#6092) by @hyf0
+- test-dev-server: update polling interval and add retry logic for CI tests (#6088) by @hyf0
+- adjust breaking change template of cliff (#6069) by @IWANABETHATGUY
+
+### ◀️ Revert
+
+- "fix: replace_plugin does not work as expected with .ts config (#5920)" (#6074) by @IWANABETHATGUY
+
+
 ## [1.0.0-beta.36] - 2025-09-08
 
 ### 💥 BREAKING CHANGES

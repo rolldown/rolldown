@@ -11,7 +11,8 @@ var module = (function() {
 // HIDDEN [rolldown:runtime]
 
 //#region mod.js
-var default_exports = __export({}, {
+var default_exports = {};
+__export(default_exports, {
 	add: () => add,
 	subtract: () => subtract
 });

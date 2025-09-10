@@ -20,7 +20,8 @@ const value = 1;
 
 //#endregion
 //#region foo.js
-var foo_exports = __export({}, {
+var foo_exports = {};
+__export(foo_exports, {
 	bar: () => import_commonjs$1.bar,
 	value: () => value
 });

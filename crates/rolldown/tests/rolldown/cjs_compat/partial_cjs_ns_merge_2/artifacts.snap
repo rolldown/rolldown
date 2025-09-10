@@ -14,7 +14,8 @@ var require_react = /* @__PURE__ */ __commonJS({ "react.js": ((exports, module) 
 
 //#endregion
 //#region lib.js
-var lib_exports = __export({}, { default: () => toArray$1 });
+var lib_exports = {};
+__export(lib_exports, { default: () => toArray$1 });
 function toArray$1(children) {
 	import_react$1.default.Children.forEach(children, function(child) {});
 	return ret;

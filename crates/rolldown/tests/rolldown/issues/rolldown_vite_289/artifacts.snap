@@ -10,7 +10,8 @@ import nodeAssert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region lib-impl.js
-var lib_impl_exports = __export({}, { foo: () => foo });
+var lib_impl_exports = {};
+__export(lib_impl_exports, { foo: () => foo });
 function foo() {
 	return fn();
 }

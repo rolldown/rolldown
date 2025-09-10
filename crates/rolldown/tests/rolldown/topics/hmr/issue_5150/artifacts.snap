@@ -9,28 +9,32 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region common.js
-var common_exports = __export({}, { prefix: () => prefix });
+var common_exports = {};
+__export(common_exports, { prefix: () => prefix });
 const common_hot = __rolldown_runtime__.createModuleHotContext("common.js");
 __rolldown_runtime__.registerModule("common.js", { exports: common_exports });
 const prefix = "prefix:";
 
 //#endregion
 //#region foo.js
-var foo_exports = __export({}, { foo: () => foo });
+var foo_exports = {};
+__export(foo_exports, { foo: () => foo });
 const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.js");
 __rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
 const foo = prefix + "foo";
 
 //#endregion
 //#region bar.js
-var bar_exports = __export({}, { bar: () => bar });
+var bar_exports = {};
+__export(bar_exports, { bar: () => bar });
 const bar_hot = __rolldown_runtime__.createModuleHotContext("bar.js");
 __rolldown_runtime__.registerModule("bar.js", { exports: bar_exports });
 const bar = prefix + "bar";
 
 //#endregion
 //#region messenger.js
-var messenger_exports = __export({}, {
+var messenger_exports = {};
+__export(messenger_exports, {
 	msg: () => msg,
 	sayMessage: () => sayMessage
 });

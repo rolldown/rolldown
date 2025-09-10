@@ -12,7 +12,8 @@ var nope = void 0;
 
 //#endregion
 //#region foo.ts
-var foo_exports = __export({}, { nope: () => nope });
+var foo_exports = {};
+__export(foo_exports, { nope: () => nope });
 
 //#endregion
 //#region entry.js

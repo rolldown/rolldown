@@ -10,7 +10,8 @@ import { __export } from "./chunk.js";
 import { trim } from "./string.js";
 
 //#region bar.js
-var bar_exports = __export({}, { default: () => bar_default });
+var bar_exports = {};
+__export(bar_exports, { default: () => bar_default });
 const bar_hot = __rolldown_runtime__.createModuleHotContext("bar.js");
 __rolldown_runtime__.registerModule("bar.js", { exports: bar_exports });
 function bar_default() {
@@ -33,7 +34,8 @@ import { __export } from "./chunk.js";
 import { trim, unused } from "./string.js";
 
 //#region utils/index.js
-var utils_exports = __export({}, {
+var utils_exports = {};
+__export(utils_exports, {
 	trim: () => trim,
 	unused: () => unused
 });
@@ -42,7 +44,8 @@ __rolldown_runtime__.registerModule("utils/index.js", { exports: utils_exports }
 
 //#endregion
 //#region foo.js
-var foo_exports = __export({}, { default: () => foo_default });
+var foo_exports = {};
+__export(foo_exports, { default: () => foo_default });
 const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.js");
 __rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
 function foo_default() {
@@ -75,7 +78,8 @@ const routes = {
 import { __export } from "./chunk.js";
 
 //#region utils/string.js
-var string_exports = __export({}, {
+var string_exports = {};
+__export(string_exports, {
 	trim: () => trim,
 	unused: () => unused
 });

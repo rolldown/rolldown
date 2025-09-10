@@ -11,7 +11,8 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region child.js
-var child_exports = __export({}, { foo: () => foo });
+var child_exports = {};
+__export(child_exports, { foo: () => foo });
 const child_hot = __rolldown_runtime__.createModuleHotContext("child.js");
 __rolldown_runtime__.registerModule("child.js", { exports: child_exports });
 const foo = 0;

@@ -10,12 +10,14 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region bar.js
-var bar_exports = __export({}, { bar: () => bar });
+var bar_exports = {};
+__export(bar_exports, { bar: () => bar });
 const bar = 123;
 
 //#endregion
 //#region foo.js
-var foo_exports = __export({}, { bar_ns: () => bar_exports });
+var foo_exports = {};
+__export(foo_exports, { bar_ns: () => bar_exports });
 
 //#endregion
 //#region entry.js

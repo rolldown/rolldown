@@ -28,7 +28,8 @@ const x = 123;
 
 //#endregion
 //#region foo.js
-var foo_exports = __export({}, { x: () => x });
+var foo_exports = {};
+__export(foo_exports, { x: () => x });
 
 //#endregion
 //#region entry.js

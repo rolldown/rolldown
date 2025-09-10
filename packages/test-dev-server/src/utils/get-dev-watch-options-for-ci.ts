@@ -3,8 +3,9 @@ import { DevWatchOptions } from 'rolldown/experimental';
 export function getDevWatchOptionsForCi(): DevWatchOptions {
   return {
     usePolling: true,
-    pollInterval: 25,
+    pollInterval: 40,
     useDebounce: true,
     debounceDuration: 200,
+    compareContentsForPolling: true,
   };
 }

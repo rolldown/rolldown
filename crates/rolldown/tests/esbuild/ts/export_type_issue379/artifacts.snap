@@ -8,12 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region a.ts
-var a_exports = __export({}, { foo: () => foo$3 });
+var a_exports = __export({ foo: () => foo$3 });
 let foo$3 = 123;
 
 //#endregion
 //#region b.ts
-var b_exports = __export({}, { foo: () => foo$2 });
+var b_exports = __export({ foo: () => foo$2 });
 let foo$2 = 123;
 
 //#endregion
@@ -22,7 +22,7 @@ var Test = void 0;
 
 //#endregion
 //#region c.ts
-var c_exports = __export({}, {
+var c_exports = __export({
 	Test: () => Test,
 	foo: () => foo$1
 });
@@ -30,7 +30,7 @@ let foo$1 = 123;
 
 //#endregion
 //#region d.ts
-var d_exports = __export({}, {
+var d_exports = __export({
 	Test: () => Test,
 	foo: () => foo
 });

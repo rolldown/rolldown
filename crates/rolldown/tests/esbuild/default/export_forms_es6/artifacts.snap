@@ -12,7 +12,7 @@ const abc = void 0;
 
 //#endregion
 //#region b.js
-var b_exports = __export({}, { xyz: () => xyz });
+var b_exports = __export({ xyz: () => xyz });
 const xyz = null;
 
 //#endregion

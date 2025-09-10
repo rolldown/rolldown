@@ -9,28 +9,28 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region common.js
-var common_exports = __export({}, { prefix: () => prefix });
+var common_exports = __export({ prefix: () => prefix });
 const common_hot = __rolldown_runtime__.createModuleHotContext("common.js");
 __rolldown_runtime__.registerModule("common.js", { exports: common_exports });
 const prefix = "prefix:";
 
 //#endregion
 //#region foo.js
-var foo_exports = __export({}, { foo: () => foo });
+var foo_exports = __export({ foo: () => foo });
 const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.js");
 __rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
 const foo = prefix + "foo";
 
 //#endregion
 //#region bar.js
-var bar_exports = __export({}, { bar: () => bar });
+var bar_exports = __export({ bar: () => bar });
 const bar_hot = __rolldown_runtime__.createModuleHotContext("bar.js");
 __rolldown_runtime__.registerModule("bar.js", { exports: bar_exports });
 const bar = prefix + "bar";
 
 //#endregion
 //#region messenger.js
-var messenger_exports = __export({}, {
+var messenger_exports = __export({
 	msg: () => msg,
 	sayMessage: () => sayMessage
 });
@@ -70,8 +70,7 @@ setInterval(sayMessage, 1e3);
 //#region bar.js
 var init_bar_0 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
-		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, { bar: () => bar });
+		var __rolldown_exports__ = __rolldown_runtime__.__export({ bar: () => bar });
 		__rolldown_runtime__.registerModule("bar.js", { exports: __rolldown_exports__ });
 		init_common_1();
 		const hot_bar = __rolldown_runtime__.createModuleHotContext("bar.js");
@@ -84,8 +83,7 @@ var init_bar_0 = __rolldown_runtime__.createEsmInitializer((function() {
 //#region common.js
 var init_common_1 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
-		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, { prefix: () => prefix });
+		var __rolldown_exports__ = __rolldown_runtime__.__export({ prefix: () => prefix });
 		__rolldown_runtime__.registerModule("common.js", { exports: __rolldown_exports__ });
 		const hot_common = __rolldown_runtime__.createModuleHotContext("common.js");
 		const prefix = "prefix-new:";
@@ -96,8 +94,7 @@ var init_common_1 = __rolldown_runtime__.createEsmInitializer((function() {
 //#region foo.js
 var init_foo_2 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
-		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, { foo: () => foo });
+		var __rolldown_exports__ = __rolldown_runtime__.__export({ foo: () => foo });
 		__rolldown_runtime__.registerModule("foo.js", { exports: __rolldown_exports__ });
 		init_common_1();
 		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo.js");
@@ -110,8 +107,7 @@ var init_foo_2 = __rolldown_runtime__.createEsmInitializer((function() {
 //#region messenger.js
 var init_messenger_3 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
-		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, {
+		var __rolldown_exports__ = __rolldown_runtime__.__export({
 			msg: () => msg,
 			sayMessage: () => sayMessage
 		});

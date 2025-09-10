@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region hmr.js
-var hmr_exports = __export({}, { foo: () => foo });
+var hmr_exports = __export({ foo: () => foo });
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 const foo = "hello";

@@ -33,7 +33,7 @@ export { b_default as default };
 ```js
 // HIDDEN [rolldown:runtime]
 //#region b.js
-var b_exports = __export({}, { default: () => b_default });
+var b_exports = __export({ default: () => b_default });
 function b_default() {}
 
 //#endregion

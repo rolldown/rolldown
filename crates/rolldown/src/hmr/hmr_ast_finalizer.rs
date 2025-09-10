@@ -1,11 +1,8 @@
 use oxc::{
-  allocator::{Allocator, Box as ArenaBox, Dummy, IntoIn, TakeIn},
+  allocator::{Allocator, Box as ArenaBox, IntoIn, TakeIn},
   ast::{
     AstBuilder, NONE,
-    ast::{
-      self, ExportDefaultDeclarationKind, Expression, ObjectExpression, ObjectPropertyKind,
-      Statement,
-    },
+    ast::{self, ExportDefaultDeclarationKind, Expression, ObjectPropertyKind, Statement},
   },
   semantic::{IsGlobalReference, Scoping, SymbolId},
   span::{Atom, SPAN, Span},
@@ -535,15 +532,6 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     binding_name_for_namespace_object_ref: &str,
     scoping: &Scoping,
   ) -> Vec<ast::Statement<'ast>> {
-    // construct `var [binding_name_for_namespace_object_ref] = {}`
-    let decl_stmt = self.snippet.var_decl_stmt(
-      binding_name_for_namespace_object_ref,
-      ast::Expression::ObjectExpression(ArenaBox::new_in(
-        ObjectExpression::dummy(self.alloc),
-        self.alloc,
-      )),
-    );
-
     // TODO reexport external module
 
     // construct `{ prop_name: () => returned, ... }`
@@ -568,15 +556,17 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       SPAN,
       self.snippet.id_ref_expr("__rolldown_runtime__.__export", SPAN),
       NONE,
-      self.snippet.builder.vec_from_array([
-        ast::Argument::from(self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN)),
-        ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc)),
-      ]),
+      self
+        .snippet
+        .builder
+        .vec_from_array([ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc))]),
       false,
     );
-    let export_call_stmt = self.snippet.builder.statement_expression(SPAN, export_call_expr);
 
-    vec![decl_stmt, export_call_stmt]
+    // construct `var [binding_name_for_namespace_object_ref] = __export({ prop_name: () => returned, ... })`
+    let decl_stmt =
+      self.snippet.var_decl_stmt(binding_name_for_namespace_object_ref, export_call_expr);
+    vec![decl_stmt]
   }
 
   // Rewrite `import(...)` to sensible form.

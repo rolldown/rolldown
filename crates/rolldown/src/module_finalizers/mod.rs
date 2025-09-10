@@ -6,7 +6,7 @@ use oxc::{
     AstBuilder, Comment, NONE,
     ast::{
       self, BindingIdentifier, ClassElement, Expression, IdentifierReference, ImportExpression,
-      MemberExpression, NumberBase, ObjectExpression, Statement, VariableDeclarationKind,
+      MemberExpression, NumberBase, Statement, VariableDeclarationKind,
     },
   },
   span::{Atom, GetSpan, GetSpanMut, SPAN},
@@ -384,13 +384,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         SPAN,
         self.finalized_expr_for_runtime_symbol("__export"),
         NONE,
-        self.snippet.builder.vec_from_array([
-          ast::Argument::from(ast::Expression::ObjectExpression(ArenaBox::new_in(
-            ObjectExpression::dummy(self.alloc),
-            self.alloc,
-          ))),
-          ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc)),
-        ]),
+        self
+          .snippet
+          .builder
+          .vec_from_array([ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc))]),
         false,
       )
     };

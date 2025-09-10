@@ -11,7 +11,7 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region child.js
-var child_exports = __export({}, { foo: () => foo });
+var child_exports = __export({ foo: () => foo });
 const child_hot = __rolldown_runtime__.createModuleHotContext("child.js");
 __rolldown_runtime__.registerModule("child.js", { exports: child_exports });
 const foo = 0;
@@ -47,8 +47,7 @@ main_hot.accept("parent.js", () => {});
 import * as import_node_assert_00 from "node:assert";
 var init_parent_0 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
-		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, {});
+		var __rolldown_exports__ = __rolldown_runtime__.__export({});
 		__rolldown_runtime__.registerModule("parent.js", { exports: __rolldown_exports__ });
 		const hot_parent = __rolldown_runtime__.createModuleHotContext("parent.js");
 		var import_child_01 = __rolldown_runtime__.loadExports("child.js");
@@ -80,8 +79,7 @@ __rolldown_runtime__.applyUpdates([['main.js', 'parent.js']]);
 //#region child.js
 var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
-		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, { foo: () => foo });
+		var __rolldown_exports__ = __rolldown_runtime__.__export({ foo: () => foo });
 		__rolldown_runtime__.registerModule("child.js", { exports: __rolldown_exports__ });
 		const hot_child = __rolldown_runtime__.createModuleHotContext("child.js");
 		const foo = 1;

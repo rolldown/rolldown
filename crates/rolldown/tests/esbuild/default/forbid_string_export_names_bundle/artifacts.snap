@@ -16,7 +16,7 @@ let nested$1 = 2;
 
 //#endregion
 //#region nested.js
-var nested_exports = __export({}, {
+var nested_exports = __export({
 	"nested name": () => nested,
 	"very nested name": () => nested$1
 });

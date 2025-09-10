@@ -12,7 +12,7 @@ var invalid_identifier$1 = true;
 
 //#endregion
 //#region test2.json
-var test2_exports = __export({}, {
+var test2_exports = __export({
 	default: () => test2_default,
 	"invalid-identifier": () => invalid_identifier
 });

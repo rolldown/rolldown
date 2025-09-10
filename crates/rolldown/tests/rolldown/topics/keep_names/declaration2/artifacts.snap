@@ -10,7 +10,7 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region a.js
-var a_exports = __export({}, {
+var a_exports = __export({
 	delay: () => delay$1,
 	random64: () => random64$1
 });

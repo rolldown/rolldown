@@ -12,7 +12,7 @@ const foo = 123;
 
 //#endregion
 //#region bar.ts
-var bar_exports = __export({}, { foo: () => foo });
+var bar_exports = __export({ foo: () => foo });
 
 //#endregion
 //#region entry.ts

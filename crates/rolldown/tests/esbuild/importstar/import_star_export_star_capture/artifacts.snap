@@ -14,8 +14,7 @@ const foo$1 = 123;
 
 //#endregion
 //#region bar.js
-var bar_exports = {};
-__export(bar_exports, { foo: () => foo$1 });
+var bar_exports = __export({}, { foo: () => foo$1 });
 
 //#endregion
 //#region entry.js

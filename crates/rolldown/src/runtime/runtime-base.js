@@ -17,6 +17,7 @@ export var __commonJSMin = (cb, mod) => () => (mod || cb((mod = { exports: {} })
 export var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true })
+  return target;
 }
 export var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === 'object' || typeof from === 'function')

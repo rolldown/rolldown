@@ -12,8 +12,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 // HIDDEN [rolldown:runtime]
 
 //#region mod.js
-var named_exports = {};
-__export(named_exports, {
+var named_exports = __export({}, {
 	add: () => add,
 	subtract: () => subtract
 });

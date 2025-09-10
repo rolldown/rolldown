@@ -4,6 +4,7 @@ import killPort from 'kill-port';
 import nodeFs from 'node:fs';
 import nodePath from 'node:path';
 import { afterAll, beforeAll, describe, test } from 'vitest';
+import { CONFIG } from './src/config';
 import { removeDirSync, sensibleTimeoutInMs } from './src/utils';
 
 function main() {
@@ -124,11 +125,17 @@ function main() {
           );
 
           // Refer to `packages/test-dev-server/src/utils/get-dev-watch-options-for-ci.ts`
-          // We used a poll-based and debounced watcher in CI, so we need to wait for at least max(poll interval 50ms, debounce duration 200ms) to
+          // We used a poll-based and debounced watcher in CI, so we need to wait for certain amount of time to
           // - Make sure different steps are not debounced together
           // - Make sure changes are detected individually for different steps
           // - Make sure changes in the same step are detected together
-          await sensibleTimeoutInMs(200);
+          if (index !== 0) {
+            await sensibleTimeoutInMs(
+              CONFIG.watch.debounceDuration + CONFIG.watch.debounceTickRate +
+                100,
+            );
+          }
+
           for (const hmrEdit of hmrEdits) {
             const newContent = nodeFs.readFileSync(
               hmrEdit.replacementPath,

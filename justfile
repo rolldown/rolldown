@@ -77,7 +77,7 @@ test-node *args="": build-rolldown
   just test-node-rollup
 
 test-node-hmr *args: build build-test-dev-server
-  test-node-hmr-only {{ args }}
+  just test-node-hmr-only {{ args }}
 
 test-node-hmr-only *args:
   pnpm run --filter @rolldown/test-dev-server-tests test {{ args }}

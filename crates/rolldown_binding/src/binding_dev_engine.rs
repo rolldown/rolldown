@@ -78,7 +78,7 @@ impl BindingDevEngine {
     };
 
     let inner = rolldown::DevEngine::with_bundler(bundler, rolldown_dev_options)
-      .map_err(|_e| napi::Error::from_reason("Fail to create dev engine"))?;
+      .map_err(|e| napi::Error::from_reason(format!("Fail to create dev engine: {e:#?}")))?;
 
     Ok(Self { inner, _session_id: session_id, _session: session })
   }

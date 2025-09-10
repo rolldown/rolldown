@@ -1,19 +1,29 @@
-import { 
+import {
   mode,
-  one
+  one,
+  bool,
+  primitiveNull,
+  primitiveUndefined,
+  longString,
+  shortString
 } from './constants.js';
 
 
-if (process.env.NODE_ENV === mode) {
-  console.log('Production mode code');
+console.log(mode, one, bool, primitiveNull, primitiveUndefined, longString, shortString);
+
+if (one || mode || bool || primitiveNull || primitiveUndefined || longString || shortString) {
+  console.log('test')
 }
 
-console.log(mode, one)
+if (process.env.NODE_ENV === mode) {
+  console.log('production')
+}
 
+export function test() {
+  var two = mode === 1 ? 'two' : 'unused two';
+  var three = mode === 1 || 'unused three';
+  var four = mode === 1 && 'four';
+  var five = mode ?? 'five';
+  return two + three + four + five;
+}
 
-export var mode_ident = mode;
-export var o = one;
-export var two = one === 1 ? 'two' : 'unused two';
-export var three = one === 1 || 'unused three';
-export var four = one === 1 && 'four';
-export var five = undefined ?? 'five';

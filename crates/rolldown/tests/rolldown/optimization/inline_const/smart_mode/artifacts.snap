@@ -6,37 +6,28 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-const mode = "development";
+//#region constants.js
+const mode = "production";
 const one = 1;
-if ("production" === mode) console.log("Production mode code");
-console.log(mode, one);
-var mode_ident = mode;
-var o = one;
-var two = one === 1 ? "two" : "unused two";
-var three = one === 1 || "unused three";
-var four = one === 1 && "four";
-var five = "five";
-export { five, four, mode_ident, o, three, two };
+const bool = true;
+const primitiveUndefined = void 0;
+const primitiveNull = null;
+const longString = "1234";
+const shortString = "123";
 
-```
----
+//#endregion
+//#region main.js
+console.log(mode, 1, true, null, void 0, longString, "123");
+if (1 || "production" || true || null || void 0 || "1234" || "123") console.log("test");
+if ("production" === "production") console.log("production");
+function test() {
+	var two = "production" === 1 ? "two" : "unused two";
+	var three = "production" === 1 || "unused three";
+	var four = "production" === 1 && "four";
+	var five = "production" ?? "five";
+	return two + three + four + five;
+}
 
-Variant: smart-inline-const: [inline_const: Config(InlineConstConfig { mode: Some(Smart), pass: 1 })]
-
-# Assets
-
-## main.js
-
-```js
-const mode = "development";
-const one = 1;
-console.log(mode, one);
-var mode_ident = mode;
-var o = one;
-var two = "two";
-var three = true;
-var four = "four";
-var five = "five";
-export { five, four, mode_ident, o, three, two };
-
+//#endregion
+export { test };
 ```

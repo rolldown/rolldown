@@ -21,11 +21,20 @@ pub struct ConstExportMeta {
   pub value: ConstantValue,
   /// For now we only support esm and commonjs format, so `bool` is enough.
   pub commonjs_export: bool,
+  /// If `true`, it's safe to inline this constant value whether in **inlineConst mode** `'all'` or
+  /// `'smart'`
+  pub safe_to_inline: bool,
 }
 
 impl ConstExportMeta {
   pub fn new(value: ConstantValue, commonjs_export: bool) -> Self {
-    Self { value, commonjs_export }
+    let safe_to_inline = match &value {
+      ConstantValue::Number(n) => n.fract() == 0.0 && *n >= -99.0 && *n <= 999.0,
+      ConstantValue::BigInt(_) => false,
+      ConstantValue::String(s) => s.len() <= 3,
+      ConstantValue::Boolean(_) | ConstantValue::Undefined | ConstantValue::Null => true,
+    };
+    Self { value, commonjs_export, safe_to_inline }
   }
 }
 

@@ -5034,7 +5034,7 @@ expression: output
 
 # tests/rolldown/optimization/inline_const/smart_mode
 
-- main-!~{000}~.js => main-DY_in-SM.js
+- main-!~{000}~.js => main-mRt7JHUp.js
 
 # tests/rolldown/optimization/pife_for_module_wrappers/basic
 

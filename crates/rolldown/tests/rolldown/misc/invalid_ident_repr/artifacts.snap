@@ -10,7 +10,8 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region 1aaa.js
-var _1aaa_exports = __export({}, { default: () => _1aaa_default });
+var _1aaa_exports = {};
+__export(_1aaa_exports, { default: () => _1aaa_default });
 const a = "shared.js";
 var _1aaa_default = a;
 

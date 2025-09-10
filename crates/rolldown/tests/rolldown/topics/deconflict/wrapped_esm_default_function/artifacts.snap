@@ -10,7 +10,8 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region foo.js
-var foo_exports = __export({}, { default: () => foo$1 });
+var foo_exports = {};
+__export(foo_exports, { default: () => foo$1 });
 function foo$1(a$1$1) {
 	assert.equal(a$1$1, a$1$1);
 	assert.equal(a$1, 1);

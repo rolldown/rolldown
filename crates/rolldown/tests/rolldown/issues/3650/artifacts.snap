@@ -10,7 +10,8 @@ import { __esm, __export } from "./rolldown-runtime.js";
 import { init_second, value } from "./second.js";
 
 //#region first.js
-var first_exports = __export({}, { value: () => value$1 });
+var first_exports = {};
+__export(first_exports, { value: () => value$1 });
 var value$1;
 var init_first = __esm({ "first.js": (() => {
 	init_second();
@@ -50,7 +51,8 @@ import { __esm, __export } from "./rolldown-runtime.js";
 import { init_first, value } from "./first.js";
 
 //#region second.js
-var second_exports = __export({}, { value: () => value$1 });
+var second_exports = {};
+__export(second_exports, { value: () => value$1 });
 var value$1;
 var init_second = __esm({ "second.js": (() => {
 	init_first();

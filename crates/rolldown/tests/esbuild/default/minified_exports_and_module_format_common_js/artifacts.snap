@@ -9,12 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 
 //#region foo/test.js
-var test_exports = __export({}, { foo: () => foo });
+var test_exports = {};
+__export(test_exports, { foo: () => foo });
 let foo = 123;
 
 //#endregion
 //#region bar/test.js
-var test_exports$1 = __export({}, { bar: () => bar });
+var test_exports$1 = {};
+__export(test_exports$1, { bar: () => bar });
 let bar = 123;
 
 //#endregion

@@ -10,7 +10,8 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region foo.js
-var foo_exports = __export({}, {
+var foo_exports = {};
+__export(foo_exports, {
 	a: () => a,
 	a1: () => a1,
 	a2: () => a2,

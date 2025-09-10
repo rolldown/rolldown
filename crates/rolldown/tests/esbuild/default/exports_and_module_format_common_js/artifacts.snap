@@ -11,12 +11,14 @@ let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 
 //#region foo/test.js
-var test_exports = __export({}, { foo: () => foo });
+var test_exports = {};
+__export(test_exports, { foo: () => foo });
 let foo = 123;
 
 //#endregion
 //#region bar/test.js
-var test_exports$1 = __export({}, { bar: () => bar });
+var test_exports$1 = {};
+__export(test_exports$1, { bar: () => bar });
 let bar = 123;
 
 //#endregion

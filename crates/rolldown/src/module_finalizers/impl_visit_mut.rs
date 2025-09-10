@@ -13,7 +13,10 @@ use oxc::{
   semantic::ScopeFlags,
   span::{SPAN, Span},
 };
-use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKind, WrapKind};
+use rolldown_common::{
+  ConcatenateWrappedModuleKind, ExportsKind, ModuleNamespaceIncludedReason, SymbolRef,
+  ThisExprReplaceKind, WrapKind,
+};
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
 
@@ -86,6 +89,27 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     program.hashbang.take();
     program.directives.clear();
     // init namespace_alias_symbol_id
+    let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
+      && if self
+        .ctx
+        .linking_info
+        .module_namespace_included_reason
+        .contains(ModuleNamespaceIncludedReason::Unknown)
+      {
+        true
+      } else if self
+        .ctx
+        .linking_info
+        .module_namespace_included_reason
+        .contains(ModuleNamespaceIncludedReason::ReExportExternalModule)
+      {
+        // If the module namespace is only used to reexport external module,
+        // then we need to ensure if it is still has dynamic exports after flatten entry level
+        // external module, see `find_entry_level_external_module`
+        self.ctx.linking_info.has_dynamic_exports
+      } else {
+        false
+      };
 
     let last_import_stmt_idx = self.remove_unused_top_level_stmt(program);
 
@@ -115,8 +139,11 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // 2. shimmed_exports
     // 3. hoisted_names
     // 4. wrapped module declaration
-    let declaration_of_module_namespace_object =
-      self.generate_declaration_of_module_namespace_object();
+    let declaration_of_module_namespace_object = if is_namespace_referenced {
+      self.generate_declaration_of_module_namespace_object()
+    } else {
+      vec![]
+    };
 
     let mut shimmed_exports =
       self.ctx.linking_info.shimmed_missing_exports.iter().collect::<Vec<_>>();

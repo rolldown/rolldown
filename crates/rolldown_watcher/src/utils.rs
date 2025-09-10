@@ -1,10 +1,36 @@
 use crate::{EventHandler, event::Event};
-use std::time::Instant;
+use notify::RecursiveMode;
+use rolldown_error::{BuildResult, ResultExt};
+use std::{path::Path, time::Instant};
 
 #[cfg(not(target_family = "wasm"))]
 pub use non_wasm::*;
 
 pub struct NotifyEventHandlerAdapter<T: EventHandler>(pub T);
+
+/// Adapter that wraps notify's PathsMut to implement rolldown's PathsMut trait.
+/// This allows non-debounced watchers to provide batch path manipulation functionality.
+pub struct NotifyPathsMutAdapter<'me>(Box<dyn notify::PathsMut + 'me>);
+
+impl<'me> NotifyPathsMutAdapter<'me> {
+  pub fn new(paths_mut: Box<dyn notify::PathsMut + 'me>) -> Self {
+    Self(paths_mut)
+  }
+}
+
+impl crate::PathsMut for NotifyPathsMutAdapter<'_> {
+  fn add(&mut self, path: &Path, recursive_mode: RecursiveMode) -> BuildResult<()> {
+    self.0.add(path, recursive_mode).map_err_to_unhandleable().map_err(Into::into)
+  }
+
+  fn remove(&mut self, path: &Path) -> BuildResult<()> {
+    self.0.remove(path).map_err_to_unhandleable().map_err(Into::into)
+  }
+
+  fn commit(self: Box<Self>) -> BuildResult<()> {
+    self.0.commit().map_err_to_unhandleable().map_err(Into::into)
+  }
+}
 
 impl<T> notify::EventHandler for NotifyEventHandlerAdapter<T>
 where

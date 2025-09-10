@@ -1,4 +1,7 @@
-use crate::{EventHandler, Watcher, WatcherConfig, utils::NotifyEventHandlerAdapter};
+use crate::{
+  EventHandler, Watcher, WatcherConfig,
+  utils::{NotifyEventHandlerAdapter, NotifyPathsMutAdapter},
+};
 use notify::{PollWatcher as NotifyPollWatcher, Watcher as NotifyWatcherTrait};
 use rolldown_error::{BuildResult, ResultExt};
 
@@ -38,5 +41,10 @@ impl Watcher for PollWatcher {
   fn unwatch(&mut self, path: &std::path::Path) -> BuildResult<()> {
     self.0.unwatch(path).map_err_to_unhandleable()?;
     Ok(())
+  }
+
+  fn paths_mut<'me>(&'me mut self) -> Box<dyn crate::PathsMut + 'me> {
+    let paths_mut = self.0.paths_mut();
+    Box::new(NotifyPathsMutAdapter::new(paths_mut))
   }
 }

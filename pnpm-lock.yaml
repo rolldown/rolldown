@@ -35,7 +35,7 @@ catalogs:
       version: 0.87.0
     rolldown-plugin-dts:
       specifier: ^0.16.0
-      version: 0.16.1
+      version: 0.16.2
     tsdown:
       specifier: 0.15.0
       version: 0.15.0
@@ -362,7 +362,7 @@ importers:
         version: 'link:'
       rolldown-plugin-dts:
         specifier: 'catalog:'
-        version: 0.16.1(oxc-resolver@11.6.2)(rolldown@packages+rolldown)(typescript@5.9.2)
+        version: 0.16.2(oxc-resolver@11.6.2)(rolldown@packages+rolldown)(typescript@5.9.2)
       rollup:
         specifier: ^4.18.0
         version: 4.50.1
@@ -4869,8 +4869,8 @@ packages:
     engines: {node: 20 || >=22}
     hasBin: true
 
-  rolldown-plugin-dts@0.16.1:
-    resolution: {integrity: sha512-bEfJpvhHm+h2cldNUbj8dT5tF9BJrJawPquScFdodob/55DqYkBis7iar8nkn8wSNIFKxwd2jP9ly/Z7lRME2w==}
+  rolldown-plugin-dts@0.16.2:
+    resolution: {integrity: sha512-WV1J5OqhWL8O8Nd5VAVQghmNcjyQvcGI5w51VszjO9k73avbXpz9X86KLYcKTWXXH6L0f+93JzZxiiSrcYhDLw==}
     engines: {node: '>=20.18.0'}
     peerDependencies:
       '@typescript/native-preview': '>=7.0.0-dev.20250601.1'
@@ -9900,7 +9900,7 @@ snapshots:
       glob: 11.0.3
       package-json-from-dist: 1.0.1
 
-  rolldown-plugin-dts@0.16.1(oxc-resolver@11.6.2)(rolldown@packages+rolldown)(typescript@5.9.2):
+  rolldown-plugin-dts@0.16.2(oxc-resolver@11.6.2)(rolldown@packages+rolldown)(typescript@5.9.2):
     dependencies:
       '@babel/generator': 7.28.3
       '@babel/parser': 7.28.4
@@ -9917,7 +9917,7 @@ snapshots:
       - oxc-resolver
       - supports-color
 
-  rolldown-plugin-dts@0.16.1(rolldown@1.0.0-beta.36)(typescript@5.9.2):
+  rolldown-plugin-dts@0.16.2(rolldown@1.0.0-beta.36)(typescript@5.9.2):
     dependencies:
       '@babel/generator': 7.28.3
       '@babel/parser': 7.28.4
@@ -10308,7 +10308,7 @@ snapshots:
       empathic: 2.0.0
       hookable: 5.5.3
       rolldown: 1.0.0-beta.36
-      rolldown-plugin-dts: 0.16.1(rolldown@1.0.0-beta.36)(typescript@5.9.2)
+      rolldown-plugin-dts: 0.16.2(rolldown@1.0.0-beta.36)(typescript@5.9.2)
       semver: 7.7.2
       tinyexec: 1.0.1
       tinyglobby: 0.2.15

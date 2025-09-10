@@ -1,5 +1,9 @@
+use std::path::Path;
+
 use crate::{EventHandler, Watcher, WatcherConfig, utils::NotifyEventHandlerAdapter};
-use notify::{RecommendedWatcher as NotifyRecommendedWatcher, Watcher as NotifyWatcherTrait};
+use notify::{
+  RecommendedWatcher as NotifyRecommendedWatcher, RecursiveMode, Watcher as NotifyWatcherTrait,
+};
 use rolldown_error::{BuildResult, ResultExt};
 
 /// Will use the ideal watcher under the hood based on the platform.
@@ -38,5 +42,26 @@ impl Watcher for RecommendedWatcher {
   fn unwatch(&mut self, path: &std::path::Path) -> BuildResult<()> {
     self.0.unwatch(path).map_err_to_unhandleable()?;
     Ok(())
+  }
+
+  fn paths_mut<'me>(&'me mut self) -> Box<dyn crate::PathsMut + 'me> {
+    struct CustomPathsMut<'me>(Box<dyn notify::PathsMut + 'me>);
+
+    impl crate::PathsMut for CustomPathsMut<'_> {
+      fn add(&mut self, path: &Path, recursive_mode: RecursiveMode) -> BuildResult<()> {
+        self.0.add(path, recursive_mode).map_err_to_unhandleable().map_err(Into::into)
+      }
+
+      fn remove(&mut self, path: &Path) -> BuildResult<()> {
+        self.0.remove(path).map_err_to_unhandleable().map_err(Into::into)
+      }
+
+      fn commit(self: Box<Self>) -> BuildResult<()> {
+        self.0.commit().map_err_to_unhandleable().map_err(Into::into)
+      }
+    }
+
+    let paths_mut = self.0.paths_mut();
+    Box::new(CustomPathsMut(paths_mut))
   }
 }

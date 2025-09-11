@@ -42,10 +42,8 @@ jobs:
 
       - name: Node Test
         run: pnpm run --recursive --filter=!rollup-tests --filter=!vite-tests test
-        if: false
         env:
           NAPI_RS_FORCE_WASI: error
-          RD_LOG: trace
 
       - name: Rollup Test
         run: pnpm run --filter rollup-tests test

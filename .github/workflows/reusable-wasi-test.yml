@@ -37,7 +37,6 @@ jobs:
 
       - name: Build Basic Example
         run: pnpm --filter '@example/*' run --sequential build
-        if: ${{ inputs.os != 'windows-latest' }}
         env:
           NAPI_RS_FORCE_WASI: error
 

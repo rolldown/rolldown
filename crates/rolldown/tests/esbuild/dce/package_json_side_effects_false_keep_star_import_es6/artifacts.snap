@@ -10,7 +10,7 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region node_modules/demo-pkg/index.js
-var demo_pkg_exports = __export({ foo: () => foo });
+var demo_pkg_exports = /* @__PURE__ */ __export({ foo: () => foo });
 const foo = 123;
 console.log("hello");
 

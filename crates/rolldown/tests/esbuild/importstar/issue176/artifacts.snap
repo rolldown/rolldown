@@ -12,7 +12,7 @@ const foo = () => "hi there";
 
 //#endregion
 //#region folders/index.js
-var folders_exports = __export({ foo: () => foo });
+var folders_exports = /* @__PURE__ */ __export({ foo: () => foo });
 
 //#endregion
 //#region entry.js

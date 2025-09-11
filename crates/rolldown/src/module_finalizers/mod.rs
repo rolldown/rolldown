@@ -380,7 +380,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let module_namespace_rhs = if arg_obj_expr.properties.is_empty() {
       Expression::ObjectExpression(self.builder().alloc(arg_obj_expr))
     } else {
-      self.snippet.builder.expression_call(
+      self.snippet.builder.expression_call_with_pure(
         SPAN,
         self.finalized_expr_for_runtime_symbol("__export"),
         NONE,
@@ -389,6 +389,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           .builder
           .vec_from_array([ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc))]),
         false,
+        true,
       )
     };
 

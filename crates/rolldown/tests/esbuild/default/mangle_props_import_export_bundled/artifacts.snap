@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region esm.js
-var esm_exports = __export({ esm_foo_: () => esm_foo_ });
+var esm_exports = /* @__PURE__ */ __export({ esm_foo_: () => esm_foo_ });
 var esm_foo_;
 var init_esm = __esm({ "esm.js": (() => {
 	esm_foo_ = "foo";

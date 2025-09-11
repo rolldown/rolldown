@@ -18,7 +18,7 @@ const z = 4;
 
 //#endregion
 //#region common.js
-var common_exports = __export({
+var common_exports = /* @__PURE__ */ __export({
 	x: () => x,
 	z: () => z
 });

@@ -19,7 +19,7 @@ var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
 
 //#endregion
 //#region esm.js
-var esm_exports = __export({ value: () => value });
+var esm_exports = /* @__PURE__ */ __export({ value: () => value });
 var value;
 var init_esm = __esm({ "esm.js": (() => {
 	value = 1;

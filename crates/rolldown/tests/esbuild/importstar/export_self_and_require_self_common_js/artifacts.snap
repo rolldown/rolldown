@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 
 //#region entry.js
-var entry_exports = __export({ foo: () => foo });
+var entry_exports = /* @__PURE__ */ __export({ foo: () => foo });
 var foo;
 var init_entry = __esm({ "entry.js": (() => {
 	foo = 123;

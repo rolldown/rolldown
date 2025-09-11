@@ -1,0 +1,7 @@
+{
+  "config": {
+    "external": ["external"],
+    "minify": "dceOnly"
+  },
+  "expectExecuted": false
+}

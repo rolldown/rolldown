@@ -15,7 +15,7 @@ var init_a = __esm({ "a.js": (() => {
 
 //#endregion
 //#region b.js
-var b_exports = __export({ xyz: () => xyz });
+var b_exports = /* @__PURE__ */ __export({ xyz: () => xyz });
 var xyz;
 var init_b = __esm({ "b.js": (() => {
 	xyz = null;
@@ -23,7 +23,7 @@ var init_b = __esm({ "b.js": (() => {
 
 //#endregion
 //#region commonjs.js
-var commonjs_exports = __export({
+var commonjs_exports = /* @__PURE__ */ __export({
 	C: () => Class,
 	Class: () => Class,
 	Fn: () => Fn,
@@ -48,7 +48,7 @@ var init_commonjs = __esm({ "commonjs.js": (() => {
 
 //#endregion
 //#region c.js
-var c_exports = __export({ default: () => c_default });
+var c_exports = /* @__PURE__ */ __export({ default: () => c_default });
 var c_default;
 var init_c = __esm({ "c.js": (() => {
 	c_default = class {};
@@ -56,7 +56,7 @@ var init_c = __esm({ "c.js": (() => {
 
 //#endregion
 //#region d.js
-var d_exports = __export({ default: () => Foo });
+var d_exports = /* @__PURE__ */ __export({ default: () => Foo });
 var Foo;
 var init_d = __esm({ "d.js": (() => {
 	Foo = class {};
@@ -65,13 +65,13 @@ var init_d = __esm({ "d.js": (() => {
 
 //#endregion
 //#region e.js
-var e_exports = __export({ default: () => e_default });
+var e_exports = /* @__PURE__ */ __export({ default: () => e_default });
 function e_default() {}
 var init_e = __esm({ "e.js": (() => {}) });
 
 //#endregion
 //#region f.js
-var f_exports = __export({ default: () => foo$1 });
+var f_exports = /* @__PURE__ */ __export({ default: () => foo$1 });
 function foo$1() {}
 var init_f = __esm({ "f.js": (() => {
 	foo$1.prop = 123;
@@ -79,13 +79,13 @@ var init_f = __esm({ "f.js": (() => {
 
 //#endregion
 //#region g.js
-var g_exports = __export({ default: () => g_default });
+var g_exports = /* @__PURE__ */ __export({ default: () => g_default });
 async function g_default() {}
 var init_g = __esm({ "g.js": (() => {}) });
 
 //#endregion
 //#region h.js
-var h_exports = __export({ default: () => foo });
+var h_exports = /* @__PURE__ */ __export({ default: () => foo });
 async function foo() {}
 var init_h = __esm({ "h.js": (() => {
 	foo.prop = 123;

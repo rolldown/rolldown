@@ -11,22 +11,22 @@ import { ns } from "x";
 
 // HIDDEN [rolldown:runtime]
 //#region a.js
-var a_exports = __export({ ns: () => ns$1 });
+var a_exports = /* @__PURE__ */ __export({ ns: () => ns$1 });
 var init_a = __esm({ "a.js": (() => {}) });
 
 //#endregion
 //#region b.js
-var b_exports = __export({ ns: () => ns$1 });
+var b_exports = /* @__PURE__ */ __export({ ns: () => ns$1 });
 var init_b = __esm({ "b.js": (() => {}) });
 
 //#endregion
 //#region c.js
-var c_exports = __export({ ns: () => ns$1 });
+var c_exports = /* @__PURE__ */ __export({ ns: () => ns$1 });
 var init_c = __esm({ "c.js": (() => {}) });
 
 //#endregion
 //#region d.js
-var d_exports = __export({ ns: () => ns });
+var d_exports = /* @__PURE__ */ __export({ ns: () => ns });
 var init_d = __esm({ "d.js": (() => {}) });
 
 //#endregion

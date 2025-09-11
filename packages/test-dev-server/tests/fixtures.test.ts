@@ -3,7 +3,7 @@ import glob from 'fast-glob';
 import killPort from 'kill-port';
 import nodeFs from 'node:fs';
 import nodePath from 'node:path';
-import { afterAll, beforeAll, describe, test } from 'vitest';
+import { afterAll, describe, test } from 'vitest';
 import { CONFIG } from './src/config';
 import { removeDirSync, sensibleTimeoutInMs } from './src/utils';
 
@@ -21,19 +21,6 @@ function main() {
 
   console.log(`🔄 - Cleaning up ${tmpFixturesPath} directory...`);
   removeDirSync(tmpFixturesPath);
-  console.log(`🔄 - Copying projects to ${tmpFixturesPath} directory...`);
-  nodeFs.mkdirSync(tmpFixturesPath, { recursive: true });
-  nodeFs.cpSync(fixturesPath, tmpFixturesPath, {
-    recursive: true,
-    filter: (src) => {
-      return !src.includes('node_modules') && !src.includes('dist');
-    },
-  });
-
-  beforeAll(async () => {
-    console.log(`🔄 - Updating node_modules...`);
-    await updateNodeModules();
-  }, 30 * 1000);
 
   afterAll(async () => {
     if (!process.env.CI) {
@@ -56,12 +43,38 @@ function main() {
       ) {
         continue;
       }
+
       test.sequential(`fixture: ${fixtureName}`, async () => {
-        const projectName = fixtureName;
-        const tmpProjectPath = nodePath.join(
+        let tmpProjectPath = nodePath.join(
           tmpFixturesPath,
-          projectName,
+          fixtureName,
         );
+        while (nodeFs.existsSync(tmpProjectPath)) {
+          tmpProjectPath = nodePath.join(
+            tmpFixturesPath,
+            fixtureName + '-retry',
+          );
+        }
+
+        console.log(
+          `🔄 - Copying ${
+            nodePath.join(fixturesPath, fixtureName)
+          } to ${tmpProjectPath}...`,
+        );
+        nodeFs.mkdirSync(tmpProjectPath, { recursive: true });
+        nodeFs.cpSync(
+          nodePath.join(fixturesPath, fixtureName),
+          tmpProjectPath,
+          {
+            recursive: true,
+            filter: (src) => {
+              return !src.includes('node_modules') && !src.includes('dist');
+            },
+          },
+        );
+
+        console.log(`🔄 - Updating node_modules...`);
+        await updateNodeModules(true);
 
         console.log(`🔄 - Killing any process running on port 3000...`);
         try {
@@ -87,13 +100,9 @@ function main() {
           },
         });
 
-        await waitForPathExists(nodePath.join(tmpProjectPath, 'dist/main.js'));
-
         const nodeScriptPath = nodePath.join(tmpProjectPath, 'dist/main.js');
 
-        //   let inject_script_url =
-        //   format!("data:text/javascript,{}", urlencoding::encode(&globals_injection));
-        // node_command.arg("--import");
+        await waitForPathExists(nodeScriptPath);
 
         const initOkFilePath = nodePath.join(tmpProjectPath, 'ok-init');
 
@@ -103,9 +112,6 @@ function main() {
           `.trim());
 
         console.log(`🔄 Starting Node.js process: ${nodeScriptPath}`);
-        console.log(
-          `node ${nodeScriptPath} --import data:text/javascript,${injectCode}`,
-        );
         const runningArtifactProcess = execa(
           'node',
           ['--import', `data:text/javascript,${injectCode}`, nodeScriptPath],

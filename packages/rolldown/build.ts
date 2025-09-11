@@ -140,7 +140,9 @@ function withShared(
       options.plugins,
     ],
     treeshake: {
-      moduleSideEffects: ['signal-exit'],
+      moduleSideEffects: [
+        { test: /\/signal-exit\//, sideEffects: false },
+      ],
     },
   };
 }

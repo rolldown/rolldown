@@ -148,6 +148,21 @@ describe('Error output format', () => {
       expect(removeAnsiColors(error.message)).toMatchSnapshot()
     }
   })
+
+  test('bundler initialize error occurs', async () => {
+    try {
+    const build = await rolldown({
+        input: './main.js',
+        cwd: import.meta.dirname,
+        transform: {
+          target: 'es5'
+        }
+      })
+      await build.write({})
+    } catch (error: any) {
+      expect(removeAnsiColors(error.message)).toMatchSnapshot()
+    }
+  })
 })
 
 // oxlint-disable no-control-regex

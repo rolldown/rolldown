@@ -1,5 +1,12 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`Error output format > bundler initialize error occurs 1`] = `
+"[BUNDLER_INITIALIZE_ERROR] Error: Invalid target 'es5'.
+  │ 
+  │ Help: Rolldown only supports ES2015 (ES6) and later.
+"
+`;
+
 exports[`Error output format > should correctly output the custom error defined on the rust side 1`] = `
 "Build failed with 1 error:
 

@@ -2,12 +2,13 @@ use std::sync::Arc;
 
 use oxc::transformer::ESTarget;
 use rolldown_common::{BundlerTransformOptions, Either, JsxOptions, JsxPreset, TransformOptions};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 
 #[expect(clippy::too_many_lines)]
 pub fn normalize_transform_options_with_tsconfig(
   mut transform_options: BundlerTransformOptions,
   tsconfig: Option<Arc<rolldown_resolver::TsConfig>>,
-) -> anyhow::Result<TransformOptions> {
+) -> BuildResult<TransformOptions> {
   let es_target = normalize_es_target(transform_options.target.as_ref());
   let mut jsx_preset = JsxPreset::Enable;
 
@@ -18,7 +19,12 @@ pub fn normalize_transform_options_with_tsconfig(
         "preserve".clone_into(jsx);
         JsxPreset::Disable
       }
-      _ => return Err(anyhow::anyhow!("Invalid jsx option: `{jsx}`.")),
+      _ => {
+        return Err(BuildDiagnostic::bundler_initialize_error(
+          format!("Invalid jsx option: `{jsx}`."),
+          Some("Valid options are 'preserve' to keep JSX as-is, or omit the option to use default transform.".to_owned()),
+        ))?;
+      }
     };
   }
 
@@ -141,11 +147,17 @@ pub fn normalize_transform_options_with_tsconfig(
     transform_options.assumptions = Some(assumptions);
   }
 
-  Ok(TransformOptions::new(
-    transform_options.try_into().map_err(|err: String| anyhow::anyhow!(err))?,
-    es_target,
-    jsx_preset,
-  ))
+  let options = transform_options.try_into().map_err(|err: String| {
+    let hint = if err.contains("Invalid target") {
+      Some("Rolldown only supports ES2015 (ES6) and later.".to_owned())
+    } else {
+      None
+    };
+
+    BuildDiagnostic::bundler_initialize_error(err, hint)
+  })?;
+
+  Ok(TransformOptions::new(options, es_target, jsx_preset))
 }
 
 fn normalize_es_target(target: Option<&Either<String, Vec<String>>>) -> ESTarget {

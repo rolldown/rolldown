@@ -36,5 +36,6 @@ bitflags! {
     const NapiError = 1 << 28;
     const ConfigurationFieldConflict = 1 << 29;
     const PreferBuiltinFeature = 1 << 30;
+    const BundlerInitializeError = 1 << 31;
   }
 }

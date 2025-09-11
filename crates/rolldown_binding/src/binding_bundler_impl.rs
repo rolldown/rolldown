@@ -89,10 +89,7 @@ impl BindingBundlerImpl {
     let bundler = bundler_builder.build().map_err(|err| {
       napi::Error::new(
         napi::Status::GenericFailure,
-        format!(
-          "Failed to create bundler:\n{}",
-          err.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n")
-        ),
+        err.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
       )
     })?;
 

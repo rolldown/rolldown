@@ -11,6 +11,7 @@ use crate::events::DiagnosableArcstr;
 #[cfg(feature = "napi")]
 use crate::events::NapiError;
 use crate::events::assign_to_import::AssignToImport;
+use crate::events::bundler_initialize_error::BundlerInitializeError;
 use crate::events::configuration_field_conflict::ConfigurationFieldConflict;
 use crate::events::export_undefined_variable::ExportUndefinedVariable;
 use crate::events::filename_conflict::FilenameConflict;
@@ -320,6 +321,10 @@ impl BuildDiagnostic {
   pub fn unhandleable_error(err: anyhow::Error) -> Self {
     downcast_napi_error_diagnostics(err)
       .unwrap_or_else(|err| Self::new_inner(UnhandleableError(err)))
+  }
+
+  pub fn bundler_initialize_error(message: String, hint: Option<String>) -> Self {
+    Self::new_inner(BundlerInitializeError { message, hint })
   }
 }
 

@@ -43,6 +43,7 @@ pub enum EventKind {
   NapiError = 28,
   ConfigurationFieldConflict = 29,
   PreferBuiltinFeature = 30,
+  BundlerInitializeError = 31,
 }
 
 impl Display for EventKind {
@@ -87,6 +88,7 @@ impl Display for EventKind {
       EventKind::NapiError => write!(f, "NAPI_ERROR"),
       EventKind::ConfigurationFieldConflict => write!(f, "CONFIGURATION_FIELD_CONFLICT"),
       EventKind::PreferBuiltinFeature => write!(f, "PREFER_BUILTIN_FEATURE"),
+      EventKind::BundlerInitializeError => write!(f, "BUNDLER_INITIALIZE_ERROR"),
     }
   }
 }

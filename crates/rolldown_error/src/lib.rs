@@ -15,6 +15,7 @@ pub use crate::{
   event_kind::EventKind,
   events::DiagnosableArcstr,
   events::ambiguous_external_namespace::AmbiguousExternalNamespaceModule,
+  events::bundler_initialize_error::BundlerInitializeError,
   events::commonjs_variable_in_esm::CjsExportSpan,
   events::invalid_option::InvalidOptionType,
   events::unhandleable_error::CausedPlugin,

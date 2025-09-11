@@ -167,6 +167,7 @@ impl Bundler {
     Ok(scan_stage_output)
   }
 
+  #[tracing::instrument(level = "debug", skip(self, output))]
   pub fn normalize_scan_stage_output_and_update_cache(
     &mut self,
     output: ScanStageOutput,

@@ -14,6 +14,7 @@ use crate::type_alias::AssetVec;
 use super::GenerateStage;
 
 impl GenerateStage<'_> {
+  #[tracing::instrument(level = "debug", skip_all)]
   pub fn minify_assets(
     options: &NormalizedBundlerOptions,
     assets: &mut AssetVec,

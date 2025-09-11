@@ -15,7 +15,10 @@ use rolldown_plugin::HookAddonArgs;
 use rolldown_sourcemap::Source;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
-use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
+use rolldown_utils::{
+  rayon::{IntoParallelRefIterator, ParallelIterator},
+  rustc_hash::FxHashMapExt,
+};
 use rustc_hash::FxHashMap;
 
 use super::format::{cjs::render_cjs, esm::render_esm, iife::render_iife, umd::render_umd};
@@ -45,7 +48,7 @@ pub struct EcmaGenerator;
 impl Generator for EcmaGenerator {
   #[expect(clippy::too_many_lines)]
   async fn instantiate_chunk(ctx: &mut GenerateContext<'_>) -> Result<BuildResult<GenerateOutput>> {
-    let mut rendered_modules = FxHashMap::default();
+    let mut rendered_modules = FxHashMap::with_capacity(ctx.chunk.modules.len());
     let module_id_to_codegen_ret = std::mem::take(&mut ctx.module_id_to_codegen_ret);
     let rendered_module_sources: RenderedModuleSources = ctx
       .chunk

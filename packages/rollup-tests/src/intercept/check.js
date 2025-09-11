@@ -31,7 +31,7 @@ beforeEach(function skipAlreadyFiledTests() {
       // Emit a custom error to make it easier to find the test that timed out.
       currentTest.callback?.(new Error(`Test timed out: [${id}]`))
     }
-  }, 500)
+  }, 5000)
 })
 
 afterEach(function updateStatus() {

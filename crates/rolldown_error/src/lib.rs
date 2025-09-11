@@ -4,11 +4,13 @@ mod event_kind;
 mod events;
 mod generated;
 mod locator;
-mod type_aliases;
 mod types;
 mod utils;
 
-pub use types::result_ext::ResultExt;
+use crate::build_error::BatchedBuildDiagnostic;
+
+pub type BuildResult<T> = Result<T, BatchedBuildDiagnostic>;
+pub type SingleBuildResult<T> = std::result::Result<T, BuildDiagnostic>;
 
 pub use crate::{
   build_error::{BuildDiagnostic, severity::Severity},
@@ -22,8 +24,8 @@ pub use crate::{
   events::unloadable_dependency::UnloadableDependencyContext,
   generated::event_kind_switcher::EventKindSwitcher,
   locator::line_column_to_byte_offset,
-  type_aliases::{BuildResult, SingleBuildResult},
   types::diagnostic_options::DiagnosticOptions,
+  types::result_ext::ResultExt,
   utils::filter_out_disabled_diagnostics,
 };
 

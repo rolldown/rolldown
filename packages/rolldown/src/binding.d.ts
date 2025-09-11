@@ -1580,6 +1580,7 @@ export interface BindingDevOptions {
 }
 
 export interface BindingDevWatchOptions {
+  skipWrite?: boolean
   usePolling?: boolean
   pollInterval?: number
   useDebounce?: boolean

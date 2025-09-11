@@ -2,6 +2,11 @@ import type { BindingHmrUpdate } from '../../binding';
 
 export interface DevWatchOptions {
   /**
+   * If `true`, files are not written to disk.
+   * @default false
+   */
+  skipWrite?: boolean;
+  /**
    * If `true`, use polling instead of native file system events for watching.
    * @default false
    */

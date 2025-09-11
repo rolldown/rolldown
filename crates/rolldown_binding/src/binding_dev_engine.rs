@@ -32,6 +32,7 @@ impl BindingDevEngine {
 
     let on_hmr_updates_callback = dev_options.as_ref().and_then(|opts| opts.on_hmr_updates.clone());
     let watch_options = dev_options.as_ref().and_then(|opts| opts.watch.as_ref());
+    let skip_write = watch_options.and_then(|watch| watch.skip_write);
     let use_polling = watch_options.and_then(|watch| watch.use_polling);
     let poll_interval = watch_options.and_then(|watch| watch.poll_interval);
     let use_debounce = watch_options.and_then(|watch| watch.use_debounce);
@@ -52,7 +53,8 @@ impl BindingDevEngine {
       }) as OnHmrUpdatesCallback
     });
 
-    let dev_watch_options = if use_polling.is_some()
+    let dev_watch_options = if skip_write.is_some()
+      || use_polling.is_some()
       || poll_interval.is_some()
       || use_debounce.is_some()
       || debounce_duration.is_some()
@@ -60,6 +62,7 @@ impl BindingDevEngine {
       || debounce_tick_rate.is_some()
     {
       Some(rolldown::dev::dev_options::DevWatchOptions {
+        skip_write,
         use_polling,
         poll_interval: poll_interval.map(u64::from),
         use_debounce,

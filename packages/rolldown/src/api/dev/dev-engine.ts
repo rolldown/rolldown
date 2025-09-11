@@ -24,6 +24,7 @@ export class DevEngine {
     const bindingDevOptions = {
       onHmrUpdates: devOptions.onHmrUpdates,
       watch: devOptions.watch && {
+        skipWrite: devOptions.watch.skipWrite,
         usePolling: devOptions.watch.usePolling,
         pollInterval: devOptions.watch.pollInterval,
         useDebounce: devOptions.watch.useDebounce,

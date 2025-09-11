@@ -5,6 +5,7 @@ use napi_derive::napi;
 
 #[napi(object, object_to_js = false)]
 pub struct BindingDevWatchOptions {
+  pub skip_write: Option<bool>,
   pub use_polling: Option<bool>,
   pub poll_interval: Option<u32>,
   pub use_debounce: Option<bool>,

@@ -7,6 +7,8 @@ pub type SharedNormalizedDevOptions = Arc<NormalizedDevOptions>;
 
 #[derive(Default)]
 pub struct DevWatchOptions {
+  /// If `true`, files are not written to disk.
+  pub skip_write: Option<bool>,
   /// If `true`, use polling instead of native file system events for watching
   pub use_polling: Option<bool>,
   /// Poll interval in milliseconds (only used when use_polling is true)
@@ -32,6 +34,7 @@ pub struct DevOptions {
 #[expect(clippy::struct_excessive_bools)]
 pub struct NormalizedDevOptions {
   pub on_hmr_updates: Option<OnHmrUpdatesCallback>,
+  pub skip_write: bool,
   pub eager_rebuild: bool,
   pub use_polling: bool,
   pub poll_interval: u64,
@@ -45,6 +48,7 @@ pub fn normalize_dev_options(options: DevOptions) -> NormalizedDevOptions {
   let watch_options = options.watch.unwrap_or_default();
   NormalizedDevOptions {
     on_hmr_updates: options.on_hmr_updates,
+    skip_write: watch_options.skip_write.unwrap_or_default(),
     eager_rebuild: options.eager_rebuild.unwrap_or_default(),
     use_polling: watch_options.use_polling.unwrap_or(false),
     poll_interval: watch_options.poll_interval.unwrap_or(100),

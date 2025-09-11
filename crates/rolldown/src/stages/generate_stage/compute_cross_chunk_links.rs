@@ -607,7 +607,6 @@ fn generate_minified_names(mut value: u32) -> String {
     buffer.push(byte);
     value /= REST_BASE;
   }
-  buffer.reverse();
   // SAFETY: `buffer` is base64 characters, it is valid utf8 characters
   unsafe { String::from_utf8_unchecked(buffer) }
 }

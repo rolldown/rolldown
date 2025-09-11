@@ -39,11 +39,10 @@ pub enum EventKind {
   UnhandleableError = 25,
   UnloadableDependencyError = 26,
 
-  IoError = 27,
-  NapiError = 28,
-  ConfigurationFieldConflict = 29,
-  PreferBuiltinFeature = 30,
-  BundlerInitializeError = 31,
+  NapiError = 27,
+  ConfigurationFieldConflict = 28,
+  PreferBuiltinFeature = 29,
+  BundlerInitializeError = 30,
 }
 
 impl Display for EventKind {
@@ -84,7 +83,6 @@ impl Display for EventKind {
       EventKind::UnhandleableError => write!(f, "UNHANDLEABLE_ERROR"),
       EventKind::UnloadableDependencyError => write!(f, "UNLOADABLE_DEPENDENCY"),
 
-      EventKind::IoError => write!(f, "IO_ERROR"),
       EventKind::NapiError => write!(f, "NAPI_ERROR"),
       EventKind::ConfigurationFieldConflict => write!(f, "CONFIGURATION_FIELD_CONFLICT"),
       EventKind::PreferBuiltinFeature => write!(f, "PREFER_BUILTIN_FEATURE"),

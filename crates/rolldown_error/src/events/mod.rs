@@ -82,16 +82,6 @@ impl BuildEvent for NapiError {
   }
 }
 
-impl BuildEvent for std::io::Error {
-  fn kind(&self) -> EventKind {
-    EventKind::IoError
-  }
-
-  fn message(&self, _opts: &DiagnosticOptions) -> String {
-    format!("IO error: {self}")
-  }
-}
-
 /// A Hybrid string type used for diagnostic, e.g.
 /// for `UnresolvedError`, a specifier could be either a slice from raw source, or
 /// created during ast transformation. When the specifier came from raw source, we could

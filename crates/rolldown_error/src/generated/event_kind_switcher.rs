@@ -32,10 +32,9 @@ bitflags! {
     const ResolveError = 1 << 24;
     const UnhandleableError = 1 << 25;
     const UnloadableDependencyError = 1 << 26;
-    const IoError = 1 << 27;
-    const NapiError = 1 << 28;
-    const ConfigurationFieldConflict = 1 << 29;
-    const PreferBuiltinFeature = 1 << 30;
-    const BundlerInitializeError = 1 << 31;
+    const NapiError = 1 << 27;
+    const ConfigurationFieldConflict = 1 << 28;
+    const PreferBuiltinFeature = 1 << 29;
+    const BundlerInitializeError = 1 << 30;
   }
 }

@@ -95,12 +95,6 @@ impl BuildDiagnostic {
   }
 }
 
-impl From<std::io::Error> for BuildDiagnostic {
-  fn from(e: std::io::Error) -> Self {
-    Self::new_inner(e)
-  }
-}
-
 #[cfg(feature = "napi")]
 impl From<napi::Error> for BuildDiagnostic {
   fn from(e: napi::Error) -> Self {

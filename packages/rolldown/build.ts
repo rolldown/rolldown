@@ -43,15 +43,22 @@ const configs: BuildOptions[] = [
 ];
 
 if (isBrowserPkg) {
+  let init = withShared({
+    browserBuild: true,
+    output: {
+      dir: outputDir,
+      format: 'esm',
+      entryFileNames: '[name].browser.mjs',
+    },
+  });
+  init.define = {
+    ...init.define,
+    // `experimental-index` now dependents on `logger` in cli to emit warning which require `process.env.ROLLDOWN_TEST` to initialize logger correctly.
+    // But in browser build, we don't have `process.`, so we polyfill them
+    'process.env.ROLLDOWN_TEST': 'false',
+  };
   configs.push(
-    withShared({
-      browserBuild: true,
-      output: {
-        dir: outputDir,
-        format: 'esm',
-        entryFileNames: '[name].browser.mjs',
-      },
-    }),
+    init,
   );
 }
 

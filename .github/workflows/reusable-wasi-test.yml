@@ -47,7 +47,5 @@ jobs:
 
       - name: Rollup Test
         run: pnpm run --filter rollup-tests test
-        if: false
         env:
           NAPI_RS_FORCE_WASI: error
-          RD_LOG: trace

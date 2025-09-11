@@ -92,6 +92,8 @@
     "build-native:release": "pnpm run --sequential '/^build-(binding:release|js-glue)$/'",
     "build-native:profile": "pnpm run build-binding:profile && pnpm run build-js-glue",
     "build-native:memory-profile": "pnpm run build-binding:profile --features default_global_allocator && pnpm run build-js-glue",
+    "build-wasi:debug": "TARGET='rolldown-wasi' pnpm run --sequential '/^build-(binding|binding:wasi|node)$/'",
+    "build-wasi:release": "TARGET='rolldown-wasi' pnpm run --sequential '/^build-(binding|binding:wasi:release|node)$/'",
     "build-browser-pkg:debug": "TARGET='browser' pnpm run --sequential '/^build-(binding|binding:wasi|node)$/'",
     "build-browser-pkg:release": "TARGET='browser' pnpm run --sequential '/^build-(binding|binding:wasi:release|node)$/'",
     "# Scrips for docs #": "_",

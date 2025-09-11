@@ -19,7 +19,9 @@ const buildMeta = (function makeBuildMeta() {
   // Refer to `rolldown` package
   type TargetRolldownPkg = 'rolldown-pkg';
 
-  const target: TargetBrowserPkg | TargetRolldownPkg =
+  type TargetRolldownPkgWasi = 'rolldown-pkg-wasi';
+
+  const target: TargetBrowserPkg | TargetRolldownPkg | TargetRolldownPkgWasi =
     (function determineTarget() {
       switch (process.env.TARGET) {
         case undefined:
@@ -27,6 +29,8 @@ const buildMeta = (function makeBuildMeta() {
           return 'rolldown-pkg';
         case 'browser':
           return 'browser-pkg';
+        case 'rolldown-wasi':
+          return 'rolldown-pkg-wasi';
         default:
           console.warn(
             `Unknown target: ${process.env.TARGET}, defaulting to 'rolldown-pkg'`,
@@ -48,6 +52,7 @@ const buildMeta = (function makeBuildMeta() {
     pkgJson: JSON.parse(
       fs.readFileSync(nodePath.resolve(pkgRoot, 'package.json'), 'utf-8'),
     ),
+    desireWasmFiles: target === 'browser-pkg' || target === 'rolldown-pkg-wasi',
   };
 })();
 
@@ -135,7 +140,8 @@ function withShared(
     },
     ...options,
     plugins: [
-      buildMeta.target === 'browser-pkg' && resolveWasiBinding(isBrowserBuild),
+      buildMeta.desireWasmFiles &&
+      resolveWasiBinding(buildMeta.target === 'browser-pkg'),
       isBrowserBuild && removeBuiltModules(),
       options.plugins,
     ],
@@ -147,7 +153,6 @@ function withShared(
   };
 }
 
-// browser package only
 // alias binding file to rolldown-binding.wasi.js and mark it as external
 // alias its dts file to rolldown-binding.d.ts without external
 function resolveWasiBinding(isBrowserBuild?: boolean): Plugin {
@@ -237,10 +242,10 @@ function copy() {
 
   // Binary build is on the separate step on CI
   if (!buildMeta.isCI) {
-    if (buildMeta.target === 'browser-pkg' && !wasmFiles.length) {
+    if (buildMeta.desireWasmFiles && !wasmFiles.length) {
       throw new Error('No WASM files found.');
     }
-    if (buildMeta.target === 'rolldown-pkg' && !nodeFiles.length) {
+    if (!buildMeta.desireWasmFiles && !nodeFiles.length) {
       throw new Error('No Node files found.');
     }
   }
@@ -252,11 +257,11 @@ function copy() {
     // Released `rolldown` package import binary via `@rolldown/binding-<platform>` packages.
     // There's no need to copy binary files to dist folder.
 
-    if (buildMeta.target === 'browser-pkg') {
+    if (buildMeta.desireWasmFiles) {
       // Move the wasm file to dist
       wasmFiles.forEach((file) => {
         const fileName = nodePath.basename(file);
-        if (buildMeta.target === 'browser-pkg' && fileName.includes('debug')) {
+        if (buildMeta.desireWasmFiles && fileName.includes('debug')) {
           // NAPI-RS now generates a debug wasm binary no matter how and we don't want to ship it to npm.
           console.log(colors.yellow('[build:done]'), 'Skipping', file);
         } else {

@@ -157,26 +157,30 @@ build: build-pluginutils build-rolldown
 build-glue:
   pnpm run --filter rolldown build-js-glue
 
-# Build `rolldown` located in `packages/rolldown` itself and its binding.
+# Build `rolldown` located in `packages/rolldown` itself and its `.node` binding.
 build-rolldown: build-pluginutils
   pnpm run --filter rolldown build-native:debug
 
-# Build `rolldown` located in `packages/rolldown` itself and its binding in release mode.
+# Build `rolldown` located in `packages/rolldown` itself and its `.wasm` binding for WASI.
+build-rolldown-wasi: build-pluginutils
+  pnpm run --filter rolldown build-wasi:debug
+
+# Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in release mode.
 build-rolldown-release: build-pluginutils
   pnpm run --filter rolldown build-native:release
 
-# Build `rolldown` located in `packages/rolldown` itself and its binding in profile mode.
+# Build `rolldown` located in `packages/rolldown` itself and its `.node` binding in profile mode.
 build-rolldown-profile:
   pnpm run --filter rolldown build-native:profile
 
 build-rolldown-memory-profile:
   pnpm run --filter rolldown build-native:memory-profile
 
-# Build `@rolldown/browser` located in `packages/browser` itself and its binding.
+# Build `@rolldown/browser` located in `packages/browser` itself and its `.wasm` binding.
 build-browser: build-pluginutils
   pnpm run --filter "@rolldown/browser" build:debug
 
-# Build `@rolldown/browser` located in `packages/browser` itself and its binding in release mode.
+# Build `@rolldown/browser` located in `packages/browser` itself and its `.wasm` binding in release mode.
 build-browser-release: build-pluginutils
   pnpm run --filter "@rolldown/browser" build:release
 

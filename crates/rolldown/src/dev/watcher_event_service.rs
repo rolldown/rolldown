@@ -48,6 +48,14 @@ impl WatcherEventService {
             // Not sure if we want this behavior for hmr scenario.
             let mut changed_files = FxIndexSet::default();
             batched_events.into_iter().for_each(|batched_event| match &batched_event.detail.kind {
+              #[cfg(target_os = "macos")]
+              notify::EventKind::Modify(notify::event::ModifyKind::Metadata(_))
+                if !self.ctx.options.use_polling =>
+              {
+                // When using kqueue on mac, ignore metadata changes as it happens frequently and doesn't affect the build in most cases
+                // Note that when using polling, we shouldn't ignore metadata changes as the polling watcher prefer to emit them over
+                // content change events
+              }
               notify::EventKind::Modify(_modify_kind) => {
                 changed_files.extend(batched_event.detail.paths);
               }

@@ -7,22 +7,49 @@ import { dts } from 'rolldown-plugin-dts';
 import * as ts from 'typescript';
 import { build, BuildOptions, type Plugin } from './src/index';
 
-const isCI = !!process.env.CI;
-const isReleasingCI = !!process.env.RELEASING;
 const __dirname = nodePath.join(fileURLToPath(import.meta.url), '..');
 
-// In `@rolldown/browser`, there will be two builds:
-// - ESM for Node (used in StackBlitz / WebContainers)
-// - ESM for browser bundlers (used in Vite and running in the browser)
-const isBrowserPkg = !!process.env.BROWSER_PKG;
+const buildMeta = (function makeBuildMeta() {
+  // Refer to `@rolldown/browser` package.
+  // In `@rolldown/browser`, there will be two builds:
+  // - ESM for Node (used in StackBlitz / WebContainers)
+  // - ESM for browser bundlers (used in Vite and running in the browser)
+  type TargetBrowserPkg = 'browser-pkg';
 
-const pkgRoot = isBrowserPkg
-  ? nodePath.resolve(__dirname, '../browser')
-  : __dirname;
-const outputDir = nodePath.resolve(pkgRoot, 'dist');
-const pkgJson = JSON.parse(
-  fs.readFileSync(nodePath.resolve(pkgRoot, 'package.json'), 'utf-8'),
-);
+  // Refer to `rolldown` package
+  type TargetRolldownPkg = 'rolldown-pkg';
+
+  const target: TargetBrowserPkg | TargetRolldownPkg =
+    (function determineTarget() {
+      switch (process.env.TARGET) {
+        case undefined:
+        case 'rolldown':
+          return 'rolldown-pkg';
+        case 'browser':
+          return 'browser-pkg';
+        default:
+          console.warn(
+            `Unknown target: ${process.env.TARGET}, defaulting to 'rolldown-pkg'`,
+          );
+          return 'rolldown-pkg';
+      }
+    })();
+
+  const pkgRoot = target === 'browser-pkg'
+    ? nodePath.resolve(__dirname, '../browser')
+    : __dirname;
+
+  return {
+    isCI: !!process.env.CI,
+    isReleasingPkgInCI: !!process.env.RELEASING,
+    target,
+    pkgRoot,
+    buildOutputDir: nodePath.resolve(pkgRoot, 'dist'),
+    pkgJson: JSON.parse(
+      fs.readFileSync(nodePath.resolve(pkgRoot, 'package.json'), 'utf-8'),
+    ),
+  };
+})();
 
 const bindingFile = nodePath.resolve('src/binding.js');
 const bindingFileWasi = nodePath.resolve('src/rolldown-binding.wasi.cjs');
@@ -34,7 +61,7 @@ const configs: BuildOptions[] = [
   withShared({
     plugins: [patchBindingJs(), dts()],
     output: {
-      dir: outputDir,
+      dir: buildMeta.buildOutputDir,
       format: 'esm',
       entryFileNames: `[name].mjs`,
       chunkFileNames: `shared/[name]-[hash].mjs`,
@@ -42,11 +69,11 @@ const configs: BuildOptions[] = [
   }),
 ];
 
-if (isBrowserPkg) {
+if (buildMeta.target === 'browser-pkg') {
   let init = withShared({
     browserBuild: true,
     output: {
-      dir: outputDir,
+      dir: buildMeta.buildOutputDir,
       format: 'esm',
       entryFileNames: '[name].browser.mjs',
     },
@@ -64,8 +91,8 @@ if (isBrowserPkg) {
 
 (async () => {
   // clean up unused files that may be left from previous builds
-  fs.rmSync(outputDir, { recursive: true, force: true });
-  fs.mkdirSync(outputDir, { recursive: true });
+  fs.rmSync(buildMeta.buildOutputDir, { recursive: true, force: true });
+  fs.mkdirSync(buildMeta.buildOutputDir, { recursive: true });
 
   for (const config of configs) {
     await build(config);
@@ -101,14 +128,14 @@ function withShared(
     external: [
       /rolldown-binding\..*\.node/,
       /@rolldown\/binding-.*/,
-      ...Object.keys(pkgJson.dependencies ?? {}),
+      ...Object.keys(buildMeta.pkgJson.dependencies ?? {}),
     ],
     define: {
       'import.meta.browserBuild': String(isBrowserBuild),
     },
     ...options,
     plugins: [
-      isBrowserPkg && resolveWasiBinding(isBrowserBuild),
+      buildMeta.target === 'browser-pkg' && resolveWasiBinding(isBrowserBuild),
       isBrowserBuild && removeBuiltModules(),
       options.plugins,
     ],
@@ -207,27 +234,27 @@ function copy() {
   });
 
   // Binary build is on the separate step on CI
-  if (!isCI) {
-    if (isBrowserPkg && !wasmFiles.length) {
+  if (!buildMeta.isCI) {
+    if (buildMeta.target === 'browser-pkg' && !wasmFiles.length) {
       throw new Error('No WASM files found.');
     }
-    if (!isBrowserPkg && !nodeFiles.length) {
+    if (buildMeta.target === 'rolldown-pkg' && !nodeFiles.length) {
       throw new Error('No Node files found.');
     }
   }
 
-  const copyTo = nodePath.resolve(outputDir);
+  const copyTo = nodePath.resolve(buildMeta.buildOutputDir);
   fs.mkdirSync(copyTo, { recursive: true });
 
-  if (!isReleasingCI) {
+  if (!buildMeta.isReleasingPkgInCI) {
     // Released `rolldown` package import binary via `@rolldown/binding-<platform>` packages.
     // There's no need to copy binary files to dist folder.
 
-    if (isBrowserPkg) {
+    if (buildMeta.target === 'browser-pkg') {
       // Move the wasm file to dist
       wasmFiles.forEach((file) => {
         const fileName = nodePath.basename(file);
-        if (isBrowserPkg && fileName.includes('debug')) {
+        if (buildMeta.target === 'browser-pkg' && fileName.includes('debug')) {
           // NAPI-RS now generates a debug wasm binary no matter how and we don't want to ship it to npm.
           console.log(colors.yellow('[build:done]'), 'Skipping', file);
         } else {
@@ -277,7 +304,7 @@ function generateRuntimeTypes() {
     '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js',
   );
   const outputFile = nodePath.resolve(
-    outputDir,
+    buildMeta.buildOutputDir,
     'experimental-runtime-types.d.ts',
   );
 

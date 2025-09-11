@@ -50,9 +50,9 @@
   },
   "scripts": {
     "build": "pnpm run build:debug",
-    "build:debug": "pnpm run --filter rolldown build-browser:debug",
-    "build:release": "pnpm run --filter rolldown build-browser:release",
-    "build-node": "BROWSER_PKG=1 pnpm run --filter rolldown build-node",
+    "build:debug": "pnpm run --filter rolldown build-browser-pkg:debug",
+    "build:release": "pnpm run --filter rolldown build-browser-pkg:release",
+    "build-node": "TARGET='browser' pnpm run --filter rolldown build-node",
     "preinstall": "npx only-allow pnpm"
   },
   "dependencies": {

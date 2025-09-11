@@ -92,8 +92,8 @@
     "build-native:release": "pnpm run --sequential '/^build-(binding:release|js-glue)$/'",
     "build-native:profile": "pnpm run build-binding:profile && pnpm run build-js-glue",
     "build-native:memory-profile": "pnpm run build-binding:profile --features default_global_allocator && pnpm run build-js-glue",
-    "build-browser:debug": "BROWSER_PKG=1 pnpm run --sequential '/^build-(binding|binding:wasi|node)$/'",
-    "build-browser:release": "BROWSER_PKG=1 pnpm run --sequential '/^build-(binding|binding:wasi:release|node)$/'",
+    "build-browser-pkg:debug": "TARGET='browser' pnpm run --sequential '/^build-(binding|binding:wasi|node)$/'",
+    "build-browser-pkg:release": "TARGET='browser' pnpm run --sequential '/^build-(binding|binding:wasi:release|node)$/'",
     "# Scrips for docs #": "_",
     "extract-options-doc": "typedoc",
     "prepublishOnly": "napi pre-publish -t npm --no-gh-release"

@@ -1,0 +1,8 @@
+{
+  "eval": true,
+  "arguments": false,
+  "valid": true,
+  "let": true,
+  "_let": "result",
+  "globalThis": false
+}

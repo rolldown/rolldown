@@ -18,7 +18,7 @@ var y_default = {
 //#endregion
 //#region z.json
 var small = "some small text";
-var if$1 = "test keyword imports";
+var _if = "test keyword imports";
 
 //#endregion
 //#region x.json
@@ -29,7 +29,7 @@ var require_x = /* @__PURE__ */ __commonJS({ "x.json": ((exports, module) => {
 //#endregion
 //#region entry.js
 const x_json = require_x();
-console.log(x_json, y_default, small, if$1);
+console.log(x_json, y_default, small, _if);
 
 //#endregion
 ```

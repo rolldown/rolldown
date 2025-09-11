@@ -2364,7 +2364,7 @@ expression: output
 
 # tests/esbuild/loader/loader_json_common_js_and_es6
 
-- entry-!~{000}~.js => entry-D7f4GZoe.js
+- entry-!~{000}~.js => entry-rPcexRV8.js
 
 # tests/esbuild/loader/loader_json_invalid_identifier_es6
 
@@ -4390,7 +4390,7 @@ expression: output
 
 # tests/rolldown/function/module_types/json/object_with_reserved_key
 
-- main-!~{000}~.js => main-JgGfdFZ1.js
+- main-!~{000}~.js => main-DSa1gaE0.js
 
 # tests/rolldown/function/module_types/jsx
 
@@ -5567,6 +5567,10 @@ expression: output
 
 - main-!~{000}~.js => main-DuxQNW7D.js
 - main-DuxQNW7D.js.map
+
+# tests/rolldown/topics/json/preserved_key
+
+- main-!~{000}~.js => main-OvdenNcV.js
 
 # tests/rolldown/topics/keep_names/declaration
 

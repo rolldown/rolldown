@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "assert";
+
+//#region a.json
+var _eval = true;
+var _arguments = false;
+var valid = true;
+var _let = true;
+var __let = "result";
+var _globalThis = false;
+var a_default = {
+	"eval": _eval,
+	"arguments": _arguments,
+	valid,
+	"let": _let,
+	"_let": __let,
+	"globalThis": _globalThis
+};
+
+//#endregion
+//#region main.js
+assert.deepStrictEqual(a_default, {
+	eval: true,
+	arguments: false,
+	valid: true,
+	let: true,
+	_let: "result",
+	globalThis: false
+});
+
+//#endregion
+```

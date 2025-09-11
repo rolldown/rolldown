@@ -1,14 +1,57 @@
-use oxc::syntax::{identifier, keyword};
+use oxc::{
+  span::CompactStr,
+  syntax::{identifier, keyword},
+};
 use std::{borrow::Cow, path::Path};
 
-use crate::concat_string;
+use crate::{concat_string, indexmap::FxIndexMap};
 
+#[inline]
 pub fn is_validate_identifier_name(name: &str) -> bool {
   identifier::is_identifier_name(name)
 }
 
+#[inline]
+/// extra branches are used to avoid SyntaxError in strict mode
+/// ```bash
+/// SyntaxError: Unexpected eval or arguments in strict mode
+/// ```
+pub fn none_preserved_keyword_or_global_object_ext(name: &str) -> bool {
+  !keyword::is_reserved_keyword_or_global_object(name) && name != "arguments" && name != "eval"
+}
+
 pub fn is_validate_assignee_identifier_name(name: &str) -> bool {
   identifier::is_identifier_name(name) && !keyword::is_reserved_keyword_or_global_object(name)
+}
+
+pub fn legitimize_json_local_binding_name(
+  name: &str,
+  map: &FxIndexMap<CompactStr, (CompactStr, bool)>,
+) -> CompactStr {
+  let mut name = CompactStr::new(name);
+  let none_preserved_keyword_or_global_object_binding =
+    none_preserved_keyword_or_global_object_ext(&name);
+  let is_identifier_name = identifier::is_identifier_name(&name);
+  let exists_in_map = map.contains_key(&name);
+  if is_identifier_name && none_preserved_keyword_or_global_object_binding && !exists_in_map {
+    return name;
+  }
+  if !none_preserved_keyword_or_global_object_binding {
+    loop {
+      name = CompactStr::from(format!("_{name}"));
+      if none_preserved_keyword_or_global_object_ext(&name) {
+        break;
+      }
+    }
+  }
+  let mut name = CompactStr::new(&legitimize_identifier_name(&name));
+  loop {
+    if !map.contains_key(&name) {
+      break;
+    }
+    name = CompactStr::from(format!("_{name}"));
+  }
+  name
 }
 
 pub fn legitimize_identifier_name(name: &str) -> Cow<'_, str> {

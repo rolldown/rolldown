@@ -692,40 +692,37 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   #[inline]
-  pub fn statement_module_declaration_export_named_declaration<T: AsRef<str>>(
+  pub fn statement_module_declaration_export_named_declaration<'a, T: AsRef<str> + 'a, I>(
     &self,
     declaration: Option<Declaration<'ast>>,
-    specifiers: &[(T /*local*/, T /*exported*/, bool /*legal ident*/)],
-  ) -> Statement<'ast> {
+    specifiers: I,
+  ) -> Statement<'ast>
+  where
+    I: Iterator<Item = (&'a T, &'a (T, bool))>,
+  {
     Statement::from(self.builder.module_declaration_export_named_declaration(
       SPAN,
       declaration,
-      {
-        let mut vec = self.builder.vec_with_capacity(specifiers.len());
-        for (local, exported, legal_ident) in specifiers {
-          vec.push(
-            self.builder.export_specifier(
+      self.builder.vec_from_iter(specifiers.into_iter().map(|(local, (exported, legal_ident))| {
+        self.builder.export_specifier(
+          SPAN,
+          self
+            .builder
+            .module_export_name_identifier_reference(SPAN, self.builder.atom(local.as_ref())),
+          if *legal_ident {
+            self
+              .builder
+              .module_export_name_identifier_name(SPAN, self.builder.atom(exported.as_ref()))
+          } else {
+            self.builder.module_export_name_string_literal(
               SPAN,
-              self
-                .builder
-                .module_export_name_identifier_reference(SPAN, self.builder.atom(local.as_ref())),
-              if *legal_ident {
-                self
-                  .builder
-                  .module_export_name_identifier_name(SPAN, self.builder.atom(exported.as_ref()))
-              } else {
-                self.builder.module_export_name_string_literal(
-                  SPAN,
-                  self.builder.atom(exported.as_ref()),
-                  None,
-                )
-              },
-              ImportOrExportKind::Value,
-            ),
-          );
-        }
-        vec
-      },
+              self.builder.atom(exported.as_ref()),
+              None,
+            )
+          },
+          ImportOrExportKind::Value,
+        )
+      })),
       None,
       ImportOrExportKind::Value,
       NONE,

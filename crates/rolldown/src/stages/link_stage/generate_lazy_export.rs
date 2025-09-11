@@ -12,8 +12,8 @@ use rolldown_common::{
   TaggedSymbolRef, WrapKind,
 };
 use rolldown_ecmascript_utils::AstSnippet;
+use rolldown_utils::ecmascript::legitimize_json_local_binding_name;
 use rolldown_utils::{
-  ecmascript::legitimize_identifier_name,
   indexmap::FxIndexMap,
   rayon::{IntoParallelRefMutIterator, ParallelIterator},
 };
@@ -111,8 +111,9 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   };
 
   let ecma_ast = link_staged.ast_table[module_idx].as_mut().unwrap();
-  // (local, exported, legal_ident)
-  let mut declaration_binding_names: Vec<(CompactStr, CompactStr, bool)> = vec![];
+  // (local, (exported, legal_ident))
+  let mut declaration_binding_names: FxIndexMap<CompactStr, (CompactStr, bool)> =
+    FxIndexMap::default();
   let transformed = ecma_ast.program.with_mut(|fields| {
     let mut index_map = FxIndexMap::default();
     let snippet = AstSnippet::new(fields.allocator);
@@ -145,13 +146,13 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
           if key.is_empty() {
             continue;
           }
-          let legitimized_ident = CompactStr::new(&legitimize_identifier_name(&key));
+          let legitimized_ident =
+            legitimize_json_local_binding_name(&key, &declaration_binding_names);
+
           let is_legal_ident = legitimized_ident.as_str() == key;
-          declaration_binding_names.push((
-            legitimized_ident.clone(),
-            CompactStr::new(&key),
-            is_legal_ident,
-          ));
+
+          declaration_binding_names
+            .insert(legitimized_ident.clone(), (CompactStr::new(&key), is_legal_ident));
 
           let value = std::mem::replace(
             &mut property.value,
@@ -192,10 +193,10 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
         snippet.export_default_expr_stmt(Expression::ObjectExpression(obj_expr)),
       ))
       // export all declaration
-      .chain(std::iter::once(
-        snippet
-          .statement_module_declaration_export_named_declaration(None, &declaration_binding_names),
-      ));
+      .chain(std::iter::once(snippet.statement_module_declaration_export_named_declaration(
+        None,
+        declaration_binding_names.iter(),
+      )));
     program.body.extend(stmts);
     true
   });
@@ -216,7 +217,6 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
     }),
   );
 
-  // let default_symbol_ref = module.default_export_ref;
   // update semantic data of module
   let root_scope_id = scoping.root_scope_id();
   let mut symbol_ref_db = SymbolRefDbForModule::new(scoping, module_idx, root_scope_id);
@@ -231,7 +231,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   let stmt_info = module.stmt_infos.drain(1.into()..);
   let mut all_declared_symbols =
     stmt_info.flat_map(|info| info.referenced_symbols).collect::<Vec<_>>();
-  for (i, (local, exported, _)) in declaration_binding_names.iter().enumerate() {
+  for (i, (local, (exported, _))) in declaration_binding_names.iter().enumerate() {
     let symbol_id =
       symbol_ref_db.scoping().get_root_binding(local.as_str()).expect("should have binding");
     let symbol_ref: SymbolRef = (module_idx, symbol_id).into();

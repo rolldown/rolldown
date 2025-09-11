@@ -13,6 +13,10 @@ impl ByteLocator {
 
   /// line: 0-based column: 0-based
   pub fn byte_offset(&self, line: usize, column: usize) -> usize {
+    if line >= self.line_starts.len() {
+      // Return last position or handle error appropriately
+      return self.line_starts.last().copied().unwrap_or(0) + column;
+    }
     self.line_starts[line] + column
   }
 }

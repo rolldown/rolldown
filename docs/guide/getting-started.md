@@ -64,7 +64,7 @@ If you are using a platform that a prebuilt binary is not distributed, you have 
        ```
   2. Make Rolldown load the Wasm build.
      - If the prebuilt binary is not available, Rolldown will fallback to the Wasm binary automatically.
-     - In case you need to force Rolldown to use the Wasm build, you can set `NAPI_RS_FORCE_WASI=1` environment variable.
+     - In case you need to force Rolldown to use the Wasm build, you can set `NAPI_RS_FORCE_WASI=error` environment variable.
 - Build from source
   1. Clone the repository.
   2. Setup the project by following [the setup instructions](/contrib-guide/setup-the-project).

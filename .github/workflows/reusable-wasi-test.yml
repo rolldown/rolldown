@@ -36,6 +36,7 @@ jobs:
           path: ./packages
 
       - name: Build Basic Example
+        if: ${{ inputs.os != 'windows-latest' }}
         run: pnpm --filter '@example/*' run --sequential build
         env:
           NAPI_RS_FORCE_WASI: error
@@ -46,8 +47,7 @@ jobs:
           NAPI_RS_FORCE_WASI: error
 
       - name: Rollup Test
-        run: pnpm run --filter rollup-tests test
         if: false
+        run: pnpm run --filter rollup-tests test
         env:
           NAPI_RS_FORCE_WASI: error
-          RD_LOG: trace

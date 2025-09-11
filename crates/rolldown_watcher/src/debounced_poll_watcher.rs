@@ -1,4 +1,7 @@
-use crate::{EventHandler, Watcher, WatcherConfig, utils::DebounceEventHandlerAdapter};
+use crate::{
+  EventHandler, Watcher, WatcherConfig,
+  utils::{DebounceEventHandlerAdapter, NotifyPathsMutAdapter},
+};
 use notify::PollWatcher;
 use notify_debouncer_full::{Debouncer, RecommendedCache, new_debouncer_opt};
 use rolldown_error::{BuildResult, ResultExt};
@@ -44,5 +47,10 @@ impl Watcher for DebouncedPollWatcher {
   fn unwatch(&mut self, path: &std::path::Path) -> BuildResult<()> {
     self.0.unwatch(path).map_err_to_unhandleable()?;
     Ok(())
+  }
+
+  fn paths_mut<'me>(&'me mut self) -> Box<dyn crate::PathsMut + 'me> {
+    let paths_mut = self.0.paths_mut();
+    Box::new(NotifyPathsMutAdapter::new(paths_mut))
   }
 }

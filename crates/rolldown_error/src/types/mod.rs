@@ -1,2 +1,2 @@
 pub mod diagnostic_options;
-pub mod result_ext;
+pub mod event_kind;

@@ -27,7 +27,8 @@ define_generator!(CheckOptionsGenerator);
 
 impl Generator for CheckOptionsGenerator {
   fn generate_many(&self, ctx: &Context) -> anyhow::Result<Vec<crate::output::Output>> {
-    let event_kind_source_path = ctx.workspace_root.join("crates/rolldown_error/src/event_kind.rs");
+    let event_kind_source_path =
+      ctx.workspace_root.join("crates/rolldown_error/src/types/event_kind.rs");
     let event_kind_source = std::fs::read_to_string(&event_kind_source_path)?;
     let ast = parse_str::<File>(&event_kind_source)?;
     let variant_and_number_pairs = extract_event_kind_enum(&ast);

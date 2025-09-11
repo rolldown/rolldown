@@ -1,31 +1,26 @@
-mod build_error;
-mod diagnostic;
-mod event_kind;
-mod events;
+mod build_diagnostic;
 mod generated;
-mod locator;
 mod types;
 mod utils;
 
-use crate::build_error::BatchedBuildDiagnostic;
+use crate::build_diagnostic::BatchedBuildDiagnostic;
 
 pub type BuildResult<T> = Result<T, BatchedBuildDiagnostic>;
 pub type SingleBuildResult<T> = std::result::Result<T, BuildDiagnostic>;
 
 pub use crate::{
-  build_error::{BuildDiagnostic, severity::Severity},
-  event_kind::EventKind,
-  events::DiagnosableArcstr,
-  events::ambiguous_external_namespace::AmbiguousExternalNamespaceModule,
-  events::bundler_initialize_error::BundlerInitializeError,
-  events::commonjs_variable_in_esm::CjsExportSpan,
-  events::invalid_option::InvalidOptionType,
-  events::unhandleable_error::CausedPlugin,
-  events::unloadable_dependency::UnloadableDependencyContext,
+  build_diagnostic::events::DiagnosableArcstr,
+  build_diagnostic::events::ambiguous_external_namespace::AmbiguousExternalNamespaceModule,
+  build_diagnostic::events::bundler_initialize_error::BundlerInitializeError,
+  build_diagnostic::events::commonjs_variable_in_esm::CjsExportSpan,
+  build_diagnostic::events::invalid_option::InvalidOptionType,
+  build_diagnostic::events::unhandleable_error::CausedPlugin,
+  build_diagnostic::events::unloadable_dependency::UnloadableDependencyContext,
+  build_diagnostic::{BuildDiagnostic, Severity},
   generated::event_kind_switcher::EventKindSwitcher,
-  locator::line_column_to_byte_offset,
   types::diagnostic_options::DiagnosticOptions,
-  types::result_ext::ResultExt,
+  types::event_kind::EventKind,
+  utils::ResultExt,
   utils::filter_out_disabled_diagnostics,
 };
 

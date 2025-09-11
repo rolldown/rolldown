@@ -63,13 +63,18 @@ impl BundlingTask {
     let mut bundler = self.bundler.lock().await;
     bundler.set_cache(self.cache.take().unwrap_or_default());
 
+    let skip_write = self.dev_data.options.skip_write;
     let changed_files = if self.require_full_rebuild {
       vec![]
     } else {
       self.changed_files.iter().map(|p| p.to_string_lossy().into()).collect()
     };
     let scan_output = bundler.scan(changed_files).await?;
-    let _bundle_output = bundler.bundle_write(scan_output).await?;
+    let _bundle_output = if skip_write {
+      bundler.bundle_generate(scan_output).await
+    } else {
+      bundler.bundle_write(scan_output).await
+    }?;
 
     let mut build_status = loop {
       let mut build_status = self.dev_data.state.lock().await;
@@ -86,7 +91,11 @@ impl BundlingTask {
       drop(build_status);
       let changed_files = changed_files.iter().map(|p| p.to_string_lossy().into()).collect();
       let scan_output = bundler.scan(changed_files).await?;
-      let _bundle_output = bundler.bundle_write(scan_output).await?;
+      let _bundle_output = if skip_write {
+        bundler.bundle_generate(scan_output).await
+      } else {
+        bundler.bundle_write(scan_output).await
+      }?;
     };
     build_status.cache = Some(bundler.take_cache());
     tracing::trace!(

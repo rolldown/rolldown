@@ -85,7 +85,7 @@ impl Bundler {
       trace_action!(action::BuildStart { action: "BuildStart" });
       let scan_stage_output = self.scan(vec![]).await?;
 
-      let ret = self.bundle_up(scan_stage_output, /* is_write */ false).await.map(|mut output| {
+      let ret = self.bundle_generate(scan_stage_output).await.map(|mut output| {
         output.warnings.append(&mut self.warnings);
         output
       });
@@ -220,6 +220,13 @@ impl Bundler {
     output.warnings.append(&mut self.warnings);
 
     Ok(output)
+  }
+
+  pub async fn bundle_generate(
+    &mut self,
+    scan_stage_output: NormalizedScanStageOutput,
+  ) -> BuildResult<BundleOutput> {
+    self.bundle_up(scan_stage_output, false).await
   }
 
   async fn bundle_up(

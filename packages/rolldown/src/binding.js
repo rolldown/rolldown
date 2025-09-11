@@ -67,7 +67,7 @@ const isMuslFromChildProcess = () => {
 function requireNative() {
   if (process.env.NAPI_RS_NATIVE_LIBRARY_PATH) {
     try {
-      nativeBinding = require(process.env.NAPI_RS_NATIVE_LIBRARY_PATH);
+      return require(process.env.NAPI_RS_NATIVE_LIBRARY_PATH);
     } catch (err) {
       loadErrors.push(err)
     }
@@ -349,6 +349,40 @@ function requireNative() {
           loadErrors.push(e)
         }
       }
+    } else if (process.arch === 'loong64') {
+      if (isMusl()) {
+        try {
+          return require('./rolldown-binding.linux-loong64-musl.node')
+        } catch (e) {
+          loadErrors.push(e)
+        }
+        try {
+          const binding = require('@rolldown/binding-linux-loong64-musl')
+          const bindingPackageVersion = require('@rolldown/binding-linux-loong64-musl/package.json').version
+          if (bindingPackageVersion !== '1.0.0-beta.37' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.37 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          }
+          return binding
+        } catch (e) {
+          loadErrors.push(e)
+        }
+      } else {
+        try {
+          return require('./rolldown-binding.linux-loong64-gnu.node')
+        } catch (e) {
+          loadErrors.push(e)
+        }
+        try {
+          const binding = require('@rolldown/binding-linux-loong64-gnu')
+          const bindingPackageVersion = require('@rolldown/binding-linux-loong64-gnu/package.json').version
+          if (bindingPackageVersion !== '1.0.0-beta.37' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.37 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          }
+          return binding
+        } catch (e) {
+          loadErrors.push(e)
+        }
+      }
     } else if (process.arch === 'riscv64') {
       if (isMusl()) {
         try {
@@ -478,21 +512,31 @@ function requireNative() {
 nativeBinding = requireNative()
 
 if (!nativeBinding || process.env.NAPI_RS_FORCE_WASI) {
+  let wasiBinding = null
+  let wasiBindingError = null
   try {
-    nativeBinding = require('./rolldown-binding.wasi.cjs')
+    wasiBinding = require('./rolldown-binding.wasi.cjs')
+    nativeBinding = wasiBinding
   } catch (err) {
     if (process.env.NAPI_RS_FORCE_WASI) {
-      loadErrors.push(err)
+      wasiBindingError = err
     }
   }
   if (!nativeBinding) {
     try {
-      nativeBinding = require('@rolldown/binding-wasm32-wasi')
+      wasiBinding = require('@rolldown/binding-wasm32-wasi')
+      nativeBinding = wasiBinding
     } catch (err) {
       if (process.env.NAPI_RS_FORCE_WASI) {
+        wasiBindingError.cause = err
         loadErrors.push(err)
       }
     }
+  }
+  if (process.env.NAPI_RS_FORCE_WASI === 'error' && !wasiBinding) {
+    const error = new Error('WASI binding not found and NAPI_RS_FORCE_WASI is set to error')
+    error.cause = wasiBindingError
+    throw error
   }
 }
 
@@ -502,7 +546,12 @@ if (!nativeBinding) {
       `Cannot find native binding. ` +
         `npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). ` +
         'Please try `npm i` again after removing both package-lock.json and node_modules directory.',
-      { cause: loadErrors }
+      {
+        cause: loadErrors.reduce((err, cur) => {
+          cur.cause = err
+          return cur
+        }),
+      },
     )
   }
   throw new Error(`Failed to load native binding`)

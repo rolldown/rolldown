@@ -208,6 +208,12 @@ function patchBindingJs(): Plugin {
       handler(code) {
         return (
           code
+            // Throw error if wasi binding is not available when `NAPI_RS_FORCE_WASI` is truthy. This helps us catch the wasi issue early.
+            // FIXME: hyf0 remove this once napi-rs introduces such behavior.
+            .replace(
+              'nativeBinding = requireNative()',
+              `nativeBinding = process.env.NAPI_RS_FORCE_WASI ? undefined : requireNative()`,
+            )
             // strip off unneeded createRequire in cjs, which breaks mjs
             .replace('const require = createRequire(import.meta.url)', '')
             // inject binding auto download fallback for webcontainer

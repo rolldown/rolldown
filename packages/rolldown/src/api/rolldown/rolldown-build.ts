@@ -1,18 +1,27 @@
+import type { BindingBundlerImpl, BindingHmrUpdate } from '../../binding';
 import {
-  type BundlerImplWithStopWorker,
-  createBundlerImpl,
-} from '../../utils/create-bundler';
-import { transformToRollupOutput } from '../../utils/transform-to-rollup-output';
-
-import type { BindingHmrUpdate } from '../../binding';
-import { BindingBundler } from '../../binding';
+  BindingBundler,
+  shutdownAsyncRuntime,
+  startAsyncRuntime,
+} from '../../binding';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import type { HasProperty, TypeAssert } from '../../types/assert';
 import type { RolldownOutput } from '../../types/rolldown-output';
+import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { normalizeErrors } from '../../utils/error';
 import { transformHmrPatchOutput } from '../../utils/transform-hmr-patch-output';
+import {
+  handleOutputErrors,
+  transformToRollupOutput,
+} from '../../utils/transform-to-rollup-output';
 import { validateOption } from '../../utils/validator';
+
+interface BundlerImplWithStopWorker {
+  impl: BindingBundlerImpl;
+  stopWorkers?: () => Promise<void>;
+  shutdown: () => void;
+}
 
 // @ts-expect-error TS2540: the polyfill of `asyncDispose`.
 Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose');
@@ -22,8 +31,9 @@ export class RolldownBuild {
   #bundler: BindingBundler;
   #bundlerImpl?: BundlerImplWithStopWorker;
 
+  static asyncRuntimeShutdown = false;
+
   constructor(inputOptions: InputOptions) {
-    // TODO: Check if `inputOptions.output` is set. If so, throw an warning that it is ignored.
     this.#inputOptions = inputOptions;
     this.#bundler = new BindingBundler();
   }
@@ -39,11 +49,36 @@ export class RolldownBuild {
     if (this.#bundlerImpl) {
       await this.#bundlerImpl.stopWorkers?.();
     }
-    return (this.#bundlerImpl = await createBundlerImpl(
-      this.#bundler,
+
+    const option = await createBundlerOptions(
       this.#inputOptions,
       outputOptions,
-    ));
+      false,
+    );
+
+    if (RolldownBuild.asyncRuntimeShutdown) {
+      startAsyncRuntime();
+    }
+
+    try {
+      return this.#bundlerImpl = {
+        impl: this.#bundler.createImpl(option.bundlerOptions),
+        stopWorkers: option.stopWorkers,
+        shutdown: () => {
+          shutdownAsyncRuntime();
+          RolldownBuild.asyncRuntimeShutdown = true;
+        },
+      };
+    } catch (e) {
+      await option.stopWorkers?.();
+      throw e;
+    }
+  }
+
+  async scan(): Promise<void> {
+    const { impl } = await this.#getBundlerWithStopWorker({});
+    const output = await impl.scan();
+    return handleOutputErrors(output);
   }
 
   async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
@@ -100,7 +135,7 @@ export class RolldownBuild {
     return transformHmrPatchOutput(output)!;
   }
 
-  // TODO(underfin)
+  // TODO(shulaoda)
   // The `watchFiles` method returns a promise, but Rollup does not.
   // Converting it to a synchronous API might cause a deadlock if the user calls `write` and `watchFiles` simultaneously.
   get watchFiles(): Promise<string[]> {

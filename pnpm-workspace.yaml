@@ -16,7 +16,7 @@ verifyDepsBeforeRun: install
 
 # Define a catalog of version ranges.
 catalog:
-  '@napi-rs/cli': '^3.1.2'
+  '@napi-rs/cli': '^3.2.0'
   '@napi-rs/wasm-runtime': '^1.0.0'
   '@oxc-node/cli': '^0.0.32'
   '@oxc-node/core': '^0.0.32'

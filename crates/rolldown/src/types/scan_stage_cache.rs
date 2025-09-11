@@ -15,6 +15,7 @@ pub struct ScanStageCache {
   snapshot: Option<NormalizedScanStageOutput>,
   pub module_id_to_idx: FxHashMap<ArcStr, VisitState>,
   pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
+  pub user_defined_entry: FxHashSet<ArcStr>,
 }
 
 impl ScanStageCache {

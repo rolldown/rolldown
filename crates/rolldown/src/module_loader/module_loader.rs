@@ -252,7 +252,7 @@ impl<'a> ModuleLoader<'a> {
     idx
   }
 
-  /// For `fetch_modules` we may want support three scenarios:
+  /// For `fetch_modules` we need to support three scenarios:
   /// - Full scan mode in none watch mode, scan all modules from user defined entries.
   /// - Partial scan mode, scan the changed modules, it maybe none initial
   /// build in incremental watch mode
@@ -307,6 +307,13 @@ impl<'a> ModuleLoader<'a> {
       });
     }
 
+    if self.is_full_scan && self.options.experimental.is_incremental_build_enabled() {
+      self
+        .cache
+        .user_defined_entry
+        .extend(user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.clone()));
+    }
+
     // If it is in partial scan mode, we need to invalidate the changed modules
     // and re-fetch them, do nothing in full scan mode
     //
@@ -316,10 +323,19 @@ impl<'a> ModuleLoader<'a> {
         let idx = occ.get().idx();
         occ.insert(VisitState::Invalidate(idx));
       }
+      // User may update the entry module in incremental mode, so we need to make sure
+      // if it is a user defined entry to avoid generate wrong asset file
+      let is_user_defined_entry = self.cache.user_defined_entry.contains(&resolved_id.id);
       // set `Owner` to `None` is safe, since it is used to emit `Unloadable` diagnostic, we know this is
       // exists in fs system, which is loadable.
       // TODO: copy assert_module_type
-      self.try_spawn_new_task(resolved_id, None, false, None, Arc::clone(&user_defined_entries));
+      self.try_spawn_new_task(
+        resolved_id,
+        None,
+        is_user_defined_entry,
+        None,
+        Arc::clone(&user_defined_entries),
+      );
     }
 
     let mut dynamic_import_entry_ids = FxHashMap::default();

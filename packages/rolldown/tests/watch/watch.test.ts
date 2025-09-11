@@ -341,6 +341,40 @@ test.sequential('#5260', async () => {
   await watcher.close()
 })
 
+test.sequential('incremental-watch-modify-entry-module', async () => {
+  createTestWithMultiFiles('incremental-watch-modify-entry-module', {
+    'main.js':` 
+import {a} from './foo.js'
+console.log(a)
+`,
+    'foo.js': `export const a = 10000`
+  });
+  const cwd = path.join(import.meta.dirname, 'temp', 'incremental-watch-modify-entry-module');
+  const watcher = watch({
+    cwd,
+    input: 'main.js',
+    watch: {
+      buildDelay: 50,
+    },
+    experimental: {
+      incrementalBuild: true
+    }
+  })
+  await waitBuildFinished(watcher)
+
+  watcher.clear('event')
+  expect(fs.readdirSync(path.join(cwd, "dist"))).toHaveLength(1)
+
+  fs.writeFileSync(path.join(cwd, 'main.js'),` 
+import {a} from './foo.js'
+console.log(a + 1000)
+`)
+
+  await waitBuildFinished(watcher)
+  expect(fs.readdirSync(path.join(cwd, "dist"))).toHaveLength(1)
+  await watcher.close()
+})
+
 
 test.sequential('watch sync ast of newly added ast', async () => {
   createTestWithMultiFiles('sync-ast-of-newly-added-modules', {

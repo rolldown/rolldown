@@ -1,5 +1,6 @@
 pub mod error_constructors;
 pub mod severity;
+
 use std::{
   fmt::Display,
   ops::{Deref, DerefMut},
@@ -9,20 +10,12 @@ use crate::{
   diagnostic::Diagnostic, events::BuildEvent, types::diagnostic_options::DiagnosticOptions,
 };
 
-use self::severity::Severity;
-
 #[derive(Debug)]
 pub struct BuildDiagnostic {
   inner: Box<dyn BuildEvent>,
-  source: Option<Box<dyn std::error::Error + 'static + Send + Sync>>,
+  severity: severity::Severity,
   #[cfg(feature = "napi")]
   napi_error: Option<napi::Error>,
-  severity: Severity,
-}
-
-fn _assert_build_error_send_sync() {
-  fn assert_send_sync<T: Send + Sync>() {}
-  assert_send_sync::<BuildDiagnostic>();
 }
 
 impl Display for BuildDiagnostic {
@@ -32,22 +25,34 @@ impl Display for BuildDiagnostic {
 }
 
 impl BuildDiagnostic {
+  fn new_inner(inner: impl Into<Box<dyn BuildEvent>>) -> Self {
+    Self {
+      inner: inner.into(),
+      severity: severity::Severity::Error,
+      #[cfg(feature = "napi")]
+      napi_error: None,
+    }
+  }
+
+  pub fn id(&self) -> Option<String> {
+    self.inner.id()
+  }
+
   pub fn kind(&self) -> crate::event_kind::EventKind {
     self.inner.kind()
   }
 
-  #[must_use]
-  pub fn with_source(
-    mut self,
-    source: impl Into<Box<dyn std::error::Error + 'static + Send + Sync>>,
-  ) -> Self {
-    self.source = Some(source.into());
-    self
+  pub fn exporter(&self) -> Option<String> {
+    self.inner.exporter()
+  }
+
+  pub fn severity(&self) -> severity::Severity {
+    self.severity
   }
 
   #[must_use]
   pub fn with_severity_warning(mut self) -> Self {
-    self.severity = Severity::Warning;
+    self.severity = severity::Severity::Warning;
     self
   }
 
@@ -67,30 +72,6 @@ impl BuildDiagnostic {
     match &self.napi_error {
       Some(napi_error) => Ok(napi_error),
       None => Err(self),
-    }
-  }
-
-  pub fn id(&self) -> Option<String> {
-    self.inner.id()
-  }
-
-  pub fn exporter(&self) -> Option<String> {
-    self.inner.exporter()
-  }
-
-  pub fn severity(&self) -> Severity {
-    self.severity
-  }
-
-  // --- private
-
-  fn new_inner(inner: impl Into<Box<dyn BuildEvent>>) -> Self {
-    Self {
-      inner: inner.into(),
-      source: None,
-      #[cfg(feature = "napi")]
-      napi_error: None,
-      severity: Severity::Error,
     }
   }
 }

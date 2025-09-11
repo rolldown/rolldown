@@ -33,3 +33,8 @@ fn _usage_should_able_to_auto_convert_outside_errors() -> BuildResult<()> {
   let _: usize = 0u32.try_into().map_err_to_unhandleable()?;
   Ok(())
 }
+
+fn _assert_build_error_send_sync() {
+  fn assert_send_sync<T: Send + Sync>() {}
+  assert_send_sync::<BuildDiagnostic>();
+}

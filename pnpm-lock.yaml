@@ -11,7 +11,7 @@ catalogs:
       version: 3.2.0
     '@napi-rs/wasm-runtime':
       specifier: ^1.0.0
-      version: 1.0.3
+      version: 1.0.4
     '@oxc-node/cli':
       specifier: ^0.0.32
       version: 0.0.32
@@ -35,7 +35,7 @@ catalogs:
       version: 0.87.0
     rolldown-plugin-dts:
       specifier: ^0.16.0
-      version: 0.16.2
+      version: 0.16.3
     tsdown:
       specifier: 0.15.0
       version: 0.15.0
@@ -277,7 +277,7 @@ importers:
     dependencies:
       '@napi-rs/wasm-runtime':
         specifier: 'catalog:'
-        version: 1.0.3
+        version: 1.0.4
       '@oxc-project/runtime':
         specifier: 'catalog:'
         version: 0.87.0
@@ -320,10 +320,10 @@ importers:
     devDependencies:
       '@napi-rs/cli':
         specifier: 'catalog:'
-        version: 3.2.0(@emnapi/runtime@1.4.5)(@types/node@24.3.1)(emnapi@1.4.5)
+        version: 3.2.0(@emnapi/runtime@1.5.0)(@types/node@24.3.1)(emnapi@1.4.5)
       '@napi-rs/wasm-runtime':
         specifier: ^1.0.0
-        version: 1.0.3
+        version: 1.0.4
       '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.0.32
@@ -362,7 +362,7 @@ importers:
         version: 'link:'
       rolldown-plugin-dts:
         specifier: 'catalog:'
-        version: 0.16.2(oxc-resolver@11.6.2)(rolldown@packages+rolldown)(typescript@5.9.2)
+        version: 0.16.3(oxc-resolver@11.6.2)(rolldown@packages+rolldown)(typescript@5.9.2)
       rollup:
         specifier: ^4.18.0
         version: 4.50.1
@@ -1180,14 +1180,14 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@emnapi/core@1.4.5':
-    resolution: {integrity: sha512-XsLw1dEOpkSX/WucdqUhPWP7hDxSvZiY+fsUC14h+FtQ2Ifni4znbBt8punRX+Uj2JG/uDb8nEHVKvrVlvdZ5Q==}
+  '@emnapi/core@1.5.0':
+    resolution: {integrity: sha512-sbP8GzB1WDzacS8fgNPpHlp6C9VZe+SJP3F90W9rLemaQj2PzIuTEl1qDOYQf58YIpyjViI24y9aPWCjEzY2cg==}
 
-  '@emnapi/runtime@1.4.5':
-    resolution: {integrity: sha512-++LApOtY0pEEz1zrd9vy1/zXVaVJJ/EbAF3u0fXIzPJEDtnITsBGbbK0EkM72amhl/R5b+5xx0Y/QhcVOpuulg==}
+  '@emnapi/runtime@1.5.0':
+    resolution: {integrity: sha512-97/BJ3iXHww3djw6hYIfErCZFee7qCtrneuLa20UXFCOTCfBM2cvQHjWJ2EG0s0MtdNwInarqCTz35i4wWXHsQ==}
 
-  '@emnapi/wasi-threads@1.0.4':
-    resolution: {integrity: sha512-PJR+bOmMOPH8AtcTGAyYNiuJ3/Fcoj2XN/gBEWzDIKh254XO+mM9XoXHk5GNEhodxeMznbg7BlRojVbKN+gC6g==}
+  '@emnapi/wasi-threads@1.1.0':
+    resolution: {integrity: sha512-WI0DdZ8xFSbgMjR1sFsKABJ/C5OnRrjT06JXbZKexJGrDuPTzZdDYfFlsgcCXCyf+suG5QU2e/y1Wo2V/OapLQ==}
 
   '@emotion/is-prop-valid@1.2.2':
     resolution: {integrity: sha512-uNsoYd37AFmaCdXlg6EYD1KaPOaRWRByMCYzbKUX4+hhMfrxdVSelShywL4JVaAeM/eHUOSprYBQls+/neX3pw==}
@@ -1786,8 +1786,8 @@ packages:
     resolution: {integrity: sha512-7cmzIu+Vbupriudo7UudoMRH2OA3cTw67vva8MxeoAe5S7vPFI7z0vp0pMXiA25S8IUJefImQ90FeJjl8fjEaQ==}
     engines: {node: '>= 10'}
 
-  '@napi-rs/wasm-runtime@1.0.3':
-    resolution: {integrity: sha512-rZxtMsLwjdXkMUGC3WwsPwLNVqVqnTJT6MNIB6e+5fhMcSCPP0AOsNWuMQ5mdCq6HNjs/ZeWAEchpqeprqBD2Q==}
+  '@napi-rs/wasm-runtime@1.0.4':
+    resolution: {integrity: sha512-+ZEtJPp8EF8h4kN6rLQECRor00H7jtDgBVtttIUoxuDkXLiQMaSBqju3LV/IEsMvqVG5pviUvR4jYhIA1xNm8w==}
 
   '@napi-rs/wasm-tools-android-arm-eabi@1.0.1':
     resolution: {integrity: sha512-lr07E/l571Gft5v4aA1dI8koJEmF1F0UigBbsqg9OWNzg80H3lDPO+auv85y3T/NHE3GirDk7x/D3sLO57vayw==}
@@ -2924,8 +2924,8 @@ packages:
     resolution: {integrity: sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ==}
     engines: {node: '>=18'}
 
-  '@tybys/wasm-util@0.10.0':
-    resolution: {integrity: sha512-VyyPYFlOMNylG45GoAe0xDoLwWuowvf92F9kySqzYh8vmYm7D2u4iUJKa1tOUpS70Ku13ASrOkS4ScXFsTaCNQ==}
+  '@tybys/wasm-util@0.10.1':
+    resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -4869,8 +4869,8 @@ packages:
     engines: {node: 20 || >=22}
     hasBin: true
 
-  rolldown-plugin-dts@0.16.2:
-    resolution: {integrity: sha512-WV1J5OqhWL8O8Nd5VAVQghmNcjyQvcGI5w51VszjO9k73avbXpz9X86KLYcKTWXXH6L0f+93JzZxiiSrcYhDLw==}
+  rolldown-plugin-dts@0.16.3:
+    resolution: {integrity: sha512-ePFDr92rCKCqaVhEOFT9krvMWjn6G1EOvI93Fc8JcJZRSYdYpdwm93a3gtCdxXGYkG+JyD3gRO1JRdtZUsrbNw==}
     engines: {node: '>=20.18.0'}
     peerDependencies:
       '@typescript/native-preview': '>=7.0.0-dev.20250601.1'
@@ -6424,16 +6424,16 @@ snapshots:
   '@dprint/win32-x64@0.50.1':
     optional: true
 
-  '@emnapi/core@1.4.5':
+  '@emnapi/core@1.5.0':
     dependencies:
-      '@emnapi/wasi-threads': 1.0.4
+      '@emnapi/wasi-threads': 1.1.0
       tslib: 2.8.1
 
-  '@emnapi/runtime@1.4.5':
+  '@emnapi/runtime@1.5.0':
     dependencies:
       tslib: 2.8.1
 
-  '@emnapi/wasi-threads@1.0.4':
+  '@emnapi/wasi-threads@1.1.0':
     dependencies:
       tslib: 2.8.1
 
@@ -6717,7 +6717,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@napi-rs/cli@3.2.0(@emnapi/runtime@1.4.5)(@types/node@24.3.1)(emnapi@1.4.5)':
+  '@napi-rs/cli@3.2.0(@emnapi/runtime@1.5.0)(@types/node@24.3.1)(emnapi@1.4.5)':
     dependencies:
       '@inquirer/prompts': 7.8.4(@types/node@24.3.1)
       '@napi-rs/cross-toolchain': 1.0.3
@@ -6732,7 +6732,7 @@ snapshots:
       semver: 7.7.2
       typanion: 3.14.0
     optionalDependencies:
-      '@emnapi/runtime': 1.4.5
+      '@emnapi/runtime': 1.5.0
       emnapi: 1.4.5
     transitivePeerDependencies:
       - '@napi-rs/cross-toolchain-arm64-target-aarch64'
@@ -6797,7 +6797,7 @@ snapshots:
 
   '@napi-rs/lzma-wasm32-wasi@1.4.5':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.0.3
+      '@napi-rs/wasm-runtime': 1.0.4
     optional: true
 
   '@napi-rs/lzma-win32-arm64-msvc@1.4.5':
@@ -6867,7 +6867,7 @@ snapshots:
 
   '@napi-rs/tar-wasm32-wasi@1.1.0':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.0.3
+      '@napi-rs/wasm-runtime': 1.0.4
     optional: true
 
   '@napi-rs/tar-win32-arm64-msvc@1.1.0':
@@ -6898,11 +6898,11 @@ snapshots:
       '@napi-rs/tar-win32-ia32-msvc': 1.1.0
       '@napi-rs/tar-win32-x64-msvc': 1.1.0
 
-  '@napi-rs/wasm-runtime@1.0.3':
+  '@napi-rs/wasm-runtime@1.0.4':
     dependencies:
-      '@emnapi/core': 1.4.5
-      '@emnapi/runtime': 1.4.5
-      '@tybys/wasm-util': 0.10.0
+      '@emnapi/core': 1.5.0
+      '@emnapi/runtime': 1.5.0
+      '@tybys/wasm-util': 0.10.1
 
   '@napi-rs/wasm-tools-android-arm-eabi@1.0.1':
     optional: true
@@ -6933,7 +6933,7 @@ snapshots:
 
   '@napi-rs/wasm-tools-wasm32-wasi@1.0.1':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.0.3
+      '@napi-rs/wasm-runtime': 1.0.4
     optional: true
 
   '@napi-rs/wasm-tools-win32-arm64-msvc@1.0.1':
@@ -7073,7 +7073,7 @@ snapshots:
 
   '@oxc-minify/binding-wasm32-wasi@0.87.0':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.0.3
+      '@napi-rs/wasm-runtime': 1.0.4
     optional: true
 
   '@oxc-minify/binding-win32-arm64-msvc@0.87.0':
@@ -7127,7 +7127,7 @@ snapshots:
 
   '@oxc-node/core-wasm32-wasi@0.0.32':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.0.3
+      '@napi-rs/wasm-runtime': 1.0.4
     optional: true
 
   '@oxc-node/core-win32-arm64-msvc@0.0.32':
@@ -7217,7 +7217,7 @@ snapshots:
 
   '@oxc-parser/binding-wasm32-wasi@0.87.0':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.0.3
+      '@napi-rs/wasm-runtime': 1.0.4
     optional: true
 
   '@oxc-parser/binding-win32-arm64-msvc@0.37.0':
@@ -7285,7 +7285,7 @@ snapshots:
 
   '@oxc-resolver/binding-wasm32-wasi@11.6.2':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.0.3
+      '@napi-rs/wasm-runtime': 1.0.4
     optional: true
 
   '@oxc-resolver/binding-win32-arm64-msvc@11.6.2':
@@ -7335,7 +7335,7 @@ snapshots:
 
   '@oxc-transform/binding-wasm32-wasi@0.87.0':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.0.3
+      '@napi-rs/wasm-runtime': 1.0.4
     optional: true
 
   '@oxc-transform/binding-win32-arm64-msvc@0.87.0':
@@ -7663,7 +7663,7 @@ snapshots:
 
   '@rolldown/binding-wasm32-wasi@1.0.0-beta.37':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.0.3
+      '@napi-rs/wasm-runtime': 1.0.4
     optional: true
 
   '@rolldown/binding-win32-arm64-msvc@1.0.0-beta.37':
@@ -7822,7 +7822,7 @@ snapshots:
 
   '@sindresorhus/merge-streams@4.0.0': {}
 
-  '@tybys/wasm-util@0.10.0':
+  '@tybys/wasm-util@0.10.1':
     dependencies:
       tslib: 2.8.1
 
@@ -9900,7 +9900,7 @@ snapshots:
       glob: 11.0.3
       package-json-from-dist: 1.0.1
 
-  rolldown-plugin-dts@0.16.2(oxc-resolver@11.6.2)(rolldown@packages+rolldown)(typescript@5.9.2):
+  rolldown-plugin-dts@0.16.3(oxc-resolver@11.6.2)(rolldown@packages+rolldown)(typescript@5.9.2):
     dependencies:
       '@babel/generator': 7.28.3
       '@babel/parser': 7.28.4
@@ -9917,7 +9917,7 @@ snapshots:
       - oxc-resolver
       - supports-color
 
-  rolldown-plugin-dts@0.16.2(rolldown@1.0.0-beta.37)(typescript@5.9.2):
+  rolldown-plugin-dts@0.16.3(rolldown@1.0.0-beta.37)(typescript@5.9.2):
     dependencies:
       '@babel/generator': 7.28.3
       '@babel/parser': 7.28.4
@@ -10308,7 +10308,7 @@ snapshots:
       empathic: 2.0.0
       hookable: 5.5.3
       rolldown: 1.0.0-beta.37
-      rolldown-plugin-dts: 0.16.2(rolldown@1.0.0-beta.37)(typescript@5.9.2)
+      rolldown-plugin-dts: 0.16.3(rolldown@1.0.0-beta.37)(typescript@5.9.2)
       semver: 7.7.2
       tinyexec: 1.0.1
       tinyglobby: 0.2.15

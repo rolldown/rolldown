@@ -37,8 +37,8 @@ catalogs:
       specifier: ^0.16.0
       version: 0.16.5
     tsdown:
-      specifier: 0.15.0
-      version: 0.15.0
+      specifier: 0.15.1
+      version: 0.15.1
 
 overrides:
   vitepress>vite: npm:rolldown-vite@latest
@@ -298,7 +298,7 @@ importers:
         version: 4.0.3
       tsdown:
         specifier: 'catalog:'
-        version: 0.15.0(typescript@5.9.2)
+        version: 0.15.1(typescript@5.9.2)
       vitest:
         specifier: ^3.0.1
         version: 3.2.4(@types/debug@4.1.12)(@types/node@24.3.1)(jiti@2.5.1)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.20.5)(yaml@2.8.1)
@@ -5254,8 +5254,8 @@ packages:
   trough@2.2.0:
     resolution: {integrity: sha512-tmMpK00BjZiUyVyvrBK7knerNgmgvcV/KLVyuma/SC+TQN167GrMRciANTz09+k3zW8L8t60jWO1GpfkZdjTaw==}
 
-  tsdown@0.15.0:
-    resolution: {integrity: sha512-xbz8tvdlB2wspocZWcJQhZNDLJC+sKV+sTIpiRgfUiQCUxLFGnUZUPc9KoKp3nfMeXQqTyMi6FM9/SasSj+csQ==}
+  tsdown@0.15.1:
+    resolution: {integrity: sha512-USTr2wS5OIyohR8Sp09rp5mXVwOX4YvVRqarS9I9jIhF+PqgtVSMXG4vBrHGY1OficNcLT5Z75pSoxd2uU+BYg==}
     engines: {node: '>=20.19.0'}
     hasBin: true
     peerDependencies:
@@ -10303,7 +10303,7 @@ snapshots:
 
   trough@2.2.0: {}
 
-  tsdown@0.15.0(typescript@5.9.2):
+  tsdown@0.15.1(typescript@5.9.2):
     dependencies:
       ansis: 4.1.0
       cac: 6.7.14

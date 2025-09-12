@@ -1,5 +1,3 @@
-import { fileURLToPath } from 'node:url';
-import { oxcRuntimePlugin } from '../builtin-plugin/constructors';
 import { BuiltinPlugin } from '../builtin-plugin/utils';
 import { ENUMERATED_INPUT_PLUGIN_HOOK_NAMES } from '../constants/plugin';
 import type { LogHandler } from '../log/log-handler';
@@ -53,7 +51,3 @@ export function normalizePlugins<T extends RolldownPlugin>(
 
 export const ANONYMOUS_PLUGIN_PREFIX = 'at position ';
 export const ANONYMOUS_OUTPUT_PLUGIN_PREFIX = 'at output position ';
-
-export const BUILTIN_PLUGINS: BuiltinPlugin[] = import.meta.browserBuild
-  ? []
-  : [oxcRuntimePlugin({ resolveBase: fileURLToPath(import.meta.url) })];

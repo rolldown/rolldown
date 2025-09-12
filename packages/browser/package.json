@@ -56,7 +56,6 @@
     "preinstall": "npx only-allow pnpm"
   },
   "dependencies": {
-    "@napi-rs/wasm-runtime": "catalog:",
-    "@oxc-project/runtime": "catalog:"
+    "@napi-rs/wasm-runtime": "catalog:"
   }
 }

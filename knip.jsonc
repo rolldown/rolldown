@@ -28,7 +28,7 @@
       "ignoreDependencies": ["@babel/preset-.+", "react", "react-dom"],
     },
     "packages/browser": {
-      "ignoreDependencies": ["@napi-rs/wasm-runtime", "@oxc-project/runtime"],
+      "ignoreDependencies": ["@napi-rs/wasm-runtime"],
     },
     "packages/rolldown": {
       "entry": [
@@ -46,7 +46,6 @@
         "src/browser.js",
       ],
       "ignoreDependencies": [
-        "@oxc-project/runtime",
         "@rollup/plugin-json",
         "buble",
         "pathe",

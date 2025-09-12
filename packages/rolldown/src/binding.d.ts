@@ -1522,7 +1522,6 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:load-fallback'|
 'builtin:manifest'|
 'builtin:module-preload-polyfill'|
-'builtin:oxc-runtime'|
 'builtin:react-refresh-wrapper'|
 'builtin:reporter'|
 'builtin:replace'|
@@ -1926,10 +1925,6 @@ export interface BindingOutputOptions {
   preserveModulesRoot?: string
   topLevelVar?: boolean
   minifyInternalExports?: boolean
-}
-
-export interface BindingOxcRuntimePluginConfig {
-  resolveBase?: string
 }
 
 export interface BindingPluginContextResolvedId {

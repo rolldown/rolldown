@@ -2681,6 +2681,7 @@ dependencies = [
  "rolldown_plugin_chunk_import_map",
  "rolldown_plugin_data_uri",
  "rolldown_plugin_hmr",
+ "rolldown_plugin_oxc_runtime",
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_std_utils",
@@ -2749,7 +2750,6 @@ dependencies = [
  "rolldown_plugin_load_fallback",
  "rolldown_plugin_manifest",
  "rolldown_plugin_module_preload_polyfill",
- "rolldown_plugin_oxc_runtime",
  "rolldown_plugin_react_refresh_wrapper",
  "rolldown_plugin_replace",
  "rolldown_plugin_reporter",
@@ -3093,6 +3093,9 @@ dependencies = [
 name = "rolldown_plugin_oxc_runtime"
 version = "0.1.0"
 dependencies = [
+ "arcstr",
+ "oxc_resolver",
+ "phf",
  "rolldown_plugin",
 ]
 

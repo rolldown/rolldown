@@ -2,9 +2,6 @@ use std::sync::Arc;
 
 use napi::{Unknown, bindgen_prelude::FromNapiValue};
 use napi_derive::napi;
-use rolldown_plugin_manifest::ManifestPlugin;
-use rolldown_plugin_oxc_runtime::OxcRuntimePlugin;
-
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_alias::AliasPlugin;
 use rolldown_plugin_asset::AssetPlugin;
@@ -16,6 +13,7 @@ use rolldown_plugin_import_glob::ImportGlobPlugin;
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
 use rolldown_plugin_json::JsonPlugin;
 use rolldown_plugin_load_fallback::LoadFallbackPlugin;
+use rolldown_plugin_manifest::ManifestPlugin;
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
 use rolldown_plugin_react_refresh_wrapper::ReactRefreshWrapperPlugin;
 use rolldown_plugin_replace::ReplacePlugin;
@@ -36,8 +34,8 @@ use super::{
     BindingAliasPluginConfig, BindingAssetPluginConfig, BindingBuildImportAnalysisPluginConfig,
     BindingDynamicImportVarsPluginConfig, BindingImportGlobPluginConfig,
     BindingIsolatedDeclarationPluginConfig, BindingJsonPluginConfig, BindingManifestPluginConfig,
-    BindingOxcRuntimePluginConfig, BindingReplacePluginConfig, BindingReporterPluginConfig,
-    BindingTransformPluginConfig, BindingViteResolvePluginConfig,
+    BindingReplacePluginConfig, BindingReporterPluginConfig, BindingTransformPluginConfig,
+    BindingViteResolvePluginConfig,
   },
   types::binding_builtin_plugin_name::BindingBuiltinPluginName,
 };
@@ -142,14 +140,6 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           BindingModulePreloadPolyfillPluginConfig::from_unknown(options)?.into()
         } else {
           ModulePreloadPolyfillPlugin::default()
-        };
-        Arc::new(plugin)
-      }
-      BindingBuiltinPluginName::OxcRuntime => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingOxcRuntimePluginConfig::from_unknown(options)?.into()
-        } else {
-          OxcRuntimePlugin::default()
         };
         Arc::new(plugin)
       }

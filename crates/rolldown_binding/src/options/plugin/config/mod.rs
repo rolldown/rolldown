@@ -8,7 +8,6 @@ mod binding_isolated_declaration_plugin_config;
 mod binding_json_plugin_config;
 mod binding_manifest_plugin_config;
 mod binding_module_preload_polyfill_plugin_config;
-mod binding_oxc_runtime_plugin_config;
 mod binding_react_refresh_wrapper_plugin_config;
 mod binding_replace_plugin_config;
 mod binding_reporter_plugin_config;
@@ -26,7 +25,6 @@ pub use binding_isolated_declaration_plugin_config::BindingIsolatedDeclarationPl
 pub use binding_json_plugin_config::BindingJsonPluginConfig;
 pub use binding_manifest_plugin_config::BindingManifestPluginConfig;
 pub use binding_module_preload_polyfill_plugin_config::BindingModulePreloadPolyfillPluginConfig;
-pub use binding_oxc_runtime_plugin_config::BindingOxcRuntimePluginConfig;
 pub use binding_react_refresh_wrapper_plugin_config::BindingReactRefreshWrapperPluginConfig;
 pub use binding_replace_plugin_config::BindingReplacePluginConfig;
 pub use binding_reporter_plugin_config::BindingReporterPluginConfig;

@@ -25,8 +25,6 @@ pub enum BindingBuiltinPluginName {
   Manifest,
   #[napi(value = "builtin:module-preload-polyfill")]
   ModulePreloadPolyfill,
-  #[napi(value = "builtin:oxc-runtime")]
-  OxcRuntime,
   #[napi(value = "builtin:react-refresh-wrapper")]
   ReactRefreshWrapper,
   #[napi(value = "builtin:reporter")]

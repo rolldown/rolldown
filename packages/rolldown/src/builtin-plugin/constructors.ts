@@ -8,7 +8,6 @@ import type {
   BindingJsonPluginConfig,
   BindingManifestPluginConfig,
   BindingModulePreloadPolyfillPluginConfig,
-  BindingOxcRuntimePluginConfig,
   BindingReactRefreshWrapperPluginConfig,
   BindingReporterPluginConfig,
   BindingViteResolvePluginConfig,
@@ -109,12 +108,6 @@ export function assetPlugin(
 
 export function webWorkerPostPlugin(): BuiltinPlugin {
   return new BuiltinPlugin('builtin:web-worker-post');
-}
-
-export function oxcRuntimePlugin(
-  config?: BindingOxcRuntimePluginConfig,
-): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:oxc-runtime', config);
 }
 
 export function esmExternalRequirePlugin(

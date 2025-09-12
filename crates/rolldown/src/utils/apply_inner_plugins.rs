@@ -14,7 +14,8 @@ pub fn apply_inner_plugins(
   options: &NormalizedBundlerOptions,
   user_plugins: &mut Vec<SharedPluginable>,
 ) {
-  let mut before_user_plugins: Vec<SharedPluginable> = vec![];
+  let mut before_user_plugins: Vec<SharedPluginable> =
+    vec![Arc::new(rolldown_plugin_oxc_runtime::OxcRuntimePlugin)];
 
   if options.experimental.hmr.is_some() {
     before_user_plugins.push(Arc::new(rolldown_plugin_hmr::HmrPlugin));

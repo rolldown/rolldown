@@ -10,4 +10,9 @@ repository.workspace = true
 doctest = false
 
 [dependencies]
+arcstr = { workspace = true }
+phf = { workspace = true }
 rolldown_plugin = { workspace = true }
+
+[build-dependencies]
+oxc_resolver = { workspace = true }

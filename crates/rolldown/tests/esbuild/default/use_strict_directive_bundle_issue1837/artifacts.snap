@@ -20,13 +20,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 node_assert = __toESM(node_assert);
 
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports) => {
-	exports.foo = process;
-}) });
+	var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports) => {
+		exports.foo = process;
+	}) });
 
 //#endregion
 //#region entry.js
-node_assert.default.deepEqual(require_cjs(), { foo: process });
+	node_assert.default.deepEqual(require_cjs(), { foo: process });
 
 //#endregion
 })(node_assert);

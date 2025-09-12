@@ -14,8 +14,8 @@ this.test = this.test || {};
 
 
 //#region main.js
-const a = 1;
-const b = 2;
+	const a = 1;
+	const b = 2;
 
 //#endregion
 exports.a = a;

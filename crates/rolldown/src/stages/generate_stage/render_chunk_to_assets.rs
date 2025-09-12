@@ -249,6 +249,7 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &ChunkGraph,
   ) -> Vec<Vec<Option<ModuleRenderOutput>>> {
+    let is_iife = matches!(self.options.format, rolldown_common::OutputFormat::Iife);
     chunk_graph
       .chunk_table
       .par_iter()
@@ -260,13 +261,14 @@ impl GenerateStage<'_> {
             Some(module) => {
               let ast = self.link_output.ast_table[module.idx].as_ref().expect("should have ast");
               #[expect(clippy::bool_to_int_with_if)]
-              let initial_indent = if matches!(
-                self.link_output.metas[module_idx].concatenated_wrapped_module_kind,
-                ConcatenateWrappedModuleKind::None
-              ) {
-                0
-              } else {
+              let initial_indent = if is_iife
+                || !matches!(
+                  self.link_output.metas[module_idx].concatenated_wrapped_module_kind,
+                  ConcatenateWrappedModuleKind::None
+                ) {
                 1
+              } else {
+                0
               };
               module.render(self.options, &ModuleRenderArgs::Ecma { ast }, initial_indent)
             }

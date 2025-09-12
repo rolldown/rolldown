@@ -19,8 +19,8 @@ var bundle = (function(exports) {
 Object.defineProperty(exports, '__esModule', { value: true });
 
 //#region main.js
-var main_default = 1;
-const a = 2;
+	var main_default = 1;
+	const a = 2;
 
 //#endregion
 exports.a = a;

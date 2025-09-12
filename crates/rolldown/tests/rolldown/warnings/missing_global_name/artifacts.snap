@@ -20,7 +20,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 node_path = __toESM(node_path);
 
 //#region main.js
-console.log((0, node_path.join)("a", "b"));
+	console.log((0, node_path.join)("a", "b"));
 
 //#endregion
 })(node_path);

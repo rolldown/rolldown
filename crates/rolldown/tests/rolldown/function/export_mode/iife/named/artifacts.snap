@@ -12,22 +12,22 @@ Object.defineProperty(exports, '__esModule', { value: true });
 // HIDDEN [rolldown:runtime]
 
 //#region mod.js
-var named_exports = /* @__PURE__ */ __export({
-	add: () => add,
-	subtract: () => subtract
-});
-function add(a, b) {
-	return a + b;
-}
-function subtract(a, b) {
-	return a - b;
-}
+	var named_exports = /* @__PURE__ */ __export({
+		add: () => add,
+		subtract: () => subtract
+	});
+	function add(a, b) {
+		return a + b;
+	}
+	function subtract(a, b) {
+		return a - b;
+	}
 
 //#endregion
 //#region main.js
-function aaa() {
-	return "aaa";
-}
+	function aaa() {
+		return "aaa";
+	}
 
 //#endregion
 exports.aaa = aaa;

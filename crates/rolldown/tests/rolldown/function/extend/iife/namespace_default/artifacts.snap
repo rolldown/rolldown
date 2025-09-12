@@ -14,7 +14,7 @@ this.test.module = (function() {
 
 
 //#region main.js
-var main_default = "default";
+	var main_default = "default";
 
 //#endregion
 return main_default;

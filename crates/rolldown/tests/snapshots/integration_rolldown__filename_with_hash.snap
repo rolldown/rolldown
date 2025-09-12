@@ -110,7 +110,7 @@ expression: output
 
 # tests/esbuild/dce/dce_type_of_compare_string_guard_condition
 
-- entry-!~{000}~.js => entry-CETSKyCT.js
+- entry-!~{000}~.js => entry-Cn15IU5R.js
 
 # tests/esbuild/dce/dce_type_of_equals_string
 
@@ -118,7 +118,7 @@ expression: output
 
 # tests/esbuild/dce/dce_type_of_equals_string_guard_condition
 
-- entry-!~{000}~.js => entry-Dw3uJSTW.js
+- entry-!~{000}~.js => entry-pJWeLxzn.js
 
 # tests/esbuild/dce/dce_type_of_equals_string_mangle
 
@@ -406,11 +406,11 @@ expression: output
 
 # tests/esbuild/dce/preserve_directives_minify_bundle
 
-- entry-!~{000}~.js => entry-hFvhixIx.js
+- entry-!~{000}~.js => entry-DY-eGl64.js
 
 # tests/esbuild/dce/preserve_directives_minify_iife
 
-- entry-!~{000}~.js => entry-ByJ-QZz0.js
+- entry-!~{000}~.js => entry-D7XpJncY.js
 
 # tests/esbuild/dce/preserve_directives_minify_pass_through
 
@@ -536,7 +536,7 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_no_bundle_iife
 
-- entry-!~{000}~.js => entry-BqRcJgXK.js
+- entry-!~{000}~.js => entry-_yDlNCLx.js
 
 # tests/esbuild/dce/tree_shaking_object_property
 
@@ -726,7 +726,7 @@ expression: output
 
 # tests/esbuild/default/export_forms_iife
 
-- entry-!~{000}~.js => entry-BoA_Bz4x.js
+- entry-!~{000}~.js => entry-DA4sDyJK.js
 
 # tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle
 
@@ -815,7 +815,7 @@ expression: output
 
 # tests/esbuild/default/hashbang_banner_use_strict_order
 
-- entry-!~{000}~.js => entry-6U8T8zUM.js
+- entry-!~{000}~.js => entry-BAzNWaPX.js
 
 # tests/esbuild/default/hashbang_bundle
 
@@ -827,7 +827,7 @@ expression: output
 
 # tests/esbuild/default/iife_es5
 
-- entry-!~{000}~.js => entry-CRHW1SsE.js
+- entry-!~{000}~.js => entry-uA_z3GJj.js
 
 # tests/esbuild/default/import_abs_path_as_dir
 
@@ -1568,7 +1568,7 @@ expression: output
 
 # tests/esbuild/default/string_export_names_iife
 
-- entry-!~{000}~.js => entry-B_V2Hjq1.js
+- entry-!~{000}~.js => entry-b0u-Oki7.js
 
 # tests/esbuild/default/switch_scope_no_bundle
 
@@ -1621,7 +1621,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_forbidden_require_dead_branch
 
-- entry-!~{000}~.js => entry-DlifuZns.js
+- entry-!~{000}~.js => entry-BgTb3TA9.js
 
 # tests/esbuild/default/top_level_await_iife_dead_branch
 
@@ -1681,11 +1681,11 @@ expression: output
 
 # tests/esbuild/default/use_strict_directive_bundle_iife_issue2264
 
-- entry-!~{000}~.js => entry-BFZLtvQZ.js
+- entry-!~{000}~.js => entry-CTAM4RIy.js
 
 # tests/esbuild/default/use_strict_directive_bundle_issue1837
 
-- entry-!~{000}~.js => entry-akxmgeci.js
+- entry-!~{000}~.js => entry-6Kn3K3CI.js
 
 # tests/esbuild/default/use_strict_directive_minify_no_bundle
 
@@ -1790,11 +1790,11 @@ expression: output
 
 # tests/esbuild/importstar/export_self_iife
 
-- entry-!~{000}~.js => entry-BWQGMH-3.js
+- entry-!~{000}~.js => entry-lbPVtccS.js
 
 # tests/esbuild/importstar/export_self_iife_with_name
 
-- entry-!~{000}~.js => entry-vgMdvR0H.js
+- entry-!~{000}~.js => entry-8JkQPpw9.js
 
 # tests/esbuild/importstar/export_star_default_export_common_js
 
@@ -2018,11 +2018,11 @@ expression: output
 
 # tests/esbuild/importstar/re_export_star_as_external_iife
 
-- entry-!~{000}~.js => entry-BXo1GPdd.js
+- entry-!~{000}~.js => entry-SeKIwlWD.js
 
 # tests/esbuild/importstar/re_export_star_as_iife_no_bundle
 
-- entry-!~{000}~.js => entry-BXo1GPdd.js
+- entry-!~{000}~.js => entry-SeKIwlWD.js
 
 # tests/esbuild/importstar/re_export_star_common_js_no_bundle
 
@@ -2388,7 +2388,7 @@ expression: output
 
 # tests/esbuild/loader/loader_json_no_bundle_iife
 
-- test-!~{000}~.js => test-C2X3cNPX.js
+- test-!~{000}~.js => test-9w8KKPXb.js
 
 # tests/esbuild/loader/loader_json_prototype
 
@@ -3875,7 +3875,7 @@ expression: output
 
 # tests/rolldown/function/es_module/always
 
-- main-!~{000}~.js => main-Bafsoqcd.js
+- main-!~{000}~.js => main-Dt1QGEoW.js
 
 # tests/rolldown/function/es_module/if_default_prop_cjs_false
 
@@ -3887,15 +3887,15 @@ expression: output
 
 # tests/rolldown/function/es_module/if_default_prop_iife_false
 
-- main-!~{000}~.js => main-BnlFRw1j.js
+- main-!~{000}~.js => main-BtfNOhnu.js
 
 # tests/rolldown/function/es_module/if_default_prop_iife_true
 
-- main-!~{000}~.js => main-BfTTyV1x.js
+- main-!~{000}~.js => main-BReqUdTx.js
 
 # tests/rolldown/function/es_module/never
 
-- main-!~{000}~.js => main-BnlFRw1j.js
+- main-!~{000}~.js => main-BtfNOhnu.js
 
 # tests/rolldown/function/experimental/attach_debug_info/full
 
@@ -4043,15 +4043,15 @@ expression: output
 
 # tests/rolldown/function/export_mode/iife/auto/none
 
-- main-!~{000}~.js => main-aRPCP9J8.js
+- main-!~{000}~.js => main-Dh8Jz4LL.js
 
 # tests/rolldown/function/export_mode/iife/default
 
-- main-!~{000}~.js => main-CIGIL4Cn.js
+- main-!~{000}~.js => main-hD4Bv_2b.js
 
 # tests/rolldown/function/export_mode/iife/named
 
-- main-!~{000}~.js => main-DJKY92-1.js
+- main-!~{000}~.js => main-DNXEA875.js
 
 # tests/rolldown/function/export_mode/umd/auto/none
 
@@ -4083,27 +4083,27 @@ expression: output
 
 # tests/rolldown/function/extend/iife/namespace_default
 
-- main-!~{000}~.js => main-7jHIy-l8.js
+- main-!~{000}~.js => main-brwQAyPP.js
 
 # tests/rolldown/function/extend/iife/namespace_named
 
-- main-!~{000}~.js => main-B7j_Kuo-.js
+- main-!~{000}~.js => main-K2e4wWw_.js
 
 # tests/rolldown/function/extend/iife/no_name_default
 
-- main-!~{000}~.js => main-D633tz30.js
+- main-!~{000}~.js => main-DvWW2A3k.js
 
 # tests/rolldown/function/extend/iife/no_name_named
 
-- main-!~{000}~.js => main-DhV_O5KT.js
+- main-!~{000}~.js => main-D8TMSZ5a.js
 
 # tests/rolldown/function/extend/iife/non_namespace_default
 
-- main-!~{000}~.js => main-B26-2e5L.js
+- main-!~{000}~.js => main-CtaMhTxu.js
 
 # tests/rolldown/function/extend/iife/non_namespace_named
 
-- main-!~{000}~.js => main-C9fyPnJt.js
+- main-!~{000}~.js => main-Vl2v0XGB.js
 
 # tests/rolldown/function/extend/umd/complex_name_default
 
@@ -4205,35 +4205,35 @@ expression: output
 
 # tests/rolldown/function/format/iife/conflict_exports_key
 
-- main-!~{000}~.js => main-B7DdMTgu.js
+- main-!~{000}~.js => main-D8JHDTGU.js
 
 # tests/rolldown/function/format/iife/conflict_exports_key_loop
 
-- main-!~{000}~.js => main-DlYLZZtm.js
+- main-!~{000}~.js => main-zFJen5PZ.js
 
 # tests/rolldown/function/format/iife/external_modules
 
-- main-!~{000}~.js => main-CRmb7lkJ.js
+- main-!~{000}~.js => main-CRV-y3Hf.js
 
 # tests/rolldown/function/format/iife/external_modules_with_globals
 
-- main-!~{000}~.js => main-BIhdWWmn.js
+- main-!~{000}~.js => main-C0-U29mM.js
 
 # tests/rolldown/function/format/iife/iife_with_name
 
-- main-!~{000}~.js => main-DUPK3FQr.js
+- main-!~{000}~.js => main-Cs5fJW0V.js
 
 # tests/rolldown/function/format/iife/iife_with_name_with_minify
 
-- main-!~{000}~.js => main-By4Ie0BL.js
+- main-!~{000}~.js => main-fJkDORp8.js
 
 # tests/rolldown/function/format/iife/namespaced_name
 
-- main-!~{000}~.js => main-BT81TQ4i.js
+- main-!~{000}~.js => main-KV4fp_9m.js
 
 # tests/rolldown/function/format/iife/namespaced_name_reserved
 
-- main-!~{000}~.js => main-DFEeDYGO.js
+- main-!~{000}~.js => main-Bd98rPpn.js
 
 # tests/rolldown/function/format/umd/conflict_exports_key
 
@@ -4273,7 +4273,7 @@ expression: output
 
 # tests/rolldown/function/inline_dynamic_imports/iife
 
-- main-!~{000}~.js => main-BCBDWXHd.js
+- main-!~{000}~.js => main-m4a_SVY-.js
 
 # tests/rolldown/function/intro/cjs
 
@@ -4285,7 +4285,7 @@ expression: output
 
 # tests/rolldown/function/intro/iife
 
-- main-!~{000}~.js => main-CavIXIVN.js
+- main-!~{000}~.js => main-BLQ_fRpz.js
 
 # tests/rolldown/function/legal_comments/inline
 
@@ -4426,7 +4426,7 @@ expression: output
 
 # tests/rolldown/function/outro/iife
 
-- main-!~{000}~.js => main-C0CDpPrv.js
+- main-!~{000}~.js => main-UB4Gsih1.js
 
 # tests/rolldown/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
@@ -4788,7 +4788,7 @@ expression: output
 
 # tests/rolldown/misc/banner/iife
 
-- main-!~{000}~.js => main-BE21lZ-8.js
+- main-!~{000}~.js => main-CtDq3ygp.js
 
 # tests/rolldown/misc/basic
 
@@ -4827,7 +4827,7 @@ expression: output
 
 # tests/rolldown/misc/footer/iife
 
-- main-!~{000}~.js => main-CCj8ebS3.js
+- main-!~{000}~.js => main-TWXkT4-3.js
 
 # tests/rolldown/misc/generate_valid_name_for_kebab_case_files
 
@@ -5962,7 +5962,7 @@ expression: output
 
 # tests/rolldown/warnings/invalid_option/unsupported_inline_dynamic_format
 
-- main-!~{000}~.js => main-dBcUUTZg.js
+- main-!~{000}~.js => main-Bsett4-U.js
 
 # tests/rolldown/warnings/minified-with-eval
 
@@ -5970,15 +5970,15 @@ expression: output
 
 # tests/rolldown/warnings/missing_global_name
 
-- main-!~{000}~.js => main-CcFLlkCI.js
+- main-!~{000}~.js => main-CHKrxru-.js
 
 # tests/rolldown/warnings/missing_name_option_for_iife_export
 
-- main-!~{000}~.js => main-CFJGex8a.js
+- main-!~{000}~.js => main-BaAKcWPI.js
 
 # tests/rolldown/warnings/mixed_export
 
-- main-!~{000}~.js => main-DCCeEska.js
+- main-!~{000}~.js => main-C2--WjG8.js
 
 # tests/rolldown/warnings/none-ascii-content
 

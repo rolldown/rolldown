@@ -11,8 +11,8 @@ var module = (function(exports) {
 Object.defineProperty(exports, '__esModule', { value: true });
 
 //#region main.js
-const validator = "if_default_prop_false";
-const value = true;
+	const validator = "if_default_prop_false";
+	const value = true;
 
 //#endregion
 exports.validator = validator;

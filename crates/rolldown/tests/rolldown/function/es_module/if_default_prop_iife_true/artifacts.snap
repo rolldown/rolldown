@@ -11,8 +11,8 @@ var module = (function(exports) {
 Object.defineProperty(exports, '__esModule', { value: true });
 
 //#region main.js
-var main_default = "if_default_prop_true";
-const value = true;
+	var main_default = "if_default_prop_true";
+	const value = true;
 
 //#endregion
 exports.default = main_default;

@@ -18,7 +18,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region main.js
-var main_default = 1;
+	var main_default = 1;
 
 //#endregion
 return main_default;

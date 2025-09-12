@@ -11,27 +11,27 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 
 //#region foo.js
-var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": (() => {}) });
+	var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": (() => {}) });
 
 //#endregion
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
-	module.exports = 1;
-}) });
+	var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
+		module.exports = 1;
+	}) });
 
 //#endregion
 //#region esm.js
-var esm_exports = /* @__PURE__ */ __export({ value: () => value });
-var value;
-var init_esm = __esm({ "esm.js": (() => {
-	value = 1;
-}) });
+	var esm_exports = /* @__PURE__ */ __export({ value: () => value });
+	var value;
+	var init_esm = __esm({ "esm.js": (() => {
+		value = 1;
+	}) });
 
 //#endregion
 //#region main.js
-Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_foo()));
-Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs()));
-Promise.resolve().then(() => (init_esm(), esm_exports));
+	Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_foo()));
+	Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs()));
+	Promise.resolve().then(() => (init_esm(), esm_exports));
 
 //#endregion
 })();

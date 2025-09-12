@@ -54,9 +54,9 @@ Variant: [exports: Named] [extend: true] [format: Iife] [name: "module"]
 // HIDDEN [rolldown:runtime]
 
 //#region main.js
-var require_main = /* @__PURE__ */ __commonJS({ "main.js": (() => {
-	require_main();
-}) });
+	var require_main = /* @__PURE__ */ __commonJS({ "main.js": (() => {
+		require_main();
+	}) });
 
 //#endregion
 Object.defineProperty(exports, 'default', {

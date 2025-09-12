@@ -15,11 +15,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region nested.js
-nested();
+	nested();
 
 //#endregion
 //#region entry.js
-entry();
+	entry();
 
 //#endregion
 })();

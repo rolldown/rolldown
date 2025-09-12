@@ -25,12 +25,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 Object.defineProperty(exports, '__esModule', { value: true });
 
 //#region test.json
-var test = 123;
-var invalid_identifier = true;
-var test_default = {
-	test,
-	"invalid-identifier": invalid_identifier
-};
+	var test = 123;
+	var invalid_identifier = true;
+	var test_default = {
+		test,
+		"invalid-identifier": invalid_identifier
+	};
 
 //#endregion
 Object.defineProperty(exports, 'default', {

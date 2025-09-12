@@ -10,8 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region entry.js
-function keep() {}
-keep();
+	function keep() {}
+	keep();
 
 //#endregion
 })();

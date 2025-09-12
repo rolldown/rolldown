@@ -15,7 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region entry.js
-entry();
+	entry();
 
 //#endregion
 })();

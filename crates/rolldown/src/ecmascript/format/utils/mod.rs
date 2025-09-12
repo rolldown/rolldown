@@ -87,7 +87,6 @@ pub fn render_modules_with_peek_runtime_module_at_first<'a>(
   source_joiner.append_source(import_code);
 
   // chunk content
-  // TODO indent chunk content for iife format
   module_sources_peekable.for_each(
     |RenderedModuleSource { sources: module_render_output, .. }| {
       if let Some(emitted_sources) = module_render_output {

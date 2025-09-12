@@ -11,16 +11,16 @@ var module = (function() {
 // HIDDEN [rolldown:runtime]
 
 //#region mod.js
-var default_exports = /* @__PURE__ */ __export({
-	add: () => add,
-	subtract: () => subtract
-});
-function add(a, b) {
-	return a + b;
-}
-function subtract(a, b) {
-	return a - b;
-}
+	var default_exports = /* @__PURE__ */ __export({
+		add: () => add,
+		subtract: () => subtract
+	});
+	function add(a, b) {
+		return a + b;
+	}
+	function subtract(a, b) {
+		return a - b;
+	}
 
 //#endregion
 return default_exports;

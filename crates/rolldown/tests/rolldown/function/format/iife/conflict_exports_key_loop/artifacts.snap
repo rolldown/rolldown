@@ -10,8 +10,8 @@ var module = (function(exports) {
 
 
 //#region main.js
-const exports$1 = "exports";
-const exports$1$1 = "exports$1";
+	const exports$1 = "exports";
+	const exports$1$1 = "exports$1";
 
 //#endregion
 exports.exports = exports$1;

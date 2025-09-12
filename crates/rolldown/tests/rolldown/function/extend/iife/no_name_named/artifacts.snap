@@ -18,8 +18,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region main.js
-const a = 1;
-const b = 2;
+	const a = 1;
+	const b = 2;
 
 //#endregion
 exports.a = a;

@@ -3,8 +3,6 @@ mod generated;
 mod types;
 mod utils;
 
-use crate::build_diagnostic::BatchedBuildDiagnostic;
-
 pub type BuildResult<T> = Result<T, BatchedBuildDiagnostic>;
 pub type SingleBuildResult<T> = std::result::Result<T, BuildDiagnostic>;
 
@@ -14,9 +12,9 @@ pub use crate::{
   build_diagnostic::events::bundler_initialize_error::BundlerInitializeError,
   build_diagnostic::events::commonjs_variable_in_esm::CjsExportSpan,
   build_diagnostic::events::invalid_option::InvalidOptionType,
-  build_diagnostic::events::unhandleable_error::CausedPlugin,
+  build_diagnostic::events::plugin_error::CausedPlugin,
   build_diagnostic::events::unloadable_dependency::UnloadableDependencyContext,
-  build_diagnostic::{BuildDiagnostic, Severity},
+  build_diagnostic::{BatchedBuildDiagnostic, BuildDiagnostic, Severity},
   generated::event_kind_switcher::EventKindSwitcher,
   types::diagnostic_options::DiagnosticOptions,
   types::event_kind::EventKind,

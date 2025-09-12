@@ -1,6 +1,4 @@
-use std::{borrow::Cow, fmt::Display};
-
-use crate::{types::diagnostic_options::DiagnosticOptions, types::event_kind::EventKind};
+use crate::types::{diagnostic_options::DiagnosticOptions, event_kind::EventKind};
 
 use super::BuildEvent;
 
@@ -21,34 +19,9 @@ impl BuildEvent for UnhandleableError {
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
-    if let Some(inner_err) = self.0.downcast_ref::<CausedPlugin>() {
-      let source = self.0.source().expect("Error with CausedPlugin should have a source");
-      return format!(
-        "Something went wrong inside native plugin `{}`. Please report this problem at https://github.com/rolldown/rolldown/issues.\n{}",
-        inner_err.plugin, source
-      );
-    }
-
     format!(
       "Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.\n{}",
       self.0
     )
-  }
-}
-
-#[derive(Debug)]
-pub struct CausedPlugin {
-  pub plugin: Cow<'static, str>,
-}
-
-impl CausedPlugin {
-  pub fn new(plugin: Cow<'static, str>) -> Self {
-    Self { plugin }
-  }
-}
-
-impl Display for CausedPlugin {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(f, "caused by plugin `{}`", self.plugin)
   }
 }

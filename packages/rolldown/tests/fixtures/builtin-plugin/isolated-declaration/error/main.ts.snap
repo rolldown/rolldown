@@ -1,7 +1,5 @@
 Error: Build failed with 1 error:
 
-[UNHANDLEABLE_ERROR] Error: Something went wrong inside native plugin `builtin:isolated-declaration`. Please report this problem at https://github.com/rolldown/rolldown/issues.
-
 [builtin:isolated-declaration] Error: TS9007: Function must have an explicit return type annotation with --isolatedDeclarations.
    ╭─[ main.ts:3:17 ]
    │
@@ -9,4 +7,3 @@ Error: Build failed with 1 error:
    │                 ┬  
    │                 ╰── 
 ───╯
-

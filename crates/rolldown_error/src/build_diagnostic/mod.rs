@@ -7,7 +7,10 @@ use std::{
   ops::{Deref, DerefMut},
 };
 
-use crate::{types::diagnostic_options::DiagnosticOptions, utils::downcast_napi_error_diagnostics};
+use crate::{
+  build_diagnostic::events::plugin_error::CausedPlugin,
+  types::diagnostic_options::DiagnosticOptions, utils::downcast_napi_error_diagnostics,
+};
 
 use self::{diagnostic::Diagnostic, events::BuildEvent};
 
@@ -22,6 +25,8 @@ pub struct BuildDiagnostic {
   inner: Box<dyn BuildEvent>,
   severity: Severity,
 }
+
+impl std::error::Error for BuildDiagnostic {}
 
 impl Display for BuildDiagnostic {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -73,31 +78,6 @@ impl BuildDiagnostic {
   }
 }
 
-#[cfg(feature = "napi")]
-impl From<napi::Error> for BuildDiagnostic {
-  fn from(e: napi::Error) -> Self {
-    BuildDiagnostic::napi_error(e)
-  }
-}
-
-impl From<BuildDiagnostic> for BatchedBuildDiagnostic {
-  fn from(v: BuildDiagnostic) -> Self {
-    Self::new(vec![v])
-  }
-}
-
-impl From<anyhow::Error> for BatchedBuildDiagnostic {
-  fn from(err: anyhow::Error) -> Self {
-    Self::new(vec![err.into()])
-  }
-}
-
-impl From<Vec<BuildDiagnostic>> for BatchedBuildDiagnostic {
-  fn from(v: Vec<BuildDiagnostic>) -> Self {
-    Self::new(v)
-  }
-}
-
 impl From<anyhow::Error> for BuildDiagnostic {
   fn from(err: anyhow::Error) -> Self {
     downcast_napi_error_diagnostics(err).unwrap_or_else(BuildDiagnostic::unhandleable_error)
@@ -114,6 +94,57 @@ impl BatchedBuildDiagnostic {
 
   pub fn into_vec(self) -> Vec<BuildDiagnostic> {
     self.0
+  }
+}
+
+impl std::error::Error for BatchedBuildDiagnostic {}
+
+impl Display for BatchedBuildDiagnostic {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    self.0.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join("\n").fmt(f)
+  }
+}
+
+impl From<BuildDiagnostic> for BatchedBuildDiagnostic {
+  fn from(v: BuildDiagnostic) -> Self {
+    Self::new(vec![v])
+  }
+}
+
+impl From<Vec<BuildDiagnostic>> for BatchedBuildDiagnostic {
+  fn from(v: Vec<BuildDiagnostic>) -> Self {
+    Self::new(v)
+  }
+}
+
+impl From<anyhow::Error> for BatchedBuildDiagnostic {
+  fn from(error: anyhow::Error) -> Self {
+    let caused_plugin = error.downcast_ref::<CausedPlugin>().cloned();
+    match error.downcast::<Self>() {
+      Ok(batched) => {
+        if let Some(plugin) = caused_plugin {
+          Self::new(
+            batched
+              .into_vec()
+              .into_iter()
+              .map(|diag| BuildDiagnostic::plugin_error(plugin.clone(), diag.into()))
+              .collect(),
+          )
+        } else {
+          batched
+        }
+      }
+      Err(error) => {
+        // TODO: improve below logic
+        let diagnostic = if let Some(plugin) = caused_plugin {
+          downcast_napi_error_diagnostics(error)
+            .unwrap_or_else(|error| BuildDiagnostic::plugin_error(plugin, error))
+        } else {
+          BuildDiagnostic::from(error)
+        };
+        Self::new(vec![diagnostic])
+      }
+    }
   }
 }
 

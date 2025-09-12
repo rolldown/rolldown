@@ -2750,6 +2750,7 @@ dependencies = [
  "rolldown_plugin_manifest",
  "rolldown_plugin_module_preload_polyfill",
  "rolldown_plugin_oxc_runtime",
+ "rolldown_plugin_react_refresh_wrapper",
  "rolldown_plugin_replace",
  "rolldown_plugin_reporter",
  "rolldown_plugin_transform",
@@ -3093,6 +3094,18 @@ name = "rolldown_plugin_oxc_runtime"
 version = "0.1.0"
 dependencies = [
  "rolldown_plugin",
+]
+
+[[package]]
+name = "rolldown_plugin_react_refresh_wrapper"
+version = "0.1.0"
+dependencies = [
+ "arcstr",
+ "memchr",
+ "regex",
+ "rolldown_plugin",
+ "rolldown_plugin_utils",
+ "rolldown_utils",
 ]
 
 [[package]]

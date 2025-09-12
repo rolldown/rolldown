@@ -1523,6 +1523,7 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:manifest'|
 'builtin:module-preload-polyfill'|
 'builtin:oxc-runtime'|
+'builtin:react-refresh-wrapper'|
 'builtin:reporter'|
 'builtin:replace'|
 'builtin:esm-external-require'|
@@ -2038,6 +2039,13 @@ export declare enum BindingPropertyReadSideEffects {
 export declare enum BindingPropertyWriteSideEffects {
   Always = 0,
   False = 1
+}
+
+export interface BindingReactRefreshWrapperPluginConfig {
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  jsxImportSource: string
+  reactRefreshHost: string
 }
 
 export interface BindingRenderBuiltUrlConfig {

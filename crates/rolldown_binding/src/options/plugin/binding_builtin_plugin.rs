@@ -17,6 +17,7 @@ use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
 use rolldown_plugin_json::JsonPlugin;
 use rolldown_plugin_load_fallback::LoadFallbackPlugin;
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
+use rolldown_plugin_react_refresh_wrapper::ReactRefreshWrapperPlugin;
 use rolldown_plugin_replace::ReplacePlugin;
 use rolldown_plugin_reporter::ReporterPlugin;
 use rolldown_plugin_transform::TransformPlugin;
@@ -27,7 +28,7 @@ use rolldown_plugin_web_worker_post::WebWorkerPostPlugin;
 
 use crate::options::plugin::config::{
   BindingEsmExternalRequirePluginConfig, BindingModulePreloadPolyfillPluginConfig,
-  BindingWasmHelperPluginConfig,
+  BindingReactRefreshWrapperPluginConfig, BindingWasmHelperPluginConfig,
 };
 
 use super::{
@@ -151,6 +152,17 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           OxcRuntimePlugin::default()
         };
         Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ReactRefreshWrapper => {
+        let config = if let Some(options) = plugin.options {
+          BindingReactRefreshWrapperPluginConfig::from_unknown(options)?
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ReactRefreshWrapperPlugin",
+          ));
+        };
+        Arc::new(ReactRefreshWrapperPlugin::new(config.into()))
       }
       BindingBuiltinPluginName::Report => {
         let plugin: ReporterPlugin = if let Some(options) = plugin.options {

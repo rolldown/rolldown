@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use futures::future::join_all;
+use oxc_index::IndexVec;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_common::{
   EntryPoint, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures, ResolvedId,
   RuntimeModuleBrief, ScanMode, SymbolRef, SymbolRefDb,
@@ -83,11 +85,17 @@ impl NormalizedScanStageOutput {
   pub fn make_copy(&self) -> Self {
     Self {
       module_table: self.module_table.clone(),
-      index_ecma_ast: self
-        .index_ecma_ast
-        .iter()
-        .map(|ast| ast.as_ref().map(rolldown_ecmascript::EcmaAst::clone_with_another_arena))
-        .collect(),
+      index_ecma_ast: {
+        #[cfg(not(target_os = "macos"))]
+        let iter = self.index_ecma_ast.raw.par_iter();
+        #[cfg(target_os = "macos")]
+        let iter = self.index_ecma_ast.raw.iter();
+
+        let index_ecma_ast = iter
+          .map(|ast| ast.as_ref().map(rolldown_ecmascript::EcmaAst::clone_with_another_arena))
+          .collect::<Vec<_>>();
+        IndexVec::from_vec(index_ecma_ast)
+      },
       entry_points: self.entry_points.clone(),
       symbol_ref_db: self.symbol_ref_db.clone_without_scoping(),
       runtime: self.runtime.clone(),

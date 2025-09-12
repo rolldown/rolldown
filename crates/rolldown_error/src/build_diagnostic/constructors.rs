@@ -7,11 +7,12 @@ use oxc_resolver::ResolveError;
 
 use crate::utils::ByteLocator;
 
+#[cfg(feature = "napi")]
+use super::events::napi_error::NapiError;
+
 use super::BuildDiagnostic;
 use super::Severity;
 use super::events::DiagnosableArcstr;
-#[cfg(feature = "napi")]
-use super::events::NapiError;
 use super::events::assign_to_import::AssignToImport;
 use super::events::bundler_initialize_error::BundlerInitializeError;
 use super::events::configuration_field_conflict::ConfigurationFieldConflict;
@@ -95,11 +96,9 @@ impl BuildDiagnostic {
   pub fn unloadable_dependency(
     resolved: ArcStr,
     context: Option<UnloadableDependencyContext>,
-    err: anyhow::Error,
+    reason: ArcStr,
   ) -> Self {
-    downcast_napi_error_diagnostics(err).unwrap_or_else(|err| {
-      Self::new_inner(UnloadableDependency { resolved, context, reason: err.to_string().into() })
-    })
+    Self::new_inner(UnloadableDependency { resolved, context, reason })
   }
 
   pub fn circular_dependency(paths: Vec<String>) -> Self {
@@ -261,9 +260,7 @@ impl BuildDiagnostic {
 
   #[cfg(feature = "napi")]
   pub fn napi_error(err: napi::Error) -> Self {
-    let mut diagnostic = Self::new_inner(NapiError);
-    diagnostic.napi_error = Some(err);
-    diagnostic
+    Self::new_inner(NapiError(err))
   }
 
   pub fn eval(filename: String, source: ArcStr, span: Span) -> Self {
@@ -320,22 +317,10 @@ impl BuildDiagnostic {
   }
 
   pub fn unhandleable_error(err: anyhow::Error) -> Self {
-    downcast_napi_error_diagnostics(err)
-      .unwrap_or_else(|err| Self::new_inner(UnhandleableError(err)))
+    Self::new_inner(UnhandleableError(err))
   }
 
   pub fn bundler_initialize_error(message: String, hint: Option<String>) -> Self {
     Self::new_inner(BundlerInitializeError { message, hint })
-  }
-}
-
-fn downcast_napi_error_diagnostics(err: anyhow::Error) -> Result<BuildDiagnostic, anyhow::Error> {
-  #[cfg(feature = "napi")]
-  {
-    err.downcast::<napi::Error>().map(BuildDiagnostic::napi_error)
-  }
-  #[cfg(not(feature = "napi"))]
-  {
-    Err(err)
   }
 }

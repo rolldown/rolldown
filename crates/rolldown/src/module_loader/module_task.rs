@@ -2,8 +2,6 @@ use arcstr::ArcStr;
 use oxc::span::CompactStr;
 use oxc::span::Span;
 use oxc_index::IndexVec;
-use rolldown_std_utils::PathExt;
-use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 use std::sync::Arc;
 use sugar_path::SugarPath;
 
@@ -11,9 +9,12 @@ use rolldown_common::{
   ImportKind, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType, NormalModule,
   NormalModuleTaskResult, ResolvedId, StrOrBytes,
 };
-use rolldown_error::{BuildDiagnostic, BuildResult, UnloadableDependencyContext};
+use rolldown_error::{
+  BuildDiagnostic, BuildResult, UnloadableDependencyContext, downcast_napi_error_diagnostics,
+};
+use rolldown_std_utils::PathExt;
+use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 
-use super::{resolve_utils::resolve_dependencies, task_context::TaskContext};
 use crate::{
   asset::create_asset_view,
   css::create_css_view,
@@ -21,6 +22,8 @@ use crate::{
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
   utils::{load_source::load_source, transform_source::transform_source},
 };
+
+use super::{resolve_utils::resolve_dependencies, task_context::TaskContext};
 
 pub struct ModuleTaskOwner {
   source: ArcStr,
@@ -244,15 +247,17 @@ impl ModuleTask {
       self.ctx.plugin_driver.watch_files.insert(self.resolved_id.id.clone());
     }
     let (source, mut module_type) = result.map_err(|err| {
-      BuildDiagnostic::unloadable_dependency(
-        self.resolved_id.debug_id(self.ctx.options.cwd.as_path()).into(),
-        self.owner.as_ref().map(|owner| UnloadableDependencyContext {
-          importer_id: owner.importer_id.as_str().into(),
-          importee_span: owner.importee_span,
-          source: owner.source.clone(),
-        }),
-        err,
-      )
+      downcast_napi_error_diagnostics(err).unwrap_or_else(|e| {
+        BuildDiagnostic::unloadable_dependency(
+          self.resolved_id.debug_id(self.ctx.options.cwd.as_path()).into(),
+          self.owner.as_ref().map(|owner| UnloadableDependencyContext {
+            importer_id: owner.importer_id.as_str().into(),
+            importee_span: owner.importee_span,
+            source: owner.source.clone(),
+          }),
+          e.to_string().into(),
+        )
+      })
     })?;
     if let Some(asserted) = &self.asserted_module_type {
       module_type = asserted.clone();

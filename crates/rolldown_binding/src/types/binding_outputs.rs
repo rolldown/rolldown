@@ -122,8 +122,21 @@ pub fn to_js_diagnostic(
 ) -> napi::Either<napi::JsError, BindingError> {
   match diagnostic.downcast_napi_error() {
     Ok(napi_error) => {
-      let e = napi::JsError::from(napi_error.try_clone().unwrap_or_else(|e| e));
-      napi::Either::A(e)
+      // Note: In WASM workers, napi::Error objects with maybe_raw/maybe_env references cannot be
+      // safely shared across threads, which would cause try_clone() to fail. Currently, we don't
+      // guarantee full JS error consistency in WASM environments. In the future, we could enhance
+      // the BindingError fields to preserve all custom error properties and achieve complete JS
+      // error consistency across all environments.
+      #[cfg(not(target_family = "wasm"))]
+      {
+        let error = napi_error.try_clone().unwrap_or_else(|e| e);
+        napi::Either::A(napi::JsError::from(error))
+      }
+      #[cfg(target_family = "wasm")]
+      {
+        let error = napi::Error::new(napi_error.status, napi_error.reason.clone());
+        napi::Either::A(napi::JsError::from(error))
+      }
     }
     Err(error) => napi::Either::B(BindingError {
       kind: error.kind().to_string(),

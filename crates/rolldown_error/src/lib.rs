@@ -21,6 +21,7 @@ pub use crate::{
   types::diagnostic_options::DiagnosticOptions,
   types::event_kind::EventKind,
   utils::ResultExt,
+  utils::downcast_napi_error_diagnostics,
   utils::filter_out_disabled_diagnostics,
 };
 

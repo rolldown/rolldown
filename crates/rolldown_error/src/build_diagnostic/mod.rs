@@ -7,7 +7,7 @@ use std::{
   ops::{Deref, DerefMut},
 };
 
-use crate::types::diagnostic_options::DiagnosticOptions;
+use crate::{types::diagnostic_options::DiagnosticOptions, utils::downcast_napi_error_diagnostics};
 
 use self::{diagnostic::Diagnostic, events::BuildEvent};
 
@@ -21,8 +21,6 @@ pub enum Severity {
 pub struct BuildDiagnostic {
   inner: Box<dyn BuildEvent>,
   severity: Severity,
-  #[cfg(feature = "napi")]
-  napi_error: Option<napi::Error>,
 }
 
 impl Display for BuildDiagnostic {
@@ -33,12 +31,7 @@ impl Display for BuildDiagnostic {
 
 impl BuildDiagnostic {
   fn new_inner(inner: impl Into<Box<dyn BuildEvent>>) -> Self {
-    Self {
-      inner: inner.into(),
-      severity: Severity::Error,
-      #[cfg(feature = "napi")]
-      napi_error: None,
-    }
+    Self { inner: inner.into(), severity: Severity::Error }
   }
 
   pub fn id(&self) -> Option<String> {
@@ -76,10 +69,7 @@ impl BuildDiagnostic {
 
   #[cfg(feature = "napi")]
   pub fn downcast_napi_error(&self) -> Result<&napi::Error, &Self> {
-    match &self.napi_error {
-      Some(napi_error) => Ok(napi_error),
-      None => Err(self),
-    }
+    self.inner.as_napi_error().ok_or(self)
   }
 }
 
@@ -98,7 +88,7 @@ impl From<BuildDiagnostic> for BatchedBuildDiagnostic {
 
 impl From<anyhow::Error> for BatchedBuildDiagnostic {
   fn from(err: anyhow::Error) -> Self {
-    Self::new(vec![BuildDiagnostic::unhandleable_error(err)])
+    Self::new(vec![err.into()])
   }
 }
 
@@ -110,7 +100,7 @@ impl From<Vec<BuildDiagnostic>> for BatchedBuildDiagnostic {
 
 impl From<anyhow::Error> for BuildDiagnostic {
   fn from(err: anyhow::Error) -> Self {
-    BuildDiagnostic::unhandleable_error(err)
+    downcast_napi_error_diagnostics(err).unwrap_or_else(BuildDiagnostic::unhandleable_error)
   }
 }
 

@@ -8,6 +8,9 @@ use crate::{
   types::{diagnostic_options::DiagnosticOptions, event_kind::EventKind},
 };
 
+#[cfg(feature = "napi")]
+pub mod napi_error;
+
 pub mod ambiguous_external_namespace;
 pub mod assign_to_import;
 pub mod bundler_initialize_error;
@@ -55,6 +58,11 @@ pub trait BuildEvent: Debug + Sync + Send {
   fn exporter(&self) -> Option<String> {
     None
   }
+
+  #[cfg(feature = "napi")]
+  fn as_napi_error(&self) -> Option<&napi::Error> {
+    None
+  }
 }
 
 impl<T: BuildEvent + 'static> From<T> for Box<dyn BuildEvent>
@@ -63,23 +71,6 @@ where
 {
   fn from(e: T) -> Self {
     Box::new(e)
-  }
-}
-
-// --- TODO(hyf0): These errors are only for compatibility with legacy code. They should be replaced with more specific errors.
-// NOTE: Using #[allow] instead of #[expect] because NapiError is only used with certain feature flags
-#[allow(clippy::allow_attributes)] // Exemption: conditional usage based on features
-#[allow(dead_code)]
-#[derive(Debug)]
-pub struct NapiError;
-
-impl BuildEvent for NapiError {
-  fn kind(&self) -> EventKind {
-    EventKind::NapiError
-  }
-
-  fn message(&self, _opts: &DiagnosticOptions) -> String {
-    "Napi error".into()
   }
 }
 

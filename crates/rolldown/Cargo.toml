@@ -25,6 +25,7 @@ arcstr = { workspace = true }
 bitflags = { workspace = true }
 commondir = { workspace = true }
 css-module-lexer = { workspace = true }
+derive_more = { workspace = true }
 dunce = { workspace = true }
 futures = { workspace = true }
 indexmap = { workspace = true }

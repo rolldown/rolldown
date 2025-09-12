@@ -1,3 +1,4 @@
+use derive_more::Debug;
 use rolldown_common::HmrUpdate;
 use std::sync::Arc;
 
@@ -5,7 +6,7 @@ pub type OnHmrUpdatesCallback = Arc<dyn Fn(Vec<HmrUpdate>, Vec<String>) + Send +
 
 pub type SharedNormalizedDevOptions = Arc<NormalizedDevOptions>;
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct DevWatchOptions {
   /// If `true`, files are not written to disk.
   pub skip_write: Option<bool>,
@@ -23,8 +24,9 @@ pub struct DevWatchOptions {
   pub debounce_tick_rate: Option<u64>,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct DevOptions {
+  #[debug(skip)]
   pub on_hmr_updates: Option<OnHmrUpdatesCallback>,
   /// If `true`, A rebuild will be always issued when a file changes.
   pub eager_rebuild: Option<bool>,
@@ -32,7 +34,9 @@ pub struct DevOptions {
 }
 
 #[expect(clippy::struct_excessive_bools)]
+#[derive(Debug)]
 pub struct NormalizedDevOptions {
+  #[debug(skip)]
   pub on_hmr_updates: Option<OnHmrUpdatesCallback>,
   pub skip_write: bool,
   pub eager_rebuild: bool,

@@ -2654,6 +2654,7 @@ dependencies = [
  "bitflags 2.9.4",
  "commondir",
  "css-module-lexer",
+ "derive_more",
  "dunce",
  "futures",
  "glob",

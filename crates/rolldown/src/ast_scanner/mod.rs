@@ -11,6 +11,7 @@ use arcstr::ArcStr;
 use const_eval::{ConstEvalCtx, try_extract_const_literal};
 use oxc::ast::ast::{BindingPatternKind, Expression};
 use oxc::ast::{AstKind, ast};
+use oxc::ast_visit::walk;
 use oxc::semantic::{Reference, ScopeFlags, Scoping};
 use oxc::span::SPAN;
 use oxc::{
@@ -31,8 +32,8 @@ use rolldown_common::{
   ConstExportMeta, ConstantValue, EcmaModuleAstUsage, EcmaViewMeta, ExportsKind, HmrInfo,
   ImportAttribute, ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport, MemberExprRef,
   ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord, SideEffectDetail, Specifier,
-  StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef,
-  ThisExprReplaceKind, generate_replace_this_expr_map,
+  StmtInfo, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
+  TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -647,6 +648,19 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
   }
 
+  fn visit_function_decl(&mut self, it: &ast::Function<'ast>, flags: oxc::semantic::ScopeFlags) {
+    self.current_stmt_info.meta.insert(StmtInfoMeta::FnDecl);
+    walk::walk_function(self, it, flags);
+  }
+
+  fn visit_class_decl(&mut self, it: &ast::Class<'ast>) {
+    let previous_class_decl_id = self.cur_class_decl.take();
+    self.cur_class_decl = self.get_class_id(it);
+    self.current_stmt_info.meta.insert(StmtInfoMeta::ClassDecl);
+    walk::walk_class(self, it);
+    self.cur_class_decl = previous_class_decl_id;
+  }
+
   fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration) {
     if let Some(source) = &decl.source {
       let record_id = self.add_import_record(
@@ -821,11 +835,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         self.scan_export_default_decl(decl);
         match &decl.declaration {
           ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
-            self.visit_class(class);
-            // walk::walk_declaration(self, &ast::Declaration::ClassDeclaration(func));
+            self.visit_class_decl(class);
           }
           ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
-            self.visit_function(func, ScopeFlags::Function);
+            self.visit_function_decl(func, ScopeFlags::Function);
           }
           _ => {}
         }

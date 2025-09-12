@@ -1,7 +1,7 @@
 use oxc::{
   ast::{
     AstKind,
-    ast::{self, BindingPatternKind, Expression, IdentifierReference},
+    ast::{self, BindingPatternKind, Declaration, Expression, IdentifierReference},
   },
   ast_visit::{Visit, walk},
   semantic::{ScopeFlags, SymbolId},
@@ -309,14 +309,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     walk::walk_this_expression(self, it);
   }
 
-  fn visit_class(&mut self, it: &ast::Class<'ast>) {
-    let previous_class_decl_id = self.cur_class_decl.take();
-    self.cur_class_decl = self.get_class_id(it);
-    self.current_stmt_info.meta.insert(StmtInfoMeta::ClassDecl);
-    walk::walk_class(self, it);
-    self.cur_class_decl = previous_class_decl_id;
-  }
-
   fn visit_class_element(&mut self, it: &ast::ClassElement<'ast>) {
     let pre_is_nested_this_inside_class = self.is_nested_this_inside_class;
     self.is_nested_this_inside_class = true;
@@ -375,9 +367,24 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     walk::walk_variable_declaration(self, decl);
   }
 
-  fn visit_function(&mut self, it: &ast::Function<'ast>, flags: oxc::semantic::ScopeFlags) {
-    self.current_stmt_info.meta.insert(StmtInfoMeta::FnDecl);
-    walk::walk_function(self, it, flags);
+  fn visit_declaration(&mut self, it: &ast::Declaration<'ast>) {
+    match it {
+      Declaration::VariableDeclaration(_) => {
+        walk::walk_declaration(self, it);
+      }
+      Declaration::FunctionDeclaration(function) => {
+        self.visit_function_decl(function, ScopeFlags::Function);
+      }
+      Declaration::ClassDeclaration(class) => {
+        self.visit_class_decl(class);
+      }
+
+      Declaration::TSTypeAliasDeclaration(_)
+      | Declaration::TSInterfaceDeclaration(_)
+      | Declaration::TSEnumDeclaration(_)
+      | Declaration::TSModuleDeclaration(_)
+      | Declaration::TSImportEqualsDeclaration(_) => unreachable!(),
+    }
   }
 
   fn visit_call_expression(&mut self, it: &ast::CallExpression<'ast>) {

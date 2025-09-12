@@ -15,11 +15,23 @@ pub fn is_context_too_long(
     return false;
   }
   let rope = ropey::Rope::from_str(source);
+
+  if span.start() > rope.len_bytes() || span.end() > rope.len_bytes() {
+    unreachable!(
+      "Internal error: Diagnostic span is out of range. This should never happen! \
+       Span: {}..{}, Rope length: {} bytes, Source ID: {:?}, Label message: {:?}. \
+       Please report this bug with the source file that triggered this error.",
+      span.start(),
+      span.end(),
+      rope.len_bytes(),
+      source_id,
+      label.display_info().msg()
+    );
+  }
+
   // 1. If start to beginning of the file is less than 300 characters, treated as it has line feed before.
   // 2. If end to end of the file is less than 300 characters, treated as it has line feed after.
-  let end = span.end();
-  let start = span.start();
-  let postfix = rope.slice(end..);
+  let postfix = rope.byte_slice(span.end()..);
   let mut has_line_feed_after = false;
   let mut cnt = 0;
   for ch in postfix.chars() {
@@ -37,7 +49,7 @@ pub fn is_context_too_long(
     has_line_feed_after = true;
   }
 
-  let prefix = rope.slice(..start);
+  let prefix = rope.byte_slice(..span.start());
 
   let mut has_line_feed_before = false;
   let mut cnt = 0;

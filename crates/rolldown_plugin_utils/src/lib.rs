@@ -14,6 +14,7 @@ mod render_asset_url_in_js;
 mod strip_bom;
 mod to_output_file_path;
 mod to_relative_runtime_path;
+mod to_string_literal;
 
 pub mod constants;
 pub mod css;
@@ -37,3 +38,4 @@ pub use to_output_file_path::{
   AssetUrlResult, RenderBuiltUrl, RenderBuiltUrlConfig, RenderBuiltUrlRet, ToOutputFilePathEnv,
 };
 pub use to_relative_runtime_path::create_to_import_meta_url_based_relative_runtime;
+pub use to_string_literal::to_string_literal;

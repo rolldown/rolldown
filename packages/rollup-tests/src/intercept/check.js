@@ -64,7 +64,7 @@ after(function printStatus() {
     if (expectedStatus.skipFailed !== status.skipFailed || expectedStatus.passed !== status.passed) {
       console.log('expected', expectedStatus)
       console.log('actual', status)
-      throw new Error('The rollup test status file is not updated. Please run `just test-node rollup --update` to update it.')
+      throw new Error('The rollup test status file is not updated. Please run `just test-node-rollup --update` to update it.')
     }
     process.exit(0)
   }

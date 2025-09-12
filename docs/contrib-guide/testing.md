@@ -19,8 +19,8 @@ Here is some details about how to choose test technique [details](#how-to-choose
 - `just test-update` running all tests and update snapshots automatically
 - `just test-rust` for running all Rust tests.
 - `just test-node` for running all Node.js tests.
-- `just test-node rolldown` for running only Rolldown's Node.js tests.
-- `just test-node rollup` for running only Rollup's tests.
+- `just test-node-rolldown` for running only Rolldown's Node.js tests.
+- `just test-node-rollup` for running only Rollup's tests.
 
 ## Rust Tests
 
@@ -109,34 +109,34 @@ Tests located in `packages/rolldown/tests` are used to test Rolldown's Node.js A
 
 It is our goal to align Rolldown's Node.js API with that of Rollup's as much as possible, and the tests are used to verify API alignment and track the progress. Currently, there are many Rollup options that are not yet supported. If you implemented support for additional options from rollup, please add corresponding test cases for them.
 
-- `just test-node rolldown` will run rolldown tests.
-- `just test-node rolldown --update` will run tests and update snapshots.
+- `just test-node-rolldown` will run rolldown tests.
+- `just test-node-rolldown --update` will run tests and update snapshots.
 
 #### Run tests of the specific file
 
 To run tests of the specific file, you could use
 
 ```shell
-just test-node rolldown test-file-name
+just test-node-rolldown test-file-name
 ```
 
-For example, to run tests in `fixture.test.ts`, you could use `just test-node rolldown fixture`.
+For example, to run tests in `fixture.test.ts`, you could use `just test-node-rolldown fixture`.
 
 #### Run the specific test
 
 To run specific test, you could use
 
 ```shell
-just test-node rolldown -t test-name
+just test-node-rolldown -t test-name
 ```
 
 Names of tests in `fixture.test.ts` are defined with their folder names. `tests/fixtures/resolve/alias` will has test name `resolve/alias`.
 
-To run the `tests/fixtures/resolve/alias` test, you could use `just test-node rolldown -t resolve/alias`.
+To run the `tests/fixtures/resolve/alias` test, you could use `just test-node-rolldown -t resolve/alias`.
 
 :::info
 
-- `just test-node rolldown -t aaa bbb` is different from `just test-node rolldown -t "aaa bbb"`. The former will run tests that either contains `aaa` or `bbb`, while the latter will run tests, whose name contain `aaa bbb`.
+- `just test-node-rolldown -t aaa bbb` is different from `just test-node-rolldown -t "aaa bbb"`. The former will run tests that either contains `aaa` or `bbb`, while the latter will run tests, whose name contain `aaa bbb`.
 
 - For more advanced usage, please refer to https://vitest.dev/guide/filtering.
 
@@ -148,12 +148,12 @@ We also aim for behavior alignment with Rollup by running Rollup's own tests aga
 
 To achieve this, each test case in `packages/rollup-tests/test` proxies to the corresponding test in the `rollup` git submodule in project root.
 
-The git submodule should have been initialized after running `just init` when setting up the project, but you should also run `just update` to update the submodule before running the Rollup tests.
+The git submodule should have been initialized after running `just setup` when setting up the project, but you should also run `just update-submodule` to update the submodule before running the Rollup tests.
 
 In `/packages/rollup-tests`:
 
-- `just test-node rollup` will run rollup tests.
-- `just test-node rollup --update` will run and update the tests' status.
+- `just test-node-rollup` will run rollup tests.
+- `just test-node-rollup --update` will run and update the tests' status.
 
 ### How to choose test technique
 

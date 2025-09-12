@@ -7,5 +7,5 @@ To achieve this, each test case in `packages/rollup-tests/test` proxies to the c
 The git submodule should have been initialized after running `just setup` when setting up the project, but you should also run `just update-submodule` to update the submodule before running the Rollup tests.
 
 
-- `just test-node rollup` will run rollup tests.
-- `just test-node rollup --update` will run and update the tests status.
+- `just test-node-rollup` will run rollup tests.
+- `just test-node-rollup --update` will run and update the tests status.

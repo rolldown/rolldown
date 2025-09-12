@@ -15,7 +15,7 @@ cargo binstall samply
 To build Rolldown with the information required by `samply`, you need to build it with:
 
 ```shell
-just build-profile
+just build-rolldown-profile
 ```
 
 ### Profiling
@@ -55,7 +55,7 @@ sudo apt install heaptrack heaptrack-gui
 To build Rolldown with the information required by `heaptrack`, you need to build it with:
 
 ```shell
-just build-memory-profile
+just build-rolldown-memory-profile
 ```
 
 ### Profiling

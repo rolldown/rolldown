@@ -23,7 +23,7 @@ just bench-rust
 Make sure to build the Node.js bindings in release mode:
 
 ```shell
-just build native release
+just build-rolldown-release
 ```
 
 Then run

@@ -136,6 +136,13 @@ jobs:
 
   wasi-test:
     needs: [changes, build-rolldown-wasi]
+    # Normally, if `build-rolldown-wasi` is skipped, this job won't run, which makes status checks failed.
+    # By using such syntax, https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#example-not-requiring-successful-dependent-jobs
+    # we always run this job even when `build-rolldown-wasi` is skipped. We'll handle/skip unnecessary runs in `reusable-wasi-test.yml`.
+    if: |
+      always() &&
+      (needs.build-rolldown-wasi.result == 'success' || needs.build-rolldown-wasi.result == 'skipped')
+
     strategy:
       matrix:
         target: [ubuntu-latest, macos-latest, windows-latest]

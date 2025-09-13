@@ -1,6 +1,6 @@
 # Profiling
 
-## CPU profiling
+## CPU profiling (samply)
 
 ### Setup
 
@@ -9,6 +9,12 @@ First you need to install [`samply`](https://github.com/mstange/samply). You can
 ```bash
 cargo binstall samply
 ```
+
+::: warning
+
+Samply does not work well on macOS. We recommend using Xcode Instruments instead.
+
+:::
 
 ### Build
 
@@ -30,6 +36,34 @@ If you want to profile the JavaScript part as well, you can pass [the required f
 
 ```shell
 samply record node --perf-prof --perf-basic-prof --perf-prof-unwinding-info --interpreted-frames-native-stack ./path/to/script-rolldown-is-used.js
+```
+
+## CPU profiling (Xcode Instruments)
+
+### Setup
+
+First, make sure you have Xcode installed.
+
+### Build
+
+To build Rolldown with the information required by Xcode Instruments, you need to build it with:
+
+```shell
+just build-rolldown-profile
+```
+
+### Profiling
+
+After building, you can run Rolldown with the following command to profile CPU usage:
+
+```shell
+xctrace record --template "Time Profile" --output . --launch -- node ./path/to/script-rolldown-is-used.js
+```
+
+then the output file path will be printed. You can open the file with:
+
+```shell
+open ./Launch_node_yyyy-mm-dd_hh.mm.ss_hash.trace
 ```
 
 ## Memory profiling

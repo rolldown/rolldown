@@ -1,21 +1,11 @@
 import { parseArgs } from 'node:util';
-import type { Schema } from '../../types/schema';
-import { getJsonSchema } from '../../utils/validator';
+import { getCliSchemaInfo } from '../../utils/validator';
 import { logger } from '../logger';
 import { alias, type OptionConfig } from './alias';
 import { normalizeCliOptions, type NormalizedCliOptions } from './normalize';
-import {
-  camelCaseToKebabCase,
-  flattenSchema,
-  getSchemaType,
-  kebabCaseToCamelCase,
-} from './utils';
+import { camelCaseToKebabCase, kebabCaseToCamelCase } from './utils';
 
-const objectSchema = getJsonSchema();
-
-const flattenedSchema: Record<string, Schema> = flattenSchema(
-  objectSchema.properties,
-);
+const schemaInfo = getCliSchemaInfo();
 
 export const options: {
   [k: string]: {
@@ -27,43 +17,42 @@ export const options: {
     description: string;
   };
 } = Object.fromEntries(
-  Object.entries(flattenedSchema).filter(([_key, schema]) =>
-    getSchemaType(schema) !== 'never'
-  ).map(([key, schema]) => {
-    const config = Object.getOwnPropertyDescriptor(alias, key)?.value as
-      | OptionConfig
-      | undefined;
+  Object.entries(schemaInfo).filter(([_key, info]) => info.type !== 'never')
+    .map(([key, info]) => {
+      const config = Object.getOwnPropertyDescriptor(alias, key)?.value as
+        | OptionConfig
+        | undefined;
 
-    const type = getSchemaType(schema);
+      const type = info.type;
 
-    const result = {
-      type: type === 'boolean' ? 'boolean' : 'string',
-      // We only support comma separated mode right now.
-      // multiple: type === 'object' || type === 'array',
-      description: schema?.description ?? config?.description ?? '',
-      hint: config?.hint,
-    } as {
-      type: 'boolean' | 'string';
-      multiple: boolean;
-      short?: string;
-      default?: boolean | string | string[];
-      hint?: string;
-      description: string;
-    };
-    if (config && config?.abbreviation) {
-      result.short = config?.abbreviation;
-    }
-    if (config && config.reverse) {
-      if (result.description.startsWith('enable')) {
-        result.description = result.description.replace('enable', 'disable');
-      } else if (!result.description.startsWith('Avoid')) {
-        result.description = `disable ${result.description}`;
+      const result = {
+        type: type === 'boolean' ? 'boolean' : 'string',
+        // We only support comma separated mode right now.
+        // multiple: type === 'object' || type === 'array',
+        description: info?.description ?? config?.description ?? '',
+        hint: config?.hint,
+      } as {
+        type: 'boolean' | 'string';
+        multiple: boolean;
+        short?: string;
+        default?: boolean | string | string[];
+        hint?: string;
+        description: string;
+      };
+      if (config && config?.abbreviation) {
+        result.short = config?.abbreviation;
       }
-    }
-    key = camelCaseToKebabCase(key);
-    // add 'no-' prefix for need reverse options
-    return [config?.reverse ? `no-${key}` : key, result];
-  }),
+      if (config && config.reverse) {
+        if (result.description.startsWith('enable')) {
+          result.description = result.description.replace('enable', 'disable');
+        } else if (!result.description.startsWith('Avoid')) {
+          result.description = `disable ${result.description}`;
+        }
+      }
+      key = camelCaseToKebabCase(key);
+      // add 'no-' prefix for need reverse options
+      return [config?.reverse ? `no-${key}` : key, result];
+    }),
 );
 
 export function parseCliArguments(): NormalizedCliOptions & {
@@ -84,7 +73,7 @@ export function parseCliArguments(): NormalizedCliOptions & {
       if (option.name.startsWith('no-')) {
         // stripe `no-` prefix
         const name = kebabCaseToCamelCase(option.name.substring(3));
-        if (name in flattenedSchema) {
+        if (name in schemaInfo) {
           // Remove the `no-` in values
           delete values[option.name];
           option.name = name;
@@ -93,12 +82,12 @@ export function parseCliArguments(): NormalizedCliOptions & {
       }
       delete values[option.name]; // Strip the kebab-case options.
       option.name = kebabCaseToCamelCase(option.name);
-      let originalType = flattenedSchema[option.name];
-      if (!originalType) {
+      let originalInfo = schemaInfo[option.name];
+      if (!originalInfo) {
         // Return the summary of invalid option.
         return { name: option.name, value: option.value };
       }
-      let type = getSchemaType(originalType);
+      let type = originalInfo.type;
       if (type === 'string' && typeof option.value !== 'string') {
         let opt = option as { name: string };
         // We should use the default value.
@@ -144,6 +133,16 @@ export function parseCliArguments(): NormalizedCliOptions & {
       } else if (type === 'boolean') {
         Object.defineProperty(values, option.name, {
           value: !negative,
+          enumerable: true,
+          configurable: true,
+          writable: true,
+        });
+      } else if (type === 'union') {
+        // We should use the default value.
+        let defaultValue = Object.getOwnPropertyDescriptor(alias, option.name)
+          ?.value as OptionConfig;
+        Object.defineProperty(values, option.name, {
+          value: option.value ?? defaultValue?.default ?? '',
           enumerable: true,
           configurable: true,
           writable: true,

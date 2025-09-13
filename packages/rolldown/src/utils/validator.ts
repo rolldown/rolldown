@@ -1,4 +1,3 @@
-import { toJsonSchema } from '@valibot/to-json-schema';
 import colors from 'ansis';
 import * as v from 'valibot';
 import type { PreRenderedChunk } from '../binding';
@@ -12,7 +11,7 @@ import type {
   SourcemapPathTransformOption,
 } from '../types/misc';
 import type { RenderedChunk } from '../types/rolldown-output';
-import type { ObjectSchema } from '../types/schema';
+import { flattenValibotSchema } from './flatten-valibot-schema';
 
 const StringOrRegExpSchema = v.union([v.string(), v.instance(RegExp)]);
 
@@ -594,9 +593,7 @@ const InputCliOverrideSchema = v.strictObject({
     v.description('Jsx options preset'),
   ),
   preserveEntrySignatures: v.pipe(
-    v.optional(v.union([
-      v.literal(false),
-    ])),
+    v.optional(v.literal(false)),
     v.description('Avoid facade chunks for entry points'),
   ),
   context: v.pipe(
@@ -1071,11 +1068,9 @@ export function getOutputCliKeys(): string[] {
   return v.keyof(OutputCliOptionsSchema).options;
 }
 
-export function getJsonSchema(): ObjectSchema {
-  return toJsonSchema(CliOptionsSchema, {
-    // errorMode: 'ignore' is set to ignore `never` schema
-    // there's no way to suppress the error one-by-one
-    // https://github.com/fabian-hiller/valibot/issues/1062
-    errorMode: 'ignore',
-  }) as ObjectSchema;
+export function getCliSchemaInfo(): Record<
+  string,
+  { type: string; description?: string }
+> {
+  return flattenValibotSchema(CliOptionsSchema);
 }

@@ -11,7 +11,7 @@ use oxc::ast::ast::{
 use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::span::{SPAN, Span};
 use rolldown_ecmascript_utils::ExpressionExt;
-use rolldown_plugin::PluginContext;
+use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_plugin_utils::constants::{ViteImportGlob, ViteImportGlobValue};
 use sugar_path::SugarPath;
 
@@ -131,16 +131,16 @@ impl<'ast> GlobImportVisit<'ast, '_> {
         }
 
         // import.meta.glob('./dir/*.js')
-        if let Some(arg) = call_expr.arguments.first() {
-          self.eval_glob_expr(arg, &mut files, &options);
-        }
+        let Some(arg) = call_expr.arguments.first() else { return };
 
         // {
         //   './dir/ind.js': __glob__0_0_,
         //   './dir/foo.js': () => import('./dir/foo.js'),
         //   './dir/bar.js': () => import('./dir/bar.js?raw').then((m) => m.setup),
         // }
-        *expr = self.generate_glob_object_expression(&files, &options, omit_type, call_expr.span);
+        if self.eval_glob_expr(arg, &mut files, &options).is_some() {
+          *expr = self.generate_glob_object_expression(&files, &options, omit_type, call_expr.span);
+        }
 
         self.current += 1;
       }
@@ -361,7 +361,7 @@ impl GlobImportVisit<'_, '_> {
     dir: &Path,
     root: &Path,
     base: Option<&str>,
-  ) -> PathWithGlob<'a> {
+  ) -> Option<PathWithGlob<'a>> {
     let dir = if let Some(base) = base {
       if let Some(base) = base.strip_prefix('/') { root.join(base) } else { dir.join(base) }
     } else {
@@ -391,15 +391,21 @@ impl GlobImportVisit<'_, '_> {
         };
         let path = Path::new(id.as_ref());
         if path.is_absolute() && path.starts_with(root) {
-          return PathWithGlob::new(id.to_string(), glob);
+          return Some(PathWithGlob::new(id.to_string(), glob));
         }
       }
-      panic!(
-        "Invalid glob pattern: {glob} (resolved: '{}'), it must start with '/' or './'.",
-        self.id
-      );
+
+      self.ctx.warn(LogWithoutPlugin {
+        message: format!(
+          "Invalid glob pattern: `{glob}` in file '{}'. Glob patterns must start with:\n  • '/' for absolute paths from project root\n  • './' or '../' for relative paths\n  • '**/' for recursive matching from project root\n  • '#' for subpath imports (with '*' wildcard)",
+          self.id.relative(self.root).display()
+        ),
+        ..Default::default()
+      });
+
+      return None;
     };
-    PathWithGlob::new(absolute_glob.normalize().to_string_lossy().into_owned(), glob)
+    Some(PathWithGlob::new(absolute_glob.normalize().to_string_lossy().into_owned(), glob))
   }
 
   fn relative_path(&self, path: &Path, to: Option<&Path>) -> String {
@@ -448,7 +454,7 @@ impl GlobImportVisit<'_, '_> {
     arg: &Argument,
     files: &mut Vec<ImportGlobFileData>,
     options: &ImportGlobOptions,
-  ) {
+  ) -> Option<()> {
     let root = Path::new(&self.root);
     let is_virtual_module = self.is_virtual_module();
 
@@ -466,14 +472,14 @@ impl GlobImportVisit<'_, '_> {
     match arg {
       Argument::StringLiteral(str) => {
         if let Some(glob) = str.value.strip_prefix('!') {
-          negated_globs.push(self.to_absolute_glob(glob, dir, root, options.base.as_deref()));
+          negated_globs.push(self.to_absolute_glob(glob, dir, root, options.base.as_deref())?);
         } else {
           positive_globs.push(self.to_absolute_glob(
             &str.value,
             dir,
             root,
             options.base.as_deref(),
-          ));
+          )?);
           if !str.value.starts_with('.') {
             is_relative = false;
           }
@@ -483,14 +489,19 @@ impl GlobImportVisit<'_, '_> {
         for expr in &array_expr.elements {
           if let ArrayExpressionElement::StringLiteral(str) = expr {
             if let Some(glob) = str.value.strip_prefix('!') {
-              negated_globs.push(self.to_absolute_glob(glob, dir, root, options.base.as_deref()));
+              negated_globs.push(self.to_absolute_glob(
+                glob,
+                dir,
+                root,
+                options.base.as_deref(),
+              )?);
             } else {
               positive_globs.push(self.to_absolute_glob(
                 &str.value,
                 dir,
                 root,
                 options.base.as_deref(),
-              ));
+              )?);
               if !str.value.starts_with('.') {
                 is_relative = false;
               }
@@ -502,7 +513,7 @@ impl GlobImportVisit<'_, '_> {
     }
 
     if negated_globs.is_empty() && positive_globs.is_empty() {
-      return;
+      return Some(());
     }
 
     assert!(
@@ -567,6 +578,7 @@ impl GlobImportVisit<'_, '_> {
 
       files.push(ImportGlobFileData { file_path, import_path });
     }
+    Some(())
   }
 
   fn update_options(arg: &Argument, options: &mut ImportGlobOptions) {

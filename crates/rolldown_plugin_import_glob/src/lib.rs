@@ -1,3 +1,5 @@
+mod utils;
+
 use std::{borrow::Cow, path::PathBuf};
 
 use oxc::{ast::AstBuilder, ast_visit::VisitMut};
@@ -5,10 +7,6 @@ use rolldown_plugin::{
   HookTransformAstArgs, HookTransformAstReturn, HookUsage, Plugin, PluginContext,
 };
 use sugar_path::SugarPath;
-
-mod utils;
-
-use utils::GlobImportVisit;
 
 #[derive(Debug, Default)]
 pub struct ImportGlobPlugin {
@@ -37,19 +35,16 @@ impl Plugin for ImportGlobPlugin {
       let id = args.id.to_slash_lossy();
       let root = self.config.root.as_ref().map(PathBuf::from);
       let root = root.as_ref().unwrap_or(args.cwd);
-
       let ast_builder = AstBuilder::new(fields.allocator);
-
-      let mut visitor = GlobImportVisit {
+      let mut visitor = utils::GlobImportVisit {
         ctx,
         root,
         id: &id,
         ast_builder,
-        restore_query_extension: self.config.restore_query_extension,
         current: 0,
         import_decls: ast_builder.vec(),
+        restore_query_extension: self.config.restore_query_extension,
       };
-
       visitor.visit_program(fields.program);
       if !visitor.import_decls.is_empty() {
         fields.program.body.extend(visitor.import_decls);

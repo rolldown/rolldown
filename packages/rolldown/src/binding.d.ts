@@ -1617,6 +1617,7 @@ export interface BindingError {
 
 export interface BindingEsmExternalRequirePluginConfig {
   external: Array<BindingStringOrRegex>
+  skipDuplicateCheck?: boolean
 }
 
 export interface BindingExperimentalHmrOptions {

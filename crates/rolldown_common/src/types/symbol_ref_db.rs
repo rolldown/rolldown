@@ -29,6 +29,8 @@ bitflags::bitflags! {
     /// If this symbol is declared by `const`. Eg. `const a = 1;`
     const IsConst = 1 << 1;
     const MustStartWithCapitalLetterForJSX = 1 << 2;
+    /// If the SymbolRef is pointed to an empty function.
+    const EmptyFunction = 1 << 3;
   }
 }
 

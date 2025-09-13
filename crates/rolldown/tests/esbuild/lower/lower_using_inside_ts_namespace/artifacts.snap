@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region \0@oxc-project/runtime/helpers/usingCtx.js
+//#region \0@oxc-project+runtime@0.87.0/helpers/usingCtx.js
 function _usingCtx() {
 	var r = "function" == typeof SuppressedError ? SuppressedError : function(r$1, e$1) {
 		var n$1 = Error();

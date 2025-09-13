@@ -3097,6 +3097,7 @@ dependencies = [
  "oxc_resolver",
  "phf",
  "rolldown_plugin",
+ "rolldown_utils",
 ]
 
 [[package]]

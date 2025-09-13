@@ -5,7 +5,8 @@
 use arcstr::ArcStr;
 use phf::{Map, phf_map};
 
-// pub const OXC_RUNTIME_VERSION: &str = "0.87.0";
+pub const RUNTIME_HELPER_PREFIX: &str = "@oxc-project+runtime@0.87.0/helpers/";
+pub const RUNTIME_HELPER_UNVERSIONED_PREFIX: &str = "@oxc-project/runtime/helpers/";
 
 /// Map of all ESM helpers from @oxc-project/runtime/src/helpers/esm/
 pub static ESM_HELPERS: Map<&'static str, ArcStr> = phf_map! {
@@ -2609,16 +2610,16 @@ export { _writeOnlyError as default };"#),
 
 /// Get the content of a helper by its specifier
 pub fn get_helper_content(specifier: &str) -> Option<ArcStr> {
-  ESM_HELPERS
-    .get(
-      specifier
-        .strip_prefix("@oxc-project/runtime/helpers/")
-        .map(|name| name.strip_suffix(".js").unwrap_or(name))?,
-    )
-    .cloned()
+  let helper_name = specifier.strip_prefix(RUNTIME_HELPER_PREFIX)?;
+  ESM_HELPERS.get(helper_name.strip_suffix(".js").unwrap_or(helper_name)).cloned()
 }
 
 /// Check if a specifier is an OXC runtime helper
 pub fn is_runtime_helper(specifier: &str) -> bool {
-  specifier.starts_with("@oxc-project/runtime/helpers/")
+  specifier.starts_with(RUNTIME_HELPER_UNVERSIONED_PREFIX)
+}
+
+/// Check if a specifier is a virtual runtime helper (with \0 prefix)
+pub fn is_virtual_runtime_helper(specifier: &str) -> bool {
+  specifier.starts_with(RUNTIME_HELPER_PREFIX)
 }

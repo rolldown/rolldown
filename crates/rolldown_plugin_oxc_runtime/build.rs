@@ -67,13 +67,19 @@ fn main() {
   .unwrap();
 
   // Write the static helper map using phf with ArcStr values
-  writeln!(&mut file, "use arcstr::ArcStr;").unwrap();
-  writeln!(&mut file, "use phf::{{Map, phf_map}};\n").unwrap();
-  writeln!(&mut file, "// pub const OXC_RUNTIME_VERSION: &str = \"{}\";", version).unwrap();
-  writeln!(&mut file).unwrap();
-  writeln!(&mut file, "/// Map of all ESM helpers from @oxc-project/runtime/src/helpers/esm/")
-    .unwrap();
-  writeln!(&mut file, "pub static ESM_HELPERS: Map<&'static str, ArcStr> = phf_map! {{").unwrap();
+  writeln!(
+    &mut file,
+    r#"use arcstr::ArcStr;
+use phf::{{Map, phf_map}};
+
+pub const RUNTIME_HELPER_PREFIX: &str = "@oxc-project+runtime@{}/helpers/";
+pub const RUNTIME_HELPER_UNVERSIONED_PREFIX: &str = "@oxc-project/runtime/helpers/";
+
+/// Map of all ESM helpers from @oxc-project/runtime/src/helpers/esm/
+pub static ESM_HELPERS: Map<&'static str, ArcStr> = phf_map! {{"#,
+    version,
+  )
+  .unwrap();
 
   for (helper_name, content) in &helpers {
     // Calculate hash count for raw string literal
@@ -96,18 +102,18 @@ fn main() {
     &mut file,
     r#"/// Get the content of a helper by its specifier
 pub fn get_helper_content(specifier: &str) -> Option<ArcStr> {{
-  ESM_HELPERS
-    .get(
-      specifier
-        .strip_prefix("@oxc-project/runtime/helpers/")
-        .map(|name| name.strip_suffix(".js").unwrap_or(name))?,
-    )
-    .cloned()
+  let helper_name = specifier.strip_prefix(RUNTIME_HELPER_PREFIX)?;
+  ESM_HELPERS.get(helper_name.strip_suffix(".js").unwrap_or(helper_name)).cloned()
 }}
 
 /// Check if a specifier is an OXC runtime helper
 pub fn is_runtime_helper(specifier: &str) -> bool {{
-  specifier.starts_with("@oxc-project/runtime/helpers/")
+  specifier.starts_with(RUNTIME_HELPER_UNVERSIONED_PREFIX)
+}}
+
+/// Check if a specifier is a virtual runtime helper (with \0 prefix)
+pub fn is_virtual_runtime_helper(specifier: &str) -> bool {{
+  specifier.starts_with(RUNTIME_HELPER_PREFIX)
 }}"#
   )
   .unwrap();

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc_index::IndexVec;
+#[cfg(not(target_os = "macos"))]
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_common::{
   EntryPoint, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures, ResolvedId,

@@ -1759,7 +1759,7 @@ export interface BindingInputItem {
 }
 
 export interface BindingInputOptions {
-  external?: undefined | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)
+  external?: Array<string | RegExp> | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)
   input: Array<BindingInputItem>
   plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   resolve?: BindingResolveOptions

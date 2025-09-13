@@ -235,7 +235,7 @@ where
   D: Deserializer<'de>,
 {
   let deserialized = Option::<Vec<String>>::deserialize(deserializer)?;
-  Ok(deserialized.map(IsExternal::from_vec))
+  Ok(deserialized.map(IsExternal::from))
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

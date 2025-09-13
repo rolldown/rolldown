@@ -28,7 +28,7 @@ impl CrossModuleInlineConstCtx {
 }
 
 impl LinkStage<'_> {
-  pub(super) fn cross_module_inline_const(&mut self) {
+  pub(super) fn cross_module_optimization(&mut self) {
     let inline_const_pass = self.options.optimization.inline_const_pass();
     if inline_const_pass < 2 {
       return;

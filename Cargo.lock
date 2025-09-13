@@ -3017,13 +3017,10 @@ dependencies = [
 name = "rolldown_plugin_import_glob"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "arcstr",
  "fast-glob",
  "itoa",
  "oxc",
  "rolldown_ecmascript_utils",
- "rolldown_error",
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_utils",

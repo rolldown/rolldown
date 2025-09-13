@@ -37,6 +37,15 @@ describe('basic arguments', () => {
       ),
     ).toMatchSnapshot()
   })
+
+  test('should not show warning with supported Node.js version', async () => {
+    // NOTE: we only run tests with supported Node.js versions
+    const ret = await execa`rolldown`
+
+    expect(ret.exitCode).toBe(0)
+    expect(ret.stdout).toContain('rolldown v');
+    expect(ret.stdout).not.toContain('Please upgrade your Node.js version');
+  })
 })
 
 describe('cli options for bundling', () => {

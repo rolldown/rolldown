@@ -4,6 +4,15 @@ import { parseCliArguments } from './arguments';
 import { bundleWithCliOptions, bundleWithConfig } from './commands/bundle';
 import { showHelp } from './commands/help';
 import { logger } from './logger';
+import { checkNodeVersion } from './version-check';
+
+if (!checkNodeVersion(process.versions.node)) {
+  logger.warn(
+    `You are using Node.js ${process.versions.node}. ` +
+      `Rolldown requires Node.js version 20.19+ or 22.12+. ` +
+      `Please upgrade your Node.js version.`,
+  );
+}
 
 async function main() {
   const { rawArgs, ...cliOptions } = parseCliArguments();

@@ -8,7 +8,7 @@ use oxc::{
   },
   ast_visit::Visit,
 };
-use rolldown_common::{ConstExportMeta, GetLocalDb, ModuleIdx, SymbolRef};
+use rolldown_common::{ConstExportMeta, EcmaViewMeta, GetLocalDb, ModuleIdx, SymbolRef};
 use rustc_hash::FxHashMap;
 
 use crate::ast_scanner::const_eval::{ConstEvalCtx, try_extract_const_literal};
@@ -18,19 +18,41 @@ use super::LinkStage;
 #[derive(Default)]
 struct CrossModuleInlineConstCtx {
   changed: bool,
-  iteration: u32,
+  config: CrossModuleOptimizationConfig,
 }
 
 impl CrossModuleInlineConstCtx {
-  fn new(iteration: u32) -> Self {
-    Self { changed: true, iteration }
+  fn new(config: CrossModuleOptimizationConfig) -> Self {
+    Self { changed: true, config }
   }
 }
 
+#[derive(Default, Clone, Copy, Debug)]
+struct CrossModuleOptimizationConfig {
+  pass: u32,
+  #[expect(unused)]
+  empty_function_optimization: bool,
+  inline_const_optimization: bool,
+}
+
 impl LinkStage<'_> {
+  fn prepare_cross_module_optimization(&self) -> CrossModuleOptimizationConfig {
+    let empty_function_optimization = self
+      .module_table
+      .iter()
+      .filter_map(|item| item.as_normal())
+      .any(|module| module.ecma_view.meta.contains(EcmaViewMeta::TopExportedLevelEmptyFunction));
+    // let other_optimization_pass = if empty_function_optimization { 1 } else { 0 };
+    let inline_const_pass = self.options.optimization.inline_const_pass() - 1;
+    CrossModuleOptimizationConfig {
+      pass: inline_const_pass,
+      empty_function_optimization,
+      inline_const_optimization: self.options.optimization.is_inline_const_enabled(),
+    }
+  }
   pub(super) fn cross_module_optimization(&mut self) {
-    let inline_const_pass = self.options.optimization.inline_const_pass();
-    if inline_const_pass < 2 {
+    let config = self.prepare_cross_module_optimization();
+    if config.pass < 1 {
       return;
     }
     // Explain `inline_const.pass`:
@@ -45,17 +67,17 @@ impl LinkStage<'_> {
     //  - if in one pass there is no new constant export found, we can stop the pass early.
     //  - if all dependencies of a module has no constant export, we don't need to visit ast at all.
     // The extra passes only run when user enable `inline_const` and set `pass` greater than 1.
-    let mut ctx = CrossModuleInlineConstCtx::new(inline_const_pass - 1);
-    let mut constant_symbol_map = std::mem::take(&mut self.constant_symbol_map);
-    while ctx.iteration > 0 && ctx.changed {
-      ctx.iteration -= 1;
+    let mut ctx = CrossModuleInlineConstCtx::new(config);
+    let mut constant_symbol_map = std::mem::take(&mut self.global_constant_symbol_map);
+    while ctx.config.pass > 0 && ctx.changed {
+      ctx.config.pass -= 1;
       ctx.changed = false;
       self.run(&mut ctx, &mut constant_symbol_map);
       if !ctx.changed {
         break;
       }
     }
-    self.constant_symbol_map = constant_symbol_map;
+    self.global_constant_symbol_map = constant_symbol_map;
   }
 
   fn run(
@@ -85,7 +107,12 @@ impl LinkStage<'_> {
           }),
           constant_map: &constant_map,
         };
-        let mut ctx = Context::new(eval_ctx, module.default_export_ref, module_idx);
+        let mut ctx = Context::new(
+          eval_ctx,
+          module.default_export_ref,
+          module_idx,
+          &cross_module_inline_const_ctx.config,
+        );
         ctx.visit_program(&dep.program);
         if !ctx.local_symbol_map.is_empty() {
           cross_module_inline_const_ctx.changed = true;
@@ -101,6 +128,7 @@ struct Context<'a, 'ast: 'a> {
   eval_ctx: ConstEvalCtx<'a, 'ast>,
   export_default_symbol: SymbolRef,
   module_idx: ModuleIdx,
+  config: &'a CrossModuleOptimizationConfig,
 }
 
 impl<'a, 'ast: 'a> Context<'a, 'ast> {
@@ -108,14 +136,21 @@ impl<'a, 'ast: 'a> Context<'a, 'ast> {
     eval_ctx: ConstEvalCtx<'a, 'ast>,
     export_default_symbol: SymbolRef,
     module_idx: ModuleIdx,
+    config: &'a CrossModuleOptimizationConfig,
   ) -> Self {
-    Self { local_symbol_map: FxHashMap::default(), eval_ctx, export_default_symbol, module_idx }
+    Self {
+      local_symbol_map: FxHashMap::default(),
+      eval_ctx,
+      export_default_symbol,
+      module_idx,
+      config,
+    }
   }
 }
 
 impl<'a, 'ast: 'a> Visit<'ast> for Context<'a, 'ast> {
   fn visit_export_named_declaration(&mut self, it: &ExportNamedDeclaration<'ast>) {
-    if it.source.is_some() {
+    if it.source.is_some() || !self.config.inline_const_optimization {
       return;
     }
 
@@ -140,7 +175,11 @@ impl<'a, 'ast: 'a> Visit<'ast> for Context<'a, 'ast> {
       }
     });
   }
+
   fn visit_export_default_declaration(&mut self, it: &ExportDefaultDeclaration<'ast>) {
+    if !self.config.inline_const_optimization {
+      return;
+    }
     let Some(expr) = it.declaration.as_expression() else {
       return;
     };

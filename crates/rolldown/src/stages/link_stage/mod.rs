@@ -57,7 +57,7 @@ pub struct LinkStageOutput {
   /// Used to store `preserveSignature` specified with `this.emitFile` in plugins.
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
-  pub constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
+  pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
 }
 
 #[derive(Debug)]
@@ -79,7 +79,7 @@ pub struct LinkStage<'a> {
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
-  pub constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
+  pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
 }
 
 impl<'a> LinkStage<'a> {
@@ -117,7 +117,7 @@ impl<'a> LinkStage<'a> {
 
     Self {
       sorted_modules: Vec::new(),
-      constant_symbol_map,
+      global_constant_symbol_map: constant_symbol_map,
       metas: scan_stage_output
         .module_table
         .modules
@@ -195,7 +195,7 @@ impl<'a> LinkStage<'a> {
       external_import_namespace_merger: self.external_import_namespace_merger,
       overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: self.entry_point_to_reference_ids,
-      constant_symbol_map: self.constant_symbol_map,
+      global_constant_symbol_map: self.global_constant_symbol_map,
     }
   }
 

@@ -335,7 +335,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
             ast::Expression::ClassExpression(_) => {
               self.current_stmt_info.meta.insert(StmtInfoMeta::ClassExpr);
             }
-            ast::Expression::FunctionExpression(_) => {
+            ast::Expression::FunctionExpression(_func) => {
               self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
             }
             _ => {}

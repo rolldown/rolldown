@@ -206,8 +206,11 @@ impl NormalModule {
           PrintOptions {
             sourcemap: enable_sourcemap,
             filename: self.id.to_string(),
-            print_legal_comments,
+            legal_comments: print_legal_comments,
             initial_indent,
+            normal_comments: options.comments.normal(),
+            jsdoc_comments: options.comments.jsdoc(),
+            annotation_comments: options.comments.annotation(),
           },
         );
         if !self.ecma_view.mutations.is_empty() {

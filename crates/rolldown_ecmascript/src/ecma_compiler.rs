@@ -80,17 +80,15 @@ impl EcmaCompiler {
   }
 
   pub fn print_with(ast: &EcmaAst, options: PrintOptions) -> CodegenReturn {
-    let legal =
-      if options.print_legal_comments { LegalComment::Inline } else { LegalComment::None };
+    let legal = if options.legal_comments { LegalComment::Inline } else { LegalComment::None };
+
     Codegen::new()
       .with_options(CodegenOptions {
         comments: CommentOptions {
-          normal: false,
+          normal: options.normal_comments,
           legal,
-          // These option will be configurable when we begin to support `ignore-annotations`
-          // https://esbuild.github.io/api/#ignore-annotations
-          jsdoc: true,
-          annotation: true,
+          jsdoc: options.jsdoc_comments,
+          annotation: options.annotation_comments,
         },
         initial_indent: options.initial_indent,
         source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),
@@ -134,11 +132,32 @@ fn basic_test() {
   let code = EcmaCompiler::print_with(&ast, PrintOptions::default()).code;
   assert_eq!(code, "const a = 1;\n");
 }
-#[derive(Debug, Default)]
-
+#[derive(Debug)]
+#[expect(clippy::struct_excessive_bools)]
 pub struct PrintOptions {
-  pub print_legal_comments: bool,
+  /// Print normal comments that do not have special meanings.
+  pub normal_comments: bool,
+  /// Print jsdoc comments.
+  pub jsdoc_comments: bool,
+  /// Print annotation comments.
+  pub annotation_comments: bool,
+  /// Print legal comments.
+  pub legal_comments: bool,
   pub filename: String,
   pub sourcemap: bool,
   pub initial_indent: u32,
+}
+
+impl Default for PrintOptions {
+  fn default() -> Self {
+    Self {
+      normal_comments: false,
+      jsdoc_comments: true,
+      annotation_comments: true,
+      legal_comments: false,
+      filename: String::new(),
+      sourcemap: false,
+      initial_indent: 0,
+    }
+  }
 }

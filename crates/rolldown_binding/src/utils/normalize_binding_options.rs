@@ -2,6 +2,7 @@ use super::normalize_binding_transform_options;
 use crate::options::binding_advanced_chunks_options::BindingChunkingContext;
 use crate::options::binding_jsx::BindingJsx;
 use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption, SanitizeFileName};
+use crate::types::binding_string_or_regex::bindingify_string_or_regex_array;
 use crate::{
   options::binding_inject_import::normalize_binding_inject_import,
   types::js_callback::JsCallbackExt,
@@ -127,18 +128,21 @@ pub fn normalize_binding_options(
 ) -> napi::Result<NormalizeBindingOptionsReturn> {
   let cwd = PathBuf::from(input_options.cwd);
 
-  let external = input_options.external.map(|ts_fn| {
-    IsExternal::from_closure(move |source, importer, is_resolved| {
-      let source = source.to_string();
-      let importer = importer.map(ToString::to_string);
-      let ts_fn = Arc::clone(&ts_fn);
-      Box::pin(async move {
-        ts_fn
-          .invoke_async((source.to_string(), importer, is_resolved).into())
-          .await
-          .map_err(anyhow::Error::from)
-      })
-    })
+  let external = input_options.external.map(|external| match external {
+    Either::A(patterns) => IsExternal::StringOrRegex(bindingify_string_or_regex_array(patterns)),
+    Either::B(is_external) => {
+      IsExternal::Fn(Some(Arc::new(move |source, importer, is_resolved| {
+        let source = source.to_string();
+        let importer = importer.map(ToString::to_string);
+        let is_external = Arc::clone(&is_external);
+        Box::pin(async move {
+          is_external
+            .invoke_async((source.to_string(), importer, is_resolved).into())
+            .await
+            .map_err(anyhow::Error::from)
+        })
+      })))
+    }
   });
 
   let get_defer_sync_scan_data = input_options.defer_sync_scan_data.map(|ts_fn| {

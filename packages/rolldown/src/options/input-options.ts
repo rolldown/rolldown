@@ -347,7 +347,7 @@ export interface InputOptions {
   inject?: Record<string, string | [string, string]>;
   profilerNames?: boolean;
   /**
-   * @deprecated Use {@link OxcTransformOption.jsx} instead.
+   * @deprecated Use `transform.jsx` instead.
    *
    * This top-level `jsx` option will be removed in a future release.
    * It is only kept for backward compatibility and will be mapped internally to `transform.jsx`.

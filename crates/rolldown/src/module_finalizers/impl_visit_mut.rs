@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use oxc::allocator::FromIn;
 use oxc::ast::AstType;
+use oxc::ast::ast::JSXMemberExpression;
 use oxc::span::{Atom, CompactStr};
 use oxc::{
   allocator::{self, IntoIn, TakeIn},
@@ -473,7 +474,23 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           if let Some(new_expr) = self.try_rewrite_identifier_reference_expr(ident, false) {
             match new_expr {
               Expression::Identifier(ident_ref) => {
-                jsx_member_expression.object.rewrite_ident_reference(ident_ref);
+                jsx_member_expression.object.rewrite_ident_reference(
+                  ast::JSXMemberExpressionObject::IdentifierReference(ident_ref),
+                );
+              }
+              Expression::StaticMemberExpression(member_expr) => {
+                jsx_member_expression.object.rewrite_ident_reference(
+                  ast::JSXMemberExpressionObject::MemberExpression(oxc::allocator::Box::new_in(
+                    // TODO: Currently only support `StaticMemberExpression`, `ThisExpression` and `IdentifierReference`.
+                    // In most of scenarios, it should be enough. The ultimate solution is create
+                    // an extra binding for the cjs property access then *Uppercase* the binding.
+                    JSXMemberExpression::from_ast(member_expr.unbox(), self.alloc).unwrap(),
+                    self.alloc,
+                  )),
+                );
+              }
+              Expression::ThisExpression(this_expr) => {
+                *it = ast::JSXElementName::ThisExpression(this_expr);
               }
               _ => {
                 unreachable!(

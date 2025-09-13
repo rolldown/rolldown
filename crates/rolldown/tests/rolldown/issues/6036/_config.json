@@ -1,0 +1,14 @@
+{
+  "config": {
+    "transform": {
+      "jsx": "preserve"
+    },
+    "input": [
+      {
+        "name": "main",
+        "import": "./index.ts"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

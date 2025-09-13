@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region react.ts
+var require_react = /* @__PURE__ */ __commonJS({ "react.ts": ((exports, module) => {
+	module.exports = {};
+}) });
+
+//#endregion
+//#region component/hello.tsx
+var import_react = /* @__PURE__ */ __toESM(require_react());
+function Hello() {
+	return <import_react.default.Fragment>
+      <h1>Hello</h1>
+    </import_react.default.Fragment>;
+}
+
+//#endregion
+export { Hello };
+```

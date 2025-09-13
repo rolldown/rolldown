@@ -91,7 +91,7 @@ const JsxOptionsSchema = v.strictObject({
     v.optional(v.string()),
     v.description('Jsx element transformation'),
   ),
-  pragmaFlag: v.pipe(
+  pragmaFrag: v.pipe(
     v.optional(
       v.string(),
     ),

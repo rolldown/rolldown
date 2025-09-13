@@ -98,7 +98,7 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> Vec<BuildDiagnosti
 pub fn prepare_build_context(
   mut raw_options: crate::BundlerOptions,
 ) -> BuildResult<PrepareBuildContext> {
-  let warnings = verify_raw_options(&raw_options);
+  let mut warnings = verify_raw_options(&raw_options);
 
   let format = raw_options.format.unwrap_or(crate::OutputFormat::Esm);
   let preserve_entry_signatures = raw_options.preserve_entry_signatures.unwrap_or_default();
@@ -225,6 +225,7 @@ pub fn prepare_build_context(
   let transform_options = Box::new(normalize_transform_options_with_tsconfig(
     raw_options.transform.unwrap_or_default(),
     tsconfig.as_ref().map(|path| resolver.resolve_tsconfig(&path)).transpose().unwrap(),
+    &mut warnings,
   )?);
 
   let mut normalized = NormalizedBundlerOptions {

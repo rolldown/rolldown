@@ -1,6 +1,14 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## CONFIGURATION_FIELD_CONFLICT
+
+```text
+[CONFIGURATION_FIELD_CONFLICT] Warning: `compilerOptions.jsxFactory` from `tsconfig.json` is overridden by `pragma` from `transform.jsx` which has higher priority. Please make sure this is what you expected.
+
+```
 # Assets
 
 ## main.js

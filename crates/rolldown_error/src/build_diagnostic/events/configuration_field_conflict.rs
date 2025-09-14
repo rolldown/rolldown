@@ -20,8 +20,8 @@ impl BuildEvent for ConfigurationFieldConflict {
     let b_config_name = opts.stabilize_path(&self.b_config_name);
     let a_config_name = opts.stabilize_path(&self.a_config_name);
     format!(
-      "{} in `{b_config_name}` will be override by {} in `{}` since `{}` has higher priority.\nMake sure this is what you expected",
-      self.b_field, self.a_field, a_config_name, self.a_config_name
+      "`{}` from `{}` is overridden by `{}` from `{}` which has higher priority. Please make sure this is what you expected.",
+      self.b_field, b_config_name, self.a_field, a_config_name
     )
   }
 }

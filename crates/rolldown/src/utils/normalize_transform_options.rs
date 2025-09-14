@@ -8,6 +8,7 @@ use rolldown_error::{BuildDiagnostic, BuildResult};
 pub fn normalize_transform_options_with_tsconfig(
   mut transform_options: BundlerTransformOptions,
   tsconfig: Option<Arc<rolldown_resolver::TsConfig>>,
+  warnings: &mut Vec<BuildDiagnostic>,
 ) -> BuildResult<TransformOptions> {
   let es_target = normalize_es_target(transform_options.target.as_ref());
   let mut jsx_preset = JsxPreset::Enable;
@@ -32,13 +33,24 @@ pub fn normalize_transform_options_with_tsconfig(
     let compiler_options = &tsconfig.compiler_options;
 
     // when both the normal options and tsconfig is set, we want to prioritize the normal options
-    if compiler_options.jsx.as_deref() == Some("preserve")
-      && transform_options
+    if compiler_options.jsx.as_deref() == Some("preserve") {
+      if transform_options
         .jsx
         .as_ref()
         .is_none_or(|jsx| matches!(jsx, Either::Right(right) if right.runtime.is_none()))
-    {
-      transform_options.jsx = Some(Either::Left(String::from("preserve")));
+      {
+        transform_options.jsx = Some(Either::Left(String::from("preserve")));
+      } else {
+        warnings.push(
+          BuildDiagnostic::configuration_field_conflict(
+            "transform",
+            "jsx",
+            "tsconfig.json",
+            "compilerOptions.jsx",
+          )
+          .with_severity_warning(),
+        );
+      }
     }
 
     if !matches!(&transform_options.jsx, Some(Either::Left(left)) if left == "preserve") {
@@ -48,14 +60,50 @@ pub fn normalize_transform_options_with_tsconfig(
         JsxOptions::default()
       };
 
-      if compiler_options.jsx_factory.is_some() && jsx.pragma.is_none() {
-        jsx.pragma.clone_from(&compiler_options.jsx_factory);
+      if compiler_options.jsx_factory.is_some() {
+        if jsx.pragma.is_none() {
+          jsx.pragma.clone_from(&compiler_options.jsx_factory);
+        } else {
+          warnings.push(
+            BuildDiagnostic::configuration_field_conflict(
+              "transform.jsx",
+              "pragma",
+              "tsconfig.json",
+              "compilerOptions.jsxFactory",
+            )
+            .with_severity_warning(),
+          );
+        }
       }
-      if compiler_options.jsx_import_source.is_some() && jsx.import_source.is_none() {
-        jsx.import_source.clone_from(&compiler_options.jsx_import_source);
+      if compiler_options.jsx_import_source.is_some() {
+        if jsx.import_source.is_none() {
+          jsx.import_source.clone_from(&compiler_options.jsx_import_source);
+        } else {
+          warnings.push(
+            BuildDiagnostic::configuration_field_conflict(
+              "transform.jsx",
+              "importSource",
+              "tsconfig.json",
+              "compilerOptions.jsxImportSource",
+            )
+            .with_severity_warning(),
+          );
+        }
       }
-      if compiler_options.jsx_fragment_factory.is_some() && jsx.pragma_frag.is_none() {
-        jsx.pragma_frag.clone_from(&compiler_options.jsx_fragment_factory);
+      if compiler_options.jsx_fragment_factory.is_some() {
+        if jsx.pragma_frag.is_none() {
+          jsx.pragma_frag.clone_from(&compiler_options.jsx_fragment_factory);
+        } else {
+          warnings.push(
+            BuildDiagnostic::configuration_field_conflict(
+              "transform.jsx",
+              "pragmaFrag",
+              "tsconfig.json",
+              "compilerOptions.jsxFragmentFactory",
+            )
+            .with_severity_warning(),
+          );
+        }
       }
 
       if jsx.runtime.is_none() {
@@ -75,6 +123,7 @@ pub fn normalize_transform_options_with_tsconfig(
           _ => {}
         }
       }
+
       transform_options.jsx = Some(Either::Right(jsx));
     }
 
@@ -90,6 +139,31 @@ pub fn normalize_transform_options_with_tsconfig(
       }
 
       transform_options.decorator = Some(decorator);
+    } else {
+      if compiler_options.experimental_decorators.is_some() {
+        warnings.push(
+          BuildDiagnostic::configuration_field_conflict(
+            "transform.decorator",
+            "legacy",
+            "tsconfig.json",
+            "compilerOptions.experimentalDecorators",
+          )
+          .with_severity_warning(),
+        );
+      }
+      if compiler_options.emit_decorator_metadata.is_some()
+        && transform_options.decorator.as_ref().is_some_and(|d| d.emit_decorator_metadata.is_some())
+      {
+        warnings.push(
+          BuildDiagnostic::configuration_field_conflict(
+            "transform.decorator",
+            "emitDecoratorMetadata",
+            "tsconfig.json",
+            "compilerOptions.emitDecoratorMetadata",
+          )
+          .with_severity_warning(),
+        );
+      }
     }
 
     // | preserveValueImports | importsNotUsedAsValues | verbatimModuleSyntax | onlyRemoveTypeImports |
@@ -123,6 +197,16 @@ pub fn normalize_transform_options_with_tsconfig(
             Some(false)
           };
       }
+    } else if compiler_options.verbatim_module_syntax.is_some() {
+      warnings.push(
+        BuildDiagnostic::configuration_field_conflict(
+          "transform.typescript",
+          "onlyRemoveTypeImports",
+          "tsconfig.json",
+          "compilerOptions.verbatimModuleSyntax",
+        )
+        .with_severity_warning(),
+      );
     }
 
     let disable_use_define_for_class_fields =

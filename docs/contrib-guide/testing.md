@@ -157,7 +157,7 @@ In `/packages/rollup-tests`:
 
 ### How to choose test technique
 
-Our Rust test infra is powerful enough to cover most of the case of JavaScript(plugin, passing function inside config).
+Our Rust test infra is powerful enough to cover most of the case of JavaScript (plugin, passing function inside config).
 But since JavaScript side user is still our first class user, try to put tests in JavaScript side if possible.
 Here are some experience about what test technique you should use.
 :::tip TLDR

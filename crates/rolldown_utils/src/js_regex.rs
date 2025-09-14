@@ -38,6 +38,13 @@ impl HybridRegex {
     }
   }
 
+  pub fn regex_pattern(&self) -> Option<&str> {
+    match self {
+      HybridRegex::Optimize(r) => Some(r.as_str()),
+      HybridRegex::Ecma(_) => None,
+    }
+  }
+
   fn get_regex_pattern(pattern: &str, flags: &str) -> String {
     // ECMAScript regex treats CRLF as a line break like LF
     // (e.g. `/a$/m.test("a\r\n")` and `/a$/m.test("a\n")` both returns `true`)

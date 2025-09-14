@@ -43,6 +43,30 @@ Type: `(string | RegExp)[]`
 
 Defines which dependencies should be treated as external. When the output format is ESM, their `require()` calls will be converted to `import` statements. For non-ESM output formats, the dependencies will be marked as external but the `require()` calls will remain unchanged.
 
+### `skipDuplicateCheck`
+
+Type: `boolean`
+Default: `false`
+
+When enabled, skips checking for duplicate externals between this plugin and the top-level `external` option. This can improve build performance when you're confident there are no duplicates.
+
+```javascript
+esmExternalRequirePlugin({
+  external: ['react', 'vue'],
+  skipDuplicateCheck: true, // Skip duplicate check for better performance
+});
+```
+
+## Duplicate External Detection
+
+By default, the plugin checks if any externals you specify are also configured in the top-level `external` option. If duplicates are found, you'll see a warning:
+
+```
+Found 2 duplicate external: `react`, `vue`. Remove them from top-level `external` as they're already handled by 'builtin:esm-external-require' plugin.
+```
+
+This helps avoid configuration confusion and ensures the plugin handles ESM `require()` transforms correctly. You can disable this check by setting `skipDuplicateCheck: true` if you're confident about your configuration.
+
 ## Limitations
 
 Since this plugin changes `require()` calls to `import` statements, there are some semantic differences after bundling:

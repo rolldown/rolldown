@@ -190,7 +190,7 @@ export interface ChangedOutputs {
   deleted: Set<string>;
 }
 
-// TODO find a way only transfer the changed part to rust side.
+// TODO find a way only transfer the changed part to Rust side.
 export function collectChangedBundle(
   changed: ChangedOutputs,
   bundle: OutputBundle,
@@ -209,7 +209,7 @@ export function collectChangedBundle(
         names: item.names,
       };
     } else {
-      // not all properties modifications are reflected to rust side
+      // not all properties modifications are reflected to Rust side
       changes[key] = {
         code: item.code,
         filename: item.fileName,

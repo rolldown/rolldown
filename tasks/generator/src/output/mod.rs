@@ -28,7 +28,7 @@ pub fn add_header(code: &str, generator_path: &str, comment_start: &str) -> Stri
 
 /// An output from codegen.
 ///
-/// Can be Rust, Javascript, or other formats.
+/// Can be Rust, JavaScript, or other formats.
 pub enum Output {
   Rust { path: String, tokens: TokenStream },
   RustString { path: String, code: String },

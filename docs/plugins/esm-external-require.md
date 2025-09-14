@@ -6,7 +6,7 @@ The `esmExternalRequirePlugin` is a built-in Rolldown plugin that converts Commo
 
 When bundling code with Rolldown, `require()` calls for external dependencies are not automatically converted to ESM imports to preserve the semantics of `require()`. While Rolldown injects `require` function when `platform: 'node'` is set, it does so by generating code like:
 
-```javascript
+```JavaScript
 import { createRequire } from 'node:module';
 var __require = createRequire(import.meta.url);
 ```
@@ -17,7 +17,7 @@ However, this approach relies on the Node.js module API, which isn't available i
 
 Import and use the plugin from Rolldown's experimental exports:
 
-```javascript
+```JavaScript
 import { defineConfig } from 'rolldown';
 import { esmExternalRequirePlugin } from 'rolldown/experimental';
 
@@ -61,7 +61,7 @@ This plugin intercepts `require()` calls for dependencies specified in the optio
 
 For non-external `require()` calls, Rolldown automatically wraps them and converts them into ESM imports.
 
-```javascript
+```JavaScript
 // Input code
 const react = require('react');
 

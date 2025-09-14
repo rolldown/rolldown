@@ -95,7 +95,7 @@ export default defineTest({
       expect(option.esModule).toBe('if-default-prop')
       expect(option.inlineDynamicImports).toBe(true)
       expect(option.sourcemap).toBe('inline')
-      // all of these addon options are Function in rust side currently
+      // all of these addon options are Function in Rust side currently
       // @ts-expect-error need to RenderedChunk as argument
       expect(option.banner()).toBe('/* banner */')
       expect(option.footer).toStrictEqual(footer)

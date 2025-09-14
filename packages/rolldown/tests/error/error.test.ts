@@ -137,7 +137,7 @@ test('should print original error if it can not be assigned', async () => {
 })
 
 describe('Error output format', () => {
-  test('should correctly output the custom error defined on the rust side', async () => {
+  test('should correctly output the custom error defined on the Rust side', async () => {
     try {
       const build = await rolldown({
         input: './error.js',

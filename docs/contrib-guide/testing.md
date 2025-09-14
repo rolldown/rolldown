@@ -8,7 +8,7 @@ We have two groups of test suites: one for Rust, and one for Node.js.
 
 :::warning Test principle you should respect
 
-1. When adding new feature with options, always make sure adding related tests in javascript side if possible.
+1. When adding new feature with options, always make sure adding related tests in JavaScript side if possible.
 
 Here is some details about how to choose test technique [details](#how-to-choose-test-technique)\
 :::
@@ -45,15 +45,15 @@ For all available options, you could refer to
 - Rolldown will bundle the input into `/dist`, and execute every entry file in `/dist` orderly. You might thinking it as running `node --import ./dist/entry1.mjs --import ./dist/entry2.mjs --import ./dist/entry3.mjs --eval ""`.
   - If there is a `_test.mjs`/`_test.cjs` in the test case folder, only `_test.mjs`/`_test.cjs` will be executed. If you want to execute compiled entries, you need to import them manually in `_test.mjs`/`_test.cjs`.
 
-### Function-complete tests in rust
+### Function-complete tests in Rust
 
-`_config.json` has it's limitations, so we also support writing tests with rust directly. You could refer to
+`_config.json` has it's limitations, so we also support writing tests with Rust directly. You could refer to
 
 - https://github.com/rolldown/rolldown/commit/7d32cc70e194c52fa932cefbd4f926a9c3e3315f
 
 #### Snapshot testing
 
-Rolldown uses [insta](https://insta.rs/docs/cli/) for rust snapshot testing. You could use
+Rolldown uses [insta](https://insta.rs/docs/cli/) for Rust snapshot testing. You could use
 
 - `cargo insta review` to review the new snapshot one by one.
 - `cargo insta accept` to accept all new snapshots at once.
@@ -157,11 +157,11 @@ In `/packages/rollup-tests`:
 
 ### How to choose test technique
 
-Our rust test infra is powerful enough to cover most of the case of javascript(plugin, passing function inside config).
-But since Javascript side user is still our first class user, try to put tests in javascript side if possible.
+Our Rust test infra is powerful enough to cover most of the case of JavasSript(plugin, passing function inside config).
+But since JavaScript side user is still our first class user, try to put tests in JavaScript side if possible.
 Here are some experience about what test technique you should use.
 :::tip TLDR
-Add test in javascript side if you don't want to wasting time on deciding which way to use.
+Add test in JavaScript side if you don't want to wasting time on deciding which way to use.
 :::
 
 #### Prefer Rust
@@ -170,8 +170,8 @@ Add test in javascript side if you don't want to wasting time on deciding which 
    - [error](https://github.com/rolldown/rolldown/blob/568197a06444809bf44642d88509313ee2735594/crates/rolldown/tests/rolldown/errors/assign_to_import/artifacts.snap?plain=1#L2-L54)
    - [warning](https://github.com/rolldown/rolldown/blob/568197a06444809bf44642d88509313ee2735594/crates/rolldown/tests/rolldown/warnings/eval/artifacts.snap?plain=1#L1-L28)
 2. Matrix testing, assume you want to test a suite different [format](https://github.com/rolldown/rolldown/blob/568197a06444809bf44642d88509313ee2735594/crates/rolldown/tests/rolldown/topics/bundler_esm_cjs_tests/4/_config.json?plain=1#L1-L21), with `configVariants` you could do that with only one test.
-3. Tests related to linking algorithm(tree shaking, chunk splitting) Those may require a lot of debugging, add test on rust side could reduce the time of coding-debug-coding work loop.
+3. Tests related to linking algorithm(tree shaking, chunk splitting) Those may require a lot of debugging, add test on Rust side could reduce the time of coding-debug-coding work loop.
 
-#### Prefer Javascript
+#### Prefer JavaScript
 
-Any category not mentioned above should put in javascript side.
+Any category not mentioned above should put in JavaScript side.

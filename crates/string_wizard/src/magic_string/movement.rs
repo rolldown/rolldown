@@ -16,7 +16,7 @@ impl MagicString<'_> {
   }
 
   /// Moves the characters from start and end to index. Returns this.
-  // `move` is reserved keyword in rust, so we use `relocate` instead.
+  // `move` is reserved keyword in Rust, so we use `relocate` instead.
   pub fn relocate(&mut self, start: usize, end: usize, to: usize) -> &mut Self {
     if to >= start && to <= end {
       panic!("Cannot relocate a selection inside itself")

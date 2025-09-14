@@ -58,7 +58,7 @@ after(function printStatus() {
   console.log('failures', JSON.stringify(sorted.map(v => v.name), null, 2))
   console.table(status)
   if (status.failed > 0) {
-    // enforce exit process to avoid rust process is not exit.
+    // enforce exit process to avoid Rust process is not exit.
     process.exit(1)
   } else {
     if (expectedStatus.skipFailed !== status.skipFailed || expectedStatus.passed !== status.passed) {

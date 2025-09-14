@@ -53,7 +53,7 @@ For all available options, you could refer to
 
 #### Snapshot testing
 
-Rolldown uses [insta](https://insta.rs/docs/cli/) for Rust snapshot testing. You could use
+Rolldown uses [insta](https://insta.rs/docs/cli/) for Rust snapshot testing. You can use:
 
 - `cargo insta review` to review the new snapshot one by one.
 - `cargo insta accept` to accept all new snapshots at once.

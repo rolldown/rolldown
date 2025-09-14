@@ -16,8 +16,8 @@ var Foo = class {};
 
 //#endregion
 //#region main.js
-test();
-a();
+/* @__PURE__ */ test();
+/* @__PURE__ */ a();
 const test$1 = 10;
 var Foo$1 = class extends Foo {
 	static {

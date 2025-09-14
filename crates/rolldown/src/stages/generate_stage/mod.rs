@@ -153,7 +153,7 @@ impl<'a> GenerateStage<'a> {
             cur_stmt_index: 0,
             keep_name_statement_to_insert: Vec::new(),
             file_emitter: &self.plugin_driver.file_emitter,
-            constant_value_map: &self.link_output.constant_symbol_map,
+            constant_value_map: &self.link_output.global_constant_symbol_map,
             needs_hosted_top_level_binding: false,
             module_namespace_included: self
               .link_output

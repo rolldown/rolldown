@@ -35,7 +35,7 @@ use rolldown_common::{
   StmtInfo, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
   TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
 };
-use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
+use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt, FunctionExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
 use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
@@ -661,7 +661,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.cur_class_decl = previous_class_decl_id;
   }
 
-  fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration) {
+  fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration<'ast>) {
     if let Some(source) = &decl.source {
       let record_id = self.add_import_record(
         source.value.as_str(),
@@ -712,16 +712,47 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               decl.id.binding_identifiers().into_iter().for_each(|id| {
                 self.add_local_export(&id.name, id.expect_symbol_id(), id.span);
               });
-              if let BindingPatternKind::BindingIdentifier(ref binding) = decl.id.kind
-                && let Some(value) = self.extract_constant_value_from_expr(decl.init.as_ref())
-              {
-                self.add_constant_symbol(binding.symbol_id(), ConstExportMeta::new(value, false));
+              if let BindingPatternKind::BindingIdentifier(ref binding) = decl.id.kind {
+                let symbol_id = binding.symbol_id();
+                if let Some(value) = self.extract_constant_value_from_expr(decl.init.as_ref()) {
+                  self.add_constant_symbol(symbol_id, ConstExportMeta::new(value, false));
+                }
+                let is_empty_function = decl
+                  .init
+                  .as_ref()
+                  .map(|expr| match expr {
+                    Expression::FunctionExpression(func) => func.is_side_effect_free(),
+                    Expression::ArrowFunctionExpression(func) => func.is_side_effect_free(),
+                    _ => false,
+                  })
+                  .unwrap_or(false);
+                if is_empty_function {
+                  self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedLevelEmptyFunction);
+                  self
+                    .result
+                    .symbol_ref_db
+                    .flags
+                    .entry(symbol_id)
+                    .or_default()
+                    .insert(SymbolRefFlags::EmptyFunction);
+                }
               }
             });
           }
           ast::Declaration::FunctionDeclaration(fn_decl) => {
-            let id = fn_decl.id.as_ref().unwrap();
-            self.add_local_export(id.name.as_str(), id.expect_symbol_id(), id.span);
+            let binding_id = fn_decl.id.as_ref().unwrap();
+            let symbol_id = binding_id.expect_symbol_id();
+            self.add_local_export(binding_id.name.as_str(), symbol_id, binding_id.span);
+            if fn_decl.is_side_effect_free() {
+              self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedLevelEmptyFunction);
+              self
+                .result
+                .symbol_ref_db
+                .flags
+                .entry(symbol_id)
+                .or_default()
+                .insert(SymbolRefFlags::EmptyFunction);
+            }
           }
           ast::Declaration::ClassDeclaration(cls_decl) => {
             let id = cls_decl.id.as_ref().unwrap();

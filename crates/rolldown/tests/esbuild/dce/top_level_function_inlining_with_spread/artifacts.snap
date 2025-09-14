@@ -22,9 +22,9 @@ function identity3(x) {
 
 //#endregion
 //#region entry-outer.js
-empty1();
-empty2(args);
-empty3(...args);
+/* @__PURE__ */ empty1();
+/* @__PURE__ */ empty2(args);
+/* @__PURE__ */ empty3(...args);
 identity1();
 identity2(args);
 identity3(...args);

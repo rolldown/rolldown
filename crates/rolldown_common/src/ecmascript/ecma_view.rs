@@ -25,6 +25,9 @@ bitflags! {
         const SafelyTreeshakeCommonjs = 1 << 4;
         /// If a module has side effects or has top-level global variable access
         const ExecutionOrderSensitive = 1 << 5;
+        /// If the module has top-level empty function, if any module has top level empty function, we need
+        /// to apply cross module optimization.
+        const TopExportedLevelEmptyFunction = 1 << 6;
     }
 }
 

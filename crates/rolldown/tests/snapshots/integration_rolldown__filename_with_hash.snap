@@ -170,7 +170,7 @@ expression: output
 # tests/esbuild/dce/nested_function_inlining_with_spread
 
 - entry-!~{000}~.js => entry-DOpyolWK.js
-- entry-outer-!~{001}~.js => entry-outer-Bfmk9Hrb.js
+- entry-outer-!~{001}~.js => entry-outer-BEWcnCyx.js
 
 # tests/esbuild/dce/no_side_effects_comment
 
@@ -459,7 +459,7 @@ expression: output
 # tests/esbuild/dce/top_level_function_inlining_with_spread
 
 - entry-!~{000}~.js => entry-C3EI3-3o.js
-- entry-outer-!~{001}~.js => entry-outer-Djht_Eza.js
+- entry-outer-!~{001}~.js => entry-outer-DEWOwojd.js
 
 # tests/esbuild/dce/tree_shaking_binary_operators
 
@@ -3109,11 +3109,11 @@ expression: output
 
 # tests/esbuild/splitting/splitting_cross_chunk_assignment_dependencies_recursive
 
-- a-!~{000}~.js => a-B6CDTJan.js
-- b-!~{001}~.js => b-BeLJzcJx.js
-- c-!~{002}~.js => c-DIqLKrYX.js
+- a-!~{000}~.js => a-CmzP2LuN.js
+- b-!~{001}~.js => b-UxECpkMr.js
+- c-!~{002}~.js => c-CmQRqESM.js
 - x-!~{003}~.js => x-BhbOquNH.js
-- z-!~{005}~.js => z-BXIfo6kz.js
+- z-!~{005}~.js => z-Cm9tS1CI.js
 
 # tests/esbuild/splitting/splitting_duplicate_chunk_collision
 
@@ -5044,6 +5044,11 @@ expression: output
 
 - main-!~{000}~.js => main-mRt7JHUp.js
 
+# tests/rolldown/optimization/inline_empty_function_call/basic
+
+- main-!~{000}~.js => main-BbnV7Uu1.js
+- b-!~{001}~.js => b-BTVziTgp.js
+
 # tests/rolldown/optimization/pife_for_module_wrappers/basic
 
 - a-!~{000}~.js => a-CcaBLJp5.js
@@ -5582,7 +5587,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/declaration
 
-- main-!~{000}~.js => main-zKjYwJAp.js
+- main-!~{000}~.js => main-CZcvVHyD.js
 
 # tests/rolldown/topics/keep_names/declaration2
 

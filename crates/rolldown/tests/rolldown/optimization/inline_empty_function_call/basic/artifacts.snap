@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## b.js
+
+```js
+console.log("should not be included");
+var b_default = false;
+export { b_default as default };
+
+```
+## main.js
+
+```js
+function _page($$payload, $$props) {
+	res();
+}
+export { _page as default };
+
+```

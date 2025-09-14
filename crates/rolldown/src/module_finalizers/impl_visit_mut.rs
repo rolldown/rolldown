@@ -14,7 +14,10 @@ use oxc::{
   semantic::ScopeFlags,
   span::{SPAN, Span},
 };
-use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKind, WrapKind};
+use rolldown_common::{
+  ConcatenateWrappedModuleKind, GetLocalDb, SymbolRef, SymbolRefFlags, ThisExprReplaceKind,
+  WrapKind,
+};
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
 
@@ -366,25 +369,31 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     );
   }
 
-  fn visit_call_expression(&mut self, expr: &mut ast::CallExpression<'ast>) {
-    self.rewrite_hot_accept_call_deps(expr);
-
-    if let Some(new_expr) = expr
-      .callee
-      .as_identifier_mut()
-      .and_then(|ident_ref| self.try_rewrite_identifier_reference_expr(ident_ref, true))
-    {
-      expr.callee = new_expr;
-    }
-
-    walk_mut::walk_call_expression(self, expr);
-  }
-
   fn visit_expression(&mut self, expr: &mut ast::Expression<'ast>) {
     match expr {
       ast::Expression::CallExpression(call_expr) => {
+        self.rewrite_hot_accept_call_deps(call_expr);
         if let Some(new_expr) = self.try_rewrite_global_require_call(call_expr) {
           *expr = new_expr;
+        } else if let Some(ident_ref) = call_expr.callee.as_identifier_mut() {
+          let is_empty_function = ident_ref
+            .reference_id
+            .get()
+            .and_then(|ref_id| self.scope.scoping().get_reference(ref_id).symbol_id())
+            .and_then(|id| {
+              let symbol_ref = self.ctx.symbol_db.canonical_ref_for((self.ctx.id, id).into());
+              let db = self.ctx.symbol_db.local_db(symbol_ref.owner);
+              let is_empty =
+                db.flags.get(&symbol_ref.symbol)?.contains(SymbolRefFlags::EmptyFunction);
+              Some(is_empty)
+            })
+            .unwrap_or(false);
+          if is_empty_function {
+            call_expr.pure = true;
+          } else if let Some(new_expr) = self.try_rewrite_identifier_reference_expr(ident_ref, true)
+          {
+            call_expr.callee = new_expr;
+          }
         }
       }
       // inline dynamic import

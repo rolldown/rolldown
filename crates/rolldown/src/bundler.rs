@@ -64,7 +64,7 @@ impl Bundler {
     async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
-      let scan_stage_output = self.scan(vec![]).await?;
+      let scan_stage_output = self.scan(ScanMode::Full).await?;
 
       let ret = self.bundle_write(scan_stage_output).await;
       trace_action!(action::BuildEnd { action: "BuildEnd" });
@@ -83,7 +83,7 @@ impl Bundler {
     async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
-      let scan_stage_output = self.scan(vec![]).await?;
+      let scan_stage_output = self.scan(ScanMode::Full).await?;
 
       let ret = self.bundle_generate(scan_stage_output).await.map(|mut output| {
         output.warnings.append(&mut self.warnings);
@@ -118,15 +118,12 @@ impl Bundler {
   }
 
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
-  pub async fn scan(&mut self, changed_ids: Vec<ArcStr>) -> BuildResult<NormalizedScanStageOutput> {
+  pub async fn scan(
+    &mut self,
+    scan_mode: ScanMode<ArcStr>,
+  ) -> BuildResult<NormalizedScanStageOutput> {
     trace_action!(action::BuildStart { action: "BuildStart" });
-    let mode =
-      if !self.options.experimental.is_incremental_build_enabled() || changed_ids.is_empty() {
-        ScanMode::Full
-      } else {
-        ScanMode::Partial(changed_ids)
-      };
-    let is_full_scan_mode = mode.is_full();
+    let is_full_scan_mode = scan_mode.is_full();
 
     // Make sure the cache is reset if incremental build is not enabled.
     let mut scan_stage_cache_guard = CacheGuard {
@@ -140,7 +137,7 @@ impl Bundler {
       self.fs.clone(),
       Arc::clone(&self.resolver),
     )
-    .scan(mode, scan_stage_cache_guard.inner())
+    .scan(scan_mode, scan_stage_cache_guard.inner())
     .await
     {
       Ok(v) => v,

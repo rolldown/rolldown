@@ -21,6 +21,7 @@ use napi::{
 };
 use napi_derive::napi;
 use rolldown::{Bundler as NativeBundler, BundlerBuilder, LogLevel, NormalizedBundlerOptions};
+use rolldown_common::ScanMode;
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosticOptions, filter_out_disabled_diagnostics,
 };
@@ -196,7 +197,8 @@ impl BindingBundlerImpl {
   #[expect(clippy::significant_drop_tightening)]
   pub async fn scan_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.lock().await;
-    let output = Self::handle_result(bundler_core.scan(vec![]).await, bundler_core.options());
+    let output =
+      Self::handle_result(bundler_core.scan(ScanMode::Full).await, bundler_core.options());
 
     match output {
       Ok(output) => {

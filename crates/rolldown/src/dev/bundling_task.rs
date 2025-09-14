@@ -1,6 +1,7 @@
 use std::{mem, path::PathBuf, sync::Arc, time::Duration};
 
 use indexmap::IndexSet;
+use rolldown_common::ScanMode;
 use rolldown_error::BuildResult;
 use tokio::sync::Mutex;
 
@@ -64,12 +65,12 @@ impl BundlingTask {
     bundler.set_cache(self.cache.take().unwrap_or_default());
 
     let skip_write = self.dev_data.options.skip_write;
-    let changed_files = if self.require_full_rebuild {
-      vec![]
+    let scan_mode = if self.require_full_rebuild {
+      ScanMode::Full
     } else {
-      self.changed_files.iter().map(|p| p.to_string_lossy().into()).collect()
+      ScanMode::Partial(self.changed_files.iter().map(|p| p.to_string_lossy().into()).collect())
     };
-    let scan_output = bundler.scan(changed_files).await?;
+    let scan_output = bundler.scan(scan_mode).await?;
     let _bundle_output = if skip_write {
       bundler.bundle_generate(scan_output).await
     } else {
@@ -90,7 +91,7 @@ impl BundlingTask {
       }
       drop(build_status);
       let changed_files = changed_files.iter().map(|p| p.to_string_lossy().into()).collect();
-      let scan_output = bundler.scan(changed_files).await?;
+      let scan_output = bundler.scan(ScanMode::Partial(changed_files)).await?;
       let _bundle_output = if skip_write {
         bundler.bundle_generate(scan_output).await
       } else {

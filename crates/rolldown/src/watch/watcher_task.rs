@@ -50,6 +50,7 @@ impl WatcherTask {
       return Ok(());
     }
     let mut bundler = self.bundler.lock().await;
+    let is_incremental = bundler.options.experimental.is_incremental_build_enabled();
 
     let start_time = Instant::now();
 
@@ -59,7 +60,12 @@ impl WatcherTask {
     bundler.plugin_driver.clear();
 
     let result = {
-      let result = bundler.scan(changed_files.to_owned()).await;
+      let scan_mode = if is_incremental && !changed_files.is_empty() {
+        rolldown_common::ScanMode::Partial(changed_files.to_vec())
+      } else {
+        rolldown_common::ScanMode::Full
+      };
+      let result = bundler.scan(scan_mode).await;
       let watched_files = Arc::clone(bundler.get_watch_files());
       self.watch_files(&watched_files, &bundler.options).await?;
       match result {

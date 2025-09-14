@@ -4,7 +4,7 @@ use rolldown_common::{
   SymbolRefDb,
 };
 
-use oxc::{allocator::TakeIn as _, ast_visit::VisitMut as _, span::CompactStr};
+use oxc::{ast_visit::VisitMut as _, span::CompactStr};
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -49,14 +49,12 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         ctx: self,
         scope: ast_scope,
         snippet: AstSnippet::new(alloc),
-        comments: oxc_program.comments.take_in(alloc),
         generated_init_esm_importee_ids: FxHashSet::default(),
         scope_stack: vec![],
         top_level_var_bindings: FxIndexSet::default(),
         state: TraverseState::empty(),
       };
       finalizer.visit_program(oxc_program);
-      oxc_program.comments = finalizer.comments.take_in(alloc);
       finalizer.ctx
     })
   }

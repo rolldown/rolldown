@@ -3,7 +3,7 @@ use oxc::semantic::ScopeFlags;
 use oxc::{
   allocator::{self, Allocator, Box as ArenaBox, CloneIn, Dummy, IntoIn, TakeIn},
   ast::{
-    AstBuilder, Comment, NONE,
+    AstBuilder, NONE,
     ast::{
       self, BindingIdentifier, ClassElement, Expression, IdentifierReference, ImportExpression,
       MemberExpression, NumberBase, Statement, VariableDeclarationKind,
@@ -54,7 +54,6 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub scope: &'me AstScopes,
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
-  pub comments: oxc::allocator::Vec<'ast, Comment>,
   pub generated_init_esm_importee_ids: FxHashSet<ModuleIdx>,
   pub scope_stack: Vec<ScopeFlags>,
   pub state: TraverseState,

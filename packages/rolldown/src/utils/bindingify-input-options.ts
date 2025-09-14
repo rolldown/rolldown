@@ -163,15 +163,7 @@ function bindingifyExternal(
         return external(id, importer, isResolved) ?? false;
       };
     }
-    const externalArr = arraify(external);
-    return (id, _importer, _isResolved) => {
-      return externalArr.some((pat) => {
-        if (pat instanceof RegExp) {
-          return pat.test(id);
-        }
-        return id === pat;
-      });
-    };
+    return arraify(external);
   }
 }
 

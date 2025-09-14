@@ -14,6 +14,7 @@ use binding_debug_options::BindingDebugOptions;
 use binding_make_absolute_externals_relative::BindingMakeAbsoluteExternalsRelative;
 use binding_optimization::BindingOptimization;
 use derive_more::Debug;
+use napi::Either;
 use napi::bindgen_prelude::{FnArgs, Promise};
 use napi_derive::napi;
 use rustc_hash::FxBuildHasher;
@@ -27,6 +28,7 @@ use binding_watch_option::BindingWatchOption;
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 use crate::generated::binding_checks_options;
+use crate::types::binding_string_or_regex::BindingStringOrRegex;
 use crate::types::defer_sync_scan_data::BindingDeferSyncScanData;
 use crate::types::preserve_entry_signatures::BindingPreserveEntrySignatures;
 use crate::types::{
@@ -49,9 +51,11 @@ pub struct BindingInputOptions<'env> {
   // experimentalCacheExpiry?: number;
   #[debug(skip)]
   #[napi(
-    ts_type = "undefined | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)"
+    ts_type = "Array<string | RegExp> | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)"
   )]
-  pub external: Option<JsCallback<FnArgs<(String, Option<String>, bool)>, bool>>,
+  pub external: Option<
+    Either<Vec<BindingStringOrRegex>, JsCallback<FnArgs<(String, Option<String>, bool)>, bool>>,
+  >,
   pub input: Vec<BindingInputItem>,
   // makeAbsoluteExternalsRelative?: boolean | 'ifRelativeSource';
   // /** @deprecated Use the "manualChunks" output option instead. */

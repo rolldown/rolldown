@@ -339,7 +339,10 @@ const MinifyOptionsSchema = v.strictObject({
 
 const ResolveOptionsSchema = v.strictObject({
   alias: v.optional(
-    v.record(v.string(), v.union([v.string(), v.array(v.string())])),
+    v.record(
+      v.string(),
+      v.union([v.literal(false), v.string(), v.array(v.string())]),
+    ),
   ),
   aliasFields: v.optional(v.array(v.array(v.string()))),
   conditionNames: v.optional(v.array(v.string())),

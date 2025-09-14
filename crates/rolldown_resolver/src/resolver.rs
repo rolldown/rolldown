@@ -102,7 +102,16 @@ impl<F: FileSystem> Resolver<F> {
           alias
             .into_iter()
             .map(|(key, value)| {
-              (key, value.into_iter().map(oxc_resolver::AliasValue::Path).collect::<Vec<_>>())
+              (
+                key,
+                value
+                  .into_iter()
+                  .map(|v| match v {
+                    None => oxc_resolver::AliasValue::Ignore,
+                    Some(path) => oxc_resolver::AliasValue::Path(path),
+                  })
+                  .collect::<Vec<_>>(),
+              )
             })
             .collect::<Vec<_>>()
         })

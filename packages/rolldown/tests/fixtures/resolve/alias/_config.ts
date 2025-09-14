@@ -5,7 +5,11 @@ export default defineTest({
     resolve: {
       alias: {
         '@': ['./not-exists', __dirname],
+        'ignore-me': false,
       },
     },
+  },
+  afterTest() {
+    import('./assert.mjs')
   },
 })

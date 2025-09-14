@@ -1453,7 +1453,7 @@ export declare class TraceSubscriberGuard {
 
 export interface AliasItem {
   find: string
-  replacements: Array<string>
+  replacements: Array<string | undefined | null>
 }
 
 export interface BindingAdvancedChunksOptions {

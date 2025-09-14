@@ -12,7 +12,7 @@ use serde::Deserialize;
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
 pub struct ResolveOptions {
-  pub alias: Option<Vec<(String, Vec<String>)>>,
+  pub alias: Option<Vec<(String, Vec<Option<String>>)>>,
   pub alias_fields: Option<Vec<Vec<String>>>,
   pub condition_names: Option<Vec<String>>,
   pub exports_fields: Option<Vec<Vec<String>>>,

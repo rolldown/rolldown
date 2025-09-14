@@ -2,5 +2,5 @@
 #[derive(Debug, Default)]
 pub struct AliasItem {
   pub find: String,
-  pub replacements: Vec<String>,
+  pub replacements: Vec<Option<String>>,
 }

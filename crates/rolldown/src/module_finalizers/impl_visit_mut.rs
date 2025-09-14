@@ -14,10 +14,7 @@ use oxc::{
   semantic::ScopeFlags,
   span::{SPAN, Span},
 };
-use rolldown_common::{
-  ConcatenateWrappedModuleKind, GetLocalDb, SymbolRef, SymbolRefFlags, ThisExprReplaceKind,
-  WrapKind,
-};
+use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
 
@@ -380,12 +377,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             .reference_id
             .get()
             .and_then(|ref_id| self.scope.scoping().get_reference(ref_id).symbol_id())
-            .and_then(|id| {
+            .map(|id| {
               let symbol_ref = self.ctx.symbol_db.canonical_ref_for((self.ctx.id, id).into());
-              let db = self.ctx.symbol_db.local_db(symbol_ref.owner);
-              let is_empty =
-                db.flags.get(&symbol_ref.symbol)?.contains(SymbolRefFlags::EmptyFunction);
-              Some(is_empty)
+              self.ctx.side_effect_free_function_symbols.contains(&symbol_ref)
             })
             .unwrap_or(false);
           if is_empty_function {

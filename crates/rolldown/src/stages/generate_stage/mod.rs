@@ -8,12 +8,13 @@ use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::BuildResult;
 use rolldown_std_utils::OptionExt;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use rolldown_common::{
-  ChunkIdx, ChunkKind, ConcatenateWrappedModuleKind, CssAssetNameReplacer,
+  ChunkIdx, ChunkKind, ConcatenateWrappedModuleKind, CssAssetNameReplacer, EcmaViewMeta,
   ImportMetaRolldownAssetReplacer, ImportRecordIdx, Module, ModuleIdx, PreliminaryFilename,
-  PrependRenderedImport, RenderedConcatenatedModuleParts, RollupPreRenderedAsset,
+  PrependRenderedImport, RenderedConcatenatedModuleParts, RollupPreRenderedAsset, SymbolRef,
+  SymbolRefFlags,
 };
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{PathBufExt, PathExt, representative_file_name_for_preserve_modules};
@@ -122,6 +123,29 @@ impl<'a> GenerateStage<'a> {
         );
       });
     });
+    let side_effect_free_function_symbols = self
+      .link_output
+      .module_table
+      .iter()
+      .zip(self.link_output.symbol_db.inner().iter())
+      .filter_map(|(m, symbol_for_module)| {
+        let normal_module = m.as_normal()?;
+        let idx = normal_module.idx;
+        normal_module
+          .meta
+          .contains(EcmaViewMeta::TopExportedLevelEmptyFunction)
+          .then(move || {
+            let symbol_for_module = symbol_for_module.as_ref()?;
+            Some(symbol_for_module.flags.iter().filter_map(move |(symbol_id, flag)| {
+              flag
+                .contains(SymbolRefFlags::EmptyFunction)
+                .then_some(SymbolRef::from((idx, *symbol_id)))
+            }))
+          })
+          .flatten()
+      })
+      .flatten()
+      .collect::<FxHashSet<SymbolRef>>();
 
     let transfer_parts_rendered_maps = debug_span!("finalize_modules").in_scope(|| {
       let ast_table_iter = self.link_output.ast_table.par_iter_mut_enumerated();
@@ -168,6 +192,7 @@ impl<'a> GenerateStage<'a> {
               })
               .unwrap_or_default(),
             rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
+            side_effect_free_function_symbols: &side_effect_free_function_symbols,
           };
           let ctx = ctx.finalize_normal_module(ast, ast_scope);
           (!ctx.transferred_import_record.is_empty()

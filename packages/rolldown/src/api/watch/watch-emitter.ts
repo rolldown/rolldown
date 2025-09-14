@@ -40,7 +40,7 @@ export class WatcherEmitter {
   timer: any;
 
   constructor() {
-    // The rust side already create a thread for watcher, but it isn't at main thread.
+    // The Rust side already create a thread for watcher, but it isn't at main thread.
     // So here we need to avoid main process exit util the user call `watcher.close()`.
     this.timer = setInterval(() => {}, 1e9 /* Low power usage */);
   }

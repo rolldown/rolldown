@@ -56,7 +56,7 @@ export interface ModuleOptions {
   moduleSideEffects: ModuleSideEffects;
   meta: CustomPluginOptions;
   // flag used to check if user directly modified the `ModuleInfo`
-  // this is used to sync state between rust and js
+  // this is used to sync state between Rust and JavaScript
   invalidate?: boolean;
   packageJsonPath?: string;
 }

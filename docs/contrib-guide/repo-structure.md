@@ -6,7 +6,7 @@ This document outlines the structure of the repository and the purpose of each d
 
 We store all the Rust crates in this directory.
 
-- `/bench` Benchmark programs for rust side of the project.
+- `/bench` Benchmark programs for Rust side of the project.
 - `/rolldown` Core logic of rolldown the bundler.
 - `/rolldown_binding` Glue code that binds the core logic to the Node.js.
 

@@ -62,7 +62,7 @@ after(function printStatus() {
   updateFailedTestsJson(alreadyFailedTests)
   fs.writeFileSync(path.join(__dirname, '../status.json'), JSON.stringify(status, null, 2))
   writeTestStatusToMarkdown()
-  // enforce exit process to avoid rust process is not exit.
+  // enforce exit process to avoid Rust process is not exit.
   process.exit(0)
 })
 

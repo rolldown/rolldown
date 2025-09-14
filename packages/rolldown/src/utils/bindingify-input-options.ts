@@ -83,7 +83,7 @@ export function bindingifyInputOptions(
     onLog: async (level, log) => onLog(level, log),
     // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned
     // Because it is hard to represent Enum in napi, ref: https://github.com/napi-rs/napi-rs/issues/507
-    // So we use `undefined | NormalizedTreeshakingOptions` (or Option<NormalizedTreeshakingOptions> in rust side), to represent `false | NormalizedTreeshakingOptions`
+    // So we use `undefined | NormalizedTreeshakingOptions` (or Option<NormalizedTreeshakingOptions> in Rust side), to represent `false | NormalizedTreeshakingOptions`
     treeshake: bindingifyTreeshakeOptions(inputOptions.treeshake),
     moduleTypes: inputOptions.moduleTypes,
     define: inputOptions.define

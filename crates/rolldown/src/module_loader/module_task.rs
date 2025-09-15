@@ -15,6 +15,7 @@ use rolldown_error::{
 use rolldown_std_utils::PathExt;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 
+use crate::ast_scanner::side_effect_detector::FlatOptions;
 use crate::{
   asset::create_asset_view,
   css::create_css_view,
@@ -45,6 +46,7 @@ pub struct ModuleTask {
   is_user_defined_entry: bool,
   /// The module is asserted to be this specific module type.
   asserted_module_type: Option<ModuleType>,
+  flat_options: FlatOptions,
 }
 
 impl ModuleTask {
@@ -55,6 +57,7 @@ impl ModuleTask {
     owner: Option<ModuleTaskOwner>,
     is_user_defined_entry: bool,
     assert_module_type: Option<ModuleType>,
+    flat_options: FlatOptions,
   ) -> Self {
     Self {
       ctx,
@@ -63,6 +66,7 @@ impl ModuleTask {
       owner,
       is_user_defined_entry,
       asserted_module_type: assert_module_type,
+      flat_options,
     }
   }
 
@@ -141,6 +145,7 @@ impl ModuleTask {
         module_type: module_type.clone(),
         replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
         is_user_defined_entry: self.is_user_defined_entry,
+        flat_options: self.flat_options,
       },
       CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
     )

@@ -48,7 +48,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_simple_assignment_target(&mut self, it: &ast::SimpleAssignmentTarget<'ast>) {
-    if !self.flags.property_write_side_effects()
+    if !self.flat_options.property_write_side_effects()
       && self.traverse_state.contains(TraverseState::TopLevel)
     {
       match it {
@@ -80,9 +80,12 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     // Custom visit
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx.into());
-      self.current_stmt_info.side_effect =
-        SideEffectDetector::new(&self.result.symbol_ref_db.ast_scopes, self.flags, self.options)
-          .detect_side_effect_of_stmt(stmt);
+      self.current_stmt_info.side_effect = SideEffectDetector::new(
+        &self.result.symbol_ref_db.ast_scopes,
+        self.flat_options,
+        self.options,
+      )
+      .detect_side_effect_of_stmt(stmt);
 
       #[cfg(debug_assertions)]
       {
@@ -138,7 +141,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_for_of_statement(&mut self, it: &ast::ForOfStatement<'ast>) {
     let is_top_level_await = it.r#await && self.is_valid_tla_scope();
-    if is_top_level_await && !self.flags.keep_esm_import_export_syntax() {
+    if is_top_level_await && !self.flat_options.keep_esm_import_export_syntax() {
       self.result.errors.push(BuildDiagnostic::unsupported_feature(
         self.id.resource_id().clone(),
         self.source.clone(),
@@ -158,7 +161,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_await_expression(&mut self, it: &ast::AwaitExpression<'ast>) {
     let is_top_level_await = self.is_valid_tla_scope();
-    if !self.flags.keep_esm_import_export_syntax() && is_top_level_await {
+    if !self.flat_options.keep_esm_import_export_syntax() && is_top_level_await {
       self.result.errors.push(BuildDiagnostic::unsupported_feature(
         self.id.resource_id().clone(),
         self.source.clone(),
@@ -266,14 +269,14 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_new_expression(&mut self, it: &ast::NewExpression<'ast>) {
-    if self.flags.resolve_new_url_to_asset_enabled() {
+    if self.flat_options.resolve_new_url_to_asset_enabled() {
       self.handle_new_url_with_string_literal_and_import_meta_url(it);
     }
     walk::walk_new_expression(self, it);
   }
 
   fn visit_meta_property(&mut self, it: &ast::MetaProperty<'ast>) {
-    if self.flags.keep_esm_import_export_syntax() {
+    if self.flat_options.keep_esm_import_export_syntax() {
       walk::walk_meta_property(self, it);
       return;
     }
@@ -350,7 +353,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         }
       }
       _ => {
-        if self.flags.inline_const_enabled() && self.is_root_scope() {
+        if self.flat_options.inline_const_enabled() && self.is_root_scope() {
           for var_decl in &decl.declarations {
             if let BindingPatternKind::BindingIdentifier(binding) = &var_decl.id.kind {
               if let Some(init) = &var_decl.init {
@@ -444,8 +447,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             // should not replace require in `runtime` code
             if is_dummy_record
               && self.id.as_ref() != RUNTIME_MODULE_KEY
-              && self.flags.should_call_runtime_require()
-              && self.flags.polyfill_require_for_esm_format_with_node_platform()
+              && self.flat_options.should_call_runtime_require()
+              && self.flat_options.polyfill_require_for_esm_format_with_node_platform()
             {
               self.current_stmt_info.meta.insert(StmtInfoMeta::HasDummyRecord);
               self.result.dummy_record_set.insert(ident_ref.span);
@@ -489,7 +492,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           _ => {}
         }
 
-        if self.flags.jsx_preserve()
+        if self.flat_options.jsx_preserve()
           && self.visit_path.last().is_some_and(|ast_kind| {
             matches!(ast_kind, AstKind::JSXOpeningElement(_) | AstKind::JSXClosingElement(_))
           })

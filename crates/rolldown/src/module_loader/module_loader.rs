@@ -25,6 +25,7 @@ use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use tracing::Instrument;
 
+use crate::ast_scanner::side_effect_detector::FlatOptions;
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 use crate::module_loader::task_context::TaskContext;
 use crate::stages::scan_stage::resolve_user_defined_entries;
@@ -108,6 +109,7 @@ pub struct ModuleLoader<'a> {
   is_full_scan: bool,
   new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
   cache: &'a mut ScanStageCache,
+  pub flat_options: FlatOptions,
 }
 
 pub struct ModuleLoaderOutput {
@@ -128,6 +130,7 @@ pub struct ModuleLoaderOutput {
   /// Note, one entry point may related to multiple reference ids
   /// e.g. https://stackblitz.com/edit/rolldown-rolldown-starter-stackblitz-jqg7vnkw?file=rolldown.config.mjs,src%2Findex.js,package.json
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
+  pub flat_options: FlatOptions,
 }
 
 impl Drop for ModuleLoader<'_> {
@@ -151,6 +154,8 @@ impl<'a> ModuleLoader<'a> {
       // if we are in full scan mode
       std::mem::take(cache);
     }
+
+    let flat_options = FlatOptions::from_shared_options(&options);
 
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
@@ -184,7 +189,7 @@ impl<'a> ModuleLoader<'a> {
       intermediate_normal_modules.reset_ecma_module_idx();
       0
     } else {
-      let task = RuntimeModuleTask::new(runtime_id, Arc::clone(&shared_context));
+      let task = RuntimeModuleTask::new(runtime_id, Arc::clone(&shared_context), flat_options);
       tokio::spawn(task.run());
       cache.module_id_to_idx.insert(RUNTIME_MODULE_KEY.into(), VisitState::Seen(runtime_id));
       1
@@ -204,6 +209,7 @@ impl<'a> ModuleLoader<'a> {
       symbol_ref_db,
       intermediate_normal_modules,
       new_added_modules_from_partial_scan: FxIndexSet::default(),
+      flat_options,
     })
   }
 
@@ -244,8 +250,15 @@ impl<'a> ModuleLoader<'a> {
       let task = ExternalModuleTask::new(ctx, idx, resolved_id, user_defined_entries);
       tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task")));
     } else {
-      let task =
-        ModuleTask::new(ctx, idx, resolved_id, owner, is_user_defined_entry, assert_module_type);
+      let task = ModuleTask::new(
+        ctx,
+        idx,
+        resolved_id,
+        owner,
+        is_user_defined_entry,
+        assert_module_type,
+        self.flat_options,
+      );
       tokio::spawn(task.run().instrument(tracing::info_span!("normal_module_task")));
     }
     self.remaining += 1;
@@ -742,6 +755,7 @@ impl<'a> ModuleLoader<'a> {
       new_added_modules_from_partial_scan: std::mem::take(
         &mut self.new_added_modules_from_partial_scan,
       ),
+      flat_options: self.flat_options,
     })
   }
 

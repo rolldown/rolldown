@@ -18,6 +18,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{
   SharedOptions, SharedResolver,
+  ast_scanner::side_effect_detector::FlatOptions,
   module_loader::{ModuleLoader, module_loader::ModuleLoaderOutput},
   type_alias::IndexEcmaAst,
   types::scan_stage_cache::ScanStageCache,
@@ -78,6 +79,7 @@ pub struct NormalizedScanStageOutput {
   // TODO: merge the preserve_entry_signatures_map in incremental build
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
+  pub flat_options: FlatOptions,
 }
 
 impl NormalizedScanStageOutput {
@@ -105,6 +107,7 @@ impl NormalizedScanStageOutput {
       safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map.clone(),
       overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map.clone(),
       entry_point_to_reference_ids: self.entry_point_to_reference_ids.clone(),
+      flat_options: self.flat_options,
     }
   }
 }
@@ -128,6 +131,7 @@ impl From<ScanStageOutput> for NormalizedScanStageOutput {
       safely_merge_cjs_ns_map: value.safely_merge_cjs_ns_map,
       overrode_preserve_entry_signature_map: value.overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: value.entry_point_to_reference_ids,
+      flat_options: value.flat_options,
     }
   }
 }
@@ -144,6 +148,7 @@ pub struct ScanStageOutput {
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
+  pub flat_options: FlatOptions,
 }
 
 impl ScanStage {
@@ -204,6 +209,7 @@ impl ScanStage {
       safely_merge_cjs_ns_map,
       overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids,
+      flat_options,
     } = module_loader_output;
 
     self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;
@@ -221,6 +227,7 @@ impl ScanStage {
       safely_merge_cjs_ns_map,
       overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids,
+      flat_options,
     })
   }
 
@@ -271,6 +278,7 @@ impl From<ModuleLoaderOutput> for ScanStageOutput {
       safely_merge_cjs_ns_map,
       overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids,
+      flat_options,
     } = module_loader_output;
     ScanStageOutput {
       entry_points,
@@ -283,6 +291,7 @@ impl From<ModuleLoaderOutput> for ScanStageOutput {
       safely_merge_cjs_ns_map,
       overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids,
+      flat_options,
     }
   }
 }

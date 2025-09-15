@@ -32,7 +32,9 @@ bitflags! {
 
 bitflags! {
   #[derive(Debug, Clone, Copy)]
-  pub struct ScannerFlatOptions: u16 {
+  /// A flat options struct to avoid passing `&SharedNormalizedBundlerOptions` everywhere.
+  /// which also make accessing frequently used options faster.
+  pub struct FlatOptions: u16 {
     const IgnoreAnnotations = 1 << 0;
     const JsxPreserve = 1 << 1;
     const IsManualPureFunctionsEmpty = 1 << 2;
@@ -60,7 +62,7 @@ bitflags! {
   }
 }
 
-impl ScannerFlatOptions {
+impl FlatOptions {
   pub fn from_shared_options(options: &SharedNormalizedBundlerOptions) -> Self {
     let mut flags = Self::empty();
     flags.set(Self::IgnoreAnnotations, !options.treeshake.annotations());
@@ -152,13 +154,13 @@ mod utils;
 pub struct SideEffectDetector<'a> {
   pub scope: &'a AstScopes,
   options: &'a SharedNormalizedBundlerOptions,
-  flags: ScannerFlatOptions,
+  flags: FlatOptions,
 }
 
 impl<'a> SideEffectDetector<'a> {
   pub fn new(
     scope: &'a AstScopes,
-    flags: ScannerFlatOptions,
+    flags: FlatOptions,
     options: &'a SharedNormalizedBundlerOptions,
   ) -> Self {
     Self { scope, options, flags }
@@ -1070,7 +1072,7 @@ mod test {
   use rolldown_common::{AstScopes, NormalizedBundlerOptions, SideEffectDetail};
   use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 
-  use super::{ScannerFlatOptions, SideEffectDetector};
+  use super::{FlatOptions, SideEffectDetector};
 
   fn get_statements_side_effect(code: &str) -> bool {
     let source_type = SourceType::tsx();
@@ -1080,7 +1082,7 @@ mod test {
     let ast_scopes = AstScopes::new(scoping);
 
     let options = Arc::new(NormalizedBundlerOptions::default());
-    let flags = ScannerFlatOptions::from_shared_options(&options);
+    let flags = FlatOptions::from_shared_options(&options);
     ast.program().body.iter().any(|stmt| {
       SideEffectDetector::new(&ast_scopes, flags, &options)
         .detect_side_effect_of_stmt(stmt)
@@ -1096,7 +1098,7 @@ mod test {
     let ast_scopes = AstScopes::new(scoping);
 
     let options = Arc::new(NormalizedBundlerOptions::default());
-    let flags = ScannerFlatOptions::from_shared_options(&options);
+    let flags = FlatOptions::from_shared_options(&options);
     ast
       .program()
       .body

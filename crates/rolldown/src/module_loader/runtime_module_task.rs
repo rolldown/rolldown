@@ -19,7 +19,7 @@ use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  ast_scanner::{AstScanner, ScanResult, side_effect_detector::ScannerFlatOptions},
+  ast_scanner::{AstScanner, ScanResult, side_effect_detector::FlatOptions},
   utils::tweak_ast_for_scanning::PreProcessor,
 };
 
@@ -42,11 +42,16 @@ fn get_runtime_js_with_node_platform() -> String {
 pub struct RuntimeModuleTask {
   module_idx: ModuleIdx,
   ctx: Arc<TaskContext>,
+  flat_options: FlatOptions,
 }
 
 impl RuntimeModuleTask {
-  pub fn new(module_idx: ModuleIdx, shared_context: Arc<TaskContext>) -> Self {
-    Self { module_idx, ctx: shared_context }
+  pub fn new(
+    module_idx: ModuleIdx,
+    shared_context: Arc<TaskContext>,
+    flat_options: FlatOptions,
+  ) -> Self {
+    Self { module_idx, ctx: shared_context, flat_options }
   }
 
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
@@ -181,7 +186,6 @@ impl RuntimeModuleTask {
 
     let scoping = ast.make_scoping();
     let facade_path = RUNTIME_MODULE_ID;
-    let flags = ScannerFlatOptions::from_shared_options(&self.ctx.options);
     let scanner = AstScanner::new(
       self.module_idx,
       scoping,
@@ -192,7 +196,7 @@ impl RuntimeModuleTask {
       ast.comments(),
       &self.ctx.options,
       ast.allocator(),
-      flags,
+      self.flat_options,
     );
     let scan_result = scanner.scan(ast.program())?;
 

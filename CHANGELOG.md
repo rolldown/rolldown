@@ -1,4 +1,107 @@
 
+## [1.0.0-beta.38] - 2025-09-15
+
+### 💥 BREAKING CHANGES
+
+- rolldown_plugin_oxc_runtime: embed helpers to support browser environment (#6177) by @shulaoda
+
+### 🚀 Features
+
+- rolldown: oxc v0.89.0 (#6220) by @Boshen
+- rolldown_plugin_esm_external_require: add duplicate external detection (#6202) by @shulaoda
+- cross module noop function optimization (#6199) by @IWANABETHATGUY
+- support to specify `scan_mode` in `bundler.scan` (#6204) by @IWANABETHATGUY
+- warn when transform options override tsconfig compiler options (#6197) by @shulaoda
+- support `false` in `resolve.alias` to ignore resolution (#6203) by @shulaoda
+- cli: remove `getJsonSchema` (#6186) by @shulaoda
+- cli: add Node.js version warning for unsupported versions (#6150) by @Copilot
+- rolldown_plugin_oxc_runtime: include version in virtual module paths (#6179) by @shulaoda
+- add native react-refresh-wrapper plugin (#6144) by @sapphi-red
+- rolldown_plugin_utils: add `to_string_literal` (#6178) by @sapphi-red
+- improve error messages for builtin plugins (#6175) by @shulaoda
+- indent module content in IIFE format (#6174) by @IWANABETHATGUY
+- rolldown_error: improve N-API error handling logic (#6171) by @shulaoda
+- rolldown_error: improve `ByteLocator#byte_offset` (#6169) by @shulaoda
+- dev: skip writing to file (#6148) by @sapphi-red
+- dev: add `skip_write` option (#6151) by @sapphi-red
+- dev: ignore file metadata changes (#6138) by @sapphi-red
+- dev: add PathsMut for debounced PollWatcher (#6139) by @sapphi-red
+- dev: use PathsMut for debounced RecommendedWatcher (#6137) by @sapphi-red
+- improve bundler initialization error handling (#6132) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_vite_resolve: correctly handle Windows drive paths with leading slash (#6209) by @shulaoda
+- allow `jsx.pragmaFrag` instead of `jsx.pragmaFlag` (#6200) by @sapphi-red
+- improve import-glob plugin error handling without panic (#6106) by @hikomoon
+- Panic with "jsx": "preserve" when rewrite a `memberExpression` (#6192) by @IWANABETHATGUY
+- rolldown_error: use `byte_slice` instead of `slice` for correct span handling (#6185) by @shulaoda
+- generate valid identifier for export names with `minifyInternalExports` (#6166) by @sapphi-red
+- useless __export helper usage (#6160) by @IWANABETHATGUY
+- incremental watch modify entry module (#6156) by @IWANABETHATGUY
+- register trace subscriber (#6145) by @sapphi-red
+- json imports error with `eval` or `arguments` in *strict mode* (#6140) by @IWANABETHATGUY
+- `process` is not defined in repl (#6147) by @IWANABETHATGUY
+
+### 💼 Other
+
+- rolldown: support to build `rolldown` with `.wasm` binding (#6153) by @hyf0
+- rolldown: refactor `build.ts` to prepare to support build `rolldown` package with wasi binding (#6152) by @hyf0
+
+### 🚜 Refactor
+
+- share `FlatOptions` in whole build session (#6211) by @IWANABETHATGUY
+- remove unnecessary `comments` in ScopeHoistingFinalizerContext (#6205) by @IWANABETHATGUY
+- move external string/regex matching from JS to Rust (#6201) by @shulaoda
+- rename `cross_module_inline_const` to `cross_module_optimization` (#6193) by @IWANABETHATGUY
+- rename `class` and `function` visitor to `class_decl`, `function_decl` (#6176) by @IWANABETHATGUY
+- rolldown_error: tweak code (#6168) by @shulaoda
+- improve `BuildDiagnostic` (#6165) by @shulaoda
+- improve `RolldownBuild` (#6136) by @shulaoda
+- rolldown_error: remove unused `EventKind::IoError` (#6134) by @shulaoda
+- rename CustomPathsMut to NotifyPathsMutAdapter and move to utils (#6135) by @hyf0
+
+### 📚 Documentation
+
+- contrib-guide: add profiling instructions for macOS (#6183) by @sapphi-red
+- contrib-guide: update just commands (#6181) by @sapphi-red
+
+### ⚡ Performance
+
+- pre calculate `side_effects_free_function_symbol_ref` (#6206) by @IWANABETHATGUY
+- parallel clone ast (#6167) by @IWANABETHATGUY
+- reserve capacity for rendered modules in `instantiate_chunk` (#6159) by @sapphi-red
+
+### 🧪 Testing
+
+- hmr: ensure each test isolated to be able to be retryed (#6142) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance npm packages (#6219) by @renovate[bot]
+- deps: lock file maintenance rust crates (#6217) by @renovate[bot]
+- deps: update github-actions (#6213) by @renovate[bot]
+- deps: lock file maintenance npm packages (#6215) by @renovate[bot]
+- deps: update github-actions (major) (#6214) by @renovate[bot]
+- tweak wordings (#6208) by @iiio2
+- fix unused import warnings (#6196) by @shulaoda
+- correct deprecated JSDoc reference for jsx option (#6195) by @shulaoda
+- add `if: always()` to wasi-test (#6190) by @sapphi-red
+- skip `@rolldown/browser` build if no node related changes detected (#6189) by @sapphi-red
+- extract wasi build to reusable workflow (#6188) by @sapphi-red
+- deps: update dependency tsdown to v0.15.1 (#6184) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.16.5 (#6182) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.16.4 (#6180) by @renovate[bot]
+- dev: implement Debug trait for DevOptions (#6173) by @sapphi-red
+- deps: update dependency rolldown-plugin-dts to v0.16.3 (#6172) by @renovate[bot]
+- update @napi-rs/cli and js binding (#6157) by @Brooooooklyn
+- ci: ensure `@rolldown/browser` build without errors (#6155) by @hyf0
+- ci: ensure running wasi tests correctly (#6154) by @hyf0
+- add more tracing instrumentation (#6149) by @sapphi-red
+- extend timeout for rollup test (#6143) by @IWANABETHATGUY
+- rolldown_error: remove unnecessary `type_aliases.rs` (#6133) by @shulaoda
+
+
 ## [1.0.0-beta.37] - 2025-09-10
 
 ### 🚀 Features

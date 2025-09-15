@@ -224,7 +224,22 @@ impl Plugin for ViteResolvePlugin {
       return Ok(Some(HookResolveIdOutput { id: args.specifier.into(), ..Default::default() }));
     }
 
-    let mut id = Cow::Borrowed(args.specifier);
+    let mut id = {
+      #[cfg(windows)]
+      {
+        // handle /C:/foo/bar
+        args
+          .specifier
+          .strip_prefix('/')
+          .filter(|p| is_windows_drive_path(p))
+          .map_or(Cow::Borrowed(args.specifier), Cow::Borrowed)
+      }
+      #[cfg(not(windows))]
+      {
+        Cow::Borrowed(args.specifier)
+      }
+    };
+
     if args.specifier.starts_with('#') {
       if let Some(resolved_imports) =
         (self.resolve_subpath_imports)(&id, args.importer, args.kind == ImportKind::Require, scan)

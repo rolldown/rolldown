@@ -21,10 +21,7 @@ var require_c = /* @__PURE__ */ __commonJS({ "c.js": ((exports, module) => {
 //#endregion
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
-	if (0) {
-		var ReactIs;
-		var a;
-	} else module.exports = require_c()();
+	module.exports = require_c()();
 }) });
 
 //#endregion

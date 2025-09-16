@@ -212,6 +212,11 @@ export default defineConfig({
       message: 'Released under the MIT License.',
       copyright: 'Copyright © 2023-present VoidZero Inc.',
     },
+
+    editLink: {
+      pattern: 'https://github.com/rolldown/rolldown/edit/main/docs/:path',
+      text: 'Edit this page on GitHub',
+    },
   },
 
   vite: {

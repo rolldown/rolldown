@@ -3,7 +3,7 @@ use std::{borrow::Cow, path::Path};
 use cow_utils::CowUtils;
 use oxc::{
   ast::{
-    AstBuilder, NONE,
+    AstBuilder, Comment, NONE,
     ast::{
       Argument, Expression, ImportOrExportKind, PropertyKind, Statement, TemplateElementValue,
     },
@@ -33,6 +33,8 @@ pub struct DynamicImportVarsVisit<'ast, 'b> {
   pub root: &'b Path,
   pub importer: &'b Path,
   pub need_helper: bool,
+  pub comments: &'b oxc::allocator::Vec<'ast, Comment>,
+  pub current_comment: usize,
   pub async_imports: Vec<String>,
   pub async_imports_addrs: Vec<*mut Expression<'ast>>,
 }
@@ -54,6 +56,18 @@ impl<'ast> DynamicImportVarsVisit<'ast, '_> {
     if let Expression::ImportExpression(import_expr) = expr
       && let Expression::TemplateLiteral(source) = &mut import_expr.source
     {
+      // Respects @vite-ignore comment (e.g., import(/* @vite-ignore */ `..`))
+      if self.current_comment < self.comments.len() {
+        for comment in &self.comments[self.current_comment..] {
+          if comment.attached_to > source.span.start {
+            break;
+          }
+          self.current_comment += 1;
+          if comment.attached_to == source.span.start && comment.is_vite() {
+            return false;
+          }
+        }
+      }
       let glob = match async_imports {
         Some(glob) => Cow::Borrowed(glob),
         None => {

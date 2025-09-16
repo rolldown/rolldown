@@ -83,11 +83,13 @@ impl Plugin for DynamicImportVarsPlugin {
         root: args.cwd,
         importer: args.id.as_path(),
         need_helper: false,
+        comments: &fields.program.comments,
+        current_comment: 0,
         async_imports: Vec::default(),
         async_imports_addrs: Vec::default(),
       };
 
-      visitor.visit_program(fields.program);
+      visitor.visit_statements(&mut fields.program.body);
 
       if !visitor.async_imports.is_empty()
         && let Some(resolver) = &self.resolver

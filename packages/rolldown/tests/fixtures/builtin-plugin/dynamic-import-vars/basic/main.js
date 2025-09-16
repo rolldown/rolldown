@@ -7,9 +7,13 @@ export function multiDirs(dir, name) {
 }
 
 export function noFile(name) {
-  return import(`./dir/c/${name}.js`)
+  return import(/* hello */`./dir/c/${name}.js`)
 }
 
 export function withAlias(name) {
-  return import(`@/${name}.js`)
+  return import(/** @vite-ignore */ `@/${name}.js`)
+}
+
+export function withIgnoreTag(name) {
+  return import(/* @vite-ignore */ `./dir/a/${name}.js`)
 }

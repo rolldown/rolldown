@@ -35,6 +35,7 @@ impl<'ast> VisitMut<'ast> for GlobImportVisit<'ast, '_> {
 #[derive(Debug, Default)]
 pub struct ImportGlobOptions {
   eager: bool,
+  exhaustive: bool,
   base: Option<String>,
   query: Option<String>,
   import: Option<String>,
@@ -411,7 +412,7 @@ impl GlobImportVisit<'_, '_> {
   fn relative_path(&self, path: &Path, to: Option<&Path>) -> String {
     let path = path.relative(to.unwrap_or(self.root));
     let path = path.to_slash_lossy();
-    if path.starts_with('.') {
+    if path.starts_with("./") || path.starts_with("../") {
       path.to_string()
     } else {
       let prefix = if to.is_none() { "/" } else { "./" };
@@ -526,7 +527,13 @@ impl GlobImportVisit<'_, '_> {
       .sort_by(|a, b| a.file_name().cmp(b.file_name()))
       .into_iter()
       .filter_entry(|entry| {
-        entry.depth() == 0 || entry.file_name().to_str().is_none_or(|s| s != "node_modules")
+        options.exhaustive || entry.depth() == 0 || {
+          let path = entry.file_name();
+          if path.as_encoded_bytes().first() == Some(&b'.') {
+            return false;
+          }
+          path.to_str().is_none_or(|s| s != "node_modules")
+        }
       })
       .filter_map(Result::ok)
       .filter(|e| !e.file_type().is_dir());
@@ -621,6 +628,11 @@ impl GlobImportVisit<'_, '_> {
         "eager" => {
           if let Expression::BooleanLiteral(bool) = &p.value {
             options.eager = bool.value;
+          }
+        }
+        "exhaustive" => {
+          if let Expression::BooleanLiteral(bool) = &p.value {
+            options.exhaustive = bool.value;
           }
         }
         "query" => match &p.value {

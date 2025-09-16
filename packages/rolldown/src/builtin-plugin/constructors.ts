@@ -133,5 +133,9 @@ export function reactRefreshWrapperPlugin(
     config.include = normalizedStringOrRegex(config.include);
     config.exclude = normalizedStringOrRegex(config.exclude);
   }
-  return new BuiltinPlugin('builtin:react-refresh-wrapper', config);
+  const builtinPlugin = new BuiltinPlugin(
+    'builtin:react-refresh-wrapper',
+    config,
+  );
+  return makeBuiltinPluginCallable(builtinPlugin);
 }

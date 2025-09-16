@@ -51,7 +51,8 @@ impl BundlingTask {
 
     match build_result {
       Ok(()) => {}
-      Err(_) => {
+      Err(err) => {
+        eprintln!("Build error: {err}"); // FIXME: handle this error
         let mut build_status = self.dev_data.state.lock().await;
         let mut bundler = self.bundler.lock().await;
         build_status.cache = Some(bundler.take_cache());

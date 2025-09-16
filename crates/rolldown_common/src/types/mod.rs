@@ -11,6 +11,7 @@ pub mod defer_sync_scan_data;
 pub mod entry_point;
 pub mod exports_kind;
 pub mod external_module_idx;
+pub mod flat_options;
 pub mod hmr_info;
 pub mod hybrid_index_vec;
 pub mod import_attribute;

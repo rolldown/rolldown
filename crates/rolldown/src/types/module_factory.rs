@@ -1,12 +1,12 @@
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
 use rolldown_common::{
-  ModuleIdx, ModuleType, ResolvedId, StrOrBytes, side_effects::HookSideEffects,
+  FlatOptions, ModuleIdx, ModuleType, ResolvedId, StrOrBytes, side_effects::HookSideEffects,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_sourcemap::SourceMap;
 
-use crate::{SharedOptions, ast_scanner::side_effect_detector::FlatOptions};
+use crate::SharedOptions;
 
 pub struct CreateModuleContext<'a> {
   pub stable_id: &'a str,

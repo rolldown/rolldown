@@ -4,7 +4,7 @@ use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  ConstExportMeta, EntryPoint, EntryPointKind, ImportKind, ModuleIdx, ModuleTable,
+  ConstExportMeta, EntryPoint, EntryPointKind, FlatOptions, ImportKind, ModuleIdx, ModuleTable,
   PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
@@ -20,7 +20,6 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   SharedOptions,
-  ast_scanner::side_effect_detector::FlatOptions,
   type_alias::IndexEcmaAst,
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };

@@ -142,6 +142,7 @@ pub use crate::{
   types::entry_point::{EntryPoint, EntryPointKind},
   types::exports_kind::ExportsKind,
   types::external_module_idx::ExternalModuleIdx,
+  types::flat_options::FlatOptions,
   types::hmr_info::HmrInfo,
   types::hybrid_index_vec::HybridIndexVec,
   types::import_attribute::ImportAttribute,

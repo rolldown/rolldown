@@ -9,7 +9,7 @@ use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
-  EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult,
+  EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult, FlatOptions,
   HybridIndexVec, ImportKind, ImportRecordMeta, ImporterRecord, Module, ModuleId, ModuleIdx,
   ModuleLoaderMsg, ModuleType, NormalModuleTaskResult, PreserveEntrySignatures, RUNTIME_MODULE_KEY,
   ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, ScanMode, SymbolRef, SymbolRefDb,
@@ -25,7 +25,6 @@ use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use tracing::Instrument;
 
-use crate::ast_scanner::side_effect_detector::FlatOptions;
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 use crate::module_loader::task_context::TaskContext;
 use crate::stages::scan_stage::resolve_user_defined_entries;

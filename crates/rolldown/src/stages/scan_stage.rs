@@ -6,8 +6,8 @@ use oxc_index::IndexVec;
 #[cfg(not(target_os = "macos"))]
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_common::{
-  EntryPoint, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures, ResolvedId,
-  RuntimeModuleBrief, ScanMode, SymbolRef, SymbolRefDb,
+  EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures,
+  ResolvedId, RuntimeModuleBrief, ScanMode, SymbolRef, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_ecmascript::EcmaAst;
@@ -18,7 +18,6 @@ use rustc_hash::FxHashMap;
 
 use crate::{
   SharedOptions, SharedResolver,
-  ast_scanner::side_effect_detector::FlatOptions,
   module_loader::{ModuleLoader, module_loader::ModuleLoaderOutput},
   type_alias::IndexEcmaAst,
   types::scan_stage_cache::ScanStageCache,

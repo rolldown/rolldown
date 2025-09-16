@@ -11,8 +11,9 @@ use oxc::{
   semantic::ScopeFlags,
 };
 use rolldown_common::{
-  AstScopes, ConstExportMeta, EcmaViewMeta, GetLocalDb, ModuleIdx, SharedNormalizedBundlerOptions,
-  SideEffectDetail, StmtInfoIdx, SymbolRef, SymbolRefDb, SymbolRefFlags,
+  AstScopes, ConstExportMeta, EcmaViewMeta, FlatOptions, GetLocalDb, ModuleIdx,
+  SharedNormalizedBundlerOptions, SideEffectDetail, StmtInfoIdx, SymbolRef, SymbolRefDb,
+  SymbolRefFlags,
 };
 use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -20,7 +21,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   ast_scanner::{
     const_eval::{ConstEvalCtx, try_extract_const_literal},
-    side_effect_detector::{FlatOptions, SideEffectDetector},
+    side_effect_detector::SideEffectDetector,
   },
   module_finalizers::TraverseState,
 };

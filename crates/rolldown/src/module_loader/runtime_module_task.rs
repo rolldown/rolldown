@@ -5,7 +5,7 @@ use oxc::ast_visit::VisitMut;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaView, ExportsKind, ModuleDefFormat, ModuleIdx, ModuleType, NormalModule,
+  EcmaView, ExportsKind, FlatOptions, ModuleDefFormat, ModuleIdx, ModuleType, NormalModule,
   side_effects::DeterminedSideEffects,
 };
 use rolldown_common::{
@@ -19,7 +19,7 @@ use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  ast_scanner::{AstScanner, ScanResult, side_effect_detector::FlatOptions},
+  ast_scanner::{AstScanner, ScanResult},
   utils::tweak_ast_for_scanning::PreProcessor,
 };
 

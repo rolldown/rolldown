@@ -29,11 +29,11 @@ use oxc::{
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
-  ConstExportMeta, ConstantValue, EcmaModuleAstUsage, EcmaViewMeta, ExportsKind, HmrInfo,
-  ImportAttribute, ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport, MemberExprRef,
-  ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord, SideEffectDetail, Specifier,
-  StmtInfo, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
-  TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
+  ConstExportMeta, ConstantValue, EcmaModuleAstUsage, EcmaViewMeta, ExportsKind, FlatOptions,
+  HmrInfo, ImportAttribute, ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport,
+  MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
+  SideEffectDetail, Specifier, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule,
+  SymbolRefFlags, TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt, FunctionExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -46,7 +46,6 @@ use std::borrow::Cow;
 use sugar_path::SugarPath;
 
 use crate::SharedOptions;
-use crate::ast_scanner::side_effect_detector::FlatOptions;
 
 // TODO: Not sure if this necessary to match the module request.
 // If we found it cause high false positive, we could add a extra step to match it package name as

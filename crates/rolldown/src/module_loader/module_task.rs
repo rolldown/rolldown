@@ -6,8 +6,8 @@ use std::sync::Arc;
 use sugar_path::SugarPath;
 
 use rolldown_common::{
-  ImportKind, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType, NormalModule,
-  NormalModuleTaskResult, ResolvedId, StrOrBytes,
+  FlatOptions, ImportKind, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType,
+  NormalModule, NormalModuleTaskResult, ResolvedId, StrOrBytes,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, UnloadableDependencyContext, downcast_napi_error_diagnostics,
@@ -15,7 +15,6 @@ use rolldown_error::{
 use rolldown_std_utils::PathExt;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 
-use crate::ast_scanner::side_effect_detector::FlatOptions;
 use crate::{
   asset::create_asset_view,
   css::create_css_view,

@@ -7,27 +7,27 @@ use crate::dev::{
   watcher_event_handler::WatcherEventHandler,
 };
 
-pub enum WatcherEventServiceMsg {
+pub enum BuildMessage {
   FileChange(FileChangeResult),
 }
 
-pub type WatcherEventServiceTx = UnboundedSender<WatcherEventServiceMsg>;
-pub type WatcherEventServiceRx = UnboundedReceiver<WatcherEventServiceMsg>;
+pub type BuildDriverServiceTx = UnboundedSender<BuildMessage>;
+pub type BuildDriverServiceRx = UnboundedReceiver<BuildMessage>;
 
-pub struct WatcherEventService {
+pub struct BuildDriverService {
   pub build_driver: SharedBuildDriver,
-  pub rx: WatcherEventServiceRx,
-  pub tx: WatcherEventServiceTx,
+  pub rx: BuildDriverServiceRx,
+  pub tx: BuildDriverServiceTx,
   pub ctx: SharedDevContext,
 }
 
-impl WatcherEventService {
+impl BuildDriverService {
   pub fn new(build_driver: SharedBuildDriver, ctx: SharedDevContext) -> Self {
-    let (tx, rx) = unbounded_channel::<WatcherEventServiceMsg>();
+    let (tx, rx) = unbounded_channel::<BuildMessage>();
     Self { build_driver, ctx, rx, tx }
   }
 
-  pub fn create_event_handler(&self) -> WatcherEventHandler {
+  pub fn create_watcher_event_handler(&self) -> WatcherEventHandler {
     WatcherEventHandler { service_tx: self.tx.clone() }
   }
 
@@ -38,7 +38,7 @@ impl WatcherEventService {
       self.rx.recv().await
     } {
       match msg {
-        WatcherEventServiceMsg::FileChange(file_change_result) => match file_change_result {
+        BuildMessage::FileChange(file_change_result) => match file_change_result {
           Ok(batched_events) => {
             tracing::debug!(target: "hmr", "Received batched events: {:#?}", batched_events);
             if option_env!("CI").is_some() {

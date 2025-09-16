@@ -13,15 +13,15 @@ use crate::{
   Bundler, BundlerBuilder,
   dev::{
     build_driver::{BuildDriver, SharedBuildDriver},
+    build_driver_service::BuildDriverService,
     build_state_machine::BuildStateMachine,
     dev_context::{DevContext, PinBoxSendStaticFuture, SharedDevContext},
     dev_options::{DevOptions, normalize_dev_options},
-    watcher_event_service::WatcherEventService,
   },
 };
 
-pub struct WatchServiceState {
-  service: Option<WatcherEventService>,
+pub struct BuildDriverServiceState {
+  service: Option<BuildDriverService>,
   handle: Option<Shared<PinBoxSendStaticFuture<()>>>,
 }
 
@@ -29,7 +29,7 @@ pub struct DevEngine {
   build_driver: SharedBuildDriver,
   watcher: Mutex<DynWatcher>,
   watched_files: FxDashSet<ArcStr>,
-  watch_service_state: Mutex<WatchServiceState>,
+  watch_service_state: Mutex<BuildDriverServiceState>,
   ctx: SharedDevContext,
 }
 
@@ -47,8 +47,7 @@ impl DevEngine {
     });
     let build_driver = Arc::new(BuildDriver::new(bundler, Arc::clone(&ctx)));
 
-    let watcher_event_service =
-      WatcherEventService::new(Arc::clone(&build_driver), Arc::clone(&ctx));
+    let build_driver_service = BuildDriverService::new(Arc::clone(&build_driver), Arc::clone(&ctx));
     let watcher_config = WatcherConfig {
       poll_interval: ctx.options.poll_interval,
       debounce_delay: ctx.options.debounce_duration,
@@ -65,25 +64,26 @@ impl DevEngine {
 
         match (ctx.options.use_polling, ctx.options.use_debounce) {
           // Polling + no debounce = PollWatcher
-          (true, false) => {
-            PollWatcher::with_config(watcher_event_service.create_event_handler(), watcher_config)?
-              .into_dyn_watcher()
-          }
+          (true, false) => PollWatcher::with_config(
+            build_driver_service.create_watcher_event_handler(),
+            watcher_config,
+          )?
+          .into_dyn_watcher(),
           // Polling + debounce = DebouncedPollWatcher
           (true, true) => DebouncedPollWatcher::with_config(
-            watcher_event_service.create_event_handler(),
+            build_driver_service.create_watcher_event_handler(),
             watcher_config,
           )?
           .into_dyn_watcher(),
           // No polling + no debounce = RecommendedWatcher
           (false, false) => RecommendedWatcher::with_config(
-            watcher_event_service.create_event_handler(),
+            build_driver_service.create_watcher_event_handler(),
             watcher_config,
           )?
           .into_dyn_watcher(),
           // No polling + debounce = DebouncedRecommendedWatcher
           (false, true) => DebouncedRecommendedWatcher::with_config(
-            watcher_event_service.create_event_handler(),
+            build_driver_service.create_watcher_event_handler(),
             watcher_config,
           )?
           .into_dyn_watcher(),
@@ -95,7 +95,7 @@ impl DevEngine {
         // For WASM, always use NotifyWatcher (which is PollWatcher in WASM)
         // Use the Watcher trait implementation
         RecommendedWatcher::with_config(
-          watcher_event_service.create_event_handler(),
+          build_driver_service.create_watcher_event_handler(),
           watcher_config,
         )?
         .into_dyn_watcher()
@@ -106,8 +106,8 @@ impl DevEngine {
       build_driver,
       watcher: Mutex::new(watcher),
       watched_files: FxDashSet::default(),
-      watch_service_state: Mutex::new(WatchServiceState {
-        service: Some(watcher_event_service),
+      watch_service_state: Mutex::new(BuildDriverServiceState {
+        service: Some(build_driver_service),
         handle: None,
       }),
       ctx,

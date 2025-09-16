@@ -14,7 +14,7 @@ use oxc::{
 use rolldown_common::{
   AstScopes, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx, ImportRecordMeta,
   MemberExprRefResolution, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType,
-  OutputFormat, Platform, SymbolRef, WrapKind,
+  OutputFormat, Platform, RenderedConcatenatedModuleParts, SymbolRef, WrapKind,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
@@ -23,10 +23,10 @@ use rolldown_ecmascript_utils::{
 
 mod finalizer_context;
 mod impl_visit_mut;
-pub use finalizer_context::ScopeHoistingFinalizerContext;
+pub use finalizer_context::{FinalizerMutableState, ScopeHoistingFinalizerContext};
 use oxc::span::CompactStr;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
-use rolldown_utils::indexmap::FxIndexSet;
+use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
@@ -59,6 +59,12 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub scope_stack: Vec<ScopeFlags>,
   pub state: TraverseState,
   pub top_level_var_bindings: FxIndexSet<Atom<'ast>>,
+  pub cur_stmt_index: usize,
+  pub keep_name_statement_to_insert: Vec<(usize, CompactStr, CompactStr)>,
+  pub needs_hosted_top_level_binding: bool,
+  pub module_namespace_included: bool,
+  pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
+  pub rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -156,8 +162,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             self.ctx.module.should_consider_node_esm_spec_for_static_import(),
           ),
         );
-        if self.ctx.transferred_import_record.contains_key(&rec_id) {
-          self.ctx.transferred_import_record.insert(rec_id, stmt.to_source_string());
+        if self.transferred_import_record.contains_key(&rec_id) {
+          self.transferred_import_record.insert(rec_id, stmt.to_source_string());
           return true;
         }
         return false;
@@ -203,8 +209,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           *stmt = self.snippet.builder.statement_expression(SPAN, init_call);
         }
 
-        if self.ctx.transferred_import_record.contains_key(&rec_id) {
-          self.ctx.transferred_import_record.insert(rec_id, stmt.to_source_string());
+        if self.transferred_import_record.contains_key(&rec_id) {
+          self.transferred_import_record.insert(rec_id, stmt.to_source_string());
           return true;
         }
         return false;
@@ -1105,7 +1111,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     // If **commonjs** treeshake is enabled, the module_namespace is included on
                     // demand, we should skip generate related `__reExport` statements
                     // See: https://github.com/rolldown/rolldown/blob/60fc81ada3955ce84b38a5edbb33a169d1f89f15/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs?plain=1#L148-L150
-                    if !self.ctx.module_namespace_included {
+                    if !self.module_namespace_included {
                       return;
                     }
 
@@ -1272,7 +1278,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let (_, canonical_name) = self.get_conflicted_info(symbol_binding_id.as_ref()?)?;
     let original_name: CompactStr = CompactStr::new(original_name);
     let new_name = canonical_name.clone();
-    let insert_position = self.ctx.cur_stmt_index + 1;
+    let insert_position = self.cur_stmt_index + 1;
     Some((insert_position, original_name, new_name))
   }
 

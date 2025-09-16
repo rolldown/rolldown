@@ -115,7 +115,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       .is_some_and(|idx| self.ctx.module.stmt_infos[idx].is_included)
       .then_some(self.ctx.linking_info.wrap_kind());
 
-    self.ctx.needs_hosted_top_level_binding = matches!(included_wrap_kind, Some(WrapKind::Esm));
+    self.needs_hosted_top_level_binding = matches!(included_wrap_kind, Some(WrapKind::Esm));
 
     // the order should be
     // 1. module namespace object declaration
@@ -208,13 +208,13 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           });
 
         if is_concatenated_wrapped_module {
-          self.ctx.rendered_concatenated_wrapped_module_parts.hoisted_functions_or_module_ns_decl =
+          self.rendered_concatenated_wrapped_module_parts.hoisted_functions_or_module_ns_decl =
             declaration_of_module_namespace_object
               .iter()
               .chain(fn_stmts.iter())
               .map(rolldown_ecmascript::ToSourceString::to_source_string)
               .collect_vec();
-          self.ctx.rendered_concatenated_wrapped_module_parts.hoisted_vars = self
+          self.rendered_concatenated_wrapped_module_parts.hoisted_vars = self
             .top_level_var_bindings
             .iter()
             .map(|var_name| CompactStr::new(var_name))
@@ -270,9 +270,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           self.ctx.linking_info.concatenated_wrapped_module_kind,
           ConcatenateWrappedModuleKind::Root
         ) {
-          self.ctx.rendered_concatenated_wrapped_module_parts.rendered_esm_runtime_expr =
+          self.rendered_concatenated_wrapped_module_parts.rendered_esm_runtime_expr =
             Some(self.builder().expression_statement(SPAN, esm_ref_expr).to_source_string());
-          self.ctx.rendered_concatenated_wrapped_module_parts.wrap_ref_name =
+          self.rendered_concatenated_wrapped_module_parts.wrap_ref_name =
             Some(wrap_ref_name.clone());
           program.body.extend(stmts_inside_closure);
           return;
@@ -325,7 +325,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // transform top level `var a = 1, b = 1;` to `a = 1, b = 1`
     // for `__esm(() => {})` wrapping VariableDeclaration hoist
     if self.state.contains(TraverseState::TopLevel)
-      && self.ctx.needs_hosted_top_level_binding
+      && self.needs_hosted_top_level_binding
       && let ast::Statement::VariableDeclaration(decl) = it
     {
       if let Some((expr, bindings)) =
@@ -340,16 +340,15 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_statements(&mut self, it: &mut allocator::Vec<'ast, ast::Statement<'ast>>) {
-    let previous_stmt_index = self.ctx.cur_stmt_index;
-    let previous_keep_name_statement = std::mem::take(&mut self.ctx.keep_name_statement_to_insert);
+    let previous_stmt_index = self.cur_stmt_index;
+    let previous_keep_name_statement = std::mem::take(&mut self.keep_name_statement_to_insert);
     for (i, stmt) in it.iter_mut().enumerate() {
-      self.ctx.cur_stmt_index = i;
+      self.cur_stmt_index = i;
       self.visit_statement(stmt);
     }
 
     // TODO: perf it
-    for (stmt_index, original_name, new_name) in self.ctx.keep_name_statement_to_insert.iter().rev()
-    {
+    for (stmt_index, original_name, new_name) in self.keep_name_statement_to_insert.iter().rev() {
       let name_ref = self.canonical_ref_for_runtime("__name");
       let finalized_callee = self.finalized_expr_for_symbol_ref(name_ref, false, false);
       let target =
@@ -362,8 +361,8 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         ),
       );
     }
-    self.ctx.cur_stmt_index = previous_stmt_index;
-    self.ctx.keep_name_statement_to_insert = previous_keep_name_statement;
+    self.cur_stmt_index = previous_stmt_index;
+    self.keep_name_statement_to_insert = previous_keep_name_statement;
   }
 
   fn visit_identifier_reference(&mut self, ident: &mut ast::IdentifierReference) {
@@ -610,7 +609,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   fn visit_for_statement_init(&mut self, it: &mut ast::ForStatementInit<'ast>) {
     walk_mut::walk_for_statement_init(self, it);
     if self.state.contains(TraverseState::TopLevel)
-      && self.ctx.needs_hosted_top_level_binding
+      && self.needs_hosted_top_level_binding
       && let ast::ForStatementInit::VariableDeclaration(decl) = it
     {
       if let Some((expr, bindings)) =
@@ -661,7 +660,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         if let Some((insert_position, original_name, new_name)) =
           self.process_fn(decl.id.as_ref(), decl.id.as_ref())
         {
-          self.ctx.keep_name_statement_to_insert.push((insert_position, original_name, new_name));
+          self.keep_name_statement_to_insert.push((insert_position, original_name, new_name));
         }
       }
       ast::Declaration::ClassDeclaration(decl) => {

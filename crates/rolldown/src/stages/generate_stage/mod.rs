@@ -32,7 +32,7 @@ use tracing::debug_span;
 use crate::{
   BundleOutput, SharedOptions,
   chunk_graph::ChunkGraph,
-  module_finalizers::ScopeHoistingFinalizerContext,
+  module_finalizers::{FinalizerMutableState, ScopeHoistingFinalizerContext},
   stages::link_stage::LinkStageOutput,
   utils::chunk::{
     deconflict_chunk_symbols::deconflict_chunk_symbols, generate_pre_rendered_chunk,
@@ -174,10 +174,13 @@ impl<'a> GenerateStage<'a> {
             runtime: &self.link_output.runtime,
             chunk_graph: &chunk_graph,
             options: self.options,
-            cur_stmt_index: 0,
-            keep_name_statement_to_insert: Vec::new(),
             file_emitter: &self.plugin_driver.file_emitter,
             constant_value_map: &self.link_output.global_constant_symbol_map,
+            side_effect_free_function_symbols: &side_effect_free_function_symbols,
+          };
+          let mutable_state = FinalizerMutableState {
+            cur_stmt_index: 0,
+            keep_name_statement_to_insert: Vec::new(),
             needs_hosted_top_level_binding: false,
             module_namespace_included: self
               .link_output
@@ -192,19 +195,15 @@ impl<'a> GenerateStage<'a> {
               })
               .unwrap_or_default(),
             rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
-            side_effect_free_function_symbols: &side_effect_free_function_symbols,
           };
-          let ctx = ctx.finalize_normal_module(ast, ast_scope);
-          (!ctx.transferred_import_record.is_empty()
-            || !matches!(
-              ctx.linking_info.concatenated_wrapped_module_kind,
-              ConcatenateWrappedModuleKind::None
-            ))
-          .then_some((
-            idx,
-            ctx.transferred_import_record,
-            ctx.rendered_concatenated_wrapped_module_parts,
-          ))
+
+          let concatenated_wrapped_module_kind = ctx.linking_info.concatenated_wrapped_module_kind;
+          let (transferred_import_record, rendered_concatenated_wrapped_module_parts) =
+            ctx.finalize_normal_module(ast, ast_scope, mutable_state);
+
+          (!transferred_import_record.is_empty()
+            || !matches!(concatenated_wrapped_module_kind, ConcatenateWrappedModuleKind::None))
+          .then_some((idx, transferred_import_record, rendered_concatenated_wrapped_module_parts))
         })
         .collect::<Vec<_>>()
     });

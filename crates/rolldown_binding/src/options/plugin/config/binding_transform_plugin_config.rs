@@ -15,7 +15,6 @@ pub struct BindingTransformPluginConfig {
   pub jsx_refresh_exclude: Option<Vec<BindingStringOrRegex>>,
 
   pub is_server_consumer: Option<bool>,
-  pub runtime_resolve_base: Option<String>,
 
   pub jsx_inject: Option<String>,
   pub transform_options: Option<TransformOptions>,

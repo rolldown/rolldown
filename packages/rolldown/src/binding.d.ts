@@ -2105,7 +2105,6 @@ export interface BindingTransformPluginConfig {
   jsxRefreshInclude?: Array<BindingStringOrRegex>
   jsxRefreshExclude?: Array<BindingStringOrRegex>
   isServerConsumer?: boolean
-  runtimeResolveBase?: string
   jsxInject?: string
   transformOptions?: TransformOptions
 }

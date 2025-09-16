@@ -34,6 +34,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       TraverseState::IsTopLevel,
       self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top()),
     );
+    self
+      .state
+      .set(TraverseState::IsRootLevel, self.scope_stack.iter().rev().all(|flag| flag.is_top()));
   }
 
   fn leave_scope(&mut self) {
@@ -42,6 +45,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       TraverseState::IsTopLevel,
       self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top()),
     );
+    self
+      .state
+      .set(TraverseState::IsRootLevel, self.scope_stack.iter().rev().all(|flag| flag.is_top()));
   }
 
   fn visit_if_statement(&mut self, it: &mut ast::IfStatement<'ast>) {
@@ -315,17 +321,21 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       }
     }
     walk_mut::walk_statement(self, it);
+
     // transform top level `var a = 1, b = 1;` to `a = 1, b = 1`
     // for `__esm(() => {})` wrapping VariableDeclaration hoist
     if self.state.contains(TraverseState::IsTopLevel)
       && self.ctx.needs_hosted_top_level_binding
       && let ast::Statement::VariableDeclaration(decl) = it
     {
-      let (expr, bindings) =
-        self.var_declaration_to_expr_seq_and_bindings(decl.take_in(self.alloc));
-      self.top_level_var_bindings.extend(bindings);
-      *it =
-        ast::Statement::ExpressionStatement(self.builder().alloc_expression_statement(SPAN, expr));
+      if let Some((expr, bindings)) =
+        self.var_declaration_to_expr_seq_and_bindings(decl, self.state)
+      {
+        self.top_level_var_bindings.extend(bindings);
+        *it = ast::Statement::ExpressionStatement(
+          self.builder().alloc_expression_statement(SPAN, expr),
+        );
+      }
     }
   }
 
@@ -603,10 +613,12 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       && self.ctx.needs_hosted_top_level_binding
       && let ast::ForStatementInit::VariableDeclaration(decl) = it
     {
-      let (expr, bindings) =
-        self.var_declaration_to_expr_seq_and_bindings(decl.take_in(self.alloc));
-      self.top_level_var_bindings.extend(bindings);
-      *it = ast::ForStatementInit::from(expr);
+      if let Some((expr, bindings)) =
+        self.var_declaration_to_expr_seq_and_bindings(decl, self.state)
+      {
+        self.top_level_var_bindings.extend(bindings);
+        *it = ast::ForStatementInit::from(expr);
+      }
     }
   }
 

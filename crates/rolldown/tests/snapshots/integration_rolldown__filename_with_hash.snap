@@ -5489,6 +5489,10 @@ expression: output
 - entry2-!~{001}~.js => entry2-TnfF1t67.js
 - foo-!~{002}~.js => foo-CNqygoys.js
 
+# tests/rolldown/topics/deconflict/issue_6227
+
+- entry-!~{000}~.js => entry-CFf9QVKd.js
+
 # tests/rolldown/topics/deconflict/wrapped_esm_default_function
 
 - main-!~{000}~.js => main-DozknKTF.js

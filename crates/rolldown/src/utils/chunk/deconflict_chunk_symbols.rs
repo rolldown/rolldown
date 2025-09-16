@@ -116,7 +116,6 @@ pub fn deconflict_chunk_symbols(
       if let Some(hmr_hot_ref) = module.hmr_hot_ref {
         renamer.add_symbol_in_root_scope(hmr_hot_ref);
       }
-
       module
         .stmt_infos
         .iter()

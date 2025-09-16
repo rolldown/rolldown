@@ -45,6 +45,7 @@ bitflags! {
         /// - test1 && test2
         /// - test1 ?? test2
         const SmartInlineConst = 1 << 1;
+        const IsRootLevel = 1 << 2;
     }
 }
 
@@ -301,13 +302,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   fn var_declaration_to_expr_seq_and_bindings(
     &self,
-    decl: ast::VariableDeclaration<'ast>,
-  ) -> (Expression<'ast>, Vec<Atom<'ast>>) {
+    decl: &mut ast::VariableDeclaration<'ast>,
+    traverse_state: TraverseState,
+  ) -> Option<(Expression<'ast>, Vec<Atom<'ast>>)> {
+    let should_hoist = (decl.kind.is_var() && traverse_state.contains(TraverseState::IsTopLevel))
+      || (decl.kind.is_lexical() && traverse_state.contains(TraverseState::IsRootLevel));
+    if !should_hoist {
+      return None;
+    }
     let mut ret = vec![];
-    let exprs = decl.declarations.into_iter().filter_map(|mut var_decl| {
+    let exprs = decl.declarations.iter_mut().filter_map(|var_decl| {
       ret.extend(var_decl.id.binding_identifiers().iter().map(|item| item.name));
       // Turn `var ... = ...` to `... = ...`
-      if let Some(mut init_expr) = var_decl.init {
+      if let Some(ref mut init_expr) = var_decl.init {
         let left = var_decl.id.take_in(self.alloc).into_assignment_target(self.alloc);
         Some(ast::Expression::AssignmentExpression(
           ast::AssignmentExpression {
@@ -321,8 +328,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         None
       }
     });
-
-    (self.builder().expression_sequence(SPAN, self.builder().vec_from_iter(exprs)), ret)
+    Some((self.builder().expression_sequence(SPAN, self.builder().vec_from_iter(exprs)), ret))
   }
 
   #[expect(clippy::too_many_lines)]

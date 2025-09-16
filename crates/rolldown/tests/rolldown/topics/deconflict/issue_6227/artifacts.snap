@@ -1,0 +1,46 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region init.js
+var init_init = __esm({ "init.js": (() => {
+	globalThis.array = [];
+}) });
+
+//#endregion
+//#region foo.js
+var init_foo = __esm({ "foo.js": (() => {
+	{
+		const foo = "foo" + globalThis.foo;
+		setTimeout(() => {
+			globalThis.array.push(foo);
+		}, 100);
+	}
+}) });
+
+//#endregion
+//#region bar.js
+var init_bar = __esm({ "bar.js": (() => {
+	{
+		const foo = "bar" + globalThis.bar;
+		globalThis.array.push(foo);
+	}
+}) });
+
+//#endregion
+//#region main.js
+var init_main = __esm({ "main.js": (() => {
+	init_init();
+	init_foo();
+	init_bar();
+	console.log(globalThis.array);
+}) });
+
+//#endregion
+init_main();
+```

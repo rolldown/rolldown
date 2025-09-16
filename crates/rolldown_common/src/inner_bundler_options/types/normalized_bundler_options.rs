@@ -29,8 +29,7 @@ use crate::inner_bundler_options::types::optimization::NormalizedOptimizationCon
 use crate::{
   DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
   HashCharacters, InjectImport, InputItem, InvalidateJsSideCache, LogLevel,
-  MakeAbsoluteExternalsRelative, MarkModuleLoaded, ModuleType, OnLog, RollupPreRenderedAsset,
-  TransformOptions,
+  MakeAbsoluteExternalsRelative, ModuleType, OnLog, RollupPreRenderedAsset, TransformOptions,
 };
 
 #[expect(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
@@ -93,7 +92,6 @@ pub struct NormalizedBundlerOptions {
   pub transform_options: Box<TransformOptions>,
   pub make_absolute_externals_relative: MakeAbsoluteExternalsRelative,
   pub invalidate_js_side_cache: Option<InvalidateJsSideCache>,
-  pub mark_module_loaded: Option<MarkModuleLoaded>,
   pub log_level: Option<LogLevel>,
   pub on_log: Option<OnLog>,
   pub preserve_modules: bool,
@@ -164,7 +162,6 @@ impl Default for NormalizedBundlerOptions {
       transform_options: Default::default(),
       make_absolute_externals_relative: Default::default(),
       invalidate_js_side_cache: Default::default(),
-      mark_module_loaded: Default::default(),
       log_level: Default::default(),
       on_log: Default::default(),
       preserve_modules: false,

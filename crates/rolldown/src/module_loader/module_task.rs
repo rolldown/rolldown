@@ -73,12 +73,7 @@ impl ModuleTask {
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
   pub async fn run(mut self) {
     if let Err(errs) = self.run_inner().await {
-      self
-        .ctx
-        .plugin_driver
-        .mark_context_load_modules_loaded(&ModuleId::new(&self.resolved_id.id), false)
-        .await
-        .expect("Mark context load modules loaded should not fail");
+      self.ctx.plugin_driver.mark_context_load_modules_loaded(ModuleId::new(&self.resolved_id.id));
       self
         .ctx
         .tx
@@ -212,7 +207,7 @@ impl ModuleTask {
     let module_info = Arc::new(module.to_module_info(Some(&raw_import_records)));
     self.ctx.plugin_driver.set_module_info(&module.id, Arc::clone(&module_info));
     self.ctx.plugin_driver.module_parsed(Arc::clone(&module_info), &module).await?;
-    self.ctx.plugin_driver.mark_context_load_modules_loaded(&module.id, true).await?;
+    self.ctx.plugin_driver.mark_context_load_modules_loaded(module.id.clone());
 
     let result = ModuleLoaderMsg::NormalModuleDone(Box::new(NormalModuleTaskResult {
       module: module.into(),

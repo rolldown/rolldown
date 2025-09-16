@@ -108,9 +108,6 @@ pub struct BindingInputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "() => void")]
   pub invalidate_js_side_cache: Option<JsCallback>,
-  #[debug(skip)]
-  #[napi(ts_type = "(id: string, success: boolean) => void")]
-  pub mark_module_loaded: Option<JsCallback<FnArgs<(String, bool)>>>,
   pub preserve_entry_signatures: Option<BindingPreserveEntrySignatures>,
   pub optimization: Option<BindingOptimization>,
   pub context: Option<String>,

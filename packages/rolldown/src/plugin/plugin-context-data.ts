@@ -21,7 +21,6 @@ export class PluginContextData {
   moduleOptionMap: Map<string, ModuleOptions> = new Map();
   resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map();
   loadModulePromiseMap: Map<string, Promise<void>> = new Map();
-  loadModulePromiseResolveFnMap: Map<string, () => void> = new Map();
   renderedChunkMeta: RenderedChunkMeta | null = null;
   normalizedInputOptions: NormalizedInputOptions | null = null;
   normalizedOutputOptions: NormalizedOutputOptions | null = null;
@@ -137,16 +136,8 @@ export class PluginContextData {
     return this.normalizedOutputOptions;
   }
 
-  markModuleLoaded(id: string, _success: boolean): void {
-    // Here the bundler will give an error for it, so here avoid give other error again, it could be is confusing.
-    // TODO: It maybe could be improved in the future.
-    const resolve = this.loadModulePromiseResolveFnMap.get(id);
-    if (resolve) resolve();
-  }
-
   clear(): void {
     this.renderedChunkMeta = null;
     this.loadModulePromiseMap.clear();
-    this.loadModulePromiseResolveFnMap.clear();
   }
 }

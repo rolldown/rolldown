@@ -16,7 +16,6 @@ pub mod is_external;
 pub mod legal_comments;
 pub mod log_level;
 pub mod make_absolute_externals_relative;
-pub mod mark_module_loaded;
 pub mod minify_options;
 pub mod module_type;
 pub mod normalized_bundler_options;

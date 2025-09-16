@@ -60,6 +60,11 @@ impl NativePluginContextImpl {
         ..Default::default()
       })))
       .await?;
+    let plugin_driver = self
+      .plugin_driver
+      .upgrade()
+      .ok_or_else(|| anyhow::anyhow!("Plugin driver is already dropped."))?;
+    plugin_driver.wait_for_module_load_completion(specifier).await;
     Ok(())
   }
 

@@ -291,7 +291,6 @@ pub fn prepare_build_context(
       .make_absolute_externals_relative
       .unwrap_or_default(),
     invalidate_js_side_cache: raw_options.invalidate_js_side_cache,
-    mark_module_loaded: raw_options.mark_module_loaded,
     log_level: raw_options.log_level,
     on_log: raw_options.on_log,
     preserve_modules: raw_options.preserve_modules.unwrap_or_default(),

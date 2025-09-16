@@ -1785,7 +1785,6 @@ export interface BindingInputOptions {
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
   debug?: BindingDebugOptions
   invalidateJsSideCache?: () => void
-  markModuleLoaded?: (id: string, success: boolean) => void
   preserveEntrySignatures?: BindingPreserveEntrySignatures
   optimization?: BindingOptimization
   context?: string

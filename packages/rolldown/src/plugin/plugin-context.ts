@@ -120,34 +120,20 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     };
     this.data.updateModuleOption(id, rawOptions);
 
-    async function createLoadModulePromise(
-      context: BindingPluginContext,
-      data: PluginContextData,
-    ) {
-      const loadPromise = data.loadModulePromiseMap.get(id);
-      if (loadPromise) {
-        return loadPromise;
-      }
-      const promise = new Promise<void>((resolve, _) => {
-        data.loadModulePromiseResolveFnMap.set(id, resolve);
+    let loadPromise = this.data.loadModulePromiseMap.get(id);
+    if (!loadPromise) {
+      loadPromise = this.context.load(
+        id,
+        options.moduleSideEffects ?? undefined,
+      ).catch(() => {
+        // avoid reusing the promise if it's an error
+        // because the error may happen only in non-supported hooks (e.g. `buildStart` hook)
+        this.data.loadModulePromiseMap.delete(id);
       });
-      data.loadModulePromiseMap.set(id, promise);
-      try {
-        await context.load(
-          id,
-          options.moduleSideEffects ?? undefined,
-        );
-      } catch (e) {
-        // If the load module has failed, avoid it re-load using unresolved promise.
-        data.loadModulePromiseMap.delete(id);
-        data.loadModulePromiseResolveFnMap.delete(id);
-        throw e;
-      }
-      return promise;
+      this.data.loadModulePromiseMap.set(id, loadPromise);
     }
 
-    // avoid one module load twice at concurrent.
-    await createLoadModulePromise(this.context, this.data);
+    await loadPromise;
     return this.data.getModuleInfo(id, this.context)!;
   }
 

@@ -19,7 +19,7 @@ use rolldown_common::{
 use rolldown_resolver::Resolver;
 use rolldown_utils::dashmap::FxDashSet;
 use sugar_path::SugarPath;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, broadcast};
 
 use crate::{
   __inner::SharedPluginable,
@@ -42,6 +42,7 @@ pub struct PluginDriver {
   pub modules: SharedModuleInfoDashMap,
   /// Transform dependencies per module, tracked during transform hooks
   pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
+  context_load_completion_manager: ContextLoadCompletionManager,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
 }
 
@@ -88,6 +89,7 @@ impl PluginDriver {
         watch_files,
         modules,
         transform_dependencies: Arc::new(DashMap::default()),
+        context_load_completion_manager: ContextLoadCompletionManager::default(),
         tx,
         options: Arc::clone(options),
       }
@@ -98,6 +100,7 @@ impl PluginDriver {
     self.watch_files.clear();
     self.modules.clear();
     self.transform_dependencies.clear();
+    self.context_load_completion_manager.clear();
     self.file_emitter.clear();
   }
 
@@ -113,15 +116,16 @@ impl PluginDriver {
     *tx_guard = tx;
   }
 
-  pub async fn mark_context_load_modules_loaded(
-    &self,
-    module_id: &ModuleId,
-    success: bool,
-  ) -> anyhow::Result<()> {
-    if let Some(mark_module_loaded) = &self.options.mark_module_loaded {
-      mark_module_loaded.call(module_id, success).await?;
-    }
-    Ok(())
+  pub fn mark_context_load_modules_loaded(&self, module_id: ModuleId) {
+    self.context_load_completion_manager.mark_completion(module_id);
+  }
+
+  pub fn invalidate_context_load_module(&self, module_id: &ModuleId) {
+    self.context_load_completion_manager.invalidate(module_id);
+  }
+
+  pub async fn wait_for_module_load_completion(&self, specifier: &str) {
+    self.context_load_completion_manager.wait_for_completion(specifier.into()).await;
   }
 
   pub fn iter_plugin_with_context_by_order<'me>(
@@ -154,5 +158,74 @@ impl Deref for PluginDriver {
   type Target = PluginHookOrders;
   fn deref(&self) -> &Self::Target {
     &self.hook_orders
+  }
+}
+
+#[derive(Default)]
+struct ContextLoadCompletionManager {
+  notifiers: DashMap<ModuleId, ContextLoadCompletionState>,
+}
+
+enum ContextLoadCompletionState {
+  Pending(broadcast::Sender<()>),
+  Completed,
+}
+
+impl ContextLoadCompletionManager {
+  pub async fn wait_for_completion(&self, module_id: ModuleId) {
+    let mut rx = match self.notifiers.entry(module_id) {
+      dashmap::Entry::Vacant(guard) => {
+        let (tx, rx) = broadcast::channel(1);
+        guard.insert(ContextLoadCompletionState::Pending(tx));
+        rx
+      }
+      dashmap::Entry::Occupied(mut guard) => match guard.get_mut() {
+        ContextLoadCompletionState::Pending(sender) => sender.subscribe(),
+        ContextLoadCompletionState::Completed => {
+          /* no need to wait */
+          return;
+        }
+      },
+    };
+
+    if let Err(err) = rx.recv().await {
+      // This happens when `.invalidate` is called before `.mark_completion` is called, which is not expected
+      debug_assert!(
+        false,
+        "The sender was dropped while waiting for module load completion: {err}"
+      );
+      tracing::warn!("The sender was dropped while waiting for module load completion");
+    }
+  }
+
+  pub fn mark_completion(&self, module_id: ModuleId) {
+    match self.notifiers.entry(module_id) {
+      dashmap::Entry::Vacant(guard) => {
+        guard.insert(ContextLoadCompletionState::Completed);
+      }
+      dashmap::Entry::Occupied(mut guard) => match guard.get_mut() {
+        ContextLoadCompletionState::Pending(sender) => {
+          if let Err(err) = sender.send(()) {
+            // This happens if `.mark_completion` is called before `.wait_for_completion` is called, which is not expected
+            debug_assert!(false, "All receivers were dropped when marking completion: {err}");
+            tracing::warn!("All receivers were dropped when marking completion");
+          }
+          *guard.get_mut() = ContextLoadCompletionState::Completed;
+        }
+        ContextLoadCompletionState::Completed => {
+          // This happens if `.mark_completion` is called multiple times, which is not expected
+          debug_assert!(false, "mark_completion was called even though it was already completed");
+          tracing::warn!("mark_completion was called even though it was already completed");
+        }
+      },
+    }
+  }
+
+  pub fn invalidate(&self, module_id: &ModuleId) {
+    self.notifiers.remove(module_id);
+  }
+
+  pub fn clear(&self) {
+    self.notifiers.clear();
   }
 }

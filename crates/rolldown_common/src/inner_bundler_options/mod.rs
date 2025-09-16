@@ -8,7 +8,6 @@ use types::invalidate_js_side_cache::InvalidateJsSideCache;
 use types::legal_comments::LegalComments;
 use types::log_level::LogLevel;
 use types::make_absolute_externals_relative::MakeAbsoluteExternalsRelative;
-use types::mark_module_loaded::MarkModuleLoaded;
 use types::minify_options::RawMinifyOptions;
 use types::on_log::OnLog;
 use types::optimization::OptimizationOption;
@@ -205,12 +204,6 @@ pub struct BundlerOptions {
     schemars(skip)
   )]
   pub invalidate_js_side_cache: Option<InvalidateJsSideCache>,
-  #[cfg_attr(
-    feature = "deserialize_bundler_options",
-    serde(default, skip_deserializing),
-    schemars(skip)
-  )]
-  pub mark_module_loaded: Option<MarkModuleLoaded>,
   pub log_level: Option<LogLevel>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",

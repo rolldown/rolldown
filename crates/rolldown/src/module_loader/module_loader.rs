@@ -332,6 +332,10 @@ impl<'a> ModuleLoader<'a> {
     //
     for resolved_id in fetch_mode.iter() {
       let resolved_id = resolved_id.clone();
+      self
+        .shared_context
+        .plugin_driver
+        .invalidate_context_load_module(&resolved_id.id.clone().into());
       if let Entry::Occupied(mut occ) = self.cache.module_id_to_idx.entry(resolved_id.id.clone()) {
         let idx = occ.get().idx();
         occ.insert(VisitState::Invalidate(idx));

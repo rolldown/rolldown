@@ -189,16 +189,6 @@ pub fn normalize_binding_options(
     }))
   });
 
-  let mark_module_loaded = input_options.mark_module_loaded.map(|ts_fn| {
-    rolldown::MarkModuleLoaded::new(Arc::new(move |module_id, success| {
-      let ts_fn = Arc::clone(&ts_fn);
-      let module_id = module_id.to_string();
-      Box::pin(async move {
-        ts_fn.invoke_async((module_id, success).into()).await.map_err(anyhow::Error::from)
-      })
-    }))
-  });
-
   let on_log = input_options.on_log.map(|ts_fn| {
     rolldown::OnLog::new(Arc::new(move |level, log| {
       let ts_fn = Arc::clone(&ts_fn);
@@ -429,7 +419,6 @@ pub fn normalize_binding_options(
       .map(Into::into),
     debug: input_options.debug.map(|inner| rolldown::DebugOptions { session_id: inner.session_id }),
     invalidate_js_side_cache,
-    mark_module_loaded,
     log_level: Some(input_options.log_level.into()),
     on_log,
     preserve_modules: output_options.preserve_modules,

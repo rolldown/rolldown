@@ -14,7 +14,7 @@ use rolldown_common::{
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
-use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
 
@@ -31,12 +31,12 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     _scope_id: &std::cell::Cell<Option<oxc::semantic::ScopeId>>,
   ) {
     self.scope_stack.push(flags);
-    self.traverse_state.set(TraverseState::TopLevel, self.is_top_level());
+    self.traverse_state.set(TraverseState::TopLevel, is_top_level(&self.scope_stack));
   }
 
   fn leave_scope(&mut self) {
     self.scope_stack.pop();
-    self.traverse_state.set(TraverseState::TopLevel, self.is_top_level());
+    self.traverse_state.set(TraverseState::TopLevel, is_top_level(&self.scope_stack));
   }
 
   fn enter_node(&mut self, kind: oxc::ast::AstKind<'ast>) {
@@ -84,6 +84,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         &self.result.symbol_ref_db.ast_scopes,
         self.flat_options,
         self.options,
+        None,
       )
       .detect_side_effect_of_stmt(stmt);
 

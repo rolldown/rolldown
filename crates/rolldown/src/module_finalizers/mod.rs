@@ -38,7 +38,7 @@ mod rename;
 bitflags! {
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub struct TraverseState: u8 {
-        const IsTopLevel = 1;
+        const TopLevel = 1;
         /// - `if (test) {} else {}`
         /// - test ? a : b
         /// - test1 || test2
@@ -305,7 +305,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     decl: &mut ast::VariableDeclaration<'ast>,
     traverse_state: TraverseState,
   ) -> Option<(Expression<'ast>, Vec<Atom<'ast>>)> {
-    let should_hoist = (decl.kind.is_var() && traverse_state.contains(TraverseState::IsTopLevel))
+    let should_hoist = (decl.kind.is_var() && traverse_state.contains(TraverseState::TopLevel))
       || (decl.kind.is_lexical() && traverse_state.contains(TraverseState::IsRootLevel));
     if !should_hoist {
       return None;

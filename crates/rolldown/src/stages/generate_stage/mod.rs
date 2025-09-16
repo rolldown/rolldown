@@ -133,12 +133,12 @@ impl<'a> GenerateStage<'a> {
         let idx = normal_module.idx;
         normal_module
           .meta
-          .contains(EcmaViewMeta::TopExportedLevelEmptyFunction)
+          .contains(EcmaViewMeta::TopExportedSideEffectsFreeFunction)
           .then(move || {
             let symbol_for_module = symbol_for_module.as_ref()?;
             Some(symbol_for_module.flags.iter().filter_map(move |(symbol_id, flag)| {
               flag
-                .contains(SymbolRefFlags::EmptyFunction)
+                .contains(SymbolRefFlags::SideEffectsFreeFunction)
                 .then_some(SymbolRef::from((idx, *symbol_id)))
             }))
           })

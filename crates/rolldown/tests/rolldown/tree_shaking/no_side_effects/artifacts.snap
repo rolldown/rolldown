@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+console.log("Hello");
+
+```
+## entry2.js
+
+```js
+
+```

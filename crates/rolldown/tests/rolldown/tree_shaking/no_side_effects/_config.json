@@ -1,0 +1,15 @@
+{
+  "config": {
+    "minify": "dceOnly",
+    "input": [
+      {
+        "name": "entry",
+        "import": "./main.js"
+      },
+      {
+        "name": "entry2",
+        "import": "./entry2.js"
+      }
+    ]
+  }
+}

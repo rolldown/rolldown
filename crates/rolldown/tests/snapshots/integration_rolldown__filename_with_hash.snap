@@ -459,7 +459,7 @@ expression: output
 # tests/esbuild/dce/top_level_function_inlining_with_spread
 
 - entry-!~{000}~.js => entry-C3EI3-3o.js
-- entry-outer-!~{001}~.js => entry-outer-DEWOwojd.js
+- entry-outer-!~{001}~.js => entry-outer-Zf6PVNzz.js
 
 # tests/esbuild/dce/tree_shaking_binary_operators
 
@@ -3109,11 +3109,11 @@ expression: output
 
 # tests/esbuild/splitting/splitting_cross_chunk_assignment_dependencies_recursive
 
-- a-!~{000}~.js => a-CmzP2LuN.js
-- b-!~{001}~.js => b-UxECpkMr.js
-- c-!~{002}~.js => c-CmQRqESM.js
-- x-!~{003}~.js => x-BhbOquNH.js
-- z-!~{005}~.js => z-Cm9tS1CI.js
+- a-!~{000}~.js => a-DX3Ku8uZ.js
+- b-!~{001}~.js => b-PrB6LDJC.js
+- c-!~{002}~.js => c-HaBYwsma.js
+- x-!~{003}~.js => x-KEV6KpMQ.js
+- z-!~{005}~.js => z-B2Db3a-x.js
 
 # tests/esbuild/splitting/splitting_duplicate_chunk_collision
 
@@ -5591,7 +5591,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/declaration
 
-- main-!~{000}~.js => main-CZcvVHyD.js
+- main-!~{000}~.js => main-ficVjDHh.js
 
 # tests/rolldown/topics/keep_names/declaration2
 
@@ -5900,6 +5900,11 @@ expression: output
 
 - main-!~{000}~.js => main-BnY28741.js
 - main-BnY28741.js.map
+
+# tests/rolldown/tree_shaking/no_side_effects
+
+- entry-!~{000}~.js => entry-CglVlrGN.js
+- entry2-!~{001}~.js => entry2-BfeMxN5u.js
 
 # tests/rolldown/tree_shaking/property_read_side_effects
 

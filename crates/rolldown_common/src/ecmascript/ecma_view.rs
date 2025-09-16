@@ -27,7 +27,7 @@ bitflags! {
         const ExecutionOrderSensitive = 1 << 5;
         /// If the module has top-level empty function, if any module has top level empty function, we need
         /// to apply cross module optimization.
-        const TopExportedLevelEmptyFunction = 1 << 6;
+        const TopExportedSideEffectsFreeFunction = 1 << 6;
     }
 }
 

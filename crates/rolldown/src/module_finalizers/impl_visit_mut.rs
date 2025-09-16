@@ -31,7 +31,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   ) {
     self.scope_stack.push(flags);
     self.state.set(
-      TraverseState::IsTopLevel,
+      TraverseState::TopLevel,
       self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top()),
     );
     self
@@ -42,7 +42,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   fn leave_scope(&mut self) {
     self.scope_stack.pop();
     self.state.set(
-      TraverseState::IsTopLevel,
+      TraverseState::TopLevel,
       self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top()),
     );
     self
@@ -324,7 +324,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
     // transform top level `var a = 1, b = 1;` to `a = 1, b = 1`
     // for `__esm(() => {})` wrapping VariableDeclaration hoist
-    if self.state.contains(TraverseState::IsTopLevel)
+    if self.state.contains(TraverseState::TopLevel)
       && self.ctx.needs_hosted_top_level_binding
       && let ast::Statement::VariableDeclaration(decl) = it
     {
@@ -609,7 +609,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
   fn visit_for_statement_init(&mut self, it: &mut ast::ForStatementInit<'ast>) {
     walk_mut::walk_for_statement_init(self, it);
-    if self.state.contains(TraverseState::IsTopLevel)
+    if self.state.contains(TraverseState::TopLevel)
       && self.ctx.needs_hosted_top_level_binding
       && let ast::ForStatementInit::VariableDeclaration(decl) = it
     {

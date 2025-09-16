@@ -1,5 +1,6 @@
 mod ast_snippet;
 mod extensions;
+mod scope;
 
 pub use crate::{
   ast_snippet::AstSnippet,
@@ -11,4 +12,5 @@ pub use crate::{
     },
     span_ext::SpanExt,
   },
+  scope::is_top_level,
 };

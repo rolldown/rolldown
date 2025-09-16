@@ -81,8 +81,8 @@ pub struct LinkStage<'a> {
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
-  #[expect(dead_code)]
   pub flat_options: FlatOptions,
+  pub side_effects_free_function_symbol_ref: FxHashSet<SymbolRef>,
 }
 
 impl<'a> LinkStage<'a> {
@@ -163,6 +163,7 @@ impl<'a> LinkStage<'a> {
         .overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: scan_stage_output.entry_point_to_reference_ids,
       flat_options: scan_stage_output.flat_options,
+      side_effects_free_function_symbol_ref: FxHashSet::default(),
     }
   }
 

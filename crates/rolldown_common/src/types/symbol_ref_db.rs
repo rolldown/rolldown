@@ -30,7 +30,7 @@ bitflags::bitflags! {
     const IsConst = 1 << 1;
     const MustStartWithCapitalLetterForJSX = 1 << 2;
     /// If the SymbolRef is pointed to an empty function.
-    const EmptyFunction = 1 << 3;
+    const SideEffectsFreeFunction = 1 << 3;
   }
 }
 

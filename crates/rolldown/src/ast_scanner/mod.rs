@@ -238,30 +238,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
   }
 
-  /// if current visit path is top level
-  /// including such scenario:
-  /// ```js
-  /// class T {
-  ///   [foo]() {}
-  /// }
-  /// class A {
-  ///   static {
-  ///     foo;
-  ///   }
-  /// }
-  ///
-  /// foo;
-  /// {
-  ///   foo;
-  /// }
-  /// ```
-  pub fn is_top_level(&self) -> bool {
-    self.scope_stack.iter().rev().all(|flag| {
-      flag.intersects(ScopeFlags::Top | ScopeFlags::StrictMode | ScopeFlags::ClassStaticBlock)
-        || flag.is_empty()
-    })
-  }
-
   /// including such scenario:
   /// ```js
   /// class T {
@@ -661,6 +637,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.cur_class_decl = previous_class_decl_id;
   }
 
+  #[expect(clippy::too_many_lines)]
   fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration<'ast>) {
     if let Some(source) = &decl.source {
       let record_id = self.add_import_record(
@@ -717,24 +694,29 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                 if let Some(value) = self.extract_constant_value_from_expr(decl.init.as_ref()) {
                   self.add_constant_symbol(symbol_id, ConstExportMeta::new(value, false));
                 }
-                let is_empty_function = decl
+                let is_side_effect_free_function = decl
                   .init
                   .as_ref()
                   .map(|expr| match expr {
-                    Expression::FunctionExpression(func) => func.is_side_effect_free(),
-                    Expression::ArrowFunctionExpression(func) => func.is_side_effect_free(),
+                    Expression::FunctionExpression(func) => func.is_side_effect_free() || func.pure,
+                    Expression::ArrowFunctionExpression(func) => {
+                      func.is_side_effect_free() || func.pure
+                    }
                     _ => false,
                   })
                   .unwrap_or(false);
-                if is_empty_function {
-                  self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedLevelEmptyFunction);
+                if is_side_effect_free_function {
+                  self
+                    .result
+                    .ecma_view_meta
+                    .insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
                   self
                     .result
                     .symbol_ref_db
                     .flags
                     .entry(symbol_id)
                     .or_default()
-                    .insert(SymbolRefFlags::EmptyFunction);
+                    .insert(SymbolRefFlags::SideEffectsFreeFunction);
                 }
               }
             });
@@ -743,15 +725,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             let binding_id = fn_decl.id.as_ref().unwrap();
             let symbol_id = binding_id.expect_symbol_id();
             self.add_local_export(binding_id.name.as_str(), symbol_id, binding_id.span);
-            if fn_decl.is_side_effect_free() {
-              self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedLevelEmptyFunction);
+            if fn_decl.is_side_effect_free() || fn_decl.pure {
+              self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
               self
                 .result
                 .symbol_ref_db
                 .flags
                 .entry(symbol_id)
                 .or_default()
-                .insert(SymbolRefFlags::EmptyFunction);
+                .insert(SymbolRefFlags::SideEffectsFreeFunction);
             }
           }
           ast::Declaration::ClassDeclaration(cls_decl) => {

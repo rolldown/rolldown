@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region inner.js
-function empty1() {}
 function empty2() {}
 function empty3() {}
 function identity1(x) {
@@ -22,7 +21,6 @@ function identity3(x) {
 
 //#endregion
 //#region entry-outer.js
-/* @__PURE__ */ empty1();
 /* @__PURE__ */ empty2(args);
 /* @__PURE__ */ empty3(...args);
 identity1();

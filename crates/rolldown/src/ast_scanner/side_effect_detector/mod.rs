@@ -8,11 +8,13 @@ use oxc::ast::ast::{
   VariableDeclarationKind,
 };
 use oxc::ast::{match_expression, match_member_expression};
+use oxc_allocator::Address;
 use rolldown_common::{AstScopes, SharedNormalizedBundlerOptions, SideEffectDetail};
 use rolldown_utils::global_reference::{
   is_global_ident_ref, is_side_effect_free_member_expr_of_len_three,
   is_side_effect_free_member_expr_of_len_two,
 };
+use rustc_hash::FxHashSet;
 use utils::{
   can_change_strict_to_loose, is_side_effect_free_unbound_identifier_ref,
   maybe_side_effect_free_global_constructor,
@@ -154,16 +156,19 @@ mod utils;
 pub struct SideEffectDetector<'a> {
   pub scope: &'a AstScopes,
   options: &'a SharedNormalizedBundlerOptions,
-  flags: FlatOptions,
+  flat_options: FlatOptions,
+  /// This field is only used for `LinkStage#cross_module_optimization`.
+  side_effect_free_function_symbol_ref: Option<&'a FxHashSet<Address>>,
 }
 
 impl<'a> SideEffectDetector<'a> {
   pub fn new(
     scope: &'a AstScopes,
-    flags: FlatOptions,
+    flat_options: FlatOptions,
     options: &'a SharedNormalizedBundlerOptions,
+    side_effect_free_function_symbol_ref: Option<&'a FxHashSet<Address>>,
   ) -> Self {
-    Self { scope, options, flags }
+    Self { scope, options, flat_options, side_effect_free_function_symbol_ref }
   }
 
   #[inline]
@@ -259,10 +264,10 @@ impl<'a> SideEffectDetector<'a> {
   ) -> SideEffectDetail {
     let mut property_access_side_effects = false;
     if property_access_kind.contains(PropertyAccessFlag::Read) {
-      property_access_side_effects |= self.flags.property_read_side_effects();
+      property_access_side_effects |= self.flat_options.property_read_side_effects();
     }
     if property_access_kind.contains(PropertyAccessFlag::Write) {
-      property_access_side_effects |= self.flags.property_write_side_effects();
+      property_access_side_effects |= self.flat_options.property_write_side_effects();
     }
 
     let mut side_effects_detail = SideEffectDetail::empty();
@@ -292,10 +297,10 @@ impl<'a> SideEffectDetector<'a> {
   ) -> SideEffectDetail {
     let mut property_access_side_effects = false;
     if property_access_kind.contains(PropertyAccessFlag::Read) {
-      property_access_side_effects |= self.flags.property_read_side_effects();
+      property_access_side_effects |= self.flat_options.property_read_side_effects();
     }
     if property_access_kind.contains(PropertyAccessFlag::Write) {
-      property_access_side_effects |= self.flags.property_write_side_effects();
+      property_access_side_effects |= self.flat_options.property_write_side_effects();
     }
 
     let mut side_effects_detail = SideEffectDetail::empty();
@@ -406,14 +411,14 @@ impl<'a> SideEffectDetector<'a> {
               && member_expr.static_property_name().is_some()
             {
               SideEffectDetail::PureCjs
-            } else if self.flags.property_write_side_effects() {
+            } else if self.flat_options.property_write_side_effects() {
               true.into()
             } else {
               self.detect_side_effect_of_member_expr(member_expr, PropertyAccessFlag::Write)
             }
           }
           _ => {
-            if self.flags.property_write_side_effects() {
+            if self.flat_options.property_write_side_effects() {
               true.into()
             } else {
               self.detect_side_effect_of_member_expr(member_expr, PropertyAccessFlag::Write)
@@ -450,7 +455,11 @@ impl<'a> SideEffectDetector<'a> {
     //   return StmtSideEffect::Unknown;
     // }
 
-    let is_pure = !self.flags.ignore_annotations() && expr.pure;
+    let is_pure = !self.flat_options.ignore_annotations()
+      && (expr.pure
+        || self
+          .side_effect_free_function_symbol_ref
+          .is_some_and(|map| map.contains(&Address::from_ptr(expr))));
     if is_pure {
       // Even it is pure, we also wants to know if the callee has access global var
       // But we need to ignore the `Unknown` flag, since it is already marked as `pure`.
@@ -472,7 +481,7 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn is_expr_manual_pure_functions(&self, expr: &'a Expression) -> bool {
-    if self.flags.is_manual_pure_functions_empty() {
+    if self.flat_options.is_manual_pure_functions_empty() {
       return false;
     }
     // `is_manual_pure_functions_empty` is false, so `manual_pure_functions` is `Some`.
@@ -538,7 +547,7 @@ impl<'a> SideEffectDetector<'a> {
             }
             // refer https://github.com/rollup/rollup/blob/f7633942/src/ast/nodes/SpreadElement.ts#L32
             ast::ObjectPropertyKind::SpreadProperty(res) => {
-              if self.flags.property_read_side_effects() {
+              if self.flat_options.property_read_side_effects() {
                 return true.into();
               }
               self.detect_side_effect_of_expr(&res.argument)
@@ -728,7 +737,7 @@ impl<'a> SideEffectDetector<'a> {
         // Handle update expressions like obj.prop++ or obj[prop]++
         match &expr.argument {
           ast::SimpleAssignmentTarget::StaticMemberExpression(static_member_expr) => {
-            if self.flags.property_write_side_effects() {
+            if self.flat_options.property_write_side_effects() {
               true.into()
             } else {
               // If property_write_side_effects is false, we consider property updates
@@ -752,7 +761,7 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::V8IntrinsicExpression(_) => true.into(),
 
       Expression::JSXElement(_) | Expression::JSXFragment(_) => {
-        if self.flags.jsx_preserve() {
+        if self.flat_options.jsx_preserve() {
           return true.into();
         }
         unreachable!("jsx should be transpiled")
@@ -833,7 +842,7 @@ impl<'a> SideEffectDetector<'a> {
               // the built-in side-effect free array iterator.
               BindingPatternKind::ObjectPattern(_) => {
                 // Object destructuring only has side effects when property_read_side_effects is Always
-                if self.flags.property_read_side_effects() {
+                if self.flat_options.property_read_side_effects() {
                   true.into()
                 } else {
                   declarator
@@ -1084,7 +1093,7 @@ mod test {
     let options = Arc::new(NormalizedBundlerOptions::default());
     let flags = FlatOptions::from_shared_options(&options);
     ast.program().body.iter().any(|stmt| {
-      SideEffectDetector::new(&ast_scopes, flags, &options)
+      SideEffectDetector::new(&ast_scopes, flags, &options, None)
         .detect_side_effect_of_stmt(stmt)
         .has_side_effect()
     })
@@ -1104,7 +1113,7 @@ mod test {
       .body
       .iter()
       .map(|stmt| {
-        SideEffectDetector::new(&ast_scopes, flags, &options).detect_side_effect_of_stmt(stmt)
+        SideEffectDetector::new(&ast_scopes, flags, &options, None).detect_side_effect_of_stmt(stmt)
       })
       .collect_vec()
   }

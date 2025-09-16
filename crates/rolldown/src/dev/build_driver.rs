@@ -102,6 +102,7 @@ impl BuildDriver {
         break build_state;
       }
     };
+    println!("build_state: {build_state:#?}");
 
     let bundler = self.bundler.lock().await;
     let cache = build_state.cache.take().expect("Should never be none here");

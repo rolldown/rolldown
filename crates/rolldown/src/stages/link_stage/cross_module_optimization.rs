@@ -29,12 +29,12 @@ use crate::{
 use super::LinkStage;
 
 #[derive(Default)]
-struct CrossModuleInlineConstCtx {
+struct CrossModuleOptimizationCtx {
   changed: bool,
   config: CrossModuleOptimizationConfig,
 }
 
-impl CrossModuleInlineConstCtx {
+impl CrossModuleOptimizationCtx {
   fn new(config: CrossModuleOptimizationConfig) -> Self {
     Self { changed: true, config }
   }
@@ -103,7 +103,7 @@ impl LinkStage<'_> {
     //  - if in one pass there is no new constant export found, we can stop the pass early.
     //  - if all dependencies of a module has no constant export, we don't need to visit ast at all.
     // The extra passes only run when user enable `inline_const` and set `pass` greater than 1.
-    let mut ctx = CrossModuleInlineConstCtx::new(config);
+    let mut ctx = CrossModuleOptimizationCtx::new(config);
     let mut constant_symbol_map = std::mem::take(&mut self.global_constant_symbol_map);
     while ctx.config.pass > 0 && ctx.changed {
       ctx.config.pass -= 1;
@@ -118,7 +118,7 @@ impl LinkStage<'_> {
 
   fn run(
     &mut self,
-    cross_module_inline_const_ctx: &mut CrossModuleInlineConstCtx,
+    cross_module_inline_const_ctx: &mut CrossModuleOptimizationCtx,
     constant_symbol_map: &mut FxHashMap<SymbolRef, ConstExportMeta>,
   ) {
     let mut side_effect_mutation_map: FxHashMap<ModuleIdx, Vec<(StmtInfoIdx, SideEffectDetail)>> =
@@ -146,26 +146,31 @@ impl LinkStage<'_> {
           }),
           constant_map: &constant_map,
         };
-        let mut ctx = Context::new(
-          eval_ctx,
-          module.default_export_ref,
-          module_idx,
-          &cross_module_inline_const_ctx.config,
-          &self.side_effects_free_function_symbol_ref,
-          &ContextOptions {
+        let mut ctx = CrossModuleOptimizationRunnerContext {
+          local_constant_symbol_map: FxHashMap::default(),
+          side_effect_detail_mutations: FxHashMap::default(),
+          scope_stack: vec![],
+          traverse_state: TraverseState::empty(),
+          side_effect_free_call_expr_addr: FxHashSet::default(),
+          immutable_ctx: CrossModuleOptimizationImmutableCtx {
+            eval_ctx: &eval_ctx,
+            export_default_symbol: module.default_export_ref,
+            module_idx,
+            config: &cross_module_inline_const_ctx.config,
+            global_side_effect_free_function_symbols: &self.side_effects_free_function_symbol_ref,
             symbols: &self.symbols,
             flat_options: self.flat_options,
             options: self.options,
             ast_scope: &self.symbols.local_db(module_idx).ast_scopes,
           },
-        );
+        };
         ctx.visit_program(&dep.program);
         ctx.side_effect_detail_mutations.into_iter().for_each(|(stmt_idx, detail)| {
           side_effect_mutation_map.entry(module_idx).or_default().push((stmt_idx, detail));
         });
-        if !ctx.local_symbol_map.is_empty() {
+        if !ctx.local_constant_symbol_map.is_empty() {
           cross_module_inline_const_ctx.changed = true;
-          constant_symbol_map.extend(ctx.local_symbol_map);
+          constant_symbol_map.extend(ctx.local_constant_symbol_map);
         }
       });
     }
@@ -179,59 +184,28 @@ impl LinkStage<'_> {
   }
 }
 
-struct ContextOptions<'a> {
-  symbols: &'a SymbolRefDb,
-  flat_options: FlatOptions,
-  options: &'a SharedNormalizedBundlerOptions,
-  ast_scope: &'a AstScopes,
-}
-
-struct Context<'a, 'ast: 'a> {
-  local_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
-  side_effect_detail_mutations: FxHashMap<StmtInfoIdx, SideEffectDetail>,
-  eval_ctx: ConstEvalCtx<'a, 'ast>,
+struct CrossModuleOptimizationImmutableCtx<'a, 'ast: 'a> {
+  eval_ctx: &'a ConstEvalCtx<'a, 'ast>,
   export_default_symbol: SymbolRef,
   module_idx: ModuleIdx,
   config: &'a CrossModuleOptimizationConfig,
-  scope_stack: Vec<ScopeFlags>,
-  traverse_state: TraverseState,
-  side_effect_free_call_expr_addr: FxHashSet<Address>,
-  global_side_effect_free_function_symbols_: &'a FxHashSet<SymbolRef>,
+  global_side_effect_free_function_symbols: &'a FxHashSet<SymbolRef>,
   symbols: &'a SymbolRefDb,
   flat_options: FlatOptions,
   options: &'a SharedNormalizedBundlerOptions,
   ast_scope: &'a AstScopes,
 }
 
-impl<'a, 'ast: 'a> Context<'a, 'ast> {
-  fn new(
-    eval_ctx: ConstEvalCtx<'a, 'ast>,
-    export_default_symbol: SymbolRef,
-    module_idx: ModuleIdx,
-    config: &'a CrossModuleOptimizationConfig,
-    global_side_effects_free_function_symbol_ref: &'a FxHashSet<SymbolRef>,
-    ctx_options: &ContextOptions<'a>,
-  ) -> Self {
-    Self {
-      local_symbol_map: FxHashMap::default(),
-      eval_ctx,
-      export_default_symbol,
-      module_idx,
-      config,
-      scope_stack: vec![],
-      traverse_state: TraverseState::empty(),
-      side_effect_free_call_expr_addr: FxHashSet::default(),
-      global_side_effect_free_function_symbols_: global_side_effects_free_function_symbol_ref,
-      symbols: ctx_options.symbols,
-      flat_options: ctx_options.flat_options,
-      options: ctx_options.options,
-      ast_scope: ctx_options.ast_scope,
-      side_effect_detail_mutations: FxHashMap::default(),
-    }
-  }
+struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
+  local_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
+  side_effect_detail_mutations: FxHashMap<StmtInfoIdx, SideEffectDetail>,
+  scope_stack: Vec<ScopeFlags>,
+  traverse_state: TraverseState,
+  side_effect_free_call_expr_addr: FxHashSet<Address>,
+  immutable_ctx: CrossModuleOptimizationImmutableCtx<'a, 'ast>,
 }
 
-impl<'a, 'ast: 'a> Visit<'ast> for Context<'a, 'ast> {
+impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast> {
   fn enter_scope(
     &mut self,
     flags: oxc::semantic::ScopeFlags,
@@ -264,9 +238,9 @@ impl<'a, 'ast: 'a> Visit<'ast> for Context<'a, 'ast> {
       if pre_addr_len != self.side_effect_free_call_expr_addr.len() {
         let stmt_info_idx = StmtInfoIdx::new(idx + 1);
         let side_effect_detail = SideEffectDetector::new(
-          self.ast_scope,
-          self.flat_options,
-          self.options,
+          self.immutable_ctx.ast_scope,
+          self.immutable_ctx.flat_options,
+          self.immutable_ctx.options,
           Some(&self.side_effect_free_call_expr_addr),
         )
         .detect_side_effect_of_stmt(stmt);
@@ -286,10 +260,13 @@ impl<'a, 'ast: 'a> Visit<'ast> for Context<'a, 'ast> {
           item
             .reference_id
             .get()
-            .and_then(|ref_id| self.eval_ctx.scope.get_reference(ref_id).symbol_id())
+            .and_then(|ref_id| self.immutable_ctx.eval_ctx.scope.get_reference(ref_id).symbol_id())
             .map(|id| {
-              let symbol_ref = self.symbols.canonical_ref_for((self.module_idx, id).into());
-              self.global_side_effect_free_function_symbols_.contains(&symbol_ref)
+              let symbol_ref = self
+                .immutable_ctx
+                .symbols
+                .canonical_ref_for((self.immutable_ctx.module_idx, id).into());
+              self.immutable_ctx.global_side_effect_free_function_symbols.contains(&symbol_ref)
             })
         })
         .unwrap_or(false);
@@ -303,7 +280,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for Context<'a, 'ast> {
 
   fn visit_export_named_declaration(&mut self, it: &ExportNamedDeclaration<'ast>) {
     if it.source.is_none()
-      && self.config.inline_const_optimization
+      && self.immutable_ctx.config.inline_const_optimization
       && let Some(ref decl) = it.declaration
       && let Declaration::VariableDeclaration(var_decl) = decl
     {
@@ -312,12 +289,13 @@ impl<'a, 'ast: 'a> Visit<'ast> for Context<'a, 'ast> {
           && let Some(value) = declarator
             .init
             .as_ref()
-            .and_then(|expr| try_extract_const_literal(&self.eval_ctx, expr))
+            .and_then(|expr| try_extract_const_literal(self.immutable_ctx.eval_ctx, expr))
         {
-          let symbol_ref: SymbolRef = (self.module_idx, binding.symbol_id()).into();
+          let symbol_ref: SymbolRef = (self.immutable_ctx.module_idx, binding.symbol_id()).into();
 
-          if self.local_symbol_map.get(&symbol_ref).map(|meta| &meta.value) != Some(&value) {
-            self.local_symbol_map.insert(symbol_ref, ConstExportMeta::new(value, false));
+          if self.local_constant_symbol_map.get(&symbol_ref).map(|meta| &meta.value) != Some(&value)
+          {
+            self.local_constant_symbol_map.insert(symbol_ref, ConstExportMeta::new(value, false));
           }
         }
       });
@@ -326,7 +304,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for Context<'a, 'ast> {
   }
 
   fn visit_export_default_declaration(&mut self, it: &ExportDefaultDeclaration<'ast>) {
-    if !self.config.inline_const_optimization {
+    if !self.immutable_ctx.config.inline_const_optimization {
       return;
     }
     let Some(expr) = it.declaration.as_expression() else {
@@ -343,11 +321,12 @@ impl<'a, 'ast: 'a> Visit<'ast> for Context<'a, 'ast> {
       ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
     };
 
-    let symbol_id = local_binding_for_default_export.unwrap_or(self.export_default_symbol.symbol);
-    let symbol_ref: SymbolRef = (self.module_idx, symbol_id).into();
-    if let Some(v) = try_extract_const_literal(&self.eval_ctx, expr) {
-      if self.local_symbol_map.get(&symbol_ref).map(|meta| &meta.value) != Some(&v) {
-        self.local_symbol_map.insert(symbol_ref, ConstExportMeta::new(v, false));
+    let symbol_id =
+      local_binding_for_default_export.unwrap_or(self.immutable_ctx.export_default_symbol.symbol);
+    let symbol_ref: SymbolRef = (self.immutable_ctx.module_idx, symbol_id).into();
+    if let Some(v) = try_extract_const_literal(self.immutable_ctx.eval_ctx, expr) {
+      if self.local_constant_symbol_map.get(&symbol_ref).map(|meta| &meta.value) != Some(&v) {
+        self.local_constant_symbol_map.insert(symbol_ref, ConstExportMeta::new(v, false));
       }
     }
   }

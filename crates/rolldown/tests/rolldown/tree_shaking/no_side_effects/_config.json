@@ -1,6 +1,5 @@
 {
   "config": {
-    "minify": "dceOnly",
     "input": [
       {
         "name": "entry",

@@ -6,8 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+//#region main.js
 console.log("Hello");
 
+//#endregion
 ```
 ## entry2.js
 

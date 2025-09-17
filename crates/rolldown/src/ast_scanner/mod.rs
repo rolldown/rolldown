@@ -776,6 +776,16 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let local_binding_for_default_export = match &decl.declaration {
       oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
+        if fn_decl.is_side_effect_free() || fn_decl.pure {
+          self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
+          self
+            .result
+            .symbol_ref_db
+            .flags
+            .entry(self.result.default_export_ref.symbol)
+            .or_default()
+            .insert(SymbolRefFlags::SideEffectsFreeFunction);
+        }
         fn_decl.id.as_ref().map(|id| {
           let symbol_id = rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id(id);
           self.result.default_export_ref.symbol = symbol_id;

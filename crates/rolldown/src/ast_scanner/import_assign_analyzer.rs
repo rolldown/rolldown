@@ -15,7 +15,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   pub fn check_import_assign(&mut self, ident: &IdentifierReference, symbol_id: SymbolId) {
     let symbol_flag = self.result.symbol_ref_db.scoping().symbol_flags(symbol_id);
     if symbol_flag.contains(SymbolFlags::Import) {
-      let symbol_ref: SymbolRef = (self.idx, symbol_id).into();
+      let symbol_ref: SymbolRef = (self.immutable_ctx.idx, symbol_id).into();
       let is_namespace = self
         .result
         .named_imports
@@ -24,8 +24,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       if is_namespace {
         if let Some((span, name)) = self.get_span_if_namespace_specifier_updated() {
           self.result.errors.push(BuildDiagnostic::assign_to_import(
-            self.id.resource_id().clone(),
-            self.source.clone(),
+            self.immutable_ctx.id.resource_id().clone(),
+            self.immutable_ctx.source.clone(),
             span,
             name.into(),
           ));
@@ -36,8 +36,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         self.result.symbol_ref_db.scoping().get_reference(ident.reference_id()).flags();
       if reference_flag.is_write() {
         self.result.errors.push(BuildDiagnostic::assign_to_import(
-          self.id.resource_id().clone(),
-          self.source.clone(),
+          self.immutable_ctx.id.resource_id().clone(),
+          self.immutable_ctx.source.clone(),
           ident.span,
           ident.name.as_str().into(),
         ));

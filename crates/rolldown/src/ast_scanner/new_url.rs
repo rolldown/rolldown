@@ -33,11 +33,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return;
     };
     let has_leading_ignore_comment = get_leading_comment(
-      self.comments,
+      self.immutable_ctx.comments,
       first_arg_string_literal.span,
       Some(|comment: &Comment| {
-        let original_source = &self.source.as_str()[comment.content_span()];
-        original_source.contains(self.ignore_comment)
+        let original_source = &self.immutable_ctx.source.as_str()[comment.content_span()];
+        original_source.contains(self.immutable_ctx.ignore_comment)
       }),
     )
     .is_some();

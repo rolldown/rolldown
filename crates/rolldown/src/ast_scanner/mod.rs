@@ -122,12 +122,20 @@ bitflags::bitflags! {
     }
 }
 
-pub struct AstScanner<'me, 'ast> {
+pub struct AstScannerImmutableCtx<'me, 'ast> {
   idx: ModuleIdx,
   source: &'me ArcStr,
   module_type: ModuleDefFormat,
   id: &'me ModuleId,
   comments: &'me oxc::allocator::Vec<'me, Comment>,
+  options: &'me SharedOptions,
+  ignore_comment: &'static str,
+  flat_options: FlatOptions,
+  allocator: &'ast oxc::allocator::Allocator,
+}
+
+pub struct AstScanner<'me, 'ast> {
+  immutable_ctx: AstScannerImmutableCtx<'me, 'ast>,
   current_stmt_info: StmtInfo,
   result: ScanResult,
   esm_export_keyword: Option<Span>,
@@ -138,18 +146,13 @@ pub struct AstScanner<'me, 'ast> {
   cur_class_decl: Option<SymbolId>,
   visit_path: Vec<AstKind<'ast>>,
   scope_stack: Vec<ScopeFlags>,
-  options: &'me SharedOptions,
   dynamic_import_usage_info: DynamicImportUsageInfo,
-  ignore_comment: &'static str,
-  // Cached flag fields from options to avoid repeated function calls
-  flat_options: FlatOptions,
   /// "top level" `this` AstNode range in source code
   top_level_this_expr_set: FxHashSet<Span>,
   /// A flag to resolve `this` appear with propertyKey in class
   is_nested_this_inside_class: bool,
   /// Used in commonjs module it self
   self_used_cjs_named_exports: FxHashSet<CompactStr>,
-  allocator: &'ast oxc::allocator::Allocator,
   traverse_state: TraverseState,
 }
 
@@ -211,23 +214,25 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
 
     Self {
-      allocator,
-      idx,
+      immutable_ctx: AstScannerImmutableCtx {
+        allocator,
+        idx,
+        source,
+        module_type,
+        id: file_path,
+        comments,
+        options,
+        ignore_comment: options.experimental.get_ignore_comment(),
+        flat_options,
+      },
       current_stmt_info: StmtInfo::default(),
       result,
       esm_export_keyword: None,
       esm_import_keyword: None,
-      module_type,
       cjs_module_ident: None,
       cjs_exports_ident: None,
-      source,
-      id: file_path,
-      comments,
       cur_class_decl: None,
       visit_path: vec![],
-      ignore_comment: options.experimental.get_ignore_comment(),
-      flat_options,
-      options,
       scope_stack: vec![],
       dynamic_import_usage_info: DynamicImportUsageInfo::default(),
       top_level_this_expr_set: FxHashSet::default(),
@@ -271,8 +276,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       if let Some(start) = self.cjs_module_ident {
         self.result.warnings.push(
           BuildDiagnostic::commonjs_variable_in_esm(
-            self.id.to_string(),
-            self.source.clone(),
+            self.immutable_ctx.id.to_string(),
+            self.immutable_ctx.source.clone(),
             // SAFETY: we checked at the beginning
             self.esm_export_keyword.expect("should have start offset"),
             CjsExportSpan::Module(start),
@@ -283,8 +288,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       if let Some(start) = self.cjs_exports_ident {
         self.result.warnings.push(
           BuildDiagnostic::commonjs_variable_in_esm(
-            self.id.to_string(),
-            self.source.clone(),
+            self.immutable_ctx.id.to_string(),
+            self.immutable_ctx.source.clone(),
             // SAFETY: we checked at the beginning
             self.esm_export_keyword.expect("should have start offset"),
             CjsExportSpan::Exports(start),
@@ -298,7 +303,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       exports_kind = ExportsKind::CommonJs;
     } else {
       // TODO(hyf0): Should add warnings if the module type doesn't satisfy the exports kind.
-      match self.module_type {
+      match self.immutable_ctx.module_type {
         ModuleDefFormat::CJS | ModuleDefFormat::CjsPackageJson | ModuleDefFormat::Cts => {
           exports_kind = ExportsKind::CommonJs;
         }
@@ -346,7 +351,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     }
 
-    if self.options.is_hmr_enabled() && exports_kind.is_commonjs() {
+    if self.immutable_ctx.options.is_hmr_enabled() && exports_kind.is_commonjs() {
       // https://github.com/rolldown/rolldown/issues/4129
       // For cjs module with hmr enabled, bundler will generates code that references `module`.
       self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
@@ -368,7 +373,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         .scoping()
         .get_bindings(self.result.symbol_ref_db.scoping().root_scope_id())
       {
-        let symbol_ref: SymbolRef = (self.idx, *symbol_id).into();
+        let symbol_ref: SymbolRef = (self.immutable_ctx.idx, *symbol_id).into();
         let scope_id = self.result.symbol_ref_db.symbol_scope_id(*symbol_id);
         if !scanned_symbols_in_root_scope.remove(&symbol_ref) {
           return Err(anyhow::format_err!(
@@ -385,11 +390,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   fn declare_normal_symbol_ref(&mut self, id: SymbolId) {
-    self.current_stmt_info.declared_symbols.push(TaggedSymbolRef::Normal((self.idx, id).into()));
+    self
+      .current_stmt_info
+      .declared_symbols
+      .push(TaggedSymbolRef::Normal((self.immutable_ctx.idx, id).into()));
   }
 
   fn declare_link_only_symbol_ref(&mut self, id: SymbolId) {
-    self.current_stmt_info.declared_symbols.push(TaggedSymbolRef::LinkOnly((self.idx, id).into()));
+    self
+      .current_stmt_info
+      .declared_symbols
+      .push(TaggedSymbolRef::LinkOnly((self.immutable_ctx.idx, id).into()));
   }
 
   fn get_root_binding(&self, name: &str) -> Option<SymbolId> {
@@ -445,10 +456,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     span_imported: Span,
   ) {
     self.result.named_imports.insert(
-      (self.idx, local).into(),
+      (self.immutable_ctx.idx, local).into(),
       NamedImport {
         imported: CompactStr::new(imported).into(),
-        imported_as: (self.idx, local).into(),
+        imported_as: (self.immutable_ctx.idx, local).into(),
         span_imported,
         record_id,
       },
@@ -457,10 +468,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   fn add_star_import(&mut self, local: SymbolId, record_id: ImportRecordIdx, span_imported: Span) {
     self.result.named_imports.insert(
-      (self.idx, local).into(),
+      (self.immutable_ctx.idx, local).into(),
       NamedImport {
         imported: Specifier::Star,
-        imported_as: (self.idx, local).into(),
+        imported_as: (self.immutable_ctx.idx, local).into(),
         record_id,
         span_imported,
       },
@@ -468,7 +479,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   fn add_local_export(&mut self, export_name: &str, local: SymbolId, span: Span) {
-    let symbol_ref: SymbolRef = (self.idx, local).into();
+    let symbol_ref: SymbolRef = (self.immutable_ctx.idx, local).into();
 
     let is_const = self.result.symbol_ref_db.scoping().symbol_flags(local).is_const_variable();
 
@@ -486,13 +497,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
     self.result.named_exports.insert(
       export_name.into(),
-      LocalExport { referenced: (self.idx, local).into(), span, came_from_commonjs: false },
+      LocalExport {
+        referenced: (self.immutable_ctx.idx, local).into(),
+        span,
+        came_from_commonjs: false,
+      },
     );
   }
 
   fn add_local_default_export(&mut self, local: SymbolId, span: Span) {
     // The default symbol ref never get reassigned.
-    let symbol_ref: SymbolRef = (self.idx, local).into();
+    let symbol_ref: SymbolRef = (self.immutable_ctx.idx, local).into();
     symbol_ref.flags_mut(&mut self.result.symbol_ref_db).insert(SymbolRefFlags::IsNotReassigned);
 
     self.result.named_exports.insert(
@@ -674,8 +689,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           self.add_local_export(spec.exported.name().as_str(), local_symbol_id, spec.span);
         } else {
           self.result.errors.push(BuildDiagnostic::export_undefined_variable(
-            self.id.to_string(),
-            self.source.clone(),
+            self.immutable_ctx.id.to_string(),
+            self.immutable_ctx.source.clone(),
             spec.local.span(),
             ArcStr::from(spec.local.name().as_str()),
           ));
@@ -887,8 +902,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       let symbol_id = reference.symbol_id()?;
       if self.result.symbol_ref_db.scoping().symbol_flags(symbol_id).is_const_variable() {
         self.result.errors.push(BuildDiagnostic::forbid_const_assign(
-          self.id.to_string(),
-          self.source.clone(),
+          self.immutable_ctx.id.to_string(),
+          self.immutable_ctx.source.clone(),
           self.result.symbol_ref_db.symbol_name(symbol_id).into(),
           self.result.symbol_ref_db.scoping().symbol_span(symbol_id),
           id_ref.span(),
@@ -903,7 +918,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     match self.resolve_symbol_from_reference(ident) {
       Some(symbol_id) => {
         if self.is_root_symbol(symbol_id) {
-          IdentifierReferenceKind::Root((self.idx, symbol_id).into())
+          IdentifierReferenceKind::Root((self.immutable_ctx.idx, symbol_id).into())
         } else {
           IdentifierReferenceKind::Other
         }
@@ -970,7 +985,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   #[inline]
   pub fn create_constant_eval_ctx(&'me self) -> ConstEvalCtx<'me, 'ast> {
     ConstEvalCtx {
-      ast: oxc::ast::AstBuilder::new(self.allocator),
+      ast: oxc::ast::AstBuilder::new(self.immutable_ctx.allocator),
       scope: self.result.symbol_ref_db.scoping(),
       constant_map: &self.result.constant_export_map,
       overrode_get_constant_value_from_reference_id: None,
@@ -981,7 +996,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &self,
     expr: Option<&Expression<'ast>>,
   ) -> Option<ConstantValue> {
-    if !self.options.optimization.is_inline_const_enabled() {
+    if !self.immutable_ctx.options.optimization.is_inline_const_enabled() {
       return None;
     }
     expr.and_then(|expr| try_extract_const_literal(&self.create_constant_eval_ctx(), expr))

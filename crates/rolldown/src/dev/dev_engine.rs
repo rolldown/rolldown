@@ -1,4 +1,4 @@
-use std::{ops::Deref, sync::Arc};
+use std::{collections::VecDeque, ops::Deref, sync::Arc};
 
 use arcstr::ArcStr;
 use futures::{FutureExt, future::Shared};
@@ -7,14 +7,15 @@ use rolldown_error::BuildResult;
 use rolldown_utils::dashmap::FxDashSet;
 use rolldown_watcher::{DynWatcher, Watcher, WatcherConfig, WatcherExt};
 use sugar_path::SugarPath;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, mpsc::unbounded_channel};
 
 use crate::{
   Bundler, BundlerBuilder,
   dev::{
     build_driver::{BuildDriver, SharedBuildDriver},
-    build_driver_service::BuildDriverService,
+    build_driver_service::{BuildDriverService, BuildMessage},
     build_state_machine::BuildStateMachine,
+    building_task::TaskInput,
     dev_context::{DevContext, PinBoxSendStaticFuture, SharedDevContext},
     dev_options::{DevOptions, normalize_dev_options},
   },
@@ -41,13 +42,20 @@ impl DevEngine {
   pub fn with_bundler(bundler: Arc<Mutex<Bundler>>, options: DevOptions) -> BuildResult<Self> {
     let normalized_options = normalize_dev_options(options);
 
+    let (build_channel_tx, build_channel_rx) = unbounded_channel::<BuildMessage>();
+
     let ctx = Arc::new(DevContext {
-      state: Mutex::new(BuildStateMachine::new()),
+      state: Mutex::new(BuildStateMachine {
+        queued_tasks: VecDeque::from([TaskInput::new_initial_build_task()]),
+        ..BuildStateMachine::new()
+      }),
       options: normalized_options,
+      build_channel_tx,
     });
     let build_driver = Arc::new(BuildDriver::new(bundler, Arc::clone(&ctx)));
 
-    let build_driver_service = BuildDriverService::new(Arc::clone(&build_driver), Arc::clone(&ctx));
+    let build_driver_service =
+      BuildDriverService::new(Arc::clone(&build_driver), Arc::clone(&ctx), build_channel_rx);
     let watcher_config = WatcherConfig {
       poll_interval: ctx.options.poll_interval,
       debounce_delay: ctx.options.debounce_duration,
@@ -115,23 +123,23 @@ impl DevEngine {
   }
 
   pub async fn run(&self) -> BuildResult<()> {
-    let mut watch_service_state = self.watch_service_state.lock().await;
+    let mut build_service_state = self.watch_service_state.lock().await;
 
-    if watch_service_state.service.is_none() {
+    if build_service_state.service.is_none() {
       // The watcher service is already running.
       return Ok(());
     }
 
     self.build_driver.ensure_latest_build().await.expect("FIXME: Should not fail");
 
-    if let Some(watcher_service) = watch_service_state.service.take() {
+    if let Some(watcher_service) = build_service_state.service.take() {
       let join_handle = tokio::spawn(watcher_service.run());
       let watcher_service_handle = Box::pin(async move {
         join_handle.await.unwrap();
       }) as PinBoxSendStaticFuture;
-      watch_service_state.handle = Some(watcher_service_handle.shared());
+      build_service_state.handle = Some(watcher_service_handle.shared());
     }
-    drop(watch_service_state);
+    drop(build_service_state);
 
     let bundler = self.build_driver.bundler.lock().await;
     // hyf0 TODO: `get_watch_files` is not a proper API to tell which files should be watched.

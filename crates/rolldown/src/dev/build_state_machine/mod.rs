@@ -1,28 +1,25 @@
 pub mod build_state;
+use std::collections::VecDeque;
+
 use build_state::{BuildBuildingState, BuildDelayingState, BuildState};
 use rolldown_error::BuildResult;
 
-use crate::{dev::dev_context::BuildProcessFuture, types::scan_stage_cache::ScanStageCache};
-use indexmap::IndexSet;
-use std::path::PathBuf;
+use crate::{
+  dev::{building_task::TaskInput, dev_context::BuildProcessFuture},
+  types::scan_stage_cache::ScanStageCache,
+};
 use tracing;
 
 #[derive(Debug)]
 pub struct BuildStateMachine<State = BuildState> {
-  pub changed_files: IndexSet<PathBuf>,
-  pub require_full_rebuild: bool,
+  pub queued_tasks: VecDeque<TaskInput>,
   pub cache: Option<ScanStageCache>,
   pub state: State,
 }
 
 impl BuildStateMachine<BuildState> {
   pub fn new() -> Self {
-    Self {
-      changed_files: IndexSet::new(),
-      require_full_rebuild: true,
-      state: BuildState::Idle,
-      cache: None,
-    }
+    Self { queued_tasks: VecDeque::new(), state: BuildState::Idle, cache: None }
   }
 
   pub fn is_busy(&self) -> bool {
@@ -47,7 +44,6 @@ impl BuildStateMachine<BuildState> {
 
   pub fn try_to_delaying(&mut self, future: BuildProcessFuture) -> BuildResult<()> {
     tracing::trace!("Attempting to transition to Delaying state");
-    self.require_full_rebuild = false;
     match &self.state {
       BuildState::Idle => {
         tracing::info!("State transition: Idle -> Delaying");

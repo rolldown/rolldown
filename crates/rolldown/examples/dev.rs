@@ -19,9 +19,9 @@ async fn main() {
   let dev_engine = DevEngine::new(
     bundler_builder,
     DevOptions {
-      eager_rebuild: Some(false),
-      on_hmr_updates: Some(Arc::new(|updates, _changed_files| {
-        println!("HMR updates: {updates:#?}");
+      eager_rebuild: Some(true),
+      on_hmr_updates: Some(Arc::new(|updates, changed_files| {
+        println!("HMR updates: {updates:#?} due to {changed_files:#?}");
       })),
       ..Default::default()
     },

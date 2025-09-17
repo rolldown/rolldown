@@ -1,5 +1,4 @@
 use std::{
-  mem,
   path::PathBuf,
   sync::{Arc, atomic::AtomicU32},
 };
@@ -8,12 +7,13 @@ use futures::FutureExt;
 
 use rolldown_common::HmrUpdate;
 use rolldown_error::BuildResult;
+use rolldown_utils::indexmap::FxIndexSet;
 use tokio::sync::Mutex;
 
 use crate::{
   Bundler,
   dev::{
-    bundling_task::BundlingTask,
+    building_task::{BundlingTask, TaskInput},
     dev_context::{BuildProcessFuture, PinBoxSendStaticFuture, SharedDevContext},
   },
 };
@@ -31,10 +31,15 @@ impl BuildDriver {
     Self { bundler, ctx, next_hmr_patch_id: Arc::new(AtomicU32::new(0)) }
   }
 
-  pub async fn register_changed_files(&self, paths: Vec<PathBuf>) {
-    tracing::trace!("Register changed files: {:?}", paths);
+  pub async fn handle_file_changes(&self, changed_files: FxIndexSet<PathBuf>) {
+    let task_input = TaskInput {
+      changed_files,
+      require_full_rebuild: false,
+      generate_hmr_updates: true,
+      rebuild: self.ctx.options.eager_rebuild,
+    };
     let mut build_state = self.ctx.state.lock().await;
-    build_state.changed_files.extend(paths);
+    build_state.queued_tasks.push_back(task_input);
   }
 
   /// Schedule a build to consume pending changed files.
@@ -42,33 +47,31 @@ impl BuildDriver {
     &self,
   ) -> BuildResult<Option<(BuildProcessFuture, /* already scheduled */ bool)>> {
     tracing::trace!("Start scheduling a build to consume pending changed files");
+
     let mut build_state = self.ctx.state.lock().await;
-    tracing::trace!("Start scheduling a build to consume pending changed files2");
     if let Some(building_future) = build_state.is_busy_then_future().cloned() {
       tracing::trace!("A build is running, return the future immediately");
+
       drop(build_state);
       // If there's build running, it will be responsible to handle new changed files.
       // So, we only need to wait for the latest build to finish.
       Ok(Some((building_future, true)))
-    } else if build_state.require_full_rebuild || !build_state.changed_files.is_empty() {
+    } else if let Some(task_input) = build_state.queued_tasks.pop_front() {
       tracing::trace!(
-        "Schedule a build to consume pending changed files due to {:?} or {:?}",
-        build_state.require_full_rebuild,
-        build_state.changed_files
+        "Schedule a build to consume pending changed files due to task{task_input:#?}",
       );
-      // Note: Full rebuild and incremental build both clear changed files.
-      let changed_files = mem::take(&mut build_state.changed_files);
+
+      // TODO: hyf0 merge mergeable task inputs into one
 
       let bundling_task = BundlingTask {
+        input: task_input,
         bundler: Arc::clone(&self.bundler),
-        changed_files,
-        require_full_rebuild: build_state.require_full_rebuild,
-        dev_data: Arc::clone(&self.ctx),
-        ensure_latest_build: true,
-        cache: build_state.cache.take(),
+        dev_context: Arc::clone(&self.ctx),
+        bundler_cache: build_state.cache.take(),
+        next_hmr_patch_id: Arc::clone(&self.next_hmr_patch_id),
       };
 
-      let bundling_future = (Box::pin(bundling_task.exec()) as PinBoxSendStaticFuture).shared();
+      let bundling_future = (Box::pin(bundling_task.run()) as PinBoxSendStaticFuture).shared();
       tokio::spawn(bundling_future.clone());
 
       build_state.try_to_delaying(bundling_future.clone())?;
@@ -76,11 +79,7 @@ impl BuildDriver {
 
       Ok(Some((bundling_future, false)))
     } else {
-      tracing::trace!(
-        "Nothing to do due to {:?} or {:?}",
-        build_state.require_full_rebuild,
-        build_state.changed_files
-      );
+      tracing::trace!("Nothing to do due to no task in queue",);
       Ok(None)
     }
   }
@@ -89,29 +88,6 @@ impl BuildDriver {
     if let Some((future, _)) = self.schedule_build_if_stale().await? {
       future.await;
     }
-    Ok(())
-  }
-
-  pub async fn generate_hmr_updates(&self, changed_files: Vec<String>) -> BuildResult<()> {
-    let mut build_state = loop {
-      let build_state = self.ctx.state.lock().await;
-      if let Some(building_future) = build_state.is_busy_then_future().cloned() {
-        drop(build_state);
-        building_future.await;
-      } else {
-        break build_state;
-      }
-    };
-
-    let bundler = self.bundler.lock().await;
-    let cache = build_state.cache.take().expect("Should never be none here");
-    let mut hmr_manager = bundler.create_hmr_manager(cache, Arc::clone(&self.next_hmr_patch_id));
-    let updates = hmr_manager.compute_hmr_update_for_file_changes(&changed_files).await?;
-    build_state.cache = Some(hmr_manager.input.cache);
-    if let Some(on_hmr_updates) = self.ctx.options.on_hmr_updates.as_ref() {
-      on_hmr_updates(updates, changed_files);
-    }
-
     Ok(())
   }
 

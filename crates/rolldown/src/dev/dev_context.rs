@@ -3,7 +3,10 @@ use std::{future::Future, pin::Pin, sync::Arc};
 use futures::future::Shared;
 use tokio::sync::Mutex;
 
-use crate::dev::{NormalizedDevOptions, build_state_machine::BuildStateMachine};
+use crate::dev::{
+  NormalizedDevOptions, build_driver_service::BuildChannelTx,
+  build_state_machine::BuildStateMachine,
+};
 
 pub type SharedDevContext = Arc<DevContext>;
 
@@ -13,6 +16,7 @@ pub type BuildProcessFuture = Shared<PinBoxSendStaticFuture<()>>;
 pub struct DevContext {
   pub state: Mutex<BuildStateMachine>,
   pub options: NormalizedDevOptions,
+  pub build_channel_tx: BuildChannelTx,
 }
 
 impl DevContext {

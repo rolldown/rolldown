@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+let result = 0;
+function classLike() {}
+Object.defineProperty(classLike.prototype, "sideEffect", { get() {
+	result++;
+	return 0;
+} });
+function main_default() {
+	new classLike();
+	assert.equal(result, 1);
+}
+export { main_default as default };
+
+```

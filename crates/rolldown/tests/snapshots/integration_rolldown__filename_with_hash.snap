@@ -5049,6 +5049,10 @@ expression: output
 - main-!~{000}~.js => main-BbnV7Uu1.js
 - b-!~{001}~.js => b-BTVziTgp.js
 
+# tests/rolldown/optimization/inline_empty_function_call/class_like
+
+- main-!~{000}~.js => main-CyCzjYr_.js
+
 # tests/rolldown/optimization/pife_for_module_wrappers/basic
 
 - a-!~{000}~.js => a-CcaBLJp5.js
@@ -5903,8 +5907,9 @@ expression: output
 
 # tests/rolldown/tree_shaking/no_side_effects
 
-- entry-!~{000}~.js => entry-CglVlrGN.js
-- entry2-!~{001}~.js => entry2-BfeMxN5u.js
+- entry-!~{000}~.js => entry-DKLXbdZt.js
+- entry2-!~{001}~.js => entry2-n-AAi8Vc.js
+- classLike-!~{002}~.js => classLike-ByuPzZA8.js
 
 # tests/rolldown/tree_shaking/property_read_side_effects
 

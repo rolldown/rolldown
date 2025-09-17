@@ -3,9 +3,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
+## classLike.js
+
+```js
+//#region classLike.js
+/* @__NO_SIDE_EFFECTS__ */
+function classLike() {}
+Object.defineProperty(classLike.prototype, "sideEffect", { get() {
+	console.log("this side effect may not need to be preserved? See https://github.com/javascript-compiler-hints/compiler-notations-spec/issues/8");
+	return 0;
+} });
+
+//#endregion
+export { classLike };
+```
 ## entry.js
 
 ```js
+import "./classLike.js";
+
 //#region main.js
 console.log("Hello");
 
@@ -14,5 +30,10 @@ console.log("Hello");
 ## entry2.js
 
 ```js
+import { classLike } from "./classLike.js";
 
+//#region entry2.js
+new classLike();
+
+//#endregion
 ```

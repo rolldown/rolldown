@@ -35,4 +35,4 @@ jobs:
           tools: just,cargo-insta,typos-cli,cargo-shear,dprint
           components: clippy rust-docs rustfmt
 
-      - uses: oxc-project/setup-node@beeabdfbd12652a18a61ff476a59b62518bc1c7b # v1.0.3
+      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4

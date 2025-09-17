@@ -132,12 +132,6 @@ bitflags! {
 
 #[derive(Default, Debug, Clone)]
 pub struct StmtInfo {
-  /// The index of this statement in the module body.
-  ///
-  /// We will create some facade statements while bundling, and the facade statements
-  /// don't have a corresponding statement in the original module body, which means
-  /// `stmt_idx` will be `None`.
-  pub stmt_idx: Option<StmtInfoIdx>,
   // currently, we only store top level symbols
   pub declared_symbols: Vec<TaggedSymbolRef>,
   // We will add symbols of other modules to `referenced_symbols`, so we need `SymbolRef`
@@ -157,7 +151,7 @@ pub struct StmtInfo {
 #[cfg(target_pointer_width = "64")]
 const _: () = {
   #[cfg(not(debug_assertions))]
-  assert!(size_of::<StmtInfo>() == 88usize);
+  assert!(size_of::<StmtInfo>() == 80usize);
 };
 
 impl StmtInfo {
@@ -168,12 +162,6 @@ impl StmtInfo {
       #[cfg(debug_assertions)]
       source: self.debug_label.clone().unwrap_or_else(|| "<Noop>".into()),
     }
-  }
-
-  #[must_use]
-  pub fn with_stmt_idx(mut self, stmt_idx: usize) -> Self {
-    self.stmt_idx = Some(stmt_idx.into());
-    self
   }
 
   #[must_use]

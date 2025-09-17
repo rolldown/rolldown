@@ -69,7 +69,6 @@ impl LinkStage<'_> {
         // tree-shaking process.
         linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
           let stmt_info = StmtInfo {
-            stmt_idx: None,
             declared_symbols: vec![TaggedSymbolRef::Normal(*symbol_ref)],
             referenced_symbols: vec![],
             side_effect: false.into(),
@@ -120,7 +119,6 @@ impl LinkStage<'_> {
           // Corresponding AST for this statement will be created by the finalizer.
           declared_symbols.push(TaggedSymbolRef::Normal(ecma_module.namespace_object_ref));
           let namespace_stmt_info = StmtInfo {
-            stmt_idx: None,
             declared_symbols,
             referenced_symbols,
             side_effect: false.into(),

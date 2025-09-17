@@ -1041,7 +1041,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
     old_body.into_iter().enumerate().zip(self.ctx.module.stmt_infos.iter().skip(1)).for_each(
       |((_top_stmt_idx, mut top_stmt), stmt_info)| {
-        debug_assert!(matches!(stmt_info.stmt_idx, Some(_top_stmt_idx)));
         if !stmt_info.is_included {
           return;
         }

@@ -220,7 +220,6 @@ pub fn create_wrapper(
         .create_facade_root_symbol_ref(module.idx, &format!("require_{}", &module.repr_name));
 
       let stmt_info = StmtInfo {
-        stmt_idx: None,
         declared_symbols: vec![TaggedSymbolRef::Normal(wrapper_ref)],
         referenced_symbols: vec![if options.profiler_names {
           runtime.resolve_symbol("__commonJS").into()
@@ -253,7 +252,6 @@ pub fn create_wrapper(
         symbols.create_facade_root_symbol_ref(module.idx, &format!("init_{}", &module.repr_name));
 
       let stmt_info = StmtInfo {
-        stmt_idx: None,
         declared_symbols: vec![TaggedSymbolRef::Normal(wrapper_ref)],
         referenced_symbols: vec![if options.profiler_names {
           runtime.resolve_symbol("__esm").into()

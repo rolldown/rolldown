@@ -79,7 +79,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     );
     // Custom visit
     for (idx, stmt) in program.body.iter().enumerate() {
-      self.current_stmt_info.stmt_idx = Some(idx.into());
+      self.current_stmt_idx = Some(idx.into());
       self.current_stmt_info.side_effect = SideEffectDetector::new(
         &self.result.symbol_ref_db.ast_scopes,
         self.immutable_ctx.flat_options,
@@ -493,10 +493,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
         if self.traverse_state.contains(TraverseState::RootSymbolReferenceStmtInfoId) {
           // Since `0` is always namespace object stmt info
-          self.result.stmt_infos.reference_stmt_for_symbol_id(
-            self.current_stmt_info.stmt_idx.unwrap() + 1,
-            root_symbol_id,
-          );
+          self
+            .result
+            .stmt_infos
+            .reference_stmt_for_symbol_id(self.current_stmt_idx.unwrap() + 1, root_symbol_id);
         }
 
         self.check_import_assign(ident_ref, root_symbol_id.symbol);

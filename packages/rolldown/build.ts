@@ -141,7 +141,7 @@ function withShared(
     ...options,
     plugins: [
       buildMeta.desireWasmFiles &&
-      resolveWasiBinding(buildMeta.target === 'browser-pkg'),
+      resolveWasiBinding(isBrowserBuild),
       isBrowserBuild && removeBuiltModules(),
       options.plugins,
     ],

@@ -192,31 +192,39 @@ function main() {
   });
 }
 
-function waitForPathExists(path: string, timeout = 6 * 1000) {
+async function waitForPathExists(path: string, timeout = 6 * 1000) {
   console.log(`🔄 - Waiting for path ${path} to exist...`);
+  try {
+    await waitFor(() => {
+      nodeFs.accessSync(path);
+    }, timeout);
+    console.log(`✅ - Path ${path} exists`);
+  } catch (err) {
+    const parentDir = nodePath.dirname(path);
+    let listedFiles: string[] | null = null;
+    if (nodeFs.existsSync(parentDir)) {
+      listedFiles = nodeFs.readdirSync(parentDir);
+    }
+    throw new Error(
+      `Path ${path} does not exist after ${timeout}ms. Parent directory contents: ${
+        listedFiles?.join(', ')
+      }`,
+      { cause: err },
+    );
+  }
+}
+
+function waitFor(cb: () => void, timeout = 6 * 1000) {
   const startTime = Date.now();
   const isTimeout = () => Date.now() - startTime > timeout;
   return new Promise<void>((resolve, reject) => {
     function check() {
       try {
-        nodeFs.accessSync(path);
-        console.log(`✅ - Path ${path} exists`);
+        cb();
         resolve();
       } catch (err) {
         if (isTimeout()) {
-          const parentDir = nodePath.dirname(path);
-          let listedFiles: string[] | null = null;
-          if (nodeFs.existsSync(parentDir)) {
-            listedFiles = nodeFs.readdirSync(parentDir);
-          }
-          reject(
-            new Error(
-              `Path ${path} does not exist after ${timeout}ms. Parent directory contents: ${
-                listedFiles?.join(', ')
-              }`,
-              { cause: err },
-            ),
-          );
+          reject(err);
         } else {
           setTimeout(check, 100);
         }

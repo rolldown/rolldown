@@ -32,8 +32,9 @@ use rolldown_common::{
   ConstExportMeta, ConstantValue, EcmaModuleAstUsage, EcmaViewMeta, ExportsKind, FlatOptions,
   HmrInfo, ImportAttribute, ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport,
   MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
-  SideEffectDetail, Specifier, StmtInfo, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule,
-  SymbolRefFlags, TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
+  SideEffectDetail, Specifier, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef,
+  SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef, ThisExprReplaceKind,
+  generate_replace_this_expr_map,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt, FunctionExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -137,6 +138,7 @@ pub struct AstScannerImmutableCtx<'me, 'ast> {
 pub struct AstScanner<'me, 'ast> {
   immutable_ctx: AstScannerImmutableCtx<'me, 'ast>,
   current_stmt_info: StmtInfo,
+  current_stmt_idx: Option<StmtInfoIdx>,
   result: ScanResult,
   esm_export_keyword: Option<Span>,
   esm_import_keyword: Option<Span>,
@@ -226,6 +228,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         flat_options,
       },
       current_stmt_info: StmtInfo::default(),
+      current_stmt_idx: None,
       result,
       esm_export_keyword: None,
       esm_import_keyword: None,
@@ -421,7 +424,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let namespace_ref: SymbolRef =
       self.result.symbol_ref_db.create_facade_root_symbol_ref(&concat_string!(
         "#LOCAL_NAMESPACE_IN_",
-        itoa::Buffer::new().format(self.current_stmt_info.stmt_idx.unwrap_or_default().raw()),
+        itoa::Buffer::new().format(self.current_stmt_idx.unwrap_or_default().raw()),
         "#"
       ));
     let mut rec = RawImportRecord::new(
@@ -432,7 +435,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       None,
       // The first index stmt is reserved for the facade statement that constructs Module Namespace
       // Object
-      self.current_stmt_info.stmt_idx.map(|idx| idx + 1),
+      self.current_stmt_idx.map(|idx| idx + 1),
     )
     .with_meta(init_meta);
 

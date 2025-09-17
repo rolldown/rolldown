@@ -231,14 +231,13 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   let stmt_info = module.stmt_infos.drain(1.into()..);
   let mut all_declared_symbols =
     stmt_info.flat_map(|info| info.referenced_symbols).collect::<Vec<_>>();
-  for (i, (local, (exported, _))) in declaration_binding_names.iter().enumerate() {
+  for (local, (exported, _)) in &declaration_binding_names {
     let symbol_id =
       symbol_ref_db.scoping().get_root_binding(local.as_str()).expect("should have binding");
     let symbol_ref: SymbolRef = (module_idx, symbol_id).into();
     all_declared_symbols.push(SymbolOrMemberExprRef::from(symbol_ref));
-    let stmt_info = StmtInfo::default()
-      .with_stmt_idx(i)
-      .with_declared_symbols(vec![TaggedSymbolRef::Normal(symbol_ref)]);
+    let stmt_info =
+      StmtInfo::default().with_declared_symbols(vec![TaggedSymbolRef::Normal(symbol_ref)]);
     module.stmt_infos.add_stmt_info(stmt_info);
     module.named_exports.insert(
       exported.clone(),
@@ -247,7 +246,6 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   }
   // declare default export statement
   let stmt_info = StmtInfo::default()
-    .with_stmt_idx(declaration_binding_names.len())
     .with_declared_symbols(vec![TaggedSymbolRef::Normal(default_export_ref)])
     .with_referenced_symbols(all_declared_symbols.clone());
 

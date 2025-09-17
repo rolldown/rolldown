@@ -148,6 +148,7 @@ class DevServer {
           if (this.#devOptions?.platform === 'browser') {
             // TODO: send reload message to client
           }
+          this.#devEngine?.ensureLatestBuild();
           break;
         case 'Noop':
           break;

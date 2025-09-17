@@ -104,22 +104,10 @@ function main() {
 
         await waitForPathExists(nodeScriptPath);
 
-        const initOkFilePath = nodePath.join(tmpProjectPath, 'ok-init');
-
-        const injectCode = encodeURIComponent(`
-            import __nodeFs__ from 'node:fs';
-            __nodeFs__.writeFileSync('ok-init', '');
-          `.trim());
-
-        console.log(`🔄 Starting Node.js process: ${nodeScriptPath}`);
-        const runningArtifactProcess = execa(
-          'node',
-          ['--import', `data:text/javascript,${injectCode}`, nodeScriptPath],
-          { cwd: tmpProjectPath, stdio: 'inherit' },
+        let runningArtifactProcess = await runArtifactProcess(
+          nodeScriptPath,
+          tmpProjectPath,
         );
-
-        // Wait for the Node.js process to start
-        await waitForPathExists(initOkFilePath);
 
         const hmrEditFiles = await collectHmrEditFiles(tmpProjectPath);
 
@@ -142,35 +130,44 @@ function main() {
             );
           }
 
-          for (const hmrEdit of hmrEdits) {
-            const newContent = nodeFs.readFileSync(
-              hmrEdit.replacementPath,
-              'utf-8',
-            );
-            console.log(`🔄 Writing content to: ${hmrEdit.targetPath}`);
-            nodeFs.writeFileSync(hmrEdit.targetPath, newContent);
+          const hmrEditsWithContent = hmrEdits.map((e) => ({
+            ...e,
+            content: nodeFs.readFileSync(e.replacementPath, 'utf-8'),
+          }));
+          const needRestart = hmrEditsWithContent.some(e =>
+            /^\s*\/\/\s*@restart/.test(e.content)
+          );
+          let currentArtifactContent!: Buffer;
+          if (needRestart) {
+            currentArtifactContent = nodeFs.readFileSync(nodeScriptPath);
           }
+
+          for (const hmrEdit of hmrEditsWithContent) {
+            console.log(`🔄 Writing content to: ${hmrEdit.targetPath}`);
+            nodeFs.writeFileSync(hmrEdit.targetPath, hmrEdit.content);
+          }
+
           console.log(
             `⏳ Waiting for HMR to be triggered for step ${step}`,
           );
+
+          if (needRestart) {
+            await runningArtifactProcess.close();
+            await waitForFileToBeModified(
+              nodeScriptPath,
+              currentArtifactContent,
+            );
+            runningArtifactProcess = await runArtifactProcess(
+              nodeScriptPath,
+              tmpProjectPath,
+            );
+          }
           await waitForPathExists(
             nodePath.join(tmpProjectPath, `ok-${index}`),
             10 * 1000,
           );
           console.log(`✅ HMR triggered for step ${step}`);
         }
-
-        const catchRunningArtifactProcess = runningArtifactProcess.catch(
-          err => {
-            if (err instanceof ExecaError && err.signal === 'SIGTERM') {
-              console.log(
-                'Process killed normally with SIGTERM, ignoring error.',
-              );
-            } else {
-              throw err;
-            }
-          },
-        );
 
         const catchDevServeProcess = devServeProcess.catch(err => {
           if (err instanceof ExecaError && err.signal === 'SIGTERM') {
@@ -182,14 +179,58 @@ function main() {
           }
         });
 
-        runningArtifactProcess.kill('SIGTERM');
-        await catchRunningArtifactProcess;
+        await runningArtifactProcess.close();
 
         devServeProcess.kill('SIGTERM');
         await catchDevServeProcess;
       });
     }
   });
+}
+
+let id = 0;
+
+async function runArtifactProcess(
+  artifactPath: string,
+  tmpProjectPath: string,
+) {
+  const thisId = id;
+  id++;
+
+  const initOkFilePath = nodePath.join(tmpProjectPath, `ok-init-${thisId}`);
+  const injectCode = encodeURIComponent(`
+    import __nodeFs__ from 'node:fs';
+    __nodeFs__.writeFileSync('ok-init-${thisId}', '');
+  `.trim());
+
+  console.log(`🔄 Starting Node.js process: ${artifactPath}`);
+  const artifactProcess = execa(
+    'node',
+    ['--import', `data:text/javascript,${injectCode}`, artifactPath],
+    { cwd: tmpProjectPath, stdio: 'inherit' },
+  );
+
+  // Wait for the Node.js process to start
+  await waitForPathExists(initOkFilePath);
+
+  return {
+    process: artifactProcess,
+    async close() {
+      const catchRunningArtifactProcess = artifactProcess.catch(
+        err => {
+          if (err instanceof ExecaError && err.signal === 'SIGTERM') {
+            console.log(
+              'Process killed normally with SIGTERM, ignoring error.',
+            );
+          } else {
+            throw err;
+          }
+        },
+      );
+      artifactProcess.kill('SIGTERM');
+      await catchRunningArtifactProcess;
+    },
+  };
 }
 
 async function waitForPathExists(path: string, timeout = 6 * 1000) {
@@ -212,6 +253,21 @@ async function waitForPathExists(path: string, timeout = 6 * 1000) {
       { cause: err },
     );
   }
+}
+
+async function waitForFileToBeModified(
+  path: string,
+  previousContent: Buffer,
+  timeout = 6 * 1000,
+) {
+  console.log(`🔄 - Waiting for path ${path} to be modified...`);
+  await waitFor(() => {
+    const newContent = nodeFs.readFileSync(path);
+    if (newContent.equals(previousContent)) {
+      throw new Error('File not modified yet');
+    }
+  }, timeout);
+  console.log(`✅ - Path ${path} has been modified`);
 }
 
 function waitFor(cb: () => void, timeout = 6 * 1000) {

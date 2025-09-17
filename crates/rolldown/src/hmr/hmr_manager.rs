@@ -139,7 +139,8 @@ impl HmrManager {
     //
     // We can safely batch these importers into one update, because we know no file edits have occurred and the HMR boundary relationships
     // remain unchanged.
-    let stale_modules = caller.importers_idx.clone();
+    let mut stale_modules = caller.importers_idx.clone();
+    stale_modules.swap_remove(&caller.idx); // ignore self-imports
     let ret =
       self.compute_hmr_update(&stale_modules, &FxIndexSet::default(), first_invalidated_by).await?;
     // ret.is_self_accepting = true; // (hyf0) TODO: what's this for?

@@ -270,6 +270,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.scope_stack.iter().rev().all(|flag| flag.is_top())
   }
 
+  #[expect(clippy::too_many_lines)]
   pub fn scan(mut self, program: &Program<'ast>) -> BuildResult<ScanResult> {
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
@@ -359,6 +360,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       // For cjs module with hmr enabled, bundler will generates code that references `module`.
       self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
     }
+
+    self.result.constant_export_map.retain(|symbol_id, constant_meta| {
+      // TODO: https://github.com/rolldown/rolldown/issues/6101
+      constant_meta.commonjs_export
+        || self
+          .result
+          .symbol_ref_db
+          .flags
+          .get(symbol_id)
+          .is_some_and(|flag| flag.contains(SymbolRefFlags::IsNotReassigned))
+    });
 
     if cfg!(debug_assertions) {
       use rustc_hash::FxHashSet;

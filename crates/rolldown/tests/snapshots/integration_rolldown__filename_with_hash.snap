@@ -5026,6 +5026,10 @@ expression: output
 
 - main-!~{000}~.js => main-RyfaQvKc.js
 
+# tests/rolldown/optimization/inline_const/issue_6246
+
+- main-!~{000}~.js => main-CQPYVIDg.js
+
 # tests/rolldown/optimization/inline_const/multi_pass
 
 - pagea-!~{000}~.js => pagea-WAYx4GdC.js

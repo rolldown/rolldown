@@ -1,0 +1,14 @@
+{
+  "config": {
+    "optimization": {
+      "inlineConst": true
+    }
+  },
+  "configVariants": [
+    {
+      "inlineConst": {
+        "pass": 2
+      }
+    }
+  ]
+}

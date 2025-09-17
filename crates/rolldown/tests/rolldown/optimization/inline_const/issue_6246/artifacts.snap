@@ -1,0 +1,61 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region token.js
+var character = 0;
+function next() {
+	character++;
+	return character;
+}
+let mutable_let = "mutable_let";
+mutable_let = "mutable_let1";
+
+//#endregion
+//#region main.js
+console.log(character);
+assert.strictEqual(character, 0);
+next();
+assert.strictEqual(character, 1);
+assert.strictEqual("immutable_let", "immutable_let");
+assert.strictEqual(mutable_let, "mutable_let1");
+
+//#endregion
+```
+---
+
+Variant: [inline_const: Config(InlineConstConfig { mode: None, pass: 2 })]
+
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region token.js
+var character = 0;
+function next() {
+	character++;
+	return character;
+}
+let mutable_let = "mutable_let";
+mutable_let = "mutable_let1";
+
+//#endregion
+//#region main.js
+console.log(character);
+assert.strictEqual(character, 0);
+next();
+assert.strictEqual(character, 1);
+assert.strictEqual("immutable_let", "immutable_let");
+assert.strictEqual(mutable_let, "mutable_let1");
+
+//#endregion
+```

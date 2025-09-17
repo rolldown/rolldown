@@ -77,13 +77,13 @@ impl LinkStage<'_> {
     #[expect(clippy::bool_to_int_with_if)]
     let other_optimization_pass =
       if self.side_effects_free_function_symbol_ref.is_empty() { 0 } else { 1 };
-    let inline_const_pass = self.options.optimization.inline_const_pass() - 1;
+    let cross_module_inline_const_pass = self.options.optimization.inline_const_pass() - 1;
     CrossModuleOptimizationConfig {
-      pass: inline_const_pass.max(other_optimization_pass),
+      pass: cross_module_inline_const_pass.max(other_optimization_pass),
       side_effects_free_function_optimization: !self
         .side_effects_free_function_symbol_ref
         .is_empty(),
-      inline_const_optimization: self.options.optimization.is_inline_const_enabled(),
+      inline_const_optimization: cross_module_inline_const_pass >= 1,
     }
   }
   pub(super) fn cross_module_optimization(&mut self) {
@@ -285,17 +285,27 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
       && let Declaration::VariableDeclaration(var_decl) = decl
     {
       var_decl.declarations.iter().for_each(|declarator| {
-        if let BindingPatternKind::BindingIdentifier(ref binding) = declarator.id.kind
-          && let Some(value) = declarator
-            .init
-            .as_ref()
-            .and_then(|expr| try_extract_const_literal(self.immutable_ctx.eval_ctx, expr))
-        {
+        if let BindingPatternKind::BindingIdentifier(ref binding) = declarator.id.kind {
           let symbol_ref: SymbolRef = (self.immutable_ctx.module_idx, binding.symbol_id()).into();
+          let is_not_assigned = self
+            .immutable_ctx
+            .symbols
+            .local_db(self.immutable_ctx.module_idx)
+            .flags
+            .get(&symbol_ref.symbol)
+            .is_some_and(|flag| flag.contains(SymbolRefFlags::IsNotReassigned));
 
-          if self.local_constant_symbol_map.get(&symbol_ref).map(|meta| &meta.value) != Some(&value)
+          if is_not_assigned
+            && let Some(value) = declarator
+              .init
+              .as_ref()
+              .and_then(|expr| try_extract_const_literal(self.immutable_ctx.eval_ctx, expr))
           {
-            self.local_constant_symbol_map.insert(symbol_ref, ConstExportMeta::new(value, false));
+            if self.local_constant_symbol_map.get(&symbol_ref).map(|meta| &meta.value)
+              != Some(&value)
+            {
+              self.local_constant_symbol_map.insert(symbol_ref, ConstExportMeta::new(value, false));
+            }
           }
         }
       });

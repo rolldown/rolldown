@@ -56,12 +56,20 @@ impl BuildDriver {
       // If there's build running, it will be responsible to handle new changed files.
       // So, we only need to wait for the latest build to finish.
       Ok(Some((building_future, true)))
-    } else if let Some(task_input) = build_state.queued_tasks.pop_front() {
+    } else if let Some(mut task_input) = build_state.queued_tasks.pop_front() {
       tracing::trace!(
         "Schedule a build to consume pending changed files due to task{task_input:#?}",
       );
 
-      // TODO: hyf0 merge mergeable task inputs into one
+      // Merge mergeable task inputs into one.
+      while let Some(peeked) = build_state.queued_tasks.pop_front() {
+        if task_input.is_mergeable_with(&peeked) {
+          task_input.merge_with(peeked);
+        } else {
+          build_state.queued_tasks.push_front(peeked);
+          break;
+        }
+      }
 
       let bundling_task = BundlingTask {
         input: task_input,

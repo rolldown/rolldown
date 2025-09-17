@@ -33,6 +33,44 @@ impl TaskInput {
       generate_hmr_updates: false,
     }
   }
+
+  pub fn is_mergeable_with(&self, other: &Self) -> bool {
+    match (self.require_full_rebuild, self.generate_hmr_updates, self.rebuild) {
+      // Full Rebuild ONLY.
+      (true, _, _) => {
+        // If self is a full rebuild task:
+        // - Incoming hmr update task would be meaningless, because full rebuild will bundle with latest disk files' contents.
+        // - The build output will contains latest contents, it's no need to and we can't generate hmr updates for such situation.
+        // - The incoming incremental rebuild task would be meaningless, because the build output will contains latest contents.
+        true
+      }
+      // Rebuild ONLY.
+      (false, false, true) => {
+        // Rebuild only task can only merge with other rebuild only task.
+        // If we merge a hmr update task, we'll involve files that're not intend to be involved in the hmr generation.
+        other.rebuild && !other.generate_hmr_updates && !other.require_full_rebuild
+      }
+      // Hmr Update(include Hmr with incremental rebuild).
+      (false, true, _) => {
+        // Hmr update task can only merge with other Hmr update task (include hmr with incremental rebuild).
+        other.generate_hmr_updates && !other.require_full_rebuild
+      }
+      // Noop.
+      (false, false, false) => {
+        eprintln!("Debug: Detect a Noop task. It should be unreachable in practice.");
+        // This should be unreachable in practice.
+        false
+      }
+    }
+  }
+
+  // You should call `is_mergeable_with` first to check if the two tasks are mergeable in business logic.
+  pub fn merge_with(&mut self, other: Self) {
+    self.changed_files.extend(other.changed_files);
+    self.require_full_rebuild = self.require_full_rebuild || other.require_full_rebuild;
+    self.generate_hmr_updates = self.generate_hmr_updates || other.generate_hmr_updates;
+    self.rebuild = self.rebuild || other.rebuild;
+  }
 }
 
 pub struct BundlingTask {

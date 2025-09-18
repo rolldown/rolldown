@@ -19,7 +19,7 @@ async function getCommitId() {
 async function getCurrentVersion() {
   const pkgPath = path.resolve(REPO_ROOT, './packages/rolldown/package.json');
   const result = await import(pkgPath, {
-    assert: {
+    with: {
       type: 'json',
     },
   });
@@ -43,7 +43,7 @@ async function genVersionByPreset(preset) {
     }
     case 'commit':
       const commitId = await getCommitId();
-      return `${currentVersion}-commit.${commitId}`; // Example: 0.15.1-commit.1234567
+      return `${currentVersion}+commit.${commitId}`; // Example: 0.15.1+commit.1234567
   }
 }
 

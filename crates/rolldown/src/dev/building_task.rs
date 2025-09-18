@@ -91,11 +91,20 @@ impl Deref for BundlingTask {
 
 impl BundlingTask {
   pub async fn run(mut self) {
+    tracing::trace!("Start running bundling task: {:#?}", self.input);
     if let Err(err) = self.run_inner().await {
       // FIXME: Should handle the error properly.
       eprintln!("Build error: {err}"); // FIXME: handle this error
-      self.dev_context.state.lock().await.try_to_idle().expect("FIXME: Should not unwrap here");
     }
+
+    let mut build_state = self.dev_context.state.lock().await;
+    build_state.cache = Some(self.bundler_cache.take().expect("Should never be none here"));
+    if let Err(err) = build_state.try_to_idle() {
+      eprintln!("TODO: should handle this error {err:#?}");
+      build_state.reset_to_idle();
+    }
+    build_state.has_stale_build_output = !self.rebuild;
+    drop(build_state);
 
     if self.dev_context.build_channel_tx.send(BuildMessage::BuildFinish).is_err() {
       tracing::error!("Failed to send build finish message to build channel");
@@ -113,10 +122,6 @@ impl BundlingTask {
       self.rebuild().await?;
     }
 
-    let mut build_state = self.dev_context.state.lock().await;
-    build_state.cache = Some(self.bundler_cache.take().expect("Should never be none here"));
-    build_state.try_to_idle()?;
-    drop(build_state);
     Ok(())
   }
 

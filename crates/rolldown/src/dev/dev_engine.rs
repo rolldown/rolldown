@@ -130,7 +130,7 @@ impl DevEngine {
       return Ok(());
     }
 
-    self.build_driver.ensure_latest_build().await.expect("FIXME: Should not fail");
+    self.build_driver.ensure_latest_build_output().await.expect("FIXME: Should not fail");
 
     if let Some(watcher_service) = build_service_state.service.take() {
       let join_handle = tokio::spawn(watcher_service.run());

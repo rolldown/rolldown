@@ -13,13 +13,19 @@ use tracing;
 #[derive(Debug)]
 pub struct BuildStateMachine<State = BuildState> {
   pub queued_tasks: VecDeque<TaskInput>,
+  pub has_stale_build_output: bool,
   pub cache: Option<ScanStageCache>,
   pub state: State,
 }
 
 impl BuildStateMachine<BuildState> {
   pub fn new() -> Self {
-    Self { queued_tasks: VecDeque::new(), state: BuildState::Idle, cache: None }
+    Self {
+      queued_tasks: VecDeque::new(),
+      state: BuildState::Idle,
+      cache: None,
+      has_stale_build_output: false,
+    }
   }
 
   pub fn is_busy(&self) -> bool {
@@ -98,5 +104,10 @@ impl BuildStateMachine<BuildState> {
         Ok(())
       }
     }
+  }
+
+  pub fn reset_to_idle(&mut self) {
+    tracing::trace!("Force to transition to Idle state");
+    self.state = BuildState::Idle;
   }
 }

@@ -99,8 +99,8 @@ impl BindingDevEngine {
   }
 
   #[napi]
-  pub async fn ensure_latest_build(&self) -> napi::Result<()> {
-    self.inner.ensure_latest_build().await.expect("Should handle this error");
+  pub async fn ensure_latest_build_output(&self) -> napi::Result<()> {
+    self.inner.ensure_latest_build_output().await.expect("Should handle this error");
     Ok(())
   }
 

@@ -46,8 +46,7 @@ impl BuildDriver {
   pub async fn schedule_build_if_stale(
     &self,
   ) -> BuildResult<Option<(BuildProcessFuture, /* already scheduled */ bool)>> {
-    tracing::trace!("Start scheduling a build to consume pending changed files");
-
+    tracing::trace!("Calling `schedule_build_if_stale`");
     let mut build_state = self.ctx.state.lock().await;
     if let Some(building_future) = build_state.is_busy_then_future().cloned() {
       tracing::trace!("A build is running, return the future immediately");
@@ -92,10 +91,40 @@ impl BuildDriver {
     }
   }
 
-  pub async fn ensure_latest_build(&self) -> BuildResult<()> {
-    if let Some((future, _)) = self.schedule_build_if_stale().await? {
-      future.await;
+  pub async fn ensure_latest_build_output(&self) -> BuildResult<()> {
+    let mut count = 0;
+
+    loop {
+      count += 1;
+      if count > 1000 {
+        eprintln!(
+          "Debug: `ensure_latest_build_output` wait for 1000 times build, something might be wrong"
+        );
+        break;
+      }
+
+      let mut build_state = self.ctx.state.lock().await;
+      if let Some(building_future) = build_state.is_busy_then_future().cloned() {
+        drop(build_state);
+        building_future.await;
+      } else {
+        if build_state.has_stale_build_output && build_state.queued_tasks.is_empty() {
+          build_state.queued_tasks.push_back(TaskInput {
+            changed_files: FxIndexSet::default(),
+            require_full_rebuild: false,
+            generate_hmr_updates: false,
+            rebuild: true,
+          });
+        }
+        drop(build_state);
+        if let Some((building_future, _)) = self.schedule_build_if_stale().await? {
+          building_future.await;
+        } else {
+          break;
+        }
+      }
     }
+
     Ok(())
   }
 

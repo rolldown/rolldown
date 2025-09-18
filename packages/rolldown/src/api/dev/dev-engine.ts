@@ -62,8 +62,8 @@ export class DevEngine {
     return promise;
   }
 
-  async ensureLatestBuild(): Promise<void> {
-    await this.#inner.ensureLatestBuild();
+  async ensureLatestBuildOutput(): Promise<void> {
+    await this.#inner.ensureLatestBuildOutput();
   }
 
   /**

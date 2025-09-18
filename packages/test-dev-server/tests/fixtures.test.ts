@@ -96,7 +96,7 @@ function main() {
           stdio: 'inherit',
           env: {
             RUST_BACKTRACE: 'FULL',
-            RD_LOG: 'hmr=debug',
+            RD_LOG: process.env.RD_LOG || 'hmr=debug',
           },
         });
 

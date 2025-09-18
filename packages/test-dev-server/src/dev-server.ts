@@ -106,7 +106,7 @@ class DevServer {
   #prepareHttpServerAfterCreateDevEngine(devEngine: DevEngine): void {
     this.connectServer.use(async (req, _res, next) => {
       if (req.url === '/' || req.url === '/index.html') {
-        await devEngine.ensureLatestBuild();
+        await devEngine.ensureLatestBuildOutput();
         next();
       } else {
         next();
@@ -148,7 +148,7 @@ class DevServer {
           if (this.#devOptions?.platform === 'browser') {
             // TODO: send reload message to client
           }
-          this.#devEngine?.ensureLatestBuild();
+          this.#devEngine?.ensureLatestBuildOutput();
           break;
         case 'Noop':
           break;

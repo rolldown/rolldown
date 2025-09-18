@@ -205,14 +205,6 @@ impl HmrManager {
         .collect::<Vec<_>>(),
     );
 
-    if hmr_prerequisites.require_full_reload {
-      return Ok(HmrUpdate::FullReload {
-        reason: hmr_prerequisites
-          .full_reload_reason
-          .unwrap_or_else(|| "Unknown reason".to_string()),
-      });
-    }
-
     tracing::debug!(
       target: "hmr",
       "computed out `stale_modules` {:?}",
@@ -270,6 +262,14 @@ impl HmrManager {
 
       // Note: New added modules might include external modules. There's no way to "update" them, so we need to remove them.
       modules_to_be_updated.retain(|idx| self.module_table().modules[*idx].is_normal());
+    }
+
+    if hmr_prerequisites.require_full_reload {
+      return Ok(HmrUpdate::FullReload {
+        reason: hmr_prerequisites
+          .full_reload_reason
+          .unwrap_or_else(|| "Unknown reason".to_string()),
+      });
     }
 
     // Sorting `modules_to_be_updated` is not strictly necessary, but it:

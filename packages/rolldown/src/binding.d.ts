@@ -1286,7 +1286,7 @@ export declare class BindingDevEngine {
   constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
   run(): Promise<void>
   ensureCurrentBuildFinish(): Promise<void>
-  ensureLatestBuild(): Promise<void>
+  ensureLatestBuildOutput(): Promise<void>
   scheduleBuildIfStale(): Promise<ScheduledBuild | null>
   invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<BindingHmrUpdate>
 }

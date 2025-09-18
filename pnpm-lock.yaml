@@ -496,6 +496,12 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
+  packages/test-dev-server/tests/fixtures/edit-rebuild:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
   packages/test-dev-server/tests/fixtures/invalidation:
     devDependencies:
       '@rolldown/test-dev-server':

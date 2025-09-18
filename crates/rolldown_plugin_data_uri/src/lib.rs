@@ -48,7 +48,9 @@ impl Plugin for DataUriPlugin {
 
       let data = if parsed.is_base64 {
         let data = base64_simd::STANDARD.decode_to_vec(parsed.data)?;
-        String::from_utf8_lossy(data.as_ref()).as_ref().into()
+        simdutf8::basic::from_utf8(&data)?;
+        // SAFETY: `data` is valid utf8
+        unsafe { String::from_utf8_unchecked(data) }.into()
       } else {
         urlencoding::decode(parsed.data)?.as_ref().into()
       };

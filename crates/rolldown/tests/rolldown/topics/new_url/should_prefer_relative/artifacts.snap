@@ -5,6 +5,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ## assets/index-B0GLEKT9.txt
 
+```txt
+hello, world
+```
 ## main.js
 
 ```js

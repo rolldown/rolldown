@@ -5,6 +5,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ## assets/foo-DX_UVeUe.txt
 
+```txt
+foo
+```
 ## chunks/dep-DGfnxe7V.js
 
 ```js

@@ -2,6 +2,7 @@ use crate::light_guess::{self, RawMimeExt};
 use mime::Mime;
 use std::{fmt::Display, path::Path, str::FromStr};
 
+#[inline]
 fn is_valid_utf8(data: &[u8]) -> bool {
   simdutf8::basic::from_utf8(data).is_ok()
 }

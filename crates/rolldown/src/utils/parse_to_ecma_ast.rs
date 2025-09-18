@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use arcstr::ArcStr;
 use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
@@ -16,6 +15,7 @@ use crate::{
   utils::text_to_esm::text_to_string_literal,
 };
 
+#[inline]
 fn pure_esm_js_oxc_source_type() -> OxcSourceType {
   let pure_esm_js = OxcSourceType::default().with_module(true);
   debug_assert!(pure_esm_js.is_javascript());
@@ -99,7 +99,7 @@ fn pre_process_source(
   module_type: &ModuleType,
   is_user_defined_entry: bool,
   options: &NormalizedBundlerOptions,
-) -> BuildResult<(bool, ArcStr, OxcParseType)> {
+) -> BuildResult<(bool, String, OxcParseType)> {
   let mut has_lazy_export = matches!(
     module_type,
     ModuleType::Json
@@ -124,18 +124,18 @@ fn pre_process_source(
     ModuleType::Text => text_to_string_literal(&source.try_into_string()?)?,
     ModuleType::Asset => "import.meta.__ROLLDOWN_ASSET_FILENAME".to_string(),
     ModuleType::Base64 => {
-      let source = source.into_bytes();
+      let source = source.as_bytes();
       let encoded = rolldown_utils::base64::to_standard_base64(source);
       text_to_string_literal(&encoded)?
     }
     ModuleType::Dataurl => {
-      let data = source.into_bytes();
-      let guessed_mime = guess_mime(path, &data)?;
-      let dataurl = rolldown_utils::dataurl::encode_as_shortest_dataurl(&guessed_mime, &data);
+      let data = source.as_bytes();
+      let guessed_mime = guess_mime(path, data)?;
+      let dataurl = rolldown_utils::dataurl::encode_as_shortest_dataurl(&guessed_mime, data);
       text_to_string_literal(&dataurl)?
     }
     ModuleType::Binary => {
-      let source = source.into_bytes();
+      let source = source.as_bytes();
       let encoded = rolldown_utils::base64::to_standard_base64(source);
       let to_binary = match options.platform {
         rolldown_common::Platform::Node => "__toBinaryNode",
@@ -161,5 +161,5 @@ fn pre_process_source(
     }
   };
 
-  Ok((has_lazy_export, source.into(), module_type.into()))
+  Ok((has_lazy_export, source, module_type.into()))
 }

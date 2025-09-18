@@ -2842,6 +2842,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "simdutf8",
  "string_wizard",
  "sugar_path",
  "tokio",
@@ -3015,6 +3016,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_utils",
+ "simdutf8",
  "urlencoding",
 ]
 

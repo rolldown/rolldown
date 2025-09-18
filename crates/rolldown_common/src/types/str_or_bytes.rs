@@ -23,14 +23,12 @@ impl StrOrBytes {
   pub fn try_into_string(self) -> anyhow::Result<String> {
     match self {
       Self::Str(s) => Ok(s),
-      Self::Bytes(b) => Ok(String::from_utf8(b)?),
-    }
-  }
-
-  pub fn into_bytes(self) -> Vec<u8> {
-    match self {
-      Self::Str(s) => s.into_bytes(),
-      Self::Bytes(b) => b,
+      Self::Bytes(b) => {
+        // validate utf8
+        simdutf8::basic::from_utf8(&b)?;
+        // SAFETY: `b` is valid utf8
+        unsafe { Ok(String::from_utf8_unchecked(b)) }
+      }
     }
   }
 

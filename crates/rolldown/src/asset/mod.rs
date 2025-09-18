@@ -1,7 +1,7 @@
-use rolldown_common::AssetView;
+use rolldown_common::{AssetView, StrOrBytes};
 
 pub mod asset_generator;
 
-pub fn create_asset_view(source: Box<[u8]>) -> AssetView {
+pub fn create_asset_view(source: StrOrBytes) -> AssetView {
   AssetView { source }
 }

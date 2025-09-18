@@ -110,8 +110,7 @@ impl ModuleTask {
 
     let (asset_view, css_view) = match module_type {
       ModuleType::Asset => {
-        let asset_source = source.into_bytes();
-        let asset_view = create_asset_view(asset_source.into());
+        let asset_view = create_asset_view(source);
         source = StrOrBytes::Str(String::new());
         (Some(asset_view), None)
       }

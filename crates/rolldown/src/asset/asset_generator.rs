@@ -1,7 +1,7 @@
 use crate::types::generator::{GenerateContext, GenerateOutput, Generator};
 
 use anyhow::Result;
-use rolldown_common::{InstantiatedChunk, InstantiationKind, StrOrBytes};
+use rolldown_common::{InstantiatedChunk, InstantiationKind};
 use rolldown_error::BuildResult;
 use rolldown_std_utils::OptionExt;
 
@@ -26,7 +26,7 @@ impl Generator for AssetGenerator {
 
       instantiated_chunks.push(InstantiatedChunk {
         originate_from: ctx.chunk_idx,
-        content: StrOrBytes::Bytes(asset_view.source.to_vec()),
+        content: asset_view.source.clone(),
         map: None,
         kind: InstantiationKind::None,
         augment_chunk_hash: None,

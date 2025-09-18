@@ -6,4 +6,5 @@ import cjs from "./cjs.js";
 assert.equal(foo, "foo");
 assert.equal(ns.a, "a");
 assert.equal(cjs.foo, "cjs-foo");
+assert.equal(cjs.version, "1.0.0");
 

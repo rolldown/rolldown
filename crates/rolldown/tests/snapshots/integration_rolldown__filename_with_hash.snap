@@ -5011,7 +5011,7 @@ expression: output
 
 # tests/rolldown/optimization/inline_const/basic
 
-- main-!~{000}~.js => main-CTfw_pO5.js
+- main-!~{000}~.js => main-BHmOf_A8.js
 
 # tests/rolldown/optimization/inline_const/issue_4786
 

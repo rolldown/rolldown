@@ -3,6 +3,7 @@ use oxc::ast::{
   AstKind, MemberExpressionKind,
   ast::{self, AssignmentExpression, Expression, PropertyKey},
 };
+use oxc::span::CompactStr;
 use rolldown_common::{AstScopes, EcmaModuleAstUsage};
 use rolldown_ecmascript_utils::ExpressionExt;
 
@@ -10,10 +11,13 @@ use crate::ast_scanner::IdentifierReferenceKind;
 
 use super::AstScanner;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CommonJsAstType {
-  // We don't need extra `module.exports` related type for now.
-  ExportsPropWrite,
+  /// We don't need extra `module.exports` related type for now.
+  /// If `CompactStr` eq = `*`, it means the property name is not a static string.
+  ExportsPropWrite(CompactStr),
+  /// Read global `exports` object, but not write to it. e.g.
+  /// `console.log(exports)`
   ExportsRead,
   EsModuleFlag,
   Reexport,
@@ -46,7 +50,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           match parent_parent_kind {
             parent_parent_kind if parent_parent_kind.is_member_expression_kind() => {
               let parent_parent = parent_parent_kind.as_member_expression_kind().unwrap();
-              self.check_assignment_target_property(&parent_parent, cursor - 1)
+              Self::check_assignment_target_property(
+                &parent_parent,
+                self.visit_path.get(cursor - 2)?,
+              )
             }
             AstKind::Argument(arg) => self.check_object_define_property(arg, cursor - 1),
             AstKind::AssignmentExpression(assignment_expr) => {
@@ -63,7 +70,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           // one scenario:
           // 1. exports.__esModule = true;
           let member_expr = kind.as_member_expression_kind().unwrap();
-          self.check_assignment_target_property(&member_expr, cursor)
+          Self::check_assignment_target_property(&member_expr, self.visit_path.get(cursor - 1)?)
         }
       },
       AstKind::Argument(arg) => {
@@ -73,8 +80,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
       _ => None,
     };
-    if matches!(v, Some(CommonJsAstType::EsModuleFlag)) {
-      self.result.ast_usage.insert(EcmaModuleAstUsage::EsModuleFlag);
+    match v.as_ref() {
+      Some(CommonJsAstType::EsModuleFlag) => {
+        self.result.ast_usage.insert(EcmaModuleAstUsage::EsModuleFlag);
+      }
+      Some(CommonJsAstType::ExportsRead) => {
+        self.result.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
+      }
+      Some(CommonJsAstType::ExportsPropWrite(prop)) if prop == "*" => {
+        self.result.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
+      }
+      _ => {}
     }
     v
   }
@@ -97,30 +113,26 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   /// Check if the member expression is a valid assignment target for `__esModule` flag.
   fn check_assignment_target_property(
-    &mut self,
     member_expr: &MemberExpressionKind,
-    base_cursor: usize,
+    parent: &AstKind<'ast>,
   ) -> Option<CommonJsAstType> {
     let static_property_name = member_expr.static_property_name();
-    if static_property_name.is_none() {
-      self.result.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
-    }
 
-    let parent = self.visit_path.get(base_cursor - 1)?;
     if !member_expr.is_assigned_to_in_parent(parent) {
-      return None;
+      return Some(CommonJsAstType::ExportsRead);
     }
 
-    let is_es_module_flag_prop =
-      static_property_name.is_some_and(|atom| atom.as_str() == "__esModule");
-    if !is_es_module_flag_prop {
-      return Some(CommonJsAstType::ExportsPropWrite);
+    let Some(static_property_name) = static_property_name else {
+      return Some(CommonJsAstType::ExportsPropWrite(CompactStr::from("*")));
+    };
+    if static_property_name.as_str() != "__esModule" {
+      return Some(CommonJsAstType::ExportsPropWrite(CompactStr::from(static_property_name)));
     }
 
     let assignment_expr = parent.as_assignment_expression()?;
 
     let Expression::BooleanLiteral(bool_lit) = &assignment_expr.right else {
-      return None;
+      return Some(CommonJsAstType::ExportsPropWrite("__esModule".into()));
     };
     bool_lit.value.then_some(CommonJsAstType::EsModuleFlag)
   }
@@ -177,12 +189,11 @@ pub fn is_object_define_property_es_module(
   }
 
   let second = call_expr.arguments.get(1)?;
-  let is_es_module = second
-    .as_expression()
-    .and_then(|item| item.as_string_literal())
-    .is_some_and(|item| item.value == "__esModule");
-  if !is_es_module {
-    return Some(CommonJsAstType::ExportsRead);
+  let Some(string_lit) = second.as_expression().and_then(|item| item.as_string_literal()) else {
+    return Some(CommonJsAstType::ExportsPropWrite("*".into()));
+  };
+  if string_lit.value != "__esModule" {
+    return Some(CommonJsAstType::ExportsPropWrite(string_lit.value.as_str().into()));
   }
   let third = call_expr.arguments.get(2)?;
   let ret = third
@@ -200,5 +211,77 @@ pub fn is_object_define_property_es_module(
       },
       _ => false,
     });
-  if ret { Some(CommonJsAstType::EsModuleFlag) } else { Some(CommonJsAstType::ExportsRead) }
+  if ret {
+    Some(CommonJsAstType::EsModuleFlag)
+  } else {
+    Some(CommonJsAstType::ExportsPropWrite("__esModule".into()))
+  }
+}
+
+#[cfg(test)]
+mod tests {
+
+  use super::*;
+  use oxc::{
+    allocator::Allocator, ast::ast::Program, parser::Parser, semantic::SemanticBuilder,
+    span::SourceType,
+  };
+  use rolldown_common::AstScopes;
+
+  fn create_ast_scopes_and_program_from_source<'ast, 'a: 'ast>(
+    source: &'ast str,
+    allocator: &'a Allocator,
+  ) -> (AstScopes, Program<'ast>) {
+    let source_type = SourceType::default();
+    let ret = Parser::new(allocator, source, source_type).parse();
+    let program = ret.program;
+    let semantic_ret = SemanticBuilder::new().build(&program);
+    (AstScopes::new(semantic_ret.semantic.into_scoping()), program)
+  }
+
+  fn extract_call_expr<'a>(
+    program: &'a oxc::ast::ast::Program<'a>,
+  ) -> Option<&'a oxc::ast::ast::CallExpression<'a>> {
+    let first = program.body.first()?;
+    let oxc::ast::ast::Statement::ExpressionStatement(expr_stmt) = first else {
+      return None;
+    };
+    expr_stmt.expression.as_call_expression()
+  }
+
+  #[test]
+  fn test_is_object_define_property_es_module_valid() {
+    let source = r#"Object.defineProperty(exports, "__esModule", { value: true });"#;
+    let allocator = Allocator::default();
+    let (ast_scopes, program) = create_ast_scopes_and_program_from_source(source, &allocator);
+
+    if let Some(call_expr) = extract_call_expr(&program) {
+      let result = is_object_define_property_es_module(&ast_scopes, call_expr);
+      assert_eq!(result, Some(CommonJsAstType::EsModuleFlag));
+    }
+  }
+
+  #[test]
+  fn test_is_object_define_property_es_module_invalid() {
+    let source = r#"Object.defineProperty(exports, "notEsModule", { value: true });"#;
+    let allocator = Allocator::default();
+    let (ast_scopes, program) = create_ast_scopes_and_program_from_source(source, &allocator);
+
+    if let Some(call_expr) = extract_call_expr(&program) {
+      let result = is_object_define_property_es_module(&ast_scopes, call_expr);
+      assert_eq!(result, Some(CommonJsAstType::ExportsPropWrite("notEsModule".into())));
+    }
+  }
+
+  #[test]
+  fn test_is_object_define_property_with_false_value() {
+    let source = r#"Object.defineProperty(exports, "__esModule", { value: false });"#;
+    let allocator = Allocator::default();
+    let (ast_scopes, program) = create_ast_scopes_and_program_from_source(source, &allocator);
+
+    if let Some(call_expr) = extract_call_expr(&program) {
+      let result = is_object_define_property_es_module(&ast_scopes, call_expr);
+      assert_eq!(result, Some(CommonJsAstType::ExportsPropWrite("__esModule".into())));
+    }
+  }
 }

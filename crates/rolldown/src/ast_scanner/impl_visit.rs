@@ -430,10 +430,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             let v = self.cjs_ast_analyzer(&CjsGlobalAssignmentType::ExportsAssignment);
             match v {
               // Do nothing since we need to tree shake `exports.<prop>` access
-              Some(CommonJsAstType::ExportsPropWrite | CommonJsAstType::EsModuleFlag) => {}
+              Some(CommonJsAstType::ExportsPropWrite(_) | CommonJsAstType::EsModuleFlag) => {}
               Some(CommonJsAstType::Reexport) => {
                 // This is only usd for `module.exports = require('mod')`
-                // should only reached when `ident_ref` is `exports`
+                // should only reached when `ident_ref` is `module`
                 unreachable!()
               }
               Some(CommonJsAstType::ExportsRead) => {

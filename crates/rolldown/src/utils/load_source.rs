@@ -9,11 +9,11 @@ use rolldown_sourcemap::SourceMap;
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
-#[expect(clippy::too_many_arguments)]
-pub async fn load_source<Fs: FileSystem>(
+#[expect(clippy::too_many_arguments, clippy::too_many_lines)]
+pub async fn load_source<Fs: FileSystem + 'static>(
   plugin_driver: &PluginDriver,
   resolved_id: &ResolvedId,
-  fs: &Fs,
+  fs: Fs,
   sourcemap_chain: &mut Vec<SourceMap>,
   side_effects: &mut Option<HookSideEffects>,
   options: &NormalizedBundlerOptions,
@@ -62,7 +62,22 @@ pub async fn load_source<Fs: FileSystem>(
           // - Unknown module type,
           // - No loader to load corresponding module
           // - User don't specify moduleTypeMapping, we treated it as JS
-          Ok((StrOrBytes::Str(fs.read_to_string(resolved_id.id.as_path())?), ModuleType::Js))
+          Ok((
+            StrOrBytes::Str({
+              #[cfg(not(target_family = "wasm"))]
+              {
+                let id = resolved_id.id.clone();
+                tokio::runtime::Handle::current()
+                  .spawn_blocking(move || fs.read_to_string(id.as_path()))
+                  .await??
+              }
+              #[cfg(target_family = "wasm")]
+              {
+                fs.read_to_string(resolved_id.id.as_path())?
+              }
+            }),
+            ModuleType::Js,
+          ))
         }
         (source, Some(guessed)) => match &guessed {
           ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl | ModuleType::Asset => {
@@ -85,9 +100,23 @@ pub async fn load_source<Fs: FileSystem>(
           | ModuleType::Empty
           | ModuleType::Css
           | ModuleType::Custom(_) => Ok((
-            StrOrBytes::Str(
-              source.ok_or(()).or_else(|()| fs.read_to_string(resolved_id.id.as_path()))?,
-            ),
+            StrOrBytes::Str({
+              if let Some(s) = source {
+                s
+              } else {
+                #[cfg(not(target_family = "wasm"))]
+                {
+                  let id = resolved_id.id.clone();
+                  tokio::runtime::Handle::current()
+                    .spawn_blocking(move || fs.read_to_string(id.as_path()))
+                    .await??
+                }
+                #[cfg(target_family = "wasm")]
+                {
+                  fs.read_to_string(resolved_id.id.as_path())?
+                }
+              }
+            }),
             guessed,
           )),
         },
@@ -96,7 +125,7 @@ pub async fn load_source<Fs: FileSystem>(
     }
     (None, Some(ty)) => {
       if asserted_module_type.is_some() {
-        Ok((read_file_by_module_type(resolved_id.id.as_path(), &ty, fs)?, ty))
+        Ok((read_file_by_module_type(resolved_id.id.as_path(), &ty, &fs)?, ty))
       } else {
         unreachable!("Invalid state")
       }

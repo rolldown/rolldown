@@ -232,7 +232,7 @@ impl ModuleTask {
     let result = load_source(
       &self.ctx.plugin_driver,
       &self.resolved_id,
-      &self.ctx.fs,
+      self.ctx.fs.clone(),
       sourcemap_chain,
       hook_side_effects,
       &self.ctx.options,

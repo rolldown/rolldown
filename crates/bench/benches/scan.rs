@@ -21,7 +21,14 @@ fn criterion_benchmark(c: &mut Criterion) {
     .flat_map(|(name, options)| derive_benchmark_items(&derive_options, name, options.clone()))
     .for_each(|item| {
       group.bench_function(format!("scan@{}", item.name), move |b| {
-        b.to_async(tokio::runtime::Runtime::new().unwrap()).iter(|| async {
+        b.to_async(
+          tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .max_blocking_threads(32)
+            .build()
+            .unwrap(),
+        )
+        .iter(|| async {
           let mut rolldown_bundler =
             rolldown::Bundler::new(item.options.clone()).expect("Failed to create bundler");
           let _output =

@@ -54,8 +54,22 @@ pub fn init() {
   let max_blocking_threads = std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS")
     .ok()
     .and_then(|v| v.parse::<usize>().ok())
-    .unwrap_or(512); // default value in tokio implementation
-  let rt = tokio::runtime::Builder::new_multi_thread()
+    .unwrap_or(if cfg!(target_os = "macos") {
+      4
+    } else {
+      // default value in tokio implementation is **512**
+      // it's too high for us
+      // we don't have that many `blocking` tasks to run at this moment
+      32
+    });
+  let mut builder = tokio::runtime::Builder::new_multi_thread();
+  #[cfg(target_os = "macos")]
+  {
+    // because we spawn less threads on macOS
+    // we can increase the stack size on it and don't need to worry about the memory consumption
+    builder.thread_stack_size(32 * 1024 * 1024);
+  }
+  let rt = builder
     .max_blocking_threads(max_blocking_threads)
     .enable_all()
     .build()

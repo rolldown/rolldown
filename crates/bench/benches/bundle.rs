@@ -1,6 +1,5 @@
 use bench::{DeriveOptions, derive_benchmark_items};
 use criterion::{Criterion, criterion_group, criterion_main};
-use rolldown_testing::utils::assert_bundled;
 
 use rolldown_common::BundlerOptions;
 use rolldown_testing::bundler_options_presets::{multi_duplicated_symbol, rome_ts, threejs};
@@ -25,7 +24,21 @@ fn criterion_benchmark(c: &mut Criterion) {
     .flat_map(|(name, options)| derive_benchmark_items(&derive_options, name, options.clone()))
     .for_each(|item| {
       group.bench_function(format!("bundle@{}", item.name), move |b| {
-        b.iter(|| assert_bundled(item.options.clone()));
+        b.to_async(
+          tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .max_blocking_threads(32)
+            .build()
+            .unwrap(),
+        )
+        .iter(|| async {
+          let mut bundler =
+            rolldown::Bundler::new(item.options.clone()).expect("Failed to create bundler");
+          let result = bundler.generate().await;
+          if let Err(e) = result {
+            panic!("Failed to bundle: {e}");
+          }
+        });
       });
     });
 }

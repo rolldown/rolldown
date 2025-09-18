@@ -2907,6 +2907,7 @@ dependencies = [
  "ropey",
  "rustc-hash",
  "sugar_path",
+ "tokio",
 ]
 
 [[package]]

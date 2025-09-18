@@ -84,6 +84,12 @@ impl From<anyhow::Error> for BuildDiagnostic {
   }
 }
 
+impl From<tokio::task::JoinError> for BuildDiagnostic {
+  fn from(err: tokio::task::JoinError) -> Self {
+    BuildDiagnostic::unhandleable_error(err.into())
+  }
+}
+
 #[derive(Debug, Default)]
 pub struct BatchedBuildDiagnostic(Vec<BuildDiagnostic>);
 

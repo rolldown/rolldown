@@ -7,7 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region main.js
-new URL("path-should-not-exists", import.meta.url);
+new URL(
+	/* @vite-ignore */
+	"path-should-not-exists",
+	import.meta.url
+);
 
 //#endregion
 ```

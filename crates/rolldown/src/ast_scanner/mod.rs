@@ -130,7 +130,6 @@ pub struct AstScannerImmutableCtx<'me, 'ast> {
   id: &'me ModuleId,
   comments: &'me oxc::allocator::Vec<'me, Comment>,
   options: &'me SharedOptions,
-  ignore_comment: &'static str,
   flat_options: FlatOptions,
   allocator: &'ast oxc::allocator::Allocator,
 }
@@ -225,7 +224,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         id: file_path,
         comments,
         options,
-        ignore_comment: options.experimental.get_ignore_comment(),
         flat_options,
       },
       current_stmt_info: StmtInfo::default(),
@@ -1038,7 +1036,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.result.constant_export_map.insert(symbol_id, value);
   }
 
-  fn is_ignored_by_comment(&mut self, expr: &ImportExpression<'ast>) -> bool {
+  fn is_imoprt_expr_ignored_by_comment(&mut self, expr: &ImportExpression<'ast>) -> bool {
     let mut should_ignore = false;
     while self.current_comment_idx < self.immutable_ctx.comments.len() {
       let comment = &self.immutable_ctx.comments[self.current_comment_idx];

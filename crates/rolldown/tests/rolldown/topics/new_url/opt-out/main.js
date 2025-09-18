@@ -1,1 +1,1 @@
-new URL(/* @rolldown-ignore */ 'path-should-not-exists', import.meta.url);
+new URL(/* @vite-ignore */ 'path-should-not-exists', import.meta.url);

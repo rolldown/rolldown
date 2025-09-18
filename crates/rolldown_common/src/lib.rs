@@ -99,7 +99,7 @@ pub use crate::{
     css_view::{CssAssetNameReplacer, CssRenderer, CssView},
   },
   ecmascript::{
-    comment_annotation::{ROLLDOWN_IGNORE, get_leading_comment},
+    comment_annotation::get_leading_comment,
     dynamic_import_usage,
     ecma_asset_meta::EcmaAssetMeta,
     ecma_view::{

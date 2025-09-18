@@ -3,7 +3,6 @@ use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::Deserialize;
 
-use crate::ROLLDOWN_IGNORE;
 use crate::inner_bundler_options::types::chunk_import_map::ChunkImportMap;
 
 use super::attach_debug_info::AttachDebugInfo;
@@ -65,11 +64,6 @@ impl ExperimentalOptions {
 
   pub fn is_on_demand_wrapping_enabled(&self) -> bool {
     self.on_demand_wrapping.unwrap_or(false)
-  }
-
-  #[inline]
-  pub fn get_ignore_comment(&self) -> &'static str {
-    if self.vite_mode.unwrap_or_default() { "@vite-ignore" } else { ROLLDOWN_IGNORE }
   }
 
   pub fn is_resolve_new_url_to_asset_enabled(&self) -> bool {

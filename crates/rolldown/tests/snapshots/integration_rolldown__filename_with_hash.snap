@@ -5705,7 +5705,7 @@ expression: output
 
 # tests/rolldown/topics/new_url/opt-out
 
-- main-!~{000}~.js => main-BbJnFXzt.js
+- main-!~{000}~.js => main-C-kiE7Dg.js
 
 # tests/rolldown/topics/new_url/opt_out_vite_mode
 

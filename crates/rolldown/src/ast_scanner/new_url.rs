@@ -35,10 +35,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let has_leading_ignore_comment = get_leading_comment(
       self.immutable_ctx.comments,
       first_arg_string_literal.span,
-      Some(|comment: &Comment| {
-        let original_source = &self.immutable_ctx.source.as_str()[comment.content_span()];
-        original_source.contains(self.immutable_ctx.ignore_comment)
-      }),
+      Some(|comment: &Comment| comment.is_vite()),
     )
     .is_some();
     if has_leading_ignore_comment {

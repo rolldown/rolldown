@@ -202,7 +202,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_import_expression(&mut self, expr: &ast::ImportExpression<'ast>) {
     // If a `ImportExpression` is ignored by `/* @vite-ignore */` comment, we should not treat it as a dynamic import
-    let should_ignore = self.is_ignored_by_comment(expr);
+    let should_ignore = self.is_imoprt_expr_ignored_by_comment(expr);
     if !should_ignore && let Some(request) = expr.source.as_static_module_request() {
       let import_rec_idx =
         self.add_import_record(request.as_str(), ImportKind::DynamicImport, expr.source.span(), {

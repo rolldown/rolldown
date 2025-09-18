@@ -81,6 +81,7 @@ export const HelperMode = __napiModule.exports.HelperMode
 export const isolatedDeclaration = __napiModule.exports.isolatedDeclaration
 export const moduleRunnerTransform = __napiModule.exports.moduleRunnerTransform
 export const transform = __napiModule.exports.transform
+export const transformAsync = __napiModule.exports.transformAsync
 export const BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 export const BindingBundleErrorEventData = __napiModule.exports.BindingBundleErrorEventData
 export const BindingBundler = __napiModule.exports.BindingBundler

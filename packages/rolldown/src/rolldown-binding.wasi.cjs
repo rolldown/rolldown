@@ -126,6 +126,7 @@ module.exports.HelperMode = __napiModule.exports.HelperMode
 module.exports.isolatedDeclaration = __napiModule.exports.isolatedDeclaration
 module.exports.moduleRunnerTransform = __napiModule.exports.moduleRunnerTransform
 module.exports.transform = __napiModule.exports.transform
+module.exports.transformAsync = __napiModule.exports.transformAsync
 module.exports.BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 module.exports.BindingBundleErrorEventData = __napiModule.exports.BindingBundleErrorEventData
 module.exports.BindingBundler = __napiModule.exports.BindingBundler

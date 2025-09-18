@@ -1298,12 +1298,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   fn try_rewrite_import_expression(&self, node: &mut ast::Expression<'ast>) -> bool {
     if let ast::Expression::ImportExpression(expr) = node {
-      if expr.options.is_none() {
+      if expr.options.is_none()
+        && let Some(rec_id) = self.ctx.module.imports.get(&expr.span)
+      {
         // Make sure the import expression is in correct form. If it's not, we should leave it as it is.
         if let Some(str) = expr.source.as_static_module_request() {
           let mut needs_to_esm_helper = false;
-          let rec_id = self.ctx.module.imports[&expr.span];
-          let rec = &self.ctx.module.import_records[rec_id];
+          let rec = &self.ctx.module.import_records[*rec_id];
           let importee_id = rec.resolved_module;
           match &self.ctx.modules[importee_id] {
             Module::Normal(importee) => {

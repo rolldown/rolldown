@@ -9,7 +9,7 @@ pub mod side_effect_detector;
 
 use arcstr::ArcStr;
 use const_eval::{ConstEvalCtx, try_extract_const_literal};
-use oxc::ast::ast::{BindingPatternKind, Expression};
+use oxc::ast::ast::{BindingPatternKind, Expression, ImportExpression};
 use oxc::ast::{AstKind, ast};
 use oxc::ast_visit::walk;
 use oxc::semantic::{Reference, ScopeFlags, Scoping};
@@ -156,6 +156,7 @@ pub struct AstScanner<'me, 'ast> {
   /// Used in commonjs module it self
   self_used_cjs_named_exports: FxHashSet<CompactStr>,
   traverse_state: TraverseState,
+  current_comment_idx: usize,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -242,6 +243,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       is_nested_this_inside_class: false,
       self_used_cjs_named_exports: FxHashSet::from_iter(["__esModule".into()]),
       traverse_state: TraverseState::empty(),
+      current_comment_idx: 0,
     }
   }
 
@@ -1034,6 +1036,21 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return;
     }
     self.result.constant_export_map.insert(symbol_id, value);
+  }
+
+  fn is_ignored_by_comment(&mut self, expr: &ImportExpression<'ast>) -> bool {
+    let mut should_ignore = false;
+    while self.current_comment_idx < self.immutable_ctx.comments.len() {
+      let comment = &self.immutable_ctx.comments[self.current_comment_idx];
+      if comment.attached_to >= expr.span.end {
+        break;
+      }
+      if comment.attached_to >= expr.span.start && comment.is_vite() {
+        should_ignore = true;
+      }
+      self.current_comment_idx += 1;
+    }
+    should_ignore
   }
 }
 

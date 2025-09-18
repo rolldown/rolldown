@@ -135,6 +135,7 @@ impl LinkStage<'_> {
   /// ```
   ///
   /// Unlike import from normal modules, the imported variable deosn't have a place that declared the variable. So we consider `import { a } from 'external'` in `foo.js` as the declaration statement of `a`.
+  #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn bind_imports_and_exports(&mut self) {
     // Initialize `resolved_exports` to prepare for matching imports with exports
     self.metas.par_iter_mut_enumerated().for_each(|(module_id, meta)| {

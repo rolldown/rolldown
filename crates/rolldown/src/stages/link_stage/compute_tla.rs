@@ -4,6 +4,7 @@ use rustc_hash::FxHashMap;
 use super::LinkStage;
 
 impl LinkStage<'_> {
+  #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn compute_tla(&mut self) {
     // TODO: skip this phase if there is no module use TLA
     fn is_tla(

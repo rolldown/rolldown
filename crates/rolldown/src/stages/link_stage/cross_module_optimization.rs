@@ -86,6 +86,8 @@ impl LinkStage<'_> {
       inline_const_optimization: cross_module_inline_const_pass >= 1,
     }
   }
+
+  #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn cross_module_optimization(&mut self) {
     let config = self.prepare_cross_module_optimization();
     if config.pass < 1 {

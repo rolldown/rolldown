@@ -49,6 +49,7 @@ fn init_entry_point_stmt_info(
 }
 
 impl LinkStage<'_> {
+  #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn create_exports_for_ecma_modules(&mut self) {
     self.module_table.modules.iter_mut().filter_map(|m| m.as_normal_mut()).for_each(
       |ecma_module| {

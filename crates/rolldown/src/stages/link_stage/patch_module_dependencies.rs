@@ -4,6 +4,7 @@ use rolldown_utils::{index_vec_ext::IndexVecExt, rayon::ParallelIterator};
 use super::LinkStage;
 
 impl LinkStage<'_> {
+  #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn patch_module_dependencies(&mut self) {
     self.metas.par_iter_mut_enumerated().for_each(|(module_idx, meta)| {
       if !meta.depended_runtime_helper.is_empty() {

@@ -11,6 +11,7 @@ enum SideEffectCache {
 }
 
 impl LinkStage<'_> {
+  #[tracing::instrument(level = "debug", skip_all)]
   pub fn determine_side_effects(&mut self) {
     let mut index_side_effects_cache =
       oxc_index::index_vec![SideEffectCache::None; self.module_table.modules.len()];

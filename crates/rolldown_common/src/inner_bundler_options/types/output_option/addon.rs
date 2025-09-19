@@ -7,7 +7,7 @@ use crate::RollupRenderedChunk;
 
 pub type AddonFunction = dyn Fn(
     Arc<RollupRenderedChunk>,
-  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send + 'static)>>
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<String>>> + Send + 'static>>
   + Send
   + Sync;
 

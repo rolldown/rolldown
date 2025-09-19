@@ -3,7 +3,7 @@ use std::{future::Future, pin::Pin, sync::Arc};
 
 use rustc_hash::FxHashMap;
 
-pub type GlobalsFunction = dyn Fn(&str) -> Pin<Box<(dyn Future<Output = anyhow::Result<String>> + Send + 'static)>>
+pub type GlobalsFunction = dyn Fn(&str) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + 'static>>
   + Send
   + Sync;
 

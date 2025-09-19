@@ -24,7 +24,7 @@ use rolldown_utils::{url::clean_url, xxhash::xxhash_with_base};
 use string_wizard::SourceMapOptions;
 
 pub type CSSMinifyFn =
-  dyn Fn(String) -> Pin<Box<(dyn Future<Output = anyhow::Result<String>> + Send)>> + Send + Sync;
+  dyn Fn(String) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send>> + Send + Sync;
 
 #[expect(clippy::struct_excessive_bools)]
 #[derive(derive_more::Debug)]

@@ -7,7 +7,7 @@ type IsExternalFn = dyn Fn(
     &str,         // specifier
     Option<&str>, // importer
     bool,         // is_resolved
-  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<bool>> + Send + 'static)>>
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send + 'static>>
   + Send
   + Sync;
 

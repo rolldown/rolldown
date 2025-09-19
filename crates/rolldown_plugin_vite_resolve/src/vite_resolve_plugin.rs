@@ -58,11 +58,11 @@ pub type FinalizeBareSpecifierCallback = dyn (Fn(
     &str,
     &str,
     Option<&str>,
-  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync)>>)
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync>>)
   + Send
   + Sync;
 
-pub type FinalizeOtherSpecifiersCallback = dyn (Fn(&str, &str) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync)>>)
+pub type FinalizeOtherSpecifiersCallback = dyn (Fn(&str, &str) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync>>)
   + Send
   + Sync;
 
@@ -71,13 +71,12 @@ pub type ResolveSubpathImportsCallback = dyn (Fn(
     Option<&str>,
     bool,
     bool,
-  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync)>>)
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync>>)
   + Send
   + Sync;
 
-pub type OnLogCallback = dyn (Fn(String) -> Pin<Box<(dyn Future<Output = anyhow::Result<()>> + Send + Sync)>>)
-  + Send
-  + Sync;
+pub type OnLogCallback =
+  dyn (Fn(String) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + Sync>>) + Send + Sync;
 
 #[derive(Debug)]
 pub struct ViteResolveResolveOptions {

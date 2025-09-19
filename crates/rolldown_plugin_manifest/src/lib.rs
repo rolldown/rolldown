@@ -8,11 +8,10 @@ use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::FxHashSet;
 
 pub type IsLegacyFn =
-  dyn Fn() -> Pin<Box<(dyn Future<Output = anyhow::Result<bool>> + Send)>> + Send + Sync;
+  dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send>> + Send + Sync;
 
-pub type CssEntriesFn = dyn Fn() -> Pin<Box<(dyn Future<Output = anyhow::Result<FxHashSet<String>>> + Send)>>
-  + Send
-  + Sync;
+pub type CssEntriesFn =
+  dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<FxHashSet<String>>> + Send>> + Send + Sync;
 
 #[derive(derive_more::Debug)]
 pub struct ManifestPlugin {

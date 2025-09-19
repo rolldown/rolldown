@@ -18,7 +18,7 @@ const GIT_LFS_PREFIX: &[u8; 34] = b"version https://git-lfs.github.com";
 #[derive(Default)]
 pub struct AssetCache(pub FxDashMap<String, String>);
 
-type AssetInlineLimitFn = dyn (Fn(&str, &[u8]) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<bool>>> + Send + Sync)>>)
+type AssetInlineLimitFn = dyn (Fn(&str, &[u8]) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<bool>>> + Send + Sync>>)
   + Send
   + Sync;
 

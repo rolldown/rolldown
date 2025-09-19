@@ -12,7 +12,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 type ResolveUrl = dyn (Fn(
     &str,
     Option<&str>,
-  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync)>>)
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync>>)
   + Send
   + Sync;
 
@@ -27,7 +27,7 @@ type CompileCSS = dyn (Fn(
     &str,
     &str,
     &UrlResolver,
-  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<CompileCSSResult>> + Send + Sync)>>)
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<CompileCSSResult>> + Send + Sync>>)
   + Send
   + Sync;
 

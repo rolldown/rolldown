@@ -3,7 +3,7 @@ use std::{future::Future, pin::Pin, sync::Arc};
 
 use crate::DeferSyncScanData;
 
-type DeferSyncScanDataInner = dyn Fn() -> Pin<Box<(dyn Future<Output = anyhow::Result<Vec<DeferSyncScanData>>> + Send + 'static)>>
+type DeferSyncScanDataInner = dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<DeferSyncScanData>>> + Send + 'static>>
   + Send
   + Sync
   + 'static;
@@ -15,8 +15,7 @@ pub struct DeferSyncScanDataOption(Arc<DeferSyncScanDataInner>);
 impl DeferSyncScanDataOption {
   pub fn new<F>(f: F) -> Self
   where
-    F: Fn()
-        -> Pin<Box<(dyn Future<Output = anyhow::Result<Vec<DeferSyncScanData>>> + Send + 'static)>>
+    F: Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<DeferSyncScanData>>> + Send + 'static>>
       + Send
       + Sync
       + 'static,

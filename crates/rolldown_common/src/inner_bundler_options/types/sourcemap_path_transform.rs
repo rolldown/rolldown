@@ -2,7 +2,7 @@ use derive_more::Debug;
 use std::sync::Arc;
 use std::{future::Future, pin::Pin};
 
-type SourceMapPathTransformFn = dyn Fn(&str, &str) -> Pin<Box<(dyn Future<Output = anyhow::Result<String>> + Send + 'static)>>
+type SourceMapPathTransformFn = dyn Fn(&str, &str) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + 'static>>
   + Send
   + Sync;
 

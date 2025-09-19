@@ -118,7 +118,7 @@ pub enum ModuleSideEffects {
 type ModuleSideEffectsFn = dyn Fn(
     &str, // id
     bool, // external
-  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<bool>>> + Send + 'static)>>
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<bool>>> + Send + 'static>>
   + Send
   + Sync
   + 'static;

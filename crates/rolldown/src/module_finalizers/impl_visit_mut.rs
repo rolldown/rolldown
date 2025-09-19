@@ -444,6 +444,15 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           *expr = self.snippet.builder.expression_object(SPAN, self.snippet.builder.vec());
         }
       }
+      ast::Expression::ChainExpression(chain_expr) => {
+        if let Some(new_expr) = chain_expr
+          .expression
+          .as_member_expression_mut()
+          .and_then(|expr| self.try_rewrite_member_expr(expr))
+        {
+          *expr = new_expr;
+        }
+      }
       _ => {
         if let Some(new_expr) =
           expr.as_member_expression().and_then(|expr| self.try_rewrite_member_expr(expr))

@@ -4765,6 +4765,10 @@ expression: output
 
 - main-!~{000}~.js => main-QBmbik0c.js
 
+# tests/rolldown/issues/6231
+
+- main-!~{000}~.js => main-C3Er7S43.js
+
 # tests/rolldown/issues/6263
 
 - main-!~{000}~.js => main-Cnm6EsTb.js

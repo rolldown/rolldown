@@ -4,7 +4,7 @@ use std::{future::Future, pin::Pin, sync::Arc};
 use arcstr::ArcStr;
 use rolldown_utils::sanitize_filename::default_sanitize_file_name;
 
-type SanitizeFileNameFunction = dyn Fn(&str) -> Pin<Box<(dyn Future<Output = anyhow::Result<String>> + Send + 'static)>>
+type SanitizeFileNameFunction = dyn Fn(&str) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + 'static>>
   + Send
   + Sync;
 

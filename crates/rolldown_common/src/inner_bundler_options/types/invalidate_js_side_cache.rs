@@ -4,7 +4,7 @@ use std::{future::Future, pin::Pin};
 use derive_more::Debug;
 
 pub type InvalidateJsSideCacheFn =
-  dyn Fn() -> Pin<Box<(dyn Future<Output = anyhow::Result<()>> + Send + 'static)>> + Send + Sync;
+  dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + 'static>> + Send + Sync;
 
 #[derive(Clone, Debug)]
 #[debug("InvalidateJsSideCacheFn::Fn(...)")]

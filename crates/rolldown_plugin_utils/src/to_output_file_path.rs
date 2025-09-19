@@ -9,7 +9,7 @@ pub type RenderBuiltUrl = dyn Fn(
     &str,
     &RenderBuiltUrlConfig,
   ) -> Pin<
-    Box<(dyn Future<Output = anyhow::Result<Option<Either<String, RenderBuiltUrlRet>>>> + Send)>,
+    Box<dyn Future<Output = anyhow::Result<Option<Either<String, RenderBuiltUrlRet>>>> + Send>,
   > + Send
   + Sync;
 

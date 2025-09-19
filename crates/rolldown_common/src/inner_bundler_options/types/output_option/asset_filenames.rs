@@ -5,7 +5,7 @@ use crate::RollupPreRenderedAsset;
 
 type AssetFilenamesFunction = dyn Fn(
     &RollupPreRenderedAsset,
-  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<String>> + Send + 'static)>>
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + 'static>>
   + Send
   + Sync;
 

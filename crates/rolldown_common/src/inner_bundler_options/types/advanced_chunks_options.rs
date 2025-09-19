@@ -56,7 +56,7 @@ pub struct MatchGroup {
   pub max_module_size: Option<f64>,
 }
 
-type MatchGroupTestFn = dyn Fn(&str) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<bool>>> + Send + 'static)>>
+type MatchGroupTestFn = dyn Fn(&str) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<bool>>> + Send + 'static>>
   + Send
   + Sync;
 
@@ -83,7 +83,7 @@ where
 type MatchGroupNameFn = dyn Fn(
     /* module id */ &str,
     /* chunking context */ &ChunkingContext,
-  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send + 'static)>>
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<String>>> + Send + 'static>>
   + Send
   + Sync;
 

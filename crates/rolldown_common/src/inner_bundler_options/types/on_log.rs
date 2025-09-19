@@ -5,7 +5,7 @@ use derive_more::Debug;
 
 use super::log_level::LogLevel;
 
-pub type OnLogFn = dyn Fn(LogLevel, Log) -> Pin<Box<(dyn Future<Output = anyhow::Result<()>> + Send + 'static)>>
+pub type OnLogFn = dyn Fn(LogLevel, Log) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + 'static>>
   + Send
   + Sync;
 

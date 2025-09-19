@@ -18,7 +18,7 @@ use sugar_path::SugarPath as _;
 
 pub const DYNAMIC_IMPORT_HELPER: &str = "\0rolldown_dynamic_import_helper.js";
 
-pub type ResolverFn = dyn Fn(String, String) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send)>>
+pub type ResolverFn = dyn Fn(String, String) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<String>>> + Send>>
   + Send
   + Sync;
 

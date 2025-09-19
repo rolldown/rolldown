@@ -5,7 +5,7 @@ use crate::RollupPreRenderedChunk;
 
 type ChunkFilenamesFunction = dyn Fn(
     &RollupPreRenderedChunk,
-  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<String>> + Send + 'static)>>
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + 'static>>
   + Send
   + Sync;
 

@@ -3,7 +3,7 @@ use std::{future::Future, pin::Pin};
 
 use derive_more::Debug;
 
-pub type SourceMapIgnoreListFn = dyn Fn(&str, &str) -> Pin<Box<(dyn Future<Output = anyhow::Result<bool>> + Send + 'static)>>
+pub type SourceMapIgnoreListFn = dyn Fn(&str, &str) -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send + 'static>>
   + Send
   + Sync;
 

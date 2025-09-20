@@ -78,8 +78,7 @@ map_unwrap_or = "allow"
 collapsible_if = "allow"
 
 [workspace.dependencies]
-criterion2 = { version = "3.0.0", default-features = false }
-css-module-lexer = "0.0.15"
+# publish = true
 rolldown = { version = "0.1.0", path = "./crates/rolldown" }
 rolldown_binding_watcher = { version = "0.1.0", path = "./crates/rolldown_binding_watcher" }
 rolldown_common = { version = "0.1.0", path = "./crates/rolldown_common" }
@@ -96,7 +95,7 @@ rolldown_plugin_asset_import_meta_url = { version = "0.1.0", path = "./crates/ro
 rolldown_plugin_build_import_analysis = { version = "0.1.0", path = "./crates/rolldown_plugin_build_import_analysis" }
 rolldown_plugin_chunk_import_map = { version = "0.1.0", path = "./crates/rolldown_plugin_chunk_import_map" }
 rolldown_plugin_data_uri = { version = "0.1.0", path = "./crates/rolldown_plugin_data_uri" }
-rolldown_plugin_dynamic_import_vars = { version = "0.0.1", path = "./crates/rolldown_plugin_dynamic_import_vars" }
+rolldown_plugin_dynamic_import_vars = { version = "0.1.0", path = "./crates/rolldown_plugin_dynamic_import_vars" }
 rolldown_plugin_esm_external_require = { version = "0.1.0", path = "./crates/rolldown_plugin_esm_external_require" }
 rolldown_plugin_hmr = { version = "0.1.0", path = "./crates/rolldown_plugin_hmr" }
 rolldown_plugin_import_glob = { version = "0.1.0", path = "./crates/rolldown_plugin_import_glob" }
@@ -124,7 +123,9 @@ rolldown_tracing = { version = "0.1.0", path = "./crates/rolldown_tracing" }
 rolldown_utils = { version = "0.1.0", path = "./crates/rolldown_utils" }
 rolldown_watcher = { version = "0.1.0", path = "./crates/rolldown_watcher" }
 rolldown_workspace = { version = "0.1.0", path = "./crates/rolldown_workspace" }
+string_wizard = { version = "0.0.26", path = "./crates/string_wizard", features = ["serde"] }
 
+#
 anyhow = "1.0.98"
 append-only-vec = "0.1.7"
 arcstr = { version = "1.2.0", default-features = false }
@@ -138,6 +139,8 @@ bitflags = "2.9.1"
 blake3 = "1.8.2"
 commondir = "1.0.0"
 cow-utils = "0.1.3"
+criterion2 = { version = "3.0.0", default-features = false }
+css-module-lexer = "0.0.15"
 dashmap = "6.1.0"
 derive_more = { version = "2.0.1", features = ["debug"] }
 dunce = "1.0.5" # Normalize Windows paths to the most compatible format, avoiding UNC where possible
@@ -177,7 +180,6 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 simdutf8 = "0.1.5"
 smallvec = "1.15.0"
-string_wizard = { path = "./crates/string_wizard", features = ["serde"] }
 sugar_path = { version = "1.2.0", features = ["cached_current_dir"] }
 terminal_size = "0.4.2"
 testing_macros = "1.0.0"

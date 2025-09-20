@@ -3022,7 +3022,7 @@ dependencies = [
 
 [[package]]
 name = "rolldown_plugin_dynamic_import_vars"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "arcstr",

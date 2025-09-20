@@ -1,9 +1,10 @@
 [package]
 name = "rolldown_plugin_dynamic_import_vars"
-version = "0.0.1"
+version = "0.1.0"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
+publish = true
 repository.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

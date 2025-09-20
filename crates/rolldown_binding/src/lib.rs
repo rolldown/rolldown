@@ -55,7 +55,7 @@ pub fn init() {
     .ok()
     .and_then(|v| v.parse::<usize>().ok())
     .unwrap_or(if cfg!(target_os = "macos") {
-      4
+      12
     } else {
       // default value in tokio implementation is **512**
       // it's too high for us

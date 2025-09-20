@@ -31,3 +31,4 @@ rolldown_utils = { workspace = true }
 ropey = { workspace = true }
 rustc-hash = { workspace = true }
 sugar_path = { workspace = true }
+tokio = { workspace = true }

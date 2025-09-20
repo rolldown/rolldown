@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleId, ModuleType,
   RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions, SideEffectDetail,
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
-use rolldown_error::BuildResult;
+use rolldown_error::{BatchedBuildDiagnostic, BuildResult};
 use rolldown_std_utils::PathExt;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 use sugar_path::SugarPath;
@@ -14,6 +16,9 @@ use crate::{
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
   utils::parse_to_ecma_ast::{ParseToEcmaAstResult, parse_to_ecma_ast},
 };
+
+/// Async scan files larger than 64KB
+const ASYNC_SCAN_THRESHOLD: usize = 64 * 1024;
 
 pub struct CreateEcmaViewReturn {
   pub ecma_view: EcmaView,
@@ -34,22 +39,52 @@ pub async fn create_ecma_view(
 
   let module_id = ModuleId::new(&ctx.resolved_id.id);
 
-  let repr_name = module_id.as_path().representative_file_name();
-  let repr_name = legitimize_identifier_name(&repr_name);
+  let module_idx = ctx.module_index;
+  let module_def_format = ctx.resolved_id.module_def_format;
+  let options_for_scan = Arc::clone(ctx.options);
+  let flat_options = ctx.flat_options;
 
-  let scanner = AstScanner::new(
-    ctx.module_index,
-    scoping,
-    &repr_name,
-    ctx.resolved_id.module_def_format,
-    ast.source(),
-    &module_id,
-    ast.comments(),
-    ctx.options,
-    ast.allocator(),
-    ctx.flat_options,
-  );
-
+  let (ast, scan_result) = if ast.source().len() >= ASYNC_SCAN_THRESHOLD {
+    tokio::runtime::Handle::current()
+      .spawn_blocking(move || -> BuildResult<(rolldown_ecmascript::EcmaAst, ScanResult)> {
+        let repr_name = module_id.as_path().representative_file_name();
+        let repr_name = legitimize_identifier_name(&repr_name);
+        let scanner = AstScanner::new(
+          module_idx,
+          scoping,
+          &repr_name,
+          module_def_format,
+          ast.source(),
+          &module_id,
+          ast.comments(),
+          &options_for_scan,
+          ast.allocator(),
+          flat_options,
+        );
+        let scan_result = scanner.scan(ast.program())?;
+        Ok((ast, scan_result))
+      })
+      .await
+      .map_err(|err| BatchedBuildDiagnostic::new(vec![err.into()]))
+      .flatten()?
+  } else {
+    let repr_name = module_id.as_path().representative_file_name();
+    let repr_name = legitimize_identifier_name(&repr_name);
+    let scanner = AstScanner::new(
+      module_idx,
+      scoping,
+      &repr_name,
+      module_def_format,
+      ast.source(),
+      &module_id,
+      ast.comments(),
+      &options_for_scan,
+      ast.allocator(),
+      flat_options,
+    );
+    let scan_result = scanner.scan(ast.program())?;
+    (ast, scan_result)
+  };
   let ScanResult {
     commonjs_exports,
     named_imports,
@@ -76,7 +111,7 @@ pub async fn create_ecma_view(
     dummy_record_set,
     constant_export_map,
     import_attribute_map,
-  } = scanner.scan(ast.program())?;
+  } = scan_result;
   named_exports.extend(commonjs_exports);
 
   if !errors.is_empty() {

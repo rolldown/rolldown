@@ -22,7 +22,7 @@ catalog:
   '@oxc-node/core': '^0.0.32'
   'fast-glob': '^3.3.3'
   'rolldown-plugin-dts': '^0.16.0'
-  'tsdown': '0.15.3'
+  'tsdown': '0.15.4'
   # oxc
   '@oxc-project/runtime': '=0.90.0'
   '@oxc-project/types': '=0.90.0'

@@ -8,7 +8,7 @@ use crate::{
 
 use super::{Context, Generator, Runner};
 
-pub struct RuntimeHelperGenerator {}
+pub struct RuntimeHelperGenerator;
 
 define_generator!(RuntimeHelperGenerator);
 

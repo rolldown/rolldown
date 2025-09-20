@@ -1004,6 +1004,7 @@ dependencies = [
  "cow-utils",
  "heck",
  "oxc",
+ "oxc_resolver",
  "prettyplease",
  "proc-macro2",
  "quote",
@@ -3136,7 +3137,6 @@ name = "rolldown_plugin_oxc_runtime"
 version = "0.1.0"
 dependencies = [
  "arcstr",
- "oxc_resolver",
  "phf",
  "rolldown_plugin",
  "rolldown_utils",

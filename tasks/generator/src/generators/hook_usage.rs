@@ -7,7 +7,7 @@ use crate::{
 
 use super::{Context, Generator, Runner};
 
-pub struct HookUsageGenerator {}
+pub struct HookUsageGenerator;
 
 define_generator!(HookUsageGenerator);
 

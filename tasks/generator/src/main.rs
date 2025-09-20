@@ -1,12 +1,14 @@
 use generator::generators::{
-  CheckOptionsGenerator, Context, Generator, HookUsageGenerator, RuntimeHelperGenerator,
+  CheckOptionsGenerator, Context, Generator, HookUsageGenerator, OxcRuntimeHelperGenerator,
+  RuntimeHelperGenerator,
 };
 fn main() -> anyhow::Result<()> {
   let ctx = Context { workspace_root: rolldown_workspace::root_dir() };
   let generators: Vec<Box<dyn Generator>> = vec![
     Box::new(CheckOptionsGenerator { disabled_event: vec!["CircularDependency"] }),
-    Box::new(HookUsageGenerator {}),
-    Box::new(RuntimeHelperGenerator {}),
+    Box::new(HookUsageGenerator),
+    Box::new(RuntimeHelperGenerator),
+    Box::new(OxcRuntimeHelperGenerator),
   ];
   for generator in generators {
     let outputs = generator.run(&ctx)?;

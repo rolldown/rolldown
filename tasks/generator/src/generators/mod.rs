@@ -5,9 +5,11 @@ use anyhow::Result;
 
 mod checks;
 mod hook_usage;
+mod oxc_runtime_helper;
 mod runtime_helper;
 pub use checks::CheckOptionsGenerator;
 pub use hook_usage::HookUsageGenerator;
+pub use oxc_runtime_helper::OxcRuntimeHelperGenerator;
 pub use runtime_helper::RuntimeHelperGenerator;
 
 /// Trait to define a generator.

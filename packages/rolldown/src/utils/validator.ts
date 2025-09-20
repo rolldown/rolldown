@@ -673,6 +673,25 @@ const GlobalsFunctionSchema = v.pipe(
   v.returns(v.string()),
 );
 
+const CommentOptionsSchema = v.strictObject({
+  normal: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Print normal comments that do not have special meanings'),
+  ),
+  jsdoc: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Print jsdoc comments'),
+  ),
+  annotation: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Print annotation comments (pure, webpack, vite, coverage)'),
+  ),
+  legal: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Print legal comments (license, preserve)'),
+  ),
+});
+
 const AdvancedChunksSchema = v.strictObject({
   includeDependenciesRecursively: v.optional(v.boolean()),
   minSize: v.optional(v.number()),
@@ -827,6 +846,10 @@ const OutputOptionsSchema = v.strictObject({
   advancedChunks: v.optional(AdvancedChunksSchema),
   legalComments: v.pipe(
     v.optional(v.union([v.literal('none'), v.literal('inline')])),
+    v.description('Control comments in the output'),
+  ),
+  commentOptions: v.pipe(
+    v.optional(CommentOptionsSchema),
     v.description('Control comments in the output'),
   ),
   plugins: v.optional(v.custom<RolldownOutputPluginOption>(() => true)),

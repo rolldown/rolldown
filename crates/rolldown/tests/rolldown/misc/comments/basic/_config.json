@@ -1,0 +1,8 @@
+{
+  "config": {
+    "comments": {
+      "normal": false,
+      "jsdoc": false
+    }
+  }
+}

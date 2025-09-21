@@ -30,6 +30,6 @@
     "diff": "^8.0.0",
     "estree-toolkit": "^1.7.8",
     "micromatch": "^4.0.8",
-    "web-tree-sitter": "^0.25.0"
+    "web-tree-sitter": "^0.26.0"
   }
 }

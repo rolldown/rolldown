@@ -24,7 +24,7 @@ catalog:
   'rolldown-plugin-dts': '^0.16.0'
   'tsdown': '0.15.4'
   # oxc
-  '@oxc-project/runtime': '=0.90.0'
-  '@oxc-project/types': '=0.90.0'
+  '@oxc-project/runtime': '=0.91.0'
+  '@oxc-project/types': '=0.91.0'
   'oxc-parser': '=0.90.0'
-  'oxc-transform': '=0.90.0'
+  'oxc-transform': '=0.91.0'

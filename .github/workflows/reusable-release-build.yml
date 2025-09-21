@@ -89,7 +89,7 @@ jobs:
 
       - name: Setup OpenHarmony SDK
         if: ${{ contains(matrix.target, 'ohos') }}
-        uses: openharmony-rs/setup-ohos-sdk@3c181b3244cec76aaec289ab84fb00f55f2fce3f # v0.2
+        uses: Boshen/setup-ohos-sdk@edb865a89a712f1f15dbad932dfa9cfce849d95c # v1.0.0
 
       - uses: taiki-e/install-action@2fdc5fd6ac805b0f8256893bd4c807bcb666af00 # v2.61.8
         if: ${{ contains(matrix.target, 'musl') }}

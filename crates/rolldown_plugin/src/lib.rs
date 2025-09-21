@@ -50,3 +50,5 @@ pub use crate::{
   types::plugin_context_resolve_options::PluginContextResolveOptions,
   types::plugin_hook_meta::{PluginHookMeta, PluginOrder},
 };
+
+pub use rolldown_common::PluginIdx;

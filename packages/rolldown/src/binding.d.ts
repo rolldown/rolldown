@@ -1456,6 +1456,7 @@ export declare class BindingTransformPluginContext {
   getCombinedSourcemap(): string
   inner(): BindingPluginContext
   addWatchFile(file: string): void
+  sendMagicString(magicString: BindingMagicString): void
 }
 
 export declare class BindingWatcher {
@@ -2308,4 +2309,12 @@ export declare function startAsyncRuntime(): void
 
 export interface ViteImportGlobMeta {
   isSubImportsPattern?: boolean
+}
+export declare class JsWatcher {
+  constructor(options: JsWatcherOptions)
+}
+
+export interface JsWatcherOptions {
+  watch: ((err: Error | null, arg: string) => any)
+  unwatch: ((err: Error | null, arg: string) => any)
 }

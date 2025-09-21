@@ -122,3 +122,4 @@ export const initTraceSubscriber = __napiModule.exports.initTraceSubscriber
 export const registerPlugins = __napiModule.exports.registerPlugins
 export const shutdownAsyncRuntime = __napiModule.exports.shutdownAsyncRuntime
 export const startAsyncRuntime = __napiModule.exports.startAsyncRuntime
+export const JsWatcher = __napiModule.exports.JsWatcher

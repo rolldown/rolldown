@@ -8,8 +8,8 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  LogLevel, LogWithoutPlugin, ModuleInfo, ModuleLoaderMsg, ResolvedId, SharedFileEmitter,
-  SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
+  LogLevel, LogWithoutPlugin, ModuleInfo, ModuleLoaderMsg, PluginIdx, ResolvedId,
+  SharedFileEmitter, SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
@@ -20,7 +20,7 @@ use crate::{
   plugin_context::PluginContextMeta,
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped,
-    plugin_context_resolve_options::PluginContextResolveOptions, plugin_idx::PluginIdx,
+    plugin_context_resolve_options::PluginContextResolveOptions,
   },
   utils::resolve_id_check_external::resolve_id_check_external,
 };

@@ -27,7 +27,7 @@ impl CharToByteMapper {
 
 #[napi]
 pub struct BindingMagicString<'a> {
-  inner: MagicString<'a>,
+  pub(crate) inner: MagicString<'a>,
   char_to_byte_mapper: CharToByteMapper,
 }
 

@@ -1,8 +1,9 @@
 use std::{ops::Deref, sync::Arc};
 
 use crate::PluginContext;
+use crate::types::plugin_idx::PluginIdx;
 use arcstr::ArcStr;
-use rolldown_common::{ModuleIdx, SourcemapHires};
+use rolldown_common::{ModuleIdx, SourceMapGenMsg, SourcemapHires};
 use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
 use rolldown_utils::unique_arc::WeakRef;
 use std::sync::mpsc;
@@ -15,7 +16,8 @@ pub struct TransformPluginContext {
   original_code: ArcStr,
   id: ArcStr,
   module_idx: ModuleIdx,
-  magic_string_tx: Option<Arc<mpsc::Sender<MagicString<'static>>>>,
+  plugin_idx: PluginIdx,
+  magic_string_tx: Option<Arc<mpsc::Sender<SourceMapGenMsg>>>,
 }
 
 impl TransformPluginContext {
@@ -25,9 +27,10 @@ impl TransformPluginContext {
     original_code: ArcStr,
     id: ArcStr,
     module_idx: ModuleIdx,
-    magic_string_tx: Option<Arc<mpsc::Sender<MagicString<'static>>>>,
+    plugin_idx: PluginIdx,
+    magic_string_tx: Option<Arc<mpsc::Sender<SourceMapGenMsg>>>,
   ) -> Self {
-    Self { inner, sourcemap_chain, original_code, id, module_idx, magic_string_tx }
+    Self { inner, sourcemap_chain, original_code, id, module_idx, plugin_idx, magic_string_tx }
   }
 
   pub fn get_combined_sourcemap(&self) -> SourceMap {
@@ -74,11 +77,19 @@ impl TransformPluginContext {
   pub fn send_magic_string(
     &self,
     magic_string: MagicString<'static>,
-  ) -> Result<(), mpsc::SendError<MagicString<'static>>> {
+  ) -> Result<(), mpsc::SendError<SourceMapGenMsg>> {
     if let Some(tx) = self.magic_string_tx.as_ref() {
-      tx.send(magic_string)
+      tx.send(SourceMapGenMsg::MagicString(Box::new((
+        self.module_idx,
+        self.plugin_idx.raw(),
+        magic_string,
+      ))))
     } else {
-      Err(mpsc::SendError(magic_string))
+      Err(mpsc::SendError(SourceMapGenMsg::MagicString(Box::new((
+        self.module_idx,
+        self.plugin_idx.raw(),
+        magic_string,
+      )))))
     }
   }
 }

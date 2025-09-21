@@ -6,6 +6,7 @@ use itertools::Itertools;
 use oxc::semantic::{ScopeId, Scoping};
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
 use oxc_index::IndexVec;
+use rolldown_common::SourceMapGenMsg;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
@@ -23,7 +24,6 @@ use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
-use string_wizard::MagicString;
 use tracing::Instrument;
 
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
@@ -110,7 +110,7 @@ pub struct ModuleLoader<'a> {
   new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
   cache: &'a mut ScanStageCache,
   pub flat_options: FlatOptions,
-  pub magic_string_tx: Option<Arc<std::sync::mpsc::Sender<MagicString<'static>>>>,
+  pub magic_string_tx: Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
 }
 
 pub struct ModuleLoaderOutput {
@@ -148,7 +148,7 @@ impl<'a> ModuleLoader<'a> {
     plugin_driver: SharedPluginDriver,
     cache: &'a mut ScanStageCache,
     is_full_scan: bool,
-    magic_string_tx: Option<Arc<std::sync::mpsc::Sender<MagicString<'static>>>>,
+    magic_string_tx: Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
   ) -> BuildResult<Self> {
     if is_full_scan {
       // TODO: drop the cache in another thread
@@ -607,6 +607,9 @@ impl<'a> ModuleLoader<'a> {
 
     if !errors.is_empty() {
       return Err(errors.into());
+    }
+    if let Some(tx) = self.magic_string_tx.as_ref() {
+      tx.send(SourceMapGenMsg::Terminate).unwrap();
     }
 
     // defer sync user modified data in js side

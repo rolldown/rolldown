@@ -1,10 +1,12 @@
-use std::{arch::x86_64::_mm_mask_store_epi32, sync::Arc, thread};
+use std::time::Instant;
+use std::{sync::Arc, thread};
 
 use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc_index::IndexVec;
 #[cfg(not(target_os = "macos"))]
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
   EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures,
   ResolvedId, RuntimeModuleBrief, ScanMode, SymbolRef, SymbolRefDb,
@@ -15,7 +17,6 @@ use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::FxHashMap;
-use string_wizard::MagicString;
 
 use crate::{
   SharedOptions, SharedResolver,
@@ -173,14 +174,23 @@ impl ScanStage {
         ScanMode::Partial(self.resolve_absolute_path(&changed_ids).await?)
       }
     };
-    let (_tx, _rx) = std::sync::mpsc::channel::<MagicString<'_>>();
+    let (tx, rx) = std::sync::mpsc::channel::<SourceMapGenMsg>();
     let handler = thread::spawn(move || {
-      while let Some(_msg) = _rx.recv().ok() {
-        println!("{}", _msg.to_string());
-        // Just discard the message
+      while let Ok(msg) = rx.recv() {
+        match msg {
+          SourceMapGenMsg::MagicString(v) => {
+            let (_module_idx, _plugin_idx, magic_string) = *v;
+            _ = magic_string.source_map(string_wizard::SourceMapOptions::default());
+            // Just discard the message
+          }
+          SourceMapGenMsg::Terminate => {
+            break;
+          }
+        }
       }
     });
 
+    let tx_clone = Arc::new(tx);
     let mut module_loader = ModuleLoader::new(
       self.fs.clone(),
       Arc::clone(&self.options),
@@ -188,10 +198,8 @@ impl ScanStage {
       Arc::clone(&self.plugin_driver),
       cache,
       fetch_mode.is_full(),
-      Some(Arc::new(_tx)),
+      Some(Arc::<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>::clone(&tx_clone)),
     )?;
-
-    handler.join().unwrap();
 
     // For `pluginContext.emitFile` with `type: chunk`, support it at buildStart hook.
     self
@@ -206,6 +214,10 @@ impl ScanStage {
     self.plugin_driver.set_context_load_modules_tx(Some(module_loader.tx.clone())).await;
 
     let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
+
+    let start = Instant::now();
+    handler.join().unwrap();
+    let _elapsed = start.elapsed();
 
     let ModuleLoaderOutput {
       module_table,
@@ -225,6 +237,8 @@ impl ScanStage {
     self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;
 
     self.plugin_driver.set_context_load_modules_tx(None).await;
+
+    // Send terminate message to stop the thread
 
     Ok(ScanStageOutput {
       entry_points,

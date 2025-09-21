@@ -8,6 +8,7 @@ mod hmr;
 mod inner_bundler_options;
 mod module;
 mod module_loader;
+mod source_map_gen_msg;
 mod type_aliases;
 mod types;
 
@@ -22,7 +23,6 @@ pub mod bundler_options {
 
   #[cfg(feature = "deserialize_bundler_options")]
   pub use crate::inner_bundler_options::types::optimization::deserialize_inline_const;
-
   pub use crate::inner_bundler_options::{
     BundlerOptions,
     types::{
@@ -126,6 +126,7 @@ pub use crate::{
     runtime_task_result::RuntimeModuleTaskResult,
     task_result::{EcmaRelated, ExternalModuleTaskResult, NormalModuleTaskResult},
   },
+  source_map_gen_msg::SourceMapGenMsg,
   type_aliases::{MemberExprRefResolutionMap, SharedModuleInfoDashMap},
   types::asset::Asset,
   types::asset_meta::{InstantiationKind, SourcemapAssetMeta},

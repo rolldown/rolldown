@@ -2,7 +2,7 @@ use rolldown::ModuleType;
 use rolldown_plugin::HookTransformOutput;
 
 use super::binding_hook_side_effects::BindingHookSideEffects;
-use crate::types::{binding_magic_string::BindingMagicString, binding_sourcemap::BindingSourcemap};
+use crate::types::binding_sourcemap::BindingSourcemap;
 
 #[napi_derive::napi(object)]
 #[derive(Default, derive_more::Debug)]

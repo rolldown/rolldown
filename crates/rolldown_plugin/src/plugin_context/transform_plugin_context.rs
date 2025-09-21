@@ -5,6 +5,7 @@ use arcstr::ArcStr;
 use rolldown_common::{ModuleIdx, SourcemapHires};
 use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
 use rolldown_utils::unique_arc::WeakRef;
+use std::sync::mpsc;
 use string_wizard::{MagicString, SourceMapOptions};
 
 #[derive(Debug)]
@@ -14,6 +15,7 @@ pub struct TransformPluginContext {
   original_code: ArcStr,
   id: ArcStr,
   module_idx: ModuleIdx,
+  magic_string_tx: Option<Arc<mpsc::Sender<MagicString<'static>>>>,
 }
 
 impl TransformPluginContext {
@@ -23,8 +25,9 @@ impl TransformPluginContext {
     original_code: ArcStr,
     id: ArcStr,
     module_idx: ModuleIdx,
+    magic_string_tx: Option<Arc<mpsc::Sender<MagicString<'static>>>>,
   ) -> Self {
-    Self { inner, sourcemap_chain, original_code, id, module_idx }
+    Self { inner, sourcemap_chain, original_code, id, module_idx, magic_string_tx }
   }
 
   pub fn get_combined_sourcemap(&self) -> SourceMap {
@@ -65,6 +68,17 @@ impl TransformPluginContext {
       if let Some(plugin_driver) = ctx.plugin_driver.upgrade() {
         plugin_driver.add_transform_dependency(self.module_idx, file);
       }
+    }
+  }
+
+  pub fn send_magic_string(
+    &self,
+    magic_string: MagicString<'static>,
+  ) -> Result<(), mpsc::SendError<MagicString<'static>>> {
+    if let Some(tx) = self.magic_string_tx.as_ref() {
+      tx.send(magic_string)
+    } else {
+      Err(mpsc::SendError(magic_string))
     }
   }
 }

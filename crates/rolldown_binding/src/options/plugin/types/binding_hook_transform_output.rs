@@ -2,10 +2,10 @@ use rolldown::ModuleType;
 use rolldown_plugin::HookTransformOutput;
 
 use super::binding_hook_side_effects::BindingHookSideEffects;
-use crate::types::binding_sourcemap::BindingSourcemap;
+use crate::types::{binding_magic_string::BindingMagicString, binding_sourcemap::BindingSourcemap};
 
 #[napi_derive::napi(object)]
-#[derive(Default, Debug)]
+#[derive(Default, derive_more::Debug)]
 pub struct BindingHookTransformOutput {
   pub code: Option<String>,
   pub module_side_effects: Option<BindingHookSideEffects>,

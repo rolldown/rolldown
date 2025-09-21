@@ -23,6 +23,7 @@ use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
+use string_wizard::MagicString;
 use tracing::Instrument;
 
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
@@ -109,6 +110,7 @@ pub struct ModuleLoader<'a> {
   new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
   cache: &'a mut ScanStageCache,
   pub flat_options: FlatOptions,
+  pub magic_string_tx: Option<Arc<std::sync::mpsc::Sender<MagicString<'static>>>>,
 }
 
 pub struct ModuleLoaderOutput {
@@ -146,6 +148,7 @@ impl<'a> ModuleLoader<'a> {
     plugin_driver: SharedPluginDriver,
     cache: &'a mut ScanStageCache,
     is_full_scan: bool,
+    magic_string_tx: Option<Arc<std::sync::mpsc::Sender<MagicString<'static>>>>,
   ) -> BuildResult<Self> {
     if is_full_scan {
       // TODO: drop the cache in another thread
@@ -209,6 +212,7 @@ impl<'a> ModuleLoader<'a> {
       intermediate_normal_modules,
       new_added_modules_from_partial_scan: FxIndexSet::default(),
       flat_options,
+      magic_string_tx,
     })
   }
 
@@ -257,6 +261,7 @@ impl<'a> ModuleLoader<'a> {
         is_user_defined_entry,
         assert_module_type,
         self.flat_options,
+        self.magic_string_tx.clone(),
       );
       tokio::spawn(task.run().instrument(tracing::info_span!("normal_module_task")));
     }

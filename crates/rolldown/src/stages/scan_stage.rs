@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{arch::x86_64::_mm_mask_store_epi32, sync::Arc, thread};
 
 use arcstr::ArcStr;
 use futures::future::join_all;
@@ -15,6 +15,7 @@ use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::FxHashMap;
+use string_wizard::MagicString;
 
 use crate::{
   SharedOptions, SharedResolver,
@@ -172,6 +173,13 @@ impl ScanStage {
         ScanMode::Partial(self.resolve_absolute_path(&changed_ids).await?)
       }
     };
+    let (_tx, _rx) = std::sync::mpsc::channel::<MagicString<'_>>();
+    let handler = thread::spawn(move || {
+      while let Some(_msg) = _rx.recv().ok() {
+        println!("{}", _msg.to_string());
+        // Just discard the message
+      }
+    });
 
     let mut module_loader = ModuleLoader::new(
       self.fs.clone(),
@@ -180,7 +188,10 @@ impl ScanStage {
       Arc::clone(&self.plugin_driver),
       cache,
       fetch_mode.is_full(),
+      Some(Arc::new(_tx)),
     )?;
+
+    handler.join().unwrap();
 
     // For `pluginContext.emitFile` with `type: chunk`, support it at buildStart hook.
     self

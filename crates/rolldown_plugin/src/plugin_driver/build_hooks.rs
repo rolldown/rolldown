@@ -223,6 +223,7 @@ impl PluginDriver {
     sourcemap_chain: &mut Vec<SourceMap>,
     side_effects: &mut Option<HookSideEffects>,
     module_type: &mut ModuleType,
+    magic_string_tx: Option<Arc<std::sync::mpsc::Sender<string_wizard::MagicString<'static>>>>,
   ) -> Result<String> {
     let mut code = original_code;
     let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
@@ -248,6 +249,7 @@ impl PluginDriver {
             code.as_str().into(),
             id.into(),
             module_idx,
+            magic_string_tx.clone(),
           )),
           &HookTransformArgs { id, code: &code, module_type: &*module_type },
         )

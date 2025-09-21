@@ -238,6 +238,8 @@ impl HmrManager {
         Arc::clone(&self.plugin_driver),
         &mut self.cache,
         fetch_mode.is_full(),
+        // TODO: support `background sourcemap generation` for hmr
+        None,
       )?;
 
       let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;

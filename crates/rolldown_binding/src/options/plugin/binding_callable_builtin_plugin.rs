@@ -47,6 +47,7 @@ impl BindingCallableBuiltinPlugin {
         ArcStr::default(),
         ArcStr::default(),
         rolldown_common::ModuleIdx::new(0),
+        None,
       )),
     })
   }

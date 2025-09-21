@@ -20,7 +20,6 @@ export {
   assetPlugin,
   buildImportAnalysisPlugin,
   dynamicImportVarsPlugin,
-  esmExternalRequirePlugin,
   importGlobPlugin,
   isolatedDeclarationPlugin,
   jsonPlugin,
@@ -36,5 +35,4 @@ export {
 } from './builtin-plugin/constructors';
 
 export { aliasPlugin } from './builtin-plugin/alias-plugin';
-export { replacePlugin } from './builtin-plugin/replace-plugin';
 export { transformPlugin } from './builtin-plugin/transform-plugin';

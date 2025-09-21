@@ -91,7 +91,7 @@ jobs:
         if: ${{ contains(matrix.target, 'ohos') }}
         uses: Boshen/setup-ohos-sdk@edb865a89a712f1f15dbad932dfa9cfce849d95c # v1.0.0
 
-      - uses: taiki-e/install-action@2fdc5fd6ac805b0f8256893bd4c807bcb666af00 # v2.61.8
+      - uses: taiki-e/install-action@0e09747a63ae497bf945b3dcaf38fef0050d0109 # v2.62.0
         if: ${{ contains(matrix.target, 'musl') }}
         env:
           GITHUB_TOKEN: ${{ github.token }}

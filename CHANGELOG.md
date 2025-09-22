@@ -1,4 +1,85 @@
 
+## [1.0.0-beta.39] - 2025-09-22
+
+### 🚀 Features
+
+- rolldown: oxc v0.90.0 + other oxc crate updates (#6274) by @Boshen
+- support ignoring `/* @vite-ignore */` comment for dynamic imports (#6264) by @IWANABETHATGUY
+- dev: merge mergeable queued tasks into one (#6253) by @hyf0
+- dev: ignore self imports when computing update for invalidate (#6252) by @sapphi-red
+- support `#__NO_SIDE_EFFECTS__` annotation for export default function declaration (#6239) by @IWANABETHATGUY
+- rolldown_plugin_dynamic_import_vars: respect `@vite-ignore` comment (#6240) by @shulaoda
+- rolldown_plugin_import_glob: support `exhaustive` option (#6236) by @shulaoda
+- cross chunk /* @__NO_SIDE_EFFECTS__ */ support (#6207) by @IWANABETHATGUY
+- rolldown_plugin_react_refresh_wrapper: make the plugin callable (#6229) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- handle optional chaining in scope hoisting member expression rewriting (#6278) by @shulaoda
+- release: Fix semver commit release format to use plus instead of dash (#6273) by @Copilot
+- dev: `ensure_latest_build_output` should work correctly when `eagerBuild: false` (#6262) by @hyf0
+- browser: does not work in stackblitz (#6257) by @shulaoda
+- only inline constants that are not reassigned (#6247) by @IWANABETHATGUY
+- handle lexical declarations in root scope (#6230) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- move oxc runtime helper generation from `build.rs` to task generator (#6284) by @shulaoda
+- remove unused `SpanExt` (#6266) by @IWANABETHATGUY
+- remove `@rolldown-ignore` ignore comment support (#6265) by @IWANABETHATGUY
+- enhance CommonJsAstType to track property names (#6250) by @IWANABETHATGUY
+- simplify usage for `Address::from` (#6245) by @IWANABETHATGUY
+- remove `stmt_info_idx` in StmtInfo (#6244) by @IWANABETHATGUY
+- extract `CrossModuleOptimizationRunnerContext` in cross_module_optimization (#6243) by @IWANABETHATGUY
+- dev: task-queue based deisgn (#6233) by @hyf0
+- extract immutable context from AstScanner (#6238) by @IWANABETHATGUY
+- dev: rename `WatcherEventService` to `BuildDriverService` (#6232) by @hyf0
+- move FlatOptions to rolldown_common (#6235) by @IWANABETHATGUY
+- extract mutable state from ScopeHoistingFinalizerContext (#6234) by @IWANABETHATGUY
+- wait `this.load` using futures instead of callbacks (#6222) by @sapphi-red
+- rolldown_plugin_transform: remove unused `runtime_resolve_base` option (#6226) by @sapphi-red
+
+### 📚 Documentation
+
+- add "edit this page on GitHub" button (#6241) by @siaeyy
+
+### ⚡ Performance
+
+- rolldown: minor performance optimization (#6271) by @Brooooooklyn
+- rolldown: take advantage of tokio blocking threads (#6270) by @Brooooooklyn
+
+### 🧪 Testing
+
+- dev: add rebuild after HMR case (#6260) by @sapphi-red
+- dev: support full reload in tests (#6259) by @sapphi-red
+- dev: extract waitFor from waitForPathExists (#6261) by @sapphi-red
+- add class like cases for empty function optimizations (#6248) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update github-actions (#6298) by @renovate[bot]
+- deps: update dependency dprint/dprint-plugin-typescript to v0.95.11 (#6296) by @renovate[bot]
+- deps: update dependency dprint/dprint-plugin-markdown to v0.19.0 (#6295) by @renovate[bot]
+- deps: update dependency g-plane/pretty_yaml to v0.5.1 (#6294) by @renovate[bot]
+- use a forked version of openharmony-rs/setup-ohos-sdk (#6290) by @Boshen
+- deps: update dependency tsdown to v0.15.4 (#6286) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.16.7 (#6285) by @renovate[bot]
+- rust: continue to make `cargo publish --workspace` work (#6281) by @Boshen
+- deps: update dependency tsdown to v0.15.3 (#6280) by @renovate[bot]
+- rust: fixes for `cargo publish --dry-run --workspace` (#6279) by @Boshen
+- deps: update dependency rust to v1.90.0 (#6277) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.16.6 (#6276) by @renovate[bot]
+- adding tracing for all sub stage in LinkStage:link (#6268) by @IWANABETHATGUY
+- deps: update oxc-project/setup-node action to v1.0.4 (#6258) by @renovate[bot]
+- deps: update github-actions (#6249) by @renovate[bot]
+- deps: update dependency tsdown to v0.15.2 (#6242) by @renovate[bot]
+- dev: output error when the initial bundle failed (#6228) by @sapphi-red
+
+### ❤️ New Contributors
+
+* @siaeyy made their first contribution in [#6241](https://github.com/rolldown/rolldown/pull/6241)
+
+
 ## [1.0.0-beta.38] - 2025-09-15
 
 ### 💥 BREAKING CHANGES

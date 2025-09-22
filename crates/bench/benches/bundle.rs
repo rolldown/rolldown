@@ -25,9 +25,10 @@ fn criterion_benchmark(c: &mut Criterion) {
     .for_each(|item| {
       group.bench_function(format!("bundle@{}", item.name), move |b| {
         b.to_async(
-          tokio::runtime::Builder::new_current_thread()
+          tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(8)
             .enable_all()
-            .max_blocking_threads(32)
+            .max_blocking_threads(4)
             .build()
             .unwrap(),
         )

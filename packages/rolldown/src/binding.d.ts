@@ -1312,6 +1312,23 @@ export declare class BindingHmrOutput {
   get errors(): Array<Error | BindingError>
 }
 
+export declare class BindingMagicString {
+  constructor(source: string)
+  replace(from: string, to: string): void
+  replaceAll(from: string, to: string): void
+  prepend(content: string): void
+  append(content: string): void
+  prependLeft(index: number, content: string): void
+  prependRight(index: number, content: string): void
+  appendLeft(index: number, content: string): void
+  appendRight(index: number, content: string): void
+  overwrite(start: number, end: number, content: string): void
+  toString(): string
+  hasChanged(): boolean
+  length(): number
+  isEmpty(): boolean
+}
+
 export declare class BindingModuleInfo {
   id: string
   importers: Array<string>

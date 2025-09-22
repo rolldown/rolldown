@@ -2803,6 +2803,7 @@ dependencies = [
  "rolldown_tracing",
  "rolldown_utils",
  "rustc-hash",
+ "string_wizard",
  "tracing",
  "url",
 ]

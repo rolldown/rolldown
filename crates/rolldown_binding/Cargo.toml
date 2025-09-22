@@ -61,6 +61,7 @@ rolldown_sourcemap = { workspace = true }
 rolldown_tracing = { workspace = true }
 rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
+string_wizard = { workspace = true }
 tracing = { workspace = true }
 url = { workspace = true }
 

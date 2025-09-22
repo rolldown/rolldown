@@ -90,6 +90,7 @@ export const BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallable
 export const BindingChunkingContext = __napiModule.exports.BindingChunkingContext
 export const BindingDevEngine = __napiModule.exports.BindingDevEngine
 export const BindingHmrOutput = __napiModule.exports.BindingHmrOutput
+export const BindingMagicString = __napiModule.exports.BindingMagicString
 export const BindingModuleInfo = __napiModule.exports.BindingModuleInfo
 export const BindingNormalizedOptions = __napiModule.exports.BindingNormalizedOptions
 export const BindingOutputAsset = __napiModule.exports.BindingOutputAsset

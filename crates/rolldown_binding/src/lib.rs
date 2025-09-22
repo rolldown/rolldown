@@ -54,23 +54,18 @@ pub fn init() {
   let max_blocking_threads = std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS")
     .ok()
     .and_then(|v| v.parse::<usize>().ok())
-    .unwrap_or(if cfg!(target_os = "macos") {
-      4
-    } else {
-      // default value in tokio implementation is **512**
-      // it's too high for us
-      // we don't have that many `blocking` tasks to run at this moment
-      32
-    });
+    // default value in tokio implementation is **512**
+    // it's too high for us
+    // we don't have that many `blocking` tasks to run at this moment
+    .unwrap_or(4);
   let mut builder = tokio::runtime::Builder::new_multi_thread();
-  #[cfg(target_os = "macos")]
-  {
-    // because we spawn less threads on macOS
-    // we can increase the stack size on it and don't need to worry about the memory consumption
-    builder.thread_stack_size(32 * 1024 * 1024);
-  }
+
   let rt = builder
     .max_blocking_threads(max_blocking_threads)
+    // unlike the web server scenario
+    // rolldown puts a lot of blocking tasks in the worker threads rather than blocking_threads
+    // so we need to increase the worker threads rather than the blocking_threads
+    .worker_threads(num_cpus::get_physical() * 3 / 2)
     .enable_all()
     .build()
     .expect("Failed to create tokio runtime");

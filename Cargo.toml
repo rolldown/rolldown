@@ -165,6 +165,7 @@ notify = { version = "8.1.0", default-features = false, features = ["macos_kqueu
 notify-debouncer-full = { version = "0.6.0", default-features = false, features = ["macos_kqueue"], git = "https://github.com/sapphi-red/notify", rev = "refs/heads/patches" }
 num-bigint = "0.4.6"
 num-format = "0.4"
+num_cpus = "1.17"
 owo-colors = "4.2.2"
 percent-encoding = "2.3.1"
 petgraph = "0.8.1"

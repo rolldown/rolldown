@@ -212,7 +212,7 @@ impl NormalModule {
         );
         if !self.ecma_view.mutations.is_empty() {
           let original_code: Arc<str> = render_output.code.into();
-          let mut magic_string = string_wizard::MagicString::new(&original_code);
+          let mut magic_string = string_wizard::MagicString::new(&*original_code);
           for mutation in &self.ecma_view.mutations {
             mutation.apply(&mut magic_string);
           }

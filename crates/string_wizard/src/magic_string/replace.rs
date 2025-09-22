@@ -34,8 +34,13 @@ impl<'text> MagicString<'text> {
     options: ReplaceOptions,
   ) -> &mut Self {
     let to: CowStr<'text> = to.into();
-    for (match_start, part) in self.source.match_indices(from).take(options.count) {
-      let end = match_start + part.len();
+    let matches: Vec<_> = self
+      .source
+      .match_indices(from)
+      .take(options.count)
+      .map(|(start, part)| (start, start + part.len()))
+      .collect();
+    for (match_start, end) in matches {
       self.update_with(
         match_start,
         end,

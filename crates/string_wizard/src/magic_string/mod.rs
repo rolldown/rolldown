@@ -7,7 +7,7 @@ pub mod replace;
 pub mod source_map;
 pub mod update;
 
-use std::{collections::VecDeque, sync::OnceLock};
+use std::{borrow::Cow, collections::VecDeque, sync::OnceLock};
 
 use rustc_hash::FxHashMap;
 
@@ -28,7 +28,7 @@ pub struct MagicString<'s> {
   filename: Option<String>,
   intro: VecDeque<CowStr<'s>>,
   outro: VecDeque<CowStr<'s>>,
-  source: &'s str,
+  source: Cow<'s, str>,
   chunks: IndexChunks<'s>,
   first_chunk_idx: ChunkIdx,
   last_chunk_idx: ChunkIdx,
@@ -41,11 +41,12 @@ pub struct MagicString<'s> {
 }
 
 impl<'text> MagicString<'text> {
-  pub fn new(source: &'text str) -> Self {
+  pub fn new(source: impl Into<Cow<'text, str>>) -> Self {
     Self::with_options(source, Default::default())
   }
 
-  pub fn with_options(source: &'text str, options: MagicStringOptions) -> Self {
+  pub fn with_options(source: impl Into<Cow<'text, str>>, options: MagicStringOptions) -> Self {
+    let source = source.into();
     let source_len = source.len();
     let initial_chunk = Chunk::new(Span(0, source_len));
     let mut chunks = IndexChunks::with_capacity(1);
@@ -84,7 +85,7 @@ impl<'text> MagicString<'text> {
 
   /// Indicates if the string has been changed.
   pub fn has_changed(&self) -> bool {
-    self.source.len() != self.len() || self.source != self.to_string()
+    self.source.len() != self.len() || self.source.as_ref() != self.to_string()
   }
 
   fn prepend_intro(&mut self, content: impl Into<CowStr<'text>>) {
@@ -110,7 +111,7 @@ impl<'text> MagicString<'text> {
   pub(crate) fn fragments(&'text self) -> impl Iterator<Item = &'text str> {
     let intro = self.intro.iter().map(|s| s.as_ref());
     let outro = self.outro.iter().map(|s| s.as_ref());
-    let chunks = self.iter_chunks().flat_map(|c| c.fragments(self.source));
+    let chunks = self.iter_chunks().flat_map(|c| c.fragments(&self.source));
     intro.chain(chunks).chain(outro)
   }
 

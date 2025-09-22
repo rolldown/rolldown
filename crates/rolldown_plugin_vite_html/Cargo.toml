@@ -1,0 +1,19 @@
+[package]
+name = "rolldown_plugin_vite_html"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+publish = true
+repository.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+rolldown_plugin = { workspace = true }

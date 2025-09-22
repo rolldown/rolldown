@@ -21,12 +21,7 @@ impl Generator for OxcRuntimeHelperGenerator {
 
     // Use oxc_resolver to find @oxc-project/runtime
     let resolver = oxc_resolver::Resolver::new(ResolveOptions::default());
-
-    let Ok(runtime_package) = resolver.resolve(workspace_root, "@oxc-project/runtime/package.json")
-    else {
-      eprintln!("Warning: @oxc-project/runtime not found, skipping embedded helpers generation");
-      return Ok(vec![]);
-    };
+    let runtime_package = resolver.resolve(workspace_root, "@oxc-project/runtime/package.json")?;
 
     let version = runtime_package
       .package_json()

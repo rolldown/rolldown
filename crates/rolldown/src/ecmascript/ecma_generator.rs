@@ -15,10 +15,7 @@ use rolldown_plugin::HookAddonArgs;
 use rolldown_sourcemap::Source;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
-use rolldown_utils::{
-  rayon::{IntoParallelRefIterator, ParallelIterator},
-  rustc_hash::FxHashMapExt,
-};
+use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 
 use super::format::{cjs::render_cjs, esm::render_esm, iife::render_iife, umd::render_umd};
@@ -48,7 +45,6 @@ pub struct EcmaGenerator;
 impl Generator for EcmaGenerator {
   #[expect(clippy::too_many_lines)]
   async fn instantiate_chunk(ctx: &mut GenerateContext<'_>) -> Result<BuildResult<GenerateOutput>> {
-    let mut rendered_modules = FxHashMap::with_capacity(ctx.chunk.modules.len());
     let module_id_to_codegen_ret = std::mem::take(&mut ctx.module_id_to_codegen_ret);
     let rendered_module_sources: RenderedModuleSources = ctx
       .chunk
@@ -71,25 +67,25 @@ impl Generator for EcmaGenerator {
       })
       .collect::<Vec<_>>();
 
-    rendered_module_sources.iter().for_each(|rendered_module_source| {
-      let RenderedModuleSource { module_idx, module_id, exec_order, sources } =
-        rendered_module_source;
-      let rendered_exports = ctx.link_output.metas[*module_idx]
-        .resolved_exports
-        .iter()
-        .filter_map(|(key, export)| {
-          if ctx.link_output.used_symbol_refs.contains(&export.symbol_ref) {
-            Some(key.clone())
-          } else {
-            None
-          }
-        })
-        .collect::<Vec<_>>();
-      rendered_modules.insert(
-        module_id.clone(),
-        RenderedModule::new(sources.clone(), rendered_exports, *exec_order),
-      );
-    });
+    let rendered_modules: FxHashMap<ModuleId, RenderedModule> = rendered_module_sources
+      .iter()
+      .map(|rendered_module_source| {
+        let RenderedModuleSource { module_idx, module_id, exec_order, sources } =
+          rendered_module_source;
+        let rendered_exports = ctx.link_output.metas[*module_idx]
+          .resolved_exports
+          .iter()
+          .filter_map(|(key, export)| {
+            if ctx.link_output.used_symbol_refs.contains(&export.symbol_ref) {
+              Some(key.clone())
+            } else {
+              None
+            }
+          })
+          .collect::<Vec<_>>();
+        (module_id.clone(), RenderedModule::new(sources.clone(), rendered_exports, *exec_order))
+      })
+      .collect();
 
     let rendered_chunk = Arc::new(generate_rendered_chunk(ctx, rendered_modules));
 

@@ -12,7 +12,7 @@ pub fn render_ecma_module(
   if render_output.code.is_empty() {
     None
   } else {
-    let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send + Sync>> = vec![];
+    let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send + Sync>> = Vec::with_capacity(6);
     if options.experimental.is_attach_debug_info_enabled() {
       sources.push(Box::new(concat_string!("//#region ", module.debug_id)));
     }

@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{borrow::Cow, path::Path};
 
 use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes};
@@ -99,7 +99,7 @@ fn pre_process_source(
   module_type: &ModuleType,
   is_user_defined_entry: bool,
   options: &NormalizedBundlerOptions,
-) -> BuildResult<(bool, String, OxcParseType)> {
+) -> BuildResult<(bool, Cow<'static, str>, OxcParseType)> {
   let mut has_lazy_export = matches!(
     module_type,
     ModuleType::Json
@@ -111,37 +111,35 @@ fn pre_process_source(
 
   let source = match module_type {
     ModuleType::Js | ModuleType::Jsx | ModuleType::Ts | ModuleType::Tsx | ModuleType::Json => {
-      source.try_into_string()?
+      Cow::Owned(source.try_into_string()?)
     }
     ModuleType::Css => {
       if is_user_defined_entry {
-        "export {}".to_owned()
+        Cow::Borrowed("export {}")
       } else {
         has_lazy_export = true;
-        "({})".to_owned()
+        Cow::Borrowed("({})")
       }
     }
-    ModuleType::Text => text_to_string_literal(&source.try_into_string()?)?,
-    ModuleType::Asset => "import.meta.__ROLLDOWN_ASSET_FILENAME".to_string(),
+    ModuleType::Text => Cow::Owned(text_to_string_literal(&source.try_into_string()?)?),
+    ModuleType::Asset => Cow::Borrowed("import.meta.__ROLLDOWN_ASSET_FILENAME"),
     ModuleType::Base64 => {
-      let source = source.as_bytes();
-      let encoded = rolldown_utils::base64::to_standard_base64(source);
-      text_to_string_literal(&encoded)?
+      let encoded = rolldown_utils::base64::to_standard_base64(source.as_bytes());
+      Cow::Owned(text_to_string_literal(&encoded)?)
     }
     ModuleType::Dataurl => {
       let data = source.as_bytes();
       let guessed_mime = guess_mime(path, data)?;
       let dataurl = rolldown_utils::dataurl::encode_as_shortest_dataurl(&guessed_mime, data);
-      text_to_string_literal(&dataurl)?
+      Cow::Owned(text_to_string_literal(&dataurl)?)
     }
     ModuleType::Binary => {
-      let source = source.as_bytes();
-      let encoded = rolldown_utils::base64::to_standard_base64(source);
+      let encoded = rolldown_utils::base64::to_standard_base64(source.as_bytes());
       let to_binary = match options.platform {
         rolldown_common::Platform::Node => "__toBinaryNode",
         _ => "__toBinary",
       };
-      rolldown_utils::concat_string!(
+      Cow::Owned(rolldown_utils::concat_string!(
         "import {",
         to_binary,
         "} from '",
@@ -151,9 +149,9 @@ fn pre_process_source(
         "('",
         encoded,
         "')"
-      )
+      ))
     }
-    ModuleType::Empty => String::new(),
+    ModuleType::Empty => Cow::Borrowed(""),
     ModuleType::Custom(custom_type) => {
       // TODO: should provide friendly error message to say that this type is not supported by rolldown.
       // Users should handle this type in load/transform hooks

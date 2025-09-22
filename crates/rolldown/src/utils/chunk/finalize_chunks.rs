@@ -197,7 +197,7 @@ pub async fn finalize_assets(
 
   // apply sourcemap related logic
 
-  let mut derived_assets = vec![];
+  let mut derived_assets = Vec::with_capacity(assets.len());
 
   for asset in &mut assets {
     match &mut asset.meta {

@@ -1,6 +1,6 @@
 use std::{ops::Deref, sync::Arc};
 
-use futures::future::try_join_all;
+use futures::future::{try_join_all, try_join3};
 use oxc::span::CompactStr;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
@@ -164,7 +164,7 @@ impl GenerateStage<'_> {
     try_join_all(
       chunk_graph.chunk_table.iter_enumerated().zip(chunk_index_to_codegen_rets.into_iter()).map(
         |((chunk_idx, chunk), module_id_to_codegen_ret)| async move {
-          let mut ctx = GenerateContext {
+          let mut ecma_ctx = GenerateContext {
             chunk_idx,
             chunk,
             options: self.options,
@@ -175,9 +175,9 @@ impl GenerateStage<'_> {
             module_id_to_codegen_ret,
             render_export_items_index_vec,
           };
-          let ecma_chunks = EcmaGenerator::instantiate_chunk(&mut ctx).await;
+          let ecma_chunks_future = EcmaGenerator::instantiate_chunk(&mut ecma_ctx);
 
-          let mut ctx = GenerateContext {
+          let mut css_ctx = GenerateContext {
             chunk_idx,
             chunk,
             options: self.options,
@@ -189,9 +189,9 @@ impl GenerateStage<'_> {
             module_id_to_codegen_ret: vec![],
             render_export_items_index_vec: &index_vec![],
           };
-          let css_chunks = CssGenerator::instantiate_chunk(&mut ctx).await;
+          let css_chunks_future = CssGenerator::instantiate_chunk(&mut css_ctx);
 
-          let mut ctx = GenerateContext {
+          let mut asset_ctx = GenerateContext {
             chunk_idx,
             chunk,
             options: self.options,
@@ -203,13 +203,11 @@ impl GenerateStage<'_> {
             module_id_to_codegen_ret: vec![],
             render_export_items_index_vec: &index_vec![],
           };
-          let asset_chunks = AssetGenerator::instantiate_chunk(&mut ctx).await;
+          let asset_chunks_future = AssetGenerator::instantiate_chunk(&mut asset_ctx);
 
-          ecma_chunks.and_then(|ecma_chunks| {
-            css_chunks.and_then(|css_chunks| {
-              asset_chunks.map(|asset_chunks| [ecma_chunks, css_chunks, asset_chunks])
-            })
-          })
+          let (ecma_chunks, css_chunks, asset_chunks) =
+            try_join3(ecma_chunks_future, css_chunks_future, asset_chunks_future).await?;
+          Ok::<_, anyhow::Error>([ecma_chunks, css_chunks, asset_chunks])
         },
       ),
     )

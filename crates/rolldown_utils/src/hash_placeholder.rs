@@ -73,7 +73,7 @@ const CHARS: &[u8; BASE as usize] =
   b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$";
 
 pub fn to_base64(mut value: u32) -> String {
-  let mut buffer = vec![];
+  let mut buffer = Vec::with_capacity(16);
 
   loop {
     let current_digit = value % BASE;

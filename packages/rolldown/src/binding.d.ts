@@ -1946,7 +1946,7 @@ export interface BindingOutputOptions {
   plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapBaseUrl?: string
-  sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
+  sourcemapIgnoreList?: boolean | string | RegExp | ((source: string, sourcemapPath: string) => boolean)
   sourcemapDebugIds?: boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
   minify?: boolean | 'dce-only' | MinifyOptions

@@ -769,7 +769,11 @@ const OutputOptionsSchema = v.strictObject({
     v.description('Inject sourcemap debug IDs'),
   ),
   sourcemapIgnoreList: v.optional(
-    v.union([v.boolean(), v.custom<SourcemapIgnoreListOption>(() => true)]),
+    v.union([
+      v.boolean(),
+      v.custom<SourcemapIgnoreListOption>(() => true),
+      StringOrRegExpSchema,
+    ]),
   ),
   sourcemapPathTransform: v.optional(
     v.custom<SourcemapPathTransformOption>(() => true),

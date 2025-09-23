@@ -4,7 +4,7 @@ import type {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
 } from '../types/misc';
-import { bindingifySourcemapIgnoreList } from '../utils/bindingify-output-options';
+import type { StringOrRegExp } from '../types/utils';
 import type {
   AddonFunction,
   AssetFileNamesFunction,
@@ -40,7 +40,11 @@ export interface NormalizedOutputOptions {
   globals: Record<string, string> | GlobalsFunction;
   hashCharacters: 'base64' | 'base36' | 'hex';
   sourcemapDebugIds: boolean;
-  sourcemapIgnoreList: SourcemapIgnoreListOption;
+  sourcemapIgnoreList:
+    | boolean
+    | SourcemapIgnoreListOption
+    | StringOrRegExp
+    | undefined;
   sourcemapPathTransform: SourcemapPathTransformOption | undefined;
   minify: false | MinifyOptions | 'dce-only';
   legalComments: 'none' | 'inline';
@@ -159,10 +163,13 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
     return this.inner.sourcemapDebugIds;
   }
 
-  get sourcemapIgnoreList(): SourcemapIgnoreListOption {
-    return bindingifySourcemapIgnoreList(
-      this.outputOptions.sourcemapIgnoreList,
-    );
+  get sourcemapIgnoreList():
+    | boolean
+    | SourcemapIgnoreListOption
+    | StringOrRegExp
+    | undefined
+  {
+    return this.outputOptions.sourcemapIgnoreList;
   }
 
   get sourcemapPathTransform(): SourcemapPathTransformOption | undefined {

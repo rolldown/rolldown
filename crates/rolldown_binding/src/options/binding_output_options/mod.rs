@@ -14,6 +14,7 @@ use binding_pre_rendered_chunk::PreRenderedChunk;
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 use crate::types::{
   binding_rendered_chunk::BindingRenderedChunk,
+  binding_string_or_regex::BindingStringOrRegex,
   js_callback::{JsCallback, MaybeAsyncJsCallback},
 };
 
@@ -25,6 +26,8 @@ pub type AssetFileNamesOutputOption =
 pub type GlobalsOutputOption =
   Either<FxHashMap<String, String>, JsCallback<FnArgs<(String,)>, String>>;
 pub type SanitizeFileName = Either<bool, JsCallback<FnArgs<(String,)>, String>>;
+pub type SourcemapIgnoreListOutputOption =
+  Either3<bool, BindingStringOrRegex, JsCallback<FnArgs<(String, String)>, bool>>;
 
 #[napi(object, object_to_js = false)]
 #[derive(Debug)]
@@ -99,8 +102,10 @@ pub struct BindingOutputOptions<'env> {
   pub sourcemap: Option<String>,
   pub sourcemap_base_url: Option<String>,
   #[debug(skip)]
-  #[napi(ts_type = "(source: string, sourcemapPath: string) => boolean")]
-  pub sourcemap_ignore_list: Option<JsCallback<FnArgs<(String, String)>, bool>>,
+  #[napi(
+    ts_type = "boolean | string | RegExp | ((source: string, sourcemapPath: string) => boolean)"
+  )]
+  pub sourcemap_ignore_list: Option<SourcemapIgnoreListOutputOption>,
   pub sourcemap_debug_ids: Option<bool>,
   #[debug(skip)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => string")]

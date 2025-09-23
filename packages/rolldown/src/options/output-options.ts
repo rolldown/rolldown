@@ -64,7 +64,7 @@ export interface OutputOptions {
   sourcemap?: boolean | 'inline' | 'hidden';
   sourcemapBaseUrl?: string;
   sourcemapDebugIds?: boolean;
-  sourcemapIgnoreList?: boolean | SourcemapIgnoreListOption;
+  sourcemapIgnoreList?: boolean | SourcemapIgnoreListOption | StringOrRegExp;
   sourcemapPathTransform?: SourcemapPathTransformOption;
   banner?: string | AddonFunction;
   footer?: string | AddonFunction;

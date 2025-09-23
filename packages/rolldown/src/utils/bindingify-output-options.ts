@@ -1,7 +1,6 @@
 import type { BindingOutputOptions } from '../binding';
 import type { OutputOptions } from '../options/output-options';
 import { ChunkingContextImpl } from '../types/chunking-context';
-import type { SourcemapIgnoreListOption } from '../types/misc';
 import { transformAssetSource } from './asset-source';
 import { unimplemented } from './misc';
 import { transformRenderedChunk } from './transform-rendered-chunk';
@@ -56,7 +55,7 @@ export function bindingifyOutputOptions(
     sourcemap: bindingifySourcemap(sourcemap),
     sourcemapBaseUrl,
     sourcemapDebugIds,
-    sourcemapIgnoreList: bindingifySourcemapIgnoreList(sourcemapIgnoreList),
+    sourcemapIgnoreList: sourcemapIgnoreList ?? /node_modules/,
     sourcemapPathTransform,
     banner: bindingifyAddon(banner),
     footer: bindingifyAddon(footer),
@@ -142,17 +141,6 @@ function bindingifySourcemap(
     default:
       throw new Error(`unknown sourcemap: ${sourcemap}`);
   }
-}
-
-export function bindingifySourcemapIgnoreList(
-  sourcemapIgnoreList: OutputOptions['sourcemapIgnoreList'],
-): SourcemapIgnoreListOption {
-  return typeof sourcemapIgnoreList === 'function'
-    ? sourcemapIgnoreList
-    : sourcemapIgnoreList === false
-    ? () => false
-    : (relativeSourcePath: string, _sourcemapPath: string) =>
-      relativeSourcePath.includes('node_modules');
 }
 
 function bindingifyAssetFilenames(

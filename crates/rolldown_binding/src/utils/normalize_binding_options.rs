@@ -12,7 +12,7 @@ use crate::{
   options::plugin::JsPlugin,
   types::{binding_rendered_chunk::BindingRenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
 };
-use napi::bindgen_prelude::{Either, FnArgs};
+use napi::bindgen_prelude::{Either, Either3, FnArgs};
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
   ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal, MatchGroup,
@@ -160,15 +160,21 @@ pub fn normalize_binding_options(
     })
   });
 
-  let sourcemap_ignore_list = output_options.sourcemap_ignore_list.map(|ts_fn| {
-    rolldown::SourceMapIgnoreList::new(Arc::new(move |source, sourcemap_path| {
-      let ts_fn = Arc::clone(&ts_fn);
-      let source = source.to_string();
-      let sourcemap_path = sourcemap_path.to_string();
-      Box::pin(async move {
-        ts_fn.invoke_async((source, sourcemap_path).into()).await.map_err(anyhow::Error::from)
-      })
-    }))
+  let sourcemap_ignore_list = output_options.sourcemap_ignore_list.map(|option| match option {
+    Either3::A(bool_val) => rolldown::SourceMapIgnoreList::from_bool(bool_val),
+    Either3::B(string_or_regex) => {
+      rolldown::SourceMapIgnoreList::from_string_or_regex(string_or_regex.inner())
+    }
+    Either3::C(ts_fn) => {
+      rolldown::SourceMapIgnoreList::new(Arc::new(move |source, sourcemap_path| {
+        let ts_fn = Arc::clone(&ts_fn);
+        let source = source.to_string();
+        let sourcemap_path = sourcemap_path.to_string();
+        Box::pin(async move {
+          ts_fn.invoke_async((source, sourcemap_path).into()).await.map_err(anyhow::Error::from)
+        })
+      }))
+    }
   });
 
   let sourcemap_path_transform = output_options.sourcemap_path_transform.map(|ts_fn| {

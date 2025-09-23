@@ -9,6 +9,7 @@ use url::Url;
 
 use super::uuid::uuid_v4_string_from_u128;
 
+#[expect(clippy::too_many_lines)]
 pub async fn process_code_and_sourcemap(
   options: &NormalizedBundlerOptions,
   code: &mut String,
@@ -34,7 +35,19 @@ pub async fn process_code_and_sourcemap(
   if let Some(source_map_ignore_list) = &options.sourcemap_ignore_list {
     let mut x_google_ignore_list = vec![];
     for (index, source) in map.get_sources().enumerate() {
-      if source_map_ignore_list.call(source, map_path.to_string_lossy().as_ref()).await? {
+      let should_ignore = match source_map_ignore_list {
+        rolldown_common::SourceMapIgnoreList::Boolean(_)
+        | rolldown_common::SourceMapIgnoreList::StringOrRegex(_) => {
+          // Fast path: no async overhead for static values (boolean/string/regex)
+          source_map_ignore_list.exec_static(source)
+        }
+        rolldown_common::SourceMapIgnoreList::Fn(_) => {
+          // Slow path: async function call only when needed
+          source_map_ignore_list.exec_dynamic(source, map_path.to_string_lossy().as_ref()).await?
+        }
+      };
+
+      if should_ignore {
         #[expect(clippy::cast_possible_truncation)]
         x_google_ignore_list.push(index as u32);
       }

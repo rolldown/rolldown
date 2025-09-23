@@ -31,13 +31,7 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
     .map(|sourcemap| (sourcemap, sourcemap.generate_lookup_table()))
     .collect::<Vec<_>>();
 
-  let source_view_tokens = last_map.get_source_view_tokens().collect::<Vec<_>>();
-
-  let names_map = first_map
-    .get_names()
-    .enumerate()
-    .map(|(i, name)| (name, i as u32))
-    .collect::<FxHashMap<_, _>>();
+  let source_view_tokens = last_map.get_source_view_tokens();
 
   let sources_map = first_map
     .get_sources()
@@ -49,10 +43,9 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
   let mut sources_cache = FxHashMap::with_capacity(sources_map.len());
 
   let tokens = source_view_tokens
-    .iter()
     .filter_map(|token| {
       let original_token = sourcemap_and_lookup_table.iter().rev().try_fold(
-        *token,
+        token,
         |token, (sourcemap, lookup_table)| {
           sourcemap.lookup_source_view_token(
             lookup_table,
@@ -75,10 +68,7 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
               })
               .copied()
           }),
-          original_token
-            .get_name_id()
-            .and_then(|name_id| first_map.get_name(name_id))
-            .and_then(|name| names_map.get(name).copied()),
+          original_token.get_name_id(),
         )
       })
     })

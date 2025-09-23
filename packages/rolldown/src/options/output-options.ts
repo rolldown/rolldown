@@ -64,6 +64,37 @@ export interface OutputOptions {
   sourcemap?: boolean | 'inline' | 'hidden';
   sourcemapBaseUrl?: string;
   sourcemapDebugIds?: boolean;
+  /**
+   * Control which source files are included in the sourcemap ignore list.
+   * Files in the ignore list are excluded from debugger stepping and error stack traces.
+   *
+   * - `false`: Include all source files in the ignore list
+   * - `true`: Include no source files in the ignore list
+   * - `string`: Files containing this string in their path will be included in the ignore list
+   * - `RegExp`: Files matching this regular expression will be included in the ignore list
+   * - `function`: Custom function `(source: string, sourcemapPath: string) => boolean` to determine if a source should be ignored
+   *
+   * :::tip Performance
+   * Using static values (`boolean`, `string`, or `RegExp`) is significantly more performant than functions.
+   * Calling JavaScript functions from Rust has extremely high overhead, so prefer static patterns when possible.
+   * :::
+   *
+   * ## Examples
+   * ```js
+   * // ✅ Preferred: Use RegExp for better performance
+   * sourcemapIgnoreList: /node_modules/
+   *
+   * // ✅ Preferred: Use string pattern for better performance
+   * sourcemapIgnoreList: "vendor"
+   *
+   * // ⚠️ Use sparingly: Function calls have high overhead
+   * sourcemapIgnoreList: (source, sourcemapPath) => {
+   *   return source.includes('node_modules') || source.includes('.min.');
+   * }
+   * ```
+   *
+   * **default**: /node_modules/
+   */
   sourcemapIgnoreList?: boolean | SourcemapIgnoreListOption | StringOrRegExp;
   sourcemapPathTransform?: SourcemapPathTransformOption;
   banner?: string | AddonFunction;

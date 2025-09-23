@@ -34,12 +34,10 @@ impl<'text> MagicString<'text> {
     options: ReplaceOptions,
   ) -> &mut Self {
     let to: CowStr<'text> = to.into();
-    let matches: Vec<_> = self
-      .source
-      .match_indices(from)
+    let matches = memchr::memmem::find_iter(self.source.as_bytes(), from.as_bytes())
       .take(options.count)
-      .map(|(start, part)| (start, start + part.len()))
-      .collect();
+      .map(|start| (start, start + from.len()))
+      .collect::<Vec<_>>();
     for (match_start, end) in matches {
       self.update_with(
         match_start,

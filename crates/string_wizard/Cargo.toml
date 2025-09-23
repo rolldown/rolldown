@@ -9,6 +9,7 @@ description = "manipulate string like a wizard"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+memchr = { workspace = true }
 oxc_index = { workspace = true }
 oxc_sourcemap = { workspace = true, optional = true }
 rustc-hash = { workspace = true }

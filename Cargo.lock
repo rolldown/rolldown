@@ -3722,6 +3722,7 @@ name = "string_wizard"
 version = "0.0.26"
 dependencies = [
  "insta",
+ "memchr",
  "oxc_index",
  "oxc_sourcemap",
  "rustc-hash",

@@ -12,7 +12,7 @@ impl TryFrom<BindingSourcemap> for rolldown_sourcemap::SourceMap {
   fn try_from(value: BindingSourcemap) -> Result<Self, Self::Error> {
     match value.inner {
       Either::A(s) => rolldown_sourcemap::SourceMap::from_json_string(&s)
-        .map_err(|e| anyhow::format_err!("Convert string sourcemap error: {:?}", e)),
+        .map_err(|e| anyhow::format_err!("Convert string sourcemap error: {e:?}")),
       Either::B(v) => v.try_into(),
     }
   }
@@ -51,7 +51,7 @@ impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
       debug_id: value.debug_id,
       x_google_ignore_list: value.x_google_ignore_list,
     })
-    .map_err(|e| anyhow::format_err!("Convert json sourcemap error: {:?}", e))?;
+    .map_err(|e| anyhow::format_err!("Convert json sourcemap error: {e:?}"))?;
     Ok(map)
   }
 }

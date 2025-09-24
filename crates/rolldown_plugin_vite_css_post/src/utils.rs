@@ -110,7 +110,7 @@ impl ViteCssPostPlugin {
         };
 
         let Some(style) = css_styles.inner.get(&id) else {
-          return Err(anyhow::anyhow!("CSS content for  '{}' was not found", id));
+          return Err(anyhow::anyhow!("CSS content for  '{id}' was not found"));
         };
 
         let original_file_name = clean_url(&id).to_string();

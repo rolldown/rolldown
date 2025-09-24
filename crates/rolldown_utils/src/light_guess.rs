@@ -87,7 +87,7 @@ pub fn try_from_path(path: &std::path::Path) -> anyhow::Result<MimeExt> {
   if let Some(ext) = path.extension().and_then(|ext| ext.to_str()) {
     try_from_ext(ext)
   } else {
-    anyhow::bail!("No extension found for path: {:?}", path);
+    anyhow::bail!("No extension found for path: {}", path.display());
   }
 }
 

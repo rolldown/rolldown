@@ -193,7 +193,8 @@ impl Bundler {
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
 
     self.fs.create_dir_all(&dist_dir).map_err(|err| {
-      anyhow::anyhow!("Could not create directory for output chunks: {:?}", dist_dir).context(err)
+      anyhow::anyhow!("Could not create directory for output chunks: {}", dist_dir.display())
+        .context(err)
     })?;
 
     for chunk in &output.assets {
@@ -203,10 +204,9 @@ impl Bundler {
           self.fs.create_dir_all(p).unwrap();
         }
       }
-      self
-        .fs
-        .write(&dest, chunk.content_as_bytes())
-        .map_err(|err| anyhow::anyhow!("Failed to write file in {:?}", dest).context(err))?;
+      self.fs.write(&dest, chunk.content_as_bytes()).map_err(|err| {
+        anyhow::anyhow!("Failed to write file in {}", dest.display()).context(err)
+      })?;
     }
 
     self

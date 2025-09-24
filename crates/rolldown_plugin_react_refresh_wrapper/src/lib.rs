@@ -17,6 +17,7 @@ const REFRESH_CONTENT: &str = "$RefreshReg$(";
 
 #[derive(Debug)]
 pub struct ReactRefreshWrapperPluginOptions {
+  pub cwd: String,
   pub include: Vec<StringOrRegex>,
   pub exclude: Vec<StringOrRegex>,
   pub jsx_import_source: String,
@@ -25,6 +26,7 @@ pub struct ReactRefreshWrapperPluginOptions {
 
 #[derive(Debug)]
 pub struct ReactRefreshWrapperPlugin {
+  cwd: String,
   include: Vec<StringOrRegex>,
   exclude: Vec<StringOrRegex>,
   jsx_import_runtime: String,
@@ -36,6 +38,7 @@ impl ReactRefreshWrapperPlugin {
   pub fn new(options: ReactRefreshWrapperPluginOptions) -> Self {
     let jsx_import_source = options.jsx_import_source;
     Self {
+      cwd: options.cwd,
       include: options.include,
       exclude: options.exclude,
       jsx_import_dev_runtime: format!("{jsx_import_source}/jsx-dev-runtime"),
@@ -112,11 +115,11 @@ impl Plugin for ReactRefreshWrapperPlugin {
 
   async fn transform(
     &self,
-    ctx: rolldown_plugin::SharedTransformPluginContext,
+    _ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     if matches!(
-      filter(Some(&self.exclude), Some(&self.include), args.id, ctx.cwd().to_str().unwrap()),
+      filter(Some(&self.exclude), Some(&self.include), args.id, &self.cwd),
       FilterResult::Match(false) | FilterResult::NoneMatch(false)
     ) {
       return Ok(None);

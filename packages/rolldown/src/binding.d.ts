@@ -2070,6 +2070,7 @@ export declare enum BindingPropertyWriteSideEffects {
 }
 
 export interface BindingReactRefreshWrapperPluginConfig {
+  cwd: string
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   jsxImportSource: string

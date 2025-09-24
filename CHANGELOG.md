@@ -1,4 +1,43 @@
 
+## [1.0.0-beta.40] - 2025-09-24
+
+### 🚀 Features
+
+- rolldown: oxc v0.92.0 (#6322) by @Boshen
+- adding partial `MagicString` binding (#6289) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: initialize (#6292) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_react_refresh_wrapper: avoid using cwd to allow using as a callable plugin (#6318) by @sapphi-red
+- rolldown_plugin_transform: resolve tsconfig from absolute path (#6311) by @shulaoda
+
+### 🚜 Refactor
+
+- Construct MagicString with `Cow<str>` instead of `&str` (#6288) by @IWANABETHATGUY
+- throw error if generating oxc runtime helper fails (#6291) by @shulaoda
+
+### 📚 Documentation
+
+- add more description about sourcemapIgnoreList (#6314) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- reduce `sourcemap_ignore_list` js function call (#6313) by @IWANABETHATGUY
+- string_wizard: use memchr to find patterns in `replace` (#6312) by @IWANABETHATGUY
+- simplify sourcemap token processing in collapse_sourcemaps (#6310) by @IWANABETHATGUY
+- rolldown: some minor perf optimization (#6306) by @Brooooooklyn
+- rolldown: fine-tuning the tokio scheduler (#6272) by @Brooooooklyn
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance rust crates (#6302) by @renovate[bot]
+- deps: lock file maintenance npm packages (#6301) by @renovate[bot]
+- use `lto: thin` in profile mode for better profiling experience. (#6320) by @IWANABETHATGUY
+- adjust the tokio runtime config in bench (#6305) by @Brooooooklyn
+- deps: update dependency rolldown-plugin-dts to v0.16.8 (#6307) by @renovate[bot]
+
+
 ## [1.0.0-beta.39] - 2025-09-22
 
 ### 🚀 Features

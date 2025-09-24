@@ -99,15 +99,14 @@ impl BindingDevEngine {
   }
 
   #[napi]
-  pub async fn ensure_latest_build_output(&self) -> napi::Result<()> {
-    self.inner.ensure_latest_build_output().await.expect("Should handle this error");
-    Ok(())
+  pub async fn has_latest_build_output(&self) -> bool {
+    self.inner.has_latest_build_output().await
   }
 
   #[napi]
-  pub async fn schedule_build_if_stale(&self) -> Option<ScheduledBuild> {
-    let result = self.inner.schedule_build_if_stale().await.expect("Should handle this error");
-    result.map(|(future, already_scheduled)| ScheduledBuild { future, already_scheduled })
+  pub async fn ensure_latest_build_output(&self) -> napi::Result<()> {
+    self.inner.ensure_latest_build_output().await.expect("Should handle this error");
+    Ok(())
   }
 
   #[napi]

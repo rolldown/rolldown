@@ -93,7 +93,7 @@ function main() {
         const devServeProcess = execa('pnpm serve', {
           cwd: tmpProjectPath,
           shell: true,
-          stdio: 'inherit',
+          stdio: ['pipe', 'inherit', 'inherit'],
           env: {
             RUST_BACKTRACE: 'FULL',
             RD_LOG: process.env.RD_LOG || 'hmr=debug',
@@ -137,8 +137,11 @@ function main() {
           const needRestart = hmrEditsWithContent.some(e =>
             /^\s*\/\/\s*@restart/.test(e.content)
           );
+          const needReload = hmrEditsWithContent.some(e =>
+            /^\s*\/\/\s*@reload/.test(e.content)
+          );
           let currentArtifactContent!: Buffer;
-          if (needRestart) {
+          if (needRestart || needReload) {
             currentArtifactContent = nodeFs.readFileSync(nodeScriptPath);
           }
 
@@ -151,10 +154,14 @@ function main() {
             `⏳ Waiting for HMR to be triggered for step ${step}`,
           );
 
-          if (needRestart) {
+          if (needRestart || needReload) {
             // Waiting Reload hmr update to be triggered. If we close the process too fast, dev engine will think there're no clients.
             // No hmr update will be triggered.
             await sensibleTimeoutInMs(2000);
+            if (needReload) {
+              console.log(`🏃‍➡️ Sent rebuild message to the dev server`);
+              devServeProcess.stdin.write('r');
+            }
             await runningArtifactProcess.close();
             await waitForFileToBeModified(
               nodeScriptPath,

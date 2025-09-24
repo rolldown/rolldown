@@ -91,6 +91,11 @@ impl BuildDriver {
     }
   }
 
+  pub async fn has_latest_build_output(&self) -> bool {
+    let build_state = self.ctx.state.lock().await;
+    !build_state.has_stale_build_output
+  }
+
   pub async fn ensure_latest_build_output(&self) -> BuildResult<()> {
     let mut count = 0;
 

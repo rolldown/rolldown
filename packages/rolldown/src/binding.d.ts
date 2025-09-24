@@ -1309,8 +1309,8 @@ export declare class BindingDevEngine {
   constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
   run(): Promise<void>
   ensureCurrentBuildFinish(): Promise<void>
+  hasLatestBuildOutput(): Promise<boolean>
   ensureLatestBuildOutput(): Promise<void>
-  scheduleBuildIfStale(): Promise<ScheduledBuild | null>
   invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<Array<BindingClientHmrUpdate>>
   registerModules(clientId: string, modules: Array<string>): void
   removeClient(clientId: string): void

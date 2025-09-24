@@ -62,23 +62,12 @@ export class DevEngine {
     return promise;
   }
 
-  async ensureLatestBuildOutput(): Promise<void> {
-    await this.#inner.ensureLatestBuildOutput();
+  async hasLatestBuildOutput(): Promise<boolean> {
+    return this.#inner.hasLatestBuildOutput();
   }
 
-  /**
-   * Returns true if a new build is scheduled.
-   */
-  async scheduleBuildIfStale(): Promise<
-    'scheduled' | 'alreadyScheduled' | undefined
-  > {
-    const scheduled = await this.#inner.scheduleBuildIfStale();
-    if (scheduled) {
-      // don't wait here as we want to return the result without waiting the actual build
-      scheduled.wait().catch(() => {});
-      return scheduled.alreadyScheduled() ? 'alreadyScheduled' : 'scheduled';
-    }
-    return undefined;
+  async ensureLatestBuildOutput(): Promise<void> {
+    await this.#inner.ensureLatestBuildOutput();
   }
 
   async invalidate(

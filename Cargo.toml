@@ -244,8 +244,9 @@ debug = true
 inherits = "release"
 
 [profile.profile]
-debug = true
+debug = "line-tables-only"
 strip = false
+lto = "thin"
 inherits = "release"
 
 [profile.release-wasi]

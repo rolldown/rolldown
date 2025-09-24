@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use crate::binding_bundler_impl::{BindingBundlerImpl, BindingBundlerOptions};
 use crate::binding_dev_options::BindingDevOptions;
-use crate::types::binding_hmr_output::BindingHmrUpdate;
+use crate::types::binding_hmr_output::BindingClientHmrUpdate;
 use napi::bindgen_prelude::FnArgs;
 use napi::{Env, threadsafe_function::ThreadsafeFunctionCallMode};
 
@@ -41,11 +41,11 @@ impl BindingDevEngine {
       watch_options.and_then(|watch| watch.compare_contents_for_polling);
     let debounce_tick_rate = watch_options.and_then(|watch| watch.debounce_tick_rate);
 
-    // If callback is provided, wrap it to convert Vec<HmrUpdate> to Vec<BindingHmrUpdate>
+    // If callback is provided, wrap it to convert Vec<ClientHmrUpdate> to Vec<BindingClientHmrUpdate>
     let on_hmr_updates = on_hmr_updates_callback.map(|js_callback| {
-      Arc::new(move |updates: Vec<rolldown_common::HmrUpdate>, changed_files: Vec<String>| {
-        let binding_updates: Vec<BindingHmrUpdate> =
-          updates.into_iter().map(BindingHmrUpdate::from).collect();
+      Arc::new(move |updates: Vec<rolldown_common::ClientHmrUpdate>, changed_files: Vec<String>| {
+        let binding_updates: Vec<BindingClientHmrUpdate> =
+          updates.into_iter().map(BindingClientHmrUpdate::from).collect();
         js_callback.call(
           FnArgs { data: (binding_updates, changed_files) },
           ThreadsafeFunctionCallMode::Blocking,
@@ -115,10 +115,21 @@ impl BindingDevEngine {
     &self,
     caller: String,
     first_invalidated_by: Option<String>,
-  ) -> napi::Result<BindingHmrUpdate> {
-    let update =
+  ) -> napi::Result<Vec<BindingClientHmrUpdate>> {
+    let updates =
       self.inner.invalidate(caller, first_invalidated_by).await.expect("Should handle this error");
-    Ok(BindingHmrUpdate::from(update))
+    let binding_updates = updates.into_iter().map(BindingClientHmrUpdate::from).collect();
+    Ok(binding_updates)
+  }
+
+  #[napi]
+  pub fn register_modules(&self, client_id: String, modules: Vec<String>) {
+    self.inner.clients.entry(client_id).or_default().registered_modules.extend(modules);
+  }
+
+  #[napi]
+  pub fn remove_client(&self, client_id: String) {
+    self.inner.clients.remove(&client_id);
   }
 }
 

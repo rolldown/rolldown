@@ -133,6 +133,7 @@ module.exports.BindingBundler = __napiModule.exports.BindingBundler
 module.exports.BindingBundlerImpl = __napiModule.exports.BindingBundlerImpl
 module.exports.BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin
 module.exports.BindingChunkingContext = __napiModule.exports.BindingChunkingContext
+module.exports.BindingClientHmrUpdate = __napiModule.exports.BindingClientHmrUpdate
 module.exports.BindingDevEngine = __napiModule.exports.BindingDevEngine
 module.exports.BindingHmrOutput = __napiModule.exports.BindingHmrOutput
 module.exports.BindingMagicString = __napiModule.exports.BindingMagicString

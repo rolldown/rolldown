@@ -1300,13 +1300,20 @@ export declare class BindingChunkingContext {
   getModuleInfo(moduleId: string): BindingModuleInfo | null
 }
 
+export declare class BindingClientHmrUpdate {
+  get clientId(): string
+  get update(): BindingHmrUpdate
+}
+
 export declare class BindingDevEngine {
   constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
   run(): Promise<void>
   ensureCurrentBuildFinish(): Promise<void>
   ensureLatestBuildOutput(): Promise<void>
   scheduleBuildIfStale(): Promise<ScheduledBuild | null>
-  invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<BindingHmrUpdate>
+  invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<Array<BindingClientHmrUpdate>>
+  registerModules(clientId: string, modules: Array<string>): void
+  removeClient(clientId: string): void
 }
 
 export declare class BindingHmrOutput {
@@ -1610,7 +1617,7 @@ export interface BindingDeferSyncScanData {
 }
 
 export interface BindingDevOptions {
-  onHmrUpdates?: undefined | ((updates: BindingHmrUpdate[], changedFiles: string[]) => void | Promise<void>)
+  onHmrUpdates?: undefined | ((updates: BindingClientHmrUpdate[], changedFiles: string[]) => void | Promise<void>)
   watch?: BindingDevWatchOptions
 }
 

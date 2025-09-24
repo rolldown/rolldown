@@ -5,7 +5,7 @@ use std::{
 
 use futures::FutureExt;
 
-use rolldown_common::HmrUpdate;
+use rolldown_common::ClientHmrUpdate;
 use rolldown_error::BuildResult;
 use rolldown_utils::indexmap::FxIndexSet;
 use tokio::sync::Mutex;
@@ -132,23 +132,33 @@ impl BuildDriver {
     &self,
     caller: String,
     first_invalidated_by: Option<String>,
-  ) -> BuildResult<HmrUpdate> {
-    let mut build_state = loop {
-      let build_state = self.ctx.state.lock().await;
-      if let Some(building_future) = build_state.is_busy_then_future().cloned() {
-        drop(build_state);
-        building_future.await;
-      } else {
-        break build_state;
-      }
-    };
+  ) -> BuildResult<Vec<ClientHmrUpdate>> {
+    let mut updates = Vec::new();
+    for client in self.ctx.clients.iter() {
+      let mut build_state = loop {
+        let build_state = self.ctx.state.lock().await;
+        if let Some(building_future) = build_state.is_busy_then_future().cloned() {
+          drop(build_state);
+          building_future.await;
+        } else {
+          break build_state;
+        }
+      };
 
-    let bundler = self.bundler.lock().await;
-    let cache = build_state.cache.take().expect("Should never be none here");
-    let mut hmr_manager = bundler.create_hmr_manager(cache, Arc::clone(&self.next_hmr_patch_id));
-    let update =
-      hmr_manager.compute_update_for_calling_invalidate(caller, first_invalidated_by).await?;
-    build_state.cache = Some(hmr_manager.input.cache);
-    Ok(update)
+      let bundler = self.bundler.lock().await;
+      let cache = build_state.cache.take().expect("Should never be none here");
+      let mut hmr_manager = bundler.create_hmr_manager(cache, Arc::clone(&self.next_hmr_patch_id));
+      let update = hmr_manager
+        .compute_update_for_calling_invalidate(
+          caller.clone(),
+          first_invalidated_by.clone(),
+          Some(&client.registered_modules),
+        )
+        .await?;
+      build_state.cache = Some(hmr_manager.input.cache);
+      updates.push(ClientHmrUpdate { client_id: client.key().to_string(), update });
+    }
+
+    Ok(updates)
   }
 }

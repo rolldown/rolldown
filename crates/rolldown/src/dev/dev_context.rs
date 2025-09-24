@@ -4,7 +4,7 @@ use futures::future::Shared;
 use tokio::sync::Mutex;
 
 use crate::dev::{
-  NormalizedDevOptions, build_driver_service::BuildChannelTx,
+  NormalizedDevOptions, SharedClients, build_driver_service::BuildChannelTx,
   build_state_machine::BuildStateMachine,
 };
 
@@ -17,6 +17,7 @@ pub struct DevContext {
   pub state: Mutex<BuildStateMachine>,
   pub options: NormalizedDevOptions,
   pub build_channel_tx: BuildChannelTx,
+  pub clients: SharedClients,
 }
 
 impl DevContext {

@@ -152,6 +152,9 @@ function main() {
           );
 
           if (needRestart) {
+            // Waiting Reload hmr update to be triggered. If we close the process too fast, dev engine will think there're no clients.
+            // No hmr update will be triggered.
+            await sensibleTimeoutInMs(2000);
             await runningArtifactProcess.close();
             await waitForFileToBeModified(
               nodeScriptPath,
@@ -212,6 +215,8 @@ async function runArtifactProcess(
 
   // Wait for the Node.js process to start
   await waitForPathExists(initOkFilePath);
+
+  await sensibleTimeoutInMs(2000); // Make sure module are registered
 
   return {
     process: artifactProcess,

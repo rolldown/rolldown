@@ -101,6 +101,7 @@ impl HmrManager {
     // The parameter is the stable id of the module that called `import.meta.hot.invalidate()`.
     invalidate_caller: String,
     first_invalidated_by: Option<String>,
+    registered_modules: Option<&FxHashSet<String>>,
   ) -> BuildResult<HmrUpdate> {
     tracing::debug!(
       target: "hmr",
@@ -115,6 +116,14 @@ impl HmrManager {
       .unwrap_or_else(|| panic!("Not found modules for file: {invalidate_caller}"));
 
     let caller = self.module_table().modules[module_idx].as_normal().unwrap();
+
+    if let Some(registered_modules) = registered_modules {
+      // FIXME: this is for compatibility with old code. Will remove this after we remove old code.
+      if !registered_modules.contains(&caller.stable_id) {
+        // If this module is not registered, we simply ignore it.
+        return Ok(HmrUpdate::Noop);
+      }
+    }
 
     // Only self accepting modules are allowed to call `import.meta.hot.invalidate()`.
     if !caller.is_hmr_self_accepting_module() {
@@ -141,8 +150,14 @@ impl HmrManager {
     // remain unchanged.
     let mut stale_modules = caller.importers_idx.clone();
     stale_modules.swap_remove(&caller.idx); // ignore self-imports
-    let ret =
-      self.compute_hmr_update(&stale_modules, &FxIndexSet::default(), first_invalidated_by).await?;
+    let ret = self
+      .compute_hmr_update(
+        &stale_modules,
+        &FxIndexSet::default(),
+        first_invalidated_by,
+        registered_modules,
+      )
+      .await?;
     // ret.is_self_accepting = true; // (hyf0) TODO: what's this for?
     Ok(ret)
   }
@@ -150,6 +165,7 @@ impl HmrManager {
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
     changed_file_paths: &[String],
+    registered_modules: Option<&FxHashSet<String>>,
   ) -> BuildResult<Vec<HmrUpdate>> {
     tracing::debug!(target: "hmr", "compute_hmr_update_for_file_changes: {:?}", changed_file_paths);
     let mut changed_modules = FxIndexSet::default();
@@ -182,7 +198,8 @@ impl HmrManager {
       return Ok(vec![HmrUpdate::Noop]);
     }
 
-    let update = self.compute_hmr_update(&changed_modules, &changed_modules, None).await?;
+    let update =
+      self.compute_hmr_update(&changed_modules, &changed_modules, None, registered_modules).await?;
 
     Ok(vec![update])
   }
@@ -193,9 +210,13 @@ impl HmrManager {
     stale_modules: &FxIndexSet<ModuleIdx>,
     changed_modules: &FxIndexSet<ModuleIdx>,
     first_invalidated_by: Option<String>,
+    registered_modules: Option<&FxHashSet<String>>,
   ) -> BuildResult<HmrUpdate> {
-    let hmr_prerequisites =
-      self.compute_out_hmr_prerequisites(stale_modules, first_invalidated_by.as_deref());
+    let hmr_prerequisites = self.compute_out_hmr_prerequisites(
+      stale_modules,
+      first_invalidated_by.as_deref(),
+      registered_modules,
+    );
 
     tracing::debug!(
       target: "hmr",
@@ -448,6 +469,7 @@ impl HmrManager {
     hmr_boundaries: &mut FxIndexSet<HmrBoundary>,
     propagate_stack: &mut Vec<ModuleIdx>,
     modules_to_be_updated: &mut FxIndexSet<ModuleIdx>,
+    registered_modules: Option<&FxHashSet<String>>,
   ) -> PropagateUpdateStatus {
     modules_to_be_updated.insert(module_idx);
 
@@ -496,6 +518,14 @@ impl HmrManager {
         continue;
       };
 
+      if let Some(registered_modules) = registered_modules {
+        // FIXME: this is for compatibility with old code. Will remove this after we remove old code.
+        if !registered_modules.contains(&importer.stable_id) {
+          // If this module is not registered, we simply ignore it.
+          continue;
+        }
+      }
+
       if importer.can_accept_hmr_dependency_for(&module.id) {
         modules_to_be_updated.insert(module_idx);
         hmr_boundaries.insert(HmrBoundary { boundary: importer_idx, accepted_via: module_idx });
@@ -503,8 +533,13 @@ impl HmrManager {
       }
 
       propagate_stack.push(module_idx);
-      let status =
-        self.propagate_update(importer_idx, hmr_boundaries, propagate_stack, modules_to_be_updated);
+      let status = self.propagate_update(
+        importer_idx,
+        hmr_boundaries,
+        propagate_stack,
+        modules_to_be_updated,
+        registered_modules,
+      );
       propagate_stack.pop();
       if !status.is_reach_hmr_boundary() {
         return status;
@@ -518,6 +553,7 @@ impl HmrManager {
     &self,
     stale_modules: &FxIndexSet<ModuleIdx>,
     first_invalidated_by: Option<&str>,
+    registered_modules: Option<&FxHashSet<String>>,
   ) -> HmrPrerequisites {
     let mut hmr_boundaries = FxIndexSet::default();
     let mut require_full_reload = false;
@@ -529,11 +565,21 @@ impl HmrManager {
         break;
       }
       let mut boundaries = FxIndexSet::default();
+
+      if let Some(registered_modules) = registered_modules {
+        // FIXME: this is for compatibility with old code. Will remove this after we remove old code.
+        if !registered_modules.contains(self.module_table().modules[stale_module].stable_id()) {
+          // If this module is not registered, we simply ignore it.
+          continue;
+        }
+      }
+
       let propagate_update_status = self.propagate_update(
         stale_module,
         &mut boundaries,
         &mut vec![],
         &mut modules_to_be_updated,
+        registered_modules,
       );
 
       match propagate_update_status {

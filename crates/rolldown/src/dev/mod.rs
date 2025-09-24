@@ -5,6 +5,14 @@ pub mod building_task;
 pub mod dev_context;
 pub mod dev_engine;
 pub mod dev_options;
+pub mod types;
 pub mod watcher_event_handler;
 
+use std::sync::Arc;
+
 pub use dev_options::{DevOptions, NormalizedDevOptions, OnHmrUpdatesCallback};
+use rolldown_utils::dashmap::FxDashMap;
+
+use crate::dev::types::client_session::ClientSession;
+
+pub type SharedClients = Arc<FxDashMap<String, ClientSession>>;

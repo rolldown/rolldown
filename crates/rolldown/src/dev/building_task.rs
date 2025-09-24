@@ -5,7 +5,7 @@ use std::{
   time::Duration,
 };
 
-use rolldown_common::ScanMode;
+use rolldown_common::{ClientHmrUpdate, ScanMode};
 use rolldown_error::BuildResult;
 use rolldown_utils::indexmap::FxIndexSet;
 use tokio::sync::Mutex;
@@ -161,12 +161,25 @@ impl BundlingTask {
     let changed_files =
       self.changed_files.iter().map(|p| p.to_string_lossy().to_string()).collect::<Vec<_>>();
 
-    let updates = hmr_manager.compute_hmr_update_for_file_changes(&changed_files).await?;
+    let mut client_updates = Vec::new();
+    for client in self.dev_context.clients.iter() {
+      let updates = hmr_manager
+        .compute_hmr_update_for_file_changes(&changed_files, Some(&client.registered_modules))
+        .await?;
+      client_updates.extend(
+        updates
+          .into_iter()
+          .map(|update| ClientHmrUpdate { client_id: client.key().to_string(), update }),
+      );
+    }
+
     self.bundler_cache = Some(hmr_manager.input.cache);
     // We had updated the cache with those changes, so we can clear the changed files.
     // This way, we won't need to update the cache again in rebuild.
-    if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref() {
-      on_hmr_updates(updates, changed_files);
+    if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref()
+      && !client_updates.is_empty()
+    {
+      on_hmr_updates(client_updates, changed_files);
     }
 
     Ok(())

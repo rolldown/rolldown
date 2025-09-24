@@ -3,6 +3,7 @@ export { DevEngine } from './api/dev/dev-engine';
 export type { DevOptions, DevWatchOptions } from './api/dev/dev-options';
 export { scan } from './api/experimental';
 export {
+  BindingClientHmrUpdate,
   isolatedDeclaration,
   type IsolatedDeclarationsOptions,
   type IsolatedDeclarationsResult,

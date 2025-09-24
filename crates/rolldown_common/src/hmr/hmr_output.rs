@@ -19,6 +19,12 @@ pub enum HmrUpdate {
   Noop,
 }
 
+#[derive(Debug)]
+pub struct ClientHmrUpdate {
+  pub client_id: String,
+  pub update: HmrUpdate,
+}
+
 impl HmrUpdate {
   pub fn is_full_reload(&self) -> bool {
     matches!(self, Self::FullReload { .. })

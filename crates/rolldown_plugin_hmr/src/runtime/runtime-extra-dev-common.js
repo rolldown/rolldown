@@ -33,6 +33,13 @@ class Module {
 // oxlint-disable-next-line no-unused-vars
 export class DevRuntime {
   /**
+   * @param {WebSocket} socket
+   */
+  constructor(socket) {
+    this.socket = socket;
+  }
+
+  /**
    * @type {Record<string, Module>}
    */
   modules = {};
@@ -56,6 +63,7 @@ export class DevRuntime {
     const module = new Module(id);
     module.exportsHolder = exportsHolder;
     this.modules[id] = module;
+    this.sendModuleRegisteredMessage(id);
   }
   /**
    * @param {string} id
@@ -96,4 +104,38 @@ export class DevRuntime {
   __toDynamicImportESM = __toDynamicImportESM;
   /** @internal */
   __reExport = __reExport;
+
+  sendModuleRegisteredMessage = (() => {
+    const cache = /** @type {string[]} */ ([]);
+    let timeout = /** @type {NodeJS.Timeout | null} */ (null);
+    const self = this;
+
+    /**
+     * @param {string} module
+     */
+    return function sendModuleRegisteredMessage(module) {
+      if (!self.socket) {
+        return;
+      }
+      cache.push(module);
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      timeout = setTimeout(function flushCache() {
+        if (self.socket.readyState === WebSocket.OPEN) {
+          self.socket.send(JSON.stringify({
+            type: 'hmr:module-registered',
+            modules: cache,
+          }));
+          cache.length = 0;
+        } else if (self.socket.readyState === WebSocket.CLOSED) {
+          // Do nothing
+        } else {
+          self.socket.onopen = function() {
+            flushCache();
+          };
+        }
+      });
+    };
+  })();
 }

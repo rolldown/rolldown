@@ -47,6 +47,13 @@ class ModuleHotContext {
 
 class DefaultDevRuntime extends DevRuntime {
   /**
+   * @param {WebSocket} socket
+   */
+  constructor(socket) {
+    super(socket);
+  }
+
+  /**
    * @type {Map<string, ModuleHotContext>}
    */
   moduleHotContexts = new Map();
@@ -90,9 +97,6 @@ class DefaultDevRuntime extends DevRuntime {
   }
 }
 
-(/** @type {any} */ (globalThis)).__rolldown_runtime__ ??=
-  new DefaultDevRuntime();
-
 /** @param {string} url */
 function loadScript(url) {
   var script = document.createElement('script');
@@ -108,6 +112,9 @@ console.debug('HMR runtime loaded', '$ADDR');
 const addr = new URL('ws://$ADDR');
 
 const socket = new WebSocket(addr);
+
+(/** @type {any} */ (globalThis)).__rolldown_runtime__ ??=
+  new DefaultDevRuntime(socket);
 
 /** @param {MessageEvent} event */
 socket.onmessage = function(event) {

@@ -1,8 +1,8 @@
 use derive_more::Debug;
-use rolldown_common::HmrUpdate;
+use rolldown_common::ClientHmrUpdate;
 use std::sync::Arc;
 
-pub type OnHmrUpdatesCallback = Arc<dyn Fn(Vec<HmrUpdate>, Vec<String>) + Send + Sync>;
+pub type OnHmrUpdatesCallback = Arc<dyn Fn(Vec<ClientHmrUpdate>, Vec<String>) + Send + Sync>;
 
 pub type SharedNormalizedDevOptions = Arc<NormalizedDevOptions>;
 

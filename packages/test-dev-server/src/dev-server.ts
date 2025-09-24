@@ -4,10 +4,11 @@ import http from 'node:http';
 import nodePath from 'node:path';
 import nodeUrl from 'node:url';
 import * as rolldown from 'rolldown';
-import { dev, DevEngine } from 'rolldown/experimental';
+import { BindingClientHmrUpdate, dev, DevEngine } from 'rolldown/experimental';
 import serveStatic from 'serve-static';
 import { WebSocket, WebSocketServer } from 'ws';
 import { HmrInvalidateMessage } from './types/client-message.js';
+import { ClientSession } from './types/client-session.js';
 import { NormalizedDevOptions } from './types/normalized-dev-options.js';
 import { HmrUpdateMessage } from './types/server-message.js';
 import { createDevServerPlugin } from './utils/create-dev-server-plugin.js';
@@ -37,11 +38,17 @@ class DevServer {
     allowRequestPromiseResolvers: withResolvers<void>(),
   };
   wsServer = new WebSocketServer({ server: this.server });
-  #sockets = new Set<WebSocket>();
+  #clients = new Map<string, ClientSession>();
   #devOptions?: NormalizedDevOptions;
   #devEngine?: DevEngine;
 
   constructor() {}
+
+  #sendMessage(socket: WebSocket, message: HmrUpdateMessage): void {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(message));
+    }
+  }
 
   async serve(): Promise<void> {
     this.#prepareServer();
@@ -62,6 +69,7 @@ class DevServer {
     const { output: outputOptions, ...inputOptions } = buildOptions;
     let devEngine = await dev(inputOptions, outputOptions ?? {}, {
       onHmrUpdates: (updates) => {
+        console.log('HMR updates:', updates);
         this.handleHmrUpdates(updates);
       },
       watch: getDevWatchOptionsForCi(),
@@ -83,10 +91,13 @@ class DevServer {
     });
 
     this.wsServer.on('connection', (ws, _req) => {
-      this.#sockets.add(ws);
+      const clientSession = new ClientSession(ws);
+      this.#clients.set(clientSession.id, clientSession);
       ws.on('error', console.error);
       ws.on('close', () => {
-        // TODO: handle close
+        this.#clients.delete(clientSession.id);
+        this.#devEngine?.removeClient(clientSession.id);
+        console.log(`Client ${clientSession.id} disconnected`);
       });
       ws.on('message', async (rawData) => {
         const clientMessage = decodeClientMessage(rawData);
@@ -94,6 +105,17 @@ class DevServer {
           case 'hmr:invalidate':
             await this.#handleHmrInvalidate(clientMessage);
             break;
+          case 'hmr:module-registered': {
+            console.log('Registering modules:', clientMessage.modules);
+            this.#devEngine?.registerModules(
+              clientSession.id,
+              clientMessage.modules,
+            );
+            break;
+          }
+          default: {
+            const _never: never = clientMessage;
+          }
         }
       });
     });
@@ -125,32 +147,28 @@ class DevServer {
     this.serverStatus.allowRequestPromiseResolvers.resolve();
   }
 
-  #sendMessage(message: HmrUpdateMessage): void {
-    if (this.#sockets.size > 0) {
-      const encoded = JSON.stringify(message);
-      for (const s of this.#sockets) {
-        if (s.readyState === WebSocket.OPEN) {
-          s.send(encoded);
-        }
-      }
-    }
-  }
-
-  handleHmrUpdates(
-    updates: Awaited<ReturnType<rolldown.RolldownBuild['generateHmrPatch']>>,
-  ): void {
-    for (const update of updates) {
+  handleHmrUpdates(updates: BindingClientHmrUpdate[]): void {
+    for (const clientUpdate of updates) {
+      const update = clientUpdate.update;
       switch (update.type) {
-        case 'Patch':
-          this.sendUpdateToClient(update);
+        case 'Patch': {
+          const client = this.#clients.get(clientUpdate.clientId);
+          if (!client) {
+            console.warn(`Client ${clientUpdate.clientId} not found`);
+            continue;
+          }
+          this.sendUpdateToClient(client.ws, update);
           break;
+        }
         case 'FullReload':
           if (this.#devOptions?.platform === 'browser') {
             // TODO: send reload message to client
           }
+          console.warn(`Client ${clientUpdate.clientId} is reloading`);
           this.#devEngine?.ensureLatestBuildOutput();
           break;
         case 'Noop':
+          console.warn(`Client ${clientUpdate.clientId} received noop update`);
           break;
         default:
           throw new Error(`Unknown update type: ${update}`);
@@ -159,6 +177,7 @@ class DevServer {
   }
 
   sendUpdateToClient(
+    socket: WebSocket,
     output: Awaited<ReturnType<rolldown.RolldownBuild['hmrInvalidate']>>,
   ): void {
     if (output.type !== 'Patch') {
@@ -184,7 +203,7 @@ class DevServer {
           path: patchUriForFile,
         }),
       );
-      this.#sendMessage({
+      this.#sendMessage(socket, {
         type: 'hmr:update',
         url: patchUriForBrowser,
         path: patchUriForFile,
@@ -208,10 +227,9 @@ class DevServer {
     msg: HmrInvalidateMessage,
   ): Promise<void> {
     console.log('Invalidating...');
-    if (this.#sockets.size > 0) {
-      const output = await this.#devEngine!.invalidate(msg.moduleId);
-      this.sendUpdateToClient(output);
-    }
+    // Always invalidate - sendMessage will handle empty client lists
+    const updates = await this.#devEngine!.invalidate(msg.moduleId);
+    this.handleHmrUpdates(updates);
   }
 }
 

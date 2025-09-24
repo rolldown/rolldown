@@ -1,4 +1,4 @@
-import type { BindingHmrUpdate } from '../../binding';
+import type { BindingClientHmrUpdate } from '../../binding';
 
 export interface DevWatchOptions {
   /**
@@ -43,7 +43,7 @@ export interface DevWatchOptions {
 
 export interface DevOptions {
   onHmrUpdates?: (
-    updates: BindingHmrUpdate[],
+    updates: BindingClientHmrUpdate[],
     changedFiles: string[],
   ) => void | Promise<void>;
   watch?: DevWatchOptions;

@@ -2,7 +2,7 @@ use std::{collections::VecDeque, ops::Deref, sync::Arc};
 
 use arcstr::ArcStr;
 use futures::{FutureExt, future::Shared};
-use rolldown_common::HmrUpdate;
+use rolldown_common::ClientHmrUpdate;
 use rolldown_error::BuildResult;
 use rolldown_utils::dashmap::FxDashSet;
 use rolldown_watcher::{DynWatcher, Watcher, WatcherConfig, WatcherExt};
@@ -12,6 +12,7 @@ use tokio::sync::{Mutex, mpsc::unbounded_channel};
 use crate::{
   Bundler, BundlerBuilder,
   dev::{
+    SharedClients,
     build_driver::{BuildDriver, SharedBuildDriver},
     build_driver_service::{BuildDriverService, BuildMessage},
     build_state_machine::BuildStateMachine,
@@ -32,6 +33,7 @@ pub struct DevEngine {
   watched_files: FxDashSet<ArcStr>,
   watch_service_state: Mutex<BuildDriverServiceState>,
   ctx: SharedDevContext,
+  pub clients: SharedClients,
 }
 
 impl DevEngine {
@@ -44,6 +46,8 @@ impl DevEngine {
 
     let (build_channel_tx, build_channel_rx) = unbounded_channel::<BuildMessage>();
 
+    let clients = SharedClients::default();
+
     let ctx = Arc::new(DevContext {
       state: Mutex::new(BuildStateMachine {
         queued_tasks: VecDeque::from([TaskInput::new_initial_build_task()]),
@@ -51,6 +55,7 @@ impl DevEngine {
       }),
       options: normalized_options,
       build_channel_tx,
+      clients: Arc::clone(&clients),
     });
     let build_driver = Arc::new(BuildDriver::new(bundler, Arc::clone(&ctx)));
 
@@ -119,6 +124,7 @@ impl DevEngine {
         handle: None,
       }),
       ctx,
+      clients,
     })
   }
 
@@ -174,7 +180,7 @@ impl DevEngine {
     &self,
     caller: String,
     first_invalidated_by: Option<String>,
-  ) -> BuildResult<HmrUpdate> {
+  ) -> BuildResult<Vec<ClientHmrUpdate>> {
     self.build_driver.invalidate(caller, first_invalidated_by).await
   }
 }

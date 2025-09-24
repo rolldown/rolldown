@@ -1,4 +1,4 @@
-import { BindingDevEngine, type BindingHmrUpdate } from '../../binding';
+import { type BindingClientHmrUpdate, BindingDevEngine } from '../../binding';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
@@ -84,7 +84,15 @@ export class DevEngine {
   async invalidate(
     file: string,
     firstInvalidatedBy?: string,
-  ): Promise<BindingHmrUpdate> {
+  ): Promise<BindingClientHmrUpdate[]> {
     return this.#inner.invalidate(file, firstInvalidatedBy);
+  }
+
+  registerModules(clientId: string, modules: string[]): void {
+    this.#inner.registerModules(clientId, modules);
+  }
+
+  removeClient(clientId: string): void {
+    this.#inner.removeClient(clientId);
   }
 }

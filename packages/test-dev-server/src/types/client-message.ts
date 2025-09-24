@@ -5,4 +5,9 @@ export interface HmrInvalidateMessage {
   moduleId: string;
 }
 
-export type ClientMessage = HmrInvalidateMessage;
+interface HmrModuleRegisteredMessage {
+  type: 'hmr:module-registered';
+  modules: string[];
+}
+
+export type ClientMessage = HmrInvalidateMessage | HmrModuleRegisteredMessage;

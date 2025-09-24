@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use oxc::transformer::{ESTarget, TransformOptions as OxcTransformOptions};
+use oxc::transformer::{EngineTargets, TransformOptions as OxcTransformOptions};
 
 #[derive(Debug, Default, Clone)]
 pub enum JsxPreset {
@@ -17,14 +17,14 @@ pub enum JsxPreset {
 
 pub struct TransformOptions {
   inner: OxcTransformOptions,
-  pub es_target: ESTarget,
+  pub target: EngineTargets,
   pub jsx_preset: JsxPreset,
 }
 
 impl TransformOptions {
   #[inline]
-  pub fn new(options: OxcTransformOptions, es_target: ESTarget, jsx_preset: JsxPreset) -> Self {
-    Self { inner: options, es_target, jsx_preset }
+  pub fn new(options: OxcTransformOptions, target: EngineTargets, jsx_preset: JsxPreset) -> Self {
+    Self { inner: options, target, jsx_preset }
   }
 
   #[inline]

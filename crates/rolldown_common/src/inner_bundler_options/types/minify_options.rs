@@ -39,7 +39,7 @@ impl RawMinifyOptions {
           };
 
           let compress = CompressOptions {
-            target: options.transform_options.es_target,
+            target: options.transform_options.target.clone(),
             keep_names: CompressOptionsKeepNames { function: keep_names, class: keep_names },
             treeshake: TreeShakeOptions::from(&options.treeshake),
             ..CompressOptions::smallest()

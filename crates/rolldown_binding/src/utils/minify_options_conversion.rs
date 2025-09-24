@@ -20,7 +20,7 @@ pub fn compress_options_to_napi_compress_options(
   compress: &oxc::minifier::CompressOptions,
 ) -> oxc_minify_napi::CompressOptions {
   oxc_minify_napi::CompressOptions {
-    target: Some(compress.target.to_string()),
+    target: Some(napi::Either::A(compress.target.to_string())),
     drop_console: Some(compress.drop_console),
     drop_debugger: Some(compress.drop_debugger),
     unused: Some(match compress.unused {

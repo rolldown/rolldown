@@ -5,7 +5,7 @@ import { locate } from './log/locate-character';
 import { error, logParseError } from './log/logs';
 import { getCodeFrame } from './utils/code-frame';
 // @ts-ignore
-import * as oxcParserWrap from 'oxc-parser/wrap.mjs';
+import * as oxcParserWrap from 'oxc-parser/src-js/wrap.js';
 
 function wrap(result: ParseResult, sourceText: string) {
   // reuse oxc-parser wrap and eagerly throw an error if any

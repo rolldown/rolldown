@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use oxc::transformer::ESTarget;
+use oxc::transformer::EngineTargets;
 use rolldown_common::{BundlerTransformOptions, Either, JsxOptions, JsxPreset, TransformOptions};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 
@@ -10,7 +10,13 @@ pub fn normalize_transform_options_with_tsconfig(
   tsconfig: Option<Arc<rolldown_resolver::TsConfig>>,
   warnings: &mut Vec<BuildDiagnostic>,
 ) -> BuildResult<TransformOptions> {
-  let es_target = normalize_es_target(transform_options.target.as_ref());
+  let target = match &transform_options.target {
+    Some(Either::Left(target)) => EngineTargets::from_target(target),
+    Some(Either::Right(targets)) => EngineTargets::from_target_list(targets),
+    None => Ok(EngineTargets::default()),
+  }
+  .map_err(improve_target_error)?;
+
   let mut jsx_preset = JsxPreset::Enable;
 
   if let Some(Either::Left(jsx)) = &mut transform_options.jsx {
@@ -231,56 +237,16 @@ pub fn normalize_transform_options_with_tsconfig(
     transform_options.assumptions = Some(assumptions);
   }
 
-  let options = transform_options.try_into().map_err(|err: String| {
-    let hint = if err.contains("Invalid target") {
-      Some("Rolldown only supports ES2015 (ES6) and later.".to_owned())
-    } else {
-      None
-    };
+  let options = transform_options.try_into().map_err(improve_target_error)?;
 
-    BuildDiagnostic::bundler_initialize_error(err, hint)
-  })?;
-
-  Ok(TransformOptions::new(options, es_target, jsx_preset))
+  Ok(TransformOptions::new(options, target, jsx_preset))
 }
 
-fn normalize_es_target(target: Option<&Either<String, Vec<String>>>) -> ESTarget {
-  target.map_or(ESTarget::ESNext, |target| {
-    let targets = match target {
-      Either::Left(target) => {
-        if target.contains(',') {
-          target.split(',').collect::<Vec<&str>>()
-        } else {
-          vec![target.as_str()]
-        }
-      }
-      Either::Right(target) => {
-        target.iter().map(std::string::String::as_str).collect::<Vec<&str>>()
-      }
-    };
-    for target in targets {
-      if target.len() <= 2 || !target[..2].eq_ignore_ascii_case("es") {
-        continue;
-      }
-      if target[2..].eq_ignore_ascii_case("next") {
-        return ESTarget::ESNext;
-      }
-      if let Ok(n) = target[2..].parse::<usize>() {
-        return match n {
-          6 | 2015 => ESTarget::ES2015,
-          2016 => ESTarget::ES2016,
-          2017 => ESTarget::ES2017,
-          2018 => ESTarget::ES2018,
-          2019 => ESTarget::ES2019,
-          2020 => ESTarget::ES2020,
-          2021 => ESTarget::ES2021,
-          2022 => ESTarget::ES2022,
-          2023 => ESTarget::ES2023,
-          2024 => ESTarget::ES2024,
-          _ => continue,
-        };
-      }
-    }
-    ESTarget::ES2015
-  })
+fn improve_target_error(err: String) -> BuildDiagnostic {
+  let hint = if err.contains("Invalid target") {
+    Some("Rolldown only supports ES2015 (ES6) and later.".to_owned())
+  } else {
+    None
+  };
+  BuildDiagnostic::bundler_initialize_error(err, hint)
 }

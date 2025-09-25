@@ -2,7 +2,10 @@ use derive_more::Debug;
 use rolldown_common::ClientHmrUpdate;
 use std::sync::Arc;
 
+use crate::types::bundle_output::BundleOutput;
+
 pub type OnHmrUpdatesCallback = Arc<dyn Fn(Vec<ClientHmrUpdate>, Vec<String>) + Send + Sync>;
+pub type OnOutputCallback = Arc<dyn Fn(BundleOutput) + Send + Sync>;
 
 pub type SharedNormalizedDevOptions = Arc<NormalizedDevOptions>;
 
@@ -30,6 +33,8 @@ pub struct DevWatchOptions {
 pub struct DevOptions {
   #[debug(skip)]
   pub on_hmr_updates: Option<OnHmrUpdatesCallback>,
+  #[debug(skip)]
+  pub on_output: Option<OnOutputCallback>,
   /// If `true`, A rebuild will be always issued when a file changes.
   pub eager_rebuild: Option<bool>,
   pub watch: Option<DevWatchOptions>,
@@ -40,6 +45,8 @@ pub struct DevOptions {
 pub struct NormalizedDevOptions {
   #[debug(skip)]
   pub on_hmr_updates: Option<OnHmrUpdatesCallback>,
+  #[debug(skip)]
+  pub on_output: Option<OnOutputCallback>,
   pub disable_watcher: bool,
   pub skip_write: bool,
   pub eager_rebuild: bool,
@@ -55,6 +62,7 @@ pub fn normalize_dev_options(options: DevOptions) -> NormalizedDevOptions {
   let watch_options = options.watch.unwrap_or_default();
   NormalizedDevOptions {
     on_hmr_updates: options.on_hmr_updates,
+    on_output: options.on_output,
     disable_watcher: watch_options.disable_watcher.unwrap_or_default(),
     skip_write: watch_options.skip_write.unwrap_or_default(),
     eager_rebuild: options.eager_rebuild.unwrap_or_default(),

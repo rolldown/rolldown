@@ -201,11 +201,16 @@ impl BundlingTask {
       ScanMode::Partial(self.changed_files.iter().map(|p| p.to_string_lossy().into()).collect())
     };
     let scan_output = bundler.scan(scan_mode).await?;
-    let _bundle_output = if skip_write {
+    let bundle_output = if skip_write {
       bundler.bundle_generate(scan_output).await
     } else {
       bundler.bundle_write(scan_output).await
     }?;
+
+    // Call on_output callback if provided
+    if let Some(on_output) = self.dev_context.options.on_output.as_ref() {
+      on_output(bundle_output);
+    }
 
     tracing::trace!(
       "`BuildStatus` finished building with changed files: {:#?}",

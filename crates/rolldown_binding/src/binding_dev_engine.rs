@@ -77,6 +77,7 @@ impl BindingDevEngine {
 
     let rolldown_dev_options = rolldown::dev::dev_options::DevOptions {
       on_hmr_updates,
+      on_output: None, // Rust-only for now
       watch: dev_watch_options,
       ..Default::default()
     };

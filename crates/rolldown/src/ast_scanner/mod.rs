@@ -1,4 +1,4 @@
-mod cjs_ast_analyzer;
+mod cjs_export_analyzer;
 pub mod const_eval;
 pub mod dynamic_import;
 mod hmr;

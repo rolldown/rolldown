@@ -24,18 +24,10 @@ pub enum CommonJsAstType {
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
-  pub fn cjs_ast_analyzer(&mut self, ty: &CjsGlobalAssignmentType) -> Option<CommonJsAstType> {
-    match ty {
-      CjsGlobalAssignmentType::ModuleExportsAssignment => {
-        self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
-      }
-      CjsGlobalAssignmentType::ExportsAssignment => {
-        self.result.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
-      }
-    }
+  pub fn commonjs_export_analyzer(&self, ty: &CjsGlobalAssignmentType) -> Option<CommonJsAstType> {
     let cursor = self.visit_path.len() - 1;
     let parent = self.visit_path.get(cursor)?;
-    let v = match parent {
+    match parent {
       kind if kind.is_member_expression_kind() => match ty {
         // two scenarios:
         // 1. module.exports.__esModule = true;
@@ -57,11 +49,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             }
             AstKind::Argument(arg) => self.check_object_define_property(arg, cursor - 1),
             AstKind::AssignmentExpression(assignment_expr) => {
-              let v = self.check_assignment_is_cjs_reexport(assignment_expr);
-              if matches!(v, Some(CommonJsAstType::Reexport)) {
-                self.result.ast_usage.insert(EcmaModuleAstUsage::IsCjsReexport);
-              }
-              v
+              self.check_assignment_is_cjs_reexport(assignment_expr)
             }
             _ => None,
           }
@@ -79,7 +67,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         self.check_object_define_property(arg, cursor)
       }
       _ => None,
-    };
+    }
+  }
+
+  pub fn update_ast_usage_for_commonjs_export(&mut self, v: Option<&CommonJsAstType>) {
     match v.as_ref() {
       Some(CommonJsAstType::EsModuleFlag) => {
         self.result.ast_usage.insert(EcmaModuleAstUsage::EsModuleFlag);
@@ -90,9 +81,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       Some(CommonJsAstType::ExportsPropWrite(prop)) if prop == "*" => {
         self.result.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
       }
+      Some(CommonJsAstType::Reexport) => {
+        self.result.ast_usage.insert(EcmaModuleAstUsage::IsCjsReexport);
+      }
       _ => {}
     }
-    v
   }
 
   /// Check if the argument is a valid `Object.defineProperty` call expression for `__esModule` flag.

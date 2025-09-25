@@ -13,8 +13,7 @@ use anyhow::Result;
 
 use arcstr::ArcStr;
 use rolldown_common::{
-  GetLocalDbMut, HmrUpdate, Module, NormalizedBundlerOptions, ScanMode, SharedFileEmitter,
-  SymbolRefDb,
+  GetLocalDbMut, Module, NormalizedBundlerOptions, ScanMode, SharedFileEmitter, SymbolRefDb,
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
@@ -39,7 +38,6 @@ pub struct Bundler {
   pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) _log_guard: Option<Box<dyn Any + Send>>,
   pub(crate) cache: ScanStageCache,
-  pub(crate) hmr_manager: Option<HmrManager>,
   pub(crate) session: rolldown_debug::Session,
   pub(crate) build_count: u32,
 }
@@ -271,17 +269,6 @@ impl Bundler {
 
     self.merge_immutable_fields_for_cache(link_stage_output.symbol_db);
 
-    if self.options.is_legacy_hmr_enabled() {
-      self.hmr_manager = Some(HmrManager::new(HmrManagerInput {
-        fs: self.fs.clone(),
-        options: Arc::clone(&self.options),
-        resolver: Arc::clone(&self.resolver),
-        plugin_driver: Arc::clone(&self.plugin_driver),
-        // Don't forget to reset the cache if you want to rebuild the bundle instead hmr.
-        cache: std::mem::take(&mut self.cache),
-        next_hmr_patch_id: Arc::new(AtomicU32::new(0)),
-      }));
-    }
     Ok(output)
   }
 
@@ -307,33 +294,6 @@ impl Bundler {
       cache,
       next_hmr_patch_id,
     })
-  }
-
-  pub async fn generate_hmr_patch(
-    &mut self,
-    changed_files: Vec<String>,
-  ) -> BuildResult<Vec<HmrUpdate>> {
-    let updates = self
-      .hmr_manager
-      .as_mut()
-      .expect("HMR manager is not initialized")
-      .compute_hmr_update_for_file_changes(&changed_files, None)
-      .await?;
-
-    Ok(updates)
-  }
-
-  pub async fn hmr_invalidate(
-    &mut self,
-    caller: String,
-    first_invalidated_by: Option<String>,
-  ) -> BuildResult<HmrUpdate> {
-    self
-      .hmr_manager
-      .as_mut()
-      .expect("HMR manager is not initialized")
-      .compute_update_for_calling_invalidate(caller, first_invalidated_by, None)
-      .await
   }
 
   fn merge_immutable_fields_for_cache(&mut self, symbol_db: SymbolRefDb) {

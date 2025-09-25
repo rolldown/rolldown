@@ -1,4 +1,4 @@
-import type { BindingBundlerImpl, BindingHmrUpdate } from '../../binding';
+import type { BindingBundlerImpl } from '../../binding';
 import {
   BindingBundler,
   shutdownAsyncRuntime,
@@ -9,8 +9,6 @@ import type { OutputOptions } from '../../options/output-options';
 import type { HasProperty, TypeAssert } from '../../types/assert';
 import type { RolldownOutput } from '../../types/rolldown-output';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
-import { normalizeErrors } from '../../utils/error';
-import { transformHmrPatchOutput } from '../../utils/transform-hmr-patch-output';
 import {
   handleOutputErrors,
   transformToRollupOutput,
@@ -106,33 +104,6 @@ export class RolldownBuild {
 
   async [Symbol.asyncDispose](): Promise<void> {
     await this.close();
-  }
-
-  async generateHmrPatch(
-    changedFiles: string[],
-  ): Promise<BindingHmrUpdate[]> {
-    const ret = await this.#bundlerImpl!.impl.generateHmrPatch(
-      changedFiles,
-    );
-    switch (ret.type) {
-      case 'Ok':
-        return ret.field0;
-      case 'Error':
-        throw normalizeErrors(ret.field0);
-      default:
-        throw new Error('Unknown error');
-    }
-  }
-
-  async hmrInvalidate(
-    file: string,
-    firstInvalidatedBy?: string,
-  ): Promise<BindingHmrUpdate> {
-    const output = await this.#bundlerImpl!.impl.hmrInvalidate(
-      file,
-      firstInvalidatedBy,
-    );
-    return transformHmrPatchOutput(output)!;
   }
 
   // TODO(shulaoda)

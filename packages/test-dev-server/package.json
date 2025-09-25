@@ -21,7 +21,6 @@
   },
   "dependencies": {
     "@types/ws": "^8.18.0",
-    "chokidar": "^4.0.3",
     "connect": "^3.7.0",
     "rolldown": "workspace:*",
     "serve-static": "^2.0.0",

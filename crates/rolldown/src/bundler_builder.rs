@@ -49,7 +49,6 @@ impl BundlerBuilder {
       warnings,
       _log_guard: maybe_guard,
       cache: ScanStageCache::default(),
-      hmr_manager: None,
       session,
       build_count: self.build_count,
     })

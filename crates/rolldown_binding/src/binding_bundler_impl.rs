@@ -8,10 +8,7 @@ use crate::worker_manager::WorkerManager;
 use crate::{
   options::{BindingInputOptions, BindingOutputOptions},
   parallel_js_plugin_registry::ParallelJsPluginRegistry,
-  types::{
-    binding_hmr_output::{BindingGenerateHmrPatchReturn, BindingHmrOutput},
-    binding_outputs::BindingOutputs,
-  },
+  types::binding_outputs::BindingOutputs,
   utils::{handle_result, normalize_binding_options::normalize_binding_options},
 };
 use napi::{
@@ -156,40 +153,6 @@ impl BindingBundlerImpl {
   pub async fn get_watch_files(&self) -> napi::Result<Vec<String>> {
     let bundler_core = self.inner.lock().await;
     Ok(bundler_core.get_watch_files().iter().map(|s| s.to_string()).collect())
-  }
-
-  #[napi]
-  pub async fn generate_hmr_patch(
-    &self,
-    changed_files: Vec<String>,
-  ) -> napi::Result<BindingGenerateHmrPatchReturn> {
-    let mut bundler_core = self.inner.lock().await;
-    let result = bundler_core.generate_hmr_patch(changed_files).await;
-    match result {
-      Ok(updates) => {
-        Ok(BindingGenerateHmrPatchReturn::Ok(updates.into_iter().map(Into::into).collect()))
-      }
-      Err(errs) => Ok(BindingGenerateHmrPatchReturn::from_errors(
-        errs.into_vec(),
-        bundler_core.options().cwd.clone(),
-      )),
-    }
-  }
-
-  #[napi]
-  pub async fn hmr_invalidate(
-    &self,
-    caller: String,
-    first_invalidated_by: Option<String>,
-  ) -> napi::Result<BindingHmrOutput> {
-    let mut bundler_core = self.inner.lock().await;
-    let result = bundler_core.hmr_invalidate(caller, first_invalidated_by).await;
-    match result {
-      Ok(output) => Ok(BindingHmrOutput::new(Some(output.into()), None)),
-      Err(errs) => {
-        Ok(BindingHmrOutput::from_errors(errs.into_vec(), bundler_core.options().cwd.clone()))
-      }
-    }
   }
 }
 

@@ -1284,8 +1284,6 @@ export declare class BindingBundlerImpl {
   close(): Promise<void>
   get closed(): boolean
   getWatchFiles(): Promise<Array<string>>
-  generateHmrPatch(changedFiles: Array<string>): Promise<BindingGenerateHmrPatchReturn>
-  hmrInvalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<BindingHmrOutput>
 }
 
 export declare class BindingCallableBuiltinPlugin {

@@ -3,7 +3,6 @@ import nodeFs from 'node:fs';
 import http from 'node:http';
 import nodePath from 'node:path';
 import nodeUrl from 'node:url';
-import * as rolldown from 'rolldown';
 import { BindingClientHmrUpdate, dev, DevEngine } from 'rolldown/experimental';
 import serveStatic from 'serve-static';
 import { WebSocket, WebSocketServer } from 'ws';
@@ -185,7 +184,7 @@ class DevServer {
 
   sendUpdateToClient(
     socket: WebSocket,
-    output: Awaited<ReturnType<rolldown.RolldownBuild['hmrInvalidate']>>,
+    output: BindingClientHmrUpdate['update'],
   ): void {
     if (output.type !== 'Patch') {
       return;

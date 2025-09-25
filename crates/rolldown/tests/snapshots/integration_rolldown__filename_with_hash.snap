@@ -5542,10 +5542,6 @@ expression: output
 
 - main-!~{000}~.js => main-zX2lK9Te.js
 
-# tests/rolldown/topics/hmr/generate_patch_error
-
-- main-!~{000}~.js => main-BBkeSzNU.js
-
 # tests/rolldown/topics/hmr/import_meta_hot_accept
 
 - main-!~{000}~.js => main-Dv5doxPT.js

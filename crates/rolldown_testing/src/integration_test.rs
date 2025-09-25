@@ -1,6 +1,7 @@
 use core::str;
 use std::fmt::Write as _;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::{
   borrow::Cow,
   ffi::OsStr,
@@ -11,17 +12,20 @@ use std::{
 };
 
 use anyhow::Context;
-use rolldown::NormalizedBundlerOptions;
+use rolldown::dev::DevOptions;
+use rolldown::dev::dev_options::DevWatchOptions;
 use rolldown::{
   BundleOutput, Bundler, BundlerOptions, IsExternal, OutputFormat, Platform, SourceMapType,
   plugin::__inner::SharedPluginable,
 };
+use rolldown::{DevEngine, NormalizedBundlerOptions};
 use rolldown_common::{HmrUpdate, Output};
 use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosticOptions};
 use rolldown_sourcemap::SourcemapVisualizer;
 use rolldown_testing_config::TestMeta;
 use serde_json::{Map, Value};
 use sugar_path::SugarPath;
+use tokio::sync::Mutex;
 
 use crate::hmr_files::{
   apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
@@ -92,6 +96,7 @@ impl IntegrationTest {
     multiple_options: Vec<NamedBundlerOptions>,
     plugins: Vec<SharedPluginable>,
   ) {
+    // Example: crates/rolldown/tests/rolldown/topics/hmr/runtime_correctness
     let test_folder_path = &self.test_folder_path;
 
     let hmr_temp_dir_path = test_folder_path.join("hmr-temp");
@@ -123,110 +128,191 @@ impl IntegrationTest {
         named_options.options.dir.as_ref().map_or("dist", |v| v)
       );
 
-      let mut bundler = Bundler::with_plugins(named_options.options, plugins.clone())
-        .expect("Failed to create bundler");
-
       let debug_title = named_options.description.clone().unwrap_or_else(String::new);
-
-      let cwd = bundler.options().cwd.clone();
-
-      let bundle_output = if self.test_meta.write_to_disk {
-        let abs_output_dir = cwd.join(&bundler.options().out_dir);
-        if abs_output_dir.is_dir() {
-          std::fs::remove_dir_all(&abs_output_dir)
-            .context(format!("{abs_output_dir:?}"))
-            .expect("Failed to clean the output directory");
-        }
-        bundler.write().await
-      } else {
-        bundler.generate().await
-      };
-
       if !debug_title.is_empty() {
         collect_snapshot("\n---\n\n".to_string());
         collect_snapshot(format!("Variant: {debug_title}\n\n"));
       }
 
-      let execute_output = self.test_meta.expect_executed
-        && !self.test_meta.expect_error
-        && self.test_meta.write_to_disk;
+      if hmr_mode_enabled {
+        let mut options = named_options.options.clone();
+        options.experimental.get_or_insert_default().hmr.get_or_insert_default().new = Some(true);
+        // FIXME: hyf0 we shouln't use the same bundler for both hmr and non-hmr mode.
+        let bundler =
+          Bundler::with_plugins(options, plugins.clone()).expect("Failed to create bundler");
+        let cwd = bundler.options().cwd.clone();
+        let bundler = Arc::new(Mutex::new(bundler));
 
-      match bundle_output {
-        Ok(bundle_output) => {
-          assert!(
-            !self.test_meta.expect_error,
-            "Expected the bundling to be failed with diagnosable errors, but got success"
+        let hmr_update_infos = Arc::new(std::sync::Mutex::new(vec![]));
+        let build_outputs = Arc::new(std::sync::Mutex::new(vec![]));
+        let dev_engine = DevEngine::with_bundler(
+          Arc::clone(&bundler),
+          DevOptions {
+            on_hmr_updates: {
+              let hmr_update_infos = Arc::clone(&hmr_update_infos);
+              Some(Arc::new(move |updates, changed_files| {
+                hmr_update_infos.lock().unwrap().push((updates, changed_files));
+              }))
+            },
+            on_output: {
+              let build_outputs = Arc::clone(&build_outputs);
+              Some(Arc::new(move |bundle_output| {
+                build_outputs.lock().unwrap().push(bundle_output);
+              }))
+            },
+            watch: Some(DevWatchOptions {
+              disable_watcher: Some(true),
+              skip_write: Some(!self.test_meta.write_to_disk),
+              ..Default::default()
+            }),
+            ..Default::default()
+          },
+        )
+        .unwrap();
+
+        dev_engine.run().await.unwrap();
+        dev_engine.create_client_for_testing().await;
+
+        for hmr_edit_files in &hmr_steps {
+          apply_hmr_edit_files_to_hmr_temp_dir(
+            test_folder_path,
+            &hmr_temp_dir_path,
+            hmr_edit_files,
           );
+          let changed_files = get_changed_files_from_hmr_edit_files(
+            test_folder_path,
+            &hmr_temp_dir_path,
+            hmr_edit_files,
+          );
+          dev_engine
+            .ensure_task_with_changed_files(changed_files.into_iter().map(Into::into).collect())
+            .await;
+        }
+        drop(dev_engine);
 
-          let snapshot_content = self.render_bundle_output_to_string(bundle_output, vec![], &cwd);
-          collect_snapshot(snapshot_content);
+        let mut build_outputs = std::mem::take(&mut *build_outputs.lock().unwrap());
+        let hmr_update_infos = std::mem::take(&mut *hmr_update_infos.lock().unwrap());
 
-          let mut patch_chunks: Vec<String> = vec![];
-          for (step, hmr_edit_files) in hmr_steps.iter().enumerate() {
-            apply_hmr_edit_files_to_hmr_temp_dir(
-              test_folder_path,
-              &hmr_temp_dir_path,
-              hmr_edit_files,
+        let execute_output = self.test_meta.expect_executed
+          && !self.test_meta.expect_error
+          && self.test_meta.write_to_disk;
+
+        let bundle_output: BuildResult<BundleOutput> = Ok(build_outputs.pop().unwrap());
+
+        match bundle_output {
+          Ok(bundle_output) => {
+            assert!(
+              !self.test_meta.expect_error,
+              "Expected the bundling to be failed with diagnosable errors, but got success"
             );
-            let changed_files = get_changed_files_from_hmr_edit_files(
-              test_folder_path,
-              &hmr_temp_dir_path,
-              hmr_edit_files,
-            );
-            let updates = bundler.generate_hmr_patch(changed_files).await;
-            match updates {
-              Ok(updates) => {
-                for update in updates {
-                  let snapshot_content =
-                    self.render_hmr_output_to_string(step, &update, vec![], &cwd);
-                  collect_snapshot(snapshot_content);
-                  match update {
-                    rolldown_common::HmrUpdate::Patch(patch) => {
-                      let output_path = format!("{}/{}", &output_dir, &patch.filename);
-                      fs::write(&output_path, patch.code).unwrap();
-                      patch_chunks.push(format!("./{}", patch.filename));
-                    }
-                    rolldown_common::HmrUpdate::FullReload { reason } => {
-                      assert!(
-                        !execute_output,
-                        "execute_output should be false when full reload happens; reason: {reason:?}"
-                      );
-                    }
-                    rolldown_common::HmrUpdate::Noop => {}
+
+            let snapshot_content = self.render_bundle_output_to_string(bundle_output, vec![], &cwd);
+            collect_snapshot(snapshot_content);
+
+            let mut patch_chunks: Vec<String> = vec![];
+            for (step, (hmr_updates, _changed_files)) in hmr_update_infos.iter().enumerate() {
+              for hmr_update in hmr_updates {
+                let snapshot_content =
+                  self.render_hmr_output_to_string(step, &hmr_update.update, vec![], &cwd);
+                collect_snapshot(snapshot_content);
+                match &hmr_update.update {
+                  rolldown_common::HmrUpdate::Patch(patch) => {
+                    let output_path = format!("{}/{}", &output_dir, &patch.filename);
+                    fs::write(&output_path, &patch.code).unwrap();
+                    patch_chunks.push(format!("./{}", patch.filename));
                   }
+                  rolldown_common::HmrUpdate::FullReload { reason } => {
+                    assert!(
+                      !execute_output,
+                      "execute_output should be false when full reload happens; reason: {reason:?}"
+                    );
+                  }
+                  rolldown_common::HmrUpdate::Noop => {}
                 }
               }
-              Err(errs) => {
-                let snapshot_content =
-                  self.render_hmr_output_to_string(step, &HmrUpdate::Noop, errs.into_vec(), &cwd);
-                collect_snapshot(snapshot_content);
-              }
+            }
+
+            if execute_output {
+              Self::execute_output_assets(
+                &*bundler.lock().await,
+                &debug_title,
+                &patch_chunks,
+                named_options
+                  .config_name
+                  .as_deref()
+                  .map(Some)
+                  .unwrap_or(self.test_meta.config_name.as_deref()),
+              );
+            } else {
+              // do nothing
             }
           }
-
-          if execute_output {
-            Self::execute_output_assets(
-              &bundler,
-              &debug_title,
-              &patch_chunks,
-              named_options
-                .config_name
-                .as_deref()
-                .map(Some)
-                .unwrap_or(self.test_meta.config_name.as_deref()),
+          Err(errs) => {
+            assert!(
+              self.test_meta.expect_error,
+              "Expected the bundling to be success, but got diagnosable errors: {errs:#?}"
             );
-          } else {
-            // do nothing
+            let snapshot_content =
+              self.render_bundle_output_to_string(BundleOutput::default(), errs.into_vec(), &cwd);
+            collect_snapshot(snapshot_content);
           }
         }
-        Err(errs) => {
-          assert!(
-            self.test_meta.expect_error,
-            "Expected the bundling to be success, but got diagnosable errors: {errs:#?}"
-          );
-          let snapshot_content =
-            self.render_bundle_output_to_string(BundleOutput::default(), errs.into_vec(), &cwd);
-          collect_snapshot(snapshot_content);
+      } else {
+        let mut bundler = Bundler::with_plugins(named_options.options, plugins.clone())
+          .expect("Failed to create bundler");
+
+        let cwd = bundler.options().cwd.clone();
+
+        let bundle_output = if self.test_meta.write_to_disk {
+          let abs_output_dir = cwd.join(&bundler.options().out_dir);
+          if abs_output_dir.is_dir() {
+            std::fs::remove_dir_all(&abs_output_dir)
+              .context(format!("{abs_output_dir:?}"))
+              .expect("Failed to clean the output directory");
+          }
+          bundler.write().await
+        } else {
+          bundler.generate().await
+        };
+
+        let execute_output = self.test_meta.expect_executed
+          && !self.test_meta.expect_error
+          && self.test_meta.write_to_disk;
+
+        match bundle_output {
+          Ok(bundle_output) => {
+            assert!(
+              !self.test_meta.expect_error,
+              "Expected the bundling to be failed with diagnosable errors, but got success"
+            );
+
+            let snapshot_content = self.render_bundle_output_to_string(bundle_output, vec![], &cwd);
+            collect_snapshot(snapshot_content);
+
+            if execute_output {
+              Self::execute_output_assets(
+                &bundler,
+                &debug_title,
+                &[],
+                named_options
+                  .config_name
+                  .as_deref()
+                  .map(Some)
+                  .unwrap_or(self.test_meta.config_name.as_deref()),
+              );
+            } else {
+              // do nothing
+            }
+          }
+          Err(errs) => {
+            assert!(
+              self.test_meta.expect_error,
+              "Expected the bundling to be success, but got diagnosable errors: {errs:#?}"
+            );
+            let snapshot_content =
+              self.render_bundle_output_to_string(BundleOutput::default(), errs.into_vec(), &cwd);
+            collect_snapshot(snapshot_content);
+          }
         }
       }
     }

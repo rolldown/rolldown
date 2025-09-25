@@ -1,10 +1,10 @@
-use std::{collections::VecDeque, ops::Deref, sync::Arc};
+use std::{collections::VecDeque, ops::Deref, path::PathBuf, sync::Arc};
 
 use arcstr::ArcStr;
 use futures::{FutureExt, future::Shared};
 use rolldown_common::ClientHmrUpdate;
 use rolldown_error::BuildResult;
-use rolldown_utils::dashmap::FxDashSet;
+use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexSet};
 use rolldown_watcher::{DynWatcher, NoopWatcher, Watcher, WatcherConfig, WatcherExt};
 use sugar_path::SugarPath;
 use tokio::sync::{Mutex, mpsc::unbounded_channel};
@@ -19,6 +19,7 @@ use crate::{
     building_task::TaskInput,
     dev_context::{DevContext, PinBoxSendStaticFuture, SharedDevContext},
     dev_options::{DevOptions, normalize_dev_options},
+    types::client_session::ClientSession,
   },
 };
 
@@ -190,6 +191,25 @@ impl DevEngine {
     first_invalidated_by: Option<String>,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     self.build_driver.invalidate(caller, first_invalidated_by).await
+  }
+
+  /// For testing purpose.
+  pub async fn ensure_task_with_changed_files(&self, changed_files: FxIndexSet<PathBuf>) {
+    self.build_driver.handle_file_changes(changed_files).await;
+    if let Some(status) = self.build_driver.schedule_build_if_stale().await.unwrap() {
+      status.0.await;
+    }
+  }
+
+  pub async fn create_client_for_testing(&self) {
+    let mut client_session = ClientSession::default();
+    // mark all modules as registered
+    let build_state = self.ctx.state.lock().await;
+    let snapshot = build_state.cache.as_ref().unwrap().get_snapshot();
+    for module in snapshot.module_table.iter() {
+      client_session.registered_modules.insert(module.stable_id().to_string());
+    }
+    self.clients.insert("test".to_string(), client_session);
   }
 }
 

@@ -3,6 +3,7 @@
 
 mod event;
 mod event_handler;
+mod noop_watcher;
 mod paths_mut;
 mod recommended_watcher;
 mod utils;
@@ -26,6 +27,7 @@ mod debounced_recommended_watcher;
 pub use debounced_recommended_watcher::DebouncedRecommendedWatcher;
 
 pub use crate::{event::EventResult as FileChangeResult, event_handler::EventHandler};
+pub use noop_watcher::NoopWatcher;
 pub use notify::RecursiveMode;
 pub use paths_mut::PathsMut;
 pub use recommended_watcher::RecommendedWatcher;

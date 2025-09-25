@@ -62,6 +62,7 @@ impl BindingDevEngine {
       || debounce_tick_rate.is_some()
     {
       Some(rolldown::dev::dev_options::DevWatchOptions {
+        disable_watcher: None,
         skip_write,
         use_polling,
         poll_interval: poll_interval.map(u64::from),

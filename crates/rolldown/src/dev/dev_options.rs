@@ -8,6 +8,8 @@ pub type SharedNormalizedDevOptions = Arc<NormalizedDevOptions>;
 
 #[derive(Debug, Default)]
 pub struct DevWatchOptions {
+  /// If `true`, watcher will be disabled.
+  pub disable_watcher: Option<bool>,
   /// If `true`, files are not written to disk.
   pub skip_write: Option<bool>,
   /// If `true`, use polling instead of native file system events for watching
@@ -38,6 +40,7 @@ pub struct DevOptions {
 pub struct NormalizedDevOptions {
   #[debug(skip)]
   pub on_hmr_updates: Option<OnHmrUpdatesCallback>,
+  pub disable_watcher: bool,
   pub skip_write: bool,
   pub eager_rebuild: bool,
   pub use_polling: bool,
@@ -52,6 +55,7 @@ pub fn normalize_dev_options(options: DevOptions) -> NormalizedDevOptions {
   let watch_options = options.watch.unwrap_or_default();
   NormalizedDevOptions {
     on_hmr_updates: options.on_hmr_updates,
+    disable_watcher: watch_options.disable_watcher.unwrap_or_default(),
     skip_write: watch_options.skip_write.unwrap_or_default(),
     eager_rebuild: options.eager_rebuild.unwrap_or_default(),
     use_polling: watch_options.use_polling.unwrap_or(false),

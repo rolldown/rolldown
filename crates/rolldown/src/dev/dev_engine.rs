@@ -5,7 +5,7 @@ use futures::{FutureExt, future::Shared};
 use rolldown_common::ClientHmrUpdate;
 use rolldown_error::BuildResult;
 use rolldown_utils::dashmap::FxDashSet;
-use rolldown_watcher::{DynWatcher, Watcher, WatcherConfig, WatcherExt};
+use rolldown_watcher::{DynWatcher, NoopWatcher, Watcher, WatcherConfig, WatcherExt};
 use sugar_path::SugarPath;
 use tokio::sync::{Mutex, mpsc::unbounded_channel};
 
@@ -69,49 +69,57 @@ impl DevEngine {
     };
 
     let watcher = {
-      #[cfg(not(target_family = "wasm"))]
-      {
-        use rolldown_watcher::{
-          DebouncedPollWatcher, DebouncedRecommendedWatcher, PollWatcher, RecommendedWatcher,
-        };
-
-        match (ctx.options.use_polling, ctx.options.use_debounce) {
-          // Polling + no debounce = PollWatcher
-          (true, false) => PollWatcher::with_config(
-            build_driver_service.create_watcher_event_handler(),
-            watcher_config,
-          )?
-          .into_dyn_watcher(),
-          // Polling + debounce = DebouncedPollWatcher
-          (true, true) => DebouncedPollWatcher::with_config(
-            build_driver_service.create_watcher_event_handler(),
-            watcher_config,
-          )?
-          .into_dyn_watcher(),
-          // No polling + no debounce = RecommendedWatcher
-          (false, false) => RecommendedWatcher::with_config(
-            build_driver_service.create_watcher_event_handler(),
-            watcher_config,
-          )?
-          .into_dyn_watcher(),
-          // No polling + debounce = DebouncedRecommendedWatcher
-          (false, true) => DebouncedRecommendedWatcher::with_config(
-            build_driver_service.create_watcher_event_handler(),
-            watcher_config,
-          )?
-          .into_dyn_watcher(),
-        }
-      }
-      #[cfg(target_family = "wasm")]
-      {
-        use rolldown_watcher::RecommendedWatcher;
-        // For WASM, always use NotifyWatcher (which is PollWatcher in WASM)
-        // Use the Watcher trait implementation
-        RecommendedWatcher::with_config(
+      if ctx.options.disable_watcher {
+        NoopWatcher::with_config(
           build_driver_service.create_watcher_event_handler(),
           watcher_config,
         )?
         .into_dyn_watcher()
+      } else {
+        #[cfg(not(target_family = "wasm"))]
+        {
+          use rolldown_watcher::{
+            DebouncedPollWatcher, DebouncedRecommendedWatcher, PollWatcher, RecommendedWatcher,
+          };
+
+          match (ctx.options.use_polling, ctx.options.use_debounce) {
+            // Polling + no debounce = PollWatcher
+            (true, false) => PollWatcher::with_config(
+              build_driver_service.create_watcher_event_handler(),
+              watcher_config,
+            )?
+            .into_dyn_watcher(),
+            // Polling + debounce = DebouncedPollWatcher
+            (true, true) => DebouncedPollWatcher::with_config(
+              build_driver_service.create_watcher_event_handler(),
+              watcher_config,
+            )?
+            .into_dyn_watcher(),
+            // No polling + no debounce = RecommendedWatcher
+            (false, false) => RecommendedWatcher::with_config(
+              build_driver_service.create_watcher_event_handler(),
+              watcher_config,
+            )?
+            .into_dyn_watcher(),
+            // No polling + debounce = DebouncedRecommendedWatcher
+            (false, true) => DebouncedRecommendedWatcher::with_config(
+              build_driver_service.create_watcher_event_handler(),
+              watcher_config,
+            )?
+            .into_dyn_watcher(),
+          }
+        }
+        #[cfg(target_family = "wasm")]
+        {
+          use rolldown_watcher::RecommendedWatcher;
+          // For WASM, always use NotifyWatcher (which is PollWatcher in WASM)
+          // Use the Watcher trait implementation
+          RecommendedWatcher::with_config(
+            build_driver_service.create_watcher_event_handler(),
+            watcher_config,
+          )?
+          .into_dyn_watcher()
+        }
       }
     };
 

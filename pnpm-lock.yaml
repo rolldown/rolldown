@@ -6,21 +6,9 @@ settings:
 
 catalogs:
   default:
-    '@napi-rs/cli':
-      specifier: ^3.2.0
-      version: 3.2.0
     '@oxc-node/cli':
       specifier: ^0.0.32
       version: 0.0.32
-    '@oxc-project/types':
-      specifier: '=0.92.0'
-      version: 0.92.0
-    oxc-parser:
-      specifier: '=0.92.0'
-      version: 0.92.0
-    rolldown-plugin-dts:
-      specifier: ^0.16.0
-      version: 0.16.8
 
 overrides:
   vitepress>vite: npm:rolldown-vite@latest
@@ -507,9 +495,6 @@ importers:
       '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.0.32
-      picocolors:
-        specifier: ^1.1.1
-        version: 1.1.1
       tinyexec:
         specifier: ^1.0.1
         version: 1.0.1

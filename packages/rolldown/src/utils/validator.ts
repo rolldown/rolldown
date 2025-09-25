@@ -1,4 +1,4 @@
-import colors from 'ansis';
+import { styleText } from 'node:util';
 import * as v from 'valibot';
 import type { PreRenderedChunk } from '../binding';
 import type { PreRenderedAsset } from '../options/output-options';
@@ -453,7 +453,7 @@ const InputOptionsSchema = v.strictObject({
     ),
     v.description(
       `Platform for which the code should be generated (node, ${
-        colors.underline('browser')
+        styleText('underline', 'browser')
       }, neutral)`,
     ),
   ),
@@ -466,9 +466,9 @@ const InputOptionsSchema = v.strictObject({
   logLevel: v.pipe(
     v.optional(LogLevelOptionSchema),
     v.description(
-      `Log level (${colors.dim('silent')}, ${
-        colors.underline(colors.gray('info'))
-      }, debug, ${colors.yellow('warn')})`,
+      `Log level (${styleText('dim', 'silent')}, ${
+        styleText(['underline', 'gray'], 'info')
+      }, debug, ${styleText('yellow', 'warn')})`,
     ),
   ),
   onLog: v.optional(OnLogSchema),
@@ -730,7 +730,7 @@ const OutputOptionsSchema = v.strictObject({
     ),
     v.description(
       `Specify a export mode (${
-        colors.underline('auto')
+        styleText('underline', 'auto')
       }, named, default, none)`,
     ),
   ),
@@ -744,7 +744,7 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(ModuleFormatSchema),
     v.description(
       `Output format of the generated bundle (supports ${
-        colors.underline('esm')
+        styleText('underline', 'esm')
       }, cjs, and iife)`,
     ),
   ),
@@ -754,7 +754,8 @@ const OutputOptionsSchema = v.strictObject({
     ),
     v.description(
       `Generate sourcemap (\`-s inline\` for inline, or ${
-        colors.bold(
+        styleText(
+          'bold',
           'pass the `-s` on the last argument if you want to generate `.map` file',
         )
       })`,
@@ -869,9 +870,9 @@ const getAddonDescription = (
   placement: 'bottom' | 'top',
   wrapper: 'inside' | 'outside',
 ) => {
-  return `Code to insert the ${colors.bold(placement)} of the bundled file (${
-    colors.bold(wrapper)
-  } the wrapper function)`;
+  return `Code to insert the ${
+    styleText('bold', placement)
+  } of the bundled file (${styleText('bold', wrapper)} the wrapper function)`;
 };
 
 const OutputCliOverrideSchema = v.strictObject({

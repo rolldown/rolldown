@@ -34,9 +34,7 @@ export default defineDevConfig({
   build: {
     input: 'src/main.js',
     experimental: {
-      hmr: {
-        new: true,
-      },
+      hmr: {},
     },
     platform: 'node',
     treeshake: false,

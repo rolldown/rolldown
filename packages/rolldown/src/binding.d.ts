@@ -1664,7 +1664,6 @@ export interface BindingExperimentalHmrOptions {
   host?: string
   port?: number
   implement?: string
-  new?: boolean
 }
 
 export interface BindingExperimentalOptions {

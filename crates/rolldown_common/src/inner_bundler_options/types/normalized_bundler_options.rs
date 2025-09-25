@@ -193,14 +193,6 @@ impl NormalizedBundlerOptions {
     self.experimental.hmr.is_some()
   }
 
-  pub fn is_legacy_hmr_enabled(&self) -> bool {
-    self
-      .experimental
-      .hmr
-      .as_ref()
-      .is_some_and(|hmr| hmr.new.is_none() || hmr.new.is_some_and(|new| !new))
-  }
-
   /// make sure the `polyfill_require` is only valid for `esm` format with `node` platform
   #[inline]
   pub fn polyfill_require_for_esm_format_with_node_platform(&self) -> bool {

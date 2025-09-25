@@ -135,8 +135,7 @@ impl IntegrationTest {
       }
 
       if hmr_mode_enabled {
-        let mut options = named_options.options.clone();
-        options.experimental.get_or_insert_default().hmr.get_or_insert_default().new = Some(true);
+        let options = named_options.options.clone();
         // FIXME: hyf0 we shouln't use the same bundler for both hmr and non-hmr mode.
         let bundler =
           Bundler::with_plugins(options, plugins.clone()).expect("Failed to create bundler");

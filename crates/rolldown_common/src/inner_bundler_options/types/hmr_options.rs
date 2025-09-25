@@ -16,5 +16,4 @@ pub struct HmrOptions {
   pub port: Option<u16>,
   /// Custom hmr runtime implementation.
   pub implement: Option<String>,
-  pub new: Option<bool>,
 }

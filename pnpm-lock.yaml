@@ -9,36 +9,18 @@ catalogs:
     '@napi-rs/cli':
       specifier: ^3.2.0
       version: 3.2.0
-    '@napi-rs/wasm-runtime':
-      specifier: ^1.0.0
-      version: 1.0.5
     '@oxc-node/cli':
       specifier: ^0.0.32
       version: 0.0.32
-    '@oxc-node/core':
-      specifier: ^0.0.32
-      version: 0.0.32
-    '@oxc-project/runtime':
-      specifier: '=0.92.0'
-      version: 0.92.0
     '@oxc-project/types':
       specifier: '=0.92.0'
       version: 0.92.0
-    fast-glob:
-      specifier: ^3.3.3
-      version: 3.3.3
     oxc-parser:
-      specifier: '=0.92.0'
-      version: 0.92.0
-    oxc-transform:
       specifier: '=0.92.0'
       version: 0.92.0
     rolldown-plugin-dts:
       specifier: ^0.16.0
       version: 0.16.8
-    tsdown:
-      specifier: 0.15.4
-      version: 0.15.4
 
 overrides:
   vitepress>vite: npm:rolldown-vite@latest
@@ -308,9 +290,6 @@ importers:
       '@rolldown/pluginutils':
         specifier: workspace:*
         version: link:../pluginutils
-      ansis:
-        specifier: ^4.0.0
-        version: 4.1.0
     devDependencies:
       '@napi-rs/cli':
         specifier: 'catalog:'
@@ -6687,7 +6666,7 @@ snapshots:
       '@octokit/rest': 22.0.0
       clipanion: 4.0.0-rc.4(typanion@3.14.0)
       colorette: 2.0.20
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
       es-toolkit: 1.39.10
       find-up: 7.0.0
       js-yaml: 4.1.0
@@ -6714,7 +6693,7 @@ snapshots:
     dependencies:
       '@napi-rs/lzma': 1.4.5
       '@napi-rs/tar': 1.1.0
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
@@ -8403,6 +8382,10 @@ snapshots:
     dependencies:
       ms: 2.0.0
 
+  debug@4.4.3:
+    dependencies:
+      ms: 2.1.3
+
   debug@4.4.3(supports-color@8.1.1):
     dependencies:
       ms: 2.1.3
@@ -9833,7 +9816,7 @@ snapshots:
       '@babel/types': 7.28.4
       ast-kit: 2.1.2
       birpc: 2.6.1
-      debug: 4.4.3(supports-color@8.1.1)
+      debug: 4.4.3
       dts-resolver: 2.1.2(oxc-resolver@11.8.3)
       get-tsconfig: 4.10.1
       magic-string: 0.30.19

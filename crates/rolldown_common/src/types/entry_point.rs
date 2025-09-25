@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use arcstr::ArcStr;
 
-use crate::{ModuleIdx, StmtInfoIdx};
+use crate::{ImportRecordIdx, ModuleIdx, StmtInfoIdx};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct EntryPoint {
@@ -12,7 +12,7 @@ pub struct EntryPoint {
   /// emitted chunk specified filename, used to generate chunk filename
   pub file_name: Option<ArcStr>,
   /// which stmts create this entry point
-  pub related_stmt_infos: Vec<(ModuleIdx, StmtInfoIdx)>,
+  pub related_stmt_infos: Vec<(ModuleIdx, StmtInfoIdx, ImportRecordIdx)>,
 }
 
 #[derive(Debug, Eq, Clone, Copy, PartialOrd, Ord)]

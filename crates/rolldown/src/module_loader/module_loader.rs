@@ -10,10 +10,10 @@ use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult, FlatOptions,
-  HybridIndexVec, ImportKind, ImportRecordMeta, ImporterRecord, Module, ModuleId, ModuleIdx,
-  ModuleLoaderMsg, ModuleType, NormalModuleTaskResult, PreserveEntrySignatures, RUNTIME_MODULE_KEY,
-  ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, ScanMode, SymbolRef, SymbolRefDb,
-  SymbolRefDbForModule,
+  HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImporterRecord, Module, ModuleId,
+  ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult, PreserveEntrySignatures,
+  RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, ScanMode,
+  StmtInfoIdx, SymbolRef, SymbolRefDb, SymbolRefDbForModule,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -354,7 +354,10 @@ impl<'a> ModuleLoader<'a> {
       );
     }
 
-    let mut dynamic_import_entry_ids = FxHashMap::default();
+    let mut dynamic_import_entry_ids: FxHashMap<
+      ModuleIdx,
+      Vec<(ModuleIdx, StmtInfoIdx, ImportRecordIdx)>,
+    > = FxHashMap::default();
 
     let mut dynamic_import_exports_usage_pairs = vec![];
     let mut extra_entry_points = vec![];
@@ -427,7 +430,7 @@ impl<'a> ModuleLoader<'a> {
               match dynamic_import_entry_ids.entry(idx) {
                 Entry::Vacant(vac) => match raw_rec.related_stmt_info_idx {
                   Some(stmt_info_idx) => {
-                    vac.insert(vec![(module.idx(), stmt_info_idx)]);
+                    vac.insert(vec![(module.idx(), stmt_info_idx, rec_idx)]);
                   }
                   None => {
                     vac.insert(vec![]);
@@ -435,7 +438,7 @@ impl<'a> ModuleLoader<'a> {
                 },
                 Entry::Occupied(mut occ) => {
                   if let Some(stmt_info_idx) = raw_rec.related_stmt_info_idx {
-                    occ.get_mut().push((module.idx(), stmt_info_idx));
+                    occ.get_mut().push((module.idx(), stmt_info_idx, rec_idx));
                   }
                 }
               }
@@ -495,7 +498,9 @@ impl<'a> ModuleLoader<'a> {
           } = *task_result;
           let mut import_records = IndexVec::with_capacity(raw_import_records.len());
 
-          for (raw_rec, info) in raw_import_records.into_iter().zip(resolved_deps) {
+          for ((rec_idx, raw_rec), info) in
+            raw_import_records.into_iter_enumerated().zip(resolved_deps)
+          {
             let id = self.try_spawn_new_task(
               info,
               None,
@@ -516,7 +521,7 @@ impl<'a> ModuleLoader<'a> {
               match dynamic_import_entry_ids.entry(id) {
                 Entry::Vacant(vac) => match raw_rec.related_stmt_info_idx {
                   Some(stmt_info_idx) => {
-                    vac.insert(vec![(module.idx, stmt_info_idx)]);
+                    vac.insert(vec![(module.idx, stmt_info_idx, rec_idx)]);
                   }
                   None => {
                     vac.insert(vec![]);
@@ -524,7 +529,7 @@ impl<'a> ModuleLoader<'a> {
                 },
                 Entry::Occupied(mut occ) => {
                   if let Some(stmt_info_idx) = raw_rec.related_stmt_info_idx {
-                    occ.get_mut().push((module.idx, stmt_info_idx));
+                    occ.get_mut().push((module.idx, stmt_info_idx, rec_idx));
                   }
                 }
               }

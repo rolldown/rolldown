@@ -167,12 +167,10 @@ impl LinkStage<'_> {
 
     // mark those dynamic import records as dead, in case we could eliminate them later in ast
     // visitor.
-    for (mi, record_idxs) in unused_record_idxs {
+    for (mi, record_idx) in unused_record_idxs {
       let module = self.module_table[mi].as_normal_mut().expect("should be a normal module");
-      for record_idx in record_idxs {
-        let rec = &mut module.import_records[record_idx];
-        rec.meta.insert(ImportRecordMeta::DeadDynamicImport);
-      }
+      let rec = &mut module.import_records[record_idx];
+      rec.meta.insert(ImportRecordMeta::DeadDynamicImport);
     }
 
     self
@@ -327,46 +325,38 @@ impl LinkStage<'_> {
   /// import record idxs(due to limitation of rustc borrow checker) if it is unused.
   fn is_dynamic_entry_alive(
     &self,
-    item: &EntryPoint,
+    entry_point: &EntryPoint,
     is_stmt_included_vec: &IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
-  ) -> Option<Vec<(ModuleIdx, Vec<ImportRecordIdx>)>> {
+  ) -> Option<Vec<(ModuleIdx, ImportRecordIdx)>> {
     let mut ret = vec![];
-    let is_lived = match item.kind {
+    let is_lived = match entry_point.kind {
       EntryPointKind::UserDefined | EntryPointKind::EmittedUserDefined => true,
       EntryPointKind::DynamicImport => {
         let is_dynamic_imported_module_exports_unused =
-          self.dynamic_import_exports_usage_map.get(&item.idx).is_some_and(
+          self.dynamic_import_exports_usage_map.get(&entry_point.idx).is_some_and(
             |item| matches!(item, DynamicImportExportsUsage::Partial(set) if set.is_empty()),
           );
 
         // Mark the dynamic entry as lived if at least one statement that create this entry is included
-        item.related_stmt_infos.iter().any(|(module_idx, stmt_idx)| {
+        entry_point.related_stmt_infos.iter().any(|(module_idx, stmt_idx, import_record_idx)| {
           let module =
             &self.module_table[*module_idx].as_normal().expect("should be a normal module");
-          let stmt_info = &module.stmt_infos[*stmt_idx];
-          let mut dead_pure_dynamic_import_record_idx = vec![];
-          let all_dead_pure_dynamic_import =
-            stmt_info.import_records.iter().all(|import_record_idx| {
-              let import_record = &module.import_records[*import_record_idx];
-              let importee_side_effects =
-                self.module_table[import_record.resolved_module].side_effects().has_side_effects();
+          let all_dead_pure_dynamic_import = {
+            let import_record = &module.import_records[*import_record_idx];
+            let importee_side_effects =
+              self.module_table[import_record.resolved_module].side_effects().has_side_effects();
 
-              let ret = !importee_side_effects
-                && import_record.meta.contains(ImportRecordMeta::TopLevelPureDynamicImport);
-
-              // Only consider it is unused if it is a top level pure dynamic import and the
-              // importee module has no side effects.
-              if ret {
-                dead_pure_dynamic_import_record_idx.push(*import_record_idx);
-              }
-              ret
-            });
+            // Only consider it is unused if it is a top level pure dynamic import and the
+            // importee module has no side effects.
+            !importee_side_effects
+              && import_record.meta.contains(ImportRecordMeta::TopLevelPureDynamicImport)
+          };
           let is_stmt_included = is_stmt_included_vec[*module_idx][*stmt_idx];
           let lived = is_stmt_included
             && (!is_dynamic_imported_module_exports_unused || !all_dead_pure_dynamic_import);
 
-          if !lived {
-            ret.push((*module_idx, dead_pure_dynamic_import_record_idx));
+          if !lived && all_dead_pure_dynamic_import {
+            ret.push((*module_idx, *import_record_idx));
           }
           lived
         })

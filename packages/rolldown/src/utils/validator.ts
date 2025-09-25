@@ -713,6 +713,19 @@ const AdvancedChunksSchema = v.strictObject({
   ),
 });
 
+const GeneratedCodePresetSchema = v.union([
+  v.literal('es5'),
+  v.literal('es2015'),
+]);
+
+const GeneratedCodeOptionsSchema = v.strictObject({
+  symbols: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to use Symbol.toStringTag for namespace objects'),
+  ),
+  preset: GeneratedCodePresetSchema,
+});
+
 const OutputOptionsSchema = v.strictObject({
   dir: v.pipe(
     v.optional(v.string()),
@@ -812,6 +825,12 @@ const OutputOptionsSchema = v.strictObject({
     v.description(
       'Global variable of UMD / IIFE dependencies (syntax: `key=value`)',
     ),
+  ),
+  generatedCode: v.pipe(
+    v.optional(
+      v.partial(GeneratedCodeOptionsSchema),
+    ),
+    v.description('Generated code options'),
   ),
   externalLiveBindings: v.pipe(
     v.optional(v.boolean()),

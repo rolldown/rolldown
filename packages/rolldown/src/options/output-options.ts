@@ -11,6 +11,31 @@ import type { ModuleInfo } from '../types/module-info';
 import type { RenderedChunk } from '../types/rolldown-output';
 import type { NullValue, StringOrRegExp } from '../types/utils';
 
+export type GeneratedCodePreset = 'es5' | 'es2015';
+
+export interface GeneratedCodeOptions {
+  /**
+   * Whether to use Symbol.toStringTag for namespace objects.
+   * @default false
+   */
+  symbols?: boolean;
+  /**
+   * Allows choosing one of the presets listed above while overriding some options.
+   *
+   * ```js
+   * export default {
+   *   output: {
+   *     generatedCode: {
+   *       preset: 'es2015',
+   *       symbols: false
+   *     }
+   *   }
+   * };
+   * ```
+   */
+  preset?: GeneratedCodePreset;
+}
+
 export type ModuleFormat =
   | 'es'
   | 'cjs'
@@ -37,10 +62,7 @@ export type AssetFileNamesFunction = (chunkInfo: PreRenderedAsset) => string;
 
 export type GlobalsFunction = (name: string) => string;
 
-export type MinifyOptions = Omit<
-  BindingMinifyOptions,
-  'module' | 'sourcemap'
->;
+export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap'>;
 
 export interface ChunkingContext {
   getModuleInfo(moduleId: string): ModuleInfo | null;
@@ -87,7 +109,7 @@ export interface OutputOptions {
    * // ✅ Preferred: Use string pattern for better performance
    * sourcemapIgnoreList: "vendor"
    *
-   * // ⚠️ Use sparingly: Function calls have high overhead
+   * // ! Use sparingly: Function calls have high overhead
    * sourcemapIgnoreList: (source, sourcemapPath) => {
    *   return source.includes('node_modules') || source.includes('.min.');
    * }
@@ -122,6 +144,7 @@ export interface OutputOptions {
   minify?: boolean | 'dce-only' | MinifyOptions;
   name?: string;
   globals?: Record<string, string> | GlobalsFunction;
+  generatedCode?: Partial<GeneratedCodeOptions>;
   externalLiveBindings?: boolean;
   inlineDynamicImports?: boolean;
   /**
@@ -277,10 +300,7 @@ export interface OutputOptions {
        */
       name:
         | string
-        | ((
-          moduleId: string,
-          ctx: ChunkingContext,
-        ) => string | NullValue);
+        | ((moduleId: string, ctx: ChunkingContext) => string | NullValue);
       /**
        * - Type: `string | RegExp | ((id: string) => boolean | undefined | void);`
        *

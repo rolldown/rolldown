@@ -1,4 +1,5 @@
 pub mod binding_advanced_chunks_options;
+mod binding_generated_code_options;
 mod binding_pre_rendered_asset;
 mod binding_pre_rendered_chunk;
 use binding_pre_rendered_asset::BindingPreRenderedAsset;
@@ -9,6 +10,7 @@ use napi_derive::napi;
 use rustc_hash::FxHashMap;
 
 use binding_advanced_chunks_options::BindingAdvancedChunksOptions;
+pub use binding_generated_code_options::BindingGeneratedCodeOptions;
 use binding_pre_rendered_chunk::PreRenderedChunk;
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
@@ -74,7 +76,8 @@ pub struct BindingOutputOptions<'env> {
   #[napi(ts_type = "'es' | 'cjs' | 'iife' | 'umd'")]
   pub format: Option<String>,
   // freeze: boolean;
-  // generatedCode: NormalizedGeneratedCodeOptions;
+  #[napi(ts_type = "BindingGeneratedCodeOptions")]
+  pub generated_code: Option<BindingGeneratedCodeOptions>,
   #[debug(skip)]
   #[napi(ts_type = "Record<string, string> | ((name: string) => string)")]
   pub globals: Option<GlobalsOutputOption>,

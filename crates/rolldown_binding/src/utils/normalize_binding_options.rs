@@ -1,4 +1,5 @@
 use super::normalize_binding_transform_options;
+use crate::options::BindingGeneratedCodeOptions;
 use crate::options::binding_advanced_chunks_options::BindingChunkingContext;
 use crate::options::binding_jsx::BindingJsx;
 use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption, SanitizeFileName};
@@ -19,6 +20,7 @@ use rolldown::{
   MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat, Platform,
   RawMinifyOptions, SanitizeFilename,
 };
+use rolldown_common::GeneratedCodeOptions;
 use rolldown_common::{DeferSyncScanData, bundler_options};
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
@@ -35,6 +37,23 @@ use std::sync::Arc;
 pub struct NormalizeBindingOptionsReturn {
   pub bundler_options: BundlerOptions,
   pub plugins: Vec<SharedPluginable>,
+}
+
+fn normalize_generated_code_option(
+  value: BindingGeneratedCodeOptions,
+) -> napi::Result<GeneratedCodeOptions> {
+  let v = match value.preset {
+    Some(s) if s == "es5" => GeneratedCodeOptions::es5(),
+    Some(s) if s == "es2015" => GeneratedCodeOptions::es2015(),
+    Some(s) => {
+      return Err(napi::Error::new(
+        napi::Status::InvalidArg,
+        format!("Invalid preset for `generatedCode` option: {s}"),
+      ));
+    }
+    None => GeneratedCodeOptions::default(),
+  };
+  Ok(GeneratedCodeOptions { symbols: value.symbols.unwrap_or(false), ..v })
 }
 
 fn normalize_addon_option(
@@ -316,6 +335,10 @@ pub fn normalize_binding_options(
       _ => panic!("Invalid hash characters: {format_str}"),
     }),
     globals: normalize_globals_option(output_options.globals),
+    generated_code: output_options
+      .generated_code
+      .map(normalize_generated_code_option)
+      .transpose()?,
     module_types,
     experimental: if let Some(experimental) = input_options.experimental {
       Some(experimental.try_into()?)

@@ -47,6 +47,7 @@ use std::borrow::Cow;
 use sugar_path::SugarPath;
 
 use crate::SharedOptions;
+use crate::ast_scanner::cjs_export_analyzer::CommonjsExportSymbolUsage;
 
 // TODO: Not sure if this necessary to match the module request.
 // If we found it cause high false positive, we could add a extra step to match it package name as
@@ -153,7 +154,7 @@ pub struct AstScanner<'me, 'ast> {
   /// A flag to resolve `this` appear with propertyKey in class
   is_nested_this_inside_class: bool,
   /// Used in commonjs module it self
-  self_used_cjs_named_exports: FxHashSet<CompactStr>,
+  cjs_named_exports_usage: FxHashMap<CompactStr, CommonjsExportSymbolUsage>,
   traverse_state: TraverseState,
   current_comment_idx: usize,
 }
@@ -239,7 +240,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       dynamic_import_usage_info: DynamicImportUsageInfo::default(),
       top_level_this_expr_set: FxHashSet::default(),
       is_nested_this_inside_class: false,
-      self_used_cjs_named_exports: FxHashSet::from_iter(["__esModule".into()]),
+      cjs_named_exports_usage: FxHashMap::from_iter([(
+        "__esModule".into(),
+        CommonjsExportSymbolUsage { read: 0, write: 0, bailout: true },
+      )]),
       traverse_state: TraverseState::empty(),
       current_comment_idx: 0,
     }
@@ -345,12 +349,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
     // If some commonjs module facade exports was used locally, we need to explicitly mark them as
     // has side effects, so that they should not be removed in linking stage.
-    for name in &self.self_used_cjs_named_exports {
+    let mut bailout_inlined_cjs_exports_symbol_ids = FxHashSet::default();
+    for (name, usage) in &self.cjs_named_exports_usage {
       if let Some(resolved) = self.result.commonjs_exports.get(name) {
-        let stmt_info_idx_list =
-          self.result.stmt_infos.declared_stmts_by_symbol(&resolved.referenced).to_vec();
-        for idx in stmt_info_idx_list {
-          self.result.stmt_infos[idx].side_effect |= SideEffectDetail::Unknown;
+        if !usage.can_be_removed() {
+          let stmt_info_idx_list =
+            self.result.stmt_infos.declared_stmts_by_symbol(&resolved.referenced).to_vec();
+          for idx in stmt_info_idx_list {
+            self.result.stmt_infos[idx].side_effect |= SideEffectDetail::Unknown;
+          }
+        }
+        if !usage.can_be_inlined() {
+          bailout_inlined_cjs_exports_symbol_ids.insert(resolved.referenced.symbol);
         }
       }
     }
@@ -362,8 +372,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
 
     self.result.constant_export_map.retain(|symbol_id, constant_meta| {
-      // TODO: https://github.com/rolldown/rolldown/issues/6101
-      constant_meta.commonjs_export
+      (constant_meta.commonjs_export && !bailout_inlined_cjs_exports_symbol_ids.contains(symbol_id))
         || self
           .result
           .symbol_ref_db

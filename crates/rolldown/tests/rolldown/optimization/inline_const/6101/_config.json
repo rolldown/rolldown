@@ -1,0 +1,8 @@
+{
+  "config": {
+    "optimization": {
+      "inlineConst": true
+    }
+  },
+  "expectExecuted": false
+}

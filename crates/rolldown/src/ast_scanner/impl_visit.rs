@@ -438,7 +438,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             self.update_ast_usage_for_commonjs_export(v.as_ref());
             match v {
               // Do nothing since we need to tree shake `exports.<prop>` access
-              Some(CommonJsAstType::ExportsPropWrite(_) | CommonJsAstType::EsModuleFlag) => {}
+              Some(CommonJsAstType::ExportsPropWrite(prop)) => {
+                self.cjs_named_exports_usage.entry(prop).or_default().write += 1;
+              }
+              Some(CommonJsAstType::EsModuleFlag) => {}
               Some(CommonJsAstType::Reexport) => {
                 // This is only usd for `module.exports = require('mod')`
                 // should only reached when `ident_ref` is `module`
@@ -449,7 +452,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               }
               None => match self.try_extract_parent_static_member_expr_chain(1) {
                 Some((_span, prop)) => {
-                  self.self_used_cjs_named_exports.insert(prop[0].0.clone());
+                  self.cjs_named_exports_usage.entry(prop[0].0.clone()).or_default().read += 1;
                 }
                 _ => {
                   self.result.ast_usage.insert(EcmaModuleAstUsage::UnknownExportsRead);

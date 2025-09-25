@@ -11,6 +11,27 @@ use crate::ast_scanner::IdentifierReferenceKind;
 
 use super::AstScanner;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct CommonjsExportSymbolUsage {
+  pub read: u32,
+  pub write: u32,
+  pub bailout: bool,
+}
+
+impl CommonjsExportSymbolUsage {
+  /// A commonjs export symbol could only be removed if both of these conditions are met:
+  /// 1. It is never read locally.
+  /// 2. It is only be written once in top level.
+  /// 3. It should be analyzable. Which means the `bailout` flag is false.
+  pub fn can_be_removed(&self) -> bool {
+    !self.bailout && self.read == 0 && self.write == 1
+  }
+
+  pub fn can_be_inlined(&self) -> bool {
+    !self.bailout && self.write == 1
+  }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CommonJsAstType {
   /// We don't need extra `module.exports` related type for now.

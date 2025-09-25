@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region react.js
+var require_react = /* @__PURE__ */ __commonJS({ "react.js": ((exports) => {
+	exports.version = "1.0.0";
+	Object.defineProperty(exports, "version", { get() {
+		throw new Error();
+	} });
+}) });
+
+//#endregion
+//#region main.js
+var import_react = /* @__PURE__ */ __toESM(require_react());
+console.log(import_react.version);
+
+//#endregion
+```

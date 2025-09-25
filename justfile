@@ -129,10 +129,15 @@ fix-repo:
 lint: lint-rust lint-node lint-repo
 
 # Linting formatting, syntax and linting issues for Rust files.
-lint-rust:
+lint-rust: clippy
   cargo fmt --all --check
   cargo check --workspace --all-features --all-targets --locked
+
+# For the most of the time, code is automatically formatted on save in the editor.
+# Also, clippy already cover compiler error.
+clippy:
   cargo clippy --workspace --all-targets -- --deny warnings
+
 
 lint-node:
   pnpm lint-code

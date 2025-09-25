@@ -5017,9 +5017,13 @@ expression: output
 - bar-!~{003}~.js => bar-BTstUsfv.js
 - bar-!~{001}~.js => bar-BpbuVh-Q.js
 
+# tests/rolldown/optimization/inline_const/6101
+
+- main-!~{000}~.js => main-C1zSqdVO.js
+
 # tests/rolldown/optimization/inline_const/basic
 
-- main-!~{000}~.js => main-BHmOf_A8.js
+- main-!~{000}~.js => main-CarfS3Qb.js
 
 # tests/rolldown/optimization/inline_const/issue_4786
 

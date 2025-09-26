@@ -14,6 +14,7 @@ use rustc_hash::FxBuildHasher;
 
 // The `BindingOutputs` take the data to js side, the rust side will not use it anymore.
 #[napi]
+#[derive(Default)]
 pub struct BindingOutputs {
   chunks: Vec<BindingOutputChunk>,
   assets: Vec<BindingOutputAsset>,
@@ -53,16 +54,16 @@ impl BindingOutputs {
   }
 }
 
-impl From<Vec<rolldown_common::Output>> for BindingOutputs {
-  fn from(outputs: Vec<rolldown_common::Output>) -> Self {
+impl From<&Vec<rolldown_common::Output>> for BindingOutputs {
+  fn from(outputs: &Vec<rolldown_common::Output>) -> Self {
     let mut chunks = vec![];
     let mut assets = vec![];
-    outputs.into_iter().for_each(|o| match o {
+    outputs.iter().for_each(|o| match o {
       rolldown_common::Output::Chunk(chunk) => {
-        chunks.push(BindingOutputChunk::new(chunk));
+        chunks.push(BindingOutputChunk::new(Arc::downgrade(&chunk)));
       }
       rolldown_common::Output::Asset(asset) => {
-        assets.push(BindingOutputAsset::new(asset));
+        assets.push(BindingOutputAsset::new(Arc::downgrade(&asset)));
       }
     });
     Self { chunks, assets, error: None }

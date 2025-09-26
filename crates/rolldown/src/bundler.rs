@@ -13,7 +13,7 @@ use anyhow::Result;
 
 use arcstr::ArcStr;
 use rolldown_common::{
-  GetLocalDbMut, Module, NormalizedBundlerOptions, ScanMode, SharedFileEmitter, SymbolRefDb,
+  GetLocalDbMut, Module, NormalizedBundlerOptions, Output, ScanMode, SharedFileEmitter, SymbolRefDb,
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
@@ -40,6 +40,8 @@ pub struct Bundler {
   pub(crate) cache: ScanStageCache,
   pub(crate) session: rolldown_debug::Session,
   pub(crate) build_count: u32,
+  pub(crate) assets: Vec<Output>,
+  // pub(crate) profiler: Option<dhat::Profiler>,
 }
 
 impl Bundler {
@@ -105,6 +107,11 @@ impl Bundler {
 
     self.closed = true;
     self.plugin_driver.close_bundle().await?;
+
+    self.assets.clear();
+    self.cache = ScanStageCache::default();
+    self.file_emitter.clear();
+    // self.profiler = None;
 
     Ok(())
   }
@@ -254,6 +261,7 @@ impl Bundler {
     }
 
     let mut output = bundle_output?;
+    self.assets.extend(output.assets.iter().map(Clone::clone));
 
     // Add additional files from build plugins.
     self.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);

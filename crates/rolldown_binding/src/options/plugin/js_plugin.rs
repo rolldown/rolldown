@@ -1,7 +1,7 @@
 use crate::types::{
   binding_module_info::BindingModuleInfo,
   binding_normalized_options::BindingNormalizedOptions,
-  binding_outputs::{JsChangedOutputs, to_js_diagnostic},
+  binding_outputs::{BindingOutputs, JsChangedOutputs, to_js_diagnostic},
   binding_rendered_chunk::BindingRenderedChunk,
   js_callback::MaybeAsyncJsCallbackExt,
 };
@@ -479,7 +479,7 @@ impl Plugin for JsPlugin {
         .await_call(
           (
             ctx.clone().into(),
-            args.bundle.clone().into(),
+            BindingOutputs::from(&args.bundle.clone()),
             args.is_write,
             BindingNormalizedOptions::new(Arc::clone(args.options)),
           )
@@ -506,7 +506,7 @@ impl Plugin for JsPlugin {
         .await_call(
           (
             ctx.clone().into(),
-            args.bundle.clone().into(),
+            BindingOutputs::from(&args.bundle.clone()),
             BindingNormalizedOptions::new(Arc::clone(args.options)),
           )
             .into(),

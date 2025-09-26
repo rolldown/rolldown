@@ -174,7 +174,7 @@ impl BindingBundlerImpl {
       }
     }
 
-    Ok(vec![].into())
+    Ok(BindingOutputs::default())
   }
 
   #[expect(clippy::significant_drop_tightening)]
@@ -190,7 +190,7 @@ impl BindingBundlerImpl {
       return Ok(Self::handle_errors(vec![err.into()], bundler_core.options()));
     }
 
-    Ok(outputs.assets.into())
+    Ok(BindingOutputs::from(&outputs.assets))
   }
 
   #[expect(clippy::significant_drop_tightening)]
@@ -206,7 +206,7 @@ impl BindingBundlerImpl {
       return Ok(Self::handle_errors(vec![err.into()], bundler_core.options()));
     }
 
-    Ok(bundle_output.assets.into())
+    Ok(BindingOutputs::from(&bundle_output.assets))
   }
 
   #[expect(clippy::significant_drop_tightening)]

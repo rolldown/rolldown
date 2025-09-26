@@ -1,3 +1,6 @@
+// #[global_allocator]
+// static ALLOC: dhat::Alloc = dhat::Alloc;
+
 mod asset;
 mod ast_scanner;
 mod bundler;

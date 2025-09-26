@@ -1,48 +1,53 @@
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 use napi_derive::napi;
+use rolldown_common::OutputAsset;
 
 use crate::options::plugin::types::binding_asset_source::BindingAssetSource;
 
 #[napi]
 pub struct BindingOutputAsset {
-  inner: Arc<rolldown_common::OutputAsset>,
+  inner: Weak<OutputAsset>,
 }
 
 #[napi]
 impl BindingOutputAsset {
-  pub fn new(inner: Arc<rolldown_common::OutputAsset>) -> Self {
+  pub fn new(inner: Weak<OutputAsset>) -> Self {
     Self { inner }
+  }
+
+  fn inner(&self) -> Arc<OutputAsset> {
+    self.inner.upgrade().unwrap()
   }
 
   #[napi(getter)]
   pub fn file_name(&self) -> String {
-    self.inner.filename.to_string()
+    self.inner().filename.to_string()
   }
 
   #[napi(getter)]
   pub fn original_file_name(&self) -> Option<String> {
-    self.inner.original_file_names.first().cloned()
+    self.inner().original_file_names.first().cloned()
   }
 
   #[napi(getter)]
   pub fn original_file_names(&self) -> Vec<String> {
-    self.inner.original_file_names.clone()
+    self.inner().original_file_names.clone()
   }
 
   #[napi(getter)]
   pub fn source(&self) -> BindingAssetSource {
-    self.inner.source.clone().into()
+    self.inner().source.clone().into()
   }
 
   #[napi(getter)]
   pub fn name(&self) -> Option<String> {
-    self.inner.names.first().cloned()
+    self.inner().names.first().cloned()
   }
 
   #[napi(getter)]
   pub fn names(&self) -> Vec<String> {
-    self.inner.names.clone()
+    self.inner().names.clone()
   }
 }
 

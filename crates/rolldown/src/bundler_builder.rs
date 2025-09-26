@@ -51,6 +51,8 @@ impl BundlerBuilder {
       cache: ScanStageCache::default(),
       session,
       build_count: self.build_count,
+      assets: vec![],
+      // profiler: Some(dhat::Profiler::new_heap()),
     })
   }
 

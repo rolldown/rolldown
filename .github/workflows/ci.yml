@@ -125,8 +125,7 @@ jobs:
           tools: just
           cache-key: debug-build-wasi
 
-      - name: Setup Node
-        uses: ./.github/actions/setup-node
+      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
 
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
@@ -159,8 +158,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
-      - name: Setup Node
-        uses: ./.github/actions/setup-node
+      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
 
       - name: Test `@rolldown/pluginutils`
         run: pnpm --filter '@rolldown/pluginutils' test
@@ -173,8 +171,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
-      - name: Setup Node
-        uses: ./.github/actions/setup-node
+      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
 
       - name: Lint Code
         run: pnpm lint-code
@@ -191,8 +188,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
-      - name: Setup Node
-        uses: ./.github/actions/setup-node
+      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
 
       - name: Lint Filename
         run: cargo ls-lint

@@ -32,8 +32,7 @@ jobs:
           tools: just
           cache-key: debug-build
 
-      - name: Setup Node For Development
-        uses: ./.github/actions/setup-node
+      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
 
       - name: Build Native Rolldown
         run: just build-rolldown
@@ -54,7 +53,8 @@ jobs:
       - name: Setup Node20 For Testing
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
-          node-version: 22
+          node-version: 20
+          package-manager-cache: false
 
       - name: Node Test For Node20
         run: |
@@ -73,6 +73,7 @@ jobs:
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
+          package-manager-cache: false
 
       - name: Node Test For Node22
         run: |
@@ -91,6 +92,7 @@ jobs:
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
+          package-manager-cache: false
 
       - name: Node Test For Node24
         run: |

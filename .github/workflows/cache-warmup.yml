@@ -32,8 +32,7 @@ jobs:
           cache-key: debug-build
           tools: just
 
-      - name: Setup Node For Development
-        uses: ./.github/actions/setup-node
+      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
 
       - run: cargo check --workspace
       - run: cargo test --workspace --no-run
@@ -55,8 +54,7 @@ jobs:
           save-cache: ${{ github.ref_name == 'main' }}
           tools: just
 
-      - name: Setup Node For Development
-        uses: ./.github/actions/setup-node
+      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
 
       - run: just build-rolldown-release
 

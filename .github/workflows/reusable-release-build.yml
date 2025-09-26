@@ -103,8 +103,7 @@ jobs:
         run: pip install setuptools
         if: ${{ matrix.os == 'macos-latest' }}
 
-      - name: Setup Node
-        uses: ./.github/actions/setup-node
+      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
 
       - name: Build Binding
         run: ${{ matrix.build }}
@@ -174,8 +173,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
-      - name: Setup Node
-        uses: ./.github/actions/setup-node
+      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
 
       - name: Build `@rolldown/pluginutils`
         run: pnpm --filter '@rolldown/pluginutils' build
@@ -199,8 +197,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
-      - name: Setup Node
-        uses: ./.github/actions/setup-node
+      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
 
       - name: Build Node binding
         # This binary is only used to build the node package itself. It's won't be published.
@@ -256,8 +253,7 @@ jobs:
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
 
-      - name: Setup Node
-        uses: ./.github/actions/setup-node
+      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
 
       - name: Build Node binding
         # This binary is only used to build the node package itself. It's won't be published.
@@ -301,8 +297,7 @@ jobs:
           # `@rolldown/debug` only rely on debug build to produce code in `src/generated`.
           cache-key: debug-build
 
-      - name: Setup Node
-        uses: ./.github/actions/setup-node
+      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
 
       - name: Build `@rolldown/debug`
         # This binary is only used to build the node package itself. It's won't be published.

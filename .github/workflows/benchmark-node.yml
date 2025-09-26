@@ -41,8 +41,7 @@ jobs:
       - name: List Files
         run: find -maxdepth 2 -ls
 
-      - name: Setup Node
-        uses: ./.github/actions/setup-node
+      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
 
       - name: Setup Rust
         uses: oxc-project/setup-rust@d286d43bc1f606abbd98096666ff8be68c8d5f57 # v1.0.2

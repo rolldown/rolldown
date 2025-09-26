@@ -16,8 +16,8 @@ doctest = false
 workspace = true
 
 [dependencies]
-html5ever = { workspace = true }
-markup5ever_rcdom = { workspace = true }
+html5gum = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_utils = { workspace = true }
+string_cache = { workspace = true }
 sugar_path = { workspace = true }

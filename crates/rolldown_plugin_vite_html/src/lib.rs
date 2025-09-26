@@ -1,7 +1,7 @@
+mod html;
+
 use std::{borrow::Cow, rc::Rc};
 
-use html5ever::{ParseOpts, parse_document, tendril::TendrilSink as _};
-use markup5ever_rcdom as rcdom;
 use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_utils::pattern_filter::normalize_path;
 use sugar_path::SugarPath as _;
@@ -31,13 +31,14 @@ impl Plugin for ViteHtmlPlugin {
     let path = args.id.relative(ctx.cwd());
     let relative_url_path = normalize_path(&path.to_string_lossy());
 
-    let dom = parse_document(rcdom::RcDom::default(), ParseOpts::default()).one(args.code.as_str());
+    let dom = html::parser::parse_html(args.code);
 
     // TODO: Extract into a function
     let mut stack = vec![dom.document];
     while let Some(node) = stack.pop() {
       match &node.data {
-        rcdom::NodeData::Element { name, .. } if &*name.local == "script" => {
+        html::sink::NodeData::Element { name, attrs, .. } if name == "script" => {
+          let _ = attrs;
           todo!()
         }
         _ => {}

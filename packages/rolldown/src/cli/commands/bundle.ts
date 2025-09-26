@@ -1,6 +1,6 @@
-import colors from 'ansis';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { styleText } from 'node:util';
 import { onExit } from 'signal-exit';
 import { version } from '../../../package.json';
 import type { RolldownOptions, RolldownOutput } from '../..';
@@ -67,7 +67,7 @@ export async function bundleWithCliOptions(
 
   for (const file of outputs) {
     if (outputs.length > 1) {
-      logger.log(`\n${colors.cyan(colors.bold(`|→ ${file.fileName}:`))}\n`);
+      logger.log(`\n${styleText(['cyan', 'bold'], `|→ ${file.fileName}:`)}\n`);
     }
     // avoid consola since it doesn't print it as raw string
     // eslint-disable-next-line no-console
@@ -118,7 +118,7 @@ async function watchInner(
         if (changedFile.length > 0) {
           logger.log(
             `Found ${
-              colors.bold(changedFile.map(relativeId).join(', '))
+              styleText('bold', changedFile.map(relativeId).join(', '))
             } changed, rebuilding...`,
           );
         }
@@ -128,8 +128,8 @@ async function watchInner(
       case 'BUNDLE_END':
         await event.result.close();
         logger.success(
-          `Rebuilt ${colors.bold(relativeId(event.output[0]))} in ${
-            colors.green(ms(event.duration))
+          `Rebuilt ${styleText('bold', relativeId(event.output[0]))} in ${
+            styleText('green', ms(event.duration))
           }.`,
         );
         break;
@@ -182,7 +182,7 @@ async function bundleInner(
   // If the build time is more than 1s, we should display it in seconds.
 
   logger.success(
-    `rolldown v${version} Finished in ${colors.green(ms(duration))}`,
+    `rolldown v${version} Finished in ${styleText('green', ms(duration))}`,
   );
 }
 
@@ -242,7 +242,10 @@ function displaySize(bytes: number) {
 const CHUNK_GROUPS = [
   { type: 'asset', color: 'green' },
   { type: 'chunk', color: 'cyan' },
-] satisfies { type: ChunkType; color: keyof typeof colors }[];
+] satisfies {
+  type: ChunkType;
+  color: Extract<Parameters<typeof styleText>[0], string>;
+}[];
 
 function printOutputEntries(
   entries: OutputEntry[],
@@ -256,12 +259,14 @@ function printOutputEntries(
     }
     for (const entry of filtered.sort((a, z) => a.size - z.size)) {
       // output format: `path/to/xxx type | size: y.yy kB`
-      let log = colors.dim(withTrailingSlash(distPath));
-      log += colors[group.color](
+      let log = styleText('dim', withTrailingSlash(distPath));
+      log += styleText(
+        group.color,
         entry.fileName.padEnd(sizeAdjustment.longest + 2),
       );
-      log += colors.dim(entry.type);
-      log += colors.dim(
+      log += styleText('dim', entry.type);
+      log += styleText(
+        'dim',
         ` │ size: ${displaySize(entry.size).padStart(sizeAdjustment.sizePad)}`,
       );
       logger.log(log);

@@ -1,8 +1,8 @@
-import colors from 'ansis';
 import { globSync } from 'glob';
 import fs from 'node:fs';
 import nodePath from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { styleText } from 'node:util';
 import { dts } from 'rolldown-plugin-dts';
 import * as ts from 'typescript';
 import { build, BuildOptions, type Plugin } from './src/index';
@@ -263,10 +263,10 @@ function copy() {
         const fileName = nodePath.basename(file);
         if (buildMeta.desireWasmFiles && fileName.includes('debug')) {
           // NAPI-RS now generates a debug wasm binary no matter how and we don't want to ship it to npm.
-          console.log(colors.yellow('[build:done]'), 'Skipping', file);
+          console.log(styleText('yellow', '[build:done]'), 'Skipping', file);
         } else {
           console.log(
-            colors.green('[build:done]'),
+            styleText('green', '[build:done]'),
             'Copying',
             file,
             `to ${copyTo}`,
@@ -282,7 +282,7 @@ function copy() {
       browserShims.forEach((file) => {
         const fileName = nodePath.basename(file);
         console.log(
-          colors.green('[build:done]'),
+          styleText('green', '[build:done]'),
           'Copying',
           file,
           `to ${copyTo}`,
@@ -294,7 +294,7 @@ function copy() {
       nodeFiles.forEach((file) => {
         const fileName = nodePath.basename(file);
         console.log(
-          colors.green('[build:done]'),
+          styleText('green', '[build:done]'),
           'Copying',
           file,
           `to ${copyTo}`,
@@ -316,7 +316,7 @@ function generateRuntimeTypes() {
   );
 
   console.log(
-    colors.green('[build:done]'),
+    styleText('green', '[build:done]'),
     'Generating dts from',
     inputFile,
   );

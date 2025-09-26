@@ -26,7 +26,7 @@
   "devDependencies": {
     "@oxc-node/core": "catalog:",
     "@oxc-project/runtime": "catalog:",
-    "@types/node": "24.5.2",
+    "@types/node": "catalog:",
     "cjs-module-lexer": "^2.1.0",
     "dprint": "^0.50.1",
     "husky": "^9.1.7",
@@ -35,7 +35,7 @@
     "oxlint": "^1.6.0",
     "remove-unused-vars": "^0.0.7",
     "rolldown": "workspace:*",
-    "typescript": "^5.8.3"
+    "typescript": "catalog:"
   },
   "pnpm": {
     "overrides": {

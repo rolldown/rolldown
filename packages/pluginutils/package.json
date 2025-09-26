@@ -26,10 +26,10 @@
     "test": "vitest --typecheck"
   },
   "devDependencies": {
-    "@types/picomatch": "^4.0.0",
-    "picomatch": "^4.0.2",
+    "@types/picomatch": "catalog:",
+    "picomatch": "catalog:",
     "tsdown": "catalog:",
-    "vitest": "^3.0.1"
+    "vitest": "catalog:"
   },
   "tsdown": {
     "exports": true,

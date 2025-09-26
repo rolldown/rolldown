@@ -131,30 +131,30 @@
   "dependencies": {
     "@oxc-project/types": "catalog:",
     "@rolldown/pluginutils": "workspace:*",
-    "ansis": "^4.0.0"
+    "ansis": "catalog:"
   },
   "devDependencies": {
     "@napi-rs/cli": "catalog:",
-    "@napi-rs/wasm-runtime": "^1.0.0",
+    "@napi-rs/wasm-runtime": "catalog:",
     "@oxc-node/cli": "catalog:",
-    "@rollup/plugin-json": "^6.1.0",
-    "buble": "^0.20.0",
-    "consola": "^3.4.2",
-    "emnapi": "^1.2.0",
-    "execa": "^9.2.0",
-    "glob": "^11.0.0",
+    "@rollup/plugin-json": "catalog:",
+    "buble": "catalog:",
+    "consola": "catalog:",
+    "emnapi": "catalog:",
+    "execa": "catalog:",
+    "glob": "catalog:",
     "oxc-parser": "catalog:",
-    "pathe": "^2.0.3",
-    "remeda": "^2.10.0",
+    "pathe": "catalog:",
+    "remeda": "catalog:",
     "rolldown": "workspace:*",
     "rolldown-plugin-dts": "catalog:",
-    "rollup": "^4.18.0",
-    "signal-exit": "4.1.0",
-    "source-map": "^0.7.4",
-    "tsx": "^4.19.4",
-    "typedoc": "^0.28.0",
-    "typescript": "^5.7.3",
-    "valibot": "1.1.0"
+    "rollup": "catalog:",
+    "signal-exit": "catalog:",
+    "source-map": "catalog:",
+    "tsx": "catalog:",
+    "typedoc": "catalog:",
+    "typescript": "catalog:",
+    "valibot": "catalog:"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

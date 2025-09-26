@@ -8,7 +8,7 @@
   "license": "MIT",
   "devDependencies": {
     "@oxc-node/cli": "catalog:",
-    "picocolors": "^1.1.1",
-    "tinyexec": "^1.0.1"
+    "picocolors": "catalog:",
+    "tinyexec": "catalog:"
   }
 }

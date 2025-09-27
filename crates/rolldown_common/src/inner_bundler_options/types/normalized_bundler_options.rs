@@ -11,6 +11,7 @@ use rolldown_error::EventKindSwitcher;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::advanced_chunks_options::AdvancedChunksOptions;
+use super::comment_options::CommentOptions;
 use super::experimental_options::ExperimentalOptions;
 use super::legal_comments::LegalComments;
 use super::minify_options::MinifyOptions;
@@ -86,6 +87,7 @@ pub struct NormalizedBundlerOptions {
   pub profiler_names: bool,
   pub watch: WatchOption,
   pub legal_comments: LegalComments,
+  pub comments: CommentOptions,
   pub drop_labels: FxHashSet<String>,
   pub polyfill_require: bool,
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
@@ -156,6 +158,7 @@ impl Default for NormalizedBundlerOptions {
       profiler_names: Default::default(),
       watch: Default::default(),
       legal_comments: LegalComments::None,
+      comments: Default::default(),
       drop_labels: Default::default(),
       polyfill_require: Default::default(),
       defer_sync_scan_data: Default::default(),

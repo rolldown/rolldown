@@ -42,6 +42,40 @@ export type MinifyOptions = Omit<
   'module' | 'sourcemap'
 >;
 
+interface CommentOptions {
+  /**
+   * Print normal comments that do not have special meanings.
+   * At present only statement level comments are printed.
+   * @default true
+   */
+  normal?: boolean;
+
+  /**
+   * Print jsdoc comments.
+   *
+   * @default true
+   */
+  jsdoc?: boolean;
+
+  /**
+   * Print annotation comments.
+   * - pure: `\/* #__PURE__ *\/` and `\/* #__NO_SIDE_EFFECTS__ *\/`
+   * - webpack: `\/* webpackChunkName *\/`
+   * - vite: `\/* @vite-ignore *\/`
+   * - coverage: `v8 ignore`, `c8 ignore`, `node:coverage`, `istanbul ignore`
+   * @default true
+   */
+  annotation?: boolean;
+
+  /**
+   * Print legal comments.
+   * - starts with `//!` or `/*!`
+   * - contains `\/* @license *\/` or `\/* @preserve *\/`
+   * @default true
+   */
+  legal?: boolean;
+}
+
 export interface ChunkingContext {
   getModuleInfo(moduleId: string): ModuleInfo | null;
 }
@@ -375,6 +409,11 @@ export interface OutputOptions {
    * - `inline`: preserve comments that contain `@license`, `@preserve` or starts with `//!` `/*!`
    */
   legalComments?: 'none' | 'inline';
+  /**
+   * Fine-grained control over comment preservation in the output.
+   * This option allows you to control which types of comments are preserved.
+   */
+  commentOptions?: CommentOptions;
   plugins?: RolldownOutputPluginOption;
   polyfillRequire?: boolean;
   hoistTransitiveImports?: false;

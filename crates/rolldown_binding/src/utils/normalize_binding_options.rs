@@ -415,6 +415,7 @@ pub fn normalize_binding_options(
         )),
       })
       .transpose()?,
+    comments: output_options.comment_options.map(Into::into).unwrap_or_default(),
     drop_labels: input_options.drop_labels,
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,

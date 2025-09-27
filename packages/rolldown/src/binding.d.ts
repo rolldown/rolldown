@@ -1685,6 +1685,11 @@ export interface BindingFilterToken {
   payload?: BindingStringOrRegex | number | boolean
 }
 
+export interface BindingGeneratedCodeOptions {
+  symbols?: boolean
+  preset?: string
+}
+
 export type BindingGenerateHmrPatchReturn =
   | { type: 'Ok', field0: Array<BindingHmrUpdate> }
   | { type: 'Error', field0: Array<Error | BindingError> }
@@ -1944,6 +1949,7 @@ export interface BindingOutputOptions {
   externalLiveBindings?: boolean
   footer?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
   format?: 'es' | 'cjs' | 'iife' | 'umd'
+  generatedCode?: BindingGeneratedCodeOptions
   globals?: Record<string, string> | ((name: string) => string)
   hashCharacters?: 'base64' | 'base36' | 'hex'
   inlineDynamicImports?: boolean

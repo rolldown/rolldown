@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+
+//#region main.js
+const a = 1;
+
+//#endregion
+exports.a = a;
+```
+---
+
+Variant: [format: Esm]
+
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+const a = 1;
+
+//#endregion
+export { a };
+```
+---
+
+Variant: [format: Iife]
+
+# warnings
+
+## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
+
+```text
+[MISSING_NAME_OPTION_FOR_IIFE_EXPORT] Warning: If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
+
+```
+# Assets
+
+## main.js
+
+```js
+(function(exports) {
+
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+
+//#region main.js
+	const a = 1;
+
+//#endregion
+exports.a = a;
+return exports;
+})({});
+```

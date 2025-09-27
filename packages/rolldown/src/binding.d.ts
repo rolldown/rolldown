@@ -1455,6 +1455,7 @@ export declare class BindingTransformPluginContext {
   getCombinedSourcemap(): string
   inner(): BindingPluginContext
   addWatchFile(file: string): void
+  sendMagicString(magicString: BindingMagicString): void
 }
 
 export declare class BindingWatcher {

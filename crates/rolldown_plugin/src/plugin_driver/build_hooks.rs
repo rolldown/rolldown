@@ -215,6 +215,7 @@ impl PluginDriver {
   }
 
   #[tracing::instrument(target = "devtool", level = "trace", skip_all)]
+  #[expect(clippy::too_many_arguments)]
   pub async fn transform(
     &self,
     id: &str,
@@ -223,6 +224,7 @@ impl PluginDriver {
     sourcemap_chain: &mut Vec<SourceMap>,
     side_effects: &mut Option<HookSideEffects>,
     module_type: &mut ModuleType,
+    magic_string_tx: Option<Arc<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>>,
   ) -> Result<String> {
     let mut code = original_code;
     let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
@@ -248,6 +250,8 @@ impl PluginDriver {
             code.as_str().into(),
             id.into(),
             module_idx,
+            plugin_idx,
+            magic_string_tx.clone(),
           )),
           &HookTransformArgs { id, code: &code, module_type: &*module_type },
         )

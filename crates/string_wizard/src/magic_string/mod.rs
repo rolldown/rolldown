@@ -40,6 +40,24 @@ pub struct MagicString<'s> {
   last_searched_chunk_idx: ChunkIdx,
 }
 
+impl Default for MagicString<'_> {
+  fn default() -> Self {
+    MagicString {
+      intro: Default::default(),
+      outro: Default::default(),
+      source: Default::default(),
+      first_chunk_idx: 0.into(),
+      last_chunk_idx: 0.into(),
+      chunks: Default::default(),
+      chunk_by_start: Default::default(),
+      chunk_by_end: Default::default(),
+      filename: None,
+      guessed_indentor: OnceLock::default(),
+      last_searched_chunk_idx: 0.into(),
+    }
+  }
+}
+
 impl<'text> MagicString<'text> {
   pub fn new(source: impl Into<Cow<'text, str>>) -> Self {
     Self::with_options(source, Default::default())

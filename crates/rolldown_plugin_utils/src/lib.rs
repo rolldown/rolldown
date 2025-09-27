@@ -37,5 +37,7 @@ pub use strip_bom::strip_bom;
 pub use to_output_file_path::{
   AssetUrlResult, RenderBuiltUrl, RenderBuiltUrlConfig, RenderBuiltUrlRet, ToOutputFilePathEnv,
 };
-pub use to_relative_runtime_path::create_to_import_meta_url_based_relative_runtime;
+pub use to_relative_runtime_path::{
+  create_to_import_meta_url_based_relative_runtime, partial_encode_url_path,
+};
 pub use to_string_literal::to_string_literal;

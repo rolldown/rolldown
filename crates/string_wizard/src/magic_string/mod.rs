@@ -71,6 +71,10 @@ impl<'text> MagicString<'text> {
     magic_string
   }
 
+  pub fn source(&self) -> &str {
+    &self.source
+  }
+
   pub fn filename(&self) -> Option<&str> {
     self.filename.as_deref()
   }

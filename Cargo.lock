@@ -3328,8 +3328,11 @@ dependencies = [
 name = "rolldown_plugin_vite_html"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "derive_more",
  "html5gum",
  "rolldown_plugin",
+ "rolldown_plugin_utils",
  "rolldown_utils",
  "string_cache",
  "string_wizard",

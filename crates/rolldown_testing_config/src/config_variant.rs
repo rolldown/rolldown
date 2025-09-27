@@ -19,6 +19,7 @@ pub struct ConfigVariant {
   pub inline_dynamic_imports: Option<bool>,
   pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
   pub treeshake: Option<TreeshakeOptions>,
+  pub minify: Option<bool>,
   pub minify_internal_exports: Option<bool>,
   pub on_demand_wrapping: Option<bool>,
   pub profiler_names: Option<bool>,
@@ -64,6 +65,9 @@ impl ConfigVariant {
     }
     if let Some(treeshake) = &self.treeshake {
       config.treeshake = treeshake.clone();
+    }
+    if let Some(minify) = &self.minify {
+      config.minify = Some(rolldown_common::RawMinifyOptions::Bool(*minify));
     }
     if let Some(minify_internal_exports) = &self.minify_internal_exports {
       config.minify_internal_exports = Some(*minify_internal_exports);
@@ -122,6 +126,9 @@ impl ConfigVariant {
     }
     if let Some(treeshake) = &self.treeshake {
       fields.push(format!("treeshake: {treeshake:?}"));
+    }
+    if let Some(minify) = &self.minify {
+      fields.push(format!("minify: {minify:?}"));
     }
     if let Some(on_demand_wrapping) = &self.on_demand_wrapping {
       fields.push(format!("on_demand_wrapping: {on_demand_wrapping:?}"));

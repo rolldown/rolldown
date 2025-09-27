@@ -31,7 +31,6 @@ pub enum NodeData {
 }
 
 /// HTML attribute with span information
-#[expect(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Attribute {
   /// Attribute name (e.g., "class", "id") - using Atom for interning
@@ -39,7 +38,7 @@ pub struct Attribute {
   /// Attribute value - kept as String since values are usually unique
   pub value: String,
   /// Source position of this attribute
-  pub span: Option<Span>,
+  pub span: Span,
 }
 
 /// A DOM node.
@@ -84,6 +83,7 @@ pub fn append(new_parent: &Handle, child: Handle) {
 }
 
 /// The DOM itself; the result of parsing.
+#[derive(Debug)]
 pub struct RcDom {
   /// The `Document` itself.
   pub document: Handle,

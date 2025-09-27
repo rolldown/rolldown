@@ -15,7 +15,7 @@ pub fn parse_html(html: &str) -> RcDom {
         for (attr_name, attr_value) in tag.attributes {
           let name = Atom::from(unsafe { String::from_utf8_unchecked(attr_name.0) });
           let value = unsafe { String::from_utf8_unchecked(attr_value.value.0) };
-          attrs.push(Attribute { name, value, span: Some(attr_value.span) });
+          attrs.push(Attribute { name, value, span: attr_value.span });
         }
 
         dom_builder.add_element(

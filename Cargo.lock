@@ -3332,6 +3332,7 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_utils",
  "string_cache",
+ "string_wizard",
  "sugar_path",
 ]
 

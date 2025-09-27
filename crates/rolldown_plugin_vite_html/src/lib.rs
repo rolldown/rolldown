@@ -18,7 +18,7 @@ impl Plugin for ViteHtmlPlugin {
     HookUsage::Transform | HookUsage::GenerateBundle
   }
 
-  #[expect(unused_variables)]
+  #[expect(unused_variables, unused_assignments)]
   async fn transform(
     &self,
     ctx: rolldown_plugin::SharedTransformPluginContext,
@@ -32,13 +32,44 @@ impl Plugin for ViteHtmlPlugin {
     let relative_url_path = normalize_path(&path.to_string_lossy());
 
     let dom = html::parser::parse_html(args.code);
+    let mut s = string_wizard::MagicString::new(args.code);
 
     // TODO: Extract into a function
     let mut stack = vec![dom.document];
     while let Some(node) = stack.pop() {
       match &node.data {
-        html::sink::NodeData::Element { name, attrs, .. } if name == "script" => {
-          let _ = attrs;
+        html::sink::NodeData::Element { name, attrs, .. } => {
+          if &**name == "script" {
+            let mut src = None;
+            let mut loc = None;
+            let mut is_async = false;
+            let mut is_module = false;
+            let mut is_ignored = false;
+            for attr in attrs.borrow().iter() {
+              match &*attr.name {
+                "src" => {
+                  if src.is_none() {
+                    loc = Some(attr.span);
+                    src = Some(attr.value.clone());
+                  }
+                }
+                "type" if attr.value == "module" => {
+                  is_module = true;
+                }
+                "async" => {
+                  is_async = true;
+                }
+                "vite-ignore" => {
+                  is_ignored = true;
+                  s.remove(attr.span.start, attr.span.end);
+                }
+                _ => {}
+              }
+            }
+            if !is_ignored {
+              todo!()
+            }
+          }
           todo!()
         }
         _ => {}

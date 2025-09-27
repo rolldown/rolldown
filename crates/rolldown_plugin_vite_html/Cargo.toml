@@ -20,4 +20,5 @@ html5gum = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_utils = { workspace = true }
 string_cache = { workspace = true }
+string_wizard = { workspace = true }
 sugar_path = { workspace = true }

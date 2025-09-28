@@ -42,7 +42,7 @@ pub fn walk_node<V: DomVisitor>(node: &Handle, visitor: &mut V) {
     NodeData::Doctype => {
       visitor.visit_doctype(node);
     }
-    NodeData::Text => {
+    NodeData::Text { .. } => {
       visitor.visit_text(node);
     }
     NodeData::Comment => {

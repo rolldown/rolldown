@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
 use html5gum::Span;
+use rolldown_plugin_utils::constants::{HTMLProxyMap, HTMLProxyMapItem};
 use string_wizard::MagicString;
 
 use super::ViteHtmlPlugin;
@@ -13,6 +14,23 @@ impl ViteHtmlPlugin {
     } else {
       Cow::Borrowed(self.url_base.as_ref())
     }
+  }
+
+  #[inline]
+  pub fn add_to_html_proxy_cache(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    file: String,
+    index: usize,
+    result: HTMLProxyMapItem,
+  ) {
+    ctx
+      .meta()
+      .get_or_insert_default::<HTMLProxyMap>()
+      .inner
+      .entry(file)
+      .or_default()
+      .insert(index, result);
   }
 }
 

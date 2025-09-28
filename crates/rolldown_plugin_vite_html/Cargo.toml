@@ -19,6 +19,7 @@ workspace = true
 anyhow = { workspace = true }
 derive_more = { workspace = true }
 html5gum = { workspace = true }
+itoa = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_plugin_utils = { workspace = true }
 rolldown_utils = { workspace = true }

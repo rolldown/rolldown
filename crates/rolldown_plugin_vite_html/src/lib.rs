@@ -6,7 +6,8 @@ use std::{borrow::Cow, path::Path, rc::Rc, sync::Arc};
 use derive_more::Debug;
 use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_plugin_utils::{
-  AssetUrlResult, RenderBuiltUrl, ToOutputFilePathEnv, partial_encode_url_path,
+  AssetUrlResult, RenderBuiltUrl, ToOutputFilePathEnv, constants::HTMLProxyMapItem,
+  partial_encode_url_path,
 };
 use rolldown_utils::pattern_filter::normalize_path;
 use sugar_path::SugarPath as _;
@@ -40,6 +41,7 @@ impl Plugin for ViteHtmlPlugin {
       return Ok(None);
     }
 
+    let id = normalize_path(args.id);
     let path = args.id.relative(ctx.cwd());
     let path_lossy = path.to_string_lossy();
     let relative_url_path = normalize_path(&path_lossy);
@@ -61,7 +63,10 @@ impl Plugin for ViteHtmlPlugin {
     };
 
     let mut js = String::new();
-    let mut inline_module_count = 0;
+    let mut inline_module_count = 0usize;
+    let mut every_script_is_async = true;
+    let mut some_scripts_are_async = false;
+    let mut some_scripts_are_defer = false;
 
     // TODO: Support module_side_effects for module info
     // let mut set_modules = Vec::new();
@@ -118,12 +123,33 @@ impl Plugin for ViteHtmlPlugin {
                     // set_modules.push(url);
                     // add `<script type="module" src="..."/>` as an import
                     js.push_str(&rolldown_utils::concat_string!(
-                      "\nimport ",
-                      rolldown_plugin_utils::to_string_literal(url)
+                      "import ",
+                      rolldown_plugin_utils::to_string_literal(url),
+                      "\n"
+                    ));
+                    should_remove = true;
+                  } else if let Some(node) = node.children.borrow_mut().pop() {
+                    let html::sink::NodeData::Text { contents } = &node.data else {
+                      panic!("Expected text node but received: {:#?}", node.data);
+                    };
+                    self.add_to_html_proxy_cache(
+                      &ctx,
+                      public_path.clone(),
+                      inline_module_count - 1,
+                      HTMLProxyMapItem { code: contents.into(), map: None },
+                    );
+                    js.push_str(&rolldown_utils::concat_string!(
+                      "import \"",
+                      id,
+                      "?html-proxy&index=",
+                      itoa::Buffer::new().format(inline_module_count - 1),
+                      ".js\"\n"
                     ));
                     should_remove = true;
                   }
-                  todo!()
+                  every_script_is_async = every_script_is_async && is_async;
+                  some_scripts_are_async = some_scripts_are_async || is_async;
+                  some_scripts_are_defer = some_scripts_are_defer || !is_async;
                 }
                 todo!()
               }

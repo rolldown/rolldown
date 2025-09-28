@@ -33,16 +33,16 @@ use crate::{
   utils::process_code_and_sourcemap::process_code_and_sourcemap,
 };
 
-pub struct HmrManagerInput {
+pub struct HmrManagerInput<'a> {
   pub options: SharedOptions,
   pub fs: OsFileSystem,
   pub resolver: SharedResolver,
   pub plugin_driver: SharedPluginDriver,
-  pub cache: ScanStageCache,
+  pub cache: &'a mut ScanStageCache,
   pub next_hmr_patch_id: Arc<AtomicU32>,
 }
 
-impl HmrManagerInput {
+impl HmrManagerInput<'_> {
   pub fn module_table(&self) -> &ModuleTable {
     &self.cache.get_snapshot().module_table
   }
@@ -52,47 +52,27 @@ impl HmrManagerInput {
   }
 }
 
-pub struct HmrManager {
-  pub(crate) input: HmrManagerInput,
-  module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
-  module_idx_by_stable_id: FxHashMap<String, ModuleIdx>,
+pub struct HmrManager<'a> {
+  pub(crate) input: HmrManagerInput<'a>,
 }
 
-impl Deref for HmrManager {
-  type Target = HmrManagerInput;
+impl<'a> Deref for HmrManager<'a> {
+  type Target = HmrManagerInput<'a>;
 
   fn deref(&self) -> &Self::Target {
     &self.input
   }
 }
 
-impl DerefMut for HmrManager {
+impl DerefMut for HmrManager<'_> {
   fn deref_mut(&mut self) -> &mut Self::Target {
     &mut self.input
   }
 }
 
-impl HmrManager {
-  pub fn new(input: HmrManagerInput) -> Self {
-    let build_snapshot = input.cache.get_snapshot();
-
-    let module_idx_by_abs_path = build_snapshot
-      .module_table
-      .iter()
-      .filter_map(|m| m.as_normal())
-      .map(|m| {
-        let filename = m.id.resource_id().to_slash().unwrap().into();
-        let module_idx = m.idx;
-        (filename, module_idx)
-      })
-      .collect();
-    let module_idx_by_stable_id = build_snapshot
-      .module_table
-      .modules
-      .iter()
-      .map(|m| (m.stable_id().to_string(), m.idx()))
-      .collect();
-    Self { input, module_idx_by_abs_path, module_idx_by_stable_id }
+impl<'a> HmrManager<'a> {
+  pub fn new(input: HmrManagerInput<'a>) -> Self {
+    Self { input }
   }
 
   /// Compute hmr update caused by `import.meta.hot.invalidate()`.
@@ -110,6 +90,7 @@ impl HmrManager {
       first_invalidated_by,
     );
     let module_idx = self
+      .cache
       .module_idx_by_stable_id
       .get(&invalidate_caller)
       .copied()
@@ -172,7 +153,7 @@ impl HmrManager {
     for changed_file_path in changed_file_paths {
       let changed_file_path = ArcStr::from(changed_file_path.to_slash().unwrap());
       // Check if the file itself is a module
-      if let Some(module_idx) = self.module_idx_by_abs_path.get(&changed_file_path) {
+      if let Some(module_idx) = self.cache.module_idx_by_abs_path.get(&changed_file_path) {
         changed_modules.insert(*module_idx);
       }
 
@@ -257,7 +238,7 @@ impl HmrManager {
         Arc::clone(&self.options),
         Arc::clone(&self.resolver),
         Arc::clone(&self.plugin_driver),
-        &mut self.cache,
+        self.cache,
         fetch_mode.is_full(),
       )?;
 

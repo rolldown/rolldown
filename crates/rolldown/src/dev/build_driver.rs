@@ -150,17 +150,17 @@ impl BuildDriver {
         }
       };
 
-      let bundler = self.bundler.lock().await;
-      let cache = build_state.cache.take().expect("Should never be none here");
-      let mut hmr_manager = bundler.create_hmr_manager(cache, Arc::clone(&self.next_hmr_patch_id));
-      let update = hmr_manager
+      let mut bundler = self.bundler.lock().await;
+      bundler.set_cache(build_state.cache.take().expect("Should never be none here"));
+      let update = bundler
         .compute_update_for_calling_invalidate(
           caller.clone(),
           first_invalidated_by.clone(),
           Some(&client.registered_modules),
+          Arc::clone(&self.next_hmr_patch_id),
         )
         .await?;
-      build_state.cache = Some(hmr_manager.input.cache);
+      build_state.cache = Some(bundler.take_cache());
       updates.push(ClientHmrUpdate { client_id: client.key().to_string(), update });
     }
 

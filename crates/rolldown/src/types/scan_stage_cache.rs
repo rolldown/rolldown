@@ -4,6 +4,7 @@ use oxc_index::IndexVec;
 use rolldown_common::{GetLocalDbMut, ImporterRecord, ModuleIdx};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
+use sugar_path::SugarPath;
 
 use crate::{
   module_loader::module_loader::VisitState,
@@ -16,11 +17,16 @@ pub struct ScanStageCache {
   pub module_id_to_idx: FxHashMap<ArcStr, VisitState>,
   pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
   pub user_defined_entry: FxHashSet<ArcStr>,
+  // Usage: Map file path emitted by watcher to corresponding module index
+  pub module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
+  // Usage: Map module stable id injected to client code to corresponding module index
+  pub module_idx_by_stable_id: FxHashMap<String, ModuleIdx>,
 }
 
 impl ScanStageCache {
   #[inline]
   pub fn set_snapshot(&mut self, cache: NormalizedScanStageOutput) {
+    self.build_module_index_maps(&cache);
     self.snapshot = Some(cache);
   }
 
@@ -106,6 +112,38 @@ impl ScanStageCache {
       } else {
         cache.entry_points.push(entry_point);
       }
+    }
+
+    // Update module index maps after merge
+    self.rebuild_module_index_maps();
+  }
+
+  fn build_module_index_maps(&mut self, build_snapshot: &NormalizedScanStageOutput) {
+    self.module_idx_by_abs_path.clear();
+    self.module_idx_by_stable_id.clear();
+
+    for module in &build_snapshot.module_table.modules {
+      if let rolldown_common::Module::Normal(normal_module) = module {
+        let filename = normal_module.id.resource_id().to_slash().unwrap().into();
+        let module_idx = normal_module.idx;
+        self.module_idx_by_abs_path.insert(filename, module_idx);
+      }
+      self.module_idx_by_stable_id.insert(module.stable_id().to_string(), module.idx());
+    }
+  }
+
+  fn rebuild_module_index_maps(&mut self) {
+    let snapshot = self.snapshot.as_ref().unwrap();
+    self.module_idx_by_abs_path.clear();
+    self.module_idx_by_stable_id.clear();
+
+    for module in &snapshot.module_table.modules {
+      if let rolldown_common::Module::Normal(normal_module) = module {
+        let filename = normal_module.id.resource_id().to_slash().unwrap().into();
+        let module_idx = normal_module.idx;
+        self.module_idx_by_abs_path.insert(filename, module_idx);
+      }
+      self.module_idx_by_stable_id.insert(module.stable_id().to_string(), module.idx());
     }
   }
 

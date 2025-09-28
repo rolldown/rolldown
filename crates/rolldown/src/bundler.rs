@@ -13,7 +13,8 @@ use anyhow::Result;
 
 use arcstr::ArcStr;
 use rolldown_common::{
-  GetLocalDbMut, Module, NormalizedBundlerOptions, ScanMode, SharedFileEmitter, SymbolRefDb,
+  GetLocalDbMut, HmrUpdate, Module, NormalizedBundlerOptions, ScanMode, SharedFileEmitter,
+  SymbolRefDb,
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
@@ -22,6 +23,7 @@ use rolldown_plugin::{
   __inner::SharedPluginable, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver,
 };
 use rolldown_utils::dashmap::FxDashSet;
+use rustc_hash::FxHashSet;
 use std::{
   any::Any,
   sync::{Arc, atomic::AtomicU32},
@@ -281,19 +283,45 @@ impl Bundler {
     &self.plugin_driver.watch_files
   }
 
-  pub fn create_hmr_manager(
-    &self,
-    cache: ScanStageCache,
+  pub async fn compute_hmr_update_for_file_changes(
+    &mut self,
+    changed_file_paths: &[String],
+    registered_modules: Option<&FxHashSet<String>>,
     next_hmr_patch_id: Arc<AtomicU32>,
-  ) -> HmrManager {
-    HmrManager::new(HmrManagerInput {
+  ) -> BuildResult<Vec<HmrUpdate>> {
+    let mut hmr_manager = HmrManager::new(HmrManagerInput {
       fs: self.fs.clone(),
       options: Arc::clone(&self.options),
       resolver: Arc::clone(&self.resolver),
       plugin_driver: Arc::clone(&self.plugin_driver),
-      cache,
+      cache: &mut self.cache,
       next_hmr_patch_id,
-    })
+    });
+    hmr_manager.compute_hmr_update_for_file_changes(changed_file_paths, registered_modules).await
+  }
+
+  pub async fn compute_update_for_calling_invalidate(
+    &mut self,
+    invalidate_caller: String,
+    first_invalidated_by: Option<String>,
+    registered_modules: Option<&FxHashSet<String>>,
+    next_hmr_patch_id: Arc<AtomicU32>,
+  ) -> BuildResult<HmrUpdate> {
+    let mut hmr_manager = HmrManager::new(HmrManagerInput {
+      fs: self.fs.clone(),
+      options: Arc::clone(&self.options),
+      resolver: Arc::clone(&self.resolver),
+      plugin_driver: Arc::clone(&self.plugin_driver),
+      cache: &mut self.cache,
+      next_hmr_patch_id,
+    });
+    hmr_manager
+      .compute_update_for_calling_invalidate(
+        invalidate_caller,
+        first_invalidated_by,
+        registered_modules,
+      )
+      .await
   }
 
   fn merge_immutable_fields_for_cache(&mut self, symbol_db: SymbolRefDb) {

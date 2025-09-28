@@ -154,17 +154,19 @@ impl BundlingTask {
   }
 
   pub async fn generate_hmr_updates(&mut self) -> BuildResult<()> {
-    let bundler = self.bundler.lock().await;
-    let bundler_cache = self.bundler_cache.take().expect("Should never be none here");
-    let mut hmr_manager =
-      bundler.create_hmr_manager(bundler_cache, Arc::clone(&self.next_hmr_patch_id));
+    let mut bundler = self.bundler.lock().await;
+    bundler.set_cache(self.bundler_cache.take().expect("Should never be none here"));
     let changed_files =
       self.changed_files.iter().map(|p| p.to_string_lossy().to_string()).collect::<Vec<_>>();
 
     let mut client_updates = Vec::new();
     for client in self.dev_context.clients.iter() {
-      let updates = hmr_manager
-        .compute_hmr_update_for_file_changes(&changed_files, Some(&client.registered_modules))
+      let updates = bundler
+        .compute_hmr_update_for_file_changes(
+          &changed_files,
+          Some(&client.registered_modules),
+          Arc::clone(&self.next_hmr_patch_id),
+        )
         .await?;
       client_updates.extend(
         updates
@@ -173,7 +175,7 @@ impl BundlingTask {
       );
     }
 
-    self.bundler_cache = Some(hmr_manager.input.cache);
+    self.bundler_cache = Some(bundler.take_cache());
     // We had updated the cache with those changes, so we can clear the changed files.
     // This way, we won't need to update the cache again in rebuild.
     if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref()

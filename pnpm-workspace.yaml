@@ -17,11 +17,11 @@ verifyDepsBeforeRun: install
 # Define a catalog of version ranges.
 catalog:
   # --- OXC related ---
-  '@oxc-project/runtime': '=0.92.0'
-  '@oxc-project/types': '=0.92.0'
-  'oxc-parser': '=0.92.0'
-  'oxc-transform': '=0.92.0'
-  'oxc-minify': '^0.92.0'
+  '@oxc-project/runtime': '=0.93.0'
+  '@oxc-project/types': '=0.93.0'
+  'oxc-parser': '=0.93.0'
+  'oxc-transform': '=0.93.0'
+  'oxc-minify': '^0.93.0'
 
   # --- NAPI-RS related ---
   '@napi-rs/cli': '^3.2.0'

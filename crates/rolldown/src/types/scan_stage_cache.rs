@@ -74,6 +74,15 @@ impl ScanStageCache {
     for (new_idx, new_module) in modules {
       let idx = self.module_id_to_idx[new_module.id_clone()].idx();
 
+      // Update `module_idx_by_abs_path`
+      if let rolldown_common::Module::Normal(normal_module) = &new_module {
+        self
+          .module_idx_by_abs_path
+          .insert(normal_module.id.resource_id().to_slash().unwrap().into(), normal_module.idx);
+      }
+      // Update `module_idx_by_stable_id`
+      self.module_idx_by_stable_id.insert(new_module.stable_id().to_string(), new_module.idx());
+
       if new_idx.index() >= cache.module_table.modules.len() {
         let new_module_idx = ModuleIdx::from_usize(cache.module_table.modules.len());
 
@@ -113,9 +122,6 @@ impl ScanStageCache {
         cache.entry_points.push(entry_point);
       }
     }
-
-    // Update module index maps after merge
-    self.rebuild_module_index_maps();
   }
 
   fn build_module_index_maps(&mut self, build_snapshot: &NormalizedScanStageOutput) {
@@ -123,21 +129,6 @@ impl ScanStageCache {
     self.module_idx_by_stable_id.clear();
 
     for module in &build_snapshot.module_table.modules {
-      if let rolldown_common::Module::Normal(normal_module) = module {
-        let filename = normal_module.id.resource_id().to_slash().unwrap().into();
-        let module_idx = normal_module.idx;
-        self.module_idx_by_abs_path.insert(filename, module_idx);
-      }
-      self.module_idx_by_stable_id.insert(module.stable_id().to_string(), module.idx());
-    }
-  }
-
-  fn rebuild_module_index_maps(&mut self) {
-    let snapshot = self.snapshot.as_ref().unwrap();
-    self.module_idx_by_abs_path.clear();
-    self.module_idx_by_stable_id.clear();
-
-    for module in &snapshot.module_table.modules {
       if let rolldown_common::Module::Normal(normal_module) = module {
         let filename = normal_module.id.resource_id().to_slash().unwrap().into();
         let module_idx = normal_module.idx;

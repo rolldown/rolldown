@@ -30,7 +30,7 @@ impl Plugin for ViteHtmlPlugin {
     HookUsage::Transform | HookUsage::GenerateBundle
   }
 
-  #[expect(unused_variables, unused_assignments)]
+  #[expect(unused_variables, unused_assignments, clippy::too_many_lines)]
   async fn transform(
     &self,
     ctx: rolldown_plugin::SharedTransformPluginContext,
@@ -60,6 +60,11 @@ impl Plugin for ViteHtmlPlugin {
       render_built_url: self.render_built_url.as_deref(),
     };
 
+    let mut js = String::new();
+    let mut inline_module_count = 0;
+
+    // TODO: Support module_side_effects for module info
+    // let mut set_modules = Vec::new();
     let mut overwrite_attrs = Vec::new();
     let mut s = string_wizard::MagicString::new(args.code);
 
@@ -70,6 +75,7 @@ impl Plugin for ViteHtmlPlugin {
       while let Some(node) = stack.pop() {
         match &node.data {
           html::sink::NodeData::Element { name, attrs, .. } => {
+            let mut should_remove = false;
             if &**name == "script" {
               let mut src = None;
               let mut is_async = false;
@@ -99,8 +105,25 @@ impl Plugin for ViteHtmlPlugin {
                 let is_public_file = src.as_ref().is_some_and(|(s, _)| {
                   rolldown_plugin_utils::check_public_file(s, &self.public_dir).is_some()
                 });
-                if is_public_file && let Some((url, span)) = src {
+                if is_public_file && let Some((url, span)) = src.as_ref() {
                   overwrite_attrs.push((&url[1..], span));
+                }
+                if is_module {
+                  inline_module_count += 1;
+                  if let Some((url, _)) = src.as_ref()
+                    && !is_public_file
+                    && !utils::is_excluded_url(url)
+                  {
+                    // TODO: Support module_side_effects for module info
+                    // set_modules.push(url);
+                    // add `<script type="module" src="..."/>` as an import
+                    js.push_str(&rolldown_utils::concat_string!(
+                      "\nimport ",
+                      rolldown_plugin_utils::to_string_literal(url)
+                    ));
+                    should_remove = true;
+                  }
+                  todo!()
                 }
                 todo!()
               }
@@ -115,11 +138,26 @@ impl Plugin for ViteHtmlPlugin {
       }
     }
 
+    // TODO: Support module_side_effects for module info
+    // for url in set_modules {
+    //   match ctx.resolve(&url, Some(args.id), None).await? {
+    //     Ok(resolved_id) => match ctx.get_module_info(&resolved_id.id) {
+    //       Some(module_info) => module_info.module_side_effects = true,
+    //       None => {
+    //         if !resolved_id.external.is_external() {
+    //           ctx.resolve(specifier, importer, extra_options)
+    //         }
+    //       },
+    //     },
+    //     Err(_) => return Err(anyhow::anyhow!("Failed to resolve {url} from {}", args.id)),
+    //   }
+    // }
+
     for (url, span) in overwrite_attrs {
       let asset_url = env.to_output_file_path(url, "html", true, public_to_relative).await?;
       utils::overwrite_check_public_file(
         &mut s,
-        span,
+        *span,
         partial_encode_url_path(&asset_url.to_asset_url_in_css_or_html()).into_owned(),
       )?;
     }

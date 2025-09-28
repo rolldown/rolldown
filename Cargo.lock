@@ -3333,6 +3333,8 @@ dependencies = [
  "derive_more",
  "html5gum",
  "itoa",
+ "oxc",
+ "regex",
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_utils",

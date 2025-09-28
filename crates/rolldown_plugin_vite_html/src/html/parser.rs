@@ -30,7 +30,7 @@ pub fn parse_html(html: &str) -> RcDom {
       }
       Ok(Token::String(s)) => {
         let contents = unsafe { String::from_utf8_unchecked(s.0.clone()) };
-        dom_builder.add_text(contents);
+        dom_builder.add_text(contents, s.span);
       }
       Ok(Token::Comment(_)) => {
         dom_builder.add_comment();

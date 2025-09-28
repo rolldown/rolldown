@@ -4,7 +4,8 @@ mod utils;
 use std::{borrow::Cow, path::Path, rc::Rc, sync::Arc};
 
 use derive_more::Debug;
-use rolldown_plugin::{HookUsage, Plugin};
+use oxc::ast_visit::Visit;
+use rolldown_plugin::{HookUsage, LogWithoutPlugin, Plugin};
 use rolldown_plugin_utils::{
   AssetUrlResult, RenderBuiltUrl, ToOutputFilePathEnv, constants::HTMLProxyMapItem,
   partial_encode_url_path,
@@ -68,6 +69,8 @@ impl Plugin for ViteHtmlPlugin {
     let mut some_scripts_are_async = false;
     let mut some_scripts_are_defer = false;
 
+    let mut script_urls = Vec::new();
+
     // TODO: Support module_side_effects for module info
     // let mut set_modules = Vec::new();
     let mut overwrite_attrs = Vec::new();
@@ -129,7 +132,7 @@ impl Plugin for ViteHtmlPlugin {
                     ));
                     should_remove = true;
                   } else if let Some(node) = node.children.borrow_mut().pop() {
-                    let html::sink::NodeData::Text { contents } = &node.data else {
+                    let html::sink::NodeData::Text { contents, .. } = &node.data else {
                       panic!("Expected text node but received: {:#?}", node.data);
                     };
                     self.add_to_html_proxy_cache(
@@ -150,6 +153,48 @@ impl Plugin for ViteHtmlPlugin {
                   every_script_is_async = every_script_is_async && is_async;
                   some_scripts_are_async = some_scripts_are_async || is_async;
                   some_scripts_are_defer = some_scripts_are_defer || !is_async;
+                } else if let Some((url, _)) = src.as_ref()
+                  && !is_public_file
+                {
+                  if !utils::is_excluded_url(url) {
+                    let message = rolldown_utils::concat_string!(
+                      "<script src='",
+                      url,
+                      "'> in '",
+                      public_path,
+                      "' can't be bundled without type='module' attribute"
+                    );
+                    ctx.warn(LogWithoutPlugin { message, ..Default::default() });
+                  }
+                } else if let Some(node) = node.children.borrow_mut().pop() {
+                  let html::sink::NodeData::Text { contents, span } = &node.data else {
+                    panic!("Expected text node but received: {:#?}", node.data);
+                  };
+                  if utils::INLINE_IMPORT.is_match(contents) {
+                    let allocator = oxc::allocator::Allocator::default();
+                    let parser_ret = oxc::parser::Parser::new(
+                      &allocator,
+                      contents,
+                      oxc::span::SourceType::default(),
+                    )
+                    .parse();
+                    if parser_ret.panicked
+                      && let Some(err) = parser_ret
+                        .errors
+                        .iter()
+                        .find(|e| e.severity == oxc::diagnostics::Severity::Error)
+                    {
+                      return Err(anyhow::anyhow!(format!(
+                        "Failed to parse inline script in '{}': {:?}",
+                        public_path, err.message
+                      )));
+                    }
+                    let mut visitor = utils::ScriptInlineImportVisitor {
+                      offset: span.start,
+                      script_urls: &mut script_urls,
+                    };
+                    visitor.visit_program(&parser_ret.program);
+                  }
                 }
                 todo!()
               }

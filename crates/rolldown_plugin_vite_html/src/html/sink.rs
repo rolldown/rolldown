@@ -16,7 +16,7 @@ pub enum NodeData {
   Doctype,
 
   /// A text node.
-  Text { contents: String },
+  Text { contents: String, span: Span },
 
   /// A comment.
   Comment,
@@ -141,8 +141,8 @@ impl RcDomEmitter {
     }
   }
 
-  pub fn add_text(&self, contents: String) {
-    let text_node = Node::new(NodeData::Text { contents });
+  pub fn add_text(&self, contents: String, span: Span) {
+    let text_node = Node::new(NodeData::Text { contents, span });
     append(&self.current_node, text_node);
   }
 

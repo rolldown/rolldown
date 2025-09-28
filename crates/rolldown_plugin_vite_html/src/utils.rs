@@ -1,10 +1,15 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, ops::Range, sync::LazyLock};
 
 use html5gum::Span;
+use oxc::ast_visit::{Visit, walk};
+use regex::Regex;
 use rolldown_plugin_utils::constants::{HTMLProxyMap, HTMLProxyMapItem};
 use string_wizard::MagicString;
 
 use super::ViteHtmlPlugin;
+
+pub static INLINE_IMPORT: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r#"\bimport\s*\(("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')\)"#).unwrap());
 
 impl ViteHtmlPlugin {
   pub fn get_base_in_html(&self, url_relative_path: &str) -> Cow<'_, str> {
@@ -68,4 +73,22 @@ pub fn is_excluded_url(url: &str) -> bool {
       i > 0 && i + 2 < b.len() && &b[i..i + 3] == b"://"
     }
     || url.trim_start().get(..5).is_some_and(|p| p.eq_ignore_ascii_case("data:"))
+}
+
+pub struct ScriptInlineImportVisitor<'a> {
+  pub offset: usize,
+  pub script_urls: &'a mut Vec<(String, Range<usize>)>,
+}
+
+impl Visit<'_> for ScriptInlineImportVisitor<'_> {
+  fn visit_import_expression(&mut self, it: &oxc::ast::ast::ImportExpression<'_>) {
+    if let oxc::ast::ast::Expression::StringLiteral(lit) = &it.source {
+      self.script_urls.push((
+        lit.value.to_string(),
+        lit.span.start as usize + self.offset + 1..lit.span.end as usize + self.offset - 1,
+      ));
+      return;
+    }
+    walk::walk_import_expression(self, it);
+  }
 }

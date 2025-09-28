@@ -1,23 +1,13 @@
 import {
   type BindingBuiltinPlugin,
-  type BindingBuiltinPluginName,
   BindingCallableBuiltinPlugin,
 } from '../binding';
 import { error, logPluginError } from '../log/logs';
+import { BuiltinPlugin } from './constructor';
 
 type BindingCallableBuiltinPluginLike = {
   [K in keyof BindingCallableBuiltinPlugin]: BindingCallableBuiltinPlugin[K];
 };
-
-// eslint-disable @typescript-eslint/no-unsafe-declaration-merging
-export class BuiltinPlugin {
-  constructor(
-    public name: BindingBuiltinPluginName,
-    // NOTE: has `_` to avoid conflict with `options` hook
-    public _options?: unknown,
-  ) {
-  }
-}
 
 export function makeBuiltinPluginCallable(
   plugin: BuiltinPlugin,

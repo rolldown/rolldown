@@ -1,4 +1,4 @@
-import { BuiltinPlugin } from '../builtin-plugin/utils';
+import { BuiltinPlugin } from '../builtin-plugin';
 import { ENUMERATED_INPUT_PLUGIN_HOOK_NAMES } from '../constants/plugin';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN } from '../log/logging';

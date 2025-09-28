@@ -1,6 +1,6 @@
 import type { BindingReplacePluginConfig } from '../binding';
 import { logger } from '../cli/logger';
-import { BuiltinPlugin } from './utils';
+import { BuiltinPlugin } from './constructor';
 
 /**
  * Replaces targeted strings in files while bundling.

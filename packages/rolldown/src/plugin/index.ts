@@ -3,7 +3,7 @@ import type {
   BindingHookResolveIdExtraArgs,
   BindingTransformHookExtraArgs,
 } from '../binding';
-import type { BuiltinPlugin } from '../builtin-plugin/utils';
+import type { BuiltinPlugin } from '../builtin-plugin';
 import type { DefinedHookNames } from '../constants/plugin';
 import type { DEFINED_HOOK_NAMES } from '../constants/plugin';
 import type { LogLevel, RollupLog } from '../log/logging';

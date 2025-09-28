@@ -13,8 +13,7 @@ import type {
   BindingInjectImportNamespace,
   BindingInputOptions,
 } from '../binding';
-import { BuiltinPlugin } from '../builtin-plugin/utils';
-import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
+import { bindingifyBuiltInPlugin, BuiltinPlugin } from '../builtin-plugin';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
 import { logDuplicateJsxConfig } from '../log/logs';

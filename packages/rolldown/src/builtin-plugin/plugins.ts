@@ -15,7 +15,8 @@ import type {
 } from '../binding';
 import type { StringOrRegExp } from '../types/utils';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
-import { BuiltinPlugin, makeBuiltinPluginCallable } from './utils';
+import { BuiltinPlugin } from './constructor';
+import { makeBuiltinPluginCallable } from './utils';
 
 export function modulePreloadPolyfillPlugin(
   config?: BindingModulePreloadPolyfillPluginConfig,

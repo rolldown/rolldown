@@ -18,6 +18,7 @@ export {
 export { defineParallelPlugin } from './plugin/parallel-plugin';
 // Builtin plugin factory
 export {
+  aliasPlugin,
   assetPlugin,
   buildImportAnalysisPlugin,
   dynamicImportVarsPlugin,
@@ -29,13 +30,11 @@ export {
   manifestPlugin,
   modulePreloadPolyfillPlugin,
   reactRefreshWrapperPlugin,
+  replacePlugin,
   reporterPlugin,
+  transformPlugin,
   viteResolvePlugin,
   wasmFallbackPlugin,
   wasmHelperPlugin,
   webWorkerPostPlugin,
-} from './builtin-plugin/constructors';
-
-export { aliasPlugin } from './builtin-plugin/alias-plugin';
-export { replacePlugin } from './builtin-plugin/replace-plugin';
-export { transformPlugin } from './builtin-plugin/transform-plugin';
+} from './builtin-plugin';

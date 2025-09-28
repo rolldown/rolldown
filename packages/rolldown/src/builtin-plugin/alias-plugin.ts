@@ -1,4 +1,4 @@
-import { BuiltinPlugin } from './utils';
+import { BuiltinPlugin } from './constructor';
 
 type AliasPluginAlias = {
   find: string | RegExp;

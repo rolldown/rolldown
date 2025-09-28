@@ -2,7 +2,7 @@ use super::stages::{link_stage::LinkStage, scan_stage::NormalizedScanStageOutput
 use crate::{
   BundlerOptions, SharedOptions, SharedResolver,
   bundler_builder::BundlerBuilder,
-  hmr::hmr_manager::{HmrManager, HmrManagerInput},
+  hmr::hmr_stage::{HmrStage, HmrStageInput},
   stages::{
     generate_stage::GenerateStage,
     scan_stage::{ScanStage, ScanStageOutput},
@@ -286,42 +286,38 @@ impl Bundler {
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
     changed_file_paths: &[String],
-    registered_modules: Option<&FxHashSet<String>>,
+    executed_modules: &FxHashSet<String>,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<Vec<HmrUpdate>> {
-    let mut hmr_manager = HmrManager::new(HmrManagerInput {
+    let mut hmr_stage = HmrStage::new(HmrStageInput {
       fs: self.fs.clone(),
       options: Arc::clone(&self.options),
       resolver: Arc::clone(&self.resolver),
       plugin_driver: Arc::clone(&self.plugin_driver),
       cache: &mut self.cache,
       next_hmr_patch_id,
+      executed_modules,
     });
-    hmr_manager.compute_hmr_update_for_file_changes(changed_file_paths, registered_modules).await
+    hmr_stage.compute_hmr_update_for_file_changes(changed_file_paths).await
   }
 
   pub async fn compute_update_for_calling_invalidate(
     &mut self,
     invalidate_caller: String,
     first_invalidated_by: Option<String>,
-    registered_modules: Option<&FxHashSet<String>>,
+    executed_modules: &FxHashSet<String>,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<HmrUpdate> {
-    let mut hmr_manager = HmrManager::new(HmrManagerInput {
+    let mut hmr_stage = HmrStage::new(HmrStageInput {
       fs: self.fs.clone(),
       options: Arc::clone(&self.options),
       resolver: Arc::clone(&self.resolver),
       plugin_driver: Arc::clone(&self.plugin_driver),
       cache: &mut self.cache,
       next_hmr_patch_id,
+      executed_modules,
     });
-    hmr_manager
-      .compute_update_for_calling_invalidate(
-        invalidate_caller,
-        first_invalidated_by,
-        registered_modules,
-      )
-      .await
+    hmr_stage.compute_update_for_calling_invalidate(invalidate_caller, first_invalidated_by).await
   }
 
   fn merge_immutable_fields_for_cache(&mut self, symbol_db: SymbolRefDb) {

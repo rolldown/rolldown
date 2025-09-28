@@ -125,7 +125,7 @@ impl BindingDevEngine {
 
   #[napi]
   pub fn register_modules(&self, client_id: String, modules: Vec<String>) {
-    self.inner.clients.entry(client_id).or_default().registered_modules.extend(modules);
+    self.inner.clients.entry(client_id).or_default().executed_modules.extend(modules);
   }
 
   #[napi]

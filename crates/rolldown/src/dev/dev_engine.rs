@@ -207,7 +207,7 @@ impl DevEngine {
     let build_state = self.ctx.state.lock().await;
     let snapshot = build_state.cache.as_ref().unwrap().get_snapshot();
     for module in snapshot.module_table.iter() {
-      client_session.registered_modules.insert(module.stable_id().to_string());
+      client_session.executed_modules.insert(module.stable_id().to_string());
     }
     self.clients.insert("test".to_string(), client_session);
   }

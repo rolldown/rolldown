@@ -164,7 +164,7 @@ impl BundlingTask {
       let updates = bundler
         .compute_hmr_update_for_file_changes(
           &changed_files,
-          Some(&client.registered_modules),
+          &client.executed_modules,
           Arc::clone(&self.next_hmr_patch_id),
         )
         .await?;

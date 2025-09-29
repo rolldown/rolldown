@@ -122,7 +122,7 @@ fn pre_process_source(
       }
     }
     ModuleType::Text => Cow::Owned(text_to_string_literal(&source.try_into_string()?)?),
-    ModuleType::Asset => Cow::Borrowed("import.meta.__ROLLDOWN_ASSET_FILENAME"),
+    ModuleType::Asset => Cow::Borrowed("__ROLLDOWN_ASSET_FILENAME__"),
     ModuleType::Base64 => {
       let encoded = rolldown_utils::base64::to_standard_base64(source.as_bytes());
       Cow::Owned(text_to_string_literal(&encoded)?)

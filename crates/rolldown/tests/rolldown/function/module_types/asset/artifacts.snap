@@ -26,8 +26,8 @@ export { main_default as default };
 
 ```
 - ../foo.txt
-(0:0) "import.meta." --> (1:18) "\"assets/foo-C-m4uiP6.txt\""
-(0:12) "__ROLLDOWN_ASSET_FILENAME" --> (1:43) ";\n"
+(0:0) "__ROLLDOWN_ASSET_FILENAME__" --> (1:18) "\"assets/foo-C-m4uiP6.txt\""
+(0:0) "__ROLLDOWN_ASSET_FILENAME__" --> (1:43) ";\n"
 - ../main.js
 (2:0) "export default " --> (5:0) "var main_default = "
 (2:15) "filePath" --> (5:19) "foo_default;\n"

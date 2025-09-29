@@ -4368,6 +4368,11 @@ expression: output
 
 - main-!~{000}~.js => main-DQOxOmW3.js
 
+# tests/rolldown/function/module_types/issue-6345
+
+- main-!~{000}~.js => main-DvVUxegA.js
+- assets/foo-D91Zmg_q.txt
+
 # tests/rolldown/function/module_types/json/array
 
 - main-!~{000}~.js => main-BEb5GYM2.js

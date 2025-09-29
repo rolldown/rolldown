@@ -3,7 +3,6 @@ use std::{borrow::Cow, fs, sync::Arc};
 use rolldown::{BundlerOptions, ExperimentalOptions, HmrOptions, InputItem};
 use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
-use sugar_path::SugarPath;
 #[derive(Debug)]
 struct TestPlugin;
 
@@ -19,7 +18,7 @@ impl Plugin for TestPlugin {
   ) -> rolldown_plugin::HookTransformReturn {
     let input_text_path = ctx.cwd().join("./input.txt");
     let content = fs::read_to_string(&input_text_path).unwrap();
-    ctx.add_watch_file(input_text_path.normalize().to_str().unwrap());
+    ctx.add_watch_file(input_text_path.to_str().unwrap());
     let new_code = args.code.replace(
       "import.meta.getContent('./input.txt')",
       &format!("\"{}\"", content.replace('\n', "\\n")),

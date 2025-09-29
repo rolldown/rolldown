@@ -6,6 +6,7 @@ use rolldown_common::{ModuleIdx, SourcemapHires};
 use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
 use rolldown_utils::unique_arc::WeakRef;
 use string_wizard::{MagicString, SourceMapOptions};
+use sugar_path::SugarPath;
 
 #[derive(Debug)]
 pub struct TransformPluginContext {
@@ -57,6 +58,9 @@ impl TransformPluginContext {
   }
 
   pub fn add_watch_file(&self, file: &str) {
+    let file = file.absolutize_with(self.cwd().clone());
+    let file = file.to_str().unwrap();
+
     // Call the parent method to add to global watch files
     self.inner.add_watch_file(file);
 

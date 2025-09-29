@@ -13,6 +13,7 @@ use rolldown_common::{
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
+use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
 use crate::{
@@ -157,7 +158,7 @@ impl NativePluginContextImpl {
   }
 
   pub fn add_watch_file(&self, file: &str) {
-    self.watch_files.insert(file.into());
+    self.watch_files.insert(file.absolutize_with(self.cwd().clone()).to_str().unwrap().into());
   }
 
   fn log(&self, level: LogLevel, log: LogWithoutPlugin) {

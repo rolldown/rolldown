@@ -3,6 +3,7 @@ use rustc_hash::FxHashMap;
 use std::{fmt::Debug, path::PathBuf};
 use types::advanced_chunks_options::AdvancedChunksOptions;
 use types::debug_options::DebugOptions;
+use types::generated_code_options::GeneratedCodeOptions;
 use types::inject_import::InjectImport;
 use types::invalidate_js_side_cache::InvalidateJsSideCache;
 use types::legal_comments::LegalComments;
@@ -109,6 +110,7 @@ pub struct BundlerOptions {
     schemars(with = "Option<FxHashMap<String, String>>")
   )]
   pub globals: Option<GlobalsOutputOption>,
+  pub generated_code: Option<GeneratedCodeOptions>,
   pub sourcemap: Option<SourceMapType>,
   pub es_module: Option<EsModuleFlag>,
   pub drop_labels: Option<Vec<String>>,

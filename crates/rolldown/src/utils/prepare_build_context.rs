@@ -157,6 +157,7 @@ pub fn prepare_build_context(
   }
 
   let globals = raw_options.globals.unwrap_or(GlobalsOutputOption::FxHashMap(FxHashMap::default()));
+  let generated_code = raw_options.generated_code.unwrap_or_default();
 
   let oxc_inject_global_variables_config = InjectGlobalVariablesConfig::new(
     raw_options
@@ -260,6 +261,7 @@ pub fn prepare_build_context(
     exports: raw_options.exports.unwrap_or(crate::OutputExports::Auto),
     hash_characters: raw_options.hash_characters.unwrap_or(crate::HashCharacters::Base64),
     globals,
+    generated_code,
     sourcemap: raw_options.sourcemap,
     sourcemap_base_url: raw_options.sourcemap_base_url,
     sourcemap_ignore_list: raw_options.sourcemap_ignore_list,

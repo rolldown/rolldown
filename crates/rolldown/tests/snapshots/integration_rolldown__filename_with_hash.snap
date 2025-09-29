@@ -5523,6 +5523,10 @@ expression: output
 - main-!~{000}~.js => main-CzUffRKc.js
 - main-CzUffRKc.js.map
 
+# tests/rolldown/topics/generated_code/symbols
+
+- main-!~{000}~.js => main-D9Bb16oY.js
+
 # tests/rolldown/topics/hmr/accept-outside-circular
 
 - main-!~{000}~.js => main-Ce7E0hSW.js

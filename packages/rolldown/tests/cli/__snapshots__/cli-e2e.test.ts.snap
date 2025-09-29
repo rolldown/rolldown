@@ -50,6 +50,8 @@ OPTIONS
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
+  --generated-code.preset <generated-code.preset>.
+  --generated-code.symbols    Whether to use Symbol.toStringTag for namespace objects.
   --hash-characters <hash-characters>Use the specified character set for file hashes.
   --inject <inject>           Inject import statements on demand.
   --inline-dynamic-imports    Inline dynamic imports.

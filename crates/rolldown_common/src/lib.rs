@@ -37,6 +37,7 @@ pub mod bundler_options {
       es_module_flag::EsModuleFlag,
       experimental_options::{ExperimentalOptions, SourcemapHires},
       filename_template::FilenameTemplate,
+      generated_code_options::GeneratedCodeOptions,
       hash_characters::HashCharacters,
       hmr_options::HmrOptions,
       inject_import::InjectImport,

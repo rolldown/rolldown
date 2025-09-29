@@ -1,4 +1,57 @@
 
+## [1.0.0-beta.41] - 2025-09-29
+
+### 🚀 Features
+
+- support `output.generatedCode.symbols` (#6335) by @IWANABETHATGUY
+- rolldown: oxc v0.93.0 (#6364) by @Boshen
+- rolldown_plugin_vite_html: finish script tag logic (#6355) by @shulaoda
+- rolldown_plugin_vite_html: support inline html proxy (#6353) by @shulaoda
+- rolldown_plugin_vite_html: transform script tag into js import (#6351) by @shulaoda
+- rolldown_plugin_vite_html: overwrite script src url (#6349) by @shulaoda
+- rolldown_plugin_vite_html: remove `vite-ignore` attribute (#6348) by @shulaoda
+- rolldown_plugin_vite_html: use `html5ever` and `markup5ever_rcdom` (#6327) by @shulaoda
+- rust/dev: support `on_output` callback (#6330) by @hyf0
+- rust/dev: support `disable_watcher` (#6329) by @hyf0
+- dev: introduce client/session concept into dev engine (#6297) by @hyf0
+
+### 🐛 Bug Fixes
+
+- 'asset' module type and CJS format produces warnings and wrong output (#6369) by @IWANABETHATGUY
+- inlining constants in CJS by optimization.inlineConst incorrectly inlines non-constant values if the value is assigned more than once (#6328) by @IWANABETHATGUY
+- dev: add `hasLatestBuildOutput` instead of `scheduleBuildIfStale` and add edit-reload test (#6321) by @sapphi-red
+
+### 🚜 Refactor
+
+- rust/dev: rename `HmrManager` to `HmrState` and tweak namings (#6358) by @hyf0
+- rust/dev: use `Bundler` to expose hmr related methods (#6356) by @hyf0
+- rolldown_plugin_vite_html: use `html5gum` instead (#6343) by @shulaoda
+- dev: remove deprecated `new` field from HMR options and related configurations (#6337) by @hyf0
+- dev: remove unused hmr API (#6336) by @hyf0
+- make `cjs_ast_analyzer` immutable for better reuse (#6326) by @IWANABETHATGUY
+- simplify logic for determining entry is_lived (#6325) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- dev: compute depended data incrementally (#6357) by @hyf0
+
+### 🧪 Testing
+
+- rust/hmr: use dev engine to test hmr (#6334) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update notify (#6368) by @sapphi-red
+- deps: lock file maintenance npm packages (#6366) by @renovate[bot]
+- deps: update github-actions (#6365) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.16.9 (#6354) by @renovate[bot]
+- deps: update dependency tsdown to v0.15.5 (#6350) by @renovate[bot]
+- node: use `catalog:` to unify version of all dependencies (#6339) by @hyf0
+- ci: unify node installation via oxc-project/setup-node (#6338) by @Boshen
+- deps: update crate-ci/typos action to v1.36.3 (#6341) by @renovate[bot]
+- remove unused snapshots (#6331) by @IWANABETHATGUY
+
+
 ## [1.0.0-beta.40] - 2025-09-24
 
 ### 🚀 Features

@@ -816,7 +816,7 @@ checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 [[package]]
 name = "file-id"
 version = "0.2.3"
-source = "git+https://github.com/sapphi-red/notify?rev=refs%2Fheads%2Fpatches#772dce88b7acf4b02a7da02fb409001cff234676"
+source = "git+https://github.com/sapphi-red/notify?rev=refs%2Fheads%2Fpatches#cf2f71ff72bab5a94084001f6a776af81afebaac"
 dependencies = [
  "windows-sys 0.60.2",
 ]
@@ -1656,7 +1656,7 @@ checksum = "610a5acd306ec67f907abe5567859a3c693fb9886eb1f012ab8f2a47bef3db51"
 [[package]]
 name = "notify"
 version = "8.2.0"
-source = "git+https://github.com/sapphi-red/notify?rev=refs%2Fheads%2Fpatches#772dce88b7acf4b02a7da02fb409001cff234676"
+source = "git+https://github.com/sapphi-red/notify?rev=refs%2Fheads%2Fpatches#cf2f71ff72bab5a94084001f6a776af81afebaac"
 dependencies = [
  "bitflags 2.9.4",
  "fsevent-sys",
@@ -1673,7 +1673,7 @@ dependencies = [
 [[package]]
 name = "notify-debouncer-full"
 version = "0.6.0"
-source = "git+https://github.com/sapphi-red/notify?rev=refs%2Fheads%2Fpatches#772dce88b7acf4b02a7da02fb409001cff234676"
+source = "git+https://github.com/sapphi-red/notify?rev=refs%2Fheads%2Fpatches#cf2f71ff72bab5a94084001f6a776af81afebaac"
 dependencies = [
  "file-id",
  "log",
@@ -1685,7 +1685,7 @@ dependencies = [
 [[package]]
 name = "notify-types"
 version = "2.0.0"
-source = "git+https://github.com/sapphi-red/notify?rev=refs%2Fheads%2Fpatches#772dce88b7acf4b02a7da02fb409001cff234676"
+source = "git+https://github.com/sapphi-red/notify?rev=refs%2Fheads%2Fpatches#cf2f71ff72bab5a94084001f6a776af81afebaac"
 
 [[package]]
 name = "nu-ansi-term"

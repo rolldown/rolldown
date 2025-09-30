@@ -108,6 +108,7 @@ export class DevRuntime {
   sendModuleRegisteredMessage = (() => {
     const cache = /** @type {string[]} */ ([]);
     let timeout = /** @type {NodeJS.Timeout | null} */ (null);
+    let timeoutSetLength = 0;
     const self = this;
 
     /**
@@ -118,24 +119,36 @@ export class DevRuntime {
         return;
       }
       cache.push(module);
-      if (timeout) {
-        clearTimeout(timeout);
+      if (!timeout) {
+        timeout = setTimeout(
+          /** @returns void */
+          function flushCache() {
+            if (cache.length > timeoutSetLength) {
+              timeout = setTimeout(flushCache);
+              timeoutSetLength = cache.length;
+              return;
+            }
+
+            if (self.socket.readyState === WebSocket.OPEN) {
+              self.socket.send(JSON.stringify({
+                type: 'hmr:module-registered',
+                modules: cache,
+              }));
+              cache.length = 0;
+            } else if (self.socket.readyState === WebSocket.CLOSED) {
+              // Do nothing
+            } else {
+              self.socket.onopen = function() {
+                flushCache();
+              };
+            }
+
+            timeout = null;
+            timeoutSetLength = 0;
+          },
+        );
+        timeoutSetLength = cache.length;
       }
-      timeout = setTimeout(function flushCache() {
-        if (self.socket.readyState === WebSocket.OPEN) {
-          self.socket.send(JSON.stringify({
-            type: 'hmr:module-registered',
-            modules: cache,
-          }));
-          cache.length = 0;
-        } else if (self.socket.readyState === WebSocket.CLOSED) {
-          // Do nothing
-        } else {
-          self.socket.onopen = function() {
-            flushCache();
-          };
-        }
-      });
     };
   })();
 }

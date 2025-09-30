@@ -116,6 +116,9 @@ impl PluginContext {
     call_native_only!(self, "cwd", ctx => ctx.cwd())
   }
 
+  /// Add a file as a dependency.
+  ///
+  /// * file - The file to add as a watch dependency. This should be a normalized absolute path.
   pub fn add_watch_file(&self, file: &str) {
     call_native_only!(self, "add_watch_file", ctx => ctx.add_watch_file(file));
   }

@@ -56,6 +56,9 @@ impl TransformPluginContext {
     })
   }
 
+  /// Add a file as a dependency.
+  ///
+  /// * file - The file to add as a watch dependency. This should be a normalized absolute path.
   pub fn add_watch_file(&self, file: &str) {
     // Call the parent method to add to global watch files
     self.inner.add_watch_file(file);

@@ -19,7 +19,22 @@ console.log(content);
 ```
 # HMR Step 0
 
+## Assets
 
+### entry.js
+
+```js
+// HIDDEN [rolldown:runtime]
+// HIDDEN [rolldown:hmr]
+//#region entry.js
+var entry_exports = {};
+const entry_hot = __rolldown_runtime__.createModuleHotContext("entry.js");
+__rolldown_runtime__.registerModule("entry.js", { exports: entry_exports });
+const content = "input2\n";
+console.log(content);
+
+//#endregion
+```
 ## Meta
 
 - update type: full-reload

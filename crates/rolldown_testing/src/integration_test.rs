@@ -2,6 +2,7 @@ use core::str;
 use std::fmt::Write as _;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::{
   borrow::Cow,
   ffi::OsStr,
@@ -142,6 +143,7 @@ impl IntegrationTest {
         let cwd = bundler.options().cwd.clone();
         let bundler = Arc::new(Mutex::new(bundler));
 
+        let has_full_reload_update = Arc::new(AtomicBool::new(false));
         let hmr_update_infos = Arc::new(std::sync::Mutex::new(vec![]));
         let build_outputs = Arc::new(std::sync::Mutex::new(vec![]));
         let dev_engine = DevEngine::with_bundler(
@@ -149,7 +151,12 @@ impl IntegrationTest {
           DevOptions {
             on_hmr_updates: {
               let hmr_update_infos = Arc::clone(&hmr_update_infos);
+              let has_full_reload_update = Arc::clone(&has_full_reload_update);
               Some(Arc::new(move |updates, changed_files| {
+                let is_full_reload = updates.iter().any(|update| update.update.is_full_reload());
+                if is_full_reload {
+                  has_full_reload_update.store(true, Ordering::SeqCst);
+                }
                 hmr_update_infos.lock().unwrap().push((updates, changed_files));
               }))
             },
@@ -173,6 +180,9 @@ impl IntegrationTest {
         dev_engine.create_client_for_testing().await;
 
         for hmr_edit_files in &hmr_steps {
+          // Reset the flag
+          has_full_reload_update.store(false, Ordering::SeqCst);
+
           apply_hmr_edit_files_to_hmr_temp_dir(
             test_folder_path,
             &hmr_temp_dir_path,
@@ -186,6 +196,9 @@ impl IntegrationTest {
           dev_engine
             .ensure_task_with_changed_files(changed_files.into_iter().map(Into::into).collect())
             .await;
+          if has_full_reload_update.load(Ordering::SeqCst) {
+            dev_engine.ensure_latest_build_output().await.unwrap();
+          }
         }
         drop(dev_engine);
 
@@ -196,7 +209,7 @@ impl IntegrationTest {
           && !self.test_meta.expect_error
           && self.test_meta.write_to_disk;
 
-        let bundle_output: BuildResult<BundleOutput> = Ok(build_outputs.pop().unwrap());
+        let bundle_output: BuildResult<BundleOutput> = Ok(build_outputs.remove(0));
 
         match bundle_output {
           Ok(bundle_output) => {
@@ -205,14 +218,20 @@ impl IntegrationTest {
               "Expected the bundling to be failed with diagnosable errors, but got success"
             );
 
-            let snapshot_content = self.render_bundle_output_to_string(bundle_output, vec![], &cwd);
+            let snapshot_content =
+              self.render_bundle_output_to_string(bundle_output, vec![], &cwd, 0);
             collect_snapshot(snapshot_content);
 
             let mut patch_chunks: Vec<String> = vec![];
             for (step, (hmr_updates, _changed_files)) in hmr_update_infos.iter().enumerate() {
               for hmr_update in hmr_updates {
-                let snapshot_content =
-                  self.render_hmr_output_to_string(step, &hmr_update.update, vec![], &cwd);
+                let snapshot_content = self.render_hmr_output_to_string(
+                  step,
+                  &hmr_update.update,
+                  vec![],
+                  &mut build_outputs,
+                  &cwd,
+                );
                 collect_snapshot(snapshot_content);
                 match &hmr_update.update {
                   rolldown_common::HmrUpdate::Patch(patch) => {
@@ -251,8 +270,12 @@ impl IntegrationTest {
               self.test_meta.expect_error,
               "Expected the bundling to be success, but got diagnosable errors: {errs:#?}"
             );
-            let snapshot_content =
-              self.render_bundle_output_to_string(BundleOutput::default(), errs.into_vec(), &cwd);
+            let snapshot_content = self.render_bundle_output_to_string(
+              BundleOutput::default(),
+              errs.into_vec(),
+              &cwd,
+              0,
+            );
             collect_snapshot(snapshot_content);
           }
         }
@@ -285,7 +308,8 @@ impl IntegrationTest {
               "Expected the bundling to be failed with diagnosable errors, but got success"
             );
 
-            let snapshot_content = self.render_bundle_output_to_string(bundle_output, vec![], &cwd);
+            let snapshot_content =
+              self.render_bundle_output_to_string(bundle_output, vec![], &cwd, 0);
             collect_snapshot(snapshot_content);
 
             if execute_output {
@@ -308,8 +332,12 @@ impl IntegrationTest {
               self.test_meta.expect_error,
               "Expected the bundling to be success, but got diagnosable errors: {errs:#?}"
             );
-            let snapshot_content =
-              self.render_bundle_output_to_string(BundleOutput::default(), errs.into_vec(), &cwd);
+            let snapshot_content = self.render_bundle_output_to_string(
+              BundleOutput::default(),
+              errs.into_vec(),
+              &cwd,
+              0,
+            );
             collect_snapshot(snapshot_content);
           }
         }
@@ -376,11 +404,13 @@ impl IntegrationTest {
     bundle_output: BundleOutput,
     errs: Vec<BuildDiagnostic>,
     cwd: &Path,
+    heading_level: usize,
   ) -> String {
+    let heading_prefix = "#".repeat(heading_level);
     let mut errors = errs;
     let errors_section = if !errors.is_empty() {
       let mut snapshot = String::new();
-      snapshot.push_str("# Errors\n\n");
+      write!(snapshot, "{heading_prefix}# Errors\n\n").unwrap();
       errors.sort_by_key(|e| e.kind().to_string());
       let diagnostics = errors
         .into_iter()
@@ -389,7 +419,7 @@ impl IntegrationTest {
       let mut rendered_diagnostics = diagnostics
         .map(|(code, diagnostic)| {
           [
-            Cow::Owned(format!("## {code}\n")),
+            Cow::Owned(format!("{heading_prefix}## {code}\n")),
             "```text".into(),
             Cow::Owned(diagnostic.to_string()),
             "```".into(),
@@ -408,14 +438,14 @@ impl IntegrationTest {
     let warnings = bundle_output.warnings;
     let warnings_section = if !warnings.is_empty() {
       let mut snapshot = String::new();
-      snapshot.push_str("# warnings\n\n");
+      write!(snapshot, "{heading_prefix}# warnings\n\n").unwrap();
       let diagnostics = warnings
         .into_iter()
         .map(|e| (e.kind(), e.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
       let mut rendered_diagnostics = diagnostics
         .map(|(code, diagnostic)| {
           [
-            Cow::Owned(format!("## {code}\n")),
+            Cow::Owned(format!("{heading_prefix}## {code}\n")),
             "```text".into(),
             Cow::Owned(diagnostic.to_string()),
             "```".into(),
@@ -436,7 +466,7 @@ impl IntegrationTest {
 
     let assets_section = if !assets.is_empty() {
       let mut snapshot = String::new();
-      snapshot.push_str("# Assets\n\n");
+      write!(snapshot, "{heading_prefix}# Assets\n\n").unwrap();
       assets.sort_by_key(|c| c.filename().to_string());
       let artifacts = assets
         .iter()
@@ -456,7 +486,7 @@ impl IntegrationTest {
               let content = tweak_snapshot(content, self.test_meta.hidden_runtime_module, true);
 
               Some(vec![
-                Cow::Owned(format!("## {}\n", asset.filename())),
+                Cow::Owned(format!("{heading_prefix}## {}\n", asset.filename())),
                 Cow::Owned(format!("```{file_ext}")),
                 content,
                 "```".into(),
@@ -469,13 +499,14 @@ impl IntegrationTest {
               }
               match &output_asset.source {
                 rolldown_common::StrOrBytes::Str(content) => Some(vec![
-                  Cow::Owned(format!("## {}\n", asset.filename())),
+                  Cow::Owned(format!("{heading_prefix}## {}\n", asset.filename())),
                   Cow::Owned(format!("```{file_ext}")),
                   Cow::Borrowed(content),
                   "```".into(),
                 ]),
                 rolldown_common::StrOrBytes::Bytes(bytes) => {
-                  let mut ret = vec![Cow::Owned(format!("## {}\n", asset.filename()))];
+                  let mut ret =
+                    vec![Cow::Owned(format!("{heading_prefix}## {}\n", asset.filename()))];
                   if self.test_meta.snapshot_bytes {
                     ret.extend([
                       Cow::Owned(format!("```{file_ext}")),
@@ -500,7 +531,7 @@ impl IntegrationTest {
 
     let output_stats_section = if self.test_meta.snapshot_output_stats {
       let mut snapshot = String::new();
-      snapshot.push_str("## Output Stats\n\n");
+      write!(snapshot, "{heading_prefix}## Output Stats\n\n").unwrap();
       let stats = assets
         .iter()
         .flat_map(|asset| match asset {
@@ -525,7 +556,7 @@ impl IntegrationTest {
 
     let visualize_sourcemap_section = if self.test_meta.visualize_sourcemap {
       let mut snapshot = String::new();
-      snapshot.push_str("# Sourcemap Visualizer\n\n");
+      write!(snapshot, "{heading_prefix}# Sourcemap Visualizer\n\n").unwrap();
       snapshot.push_str("```\n");
       let visualizer_result = assets
         .iter()
@@ -562,6 +593,7 @@ impl IntegrationTest {
     step: usize,
     hmr_update: &HmrUpdate,
     errs: Vec<BuildDiagnostic>,
+    build_outputs: &mut Vec<BundleOutput>,
     cwd: &Path,
   ) -> String {
     let mut errors = errs;
@@ -611,6 +643,10 @@ impl IntegrationTest {
         ));
         snapshot.push_str("\n```");
         snapshot
+      }
+      HmrUpdate::FullReload { .. } => {
+        let bundle_output = build_outputs.remove(0);
+        self.render_bundle_output_to_string(bundle_output, vec![], cwd, 1)
       }
       _ => String::new(),
     };

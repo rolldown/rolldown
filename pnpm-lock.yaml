@@ -709,6 +709,12 @@ importers:
         specifier: ^3.0.1
         version: 3.2.4(@types/debug@4.1.12)(@types/node@24.5.2)(jiti@2.6.0)(lightningcss@1.30.2)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1)
 
+  packages/test-dev-server/tests/fixtures/client-module-execution-status:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
   packages/test-dev-server/tests/fixtures/edit:
     devDependencies:
       '@rolldown/test-dev-server':
@@ -744,6 +750,12 @@ importers:
       '@rolldown/test-dev-server':
         specifier: workspace:*
         version: link:../../..
+
+  packages/test-dev-server/tests/tmp/fixtures/client-module-execution-status:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../../..
 
   packages/vite-tests:
     devDependencies:

@@ -1312,6 +1312,7 @@ export declare class BindingDevEngine {
   invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<Array<BindingClientHmrUpdate>>
   registerModules(clientId: string, modules: Array<string>): void
   removeClient(clientId: string): void
+  close(): Promise<void>
 }
 
 export declare class BindingHmrOutput {

@@ -136,6 +136,16 @@ impl BindingDevEngine {
   pub fn remove_client(&self, client_id: String) {
     self.inner.clients.remove(&client_id);
   }
+
+  #[napi]
+  pub async fn close(&self) -> napi::Result<()> {
+    self
+      .inner
+      .close()
+      .await
+      .map_err(|_e| napi::Error::from_reason("Failed to close dev engine"))?;
+    Ok(())
+  }
 }
 
 #[napi]

@@ -84,4 +84,8 @@ export class DevEngine {
   removeClient(clientId: string): void {
     this.#inner.removeClient(clientId);
   }
+
+  async close(): Promise<void> {
+    await this.#inner.close();
+  }
 }

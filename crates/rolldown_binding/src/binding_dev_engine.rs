@@ -96,7 +96,11 @@ impl BindingDevEngine {
 
   #[napi]
   pub async fn ensure_current_build_finish(&self) -> napi::Result<()> {
-    self.inner.ensure_current_build_finish().await;
+    self
+      .inner
+      .ensure_current_build_finish()
+      .await
+      .map_err(|_e| napi::Error::from_reason("Failed to ensure current build finish"))?;
     Ok(())
   }
 

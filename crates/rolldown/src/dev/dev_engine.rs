@@ -1,4 +1,9 @@
-use std::{collections::VecDeque, ops::Deref, path::PathBuf, sync::Arc};
+use std::{
+  collections::VecDeque,
+  ops::Deref,
+  path::PathBuf,
+  sync::{Arc, atomic::AtomicBool},
+};
 
 use arcstr::ArcStr;
 use futures::{FutureExt, future::Shared};
@@ -32,9 +37,10 @@ pub struct DevEngine {
   build_driver: SharedBuildDriver,
   watcher: Mutex<DynWatcher>,
   watched_files: FxDashSet<ArcStr>,
-  watch_service_state: Mutex<BuildDriverServiceState>,
+  build_driver_service_state: Mutex<BuildDriverServiceState>,
   ctx: SharedDevContext,
   pub clients: SharedClients,
+  is_closed: AtomicBool,
 }
 
 impl DevEngine {
@@ -128,17 +134,18 @@ impl DevEngine {
       build_driver,
       watcher: Mutex::new(watcher),
       watched_files: FxDashSet::default(),
-      watch_service_state: Mutex::new(BuildDriverServiceState {
+      build_driver_service_state: Mutex::new(BuildDriverServiceState {
         service: Some(build_driver_service),
         handle: None,
       }),
       ctx,
       clients,
+      is_closed: AtomicBool::new(false),
     })
   }
 
   pub async fn run(&self) -> BuildResult<()> {
-    let mut build_service_state = self.watch_service_state.lock().await;
+    let mut build_service_state = self.build_driver_service_state.lock().await;
 
     if build_service_state.service.is_none() {
       // The watcher service is already running.
@@ -174,15 +181,19 @@ impl DevEngine {
     Ok(())
   }
 
-  pub async fn wait_for_close(&self) {
-    let watch_service_state = self.watch_service_state.lock().await;
-    if let Some(watcher_service_handle) = watch_service_state.handle.clone() {
-      watcher_service_handle.await;
+  pub async fn wait_for_build_driver_service_close(&self) -> BuildResult<()> {
+    self.create_error_if_closed()?;
+    let service_state = self.build_driver_service_state.lock().await;
+    if let Some(service_handle) = service_state.handle.clone() {
+      service_handle.await;
     }
+    Ok(())
   }
 
-  pub async fn ensure_current_build_finish(&self) {
+  pub async fn ensure_current_build_finish(&self) -> BuildResult<()> {
+    self.create_error_if_closed()?;
     self.ctx.ensure_current_build_finish().await;
+    Ok(())
   }
 
   pub async fn invalidate(
@@ -190,7 +201,36 @@ impl DevEngine {
     caller: String,
     first_invalidated_by: Option<String>,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
+    self.create_error_if_closed()?;
     self.build_driver.invalidate(caller, first_invalidated_by).await
+  }
+
+  pub async fn close(&self) -> BuildResult<()> {
+    if self.is_closed.swap(true, std::sync::atomic::Ordering::SeqCst) {
+      return Ok(());
+    }
+
+    // Send close message to build driver service
+    if let Err(_e) = self.ctx.build_channel_tx.send(BuildMessage::Close) {
+      // If `BuildMessage::Close` is not sent, it means the channel is closed due to error or what.
+      // It's ok to ignore the send error.
+    }
+
+    // Clean up watcher
+    let watcher =
+      std::mem::replace(&mut *self.watcher.lock().await, NoopWatcher.into_dyn_watcher());
+    std::mem::drop(watcher);
+
+    // Close the bundler
+    let mut bundler = self.build_driver.bundler.lock().await;
+    bundler.close().await?;
+
+    // Wait for build driver service to close
+    let service_state = self.build_driver_service_state.lock().await;
+    if let Some(service_handle) = service_state.handle.clone() {
+      service_handle.await;
+    }
+    Ok(())
   }
 
   /// For testing purpose.
@@ -210,6 +250,17 @@ impl DevEngine {
       client_session.executed_modules.insert(module.stable_id().to_string());
     }
     self.clients.insert("test".to_string(), client_session);
+  }
+
+  pub fn is_closed(&self) -> bool {
+    self.is_closed.load(std::sync::atomic::Ordering::SeqCst)
+  }
+
+  fn create_error_if_closed(&self) -> BuildResult<()> {
+    if self.is_closed.load(std::sync::atomic::Ordering::SeqCst) {
+      Err(anyhow::anyhow!("Dev engine is closed"))?;
+    }
+    Ok(())
   }
 }
 

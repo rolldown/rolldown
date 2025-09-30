@@ -10,6 +10,7 @@ use crate::dev::{
 pub enum BuildMessage {
   WatchEvent(FileChangeResult),
   BuildFinish,
+  Close,
 }
 
 pub type BuildChannelTx = UnboundedSender<BuildMessage>;
@@ -73,6 +74,9 @@ impl BuildDriverService {
             .schedule_build_if_stale()
             .await
             .expect("FIXME: should handle this error");
+        }
+        BuildMessage::Close => {
+          break;
         }
       }
     }

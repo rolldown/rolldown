@@ -1,14 +1,14 @@
-import { type NativeError } from '../binding';
+import { type BindingError } from '../binding';
 import type { RollupError } from '../log/logging';
 
-export function normalizeErrors(rawErrors: (NativeError | Error)[]): Error {
+export function normalizeErrors(rawErrors: BindingError[]): Error {
   const errors = rawErrors.map((e) =>
-    e instanceof Error
-      ? e
+    e.type === 'JsError'
+      ? e.field0
       // strip stacktrace of errors from native diagnostics
       : Object.assign(new Error(), {
-        kind: e.kind,
-        message: e.message,
+        kind: e.field0.kind,
+        message: e.field0.message,
         stack: undefined,
       })
   );

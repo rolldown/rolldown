@@ -1,7 +1,7 @@
 use napi_derive::napi;
 use rolldown_error::BuildDiagnostic;
 
-use crate::types::{binding_outputs::to_js_diagnostic, error::native_error::NativeError};
+use crate::types::{binding_outputs::to_js_diagnostic, error::BindingError};
 
 #[napi]
 #[derive(Debug)]
@@ -25,7 +25,7 @@ impl BindingHmrOutput {
   }
 
   #[napi(getter)]
-  pub fn errors(&mut self) -> Vec<napi::Either<napi::JsError, NativeError>> {
+  pub fn errors(&mut self) -> Vec<BindingError> {
     if let Some(rolldown_common::OutputsDiagnostics { diagnostics, cwd }) = self.errors.as_ref() {
       return diagnostics
         .iter()
@@ -121,7 +121,7 @@ impl From<rolldown_common::ClientHmrUpdate> for BindingClientHmrUpdate {
 #[napi(discriminant = "type", object_from_js = false)]
 pub enum BindingGenerateHmrPatchReturn {
   Ok(Vec<BindingHmrUpdate>),
-  Error(Vec<napi::Either<napi::JsError, NativeError>>),
+  Error(Vec<BindingError>),
 }
 
 impl BindingGenerateHmrPatchReturn {

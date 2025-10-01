@@ -6,7 +6,7 @@ use std::{
 use super::{
   binding_output_asset::{BindingOutputAsset, JsOutputAsset},
   binding_output_chunk::{BindingOutputChunk, JsOutputChunk, update_output_chunk},
-  error::native_error::NativeError,
+  error::BindingError,
 };
 use napi::Either;
 use napi_derive::napi;
@@ -38,7 +38,7 @@ impl BindingOutputs {
   }
 
   #[napi(getter)]
-  pub fn errors(&mut self) -> Vec<napi::Either<napi::JsError, NativeError>> {
+  pub fn errors(&mut self) -> Vec<BindingError> {
     if let Some(rolldown_common::OutputsDiagnostics { diagnostics, cwd }) = self.error.as_ref() {
       return diagnostics
         .iter()
@@ -111,10 +111,7 @@ impl JsChangedOutputs {
   }
 }
 
-pub fn to_js_diagnostic(
-  diagnostic: &BuildDiagnostic,
-  cwd: std::path::PathBuf,
-) -> napi::Either<napi::JsError, NativeError> {
+pub fn to_js_diagnostic(diagnostic: &BuildDiagnostic, cwd: std::path::PathBuf) -> BindingError {
   match diagnostic.downcast_napi_error() {
     Ok(napi_error) => {
       // Note: In WASM workers, napi::Error objects with maybe_raw/maybe_env references cannot be
@@ -125,15 +122,15 @@ pub fn to_js_diagnostic(
       #[cfg(not(target_family = "wasm"))]
       {
         let error = napi_error.try_clone().unwrap_or_else(|e| e);
-        napi::Either::A(napi::JsError::from(error))
+        BindingError::JsError(napi::JsError::from(error))
       }
       #[cfg(target_family = "wasm")]
       {
         let error = napi::Error::new(napi_error.status, napi_error.reason.clone());
-        napi::Either::A(napi::JsError::from(error))
+        BindingError::JsError(napi::JsError::from(error))
       }
     }
-    Err(error) => napi::Either::B(NativeError {
+    Err(error) => BindingError::NativeError(super::error::native_error::NativeError {
       kind: error.kind().to_string(),
       message: error.to_diagnostic_with(&DiagnosticOptions { cwd }).to_color_string(),
     }),

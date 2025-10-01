@@ -1,7 +1,7 @@
-import { type BindingError } from '../binding';
+import { type NativeError } from '../binding';
 import type { RollupError } from '../log/logging';
 
-export function normalizeErrors(rawErrors: (BindingError | Error)[]): Error {
+export function normalizeErrors(rawErrors: (NativeError | Error)[]): Error {
   const errors = rawErrors.map((e) =>
     e instanceof Error
       ? e

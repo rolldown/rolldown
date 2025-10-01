@@ -1269,7 +1269,7 @@ export declare class BindingBundleEndEventData {
 
 export declare class BindingBundleErrorEventData {
   get result(): BindingBundlerImpl
-  get error(): Array<Error | BindingError>
+  get error(): Array<Error | NativeError>
 }
 
 export declare class BindingBundler {
@@ -1317,7 +1317,7 @@ export declare class BindingDevEngine {
 
 export declare class BindingHmrOutput {
   get patch(): BindingHmrUpdate | null
-  get errors(): Array<Error | BindingError>
+  get errors(): Array<Error | NativeError>
 }
 
 export declare class BindingMagicString {
@@ -1416,7 +1416,7 @@ export declare class BindingOutputChunk {
 export declare class BindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
-  get errors(): Array<Error | BindingError>
+  get errors(): Array<Error | NativeError>
 }
 
 export declare class BindingPluginContext {
@@ -1651,11 +1651,6 @@ export interface BindingEmittedChunk {
   preserveEntrySignatures?: BindingPreserveEntrySignatures
 }
 
-export interface BindingError {
-  kind: string
-  message: string
-}
-
 export interface BindingEsmExternalRequirePluginConfig {
   external: Array<BindingStringOrRegex>
   skipDuplicateCheck?: boolean
@@ -1693,7 +1688,7 @@ export interface BindingGeneratedCodeOptions {
 
 export type BindingGenerateHmrPatchReturn =
   | { type: 'Ok', field0: Array<BindingHmrUpdate> }
-  | { type: 'Error', field0: Array<Error | BindingError> }
+  | { type: 'Error', field0: Array<Error | NativeError> }
 
 export interface BindingHmrBoundaryOutput {
   boundary: string
@@ -2019,7 +2014,7 @@ export interface BindingPluginOptions {
   transformFilter?: BindingHookFilter
   moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>
   moduleParsedMeta?: BindingPluginHookMeta
-  buildEnd?: (ctx: BindingPluginContext, error?: (Error | BindingError)[]) => MaybePromise<VoidNullable>
+  buildEnd?: (ctx: BindingPluginContext, error?: (Error | NativeError)[]) => MaybePromise<VoidNullable>
   buildEndMeta?: BindingPluginHookMeta
   renderChunk?: (ctx: BindingPluginContext, code: string, chunk: BindingRenderedChunk, opts: BindingNormalizedOptions, meta: BindingRenderedChunkMeta) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
   renderChunkMeta?: BindingPluginHookMeta
@@ -2028,7 +2023,7 @@ export interface BindingPluginOptions {
   augmentChunkHashMeta?: BindingPluginHookMeta
   renderStart?: (ctx: BindingPluginContext, opts: BindingNormalizedOptions) => void
   renderStartMeta?: BindingPluginHookMeta
-  renderError?: (ctx: BindingPluginContext, error: (Error | BindingError)[]) => void
+  renderError?: (ctx: BindingPluginContext, error: (Error | NativeError)[]) => void
   renderErrorMeta?: BindingPluginHookMeta
   generateBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
   generateBundleMeta?: BindingPluginHookMeta
@@ -2260,6 +2255,12 @@ export interface JsOutputChunk {
   map?: BindingSourcemap
   sourcemapFilename?: string
   preliminaryFilename: string
+}
+
+/** Error emitted from native side, it only contains kind and message, no stack trace. */
+export interface NativeError {
+  kind: string
+  message: string
 }
 
 export interface PreRenderedChunk {

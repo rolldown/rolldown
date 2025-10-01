@@ -3,7 +3,7 @@ use std::sync::Arc;
 use napi::tokio::sync::Mutex;
 use napi_derive::napi;
 
-use super::binding_outputs::{BindingError, to_js_diagnostic};
+use super::{binding_outputs::to_js_diagnostic, error::native_error::NativeError};
 use rolldown::{BundleEvent, Bundler, WatcherEvent};
 
 #[napi]
@@ -100,7 +100,7 @@ impl BindingBundleEndEventData {
 
 #[napi]
 pub struct BindingBundleErrorEventData {
-  error: Vec<napi::Either<napi::JsError, BindingError>>,
+  error: Vec<napi::Either<napi::JsError, NativeError>>,
   result: Arc<Mutex<Bundler>>,
 }
 
@@ -112,7 +112,7 @@ impl BindingBundleErrorEventData {
   }
 
   #[napi(getter)]
-  pub fn error(&mut self) -> Vec<napi::Either<napi::JsError, BindingError>> {
+  pub fn error(&mut self) -> Vec<napi::Either<napi::JsError, NativeError>> {
     std::mem::take(&mut self.error)
   }
 }

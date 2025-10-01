@@ -66,9 +66,9 @@ mod test {
 
   #[test]
   fn to_esm_named_exports_forbidden_ident() {
-    let data = serde_json::json!({"true": true, "\\\"\n": 1234});
+    let data = serde_json::json!({"true": true, "\\\"\n": 1234, "eval": 0, "arguments": 0});
     assert_eq!(
-      "export default {\n  \"true\": true,\n  \"\\\\\\\"\\n\": 1234\n};",
+      "export default {\n  \"true\": true,\n  \"\\\\\\\"\\n\": 1234,\n  \"eval\": 0,\n  \"arguments\": 0\n};",
       data_to_esm(&data, true)
     );
   }

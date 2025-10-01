@@ -21,13 +21,17 @@ Rolldown does not polyfill Node built-ins when targeting the browser. You can op
 
 ## Built-in transforms
 
-Rolldown supports the following transforms out of the box, powered by [Oxc](https://github.com/oxc-project/oxc):
+Rolldown supports the following transforms out of the box, powered by [Oxc](https://oxc.rs/docs/guide/usage/transformer).
+The transform is configurable via the `transform` option.
+The following transforms are supported:
 
 - TypeScript
+  - Sets configurations based on the `tsconfig.json` when [`tsconfig`](/reference/config-options#tsconfig) option is provided.
+  - Supported legacy decorators and decorator metadata.
 - JSX
-  - Configurable via the `jsx` option, aligned with [Rollup's `jsx` option](https://rollupjs.org/configuration-options/#jsx)
-- Syntax lowering transforms
-  - Automatically transforms modern syntax to be compatible with your defined [target](https://rolldown.rs/reference/config-options#transform).
+- Syntax lowering
+  - Automatically transforms modern syntax to be compatible with your defined [target](/reference/config-options#transform).
+  - Supports [down to ES2015](https://oxc.rs/docs/guide/usage/transformer/lowering#transformations).
 
 ## ESM / CJS Interop
 

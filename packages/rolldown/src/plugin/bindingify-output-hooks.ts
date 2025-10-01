@@ -1,6 +1,6 @@
 import type { BindingHookFilter, BindingPluginOptions } from '../binding';
 import { bindingifySourcemap } from '../types/sourcemap';
-import { normalizeErrors } from '../utils/error';
+import { aggregateBindingErrorsIntoError } from '../utils/error';
 import { normalizeHook } from '../utils/normalize-hook';
 import { transformRenderedChunk } from '../utils/transform-rendered-chunk';
 import {
@@ -156,7 +156,7 @@ export function bindingifyRenderError(
           args.logLevel,
           args.watchMode,
         ),
-        normalizeErrors(err),
+        aggregateBindingErrorsIntoError(err),
       );
     },
     meta: bindingifyPluginHookMeta(meta),

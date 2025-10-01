@@ -3,7 +3,7 @@ import {
   type BindingWatcherEvent,
 } from '../../binding';
 import type { MaybePromise } from '../../types/utils';
-import { normalizeErrors } from '../../utils/error';
+import { aggregateBindingErrorsIntoError } from '../../utils/error';
 
 type WatcherEvent = 'close' | 'event' | 'restart' | 'change';
 
@@ -117,7 +117,7 @@ export class WatcherEmitter {
                 const data = event.bundleErrorData();
                 await listener({
                   code: 'ERROR',
-                  error: normalizeErrors(data.error),
+                  error: aggregateBindingErrorsIntoError(data.error),
                   result: data.result,
                 });
                 break;

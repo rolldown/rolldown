@@ -20,7 +20,7 @@ import {
   bindingAssetSource,
   transformAssetSource,
 } from './asset-source';
-import { normalizeErrors } from './error';
+import { aggregateBindingErrorsIntoError } from './error';
 import { transformChunkModules } from './transform-rendered-chunk';
 
 function transformToRollupSourceMap(map: string): SourceMap {
@@ -146,7 +146,7 @@ export function transformToRollupOutput(
 export function handleOutputErrors(output: BindingOutputs): void {
   const rawErrors = output.errors;
   if (rawErrors.length > 0) {
-    throw normalizeErrors(rawErrors);
+    throw aggregateBindingErrorsIntoError(rawErrors);
   }
 }
 

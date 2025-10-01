@@ -121,7 +121,7 @@ impl WatcherImpl {
     }
 
     self.invalidating.store(true, Ordering::Relaxed);
-    self.exec_tx.send(ExecChannelMsg::Exec).expect("send watcher exec cannel message error");
+    self.exec_tx.send(ExecChannelMsg::Exec).expect("send watcher exec channel message error");
   }
 
   #[tracing::instrument(level = "debug", skip_all)]

@@ -19,7 +19,7 @@ pub struct EntryPoint {
 pub enum EntryPointKind {
   UserDefined = 0,
   DynamicImport = 1,
-  /// The extra varant [EntryPointKind::EmittedUserDefined] is only used to sort the entry points, it is equal to [EntryPointKind::UserDefined] in terms of functionality.
+  /// The extra variant [EntryPointKind::EmittedUserDefined] is only used to sort the entry points, it is equal to [EntryPointKind::UserDefined] in terms of functionality.
   EmittedUserDefined = 2,
 }
 

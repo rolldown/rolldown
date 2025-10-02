@@ -1,5 +1,5 @@
 use std::{
-  ops::Deref,
+  ops::{Deref, DerefMut},
   path::PathBuf,
   sync::{Arc, atomic::AtomicU32},
   time::Duration,
@@ -89,6 +89,12 @@ impl Deref for BundlingTask {
   }
 }
 
+impl DerefMut for BundlingTask {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.input
+  }
+}
+
 impl BundlingTask {
   pub async fn run(mut self) {
     tracing::trace!("Start running bundling task: {:#?}", self.input);
@@ -115,9 +121,20 @@ impl BundlingTask {
 
   async fn run_inner(&mut self) -> BuildResult<()> {
     self.delay_to_merge_incoming_changes().await?;
+
+    let mut has_full_reload_update = false;
     if self.generate_hmr_updates {
-      self.generate_hmr_updates().await?;
+      self.generate_hmr_updates(&mut has_full_reload_update).await?;
     }
+
+    // If the rebuild strategy is auto and there's a full reload update, we need to rebuild.
+    if self.dev_context.options.rebuild_strategy.is_auto()
+      && has_full_reload_update
+      && !self.rebuild
+    {
+      self.rebuild = true;
+    }
+
     if self.rebuild {
       self.rebuild().await?;
     }
@@ -153,13 +170,16 @@ impl BundlingTask {
     Ok(())
   }
 
-  pub async fn generate_hmr_updates(&mut self) -> BuildResult<()> {
+  pub async fn generate_hmr_updates(
+    &mut self,
+    has_full_reload_update: &mut bool,
+  ) -> BuildResult<()> {
     let mut bundler = self.bundler.lock().await;
     bundler.set_cache(self.bundler_cache.take().expect("Should never be none here"));
     let changed_files =
       self.changed_files.iter().map(|p| p.to_string_lossy().to_string()).collect::<Vec<_>>();
 
-    let mut client_updates = Vec::new();
+    let mut client_updates = Vec::with_capacity(self.dev_context.clients.len());
     for client in self.dev_context.clients.iter() {
       let updates = bundler
         .compute_hmr_update_for_file_changes(
@@ -168,11 +188,12 @@ impl BundlingTask {
           Arc::clone(&self.next_hmr_patch_id),
         )
         .await?;
-      client_updates.extend(
-        updates
-          .into_iter()
-          .map(|update| ClientHmrUpdate { client_id: client.key().to_string(), update }),
-      );
+      for update in updates {
+        if update.is_full_reload() {
+          *has_full_reload_update = true;
+        }
+        client_updates.push(ClientHmrUpdate { client_id: client.key().to_string(), update });
+      }
     }
 
     self.bundler_cache = Some(bundler.take_cache());

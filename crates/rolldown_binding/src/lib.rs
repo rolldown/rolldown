@@ -45,7 +45,6 @@ pub mod worker_manager;
 pub use oxc_parser_napi;
 pub use oxc_resolver_napi;
 pub use oxc_transform_napi;
-pub use rolldown_binding_watcher;
 
 #[cfg(not(target_family = "wasm"))]
 #[napi_derive::module_init]

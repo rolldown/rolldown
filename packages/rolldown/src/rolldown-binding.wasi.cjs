@@ -166,4 +166,3 @@ module.exports.initTraceSubscriber = __napiModule.exports.initTraceSubscriber
 module.exports.registerPlugins = __napiModule.exports.registerPlugins
 module.exports.shutdownAsyncRuntime = __napiModule.exports.shutdownAsyncRuntime
 module.exports.startAsyncRuntime = __napiModule.exports.startAsyncRuntime
-module.exports.JsWatcher = __napiModule.exports.JsWatcher

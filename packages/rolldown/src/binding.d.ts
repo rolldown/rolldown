@@ -2297,11 +2297,3 @@ export declare function startAsyncRuntime(): void
 export interface ViteImportGlobMeta {
   isSubImportsPattern?: boolean
 }
-export declare class JsWatcher {
-  constructor(options: JsWatcherOptions)
-}
-
-export interface JsWatcherOptions {
-  watch: ((err: Error | null, arg: string) => any)
-  unwatch: ((err: Error | null, arg: string) => any)
-}

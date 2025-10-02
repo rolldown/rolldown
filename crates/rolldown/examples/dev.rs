@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rolldown::dev::DevOptions;
+use rolldown::dev::{DevOptions, RebuildStrategy};
 use rolldown::{BundlerBuilder, BundlerOptions, DevEngine, ExperimentalOptions};
 use sugar_path::SugarPath;
 
@@ -19,7 +19,7 @@ async fn main() {
   let dev_engine = DevEngine::new(
     bundler_builder,
     DevOptions {
-      eager_rebuild: Some(true),
+      rebuild_strategy: Some(RebuildStrategy::Always),
       on_hmr_updates: Some(Arc::new(|updates, changed_files| {
         println!("HMR updates: {updates:#?} due to {changed_files:#?}");
       })),

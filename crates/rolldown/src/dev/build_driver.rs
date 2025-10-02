@@ -36,7 +36,7 @@ impl BuildDriver {
       changed_files,
       require_full_rebuild: false,
       generate_hmr_updates: true,
-      rebuild: self.ctx.options.eager_rebuild,
+      rebuild: self.ctx.options.rebuild_strategy.is_always(),
     };
     let mut build_state = self.ctx.state.lock().await;
     build_state.queued_tasks.push_back(task_input);

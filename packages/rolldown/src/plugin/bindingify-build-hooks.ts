@@ -198,6 +198,7 @@ export function bindingifyResolveDynamicImport(
       const result: BindingHookResolveIdOutput = {
         id: ret.id,
         external: ret.external,
+        packageJsonPath: ret.packageJsonPath,
       };
 
       if (ret.moduleSideEffects !== null) {

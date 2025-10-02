@@ -7,4 +7,5 @@ pub struct HookRenderChunkStart {
   /// The index of the plugin in the plugin list. It's unique to each plugin.
   pub plugin_id: u32,
   pub call_id: &'static str,
+  pub content: String,
 }

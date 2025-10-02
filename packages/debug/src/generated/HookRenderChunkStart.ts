@@ -8,4 +8,5 @@ export type HookRenderChunkStart = {
    */
   plugin_id: number;
   call_id: string;
+  content: string;
 };

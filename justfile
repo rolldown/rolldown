@@ -156,7 +156,9 @@ lint-repo:
 # Build both `@rolldown/pluginutils` and rolldown
 build: build-pluginutils build-rolldown
 
-
+# Build `@rolldown/debug` located in `packages/debug`.
+build-rolldown-debug:
+  pnpm run --filter "@rolldown/debug" build
 
 # Only build `rolldown` located in `packages/rolldown` itself without triggering building binding `crates/rolldown_binding`.
 build-glue:

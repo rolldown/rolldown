@@ -2,6 +2,7 @@ type MaybePromise<T> = T | Promise<T>
 type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
 export type BindingStringOrRegex = string | RegExp
+type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T
 
 export interface CodegenOptions {
   /**
@@ -1278,9 +1279,9 @@ export declare class BindingBundler {
 }
 
 export declare class BindingBundlerImpl {
-  write(): Promise<BindingOutputs>
-  generate(): Promise<BindingOutputs>
-  scan(): Promise<BindingOutputs>
+  write(): Promise<BindingResult<BindingOutputs>>
+  generate(): Promise<BindingResult<BindingOutputs>>
+  scan(): Promise<BindingResult<BindingOutputs>>
   close(): Promise<void>
   get closed(): boolean
   getWatchFiles(): Promise<Array<string>>
@@ -1416,7 +1417,6 @@ export declare class BindingOutputChunk {
 export declare class BindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
-  get errors(): Array<BindingError>
 }
 
 export declare class BindingPluginContext {
@@ -1655,6 +1655,11 @@ export interface BindingEmittedChunk {
 export type BindingError =
   | { type: 'JsError', field0: Error }
   | { type: 'NativeError', field0: NativeError }
+
+export interface BindingErrors {
+  errors: Array<BindingError>
+  isBindingErrors: boolean
+}
 
 export interface BindingEsmExternalRequirePluginConfig {
   external: Array<BindingStringOrRegex>
@@ -2030,9 +2035,9 @@ export interface BindingPluginOptions {
   renderStartMeta?: BindingPluginHookMeta
   renderError?: (ctx: BindingPluginContext, error: BindingError[]) => void
   renderErrorMeta?: BindingPluginHookMeta
-  generateBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
+  generateBundle?: (ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
   generateBundleMeta?: BindingPluginHookMeta
-  writeBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
+  writeBundle?: (ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
   writeBundleMeta?: BindingPluginHookMeta
   closeBundle?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
   closeBundleMeta?: BindingPluginHookMeta

@@ -10,7 +10,7 @@ import {
   bindingifySourcemap,
   type ExistingRawSourceMap,
 } from '../types/sourcemap';
-import { aggregateBindingErrorsIntoError } from '../utils/error';
+import { aggregateBindingErrorsIntoJsError } from '../utils/error';
 import { transformModuleInfo } from '../utils/transform-module-info';
 import {
   isEmptySourcemapFiled,
@@ -78,7 +78,7 @@ export function bindingifyBuildEnd(
           args.logLevel,
           args.watchMode,
         ),
-        err ? aggregateBindingErrorsIntoError(err) : undefined,
+        err ? aggregateBindingErrorsIntoJsError(err) : undefined,
       );
     },
     meta: bindingifyPluginHookMeta(meta),

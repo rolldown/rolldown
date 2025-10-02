@@ -18,7 +18,6 @@ use rustc_hash::FxBuildHasher;
 pub struct BindingOutputs {
   chunks: Vec<BindingOutputChunk>,
   assets: Vec<BindingOutputAsset>,
-  error: Option<rolldown_common::OutputsDiagnostics>,
 }
 
 #[napi]
@@ -36,22 +35,6 @@ impl BindingOutputs {
   pub fn assets(&mut self) -> Vec<BindingOutputAsset> {
     std::mem::take(&mut self.assets)
   }
-
-  #[napi(getter)]
-  pub fn errors(&mut self) -> Vec<BindingError> {
-    if let Some(rolldown_common::OutputsDiagnostics { diagnostics, cwd }) = self.error.as_ref() {
-      return diagnostics
-        .iter()
-        .map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone()))
-        .collect();
-    }
-    vec![]
-  }
-
-  pub fn from_errors(diagnostics: Vec<BuildDiagnostic>, cwd: std::path::PathBuf) -> Self {
-    let error = rolldown_common::OutputsDiagnostics { diagnostics, cwd };
-    Self { assets: vec![], chunks: vec![], error: Some(error) }
-  }
 }
 
 impl From<Vec<rolldown_common::Output>> for BindingOutputs {
@@ -66,7 +49,7 @@ impl From<Vec<rolldown_common::Output>> for BindingOutputs {
         assets.push(BindingOutputAsset::new(asset));
       }
     });
-    Self { chunks, assets, error: None }
+    Self { chunks, assets }
   }
 }
 
@@ -111,7 +94,7 @@ impl JsChangedOutputs {
   }
 }
 
-pub fn to_js_diagnostic(diagnostic: &BuildDiagnostic, cwd: std::path::PathBuf) -> BindingError {
+pub fn to_binding_error(diagnostic: &BuildDiagnostic, cwd: std::path::PathBuf) -> BindingError {
   match diagnostic.downcast_napi_error() {
     Ok(napi_error) => {
       // Note: In WASM workers, napi::Error objects with maybe_raw/maybe_env references cannot be

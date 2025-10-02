@@ -1,7 +1,7 @@
 use crate::types::{
   binding_module_info::BindingModuleInfo,
   binding_normalized_options::BindingNormalizedOptions,
-  binding_outputs::{JsChangedOutputs, to_js_diagnostic},
+  binding_outputs::{JsChangedOutputs, to_binding_error},
   binding_rendered_chunk::BindingRenderedChunk,
   js_callback::MaybeAsyncJsCallbackExt,
 };
@@ -255,7 +255,7 @@ impl Plugin for JsPlugin {
             args
               .errors
               .iter()
-              .map(|diagnostic| to_js_diagnostic(diagnostic, args.cwd.clone()))
+              .map(|diagnostic| to_binding_error(diagnostic, args.cwd.clone()))
               .collect()
           }),
         )
@@ -454,7 +454,7 @@ impl Plugin for JsPlugin {
           args
             .errors
             .iter()
-            .map(|diagnostic| to_js_diagnostic(diagnostic, args.cwd.clone()))
+            .map(|diagnostic| to_binding_error(diagnostic, args.cwd.clone()))
             .collect(),
         )
           .into(),
@@ -479,7 +479,7 @@ impl Plugin for JsPlugin {
         .await_call(
           (
             ctx.clone().into(),
-            args.bundle.clone().into(),
+            napi::Either::B(args.bundle.clone().into()),
             args.is_write,
             BindingNormalizedOptions::new(Arc::clone(args.options)),
           )
@@ -506,7 +506,7 @@ impl Plugin for JsPlugin {
         .await_call(
           (
             ctx.clone().into(),
-            args.bundle.clone().into(),
+            napi::Either::B(args.bundle.clone().into()),
             BindingNormalizedOptions::new(Arc::clone(args.options)),
           )
             .into(),

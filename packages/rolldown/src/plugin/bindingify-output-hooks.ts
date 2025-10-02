@@ -1,6 +1,9 @@
 import type { BindingHookFilter, BindingPluginOptions } from '../binding';
 import { bindingifySourcemap } from '../types/sourcemap';
-import { aggregateBindingErrorsIntoError } from '../utils/error';
+import {
+  aggregateBindingErrorsIntoJsError,
+  unwrapBindingResult,
+} from '../utils/error';
 import { normalizeHook } from '../utils/normalize-hook';
 import { transformRenderedChunk } from '../utils/transform-rendered-chunk';
 import {
@@ -156,7 +159,7 @@ export function bindingifyRenderError(
           args.logLevel,
           args.watchMode,
         ),
-        aggregateBindingErrorsIntoError(err),
+        aggregateBindingErrorsIntoJsError(err),
       );
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -187,7 +190,11 @@ export function bindingifyGenerateBundle(
         args.logLevel,
         args.watchMode,
       );
-      const output = transformToOutputBundle(context, bundle, changed);
+      const output = transformToOutputBundle(
+        context,
+        unwrapBindingResult(bundle),
+        changed,
+      );
       await handler.call(
         context,
         args.pluginContextData.getOutputOptions(opts),
@@ -224,7 +231,11 @@ export function bindingifyWriteBundle(
         args.logLevel,
         args.watchMode,
       );
-      const output = transformToOutputBundle(context, bundle, changed);
+      const output = transformToOutputBundle(
+        context,
+        unwrapBindingResult(bundle),
+        changed,
+      );
       await handler.call(
         context,
         args.pluginContextData.getOutputOptions(opts),

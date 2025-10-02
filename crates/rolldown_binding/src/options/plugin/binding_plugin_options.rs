@@ -8,7 +8,7 @@ use crate::types::{
   binding_normalized_options::BindingNormalizedOptions,
   binding_outputs::{BindingOutputs, JsChangedOutputs},
   binding_rendered_chunk::BindingRenderedChunk,
-  error::BindingError,
+  error::{BindingError, BindingResult},
   js_callback::MaybeAsyncJsCallback,
 };
 
@@ -139,22 +139,22 @@ pub struct BindingPluginOptions {
   pub render_error_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
+    ts_type = "(ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
   )]
   pub generate_bundle: Option<
     MaybeAsyncJsCallback<
-      FnArgs<(BindingPluginContext, BindingOutputs, bool, BindingNormalizedOptions)>,
+      FnArgs<(BindingPluginContext, BindingResult<BindingOutputs>, bool, BindingNormalizedOptions)>,
       JsChangedOutputs,
     >,
   >,
   pub generate_bundle_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, bundle: BindingOutputs, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
+    ts_type = "(ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>"
   )]
   pub write_bundle: Option<
     MaybeAsyncJsCallback<
-      FnArgs<(BindingPluginContext, BindingOutputs, BindingNormalizedOptions)>,
+      FnArgs<(BindingPluginContext, BindingResult<BindingOutputs>, BindingNormalizedOptions)>,
       JsChangedOutputs,
     >,
   >,

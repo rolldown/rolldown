@@ -1,7 +1,7 @@
 use napi_derive::napi;
 use rolldown_error::BuildDiagnostic;
 
-use crate::types::{binding_outputs::to_js_diagnostic, error::BindingError};
+use crate::types::{binding_outputs::to_binding_error, error::BindingError};
 
 #[napi]
 #[derive(Debug)]
@@ -29,7 +29,7 @@ impl BindingHmrOutput {
     if let Some(rolldown_common::OutputsDiagnostics { diagnostics, cwd }) = self.errors.as_ref() {
       return diagnostics
         .iter()
-        .map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone()))
+        .map(|diagnostic| to_binding_error(diagnostic, cwd.clone()))
         .collect();
     }
     vec![]
@@ -127,7 +127,7 @@ pub enum BindingGenerateHmrPatchReturn {
 impl BindingGenerateHmrPatchReturn {
   pub fn from_errors(diagnostics: Vec<BuildDiagnostic>, cwd: std::path::PathBuf) -> Self {
     Self::Error(
-      diagnostics.iter().map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone())).collect(),
+      diagnostics.iter().map(|diagnostic| to_binding_error(diagnostic, cwd.clone())).collect(),
     )
   }
 }

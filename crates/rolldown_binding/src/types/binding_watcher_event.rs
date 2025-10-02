@@ -3,7 +3,7 @@ use std::sync::Arc;
 use napi::tokio::sync::Mutex;
 use napi_derive::napi;
 
-use super::{binding_outputs::to_js_diagnostic, error::BindingError};
+use super::{binding_outputs::to_binding_error, error::BindingError};
 use rolldown::{BundleEvent, Bundler, WatcherEvent};
 
 #[napi]
@@ -66,7 +66,7 @@ impl BindingWatcherEvent {
           .error
           .diagnostics
           .iter()
-          .map(|diagnostic| to_js_diagnostic(diagnostic, data.error.cwd.clone()))
+          .map(|diagnostic| to_binding_error(diagnostic, data.error.cwd.clone()))
           .collect(),
         result: Arc::clone(&data.result),
       },

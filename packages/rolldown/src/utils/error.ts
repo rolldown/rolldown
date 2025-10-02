@@ -1,5 +1,18 @@
-import { type BindingError } from '../binding';
+import { type BindingError, type BindingResult } from '../binding';
 import type { RollupError } from '../log/logging';
+
+export function unwrapBindingResult<T>(
+  container: BindingResult<T>,
+): T {
+  if (
+    typeof container === 'object' && container !== null &&
+    'isBindingErrors' in container &&
+    container.isBindingErrors
+  ) {
+    throw aggregateBindingErrorsIntoJsError(container.errors);
+  }
+  return container as T;
+}
 
 function normalizeBindingError(e: BindingError): Error {
   return e.type === 'JsError'
@@ -11,7 +24,7 @@ function normalizeBindingError(e: BindingError): Error {
     });
 }
 
-export function aggregateBindingErrorsIntoError(
+export function aggregateBindingErrorsIntoJsError(
   rawErrors: BindingError[],
 ): Error {
   const errors = rawErrors.map(normalizeBindingError);

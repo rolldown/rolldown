@@ -46,5 +46,13 @@ export interface DevOptions {
     updates: BindingClientHmrUpdate[],
     changedFiles: string[],
   ) => void | Promise<void>;
+  /**
+   * Strategy for triggering rebuilds after HMR updates.
+   * - `'always'`: Always trigger a rebuild after HMR updates
+   * - `'auto'`: Trigger rebuild only if HMR updates contain full reload updates
+   * - `'never'`: Never trigger rebuild after HMR updates (default)
+   * @default 'never'
+   */
+  rebuildStrategy?: 'always' | 'auto' | 'never';
   watch?: DevWatchOptions;
 }

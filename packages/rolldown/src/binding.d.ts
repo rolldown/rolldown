@@ -1617,6 +1617,7 @@ export interface BindingDeferSyncScanData {
 
 export interface BindingDevOptions {
   onHmrUpdates?: undefined | ((updates: BindingClientHmrUpdate[], changedFiles: string[]) => void | Promise<void>)
+  rebuildStrategy?: BindingRebuildStrategy
   watch?: BindingDevWatchOptions
 }
 
@@ -2087,6 +2088,12 @@ export interface BindingReactRefreshWrapperPluginConfig {
   exclude?: Array<BindingStringOrRegex>
   jsxImportSource: string
   reactRefreshHost: string
+}
+
+export declare enum BindingRebuildStrategy {
+  Always = 0,
+  Auto = 1,
+  Never = 2
 }
 
 export interface BindingRenderBuiltUrlConfig {

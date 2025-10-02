@@ -4,6 +4,7 @@ export type { DevOptions, DevWatchOptions } from './api/dev/dev-options';
 export { scan } from './api/experimental';
 export {
   BindingClientHmrUpdate,
+  BindingRebuildStrategy,
   isolatedDeclaration,
   type IsolatedDeclarationsOptions,
   type IsolatedDeclarationsResult,

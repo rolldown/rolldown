@@ -1,4 +1,8 @@
-import { type BindingClientHmrUpdate, BindingDevEngine } from '../../binding';
+import {
+  type BindingClientHmrUpdate,
+  BindingDevEngine,
+  BindingRebuildStrategy,
+} from '../../binding';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
@@ -23,6 +27,13 @@ export class DevEngine {
 
     const bindingDevOptions = {
       onHmrUpdates: devOptions.onHmrUpdates,
+      rebuildStrategy: devOptions.rebuildStrategy
+        ? devOptions.rebuildStrategy === 'always'
+          ? BindingRebuildStrategy.Always
+          : devOptions.rebuildStrategy === 'auto'
+          ? BindingRebuildStrategy.Auto
+          : BindingRebuildStrategy.Never
+        : undefined,
       watch: devOptions.watch && {
         skipWrite: devOptions.watch.skipWrite,
         usePolling: devOptions.watch.usePolling,

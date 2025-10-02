@@ -31,6 +31,8 @@ impl BindingDevEngine {
     let session = rolldown_debug::Session::dummy();
 
     let on_hmr_updates_callback = dev_options.as_ref().and_then(|opts| opts.on_hmr_updates.clone());
+    let rebuild_strategy =
+      dev_options.as_ref().and_then(|opts| opts.rebuild_strategy).map(Into::into);
     let watch_options = dev_options.as_ref().and_then(|opts| opts.watch.as_ref());
     let skip_write = watch_options.and_then(|watch| watch.skip_write);
     let use_polling = watch_options.and_then(|watch| watch.use_polling);
@@ -78,8 +80,8 @@ impl BindingDevEngine {
     let rolldown_dev_options = rolldown::dev::dev_options::DevOptions {
       on_hmr_updates,
       on_output: None, // Rust-only for now
+      rebuild_strategy,
       watch: dev_watch_options,
-      ..Default::default()
     };
 
     let inner = rolldown::DevEngine::with_bundler(bundler, rolldown_dev_options)

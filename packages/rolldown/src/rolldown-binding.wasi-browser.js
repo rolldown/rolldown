@@ -116,6 +116,7 @@ export const BindingLogLevel = __napiModule.exports.BindingLogLevel
 export const BindingPluginOrder = __napiModule.exports.BindingPluginOrder
 export const BindingPropertyReadSideEffects = __napiModule.exports.BindingPropertyReadSideEffects
 export const BindingPropertyWriteSideEffects = __napiModule.exports.BindingPropertyWriteSideEffects
+export const BindingRebuildStrategy = __napiModule.exports.BindingRebuildStrategy
 export const FilterTokenKind = __napiModule.exports.FilterTokenKind
 export const initTraceSubscriber = __napiModule.exports.initTraceSubscriber
 export const registerPlugins = __napiModule.exports.registerPlugins

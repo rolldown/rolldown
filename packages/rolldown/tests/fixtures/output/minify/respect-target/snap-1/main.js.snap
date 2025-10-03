@@ -1,0 +1,4 @@
+function hello(opts) {
+	console.log(opts === null || opts === void 0 ? void 0 : opts.name);
+}
+export { hello };

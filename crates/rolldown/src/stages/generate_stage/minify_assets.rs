@@ -1,6 +1,6 @@
 use oxc::{
   codegen::{self, CodegenOptions, CommentOptions},
-  minifier::{CompressOptions, MinifierOptions},
+  minifier::{CompressOptions, MinifierOptions, TreeShakeOptions},
 };
 use oxc_allocator::AllocatorPool;
 use rolldown_common::{LegalComments, MinifyOptions, NormalizedBundlerOptions};
@@ -23,7 +23,13 @@ impl GenerateStage<'_> {
       MinifyOptions::Disabled => return Ok(()),
       MinifyOptions::DeadCodeEliminationOnly => (
         false,
-        &MinifierOptions { mangle: None, compress: Some(CompressOptions::default()) },
+        &MinifierOptions {
+          mangle: None,
+          compress: Some(CompressOptions {
+            treeshake: TreeShakeOptions::from(&options.treeshake),
+            ..CompressOptions::dce()
+          }),
+        },
         false,
       ),
       MinifyOptions::Enabled((options, remove_whitespace)) => (true, options, *remove_whitespace),

@@ -1,6 +1,6 @@
 name: CI
-# Jobs in this workflow are all required run successfully before the PR can be merged. This is enforced by using github status checks.
-# What's github status check: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/about-status-checks
+# Jobs in this workflow are all required run successfully before the PR can be merged. This is enforced by using GitHub status checks.
+# What's GitHub status check: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/about-status-checks
 
 permissions: {}
 

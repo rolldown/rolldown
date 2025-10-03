@@ -2,7 +2,9 @@ use crate::{
   HookResolveIdArgs, PluginDriver,
   types::{custom_field::CustomField, hook_resolve_id_skipped::HookResolveIdSkipped},
 };
-use rolldown_common::{ImportKind, ModuleDefFormat, ResolvedId, is_existing_node_builtin_modules};
+use rolldown_common::{
+  ImportKind, ModuleDefFormat, PackageJson, ResolvedId, is_existing_node_builtin_modules,
+};
 use rolldown_resolver::{ResolveError, Resolver};
 use std::{
   path::{Path, PathBuf},
@@ -15,6 +17,36 @@ fn is_http_url(s: &str) -> bool {
 
 pub fn is_data_url(s: &str) -> bool {
   s.trim_start().starts_with("data:")
+}
+
+/// Infers ModuleDefFormat from file path and optional package.json.
+/// This matches the logic used in the internal resolver's `infer_module_def_format`.
+fn infer_module_def_format(path: &str, package_json: Option<&Arc<PackageJson>>) -> ModuleDefFormat {
+  let fmt = ModuleDefFormat::from_path(path);
+
+  // If the extension is specific (.mjs/.cjs/.cts/.mts), use it
+  if !matches!(fmt, ModuleDefFormat::Unknown) {
+    return fmt;
+  }
+
+  // Check if it's a js-like extension (.js/.jsx/.ts/.tsx)
+  let is_js_like_extension = Path::new(path)
+    .extension()
+    .is_some_and(|ext| matches!(ext.to_str(), Some("js" | "jsx" | "ts" | "tsx")));
+
+  if is_js_like_extension {
+    if let Some(pkg) = package_json {
+      if let Some(type_field) = pkg.r#type() {
+        return match type_field {
+          "module" => ModuleDefFormat::EsmPackageJson,
+          "commonjs" => ModuleDefFormat::CjsPackageJson,
+          _ => ModuleDefFormat::Unknown,
+        };
+      }
+    }
+  }
+
+  ModuleDefFormat::Unknown
 }
 
 #[expect(clippy::too_many_arguments)]
@@ -49,7 +81,7 @@ pub async fn resolve_id_with_plugins(
         Some(package_json)
       });
       return Ok(Ok(ResolvedId {
-        module_def_format: ModuleDefFormat::from_path(r.id.as_str()),
+        module_def_format: infer_module_def_format(r.id.as_str(), package_json.as_ref()),
         id: r.id,
         external: r.external.unwrap_or_default(),
         normalize_external_id: r.normalize_external_id,
@@ -79,7 +111,7 @@ pub async fn resolve_id_with_plugins(
       Some(package_json)
     });
     return Ok(Ok(ResolvedId {
-      module_def_format: ModuleDefFormat::from_path(r.id.as_str()),
+      module_def_format: infer_module_def_format(r.id.as_str(), package_json.as_ref()),
       id: r.id,
       external: r.external.unwrap_or_default(),
       normalize_external_id: r.normalize_external_id,

@@ -5,7 +5,7 @@ use std::{
   time::Duration,
 };
 
-use rolldown_common::{ClientHmrUpdate, ScanMode};
+use rolldown_common::{ClientHmrUpdate, ScanMode, WatcherChangeKind};
 use rolldown_error::BuildResult;
 use rolldown_utils::indexmap::FxIndexSet;
 use tokio::sync::Mutex;
@@ -121,6 +121,17 @@ impl BundlingTask {
 
   async fn run_inner(&mut self) -> BuildResult<()> {
     self.delay_to_merge_incoming_changes().await?;
+
+    {
+      let bundler = self.bundler.lock().await;
+      for changed_file in &self.input.changed_files {
+        bundler
+          .plugin_driver
+          // FIXME: use proper WatcherChangeKind for created/removed files.
+          .watch_change(changed_file.to_str().unwrap(), WatcherChangeKind::Update)
+          .await?;
+      }
+    }
 
     let mut has_full_reload_update = false;
     if self.generate_hmr_updates {

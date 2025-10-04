@@ -1,12 +1,13 @@
 use derive_more::Debug;
 use rolldown_common::ClientHmrUpdate;
+use rolldown_error::BuildResult;
 use std::sync::Arc;
 
 use super::rebuild_strategy::RebuildStrategy;
 use crate::types::bundle_output::BundleOutput;
 
 pub type OnHmrUpdatesCallback = Arc<dyn Fn(Vec<ClientHmrUpdate>, Vec<String>) + Send + Sync>;
-pub type OnOutputCallback = Arc<dyn Fn(BundleOutput) + Send + Sync>;
+pub type OnOutputCallback = Arc<dyn Fn(BuildResult<BundleOutput>) + Send + Sync>;
 
 pub type SharedNormalizedDevOptions = Arc<NormalizedDevOptions>;
 

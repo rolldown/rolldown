@@ -235,15 +235,19 @@ impl BundlingTask {
       ScanMode::Partial(self.changed_files.iter().map(|p| p.to_string_lossy().into()).collect())
     };
     let scan_output = bundler.scan(scan_mode).await?;
-    let bundle_output = if skip_write {
+    let build_result = if skip_write {
       bundler.bundle_generate(scan_output).await
     } else {
       bundler.bundle_write(scan_output).await
-    }?;
+    };
+
+    if build_result.is_err() {
+      tracing::error!("Build failed for changed files: {:#?}", self.changed_files);
+    }
 
     // Call on_output callback if provided
     if let Some(on_output) = self.dev_context.options.on_output.as_ref() {
-      on_output(bundle_output);
+      on_output(build_result);
     }
 
     tracing::trace!(

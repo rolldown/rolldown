@@ -4,7 +4,7 @@ use std::path::Path;
 
 use rolldown::BundleOutput;
 use rolldown_common::{HmrUpdate, Output};
-use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
+use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosticOptions};
 use rolldown_sourcemap::SourcemapVisualizer;
 use rolldown_testing_config::TestMeta;
 use sugar_path::SugarPath;
@@ -54,7 +54,7 @@ impl ArtifactsSnapshot {
               step,
               &hmr_update.update,
               vec![],
-              &mut build_round.rebuild_outputs,
+              &mut build_round.rebuild_results,
               build_round.cwd.as_ref().unwrap(),
             );
             build_round_sections.push(hmr_section);
@@ -245,7 +245,7 @@ impl ArtifactsSnapshot {
     step: usize,
     hmr_update: &HmrUpdate,
     errs: Vec<BuildDiagnostic>,
-    build_outputs: &mut Vec<BundleOutput>,
+    build_results: &mut Vec<BuildResult<BundleOutput>>,
     cwd: &Path,
   ) -> SnapshotSection {
     let mut hmr_section = SnapshotSection::with_title(format!("HMR Step {step}"));
@@ -278,10 +278,18 @@ impl ArtifactsSnapshot {
         hmr_section.add_child(code_section);
       }
       HmrUpdate::FullReload { .. } => {
-        let bundle_output = build_outputs.remove(0);
-        let bundle_output_sections =
-          Self::create_bundle_output_sections(test_meta, bundle_output, cwd);
-        hmr_section.children.extend(bundle_output_sections);
+        let build_result = build_results.remove(0);
+        match build_result {
+          Ok(build_output) => {
+            let bundle_output_sections =
+              Self::create_bundle_output_sections(test_meta, build_output, cwd);
+            hmr_section.children.extend(bundle_output_sections);
+          }
+          Err(errs) => {
+            let errors_section = Self::create_error_section(errs.into_vec(), cwd);
+            hmr_section.add_child(errors_section);
+          }
+        }
       }
       _ => {}
     }

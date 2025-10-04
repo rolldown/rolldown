@@ -138,7 +138,7 @@ impl IntegrationTest {
 
         let has_full_reload_update = Arc::new(AtomicBool::new(false));
         let hmr_update_infos = Arc::new(std::sync::Mutex::new(vec![]));
-        let build_outputs = Arc::new(std::sync::Mutex::new(vec![]));
+        let build_results = Arc::new(std::sync::Mutex::new(vec![]));
         let dev_engine = DevEngine::with_bundler(
           Arc::clone(&bundler),
           DevOptions {
@@ -154,9 +154,9 @@ impl IntegrationTest {
               }))
             },
             on_output: {
-              let build_outputs = Arc::clone(&build_outputs);
-              Some(Arc::new(move |bundle_output| {
-                build_outputs.lock().unwrap().push(bundle_output);
+              let build_results = Arc::clone(&build_results);
+              Some(Arc::new(move |bundle_result| {
+                build_results.lock().unwrap().push(bundle_result);
               }))
             },
             watch: Some(DevWatchOptions {
@@ -195,17 +195,18 @@ impl IntegrationTest {
         }
         drop(dev_engine);
 
-        let mut build_outputs = std::mem::take(&mut *build_outputs.lock().unwrap());
+        let mut bundle_results = std::mem::take(&mut *build_results.lock().unwrap());
         let hmr_update_infos = std::mem::take(&mut *hmr_update_infos.lock().unwrap());
 
         let execute_output = self.test_meta.expect_executed
           && !self.test_meta.expect_error
           && self.test_meta.write_to_disk;
 
-        let bundle_output: BuildResult<BundleOutput> = Ok(build_outputs.remove(0));
+        // We consider the first build output as the initial build output.
+        let build_result: BuildResult<BundleOutput> = bundle_results.remove(0);
 
-        match &bundle_output {
-          Ok(_bundle_output) => {
+        match &build_result {
+          Ok(_build_output) => {
             assert!(
               !self.test_meta.expect_error,
               "Expected the bundling to be failed with diagnosable errors, but got success"
@@ -230,7 +231,7 @@ impl IntegrationTest {
                 }
               }
             }
-            build_snapshot.rebuild_outputs = build_outputs;
+            build_snapshot.rebuild_results = bundle_results;
             build_snapshot.hmr_updates_by_steps = hmr_update_infos;
 
             if execute_output {
@@ -255,7 +256,7 @@ impl IntegrationTest {
             );
           }
         }
-        build_snapshot.initial_output = Some(bundle_output);
+        build_snapshot.initial_output = Some(build_result);
       } else {
         let mut bundler = Bundler::with_plugins(named_options.options, plugins.clone())
           .expect("Failed to create bundler");

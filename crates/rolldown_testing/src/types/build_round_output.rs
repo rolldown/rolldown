@@ -13,6 +13,6 @@ pub struct BuildRoundOutput {
   pub cwd: Option<PathBuf>,
   pub debug_title: Option<String>,
   pub initial_output: Option<BuildResult<BundleOutput>>,
-  pub rebuild_outputs: Vec<BundleOutput>,
+  pub rebuild_results: Vec<BuildResult<BundleOutput>>,
   pub hmr_updates_by_steps: Vec<(Vec<rolldown_common::ClientHmrUpdate>, Vec<String>)>,
 }

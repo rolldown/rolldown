@@ -10,8 +10,13 @@ use rolldown_plugin_utils::{
   AssetUrlResult, RenderBuiltUrl, ToOutputFilePathEnv, constants::HTMLProxyMapItem,
   partial_encode_url_path,
 };
-use rolldown_utils::pattern_filter::normalize_path;
+use rolldown_utils::{dashmap::FxDashMap, pattern_filter::normalize_path};
 use sugar_path::SugarPath as _;
+
+#[derive(Debug, Default)]
+struct ViteHtmlPluginState {
+  pub is_async_script: FxDashMap<String, bool>,
+}
 
 #[derive(Debug, Default)]
 pub struct ViteHtmlPlugin {
@@ -21,6 +26,7 @@ pub struct ViteHtmlPlugin {
   pub decoded_base: String,
   #[debug(skip)]
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
+  state: ViteHtmlPluginState,
 }
 
 impl Plugin for ViteHtmlPlugin {
@@ -29,7 +35,16 @@ impl Plugin for ViteHtmlPlugin {
   }
 
   fn register_hook_usage(&self) -> rolldown_plugin::HookUsage {
-    HookUsage::Transform | HookUsage::GenerateBundle
+    HookUsage::BuildStart | HookUsage::Transform | HookUsage::GenerateBundle
+  }
+
+  async fn build_start(
+    &self,
+    _ctx: &rolldown_plugin::PluginContext,
+    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    self.state.is_async_script.clear();
+    Ok(())
   }
 
   #[expect(unused_variables, unused_assignments, clippy::too_many_lines)]
@@ -208,6 +223,8 @@ impl Plugin for ViteHtmlPlugin {
         }
       }
     }
+
+    self.state.is_async_script.insert(id.into_owned(), every_script_is_async);
 
     // TODO: Support module_side_effects for module info
     // for url in set_modules {

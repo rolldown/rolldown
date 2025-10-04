@@ -58,7 +58,11 @@
       "dev": "./src/parse-ast-index.ts",
       "default": "./dist/parse-ast-index.mjs"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./plugins": {
+      "dev": "./src/plugins-index.ts",
+      "default": "./dist/plugins-index.mjs"
+    }
   },
   "imports": {
     "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs"

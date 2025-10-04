@@ -3783,7 +3783,7 @@ dependencies = [
 
 [[package]]
 name = "string_wizard"
-version = "0.0.26"
+version = "0.0.27"
 dependencies = [
  "insta",
  "memchr",

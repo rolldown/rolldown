@@ -34,14 +34,14 @@ function foo() {
 	return 100;
 }
 
-var import_dynamic, a;
+var a;
 var init_main = __esm({"main.js": (() => {
 //#region sideeffects.js
+var import_dynamic = /* @__PURE__ */ __toESM(require_dynamic());
 	globalThis.a = 2;
 
 //#endregion
 //#region esm.js
-	import_dynamic = /* @__PURE__ */ __toESM(require_dynamic());
 	a = globalThis.a;
 	strictEqual(a, 2);
 

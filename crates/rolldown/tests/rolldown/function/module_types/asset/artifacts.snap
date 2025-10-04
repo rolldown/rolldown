@@ -19,9 +19,11 @@ var main_default = foo_default;
 export { main_default as default };
 //# sourceMappingURL=main.js.map
 ```
-## Output Stats
+
+# Output Stats
 
 - main.js, is_entry true, is_dynamic_entry false, exports ["default"]
+
 # Sourcemap Visualizer
 
 ```

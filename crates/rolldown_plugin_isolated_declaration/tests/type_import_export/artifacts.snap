@@ -9,24 +9,28 @@ source: crates/rolldown_testing/src/integration_test.rs
 export type A = string;
 
 ```
+
 ## b.d.ts
 
 ```ts
 export type B = string;
 
 ```
+
 ## c.d.ts
 
 ```ts
 export type C = string;
 
 ```
+
 ## d.d.ts
 
 ```ts
 export type D = string;
 
 ```
+
 ## main.d.ts
 
 ```ts
@@ -37,6 +41,7 @@ export { type C } from "./c";
 export type { D } from "./d";
 
 ```
+
 ## main.js
 
 ```js

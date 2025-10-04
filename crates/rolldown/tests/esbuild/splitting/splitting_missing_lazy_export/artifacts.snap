@@ -15,6 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## IMPORT_IS_UNDEFINED
 
 ```text
@@ -27,6 +28,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 # Assets
 
 ## a.js
@@ -39,6 +41,7 @@ console.log(foo());
 
 //#endregion
 ```
+
 ## b.js
 
 ```js
@@ -49,6 +52,7 @@ console.log(bar());
 
 //#endregion
 ```
+
 ## common.js
 
 ```js

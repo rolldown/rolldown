@@ -15,6 +15,7 @@ var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.js": ((exports, mo
 //#endregion
 export { __reExport, __toESM, require_commonjs };
 ```
+
 ## entry.js
 
 ```js
@@ -26,6 +27,7 @@ console.log(import_commonjs.default);
 
 //#endregion
 ```
+
 ## main.js
 
 ```js

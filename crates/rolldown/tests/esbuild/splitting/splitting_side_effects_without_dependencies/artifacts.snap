@@ -13,6 +13,7 @@ console.log(a);
 
 //#endregion
 ```
+
 ## b.js
 
 ```js
@@ -23,6 +24,7 @@ console.log(b);
 
 //#endregion
 ```
+
 ## shared.js
 
 ```js

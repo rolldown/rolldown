@@ -66,6 +66,7 @@ function text(el, text$1) {
 
 //#endregion
 ```
+
 # HMR Step 0
 
 ## Code
@@ -90,9 +91,11 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 init_hmr_0()
 __rolldown_runtime__.applyUpdates([['hmr.js', 'hmr.js']]);
 ```
+
 ## Meta
 
 - update type: patch
+
 ### Hmr Boundaries
 
 - boundary: hmr.js, accepted_via: hmr.js

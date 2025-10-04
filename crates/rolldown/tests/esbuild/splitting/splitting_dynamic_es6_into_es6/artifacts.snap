@@ -11,6 +11,7 @@ import("./foo.js").then(({ bar }) => console.log(bar));
 
 //#endregion
 ```
+
 ## foo.js
 
 ```js

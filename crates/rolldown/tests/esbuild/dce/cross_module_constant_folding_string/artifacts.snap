@@ -31,6 +31,7 @@ console.log([typeof b], [a + b], [
 
 //#endregion
 ```
+
 ## enum-entry.js
 
 ```js
@@ -62,6 +63,7 @@ console.log([typeof x.b], [x.a + x.b], [
 
 //#endregion
 ```
+
 ## nested-entry.js
 
 ```js

@@ -29,6 +29,7 @@ var init_main = __esm({ "main.js": (() => {
 init_main();
 export { dep_default as dep };
 ```
+
 ---
 
 Variant: [on_demand_wrapping: true]

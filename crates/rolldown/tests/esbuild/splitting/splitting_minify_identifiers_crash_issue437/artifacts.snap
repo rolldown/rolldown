@@ -13,6 +13,7 @@ console.log(foo);
 
 //#endregion
 ```
+
 ## b.js
 
 ```js
@@ -23,12 +24,14 @@ console.log(foo);
 
 //#endregion
 ```
+
 ## c.js
 
 ```js
 import "./shared.js";
 
 ```
+
 ## shared.js
 
 ```js

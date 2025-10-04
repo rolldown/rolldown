@@ -47,6 +47,7 @@ function shouldNotMangle() {
 //#endregion
 export { shouldMangle, shouldNotMangle };
 ```
+
 ## entry2.js
 
 ```js

@@ -11,6 +11,7 @@ import { foo, init_a } from "./a2.js";
 init_a();
 export { foo };
 ```
+
 ## a2.js
 
 ```js
@@ -25,6 +26,7 @@ var init_a = __esm({ "a.js": (() => {
 //#endregion
 export { __toCommonJS, a_exports, foo, init_a };
 ```
+
 ## b.js
 
 ```js

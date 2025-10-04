@@ -21,6 +21,7 @@ var bar = "bar";
 //#endregion
 export { bar, other, stuff, thing };
 ```
+
 ## main.js
 
 ```js

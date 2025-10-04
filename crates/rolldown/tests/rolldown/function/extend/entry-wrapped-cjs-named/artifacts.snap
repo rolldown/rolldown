@@ -16,6 +16,7 @@ var require_main = /* @__PURE__ */ __commonJS({ "main.js": (() => {
 export default require_main();
 
 ```
+
 ---
 
 Variant: [exports: Named] [format: Cjs]
@@ -40,6 +41,7 @@ Object.defineProperty(exports, 'default', {
   }
 });
 ```
+
 ---
 
 Variant: [exports: Named] [extend: true] [format: Iife] [name: "module"]
@@ -67,6 +69,7 @@ Object.defineProperty(exports, 'default', {
 });
 })(this.module = this.module || {});
 ```
+
 ---
 
 Variant: [exports: Named] [extend: true] [format: Umd] [name: "module"]

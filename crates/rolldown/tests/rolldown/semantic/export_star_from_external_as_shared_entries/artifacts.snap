@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -12,6 +11,7 @@ import "./main.js";
 export * from "node:fs"
 
 ```
+
 ## entry2.js
 
 ```js
@@ -20,6 +20,7 @@ import "./main.js";
 export * from "node:fs"
 
 ```
+
 ## main.js
 
 ```js

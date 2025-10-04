@@ -17,12 +17,14 @@ console.log(common_default);
 
 //#endregion
 ```
+
 ## entries_entry.js
 
 ```js
 import "./common.js";
 
 ```
+
 ## entries_other_entry.js
 
 ```js

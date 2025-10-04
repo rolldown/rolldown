@@ -9,12 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 [MISSING_GLOBAL_NAME] Warning: No name was provided for external module "node:fs" in "output.globals" – guessing "node_fs".
 
 ```
+
 ## MISSING_GLOBAL_NAME
 
 ```text
 [MISSING_GLOBAL_NAME] Warning: No name was provided for external module "node:path" in "output.globals" – guessing "node_path".
 
 ```
+
 # Assets
 
 ## main.js

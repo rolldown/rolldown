@@ -11,6 +11,7 @@ import { require_a } from "./a2.js";
 export default require_a();
 
 ```
+
 ## a2.js
 
 ```js
@@ -31,6 +32,7 @@ var require_a = /* @__PURE__ */ __commonJS({ "a.js": ((exports, module) => {
 //#endregion
 export { require_a, require_b };
 ```
+
 ## b.js
 
 ```js

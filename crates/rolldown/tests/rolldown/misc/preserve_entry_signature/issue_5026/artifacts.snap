@@ -14,6 +14,7 @@ globalThis.result.push("ready");
 
 //#endregion
 ```
+
 ## page.js
 
 ```js
@@ -24,6 +25,7 @@ globalThis.result = [foo];
 
 //#endregion
 ```
+
 ## router.js
 
 ```js

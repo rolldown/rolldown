@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 button { color: red }
 
 ```
+
 ## test.js
 
 ```js

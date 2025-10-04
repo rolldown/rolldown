@@ -10,6 +10,7 @@ import "./c2.js";
 import "./b2.js";
 
 ```
+
 ## b.js
 
 ```js
@@ -17,17 +18,20 @@ import "./c2.js";
 import "./b2.js";
 
 ```
+
 ## b2.js
 
 ```js
 
 ```
+
 ## c.js
 
 ```js
 import "./c2.js";
 
 ```
+
 ## c2.js
 
 ```js
@@ -36,6 +40,7 @@ await 0;
 
 //#endregion
 ```
+
 ## entry.js
 
 ```js

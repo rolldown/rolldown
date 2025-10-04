@@ -10,6 +10,7 @@ import { devil } from "./foo2.js";
 
 export { devil as "😈" };
 ```
+
 ## foo2.js
 
 ```js
@@ -19,6 +20,7 @@ const devil = "devil";
 //#endregion
 export { devil };
 ```
+
 ## main.js
 
 ```js

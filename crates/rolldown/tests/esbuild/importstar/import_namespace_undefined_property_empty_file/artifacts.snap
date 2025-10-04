@@ -15,6 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## IMPORT_IS_UNDEFINED
 
 ```text
@@ -27,6 +28,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## IMPORT_IS_UNDEFINED
 
 ```text
@@ -39,6 +41,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## IMPORT_IS_UNDEFINED
 
 ```text
@@ -51,6 +54,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 # Assets
 
 ## empty.js
@@ -63,6 +67,7 @@ var require_empty = /* @__PURE__ */ __commonJS({ "empty.cjs": (() => {}) });
 //#endregion
 export { __toESM, require_empty };
 ```
+
 ## entry-default.js
 
 ```js
@@ -74,6 +79,7 @@ console.log(void 0, void 0, import_empty.default);
 
 //#endregion
 ```
+
 ## entry-nope.js
 
 ```js

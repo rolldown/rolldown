@@ -14,6 +14,7 @@ var a_default = result();
 //#endregion
 export { a_default as default };
 ```
+
 ## b.js
 
 ```js
@@ -21,6 +22,7 @@ import { result } from "./b2.js";
 
 export { result };
 ```
+
 ## b2.js
 
 ```js
@@ -32,6 +34,7 @@ function result() {
 //#endregion
 export { result };
 ```
+
 ## main.js
 
 ```js

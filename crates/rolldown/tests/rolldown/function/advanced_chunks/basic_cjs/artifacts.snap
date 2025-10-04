@@ -11,6 +11,7 @@ import { require_a } from "./common.js";
 export default require_a();
 
 ```
+
 ## b.js
 
 ```js
@@ -19,6 +20,7 @@ import { require_b } from "./common.js";
 export default require_b();
 
 ```
+
 ## common.js
 
 ```js
@@ -38,12 +40,14 @@ var require_b = /* @__PURE__ */ __commonJS({ "b.cjs": ((exports) => {
 //#endregion
 export { require_a, require_b };
 ```
+
 ## rolldown-runtime.js
 
 ```js
 // HIDDEN [rolldown:runtime]
 export { __commonJS };
 ```
+
 ---
 
 Variant: no-profiler-names: [profiler_names: false]
@@ -58,6 +62,7 @@ import { require_a } from "./common.js";
 export default require_a();
 
 ```
+
 ## b.js
 
 ```js
@@ -66,6 +71,7 @@ import { require_b } from "./common.js";
 export default require_b();
 
 ```
+
 ## common.js
 
 ```js
@@ -85,6 +91,7 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 //#endregion
 export { require_a, require_b };
 ```
+
 ## rolldown-runtime.js
 
 ```js

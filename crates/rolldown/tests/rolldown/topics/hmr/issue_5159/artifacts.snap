@@ -20,12 +20,14 @@ function bar_default() {
 //#endregion
 export { bar_default as default };
 ```
+
 ## chunk.js
 
 ```js
 // HIDDEN [rolldown:runtime]
 export { __export, __reExport, __toCommonJS, __toDynamicImportESM, __toESM };
 ```
+
 ## foo.js
 
 ```js
@@ -52,6 +54,7 @@ function foo_default() {
 //#endregion
 export { foo_default as default };
 ```
+
 ## main.js
 
 ```js
@@ -69,6 +72,7 @@ const routes = {
 
 //#endregion
 ```
+
 ## string.js
 
 ```js

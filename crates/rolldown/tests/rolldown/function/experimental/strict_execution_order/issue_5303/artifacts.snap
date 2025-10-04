@@ -23,12 +23,14 @@ var init_main = __esm({"main.js": (() => {
 
 init_main();
 ```
+
 ## rolldown-runtime.js
 
 ```js
 // HIDDEN [rolldown:runtime]
 export { __esm };
 ```
+
 ## test.js
 
 ```js

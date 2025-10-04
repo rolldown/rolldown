@@ -15,6 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## IMPORT_IS_UNDEFINED
 
 ```text
@@ -27,6 +28,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -39,6 +41,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -51,6 +54,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -63,6 +67,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -75,6 +80,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -87,6 +93,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -99,6 +106,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 # Assets
 
 ## external-def.js
@@ -112,6 +120,7 @@ console.log(def, ns.def);
 
 //#endregion
 ```
+
 ## external-default.js
 
 ```js
@@ -123,6 +132,7 @@ console.log(def, ns.default);
 
 //#endregion
 ```
+
 ## external-default2.js
 
 ```js
@@ -133,6 +143,7 @@ console.log(def, def);
 
 //#endregion
 ```
+
 ## external-ns-def.js
 
 ```js
@@ -144,6 +155,7 @@ console.log(def, ns, ns.def);
 
 //#endregion
 ```
+
 ## external-ns-default.js
 
 ```js
@@ -155,6 +167,7 @@ console.log(def, ns, ns.default);
 
 //#endregion
 ```
+
 ## external-ns.js
 
 ```js
@@ -166,6 +179,7 @@ console.log(def, ns);
 
 //#endregion
 ```
+
 ## internal-def.js
 
 ```js
@@ -176,6 +190,7 @@ console.log(internal_default, void 0);
 
 //#endregion
 ```
+
 ## internal-default.js
 
 ```js
@@ -186,6 +201,7 @@ console.log(internal_default, internal_default);
 
 //#endregion
 ```
+
 ## internal-default2.js
 
 ```js
@@ -196,6 +212,7 @@ console.log(internal_default, internal_default);
 
 //#endregion
 ```
+
 ## internal-ns-def.js
 
 ```js
@@ -206,6 +223,7 @@ console.log(internal_default, internal_exports, void 0);
 
 //#endregion
 ```
+
 ## internal-ns-default.js
 
 ```js
@@ -216,6 +234,7 @@ console.log(internal_default, internal_exports, internal_default);
 
 //#endregion
 ```
+
 ## internal-ns.js
 
 ```js
@@ -226,6 +245,7 @@ console.log(internal_default, internal_exports);
 
 //#endregion
 ```
+
 ## internal.js
 
 ```js

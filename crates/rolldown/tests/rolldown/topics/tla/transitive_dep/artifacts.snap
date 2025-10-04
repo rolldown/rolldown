@@ -16,6 +16,7 @@ const value = value$1 + "+lib";
 //#endregion
 export { value };
 ```
+
 ---
 
 Variant: [strict_execution_order: true]

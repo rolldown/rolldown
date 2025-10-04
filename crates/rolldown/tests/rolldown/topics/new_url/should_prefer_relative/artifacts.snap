@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```txt
 hello, world
 ```
+
 ## main.js
 
 ```js

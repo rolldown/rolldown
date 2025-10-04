@@ -21,6 +21,7 @@ var Example = class Example {
 
 //#endregion
 ```
+
 ---
 
 Variant: [top_level_var: true]

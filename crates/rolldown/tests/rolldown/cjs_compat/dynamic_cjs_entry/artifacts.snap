@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 export { __commonJS, __toDynamicImportESM };
 ```
+
 ## cjs.js
 
 ```js
@@ -23,6 +24,7 @@ var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
 export default require_cjs();
 
 ```
+
 ## main.js
 
 ```js

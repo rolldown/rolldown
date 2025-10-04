@@ -13,6 +13,7 @@ import("./foo.js").then(({ bar: b }) => console.log(bar, b));
 
 //#endregion
 ```
+
 ## foo.js
 
 ```js
@@ -20,6 +21,7 @@ import { bar } from "./foo2.js";
 
 export { bar };
 ```
+
 ## foo2.js
 
 ```js

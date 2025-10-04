@@ -12,6 +12,7 @@ const A = 10;
 //#endregion
 export { A };
 ```
+
 ## b.js
 
 ```js
@@ -21,6 +22,7 @@ const A = 10;
 //#endregion
 export { A };
 ```
+
 ## entrya.js
 
 ```js
@@ -28,6 +30,7 @@ import { A } from "./a.js";
 
 export { A };
 ```
+
 ## entryb.js
 
 ```js

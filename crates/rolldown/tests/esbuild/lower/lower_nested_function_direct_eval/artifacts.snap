@@ -15,6 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## EVAL
 
 ```text
@@ -27,6 +28,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## EVAL
 
 ```text
@@ -39,6 +41,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## EVAL
 
 ```text
@@ -51,6 +54,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## EVAL
 
 ```text
@@ -63,6 +67,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## EVAL
 
 ```text
@@ -75,6 +80,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 # Assets
 
 ## 1.js
@@ -85,6 +91,7 @@ if (foo) {}
 
 //#endregion
 ```
+
 ## 2.js
 
 ```js
@@ -93,6 +100,7 @@ if (foo) eval("");
 
 //#endregion
 ```
+
 ## 3.js
 
 ```js
@@ -103,6 +111,7 @@ if (foo) {
 
 //#endregion
 ```
+
 ## 4.js
 
 ```js
@@ -111,6 +120,7 @@ if (foo) eval("");
 
 //#endregion
 ```
+
 ## 5.js
 
 ```js
@@ -119,6 +129,7 @@ if (foo) {}
 
 //#endregion
 ```
+
 ## 6.js
 
 ```js
@@ -127,6 +138,7 @@ if (foo) eval("");
 
 //#endregion
 ```
+
 ## 7.js
 
 ```js
@@ -137,6 +149,7 @@ if (foo) {
 
 //#endregion
 ```
+
 ## 8.js
 
 ```js

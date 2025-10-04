@@ -14,6 +14,7 @@ const abc = void 0;
 //#endregion
 export { a_exports };
 ```
+
 ## entry.js
 
 ```js
@@ -21,6 +22,7 @@ import { a_exports } from "./a.js";
 
 export { a_exports as a };
 ```
+
 ## main.js
 
 ```js

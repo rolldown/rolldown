@@ -16,6 +16,7 @@ import("./dyn-entry.js").then(console.log);
 
 //#endregion
 ```
+
 ## B.js
 
 ```js
@@ -28,6 +29,7 @@ console.log("entry-b");
 
 //#endregion
 ```
+
 ## Splitted.js
 
 ```js
@@ -37,6 +39,7 @@ console.log("share-splitted");
 
 //#endregion
 ```
+
 ## dyn-entry.js
 
 ```js
@@ -48,6 +51,7 @@ console.log("dyn-entry");
 
 //#endregion
 ```
+
 ## shared.js
 
 ```js

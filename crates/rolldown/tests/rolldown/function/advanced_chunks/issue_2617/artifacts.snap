@@ -13,6 +13,7 @@ console.log("lib", lib_default);
 
 //#endregion
 ```
+
 ## splited_lib.js
 
 ```js

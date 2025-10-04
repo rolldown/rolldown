@@ -11,6 +11,7 @@ import { require_dynamic } from "./dynamic2.js";
 export default require_dynamic();
 
 ```
+
 ## dynamic2.js
 
 ```js
@@ -24,6 +25,7 @@ var require_dynamic = /* @__PURE__ */ __commonJS({ "dynamic.js": ((exports, modu
 //#endregion
 export { __esm, __toESM, require_dynamic };
 ```
+
 ## main.js
 
 ```js

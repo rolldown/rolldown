@@ -15,6 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## IMPORT_IS_UNDEFINED
 
 ```text
@@ -27,6 +28,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## IMPORT_IS_UNDEFINED
 
 ```text
@@ -39,6 +41,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 # Assets
 
 ## bare.js
@@ -51,6 +54,7 @@ init_foo();
 
 //#endregion
 ```
+
 ## foo.js
 
 ```js
@@ -68,6 +72,7 @@ var init_foo = __esm({ "foo.js": (() => {
 //#endregion
 export { __toCommonJS, default$1 as default, foo_exports, init_foo, x, y };
 ```
+
 ## foo2.js
 
 ```js
@@ -75,6 +80,7 @@ import { init_foo } from "./foo.js";
 
 init_foo();
 ```
+
 ## import.js
 
 ```js
@@ -83,6 +89,7 @@ console.log(import("./foo2.js"));
 
 //#endregion
 ```
+
 ## named.js
 
 ```js
@@ -94,6 +101,7 @@ console.log(default$1(x, y));
 
 //#endregion
 ```
+
 ## require.js
 
 ```js
@@ -104,6 +112,7 @@ console.log((init_foo(), __toCommonJS(foo_exports)));
 
 //#endregion
 ```
+
 ## star-capture.js
 
 ```js
@@ -115,6 +124,7 @@ console.log(foo_exports);
 
 //#endregion
 ```
+
 ## star.js
 
 ```js

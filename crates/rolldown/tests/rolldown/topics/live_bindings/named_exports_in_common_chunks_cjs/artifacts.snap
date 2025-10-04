@@ -24,6 +24,7 @@ node_assert.default.strictEqual(require_shared.count, require_shared.count);
 
 //#endregion
 ```
+
 ## main.js
 
 ```js
@@ -42,6 +43,7 @@ Object.defineProperty(exports, 'count', {
 exports.inc = require_shared.inc;
 exports.reset = require_shared.reset;
 ```
+
 ## shared.js
 
 ```js

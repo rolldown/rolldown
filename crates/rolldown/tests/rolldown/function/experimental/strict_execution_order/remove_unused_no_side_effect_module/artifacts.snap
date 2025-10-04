@@ -13,6 +13,7 @@ nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should 
 
 //#endregion
 ```
+
 ---
 
 Variant: [strict_execution_order: true]

@@ -13,6 +13,7 @@ console.log(foo);
 
 //#endregion
 ```
+
 ## b_entry.js
 
 ```js
@@ -23,6 +24,7 @@ console.log(foo);
 
 //#endregion
 ```
+
 ## common.js
 
 ```js

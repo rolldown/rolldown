@@ -10,6 +10,7 @@ import { "\n\"\\'" as test } from "external";
 
 export { test as "\n\"\\'" };
 ```
+
 ---
 
 Variant: [format: Cjs]

@@ -13,6 +13,7 @@ foo();
 
 //#endregion
 ```
+
 ## main.js
 
 ```js
@@ -27,6 +28,7 @@ foo();
 
 //#endregion
 ```
+
 ## user-lib.js
 
 ```js

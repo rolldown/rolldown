@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 export { __commonJS, __toDynamicImportESM, __toESM };
 ```
+
 ## lib.js
 
 ```js
@@ -24,6 +25,7 @@ var require_lib = /* @__PURE__ */ __commonJS({ "lib.js": ((exports) => {
 export default require_lib();
 
 ```
+
 ## main.js
 
 ```js
@@ -68,6 +70,7 @@ var import_node_mode_by_cjs_extension = /* @__PURE__ */ __toESM(require_node_mod
 
 //#endregion
 ```
+
 ---
 
 Variant: [format: Cjs]
@@ -98,6 +101,7 @@ Object.defineProperty(exports, '__toESM', {
   }
 });
 ```
+
 ## lib.js
 
 ```js
@@ -117,6 +121,7 @@ Object.defineProperty(exports, 'default', {
   }
 });
 ```
+
 ## main.js
 
 ```js
@@ -162,6 +167,7 @@ var import_node_mode_by_cjs_extension = /* @__PURE__ */ require_chunk.__toESM(re
 
 //#endregion
 ```
+
 ---
 
 Variant: [inline_dynamic_imports: true]

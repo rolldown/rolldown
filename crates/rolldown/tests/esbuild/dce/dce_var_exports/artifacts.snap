@@ -18,6 +18,7 @@ var require_a = /* @__PURE__ */ __commonJS({ "a.js": ((exports, module) => {
 export default require_a();
 
 ```
+
 ## b.js
 
 ```js
@@ -33,6 +34,7 @@ var require_b = /* @__PURE__ */ __commonJS({ "b.js": ((exports, module) => {
 export default require_b();
 
 ```
+
 ## c.js
 
 ```js
@@ -48,6 +50,7 @@ var require_c = /* @__PURE__ */ __commonJS({ "c.js": ((exports) => {
 export default require_c();
 
 ```
+
 ## chunk.js
 
 ```js

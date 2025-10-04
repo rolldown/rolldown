@@ -10,6 +10,7 @@ import { read } from "./indirect2.js";
 
 export { read };
 ```
+
 ## indirect2.js
 
 ```js
@@ -17,6 +18,7 @@ import { read } from "node:fs";
 
 export { read };
 ```
+
 ## main.js
 
 ```js

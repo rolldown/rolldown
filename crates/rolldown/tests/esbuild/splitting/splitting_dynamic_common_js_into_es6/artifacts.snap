@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 export { __commonJS, __toDynamicImportESM };
 ```
+
 ## entry.js
 
 ```js
@@ -19,6 +20,7 @@ import("./foo.js").then(__toDynamicImportESM()).then(({ default: { bar } }) => c
 
 //#endregion
 ```
+
 ## foo.js
 
 ```js

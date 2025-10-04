@@ -13,6 +13,7 @@ __require;
 
 //#endregion
 ```
+
 ## assign.js
 
 ```js
@@ -23,12 +24,14 @@ require = x;
 
 //#endregion
 ```
+
 ## chunk.js
 
 ```js
 // HIDDEN [rolldown:runtime]
 export { __require };
 ```
+
 ## dot.js
 
 ```js
@@ -39,6 +42,7 @@ __require.cache;
 
 //#endregion
 ```
+
 ## ident.js
 
 ```js
@@ -49,6 +53,7 @@ __require;
 
 //#endregion
 ```
+
 ## index.js
 
 ```js

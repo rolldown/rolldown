@@ -14,6 +14,7 @@ const a = 1;
 //#endregion
 exports.a = a;
 ```
+
 ---
 
 Variant: [format: Esm]
@@ -29,6 +30,7 @@ const a = 1;
 //#endregion
 export { a };
 ```
+
 ---
 
 Variant: [format: Iife]
@@ -41,6 +43,7 @@ Variant: [format: Iife]
 [MISSING_NAME_OPTION_FOR_IIFE_EXPORT] Warning: If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
 
 ```
+
 # Assets
 
 ## main.js

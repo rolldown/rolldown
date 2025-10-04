@@ -14,6 +14,7 @@ let a = import_c.test;
 //#endregion
 export { a };
 ```
+
 ## b.js
 
 ```js
@@ -31,6 +32,7 @@ var import_c = /* @__PURE__ */ __toESM(require_c());
 //#endregion
 export { import_c };
 ```
+
 ## b2.js
 
 ```js
@@ -39,6 +41,7 @@ import { import_c } from "./b.js";
 var test = import_c.test;
 export { test };
 ```
+
 ## main.js
 
 ```js

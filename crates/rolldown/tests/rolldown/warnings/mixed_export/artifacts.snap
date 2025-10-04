@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 [MIXED_EXPORT] Warning: Entry module "main" is using named (including "a", "default") and default exports together. Consumers of your bundle will have to use `main.js.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
 
 ```
+
 # Assets
 
 ## main.js

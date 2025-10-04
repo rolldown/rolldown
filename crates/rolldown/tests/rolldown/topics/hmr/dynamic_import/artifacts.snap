@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 export { __commonJS, __export, __reExport, __toCommonJS, __toDynamicImportESM, __toESM };
 ```
+
 ## exist-dep-cjs.js
 
 ```js
@@ -25,6 +26,7 @@ var require_exist_dep_cjs = /* @__PURE__ */ __commonJS({ "exist-dep-cjs.js": ((e
 export default require_exist_dep_cjs();
 
 ```
+
 ## exist-dep-esm.js
 
 ```js
@@ -39,6 +41,7 @@ const value = "exist-esm";
 //#endregion
 export { value };
 ```
+
 ## main.js
 
 ```js
@@ -67,6 +70,7 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 //#endregion
 ```
+
 # HMR Step 0
 
 ## Code
@@ -122,9 +126,11 @@ var init_new_dep_esm_2 = __rolldown_runtime__.createEsmInitializer((function() {
 init_hmr_0()
 __rolldown_runtime__.applyUpdates([['hmr.js', 'hmr.js']]);
 ```
+
 ## Meta
 
 - update type: patch
+
 ### Hmr Boundaries
 
 - boundary: hmr.js, accepted_via: hmr.js

@@ -21,6 +21,7 @@ var import_b = /* @__PURE__ */ __toESM(require_b());
 //#endregion
 export { import_b };
 ```
+
 ## a2.js
 
 ```js
@@ -29,6 +30,7 @@ import { import_b } from "./a.js";
 var b_default = import_b._default;
 export { b_default as default };
 ```
+
 ## c.js
 
 ```js
@@ -42,6 +44,7 @@ function c_default(tag, options) {
 //#endregion
 export { c_default as default };
 ```
+
 ## main.js
 
 ```js

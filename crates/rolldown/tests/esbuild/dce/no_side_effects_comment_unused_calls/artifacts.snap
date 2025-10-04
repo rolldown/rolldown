@@ -20,6 +20,7 @@ x(/* @__PURE__ */ g("keepThisCall"));
 
 //#endregion
 ```
+
 ## stmt-export-default-fn.js
 
 ```js
@@ -34,6 +35,7 @@ x(/* @__PURE__ */ f("keepThisCall"));
 //#endregion
 export { f as default };
 ```
+
 ## stmt-fn.js
 
 ```js
@@ -53,6 +55,7 @@ x(/* @__PURE__ */ g("keepThisCall"));
 
 //#endregion
 ```
+
 ## stmt-local.js
 
 ```js

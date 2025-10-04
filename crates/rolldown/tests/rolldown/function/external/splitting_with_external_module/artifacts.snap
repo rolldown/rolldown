@@ -14,6 +14,7 @@ assert.equal(value, 1);
 
 //#endregion
 ```
+
 ## main.js
 
 ```js
@@ -25,6 +26,7 @@ assert(value === 1);
 
 //#endregion
 ```
+
 ## share.js
 
 ```js

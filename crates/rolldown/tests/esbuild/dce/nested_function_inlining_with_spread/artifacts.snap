@@ -26,6 +26,7 @@ check(/* @__PURE__ */ empty1(), /* @__PURE__ */ empty2(args), /* @__PURE__ */ em
 
 //#endregion
 ```
+
 ## entry.js
 
 ```js

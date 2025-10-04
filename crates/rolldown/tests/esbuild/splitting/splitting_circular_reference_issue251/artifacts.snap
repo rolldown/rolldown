@@ -10,6 +10,7 @@ import { p, q } from "./a2.js";
 
 export { p, q };
 ```
+
 ## a2.js
 
 ```js
@@ -23,6 +24,7 @@ var p = 5;
 //#endregion
 export { p, q };
 ```
+
 ## b.js
 
 ```js

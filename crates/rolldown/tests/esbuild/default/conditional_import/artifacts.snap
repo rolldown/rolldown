@@ -13,6 +13,7 @@ x ? import("a") : y ? import("./import.js").then(__toDynamicImportESM()) : impor
 
 //#endregion
 ```
+
 ## b.js
 
 ```js
@@ -23,12 +24,14 @@ x ? y ? import("a") : import("./import.js").then(__toDynamicImportESM()) : impor
 
 //#endregion
 ```
+
 ## chunk.js
 
 ```js
 // HIDDEN [rolldown:runtime]
 export { __commonJS, __toDynamicImportESM };
 ```
+
 ## import.js
 
 ```js

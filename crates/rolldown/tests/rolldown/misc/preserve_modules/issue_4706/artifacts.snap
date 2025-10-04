@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 export { __commonJS };
 ```
+
 ## child.js
 
 ```js
@@ -20,6 +21,7 @@ console.log(m);
 
 //#endregion
 ```
+
 ## cjs.js
 
 ```js
@@ -35,6 +37,7 @@ export default require_cjs();
 
 export { require_cjs };
 ```
+
 ## dynamic.js
 
 ```js
@@ -43,6 +46,7 @@ console.log("dynamic");
 
 //#endregion
 ```
+
 ## main.js
 
 ```js
@@ -50,6 +54,7 @@ import "./child.js";
 import "./reexport.js";
 
 ```
+
 ## reexport.js
 
 ```js

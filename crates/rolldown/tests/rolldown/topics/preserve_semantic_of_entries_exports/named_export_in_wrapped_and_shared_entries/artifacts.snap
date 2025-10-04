@@ -11,6 +11,7 @@ import { foo, init_main, main_default } from "./main.js";
 init_main();
 export { main_default as default, foo };
 ```
+
 ## entry2.js
 
 ```js
@@ -19,6 +20,7 @@ import { foo, init_main, main_default } from "./main.js";
 init_main();
 export { main_default as default, foo };
 ```
+
 ## main.js
 
 ```js

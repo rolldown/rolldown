@@ -17,6 +17,7 @@ var init_lazy_chunk = __esm({ "lazy-chunk.js": (() => {
 //#endregion
 init_lazy_chunk();
 ```
+
 ## main.js
 
 ```js
@@ -38,6 +39,7 @@ var init_main = __esm({ "main.js": (() => {
 //#endregion
 init_main();
 ```
+
 ## user-lib.js
 
 ```js

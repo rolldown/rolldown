@@ -15,6 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## IMPORT_IS_UNDEFINED
 
 ```text
@@ -27,6 +28,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## IMPORT_IS_UNDEFINED
 
 ```text
@@ -39,6 +41,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## IMPORT_IS_UNDEFINED
 
 ```text
@@ -51,6 +54,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 # Assets
 
 ## entry-default.js
@@ -64,6 +68,7 @@ console.log(void 0, void 0, import_no_side_effects.default);
 
 //#endregion
 ```
+
 ## entry-nope.js
 
 ```js
@@ -75,6 +80,7 @@ console.log(void 0, void 0, import_no_side_effects.nope);
 
 //#endregion
 ```
+
 ## no-side-effects.js
 
 ```js

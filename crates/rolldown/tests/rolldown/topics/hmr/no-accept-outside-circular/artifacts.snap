@@ -39,6 +39,7 @@ assert.strictEqual(a.b.c, "c");
 
 //#endregion
 ```
+
 # HMR Step 0
 
 ## Assets
@@ -79,6 +80,7 @@ assert.strictEqual(a.b.c, "c");
 
 //#endregion
 ```
+
 ## Meta
 
 - update type: full-reload

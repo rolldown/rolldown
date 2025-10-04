@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -19,6 +18,7 @@ Object.keys(node_fs).forEach(function (k) {
 });
 
 ```
+
 ## entry2.js
 
 ```js
@@ -34,6 +34,7 @@ Object.keys(node_fs).forEach(function (k) {
 });
 
 ```
+
 ## main.js
 
 ```js

@@ -10,6 +10,7 @@ import { a } from "./common.js";
 
 export { a };
 ```
+
 ## b.js
 
 ```js
@@ -17,6 +18,7 @@ import { b } from "./common.js";
 
 export { b };
 ```
+
 ## common.js
 
 ```js

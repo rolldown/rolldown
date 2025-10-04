@@ -18,6 +18,7 @@ x([
 
 //#endregion
 ```
+
 ## expr-fn.js
 
 ```js
@@ -35,6 +36,7 @@ x([
 
 //#endregion
 ```
+
 ## ns-export-fn.js
 
 ```js
@@ -57,6 +59,7 @@ let ns;
 
 //#endregion
 ```
+
 ## ns-export-local.js
 
 ```js
@@ -79,6 +82,7 @@ let ns;
 
 //#endregion
 ```
+
 ## stmt-export-default-after-async-fn-anon.js
 
 ```js
@@ -89,6 +93,7 @@ async function stmt_export_default_after_async_fn_anon_default() {}
 //#endregion
 export { stmt_export_default_after_async_fn_anon_default as default };
 ```
+
 ## stmt-export-default-after-async-fn-name.js
 
 ```js
@@ -99,6 +104,7 @@ async function f() {}
 //#endregion
 export { f as default };
 ```
+
 ## stmt-export-default-after-async-gen-fn-anon.js
 
 ```js
@@ -109,6 +115,7 @@ async function* stmt_export_default_after_async_gen_fn_anon_default() {}
 //#endregion
 export { stmt_export_default_after_async_gen_fn_anon_default as default };
 ```
+
 ## stmt-export-default-after-async-gen-fn-name.js
 
 ```js
@@ -119,6 +126,7 @@ async function* f() {}
 //#endregion
 export { f as default };
 ```
+
 ## stmt-export-default-after-fn-anon.js
 
 ```js
@@ -129,6 +137,7 @@ function stmt_export_default_after_fn_anon_default() {}
 //#endregion
 export { stmt_export_default_after_fn_anon_default as default };
 ```
+
 ## stmt-export-default-after-fn-name.js
 
 ```js
@@ -139,6 +148,7 @@ function f() {}
 //#endregion
 export { f as default };
 ```
+
 ## stmt-export-default-after-gen-fn-anon.js
 
 ```js
@@ -149,6 +159,7 @@ function* stmt_export_default_after_gen_fn_anon_default() {}
 //#endregion
 export { stmt_export_default_after_gen_fn_anon_default as default };
 ```
+
 ## stmt-export-default-after-gen-fn-name.js
 
 ```js
@@ -159,6 +170,7 @@ function* f() {}
 //#endregion
 export { f as default };
 ```
+
 ## stmt-export-default-before-async-fn-anon.js
 
 ```js
@@ -169,6 +181,7 @@ async function stmt_export_default_before_async_fn_anon_default() {}
 //#endregion
 export { stmt_export_default_before_async_fn_anon_default as default };
 ```
+
 ## stmt-export-default-before-async-fn-name.js
 
 ```js
@@ -179,6 +192,7 @@ async function f() {}
 //#endregion
 export { f as default };
 ```
+
 ## stmt-export-default-before-async-gen-fn-anon.js
 
 ```js
@@ -189,6 +203,7 @@ async function* stmt_export_default_before_async_gen_fn_anon_default() {}
 //#endregion
 export { stmt_export_default_before_async_gen_fn_anon_default as default };
 ```
+
 ## stmt-export-default-before-async-gen-fn-name.js
 
 ```js
@@ -199,6 +214,7 @@ async function* f() {}
 //#endregion
 export { f as default };
 ```
+
 ## stmt-export-default-before-fn-anon.js
 
 ```js
@@ -209,6 +225,7 @@ function stmt_export_default_before_fn_anon_default() {}
 //#endregion
 export { stmt_export_default_before_fn_anon_default as default };
 ```
+
 ## stmt-export-default-before-fn-name.js
 
 ```js
@@ -219,6 +236,7 @@ function f() {}
 //#endregion
 export { f as default };
 ```
+
 ## stmt-export-default-before-gen-fn-anon.js
 
 ```js
@@ -229,6 +247,7 @@ function* stmt_export_default_before_gen_fn_anon_default() {}
 //#endregion
 export { stmt_export_default_before_gen_fn_anon_default as default };
 ```
+
 ## stmt-export-default-before-gen-fn-name.js
 
 ```js
@@ -239,6 +258,7 @@ function* f() {}
 //#endregion
 export { f as default };
 ```
+
 ## stmt-export-fn.js
 
 ```js
@@ -255,6 +275,7 @@ async function* d() {}
 //#endregion
 export { a, b, c, d };
 ```
+
 ## stmt-export-local.js
 
 ```js
@@ -275,11 +296,13 @@ const c3 = () => {};
 //#endregion
 export { c0, c1, c2, c3, l0, l1, l2, l3, v0, v1, v2, v3 };
 ```
+
 ## stmt-fn.js
 
 ```js
 
 ```
+
 ## stmt-local.js
 
 ```js

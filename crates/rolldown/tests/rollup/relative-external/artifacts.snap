@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import "./external";
 
 ```
+
 ---
 
 Variant: [entry_filenames: "[name].js"]
@@ -21,6 +22,7 @@ Variant: [entry_filenames: "[name].js"]
 import "./external";
 
 ```
+
 ---
 
 Variant: [entry_filenames: "chunk/[name].js"]

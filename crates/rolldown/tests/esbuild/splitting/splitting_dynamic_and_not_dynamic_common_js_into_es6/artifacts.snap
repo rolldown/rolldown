@@ -14,6 +14,7 @@ import("./foo2.js").then(__toDynamicImportESM()).then(({ default: { bar: b } }) 
 
 //#endregion
 ```
+
 ## foo.js
 
 ```js
@@ -26,6 +27,7 @@ var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": ((exports) => {
 //#endregion
 export { __toDynamicImportESM, __toESM, require_foo };
 ```
+
 ## foo2.js
 
 ```js

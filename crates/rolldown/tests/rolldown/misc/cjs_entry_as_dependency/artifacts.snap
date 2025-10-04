@@ -18,6 +18,7 @@ var require_main = /* @__PURE__ */ __commonJS({ "main.js": ((exports, module) =>
 export default require_main();
 
 ```
+
 ## main2.js
 
 ```js
@@ -26,6 +27,7 @@ import { require_main2 } from "./main22.js";
 export default require_main2();
 
 ```
+
 ## main22.js
 
 ```js

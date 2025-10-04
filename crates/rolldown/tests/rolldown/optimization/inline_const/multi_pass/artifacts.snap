@@ -10,6 +10,7 @@ const derived = false;
 export { derived };
 
 ```
+
 ## pagea.js
 
 ```js
@@ -20,6 +21,7 @@ function demo() {
 demo();
 
 ```
+
 ## pageb.js
 
 ```js
@@ -30,6 +32,7 @@ function demo() {
 demo();
 
 ```
+
 ---
 
 Variant: inlineConstPass2: [inline_const: Config(InlineConstConfig { mode: None, pass: 2 })]
@@ -43,6 +46,7 @@ function demo() {}
 demo();
 
 ```
+
 ## pageb.js
 
 ```js

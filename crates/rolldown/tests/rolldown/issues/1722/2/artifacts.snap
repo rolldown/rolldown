@@ -11,6 +11,7 @@ import { import_foo } from "./main.js";
 var foo = import_foo.foo;
 export { foo };
 ```
+
 ## entry2.js
 
 ```js
@@ -19,6 +20,7 @@ import { import_foo } from "./main.js";
 var foo = import_foo.foo;
 export { foo };
 ```
+
 ## main.js
 
 ```js

@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'some-pkg/css' in entry.css
 
 ```
+
 # Assets
 
 ## entry.js
@@ -57,6 +58,7 @@ bar();
 
 //#endregion
 ```
+
 ## entry2.css
 
 ```css
@@ -77,6 +79,7 @@ c {
 
 
 ```
+
 ## entry2.js
 
 ```js

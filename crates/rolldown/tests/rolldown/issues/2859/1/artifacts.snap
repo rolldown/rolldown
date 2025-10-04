@@ -15,6 +15,7 @@ var lib_default = "default";
 //#endregion
 export { bar, lib_default as default, foo };
 ```
+
 ## main.js
 
 ```js
@@ -30,6 +31,7 @@ import("./lib.js").then((exports) => assert.deepStrictEqual({ ...exports }, {
 //#endregion
 export {  };
 ```
+
 ---
 
 Variant: [format: Cjs]
@@ -56,6 +58,7 @@ Object.defineProperty(exports, 'bar', {
 exports.default = lib_default;
 exports.foo = foo;
 ```
+
 ## main.js
 
 ```js

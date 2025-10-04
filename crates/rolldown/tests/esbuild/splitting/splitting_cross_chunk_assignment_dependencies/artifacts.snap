@@ -13,12 +13,14 @@ setValue(123);
 
 //#endregion
 ```
+
 ## b.js
 
 ```js
 import "./shared.js";
 
 ```
+
 ## shared.js
 
 ```js

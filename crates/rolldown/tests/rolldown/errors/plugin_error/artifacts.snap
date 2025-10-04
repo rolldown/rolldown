@@ -10,6 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 A
 
 ```
+
 ## PLUGIN_ERROR
 
 ```text

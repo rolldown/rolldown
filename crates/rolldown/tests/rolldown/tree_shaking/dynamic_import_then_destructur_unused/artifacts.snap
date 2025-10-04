@@ -12,6 +12,7 @@ var foo = "foo";
 //#endregion
 export { foo };
 ```
+
 ## main.js
 
 ```js

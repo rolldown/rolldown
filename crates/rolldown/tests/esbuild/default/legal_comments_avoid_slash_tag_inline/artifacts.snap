@@ -13,6 +13,7 @@ let x;
 //#endregion
 export { x };
 ```
+
 ## entry2.css
 
 ```css
@@ -20,6 +21,7 @@ export { x };
 x { y: z }
 
 ```
+
 ## entry2.js
 
 ```js

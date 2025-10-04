@@ -22,6 +22,7 @@ import("./main.js").then((exports) => assert.deepStrictEqual({ ...exports }, {
 //#endregion
 export { bar, main_default as default, foo };
 ```
+
 ---
 
 Variant: [format: Cjs]
@@ -34,6 +35,7 @@ Variant: [format: Cjs]
 [MIXED_EXPORT] Warning: Entry module "main" is using named (including "bar", "default", "foo") and default exports together. Consumers of your bundle will have to use `main.js.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
 
 ```
+
 # Assets
 
 ## main.js

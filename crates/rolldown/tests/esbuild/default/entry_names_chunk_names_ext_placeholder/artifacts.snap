@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 a:after { content: "entry1" }
 
 ```
+
 ## entries_entry1.js
 
 ```js
@@ -19,12 +20,14 @@ console.log("entry1");
 
 //#endregion
 ```
+
 ## entries_entry2.css
 
 ```css
 a:after { content: "entry2" }
 
 ```
+
 ## entries_entry2.js
 
 ```js
@@ -35,6 +38,7 @@ console.log("entry2");
 
 //#endregion
 ```
+
 ## shared.js
 
 ```js

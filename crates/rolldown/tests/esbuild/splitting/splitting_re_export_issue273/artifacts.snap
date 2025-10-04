@@ -10,6 +10,7 @@ import { a } from "./a2.js";
 
 export { a };
 ```
+
 ## a2.js
 
 ```js
@@ -19,6 +20,7 @@ const a = 1;
 //#endregion
 export { a };
 ```
+
 ## b.js
 
 ```js

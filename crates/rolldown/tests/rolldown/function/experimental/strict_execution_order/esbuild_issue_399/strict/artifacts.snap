@@ -23,6 +23,7 @@ var init_entry1 = __esm({ "entry1.js": (() => {
 //#endregion
 init_entry1();
 ```
+
 ## entry2.js
 
 ```js
@@ -43,6 +44,7 @@ var init_entry2 = __esm({ "entry2.js": (() => {
 //#endregion
 init_entry2();
 ```
+
 ## run-dep.js
 
 ```js

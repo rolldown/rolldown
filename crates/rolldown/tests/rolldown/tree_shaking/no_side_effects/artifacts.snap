@@ -17,6 +17,7 @@ Object.defineProperty(classLike.prototype, "sideEffect", { get() {
 //#endregion
 export { classLike };
 ```
+
 ## entry.js
 
 ```js
@@ -27,6 +28,7 @@ console.log("Hello");
 
 //#endregion
 ```
+
 ## entry2.js
 
 ```js

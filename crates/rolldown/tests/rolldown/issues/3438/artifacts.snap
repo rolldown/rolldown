@@ -26,6 +26,7 @@ var main_default = [
 //#endregion
 export { main_default as default };
 ```
+
 ## repro1.js
 
 ```js
@@ -33,6 +34,7 @@ import { clear } from "./repro12.js";
 
 export { clear };
 ```
+
 ## repro12.js
 
 ```js
@@ -42,6 +44,7 @@ const clear = "repro1_clear";
 //#endregion
 export { clear };
 ```
+
 ## repro2.js
 
 ```js
@@ -49,6 +52,7 @@ import { clear, clear$1 } from "./repro22.js";
 
 export { clear, clear$1 };
 ```
+
 ## repro22.js
 
 ```js
@@ -59,6 +63,7 @@ const clear = "repro2_clear";
 //#endregion
 export { clear, clear$1 };
 ```
+
 ## repro3.js
 
 ```js
@@ -66,6 +71,7 @@ import { clear, clear$1, clear$2 } from "./repro32.js";
 
 export { clear, clear$1, clear$2 };
 ```
+
 ## repro32.js
 
 ```js

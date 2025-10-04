@@ -21,6 +21,7 @@ var init_main = __esm({"main.js": (() => {
 
 init_main();
 ```
+
 ---
 
 Variant: [profiler_names: false]
@@ -45,6 +46,7 @@ var init_main = __esmMin((() => {
 
 init_main();
 ```
+
 ---
 
 Variant: [pife_for_module_wrappers: false]

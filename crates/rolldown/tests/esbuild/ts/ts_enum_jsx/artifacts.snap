@@ -16,6 +16,7 @@ console.log(/* @__PURE__ */ React.createElement(Foo.Div, null));
 //#endregion
 export { Foo };
 ```
+
 ## fragment.js
 
 ```js
@@ -29,6 +30,7 @@ console.log(/* @__PURE__ */ React.createElement(React.Fragment, null, "test"));
 //#endregion
 export { React };
 ```
+
 ## nested-element.js
 
 ```js
@@ -52,6 +54,7 @@ let x;
 
 //#endregion
 ```
+
 ## nested-fragment.js
 
 ```js

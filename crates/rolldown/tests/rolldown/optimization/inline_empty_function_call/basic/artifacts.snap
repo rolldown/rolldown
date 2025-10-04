@@ -11,6 +11,7 @@ var b_default = false;
 export { b_default as default };
 
 ```
+
 ## main.js
 
 ```js

@@ -18,6 +18,7 @@ Object.defineProperty(exports, '_0shared_file__default', {
   }
 });
 ```
+
 ## main1.js
 
 ```js
@@ -28,6 +29,7 @@ console.log(require_0shared_file_._0shared_file__default);
 
 //#endregion
 ```
+
 ## main2.js
 
 ```js

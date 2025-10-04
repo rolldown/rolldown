@@ -22,6 +22,7 @@ function test() {
 //#endregion
 export { __toESM, require_cjs, test };
 ```
+
 ## entry.js
 
 ```js
@@ -33,6 +34,7 @@ const entry = test();
 //#endregion
 export { entry };
 ```
+
 ## main.js
 
 ```js

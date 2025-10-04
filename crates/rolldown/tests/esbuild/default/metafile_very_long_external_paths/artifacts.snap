@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 ```
+
 ## assets/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111-pbxtN44L.file
 
 ## assets/444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444-CrPpbTAK.file
@@ -24,6 +25,7 @@ console.log(_1111111111111111111111111111111111111111111111111111111111111111111
 
 //#endregion
 ```
+
 ## bytesInOutput should be at least 99 (2).js
 
 ```js
@@ -36,6 +38,7 @@ console.log(default$1);
 
 //#endregion
 ```
+
 ## bytesInOutput should be at least 99 (3).js
 
 ```js
@@ -44,6 +47,7 @@ import("./3333333333333333333333333333333333333333333333333333333333333333333333
 
 //#endregion
 ```
+
 ## bytesInOutput should be at least 99.css
 
 ```css
@@ -51,6 +55,7 @@ a { background: url(assets/44444444444444444444444444444444444444444444444444444
 
 
 ```
+
 ## bytesInOutput should be at least 99.js
 
 ```js

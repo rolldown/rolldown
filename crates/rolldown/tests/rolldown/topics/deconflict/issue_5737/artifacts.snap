@@ -16,6 +16,7 @@ assert.strictEqual(foo.name, "foo");
 //#endregion
 export { foo };
 ```
+
 ## entry2.js
 
 ```js
@@ -23,6 +24,7 @@ import { foo } from "./foo.js";
 
 export { foo };
 ```
+
 ## foo.js
 
 ```js

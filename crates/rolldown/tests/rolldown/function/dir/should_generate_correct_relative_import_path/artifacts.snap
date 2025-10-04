@@ -12,6 +12,7 @@ const value = "async";
 //#endregion
 export { value };
 ```
+
 ## ./chunks/shared.mjs
 
 ```js
@@ -21,6 +22,7 @@ const value = "shared";
 //#endregion
 export { value };
 ```
+
 ## ./entries/a.mjs
 
 ```js
@@ -32,6 +34,7 @@ const asyncValue = import("../chunks/async.mjs");
 //#endregion
 export { asyncValue, value };
 ```
+
 ## ./entries/b.mjs
 
 ```js

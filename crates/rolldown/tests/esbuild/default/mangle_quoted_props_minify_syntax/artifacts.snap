@@ -19,6 +19,7 @@ foo("_keepThisProperty") in x;
 
 //#endregion
 ```
+
 ## mangle.js
 
 ```js

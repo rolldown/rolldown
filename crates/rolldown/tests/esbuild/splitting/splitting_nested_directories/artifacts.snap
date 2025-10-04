@@ -13,6 +13,7 @@ console.log(shared_default);
 
 //#endregion
 ```
+
 ## pageB_page.js
 
 ```js
@@ -23,6 +24,7 @@ console.log(-shared_default);
 
 //#endregion
 ```
+
 ## shared.js
 
 ```js

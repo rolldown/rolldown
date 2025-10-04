@@ -17,6 +17,7 @@ main();
 //#endregion
 //# sourceMappingURL=main1.js.map
 ```
+
 ## main2.js
 
 ```js
@@ -24,6 +25,7 @@ const require_shared = require('./shared.js');
 
 exports.shared = require_shared.shared;
 ```
+
 ## shared.js
 
 ```js

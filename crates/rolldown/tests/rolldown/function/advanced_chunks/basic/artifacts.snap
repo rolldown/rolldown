@@ -10,6 +10,7 @@ import { a } from "./common.js";
 
 export { a };
 ```
+
 ## b.js
 
 ```js
@@ -17,6 +18,7 @@ import { b } from "./common.js";
 
 export { b };
 ```
+
 ## common.js
 
 ```js
@@ -30,6 +32,7 @@ const b = "a";
 //#endregion
 export { a, b };
 ```
+
 ---
 
 Variant: no-profiler-names: [profiler_names: false]
@@ -43,6 +46,7 @@ import { a } from "./common.js";
 
 export { a };
 ```
+
 ## b.js
 
 ```js
@@ -50,6 +54,7 @@ import { b } from "./common.js";
 
 export { b };
 ```
+
 ## common.js
 
 ```js

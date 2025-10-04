@@ -12,6 +12,7 @@ const foo = await Promise.resolve("foo");
 //#endregion
 export { foo };
 ```
+
 ---
 
 Variant: [strict_execution_order: true]

@@ -15,6 +15,7 @@ const childFn = () => {
 //#endregion
 exports.childFn = childFn;
 ```
+
 ## main.js
 
 ```js

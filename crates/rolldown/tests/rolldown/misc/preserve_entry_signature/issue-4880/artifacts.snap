@@ -16,6 +16,7 @@ import assert from "node:assert";
 
 //#endregion
 ```
+
 ## foo.js
 
 ```js
@@ -25,12 +26,14 @@ var foo_default = "foo";
 //#endregion
 export { foo_default as default };
 ```
+
 ## foo2.js
 
 ```js
 import { foo2_default } from "./foo22.js";
 
 ```
+
 ## foo22.js
 
 ```js
@@ -40,6 +43,7 @@ var foo2_default = "foo2";
 //#endregion
 export { foo2_default };
 ```
+
 ## main.js
 
 ```js

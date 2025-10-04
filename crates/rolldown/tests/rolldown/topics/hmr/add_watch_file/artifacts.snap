@@ -17,6 +17,7 @@ console.log(content);
 
 //#endregion
 ```
+
 # HMR Step 0
 
 ## Assets
@@ -35,6 +36,7 @@ console.log(content);
 
 //#endregion
 ```
+
 ## Meta
 
 - update type: full-reload

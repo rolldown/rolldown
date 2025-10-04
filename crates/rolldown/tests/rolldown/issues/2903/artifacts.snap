@@ -15,6 +15,7 @@ Object.defineProperty(exports, '__toESM', {
   }
 });
 ```
+
 ## main.js
 
 ```js
@@ -28,6 +29,7 @@ var main_default = node_path.default.join;
 //#endregion
 module.exports = main_default;
 ```
+
 ## main2.js
 
 ```js

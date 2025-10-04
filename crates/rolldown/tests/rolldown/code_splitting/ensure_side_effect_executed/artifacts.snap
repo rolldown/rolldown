@@ -11,12 +11,14 @@ globalThis.sideEffectExecuted = true;
 
 //#endregion
 ```
+
 ## entry2_js.js
 
 ```js
 import "./entry.js";
 
 ```
+
 ## entry_js.js
 
 ```js

@@ -14,6 +14,7 @@ const foo = 1;
 //#endregion
 export { foo, foo_exports };
 ```
+
 ## foo2.js
 
 ```js
@@ -21,6 +22,7 @@ import { foo } from "./foo.js";
 
 export { foo };
 ```
+
 ## main.js
 
 ```js
@@ -32,7 +34,8 @@ console.log(foo_exports);
 
 //#endregion
 ```
-## Output Stats
+
+# Output Stats
 
 - foo.js, is_entry false, is_dynamic_entry false, exports ["foo", "foo_exports"]
 - foo2.js, is_entry false, is_dynamic_entry true, exports ["foo"]

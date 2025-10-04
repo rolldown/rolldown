@@ -12,6 +12,7 @@ var foo = void 0 && (void 0).foo;
 //#endregion
 export { foo };
 ```
+
 ## silent2.js
 
 ```js
@@ -21,6 +22,7 @@ var foo = void 0 && (() => (void 0).foo);
 //#endregion
 export { foo };
 ```
+
 ## warning1.js
 
 ```js
@@ -30,6 +32,7 @@ var foo = void 0;
 //#endregion
 export { foo };
 ```
+
 ## warning2.js
 
 ```js
@@ -39,6 +42,7 @@ var foo = void 0 || (void 0).foo;
 //#endregion
 export { foo };
 ```
+
 ## warning3.js
 
 ```js

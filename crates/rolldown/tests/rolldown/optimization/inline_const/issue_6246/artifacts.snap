@@ -28,6 +28,7 @@ assert.strictEqual(mutable_let, "mutable_let1");
 
 //#endregion
 ```
+
 ---
 
 Variant: [inline_const: Config(InlineConstConfig { mode: None, pass: 2 })]

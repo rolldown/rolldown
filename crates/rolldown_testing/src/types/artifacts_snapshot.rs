@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::ffi::OsStr;
-use std::fmt::Write as _;
 use std::path::Path;
 
 use rolldown::BundleOutput;
@@ -10,7 +9,7 @@ use rolldown_sourcemap::SourcemapVisualizer;
 use rolldown_testing_config::TestMeta;
 use sugar_path::SugarPath;
 
-use super::BuildRoundOutput;
+use super::{BuildRoundOutput, SnapshotSection};
 use crate::utils::tweak_snapshot;
 
 #[derive(Default)]
@@ -20,37 +19,36 @@ pub struct ArtifactsSnapshot {
 
 impl ArtifactsSnapshot {
   pub fn render(self, test_meta: &TestMeta) -> String {
-    let mut ret = String::new();
+    // let mut ret = String::new();
+    let mut root_section = SnapshotSection::root();
+
     for mut build_snapshot in self.builds {
       if !build_snapshot.overwritten_test_meta_snapshot {
         continue;
       }
 
       if let Some(debug_title) = &build_snapshot.debug_title {
-        ret.push_str("\n---\n\n");
-        ret.push_str("Variant: ");
-        ret.push_str(debug_title);
-        ret.push_str("\n\n");
+        let mut section_for_debug_title = SnapshotSection::new();
+        section_for_debug_title.add_content("---\n\n");
+        section_for_debug_title.add_content("Variant: ");
+        section_for_debug_title.add_content(debug_title);
+        root_section.add_child(section_for_debug_title);
       }
 
       if let Some(initial_output) = build_snapshot.initial_output {
         match initial_output {
           Ok(bundle_output) => {
-            ret.push_str(&Self::render_bundle_output_to_string(
+            root_section.children.extend(Self::create_bundle_output_sections(
               test_meta,
               bundle_output,
-              vec![],
               build_snapshot.cwd.as_ref().unwrap(),
-              0,
             ));
           }
+
           Err(errs) => {
-            ret.push_str(&Self::render_bundle_output_to_string(
-              test_meta,
-              BundleOutput::default(),
+            root_section.add_child(Self::create_error_section(
               errs.into_vec(),
               build_snapshot.cwd.as_ref().unwrap(),
-              0,
             ));
           }
         }
@@ -61,7 +59,7 @@ impl ArtifactsSnapshot {
           build_snapshot.hmr_updates_by_steps.iter().enumerate()
         {
           for hmr_update in hmr_updates {
-            let snapshot_content = Self::render_hmr_output_to_string(
+            let hmr_section = Self::create_hmr_output_section(
               test_meta,
               step,
               &hmr_update.update,
@@ -69,150 +67,138 @@ impl ArtifactsSnapshot {
               &mut build_snapshot.rebuild_outputs,
               build_snapshot.cwd.as_ref().unwrap(),
             );
-            ret.push_str(&snapshot_content);
+            root_section.add_child(hmr_section);
           }
         }
       }
     }
 
-    ret
+    root_section.render()
+  }
+
+  fn create_error_section(errs: Vec<BuildDiagnostic>, cwd: &Path) -> SnapshotSection {
+    let mut errors = errs;
+
+    let mut errors_section = SnapshotSection::with_title("Errors");
+    errors.sort_by_key(|e| e.kind().to_string());
+
+    let diagnostics = errors
+      .into_iter()
+      .map(|e| (e.kind(), e.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
+
+    let mut rendered_diagnostics = diagnostics
+      .map(|(code, diagnostic)| {
+        let mut child = SnapshotSection::with_title(code.to_string());
+        child.add_content("```text\n");
+        child.add_content(&diagnostic.to_string());
+        child.add_content("\n```");
+        child
+      })
+      .collect::<Vec<_>>();
+
+    // FIXME: For compatibility with previous snapshots, we still sort by title first. Will use a performant way later.
+    rendered_diagnostics.sort_by_cached_key(SnapshotSection::render);
+
+    for diag in rendered_diagnostics {
+      errors_section.add_child(diag);
+    }
+    errors_section
   }
 
   #[expect(clippy::too_many_lines)]
-  #[expect(clippy::if_not_else)]
-  fn render_bundle_output_to_string(
+  fn create_bundle_output_sections(
     test_meta: &TestMeta,
     bundle_output: BundleOutput,
-    errs: Vec<BuildDiagnostic>,
     cwd: &Path,
-    heading_level: usize,
-  ) -> String {
-    let heading_prefix = "#".repeat(heading_level);
-    let mut errors = errs;
-    let errors_section = if !errors.is_empty() {
-      let mut snapshot = String::new();
-      write!(snapshot, "{heading_prefix}# Errors\n\n").unwrap();
-      errors.sort_by_key(|e| e.kind().to_string());
-      let diagnostics = errors
-        .into_iter()
-        .map(|e| (e.kind(), e.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
+  ) -> Vec<SnapshotSection> {
+    let mut sections = Vec::new();
 
-      let mut rendered_diagnostics = diagnostics
-        .map(|(code, diagnostic)| {
-          [
-            Cow::Owned(format!("{heading_prefix}## {code}\n")),
-            "```text".into(),
-            Cow::Owned(diagnostic.to_string()),
-            "```".into(),
-          ]
-          .join("\n")
-        })
-        .collect::<Vec<_>>();
-      rendered_diagnostics.sort();
-      let rendered = rendered_diagnostics.join("\n");
-      snapshot.push_str(&rendered);
-      snapshot
-    } else {
-      String::default()
-    };
-
+    // Warnings section
     let warnings = bundle_output.warnings;
-    let warnings_section = if !warnings.is_empty() {
-      let mut snapshot = String::new();
-      write!(snapshot, "{heading_prefix}# warnings\n\n").unwrap();
+    if !warnings.is_empty() {
+      let mut warnings_section = SnapshotSection::with_title("warnings");
       let diagnostics = warnings
         .into_iter()
         .map(|e| (e.kind(), e.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
+
       let mut rendered_diagnostics = diagnostics
         .map(|(code, diagnostic)| {
-          [
-            Cow::Owned(format!("{heading_prefix}## {code}\n")),
-            "```text".into(),
-            Cow::Owned(diagnostic.to_string()),
-            "```".into(),
-          ]
-          .join("\n")
+          let mut child = SnapshotSection::with_title(code.to_string());
+          child.add_content("```text\n");
+          child.add_content(&diagnostic.to_string());
+          child.add_content("\n```");
+          child
         })
         .collect::<Vec<_>>();
 
-      // Make the snapshot consistent
-      rendered_diagnostics.sort();
-      snapshot.push_str(&rendered_diagnostics.join("\n"));
-      snapshot
-    } else {
-      String::new()
-    };
+      // FIXME: use a performant sorting technique.
+      rendered_diagnostics.sort_by_cached_key(SnapshotSection::render);
 
+      for diag in rendered_diagnostics {
+        warnings_section.add_child(diag);
+      }
+      sections.push(warnings_section);
+    }
+
+    // Assets section
     let mut assets = bundle_output.assets;
-
-    let assets_section = if !assets.is_empty() {
-      let mut snapshot = String::new();
-      write!(snapshot, "{heading_prefix}# Assets\n\n").unwrap();
+    if !assets.is_empty() {
+      let mut assets_section = SnapshotSection::with_title("Assets");
       assets.sort_by_key(|c| c.filename().to_string());
-      let artifacts = assets
-        .iter()
-        .filter_map(|asset| {
-          let filename = asset.filename();
-          let file_ext = filename.as_path().extension().and_then(OsStr::to_str).map_or(
-            "unknown",
-            |ext| match ext {
-              "mjs" | "cjs" => "js",
-              _ => ext,
-            },
-          );
 
-          match asset {
-            Output::Chunk(output_chunk) => {
-              let content = &output_chunk.code;
-              let content = tweak_snapshot(content, test_meta.hidden_runtime_module, true);
+      for asset in &assets {
+        let filename = asset.filename();
+        let file_ext = filename.as_path().extension().and_then(OsStr::to_str).map_or(
+          "unknown",
+          |ext| match ext {
+            "mjs" | "cjs" => "js",
+            _ => ext,
+          },
+        );
 
-              Some(vec![
-                Cow::Owned(format!("{heading_prefix}## {}\n", asset.filename())),
-                Cow::Owned(format!("```{file_ext}")),
-                content,
-                "```".into(),
-              ])
+        match asset {
+          Output::Chunk(output_chunk) => {
+            let content = &output_chunk.code;
+            let content = tweak_snapshot(content, test_meta.hidden_runtime_module, true);
+
+            let mut asset_child = SnapshotSection::with_title(asset.filename().to_string());
+            asset_child.add_content(&format!("```{file_ext}\n"));
+            asset_child.add_content(&content);
+            asset_child.add_content("\n```");
+            assets_section.add_child(asset_child);
+          }
+          Output::Asset(output_asset) => {
+            if file_ext == "map" {
+              // Skip sourcemap for now
+              continue;
             }
-            Output::Asset(output_asset) => {
-              if file_ext == "map" {
-                // Skip sourcemap for now
-                return None;
+            match &output_asset.source {
+              rolldown_common::StrOrBytes::Str(content) => {
+                let mut asset_child = SnapshotSection::with_title(asset.filename().to_string());
+                asset_child.add_content(&format!("```{file_ext}\n"));
+                asset_child.add_content(content);
+                asset_child.add_content("\n```");
+                assets_section.add_child(asset_child);
               }
-              match &output_asset.source {
-                rolldown_common::StrOrBytes::Str(content) => Some(vec![
-                  Cow::Owned(format!("{heading_prefix}## {}\n", asset.filename())),
-                  Cow::Owned(format!("```{file_ext}")),
-                  Cow::Borrowed(content),
-                  "```".into(),
-                ]),
-                rolldown_common::StrOrBytes::Bytes(bytes) => {
-                  let mut ret =
-                    vec![Cow::Owned(format!("{heading_prefix}## {}\n", asset.filename()))];
-                  if test_meta.snapshot_bytes {
-                    ret.extend([
-                      Cow::Owned(format!("```{file_ext}")),
-                      String::from_utf8_lossy(bytes),
-                      "```".into(),
-                    ]);
-                  }
-                  Some(ret)
+              rolldown_common::StrOrBytes::Bytes(bytes) => {
+                let mut asset_child = SnapshotSection::with_title(asset.filename().to_string());
+                if test_meta.snapshot_bytes {
+                  asset_child.add_content(&format!("```{file_ext}\n"));
+                  asset_child.add_content(&String::from_utf8_lossy(bytes));
+                  asset_child.add_content("\n```");
                 }
+                assets_section.add_child(asset_child);
               }
             }
           }
-        })
-        .flatten()
-        .collect::<Vec<_>>()
-        .join("\n");
-      snapshot.push_str(&artifacts);
-      snapshot
-    } else {
-      String::new()
-    };
+        }
+      }
+      sections.push(assets_section);
+    }
 
-    let output_stats_section = if test_meta.snapshot_output_stats {
-      let mut snapshot = String::new();
-      write!(snapshot, "{heading_prefix}## Output Stats\n\n").unwrap();
+    // Output Stats section
+    if test_meta.snapshot_output_stats {
+      let mut output_stats = SnapshotSection::with_title("Output Stats");
       let stats = assets
         .iter()
         .flat_map(|asset| match asset {
@@ -229,16 +215,14 @@ impl ArtifactsSnapshot {
         })
         .collect::<Vec<_>>()
         .join("\n");
-      snapshot.push_str(&stats);
-      snapshot
-    } else {
-      String::new()
-    };
+      output_stats.add_content(&stats);
+      sections.push(output_stats);
+    }
 
-    let visualize_sourcemap_section = if test_meta.visualize_sourcemap {
-      let mut snapshot = String::new();
-      write!(snapshot, "{heading_prefix}# Sourcemap Visualizer\n\n").unwrap();
-      snapshot.push_str("```\n");
+    // Sourcemap Visualizer section
+    if test_meta.visualize_sourcemap {
+      let mut sourcemap_section = SnapshotSection::with_title("Sourcemap Visualizer");
+      sourcemap_section.add_content("```\n");
       let visualizer_result = assets
         .iter()
         .filter_map(|asset| match asset {
@@ -250,65 +234,34 @@ impl ArtifactsSnapshot {
         })
         .collect::<Vec<_>>()
         .join("\n");
-      snapshot.push_str(&visualizer_result);
-      snapshot.push_str("```");
-      snapshot
-    } else {
-      String::new()
-    };
-    [
-      errors_section,
-      warnings_section,
-      assets_section,
-      output_stats_section,
-      visualize_sourcemap_section,
-    ]
-    .join("\n")
-    .trim()
-    .to_owned()
+      sourcemap_section.add_content(&visualizer_result);
+      sourcemap_section.add_content("```");
+      sections.push(sourcemap_section);
+    }
+    sections
   }
 
-  #[expect(clippy::if_not_else)]
-  fn render_hmr_output_to_string(
+  fn create_hmr_output_section(
     test_meta: &TestMeta,
     step: usize,
     hmr_update: &HmrUpdate,
     errs: Vec<BuildDiagnostic>,
     build_outputs: &mut Vec<BundleOutput>,
     cwd: &Path,
-  ) -> String {
-    let mut errors = errs;
-    let errors_section = if !errors.is_empty() {
-      let mut snapshot = String::new();
-      snapshot.push_str("## Errors\n\n");
-      errors.sort_by_key(|e| e.kind().to_string());
-      let diagnostics = errors
-        .into_iter()
-        .map(|e| (e.kind(), e.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
+  ) -> SnapshotSection {
+    let mut hmr_section = SnapshotSection::with_title(format!("HMR Step {step}"));
 
-      let mut rendered_diagnostics = diagnostics
-        .map(|(code, diagnostic)| {
-          [
-            Cow::Owned(format!("### {code}\n")),
-            "```text".into(),
-            Cow::Owned(diagnostic.to_string()),
-            "```".into(),
-          ]
-          .join("\n")
-        })
-        .collect::<Vec<_>>();
-      rendered_diagnostics.sort();
-      let rendered = rendered_diagnostics.join("\n");
-      snapshot.push_str(&rendered);
-      snapshot
-    } else {
-      String::default()
-    };
+    // Errors section
+    let errors = errs;
+    if !errors.is_empty() {
+      let errors_section = Self::create_error_section(errors, cwd);
+      hmr_section.add_child(errors_section);
+    }
 
-    let code_section = match hmr_update {
+    // Code section
+    match hmr_update {
       HmrUpdate::Patch(hmr_patch) if !hmr_patch.code.is_empty() => {
-        let mut snapshot = String::new();
-        write!(snapshot, "## Code\n\n").unwrap();
+        let mut code_section = SnapshotSection::with_title("Code");
         let file_ext = hmr_patch.filename.as_path().extension().and_then(OsStr::to_str).map_or(
           "unknown",
           |ext| match ext {
@@ -316,58 +269,60 @@ impl ArtifactsSnapshot {
             _ => ext,
           },
         );
-        writeln!(snapshot, "```{file_ext}").unwrap();
-        snapshot.push_str(&tweak_snapshot(&hmr_patch.code, test_meta.hidden_runtime_module, true));
-        snapshot.push_str("\n```");
-        snapshot
+        code_section.add_content(&format!("```{file_ext}\n"));
+        code_section.add_content(&tweak_snapshot(
+          &hmr_patch.code,
+          test_meta.hidden_runtime_module,
+          true,
+        ));
+        code_section.add_content("\n```");
+        hmr_section.add_child(code_section);
       }
       HmrUpdate::FullReload { .. } => {
         let bundle_output = build_outputs.remove(0);
-        Self::render_bundle_output_to_string(test_meta, bundle_output, vec![], cwd, 1)
+        let bundle_output_sections =
+          Self::create_bundle_output_sections(test_meta, bundle_output, cwd);
+        hmr_section.children.extend(bundle_output_sections);
       }
-      _ => String::new(),
-    };
+      _ => {}
+    }
 
-    let meta_section = {
-      let mut snapshot = String::new();
-      snapshot.push_str("## Meta\n\n");
-      writeln!(
-        snapshot,
-        "- update type: {}",
-        match hmr_update {
-          HmrUpdate::Patch(_) => "patch",
-          HmrUpdate::FullReload { .. } => "full-reload",
-          HmrUpdate::Noop => "noop",
-        }
-      )
-      .unwrap();
-
+    // Meta section
+    let mut meta_section = SnapshotSection::with_title("Meta");
+    meta_section.add_content(&format!(
+      "- update type: {}",
       match hmr_update {
-        HmrUpdate::Patch(hmr_patch) => {
-          write!(snapshot, "### Hmr Boundaries\n\n").unwrap();
-          let meta = hmr_patch
-            .hmr_boundaries
-            .iter()
-            .map(|boundary| {
-              format!(
-                "- boundary: {}, accepted_via: {}",
-                boundary.boundary.as_str(),
-                boundary.accepted_via.as_str()
-              )
-            })
-            .collect::<Vec<_>>();
-          snapshot.push_str(&meta.join("\n"));
-        }
-        HmrUpdate::FullReload { reason } => {
-          writeln!(snapshot, "- reason: {reason}").unwrap();
-        }
-        HmrUpdate::Noop => {}
+        HmrUpdate::Patch(_) => "patch",
+        HmrUpdate::FullReload { .. } => "full-reload",
+        HmrUpdate::Noop => "noop",
       }
+    ));
 
-      snapshot
-    };
+    match hmr_update {
+      HmrUpdate::Patch(hmr_patch) => {
+        let mut boundaries = SnapshotSection::with_title("Hmr Boundaries");
+        let meta = hmr_patch
+          .hmr_boundaries
+          .iter()
+          .map(|boundary| {
+            format!(
+              "- boundary: {}, accepted_via: {}",
+              boundary.boundary.as_str(),
+              boundary.accepted_via.as_str()
+            )
+          })
+          .collect::<Vec<_>>();
+        boundaries.add_content(&meta.join("\n"));
+        meta_section.add_child(boundaries);
+      }
+      HmrUpdate::FullReload { reason } => {
+        meta_section.add_content(&format!("\n- reason: {reason}"));
+      }
+      HmrUpdate::Noop => {}
+    }
 
-    "\n".to_owned()
-      + [format!("# HMR Step {step}"), errors_section, code_section, meta_section].join("\n").trim()
+    hmr_section.add_child(meta_section);
+
+    hmr_section
   }
 }

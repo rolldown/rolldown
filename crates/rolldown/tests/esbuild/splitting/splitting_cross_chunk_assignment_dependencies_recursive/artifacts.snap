@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import "./x.js";
 
 ```
+
 ## b.js
 
 ```js
@@ -16,6 +17,7 @@ import "./x.js";
 import "./z.js";
 
 ```
+
 ## c.js
 
 ```js
@@ -28,6 +30,7 @@ setZ2();
 
 //#endregion
 ```
+
 ## x.js
 
 ```js
@@ -37,6 +40,7 @@ function setX(v) {}
 //#endregion
 export { setX };
 ```
+
 ## z.js
 
 ```js

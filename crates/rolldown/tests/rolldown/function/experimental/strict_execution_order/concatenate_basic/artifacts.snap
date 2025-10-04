@@ -22,13 +22,11 @@ var init_main = __esm({"main.js": (() => {
 init_main();
 ```
 
----
+# Variant: [profiler_names: false]
 
-Variant: [profiler_names: false]
+## Assets
 
-# Assets
-
-## main.js
+### main.js
 
 ```js
 // HIDDEN [rolldown:runtime]
@@ -47,13 +45,11 @@ var init_main = __esmMin((() => {
 init_main();
 ```
 
----
+# Variant: [pife_for_module_wrappers: false]
 
-Variant: [pife_for_module_wrappers: false]
+## Assets
 
-# Assets
-
-## main.js
+### main.js
 
 ```js
 // HIDDEN [rolldown:runtime]

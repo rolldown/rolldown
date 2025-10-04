@@ -15,13 +15,11 @@ const a = 1;
 exports.a = a;
 ```
 
----
+# Variant: [format: Esm]
 
-Variant: [format: Esm]
+## Assets
 
-# Assets
-
-## main.js
+### main.js
 
 ```js
 //#region main.js
@@ -31,22 +29,20 @@ const a = 1;
 export { a };
 ```
 
----
+# Variant: [format: Iife]
 
-Variant: [format: Iife]
+## warnings
 
-# warnings
-
-## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
+### MISSING_NAME_OPTION_FOR_IIFE_EXPORT
 
 ```text
 [MISSING_NAME_OPTION_FOR_IIFE_EXPORT] Warning: If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
 
 ```
 
-# Assets
+## Assets
 
-## main.js
+### main.js
 
 ```js
 (function(exports) {

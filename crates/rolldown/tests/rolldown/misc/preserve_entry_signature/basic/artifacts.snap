@@ -30,13 +30,11 @@ const unused = value;
 export { unused, value };
 ```
 
----
+# Variant: [preserve_entry_signatures: Strict]
 
-Variant: [preserve_entry_signatures: Strict]
+## Assets
 
-# Assets
-
-## dynamic.js
+### dynamic.js
 
 ```js
 import { value } from "./lib.js";
@@ -47,7 +45,7 @@ console.log(`shared: `, value);
 //#endregion
 ```
 
-## lib.js
+### lib.js
 
 ```js
 //#region lib.js
@@ -57,7 +55,7 @@ const value = 100;
 export { value };
 ```
 
-## main.js
+### main.js
 
 ```js
 import { value } from "./lib.js";
@@ -71,13 +69,11 @@ const unused = value;
 export { unused };
 ```
 
----
+# Variant: [preserve_entry_signatures: False]
 
-Variant: [preserve_entry_signatures: False]
+## Assets
 
-# Assets
-
-## dynamic.js
+### dynamic.js
 
 ```js
 import { value } from "./main.js";
@@ -88,7 +84,7 @@ console.log(`shared: `, value);
 //#endregion
 ```
 
-## main.js
+### main.js
 
 ```js
 //#region lib.js

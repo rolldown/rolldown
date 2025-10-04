@@ -30,13 +30,11 @@ init_main();
 export { dep_default as dep };
 ```
 
----
+# Variant: [on_demand_wrapping: true]
 
-Variant: [on_demand_wrapping: true]
+## Assets
 
-# Assets
-
-## main.js
+### main.js
 
 ```js
 import nodeAssert from "node:assert";

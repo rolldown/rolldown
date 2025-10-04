@@ -22,6 +22,10 @@ impl SnapshotSection {
     Self { title: Some(title.into()), content: String::new(), children: Vec::new() }
   }
 
+  pub fn add_title(&mut self, title: impl Into<String>) {
+    self.title = Some(title.into());
+  }
+
   pub fn add_content(&mut self, content: &str) {
     self.content.push_str(content);
   }

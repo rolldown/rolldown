@@ -14,13 +14,11 @@ nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should 
 //#endregion
 ```
 
----
+# Variant: [strict_execution_order: true]
 
-Variant: [strict_execution_order: true]
+## Assets
 
-# Assets
-
-## main.js
+### main.js
 
 ```js
 import nodeAssert from "node:assert";

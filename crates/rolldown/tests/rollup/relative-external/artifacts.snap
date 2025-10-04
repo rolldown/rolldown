@@ -10,26 +10,22 @@ import "./external";
 
 ```
 
----
+# Variant: [entry_filenames: "[name].js"]
 
-Variant: [entry_filenames: "[name].js"]
+## Assets
 
-# Assets
-
-## main.js
+### main.js
 
 ```js
 import "./external";
 
 ```
 
----
+# Variant: [entry_filenames: "chunk/[name].js"]
 
-Variant: [entry_filenames: "chunk/[name].js"]
+## Assets
 
-# Assets
-
-## chunk/main.js
+### chunk/main.js
 
 ```js
 import "../external";

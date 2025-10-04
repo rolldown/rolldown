@@ -48,13 +48,11 @@ export { require_a, require_b };
 export { __commonJS };
 ```
 
----
+# Variant: no-profiler-names: [profiler_names: false]
 
-Variant: no-profiler-names: [profiler_names: false]
+## Assets
 
-# Assets
-
-## a.js
+### a.js
 
 ```js
 import { require_a } from "./common.js";
@@ -63,7 +61,7 @@ export default require_a();
 
 ```
 
-## b.js
+### b.js
 
 ```js
 import { require_b } from "./common.js";
@@ -72,7 +70,7 @@ export default require_b();
 
 ```
 
-## common.js
+### common.js
 
 ```js
 import { __commonJSMin } from "./rolldown-runtime.js";
@@ -92,7 +90,7 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 export { require_a, require_b };
 ```
 
-## rolldown-runtime.js
+### rolldown-runtime.js
 
 ```js
 // HIDDEN [rolldown:runtime]

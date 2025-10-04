@@ -33,13 +33,11 @@ demo();
 
 ```
 
----
+# Variant: inlineConstPass2: [inline_const: Config(InlineConstConfig { mode: None, pass: 2 })]
 
-Variant: inlineConstPass2: [inline_const: Config(InlineConstConfig { mode: None, pass: 2 })]
+## Assets
 
-# Assets
-
-## pagea.js
+### pagea.js
 
 ```js
 function demo() {}
@@ -47,7 +45,7 @@ demo();
 
 ```
 
-## pageb.js
+### pageb.js
 
 ```js
 function demo() {}

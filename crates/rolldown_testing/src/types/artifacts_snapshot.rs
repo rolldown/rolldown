@@ -19,44 +19,34 @@ pub struct ArtifactsSnapshot {
 
 impl ArtifactsSnapshot {
   pub fn render(self, test_meta: &TestMeta) -> String {
-    // let mut ret = String::new();
     let mut root_section = SnapshotSection::root();
 
-    for mut build_snapshot in self.builds {
-      if !build_snapshot.overwritten_test_meta_snapshot {
+    for mut build_round in self.builds {
+      if !build_round.overwritten_test_meta_snapshot {
         continue;
       }
+      let mut build_round_sections = vec![];
 
-      if let Some(debug_title) = &build_snapshot.debug_title {
-        let mut section_for_debug_title = SnapshotSection::new();
-        section_for_debug_title.add_content("---\n\n");
-        section_for_debug_title.add_content("Variant: ");
-        section_for_debug_title.add_content(debug_title);
-        root_section.add_child(section_for_debug_title);
-      }
-
-      if let Some(initial_output) = build_snapshot.initial_output {
+      if let Some(initial_output) = build_round.initial_output {
         match initial_output {
           Ok(bundle_output) => {
-            root_section.children.extend(Self::create_bundle_output_sections(
+            build_round_sections.extend(Self::create_bundle_output_sections(
               test_meta,
               bundle_output,
-              build_snapshot.cwd.as_ref().unwrap(),
+              build_round.cwd.as_ref().unwrap(),
             ));
           }
 
           Err(errs) => {
-            root_section.add_child(Self::create_error_section(
-              errs.into_vec(),
-              build_snapshot.cwd.as_ref().unwrap(),
-            ));
+            build_round_sections
+              .push(Self::create_error_section(errs.into_vec(), build_round.cwd.as_ref().unwrap()));
           }
         }
       }
 
-      if !build_snapshot.hmr_updates_by_steps.is_empty() {
+      if !build_round.hmr_updates_by_steps.is_empty() {
         for (step, (hmr_updates, _changed_files)) in
-          build_snapshot.hmr_updates_by_steps.iter().enumerate()
+          build_round.hmr_updates_by_steps.iter().enumerate()
         {
           for hmr_update in hmr_updates {
             let hmr_section = Self::create_hmr_output_section(
@@ -64,12 +54,21 @@ impl ArtifactsSnapshot {
               step,
               &hmr_update.update,
               vec![],
-              &mut build_snapshot.rebuild_outputs,
-              build_snapshot.cwd.as_ref().unwrap(),
+              &mut build_round.rebuild_outputs,
+              build_round.cwd.as_ref().unwrap(),
             );
-            root_section.add_child(hmr_section);
+            build_round_sections.push(hmr_section);
           }
         }
+      }
+
+      if let Some(debug_title) = &build_round.debug_title {
+        let mut build_round_section =
+          SnapshotSection::with_title(format!("Variant: {debug_title}"));
+        build_round_section.children = build_round_sections;
+        root_section.add_child(build_round_section);
+      } else {
+        root_section.children.extend(build_round_sections);
       }
     }
 

@@ -71,13 +71,11 @@ var import_node_mode_by_cjs_extension = /* @__PURE__ */ __toESM(require_node_mod
 //#endregion
 ```
 
----
+# Variant: [format: Cjs]
 
-Variant: [format: Cjs]
+## Assets
 
-# Assets
-
-## chunk.js
+### chunk.js
 
 ```js
 // HIDDEN [rolldown:runtime]
@@ -102,7 +100,7 @@ Object.defineProperty(exports, '__toESM', {
 });
 ```
 
-## lib.js
+### lib.js
 
 ```js
 const require_chunk = require('./chunk.js');
@@ -122,7 +120,7 @@ Object.defineProperty(exports, 'default', {
 });
 ```
 
-## main.js
+### main.js
 
 ```js
 const require_chunk = require('./chunk.js');
@@ -168,13 +166,11 @@ var import_node_mode_by_cjs_extension = /* @__PURE__ */ require_chunk.__toESM(re
 //#endregion
 ```
 
----
+# Variant: [inline_dynamic_imports: true]
 
-Variant: [inline_dynamic_imports: true]
+## Assets
 
-# Assets
-
-## main.js
+### main.js
 
 ```js
 import nodeAssert from "node:assert";

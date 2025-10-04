@@ -33,13 +33,11 @@ const b = "a";
 export { a, b };
 ```
 
----
+# Variant: no-profiler-names: [profiler_names: false]
 
-Variant: no-profiler-names: [profiler_names: false]
+## Assets
 
-# Assets
-
-## a.js
+### a.js
 
 ```js
 import { a } from "./common.js";
@@ -47,7 +45,7 @@ import { a } from "./common.js";
 export { a };
 ```
 
-## b.js
+### b.js
 
 ```js
 import { b } from "./common.js";
@@ -55,7 +53,7 @@ import { b } from "./common.js";
 export { b };
 ```
 
-## common.js
+### common.js
 
 ```js
 //#region a.js

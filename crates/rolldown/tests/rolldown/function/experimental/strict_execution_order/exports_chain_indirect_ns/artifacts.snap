@@ -22,13 +22,11 @@ nodeAssert.equal(value$1, "foo");
 //#endregion
 ```
 
----
+# Variant: [strict_execution_order: true]
 
-Variant: [strict_execution_order: true]
+## Assets
 
-# Assets
-
-## main.js
+### main.js
 
 ```js
 import nodeAssert from "node:assert";
@@ -83,13 +81,11 @@ var init_main = __esm({ "main.js": (() => {
 init_main();
 ```
 
----
+# Variant: [on_demand_wrapping: true] [strict_execution_order: true]
 
-Variant: [on_demand_wrapping: true] [strict_execution_order: true]
+## Assets
 
-# Assets
-
-## main.js
+### main.js
 
 ```js
 import nodeAssert from "node:assert";

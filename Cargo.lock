@@ -1971,7 +1971,7 @@ dependencies = [
  "bitflags 2.9.4",
  "itertools",
  "nonmax",
- "oxc_index",
+ "oxc_index 3.1.0",
  "oxc_syntax",
  "petgraph",
  "rustc-hash",
@@ -1991,7 +1991,7 @@ dependencies = [
  "oxc_allocator",
  "oxc_ast",
  "oxc_data_structures",
- "oxc_index",
+ "oxc_index 3.1.0",
  "oxc_semantic",
  "oxc_sourcemap",
  "oxc_span",
@@ -2064,6 +2064,15 @@ version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "967ae797e1f284bd1385f2d8e8ab94293ad27f623c76839ecf66827521365f5b"
 dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "oxc_index"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb3e6120999627ec9703025eab7c9f410ebb7e95557632a8902ca48210416c2b"
+dependencies = [
  "rayon",
  "serde",
 ]
@@ -2095,7 +2104,7 @@ dependencies = [
  "oxc_allocator",
  "oxc_ast",
  "oxc_data_structures",
- "oxc_index",
+ "oxc_index 3.1.0",
  "oxc_semantic",
  "oxc_span",
  "rustc-hash",
@@ -2266,7 +2275,7 @@ dependencies = [
  "oxc_data_structures",
  "oxc_diagnostics",
  "oxc_ecmascript",
- "oxc_index",
+ "oxc_index 3.1.0",
  "oxc_span",
  "oxc_syntax",
  "phf",
@@ -2318,7 +2327,7 @@ dependencies = [
  "oxc_ast_macros",
  "oxc_data_structures",
  "oxc_estree",
- "oxc_index",
+ "oxc_index 3.1.0",
  "oxc_span",
  "phf",
  "serde",
@@ -2774,7 +2783,7 @@ dependencies = [
  "oxc",
  "oxc_allocator",
  "oxc_ecmascript",
- "oxc_index",
+ "oxc_index 4.1.0",
  "oxc_traverse",
  "petgraph",
  "rayon",
@@ -2889,7 +2898,7 @@ dependencies = [
  "num-bigint",
  "oxc",
  "oxc_ecmascript",
- "oxc_index",
+ "oxc_index 4.1.0",
  "oxc_resolver",
  "rolldown_ecmascript",
  "rolldown_error",
@@ -2993,7 +3002,7 @@ dependencies = [
  "bitflags 2.9.4",
  "dashmap",
  "derive_more",
- "oxc_index",
+ "oxc_index 4.1.0",
  "rolldown_common",
  "rolldown_debug",
  "rolldown_ecmascript",
@@ -3480,7 +3489,7 @@ dependencies = [
  "mime",
  "nom",
  "oxc",
- "oxc_index",
+ "oxc_index 4.1.0",
  "phf",
  "rayon",
  "regex",
@@ -3787,7 +3796,7 @@ version = "0.0.26"
 dependencies = [
  "insta",
  "memchr",
- "oxc_index",
+ "oxc_index 4.1.0",
  "oxc_sourcemap",
  "rustc-hash",
  "serde",

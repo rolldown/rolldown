@@ -1,3 +1,4 @@
+use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::DashMap;
 use itertools::Itertools;
@@ -34,9 +35,24 @@ pub struct Resolver<T: FileSystem = OsFileSystem> {
 }
 
 impl<F: FileSystem> Resolver<F> {
-  #[inline]
-  pub fn package_json_cache(&self) -> &FxDashMap<PathBuf, Arc<PackageJson>> {
-    &self.package_json_cache
+  pub fn try_get_package_json_or_create(&self, path: &Path) -> anyhow::Result<Arc<PackageJson>> {
+    self
+      .inner_try_get_package_json_or_create(path)
+      .with_context(|| format!("Failed to read or parse package.json: {}", path.display()))
+  }
+
+  fn inner_try_get_package_json_or_create(&self, path: &Path) -> anyhow::Result<Arc<PackageJson>> {
+    if let Some(v) = self.package_json_cache.get(path) {
+      Ok(Arc::clone(v.value()))
+    } else {
+      // User have has the responsibility to ensure `path` is real path if needed. We just pass it through.
+      let realpath = path.to_path_buf();
+      let json_str = std::fs::read_to_string(path)?;
+      let oxc_pkg_json = OxcPackageJson::parse(path.to_path_buf(), realpath, &json_str)?;
+      let pkg_json = Arc::new(PackageJson::from_oxc_pkg_json(&oxc_pkg_json));
+      self.package_json_cache.insert(path.to_path_buf(), Arc::clone(&pkg_json));
+      Ok(pkg_json)
+    }
   }
 }
 

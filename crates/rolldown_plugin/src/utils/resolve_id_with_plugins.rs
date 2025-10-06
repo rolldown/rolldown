@@ -6,10 +6,8 @@ use rolldown_common::{
   ImportKind, ModuleDefFormat, PackageJson, ResolvedId, is_existing_node_builtin_modules,
 };
 use rolldown_resolver::{ResolveError, Resolver};
-use std::{
-  path::{Path, PathBuf},
-  sync::Arc,
-};
+use std::{path::Path, sync::Arc};
+use sugar_path::SugarPath;
 
 fn is_http_url(s: &str) -> bool {
   s.starts_with("http://") || s.starts_with("https://") || s.starts_with("//")
@@ -75,11 +73,11 @@ pub async fn resolve_id_with_plugins(
       )
       .await?
     {
-      let package_json = r.package_json_path.as_ref().and_then(|p| {
-        let v = resolver.package_json_cache().get(&PathBuf::from(&p))?;
-        let package_json = v.clone();
-        Some(package_json)
-      });
+      let package_json = r
+        .package_json_path
+        .as_ref()
+        .map(|p| resolver.try_get_package_json_or_create(p.as_path()))
+        .transpose()?;
       return Ok(Ok(ResolvedId {
         module_def_format: infer_module_def_format(r.id.as_str(), package_json.as_ref()),
         id: r.id,
@@ -105,11 +103,11 @@ pub async fn resolve_id_with_plugins(
     )
     .await?
   {
-    let package_json = r.package_json_path.as_ref().and_then(|p| {
-      let v = resolver.package_json_cache().get(&PathBuf::from(&p))?;
-      let package_json = v.clone();
-      Some(package_json)
-    });
+    let package_json = r
+      .package_json_path
+      .as_ref()
+      .map(|p| resolver.try_get_package_json_or_create(p.as_path()))
+      .transpose()?;
     return Ok(Ok(ResolvedId {
       module_def_format: infer_module_def_format(r.id.as_str(), package_json.as_ref()),
       id: r.id,

@@ -156,11 +156,12 @@ fn get_resolve_options(
       &additional_options,
     ),
     extensions,
+    // The first alias is the original extension to make sure that `foo.js` will be resolved to `foo.js` if `foo.js` exists.
     extension_alias: vec![
-      (".js".to_string(), vec![".ts".to_string(), ".tsx".to_string(), ".js".to_string()]),
-      (".jsx".to_string(), vec![".ts".to_string(), ".tsx".to_string(), ".jsx".to_string()]),
-      (".mjs".to_string(), vec![".mts".to_string(), ".mjs".to_string()]),
-      (".cjs".to_string(), vec![".cts".to_string(), ".cjs".to_string()]),
+      (".js".to_string(), vec![".js".to_string(), ".ts".to_string(), ".tsx".to_string()]),
+      (".jsx".to_string(), vec![".jsx".to_string(), ".ts".to_string(), ".tsx".to_string()]),
+      (".mjs".to_string(), vec![".mjs".to_string(), ".mts".to_string()]),
+      (".cjs".to_string(), vec![".cjs".to_string(), ".cts".to_string()]),
     ],
     main_fields,
     main_files: if !base_options.try_index {

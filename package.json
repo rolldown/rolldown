@@ -3,7 +3,7 @@
   "description": "Rollup in Rust",
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@10.17.1",
+  "packageManager": "pnpm@10.18.0",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },

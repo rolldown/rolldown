@@ -12,7 +12,7 @@ setup:
   cargo install cargo-binstall
   cargo binstall cargo-insta cargo-deny cargo-shear typos-cli -y
   # Node.js related setup
-  corepack enable
+  (! which corepack) || corepack enable
   pnpm install
   just setup-submodule
   just setup-bench

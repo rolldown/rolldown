@@ -140,7 +140,6 @@
     "@rollup/plugin-json": "catalog:",
     "buble": "catalog:",
     "consola": "catalog:",
-    "emnapi": "catalog:",
     "execa": "catalog:",
     "glob": "catalog:",
     "oxc-parser": "catalog:",

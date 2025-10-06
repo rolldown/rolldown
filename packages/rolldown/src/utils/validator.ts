@@ -992,6 +992,12 @@ const CliOptionsSchema = v.strictObject({
     v.description('Path to the config file (default: `rolldown.config.js`)'),
   ),
   help: v.pipe(v.optional(v.boolean()), v.description('Show help')),
+  environment: v.pipe(
+    v.optional(v.union([v.string(), v.array(v.string())])),
+    v.description(
+      'Pass additional settings to the config file via process.ENV.',
+    ),
+  ),
   version: v.pipe(
     v.optional(v.boolean()),
     v.description('Show version number'),

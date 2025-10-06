@@ -46,6 +46,7 @@ OPTIONS
   --define <define>           Define global variables.
   --drop-labels <drop-labels> Remove labeled statements with these label names.
   --entry-file-names <name>   Name pattern for emitted entry chunks.
+  --environment <environment> Pass additional settings to the config file via process.ENV.
   --es-module                 Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
@@ -317,6 +318,12 @@ exports[`config > should resolve rolldown.config.cjs 1`] = `
 exports[`config > should support custom cli arguments 1`] = `
 "Option \`customArg\` is unrecognized. We will ignore this option.
 <DIR>/index.js  chunk │ size: 0.14 kB
+
+"
+`;
+
+exports[`config > should support environment option 1`] = `
+"<DIR>/index.js  chunk │ size: 0.14 kB
 
 "
 `;

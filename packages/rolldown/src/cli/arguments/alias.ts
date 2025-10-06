@@ -6,6 +6,7 @@ export interface CliOptions extends InputCliOptions, OutputCliOptions {
   help?: boolean;
   version?: boolean;
   watch?: boolean;
+  environment?: string | string[];
 }
 
 export interface OptionConfig {

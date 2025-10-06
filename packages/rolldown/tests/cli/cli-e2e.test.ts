@@ -234,6 +234,16 @@ describe('config', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot()
   })
 
+  it('should support environment option', async () => {
+    const cwd = cliFixturesDir('cli-environment-option')
+
+    const status = await $({
+      cwd,
+    })`rolldown -c rolldown.config.js --environment PRODUCTION,FOO:bar,HOST:http://localhost:4000`
+    expect(status.exitCode).toBe(0)
+    expect(cleanStdout(status.stdout)).toMatchSnapshot()
+  })
+
 
   it('should allow multiply output + call options hook once  + call outputOptions hook', async () => {
     const cwd = cliFixturesDir('config-multiply-output-with-options-hooks')

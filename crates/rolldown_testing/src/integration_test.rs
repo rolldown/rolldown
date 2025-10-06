@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::{
   fs,
   io::{Read, Write},
@@ -136,7 +135,6 @@ impl IntegrationTest {
         build_snapshot.cwd = Some(cwd.clone());
         let bundler = Arc::new(Mutex::new(bundler));
 
-        let has_full_reload_update = Arc::new(AtomicBool::new(false));
         let hmr_update_infos = Arc::new(std::sync::Mutex::new(vec![]));
         let build_results = Arc::new(std::sync::Mutex::new(vec![]));
         let dev_engine = DevEngine::with_bundler(
@@ -144,12 +142,7 @@ impl IntegrationTest {
           DevOptions {
             on_hmr_updates: {
               let hmr_update_infos = Arc::clone(&hmr_update_infos);
-              let has_full_reload_update = Arc::clone(&has_full_reload_update);
               Some(Arc::new(move |updates, changed_files| {
-                let is_full_reload = updates.iter().any(|update| update.update.is_full_reload());
-                if is_full_reload {
-                  has_full_reload_update.store(true, Ordering::SeqCst);
-                }
                 hmr_update_infos.lock().unwrap().push((updates, changed_files));
               }))
             },
@@ -173,9 +166,6 @@ impl IntegrationTest {
         dev_engine.create_client_for_testing().await;
 
         for hmr_edit_files in &hmr_steps {
-          // Reset the flag
-          has_full_reload_update.store(false, Ordering::SeqCst);
-
           apply_hmr_edit_files_to_hmr_temp_dir(
             test_folder_path,
             &hmr_temp_dir_path,
@@ -189,9 +179,6 @@ impl IntegrationTest {
           dev_engine
             .ensure_task_with_changed_files(changed_files.into_iter().map(Into::into).collect())
             .await;
-          if has_full_reload_update.load(Ordering::SeqCst) {
-            dev_engine.ensure_latest_build_output().await.unwrap();
-          }
         }
         drop(dev_engine);
 

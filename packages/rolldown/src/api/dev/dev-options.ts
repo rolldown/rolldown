@@ -51,7 +51,7 @@ export interface DevOptions {
    * - `'always'`: Always trigger a rebuild after HMR updates
    * - `'auto'`: Trigger rebuild only if HMR updates contain full reload updates
    * - `'never'`: Never trigger rebuild after HMR updates (default)
-   * @default 'never'
+   * @default 'auto'
    */
   rebuildStrategy?: 'always' | 'auto' | 'never';
   watch?: DevWatchOptions;

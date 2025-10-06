@@ -5,9 +5,9 @@ pub enum RebuildStrategy {
   /// Incremental rebuild will always be issued after HMR.
   Always,
   /// Incremental rebuild will be issued automatically if the hmr updates contains full reload updates.
+  #[default]
   Auto,
   /// Never issue rebuilds after HMR.
-  #[default]
   Never,
 }
 

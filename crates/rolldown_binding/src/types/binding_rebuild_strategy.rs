@@ -1,11 +1,10 @@
 use napi_derive::napi;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[napi]
 pub enum BindingRebuildStrategy {
   Always,
   Auto,
-  #[default]
   Never,
 }
 

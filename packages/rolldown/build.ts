@@ -138,6 +138,7 @@ function withShared(
     define: {
       'import.meta.browserBuild': String(isBrowserBuild),
     },
+    // Do not move this line up or down, it's here for a reason
     ...options,
     plugins: [
       buildMeta.desireWasmFiles &&
@@ -149,6 +150,9 @@ function withShared(
       moduleSideEffects: [
         { test: /\/signal-exit\//, sideEffects: false },
       ],
+    },
+    transform: {
+      target: 'node22',
     },
   };
 }

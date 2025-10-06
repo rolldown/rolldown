@@ -1,5 +1,4 @@
 use oxc::semantic::{Reference, ReferenceId, ScopeId, Scoping, SymbolId};
-use oxc_index::Idx;
 use rustc_hash::FxHashMap;
 
 use super::symbol_ref_db::SymbolRefDataClassic;
@@ -79,12 +78,12 @@ impl AstScopes {
     self
       .facade_scoping
       .mutated_symbol_id_to_names
-      .insert(SymbolId::new(symbol_id), name.to_string());
+      .insert(SymbolId::from_raw_unchecked(symbol_id), name.to_string());
     self
       .facade_scoping
       .facade_symbol_classic_data
-      .insert(SymbolId::new(symbol_id), SymbolRefDataClassic::default());
-    SymbolId::new(symbol_id)
+      .insert(SymbolId::from_raw_unchecked(symbol_id), SymbolRefDataClassic::default());
+    SymbolId::from_raw_unchecked(symbol_id)
   }
 
   pub fn set_symbol_name(&mut self, symbol_id: SymbolId, name: &str) {

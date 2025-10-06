@@ -80,7 +80,7 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
     None,
     first_map.get_sources().map(Arc::clone).collect::<Vec<_>>(),
     first_map.get_source_contents().map(|x| x.map(Arc::clone)).collect::<Vec<_>>(),
-    tokens,
+    tokens.into_boxed_slice(),
     None,
   )
 }

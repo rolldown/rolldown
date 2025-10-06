@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    retry: process.env.CI ? 2 : 0,
+    retry: process.env.CI ? 3 : 0,
     testTimeout: 90000, // Increased from 40000 to 90000 for Windows compatibility
     // Disabled, Because the error printed by Rust cannot be seen
     disableConsoleIntercept: true,

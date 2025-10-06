@@ -11,6 +11,6 @@ impl SymbolIdExt for SymbolId {
   ///  see: https://github.com/rolldown/rolldown/blob/8bc7dca5a09047b6b494e3fa7b6b7564aa465372/crates/rolldown/src/ast_scanner/mod.rs?plain=1#L156-L160
   #[inline]
   fn is_module_namespace(&self) -> bool {
-    *self == unsafe { SymbolId::new_unchecked(u32::MAX - 2) }
+    *self == SymbolId::from_raw_unchecked(u32::MAX - 2)
   }
 }

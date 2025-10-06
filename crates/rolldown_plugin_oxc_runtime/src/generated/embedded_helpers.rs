@@ -2,12 +2,12 @@
 // To edit this generated file you have to edit `tasks/generator/src/generators/oxc_runtime_helper.rs`
 
 // This file contains embedded @oxc-project/runtime ESM helpers
-// @oxc-project/runtime version: 0.93.0
+// @oxc-project/runtime version: 0.94.0
 
 use arcstr::ArcStr;
 use phf::{Map, phf_map};
 
-pub const RUNTIME_HELPER_PREFIX: &str = "@oxc-project+runtime@0.93.0/helpers/";
+pub const RUNTIME_HELPER_PREFIX: &str = "@oxc-project+runtime@0.94.0/helpers/";
 pub const RUNTIME_HELPER_UNVERSIONED_PREFIX: &str = "@oxc-project/runtime/helpers/";
 
 /// Map of all ESM helpers from @oxc-project/runtime/src/helpers/esm/

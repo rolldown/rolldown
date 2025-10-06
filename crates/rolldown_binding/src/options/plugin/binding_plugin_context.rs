@@ -53,7 +53,8 @@ impl BindingPluginContext {
       id: info.id.to_string(),
       external: info.external.into(),
       module_side_effects: info.side_effects.map(Into::into),
-      package_json_path: info.package_json.map(|item| item.realpath.to_string_lossy().to_string()),
+      package_json_path:
+        info.package_json.map(|item| item.realpath().to_string_lossy().to_string()),
     }))
   }
 

@@ -13,8 +13,8 @@ use std::{
 use sugar_path::SugarPath;
 
 use oxc_resolver::{
-  EnforceExtension, ModuleType, PackageJson as OxcPackageJson, PackageType, Resolution,
-  ResolveError, ResolveOptions as OxcResolverOptions, ResolverGeneric, TsConfig,
+  EnforceExtension, ModuleType, PackageJson as OxcPackageJson, Resolution, ResolveError,
+  ResolveOptions as OxcResolverOptions, ResolverGeneric, TsConfig,
 };
 
 #[derive(Debug)]
@@ -268,15 +268,7 @@ impl<F: FileSystem> Resolver<F> {
     match self.package_json_cache.get(&oxc_pkg_json.realpath) {
       Some(v) => Arc::clone(v.value()),
       _ => {
-        let pkg_json = Arc::new(
-          PackageJson::new(oxc_pkg_json.realpath.clone())
-            .with_type(oxc_pkg_json.r#type.map(|t| match t {
-              PackageType::CommonJs => "commonjs",
-              PackageType::Module => "module",
-            }))
-            .with_side_effects(oxc_pkg_json.side_effects.as_ref())
-            .with_version(oxc_pkg_json.raw_json().get("version").and_then(|v| v.as_str())),
-        );
+        let pkg_json = Arc::new(PackageJson::from_oxc_pkg_json(oxc_pkg_json));
         self.package_json_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
         pkg_json
       }

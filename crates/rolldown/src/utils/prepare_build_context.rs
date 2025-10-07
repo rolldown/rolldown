@@ -360,10 +360,7 @@ mod tests {
     let warnings = verify_raw_options(&options);
     // Should have 1 warning about incompatible options
     assert_eq!(warnings.len(), 1);
-    assert!(matches!(
-      warnings[0].kind(),
-      rolldown_error::EventKind::InvalidOptionError
-    ));
+    assert!(matches!(warnings[0].kind(), rolldown_error::EventKind::InvalidOptionError));
   }
 
   #[test]
@@ -383,10 +380,7 @@ mod tests {
 
     let warnings = verify_raw_options(&options);
     assert_eq!(warnings.len(), 1);
-    assert!(matches!(
-      warnings[0].kind(),
-      rolldown_error::EventKind::InvalidOptionError
-    ));
+    assert!(matches!(warnings[0].kind(), rolldown_error::EventKind::InvalidOptionError));
   }
 
   #[test]
@@ -446,9 +440,6 @@ mod tests {
 
     let warnings = verify_raw_options(&options);
     assert_eq!(warnings.len(), 1);
-    assert!(matches!(
-      warnings[0].kind(),
-      rolldown_error::EventKind::InvalidOptionError
-    ));
+    assert!(matches!(warnings[0].kind(), rolldown_error::EventKind::InvalidOptionError));
   }
 }

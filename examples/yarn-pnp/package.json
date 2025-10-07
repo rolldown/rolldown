@@ -1,7 +1,7 @@
 {
   "name": "yarn-pnp",
   "packageManager": "yarn@4.3.1",
-  "type":"module",
+  "type": "module",
   "dependencies": {
     "is-even": "^1.0.0"
   }

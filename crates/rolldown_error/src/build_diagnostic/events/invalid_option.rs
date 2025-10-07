@@ -42,7 +42,7 @@ impl BuildEvent for InvalidOption {
             format!("\"{options}\" is an illegitimate identifier for option \"context\". You may use a legitimate context identifier instead.")
         }
         InvalidOptionType::IncludeDependenciesRecursivelyWithStrictSignatures => {
-            "When \"advancedChunks.includeDependenciesRecursively\" is set to false, \"preserveEntrySignatures\" must be set to false or 'allow-extension'. Setting it to 'strict' or 'exports-only' would require changing entry chunk export signatures, which conflicts with strict signature preservation.".to_string()
+            "When \"advancedChunks.includeDependenciesRecursively\" is set to `false`, \"preserveEntrySignatures\" must be set to `false` or 'allow-extension'. Setting it to 'strict' or 'exports-only' would require changing entry chunk export signatures, which conflicts with strict signature preservation.".to_string()
         }
     }
   }

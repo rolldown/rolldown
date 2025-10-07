@@ -23,7 +23,7 @@ pub struct PrepareBuildContext {
   pub warnings: Vec<BuildDiagnostic>,
 }
 
-fn verify_raw_options(raw_options: &crate::BundlerOptions) -> Vec<BuildDiagnostic> {
+fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<BuildDiagnostic>> {
   let mut warnings: Vec<BuildDiagnostic> = Vec::new();
 
   if raw_options.dir.is_some() && raw_options.file.is_some() {
@@ -95,28 +95,31 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> Vec<BuildDiagnosti
       // preserveEntrySignatures must be explicitly set to false or allow-extension
       match raw_options.preserve_entry_signatures {
         Some(PreserveEntrySignatures::False) | Some(PreserveEntrySignatures::AllowExtension) => {
-          // Valid combination, no warning
+          // Valid combination, no error
         }
         Some(PreserveEntrySignatures::Strict)
         | Some(PreserveEntrySignatures::ExportsOnly)
         | None => {
           // Invalid: either explicitly strict/exports-only, or not set (which defaults to strict)
-          warnings.push(BuildDiagnostic::invalid_option(
-            InvalidOptionType::IncludeDependenciesRecursivelyWithStrictSignatures,
-          ));
+          return Err(
+            BuildDiagnostic::invalid_option(
+              InvalidOptionType::IncludeDependenciesRecursivelyWithStrictSignatures,
+            )
+            .into(),
+          );
         }
       }
     }
   }
 
-  warnings
+  Ok(warnings)
 }
 
 #[expect(clippy::too_many_lines)] // This function is long, but it's mostly just mapping values
 pub fn prepare_build_context(
   mut raw_options: crate::BundlerOptions,
 ) -> BuildResult<PrepareBuildContext> {
-  let mut warnings = verify_raw_options(&raw_options);
+  let mut warnings = verify_raw_options(&raw_options)?;
 
   let format = raw_options.format.unwrap_or(crate::OutputFormat::Esm);
   let preserve_entry_signatures = raw_options.preserve_entry_signatures.unwrap_or_default();
@@ -336,111 +339,4 @@ pub fn prepare_build_context(
   normalized.minify = raw_minify.normalize(&normalized);
 
   Ok(PrepareBuildContext { fs, resolver, options: Arc::new(normalized), warnings })
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-  use rolldown_common::{AdvancedChunksOptions, MatchGroup, MatchGroupName};
-
-  #[test]
-  fn test_include_dependencies_recursively_false_with_strict_signatures() {
-    let options = crate::BundlerOptions {
-      advanced_chunks: Some(AdvancedChunksOptions {
-        include_dependencies_recursively: Some(false),
-        groups: Some(vec![MatchGroup {
-          name: MatchGroupName::Static("test".to_string()),
-          ..Default::default()
-        }]),
-        ..Default::default()
-      }),
-      preserve_entry_signatures: Some(PreserveEntrySignatures::Strict),
-      ..Default::default()
-    };
-
-    let warnings = verify_raw_options(&options);
-    // Should have 1 warning about incompatible options
-    assert_eq!(warnings.len(), 1);
-    assert!(matches!(warnings[0].kind(), rolldown_error::EventKind::InvalidOptionError));
-  }
-
-  #[test]
-  fn test_include_dependencies_recursively_false_with_exports_only_signatures() {
-    let options = crate::BundlerOptions {
-      advanced_chunks: Some(AdvancedChunksOptions {
-        include_dependencies_recursively: Some(false),
-        groups: Some(vec![MatchGroup {
-          name: MatchGroupName::Static("test".to_string()),
-          ..Default::default()
-        }]),
-        ..Default::default()
-      }),
-      preserve_entry_signatures: Some(PreserveEntrySignatures::ExportsOnly),
-      ..Default::default()
-    };
-
-    let warnings = verify_raw_options(&options);
-    assert_eq!(warnings.len(), 1);
-    assert!(matches!(warnings[0].kind(), rolldown_error::EventKind::InvalidOptionError));
-  }
-
-  #[test]
-  fn test_include_dependencies_recursively_false_with_allow_extension_signatures() {
-    let options = crate::BundlerOptions {
-      advanced_chunks: Some(AdvancedChunksOptions {
-        include_dependencies_recursively: Some(false),
-        groups: Some(vec![MatchGroup {
-          name: MatchGroupName::Static("test".to_string()),
-          ..Default::default()
-        }]),
-        ..Default::default()
-      }),
-      preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
-      ..Default::default()
-    };
-
-    let warnings = verify_raw_options(&options);
-    // Should have no warnings
-    assert_eq!(warnings.len(), 0);
-  }
-
-  #[test]
-  fn test_include_dependencies_recursively_false_with_false_signatures() {
-    let options = crate::BundlerOptions {
-      advanced_chunks: Some(AdvancedChunksOptions {
-        include_dependencies_recursively: Some(false),
-        groups: Some(vec![MatchGroup {
-          name: MatchGroupName::Static("test".to_string()),
-          ..Default::default()
-        }]),
-        ..Default::default()
-      }),
-      preserve_entry_signatures: Some(PreserveEntrySignatures::False),
-      ..Default::default()
-    };
-
-    let warnings = verify_raw_options(&options);
-    assert_eq!(warnings.len(), 0);
-  }
-
-  #[test]
-  fn test_include_dependencies_recursively_false_with_default_signatures() {
-    // Default is Strict, so this should warn
-    let options = crate::BundlerOptions {
-      advanced_chunks: Some(AdvancedChunksOptions {
-        include_dependencies_recursively: Some(false),
-        groups: Some(vec![MatchGroup {
-          name: MatchGroupName::Static("test".to_string()),
-          ..Default::default()
-        }]),
-        ..Default::default()
-      }),
-      preserve_entry_signatures: None,
-      ..Default::default()
-    };
-
-    let warnings = verify_raw_options(&options);
-    assert_eq!(warnings.len(), 1);
-    assert!(matches!(warnings[0].kind(), rolldown_error::EventKind::InvalidOptionError));
-  }
 }

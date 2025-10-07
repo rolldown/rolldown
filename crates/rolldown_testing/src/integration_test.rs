@@ -247,22 +247,44 @@ impl IntegrationTest {
         }
         build_snapshot.initial_output = Some(build_result);
       } else {
-        let mut bundler = Bundler::with_plugins(named_options.options, plugins.clone())
-          .expect("Failed to create bundler");
+        let bundler_result = Bundler::with_plugins(named_options.options, plugins.clone());
 
-        let cwd = bundler.options().cwd.clone();
-        build_snapshot.cwd = Some(cwd.clone());
+        // Set cwd early, even if bundler creation fails
+        // We need this for error reporting
+        if build_snapshot.cwd.is_none() {
+          // Try to get cwd from the bundler if successful, otherwise use current dir
+          let cwd = match &bundler_result {
+            Ok(bundler) => bundler.options().cwd.clone(),
+            Err(_) => std::env::current_dir().unwrap(),
+          };
+          build_snapshot.cwd = Some(cwd);
+        }
 
-        let bundle_output = if self.test_meta.write_to_disk {
-          let abs_output_dir = cwd.join(&bundler.options().out_dir);
-          if abs_output_dir.is_dir() {
-            std::fs::remove_dir_all(&abs_output_dir)
-              .context(format!("{abs_output_dir:?}"))
-              .expect("Failed to clean the output directory");
+        // Handle bundler creation errors
+        if let Err(ref errs) = bundler_result {
+          assert!(
+            self.test_meta.expect_error,
+            "Expected the bundler creation to be success, but got diagnosable errors: {errs:#?}"
+          );
+        }
+
+        let (bundle_output, maybe_bundler) = match bundler_result {
+          Ok(mut bundler) => {
+            let output = if self.test_meta.write_to_disk {
+              let cwd = bundler.options().cwd.clone();
+              let abs_output_dir = cwd.join(&bundler.options().out_dir);
+              if abs_output_dir.is_dir() {
+                std::fs::remove_dir_all(&abs_output_dir)
+                  .context(format!("{abs_output_dir:?}"))
+                  .expect("Failed to clean the output directory");
+              }
+              bundler.write().await
+            } else {
+              bundler.generate().await
+            };
+            (output, Some(bundler))
           }
-          bundler.write().await
-        } else {
-          bundler.generate().await
+          Err(errs) => (Err(errs), None),
         };
 
         let execute_output = self.test_meta.expect_executed
@@ -277,16 +299,18 @@ impl IntegrationTest {
             );
 
             if execute_output {
-              Self::execute_output_assets(
-                &bundler,
-                &debug_title,
-                &[],
-                named_options
-                  .config_name
-                  .as_deref()
-                  .map(Some)
-                  .unwrap_or(self.test_meta.config_name.as_deref()),
-              );
+              if let Some(bundler) = maybe_bundler.as_ref() {
+                Self::execute_output_assets(
+                  bundler,
+                  &debug_title,
+                  &[],
+                  named_options
+                    .config_name
+                    .as_deref()
+                    .map(Some)
+                    .unwrap_or(self.test_meta.config_name.as_deref()),
+                );
+              }
             } else {
               // do nothing
             }

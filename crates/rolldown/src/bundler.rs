@@ -64,15 +64,6 @@ impl Bundler {
     async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
-
-      // Check if there are any errors in warnings that should fail the build early
-      let (errors, warnings): (Vec<_>, Vec<_>) =
-        self.warnings.drain(..).partition(|w| w.severity() == Severity::Error);
-      self.warnings = warnings;
-      if !errors.is_empty() {
-        return Err(errors.into());
-      }
-
       let scan_stage_output = self.scan(ScanMode::Full).await?;
 
       let ret = self.bundle_write(scan_stage_output).await;
@@ -92,15 +83,6 @@ impl Bundler {
     async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
-
-      // Check if there are any errors in warnings that should fail the build early
-      let (errors, warnings): (Vec<_>, Vec<_>) =
-        self.warnings.drain(..).partition(|w| w.severity() == Severity::Error);
-      self.warnings = warnings;
-      if !errors.is_empty() {
-        return Err(errors.into());
-      }
-
       let scan_stage_output = self.scan(ScanMode::Full).await?;
 
       let ret = self.bundle_generate(scan_stage_output).await.map(|mut output| {

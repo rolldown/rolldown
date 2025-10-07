@@ -13,8 +13,8 @@ use anyhow::Result;
 
 use arcstr::ArcStr;
 use rolldown_common::{
-  GetLocalDbMut, HmrUpdate, Module, NormalizedBundlerOptions, ScanMode, SharedFileEmitter,
-  SymbolRefDb,
+  ClientHmrInput, ClientHmrUpdate, GetLocalDbMut, HmrUpdate, Module, NormalizedBundlerOptions,
+  ScanMode, SharedFileEmitter, SymbolRefDb,
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
@@ -286,9 +286,9 @@ impl Bundler {
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
     changed_file_paths: &[String],
-    executed_modules: &FxHashSet<String>,
+    clients: &[ClientHmrInput],
     next_hmr_patch_id: Arc<AtomicU32>,
-  ) -> BuildResult<Vec<HmrUpdate>> {
+  ) -> BuildResult<Vec<ClientHmrUpdate>> {
     let mut hmr_stage = HmrStage::new(HmrStageInput {
       fs: self.fs.clone(),
       options: Arc::clone(&self.options),
@@ -296,9 +296,8 @@ impl Bundler {
       plugin_driver: Arc::clone(&self.plugin_driver),
       cache: &mut self.cache,
       next_hmr_patch_id,
-      executed_modules,
     });
-    hmr_stage.compute_hmr_update_for_file_changes(changed_file_paths).await
+    hmr_stage.compute_hmr_update_for_file_changes(changed_file_paths, clients).await
   }
 
   pub async fn compute_update_for_calling_invalidate(
@@ -315,9 +314,14 @@ impl Bundler {
       plugin_driver: Arc::clone(&self.plugin_driver),
       cache: &mut self.cache,
       next_hmr_patch_id,
-      executed_modules,
     });
-    hmr_stage.compute_update_for_calling_invalidate(invalidate_caller, first_invalidated_by).await
+    hmr_stage
+      .compute_update_for_calling_invalidate(
+        invalidate_caller,
+        first_invalidated_by,
+        executed_modules,
+      )
+      .await
   }
 
   fn merge_immutable_fields_for_cache(&mut self, symbol_db: SymbolRefDb) {

@@ -5,7 +5,7 @@ use std::{
   time::Duration,
 };
 
-use rolldown_common::{ClientHmrUpdate, ScanMode, WatcherChangeKind};
+use rolldown_common::{ClientHmrInput, ScanMode, WatcherChangeKind};
 use rolldown_error::BuildResult;
 use rolldown_utils::indexmap::FxIndexSet;
 use tokio::sync::Mutex;
@@ -190,20 +190,30 @@ impl BundlingTask {
     let changed_files =
       self.changed_files.iter().map(|p| p.to_string_lossy().to_string()).collect::<Vec<_>>();
 
-    let mut client_updates = Vec::with_capacity(self.dev_context.clients.len());
-    for client in self.dev_context.clients.iter() {
-      let updates = bundler
-        .compute_hmr_update_for_file_changes(
-          &changed_files,
-          &client.executed_modules,
-          Arc::clone(&self.next_hmr_patch_id),
-        )
-        .await?;
-      for update in updates {
-        if update.is_full_reload() {
-          *has_full_reload_update = true;
-        }
-        client_updates.push(ClientHmrUpdate { client_id: client.key().to_string(), update });
+    // Build ClientHmrInput for each client
+    let client_inputs: Vec<ClientHmrInput> = self
+      .dev_context
+      .clients
+      .iter()
+      .map(|client| ClientHmrInput {
+        client_id: client.key().to_string(),
+        executed_modules: client.executed_modules.clone(),
+      })
+      .collect();
+
+    // Compute HMR updates for all clients in one call
+    let client_updates = bundler
+      .compute_hmr_update_for_file_changes(
+        &changed_files,
+        &client_inputs,
+        Arc::clone(&self.next_hmr_patch_id),
+      )
+      .await?;
+
+    // Check if any update is a full reload
+    for update in &client_updates {
+      if update.update.is_full_reload() {
+        *has_full_reload_update = true;
       }
     }
 

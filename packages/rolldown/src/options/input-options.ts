@@ -187,6 +187,17 @@ export interface InputOptions {
   ) => void;
   moduleTypes?: ModuleTypes;
   experimental?: {
+    /**
+     * Lets modules be executed in the order they are declared.
+     *
+     * - Type: `boolean`
+     * - Default: `false`
+     *
+     * This is done by injecting runtime helpers to ensure that modules are executed in the order they are imported. External modules won't be affected.
+     *
+     * > [!WARNING]
+     * > Enabling this option may negatively increase bundle size. It is recommended to use this option only when absolutely necessary.
+     */
     strictExecutionOrder?: boolean;
     disableLiveBindings?: boolean;
     viteMode?: boolean;

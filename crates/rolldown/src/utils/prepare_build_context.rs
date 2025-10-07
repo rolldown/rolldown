@@ -25,6 +25,7 @@ pub struct PrepareBuildContext {
 
 fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<BuildDiagnostic>> {
   let mut warnings: Vec<BuildDiagnostic> = Vec::new();
+  let mut errors: Vec<BuildDiagnostic> = Vec::new();
 
   if raw_options.dir.is_some() && raw_options.file.is_some() {
     warnings.push(
@@ -101,15 +102,16 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
         | Some(PreserveEntrySignatures::ExportsOnly)
         | None => {
           // Invalid: either explicitly strict/exports-only, or not set (which defaults to strict)
-          return Err(
-            BuildDiagnostic::invalid_option(
-              InvalidOptionType::IncludeDependenciesRecursivelyWithStrictSignatures,
-            )
-            .into(),
-          );
+          errors.push(BuildDiagnostic::invalid_option(
+            InvalidOptionType::IncludeDependenciesRecursivelyWithStrictSignatures,
+          ));
         }
       }
     }
+  }
+
+  if !errors.is_empty() {
+    return Err(errors.into());
   }
 
   Ok(warnings)

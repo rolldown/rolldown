@@ -6,7 +6,8 @@ use std::sync::Arc;
 use super::rebuild_strategy::RebuildStrategy;
 use crate::types::bundle_output::BundleOutput;
 
-pub type OnHmrUpdatesCallback = Arc<dyn Fn(Vec<ClientHmrUpdate>, Vec<String>) + Send + Sync>;
+pub type OnHmrUpdatesCallback =
+  Arc<dyn Fn(BuildResult<(Vec<ClientHmrUpdate>, Vec<String>)>) + Send + Sync>;
 pub type OnOutputCallback = Arc<dyn Fn(BuildResult<BundleOutput>) + Send + Sync>;
 
 pub type SharedNormalizedDevOptions = Arc<NormalizedDevOptions>;

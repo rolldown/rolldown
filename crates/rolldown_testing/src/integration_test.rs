@@ -142,7 +142,9 @@ impl IntegrationTest {
           DevOptions {
             on_hmr_updates: {
               let hmr_update_infos = Arc::clone(&hmr_update_infos);
-              Some(Arc::new(move |updates, changed_files| {
+              Some(Arc::new(move |result| {
+                let (updates, changed_files) =
+                  result.expect("HMR update computation failed in test");
                 hmr_update_infos.lock().unwrap().push((updates, changed_files));
               }))
             },

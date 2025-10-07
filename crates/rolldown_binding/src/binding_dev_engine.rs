@@ -45,14 +45,20 @@ impl BindingDevEngine {
 
     // If callback is provided, wrap it to convert Vec<ClientHmrUpdate> to Vec<BindingClientHmrUpdate>
     let on_hmr_updates = on_hmr_updates_callback.map(|js_callback| {
-      Arc::new(move |updates: Vec<rolldown_common::ClientHmrUpdate>, changed_files: Vec<String>| {
-        let binding_updates: Vec<BindingClientHmrUpdate> =
-          updates.into_iter().map(BindingClientHmrUpdate::from).collect();
-        js_callback.call(
-          FnArgs { data: (binding_updates, changed_files) },
-          ThreadsafeFunctionCallMode::Blocking,
-        );
-      }) as OnHmrUpdatesCallback
+      Arc::new(
+        move |result: rolldown_error::BuildResult<(
+          Vec<rolldown_common::ClientHmrUpdate>,
+          Vec<String>,
+        )>| {
+          let (updates, changed_files) = result.expect("HMR update computation failed");
+          let binding_updates: Vec<BindingClientHmrUpdate> =
+            updates.into_iter().map(BindingClientHmrUpdate::from).collect();
+          js_callback.call(
+            FnArgs { data: (binding_updates, changed_files) },
+            ThreadsafeFunctionCallMode::Blocking,
+          );
+        },
+      ) as OnHmrUpdatesCallback
     });
 
     let dev_watch_options = if skip_write.is_some()

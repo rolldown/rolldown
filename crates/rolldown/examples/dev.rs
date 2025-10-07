@@ -20,8 +20,13 @@ async fn main() {
     bundler_builder,
     DevOptions {
       rebuild_strategy: Some(RebuildStrategy::Always),
-      on_hmr_updates: Some(Arc::new(|updates, changed_files| {
-        println!("HMR updates: {updates:#?} due to {changed_files:#?}");
+      on_hmr_updates: Some(Arc::new(|result| match result {
+        Ok((updates, changed_files)) => {
+          println!("HMR updates: {updates:#?} due to {changed_files:#?}");
+        }
+        Err(e) => {
+          eprintln!("HMR error: {e:#?}");
+        }
       })),
       ..Default::default()
     },

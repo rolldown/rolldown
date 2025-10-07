@@ -202,31 +202,39 @@ impl BundlingTask {
       .collect();
 
     // Compute HMR updates for all clients in one call
-    let client_updates = bundler
+    let hmr_result = bundler
       .compute_hmr_update_for_file_changes(
         &changed_files,
         &client_inputs,
         Arc::clone(&self.next_hmr_patch_id),
       )
-      .await?;
+      .await;
 
-    // Check if any update is a full reload
-    for update in &client_updates {
-      if update.update.is_full_reload() {
-        *has_full_reload_update = true;
+    // Check if any update is a full reload (only if successful)
+    if let Ok(client_updates) = &hmr_result {
+      for update in client_updates {
+        if update.update.is_full_reload() {
+          *has_full_reload_update = true;
+        }
       }
     }
 
     self.bundler_cache = Some(bundler.take_cache());
-    // We had updated the cache with those changes, so we can clear the changed files.
-    // This way, we won't need to update the cache again in rebuild.
-    if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref()
-      && !client_updates.is_empty()
-    {
-      on_hmr_updates(client_updates, changed_files);
-    }
 
-    Ok(())
+    // Call on_hmr_updates callback if provided
+    if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref() {
+      match hmr_result {
+        Ok(client_updates) => {
+          on_hmr_updates(Ok((client_updates, changed_files)));
+        }
+        Err(e) => {
+          on_hmr_updates(Err(e));
+        }
+      }
+      Ok(())
+    } else {
+      hmr_result.map(|_| ())
+    }
   }
 
   async fn rebuild(&mut self) -> BuildResult<()> {

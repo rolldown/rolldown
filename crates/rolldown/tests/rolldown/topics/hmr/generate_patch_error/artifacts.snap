@@ -41,7 +41,9 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 //#endregion
 ```
+
 # HMR Step 0
+
 ## Errors
 
 ### PARSE_ERROR
@@ -57,9 +59,6 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 ```
 
-## Meta
-
-- update type: noop
 # HMR Step 1
 
 ## Code
@@ -88,9 +87,11 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 init_hmr_0()
 __rolldown_runtime__.applyUpdates([['hmr.js', 'hmr.js']]);
 ```
+
 ## Meta
 
 - update type: patch
+
 ### Hmr Boundaries
 
 - boundary: hmr.js, accepted_via: hmr.js

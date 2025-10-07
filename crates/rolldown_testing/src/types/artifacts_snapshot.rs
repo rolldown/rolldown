@@ -45,19 +45,29 @@ impl ArtifactsSnapshot {
       }
 
       if !build_round.hmr_updates_by_steps.is_empty() {
-        for (step, (hmr_updates, _changed_files)) in
-          build_round.hmr_updates_by_steps.iter().enumerate()
-        {
-          for hmr_update in hmr_updates {
-            let hmr_section = Self::create_hmr_output_section(
-              test_meta,
-              step,
-              &hmr_update.update,
-              vec![],
-              &mut build_round.rebuild_results,
-              build_round.cwd.as_ref().unwrap(),
-            );
-            build_round_sections.push(hmr_section);
+        for (step, hmr_result) in build_round.hmr_updates_by_steps.into_iter().enumerate() {
+          match hmr_result {
+            Ok((hmr_updates, _changed_files)) => {
+              for hmr_update in hmr_updates {
+                let hmr_section = Self::create_hmr_output_section(
+                  test_meta,
+                  step,
+                  &hmr_update.update,
+                  vec![],
+                  &mut build_round.rebuild_results,
+                  build_round.cwd.as_ref().unwrap(),
+                );
+                build_round_sections.push(hmr_section);
+              }
+            }
+            Err(errs) => {
+              let hmr_section = Self::create_hmr_error_section(
+                step,
+                errs.into_vec(),
+                build_round.cwd.as_ref().unwrap(),
+              );
+              build_round_sections.push(hmr_section);
+            }
           }
         }
       }
@@ -238,6 +248,17 @@ impl ArtifactsSnapshot {
       sections.push(sourcemap_section);
     }
     sections
+  }
+
+  fn create_hmr_error_section(
+    step: usize,
+    errs: Vec<BuildDiagnostic>,
+    cwd: &Path,
+  ) -> SnapshotSection {
+    let mut hmr_section = SnapshotSection::with_title(format!("HMR Step {step}"));
+    let errors_section = Self::create_error_section(errs, cwd);
+    hmr_section.add_child(errors_section);
+    hmr_section
   }
 
   fn create_hmr_output_section(

@@ -5551,6 +5551,10 @@ expression: output
 
 - main-!~{000}~.js => main-DUYBgdHJ.js
 
+# tests/rolldown/topics/hmr/generate_patch_error
+
+- main-!~{000}~.js => main-CaJN1Nok.js
+
 # tests/rolldown/topics/hmr/import_meta_hot_accept
 
 - main-!~{000}~.js => main-CRwk-v0F.js

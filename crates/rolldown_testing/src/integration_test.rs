@@ -143,9 +143,7 @@ impl IntegrationTest {
             on_hmr_updates: {
               let hmr_update_infos = Arc::clone(&hmr_update_infos);
               Some(Arc::new(move |result| {
-                let (updates, changed_files) =
-                  result.expect("HMR update computation failed in test");
-                hmr_update_infos.lock().unwrap().push((updates, changed_files));
+                hmr_update_infos.lock().unwrap().push(result);
               }))
             },
             on_output: {
@@ -202,7 +200,7 @@ impl IntegrationTest {
             );
 
             let mut patch_chunks: Vec<String> = vec![];
-            for (hmr_updates, _changed_files) in &hmr_update_infos {
+            for (hmr_updates, _changed_files) in hmr_update_infos.iter().flatten() {
               for hmr_update in hmr_updates {
                 match &hmr_update.update {
                   rolldown_common::HmrUpdate::Patch(patch) => {

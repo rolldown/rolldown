@@ -14,5 +14,5 @@ pub struct BuildRoundOutput {
   pub debug_title: Option<String>,
   pub initial_output: Option<BuildResult<BundleOutput>>,
   pub rebuild_results: Vec<BuildResult<BundleOutput>>,
-  pub hmr_updates_by_steps: Vec<(Vec<rolldown_common::ClientHmrUpdate>, Vec<String>)>,
+  pub hmr_updates_by_steps: Vec<BuildResult<(Vec<rolldown_common::ClientHmrUpdate>, Vec<String>)>>,
 }

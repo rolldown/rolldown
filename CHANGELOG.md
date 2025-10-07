@@ -1,4 +1,76 @@
 
+## [1.0.0-beta.42] - 2025-10-07
+
+### 🚀 Features
+
+- rolldown: oxc v0.94.0 (#6428) by @Boshen
+- add CLI environment flag (#6426) by @IWANABETHATGUY
+- dev: use `RebuildStrategy#Auto` by default (#6420) by @hyf0
+- rolldown_plugin_vite_html: introduce html plugin state (#6413) by @shulaoda
+- dev: expose build errors via `DevOptions#on_output` (#6412) by @hyf0
+- dev: add binding for `DevOptions#rebuild_strategy` (#6396) by @hyf0
+- dev: add `RebuildStrategy::Auto` to issue rebuild automatically if detecting full reload hmr update (#6395) by @hyf0
+- debug: inject `call_id` for `renderChunk` hook (#6392) by @hyf0
+- node/dev: add `DevEngine#close` (#6377) by @hyf0
+- rust/dev: add `DevEngine#close` (#6376) by @hyf0
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_react_refresh_wrapper: register exports in next microtask (#6423) by @sapphi-red
+- plugin/vite-resolve: try original extension before replacing with TS variants (#6421) by @sapphi-red
+- node/resolve: take custom package json path into account (#6419) by @hyf0
+- dev: call `watchChange` hook (#6403) by @sapphi-red
+- use minify options for DCE for dce-only minify (#6402) by @sapphi-red
+- respect package.json type field in plugin-resolved modules (#6400) by @hyf0
+- returning result of this.resolve in resolveDynamicImport hook impacts bundle size (#6397) by @sapphi-red
+- rolldown_plugin_json: avoid generating named exports for `eval` and `arguments` (#6381) by @sapphi-red
+- use static property for namespace object (#6383) by @sapphi-red
+
+### 🚜 Refactor
+
+- rust: improve constuction of `PackageJson` and remove unused fields (#6418) by @hyf0
+- introduce `BindingResult` to pass errors from rust to js (#6390) by @hyf0
+- rust: rename eager_rebuild to rebuild_strategy with enum (#6394) by @hyf0
+- rust/binding: use `BindingError` to cover `JsError` and `NativeError` (#6388) by @hyf0
+- rust/binding: rename `BindingError` to `NativeError` (#6387) by @hyf0
+
+### 📚 Documentation
+
+- tweak built-in transforms section (#6384) by @sapphi-red
+
+### ⚡ Performance
+
+- dev: avoid frequent `setTimeout` -> `clearTimeout` (#6375) by @sapphi-red
+
+### 🧪 Testing
+
+- hmr: include generated bundle for full reloads in snapshots (#6374) by @sapphi-red
+- dev: add test about doing hmr with not being affected by not executed modules (#6360) by @hyf0
+- hmr: hmr patch file generation for `this.addWatchFile` (#5219) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update crate-ci/typos action to v1.38.0 (#6431) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.37.3 (#6429) by @renovate[bot]
+- deps: lock file maintenance npm packages (#6417) by @renovate[bot]
+- deps: update github-actions (#6414) by @renovate[bot]
+- rust/test: sensible heading level for build snapshot of config variant (#6408) by @hyf0
+- rust/test: introduce `SnapshotSection` to organize snapshot content (#6407) by @hyf0
+- rust/test: extract `ArtifactsSnapshot` and `BuildRoundOutput` into standalone files (#6406) by @hyf0
+- rust/test: introduce `ArtifactsSnapshot` to make generating snapshot more clear (#6405) by @hyf0
+- deps: update crate-ci/typos action to v1.37.2 (#6409) by @renovate[bot]
+- fix `GitHub` casing (#6401) by @iiio2
+- rust: remove unused `rolldown_binding_watcher` crate (#6386) by @hyf0
+- deps: update crate-ci/typos action to v1.37.1 (#6391) by @renovate[bot]
+- node: rename `normalizeErrors` into `aggregateBindingErrorsIntoError` (#6389) by @hyf0
+- fix typos (#6382) by @sapphi-red
+- deps: update dependency tsdown to v0.15.6 (#6379) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.37.0 (#6380) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.16.11 (#6378) by @renovate[bot]
+- add comment to `add_watch_file` that the path should be a normalized absolute path (#6371) by @sapphi-red
+- deps: update dependency rolldown-plugin-dts to v0.16.10 (#6373) by @renovate[bot]
+
+
 ## [1.0.0-beta.41] - 2025-09-29
 
 ### 🚀 Features

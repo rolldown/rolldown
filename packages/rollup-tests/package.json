@@ -1,5 +1,6 @@
 {
   "name": "rollup-tests",
+  "type": "module",
   "private": true,
   "scripts": {
     "test": "ROLLUP_TEST=1 mocha --file ./src/intercept/check.js test/test.js",

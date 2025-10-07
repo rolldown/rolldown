@@ -1,6 +1,6 @@
 use std::{
   borrow::Cow,
-  path::PathBuf,
+  path::{Path, PathBuf},
   sync::{Arc, Weak},
 };
 
@@ -8,8 +8,8 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  LogLevel, LogWithoutPlugin, ModuleInfo, ModuleLoaderMsg, ResolvedId, SharedFileEmitter,
-  SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
+  LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleInfo, ModuleLoaderMsg, PackageJson,
+  ResolvedId, SharedFileEmitter, SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
@@ -47,6 +47,7 @@ impl NativePluginContextImpl {
     &self,
     specifier: &str,
     side_effects: Option<HookSideEffects>,
+    module_def_format: ModuleDefFormat,
   ) -> anyhow::Result<()> {
     // Clone out the sender under the lock, then drop the lock before awaiting.
     let sender = {
@@ -57,6 +58,7 @@ impl NativePluginContextImpl {
       .send(ModuleLoaderMsg::FetchModule(Box::new(ResolvedId {
         id: specifier.into(),
         side_effects,
+        module_def_format,
         ..Default::default()
       })))
       .await?;
@@ -66,6 +68,10 @@ impl NativePluginContextImpl {
       .ok_or_else(|| anyhow::anyhow!("Plugin driver is already dropped."))?;
     plugin_driver.wait_for_module_load_completion(specifier).await;
     Ok(())
+  }
+
+  pub fn try_get_package_json_or_create(&self, path: &Path) -> anyhow::Result<Arc<PackageJson>> {
+    self.resolver.try_get_package_json_or_create(path)
   }
 
   #[tracing::instrument(skip_all, fields(CONTEXT_hook_resolve_id_trigger = "manual"))]

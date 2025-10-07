@@ -19,7 +19,10 @@ pub fn is_data_url(s: &str) -> bool {
 
 /// Infers ModuleDefFormat from file path and optional package.json.
 /// This matches the logic used in the internal resolver's `infer_module_def_format`.
-fn infer_module_def_format(path: &str, package_json: Option<&Arc<PackageJson>>) -> ModuleDefFormat {
+pub fn infer_module_def_format(
+  path: &str,
+  package_json: Option<&Arc<PackageJson>>,
+) -> ModuleDefFormat {
   let fmt = ModuleDefFormat::from_path(path);
 
   // If the extension is specific (.mjs/.cjs/.cts/.mts), use it

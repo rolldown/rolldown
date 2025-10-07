@@ -2871,6 +2871,7 @@ dependencies = [
  "rolldown_utils",
  "rustc-hash",
  "string_wizard",
+ "sugar_path",
  "tracing",
  "url",
 ]

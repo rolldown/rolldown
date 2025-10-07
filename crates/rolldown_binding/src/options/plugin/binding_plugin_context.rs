@@ -1,5 +1,7 @@
 use napi_derive::napi;
+use sugar_path::SugarPath;
 
+use rolldown_plugin::__inner::infer_module_def_format;
 use rolldown_plugin::{PluginContext, SharedNativePluginContext};
 
 use super::types::{
@@ -18,15 +20,23 @@ pub struct BindingPluginContext {
 
 #[napi]
 impl BindingPluginContext {
-  #[napi(ts_args_type = "specifier: string, sideEffects: boolean | 'no-treeshake' | undefined")]
+  #[napi(
+    ts_args_type = "specifier: string, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string"
+  )]
   pub async fn load(
     &self,
     specifier: String,
     side_effects: Option<BindingHookSideEffects>,
+    package_json_path: Option<String>,
   ) -> napi::Result<()> {
+    let package_json = package_json_path
+      .as_ref()
+      .map(|p| self.inner.try_get_package_json_or_create(p.as_path()))
+      .transpose()?;
+    let module_def_format = infer_module_def_format(&specifier, package_json.as_ref());
     self
       .inner
-      .load(&specifier, side_effects.map(TryInto::try_into).transpose()?)
+      .load(&specifier, side_effects.map(TryInto::try_into).transpose()?, module_def_format)
       .await
       .map_err(|program_err| napi_error::load_error(&specifier, program_err))
   }

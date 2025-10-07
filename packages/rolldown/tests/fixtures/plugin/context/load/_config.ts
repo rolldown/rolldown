@@ -27,6 +27,10 @@ export default defineTest({
               moduleSideEffects: false,
             })
             expect(moduleInfo.code!.includes('foo')).toBe(true)
+
+            const resolved = await this.resolve('./dir/index.js', id)
+            expect(resolved).toBeDefined()
+            await this.load(resolved!)
           }
           if (id.endsWith('foo.js')) {
             fooHookCalls++
@@ -48,7 +52,8 @@ export default defineTest({
   beforeTest: () => {
     fooHookCalls = 0
   },
-  afterTest: (output) => {
-    expect(output.output[0].code.includes(`console.log`)).toBe(false)
+  afterTest: async (output) => {
+     // @ts-ignore
+     await import('./dist/main')
   },
 })

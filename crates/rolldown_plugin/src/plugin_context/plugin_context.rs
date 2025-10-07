@@ -5,7 +5,9 @@ use std::{
 
 use arcstr::ArcStr;
 use derive_more::Debug;
-use rolldown_common::{LogWithoutPlugin, ResolvedId, side_effects::HookSideEffects};
+use rolldown_common::{
+  LogWithoutPlugin, ModuleDefFormat, ResolvedId, side_effects::HookSideEffects,
+};
 
 use crate::{
   PluginContextResolveOptions, plugin_context::PluginContextMeta,
@@ -67,8 +69,9 @@ impl PluginContext {
     &self,
     specifier: &str,
     side_effects: Option<HookSideEffects>,
+    module_def_format: ModuleDefFormat,
   ) -> anyhow::Result<()> {
-    call_native_only!(self, "load", ctx => ctx.load(specifier, side_effects).await)
+    call_native_only!(self, "load", ctx => ctx.load(specifier, side_effects, module_def_format).await)
   }
 
   pub async fn resolve(

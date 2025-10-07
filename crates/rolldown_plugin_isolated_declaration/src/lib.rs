@@ -41,7 +41,7 @@ impl Plugin for IsolatedDeclarationPlugin {
       for specifier in type_import_specifiers {
         let resolved_id = ctx.resolve(&specifier, Some(args.id), None).await??;
         if matches!(resolved_id.external, ResolvedExternal::Bool(false)) {
-          ctx.load(&resolved_id.id, None).await?;
+          ctx.load(&resolved_id.id, None, resolved_id.module_def_format).await?;
         }
       }
 

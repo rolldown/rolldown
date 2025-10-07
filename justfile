@@ -12,11 +12,21 @@ setup:
   cargo install cargo-binstall
   cargo binstall cargo-insta cargo-deny cargo-shear typos-cli -y
   # Node.js related setup
-  (! which corepack) || corepack enable
+  just _maybe-corepack
   pnpm install
   just setup-submodule
   just setup-bench
   @echo "✅✅✅ Setup complete!"
+
+[private]
+[unix]
+_maybe-corepack:
+  @command -v corepack >/dev/null 2>&1 && corepack enable || echo "corepack not found, skipping corepack enable"
+
+[private]
+[windows]
+_maybe-corepack:
+  @if (Get-Command corepack -ErrorAction SilentlyContinue) { corepack enable } else { Write-Host "corepack not found, skipping corepack enable" }
 
 setup-submodule:
   git submodule update --init

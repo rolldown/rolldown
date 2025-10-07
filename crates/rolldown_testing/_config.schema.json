@@ -1159,7 +1159,6 @@
           "format": "double"
         },
         "includeDependenciesRecursively": {
-          "description": "Whether to include the captured module's dependencies recursively.\n- If `true`, the dependencies would be included this group forcefully unless they are already included in another group.\n- This option would forcefully `true`, if `preserve_entry_signatures` is not `allow-extension`.",
           "type": [
             "boolean",
             "null"

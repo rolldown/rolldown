@@ -21,9 +21,6 @@ pub struct AdvancedChunksOptions {
   pub max_size: Option<f64>,
   pub min_module_size: Option<f64>,
   pub max_module_size: Option<f64>,
-  /// Whether to include the captured module's dependencies recursively.
-  /// - If `true`, the dependencies would be included this group forcefully unless they are already included in another group.
-  /// - This option would forcefully `true`, if `preserve_entry_signatures` is not `allow-extension`.
   pub include_dependencies_recursively: Option<bool>,
   pub groups: Option<Vec<MatchGroup>>,
 }

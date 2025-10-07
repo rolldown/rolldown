@@ -206,7 +206,7 @@ export interface OutputOptions {
      * By default, each group will also include captured modules' dependencies. This reduces the chance of generating circular chunks.
      *
      * If you want to disable this behavior, it's recommended to both set
-     * - `preserveEntrySignatures: false`
+     * - `preserveEntrySignatures: false | 'allow-extension'`
      * - `strictExecutionOrder: true`
      *
      * to avoid generating invalid chunks.

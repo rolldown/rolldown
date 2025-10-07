@@ -348,9 +348,19 @@ export const value = 'a' + value;
 
 You could see, to make `a.js` work, we have to change the export signature of the entry chunk `entry.js` and add an additional export `value`. This totally violates the original intention of the code, which is to only export `foo` from `entry.js`.
 
-Fortunately, Rolldown supports [`InputOptions.preserveEntrySignatures`](/reference/config-options#preserveentrysignatures) to let you inform the bundler that it is allowed to change the export signature of the entry chunk.
+If you don't want this behavior, you could use [`advancedChunks.includeDependenciesRecursively: false`](/reference/config-options#advancedchunks-includedependenciesrecursively) to disable it.
 
-Enabling [`InputOptions.preserveEntrySignatures: false | 'allow-extension'`](/reference/config-options#preserveentrysignatures) will prevent the bundler from capturing the dependencies of the captured module.
+:::warning Caveats
+
+With `includeDependenciesRecursively: false`, depended modules of a group might be left in the entry chunks. It's invalid to export non-entry module from an entry chunk. To avoid this, we strongly recommend to set:
+
+- [`InputOptions.preserveEntrySignatures: false | 'allow-extension'`](/reference/config-options#preserveentrysignatures)
+
+`includeDependenciesRecursively: false` increases the chance of generating invalid output code. If you encounter issues due to execution order or circular dependencies, consider enabling:
+
+- [`experimental.strictExecutionOrder: true`](/reference/config-options#experimental-strictexecutionorder)
+
+:::
 
 ### Why is the chunk bigger than `maxSize`?
 

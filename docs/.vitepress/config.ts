@@ -40,6 +40,10 @@ const sharedSidebar = [
       { text: 'Top Level Await', link: '/guide/in-depth/tla-in-rolldown.md' },
       { text: 'Advanced Chunks', link: '/guide/in-depth/advanced-chunks.md' },
       { text: 'Bundling CJS', link: '/guide/in-depth/bundling-cjs.md' },
+      {
+        text: 'Why Plugin Hook Filter',
+        link: '/guide/in-depth/why-plugin-hook-filter.md',
+      },
       // { text: 'Code Splitting', link: '/guide/in-depth/code-splitting.md' },
       { text: 'Directives', link: '/guide/in-depth/directives.md' },
     ],

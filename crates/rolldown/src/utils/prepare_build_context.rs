@@ -92,18 +92,19 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> Vec<BuildDiagnosti
 
     // Check if includeDependenciesRecursively is false with incompatible preserveEntrySignatures
     if matches!(advanced_chunks.include_dependencies_recursively, Some(false)) {
-      let preserve_entry_signatures =
-        raw_options.preserve_entry_signatures.unwrap_or(PreserveEntrySignatures::Strict);
-      if matches!(
-        preserve_entry_signatures,
-        PreserveEntrySignatures::Strict | PreserveEntrySignatures::ExportsOnly
-      ) {
-        warnings.push(
-          BuildDiagnostic::invalid_option(
+      // preserveEntrySignatures must be explicitly set to false or allow-extension
+      match raw_options.preserve_entry_signatures {
+        Some(PreserveEntrySignatures::False) | Some(PreserveEntrySignatures::AllowExtension) => {
+          // Valid combination, no warning
+        }
+        Some(PreserveEntrySignatures::Strict)
+        | Some(PreserveEntrySignatures::ExportsOnly)
+        | None => {
+          // Invalid: either explicitly strict/exports-only, or not set (which defaults to strict)
+          warnings.push(BuildDiagnostic::invalid_option(
             InvalidOptionType::IncludeDependenciesRecursivelyWithStrictSignatures,
-          )
-          .with_severity_warning(),
-        );
+          ));
+        }
       }
     }
   }

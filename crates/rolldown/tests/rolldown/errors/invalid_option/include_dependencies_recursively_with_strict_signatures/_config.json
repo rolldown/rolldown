@@ -1,0 +1,14 @@
+{
+  "config": {
+    "advancedChunks": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "test",
+          "test": "main"
+        }
+      ]
+    }
+  },
+  "expectError": true
+}

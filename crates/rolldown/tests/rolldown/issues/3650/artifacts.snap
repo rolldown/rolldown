@@ -1,15 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## INVALID_OPTION
-
-```text
-[INVALID_OPTION] Warning: When "advancedChunks.includeDependenciesRecursively" is set to false, "preserveEntrySignatures" must be set to false or 'allow-extension'. Setting it to 'strict' or 'exports-only' would require changing entry chunk export signatures, which conflicts with strict signature preservation.
-
-```
-
 # Assets
 
 ## first.js

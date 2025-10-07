@@ -15,6 +15,7 @@
           "test": "second|rolldown:runtime"
         }
       ]
-    }
+    },
+    "preserveEntrySignatures": "allow-extension"
   }
 }

@@ -251,8 +251,13 @@ impl Plugin for ViteResolvePlugin {
           .is_some_and(|v| v.is_sub_imports_pattern())
         {
           let path = Path::new(&self.resolve_options.root).join(id.as_ref()).normalize();
+          let package_json_path = self
+            .resolvers
+            .get_nearest_package_json(path.to_str().unwrap())
+            .map(|pj| pj.realpath().to_str().unwrap().to_string());
           return Ok(Some(HookResolveIdOutput {
             id: path.to_slash_lossy().into(),
+            package_json_path,
             ..Default::default()
           }));
         }
@@ -283,7 +288,15 @@ impl Plugin for ViteResolvePlugin {
           res = finalized;
         }
       }
-      return Ok(Some(HookResolveIdOutput { id: res.into(), ..Default::default() }));
+      let package_json_path = self
+        .resolvers
+        .get_nearest_package_json(&path)
+        .map(|pj| pj.realpath().to_str().unwrap().to_string());
+      return Ok(Some(HookResolveIdOutput {
+        id: res.into(),
+        package_json_path,
+        ..Default::default()
+      }));
     }
 
     // data uri: pass through (this only happens during build and will be handled by rolldown)

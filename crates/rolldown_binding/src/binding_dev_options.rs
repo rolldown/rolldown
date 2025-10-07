@@ -1,4 +1,4 @@
-use crate::types::binding_hmr_output::BindingClientHmrUpdate;
+use crate::types::binding_client_hmr_update::BindingClientHmrUpdate;
 use crate::types::binding_rebuild_strategy::BindingRebuildStrategy;
 use crate::types::js_callback::JsCallback;
 use napi::bindgen_prelude::FnArgs;

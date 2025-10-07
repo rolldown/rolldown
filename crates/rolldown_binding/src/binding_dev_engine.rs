@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use crate::binding_bundler_impl::{BindingBundlerImpl, BindingBundlerOptions};
 use crate::binding_dev_options::BindingDevOptions;
-use crate::types::binding_hmr_output::BindingClientHmrUpdate;
+use crate::types::binding_client_hmr_update::BindingClientHmrUpdate;
 use napi::bindgen_prelude::FnArgs;
 use napi::{Env, threadsafe_function::ThreadsafeFunctionCallMode};
 

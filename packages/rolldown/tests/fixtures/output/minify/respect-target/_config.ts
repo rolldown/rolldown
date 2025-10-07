@@ -9,7 +9,8 @@ export default defineTest({
     },
     output: [
       { minify: true },
-      { minify: 'dce-only' }
+      { minify: 'dce-only' },
+      { minify: { compress: true } }
     ],
   },
   afterTest: async (outputs) => {

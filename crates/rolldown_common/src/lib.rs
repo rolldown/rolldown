@@ -47,7 +47,7 @@ pub mod bundler_options {
       legal_comments::LegalComments,
       log_level::LogLevel,
       make_absolute_externals_relative::MakeAbsoluteExternalsRelative,
-      minify_options::{MinifyOptions, RawMinifyOptions},
+      minify_options::{MinifyOptions, RawMinifyOptions, RawMinifyOptionsDetailed},
       module_type::ModuleType,
       normalized_bundler_options::{NormalizedBundlerOptions, SharedNormalizedBundlerOptions},
       on_log::{Log, LogWithoutPlugin, OnLog},

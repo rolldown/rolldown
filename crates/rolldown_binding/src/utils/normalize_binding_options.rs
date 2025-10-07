@@ -18,7 +18,7 @@ use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
   ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal, MatchGroup,
   MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat, Platform,
-  RawMinifyOptions, SanitizeFilename,
+  RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename,
 };
 use rolldown_common::GeneratedCodeOptions;
 use rolldown_common::{DeferSyncScanData, bundler_options};
@@ -356,15 +356,23 @@ pub fn normalize_binding_options(
             Err(napi::Error::new(napi::Status::InvalidArg, "Invalid minify option"))
           }
         }
-        napi::bindgen_prelude::Either3::C(opts) => Ok(RawMinifyOptions::Object((
-          oxc::minifier::MinifierOptions::try_from(&opts)
-            .map_err(|_| napi::Error::new(napi::Status::InvalidArg, "Invalid minify option"))?,
-          match &opts.codegen {
-            None => true,
-            Some(Either::A(bool)) => *bool,
-            Some(Either::B(codegen_opts)) => codegen_opts.remove_whitespace.unwrap_or(true),
-          },
-        ))),
+        napi::bindgen_prelude::Either3::C(opts) => {
+          Ok(RawMinifyOptions::Object(RawMinifyOptionsDetailed {
+            options: oxc::minifier::MinifierOptions::try_from(&opts)
+              .map_err(|_| napi::Error::new(napi::Status::InvalidArg, "Invalid minify option"))?,
+            default_target: matches!(
+              opts.compress,
+              Some(
+                Either::A(true) | Either::B(oxc_minify_napi::CompressOptions { target: None, .. })
+              )
+            ),
+            remove_whitespace: match &opts.codegen {
+              None => true,
+              Some(Either::A(bool)) => *bool,
+              Some(Either::B(codegen_opts)) => codegen_opts.remove_whitespace.unwrap_or(true),
+            },
+          }))
+        }
       })
       .transpose()?,
     extend: output_options.extend,

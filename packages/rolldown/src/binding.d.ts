@@ -1299,11 +1299,6 @@ export declare class BindingChunkingContext {
   getModuleInfo(moduleId: string): BindingModuleInfo | null
 }
 
-export declare class BindingClientHmrUpdate {
-  get clientId(): string
-  get update(): BindingHmrUpdate
-}
-
 export declare class BindingDevEngine {
   constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
   run(): Promise<void>
@@ -1603,6 +1598,11 @@ export interface BindingChunkImportMap {
 export declare enum BindingChunkModuleOrderBy {
   ModuleId = 0,
   ExecOrder = 1
+}
+
+export interface BindingClientHmrUpdate {
+  clientId: string
+  update: BindingHmrUpdate
 }
 
 export interface BindingDebugOptions {

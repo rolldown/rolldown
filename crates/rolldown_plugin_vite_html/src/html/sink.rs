@@ -27,6 +27,8 @@ pub enum NodeData {
     name: Atom,
     /// Attributes of the element
     attrs: RefCell<Vec<Attribute>>,
+    /// Source position of this element
+    span: Span,
   },
 }
 
@@ -115,8 +117,8 @@ impl RcDomEmitter {
     self.dom
   }
 
-  pub fn add_element(&mut self, name: Atom, attrs: Vec<Attribute>, self_closing: bool) {
-    let element = Node::new(NodeData::Element { name, attrs: RefCell::new(attrs) });
+  pub fn add_element(&mut self, name: Atom, attrs: Vec<Attribute>, span: Span, self_closing: bool) {
+    let element = Node::new(NodeData::Element { name, attrs: RefCell::new(attrs), span });
 
     append(&self.current_node, Rc::clone(&element));
 

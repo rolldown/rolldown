@@ -21,6 +21,7 @@ pub fn parse_html(html: &str) -> RcDom {
         dom_builder.add_element(
           Atom::from(String::from_utf8_lossy(&tag.name)),
           attrs,
+          tag.span,
           tag.self_closing,
         );
       }

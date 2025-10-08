@@ -47,7 +47,7 @@ impl Plugin for ViteHtmlPlugin {
     Ok(())
   }
 
-  #[expect(unused_variables, unused_assignments, clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   async fn transform(
     &self,
     ctx: rolldown_plugin::SharedTransformPluginContext,
@@ -97,7 +97,7 @@ impl Plugin for ViteHtmlPlugin {
       let mut stack = vec![dom.document];
       while let Some(node) = stack.pop() {
         match &node.data {
-          html::sink::NodeData::Element { name, attrs, .. } => {
+          html::sink::NodeData::Element { name, attrs, span } => {
             let mut should_remove = false;
             if &**name == "script" {
               let mut src = None;
@@ -128,8 +128,8 @@ impl Plugin for ViteHtmlPlugin {
                 let is_public_file = src.as_ref().is_some_and(|(s, _)| {
                   rolldown_plugin_utils::check_public_file(s, &self.public_dir).is_some()
                 });
-                if is_public_file && let Some((url, span)) = src.as_ref() {
-                  overwrite_attrs.push((&url[1..], span));
+                if is_public_file && let Some((ref url, span)) = src {
+                  overwrite_attrs.push((url[1..].to_owned(), span));
                 }
                 if is_module {
                   inline_module_count += 1;
@@ -238,17 +238,43 @@ impl Plugin for ViteHtmlPlugin {
             }
 
             // Handle <tag style="..." />
-            self.handle_style_attribute(
-              &mut s,
-              &mut js,
-              &id,
-              attrs.borrow().as_ref(),
-              &ctx,
-              public_path.clone(),
-              &mut inline_module_count,
-            )?;
+            if let Some(attr) = attrs.borrow().iter().find(|a| {
+              &*a.name == "style" && (a.value.contains("url(") || a.value.contains("image-set("))
+            }) {
+              self.handle_style_tag_or_attribute(
+                &mut s,
+                &mut js,
+                &id,
+                &ctx,
+                public_path.clone(),
+                &mut inline_module_count,
+                true,
+                (attr.value.as_str(), attr.span),
+              )?;
+            }
 
-            todo!()
+            // Handle <style>...</style>
+            if &**name == "style"
+              && let Some(node) = node.children.borrow_mut().pop()
+            {
+              let html::sink::NodeData::Text { ref contents, span } = node.data else {
+                panic!("Expected text node but received: {:#?}", node.data);
+              };
+              self.handle_style_tag_or_attribute(
+                &mut s,
+                &mut js,
+                &id,
+                &ctx,
+                public_path.clone(),
+                &mut inline_module_count,
+                false,
+                (contents, span),
+              )?;
+            }
+
+            if should_remove {
+              s.remove(span.start, span.end);
+            }
           }
           _ => {}
         }
@@ -276,10 +302,10 @@ impl Plugin for ViteHtmlPlugin {
     // }
 
     for (url, span) in overwrite_attrs {
-      let asset_url = env.to_output_file_path(url, "html", true, public_to_relative).await?;
+      let asset_url = env.to_output_file_path(&url, "html", true, public_to_relative).await?;
       utils::overwrite_check_public_file(
         &mut s,
-        *span,
+        span,
         partial_encode_url_path(&asset_url.to_asset_url_in_css_or_html()).into_owned(),
       )?;
     }

@@ -1,7 +1,6 @@
 pub mod binding_client_hmr_update;
 pub mod binding_generate_hmr_patch_return;
 pub mod binding_hmr_boundary_output;
-pub mod binding_hmr_output;
 pub mod binding_hmr_update;
 pub mod binding_log;
 pub mod binding_log_level;

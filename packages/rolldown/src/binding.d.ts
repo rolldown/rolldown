@@ -1311,11 +1311,6 @@ export declare class BindingDevEngine {
   close(): Promise<void>
 }
 
-export declare class BindingHmrOutput {
-  get patch(): BindingHmrUpdate | null
-  get errors(): Array<BindingError>
-}
-
 export declare class BindingMagicString {
   constructor(source: string)
   replace(from: string, to: string): void

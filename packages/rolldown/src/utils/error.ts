@@ -14,6 +14,19 @@ export function unwrapBindingResult<T>(
   return container as T;
 }
 
+export function normalizeBindingResult<T>(
+  container: BindingResult<T>,
+): T | Error {
+  if (
+    typeof container === 'object' && container !== null &&
+    'isBindingErrors' in container &&
+    container.isBindingErrors
+  ) {
+    return aggregateBindingErrorsIntoJsError(container.errors);
+  }
+  return container as T;
+}
+
 function normalizeBindingError(e: BindingError): Error {
   return e.type === 'JsError'
     ? e.field0

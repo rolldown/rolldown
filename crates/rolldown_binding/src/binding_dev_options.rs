@@ -1,5 +1,7 @@
 use crate::types::binding_client_hmr_update::BindingClientHmrUpdate;
+use crate::types::binding_outputs::BindingOutputs;
 use crate::types::binding_rebuild_strategy::BindingRebuildStrategy;
+use crate::types::error::BindingResult;
 use crate::types::js_callback::JsCallback;
 use napi::bindgen_prelude::FnArgs;
 use napi_derive::napi;
@@ -21,6 +23,10 @@ pub struct BindingDevOptions {
     ts_type = "undefined | ((updates: BindingClientHmrUpdate[], changedFiles: string[]) => void | Promise<void>)"
   )]
   pub on_hmr_updates: Option<JsCallback<FnArgs<(Vec<BindingClientHmrUpdate>, Vec<String>)>, ()>>,
+  #[napi(
+    ts_type = "undefined | ((result: BindingResult<BindingOutputs>) => void | Promise<void>)"
+  )]
+  pub on_output: Option<JsCallback<FnArgs<(BindingResult<BindingOutputs>,)>, ()>>,
   pub rebuild_strategy: Option<BindingRebuildStrategy>,
   pub watch: Option<BindingDevWatchOptions>,
 }

@@ -1,12 +1,14 @@
 import {
   type BindingClientHmrUpdate,
   BindingDevEngine,
+  type BindingDevOptions,
   BindingRebuildStrategy,
 } from '../../binding';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
+import { normalizeBindingResult } from '../../utils/error';
 import type { DevOptions } from './dev-options';
 
 export class DevEngine {
@@ -25,8 +27,16 @@ export class DevEngine {
       false,
     );
 
-    const bindingDevOptions = {
+    const userOnOutput = devOptions.onOutput;
+    const bindingOnOutput: BindingDevOptions['onOutput'] = userOnOutput
+      ? function(rawResult) {
+        userOnOutput(normalizeBindingResult(rawResult));
+      }
+      : undefined;
+
+    const bindingDevOptions: BindingDevOptions = {
       onHmrUpdates: devOptions.onHmrUpdates,
+      onOutput: bindingOnOutput,
       rebuildStrategy: devOptions.rebuildStrategy
         ? devOptions.rebuildStrategy === 'always'
           ? BindingRebuildStrategy.Always

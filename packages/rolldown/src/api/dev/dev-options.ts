@@ -1,4 +1,8 @@
-import type { BindingClientHmrUpdate } from '../../binding';
+import type { BindingClientHmrUpdate, BindingOutputs } from '../../binding';
+
+type DevOnOutput = (
+  result: Error | BindingOutputs,
+) => void | Promise<void>;
 
 export interface DevWatchOptions {
   /**
@@ -46,6 +50,7 @@ export interface DevOptions {
     updates: BindingClientHmrUpdate[],
     changedFiles: string[],
   ) => void | Promise<void>;
+  onOutput?: DevOnOutput;
   /**
    * Strategy for triggering rebuilds after HMR updates.
    * - `'always'`: Always trigger a rebuild after HMR updates

@@ -1,13 +1,16 @@
 use napi_derive::napi;
-use rolldown::dev::OnHmrUpdatesCallback;
 use rolldown::dev::dev_context::BuildProcessFuture;
+use rolldown::dev::{OnHmrUpdatesCallback, dev_options::OnOutputCallback};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::binding_bundler_impl::{BindingBundlerImpl, BindingBundlerOptions};
 use crate::binding_dev_options::BindingDevOptions;
 use crate::types::binding_client_hmr_update::BindingClientHmrUpdate;
+use crate::types::binding_outputs::{BindingOutputs, to_binding_error};
+use crate::types::error::{BindingErrors, BindingResult};
 use napi::bindgen_prelude::FnArgs;
-use napi::{Env, threadsafe_function::ThreadsafeFunctionCallMode};
+use napi::{Either, Env, threadsafe_function::ThreadsafeFunctionCallMode};
 
 #[napi]
 pub struct BindingDevEngine {
@@ -24,13 +27,14 @@ impl BindingDevEngine {
     options: BindingBundlerOptions,
     dev_options: Option<BindingDevOptions>,
   ) -> napi::Result<Self> {
-    let bundler =
-      BindingBundlerImpl::new(options, rolldown_debug::Session::dummy(), 0)?.into_inner();
-
     let session_id = rolldown_debug::generate_session_id();
     let session = rolldown_debug::Session::dummy();
 
     let on_hmr_updates_callback = dev_options.as_ref().and_then(|opts| opts.on_hmr_updates.clone());
+    let on_output_callback = dev_options.as_ref().and_then(|opts| opts.on_output.clone());
+
+    let cwd = Arc::new(PathBuf::from(options.input_options.cwd.clone()));
+
     let rebuild_strategy =
       dev_options.as_ref().and_then(|opts| opts.rebuild_strategy).map(Into::into);
     let watch_options = dev_options.as_ref().and_then(|opts| opts.watch.as_ref());
@@ -42,6 +46,10 @@ impl BindingDevEngine {
     let compare_contents_for_polling =
       watch_options.and_then(|watch| watch.compare_contents_for_polling);
     let debounce_tick_rate = watch_options.and_then(|watch| watch.debounce_tick_rate);
+
+    // Create bundler
+    let bundler =
+      BindingBundlerImpl::new(options, rolldown_debug::Session::dummy(), 0)?.into_inner();
 
     // If callback is provided, wrap it to convert Vec<ClientHmrUpdate> to Vec<BindingClientHmrUpdate>
     let on_hmr_updates = on_hmr_updates_callback.map(|js_callback| {
@@ -59,6 +67,24 @@ impl BindingDevEngine {
           );
         },
       ) as OnHmrUpdatesCallback
+    });
+
+    // If callback is provided, wrap it to convert BuildResult<BundleOutput> to BindingResult<BindingOutputs>
+    let on_output = on_output_callback.map(|js_callback| {
+      let cwd = Arc::<std::path::PathBuf>::clone(&cwd);
+      Arc::new(move |result: rolldown_error::BuildResult<rolldown::BundleOutput>| {
+        let binding_result: BindingResult<BindingOutputs> = match result {
+          Ok(bundle_output) => Either::B(BindingOutputs::from(bundle_output.assets)),
+          Err(errors) => {
+            let binding_errors: Vec<_> = errors
+              .iter()
+              .map(|diagnostic| to_binding_error(diagnostic, cwd.to_path_buf()))
+              .collect();
+            Either::A(BindingErrors::new(binding_errors))
+          }
+        };
+        js_callback.call(FnArgs { data: (binding_result,) }, ThreadsafeFunctionCallMode::Blocking);
+      }) as OnOutputCallback
     });
 
     let dev_watch_options = if skip_write.is_some()
@@ -85,7 +111,7 @@ impl BindingDevEngine {
 
     let rolldown_dev_options = rolldown::dev::dev_options::DevOptions {
       on_hmr_updates,
-      on_output: None, // Rust-only for now
+      on_output,
       rebuild_strategy,
       watch: dev_watch_options,
     };

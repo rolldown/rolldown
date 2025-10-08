@@ -20,9 +20,10 @@ pub struct BindingDevWatchOptions {
 #[napi(object, object_to_js = false)]
 pub struct BindingDevOptions {
   #[napi(
-    ts_type = "undefined | ((updates: BindingClientHmrUpdate[], changedFiles: string[]) => void | Promise<void>)"
+    ts_type = "undefined | ((result: BindingResult<[BindingClientHmrUpdate[], string[]]>) => void | Promise<void>)"
   )]
-  pub on_hmr_updates: Option<JsCallback<FnArgs<(Vec<BindingClientHmrUpdate>, Vec<String>)>, ()>>,
+  pub on_hmr_updates:
+    Option<JsCallback<FnArgs<(BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)>,)>, ()>>,
   #[napi(
     ts_type = "undefined | ((result: BindingResult<BindingOutputs>) => void | Promise<void>)"
   )]

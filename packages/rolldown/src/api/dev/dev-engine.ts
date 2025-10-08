@@ -3,6 +3,7 @@ import {
   BindingDevEngine,
   type BindingDevOptions,
   BindingRebuildStrategy,
+  type BindingResult,
 } from '../../binding';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
@@ -27,6 +28,16 @@ export class DevEngine {
       false,
     );
 
+    const userOnHmrUpdates = devOptions.onHmrUpdates;
+    const bindingOnHmrUpdates: BindingDevOptions['onHmrUpdates'] =
+      userOnHmrUpdates
+        ? function(
+          rawResult: BindingResult<[BindingClientHmrUpdate[], string[]]>,
+        ) {
+          userOnHmrUpdates(normalizeBindingResult(rawResult));
+        }
+        : undefined;
+
     const userOnOutput = devOptions.onOutput;
     const bindingOnOutput: BindingDevOptions['onOutput'] = userOnOutput
       ? function(rawResult) {
@@ -35,7 +46,7 @@ export class DevEngine {
       : undefined;
 
     const bindingDevOptions: BindingDevOptions = {
-      onHmrUpdates: devOptions.onHmrUpdates,
+      onHmrUpdates: bindingOnHmrUpdates,
       onOutput: bindingOnOutput,
       rebuildStrategy: devOptions.rebuildStrategy
         ? devOptions.rebuildStrategy === 'always'

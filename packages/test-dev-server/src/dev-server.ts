@@ -67,9 +67,13 @@ class DevServer {
 
     const { output: outputOptions, ...inputOptions } = buildOptions;
     let devEngine = await dev(inputOptions, outputOptions ?? {}, {
-      onHmrUpdates: (updates) => {
-        console.log('HMR updates:', updates);
-        this.handleHmrUpdates(updates);
+      onHmrUpdates: (errOrUpdates) => {
+        if (errOrUpdates instanceof Error) {
+          console.error('HMR update error:', errOrUpdates);
+        } else {
+          const [updates, _changedFiles] = errOrUpdates;
+          this.handleHmrUpdates(updates);
+        }
       },
       watch: getDevWatchOptionsForCi(),
     });

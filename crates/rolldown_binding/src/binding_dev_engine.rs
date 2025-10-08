@@ -51,20 +51,31 @@ impl BindingDevEngine {
     let bundler =
       BindingBundlerImpl::new(options, rolldown_debug::Session::dummy(), 0)?.into_inner();
 
-    // If callback is provided, wrap it to convert Vec<ClientHmrUpdate> to Vec<BindingClientHmrUpdate>
+    // If callback is provided, wrap it to convert BuildResult<(Vec<ClientHmrUpdate>, Vec<String>)> to BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)>
     let on_hmr_updates = on_hmr_updates_callback.map(|js_callback| {
+      let cwd = Arc::<std::path::PathBuf>::clone(&cwd);
       Arc::new(
         move |result: rolldown_error::BuildResult<(
           Vec<rolldown_common::ClientHmrUpdate>,
           Vec<String>,
         )>| {
-          let (updates, changed_files) = result.expect("HMR update computation failed");
-          let binding_updates: Vec<BindingClientHmrUpdate> =
-            updates.into_iter().map(BindingClientHmrUpdate::from).collect();
-          js_callback.call(
-            FnArgs { data: (binding_updates, changed_files) },
-            ThreadsafeFunctionCallMode::Blocking,
-          );
+          let binding_result: BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)> =
+            match result {
+              Ok((updates, changed_files)) => {
+                let binding_updates: Vec<BindingClientHmrUpdate> =
+                  updates.into_iter().map(BindingClientHmrUpdate::from).collect();
+                Either::B((binding_updates, changed_files))
+              }
+              Err(errors) => {
+                let binding_errors: Vec<_> = errors
+                  .iter()
+                  .map(|diagnostic| to_binding_error(diagnostic, cwd.to_path_buf()))
+                  .collect();
+                Either::A(BindingErrors::new(binding_errors))
+              }
+            };
+          js_callback
+            .call(FnArgs { data: (binding_result,) }, ThreadsafeFunctionCallMode::Blocking);
         },
       ) as OnHmrUpdatesCallback
     });

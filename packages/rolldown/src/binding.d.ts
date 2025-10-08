@@ -1616,7 +1616,7 @@ export interface BindingDeferSyncScanData {
 }
 
 export interface BindingDevOptions {
-  onHmrUpdates?: undefined | ((updates: BindingClientHmrUpdate[], changedFiles: string[]) => void | Promise<void>)
+  onHmrUpdates?: undefined | ((result: BindingResult<[BindingClientHmrUpdate[], string[]]>) => void | Promise<void>)
   onOutput?: undefined | ((result: BindingResult<BindingOutputs>) => void | Promise<void>)
   rebuildStrategy?: BindingRebuildStrategy
   watch?: BindingDevWatchOptions

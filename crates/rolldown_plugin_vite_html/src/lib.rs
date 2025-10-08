@@ -214,6 +214,29 @@ impl Plugin for ViteHtmlPlugin {
               }
             }
 
+            // Handle attributes like src/href
+            if matches!(
+              &**name,
+              "audio"
+                | "embed"
+                | "img"
+                | "image"
+                | "input"
+                | "link"
+                | "meta"
+                | "object"
+                | "source"
+                | "track"
+                | "use"
+                | "video"
+            ) {
+              if let Some(attr) = attrs.borrow().iter().find(|a| &*a.name == "vite-ignore") {
+                s.remove(attr.span.start, attr.span.end);
+              } else {
+                todo!()
+              }
+            }
+
             todo!()
           }
           _ => {}

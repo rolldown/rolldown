@@ -34,7 +34,16 @@ export class DevEngine {
         ? function(
           rawResult: BindingResult<[BindingClientHmrUpdate[], string[]]>,
         ) {
-          userOnHmrUpdates(normalizeBindingResult(rawResult));
+          const result = normalizeBindingResult(rawResult);
+          if (result instanceof Error) {
+            userOnHmrUpdates(result);
+            return;
+          }
+          const [updates, changedFiles] = result;
+          userOnHmrUpdates({
+            updates,
+            changedFiles,
+          });
         }
         : undefined;
 

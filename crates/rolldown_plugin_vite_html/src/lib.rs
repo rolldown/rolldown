@@ -237,6 +237,17 @@ impl Plugin for ViteHtmlPlugin {
               }
             }
 
+            // Handle <tag style="..." />
+            self.handle_style_attribute(
+              &mut s,
+              &mut js,
+              &id,
+              attrs.borrow().as_ref(),
+              &ctx,
+              public_path.clone(),
+              &mut inline_module_count,
+            )?;
+
             todo!()
           }
           _ => {}

@@ -71,8 +71,7 @@ class DevServer {
         if (errOrUpdates instanceof Error) {
           console.error('HMR update error:', errOrUpdates);
         } else {
-          const [updates, _changedFiles] = errOrUpdates;
-          this.handleHmrUpdates(updates);
+          this.handleHmrUpdates(errOrUpdates.updates);
         }
       },
       watch: getDevWatchOptionsForCi(),

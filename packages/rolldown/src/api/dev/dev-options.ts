@@ -1,7 +1,10 @@
 import type { BindingClientHmrUpdate, BindingOutputs } from '../../binding';
 
 type DevOnHmrUpdates = (
-  result: Error | [BindingClientHmrUpdate[], string[]],
+  result: Error | {
+    updates: BindingClientHmrUpdate[];
+    changedFiles: string[];
+  },
 ) => void | Promise<void>;
 
 type DevOnOutput = (

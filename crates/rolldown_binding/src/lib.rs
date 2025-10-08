@@ -56,7 +56,7 @@ pub fn init() {
     // default value in tokio implementation is **512**
     // it's too high for us
     // we don't have that many `blocking` tasks to run at this moment
-    .unwrap_or(4);
+    .unwrap_or(32);
   let mut builder = tokio::runtime::Builder::new_multi_thread();
 
   let rt = builder

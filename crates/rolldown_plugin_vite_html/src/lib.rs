@@ -185,7 +185,7 @@ impl Plugin for ViteHtmlPlugin {
                   let html::sink::NodeData::Text { contents, span } = &node.data else {
                     panic!("Expected text node but received: {:#?}", node.data);
                   };
-                  if utils::INLINE_IMPORT.is_match(contents) {
+                  if utils::constant::INLINE_IMPORT.is_match(contents) {
                     let allocator = oxc::allocator::Allocator::default();
                     let parser_ret = oxc::parser::Parser::new(
                       &allocator,
@@ -211,9 +211,9 @@ impl Plugin for ViteHtmlPlugin {
                     visitor.visit_program(&parser_ret.program);
                   }
                 }
-                todo!()
               }
             }
+
             todo!()
           }
           _ => {}

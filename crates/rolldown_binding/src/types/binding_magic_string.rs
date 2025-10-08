@@ -13,7 +13,7 @@ impl CharToByteMapper {
 
     let mut byte_offset = 0;
     for ch in s.chars() {
-      byte_offset += ch.len_utf8();
+      byte_offset += ch.len_utf16();
       char_to_byte.push(byte_offset);
     }
 

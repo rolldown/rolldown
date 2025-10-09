@@ -68,7 +68,7 @@ impl ViteHtmlPlugin {
 
     super::overwrite_check_public_file(
       s,
-      span,
+      span.start..span.end,
       rolldown_utils::concat_string!(
         "__VITE_INLINE_CSS__",
         xxhash_with_base(clean_url(id).as_bytes(), 16),

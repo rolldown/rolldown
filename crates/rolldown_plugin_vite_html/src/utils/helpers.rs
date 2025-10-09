@@ -1,9 +1,10 @@
-use html5gum::Span;
+use std::ops::Range;
+
 use string_wizard::MagicString;
 
 pub fn overwrite_check_public_file(
   s: &mut MagicString<'_>,
-  span: Span,
+  span: Range<usize>,
   value: String,
 ) -> anyhow::Result<()> {
   let src = &s.source().as_bytes()[span.start..span.end];

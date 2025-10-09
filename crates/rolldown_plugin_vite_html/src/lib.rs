@@ -284,7 +284,29 @@ impl Plugin for ViteHtmlPlugin {
       }
     }
 
-    self.state.is_async_script.insert(id.into_owned(), every_script_is_async);
+    self.state.is_async_script.insert(id.to_string(), every_script_is_async);
+
+    if some_scripts_are_async && some_scripts_are_defer {
+      let message = rolldown_utils::concat_string!(
+        "\nMixed async and defer script modules in ",
+        id,
+        ", output script will fallback to defer. Every script, including inline ones, need to be marked as async for your output script to be async."
+      );
+      ctx.warn(LogWithoutPlugin { message, ..Default::default() });
+    }
+
+    for (url, range) in script_urls {
+      if rolldown_plugin_utils::check_public_file(&url, &self.public_dir).is_some() {
+        let asset_url = env.to_output_file_path(&url, "html", true, public_to_relative).await?;
+        utils::overwrite_check_public_file(
+          &mut s,
+          range,
+          partial_encode_url_path(&asset_url.to_asset_url_in_css_or_html()).into_owned(),
+        )?;
+      } else if !utils::is_excluded_url(&url) {
+        todo!()
+      }
+    }
 
     // TODO: Support module_side_effects for module info
     // for url in set_modules {
@@ -305,7 +327,7 @@ impl Plugin for ViteHtmlPlugin {
       let asset_url = env.to_output_file_path(&url, "html", true, public_to_relative).await?;
       utils::overwrite_check_public_file(
         &mut s,
-        span,
+        span.start..span.end,
         partial_encode_url_path(&asset_url.to_asset_url_in_css_or_html()).into_owned(),
       )?;
     }

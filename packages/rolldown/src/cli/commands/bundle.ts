@@ -6,6 +6,7 @@ import { version } from '../../../package.json';
 import type { RolldownOptions, RolldownOutput } from '../..';
 import { rolldown } from '../../api/rolldown';
 import { watch as rolldownWatch } from '../../api/watch';
+import { createTokioRuntime } from '../../binding';
 import { getClearScreenFunction } from '../../utils/clear-screen';
 import { loadConfig } from '../../utils/load-config';
 import { arraify } from '../../utils/misc';
@@ -36,8 +37,10 @@ export async function bundleWithConfig(
 
   // TODO: Could add more validation/diagnostics here to emit a nice error message
   if (cliOptions.watch) {
+    createTokioRuntime(32);
     await watchInner(resolvedConfig, cliOptions);
   } else {
+    createTokioRuntime(4);
     await bundleInner(resolvedConfig, cliOptions);
   }
 }

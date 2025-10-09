@@ -2222,6 +2222,8 @@ export interface BindingWatchOption {
   onInvalidate?: ((id: string) => void) | undefined
 }
 
+export declare function createTokioRuntime(blockingThreads?: number | undefined | null): void
+
 export interface ExtensionAliasItem {
   target: string
   replacements: Array<string>

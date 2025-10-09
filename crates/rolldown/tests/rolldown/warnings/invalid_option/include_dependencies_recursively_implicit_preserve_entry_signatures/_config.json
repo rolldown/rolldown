@@ -1,0 +1,19 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "main.js"
+      }
+    ],
+    "advancedChunks": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "vendor",
+          "test": "shared"
+        }
+      ]
+    }
+  }
+}

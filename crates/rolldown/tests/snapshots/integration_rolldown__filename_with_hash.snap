@@ -6000,6 +6000,11 @@ expression: output
 
 - main-!~{000}~.js => main-B7ZfmDK1.js
 
+# tests/rolldown/warnings/invalid_option/include_dependencies_recursively_implicit_preserve_entry_signatures
+
+- main-!~{000}~.js => main-BTBGFOb0.js
+- vendor-!~{001}~.js => vendor-CKG4H9Kv.js
+
 # tests/rolldown/warnings/invalid_option/invalid_context_entity
 
 - main-!~{000}~.js => main-DJPe_EHd.js

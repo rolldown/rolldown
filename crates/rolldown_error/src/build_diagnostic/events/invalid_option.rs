@@ -10,6 +10,8 @@ pub enum InvalidOptionType {
   NoEntryPoint,
   AdvancedChunksWithoutGroups(Vec<String>),
   InvalidContext(String),
+  IncludeDependenciesRecursivelyWithConflictPreserveEntrySignatures(String),
+  IncludeDependenciesRecursivelyWithImplicitPreserveEntrySignatures,
 }
 
 #[derive(Debug)]
@@ -39,6 +41,29 @@ impl BuildEvent for InvalidOption {
         }
         InvalidOptionType::InvalidContext(options) => {
             format!("\"{options}\" is an illegitimate identifier for option \"context\". You may use a legitimate context identifier instead.")
+        }
+        InvalidOptionType::IncludeDependenciesRecursivelyWithConflictPreserveEntrySignatures(value) => {
+          [
+            "Invalid option combination detected:",
+            "",
+            "- advancedChunks.includeDependenciesRecursively = false",
+            &format!("- preserveEntrySignatures = \"{value}\""),
+            "",
+            "To fix:",
+            "",
+            "- Set `preserveEntrySignatures` either to false or 'allow-extension'",
+          ].join("\n")
+        }
+        InvalidOptionType::IncludeDependenciesRecursivelyWithImplicitPreserveEntrySignatures => {
+          [
+            "`preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown",
+            "",
+            "- `advancedChunks.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'",
+            "",
+            "To fix:",
+            "",
+            "- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config",
+          ].join("\n")
         }
     }
   }

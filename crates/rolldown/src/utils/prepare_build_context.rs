@@ -3,7 +3,7 @@ use std::{borrow::Cow, path::Path, sync::Arc};
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_common::{
   AttachDebugInfo, GlobalsOutputOption, InjectImport, LegalComments, MinifyOptions, ModuleType,
-  NormalizedBundlerOptions, OutputFormat, Platform, TreeshakeOptions,
+  NormalizedBundlerOptions, OutputFormat, Platform, PreserveEntrySignatures, TreeshakeOptions,
   normalize_optimization_option,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
@@ -23,8 +23,9 @@ pub struct PrepareBuildContext {
   pub warnings: Vec<BuildDiagnostic>,
 }
 
-fn verify_raw_options(raw_options: &crate::BundlerOptions) -> Vec<BuildDiagnostic> {
+fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<BuildDiagnostic>> {
   let mut warnings: Vec<BuildDiagnostic> = Vec::new();
+  let mut errors: Vec<BuildDiagnostic> = Vec::new();
 
   if raw_options.dir.is_some() && raw_options.file.is_some() {
     warnings.push(
@@ -89,19 +90,49 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> Vec<BuildDiagnosti
         );
       }
     }
+
+    // Check if `advancedChunks.include_dependencies_recursively` conflict with `preserveEntrySignatures`
+    if matches!(advanced_chunks.include_dependencies_recursively, Some(false)) {
+      if let Some(preserve_signatures) = &raw_options.preserve_entry_signatures {
+        if matches!(
+          preserve_signatures,
+          PreserveEntrySignatures::Strict | PreserveEntrySignatures::ExportsOnly
+        ) {
+          errors.push(BuildDiagnostic::invalid_option(
+            InvalidOptionType::IncludeDependenciesRecursivelyWithConflictPreserveEntrySignatures(
+              preserve_signatures.to_string(),
+            ),
+          ));
+        }
+      }
+    }
   }
 
-  warnings
+  if errors.is_empty() { Ok(warnings) } else { Err(errors.into()) }
 }
 
 #[expect(clippy::too_many_lines)] // This function is long, but it's mostly just mapping values
 pub fn prepare_build_context(
   mut raw_options: crate::BundlerOptions,
 ) -> BuildResult<PrepareBuildContext> {
-  let mut warnings = verify_raw_options(&raw_options);
+  let mut warnings = verify_raw_options(&raw_options)?;
 
   let format = raw_options.format.unwrap_or(crate::OutputFormat::Esm);
-  let preserve_entry_signatures = raw_options.preserve_entry_signatures.unwrap_or_default();
+
+  let preserve_entry_signatures = if let Some(advanced_chunks) = &raw_options.advanced_chunks
+    && matches!(advanced_chunks.include_dependencies_recursively, Some(false))
+    && raw_options.preserve_entry_signatures.is_none()
+  {
+    warnings.push(
+      BuildDiagnostic::invalid_option(
+        InvalidOptionType::IncludeDependenciesRecursivelyWithImplicitPreserveEntrySignatures,
+      )
+      .with_severity_warning(),
+    );
+    PreserveEntrySignatures::AllowExtension
+  } else {
+    raw_options.preserve_entry_signatures.unwrap_or_default()
+  };
 
   let platform = raw_options.platform.unwrap_or(match format {
     OutputFormat::Cjs => Platform::Node,

@@ -352,7 +352,7 @@ If you don't want this behavior, you could use [`advancedChunks.includeDependenc
 
 :::warning Caveats
 
-With `includeDependenciesRecursively: false`, depended modules of a group might be left in the entry chunks. It's invalid to export non-entry module from an entry chunk. To avoid this, we strongly recommend to set:
+With `includeDependenciesRecursively: false`, depended modules of a group might be left in the entry chunks. It's invalid to export non-entry module from an entry chunk. To avoid this, Rolldown will implicitly set `preserveEntrySignatures: 'allow-extension'` if you didn't set it explicitly.
 
 - [`InputOptions.preserveEntrySignatures: false | 'allow-extension'`](/reference/config-options#preserveentrysignatures)
 

@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] Error: Invalid option combination detected:
+
+- advancedChunks.includeDependenciesRecursively = false
+- preserveEntrySignatures = "strict"
+
+To fix:
+
+- Set `preserveEntrySignatures` either to false or 'allow-extension'
+
+```

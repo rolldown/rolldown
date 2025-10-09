@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "main.js"
+      }
+    ],
+    "preserveEntrySignatures": "strict",
+    "advancedChunks": {
+      "includeDependenciesRecursively": false
+    }
+  },
+  "expectError": true
+}

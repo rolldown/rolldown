@@ -245,58 +245,72 @@ impl IntegrationTest {
         }
         build_snapshot.initial_output = Some(build_result);
       } else {
-        let mut bundler = Bundler::with_plugins(named_options.options, plugins.clone())
-          .expect("Failed to create bundler");
-
-        let cwd = bundler.options().cwd.clone();
+        let mut cwd = named_options.options.cwd.clone().unwrap_or_else(|| test_folder_path.clone());
         build_snapshot.cwd = Some(cwd.clone());
 
-        let bundle_output = if self.test_meta.write_to_disk {
-          let abs_output_dir = cwd.join(&bundler.options().out_dir);
-          if abs_output_dir.is_dir() {
-            std::fs::remove_dir_all(&abs_output_dir)
-              .context(format!("{abs_output_dir:?}"))
-              .expect("Failed to clean the output directory");
-          }
-          bundler.write().await
-        } else {
-          bundler.generate().await
-        };
+        let maybe_bundler = Bundler::with_plugins(named_options.options, plugins.clone());
 
-        let execute_output = self.test_meta.expect_executed
-          && !self.test_meta.expect_error
-          && self.test_meta.write_to_disk;
+        match maybe_bundler {
+          Ok(mut bundler) => {
+            cwd.clone_from(&bundler.options().cwd);
 
-        match &bundle_output {
-          Ok(_bundle_output) => {
-            assert!(
-              !self.test_meta.expect_error,
-              "Expected the bundling to be failed with diagnosable errors, but got success"
-            );
+            build_snapshot.cwd = Some(cwd.clone());
 
-            if execute_output {
-              Self::execute_output_assets(
-                &bundler,
-                &debug_title,
-                &[],
-                named_options
-                  .config_name
-                  .as_deref()
-                  .map(Some)
-                  .unwrap_or(self.test_meta.config_name.as_deref()),
-              );
+            let bundle_output = if self.test_meta.write_to_disk {
+              let abs_output_dir = cwd.join(&bundler.options().out_dir);
+              if abs_output_dir.is_dir() {
+                std::fs::remove_dir_all(&abs_output_dir)
+                  .context(format!("{abs_output_dir:?}"))
+                  .expect("Failed to clean the output directory");
+              }
+              bundler.write().await
             } else {
-              // do nothing
+              bundler.generate().await
+            };
+
+            let execute_output = self.test_meta.expect_executed
+              && !self.test_meta.expect_error
+              && self.test_meta.write_to_disk;
+
+            match &bundle_output {
+              Ok(_bundle_output) => {
+                assert!(
+                  !self.test_meta.expect_error,
+                  "Expected the bundling to be failed with diagnosable errors, but got success"
+                );
+
+                if execute_output {
+                  Self::execute_output_assets(
+                    &bundler,
+                    &debug_title,
+                    &[],
+                    named_options
+                      .config_name
+                      .as_deref()
+                      .map(Some)
+                      .unwrap_or(self.test_meta.config_name.as_deref()),
+                  );
+                } else {
+                  // do nothing
+                }
+              }
+              Err(errs) => {
+                assert!(
+                  self.test_meta.expect_error,
+                  "Expected the bundling to be success, but got diagnosable errors: {errs:#?}"
+                );
+              }
             }
+            build_snapshot.initial_output = Some(bundle_output);
           }
           Err(errs) => {
             assert!(
               self.test_meta.expect_error,
               "Expected the bundling to be success, but got diagnosable errors: {errs:#?}"
             );
+            build_snapshot.initial_output = Some(Err(errs));
           }
         }
-        build_snapshot.initial_output = Some(bundle_output);
       }
       artifacts_snapshot.builds.push(build_snapshot);
     }

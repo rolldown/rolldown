@@ -13,6 +13,9 @@ impl Default for DiagnosticOptions {
 }
 
 impl DiagnosticOptions {
+  /// Turns an absolute path into a path relative to the current working directory. This helps make the output consistent across different machines.
+  ///
+  /// Example: `/Users/you/project/src/index.js` -> `src/index.js` (if cwd is `/Users/you/project`)
   pub fn stabilize_path(&self, path: impl AsRef<Path>) -> String {
     let path = path.as_ref();
     if path.is_absolute() {

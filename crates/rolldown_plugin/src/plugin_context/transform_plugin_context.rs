@@ -2,29 +2,36 @@ use std::{ops::Deref, sync::Arc};
 
 use crate::PluginContext;
 use arcstr::ArcStr;
-use rolldown_common::{ModuleIdx, SourcemapHires};
+use rolldown_common::{
+  ModuleIdx, PluginIdx, SourceMapGenMsg, SourcemapChainElement, SourcemapHires,
+};
 use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
 use rolldown_utils::unique_arc::WeakRef;
+use std::sync::mpsc;
 use string_wizard::{MagicString, SourceMapOptions};
 
 #[derive(Debug)]
 pub struct TransformPluginContext {
   pub inner: PluginContext,
-  sourcemap_chain: WeakRef<Vec<SourceMap>>,
+  sourcemap_chain: WeakRef<Vec<SourcemapChainElement>>,
   original_code: ArcStr,
   id: ArcStr,
   module_idx: ModuleIdx,
+  plugin_idx: PluginIdx,
+  magic_string_tx: Option<Arc<mpsc::Sender<SourceMapGenMsg>>>,
 }
 
 impl TransformPluginContext {
   pub fn new(
     inner: PluginContext,
-    sourcemap_chain: WeakRef<Vec<SourceMap>>,
+    sourcemap_chain: WeakRef<Vec<SourcemapChainElement>>,
     original_code: ArcStr,
     id: ArcStr,
     module_idx: ModuleIdx,
+    plugin_idx: PluginIdx,
+    magic_string_tx: Option<Arc<mpsc::Sender<SourceMapGenMsg>>>,
   ) -> Self {
-    Self { inner, sourcemap_chain, original_code, id, module_idx }
+    Self { inner, sourcemap_chain, original_code, id, module_idx, plugin_idx, magic_string_tx }
   }
 
   pub fn get_combined_sourcemap(&self) -> SourceMap {
@@ -32,9 +39,18 @@ impl TransformPluginContext {
       if sourcemap_chain.is_empty() {
         self.create_sourcemap()
       } else if sourcemap_chain.len() == 1 {
-        sourcemap_chain.first().expect("should have one sourcemap").clone()
+        match sourcemap_chain.first().expect("should have one sourcemap") {
+          SourcemapChainElement::Transform((_, sourcemap))
+          | SourcemapChainElement::Load(sourcemap) => sourcemap.clone(),
+        }
       } else {
-        let sourcemap_chain = sourcemap_chain.iter().collect::<Vec<_>>();
+        let sourcemap_chain = sourcemap_chain
+          .iter()
+          .map(|element| match element {
+            SourcemapChainElement::Transform((_, sourcemap))
+            | SourcemapChainElement::Load(sourcemap) => sourcemap,
+          })
+          .collect::<Vec<_>>();
         // TODO Here could be cache result for pervious sourcemap_chain, only remapping new sourcemap chain
         collapse_sourcemaps(&sourcemap_chain)
       }
@@ -68,6 +84,25 @@ impl TransformPluginContext {
       if let Some(plugin_driver) = ctx.plugin_driver.upgrade() {
         plugin_driver.add_transform_dependency(self.module_idx, file);
       }
+    }
+  }
+
+  pub fn send_magic_string(
+    &self,
+    magic_string: MagicString<'static>,
+  ) -> Result<(), mpsc::SendError<SourceMapGenMsg>> {
+    if let Some(tx) = self.magic_string_tx.as_ref() {
+      tx.send(SourceMapGenMsg::MagicString(Box::new((
+        self.module_idx,
+        self.plugin_idx,
+        magic_string,
+      ))))
+    } else {
+      Err(mpsc::SendError(SourceMapGenMsg::MagicString(Box::new((
+        self.module_idx,
+        self.plugin_idx,
+        magic_string,
+      )))))
     }
   }
 }

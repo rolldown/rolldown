@@ -6,13 +6,12 @@ use crate::{
   pluginable::HookTransformAstReturn,
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped, hook_transform_ast_args::HookTransformAstArgs,
-    plugin_idx::PluginIdx,
   },
 };
 use anyhow::{Context, Result};
 use rolldown_common::{
-  ModuleInfo, ModuleType, NormalModule, SharedNormalizedBundlerOptions, SourcemapHires,
-  side_effects::HookSideEffects,
+  ModuleInfo, ModuleType, NormalModule, PluginIdx, SharedNormalizedBundlerOptions,
+  SourcemapChainElement, SourcemapHires, side_effects::HookSideEffects,
 };
 use rolldown_debug::{action, trace_action};
 use rolldown_error::CausedPlugin;
@@ -215,14 +214,16 @@ impl PluginDriver {
   }
 
   #[tracing::instrument(target = "devtool", level = "trace", skip_all)]
+  #[expect(clippy::too_many_arguments)]
   pub async fn transform(
     &self,
     id: &str,
     module_idx: rolldown_common::ModuleIdx,
     original_code: String,
-    sourcemap_chain: &mut Vec<SourceMap>,
+    sourcemap_chain: &mut Vec<SourcemapChainElement>,
     side_effects: &mut Option<HookSideEffects>,
     module_type: &mut ModuleType,
+    magic_string_tx: Option<Arc<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>>,
   ) -> Result<String> {
     let mut code = original_code;
     let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
@@ -248,6 +249,8 @@ impl PluginDriver {
             code.as_str().into(),
             id.into(),
             module_idx,
+            plugin_idx,
+            magic_string_tx.clone(),
           )),
           &HookTransformArgs { id, code: &code, module_type: &*module_type },
         )
@@ -256,7 +259,7 @@ impl PluginDriver {
       {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
         if let Some(map) = self.normalize_transform_sourcemap(r.map, id, &code, r.code.as_ref()) {
-          original_sourcemap_chain.push(map);
+          original_sourcemap_chain.push(SourcemapChainElement::Transform((plugin_idx, map)));
         }
         plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
         if let Some(v) = r.side_effects {

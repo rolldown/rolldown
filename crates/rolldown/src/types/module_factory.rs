@@ -1,10 +1,10 @@
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
 use rolldown_common::{
-  FlatOptions, ModuleIdx, ModuleType, ResolvedId, StrOrBytes, side_effects::HookSideEffects,
+  FlatOptions, ModuleIdx, ModuleType, ResolvedId, SourcemapChainElement, StrOrBytes,
+  side_effects::HookSideEffects,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_sourcemap::SourceMap;
 
 use crate::SharedOptions;
 
@@ -23,6 +23,6 @@ pub struct CreateModuleContext<'a> {
 
 pub struct CreateModuleViewArgs {
   pub source: StrOrBytes,
-  pub sourcemap_chain: Vec<SourceMap>,
+  pub sourcemap_chain: Vec<SourcemapChainElement>,
   pub hook_side_effects: Option<HookSideEffects>,
 }

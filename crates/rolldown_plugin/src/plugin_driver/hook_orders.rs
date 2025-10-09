@@ -1,8 +1,8 @@
 use oxc_index::IndexVec;
+use rolldown_common::PluginIdx;
 
 use crate::{
   __inner::SharedPluginable, HookUsage, PluginHookMeta, PluginOrder, type_aliases::IndexPluginable,
-  types::plugin_idx::PluginIdx,
 };
 
 #[expect(clippy::struct_field_names)] // Allow all fields to have the same prefix `order_by_`

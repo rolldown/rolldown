@@ -1,9 +1,12 @@
-use crate::types::{
-  binding_module_info::BindingModuleInfo,
-  binding_normalized_options::BindingNormalizedOptions,
-  binding_outputs::{JsChangedOutputs, to_binding_error},
-  binding_rendered_chunk::BindingRenderedChunk,
-  js_callback::MaybeAsyncJsCallbackExt,
+use crate::{
+  options::plugin::binding_plugin_context::BindingPluginContext,
+  types::{
+    binding_module_info::BindingModuleInfo,
+    binding_normalized_options::BindingNormalizedOptions,
+    binding_outputs::{JsChangedOutputs, to_binding_error},
+    binding_rendered_chunk::BindingRenderedChunk,
+    js_callback::MaybeAsyncJsCallbackExt,
+  },
 };
 use napi::bindgen_prelude::FnArgs;
 use rolldown_common::NormalModule;
@@ -173,7 +176,8 @@ impl Plugin for JsPlugin {
       }
     }
 
-    cb.await_call((ctx.clone().into(), args.id.to_string()).into())
+    let ctx: BindingPluginContext = ctx.clone().into();
+    cb.await_call((ctx, args.id.to_string()).into())
       .instrument(debug_span!("load_hook", plugin_name = self.name))
       .await?
       .map(TryInto::try_into)

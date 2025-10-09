@@ -2,12 +2,13 @@ use arcstr::ArcStr;
 use oxc::span::CompactStr;
 use oxc::span::Span;
 use oxc_index::IndexVec;
+use rolldown_common::SourcemapChainElement;
 use std::sync::Arc;
 use sugar_path::SugarPath;
 
 use rolldown_common::{
   FlatOptions, ImportKind, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType,
-  NormalModule, NormalModuleTaskResult, ResolvedId, StrOrBytes,
+  NormalModule, NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, StrOrBytes,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, UnloadableDependencyContext, downcast_napi_error_diagnostics,
@@ -46,9 +47,11 @@ pub struct ModuleTask {
   /// The module is asserted to be this specific module type.
   asserted_module_type: Option<ModuleType>,
   flat_options: FlatOptions,
+  magic_string_tx: Option<std::sync::Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
 }
 
 impl ModuleTask {
+  #[expect(clippy::too_many_arguments)]
   pub fn new(
     ctx: Arc<TaskContext>,
     idx: ModuleIdx,
@@ -57,6 +60,7 @@ impl ModuleTask {
     is_user_defined_entry: bool,
     assert_module_type: Option<ModuleType>,
     flat_options: FlatOptions,
+    magic_string_tx: Option<std::sync::Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
   ) -> Self {
     Self {
       ctx,
@@ -66,6 +70,7 @@ impl ModuleTask {
       is_user_defined_entry,
       asserted_module_type: assert_module_type,
       flat_options,
+      magic_string_tx,
     }
   }
 
@@ -102,8 +107,13 @@ impl ModuleTask {
 
     let mut sourcemap_chain = vec![];
     let mut hook_side_effects = self.resolved_id.side_effects.take();
-    let (mut source, module_type) =
-      self.load_source_without_cache(&mut sourcemap_chain, &mut hook_side_effects).await?;
+    let (mut source, module_type) = self
+      .load_source_without_cache(
+        &mut sourcemap_chain,
+        &mut hook_side_effects,
+        self.magic_string_tx.clone(),
+      )
+      .await?;
 
     let stable_id = id.stabilize(&self.ctx.options.cwd);
     let mut raw_import_records = IndexVec::default();
@@ -224,8 +234,9 @@ impl ModuleTask {
   #[tracing::instrument(level = "debug", skip_all)]
   async fn load_source_without_cache(
     &self,
-    sourcemap_chain: &mut Vec<rolldown_sourcemap::SourceMap>,
+    sourcemap_chain: &mut Vec<SourcemapChainElement>,
     hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,
+    magic_string_tx: Option<std::sync::Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
   ) -> BuildResult<(StrOrBytes, ModuleType)> {
     let mut is_read_from_disk = true;
     let result = load_source(
@@ -272,6 +283,7 @@ impl ModuleTask {
           sourcemap_chain,
           hook_side_effects,
           &mut module_type,
+          magic_string_tx,
         )
         .await?;
         source.into()

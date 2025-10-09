@@ -40,6 +40,12 @@ pub struct MagicString<'s> {
   last_searched_chunk_idx: ChunkIdx,
 }
 
+impl Default for MagicString<'_> {
+  fn default() -> Self {
+    MagicString::new("")
+  }
+}
+
 impl<'text> MagicString<'text> {
   pub fn new(source: impl Into<Cow<'text, str>>) -> Self {
     Self::with_options(source, Default::default())

@@ -1,4 +1,6 @@
-use crate::{ConstExportMeta, ImportAttribute, RUNTIME_HELPER_NAMES, StmtInfoIdx};
+use crate::{
+  ConstExportMeta, ImportAttribute, RUNTIME_HELPER_NAMES, SourcemapChainElement, StmtInfoIdx,
+};
 use arcstr::ArcStr;
 use bitflags::bitflags;
 use oxc::{
@@ -83,7 +85,7 @@ pub struct EcmaView {
   pub imports: FxHashMap<Span, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
   pub default_export_ref: SymbolRef,
-  pub sourcemap_chain: Vec<rolldown_sourcemap::SourceMap>,
+  pub sourcemap_chain: Vec<SourcemapChainElement>,
   // the ids of all modules that statically import this module
   pub importers: FxIndexSet<ModuleId>,
   pub importers_idx: FxIndexSet<ModuleIdx>,

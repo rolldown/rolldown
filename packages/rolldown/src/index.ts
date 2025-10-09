@@ -9,6 +9,7 @@ import type {
   RolldownWatcherEvent,
 } from './api/watch/watch-emitter';
 import type { PreRenderedChunk } from './binding';
+export { BindingMagicString } from './binding.js';
 import type {
   LoggingFunction,
   WarningHandlerWithDefault,

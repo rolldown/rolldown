@@ -27,7 +27,14 @@ pub fn render_ecma_module(
       let sourcemap = if module.sourcemap_chain.is_empty() {
         render_output.map
       } else {
-        let mut sourcemap_chain = module.sourcemap_chain.iter().collect::<Vec<_>>();
+        let mut sourcemap_chain = module
+          .sourcemap_chain
+          .iter()
+          .map(|element| match element {
+            rolldown_common::SourcemapChainElement::Transform((_, sourcemap))
+            | rolldown_common::SourcemapChainElement::Load(sourcemap) => sourcemap,
+          })
+          .collect::<Vec<_>>();
         if let Some(sourcemap) = render_output.map.as_ref() {
           sourcemap_chain.push(sourcemap);
         }

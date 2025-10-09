@@ -57,11 +57,12 @@ export function parseAst(
   options?: ParserOptions | undefined | null,
   filename?: string,
 ): Program {
+  let ast = parseSync(filename ?? 'file.js', sourceText, {
+    ...defaultParserOptions,
+    ...options,
+  });
   return wrap(
-    parseSync(filename ?? 'file.js', sourceText, {
-      ...defaultParserOptions,
-      ...options,
-    }),
+    ast,
     sourceText,
   );
 }

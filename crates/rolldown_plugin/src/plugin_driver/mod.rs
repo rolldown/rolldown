@@ -13,8 +13,8 @@ use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, SharedFileEmitter, SharedModuleInfoDashMap,
-  SharedNormalizedBundlerOptions,
+  ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, PluginIdx, SharedFileEmitter,
+  SharedModuleInfoDashMap, SharedNormalizedBundlerOptions,
 };
 use rolldown_resolver::Resolver;
 use rolldown_utils::dashmap::FxDashSet;
@@ -27,7 +27,6 @@ use crate::{
   plugin_context::{NativePluginContextImpl, PluginContextMeta},
   plugin_driver::hook_orders::PluginHookOrders,
   type_aliases::{IndexPluginContext, IndexPluginable},
-  types::plugin_idx::PluginIdx,
 };
 
 pub type SharedPluginDriver = Arc<PluginDriver>;

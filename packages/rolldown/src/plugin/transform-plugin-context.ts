@@ -1,4 +1,5 @@
 import type {
+  BindingMagicString,
   BindingPluginContext,
   BindingTransformPluginContext,
 } from '../binding';
@@ -82,6 +83,10 @@ export class TransformPluginContextImpl extends PluginContextImpl {
 
   public addWatchFile(id: string): void {
     this.inner.addWatchFile(id);
+  }
+
+  public sendMagicString(s: BindingMagicString): void {
+    this.inner.sendMagicString(s);
   }
 }
 

@@ -1,16 +1,17 @@
+import path from 'node:path';
 import type {
   BindingHookFilter,
   BindingHookResolveIdOutput,
   BindingPluginOptions,
 } from '../binding';
-import { normalizeHook } from '../utils/normalize-hook';
-
-import path from 'node:path';
+import { BindingMagicString } from '../binding';
+import { parseAst } from '../parse-ast-index';
 import {
   bindingifySourcemap,
   type ExistingRawSourceMap,
 } from '../types/sourcemap';
 import { aggregateBindingErrorsIntoJsError } from '../utils/error';
+import { normalizeHook } from '../utils/normalize-hook';
 import { transformModuleInfo } from '../utils/transform-module-info';
 import {
   isEmptySourcemapFiled,
@@ -100,9 +101,7 @@ export function bindingifyResolveId(
   return {
     plugin: async (ctx, specifier, importer, extraOptions) => {
       const contextResolveOptions = extraOptions.custom != null
-        ? args.pluginContextData.getSavedResolveOptions(
-          extraOptions.custom,
-        )
+        ? args.pluginContextData.getSavedResolveOptions(extraOptions.custom)
         : undefined;
 
       const ret = await handler.call(
@@ -231,23 +230,45 @@ export function bindingifyTransform(
 
   return {
     plugin: async (ctx, code, id, meta) => {
-      const ret = await handler.call(
-        new TransformPluginContextImpl(
-          args.outputOptions,
-          ctx.inner(),
-          args.plugin,
-          args.pluginContextData,
-          ctx,
-          id,
-          code,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
-        code,
+      Object.defineProperties(meta, {
+        magicString: {
+          get() {
+            return new BindingMagicString(code);
+          },
+        },
+        ast: {
+          get() {
+            let lang: 'js' | 'jsx' | 'tsx' | 'ts' = 'js';
+            switch (meta.moduleType) {
+              case 'js':
+              case 'jsx':
+              case 'ts':
+              case 'tsx':
+                lang = meta.moduleType;
+                break;
+              default:
+                break;
+            }
+            return parseAst(code, {
+              astType: meta.moduleType.includes('ts') ? 'ts' : 'js',
+              lang,
+            });
+          },
+        },
+      });
+      const transformCtx = new TransformPluginContextImpl(
+        args.outputOptions,
+        ctx.inner(),
+        args.plugin,
+        args.pluginContextData,
+        ctx,
         id,
-        meta,
+        code,
+        args.onLog,
+        args.logLevel,
+        args.watchMode,
       );
+      const ret = await handler.call(transformCtx, code, id, meta);
 
       if (ret == null) {
         return undefined;
@@ -263,8 +284,18 @@ export function bindingifyTransform(
         invalidate: false,
       });
 
+      let normalizedCode: string | undefined = undefined;
+
+      if (typeof ret.code === 'string') {
+        normalizedCode = ret.code;
+      } else if (ret.code instanceof BindingMagicString) {
+        let codeOrMagicString = ret.code as BindingMagicString;
+        normalizedCode = codeOrMagicString.toString();
+        ctx.sendMagicString(codeOrMagicString);
+      }
+
       return {
-        code: ret.code,
+        code: normalizedCode,
         map: bindingifySourcemap(
           normalizeTransformHookSourcemap(id, code, ret.map),
         ),

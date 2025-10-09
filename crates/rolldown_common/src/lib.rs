@@ -8,6 +8,7 @@ mod hmr;
 mod inner_bundler_options;
 mod module;
 mod module_loader;
+mod source_map_gen_msg;
 mod type_aliases;
 mod types;
 
@@ -22,7 +23,6 @@ pub mod bundler_options {
 
   #[cfg(feature = "deserialize_bundler_options")]
   pub use crate::inner_bundler_options::types::optimization::deserialize_inline_const;
-
   pub use crate::inner_bundler_options::{
     BundlerOptions,
     types::{
@@ -128,6 +128,7 @@ pub use crate::{
     runtime_task_result::RuntimeModuleTaskResult,
     task_result::{EcmaRelated, ExternalModuleTaskResult, NormalModuleTaskResult},
   },
+  source_map_gen_msg::SourceMapGenMsg,
   type_aliases::{MemberExprRefResolutionMap, SharedModuleInfoDashMap},
   types::asset::Asset,
   types::asset_meta::{InstantiationKind, SourcemapAssetMeta},
@@ -172,6 +173,7 @@ pub use crate::{
   types::output_chunk::{Modules, OutputChunk},
   types::outputs_diagnostics::OutputsDiagnostics,
   types::package_json::PackageJson,
+  types::plugin_idx::PluginIdx,
   types::rendered_module::RenderedModule,
   types::resolved_export::ResolvedExport,
   types::resolved_request_info::{ResolvedExternal, ResolvedId},
@@ -182,6 +184,7 @@ pub use crate::{
   types::side_effect_detail::SideEffectDetail,
   types::side_effects,
   types::source_mutation::SourceMutation,
+  types::sourcemap_chain_element::SourcemapChainElement,
   types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos},
   types::str_or_bytes::StrOrBytes,
   types::symbol_or_member_expr_ref::{SymbolOrMemberExprRef, TaggedSymbolRef},

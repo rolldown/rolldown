@@ -147,7 +147,7 @@ $ npm run build
 
 ## Using the Config File
 
-When more options are needed, it is recommended to use a config file for more flexibility. A config file can be written in `.js`, `.mjs`, or `.ts` formats. Let's create the following config file:
+When more options are needed, it is recommended to use a config file for more flexibility. A config file can be written in `.js`, `.cjs`, `.mjs`, `.ts`, `.mts`, or `.cts` formats. Let's create the following config file:
 
 ```js [rolldown.config.js]
 import { defineConfig } from 'rolldown';

@@ -10,26 +10,18 @@
   },
   "configVariants": [
     {
-      "config": {
-        "format": "esm"
-      }
+      "format": "esm"
     },
     {
-      "config": {
-        "format": "cjs"
-      }
+      "format": "cjs"
     },
     {
-      "config": {
-        "format": "iife",
-        "name": "TestApp"
-      }
+      "format": "iife",
+      "name": "TestApp"
     },
     {
-      "config": {
-        "format": "umd",
-        "name": "TestLib"
-      }
+      "format": "umd",
+      "name": "TestLib"
     }
   ],
   "expectExecuted": false

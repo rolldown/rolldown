@@ -147,7 +147,7 @@ $ npm run build
 
 ## Using the Config File
 
-When more options are needed, it is recommended to use a config file for more flexibility. Let's create the following config file:
+When more options are needed, it is recommended to use a config file for more flexibility. A config file can be written in `.js`, `.mjs`, or `.ts` formats. Let's create the following config file:
 
 ```js [rolldown.config.js]
 import { defineConfig } from 'rolldown';
@@ -177,34 +177,6 @@ Next, in the npm script, we can instruct Rolldown to use the config file with th
     "rolldown": "^1.0.0-beta.1"
   }
 }
-```
-
-### TypeScript config file
-
-TypeScript config file is also supported out of the box:
-
-```json{5} [package.json]
-{
-  "name": "my-rolldown-project",
-  "type": "module",
-  "scripts": {
-    "build": "rolldown -c rolldown.config.ts"
-  },
-  "devDependencies": {
-    "rolldown": "^1.0.0-beta.1"
-  }
-}
-```
-
-```js [rolldown.config.ts]
-import { defineConfig } from 'rolldown';
-
-export default defineConfig({
-  input: 'src/main.js',
-  output: {
-    file: 'bundle.js',
-  },
-});
 ```
 
 ### Multiple builds in the same config

@@ -1,10 +1,11 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, path::Path};
 
 use html5gum::Span;
 use rolldown_plugin::PluginContext;
 use rolldown_plugin_utils::constants::{HTMLProxyMap, HTMLProxyMapItem};
 use rolldown_utils::{url::clean_url, xxhash::xxhash_with_base};
 use string_wizard::MagicString;
+use sugar_path::SugarPath as _;
 
 use crate::ViteHtmlPlugin;
 
@@ -77,5 +78,32 @@ impl ViteHtmlPlugin {
         "__"
       ),
     )
+  }
+
+  pub async fn url_to_built_url(
+    &self,
+    ctx: &PluginContext,
+    url: &str,
+    importer: &str,
+    force_inline: Option<bool>,
+  ) -> anyhow::Result<String> {
+    if rolldown_plugin_utils::check_public_file(url, &self.public_dir).is_some() {
+      let env = rolldown_plugin_utils::PublicFileToBuiltUrlEnv::new(ctx);
+      return Ok(env.public_file_to_built_url(url));
+    }
+    let path = if url.starts_with('/') {
+      ctx.cwd().join(url)
+    } else {
+      Path::new(importer).parent().unwrap().join(url)
+    };
+    let path = path.normalize();
+    let env = rolldown_plugin_utils::FileToUrlEnv {
+      ctx,
+      root: ctx.cwd(),
+      is_lib: self.is_lib,
+      public_dir: &self.public_dir,
+      asset_inline_limit: &self.asset_inline_limit,
+    };
+    env.file_to_built_url(&path.to_string_lossy(), true, force_inline).await
   }
 }

@@ -2,13 +2,14 @@
   "config": {
     "input": [
       {
-        "name": "entry",
-        "import": "./entry.js"
+        "name": "main",
+        "import": "./main.js"
       }
     ],
     "format": "esm",
     "entryFilenames": "entries/[name]-[format].js",
     "chunkFilenames": "chunks/[name]-[format].js"
   },
-  "expectExecuted": false
+  "expectExecuted": false,
+  "snapshot": false
 }

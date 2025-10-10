@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "bundle",
+        "import": "./index.js"
+      }
+    ],
+    "format": "cjs",
+    "entryFilenames": "[name]-[format].js"
+  },
+  "expectExecuted": false
+}

@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./entry.js"
+      }
+    ],
+    "format": "esm",
+    "entryFilenames": "entries/[name]-[format].js",
+    "chunkFilenames": "chunks/[name]-[format].js"
+  },
+  "expectExecuted": false
+}

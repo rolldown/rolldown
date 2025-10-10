@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "bundle",
+        "import": "./main.js"
+      }
+    ],
+    "format": "iife",
+    "name": "MyApp",
+    "entryFilenames": "[name].[format].js"
+  },
+  "expectExecuted": false
+}

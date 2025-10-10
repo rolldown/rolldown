@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "library",
+        "import": "./index.js"
+      }
+    ],
+    "format": "umd",
+    "name": "MyLibrary",
+    "entryFilenames": "dist/[name].[format].js"
+  },
+  "expectExecuted": false
+}

@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "app",
+        "import": "./app.js"
+      }
+    ],
+    "format": "esm",
+    "entryFilenames": "[format]/[name]-[hash:8].js"
+  },
+  "expectExecuted": false
+}

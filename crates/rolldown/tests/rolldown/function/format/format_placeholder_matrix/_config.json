@@ -1,0 +1,36 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "output",
+        "import": "./main.js"
+      }
+    ],
+    "entryFilenames": "[name]-[format].js"
+  },
+  "configVariants": [
+    {
+      "config": {
+        "format": "esm"
+      }
+    },
+    {
+      "config": {
+        "format": "cjs"
+      }
+    },
+    {
+      "config": {
+        "format": "iife",
+        "name": "TestApp"
+      }
+    },
+    {
+      "config": {
+        "format": "umd",
+        "name": "TestLib"
+      }
+    }
+  ],
+  "expectExecuted": false
+}

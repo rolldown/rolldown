@@ -75,32 +75,48 @@ fn hash_with_len() {
 
 #[test]
 fn format_placeholder() {
-  let filename = FilenameTemplate::new("[name]-[format].js".to_string())
-    .render(Some("entry"), Some("esm"), None, Option::<fn(Option<usize>) -> String>::None);
+  let filename = FilenameTemplate::new("[name]-[format].js".to_string()).render(
+    Some("entry"),
+    Some("esm"),
+    None,
+    Option::<fn(Option<usize>) -> String>::None,
+  );
 
   assert_eq!(filename, "entry-esm.js");
 }
 
 #[test]
 fn format_placeholder_cjs() {
-  let filename = FilenameTemplate::new("[name]-[format].js".to_string())
-    .render(Some("entry"), Some("cjs"), None, Option::<fn(Option<usize>) -> String>::None);
+  let filename = FilenameTemplate::new("[name]-[format].js".to_string()).render(
+    Some("entry"),
+    Some("cjs"),
+    None,
+    Option::<fn(Option<usize>) -> String>::None,
+  );
 
   assert_eq!(filename, "entry-cjs.js");
 }
 
 #[test]
 fn format_placeholder_iife() {
-  let filename = FilenameTemplate::new("[name].[format].js".to_string())
-    .render(Some("bundle"), Some("iife"), None, Option::<fn(Option<usize>) -> String>::None);
+  let filename = FilenameTemplate::new("[name].[format].js".to_string()).render(
+    Some("bundle"),
+    Some("iife"),
+    None,
+    Option::<fn(Option<usize>) -> String>::None,
+  );
 
   assert_eq!(filename, "bundle.iife.js");
 }
 
 #[test]
 fn format_placeholder_umd() {
-  let filename = FilenameTemplate::new("[format]/[name].js".to_string())
-    .render(Some("main"), Some("umd"), None, Option::<fn(Option<usize>) -> String>::None);
+  let filename = FilenameTemplate::new("[format]/[name].js".to_string()).render(
+    Some("main"),
+    Some("umd"),
+    None,
+    Option::<fn(Option<usize>) -> String>::None,
+  );
 
   assert_eq!(filename, "umd/main.js");
 }
@@ -108,7 +124,7 @@ fn format_placeholder_umd() {
 #[test]
 fn format_placeholder_with_hash() {
   let filename_template = FilenameTemplate::new("[name]-[format]-[hash:8].js".to_string());
-  
+
   let mut hash_iter = ["abcd1234"].iter();
   let hash_replacer = filename_template.has_hash_pattern().then_some(|_| hash_iter.next().unwrap());
 
@@ -119,16 +135,24 @@ fn format_placeholder_with_hash() {
 
 #[test]
 fn format_placeholder_multiple_occurrences() {
-  let filename = FilenameTemplate::new("[format]/[name]-[format].js".to_string())
-    .render(Some("output"), Some("cjs"), None, Option::<fn(Option<usize>) -> String>::None);
+  let filename = FilenameTemplate::new("[format]/[name]-[format].js".to_string()).render(
+    Some("output"),
+    Some("cjs"),
+    None,
+    Option::<fn(Option<usize>) -> String>::None,
+  );
 
   assert_eq!(filename, "cjs/output-cjs.js");
 }
 
 #[test]
 fn format_placeholder_with_extension() {
-  let filename = FilenameTemplate::new("dist/[name]-[format][extname]".to_string())
-    .render(Some("app"), Some("esm"), Some("mjs"), Option::<fn(Option<usize>) -> String>::None);
+  let filename = FilenameTemplate::new("dist/[name]-[format][extname]".to_string()).render(
+    Some("app"),
+    Some("esm"),
+    Some("mjs"),
+    Option::<fn(Option<usize>) -> String>::None,
+  );
 
   assert_eq!(filename, "dist/app-esm.mjs");
 }

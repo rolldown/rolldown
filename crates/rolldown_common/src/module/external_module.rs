@@ -4,7 +4,6 @@ use crate::inner_bundler_options::types::output_option::PathsOutputOption;
 use crate::side_effects::DeterminedSideEffects;
 use crate::{Chunk, ImportRecordIdx, ModuleIdx, ResolvedImportRecord, SymbolRef};
 use arcstr::ArcStr;
-use futures::executor::block_on;
 use oxc_index::IndexVec;
 use rolldown_utils::concat_string;
 use sugar_path::SugarPath;
@@ -54,7 +53,7 @@ impl ExternalModule {
   pub fn get_file_name(&self, paths: Option<&PathsOutputOption>) -> ArcStr {
     // Try to apply paths mapping first
     if let Some(paths_option) = paths {
-      if let Some(mapped_path) = block_on(paths_option.call(&self.id)) {
+      if let Some(mapped_path) = paths_option.call(&self.id) {
         return mapped_path.into();
       }
     }

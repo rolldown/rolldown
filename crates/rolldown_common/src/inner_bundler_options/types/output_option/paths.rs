@@ -1,11 +1,9 @@
 use derive_more::Debug;
-use std::{future::Future, pin::Pin, sync::Arc};
+use std::sync::Arc;
 
 use rustc_hash::FxHashMap;
 
-pub type PathsFunction = dyn Fn(&str) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + 'static>>
-  + Send
-  + Sync;
+pub type PathsFunction = dyn Fn(&str) -> anyhow::Result<String> + 'static + Send + Sync;
 
 #[derive(Clone, Debug)]
 pub enum PathsOutputOption {
@@ -16,10 +14,10 @@ pub enum PathsOutputOption {
 }
 
 impl PathsOutputOption {
-  pub async fn call(&self, id: &str) -> Option<String> {
+  pub fn call(&self, id: &str) -> Option<String> {
     match self {
       Self::FxHashMap(value) => value.get(id).cloned(),
-      Self::Fn(value) => value(id).await.ok(),
+      Self::Fn(value) => value(id).ok(),
     }
   }
 }

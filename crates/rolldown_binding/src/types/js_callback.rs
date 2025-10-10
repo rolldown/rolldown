@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Condvar, Mutex};
 
 use futures::Future;
 use napi::{
@@ -75,6 +75,7 @@ pub type MaybeAsyncJsCallback<Args = (), Ret = ()> = JsCallback<Args, Either<Pro
 
 pub trait JsCallbackExt<Args, Ret> {
   fn invoke_async(&self, args: Args) -> impl Future<Output = Result<Ret, napi::Error>> + Send;
+  fn invoke_sync(&self, args: Args) -> Result<Ret, napi::Error>;
 }
 
 impl<Args, Ret> JsCallbackExt<Args, Ret> for JsCallback<Args, Ret>
@@ -86,21 +87,54 @@ where
   async fn invoke_async(&self, args: Args) -> Result<Ret, napi::Error> {
     match self.call_async(args).await? {
       Either::A(ret) => Ok(ret),
-      Either::B(_unknown) => {
-        // TODO: should provide more information about the unknown return value
-        let js_type = "unknown";
-        let expected_rust_type = pretty_type_name::<Ret>();
-
-        Err(napi::Error::new(
-          napi::Status::InvalidArg,
-          format!(
-            "UNKNOWN_RETURN_VALUE. Cannot convert {js_type} to `{expected_rust_type}` in {}.",
-            pretty_type_name::<Self>(),
-          ),
-        ))
-      }
+      Either::B(_unknown) => create_unknown_return_error::<Ret, Self>(),
     }
   }
+
+  fn invoke_sync(&self, args: Args) -> Result<Ret, napi::Error> {
+    let init_value = Ok(Either::B(UnknownReturnValue));
+    let pair = Arc::new((Mutex::new(init_value), Condvar::new()));
+    let pair_clone = Arc::clone(&pair);
+
+    self.call_with_return_value(
+      args,
+      napi::threadsafe_function::ThreadsafeFunctionCallMode::Blocking,
+      move |ret, _env| {
+        let (lock, cvar) = &*pair;
+        *lock.lock().unwrap() = ret;
+        cvar.notify_one();
+        Ok(())
+      },
+    );
+
+    let (lock, cvar) = &*pair_clone;
+    let notified = lock.lock().unwrap();
+    let mut res = cvar.wait(notified).map_err(|err| {
+      napi::Error::new(napi::Status::GenericFailure, format!("PoisonError: {err:?}",))
+    })?;
+    let res = res
+      .as_mut()
+      .map_err(|err| napi::Error::new(napi::Status::GenericFailure, format!("{err:?}",)))?;
+
+    match std::mem::replace(res, Either::B(UnknownReturnValue)) {
+      Either::A(ret) => Ok(ret),
+      Either::B(_unknown) => create_unknown_return_error::<Ret, Self>(),
+    }
+  }
+}
+
+fn create_unknown_return_error<Ret, T>() -> Result<Ret, napi::Error> {
+  // TODO: should provide more information about the unknown return value
+  let js_type = "unknown";
+  let expected_rust_type = pretty_type_name::<Ret>();
+
+  Err(napi::Error::new(
+    napi::Status::InvalidArg,
+    format!(
+      "UNKNOWN_RETURN_VALUE. Cannot convert {js_type} to `{expected_rust_type}` in {}.",
+      pretty_type_name::<T>(),
+    ),
+  ))
 }
 
 pub trait MaybeAsyncJsCallbackExt<Args, Ret> {

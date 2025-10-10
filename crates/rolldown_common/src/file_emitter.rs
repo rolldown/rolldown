@@ -188,6 +188,7 @@ impl FileEmitter {
       let mut filename = filename_template
         .render(
           name,
+          None,
           Some(extension.unwrap_or_default()),
           Some(|len: Option<usize>| &hash[..len.map_or(8, |len| len.min(21))]),
         )

@@ -207,7 +207,14 @@ impl Chunk {
     });
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
 
-    let filename = filename_template.render(Some(&chunk_name), None, hash_replacer).into();
+    let filename = filename_template
+      .render(
+        Some(&chunk_name),
+        Some(options.format.as_str()),
+        None,
+        hash_replacer,
+      )
+      .into();
 
     let name = make_unique_name(&filename, used_name_counts);
 
@@ -277,7 +284,14 @@ impl Chunk {
     });
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
 
-    let filename = filename_template.render(Some(&chunk_name), None, hash_replacer).into();
+    let filename = filename_template
+      .render(
+        Some(&chunk_name),
+        Some(options.format.as_str()),
+        None,
+        hash_replacer,
+      )
+      .into();
 
     let name = make_unique_name(&filename, used_name_counts);
 

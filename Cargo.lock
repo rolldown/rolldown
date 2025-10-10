@@ -2769,6 +2769,7 @@ dependencies = [
  "insta",
  "itertools",
  "itoa",
+ "json-escape-simd",
  "memchr",
  "notify",
  "oxc",

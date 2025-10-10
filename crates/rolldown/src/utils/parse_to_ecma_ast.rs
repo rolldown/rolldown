@@ -1,5 +1,6 @@
 use std::{borrow::Cow, path::Path};
 
+use json_escape_simd::escape;
 use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
@@ -10,10 +11,7 @@ use sugar_path::SugarPath;
 
 use super::pre_process_ecma_ast::PreProcessEcmaAst;
 
-use crate::{
-  types::{module_factory::CreateModuleContext, oxc_parse_type::OxcParseType},
-  utils::text_to_esm::text_to_string_literal,
-};
+use crate::types::{module_factory::CreateModuleContext, oxc_parse_type::OxcParseType};
 
 #[inline]
 fn pure_esm_js_oxc_source_type() -> OxcSourceType {
@@ -121,17 +119,17 @@ fn pre_process_source(
         Cow::Borrowed("({})")
       }
     }
-    ModuleType::Text => Cow::Owned(text_to_string_literal(&source.try_into_string()?)?),
+    ModuleType::Text => Cow::Owned(escape(&source.try_into_string()?)),
     ModuleType::Asset => Cow::Borrowed("__ROLLDOWN_ASSET_FILENAME__"),
     ModuleType::Base64 => {
       let encoded = rolldown_utils::base64::to_standard_base64(source.as_bytes());
-      Cow::Owned(text_to_string_literal(&encoded)?)
+      Cow::Owned(escape(&encoded))
     }
     ModuleType::Dataurl => {
       let data = source.as_bytes();
       let guessed_mime = guess_mime(path, data)?;
       let dataurl = rolldown_utils::dataurl::encode_as_shortest_dataurl(&guessed_mime, data);
-      Cow::Owned(text_to_string_literal(&dataurl)?)
+      Cow::Owned(escape(&dataurl))
     }
     ModuleType::Binary => {
       let encoded = rolldown_utils::base64::to_standard_base64(source.as_bytes());

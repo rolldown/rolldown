@@ -32,6 +32,7 @@ futures = { workspace = true }
 indexmap = { workspace = true }
 itertools = { workspace = true }
 itoa = { workspace = true }
+json-escape-simd = { workspace = true }
 memchr = { workspace = true }
 notify = { workspace = true }
 oxc = { workspace = true }

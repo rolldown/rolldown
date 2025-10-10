@@ -16,7 +16,8 @@ use super::generated_code_options::GeneratedCodeOptions;
 use super::legal_comments::LegalComments;
 use super::minify_options::MinifyOptions;
 use super::output_option::{
-  AssetFilenamesOutputOption, ChunkFilenamesOutputOption, PreserveEntrySignatures,
+  AssetFilenamesOutputOption, ChunkFilenamesOutputOption, PathsOutputOption,
+  PreserveEntrySignatures,
 };
 use super::sanitize_filename::SanitizeFilename;
 use super::treeshake::NormalizedTreeshakeOptions;
@@ -64,6 +65,7 @@ pub struct NormalizedBundlerOptions {
   pub es_module: EsModuleFlag,
   pub hash_characters: HashCharacters,
   pub globals: GlobalsOutputOption,
+  pub paths: Option<PathsOutputOption>,
   pub generated_code: GeneratedCodeOptions,
   pub sourcemap: Option<SourceMapType>,
   pub banner: Option<AddonOutputOption>,
@@ -135,6 +137,7 @@ impl Default for NormalizedBundlerOptions {
       es_module: Default::default(),
       hash_characters: Default::default(),
       globals: GlobalsOutputOption::FxHashMap(FxHashMap::default()),
+      paths: Default::default(),
       generated_code: Default::default(),
       sourcemap: Default::default(),
       banner: Default::default(),

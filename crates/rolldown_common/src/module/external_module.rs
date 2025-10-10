@@ -1,8 +1,10 @@
 use std::path::Path;
 
+use crate::inner_bundler_options::types::output_option::PathsOutputOption;
 use crate::side_effects::DeterminedSideEffects;
 use crate::{Chunk, ImportRecordIdx, ModuleIdx, ResolvedImportRecord, SymbolRef};
 use arcstr::ArcStr;
+use futures::executor::block_on;
 use oxc_index::IndexVec;
 use rolldown_utils::concat_string;
 use sugar_path::SugarPath;
@@ -49,11 +51,22 @@ impl ExternalModule {
     }
   }
 
-  pub fn get_import_path(&self, chunk: &Chunk) -> ArcStr {
-    if !self.need_renormalize_render_path {
-      return self.name.clone();
+  pub fn get_file_name(&self, paths: Option<&PathsOutputOption>) -> ArcStr {
+    // Try to apply paths mapping first
+    if let Some(paths_option) = paths {
+      if let Some(mapped_path) = block_on(paths_option.call(&self.id)) {
+        return mapped_path.into();
+      }
     }
-    let mut target = self.name.as_str();
+    self.name.clone()
+  }
+
+  pub fn get_import_path(&self, chunk: &Chunk, paths: Option<&PathsOutputOption>) -> ArcStr {
+    if !self.need_renormalize_render_path {
+      return self.get_file_name(paths);
+    }
+    let file_name = self.get_file_name(paths);
+    let mut target = file_name.as_str();
     let mut importer = chunk
       .preliminary_filename
       .as_deref()

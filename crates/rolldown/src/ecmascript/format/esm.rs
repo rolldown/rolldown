@@ -54,18 +54,13 @@ pub fn render_esm<'code>(
 
   if let Some(entry_module) = ctx.chunk.entry_module(&ctx.link_output.module_table) {
     if matches!(entry_module.exports_kind, ExportsKind::Esm) {
-      ctx
-        .chunk
-        .entry_level_external_module_idx
-        .iter()
-        .copied()
-        .filter_map(|importee| {
-          let importee = &ctx.link_output.module_table[importee];
-          importee.as_external().map(|m| m.get_import_path(ctx.chunk))
-        })
-        .for_each(|ext_name| {
+      for importee_idx in ctx.chunk.entry_level_external_module_idx.iter().copied() {
+        let importee = &ctx.link_output.module_table[importee_idx];
+        if let Some(m) = importee.as_external() {
+          let ext_name = m.get_import_path(ctx.chunk, ctx.options.paths.as_ref());
           source_joiner.append_source(concat_string!("export * from \"", ext_name, "\"\n"));
-        });
+        }
+      }
     }
   }
 
@@ -353,7 +348,7 @@ where
           s.push_str("import * as ");
           s.push_str(alias);
           s.push_str(" from \"");
-          s.push_str(&importee.get_import_path(ctx.chunk));
+          s.push_str(&importee.get_import_path(ctx.chunk, ctx.options.paths.as_ref()));
           s.push_str("\";\n");
           None
         }
@@ -386,7 +381,7 @@ where
       &ctx.link_output.module_table,
       specifiers,
       &default_alias,
-      &importee.get_import_path(ctx.chunk),
+      &importee.get_import_path(ctx.chunk, ctx.options.paths.as_ref()),
       with_clause,
     ));
   }

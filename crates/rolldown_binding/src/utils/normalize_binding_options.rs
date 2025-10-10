@@ -136,6 +136,19 @@ fn normalize_globals_option(
   })
 }
 
+fn normalize_paths_option(
+  option: Option<crate::options::PathsOutputOption>,
+) -> Option<rolldown_common::PathsOutputOption> {
+  option.map(move |value| match value {
+    Either::A(hash_map) => rolldown_common::PathsOutputOption::FxHashMap(hash_map),
+    Either::B(func) => rolldown_common::PathsOutputOption::Fn(Arc::new(move |id| {
+      let func = Arc::clone(&func);
+      let id = id.to_string();
+      Box::pin(async move { func.invoke_async((id,).into()).await.map_err(anyhow::Error::from) })
+    })),
+  })
+}
+
 #[expect(clippy::too_many_lines)]
 pub fn normalize_binding_options(
   input_options: crate::options::BindingInputOptions,
@@ -335,6 +348,7 @@ pub fn normalize_binding_options(
       _ => panic!("Invalid hash characters: {format_str}"),
     }),
     globals: normalize_globals_option(output_options.globals),
+    paths: normalize_paths_option(output_options.paths),
     generated_code: output_options
       .generated_code
       .map(normalize_generated_code_option)

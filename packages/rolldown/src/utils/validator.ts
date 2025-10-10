@@ -673,6 +673,12 @@ const GlobalsFunctionSchema = v.pipe(
   v.returns(v.string()),
 );
 
+const PathsFunctionSchema = v.pipe(
+  v.function(),
+  v.args(v.tuple([v.string()])),
+  v.returns(v.string()),
+);
+
 const AdvancedChunksSchema = v.strictObject({
   includeDependenciesRecursively: v.optional(v.boolean()),
   minSize: v.optional(v.number()),
@@ -824,6 +830,14 @@ const OutputOptionsSchema = v.strictObject({
     ),
     v.description(
       'Global variable of UMD / IIFE dependencies (syntax: `key=value`)',
+    ),
+  ),
+  paths: v.pipe(
+    v.optional(
+      v.union([v.record(v.string(), v.string()), PathsFunctionSchema]),
+    ),
+    v.description(
+      'Maps external module IDs to paths',
     ),
   ),
   generatedCode: v.pipe(

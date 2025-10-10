@@ -126,8 +126,11 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         .as_external()
         .expect("Should be external module here");
 
-      let require_path_str =
-        concat_string!("require(\"", &importee.get_import_path(ctx.chunk), "\")");
+      let require_path_str = concat_string!(
+        "require(\"",
+        &importee.get_import_path(ctx.chunk, ctx.options.paths.as_ref()),
+        "\")"
+      );
 
       if ctx.link_output.used_symbol_refs.contains(&importee.namespace_ref) {
         let external_module_symbol_name = &ctx.chunk.canonical_names[&importee.namespace_ref];

@@ -144,6 +144,37 @@ export interface OutputOptions {
   minify?: boolean | 'dce-only' | MinifyOptions;
   name?: string;
   globals?: Record<string, string> | GlobalsFunction;
+  /**
+   * Maps external module IDs to paths.
+   *
+   * Allows customizing the path used when importing external dependencies.
+   * This is particularly useful for loading dependencies from CDNs or custom locations.
+   *
+   * - Object form: Maps module IDs to their replacement paths
+   * - Function form: Takes a module ID and returns its replacement path
+   *
+   * @example
+   * ```js
+   * {
+   *   paths: {
+   *     'd3': 'https://cdn.jsdelivr.net/npm/d3@7'
+   *   }
+   * }
+   * ```
+   *
+   * @example
+   * ```js
+   * {
+   *   paths: (id) => {
+   *     if (id.startsWith('lodash')) {
+   *       return `https://cdn.jsdelivr.net/npm/${id}`
+   *     }
+   *     return id
+   *   }
+   * }
+   * ```
+   */
+  paths?: Record<string, string> | ((id: string) => string);
   generatedCode?: Partial<GeneratedCodeOptions>;
   externalLiveBindings?: boolean;
   inlineDynamicImports?: boolean;

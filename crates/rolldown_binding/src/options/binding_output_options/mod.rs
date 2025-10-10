@@ -27,6 +27,8 @@ pub type AssetFileNamesOutputOption =
   Either<String, JsCallback<FnArgs<(BindingPreRenderedAsset,)>, String>>;
 pub type GlobalsOutputOption =
   Either<FxHashMap<String, String>, JsCallback<FnArgs<(String,)>, String>>;
+pub type PathsOutputOption =
+  Either<FxHashMap<String, String>, JsCallback<FnArgs<(String,)>, String>>;
 pub type SanitizeFileName = Either<bool, JsCallback<FnArgs<(String,)>, String>>;
 pub type SourcemapIgnoreListOutputOption =
   Either3<bool, BindingStringOrRegex, JsCallback<FnArgs<(String, String)>, bool>>;
@@ -97,7 +99,9 @@ pub struct BindingOutputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "(chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>")]
   pub outro: Option<AddonOutputOption>,
-  // paths: OptionsPaths;
+  #[debug(skip)]
+  #[napi(ts_type = "Record<string, string> | ((id: string) => string)")]
+  pub paths: Option<PathsOutputOption>,
   #[napi(ts_type = "(BindingBuiltinPlugin | BindingPluginOptions | undefined)[]")]
   pub plugins: Vec<BindingPluginOrParallelJsPluginPlaceholder<'env>>,
   // preferConst: boolean;

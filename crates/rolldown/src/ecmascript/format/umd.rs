@@ -146,7 +146,11 @@ fn render_amd_dependencies(
     dependencies.push("'exports'".to_string());
   }
   externals.iter().for_each(|external| {
-    dependencies.push(concat_string!("'", external.get_import_path(ctx.chunk), "'"));
+    dependencies.push(concat_string!(
+      "'",
+      external.get_import_path(ctx.chunk, ctx.options.paths.as_ref()),
+      "'"
+    ));
   });
   dependencies.join(", ")
 }
@@ -162,7 +166,11 @@ fn render_cjs_dependencies(
     dependencies.push("exports".to_string());
   }
   externals.iter().for_each(|external| {
-    dependencies.push(concat_string!("require('", external.get_import_path(ctx.chunk), "')"));
+    dependencies.push(concat_string!(
+      "require('",
+      external.get_import_path(ctx.chunk, ctx.options.paths.as_ref()),
+      "')"
+    ));
   });
   dependencies.join(", ")
 }

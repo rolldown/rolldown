@@ -433,7 +433,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let Some(Module::External(module)) = m else {
               return vec![];
             };
-            let importee_name = &module.get_import_path(self.ctx.chunk);
+            let importee_name = &module.get_import_path(self.ctx.chunk, None);
             vec![
               // Insert `import * as ns from 'ext'`external module in esm format
               self.snippet.import_star_stmt(importee_name, importee_namespace_name),
@@ -875,7 +875,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               call_expr.arguments.get_mut(0).expect("require should have an argument");
             // Rewrite `require('xxx')` to `require('fs')`, if there is an alias that maps 'xxx' to 'fs'
             *request_path = ast::Argument::StringLiteral(self.snippet.alloc_string_literal(
-              &importee.get_import_path(self.ctx.chunk),
+              &importee.get_import_path(self.ctx.chunk, None),
               request_path.span(),
             ));
             None
@@ -1319,7 +1319,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               needs_to_esm_helper = importee.exports_kind.is_commonjs();
             }
             Module::External(importee) => {
-              let import_path = importee.get_import_path(self.ctx.chunk);
+              let import_path = importee.get_import_path(self.ctx.chunk, None);
               if str != import_path {
                 expr.source = Expression::StringLiteral(
                   self.snippet.alloc_string_literal(&import_path, expr.source.span()),

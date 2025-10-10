@@ -1958,6 +1958,7 @@ export interface BindingOutputOptions {
   inlineDynamicImports?: boolean
   intro?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
   outro?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
+  paths?: Record<string, string> | ((id: string) => string)
   plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapBaseUrl?: string

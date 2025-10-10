@@ -7,8 +7,8 @@ use derive_more::Debug;
 use oxc::ast_visit::Visit;
 use rolldown_plugin::{HookUsage, LogWithoutPlugin, Plugin};
 use rolldown_plugin_utils::{
-  AssetUrlResult, RenderBuiltUrl, ToOutputFilePathEnv, constants::HTMLProxyMapItem,
-  partial_encode_url_path,
+  AssetUrlResult, RenderBuiltUrl, ToOutputFilePathEnv, UsizeOrFunction,
+  constants::HTMLProxyMapItem, partial_encode_url_path,
 };
 use rolldown_utils::{dashmap::FxDashMap, pattern_filter::normalize_path};
 use sugar_path::SugarPath as _;
@@ -20,10 +20,13 @@ struct ViteHtmlPluginState {
 
 #[derive(Debug, Default)]
 pub struct ViteHtmlPlugin {
+  pub is_lib: bool,
   pub is_ssr: bool,
   pub url_base: String,
   pub public_dir: String,
   pub decoded_base: String,
+  #[debug(skip)]
+  pub asset_inline_limit: UsizeOrFunction,
   #[debug(skip)]
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
   state: ViteHtmlPluginState,
@@ -296,16 +299,21 @@ impl Plugin for ViteHtmlPlugin {
     }
 
     for (url, range) in script_urls {
-      if rolldown_plugin_utils::check_public_file(&url, &self.public_dir).is_some() {
-        let asset_url = env.to_output_file_path(&url, "html", true, public_to_relative).await?;
-        utils::overwrite_check_public_file(
-          &mut s,
-          range,
-          partial_encode_url_path(&asset_url.to_asset_url_in_css_or_html()).into_owned(),
-        )?;
+      let url = if rolldown_plugin_utils::check_public_file(&url, &self.public_dir).is_some() {
+        env
+          .to_output_file_path(&url, "html", true, public_to_relative)
+          .await?
+          .to_asset_url_in_css_or_html()
       } else if !utils::is_excluded_url(&url) {
-        todo!()
-      }
+        self.url_to_built_url(&ctx, &url, &id, None).await?
+      } else {
+        continue;
+      };
+      utils::overwrite_check_public_file(
+        &mut s,
+        range,
+        partial_encode_url_path(&url).into_owned(),
+      )?;
     }
 
     // TODO: Support module_side_effects for module info

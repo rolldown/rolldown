@@ -207,10 +207,6 @@ export default defineConfig({
 });
 ```
 
-:::warning Specifying config file name
-The default config file used with the `-c` flag is `rolldown.config.js`. If you are using `.ts` or `.mjs` extensions, make sure to specify the full filename with e.g. `rolldown -c rolldown.config.ts`.
-:::
-
 ### Multiple builds in the same config
 
 You can also specify multiple configurations as an array, and Rolldown will bundle them in parallel.

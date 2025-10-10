@@ -20,6 +20,16 @@ pub enum OutputFormat {
 
 impl OutputFormat {
   #[inline]
+  pub const fn as_str(&self) -> &'static str {
+    match self {
+      Self::Esm => "esm",
+      Self::Cjs => "cjs",
+      Self::Iife => "iife",
+      Self::Umd => "umd",
+    }
+  }
+
+  #[inline]
   pub fn is_esm(&self) -> bool {
     matches!(self, Self::Esm)
   }
@@ -52,11 +62,6 @@ impl OutputFormat {
 
 impl Display for OutputFormat {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Self::Esm => write!(f, "esm"),
-      Self::Cjs => write!(f, "cjs"),
-      Self::Iife => write!(f, "iife"),
-      Self::Umd => write!(f, "umd"),
-    }
+    write!(f, "{}", self.as_str())
   }
 }

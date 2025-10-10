@@ -403,7 +403,7 @@ impl<'a> GenerateStage<'a> {
           });
 
           let mut filename =
-            asset_filename_template.render(Some(&name), extension, hash_replacer).into();
+            asset_filename_template.render(Some(&name), None, extension, hash_replacer).into();
           filename = make_unique_name(&filename, &used_name_counts);
           let preliminary = PreliminaryFilename::new(filename, hash_placeholder);
 

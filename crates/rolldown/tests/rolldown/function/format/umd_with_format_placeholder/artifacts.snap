@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dist/library.umd.js
+
+```js
+(function(global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.MyLibrary = {})));
+})(this, function(exports) {
+
+//#region index.js
+function greet(name) {
+	return `Hello, ${name}!`;
+}
+
+//#endregion
+exports.greet = greet;
+});
+```

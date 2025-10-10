@@ -1,0 +1,101 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## output-esm.js
+
+```js
+//#region main.js
+const version = "1.0.0";
+function test() {
+	return "Testing format placeholder";
+}
+
+//#endregion
+export { test, version };
+```
+
+# Variant: [format: Esm]
+
+## Assets
+
+### output-esm.js
+
+```js
+//#region main.js
+const version = "1.0.0";
+function test() {
+	return "Testing format placeholder";
+}
+
+//#endregion
+export { test, version };
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### output-cjs.js
+
+```js
+
+//#region main.js
+const version = "1.0.0";
+function test() {
+	return "Testing format placeholder";
+}
+
+//#endregion
+exports.test = test;
+exports.version = version;
+```
+
+# Variant: [format: Iife] [name: "TestApp"]
+
+## Assets
+
+### output-iife.js
+
+```js
+var TestApp = (function(exports) {
+
+
+//#region main.js
+	const version = "1.0.0";
+	function test() {
+		return "Testing format placeholder";
+	}
+
+//#endregion
+exports.test = test;
+exports.version = version;
+return exports;
+})({});
+```
+
+# Variant: [format: Umd] [name: "TestLib"]
+
+## Assets
+
+### output-umd.js
+
+```js
+(function(global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.TestLib = {})));
+})(this, function(exports) {
+
+//#region main.js
+const version = "1.0.0";
+function test() {
+	return "Testing format placeholder";
+}
+
+//#endregion
+exports.test = test;
+exports.version = version;
+});
+```

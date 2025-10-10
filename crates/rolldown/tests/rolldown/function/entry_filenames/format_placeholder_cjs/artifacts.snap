@@ -1,0 +1,15 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## bundle-cjs.js
+
+```js
+
+//#region index.js
+const message = "Hello from CommonJS";
+module.exports = { message };
+
+//#endregion
+```

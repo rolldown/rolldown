@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## chunks/shared-esm.js
+
+```js
+//#region shared.js
+const value = "This is a shared chunk";
+
+//#endregion
+export { value };
+```
+
+## entries/entry-esm.js
+
+```js
+//#region entry.js
+import("../chunks/shared-esm.js").then((module) => {
+	console.log(module.value);
+});
+
+//#endregion
+```

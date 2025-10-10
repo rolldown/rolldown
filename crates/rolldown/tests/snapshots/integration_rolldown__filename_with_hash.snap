@@ -3835,6 +3835,11 @@ expression: output
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BjHBHhXT.js
 - ui-!~{003}~.js => ui-Bf0tm2vu.js
 
+# tests/rolldown/function/chunk_filenames/format_placeholder_in_chunks
+
+- entries/entry-esm.js => entries/entry-esm.js
+- chunks/shared-esm.js => chunks/shared-esm.js
+
 # tests/rolldown/function/context/defined
 
 - main-!~{000}~.js => main-CRCfOHFz.js
@@ -3857,6 +3862,18 @@ expression: output
 - ./entries/b.mjs => ./entries/b.mjs
 - ./chunks/async.mjs => ./chunks/async.mjs
 - ./chunks/shared.mjs => ./chunks/shared.mjs
+
+# tests/rolldown/function/entry_filenames/format_placeholder_cjs
+
+- bundle-cjs.js => bundle-cjs.js
+
+# tests/rolldown/function/entry_filenames/format_placeholder_esm
+
+- main-esm.js => main-esm.js
+
+# tests/rolldown/function/entry_filenames/format_placeholder_with_hash
+
+- esm/app-!~{000}~.js => esm/app-BLl74rDG.js
 
 # tests/rolldown/function/entry_filenames/should_generate_correct_relative_import_path
 
@@ -4203,6 +4220,10 @@ expression: output
 
 - main-!~{000}~.js => main-BDxu1ur0.js
 
+# tests/rolldown/function/format/format_placeholder_matrix
+
+- output-esm.js => output-esm.js
+
 # tests/rolldown/function/format/iife/conflict_exports_key
 
 - main-!~{000}~.js => main-D8JHDTGU.js
@@ -4235,6 +4256,10 @@ expression: output
 
 - main-!~{000}~.js => main-Bd98rPpn.js
 
+# tests/rolldown/function/format/iife_with_format_placeholder
+
+- bundle.iife.js => bundle.iife.js
+
 # tests/rolldown/function/format/umd/conflict_exports_key
 
 - main-!~{000}~.js => main-BF-HiDm_.js
@@ -4258,6 +4283,10 @@ expression: output
 # tests/rolldown/function/format/umd/namespaced_name_reserved
 
 - main-!~{000}~.js => main-Ca24X2dd.js
+
+# tests/rolldown/function/format/umd_with_format_placeholder
+
+- dist/library.umd.js => dist/library.umd.js
 
 # tests/rolldown/function/inject
 

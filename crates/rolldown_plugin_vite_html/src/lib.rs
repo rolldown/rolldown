@@ -3,9 +3,11 @@ mod utils;
 
 use std::{borrow::Cow, path::Path, rc::Rc, sync::Arc};
 
+use cow_utils::CowUtils as _;
 use derive_more::Debug;
 use oxc::ast_visit::Visit;
-use rolldown_plugin::{HookUsage, LogWithoutPlugin, Plugin};
+use rolldown_common::side_effects::HookSideEffects;
+use rolldown_plugin::{HookTransformOutput, HookUsage, LogWithoutPlugin, Plugin};
 use rolldown_plugin_utils::{
   AssetUrlResult, RenderBuiltUrl, ToOutputFilePathEnv, UsizeOrFunction,
   constants::HTMLProxyMapItem, partial_encode_url_path,
@@ -25,6 +27,7 @@ pub struct ViteHtmlPlugin {
   pub url_base: String,
   pub public_dir: String,
   pub decoded_base: String,
+  pub module_preload_polyfill: bool,
   #[debug(skip)]
   pub asset_inline_limit: UsizeOrFunction,
   #[debug(skip)]
@@ -87,6 +90,7 @@ impl Plugin for ViteHtmlPlugin {
     let mut some_scripts_are_async = false;
     let mut some_scripts_are_defer = false;
 
+    let style_urls = Vec::new();
     let mut script_urls = Vec::new();
 
     // TODO: Support module_side_effects for module info
@@ -287,6 +291,15 @@ impl Plugin for ViteHtmlPlugin {
       }
     }
 
+    for (url, span) in overwrite_attrs {
+      let asset_url = env.to_output_file_path(&url, "html", true, public_to_relative).await?;
+      utils::overwrite_check_public_file(
+        &mut s,
+        span.start..span.end,
+        partial_encode_url_path(&asset_url.to_asset_url_in_css_or_html()).into_owned(),
+      )?;
+    }
+
     self.state.is_async_script.insert(id.to_string(), every_script_is_async);
 
     if some_scripts_are_async && some_scripts_are_defer {
@@ -316,6 +329,48 @@ impl Plugin for ViteHtmlPlugin {
       )?;
     }
 
+    let resolved_style_urls = rolldown_utils::futures::block_on_spawn_all(
+      style_urls.into_iter().map(async |(url, range): (&str, std::ops::Range<usize>)| {
+        (url, range, ctx.resolve(url, Some(&id), None).await)
+      }),
+    )
+    .await;
+
+    for (url, range, resolved) in resolved_style_urls {
+      match resolved?.ok() {
+        Some(_) => {
+          s.remove(range.start, range.end);
+        }
+        None => {
+          ctx.warn(LogWithoutPlugin {
+            message: format!("\n{url} doesn't exist at build time, it will remain unchanged to be resolved at runtime"),
+            ..Default::default()
+          });
+          js = js
+            .cow_replace(
+              &rolldown_utils::concat_string!(
+                "import ",
+                rolldown_plugin_utils::to_string_literal(url),
+                "\n"
+              ),
+              "",
+            )
+            .into_owned();
+        }
+      }
+    }
+
+    // TODO: processedHtml(this).set(id, s.toString())
+
+    if self.module_preload_polyfill && (some_scripts_are_async || some_scripts_are_defer) {
+      js = rolldown_utils::concat_string!(
+        "import \"",
+        utils::constant::MODULE_PRELOAD_POLYFILL,
+        "\"\n",
+        js
+      );
+    }
+
     // TODO: Support module_side_effects for module info
     // for url in set_modules {
     //   match ctx.resolve(&url, Some(args.id), None).await? {
@@ -331,16 +386,13 @@ impl Plugin for ViteHtmlPlugin {
     //   }
     // }
 
-    for (url, span) in overwrite_attrs {
-      let asset_url = env.to_output_file_path(&url, "html", true, public_to_relative).await?;
-      utils::overwrite_check_public_file(
-        &mut s,
-        span.start..span.end,
-        partial_encode_url_path(&asset_url.to_asset_url_in_css_or_html()).into_owned(),
-      )?;
-    }
-
-    todo!()
+    // Force this module to keep from being shared between other entry points.
+    // If the resulting chunk is empty, it will be removed in generateBundle.
+    Ok(Some(HookTransformOutput {
+      code: js.into(),
+      side_effects: Some(HookSideEffects::NoTreeshake),
+      ..Default::default()
+    }))
   }
 
   async fn generate_bundle(

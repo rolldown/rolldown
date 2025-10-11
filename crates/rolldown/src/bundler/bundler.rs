@@ -1,9 +1,10 @@
-use super::stages::{link_stage::LinkStage, scan_stage::NormalizedScanStageOutput};
 use crate::{
   BundlerOptions, SharedOptions, SharedResolver,
   bundler_builder::BundlerBuilder,
   hmr::hmr_stage::{HmrStage, HmrStageInput},
   stages::{
+    link_stage::LinkStage,
+    scan_stage::NormalizedScanStageOutput,
     generate_stage::GenerateStage,
     scan_stage::{ScanStage, ScanStageOutput},
   },

@@ -3,9 +3,9 @@ use crate::{
   bundler_builder::BundlerBuilder,
   hmr::hmr_stage::{HmrStage, HmrStageInput},
   stages::{
+    generate_stage::GenerateStage,
     link_stage::LinkStage,
     scan_stage::NormalizedScanStageOutput,
-    generate_stage::GenerateStage,
     scan_stage::{ScanStage, ScanStageOutput},
   },
   types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},

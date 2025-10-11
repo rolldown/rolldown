@@ -45,6 +45,8 @@ pub struct Bundler {
 }
 
 impl Bundler {
+  // --- Public API ---
+
   pub fn new(options: BundlerOptions) -> BuildResult<Self> {
     BundlerBuilder::default().with_options(options).build()
   }
@@ -55,9 +57,7 @@ impl Bundler {
   ) -> BuildResult<Self> {
     BundlerBuilder::default().with_options(options).with_plugins(plugins).build()
   }
-}
 
-impl Bundler {
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
     let build_count = self.build_count;
@@ -111,12 +111,6 @@ impl Bundler {
     Ok(())
   }
 
-  // The rollup always crate a new build at watch mode, it cloud be call multiply times.
-  // Here only reset the closed flag to make it possible to call again.
-  pub fn reset_closed(&mut self) {
-    self.closed = false;
-  }
-
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
   pub async fn scan(
     &mut self,
@@ -164,27 +158,73 @@ impl Bundler {
     Ok(scan_stage_output)
   }
 
-  #[tracing::instrument(level = "debug", skip(self, output))]
-  pub fn normalize_scan_stage_output_and_update_cache(
-    &mut self,
-    output: ScanStageOutput,
-    is_full_scan_mode: bool,
-  ) -> NormalizedScanStageOutput {
-    if !self.options.experimental.is_incremental_build_enabled() {
-      return output.into();
-    }
-
-    if is_full_scan_mode {
-      let output: NormalizedScanStageOutput = output.into();
-      self.cache.set_snapshot(output.make_copy());
-      output
-    } else {
-      self.cache.merge(output);
-      self.cache.create_output()
-    }
+  #[inline]
+  pub fn options(&self) -> &NormalizedBundlerOptions {
+    &self.options
   }
 
-  pub async fn bundle_write(
+  pub fn get_watch_files(&self) -> &Arc<FxDashSet<ArcStr>> {
+    &self.plugin_driver.watch_files
+  }
+
+  // --- Internal API ---
+
+  // The rollup always crate a new build at watch mode, it cloud be call multiply times.
+  // Here only reset the closed flag to make it possible to call again.
+  pub(crate) fn reset_closed(&mut self) {
+    self.closed = false;
+  }
+
+  pub(crate) async fn compute_hmr_update_for_file_changes(
+    &mut self,
+    changed_file_paths: &[String],
+    clients: &[ClientHmrInput],
+    next_hmr_patch_id: Arc<AtomicU32>,
+  ) -> BuildResult<Vec<ClientHmrUpdate>> {
+    let mut hmr_stage = HmrStage::new(HmrStageInput {
+      fs: self.fs.clone(),
+      options: Arc::clone(&self.options),
+      resolver: Arc::clone(&self.resolver),
+      plugin_driver: Arc::clone(&self.plugin_driver),
+      cache: &mut self.cache,
+      next_hmr_patch_id,
+    });
+    hmr_stage.compute_hmr_update_for_file_changes(changed_file_paths, clients).await
+  }
+
+  pub(crate) async fn compute_update_for_calling_invalidate(
+    &mut self,
+    invalidate_caller: String,
+    first_invalidated_by: Option<String>,
+    executed_modules: &FxHashSet<String>,
+    next_hmr_patch_id: Arc<AtomicU32>,
+  ) -> BuildResult<HmrUpdate> {
+    let mut hmr_stage = HmrStage::new(HmrStageInput {
+      fs: self.fs.clone(),
+      options: Arc::clone(&self.options),
+      resolver: Arc::clone(&self.resolver),
+      plugin_driver: Arc::clone(&self.plugin_driver),
+      cache: &mut self.cache,
+      next_hmr_patch_id,
+    });
+    hmr_stage
+      .compute_update_for_calling_invalidate(
+        invalidate_caller,
+        first_invalidated_by,
+        executed_modules,
+      )
+      .await
+  }
+
+  pub(crate) fn take_cache(&mut self) -> ScanStageCache {
+    std::mem::take(&mut self.cache)
+  }
+
+  pub(crate) fn set_cache(&mut self, cache: ScanStageCache) {
+    self.cache = cache;
+  }
+
+  pub(crate) async fn bundle_write(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
@@ -219,11 +259,31 @@ impl Bundler {
     Ok(output)
   }
 
-  pub async fn bundle_generate(
+  pub(crate) async fn bundle_generate(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
     self.bundle_up(scan_stage_output, false).await
+  }
+
+  #[tracing::instrument(level = "debug", skip(self, output))]
+  fn normalize_scan_stage_output_and_update_cache(
+    &mut self,
+    output: ScanStageOutput,
+    is_full_scan_mode: bool,
+  ) -> NormalizedScanStageOutput {
+    if !self.options.experimental.is_incremental_build_enabled() {
+      return output.into();
+    }
+
+    if is_full_scan_mode {
+      let output: NormalizedScanStageOutput = output.into();
+      self.cache.set_snapshot(output.make_copy());
+      output
+    } else {
+      self.cache.merge(output);
+      self.cache.create_output()
+    }
   }
 
   async fn bundle_up(
@@ -272,56 +332,6 @@ impl Bundler {
     self.merge_immutable_fields_for_cache(link_stage_output.symbol_db);
 
     Ok(output)
-  }
-
-  #[inline]
-  pub fn options(&self) -> &NormalizedBundlerOptions {
-    &self.options
-  }
-
-  pub fn get_watch_files(&self) -> &Arc<FxDashSet<ArcStr>> {
-    &self.plugin_driver.watch_files
-  }
-
-  pub async fn compute_hmr_update_for_file_changes(
-    &mut self,
-    changed_file_paths: &[String],
-    clients: &[ClientHmrInput],
-    next_hmr_patch_id: Arc<AtomicU32>,
-  ) -> BuildResult<Vec<ClientHmrUpdate>> {
-    let mut hmr_stage = HmrStage::new(HmrStageInput {
-      fs: self.fs.clone(),
-      options: Arc::clone(&self.options),
-      resolver: Arc::clone(&self.resolver),
-      plugin_driver: Arc::clone(&self.plugin_driver),
-      cache: &mut self.cache,
-      next_hmr_patch_id,
-    });
-    hmr_stage.compute_hmr_update_for_file_changes(changed_file_paths, clients).await
-  }
-
-  pub async fn compute_update_for_calling_invalidate(
-    &mut self,
-    invalidate_caller: String,
-    first_invalidated_by: Option<String>,
-    executed_modules: &FxHashSet<String>,
-    next_hmr_patch_id: Arc<AtomicU32>,
-  ) -> BuildResult<HmrUpdate> {
-    let mut hmr_stage = HmrStage::new(HmrStageInput {
-      fs: self.fs.clone(),
-      options: Arc::clone(&self.options),
-      resolver: Arc::clone(&self.resolver),
-      plugin_driver: Arc::clone(&self.plugin_driver),
-      cache: &mut self.cache,
-      next_hmr_patch_id,
-    });
-    hmr_stage
-      .compute_update_for_calling_invalidate(
-        invalidate_caller,
-        first_invalidated_by,
-        executed_modules,
-      )
-      .await
   }
 
   fn merge_immutable_fields_for_cache(&mut self, symbol_db: SymbolRefDb) {
@@ -401,14 +411,6 @@ impl Bundler {
         file: self.options.file.clone(),
       });
     }
-  }
-
-  pub fn take_cache(&mut self) -> ScanStageCache {
-    std::mem::take(&mut self.cache)
-  }
-
-  pub fn set_cache(&mut self, cache: ScanStageCache) {
-    self.cache = cache;
   }
 }
 

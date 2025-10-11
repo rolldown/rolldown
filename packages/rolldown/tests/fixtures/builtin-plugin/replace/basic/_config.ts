@@ -1,5 +1,5 @@
-import { replacePlugin } from 'rolldown/experimental'
 import { defineTest } from 'rolldown-tests'
+import { replacePlugin } from 'rolldown/plugins'
 
 export default defineTest({
   config: {

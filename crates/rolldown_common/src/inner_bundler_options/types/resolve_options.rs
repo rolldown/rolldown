@@ -20,6 +20,7 @@ pub struct ResolveOptions {
   pub extension_alias: Option<Vec<(String, Vec<String>)>>,
   pub main_fields: Option<Vec<String>>,
   pub main_files: Option<Vec<String>>,
+  pub modules: Option<Vec<String>>,
   pub symlinks: Option<bool>,
   pub yarn_pnp: Option<bool>,
 }

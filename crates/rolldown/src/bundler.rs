@@ -103,14 +103,7 @@ impl Bundler {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn close(&mut self) -> Result<()> {
-    if self.closed {
-      return Ok(());
-    }
-
-    self.closed = true;
-    self.plugin_driver.close_bundle().await?;
-
-    Ok(())
+    self.inner_close().await
   }
 
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
@@ -181,7 +174,7 @@ impl Bundler {
 
   // The rollup always crate a new build at watch mode, it cloud be call multiply times.
   // Here only reset the closed flag to make it possible to call again.
-  pub(crate) fn reset_closed(&mut self) {
+  pub(crate) fn reset_closed_for_watch_mode(&mut self) {
     self.closed = false;
   }
 
@@ -294,6 +287,23 @@ impl Bundler {
       self.cache.merge(output);
       self.cache.create_output()
     }
+  }
+
+  async fn inner_close(&mut self) -> Result<()> {
+    if self.closed {
+      return Ok(());
+    }
+
+    self.closed = true;
+    self.plugin_driver.close_bundle().await?;
+
+    // Clean up resources
+    self.plugin_driver.clear();
+    self.cache = ScanStageCache::default();
+    self.resolver.clear_cache();
+    self.warnings.clear();
+
+    Ok(())
   }
 
   async fn bundle_up(

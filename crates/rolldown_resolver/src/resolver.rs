@@ -200,6 +200,12 @@ impl<F: FileSystem> Resolver<F> {
   pub fn cwd(&self) -> &PathBuf {
     &self.cwd
   }
+
+  pub fn clear_cache(&self) {
+    // All resolvers share the same cache, so just clear one of them is ok.
+    self.default_resolver.clear_cache();
+    self.package_json_cache.clear();
+  }
 }
 
 #[derive(Debug)]

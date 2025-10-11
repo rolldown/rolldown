@@ -974,6 +974,12 @@
               "type": "null"
             }
           ]
+        },
+        "nativeMagicString": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

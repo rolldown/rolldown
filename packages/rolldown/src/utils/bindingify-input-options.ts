@@ -195,6 +195,7 @@ function bindingifyExperimental(
     chunkImportMap: experimental?.chunkImportMap,
     onDemandWrapping: experimental?.onDemandWrapping,
     incrementalBuild: experimental?.incrementalBuild,
+    nativeMagicString: experimental?.nativeMagicString,
   };
 }
 

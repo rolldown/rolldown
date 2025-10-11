@@ -503,6 +503,7 @@ const InputOptionsSchema = v.strictObject({
           fileName: v.optional(v.string()),
         }),
       ])),
+      backgroundSourcemap: v.optional(v.boolean()),
     }),
   ),
   define: v.pipe(

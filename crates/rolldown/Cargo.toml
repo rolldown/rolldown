@@ -72,7 +72,7 @@ xxhash-rust = { workspace = true, features = ["xxh3"] }
 [dev-dependencies]
 glob = { workspace = true }
 insta = { workspace = true }
-rolldown_testing = { workspace = true }
+rolldown_testing = { path = "../rolldown_testing" }
 rolldown_workspace = { workspace = true }
 sugar_path = { workspace = true }
 testing_macros = { workspace = true }

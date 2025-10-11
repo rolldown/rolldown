@@ -13,8 +13,8 @@ use anyhow::Result;
 
 use arcstr::ArcStr;
 use rolldown_common::{
-  ClientHmrInput, ClientHmrUpdate, GetLocalDbMut, HmrUpdate, Module, NormalizedBundlerOptions,
-  ScanMode, SharedFileEmitter, SymbolRefDb,
+  ClientHmrInput, ClientHmrUpdate, GetLocalDbMut, HmrUpdate, Module, ScanMode, SharedFileEmitter,
+  SymbolRefDb,
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
@@ -60,6 +60,7 @@ impl Bundler {
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
+    self.create_error_if_closed()?;
     let build_count = self.build_count;
     async {
       self.trace_action_session_meta();
@@ -79,6 +80,7 @@ impl Bundler {
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
+    self.create_error_if_closed()?;
     let build_count = self.build_count;
     async {
       self.trace_action_session_meta();
@@ -116,6 +118,7 @@ impl Bundler {
     &mut self,
     scan_mode: ScanMode<ArcStr>,
   ) -> BuildResult<NormalizedScanStageOutput> {
+    self.create_error_if_closed()?;
     trace_action!(action::BuildStart { action: "BuildStart" });
     let is_full_scan_mode = scan_mode.is_full();
 
@@ -159,7 +162,7 @@ impl Bundler {
   }
 
   #[inline]
-  pub fn options(&self) -> &NormalizedBundlerOptions {
+  pub fn options(&self) -> &SharedOptions {
     &self.options
   }
 
@@ -168,6 +171,13 @@ impl Bundler {
   }
 
   // --- Internal API ---
+
+  fn create_error_if_closed(&self) -> BuildResult<()> {
+    if self.closed {
+      Err(anyhow::anyhow!("Bundler is closed"))?;
+    }
+    Ok(())
+  }
 
   // The rollup always crate a new build at watch mode, it cloud be call multiply times.
   // Here only reset the closed flag to make it possible to call again.

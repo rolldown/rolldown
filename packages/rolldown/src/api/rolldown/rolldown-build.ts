@@ -1,3 +1,5 @@
+import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import type { BindingBundlerImpl } from '../../binding';
 import {
   BindingBundler,
@@ -88,6 +90,18 @@ export class RolldownBuild {
 
   async write(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
+
+    // Empty outdir when configured.
+    // todo: maybe optimize, move inside rust core.
+    if (outputOptions.dir && outputOptions.emptyOutDir) {
+      const outdir = outputOptions.dir;
+      if (existsSync(outdir) && statSync(outdir).isDirectory()) {
+        for (const name of readdirSync(outdir)) {
+          rmSync(join(outdir, name), { recursive: true });
+        }
+      }
+    }
+
     const { impl } = await this.#getBundlerWithStopWorker(outputOptions);
     const output = await impl.write();
     return transformToRollupOutput(unwrapBindingResult(output));

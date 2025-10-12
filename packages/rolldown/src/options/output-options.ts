@@ -440,6 +440,13 @@ export interface OutputOptions {
    * Whether to minify internal exports.
    */
   minifyInternalExports?: boolean;
+  /**
+   * - Type: `boolean`
+   * - Default: `false`
+   *
+   * Clear output directory before writing.
+   */
+  emptyOutDir?: boolean;
 }
 
 interface OverwriteOutputOptionsForCli {

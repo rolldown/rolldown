@@ -18,6 +18,7 @@ use sugar_path::SugarPath as _;
 #[derive(Debug, Default)]
 struct ViteHtmlPluginState {
   pub is_async_script: FxDashMap<String, bool>,
+  pub html_result_map: FxDashMap<String, String>,
 }
 
 #[derive(Debug, Default)]
@@ -360,7 +361,7 @@ impl Plugin for ViteHtmlPlugin {
       }
     }
 
-    // TODO: processedHtml(this).set(id, s.toString())
+    self.state.html_result_map.insert(id.to_string(), s.to_string());
 
     if self.module_preload_polyfill && (some_scripts_are_async || some_scripts_are_defer) {
       js = rolldown_utils::concat_string!(

@@ -36,6 +36,7 @@ impl From<BindingResolveOptions> for rolldown::ResolveOptions {
       extension_alias: value.extension_alias.map(|alias| {
         alias.into_iter().map(|item| (item.target, item.replacements)).collect::<Vec<_>>()
       }),
+      modules: value.modules,
       main_fields: value.main_fields,
       main_files: value.main_files,
       symlinks: value.symlinks,

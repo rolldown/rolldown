@@ -57,7 +57,7 @@ If you have requirements for JavaScript tools at scale, please [get in touch](ht
 
 We would love to have more contributors involved!
 
-To get started, please read our [Contributing Guide](https://rolldown.rs/contrib-guide/).
+To get started, please read our [Contributing Guide](https://rolldown.rs/contribution-guide/).
 
 ## Credits
 

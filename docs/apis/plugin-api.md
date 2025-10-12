@@ -1,4 +1,8 @@
-# Introduction
+# Plugin API
+
+:::warning 🚧 Under Construction
+We are working on creating a more detailed reference. For now, please refer to [Rollup's Plugin API](https://rollupjs.org/plugin-development/).
+:::
 
 Rolldown's plugin interface is almost fully compatible with Rollup's (detailed tracking [here](https://github.com/rolldown/rolldown/issues/819)), so if you have written a Rollup plugin before, you already know how to write a Rolldown plugin!
 

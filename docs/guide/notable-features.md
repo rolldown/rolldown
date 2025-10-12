@@ -26,11 +26,11 @@ The transform is configurable via the `transform` option.
 The following transforms are supported:
 
 - TypeScript
-  - Sets configurations based on the `tsconfig.json` when [`tsconfig`](/reference/config-options#tsconfig) option is provided.
+  - Sets configurations based on the `tsconfig.json` when [`tsconfig`](/apis/config-options#tsconfig) option is provided.
   - Supported legacy decorators and decorator metadata.
 - JSX
 - Syntax lowering
-  - Automatically transforms modern syntax to be compatible with your defined [target](/reference/config-options#transform).
+  - Automatically transforms modern syntax to be compatible with your defined [target](/apis/config-options#transform).
   - Supports [down to ES2015](https://oxc.rs/docs/guide/usage/transformer/lowering#transformations).
 
 ## ESM / CJS Interop
@@ -41,7 +41,7 @@ Rolldown handles mixed ESM / CJS module graphs out of the box, without the need 
 
 - Powered by [oxc-resolver](https://github.com/oxc-project/oxc-resolver), aligned with webpack's [enhanced-resolve](https://github.com/webpack/enhanced-resolve)
 - `node_modules` resolution is enabled by default (equivalent of `@rollup/plugin-node-resolve`)
-- tsconfig paths supported via top-level [`tsconfig`](/reference/config-options#tsconfig).
+- tsconfig paths supported via top-level [`tsconfig`](/apis/config-options#tsconfig).
 - Configurable via the `resolve` option:
 
   ```ts
@@ -132,7 +132,7 @@ interface OutputOptions {
 
 - ⚠️ Experimental
 
-This is conceptually similar to [esbuild's `loader` option](https://esbuild.github.io/api/#loader), allowing users to globally associate file extensions to built-in module types via the `moduleTypes` option, or specify module type of a specific module in plugin hooks. It is discussed in more details [here](/guide/in-depth/module-types).
+This is conceptually similar to [esbuild's `loader` option](https://esbuild.github.io/api/#loader), allowing users to globally associate file extensions to built-in module types via the `moduleTypes` option, or specify module type of a specific module in plugin hooks. It is discussed in more details [here](/in-depth/module-types).
 
 ## Minification
 

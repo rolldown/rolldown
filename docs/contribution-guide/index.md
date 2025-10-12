@@ -22,7 +22,7 @@ Before requesting new functionality, view [open issues](https://github.com/rolld
 
 We accept pull requests for all bugs, fixes, improvements, and new features. Before submitting a pull request, be sure your build passes locally using the development workflow above.
 
-For setting up the project's development environment, see [Project Setup](./setup-the-project.md).
+For setting up the project's development environment, see [Project Setup](../development-guide/setup-the-project.md).
 
 :::info
 

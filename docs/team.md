@@ -64,5 +64,5 @@ Rolldown is still in early stage. We have a lot of ground to cover, and we won't
 ### Useful Links
 
 - [GitHub](https://github.com/rolldown/rolldown)
-- [Contribution Guide](/contrib-guide/)
+- [Contribution Guide](/contribution-guide/)
 - [Discord Chat](https://chat.rolldown.rs)

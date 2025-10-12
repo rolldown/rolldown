@@ -226,6 +226,7 @@ pub struct BundlerOptions {
   pub optimization: Option<OptimizationOption>,
   pub top_level_var: Option<bool>,
   pub minify_internal_exports: Option<bool>,
+  pub empty_out_dir: Option<bool>,
   pub context: Option<String>,
   pub tsconfig: Option<String>,
 }

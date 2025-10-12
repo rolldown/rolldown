@@ -235,6 +235,10 @@ impl Bundler {
 
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
 
+    if self.options.empty_out_dir && self.options.dir.is_some() {
+      empty_inside_dir::empty_dir(&dist_dir).expect("cannot empty out dir");
+    }
+
     self.fs.create_dir_all(&dist_dir).map_err(|err| {
       anyhow::anyhow!("Could not create directory for output chunks: {}", dist_dir.display())
         .context(err)

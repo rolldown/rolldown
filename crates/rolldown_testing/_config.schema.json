@@ -513,6 +513,12 @@
             "null"
           ]
         },
+        "emptyOutDir": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "context": {
           "type": [
             "string",

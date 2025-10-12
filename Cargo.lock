@@ -739,6 +739,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "empty_inside_dir"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a90f286142020edc0a31e36e6c6c2c802493888161a842ae1a4a569c3bffd13"
+
+[[package]]
 name = "encode_unicode"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2763,6 +2769,7 @@ dependencies = [
  "css-module-lexer",
  "derive_more",
  "dunce",
+ "empty_inside_dir",
  "futures",
  "glob",
  "indexmap",

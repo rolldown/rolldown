@@ -12,9 +12,10 @@ use crate::{
 use anyhow::Result;
 
 use arcstr::ArcStr;
+use empty_inside_dir::empty_dir;
 use rolldown_common::{
-  ClientHmrInput, ClientHmrUpdate, GetLocalDbMut, HmrUpdate, Module, ScanMode, SharedFileEmitter,
-  SymbolRefDb,
+  ClientHmrInput, ClientHmrUpdate, EmptyOutDirMode, GetLocalDbMut, HmrUpdate, Module, ScanMode,
+  SharedFileEmitter, SymbolRefDb,
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
@@ -235,8 +236,19 @@ impl Bundler {
 
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
 
-    if self.options.empty_out_dir && self.options.dir.is_some() {
-      empty_inside_dir::empty_dir(&dist_dir).expect("cannot empty out dir");
+    if self.options.dir.is_some() {
+      match self.options.empty_out_dir {
+        EmptyOutDirMode::Disabled => {}
+        EmptyOutDirMode::Force => {
+          empty_dir(&dist_dir).expect("cannot empty out dir (force mode)");
+        }
+        EmptyOutDirMode::Normal => {
+          // todo: how to resolve real root?
+          if dist_dir.starts_with(&self.options.cwd) {
+            empty_dir(&dist_dir).expect("cannot empty out dir");
+          }
+        }
+      }
     }
 
     self.fs.create_dir_all(&dist_dir).map_err(|err| {

@@ -740,9 +740,9 @@ dependencies = [
 
 [[package]]
 name = "empty_inside_dir"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a90f286142020edc0a31e36e6c6c2c802493888161a842ae1a4a569c3bffd13"
+checksum = "04c5b4ed838eeb9d3f2128540663a79442d22edec55dc4e0dcfc72f73800c435"
 
 [[package]]
 name = "encode_unicode"

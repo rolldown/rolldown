@@ -136,5 +136,6 @@ pub struct BindingOutputOptions<'env> {
   pub preserve_modules_root: Option<String>,
   pub top_level_var: Option<bool>,
   pub minify_internal_exports: Option<bool>,
-  pub empty_out_dir: Option<bool>,
+  #[napi(ts_type = "boolean | 'force'")]
+  pub empty_out_dir: Option<Either<bool, String>>,
 }

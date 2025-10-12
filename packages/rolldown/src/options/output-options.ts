@@ -441,12 +441,13 @@ export interface OutputOptions {
    */
   minifyInternalExports?: boolean;
   /**
-   * - Type: `boolean`
-   * - Default: `false`
+   * Empty output directory before writing.
    *
-   * Clear output directory before writing.
+   * - `'force'`: clean the out dir even if it's not inside project root.
+   * - `true`: only clean the out dir inside project root (cwd).
+   * - `false` or `undefined`: don't do anything about the out dir.
    */
-  emptyOutDir?: boolean;
+  emptyOutDir?: boolean | 'force';
 }
 
 interface OverwriteOutputOptionsForCli {

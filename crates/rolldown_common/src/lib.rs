@@ -34,6 +34,7 @@ pub mod bundler_options {
       chunk_modules_order::ChunkModulesOrderBy,
       debug_options::DebugOptions,
       defer_sync_scan_data_option::DeferSyncScanDataOption,
+      empty_out_dir_mode::EmptyOutDirMode,
       es_module_flag::EsModuleFlag,
       experimental_options::{ExperimentalOptions, SourcemapHires},
       filename_template::FilenameTemplate,

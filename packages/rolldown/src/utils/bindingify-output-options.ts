@@ -89,7 +89,7 @@ export function bindingifyOutputOptions(
     preserveModulesRoot,
     topLevelVar,
     minifyInternalExports: outputOptions.minifyInternalExports,
-    emptyOutDir: emptyOutDir ?? false,
+    emptyOutDir: emptyOutDir === 'force' ? true : emptyOutDir ?? false,
   };
 }
 

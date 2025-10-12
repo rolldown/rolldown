@@ -514,9 +514,13 @@
           ]
         },
         "emptyOutDir": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EmptyOutDirMode"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "context": {
@@ -1502,6 +1506,25 @@
       "enum": [
         "all",
         "smart"
+      ]
+    },
+    "EmptyOutDirMode": {
+      "oneOf": [
+        {
+          "description": "Don't do anything about the out dir.",
+          "type": "string",
+          "const": "Disabled"
+        },
+        {
+          "description": "Only clean the out dir inside project root.",
+          "type": "string",
+          "const": "Normal"
+        },
+        {
+          "description": "Clean the out dir even if it's not inside project root.",
+          "type": "string",
+          "const": "Force"
+        }
       ]
     },
     "ConfigVariant": {

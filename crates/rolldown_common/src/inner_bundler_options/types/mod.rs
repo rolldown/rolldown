@@ -4,6 +4,7 @@ pub mod chunk_import_map;
 pub mod chunk_modules_order;
 pub mod debug_options;
 pub mod defer_sync_scan_data_option;
+pub mod empty_out_dir_mode;
 pub mod es_module_flag;
 pub mod experimental_options;
 pub mod filename_template;

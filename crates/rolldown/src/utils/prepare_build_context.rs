@@ -2,9 +2,9 @@ use std::{borrow::Cow, path::Path, sync::Arc};
 
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_common::{
-  AttachDebugInfo, GlobalsOutputOption, InjectImport, LegalComments, MinifyOptions, ModuleType,
-  NormalizedBundlerOptions, OutputFormat, Platform, PreserveEntrySignatures, TreeshakeOptions,
-  normalize_optimization_option,
+  AttachDebugInfo, EmptyOutDirMode, GlobalsOutputOption, InjectImport, LegalComments,
+  MinifyOptions, ModuleType, NormalizedBundlerOptions, OutputFormat, Platform,
+  PreserveEntrySignatures, TreeshakeOptions, normalize_optimization_option,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_fs::{OsFileSystem, OxcResolverFileSystem as _};
@@ -343,7 +343,7 @@ pub fn prepare_build_context(
     optimization: normalize_optimization_option(raw_options.optimization, platform),
     top_level_var: raw_options.top_level_var.unwrap_or(false),
     minify_internal_exports: raw_options.minify_internal_exports.unwrap_or(false),
-    empty_out_dir: raw_options.empty_out_dir.unwrap_or(false),
+    empty_out_dir: raw_options.empty_out_dir.unwrap_or(EmptyOutDirMode::Disabled),
     context: raw_options.context.unwrap_or_default(),
     tsconfig,
   };

@@ -11,6 +11,7 @@ use rolldown_error::EventKindSwitcher;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::advanced_chunks_options::AdvancedChunksOptions;
+use super::empty_out_dir_mode::EmptyOutDirMode;
 use super::experimental_options::ExperimentalOptions;
 use super::generated_code_options::GeneratedCodeOptions;
 use super::legal_comments::LegalComments;
@@ -106,7 +107,7 @@ pub struct NormalizedBundlerOptions {
   pub optimization: NormalizedOptimizationConfig,
   pub top_level_var: bool,
   pub minify_internal_exports: bool,
-  pub empty_out_dir: bool,
+  pub empty_out_dir: EmptyOutDirMode,
   pub context: String,
   pub tsconfig: Option<PathBuf>,
 }
@@ -179,7 +180,7 @@ impl Default for NormalizedBundlerOptions {
       optimization: NormalizedOptimizationConfig::default(),
       top_level_var: false,
       minify_internal_exports: Default::default(),
-      empty_out_dir: false,
+      empty_out_dir: EmptyOutDirMode::Disabled,
       context: Default::default(),
       tsconfig: Default::default(),
     }

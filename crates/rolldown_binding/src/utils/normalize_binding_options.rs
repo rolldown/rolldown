@@ -20,6 +20,7 @@ use rolldown::{
   MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat, Platform,
   RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename,
 };
+use rolldown_common::EmptyOutDirMode;
 use rolldown_common::GeneratedCodeOptions;
 use rolldown_common::{DeferSyncScanData, bundler_options};
 use rolldown_plugin::__inner::SharedPluginable;
@@ -146,6 +147,15 @@ fn normalize_paths_option(
       let id = id.to_string();
       func.invoke_sync((id,).into()).map_err(anyhow::Error::from)
     })),
+  })
+}
+
+fn normalize_empty_out_dir_option(option: Option<Either<bool, String>>) -> Option<EmptyOutDirMode> {
+  option.map(|value| match value {
+    Either::A(false) => EmptyOutDirMode::Disabled,
+    Either::A(true) => EmptyOutDirMode::Normal,
+    Either::B(s) if s == "force" => EmptyOutDirMode::Force,
+    Either::B(_) => EmptyOutDirMode::Disabled,
   })
 }
 
@@ -482,7 +492,7 @@ pub fn normalize_binding_options(
     optimization: input_options.optimization.map(OptimizationOption::try_from).transpose()?,
     top_level_var: output_options.top_level_var,
     minify_internal_exports: output_options.minify_internal_exports,
-    empty_out_dir: output_options.empty_out_dir,
+    empty_out_dir: normalize_empty_out_dir_option(output_options.empty_out_dir),
     context: input_options.context,
     tsconfig: input_options.tsconfig,
   };

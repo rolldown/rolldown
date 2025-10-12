@@ -283,6 +283,16 @@ export interface InputOptions {
      */
     incrementalBuild?: boolean;
     transformHiresSourcemap?: boolean | 'boundary';
+    /**
+     * Use native Rust implementation of MagicString for source map generation.
+     *
+     * - Type: `boolean`
+     * - Default: `false`
+     *
+     * When enabled, rolldown will use a native Rust implementation of MagicString
+     * for better performance during source map generation.
+     */
+    nativeMagicString?: boolean;
   };
   /**
    * Replace global variables or [property accessors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Property_accessors) with the provided values.

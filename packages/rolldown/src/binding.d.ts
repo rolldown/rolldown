@@ -1681,6 +1681,7 @@ export interface BindingExperimentalOptions {
   onDemandWrapping?: boolean
   incrementalBuild?: boolean
   transformHiresSourcemap?: boolean | 'boundary'
+  nativeMagicString?: boolean
 }
 
 export interface BindingFilterToken {

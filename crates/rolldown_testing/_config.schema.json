@@ -787,6 +787,15 @@
             "type": "string"
           }
         },
+        "modules": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
         "symlinks": {
           "type": [
             "boolean",
@@ -973,6 +982,12 @@
             {
               "type": "null"
             }
+          ]
+        },
+        "nativeMagicString": {
+          "type": [
+            "boolean",
+            "null"
           ]
         }
       },

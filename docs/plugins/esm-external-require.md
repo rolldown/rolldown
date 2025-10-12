@@ -19,7 +19,7 @@ Import and use the plugin from Rolldown's experimental exports:
 
 ```js
 import { defineConfig } from 'rolldown';
-import { esmExternalRequirePlugin } from 'rolldown/experimental';
+import { esmExternalRequirePlugin } from 'rolldown/plugins';
 
 export default defineConfig({
   input: 'src/index.js',

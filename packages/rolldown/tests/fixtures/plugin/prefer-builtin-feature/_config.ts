@@ -24,7 +24,7 @@ export default defineTest({
 			  │ 
 			  │ Help: This diagnostic may be false positive, you could turn it off via \`checks.preferBuiltinFeature\`
 			",
-			  "[PREFER_BUILTIN_FEATURE] Warning: Rolldown supports \`inject\` natively, please refer https://rolldown.rs/reference/config-options for more details, this is performant than passing \`@rollup/plugin-inject\` to plugins option.
+			  "[PREFER_BUILTIN_FEATURE] Warning: Rolldown supports \`inject\` natively, please refer https://rolldown.rs/apis/config-options for more details, this is performant than passing \`@rollup/plugin-inject\` to plugins option.
 			  │ 
 			  │ Help: This diagnostic may be false positive, you could turn it off via \`checks.preferBuiltinFeature\`
 			",

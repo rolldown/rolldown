@@ -2,6 +2,8 @@ use std::ops::Range;
 
 use string_wizard::MagicString;
 
+use super::constant::{COMMENT_RE, IMPORT_RE};
+
 pub fn overwrite_check_public_file(
   s: &mut MagicString<'_>,
   span: Range<usize>,
@@ -36,4 +38,12 @@ pub fn is_excluded_url(url: &str) -> bool {
       i > 0 && i + 2 < b.len() && &b[i..i + 3] == b"://"
     }
     || url.trim_start().get(..5).is_some_and(|p| p.eq_ignore_ascii_case("data:"))
+}
+
+pub fn is_entirely_import(code: &str) -> bool {
+  // Only consider "side-effect" imports, which match <script type=module> semantics exactly
+  // The regexes will remove too little in some exotic cases, but false-negatives are alright
+  let without_imports = IMPORT_RE.replace_all(code, "");
+  let without_comments = COMMENT_RE.replace_all(&without_imports, "");
+  without_comments.trim().is_empty()
 }

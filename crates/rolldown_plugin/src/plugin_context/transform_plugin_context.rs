@@ -90,19 +90,16 @@ impl TransformPluginContext {
   pub fn send_magic_string(
     &self,
     magic_string: MagicString<'static>,
-  ) -> Result<(), mpsc::SendError<SourceMapGenMsg>> {
+  ) -> Result<Option<String>, mpsc::SendError<SourceMapGenMsg>> {
     if let Some(tx) = self.magic_string_tx.as_ref() {
       tx.send(SourceMapGenMsg::MagicString(Box::new((
         self.module_idx,
         self.plugin_idx,
         magic_string,
       ))))
+      .map(|()| None)
     } else {
-      Err(mpsc::SendError(SourceMapGenMsg::MagicString(Box::new((
-        self.module_idx,
-        self.plugin_idx,
-        magic_string,
-      )))))
+      Ok(Some(magic_string.source_map(string_wizard::SourceMapOptions::default()).to_json_string()))
     }
   }
 }

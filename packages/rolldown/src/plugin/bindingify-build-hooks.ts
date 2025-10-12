@@ -285,19 +285,23 @@ export function bindingifyTransform(
       });
 
       let normalizedCode: string | undefined = undefined;
-
+      let map = ret.map;
       if (typeof ret.code === 'string') {
         normalizedCode = ret.code;
       } else if (ret.code instanceof BindingMagicString) {
-        let codeOrMagicString = ret.code as BindingMagicString;
-        normalizedCode = codeOrMagicString.toString();
-        ctx.sendMagicString(codeOrMagicString);
+        let magicString = ret.code as BindingMagicString;
+        normalizedCode = magicString.toString();
+        // If the option is not enable we should just return soucemapJsonString
+        let fallbackSourcemap = ctx.sendMagicString(magicString);
+        if (fallbackSourcemap != undefined) {
+          map = fallbackSourcemap;
+        }
       }
 
       return {
         code: normalizedCode,
         map: bindingifySourcemap(
-          normalizeTransformHookSourcemap(id, code, ret.map),
+          normalizeTransformHookSourcemap(id, code, map),
         ),
         moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
         moduleType: ret.moduleType,

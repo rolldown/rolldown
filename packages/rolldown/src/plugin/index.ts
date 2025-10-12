@@ -146,7 +146,10 @@ export interface FunctionPluginHooks {
     this: TransformPluginContext,
     code: string,
     id: string,
-    meta: BindingTransformHookExtraArgs & { moduleType: ModuleType },
+    meta: BindingTransformHookExtraArgs & {
+      moduleType: ModuleType;
+      magicString?: BindingMagicString;
+    },
   ) => TransformResult;
 
   [DEFINED_HOOK_NAMES.moduleParsed]: (

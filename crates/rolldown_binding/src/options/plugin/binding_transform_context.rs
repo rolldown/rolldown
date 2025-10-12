@@ -32,9 +32,13 @@ impl BindingTransformPluginContext {
   }
 
   #[napi]
-  pub fn send_magic_string(&self, magic_string: &mut BindingMagicString<'static>) {
+  pub fn send_magic_string(
+    &self,
+    magic_string: &mut BindingMagicString<'static>,
+  ) -> Option<String> {
     let internal_magic_string = std::mem::take(&mut magic_string.inner);
 
-    self.inner.send_magic_string(internal_magic_string).unwrap();
+    // If the the message is not send to main thread correctly, we should panic immediately.
+    self.inner.send_magic_string(internal_magic_string).unwrap()
   }
 }

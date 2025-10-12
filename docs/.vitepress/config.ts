@@ -153,6 +153,10 @@ export default defineConfig({
               text: 'builtin:esm-external-require',
               link: '/plugins/esm-external-require.md',
             },
+            {
+              text: 'builtin:replace',
+              link: '/plugins/replace.md',
+            },
           ],
         },
       ],

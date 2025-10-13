@@ -12,7 +12,7 @@
 - rolldown_plugin_vite_html: align `processedHtml` logic (#6494) by @shulaoda
 - add `nativeMagicString` options (#6469) by @IWANABETHATGUY
 - rust: eagerly cleanup resources when calling `close` (#6483) by @hyf0
-- rust: varify if bundler is closed for public API (#6481) by @hyf0
+- rust: verify if bundler is closed for public API (#6481) by @hyf0
 - replace [format] placeholder in chunk filename templates (#6476) by @elecmonkey
 - implement synchronous JS callback invocation for paths function (#6474) by @IWANABETHATGUY
 - rolldown_plugin_vite_html: align partial transform hook logic (#6471) by @shulaoda

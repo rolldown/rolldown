@@ -116,6 +116,17 @@ const sidebarForPluginGuide: UserConfig['themeConfig']['sidebar'] = [
   },
 ];
 
+const sidebarForResources: UserConfig['themeConfig']['sidebar'] = [
+  {
+    text: 'Team',
+    link: '/team.md',
+  },
+  {
+    text: 'Acknowledgements',
+    link: '/acknowledgements.md',
+  },
+];
+
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: 'Rolldown',
@@ -196,12 +207,18 @@ export default defineConfig({
     ],
 
     sidebar: {
+      // --- Guide ---
       '/guide/': sidebarForUserGuide,
       '/apis/': sidebarForUserGuide,
       '/in-depth/': sidebarForUserGuide,
+      // --- Plugin ---
       '/builtin-plugins/': sidebarForPluginGuide,
+      // --- Contribute ---
       '/contribution-guide/': sidebarForDevGuide,
       '/development-guide/': sidebarForDevGuide,
+      // --- Resources ---
+      '/team': sidebarForResources,
+      '/acknowledgements': sidebarForResources,
     },
     outline: 'deep',
     socialLinks: [

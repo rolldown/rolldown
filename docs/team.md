@@ -1,3 +1,7 @@
+---
+outline: false
+---
+
 <script setup>
 import { VPTeamMembers } from 'vitepress/theme'
 
@@ -27,13 +31,6 @@ const members = [
     ]
   },
   {
-    avatar: 'https://www.github.com/underfin.png',
-    name: 'Kui Li (underfin)',
-    links: [
-      { icon: 'github', link: 'https://github.com/underfin' }
-    ]
-  },
-  {
     avatar: 'https://www.github.com/iwanabethatguy.png',
     name: 'Xiangjun He (iwanabethatguy)',
     links: [
@@ -48,14 +45,26 @@ const members = [
       { icon: 'twitter', link: 'https://twitter.com/boshen_c' }
     ]
   },
+  {
+    name: 'shulaoda',
+    avatar: 'https://www.github.com/shulaoda.png',
+    links: [
+      { icon: 'github', link: 'https://github.com/shulaoda' },
+      { icon: 'twitter', link: 'https://x.com/dalaoshv' }
+    ]
+  }
 ]
 </script>
 
 # Team
 
-The Rolldown project was originally created by [Yinan Long](https://github.com/Brooooooklyn) (aka Brooooooklyn, author of [NAPI-RS](https://napi.rs/)), and is now led by [Evan You](https://github.com/yyx990803) (creator of [Vite](https://vitejs.dev/)).
+The team members work full time on the Rolldown project and are responsible for its development, maintenance, and community engagement.
 
 <VPTeamMembers size="small" :members="members" />
+
+## Past Contributors
+
+You can find the past team members and other people who significantly contributed to Rolldown over the years on the [acknowledgements](./acknowledgements.md) page.
 
 ## Join Us!
 

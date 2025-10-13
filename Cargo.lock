@@ -3319,6 +3319,7 @@ name = "rolldown_plugin_vite_html"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arcstr",
  "cow-utils",
  "derive_more",
  "html5gum",
@@ -3329,6 +3330,7 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_utils",
+ "rustc-hash",
  "string_cache",
  "string_wizard",
  "sugar_path",

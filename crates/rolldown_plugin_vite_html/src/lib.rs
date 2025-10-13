@@ -457,6 +457,10 @@ impl Plugin for ViteHtmlPlugin {
           can_inline_entry = true;
         }
 
+        // when not inlined, inject <script> for entry and modulepreload its dependencies
+        // when inlined, discard entry chunk and inject <script> for everything in post-order
+        let imports = utils::get_imported_chunks(chunk, args.bundle);
+
         if can_inline_entry { todo!() } else { todo!() }
       }
     }

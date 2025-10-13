@@ -1,4 +1,5 @@
 mod helpers;
+mod html_tag;
 mod plugin_ext;
 mod script_inline_import_visistor;
 

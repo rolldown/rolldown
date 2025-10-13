@@ -30,3 +30,9 @@ We’d like to recognize a few people who are former team members or have made s
 </ul>
 
 This list is not exhaustive.
+
+## Additional Thanks
+
+Additionally, we’re grateful to:
+
+- [Charlike Mike Reagent](https://github.com/tunnckoCore) for letting us use the `rolldown` package name on npm

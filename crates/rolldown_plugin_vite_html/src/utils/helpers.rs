@@ -52,7 +52,6 @@ pub fn is_entirely_import(code: &str) -> bool {
   without_comments.trim().is_empty()
 }
 
-#[expect(dead_code)]
 /// Represents an imported chunk or external module
 #[derive(Debug, Clone)]
 pub enum ImportedChunk {

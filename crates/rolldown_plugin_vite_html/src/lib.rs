@@ -13,7 +13,10 @@ use rolldown_plugin_utils::{
   constants::HTMLProxyMapItem, partial_encode_url_path,
 };
 use rolldown_utils::{dashmap::FxDashMap, pattern_filter::normalize_path};
+use rustc_hash::FxHashMap;
 use sugar_path::SugarPath as _;
+
+use crate::utils::html_tag::{AttrValue, HtmlTagDescriptor};
 
 #[derive(Debug, Default)]
 pub struct ViteHtmlPlugin {
@@ -461,7 +464,26 @@ impl Plugin for ViteHtmlPlugin {
         // when inlined, discard entry chunk and inject <script> for everything in post-order
         let imports = utils::get_imported_chunks(chunk, args.bundle);
 
-        if can_inline_entry { todo!() } else { todo!() }
+        let asset_tags = if can_inline_entry {
+          let mut tags = Vec::with_capacity(imports.len());
+          for imported_chunk in imports {
+            let mut tag = HtmlTagDescriptor::new("script");
+            let url = match imported_chunk {
+              utils::ImportedChunk::External(external) => external.to_string(),
+              utils::ImportedChunk::Chunk(chunk) => to_output_asset_file(&chunk.filename).await?,
+            };
+            tag.attrs = Some(FxHashMap::from_iter([
+              ("type", AttrValue::String("module".to_owned())),
+              ("crossorigin", AttrValue::Boolean(true)),
+              ("src", AttrValue::String(url)),
+            ]));
+            tags.push(tag);
+          }
+          tags
+        } else {
+          todo!()
+        };
+        todo!()
       }
     }
 

@@ -1,6 +1,6 @@
 #![expect(dead_code)]
 
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TagKind {
@@ -69,7 +69,7 @@ pub enum HtmlTagChildren {
 #[derive(Debug, Clone)]
 pub struct HtmlTagDescriptor {
   pub tag: String,
-  pub attrs: Option<HashMap<String, AttrValue>>,
+  pub attrs: Option<FxHashMap<&'static str, AttrValue>>,
   pub children: Option<HtmlTagChildren>,
   pub inject_to: InjectTo,
 }
@@ -79,7 +79,7 @@ impl HtmlTagDescriptor {
     Self { tag: tag.into(), attrs: None, children: None, inject_to: InjectTo::default() }
   }
 
-  pub fn with_attrs(mut self, attrs: HashMap<String, AttrValue>) -> Self {
+  pub fn with_attrs(mut self, attrs: FxHashMap<&'static str, AttrValue>) -> Self {
     self.attrs = Some(attrs);
     self
   }

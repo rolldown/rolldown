@@ -23,7 +23,7 @@
 - background sourcemap generation for Javascript transform hooks (#6293) by @IWANABETHATGUY
 - rolldown_plugin_vite_html: handle style tag (#6464) by @shulaoda
 - rolldown_plugin_vite_html: handle inline style attribute (#6463) by @shulaoda
-- rolldown_plugin_vite_html: patially handle vite-ignore attribute (#6462) by @shulaoda
+- rolldown_plugin_vite_html: partially handle vite-ignore attribute (#6462) by @shulaoda
 - dev/node: expose errors of `on_hmr_updatrs` to node (#6454) by @hyf0
 - dev/node: expose errors of `on_output` to node (#6453) by @hyf0
 - dev: expose hmr errors on `on_hmr_updatrs` callback (#6443) by @hyf0

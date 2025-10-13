@@ -390,7 +390,7 @@ impl Plugin for ViteHtmlPlugin {
     }))
   }
 
-  #[expect(unused_assignments, unused_variables)]
+  #[expect(unused_variables)]
   async fn generate_bundle(
     &self,
     ctx: &rolldown_plugin::PluginContext,
@@ -398,6 +398,45 @@ impl Plugin for ViteHtmlPlugin {
   ) -> rolldown_plugin::HookNoopReturn {
     for item in &self.html_result_map {
       let ((id, assets_base), (html, is_async)) = item.pair();
+
+      let path = id.relative(ctx.cwd());
+      let path_lossy = path.to_string_lossy();
+      let relative_url_path = normalize_path(&path_lossy);
+
+      let public_to_relative = |filename: &Path, _: &Path| {
+        AssetUrlResult::WithoutRuntime(rolldown_utils::concat_string!(
+          &assets_base,
+          filename.to_string_lossy()
+        ))
+      };
+
+      let env = ToOutputFilePathEnv {
+        is_ssr: self.is_ssr,
+        host_id: &relative_url_path,
+        url_base: &self.url_base,
+        decoded_base: &self.decoded_base,
+        render_built_url: self.render_built_url.as_deref(),
+      };
+
+      let to_output_file_path =
+        async |filename: &str, is_public_asset: bool| -> anyhow::Result<String> {
+          if utils::is_excluded_url(filename) {
+            Ok(filename.to_owned())
+          } else {
+            env
+              .to_output_file_path(filename, "html", is_public_asset, public_to_relative)
+              .await
+              .map(rolldown_plugin_utils::AssetUrlResult::to_asset_url_in_css_or_html)
+          }
+        };
+
+      let to_output_asset_file = async |filename: &str| -> anyhow::Result<String> {
+        to_output_file_path(filename, false).await
+      };
+
+      let to_output_public_asset_file = async |filename: &str| -> anyhow::Result<String> {
+        to_output_file_path(filename, true).await
+      };
 
       let mut can_inline_entry = false;
 
@@ -418,7 +457,7 @@ impl Plugin for ViteHtmlPlugin {
           can_inline_entry = true;
         }
 
-        todo!()
+        if can_inline_entry { todo!() } else { todo!() }
       }
     }
 

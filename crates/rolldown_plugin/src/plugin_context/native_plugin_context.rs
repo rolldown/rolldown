@@ -61,7 +61,8 @@ impl NativePluginContextImpl {
         module_def_format,
         ..Default::default()
       })))
-      .await?;
+      .await
+      .context("PluginContext: failed to send FetchModule message - module loader shut down during plugin execution")?;
     let plugin_driver = self
       .plugin_driver
       .upgrade()

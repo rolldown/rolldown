@@ -614,7 +614,9 @@ impl<'a> ModuleLoader<'a> {
       return Err(errors.into());
     }
     if let Some(tx) = self.magic_string_tx.as_ref() {
-      tx.send(SourceMapGenMsg::Terminate).unwrap();
+      tx.send(SourceMapGenMsg::Terminate).expect(
+        "SourceMapGen: failed to send Terminate message - sourcemap worker thread died unexpectedly"
+      );
     }
 
     // defer sync user modified data in js side

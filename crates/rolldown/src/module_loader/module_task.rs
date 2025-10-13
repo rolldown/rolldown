@@ -83,7 +83,7 @@ impl ModuleTask {
         .tx
         .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
         .await
-        .expect("Send should not fail");
+        .expect("ModuleLoader: failed to send build errors - main thread terminated while processing module errors");
     }
   }
 
@@ -225,8 +225,9 @@ impl ModuleTask {
       warnings,
     }));
 
-    // If the main thread is dead, nothing we can do to handle these send failures.
-    let _ = self.ctx.tx.send(result).await;
+    self.ctx.tx.send(result).await.expect(
+      "ModuleLoader channel closed while sending module completion - main thread terminated unexpectedly"
+    );
 
     Ok(())
   }

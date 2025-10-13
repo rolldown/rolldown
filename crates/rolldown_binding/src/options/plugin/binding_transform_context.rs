@@ -39,6 +39,8 @@ impl BindingTransformPluginContext {
     let internal_magic_string = std::mem::take(&mut magic_string.inner);
 
     // If the the message is not send to main thread correctly, we should panic immediately.
-    self.inner.send_magic_string(internal_magic_string).unwrap()
+    self.inner.send_magic_string(internal_magic_string).expect(
+      "TransformPluginContext: failed to send MagicString to sourcemap worker - sourcemap generation thread terminated unexpectedly during transform"
+    )
   }
 }

@@ -1,4 +1,85 @@
 
+## [1.0.0-beta.43] - 2025-10-13
+
+### 🚀 Features
+
+- add filterVitePlugins utility that uses to skip vite plugins using apply: "serve" (#6502) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: align partial can inline entry logic (#6500) by @shulaoda
+- rolldown_plugin_vite_html: align get_imported_chunks logic (#6499) by @shulaoda
+- rolldown_plugin_vite_html: align HtmlTagDescriptor (#6498) by @shulaoda
+- rolldown_plugin_vite_html: align partial utility functions logic (#6497) by @shulaoda
+- rolldown_html_vite_html: align partial inject chunk asset links logic (#6496) by @shulaoda
+- rolldown_plugin_vite_html: align `processedHtml` logic (#6494) by @shulaoda
+- add `nativeMagicString` options (#6469) by @IWANABETHATGUY
+- rust: eagerly cleanup resources when calling `close` (#6483) by @hyf0
+- rust: verify if bundler is closed for public API (#6481) by @hyf0
+- replace [format] placeholder in chunk filename templates (#6476) by @elecmonkey
+- implement synchronous JS callback invocation for paths function (#6474) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: align partial transform hook logic (#6471) by @shulaoda
+- Support `output.paths` (#6470) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: align script urls handle logic (#6466) by @shulaoda
+- add validation for `preserveEntrySignatures` with `includeDependenciesRecursively` option (#6468) by @hyf0
+- rolldown_plugin_vite_html: align partial logic (#6465) by @shulaoda
+- background sourcemap generation for Javascript transform hooks (#6293) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: handle style tag (#6464) by @shulaoda
+- rolldown_plugin_vite_html: handle inline style attribute (#6463) by @shulaoda
+- rolldown_plugin_vite_html: partially handle vite-ignore attribute (#6462) by @shulaoda
+- dev/node: expose errors of `on_hmr_updatrs` to node (#6454) by @hyf0
+- dev/node: expose errors of `on_output` to node (#6453) by @hyf0
+- dev: expose hmr errors on `on_hmr_updatrs` callback (#6443) by @hyf0
+
+### 🐛 Bug Fixes
+
+- fallback sourcemap generation for `experimental.nativeMagicString: false` (#6488) by @IWANABETHATGUY
+- take `resolve.modules` into account (#6484) by @Pickachu
+- rolldown: increase tokio blocking threads size for watch mode (#6467) by @Brooooooklyn
+- use len_utf16 in magic_string CharToByteMapper (#6461) by @IWANABETHATGUY
+- pass `advancedChunks#includeDependenciesRecursively` to rust (#6448) by @hyf0
+- dev: should compute hmr update correctly for multiple clients (#6442) by @hyf0
+- allow specifying packageJsonPath in PluginContext.load (#6439) by @sapphi-red
+- use transform.target as default for minify target when `minify: { compress: true }` (#6433) by @sapphi-red
+
+### 🚜 Refactor
+
+- extract background sourcemap handling into separate methods (#6501) by @IWANABETHATGUY
+- rust: only expose methods of `Bundler` for public usage (#6480) by @hyf0
+- dev/node: use napi object instead clss for `BindingClientHmrUpdate` (#6456) by @hyf0
+- dev/node: improve `DevOnHmrUpdates` API (#6455) by @hyf0
+
+### 📚 Documentation
+
+- update team page and add acknowledgements page (#6495) by @hyf0
+- restructure website and files (#6492) by @hyf0
+- correct incorrect documentation about the config file (#6472) by @jsparkdev
+- options: `experimental.strictExecutionOrder` (#6450) by @hyf0
+- adding `why-plugin-hook-filter` in depth (#6446) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- rolldown: replace serde JSON string escape with simd impl (#6475) by @Brooooooklyn
+
+### ⚙️ Miscellaneous Tasks
+
+- docs: redirect removed path to new locations for compatibility (#6493) by @hyf0
+- deps: lock file maintenance npm packages (#6490) by @renovate[bot]
+- deps: update github-actions (major) (#6415) by @renovate[bot]
+- deps: update github-actions (#6489) by @renovate[bot]
+- rust: add comment for `DiagnosticOptions#stabilize_path` (#6447) by @hyf0
+- rust: remove unused `BindingHmrOutput` (#6457) by @hyf0
+- rolldown_plugin_vite_html: tweak `utils.rs` (#6460) by @shulaoda
+- change node version to lts (#6435) by @iiio2
+- rust/test: split hmr related structs into their own files (#6445) by @hyf0
+- deps: update crate-ci/typos action to v1.38.1 (#6452) by @renovate[bot]
+- rust/test: render hmr errors (#6444) by @hyf0
+- examples: add `"type": "module"` in `package.json` (#6441) by @iiio2
+
+### ❤️ New Contributors
+
+* @Pickachu made their first contribution in [#6484](https://github.com/rolldown/rolldown/pull/6484)
+* @elecmonkey made their first contribution in [#6476](https://github.com/rolldown/rolldown/pull/6476)
+* @jsparkdev made their first contribution in [#6472](https://github.com/rolldown/rolldown/pull/6472)
+
+
 ## [1.0.0-beta.42] - 2025-10-07
 
 ### 🚀 Features

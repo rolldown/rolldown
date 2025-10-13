@@ -243,7 +243,9 @@ impl ScanStage {
   }
 
   fn create_sourcemap_channel(&self) -> SourcemapChannel {
-    if self.options.experimental.is_native_magic_string_enabled() {
+    if self.options.experimental.is_native_magic_string_enabled()
+      && self.options.is_sourcemap_enabled()
+    {
       let (tx, rx) = std::sync::mpsc::channel::<SourceMapGenMsg>();
       let handler = thread::spawn(move || {
         let mut map: FxHashMap<ModuleIdx, Vec<_>> = FxHashMap::default();

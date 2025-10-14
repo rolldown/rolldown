@@ -9,7 +9,6 @@ use url::Url;
 
 use super::uuid::uuid_v4_string_from_u128;
 
-#[expect(clippy::too_many_lines)]
 pub async fn process_code_and_sourcemap(
   options: &NormalizedBundlerOptions,
   code: &mut String,

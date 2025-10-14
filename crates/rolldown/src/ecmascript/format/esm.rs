@@ -86,7 +86,6 @@ pub fn render_esm<'code>(
   source_joiner
 }
 
-#[expect(clippy::too_many_lines)]
 fn render_chunk_content<'code>(
   ctx: &GenerateContext<'_>,
   module_sources: &'code [RenderedModuleSource],

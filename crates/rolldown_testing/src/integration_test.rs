@@ -83,7 +83,6 @@ impl IntegrationTest {
       .await;
   }
 
-  #[expect(clippy::too_many_lines)]
   #[expect(clippy::unnecessary_debug_formatting)]
   pub async fn run_multiple(
     &self,

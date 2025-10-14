@@ -87,7 +87,6 @@ impl ModuleTask {
     }
   }
 
-  #[expect(clippy::too_many_lines)]
   async fn run_inner(&mut self) -> BuildResult<()> {
     let id = ModuleId::new(&self.resolved_id.id);
 

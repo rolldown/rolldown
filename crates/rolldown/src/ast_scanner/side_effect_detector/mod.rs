@@ -818,7 +818,6 @@ impl<'a> SideEffectDetector<'a> {
     detail
   }
 
-  #[expect(clippy::too_many_lines)]
   pub fn detect_side_effect_of_stmt(&self, stmt: &ast::Statement) -> SideEffectDetail {
     use oxc::ast::ast::Statement;
     match stmt {

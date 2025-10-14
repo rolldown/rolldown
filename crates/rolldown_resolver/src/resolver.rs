@@ -57,7 +57,6 @@ impl<F: FileSystem> Resolver<F> {
 }
 
 impl<F: FileSystem> Resolver<F> {
-  #[expect(clippy::too_many_lines)]
   pub fn new(
     fs: F,
     cwd: PathBuf,

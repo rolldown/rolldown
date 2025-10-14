@@ -416,7 +416,7 @@ impl Plugin for ViteHtmlPlugin {
     }))
   }
 
-  #[expect(unused_variables, clippy::too_many_lines)]
+  #[expect(unused_variables)]
   async fn generate_bundle(
     &self,
     ctx: &rolldown_plugin::PluginContext,

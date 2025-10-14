@@ -59,7 +59,6 @@ impl std::fmt::Debug for BindingBuiltinPlugin<'_> {
 impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
   type Error = napi::Error;
 
-  #[expect(clippy::too_many_lines)]
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
       BindingBuiltinPluginName::Alias => {

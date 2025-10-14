@@ -82,7 +82,6 @@ pub fn render_wrapped_entry_chunk(
   }
 }
 
-#[expect(clippy::too_many_lines)]
 pub fn render_chunk_exports(
   ctx: &GenerateContext<'_>,
   export_mode: Option<&OutputExports>,

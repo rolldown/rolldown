@@ -103,7 +103,6 @@ fn update_module_default_export_info(
   module.stmt_infos.declare_symbol_for_stmt(idx, TaggedSymbolRef::Normal(default_symbol_ref));
 }
 
-#[expect(clippy::too_many_lines)]
 /// return true if the json is a ObjectExpression
 fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -> bool {
   let module = &mut link_staged.module_table[module_idx];

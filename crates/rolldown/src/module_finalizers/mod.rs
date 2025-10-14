@@ -339,7 +339,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     Some((self.builder().expression_sequence(SPAN, self.builder().vec_from_iter(exprs)), ret))
   }
 
-  #[expect(clippy::too_many_lines)]
   fn generate_declaration_of_module_namespace_object(&self) -> Vec<ast::Statement<'ast>> {
     let module_namespace_included_reason = self.ctx.linking_info.module_namespace_included_reason;
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
@@ -752,7 +751,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ))
   }
 
-  #[expect(clippy::too_many_lines)]
   fn try_rewrite_global_require_call(
     &self,
     call_expr: &mut ast::CallExpression<'ast>,
@@ -889,7 +887,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     None
   }
 
-  #[expect(clippy::too_many_lines)]
   fn try_rewrite_inline_dynamic_import_expr(
     &self,
     import_expr: &ImportExpression<'ast>,
@@ -1034,7 +1031,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     None
   }
 
-  #[expect(clippy::too_many_lines)]
   fn remove_unused_top_level_stmt(&mut self, program: &mut ast::Program<'ast>) -> usize {
     let mut last_import_stmt_idx = None;
 

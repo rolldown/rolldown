@@ -274,7 +274,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.scope_stack.iter().rev().all(|flag| flag.is_top())
   }
 
-  #[expect(clippy::too_many_lines)]
   pub fn scan(mut self, program: &Program<'ast>) -> BuildResult<ScanResult> {
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
@@ -675,7 +674,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.cur_class_decl = previous_class_decl_id;
   }
 
-  #[expect(clippy::too_many_lines)]
   fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration<'ast>) {
     if let Some(source) = &decl.source {
       let record_id = self.add_import_record(

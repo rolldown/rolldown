@@ -4,7 +4,6 @@ use oxc::transformer::EngineTargets;
 use rolldown_common::{BundlerTransformOptions, Either, JsxOptions, JsxPreset, TransformOptions};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 
-#[expect(clippy::too_many_lines)]
 pub fn normalize_transform_options_with_tsconfig(
   mut transform_options: BundlerTransformOptions,
   tsconfig: Option<Arc<rolldown_resolver::TsConfig>>,

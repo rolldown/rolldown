@@ -66,17 +66,17 @@ pub enum HtmlTagChildren {
 ///   injectTo?: 'head' | 'body' | 'head-prepend' | 'body-prepend' // default: 'head-prepend'
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct HtmlTagDescriptor {
-  pub tag: String,
+  pub tag: &'static str,
   pub attrs: Option<FxHashMap<&'static str, AttrValue>>,
   pub children: Option<HtmlTagChildren>,
   pub inject_to: InjectTo,
 }
 
 impl HtmlTagDescriptor {
-  pub fn new(tag: impl Into<String>) -> Self {
-    Self { tag: tag.into(), attrs: None, children: None, inject_to: InjectTo::default() }
+  pub fn new(tag: &'static str) -> Self {
+    Self { tag, attrs: None, children: None, inject_to: InjectTo::default() }
   }
 
   pub fn with_attrs(mut self, attrs: FxHashMap<&'static str, AttrValue>) -> Self {

@@ -71,7 +71,7 @@ fn serialize_attrs(attrs: Option<&rustc_hash::FxHashMap<&'static str, AttrValue>
 fn serialize_tag(tag: &HtmlTagDescriptor, indent: &str) -> String {
   let attrs_str = serialize_attrs(tag.attrs.as_ref());
 
-  if UNARY_TAGS.contains(tag.tag.as_str()) {
+  if UNARY_TAGS.contains(tag.tag) {
     // Unary tags: <tag attrs>
     rolldown_utils::concat_string!("<", tag.tag, attrs_str, ">")
   } else {
@@ -130,7 +130,6 @@ fn prepend_inject_fallback<'a>(html: &'a str, tags: &[HtmlTagDescriptor]) -> Cow
 }
 
 /// Inject tags to head section
-#[expect(dead_code)]
 pub fn inject_to_head<'a>(
   html: &'a str,
   tags: &[HtmlTagDescriptor],

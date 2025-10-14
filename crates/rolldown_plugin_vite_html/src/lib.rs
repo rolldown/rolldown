@@ -10,7 +10,8 @@ use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookTransformOutput, HookUsage, LogWithoutPlugin, Plugin};
 use rolldown_plugin_utils::{
   AssetUrlResult, RenderBuiltUrl, ToOutputFilePathEnv, UsizeOrFunction,
-  constants::HTMLProxyMapItem, partial_encode_url_path,
+  constants::{CSSBundleName, HTMLProxyMapItem},
+  partial_encode_url_path,
 };
 use rolldown_utils::{dashmap::FxDashMap, pattern_filter::normalize_path};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -18,6 +19,7 @@ use sugar_path::SugarPath as _;
 
 use crate::utils::html_tag::{AttrValue, HtmlTagDescriptor};
 
+#[expect(clippy::struct_excessive_bools)]
 #[derive(Debug, Default)]
 pub struct ViteHtmlPlugin {
   pub is_lib: bool,
@@ -25,6 +27,7 @@ pub struct ViteHtmlPlugin {
   pub url_base: String,
   pub public_dir: String,
   pub decoded_base: String,
+  pub css_code_split: bool,
   pub module_preload_polyfill: bool,
   #[debug(skip)]
   pub asset_inline_limit: UsizeOrFunction,
@@ -458,6 +461,31 @@ impl Plugin for ViteHtmlPlugin {
           todo!()
         };
         todo!()
+      }
+
+      if !self.css_code_split {
+        let css_bundle_name = ctx.meta().get::<CSSBundleName>();
+        if let Some(css_bundle_name) = css_bundle_name
+          && args.bundle.iter().any(
+            |o| matches!(o, rolldown_common::Output::Asset(asset) if asset.names.contains(&css_bundle_name.0)),
+          )
+        {
+          let url = self.to_output_file_path(&css_bundle_name.0, assets_base, false, &relative_url_path).await?;
+          result = utils::inject_to_head(&result, &[
+            HtmlTagDescriptor {
+              tag: "link",
+              attrs: Some(FxHashMap::from_iter([
+                ("rel", AttrValue::String("stylesheet".to_owned())),
+                ("crossorigin", AttrValue::Boolean(true)),
+                (
+                  "href",
+                  AttrValue::String(url),
+                ),
+              ])),
+                ..Default::default()
+            }
+          ], false).into_owned();
+        }
       }
 
       if let Some(s) = Self::handle_inline_css(ctx, &result) {

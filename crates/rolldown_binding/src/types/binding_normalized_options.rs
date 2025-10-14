@@ -56,11 +56,11 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter, ts_return_type = "'node' | 'browser' | 'neutral'")]
-  pub fn platform(&self) -> String {
+  pub fn platform(&self) -> &'static str {
     match &self.inner.platform {
-      rolldown::Platform::Node => "node".to_string(),
-      rolldown::Platform::Browser => "browser".to_string(),
-      rolldown::Platform::Neutral => "neutral".to_string(),
+      rolldown::Platform::Node => "node",
+      rolldown::Platform::Browser => "browser",
+      rolldown::Platform::Neutral => "neutral",
     }
   }
 
@@ -70,8 +70,8 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
-  pub fn name(&self) -> Option<String> {
-    self.inner.name.clone()
+  pub fn name(&self) -> Option<&str> {
+    self.inner.name.as_deref()
   }
 
   // Some options can be set to `None`, and these values are converted to `null` in JavaScript.
@@ -117,32 +117,32 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
-  pub fn dir(&self) -> Option<String> {
-    self.inner.dir.clone()
+  pub fn dir(&self) -> Option<&str> {
+    self.inner.dir.as_deref()
   }
 
   #[napi(getter)]
-  pub fn file(&self) -> Option<String> {
-    self.inner.file.clone()
+  pub fn file(&self) -> Option<&str> {
+    self.inner.file.as_deref()
   }
 
   #[napi(getter, ts_return_type = "'es' | 'cjs' | 'iife' | 'umd'")]
-  pub fn format(&self) -> String {
+  pub fn format(&self) -> &'static str {
     match self.inner.format {
-      rolldown::OutputFormat::Esm => "es".to_string(),
-      rolldown::OutputFormat::Cjs => "cjs".to_string(),
-      rolldown::OutputFormat::Iife => "iife".to_string(),
-      rolldown::OutputFormat::Umd => "umd".to_string(),
+      rolldown::OutputFormat::Esm => "es",
+      rolldown::OutputFormat::Cjs => "cjs",
+      rolldown::OutputFormat::Iife => "iife",
+      rolldown::OutputFormat::Umd => "umd",
     }
   }
 
   #[napi(getter, ts_return_type = "'default' | 'named' | 'none' | 'auto'")]
-  pub fn exports(&self) -> String {
+  pub fn exports(&self) -> &'static str {
     match self.inner.exports {
-      rolldown::OutputExports::Default => "default".to_string(),
-      rolldown::OutputExports::Named => "named".to_string(),
-      rolldown::OutputExports::None => "none".to_string(),
-      rolldown::OutputExports::Auto => "auto".to_string(),
+      rolldown::OutputExports::Default => "default",
+      rolldown::OutputExports::Named => "named",
+      rolldown::OutputExports::None => "none",
+      rolldown::OutputExports::Auto => "auto",
     }
   }
 
@@ -230,8 +230,12 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter, ts_return_type = "'base64' | 'base36' | 'hex'")]
-  pub fn hash_characters(&self) -> String {
-    self.inner.hash_characters.to_string()
+  pub fn hash_characters(&self) -> &'static str {
+    match self.inner.hash_characters {
+      rolldown::HashCharacters::Base64 => "base64",
+      rolldown::HashCharacters::Base36 => "base36",
+      rolldown::HashCharacters::Hex => "hex",
+    }
   }
 
   #[napi(getter)]
@@ -267,8 +271,11 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter, ts_return_type = "'none' | 'inline'")]
-  pub fn legal_comments(&self) -> String {
-    self.inner.legal_comments.to_string()
+  pub fn legal_comments(&self) -> &'static str {
+    match self.inner.legal_comments {
+      rolldown::LegalComments::None => "none",
+      rolldown::LegalComments::Inline => "inline",
+    }
   }
 
   #[napi(getter)]
@@ -282,8 +289,8 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
-  pub fn virtual_dirname(&self) -> String {
-    self.inner.virtual_dirname.clone()
+  pub fn virtual_dirname(&self) -> &str {
+    &self.inner.virtual_dirname
   }
 
   #[napi(getter)]
@@ -297,6 +304,7 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
+  // TODO: claude code - Cannot change to &str: returns computed literal "void 0" or clones String field based on condition
   pub fn context(&self) -> String {
     // https://github.com/rolldown/rolldown/issues/5671
     if self.inner.context.is_empty() {

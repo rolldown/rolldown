@@ -18,8 +18,8 @@ impl BindingWatcherEvent {
   }
 
   #[napi]
-  pub fn event_kind(&self) -> String {
-    self.inner.to_string()
+  pub fn event_kind(&self) -> &str {
+    self.inner.as_str()
   }
 
   #[napi]
@@ -49,9 +49,9 @@ impl BindingWatcherEvent {
   }
 
   #[napi]
-  pub fn bundle_event_kind(&self) -> String {
+  pub fn bundle_event_kind(&self) -> &str {
     match &self.inner {
-      WatcherEvent::Event(kind) => kind.to_string(),
+      WatcherEvent::Event(kind) => kind.as_str(),
       _ => {
         unreachable!("Expected WatcherEvent::Event")
       }

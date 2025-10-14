@@ -102,6 +102,7 @@ impl BindingMagicString<'_> {
   }
 
   #[napi]
+  // TODO: claude code - Cannot change to &str: generates new String from MagicString internal representation
   pub fn to_string(&self) -> String {
     self.inner.to_string()
   }

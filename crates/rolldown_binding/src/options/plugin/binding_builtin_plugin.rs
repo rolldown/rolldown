@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use napi::{Unknown, bindgen_prelude::FromNapiValue};
-use napi_derive::napi;
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_alias::AliasPlugin;
 use rolldown_plugin_asset::AssetPlugin;
@@ -41,7 +40,7 @@ use super::{
 };
 
 #[expect(clippy::pub_underscore_fields)]
-#[napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingBuiltinPlugin<'a> {
   #[napi(js_name = "__name")]
   pub __name: BindingBuiltinPluginName,

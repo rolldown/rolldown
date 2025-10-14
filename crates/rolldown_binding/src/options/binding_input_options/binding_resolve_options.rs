@@ -1,9 +1,7 @@
-use napi_derive::napi;
-
 use crate::types::binding_resolve_alias_item::AliasItem;
 use crate::types::binding_resolve_extension_alias::ExtensionAliasItem;
 
-#[napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingResolveOptions {
   // Option<Vec<(String, Vec<String>)>>> is better, maybe NAPI-RS should support tuples.

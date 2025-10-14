@@ -4,9 +4,8 @@ use crate::types::binding_rebuild_strategy::BindingRebuildStrategy;
 use crate::types::error::BindingResult;
 use crate::types::js_callback::JsCallback;
 use napi::bindgen_prelude::FnArgs;
-use napi_derive::napi;
 
-#[napi(object, object_to_js = false)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingDevWatchOptions {
   pub skip_write: Option<bool>,
   pub use_polling: Option<bool>,
@@ -17,7 +16,7 @@ pub struct BindingDevWatchOptions {
   pub debounce_tick_rate: Option<u32>,
 }
 
-#[napi(object, object_to_js = false)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingDevOptions {
   #[napi(
     ts_type = "undefined | ((result: BindingResult<[BindingClientHmrUpdate[], string[]]>) => void | Promise<void>)"

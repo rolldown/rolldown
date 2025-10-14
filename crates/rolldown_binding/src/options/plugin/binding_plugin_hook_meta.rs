@@ -16,7 +16,7 @@ impl From<BindingPluginOrder> for rolldown_plugin::PluginOrder {
   }
 }
 
-#[napi(object, object_to_js = false)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Default)]
 pub struct BindingPluginHookMeta {
   pub order: Option<BindingPluginOrder>,

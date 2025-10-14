@@ -46,7 +46,7 @@ impl BindingOutputAsset {
   }
 }
 
-#[napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct JsOutputAsset {
   pub names: Vec<String>,
   pub original_file_names: Vec<String>,

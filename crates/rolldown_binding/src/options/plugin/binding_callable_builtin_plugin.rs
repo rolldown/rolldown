@@ -165,7 +165,7 @@ impl BindingCallableBuiltinPlugin {
 }
 
 #[derive(Debug)]
-#[napi(object, object_to_js = false)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingHookJsResolveIdOptions {
   pub is_entry: Option<bool>,
   pub scan: Option<bool>,
@@ -188,7 +188,7 @@ impl From<BindingHookJsResolveIdOptions> for Arc<CustomField> {
   }
 }
 
-#[napi(object)]
+#[napi_derive::napi(object)]
 pub struct BindingHookJsResolveIdOutput {
   pub id: String,
   #[napi(ts_type = "boolean | 'absolute' | 'relative'")]
@@ -207,7 +207,7 @@ impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
   }
 }
 
-#[napi(object)]
+#[napi_derive::napi(object)]
 pub struct BindingHookJsLoadOutput {
   pub code: String,
   pub map: Option<String>,
@@ -225,7 +225,7 @@ impl From<HookLoadOutput> for BindingHookJsLoadOutput {
   }
 }
 
-#[napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingJsWatchChangeEvent {
   pub event: String,
 }

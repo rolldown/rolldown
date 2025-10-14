@@ -96,7 +96,7 @@ impl BindingOutputChunk {
   }
 }
 
-#[napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct JsOutputChunk {
   // PreRenderedChunk
   pub name: String,

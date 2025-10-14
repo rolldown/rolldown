@@ -26,7 +26,7 @@ use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosticOptions, filter_out_disabled_diagnostics,
 };
 
-#[napi(object, object_to_js = false)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingBundlerOptions<'env> {
   pub input_options: BindingInputOptions<'env>,
   pub output_options: BindingOutputOptions<'env>,

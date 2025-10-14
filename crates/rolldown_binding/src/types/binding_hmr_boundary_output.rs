@@ -1,6 +1,4 @@
-use napi_derive::napi;
-
-#[napi(object)]
+#[napi_derive::napi(object)]
 #[derive(Debug)]
 pub struct BindingHmrBoundaryOutput {
   pub boundary: String,

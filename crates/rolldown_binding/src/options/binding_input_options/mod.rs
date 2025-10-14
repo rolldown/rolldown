@@ -16,7 +16,6 @@ use binding_optimization::BindingOptimization;
 use derive_more::Debug;
 use napi::Either;
 use napi::bindgen_prelude::{FnArgs, Promise};
-use napi_derive::napi;
 use rustc_hash::FxBuildHasher;
 use std::collections::HashMap;
 
@@ -37,7 +36,7 @@ use crate::types::{
 
 pub type BindingOnLog = Option<JsCallback<FnArgs<(String, BindingLog)>, Promise<()>>>;
 
-#[napi(object, object_to_js = false)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Default, Debug)]
 pub struct BindingInputOptions<'env> {
   // Not going to be supported

@@ -3,6 +3,9 @@ use super::{
   binding_resolved_external::BindingResolvedExternal,
 };
 
+// This struct is used to both pass to JS and receive from JS:
+// - Pass to JS: `From<HookResolveIdOutput>` impl in binding_callable_builtin_plugin.rs:200
+// - Receive from JS: `TryFrom` impl (line 21) used when JS plugins return resolve results
 #[napi_derive::napi(object)]
 #[derive(Default, Debug)]
 pub struct BindingHookResolveIdOutput {

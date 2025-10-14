@@ -165,7 +165,7 @@ fn generate_check_inner_options_and_binding(
     });
   }
   let check_options_struct = quote! {
-    #[napi_derive::napi(object)]
+    #[napi_derive::napi(object, object_to_js = false)]
     #[derive(Debug, Default)]
     pub struct BindingChecksOptions {
       #(#struct_fields)*

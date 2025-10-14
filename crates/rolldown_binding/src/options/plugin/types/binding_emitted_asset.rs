@@ -1,6 +1,6 @@
 use super::binding_asset_source::BindingAssetSource;
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Default, Debug)]
 pub struct BindingEmittedAsset {
   pub name: Option<String>,

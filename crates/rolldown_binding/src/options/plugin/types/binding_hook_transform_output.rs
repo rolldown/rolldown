@@ -4,6 +4,9 @@ use rolldown_plugin::HookTransformOutput;
 use super::binding_hook_side_effects::BindingHookSideEffects;
 use crate::types::binding_sourcemap::BindingSourcemap;
 
+// This struct is used to both pass to JS and receive from JS:
+// - Pass to JS: `From<HookTransformOutput>` impl (line 30) returned from builtin plugins
+// - Receive from JS: `TryFrom` impl (line 17) when JS plugins return transform results
 #[napi_derive::napi(object)]
 #[derive(Default, derive_more::Debug)]
 pub struct BindingHookTransformOutput {

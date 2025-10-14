@@ -188,7 +188,7 @@ impl From<BindingHookJsResolveIdOptions> for Arc<CustomField> {
   }
 }
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_from_js = false)]
 pub struct BindingHookJsResolveIdOutput {
   pub id: String,
   #[napi(ts_type = "boolean | 'absolute' | 'relative'")]
@@ -207,7 +207,7 @@ impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
   }
 }
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_from_js = false)]
 pub struct BindingHookJsLoadOutput {
   pub code: String,
   pub map: Option<String>,

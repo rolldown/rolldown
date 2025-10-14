@@ -14,7 +14,7 @@ use crate::types::{
   },
 };
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_from_js = false)]
 pub struct BindingRenderBuiltUrlConfig {
   pub ssr: bool,
   #[napi(ts_type = "'asset' | 'public'")]

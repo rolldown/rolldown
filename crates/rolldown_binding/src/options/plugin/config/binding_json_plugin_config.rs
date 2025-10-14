@@ -1,7 +1,7 @@
 use napi_derive::napi;
 use rolldown_plugin_json::{JsonPlugin, JsonPluginStringify};
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingJsonPluginConfig {
   pub minify: Option<bool>,

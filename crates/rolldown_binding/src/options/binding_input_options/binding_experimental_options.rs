@@ -58,7 +58,7 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
   }
 }
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingExperimentalHmrOptions {
   pub host: Option<String>,
@@ -106,7 +106,7 @@ impl From<BindingChunkModuleOrderBy> for rolldown_common::ChunkModulesOrderBy {
   }
 }
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingChunkImportMap {
   pub base_url: Option<String>,

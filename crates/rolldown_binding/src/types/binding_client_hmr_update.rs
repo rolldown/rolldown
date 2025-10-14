@@ -1,6 +1,6 @@
 use super::binding_hmr_update::BindingHmrUpdate;
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_from_js = false)]
 #[derive(Debug)]
 pub struct BindingClientHmrUpdate {
   pub client_id: String,

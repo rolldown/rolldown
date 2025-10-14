@@ -1,4 +1,4 @@
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_from_js = false)]
 pub struct BindingLog {
   pub message: String,
   pub id: Option<String>,

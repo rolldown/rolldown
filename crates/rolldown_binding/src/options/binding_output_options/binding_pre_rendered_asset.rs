@@ -2,7 +2,7 @@ use arcstr::ArcStr;
 
 use crate::options::plugin::types::binding_asset_source::BindingAssetSource;
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_from_js = false)]
 #[derive(Default, Debug)]
 pub struct BindingPreRenderedAsset {
   pub name: Option<String>,

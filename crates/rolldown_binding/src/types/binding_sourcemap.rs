@@ -1,5 +1,8 @@
 use napi::Either;
 
+// This struct is used to both pass to JS and receive from JS:
+// - Pass to JS: `From<JSONSourceMap>` impl (line 61) used in hook outputs
+// - Receive from JS: `TryFrom<BindingSourcemap>` impl (line 10) used in JsOutputChunk
 #[napi_derive::napi(object)]
 #[derive(Debug)]
 pub struct BindingSourcemap {
@@ -18,6 +21,10 @@ impl TryFrom<BindingSourcemap> for rolldown_sourcemap::SourceMap {
   }
 }
 
+// This struct is used to both pass to JS and receive from JS:
+// - Part of BindingSourcemap Either type, used in both directions
+// - Pass to JS: Created in From<JSONSourceMap> impl (line 64)
+// - Receive from JS: Converted in TryFrom<BindingSourcemap> impl (line 16)
 #[derive(Debug, Default)]
 #[napi_derive::napi(object)]
 pub struct BindingJsonSourcemap {

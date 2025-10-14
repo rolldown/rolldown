@@ -127,7 +127,7 @@ impl From<PluginContext> for BindingPluginContext {
     }
   }
 }
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_from_js = false)]
 pub struct BindingPluginContextResolvedId {
   pub id: String,
   pub package_json_path: Option<String>,

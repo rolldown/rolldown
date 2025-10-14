@@ -1,9 +1,14 @@
-use std::{borrow::Cow, path::Path};
+use std::{borrow::Cow, path::Path, sync::Arc};
 
 use html5gum::Span;
+use rolldown_common::OutputChunk;
 use rolldown_plugin::PluginContext;
-use rolldown_plugin_utils::constants::{HTMLProxyMap, HTMLProxyMapItem, HTMLProxyResult};
-use rolldown_utils::{url::clean_url, xxhash::xxhash_with_base};
+use rolldown_plugin_utils::{
+  AssetUrlItem, AssetUrlIter, AssetUrlResult, PublicAssetUrlCache, ToOutputFilePathEnv,
+  constants::{HTMLProxyMap, HTMLProxyMapItem, HTMLProxyResult, ViteMetadata},
+  uri::encode_uri_path,
+};
+use rolldown_utils::{pattern_filter::normalize_path, url::clean_url, xxhash::xxhash_with_base};
 use string_wizard::MagicString;
 use sugar_path::SugarPath as _;
 
@@ -159,5 +164,94 @@ impl ViteHtmlPlugin {
       s.update(start, match_end, css_transformed_code.to_string());
     }
     s
+  }
+
+  pub async fn to_output_file_path(
+    &self,
+    filename: &str,
+    assets_base: &str,
+    is_public_asset: bool,
+    relative_url_path: &str,
+  ) -> anyhow::Result<String> {
+    let env = ToOutputFilePathEnv {
+      is_ssr: self.is_ssr,
+      host_id: relative_url_path,
+      url_base: &self.url_base,
+      decoded_base: &self.decoded_base,
+      render_built_url: self.render_built_url.as_deref(),
+    };
+
+    if super::is_excluded_url(filename) {
+      Ok(filename.to_owned())
+    } else {
+      env
+        .to_output_file_path(filename, "html", is_public_asset, |filename: &Path, _: &Path| {
+          AssetUrlResult::WithoutRuntime(rolldown_utils::concat_string!(
+            &assets_base,
+            filename.to_string_lossy()
+          ))
+        })
+        .await
+        .map(rolldown_plugin_utils::AssetUrlResult::to_asset_url_in_css_or_html)
+    }
+  }
+
+  pub async fn handle_html_asset_url(
+    &self,
+    ctx: &PluginContext,
+    html: &str,
+    chunk: Option<&Arc<OutputChunk>>,
+    assets_base: &str,
+    relative_url_path: &str,
+  ) -> anyhow::Result<Option<String>> {
+    let mut s = None;
+    let mut end = 0;
+    for item in AssetUrlIter::from(html).into_asset_url_iter() {
+      let s = s.get_or_insert_with(|| String::with_capacity(html.len()));
+      match item {
+        AssetUrlItem::Asset((range, reference_id, postfix)) => {
+          let filename = ctx.get_file_name(reference_id)?;
+
+          if let Some(chunk) = chunk {
+            ctx
+              .meta()
+              .get_or_insert_default::<ViteMetadata>()
+              .get_or_insert_default(chunk.preliminary_filename.as_str().into())
+              .imported_assets
+              .insert(clean_url(&filename).into());
+          }
+
+          let uri =
+            self.to_output_file_path(&filename, assets_base, false, relative_url_path).await?;
+
+          s.push_str(&html[end..range.start]);
+          s.push_str(&encode_uri_path(uri));
+          if let Some(postfix) = postfix {
+            s.push_str(postfix);
+          }
+          end = range.end;
+        }
+        AssetUrlItem::PublicAsset((range, hash)) => {
+          let cache = ctx
+            .meta()
+            .get::<PublicAssetUrlCache>()
+            .ok_or_else(|| anyhow::anyhow!("PublicAssetUrlCache missing"))?;
+
+          let filename = cache.0.get(hash).unwrap();
+          let uri =
+            self.to_output_file_path(&filename, assets_base, true, relative_url_path).await?;
+
+          s.push_str(&html[end..range.start]);
+          s.push_str(&encode_uri_path(normalize_path(&uri).into_owned()));
+          end = range.end;
+        }
+      }
+    }
+    if let Some(s) = &mut s
+      && end < html.len()
+    {
+      s.push_str(&html[end..]);
+    }
+    Ok(s)
   }
 }

@@ -1,7 +1,7 @@
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
-  NormalModule, RenderedConcatenatedModuleParts, RuntimeModuleBrief, SharedFileEmitter, SymbolRef,
-  SymbolRefDb,
+  ModuleType, NormalModule, RenderedConcatenatedModuleParts, RuntimeModuleBrief, SharedFileEmitter,
+  SymbolRef, SymbolRefDb,
 };
 
 pub type FinalizerMutableFields = (
@@ -58,6 +58,9 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
   ) -> FinalizerMutableFields {
     ast.program.with_mut(move |fields| {
       let (oxc_program, alloc) = (fields.program, fields.allocator);
+
+      let need_inline_json_prop = matches!(self.module.module_type, ModuleType::Json)
+        && !self.module.exports_kind.is_commonjs();
       let mut finalizer = ScopeHoistingFinalizer {
         alloc,
         ctx: self,
@@ -74,6 +77,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         transferred_import_record: mutable_state.transferred_import_record,
         rendered_concatenated_wrapped_module_parts: mutable_state
           .rendered_concatenated_wrapped_module_parts,
+        json_module_inlined_prop: need_inline_json_prop.then(|| Box::new(FxHashMap::default())),
       };
       finalizer.visit_program(oxc_program);
       (finalizer.transferred_import_record, finalizer.rendered_concatenated_wrapped_module_parts)

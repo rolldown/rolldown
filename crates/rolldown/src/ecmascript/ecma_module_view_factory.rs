@@ -136,6 +136,7 @@ pub async fn create_ecma_view(
     constant_export_map,
     depended_runtime_helper: Box::default(),
     import_attribute_map,
+    json_module_none_self_reference_included_symbol: None,
   };
 
   let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage };

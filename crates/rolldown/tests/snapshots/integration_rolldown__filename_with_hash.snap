@@ -1257,7 +1257,7 @@ expression: output
 
 # tests/esbuild/default/metafile_import_with_type_json
 
-- entry-!~{000}~.js => entry-FOYNJ7A8.js
+- entry-!~{000}~.js => entry-hKBp-jZT.js
 
 # tests/esbuild/default/metafile_no_bundle
 
@@ -2203,7 +2203,7 @@ expression: output
 
 # tests/esbuild/loader/loader_bundle_with_import_attributes
 
-- entry-!~{000}~.js => entry-D2KuEVij.js
+- entry-!~{000}~.js => entry-DGh9-jdq.js
 
 # tests/esbuild/loader/loader_bundle_with_type_json_only_default_export
 
@@ -2235,7 +2235,7 @@ expression: output
 
 # tests/esbuild/loader/loader_data_url_application_json
 
-- entry-!~{000}~.js => entry-CYTXagqf.js
+- entry-!~{000}~.js => entry-DxkwWC22.js
 
 # tests/esbuild/loader/loader_data_url_base64_invalid_utf8
 
@@ -2364,11 +2364,11 @@ expression: output
 
 # tests/esbuild/loader/loader_json_common_js_and_es6
 
-- entry-!~{000}~.js => entry-rPcexRV8.js
+- entry-!~{000}~.js => entry-DQtjCY_d.js
 
 # tests/esbuild/loader/loader_json_invalid_identifier_es6
 
-- entry-!~{000}~.js => entry-u_TCkpaS.js
+- entry-!~{000}~.js => entry-CMMWNBUK.js
 
 # tests/esbuild/loader/loader_json_no_bundle
 
@@ -2392,13 +2392,13 @@ expression: output
 
 # tests/esbuild/loader/loader_json_prototype
 
-- entry-!~{000}~.js => entry-DEuj-ZaU.js
+- entry-!~{000}~.js => entry-ErGDKV_-.js
 
 # tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413
 
-- a-!~{000}~.js => a-Bidc285K.js
-- b-!~{001}~.js => b-_hCXwXWb.js
-- data-!~{002}~.js => data-BMjU8Z7E.js
+- a-!~{000}~.js => a-C98attye.js
+- b-!~{001}~.js => b-Ce4gepAP.js
+- data-!~{002}~.js => data-BohhjThX.js
 
 # tests/esbuild/loader/loader_text_common_js_and_es6
 
@@ -4395,7 +4395,7 @@ expression: output
 
 # tests/rolldown/function/module_types/json/object_with_reserved_key
 
-- main-!~{000}~.js => main-DSa1gaE0.js
+- main-!~{000}~.js => main-DuL9VPap.js
 
 # tests/rolldown/function/module_types/jsx
 
@@ -5621,7 +5621,7 @@ expression: output
 
 # tests/rolldown/topics/json/preserved_key
 
-- main-!~{000}~.js => main-OvdenNcV.js
+- main-!~{000}~.js => main-DtytjKtK.js
 
 # tests/rolldown/topics/keep_names/declaration
 

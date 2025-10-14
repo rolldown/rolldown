@@ -1,5 +1,6 @@
 use bitflags::bitflags;
-use oxc::semantic::ScopeFlags;
+use oxc::ast::ast::ObjectPropertyKind;
+use oxc::semantic::{ScopeFlags, SymbolId};
 use oxc::{
   allocator::{self, Allocator, Box as ArenaBox, CloneIn, Dummy, IntoIn, TakeIn},
   ast::{
@@ -27,7 +28,7 @@ pub use finalizer_context::{FinalizerMutableState, ScopeHoistingFinalizerContext
 use oxc::span::CompactStr;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
 use crate::hmr::utils::HmrAstBuilder;
@@ -65,6 +66,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub module_namespace_included: bool,
   pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
   pub rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts,
+  pub json_module_inlined_prop: Option<Box<FxHashMap<SymbolId, ast::Expression<'ast>>>>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -1382,5 +1384,61 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
     }
     false
+  }
+
+  /// if the json module prop needs to inline, we would just rewrite the inlined prop to
+  /// `EmptyStatement`
+  fn try_inline_json_module_prop(&mut self, it: &mut Statement<'ast>) -> Option<()> {
+    let json_module_inlined_prop = self.json_module_inlined_prop.as_mut()?;
+    let decl = it.as_declaration_mut()?;
+    let ast::Declaration::VariableDeclaration(var_decl) = decl else {
+      return None;
+    };
+    let first_decl = var_decl.declarations.first_mut()?;
+    let init = first_decl.init.as_mut()?;
+    // For synthesis json module, only last symbol of var stmt is `None`, since it is a generated
+    // manually.
+    let id = first_decl.id.get_binding_identifier()?.symbol_id.get();
+    match id {
+      Some(id) => {
+        let symbol_ref: SymbolRef = (self.ctx.id, id).into();
+        if !self
+          .ctx
+          .module
+          .json_module_none_self_reference_included_symbol
+          .as_ref()?
+          .contains(&symbol_ref)
+        {
+          json_module_inlined_prop.insert(id, init.take_in(self.alloc));
+          *it = self.snippet.builder.statement_empty(SPAN);
+        }
+      }
+      None => {
+        // It is `json export default stmt`. e.g.
+        // ```js
+        // ...snip
+        // export default { foo, bar };
+        // ```
+        //
+        let Expression::ObjectExpression(obj_expr) = init else {
+          return None;
+        };
+
+        for ele in &mut obj_expr.properties {
+          let ObjectPropertyKind::ObjectProperty(prop) = ele else {
+            return None;
+          };
+          let identifier = prop.value.as_identifier()?;
+          let reference_id = identifier.reference_id();
+          let symbol_id = self.scope.symbol_id_for(reference_id)?;
+          let Some(replaced_expr) = json_module_inlined_prop.remove(&symbol_id) else {
+            continue;
+          };
+          prop.value = replaced_expr;
+        }
+      }
+    }
+
+    Some(())
   }
 }

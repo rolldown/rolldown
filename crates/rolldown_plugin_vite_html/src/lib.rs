@@ -1,7 +1,7 @@
 mod html;
 mod utils;
 
-use std::{borrow::Cow, path::Path, rc::Rc, sync::Arc};
+use std::{borrow::Cow, path::Path, pin::Pin, rc::Rc, sync::Arc};
 
 use cow_utils::CowUtils as _;
 use derive_more::Debug;
@@ -17,7 +17,24 @@ use rolldown_utils::{dashmap::FxDashMap, pattern_filter::normalize_path};
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath as _;
 
-use crate::utils::html_tag::{AttrValue, HtmlTagDescriptor};
+use crate::utils::{
+  html_tag::{AttrValue, HtmlTagDescriptor},
+  inject_to_head,
+};
+
+pub type ResolveDependencies = dyn Fn(
+    &str,
+    Vec<String>,
+    &str,
+    &str,
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<String>>> + Send>>
+  + Send
+  + Sync;
+
+pub enum ResolveDependenciesEither {
+  True,
+  Fn(Arc<ResolveDependencies>),
+}
 
 #[expect(clippy::struct_excessive_bools)]
 #[derive(Debug, Default)]
@@ -33,6 +50,8 @@ pub struct ViteHtmlPlugin {
   pub asset_inline_limit: UsizeOrFunction,
   #[debug(skip)]
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
+  #[debug(skip)]
+  pub resolve_dependencies: Option<ResolveDependenciesEither>,
   html_result_map: FxDashMap<(String, String), (String, bool)>,
 }
 
@@ -396,7 +415,7 @@ impl Plugin for ViteHtmlPlugin {
     }))
   }
 
-  #[expect(unused_variables)]
+  #[expect(unused_variables, clippy::too_many_lines)]
   async fn generate_bundle(
     &self,
     ctx: &rolldown_plugin::PluginContext,
@@ -458,9 +477,54 @@ impl Plugin for ViteHtmlPlugin {
           }
           tags
         } else {
-          todo!()
+          let mut tags = vec![{
+            let mut tag = HtmlTagDescriptor::new("script");
+            let url = self
+              .to_output_file_path(&chunk.filename, assets_base, false, &relative_url_path)
+              .await?;
+            tag.attrs = Some(FxHashMap::from_iter([
+              ("type", AttrValue::String("module".to_owned())),
+              ("crossorigin", AttrValue::Boolean(true)),
+              ("src", AttrValue::String(url)),
+            ]));
+            if *is_async {
+              tag.attrs.as_mut().unwrap().insert("async", AttrValue::Boolean(true));
+            }
+            tag
+          }];
+          if let Some(resolve_dependencies) = &self.resolve_dependencies {
+            let imports_filenames = imports
+              .iter()
+              .filter_map(|c| match c {
+                utils::ImportedChunk::Chunk(chunk) => Some(chunk.filename.to_string()),
+                utils::ImportedChunk::External(_) => None,
+              })
+              .collect::<Vec<_>>();
+            let resolved_deps = match resolve_dependencies {
+              ResolveDependenciesEither::True => imports_filenames,
+              ResolveDependenciesEither::Fn(r) => {
+                r(&chunk.filename, imports_filenames, &relative_url_path, "html").await?
+              }
+            };
+            for dep in resolved_deps {
+              let mut tag = HtmlTagDescriptor::new("link");
+              let url = self
+                .to_output_file_path(&chunk.filename, assets_base, false, &relative_url_path)
+                .await?;
+              tag.attrs = Some(FxHashMap::from_iter([
+                ("rel", AttrValue::String("modulepreload".to_owned())),
+                ("crossorigin", AttrValue::Boolean(true)),
+                ("href", AttrValue::String(url)),
+              ]));
+              tags.push(tag);
+            }
+          }
+          tags
         };
-        todo!()
+        // TODO: align below logic
+        // assetTags.push(...getCssTagsForChunk(chunk, toOutputAssetFilePath))
+
+        result = inject_to_head(&result, &asset_tags, false).into_owned();
       }
 
       if !self.css_code_split {

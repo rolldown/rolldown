@@ -402,6 +402,8 @@ impl Plugin for ViteHtmlPlugin {
     for item in &self.html_result_map {
       let ((id, assets_base), (html, is_async)) = item.pair();
 
+      let mut result = html.to_string();
+
       let path = id.relative(ctx.cwd());
       let path_lossy = path.to_string_lossy();
       let relative_url_path = normalize_path(&path_lossy);
@@ -485,6 +487,14 @@ impl Plugin for ViteHtmlPlugin {
         };
         todo!()
       }
+
+      #[expect(unused_assignments)]
+      if let Some(s) = Self::handle_inline_css(ctx, &result) {
+        result = s.to_string();
+      }
+
+      // TODO: applyHtmlTransforms
+      // result = await applyHtmlTransforms(..)
     }
 
     todo!()

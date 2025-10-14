@@ -2,7 +2,7 @@ use std::{borrow::Cow, path::Path};
 
 use html5gum::Span;
 use rolldown_plugin::PluginContext;
-use rolldown_plugin_utils::constants::{HTMLProxyMap, HTMLProxyMapItem};
+use rolldown_plugin_utils::constants::{HTMLProxyMap, HTMLProxyMapItem, HTMLProxyResult};
 use rolldown_utils::{url::clean_url, xxhash::xxhash_with_base};
 use string_wizard::MagicString;
 use sugar_path::SugarPath as _;
@@ -105,5 +105,59 @@ impl ViteHtmlPlugin {
       asset_inline_limit: &self.asset_inline_limit,
     };
     env.file_to_built_url(&path.to_string_lossy(), true, force_inline).await
+  }
+
+  pub fn handle_inline_css<'a>(ctx: &PluginContext, html: &'a str) -> Option<MagicString<'a>> {
+    let mut s = None;
+    for (start, _) in "__VITE_INLINE_CSS__".match_indices(html) {
+      let prefix_end = start + 19; // "__VITE_INLINE_CSS__".len()
+      let bytes = html.as_bytes();
+
+      // Match pattern: __VITE_INLINE_CSS__([a-z\d]{8}_\d+)__
+      // Check 8 hex characters [a-z\d]{8}
+      let hex_count = bytes[prefix_end..]
+        .iter()
+        .take_while(|&&b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        .count();
+
+      if hex_count != 8 {
+        continue;
+      }
+
+      let after_hex = prefix_end + 8;
+
+      // Check single underscore '_'
+      if !html[after_hex..].starts_with('_') {
+        continue;
+      }
+
+      let after_underscore = after_hex + 1;
+
+      // Count digits '\d+'
+      let digit_count =
+        bytes[after_underscore..].iter().take_while(|&&b| b.is_ascii_digit()).count();
+
+      if digit_count == 0 {
+        continue;
+      }
+
+      let after_digits = after_underscore + digit_count;
+
+      // Check ending '__'
+      if !html[after_digits..].starts_with("__") {
+        continue;
+      }
+
+      // Match successful - extract full match and scoped name
+      let match_end = after_digits + 2; // Include ending '__'
+      let scoped_name = &html[prefix_end..after_digits]; // e.g., "abcd1234_0"
+
+      let s = s.get_or_insert_with(|| string_wizard::MagicString::new(html));
+
+      let cache = ctx.meta().get::<HTMLProxyResult>().expect("HTMLProxyResult missing");
+      let css_transformed_code = cache.inner.get(scoped_name).unwrap();
+      s.update(start, match_end, css_transformed_code.to_string());
+    }
+    s
   }
 }

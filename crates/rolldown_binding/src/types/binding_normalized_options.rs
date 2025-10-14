@@ -77,41 +77,41 @@ impl BindingNormalizedOptions {
   // Some options can be set to `None`, and these values are converted to `null` in JavaScript.
   // To distinguish them from regular None values, `undefined` is used to represent unsupported functions
   #[napi(getter)]
-  pub fn css_entry_filenames(&self) -> Either<String, Undefined> {
+  pub fn css_entry_filenames(&self) -> Either<&str, Undefined> {
     match &self.inner.css_entry_filenames {
-      rolldown::ChunkFilenamesOutputOption::String(inner) => Either::A(inner.clone()),
+      rolldown::ChunkFilenamesOutputOption::String(inner) => Either::A(inner),
       rolldown::ChunkFilenamesOutputOption::Fn(_) => Either::B(()),
     }
   }
 
   #[napi(getter)]
-  pub fn css_chunk_filenames(&self) -> Either<String, Undefined> {
+  pub fn css_chunk_filenames(&self) -> Either<&str, Undefined> {
     match &self.inner.css_chunk_filenames {
-      rolldown::ChunkFilenamesOutputOption::String(inner) => Either::A(inner.clone()),
+      rolldown::ChunkFilenamesOutputOption::String(inner) => Either::A(inner),
       rolldown::ChunkFilenamesOutputOption::Fn(_) => Either::B(()),
     }
   }
 
   #[napi(getter)]
-  pub fn entry_filenames(&self) -> Either<String, Undefined> {
+  pub fn entry_filenames(&self) -> Either<&str, Undefined> {
     match &self.inner.entry_filenames {
-      rolldown::ChunkFilenamesOutputOption::String(inner) => Either::A(inner.clone()),
+      rolldown::ChunkFilenamesOutputOption::String(inner) => Either::A(inner),
       rolldown::ChunkFilenamesOutputOption::Fn(_) => Either::B(()),
     }
   }
 
   #[napi(getter)]
-  pub fn chunk_filenames(&self) -> Either<String, Undefined> {
+  pub fn chunk_filenames(&self) -> Either<&str, Undefined> {
     match &self.inner.chunk_filenames {
-      rolldown::ChunkFilenamesOutputOption::String(inner) => Either::A(inner.clone()),
+      rolldown::ChunkFilenamesOutputOption::String(inner) => Either::A(inner),
       rolldown::ChunkFilenamesOutputOption::Fn(_) => Either::B(()),
     }
   }
 
   #[napi(getter)]
-  pub fn asset_filenames(&self) -> Either<String, Undefined> {
+  pub fn asset_filenames(&self) -> Either<&str, Undefined> {
     match &self.inner.asset_filenames {
-      rolldown::AssetFilenamesOutputOption::String(inner) => Either::A(inner.clone()),
+      rolldown::AssetFilenamesOutputOption::String(inner) => Either::A(inner),
       rolldown::AssetFilenamesOutputOption::Fn(_) => Either::B(()),
     }
   }
@@ -147,11 +147,11 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter, ts_return_type = "boolean | 'if-default-prop'")]
-  pub fn es_module(&self) -> Either<bool, String> {
+  pub fn es_module(&self) -> Either<bool, &'static str> {
     match self.inner.es_module {
       rolldown::EsModuleFlag::Always => Either::A(true),
       rolldown::EsModuleFlag::Never => Either::A(false),
-      rolldown::EsModuleFlag::IfDefaultProp => Either::B("if-default-prop".to_string()),
+      rolldown::EsModuleFlag::IfDefaultProp => Either::B("if-default-prop"),
     }
   }
 
@@ -161,51 +161,51 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter, ts_return_type = "boolean | 'inline' | 'hidden'")]
-  pub fn sourcemap(&self) -> Either<bool, String> {
+  pub fn sourcemap(&self) -> Either<bool, &'static str> {
     match self.inner.sourcemap {
       Some(rolldown::SourceMapType::File) => Either::A(true),
-      Some(rolldown::SourceMapType::Hidden) => Either::B("hidden".to_string()),
-      Some(rolldown::SourceMapType::Inline) => Either::B("inline".to_string()),
+      Some(rolldown::SourceMapType::Hidden) => Either::B("hidden"),
+      Some(rolldown::SourceMapType::Inline) => Either::B("inline"),
       None => Either::A(false),
     }
   }
 
   #[napi(getter)]
-  pub fn sourcemap_base_url(&self) -> Option<String> {
-    self.inner.sourcemap_base_url.clone()
+  pub fn sourcemap_base_url(&self) -> Option<&str> {
+    self.inner.sourcemap_base_url.as_deref()
   }
 
   #[napi(getter)]
-  pub fn banner(&self) -> Either<Option<String>, Undefined> {
+  pub fn banner(&self) -> Either<Option<&str>, Undefined> {
     match &self.inner.banner {
-      Some(rolldown::AddonOutputOption::String(inner)) => Either::A(inner.clone()),
+      Some(rolldown::AddonOutputOption::String(inner)) => Either::A(inner.as_deref()),
       Some(rolldown::AddonOutputOption::Fn(_)) => Either::B(()),
       None => Either::A(None),
     }
   }
 
   #[napi(getter)]
-  pub fn footer(&self) -> Either<Option<String>, Undefined> {
+  pub fn footer(&self) -> Either<Option<&str>, Undefined> {
     match &self.inner.footer {
-      Some(rolldown::AddonOutputOption::String(inner)) => Either::A(inner.clone()),
+      Some(rolldown::AddonOutputOption::String(inner)) => Either::A(inner.as_deref()),
       Some(rolldown::AddonOutputOption::Fn(_)) => Either::B(()),
       None => Either::A(None),
     }
   }
 
   #[napi(getter)]
-  pub fn intro(&self) -> Either<Option<String>, Undefined> {
+  pub fn intro(&self) -> Either<Option<&str>, Undefined> {
     match &self.inner.intro {
-      Some(rolldown::AddonOutputOption::String(inner)) => Either::A(inner.clone()),
+      Some(rolldown::AddonOutputOption::String(inner)) => Either::A(inner.as_deref()),
       Some(rolldown::AddonOutputOption::Fn(_)) => Either::B(()),
       None => Either::A(None),
     }
   }
 
   #[napi(getter)]
-  pub fn outro(&self) -> Either<Option<String>, Undefined> {
+  pub fn outro(&self) -> Either<Option<&str>, Undefined> {
     match &self.inner.outro {
-      Some(rolldown::AddonOutputOption::String(inner)) => Either::A(inner.clone()),
+      Some(rolldown::AddonOutputOption::String(inner)) => Either::A(inner.as_deref()),
       Some(rolldown::AddonOutputOption::Fn(_)) => Either::B(()),
       None => Either::A(None),
     }
@@ -249,10 +249,10 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter, ts_return_type = "false | 'dce-only' | MinifyOptions")]
-  pub fn minify(&self) -> Either3<bool, String, oxc_minify_napi::MinifyOptions> {
+  pub fn minify(&self) -> Either3<bool, &'static str, oxc_minify_napi::MinifyOptions> {
     match &self.inner.minify {
       MinifyOptions::Disabled => Either3::A(false),
-      MinifyOptions::DeadCodeEliminationOnly => Either3::B("dce-only".to_string()),
+      MinifyOptions::DeadCodeEliminationOnly => Either3::B("dce-only"),
       MinifyOptions::Enabled((minify_options, remove_whitespace)) => {
         Either3::C(oxc_minify_napi::MinifyOptions {
           compress: minify_options
@@ -284,8 +284,8 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter, ts_return_type = "string | undefined")]
-  pub fn preserve_modules_root(&self) -> Option<String> {
-    self.inner.preserve_modules_root.clone()
+  pub fn preserve_modules_root(&self) -> Option<&str> {
+    self.inner.preserve_modules_root.as_deref()
   }
 
   #[napi(getter)]
@@ -304,13 +304,12 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
-  // TODO: claude code - Cannot change to &str: returns computed literal "void 0" or clones String field based on condition
-  pub fn context(&self) -> String {
+  pub fn context(&self) -> &str {
     // https://github.com/rolldown/rolldown/issues/5671
     if self.inner.context.is_empty() {
-      return "void 0".into();
+      return "void 0";
     }
 
-    self.inner.context.clone()
+    &self.inner.context
   }
 }

@@ -17,7 +17,7 @@ impl BindingTransformPluginContext {
   }
 
   #[napi]
-  // TODO: claude code - Cannot change to &str: performs JSON serialization to generate new String
+  // TODO: should use `&str` instead. (claude code) Attempt failed due to performs JSON serialization to generate new String
   pub fn get_combined_sourcemap(&self) -> String {
     self.inner.get_combined_sourcemap().to_json_string()
   }

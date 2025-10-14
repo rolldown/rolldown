@@ -1,0 +1,11 @@
+{
+  "name": "@example/native-magic-string",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rolldown --config ./rolldown.config.js"
+  },
+  "devDependencies": {
+    "rolldown": "workspace:*"
+  }
+}

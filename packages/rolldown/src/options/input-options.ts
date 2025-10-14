@@ -319,6 +319,7 @@ export interface InputOptions {
      * > [!NOTE]
      * > This is an experimental feature. While it aims to provide identical behavior to the JavaScript
      * > implementation, there may be edge cases. Please report any discrepancies you encounter.
+     * > For a complete working example, see [examples/native-magic-string](https://github.com/rolldown/rolldown/tree/main/examples/native-magic-string)
      */
     nativeMagicString?: boolean;
   };

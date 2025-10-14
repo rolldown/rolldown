@@ -393,6 +393,12 @@ importers:
         specifier: ^0.8.1
         version: 0.8.3(oxc-transform@0.94.0)(rollup@4.52.4)(typescript@5.9.3)
 
+  examples/native-magic-string:
+    devDependencies:
+      rolldown:
+        specifier: workspace:*
+        version: link:../../packages/rolldown
+
   examples/par-plugin:
     devDependencies:
       '@babel/core':

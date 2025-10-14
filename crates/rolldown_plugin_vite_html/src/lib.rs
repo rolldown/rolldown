@@ -13,7 +13,7 @@ use rolldown_plugin_utils::{
   constants::HTMLProxyMapItem, partial_encode_url_path,
 };
 use rolldown_utils::{dashmap::FxDashMap, pattern_filter::normalize_path};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath as _;
 
 use crate::utils::html_tag::{AttrValue, HtmlTagDescriptor};
@@ -399,6 +399,7 @@ impl Plugin for ViteHtmlPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
+    let mut inline_entry_chunk = FxHashSet::default();
     for item in &self.html_result_map {
       let ((id, assets_base), (html, is_async)) = item.pair();
 
@@ -459,7 +460,6 @@ impl Plugin for ViteHtmlPlugin {
         todo!()
       }
 
-      #[expect(unused_assignments)]
       if let Some(s) = Self::handle_inline_css(ctx, &result) {
         result = s.to_string();
       }
@@ -467,14 +467,34 @@ impl Plugin for ViteHtmlPlugin {
       // TODO: applyHtmlTransforms
       // result = await applyHtmlTransforms(..)
 
-      #[expect(unused_assignments)]
       if let Some(s) =
         self.handle_html_asset_url(ctx, html, chunk, assets_base, &relative_url_path).await?
       {
         result = s;
       }
+
+      if let Some(chunk) = chunk
+        && can_inline_entry
+      {
+        inline_entry_chunk.insert(chunk.filename.clone());
+      }
+
+      ctx
+        .emit_file_async(rolldown_common::EmittedAsset {
+          name: None,
+          original_file_name: Some(id.to_string()),
+          file_name: Some(relative_url_path.into()),
+          source: rolldown_common::StrOrBytes::Str(result),
+        })
+        .await?;
     }
 
-    todo!()
+    // all imports from entry have been inlined to html, prevent outputting it
+    args.bundle.retain(|o| match o {
+      rolldown_common::Output::Chunk(chunk) => !inline_entry_chunk.contains(&chunk.filename),
+      rolldown_common::Output::Asset(asset) => true,
+    });
+
+    Ok(())
   }
 }

@@ -2,8 +2,10 @@ use std::{ops::Range, sync::Arc};
 
 use arcstr::ArcStr;
 use rolldown_common::{Output, OutputChunk};
+use rolldown_plugin::PluginContext;
+use rolldown_plugin_utils::constants::ViteMetadata;
 use rolldown_utils::rustc_hash::FxHashSetExt as _;
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 use string_wizard::MagicString;
 
 use super::constant::{COMMENT_RE, IMPORT_RE};
@@ -94,4 +96,89 @@ fn get_imported_chunks_inner(
       chunks.push(ImportedChunk::External(file.clone()));
     }
   }
+}
+
+pub fn get_css_files_for_chunk(
+  ctx: &PluginContext,
+  chunk: &Arc<OutputChunk>,
+  bundle: &[rolldown_common::Output],
+  analyzed_imported_css_files: &mut FxHashMap<ArcStr, Vec<String>>,
+) -> Vec<String> {
+  fn get_css_files_for_chunk_impl(
+    ctx: &PluginContext,
+    chunk: &Arc<OutputChunk>,
+    bundle: &[rolldown_common::Output],
+    analyzed_imported_css_files: &mut FxHashMap<ArcStr, Vec<String>>,
+    seen_chunks: &mut FxHashSet<ArcStr>,
+    seen_css: &mut FxHashSet<String>,
+  ) -> Vec<String> {
+    // Check if we've already processed this chunk (cycle detection)
+    if seen_chunks.contains(&chunk.filename) {
+      return Vec::new();
+    }
+    seen_chunks.insert(chunk.filename.clone());
+
+    // Check if we've already analyzed this chunk (cache hit)
+    if let Some(cached_files) = analyzed_imported_css_files.get(&chunk.filename) {
+      let additionals = cached_files
+        .iter()
+        .filter(|file| !seen_css.contains(file.as_str()))
+        .cloned()
+        .collect::<Vec<_>>();
+      for file in &additionals {
+        seen_css.insert(file.clone());
+      }
+      return additionals;
+    }
+
+    let mut files = Vec::new();
+
+    // Recursively collect CSS from imported chunks
+    for import_filename in &chunk.imports {
+      // TODO: we could improve below logic in future
+      if let Some(importee) = bundle.iter().find_map(|output| match output {
+        rolldown_common::Output::Chunk(c) if &c.filename == import_filename => Some(c),
+        _ => None,
+      }) {
+        files.extend(get_css_files_for_chunk_impl(
+          ctx,
+          importee,
+          bundle,
+          analyzed_imported_css_files,
+          seen_chunks,
+          seen_css,
+        ));
+      }
+    }
+
+    // Cache the analyzed files for this chunk
+    analyzed_imported_css_files.insert(chunk.filename.clone(), files.clone());
+
+    // Collect CSS files from this chunk's metadata
+    if let Some(chunk_metadata) = ctx
+      .meta()
+      .get::<ViteMetadata>()
+      .and_then(|vite_metadata| vite_metadata.get(&chunk.preliminary_filename.as_str().into()))
+    {
+      for file in chunk_metadata.imported_css.iter() {
+        if !seen_css.contains(file.as_str()) {
+          seen_css.insert(file.to_string());
+          files.push(file.to_string());
+        }
+      }
+    }
+
+    files
+  }
+
+  let mut seen_chunks = FxHashSet::default();
+  let mut seen_css = FxHashSet::default();
+  get_css_files_for_chunk_impl(
+    ctx,
+    chunk,
+    bundle,
+    analyzed_imported_css_files,
+    &mut seen_chunks,
+    &mut seen_css,
+  )
 }

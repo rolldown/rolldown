@@ -18,6 +18,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath as _;
 
 use crate::utils::{
+  get_css_files_for_chunk,
   html_tag::{AttrValue, HtmlTagDescriptor},
   inject_to_head,
 };
@@ -422,6 +423,7 @@ impl Plugin for ViteHtmlPlugin {
     args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     let mut inline_entry_chunk = FxHashSet::default();
+    let mut analyzed_imported_css_files = FxHashMap::default();
     for item in &self.html_result_map {
       let ((id, assets_base), (html, is_async)) = item.pair();
 
@@ -456,7 +458,7 @@ impl Plugin for ViteHtmlPlugin {
         // when inlined, discard entry chunk and inject <script> for everything in post-order
         let imports = utils::get_imported_chunks(chunk, args.bundle);
 
-        let asset_tags = if can_inline_entry {
+        let mut asset_tags = if can_inline_entry {
           let mut tags = Vec::with_capacity(imports.len());
           for imported_chunk in imports {
             let mut tag = HtmlTagDescriptor::new("script");
@@ -521,8 +523,21 @@ impl Plugin for ViteHtmlPlugin {
           }
           tags
         };
-        // TODO: align below logic
-        // assetTags.push(...getCssTagsForChunk(chunk, toOutputAssetFilePath))
+
+        let css_files =
+          get_css_files_for_chunk(ctx, chunk, args.bundle, &mut analyzed_imported_css_files);
+        asset_tags.reserve(css_files.len());
+        for css_file in css_files {
+          let url =
+            self.to_output_file_path(&css_file, assets_base, false, &relative_url_path).await?;
+          let mut tag = HtmlTagDescriptor::new("link");
+          tag.attrs = Some(FxHashMap::from_iter([
+            ("rel", AttrValue::String("stylesheet".to_owned())),
+            ("crossorigin", AttrValue::Boolean(true)),
+            ("href", AttrValue::String(url)),
+          ]));
+          asset_tags.push(tag);
+        }
 
         result = inject_to_head(&result, &asset_tags, false).into_owned();
       }

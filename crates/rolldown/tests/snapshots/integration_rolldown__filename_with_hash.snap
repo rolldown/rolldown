@@ -4787,6 +4787,12 @@ expression: output
 - entries/main-esm.js => entries/main-esm.js
 - chunks/lazy-esm.js => chunks/lazy-esm.js
 
+# tests/rolldown/issues/6513
+
+- main-!~{000}~.js => main-DJLQ7AhO.js
+- chunk-!~{001}~.js => chunk--zchQUYv.js
+- dynamic-!~{003}~.js => dynamic-C-F4zVAd.js
+
 # tests/rolldown/issues/rolldown_vite_289
 
 - main-!~{000}~.js => main-Bldhf8JA.js

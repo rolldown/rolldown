@@ -127,6 +127,17 @@ impl LinkStage<'_> {
     let mut unused_record_idxs = vec![];
     let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
 
+    // It could be safely take since it is no more used.
+    for idx in std::mem::take(&mut context.bailout_cjs_tree_shaking_modules) {
+      self.metas[idx]
+        .resolved_exports
+        .iter()
+        .filter_map(|(_name, local)| local.came_from_cjs.then_some(local))
+        .for_each(|local| {
+          include_symbol(context, local.symbol_ref, SymbolIncludeReason::Normal);
+        });
+    }
+
     dynamic_entries.retain(|entry| {
       if !cycled_idx.contains(&entry.idx) {
         if let Some(item) = self.is_dynamic_entry_alive(entry, context.is_included_vec) {
@@ -160,17 +171,6 @@ impl LinkStage<'_> {
 
     // update entries with lived only.
     self.entries = user_defined_entries.into_iter().chain(dynamic_entries).collect();
-
-    // It could be safely take since it is no more used.
-    for idx in std::mem::take(&mut context.bailout_cjs_tree_shaking_modules) {
-      self.metas[idx]
-        .resolved_exports
-        .iter()
-        .filter_map(|(_name, local)| local.came_from_cjs.then_some(local))
-        .for_each(|local| {
-          include_symbol(context, local.symbol_ref, SymbolIncludeReason::Normal);
-        });
-    }
 
     // Setting the json module none self reference included symbol map
     for (mi, set) in std::mem::take(&mut context.json_module_none_self_reference_included_symbol) {

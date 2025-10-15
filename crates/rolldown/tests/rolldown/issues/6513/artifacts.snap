@@ -1,0 +1,70 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## chunk.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+Object.defineProperty(exports, '__commonJS', {
+  enumerable: true,
+  get: function () {
+    return __commonJS;
+  }
+});
+Object.defineProperty(exports, '__esm', {
+  enumerable: true,
+  get: function () {
+    return __esm;
+  }
+});
+Object.defineProperty(exports, '__toESM', {
+  enumerable: true,
+  get: function () {
+    return __toESM;
+  }
+});
+```
+
+## dynamic.js
+
+```js
+const require_chunk = require('./chunk.js');
+
+//#region dynamic.js
+var ddd;
+var init_dynamic = require_chunk.__esm({ "dynamic.js": (() => {
+	ddd = 100;
+}) });
+
+//#endregion
+init_dynamic();
+exports.ddd = ddd;
+```
+
+## main.js
+
+```js
+const require_chunk = require('./chunk.js');
+let node_assert = require("node:assert");
+node_assert = require_chunk.__toESM(node_assert);
+
+//#region lib.js
+var require_lib = /* @__PURE__ */ require_chunk.__commonJS({ "lib.js": ((exports) => {
+	const remoteProvider = async function() {
+		return await Promise.resolve().then(() => require("./dynamic.js"));
+	};
+	exports.defaultProvider = remoteProvider;
+}) });
+
+//#endregion
+//#region entry.js
+var import_lib = /* @__PURE__ */ require_chunk.__toESM(require_lib());
+(async () => {
+	(0, node_assert.default)((await (0, import_lib.defaultProvider)()).ddd === 100);
+})();
+
+//#endregion
+```

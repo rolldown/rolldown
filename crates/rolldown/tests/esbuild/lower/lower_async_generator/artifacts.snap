@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region \0@oxc-project+runtime@0.94.0/helpers/usingCtx.js
+//#region \0@oxc-project+runtime@0.95.0/helpers/usingCtx.js
 function _usingCtx() {
 	var r = "function" == typeof SuppressedError ? SuppressedError : function(r$1, e$1) {
 		var n$1 = Error();
@@ -63,7 +63,7 @@ function _usingCtx() {
 }
 
 //#endregion
-//#region \0@oxc-project+runtime@0.94.0/helpers/asyncIterator.js
+//#region \0@oxc-project+runtime@0.95.0/helpers/asyncIterator.js
 function _asyncIterator(r) {
 	var n, t, o, e = 2;
 	for ("undefined" != typeof Symbol && (t = Symbol.asyncIterator, o = Symbol.iterator); e--;) {
@@ -107,13 +107,13 @@ function AsyncFromSyncIterator(r) {
 }
 
 //#endregion
-//#region \0@oxc-project+runtime@0.94.0/helpers/OverloadYield.js
+//#region \0@oxc-project+runtime@0.95.0/helpers/OverloadYield.js
 function _OverloadYield(e, d) {
 	this.v = e, this.k = d;
 }
 
 //#endregion
-//#region \0@oxc-project+runtime@0.94.0/helpers/asyncGeneratorDelegate.js
+//#region \0@oxc-project+runtime@0.95.0/helpers/asyncGeneratorDelegate.js
 function _asyncGeneratorDelegate(t) {
 	var e = {}, n = !1;
 	function pump(e$1, r) {
@@ -137,13 +137,13 @@ function _asyncGeneratorDelegate(t) {
 }
 
 //#endregion
-//#region \0@oxc-project+runtime@0.94.0/helpers/awaitAsyncGenerator.js
+//#region \0@oxc-project+runtime@0.95.0/helpers/awaitAsyncGenerator.js
 function _awaitAsyncGenerator(e) {
 	return new _OverloadYield(e, 0);
 }
 
 //#endregion
-//#region \0@oxc-project+runtime@0.94.0/helpers/wrapAsyncGenerator.js
+//#region \0@oxc-project+runtime@0.95.0/helpers/wrapAsyncGenerator.js
 function _wrapAsyncGenerator(e) {
 	return function() {
 		return new AsyncGenerator(e.apply(this, arguments));

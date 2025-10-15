@@ -3,7 +3,7 @@ use rolldown::InjectImport;
 
 pub type BindingInjectImport = Either<BindingInjectImportNamed, BindingInjectImportNamespace>;
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingInjectImportNamed {
   #[napi(ts_type = "true")]
@@ -13,7 +13,7 @@ pub struct BindingInjectImportNamed {
   pub from: String,
 }
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingInjectImportNamespace {
   #[napi(ts_type = "true")]

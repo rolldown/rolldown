@@ -204,11 +204,9 @@ impl ContextLoadCompletionManager {
       }
       dashmap::Entry::Occupied(mut guard) => match guard.get_mut() {
         ContextLoadCompletionState::Pending(sender) => {
-          if let Err(err) = sender.send(()) {
-            // This happens if `.mark_completion` is called before `.wait_for_completion` is called, which is not expected
-            debug_assert!(false, "All receivers were dropped when marking completion: {err}");
-            tracing::warn!("All receivers were dropped when marking completion");
-          }
+          sender.send(()).expect(
+            "PluginDriver: failed to send completion notification - receiver was dropped before wait_for_completion was called, indicating a race condition in module loading"
+          );
           *guard.get_mut() = ContextLoadCompletionState::Completed;
         }
         ContextLoadCompletionState::Completed => {

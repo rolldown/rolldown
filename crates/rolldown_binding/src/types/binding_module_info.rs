@@ -34,7 +34,7 @@ impl BindingModuleInfo {
   }
 
   #[napi(getter)]
-  pub fn code(&self) -> Option<String> {
-    self.inner.code.as_ref().map(ToString::to_string)
+  pub fn code(&self) -> Option<&str> {
+    self.inner.code.as_deref()
   }
 }

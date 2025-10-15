@@ -1,6 +1,5 @@
 use std::{collections::HashMap, sync::Arc};
 
-use arcstr::ArcStr;
 use napi_derive::napi;
 use rolldown_sourcemap::SourceMap;
 use rustc_hash::FxBuildHasher;
@@ -34,24 +33,24 @@ impl BindingOutputChunk {
   }
 
   #[napi(getter)]
-  pub fn facade_module_id(&self) -> Option<String> {
-    self.inner.facade_module_id.as_ref().map(|x| x.to_string())
+  pub fn facade_module_id(&self) -> Option<&str> {
+    self.inner.facade_module_id.as_deref()
   }
 
   #[napi(getter)]
-  pub fn module_ids(&self) -> Vec<String> {
-    self.inner.module_ids.iter().map(|x| x.to_string()).collect()
+  pub fn module_ids(&self) -> Vec<&str> {
+    self.inner.module_ids.iter().map(AsRef::as_ref).collect()
   }
 
   #[napi(getter)]
-  pub fn exports(&self) -> Vec<String> {
-    self.inner.exports.iter().map(ToString::to_string).collect()
+  pub fn exports(&self) -> Vec<&str> {
+    self.inner.exports.iter().map(AsRef::as_ref).collect()
   }
 
   // RenderedChunk
   #[napi(getter)]
-  pub fn file_name(&self) -> String {
-    self.inner.filename.to_string()
+  pub fn file_name(&self) -> &str {
+    &self.inner.filename
   }
 
   #[napi(getter)]
@@ -60,43 +59,44 @@ impl BindingOutputChunk {
   }
 
   #[napi(getter)]
-  pub fn imports(&self) -> Vec<String> {
-    self.inner.imports.iter().map(ArcStr::to_string).collect()
+  pub fn imports(&self) -> Vec<&str> {
+    self.inner.imports.iter().map(AsRef::as_ref).collect()
   }
 
   #[napi(getter)]
-  pub fn dynamic_imports(&self) -> Vec<String> {
-    self.inner.dynamic_imports.iter().map(ArcStr::to_string).collect()
+  pub fn dynamic_imports(&self) -> Vec<&str> {
+    self.inner.dynamic_imports.iter().map(AsRef::as_ref).collect()
   }
 
   // OutputChunk
   #[napi(getter)]
-  pub fn code(&self) -> String {
-    self.inner.code.clone()
+  pub fn code(&self) -> &str {
+    &self.inner.code
   }
 
   #[napi(getter)]
+  // TODO: claude code - Cannot change to Option<&str>: performs JSON serialization via to_json_string()
   pub fn map(&self) -> napi::Result<Option<String>> {
     Ok(self.inner.map.as_ref().map(SourceMap::to_json_string))
   }
 
   #[napi(getter)]
-  pub fn sourcemap_file_name(&self) -> Option<String> {
-    self.inner.sourcemap_filename.clone()
+  pub fn sourcemap_file_name(&self) -> Option<&str> {
+    self.inner.sourcemap_filename.as_deref()
   }
 
   #[napi(getter)]
-  pub fn preliminary_file_name(&self) -> String {
-    self.inner.preliminary_filename.to_string()
+  pub fn preliminary_file_name(&self) -> &str {
+    &self.inner.preliminary_filename
   }
 
   #[napi(getter)]
-  pub fn name(&self) -> String {
-    self.inner.name.to_string()
+  pub fn name(&self) -> &str {
+    &self.inner.name
   }
 }
 
-#[napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct JsOutputChunk {
   // PreRenderedChunk
   pub name: String,

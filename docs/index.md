@@ -14,10 +14,10 @@ hero:
       openVideoModal: true
     - theme: brand
       text: Get Started
-      link: /guide/
+      link: /guide/getting-started.md
     - theme: alt
       text: Contribute
-      link: /contrib-guide/
+      link: /contribution-guide/
 
 features:
   - title: Speed of Rust

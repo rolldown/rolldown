@@ -383,7 +383,6 @@ impl LinkStage<'_> {
   /// export const c = 1;
   /// ```
   /// The final pointed `SymbolRef` of `foo_ns.bar_ns.c` is the `c` in `bar.js`.
-  #[expect(clippy::too_many_lines)]
   fn resolve_member_expr_refs(
     &mut self,
     side_effects_modules: &FxHashSet<ModuleIdx>,
@@ -592,7 +591,6 @@ struct BindImportsAndExportsContext<'a> {
 }
 
 impl BindImportsAndExportsContext<'_> {
-  #[expect(clippy::too_many_lines)]
   fn match_imports_with_exports(&mut self, module_id: ModuleIdx) {
     let Module::Normal(module) = &self.index_modules[module_id] else {
       return;
@@ -798,7 +796,6 @@ impl BindImportsAndExportsContext<'_> {
     }
   }
 
-  #[expect(clippy::too_many_lines)]
   fn match_import_with_export(
     &mut self,
     index_modules: &IndexModules,

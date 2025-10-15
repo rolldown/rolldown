@@ -1,7 +1,7 @@
 # Plugin hook filters
 
 > [!note]
-> For more details about **why you need plugin hook filter** please refer [why-plugin-hook-filter](/guide/in-depth/why-plugin-hook-filter)
+> For more details about **why you need plugin hook filter** please refer [why-plugin-hook-filter](/in-depth/why-plugin-hook-filter)
 
 One important thing to note for JavaScript plugins in Rolldown is that every plugin hook call incurs a small communication overhead between Rust and the JavaScript runtime (i.e. Node.js).
 

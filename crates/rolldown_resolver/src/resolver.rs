@@ -57,7 +57,6 @@ impl<F: FileSystem> Resolver<F> {
 }
 
 impl<F: FileSystem> Resolver<F> {
-  #[expect(clippy::too_many_lines)]
   pub fn new(
     fs: F,
     cwd: PathBuf,
@@ -147,7 +146,7 @@ impl<F: FileSystem> Resolver<F> {
       fully_specified: false,
       main_fields,
       main_files: raw_resolve.main_files.unwrap_or_else(|| vec!["index".to_string()]),
-      modules: vec!["node_modules".into()],
+      modules: raw_resolve.modules.unwrap_or_else(|| vec!["node_modules".into()]),
       resolve_to_context: false,
       prefer_relative: false,
       prefer_absolute: false,

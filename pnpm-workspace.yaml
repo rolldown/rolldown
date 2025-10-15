@@ -17,11 +17,11 @@ verifyDepsBeforeRun: install
 # Define a catalog of version ranges.
 catalog:
   # --- OXC related ---
-  '@oxc-project/runtime': '=0.94.0'
-  '@oxc-project/types': '=0.94.0'
-  'oxc-parser': '=0.94.0'
-  'oxc-transform': '=0.94.0'
-  'oxc-minify': '^0.94.0'
+  '@oxc-project/runtime': '=0.95.0'
+  '@oxc-project/types': '=0.95.0'
+  'oxc-parser': '=0.95.0'
+  'oxc-transform': '=0.95.0'
+  'oxc-minify': '^0.95.0'
 
   # --- NAPI-RS related ---
   '@napi-rs/cli': '^3.2.0'
@@ -48,13 +48,13 @@ catalog:
   '@oxc-node/core': '^0.0.32'
   'fast-glob': '^3.3.3'
   'rolldown-plugin-dts': '^0.16.0'
-  'tsdown': '0.15.6'
+  'tsdown': '0.15.7'
   'ansis': '=4.2.0'
   'typescript': '^5.8.3'
   'tsx': '^4.19.4'
   'vitest': '^3.0.1'
   'vite': '^7.0.0'
-  '@types/node': '24.7.0'
+  '@types/node': '24.7.2'
   'esbuild': '^0.25.0'
   'rollup': '^4.18.0'
   'terser': '^5.31.1'

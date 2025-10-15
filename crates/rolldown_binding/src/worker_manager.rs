@@ -14,7 +14,11 @@ impl WorkerManager {
   pub fn new(worker_count: u16) -> Self {
     let (sender, receiver) = async_channel::unbounded::<u16>();
 
-    (0..worker_count).for_each(|value| sender.send_blocking(value).unwrap());
+    (0..worker_count).for_each(|value| {
+      sender
+        .send_blocking(value)
+        .expect("WorkerManager: failed to initialize worker pool - channel closed during setup");
+    });
 
     Self { free_workers_sender: sender, free_workers_receiver: receiver, worker_count }
   }
@@ -54,7 +58,9 @@ impl WorkerSemaphorePermit {
 impl Drop for WorkerSemaphorePermit {
   fn drop(&mut self) {
     let worker_index = self.worker_index;
-    self.sender.send_blocking(worker_index).expect("failed to send worker_index");
+    self.sender.send_blocking(worker_index).expect(
+      "WorkerManager: failed to return worker to pool - channel closed while worker was active",
+    );
   }
 }
 
@@ -72,7 +78,7 @@ impl Drop for WorkerAllSemaphorePermit {
       self
         .sender
         .send_blocking(value)
-        .expect("failed to send worker_index while sending all of them");
+        .expect("WorkerManager: failed to return workers to pool during bulk release - channel closed unexpectedly");
     });
   }
 }

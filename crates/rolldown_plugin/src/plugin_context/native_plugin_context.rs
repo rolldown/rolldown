@@ -61,7 +61,8 @@ impl NativePluginContextImpl {
         module_def_format,
         ..Default::default()
       })))
-      .await?;
+      .await
+      .context("PluginContext: failed to send FetchModule message - module loader shut down during plugin execution")?;
     let plugin_driver = self
       .plugin_driver
       .upgrade()
@@ -154,8 +155,8 @@ impl NativePluginContextImpl {
     self.modules.get(module_id).map(|v| Arc::<rolldown_common::ModuleInfo>::clone(v.value()))
   }
 
-  pub fn get_module_ids(&self) -> Vec<String> {
-    self.modules.iter().map(|v| v.key().to_string()).collect()
+  pub fn get_module_ids(&self) -> Vec<ArcStr> {
+    self.modules.iter().map(|v| v.key().clone()).collect()
   }
 
   pub fn cwd(&self) -> &PathBuf {

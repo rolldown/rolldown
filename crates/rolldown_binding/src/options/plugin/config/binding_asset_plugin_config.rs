@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use derive_more::Debug;
 use napi::bindgen_prelude::{Buffer, Either, FnArgs};
-use napi_derive::napi;
 use rolldown_plugin_asset::AssetPlugin;
 use rolldown_plugin_utils::UsizeOrFunction;
 use rolldown_plugin_utils::{RenderBuiltUrl, RenderBuiltUrlConfig, RenderBuiltUrlRet};
@@ -15,7 +14,7 @@ use crate::types::{
   },
 };
 
-#[napi(object)]
+#[napi_derive::napi(object, object_from_js = false)]
 pub struct BindingRenderBuiltUrlConfig {
   pub ssr: bool,
   #[napi(ts_type = "'asset' | 'public'")]
@@ -36,7 +35,7 @@ impl From<&RenderBuiltUrlConfig<'_>> for BindingRenderBuiltUrlConfig {
   }
 }
 
-#[napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingRenderBuiltUrlRet {
   pub relative: Option<bool>,
   pub runtime: Option<String>,
@@ -48,7 +47,7 @@ impl From<BindingRenderBuiltUrlRet> for RenderBuiltUrlRet {
   }
 }
 
-#[napi(object, object_to_js = false)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug)]
 pub struct BindingAssetPluginConfig {
   pub is_lib: Option<bool>,

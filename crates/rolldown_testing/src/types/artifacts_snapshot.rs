@@ -114,7 +114,6 @@ impl ArtifactsSnapshot {
     errors_section
   }
 
-  #[expect(clippy::too_many_lines)]
   fn create_bundle_output_sections(
     test_meta: &TestMeta,
     bundle_output: BundleOutput,

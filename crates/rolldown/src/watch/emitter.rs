@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -18,7 +18,10 @@ impl WatcherEmitter {
   }
 
   pub fn emit(&self, event: WatcherEvent) -> Result<()> {
-    self.tx.send(event)?;
+    self
+      .tx
+      .send(event)
+      .context("WatcherEmitter: failed to emit event - receiver was dropped prematurely")?;
     Ok(())
   }
 }

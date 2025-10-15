@@ -1,3 +1,5 @@
+use itertools::Itertools;
+use napi::Env;
 use napi_derive::napi;
 use sugar_path::SugarPath;
 
@@ -60,33 +62,45 @@ impl BindingPluginContext {
       .ok();
 
     Ok(ret.map(|info| BindingPluginContextResolvedId {
+      // TODO: should use `&str` instead. (claude code) Attempt failed due to NAPI object field must be String type
       id: info.id.to_string(),
       external: info.external.into(),
       module_side_effects: info.side_effects.map(Into::into),
+      // TODO: should use `&str` instead. (claude code) Attempt failed due to PathBuf conversion requires to_string_lossy()
       package_json_path:
         info.package_json.map(|item| item.realpath().to_string_lossy().to_string()),
     }))
   }
 
   #[napi]
-  pub fn emit_file(
+  pub fn emit_file<'env>(
     &self,
+    env: &'env Env,
     file: BindingEmittedAsset,
     asset_filename: Option<String>,
     fn_sanitized_file_name: Option<String>,
-  ) -> String {
-    self.inner.emit_file(file.into(), asset_filename, fn_sanitized_file_name).to_string()
+  ) -> napi::Result<napi::JsString<'env>> {
+    env.create_string(self.inner.emit_file(file.into(), asset_filename, fn_sanitized_file_name))
   }
 
   #[napi]
-  pub fn emit_chunk(&self, file: BindingEmittedChunk) -> anyhow::Result<String> {
-    napi::bindgen_prelude::block_on(self.inner.emit_chunk(file.try_into()?))
-      .map(|id| id.to_string())
+  pub fn emit_chunk<'env>(
+    &self,
+    env: &'env Env,
+    file: BindingEmittedChunk,
+  ) -> napi::Result<napi::JsString<'env>> {
+    let arc_str = napi::bindgen_prelude::block_on(self.inner.emit_chunk(file.try_into()?))?;
+    env.create_string(arc_str)
   }
 
   #[napi]
-  pub fn get_file_name(&self, reference_id: String) -> anyhow::Result<String> {
-    self.inner.get_file_name(reference_id.as_str()).map(|id| id.to_string())
+  pub fn get_file_name<'env>(
+    &self,
+    env: &'env Env,
+    reference_id: String,
+  ) -> napi::Result<napi::JsString<'env>> {
+    let arc_str = self.inner.get_file_name(reference_id.as_str())?;
+    env.create_string(arc_str)
   }
 
   #[napi]
@@ -95,8 +109,8 @@ impl BindingPluginContext {
   }
 
   #[napi]
-  pub fn get_module_ids(&self) -> Vec<String> {
-    self.inner.get_module_ids()
+  pub fn get_module_ids<'env>(&self, env: &'env Env) -> napi::Result<Vec<napi::JsString<'env>>> {
+    self.inner.get_module_ids().iter().map(|id| env.create_string(id)).try_collect()
   }
 
   #[napi]
@@ -113,7 +127,7 @@ impl From<PluginContext> for BindingPluginContext {
     }
   }
 }
-#[napi(object)]
+#[napi_derive::napi(object, object_from_js = false)]
 pub struct BindingPluginContextResolvedId {
   pub id: String,
   pub package_json_path: Option<String>,

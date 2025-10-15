@@ -29,7 +29,7 @@ jobs:
           fetch-depth: 0 # for changelog
           persist-credentials: true # for create-pull-request
 
-      - uses: taiki-e/install-action@f355b1dcaf1a1c56ccead97cc540a259faf4bd5a # v2.62.20
+      - uses: taiki-e/install-action@e7ef886cf8f69c25ecef6bbc2858a42e273496ec # v2.62.28
         with:
           tool: just
 
@@ -65,4 +65,4 @@ jobs:
           branch-suffix: timestamp
           base: main
           title: 'release: v${{ env.VERSION }}'
-          assignees: Boshen
+          assignees: Boshen, shulaoda

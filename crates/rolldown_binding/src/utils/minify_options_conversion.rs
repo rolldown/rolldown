@@ -24,9 +24,9 @@ pub fn compress_options_to_napi_compress_options(
     drop_console: Some(compress.drop_console),
     drop_debugger: Some(compress.drop_debugger),
     unused: Some(match compress.unused {
-      oxc::minifier::CompressOptionsUnused::Remove => "remove".to_owned(),
-      oxc::minifier::CompressOptionsUnused::KeepAssign => "keep-assign".to_owned(),
-      oxc::minifier::CompressOptionsUnused::Keep => "keep".to_owned(),
+      oxc::minifier::CompressOptionsUnused::Remove => napi::Either::A(true),
+      oxc::minifier::CompressOptionsUnused::KeepAssign => napi::Either::B("keep-assign".to_owned()),
+      oxc::minifier::CompressOptionsUnused::Keep => napi::Either::A(false),
     }),
     keep_names: {
       let keep_names = oxc_minify_napi::CompressOptionsKeepNames {
@@ -35,6 +35,9 @@ pub fn compress_options_to_napi_compress_options(
       };
       Some(keep_names)
     },
+    join_vars: Some(compress.join_vars),
+    sequences: Some(compress.sequences),
+    max_iterations: compress.max_iterations,
   }
 }
 

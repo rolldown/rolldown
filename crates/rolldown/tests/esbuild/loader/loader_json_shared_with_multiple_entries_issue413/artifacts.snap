@@ -29,8 +29,7 @@ console.log("b:", data_default);
 
 ```js
 //#region data.json
-var test = 123;
-var data_default = { test };
+var data_default = { test: 123 };
 
 //#endregion
 export { data_default };

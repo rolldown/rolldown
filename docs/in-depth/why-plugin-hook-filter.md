@@ -294,4 +294,4 @@ export default {
 };
 ```
 
-See the [plugin hook filter usage](/plugins/hook-filters) for complete filter api and options.
+See the [plugin hook filter usage](../apis/plugin-hook-filters.md) for complete filter api and options.

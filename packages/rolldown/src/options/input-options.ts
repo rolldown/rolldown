@@ -283,6 +283,45 @@ export interface InputOptions {
      */
     incrementalBuild?: boolean;
     transformHiresSourcemap?: boolean | 'boundary';
+    /**
+     * Use native Rust implementation of MagicString for source map generation.
+     *
+     * - Type: `boolean`
+     * - Default: `false`
+     *
+     * [MagicString](https://github.com/rich-harris/magic-string) is a JavaScript library commonly used by bundlers
+     * for string manipulation and source map generation. When enabled, rolldown will use a native Rust
+     * implementation of MagicString instead of the JavaScript version, providing significantly better performance
+     * during source map generation and code transformation.
+     *
+     * ## Benefits
+     *
+     * - **Improved Performance**: The native Rust implementation is typically faster than the JavaScript version,
+     *   especially for large codebases with extensive source maps.
+     * - **Background Processing**: Source map generation is performed asynchronously in a background thread,
+     *   allowing the main bundling process to continue without blocking. This parallel processing can significantly
+     *   reduce overall build times when working with JavaScript transform hooks.
+     * - **Better Integration**: Seamless integration with rolldown's native Rust architecture.
+     *
+     * ## Example
+     *
+     * ```js
+     * export default {
+     *   experimental: {
+     *     nativeMagicString: true
+     *   },
+     *   output: {
+     *     sourcemap: true
+     *   }
+     * }
+     * ```
+     *
+     * > [!NOTE]
+     * > This is an experimental feature. While it aims to provide identical behavior to the JavaScript
+     * > implementation, there may be edge cases. Please report any discrepancies you encounter.
+     * > For a complete working example, see [examples/native-magic-string](https://github.com/rolldown/rolldown/tree/main/examples/native-magic-string)
+     */
+    nativeMagicString?: boolean;
   };
   /**
    * Replace global variables or [property accessors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Property_accessors) with the provided values.
@@ -333,6 +372,8 @@ export interface InputOptions {
   define?: Record<string, string>;
   /**
    * Inject import statements on demand.
+   *
+   * The API is aligned with `@rollup/plugin-inject`.
    *
    * ## Supported patterns
    * ```js

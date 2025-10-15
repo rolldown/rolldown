@@ -149,7 +149,6 @@ impl<'ast> GlobImportVisit<'ast, '_> {
     }
   }
 
-  #[expect(clippy::too_many_lines)]
   fn generate_glob_object_expression(
     &mut self,
     files: &[ImportGlobFileData],
@@ -449,7 +448,6 @@ impl GlobImportVisit<'_, '_> {
     }
   }
 
-  #[expect(clippy::too_many_lines)]
   fn eval_glob_expr(
     &self,
     arg: &Argument,

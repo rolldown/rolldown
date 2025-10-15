@@ -85,7 +85,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     self.state = pre;
   }
 
-  #[expect(clippy::too_many_lines)]
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     // Drop the hashbang since we already store them in ast_scan phase and
     // we don't want oxc to generate hashbang statement and directives in module level since we already handle
@@ -293,6 +292,10 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         program.body.splice(0..0, declaration_of_module_namespace_object);
       }
     }
+
+    if self.json_module_inlined_prop.is_some() {
+      program.body.drain_filter(|item| matches!(item, ast::Statement::EmptyStatement(_)));
+    }
   }
 
   fn visit_binding_identifier(&mut self, ident: &mut ast::BindingIdentifier<'ast>) {
@@ -313,6 +316,8 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_statement(&mut self, it: &mut ast::Statement<'ast>) {
+    _ = self.try_inline_json_module_prop(it);
+
     if !self.ctx.options.drop_labels.is_empty() {
       if let ast::Statement::LabeledStatement(stmt) = it {
         if self.ctx.options.drop_labels.contains(stmt.label.name.as_str()) {

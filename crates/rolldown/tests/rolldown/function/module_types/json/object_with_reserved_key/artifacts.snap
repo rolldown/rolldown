@@ -9,8 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 //#region foo.json
-var _null = null;
-var foo_default = { "null": _null };
+var foo_default = { "null": null };
 
 //#endregion
 //#region main.js

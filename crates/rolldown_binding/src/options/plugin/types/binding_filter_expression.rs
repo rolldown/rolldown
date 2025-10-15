@@ -82,7 +82,7 @@ impl FromNapiValue for BindingFilterTokenPayload {
   }
 }
 
-#[napi(object, object_to_js = false)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Clone)]
 pub struct BindingFilterToken {
   pub kind: FilterTokenKind,

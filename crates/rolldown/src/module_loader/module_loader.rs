@@ -277,8 +277,8 @@ impl<'a> ModuleLoader<'a> {
   /// time build in watch mode or edgecase in HMR(User update `node_modules` too much modules are
   /// updated at same time, patch them one by one is not efficient, so we do full scan directly)
   ///
-  #[expect(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
+  #[expect(clippy::too_many_lines)]
   pub async fn fetch_modules(
     &mut self,
     fetch_mode: ScanMode<ResolvedId>,
@@ -614,7 +614,9 @@ impl<'a> ModuleLoader<'a> {
       return Err(errors.into());
     }
     if let Some(tx) = self.magic_string_tx.as_ref() {
-      tx.send(SourceMapGenMsg::Terminate).unwrap();
+      tx.send(SourceMapGenMsg::Terminate).expect(
+        "SourceMapGen: failed to send Terminate message - sourcemap worker thread died unexpectedly"
+      );
     }
 
     // defer sync user modified data in js side

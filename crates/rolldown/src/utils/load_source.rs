@@ -9,7 +9,7 @@ use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
-#[expect(clippy::too_many_arguments, clippy::too_many_lines)]
+#[expect(clippy::too_many_arguments)]
 pub async fn load_source<Fs: FileSystem + 'static>(
   plugin_driver: &PluginDriver,
   resolved_id: &ResolvedId,

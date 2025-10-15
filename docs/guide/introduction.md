@@ -6,7 +6,7 @@ In JavaScript development, a bundler is responsible for compiling small pieces o
 
 For web applications, this makes your application load and run significantly faster (even with HTTP/2). For libraries, this can avoid your consuming application having to bundle the source again, and can also improve runtime execution performance.
 
-For those interested in the details, we have written a deeper analysis on [why bundlers are still needed](/guide/in-depth/why-bundlers).
+For those interested in the details, we have written a deeper analysis on [why bundlers are still needed](/in-depth/why-bundlers).
 
 ## Why Rolldown
 
@@ -24,7 +24,7 @@ Although designed for Vite, Rolldown is also fully capable of being used as a st
 
 Rolldown provides largely compatible APIs (especially the plugin interface) with Rollup, and has similar treeshaking capabilities for bundle size optimization.
 
-However, Rolldown's feature scope is more similar to esbuild, offering these [additional features](./features.md) as built-in:
+However, Rolldown's feature scope is more similar to esbuild, offering these [additional features](./notable-features) as built-in:
 
 - Platform presets
 - TypeScript / JSX / syntax lowering transforms
@@ -37,12 +37,12 @@ However, Rolldown's feature scope is more similar to esbuild, offering these [ad
 
 Rolldown also has a few concepts that have close equivalents in esbuild, but do not exist in Rollup:
 
-- [Module Types](./features#module-types) (Experimental)
-- [Plugin hook filters](/plugins/hook-filters.md)
+- [Module Types](./notable-features#module-types) (Experimental)
+- [Plugin hook filters](/apis/plugin-hook-filters)
 
 Finally, Rolldown provides some features that esbuild and Rollup do not (and may not intend to) implement:
 
-- [Advanced chunk splitting control](./features#advanced-chunks) (Experimental)
+- [Advanced chunk splitting control](./notable-features#advanced-chunks) (Experimental)
 - HMR support (WIP)
 - Module Federation (planned)
 

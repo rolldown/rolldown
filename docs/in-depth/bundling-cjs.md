@@ -91,11 +91,11 @@ The `__toESM` helper ensures that CommonJS exports are properly converted to ES 
 
 ## `require` external modules
 
-When [`platform: 'node'`](../features.md#platform-presets) is set, Rolldown will generate a `require` function from [`module.createRequire`](https://nodejs.org/docs/latest/api/module.html#modulecreaterequirefilename).
+When [`platform: 'node'`](../guide/notable-features.md#platform-presets) is set, Rolldown will generate a `require` function from [`module.createRequire`](https://nodejs.org/docs/latest/api/module.html#modulecreaterequirefilename).
 
 For other platforms, Rolldown will leave it as it is, so ensure that the running environment provides a `require` function or inject one manually.
 
-For example, you can inject the `require` function that returns the value obtained by `import` by using [`inject` feature](../features.md#inject).
+For example, you can inject the `require` function that returns the value obtained by `import` by using [`inject` feature](../guide/notable-features.md#inject).
 
 ::: code-group
 
@@ -121,7 +121,7 @@ export default (id) => {
 
 :::
 
-You can also use [the built-in `esmExternalRequirePlugin`](/plugins/esm-external-require.md) to convert `require()` calls to `import` statements.
+You can also use [the built-in `esmExternalRequirePlugin`](/builtin-plugins/esm-external-require) to convert `require()` calls to `import` statements.
 
 ## Future Plans
 

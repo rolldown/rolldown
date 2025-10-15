@@ -6,7 +6,6 @@ use binding_pre_rendered_asset::BindingPreRenderedAsset;
 use derive_more::Debug;
 use napi::Either;
 use napi::bindgen_prelude::{Either3, FnArgs};
-use napi_derive::napi;
 use rustc_hash::FxHashMap;
 
 use binding_advanced_chunks_options::BindingAdvancedChunksOptions;
@@ -33,7 +32,7 @@ pub type SanitizeFileName = Either<bool, JsCallback<FnArgs<(String,)>, String>>;
 pub type SourcemapIgnoreListOutputOption =
   Either3<bool, BindingStringOrRegex, JsCallback<FnArgs<(String, String)>, bool>>;
 
-#[napi(object, object_to_js = false)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug)]
 pub struct BindingOutputOptions<'env> {
   // --- Options Rolldown doesn't need to be supported

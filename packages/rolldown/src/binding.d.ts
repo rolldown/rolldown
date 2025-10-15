@@ -42,13 +42,30 @@ export interface CompressOptions {
    */
   dropDebugger?: boolean
   /**
-   * Drop unreferenced functions and variables.
+   * Pass `true` to drop unreferenced functions and variables.
    *
-   * Simple direct variable assignments do not count as references unless set to "keep_assign".
+   * Simple direct variable assignments do not count as references unless set to `keep_assign`.
+   * @default true
    */
-  unused?: true | false | 'keep_assign'
+  unused?: boolean | 'keep_assign'
   /** Keep function / class names. */
   keepNames?: CompressOptionsKeepNames
+  /**
+   * Join consecutive var, let and const statements.
+   *
+   * @default true
+   */
+  joinVars?: boolean
+  /**
+   * Join consecutive simple statements using the comma operator.
+   *
+   * `a; b` -> `a, b`
+   *
+   * @default true
+   */
+  sequences?: boolean
+  /** Limit the maximum number of iterations for debugging purpose. */
+  maxIterations?: number
 }
 
 export interface CompressOptionsKeepNames {
@@ -1446,7 +1463,7 @@ export declare class BindingTransformPluginContext {
   getCombinedSourcemap(): string
   inner(): BindingPluginContext
   addWatchFile(file: string): void
-  sendMagicString(magicString: BindingMagicString): void
+  sendMagicString(magicString: BindingMagicString): string | null
 }
 
 export declare class BindingWatcher {
@@ -1681,6 +1698,7 @@ export interface BindingExperimentalOptions {
   onDemandWrapping?: boolean
   incrementalBuild?: boolean
   transformHiresSourcemap?: boolean | 'boundary'
+  nativeMagicString?: boolean
 }
 
 export interface BindingFilterToken {

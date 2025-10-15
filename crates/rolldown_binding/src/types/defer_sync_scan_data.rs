@@ -2,7 +2,7 @@ use rolldown_common::DeferSyncScanData;
 
 use crate::options::plugin::types::binding_hook_side_effects::BindingHookSideEffects;
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug)]
 pub struct BindingDeferSyncScanData {
   /// ModuleId

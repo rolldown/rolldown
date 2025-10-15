@@ -5,10 +5,11 @@ use std::{
   sync::{Arc, atomic::AtomicBool},
 };
 
+use anyhow::Context;
 use arcstr::ArcStr;
 use futures::{FutureExt, future::Shared};
 use rolldown_common::ClientHmrUpdate;
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildResult, ResultExt};
 use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexSet};
 use rolldown_watcher::{DynWatcher, NoopWatcher, Watcher, WatcherConfig, WatcherExt};
 use sugar_path::SugarPath;
@@ -211,10 +212,9 @@ impl DevEngine {
     }
 
     // Send close message to build driver service
-    if let Err(_e) = self.ctx.build_channel_tx.send(BuildMessage::Close) {
-      // If `BuildMessage::Close` is not sent, it means the channel is closed due to error or what.
-      // It's ok to ignore the send error.
-    }
+    self.ctx.build_channel_tx.send(BuildMessage::Close)
+      .map_err_to_unhandleable()
+      .context("DevEngine: failed to send Close message to build service - service may have already terminated")?;
 
     // Clean up watcher
     let watcher =

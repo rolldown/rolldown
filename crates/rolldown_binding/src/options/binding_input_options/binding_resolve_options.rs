@@ -1,9 +1,7 @@
-use napi_derive::napi;
-
 use crate::types::binding_resolve_alias_item::AliasItem;
 use crate::types::binding_resolve_extension_alias::ExtensionAliasItem;
 
-#[napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingResolveOptions {
   // Option<Vec<(String, Vec<String>)>>> is better, maybe NAPI-RS should support tuples.
@@ -36,6 +34,7 @@ impl From<BindingResolveOptions> for rolldown::ResolveOptions {
       extension_alias: value.extension_alias.map(|alias| {
         alias.into_iter().map(|item| (item.target, item.replacements)).collect::<Vec<_>>()
       }),
+      modules: value.modules,
       main_fields: value.main_fields,
       main_files: value.main_files,
       symlinks: value.symlinks,

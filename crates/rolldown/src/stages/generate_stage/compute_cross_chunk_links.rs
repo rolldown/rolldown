@@ -142,7 +142,6 @@ impl GenerateStage<'_> {
 
   /// - Assign each symbol to the chunk it belongs to
   /// - Collect all referenced symbols and consider them potential imports
-  #[expect(clippy::too_many_lines)]
   fn collect_depended_symbols(
     &mut self,
     chunk_graph: &ChunkGraph,
@@ -320,7 +319,6 @@ impl GenerateStage<'_> {
 
   /// - Filter out depended symbols to come from other chunks
   /// - Mark exports of importee chunks
-  #[expect(clippy::too_many_lines)]
   fn compute_chunk_imports(
     &self,
     chunk_graph: &ChunkGraph,

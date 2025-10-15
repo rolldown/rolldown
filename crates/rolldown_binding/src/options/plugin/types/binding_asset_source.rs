@@ -1,6 +1,9 @@
 use napi::Either;
 use napi::bindgen_prelude::Buffer;
 
+// This struct is used to both pass to JS and receive from JS:
+// - Pass to JS: `From<StrOrBytes>` impl (line 44) in BindingOutputAsset.source getter
+// - Receive from JS: `From<BindingAssetSource>` impl (line 35) in BindingEmittedAsset
 #[napi_derive::napi(object)]
 pub struct BindingAssetSource {
   #[napi(ts_type = "string | Uint8Array")]

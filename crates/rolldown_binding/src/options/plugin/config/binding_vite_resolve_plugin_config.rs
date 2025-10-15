@@ -135,7 +135,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
   }
 }
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug)]
 #[expect(clippy::struct_excessive_bools)]
 pub struct BindingViteResolvePluginResolveOptions {

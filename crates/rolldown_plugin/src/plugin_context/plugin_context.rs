@@ -111,7 +111,7 @@ impl PluginContext {
     call_native_only!(self, "get_module_info", ctx => ctx.get_module_info(module_id))
   }
 
-  pub fn get_module_ids(&self) -> Vec<String> {
+  pub fn get_module_ids(&self) -> Vec<ArcStr> {
     call_native_only!(self, "get_module_ids", ctx => ctx.get_module_ids())
   }
 

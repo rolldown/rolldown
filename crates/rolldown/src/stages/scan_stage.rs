@@ -25,6 +25,11 @@ use crate::{
   utils::load_entry_module::load_entry_module,
 };
 
+type SourcemapChannel = (
+  Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+  Option<thread::JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>>,
+);
+
 /// Resolve `InputOptions.input`
 #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
 pub async fn resolve_user_defined_entries(
@@ -161,7 +166,6 @@ impl ScanStage {
     Self { options, plugin_driver, fs, resolver }
   }
 
-  #[expect(clippy::too_many_lines)]
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
   pub async fn scan(
     &self,
@@ -174,29 +178,8 @@ impl ScanStage {
         ScanMode::Partial(self.resolve_absolute_path(&changed_ids).await?)
       }
     };
-    let (tx, rx) = std::sync::mpsc::channel::<SourceMapGenMsg>();
-    let handler = thread::spawn(move || {
-      let mut map: FxHashMap<ModuleIdx, Vec<_>> = FxHashMap::default();
-      while let Ok(msg) = rx.recv() {
-        match msg {
-          SourceMapGenMsg::MagicString(v) => {
-            let (module_idx, plugin_idx, magic_string) = *v;
-            let generated_sourcemap =
-              magic_string.source_map(string_wizard::SourceMapOptions::default());
-            map
-              .entry(module_idx)
-              .or_default()
-              .push(SourcemapChainElement::Transform((plugin_idx, generated_sourcemap)));
-          }
-          SourceMapGenMsg::Terminate => {
-            break;
-          }
-        }
-      }
-      map
-    });
+    let (tx_clone, handler) = self.create_sourcemap_channel();
 
-    let tx_clone = Arc::new(tx);
     let mut module_loader = ModuleLoader::new(
       self.fs.clone(),
       Arc::clone(&self.options),
@@ -204,7 +187,7 @@ impl ScanStage {
       Arc::clone(&self.plugin_driver),
       cache,
       fetch_mode.is_full(),
-      Some(Arc::<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>::clone(&tx_clone)),
+      tx_clone,
     )?;
 
     // For `pluginContext.emitFile` with `type: chunk`, support it at buildStart hook.
@@ -221,6 +204,80 @@ impl ScanStage {
 
     let mut module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
 
+    if let Some(handler) = handler {
+      self.process_sourcemap_handler(handler, &mut module_loader_output);
+    }
+
+    let ModuleLoaderOutput {
+      module_table,
+      entry_points,
+      symbol_ref_db,
+      runtime,
+      warnings,
+      index_ecma_ast,
+      dynamic_import_exports_usage_map,
+      new_added_modules_from_partial_scan: _,
+      safely_merge_cjs_ns_map,
+      overrode_preserve_entry_signature_map,
+      entry_point_to_reference_ids,
+      flat_options,
+    } = module_loader_output;
+
+    self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;
+
+    self.plugin_driver.set_context_load_modules_tx(None).await;
+
+    Ok(ScanStageOutput {
+      entry_points,
+      symbol_ref_db,
+      runtime,
+      warnings,
+      index_ecma_ast,
+      dynamic_import_exports_usage_map,
+      module_table,
+      safely_merge_cjs_ns_map,
+      overrode_preserve_entry_signature_map,
+      entry_point_to_reference_ids,
+      flat_options,
+    })
+  }
+
+  fn create_sourcemap_channel(&self) -> SourcemapChannel {
+    if self.options.experimental.is_native_magic_string_enabled()
+      && self.options.is_sourcemap_enabled()
+    {
+      let (tx, rx) = std::sync::mpsc::channel::<SourceMapGenMsg>();
+      let handler = thread::spawn(move || {
+        let mut map: FxHashMap<ModuleIdx, Vec<_>> = FxHashMap::default();
+        while let Ok(msg) = rx.recv() {
+          match msg {
+            SourceMapGenMsg::MagicString(v) => {
+              let (module_idx, plugin_idx, magic_string) = *v;
+              let generated_sourcemap =
+                magic_string.source_map(string_wizard::SourceMapOptions::default());
+              map
+                .entry(module_idx)
+                .or_default()
+                .push(SourcemapChainElement::Transform((plugin_idx, generated_sourcemap)));
+            }
+            SourceMapGenMsg::Terminate => {
+              break;
+            }
+          }
+        }
+        map
+      });
+      (Some(Arc::new(tx)), Some(handler))
+    } else {
+      (None, None)
+    }
+  }
+
+  fn process_sourcemap_handler(
+    &self,
+    handler: thread::JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>,
+    module_loader_output: &mut ModuleLoaderOutput,
+  ) {
     let map: FxHashMap<ModuleIdx, Vec<_>> = handler.join().unwrap();
     if !map.is_empty() {
       let transform_plugin_order_map = self
@@ -260,39 +317,6 @@ impl ScanStage {
         });
       }
     }
-
-    let ModuleLoaderOutput {
-      module_table,
-      entry_points,
-      symbol_ref_db,
-      runtime,
-      warnings,
-      index_ecma_ast,
-      dynamic_import_exports_usage_map,
-      new_added_modules_from_partial_scan: _,
-      safely_merge_cjs_ns_map,
-      overrode_preserve_entry_signature_map,
-      entry_point_to_reference_ids,
-      flat_options,
-    } = module_loader_output;
-
-    self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;
-
-    self.plugin_driver.set_context_load_modules_tx(None).await;
-
-    Ok(ScanStageOutput {
-      entry_points,
-      symbol_ref_db,
-      runtime,
-      warnings,
-      index_ecma_ast,
-      dynamic_import_exports_usage_map,
-      module_table,
-      safely_merge_cjs_ns_map,
-      overrode_preserve_entry_signature_map,
-      entry_point_to_reference_ids,
-      flat_options,
-    })
   }
 
   /// Make sure the passed `ids` is all absolute path

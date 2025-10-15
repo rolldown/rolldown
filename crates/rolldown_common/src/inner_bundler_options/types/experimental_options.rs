@@ -51,6 +51,7 @@ pub struct ExperimentalOptions {
   pub chunk_modules_order: Option<ChunkModulesOrderBy>,
   pub on_demand_wrapping: Option<bool>,
   pub transform_hires_sourcemap: Option<SourcemapHires>,
+  pub native_magic_string: Option<bool>,
 }
 
 impl ExperimentalOptions {
@@ -81,5 +82,9 @@ impl ExperimentalOptions {
 
   pub fn is_attach_debug_info_full(&self) -> bool {
     self.attach_debug_info.is_some_and(|info| info.is_full())
+  }
+
+  pub fn is_native_magic_string_enabled(&self) -> bool {
+    self.native_magic_string.unwrap_or(false)
   }
 }

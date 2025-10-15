@@ -2,7 +2,7 @@ use napi_derive::napi;
 
 use super::binding_hmr_boundary_output::BindingHmrBoundaryOutput;
 
-#[napi(discriminant = "type")]
+#[napi(discriminant = "type", object_from_js = false)]
 #[derive(Debug)]
 pub enum BindingHmrUpdate {
   Patch {

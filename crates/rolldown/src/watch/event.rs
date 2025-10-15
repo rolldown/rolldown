@@ -18,14 +18,20 @@ pub enum WatcherEvent {
   Change(WatcherChangeData),
 }
 
+impl WatcherEvent {
+  pub fn as_str(&self) -> &str {
+    match self {
+      WatcherEvent::Close => "close",
+      WatcherEvent::Event(_) => "event",
+      WatcherEvent::Restart => "restart",
+      WatcherEvent::Change(_) => "change",
+    }
+  }
+}
+
 impl Display for WatcherEvent {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    match self {
-      WatcherEvent::Close => write!(f, "close"),
-      WatcherEvent::Event(_) => write!(f, "event"),
-      WatcherEvent::Restart => write!(f, "restart"),
-      WatcherEvent::Change(_) => write!(f, "change"),
-    }
+    write!(f, "{}", self.as_str())
   }
 }
 
@@ -44,15 +50,21 @@ pub enum BundleEvent {
   Error(BundleErrorEventData),
 }
 
+impl BundleEvent {
+  pub fn as_str(&self) -> &str {
+    match self {
+      BundleEvent::Start => "START",
+      BundleEvent::BundleStart => "BUNDLE_START",
+      BundleEvent::BundleEnd(_) => "BUNDLE_END",
+      BundleEvent::End => "END",
+      BundleEvent::Error(_) => "ERROR",
+    }
+  }
+}
+
 impl Display for BundleEvent {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    match self {
-      BundleEvent::Start => write!(f, "START"),
-      BundleEvent::BundleStart => write!(f, "BUNDLE_START"),
-      BundleEvent::BundleEnd(_) => write!(f, "BUNDLE_END"),
-      BundleEvent::End => write!(f, "END"),
-      BundleEvent::Error(_) => write!(f, "ERROR"),
-    }
+    write!(f, "{}", self.as_str())
   }
 }
 

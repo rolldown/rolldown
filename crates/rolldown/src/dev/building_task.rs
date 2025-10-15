@@ -112,11 +112,9 @@ impl BundlingTask {
     build_state.has_stale_build_output = !self.rebuild;
     drop(build_state);
 
-    if self.dev_context.build_channel_tx.send(BuildMessage::BuildFinish).is_err() {
-      tracing::error!("Failed to send build finish message to build channel");
-      // Notice: Send error will only happen when the channel is closed. It might be closed by an error or what.
-      // Handling this error is helpful to that situation.
-    }
+    self.dev_context.build_channel_tx.send(BuildMessage::BuildFinish).expect(
+      "Build service channel closed while sending BuildFinish - build service terminated unexpectedly"
+    );
   }
 
   async fn run_inner(&mut self) -> BuildResult<()> {

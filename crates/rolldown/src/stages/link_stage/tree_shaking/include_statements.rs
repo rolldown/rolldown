@@ -30,6 +30,12 @@ bitflags::bitflags! {
         /// 1. https://github.com/rolldown/rolldown/blob/8bc7dca5a09047b6b494e3fa7b6b7564aa465372/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs?plain=1#L122-L134
         /// 2. https://github.com/rolldown/rolldown/blob/8bc7dca5a09047b6b494e3fa7b6b7564aa465372/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs?plain=1#L188-L197
         const ReExportDynamicExports = 1 << 2;
+        /// After transforming a JSON module to an ESM module, a default export is created that
+        /// references all top-level properties of the JSON object. This flag tracks whether a
+        /// property is being referenced by the export default object itself (self-reference).
+        /// If a top-level property is only referenced by the export default object and not by
+        /// any outer modules, it can be safely inlined in the final output.
+        const JsonDefaultExportSelfReference = 1 << 3;
     }
 }
 
@@ -51,10 +57,10 @@ struct Context<'a> {
   bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
   may_partial_namespace: bool,
   module_namespace_included_reason: &'a mut IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>,
+  json_module_none_self_reference_included_symbol: FxHashMap<ModuleIdx, FxHashSet<SymbolRef>>,
 }
 
 impl LinkStage<'_> {
-  #[expect(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(&mut self) {
     let mut is_included_vec: IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>> = self
@@ -88,6 +94,7 @@ impl LinkStage<'_> {
       may_partial_namespace: false,
       module_namespace_included_reason: &mut module_namespace_included_reason,
       inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
+      json_module_none_self_reference_included_symbol: FxHashMap::default(),
     };
 
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
@@ -163,6 +170,12 @@ impl LinkStage<'_> {
         .for_each(|local| {
           include_symbol(context, local.symbol_ref, SymbolIncludeReason::Normal);
         });
+    }
+
+    // Setting the json module none self reference included symbol map
+    for (mi, set) in std::mem::take(&mut context.json_module_none_self_reference_included_symbol) {
+      let module = self.module_table[mi].as_normal_mut().expect("should be a normal module");
+      _ = module.ecma_view.json_module_none_self_reference_included_symbol.insert(Box::new(set));
     }
 
     // mark those dynamic import records as dead, in case we could eliminate them later in ast
@@ -401,6 +414,7 @@ impl LinkStage<'_> {
       may_partial_namespace: false,
       module_namespace_included_reason,
       inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
+      json_module_none_self_reference_included_symbol: FxHashMap::default(),
     };
 
     for helper in depended_runtime_helper {
@@ -508,11 +522,11 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   }
 }
 
-fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: SymbolIncludeReason) {
+fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_reason: SymbolIncludeReason) {
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
 
   if let Some(v) = ctx.constant_symbol_map.get(&canonical_ref)
-    && !include_kind.contains(SymbolIncludeReason::EntryExport)
+    && !include_reason.contains(SymbolIncludeReason::EntryExport)
     && !ctx.inline_const_smart
     && !v.commonjs_export
   {
@@ -567,10 +581,10 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: Symbol
   }
 
   if canonical_ref.symbol.is_module_namespace() {
-    if include_kind.intersects(SymbolIncludeReason::Normal | SymbolIncludeReason::EntryExport) {
+    if include_reason.intersects(SymbolIncludeReason::Normal | SymbolIncludeReason::EntryExport) {
       ctx.module_namespace_included_reason[canonical_ref.owner]
         .insert(ModuleNamespaceIncludedReason::Unknown);
-    } else if include_kind.contains(SymbolIncludeReason::ReExportDynamicExports) {
+    } else if include_reason.contains(SymbolIncludeReason::ReExportDynamicExports) {
       ctx.module_namespace_included_reason[canonical_ref.owner]
         .insert(ModuleNamespaceIncludedReason::ReExportExternalModule);
     }
@@ -579,6 +593,15 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: Symbol
   ctx.used_symbol_refs.insert(canonical_ref);
 
   if let Module::Normal(module) = &ctx.modules[canonical_ref.owner] {
+    if !include_reason.contains(SymbolIncludeReason::JsonDefaultExportSelfReference)
+      && module.module_type == ModuleType::Json
+    {
+      ctx
+        .json_module_none_self_reference_included_symbol
+        .entry(module.idx)
+        .or_default()
+        .insert(canonical_ref);
+    }
     include_module(ctx, module);
     module.stmt_infos.declared_stmts_by_symbol(&canonical_ref).iter().copied().for_each(
       |stmt_info_id| {
@@ -639,11 +662,19 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
       ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
     }
   });
-  let include_kind = if stmt_info.meta.contains(StmtInfoMeta::ReExportDynamicExports) {
+  let mut include_kind = if stmt_info.meta.contains(StmtInfoMeta::ReExportDynamicExports) {
     SymbolIncludeReason::ReExportDynamicExports
   } else {
     SymbolIncludeReason::Normal
   };
+
+  let is_json_module = module.module_type == ModuleType::Json;
+
+  // For a transformed json module
+  if is_json_module && !stmt_info.referenced_symbols.is_empty() {
+    include_kind |= SymbolIncludeReason::JsonDefaultExportSelfReference;
+  }
+
   stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
     if let Some(member_expr_resolution) = match reference_ref {
       SymbolOrMemberExprRef::Symbol(_) => None,

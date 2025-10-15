@@ -21,8 +21,8 @@ impl BindingRenderedModule {
   }
 
   #[napi(getter)]
-  pub fn rendered_exports(&self) -> Vec<String> {
-    self.inner.rendered_exports.iter().map(std::string::ToString::to_string).collect()
+  pub fn rendered_exports(&self) -> Vec<&str> {
+    self.inner.rendered_exports.iter().map(AsRef::as_ref).collect()
   }
 }
 

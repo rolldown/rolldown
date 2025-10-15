@@ -17,8 +17,8 @@ impl BindingRenderedChunk {
   }
 
   #[napi(getter)]
-  pub fn get_name(&self) -> String {
-    self.inner.name.to_string()
+  pub fn get_name(&self) -> &str {
+    &self.inner.name
   }
 
   #[napi(getter)]
@@ -32,23 +32,23 @@ impl BindingRenderedChunk {
   }
 
   #[napi(getter)]
-  pub fn get_facade_module_id(&self) -> Option<String> {
-    self.inner.facade_module_id.as_ref().map(|x| x.to_string())
+  pub fn get_facade_module_id(&self) -> Option<&str> {
+    self.inner.facade_module_id.as_deref()
   }
 
   #[napi(getter)]
-  pub fn get_module_ids(&self) -> Vec<String> {
-    self.inner.module_ids.iter().map(|x| x.to_string()).collect()
+  pub fn get_module_ids(&self) -> Vec<&str> {
+    self.inner.module_ids.iter().map(AsRef::as_ref).collect()
   }
 
   #[napi(getter)]
-  pub fn get_exports(&self) -> Vec<String> {
-    self.inner.exports.iter().map(std::string::ToString::to_string).collect()
+  pub fn get_exports(&self) -> Vec<&str> {
+    self.inner.exports.iter().map(AsRef::as_ref).collect()
   }
 
   #[napi(getter)]
-  pub fn get_file_name(&self) -> String {
-    self.inner.filename.to_string()
+  pub fn get_file_name(&self) -> &str {
+    &self.inner.filename
   }
 
   #[napi(getter)]
@@ -57,17 +57,17 @@ impl BindingRenderedChunk {
   }
 
   #[napi(getter)]
-  pub fn get_imports(&self) -> Vec<String> {
-    self.inner.imports.iter().map(arcstr::ArcStr::to_string).collect()
+  pub fn get_imports(&self) -> Vec<&str> {
+    self.inner.imports.iter().map(AsRef::as_ref).collect()
   }
 
   #[napi(getter)]
-  pub fn get_dynamic_imports(&self) -> Vec<String> {
-    self.inner.dynamic_imports.iter().map(arcstr::ArcStr::to_string).collect()
+  pub fn get_dynamic_imports(&self) -> Vec<&str> {
+    self.inner.dynamic_imports.iter().map(AsRef::as_ref).collect()
   }
 }
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_from_js = false)]
 #[derive(Default, Debug, Clone)]
 pub struct BindingModules {
   pub values: Vec<BindingRenderedModule>,

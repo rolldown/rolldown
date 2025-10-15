@@ -151,6 +151,7 @@ impl RuntimeModuleTask {
         constant_export_map: FxHashMap::default(),
         depended_runtime_helper: Box::default(),
         import_attribute_map: FxHashMap::default(),
+        json_module_none_self_reference_included_symbol: None,
       },
       css_view: None,
       asset_view: None,

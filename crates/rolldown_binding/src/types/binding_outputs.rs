@@ -53,7 +53,7 @@ impl From<Vec<rolldown_common::Output>> for BindingOutputs {
   }
 }
 
-#[napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct JsChangedOutputs {
   pub deleted: HashSet<String, FxBuildHasher>,
   pub changes: HashMap<String, Either<JsOutputChunk, JsOutputAsset>, FxBuildHasher>,

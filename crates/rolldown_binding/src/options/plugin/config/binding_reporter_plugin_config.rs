@@ -1,6 +1,6 @@
 use rolldown_plugin_reporter::ReporterPlugin;
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 #[expect(clippy::struct_excessive_bools)]
 pub struct BindingReporterPluginConfig {

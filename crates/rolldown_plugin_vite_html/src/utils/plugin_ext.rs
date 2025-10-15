@@ -1,9 +1,14 @@
-use std::{borrow::Cow, path::Path};
+use std::{borrow::Cow, path::Path, sync::Arc};
 
 use html5gum::Span;
+use rolldown_common::OutputChunk;
 use rolldown_plugin::PluginContext;
-use rolldown_plugin_utils::constants::{HTMLProxyMap, HTMLProxyMapItem};
-use rolldown_utils::{url::clean_url, xxhash::xxhash_with_base};
+use rolldown_plugin_utils::{
+  AssetUrlItem, AssetUrlIter, AssetUrlResult, PublicAssetUrlCache, ToOutputFilePathEnv,
+  constants::{HTMLProxyMap, HTMLProxyMapItem, HTMLProxyResult, ViteMetadata},
+  uri::encode_uri_path,
+};
+use rolldown_utils::{pattern_filter::normalize_path, url::clean_url, xxhash::xxhash_with_base};
 use string_wizard::MagicString;
 use sugar_path::SugarPath as _;
 
@@ -105,5 +110,148 @@ impl ViteHtmlPlugin {
       asset_inline_limit: &self.asset_inline_limit,
     };
     env.file_to_built_url(&path.to_string_lossy(), true, force_inline).await
+  }
+
+  pub fn handle_inline_css<'a>(ctx: &PluginContext, html: &'a str) -> Option<MagicString<'a>> {
+    let mut s = None;
+    for (start, _) in "__VITE_INLINE_CSS__".match_indices(html) {
+      let prefix_end = start + 19; // "__VITE_INLINE_CSS__".len()
+      let bytes = html.as_bytes();
+
+      // Match pattern: __VITE_INLINE_CSS__([a-z\d]{8}_\d+)__
+      // Check 8 hex characters [a-z\d]{8}
+      let hex_count = bytes[prefix_end..]
+        .iter()
+        .take_while(|&&b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        .count();
+
+      if hex_count != 8 {
+        continue;
+      }
+
+      let after_hex = prefix_end + 8;
+
+      // Check single underscore '_'
+      if !html[after_hex..].starts_with('_') {
+        continue;
+      }
+
+      let after_underscore = after_hex + 1;
+
+      // Count digits '\d+'
+      let digit_count =
+        bytes[after_underscore..].iter().take_while(|&&b| b.is_ascii_digit()).count();
+
+      if digit_count == 0 {
+        continue;
+      }
+
+      let after_digits = after_underscore + digit_count;
+
+      // Check ending '__'
+      if !html[after_digits..].starts_with("__") {
+        continue;
+      }
+
+      // Match successful - extract full match and scoped name
+      let match_end = after_digits + 2; // Include ending '__'
+      let scoped_name = &html[prefix_end..after_digits]; // e.g., "abcd1234_0"
+
+      let s = s.get_or_insert_with(|| string_wizard::MagicString::new(html));
+
+      let cache = ctx.meta().get::<HTMLProxyResult>().expect("HTMLProxyResult missing");
+      let css_transformed_code = cache.inner.get(scoped_name).unwrap();
+      s.update(start, match_end, css_transformed_code.to_string());
+    }
+    s
+  }
+
+  pub async fn to_output_file_path(
+    &self,
+    filename: &str,
+    assets_base: &str,
+    is_public_asset: bool,
+    relative_url_path: &str,
+  ) -> anyhow::Result<String> {
+    let env = ToOutputFilePathEnv {
+      is_ssr: self.is_ssr,
+      host_id: relative_url_path,
+      url_base: &self.url_base,
+      decoded_base: &self.decoded_base,
+      render_built_url: self.render_built_url.as_deref(),
+    };
+
+    if super::is_excluded_url(filename) {
+      Ok(filename.to_owned())
+    } else {
+      env
+        .to_output_file_path(filename, "html", is_public_asset, |filename: &Path, _: &Path| {
+          AssetUrlResult::WithoutRuntime(rolldown_utils::concat_string!(
+            &assets_base,
+            filename.to_string_lossy()
+          ))
+        })
+        .await
+        .map(rolldown_plugin_utils::AssetUrlResult::to_asset_url_in_css_or_html)
+    }
+  }
+
+  pub async fn handle_html_asset_url(
+    &self,
+    ctx: &PluginContext,
+    html: &str,
+    chunk: Option<&Arc<OutputChunk>>,
+    assets_base: &str,
+    relative_url_path: &str,
+  ) -> anyhow::Result<Option<String>> {
+    let mut s = None;
+    let mut end = 0;
+    for item in AssetUrlIter::from(html).into_asset_url_iter() {
+      let s = s.get_or_insert_with(|| String::with_capacity(html.len()));
+      match item {
+        AssetUrlItem::Asset((range, reference_id, postfix)) => {
+          let filename = ctx.get_file_name(reference_id)?;
+
+          if let Some(chunk) = chunk {
+            ctx
+              .meta()
+              .get_or_insert_default::<ViteMetadata>()
+              .get_or_insert_default(chunk.preliminary_filename.as_str().into())
+              .imported_assets
+              .insert(clean_url(&filename).into());
+          }
+
+          let uri =
+            self.to_output_file_path(&filename, assets_base, false, relative_url_path).await?;
+
+          s.push_str(&html[end..range.start]);
+          s.push_str(&encode_uri_path(uri));
+          if let Some(postfix) = postfix {
+            s.push_str(postfix);
+          }
+          end = range.end;
+        }
+        AssetUrlItem::PublicAsset((range, hash)) => {
+          let cache = ctx
+            .meta()
+            .get::<PublicAssetUrlCache>()
+            .ok_or_else(|| anyhow::anyhow!("PublicAssetUrlCache missing"))?;
+
+          let filename = cache.0.get(hash).unwrap();
+          let uri =
+            self.to_output_file_path(&filename, assets_base, true, relative_url_path).await?;
+
+          s.push_str(&html[end..range.start]);
+          s.push_str(&encode_uri_path(normalize_path(&uri).into_owned()));
+          end = range.end;
+        }
+      }
+    }
+    if let Some(s) = &mut s
+      && end < html.len()
+    {
+      s.push_str(&html[end..]);
+    }
+    Ok(s)
   }
 }

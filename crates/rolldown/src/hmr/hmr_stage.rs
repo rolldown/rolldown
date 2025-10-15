@@ -298,8 +298,7 @@ impl<'a> HmrStage<'a> {
 
   // Kept for backwards compatibility - this method is no longer used but kept in case
   // it's needed for other use cases
-  #[expect(dead_code)]
-  #[expect(clippy::too_many_lines)]
+  #[expect(dead_code, clippy::too_many_lines)]
   async fn compute_hmr_update_single(
     &mut self,
     stale_modules: &FxIndexSet<ModuleIdx>,
@@ -560,7 +559,6 @@ impl<'a> HmrStage<'a> {
     }))
   }
 
-  #[expect(clippy::too_many_lines)]
   async fn render_hmr_patch_from_prerequisites(
     &self,
     hmr_prerequisites: HmrPrerequisites,

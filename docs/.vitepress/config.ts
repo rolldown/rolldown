@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { defineConfig } from 'vitepress';
+import { defineConfig, UserConfig } from 'vitepress';
 import {
   groupIconMdPlugin,
   groupIconVitePlugin,
@@ -7,13 +7,14 @@ import {
 } from 'vitepress-plugin-group-icons';
 import llmstxt from 'vitepress-plugin-llms';
 
-const sharedSidebar = [
+const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
   {
-    text: 'User Guide',
+    text: 'Guide',
+    link: '/guide/getting-started.md',
     items: [
-      { text: 'Introduction', link: '/guide/index.md' },
+      { text: 'Introduction', link: '/guide/introduction.md' },
       { text: 'Getting Started', link: '/guide/getting-started.md' },
-      { text: 'Notable Features', link: '/guide/features.md' },
+      { text: 'Notable Features', link: '/guide/notable-features.md' },
       {
         text: 'Troubleshooting',
         link: '/guide/troubleshooting.md',
@@ -21,32 +22,112 @@ const sharedSidebar = [
     ],
   },
   {
-    text: 'Reference',
+    text: 'APIs',
     items: [
       {
         text: 'Config Options',
-        link: '/reference/config-options.md',
+        link: '/apis/config-options.md',
       },
-      { text: 'Bundler API', link: '/reference/bundler-api.md' },
-      { text: 'Plugin API', link: '/reference/plugin-api.md' },
-      { text: 'Command Line Interface', link: '/reference/cli.md' },
+      { text: 'Bundler API', link: '/apis/bundler-api.md' },
+      { text: 'Plugin API', link: '/apis/plugin-api.md' },
+      { text: 'Plugin Hook Filters', link: '/apis/plugin-hook-filters.md' },
+      { text: 'Command Line Interface', link: '/apis/cli.md' },
     ],
   },
   {
     text: 'In Depth',
     items: [
-      { text: 'Why Bundlers', link: '/guide/in-depth/why-bundlers.md' },
-      { text: 'Module Types', link: '/guide/in-depth/module-types.md' },
-      { text: 'Top Level Await', link: '/guide/in-depth/tla-in-rolldown.md' },
-      { text: 'Advanced Chunks', link: '/guide/in-depth/advanced-chunks.md' },
-      { text: 'Bundling CJS', link: '/guide/in-depth/bundling-cjs.md' },
+      { text: 'Why Bundlers', link: '/in-depth/why-bundlers.md' },
+      { text: 'Module Types', link: '/in-depth/module-types.md' },
+      { text: 'Top Level Await', link: '/in-depth/tla-in-rolldown.md' },
+      { text: 'Advanced Chunks', link: '/in-depth/advanced-chunks.md' },
+      { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
       {
         text: 'Why Plugin Hook Filter',
-        link: '/guide/in-depth/why-plugin-hook-filter.md',
+        link: '/in-depth/why-plugin-hook-filter.md',
       },
-      // { text: 'Code Splitting', link: '/guide/in-depth/code-splitting.md' },
-      { text: 'Directives', link: '/guide/in-depth/directives.md' },
+      // { text: 'Code Splitting', link: '/in-depth/code-splitting.md' },
+      { text: 'Directives', link: '/in-depth/directives.md' },
     ],
+  },
+];
+
+const sidebarForDevGuide: UserConfig['themeConfig']['sidebar'] = [
+  {
+    text: 'Contribution Guide',
+    items: [
+      {
+        text: 'Overview',
+        link: '/contribution-guide/',
+      },
+      {
+        text: 'Etiquette',
+        link:
+          'https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette',
+      },
+    ],
+  },
+  {
+    text: 'Development Guide',
+    items: [
+      {
+        text: 'Setup the project',
+        link: '/development-guide/setup-the-project.md',
+      },
+      {
+        text: 'Building and running',
+        link: '/development-guide/building-and-running.md',
+      },
+      { text: 'Testing', link: '/development-guide/testing.md' },
+      {
+        text: 'Benchmarking',
+        link: '/development-guide/benchmarking.md',
+      },
+      {
+        text: 'Tracing/Logging',
+        link: '/development-guide/tracing-logging.md',
+      },
+      {
+        text: 'Profiling',
+        link: '/development-guide/profiling.md',
+      },
+      { text: 'Docs', link: '/development-guide/docs.md' },
+      {
+        text: 'Coding Style',
+        link: '/development-guide/coding-style.md',
+      },
+    ],
+  },
+];
+
+const sidebarForPluginGuide: UserConfig['themeConfig']['sidebar'] = [
+  {
+    text: 'Builtin Plugins',
+    items: [
+      {
+        text: 'Introduction',
+        link: '/builtin-plugins/',
+      },
+      {
+        text: 'builtin:esm-external-require',
+        link: '/builtin-plugins/esm-external-require.md',
+      },
+      {
+        text: 'builtin:replace',
+        link: '/builtin-plugins/replace.md',
+      },
+    ],
+  },
+];
+
+const sidebarForResources: UserConfig['themeConfig']['sidebar'] = [
+  {
+    text: 'Team',
+    link: '/team.md',
+  },
+  {
+    text: 'Acknowledgements',
+    link: '/acknowledgements.md',
   },
 ];
 
@@ -93,11 +174,10 @@ export default defineConfig({
 
     // https://vitepress.dev/reference/default-theme-config
     nav: [
-      { text: 'User Guide', link: '/guide/' },
-      { text: 'Reference', link: '/reference/config-options.md' },
-      { text: 'Plugins', link: '/plugins/' },
-      { text: 'Contribute', link: '/contrib-guide/' },
-      { text: 'REPL', link: 'https://repl.rolldown.rs/' },
+      { text: 'Guide', link: '/guide/getting-started.md' },
+      { text: 'Config', link: '/apis/config-options.md' },
+      { text: 'Plugins', link: '/builtin-plugins/' },
+      { text: 'Contribute', link: '/contribution-guide/' },
       {
         text: 'Resources',
         items: [
@@ -127,79 +207,22 @@ export default defineConfig({
           },
         ],
       },
+      { text: 'REPL', link: 'https://repl.rolldown.rs/' },
     ],
 
     sidebar: {
-      '/guide/': sharedSidebar,
-      '/reference/': sharedSidebar,
-      '/plugins/': [
-        {
-          text: 'Plugins Guide',
-          items: [
-            {
-              text: 'Introduction',
-              link: '/plugins/index.md',
-            },
-            {
-              text: 'Hook Filters',
-              link: '/plugins/hook-filters.md',
-            },
-          ],
-        },
-        {
-          text: 'Builtin Plugins',
-          items: [
-            {
-              text: 'builtin:esm-external-require',
-              link: '/plugins/esm-external-require.md',
-            },
-          ],
-        },
-      ],
-      '/contrib-guide/': [
-        {
-          text: 'Contribution Guide',
-          items: [
-            {
-              text: 'Overview',
-              link: '/contrib-guide/',
-            },
-            {
-              text: 'Etiquette',
-              link:
-                'https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette',
-            },
-          ],
-        },
-        {
-          text: 'Development',
-          items: [
-            {
-              text: 'Setup the project',
-              link: '/contrib-guide/setup-the-project.md',
-            },
-            {
-              text: 'Building and running',
-              link: '/contrib-guide/building-and-running.md',
-            },
-            { text: 'Testing', link: '/contrib-guide/testing.md' },
-            { text: 'Benchmarking', link: '/contrib-guide/benchmarking.md' },
-            {
-              text: 'Tracing/Logging',
-              link: '/contrib-guide/tracing-logging.md',
-            },
-            {
-              text: 'Profiling',
-              link: '/contrib-guide/profiling.md',
-            },
-            { text: 'Docs', link: '/contrib-guide/docs.md' },
-          ],
-        },
-        {
-          text: 'Coding Style',
-          link: '/contrib-guide/coding-style.md',
-        },
-      ],
+      // --- Guide ---
+      '/guide/': sidebarForUserGuide,
+      '/apis/': sidebarForUserGuide,
+      '/in-depth/': sidebarForUserGuide,
+      // --- Plugin ---
+      '/builtin-plugins/': sidebarForPluginGuide,
+      // --- Contribute ---
+      '/contribution-guide/': sidebarForDevGuide,
+      '/development-guide/': sidebarForDevGuide,
+      // --- Resources ---
+      '/team': sidebarForResources,
+      '/acknowledgements': sidebarForResources,
     },
     outline: 'deep',
     socialLinks: [
@@ -236,7 +259,12 @@ export default defineConfig({
         },
       }) as any,
       llmstxt({
-        ignoreFiles: ['contrib-guide/**/*', 'index.md', 'README.md', 'team.md'],
+        ignoreFiles: [
+          'development-guide/**/*',
+          'index.md',
+          'README.md',
+          'team.md',
+        ],
         description:
           'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
         details: '',

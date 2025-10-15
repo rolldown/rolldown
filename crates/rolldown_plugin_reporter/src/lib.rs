@@ -196,7 +196,6 @@ impl Plugin for ReporterPlugin {
     Ok(None)
   }
 
-  #[expect(clippy::too_many_lines)]
   async fn write_bundle(
     &self,
     ctx: &PluginContext,

@@ -85,5 +85,46 @@ export interface TransformOptions extends
    * ```
    */
   inject?: Record<string, string | [string, string]>;
+  /**
+   * Configuration for JSX syntax support.
+   *
+   *  ## Rollup `jsx` preset equivalents
+   *
+   * @example `jsx: 'react'` is equivalent to:
+   *
+   * ```js
+   * export default defineConfig({
+   *   transform: {
+   *     jsx: {
+   *       runtime: 'classic',
+   *     }
+   *   }
+   * })
+   * ```
+   *
+   * @example `jsx: 'react-jsx'` is equivalent to:
+   *
+   * ```js
+   * export default defineConfig({
+   *   transform: {
+   *     jsx: {
+   *       runtime: 'automatic',
+   *     }
+   *   }
+   * })
+   * ```
+   *
+   * @example `jsx: 'preserve'` is equivalent to:
+   *
+   * ```js
+   * export default defineConfig({
+   *   transform: {
+   *     jsx: 'preserve'
+   *   }
+   * })
+   * ```
+   *
+   * **Note:** `jsx: 'preserve-react'` doesn't have a equivalent option.
+   */
   jsx?: OxcTransformOptions['jsx'];
 }

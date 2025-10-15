@@ -5,12 +5,16 @@ import { getOutputChunk } from 'rolldown-tests/utils'
 export default defineTest({
   config: {
     input: 'main.jsx',
+    external: ['react'],
     transform: {
-      jsx: 'preserve'
-    }
+      jsx: {
+        runtime: 'classic',
+      }
+    },
   },
   afterTest: (output) => {
     const chunk = getOutputChunk(output)[0]
-    expect(chunk.code.replace(/\s+/g, '')).toBe(`//#regionmain.jsxconsole.log(<div>test</div>);//#endregion`)
+    // Verify it transforms JSX to React.createElement calls (classic runtime)
+    expect(chunk.code.includes('React.createElement')).toBe(true)
   },
 })

@@ -5,15 +5,15 @@ import { getOutputChunk } from 'rolldown-tests/utils'
 export default defineTest({
   config: {
     input: 'main.jsx',
-    external: ['react'],
     transform: {
-      jsx: {
-        runtime: 'classic'
-      }
-    },
+      jsx: 'preserve'
+    }
   },
   afterTest: (output) => {
     const chunk = getOutputChunk(output)[0]
-    expect(chunk.code.includes('React.createElement')).toBe(true)
+    // Verify JSX is preserved in the output (not transformed)
+    expect(chunk.code.includes('<div>test</div>')).toBe(true)
+    // Should not include React.createElement when preserving
+    expect(chunk.code.includes('React.createElement')).toBe(false)
   },
 })

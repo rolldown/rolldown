@@ -34,6 +34,15 @@ export interface GeneratedCodeOptions {
    * ```
    */
   preset?: GeneratedCodePreset;
+  /**
+   * Whether to add readable names to internal variables for profiling purposes.
+   *
+   * When enabled, generated code will use descriptive variable names that correspond
+   * to the original module names, making it easier to profile and debug the bundled code.
+   *
+   * @default true when minification is disabled, false when minification is enabled
+   */
+  profilerNames?: boolean;
 }
 
 export type ModuleFormat =

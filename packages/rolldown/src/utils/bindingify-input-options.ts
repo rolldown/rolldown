@@ -15,7 +15,8 @@ import type {
 import { BuiltinPlugin } from '../builtin-plugin/utils';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
-import { type LogLevelOption } from '../log/logging';
+import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
+import { logDeprecatedProfilerNames } from '../log/logs';
 import type {
   AttachDebugOptions,
   HmrOptions,
@@ -66,6 +67,16 @@ export function bindingifyInputOptions(
   // Normalize transform options to extract define, inject, and oxc transform options
   const normalizedTransform = normalizeTransformOptions(inputOptions, onLog);
 
+  // Normalize profilerNames - prefer output.generatedCode.profilerNames over top-level profilerNames
+  let profilerNames: boolean | undefined;
+  if (outputOptions.generatedCode?.profilerNames !== undefined) {
+    profilerNames = outputOptions.generatedCode.profilerNames;
+  } else if (inputOptions.profilerNames !== undefined) {
+    // Warn about deprecated top-level profilerNames
+    onLog(LOG_LEVEL_WARN, logDeprecatedProfilerNames());
+    profilerNames = inputOptions.profilerNames;
+  }
+
   return {
     input: bindingifyInput(inputOptions.input),
     plugins,
@@ -85,7 +96,7 @@ export function bindingifyInputOptions(
     define: normalizedTransform.define,
     inject: bindingifyInject(normalizedTransform.inject),
     experimental: bindingifyExperimental(inputOptions.experimental),
-    profilerNames: inputOptions?.profilerNames,
+    profilerNames,
     transform: normalizedTransform.oxcTransformOptions,
     watch: bindingifyWatch(inputOptions.watch),
     dropLabels: inputOptions.dropLabels,

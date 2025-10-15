@@ -699,6 +699,12 @@ const GeneratedCodeOptionsSchema = v.strictObject({
     v.description('Whether to use Symbol.toStringTag for namespace objects'),
   ),
   preset: GeneratedCodePresetSchema,
+  profilerNames: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to add readable names to internal variables for profiling purposes',
+    ),
+  ),
 });
 
 const OutputOptionsSchema = v.strictObject({

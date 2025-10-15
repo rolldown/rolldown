@@ -320,6 +320,16 @@ export interface InputOptions {
    * See `transform.inject` for detailed documentation and examples.
    */
   inject?: Record<string, string | [string, string]>;
+  /**
+   * Whether to add readable names to internal variables for profiling purposes.
+   *
+   * When enabled, generated code will use descriptive variable names that correspond
+   * to the original module names, making it easier to profile and debug the bundled code.
+   *
+   * @default true when minification is disabled, false when minification is enabled
+   *
+   * @deprecated Use `output.generatedCode.profilerNames` instead. This top-level option will be removed in a future release.
+   */
   profilerNames?: boolean;
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.

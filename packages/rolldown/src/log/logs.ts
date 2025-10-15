@@ -10,7 +10,8 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   PARSE_ERROR = 'PARSE_ERROR',
   NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER',
   DEPRECATED_DEFINE = 'DEPRECATED_DEFINE',
-  DEPRECATED_INJECT = 'DEPRECATED_INJECT';
+  DEPRECATED_INJECT = 'DEPRECATED_INJECT',
+  DEPRECATED_PROFILER_NAMES = 'DEPRECATED_PROFILER_NAMES';
 
 export function logParseError(message: string): RollupLog {
   return {
@@ -78,6 +79,14 @@ export function logDeprecatedInject(): RollupLog {
     code: DEPRECATED_INJECT,
     message:
       'The top-level "inject" option is deprecated. Use "transform.inject" instead.',
+  };
+}
+
+export function logDeprecatedProfilerNames(): RollupLog {
+  return {
+    code: DEPRECATED_PROFILER_NAMES,
+    message:
+      'The top-level "profilerNames" option is deprecated. Use "output.generatedCode.profilerNames" instead.',
   };
 }
 

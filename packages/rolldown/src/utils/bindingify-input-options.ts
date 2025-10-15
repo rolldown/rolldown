@@ -29,6 +29,7 @@ import { bindingifyPlugin } from '../plugin/bindingify-plugin';
 import { PluginContextData } from '../plugin/plugin-context-data';
 import { arraify } from './misc';
 import { normalizedStringOrRegex } from './normalize-string-or-regex';
+import { normalizeTransformOptions } from './normalize-transform-options';
 
 export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
@@ -64,10 +65,13 @@ export function bindingifyInputOptions(
     );
   });
 
+  // Normalize transform options to extract define, inject, and oxc transform options
+  const normalizedTransform = normalizeTransformOptions(inputOptions, onLog);
+
   const { jsx, transform } = bindingifyJsx(
     onLog,
     inputOptions.jsx,
-    inputOptions.transform,
+    normalizedTransform.oxcTransformOptions,
   );
 
   return {
@@ -86,10 +90,8 @@ export function bindingifyInputOptions(
     // So we use `undefined | NormalizedTreeshakingOptions` (or Option<NormalizedTreeshakingOptions> in Rust side), to represent `false | NormalizedTreeshakingOptions`
     treeshake: bindingifyTreeshakeOptions(inputOptions.treeshake),
     moduleTypes: inputOptions.moduleTypes,
-    define: inputOptions.define
-      ? Object.entries(inputOptions.define)
-      : undefined,
-    inject: bindingifyInject(inputOptions.inject),
+    define: normalizedTransform.define,
+    inject: bindingifyInject(normalizedTransform.inject),
     experimental: bindingifyExperimental(inputOptions.experimental),
     profilerNames: inputOptions?.profilerNames,
     jsx,

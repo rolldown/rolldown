@@ -1,8 +1,9 @@
-use arcstr::ArcStr;
-use itertools::Itertools;
+use std::borrow::Cow;
+
+use itertools::{Either, Itertools};
 use rolldown_common::{
   AddonRenderContext, ExportsKind, ExternalModule, ImportRecordIdx, ModuleIdx, ModuleTable,
-  Specifier,
+  NamedImport, Specifier,
 };
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::to_module_import_export_name};
@@ -203,76 +204,76 @@ fn render_chunk_content<'code>(
 }
 
 fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
-  let mut s = String::new();
-  ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
-    let importee_chunk = &ctx.chunk_graph.chunk_table[*exporter_id];
-    let mut default_alias = vec![];
-    let mut specifiers = items
-      .iter()
-      .filter_map(|item| {
-        let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(item.import_ref);
-        let imported = &ctx.chunk.canonical_names[&canonical_ref];
-        let alias = &ctx.render_export_items_index_vec[*exporter_id]
-          .get(&item.import_ref)
-          .expect("should have export item index")[0];
-        if alias == imported {
-          Some(alias.as_str().into())
-        } else {
-          if alias.as_str() == "default" {
-            default_alias.push(imported.as_str().into());
-            return None;
+  let import_declarations =
+    ctx.chunk.imports_from_other_chunks.iter().map(|(exporter_id, items)| {
+      let importee_chunk = &ctx.chunk_graph.chunk_table[*exporter_id];
+      let (mut specifiers, default_alias): (Vec<Cow<'_, str>>, Vec<&str>) =
+        items.iter().partition_map(|item| {
+          let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(item.import_ref);
+          let imported = &ctx.chunk.canonical_names[&canonical_ref];
+          let alias = &ctx.render_export_items_index_vec[*exporter_id]
+            .get(&item.import_ref)
+            .expect("should have export item index")[0];
+          if alias == imported {
+            Either::Left(Cow::Borrowed(alias.as_str()))
+          } else {
+            if alias.as_str() == "default" {
+              return Either::Right(imported.as_str());
+            }
+            Either::Left(Cow::Owned(concat_string!(alias, " as ", imported)))
           }
-          Some(concat_string!(alias, " as ", imported))
-        }
-      })
-      .collect::<Vec<_>>();
-    specifiers.sort_unstable();
+        });
+      specifiers.sort_unstable();
 
-    s.push_str(&create_import_declaration(
-      &ctx.link_output.module_table,
-      specifiers,
-      &default_alias,
-      &ctx.chunk.import_path_for(importee_chunk),
-      None,
-    ));
-  });
+      create_import_declaration(
+        &ctx.link_output.module_table,
+        specifiers,
+        default_alias.as_slice(),
+        &ctx.chunk.import_path_for(importee_chunk),
+        None,
+      )
+    });
   let mut rendered_external_import_namespace_modules = FxHashSet::default();
   // render external imports
-  ctx.chunk.direct_imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
-    let importee = &ctx.link_output.module_table[*importee_id]
-      .as_external()
-      .expect("Should be external module here");
-    let mut has_importee_imported = false;
-    let mut import_attribute = None;
-    // TODO: Warning same import record has different import attributes. https://tinyurl.com/2ddnbbc8
-    named_imports.iter().for_each(|(idx, named_import)| {
-      let module = ctx.link_output.module_table[*idx].as_normal().unwrap();
-      if module.import_attribute_map.contains_key(&named_import.record_id) {
-        if import_attribute.is_none() {
-          import_attribute = Some((module.idx, named_import.record_id));
-        }
-      }
-    });
-    s += &render_named_imports(
-      ctx,
-      importee,
-      named_imports.iter(),
-      &mut has_importee_imported,
-      &mut rendered_external_import_namespace_modules,
-      import_attribute,
-    );
-  });
+  let s = import_declarations
+    .chain(ctx.chunk.direct_imports_from_external_modules.iter().map(
+      |(importee_id, named_imports)| {
+        let importee = &ctx.link_output.module_table[*importee_id]
+          .as_external()
+          .expect("Should be external module here");
+        let mut has_importee_imported = false;
+        let mut import_attribute = None;
+        // TODO: Warning same import record has different import attributes. https://tinyurl.com/2ddnbbc8
+        named_imports.iter().for_each(|(idx, named_import)| {
+          let module = ctx.link_output.module_table[*idx].as_normal().unwrap();
+          if module.import_attribute_map.contains_key(&named_import.record_id) {
+            if import_attribute.is_none() {
+              import_attribute = Some((module.idx, named_import.record_id));
+            }
+          }
+        });
+        render_named_imports(
+          ctx,
+          importee,
+          named_imports.as_slice(),
+          &mut has_importee_imported,
+          &mut rendered_external_import_namespace_modules,
+          import_attribute,
+        )
+      },
+    ))
+    .collect::<String>();
   (!s.is_empty()).then_some(s)
 }
 
 fn create_import_declaration(
   module_table: &ModuleTable,
-  mut specifiers: Vec<String>,
-  default_alias: &[ArcStr],
+  mut specifiers: Vec<Cow<'_, str>>,
+  default_alias: &[&str],
   path: &str,
   with_clause: Option<(ModuleIdx, ImportRecordIdx)>,
 ) -> String {
-  let mut ret = String::new();
+  let mut ret = String::with_capacity(128);
   let with_clause_string = with_clause.and_then(|(module_idx, record_idx)| {
     let module = module_table[module_idx].as_normal()?;
     let import_attribute = module.import_attribute_map.get(&record_idx)?;
@@ -282,7 +283,7 @@ fn create_import_declaration(
     [] => None,
     [first] => Some(first),
     [first, rest @ ..] => {
-      specifiers.extend(rest.iter().map(|item| concat_string!("default as ", item)));
+      specifiers.extend(rest.iter().map(|item| Cow::Owned(concat_string!("default as ", item))));
       Some(first)
     }
   };
@@ -317,20 +318,18 @@ fn create_import_declaration(
   ret
 }
 
-fn render_named_imports<'a, I>(
+fn render_named_imports(
   ctx: &GenerateContext<'_>,
   importee: &ExternalModule,
-  named_imports: I,
+  named_imports: &[(ModuleIdx, NamedImport)],
   is_importee_rendered: &mut bool,
   rendered_external_import_namespace_modules: &mut FxHashSet<ModuleIdx>,
   with_clause: Option<(ModuleIdx, ImportRecordIdx)>,
-) -> String
-where
-  I: Iterator<Item = &'a (ModuleIdx, rolldown_common::NamedImport)>,
-{
+) -> String {
   let mut s = String::new();
   let mut default_alias = vec![];
   let specifiers = named_imports
+    .iter()
     .filter_map(|(_importer, named_import)| {
       let canonical_ref = &ctx.link_output.symbol_db.canonical_ref_for(named_import.imported_as);
       if !ctx.link_output.used_symbol_refs.contains(canonical_ref) {
@@ -353,14 +352,14 @@ where
         }
         Specifier::Literal(imported) => {
           if alias == imported {
-            Some(alias.as_str().into())
+            Some(Cow::Borrowed(alias.as_str()))
           } else {
             if imported.as_str() == "default" {
-              default_alias.push(alias.as_str().into());
+              default_alias.push(alias.as_str());
               return None;
             }
             let imported = to_module_import_export_name(imported);
-            Some(concat_string!(imported, " as ", alias))
+            Some(Cow::Owned(concat_string!(imported, " as ", alias)))
           }
         }
       }
@@ -379,7 +378,7 @@ where
     s.push_str(&create_import_declaration(
       &ctx.link_output.module_table,
       specifiers,
-      &default_alias,
+      default_alias.as_slice(),
       &importee.get_import_path(ctx.chunk, ctx.options.paths.as_ref()),
       with_clause,
     ));

@@ -1,8 +1,9 @@
 use std::{hash::Hash, mem};
 
 use arcstr::ArcStr;
+use futures::future::try_join_all;
 use itertools::Itertools;
-use oxc_index::{IndexVec, index_vec};
+use oxc_index::IndexVec;
 use rolldown_common::{
   Asset, HashCharacters, InsChunkIdx, InstantiationKind, NormalizedBundlerOptions, SourceMapType,
   StrOrBytes,
@@ -13,7 +14,7 @@ use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   concat_string,
   hash_placeholder::{
-    extract_hash_placeholders, hash_placeholder_left_finder, replace_placeholder_with_hash,
+    HASH_PLACEHOLDER_LEFT_FINDER, extract_hash_placeholders, replace_placeholder_with_hash,
   },
   indexmap::FxIndexSet,
   rayon::{
@@ -32,6 +33,7 @@ use crate::{
 };
 
 #[tracing::instrument(level = "debug", skip_all)]
+#[expect(clippy::too_many_lines)]
 pub async fn finalize_assets(
   chunk_graph: &ChunkGraph,
   link_output: &LinkStageOutput,
@@ -40,8 +42,6 @@ pub async fn finalize_assets(
   hash_characters: HashCharacters,
   options: &NormalizedBundlerOptions,
 ) -> BuildResult<AssetVec> {
-  let finder = hash_placeholder_left_finder();
-
   let ins_chunk_idx_by_placeholder = index_instantiated_chunks
     .iter_enumerated()
     .filter_map(|(ins_chunk_idx, ins_chunk)| {
@@ -55,14 +55,13 @@ pub async fn finalize_assets(
   let index_direct_dependencies: IndexVec<InsChunkIdx, Vec<InsChunkIdx>> =
     index_instantiated_chunks
       .par_iter()
-      .map(|asset| match &asset.content {
-        StrOrBytes::Str(content) => extract_hash_placeholders(content, &finder)
-          .iter()
-          .filter_map(|placeholder| ins_chunk_idx_by_placeholder.get(placeholder).copied())
-          .collect_vec(),
-        StrOrBytes::Bytes(_content) => {
-          vec![]
-        }
+      .map(|asset| {
+        asset.content.to_str().map_or(vec![], |content| {
+          extract_hash_placeholders(content, &HASH_PLACEHOLDER_LEFT_FINDER)
+            .iter()
+            .filter_map(|placeholder| ins_chunk_idx_by_placeholder.get(placeholder).copied())
+            .collect_vec()
+        })
       })
       .collect::<Vec<_>>()
       .into();
@@ -72,7 +71,6 @@ pub async fn finalize_assets(
   let index_transitive_dependencies: IndexVec<InsChunkIdx, FxIndexSet<InsChunkIdx>> =
     collect_transitive_dependencies(&index_direct_dependencies);
 
-  let hash_base = hash_characters.base();
   let index_standalone_content_hashes: IndexVec<InsChunkIdx, String> = index_instantiated_chunks
     .par_iter()
     .map(|chunk| {
@@ -87,13 +85,13 @@ pub async fn finalize_assets(
     .collect::<Vec<_>>()
     .into();
 
-  let index_ins_chunk_to_hashers: IndexVec<InsChunkIdx, Xxh3> =
-    index_vec![Xxh3::default(); index_instantiated_chunks.len()];
+  let hash_base = hash_characters.base();
 
-  let index_final_hashes: IndexVec<InsChunkIdx, (String, u128)> = index_ins_chunk_to_hashers
+  let index_final_hashes: IndexVec<InsChunkIdx, (String, u128)> = (0..index_instantiated_chunks
+    .len())
     .into_par_iter()
-    .enumerate()
-    .map(|(asset_idx, mut hasher)| {
+    .map(|asset_idx| {
+      let mut hasher = Xxh3::default();
       let asset_idx = InsChunkIdx::from(asset_idx);
       // Start to calculate hash, first we hash itself
       index_standalone_content_hashes[asset_idx].hash(&mut hasher);
@@ -122,7 +120,9 @@ pub async fn finalize_assets(
     .flatten()
     .collect::<FxHashMap<_, _>>();
 
-  let mut assets: AssetVec = index_instantiated_chunks
+  let mut assets = Vec::with_capacity(index_instantiated_chunks.len() * 2);
+
+  let instantiated_assets = index_instantiated_chunks
     .into_par_iter()
     .enumerate()
     .map(|(asset_idx, mut instantiated_chunk)| {
@@ -131,7 +131,7 @@ pub async fn finalize_assets(
       let filename: ArcStr = replace_placeholder_with_hash(
         instantiated_chunk.preliminary_filename.as_str(),
         &final_hashes_by_placeholder,
-        &finder,
+        &HASH_PLACEHOLDER_LEFT_FINDER,
       )
       .into();
 
@@ -149,21 +149,31 @@ pub async fn finalize_assets(
       match &mut instantiated_chunk.content {
         StrOrBytes::Str(content) => {
           *content = replace_placeholder_with_hash(
-            &mem::take(content),
+            content,
             &final_hashes_by_placeholder,
-            &finder,
+            &HASH_PLACEHOLDER_LEFT_FINDER,
           )
           .into_owned();
         }
-        StrOrBytes::Bytes(_content) => {}
+        StrOrBytes::ArcStr(content) => {
+          *content = replace_placeholder_with_hash(
+            content.as_str(),
+            &final_hashes_by_placeholder,
+            &HASH_PLACEHOLDER_LEFT_FINDER,
+          )
+          .into();
+        }
+        StrOrBytes::Bytes(..) => {}
       }
 
       instantiated_chunk.finalize(filename)
     })
     .collect::<Vec<_>>();
 
+  assets.extend(instantiated_assets);
+
   let index_ins_chunk_to_filename: IndexVec<InsChunkIdx, ArcStr> =
-    assets.iter().map(|ins_chunk| ins_chunk.filename.clone()).collect::<Vec<_>>().into();
+    assets.iter().map(|ins_chunk| ins_chunk.filename.clone()).collect();
 
   assets.par_iter_mut().for_each(|ins_chunk| {
     if let (InstantiationKind::Ecma(ecma_meta), Some(originate_from)) =
@@ -196,9 +206,8 @@ pub async fn finalize_assets(
 
   // apply sourcemap related logic
 
-  let mut derived_assets = Vec::with_capacity(assets.len());
-
-  for asset in &mut assets {
+  let derived_assets = try_join_all(assets.iter_mut().map(async |asset| {
+    let mut derived_asset: Result<Option<Asset>, anyhow::Error> = Ok(None::<Asset>);
     match &mut asset.meta {
       InstantiationKind::Ecma(ecma_meta) => {
         let asset_code = mem::take(&mut asset.content);
@@ -215,7 +224,7 @@ pub async fn finalize_assets(
           )
           .await?
           {
-            derived_assets.push(Asset {
+            derived_asset = Ok(Some(Asset {
               originate_from: None,
               content: sourcemap_asset.source,
               filename: sourcemap_asset.filename.clone(),
@@ -224,7 +233,7 @@ pub async fn finalize_assets(
                 names: sourcemap_asset.names,
                 original_file_names: sourcemap_asset.original_file_names,
               })),
-            });
+            }));
           }
         }
 
@@ -252,13 +261,13 @@ pub async fn finalize_assets(
           )
           .await?
           {
-            derived_assets.push(Asset {
+            derived_asset = Ok(Some(Asset {
               originate_from: None,
               content: sourcemap_asset.source,
-              filename: sourcemap_asset.filename.clone(),
+              filename: sourcemap_asset.filename,
               map: None,
               meta: InstantiationKind::None,
-            });
+            }));
           }
         }
 
@@ -266,7 +275,11 @@ pub async fn finalize_assets(
       }
       InstantiationKind::None | InstantiationKind::Sourcemap(_) => {}
     }
-  }
+    derived_asset
+  }))
+  .await?
+  .into_iter()
+  .flatten();
 
   assets.extend(derived_assets);
 

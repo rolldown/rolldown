@@ -18,7 +18,7 @@ pub enum HashCharacters {
 }
 
 impl HashCharacters {
-  pub fn base(&self) -> u8 {
+  pub const fn base(&self) -> u8 {
     match self {
       HashCharacters::Base64 => 64,
       HashCharacters::Base36 => 36,

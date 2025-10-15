@@ -39,7 +39,7 @@ impl Plugin for WasmHelperPlugin {
 
     if args.id.ends_with(".wasm?init") {
       let file_path = Path::new(&args.id[..args.id.len() - 5]);
-      let source = StrOrBytes::Bytes(fs::read(file_path)?);
+      let source = StrOrBytes::Bytes(fs::read(file_path)?, false);
 
       let referenced_id = ctx
         .emit_file_async(EmittedAsset {

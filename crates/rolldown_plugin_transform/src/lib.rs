@@ -54,7 +54,7 @@ impl Plugin for TransformPlugin {
     if ret.panicked || !ret.errors.is_empty() {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         ret.errors,
-        &ArcStr::from(args.code.as_str()),
+        &ArcStr::from(args.code),
         &stabilize_id(args.id, ctx.cwd()),
         &Severity::Error,
       )))?;
@@ -67,7 +67,7 @@ impl Plugin for TransformPlugin {
     if !transformer_return.errors.is_empty() {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         transformer_return.errors,
-        &ArcStr::from(args.code.as_str()),
+        &ArcStr::from(args.code),
         &stabilize_id(args.id, ctx.cwd()),
         &Severity::Error,
       )))?;

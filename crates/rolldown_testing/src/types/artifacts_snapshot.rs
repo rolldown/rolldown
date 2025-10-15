@@ -180,15 +180,15 @@ impl ArtifactsSnapshot {
               // Skip sourcemap for now
               continue;
             }
+
             match &output_asset.source {
               rolldown_common::StrOrBytes::Str(content) => {
-                let mut asset_child = SnapshotSection::with_title(asset.filename().to_string());
-                asset_child.add_content(&format!("```{file_ext}\n"));
-                asset_child.add_content(content);
-                asset_child.add_content("\n```");
-                assets_section.add_child(asset_child);
+                assets_section.add_child(Self::add_asset_child(asset, file_ext, content));
               }
-              rolldown_common::StrOrBytes::Bytes(bytes) => {
+              rolldown_common::StrOrBytes::ArcStr(content) => {
+                assets_section.add_child(Self::add_asset_child(asset, file_ext, content.as_str()));
+              }
+              rolldown_common::StrOrBytes::Bytes(bytes, _) => {
                 let mut asset_child = SnapshotSection::with_title(asset.filename().to_string());
                 if test_meta.snapshot_bytes {
                   asset_child.add_content(&format!("```{file_ext}\n"));
@@ -247,6 +247,14 @@ impl ArtifactsSnapshot {
       sections.push(sourcemap_section);
     }
     sections
+  }
+
+  fn add_asset_child(asset: &Output, file_ext: &str, content: &str) -> SnapshotSection {
+    let mut asset_child = SnapshotSection::with_title(asset.filename());
+    asset_child.add_content(&format!("```{file_ext}\n"));
+    asset_child.add_content(content);
+    asset_child.add_content("\n```");
+    asset_child
   }
 
   fn create_hmr_error_section(

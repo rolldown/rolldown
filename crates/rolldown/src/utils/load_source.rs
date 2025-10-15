@@ -28,11 +28,11 @@ pub async fn load_source<Fs: FileSystem + 'static>(
           *side_effects = Some(v);
         }
 
-        (Some(load_hook_output.code.to_string()), load_hook_output.module_type)
+        (Some(load_hook_output.code), load_hook_output.module_type)
       }
       _ => {
         if resolved_id.ignored {
-          (Some(String::new()), Some(ModuleType::Empty))
+          (Some(String::new().into()), Some(ModuleType::Empty))
         } else {
           (None, None)
         }
@@ -54,7 +54,7 @@ pub async fn load_source<Fs: FileSystem + 'static>(
   }
 
   match (maybe_source, maybe_module_type) {
-    (Some(source), Some(module_type)) => Ok((source.into(), module_type)),
+    (Some(source), Some(module_type)) => Ok((StrOrBytes::ArcStr(source), module_type)),
     (source, None) => {
       let guessed = get_module_loader_from_file_extension(&resolved_id.id, &options.module_types);
       match (source, guessed) {
@@ -82,21 +82,20 @@ pub async fn load_source<Fs: FileSystem + 'static>(
         (source, Some(guessed)) => match &guessed {
           ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl | ModuleType::Asset => {
             Ok((
-              StrOrBytes::Bytes({
-                match source {
-                  Some(s) => s.into_bytes(),
-                  None => {
-                    if cfg!(target_family = "wasm") {
-                      fs.read(resolved_id.id.as_path())?
-                    } else {
-                      let id = resolved_id.id.clone();
-                      tokio::runtime::Handle::current()
-                        .spawn_blocking(move || fs.read(id.as_path()))
-                        .await??
-                    }
-                  }
-                }
-              }),
+              match source {
+                Some(s) => StrOrBytes::Bytes(s.as_bytes().to_vec(), true),
+                None => StrOrBytes::Bytes(
+                  if cfg!(target_family = "wasm") {
+                    fs.read(resolved_id.id.as_path())?
+                  } else {
+                    let id = resolved_id.id.clone();
+                    tokio::runtime::Handle::current()
+                      .spawn_blocking(move || fs.read(id.as_path()))
+                      .await??
+                  },
+                  false,
+                ),
+              },
               guessed,
             ))
           }
@@ -109,27 +108,29 @@ pub async fn load_source<Fs: FileSystem + 'static>(
           | ModuleType::Empty
           | ModuleType::Css
           | ModuleType::Custom(_) => Ok((
-            StrOrBytes::Str({
+            {
               if let Some(s) = source {
-                s
+                StrOrBytes::ArcStr(s)
               } else {
-                #[cfg(not(target_family = "wasm"))]
-                {
-                  let id = resolved_id.id.clone();
-                  tokio::runtime::Handle::current()
-                    .spawn_blocking(move || fs.read_to_string(id.as_path()))
-                    .await??
-                }
-                #[cfg(target_family = "wasm")]
-                {
-                  fs.read_to_string(resolved_id.id.as_path())?
-                }
+                StrOrBytes::Str({
+                  #[cfg(not(target_family = "wasm"))]
+                  {
+                    let id = resolved_id.id.clone();
+                    tokio::runtime::Handle::current()
+                      .spawn_blocking(move || fs.read_to_string(id.as_path()))
+                      .await??
+                  }
+                  #[cfg(target_family = "wasm")]
+                  {
+                    fs.read_to_string(resolved_id.id.as_path())?
+                  }
+                })
               }
-            }),
+            },
             guessed,
           )),
         },
-        (Some(source), None) => Ok((StrOrBytes::Str(source), ModuleType::Js)),
+        (Some(source), None) => Ok((StrOrBytes::ArcStr(source), ModuleType::Js)),
       }
     }
     (None, Some(ty)) => {
@@ -179,13 +180,16 @@ async fn read_file_by_module_type<Fs: FileSystem + 'static>(
       }
     })),
     ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl | ModuleType::Asset => {
-      Ok(StrOrBytes::Bytes({
-        if cfg!(target_family = "wasm") {
-          fs.read(&path)?
-        } else {
-          tokio::runtime::Handle::current().spawn_blocking(move || fs.read(&path)).await??
-        }
-      }))
+      Ok(StrOrBytes::Bytes(
+        {
+          if cfg!(target_family = "wasm") {
+            fs.read(&path)?
+          } else {
+            tokio::runtime::Handle::current().spawn_blocking(move || fs.read(&path)).await??
+          }
+        },
+        false,
+      ))
     }
   }
 }

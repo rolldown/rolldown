@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use futures::future::try_join_all;
 use oxc::ast::CommentKind;
 use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
 use rolldown_error::{BuildResult, ResultExt};
@@ -57,11 +58,21 @@ pub async fn process_code_and_sourcemap(
   }
 
   if let Some(sourcemap_path_transform) = &options.sourcemap_path_transform {
-    let mut sources = Vec::with_capacity(map.get_sources().count());
-    for source in map.get_sources() {
-      sources
-        .push(sourcemap_path_transform.call(source, map_path.to_string_lossy().as_ref()).await?);
-    }
+    let sources = try_join_all(map.get_sources().map(async |source| {
+      let source =
+        sourcemap_path_transform.call(source, map_path.to_string_lossy().as_ref()).await?;
+      #[cfg(windows)]
+      {
+        // Normalize the windows path.
+        Ok::<_, anyhow::Error>(source.replace(std::path::MAIN_SEPARATOR, "/"))
+      }
+      #[cfg(not(windows))]
+      {
+        Ok::<_, anyhow::Error>(source)
+      }
+    }))
+    .await?;
+
     map.set_sources(sources);
   }
 
@@ -80,9 +91,11 @@ pub async fn process_code_and_sourcemap(
     )?;
   }
 
-  // Normalize the windows path at final.
-  let sources = map.get_sources().map(|x| x.to_slash_lossy().to_string()).collect::<Vec<_>>();
-  map.set_sources(sources);
+  #[cfg(windows)]
+  {
+    let sources = map.get_sources().map(|x| x.to_slash_lossy().to_string()).collect::<Vec<_>>();
+    map.set_sources(sources);
+  }
 
   if let Some(sourcemap) = &options.sourcemap {
     match sourcemap {

@@ -62,6 +62,7 @@ rolldown_watcher = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true }
+simdutf8 = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }

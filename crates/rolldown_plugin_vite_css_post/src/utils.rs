@@ -709,7 +709,7 @@ impl ViteCssPostPlugin {
                 width = len.saturating_sub(15 + p1.len())
               )
             })
-            .into_owned();
+            .into();
         }
         *chunk = Arc::new(new_chunk);
       }

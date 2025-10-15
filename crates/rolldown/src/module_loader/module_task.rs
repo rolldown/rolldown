@@ -104,7 +104,7 @@ impl ModuleTask {
       }),
     );
 
-    let mut sourcemap_chain = vec![];
+    let mut sourcemap_chain = Vec::with_capacity(128);
     let mut hook_side_effects = self.resolved_id.side_effects.take();
     let (mut source, module_type) = self
       .load_source_without_cache(
@@ -134,7 +134,7 @@ impl ModuleTask {
       _ => (None, None),
     };
 
-    let mut warnings = vec![];
+    let mut warnings = Vec::with_capacity(32);
 
     let ret = create_ecma_view(
       &mut CreateModuleContext {
@@ -279,6 +279,21 @@ impl ModuleTask {
           &self.ctx.plugin_driver,
           &self.resolved_id,
           self.module_idx,
+          source.into(),
+          sourcemap_chain,
+          hook_side_effects,
+          &mut module_type,
+          magic_string_tx,
+        )
+        .await?;
+        StrOrBytes::ArcStr(source)
+      }
+      StrOrBytes::ArcStr(source) => {
+        // Run plugin transform.
+        let source = transform_source(
+          &self.ctx.plugin_driver,
+          &self.resolved_id,
+          self.module_idx,
           source,
           sourcemap_chain,
           hook_side_effects,
@@ -286,9 +301,9 @@ impl ModuleTask {
           magic_string_tx,
         )
         .await?;
-        source.into()
+        StrOrBytes::ArcStr(source)
       }
-      StrOrBytes::Bytes(_) => source,
+      StrOrBytes::Bytes(..) => source,
     };
     if let ModuleType::Custom(_) = module_type {
       // TODO: should provide some diagnostics for user how they should handle the module type.

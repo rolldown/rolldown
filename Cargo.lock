@@ -1347,15 +1347,6 @@ dependencies = [
 
 [[package]]
 name = "json-escape-simd"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a1f7d5786a4cb0f4e0f862b562a0e085b5bfa23a4f0dc05e7b823ed4e4d791f"
-dependencies = [
- "anyhow",
-]
-
-[[package]]
-name = "json-escape-simd"
 version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3c2a6c0b4b5637c41719973ef40c6a1cf564f9db6958350de6193fbee9c23f5"
@@ -2288,7 +2279,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0bd56ed0ec53da593c43d9ea65ced157fe319e454888eb65b239a275e3696499"
 dependencies = [
  "base64-simd",
- "json-escape-simd 3.0.1",
+ "json-escape-simd",
  "napi",
  "napi-build",
  "napi-derive",
@@ -2776,7 +2767,7 @@ dependencies = [
  "insta",
  "itertools",
  "itoa",
- "json-escape-simd 1.1.0",
+ "json-escape-simd",
  "memchr",
  "notify",
  "oxc",
@@ -2808,6 +2799,7 @@ dependencies = [
  "rustc-hash",
  "serde",
  "serde_json",
+ "simdutf8",
  "string_wizard",
  "sugar_path",
  "testing_macros",

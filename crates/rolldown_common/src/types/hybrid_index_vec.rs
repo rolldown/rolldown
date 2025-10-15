@@ -92,4 +92,18 @@ impl<I: Idx, T> HybridIndexVec<I, T> {
       HybridIndexVec::Map(hash_map) => itertools::Either::Right(hash_map.values()),
     }
   }
+
+  pub fn len(&self) -> usize {
+    match self {
+      HybridIndexVec::IndexVec(index_vec) => index_vec.len(),
+      HybridIndexVec::Map(hash_map) => hash_map.len(),
+    }
+  }
+
+  pub fn is_empty(&self) -> bool {
+    match self {
+      HybridIndexVec::IndexVec(index_vec) => index_vec.is_empty(),
+      HybridIndexVec::Map(hash_map) => hash_map.is_empty(),
+    }
+  }
 }

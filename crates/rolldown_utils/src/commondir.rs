@@ -17,7 +17,7 @@ pub fn extract_longest_common_path(path1: &str, path2: &str) -> String {
 
   let mut components1 = path1.components().peekable();
   let mut components2 = path2.components().peekable();
-  let mut common_path = String::new();
+  let mut common_path = String::with_capacity(128);
 
   while let (Some(&comp1), Some(&comp2)) = (components1.peek(), components2.peek()) {
     if comp1 == comp2 {
@@ -29,7 +29,7 @@ pub fn extract_longest_common_path(path1: &str, path2: &str) -> String {
         }
         Component::Normal(s) => {
           common_path.push_str(s.to_str().unwrap_or("")); //Handle the case where the component is not valid utf-8.
-          common_path.push_str(std::path::MAIN_SEPARATOR_STR);
+          common_path.push(std::path::MAIN_SEPARATOR);
         }
       }
 
@@ -40,7 +40,7 @@ pub fn extract_longest_common_path(path1: &str, path2: &str) -> String {
     }
   }
   //Remove the last separator if it exists and the path is not just the root.
-  if common_path.len() > 1 && common_path.ends_with(std::path::MAIN_SEPARATOR_STR) {
+  if common_path.len() > 1 && common_path.ends_with(std::path::MAIN_SEPARATOR) {
     common_path.pop();
   }
   common_path

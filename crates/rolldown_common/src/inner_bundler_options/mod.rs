@@ -3,7 +3,6 @@ use rustc_hash::FxHashMap;
 use std::{fmt::Debug, path::PathBuf};
 use types::advanced_chunks_options::AdvancedChunksOptions;
 use types::debug_options::DebugOptions;
-use types::empty_out_dir_mode::EmptyOutDirMode;
 use types::generated_code_options::GeneratedCodeOptions;
 use types::inject_import::InjectImport;
 use types::invalidate_js_side_cache::InvalidateJsSideCache;
@@ -227,7 +226,7 @@ pub struct BundlerOptions {
   pub optimization: Option<OptimizationOption>,
   pub top_level_var: Option<bool>,
   pub minify_internal_exports: Option<bool>,
-  pub empty_out_dir: Option<EmptyOutDirMode>,
+  pub empty_out_dir: Option<bool>,
   pub context: Option<String>,
   pub tsconfig: Option<String>,
 }

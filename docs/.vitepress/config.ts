@@ -7,6 +7,8 @@ import {
 } from 'vitepress-plugin-group-icons';
 import llmstxt from 'vitepress-plugin-llms';
 
+const CONFIG_LINK = '/options/input.md';
+
 const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
   {
     text: 'Guide',
@@ -24,10 +26,7 @@ const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
   {
     text: 'APIs',
     items: [
-      {
-        text: 'Config Options',
-        link: '/apis/config-options.md',
-      },
+      { text: 'Configuration Options', link: CONFIG_LINK },
       { text: 'Bundler API', link: '/apis/bundler-api.md' },
       { text: 'Plugin API', link: '/apis/plugin-api.md' },
       { text: 'Plugin Hook Filters', link: '/apis/plugin-hook-filters.md' },
@@ -48,6 +47,46 @@ const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
       },
       // { text: 'Code Splitting', link: '/in-depth/code-splitting.md' },
       { text: 'Directives', link: '/in-depth/directives.md' },
+    ],
+  },
+];
+
+const sidebarForOptions: UserConfig['themeConfig']['sidebar'] = [
+  {
+    text: 'Rolldown Options',
+    items: [
+      { text: 'input', link: '/options/input.md' },
+      { text: 'external', link: '/options/external.md' },
+      { text: 'resolve', link: '/options/resolve.md' },
+      { text: 'cwd', link: '/options/cwd.md' },
+      { text: 'platform', link: '/options/platform.md' },
+      { text: 'shimMissingExports', link: '/options/shim-missing-exports.md' },
+      { text: 'treeshake', link: '/options/treeshake.md' },
+      { text: 'logLevel', link: '/options/log-level.md' },
+      { text: 'onLog', link: '/options/on-log.md' },
+      { text: 'onwarn', link: '/options/onwarn.md' },
+      { text: 'moduleTypes', link: '/options/module-types.md' },
+      {
+        text: 'preserveEntrySignatures',
+        link: '/options/preserve-entry-signatures.md',
+      },
+      { text: 'optimization', link: '/options/optimization.md' },
+      { text: 'context', link: '/options/context.md' },
+      { text: 'tsconfig', link: '/options/tsconfig.md' },
+      { text: 'experimental', link: '/options/experimental.md' },
+      { text: 'output', link: '/options/output.md' },
+      {
+        text: 'output.sourcemap',
+        link: '/options/output-sourcemap.md',
+      },
+      {
+        text: 'output.generatedCode',
+        link: '/options/output-generated-code.md',
+      },
+      {
+        text: 'output.advancedChunks',
+        link: '/options/output-advanced-chunks.md',
+      },
     ],
   },
 ];
@@ -120,6 +159,19 @@ const sidebarForPluginGuide: UserConfig['themeConfig']['sidebar'] = [
   },
 ];
 
+const sidebarForGlossary: UserConfig['themeConfig']['sidebar'] = [
+  {
+    text: 'Glossary',
+    link: '/glossary/',
+    items: [
+      { text: 'Entry', link: '/glossary/entry.md' },
+      { text: 'Entry Chunk', link: '/glossary/entry-chunk.md' },
+      { text: 'Entry Name', link: '/glossary/entry-name.md' },
+      { text: 'User-defined Entry', link: '/glossary/user-defined-entry.md' },
+    ],
+  },
+];
+
 const sidebarForResources: UserConfig['themeConfig']['sidebar'] = [
   {
     text: 'Team',
@@ -175,7 +227,7 @@ export default defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: 'Guide', link: '/guide/getting-started.md' },
-      { text: 'Config', link: '/apis/config-options.md' },
+      { text: 'Config', link: CONFIG_LINK },
       { text: 'Plugins', link: '/builtin-plugins/' },
       { text: 'Contribute', link: '/contribution-guide/' },
       {
@@ -184,6 +236,10 @@ export default defineConfig({
           {
             text: 'Team',
             link: '/team.md',
+          },
+          {
+            text: 'Glossary',
+            link: '/glossary/',
           },
           {
             text: 'Roadmap',
@@ -215,8 +271,12 @@ export default defineConfig({
       '/guide/': sidebarForUserGuide,
       '/apis/': sidebarForUserGuide,
       '/in-depth/': sidebarForUserGuide,
+      // --- Options ---
+      '/options/': sidebarForOptions,
       // --- Plugin ---
       '/builtin-plugins/': sidebarForPluginGuide,
+      // --- Glossary ---
+      '/glossary/': sidebarForGlossary,
       // --- Contribute ---
       '/contribution-guide/': sidebarForDevGuide,
       '/development-guide/': sidebarForDevGuide,

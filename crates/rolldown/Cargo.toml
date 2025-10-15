@@ -28,7 +28,6 @@ commondir = { workspace = true }
 css-module-lexer = { workspace = true }
 derive_more = { workspace = true }
 dunce = { workspace = true }
-empty_inside_dir = { workspace = true }
 futures = { workspace = true }
 indexmap = { workspace = true }
 itertools = { workspace = true }

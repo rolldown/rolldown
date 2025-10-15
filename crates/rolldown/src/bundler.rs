@@ -10,16 +10,14 @@ use crate::{
   types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
 };
 use anyhow::Result;
-
 use arcstr::ArcStr;
-use empty_inside_dir::empty_dir;
 use rolldown_common::{
   ClientHmrInput, ClientHmrUpdate, EmptyOutDirMode, GetLocalDbMut, HmrUpdate, Module, ScanMode,
   SharedFileEmitter, SymbolRefDb,
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
-use rolldown_fs::{FileSystem, OsFileSystem};
+use rolldown_fs::{FileSystem, FileSystemUtils, OsFileSystem};
 use rolldown_plugin::{
   __inner::SharedPluginable, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver,
 };
@@ -240,12 +238,12 @@ impl Bundler {
       match self.options.empty_out_dir {
         EmptyOutDirMode::Disabled => {}
         EmptyOutDirMode::Force => {
-          empty_dir(&dist_dir).expect("cannot empty out dir (force mode)");
+          self.fs.clean_dir(&dist_dir).expect("cannot clean out dir (force mode)");
         }
         EmptyOutDirMode::Normal => {
           // todo: how to resolve real root?
           if dist_dir.starts_with(&self.options.cwd) {
-            empty_dir(&dist_dir).expect("cannot empty out dir");
+            self.fs.clean_dir(&dist_dir).expect("cannot clean out dir");
           }
         }
       }

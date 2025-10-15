@@ -513,7 +513,7 @@
             "null"
           ]
         },
-        "emptyOutDir": {
+        "cleanOutDir": {
           "type": [
             "boolean",
             "null"

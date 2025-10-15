@@ -444,9 +444,9 @@ export interface OutputOptions {
    * - Type: `boolean`
    * - Default: `false`
    *
-   * Clear output directory before writing.
+   * Clean output directory before writing.
    */
-  emptyOutDir?: boolean;
+  cleanOutDir?: boolean;
 }
 
 interface OverwriteOutputOptionsForCli {

@@ -1,4 +1,3 @@
-import type { TransformOptions } from '../binding';
 import type {
   LogLevel,
   LogLevelOption,
@@ -10,19 +9,9 @@ import type { RolldownPluginOption } from '../plugin';
 import type { TreeshakingOptions } from '../types/module-side-effects';
 import type { NullValue, StringOrRegExp } from '../types/utils';
 import type { ChecksOptions } from './generated/checks-options';
+import type { TransformOptions } from './transform-options';
 
 export type InputOption = string | string[] | Record<string, string>;
-
-// Omit those key that are part of rolldown option
-type OxcTransformOption = Omit<
-  TransformOptions,
-  | 'sourceType'
-  | 'lang'
-  | 'cwd'
-  | 'sourcemap'
-  | 'define'
-  | 'inject'
->;
 
 export type ExternalOption =
   | StringOrRegExp
@@ -326,74 +315,17 @@ export interface InputOptions {
   /**
    * Replace global variables or [property accessors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Property_accessors) with the provided values.
    *
-   * # Examples
+   * @deprecated Use `transform.define` instead. This top-level option will be removed in a future release.
    *
-   * - Replace the global variable `IS_PROD` with `true`
-   *
-   * ```js rolldown.config.js
-   * export default defineConfig({ define: { IS_PROD: 'true' // or JSON.stringify(true) } })
-   * ```
-   *
-   * Result:
-   *
-   * ```js
-   * // Input
-   * if (IS_PROD) {
-   *   console.log('Production mode')
-   * }
-   *
-   * // After bundling
-   * if (true) {
-   *   console.log('Production mode')
-   * }
-   * ```
-   *
-   * - Replace the property accessor `process.env.NODE_ENV` with `'production'`
-   *
-   * ```js rolldown.config.js
-   * export default defineConfig({ define: { 'process.env.NODE_ENV': "'production'" } })
-   * ```
-   *
-   * Result:
-   *
-   * ```js
-   * // Input
-   * if (process.env.NODE_ENV === 'production') {
-   *  console.log('Production mode')
-   * }
-   *
-   * // After bundling
-   * if ('production' === 'production') {
-   * console.log('Production mode')
-   * }
-   *
-   * ```
+   * See `transform.define` for detailed documentation and examples.
    */
   define?: Record<string, string>;
   /**
    * Inject import statements on demand.
    *
-   * The API is aligned with `@rollup/plugin-inject`.
+   * @deprecated Use `transform.inject` instead. This top-level option will be removed in a future release.
    *
-   * ## Supported patterns
-   * ```js
-   * {
-   *   // import { Promise } from 'es6-promise'
-   *   Promise: ['es6-promise', 'Promise'],
-   *
-   *   // import { Promise as P } from 'es6-promise'
-   *   P: ['es6-promise', 'Promise'],
-   *
-   *   // import $ from 'jquery'
-   *   $: 'jquery',
-   *
-   *   // import * as fs from 'node:fs'
-   *   fs: ['node:fs', '*'],
-   *
-   *   // Inject shims for property access pattern
-   *   'Object.assign': path.resolve( 'src/helpers/object-assign.js' ),
-   * }
-   * ```
+   * See `transform.inject` for detailed documentation and examples.
    */
   inject?: Record<string, string | [string, string]>;
   profilerNames?: boolean;
@@ -428,7 +360,7 @@ export interface InputOptions {
    *
    * For latest decorators proposal, rolldown is able to bundle them but doesn't support transpiling them yet.
    */
-  transform?: OxcTransformOption;
+  transform?: TransformOptions;
   watch?: WatcherOptions | false;
   dropLabels?: string[];
   keepNames?: boolean;

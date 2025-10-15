@@ -81,6 +81,7 @@ For example, the following common Rollup plugins may be replaced with Rolldown's
 - `@rollup/plugin-alias`: [`resolve.alias`](/apis/config-options#resolve-alias) option
 - `@rollup/plugin-commonjs`: supported out of the box
 - `@rollup/plugin-inject`: [`inject`](/apis/config-options#inject) option
+- `@rollup/plugin-replace`: [`replacePlugin`](/builtin-plugins/replace)
 - `@rollup/plugin-node-resolve`: supported out of the box
 - `@rollup/plugin-json`: supported out of the box
 - `@rollup/plugin-swc`, `@rollup/plugin-babel`, `@rollup/plugin-sucrase`: supported out of the box via Oxc (complex configurations might still require the plugin)
@@ -89,7 +90,6 @@ For example, the following common Rollup plugins may be replaced with Rolldown's
 <!--
 experimental plugins (do we want to document these?)
 
-- `@rollup/plugin-replace`: `import { replacePlugin } from 'rolldown/experimental'`
 - `@rollup/plugin-dynamic-import-vars`: `import { dynamicImportVarsPlugin } from 'rolldown/experimental'`
 
 -->

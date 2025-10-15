@@ -69,7 +69,11 @@ Rolldown handles mixed ESM / CJS module graphs out of the box, without the need 
 
 This feature provides a way to replace global identifiers with constant expressions. Aligns with the respective options in [Vite](https://vite.dev/config/shared-options.html#define) and [esbuild](https://esbuild.github.io/api/#define).
 
-Note it behaves differently from [`@rollup/plugin-replace`](https://github.com/rollup/plugins/tree/master/packages/replace) as the replacement is AST-based, so the value to be replaced must be a valid identifier or member expression.
+::: tip `@rollup/plugin-replace` behaves differently
+
+Note it behaves differently from [`@rollup/plugin-replace`](https://github.com/rollup/plugins/tree/master/packages/replace) as the replacement is AST-based, so the value to be replaced must be a valid identifier or member expression. Use the built-in [`replacePlugin`](/builtin-plugins/replace) for that purpose.
+
+:::
 
 ## Inject
 

@@ -112,6 +112,10 @@ const sidebarForPluginGuide: UserConfig['themeConfig']['sidebar'] = [
         text: 'builtin:esm-external-require',
         link: '/builtin-plugins/esm-external-require.md',
       },
+      {
+        text: 'builtin:replace',
+        link: '/builtin-plugins/replace.md',
+      },
     ],
   },
 ];

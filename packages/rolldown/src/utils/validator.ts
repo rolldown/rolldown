@@ -871,6 +871,10 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Rewrite top-level declarations to use `var`.'),
   ),
+  keepNames: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Keep function and class names after bundling'),
+  ),
 });
 
 const getAddonDescription = (

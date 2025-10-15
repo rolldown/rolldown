@@ -11,7 +11,8 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER',
   DEPRECATED_DEFINE = 'DEPRECATED_DEFINE',
   DEPRECATED_INJECT = 'DEPRECATED_INJECT',
-  DEPRECATED_PROFILER_NAMES = 'DEPRECATED_PROFILER_NAMES';
+  DEPRECATED_PROFILER_NAMES = 'DEPRECATED_PROFILER_NAMES',
+  DEPRECATED_KEEP_NAMES = 'DEPRECATED_KEEP_NAMES';
 
 export function logParseError(message: string): RollupLog {
   return {
@@ -87,6 +88,14 @@ export function logDeprecatedProfilerNames(): RollupLog {
     code: DEPRECATED_PROFILER_NAMES,
     message:
       'The top-level "profilerNames" option is deprecated. Use "output.generatedCode.profilerNames" instead.',
+  };
+}
+
+export function logDeprecatedKeepNames(): RollupLog {
+  return {
+    code: DEPRECATED_KEEP_NAMES,
+    message:
+      'The top-level "keepNames" option is deprecated. Use "output.keepNames" instead.',
   };
 }
 

@@ -16,7 +16,10 @@ import { BuiltinPlugin } from '../builtin-plugin/utils';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
-import { logDeprecatedProfilerNames } from '../log/logs';
+import {
+  logDeprecatedKeepNames,
+  logDeprecatedProfilerNames,
+} from '../log/logs';
 import type {
   AttachDebugOptions,
   HmrOptions,
@@ -77,6 +80,16 @@ export function bindingifyInputOptions(
     profilerNames = inputOptions.profilerNames;
   }
 
+  // Normalize keepNames - prefer output.keepNames over top-level keepNames
+  let keepNames: boolean | undefined;
+  if (outputOptions.keepNames !== undefined) {
+    keepNames = outputOptions.keepNames;
+  } else if (inputOptions.keepNames !== undefined) {
+    // Warn about deprecated top-level keepNames
+    onLog(LOG_LEVEL_WARN, logDeprecatedKeepNames());
+    keepNames = inputOptions.keepNames;
+  }
+
   return {
     input: bindingifyInput(inputOptions.input),
     plugins,
@@ -100,7 +113,7 @@ export function bindingifyInputOptions(
     transform: normalizedTransform.oxcTransformOptions,
     watch: bindingifyWatch(inputOptions.watch),
     dropLabels: inputOptions.dropLabels,
-    keepNames: inputOptions.keepNames,
+    keepNames,
     checks: inputOptions.checks,
     deferSyncScanData: () => {
       let ret: BindingDeferSyncScanData[] = [];

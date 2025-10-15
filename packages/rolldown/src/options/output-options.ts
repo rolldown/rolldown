@@ -449,6 +449,15 @@ export interface OutputOptions {
    * Whether to minify internal exports.
    */
   minifyInternalExports?: boolean;
+  /**
+   * Keep function and class names after bundling.
+   *
+   * When enabled, the bundler will preserve the original names of functions and classes
+   * in the output, which is useful for debugging and error stack traces.
+   *
+   * @default false
+   */
+  keepNames?: boolean;
 }
 
 interface OverwriteOutputOptionsForCli {

@@ -52,14 +52,14 @@ OPTIONS
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
   --generated-code.preset <generated-code.preset>.
+  --generated-code.profiler-names Whether to add readable names to internal variables for profiling purposes.
   --generated-code.symbols    Whether to use Symbol.toStringTag for namespace objects.
   --hash-characters <hash-characters>Use the specified character set for file hashes.
   --inject <inject>           Inject import statements on demand.
   --inline-dynamic-imports    Inline dynamic imports.
   --input <input>             Entry file.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
-  --jsx <jsx>                 Jsx options preset.
-  --keep-names                Keep function/class name.
+  --keep-names                Keep function and class names after bundling.
   --legal-comments <legal-comments>Control comments in the output.
   --log-level <log-level>     Log level (silent, info, debug, warn).
   --make-absolute-externals-relative Prevent normalization of external imports.
@@ -87,7 +87,10 @@ OPTIONS
   --transform.assumptions.set-public-class-fields .
   --transform.decorators.emit-decorator-metadata .
   --transform.decorators.legacy .
+  --transform.define <transform.define>.
+  --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
+  --transform.inject <transform.inject>.
   --transform.jsx <transform.jsx>.
   --transform.target <transform.target>The JavaScript target environment.
   --transform.typescript.allow-declare-fields .

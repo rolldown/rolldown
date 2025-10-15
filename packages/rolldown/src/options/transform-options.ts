@@ -9,6 +9,7 @@ export interface TransformOptions extends
     | 'sourcemap'
     | 'define'
     | 'inject'
+    | 'jsx'
   >
 {
   /**
@@ -84,4 +85,33 @@ export interface TransformOptions extends
    * ```
    */
   inject?: Record<string, string | [string, string]>;
+  /**
+   * Remove labeled statements with these label names.
+   *
+   * Labeled statements are JavaScript statements prefixed with a label identifier.
+   * This option allows you to strip specific labeled statements from the output,
+   * which is useful for removing debug-only code in production builds.
+   *
+   * ## Example
+   *
+   * ```js rolldown.config.js
+   * export default defineConfig({ transform: { dropLabels: ['DEBUG', 'DEV'] } })
+   * ```
+   *
+   * Result:
+   *
+   * ```js
+   * // Input
+   * DEBUG: console.log('Debug info');
+   * DEV: {
+   *   console.log('Development mode');
+   * }
+   * console.log('Production code');
+   *
+   * // After bundling
+   * console.log('Production code');
+   * ```
+   */
+  dropLabels?: string[];
+  jsx?: OxcTransformOptions['jsx'];
 }

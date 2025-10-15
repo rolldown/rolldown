@@ -182,3 +182,55 @@ pub fn get_css_files_for_chunk(
     &mut seen_css,
   )
 }
+
+/// Represents an image candidate in a srcset attribute
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImageCandidate {
+  pub url: String,
+  pub descriptor: String,
+}
+
+/// Parses a srcset attribute string into a vector of image candidates.
+///
+/// This implements the parsing logic for HTML srcset attributes and CSS image-set() values.
+///
+/// See:
+/// - https://html.spec.whatwg.org/multipage/images.html#srcset-attribute
+/// - https://drafts.csswg.org/css-images-4/#image-set-notation
+///
+/// Each candidate consists of:
+/// - `url`: The image URL (can be a CSS function, quoted string, or plain URL)
+/// - `descriptor`: Optional descriptor like "2x", "480w", "100w 2x", etc.
+///
+/// # Examples
+///
+/// ```
+/// # use rolldown_plugin_vite_html::utils::helpers::{parse_srcset, ImageCandidate};
+/// let candidates = parse_srcset("small.jpg 480w, large.jpg 1200w");
+/// assert_eq!(candidates.len(), 2);
+/// assert_eq!(candidates[0].url, "small.jpg");
+/// assert_eq!(candidates[0].descriptor, "480w");
+/// ```
+pub fn parse_srcset(srcset: &str) -> Vec<ImageCandidate> {
+  // Split by comma and parse each candidate
+  // split_whitespace() automatically handles all whitespace (spaces, tabs, newlines, etc.)
+  srcset
+    .trim()
+    .split(',')
+    .filter_map(|candidate| {
+      let parts = candidate.split_whitespace().collect::<Vec<_>>();
+      if parts.is_empty() {
+        return None;
+      }
+
+      let url = parts[0].to_string();
+      if url.is_empty() {
+        return None;
+      }
+
+      let descriptor = if parts.len() > 1 { parts[1..].join(" ") } else { String::new() };
+
+      Some(ImageCandidate { url, descriptor })
+    })
+    .collect()
+}

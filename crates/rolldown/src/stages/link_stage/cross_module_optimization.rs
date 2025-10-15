@@ -16,6 +16,7 @@ use rolldown_common::{
   SymbolRefFlags,
 };
 use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
+use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -27,6 +28,11 @@ use crate::{
 };
 
 use super::LinkStage;
+
+type MutationResult = (
+  Option<(ModuleIdx, FxHashMap<StmtInfoIdx, SideEffectDetail>)>,
+  FxHashMap<SymbolRef, ConstExportMeta>,
+);
 
 #[derive(Default)]
 struct CrossModuleOptimizationCtx {
@@ -123,64 +129,78 @@ impl LinkStage<'_> {
     cross_module_inline_const_ctx: &mut CrossModuleOptimizationCtx,
     constant_symbol_map: &mut FxHashMap<SymbolRef, ConstExportMeta>,
   ) {
-    let mut side_effect_mutation_map: FxHashMap<ModuleIdx, Vec<(StmtInfoIdx, SideEffectDetail)>> =
-      FxHashMap::default();
-    for module in
-      self.sorted_modules.iter_mut().filter_map(|item| self.module_table[*item].as_normal())
-    {
-      let module_idx = module.idx;
-      let ast = self.ast_table[module_idx].as_ref().expect("ast should be set in a normal module");
-      // A dummy map to fits the api of `ConstEvalCtx`
-      let constant_map = FxHashMap::default();
-      ast.program.with_dependent(|owner, dep| {
-        let module_symbol_table = self.symbols.local_db(module_idx);
-        let eval_ctx = ConstEvalCtx {
-          ast: AstBuilder::new(&owner.allocator),
-          scope: module_symbol_table.scoping(),
-          overrode_get_constant_value_from_reference_id: Some(&|reference_id| {
-            let reference = module_symbol_table.scoping().get_reference(reference_id);
-            let symbol_id = reference.symbol_id()?;
-            let symbol_ref: SymbolRef = (module_idx, symbol_id).into();
-            let canonical_ref = self.symbols.canonical_ref_for(symbol_ref);
-            constant_symbol_map
-              .get(&canonical_ref)
-              .map(|meta| oxc_ecmascript::constant_evaluation::ConstantValue::from(&meta.value))
-          }),
-          constant_map: &constant_map,
-        };
-        let mut ctx = CrossModuleOptimizationRunnerContext {
-          local_constant_symbol_map: FxHashMap::default(),
-          side_effect_detail_mutations: FxHashMap::default(),
-          scope_stack: vec![],
-          traverse_state: TraverseState::empty(),
-          side_effect_free_call_expr_addr: FxHashSet::default(),
-          immutable_ctx: CrossModuleOptimizationImmutableCtx {
-            eval_ctx: &eval_ctx,
-            export_default_symbol: module.default_export_ref,
-            module_idx,
-            config: &cross_module_inline_const_ctx.config,
-            global_side_effect_free_function_symbols: &self.side_effects_free_function_symbol_ref,
-            symbols: &self.symbols,
-            flat_options: self.flat_options,
-            options: self.options,
-            ast_scope: &self.symbols.local_db(module_idx).ast_scopes,
-          },
-        };
-        ctx.visit_program(&dep.program);
-        ctx.side_effect_detail_mutations.into_iter().for_each(|(stmt_idx, detail)| {
-          side_effect_mutation_map.entry(module_idx).or_default().push((stmt_idx, detail));
-        });
-        if !ctx.local_constant_symbol_map.is_empty() {
-          cross_module_inline_const_ctx.changed = true;
-          constant_symbol_map.extend(ctx.local_constant_symbol_map);
+    let mutation_result: Vec<MutationResult> = self
+      .sorted_modules
+      .par_iter()
+      .filter_map(|item| {
+        let module = self.module_table[*item].as_normal()?;
+        let module_idx = module.idx;
+        let ast =
+          self.ast_table[module_idx].as_ref().expect("ast should be set in a normal module");
+        // A dummy map to fits the api of `ConstEvalCtx`
+        let constant_map = FxHashMap::default();
+        ast.program.with_dependent(|owner, dep| {
+          let module_symbol_table = self.symbols.local_db(module_idx);
+          let eval_ctx = ConstEvalCtx {
+            ast: AstBuilder::new(&owner.allocator),
+            scope: module_symbol_table.scoping(),
+            overrode_get_constant_value_from_reference_id: Some(&|reference_id| {
+              let reference = module_symbol_table.scoping().get_reference(reference_id);
+              let symbol_id = reference.symbol_id()?;
+              let symbol_ref: SymbolRef = (module_idx, symbol_id).into();
+              let canonical_ref = self.symbols.canonical_ref_for(symbol_ref);
+              constant_symbol_map
+                .get(&canonical_ref)
+                .map(|meta| oxc_ecmascript::constant_evaluation::ConstantValue::from(&meta.value))
+            }),
+            constant_map: &constant_map,
+          };
+          let mut ctx = CrossModuleOptimizationRunnerContext {
+            local_constant_symbol_map: FxHashMap::default(),
+            side_effect_detail_mutations: FxHashMap::default(),
+            scope_stack: vec![],
+            traverse_state: TraverseState::empty(),
+            side_effect_free_call_expr_addr: FxHashSet::default(),
+            immutable_ctx: CrossModuleOptimizationImmutableCtx {
+              eval_ctx: &eval_ctx,
+              export_default_symbol: module.default_export_ref,
+              module_idx,
+              config: &cross_module_inline_const_ctx.config,
+              global_side_effect_free_function_symbols: &self.side_effects_free_function_symbol_ref,
+              symbols: &self.symbols,
+              flat_options: self.flat_options,
+              options: self.options,
+              ast_scope: &self.symbols.local_db(module_idx).ast_scopes,
+            },
+          };
+          ctx.visit_program(&dep.program);
+
+          let side_effect_mutations = if ctx.side_effect_detail_mutations.is_empty() {
+            None
+          } else {
+            Some((module_idx, ctx.side_effect_detail_mutations))
+          };
+          if side_effect_mutations.is_none() && ctx.local_constant_symbol_map.is_empty() {
+            return None;
+          }
+          Some((side_effect_mutations, ctx.local_constant_symbol_map))
+        })
+      })
+      .collect();
+
+    // Process results sequentially
+    for (side_effect_mutations, local_constants) in mutation_result {
+      if let Some((module_idx, mutations)) = side_effect_mutations {
+        if let Some(module) = self.module_table[module_idx].as_normal_mut() {
+          for (stmt_info_idx, side_effect_detail) in mutations {
+            module.stmt_infos[stmt_info_idx].side_effect = side_effect_detail;
+          }
         }
-      });
-    }
-    for (module_idx, mutations) in side_effect_mutation_map {
-      if let Some(module) = self.module_table[module_idx].as_normal_mut() {
-        for (stmt_info_idx, side_effect_detail) in mutations {
-          module.stmt_infos[stmt_info_idx].side_effect = side_effect_detail;
-        }
+      }
+
+      if !local_constants.is_empty() {
+        cross_module_inline_const_ctx.changed = true;
+        constant_symbol_map.extend(local_constants);
       }
     }
   }

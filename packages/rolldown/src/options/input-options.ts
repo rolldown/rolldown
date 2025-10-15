@@ -106,14 +106,6 @@ export type AttachDebugOptions = 'none' | 'simple' | 'full';
 
 type ChunkModulesOrder = 'exec-order' | 'module-id';
 
-interface RollupJsxOptions {
-  mode?: 'classic' | 'automatic' | 'preserve';
-  factory?: string;
-  fragment?: string;
-  importSource?: string;
-  jsxImportSource?: string;
-}
-
 export interface InputOptions {
   input?: InputOption;
   plugins?: RolldownPluginOption;
@@ -328,21 +320,17 @@ export interface InputOptions {
    * See `transform.inject` for detailed documentation and examples.
    */
   inject?: Record<string, string | [string, string]>;
-  profilerNames?: boolean;
   /**
-   * @deprecated Use `transform.jsx` instead.
+   * Whether to add readable names to internal variables for profiling purposes.
    *
-   * This top-level `jsx` option will be removed in a future release.
-   * It is only kept for backward compatibility and will be mapped internally to `transform.jsx`.
+   * When enabled, generated code will use descriptive variable names that correspond
+   * to the original module names, making it easier to profile and debug the bundled code.
    *
-   * - `false` disables the JSX parser, resulting in a syntax error if JSX syntax is used.
-   * - `"preserve"` disables the JSX transformer, preserving the original JSX syntax in the output.
-   * - `"react"` enables the `classic` JSX transformer.
-   * - `"react-jsx"` enables the `automatic` JSX transformer.
+   * @default true when minification is disabled, false when minification is enabled
    *
-   * @default runtime = "automatic"
+   * @deprecated Use `output.generatedCode.profilerNames` instead. This top-level option will be removed in a future release.
    */
-  jsx?: false | 'react' | 'react-jsx' | 'preserve' | RollupJsxOptions;
+  profilerNames?: boolean;
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.
    *
@@ -362,7 +350,21 @@ export interface InputOptions {
    */
   transform?: TransformOptions;
   watch?: WatcherOptions | false;
+  /**
+   * Remove labeled statements with these label names.
+   *
+   * @deprecated Use `transform.dropLabels` instead. This top-level option will be removed in a future release.
+   *
+   * See `transform.dropLabels` for detailed documentation and examples.
+   */
   dropLabels?: string[];
+  /**
+   * Keep function and class names after bundling.
+   *
+   * @deprecated Use `output.keepNames` instead. This top-level option will be removed in a future release.
+   *
+   * See `output.keepNames` for detailed documentation.
+   */
   keepNames?: boolean;
   checks?: ChecksOptions;
   makeAbsoluteExternalsRelative?: MakeAbsoluteExternalsRelative;

@@ -1841,7 +1841,6 @@ export interface BindingInputOptions {
   inject?: Array<BindingInjectImportNamed | BindingInjectImportNamespace>
   experimental?: BindingExperimentalOptions
   profilerNames?: boolean
-  jsx?: BindingJsx
   transform?: TransformOptions
   watch?: BindingWatchOption
   keepNames?: boolean
@@ -1882,13 +1881,6 @@ export interface BindingJsonSourcemap {
 
 export interface BindingJsWatchChangeEvent {
   event: string
-}
-
-export declare enum BindingJsx {
-  Disable = 0,
-  Preserve = 1,
-  React = 2,
-  ReactJsx = 3
 }
 
 export interface BindingLog {

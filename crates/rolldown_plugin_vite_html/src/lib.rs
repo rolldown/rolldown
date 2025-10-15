@@ -116,6 +116,7 @@ impl Plugin for ViteHtmlPlugin {
 
     // TODO: Support module_side_effects for module info
     // let mut set_modules = Vec::new();
+    let mut srcset_tasks = Vec::new();
     let mut overwrite_attrs = Vec::new();
     let mut s = string_wizard::MagicString::new(args.code);
 
@@ -263,8 +264,10 @@ impl Plugin for ViteHtmlPlugin {
                 s.remove(attr.span.start, attr.span.end);
               } else {
                 // Collect all attributes into a map for filtering
-                let attr_map =
-                  attrs_borrowed.iter().map(|a| (a.name.as_ref(), a)).collect::<FxHashMap<_, _>>();
+                let attr_map = attrs_borrowed
+                  .iter()
+                  .filter_map(|a| (!a.value.is_empty()).then_some((a.name.as_ref(), a)))
+                  .collect::<FxHashMap<_, _>>();
 
                 // Define which attributes to process based on element type
                 let (_src_attrs, srcset_attrs): (&[&str], &[&str]) = match &**name {
@@ -280,8 +283,8 @@ impl Plugin for ViteHtmlPlugin {
 
                 // Process srcset attributes (complex, multi-URL handling)
                 for srcset_attr in srcset_attrs {
-                  if let Some(_attr) = attr_map.get(srcset_attr) {
-                    todo!()
+                  if let Some(attr) = attr_map.get(srcset_attr) {
+                    srcset_tasks.push((attr.value.clone(), attr.span));
                   }
                 }
 
@@ -334,6 +337,13 @@ impl Plugin for ViteHtmlPlugin {
         for child in node.children.borrow().iter() {
           stack.push(Rc::clone(child));
         }
+      }
+    }
+
+    for (task, span) in srcset_tasks {
+      let processed_encoded_url = self.process_src_set(&ctx, &task, &id).await?;
+      if processed_encoded_url != task {
+        overwrite_attrs.push((processed_encoded_url, span));
       }
     }
 

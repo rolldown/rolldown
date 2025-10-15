@@ -12,7 +12,7 @@ use rolldown_utils::{pattern_filter::normalize_path, url::clean_url, xxhash::xxh
 use string_wizard::MagicString;
 use sugar_path::SugarPath as _;
 
-use crate::ViteHtmlPlugin;
+use crate::{ViteHtmlPlugin, utils::helpers::parse_srcset};
 
 impl ViteHtmlPlugin {
   pub fn get_base_in_html(&self, url_relative_path: &str) -> Cow<'_, str> {
@@ -110,6 +110,76 @@ impl ViteHtmlPlugin {
       asset_inline_limit: &self.asset_inline_limit,
     };
     env.file_to_built_url(&path.to_string_lossy(), true, force_inline).await
+  }
+
+  /// Processes a srcset string by applying a replacer function to each image URL.
+  ///
+  /// This is equivalent to Vite's `processSrcSet` function.
+  ///
+  /// # Arguments
+  /// * `src` - The srcset string to process
+  /// * `replacer` - An async function that transforms each image candidate's URL
+  ///
+  /// # Returns
+  /// A new srcset string with transformed URLs, maintaining the original descriptors.
+  pub async fn process_src_set(
+    &self,
+    ctx: &PluginContext,
+    src: &str,
+    importer: &str,
+  ) -> anyhow::Result<String> {
+    let candidates = parse_srcset(src);
+    let mut count = candidates.len().saturating_sub(1);
+    let mut result = String::with_capacity(src.len());
+
+    // Process each candidate sequentially (maintaining order)
+    for candidate in candidates {
+      let new_url = {
+        let decode_url = rolldown_plugin_utils::uri::decode_uri(&candidate.url);
+        if super::is_excluded_url(&decode_url) {
+          candidate.url
+        } else {
+          let result = self.process_asset_url(ctx, &decode_url, importer, None).await?;
+          if result == decode_url {
+            candidate.url
+          } else {
+            rolldown_plugin_utils::uri::encode_uri_path(result.into_owned())
+          }
+        }
+      };
+
+      if candidate.descriptor.is_empty() {
+        result.push_str(&new_url);
+      } else {
+        // Join with space separator: "url descriptor"
+        result.push_str(&new_url);
+        result.push(' ');
+        result.push_str(&candidate.descriptor);
+      }
+      if count > 0 {
+        count -= 1;
+        result.push_str(", ");
+      }
+    }
+
+    Ok(result)
+  }
+
+  pub async fn process_asset_url<'a>(
+    &self,
+    ctx: &PluginContext,
+    url: &'a str,
+    importer: &str,
+    should_inline: Option<bool>,
+  ) -> anyhow::Result<Cow<'a, str>> {
+    let is_named_output = ctx.options().input.iter().any(|input_item| {
+      input_item.import == url || url.strip_prefix('/').is_some_and(|url| url == input_item.import)
+    });
+    if is_named_output {
+      Ok(Cow::Borrowed(url))
+    } else {
+      self.url_to_built_url(ctx, url, importer, should_inline).await.map(Cow::Owned)
+    }
   }
 
   pub fn handle_inline_css<'a>(ctx: &PluginContext, html: &'a str) -> Option<MagicString<'a>> {

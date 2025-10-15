@@ -4797,6 +4797,10 @@ expression: output
 
 - main-!~{000}~.js => main-Bldhf8JA.js
 
+# tests/rolldown/issues/rolldown_vite_446
+
+- main-!~{000}~.js => main-h6-DlyQZ.js
+
 # tests/rolldown/misc/ambiguous_star_export
 
 - main-!~{000}~.js => main-Brk4weCb.js

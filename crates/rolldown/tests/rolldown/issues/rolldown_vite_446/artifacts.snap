@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+var _window$settings;
+const foo = "foo";
+const authURL = foo !== null && foo !== void 0 ? foo : (_window$settings = window.settings) === null || _window$settings === void 0 ? void 0 : _window$settings.authURL;
+
+//#endregion
+export { authURL };
+```

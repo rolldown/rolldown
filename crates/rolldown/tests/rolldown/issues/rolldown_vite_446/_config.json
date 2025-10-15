@@ -1,0 +1,10 @@
+{
+  "config": {
+    "transform": {
+      "target": "es2018"
+    },
+    "define": {
+      "import.meta.env.VITE_AUTH_URL": "foo"
+    }
+  }
+}

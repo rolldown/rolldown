@@ -112,7 +112,7 @@ export function bindingifyInputOptions(
     profilerNames,
     transform: normalizedTransform.oxcTransformOptions,
     watch: bindingifyWatch(inputOptions.watch),
-    dropLabels: inputOptions.dropLabels,
+    dropLabels: normalizedTransform.dropLabels,
     keepNames,
     checks: inputOptions.checks,
     deferSyncScanData: () => {

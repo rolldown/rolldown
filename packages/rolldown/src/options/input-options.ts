@@ -350,6 +350,13 @@ export interface InputOptions {
    */
   transform?: TransformOptions;
   watch?: WatcherOptions | false;
+  /**
+   * Remove labeled statements with these label names.
+   *
+   * @deprecated Use `transform.dropLabels` instead. This top-level option will be removed in a future release.
+   *
+   * See `transform.dropLabels` for detailed documentation and examples.
+   */
   dropLabels?: string[];
   /**
    * Keep function and class names after bundling.

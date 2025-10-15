@@ -87,7 +87,10 @@ OPTIONS
   --transform.assumptions.set-public-class-fields .
   --transform.decorators.emit-decorator-metadata .
   --transform.decorators.legacy .
+  --transform.define <transform.define>.
+  --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
+  --transform.inject <transform.inject>.
   --transform.jsx <transform.jsx>.
   --transform.target <transform.target>The JavaScript target environment.
   --transform.typescript.allow-declare-fields .

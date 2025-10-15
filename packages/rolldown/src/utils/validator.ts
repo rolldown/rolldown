@@ -150,6 +150,17 @@ const TransformOptionsSchema = v.object({
     v.optional(v.union([v.string(), v.array(v.string())])),
     v.description('The JavaScript target environment'),
   ),
+  define: v.optional(v.record(v.string(), v.string())),
+  inject: v.optional(
+    v.record(
+      v.string(),
+      v.union([v.string(), v.tuple([v.string(), v.string()])]),
+    ),
+  ),
+  dropLabels: v.pipe(
+    v.optional(v.array(v.string())),
+    v.description('Remove labeled statements with these label names'),
+  ),
 });
 
 const WatchOptionsSchema = v.strictObject({

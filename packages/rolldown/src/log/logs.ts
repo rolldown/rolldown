@@ -12,7 +12,8 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   DEPRECATED_DEFINE = 'DEPRECATED_DEFINE',
   DEPRECATED_INJECT = 'DEPRECATED_INJECT',
   DEPRECATED_PROFILER_NAMES = 'DEPRECATED_PROFILER_NAMES',
-  DEPRECATED_KEEP_NAMES = 'DEPRECATED_KEEP_NAMES';
+  DEPRECATED_KEEP_NAMES = 'DEPRECATED_KEEP_NAMES',
+  DEPRECATED_DROP_LABELS = 'DEPRECATED_DROP_LABELS';
 
 export function logParseError(message: string): RollupLog {
   return {
@@ -96,6 +97,14 @@ export function logDeprecatedKeepNames(): RollupLog {
     code: DEPRECATED_KEEP_NAMES,
     message:
       'The top-level "keepNames" option is deprecated. Use "output.keepNames" instead.',
+  };
+}
+
+export function logDeprecatedDropLabels(): RollupLog {
+  return {
+    code: DEPRECATED_DROP_LABELS,
+    message:
+      'The top-level "dropLabels" option is deprecated. Use "transform.dropLabels" instead.',
   };
 }
 

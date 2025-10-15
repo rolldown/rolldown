@@ -4,7 +4,7 @@ This page documents some notable features in Rolldown that do not have built-in 
 
 ## Platform presets
 
-- Configurable via the `platform` option.
+- Configurable via the [`platform`](/apis/config-options#platform) option.
 - Default: `browser`
 - Possible values: `browser | node | neutral`
 
@@ -22,7 +22,7 @@ Rolldown does not polyfill Node built-ins when targeting the browser. You can op
 ## Built-in transforms
 
 Rolldown supports the following transforms out of the box, powered by [Oxc](https://oxc.rs/docs/guide/usage/transformer).
-The transform is configurable via the `transform` option.
+The transform is configurable via the [`transform`](/apis/config-options#transform) option.
 The following transforms are supported:
 
 - TypeScript
@@ -33,39 +33,24 @@ The following transforms are supported:
   - Automatically transforms modern syntax to be compatible with your defined [target](/apis/config-options#transform).
   - Supports [down to ES2015](https://oxc.rs/docs/guide/usage/transformer/lowering#transformations).
 
-## ESM / CJS Interop
+## CJS support
 
-Rolldown handles mixed ESM / CJS module graphs out of the box, without the need for `@rollup/plugin-commonjs`. It largely follows esbuild's semantics and [passes all esbuild ESM / CJS interop tests](https://github.com/rolldown/bundler-esm-cjs-tests).
+Rolldown supports mixed ESM / CJS module graphs out of the box, without the need for `@rollup/plugin-commonjs`. It largely follows esbuild's semantics and [passes all esbuild ESM / CJS interop tests](https://github.com/rolldown/bundler-esm-cjs-tests).
+
+See [Bundling CJS](/in-depth/bundling-cjs) for more details.
 
 ## Module resolution
 
+- Configurable via the [`resolve`](/apis/config-options#resolve) option
 - Powered by [oxc-resolver](https://github.com/oxc-project/oxc-resolver), aligned with webpack's [enhanced-resolve](https://github.com/webpack/enhanced-resolve)
-- `node_modules` resolution is enabled by default (equivalent of `@rollup/plugin-node-resolve`)
-- tsconfig paths supported via top-level [`tsconfig`](/apis/config-options#tsconfig).
-- Configurable via the `resolve` option:
 
-  ```ts
-  interface InputOptions {
-    resolve?: {
-      alias?: Record<string, string[] | string>;
-      aliasFields?: string[][];
-      conditionNames?: string[];
-      extensionAlias?: Record<string, string[]>;
-      exportsFields?: string[][];
-      extensions?: string[];
-      mainFields?: string[];
-      mainFiles?: string[];
-      modules?: string[];
-      symlinks?: boolean;
-    };
-  }
-  ```
+Rolldown resolves modules based on TypeScript and Node.js' behavior by default, without the need for `@rollup/plugin-node-resolve`.
 
-  When top-level `tsconfig` is provided, the resolver will respect `compilerOptions.paths` in the specified `tsconfig.json`.
+When top-level [`tsconfig`](/apis/config-options#tsconfig) option is provided, Rolldown will respect `compilerOptions.paths` in the specified `tsconfig.json`.
 
 ## Define
 
-- Configurable via the `define` option.
+- Configurable via the [`define`](/apis/config-options#define) option.
 
 This feature provides a way to replace global identifiers with constant expressions. Aligns with the respective options in [Vite](https://vite.dev/config/shared-options.html#define) and [esbuild](https://esbuild.github.io/api/#define).
 
@@ -77,32 +62,9 @@ Note it behaves differently from [`@rollup/plugin-replace`](https://github.com/r
 
 ## Inject
 
-- Configurable via the `inject` option.
+- Configurable via the [`inject`](/apis/config-options#inject) option.
 
-This is the feature equivalent of [esbuild's `inject` option](https://esbuild.github.io/api/#inject) and [`@rollup/plugin-inject`](https://github.com/rollup/plugins/tree/master/packages/inject).
-
-The API is aligned with `@rollup/plugin-inject`:
-
-```js [rolldown.config.js]
-export default {
-  inject: {
-    // import { Promise } from 'es6-promise'
-    Promise: ['es6-promise', 'Promise'],
-
-    // import { Promise as P } from 'es6-promise'
-    P: ['es6-promise', 'Promise'],
-
-    // import $ from 'jquery'
-    $: 'jquery',
-
-    // import * as fs from 'node:fs'
-    fs: ['node:fs', '*'],
-
-    // Inject shims for property access pattern
-    'Object.assign': path.resolve('src/helpers/object-assign.js'),
-  },
-};
-```
+This feature provides a way to shim global variables with a specific value exported from a module. This feature is equivalent of [esbuild's `inject` option](https://esbuild.github.io/api/#inject) and [`@rollup/plugin-inject`](https://github.com/rollup/plugins/tree/master/packages/inject).
 
 ## CSS bundling
 
@@ -113,24 +75,11 @@ Rolldown supports bundling CSS imported from JS out of the box. Note this featur
 ## Advanced Chunks
 
 - ⚠️ Experimental
-- Similar to webpack's [`optimization.splitChunks`](https://webpack.js.org/plugins/split-chunks-plugin/#optimizationsplitchunks)
-- Configurable via `output.advancedChunks`:
+- Configurable via [`output.advancedChunks`](/apis/config-options#advancedchunks) option.
 
-```ts
-interface OutputOptions {
-  advancedChunks?: {
-    minSize?: number;
-    minShareCount?: number;
-    groups?: {
-      name: string;
-      test?: StringOrRegExp;
-      priority?: number;
-      minSize?: number;
-      minShareCount?: number;
-    }[];
-  };
-}
-```
+Rolldown allows controlling the chunking behavior granularly, similar to webpack's [`optimization.splitChunks`](https://webpack.js.org/plugins/split-chunks-plugin/#optimizationsplitchunks) feature.
+
+See [Advanced Chunks](/in-depth/advanced-chunks) for more details.
 
 ## Module types
 
@@ -141,7 +90,7 @@ This is conceptually similar to [esbuild's `loader` option](https://esbuild.gith
 ## Minification
 
 - ⚠️ Experimental
-- Configurable via the `output.minify` option.
+- Configurable via the [`output.minify`](/apis/config-options#minify) option.
 
 The minification is powered by [`oxc-minifier`](https://github.com/oxc-project/oxc/tree/main/crates/oxc_minifier), which is currently in alpha and can still have bugs. We recommend thoroughly testing your output in production environments.
 

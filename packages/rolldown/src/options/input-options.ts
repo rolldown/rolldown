@@ -373,6 +373,8 @@ export interface InputOptions {
   /**
    * Inject import statements on demand.
    *
+   * The API is aligned with `@rollup/plugin-inject`.
+   *
    * ## Supported patterns
    * ```js
    * {

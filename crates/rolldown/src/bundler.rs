@@ -234,7 +234,7 @@ impl Bundler {
 
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
 
-    if self.options.clean_out_dir && self.options.dir.is_some() {
+    if self.options.clean_dir && self.options.dir.is_some() {
       self.fs.clean_dir(&dist_dir).expect("cannot clean out dir");
     }
 

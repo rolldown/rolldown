@@ -106,7 +106,7 @@ pub struct NormalizedBundlerOptions {
   pub optimization: NormalizedOptimizationConfig,
   pub top_level_var: bool,
   pub minify_internal_exports: bool,
-  pub clean_out_dir: bool,
+  pub clean_dir: bool,
   pub context: String,
   pub tsconfig: Option<PathBuf>,
 }
@@ -179,7 +179,7 @@ impl Default for NormalizedBundlerOptions {
       optimization: NormalizedOptimizationConfig::default(),
       top_level_var: false,
       minify_internal_exports: Default::default(),
-      clean_out_dir: false,
+      clean_dir: false,
       context: Default::default(),
       tsconfig: Default::default(),
     }

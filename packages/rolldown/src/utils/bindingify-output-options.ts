@@ -40,7 +40,7 @@ export function bindingifyOutputOptions(
     preserveModulesRoot,
     manualChunks,
     topLevelVar,
-    cleanOutDir,
+    cleanDir,
   } = outputOptions;
 
   const advancedChunks = bindingifyAdvancedChunks(
@@ -89,7 +89,7 @@ export function bindingifyOutputOptions(
     preserveModulesRoot,
     topLevelVar,
     minifyInternalExports: outputOptions.minifyInternalExports,
-    cleanOutDir,
+    cleanDir,
   };
 }
 

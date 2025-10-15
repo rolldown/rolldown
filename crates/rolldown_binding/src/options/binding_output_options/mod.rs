@@ -135,5 +135,5 @@ pub struct BindingOutputOptions<'env> {
   pub preserve_modules_root: Option<String>,
   pub top_level_var: Option<bool>,
   pub minify_internal_exports: Option<bool>,
-  pub clean_out_dir: Option<bool>,
+  pub clean_dir: Option<bool>,
 }

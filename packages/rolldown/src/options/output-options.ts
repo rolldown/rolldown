@@ -446,7 +446,7 @@ export interface OutputOptions {
    *
    * Clean output directory before writing.
    */
-  cleanOutDir?: boolean;
+  cleanDir?: boolean;
 }
 
 interface OverwriteOutputOptionsForCli {

@@ -482,7 +482,7 @@ pub fn normalize_binding_options(
     optimization: input_options.optimization.map(OptimizationOption::try_from).transpose()?,
     top_level_var: output_options.top_level_var,
     minify_internal_exports: output_options.minify_internal_exports,
-    clean_out_dir: output_options.clean_out_dir,
+    clean_dir: output_options.clean_dir,
     context: input_options.context,
     tsconfig: input_options.tsconfig,
   };

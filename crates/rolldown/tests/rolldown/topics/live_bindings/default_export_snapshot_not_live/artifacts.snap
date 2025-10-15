@@ -6,13 +6,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-//#region main.js
+// HIDDEN [rolldown:runtime]
+//#region file.js
+var file_exports = /* @__PURE__ */ __export({
+	default: () => file_default,
+	inc: () => inc
+});
 let x = 42;
 function inc() {
 	x += 1;
 }
-var main_default = x;
+var file_default = x;
 
 //#endregion
-export { main_default as default, inc };
+export { file_exports as file };
 ```

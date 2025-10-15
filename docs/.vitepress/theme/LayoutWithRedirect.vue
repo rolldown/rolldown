@@ -12,7 +12,8 @@ const { go } = useRouter()
 
 // WARNING: This is only used to redirect removed documentation pages to their new locations. Don't rediect existing pages with this!
 const redirects = Object.entries({
-  '/reference/': '/apis/' // TODO: remove this after publishing next version of rolldown
+  '/reference/': '/apis/', // TODO: remove this after publishing next version of rolldown
+  '/guide/in-depth/': '/in-depth/'
 })
 
 watch(

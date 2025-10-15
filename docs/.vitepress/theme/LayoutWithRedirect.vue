@@ -10,10 +10,11 @@ const { go } = useRouter()
 // > brc-dd: Don't use this if your application is SEO-critical as the page will still be returned with a 404 status code.
 // hyf0: We're redirecting old paths to new ones, so SEO for those old paths is not critical. We actually want them to be 404 in search engines.
 
-// WARNING: This is only used to redirect removed documentation pages to their new locations. Don't rediect existing pages with this!
+// WARNING: This is only used to redirect removed documentation pages to their new locations. Don't redirect existing pages with this!
 const redirects = Object.entries({
   '/reference/': '/apis/', // TODO: remove this after publishing next version of rolldown
-  '/guide/in-depth/': '/in-depth/'
+  '/guide/in-depth/': '/in-depth/',
+  '/apis/config-options/': '/options/input/'
 })
 
 watch(

@@ -4,8 +4,8 @@ This page documents some notable features in Rolldown that do not have built-in 
 
 ## Platform presets
 
-- Configurable via the [`platform`](/apis/config-options#platform) option.
-- Default: `browser`
+- Configurable via the [`platform`](/options/platform) option.
+- Default: `'node'` for `cjs` output, `'browser'` otherwise
 - Possible values: `browser | node | neutral`
 
 Similar to [esbuild's `platform` option](https://esbuild.github.io/api/#platform), this option provides some sensible defaults regarding module resolution and how to handle `process.env.NODE_ENV`.
@@ -22,15 +22,15 @@ Rolldown does not polyfill Node built-ins when targeting the browser. You can op
 ## Built-in transforms
 
 Rolldown supports the following transforms out of the box, powered by [Oxc](https://oxc.rs/docs/guide/usage/transformer).
-The transform is configurable via the [`transform`](/apis/config-options#transform) option.
+The transform is configurable via the `transform` option.
 The following transforms are supported:
 
 - TypeScript
-  - Sets configurations based on the `tsconfig.json` when [`tsconfig`](/apis/config-options#tsconfig) option is provided.
+  - Sets configurations based on the `tsconfig.json` when the [`tsconfig`](/options/tsconfig) option is provided.
   - Supported legacy decorators and decorator metadata.
 - JSX
 - Syntax lowering
-  - Automatically transforms modern syntax to be compatible with your defined [target](/apis/config-options#transform).
+  - Automatically transforms modern syntax to be compatible with your defined target.
   - Supports [down to ES2015](https://oxc.rs/docs/guide/usage/transformer/lowering#transformations).
 
 ## CJS support
@@ -41,16 +41,16 @@ See [Bundling CJS](/in-depth/bundling-cjs) for more details.
 
 ## Module resolution
 
-- Configurable via the [`resolve`](/apis/config-options#resolve) option
+- Configurable via the [`resolve`](/options/resolve) option
 - Powered by [oxc-resolver](https://github.com/oxc-project/oxc-resolver), aligned with webpack's [enhanced-resolve](https://github.com/webpack/enhanced-resolve)
 
 Rolldown resolves modules based on TypeScript and Node.js' behavior by default, without the need for `@rollup/plugin-node-resolve`.
 
-When top-level [`tsconfig`](/apis/config-options#tsconfig) option is provided, Rolldown will respect `compilerOptions.paths` in the specified `tsconfig.json`.
+When top-level [`tsconfig`](/options/tsconfig) option is provided, Rolldown will respect `compilerOptions.paths` in the specified `tsconfig.json`.
 
 ## Define
 
-- Configurable via the [`define`](/apis/config-options#define) option.
+- Configurable via the `define` option.
 
 This feature provides a way to replace global identifiers with constant expressions. Aligns with the respective options in [Vite](https://vite.dev/config/shared-options.html#define) and [esbuild](https://esbuild.github.io/api/#define).
 
@@ -62,7 +62,7 @@ Note it behaves differently from [`@rollup/plugin-replace`](https://github.com/r
 
 ## Inject
 
-- Configurable via the [`inject`](/apis/config-options#inject) option.
+- Configurable via the `inject` option.
 
 This feature provides a way to shim global variables with a specific value exported from a module. This feature is equivalent of [esbuild's `inject` option](https://esbuild.github.io/api/#inject) and [`@rollup/plugin-inject`](https://github.com/rollup/plugins/tree/master/packages/inject).
 
@@ -75,7 +75,7 @@ Rolldown supports bundling CSS imported from JS out of the box. Note this featur
 ## Advanced Chunks
 
 - ⚠️ Experimental
-- Configurable via [`output.advancedChunks`](/apis/config-options#advancedchunks) option.
+- Configurable via [`output.advancedChunks`](/options/output-advanced-chunks) option.
 
 Rolldown allows controlling the chunking behavior granularly, similar to webpack's [`optimization.splitChunks`](https://webpack.js.org/plugins/split-chunks-plugin/#optimizationsplitchunks) feature.
 
@@ -90,7 +90,7 @@ This is conceptually similar to [esbuild's `loader` option](https://esbuild.gith
 ## Minification
 
 - ⚠️ Experimental
-- Configurable via the [`output.minify`](/apis/config-options#minify) option.
+- Configurable via the [`output.minify`](/options/output#minify) option.
 
 The minification is powered by [`oxc-minifier`](https://github.com/oxc-project/oxc/tree/main/crates/oxc_minifier), which is currently in alpha and can still have bugs. We recommend thoroughly testing your output in production environments.
 

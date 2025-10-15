@@ -258,9 +258,34 @@ impl Plugin for ViteHtmlPlugin {
                 | "use"
                 | "video"
             ) {
-              if let Some(attr) = attrs.borrow().iter().find(|a| &*a.name == "vite-ignore") {
+              let attrs_borrowed = attrs.borrow();
+              if let Some(attr) = attrs_borrowed.iter().find(|a| &*a.name == "vite-ignore") {
                 s.remove(attr.span.start, attr.span.end);
               } else {
+                // Collect all attributes into a map for filtering
+                let attr_map =
+                  attrs_borrowed.iter().map(|a| (a.name.as_ref(), a)).collect::<FxHashMap<_, _>>();
+
+                // Define which attributes to process based on element type
+                let (_src_attrs, srcset_attrs): (&[&str], &[&str]) = match &**name {
+                  "audio" | "embed" | "input" | "track" => (&["src"], &[]),
+                  "img" | "source" => (&["src"], &["srcset"]),
+                  "image" | "use" => (&["href", "xlink:href"], &[]),
+                  "link" => (&["href"], &["imagesrcset"]),
+                  "meta" => (&["content"], &[]),
+                  "object" => (&["data"], &[]),
+                  "video" => (&["src", "poster"], &[]),
+                  _ => unreachable!("Element type should be matched in outer condition"),
+                };
+
+                // Process srcset attributes (complex, multi-URL handling)
+                for srcset_attr in srcset_attrs {
+                  if let Some(_attr) = attr_map.get(srcset_attr) {
+                    todo!()
+                  }
+                }
+
+                // Process src/href attributes
                 todo!()
               }
             }

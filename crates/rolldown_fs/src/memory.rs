@@ -7,7 +7,7 @@ use std::{
 use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem, ResolveError};
 use vfs::{FileSystem as _, MemoryFS};
 
-use crate::file_system::FileSystem;
+use crate::file_system::{FileSystem, FileSystemUtils};
 
 pub type FsPath = String;
 pub type FsFileContent = String;
@@ -86,6 +86,8 @@ impl FileSystem for MemoryFileSystem {
     Ok(buf)
   }
 }
+
+impl FileSystemUtils for MemoryFileSystem {}
 
 impl OxcResolverFileSystem for MemoryFileSystem {
   fn new(_yarn_pnp: bool) -> Self {
@@ -169,6 +171,29 @@ mod tests {
       utils_content.to_vec(),
       fs.read(Path::new("/module_2/utils/index.js")).map_err(|err| err.to_string())?
     );
+
+    Ok(())
+  }
+
+  #[test]
+  fn test_clean_dir() -> Result<(), String> {
+    use crate::file_system::FileSystemUtils;
+
+    let fs = MemoryFileSystem::new(&[]);
+
+    // Test clearing non-existent directory (should succeed).
+    fs.clean_dir(Path::new("/non_existent")).map_err(|err| err.to_string())?;
+
+    // Test clearing an empty directory.
+    fs.create_dir_all(Path::new("/empty_dir")).map_err(|err| err.to_string())?;
+    assert!(fs.exists(Path::new("/empty_dir")));
+    fs.clean_dir(Path::new("/empty_dir")).map_err(|err| err.to_string())?;
+    assert!(fs.exists(Path::new("/empty_dir")));
+
+    // Test clearing a file (should fail).
+    fs.write(Path::new("/test_file.txt"), b"content").map_err(|err| err.to_string())?;
+    let result = fs.clean_dir(Path::new("/test_file.txt"));
+    assert!(result.is_err());
 
     Ok(())
   }

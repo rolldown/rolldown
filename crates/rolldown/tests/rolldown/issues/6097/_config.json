@@ -1,0 +1,12 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "format": "esm"
+  },
+  "expectExecuted": false
+}

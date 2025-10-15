@@ -9,6 +9,7 @@ export interface TransformOptions extends
     | 'sourcemap'
     | 'define'
     | 'inject'
+    | 'jsx'
   >
 {
   /**
@@ -84,4 +85,5 @@ export interface TransformOptions extends
    * ```
    */
   inject?: Record<string, string | [string, string]>;
+  jsx?: OxcTransformOptions['jsx'];
 }

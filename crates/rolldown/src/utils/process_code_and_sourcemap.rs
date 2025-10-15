@@ -62,7 +62,7 @@ pub async fn process_code_and_sourcemap(
       sources
         .push(sourcemap_path_transform.call(source, map_path.to_string_lossy().as_ref()).await?);
     }
-    map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
+    map.set_sources(sources);
   }
 
   if options.sourcemap_debug_ids && options.sourcemap.is_some() {
@@ -82,7 +82,7 @@ pub async fn process_code_and_sourcemap(
 
   // Normalize the windows path at final.
   let sources = map.get_sources().map(|x| x.to_slash_lossy().to_string()).collect::<Vec<_>>();
-  map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
+  map.set_sources(sources);
 
   if let Some(sourcemap) = &options.sourcemap {
     match sourcemap {

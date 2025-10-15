@@ -44,6 +44,7 @@ impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
 
   fn try_from(value: BindingJsonSourcemap) -> Result<Self, Self::Error> {
     let map = rolldown_sourcemap::SourceMap::from_json(rolldown_sourcemap::JSONSourceMap {
+      version: 3,
       file: value.file,
       mappings: value.mappings.unwrap_or_default(),
       source_root: value.source_root,

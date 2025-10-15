@@ -676,7 +676,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.61.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -763,7 +763,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1355,6 +1355,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "json-escape-simd"
+version = "3.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3c2a6c0b4b5637c41719973ef40c6a1cf564f9db6958350de6193fbee9c23f5"
+
+[[package]]
 name = "json-strip-comments"
 version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1842,9 +1848,9 @@ checksum = "48dd4f4a2c8405440fd0462561f0e5806bd0f77e86f51c761481bdd4018b545e"
 
 [[package]]
 name = "oxc"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0147cb62f855e00fc310021ca211413311681f5e6cea489f4e157c11c802f1a9"
+checksum = "8ca2b36d3a7519a1aa606ecdb2d48f01bcdaba810d0a74881c9aebb41d8bec42"
 dependencies = [
  "oxc_allocator",
  "oxc_ast",
@@ -1866,9 +1872,9 @@ dependencies = [
 
 [[package]]
 name = "oxc-browserslist"
-version = "2.1.1"
+version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37c5bf598bf7f55955c737d580cdadaeeda80e0e6430834f6165aef21220e3a2"
+checksum = "7612127f5fa1ef0f3e98905ddfc10a7fa1df98944b75d774bb3cb4b530663616"
 dependencies = [
  "bincode 2.0.1",
  "flate2",
@@ -1908,9 +1914,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_allocator"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c2294f53fe0d6a715ad1877300fe5432033db1e5804800f82ee84840bd09894"
+checksum = "433214c659b860685d987ca25a523a544d35ebf87ee3658a942fd1c664cfa49b"
 dependencies = [
  "allocator-api2",
  "bumpalo",
@@ -1923,9 +1929,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_ast"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "678ce41e4a2fc2b5eb2b870a2b2dec2e0cdd9861d1bc22d19f6ce2dd2942f236"
+checksum = "0e78ea25d23521092edcd509198635dd0bd96df7fb71349bcd8087bb8f6a615d"
 dependencies = [
  "bitflags 2.9.4",
  "oxc_allocator",
@@ -1940,9 +1946,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_ast_macros"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85d18fd697fdceb2b61329e3fff5b3b61520b9a2f898714ed84345bfa0957b9e"
+checksum = "d3f29bf83925451a7ebbd30d3ff449414cc230c9b63aba70487c2ca74ea1e3ed"
 dependencies = [
  "phf",
  "proc-macro2",
@@ -1952,9 +1958,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_ast_visit"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4f93e36c0d169bf3c23dc4f545255a0c3b2acae23fcb963d5a59629f4444769"
+checksum = "808862f42c9331954cf187261d6a48dbf471ccbe60b6a35f6b1056c11f32e95b"
 dependencies = [
  "oxc_allocator",
  "oxc_ast",
@@ -1964,9 +1970,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_cfg"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b20eb52edbd6510dbc147a3c253332ebe6be3b730f9938c3253e0aca877a17ec"
+checksum = "6c88db454a235f30f3c9730e5a9926c64794864a9e560190094fb40937654b71"
 dependencies = [
  "bitflags 2.9.4",
  "itertools",
@@ -1978,9 +1984,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_codegen"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d0faa35a719816d3488d6c920ba44f6d89e2e255fa8045e1f69992c30106e15"
+checksum = "480bab938439c921d34750708abf15aacf253ea11e2f348e4b085cbf697f4ea2"
 dependencies = [
  "bitflags 2.9.4",
  "cow-utils",
@@ -1999,9 +2005,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_compat"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25e8b4b593d0c06c6c0c0f6f52e8497b2cf2411c99f6975f774602a6c509a8f9"
+checksum = "bd06b5cb59ece933be410adc6f811108a10c567fa2d105321f8d0f01cc4ab0c6"
 dependencies = [
  "cow-utils",
  "oxc-browserslist",
@@ -2012,18 +2018,18 @@ dependencies = [
 
 [[package]]
 name = "oxc_data_structures"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ca52a37a6fc68321a86a169064993d7bb5ea83efe64ff0fa6f8d4718261718d"
+checksum = "dd090988aa69c1e394f424289abb9bb1281448a072419ca556a07228ad36b854"
 dependencies = [
  "ropey",
 ]
 
 [[package]]
 name = "oxc_diagnostics"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a671bb9d9e9ef62a89e8b8f2308f511246d42ff56403831b7f0e32432861563"
+checksum = "9b8a09558d38ee7f23faf0249cdb37b5b26f53a7375941f8636c41c661b283ce"
 dependencies = [
  "cow-utils",
  "oxc-miette",
@@ -2032,9 +2038,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_ecmascript"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "569d276186f994866a9793fac530361995c204ee62bbcf351168352434119373"
+checksum = "c0002ece1cc266aa6654913d39cf552b0cf501afce9d953b87c283dfcd307266"
 dependencies = [
  "cow-utils",
  "num-bigint",
@@ -2047,9 +2053,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_estree"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "916aaf325a3156c3d12d15c88d7d0fa1049090dad5e227659b74494ccf5258db"
+checksum = "af85b24b7e10bf0ccb252f16d38492f51236c1ba146f62013993667cbf7fa649"
 dependencies = [
  "dragonbox_ecma",
  "itoa",
@@ -2069,9 +2075,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_isolated_declarations"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d13f2968f5f7c3e611468e22d053e73223b0de8e21518eeb043672d5c420eb1"
+checksum = "d82e443dba19b89e943d874fbd75fc5adbe996796d6930b891d7b63084e4b926"
 dependencies = [
  "bitflags 2.9.4",
  "oxc_allocator",
@@ -2086,9 +2092,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_mangler"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "385a2920126be514159cff462eb94255f1cef187bf5780ffa3f2100f75f0f27c"
+checksum = "fb751e1971f0809547347edfebe3755d5bed354aacf3ca7fe7216b901a11dd1d"
 dependencies = [
  "itertools",
  "oxc_allocator",
@@ -2103,9 +2109,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_minifier"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21b24aabd566d8f9104cedab2911c479a91408c99eaf5b107eb3289fa8a2c57b"
+checksum = "e836caa36befa6f9603eebf56b0c08d1e164ae31160c8e99ab3f535203065a4c"
 dependencies = [
  "cow-utils",
  "oxc_allocator",
@@ -2115,6 +2121,7 @@ dependencies = [
  "oxc_compat",
  "oxc_data_structures",
  "oxc_ecmascript",
+ "oxc_index",
  "oxc_mangler",
  "oxc_parser",
  "oxc_regular_expression",
@@ -2127,9 +2134,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_minify_napi"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c262c78dc41bb7e68765e5ff61cdaea67faea2c484faf1ad3da7409016e6cd2"
+checksum = "3c2799097a880c4beffb610640abce7540e21d77af278ef37a4f2187561e10e5"
 dependencies = [
  "napi",
  "napi-build",
@@ -2147,9 +2154,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_napi"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7799fe130943bf17152f58ec5adab50d5073ab675238c9e2a412da11b471f10"
+checksum = "7440c5ac912bd9e80b01762e57a6d422f8bd247565eae5407c5c6551d1545b65"
 dependencies = [
  "napi",
  "napi-build",
@@ -2163,9 +2170,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_parser"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7db89e1c024fe806c90c8bae0a40b4efac5ac76c07d148b1fa93cbc0efaa50dd"
+checksum = "fb730ab93ff23bbc471ef7109f847afa709bb284dd52a5d3366283d724858158"
 dependencies = [
  "bitflags 2.9.4",
  "cow-utils",
@@ -2186,9 +2193,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_parser_napi"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f50be4548e08c2bb629bfcfe5c02be0575dfd57dd83d28b0782d473516156986"
+checksum = "9d829c3702103bc7ee069d99dc085371055b47a50028b7d5166de0ee8666104f"
 dependencies = [
  "napi",
  "napi-build",
@@ -2202,9 +2209,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_regular_expression"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4de2762ca6e1d717ed35a0e65086ea4495b0b69534fe7d3c4a846f4b53a2f231"
+checksum = "27bafc3035e3b0fe555ae56f7bbc108a7ee520b0858250ba16d197e44ca83746"
 dependencies = [
  "bitflags 2.9.4",
  "oxc_allocator",
@@ -2254,9 +2261,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_semantic"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb3c0f020670078ece7fde05e83a3797078cc84f500e1bb078e0c48861232e3f"
+checksum = "578e5fa0b975a28e1d1ffa6c81c8df094545fe3c3225956d4e93ffe1ade3dae0"
 dependencies = [
  "itertools",
  "oxc_allocator",
@@ -2276,12 +2283,12 @@ dependencies = [
 
 [[package]]
 name = "oxc_sourcemap"
-version = "4.2.1"
+version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05ff280f25901ac054ad8552395ecd6a455e4b9352a94debbc34c433760586ef"
+checksum = "0bd56ed0ec53da593c43d9ea65ced157fe319e454888eb65b239a275e3696499"
 dependencies = [
  "base64-simd",
- "json-escape-simd",
+ "json-escape-simd 3.0.1",
  "napi",
  "napi-build",
  "napi-derive",
@@ -2292,9 +2299,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_span"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f0567f9473b114f91493baab8f9c6f8bfb9e7f7767a861544c147a4eeba9e00"
+checksum = "71243fe1ece27f71a6be5e2ab11d051792eeb578f3b056d7c9bbe82ec8043bf3"
 dependencies = [
  "compact_str",
  "oxc-miette",
@@ -2306,9 +2313,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_syntax"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "163ca5aee9139e5b04c5848795e632dbdcb472be1b3658be4b32ff957993610d"
+checksum = "93c99e555ed497111004a71fb2aa6f8fb90b0d3e2733aceeb035e24701d69634"
 dependencies = [
  "bitflags 2.9.4",
  "cow-utils",
@@ -2327,9 +2334,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_transform_napi"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00a064f0b830be12bf6ea5d3e7e32db65d4bd7f7dccffa0a6b803604ee58b072"
+checksum = "3f7549e78a8b0f91d73bb2f1457b1389db72db1520aa4884fae61b5cdbd5d55d"
 dependencies = [
  "napi",
  "napi-build",
@@ -2342,9 +2349,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_transformer"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f16ed81ad384621c3afc95000867dfffcb2caa438fb753c8bce83b5564347132"
+checksum = "7d55a4cd5291f307ae9138e30de09b6b3004b07001df7b70b9d9d72b87593d07"
 dependencies = [
  "base64",
  "compact_str",
@@ -2372,9 +2379,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_transformer_plugins"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9cf1c7ab2242611442004815f8134f7b9987aa7066b21197601676b7a7a29d7"
+checksum = "bcec20f3427b1b1fd2bc5a67c1a22aac31d5157ee0c85eed7105a4289bfd9e86"
 dependencies = [
  "cow-utils",
  "itoa",
@@ -2394,9 +2401,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_traverse"
-version = "0.94.0"
+version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8561f5e51bb4bfc37394ceb6390bfa59e90d82d6d0fb805a585042f9d3bb410e"
+checksum = "68d00264248ef474988ea02bfa44ccacd9a1d8716f0efb33a9cd6f992cf07b7b"
 dependencies = [
  "itoa",
  "oxc_allocator",
@@ -2769,7 +2776,7 @@ dependencies = [
  "insta",
  "itertools",
  "itoa",
- "json-escape-simd",
+ "json-escape-simd 1.1.0",
  "memchr",
  "notify",
  "oxc",
@@ -3547,7 +3554,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -3609,7 +3616,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b55fb86dfd3a2f5f76ea78310a88f96c4ea21a3031f8d212443d56123fd0521"
 dependencies = [
  "libc",
- "windows-sys 0.61.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4316,7 +4323,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4452,15 +4459,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2f500e4d28234f72040990ec9d39e3a6b950f9f22d3dba18416c35882612bcb"
 dependencies = [
  "windows-targets 0.53.3",
-]
-
-[[package]]
-name = "windows-sys"
-version = "0.61.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e201184e40b2ede64bc2ea34968b28e33622acdbbf37104f0e4a33f7abe657aa"
-dependencies = [
- "windows-link 0.2.0",
 ]
 
 [[package]]

@@ -250,11 +250,16 @@ impl BundlingTask {
     } else {
       ScanMode::Partial(self.changed_files.iter().map(|p| p.to_string_lossy().into()).collect())
     };
-    let scan_output = bundler.scan(scan_mode).await?;
-    let build_result = if skip_write {
-      bundler.bundle_generate(scan_output).await
-    } else {
-      bundler.bundle_write(scan_output).await
+    let scan_output = bundler.scan(scan_mode).await;
+    let build_result = match scan_output {
+      Ok(scan_output) => {
+        if skip_write {
+          bundler.bundle_generate(scan_output).await
+        } else {
+          bundler.bundle_write(scan_output).await
+        }
+      }
+      Err(scan_error) => Err(scan_error),
     };
 
     if build_result.is_err() {

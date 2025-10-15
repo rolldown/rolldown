@@ -106,14 +106,6 @@ export type AttachDebugOptions = 'none' | 'simple' | 'full';
 
 type ChunkModulesOrder = 'exec-order' | 'module-id';
 
-interface RollupJsxOptions {
-  mode?: 'classic' | 'automatic' | 'preserve';
-  factory?: string;
-  fragment?: string;
-  importSource?: string;
-  jsxImportSource?: string;
-}
-
 export interface InputOptions {
   input?: InputOption;
   plugins?: RolldownPluginOption;
@@ -329,20 +321,6 @@ export interface InputOptions {
    */
   inject?: Record<string, string | [string, string]>;
   profilerNames?: boolean;
-  /**
-   * @deprecated Use `transform.jsx` instead.
-   *
-   * This top-level `jsx` option will be removed in a future release.
-   * It is only kept for backward compatibility and will be mapped internally to `transform.jsx`.
-   *
-   * - `false` disables the JSX parser, resulting in a syntax error if JSX syntax is used.
-   * - `"preserve"` disables the JSX transformer, preserving the original JSX syntax in the output.
-   * - `"react"` enables the `classic` JSX transformer.
-   * - `"react-jsx"` enables the `automatic` JSX transformer.
-   *
-   * @default runtime = "automatic"
-   */
-  jsx?: false | 'react' | 'react-jsx' | 'preserve' | RollupJsxOptions;
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.
    *

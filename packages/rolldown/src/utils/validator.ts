@@ -103,18 +103,6 @@ const JsxOptionsSchema = v.strictObject({
   ),
 });
 
-const RollupJsxOptionsSchema = v.strictObject({
-  mode: v.optional(v.union([
-    v.literal('classic'),
-    v.literal('automatic'),
-    v.literal('preserve'),
-  ])),
-  factory: v.optional(v.string()),
-  fragment: v.optional(v.string()),
-  importSource: v.optional(v.string()),
-  jsxImportSource: v.optional(v.string()),
-});
-
 const HelperModeSchema = v.union([v.literal('Runtime'), v.literal('External')]);
 
 const DecoratorOptionSchema = v.object({
@@ -517,15 +505,6 @@ const InputOptionsSchema = v.strictObject({
     ),
   ),
   profilerNames: v.optional(v.boolean()),
-  jsx: v.optional(
-    v.union([
-      v.literal(false),
-      v.literal('react'),
-      v.literal('react-jsx'),
-      v.literal('preserve'),
-      RollupJsxOptionsSchema,
-    ]),
-  ),
   transform: v.optional(TransformOptionsSchema),
   watch: v.optional(v.union([WatchOptionsSchema, v.literal(false)])),
   dropLabels: v.pipe(
@@ -584,17 +563,6 @@ const InputCliOverrideSchema = v.strictObject({
   makeAbsoluteExternalsRelative: v.pipe(
     v.optional(v.boolean()),
     v.description('Prevent normalization of external imports'),
-  ),
-  jsx: v.pipe(
-    v.optional(
-      v.union([
-        v.literal(false),
-        v.literal('react'),
-        v.literal('react-jsx'),
-        v.literal('preserve'),
-      ]),
-    ),
-    v.description('Jsx options preset'),
   ),
   preserveEntrySignatures: v.pipe(
     v.optional(v.literal(false)),

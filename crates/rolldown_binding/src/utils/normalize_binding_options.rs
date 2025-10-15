@@ -1,7 +1,6 @@
 use super::normalize_binding_transform_options;
 use crate::options::BindingGeneratedCodeOptions;
 use crate::options::binding_advanced_chunks_options::BindingChunkingContext;
-use crate::options::binding_jsx::BindingJsx;
 use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption, SanitizeFileName};
 use crate::types::binding_string_or_regex::bindingify_string_or_regex_array;
 use crate::{
@@ -20,8 +19,8 @@ use rolldown::{
   MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat, Platform,
   RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename,
 };
+use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
-use rolldown_common::{DeferSyncScanData, bundler_options};
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
 use rolldown_utils::rustc_hash::FxHashMapExt;
@@ -253,22 +252,7 @@ pub fn normalize_binding_options(
     module_types = Some(tmp);
   }
 
-  let mut transform_options = input_options.transform.map(normalize_binding_transform_options);
-  if transform_options.as_ref().is_none_or(|options| options.jsx.is_none()) {
-    if let Some(jsx) = input_options.jsx
-      && !matches!(jsx, BindingJsx::ReactJsx)
-    {
-      transform_options.get_or_insert_default().jsx = match jsx {
-        BindingJsx::Disable => Some(bundler_options::Either::Left("disable".to_owned())),
-        BindingJsx::Preserve => Some(bundler_options::Either::Left("preserve".to_owned())),
-        BindingJsx::React => Some(bundler_options::Either::Right(bundler_options::JsxOptions {
-          runtime: Some("classic".to_owned()),
-          ..Default::default()
-        })),
-        BindingJsx::ReactJsx => unreachable!(),
-      };
-    }
-  }
+  let transform_options = input_options.transform.map(normalize_binding_transform_options);
 
   let bundler_options = BundlerOptions {
     input: Some(input_options.input.into_iter().map(Into::into).collect()),

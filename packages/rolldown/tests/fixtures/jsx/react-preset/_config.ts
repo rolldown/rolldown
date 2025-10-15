@@ -6,7 +6,11 @@ export default defineTest({
   config: {
     input: 'main.jsx',
     external: ['react'],
-    jsx: 'react',
+    transform: {
+      jsx: {
+        runtime: 'classic'
+      }
+    },
   },
   afterTest: (output) => {
     const chunk = getOutputChunk(output)[0]

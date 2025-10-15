@@ -58,7 +58,6 @@ OPTIONS
   --inline-dynamic-imports    Inline dynamic imports.
   --input <input>             Entry file.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
-  --jsx <jsx>                 Jsx options preset.
   --keep-names                Keep function/class name.
   --legal-comments <legal-comments>Control comments in the output.
   --log-level <log-level>     Log level (silent, info, debug, warn).

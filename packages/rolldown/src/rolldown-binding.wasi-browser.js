@@ -109,7 +109,6 @@ export const TraceSubscriberGuard = __napiModule.exports.TraceSubscriberGuard
 export const BindingAttachDebugInfo = __napiModule.exports.BindingAttachDebugInfo
 export const BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 export const BindingChunkModuleOrderBy = __napiModule.exports.BindingChunkModuleOrderBy
-export const BindingJsx = __napiModule.exports.BindingJsx
 export const BindingLogLevel = __napiModule.exports.BindingLogLevel
 export const BindingPluginOrder = __napiModule.exports.BindingPluginOrder
 export const BindingPropertyReadSideEffects = __napiModule.exports.BindingPropertyReadSideEffects

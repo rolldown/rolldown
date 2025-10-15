@@ -85,6 +85,28 @@ impl FileSystem for MemoryFileSystem {
       .read_to_end(&mut buf)?;
     Ok(buf)
   }
+
+  fn read_dir(&self, path: &Path) -> io::Result<Vec<PathBuf>> {
+    let path_str = path.to_string_lossy();
+    let entries = self
+      .fs
+      .read_dir(path_str.as_ref())
+      .map_err(|err| io::Error::new(io::ErrorKind::NotFound, err))?;
+
+    let mut paths = Vec::new();
+    for entry in entries {
+      let entry_path = PathBuf::from(entry);
+      paths.push(entry_path);
+    }
+    Ok(paths)
+  }
+
+  fn remove_file(&self, path: &Path) -> io::Result<()> {
+    self
+      .fs
+      .remove_file(&path.to_string_lossy())
+      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
+  }
 }
 
 impl FileSystemUtils for MemoryFileSystem {}
@@ -175,26 +197,141 @@ mod tests {
     Ok(())
   }
 
-  #[test]
-  fn test_clean_dir() -> Result<(), String> {
+  #[cfg(test)]
+  mod clean_dir {
+    use super::*;
     use crate::file_system::FileSystemUtils;
 
-    let fs = MemoryFileSystem::new(&[]);
+    #[test]
+    fn non_existent_dir() -> Result<(), String> {
+      let fs = MemoryFileSystem::new(&[]);
+      fs.clean_dir(Path::new("/non_existent")).map_err(|err| err.to_string())?;
+      Ok(())
+    }
 
-    // Test clearing non-existent directory (should succeed).
-    fs.clean_dir(Path::new("/non_existent")).map_err(|err| err.to_string())?;
+    #[test]
+    fn empty_dir() -> Result<(), String> {
+      let fs = MemoryFileSystem::new(&[]);
+      fs.create_dir_all(Path::new("/empty_dir")).map_err(|err| err.to_string())?;
+      assert!(fs.exists(Path::new("/empty_dir")));
+      fs.clean_dir(Path::new("/empty_dir")).map_err(|err| err.to_string())?;
+      assert!(fs.exists(Path::new("/empty_dir")));
+      Ok(())
+    }
 
-    // Test clearing an empty directory.
-    fs.create_dir_all(Path::new("/empty_dir")).map_err(|err| err.to_string())?;
-    assert!(fs.exists(Path::new("/empty_dir")));
-    fs.clean_dir(Path::new("/empty_dir")).map_err(|err| err.to_string())?;
-    assert!(fs.exists(Path::new("/empty_dir")));
+    #[test]
+    fn clean_file_should_fail() -> Result<(), String> {
+      let fs = MemoryFileSystem::new(&[]);
+      fs.write(Path::new("/test_file.txt"), b"content").map_err(|err| err.to_string())?;
+      let result = fs.clean_dir(Path::new("/test_file.txt"));
+      assert!(result.is_err());
+      Ok(())
+    }
 
-    // Test clearing a file (should fail).
-    fs.write(Path::new("/test_file.txt"), b"content").map_err(|err| err.to_string())?;
-    let result = fs.clean_dir(Path::new("/test_file.txt"));
-    assert!(result.is_err());
+    #[test]
+    fn files_and_sub_dirs() -> Result<(), String> {
+      let fs = MemoryFileSystem::new(&[]);
 
-    Ok(())
+      // Create directory structure.
+      fs.create_dir_all(Path::new("/test_dir")).map_err(|err| err.to_string())?;
+      fs.write(Path::new("/test_dir/file1.txt"), b"content1").map_err(|err| err.to_string())?;
+      fs.write(Path::new("/test_dir/file2.txt"), b"content2").map_err(|err| err.to_string())?;
+      let subdir = Path::new("/test_dir/subdir");
+      fs.create_dir_all(subdir).map_err(|err| err.to_string())?;
+      fs.write(Path::new("/test_dir/subdir/file3.txt"), b"content3")
+        .map_err(|err| err.to_string())?;
+
+      // Verify files exist before cleaning.
+      assert!(fs.exists(Path::new("/test_dir")));
+      assert!(fs.exists(Path::new("/test_dir/file1.txt")));
+      assert!(fs.exists(Path::new("/test_dir/file2.txt")));
+      assert!(fs.exists(subdir));
+      assert!(fs.exists(Path::new("/test_dir/subdir/file3.txt")));
+
+      fs.clean_dir(Path::new("/test_dir")).map_err(|err| err.to_string())?;
+      assert!(fs.exists(Path::new("/test_dir")));
+      assert!(!fs.exists(Path::new("/test_dir/file1.txt")));
+      assert!(!fs.exists(Path::new("/test_dir/file2.txt")));
+      assert!(!fs.exists(subdir));
+
+      Ok(())
+    }
+  }
+
+  #[cfg(test)]
+  mod read_dir {
+    use super::*;
+
+    #[test]
+    fn basic() -> Result<(), String> {
+      let fs = MemoryFileSystem::new(&[]);
+
+      fs.create_dir_all(Path::new("/test_dir")).map_err(|err| err.to_string())?;
+      fs.write(Path::new("/test_dir/file1.js"), b"content1").map_err(|err| err.to_string())?;
+      fs.write(Path::new("/test_dir/file2.js"), b"content2").map_err(|err| err.to_string())?;
+      fs.create_dir_all(Path::new("/test_dir/subdir")).map_err(|err| err.to_string())?;
+      fs.write(Path::new("/test_dir/subdir/file3.js"), b"content3")
+        .map_err(|err| err.to_string())?;
+
+      // Test reading directory contents.
+      let entries = fs.read_dir(Path::new("/test_dir")).map_err(|err| err.to_string())?;
+
+      // Should contain 3 entries: file1.js, file2.js, subdir.
+      assert_eq!(entries.len(), 3);
+
+      // Check if expected file paths are present (read_dir returns relative paths).
+      let entry_paths: Vec<String> =
+        entries.iter().map(|p| p.to_string_lossy().to_string()).collect();
+      assert!(entry_paths.contains(&"file1.js".to_string()));
+      assert!(entry_paths.contains(&"file2.js".to_string()));
+      assert!(entry_paths.contains(&"subdir".to_string()));
+
+      // Test reading non-existent directory should return error.
+      let result = fs.read_dir(Path::new("/non_existent_dir"));
+      assert!(result.is_err());
+
+      // Test reading file - VFS implementation returns empty vector for files.
+      fs.write(Path::new("/test_file.txt"), b"content").map_err(|err| err.to_string())?;
+      let result = fs.read_dir(Path::new("/test_file.txt")).map_err(|err| err.to_string())?;
+      assert!(result.is_empty());
+
+      Ok(())
+    }
+
+    #[test]
+    fn empty_directory() -> Result<(), String> {
+      let fs = MemoryFileSystem::new(&[]);
+      fs.create_dir_all(Path::new("/empty_dir")).map_err(|err| err.to_string())?;
+
+      let entries = fs.read_dir(Path::new("/empty_dir")).map_err(|err| err.to_string())?;
+      assert!(entries.is_empty());
+      Ok(())
+    }
+
+    #[test]
+    fn nested_structure() -> Result<(), String> {
+      let fs = MemoryFileSystem::new(&[]);
+      fs.create_dir_all(Path::new("/root")).map_err(|err| err.to_string())?;
+      fs.create_dir_all(Path::new("/root/dir1")).map_err(|err| err.to_string())?;
+      fs.create_dir_all(Path::new("/root/dir2")).map_err(|err| err.to_string())?;
+      fs.write(Path::new("/root/file1.txt"), b"file1").map_err(|err| err.to_string())?;
+      fs.write(Path::new("/root/dir1/file2.txt"), b"file2").map_err(|err| err.to_string())?;
+      fs.write(Path::new("/root/dir2/file3.txt"), b"file3").map_err(|err| err.to_string())?;
+
+      let root_entries = fs.read_dir(Path::new("/root")).map_err(|err| err.to_string())?;
+      assert_eq!(root_entries.len(), 3); // dir1, dir2, file1.txt
+
+      let root_paths: Vec<String> =
+        root_entries.iter().map(|p| p.to_string_lossy().to_string()).collect();
+      assert!(root_paths.contains(&"dir1".to_string()));
+      assert!(root_paths.contains(&"dir2".to_string()));
+      assert!(root_paths.contains(&"file1.txt".to_string()));
+
+      let dir1_entries = fs.read_dir(Path::new("/root/dir1")).map_err(|err| err.to_string())?;
+      assert_eq!(dir1_entries.len(), 1);
+      assert_eq!(dir1_entries[0].to_string_lossy(), "file2.txt");
+
+      Ok(())
+    }
   }
 }

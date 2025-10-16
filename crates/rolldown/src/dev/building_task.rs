@@ -13,14 +13,12 @@ use crate::{
   dev::{
     build_driver_service::BuildMessage, dev_context::SharedDevContext, types::task_input::TaskInput,
   },
-  types::scan_stage_cache::ScanStageCache,
 };
 
 pub struct BundlingTask {
   pub input: TaskInput,
   pub bundler: Arc<Mutex<Bundler>>,
   pub dev_context: SharedDevContext,
-  pub bundler_cache: Option<ScanStageCache>,
   pub next_hmr_patch_id: Arc<AtomicU32>,
 }
 
@@ -47,7 +45,6 @@ impl BundlingTask {
     }
 
     let mut build_state = self.dev_context.state.lock().await;
-    build_state.cache = Some(self.bundler_cache.take().expect("Should never be none here"));
     if let Err(err) = build_state.try_to_idle() {
       eprintln!("TODO: should handle this error {err:#?}");
       build_state.reset_to_idle();
@@ -133,7 +130,6 @@ impl BundlingTask {
     has_full_reload_update: &mut bool,
   ) -> BuildResult<()> {
     let mut bundler = self.bundler.lock().await;
-    bundler.set_cache(self.bundler_cache.take().expect("Should never be none here"));
     let changed_files = self
       .input
       .changed_files()
@@ -171,8 +167,6 @@ impl BundlingTask {
       }
     }
 
-    self.bundler_cache = Some(bundler.take_cache());
-
     // Call on_hmr_updates callback if provided
     if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref() {
       match hmr_result {
@@ -189,13 +183,8 @@ impl BundlingTask {
     }
   }
 
-  async fn rebuild(&mut self) -> BuildResult<()> {
+  async fn rebuild(&self) -> BuildResult<()> {
     let mut bundler = self.bundler.lock().await;
-
-    if !self.input.requires_full_rebuild() {
-      // We only need to pass the previous cache if it's an incremental rebuild.
-      bundler.set_cache(self.bundler_cache.take().expect("Should never be none here"));
-    }
 
     let skip_write = self.dev_context.options.skip_write;
 
@@ -231,7 +220,6 @@ impl BundlingTask {
       "`BuildStatus` finished building with changed files: {:#?}",
       self.input.changed_files()
     );
-    self.bundler_cache = Some(bundler.take_cache());
     Ok(())
   }
 }

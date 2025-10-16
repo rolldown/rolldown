@@ -221,14 +221,6 @@ impl Bundler {
       .await
   }
 
-  pub(crate) fn take_cache(&mut self) -> ScanStageCache {
-    std::mem::take(&mut self.cache)
-  }
-
-  pub(crate) fn set_cache(&mut self, cache: ScanStageCache) {
-    self.cache = cache;
-  }
-
   pub(crate) async fn bundle_write(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,

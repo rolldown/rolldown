@@ -4,28 +4,19 @@ use std::collections::VecDeque;
 use build_state::{BuildBuildingState, BuildDelayingState, BuildState};
 use rolldown_error::BuildResult;
 
-use crate::{
-  dev::{dev_context::BuildProcessFuture, types::task_input::TaskInput},
-  types::scan_stage_cache::ScanStageCache,
-};
+use crate::dev::{dev_context::BuildProcessFuture, types::task_input::TaskInput};
 use tracing;
 
 #[derive(Debug)]
 pub struct BuildStateMachine<State = BuildState> {
   pub queued_tasks: VecDeque<TaskInput>,
   pub has_stale_build_output: bool,
-  pub cache: Option<ScanStageCache>,
   pub state: State,
 }
 
 impl BuildStateMachine<BuildState> {
   pub fn new() -> Self {
-    Self {
-      queued_tasks: VecDeque::new(),
-      state: BuildState::Idle,
-      cache: None,
-      has_stale_build_output: false,
-    }
+    Self { queued_tasks: VecDeque::new(), state: BuildState::Idle, has_stale_build_output: false }
   }
 
   pub fn is_busy(&self) -> bool {

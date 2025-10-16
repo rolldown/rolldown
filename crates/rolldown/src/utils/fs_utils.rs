@@ -12,21 +12,20 @@ pub fn clean_dir<Fs: FileSystem + ?Sized>(fs: &Fs, path: &Path) -> io::Result<()
     return Ok(());
   }
 
-  let metadata = fs.metadata(path)?;
-  if !metadata.is_dir() {
-    return Err(io::Error::new(
-      io::ErrorKind::InvalidInput,
-      format!("not a directory: {}", path.display()),
-    ));
+  if let Ok(metadata) = fs.metadata(path) {
+    if !metadata.is_dir() {
+      return Err(io::Error::new(
+        io::ErrorKind::InvalidInput,
+        format!("not a directory: {}", path.display()),
+      ));
+    }
   }
 
   // Read all entries in the directory and remove them individually.
   for entry in fs.read_dir(path)? {
-    let metadata = fs.metadata(&entry)?;
-    if metadata.is_dir() {
-      fs.remove_dir_all(&entry)?;
-    } else {
-      fs.remove_file(&entry)?;
+    match fs.metadata(&entry)?.is_dir() {
+      true => fs.remove_dir_all(&entry)?,
+      false => fs.remove_file(&entry)?,
     }
   }
 

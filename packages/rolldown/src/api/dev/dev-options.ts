@@ -1,4 +1,5 @@
-import type { BindingClientHmrUpdate, BindingOutputs } from '../../binding';
+import type { BindingClientHmrUpdate } from '../../binding';
+import type { RolldownOutput } from '../../types/rolldown-output';
 
 type DevOnHmrUpdates = (
   result: Error | {
@@ -8,7 +9,7 @@ type DevOnHmrUpdates = (
 ) => void | Promise<void>;
 
 type DevOnOutput = (
-  result: Error | BindingOutputs,
+  result: Error | RolldownOutput,
 ) => void | Promise<void>;
 
 export interface DevWatchOptions {

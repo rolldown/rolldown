@@ -8,9 +8,9 @@ use crate::{
     scan_stage::{ScanStage, ScanStageOutput},
   },
   types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
+  utils::fs_utils::clean_dir,
 };
 use anyhow::Result;
-
 use arcstr::ArcStr;
 use rolldown_common::{
   ClientHmrInput, ClientHmrUpdate, GetLocalDbMut, HmrUpdate, Module, ScanMode, SharedFileEmitter,
@@ -228,6 +228,13 @@ impl Bundler {
     let mut output = self.bundle_up(scan_stage_output, /* is_write */ true).await?;
 
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
+
+    if self.options.clean_dir && self.options.dir.is_some() {
+      clean_dir(&self.fs, &dist_dir).map_err(|err| {
+        anyhow::anyhow!("Could not clean directory for output chunks: {}", dist_dir.display())
+          .context(err)
+      })?;
+    }
 
     self.fs.create_dir_all(&dist_dir).map_err(|err| {
       anyhow::anyhow!("Could not create directory for output chunks: {}", dist_dir.display())

@@ -513,6 +513,12 @@
             "null"
           ]
         },
+        "cleanDir": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "context": {
           "type": [
             "string",

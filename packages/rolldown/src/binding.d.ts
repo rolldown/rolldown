@@ -1984,6 +1984,7 @@ export interface BindingOutputOptions {
   preserveModulesRoot?: string
   topLevelVar?: boolean
   minifyInternalExports?: boolean
+  cleanDir?: boolean
 }
 
 export interface BindingPluginContextResolvedId {

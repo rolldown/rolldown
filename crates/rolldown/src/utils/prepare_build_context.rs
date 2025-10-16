@@ -343,6 +343,7 @@ pub fn prepare_build_context(
     optimization: normalize_optimization_option(raw_options.optimization, platform),
     top_level_var: raw_options.top_level_var.unwrap_or(false),
     minify_internal_exports: raw_options.minify_internal_exports.unwrap_or(false),
+    clean_dir: raw_options.clean_dir.unwrap_or(false),
     context: raw_options.context.unwrap_or_default(),
     tsconfig,
   };

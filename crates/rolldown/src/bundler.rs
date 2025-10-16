@@ -278,15 +278,16 @@ impl Bundler {
     is_full_scan_mode: bool,
   ) -> NormalizedScanStageOutput {
     if !self.options.experimental.is_incremental_build_enabled() {
-      return output.into();
+      return output.try_into().expect("Failed to normalize ScanStageOutput");
     }
 
     if is_full_scan_mode {
-      let output: NormalizedScanStageOutput = output.into();
+      let output: NormalizedScanStageOutput =
+        output.try_into().expect("Failed to normalize ScanStageOutput");
       self.cache.set_snapshot(output.make_copy());
       output
     } else {
-      self.cache.merge(output);
+      self.cache.merge(output).expect("Failed to normalize ScanStageOutput");
       self.cache.create_output()
     }
   }

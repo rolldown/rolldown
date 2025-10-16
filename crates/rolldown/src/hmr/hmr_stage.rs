@@ -272,7 +272,7 @@ impl<'a> HmrStage<'a> {
           .collect::<Vec<_>>(),
       );
 
-      self.cache.merge(module_loader_output.into());
+      self.cache.merge(module_loader_output.into()).map_err(|e| vec![anyhow::anyhow!(e).into()])?;
       new_added_modules
     };
 
@@ -369,7 +369,7 @@ impl<'a> HmrStage<'a> {
       );
       modules_to_be_updated
         .extend(module_loader_output.new_added_modules_from_partial_scan.clone());
-      self.cache.merge(module_loader_output.into());
+      self.cache.merge(module_loader_output.into()).map_err(|e| vec![anyhow::anyhow!(e).into()])?;
 
       // Note: New added modules might include external modules. There's no way to "update" them, so we need to remove them.
       modules_to_be_updated.retain(|idx| self.module_table().modules[*idx].is_normal());

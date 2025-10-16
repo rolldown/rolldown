@@ -54,8 +54,6 @@ impl FileSystem for OsFileSystem {
   }
 }
 
-impl crate::file_system::FileSystemUtils for OsFileSystem {}
-
 impl OxcResolverFileSystem for OsFileSystem {
   fn new(yarn_pnp: bool) -> Self {
     Self(Arc::new(FileSystemOs::new(yarn_pnp)))

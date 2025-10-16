@@ -7,7 +7,7 @@ use std::{
 use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem, ResolveError};
 use vfs::{FileSystem as _, MemoryFS};
 
-use crate::file_system::{FileSystem, FileSystemUtils};
+use crate::file_system::FileSystem;
 
 pub type FsPath = String;
 pub type FsFileContent = String;
@@ -108,8 +108,6 @@ impl FileSystem for MemoryFileSystem {
       .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
   }
 }
-
-impl FileSystemUtils for MemoryFileSystem {}
 
 impl OxcResolverFileSystem for MemoryFileSystem {
   fn new(_yarn_pnp: bool) -> Self {

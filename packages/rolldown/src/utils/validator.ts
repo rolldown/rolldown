@@ -882,6 +882,10 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Rewrite top-level declarations to use `var`.'),
   ),
+  cleanDir: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Clean output directory before writing'),
+  ),
   keepNames: v.pipe(
     v.optional(v.boolean()),
     v.description('Keep function and class names after bundling'),

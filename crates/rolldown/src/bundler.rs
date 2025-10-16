@@ -8,6 +8,7 @@ use crate::{
     scan_stage::{ScanStage, ScanStageOutput},
   },
   types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
+  utils::fs_utils::clean_dir,
 };
 use anyhow::Result;
 use arcstr::ArcStr;
@@ -17,7 +18,7 @@ use rolldown_common::{
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
-use rolldown_fs::{FileSystem, FileSystemUtils, OsFileSystem};
+use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   __inner::SharedPluginable, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver,
 };
@@ -235,7 +236,7 @@ impl Bundler {
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
 
     if self.options.clean_dir && self.options.dir.is_some() {
-      self.fs.clean_dir(&dist_dir).map_err(|err| {
+      clean_dir(&self.fs, &dist_dir).map_err(|err| {
         anyhow::anyhow!("Could not clean directory for output chunks: {}", dist_dir.display())
           .context(err)
       })?;

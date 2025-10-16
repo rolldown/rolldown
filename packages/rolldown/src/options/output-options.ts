@@ -453,7 +453,7 @@ export interface OutputOptions {
    * - Type: `boolean`
    * - Default: `false`
    *
-   * Clean output directory before writing.
+   * Clean output directory before emitting output.
    */
   cleanDir?: boolean;
   /** Keep function and class names after bundling.

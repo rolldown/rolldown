@@ -156,6 +156,7 @@ impl BuildDriver {
         .compute_update_for_calling_invalidate(
           caller.clone(),
           first_invalidated_by.clone(),
+          client.key(),
           &client.executed_modules,
           Arc::clone(&self.next_hmr_patch_id),
         )

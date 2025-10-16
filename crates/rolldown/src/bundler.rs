@@ -199,6 +199,7 @@ impl Bundler {
     &mut self,
     invalidate_caller: String,
     first_invalidated_by: Option<String>,
+    client_id: &str,
     executed_modules: &FxHashSet<String>,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<HmrUpdate> {
@@ -214,6 +215,7 @@ impl Bundler {
       .compute_update_for_calling_invalidate(
         invalidate_caller,
         first_invalidated_by,
+        client_id,
         executed_modules,
       )
       .await

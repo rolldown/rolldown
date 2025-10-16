@@ -135,9 +135,6 @@ function withShared(
       /@rolldown\/binding-.*/,
       ...Object.keys(buildMeta.pkgJson.dependencies ?? {}),
     ],
-    define: {
-      'import.meta.browserBuild': String(isBrowserBuild),
-    },
     // Do not move this line up or down, it's here for a reason
     ...options,
     plugins: [
@@ -153,6 +150,9 @@ function withShared(
     },
     transform: {
       target: 'node22',
+      define: {
+        'import.meta.browserBuild': String(isBrowserBuild),
+      },
     },
   };
 }

@@ -162,8 +162,6 @@ memchr = "2.7.4"
 mimalloc-safe = "0.1.52"
 mime = "0.3.17"
 nom = "8.0.0"
-notify = { version = "8.1.0", default-features = false, features = ["macos_kqueue"], git = "https://github.com/sapphi-red/notify", rev = "refs/heads/patches" }
-notify-debouncer-full = { version = "0.6.0", default-features = false, features = ["macos_kqueue"], git = "https://github.com/sapphi-red/notify", rev = "refs/heads/patches" }
 num-bigint = "0.4.6"
 num-format = "0.4"
 num_cpus = "1.17"
@@ -174,6 +172,8 @@ phf = "0.13.0"
 rayon = "1.10.0"
 regex = "1.11.1"
 regress = "0.10.3"
+rolldown-notify = { version = "8.1.0", default-features = false, features = ["macos_kqueue"] }
+rolldown-notify-debouncer-full = { version = "0.6.0", default-features = false, features = ["macos_kqueue"] }
 ropey = "1.6.1"
 rustc-hash = { version = "2.1.1" }
 schemars = "1.0.0"

@@ -189,13 +189,14 @@ impl BundlingTask {
       self.changed_files.iter().map(|p| p.to_string_lossy().to_string()).collect::<Vec<_>>();
 
     // Build ClientHmrInput for each client
-    let client_inputs: Vec<ClientHmrInput> = self
-      .dev_context
-      .clients
+    // Store client sessions to keep data alive during HMR computation
+    let client_sessions: Vec<_> = self.dev_context.clients.iter().collect();
+
+    let client_inputs: Vec<ClientHmrInput> = client_sessions
       .iter()
       .map(|client| ClientHmrInput {
-        client_id: client.key().to_string(),
-        executed_modules: client.executed_modules.clone(),
+        client_id: client.key(),
+        executed_modules: &client.executed_modules,
       })
       .collect();
 

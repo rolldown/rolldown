@@ -241,15 +241,11 @@ impl DevEngine {
     }
   }
 
-  pub async fn create_client_for_testing(&self) {
-    let mut client_session = ClientSession::default();
-    // mark all modules as registered
-    let build_state = self.ctx.state.lock().await;
-    let snapshot = build_state.cache.as_ref().unwrap().get_snapshot();
-    for module in snapshot.module_table.iter() {
-      client_session.executed_modules.insert(module.stable_id().to_string());
-    }
-    self.clients.insert("test".to_string(), client_session);
+  pub fn create_client_for_testing(&self) {
+    let client_session = ClientSession::default();
+    // Use special client ID "rolldown-tests" which will be recognized by HMR logic
+    // to always consider modules as executed, without needing to populate the HashSet
+    self.clients.insert("rolldown-tests".to_string(), client_session);
   }
 
   pub fn is_closed(&self) -> bool {

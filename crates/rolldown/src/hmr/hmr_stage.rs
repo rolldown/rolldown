@@ -82,6 +82,7 @@ impl<'a> HmrStage<'a> {
     // The parameter is the stable id of the module that called `import.meta.hot.invalidate()`.
     invalidate_caller: String,
     first_invalidated_by: Option<String>,
+    client_id: &str,
     executed_modules: &FxHashSet<String>,
   ) -> BuildResult<HmrUpdate> {
     tracing::debug!(
@@ -99,7 +100,9 @@ impl<'a> HmrStage<'a> {
 
     let caller = self.module_table().modules[module_idx].as_normal().unwrap();
 
-    if !executed_modules.contains(&caller.stable_id) {
+    // Use helper to check if module is executed (supports special testing client ID)
+    let temp_client = ClientHmrInput { client_id, executed_modules };
+    if !temp_client.is_module_executed(&caller.stable_id) {
       // If this module is not registered, we simply ignore it.
       return Ok(HmrUpdate::Noop);
     }
@@ -131,10 +134,7 @@ impl<'a> HmrStage<'a> {
     stale_modules.swap_remove(&caller.idx); // ignore self-imports
 
     // Workaround: Create a temporary single-client array to call compute_hmr_update
-    let temp_client = ClientHmrInput {
-      client_id: String::new(), // placeholder, not used in this path
-      executed_modules: executed_modules.clone(),
-    };
+    let temp_client = ClientHmrInput { client_id, executed_modules };
 
     let mut results = self
       .compute_hmr_update(
@@ -153,7 +153,7 @@ impl<'a> HmrStage<'a> {
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
     changed_file_paths: &[String],
-    clients: &[ClientHmrInput],
+    clients: &[ClientHmrInput<'_>],
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     tracing::debug!(target: "hmr", "compute_hmr_update_for_file_changes: {:?}", changed_file_paths);
 
@@ -189,7 +189,7 @@ impl<'a> HmrStage<'a> {
         clients
           .iter()
           .map(|client| ClientHmrUpdate {
-            client_id: client.client_id.clone(),
+            client_id: client.client_id.to_string(),
             update: HmrUpdate::Noop,
           })
           .collect(),
@@ -204,16 +204,13 @@ impl<'a> HmrStage<'a> {
     stale_modules: &FxIndexSet<ModuleIdx>,
     changed_modules: &FxIndexSet<ModuleIdx>,
     first_invalidated_by: Option<String>,
-    clients: &[ClientHmrInput],
+    clients: &[ClientHmrInput<'_>],
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     // 1. Compute prerequisites for each client
     let mut clients_prerequisites = Vec::with_capacity(clients.len());
     for client in clients {
-      let prerequisites = self.compute_out_hmr_prerequisites(
-        stale_modules,
-        first_invalidated_by.as_deref(),
-        &client.executed_modules,
-      );
+      let prerequisites =
+        self.compute_out_hmr_prerequisites(stale_modules, first_invalidated_by.as_deref(), client);
 
       tracing::debug!(
         target: "hmr",
@@ -225,7 +222,7 @@ impl<'a> HmrStage<'a> {
         prerequisites.require_full_reload,
       );
 
-      clients_prerequisites.push((client.client_id.clone(), prerequisites));
+      clients_prerequisites.push((client.client_id.to_string(), prerequisites));
     }
 
     // 2. Do ONE module refetch and cache merge (if needed)
@@ -275,7 +272,7 @@ impl<'a> HmrStage<'a> {
           .collect::<Vec<_>>(),
       );
 
-      self.cache.merge(module_loader_output.into());
+      self.cache.merge(module_loader_output.into()).map_err(|e| vec![anyhow::anyhow!(e).into()])?;
       new_added_modules
     };
 
@@ -304,13 +301,10 @@ impl<'a> HmrStage<'a> {
     stale_modules: &FxIndexSet<ModuleIdx>,
     changed_modules: &FxIndexSet<ModuleIdx>,
     first_invalidated_by: Option<String>,
-    executed_modules: &FxHashSet<String>,
+    client: &ClientHmrInput<'_>,
   ) -> BuildResult<HmrUpdate> {
-    let hmr_prerequisites = self.compute_out_hmr_prerequisites(
-      stale_modules,
-      first_invalidated_by.as_deref(),
-      executed_modules,
-    );
+    let hmr_prerequisites =
+      self.compute_out_hmr_prerequisites(stale_modules, first_invalidated_by.as_deref(), client);
 
     tracing::debug!(
       target: "hmr",
@@ -375,7 +369,7 @@ impl<'a> HmrStage<'a> {
       );
       modules_to_be_updated
         .extend(module_loader_output.new_added_modules_from_partial_scan.clone());
-      self.cache.merge(module_loader_output.into());
+      self.cache.merge(module_loader_output.into()).map_err(|e| vec![anyhow::anyhow!(e).into()])?;
 
       // Note: New added modules might include external modules. There's no way to "update" them, so we need to remove them.
       modules_to_be_updated.retain(|idx| self.module_table().modules[*idx].is_normal());
@@ -747,7 +741,7 @@ impl<'a> HmrStage<'a> {
     hmr_boundaries: &mut FxIndexSet<HmrBoundary>,
     propagate_stack: &mut Vec<ModuleIdx>,
     modules_to_be_updated: &mut FxIndexSet<ModuleIdx>,
-    executed_modules: &FxHashSet<String>,
+    client: &ClientHmrInput,
   ) -> PropagateUpdateStatus {
     modules_to_be_updated.insert(module_idx);
 
@@ -796,7 +790,7 @@ impl<'a> HmrStage<'a> {
         continue;
       };
 
-      if !executed_modules.contains(&importer.stable_id) {
+      if !client.is_module_executed(&importer.stable_id) {
         // If this module is not registered, we simply ignore it.
         continue;
       }
@@ -813,7 +807,7 @@ impl<'a> HmrStage<'a> {
         hmr_boundaries,
         propagate_stack,
         modules_to_be_updated,
-        executed_modules,
+        client,
       );
       propagate_stack.pop();
       if !status.is_reach_hmr_boundary() {
@@ -828,7 +822,7 @@ impl<'a> HmrStage<'a> {
     &self,
     stale_modules: &FxIndexSet<ModuleIdx>,
     first_invalidated_by: Option<&str>,
-    executed_modules: &FxHashSet<String>,
+    client: &ClientHmrInput,
   ) -> HmrPrerequisites {
     let mut hmr_boundaries = FxIndexSet::default();
     let mut require_full_reload = false;
@@ -841,7 +835,7 @@ impl<'a> HmrStage<'a> {
       }
       let mut boundaries = FxIndexSet::default();
 
-      if !executed_modules.contains(self.module_table().modules[stale_module].stable_id()) {
+      if !client.is_module_executed(self.module_table().modules[stale_module].stable_id()) {
         // If this module is not registered, we simply ignore it.
         continue;
       }
@@ -851,7 +845,7 @@ impl<'a> HmrStage<'a> {
         &mut boundaries,
         &mut vec![],
         &mut modules_to_be_updated,
-        executed_modules,
+        client,
       );
 
       match propagate_update_status {

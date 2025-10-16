@@ -181,7 +181,7 @@ impl Bundler {
   pub(crate) async fn compute_hmr_update_for_file_changes(
     &mut self,
     changed_file_paths: &[String],
-    clients: &[ClientHmrInput],
+    clients: &[ClientHmrInput<'_>],
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     let mut hmr_stage = HmrStage::new(HmrStageInput {
@@ -199,6 +199,7 @@ impl Bundler {
     &mut self,
     invalidate_caller: String,
     first_invalidated_by: Option<String>,
+    client_id: &str,
     executed_modules: &FxHashSet<String>,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<HmrUpdate> {
@@ -214,6 +215,7 @@ impl Bundler {
       .compute_update_for_calling_invalidate(
         invalidate_caller,
         first_invalidated_by,
+        client_id,
         executed_modules,
       )
       .await
@@ -283,15 +285,16 @@ impl Bundler {
     is_full_scan_mode: bool,
   ) -> NormalizedScanStageOutput {
     if !self.options.experimental.is_incremental_build_enabled() {
-      return output.into();
+      return output.try_into().expect("Failed to normalize ScanStageOutput");
     }
 
     if is_full_scan_mode {
-      let output: NormalizedScanStageOutput = output.into();
+      let output: NormalizedScanStageOutput =
+        output.try_into().expect("Failed to normalize ScanStageOutput");
       self.cache.set_snapshot(output.make_copy());
       output
     } else {
-      self.cache.merge(output);
+      self.cache.merge(output).expect("Failed to normalize ScanStageOutput");
       self.cache.create_output()
     }
   }

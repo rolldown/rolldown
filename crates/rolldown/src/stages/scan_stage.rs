@@ -117,17 +117,23 @@ impl NormalizedScanStageOutput {
   }
 }
 
-impl From<ScanStageOutput> for NormalizedScanStageOutput {
-  fn from(value: ScanStageOutput) -> Self {
-    Self {
-      module_table: match value.module_table {
-        HybridIndexVec::IndexVec(modules) => ModuleTable { modules },
-        HybridIndexVec::Map(_) => unreachable!("Please normalized first"),
-      },
-      index_ecma_ast: match value.index_ecma_ast {
-        HybridIndexVec::IndexVec(ast) => ast,
-        HybridIndexVec::Map(_) => unreachable!("Please normalized first"),
-      },
+impl TryFrom<ScanStageOutput> for NormalizedScanStageOutput {
+  type Error = &'static str;
+
+  fn try_from(value: ScanStageOutput) -> Result<Self, Self::Error> {
+    let module_table = match value.module_table {
+      HybridIndexVec::IndexVec(modules) => ModuleTable { modules },
+      HybridIndexVec::Map(_) => return Err("module_table must be normalized to IndexVec first"),
+    };
+
+    let index_ecma_ast = match value.index_ecma_ast {
+      HybridIndexVec::IndexVec(ast) => ast,
+      HybridIndexVec::Map(_) => return Err("index_ecma_ast must be normalized to IndexVec first"),
+    };
+
+    Ok(Self {
+      module_table,
+      index_ecma_ast,
       entry_points: value.entry_points,
       symbol_ref_db: value.symbol_ref_db,
       runtime: value.runtime,
@@ -137,7 +143,7 @@ impl From<ScanStageOutput> for NormalizedScanStageOutput {
       overrode_preserve_entry_signature_map: value.overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: value.entry_point_to_reference_ids,
       flat_options: value.flat_options,
-    }
+    })
   }
 }
 

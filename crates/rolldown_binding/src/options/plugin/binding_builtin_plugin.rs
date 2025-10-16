@@ -97,6 +97,14 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         };
         Arc::new(plugin)
       }
+      BindingBuiltinPluginName::EsmExternalRequire => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingEsmExternalRequirePluginConfig::from_unknown(options)?.into()
+        } else {
+          EsmExternalRequirePlugin::default()
+        };
+        Arc::new(plugin)
+      }
       BindingBuiltinPluginName::ImportGlob => {
         let plugin = if let Some(options) = plugin.options {
           BindingImportGlobPluginConfig::from_unknown(options)?.into()
@@ -170,14 +178,6 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           BindingReplacePluginConfig::default()
         };
         Arc::new(ReplacePlugin::with_options(config.into()))
-      }
-      BindingBuiltinPluginName::RequireToImport => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingEsmExternalRequirePluginConfig::from_unknown(options)?.into()
-        } else {
-          EsmExternalRequirePlugin::default()
-        };
-        Arc::new(plugin)
       }
       BindingBuiltinPluginName::Transform => {
         let plugin = if let Some(options) = plugin.options {

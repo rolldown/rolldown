@@ -162,7 +162,7 @@ impl IntegrationTest {
         .unwrap();
 
         dev_engine.run().await.unwrap();
-        dev_engine.create_client_for_testing().await;
+        dev_engine.create_client_for_testing();
 
         for hmr_edit_files in &hmr_steps {
           apply_hmr_edit_files_to_hmr_temp_dir(

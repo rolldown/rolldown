@@ -235,7 +235,10 @@ impl Bundler {
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
 
     if self.options.clean_dir && self.options.dir.is_some() {
-      self.fs.clean_dir(&dist_dir).expect("cannot clean out dir");
+      self.fs.clean_dir(&dist_dir).map_err(|err| {
+        anyhow::anyhow!("Could not clean directory for output chunks: {}", dist_dir.display())
+          .context(err)
+      })?;
     }
 
     self.fs.create_dir_all(&dist_dir).map_err(|err| {

@@ -181,7 +181,7 @@ impl Bundler {
   pub(crate) async fn compute_hmr_update_for_file_changes(
     &mut self,
     changed_file_paths: &[String],
-    clients: &[ClientHmrInput],
+    clients: &[ClientHmrInput<'_>],
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     let mut hmr_stage = HmrStage::new(HmrStageInput {

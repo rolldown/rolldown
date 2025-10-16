@@ -132,8 +132,8 @@ impl<'a> HmrStage<'a> {
 
     // Workaround: Create a temporary single-client array to call compute_hmr_update
     let temp_client = ClientHmrInput {
-      client_id: String::new(), // placeholder, not used in this path
-      executed_modules: executed_modules.clone(),
+      client_id: "", // placeholder, not used in this path
+      executed_modules,
     };
 
     let mut results = self
@@ -153,7 +153,7 @@ impl<'a> HmrStage<'a> {
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
     changed_file_paths: &[String],
-    clients: &[ClientHmrInput],
+    clients: &[ClientHmrInput<'_>],
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     tracing::debug!(target: "hmr", "compute_hmr_update_for_file_changes: {:?}", changed_file_paths);
 
@@ -189,7 +189,7 @@ impl<'a> HmrStage<'a> {
         clients
           .iter()
           .map(|client| ClientHmrUpdate {
-            client_id: client.client_id.clone(),
+            client_id: client.client_id.to_string(),
             update: HmrUpdate::Noop,
           })
           .collect(),
@@ -204,7 +204,7 @@ impl<'a> HmrStage<'a> {
     stale_modules: &FxIndexSet<ModuleIdx>,
     changed_modules: &FxIndexSet<ModuleIdx>,
     first_invalidated_by: Option<String>,
-    clients: &[ClientHmrInput],
+    clients: &[ClientHmrInput<'_>],
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     // 1. Compute prerequisites for each client
     let mut clients_prerequisites = Vec::with_capacity(clients.len());
@@ -212,7 +212,7 @@ impl<'a> HmrStage<'a> {
       let prerequisites = self.compute_out_hmr_prerequisites(
         stale_modules,
         first_invalidated_by.as_deref(),
-        &client.executed_modules,
+        client.executed_modules,
       );
 
       tracing::debug!(
@@ -225,7 +225,7 @@ impl<'a> HmrStage<'a> {
         prerequisites.require_full_reload,
       );
 
-      clients_prerequisites.push((client.client_id.clone(), prerequisites));
+      clients_prerequisites.push((client.client_id.to_string(), prerequisites));
     }
 
     // 2. Do ONE module refetch and cache merge (if needed)

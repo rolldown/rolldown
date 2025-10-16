@@ -22,10 +22,9 @@ use crate::{
     build_driver::{BuildDriver, SharedBuildDriver},
     build_driver_service::{BuildDriverService, BuildMessage},
     build_state_machine::BuildStateMachine,
-    building_task::TaskInput,
     dev_context::{DevContext, PinBoxSendStaticFuture, SharedDevContext},
     dev_options::{DevOptions, normalize_dev_options},
-    types::client_session::ClientSession,
+    types::{client_session::ClientSession, task_input::TaskInput},
   },
 };
 

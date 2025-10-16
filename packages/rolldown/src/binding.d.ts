@@ -1565,6 +1565,7 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:asset-import-meta-url'|
 'builtin:build-import-analysis'|
 'builtin:dynamic-import-vars'|
+'builtin:esm-external-require'|
 'builtin:import-glob'|
 'builtin:isolated-declaration'|
 'builtin:json'|
@@ -1574,7 +1575,6 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:react-refresh-wrapper'|
 'builtin:reporter'|
 'builtin:replace'|
-'builtin:esm-external-require'|
 'builtin:transform'|
 'builtin:vite-resolve'|
 'builtin:wasm-fallback'|
@@ -1984,6 +1984,7 @@ export interface BindingOutputOptions {
   preserveModulesRoot?: string
   topLevelVar?: boolean
   minifyInternalExports?: boolean
+  cleanDir?: boolean
 }
 
 export interface BindingPluginContextResolvedId {

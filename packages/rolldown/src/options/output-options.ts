@@ -450,7 +450,13 @@ export interface OutputOptions {
    */
   minifyInternalExports?: boolean;
   /**
-   * Keep function and class names after bundling.
+   * - Type: `boolean`
+   * - Default: `false`
+   *
+   * Clean output directory before emitting output.
+   */
+  cleanDir?: boolean;
+  /** Keep function and class names after bundling.
    *
    * When enabled, the bundler will preserve the original names of functions and classes
    * in the output, which is useful for debugging and error stack traces.

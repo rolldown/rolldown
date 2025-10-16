@@ -8,9 +8,9 @@ use crate::{
     scan_stage::{ScanStage, ScanStageOutput},
   },
   types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
+  utils::fs_utils::clean_dir,
 };
 use anyhow::Result;
-
 use arcstr::ArcStr;
 use rolldown_common::{
   ClientHmrInput, ClientHmrUpdate, GetLocalDbMut, HmrUpdate, Module, ScanMode, SharedFileEmitter,
@@ -221,14 +221,6 @@ impl Bundler {
       .await
   }
 
-  pub(crate) fn take_cache(&mut self) -> ScanStageCache {
-    std::mem::take(&mut self.cache)
-  }
-
-  pub(crate) fn set_cache(&mut self, cache: ScanStageCache) {
-    self.cache = cache;
-  }
-
   pub(crate) async fn bundle_write(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
@@ -236,6 +228,13 @@ impl Bundler {
     let mut output = self.bundle_up(scan_stage_output, /* is_write */ true).await?;
 
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
+
+    if self.options.clean_dir && self.options.dir.is_some() {
+      clean_dir(&self.fs, &dist_dir).map_err(|err| {
+        anyhow::anyhow!("Could not clean directory for output chunks: {}", dist_dir.display())
+          .context(err)
+      })?;
+    }
 
     self.fs.create_dir_all(&dist_dir).map_err(|err| {
       anyhow::anyhow!("Could not create directory for output chunks: {}", dist_dir.display())
@@ -278,15 +277,16 @@ impl Bundler {
     is_full_scan_mode: bool,
   ) -> NormalizedScanStageOutput {
     if !self.options.experimental.is_incremental_build_enabled() {
-      return output.into();
+      return output.try_into().expect("Failed to normalize ScanStageOutput");
     }
 
     if is_full_scan_mode {
-      let output: NormalizedScanStageOutput = output.into();
+      let output: NormalizedScanStageOutput =
+        output.try_into().expect("Failed to normalize ScanStageOutput");
       self.cache.set_snapshot(output.make_copy());
       output
     } else {
-      self.cache.merge(output);
+      self.cache.merge(output).expect("Failed to normalize ScanStageOutput");
       self.cache.create_output()
     }
   }

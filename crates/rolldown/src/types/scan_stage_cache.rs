@@ -42,10 +42,10 @@ impl ScanStageCache {
     self.snapshot.as_ref().unwrap()
   }
 
-  pub fn merge(&mut self, mut scan_stage_output: ScanStageOutput) {
+  pub fn merge(&mut self, mut scan_stage_output: ScanStageOutput) -> Result<(), &'static str> {
     let Some(ref mut cache) = self.snapshot else {
-      self.snapshot = Some(scan_stage_output.into());
-      return;
+      self.snapshot = Some(scan_stage_output.try_into()?);
+      return Ok(());
     };
     let modules = match scan_stage_output.module_table {
       rolldown_common::HybridIndexVec::IndexVec(_index_vec) => {
@@ -122,6 +122,7 @@ impl ScanStageCache {
         cache.entry_points.push(entry_point);
       }
     }
+    Ok(())
   }
 
   fn build_module_index_maps(&mut self, build_snapshot: &NormalizedScanStageOutput) {

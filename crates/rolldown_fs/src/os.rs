@@ -38,6 +38,20 @@ impl FileSystem for OsFileSystem {
   fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
     std::fs::read(path)
   }
+
+  fn read_dir(&self, path: &Path) -> io::Result<Vec<PathBuf>> {
+    let entries = std::fs::read_dir(path)?;
+    let mut paths = Vec::new();
+    for entry in entries {
+      let entry = entry?;
+      paths.push(entry.path());
+    }
+    Ok(paths)
+  }
+
+  fn remove_file(&self, path: &Path) -> io::Result<()> {
+    std::fs::remove_file(path)
+  }
 }
 
 impl OxcResolverFileSystem for OsFileSystem {

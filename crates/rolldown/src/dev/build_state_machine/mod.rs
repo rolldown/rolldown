@@ -5,7 +5,7 @@ use build_state::{BuildBuildingState, BuildDelayingState, BuildState};
 use rolldown_error::BuildResult;
 
 use crate::{
-  dev::{building_task::TaskInput, dev_context::BuildProcessFuture},
+  dev::{dev_context::BuildProcessFuture, types::task_input::TaskInput},
   types::scan_stage_cache::ScanStageCache,
 };
 use tracing;

@@ -13,8 +13,9 @@ use tokio::sync::Mutex;
 use crate::{
   Bundler,
   dev::{
-    building_task::{BundlingTask, TaskInput},
+    building_task::BundlingTask,
     dev_context::{BuildProcessFuture, PinBoxSendStaticFuture, SharedDevContext},
+    types::task_input::TaskInput,
   },
 };
 
@@ -32,11 +33,10 @@ impl BuildDriver {
   }
 
   pub async fn handle_file_changes(&self, changed_files: FxIndexSet<PathBuf>) {
-    let task_input = TaskInput {
-      changed_files,
-      require_full_rebuild: false,
-      generate_hmr_updates: true,
-      rebuild: self.ctx.options.rebuild_strategy.is_always(),
+    let task_input = if self.ctx.options.rebuild_strategy.is_always() {
+      TaskInput::HmrRebuild { changed_files }
+    } else {
+      TaskInput::Hmr { changed_files }
     };
     let mut build_state = self.ctx.state.lock().await;
     build_state.queued_tasks.push_back(task_input);
@@ -114,12 +114,9 @@ impl BuildDriver {
         building_future.await;
       } else {
         if build_state.has_stale_build_output && build_state.queued_tasks.is_empty() {
-          build_state.queued_tasks.push_back(TaskInput {
-            changed_files: FxIndexSet::default(),
-            require_full_rebuild: false,
-            generate_hmr_updates: false,
-            rebuild: true,
-          });
+          build_state
+            .queued_tasks
+            .push_back(TaskInput::Rebuild { changed_files: FxIndexSet::default() });
         }
         drop(build_state);
         if let Some((building_future, _)) = self.schedule_build_if_stale().await? {

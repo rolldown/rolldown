@@ -884,7 +884,7 @@ const OutputOptionsSchema = v.strictObject({
   ),
   cleanDir: v.pipe(
     v.optional(v.boolean()),
-    v.description('Clean output directory before writing'),
+    v.description('Clean output directory before emitting output'),
   ),
   keepNames: v.pipe(
     v.optional(v.boolean()),

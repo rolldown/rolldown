@@ -220,7 +220,7 @@ impl BuildDiagnostic {
 
   pub fn from_oxc_diagnostics<T>(
     diagnostics: T,
-    source: &ArcStr,
+    source: ArcStr,
     path: &str,
     severity: &Severity,
   ) -> Vec<Self>

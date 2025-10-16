@@ -279,6 +279,20 @@ impl ModuleTask {
           &self.ctx.plugin_driver,
           &self.resolved_id,
           self.module_idx,
+          source.into(),
+          sourcemap_chain,
+          hook_side_effects,
+          &mut module_type,
+          magic_string_tx,
+        )
+        .await?;
+        StrOrBytes::ArcStr(source)
+      }
+      StrOrBytes::ArcStr(source) => {
+        let source = transform_source(
+          &self.ctx.plugin_driver,
+          &self.resolved_id,
+          self.module_idx,
           source,
           sourcemap_chain,
           hook_side_effects,
@@ -286,9 +300,9 @@ impl ModuleTask {
           magic_string_tx,
         )
         .await?;
-        source.into()
+        StrOrBytes::ArcStr(source)
       }
-      StrOrBytes::Bytes(_) => source,
+      StrOrBytes::Bytes(..) => source,
     };
     if let ModuleType::Custom(_) = module_type {
       // TODO: should provide some diagnostics for user how they should handle the module type.

@@ -188,7 +188,14 @@ impl ArtifactsSnapshot {
                 asset_child.add_content("\n```");
                 assets_section.add_child(asset_child);
               }
-              rolldown_common::StrOrBytes::Bytes(bytes) => {
+              rolldown_common::StrOrBytes::ArcStr(content) => {
+                let mut asset_child = SnapshotSection::with_title(asset.filename().to_string());
+                asset_child.add_content(&format!("```{file_ext}\n"));
+                asset_child.add_content(content);
+                asset_child.add_content("\n```");
+                assets_section.add_child(asset_child);
+              }
+              rolldown_common::StrOrBytes::Bytes(bytes, _) => {
                 let mut asset_child = SnapshotSection::with_title(asset.filename().to_string());
                 if test_meta.snapshot_bytes {
                   asset_child.add_content(&format!("```{file_ext}\n"));

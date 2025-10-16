@@ -32,7 +32,7 @@ impl EcmaCompiler {
         if ret.panicked || !ret.errors.is_empty() {
           Err(BuildDiagnostic::from_oxc_diagnostics(
             ret.errors,
-            &source.clone(),
+            source.clone(),
             filename,
             &Severity::Error,
           ))
@@ -70,7 +70,7 @@ impl EcmaCompiler {
           }
           Err(errors) => Err(BuildDiagnostic::from_oxc_diagnostics(
             errors,
-            &source.clone(),
+            source.clone(),
             filename,
             &Severity::Error,
           )),

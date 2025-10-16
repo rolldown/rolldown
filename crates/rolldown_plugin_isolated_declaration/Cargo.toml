@@ -16,7 +16,6 @@ doctest = false
 workspace = true
 
 [dependencies]
-arcstr = { workspace = true }
 oxc = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_error = { workspace = true }

@@ -46,9 +46,14 @@ impl PreProcessEcmaAst {
       semantic_ret.errors.into_iter().partition(|w| w.severity == OxcSeverity::Error);
 
     let warnings = if errors.is_empty() {
-      BuildDiagnostic::from_oxc_diagnostics(warnings, &source, path, &Severity::Warning)
+      BuildDiagnostic::from_oxc_diagnostics(warnings, source.clone(), path, &Severity::Warning)
     } else {
-      return Err(BuildDiagnostic::from_oxc_diagnostics(errors, &source, path, &Severity::Error))?;
+      return Err(BuildDiagnostic::from_oxc_diagnostics(
+        errors,
+        source.clone(),
+        path,
+        &Severity::Error,
+      ))?;
     };
 
     self.stats = semantic_ret.semantic.stats();
@@ -85,7 +90,7 @@ impl PreProcessEcmaAst {
             .collect_vec();
           return Err(BuildDiagnostic::from_oxc_diagnostics(
             errors,
-            &source,
+            source,
             path,
             &Severity::Error,
           ));

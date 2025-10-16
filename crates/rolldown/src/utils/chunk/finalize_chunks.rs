@@ -32,6 +32,7 @@ use crate::{
 };
 
 #[tracing::instrument(level = "debug", skip_all)]
+#[expect(clippy::too_many_lines)]
 pub async fn finalize_assets(
   chunk_graph: &ChunkGraph,
   link_output: &LinkStageOutput,
@@ -55,12 +56,13 @@ pub async fn finalize_assets(
   let index_direct_dependencies: IndexVec<InsChunkIdx, Vec<InsChunkIdx>> =
     index_instantiated_chunks
       .par_iter()
-      .map(|asset| match &asset.content {
-        StrOrBytes::Str(content) => extract_hash_placeholders(content, &finder)
-          .iter()
-          .filter_map(|placeholder| ins_chunk_idx_by_placeholder.get(placeholder).copied())
-          .collect_vec(),
-        StrOrBytes::Bytes(_content) => {
+      .map(|asset| {
+        if let Some(content) = asset.content.to_str() {
+          extract_hash_placeholders(content, &finder)
+            .iter()
+            .filter_map(|placeholder| ins_chunk_idx_by_placeholder.get(placeholder).copied())
+            .collect_vec()
+        } else {
           vec![]
         }
       })
@@ -155,7 +157,15 @@ pub async fn finalize_assets(
           )
           .into_owned();
         }
-        StrOrBytes::Bytes(_content) => {}
+        StrOrBytes::ArcStr(content) => {
+          *content = replace_placeholder_with_hash(
+            &mem::take(content),
+            &final_hashes_by_placeholder,
+            &finder,
+          )
+          .into();
+        }
+        StrOrBytes::Bytes(_content, _) => {}
       }
 
       instantiated_chunk.finalize(filename)

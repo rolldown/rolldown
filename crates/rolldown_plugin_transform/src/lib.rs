@@ -3,7 +3,6 @@ mod utils;
 use std::borrow::Cow;
 use std::path::Path;
 
-use arcstr::ArcStr;
 use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions};
 use oxc::parser::Parser;
 use oxc::semantic::SemanticBuilder;
@@ -54,7 +53,7 @@ impl Plugin for TransformPlugin {
     if ret.panicked || !ret.errors.is_empty() {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         ret.errors,
-        &ArcStr::from(args.code.as_str()),
+        args.code.into(),
         &stabilize_id(args.id, ctx.cwd()),
         &Severity::Error,
       )))?;
@@ -67,7 +66,7 @@ impl Plugin for TransformPlugin {
     if !transformer_return.errors.is_empty() {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         transformer_return.errors,
-        &ArcStr::from(args.code.as_str()),
+        args.code.into(),
         &stabilize_id(args.id, ctx.cwd()),
         &Severity::Error,
       )))?;

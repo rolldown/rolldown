@@ -17,7 +17,6 @@ workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
-arcstr = { workspace = true }
 itertools = { workspace = true }
 memchr = { workspace = true }
 oxc = { workspace = true }

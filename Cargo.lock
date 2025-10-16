@@ -3136,7 +3136,6 @@ dependencies = [
 name = "rolldown_plugin_isolated_declaration"
 version = "0.1.0"
 dependencies = [
- "arcstr",
  "oxc",
  "rolldown_common",
  "rolldown_error",
@@ -3251,7 +3250,6 @@ name = "rolldown_plugin_transform"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "arcstr",
  "itertools",
  "memchr",
  "oxc",

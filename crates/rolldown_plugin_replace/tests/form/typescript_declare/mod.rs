@@ -23,7 +23,7 @@ impl Plugin for TestPlugin {
     args: &HookTransformArgs<'_>,
   ) -> HookTransformReturn {
     let mut code = self.0.lock().unwrap();
-    *code = Some(args.code.clone());
+    *code = Some(args.code.to_string());
     Ok(None)
   }
 

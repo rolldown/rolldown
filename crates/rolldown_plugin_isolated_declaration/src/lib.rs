@@ -1,6 +1,5 @@
 use std::{borrow::Cow, path::Path};
 
-use arcstr::ArcStr;
 use oxc::{
   allocator::IntoIn,
   ast_visit::VisitMut,
@@ -56,7 +55,7 @@ impl Plugin for IsolatedDeclarationPlugin {
       if !ret.errors.is_empty() {
         return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
           ret.errors,
-          &ArcStr::from(ret.program.source_text),
+          ret.program.source_text.into(),
           &stabilize_id(args.id, ctx.cwd()),
           &Severity::Error,
         )))?;

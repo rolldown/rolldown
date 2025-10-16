@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::sync::mpsc::Sender;
 
 use anyhow::Result;
+use arcstr::ArcStr;
 use rolldown_common::ModuleType;
 use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
@@ -16,12 +17,12 @@ pub async fn transform_source(
   plugin_driver: &PluginDriver,
   resolved_id: &ResolvedId,
   module_idx: ModuleIdx,
-  source: String,
+  source: ArcStr,
   sourcemap_chain: &mut Vec<SourcemapChainElement>,
   side_effects: &mut Option<HookSideEffects>,
   module_type: &mut ModuleType,
   magic_string_tx: Option<Arc<Sender<SourceMapGenMsg>>>,
-) -> Result<String> {
+) -> Result<ArcStr> {
   plugin_driver
     .transform(
       &resolved_id.id,

@@ -3,6 +3,7 @@ use std::{ops::Deref, sync::Arc};
 use futures::future::{try_join_all, try_join3};
 use oxc::span::CompactStr;
 use oxc_index::{IndexVec, index_vec};
+use rolldown_common::StrOrBytes;
 use rolldown_common::{
   Asset, ChunkIdx, ConcatenateWrappedModuleKind, EmittedChunkInfo, InstantiationKind,
   ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk, SharedFileEmitter,
@@ -61,61 +62,62 @@ impl GenerateStage<'_> {
 
     Self::trace_action_assets_ready(&assets);
 
-    let mut output = Vec::with_capacity(assets.len());
-    let mut output_assets: Vec<Output> = vec![];
-    for Asset { map, meta: rendered_chunk, content: code, filename, .. } in assets {
-      match rendered_chunk {
-        InstantiationKind::Ecma(ecma_meta) => {
-          let code = code.try_into_string()?;
-          let rendered_chunk = ecma_meta.rendered_chunk;
-          output.push(Output::Chunk(Arc::new(OutputChunk {
-            name: rendered_chunk.name.clone(),
-            filename: filename.clone(),
-            code,
-            is_entry: rendered_chunk.is_entry,
-            is_dynamic_entry: rendered_chunk.is_dynamic_entry,
-            facade_module_id: rendered_chunk.facade_module_id.clone(),
-            modules: rendered_chunk.modules.clone(),
-            exports: rendered_chunk.exports.clone(),
-            module_ids: rendered_chunk.module_ids.clone(),
-            imports: ecma_meta.imports,
-            dynamic_imports: ecma_meta.dynamic_imports,
-            map,
-            sourcemap_filename: ecma_meta.sourcemap_filename,
-            preliminary_filename: ecma_meta.preliminary_filename.to_string(),
-          })));
-        }
-        InstantiationKind::Css(_css_meta) => {
-          let code = code.try_into_string()?;
-          output.push(Output::Asset(Arc::new(OutputAsset {
-            filename: filename.clone(),
-            source: code.into(),
-            original_file_names: vec![],
-            names: vec![],
-          })));
-        }
-        InstantiationKind::Sourcemap(sourcemap_meta) => {
-          output.push(Output::Asset(Arc::new(OutputAsset {
-            filename: filename.clone(),
-            source: code,
-            original_file_names: sourcemap_meta.original_file_names,
-            names: sourcemap_meta.names,
-          })));
-        }
-        InstantiationKind::None => {
-          output.push(Output::Asset(Arc::new(OutputAsset {
-            filename: filename.clone(),
+    let mut output = assets
+      .into_iter()
+      .map(
+        |Asset { map, meta: rendered_chunk, content: code, filename, .. }| match rendered_chunk {
+          InstantiationKind::Ecma(ecma_meta) => {
+            let rendered_chunk = ecma_meta.rendered_chunk;
+            anyhow::Ok(Output::Chunk(Arc::new(OutputChunk {
+              name: rendered_chunk.name.clone(),
+              filename,
+              code: match code {
+                StrOrBytes::ArcStr(s) => s,
+                StrOrBytes::Str(s) => s.into(),
+                StrOrBytes::Bytes(b, valid) => {
+                  if !valid {
+                    simdutf8::basic::from_utf8(&b)?;
+                  }
+                  // SAFETY: `b` is valid utf8
+                  unsafe { String::from_utf8_unchecked(b) }.into()
+                }
+              },
+              is_entry: rendered_chunk.is_entry,
+              is_dynamic_entry: rendered_chunk.is_dynamic_entry,
+              facade_module_id: rendered_chunk.facade_module_id.clone(),
+              modules: rendered_chunk.modules.clone(),
+              exports: rendered_chunk.exports.clone(),
+              module_ids: rendered_chunk.module_ids.clone(),
+              imports: ecma_meta.imports,
+              dynamic_imports: ecma_meta.dynamic_imports,
+              map,
+              sourcemap_filename: ecma_meta.sourcemap_filename,
+              preliminary_filename: ecma_meta.preliminary_filename.to_string(),
+            })))
+          }
+          InstantiationKind::Css(_css_meta) => Ok(Output::Asset(Arc::new(OutputAsset {
+            filename,
             source: code,
             original_file_names: vec![],
             names: vec![],
-          })));
-        }
-      }
-    }
-
-    // Make sure order of assets are deterministic
-    // TODO: use `preliminary_filename` on `Output::Asset` instead
-    output_assets.sort_unstable_by(|a, b| a.filename().cmp(b.filename()));
+          }))),
+          InstantiationKind::Sourcemap(sourcemap_meta) => {
+            Ok(Output::Asset(Arc::new(OutputAsset {
+              filename,
+              source: code,
+              original_file_names: sourcemap_meta.original_file_names,
+              names: sourcemap_meta.names,
+            })))
+          }
+          InstantiationKind::None => Ok(Output::Asset(Arc::new(OutputAsset {
+            filename,
+            source: code,
+            original_file_names: vec![],
+            names: vec![],
+          }))),
+        },
+      )
+      .collect::<anyhow::Result<Vec<_>>>()?;
 
     // The chunks order make sure the entry chunk at first, the assets at last, see https://github.com/rollup/rollup/blob/master/src/rollup/rollup.ts#L266
     output.sort_unstable_by(|a, b| {
@@ -126,8 +128,6 @@ impl GenerateStage<'_> {
       }
       a_type.cmp(&b_type)
     });
-
-    output.extend(output_assets);
 
     if !errors.is_empty() {
       return Err(errors.into());

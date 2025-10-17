@@ -9,10 +9,12 @@ use rolldown_resolver::{ResolveError, Resolver};
 use std::{path::Path, sync::Arc};
 use sugar_path::SugarPath;
 
+#[inline]
 fn is_http_url(s: &str) -> bool {
   s.starts_with("http://") || s.starts_with("https://") || s.starts_with("//")
 }
 
+#[inline]
 pub fn is_data_url(s: &str) -> bool {
   s.trim_start().starts_with("data:")
 }

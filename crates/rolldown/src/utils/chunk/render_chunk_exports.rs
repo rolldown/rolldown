@@ -98,7 +98,7 @@ pub fn render_chunk_exports(
       if export_items.is_empty() && !matches!(ctx.options.platform, Platform::Node) {
         return None;
       }
-      let mut s = String::new();
+      let mut s = String::with_capacity(128);
       let rendered_items = export_items
         .into_iter()
         .map(|(exported_name, export_ref)| {
@@ -139,7 +139,7 @@ pub fn render_chunk_exports(
       Some(s)
     }
     OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {
-      let mut s = String::new();
+      let mut s = String::with_capacity(128);
       match chunk.kind {
         ChunkKind::EntryPoint { module, .. } => {
           let module =

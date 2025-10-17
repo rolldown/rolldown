@@ -98,7 +98,7 @@ pub fn render_cjs<'code>(
 
 // Make sure the imports generate stmts keep live bindings.
 fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
-  let mut s = String::new();
+  let mut s = String::with_capacity(128);
 
   // render imports from other chunks
   ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {

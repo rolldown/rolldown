@@ -2757,6 +2757,7 @@ dependencies = [
  "rustc-hash",
  "serde",
  "serde_json",
+ "simdutf8",
  "string_wizard",
  "sugar_path",
  "testing_macros",

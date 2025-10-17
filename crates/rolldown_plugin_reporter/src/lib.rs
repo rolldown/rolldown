@@ -314,7 +314,7 @@ impl Plugin for ReporterPlugin {
         }
         filtered.sort_by(|a, b| a.size.cmp(&b.size));
         for log_entry in filtered {
-          let mut info = String::new();
+          let mut info = String::with_capacity(512);
           let _ = write!(&mut info, "\x1b[2m{out_dir}/\x1b[22m");
 
           let is_asset = !self.is_lib && Path::new(log_entry.name).starts_with(&self.assets_dir);

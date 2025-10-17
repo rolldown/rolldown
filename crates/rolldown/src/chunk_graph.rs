@@ -1,13 +1,69 @@
+use std::cmp::Ordering;
+
 use arcstr::ArcStr;
-use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx, RuntimeHelper,
+  Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, Module, ModuleIdx, RuntimeHelper,
   SymbolRef,
 };
 use rustc_hash::FxHashMap;
 
 use crate::{SharedOptions, stages::link_stage::LinkStageOutput};
+
+/// Represents the sort priority for modules within a chunk.
+///
+/// Sort order (lowest to highest):
+/// 1. Runtime modules (rolldown:*) - sorted by exec_order
+/// 2. Side-effects-free leaf modules - sorted by id
+/// 3. Normal modules - sorted by exec_order
+#[derive(Debug, PartialEq, Eq)]
+enum ModuleSortKey<'a> {
+  /// Runtime modules (rolldown:*) sorted by execution order
+  Runtime(u32),
+  /// Side-effects-free leaf modules sorted by id
+  SideEffectsFree(&'a str),
+  /// Normal modules sorted by execution order
+  Normal(u32),
+}
+
+impl Ord for ModuleSortKey<'_> {
+  fn cmp(&self, other: &Self) -> Ordering {
+    match (self, other) {
+      (ModuleSortKey::Runtime(a), ModuleSortKey::Runtime(b))
+      | (ModuleSortKey::Normal(a), ModuleSortKey::Normal(b)) => a.cmp(b),
+      (ModuleSortKey::Runtime(_), _)
+      | (ModuleSortKey::SideEffectsFree(_), ModuleSortKey::Normal(_)) => Ordering::Less,
+      (_, ModuleSortKey::Runtime(_))
+      | (ModuleSortKey::Normal(_), ModuleSortKey::SideEffectsFree(_)) => Ordering::Greater,
+
+      (ModuleSortKey::SideEffectsFree(a), ModuleSortKey::SideEffectsFree(b)) => a.cmp(b),
+    }
+  }
+}
+
+impl PartialOrd for ModuleSortKey<'_> {
+  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    Some(self.cmp(other))
+  }
+}
+
+/// Creates a sort key for a module based on its type and properties.
+fn module_sort_key(module: &Module) -> ModuleSortKey<'_> {
+  if module.id().starts_with("rolldown:") {
+    return ModuleSortKey::Runtime(module.exec_order());
+  }
+
+  if let Some(normal) = module.as_normal() {
+    let is_side_effects_free = normal.import_records.is_empty()
+      && !normal.meta.contains(EcmaViewMeta::ExecutionOrderSensitive);
+
+    if is_side_effects_free {
+      return ModuleSortKey::SideEffectsFree(module.id());
+    }
+  }
+
+  ModuleSortKey::Normal(module.exec_order())
+}
 
 #[derive(Debug)]
 pub struct ChunkGraph {
@@ -67,33 +123,7 @@ impl ChunkGraph {
         return;
       }
 
-      // group those leaf module that has no side effects together.
-      let mut side_effects_free_leaf_modules = vec![];
-      let mut rest = vec![];
-      let mut runtime_related = vec![];
-      for &module_idx in &chunk.modules {
-        let module = &link_output.module_table[module_idx];
-        if module.id().starts_with("rolldown:") {
-          runtime_related.push(module_idx);
-          continue;
-        }
-        if let Some(normal) = module.as_normal()
-          && normal.import_records.is_empty()
-          && !normal.meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
-        {
-          side_effects_free_leaf_modules.push(module_idx);
-        } else {
-          rest.push(module_idx);
-        }
-      }
-      side_effects_free_leaf_modules.sort_by_key(|idx| link_output.module_table[*idx].id());
-      rest.sort_unstable_by_key(|idx| link_output.module_table[*idx].exec_order());
-      runtime_related.sort_unstable_by_key(|idx| link_output.module_table[*idx].exec_order());
-
-      chunk.modules = runtime_related
-        .into_iter()
-        .chain(side_effects_free_leaf_modules.into_iter().chain(rest))
-        .collect_vec();
+      chunk.modules.sort_by_key(|idx| module_sort_key(&link_output.module_table[*idx]));
     });
   }
 }

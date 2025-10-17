@@ -318,7 +318,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if !should_hoist {
       return None;
     }
-    let mut ret = vec![];
+    let mut ret = Vec::with_capacity(decl.declarations.len() * 2);
     let exprs = decl.declarations.iter_mut().filter_map(|var_decl| {
       ret.extend(var_decl.id.binding_identifiers().iter().map(|item| item.name));
       // Turn `var ... = ...` to `... = ...`

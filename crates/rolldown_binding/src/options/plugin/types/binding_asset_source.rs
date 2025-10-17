@@ -1,5 +1,5 @@
 use napi::Either;
-use napi::bindgen_prelude::Buffer;
+use napi::bindgen_prelude::Uint8Array;
 
 // This struct is used to both pass to JS and receive from JS:
 // - Pass to JS: `From<StrOrBytes>` impl (line 44) in BindingOutputAsset.source getter
@@ -7,10 +7,11 @@ use napi::bindgen_prelude::Buffer;
 #[napi_derive::napi(object)]
 pub struct BindingAssetSource {
   #[napi(ts_type = "string | Uint8Array")]
-  pub inner: Either<String, Buffer>,
+  pub inner: Either<String, Uint8Array>,
 }
 
-fn default_source() -> Either<String, Buffer> {
+#[inline]
+fn default_source() -> Either<String, Uint8Array> {
   Either::A(String::default())
 }
 
@@ -38,7 +39,7 @@ impl From<BindingAssetSource> for rolldown_common::StrOrBytes {
   fn from(value: BindingAssetSource) -> Self {
     match value.inner {
       Either::A(s) => Self::Str(s),
-      Either::B(buff) => Self::Bytes(buff.to_vec()),
+      Either::B(buff) => Self::Bytes(buff.to_vec(), false),
     }
   }
 }
@@ -47,7 +48,8 @@ impl From<rolldown_common::StrOrBytes> for BindingAssetSource {
   fn from(value: rolldown_common::StrOrBytes) -> Self {
     match value {
       rolldown_common::StrOrBytes::Str(s) => Self { inner: Either::A(s) },
-      rolldown_common::StrOrBytes::Bytes(buff) => Self { inner: Either::B(buff.into()) },
+      rolldown_common::StrOrBytes::ArcStr(s) => Self { inner: Either::A(s.to_string()) },
+      rolldown_common::StrOrBytes::Bytes(buff, _) => Self { inner: Either::B(buff.into()) },
     }
   }
 }

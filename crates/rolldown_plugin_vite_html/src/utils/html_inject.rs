@@ -41,29 +41,30 @@ fn serialize_attrs(attrs: Option<&rustc_hash::FxHashMap<&'static str, AttrValue>
   let Some(attrs) = attrs else {
     return String::new();
   };
-  let mut result = String::new();
-  for (key, value) in attrs {
-    match value {
-      AttrValue::String(s) => {
-        // Escape HTML entities in attribute values
-        result.push_str(&rolldown_utils::concat_string!(
-          " ",
-          key,
-          "=\"",
-          s.cow_replace('&', "&amp;")
-            .cow_replace('"', "&quot;")
-            .cow_replace('<', "&lt;")
-            .cow_replace('>', "&gt;"),
-          "\""
-        ));
+  attrs
+    .iter()
+    .map(|(key, value)| {
+      match value {
+        AttrValue::String(s) => {
+          // Escape HTML entities in attribute values
+          rolldown_utils::concat_string!(
+            " ",
+            key,
+            "=\"",
+            s.cow_replace('&', "&amp;")
+              .cow_replace('"', "&quot;")
+              .cow_replace('<', "&lt;")
+              .cow_replace('>', "&gt;"),
+            "\""
+          )
+        }
+        AttrValue::Boolean(true) => {
+          rolldown_utils::concat_string!(" ", key)
+        }
+        AttrValue::Boolean(false) | AttrValue::Undefined => String::new(),
       }
-      AttrValue::Boolean(true) => {
-        result.push_str(&rolldown_utils::concat_string!(" ", key));
-      }
-      AttrValue::Boolean(false) | AttrValue::Undefined => {}
-    }
-  }
-  result
+    })
+    .collect()
 }
 
 /// Serialize a single HTML tag to string

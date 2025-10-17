@@ -38,7 +38,7 @@ pub fn generate_namespace_definition(
   delimiter: &str,
 ) -> (String, String) {
   let parts: Vec<&str> = name.split('.').collect();
-  let mut stmts = String::new();
+  let mut stmts = String::with_capacity(128);
   let mut namespace = String::from(global);
   let global_len = global.len();
 

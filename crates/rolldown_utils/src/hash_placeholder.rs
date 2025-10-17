@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::sync::LazyLock;
 
 use memchr::memmem::Finder;
 use rustc_hash::FxHashMap;
@@ -16,9 +17,8 @@ const DEFAULT_HASH_SIZE: usize = 8;
 
 const MINIMUM_HASH_PLACEHOLDER_LENGTH: usize = HASH_PLACEHOLDER_OVERHEAD + MIN_HASH_SIZE;
 
-pub fn hash_placeholder_left_finder() -> Finder<'static> {
-  Finder::new(HASH_PLACEHOLDER_LEFT)
-}
+pub static HASH_PLACEHOLDER_LEFT_FINDER: LazyLock<Finder<'static>> =
+  LazyLock::new(|| Finder::new(HASH_PLACEHOLDER_LEFT));
 
 /// Checks if a string is a hash placeholder with the pattern "!~{...}~"
 /// where ... is 1-17 alphanumeric characters or _ or $
@@ -219,17 +219,17 @@ fn test_is_hash_placeholder() {
 #[test]
 fn test_find_hash_placeholders() {
   let s = "prefix!~{000}~middle!~{abc}~suffix";
-  let placeholders = find_hash_placeholders(s, &hash_placeholder_left_finder());
+  let placeholders = find_hash_placeholders(s, &HASH_PLACEHOLDER_LEFT_FINDER);
   assert_eq!(placeholders.len(), 2);
   assert_eq!(placeholders[0], (6, 14, "!~{000}~"));
   assert_eq!(placeholders[1], (20, 28, "!~{abc}~"));
 
   let s = "no placeholders here";
-  let placeholders = find_hash_placeholders(s, &hash_placeholder_left_finder());
+  let placeholders = find_hash_placeholders(s, &HASH_PLACEHOLDER_LEFT_FINDER);
   assert_eq!(placeholders.len(), 0);
 
   let s = "!~{000}~!~{001}~";
-  let placeholders = find_hash_placeholders(s, &hash_placeholder_left_finder());
+  let placeholders = find_hash_placeholders(s, &HASH_PLACEHOLDER_LEFT_FINDER);
   assert_eq!(placeholders.len(), 2);
   assert_eq!(placeholders[0], (0, 8, "!~{000}~"));
   assert_eq!(placeholders[1], (8, 16, "!~{001}~"));

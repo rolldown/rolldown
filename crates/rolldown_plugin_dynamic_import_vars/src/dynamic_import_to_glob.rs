@@ -1,9 +1,10 @@
 // Ported from https://github.com/rollup/plugins/blob/944e7d3/packages/dynamic-import-vars/src/dynamic-import-to-glob.js
+use std::{borrow::Cow, path::Path};
+
 use oxc::{
   ast::ast::{Argument, BinaryExpression, CallExpression, Expression, TemplateLiteral},
   syntax::operator::BinaryOperator,
 };
-use std::{borrow::Cow, path::Path};
 
 const EXAMPLE_CODE: &str = "For example: import(`./foo/${bar}.js`).";
 const IGNORED_PROTOCOLS: [&str; 3] = ["data:", "http:", "https:"];
@@ -56,13 +57,20 @@ pub fn to_valid_glob<'a>(glob: &'a str, source: &str) -> anyhow::Result<Cow<'a, 
 }
 
 pub fn template_literal_to_glob<'a>(node: &TemplateLiteral) -> anyhow::Result<Cow<'a, str>> {
-  let mut glob = String::new();
-  for (index, quasi) in node.quasis.iter().enumerate() {
-    glob += &sanitize_string(&quasi.value.raw)?;
-    if let Some(expr) = node.expressions.get(index) {
-      glob += &expr_to_glob(expr)?;
-    }
-  }
+  let glob = node
+    .quasis
+    .iter()
+    .enumerate()
+    .map(|(index, quasi)| {
+      let raw = sanitize_string(&quasi.value.raw)?;
+      if let Some(expr) = node.expressions.get(index) {
+        Ok::<_, anyhow::Error>(raw + expr_to_glob(expr)?)
+      } else {
+        Ok(raw)
+      }
+    })
+    .collect::<Result<String, anyhow::Error>>()?;
+
   Ok(Cow::Owned(glob))
 }
 

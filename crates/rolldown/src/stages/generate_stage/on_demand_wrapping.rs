@@ -149,7 +149,7 @@ impl GenerateStage<'_> {
         root_only.insert(*module_idx);
       }
     }
-    let mut module_groups = vec![];
+    let mut module_groups = Vec::with_capacity(chunk.modules.len());
     let mut module_idx_to_group_idx = FxHashMap::default();
     // higher exec_order usually means module is more closed to entry point
     // lower exec_order means module is more closed to the leaf node of the chunk.

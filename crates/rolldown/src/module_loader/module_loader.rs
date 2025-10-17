@@ -22,7 +22,7 @@ use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
-use rolldown_utils::rustc_hash::FxHashSetExt;
+use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use tracing::Instrument;
 
@@ -283,8 +283,8 @@ impl<'a> ModuleLoader<'a> {
     &mut self,
     fetch_mode: ScanMode<ResolvedId>,
   ) -> BuildResult<ModuleLoaderOutput> {
-    let mut errors = vec![];
-    let mut all_warnings: Vec<BuildDiagnostic> = vec![];
+    let mut errors = Vec::with_capacity(64);
+    let mut all_warnings: Vec<BuildDiagnostic> = Vec::with_capacity(128);
 
     let user_defined_entries = match fetch_mode {
       ScanMode::Full => {
@@ -302,27 +302,32 @@ impl<'a> ModuleLoader<'a> {
     self.intermediate_normal_modules.modules.reserve(entries_count);
     self.intermediate_normal_modules.index_ecma_ast.reserve(entries_count);
 
-    // Store the already consider as entry module
-    let mut entry_points = FxIndexSet::default();
-    let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
     let user_defined_entries = Arc::new(user_defined_entries);
-    for (defined_name, resolved_id) in user_defined_entries.iter() {
-      let idx = self.try_spawn_new_task(
-        resolved_id.clone(),
-        None,
-        true,
-        None,
-        Arc::clone(&user_defined_entries),
-      );
-      user_defined_entry_ids.insert(idx);
-      entry_points.insert(EntryPoint {
-        name: defined_name.clone(),
-        idx,
-        kind: EntryPointKind::UserDefined,
-        file_name: None,
-        related_stmt_infos: vec![],
-      });
-    }
+    let (mut user_defined_entry_ids, mut entry_points): (
+      FxHashSet<ModuleIdx>,
+      FxIndexSet<EntryPoint>,
+    ) = user_defined_entries
+      .iter()
+      .map(|(defined_name, resolved_id)| {
+        let idx = self.try_spawn_new_task(
+          resolved_id.clone(),
+          None,
+          true,
+          None,
+          Arc::clone(&user_defined_entries),
+        );
+        (
+          idx,
+          EntryPoint {
+            name: defined_name.clone(),
+            idx,
+            kind: EntryPointKind::UserDefined,
+            file_name: None,
+            related_stmt_infos: vec![],
+          },
+        )
+      })
+      .unzip();
 
     if self.is_full_scan && self.options.experimental.is_incremental_build_enabled() {
       self
@@ -364,13 +369,17 @@ impl<'a> ModuleLoader<'a> {
       Vec<(ModuleIdx, StmtInfoIdx, ImportRecordIdx)>,
     > = FxHashMap::default();
 
-    let mut dynamic_import_exports_usage_pairs = vec![];
-    let mut extra_entry_points = vec![];
-    let mut entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>> = FxHashMap::default();
+    let mut dynamic_import_exports_usage_pairs =
+      Vec::with_capacity(self.intermediate_normal_modules.modules.len());
+    let mut extra_entry_points = Vec::with_capacity(128);
+    let mut entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>> =
+      FxHashMap::with_capacity(256);
 
-    let mut safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>> = FxHashMap::default();
+    let mut safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>> =
+      FxHashMap::with_capacity(self.intermediate_normal_modules.modules.len());
     let mut runtime_brief = None;
-    let mut overrode_preserve_entry_signature_map = FxHashMap::default();
+    let mut overrode_preserve_entry_signature_map =
+      FxHashMap::with_capacity(self.intermediate_normal_modules.modules.len());
 
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else {
@@ -664,8 +673,10 @@ impl<'a> ModuleLoader<'a> {
       }
     }
 
+    let dynamic_import_exports_usage_map_capacity = dynamic_import_exports_usage_pairs.len();
+
     let dynamic_import_exports_usage_map = dynamic_import_exports_usage_pairs.into_iter().fold(
-      FxHashMap::default(),
+      FxHashMap::with_capacity(dynamic_import_exports_usage_map_capacity),
       |mut acc, (idx, usage)| {
         match acc.entry(idx) {
           Entry::Vacant(vac) => {
@@ -679,7 +690,8 @@ impl<'a> ModuleLoader<'a> {
       },
     );
 
-    let mut idx_of_module_info_need_update = vec![];
+    let mut idx_of_module_info_need_update =
+      Vec::with_capacity(self.intermediate_normal_modules.modules.len());
     let is_dense_index_vec = self.intermediate_normal_modules.modules.is_index_vec();
 
     let modules_iter = std::mem::take(&mut self.intermediate_normal_modules.modules)

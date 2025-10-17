@@ -9,6 +9,7 @@ use crate::{
   },
 };
 use anyhow::{Context, Result};
+use arcstr::ArcStr;
 use rolldown_common::{
   ModuleInfo, ModuleType, NormalModule, PluginIdx, SharedNormalizedBundlerOptions,
   SourcemapChainElement, SourcemapHires, side_effects::HookSideEffects,
@@ -219,12 +220,12 @@ impl PluginDriver {
     &self,
     id: &str,
     module_idx: rolldown_common::ModuleIdx,
-    original_code: String,
+    original_code: ArcStr,
     sourcemap_chain: &mut Vec<SourcemapChainElement>,
     side_effects: &mut Option<HookSideEffects>,
     module_type: &mut ModuleType,
     magic_string_tx: Option<Arc<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>>,
-  ) -> Result<String> {
+  ) -> Result<ArcStr> {
     let mut code = original_code;
     let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
     let mut plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
@@ -236,7 +237,7 @@ impl PluginDriver {
       trace_action!(action::HookTransformCallStart {
         action: "HookTransformCallStart",
         module_id: id.to_string(),
-        content: code.clone(),
+        content: code.to_string(),
         plugin_name: plugin.call_name().to_string(),
         plugin_id: plugin_idx.raw(),
         call_id: call_id.clone().unwrap_or_default(),
@@ -252,7 +253,7 @@ impl PluginDriver {
             plugin_idx,
             magic_string_tx.clone(),
           )),
-          &HookTransformArgs { id, code: &code, module_type: &*module_type },
+          &HookTransformArgs { id, code: code.as_str(), module_type: &*module_type },
         )
         .await
         .with_context(|| CausedPlugin::new(plugin.call_name()))?
@@ -266,7 +267,7 @@ impl PluginDriver {
           *side_effects = Some(v);
         }
         if let Some(v) = r.code {
-          code = v;
+          code = v.into();
           trace_action!(action::HookTransformCallEnd {
             action: "HookTransformCallEnd",
             module_id: id.to_string(),

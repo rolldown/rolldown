@@ -24,7 +24,7 @@ pub struct OutputChunk {
   pub imports: Vec<ArcStr>,
   pub dynamic_imports: Vec<ArcStr>,
   // OutputChunk
-  pub code: String,
+  pub code: ArcStr,
   pub map: Option<SourceMap>,
   pub sourcemap_filename: Option<String>,
   pub preliminary_filename: String,

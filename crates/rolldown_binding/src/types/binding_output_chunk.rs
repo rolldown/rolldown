@@ -123,7 +123,7 @@ pub fn update_output_chunk(
 ) -> anyhow::Result<()> {
   let old_chunk = (**chunk).clone();
   *chunk = Arc::new(rolldown_common::OutputChunk {
-    code: js_chunk.code,
+    code: js_chunk.code.into(),
     map: js_chunk.map.map(TryInto::try_into).transpose()?,
     imports: js_chunk.imports.into_iter().map(Into::into).collect(),
     dynamic_imports: js_chunk.dynamic_imports.into_iter().map(Into::into).collect(),

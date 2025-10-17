@@ -1466,6 +1466,10 @@ export declare class BindingTransformPluginContext {
   sendMagicString(magicString: BindingMagicString): string | null
 }
 
+export declare class BindingUrlResolver {
+  call(url: string, importer?: string): Promise<[string, string | undefined]>
+}
+
 export declare class BindingWatcher {
   constructor(options: Array<BindingBundlerOptions>, notifyOption?: BindingNotifyOption | undefined | null)
   close(): Promise<void>
@@ -2196,6 +2200,7 @@ export interface BindingTreeshake {
 export interface BindingViteCssPluginConfig {
   isLib: boolean
   publicDir: string
+  compressCss: (url: string, importer: string, resolver: BindingUrlResolver) => Promise<BindingCompileCSSResult>
   resolveUrl: (url: string, importer?: string) => MaybePromise<string | undefined>
   assetInlineLimit?: number | ((file: string, content: Buffer) => boolean | undefined)
 }

@@ -17,8 +17,8 @@ type ResolveUrl = dyn (Fn(
   + Sync;
 
 pub type UrlResolver = dyn Fn(
-    &str,
-    Option<&str>,
+    String,
+    Option<String>,
   ) -> Pin<Box<dyn Future<Output = anyhow::Result<(String, Option<String>)>> + Send>>
   + Send
   + Sync;
@@ -135,14 +135,12 @@ impl ViteCSSPlugin {
     let public_dir = self.public_dir.clone();
     let resolve_url = Arc::clone(&self.resolve_url);
     let asset_inline_limit = self.asset_inline_limit.clone();
-    Arc::new(move |url: &str, importer: Option<&str>| {
+    Arc::new(move |url: String, importer: Option<String>| {
       let ctx = Arc::clone(&ctx);
       let public_dir = public_dir.clone();
       let asset_inline_limit = asset_inline_limit.clone();
       let resolve_url = Arc::clone(&resolve_url);
 
-      let url = url.to_owned();
-      let importer = importer.map(str::to_owned);
       Box::pin(async move {
         let decoded_url = decode_uri(&url);
 

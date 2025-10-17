@@ -100,6 +100,7 @@ export const BindingRenderedChunk = __napiModule.exports.BindingRenderedChunk
 export const BindingRenderedChunkMeta = __napiModule.exports.BindingRenderedChunkMeta
 export const BindingRenderedModule = __napiModule.exports.BindingRenderedModule
 export const BindingTransformPluginContext = __napiModule.exports.BindingTransformPluginContext
+export const BindingUrlResolver = __napiModule.exports.BindingUrlResolver
 export const BindingWatcher = __napiModule.exports.BindingWatcher
 export const BindingWatcherChangeData = __napiModule.exports.BindingWatcherChangeData
 export const BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent

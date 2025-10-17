@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use napi::bindgen_prelude::{Buffer, Either, FnArgs};
 use rolldown_plugin_utils::UsizeOrFunction;
-use rolldown_plugin_vite_css::{UrlResolver, ViteCSSPlugin};
+use rolldown_plugin_vite_css::{CompileCSSResult, UrlResolver, ViteCSSPlugin};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::types::{
@@ -12,8 +12,33 @@ use crate::types::{
   },
 };
 
-#[expect(dead_code)]
-#[napi_derive::napi(object)]
+#[napi_derive::napi]
+pub struct BindingUrlResolver {
+  inner: Arc<UrlResolver>,
+}
+
+impl BindingUrlResolver {
+  pub fn new(inner: Arc<UrlResolver>) -> Self {
+    Self { inner }
+  }
+}
+
+#[napi_derive::napi]
+impl BindingUrlResolver {
+  #[napi(
+    ts_args_type = "url: string, importer?: string",
+    ts_return_type = "Promise<[string, string | undefined]>"
+  )]
+  pub async fn call(
+    &self,
+    url: String,
+    importer: Option<String>,
+  ) -> napi::Result<(String, Option<String>)> {
+    (self.inner)(url, importer).await.map_err(napi::Error::from)
+  }
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingCompileCSSResult {
   pub code: String,
   pub map: Option<BindingSourcemap>,
@@ -21,11 +46,30 @@ pub struct BindingCompileCSSResult {
   pub modules: Option<FxHashMap<String, String>>,
 }
 
+impl TryFrom<BindingCompileCSSResult> for CompileCSSResult {
+  type Error = anyhow::Error;
+
+  fn try_from(value: BindingCompileCSSResult) -> Result<Self, Self::Error> {
+    Ok(Self {
+      code: value.code,
+      map: value.map.map(TryInto::try_into).transpose()?,
+      deps: value.deps,
+      modules: value.modules,
+    })
+  }
+}
+
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(derive_more::Debug)]
 pub struct BindingViteCSSPluginConfig {
   pub is_lib: bool,
   pub public_dir: String,
+  #[debug(skip)]
+  #[napi(
+    ts_type = "(url: string, importer: string, resolver: BindingUrlResolver) => Promise<BindingCompileCSSResult>"
+  )]
+  pub compress_css:
+    MaybeAsyncJsCallback<FnArgs<(String, String, BindingUrlResolver)>, BindingCompileCSSResult>,
   #[debug(skip)]
   #[napi(ts_type = "(url: string, importer?: string) => MaybePromise<string | undefined>")]
   pub resolve_url: MaybeAsyncJsCallback<FnArgs<(String, Option<String>)>, Option<String>>,
@@ -57,10 +101,17 @@ impl From<BindingViteCSSPluginConfig> for ViteCSSPlugin {
     Self {
       is_lib: value.is_lib,
       public_dir: value.public_dir,
-      compile_css: Arc::new(move |url: &str, importer: &str, _url_resolver: Arc<UrlResolver>| {
-        let _url = url.to_string();
-        let _importer = importer.to_string();
-        Box::pin(async move { todo!() })
+      compile_css: Arc::new(move |url: &str, importer: &str, url_resolver: Arc<UrlResolver>| {
+        let url = url.to_string();
+        let importer = importer.to_string();
+        let compress_css = Arc::clone(&value.compress_css);
+        Box::pin(async move {
+          compress_css
+            .await_call((url, importer, BindingUrlResolver::new(url_resolver)).into())
+            .await
+            .map_err(anyhow::Error::from)
+            .and_then(TryInto::try_into)
+        })
       }),
       resolve_url: Arc::new(move |url: &str, importer: Option<&str>| {
         let url = url.to_string();

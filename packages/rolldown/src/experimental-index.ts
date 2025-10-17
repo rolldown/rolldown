@@ -31,6 +31,7 @@ export {
   modulePreloadPolyfillPlugin,
   reactRefreshWrapperPlugin,
   reporterPlugin,
+  viteCSSPlugin,
   viteResolvePlugin,
   wasmFallbackPlugin,
   wasmHelperPlugin,

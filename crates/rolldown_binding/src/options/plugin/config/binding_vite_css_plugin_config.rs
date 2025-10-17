@@ -65,9 +65,12 @@ pub struct BindingViteCSSPluginConfig {
   pub is_lib: bool,
   pub public_dir: String,
   #[debug(skip)]
-  #[napi(
-    ts_type = "(url: string, importer: string, resolver: BindingUrlResolver) => Promise<BindingCompileCSSResult>"
-  )]
+  #[napi(ts_type = "(url: string, importer: string, resolver: BindingUrlResolver) => Promise<{
+  code: string
+  map?: BindingSourcemap
+  modules?: Record<string, string>
+  deps?: Set<string>
+}>")]
   pub compress_css:
     MaybeAsyncJsCallback<FnArgs<(String, String, BindingUrlResolver)>, BindingCompileCSSResult>,
   #[debug(skip)]

@@ -2200,10 +2200,15 @@ export interface BindingTreeshake {
 export interface BindingViteCssPluginConfig {
   isLib: boolean
   publicDir: string
-  compressCss: (url: string, importer: string, resolver: BindingUrlResolver) => Promise<BindingCompileCSSResult>
-  resolveUrl: (url: string, importer?: string) => MaybePromise<string | undefined>
-  assetInlineLimit?: number | ((file: string, content: Buffer) => boolean | undefined)
-}
+  compressCss: (url: string, importer: string, resolver: BindingUrlResolver) => Promise<{
+    code: string
+    map?: BindingSourcemap
+    modules?: Record<string, string>
+    deps?: Set<string>
+    }>
+    resolveUrl: (url: string, importer?: string) => MaybePromise<string | undefined>
+    assetInlineLimit?: number | ((file: string, content: Buffer) => boolean | undefined)
+  }
 
 export interface BindingVitePluginCustom {
   'vite:import-glob'?: ViteImportGlobMeta

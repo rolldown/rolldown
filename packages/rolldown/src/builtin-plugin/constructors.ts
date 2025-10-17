@@ -10,6 +10,7 @@ import type {
   BindingModulePreloadPolyfillPluginConfig,
   BindingReactRefreshWrapperPluginConfig,
   BindingReporterPluginConfig,
+  BindingViteCssPluginConfig,
   BindingViteResolvePluginConfig,
   BindingWasmHelperPluginConfig,
 } from '../binding';
@@ -138,4 +139,10 @@ export function reactRefreshWrapperPlugin(
     config,
   );
   return makeBuiltinPluginCallable(builtinPlugin);
+}
+
+export function viteCSSPlugin(
+  config?: BindingViteCssPluginConfig,
+): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:vite-css', config);
 }

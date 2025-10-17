@@ -4,7 +4,7 @@ mod utils;
 use std::{borrow::Cow, path::Path, pin::Pin, rc::Rc, sync::Arc};
 
 use cow_utils::CowUtils as _;
-use derive_more::Debug;
+use html5gum::Span;
 use oxc::ast_visit::Visit;
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookTransformOutput, HookUsage, LogWithoutPlugin, Plugin};
@@ -38,7 +38,7 @@ pub enum ResolveDependenciesEither {
 }
 
 #[expect(clippy::struct_excessive_bools)]
-#[derive(Debug, Default)]
+#[derive(derive_more::Debug, Default)]
 pub struct ViteHtmlPlugin {
   pub is_lib: bool,
   pub is_ssr: bool,
@@ -111,11 +111,12 @@ impl Plugin for ViteHtmlPlugin {
     let mut some_scripts_are_async = false;
     let mut some_scripts_are_defer = false;
 
-    let style_urls = Vec::new();
+    let mut style_urls = Vec::new();
     let mut script_urls = Vec::new();
 
     // TODO: Support module_side_effects for module info
     // let mut set_modules = Vec::new();
+    let mut src_tasks = Vec::new();
     let mut srcset_tasks = Vec::new();
     let mut overwrite_attrs = Vec::new();
     let mut s = string_wizard::MagicString::new(args.code);
@@ -270,7 +271,7 @@ impl Plugin for ViteHtmlPlugin {
                   .collect::<FxHashMap<_, _>>();
 
                 // Define which attributes to process based on element type
-                let (_src_attrs, srcset_attrs): (&[&str], &[&str]) = match &**name {
+                let (src_attrs, srcset_attrs): (&[&str], &[&str]) = match &**name {
                   "audio" | "embed" | "input" | "track" => (&["src"], &[]),
                   "img" | "source" => (&["src"], &["srcset"]),
                   "image" | "use" => (&["href", "xlink:href"], &[]),
@@ -289,7 +290,37 @@ impl Plugin for ViteHtmlPlugin {
                 }
 
                 // Process src/href attributes
-                todo!()
+                for src_attr in src_attrs {
+                  if let Some(attr) = attr_map.get(src_attr) {
+                    let decode_url =
+                      rolldown_plugin_utils::uri::decode_uri(&attr.value).into_owned();
+                    if rolldown_plugin_utils::check_public_file(&decode_url, &self.public_dir)
+                      .is_some()
+                    {
+                      overwrite_attrs.push((decode_url, attr.span));
+                    } else if !utils::is_excluded_url(&decode_url) {
+                      if &**name == "link"
+                        && rolldown_plugin_utils::css::is_css_request(&decode_url)
+                        && !(attr_map.contains_key("media") || attr_map.contains_key("disabled"))
+                      {
+                        js.push_str("import ");
+                        js.push_str(&rolldown_plugin_utils::to_string_literal(&decode_url));
+                        js.push_str(";\n");
+                        style_urls.push((decode_url, attr.span));
+                      }
+                    } else {
+                      let should_inline = (&**name == "link"
+                        && attr_map.get("rel").is_some_and(|attr| {
+                          utils::parse_rel_attr(&attr.value).into_iter().any(|v| {
+                            ["icon", "apple-touch-icon", "apple-touch-startup-image", "manifest"]
+                              .contains(&v.as_str())
+                          })
+                        }))
+                      .then_some(false);
+                      src_tasks.push((decode_url, attr.span, should_inline));
+                    }
+                  }
+                }
               }
             }
 
@@ -340,6 +371,13 @@ impl Plugin for ViteHtmlPlugin {
       }
     }
 
+    for (url, span, should_inline) in src_tasks {
+      let processed_encoded_url = self.process_asset_url(&ctx, &url, &id, should_inline).await?;
+      if processed_encoded_url != url {
+        overwrite_attrs.push((processed_encoded_url.into_owned(), span));
+      }
+    }
+
     for (task, span) in srcset_tasks {
       let processed_encoded_url = self.process_src_set(&ctx, &task, &id).await?;
       if processed_encoded_url != task {
@@ -384,16 +422,17 @@ impl Plugin for ViteHtmlPlugin {
     }
 
     let resolved_style_urls = rolldown_utils::futures::block_on_spawn_all(
-      style_urls.into_iter().map(async |(url, range): (&str, std::ops::Range<usize>)| {
-        (url, range, ctx.resolve(url, Some(&id), None).await)
+      style_urls.into_iter().map(async |(url, range): (String, Span)| {
+        let resolved = ctx.resolve(&url, Some(&id), None).await;
+        (url, range, resolved)
       }),
     )
     .await;
 
-    for (url, range, resolved) in resolved_style_urls {
+    for (url, span, resolved) in resolved_style_urls {
       match resolved?.ok() {
         Some(_) => {
-          s.remove(range.start, range.end);
+          s.remove(span.start, span.end);
         }
         None => {
           ctx.warn(LogWithoutPlugin {
@@ -404,7 +443,7 @@ impl Plugin for ViteHtmlPlugin {
             .cow_replace(
               &rolldown_utils::concat_string!(
                 "import ",
-                rolldown_plugin_utils::to_string_literal(url),
+                rolldown_plugin_utils::to_string_literal(&url),
                 "\n"
               ),
               "",

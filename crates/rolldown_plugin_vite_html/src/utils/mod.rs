@@ -8,7 +8,7 @@ pub mod html_tag;
 
 pub use helpers::{
   ImportedChunk, get_css_files_for_chunk, get_imported_chunks, is_entirely_import, is_excluded_url,
-  overwrite_check_public_file,
+  overwrite_check_public_file, parse_rel_attr,
 };
 pub use html_inject::inject_to_head;
 pub use script_inline_import_visistor::ScriptInlineImportVisitor;

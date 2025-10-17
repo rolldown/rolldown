@@ -234,3 +234,24 @@ pub fn parse_srcset(srcset: &str) -> Vec<ImageCandidate> {
     })
     .collect()
 }
+
+/// Parses a rel attribute value into individual tokens.
+///
+/// This is equivalent to Vite's `parseRelAttr` function.
+/// Splits the attribute by HTML whitespace characters (tab, newline, form feed, carriage return, space)
+/// and converts each token to lowercase.
+///
+/// # Arguments
+/// * `attr` - The rel attribute value to parse
+///
+/// # Returns
+/// A vector of lowercase tokens
+///
+/// # Example
+/// ```
+/// let tokens = parse_rel_attr("stylesheet icon");
+/// assert_eq!(tokens, vec!["stylesheet", "icon"]);
+/// ```
+pub fn parse_rel_attr(attr: &str) -> Vec<String> {
+  attr.split(['\t', '\n', '\u{000C}', '\r', ' ']).map(str::to_lowercase).collect()
+}

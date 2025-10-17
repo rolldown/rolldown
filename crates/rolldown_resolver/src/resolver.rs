@@ -21,6 +21,7 @@ use oxc_resolver::{
 #[derive(Debug)]
 #[expect(clippy::struct_field_names)]
 pub struct Resolver<T: FileSystem = OsFileSystem> {
+  fs: T,
   cwd: PathBuf,
   default_resolver: ResolverGeneric<T>,
   // Resolver for `import '...'` and `import(...)`
@@ -47,7 +48,7 @@ impl<F: FileSystem> Resolver<F> {
     } else {
       // User have has the responsibility to ensure `path` is real path if needed. We just pass it through.
       let realpath = path.to_path_buf();
-      let json_str = std::fs::read_to_string(path)?;
+      let json_str = self.fs.read_to_string(path)?;
       let oxc_pkg_json = OxcPackageJson::parse(path.to_path_buf(), realpath, &json_str)?;
       let pkg_json = Arc::new(PackageJson::from_oxc_pkg_json(&oxc_pkg_json));
       self.package_json_cache.insert(path.to_path_buf(), Arc::clone(&pkg_json));
@@ -56,7 +57,7 @@ impl<F: FileSystem> Resolver<F> {
   }
 }
 
-impl<F: FileSystem> Resolver<F> {
+impl<F: FileSystem + Clone> Resolver<F> {
   pub fn new(
     fs: F,
     cwd: PathBuf,
@@ -178,7 +179,7 @@ impl<F: FileSystem> Resolver<F> {
     };
 
     let default_resolver =
-      ResolverGeneric::new_with_file_system(fs, resolve_options_with_default_conditions);
+      ResolverGeneric::new_with_file_system(fs.clone(), resolve_options_with_default_conditions);
     let import_resolver =
       default_resolver.clone_with_options(resolve_options_with_import_conditions);
     let require_resolver =
@@ -186,6 +187,7 @@ impl<F: FileSystem> Resolver<F> {
     let css_resolver = default_resolver.clone_with_options(resolve_options_for_css);
     let new_url_resolver = default_resolver.clone_with_options(resolve_options_for_new_url);
     Self {
+      fs,
       cwd,
       default_resolver,
       import_resolver,

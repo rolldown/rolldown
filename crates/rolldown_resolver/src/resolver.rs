@@ -49,7 +49,7 @@ impl<F: FileSystem> Resolver<F> {
       // User have has the responsibility to ensure `path` is real path if needed. We just pass it through.
       let realpath = path.to_path_buf();
       let json_str = self.fs.read_to_string(path)?;
-      let oxc_pkg_json = OxcPackageJson::parse(path.to_path_buf(), realpath, &json_str)?;
+      let oxc_pkg_json = OxcPackageJson::parse(path.to_path_buf(), realpath, json_str)?;
       let pkg_json = Arc::new(PackageJson::from_oxc_pkg_json(&oxc_pkg_json));
       self.package_json_cache.insert(path.to_path_buf(), Arc::clone(&pkg_json));
       Ok(pkg_json)

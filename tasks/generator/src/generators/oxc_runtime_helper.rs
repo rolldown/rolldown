@@ -23,14 +23,7 @@ impl Generator for OxcRuntimeHelperGenerator {
     let resolver = oxc_resolver::Resolver::new(ResolveOptions::default());
     let runtime_package = resolver.resolve(workspace_root, "@oxc-project/runtime/package.json")?;
 
-    let version = runtime_package
-      .package_json()
-      .unwrap()
-      .raw_json()
-      .as_object()
-      .and_then(|obj| obj.get("version"))
-      .and_then(|v| v.as_str())
-      .unwrap_or("unknown");
+    let version = runtime_package.package_json().and_then(|v| v.version()).unwrap_or("unknown");
 
     let runtime_dir = runtime_package.path().parent().unwrap();
     let esm_helpers_dir = runtime_dir.join("src/helpers/esm");

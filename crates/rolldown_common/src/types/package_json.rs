@@ -14,11 +14,11 @@ pub struct PackageJson {
 impl PackageJson {
   pub fn from_oxc_pkg_json(oxc_pkg_json: &oxc_resolver::PackageJson) -> Self {
     Self {
-      r#type: oxc_pkg_json.r#type.map(|t| match t {
+      r#type: oxc_pkg_json.r#type().map(|t| match t {
         PackageType::CommonJs => "commonjs",
         PackageType::Module => "module",
       }),
-      side_effects: oxc_pkg_json.side_effects.as_ref().and_then(SideEffects::from_json_value),
+      side_effects: oxc_pkg_json.side_effects().as_ref().and_then(SideEffects::from_resolver),
       realpath: oxc_pkg_json.realpath.clone(),
     }
   }

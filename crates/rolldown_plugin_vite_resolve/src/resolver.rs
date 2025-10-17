@@ -427,7 +427,7 @@ impl Resolver {
       let mut resolved_id = id;
       if is_deep_import(id) && get_extension(id) != get_extension(&resolved.id) {
         if let Some(pkg_json) = oxc_resolved_result.unwrap().package_json() {
-          let has_exports_field = pkg_json.raw_json().as_object().unwrap().get("exports").is_some();
+          let has_exports_field = pkg_json.exports().is_some();
           if !has_exports_field {
             // id date-fns/locale
             // resolve.id ...date-fns/esm/locale/index.js

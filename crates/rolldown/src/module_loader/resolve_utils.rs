@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use futures::future::join_all;
+use futures::{FutureExt, future::join_all};
 use oxc_index::IndexVec;
 use rolldown_common::{
   ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleType,
@@ -58,12 +58,17 @@ pub async fn resolve_dependencies(
   warnings: &mut Vec<BuildDiagnostic>,
   module_type: &ModuleType,
 ) -> BuildResult<IndexVec<ImportRecordIdx, ResolvedId>> {
-  let jobs = dependencies.iter_enumerated().map(async |(idx, item)| {
-    let importer = &self_resolved_id.id;
-    let specifier = &item.module_request;
-    resolve_id(options, resolver, plugin_driver, importer, specifier, item.kind)
-      .await
-      .map(|id| (idx, id))
+  let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
+    let options = Arc::clone(options);
+    let resolver = Arc::clone(resolver);
+    let plugin_driver = Arc::clone(plugin_driver);
+    let importer = self_resolved_id.id.clone();
+    let specifier = item.module_request.clone();
+    let kind = item.kind;
+    tokio::spawn(async move {
+      resolve_id(&options, &resolver, &plugin_driver, &importer, &specifier, kind).await
+    })
+    .map(move |id| (idx, id))
   });
 
   // FIXME: if the import records came from css view, but source from ecma view,
@@ -72,9 +77,9 @@ pub async fn resolve_dependencies(
   let mut ret = IndexVec::with_capacity(dependencies.len());
   let mut build_errors = vec![];
   for resolved_id in join_all(jobs).await {
-    let (idx, resolved_id) = resolved_id?;
+    let (idx, resolved_id) = resolved_id;
 
-    match resolved_id {
+    match resolved_id.map_err(anyhow::Error::from)?? {
       Ok(info) => {
         ret.push(info);
       }

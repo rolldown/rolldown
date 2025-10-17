@@ -65,7 +65,6 @@ pub fn create_tokio_runtime(blocking_threads: Option<u32>) {
     // unlike the web server scenario
     // rolldown puts a lot of blocking tasks in the worker threads rather than blocking_threads
     // so we need to increase the worker threads rather than the blocking_threads
-    .worker_threads(num_cpus::get_physical() * 3 / 2)
     .enable_all()
     .build()
     .expect("Failed to create tokio runtime");

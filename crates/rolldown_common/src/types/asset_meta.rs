@@ -10,6 +10,12 @@ pub enum InstantiationKind {
   None,
 }
 
+impl Default for InstantiationKind {
+  fn default() -> Self {
+    InstantiationKind::None
+  }
+}
+
 impl From<EcmaAssetMeta> for InstantiationKind {
   fn from(rendered_chunk: EcmaAssetMeta) -> Self {
     InstantiationKind::Ecma(Box::new(rendered_chunk))

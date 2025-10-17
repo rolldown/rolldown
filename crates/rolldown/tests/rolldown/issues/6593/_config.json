@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./entry.js"
+      }
+    ]
+  }
+}

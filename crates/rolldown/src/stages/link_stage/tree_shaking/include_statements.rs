@@ -60,6 +60,22 @@ struct Context<'a> {
   json_module_none_self_reference_included_symbol: FxHashMap<ModuleIdx, FxHashSet<SymbolRef>>,
 }
 
+fn include_cjs_bailout_exports(
+  context: &mut Context,
+  metas: &LinkingMetadataVec,
+  bailout_modules: impl IntoIterator<Item = ModuleIdx>,
+) {
+  for idx in bailout_modules {
+    metas[idx]
+      .resolved_exports
+      .iter()
+      .filter_map(|(_name, local)| local.came_from_cjs.then_some(local))
+      .for_each(|local| {
+        include_symbol(context, local.symbol_ref, SymbolIncludeReason::Normal);
+      });
+  }
+}
+
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(&mut self) {
@@ -128,15 +144,11 @@ impl LinkStage<'_> {
     let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
 
     // It could be safely take since it is no more used.
-    for idx in std::mem::take(&mut context.bailout_cjs_tree_shaking_modules) {
-      self.metas[idx]
-        .resolved_exports
-        .iter()
-        .filter_map(|(_name, local)| local.came_from_cjs.then_some(local))
-        .for_each(|local| {
-          include_symbol(context, local.symbol_ref, SymbolIncludeReason::Normal);
-        });
-    }
+    // We extract bailout_modules first to avoid borrowing conflict:
+    // passing `context` requires a mutable borrow, which conflicts with
+    // borrowing `context.bailout_cjs_tree_shaking_modules` inside the call.
+    let bailout_modules = std::mem::take(&mut context.bailout_cjs_tree_shaking_modules);
+    include_cjs_bailout_exports(context, &self.metas, bailout_modules);
 
     dynamic_entries.retain(|entry| {
       if !cycled_idx.contains(&entry.idx) {
@@ -168,6 +180,12 @@ impl LinkStage<'_> {
       include_module(context, module);
       true
     });
+
+    // We extract bailout_modules first to avoid borrowing conflict:
+    // passing `context` requires a mutable borrow, which conflicts with
+    // borrowing `context.bailout_cjs_tree_shaking_modules` inside the call.
+    let bailout_modules = std::mem::take(&mut context.bailout_cjs_tree_shaking_modules);
+    include_cjs_bailout_exports(context, &self.metas, bailout_modules);
 
     // update entries with lived only.
     self.entries = user_defined_entries.into_iter().chain(dynamic_entries).collect();

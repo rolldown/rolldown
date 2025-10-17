@@ -1,0 +1,51 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## chunk.js
+
+```js
+// HIDDEN [rolldown:runtime]
+export { __commonJS, __toDynamicImportESM };
+```
+
+## lib.js
+
+```js
+import { __commonJS } from "./chunk.js";
+
+//#region plugin.js
+var require_plugin = /* @__PURE__ */ __commonJS({ "plugin.js": ((exports) => {
+	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.makePlugin = makePlugin;
+	function makePlugin() {
+		return { name: "plugin" };
+	}
+}) });
+
+//#endregion
+//#region lib.js
+var require_lib = /* @__PURE__ */ __commonJS({ "lib.js": ((exports, module) => {
+	var _pluginFactory = require_plugin();
+	module.exports = _pluginFactory.makePlugin;
+	module.exports.postcss = true;
+}) });
+
+//#endregion
+export default require_lib();
+
+```
+
+## main.js
+
+```js
+import { __toDynamicImportESM } from "./chunk.js";
+import assert from "node:assert";
+
+//#region entry.js
+const mod = await import("./lib.js").then(__toDynamicImportESM());
+assert.strictEqual(mod.default().name, "plugin");
+
+//#endregion
+```

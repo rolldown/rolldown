@@ -715,6 +715,12 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
+  packages/test-dev-server/tests/fixtures/defer-sync-scan-data:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
   packages/test-dev-server/tests/fixtures/edit:
     devDependencies:
       '@rolldown/test-dev-server':

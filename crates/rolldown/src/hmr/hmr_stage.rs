@@ -273,6 +273,10 @@ impl<'a> HmrStage<'a> {
       );
 
       self.cache.merge(module_loader_output.into()).map_err(|e| vec![anyhow::anyhow!(e).into()])?;
+
+      let options = Arc::clone(&self.options);
+      let resolver = Arc::clone(&self.resolver);
+      self.cache.update_defer_sync_data(&options, &resolver).await?;
       new_added_modules
     };
 
@@ -370,6 +374,9 @@ impl<'a> HmrStage<'a> {
       modules_to_be_updated
         .extend(module_loader_output.new_added_modules_from_partial_scan.clone());
       self.cache.merge(module_loader_output.into()).map_err(|e| vec![anyhow::anyhow!(e).into()])?;
+      let options = Arc::clone(&self.options);
+      let resolver = Arc::clone(&self.resolver);
+      self.cache.update_defer_sync_data(&options, &resolver).await?;
 
       // Note: New added modules might include external modules. There's no way to "update" them, so we need to remove them.
       modules_to_be_updated.retain(|idx| self.module_table().modules[*idx].is_normal());

@@ -3,6 +3,7 @@ use crate::{
   BundlerOptions, SharedOptions, SharedResolver,
   bundler_builder::BundlerBuilder,
   hmr::hmr_stage::{HmrStage, HmrStageInput},
+  module_loader::deferred_scan_data::defer_sync_scan_data,
   stages::{
     generate_stage::GenerateStage,
     scan_stage::{ScanStage, ScanStageOutput},
@@ -145,8 +146,9 @@ impl Bundler {
     // Manually drop it to avoid holding the mut reference.
     drop(scan_stage_cache_guard);
 
-    let scan_stage_output =
-      self.normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode);
+    let scan_stage_output = self
+      .normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode)
+      .await?;
 
     Self::trace_action_module_graph_ready(&scan_stage_output);
     self.plugin_driver.build_end(None).await?;
@@ -271,24 +273,42 @@ impl Bundler {
   }
 
   #[tracing::instrument(level = "debug", skip(self, output))]
-  fn normalize_scan_stage_output_and_update_cache(
+  async fn normalize_scan_stage_output_and_update_cache(
     &mut self,
     output: ScanStageOutput,
     is_full_scan_mode: bool,
-  ) -> NormalizedScanStageOutput {
+  ) -> BuildResult<NormalizedScanStageOutput> {
     if !self.options.experimental.is_incremental_build_enabled() {
-      return output.try_into().expect("Failed to normalize ScanStageOutput");
+      return Ok(
+        output.try_into().expect("Should be able to convert to NormalizedScanStageOutput"),
+      );
     }
 
     if is_full_scan_mode {
-      let output: NormalizedScanStageOutput =
-        output.try_into().expect("Failed to normalize ScanStageOutput");
+      let mut output: NormalizedScanStageOutput =
+        output.try_into().expect("Should be able to convert to NormalizedScanStageOutput");
+      self.defer_sync_scan_data(&mut output).await?;
       self.cache.set_snapshot(output.make_copy());
-      output
+      Ok(output)
     } else {
-      self.cache.merge(output).expect("Failed to normalize ScanStageOutput");
-      self.cache.create_output()
+      self.cache.merge(output)?;
+      self.cache.update_defer_sync_data(&self.options, &self.resolver).await?;
+      Ok(self.cache.create_output())
     }
+  }
+
+  #[expect(clippy::needless_pass_by_ref_mut, reason = "Required for Send bound across await")]
+  async fn defer_sync_scan_data(
+    &mut self,
+    scan_stage_output: &mut NormalizedScanStageOutput,
+  ) -> BuildResult<()> {
+    defer_sync_scan_data(
+      &self.options,
+      &self.cache.module_id_to_idx,
+      &self.resolver,
+      scan_stage_output,
+    )
+    .await
   }
 
   async fn inner_close(&mut self) -> Result<()> {

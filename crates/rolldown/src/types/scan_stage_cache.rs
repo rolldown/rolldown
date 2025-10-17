@@ -2,12 +2,14 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{GetLocalDbMut, ImporterRecord, ModuleIdx};
+use rolldown_error::BuildResult;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
 use crate::{
-  module_loader::module_loader::VisitState,
+  SharedOptions, SharedResolver,
+  module_loader::{deferred_scan_data::defer_sync_scan_data, module_loader::VisitState},
   stages::scan_stage::{NormalizedScanStageOutput, ScanStageOutput},
 };
 
@@ -36,15 +38,35 @@ impl ScanStageCache {
     self.snapshot.as_mut().unwrap()
   }
 
+  /// Useful when workarounding rustc borrow rules
+  pub fn take_snapshot(&mut self) -> Option<NormalizedScanStageOutput> {
+    self.snapshot.take()
+  }
+
+  pub async fn update_defer_sync_data(
+    &mut self,
+    options: &SharedOptions,
+    resolver: &SharedResolver,
+  ) -> BuildResult<()> {
+    let snapshot = self.take_snapshot();
+    if let Some(mut snapshot) = snapshot {
+      defer_sync_scan_data(options, &self.module_id_to_idx, resolver, &mut snapshot).await?;
+      self.set_snapshot(snapshot);
+    }
+    Ok(())
+  }
+
   /// # Panic
   /// - if the snapshot is unset
   pub fn get_snapshot(&self) -> &NormalizedScanStageOutput {
     self.snapshot.as_ref().unwrap()
   }
 
-  pub fn merge(&mut self, mut scan_stage_output: ScanStageOutput) -> Result<(), &'static str> {
+  pub fn merge(&mut self, mut scan_stage_output: ScanStageOutput) -> BuildResult<()> {
     let Some(ref mut cache) = self.snapshot else {
-      self.snapshot = Some(scan_stage_output.try_into()?);
+      self.snapshot = Some(
+        scan_stage_output.try_into().map_err(|e: &'static str| vec![anyhow::anyhow!(e).into()])?,
+      );
       return Ok(());
     };
     let modules = match scan_stage_output.module_table {

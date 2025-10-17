@@ -74,6 +74,11 @@ class DevServer {
           this.handleHmrUpdates(errOrUpdates.updates);
         }
       },
+      onOutput: (errOrOutputs) => {
+        if (errOrOutputs instanceof Error) {
+          console.error('Build error:', errOrOutputs);
+        }
+      },
       watch: getDevWatchOptionsForCi(),
     });
     this.#devEngine = devEngine;

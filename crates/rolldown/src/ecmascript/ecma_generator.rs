@@ -13,9 +13,6 @@ use rolldown_common::{
 use rolldown_error::BuildResult;
 use rolldown_plugin::HookAddonArgs;
 use rolldown_sourcemap::Source;
-#[cfg(not(target_family = "wasm"))]
-use rolldown_utils::rayon::IndexedParallelIterator;
-use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 
 use super::format::{cjs::render_cjs, esm::render_esm, iife::render_iife, umd::render_umd};
@@ -48,11 +45,10 @@ impl Generator for EcmaGenerator {
     let rendered_module_sources: RenderedModuleSources = ctx
       .chunk
       .modules
-      .par_iter()
-      .copied()
+      .iter()
       .zip(module_id_to_codegen_ret)
       .filter_map(|(id, codegen_ret)| {
-        ctx.link_output.module_table[id]
+        ctx.link_output.module_table[*id]
           .as_normal()
           .map(|m| (m, codegen_ret.expect("should have codegen_ret")))
       })

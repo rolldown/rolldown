@@ -1,6 +1,6 @@
-use std::{ops::Deref, sync::Arc};
+use std::{ops::Deref, pin::Pin, sync::Arc};
 
-use futures::future::{try_join_all, try_join3};
+use futures::future::try_join_all;
 use oxc::span::CompactStr;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
@@ -9,7 +9,7 @@ use rolldown_common::{
   SymbolRef,
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
-use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult};
 use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, ParallelIterator},
@@ -22,7 +22,7 @@ use crate::{
   css::css_generator::CssGenerator,
   ecmascript::ecma_generator::EcmaGenerator,
   type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
-  types::generator::{GenerateContext, Generator},
+  types::generator::{GenerateContext, GenerateOutput, Generator},
   utils::{
     augment_chunk_hash::augment_chunk_hash,
     chunk::{finalize_chunks::finalize_assets, render_chunk_exports::get_export_items},
@@ -31,6 +31,14 @@ use crate::{
 };
 
 use super::GenerateStage;
+
+type ChunkGeneratorFuture<'a> = Pin<
+  Box<
+    dyn Future<Output = Result<Result<GenerateOutput, BatchedBuildDiagnostic>, anyhow::Error>>
+      + 'a
+      + Send,
+  >,
+>;
 
 impl GenerateStage<'_> {
   pub async fn render_chunk_to_assets(
@@ -162,58 +170,64 @@ impl GenerateStage<'_> {
       .collect();
 
     try_join_all(
-      chunk_graph.chunk_table.iter_enumerated().zip(chunk_index_to_codegen_rets.into_iter()).map(
-        |((chunk_idx, chunk), module_id_to_codegen_ret)| async move {
-          let mut ecma_ctx = GenerateContext {
-            chunk_idx,
-            chunk,
-            options: self.options,
-            link_output: self.link_output,
-            chunk_graph,
-            plugin_driver: self.plugin_driver,
-            warnings: vec![],
-            module_id_to_codegen_ret,
-            render_export_items_index_vec,
-          };
-          let ecma_chunks_future = EcmaGenerator::instantiate_chunk(&mut ecma_ctx);
-
-          let mut css_ctx = GenerateContext {
-            chunk_idx,
-            chunk,
-            options: self.options,
-            link_output: self.link_output,
-            chunk_graph,
-            plugin_driver: self.plugin_driver,
-            warnings: vec![],
-            // FIXME: module_id_to_codegen_ret is currently not used in CssGenerator. But we need to pass it to satisfy the args.
-            module_id_to_codegen_ret: vec![],
-            render_export_items_index_vec: &index_vec![],
-          };
-          let css_chunks_future = CssGenerator::instantiate_chunk(&mut css_ctx);
-
-          let mut asset_ctx = GenerateContext {
-            chunk_idx,
-            chunk,
-            options: self.options,
-            link_output: self.link_output,
-            chunk_graph,
-            plugin_driver: self.plugin_driver,
-            warnings: vec![],
-            // FIXME: module_id_to_codegen_ret is currently not used in AssetGenerator. But we need to pass it to satisfy the args.
-            module_id_to_codegen_ret: vec![],
-            render_export_items_index_vec: &index_vec![],
-          };
-          let asset_chunks_future = AssetGenerator::instantiate_chunk(&mut asset_ctx);
-
-          let (ecma_chunks, css_chunks, asset_chunks) =
-            try_join3(ecma_chunks_future, css_chunks_future, asset_chunks_future).await?;
-          Ok::<_, anyhow::Error>([ecma_chunks, css_chunks, asset_chunks])
-        },
-      ),
+      chunk_graph
+        .chunk_table
+        .iter_enumerated()
+        .zip(chunk_index_to_codegen_rets.into_iter())
+        .flat_map(|((chunk_idx, chunk), module_id_to_codegen_ret)| {
+          let ecma_chunks_future: ChunkGeneratorFuture = Box::pin(async move {
+            let mut ecma_ctx = GenerateContext {
+              chunk_idx,
+              chunk,
+              options: self.options,
+              link_output: self.link_output,
+              chunk_graph,
+              plugin_driver: self.plugin_driver,
+              warnings: vec![],
+              module_id_to_codegen_ret,
+              render_export_items_index_vec,
+            };
+            let ecma_chunks_future = EcmaGenerator::instantiate_chunk(&mut ecma_ctx);
+            let ecma_chunks = ecma_chunks_future.await?;
+            Ok(ecma_chunks)
+          });
+          let css_chunks_future: ChunkGeneratorFuture = Box::pin(async move {
+            let mut css_ctx = GenerateContext {
+              chunk_idx,
+              chunk,
+              options: self.options,
+              link_output: self.link_output,
+              chunk_graph,
+              plugin_driver: self.plugin_driver,
+              warnings: vec![],
+              module_id_to_codegen_ret: vec![],
+              render_export_items_index_vec: &index_vec![],
+            };
+            let css_chunks_future = CssGenerator::instantiate_chunk(&mut css_ctx);
+            let css_chunks = css_chunks_future.await?;
+            Ok(css_chunks)
+          });
+          let asset_chunks_future: ChunkGeneratorFuture = Box::pin(async move {
+            let mut asset_ctx = GenerateContext {
+              chunk_idx,
+              chunk,
+              options: self.options,
+              link_output: self.link_output,
+              chunk_graph,
+              plugin_driver: self.plugin_driver,
+              warnings: vec![],
+              module_id_to_codegen_ret: vec![],
+              render_export_items_index_vec: &index_vec![],
+            };
+            let asset_chunks_future = AssetGenerator::instantiate_chunk(&mut asset_ctx);
+            let asset_chunks = asset_chunks_future.await?;
+            Ok(asset_chunks)
+          });
+          [ecma_chunks_future, css_chunks_future, asset_chunks_future]
+        }),
     )
     .await?
     .into_iter()
-    .flatten()
     .for_each(|result| match result {
       Ok(generate_output) => {
         generate_output.chunks.into_iter().for_each(|ins_chunk| {

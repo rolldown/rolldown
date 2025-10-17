@@ -1,4 +1,4 @@
-use std::{hash::Hash, mem};
+use std::{borrow::Cow, hash::Hash, mem};
 
 use arcstr::ArcStr;
 use itertools::Itertools;
@@ -13,7 +13,7 @@ use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   concat_string,
   hash_placeholder::{
-    extract_hash_placeholders, hash_placeholder_left_finder, replace_placeholder_with_hash,
+    HASH_PLACEHOLDER_LEFT_FINDER, extract_hash_placeholders, replace_placeholder_with_hash,
   },
   indexmap::FxIndexSet,
   rayon::{
@@ -40,8 +40,6 @@ pub async fn finalize_assets(
   hash_characters: HashCharacters,
   options: &NormalizedBundlerOptions,
 ) -> BuildResult<AssetVec> {
-  let finder = hash_placeholder_left_finder();
-
   let ins_chunk_idx_by_placeholder = index_instantiated_chunks
     .iter_enumerated()
     .filter_map(|(ins_chunk_idx, ins_chunk)| {
@@ -55,12 +53,13 @@ pub async fn finalize_assets(
   let index_direct_dependencies: IndexVec<InsChunkIdx, Vec<InsChunkIdx>> =
     index_instantiated_chunks
       .par_iter()
-      .map(|asset| match &asset.content {
-        StrOrBytes::Str(content) => extract_hash_placeholders(content, &finder)
-          .iter()
-          .filter_map(|placeholder| ins_chunk_idx_by_placeholder.get(placeholder).copied())
-          .collect_vec(),
-        StrOrBytes::Bytes(_content) => {
+      .map(|asset| {
+        if let StrOrBytes::Str(content) = &asset.content {
+          extract_hash_placeholders(content, &HASH_PLACEHOLDER_LEFT_FINDER)
+            .iter()
+            .filter_map(|placeholder| ins_chunk_idx_by_placeholder.get(placeholder).copied())
+            .collect_vec()
+        } else {
           vec![]
         }
       })
@@ -131,7 +130,7 @@ pub async fn finalize_assets(
       let filename: ArcStr = replace_placeholder_with_hash(
         instantiated_chunk.preliminary_filename.as_str(),
         &final_hashes_by_placeholder,
-        &finder,
+        &HASH_PLACEHOLDER_LEFT_FINDER,
       )
       .into();
 
@@ -145,17 +144,14 @@ pub async fn finalize_assets(
         css_meta.debug_id = debug_id;
       }
 
-      // TODO: PERF: should check if this asset has dependencies/placeholders to be replaced
-      match &mut instantiated_chunk.content {
-        StrOrBytes::Str(content) => {
-          *content = replace_placeholder_with_hash(
-            &mem::take(content),
-            &final_hashes_by_placeholder,
-            &finder,
-          )
-          .into_owned();
+      if let StrOrBytes::Str(content) = &mut instantiated_chunk.content {
+        if let Cow::Owned(replaced) = replace_placeholder_with_hash(
+          content,
+          &final_hashes_by_placeholder,
+          &HASH_PLACEHOLDER_LEFT_FINDER,
+        ) {
+          *content = replaced;
         }
-        StrOrBytes::Bytes(_content) => {}
       }
 
       instantiated_chunk.finalize(filename)

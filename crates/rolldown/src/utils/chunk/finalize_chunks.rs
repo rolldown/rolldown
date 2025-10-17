@@ -1,8 +1,9 @@
 use std::{borrow::Cow, hash::Hash, mem};
 
 use arcstr::ArcStr;
+use futures::future::try_join_all;
 use itertools::Itertools;
-use oxc_index::{IndexVec, index_vec};
+use oxc_index::IndexVec;
 use rolldown_common::{
   Asset, HashCharacters, InsChunkIdx, InstantiationKind, NormalizedBundlerOptions, SourceMapType,
   StrOrBytes,
@@ -86,13 +87,11 @@ pub async fn finalize_assets(
     .collect::<Vec<_>>()
     .into();
 
-  let index_ins_chunk_to_hashers: IndexVec<InsChunkIdx, Xxh3> =
-    index_vec![Xxh3::default(); index_instantiated_chunks.len()];
-
-  let index_final_hashes: IndexVec<InsChunkIdx, (String, u128)> = index_ins_chunk_to_hashers
+  let index_final_hashes: IndexVec<InsChunkIdx, (String, u128)> = (0..index_instantiated_chunks
+    .len())
     .into_par_iter()
-    .enumerate()
-    .map(|(asset_idx, mut hasher)| {
+    .map(|asset_idx| {
+      let mut hasher = Xxh3::default();
       let asset_idx = InsChunkIdx::from(asset_idx);
       // Start to calculate hash, first we hash itself
       index_standalone_content_hashes[asset_idx].hash(&mut hasher);
@@ -192,9 +191,8 @@ pub async fn finalize_assets(
 
   // apply sourcemap related logic
 
-  let mut derived_assets = Vec::with_capacity(assets.len());
-
-  for asset in &mut assets {
+  let derived_assets = try_join_all(assets.iter_mut().map(async |asset| {
+    let mut derived_asset: Result<Option<Asset>, anyhow::Error> = Ok(None::<Asset>);
     match &mut asset.meta {
       InstantiationKind::Ecma(ecma_meta) => {
         let asset_code = mem::take(&mut asset.content);
@@ -211,7 +209,7 @@ pub async fn finalize_assets(
           )
           .await?
           {
-            derived_assets.push(Asset {
+            derived_asset = Ok(Some(Asset {
               originate_from: None,
               content: sourcemap_asset.source,
               filename: sourcemap_asset.filename.clone(),
@@ -220,7 +218,7 @@ pub async fn finalize_assets(
                 names: sourcemap_asset.names,
                 original_file_names: sourcemap_asset.original_file_names,
               })),
-            });
+            }));
           }
         }
 
@@ -248,13 +246,13 @@ pub async fn finalize_assets(
           )
           .await?
           {
-            derived_assets.push(Asset {
+            derived_asset = Ok(Some(Asset {
               originate_from: None,
               content: sourcemap_asset.source,
-              filename: sourcemap_asset.filename.clone(),
+              filename: sourcemap_asset.filename,
               map: None,
               meta: InstantiationKind::None,
-            });
+            }));
           }
         }
 
@@ -262,9 +260,11 @@ pub async fn finalize_assets(
       }
       InstantiationKind::None | InstantiationKind::Sourcemap(_) => {}
     }
-  }
+    derived_asset
+  }))
+  .await?;
 
-  assets.extend(derived_assets);
+  assets.extend(derived_assets.into_iter().flatten());
 
   Ok(assets)
 }

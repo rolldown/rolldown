@@ -89,9 +89,13 @@ export function buildImportAnalysisPlugin(
 }
 
 export function viteResolvePlugin(
-  config: BindingViteResolvePluginConfig,
+  config: Exclude<BindingViteResolvePluginConfig, 'yarnPnp'>,
 ): BuiltinPlugin {
-  const builtinPlugin = new BuiltinPlugin('builtin:vite-resolve', config);
+  const builtinPlugin = new BuiltinPlugin('builtin:vite-resolve', {
+    ...config,
+    // process is undefined for browser build
+    yarnPnp: typeof process === 'object' && !!process.versions?.pnp,
+  });
   return makeBuiltinPluginCallable(builtinPlugin);
 }
 

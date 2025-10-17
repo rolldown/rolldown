@@ -18,6 +18,7 @@ workspace = true
 [features]
 default = ["serde"]
 serde = ["dep:serde", "oxc_index/serde"]
+testing = []
 
 [dependencies]
 anyhow = { workspace = true }

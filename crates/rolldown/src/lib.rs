@@ -37,3 +37,6 @@ pub use rolldown_common::bundler_options::*;
 pub use rolldown_resolver::ResolveOptions;
 
 pub use rolldown_plugin as plugin;
+
+#[cfg(feature = "testing")]
+pub use crate::utils::determine_minify_internal_exports_default::determine_minify_internal_exports_default;

@@ -3,8 +3,8 @@ use std::{borrow::Cow, path::Path, sync::Arc};
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_common::{
   AttachDebugInfo, GlobalsOutputOption, InjectImport, LegalComments, MinifyOptions, ModuleType,
-  NormalizedBundlerOptions, OutputFormat, Platform, PreserveEntrySignatures, RawMinifyOptions,
-  TreeshakeOptions, normalize_optimization_option,
+  NormalizedBundlerOptions, OutputFormat, Platform, PreserveEntrySignatures, TreeshakeOptions,
+  normalize_optimization_option,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_fs::{OsFileSystem, OxcResolverFileSystem as _};
@@ -342,10 +342,12 @@ pub fn prepare_build_context(
     debug: raw_options.debug.is_some(),
     optimization: normalize_optimization_option(raw_options.optimization, platform),
     top_level_var: raw_options.top_level_var.unwrap_or(false),
-    minify_internal_exports: raw_options.minify_internal_exports.unwrap_or(
-      matches!(format, OutputFormat::Esm)
-        || matches!(raw_minify, RawMinifyOptions::Bool(true) | RawMinifyOptions::Object(_)),
-    ),
+    minify_internal_exports: raw_options.minify_internal_exports.unwrap_or_else(|| {
+      crate::utils::determine_minify_internal_exports_default::determine_minify_internal_exports_default(
+        Some(format),
+        &raw_minify,
+      )
+    }),
     clean_dir: raw_options.clean_dir.unwrap_or(false),
     context: raw_options.context.unwrap_or_default(),
     tsconfig,

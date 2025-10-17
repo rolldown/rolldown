@@ -24,7 +24,7 @@ insta = { workspace = true }
 json-strip-comments = { workspace = true }
 jsonschema = { workspace = true }
 regex = { workspace = true }
-rolldown = { workspace = true }
+rolldown = { workspace = true, features = ["testing"] }
 rolldown_common = { workspace = true }
 rolldown_error = { workspace = true }
 rolldown_sourcemap = { workspace = true }

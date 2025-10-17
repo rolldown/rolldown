@@ -246,7 +246,9 @@ impl GenerateStage<'_> {
   }
 
   pub fn ensure_lazy_module_initialization_order(&self, chunk_graph: &mut ChunkGraph) {
-    if self.options.experimental.strict_execution_order.unwrap_or_default() {
+    if self.options.experimental.strict_execution_order.unwrap_or_default()
+      && !self.options.experimental.is_on_demand_wrapping_enabled()
+    {
       // If `strict_execution_order` is enabled, the lazy module initialization order is already
       // guaranteed.
       return;

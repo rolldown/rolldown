@@ -18,6 +18,7 @@ use rolldown_plugin_react_refresh_wrapper::ReactRefreshWrapperPlugin;
 use rolldown_plugin_replace::ReplacePlugin;
 use rolldown_plugin_reporter::ReporterPlugin;
 use rolldown_plugin_transform::TransformPlugin;
+use rolldown_plugin_vite_css::ViteCSSPlugin;
 use rolldown_plugin_vite_resolve::ViteResolvePlugin;
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
@@ -25,7 +26,8 @@ use rolldown_plugin_web_worker_post::WebWorkerPostPlugin;
 
 use crate::options::plugin::config::{
   BindingEsmExternalRequirePluginConfig, BindingModulePreloadPolyfillPluginConfig,
-  BindingReactRefreshWrapperPluginConfig, BindingWasmHelperPluginConfig,
+  BindingReactRefreshWrapperPluginConfig, BindingViteCSSPluginConfig,
+  BindingWasmHelperPluginConfig,
 };
 
 use super::{
@@ -184,6 +186,17 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           BindingTransformPluginConfig::from_unknown(options)?.into()
         } else {
           TransformPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteCSS => {
+        let plugin: ViteCSSPlugin = if let Some(options) = plugin.options {
+          BindingViteCSSPluginConfig::from_unknown(options)?.into()
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteCSSPlugin",
+          ));
         };
         Arc::new(plugin)
       }

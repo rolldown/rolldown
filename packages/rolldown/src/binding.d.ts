@@ -1576,6 +1576,7 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:reporter'|
 'builtin:replace'|
 'builtin:transform'|
+'builtin:vite-css'|
 'builtin:vite-resolve'|
 'builtin:wasm-fallback'|
 'builtin:wasm-helper'|
@@ -1616,6 +1617,13 @@ export declare enum BindingChunkModuleOrderBy {
 export interface BindingClientHmrUpdate {
   clientId: string
   update: BindingHmrUpdate
+}
+
+export interface BindingCompileCssResult {
+  code: string
+  map?: BindingSourcemap
+  deps?: FxHashSet<string>
+  modules?: FxHashMap<string, string>
 }
 
 export interface BindingDebugOptions {
@@ -2183,6 +2191,13 @@ export interface BindingTreeshake {
   commonjs?: boolean
   propertyReadSideEffects?: BindingPropertyReadSideEffects
   propertyWriteSideEffects?: BindingPropertyWriteSideEffects
+}
+
+export interface BindingViteCssPluginConfig {
+  isLib: boolean
+  publicDir: string
+  resolveUrl: (url: string, importer?: string) => MaybePromise<string | undefined>
+  assetInlineLimit?: number | ((file: string, content: Buffer) => boolean | undefined)
 }
 
 export interface BindingVitePluginCustom {

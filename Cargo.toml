@@ -109,6 +109,7 @@ rolldown_plugin_replace = { version = "0.1.0", path = "crates/rolldown_plugin_re
 rolldown_plugin_reporter = { version = "0.1.0", path = "crates/rolldown_plugin_reporter" }
 rolldown_plugin_transform = { version = "0.1.0", path = "crates/rolldown_plugin_transform" }
 rolldown_plugin_utils = { version = "0.1.0", path = "crates/rolldown_plugin_utils" }
+rolldown_plugin_vite_css = { version = "0.1.0", path = "crates/rolldown_plugin_vite_css" }
 rolldown_plugin_vite_resolve = { version = "0.1.0", path = "crates/rolldown_plugin_vite_resolve" }
 rolldown_plugin_wasm_fallback = { version = "0.1.0", path = "crates/rolldown_plugin_wasm_fallback" }
 rolldown_plugin_wasm_helper = { version = "0.1.0", path = "crates/rolldown_plugin_wasm_helper" }

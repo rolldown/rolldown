@@ -16,7 +16,7 @@ type ResolveUrl = dyn (Fn(
   + Send
   + Sync;
 
-type UrlResolver = dyn Fn(
+pub type UrlResolver = dyn Fn(
     &str,
     Option<&str>,
   ) -> Pin<Box<dyn Future<Output = anyhow::Result<(String, Option<String>)>> + Send>>
@@ -26,7 +26,7 @@ type UrlResolver = dyn Fn(
 type CompileCSS = dyn (Fn(
     &str,
     &str,
-    &UrlResolver,
+    Arc<UrlResolver>,
   ) -> Pin<Box<dyn Future<Output = anyhow::Result<CompileCSSResult>> + Send + Sync>>)
   + Send
   + Sync;
@@ -39,7 +39,7 @@ pub struct CompileCSSResult {
 }
 
 #[derive(derive_more::Debug)]
-pub struct ViteCssPlugin {
+pub struct ViteCSSPlugin {
   pub is_lib: bool,
   pub public_dir: String,
   #[debug(skip)]
@@ -50,7 +50,7 @@ pub struct ViteCssPlugin {
   pub asset_inline_limit: UsizeOrFunction,
 }
 
-impl Plugin for ViteCssPlugin {
+impl Plugin for ViteCSSPlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
     std::borrow::Cow::Borrowed("builtin:vite-css")
   }
@@ -106,7 +106,7 @@ impl Plugin for ViteCssPlugin {
     // Compile CSS with the url resolver
     let url_resolver = self.create_url_resolver(Arc::clone(&ctx));
     let CompileCSSResult { code, map, deps, modules } =
-      (self.compile_css)(args.id, args.code, &*url_resolver).await?;
+      (self.compile_css)(args.id, args.code, url_resolver).await?;
 
     if let Some(modules) = modules {
       let cache = ctx
@@ -126,16 +126,16 @@ impl Plugin for ViteCssPlugin {
   }
 }
 
-impl ViteCssPlugin {
+impl ViteCSSPlugin {
   fn create_url_resolver(
     &self,
     ctx: rolldown_plugin::SharedTransformPluginContext,
-  ) -> Box<UrlResolver> {
+  ) -> Arc<UrlResolver> {
     let is_lib = self.is_lib;
     let public_dir = self.public_dir.clone();
     let resolve_url = Arc::clone(&self.resolve_url);
     let asset_inline_limit = self.asset_inline_limit.clone();
-    Box::new(move |url: &str, importer: Option<&str>| {
+    Arc::new(move |url: &str, importer: Option<&str>| {
       let ctx = Arc::clone(&ctx);
       let public_dir = public_dir.clone();
       let asset_inline_limit = asset_inline_limit.clone();

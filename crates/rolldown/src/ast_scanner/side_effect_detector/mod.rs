@@ -1279,6 +1279,24 @@ mod test {
     assert!(!get_statements_side_effect(
       "new Date(); new Date(''); new Date(null); new Date(false); new Date(undefined)"
     ));
+
+    // TypedArray constructors should be side-effect free with no args, null, or undefined
+    assert!(!get_statements_side_effect("new Uint8Array()"));
+    assert!(!get_statements_side_effect("new Uint8Array(null)"));
+    assert!(!get_statements_side_effect("new Uint8Array(undefined)"));
+    assert!(!get_statements_side_effect("new Int8Array()"));
+    assert!(!get_statements_side_effect("new Uint16Array()"));
+    assert!(!get_statements_side_effect("new Uint32Array()"));
+    assert!(!get_statements_side_effect("new Float64Array()"));
+    assert!(!get_statements_side_effect("new BigUint64Array()"));
+
+    // TypedArray constructors with numeric args should have side effects (memory allocation)
+    assert!(get_statements_side_effect("new Uint8Array(10)"));
+    assert!(get_statements_side_effect("new Int16Array(5)"));
+    assert!(get_statements_side_effect("new Int32Array(100)"));
+    assert!(get_statements_side_effect("new Float32Array(20)"));
+    assert!(get_statements_side_effect("new BigInt64Array(8)"));
+    assert!(get_statements_side_effect("new Uint8ClampedArray(256)"));
   }
 
   #[test]

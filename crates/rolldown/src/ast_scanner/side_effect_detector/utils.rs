@@ -345,6 +345,25 @@ pub fn maybe_side_effect_free_global_constructor(
 
   if scope.is_unresolved(ident.reference_id()) {
     match ident.name.as_str() {
+      // TypedArray constructors - considered side-effect free with no args, null, or undefined
+      "Int8Array" | "Uint8Array" | "Uint8ClampedArray" | "Int16Array" | "Uint16Array"
+      | "Int32Array" | "Uint32Array" | "Float32Array" | "Float64Array" | "BigInt64Array"
+      | "BigUint64Array" => match expr.arguments.len() {
+        0 => return true,
+        1 => {
+          let arg = &expr.arguments[0];
+          match arg {
+            ast::Argument::NullLiteral(_) => return true,
+            ast::Argument::Identifier(id)
+              if id.name == "undefined" && scope.is_unresolved(id.reference_id()) =>
+            {
+              return true;
+            }
+            _ => {}
+          }
+        }
+        _ => {}
+      },
       "WeakSet" | "WeakMap" => match expr.arguments.len() {
         0 => return true,
         1 => {

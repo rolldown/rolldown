@@ -5,7 +5,7 @@ use std::{
   sync::Arc,
 };
 
-use oxc_resolver::{ResolveOptions, TsconfigOptions, TsconfigReferences};
+use oxc_resolver::{PackageJson, ResolveOptions, TsconfigOptions, TsconfigReferences};
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
 use rolldown_utils::{dashmap::FxDashMap, url::clean_url};
@@ -126,6 +126,10 @@ impl Resolvers {
 
   pub fn get_for_external(&self) -> Arc<Resolver> {
     Arc::clone(&self.external_resolver)
+  }
+
+  pub fn get_nearest_package_json(&self, p: &str) -> Option<Arc<PackageJson>> {
+    self.resolvers[0].get_nearest_package_json(p)
   }
 
   pub fn clear_cache(&self) {
@@ -343,7 +347,14 @@ impl Resolver {
               if side_effects { HookSideEffects::True } else { HookSideEffects::False }
             },
           );
-        Ok(Some(HookResolveIdOutput { id: path.into(), side_effects, ..Default::default() }))
+        Ok(Some(HookResolveIdOutput {
+          id: path.into(),
+          side_effects,
+          package_json_path: result
+            .package_json()
+            .map(|pj| pj.realpath().to_str().unwrap().to_string()),
+          ..Default::default()
+        }))
       }
       Err(oxc_resolver::ResolveError::NotFound(id)) => {
         // if import can't be found, check if it's an optional peer dep.
@@ -375,10 +386,7 @@ impl Resolver {
     }
   }
 
-  fn get_nearest_package_json_optional_peer_deps(
-    &self,
-    p: &str,
-  ) -> Option<Arc<PackageJsonWithOptionalPeerDependencies>> {
+  pub fn get_nearest_package_json(&self, p: &str) -> Option<Arc<PackageJson>> {
     let specifier = Path::new(p).absolutize();
     let Ok(result) = self.inner.resolve(
       /* actually this can be anything, as the specifier is absolute path */ &self.root,
@@ -388,9 +396,15 @@ impl Resolver {
       return None;
     };
 
-    result
-      .package_json()
-      .map(|pj| self.package_json_cache.cached_package_json_optional_peer_dep(pj))
+    result.package_json().map(Arc::clone)
+  }
+
+  fn get_nearest_package_json_optional_peer_deps(
+    &self,
+    p: &str,
+  ) -> Option<Arc<PackageJsonWithOptionalPeerDependencies>> {
+    let pj = self.get_nearest_package_json(p)?;
+    Some(self.package_json_cache.cached_package_json_optional_peer_dep(&pj))
   }
 
   pub fn resolve_bare_import(

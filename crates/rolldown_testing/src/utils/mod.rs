@@ -1,3 +1,5 @@
+pub mod snapshot;
+
 use std::{borrow::Cow, sync::LazyLock};
 
 use regex::Regex;

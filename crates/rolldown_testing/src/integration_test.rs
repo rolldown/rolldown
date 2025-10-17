@@ -25,7 +25,9 @@ use crate::hmr_files::{
   apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
   copy_non_hmr_edit_files_to_hmr_temp_dir, get_changed_files_from_hmr_edit_files,
 };
-use crate::types::{ArtifactsSnapshot, BuildRoundOutput};
+use crate::types::{
+  BuildArtifactsSnapshot, BuildRoundOutput, DevArtifactsSnapshot, DevRoundOutput,
+};
 
 #[derive(Default)]
 pub struct IntegrationTest {
@@ -88,44 +90,19 @@ impl IntegrationTest {
     self.test_meta.expect_executed && !self.test_meta.expect_error && self.test_meta.write_to_disk
   }
 
-  /// Try to create a bundler and handle errors consistently
-  /// Returns Some(bundler) on success, None on error (error is recorded in build_snapshot)
-  fn try_create_bundler(
-    &self,
-    options: BundlerOptions,
-    plugins: Vec<SharedPluginable>,
-    build_snapshot: &mut BuildRoundOutput,
-  ) -> Option<Bundler> {
-    // Store cwd before creating bundler, as we need it even if creation fails
-    let cwd = options.cwd.clone().unwrap_or_else(|| self.test_folder_path.clone());
-
-    match Bundler::with_plugins(options, plugins) {
-      Ok(bundler) => {
-        build_snapshot.cwd = Some(bundler.options().cwd.clone());
-        Some(bundler)
-      }
-      Err(errs) => {
-        // Set cwd even on error, as it's needed for error rendering
-        build_snapshot.cwd = Some(cwd);
-        build_snapshot.initial_output = Some(Err(errs));
-        None
-      }
-    }
-  }
-
   /// Run multiple bundler configurations in HMR mode
-  async fn run_multiple_for_dev_engine(
+  async fn run_multiple_for_dev(
     &self,
     multiple_options: Vec<NamedBundlerOptions>,
     plugins: Vec<SharedPluginable>,
     hmr_steps: &[Vec<PathBuf>],
-  ) -> ArtifactsSnapshot {
+  ) -> DevArtifactsSnapshot {
     let test_folder_path = &self.test_folder_path;
     let hmr_temp_dir_path = test_folder_path.join("hmr-temp");
-    let mut artifacts_snapshot = ArtifactsSnapshot::default();
+    let mut artifacts_snapshot = DevArtifactsSnapshot::default();
 
     for mut named_options in multiple_options {
-      let mut build_snapshot = BuildRoundOutput {
+      let mut build_snapshot = DevRoundOutput {
         overwritten_test_meta_snapshot: named_options.snapshot.unwrap_or(self.test_meta.snapshot),
         ..Default::default()
       };
@@ -150,14 +127,22 @@ impl IntegrationTest {
       }
 
       // Create bundler and DevEngine
-      let Some(bundler) = self.try_create_bundler(
-        named_options.options.clone(),
-        plugins.clone(),
-        &mut build_snapshot,
-      ) else {
-        // Bundler creation failed, error is already recorded in build_snapshot
-        artifacts_snapshot.builds.push(build_snapshot);
-        continue;
+      let cwd = named_options.options.cwd.clone().unwrap_or_else(|| self.test_folder_path.clone());
+
+      let bundler_result = Bundler::with_plugins(named_options.options.clone(), plugins.clone());
+
+      let bundler = match bundler_result {
+        Ok(bundler) => {
+          build_snapshot.cwd = Some(bundler.options().cwd.clone());
+          bundler
+        }
+        Err(errs) => {
+          // Set cwd and error, then skip this build round
+          build_snapshot.cwd = Some(cwd);
+          build_snapshot.initial_output = Some(Err(errs));
+          artifacts_snapshot.builds.push(build_snapshot);
+          continue;
+        }
       };
       let bundler = Arc::new(Mutex::new(bundler));
 
@@ -278,8 +263,8 @@ impl IntegrationTest {
     &self,
     multiple_options: Vec<NamedBundlerOptions>,
     plugins: Vec<SharedPluginable>,
-  ) -> ArtifactsSnapshot {
-    let mut artifacts_snapshot = ArtifactsSnapshot::default();
+  ) -> BuildArtifactsSnapshot {
+    let mut artifacts_snapshot = BuildArtifactsSnapshot::default();
 
     for named_options in multiple_options {
       let mut build_snapshot = BuildRoundOutput {
@@ -292,13 +277,23 @@ impl IntegrationTest {
         build_snapshot.debug_title = Some(debug_title.clone());
       }
 
-      // Try to create bundler (cwd will be set in build_snapshot by helper)
-      let Some(mut bundler) =
-        self.try_create_bundler(named_options.options, plugins.clone(), &mut build_snapshot)
-      else {
-        // Bundler creation failed, error is already recorded in build_snapshot
-        artifacts_snapshot.builds.push(build_snapshot);
-        continue;
+      // Try to create bundler
+      let cwd = named_options.options.cwd.clone().unwrap_or_else(|| self.test_folder_path.clone());
+
+      let bundler_result = Bundler::with_plugins(named_options.options, plugins.clone());
+
+      let mut bundler = match bundler_result {
+        Ok(bundler) => {
+          build_snapshot.cwd = Some(bundler.options().cwd.clone());
+          bundler
+        }
+        Err(errs) => {
+          // Set cwd and error, then skip this build round
+          build_snapshot.cwd = Some(cwd);
+          build_snapshot.initial_output = Some(Err(errs));
+          artifacts_snapshot.builds.push(build_snapshot);
+          continue;
+        }
       };
 
       let cwd = bundler.options().cwd.clone();
@@ -367,15 +362,18 @@ impl IntegrationTest {
       self.apply_test_defaults(&mut named_options.options);
     }
 
-    // Dispatch to appropriate build method
-    let artifacts_snapshot = if hmr_mode_enabled {
-      self.run_multiple_for_dev_engine(multiple_options, plugins, &hmr_steps).await
+    // Dispatch to appropriate build method and generate snapshot
+    let snapshot_content = if hmr_mode_enabled {
+      let artifacts_snapshot =
+        self.run_multiple_for_dev(multiple_options, plugins, &hmr_steps).await;
+      artifacts_snapshot.render(&self.test_meta)
     } else {
-      self.run_multiple_for_build(multiple_options, plugins).await
+      let artifacts_snapshot = self.run_multiple_for_build(multiple_options, plugins).await;
+      artifacts_snapshot.render(&self.test_meta)
     };
 
     // Generate snapshot
-    self.snapshot_bundle_output(test_folder_path, &artifacts_snapshot.render(&self.test_meta));
+    self.snapshot_bundle_output(test_folder_path, &snapshot_content);
   }
 
   fn apply_test_defaults(&self, options: &mut BundlerOptions) {

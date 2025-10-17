@@ -13,13 +13,13 @@ var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.js": ((exports, mo
 }) });
 
 //#endregion
-export { __reExport, __toESM, require_commonjs };
+export { __reExport as n, __toESM as r, require_commonjs as t };
 ```
 
 ## entry.js
 
 ```js
-import { __toESM, require_commonjs } from "./commonjs.js";
+import { r as __toESM, t as require_commonjs } from "./commonjs.js";
 
 //#region entry.js
 var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs(), 1);
@@ -31,7 +31,7 @@ console.log(import_commonjs.default);
 ## main.js
 
 ```js
-import { __reExport, __toESM, require_commonjs } from "./commonjs.js";
+import { n as __reExport, r as __toESM, t as require_commonjs } from "./commonjs.js";
 
 //#region star-export.js
 var star_export_exports = {};

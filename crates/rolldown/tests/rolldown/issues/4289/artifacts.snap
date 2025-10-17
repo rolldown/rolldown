@@ -7,13 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __commonJS, __toDynamicImportESM, __toESM };
+export { __toDynamicImportESM as n, __toESM as r, __commonJS as t };
 ```
 
 ## lib.js
 
 ```js
-import { __commonJS } from "./chunk.js";
+import { t as __commonJS } from "./chunk.js";
 
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJS({ "lib.js": ((exports) => {
@@ -29,7 +29,7 @@ export default require_lib();
 ## main.js
 
 ```js
-import { __commonJS, __toDynamicImportESM, __toESM } from "./chunk.js";
+import { n as __toDynamicImportESM, r as __toESM, t as __commonJS } from "./chunk.js";
 import nodeAssert from "node:assert";
 
 //#region non-node-mode.js

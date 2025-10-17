@@ -60,7 +60,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry-default.js
 
 ```js
-import { __toESM, require_no_side_effects } from "./no-side-effects.js";
+import { n as __toESM, t as require_no_side_effects } from "./no-side-effects.js";
 
 //#region entry-default.js
 var import_no_side_effects = /* @__PURE__ */ __toESM(require_no_side_effects());
@@ -72,7 +72,7 @@ console.log(void 0, void 0, import_no_side_effects.default);
 ## entry-nope.js
 
 ```js
-import { __toESM, require_no_side_effects } from "./no-side-effects.js";
+import { n as __toESM, t as require_no_side_effects } from "./no-side-effects.js";
 
 //#region entry-nope.js
 var import_no_side_effects = /* @__PURE__ */ __toESM(require_no_side_effects());
@@ -91,5 +91,5 @@ var require_no_side_effects = /* @__PURE__ */ __commonJS({ "foo/no-side-effects.
 }) });
 
 //#endregion
-export { __toESM, require_no_side_effects };
+export { __toESM as n, require_no_side_effects as t };
 ```

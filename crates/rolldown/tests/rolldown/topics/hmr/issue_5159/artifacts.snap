@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bar.js
 
 ```js
-import { __export } from "./chunk.js";
-import { trim } from "./string.js";
+import { t as __export } from "./chunk.js";
+import { t as trim } from "./string.js";
 
 //#region bar.js
 var bar_exports = /* @__PURE__ */ __export({ default: () => bar_default });
@@ -25,14 +25,14 @@ export { bar_default as default };
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __export, __reExport, __toCommonJS, __toDynamicImportESM, __toESM };
+export { __toESM as a, __toDynamicImportESM as i, __reExport as n, __toCommonJS as r, __export as t };
 ```
 
 ## foo.js
 
 ```js
-import { __export } from "./chunk.js";
-import { trim, unused } from "./string.js";
+import { t as __export } from "./chunk.js";
+import { n as unused, t as trim } from "./string.js";
 
 //#region utils/index.js
 var utils_exports = /* @__PURE__ */ __export({
@@ -58,7 +58,7 @@ export { foo_default as default };
 ## main.js
 
 ```js
-import { __export, __reExport, __toCommonJS, __toDynamicImportESM, __toESM } from "./chunk.js";
+import { a as __toESM, i as __toDynamicImportESM, n as __reExport, r as __toCommonJS, t as __export } from "./chunk.js";
 
 // HIDDEN [rolldown:hmr]
 //#region main.js
@@ -76,7 +76,7 @@ const routes = {
 ## string.js
 
 ```js
-import { __export } from "./chunk.js";
+import { t as __export } from "./chunk.js";
 
 //#region utils/string.js
 var string_exports = /* @__PURE__ */ __export({
@@ -93,5 +93,5 @@ function unused() {
 }
 
 //#endregion
-export { trim, unused };
+export { unused as n, trim as t };
 ```

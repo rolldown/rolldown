@@ -7,14 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 const derived = false;
-export { derived };
+export { derived as t };
 
 ```
 
 ## pagea.js
 
 ```js
-import { derived } from "./foo.js";
+import { t as derived } from "./foo.js";
 function demo() {
 	if (derived) console.log("page-a");
 }
@@ -25,7 +25,7 @@ demo();
 ## pageb.js
 
 ```js
-import { derived } from "./foo.js";
+import { t as derived } from "./foo.js";
 function demo() {
 	if (derived) console.log("page-a");
 }

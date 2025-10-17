@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { a } from "./a2.js";
+import { t as a } from "./a2.js";
 
 export { a };
 ```
@@ -18,13 +18,13 @@ export { a };
 const a = 1;
 
 //#endregion
-export { a };
+export { a as t };
 ```
 
 ## b.js
 
 ```js
-import { a } from "./a2.js";
+import { t as a } from "./a2.js";
 
 export { a };
 ```

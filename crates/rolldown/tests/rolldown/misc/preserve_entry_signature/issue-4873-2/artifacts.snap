@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bar.js
 
 ```js
-import { n } from "./shared.js";
+import { t as n } from "./shared.js";
 
 //#region bar.js
 console.log("bar" + n);
@@ -19,7 +19,7 @@ export { msg };
 ## foo.js
 
 ```js
-import { n } from "./shared.js";
+import { t as n } from "./shared.js";
 
 //#region foo.js
 console.log("foo" + n);
@@ -55,5 +55,5 @@ import(`https://localhost`).catch((mod) => {
 const n = 1;
 
 //#endregion
-export { n };
+export { n as t };
 ```

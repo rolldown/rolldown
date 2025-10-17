@@ -21,7 +21,7 @@ To fix:
 ## main.js
 
 ```js
-import { sharedValue } from "./vendor.js";
+import { t as sharedValue } from "./vendor.js";
 
 //#region main.js
 console.log("Main entry with shared:", sharedValue);
@@ -40,5 +40,5 @@ export { mainFunc };
 const sharedValue = "shared module value";
 
 //#endregion
-export { sharedValue };
+export { sharedValue as t };
 ```

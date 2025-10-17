@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## pageA_page.js
 
 ```js
-import { shared_default } from "./shared.js";
+import { t as shared_default } from "./shared.js";
 
 //#region pageA/page.js
 console.log(shared_default);
@@ -17,7 +17,7 @@ console.log(shared_default);
 ## pageB_page.js
 
 ```js
-import { shared_default } from "./shared.js";
+import { t as shared_default } from "./shared.js";
 
 //#region pageB/page.js
 console.log(-shared_default);
@@ -32,5 +32,5 @@ console.log(-shared_default);
 var shared_default = 123;
 
 //#endregion
-export { shared_default };
+export { shared_default as t };
 ```

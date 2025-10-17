@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bar.js
 
 ```js
-import { bar_default } from "./bar2.js";
+import { t as bar_default } from "./bar2.js";
 
 export { bar_default as default };
 ```
@@ -18,13 +18,13 @@ export { bar_default as default };
 var bar_default = "bar";
 
 //#endregion
-export { bar_default };
+export { bar_default as t };
 ```
 
 ## main.js
 
 ```js
-import { bar_default } from "./bar2.js";
+import { t as bar_default } from "./bar2.js";
 import assert from "node:assert";
 
 //#region main.js

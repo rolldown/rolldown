@@ -20,13 +20,13 @@ function test() {
 }
 
 //#endregion
-export { __toESM, require_cjs, test };
+export { require_cjs as n, __toESM as r, test as t };
 ```
 
 ## entry.js
 
 ```js
-import { test } from "./a.js";
+import { t as test } from "./a.js";
 
 //#region entry.js
 const entry = test();
@@ -38,7 +38,7 @@ export { entry };
 ## main.js
 
 ```js
-import { __toESM, require_cjs, test } from "./a.js";
+import { n as require_cjs, r as __toESM, t as test } from "./a.js";
 
 //#region b.js
 var import_cjs = /* @__PURE__ */ __toESM(require_cjs());

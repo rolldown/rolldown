@@ -22,7 +22,7 @@ import "./z.js";
 
 ```js
 import "./x.js";
-import { setY2, setZ2 } from "./z.js";
+import { n as setY2, t as setZ2 } from "./z.js";
 
 //#region c.js
 setY2();
@@ -38,13 +38,13 @@ setZ2();
 function setX(v) {}
 
 //#endregion
-export { setX };
+export { setX as t };
 ```
 
 ## z.js
 
 ```js
-import { setX } from "./x.js";
+import { t as setX } from "./x.js";
 
 //#region y.js
 function setY(v) {}
@@ -59,5 +59,5 @@ function setZ2(v) {
 }
 
 //#endregion
-export { setY2, setZ2 };
+export { setY2 as n, setZ2 as t };
 ```

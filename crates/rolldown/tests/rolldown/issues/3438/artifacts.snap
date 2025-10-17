@@ -6,9 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { clear } from "./repro12.js";
-import { clear as clear$1, clear$1 as clear$1$1 } from "./repro22.js";
-import { clear as clear$2, clear$1 as clear$1$2, clear$2 as clear$2$1 } from "./repro32.js";
+import { t as clear } from "./repro12.js";
+import { n as clear$1$1, t as clear$1 } from "./repro22.js";
+import { n as clear$1$2, r as clear$2$1, t as clear$2 } from "./repro32.js";
 
 //#region main.js
 var main_default = [
@@ -30,7 +30,7 @@ export { main_default as default };
 ## repro1.js
 
 ```js
-import { clear } from "./repro12.js";
+import { t as clear } from "./repro12.js";
 
 export { clear };
 ```
@@ -42,13 +42,13 @@ export { clear };
 const clear = "repro1_clear";
 
 //#endregion
-export { clear };
+export { clear as t };
 ```
 
 ## repro2.js
 
 ```js
-import { clear, clear$1 } from "./repro22.js";
+import { n as clear$1, t as clear } from "./repro22.js";
 
 export { clear, clear$1 };
 ```
@@ -61,13 +61,13 @@ const clear$1 = "repro2_clear$1";
 const clear = "repro2_clear";
 
 //#endregion
-export { clear, clear$1 };
+export { clear$1 as n, clear as t };
 ```
 
 ## repro3.js
 
 ```js
-import { clear, clear$1, clear$2 } from "./repro32.js";
+import { n as clear$1, r as clear$2, t as clear } from "./repro32.js";
 
 export { clear, clear$1, clear$2 };
 ```
@@ -81,5 +81,5 @@ const clear$1 = "repro3_clear$1";
 const clear = "repro3_clear";
 
 //#endregion
-export { clear, clear$1, clear$2 };
+export { clear$1 as n, clear$2 as r, clear as t };
 ```

@@ -30,8 +30,9 @@ export { foo_default as default };
 ## foo2.js
 
 ```js
-import { foo2_default } from "./foo22.js";
+import { t as foo2_default } from "./foo22.js";
 
+export { foo2_default as default };
 ```
 
 ## foo22.js
@@ -41,13 +42,13 @@ import { foo2_default } from "./foo22.js";
 var foo2_default = "foo2";
 
 //#endregion
-export { foo2_default };
+export { foo2_default as t };
 ```
 
 ## main.js
 
 ```js
-import { foo2_default } from "./foo22.js";
+import { t as foo2_default } from "./foo22.js";
 import assert from "node:assert";
 
 //#region main.js

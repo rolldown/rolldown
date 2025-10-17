@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## foo.js
 
 ```js
-import { devil } from "./foo2.js";
+import { t as devil } from "./foo2.js";
 
 export { devil as "😈" };
 ```
@@ -18,13 +18,13 @@ export { devil as "😈" };
 const devil = "devil";
 
 //#endregion
-export { devil };
+export { devil as t };
 ```
 
 ## main.js
 
 ```js
-import { devil } from "./foo2.js";
+import { t as devil } from "./foo2.js";
 
 //#region main.js
 const moduleFoo = import("./foo.js");

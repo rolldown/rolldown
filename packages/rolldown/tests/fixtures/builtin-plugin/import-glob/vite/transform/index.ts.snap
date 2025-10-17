@@ -1,8 +1,8 @@
-import { a_exports, name as name$1 } from "./a2.js";
-import { b_exports, name as name$2 } from "./b2.js";
-import { modules_exports, name as name$3 } from "./modules2.js";
-import { a_default } from "./a4.js";
-import { b_default } from "./b4.js";
+import { n as name$1, t as a_exports } from "./a2.js";
+import { n as name$2, t as b_exports } from "./b2.js";
+import { n as modules_exports, r as name$3 } from "./modules2.js";
+import { t as a_default } from "./a4.js";
+import { t as b_default } from "./b4.js";
 
 //#region ../fixtures/a/index.ts
 const basic = {

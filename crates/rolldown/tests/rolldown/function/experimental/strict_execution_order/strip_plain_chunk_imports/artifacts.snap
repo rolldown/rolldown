@@ -7,13 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __esm };
+export { __esm as t };
 ```
 
 ## common.js
 
 ```js
-import { __esm } from "./chunk.js";
+import { t as __esm } from "./chunk.js";
 
 //#region common.js
 function foo() {
@@ -26,13 +26,13 @@ var init_common = __esm({ "common.js": (() => {
 }) });
 
 //#endregion
-export { _, common, init_common };
+export { common as n, init_common as r, _ as t };
 ```
 
 ## main.js
 
 ```js
-import { __esm } from "./chunk.js";
+import { t as __esm } from "./chunk.js";
 
 //#region main.js
 var init_main = __esm({ "main.js": (async () => {
@@ -47,8 +47,8 @@ await init_main();
 ## page-a.js
 
 ```js
-import { __esm } from "./chunk.js";
-import { _, common, init_common } from "./common.js";
+import { t as __esm } from "./chunk.js";
+import { n as common, r as init_common, t as _ } from "./common.js";
 import nodeAssert from "node:assert";
 
 //#region page-a.js
@@ -68,7 +68,7 @@ export { render };
 ## page-b.js
 
 ```js
-import { __esm } from "./chunk.js";
+import { t as __esm } from "./chunk.js";
 import nodeAssert from "node:assert";
 
 //#region page-b.js

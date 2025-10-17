@@ -12,13 +12,13 @@ var foo_exports = /* @__PURE__ */ __export({ foo: () => foo });
 const foo = 1;
 
 //#endregion
-export { foo, foo_exports };
+export { foo_exports as n, foo as t };
 ```
 
 ## foo2.js
 
 ```js
-import { foo } from "./foo.js";
+import { t as foo } from "./foo.js";
 
 export { foo };
 ```
@@ -26,7 +26,7 @@ export { foo };
 ## main.js
 
 ```js
-import { foo_exports } from "./foo.js";
+import { n as foo_exports } from "./foo.js";
 
 //#region main.js
 import("./foo2.js").then(console.log);
@@ -37,6 +37,6 @@ console.log(foo_exports);
 
 # Output Stats
 
-- foo.js, is_entry false, is_dynamic_entry false, exports ["foo", "foo_exports"]
+- foo.js, is_entry false, is_dynamic_entry false, exports ["n", "t"]
 - foo2.js, is_entry false, is_dynamic_entry true, exports ["foo"]
 - main.js, is_entry true, is_dynamic_entry false, exports []

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { bar } from "./foo2.js";
+import { t as bar } from "./foo2.js";
 
 //#region entry.js
 import("./foo.js").then(({ bar: b }) => console.log(bar, b));
@@ -17,7 +17,7 @@ import("./foo.js").then(({ bar: b }) => console.log(bar, b));
 ## foo.js
 
 ```js
-import { bar } from "./foo2.js";
+import { t as bar } from "./foo2.js";
 
 export { bar };
 ```
@@ -29,5 +29,5 @@ export { bar };
 let bar = 123;
 
 //#endregion
-export { bar };
+export { bar as t };
 ```

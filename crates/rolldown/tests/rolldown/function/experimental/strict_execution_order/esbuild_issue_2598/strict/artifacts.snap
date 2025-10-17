@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lazy-chunk.js
 
 ```js
-import { __esm, foo, init_user_lib } from "./user-lib.js";
+import { n as init_user_lib, r as __esm, t as foo } from "./user-lib.js";
 
 //#region lazy-chunk.js
 var init_lazy_chunk = __esm({ "lazy-chunk.js": (() => {
@@ -21,7 +21,7 @@ init_lazy_chunk();
 ## main.js
 
 ```js
-import { __esm, foo, init_user_lib } from "./user-lib.js";
+import { n as init_user_lib, r as __esm, t as foo } from "./user-lib.js";
 
 //#region polyfill.js
 var init_polyfill = __esm({ "polyfill.js": (() => {
@@ -53,5 +53,5 @@ var init_user_lib = __esm({ "user-lib.js": (() => {
 }) });
 
 //#endregion
-export { __esm, foo, init_user_lib };
+export { init_user_lib as n, __esm as r, foo as t };
 ```

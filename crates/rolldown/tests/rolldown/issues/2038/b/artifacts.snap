@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { import_c } from "./b.js";
+import { t as import_c } from "./b.js";
 
 //#region a.js
 let a = import_c.test;
@@ -30,13 +30,13 @@ var require_c = /* @__PURE__ */ __commonJS({ "c.js": ((exports) => {
 var import_c = /* @__PURE__ */ __toESM(require_c());
 
 //#endregion
-export { import_c };
+export { import_c as t };
 ```
 
 ## b2.js
 
 ```js
-import { import_c } from "./b.js";
+import { t as import_c } from "./b.js";
 
 var test = import_c.test;
 export { test };

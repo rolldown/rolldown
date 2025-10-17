@@ -444,7 +444,7 @@ export interface OutputOptions {
   topLevelVar?: boolean;
   /**
    * - Type: `boolean`
-   * - Default: `false`
+   * - Default: `true` for format `es` or if `output.minify` is `true` or object, `false` otherwise
    *
    * Whether to minify internal exports.
    */

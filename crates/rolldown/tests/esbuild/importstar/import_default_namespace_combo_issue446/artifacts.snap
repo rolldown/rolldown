@@ -183,7 +183,7 @@ console.log(def, ns);
 ## internal-def.js
 
 ```js
-import { internal_default } from "./internal.js";
+import { t as internal_default } from "./internal.js";
 
 //#region internal-def.js
 console.log(internal_default, void 0);
@@ -194,7 +194,7 @@ console.log(internal_default, void 0);
 ## internal-default.js
 
 ```js
-import { internal_default } from "./internal.js";
+import { t as internal_default } from "./internal.js";
 
 //#region internal-default.js
 console.log(internal_default, internal_default);
@@ -205,7 +205,7 @@ console.log(internal_default, internal_default);
 ## internal-default2.js
 
 ```js
-import { internal_default } from "./internal.js";
+import { t as internal_default } from "./internal.js";
 
 //#region internal-default2.js
 console.log(internal_default, internal_default);
@@ -216,7 +216,7 @@ console.log(internal_default, internal_default);
 ## internal-ns-def.js
 
 ```js
-import { internal_default, internal_exports } from "./internal.js";
+import { n as internal_exports, t as internal_default } from "./internal.js";
 
 //#region internal-ns-def.js
 console.log(internal_default, internal_exports, void 0);
@@ -227,7 +227,7 @@ console.log(internal_default, internal_exports, void 0);
 ## internal-ns-default.js
 
 ```js
-import { internal_default, internal_exports } from "./internal.js";
+import { n as internal_exports, t as internal_default } from "./internal.js";
 
 //#region internal-ns-default.js
 console.log(internal_default, internal_exports, internal_default);
@@ -238,7 +238,7 @@ console.log(internal_default, internal_exports, internal_default);
 ## internal-ns.js
 
 ```js
-import { internal_default, internal_exports } from "./internal.js";
+import { n as internal_exports, t as internal_default } from "./internal.js";
 
 //#region internal-ns.js
 console.log(internal_default, internal_exports);
@@ -255,5 +255,5 @@ var internal_exports = /* @__PURE__ */ __export({ default: () => internal_defaul
 var internal_default = 123;
 
 //#endregion
-export { internal_default, internal_exports };
+export { internal_exports as n, internal_default as t };
 ```

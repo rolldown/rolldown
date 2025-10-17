@@ -55,11 +55,11 @@ export default defineTest({
           expect(chunk.preliminaryFileName).toMatchInlineSnapshot(
             `"main-!~{000}~.js"`,
           )
-          expect(chunk.fileName).toMatchInlineSnapshot(`"main-Cq0S4hCi.js"`)
+          expect(chunk.fileName).toMatchInlineSnapshot(`"main-BKJjLIpN.js"`)
           expect(chunk.imports).toMatchInlineSnapshot(
             `
             [
-              "shared-C2o4kkYX.js",
+              "shared-4ttuH-iD.js",
             ]
           `,
           )
@@ -73,11 +73,11 @@ export default defineTest({
           break
 
         case path.join(__dirname, 'entry.js'):
-          expect(chunk.fileName).toMatchInlineSnapshot(`"entry-DHkmI37_.js"`)
+          expect(chunk.fileName).toMatchInlineSnapshot(`"entry--UVBFch3.js"`)
           expect(chunk.imports).toMatchInlineSnapshot(
             `
             [
-              "shared-C2o4kkYX.js",
+              "shared-4ttuH-iD.js",
             ]
           `,
           )

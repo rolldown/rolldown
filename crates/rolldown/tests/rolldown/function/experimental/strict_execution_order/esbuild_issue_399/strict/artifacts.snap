@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry1.js
 
 ```js
-import { __esm, init_run_dep } from "./run-dep.js";
+import { n as __esm, t as init_run_dep } from "./run-dep.js";
 
 //#region init-dep-1.js
 var init_init_dep_1 = __esm({ "init-dep-1.js": (() => {
@@ -27,7 +27,7 @@ init_entry1();
 ## entry2.js
 
 ```js
-import { __esm, init_run_dep } from "./run-dep.js";
+import { n as __esm, t as init_run_dep } from "./run-dep.js";
 
 //#region init-dep-2.js
 var init_init_dep_2 = __esm({ "init-dep-2.js": (() => {
@@ -55,5 +55,5 @@ var init_run_dep = __esm({ "run-dep.js": (() => {
 }) });
 
 //#endregion
-export { __esm, init_run_dep };
+export { __esm as n, init_run_dep as t };
 ```

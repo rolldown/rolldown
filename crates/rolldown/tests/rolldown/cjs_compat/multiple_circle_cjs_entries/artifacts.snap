@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { require_a } from "./a2.js";
+import { t as require_a } from "./a2.js";
 
 export default require_a();
 
@@ -30,13 +30,13 @@ var require_a = /* @__PURE__ */ __commonJS({ "a.js": ((exports, module) => {
 }) });
 
 //#endregion
-export { require_a, require_b };
+export { require_b as n, require_a as t };
 ```
 
 ## b.js
 
 ```js
-import { require_b } from "./a2.js";
+import { n as require_b } from "./a2.js";
 
 export default require_b();
 

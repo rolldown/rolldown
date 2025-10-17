@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 "use entry2";
 
 
-import { a } from "./shared.js";
+import { t as a } from "./shared.js";
 
 //#region entry2.js
 console.log(`a: `, a);
@@ -23,7 +23,7 @@ console.log(`a: `, a);
 "use entry";
 
 
-import { a } from "./shared.js";
+import { t as a } from "./shared.js";
 
 //#region entry1.js
 console.log(`a: `, a);
@@ -38,5 +38,5 @@ console.log(`a: `, a);
 const a = "shared.js";
 
 //#endregion
-export { a };
+export { a as t };
 ```

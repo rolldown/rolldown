@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry1.js
 
 ```js
-import { import_foo } from "./main.js";
+import { t as import_foo } from "./main.js";
 
 var foo = import_foo.foo;
 export { foo };
@@ -15,7 +15,7 @@ export { foo };
 ## entry2.js
 
 ```js
-import { import_foo } from "./main.js";
+import { t as import_foo } from "./main.js";
 
 var foo = import_foo.foo;
 export { foo };
@@ -35,5 +35,5 @@ var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": ((exports, module) => {
 var import_foo = /* @__PURE__ */ __toESM(require_foo());
 
 //#endregion
-export { import_foo };
+export { import_foo as t };
 ```

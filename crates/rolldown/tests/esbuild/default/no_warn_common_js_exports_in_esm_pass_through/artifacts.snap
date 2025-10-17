@@ -55,7 +55,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __commonJS };
+export { __commonJS as t };
 ```
 
 ## cjs-in-esm.js
@@ -73,7 +73,7 @@ export { foo };
 ## import-in-cjs.js
 
 ```js
-import { __commonJS } from "./chunk.js";
+import { t as __commonJS } from "./chunk.js";
 import { foo } from "bar";
 
 //#region import-in-cjs.js
@@ -90,7 +90,7 @@ export default require_import_in_cjs();
 ## no-warnings-here.js
 
 ```js
-import { __commonJS } from "./chunk.js";
+import { t as __commonJS } from "./chunk.js";
 
 //#region no-warnings-here.js
 var require_no_warnings_here = /* @__PURE__ */ __commonJS({ "no-warnings-here.js": ((exports, module) => {

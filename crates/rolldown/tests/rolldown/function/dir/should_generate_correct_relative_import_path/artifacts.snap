@@ -20,13 +20,13 @@ export { value };
 const value = "shared";
 
 //#endregion
-export { value };
+export { value as t };
 ```
 
 ## ./entries/a.mjs
 
 ```js
-import { value } from "../chunks/shared.mjs";
+import { t as value } from "../chunks/shared.mjs";
 
 //#region a.js
 const asyncValue = import("../chunks/async.mjs");
@@ -38,7 +38,7 @@ export { asyncValue, value };
 ## ./entries/b.mjs
 
 ```js
-import { value } from "../chunks/shared.mjs";
+import { t as value } from "../chunks/shared.mjs";
 
 //#region b.js
 const asyncValue = import("../chunks/async.mjs");

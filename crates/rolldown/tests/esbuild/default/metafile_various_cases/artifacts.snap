@@ -59,7 +59,7 @@ copy;
 var default$1 = void 0;
 
 //#endregion
-export { default$1 as default, file_default };
+export { file_default as n, default$1 as t };
 ```
 
 ## dynamic.js
@@ -75,7 +75,7 @@ export { dynamic_default as default };
 ## entry.js
 
 ```js
-import default$1, { file_default } from "./copy.js";
+import { n as file_default, t as default$1 } from "./copy.js";
 import a from "extern-esm";
 
 // HIDDEN [rolldown:runtime]

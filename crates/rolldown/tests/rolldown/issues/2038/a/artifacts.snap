@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { result } from "./b2.js";
+import { t as result } from "./b2.js";
 
 //#region a.js
 var a_default = result();
@@ -18,7 +18,7 @@ export { a_default as default };
 ## b.js
 
 ```js
-import { result } from "./b2.js";
+import { t as result } from "./b2.js";
 
 export { result };
 ```
@@ -32,7 +32,7 @@ function result() {
 }
 
 //#endregion
-export { result };
+export { result as t };
 ```
 
 ## main.js

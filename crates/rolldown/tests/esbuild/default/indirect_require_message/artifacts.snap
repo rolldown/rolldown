@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## array.js
 
 ```js
-import { __require } from "./chunk.js";
+import { t as __require } from "./chunk.js";
 
 //#region array.js
 __require;
@@ -17,7 +17,7 @@ __require;
 ## assign.js
 
 ```js
-import { __require } from "./chunk.js";
+import { t as __require } from "./chunk.js";
 
 //#region assign.js
 require = x;
@@ -29,13 +29,13 @@ require = x;
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __require };
+export { __require as t };
 ```
 
 ## dot.js
 
 ```js
-import { __require } from "./chunk.js";
+import { t as __require } from "./chunk.js";
 
 //#region dot.js
 __require.cache;
@@ -46,7 +46,7 @@ __require.cache;
 ## ident.js
 
 ```js
-import { __require } from "./chunk.js";
+import { t as __require } from "./chunk.js";
 
 //#region ident.js
 __require;
@@ -57,7 +57,7 @@ __require;
 ## index.js
 
 ```js
-import { __require } from "./chunk.js";
+import { t as __require } from "./chunk.js";
 
 //#region index.js
 __require[cache];

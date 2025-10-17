@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { __esm } from "./rolldown-runtime.js";
-import { foo, init_foo } from "./vendor.js";
+import { t as __esm } from "./rolldown-runtime.js";
+import { n as init_foo, t as foo } from "./vendor.js";
 import nodeAssert from "node:assert";
 
 //#region main.js
@@ -24,13 +24,13 @@ init_main();
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __esm };
+export { __esm as t };
 ```
 
 ## vendor.js
 
 ```js
-import { __esm } from "./rolldown-runtime.js";
+import { t as __esm } from "./rolldown-runtime.js";
 
 //#region bar.js
 var bar;
@@ -47,5 +47,5 @@ var init_foo = __esm({ "foo.js": (() => {
 }) });
 
 //#endregion
-export { foo, init_foo };
+export { init_foo as n, foo as t };
 ```

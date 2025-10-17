@@ -12,13 +12,13 @@ var a_exports = /* @__PURE__ */ __export({ abc: () => abc });
 const abc = void 0;
 
 //#endregion
-export { a_exports };
+export { a_exports as t };
 ```
 
 ## entry.js
 
 ```js
-import { a_exports } from "./a.js";
+import { t as a_exports } from "./a.js";
 
 export { a_exports as a };
 ```
@@ -26,7 +26,7 @@ export { a_exports as a };
 ## main.js
 
 ```js
-import { a_exports } from "./a.js";
+import { t as a_exports } from "./a.js";
 
 export { a_exports as a };
 ```

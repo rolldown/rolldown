@@ -3269,6 +3269,7 @@ dependencies = [
  "flate2",
  "itoa",
  "num-format",
+ "owo-colors",
  "rayon",
  "rolldown_common",
  "rolldown_plugin",

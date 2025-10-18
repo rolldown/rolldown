@@ -9,10 +9,10 @@ import { BuiltinPlugin } from './utils';
 type ViteCssPluginConfig =
   & Omit<
     BindingViteCssPluginConfig,
-    'compressCss'
+    'compileCSS'
   >
   & {
-    compressCss: (
+    compileCSS: (
       url: string,
       importer: string,
       resolver: BindingUrlResolver,
@@ -32,12 +32,12 @@ export function viteCSSPlugin(
     config
       ? {
         ...config,
-        async compressCss(
+        async compileCSS(
           url: string,
           importer: string,
           resolver: BindingUrlResolver,
         ) {
-          let result = await config.compressCss(url, importer, resolver);
+          let result = await config.compileCSS(url, importer, resolver);
           return {
             ...result,
             map: bindingifySourcemap(result.map),

@@ -2207,7 +2207,7 @@ export interface BindingTreeshake {
 export interface BindingViteCssPluginConfig {
   isLib: boolean
   publicDir: string
-  compressCss: (url: string, importer: string, resolver: BindingUrlResolver) => Promise<{
+  compileCSS: (url: string, importer: string, resolver: BindingUrlResolver) => Promise<{
     code: string
     map?: BindingSourcemap
     modules?: Record<string, string>

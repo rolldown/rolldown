@@ -65,13 +65,16 @@ pub struct BindingViteCSSPluginConfig {
   pub is_lib: bool,
   pub public_dir: String,
   #[debug(skip)]
-  #[napi(ts_type = "(url: string, importer: string, resolver: BindingUrlResolver) => Promise<{
+  #[napi(
+    js_name = "compileCSS",
+    ts_type = "(url: string, importer: string, resolver: BindingUrlResolver) => Promise<{
   code: string
   map?: BindingSourcemap
   modules?: Record<string, string>
   deps?: Set<string>
-}>")]
-  pub compress_css:
+}>"
+  )]
+  pub compile_css:
     MaybeAsyncJsCallback<FnArgs<(String, String, BindingUrlResolver)>, BindingCompileCSSResult>,
   #[debug(skip)]
   #[napi(ts_type = "(url: string, importer?: string) => MaybePromise<string | undefined>")]
@@ -107,9 +110,9 @@ impl From<BindingViteCSSPluginConfig> for ViteCSSPlugin {
       compile_css: Arc::new(move |url: &str, importer: &str, url_resolver: Arc<UrlResolver>| {
         let url = url.to_string();
         let importer = importer.to_string();
-        let compress_css = Arc::clone(&value.compress_css);
+        let compile_css = Arc::clone(&value.compile_css);
         Box::pin(async move {
-          compress_css
+          compile_css
             .await_call((url, importer, BindingUrlResolver::new(url_resolver)).into())
             .await
             .map_err(anyhow::Error::from)

@@ -1,3 +1,4 @@
+import colors from 'ansis';
 import { getCodeFrame } from '../utils/code-frame';
 import { locate } from './locate-character';
 import type { RollupLog } from './logging';
@@ -71,16 +72,18 @@ export function logNoFileSystemInBrowser(method: string): RollupLog {
 export function logDeprecatedDefine(): RollupLog {
   return {
     code: DEPRECATED_DEFINE,
-    message:
-      'The top-level "define" option is deprecated. Use "transform.define" instead.',
+    message: `${
+      colors.yellow(colors.bold('⚠ Deprecation Warning:'))
+    } The top-level "define" option is deprecated. Use "transform.define" instead.`,
   };
 }
 
 export function logDeprecatedInject(): RollupLog {
   return {
     code: DEPRECATED_INJECT,
-    message:
-      'The top-level "inject" option is deprecated. Use "transform.inject" instead.',
+    message: `${
+      colors.yellow(colors.bold('⚠ Deprecation Warning:'))
+    } The top-level "inject" option is deprecated. Use "transform.inject" instead.`,
   };
 }
 
@@ -103,8 +106,9 @@ export function logDeprecatedKeepNames(): RollupLog {
 export function logDeprecatedDropLabels(): RollupLog {
   return {
     code: DEPRECATED_DROP_LABELS,
-    message:
-      'The top-level "dropLabels" option is deprecated. Use "transform.dropLabels" instead.',
+    message: `${
+      colors.yellow(colors.bold('⚠ Deprecation Warning:'))
+    } The top-level "dropLabels" option is deprecated. Use "transform.dropLabels" instead.`,
   };
 }
 

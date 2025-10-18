@@ -78,9 +78,9 @@ Check the [Rolldown Features](/guide/notable-features) page for capabilities tha
 
 For example, the following common Rollup plugins may be replaced with Rolldown's built-in features:
 
-- `@rollup/plugin-alias`: [`resolve.alias`](/apis/config-options#resolve-alias) option
+- `@rollup/plugin-alias`: [`resolve.alias`](/options/resolve#alias) option
 - `@rollup/plugin-commonjs`: supported out of the box
-- `@rollup/plugin-inject`: [`inject`](/apis/config-options#inject) option
+- `@rollup/plugin-inject`: [`inject`](/guide/notable-features#inject) option
 - `@rollup/plugin-replace`: [`replacePlugin`](/builtin-plugins/replace)
 - `@rollup/plugin-node-resolve`: supported out of the box
 - `@rollup/plugin-json`: supported out of the box

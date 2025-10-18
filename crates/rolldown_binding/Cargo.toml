@@ -25,7 +25,6 @@ futures = { workspace = true }
 itertools = { workspace = true }
 napi = { workspace = true }
 napi-derive = { workspace = true }
-num_cpus = { workspace = true }
 oxc = { workspace = true }
 oxc_minify_napi = { workspace = true }
 oxc_parser_napi = { workspace = true }

@@ -6,6 +6,7 @@ homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
+description = "Fast JavaScript bundler in Rust, designed for the future of Vite"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -73,7 +74,7 @@ xxhash-rust = { workspace = true, features = ["xxh3"] }
 [dev-dependencies]
 glob = { workspace = true }
 insta = { workspace = true }
-rolldown_testing = { workspace = true }
+rolldown_testing = { path = "../rolldown_testing" }
 rolldown_workspace = { workspace = true }
 sugar_path = { workspace = true }
 testing_macros = { workspace = true }

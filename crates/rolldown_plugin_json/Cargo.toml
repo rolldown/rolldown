@@ -6,6 +6,7 @@ homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
+description = "Rolldown plugin for JSON file imports"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

@@ -6,6 +6,7 @@ homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
+description = "Analyzer for filter patterns in Rolldown"
 
 [lints]
 workspace = true

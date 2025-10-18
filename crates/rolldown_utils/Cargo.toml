@@ -2,6 +2,7 @@
 name = "rolldown_utils"
 version = "0.1.0"
 publish = true
+description = "General-purpose utilities for Rolldown"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

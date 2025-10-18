@@ -125,7 +125,7 @@ rolldown_tracing = { version = "0.1.0", path = "crates/rolldown_tracing" }
 rolldown_utils = { version = "0.1.0", path = "crates/rolldown_utils" }
 rolldown_watcher = { version = "0.1.0", path = "crates/rolldown_watcher" }
 rolldown_workspace = { version = "0.1.0", path = "crates/rolldown_workspace" }
-string_wizard = { version = "0.0.26", path = "crates/string_wizard", features = ["serde"] }
+string_wizard = { version = "0.0.27", path = "crates/string_wizard", features = ["serde"] }
 
 #
 anyhow = "1.0.98"

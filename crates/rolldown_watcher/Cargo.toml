@@ -6,6 +6,7 @@ homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
+description = "File watching implementation for Rolldown"
 
 [dependencies]
 rolldown-notify = { workspace = true }

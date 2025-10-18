@@ -6,6 +6,7 @@ homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
+description = "Shared utilities for Rolldown plugins"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

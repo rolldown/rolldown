@@ -12,6 +12,7 @@ use std::{
 };
 
 use cow_utils::CowUtils;
+use owo_colors::OwoColorize;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_plugin_utils::is_in_node_modules;
@@ -85,9 +86,9 @@ impl Plugin for ReporterPlugin {
 
       if duration > Duration::from_millis(100) {
         utils::write_line(&format!(
-          "transforming ({}) \x1b[2m{}\x1b[22m",
+          "transforming ({}) {}",
           itoa::Buffer::new().format(transformed_count),
-          Path::new(args.id).relative(ctx.cwd()).to_string_lossy()
+          Path::new(args.id).relative(ctx.cwd()).to_string_lossy().dimmed()
         ));
 
         *self.latest_checkpoint.write().unwrap() = now;
@@ -120,7 +121,8 @@ impl Plugin for ReporterPlugin {
     }
 
     utils::log_info(&format!(
-      "\x1b[32m✓\x1b[39m {} modules transformed.",
+      "{} {} modules transformed.",
+      "✓".green(),
       self.transformed_count.load(Ordering::SeqCst)
     ));
 
@@ -315,11 +317,11 @@ impl Plugin for ReporterPlugin {
         filtered.sort_by(|a, b| a.size.cmp(&b.size));
         for log_entry in filtered {
           let mut info = String::new();
-          let _ = write!(&mut info, "\x1b[2m{out_dir}/\x1b[22m");
+          let _ = write!(&mut info, "{}/", out_dir.dimmed());
 
           let is_asset = !self.is_lib && Path::new(log_entry.name).starts_with(&self.assets_dir);
           if is_asset {
-            let _ = write!(&mut info, "\x1b[2m{}\x1b[22m", &self.assets_dir.cow_replace('\\', "/"));
+            let _ = write!(&mut info, "{}", self.assets_dir.cow_replace('\\', "/").dimmed());
           }
 
           let name = if is_asset {
@@ -330,27 +332,27 @@ impl Plugin for ReporterPlugin {
           };
 
           let _ = match group {
-            utils::AssetGroup::JS => write!(&mut info, "\x1b[36m{name}\x1b[39m"),
-            utils::AssetGroup::Css => write!(&mut info, "\x1b[35m{name}\x1b[39m"),
-            utils::AssetGroup::Assets => write!(&mut info, "\x1b[32m{name}\x1b[39m"),
+            utils::AssetGroup::JS => write!(&mut info, "{}", name.cyan()),
+            utils::AssetGroup::Css => write!(&mut info, "{}", name.magenta()),
+            utils::AssetGroup::Assets => write!(&mut info, "{}", name.green()),
           };
 
           let size = utils::display_size(log_entry.size);
           if group == utils::AssetGroup::JS && log_entry.size.div_ceil(1000) > self.chunk_limit {
             has_large_chunks = true;
-            let _ = write!(&mut info, "\x1b[1m\x1b[33m{size:>size_pad$}\x1b[39m\x1b[22m");
+            let _ = write!(&mut info, "{:>size_pad$}", size.bold().yellow());
           } else {
-            let _ = write!(&mut info, "\x1b[1m\x1b[2m{size:>size_pad$}\x1b[22m\x1b[22m");
+            let _ = write!(&mut info, "{:>size_pad$}", size.bold().dimmed());
           }
 
           if let Some(compressed_size) = log_entry.compressed_size {
             let size = utils::display_size(compressed_size);
-            let _ = write!(&mut info, "\x1b[2m │ gzip: {size:>compress_pad$}\x1b[22m");
+            let _ = write!(&mut info, " │ gzip: {:>compress_pad$}", size.dimmed());
           }
 
           if let Some(map_size) = log_entry.map_size {
             let size = utils::display_size(map_size);
-            let _ = write!(&mut info, "\x1b[2m │ map: {size:>map_pad$}\x1b[22m");
+            let _ = write!(&mut info, " │ map: {:>map_pad$}", size.dimmed());
           }
 
           utils::log_info(&info);
@@ -367,8 +369,8 @@ impl Plugin for ReporterPlugin {
     }
     if self.warn_large_chunks && has_large_chunks {
       let message = format!(
-        "\x1b[1m\x1b[33m\n(!) Some chunks are larger than {} kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
-        itoa::Buffer::new().format(self.chunk_limit),
+        "\n(!) Some chunks are larger than {} kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+        itoa::Buffer::new().format(self.chunk_limit).bold().yellow(),
       );
       ctx.warn(rolldown_common::LogWithoutPlugin { message, ..Default::default() });
     }

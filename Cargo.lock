@@ -1011,7 +1011,7 @@ dependencies = [
  "cow-utils",
  "heck",
  "oxc",
- "oxc_resolver",
+ "oxc_resolver 11.10.0 (git+https://github.com/oxc-project/oxc-resolver.git?branch=feat%2Ftsconfig-discovery)",
  "prettyplease",
  "proc-macro2",
  "quote",
@@ -2224,6 +2224,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxc_resolver"
+version = "11.10.0"
+source = "git+https://github.com/oxc-project/oxc-resolver.git?branch=feat%2Ftsconfig-discovery#1da68af3048208e6f9a4c1a4cbf5a1f61fe847e6"
+dependencies = [
+ "cfg-if",
+ "indexmap",
+ "json-strip-comments",
+ "libc",
+ "once_cell",
+ "papaya",
+ "pnp",
+ "rustc-hash",
+ "self_cell",
+ "serde",
+ "serde_json",
+ "simd-json",
+ "simdutf8",
+ "thiserror 2.0.16",
+ "tracing",
+ "url",
+ "windows",
+]
+
+[[package]]
 name = "oxc_resolver_napi"
 version = "11.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2233,7 +2257,7 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
- "oxc_resolver",
+ "oxc_resolver 11.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2925,7 +2949,7 @@ dependencies = [
  "oxc",
  "oxc_ecmascript",
  "oxc_index",
- "oxc_resolver",
+ "oxc_resolver 11.10.0 (git+https://github.com/oxc-project/oxc-resolver.git?branch=feat%2Ftsconfig-discovery)",
  "rolldown_ecmascript",
  "rolldown_error",
  "rolldown_sourcemap",
@@ -2994,7 +3018,7 @@ dependencies = [
  "heck",
  "napi",
  "oxc",
- "oxc_resolver",
+ "oxc_resolver 11.10.0 (git+https://github.com/oxc-project/oxc-resolver.git?branch=feat%2Ftsconfig-discovery)",
  "rolldown-ariadne",
  "rolldown_utils",
  "ropey",
@@ -3014,7 +3038,7 @@ dependencies = [
 name = "rolldown_fs"
 version = "0.1.0"
 dependencies = [
- "oxc_resolver",
+ "oxc_resolver 11.10.0 (git+https://github.com/oxc-project/oxc-resolver.git?branch=feat%2Ftsconfig-discovery)",
  "vfs",
 ]
 
@@ -3380,7 +3404,7 @@ dependencies = [
  "derive_more",
  "fast-glob",
  "owo-colors",
- "oxc_resolver",
+ "oxc_resolver 11.10.0 (git+https://github.com/oxc-project/oxc-resolver.git?branch=feat%2Ftsconfig-discovery)",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_plugin_utils",
@@ -3428,7 +3452,7 @@ dependencies = [
  "arcstr",
  "dashmap",
  "itertools",
- "oxc_resolver",
+ "oxc_resolver 11.10.0 (git+https://github.com/oxc-project/oxc-resolver.git?branch=feat%2Ftsconfig-discovery)",
  "rolldown_common",
  "rolldown_fs",
  "rolldown_utils",

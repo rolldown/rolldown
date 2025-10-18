@@ -27,8 +27,8 @@ pub type CSSMinifyFn =
   dyn Fn(String) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send>> + Send + Sync;
 
 #[expect(clippy::struct_excessive_bools)]
-#[derive(derive_more::Debug)]
-pub struct ViteCssPostPlugin {
+#[derive(derive_more::Debug, Default)]
+pub struct ViteCSSPostPlugin {
   pub is_lib: bool,
   pub is_ssr: bool,
   pub is_worker: bool,
@@ -48,7 +48,7 @@ pub struct ViteCssPostPlugin {
   pub has_emitted: AtomicBool,
 }
 
-impl Plugin for ViteCssPostPlugin {
+impl Plugin for ViteCSSPostPlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
     std::borrow::Cow::Borrowed("builtin:vite-css-post")
   }

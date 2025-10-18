@@ -28,7 +28,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
 
-use crate::ViteCssPostPlugin;
+use crate::ViteCSSPostPlugin;
 
 pub const VITE_HASH_UPDATE_MARKER: &str = "/*$vite$:1*/";
 pub const DEFAULT_CSS_BUNDLE_NAME: &str = "style.css";
@@ -83,7 +83,7 @@ impl Deref for FinalizedContext<'_, '_, '_> {
   }
 }
 
-impl ViteCssPostPlugin {
+impl ViteCSSPostPlugin {
   pub async fn finalize_vite_css_urls<'a>(
     &self,
     ctx: &FinalizedContext<'a, '_, '_>,
@@ -92,7 +92,8 @@ impl ViteCssPostPlugin {
   ) -> anyhow::Result<()> {
     let mut css_url_iter = ctx.args.code.match_indices("__VITE_CSS_URL__").peekable();
     if css_url_iter.peek().is_some() {
-      let tasks = css_url_iter.map(async |(index, _)| {
+      let indices = css_url_iter.map(|(index, _)| index).collect::<Vec<_>>();
+      let tasks = indices.into_iter().map(|index| async move {
         let start = index + "__VITE_CSS_URL__".len();
         let Some(pos) = ctx.args.code[start..].find("__") else {
           return Err(anyhow::anyhow!(

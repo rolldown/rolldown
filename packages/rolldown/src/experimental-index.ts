@@ -32,6 +32,7 @@ export {
   reactRefreshWrapperPlugin,
   reporterPlugin,
   viteCSSPlugin,
+  viteCSSPostPlugin,
   viteResolvePlugin,
   wasmFallbackPlugin,
   wasmHelperPlugin,

@@ -37,6 +37,8 @@ pub enum BindingBuiltinPluginName {
   Transform,
   #[napi(value = "builtin:vite-css")]
   ViteCSS,
+  #[napi(value = "builtin:vite-css-post")]
+  ViteCSSPost,
   #[napi(value = "builtin:vite-resolve")]
   ViteResolve,
   #[napi(value = "builtin:wasm-fallback")]

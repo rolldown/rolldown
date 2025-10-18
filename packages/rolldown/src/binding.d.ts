@@ -1581,6 +1581,7 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:replace'|
 'builtin:transform'|
 'builtin:vite-css'|
+'builtin:vite-css-post'|
 'builtin:vite-resolve'|
 'builtin:wasm-fallback'|
 'builtin:wasm-helper'|
@@ -2209,6 +2210,22 @@ export interface BindingViteCssPluginConfig {
     resolveUrl: (url: string, importer?: string) => MaybePromise<string | undefined>
     assetInlineLimit?: number | ((file: string, content: Buffer) => boolean | undefined)
   }
+
+export interface BindingViteCssPostPluginConfig {
+  isLib: boolean
+  isSsr: boolean
+  isWorker: boolean
+  isLegacy: boolean
+  isClient: boolean
+  cssCodeSplit: boolean
+  sourcemap: boolean
+  assetsDir: string
+  urlBase: string
+  decodedBase: string
+  libCssFilename?: string
+  cssMinify?: (css: string) => Promise<string>
+  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => MaybePromise<VoidNullable<string | BindingRenderBuiltUrlRet>>
+}
 
 export interface BindingVitePluginCustom {
   'vite:import-glob'?: ViteImportGlobMeta

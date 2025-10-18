@@ -3,7 +3,7 @@ use rolldown_sourcemap::SourceMap;
 
 use crate::{ChunkIdx, InstantiationKind, StrOrBytes};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 /// Assets is final output of the bundling process. Inputs -> Modules -> Chunks -> Assets
 pub struct Asset {
   /// This field indicates the chunk that this asset originates from.

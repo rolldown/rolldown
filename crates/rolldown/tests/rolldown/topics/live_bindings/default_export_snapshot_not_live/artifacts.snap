@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region file.js
+var file_exports = /* @__PURE__ */ __export({
+	default: () => file_default,
+	inc: () => inc
+});
+let x = 42;
+function inc() {
+	x += 1;
+}
+var file_default = x;
+
+//#endregion
+export { file_exports as file };
+```

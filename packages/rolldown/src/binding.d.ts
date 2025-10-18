@@ -1582,6 +1582,7 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:transform'|
 'builtin:vite-css'|
 'builtin:vite-css-post'|
+'builtin:vite-html'|
 'builtin:vite-resolve'|
 'builtin:wasm-fallback'|
 'builtin:wasm-helper'|
@@ -2153,6 +2154,11 @@ export interface BindingReporterPluginConfig {
   reportCompressedSize: boolean
 }
 
+export interface BindingResolveDependenciesContext {
+  hostId: string
+  hostType: string
+}
+
 export type BindingResolvedExternal =
   boolean | string
 
@@ -2225,6 +2231,19 @@ export interface BindingViteCssPostPluginConfig {
   libCssFilename?: string
   cssMinify?: (css: string) => Promise<string>
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => MaybePromise<VoidNullable<string | BindingRenderBuiltUrlRet>>
+}
+
+export interface BindingViteHtmlPluginConfig {
+  isLib: boolean
+  isSsr: boolean
+  urlBase: string
+  publicDir: string
+  decodedBase: string
+  cssCodeSplit: boolean
+  modulePreloadPolyfill: boolean
+  assetInlineLimit?: number | ((file: string, content: Buffer) => boolean | undefined)
+  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => MaybePromise<VoidNullable<string | BindingRenderBuiltUrlRet>>
+  resolveDependencies?: boolean | ((filename: string, dependencies: string[], context: { hostId: string, hostType: 'html' | 'js' }) => Promise<string[]>)
 }
 
 export interface BindingVitePluginCustom {

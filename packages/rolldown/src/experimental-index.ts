@@ -33,6 +33,7 @@ export {
   reporterPlugin,
   viteCSSPlugin,
   viteCSSPostPlugin,
+  viteHtmlPlugin,
   viteResolvePlugin,
   wasmFallbackPlugin,
   wasmHelperPlugin,

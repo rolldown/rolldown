@@ -23,7 +23,7 @@ use crate::utils::{
   inject_to_head,
 };
 
-pub type ResolveDependencies = dyn Fn(
+pub type ResolveDependenciesFn = dyn Fn(
     &str,
     Vec<String>,
     &str,
@@ -34,7 +34,7 @@ pub type ResolveDependencies = dyn Fn(
 
 pub enum ResolveDependenciesEither {
   True,
-  Fn(Arc<ResolveDependencies>),
+  Fn(Arc<ResolveDependenciesFn>),
 }
 
 #[expect(clippy::struct_excessive_bools)]
@@ -53,7 +53,8 @@ pub struct ViteHtmlPlugin {
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
   #[debug(skip)]
   pub resolve_dependencies: Option<ResolveDependenciesEither>,
-  html_result_map: FxDashMap<(String, String), (String, bool)>,
+  // internal state
+  pub html_result_map: FxDashMap<(String, String), (String, bool)>,
 }
 
 impl Plugin for ViteHtmlPlugin {

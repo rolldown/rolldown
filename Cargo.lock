@@ -2895,6 +2895,7 @@ dependencies = [
  "rolldown_plugin_utils",
  "rolldown_plugin_vite_css",
  "rolldown_plugin_vite_css_post",
+ "rolldown_plugin_vite_html",
  "rolldown_plugin_vite_resolve",
  "rolldown_plugin_wasm_fallback",
  "rolldown_plugin_wasm_helper",

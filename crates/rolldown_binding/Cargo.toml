@@ -55,6 +55,7 @@ rolldown_plugin_transform = { workspace = true }
 rolldown_plugin_utils = { workspace = true }
 rolldown_plugin_vite_css = { workspace = true }
 rolldown_plugin_vite_css_post = { workspace = true }
+rolldown_plugin_vite_html = { workspace = true }
 rolldown_plugin_vite_resolve = { workspace = true }
 rolldown_plugin_wasm_fallback = { workspace = true }
 rolldown_plugin_wasm_helper = { workspace = true }

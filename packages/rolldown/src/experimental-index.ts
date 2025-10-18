@@ -31,7 +31,6 @@ export {
   modulePreloadPolyfillPlugin,
   reactRefreshWrapperPlugin,
   reporterPlugin,
-  viteCSSPlugin,
   viteCSSPostPlugin,
   viteHtmlPlugin,
   viteResolvePlugin,
@@ -43,3 +42,4 @@ export {
 export { aliasPlugin } from './builtin-plugin/alias-plugin';
 export { replacePlugin } from './builtin-plugin/replace-plugin';
 export { transformPlugin } from './builtin-plugin/transform-plugin';
+export { viteCSSPlugin } from './builtin-plugin/vite-css-plugin';

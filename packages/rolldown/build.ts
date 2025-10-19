@@ -117,6 +117,7 @@ function withShared(
       'experimental-index': './src/experimental-index',
       ...!isBrowserBuild
         ? {
+          'cli-setup': './src/cli/setup-index',
           cli: './src/cli/index',
           config: './src/config',
           'parallel-plugin': './src/parallel-plugin',

@@ -33,6 +33,7 @@
     "packages/rolldown": {
       "entry": [
         "src/browser.js",
+        "src/cli/setup-index.ts",
         "src/cli/index.ts",
         "src/log/locate-character/index.d.ts",
         "src/parallel-plugin-worker.ts",

@@ -1,16 +1,14 @@
 use std::sync::Arc;
 
-use napi::bindgen_prelude::{Buffer, Either, FnArgs};
+use napi::bindgen_prelude::{Either, FnArgs};
 use rolldown_plugin_asset::AssetPlugin;
-use rolldown_plugin_utils::UsizeOrFunction;
 use rolldown_plugin_utils::{RenderBuiltUrl, RenderBuiltUrlConfig, RenderBuiltUrlRet};
 use rolldown_utils::dashmap::FxDashSet;
 
+use crate::options::plugin::types::binding_asset_inline_limit::BindingAssetInlineLimit;
 use crate::types::{
   binding_string_or_regex::{BindingStringOrRegex, bindingify_string_or_regex_array},
-  js_callback::{
-    JsCallback, JsCallbackExt as _, MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _,
-  },
+  js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _},
 };
 
 #[napi_derive::napi(object, object_from_js = false)]
@@ -58,7 +56,7 @@ pub struct BindingAssetPluginConfig {
   pub is_skip_assets: bool,
   pub assets_include: Vec<BindingStringOrRegex>,
   #[napi(ts_type = "number | ((file: string, content: Buffer) => boolean | undefined)")]
-  pub asset_inline_limit: Either<u32, JsCallback<FnArgs<(String, Buffer)>, Option<bool>>>,
+  pub asset_inline_limit: BindingAssetInlineLimit,
   #[napi(
     ts_type = "(filename: string, type: BindingRenderBuiltUrlConfig) => MaybePromise<VoidNullable<string | BindingRenderBuiltUrlRet>>"
   )]
@@ -72,21 +70,6 @@ pub struct BindingAssetPluginConfig {
 
 impl From<BindingAssetPluginConfig> for AssetPlugin {
   fn from(config: BindingAssetPluginConfig) -> Self {
-    let asset_inline_limit = match config.asset_inline_limit {
-      Either::A(value) => UsizeOrFunction::Number(value as usize),
-      Either::B(func) => UsizeOrFunction::Function(Arc::new(move |file: &str, content: &[u8]| {
-        let file = file.to_string();
-        let content = Buffer::from(content);
-        let asset_inline_limit_fn = Arc::clone(&func);
-        Box::pin(async move {
-          asset_inline_limit_fn
-            .invoke_async((file, content).into())
-            .await
-            .map_err(anyhow::Error::from)
-        })
-      })),
-    };
-
     Self {
       is_lib: config.is_lib,
       is_ssr: config.is_ssr,
@@ -96,7 +79,7 @@ impl From<BindingAssetPluginConfig> for AssetPlugin {
       decoded_base: config.decoded_base,
       is_skip_assets: config.is_skip_assets,
       assets_include: bindingify_string_or_regex_array(config.assets_include),
-      asset_inline_limit,
+      asset_inline_limit: config.asset_inline_limit.into(),
       render_built_url: config.render_built_url.map(|render_built_url| -> Arc<RenderBuiltUrl> {
         Arc::new(move |filename: &str, config: &RenderBuiltUrlConfig| {
           let render_built_url = Arc::clone(&render_built_url);

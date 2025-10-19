@@ -1,3 +1,4 @@
+pub mod binding_asset_inline_limit;
 pub mod binding_asset_source;
 pub mod binding_builtin_plugin_name;
 pub mod binding_emitted_asset;

@@ -1,20 +1,16 @@
 use std::sync::Arc;
 
-use napi::{
-  Either,
-  bindgen_prelude::{Buffer, FnArgs},
-};
-use rolldown_plugin_utils::{RenderBuiltUrl, RenderBuiltUrlConfig, UsizeOrFunction};
+use napi::{Either, bindgen_prelude::FnArgs};
+use rolldown_plugin_utils::{RenderBuiltUrl, RenderBuiltUrlConfig};
 use rolldown_plugin_vite_html::{ResolveDependenciesEither, ViteHtmlPlugin};
 use rolldown_utils::dashmap::FxDashMap;
 
 use crate::{
-  options::plugin::config::binding_asset_plugin_config::{
-    BindingRenderBuiltUrlConfig, BindingRenderBuiltUrlRet,
+  options::plugin::{
+    config::binding_asset_plugin_config::{BindingRenderBuiltUrlConfig, BindingRenderBuiltUrlRet},
+    types::binding_asset_inline_limit::BindingAssetInlineLimit,
   },
-  types::js_callback::{
-    JsCallback, JsCallbackExt as _, MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _,
-  },
+  types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _},
 };
 
 #[expect(clippy::struct_excessive_bools)]
@@ -28,7 +24,7 @@ pub struct BindingViteHtmlPluginConfig {
   pub css_code_split: bool,
   pub module_preload_polyfill: bool,
   #[napi(ts_type = "number | ((file: string, content: Buffer) => boolean | undefined)")]
-  pub asset_inline_limit: Option<Either<u32, JsCallback<FnArgs<(String, Buffer)>, Option<bool>>>>,
+  pub asset_inline_limit: BindingAssetInlineLimit,
   #[napi(
     ts_type = "(filename: string, type: BindingRenderBuiltUrlConfig) => MaybePromise<VoidNullable<string | BindingRenderBuiltUrlRet>>"
   )]
@@ -60,24 +56,6 @@ pub struct BindingResolveDependenciesContext {
 
 impl From<BindingViteHtmlPluginConfig> for ViteHtmlPlugin {
   fn from(value: BindingViteHtmlPluginConfig) -> Self {
-    let asset_inline_limit =
-      value.asset_inline_limit.map(|asset_inline_limit| match asset_inline_limit {
-        Either::A(value) => UsizeOrFunction::Number(value as usize),
-        Either::B(func) => {
-          UsizeOrFunction::Function(Arc::new(move |file: &str, content: &[u8]| {
-            let file = file.to_string();
-            let content = Buffer::from(content);
-            let asset_inline_limit_fn = Arc::clone(&func);
-            Box::pin(async move {
-              asset_inline_limit_fn
-                .invoke_async((file, content).into())
-                .await
-                .map_err(anyhow::Error::from)
-            })
-          }))
-        }
-      });
-
     let render_built_url = value.render_built_url.map(|render_built_url| -> Arc<RenderBuiltUrl> {
       Arc::new(move |filename: &str, config: &RenderBuiltUrlConfig| {
         let render_built_url = Arc::clone(&render_built_url);
@@ -128,7 +106,7 @@ impl From<BindingViteHtmlPluginConfig> for ViteHtmlPlugin {
       decoded_base: value.decoded_base,
       css_code_split: value.css_code_split,
       module_preload_polyfill: value.module_preload_polyfill,
-      asset_inline_limit: asset_inline_limit.unwrap_or_default(),
+      asset_inline_limit: value.asset_inline_limit.into(),
       render_built_url,
       resolve_dependencies,
       html_result_map: FxDashMap::default(),

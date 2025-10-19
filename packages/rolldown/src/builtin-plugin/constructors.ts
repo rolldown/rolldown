@@ -1,5 +1,4 @@
 import type {
-  BindingAssetPluginConfig,
   BindingBuildImportAnalysisPluginConfig,
   BindingDynamicImportVarsPluginConfig,
   BindingEsmExternalRequirePluginConfig,
@@ -100,12 +99,6 @@ export function isolatedDeclarationPlugin(
   config?: BindingIsolatedDeclarationPluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:isolated-declaration', config);
-}
-
-export function assetPlugin(
-  config?: BindingAssetPluginConfig,
-): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:asset', config);
 }
 
 export function webWorkerPostPlugin(): BuiltinPlugin {

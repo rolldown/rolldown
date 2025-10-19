@@ -206,9 +206,14 @@ impl ViteCSSPostPlugin {
           css_asset_path.to_string_lossy().into_owned()
         };
 
+        let is_legacy = match &self.is_legacy {
+          Some(is_legacy_fn) => is_legacy_fn().await?,
+          None => false,
+        };
+
         let original_file_name = get_chunk_original_name(
           ctx.cwd(),
-          self.is_legacy,
+          is_legacy,
           &ctx.args.chunk.name,
           ctx.args.chunk.facade_module_id.as_ref(),
         );

@@ -2221,7 +2221,6 @@ export interface BindingViteCssPostPluginConfig {
   isLib: boolean
   isSsr: boolean
   isWorker: boolean
-  isLegacy: boolean
   isClient: boolean
   cssCodeSplit: boolean
   sourcemap: boolean
@@ -2229,6 +2228,7 @@ export interface BindingViteCssPostPluginConfig {
   urlBase: string
   decodedBase: string
   libCssFilename?: string
+  isLegacy?: () => boolean
   cssMinify?: (css: string) => Promise<string>
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => MaybePromise<VoidNullable<string | BindingRenderBuiltUrlRet>>
 }

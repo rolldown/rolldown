@@ -23,6 +23,9 @@ use rolldown_plugin_utils::{
 use rolldown_utils::{url::clean_url, xxhash::xxhash_with_base};
 use string_wizard::SourceMapOptions;
 
+pub type IsLegacyFn =
+  dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send>> + Send + Sync;
+
 pub type CSSMinifyFn =
   dyn Fn(String) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send>> + Send + Sync;
 
@@ -32,7 +35,6 @@ pub struct ViteCSSPostPlugin {
   pub is_lib: bool,
   pub is_ssr: bool,
   pub is_worker: bool,
-  pub is_legacy: bool,
   pub is_client: bool,
   pub css_code_split: bool,
   pub sourcemap: bool,
@@ -40,6 +42,8 @@ pub struct ViteCSSPostPlugin {
   pub url_base: String,
   pub decoded_base: String,
   pub lib_css_filename: Option<String>,
+  #[debug(skip)]
+  pub is_legacy: Option<Arc<IsLegacyFn>>,
   #[debug(skip)]
   pub css_minify: Option<Arc<CSSMinifyFn>>,
   #[debug(skip)]
@@ -223,7 +227,9 @@ impl Plugin for ViteCSSPostPlugin {
     args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     // to avoid emitting duplicate assets for modern build and legacy build
-    if self.is_legacy {
+    if let Some(is_legacy_fn) = &self.is_legacy
+      && is_legacy_fn().await?
+    {
       return Ok(());
     }
 

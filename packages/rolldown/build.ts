@@ -83,8 +83,9 @@ if (buildMeta.target === 'browser-pkg') {
       entryFileNames: '[name].browser.mjs',
     },
   });
-  init.define = {
-    ...init.define,
+  init.transform ??= {};
+  init.transform.define = {
+    ...init.transform.define,
     // `experimental-index` now dependents on `logger` in cli to emit warning which require `process.env.ROLLDOWN_TEST` to initialize logger correctly.
     // But in browser build, we don't have `process.`, so we polyfill them
     'process.env.ROLLDOWN_TEST': 'false',

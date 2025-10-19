@@ -6,9 +6,9 @@ use oxc::span::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, IndexModules, MemberExprRefResolution, Module, ModuleIdx,
-  ModuleType, NamespaceAlias, NormalModule, OutputFormat, ResolvedExport, Specifier,
-  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  EcmaModuleAstUsage, ExportsKind, IndexModules, MemberExprObjectReferencedType,
+  MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
+  OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_utils::{
@@ -410,8 +410,10 @@ impl LinkStage<'_> {
                     Module::Normal(module) => module,
                     Module::External(_) => return,
                   };
-                let mut is_namespace_ref =
-                  canonical_ref_owner.namespace_object_ref == canonical_ref;
+                let mut is_namespace_ref = canonical_ref_owner.namespace_object_ref
+                  == canonical_ref
+                  || (matches!(canonical_ref_owner.module_type, ModuleType::Json)
+                    && member_expr_ref.object_ref_type == MemberExprObjectReferencedType::Default);
                 let mut cursor = 0;
                 while cursor < member_expr_ref.prop_and_span_list.len() && is_namespace_ref {
                   let (name, _related_span) = &member_expr_ref.prop_and_span_list[cursor];

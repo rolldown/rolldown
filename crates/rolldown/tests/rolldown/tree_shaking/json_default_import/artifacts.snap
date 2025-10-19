@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region foo.json
+var a$1 = "used";
+
+//#endregion
+//#region bailout.json
+var a = "bailout_a";
+var bailout_default = {
+	a,
+	b: "bailout_b"
+};
+
+//#endregion
+//#region main.js
+assert.strictEqual(a$1, "used");
+assert.strictEqual(a, "bailout_a");
+assert.deepEqual(bailout_default, {
+	a: "bailout_a",
+	b: "bailout_b"
+});
+
+//#endregion
+```

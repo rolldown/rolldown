@@ -9,10 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 //#region a.json
-var a_default = {
-	Message: 1,
-	a: 2e3
-};
+var Message$1 = 1;
 
 //#endregion
 //#region main.js
@@ -27,7 +24,7 @@ var Message = class {
 };
 const y = new Message(1);
 assert(y.toString() === "1");
-assert(a_default.Message + y.toString() === "11");
+assert(Message$1 + y.toString() === "11");
 
 //#endregion
 ```

@@ -9,8 +9,8 @@ use oxc::{
 };
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
-  RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoMeta, SymbolRefFlags,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  MemberExprObjectReferencedType, RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoMeta,
+  SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
@@ -489,12 +489,26 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         // if the identifier_reference is a NamedImport MemberExpr access, we store it as a `MemberExpr`
         // use this flag to avoid insert it as `Symbol` at the same time.
         let mut is_inserted_before = false;
-        if self.result.named_imports.contains_key(&root_symbol_id) {
-          if let Some((span, props)) = self.try_extract_parent_static_member_expr_chain(usize::MAX)
+        if let Some(named_import) = self.result.named_imports.get(&root_symbol_id) {
+          let (ty, max_tract_len) = match named_import.imported {
+            rolldown_common::Specifier::Star => {
+              (MemberExprObjectReferencedType::Namespace, usize::MAX)
+            }
+            rolldown_common::Specifier::Literal(ref compact_str)
+              if compact_str.as_str() == "default" =>
+            {
+              (MemberExprObjectReferencedType::Default, 2)
+            }
+            rolldown_common::Specifier::Literal(_) => {
+              (MemberExprObjectReferencedType::Named, usize::MAX)
+            }
+          };
+          if let Some((span, props)) =
+            self.try_extract_parent_static_member_expr_chain(max_tract_len)
           {
             if !span.is_unspanned() {
               is_inserted_before = true;
-              self.add_member_expr_reference(root_symbol_id, props, span);
+              self.add_member_expr_reference(root_symbol_id, props, span, ty);
             }
           }
         }

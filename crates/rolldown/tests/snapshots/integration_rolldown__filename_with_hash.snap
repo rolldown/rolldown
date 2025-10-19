@@ -4772,7 +4772,7 @@ expression: output
 
 # tests/rolldown/issues/6097
 
-- main-!~{000}~.js => main-Do2sd5of.js
+- main-!~{000}~.js => main-C3snyGp9.js
 
 # tests/rolldown/issues/6231
 
@@ -5941,6 +5941,10 @@ expression: output
 - dynamic-!~{005}~.js => dynamic-C1dXXjI-.js
 - static-!~{003}~.js => static-BP37ah8X.js
 - static-!~{001}~.js => static-CE4ZR3EF.js
+
+# tests/rolldown/tree_shaking/json_default_import
+
+- main-!~{000}~.js => main-Vltw6_mA.js
 
 # tests/rolldown/tree_shaking/json_module_def_format
 

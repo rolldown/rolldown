@@ -12,7 +12,7 @@ use std::{
 };
 
 use cow_utils::CowUtils;
-use owo_colors::OwoColorize;
+use owo_colors::{OwoColorize, Stream};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_plugin_utils::is_in_node_modules;
@@ -88,7 +88,10 @@ impl Plugin for ReporterPlugin {
         utils::write_line(&format!(
           "transforming ({}) {}",
           itoa::Buffer::new().format(transformed_count),
-          Path::new(args.id).relative(ctx.cwd()).to_string_lossy().dimmed()
+          Path::new(args.id)
+            .relative(ctx.cwd())
+            .to_string_lossy()
+            .if_supports_color(Stream::Stdout, |text| { text.dimmed() })
         ));
 
         *self.latest_checkpoint.write().unwrap() = now;
@@ -122,7 +125,7 @@ impl Plugin for ReporterPlugin {
 
     utils::log_info(&format!(
       "{} {} modules transformed.",
-      "✓".green(),
+      "✓".if_supports_color(Stream::Stdout, |text| text.green()),
       self.transformed_count.load(Ordering::SeqCst)
     ));
 
@@ -317,11 +320,22 @@ impl Plugin for ReporterPlugin {
         filtered.sort_by(|a, b| a.size.cmp(&b.size));
         for log_entry in filtered {
           let mut info = String::new();
-          let _ = write!(&mut info, "{}/", out_dir.dimmed());
+          let _ = write!(
+            &mut info,
+            "{}/",
+            out_dir.if_supports_color(Stream::Stdout, |text| text.dimmed())
+          );
 
           let is_asset = !self.is_lib && Path::new(log_entry.name).starts_with(&self.assets_dir);
           if is_asset {
-            let _ = write!(&mut info, "{}", self.assets_dir.cow_replace('\\', "/").dimmed());
+            let _ = write!(
+              &mut info,
+              "{}",
+              self
+                .assets_dir
+                .cow_replace('\\', "/")
+                .if_supports_color(Stream::Stdout, |text| text.dimmed())
+            );
           }
 
           let name = if is_asset {
@@ -332,27 +346,49 @@ impl Plugin for ReporterPlugin {
           };
 
           let _ = match group {
-            utils::AssetGroup::JS => write!(&mut info, "{}", name.cyan()),
-            utils::AssetGroup::Css => write!(&mut info, "{}", name.magenta()),
-            utils::AssetGroup::Assets => write!(&mut info, "{}", name.green()),
+            utils::AssetGroup::JS => {
+              write!(&mut info, "{}", name.if_supports_color(Stream::Stdout, |text| text.cyan()))
+            }
+            utils::AssetGroup::Css => {
+              write!(&mut info, "{}", name.if_supports_color(Stream::Stdout, |text| text.magenta()))
+            }
+            utils::AssetGroup::Assets => {
+              write!(&mut info, "{}", name.if_supports_color(Stream::Stdout, |text| text.green()))
+            }
           };
 
           let size = utils::display_size(log_entry.size);
           if group == utils::AssetGroup::JS && log_entry.size.div_ceil(1000) > self.chunk_limit {
             has_large_chunks = true;
-            let _ = write!(&mut info, "{:>size_pad$}", size.bold().yellow());
+            let _ = write!(
+              &mut info,
+              "{:>size_pad$}",
+              size.if_supports_color(Stream::Stdout, |text| { text.bold().yellow().to_string() })
+            );
           } else {
-            let _ = write!(&mut info, "{:>size_pad$}", size.bold().dimmed());
+            let _ = write!(
+              &mut info,
+              "{:>size_pad$}",
+              size.if_supports_color(Stream::Stdout, |text| { text.bold().dimmed().to_string() })
+            );
           }
 
           if let Some(compressed_size) = log_entry.compressed_size {
             let size = utils::display_size(compressed_size);
-            let _ = write!(&mut info, " │ gzip: {:>compress_pad$}", size.dimmed());
+            let _ = write!(
+              &mut info,
+              " │ gzip: {:>compress_pad$}",
+              size.if_supports_color(Stream::Stdout, |text| text.dimmed())
+            );
           }
 
           if let Some(map_size) = log_entry.map_size {
             let size = utils::display_size(map_size);
-            let _ = write!(&mut info, " │ map: {:>map_pad$}", size.dimmed());
+            let _ = write!(
+              &mut info,
+              " │ map: {:>map_pad$}",
+              size.if_supports_color(Stream::Stdout, |text| text.dimmed())
+            );
           }
 
           utils::log_info(&info);
@@ -370,7 +406,9 @@ impl Plugin for ReporterPlugin {
     if self.warn_large_chunks && has_large_chunks {
       let message = format!(
         "\n(!) Some chunks are larger than {} kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
-        itoa::Buffer::new().format(self.chunk_limit).bold().yellow(),
+        itoa::Buffer::new()
+          .format(self.chunk_limit)
+          .if_supports_color(Stream::Stdout, |text| { text.bold().yellow().to_string() }),
       );
       ctx.warn(rolldown_common::LogWithoutPlugin { message, ..Default::default() });
     }

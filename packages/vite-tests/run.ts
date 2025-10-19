@@ -10,7 +10,7 @@ const OVERRIDES = [
 ];
 
 function printTitle(title: string) {
-  console.info(styleText(['cyan', 'bold'],title))
+  console.info(styleText(['cyan', 'bold'], title));
 }
 
 async function runCmdAndPipe(title: string, cmdOptions: Parameters<typeof x>): Promise<boolean> {
@@ -23,7 +23,8 @@ async function runCmdAndPipe(title: string, cmdOptions: Parameters<typeof x>): P
   console.info('------------------------');
   if (result.exitCode !== 0) {
     console.error(
-      styleText('red', 
+      styleText(
+        'red',
         `${styleText('bold', 'Failed to execute command:')} ${
           [cmdOptions[0]].concat(cmdOptions[1] ?? []).join(' ')
         }`,
@@ -112,7 +113,7 @@ const failedJsTestBuild = await runCmdAndPipe(
 if (failedJsTestBuild) failed.push('[JS] test-build');
 
 if (failed.length > 0) {
-  console.error(styleText(['red', 'bold'],'The following test suites failed:'));
+  console.error(styleText(['red', 'bold'], 'The following test suites failed:'));
   failed.forEach(test => console.error(styleText('red', ` - ${test}`)));
   process.exit(1);
 }

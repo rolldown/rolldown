@@ -51,7 +51,7 @@ jobs:
           pnpm run --filter rolldown-tests test:types
 
       - name: Setup Node20 For Testing
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: 22
           package-manager-cache: false
@@ -70,7 +70,7 @@ jobs:
         run: pnpm run --filter '@rolldown/test-dev-server-tests' test
 
       - name: Setup Node22 For Testing
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: 22
           package-manager-cache: false
@@ -89,7 +89,7 @@ jobs:
         run: pnpm run --filter '@rolldown/test-dev-server-tests' test
 
       - name: Setup Node24 For Testing
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: 24
           package-manager-cache: false

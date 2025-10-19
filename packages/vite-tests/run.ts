@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import colors from 'picocolors';
+import { styleText } from 'node:util';
 import { x } from 'tinyexec';
 
 const REPO_PATH = path.resolve(import.meta.dirname, './repo');
@@ -10,7 +10,7 @@ const OVERRIDES = [
 ];
 
 function printTitle(title: string) {
-  console.info(colors.cyan(colors.bold(title)));
+  console.info(styleText(['cyan', 'bold'],title))
 }
 
 async function runCmdAndPipe(title: string, cmdOptions: Parameters<typeof x>): Promise<boolean> {
@@ -23,8 +23,8 @@ async function runCmdAndPipe(title: string, cmdOptions: Parameters<typeof x>): P
   console.info('------------------------');
   if (result.exitCode !== 0) {
     console.error(
-      colors.red(
-        `${colors.bold('Failed to execute command:')} ${
+      styleText('red', 
+        `${styleText('bold', 'Failed to execute command:')} ${
           [cmdOptions[0]].concat(cmdOptions[1] ?? []).join(' ')
         }`,
       ),
@@ -112,7 +112,7 @@ const failedJsTestBuild = await runCmdAndPipe(
 if (failedJsTestBuild) failed.push('[JS] test-build');
 
 if (failed.length > 0) {
-  console.error(colors.red(colors.bold('The following test suites failed:')));
-  failed.forEach(test => console.error(colors.red(` - ${test}`)));
+  console.error(styleText(['red', 'bold'],'The following test suites failed:'));
+  failed.forEach(test => console.error(styleText('red', ` - ${test}`)));
   process.exit(1);
 }

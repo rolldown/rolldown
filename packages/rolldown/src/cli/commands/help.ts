@@ -1,16 +1,18 @@
-import colors from 'ansis';
 import { description, version } from '../../../package.json' assert {
   type: 'json',
 };
+import { styleText } from '../../utils/style-text';
 import { options } from '../arguments';
 import { camelCaseToKebabCase } from '../arguments/utils';
 import { logger } from '../logger';
 
-const introduction = `${colors.gray(`${description} (rolldown v${version})`)}
+const introduction = `${
+  styleText('gray', `${description} (rolldown v${version})`)
+}
 
-${colors.bold(colors.underline('USAGE'))} ${
-  colors.cyan('rolldown -c <config>')
-} or ${colors.cyan('rolldown <input> <options>')}`;
+${styleText(['bold', 'underline'], 'USAGE')} ${
+  styleText('cyan', 'rolldown -c <config>')
+} or ${styleText('cyan', 'rolldown <input> <options>')}`;
 
 const examples = [
   {
@@ -46,7 +48,7 @@ const notes = [
 export function showHelp(): void {
   logger.log(introduction);
   logger.log('');
-  logger.log(`${colors.bold(colors.underline('OPTIONS'))}`);
+  logger.log(`${styleText(['bold', 'underline'], 'OPTIONS')}`);
   logger.log('');
   logger.log(
     Object.entries(options)
@@ -78,7 +80,7 @@ export function showHelp(): void {
           description = description[0].toUpperCase() + description.slice(1);
         }
         return (
-          colors.cyan(optionStr.padEnd(30)) +
+          styleText('cyan', optionStr.padEnd(30)) +
           description +
           (description && description?.endsWith('.') ? '' : '.')
         );
@@ -86,16 +88,16 @@ export function showHelp(): void {
       .join('\n'),
   );
   logger.log('');
-  logger.log(`${colors.bold(colors.underline('EXAMPLES'))}`);
+  logger.log(`${styleText(['bold', 'underline'], 'EXAMPLES')}`);
   logger.log('');
   examples.forEach(({ title, command }, ord) => {
     logger.log(`  ${ord + 1}. ${title}:`);
-    logger.log(`    ${colors.cyan(command)}`);
+    logger.log(`    ${styleText('cyan', command)}`);
     logger.log('');
   });
-  logger.log(`${colors.bold(colors.underline('NOTES'))}`);
+  logger.log(`${styleText(['bold', 'underline'], 'NOTES')}`);
   logger.log('');
   notes.forEach((note) => {
-    logger.log(`  * ${colors.gray(note)}`);
+    logger.log(`  * ${styleText('gray', note)}`);
   });
 }

@@ -130,8 +130,7 @@
   },
   "dependencies": {
     "@oxc-project/types": "catalog:",
-    "@rolldown/pluginutils": "workspace:*",
-    "ansis": "catalog:"
+    "@rolldown/pluginutils": "workspace:*"
   },
   "devDependencies": {
     "@napi-rs/cli": "catalog:",

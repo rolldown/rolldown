@@ -2214,7 +2214,7 @@ export interface BindingViteCssPluginConfig {
     deps?: Set<string>
     }>
     resolveUrl: (url: string, importer?: string) => MaybePromise<string | undefined>
-    assetInlineLimit?: number | ((file: string, content: Buffer) => boolean | undefined)
+    assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
   }
 
 export interface BindingViteCssPostPluginConfig {
@@ -2241,7 +2241,7 @@ export interface BindingViteHtmlPluginConfig {
   decodedBase: string
   cssCodeSplit: boolean
   modulePreloadPolyfill: boolean
-  assetInlineLimit?: number | ((file: string, content: Buffer) => boolean | undefined)
+  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => MaybePromise<VoidNullable<string | BindingRenderBuiltUrlRet>>
   resolveDependencies?: boolean | ((filename: string, dependencies: string[], context: { hostId: string, hostType: 'html' | 'js' }) => Promise<string[]>)
 }

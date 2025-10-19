@@ -214,8 +214,8 @@ catalogs:
       specifier: ^1.0.1
       version: 1.0.1
     tsdown:
-      specifier: 0.15.7
-      version: 0.15.7
+      specifier: 0.15.8
+      version: 0.15.8
     tsx:
       specifier: ^4.19.4
       version: 4.20.6
@@ -520,7 +520,7 @@ importers:
         version: 4.0.3
       tsdown:
         specifier: 'catalog:'
-        version: 0.15.7(typescript@5.9.3)
+        version: 0.15.8(typescript@5.9.3)
       vitest:
         specifier: 'catalog:'
         version: 3.2.4(@types/debug@4.1.12)(@types/node@24.7.2)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1)
@@ -5432,8 +5432,8 @@ packages:
   trough@2.2.0:
     resolution: {integrity: sha512-tmMpK00BjZiUyVyvrBK7knerNgmgvcV/KLVyuma/SC+TQN167GrMRciANTz09+k3zW8L8t60jWO1GpfkZdjTaw==}
 
-  tsdown@0.15.7:
-    resolution: {integrity: sha512-uFaVgWAogjOMqjY+CQwrUt3C6wzy6ynt82CIoXymnbS17ipUZ8WDXUceJjkislUahF/BZc5+W44Ue3p2oWtqUg==}
+  tsdown@0.15.8:
+    resolution: {integrity: sha512-A9CY3lO2SC6G5wyQV38cNdPkDmCoIQ6zYVd+lLnEGH09BxNRTJkCHfb7cBeBxZYJDYGFtgg/3yBpEryYJjBd+Q==}
     engines: {node: '>=20.19.0'}
     hasBin: true
     peerDependencies:
@@ -10417,7 +10417,7 @@ snapshots:
 
   trough@2.2.0: {}
 
-  tsdown@0.15.7(typescript@5.9.3):
+  tsdown@0.15.8(typescript@5.9.3):
     dependencies:
       ansis: 4.2.0
       cac: 6.7.14

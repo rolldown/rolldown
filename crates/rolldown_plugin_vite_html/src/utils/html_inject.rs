@@ -20,6 +20,10 @@ static DOCTYPE_PREPEND_INJECT_RE: LazyLock<Regex> =
 static HTML_PREPEND_INJECT_RE: LazyLock<Regex> =
   LazyLock::new(|| Regex::new(r"([ \t]*)<html[^>]*>").unwrap());
 
+static BODY_INJECT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"([ \t]*)</body>").unwrap());
+
+static HTML_INJECT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"</html>").unwrap());
+
 // Unary/void tags that don't have closing tags
 // Aligned with Vite's implementation
 static UNARY_TAGS: LazyLock<FxHashSet<&'static str>> =
@@ -167,4 +171,55 @@ pub fn inject_to_head<'a>(
 
   // if no head tag is present, we prepend the tag for both prepend and append
   prepend_inject_fallback(html, tags)
+}
+
+/// Inject tags to body section
+#[expect(dead_code)]
+pub fn inject_to_body<'a>(
+  html: &'a str,
+  tags: &[HtmlTagDescriptor],
+  prepend: bool,
+) -> Cow<'a, str> {
+  if tags.is_empty() {
+    return Cow::Borrowed(html);
+  }
+
+  if prepend {
+    // inject after body open
+    if BODY_PREPEND_INJECT_RE.is_match(html) {
+      return BODY_PREPEND_INJECT_RE.replace(html, |caps: &regex::Captures| {
+        rolldown_utils::concat_string!(
+          &caps[0],
+          "\n",
+          serialize_tags(tags, &increment_indent(&caps[1]))
+        )
+      });
+    }
+
+    // if no body tag is present, inject after head or fallback to prepend in html
+    if HEAD_INJECT_RE.is_match(html) {
+      return HEAD_INJECT_RE.replace(html, |caps: &regex::Captures| {
+        rolldown_utils::concat_string!(&caps[0], "\n", serialize_tags(tags, &caps[1]))
+      });
+    }
+
+    prepend_inject_fallback(html, tags)
+  } else {
+    // inject before body close
+    if BODY_INJECT_RE.is_match(html) {
+      return BODY_INJECT_RE.replace(html, |caps: &regex::Captures| {
+        serialize_tags(tags, &increment_indent(&caps[1])) + &caps[0]
+      });
+    }
+
+    // if no body tag is present, append to the html tag, or at the end of the file
+    if HTML_INJECT_RE.is_match(html) {
+      return HTML_INJECT_RE.replace(html, |caps: &regex::Captures| {
+        rolldown_utils::concat_string!(serialize_tags(tags, ""), "\n", &caps[0])
+      });
+    }
+
+    // append to the end of the file
+    Cow::Owned(rolldown_utils::concat_string!(html, "\n", serialize_tags(tags, "")))
+  }
 }

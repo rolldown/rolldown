@@ -2,10 +2,10 @@ import { globSync } from 'glob';
 import fs from 'node:fs';
 import nodePath from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { styleText } from 'node:util';
 import { dts } from 'rolldown-plugin-dts';
 import * as ts from 'typescript';
 import { build, BuildOptions, type Plugin } from './src/index';
+import { styleText } from './src/utils/style-text';
 
 const __dirname = nodePath.join(fileURLToPath(import.meta.url), '..');
 

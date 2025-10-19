@@ -9,6 +9,7 @@ import type {
   RolldownWatcherEvent,
 } from './api/watch/watch-emitter';
 import type { PreRenderedChunk } from './binding';
+export { BindingMagicString } from './binding.js';
 import type {
   LoggingFunction,
   WarningHandlerWithDefault,
@@ -38,6 +39,8 @@ import type {
   AddonFunction,
   ChunkFileNamesFunction,
   ChunkingContext,
+  GeneratedCodeOptions,
+  GeneratedCodePreset,
   GlobalsFunction,
   MinifyOptions,
   ModuleFormat,
@@ -127,6 +130,8 @@ export type {
   ExternalOption,
   FunctionPluginHooks,
   GeneralHookFilter,
+  GeneratedCodeOptions,
+  GeneratedCodePreset,
   GetModuleInfo,
   GlobalsFunction,
   HookFilter,

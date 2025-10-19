@@ -1,4 +1,3 @@
-import { styleText } from 'node:util';
 import * as v from 'valibot';
 import type { PreRenderedChunk } from '../binding';
 import type { PreRenderedAsset } from '../options/output-options';
@@ -12,6 +11,7 @@ import type {
 } from '../types/misc';
 import type { RenderedChunk } from '../types/rolldown-output';
 import { flattenValibotSchema } from './flatten-valibot-schema';
+import { styleText } from './style-text';
 
 const StringOrRegExpSchema = v.union([v.string(), v.instance(RegExp)]);
 
@@ -103,18 +103,6 @@ const JsxOptionsSchema = v.strictObject({
   ),
 });
 
-const RollupJsxOptionsSchema = v.strictObject({
-  mode: v.optional(v.union([
-    v.literal('classic'),
-    v.literal('automatic'),
-    v.literal('preserve'),
-  ])),
-  factory: v.optional(v.string()),
-  fragment: v.optional(v.string()),
-  importSource: v.optional(v.string()),
-  jsxImportSource: v.optional(v.string()),
-});
-
 const HelperModeSchema = v.union([v.literal('Runtime'), v.literal('External')]);
 
 const DecoratorOptionSchema = v.object({
@@ -161,6 +149,17 @@ const TransformOptionsSchema = v.object({
   target: v.pipe(
     v.optional(v.union([v.string(), v.array(v.string())])),
     v.description('The JavaScript target environment'),
+  ),
+  define: v.optional(v.record(v.string(), v.string())),
+  inject: v.optional(
+    v.record(
+      v.string(),
+      v.union([v.string(), v.tuple([v.string(), v.string()])]),
+    ),
+  ),
+  dropLabels: v.pipe(
+    v.optional(v.array(v.string())),
+    v.description('Remove labeled statements with these label names'),
   ),
 });
 
@@ -503,6 +502,7 @@ const InputOptionsSchema = v.strictObject({
           fileName: v.optional(v.string()),
         }),
       ])),
+      nativeMagicString: v.optional(v.boolean()),
     }),
   ),
   define: v.pipe(
@@ -516,15 +516,6 @@ const InputOptionsSchema = v.strictObject({
     ),
   ),
   profilerNames: v.optional(v.boolean()),
-  jsx: v.optional(
-    v.union([
-      v.literal(false),
-      v.literal('react'),
-      v.literal('react-jsx'),
-      v.literal('preserve'),
-      RollupJsxOptionsSchema,
-    ]),
-  ),
   transform: v.optional(TransformOptionsSchema),
   watch: v.optional(v.union([WatchOptionsSchema, v.literal(false)])),
   dropLabels: v.pipe(
@@ -583,17 +574,6 @@ const InputCliOverrideSchema = v.strictObject({
   makeAbsoluteExternalsRelative: v.pipe(
     v.optional(v.boolean()),
     v.description('Prevent normalization of external imports'),
-  ),
-  jsx: v.pipe(
-    v.optional(
-      v.union([
-        v.literal(false),
-        v.literal('react'),
-        v.literal('react-jsx'),
-        v.literal('preserve'),
-      ]),
-    ),
-    v.description('Jsx options preset'),
   ),
   preserveEntrySignatures: v.pipe(
     v.optional(v.literal(false)),
@@ -673,6 +653,12 @@ const GlobalsFunctionSchema = v.pipe(
   v.returns(v.string()),
 );
 
+const PathsFunctionSchema = v.pipe(
+  v.function(),
+  v.args(v.tuple([v.string()])),
+  v.returns(v.string()),
+);
+
 const AdvancedChunksSchema = v.strictObject({
   includeDependenciesRecursively: v.optional(v.boolean()),
   minSize: v.optional(v.number()),
@@ -709,6 +695,25 @@ const AdvancedChunksSchema = v.strictObject({
         minModuleSize: v.optional(v.number()),
         maxModuleSize: v.optional(v.number()),
       }),
+    ),
+  ),
+});
+
+const GeneratedCodePresetSchema = v.union([
+  v.literal('es5'),
+  v.literal('es2015'),
+]);
+
+const GeneratedCodeOptionsSchema = v.strictObject({
+  symbols: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to use Symbol.toStringTag for namespace objects'),
+  ),
+  preset: GeneratedCodePresetSchema,
+  profilerNames: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to add readable names to internal variables for profiling purposes',
     ),
   ),
 });
@@ -814,6 +819,20 @@ const OutputOptionsSchema = v.strictObject({
       'Global variable of UMD / IIFE dependencies (syntax: `key=value`)',
     ),
   ),
+  paths: v.pipe(
+    v.optional(
+      v.union([v.record(v.string(), v.string()), PathsFunctionSchema]),
+    ),
+    v.description(
+      'Maps external module IDs to paths',
+    ),
+  ),
+  generatedCode: v.pipe(
+    v.optional(
+      v.partial(GeneratedCodeOptionsSchema),
+    ),
+    v.description('Generated code options'),
+  ),
   externalLiveBindings: v.pipe(
     v.optional(v.boolean()),
     v.description('external live bindings'),
@@ -863,6 +882,14 @@ const OutputOptionsSchema = v.strictObject({
   topLevelVar: v.pipe(
     v.optional(v.boolean()),
     v.description('Rewrite top-level declarations to use `var`.'),
+  ),
+  cleanDir: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Clean output directory before emitting output'),
+  ),
+  keepNames: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Keep function and class names after bundling'),
   ),
 });
 
@@ -974,6 +1001,12 @@ const CliOptionsSchema = v.strictObject({
     v.description('Path to the config file (default: `rolldown.config.js`)'),
   ),
   help: v.pipe(v.optional(v.boolean()), v.description('Show help')),
+  environment: v.pipe(
+    v.optional(v.union([v.string(), v.array(v.string())])),
+    v.description(
+      'Pass additional settings to the config file via process.ENV.',
+    ),
+  ),
   version: v.pipe(
     v.optional(v.boolean()),
     v.description('Show version number'),

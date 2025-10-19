@@ -12,16 +12,17 @@ pub fn is_validate_identifier_name(name: &str) -> bool {
 }
 
 #[inline]
+pub fn is_validate_assignee_identifier_name(name: &str) -> bool {
+  identifier::is_identifier_name(name) && none_preserved_keyword_or_global_object_ext(name)
+}
+
+#[inline]
 /// extra branches are used to avoid SyntaxError in strict mode
 /// ```bash
 /// SyntaxError: Unexpected eval or arguments in strict mode
 /// ```
 pub fn none_preserved_keyword_or_global_object_ext(name: &str) -> bool {
   !keyword::is_reserved_keyword_or_global_object(name) && name != "arguments" && name != "eval"
-}
-
-pub fn is_validate_assignee_identifier_name(name: &str) -> bool {
-  identifier::is_identifier_name(name) && !keyword::is_reserved_keyword_or_global_object(name)
 }
 
 pub fn legitimize_json_local_binding_name(

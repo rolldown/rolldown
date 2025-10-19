@@ -202,6 +202,25 @@
             "type": "string"
           }
         },
+        "paths": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "generatedCode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratedCodeOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "sourcemap": {
           "anyOf": [
             {
@@ -494,6 +513,12 @@
             "null"
           ]
         },
+        "cleanDir": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "context": {
           "type": [
             "string",
@@ -558,6 +583,34 @@
         "default",
         "named",
         "none"
+      ]
+    },
+    "GeneratedCodeOptions": {
+      "type": "object",
+      "properties": {
+        "preset": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GeneratedCodePreset"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "symbols": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "symbols"
+      ]
+    },
+    "GeneratedCodePreset": {
+      "type": "string",
+      "enum": [
+        "es5",
+        "es2015"
       ]
     },
     "SourceMapType": {
@@ -732,6 +785,15 @@
           }
         },
         "mainFiles": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "modules": {
           "type": [
             "array",
             "null"
@@ -927,6 +989,12 @@
               "type": "null"
             }
           ]
+        },
+        "nativeMagicString": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -1121,7 +1189,6 @@
           "format": "double"
         },
         "includeDependenciesRecursively": {
-          "description": "Whether to include the captured module's dependencies recursively.\n- If `true`, the dependencies would be included this group forcefully unless they are already included in another group.\n- This option would forcefully `true`, if `preserve_entry_signatures` is not `allow-extension`.",
           "type": [
             "boolean",
             "null"
@@ -1585,8 +1652,8 @@
     "ExtendedTests": {
       "type": "object",
       "properties": {
-        "minifyInternalExports": {
-          "description": "Run the test case with `minifyInternalExports` enabled in addition to the default config.",
+        "oppositeMinifyInternalExports": {
+          "description": "Run the test case with the opposite value of `minifyInternalExports` compared to what the default would be.\nIf it's explicitly set in the config, this option has no effect.\nIf the default resolves to `true` (e.g., format: 'es' or minify: true), tests with `false`.\nIf the default resolves to `false` (e.g., format: 'cjs' without minify), tests with `true`.",
           "type": "boolean",
           "default": true
         }

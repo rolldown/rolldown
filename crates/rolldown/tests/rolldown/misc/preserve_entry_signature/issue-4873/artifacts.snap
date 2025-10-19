@@ -12,6 +12,7 @@ var foo_default = "foo";
 //#endregion
 export { foo_default as default };
 ```
+
 ## main.js
 
 ```js

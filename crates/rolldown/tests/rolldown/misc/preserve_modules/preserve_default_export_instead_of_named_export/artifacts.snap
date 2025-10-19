@@ -12,6 +12,7 @@ var class_default = class {};
 //#endregion
 export { class_default as default };
 ```
+
 ## default.js
 
 ```js
@@ -22,6 +23,7 @@ var default_default = foo;
 //#endregion
 export { default_default as default };
 ```
+
 ## function.js
 
 ```js
@@ -33,6 +35,7 @@ function func() {
 //#endregion
 export { func as default };
 ```
+
 ## main.js
 
 ```js

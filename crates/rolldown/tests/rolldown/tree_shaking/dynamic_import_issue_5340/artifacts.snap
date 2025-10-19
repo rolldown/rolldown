@@ -14,6 +14,7 @@ const render = async () => {
 //#endregion
 export { render };
 ```
+
 ## main.js
 
 ```js

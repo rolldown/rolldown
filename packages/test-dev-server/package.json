@@ -20,14 +20,14 @@
     "test": "pnpm run --filter @rolldown/test-dev-server-tests test"
   },
   "dependencies": {
-    "@types/ws": "^8.18.0",
-    "connect": "^3.7.0",
+    "@types/ws": "catalog:",
+    "connect": "catalog:",
     "rolldown": "workspace:*",
-    "serve-static": "^2.0.0",
-    "ws": "^8.18.1"
+    "serve-static": "catalog:",
+    "ws": "catalog:"
   },
   "devDependencies": {
-    "@types/connect": "^3.4.38",
-    "@types/serve-static": "^1.15.7"
+    "@types/connect": "catalog:",
+    "@types/serve-static": "catalog:"
   }
 }

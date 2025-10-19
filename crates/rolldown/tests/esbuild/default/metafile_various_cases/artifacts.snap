@@ -15,6 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ────╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -27,18 +28,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'extern.css' in entry.css
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'extern.png' in entry.css
 
 ```
+
 # Assets
 
 ## assets/file-kQXAkSQM.file
@@ -55,8 +59,9 @@ copy;
 var default$1 = void 0;
 
 //#endregion
-export { default$1 as default, file_default };
+export { file_default as n, default$1 as t };
 ```
+
 ## dynamic.js
 
 ```js
@@ -66,10 +71,11 @@ var dynamic_default = 5;
 //#endregion
 export { dynamic_default as default };
 ```
+
 ## entry.js
 
 ```js
-import default$1, { file_default } from "./copy.js";
+import { n as file_default, t as default$1 } from "./copy.js";
 import a from "extern-esm";
 
 // HIDDEN [rolldown:runtime]
@@ -94,6 +100,7 @@ let exported;
 //#endregion
 export { exported };
 ```
+
 ## entry2.css
 
 ```css
@@ -103,6 +110,7 @@ c { background: url(copy.copy) }
 d { background: url(extern.png) }
 
 ```
+
 ## entry2.js
 
 ```js

@@ -10,8 +10,8 @@
     "rolldown": "workspace:*"
   },
   "dependencies": {
-    "react": "19.1.1",
-    "react-dom": "19.1.1",
+    "react": "catalog:",
+    "react-dom": "catalog:",
     "styled-components": "^6.1.8"
   }
 }

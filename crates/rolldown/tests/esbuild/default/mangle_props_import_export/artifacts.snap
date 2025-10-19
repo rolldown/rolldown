@@ -15,6 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -27,6 +28,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 # Assets
 
 ## cjs.js
@@ -43,6 +45,7 @@ var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports) => {
 export default require_cjs();
 
 ```
+
 ## esm.js
 
 ```js

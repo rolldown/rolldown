@@ -96,7 +96,8 @@ runTestSuiteWithSamples(
 			    // The `options-async-hook` assert config equal
 				if (directory.includes('class-name-conflict')) {
 					config.options = config.options || {}
-					config.options.keepNames = true; // avoid other tests snapshot changed
+					config.options.output = config.options.output || {}
+					config.options.output.keepNames = true; // avoid other tests snapshot changed
 				}
 
 				return rollup

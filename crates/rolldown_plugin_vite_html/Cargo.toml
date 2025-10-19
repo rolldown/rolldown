@@ -6,6 +6,7 @@ homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
+description = "Rolldown plugin for Vite HTML handling"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -16,8 +17,19 @@ doctest = false
 workspace = true
 
 [dependencies]
-html5ever = { workspace = true }
-markup5ever_rcdom = { workspace = true }
+anyhow = { workspace = true }
+arcstr = { workspace = true }
+cow-utils = { workspace = true }
+derive_more = { workspace = true }
+html5gum = { workspace = true }
+itoa = { workspace = true }
+oxc = { workspace = true }
+regex = { workspace = true }
+rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
+rolldown_plugin_utils = { workspace = true }
 rolldown_utils = { workspace = true }
+rustc-hash = { workspace = true }
+string_cache = { workspace = true }
+string_wizard = { workspace = true }
 sugar_path = { workspace = true }

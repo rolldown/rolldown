@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rolldown::dev::DevOptions;
+use rolldown::dev::{DevOptions, RebuildStrategy};
 use rolldown::{BundlerBuilder, BundlerOptions, DevEngine, ExperimentalOptions};
 use sugar_path::SugarPath;
 
@@ -19,14 +19,19 @@ async fn main() {
   let dev_engine = DevEngine::new(
     bundler_builder,
     DevOptions {
-      eager_rebuild: Some(true),
-      on_hmr_updates: Some(Arc::new(|updates, changed_files| {
-        println!("HMR updates: {updates:#?} due to {changed_files:#?}");
+      rebuild_strategy: Some(RebuildStrategy::Always),
+      on_hmr_updates: Some(Arc::new(|result| match result {
+        Ok((updates, changed_files)) => {
+          println!("HMR updates: {updates:#?} due to {changed_files:#?}");
+        }
+        Err(e) => {
+          eprintln!("HMR error: {e:#?}");
+        }
       })),
       ..Default::default()
     },
   )
   .unwrap();
   dev_engine.run().await.unwrap();
-  dev_engine.wait_for_close().await;
+  dev_engine.wait_for_build_driver_service_close().await.unwrap();
 }

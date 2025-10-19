@@ -20,6 +20,7 @@ export interface NormalizedCliOptions {
   config: string;
   version: boolean;
   watch: boolean;
+  environment?: string | string[];
 }
 
 export function normalizeCliOptions(
@@ -47,9 +48,13 @@ export function normalizeCliOptions(
     result.config = options.config;
   }
 
+  if (options.environment !== undefined) {
+    result.environment = options.environment;
+  }
+
   const keysOfInput = getInputCliKeys();
   const keysOfOutput = getOutputCliKeys();
-  const reservedKeys = ['help', 'version', 'config', 'watch'];
+  const reservedKeys = ['help', 'version', 'config', 'watch', 'environment'];
 
   for (let [key, value] of Object.entries(options)) {
     const keys = key.split('.');

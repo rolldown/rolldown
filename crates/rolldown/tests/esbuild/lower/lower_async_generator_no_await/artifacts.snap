@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region \0@oxc-project+runtime@0.92.0/helpers/usingCtx.js
+//#region \0@oxc-project+runtime@0.95.0/helpers/usingCtx.js
 function _usingCtx() {
 	var r = "function" == typeof SuppressedError ? SuppressedError : function(r$1, e$1) {
 		var n$1 = Error();
@@ -63,119 +63,418 @@ function _usingCtx() {
 }
 
 //#endregion
-//#region entry.ts
-async function* foo() {
-	try {
-		var _usingCtx$1 = _usingCtx();
-		yield;
-		yield x;
-		yield* x;
-		const x = _usingCtx$1.a(await y);
-		for await (let x$1 of y);
-		for await (const _x of y) try {
-			var _usingCtx3 = _usingCtx();
-			const x$1 = _usingCtx3.a(_x);
-		} catch (_) {
-			_usingCtx3.e = _;
-		} finally {
-			await _usingCtx3.d();
-		}
-	} catch (_) {
-		_usingCtx$1.e = _;
-	} finally {
-		await _usingCtx$1.d();
+//#region \0@oxc-project+runtime@0.95.0/helpers/asyncIterator.js
+function _asyncIterator(r) {
+	var n, t, o, e = 2;
+	for ("undefined" != typeof Symbol && (t = Symbol.asyncIterator, o = Symbol.iterator); e--;) {
+		if (t && null != (n = r[t])) return n.call(r);
+		if (o && null != (n = r[o])) return new AsyncFromSyncIterator(n.call(r));
+		t = "@@asyncIterator", o = "@@iterator";
 	}
+	throw new TypeError("Object is not async iterable");
 }
-foo = async function* () {
+function AsyncFromSyncIterator(r) {
+	function AsyncFromSyncIteratorContinuation(r$1) {
+		if (Object(r$1) !== r$1) return Promise.reject(/* @__PURE__ */ new TypeError(r$1 + " is not an object."));
+		var n = r$1.done;
+		return Promise.resolve(r$1.value).then(function(r$2) {
+			return {
+				value: r$2,
+				done: n
+			};
+		});
+	}
+	return AsyncFromSyncIterator = function AsyncFromSyncIterator$1(r$1) {
+		this.s = r$1, this.n = r$1.next;
+	}, AsyncFromSyncIterator.prototype = {
+		s: null,
+		n: null,
+		next: function next() {
+			return AsyncFromSyncIteratorContinuation(this.n.apply(this.s, arguments));
+		},
+		"return": function _return(r$1) {
+			var n = this.s["return"];
+			return void 0 === n ? Promise.resolve({
+				value: r$1,
+				done: !0
+			}) : AsyncFromSyncIteratorContinuation(n.apply(this.s, arguments));
+		},
+		"throw": function _throw(r$1) {
+			var n = this.s["return"];
+			return void 0 === n ? Promise.reject(r$1) : AsyncFromSyncIteratorContinuation(n.apply(this.s, arguments));
+		}
+	}, new AsyncFromSyncIterator(r);
+}
+
+//#endregion
+//#region \0@oxc-project+runtime@0.95.0/helpers/OverloadYield.js
+function _OverloadYield(e, d) {
+	this.v = e, this.k = d;
+}
+
+//#endregion
+//#region \0@oxc-project+runtime@0.95.0/helpers/asyncGeneratorDelegate.js
+function _asyncGeneratorDelegate(t) {
+	var e = {}, n = !1;
+	function pump(e$1, r) {
+		return n = !0, r = new Promise(function(n$1) {
+			n$1(t[e$1](r));
+		}), {
+			done: !1,
+			value: new _OverloadYield(r, 1)
+		};
+	}
+	return e["undefined" != typeof Symbol && Symbol.iterator || "@@iterator"] = function() {
+		return this;
+	}, e.next = function(t$1) {
+		return n ? (n = !1, t$1) : pump("next", t$1);
+	}, "function" == typeof t["throw"] && (e["throw"] = function(t$1) {
+		if (n) throw n = !1, t$1;
+		return pump("throw", t$1);
+	}), "function" == typeof t["return"] && (e["return"] = function(t$1) {
+		return n ? (n = !1, t$1) : pump("return", t$1);
+	}), e;
+}
+
+//#endregion
+//#region \0@oxc-project+runtime@0.95.0/helpers/awaitAsyncGenerator.js
+function _awaitAsyncGenerator(e) {
+	return new _OverloadYield(e, 0);
+}
+
+//#endregion
+//#region \0@oxc-project+runtime@0.95.0/helpers/wrapAsyncGenerator.js
+function _wrapAsyncGenerator(e) {
+	return function() {
+		return new AsyncGenerator(e.apply(this, arguments));
+	};
+}
+function AsyncGenerator(e) {
+	var r, t;
+	function resume(r$1, t$1) {
+		try {
+			var n = e[r$1](t$1), o = n.value, u = o instanceof _OverloadYield;
+			Promise.resolve(u ? o.v : o).then(function(t$2) {
+				if (u) {
+					var i = "return" === r$1 ? "return" : "next";
+					if (!o.k || t$2.done) return resume(i, t$2);
+					t$2 = e[i](t$2).value;
+				}
+				settle(n.done ? "return" : "normal", t$2);
+			}, function(e$1) {
+				resume("throw", e$1);
+			});
+		} catch (e$1) {
+			settle("throw", e$1);
+		}
+	}
+	function settle(e$1, n) {
+		switch (e$1) {
+			case "return":
+				r.resolve({
+					value: n,
+					done: !0
+				});
+				break;
+			case "throw":
+				r.reject(n);
+				break;
+			default: r.resolve({
+				value: n,
+				done: !1
+			});
+		}
+		(r = r.next) ? resume(r.key, r.arg) : t = null;
+	}
+	this._invoke = function(e$1, n) {
+		return new Promise(function(o, u) {
+			var i = {
+				key: e$1,
+				arg: n,
+				resolve: o,
+				reject: u,
+				next: null
+			};
+			t ? t = t.next = i : (r = t = i, resume(e$1, n));
+		});
+	}, "function" != typeof e["return"] && (this["return"] = void 0);
+}
+AsyncGenerator.prototype["function" == typeof Symbol && Symbol.asyncIterator || "@@asyncIterator"] = function() {
+	return this;
+}, AsyncGenerator.prototype.next = function(e) {
+	return this._invoke("next", e);
+}, AsyncGenerator.prototype["throw"] = function(e) {
+	return this._invoke("throw", e);
+}, AsyncGenerator.prototype["return"] = function(e) {
+	return this._invoke("return", e);
+};
+
+//#endregion
+//#region entry.ts
+function foo() {
+	return _foo.apply(this, arguments);
+}
+function _foo() {
+	_foo = _wrapAsyncGenerator(function* () {
+		try {
+			var _usingCtx$1 = _usingCtx();
+			yield;
+			yield x;
+			yield* _asyncGeneratorDelegate(_asyncIterator(x));
+			const x = _usingCtx$1.a(yield _awaitAsyncGenerator(y));
+			var _iteratorAbruptCompletion = false;
+			var _didIteratorError = false;
+			var _iteratorError;
+			try {
+				for (var _iterator = _asyncIterator(y), _step; _iteratorAbruptCompletion = !(_step = yield _awaitAsyncGenerator(_iterator.next())).done; _iteratorAbruptCompletion = false) _step.value;
+			} catch (err) {
+				_didIteratorError = true;
+				_iteratorError = err;
+			} finally {
+				try {
+					if (_iteratorAbruptCompletion && _iterator.return != null) yield _awaitAsyncGenerator(_iterator.return());
+				} finally {
+					if (_didIteratorError) throw _iteratorError;
+				}
+			}
+			var _iteratorAbruptCompletion2 = false;
+			var _didIteratorError2 = false;
+			var _iteratorError2;
+			try {
+				for (var _iterator2 = _asyncIterator(y), _step2; _iteratorAbruptCompletion2 = !(_step2 = yield _awaitAsyncGenerator(_iterator2.next())).done; _iteratorAbruptCompletion2 = false) try {
+					var _usingCtx3 = _usingCtx();
+					const x$1 = _usingCtx3.a(_step2.value);
+				} catch (_) {
+					_usingCtx3.e = _;
+				} finally {
+					yield _awaitAsyncGenerator(_usingCtx3.d());
+				}
+			} catch (err) {
+				_didIteratorError2 = true;
+				_iteratorError2 = err;
+			} finally {
+				try {
+					if (_iteratorAbruptCompletion2 && _iterator2.return != null) yield _awaitAsyncGenerator(_iterator2.return());
+				} finally {
+					if (_didIteratorError2) throw _iteratorError2;
+				}
+			}
+		} catch (_) {
+			_usingCtx$1.e = _;
+		} finally {
+			yield _awaitAsyncGenerator(_usingCtx$1.d());
+		}
+	});
+	return _foo.apply(this, arguments);
+}
+foo = _wrapAsyncGenerator(function* () {
 	try {
 		var _usingCtx4 = _usingCtx();
 		yield;
 		yield x;
-		yield* x;
-		const x = _usingCtx4.a(await y);
-		for await (let x$1 of y);
-		for await (const _x2 of y) try {
-			var _usingCtx5 = _usingCtx();
-			const x$1 = _usingCtx5.a(_x2);
-		} catch (_) {
-			_usingCtx5.e = _;
+		yield* _asyncGeneratorDelegate(_asyncIterator(x));
+		const x = _usingCtx4.a(yield _awaitAsyncGenerator(y));
+		var _iteratorAbruptCompletion3 = false;
+		var _didIteratorError3 = false;
+		var _iteratorError3;
+		try {
+			for (var _iterator3 = _asyncIterator(y), _step3; _iteratorAbruptCompletion3 = !(_step3 = yield _awaitAsyncGenerator(_iterator3.next())).done; _iteratorAbruptCompletion3 = false) _step3.value;
+		} catch (err) {
+			_didIteratorError3 = true;
+			_iteratorError3 = err;
 		} finally {
-			await _usingCtx5.d();
+			try {
+				if (_iteratorAbruptCompletion3 && _iterator3.return != null) yield _awaitAsyncGenerator(_iterator3.return());
+			} finally {
+				if (_didIteratorError3) throw _iteratorError3;
+			}
+		}
+		var _iteratorAbruptCompletion4 = false;
+		var _didIteratorError4 = false;
+		var _iteratorError4;
+		try {
+			for (var _iterator4 = _asyncIterator(y), _step4; _iteratorAbruptCompletion4 = !(_step4 = yield _awaitAsyncGenerator(_iterator4.next())).done; _iteratorAbruptCompletion4 = false) try {
+				var _usingCtx5 = _usingCtx();
+				const x$1 = _usingCtx5.a(_step4.value);
+			} catch (_) {
+				_usingCtx5.e = _;
+			} finally {
+				yield _awaitAsyncGenerator(_usingCtx5.d());
+			}
+		} catch (err) {
+			_didIteratorError4 = true;
+			_iteratorError4 = err;
+		} finally {
+			try {
+				if (_iteratorAbruptCompletion4 && _iterator4.return != null) yield _awaitAsyncGenerator(_iterator4.return());
+			} finally {
+				if (_didIteratorError4) throw _iteratorError4;
+			}
 		}
 	} catch (_) {
 		_usingCtx4.e = _;
 	} finally {
-		await _usingCtx4.d();
+		yield _awaitAsyncGenerator(_usingCtx4.d());
 	}
-};
-foo = { async *bar() {
-	try {
-		var _usingCtx6 = _usingCtx();
-		yield;
-		yield x;
-		yield* x;
-		const x = _usingCtx6.a(await y);
-		for await (let x$1 of y);
-		for await (const _x3 of y) try {
-			var _usingCtx7 = _usingCtx();
-			const x$1 = _usingCtx7.a(_x3);
-		} catch (_) {
-			_usingCtx7.e = _;
-		} finally {
-			await _usingCtx7.d();
-		}
-	} catch (_) {
-		_usingCtx6.e = _;
-	} finally {
-		await _usingCtx6.d();
-	}
-} };
-var Foo = class {
-	async *bar() {
+});
+foo = { bar() {
+	return _wrapAsyncGenerator(function* () {
 		try {
-			var _usingCtx8 = _usingCtx();
+			var _usingCtx6 = _usingCtx();
 			yield;
 			yield x;
-			yield* x;
-			const x = _usingCtx8.a(await y);
-			for await (let x$1 of y);
-			for await (const _x4 of y) try {
-				var _usingCtx9 = _usingCtx();
-				const x$1 = _usingCtx9.a(_x4);
-			} catch (_) {
-				_usingCtx9.e = _;
+			yield* _asyncGeneratorDelegate(_asyncIterator(x));
+			const x = _usingCtx6.a(yield _awaitAsyncGenerator(y));
+			var _iteratorAbruptCompletion5 = false;
+			var _didIteratorError5 = false;
+			var _iteratorError5;
+			try {
+				for (var _iterator5 = _asyncIterator(y), _step5; _iteratorAbruptCompletion5 = !(_step5 = yield _awaitAsyncGenerator(_iterator5.next())).done; _iteratorAbruptCompletion5 = false) _step5.value;
+			} catch (err) {
+				_didIteratorError5 = true;
+				_iteratorError5 = err;
 			} finally {
-				await _usingCtx9.d();
+				try {
+					if (_iteratorAbruptCompletion5 && _iterator5.return != null) yield _awaitAsyncGenerator(_iterator5.return());
+				} finally {
+					if (_didIteratorError5) throw _iteratorError5;
+				}
+			}
+			var _iteratorAbruptCompletion6 = false;
+			var _didIteratorError6 = false;
+			var _iteratorError6;
+			try {
+				for (var _iterator6 = _asyncIterator(y), _step6; _iteratorAbruptCompletion6 = !(_step6 = yield _awaitAsyncGenerator(_iterator6.next())).done; _iteratorAbruptCompletion6 = false) try {
+					var _usingCtx7 = _usingCtx();
+					const x$1 = _usingCtx7.a(_step6.value);
+				} catch (_) {
+					_usingCtx7.e = _;
+				} finally {
+					yield _awaitAsyncGenerator(_usingCtx7.d());
+				}
+			} catch (err) {
+				_didIteratorError6 = true;
+				_iteratorError6 = err;
+			} finally {
+				try {
+					if (_iteratorAbruptCompletion6 && _iterator6.return != null) yield _awaitAsyncGenerator(_iterator6.return());
+				} finally {
+					if (_didIteratorError6) throw _iteratorError6;
+				}
 			}
 		} catch (_) {
-			_usingCtx8.e = _;
+			_usingCtx6.e = _;
 		} finally {
-			await _usingCtx8.d();
+			yield _awaitAsyncGenerator(_usingCtx6.d());
 		}
+	})();
+} };
+var Foo = class {
+	bar() {
+		return _wrapAsyncGenerator(function* () {
+			try {
+				var _usingCtx8 = _usingCtx();
+				yield;
+				yield x;
+				yield* _asyncGeneratorDelegate(_asyncIterator(x));
+				const x = _usingCtx8.a(yield _awaitAsyncGenerator(y));
+				var _iteratorAbruptCompletion7 = false;
+				var _didIteratorError7 = false;
+				var _iteratorError7;
+				try {
+					for (var _iterator7 = _asyncIterator(y), _step7; _iteratorAbruptCompletion7 = !(_step7 = yield _awaitAsyncGenerator(_iterator7.next())).done; _iteratorAbruptCompletion7 = false) _step7.value;
+				} catch (err) {
+					_didIteratorError7 = true;
+					_iteratorError7 = err;
+				} finally {
+					try {
+						if (_iteratorAbruptCompletion7 && _iterator7.return != null) yield _awaitAsyncGenerator(_iterator7.return());
+					} finally {
+						if (_didIteratorError7) throw _iteratorError7;
+					}
+				}
+				var _iteratorAbruptCompletion8 = false;
+				var _didIteratorError8 = false;
+				var _iteratorError8;
+				try {
+					for (var _iterator8 = _asyncIterator(y), _step8; _iteratorAbruptCompletion8 = !(_step8 = yield _awaitAsyncGenerator(_iterator8.next())).done; _iteratorAbruptCompletion8 = false) try {
+						var _usingCtx9 = _usingCtx();
+						const x$1 = _usingCtx9.a(_step8.value);
+					} catch (_) {
+						_usingCtx9.e = _;
+					} finally {
+						yield _awaitAsyncGenerator(_usingCtx9.d());
+					}
+				} catch (err) {
+					_didIteratorError8 = true;
+					_iteratorError8 = err;
+				} finally {
+					try {
+						if (_iteratorAbruptCompletion8 && _iterator8.return != null) yield _awaitAsyncGenerator(_iterator8.return());
+					} finally {
+						if (_didIteratorError8) throw _iteratorError8;
+					}
+				}
+			} catch (_) {
+				_usingCtx8.e = _;
+			} finally {
+				yield _awaitAsyncGenerator(_usingCtx8.d());
+			}
+		})();
 	}
 };
 Foo = class {
-	async *bar() {
-		try {
-			var _usingCtx10 = _usingCtx();
-			yield;
-			yield x;
-			yield* x;
-			const x = _usingCtx10.a(await y);
-			for await (let x$1 of y);
-			for await (const _x5 of y) try {
-				var _usingCtx11 = _usingCtx();
-				const x$1 = _usingCtx11.a(_x5);
+	bar() {
+		return _wrapAsyncGenerator(function* () {
+			try {
+				var _usingCtx10 = _usingCtx();
+				yield;
+				yield x;
+				yield* _asyncGeneratorDelegate(_asyncIterator(x));
+				const x = _usingCtx10.a(yield _awaitAsyncGenerator(y));
+				var _iteratorAbruptCompletion9 = false;
+				var _didIteratorError9 = false;
+				var _iteratorError9;
+				try {
+					for (var _iterator9 = _asyncIterator(y), _step9; _iteratorAbruptCompletion9 = !(_step9 = yield _awaitAsyncGenerator(_iterator9.next())).done; _iteratorAbruptCompletion9 = false) _step9.value;
+				} catch (err) {
+					_didIteratorError9 = true;
+					_iteratorError9 = err;
+				} finally {
+					try {
+						if (_iteratorAbruptCompletion9 && _iterator9.return != null) yield _awaitAsyncGenerator(_iterator9.return());
+					} finally {
+						if (_didIteratorError9) throw _iteratorError9;
+					}
+				}
+				var _iteratorAbruptCompletion10 = false;
+				var _didIteratorError10 = false;
+				var _iteratorError10;
+				try {
+					for (var _iterator10 = _asyncIterator(y), _step10; _iteratorAbruptCompletion10 = !(_step10 = yield _awaitAsyncGenerator(_iterator10.next())).done; _iteratorAbruptCompletion10 = false) try {
+						var _usingCtx11 = _usingCtx();
+						const x$1 = _usingCtx11.a(_step10.value);
+					} catch (_) {
+						_usingCtx11.e = _;
+					} finally {
+						yield _awaitAsyncGenerator(_usingCtx11.d());
+					}
+				} catch (err) {
+					_didIteratorError10 = true;
+					_iteratorError10 = err;
+				} finally {
+					try {
+						if (_iteratorAbruptCompletion10 && _iterator10.return != null) yield _awaitAsyncGenerator(_iterator10.return());
+					} finally {
+						if (_didIteratorError10) throw _iteratorError10;
+					}
+				}
 			} catch (_) {
-				_usingCtx11.e = _;
+				_usingCtx10.e = _;
 			} finally {
-				await _usingCtx11.d();
+				yield _awaitAsyncGenerator(_usingCtx10.d());
 			}
-		} catch (_) {
-			_usingCtx10.e = _;
-		} finally {
-			await _usingCtx10.d();
-		}
+		})();
 	}
 };
 

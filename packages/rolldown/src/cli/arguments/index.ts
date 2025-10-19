@@ -15,6 +15,7 @@ export const options: {
     default?: boolean | string | string[];
     hint?: string;
     description: string;
+    environment?: string | string[];
   };
 } = Object.fromEntries(
   Object.entries(schemaInfo).filter(([_key, info]) => info.type !== 'never')
@@ -38,6 +39,7 @@ export const options: {
         default?: boolean | string | string[];
         hint?: string;
         description: string;
+        environment?: string | string[];
       };
       if (config && config?.abbreviation) {
         result.short = config?.abbreviation;

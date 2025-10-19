@@ -15,12 +15,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'react' in entry.jsx
 
 ```
+
 # Assets
 
 ## entry.js

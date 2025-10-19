@@ -6,8 +6,8 @@ use itertools::Itertools;
 use oxc::semantic::{ScopeId, Scoping};
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
 use oxc_index::IndexVec;
+use rolldown_common::SourceMapGenMsg;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
-use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult, FlatOptions,
   HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImporterRecord, Module, ModuleId,
@@ -25,7 +25,6 @@ use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use tracing::Instrument;
 
-use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 use crate::module_loader::task_context::TaskContext;
 use crate::stages::scan_stage::resolve_user_defined_entries;
 use crate::types::scan_stage_cache::ScanStageCache;
@@ -109,6 +108,7 @@ pub struct ModuleLoader<'a> {
   new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
   cache: &'a mut ScanStageCache,
   pub flat_options: FlatOptions,
+  pub magic_string_tx: Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
 }
 
 pub struct ModuleLoaderOutput {
@@ -146,6 +146,7 @@ impl<'a> ModuleLoader<'a> {
     plugin_driver: SharedPluginDriver,
     cache: &'a mut ScanStageCache,
     is_full_scan: bool,
+    magic_string_tx: Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
   ) -> BuildResult<Self> {
     if is_full_scan {
       // TODO: drop the cache in another thread
@@ -209,6 +210,7 @@ impl<'a> ModuleLoader<'a> {
       intermediate_normal_modules,
       new_added_modules_from_partial_scan: FxIndexSet::default(),
       flat_options,
+      magic_string_tx,
     })
   }
 
@@ -257,6 +259,7 @@ impl<'a> ModuleLoader<'a> {
         is_user_defined_entry,
         assert_module_type,
         self.flat_options,
+        self.magic_string_tx.clone(),
       );
       tokio::spawn(task.run().instrument(tracing::info_span!("normal_module_task")));
     }
@@ -272,8 +275,8 @@ impl<'a> ModuleLoader<'a> {
   /// time build in watch mode or edgecase in HMR(User update `node_modules` too much modules are
   /// updated at same time, patch them one by one is not efficient, so we do full scan directly)
   ///
-  #[expect(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
+  #[expect(clippy::too_many_lines)]
   pub async fn fetch_modules(
     &mut self,
     fetch_mode: ScanMode<ResolvedId>,
@@ -608,50 +611,10 @@ impl<'a> ModuleLoader<'a> {
     if !errors.is_empty() {
       return Err(errors.into());
     }
-
-    // defer sync user modified data in js side
-    if let Some(ref func) = self.options.defer_sync_scan_data {
-      for data in func.exec().await? {
-        let source_id = ArcStr::from(data.id);
-        let Some(state) = self.cache.module_id_to_idx.get(&source_id) else {
-          continue;
-        };
-        let Some(normal) = self
-          .intermediate_normal_modules
-          .modules
-          .get_mut(state.idx())
-          .as_mut()
-          .and_then(|item| item.as_normal_mut())
-        else {
-          continue;
-        };
-        // TODO: Document this and recommend user to return `moduleSideEffects` in hook return
-        // value rather than mutate the `ModuleInfo`
-        normal.ecma_view.side_effects = match data.side_effects {
-          Some(HookSideEffects::False) => DeterminedSideEffects::UserDefined(false),
-          Some(HookSideEffects::NoTreeshake) => DeterminedSideEffects::NoTreeshake,
-          _ => {
-            // for Some(HookSideEffects::True) and None, we need to re resolve module source_id,
-            // get package_json and re analyze the side effects
-            let resolved_id = self
-              .shared_context
-              .resolver
-              // other params except `source_id` is not important, since we need `package_json`
-              // from `resolved_id` to re analyze the side effects
-              .resolve(None, source_id.as_str(), ImportKind::Import, normal.is_user_defined_entry)
-              .expect("Should have resolved id")
-              .into();
-            normalize_side_effects(
-              &self.options,
-              &resolved_id,
-              Some(&normal.stmt_infos),
-              Some(&normal.module_type),
-              data.side_effects,
-            )
-            .await?
-          }
-        };
-      }
+    if let Some(tx) = self.magic_string_tx.as_ref() {
+      tx.send(SourceMapGenMsg::Terminate).expect(
+        "SourceMapGen: failed to send Terminate message - sourcemap worker thread died unexpectedly"
+      );
     }
 
     let dynamic_import_exports_usage_map = dynamic_import_exports_usage_pairs.into_iter().fold(

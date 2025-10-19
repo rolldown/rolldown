@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```txt
 foo
 ```
+
 ## chunks/dep-DGfnxe7V.js
 
 ```js
@@ -19,6 +20,7 @@ const url = new URL("../assets/foo-DX_UVeUe.txt", import.meta.url);
 //#endregion
 export { url };
 ```
+
 ## chunks/foo-GNO-ZiAj.js
 
 ```js
@@ -27,6 +29,7 @@ var foo_default = "assets/foo-DX_UVeUe.txt";
 
 //#endregion
 ```
+
 ## main.js
 
 ```js

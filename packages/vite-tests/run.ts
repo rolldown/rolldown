@@ -53,7 +53,7 @@ printTitle('# Updating pnpm-workspace.yaml to link to local rolldown...');
 const pnpmWorkspace = path.resolve(REPO_PATH, 'pnpm-workspace.yaml');
 const pnpmWorkspaceYaml = fs.readFileSync(pnpmWorkspace, 'utf-8');
 const newPnpmWorkspaceYaml = pnpmWorkspaceYaml.replace(
-  /overrides:\n/,
+  /overrides:\n\s*rolldown:\s*\$rolldown\n/,
   `overrides:\n${OVERRIDES.join('\n')}\n`
 );
 fs.writeFileSync(pnpmWorkspace, newPnpmWorkspaceYaml, 'utf-8');

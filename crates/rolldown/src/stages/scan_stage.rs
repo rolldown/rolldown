@@ -1,13 +1,14 @@
-use std::sync::Arc;
+use std::{sync::Arc, thread};
 
 use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc_index::IndexVec;
 #[cfg(not(target_os = "macos"))]
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
   EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures,
-  ResolvedId, RuntimeModuleBrief, ScanMode, SymbolRef, SymbolRefDb,
+  ResolvedId, RuntimeModuleBrief, ScanMode, SourcemapChainElement, SymbolRef, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_ecmascript::EcmaAst;
@@ -23,6 +24,11 @@ use crate::{
   types::scan_stage_cache::ScanStageCache,
   utils::load_entry_module::load_entry_module,
 };
+
+type SourcemapChannel = (
+  Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+  Option<thread::JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>>,
+);
 
 /// Resolve `InputOptions.input`
 #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
@@ -111,17 +117,23 @@ impl NormalizedScanStageOutput {
   }
 }
 
-impl From<ScanStageOutput> for NormalizedScanStageOutput {
-  fn from(value: ScanStageOutput) -> Self {
-    Self {
-      module_table: match value.module_table {
-        HybridIndexVec::IndexVec(modules) => ModuleTable { modules },
-        HybridIndexVec::Map(_) => unreachable!("Please normalized first"),
-      },
-      index_ecma_ast: match value.index_ecma_ast {
-        HybridIndexVec::IndexVec(ast) => ast,
-        HybridIndexVec::Map(_) => unreachable!("Please normalized first"),
-      },
+impl TryFrom<ScanStageOutput> for NormalizedScanStageOutput {
+  type Error = &'static str;
+
+  fn try_from(value: ScanStageOutput) -> Result<Self, Self::Error> {
+    let module_table = match value.module_table {
+      HybridIndexVec::IndexVec(modules) => ModuleTable { modules },
+      HybridIndexVec::Map(_) => return Err("module_table must be normalized to IndexVec first"),
+    };
+
+    let index_ecma_ast = match value.index_ecma_ast {
+      HybridIndexVec::IndexVec(ast) => ast,
+      HybridIndexVec::Map(_) => return Err("index_ecma_ast must be normalized to IndexVec first"),
+    };
+
+    Ok(Self {
+      module_table,
+      index_ecma_ast,
       entry_points: value.entry_points,
       symbol_ref_db: value.symbol_ref_db,
       runtime: value.runtime,
@@ -131,7 +143,7 @@ impl From<ScanStageOutput> for NormalizedScanStageOutput {
       overrode_preserve_entry_signature_map: value.overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: value.entry_point_to_reference_ids,
       flat_options: value.flat_options,
-    }
+    })
   }
 }
 
@@ -172,6 +184,7 @@ impl ScanStage {
         ScanMode::Partial(self.resolve_absolute_path(&changed_ids).await?)
       }
     };
+    let (tx_clone, handler) = self.create_sourcemap_channel();
 
     let mut module_loader = ModuleLoader::new(
       self.fs.clone(),
@@ -180,6 +193,7 @@ impl ScanStage {
       Arc::clone(&self.plugin_driver),
       cache,
       fetch_mode.is_full(),
+      tx_clone,
     )?;
 
     // For `pluginContext.emitFile` with `type: chunk`, support it at buildStart hook.
@@ -194,7 +208,11 @@ impl ScanStage {
     // For `await pluginContext.load`, if support it at buildStart hook, it could be caused stuck.
     self.plugin_driver.set_context_load_modules_tx(Some(module_loader.tx.clone())).await;
 
-    let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
+    let mut module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
+
+    if let Some(handler) = handler {
+      self.process_sourcemap_handler(handler, &mut module_loader_output);
+    }
 
     let ModuleLoaderOutput {
       module_table,
@@ -228,6 +246,83 @@ impl ScanStage {
       entry_point_to_reference_ids,
       flat_options,
     })
+  }
+
+  fn create_sourcemap_channel(&self) -> SourcemapChannel {
+    if self.options.experimental.is_native_magic_string_enabled()
+      && self.options.is_sourcemap_enabled()
+    {
+      let (tx, rx) = std::sync::mpsc::channel::<SourceMapGenMsg>();
+      let handler = thread::spawn(move || {
+        let mut map: FxHashMap<ModuleIdx, Vec<_>> = FxHashMap::default();
+        while let Ok(msg) = rx.recv() {
+          match msg {
+            SourceMapGenMsg::MagicString(v) => {
+              let (module_idx, plugin_idx, magic_string) = *v;
+              let generated_sourcemap =
+                magic_string.source_map(string_wizard::SourceMapOptions::default());
+              map
+                .entry(module_idx)
+                .or_default()
+                .push(SourcemapChainElement::Transform((plugin_idx, generated_sourcemap)));
+            }
+            SourceMapGenMsg::Terminate => {
+              break;
+            }
+          }
+        }
+        map
+      });
+      (Some(Arc::new(tx)), Some(handler))
+    } else {
+      (None, None)
+    }
+  }
+
+  fn process_sourcemap_handler(
+    &self,
+    handler: thread::JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>,
+    module_loader_output: &mut ModuleLoaderOutput,
+  ) {
+    let map: FxHashMap<ModuleIdx, Vec<_>> = handler.join().unwrap();
+    if !map.is_empty() {
+      let transform_plugin_order_map = self
+        .plugin_driver
+        .order_by_transform_meta
+        .iter()
+        .enumerate()
+        .map(|(i, plugin_idx)| (*plugin_idx, i))
+        .collect::<FxHashMap<_, _>>();
+      for (module_idx, sourcemaps) in map {
+        let Some(module) = module_loader_output.module_table.get_mut(module_idx).as_normal_mut()
+        else {
+          continue;
+        };
+        module.sourcemap_chain.extend(sourcemaps);
+        // Sort sourcemap generated by transform hook by the plugin order, don't change the relative order of the sourcemap generated by the load hook
+        module.sourcemap_chain.sort_by(|a, b| match (a, b) {
+          (
+            SourcemapChainElement::Transform((a_plugin_idx, _)),
+            SourcemapChainElement::Transform((b_plugin_idx, _)),
+          ) => {
+            let a_order =
+              transform_plugin_order_map.get(a_plugin_idx).copied().unwrap_or(usize::MAX);
+            let b_order =
+              transform_plugin_order_map.get(b_plugin_idx).copied().unwrap_or(usize::MAX);
+            a_order.cmp(&b_order)
+          }
+          (SourcemapChainElement::Load(_), SourcemapChainElement::Load(_)) => {
+            std::cmp::Ordering::Equal
+          }
+          (SourcemapChainElement::Load(_), SourcemapChainElement::Transform(_)) => {
+            std::cmp::Ordering::Less
+          }
+          (SourcemapChainElement::Transform(_), SourcemapChainElement::Load(_)) => {
+            std::cmp::Ordering::Greater
+          }
+        });
+      }
+    }
   }
 
   /// Make sure the passed `ids` is all absolute path

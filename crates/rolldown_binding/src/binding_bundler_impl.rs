@@ -8,7 +8,10 @@ use crate::worker_manager::WorkerManager;
 use crate::{
   options::{BindingInputOptions, BindingOutputOptions},
   parallel_js_plugin_registry::ParallelJsPluginRegistry,
-  types::binding_outputs::BindingOutputs,
+  types::{
+    binding_outputs::{BindingOutputs, to_binding_error},
+    error::{BindingError, BindingErrors, BindingResult},
+  },
   utils::{handle_result, normalize_binding_options::normalize_binding_options},
 };
 use napi::{
@@ -23,7 +26,7 @@ use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosticOptions, filter_out_disabled_diagnostics,
 };
 
-#[napi(object, object_to_js = false)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingBundlerOptions<'env> {
   pub input_options: BindingInputOptions<'env>,
   pub output_options: BindingOutputOptions<'env>,
@@ -103,7 +106,10 @@ impl BindingBundlerImpl {
 
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn write<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, BindingOutputs>> {
+  pub fn write<'env>(
+    &self,
+    env: &'env Env,
+  ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let inner = Arc::clone(&self.inner);
     let memory_adjustment = Arc::clone(&self.memory_adjustment);
 
@@ -113,12 +119,14 @@ impl BindingBundlerImpl {
         Ok(outputs)
       },
       move |env, outputs| {
-        let chunk_size = outputs.chunk_len();
-        // 16mb per chunk, it's just a hint, so it doesn't need to be accurate
-        #[expect(clippy::cast_possible_wrap)]
-        let memory_consumption = chunk_size as i64 * 1024 * 1024 * 16;
-        memory_adjustment.fetch_add(memory_consumption, Ordering::Relaxed);
-        env.adjust_external_memory(memory_consumption)?;
+        if let napi::Either::B(ref binding_outputs) = outputs {
+          let chunk_size = binding_outputs.chunk_len();
+          // 16mb per chunk, it's just a hint, so it doesn't need to be accurate
+          #[expect(clippy::cast_possible_wrap)]
+          let memory_consumption = chunk_size as i64 * 1024 * 1024 * 16;
+          memory_adjustment.fetch_add(memory_consumption, Ordering::Relaxed);
+          env.adjust_external_memory(memory_consumption)?;
+        }
         Ok(outputs)
       },
     )
@@ -126,13 +134,13 @@ impl BindingBundlerImpl {
 
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn generate(&self) -> napi::Result<BindingOutputs> {
+  pub async fn generate(&self) -> napi::Result<BindingResult<BindingOutputs>> {
     self.generate_impl().await
   }
 
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn scan(&self) -> napi::Result<BindingOutputs> {
+  pub async fn scan(&self) -> napi::Result<BindingResult<BindingOutputs>> {
     self.scan_impl().await
   }
 
@@ -158,7 +166,7 @@ impl BindingBundlerImpl {
 
 impl BindingBundlerImpl {
   #[expect(clippy::significant_drop_tightening)]
-  pub async fn scan_impl(&self) -> napi::Result<BindingOutputs> {
+  pub async fn scan_impl(&self) -> napi::Result<BindingResult<BindingOutputs>> {
     let mut bundler_core = self.inner.lock().await;
     let output =
       Self::handle_result(bundler_core.scan(ScanMode::Full).await, bundler_core.options());
@@ -166,47 +174,66 @@ impl BindingBundlerImpl {
     match output {
       Ok(output) => {
         if let Err(err) = Self::handle_warnings(output.warnings, bundler_core.options()).await {
-          return Ok(Self::handle_errors(vec![err.into()], bundler_core.options()));
+          let error = to_binding_error(&err.into(), bundler_core.options().cwd.clone());
+          return Ok(napi::Either::A(BindingErrors::new(vec![error])));
         }
       }
-      Err(outputs) => {
-        return Ok(outputs);
+      Err(errors) => {
+        return Ok(napi::Either::A(BindingErrors::new(errors)));
       }
     }
 
-    Ok(vec![].into())
+    Ok(napi::Either::B(vec![].into()))
   }
 
   #[expect(clippy::significant_drop_tightening)]
-  pub async fn write_impl(bundler: Arc<Mutex<NativeBundler>>) -> napi::Result<BindingOutputs> {
+  pub async fn write_impl(
+    bundler: Arc<Mutex<NativeBundler>>,
+  ) -> napi::Result<BindingResult<BindingOutputs>> {
     let mut bundler_core = bundler.lock().await;
 
     let outputs = match bundler_core.write().await {
       Ok(outputs) => outputs,
-      Err(errs) => return Ok(Self::handle_errors(errs.into_vec(), bundler_core.options())),
+      Err(errs) => {
+        let errors: Vec<BindingError> = errs
+          .into_vec()
+          .iter()
+          .map(|diagnostic| to_binding_error(diagnostic, bundler_core.options().cwd.clone()))
+          .collect();
+        return Ok(napi::Either::A(BindingErrors::new(errors)));
+      }
     };
 
     if let Err(err) = Self::handle_warnings(outputs.warnings, bundler_core.options()).await {
-      return Ok(Self::handle_errors(vec![err.into()], bundler_core.options()));
+      let error = to_binding_error(&err.into(), bundler_core.options().cwd.clone());
+      return Ok(napi::Either::A(BindingErrors::new(vec![error])));
     }
 
-    Ok(outputs.assets.into())
+    Ok(napi::Either::B(outputs.assets.into()))
   }
 
   #[expect(clippy::significant_drop_tightening)]
-  pub async fn generate_impl(&self) -> napi::Result<BindingOutputs> {
+  pub async fn generate_impl(&self) -> napi::Result<BindingResult<BindingOutputs>> {
     let mut bundler_core = self.inner.lock().await;
 
     let bundle_output = match bundler_core.generate().await {
       Ok(output) => output,
-      Err(errs) => return Ok(Self::handle_errors(errs.into_vec(), bundler_core.options())),
+      Err(errs) => {
+        let errors: Vec<BindingError> = errs
+          .into_vec()
+          .iter()
+          .map(|diagnostic| to_binding_error(diagnostic, bundler_core.options().cwd.clone()))
+          .collect();
+        return Ok(napi::Either::A(BindingErrors::new(errors)));
+      }
     };
 
     if let Err(err) = Self::handle_warnings(bundle_output.warnings, bundler_core.options()).await {
-      return Ok(Self::handle_errors(vec![err.into()], bundler_core.options()));
+      let error = to_binding_error(&err.into(), bundler_core.options().cwd.clone());
+      return Ok(napi::Either::A(BindingErrors::new(vec![error])));
     }
 
-    Ok(bundle_output.assets.into())
+    Ok(napi::Either::B(bundle_output.assets.into()))
   }
 
   #[expect(clippy::significant_drop_tightening)]
@@ -222,18 +249,16 @@ impl BindingBundlerImpl {
     self.inner
   }
 
-  fn handle_errors(
-    errs: Vec<BuildDiagnostic>,
-    options: &NormalizedBundlerOptions,
-  ) -> BindingOutputs {
-    BindingOutputs::from_errors(errs, options.cwd.clone())
-  }
-
   fn handle_result<T>(
     result: BuildResult<T>,
     options: &NormalizedBundlerOptions,
-  ) -> Result<T, BindingOutputs> {
-    result.map_err(|e| Self::handle_errors(e.into_vec(), options))
+  ) -> Result<T, Vec<crate::types::error::BindingError>> {
+    result.map_err(|e| {
+      e.into_vec()
+        .iter()
+        .map(|diagnostic| to_binding_error(diagnostic, options.cwd.clone()))
+        .collect()
+    })
   }
 
   async fn handle_warnings(

@@ -15,6 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## IMPORT_IS_UNDEFINED
 
 ```text
@@ -27,28 +28,31 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 # Assets
 
 ## a.js
 
 ```js
-import { foo } from "./common.js";
+import { n as foo } from "./common.js";
 
 //#region a.js
 console.log(foo());
 
 //#endregion
 ```
+
 ## b.js
 
 ```js
-import { bar } from "./common.js";
+import { t as bar } from "./common.js";
 
 //#region b.js
 console.log(bar());
 
 //#endregion
 ```
+
 ## common.js
 
 ```js
@@ -65,5 +69,5 @@ function bar() {
 }
 
 //#endregion
-export { bar, foo };
+export { foo as n, bar as t };
 ```

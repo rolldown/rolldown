@@ -1,9 +1,15 @@
-use std::{collections::VecDeque, ops::Deref, path::PathBuf, sync::Arc};
+use std::{
+  collections::VecDeque,
+  ops::Deref,
+  path::PathBuf,
+  sync::{Arc, atomic::AtomicBool},
+};
 
+use anyhow::Context;
 use arcstr::ArcStr;
 use futures::{FutureExt, future::Shared};
 use rolldown_common::ClientHmrUpdate;
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildResult, ResultExt};
 use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexSet};
 use rolldown_watcher::{DynWatcher, NoopWatcher, Watcher, WatcherConfig, WatcherExt};
 use sugar_path::SugarPath;
@@ -16,10 +22,9 @@ use crate::{
     build_driver::{BuildDriver, SharedBuildDriver},
     build_driver_service::{BuildDriverService, BuildMessage},
     build_state_machine::BuildStateMachine,
-    building_task::TaskInput,
     dev_context::{DevContext, PinBoxSendStaticFuture, SharedDevContext},
     dev_options::{DevOptions, normalize_dev_options},
-    types::client_session::ClientSession,
+    types::{client_session::ClientSession, task_input::TaskInput},
   },
 };
 
@@ -32,9 +37,10 @@ pub struct DevEngine {
   build_driver: SharedBuildDriver,
   watcher: Mutex<DynWatcher>,
   watched_files: FxDashSet<ArcStr>,
-  watch_service_state: Mutex<BuildDriverServiceState>,
+  build_driver_service_state: Mutex<BuildDriverServiceState>,
   ctx: SharedDevContext,
   pub clients: SharedClients,
+  is_closed: AtomicBool,
 }
 
 impl DevEngine {
@@ -128,17 +134,18 @@ impl DevEngine {
       build_driver,
       watcher: Mutex::new(watcher),
       watched_files: FxDashSet::default(),
-      watch_service_state: Mutex::new(BuildDriverServiceState {
+      build_driver_service_state: Mutex::new(BuildDriverServiceState {
         service: Some(build_driver_service),
         handle: None,
       }),
       ctx,
       clients,
+      is_closed: AtomicBool::new(false),
     })
   }
 
   pub async fn run(&self) -> BuildResult<()> {
-    let mut build_service_state = self.watch_service_state.lock().await;
+    let mut build_service_state = self.build_driver_service_state.lock().await;
 
     if build_service_state.service.is_none() {
       // The watcher service is already running.
@@ -174,15 +181,19 @@ impl DevEngine {
     Ok(())
   }
 
-  pub async fn wait_for_close(&self) {
-    let watch_service_state = self.watch_service_state.lock().await;
-    if let Some(watcher_service_handle) = watch_service_state.handle.clone() {
-      watcher_service_handle.await;
+  pub async fn wait_for_build_driver_service_close(&self) -> BuildResult<()> {
+    self.create_error_if_closed()?;
+    let service_state = self.build_driver_service_state.lock().await;
+    if let Some(service_handle) = service_state.handle.clone() {
+      service_handle.await;
     }
+    Ok(())
   }
 
-  pub async fn ensure_current_build_finish(&self) {
+  pub async fn ensure_current_build_finish(&self) -> BuildResult<()> {
+    self.create_error_if_closed()?;
     self.ctx.ensure_current_build_finish().await;
+    Ok(())
   }
 
   pub async fn invalidate(
@@ -190,7 +201,35 @@ impl DevEngine {
     caller: String,
     first_invalidated_by: Option<String>,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
+    self.create_error_if_closed()?;
     self.build_driver.invalidate(caller, first_invalidated_by).await
+  }
+
+  pub async fn close(&self) -> BuildResult<()> {
+    if self.is_closed.swap(true, std::sync::atomic::Ordering::SeqCst) {
+      return Ok(());
+    }
+
+    // Send close message to build driver service
+    self.ctx.build_channel_tx.send(BuildMessage::Close)
+      .map_err_to_unhandleable()
+      .context("DevEngine: failed to send Close message to build service - service may have already terminated")?;
+
+    // Clean up watcher
+    let watcher =
+      std::mem::replace(&mut *self.watcher.lock().await, NoopWatcher.into_dyn_watcher());
+    std::mem::drop(watcher);
+
+    // Close the bundler
+    let mut bundler = self.build_driver.bundler.lock().await;
+    bundler.close().await?;
+
+    // Wait for build driver service to close
+    let service_state = self.build_driver_service_state.lock().await;
+    if let Some(service_handle) = service_state.handle.clone() {
+      service_handle.await;
+    }
+    Ok(())
   }
 
   /// For testing purpose.
@@ -201,15 +240,22 @@ impl DevEngine {
     }
   }
 
-  pub async fn create_client_for_testing(&self) {
-    let mut client_session = ClientSession::default();
-    // mark all modules as registered
-    let build_state = self.ctx.state.lock().await;
-    let snapshot = build_state.cache.as_ref().unwrap().get_snapshot();
-    for module in snapshot.module_table.iter() {
-      client_session.registered_modules.insert(module.stable_id().to_string());
+  pub fn create_client_for_testing(&self) {
+    let client_session = ClientSession::default();
+    // Use special client ID "rolldown-tests" which will be recognized by HMR logic
+    // to always consider modules as executed, without needing to populate the HashSet
+    self.clients.insert("rolldown-tests".to_string(), client_session);
+  }
+
+  pub fn is_closed(&self) -> bool {
+    self.is_closed.load(std::sync::atomic::Ordering::SeqCst)
+  }
+
+  fn create_error_if_closed(&self) -> BuildResult<()> {
+    if self.is_closed.load(std::sync::atomic::Ordering::SeqCst) {
+      Err(anyhow::anyhow!("Dev engine is closed"))?;
     }
-    self.clients.insert("test".to_string(), client_session);
+    Ok(())
   }
 }
 

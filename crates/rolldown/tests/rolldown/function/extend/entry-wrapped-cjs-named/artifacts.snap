@@ -16,13 +16,12 @@ var require_main = /* @__PURE__ */ __commonJS({ "main.js": (() => {
 export default require_main();
 
 ```
----
 
-Variant: [exports: Named] [format: Cjs]
+# Variant: [exports: Named] [format: Cjs]
 
-# Assets
+## Assets
 
-## main.js
+### main.js
 
 ```js
 // HIDDEN [rolldown:runtime]
@@ -40,13 +39,12 @@ Object.defineProperty(exports, 'default', {
   }
 });
 ```
----
 
-Variant: [exports: Named] [extend: true] [format: Iife] [name: "module"]
+# Variant: [exports: Named] [extend: true] [format: Iife] [name: "module"]
 
-# Assets
+## Assets
 
-## main.js
+### main.js
 
 ```js
 (function(exports) {
@@ -67,13 +65,12 @@ Object.defineProperty(exports, 'default', {
 });
 })(this.module = this.module || {});
 ```
----
 
-Variant: [exports: Named] [extend: true] [format: Umd] [name: "module"]
+# Variant: [exports: Named] [extend: true] [format: Umd] [name: "module"]
 
-# Assets
+## Assets
 
-## main.js
+### main.js
 
 ```js
 (function(global, factory) {

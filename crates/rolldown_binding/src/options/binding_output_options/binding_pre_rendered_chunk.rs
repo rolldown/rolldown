@@ -1,4 +1,4 @@
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_from_js = false)]
 #[derive(Default, Debug)]
 pub struct PreRenderedChunk {
   pub name: String,

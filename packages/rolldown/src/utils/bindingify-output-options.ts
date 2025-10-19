@@ -30,6 +30,8 @@ export function bindingifyOutputOptions(
     outro,
     esModule,
     globals,
+    paths,
+    generatedCode,
     file,
     sanitizeFileName,
     preserveModules,
@@ -38,6 +40,7 @@ export function bindingifyOutputOptions(
     preserveModulesRoot,
     manualChunks,
     topLevelVar,
+    cleanDir,
   } = outputOptions;
 
   const advancedChunks = bindingifyAdvancedChunks(
@@ -63,6 +66,8 @@ export function bindingifyOutputOptions(
     outro: bindingifyAddon(outro),
     extend: outputOptions.extend,
     globals,
+    paths,
+    generatedCode,
     esModule,
     name,
     assetFileNames: bindingifyAssetFilenames(assetFileNames),
@@ -84,6 +89,7 @@ export function bindingifyOutputOptions(
     preserveModulesRoot,
     topLevelVar,
     minifyInternalExports: outputOptions.minifyInternalExports,
+    cleanDir,
   };
 }
 

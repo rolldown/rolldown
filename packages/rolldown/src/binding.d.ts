@@ -2,6 +2,7 @@ type MaybePromise<T> = T | Promise<T>
 type Nullable<T> = T | null | undefined
 type VoidNullable<T = void> = T | null | undefined | void
 export type BindingStringOrRegex = string | RegExp
+type BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T
 
 export interface CodegenOptions {
   /**
@@ -41,13 +42,30 @@ export interface CompressOptions {
    */
   dropDebugger?: boolean
   /**
-   * Drop unreferenced functions and variables.
+   * Pass `true` to drop unreferenced functions and variables.
    *
-   * Simple direct variable assignments do not count as references unless set to "keep_assign".
+   * Simple direct variable assignments do not count as references unless set to `keep_assign`.
+   * @default true
    */
-  unused?: true | false | 'keep_assign'
+  unused?: boolean | 'keep_assign'
   /** Keep function / class names. */
   keepNames?: CompressOptionsKeepNames
+  /**
+   * Join consecutive var, let and const statements.
+   *
+   * @default true
+   */
+  joinVars?: boolean
+  /**
+   * Join consecutive simple statements using the comma operator.
+   *
+   * `a; b` -> `a, b`
+   *
+   * @default true
+   */
+  sequences?: boolean
+  /** Limit the maximum number of iterations for debugging purpose. */
+  maxIterations?: number
 }
 
 export interface CompressOptionsKeepNames {
@@ -1269,7 +1287,7 @@ export declare class BindingBundleEndEventData {
 
 export declare class BindingBundleErrorEventData {
   get result(): BindingBundlerImpl
-  get error(): Array<Error | BindingError>
+  get error(): Array<BindingError>
 }
 
 export declare class BindingBundler {
@@ -1278,9 +1296,9 @@ export declare class BindingBundler {
 }
 
 export declare class BindingBundlerImpl {
-  write(): Promise<BindingOutputs>
-  generate(): Promise<BindingOutputs>
-  scan(): Promise<BindingOutputs>
+  write(): Promise<BindingResult<BindingOutputs>>
+  generate(): Promise<BindingResult<BindingOutputs>>
+  scan(): Promise<BindingResult<BindingOutputs>>
   close(): Promise<void>
   get closed(): boolean
   getWatchFiles(): Promise<Array<string>>
@@ -1298,11 +1316,6 @@ export declare class BindingChunkingContext {
   getModuleInfo(moduleId: string): BindingModuleInfo | null
 }
 
-export declare class BindingClientHmrUpdate {
-  get clientId(): string
-  get update(): BindingHmrUpdate
-}
-
 export declare class BindingDevEngine {
   constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
   run(): Promise<void>
@@ -1312,11 +1325,7 @@ export declare class BindingDevEngine {
   invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<Array<BindingClientHmrUpdate>>
   registerModules(clientId: string, modules: Array<string>): void
   removeClient(clientId: string): void
-}
-
-export declare class BindingHmrOutput {
-  get patch(): BindingHmrUpdate | null
-  get errors(): Array<Error | BindingError>
+  close(): Promise<void>
 }
 
 export declare class BindingMagicString {
@@ -1415,11 +1424,10 @@ export declare class BindingOutputChunk {
 export declare class BindingOutputs {
   get chunks(): Array<BindingOutputChunk>
   get assets(): Array<BindingOutputAsset>
-  get errors(): Array<Error | BindingError>
 }
 
 export declare class BindingPluginContext {
-  load(specifier: string, sideEffects: boolean | 'no-treeshake' | undefined): Promise<void>
+  load(specifier: string, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
@@ -1455,6 +1463,11 @@ export declare class BindingTransformPluginContext {
   getCombinedSourcemap(): string
   inner(): BindingPluginContext
   addWatchFile(file: string): void
+  sendMagicString(magicString: BindingMagicString): string | null
+}
+
+export declare class BindingUrlResolver {
+  call(url: string, importer?: string): Promise<[string, string | undefined]>
 }
 
 export declare class BindingWatcher {
@@ -1516,15 +1529,15 @@ export interface BindingAliasPluginConfig {
 }
 
 export interface BindingAssetPluginConfig {
-  isLib?: boolean
-  isSsr?: boolean
-  isWorker?: boolean
-  urlBase?: string
-  publicDir?: string
-  decodedBase?: string
-  isSkipAssets?: boolean
-  assetsInclude?: Array<BindingStringOrRegex>
-  assetInlineLimit?: number | ((file: string, content: Buffer) => boolean | undefined)
+  isLib: boolean
+  isSsr: boolean
+  isWorker: boolean
+  urlBase: string
+  publicDir: string
+  decodedBase: string
+  isSkipAssets: boolean
+  assetsInclude: Array<BindingStringOrRegex>
+  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => MaybePromise<VoidNullable<string | BindingRenderBuiltUrlRet>>
 }
 
@@ -1556,6 +1569,7 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:asset-import-meta-url'|
 'builtin:build-import-analysis'|
 'builtin:dynamic-import-vars'|
+'builtin:esm-external-require'|
 'builtin:import-glob'|
 'builtin:isolated-declaration'|
 'builtin:json'|
@@ -1565,8 +1579,10 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:react-refresh-wrapper'|
 'builtin:reporter'|
 'builtin:replace'|
-'builtin:esm-external-require'|
 'builtin:transform'|
+'builtin:vite-css'|
+'builtin:vite-css-post'|
+'builtin:vite-html'|
 'builtin:vite-resolve'|
 'builtin:wasm-fallback'|
 'builtin:wasm-helper'|
@@ -1604,6 +1620,18 @@ export declare enum BindingChunkModuleOrderBy {
   ExecOrder = 1
 }
 
+export interface BindingClientHmrUpdate {
+  clientId: string
+  update: BindingHmrUpdate
+}
+
+export interface BindingCompileCssResult {
+  code: string
+  map?: BindingSourcemap
+  deps?: FxHashSet<string>
+  modules?: FxHashMap<string, string>
+}
+
 export interface BindingDebugOptions {
   sessionId?: string
 }
@@ -1615,7 +1643,9 @@ export interface BindingDeferSyncScanData {
 }
 
 export interface BindingDevOptions {
-  onHmrUpdates?: undefined | ((updates: BindingClientHmrUpdate[], changedFiles: string[]) => void | Promise<void>)
+  onHmrUpdates?: undefined | ((result: BindingResult<[BindingClientHmrUpdate[], string[]]>) => void | Promise<void>)
+  onOutput?: undefined | ((result: BindingResult<BindingOutputs>) => void | Promise<void>)
+  rebuildStrategy?: BindingRebuildStrategy
   watch?: BindingDevWatchOptions
 }
 
@@ -1650,9 +1680,13 @@ export interface BindingEmittedChunk {
   preserveEntrySignatures?: BindingPreserveEntrySignatures
 }
 
-export interface BindingError {
-  kind: string
-  message: string
+export type BindingError =
+  | { type: 'JsError', field0: Error }
+  | { type: 'NativeError', field0: NativeError }
+
+export interface BindingErrors {
+  errors: Array<BindingError>
+  isBindingErrors: boolean
 }
 
 export interface BindingEsmExternalRequirePluginConfig {
@@ -1678,6 +1712,7 @@ export interface BindingExperimentalOptions {
   onDemandWrapping?: boolean
   incrementalBuild?: boolean
   transformHiresSourcemap?: boolean | 'boundary'
+  nativeMagicString?: boolean
 }
 
 export interface BindingFilterToken {
@@ -1685,9 +1720,14 @@ export interface BindingFilterToken {
   payload?: BindingStringOrRegex | number | boolean
 }
 
+export interface BindingGeneratedCodeOptions {
+  symbols?: boolean
+  preset?: string
+}
+
 export type BindingGenerateHmrPatchReturn =
   | { type: 'Ok', field0: Array<BindingHmrUpdate> }
-  | { type: 'Error', field0: Array<Error | BindingError> }
+  | { type: 'Error', field0: Array<BindingError> }
 
 export interface BindingHmrBoundaryOutput {
   boundary: string
@@ -1815,7 +1855,6 @@ export interface BindingInputOptions {
   inject?: Array<BindingInjectImportNamed | BindingInjectImportNamespace>
   experimental?: BindingExperimentalOptions
   profilerNames?: boolean
-  jsx?: BindingJsx
   transform?: TransformOptions
   watch?: BindingWatchOption
   keepNames?: boolean
@@ -1856,13 +1895,6 @@ export interface BindingJsonSourcemap {
 
 export interface BindingJsWatchChangeEvent {
   event: string
-}
-
-export declare enum BindingJsx {
-  Disable = 0,
-  Preserve = 1,
-  React = 2,
-  ReactJsx = 3
 }
 
 export interface BindingLog {
@@ -1944,11 +1976,13 @@ export interface BindingOutputOptions {
   externalLiveBindings?: boolean
   footer?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
   format?: 'es' | 'cjs' | 'iife' | 'umd'
+  generatedCode?: BindingGeneratedCodeOptions
   globals?: Record<string, string> | ((name: string) => string)
   hashCharacters?: 'base64' | 'base36' | 'hex'
   inlineDynamicImports?: boolean
   intro?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
   outro?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
+  paths?: Record<string, string> | ((id: string) => string)
   plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
   sourcemapBaseUrl?: string
@@ -1964,6 +1998,7 @@ export interface BindingOutputOptions {
   preserveModulesRoot?: string
   topLevelVar?: boolean
   minifyInternalExports?: boolean
+  cleanDir?: boolean
 }
 
 export interface BindingPluginContextResolvedId {
@@ -2012,7 +2047,7 @@ export interface BindingPluginOptions {
   transformFilter?: BindingHookFilter
   moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>
   moduleParsedMeta?: BindingPluginHookMeta
-  buildEnd?: (ctx: BindingPluginContext, error?: (Error | BindingError)[]) => MaybePromise<VoidNullable>
+  buildEnd?: (ctx: BindingPluginContext, error?: BindingError[]) => MaybePromise<VoidNullable>
   buildEndMeta?: BindingPluginHookMeta
   renderChunk?: (ctx: BindingPluginContext, code: string, chunk: BindingRenderedChunk, opts: BindingNormalizedOptions, meta: BindingRenderedChunkMeta) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
   renderChunkMeta?: BindingPluginHookMeta
@@ -2021,11 +2056,11 @@ export interface BindingPluginOptions {
   augmentChunkHashMeta?: BindingPluginHookMeta
   renderStart?: (ctx: BindingPluginContext, opts: BindingNormalizedOptions) => void
   renderStartMeta?: BindingPluginHookMeta
-  renderError?: (ctx: BindingPluginContext, error: (Error | BindingError)[]) => void
+  renderError?: (ctx: BindingPluginContext, error: BindingError[]) => void
   renderErrorMeta?: BindingPluginHookMeta
-  generateBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
+  generateBundle?: (ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, isWrite: boolean, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
   generateBundleMeta?: BindingPluginHookMeta
-  writeBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
+  writeBundle?: (ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
   writeBundleMeta?: BindingPluginHookMeta
   closeBundle?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
   closeBundleMeta?: BindingPluginHookMeta
@@ -2083,6 +2118,12 @@ export interface BindingReactRefreshWrapperPluginConfig {
   reactRefreshHost: string
 }
 
+export declare enum BindingRebuildStrategy {
+  Always = 0,
+  Auto = 1,
+  Never = 2
+}
+
 export interface BindingRenderBuiltUrlConfig {
   ssr: boolean
   type: 'asset' | 'public'
@@ -2111,6 +2152,11 @@ export interface BindingReporterPluginConfig {
   shouldLogInfo: boolean
   warnLargeChunks: boolean
   reportCompressedSize: boolean
+}
+
+export interface BindingResolveDependenciesContext {
+  hostId: string
+  hostType: string
 }
 
 export type BindingResolvedExternal =
@@ -2156,6 +2202,48 @@ export interface BindingTreeshake {
   commonjs?: boolean
   propertyReadSideEffects?: BindingPropertyReadSideEffects
   propertyWriteSideEffects?: BindingPropertyWriteSideEffects
+}
+
+export interface BindingViteCssPluginConfig {
+  isLib: boolean
+  publicDir: string
+  compileCSS: (url: string, importer: string, resolver: BindingUrlResolver) => Promise<{
+    code: string
+    map?: BindingSourcemap
+    modules?: Record<string, string>
+    deps?: Set<string>
+    }>
+    resolveUrl: (url: string, importer?: string) => MaybePromise<string | undefined>
+    assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
+  }
+
+export interface BindingViteCssPostPluginConfig {
+  isLib: boolean
+  isSsr: boolean
+  isWorker: boolean
+  isClient: boolean
+  cssCodeSplit: boolean
+  sourcemap: boolean
+  assetsDir: string
+  urlBase: string
+  decodedBase: string
+  libCssFilename?: string
+  isLegacy?: () => boolean
+  cssMinify?: (css: string) => Promise<string>
+  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => MaybePromise<VoidNullable<string | BindingRenderBuiltUrlRet>>
+}
+
+export interface BindingViteHtmlPluginConfig {
+  isLib: boolean
+  isSsr: boolean
+  urlBase: string
+  publicDir: string
+  decodedBase: string
+  cssCodeSplit: boolean
+  modulePreloadPolyfill: boolean
+  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
+  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => MaybePromise<VoidNullable<string | BindingRenderBuiltUrlRet>>
+  resolveDependencies?: boolean | ((filename: string, dependencies: string[], context: { hostId: string, hostType: 'html' | 'js' }) => Promise<string[]>)
 }
 
 export interface BindingVitePluginCustom {
@@ -2207,6 +2295,8 @@ export interface BindingWatchOption {
   onInvalidate?: ((id: string) => void) | undefined
 }
 
+export declare function createTokioRuntime(blockingThreads?: number | undefined | null): void
+
 export interface ExtensionAliasItem {
   target: string
   replacements: Array<string>
@@ -2255,6 +2345,12 @@ export interface JsOutputChunk {
   preliminaryFilename: string
 }
 
+/** Error emitted from native side, it only contains kind and message, no stack trace. */
+export interface NativeError {
+  kind: string
+  message: string
+}
+
 export interface PreRenderedChunk {
   name: string
   isEntry: boolean
@@ -2284,12 +2380,4 @@ export declare function startAsyncRuntime(): void
 
 export interface ViteImportGlobMeta {
   isSubImportsPattern?: boolean
-}
-export declare class JsWatcher {
-  constructor(options: JsWatcherOptions)
-}
-
-export interface JsWatcherOptions {
-  watch: ((err: Error | null, arg: string) => any)
-  unwatch: ((err: Error | null, arg: string) => any)
 }

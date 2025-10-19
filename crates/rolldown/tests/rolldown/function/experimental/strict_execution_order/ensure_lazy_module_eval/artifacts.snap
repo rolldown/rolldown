@@ -6,11 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-import { require_dynamic } from "./dynamic2.js";
+import { t as require_dynamic } from "./dynamic2.js";
 
 export default require_dynamic();
 
 ```
+
 ## dynamic2.js
 
 ```js
@@ -22,12 +23,13 @@ var require_dynamic = /* @__PURE__ */ __commonJS({ "dynamic.js": ((exports, modu
 }) });
 
 //#endregion
-export { __toESM, require_dynamic };
+export { __toESM as n, require_dynamic as t };
 ```
+
 ## main.js
 
 ```js
-import { __toESM, require_dynamic } from "./dynamic2.js";
+import { n as __toESM, t as require_dynamic } from "./dynamic2.js";
 import { strictEqual } from "node:assert";
 
 //#region sideeffects.js

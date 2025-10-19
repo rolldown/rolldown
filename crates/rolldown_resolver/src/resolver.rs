@@ -1,3 +1,4 @@
+use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::DashMap;
 use itertools::Itertools;
@@ -13,13 +14,14 @@ use std::{
 use sugar_path::SugarPath;
 
 use oxc_resolver::{
-  EnforceExtension, ModuleType, PackageJson as OxcPackageJson, PackageType, Resolution,
-  ResolveError, ResolveOptions as OxcResolverOptions, ResolverGeneric, TsConfig,
+  EnforceExtension, ModuleType, PackageJson as OxcPackageJson, Resolution, ResolveError,
+  ResolveOptions as OxcResolverOptions, ResolverGeneric, TsConfig,
 };
 
 #[derive(Debug)]
 #[expect(clippy::struct_field_names)]
 pub struct Resolver<T: FileSystem = OsFileSystem> {
+  fs: T,
   cwd: PathBuf,
   default_resolver: ResolverGeneric<T>,
   // Resolver for `import '...'` and `import(...)`
@@ -34,14 +36,28 @@ pub struct Resolver<T: FileSystem = OsFileSystem> {
 }
 
 impl<F: FileSystem> Resolver<F> {
-  #[inline]
-  pub fn package_json_cache(&self) -> &FxDashMap<PathBuf, Arc<PackageJson>> {
-    &self.package_json_cache
+  pub fn try_get_package_json_or_create(&self, path: &Path) -> anyhow::Result<Arc<PackageJson>> {
+    self
+      .inner_try_get_package_json_or_create(path)
+      .with_context(|| format!("Failed to read or parse package.json: {}", path.display()))
+  }
+
+  fn inner_try_get_package_json_or_create(&self, path: &Path) -> anyhow::Result<Arc<PackageJson>> {
+    if let Some(v) = self.package_json_cache.get(path) {
+      Ok(Arc::clone(v.value()))
+    } else {
+      // User have has the responsibility to ensure `path` is real path if needed. We just pass it through.
+      let realpath = path.to_path_buf();
+      let json_str = self.fs.read_to_string(path)?;
+      let oxc_pkg_json = OxcPackageJson::parse(path.to_path_buf(), realpath, json_str)?;
+      let pkg_json = Arc::new(PackageJson::from_oxc_pkg_json(&oxc_pkg_json));
+      self.package_json_cache.insert(path.to_path_buf(), Arc::clone(&pkg_json));
+      Ok(pkg_json)
+    }
   }
 }
 
-impl<F: FileSystem> Resolver<F> {
-  #[expect(clippy::too_many_lines)]
+impl<F: FileSystem + Clone> Resolver<F> {
   pub fn new(
     fs: F,
     cwd: PathBuf,
@@ -131,7 +147,7 @@ impl<F: FileSystem> Resolver<F> {
       fully_specified: false,
       main_fields,
       main_files: raw_resolve.main_files.unwrap_or_else(|| vec!["index".to_string()]),
-      modules: vec!["node_modules".into()],
+      modules: raw_resolve.modules.unwrap_or_else(|| vec!["node_modules".into()]),
       resolve_to_context: false,
       prefer_relative: false,
       prefer_absolute: false,
@@ -163,7 +179,7 @@ impl<F: FileSystem> Resolver<F> {
     };
 
     let default_resolver =
-      ResolverGeneric::new_with_file_system(fs, resolve_options_with_default_conditions);
+      ResolverGeneric::new_with_file_system(fs.clone(), resolve_options_with_default_conditions);
     let import_resolver =
       default_resolver.clone_with_options(resolve_options_with_import_conditions);
     let require_resolver =
@@ -171,6 +187,7 @@ impl<F: FileSystem> Resolver<F> {
     let css_resolver = default_resolver.clone_with_options(resolve_options_for_css);
     let new_url_resolver = default_resolver.clone_with_options(resolve_options_for_new_url);
     Self {
+      fs,
       cwd,
       default_resolver,
       import_resolver,
@@ -183,6 +200,12 @@ impl<F: FileSystem> Resolver<F> {
 
   pub fn cwd(&self) -> &PathBuf {
     &self.cwd
+  }
+
+  pub fn clear_cache(&self) {
+    // All resolvers share the same cache, so just clear one of them is ok.
+    self.default_resolver.clear_cache();
+    self.package_json_cache.clear();
   }
 }
 
@@ -268,15 +291,7 @@ impl<F: FileSystem> Resolver<F> {
     match self.package_json_cache.get(&oxc_pkg_json.realpath) {
       Some(v) => Arc::clone(v.value()),
       _ => {
-        let pkg_json = Arc::new(
-          PackageJson::new(oxc_pkg_json.realpath.clone())
-            .with_type(oxc_pkg_json.r#type.map(|t| match t {
-              PackageType::CommonJs => "commonjs",
-              PackageType::Module => "module",
-            }))
-            .with_side_effects(oxc_pkg_json.side_effects.as_ref())
-            .with_version(oxc_pkg_json.raw_json().get("version").and_then(|v| v.as_str())),
-        );
+        let pkg_json = Arc::new(PackageJson::from_oxc_pkg_json(oxc_pkg_json));
         self.package_json_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
         pkg_json
       }

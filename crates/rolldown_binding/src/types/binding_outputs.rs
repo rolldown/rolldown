@@ -6,6 +6,7 @@ use std::{
 use super::{
   binding_output_asset::{BindingOutputAsset, JsOutputAsset},
   binding_output_chunk::{BindingOutputChunk, JsOutputChunk, update_output_chunk},
+  error::BindingError,
 };
 use napi::Either;
 use napi_derive::napi;
@@ -17,7 +18,6 @@ use rustc_hash::FxBuildHasher;
 pub struct BindingOutputs {
   chunks: Vec<BindingOutputChunk>,
   assets: Vec<BindingOutputAsset>,
-  error: Option<rolldown_common::OutputsDiagnostics>,
 }
 
 #[napi]
@@ -35,22 +35,6 @@ impl BindingOutputs {
   pub fn assets(&mut self) -> Vec<BindingOutputAsset> {
     std::mem::take(&mut self.assets)
   }
-
-  #[napi(getter)]
-  pub fn errors(&mut self) -> Vec<napi::Either<napi::JsError, BindingError>> {
-    if let Some(rolldown_common::OutputsDiagnostics { diagnostics, cwd }) = self.error.as_ref() {
-      return diagnostics
-        .iter()
-        .map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone()))
-        .collect();
-    }
-    vec![]
-  }
-
-  pub fn from_errors(diagnostics: Vec<BuildDiagnostic>, cwd: std::path::PathBuf) -> Self {
-    let error = rolldown_common::OutputsDiagnostics { diagnostics, cwd };
-    Self { assets: vec![], chunks: vec![], error: Some(error) }
-  }
 }
 
 impl From<Vec<rolldown_common::Output>> for BindingOutputs {
@@ -65,11 +49,11 @@ impl From<Vec<rolldown_common::Output>> for BindingOutputs {
         assets.push(BindingOutputAsset::new(asset));
       }
     });
-    Self { chunks, assets, error: None }
+    Self { chunks, assets }
   }
 }
 
-#[napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct JsChangedOutputs {
   pub deleted: HashSet<String, FxBuildHasher>,
   pub changes: HashMap<String, Either<JsOutputChunk, JsOutputAsset>, FxBuildHasher>,
@@ -110,16 +94,7 @@ impl JsChangedOutputs {
   }
 }
 
-#[napi(object)]
-pub struct BindingError {
-  pub kind: String,
-  pub message: String,
-}
-
-pub fn to_js_diagnostic(
-  diagnostic: &BuildDiagnostic,
-  cwd: std::path::PathBuf,
-) -> napi::Either<napi::JsError, BindingError> {
+pub fn to_binding_error(diagnostic: &BuildDiagnostic, cwd: std::path::PathBuf) -> BindingError {
   match diagnostic.downcast_napi_error() {
     Ok(napi_error) => {
       // Note: In WASM workers, napi::Error objects with maybe_raw/maybe_env references cannot be
@@ -130,15 +105,15 @@ pub fn to_js_diagnostic(
       #[cfg(not(target_family = "wasm"))]
       {
         let error = napi_error.try_clone().unwrap_or_else(|e| e);
-        napi::Either::A(napi::JsError::from(error))
+        BindingError::JsError(napi::JsError::from(error))
       }
       #[cfg(target_family = "wasm")]
       {
         let error = napi::Error::new(napi_error.status, napi_error.reason.clone());
-        napi::Either::A(napi::JsError::from(error))
+        BindingError::JsError(napi::JsError::from(error))
       }
     }
-    Err(error) => napi::Either::B(BindingError {
+    Err(error) => BindingError::NativeError(super::error::native_error::NativeError {
       kind: error.kind().to_string(),
       message: error.to_diagnostic_with(&DiagnosticOptions { cwd }).to_color_string(),
     }),

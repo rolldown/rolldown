@@ -8,7 +8,6 @@ mod binding_treeshake;
 mod binding_watch_option;
 
 pub mod binding_inject_import;
-pub mod binding_jsx;
 
 use binding_debug_options::BindingDebugOptions;
 use binding_make_absolute_externals_relative::BindingMakeAbsoluteExternalsRelative;
@@ -16,13 +15,11 @@ use binding_optimization::BindingOptimization;
 use derive_more::Debug;
 use napi::Either;
 use napi::bindgen_prelude::{FnArgs, Promise};
-use napi_derive::napi;
 use rustc_hash::FxBuildHasher;
 use std::collections::HashMap;
 
 use binding_inject_import::BindingInjectImport;
 use binding_input_item::BindingInputItem;
-use binding_jsx::BindingJsx;
 use binding_resolve_options::BindingResolveOptions;
 use binding_watch_option::BindingWatchOption;
 
@@ -37,7 +34,7 @@ use crate::types::{
 
 pub type BindingOnLog = Option<JsCallback<FnArgs<(String, BindingLog)>, Promise<()>>>;
 
-#[napi(object, object_to_js = false)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Default, Debug)]
 pub struct BindingInputOptions<'env> {
   // Not going to be supported
@@ -93,8 +90,6 @@ pub struct BindingInputOptions<'env> {
   pub inject: Option<Vec<BindingInjectImport>>,
   pub experimental: Option<binding_experimental_options::BindingExperimentalOptions>,
   pub profiler_names: Option<bool>,
-  #[debug(skip)]
-  pub jsx: Option<BindingJsx>,
   #[debug(skip)]
   pub transform: Option<oxc_transform_napi::TransformOptions>,
   pub watch: Option<BindingWatchOption>,

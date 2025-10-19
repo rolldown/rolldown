@@ -10,6 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 exports.__toESM = __toESM;
 ```
+
 ## cube.js
 
 ```js
@@ -18,6 +19,7 @@ let preact = require("preact");
 preact = require_rolldown_runtime.__toESM(preact);
 
 ```
+
 ## lib.js
 
 ```js
@@ -27,6 +29,7 @@ let preact = require("preact");
 preact = require_rolldown_runtime.__toESM(preact);
 
 ```
+
 ## main.js
 
 ```js

@@ -31,9 +31,9 @@ use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicIm
 use rolldown_common::{
   ConstExportMeta, ConstantValue, EcmaModuleAstUsage, EcmaViewMeta, ExportsKind, FlatOptions,
   HmrInfo, ImportAttribute, ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport,
-  MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
-  SideEffectDetail, Specifier, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef,
-  SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef, ThisExprReplaceKind,
+  MemberExprObjectReferencedType, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport,
+  RawImportRecord, SideEffectDetail, Specifier, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos,
+  SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef, ThisExprReplaceKind,
   generate_replace_this_expr_map,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt, FunctionExt};
@@ -274,7 +274,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.scope_stack.iter().rev().all(|flag| flag.is_top())
   }
 
-  #[expect(clippy::too_many_lines)]
   pub fn scan(mut self, program: &Program<'ast>) -> BuildResult<ScanResult> {
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
@@ -675,7 +674,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.cur_class_decl = previous_class_decl_id;
   }
 
-  #[expect(clippy::too_many_lines)]
   fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration<'ast>) {
     if let Some(source) = &decl.source {
       let record_id = self.add_import_record(
@@ -912,16 +910,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.current_stmt_info.referenced_symbols.push(sym_ref.into());
   }
 
+  #[inline]
   pub fn add_member_expr_reference(
     &mut self,
     object_ref: SymbolRef,
     prop_and_span_list: Vec<(CompactStr, Span)>,
     span: Span,
+    obj_ref_type: MemberExprObjectReferencedType,
   ) {
     self
       .current_stmt_info
       .referenced_symbols
-      .push(MemberExprRef::new(object_ref, prop_and_span_list, span).into());
+      .push(MemberExprRef::new(object_ref, prop_and_span_list, span, obj_ref_type).into());
   }
 
   fn is_root_symbol(&self, symbol_id: SymbolId) -> bool {

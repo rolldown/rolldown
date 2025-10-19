@@ -12,6 +12,7 @@ import("./foo2.js");
 
 //#endregion
 ```
+
 ## foo.js
 
 ```js
@@ -20,6 +21,7 @@ console.log("a/foo");
 
 //#endregion
 ```
+
 ## foo2.js
 
 ```js

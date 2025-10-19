@@ -8,28 +8,28 @@
     "esbuild-snap-diff": "oxnode ./snap-diff/index.ts"
   },
   "dependencies": {
-    "@pnpm/find-workspace-packages": "^6.0.9",
-    "@types/fs-extra": "^11.0.4",
-    "@types/semver": "^7.5.8",
-    "chalk": "^5.3.0",
-    "change-case": "^5.4.4",
-    "dedent": "^1.5.3",
-    "fast-glob": "^3.3.2",
-    "follow-redirects": "^1.15.6",
-    "fs-extra": "^11.2.0",
-    "remark-parse": "^11.0.0",
+    "@pnpm/find-workspace-packages": "catalog:",
+    "@types/fs-extra": "catalog:",
+    "@types/semver": "catalog:",
+    "chalk": "catalog:",
+    "change-case": "catalog:",
+    "dedent": "catalog:",
+    "fast-glob": "catalog:",
+    "follow-redirects": "catalog:",
+    "fs-extra": "catalog:",
+    "remark-parse": "catalog:",
     "rolldown-tests": "workspace:*",
-    "semver": "^7.6.2",
-    "unified": "^11.0.5",
-    "zx": "^8.1.2"
+    "semver": "catalog:",
+    "unified": "catalog:",
+    "zx": "catalog:"
   },
   "devDependencies": {
     "@oxc-node/cli": "catalog:",
-    "acorn": "^8.12.1",
-    "astring": "^1.9.0",
-    "diff": "^8.0.0",
-    "estree-toolkit": "^1.7.8",
-    "micromatch": "^4.0.8",
-    "web-tree-sitter": "^0.25.0"
+    "acorn": "catalog:",
+    "astring": "catalog:",
+    "diff": "catalog:",
+    "estree-toolkit": "catalog:",
+    "micromatch": "catalog:",
+    "web-tree-sitter": "catalog:"
   }
 }

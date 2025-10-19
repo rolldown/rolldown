@@ -49,7 +49,6 @@ runTestSuiteWithSamples(
 										warnings.push(log);
 									}
 								},
-								keepNames: directory.includes('assignment-to-exports-class-declaration') ? true : false,
 								strictDeprecations: true,
 								...config.options,
 								plugins: config.options?.plugins
@@ -68,6 +67,7 @@ runTestSuiteWithSamples(
 								file: inputFile,
 								format: defaultFormat,
 								validate: true,
+								keepNames: directory.includes('assignment-to-exports-class-declaration') ? true : false,
 								...(config.options || {}).output
 							},
 							bundleFile,

@@ -5,7 +5,7 @@ use std::{
   sync::Arc,
 };
 
-use oxc_resolver::{ResolveOptions, TsconfigOptions, TsconfigReferences};
+use oxc_resolver::{PackageJson, ResolveOptions, TsconfigOptions, TsconfigReferences};
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
 use rolldown_utils::{dashmap::FxDashMap, url::clean_url};
@@ -128,6 +128,10 @@ impl Resolvers {
     Arc::clone(&self.external_resolver)
   }
 
+  pub fn get_nearest_package_json(&self, p: &str) -> Option<Arc<PackageJson>> {
+    self.resolvers[0].get_nearest_package_json(p)
+  }
+
   pub fn clear_cache(&self) {
     self.resolvers.iter().for_each(|v| v.clear_cache());
     self.external_resolver.clear_cache();
@@ -156,11 +160,12 @@ fn get_resolve_options(
       &additional_options,
     ),
     extensions,
+    // The first alias is the original extension to make sure that `foo.js` will be resolved to `foo.js` if `foo.js` exists.
     extension_alias: vec![
-      (".js".to_string(), vec![".ts".to_string(), ".tsx".to_string(), ".js".to_string()]),
-      (".jsx".to_string(), vec![".ts".to_string(), ".tsx".to_string(), ".jsx".to_string()]),
-      (".mjs".to_string(), vec![".mts".to_string(), ".mjs".to_string()]),
-      (".cjs".to_string(), vec![".cts".to_string(), ".cjs".to_string()]),
+      (".js".to_string(), vec![".js".to_string(), ".ts".to_string(), ".tsx".to_string()]),
+      (".jsx".to_string(), vec![".jsx".to_string(), ".ts".to_string(), ".tsx".to_string()]),
+      (".mjs".to_string(), vec![".mjs".to_string(), ".mts".to_string()]),
+      (".cjs".to_string(), vec![".cjs".to_string(), ".cts".to_string()]),
     ],
     main_fields,
     main_files: if !base_options.try_index {
@@ -342,7 +347,14 @@ impl Resolver {
               if side_effects { HookSideEffects::True } else { HookSideEffects::False }
             },
           );
-        Ok(Some(HookResolveIdOutput { id: path.into(), side_effects, ..Default::default() }))
+        Ok(Some(HookResolveIdOutput {
+          id: path.into(),
+          side_effects,
+          package_json_path: result
+            .package_json()
+            .map(|pj| pj.realpath().to_str().unwrap().to_string()),
+          ..Default::default()
+        }))
       }
       Err(oxc_resolver::ResolveError::NotFound(id)) => {
         // if import can't be found, check if it's an optional peer dep.
@@ -374,10 +386,7 @@ impl Resolver {
     }
   }
 
-  fn get_nearest_package_json_optional_peer_deps(
-    &self,
-    p: &str,
-  ) -> Option<Arc<PackageJsonWithOptionalPeerDependencies>> {
+  pub fn get_nearest_package_json(&self, p: &str) -> Option<Arc<PackageJson>> {
     let specifier = Path::new(p).absolutize();
     let Ok(result) = self.inner.resolve(
       /* actually this can be anything, as the specifier is absolute path */ &self.root,
@@ -387,9 +396,15 @@ impl Resolver {
       return None;
     };
 
-    result
-      .package_json()
-      .map(|pj| self.package_json_cache.cached_package_json_optional_peer_dep(pj))
+    result.package_json().map(Arc::clone)
+  }
+
+  fn get_nearest_package_json_optional_peer_deps(
+    &self,
+    p: &str,
+  ) -> Option<Arc<PackageJsonWithOptionalPeerDependencies>> {
+    let pj = self.get_nearest_package_json(p)?;
+    Some(self.package_json_cache.cached_package_json_optional_peer_dep(&pj))
   }
 
   pub fn resolve_bare_import(
@@ -412,7 +427,7 @@ impl Resolver {
       let mut resolved_id = id;
       if is_deep_import(id) && get_extension(id) != get_extension(&resolved.id) {
         if let Some(pkg_json) = oxc_resolved_result.unwrap().package_json() {
-          let has_exports_field = pkg_json.raw_json().as_object().unwrap().get("exports").is_some();
+          let has_exports_field = pkg_json.exports().is_some();
           if !has_exports_field {
             // id date-fns/locale
             // resolve.id ...date-fns/esm/locale/index.js

@@ -29,6 +29,7 @@ assert.strictEqual(shared_default, shared_default);
 
 //#endregion
 ```
+
 ## main.js
 
 ```js

@@ -1,19 +1,20 @@
 {
   "name": "react-hmr",
   "version": "0.0.0",
+  "type": "module",
   "private": true,
   "scripts": {
     "dev": "serve",
     "dev:new": "USE_NEW_DEV_SERVER=1 serve"
   },
   "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
     "@rolldown/test-dev-server": "workspace:*",
-    "@types/react": "^19.0.8",
-    "@types/react-dom": "^19.0.3",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "rolldown": "workspace:*"
   }
 }

@@ -21,13 +21,12 @@ var Example = class Example {
 
 //#endregion
 ```
----
 
-Variant: [top_level_var: true]
+# Variant: [top_level_var: true]
 
-# Assets
+## Assets
 
-## main.js
+### main.js
 
 ```js
 import assert from "node:assert";

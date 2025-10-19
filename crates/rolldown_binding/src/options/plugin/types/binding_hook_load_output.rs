@@ -3,6 +3,9 @@ use rolldown::ModuleType;
 use super::binding_hook_side_effects::BindingHookSideEffects;
 use crate::types::binding_sourcemap::BindingSourcemap;
 
+// This struct is used to both pass to JS and receive from JS:
+// - Pass to JS: `From<HookLoadOutput>` impl in binding_callable_builtin_plugin.rs:218
+// - Receive from JS: `TryFrom` impl (line 17) when JS plugins return load results
 #[napi_derive::napi(object)]
 #[derive(Default, Debug)]
 pub struct BindingHookLoadOutput {

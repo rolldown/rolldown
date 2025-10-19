@@ -43,6 +43,7 @@ assert.strictEqual(a.b.c, "c");
 
 //#endregion
 ```
+
 # HMR Step 0
 
 ## Code
@@ -68,9 +69,11 @@ var init_c_0 = __rolldown_runtime__.createEsmInitializer((function() {
 init_c_0()
 __rolldown_runtime__.applyUpdates([['c.js', 'c.js']]);
 ```
+
 ## Meta
 
 - update type: patch
+
 ### Hmr Boundaries
 
 - boundary: c.js, accepted_via: c.js

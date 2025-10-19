@@ -10,13 +10,12 @@ import { "\n\"\\'" as test } from "external";
 
 export { test as "\n\"\\'" };
 ```
----
 
-Variant: [format: Cjs]
+# Variant: [format: Cjs]
 
-# Assets
+## Assets
 
-## main.js
+### main.js
 
 ```js
 // HIDDEN [rolldown:runtime]

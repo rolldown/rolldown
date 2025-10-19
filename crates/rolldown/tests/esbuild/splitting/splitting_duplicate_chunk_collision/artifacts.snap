@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import "./ab.js";
 
 ```
+
 ## ab.js
 
 ```js
@@ -17,18 +18,21 @@ console.log(123);
 
 //#endregion
 ```
+
 ## b.js
 
 ```js
 import "./ab.js";
 
 ```
+
 ## c.js
 
 ```js
 import "./cd.js";
 
 ```
+
 ## cd.js
 
 ```js
@@ -37,6 +41,7 @@ console.log(123);
 
 //#endregion
 ```
+
 ## d.js
 
 ```js

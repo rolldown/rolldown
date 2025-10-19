@@ -21,6 +21,7 @@ Object.defineProperty(exports, '__toESM', {
   }
 });
 ```
+
 ## main.js
 
 ```js
@@ -37,6 +38,7 @@ var import_cjs_dep = /* @__PURE__ */ require_chunk.__toESM(require_cjs_dep());
 
 //#endregion
 ```
+
 ## main2.js
 
 ```js

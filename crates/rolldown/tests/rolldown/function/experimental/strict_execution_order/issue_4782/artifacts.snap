@@ -31,13 +31,12 @@ var init_main = __esm({ "main.js": (() => {
 //#endregion
 init_main();
 ```
----
 
-Variant: [on_demand_wrapping: true]
+# Variant: [on_demand_wrapping: true]
 
-# Assets
+## Assets
 
-## main.js
+### main.js
 
 ```js
 // HIDDEN [rolldown:runtime]

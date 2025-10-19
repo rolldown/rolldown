@@ -21,7 +21,6 @@ pub struct CreateEcmaViewReturn {
   pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
 }
 
-#[expect(clippy::too_many_lines)]
 pub async fn create_ecma_view(
   ctx: &mut CreateModuleContext<'_>,
   args: CreateModuleViewArgs,
@@ -136,6 +135,7 @@ pub async fn create_ecma_view(
     constant_export_map,
     depended_runtime_helper: Box::default(),
     import_attribute_map,
+    json_module_none_self_reference_included_symbol: None,
   };
 
   let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage };
@@ -214,7 +214,8 @@ pub fn lazy_check_side_effects(
     .and_then(|p| {
       // the glob expr is based on parent path of package.json, which is package path
       // so we should use the relative path of the module to package path
-      let module_path_relative_to_package = resolved_id.id.as_path().relative(p.realpath.parent()?);
+      let module_path_relative_to_package =
+        resolved_id.id.as_path().relative(p.realpath().parent()?);
       p.check_side_effects_for(&module_path_relative_to_package.to_string_lossy())
         .map(DeterminedSideEffects::UserDefined)
     })

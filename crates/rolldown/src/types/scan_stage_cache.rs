@@ -2,11 +2,14 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{GetLocalDbMut, ImporterRecord, ModuleIdx};
+use rolldown_error::BuildResult;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
+use sugar_path::SugarPath;
 
 use crate::{
-  module_loader::module_loader::VisitState,
+  SharedOptions, SharedResolver,
+  module_loader::{deferred_scan_data::defer_sync_scan_data, module_loader::VisitState},
   stages::scan_stage::{NormalizedScanStageOutput, ScanStageOutput},
 };
 
@@ -16,11 +19,16 @@ pub struct ScanStageCache {
   pub module_id_to_idx: FxHashMap<ArcStr, VisitState>,
   pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
   pub user_defined_entry: FxHashSet<ArcStr>,
+  // Usage: Map file path emitted by watcher to corresponding module index
+  pub module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
+  // Usage: Map module stable id injected to client code to corresponding module index
+  pub module_idx_by_stable_id: FxHashMap<String, ModuleIdx>,
 }
 
 impl ScanStageCache {
   #[inline]
   pub fn set_snapshot(&mut self, cache: NormalizedScanStageOutput) {
+    self.build_module_index_maps(&cache);
     self.snapshot = Some(cache);
   }
 
@@ -30,16 +38,36 @@ impl ScanStageCache {
     self.snapshot.as_mut().unwrap()
   }
 
+  /// Useful when workarounding rustc borrow rules
+  pub fn take_snapshot(&mut self) -> Option<NormalizedScanStageOutput> {
+    self.snapshot.take()
+  }
+
+  pub async fn update_defer_sync_data(
+    &mut self,
+    options: &SharedOptions,
+    resolver: &SharedResolver,
+  ) -> BuildResult<()> {
+    let snapshot = self.take_snapshot();
+    if let Some(mut snapshot) = snapshot {
+      defer_sync_scan_data(options, &self.module_id_to_idx, resolver, &mut snapshot).await?;
+      self.set_snapshot(snapshot);
+    }
+    Ok(())
+  }
+
   /// # Panic
   /// - if the snapshot is unset
   pub fn get_snapshot(&self) -> &NormalizedScanStageOutput {
     self.snapshot.as_ref().unwrap()
   }
 
-  pub fn merge(&mut self, mut scan_stage_output: ScanStageOutput) {
+  pub fn merge(&mut self, mut scan_stage_output: ScanStageOutput) -> BuildResult<()> {
     let Some(ref mut cache) = self.snapshot else {
-      self.snapshot = Some(scan_stage_output.into());
-      return;
+      self.snapshot = Some(
+        scan_stage_output.try_into().map_err(|e: &'static str| vec![anyhow::anyhow!(e).into()])?,
+      );
+      return Ok(());
     };
     let modules = match scan_stage_output.module_table {
       rolldown_common::HybridIndexVec::IndexVec(_index_vec) => {
@@ -67,6 +95,15 @@ impl ScanStageCache {
     // merge module_table, index_ast_scope, index_ecma_ast
     for (new_idx, new_module) in modules {
       let idx = self.module_id_to_idx[new_module.id_clone()].idx();
+
+      // Update `module_idx_by_abs_path`
+      if let rolldown_common::Module::Normal(normal_module) = &new_module {
+        self
+          .module_idx_by_abs_path
+          .insert(normal_module.id.resource_id().to_slash().unwrap().into(), normal_module.idx);
+      }
+      // Update `module_idx_by_stable_id`
+      self.module_idx_by_stable_id.insert(new_module.stable_id().to_string(), new_module.idx());
 
       if new_idx.index() >= cache.module_table.modules.len() {
         let new_module_idx = ModuleIdx::from_usize(cache.module_table.modules.len());
@@ -106,6 +143,21 @@ impl ScanStageCache {
       } else {
         cache.entry_points.push(entry_point);
       }
+    }
+    Ok(())
+  }
+
+  fn build_module_index_maps(&mut self, build_snapshot: &NormalizedScanStageOutput) {
+    self.module_idx_by_abs_path.clear();
+    self.module_idx_by_stable_id.clear();
+
+    for module in &build_snapshot.module_table.modules {
+      if let rolldown_common::Module::Normal(normal_module) = module {
+        let filename = normal_module.id.resource_id().to_slash().unwrap().into();
+        let module_idx = normal_module.idx;
+        self.module_idx_by_abs_path.insert(filename, module_idx);
+      }
+      self.module_idx_by_stable_id.insert(module.stable_id().to_string(), module.idx());
     }
   }
 

@@ -1,0 +1,97 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+// HIDDEN [rolldown:hmr]
+//#region hmr.js
+var hmr_exports = /* @__PURE__ */ __export({ foo: () => foo });
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
+__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+const foo = "hello";
+text$1(".hmr", foo);
+function text$1(el, text$2) {
+	console.log(el, text$2);
+}
+hmr_hot.accept((mod) => {
+	if (mod) {
+		console.log(".hmr", mod.foo);
+	}
+});
+
+//#endregion
+//#region sub.js
+var sub_exports = {};
+const sub_hot = __rolldown_runtime__.createModuleHotContext("sub.js");
+__rolldown_runtime__.registerModule("sub.js", { exports: sub_exports });
+text(".app", "hello");
+function text(el, text$2) {
+	console.log(el, text$2);
+}
+
+//#endregion
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+
+//#endregion
+```
+
+# HMR Step 0
+
+## Errors
+
+### PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Unterminated string
+   ╭─[ hmr.js:1:20 ]
+   │
+ 1 │ export const foo = 'hello
+   │                    ───┬───  
+   │                       ╰───── 
+───╯
+
+```
+
+# HMR Step 1
+
+## Code
+
+```js
+//#region hmr.js
+var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = __rolldown_runtime__.__export({ foo: () => foo });
+		__rolldown_runtime__.registerModule("hmr.js", { exports: __rolldown_exports__ });
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
+		const foo = "hello";
+		text(".hmr", foo);
+		function text(el, text) {
+			console.log(el, text);
+		}
+		hot_hmr.accept((mod) => {
+			if (mod) {
+				console.log(".hmr", mod.foo);
+			}
+		});
+	} finally {}
+}));
+
+//#endregion
+init_hmr_0()
+__rolldown_runtime__.applyUpdates([['hmr.js', 'hmr.js']]);
+```
+
+## Meta
+
+- update type: patch
+
+### Hmr Boundaries
+
+- boundary: hmr.js, accepted_via: hmr.js

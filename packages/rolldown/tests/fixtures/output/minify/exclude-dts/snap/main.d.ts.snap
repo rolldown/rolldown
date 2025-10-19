@@ -1,3 +1,3 @@
-import { hello } from "./main-CiI4PTwY.js";
+import { t as hello } from "./main-CVjRSRz3.js";
 
 export { hello };

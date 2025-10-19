@@ -12,6 +12,7 @@ var dep1_default = () => import("./dep2.js");
 //#endregion
 export { dep1_default as default };
 ```
+
 ## dep2.js
 
 ```js
@@ -21,6 +22,7 @@ var dep2_default = "dep2";
 //#endregion
 export { dep2_default as default };
 ```
+
 ## main.js
 
 ```js

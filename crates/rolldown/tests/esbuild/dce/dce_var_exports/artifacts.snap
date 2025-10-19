@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { __commonJS } from "./chunk.js";
+import { t as __commonJS } from "./chunk.js";
 
 //#region a.js
 var require_a = /* @__PURE__ */ __commonJS({ "a.js": ((exports, module) => {
@@ -18,10 +18,11 @@ var require_a = /* @__PURE__ */ __commonJS({ "a.js": ((exports, module) => {
 export default require_a();
 
 ```
+
 ## b.js
 
 ```js
-import { __commonJS } from "./chunk.js";
+import { t as __commonJS } from "./chunk.js";
 
 //#region b.js
 var require_b = /* @__PURE__ */ __commonJS({ "b.js": ((exports, module) => {
@@ -33,10 +34,11 @@ var require_b = /* @__PURE__ */ __commonJS({ "b.js": ((exports, module) => {
 export default require_b();
 
 ```
+
 ## c.js
 
 ```js
-import { __commonJS } from "./chunk.js";
+import { t as __commonJS } from "./chunk.js";
 
 //#region c.js
 var require_c = /* @__PURE__ */ __commonJS({ "c.js": ((exports) => {
@@ -48,9 +50,10 @@ var require_c = /* @__PURE__ */ __commonJS({ "c.js": ((exports) => {
 export default require_c();
 
 ```
+
 ## chunk.js
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __commonJS };
+export { __commonJS as t };
 ```

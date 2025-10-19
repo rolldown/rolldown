@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import "./after-preload-dynamic2.js";
 
 ```
+
 ## after-preload-dynamic2.js
 
 ```js
@@ -18,6 +19,7 @@ console.log("after preload dynamic");
 
 //#endregion
 ```
+
 ## dynamic-foo.js
 
 ```js
@@ -26,6 +28,7 @@ console.log("dynamic-foo");
 
 //#endregion
 ```
+
 ## entry.js
 
 ```js

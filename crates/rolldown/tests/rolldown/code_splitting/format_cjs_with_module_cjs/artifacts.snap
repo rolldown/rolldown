@@ -16,6 +16,7 @@ node_assert.default.equal((0, import_share.share)(), 1);
 
 //#endregion
 ```
+
 ## main2.js
 
 ```js
@@ -29,6 +30,7 @@ node_assert.default.equal((0, import_share.share)(), 1);
 
 //#endregion
 ```
+
 ## share.js
 
 ```js

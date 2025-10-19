@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 #[derive(Debug, Copy, Clone)]
 /// represent the side-effects of module is derived from `side effect hook`, package.json or analyzed from source file
 pub enum DeterminedSideEffects {
@@ -27,19 +29,13 @@ pub enum SideEffects {
 }
 
 impl SideEffects {
-  pub fn from_json_value(value: &serde_json::Value) -> Option<Self> {
+  pub fn from_resolver(value: &oxc_resolver::SideEffects) -> Option<Self> {
     match value {
-      serde_json::Value::Bool(v) => Some(SideEffects::Bool(*v)),
-      serde_json::Value::String(v) => Some(SideEffects::String(v.to_string())),
-      serde_json::Value::Array(v) => {
-        let mut side_effects = vec![];
-        for value in v {
-          let str = value.as_str()?;
-          side_effects.push(str.to_string());
-        }
-        Some(SideEffects::Array(side_effects))
+      oxc_resolver::SideEffects::Bool(v) => Some(SideEffects::Bool(*v)),
+      oxc_resolver::SideEffects::String(v) => Some(SideEffects::String((*v).to_string())),
+      oxc_resolver::SideEffects::Array(v) => {
+        Some(SideEffects::Array(v.iter().map(ToString::to_string).collect_vec()))
       }
-      _ => None,
     }
   }
 }

@@ -139,7 +139,7 @@ pub async fn resolve_dependencies(
                 },
                 format!("Matched alias not found for '{specifier}'"),
                     EventKind::ResolveError,
-                Some("May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/reference/config-options#resolve-alias for more details".to_string()),
+                Some("May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/apis/config-options#resolve-alias for more details".to_string()),
               ));
           }
           e => {

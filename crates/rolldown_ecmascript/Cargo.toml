@@ -2,6 +2,7 @@
 name = "rolldown_ecmascript"
 version = "0.1.0"
 publish = true
+description = "ECMAScript AST and parsing utilities for Rolldown"
 
 edition.workspace = true
 homepage.workspace = true

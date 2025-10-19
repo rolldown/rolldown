@@ -1,14 +1,15 @@
 pub mod binding_advanced_chunks_options;
+mod binding_generated_code_options;
 mod binding_pre_rendered_asset;
 mod binding_pre_rendered_chunk;
 use binding_pre_rendered_asset::BindingPreRenderedAsset;
 use derive_more::Debug;
 use napi::Either;
 use napi::bindgen_prelude::{Either3, FnArgs};
-use napi_derive::napi;
 use rustc_hash::FxHashMap;
 
 use binding_advanced_chunks_options::BindingAdvancedChunksOptions;
+pub use binding_generated_code_options::BindingGeneratedCodeOptions;
 use binding_pre_rendered_chunk::PreRenderedChunk;
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
@@ -25,11 +26,13 @@ pub type AssetFileNamesOutputOption =
   Either<String, JsCallback<FnArgs<(BindingPreRenderedAsset,)>, String>>;
 pub type GlobalsOutputOption =
   Either<FxHashMap<String, String>, JsCallback<FnArgs<(String,)>, String>>;
+pub type PathsOutputOption =
+  Either<FxHashMap<String, String>, JsCallback<FnArgs<(String,)>, String>>;
 pub type SanitizeFileName = Either<bool, JsCallback<FnArgs<(String,)>, String>>;
 pub type SourcemapIgnoreListOutputOption =
   Either3<bool, BindingStringOrRegex, JsCallback<FnArgs<(String, String)>, bool>>;
 
-#[napi(object, object_to_js = false)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug)]
 pub struct BindingOutputOptions<'env> {
   // --- Options Rolldown doesn't need to be supported
@@ -74,7 +77,8 @@ pub struct BindingOutputOptions<'env> {
   #[napi(ts_type = "'es' | 'cjs' | 'iife' | 'umd'")]
   pub format: Option<String>,
   // freeze: boolean;
-  // generatedCode: NormalizedGeneratedCodeOptions;
+  #[napi(ts_type = "BindingGeneratedCodeOptions")]
+  pub generated_code: Option<BindingGeneratedCodeOptions>,
   #[debug(skip)]
   #[napi(ts_type = "Record<string, string> | ((name: string) => string)")]
   pub globals: Option<GlobalsOutputOption>,
@@ -94,7 +98,9 @@ pub struct BindingOutputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "(chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>")]
   pub outro: Option<AddonOutputOption>,
-  // paths: OptionsPaths;
+  #[debug(skip)]
+  #[napi(ts_type = "Record<string, string> | ((id: string) => string)")]
+  pub paths: Option<PathsOutputOption>,
   #[napi(ts_type = "(BindingBuiltinPlugin | BindingPluginOptions | undefined)[]")]
   pub plugins: Vec<BindingPluginOrParallelJsPluginPlaceholder<'env>>,
   // preferConst: boolean;
@@ -129,4 +135,5 @@ pub struct BindingOutputOptions<'env> {
   pub preserve_modules_root: Option<String>,
   pub top_level_var: Option<bool>,
   pub minify_internal_exports: Option<bool>,
+  pub clean_dir: Option<bool>,
 }

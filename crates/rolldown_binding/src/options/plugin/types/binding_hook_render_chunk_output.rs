@@ -1,6 +1,6 @@
 use crate::types::binding_sourcemap::BindingSourcemap;
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Default, Debug)]
 pub struct BindingHookRenderChunkOutput {
   pub code: String,

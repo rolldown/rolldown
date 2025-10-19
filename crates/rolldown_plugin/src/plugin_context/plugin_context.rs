@@ -5,7 +5,9 @@ use std::{
 
 use arcstr::ArcStr;
 use derive_more::Debug;
-use rolldown_common::{LogWithoutPlugin, ResolvedId, side_effects::HookSideEffects};
+use rolldown_common::{
+  LogWithoutPlugin, ModuleDefFormat, ResolvedId, side_effects::HookSideEffects,
+};
 
 use crate::{
   PluginContextResolveOptions, plugin_context::PluginContextMeta,
@@ -67,8 +69,9 @@ impl PluginContext {
     &self,
     specifier: &str,
     side_effects: Option<HookSideEffects>,
+    module_def_format: ModuleDefFormat,
   ) -> anyhow::Result<()> {
-    call_native_only!(self, "load", ctx => ctx.load(specifier, side_effects).await)
+    call_native_only!(self, "load", ctx => ctx.load(specifier, side_effects, module_def_format).await)
   }
 
   pub async fn resolve(
@@ -108,7 +111,7 @@ impl PluginContext {
     call_native_only!(self, "get_module_info", ctx => ctx.get_module_info(module_id))
   }
 
-  pub fn get_module_ids(&self) -> Vec<String> {
+  pub fn get_module_ids(&self) -> Vec<ArcStr> {
     call_native_only!(self, "get_module_ids", ctx => ctx.get_module_ids())
   }
 
@@ -116,6 +119,9 @@ impl PluginContext {
     call_native_only!(self, "cwd", ctx => ctx.cwd())
   }
 
+  /// Add a file as a dependency.
+  ///
+  /// * file - The file to add as a watch dependency. This should be a normalized absolute path.
   pub fn add_watch_file(&self, file: &str) {
     call_native_only!(self, "add_watch_file", ctx => ctx.add_watch_file(file));
   }

@@ -10,9 +10,9 @@
   },
   "devDependencies": {
     "rolldown": "workspace:*",
-    "@babel/core": "^7.24.4",
-    "@babel/preset-env": "^7.24.4",
-    "@babel/preset-typescript": "^7.24.1"
+    "@babel/core": "catalog:",
+    "@babel/preset-env": "catalog:",
+    "@babel/preset-typescript": "catalog:"
   },
   "dependencies": {}
 }

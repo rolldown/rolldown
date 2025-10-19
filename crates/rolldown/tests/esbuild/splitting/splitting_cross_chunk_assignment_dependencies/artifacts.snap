@@ -6,19 +6,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { setValue } from "./shared.js";
+import { t as setValue } from "./shared.js";
 
 //#region a.js
 setValue(123);
 
 //#endregion
 ```
+
 ## b.js
 
 ```js
 import "./shared.js";
 
 ```
+
 ## shared.js
 
 ```js
@@ -35,5 +37,5 @@ function setValue(next) {
 sideEffects(getValue);
 
 //#endregion
-export { setValue };
+export { setValue as t };
 ```

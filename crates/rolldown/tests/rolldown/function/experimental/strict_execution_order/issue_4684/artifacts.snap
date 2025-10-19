@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-import { __esm, init_read, read } from "./read.js";
+import { n as read, r as __esm, t as init_read } from "./read.js";
 
 //#region dynamic.js
 var init_dynamic = __esm({ "dynamic.js": (() => {
@@ -17,10 +17,11 @@ var init_dynamic = __esm({ "dynamic.js": (() => {
 //#endregion
 init_dynamic();
 ```
+
 ## main.js
 
 ```js
-import { __esm, init_read, read } from "./read.js";
+import { n as read, r as __esm, t as init_read } from "./read.js";
 import nodeAssert from "node:assert";
 
 //#region setup.js
@@ -46,6 +47,7 @@ var init_main = __esm({ "main.js": (() => {
 //#endregion
 init_main();
 ```
+
 ## read.js
 
 ```js
@@ -60,5 +62,5 @@ var init_read = __esm({ "read.js": (() => {
 }) });
 
 //#endregion
-export { __esm, init_read, read };
+export { read as n, __esm as r, init_read as t };
 ```

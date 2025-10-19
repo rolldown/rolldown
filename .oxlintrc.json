@@ -1,6 +1,12 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["import", "jsdoc", "unicorn", "typescript", "oxc"],
+  "plugins": [
+    "import",
+    "jsdoc",
+    "unicorn",
+    "typescript",
+    "oxc"
+  ],
   "ignorePatterns": [
     "crates/**",
     "packages/rollup-tests/**",
@@ -12,27 +18,44 @@
     "rollup/**"
   ],
   "rules": {
-    "no-unused-vars": [
-      "warn",
-      { "varsIgnorePattern": "^_", "argsIgnorePattern": "^_" }
-    ],
-    "unicorn/prefer-node-protocol": "error",
+    "import/named": "error",
     "import/namespace": [
       "error",
       {
         "allowComputed": true
       }
     ],
-    "import/named": "error"
+    "no-unused-expressions": [
+      "warn",
+      {
+        "allowShortCircuit": true,
+        "allowTaggedTemplates": true
+      }
+    ],
+    "no-unused-vars": [
+      "warn",
+      {
+        "varsIgnorePattern": "^_",
+        "argsIgnorePattern": "^_"
+      }
+    ],
+    "unicorn/prefer-node-protocol": "error"
   },
   "overrides": [
     {
-      "files": ["**/packages/rolldown/src/**"],
+      "files": [
+        "**/packages/rolldown/src/**"
+      ],
       "rules": {
         "no-console": [
           "warn",
           {
-            "allow": ["warn", "error", "debug", "info"]
+            "allow": [
+              "warn",
+              "error",
+              "debug",
+              "info"
+            ]
           }
         ]
       }

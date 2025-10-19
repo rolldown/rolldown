@@ -15,6 +15,7 @@ pub struct BindingExperimentalOptions {
   pub incremental_build: Option<bool>,
   #[napi(ts_type = "boolean | 'boundary'")]
   pub transform_hires_sourcemap: Option<Either<bool, String>>,
+  pub native_magic_string: Option<bool>,
 }
 
 impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
@@ -52,11 +53,12 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
       } else {
         None
       },
+      native_magic_string: value.native_magic_string,
     })
   }
 }
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingExperimentalHmrOptions {
   pub host: Option<String>,
@@ -104,7 +106,7 @@ impl From<BindingChunkModuleOrderBy> for rolldown_common::ChunkModulesOrderBy {
   }
 }
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingChunkImportMap {
   pub base_url: Option<String>,

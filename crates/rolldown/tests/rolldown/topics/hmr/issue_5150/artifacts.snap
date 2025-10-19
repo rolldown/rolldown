@@ -62,6 +62,7 @@ setInterval(sayMessage, 1e3);
 
 //#endregion
 ```
+
 # HMR Step 0
 
 ## Code
@@ -142,9 +143,11 @@ var init_messenger_3 = __rolldown_runtime__.createEsmInitializer((function() {
 init_messenger_3()
 __rolldown_runtime__.applyUpdates([['messenger.js', 'messenger.js']]);
 ```
+
 ## Meta
 
 - update type: patch
+
 ### Hmr Boundaries
 
 - boundary: messenger.js, accepted_via: messenger.js

@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use napi::{Unknown, bindgen_prelude::FromNapiValue};
-use napi_derive::napi;
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_alias::AliasPlugin;
 use rolldown_plugin_asset::AssetPlugin;
@@ -19,6 +18,9 @@ use rolldown_plugin_react_refresh_wrapper::ReactRefreshWrapperPlugin;
 use rolldown_plugin_replace::ReplacePlugin;
 use rolldown_plugin_reporter::ReporterPlugin;
 use rolldown_plugin_transform::TransformPlugin;
+use rolldown_plugin_vite_css::ViteCSSPlugin;
+use rolldown_plugin_vite_css_post::ViteCSSPostPlugin;
+use rolldown_plugin_vite_html::ViteHtmlPlugin;
 use rolldown_plugin_vite_resolve::ViteResolvePlugin;
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
@@ -26,7 +28,8 @@ use rolldown_plugin_web_worker_post::WebWorkerPostPlugin;
 
 use crate::options::plugin::config::{
   BindingEsmExternalRequirePluginConfig, BindingModulePreloadPolyfillPluginConfig,
-  BindingReactRefreshWrapperPluginConfig, BindingWasmHelperPluginConfig,
+  BindingReactRefreshWrapperPluginConfig, BindingViteCSSPluginConfig,
+  BindingViteCSSPostPluginConfig, BindingViteHtmlPluginConfig, BindingWasmHelperPluginConfig,
 };
 
 use super::{
@@ -41,7 +44,7 @@ use super::{
 };
 
 #[expect(clippy::pub_underscore_fields)]
-#[napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingBuiltinPlugin<'a> {
   #[napi(js_name = "__name")]
   pub __name: BindingBuiltinPluginName,
@@ -60,7 +63,6 @@ impl std::fmt::Debug for BindingBuiltinPlugin<'_> {
 impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
   type Error = napi::Error;
 
-  #[expect(clippy::too_many_lines)]
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
       BindingBuiltinPluginName::Alias => {
@@ -96,6 +98,14 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           BindingDynamicImportVarsPluginConfig::from_unknown(options)?.into()
         } else {
           DynamicImportVarsPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::EsmExternalRequire => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingEsmExternalRequirePluginConfig::from_unknown(options)?.into()
+        } else {
+          EsmExternalRequirePlugin::default()
         };
         Arc::new(plugin)
       }
@@ -173,19 +183,41 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         };
         Arc::new(ReplacePlugin::with_options(config.into()))
       }
-      BindingBuiltinPluginName::RequireToImport => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingEsmExternalRequirePluginConfig::from_unknown(options)?.into()
-        } else {
-          EsmExternalRequirePlugin::default()
-        };
-        Arc::new(plugin)
-      }
       BindingBuiltinPluginName::Transform => {
         let plugin = if let Some(options) = plugin.options {
           BindingTransformPluginConfig::from_unknown(options)?.into()
         } else {
           TransformPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteCSS => {
+        let plugin: ViteCSSPlugin = if let Some(options) = plugin.options {
+          BindingViteCSSPluginConfig::from_unknown(options)?.into()
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteCSSPlugin",
+          ));
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteCSSPost => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingViteCSSPostPluginConfig::from_unknown(options)?.into()
+        } else {
+          ViteCSSPostPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteHtml => {
+        let plugin: ViteHtmlPlugin = if let Some(options) = plugin.options {
+          BindingViteHtmlPluginConfig::from_unknown(options)?.into()
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteHtmlPlugin",
+          ));
         };
         Arc::new(plugin)
       }

@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use oxc::semantic::{ScopeId, Scoping, SymbolId};
 use oxc::span::CompactStr;
-use oxc_index::{Idx, IndexVec};
+use oxc_index::IndexVec;
 use rolldown_std_utils::OptionExt;
 use rustc_hash::FxHashMap;
 

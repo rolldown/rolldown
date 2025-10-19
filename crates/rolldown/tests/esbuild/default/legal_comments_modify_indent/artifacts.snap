@@ -16,6 +16,7 @@ var entry_default = () => {
 //#endregion
 export { entry_default as default };
 ```
+
 ## entry2.css
 
 ```css
@@ -27,6 +28,7 @@ export { entry_default as default };
 }
 
 ```
+
 ## entry2.js
 
 ```js

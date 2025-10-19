@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```png
 x
 ```
+
 ## common-DfJE1WzA.css
 
 ```css
@@ -16,6 +17,7 @@ div {
 }
 
 ```
+
 ## common.js
 
 ```js
@@ -24,24 +26,28 @@ var common_default = "assets/common-CHxUrMdU.png";
 
 //#endregion
 ```
+
 ## entries_entry.css
 
 ```css
 
 
 ```
+
 ## entries_entry.js
 
 ```js
 import "./common.js";
 
 ```
+
 ## entries_other_entry.css
 
 ```css
 
 
 ```
+
 ## entries_other_entry.js
 
 ```js

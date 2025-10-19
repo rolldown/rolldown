@@ -9,6 +9,6 @@
     "rolldown": "workspace:*"
   },
   "dependencies": {
-    "vue": "^3.4.21"
+    "vue": "catalog:"
   }
 }

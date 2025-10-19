@@ -1,6 +1,7 @@
 import type { InputOptions, OutputOptions } from '..';
 import type {
   BindingHookResolveIdExtraArgs,
+  BindingMagicString,
   BindingTransformHookExtraArgs,
 } from '../binding';
 import type { BuiltinPlugin } from '../builtin-plugin/utils';
@@ -87,7 +88,10 @@ export type ResolveIdResult = string | NullValue | false | PartialResolvedId;
 
 export type LoadResult = NullValue | string | SourceDescription;
 
-export type TransformResult = NullValue | string | Partial<SourceDescription>;
+export type TransformResult =
+  | NullValue
+  | string
+  | Omit<SourceDescription, 'code'> & { code?: string | BindingMagicString };
 
 export type RenderedChunkMeta = { chunks: Record<string, RenderedChunk> };
 
@@ -142,7 +146,10 @@ export interface FunctionPluginHooks {
     this: TransformPluginContext,
     code: string,
     id: string,
-    meta: BindingTransformHookExtraArgs & { moduleType: ModuleType },
+    meta: BindingTransformHookExtraArgs & {
+      moduleType: ModuleType;
+      magicString?: BindingMagicString;
+    },
   ) => TransformResult;
 
   [DEFINED_HOOK_NAMES.moduleParsed]: (

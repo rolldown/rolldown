@@ -10,7 +10,7 @@ use rolldown::ModuleType;
 use rolldown_common::WatcherChangeKind;
 use rolldown_plugin::{
   CustomField, HookLoadArgs, HookLoadOutput, HookResolveIdArgs, HookResolveIdOutput,
-  HookTransformArgs, Pluginable, SharedTransformPluginContext, TransformPluginContext,
+  HookTransformArgs, PluginIdx, Pluginable, SharedTransformPluginContext, TransformPluginContext,
 };
 use rolldown_plugin_vite_resolve::ResolveIdOptionsScan;
 use rolldown_utils::unique_arc::UniqueArc;
@@ -47,6 +47,8 @@ impl BindingCallableBuiltinPlugin {
         ArcStr::default(),
         ArcStr::default(),
         rolldown_common::ModuleIdx::new(0),
+        PluginIdx::new(0),
+        None,
       )),
     })
   }
@@ -163,7 +165,7 @@ impl BindingCallableBuiltinPlugin {
 }
 
 #[derive(Debug)]
-#[napi(object, object_to_js = false)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingHookJsResolveIdOptions {
   pub is_entry: Option<bool>,
   pub scan: Option<bool>,
@@ -186,7 +188,7 @@ impl From<BindingHookJsResolveIdOptions> for Arc<CustomField> {
   }
 }
 
-#[napi(object)]
+#[napi_derive::napi(object, object_from_js = false)]
 pub struct BindingHookJsResolveIdOutput {
   pub id: String,
   #[napi(ts_type = "boolean | 'absolute' | 'relative'")]
@@ -205,7 +207,7 @@ impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
   }
 }
 
-#[napi(object)]
+#[napi_derive::napi(object, object_from_js = false)]
 pub struct BindingHookJsLoadOutput {
   pub code: String,
   pub map: Option<String>,
@@ -223,7 +225,7 @@ impl From<HookLoadOutput> for BindingHookJsLoadOutput {
   }
 }
 
-#[napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingJsWatchChangeEvent {
   pub event: String,
 }

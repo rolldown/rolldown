@@ -25,12 +25,16 @@ impl FilenameTemplate {
   pub fn render(
     self,
     name: Option<&str>,
+    format: Option<&str>,
     extension: Option<&str>,
     hash_replacer: Option<impl Replacer>,
   ) -> String {
     let mut tmp = self.template;
     if let Some(name) = name {
       tmp = tmp.replace_all("[name]", name);
+    }
+    if let Some(format) = format {
+      tmp = tmp.replace_all("[format]", format);
     }
     if let Some(hash_replacer) = hash_replacer {
       tmp = tmp.replace_all_with_len("[hash]", hash_replacer);
@@ -64,7 +68,7 @@ fn hash_with_len() {
   let mut hash_iter = ["abc", "def"].iter();
   let hash_replacer = filename_template.has_hash_pattern().then_some(|_| hash_iter.next().unwrap());
 
-  let filename = filename_template.render(Some("hello"), None, hash_replacer);
+  let filename = filename_template.render(Some("hello"), None, None, hash_replacer);
 
   assert_eq!(filename, "hello-abc-def.js");
 }

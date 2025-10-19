@@ -13,6 +13,7 @@ global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
 
 //#endregion
 ```
+
 ## entry2.js
 
 ```js
@@ -23,6 +24,7 @@ global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
 
 //#endregion
 ```
+
 ## run-dep.js
 
 ```js

@@ -6,6 +6,7 @@ homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
+description = "Rolldown plugin for string replacement"
 
 [lints]
 workspace = true
@@ -23,5 +24,5 @@ string_wizard = { workspace = true }
 
 [dev-dependencies]
 rolldown = { workspace = true }
-rolldown_testing = { workspace = true }
+rolldown_testing = { path = '../rolldown_testing' }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }

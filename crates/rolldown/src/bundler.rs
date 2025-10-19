@@ -2,18 +2,20 @@ use super::stages::{link_stage::LinkStage, scan_stage::NormalizedScanStageOutput
 use crate::{
   BundlerOptions, SharedOptions, SharedResolver,
   bundler_builder::BundlerBuilder,
-  hmr::hmr_manager::{HmrManager, HmrManagerInput},
+  hmr::hmr_stage::{HmrStage, HmrStageInput},
+  module_loader::deferred_scan_data::defer_sync_scan_data,
   stages::{
     generate_stage::GenerateStage,
     scan_stage::{ScanStage, ScanStageOutput},
   },
   types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
+  utils::fs_utils::clean_dir,
 };
 use anyhow::Result;
-
 use arcstr::ArcStr;
 use rolldown_common::{
-  GetLocalDbMut, Module, NormalizedBundlerOptions, ScanMode, SharedFileEmitter, SymbolRefDb,
+  ClientHmrInput, ClientHmrUpdate, GetLocalDbMut, HmrUpdate, Module, ScanMode, SharedFileEmitter,
+  SymbolRefDb,
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
@@ -22,6 +24,7 @@ use rolldown_plugin::{
   __inner::SharedPluginable, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver,
 };
 use rolldown_utils::dashmap::FxDashSet;
+use rustc_hash::FxHashSet;
 use std::{
   any::Any,
   sync::{Arc, atomic::AtomicU32},
@@ -43,6 +46,8 @@ pub struct Bundler {
 }
 
 impl Bundler {
+  // --- Public API ---
+
   pub fn new(options: BundlerOptions) -> BuildResult<Self> {
     BundlerBuilder::default().with_options(options).build()
   }
@@ -53,11 +58,10 @@ impl Bundler {
   ) -> BuildResult<Self> {
     BundlerBuilder::default().with_options(options).with_plugins(plugins).build()
   }
-}
 
-impl Bundler {
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
+    self.create_error_if_closed()?;
     let build_count = self.build_count;
     async {
       self.trace_action_session_meta();
@@ -77,6 +81,7 @@ impl Bundler {
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
+    self.create_error_if_closed()?;
     let build_count = self.build_count;
     async {
       self.trace_action_session_meta();
@@ -99,20 +104,7 @@ impl Bundler {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn close(&mut self) -> Result<()> {
-    if self.closed {
-      return Ok(());
-    }
-
-    self.closed = true;
-    self.plugin_driver.close_bundle().await?;
-
-    Ok(())
-  }
-
-  // The rollup always crate a new build at watch mode, it cloud be call multiply times.
-  // Here only reset the closed flag to make it possible to call again.
-  pub fn reset_closed(&mut self) {
-    self.closed = false;
+    self.inner_close().await
   }
 
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
@@ -120,6 +112,7 @@ impl Bundler {
     &mut self,
     scan_mode: ScanMode<ArcStr>,
   ) -> BuildResult<NormalizedScanStageOutput> {
+    self.create_error_if_closed()?;
     trace_action!(action::BuildStart { action: "BuildStart" });
     let is_full_scan_mode = scan_mode.is_full();
 
@@ -153,8 +146,9 @@ impl Bundler {
     // Manually drop it to avoid holding the mut reference.
     drop(scan_stage_cache_guard);
 
-    let scan_stage_output =
-      self.normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode);
+    let scan_stage_output = self
+      .normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode)
+      .await?;
 
     Self::trace_action_module_graph_ready(&scan_stage_output);
     self.plugin_driver.build_end(None).await?;
@@ -162,33 +156,87 @@ impl Bundler {
     Ok(scan_stage_output)
   }
 
-  #[tracing::instrument(level = "debug", skip(self, output))]
-  pub fn normalize_scan_stage_output_and_update_cache(
-    &mut self,
-    output: ScanStageOutput,
-    is_full_scan_mode: bool,
-  ) -> NormalizedScanStageOutput {
-    if !self.options.experimental.is_incremental_build_enabled() {
-      return output.into();
-    }
-
-    if is_full_scan_mode {
-      let output: NormalizedScanStageOutput = output.into();
-      self.cache.set_snapshot(output.make_copy());
-      output
-    } else {
-      self.cache.merge(output);
-      self.cache.create_output()
-    }
+  #[inline]
+  pub fn options(&self) -> &SharedOptions {
+    &self.options
   }
 
-  pub async fn bundle_write(
+  pub fn get_watch_files(&self) -> &Arc<FxDashSet<ArcStr>> {
+    &self.plugin_driver.watch_files
+  }
+
+  // --- Internal API ---
+
+  fn create_error_if_closed(&self) -> BuildResult<()> {
+    if self.closed {
+      Err(anyhow::anyhow!("Bundler is closed"))?;
+    }
+    Ok(())
+  }
+
+  // The rollup always crate a new build at watch mode, it cloud be call multiply times.
+  // Here only reset the closed flag to make it possible to call again.
+  pub(crate) fn reset_closed_for_watch_mode(&mut self) {
+    self.closed = false;
+  }
+
+  pub(crate) async fn compute_hmr_update_for_file_changes(
+    &mut self,
+    changed_file_paths: &[String],
+    clients: &[ClientHmrInput<'_>],
+    next_hmr_patch_id: Arc<AtomicU32>,
+  ) -> BuildResult<Vec<ClientHmrUpdate>> {
+    let mut hmr_stage = HmrStage::new(HmrStageInput {
+      fs: self.fs.clone(),
+      options: Arc::clone(&self.options),
+      resolver: Arc::clone(&self.resolver),
+      plugin_driver: Arc::clone(&self.plugin_driver),
+      cache: &mut self.cache,
+      next_hmr_patch_id,
+    });
+    hmr_stage.compute_hmr_update_for_file_changes(changed_file_paths, clients).await
+  }
+
+  pub(crate) async fn compute_update_for_calling_invalidate(
+    &mut self,
+    invalidate_caller: String,
+    first_invalidated_by: Option<String>,
+    client_id: &str,
+    executed_modules: &FxHashSet<String>,
+    next_hmr_patch_id: Arc<AtomicU32>,
+  ) -> BuildResult<HmrUpdate> {
+    let mut hmr_stage = HmrStage::new(HmrStageInput {
+      fs: self.fs.clone(),
+      options: Arc::clone(&self.options),
+      resolver: Arc::clone(&self.resolver),
+      plugin_driver: Arc::clone(&self.plugin_driver),
+      cache: &mut self.cache,
+      next_hmr_patch_id,
+    });
+    hmr_stage
+      .compute_update_for_calling_invalidate(
+        invalidate_caller,
+        first_invalidated_by,
+        client_id,
+        executed_modules,
+      )
+      .await
+  }
+
+  pub(crate) async fn bundle_write(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
     let mut output = self.bundle_up(scan_stage_output, /* is_write */ true).await?;
 
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
+
+    if self.options.clean_dir && self.options.dir.is_some() {
+      clean_dir(&self.fs, &dist_dir).map_err(|err| {
+        anyhow::anyhow!("Could not clean directory for output chunks: {}", dist_dir.display())
+          .context(err)
+      })?;
+    }
 
     self.fs.create_dir_all(&dist_dir).map_err(|err| {
       anyhow::anyhow!("Could not create directory for output chunks: {}", dist_dir.display())
@@ -217,11 +265,67 @@ impl Bundler {
     Ok(output)
   }
 
-  pub async fn bundle_generate(
+  pub(crate) async fn bundle_generate(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
     self.bundle_up(scan_stage_output, false).await
+  }
+
+  #[tracing::instrument(level = "debug", skip(self, output))]
+  async fn normalize_scan_stage_output_and_update_cache(
+    &mut self,
+    output: ScanStageOutput,
+    is_full_scan_mode: bool,
+  ) -> BuildResult<NormalizedScanStageOutput> {
+    if !self.options.experimental.is_incremental_build_enabled() {
+      return Ok(
+        output.try_into().expect("Should be able to convert to NormalizedScanStageOutput"),
+      );
+    }
+
+    if is_full_scan_mode {
+      let mut output: NormalizedScanStageOutput =
+        output.try_into().expect("Should be able to convert to NormalizedScanStageOutput");
+      self.defer_sync_scan_data(&mut output).await?;
+      self.cache.set_snapshot(output.make_copy());
+      Ok(output)
+    } else {
+      self.cache.merge(output)?;
+      self.cache.update_defer_sync_data(&self.options, &self.resolver).await?;
+      Ok(self.cache.create_output())
+    }
+  }
+
+  #[expect(clippy::needless_pass_by_ref_mut, reason = "Required for Send bound across await")]
+  async fn defer_sync_scan_data(
+    &mut self,
+    scan_stage_output: &mut NormalizedScanStageOutput,
+  ) -> BuildResult<()> {
+    defer_sync_scan_data(
+      &self.options,
+      &self.cache.module_id_to_idx,
+      &self.resolver,
+      scan_stage_output,
+    )
+    .await
+  }
+
+  async fn inner_close(&mut self) -> Result<()> {
+    if self.closed {
+      return Ok(());
+    }
+
+    self.closed = true;
+    self.plugin_driver.close_bundle().await?;
+
+    // Clean up resources
+    self.plugin_driver.clear();
+    self.cache = ScanStageCache::default();
+    self.resolver.clear_cache();
+    self.warnings.clear();
+
+    Ok(())
   }
 
   async fn bundle_up(
@@ -270,30 +374,6 @@ impl Bundler {
     self.merge_immutable_fields_for_cache(link_stage_output.symbol_db);
 
     Ok(output)
-  }
-
-  #[inline]
-  pub fn options(&self) -> &NormalizedBundlerOptions {
-    &self.options
-  }
-
-  pub fn get_watch_files(&self) -> &Arc<FxDashSet<ArcStr>> {
-    &self.plugin_driver.watch_files
-  }
-
-  pub fn create_hmr_manager(
-    &self,
-    cache: ScanStageCache,
-    next_hmr_patch_id: Arc<AtomicU32>,
-  ) -> HmrManager {
-    HmrManager::new(HmrManagerInput {
-      fs: self.fs.clone(),
-      options: Arc::clone(&self.options),
-      resolver: Arc::clone(&self.resolver),
-      plugin_driver: Arc::clone(&self.plugin_driver),
-      cache,
-      next_hmr_patch_id,
-    })
   }
 
   fn merge_immutable_fields_for_cache(&mut self, symbol_db: SymbolRefDb) {
@@ -373,14 +453,6 @@ impl Bundler {
         file: self.options.file.clone(),
       });
     }
-  }
-
-  pub fn take_cache(&mut self) -> ScanStageCache {
-    std::mem::take(&mut self.cache)
-  }
-
-  pub fn set_cache(&mut self, cache: ScanStageCache) {
-    self.cache = cache;
   }
 }
 

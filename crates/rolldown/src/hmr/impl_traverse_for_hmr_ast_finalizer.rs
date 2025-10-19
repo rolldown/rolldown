@@ -25,7 +25,6 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     });
   }
 
-  #[expect(clippy::too_many_lines)]
   fn exit_program(
     &mut self,
     node: &mut ast::Program<'ast>,

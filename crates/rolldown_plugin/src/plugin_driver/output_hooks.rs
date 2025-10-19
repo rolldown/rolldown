@@ -8,6 +8,7 @@ use rolldown_common::{Output, RollupRenderedChunk, SharedNormalizedBundlerOption
 use rolldown_debug::{action, trace_action};
 use rolldown_error::{BuildDiagnostic, CausedPlugin};
 use rolldown_sourcemap::SourceMap;
+use tracing::Instrument;
 
 impl PluginDriver {
   pub async fn render_start(&self, opts: &SharedNormalizedBundlerOptions) -> HookNoopReturn {
@@ -103,6 +104,7 @@ impl PluginDriver {
           plugin_name: plugin.call_name().to_string(),
           plugin_id: plugin_idx.raw(),
           call_id: "${call_id}",
+          content: args.code.clone(),
         });
         if let Some(r) = plugin
           .call_render_chunk(ctx, &args)
@@ -113,16 +115,29 @@ impl PluginDriver {
           if let Some(map) = r.map {
             sourcemap_chain.push(map);
           }
+          trace_action!(action::HookRenderChunkEnd {
+            action: "HookRenderChunkEnd",
+            plugin_name: plugin.call_name().to_string(),
+            plugin_id: plugin_idx.raw(),
+            call_id: "${call_id}",
+            content: Some(args.code.clone()),
+          });
+        } else {
+          trace_action!(action::HookRenderChunkEnd {
+            action: "HookRenderChunkEnd",
+            plugin_name: plugin.call_name().to_string(),
+            plugin_id: plugin_idx.raw(),
+            call_id: "${call_id}",
+            content: None,
+          });
         }
-        trace_action!(action::HookRenderChunkEnd {
-          action: "HookRenderChunkEnd",
-          plugin_name: plugin.call_name().to_string(),
-          plugin_id: plugin_idx.raw(),
-          call_id: "${call_id}",
-        });
 
         Ok(())
       }
+      .instrument(tracing::trace_span!(
+        "HookRenderChunk",
+        CONTEXT_call_id = rolldown_utils::uuid::uuid_v4()
+      ))
       .await?;
     }
     Ok((args.code, sourcemap_chain))

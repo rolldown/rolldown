@@ -16,6 +16,7 @@ assert(foo() !== void 0);
 
 //#endregion
 ```
+
 ## backwards-reference-top-level.js
 
 ```js
@@ -26,6 +27,7 @@ console.log(x, x, y, y);
 
 //#endregion
 ```
+
 ## comment-before.js
 
 ```js
@@ -38,6 +40,7 @@ console.log(x, x, y, y);
 
 //#endregion
 ```
+
 ## debugger-before.js
 
 ```js
@@ -50,6 +53,7 @@ console.log(x, x, y, y);
 
 //#endregion
 ```
+
 ## directive-before.js
 
 ```js
@@ -63,6 +67,7 @@ assert(nested() !== void 0);
 
 //#endregion
 ```
+
 ## disabled-tdz.js
 
 ```js
@@ -75,6 +80,7 @@ function foo() {
 
 //#endregion
 ```
+
 ## exprs-before.js
 
 ```js
@@ -84,6 +90,7 @@ assert(nested() !== void 0);
 
 //#endregion
 ```
+
 ## issue-3125.js
 
 ```js
@@ -97,6 +104,7 @@ assert(foo() !== void 0);
 
 //#endregion
 ```
+
 ## namespace-export.js
 
 ```js
@@ -110,6 +118,7 @@ let ns;
 
 //#endregion
 ```
+
 ## nested-block.js
 
 ```js
@@ -125,6 +134,7 @@ let ns;
 
 //#endregion
 ```
+
 ## nested-function.js
 
 ```js
@@ -141,6 +151,7 @@ assert(nested() !== void 0);
 
 //#endregion
 ```
+
 ## semicolon-before.js
 
 ```js
@@ -152,6 +163,7 @@ assert(nested() !== void 0);
 
 //#endregion
 ```
+
 ## top-level.js
 
 ```js
@@ -165,6 +177,7 @@ console.log(n_keep, n_keep, u_keep, u_keep, i_keep, i_keep, f_keep, f_keep, s_ke
 
 //#endregion
 ```
+
 ## type-before.js
 
 ```js

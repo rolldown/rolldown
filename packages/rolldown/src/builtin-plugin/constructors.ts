@@ -1,5 +1,4 @@
 import type {
-  BindingAssetPluginConfig,
   BindingBuildImportAnalysisPluginConfig,
   BindingDynamicImportVarsPluginConfig,
   BindingEsmExternalRequirePluginConfig,
@@ -10,6 +9,8 @@ import type {
   BindingModulePreloadPolyfillPluginConfig,
   BindingReactRefreshWrapperPluginConfig,
   BindingReporterPluginConfig,
+  BindingViteCssPostPluginConfig,
+  BindingViteHtmlPluginConfig,
   BindingViteResolvePluginConfig,
   BindingWasmHelperPluginConfig,
 } from '../binding';
@@ -100,12 +101,6 @@ export function isolatedDeclarationPlugin(
   return new BuiltinPlugin('builtin:isolated-declaration', config);
 }
 
-export function assetPlugin(
-  config?: BindingAssetPluginConfig,
-): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:asset', config);
-}
-
 export function webWorkerPostPlugin(): BuiltinPlugin {
   return new BuiltinPlugin('builtin:web-worker-post');
 }
@@ -138,4 +133,16 @@ export function reactRefreshWrapperPlugin(
     config,
   );
   return makeBuiltinPluginCallable(builtinPlugin);
+}
+
+export function viteCSSPostPlugin(
+  config?: BindingViteCssPostPluginConfig,
+): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:vite-css-post', config);
+}
+
+export function viteHtmlPlugin(
+  config?: BindingViteHtmlPluginConfig,
+): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:vite-html', config);
 }

@@ -6,29 +6,32 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { foo } from "./shared.js";
+import { t as foo } from "./shared.js";
 
 //#region a.js
 console.log(foo);
 
 //#endregion
 ```
+
 ## b.js
 
 ```js
-import { foo } from "./shared.js";
+import { t as foo } from "./shared.js";
 
 //#region b.js
 console.log(foo);
 
 //#endregion
 ```
+
 ## c.js
 
 ```js
 import "./shared.js";
 
 ```
+
 ## shared.js
 
 ```js
@@ -36,5 +39,5 @@ import "./shared.js";
 function foo(bar) {}
 
 //#endregion
-export { foo };
+export { foo as t };
 ```

@@ -1,20 +1,20 @@
 use std::{borrow::Cow, path::Path};
 
 use rolldown_common::{
-  ModuleType, NormalizedBundlerOptions, ResolvedId, StrOrBytes, side_effects::HookSideEffects,
+  ModuleType, NormalizedBundlerOptions, ResolvedId, SourcemapChainElement, StrOrBytes,
+  side_effects::HookSideEffects,
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
-use rolldown_sourcemap::SourceMap;
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
-#[expect(clippy::too_many_arguments, clippy::too_many_lines)]
+#[expect(clippy::too_many_arguments)]
 pub async fn load_source<Fs: FileSystem + 'static>(
   plugin_driver: &PluginDriver,
   resolved_id: &ResolvedId,
   fs: Fs,
-  sourcemap_chain: &mut Vec<SourceMap>,
+  sourcemap_chain: &mut Vec<SourcemapChainElement>,
   side_effects: &mut Option<HookSideEffects>,
   options: &NormalizedBundlerOptions,
   asserted_module_type: Option<&ModuleType>,
@@ -23,7 +23,7 @@ pub async fn load_source<Fs: FileSystem + 'static>(
   let (maybe_source, maybe_module_type) =
     match plugin_driver.load(&HookLoadArgs { id: &resolved_id.id }).await? {
       Some(load_hook_output) => {
-        sourcemap_chain.extend(load_hook_output.map);
+        sourcemap_chain.extend(load_hook_output.map.map(SourcemapChainElement::Load));
         if let Some(v) = load_hook_output.side_effects {
           *side_effects = Some(v);
         }

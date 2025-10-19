@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region a.json
+var Message$1 = 1;
+
+//#endregion
+//#region main.js
+var Message = class {
+	id;
+	constructor(id) {
+		this.id = id;
+	}
+	toString() {
+		return this.id.toString();
+	}
+};
+const y = new Message(1);
+assert(y.toString() === "1");
+assert(Message$1 + y.toString() === "11");
+
+//#endregion
+```

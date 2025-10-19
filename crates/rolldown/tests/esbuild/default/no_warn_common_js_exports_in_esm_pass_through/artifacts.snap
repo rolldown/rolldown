@@ -18,6 +18,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## COMMONJS_VARIABLE_IN_ESM
 
 ```text
@@ -34,6 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -46,14 +48,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 # Assets
 
 ## chunk.js
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __commonJS };
+export { __commonJS as t };
 ```
+
 ## cjs-in-esm.js
 
 ```js
@@ -65,10 +69,11 @@ module.exports = 3;
 //#endregion
 export { foo };
 ```
+
 ## import-in-cjs.js
 
 ```js
-import { __commonJS } from "./chunk.js";
+import { t as __commonJS } from "./chunk.js";
 import { foo } from "bar";
 
 //#region import-in-cjs.js
@@ -81,10 +86,11 @@ var require_import_in_cjs = /* @__PURE__ */ __commonJS({ "import-in-cjs.js": ((e
 export default require_import_in_cjs();
 
 ```
+
 ## no-warnings-here.js
 
 ```js
-import { __commonJS } from "./chunk.js";
+import { t as __commonJS } from "./chunk.js";
 
 //#region no-warnings-here.js
 var require_no_warnings_here = /* @__PURE__ */ __commonJS({ "no-warnings-here.js": ((exports, module) => {

@@ -6,13 +6,14 @@ homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
+description = "File watching implementation for Rolldown"
 
 [dependencies]
-notify = { workspace = true }
+rolldown-notify = { workspace = true }
 rolldown_error = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-notify-debouncer-full = { workspace = true }
+rolldown-notify-debouncer-full = { workspace = true }
 
 [lints]
 workspace = true

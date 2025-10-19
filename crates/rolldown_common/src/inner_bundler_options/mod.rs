@@ -3,6 +3,7 @@ use rustc_hash::FxHashMap;
 use std::{fmt::Debug, path::PathBuf};
 use types::advanced_chunks_options::AdvancedChunksOptions;
 use types::debug_options::DebugOptions;
+use types::generated_code_options::GeneratedCodeOptions;
 use types::inject_import::InjectImport;
 use types::invalidate_js_side_cache::InvalidateJsSideCache;
 use types::legal_comments::LegalComments;
@@ -12,7 +13,7 @@ use types::minify_options::RawMinifyOptions;
 use types::on_log::OnLog;
 use types::optimization::OptimizationOption;
 use types::output_option::{
-  AssetFilenamesOutputOption, GlobalsOutputOption, PreserveEntrySignatures,
+  AssetFilenamesOutputOption, GlobalsOutputOption, PathsOutputOption, PreserveEntrySignatures,
 };
 use types::sanitize_filename::SanitizeFilename;
 use types::watch_option::WatchOption;
@@ -109,6 +110,13 @@ pub struct BundlerOptions {
     schemars(with = "Option<FxHashMap<String, String>>")
   )]
   pub globals: Option<GlobalsOutputOption>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_paths"),
+    schemars(with = "Option<FxHashMap<String, String>>")
+  )]
+  pub paths: Option<PathsOutputOption>,
+  pub generated_code: Option<GeneratedCodeOptions>,
   pub sourcemap: Option<SourceMapType>,
   pub es_module: Option<EsModuleFlag>,
   pub drop_labels: Option<Vec<String>>,
@@ -218,6 +226,7 @@ pub struct BundlerOptions {
   pub optimization: Option<OptimizationOption>,
   pub top_level_var: Option<bool>,
   pub minify_internal_exports: Option<bool>,
+  pub clean_dir: Option<bool>,
   pub context: Option<String>,
   pub tsconfig: Option<String>,
 }
@@ -275,6 +284,15 @@ where
 
 #[cfg(feature = "deserialize_bundler_options")]
 fn deserialize_globals<'de, D>(deserializer: D) -> Result<Option<GlobalsOutputOption>, D::Error>
+where
+  D: Deserializer<'de>,
+{
+  let deserialized = Option::<FxHashMap<String, String>>::deserialize(deserializer)?;
+  Ok(deserialized.map(From::from))
+}
+
+#[cfg(feature = "deserialize_bundler_options")]
+fn deserialize_paths<'de, D>(deserializer: D) -> Result<Option<PathsOutputOption>, D::Error>
 where
   D: Deserializer<'de>,
 {

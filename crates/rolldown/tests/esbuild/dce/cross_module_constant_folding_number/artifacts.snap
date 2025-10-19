@@ -52,6 +52,7 @@ console.log([
 
 //#endregion
 ```
+
 ## enum-entry.js
 
 ```js
@@ -104,6 +105,7 @@ console.log([
 
 //#endregion
 ```
+
 ## nested-entry.js
 
 ```js

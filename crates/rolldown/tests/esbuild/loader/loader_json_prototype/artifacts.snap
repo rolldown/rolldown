@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region data.json
-var __proto__ = { "foo": "bar" };
 var data_default = {
 	"": "The property below should be converted to a computed property:",
 	["__proto__"]: __proto__

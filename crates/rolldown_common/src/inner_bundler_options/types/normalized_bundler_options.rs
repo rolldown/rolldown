@@ -12,10 +12,12 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::advanced_chunks_options::AdvancedChunksOptions;
 use super::experimental_options::ExperimentalOptions;
+use super::generated_code_options::GeneratedCodeOptions;
 use super::legal_comments::LegalComments;
 use super::minify_options::MinifyOptions;
 use super::output_option::{
-  AssetFilenamesOutputOption, ChunkFilenamesOutputOption, PreserveEntrySignatures,
+  AssetFilenamesOutputOption, ChunkFilenamesOutputOption, PathsOutputOption,
+  PreserveEntrySignatures,
 };
 use super::sanitize_filename::SanitizeFilename;
 use super::treeshake::NormalizedTreeshakeOptions;
@@ -63,6 +65,8 @@ pub struct NormalizedBundlerOptions {
   pub es_module: EsModuleFlag,
   pub hash_characters: HashCharacters,
   pub globals: GlobalsOutputOption,
+  pub paths: Option<PathsOutputOption>,
+  pub generated_code: GeneratedCodeOptions,
   pub sourcemap: Option<SourceMapType>,
   pub banner: Option<AddonOutputOption>,
   pub footer: Option<AddonOutputOption>,
@@ -102,6 +106,7 @@ pub struct NormalizedBundlerOptions {
   pub optimization: NormalizedOptimizationConfig,
   pub top_level_var: bool,
   pub minify_internal_exports: bool,
+  pub clean_dir: bool,
   pub context: String,
   pub tsconfig: Option<PathBuf>,
 }
@@ -133,6 +138,8 @@ impl Default for NormalizedBundlerOptions {
       es_module: Default::default(),
       hash_characters: Default::default(),
       globals: GlobalsOutputOption::FxHashMap(FxHashMap::default()),
+      paths: Default::default(),
+      generated_code: Default::default(),
       sourcemap: Default::default(),
       banner: Default::default(),
       footer: Default::default(),
@@ -172,6 +179,7 @@ impl Default for NormalizedBundlerOptions {
       optimization: NormalizedOptimizationConfig::default(),
       top_level_var: false,
       minify_internal_exports: Default::default(),
+      clean_dir: false,
       context: Default::default(),
       tsconfig: Default::default(),
     }

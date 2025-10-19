@@ -15,6 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -27,6 +28,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -39,6 +41,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 # Assets
 
 ## a.js
@@ -53,6 +56,7 @@ console.log(external[foo](), new external[foo]());
 
 //#endregion
 ```
+
 ## b.js
 
 ```js
@@ -65,6 +69,7 @@ console.log(external.foo(), new external.foo());
 
 //#endregion
 ```
+
 ## c.js
 
 ```js
@@ -78,6 +83,7 @@ console.log(new external.default(), new external.foo());
 
 //#endregion
 ```
+
 ## chunk.js
 
 ```js

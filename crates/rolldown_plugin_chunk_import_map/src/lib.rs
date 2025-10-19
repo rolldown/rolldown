@@ -9,7 +9,7 @@ use rolldown_common::{EmittedAsset, Output};
 use rolldown_plugin::{HookRenderChunkOutput, HookUsage, Plugin};
 use rolldown_utils::{
   dashmap::FxDashMap,
-  hash_placeholder::{find_hash_placeholders, hash_placeholder_left_finder},
+  hash_placeholder::{HASH_PLACEHOLDER_LEFT_FINDER, find_hash_placeholders},
   rustc_hash::FxHashMapExt as _,
   xxhash::xxhash_with_base,
 };
@@ -38,12 +38,12 @@ impl Plugin for ChunkImportMapPlugin {
     _ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookRenderChunkArgs<'_>,
   ) -> rolldown_plugin::HookRenderChunkReturn {
-    let hash_finder = hash_placeholder_left_finder();
     if !self.initialized.swap(true, Ordering::SeqCst) {
       let base = args.options.hash_characters.base();
       let mut used_names = FxHashSet::default();
       for chunk in args.chunks.values() {
-        let hash_placeholders = find_hash_placeholders(&chunk.filename, &hash_finder);
+        let hash_placeholders =
+          find_hash_placeholders(&chunk.filename, &HASH_PLACEHOLDER_LEFT_FINDER);
         if hash_placeholders.is_empty() {
           continue;
         }
@@ -78,7 +78,7 @@ impl Plugin for ChunkImportMapPlugin {
       }
     }
 
-    let mut placeholders = find_hash_placeholders(&args.code, &hash_finder);
+    let mut placeholders = find_hash_placeholders(&args.code, &HASH_PLACEHOLDER_LEFT_FINDER);
     placeholders.retain(|placeholder| self.chunk_import_map.contains_key(placeholder.2));
 
     if placeholders.is_empty() {

@@ -26,7 +26,6 @@ where
   S: Subscriber + for<'lookup> LookupSpan<'lookup>,
   N: for<'writer> FormatFields<'writer> + 'static,
 {
-  #[expect(clippy::too_many_lines)]
   fn format_event(
     &self,
     ctx: &FmtContext<'_, S, N>,

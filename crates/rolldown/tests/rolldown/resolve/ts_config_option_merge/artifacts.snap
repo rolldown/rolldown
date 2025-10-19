@@ -14,7 +14,7 @@ function add(a, b) {
 }
 
 //#endregion
-//#region \0@oxc-project+runtime@0.92.0/helpers/decorateParam.js
+//#region \0@oxc-project+runtime@0.95.0/helpers/decorateParam.js
 function __decorateParam(paramIndex, decorator) {
 	return function(target, key) {
 		decorator(target, key, paramIndex);
@@ -22,7 +22,7 @@ function __decorateParam(paramIndex, decorator) {
 }
 
 //#endregion
-//#region \0@oxc-project+runtime@0.92.0/helpers/decorate.js
+//#region \0@oxc-project+runtime@0.95.0/helpers/decorate.js
 function __decorate(decorators, target, key, desc) {
 	var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
 	if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);

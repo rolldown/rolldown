@@ -13,7 +13,7 @@ impl CharToByteMapper {
 
     let mut byte_offset = 0;
     for ch in s.chars() {
-      byte_offset += ch.len_utf8();
+      byte_offset += ch.len_utf16();
       char_to_byte.push(byte_offset);
     }
 
@@ -27,7 +27,7 @@ impl CharToByteMapper {
 
 #[napi]
 pub struct BindingMagicString<'a> {
-  inner: MagicString<'a>,
+  pub(crate) inner: MagicString<'a>,
   char_to_byte_mapper: CharToByteMapper,
 }
 
@@ -102,6 +102,7 @@ impl BindingMagicString<'_> {
   }
 
   #[napi]
+  // TODO: should use `&str` instead. (claude code) Attempt failed due to generates new String from MagicString internal representation
   pub fn to_string(&self) -> String {
     self.inner.to_string()
   }

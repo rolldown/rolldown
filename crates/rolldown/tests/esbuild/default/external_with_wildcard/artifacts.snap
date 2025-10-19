@@ -15,6 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ────╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -27,6 +28,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text

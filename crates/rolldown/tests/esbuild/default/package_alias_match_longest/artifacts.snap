@@ -13,10 +13,11 @@ source: crates/rolldown_testing/src/integration_test.rs
    │        ──────┬──────  
    │              ╰──────── Matched alias not found for 'pkg/bar/baz'
    │ 
-   │ Help: May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/reference/config-options#resolve-alias for more details
+   │ Help: May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/apis/config-options#resolve-alias for more details
 ───╯
 
 ```
+
 ## RESOLVE_ERROR
 
 ```text
@@ -27,10 +28,11 @@ source: crates/rolldown_testing/src/integration_test.rs
    │        ────┬────  
    │            ╰────── Matched alias not found for 'pkg/baz'
    │ 
-   │ Help: May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/reference/config-options#resolve-alias for more details
+   │ Help: May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/apis/config-options#resolve-alias for more details
 ───╯
 
 ```
+
 ## RESOLVE_ERROR
 
 ```text
@@ -41,7 +43,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │        ────────┬────────  
    │                ╰────────── Matched alias not found for 'pkg/foo/bar/baz'
    │ 
-   │ Help: May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/reference/config-options#resolve-alias for more details
+   │ Help: May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/apis/config-options#resolve-alias for more details
 ───╯
 
 ```

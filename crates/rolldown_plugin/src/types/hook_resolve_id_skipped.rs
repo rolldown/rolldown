@@ -1,6 +1,5 @@
 use arcstr::ArcStr;
-
-use super::plugin_idx::PluginIdx;
+use rolldown_common::PluginIdx;
 
 #[derive(Debug, Clone)]
 pub struct HookResolveIdSkipped {

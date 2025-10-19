@@ -9,12 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 export declare const foo: string;
 
 ```
+
 ## main.d.ts
 
 ```ts
 export { foo } from "./foo";
 
 ```
+
 ## main.js
 
 ```js

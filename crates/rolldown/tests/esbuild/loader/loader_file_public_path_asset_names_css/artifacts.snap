@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```png
 x
 ```
+
 ## entries_entry.css
 
 ```css
@@ -16,6 +17,7 @@ div {
 }
 
 ```
+
 ## entries_entry.js
 
 ```js

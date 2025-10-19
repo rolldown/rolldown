@@ -15,6 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -27,6 +28,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 # Assets
 
 ## import-computed.js
@@ -44,6 +46,7 @@ function foo() {
 
 //#endregion
 ```
+
 ## import-normal.js
 
 ```js
@@ -59,6 +62,7 @@ function foo() {
 
 //#endregion
 ```
+
 ## local-computed.js
 
 ```js
@@ -75,6 +79,7 @@ function foo(__proto__, bar) {
 
 //#endregion
 ```
+
 ## local-normal.js
 
 ```js

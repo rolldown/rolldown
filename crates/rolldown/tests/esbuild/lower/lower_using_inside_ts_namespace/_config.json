@@ -5,7 +5,10 @@
         "name": "entry",
         "import": "entry.ts"
       }
-    ]
+    ],
+    "transform": {
+      "target": "es2015"
+    }
   },
   "expectExecuted": false
 }

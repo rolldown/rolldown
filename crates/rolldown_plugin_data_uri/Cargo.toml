@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 publish = true
+description = "Rolldown plugin for data URI handling"
 
 [lib]
 doctest = false

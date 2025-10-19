@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Errors
 
@@ -16,6 +15,7 @@ snapshot_kind: text
 ───╯
 
 ```
+
 ## RESOLVE_ERROR
 
 ```text
@@ -28,6 +28,7 @@ snapshot_kind: text
 ───╯
 
 ```
+
 ## RESOLVE_ERROR
 
 ```text

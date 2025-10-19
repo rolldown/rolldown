@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'react/jsx-runtime' in entry.js
 
 ```
+
 # Assets
 
 ## entry.js

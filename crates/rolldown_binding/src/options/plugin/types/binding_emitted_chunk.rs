@@ -1,6 +1,6 @@
 use crate::types::preserve_entry_signatures::BindingPreserveEntrySignatures;
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Default, Debug)]
 pub struct BindingEmittedChunk {
   pub name: Option<String>,

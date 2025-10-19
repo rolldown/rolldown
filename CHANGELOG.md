@@ -1,4 +1,210 @@
 
+## [1.0.0-beta.43] - 2025-10-13
+
+### 🚀 Features
+
+- add filterVitePlugins utility that uses to skip vite plugins using apply: "serve" (#6502) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: align partial can inline entry logic (#6500) by @shulaoda
+- rolldown_plugin_vite_html: align get_imported_chunks logic (#6499) by @shulaoda
+- rolldown_plugin_vite_html: align HtmlTagDescriptor (#6498) by @shulaoda
+- rolldown_plugin_vite_html: align partial utility functions logic (#6497) by @shulaoda
+- rolldown_html_vite_html: align partial inject chunk asset links logic (#6496) by @shulaoda
+- rolldown_plugin_vite_html: align `processedHtml` logic (#6494) by @shulaoda
+- add `nativeMagicString` options (#6469) by @IWANABETHATGUY
+- rust: eagerly cleanup resources when calling `close` (#6483) by @hyf0
+- rust: verify if bundler is closed for public API (#6481) by @hyf0
+- replace [format] placeholder in chunk filename templates (#6476) by @elecmonkey
+- implement synchronous JS callback invocation for paths function (#6474) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: align partial transform hook logic (#6471) by @shulaoda
+- Support `output.paths` (#6470) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: align script urls handle logic (#6466) by @shulaoda
+- add validation for `preserveEntrySignatures` with `includeDependenciesRecursively` option (#6468) by @hyf0
+- rolldown_plugin_vite_html: align partial logic (#6465) by @shulaoda
+- background sourcemap generation for Javascript transform hooks (#6293) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: handle style tag (#6464) by @shulaoda
+- rolldown_plugin_vite_html: handle inline style attribute (#6463) by @shulaoda
+- rolldown_plugin_vite_html: partially handle vite-ignore attribute (#6462) by @shulaoda
+- dev/node: expose errors of `on_hmr_updatrs` to node (#6454) by @hyf0
+- dev/node: expose errors of `on_output` to node (#6453) by @hyf0
+- dev: expose hmr errors on `on_hmr_updatrs` callback (#6443) by @hyf0
+
+### 🐛 Bug Fixes
+
+- fallback sourcemap generation for `experimental.nativeMagicString: false` (#6488) by @IWANABETHATGUY
+- take `resolve.modules` into account (#6484) by @Pickachu
+- rolldown: increase tokio blocking threads size for watch mode (#6467) by @Brooooooklyn
+- use len_utf16 in magic_string CharToByteMapper (#6461) by @IWANABETHATGUY
+- pass `advancedChunks#includeDependenciesRecursively` to rust (#6448) by @hyf0
+- dev: should compute hmr update correctly for multiple clients (#6442) by @hyf0
+- allow specifying packageJsonPath in PluginContext.load (#6439) by @sapphi-red
+- use transform.target as default for minify target when `minify: { compress: true }` (#6433) by @sapphi-red
+
+### 🚜 Refactor
+
+- extract background sourcemap handling into separate methods (#6501) by @IWANABETHATGUY
+- rust: only expose methods of `Bundler` for public usage (#6480) by @hyf0
+- dev/node: use napi object instead clss for `BindingClientHmrUpdate` (#6456) by @hyf0
+- dev/node: improve `DevOnHmrUpdates` API (#6455) by @hyf0
+
+### 📚 Documentation
+
+- update team page and add acknowledgements page (#6495) by @hyf0
+- restructure website and files (#6492) by @hyf0
+- correct incorrect documentation about the config file (#6472) by @jsparkdev
+- options: `experimental.strictExecutionOrder` (#6450) by @hyf0
+- adding `why-plugin-hook-filter` in depth (#6446) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- rolldown: replace serde JSON string escape with simd impl (#6475) by @Brooooooklyn
+
+### ⚙️ Miscellaneous Tasks
+
+- docs: redirect removed path to new locations for compatibility (#6493) by @hyf0
+- deps: lock file maintenance npm packages (#6490) by @renovate[bot]
+- deps: update github-actions (major) (#6415) by @renovate[bot]
+- deps: update github-actions (#6489) by @renovate[bot]
+- rust: add comment for `DiagnosticOptions#stabilize_path` (#6447) by @hyf0
+- rust: remove unused `BindingHmrOutput` (#6457) by @hyf0
+- rolldown_plugin_vite_html: tweak `utils.rs` (#6460) by @shulaoda
+- change node version to lts (#6435) by @iiio2
+- rust/test: split hmr related structs into their own files (#6445) by @hyf0
+- deps: update crate-ci/typos action to v1.38.1 (#6452) by @renovate[bot]
+- rust/test: render hmr errors (#6444) by @hyf0
+- examples: add `"type": "module"` in `package.json` (#6441) by @iiio2
+
+### ❤️ New Contributors
+
+* @Pickachu made their first contribution in [#6484](https://github.com/rolldown/rolldown/pull/6484)
+* @elecmonkey made their first contribution in [#6476](https://github.com/rolldown/rolldown/pull/6476)
+* @jsparkdev made their first contribution in [#6472](https://github.com/rolldown/rolldown/pull/6472)
+
+
+## [1.0.0-beta.42] - 2025-10-07
+
+### 🚀 Features
+
+- rolldown: oxc v0.94.0 (#6428) by @Boshen
+- add CLI environment flag (#6426) by @IWANABETHATGUY
+- dev: use `RebuildStrategy#Auto` by default (#6420) by @hyf0
+- rolldown_plugin_vite_html: introduce html plugin state (#6413) by @shulaoda
+- dev: expose build errors via `DevOptions#on_output` (#6412) by @hyf0
+- dev: add binding for `DevOptions#rebuild_strategy` (#6396) by @hyf0
+- dev: add `RebuildStrategy::Auto` to issue rebuild automatically if detecting full reload hmr update (#6395) by @hyf0
+- debug: inject `call_id` for `renderChunk` hook (#6392) by @hyf0
+- node/dev: add `DevEngine#close` (#6377) by @hyf0
+- rust/dev: add `DevEngine#close` (#6376) by @hyf0
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_react_refresh_wrapper: register exports in next microtask (#6423) by @sapphi-red
+- plugin/vite-resolve: try original extension before replacing with TS variants (#6421) by @sapphi-red
+- node/resolve: take custom package json path into account (#6419) by @hyf0
+- dev: call `watchChange` hook (#6403) by @sapphi-red
+- use minify options for DCE for dce-only minify (#6402) by @sapphi-red
+- respect package.json type field in plugin-resolved modules (#6400) by @hyf0
+- returning result of this.resolve in resolveDynamicImport hook impacts bundle size (#6397) by @sapphi-red
+- rolldown_plugin_json: avoid generating named exports for `eval` and `arguments` (#6381) by @sapphi-red
+- use static property for namespace object (#6383) by @sapphi-red
+
+### 🚜 Refactor
+
+- rust: improve constuction of `PackageJson` and remove unused fields (#6418) by @hyf0
+- introduce `BindingResult` to pass errors from rust to js (#6390) by @hyf0
+- rust: rename eager_rebuild to rebuild_strategy with enum (#6394) by @hyf0
+- rust/binding: use `BindingError` to cover `JsError` and `NativeError` (#6388) by @hyf0
+- rust/binding: rename `BindingError` to `NativeError` (#6387) by @hyf0
+
+### 📚 Documentation
+
+- tweak built-in transforms section (#6384) by @sapphi-red
+
+### ⚡ Performance
+
+- dev: avoid frequent `setTimeout` -> `clearTimeout` (#6375) by @sapphi-red
+
+### 🧪 Testing
+
+- hmr: include generated bundle for full reloads in snapshots (#6374) by @sapphi-red
+- dev: add test about doing hmr with not being affected by not executed modules (#6360) by @hyf0
+- hmr: hmr patch file generation for `this.addWatchFile` (#5219) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update crate-ci/typos action to v1.38.0 (#6431) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.37.3 (#6429) by @renovate[bot]
+- deps: lock file maintenance npm packages (#6417) by @renovate[bot]
+- deps: update github-actions (#6414) by @renovate[bot]
+- rust/test: sensible heading level for build snapshot of config variant (#6408) by @hyf0
+- rust/test: introduce `SnapshotSection` to organize snapshot content (#6407) by @hyf0
+- rust/test: extract `ArtifactsSnapshot` and `BuildRoundOutput` into standalone files (#6406) by @hyf0
+- rust/test: introduce `ArtifactsSnapshot` to make generating snapshot more clear (#6405) by @hyf0
+- deps: update crate-ci/typos action to v1.37.2 (#6409) by @renovate[bot]
+- fix `GitHub` casing (#6401) by @iiio2
+- rust: remove unused `rolldown_binding_watcher` crate (#6386) by @hyf0
+- deps: update crate-ci/typos action to v1.37.1 (#6391) by @renovate[bot]
+- node: rename `normalizeErrors` into `aggregateBindingErrorsIntoError` (#6389) by @hyf0
+- fix typos (#6382) by @sapphi-red
+- deps: update dependency tsdown to v0.15.6 (#6379) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.37.0 (#6380) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.16.11 (#6378) by @renovate[bot]
+- add comment to `add_watch_file` that the path should be a normalized absolute path (#6371) by @sapphi-red
+- deps: update dependency rolldown-plugin-dts to v0.16.10 (#6373) by @renovate[bot]
+
+
+## [1.0.0-beta.41] - 2025-09-29
+
+### 🚀 Features
+
+- support `output.generatedCode.symbols` (#6335) by @IWANABETHATGUY
+- rolldown: oxc v0.93.0 (#6364) by @Boshen
+- rolldown_plugin_vite_html: finish script tag logic (#6355) by @shulaoda
+- rolldown_plugin_vite_html: support inline html proxy (#6353) by @shulaoda
+- rolldown_plugin_vite_html: transform script tag into js import (#6351) by @shulaoda
+- rolldown_plugin_vite_html: overwrite script src url (#6349) by @shulaoda
+- rolldown_plugin_vite_html: remove `vite-ignore` attribute (#6348) by @shulaoda
+- rolldown_plugin_vite_html: use `html5ever` and `markup5ever_rcdom` (#6327) by @shulaoda
+- rust/dev: support `on_output` callback (#6330) by @hyf0
+- rust/dev: support `disable_watcher` (#6329) by @hyf0
+- dev: introduce client/session concept into dev engine (#6297) by @hyf0
+
+### 🐛 Bug Fixes
+
+- 'asset' module type and CJS format produces warnings and wrong output (#6369) by @IWANABETHATGUY
+- inlining constants in CJS by optimization.inlineConst incorrectly inlines non-constant values if the value is assigned more than once (#6328) by @IWANABETHATGUY
+- dev: add `hasLatestBuildOutput` instead of `scheduleBuildIfStale` and add edit-reload test (#6321) by @sapphi-red
+
+### 🚜 Refactor
+
+- rust/dev: rename `HmrManager` to `HmrState` and tweak namings (#6358) by @hyf0
+- rust/dev: use `Bundler` to expose hmr related methods (#6356) by @hyf0
+- rolldown_plugin_vite_html: use `html5gum` instead (#6343) by @shulaoda
+- dev: remove deprecated `new` field from HMR options and related configurations (#6337) by @hyf0
+- dev: remove unused hmr API (#6336) by @hyf0
+- make `cjs_ast_analyzer` immutable for better reuse (#6326) by @IWANABETHATGUY
+- simplify logic for determining entry is_lived (#6325) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- dev: compute depended data incrementally (#6357) by @hyf0
+
+### 🧪 Testing
+
+- rust/hmr: use dev engine to test hmr (#6334) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update notify (#6368) by @sapphi-red
+- deps: lock file maintenance npm packages (#6366) by @renovate[bot]
+- deps: update github-actions (#6365) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.16.9 (#6354) by @renovate[bot]
+- deps: update dependency tsdown to v0.15.5 (#6350) by @renovate[bot]
+- node: use `catalog:` to unify version of all dependencies (#6339) by @hyf0
+- ci: unify node installation via oxc-project/setup-node (#6338) by @Boshen
+- deps: update crate-ci/typos action to v1.36.3 (#6341) by @renovate[bot]
+- remove unused snapshots (#6331) by @IWANABETHATGUY
+
+
 ## [1.0.0-beta.40] - 2025-09-24
 
 ### 🚀 Features

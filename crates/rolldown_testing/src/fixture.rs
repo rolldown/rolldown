@@ -76,10 +76,24 @@ impl Fixture {
     options: &BundlerOptions,
     config_variants: &mut Vec<ConfigVariant>,
   ) {
-    if meta.extended_tests.minify_internal_exports && options.minify_internal_exports.is_none() {
+    use rolldown::determine_minify_internal_exports_default;
+    use rolldown_common::RawMinifyOptions;
+
+    if meta.extended_tests.opposite_minify_internal_exports
+      && options.minify_internal_exports.is_none()
+    {
+      // Determine what the default value would be based on format and minify settings
+      let default_value = determine_minify_internal_exports_default(
+        options.format,
+        options.minify.as_ref().unwrap_or(&RawMinifyOptions::Bool(false)),
+      );
+
+      // Test the opposite of the default
+      let test_value = !default_value;
+
       config_variants.push(ConfigVariant {
         config_name: Some("extended-minify-internal-exports".to_string()),
-        minify_internal_exports: Some(true),
+        minify_internal_exports: Some(test_value),
         snapshot: Some(false),
         ..Default::default()
       });

@@ -45,15 +45,15 @@ pub mod worker_manager;
 pub use oxc_parser_napi;
 pub use oxc_resolver_napi;
 pub use oxc_transform_napi;
-pub use rolldown_binding_watcher;
 
-#[cfg(not(target_family = "wasm"))]
-#[napi_derive::module_init]
-pub fn init() {
+#[napi_derive::napi]
+pub fn create_tokio_runtime(blocking_threads: Option<u32>) {
   use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
-  let max_blocking_threads = std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS")
-    .ok()
-    .and_then(|v| v.parse::<usize>().ok())
+  let max_blocking_threads = blocking_threads
+    .map(|v| v as usize)
+    .or_else(|| {
+      std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS").ok().and_then(|v| v.parse::<usize>().ok())
+    })
     // default value in tokio implementation is **512**
     // it's too high for us
     // we don't have that many `blocking` tasks to run at this moment

@@ -15,6 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 # Assets
 
 ## lib.js
@@ -27,6 +28,7 @@ const b = "b";
 //#endregion
 export { a, b };
 ```
+
 ## lib2.js
 
 ```js
@@ -37,6 +39,7 @@ const d = "d";
 //#endregion
 export { c, d };
 ```
+
 ## main.js
 
 ```js

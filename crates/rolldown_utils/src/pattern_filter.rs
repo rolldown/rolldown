@@ -181,7 +181,6 @@ mod tests {
 
   use super::*;
 
-  #[expect(clippy::too_many_lines)]
   #[test]
   fn test_filter() {
     #[derive(Debug)]

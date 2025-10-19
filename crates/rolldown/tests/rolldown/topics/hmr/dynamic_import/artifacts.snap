@@ -7,12 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __commonJS, __export, __reExport, __toCommonJS, __toDynamicImportESM, __toESM };
+export { __toDynamicImportESM as a, __toCommonJS as i, __export as n, __toESM as o, __reExport as r, __commonJS as t };
 ```
+
 ## exist-dep-cjs.js
 
 ```js
-import { __commonJS } from "./chunk.js";
+import { t as __commonJS } from "./chunk.js";
 
 //#region exist-dep-cjs.js
 var require_exist_dep_cjs = /* @__PURE__ */ __commonJS({ "exist-dep-cjs.js": ((exports, module) => {
@@ -25,10 +26,11 @@ var require_exist_dep_cjs = /* @__PURE__ */ __commonJS({ "exist-dep-cjs.js": ((e
 export default require_exist_dep_cjs();
 
 ```
+
 ## exist-dep-esm.js
 
 ```js
-import { __export } from "./chunk.js";
+import { n as __export } from "./chunk.js";
 
 //#region exist-dep-esm.js
 var exist_dep_esm_exports = /* @__PURE__ */ __export({ value: () => value });
@@ -39,10 +41,11 @@ const value = "exist-esm";
 //#endregion
 export { value };
 ```
+
 ## main.js
 
 ```js
-import { __export, __reExport, __toCommonJS, __toDynamicImportESM, __toESM } from "./chunk.js";
+import { a as __toDynamicImportESM, i as __toCommonJS, n as __export, o as __toESM, r as __reExport } from "./chunk.js";
 
 // HIDDEN [rolldown:hmr]
 //#region hmr.js
@@ -67,6 +70,7 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 //#endregion
 ```
+
 # HMR Step 0
 
 ## Code
@@ -122,9 +126,11 @@ var init_new_dep_esm_2 = __rolldown_runtime__.createEsmInitializer((function() {
 init_hmr_0()
 __rolldown_runtime__.applyUpdates([['hmr.js', 'hmr.js']]);
 ```
+
 ## Meta
 
 - update type: patch
+
 ### Hmr Boundaries
 
 - boundary: hmr.js, accepted_via: hmr.js

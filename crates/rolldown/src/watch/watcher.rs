@@ -1,4 +1,5 @@
 use crate::watch::event::{BundleEvent, WatcherChangeData, WatcherEvent};
+use anyhow::Context;
 use arcstr::ArcStr;
 #[cfg(not(target_family = "wasm"))]
 use notify::Watcher as _;
@@ -73,7 +74,9 @@ impl WatcherImpl {
     let notify_watcher = Arc::new(Mutex::new(RecommendedWatcher::new(
       move |res| {
         if let Err(e) = tx.send(WatcherChannelMsg::NotifyEvent(res)) {
-          eprintln!("send watch event error {e:?}");
+          eprintln!(
+            "Watcher: failed to send file change notification - channel closed while processing file system event: {e:?}"
+          );
         }
       },
       watch_option,
@@ -121,7 +124,9 @@ impl WatcherImpl {
     }
 
     self.invalidating.store(true, Ordering::Relaxed);
-    self.exec_tx.send(ExecChannelMsg::Exec).expect("send watcher exec cannel message error");
+    self.exec_tx.send(ExecChannelMsg::Exec).expect(
+      "Watcher: failed to send Exec message - watcher event loop terminated while scheduling rebuild"
+    );
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -148,8 +153,13 @@ impl WatcherImpl {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn close(&self) -> anyhow::Result<()> {
     // close channel
-    self.tx.send(WatcherChannelMsg::Close)?;
-    self.exec_tx.send(ExecChannelMsg::Close)?;
+    self
+      .tx
+      .send(WatcherChannelMsg::Close)
+      .context("Watcher: failed to send Close message - watcher event loop already terminated")?;
+    self.exec_tx.send(ExecChannelMsg::Close).context(
+      "Watcher: failed to send Close message to exec channel - watcher execution loop already terminated"
+    )?;
     // stop watching files
     // TODO the notify watcher should be dropped, because the stop method is private
     let inner = self.notify_watcher.lock().await;

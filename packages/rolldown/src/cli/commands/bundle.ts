@@ -1,6 +1,5 @@
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { styleText } from 'node:util';
 import { onExit } from 'signal-exit';
 import { version } from '../../../package.json';
 import type { RolldownOptions, RolldownOutput } from '../..';
@@ -9,6 +8,7 @@ import { watch as rolldownWatch } from '../../api/watch';
 import { getClearScreenFunction } from '../../utils/clear-screen';
 import { loadConfig } from '../../utils/load-config';
 import { arraify } from '../../utils/misc';
+import { styleText } from '../../utils/style-text';
 import type { NormalizedCliOptions } from '../arguments/normalize';
 import { logger } from '../logger';
 
@@ -242,10 +242,7 @@ function displaySize(bytes: number) {
 const CHUNK_GROUPS = [
   { type: 'asset', color: 'green' },
   { type: 'chunk', color: 'cyan' },
-] satisfies {
-  type: ChunkType;
-  color: Extract<Parameters<typeof styleText>[0], string>;
-}[];
+] satisfies { type: ChunkType; color: 'green' | 'cyan' }[];
 
 function printOutputEntries(
   entries: OutputEntry[],

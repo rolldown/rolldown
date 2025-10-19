@@ -61,6 +61,17 @@ pub struct HTMLProxyResult {
 }
 
 #[derive(Debug, Default)]
+pub struct HTMLProxyMapItem {
+  pub code: ArcStr,
+  pub map: Option<rolldown_sourcemap::SourceMap>,
+}
+
+#[derive(Debug, Default)]
+pub struct HTMLProxyMap {
+  pub inner: FxDashMap<String, FxDashMap<usize, HTMLProxyMapItem>>,
+}
+
+#[derive(Debug, Default)]
 pub struct CSSStyles {
   pub inner: FxDashMap<String, String>,
 }

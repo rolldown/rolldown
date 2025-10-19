@@ -18,7 +18,7 @@
     "docs": {
       "entry": [
         ".vitepress/config.ts", // no Vitepress plugin yet
-        ".vitepress/theme/index.js",
+        ".vitepress/theme/index.ts",
         ".vitepress/theme/components/overrides/VPHero.vue",
         "data-loading/*.data.{js,ts}",
       ],
@@ -33,6 +33,7 @@
     "packages/rolldown": {
       "entry": [
         "src/browser.js",
+        "src/cli/setup-index.ts",
         "src/cli/index.ts",
         "src/log/locate-character/index.d.ts",
         "src/parallel-plugin-worker.ts",

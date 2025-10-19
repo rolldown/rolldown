@@ -21,7 +21,9 @@ impl HookResolveIdOutput {
       external: Some(resolved_id.external),
       side_effects: resolved_id.side_effects,
       normalize_external_id: None,
-      package_json_path: resolved_id.package_json.map(|p| p.realpath.to_string_lossy().to_string()),
+      package_json_path: resolved_id
+        .package_json
+        .map(|p| p.realpath().to_string_lossy().to_string()),
     }
   }
 }

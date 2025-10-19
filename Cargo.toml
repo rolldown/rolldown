@@ -80,7 +80,6 @@ collapsible_if = "allow"
 [workspace.dependencies]
 # publish = true
 rolldown = { version = "0.1.0", path = "crates/rolldown" }
-rolldown_binding_watcher = { version = "0.1.0", path = "crates/rolldown_binding_watcher" }
 rolldown_common = { version = "0.1.0", path = "crates/rolldown_common" }
 rolldown_debug = { version = "0.1.0", path = "crates/rolldown_debug" }
 rolldown_debug_action = { version = "0.1.0", path = "crates/rolldown_debug_action" }
@@ -110,6 +109,9 @@ rolldown_plugin_replace = { version = "0.1.0", path = "crates/rolldown_plugin_re
 rolldown_plugin_reporter = { version = "0.1.0", path = "crates/rolldown_plugin_reporter" }
 rolldown_plugin_transform = { version = "0.1.0", path = "crates/rolldown_plugin_transform" }
 rolldown_plugin_utils = { version = "0.1.0", path = "crates/rolldown_plugin_utils" }
+rolldown_plugin_vite_css = { version = "0.1.0", path = "crates/rolldown_plugin_vite_css" }
+rolldown_plugin_vite_css_post = { version = "0.1.0", path = "crates/rolldown_plugin_vite_css_post" }
+rolldown_plugin_vite_html = { version = "0.1.0", path = "crates/rolldown_plugin_vite_html" }
 rolldown_plugin_vite_resolve = { version = "0.1.0", path = "crates/rolldown_plugin_vite_resolve" }
 rolldown_plugin_wasm_fallback = { version = "0.1.0", path = "crates/rolldown_plugin_wasm_fallback" }
 rolldown_plugin_wasm_helper = { version = "0.1.0", path = "crates/rolldown_plugin_wasm_helper" }
@@ -123,7 +125,7 @@ rolldown_tracing = { version = "0.1.0", path = "crates/rolldown_tracing" }
 rolldown_utils = { version = "0.1.0", path = "crates/rolldown_utils" }
 rolldown_watcher = { version = "0.1.0", path = "crates/rolldown_watcher" }
 rolldown_workspace = { version = "0.1.0", path = "crates/rolldown_workspace" }
-string_wizard = { version = "0.0.26", path = "crates/string_wizard", features = ["serde"] }
+string_wizard = { version = "0.0.27", path = "crates/string_wizard", features = ["serde"] }
 
 #
 anyhow = "1.0.98"
@@ -150,21 +152,19 @@ form_urlencoded = "1.2.1"
 futures = "0.3.31"
 glob = "0.3.2"
 heck = "0.5.0"
-html5ever = "0.35.0"
+html5gum = "0.8.0"
 indexmap = "2.9.0"
 infer = "0.19.0"
 insta = "1.43.1"
 itertools = "0.14.0"
 itoa = "1.0.15"
+json-escape-simd = "3"
 json-strip-comments = "3"
 jsonschema = { version = "0.33.0", default-features = false }
-markup5ever_rcdom = "0.35.0"
 memchr = "2.7.4"
 mimalloc-safe = "0.1.52"
 mime = "0.3.17"
 nom = "8.0.0"
-notify = { version = "8.1.0", default-features = false, features = ["macos_kqueue"], git = "https://github.com/sapphi-red/notify", rev = "refs/heads/patches" }
-notify-debouncer-full = { version = "0.6.0", default-features = false, features = ["macos_kqueue"], git = "https://github.com/sapphi-red/notify", rev = "refs/heads/patches" }
 num-bigint = "0.4.6"
 num-format = "0.4"
 num_cpus = "1.17"
@@ -175,6 +175,8 @@ phf = "0.13.0"
 rayon = "1.10.0"
 regex = "1.11.1"
 regress = "0.10.3"
+rolldown-notify = { version = "8.1.0", default-features = false, features = ["macos_kqueue"] }
+rolldown-notify-debouncer-full = { version = "0.6.0", default-features = false, features = ["macos_kqueue"] }
 ropey = "1.6.1"
 rustc-hash = { version = "2.1.1" }
 schemars = "1.0.0"
@@ -183,6 +185,7 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 simdutf8 = "0.1.5"
 smallvec = "1.15.0"
+string_cache = "0.9.0"
 sugar_path = { version = "1.2.0", features = ["cached_current_dir"] }
 terminal_size = "0.4.2"
 testing_macros = "1.0.0"
@@ -210,21 +213,21 @@ napi-build = { version = "2.2.2" }
 napi-derive = { version = "3.0.0", default-features = false, features = ["type-def"] }
 
 # oxc crates with the same version
-oxc = { version = "0.92.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
-oxc_allocator = { version = "0.92.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.92.0" }
-oxc_minify_napi = { version = "0.92.0" }
-oxc_parser_napi = { version = "0.92.0" }
-oxc_transform_napi = { version = "0.92.0" }
-oxc_traverse = { version = "0.92.0" }
+oxc = { version = "0.95.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
+oxc_allocator = { version = "0.95.0", features = ["pool"] }
+oxc_ecmascript = { version = "0.95.0" }
+oxc_minify_napi = { version = "0.95.0" }
+oxc_parser_napi = { version = "0.95.0" }
+oxc_transform_napi = { version = "0.95.0" }
+oxc_traverse = { version = "0.95.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
 # Please update with `cargo update oxc_resolver oxc_resolver_napi oxc_sourcemap oxc_index oxc-browserslist`
-oxc_index = { version = "3", features = ["rayon", "serde"] } # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver = { version = "11.7.0", features = ["package_json_raw_json_api", "yarn_pnp"] } # https://github.com/oxc-project/oxc-resolver
-oxc_resolver_napi = { version = "11.7.0", default-features = false, features = ["yarn_pnp"] }
-oxc_sourcemap = { version = "4" } # https://github.com/oxc-project/oxc-sourcemap
+oxc_index = { version = "4", features = ["rayon", "serde"] } # https://github.com/oxc-project/oxc-index-vec
+oxc_resolver = { version = "11", features = ["yarn_pnp"] } # https://github.com/oxc-project/oxc-resolver
+oxc_resolver_napi = { version = "11", default-features = false, features = ["yarn_pnp"] }
+oxc_sourcemap = { version = "6" } # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.dev]
 # Minimal debug info to speed up local and CI builds.

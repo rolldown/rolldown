@@ -5,7 +5,7 @@ use std::sync::Arc;
 use arcstr::ArcStr;
 
 use oxc::{semantic::SymbolId, span::Span};
-use oxc_index::{Idx, IndexVec};
+use oxc_index::IndexVec;
 use rolldown_common::{
   CssRenderer, CssView, ImportKind, ImportRecordIdx, ModuleIdx, RawImportRecord, SymbolRef,
 };

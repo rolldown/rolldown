@@ -9,12 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 import "./shared.js";
 
 ```
+
 ## b.js
 
 ```js
 import "./shared.js";
 
 ```
+
 ## shared.js
 
 ```js

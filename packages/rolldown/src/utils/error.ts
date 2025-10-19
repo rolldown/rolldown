@@ -1,17 +1,47 @@
-import { type BindingError } from '../binding';
+import { type BindingError, type BindingResult } from '../binding';
 import type { RollupError } from '../log/logging';
 
-export function normalizeErrors(rawErrors: (BindingError | Error)[]): Error {
-  const errors = rawErrors.map((e) =>
-    e instanceof Error
-      ? e
-      // strip stacktrace of errors from native diagnostics
-      : Object.assign(new Error(), {
-        kind: e.kind,
-        message: e.message,
-        stack: undefined,
-      })
-  );
+export function unwrapBindingResult<T>(
+  container: BindingResult<T>,
+): T {
+  if (
+    typeof container === 'object' && container !== null &&
+    'isBindingErrors' in container &&
+    container.isBindingErrors
+  ) {
+    throw aggregateBindingErrorsIntoJsError(container.errors);
+  }
+  return container as T;
+}
+
+export function normalizeBindingResult<T>(
+  container: BindingResult<T>,
+): T | Error {
+  if (
+    typeof container === 'object' && container !== null &&
+    'isBindingErrors' in container &&
+    container.isBindingErrors
+  ) {
+    return aggregateBindingErrorsIntoJsError(container.errors);
+  }
+  return container as T;
+}
+
+function normalizeBindingError(e: BindingError): Error {
+  return e.type === 'JsError'
+    ? e.field0
+    : Object.assign(new Error(), {
+      kind: e.field0.kind,
+      message: e.field0.message,
+      stack: undefined,
+    });
+}
+
+export function aggregateBindingErrorsIntoJsError(
+  rawErrors: BindingError[],
+): Error {
+  const errors = rawErrors.map(normalizeBindingError);
+
   // based on https://github.com/evanw/esbuild/blob/9eca46464ed5615cb36a3beb3f7a7b9a8ffbe7cf/lib/shared/common.ts#L1673
   // combine error messages as a top level error
   let summary = `Build failed with ${errors.length} error${

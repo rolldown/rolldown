@@ -83,8 +83,9 @@ if (buildMeta.target === 'browser-pkg') {
       entryFileNames: '[name].browser.mjs',
     },
   });
-  init.define = {
-    ...init.define,
+  init.transform ??= {};
+  init.transform.define = {
+    ...init.transform.define,
     // `experimental-index` now dependents on `logger` in cli to emit warning which require `process.env.ROLLDOWN_TEST` to initialize logger correctly.
     // But in browser build, we don't have `process.`, so we polyfill them
     'process.env.ROLLDOWN_TEST': 'false',
@@ -117,6 +118,7 @@ function withShared(
       'experimental-index': './src/experimental-index',
       ...!isBrowserBuild
         ? {
+          'cli-setup': './src/cli/setup-index',
           cli: './src/cli/index',
           config: './src/config',
           'parallel-plugin': './src/parallel-plugin',
@@ -135,9 +137,7 @@ function withShared(
       /@rolldown\/binding-.*/,
       ...Object.keys(buildMeta.pkgJson.dependencies ?? {}),
     ],
-    define: {
-      'import.meta.browserBuild': String(isBrowserBuild),
-    },
+    // Do not move this line up or down, it's here for a reason
     ...options,
     plugins: [
       buildMeta.desireWasmFiles &&
@@ -149,6 +149,12 @@ function withShared(
       moduleSideEffects: [
         { test: /\/signal-exit\//, sideEffects: false },
       ],
+    },
+    transform: {
+      target: 'node22',
+      define: {
+        'import.meta.browserBuild': String(isBrowserBuild),
+      },
     },
   };
 }
@@ -187,7 +193,7 @@ function removeBuiltModules(): Plugin {
         }
         if (
           id === 'node:os' || id === 'node:worker_threads' ||
-          id === 'node:url' || id === 'node:fs/promises'
+          id === 'node:url' || id === 'node:fs/promises' || id === 'node:util'
         ) {
           // conditional import
           return { id, external: true, moduleSideEffects: false };

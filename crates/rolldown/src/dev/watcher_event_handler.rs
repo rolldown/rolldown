@@ -7,8 +7,8 @@ pub struct WatcherEventHandler {
 }
 impl EventHandler for WatcherEventHandler {
   fn handle_event(&mut self, event: rolldown_watcher::FileChangeResult) {
-    if self.service_tx.send(BuildMessage::WatchEvent(event)).is_err() {
-      // TODO: handle send failed
-    }
+    self.service_tx.send(BuildMessage::WatchEvent(event)).expect(
+      "Build service channel closed while sending file change event - build service terminated unexpectedly"
+    );
   }
 }

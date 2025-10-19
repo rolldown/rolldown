@@ -14,6 +14,7 @@ using a = b;
 
 //#endregion
 ```
+
 ## hoist-export-class-direct.js
 
 ```js
@@ -34,6 +35,7 @@ using c = d;
 //#endregion
 export { Bar1, Foo1 };
 ```
+
 ## hoist-export-class-indirect.js
 
 ```js
@@ -54,6 +56,7 @@ using c = d;
 //#endregion
 export { Bar1, Foo1 };
 ```
+
 ## hoist-export-clause.js
 
 ```js
@@ -64,6 +67,7 @@ using c = d;
 //#endregion
 export { a, c as "c!" };
 ```
+
 ## hoist-export-default-class-anonymous.js
 
 ```js
@@ -77,6 +81,7 @@ using c = d;
 //#endregion
 export { hoist_export_default_class_anonymous_default as default };
 ```
+
 ## hoist-export-default-class-name-unused.js
 
 ```js
@@ -90,6 +95,7 @@ using c = d;
 //#endregion
 export { Foo as default };
 ```
+
 ## hoist-export-default-class-name-used.js
 
 ```js
@@ -107,6 +113,7 @@ using c = d;
 //#endregion
 export { Foo as default };
 ```
+
 ## hoist-export-default-expr.js
 
 ```js
@@ -118,6 +125,7 @@ using c = d;
 //#endregion
 export { hoist_export_default_expr_default as default };
 ```
+
 ## hoist-export-default-function-anonymous.js
 
 ```js
@@ -131,6 +139,7 @@ using c = d;
 //#endregion
 export { hoist_export_default_function_anonymous_default as default };
 ```
+
 ## hoist-export-default-function-name-unused.js
 
 ```js
@@ -144,6 +153,7 @@ using c = d;
 //#endregion
 export { foo as default };
 ```
+
 ## hoist-export-default-function-name-used.js
 
 ```js
@@ -161,6 +171,7 @@ using c = d;
 //#endregion
 export { foo as default };
 ```
+
 ## hoist-export-from.js
 
 ```js
@@ -173,6 +184,7 @@ using c = d;
 //#endregion
 export { x, y };
 ```
+
 ## hoist-export-function-direct.js
 
 ```js
@@ -193,6 +205,7 @@ using c = d;
 //#endregion
 export { bar1, foo1 };
 ```
+
 ## hoist-export-function-indirect.js
 
 ```js
@@ -213,6 +226,7 @@ using c = d;
 //#endregion
 export { bar1, foo1 };
 ```
+
 ## hoist-export-local-direct.js
 
 ```js
@@ -232,6 +246,7 @@ using c = d;
 //#endregion
 export { a1, ac1, c1, x1, y1, z1 };
 ```
+
 ## hoist-export-local-indirect.js
 
 ```js
@@ -248,6 +263,7 @@ using c = d;
 //#endregion
 export { x1, y1, z1 };
 ```
+
 ## hoist-export-star.js
 
 ```js
@@ -259,6 +275,7 @@ using c = d;
 
 //#endregion
 ```
+
 ## hoist-import.js
 
 ```js
@@ -270,6 +287,7 @@ using c = d;
 
 //#endregion
 ```
+
 ## hoist-use-strict.js
 
 ```js

@@ -19,6 +19,7 @@ let x;
 //#endregion
 export { x };
 ```
+
 ## enum.js
 
 ```js
@@ -36,6 +37,7 @@ let x;
 //#endregion
 export { x };
 ```
+
 ## function.js
 
 ```js
@@ -52,6 +54,7 @@ let x;
 //#endregion
 export { x };
 ```
+
 ## let.js
 
 ```js
@@ -67,6 +70,7 @@ let x;
 //#endregion
 export { x };
 ```
+
 ## namespace.js
 
 ```js

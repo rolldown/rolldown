@@ -23,16 +23,18 @@ use rolldown_plugin_utils::{
 use rolldown_utils::{url::clean_url, xxhash::xxhash_with_base};
 use string_wizard::SourceMapOptions;
 
+pub type IsLegacyFn =
+  dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send>> + Send + Sync;
+
 pub type CSSMinifyFn =
   dyn Fn(String) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send>> + Send + Sync;
 
 #[expect(clippy::struct_excessive_bools)]
-#[derive(derive_more::Debug)]
-pub struct ViteCssPostPlugin {
+#[derive(derive_more::Debug, Default)]
+pub struct ViteCSSPostPlugin {
   pub is_lib: bool,
   pub is_ssr: bool,
   pub is_worker: bool,
-  pub is_legacy: bool,
   pub is_client: bool,
   pub css_code_split: bool,
   pub sourcemap: bool,
@@ -41,6 +43,8 @@ pub struct ViteCssPostPlugin {
   pub decoded_base: String,
   pub lib_css_filename: Option<String>,
   #[debug(skip)]
+  pub is_legacy: Option<Arc<IsLegacyFn>>,
+  #[debug(skip)]
   pub css_minify: Option<Arc<CSSMinifyFn>>,
   #[debug(skip)]
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
@@ -48,7 +52,7 @@ pub struct ViteCssPostPlugin {
   pub has_emitted: AtomicBool,
 }
 
-impl Plugin for ViteCssPostPlugin {
+impl Plugin for ViteCSSPostPlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
     std::borrow::Cow::Borrowed("builtin:vite-css-post")
   }
@@ -223,7 +227,9 @@ impl Plugin for ViteCssPostPlugin {
     args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     // to avoid emitting duplicate assets for modern build and legacy build
-    if self.is_legacy {
+    if let Some(is_legacy_fn) = &self.is_legacy
+      && is_legacy_fn().await?
+    {
       return Ok(());
     }
 

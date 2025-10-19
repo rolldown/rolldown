@@ -9,12 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 [MISSING_NAME_OPTION_FOR_IIFE_EXPORT] Warning: If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
 
 ```
+
 ## MIXED_EXPORT
 
 ```text
 [MIXED_EXPORT] Warning: Entry module "test" is using named (including "default", "invalid-identifier", "test") and default exports together. Consumers of your bundle will have to use `test.json.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
 
 ```
+
 # Assets
 
 ## test.js

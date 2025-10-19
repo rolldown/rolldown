@@ -1,8 +1,16 @@
-import { type BindingClientHmrUpdate, BindingDevEngine } from '../../binding';
+import {
+  type BindingClientHmrUpdate,
+  BindingDevEngine,
+  type BindingDevOptions,
+  BindingRebuildStrategy,
+  type BindingResult,
+} from '../../binding';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
+import { normalizeBindingResult } from '../../utils/error';
+import { transformToRollupOutput } from '../../utils/transform-to-rollup-output';
 import type { DevOptions } from './dev-options';
 
 export class DevEngine {
@@ -21,8 +29,47 @@ export class DevEngine {
       false,
     );
 
-    const bindingDevOptions = {
-      onHmrUpdates: devOptions.onHmrUpdates,
+    const userOnHmrUpdates = devOptions.onHmrUpdates;
+    const bindingOnHmrUpdates: BindingDevOptions['onHmrUpdates'] =
+      userOnHmrUpdates
+        ? function(
+          rawResult: BindingResult<[BindingClientHmrUpdate[], string[]]>,
+        ) {
+          const result = normalizeBindingResult(rawResult);
+          if (result instanceof Error) {
+            userOnHmrUpdates(result);
+            return;
+          }
+          const [updates, changedFiles] = result;
+          userOnHmrUpdates({
+            updates,
+            changedFiles,
+          });
+        }
+        : undefined;
+
+    const userOnOutput = devOptions.onOutput;
+    const bindingOnOutput: BindingDevOptions['onOutput'] = userOnOutput
+      ? function(rawResult) {
+        const result = normalizeBindingResult(rawResult);
+        if (result instanceof Error) {
+          userOnOutput(result);
+          return;
+        }
+        userOnOutput(transformToRollupOutput(result));
+      }
+      : undefined;
+
+    const bindingDevOptions: BindingDevOptions = {
+      onHmrUpdates: bindingOnHmrUpdates,
+      onOutput: bindingOnOutput,
+      rebuildStrategy: devOptions.rebuildStrategy
+        ? devOptions.rebuildStrategy === 'always'
+          ? BindingRebuildStrategy.Always
+          : devOptions.rebuildStrategy === 'auto'
+          ? BindingRebuildStrategy.Auto
+          : BindingRebuildStrategy.Never
+        : undefined,
       watch: devOptions.watch && {
         skipWrite: devOptions.watch.skipWrite,
         usePolling: devOptions.watch.usePolling,
@@ -83,5 +130,9 @@ export class DevEngine {
 
   removeClient(clientId: string): void {
     this.#inner.removeClient(clientId);
+  }
+
+  async close(): Promise<void> {
+    await this.#inner.close();
   }
 }

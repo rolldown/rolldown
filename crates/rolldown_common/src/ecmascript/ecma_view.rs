@@ -1,4 +1,6 @@
-use crate::{ConstExportMeta, ImportAttribute, RUNTIME_HELPER_NAMES, StmtInfoIdx};
+use crate::{
+  ConstExportMeta, ImportAttribute, RUNTIME_HELPER_NAMES, SourcemapChainElement, StmtInfoIdx,
+};
 use arcstr::ArcStr;
 use bitflags::bitflags;
 use oxc::{
@@ -83,7 +85,7 @@ pub struct EcmaView {
   pub imports: FxHashMap<Span, ImportRecordIdx>,
   pub exports_kind: ExportsKind,
   pub default_export_ref: SymbolRef,
-  pub sourcemap_chain: Vec<rolldown_sourcemap::SourceMap>,
+  pub sourcemap_chain: Vec<SourcemapChainElement>,
   // the ids of all modules that statically import this module
   pub importers: FxIndexSet<ModuleId>,
   pub importers_idx: FxIndexSet<ModuleIdx>,
@@ -110,6 +112,8 @@ pub struct EcmaView {
   pub hmr_info: HmrInfo,
   pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
   pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
+  /// Use `Box` since it is rarely used also it could reduce the size of `EcmaView`, .
+  pub json_module_none_self_reference_included_symbol: Option<Box<FxHashSet<SymbolRef>>>,
 }
 
 bitflags! {
@@ -138,8 +142,7 @@ pub struct ImportMetaRolldownAssetReplacer {
 
 impl SourceMutation for ImportMetaRolldownAssetReplacer {
   fn apply(&self, magic_string: &mut string_wizard::MagicString<'_>) {
-    magic_string
-      .replace_all("import.meta.__ROLLDOWN_ASSET_FILENAME", format!("\"{}\"", self.asset_filename));
+    magic_string.replace_all("__ROLLDOWN_ASSET_FILENAME__", format!("\"{}\"", self.asset_filename));
   }
 }
 

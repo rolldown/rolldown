@@ -6,13 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-import { value } from "./main.js";
+import { t as value } from "./main.js";
 
 //#region dynamic.js
 console.log(`shared: `, value);
 
 //#endregion
 ```
+
 ## main.js
 
 ```js
@@ -26,37 +27,38 @@ console.log(`shared: `, value);
 const unused = value;
 
 //#endregion
-export { unused, value };
+export { value as t, unused };
 ```
----
 
-Variant: [preserve_entry_signatures: Strict]
+# Variant: [preserve_entry_signatures: Strict]
 
-# Assets
+## Assets
 
-## dynamic.js
+### dynamic.js
 
 ```js
-import { value } from "./lib.js";
+import { t as value } from "./lib.js";
 
 //#region dynamic.js
 console.log(`shared: `, value);
 
 //#endregion
 ```
-## lib.js
+
+### lib.js
 
 ```js
 //#region lib.js
 const value = 100;
 
 //#endregion
-export { value };
+export { value as t };
 ```
-## main.js
+
+### main.js
 
 ```js
-import { value } from "./lib.js";
+import { t as value } from "./lib.js";
 
 //#region main.js
 import("./dynamic.js");
@@ -66,23 +68,23 @@ const unused = value;
 //#endregion
 export { unused };
 ```
----
 
-Variant: [preserve_entry_signatures: False]
+# Variant: [preserve_entry_signatures: False]
 
-# Assets
+## Assets
 
-## dynamic.js
+### dynamic.js
 
 ```js
-import { value } from "./main.js";
+import { t as value } from "./main.js";
 
 //#region dynamic.js
 console.log(`shared: `, value);
 
 //#endregion
 ```
-## main.js
+
+### main.js
 
 ```js
 //#region lib.js
@@ -94,5 +96,5 @@ import("./dynamic.js");
 console.log(`shared: `, value);
 
 //#endregion
-export { value };
+export { value as t };
 ```

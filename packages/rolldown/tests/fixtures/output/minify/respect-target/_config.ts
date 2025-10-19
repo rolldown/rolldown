@@ -7,20 +7,24 @@ export default defineTest({
     transform: {
       target: "chrome88"
     },
-    output: {
-      minify: true,
-    },
+    output: [
+      { minify: true },
+      { minify: 'dce-only' },
+      { minify: { compress: true } }
+    ],
   },
-  afterTest: async (output) => {
-    for (const o of output.output) {
-      if (o.type !== "chunk") {
-        await expect(o.source).toMatchFileSnapshot(
-          path.resolve(import.meta.dirname, 'snap', `${o.fileName}.snap`),
-        );
-      } else {
-        await expect(o.code).toMatchFileSnapshot(
-          path.resolve(import.meta.dirname, 'snap',`${o.fileName}.snap`),
-        );
+  afterTest: async (outputs) => {
+    for (const [index, output] of outputs.entries()) {
+      for (const o of output.output) {
+        if (o.type !== "chunk") {
+          await expect(o.source).toMatchFileSnapshot(
+            path.resolve(import.meta.dirname, `snap-${index}`, `${o.fileName}.snap`),
+          );
+        } else {
+          await expect(o.code).toMatchFileSnapshot(
+            path.resolve(import.meta.dirname, `snap-${index}`,`${o.fileName}.snap`),
+          );
+        }
       }
     }
   },

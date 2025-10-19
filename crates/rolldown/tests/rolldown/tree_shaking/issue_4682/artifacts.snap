@@ -19,6 +19,7 @@ const lazyLoad = async () => {
 //#endregion
 export { lazyLoad };
 ```
+
 ## main.js
 
 ```js
@@ -31,6 +32,7 @@ import("./dynamic.js").then(async ({ lazyLoad }) => {
 
 //#endregion
 ```
+
 ## static.js
 
 ```js
@@ -39,6 +41,7 @@ console.log("static no-treeshake");
 
 //#endregion
 ```
+
 ## static2.js
 
 ```js

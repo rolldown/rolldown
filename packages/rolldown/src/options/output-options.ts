@@ -11,6 +11,40 @@ import type { ModuleInfo } from '../types/module-info';
 import type { RenderedChunk } from '../types/rolldown-output';
 import type { NullValue, StringOrRegExp } from '../types/utils';
 
+export type GeneratedCodePreset = 'es5' | 'es2015';
+
+export interface GeneratedCodeOptions {
+  /**
+   * Whether to use Symbol.toStringTag for namespace objects.
+   * @default false
+   */
+  symbols?: boolean;
+  /**
+   * Allows choosing one of the presets listed above while overriding some options.
+   *
+   * ```js
+   * export default {
+   *   output: {
+   *     generatedCode: {
+   *       preset: 'es2015',
+   *       symbols: false
+   *     }
+   *   }
+   * };
+   * ```
+   */
+  preset?: GeneratedCodePreset;
+  /**
+   * Whether to add readable names to internal variables for profiling purposes.
+   *
+   * When enabled, generated code will use descriptive variable names that correspond
+   * to the original module names, making it easier to profile and debug the bundled code.
+   *
+   * @default true when minification is disabled, false when minification is enabled
+   */
+  profilerNames?: boolean;
+}
+
 export type ModuleFormat =
   | 'es'
   | 'cjs'
@@ -37,10 +71,7 @@ export type AssetFileNamesFunction = (chunkInfo: PreRenderedAsset) => string;
 
 export type GlobalsFunction = (name: string) => string;
 
-export type MinifyOptions = Omit<
-  BindingMinifyOptions,
-  'module' | 'sourcemap'
->;
+export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap'>;
 
 export interface ChunkingContext {
   getModuleInfo(moduleId: string): ModuleInfo | null;
@@ -87,7 +118,7 @@ export interface OutputOptions {
    * // ✅ Preferred: Use string pattern for better performance
    * sourcemapIgnoreList: "vendor"
    *
-   * // ⚠️ Use sparingly: Function calls have high overhead
+   * // ! Use sparingly: Function calls have high overhead
    * sourcemapIgnoreList: (source, sourcemapPath) => {
    *   return source.includes('node_modules') || source.includes('.min.');
    * }
@@ -122,6 +153,38 @@ export interface OutputOptions {
   minify?: boolean | 'dce-only' | MinifyOptions;
   name?: string;
   globals?: Record<string, string> | GlobalsFunction;
+  /**
+   * Maps external module IDs to paths.
+   *
+   * Allows customizing the path used when importing external dependencies.
+   * This is particularly useful for loading dependencies from CDNs or custom locations.
+   *
+   * - Object form: Maps module IDs to their replacement paths
+   * - Function form: Takes a module ID and returns its replacement path
+   *
+   * @example
+   * ```js
+   * {
+   *   paths: {
+   *     'd3': 'https://cdn.jsdelivr.net/npm/d3@7'
+   *   }
+   * }
+   * ```
+   *
+   * @example
+   * ```js
+   * {
+   *   paths: (id) => {
+   *     if (id.startsWith('lodash')) {
+   *       return `https://cdn.jsdelivr.net/npm/${id}`
+   *     }
+   *     return id
+   *   }
+   * }
+   * ```
+   */
+  paths?: Record<string, string> | ((id: string) => string);
+  generatedCode?: Partial<GeneratedCodeOptions>;
   externalLiveBindings?: boolean;
   inlineDynamicImports?: boolean;
   /**
@@ -183,7 +246,7 @@ export interface OutputOptions {
      * By default, each group will also include captured modules' dependencies. This reduces the chance of generating circular chunks.
      *
      * If you want to disable this behavior, it's recommended to both set
-     * - `preserveEntrySignatures: false`
+     * - `preserveEntrySignatures: false | 'allow-extension'`
      * - `strictExecutionOrder: true`
      *
      * to avoid generating invalid chunks.
@@ -277,10 +340,7 @@ export interface OutputOptions {
        */
       name:
         | string
-        | ((
-          moduleId: string,
-          ctx: ChunkingContext,
-        ) => string | NullValue);
+        | ((moduleId: string, ctx: ChunkingContext) => string | NullValue);
       /**
        * - Type: `string | RegExp | ((id: string) => boolean | undefined | void);`
        *
@@ -384,11 +444,26 @@ export interface OutputOptions {
   topLevelVar?: boolean;
   /**
    * - Type: `boolean`
-   * - Default: `false`
+   * - Default: `true` for format `es` or if `output.minify` is `true` or object, `false` otherwise
    *
    * Whether to minify internal exports.
    */
   minifyInternalExports?: boolean;
+  /**
+   * - Type: `boolean`
+   * - Default: `false`
+   *
+   * Clean output directory before emitting output.
+   */
+  cleanDir?: boolean;
+  /** Keep function and class names after bundling.
+   *
+   * When enabled, the bundler will preserve the original names of functions and classes
+   * in the output, which is useful for debugging and error stack traces.
+   *
+   * @default false
+   */
+  keepNames?: boolean;
 }
 
 interface OverwriteOutputOptionsForCli {

@@ -9,8 +9,8 @@ import type { OutputOptions } from '../../options/output-options';
 import type { HasProperty, TypeAssert } from '../../types/assert';
 import type { RolldownOutput } from '../../types/rolldown-output';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
+import { unwrapBindingResult } from '../../utils/error';
 import {
-  handleOutputErrors,
   transformToRollupOutput,
 } from '../../utils/transform-to-rollup-output';
 import { validateOption } from '../../utils/validator';
@@ -76,21 +76,21 @@ export class RolldownBuild {
   async scan(): Promise<void> {
     const { impl } = await this.#getBundlerWithStopWorker({});
     const output = await impl.scan();
-    return handleOutputErrors(output);
+    unwrapBindingResult(output);
   }
 
   async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
     const { impl } = await this.#getBundlerWithStopWorker(outputOptions);
     const output = await impl.generate();
-    return transformToRollupOutput(output);
+    return transformToRollupOutput(unwrapBindingResult(output));
   }
 
   async write(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
     const { impl } = await this.#getBundlerWithStopWorker(outputOptions);
     const output = await impl.write();
-    return transformToRollupOutput(output);
+    return transformToRollupOutput(unwrapBindingResult(output));
   }
 
   async close(): Promise<void> {

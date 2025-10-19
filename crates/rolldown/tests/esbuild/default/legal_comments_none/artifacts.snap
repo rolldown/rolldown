@@ -19,6 +19,7 @@ console.log("in c");
 
 //#endregion
 ```
+
 ## entry2.css
 
 ```css
@@ -28,6 +29,7 @@ c { zoom: 2 } /*! Copyright notice 2 */
 
 
 ```
+
 ## entry2.js
 
 ```js

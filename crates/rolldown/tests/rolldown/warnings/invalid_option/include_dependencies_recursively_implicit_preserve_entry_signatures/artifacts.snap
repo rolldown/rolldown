@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] Warning: `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
+
+- `advancedChunks.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+
+To fix:
+
+- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import { t as sharedValue } from "./vendor.js";
+
+//#region main.js
+console.log("Main entry with shared:", sharedValue);
+function mainFunc() {
+	return "main function";
+}
+
+//#endregion
+export { mainFunc };
+```
+
+## vendor.js
+
+```js
+//#region shared.js
+const sharedValue = "shared module value";
+
+//#endregion
+export { sharedValue as t };
+```

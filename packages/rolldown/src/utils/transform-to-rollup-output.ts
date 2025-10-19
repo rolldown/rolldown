@@ -20,7 +20,6 @@ import {
   bindingAssetSource,
   transformAssetSource,
 } from './asset-source';
-import { normalizeErrors } from './error';
 import { transformChunkModules } from './transform-rendered-chunk';
 
 function transformToRollupSourceMap(map: string): SourceMap {
@@ -133,7 +132,6 @@ export function transformToRollupOutput(
   output: BindingOutputs,
   changed?: ChangedOutputs,
 ): RolldownOutput {
-  handleOutputErrors(output);
   const { chunks, assets } = output;
   return {
     output: [
@@ -141,13 +139,6 @@ export function transformToRollupOutput(
       ...assets.map((asset) => transformToRollupOutputAsset(asset, changed)),
     ],
   } as RolldownOutput;
-}
-
-export function handleOutputErrors(output: BindingOutputs): void {
-  const rawErrors = output.errors;
-  if (rawErrors.length > 0) {
-    throw normalizeErrors(rawErrors);
-  }
 }
 
 export function transformToOutputBundle(

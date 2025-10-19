@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 [MIXED_EXPORT] Warning: Entry module "entry" is using named (including "C", "Class", "Fn", "abc", "b", "c", "default", "l", "v") and default exports together. Consumers of your bundle will have to use `entry.js.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
 
 ```
+
 # Assets
 
 ## entry.js

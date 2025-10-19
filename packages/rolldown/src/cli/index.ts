@@ -16,6 +16,19 @@ if (!checkNodeVersion(process.versions.node)) {
 
 async function main() {
   const { rawArgs, ...cliOptions } = parseCliArguments();
+  // Process --environment flag
+  if (cliOptions.environment) {
+    const environment = Array.isArray(cliOptions.environment)
+      ? cliOptions.environment
+      : [cliOptions.environment];
+
+    for (const argument of environment) {
+      for (const pair of argument.split(',')) {
+        const [key, ...value] = pair.split(':');
+        process.env[key] = value.length === 0 ? String(true) : value.join(':');
+      }
+    }
+  }
 
   if (cliOptions.config || cliOptions.config === '') {
     await bundleWithConfig(cliOptions.config, cliOptions, rawArgs);

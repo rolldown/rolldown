@@ -7,8 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region data.json
-var works = true;
-var data_default = { works };
+var data_default = { works: true };
 
 //#endregion
 //#region entry.js

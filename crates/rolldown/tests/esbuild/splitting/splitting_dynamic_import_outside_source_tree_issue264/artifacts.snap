@@ -11,6 +11,7 @@ console.log("imported");
 
 //#endregion
 ```
+
 ## src_entry1.js
 
 ```js
@@ -19,6 +20,7 @@ import("./package.js");
 
 //#endregion
 ```
+
 ## src_entry2.js
 
 ```js

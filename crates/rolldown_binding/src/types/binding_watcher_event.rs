@@ -3,7 +3,7 @@ use std::sync::Arc;
 use napi::tokio::sync::Mutex;
 use napi_derive::napi;
 
-use super::binding_outputs::{BindingError, to_js_diagnostic};
+use super::{binding_outputs::to_binding_error, error::BindingError};
 use rolldown::{BundleEvent, Bundler, WatcherEvent};
 
 #[napi]
@@ -18,8 +18,8 @@ impl BindingWatcherEvent {
   }
 
   #[napi]
-  pub fn event_kind(&self) -> String {
-    self.inner.to_string()
+  pub fn event_kind(&self) -> &str {
+    self.inner.as_str()
   }
 
   #[napi]
@@ -49,9 +49,9 @@ impl BindingWatcherEvent {
   }
 
   #[napi]
-  pub fn bundle_event_kind(&self) -> String {
+  pub fn bundle_event_kind(&self) -> &str {
     match &self.inner {
-      WatcherEvent::Event(kind) => kind.to_string(),
+      WatcherEvent::Event(kind) => kind.as_str(),
       _ => {
         unreachable!("Expected WatcherEvent::Event")
       }
@@ -66,7 +66,7 @@ impl BindingWatcherEvent {
           .error
           .diagnostics
           .iter()
-          .map(|diagnostic| to_js_diagnostic(diagnostic, data.error.cwd.clone()))
+          .map(|diagnostic| to_binding_error(diagnostic, data.error.cwd.clone()))
           .collect(),
         result: Arc::clone(&data.result),
       },
@@ -100,7 +100,7 @@ impl BindingBundleEndEventData {
 
 #[napi]
 pub struct BindingBundleErrorEventData {
-  error: Vec<napi::Either<napi::JsError, BindingError>>,
+  error: Vec<BindingError>,
   result: Arc<Mutex<Bundler>>,
 }
 
@@ -112,7 +112,7 @@ impl BindingBundleErrorEventData {
   }
 
   #[napi(getter)]
-  pub fn error(&mut self) -> Vec<napi::Either<napi::JsError, BindingError>> {
+  pub fn error(&mut self) -> Vec<BindingError> {
     std::mem::take(&mut self.error)
   }
 }

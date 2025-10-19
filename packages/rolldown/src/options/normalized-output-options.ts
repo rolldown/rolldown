@@ -14,6 +14,8 @@ import type {
   OutputOptions,
 } from './output-options';
 
+type PathsFunction = (id: string) => string;
+
 export type InternalModuleFormat = 'es' | 'cjs' | 'iife' | 'umd';
 
 export interface NormalizedOutputOptions {
@@ -38,6 +40,7 @@ export interface NormalizedOutputOptions {
   esModule: boolean | 'if-default-prop';
   extend: boolean;
   globals: Record<string, string> | GlobalsFunction;
+  paths: Record<string, string> | PathsFunction | undefined;
   hashCharacters: 'base64' | 'base36' | 'hex';
   sourcemapDebugIds: boolean;
   sourcemapIgnoreList:
@@ -153,6 +156,10 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
 
   get globals(): Record<string, string> | GlobalsFunction {
     return this.inner.globals || this.outputOptions.globals!;
+  }
+
+  get paths(): Record<string, string> | PathsFunction | undefined {
+    return this.outputOptions.paths;
   }
 
   get hashCharacters(): 'base64' | 'base36' | 'hex' {

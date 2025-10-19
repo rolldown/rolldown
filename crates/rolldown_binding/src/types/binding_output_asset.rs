@@ -16,18 +16,18 @@ impl BindingOutputAsset {
   }
 
   #[napi(getter)]
-  pub fn file_name(&self) -> String {
-    self.inner.filename.to_string()
+  pub fn file_name(&self) -> &str {
+    &self.inner.filename
   }
 
   #[napi(getter)]
-  pub fn original_file_name(&self) -> Option<String> {
-    self.inner.original_file_names.first().cloned()
+  pub fn original_file_name(&self) -> Option<&str> {
+    self.inner.original_file_names.first().map(AsRef::as_ref)
   }
 
   #[napi(getter)]
-  pub fn original_file_names(&self) -> Vec<String> {
-    self.inner.original_file_names.clone()
+  pub fn original_file_names(&self) -> Vec<&str> {
+    self.inner.original_file_names.iter().map(AsRef::as_ref).collect()
   }
 
   #[napi(getter)]
@@ -36,17 +36,17 @@ impl BindingOutputAsset {
   }
 
   #[napi(getter)]
-  pub fn name(&self) -> Option<String> {
-    self.inner.names.first().cloned()
+  pub fn name(&self) -> Option<&str> {
+    self.inner.names.first().map(AsRef::as_ref)
   }
 
   #[napi(getter)]
-  pub fn names(&self) -> Vec<String> {
-    self.inner.names.clone()
+  pub fn names(&self) -> Vec<&str> {
+    self.inner.names.iter().map(AsRef::as_ref).collect()
   }
 }
 
-#[napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 pub struct JsOutputAsset {
   pub names: Vec<String>,
   pub original_file_names: Vec<String>,

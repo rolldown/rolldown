@@ -1,4 +1,5 @@
 import { getCodeFrame } from '../utils/code-frame';
+import { styleText } from '../utils/style-text';
 import { locate } from './locate-character';
 import type { RollupLog } from './logging';
 
@@ -8,8 +9,12 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   CYCLE_LOADING = 'CYCLE_LOADING',
   MULTIPLY_NOTIFY_OPTION = 'MULTIPLY_NOTIFY_OPTION',
   PARSE_ERROR = 'PARSE_ERROR',
-  DUPLICATE_JSX_CONFIG = 'DUPLICATE_JSX_CONFIG',
-  NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER';
+  NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER',
+  DEPRECATED_DEFINE = 'DEPRECATED_DEFINE',
+  DEPRECATED_INJECT = 'DEPRECATED_INJECT',
+  DEPRECATED_PROFILER_NAMES = 'DEPRECATED_PROFILER_NAMES',
+  DEPRECATED_KEEP_NAMES = 'DEPRECATED_KEEP_NAMES',
+  DEPRECATED_DROP_LABELS = 'DEPRECATED_DROP_LABELS';
 
 export function logParseError(message: string): RollupLog {
   return {
@@ -56,19 +61,54 @@ export function logMultiplyNotifyOption(): RollupLog {
   };
 }
 
-export function logDuplicateJsxConfig(): RollupLog {
-  return {
-    code: DUPLICATE_JSX_CONFIG,
-    message:
-      'Both `options.jsx` and `options.transform.jsx` are set so `options.jsx` is ignored',
-  };
-}
-
 export function logNoFileSystemInBrowser(method: string): RollupLog {
   return {
     code: NO_FS_IN_BROWSER,
     message:
       `Cannot access the file system (via "${method}") when using the browser build of Rolldown.`,
+  };
+}
+
+export function logDeprecatedDefine(): RollupLog {
+  return {
+    code: DEPRECATED_DEFINE,
+    message: `${
+      styleText(['yellow', 'bold'], '⚠ Deprecation Warning:')
+    } The top-level "define" option is deprecated. Use "transform.define" instead.`,
+  };
+}
+
+export function logDeprecatedInject(): RollupLog {
+  return {
+    code: DEPRECATED_INJECT,
+    message: `${
+      styleText(['yellow', 'bold'], '⚠ Deprecation Warning:')
+    } The top-level "inject" option is deprecated. Use "transform.inject" instead.`,
+  };
+}
+
+export function logDeprecatedProfilerNames(): RollupLog {
+  return {
+    code: DEPRECATED_PROFILER_NAMES,
+    message:
+      'The top-level "profilerNames" option is deprecated. Use "output.generatedCode.profilerNames" instead.',
+  };
+}
+
+export function logDeprecatedKeepNames(): RollupLog {
+  return {
+    code: DEPRECATED_KEEP_NAMES,
+    message:
+      'The top-level "keepNames" option is deprecated. Use "output.keepNames" instead.',
+  };
+}
+
+export function logDeprecatedDropLabels(): RollupLog {
+  return {
+    code: DEPRECATED_DROP_LABELS,
+    message: `${
+      styleText(['yellow', 'bold'], '⚠ Deprecation Warning:')
+    } The top-level "dropLabels" option is deprecated. Use "transform.dropLabels" instead.`,
   };
 }
 

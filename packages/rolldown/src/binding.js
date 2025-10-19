@@ -81,8 +81,8 @@ function requireNative() {
       try {
         const binding = require('@rolldown/binding-android-arm64')
         const bindingPackageVersion = require('@rolldown/binding-android-arm64/package.json').version
-        if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -97,8 +97,8 @@ function requireNative() {
       try {
         const binding = require('@rolldown/binding-android-arm-eabi')
         const bindingPackageVersion = require('@rolldown/binding-android-arm-eabi/package.json').version
-        if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -109,7 +109,24 @@ function requireNative() {
     }
   } else if (process.platform === 'win32') {
     if (process.arch === 'x64') {
+      if (process.report?.getReport?.()?.header?.osName?.startsWith?.('MINGW')) {
+        try {
+        return require('./rolldown-binding.win32-x64-gnu.node')
+      } catch (e) {
+        loadErrors.push(e)
+      }
       try {
+        const binding = require('@rolldown/binding-win32-x64-gnu')
+        const bindingPackageVersion = require('@rolldown/binding-win32-x64-gnu/package.json').version
+        if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        }
+        return binding
+      } catch (e) {
+        loadErrors.push(e)
+      }
+      } else {
+        try {
         return require('./rolldown-binding.win32-x64-msvc.node')
       } catch (e) {
         loadErrors.push(e)
@@ -117,12 +134,13 @@ function requireNative() {
       try {
         const binding = require('@rolldown/binding-win32-x64-msvc')
         const bindingPackageVersion = require('@rolldown/binding-win32-x64-msvc/package.json').version
-        if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
         loadErrors.push(e)
+      }
       }
     } else if (process.arch === 'ia32') {
       try {
@@ -133,8 +151,8 @@ function requireNative() {
       try {
         const binding = require('@rolldown/binding-win32-ia32-msvc')
         const bindingPackageVersion = require('@rolldown/binding-win32-ia32-msvc/package.json').version
-        if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -149,8 +167,8 @@ function requireNative() {
       try {
         const binding = require('@rolldown/binding-win32-arm64-msvc')
         const bindingPackageVersion = require('@rolldown/binding-win32-arm64-msvc/package.json').version
-        if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -168,8 +186,8 @@ function requireNative() {
     try {
       const binding = require('@rolldown/binding-darwin-universal')
       const bindingPackageVersion = require('@rolldown/binding-darwin-universal/package.json').version
-      if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-        throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+      if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+        throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
       }
       return binding
     } catch (e) {
@@ -184,8 +202,8 @@ function requireNative() {
       try {
         const binding = require('@rolldown/binding-darwin-x64')
         const bindingPackageVersion = require('@rolldown/binding-darwin-x64/package.json').version
-        if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -200,8 +218,8 @@ function requireNative() {
       try {
         const binding = require('@rolldown/binding-darwin-arm64')
         const bindingPackageVersion = require('@rolldown/binding-darwin-arm64/package.json').version
-        if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -220,8 +238,8 @@ function requireNative() {
       try {
         const binding = require('@rolldown/binding-freebsd-x64')
         const bindingPackageVersion = require('@rolldown/binding-freebsd-x64/package.json').version
-        if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -236,8 +254,8 @@ function requireNative() {
       try {
         const binding = require('@rolldown/binding-freebsd-arm64')
         const bindingPackageVersion = require('@rolldown/binding-freebsd-arm64/package.json').version
-        if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -257,8 +275,8 @@ function requireNative() {
         try {
           const binding = require('@rolldown/binding-linux-x64-musl')
           const bindingPackageVersion = require('@rolldown/binding-linux-x64-musl/package.json').version
-          if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -273,8 +291,8 @@ function requireNative() {
         try {
           const binding = require('@rolldown/binding-linux-x64-gnu')
           const bindingPackageVersion = require('@rolldown/binding-linux-x64-gnu/package.json').version
-          if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -291,8 +309,8 @@ function requireNative() {
         try {
           const binding = require('@rolldown/binding-linux-arm64-musl')
           const bindingPackageVersion = require('@rolldown/binding-linux-arm64-musl/package.json').version
-          if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -307,8 +325,8 @@ function requireNative() {
         try {
           const binding = require('@rolldown/binding-linux-arm64-gnu')
           const bindingPackageVersion = require('@rolldown/binding-linux-arm64-gnu/package.json').version
-          if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -325,8 +343,8 @@ function requireNative() {
         try {
           const binding = require('@rolldown/binding-linux-arm-musleabihf')
           const bindingPackageVersion = require('@rolldown/binding-linux-arm-musleabihf/package.json').version
-          if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -341,8 +359,8 @@ function requireNative() {
         try {
           const binding = require('@rolldown/binding-linux-arm-gnueabihf')
           const bindingPackageVersion = require('@rolldown/binding-linux-arm-gnueabihf/package.json').version
-          if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -359,8 +377,8 @@ function requireNative() {
         try {
           const binding = require('@rolldown/binding-linux-loong64-musl')
           const bindingPackageVersion = require('@rolldown/binding-linux-loong64-musl/package.json').version
-          if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -375,8 +393,8 @@ function requireNative() {
         try {
           const binding = require('@rolldown/binding-linux-loong64-gnu')
           const bindingPackageVersion = require('@rolldown/binding-linux-loong64-gnu/package.json').version
-          if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -393,8 +411,8 @@ function requireNative() {
         try {
           const binding = require('@rolldown/binding-linux-riscv64-musl')
           const bindingPackageVersion = require('@rolldown/binding-linux-riscv64-musl/package.json').version
-          if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -409,8 +427,8 @@ function requireNative() {
         try {
           const binding = require('@rolldown/binding-linux-riscv64-gnu')
           const bindingPackageVersion = require('@rolldown/binding-linux-riscv64-gnu/package.json').version
-          if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+          if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+            throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
           return binding
         } catch (e) {
@@ -426,8 +444,8 @@ function requireNative() {
       try {
         const binding = require('@rolldown/binding-linux-ppc64-gnu')
         const bindingPackageVersion = require('@rolldown/binding-linux-ppc64-gnu/package.json').version
-        if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -442,8 +460,8 @@ function requireNative() {
       try {
         const binding = require('@rolldown/binding-linux-s390x-gnu')
         const bindingPackageVersion = require('@rolldown/binding-linux-s390x-gnu/package.json').version
-        if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -462,8 +480,8 @@ function requireNative() {
       try {
         const binding = require('@rolldown/binding-openharmony-arm64')
         const bindingPackageVersion = require('@rolldown/binding-openharmony-arm64/package.json').version
-        if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -478,8 +496,8 @@ function requireNative() {
       try {
         const binding = require('@rolldown/binding-openharmony-x64')
         const bindingPackageVersion = require('@rolldown/binding-openharmony-x64/package.json').version
-        if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -494,8 +512,8 @@ function requireNative() {
       try {
         const binding = require('@rolldown/binding-openharmony-arm')
         const bindingPackageVersion = require('@rolldown/binding-openharmony-arm/package.json').version
-        if (bindingPackageVersion !== '1.0.0-beta.40' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.40 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
+        if (bindingPackageVersion !== '1.0.0-beta.43' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
+          throw new Error(`Native binding package version mismatch, expected 1.0.0-beta.43 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
         return binding
       } catch (e) {
@@ -557,7 +575,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { minify, Severity, ParseResult, ExportExportNameKind, ExportImportNameKind, ExportLocalNameKind, ImportNameKind, parseAsync, parseSync, rawTransferSupported, ResolverFactory, EnforceExtension, ModuleType, sync, HelperMode, isolatedDeclaration, moduleRunnerTransform, transform, transformAsync, BindingBundleEndEventData, BindingBundleErrorEventData, BindingBundler, BindingBundlerImpl, BindingCallableBuiltinPlugin, BindingChunkingContext, BindingClientHmrUpdate, BindingDevEngine, BindingHmrOutput, BindingMagicString, BindingModuleInfo, BindingNormalizedOptions, BindingOutputAsset, BindingOutputChunk, BindingOutputs, BindingPluginContext, BindingRenderedChunk, BindingRenderedChunkMeta, BindingRenderedModule, BindingTransformPluginContext, BindingWatcher, BindingWatcherChangeData, BindingWatcherEvent, ParallelJsPluginRegistry, ScheduledBuild, TraceSubscriberGuard, BindingAttachDebugInfo, BindingBuiltinPluginName, BindingChunkModuleOrderBy, BindingJsx, BindingLogLevel, BindingPluginOrder, BindingPropertyReadSideEffects, BindingPropertyWriteSideEffects, FilterTokenKind, initTraceSubscriber, registerPlugins, shutdownAsyncRuntime, startAsyncRuntime, JsWatcher } = nativeBinding
+const { minify, Severity, ParseResult, ExportExportNameKind, ExportImportNameKind, ExportLocalNameKind, ImportNameKind, parseAsync, parseSync, rawTransferSupported, ResolverFactory, EnforceExtension, ModuleType, sync, HelperMode, isolatedDeclaration, moduleRunnerTransform, transform, transformAsync, BindingBundleEndEventData, BindingBundleErrorEventData, BindingBundler, BindingBundlerImpl, BindingCallableBuiltinPlugin, BindingChunkingContext, BindingDevEngine, BindingMagicString, BindingModuleInfo, BindingNormalizedOptions, BindingOutputAsset, BindingOutputChunk, BindingOutputs, BindingPluginContext, BindingRenderedChunk, BindingRenderedChunkMeta, BindingRenderedModule, BindingTransformPluginContext, BindingUrlResolver, BindingWatcher, BindingWatcherChangeData, BindingWatcherEvent, ParallelJsPluginRegistry, ScheduledBuild, TraceSubscriberGuard, BindingAttachDebugInfo, BindingBuiltinPluginName, BindingChunkModuleOrderBy, BindingLogLevel, BindingPluginOrder, BindingPropertyReadSideEffects, BindingPropertyWriteSideEffects, BindingRebuildStrategy, createTokioRuntime, FilterTokenKind, initTraceSubscriber, registerPlugins, shutdownAsyncRuntime, startAsyncRuntime } = nativeBinding
 export { minify }
 export { Severity }
 export { ParseResult }
@@ -583,9 +601,7 @@ export { BindingBundler }
 export { BindingBundlerImpl }
 export { BindingCallableBuiltinPlugin }
 export { BindingChunkingContext }
-export { BindingClientHmrUpdate }
 export { BindingDevEngine }
-export { BindingHmrOutput }
 export { BindingMagicString }
 export { BindingModuleInfo }
 export { BindingNormalizedOptions }
@@ -597,6 +613,7 @@ export { BindingRenderedChunk }
 export { BindingRenderedChunkMeta }
 export { BindingRenderedModule }
 export { BindingTransformPluginContext }
+export { BindingUrlResolver }
 export { BindingWatcher }
 export { BindingWatcherChangeData }
 export { BindingWatcherEvent }
@@ -606,14 +623,14 @@ export { TraceSubscriberGuard }
 export { BindingAttachDebugInfo }
 export { BindingBuiltinPluginName }
 export { BindingChunkModuleOrderBy }
-export { BindingJsx }
 export { BindingLogLevel }
 export { BindingPluginOrder }
 export { BindingPropertyReadSideEffects }
 export { BindingPropertyWriteSideEffects }
+export { BindingRebuildStrategy }
+export { createTokioRuntime }
 export { FilterTokenKind }
 export { initTraceSubscriber }
 export { registerPlugins }
 export { shutdownAsyncRuntime }
 export { startAsyncRuntime }
-export { JsWatcher }

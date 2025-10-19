@@ -9,12 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 [MISSING_GLOBAL_NAME] Warning: No name was provided for external module "foo" in "output.globals" – guessing "foo".
 
 ```
+
 ## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
 
 ```text
 [MISSING_NAME_OPTION_FOR_IIFE_EXPORT] Warning: If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
 
 ```
+
 # Assets
 
 ## entry.js

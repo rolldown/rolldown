@@ -58,7 +58,7 @@ fn worker_iife(path: &str) -> String {
   format!("new URL('{}', self.location.href).href", escape_id(&partial_encode_url_path(path)))
 }
 
-fn partial_encode_url_path(url: &str) -> Cow<'_, str> {
+pub fn partial_encode_url_path(url: &str) -> Cow<'_, str> {
   if url.starts_with("data:") {
     return Cow::Borrowed(url);
   }

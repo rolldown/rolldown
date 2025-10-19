@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 publish = true
+description = "Rolldown plugin for Vite module resolution"
 
 [lib]
 doctest = false
@@ -17,7 +18,7 @@ dashmap = { workspace = true }
 derive_more = { workspace = true }
 fast-glob = { workspace = true }
 owo-colors = { workspace = true }
-oxc_resolver = { workspace = true, features = ["package_json_raw_json_api"] }
+oxc_resolver = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_plugin_utils = { workspace = true }

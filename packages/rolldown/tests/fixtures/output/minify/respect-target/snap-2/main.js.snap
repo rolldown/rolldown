@@ -1,0 +1,1 @@
+function hello(e){console.log(e==null?void 0:e.name)}export{hello};

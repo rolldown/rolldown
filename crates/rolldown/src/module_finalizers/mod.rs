@@ -1,5 +1,6 @@
 use bitflags::bitflags;
-use oxc::semantic::ScopeFlags;
+use oxc::ast::ast::ObjectPropertyKind;
+use oxc::semantic::{ScopeFlags, SymbolId};
 use oxc::{
   allocator::{self, Allocator, Box as ArenaBox, CloneIn, Dummy, IntoIn, TakeIn},
   ast::{
@@ -27,7 +28,7 @@ pub use finalizer_context::{FinalizerMutableState, ScopeHoistingFinalizerContext
 use oxc::span::CompactStr;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
 use crate::hmr::utils::HmrAstBuilder;
@@ -65,6 +66,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub module_namespace_included: bool,
   pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
   pub rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts,
+  pub json_module_inlined_prop: Option<Box<FxHashMap<SymbolId, ast::Expression<'ast>>>>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -337,7 +339,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     Some((self.builder().expression_sequence(SPAN, self.builder().vec_from_iter(exprs)), ret))
   }
 
-  #[expect(clippy::too_many_lines)]
   fn generate_declaration_of_module_namespace_object(&self) -> Vec<ast::Statement<'ast>> {
     let module_namespace_included_reason = self.ctx.linking_info.module_namespace_included_reason;
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
@@ -433,7 +434,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let Some(Module::External(module)) = m else {
               return vec![];
             };
-            let importee_name = &module.get_import_path(self.ctx.chunk);
+            let importee_name = &module.get_import_path(self.ctx.chunk, None);
             vec![
               // Insert `import * as ns from 'ext'`external module in esm format
               self.snippet.import_star_stmt(importee_name, importee_namespace_name),
@@ -750,7 +751,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ))
   }
 
-  #[expect(clippy::too_many_lines)]
   fn try_rewrite_global_require_call(
     &self,
     call_expr: &mut ast::CallExpression<'ast>,
@@ -875,7 +875,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               call_expr.arguments.get_mut(0).expect("require should have an argument");
             // Rewrite `require('xxx')` to `require('fs')`, if there is an alias that maps 'xxx' to 'fs'
             *request_path = ast::Argument::StringLiteral(self.snippet.alloc_string_literal(
-              &importee.get_import_path(self.ctx.chunk),
+              &importee.get_import_path(self.ctx.chunk, None),
               request_path.span(),
             ));
             None
@@ -887,7 +887,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     None
   }
 
-  #[expect(clippy::too_many_lines)]
   fn try_rewrite_inline_dynamic_import_expr(
     &self,
     import_expr: &ImportExpression<'ast>,
@@ -1032,7 +1031,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     None
   }
 
-  #[expect(clippy::too_many_lines)]
   fn remove_unused_top_level_stmt(&mut self, program: &mut ast::Program<'ast>) -> usize {
     let mut last_import_stmt_idx = None;
 
@@ -1319,7 +1317,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               needs_to_esm_helper = importee.exports_kind.is_commonjs();
             }
             Module::External(importee) => {
-              let import_path = importee.get_import_path(self.ctx.chunk);
+              let import_path = importee.get_import_path(self.ctx.chunk, None);
               if str != import_path {
                 expr.source = Expression::StringLiteral(
                   self.snippet.alloc_string_literal(&import_path, expr.source.span()),
@@ -1382,5 +1380,61 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
     }
     false
+  }
+
+  /// if the json module prop needs to inline, we would just rewrite the inlined prop to
+  /// `EmptyStatement`
+  fn try_inline_json_module_prop(&mut self, it: &mut Statement<'ast>) -> Option<()> {
+    let json_module_inlined_prop = self.json_module_inlined_prop.as_mut()?;
+    let decl = it.as_declaration_mut()?;
+    let ast::Declaration::VariableDeclaration(var_decl) = decl else {
+      return None;
+    };
+    let first_decl = var_decl.declarations.first_mut()?;
+    let init = first_decl.init.as_mut()?;
+    // For synthesis json module, only last symbol of var stmt is `None`, since it is a generated
+    // manually.
+    let id = first_decl.id.get_binding_identifier()?.symbol_id.get();
+    match id {
+      Some(id) => {
+        let symbol_ref: SymbolRef = (self.ctx.id, id).into();
+        if !self
+          .ctx
+          .module
+          .json_module_none_self_reference_included_symbol
+          .as_ref()?
+          .contains(&symbol_ref)
+        {
+          json_module_inlined_prop.insert(id, init.take_in(self.alloc));
+          *it = self.snippet.builder.statement_empty(SPAN);
+        }
+      }
+      None => {
+        // It is `json export default stmt`. e.g.
+        // ```js
+        // ...snip
+        // export default { foo, bar };
+        // ```
+        //
+        let Expression::ObjectExpression(obj_expr) = init else {
+          return None;
+        };
+
+        for ele in &mut obj_expr.properties {
+          let ObjectPropertyKind::ObjectProperty(prop) = ele else {
+            return None;
+          };
+          let identifier = prop.value.as_identifier()?;
+          let reference_id = identifier.reference_id();
+          let symbol_id = self.scope.symbol_id_for(reference_id)?;
+          let Some(replaced_expr) = json_module_inlined_prop.remove(&symbol_id) else {
+            continue;
+          };
+          prop.value = replaced_expr;
+        }
+      }
+    }
+
+    Some(())
   }
 }

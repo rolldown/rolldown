@@ -6,6 +6,7 @@ homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
+description = "Rolldown plugin for TypeScript isolated declarations"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -25,5 +26,5 @@ rolldown_utils = { workspace = true }
 sugar_path = { workspace = true }
 
 [dev-dependencies]
-rolldown_testing = { workspace = true }
+rolldown_testing = { path = '../rolldown_testing' }
 testing_macros = { workspace = true }

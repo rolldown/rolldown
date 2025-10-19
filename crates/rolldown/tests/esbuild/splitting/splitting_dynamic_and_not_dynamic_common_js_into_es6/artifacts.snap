@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { __toDynamicImportESM, __toESM, require_foo } from "./foo.js";
+import { n as __toDynamicImportESM, r as __toESM, t as require_foo } from "./foo.js";
 
 //#region entry.js
 var import_foo = /* @__PURE__ */ __toESM(require_foo());
@@ -14,6 +14,7 @@ import("./foo2.js").then(__toDynamicImportESM()).then(({ default: { bar: b } }) 
 
 //#endregion
 ```
+
 ## foo.js
 
 ```js
@@ -24,12 +25,13 @@ var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": ((exports) => {
 }) });
 
 //#endregion
-export { __toDynamicImportESM, __toESM, require_foo };
+export { __toDynamicImportESM as n, __toESM as r, require_foo as t };
 ```
+
 ## foo2.js
 
 ```js
-import { require_foo } from "./foo.js";
+import { t as require_foo } from "./foo.js";
 
 export default require_foo();
 

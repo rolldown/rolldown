@@ -24,7 +24,7 @@ jobs:
       binary_size: ${{ steps.run.outputs.BINARY_SIZE }}
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
-      - uses: oxc-project/setup-rust@d286d43bc1f606abbd98096666ff8be68c8d5f57 # v1.0.2
+      - uses: oxc-project/setup-rust@1ff88fdaffd6ae35c0fb32ccc159340b37d0beac # v1.0.7
         with:
           cache-key: release-build
       - run: cargo clean # build from scratch using local system cache to avoid download from crates.io
@@ -55,18 +55,10 @@ jobs:
           token: ${{ secrets.METRIC_SECRET_KEY }}
           persist-credentials: true # required by `git push` below
 
-      - name: Setup Pnpm
-        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-        with:
-          node-version: '22' # Specify the Node.js version you need
-          cache: 'pnpm'
+      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
 
       - name: Install dependencies and push metric
         run: |
-          pnpm install -r
           node ./scripts/compile-time-and-binary-size.mjs
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'

@@ -67,8 +67,8 @@ If you are using a platform that a prebuilt binary is not distributed, you have 
      - In case you need to force Rolldown to use the Wasm build, you can set `NAPI_RS_FORCE_WASI=error` environment variable.
 - Build from source
   1. Clone the repository.
-  2. Setup the project by following [the setup instructions](/contrib-guide/setup-the-project).
-  3. Build the project by following [the build instructions](/contrib-guide/building-and-running).
+  2. Setup the project by following [the setup instructions](/development-guide/setup-the-project).
+  3. Build the project by following [the build instructions](/development-guide/building-and-running).
   4. Set the `NAPI_RS_NATIVE_LIBRARY_PATH` environment variable to the path of `packages/rolldown` in the cloned repository.
 
 :::
@@ -147,7 +147,7 @@ $ npm run build
 
 ## Using the Config File
 
-When more options are needed, it is recommended to use a config file for more flexibility. Let's create the following config file:
+When more options are needed, it is recommended to use a config file for more flexibility. A config file can be written in `.js`, `.cjs`, `.mjs`, `.ts`, `.mts`, or `.cts` formats. Let's create the following config file:
 
 ```js [rolldown.config.js]
 import { defineConfig } from 'rolldown';
@@ -160,7 +160,7 @@ export default defineConfig({
 });
 ```
 
-Rolldown supports most of the [Rollup config options](https://rollupjs.org/configuration-options), with some [notable additional features](./features.md).
+Rolldown supports most of the [Rollup config options](https://rollupjs.org/configuration-options), with some [notable additional features](./notable-features).
 
 While exporting a plain object also works, it is recommended to utilize the `defineConfig` helper method to get options intellisense and auto-completion. This helper is provided purely for the types and returns the options as-is.
 
@@ -178,38 +178,6 @@ Next, in the npm script, we can instruct Rolldown to use the config file with th
   }
 }
 ```
-
-### TypeScript config file
-
-TypeScript config file is also supported out of the box:
-
-```json{5} [package.json]
-{
-  "name": "my-rolldown-project",
-  "type": "module",
-  "scripts": {
-    "build": "rolldown -c rolldown.config.ts"
-  },
-  "devDependencies": {
-    "rolldown": "^1.0.0-beta.1"
-  }
-}
-```
-
-```js [rolldown.config.ts]
-import { defineConfig } from 'rolldown';
-
-export default defineConfig({
-  input: 'src/main.js',
-  output: {
-    file: 'bundle.js',
-  },
-});
-```
-
-:::warning Specifying config file name
-The default config file used with the `-c` flag is `rolldown.config.js`. If you are using `.ts` or `.mjs` extensions, make sure to specify the full filename with e.g. `rolldown -c rolldown.config.ts`.
-:::
 
 ### Multiple builds in the same config
 
@@ -237,7 +205,7 @@ export default defineConfig([
 
 ## Using Plugins
 
-Rolldown's plugin API is identical to that of Rollup's, so you can reuse most of the existing Rollup plugins when using Rolldown. That said, Rolldown provides many [built-in features](./features.md) that make it unnecessary to use plugins.
+Rolldown's plugin API is identical to that of Rollup's, so you can reuse most of the existing Rollup plugins when using Rolldown. That said, Rolldown provides many [built-in features](./notable-features) that make it unnecessary to use plugins.
 
 ## Using the API
 

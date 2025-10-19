@@ -12,7 +12,14 @@ use serde::Deserialize;
 pub enum RawMinifyOptions {
   Bool(bool),
   DeadCodeEliminationOnly,
-  Object((oxc::minifier::MinifierOptions, bool)),
+  Object(RawMinifyOptionsDetailed),
+}
+
+#[derive(Debug, Clone)]
+pub struct RawMinifyOptionsDetailed {
+  pub options: oxc::minifier::MinifierOptions,
+  pub default_target: bool,
+  pub remove_whitespace: bool,
 }
 
 impl RawMinifyOptions {
@@ -53,7 +60,16 @@ impl RawMinifyOptions {
         }
       }
       RawMinifyOptions::DeadCodeEliminationOnly => MinifyOptions::DeadCodeEliminationOnly,
-      RawMinifyOptions::Object(value) => MinifyOptions::Enabled(value),
+      RawMinifyOptions::Object(value) => MinifyOptions::Enabled((
+        {
+          let mut opts = value.options;
+          if value.default_target {
+            opts.compress.get_or_insert_default().target = options.transform_options.target.clone();
+          }
+          opts
+        },
+        value.remove_whitespace,
+      )),
     }
     //
   }

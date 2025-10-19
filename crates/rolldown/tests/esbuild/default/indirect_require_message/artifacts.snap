@@ -6,53 +6,58 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## array.js
 
 ```js
-import { __require } from "./chunk.js";
+import { t as __require } from "./chunk.js";
 
 //#region array.js
 __require;
 
 //#endregion
 ```
+
 ## assign.js
 
 ```js
-import { __require } from "./chunk.js";
+import { t as __require } from "./chunk.js";
 
 //#region assign.js
 require = x;
 
 //#endregion
 ```
+
 ## chunk.js
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __require };
+export { __require as t };
 ```
+
 ## dot.js
 
 ```js
-import { __require } from "./chunk.js";
+import { t as __require } from "./chunk.js";
 
 //#region dot.js
 __require.cache;
 
 //#endregion
 ```
+
 ## ident.js
 
 ```js
-import { __require } from "./chunk.js";
+import { t as __require } from "./chunk.js";
 
 //#region ident.js
 __require;
 
 //#endregion
 ```
+
 ## index.js
 
 ```js
-import { __require } from "./chunk.js";
+import { t as __require } from "./chunk.js";
 
 //#region index.js
 __require[cache];

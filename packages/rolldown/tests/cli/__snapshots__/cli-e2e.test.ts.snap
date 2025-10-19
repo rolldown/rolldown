@@ -38,6 +38,7 @@ OPTIONS
   --checks.unresolved-entry   Whether to emit warning when detecting unresolved entry.
   --checks.unresolved-import  Whether to emit warning when detecting unresolved import.
   --chunk-file-names <name>   Name pattern for emitted secondary chunks.
+  --clean-dir                 Clean output directory before emitting output.
   --context <context>         The entity top-level \`this\` represents.
   --css-chunk-file-names <css-chunk-file-names>Name pattern for emitted css secondary chunks.
   --css-entry-file-names <css-entry-file-names>Name pattern for emitted css entry chunks.
@@ -46,17 +47,20 @@ OPTIONS
   --define <define>           Define global variables.
   --drop-labels <drop-labels> Remove labeled statements with these label names.
   --entry-file-names <name>   Name pattern for emitted entry chunks.
+  --environment <environment> Pass additional settings to the config file via process.ENV.
   --es-module                 Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
   --exports <exports>         Specify a export mode (auto, named, default, none).
   --extend                    Extend global variable defined by name in IIFE / UMD formats.
   --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
+  --generated-code.preset <generated-code.preset>.
+  --generated-code.profiler-names Whether to add readable names to internal variables for profiling purposes.
+  --generated-code.symbols    Whether to use Symbol.toStringTag for namespace objects.
   --hash-characters <hash-characters>Use the specified character set for file hashes.
   --inject <inject>           Inject import statements on demand.
   --inline-dynamic-imports    Inline dynamic imports.
   --input <input>             Entry file.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
-  --jsx <jsx>                 Jsx options preset.
-  --keep-names                Keep function/class name.
+  --keep-names                Keep function and class names after bundling.
   --legal-comments <legal-comments>Control comments in the output.
   --log-level <log-level>     Log level (silent, info, debug, warn).
   --make-absolute-externals-relative Prevent normalization of external imports.
@@ -68,6 +72,7 @@ OPTIONS
   --optimization.inline-const <optimization.inline-const>Enable crossmodule constant inlining.
   --optimization.pife-for-module-wrappers Use PIFE pattern for module wrappers.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
+  --paths <paths>             Maps external module IDs to paths.
   --polyfill-require          Disable require polyfill injection.
   --preserve-modules          Preserve module structure.
   --preserve-modules-root <preserve-modules-root>Put preserved modules under this path at root level.
@@ -83,7 +88,10 @@ OPTIONS
   --transform.assumptions.set-public-class-fields .
   --transform.decorators.emit-decorator-metadata .
   --transform.decorators.legacy .
+  --transform.define <transform.define>.
+  --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
+  --transform.inject <transform.inject>.
   --transform.jsx <transform.jsx>.
   --transform.target <transform.target>The JavaScript target environment.
   --transform.typescript.allow-declare-fields .
@@ -315,6 +323,12 @@ exports[`config > should resolve rolldown.config.cjs 1`] = `
 exports[`config > should support custom cli arguments 1`] = `
 "Option \`customArg\` is unrecognized. We will ignore this option.
 <DIR>/index.js  chunk │ size: 0.14 kB
+
+"
+`;
+
+exports[`config > should support environment option 1`] = `
+"<DIR>/index.js  chunk │ size: 0.14 kB
 
 "
 `;

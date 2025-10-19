@@ -85,6 +85,28 @@ impl FileSystem for MemoryFileSystem {
       .read_to_end(&mut buf)?;
     Ok(buf)
   }
+
+  fn read_dir(&self, path: &Path) -> io::Result<Vec<PathBuf>> {
+    let path_str = path.to_string_lossy();
+    let entries = self
+      .fs
+      .read_dir(path_str.as_ref())
+      .map_err(|err| io::Error::new(io::ErrorKind::NotFound, err))?;
+
+    let mut paths = Vec::new();
+    for entry in entries {
+      let entry_path = PathBuf::from(entry);
+      paths.push(entry_path);
+    }
+    Ok(paths)
+  }
+
+  fn remove_file(&self, path: &Path) -> io::Result<()> {
+    self
+      .fs
+      .remove_file(&path.to_string_lossy())
+      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
+  }
 }
 
 impl OxcResolverFileSystem for MemoryFileSystem {

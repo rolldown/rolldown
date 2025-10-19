@@ -12,6 +12,7 @@ const internal = "internal";
 //#endregion
 export { internal as t };
 ```
+
 ## main.js
 
 ```js
@@ -23,6 +24,7 @@ const main = internal;
 //#endregion
 export { main };
 ```
+
 ## main2.js
 
 ```js

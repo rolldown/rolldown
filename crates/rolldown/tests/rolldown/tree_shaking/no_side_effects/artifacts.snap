@@ -15,8 +15,9 @@ Object.defineProperty(classLike.prototype, "sideEffect", { get() {
 } });
 
 //#endregion
-export { classLike };
+export { classLike as t };
 ```
+
 ## entry.js
 
 ```js
@@ -27,10 +28,11 @@ console.log("Hello");
 
 //#endregion
 ```
+
 ## entry2.js
 
 ```js
-import { classLike } from "./classLike.js";
+import { t as classLike } from "./classLike.js";
 
 //#region entry2.js
 new classLike();

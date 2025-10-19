@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.cjs"
+      }
+    ],
+    "format": "cjs",
+    "moduleTypes": {
+      ".txt": "asset"
+    }
+  }
+}

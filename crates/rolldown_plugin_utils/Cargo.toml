@@ -6,6 +6,7 @@ homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
+description = "Shared utilities for Rolldown plugins"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -24,6 +25,7 @@ memchr = { workspace = true }
 percent-encoding = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
+rolldown_sourcemap = { workspace = true }
 rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
 serde_json = { workspace = true }

@@ -1,4 +1,16 @@
 import type { BindingClientHmrUpdate } from '../../binding';
+import type { RolldownOutput } from '../../types/rolldown-output';
+
+type DevOnHmrUpdates = (
+  result: Error | {
+    updates: BindingClientHmrUpdate[];
+    changedFiles: string[];
+  },
+) => void | Promise<void>;
+
+type DevOnOutput = (
+  result: Error | RolldownOutput,
+) => void | Promise<void>;
 
 export interface DevWatchOptions {
   /**
@@ -42,9 +54,15 @@ export interface DevWatchOptions {
 }
 
 export interface DevOptions {
-  onHmrUpdates?: (
-    updates: BindingClientHmrUpdate[],
-    changedFiles: string[],
-  ) => void | Promise<void>;
+  onHmrUpdates?: DevOnHmrUpdates;
+  onOutput?: DevOnOutput;
+  /**
+   * Strategy for triggering rebuilds after HMR updates.
+   * - `'always'`: Always trigger a rebuild after HMR updates
+   * - `'auto'`: Trigger rebuild only if HMR updates contain full reload updates
+   * - `'never'`: Never trigger rebuild after HMR updates (default)
+   * @default 'auto'
+   */
+  rebuildStrategy?: 'always' | 'auto' | 'never';
   watch?: DevWatchOptions;
 }

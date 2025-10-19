@@ -56,7 +56,7 @@ impl WatcherTask {
 
     self.emitter.emit(WatcherEvent::Event(BundleEvent::BundleStart))?;
 
-    bundler.reset_closed();
+    bundler.reset_closed_for_watch_mode();
     bundler.plugin_driver.clear();
 
     let result = {

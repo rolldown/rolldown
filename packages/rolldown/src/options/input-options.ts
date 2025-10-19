@@ -1,4 +1,3 @@
-import type { TransformOptions } from '../binding';
 import type {
   LogLevel,
   LogLevelOption,
@@ -10,19 +9,9 @@ import type { RolldownPluginOption } from '../plugin';
 import type { TreeshakingOptions } from '../types/module-side-effects';
 import type { NullValue, StringOrRegExp } from '../types/utils';
 import type { ChecksOptions } from './generated/checks-options';
+import type { TransformOptions } from './transform-options';
 
 export type InputOption = string | string[] | Record<string, string>;
-
-// Omit those key that are part of rolldown option
-type OxcTransformOption = Omit<
-  TransformOptions,
-  | 'sourceType'
-  | 'lang'
-  | 'cwd'
-  | 'sourcemap'
-  | 'define'
-  | 'inject'
->;
 
 export type ExternalOption =
   | StringOrRegExp
@@ -117,14 +106,6 @@ export type AttachDebugOptions = 'none' | 'simple' | 'full';
 
 type ChunkModulesOrder = 'exec-order' | 'module-id';
 
-interface RollupJsxOptions {
-  mode?: 'classic' | 'automatic' | 'preserve';
-  factory?: string;
-  fragment?: string;
-  importSource?: string;
-  jsxImportSource?: string;
-}
-
 export interface InputOptions {
   input?: InputOption;
   plugins?: RolldownPluginOption;
@@ -187,6 +168,17 @@ export interface InputOptions {
   ) => void;
   moduleTypes?: ModuleTypes;
   experimental?: {
+    /**
+     * Lets modules be executed in the order they are declared.
+     *
+     * - Type: `boolean`
+     * - Default: `false`
+     *
+     * This is done by injecting runtime helpers to ensure that modules are executed in the order they are imported. External modules won't be affected.
+     *
+     * > [!WARNING]
+     * > Enabling this option may negatively increase bundle size. It is recommended to use this option only when absolutely necessary.
+     */
     strictExecutionOrder?: boolean;
     disableLiveBindings?: boolean;
     viteMode?: boolean;
@@ -272,93 +264,73 @@ export interface InputOptions {
      */
     incrementalBuild?: boolean;
     transformHiresSourcemap?: boolean | 'boundary';
+    /**
+     * Use native Rust implementation of MagicString for source map generation.
+     *
+     * - Type: `boolean`
+     * - Default: `false`
+     *
+     * [MagicString](https://github.com/rich-harris/magic-string) is a JavaScript library commonly used by bundlers
+     * for string manipulation and source map generation. When enabled, rolldown will use a native Rust
+     * implementation of MagicString instead of the JavaScript version, providing significantly better performance
+     * during source map generation and code transformation.
+     *
+     * ## Benefits
+     *
+     * - **Improved Performance**: The native Rust implementation is typically faster than the JavaScript version,
+     *   especially for large codebases with extensive source maps.
+     * - **Background Processing**: Source map generation is performed asynchronously in a background thread,
+     *   allowing the main bundling process to continue without blocking. This parallel processing can significantly
+     *   reduce overall build times when working with JavaScript transform hooks.
+     * - **Better Integration**: Seamless integration with rolldown's native Rust architecture.
+     *
+     * ## Example
+     *
+     * ```js
+     * export default {
+     *   experimental: {
+     *     nativeMagicString: true
+     *   },
+     *   output: {
+     *     sourcemap: true
+     *   }
+     * }
+     * ```
+     *
+     * > [!NOTE]
+     * > This is an experimental feature. While it aims to provide identical behavior to the JavaScript
+     * > implementation, there may be edge cases. Please report any discrepancies you encounter.
+     * > For a complete working example, see [examples/native-magic-string](https://github.com/rolldown/rolldown/tree/main/examples/native-magic-string)
+     */
+    nativeMagicString?: boolean;
   };
   /**
    * Replace global variables or [property accessors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Property_accessors) with the provided values.
    *
-   * # Examples
+   * @deprecated Use `transform.define` instead. This top-level option will be removed in a future release.
    *
-   * - Replace the global variable `IS_PROD` with `true`
-   *
-   * ```js rolldown.config.js
-   * export default defineConfig({ define: { IS_PROD: 'true' // or JSON.stringify(true) } })
-   * ```
-   *
-   * Result:
-   *
-   * ```js
-   * // Input
-   * if (IS_PROD) {
-   *   console.log('Production mode')
-   * }
-   *
-   * // After bundling
-   * if (true) {
-   *   console.log('Production mode')
-   * }
-   * ```
-   *
-   * - Replace the property accessor `process.env.NODE_ENV` with `'production'`
-   *
-   * ```js rolldown.config.js
-   * export default defineConfig({ define: { 'process.env.NODE_ENV': "'production'" } })
-   * ```
-   *
-   * Result:
-   *
-   * ```js
-   * // Input
-   * if (process.env.NODE_ENV === 'production') {
-   *  console.log('Production mode')
-   * }
-   *
-   * // After bundling
-   * if ('production' === 'production') {
-   * console.log('Production mode')
-   * }
-   *
-   * ```
+   * See `transform.define` for detailed documentation and examples.
    */
   define?: Record<string, string>;
   /**
    * Inject import statements on demand.
    *
-   * ## Supported patterns
-   * ```js
-   * {
-   *   // import { Promise } from 'es6-promise'
-   *   Promise: ['es6-promise', 'Promise'],
+   * @deprecated Use `transform.inject` instead. This top-level option will be removed in a future release.
    *
-   *   // import { Promise as P } from 'es6-promise'
-   *   P: ['es6-promise', 'Promise'],
-   *
-   *   // import $ from 'jquery'
-   *   $: 'jquery',
-   *
-   *   // import * as fs from 'node:fs'
-   *   fs: ['node:fs', '*'],
-   *
-   *   // Inject shims for property access pattern
-   *   'Object.assign': path.resolve( 'src/helpers/object-assign.js' ),
-   * }
-   * ```
+   * See `transform.inject` for detailed documentation and examples.
    */
   inject?: Record<string, string | [string, string]>;
-  profilerNames?: boolean;
   /**
-   * @deprecated Use `transform.jsx` instead.
+   * Whether to add readable names to internal variables for profiling purposes.
    *
-   * This top-level `jsx` option will be removed in a future release.
-   * It is only kept for backward compatibility and will be mapped internally to `transform.jsx`.
+   * When enabled, generated code will use descriptive variable names that correspond
+   * to the original module names, making it easier to profile and debug the bundled code.
    *
-   * - `false` disables the JSX parser, resulting in a syntax error if JSX syntax is used.
-   * - `"preserve"` disables the JSX transformer, preserving the original JSX syntax in the output.
-   * - `"react"` enables the `classic` JSX transformer.
-   * - `"react-jsx"` enables the `automatic` JSX transformer.
+   * @default true when minification is disabled, false when minification is enabled
    *
-   * @default runtime = "automatic"
+   * @deprecated Use `output.generatedCode.profilerNames` instead. This top-level option will be removed in a future release.
    */
-  jsx?: false | 'react' | 'react-jsx' | 'preserve' | RollupJsxOptions;
+  profilerNames?: boolean;
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.
    *
@@ -376,9 +348,23 @@ export interface InputOptions {
    *
    * For latest decorators proposal, rolldown is able to bundle them but doesn't support transpiling them yet.
    */
-  transform?: OxcTransformOption;
+  transform?: TransformOptions;
   watch?: WatcherOptions | false;
+  /**
+   * Remove labeled statements with these label names.
+   *
+   * @deprecated Use `transform.dropLabels` instead. This top-level option will be removed in a future release.
+   *
+   * See `transform.dropLabels` for detailed documentation and examples.
+   */
   dropLabels?: string[];
+  /**
+   * Keep function and class names after bundling.
+   *
+   * @deprecated Use `output.keepNames` instead. This top-level option will be removed in a future release.
+   *
+   * See `output.keepNames` for detailed documentation.
+   */
   keepNames?: boolean;
   checks?: ChecksOptions;
   makeAbsoluteExternalsRelative?: MakeAbsoluteExternalsRelative;

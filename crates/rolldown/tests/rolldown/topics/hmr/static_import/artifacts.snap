@@ -101,6 +101,7 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 //#endregion
 ```
+
 # HMR Step 0
 
 ## Code
@@ -167,9 +168,11 @@ var init_new_dep_esm_2 = __rolldown_runtime__.createEsmInitializer((function() {
 init_hmr_0()
 __rolldown_runtime__.applyUpdates([['hmr.js', 'hmr.js']]);
 ```
+
 ## Meta
 
 - update type: patch
+
 ### Hmr Boundaries
 
 - boundary: hmr.js, accepted_via: hmr.js

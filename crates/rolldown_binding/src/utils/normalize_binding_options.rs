@@ -1,6 +1,6 @@
 use super::normalize_binding_transform_options;
+use crate::options::BindingGeneratedCodeOptions;
 use crate::options::binding_advanced_chunks_options::BindingChunkingContext;
-use crate::options::binding_jsx::BindingJsx;
 use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption, SanitizeFileName};
 use crate::types::binding_string_or_regex::bindingify_string_or_regex_array;
 use crate::{
@@ -17,9 +17,10 @@ use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
   ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal, MatchGroup,
   MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat, Platform,
-  RawMinifyOptions, SanitizeFilename,
+  RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename,
 };
-use rolldown_common::{DeferSyncScanData, bundler_options};
+use rolldown_common::DeferSyncScanData;
+use rolldown_common::GeneratedCodeOptions;
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
 use rolldown_utils::rustc_hash::FxHashMapExt;
@@ -35,6 +36,23 @@ use std::sync::Arc;
 pub struct NormalizeBindingOptionsReturn {
   pub bundler_options: BundlerOptions,
   pub plugins: Vec<SharedPluginable>,
+}
+
+fn normalize_generated_code_option(
+  value: BindingGeneratedCodeOptions,
+) -> napi::Result<GeneratedCodeOptions> {
+  let v = match value.preset {
+    Some(s) if s == "es5" => GeneratedCodeOptions::es5(),
+    Some(s) if s == "es2015" => GeneratedCodeOptions::es2015(),
+    Some(s) => {
+      return Err(napi::Error::new(
+        napi::Status::InvalidArg,
+        format!("Invalid preset for `generatedCode` option: {s}"),
+      ));
+    }
+    None => GeneratedCodeOptions::default(),
+  };
+  Ok(GeneratedCodeOptions { symbols: value.symbols.unwrap_or(false), ..v })
 }
 
 fn normalize_addon_option(
@@ -113,6 +131,19 @@ fn normalize_globals_option(
       let func = Arc::clone(&func);
       let name = name.to_string();
       Box::pin(async move { func.invoke_async((name,).into()).await.map_err(anyhow::Error::from) })
+    })),
+  })
+}
+
+fn normalize_paths_option(
+  option: Option<crate::options::PathsOutputOption>,
+) -> Option<rolldown_common::PathsOutputOption> {
+  option.map(move |value| match value {
+    Either::A(hash_map) => rolldown_common::PathsOutputOption::FxHashMap(hash_map),
+    Either::B(func) => rolldown_common::PathsOutputOption::Fn(Arc::new(move |id| {
+      let func = Arc::clone(&func);
+      let id = id.to_string();
+      func.invoke_sync((id,).into()).map_err(anyhow::Error::from)
     })),
   })
 }
@@ -221,22 +252,7 @@ pub fn normalize_binding_options(
     module_types = Some(tmp);
   }
 
-  let mut transform_options = input_options.transform.map(normalize_binding_transform_options);
-  if transform_options.as_ref().is_none_or(|options| options.jsx.is_none()) {
-    if let Some(jsx) = input_options.jsx
-      && !matches!(jsx, BindingJsx::ReactJsx)
-    {
-      transform_options.get_or_insert_default().jsx = match jsx {
-        BindingJsx::Disable => Some(bundler_options::Either::Left("disable".to_owned())),
-        BindingJsx::Preserve => Some(bundler_options::Either::Left("preserve".to_owned())),
-        BindingJsx::React => Some(bundler_options::Either::Right(bundler_options::JsxOptions {
-          runtime: Some("classic".to_owned()),
-          ..Default::default()
-        })),
-        BindingJsx::ReactJsx => unreachable!(),
-      };
-    }
-  }
+  let transform_options = input_options.transform.map(normalize_binding_transform_options);
 
   let bundler_options = BundlerOptions {
     input: Some(input_options.input.into_iter().map(Into::into).collect()),
@@ -316,6 +332,11 @@ pub fn normalize_binding_options(
       _ => panic!("Invalid hash characters: {format_str}"),
     }),
     globals: normalize_globals_option(output_options.globals),
+    paths: normalize_paths_option(output_options.paths),
+    generated_code: output_options
+      .generated_code
+      .map(normalize_generated_code_option)
+      .transpose()?,
     module_types,
     experimental: if let Some(experimental) = input_options.experimental {
       Some(experimental.try_into()?)
@@ -333,15 +354,23 @@ pub fn normalize_binding_options(
             Err(napi::Error::new(napi::Status::InvalidArg, "Invalid minify option"))
           }
         }
-        napi::bindgen_prelude::Either3::C(opts) => Ok(RawMinifyOptions::Object((
-          oxc::minifier::MinifierOptions::try_from(&opts)
-            .map_err(|_| napi::Error::new(napi::Status::InvalidArg, "Invalid minify option"))?,
-          match &opts.codegen {
-            None => true,
-            Some(Either::A(bool)) => *bool,
-            Some(Either::B(codegen_opts)) => codegen_opts.remove_whitespace.unwrap_or(true),
-          },
-        ))),
+        napi::bindgen_prelude::Either3::C(opts) => {
+          Ok(RawMinifyOptions::Object(RawMinifyOptionsDetailed {
+            options: oxc::minifier::MinifierOptions::try_from(&opts)
+              .map_err(|_| napi::Error::new(napi::Status::InvalidArg, "Invalid minify option"))?,
+            default_target: matches!(
+              opts.compress,
+              Some(
+                Either::A(true) | Either::B(oxc_minify_napi::CompressOptions { target: None, .. })
+              )
+            ),
+            remove_whitespace: match &opts.codegen {
+              None => true,
+              Some(Either::A(bool)) => *bool,
+              Some(Either::B(codegen_opts)) => codegen_opts.remove_whitespace.unwrap_or(true),
+            },
+          }))
+        }
       })
       .transpose()?,
     extend: output_options.extend,
@@ -399,7 +428,7 @@ pub fn normalize_binding_options(
           })
           .collect::<Vec<_>>()
       }),
-      include_dependencies_recursively: None,
+      include_dependencies_recursively: inner.include_dependencies_recursively,
     }),
     checks: input_options.checks.map(Into::into),
     profiler_names: input_options.profiler_names,
@@ -437,6 +466,7 @@ pub fn normalize_binding_options(
     optimization: input_options.optimization.map(OptimizationOption::try_from).transpose()?,
     top_level_var: output_options.top_level_var,
     minify_internal_exports: output_options.minify_internal_exports,
+    clean_dir: output_options.clean_dir,
     context: input_options.context,
     tsconfig: input_options.tsconfig,
   };

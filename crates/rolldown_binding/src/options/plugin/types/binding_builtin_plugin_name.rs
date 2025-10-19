@@ -13,6 +13,8 @@ pub enum BindingBuiltinPluginName {
   BuildImportAnalysis,
   #[napi(value = "builtin:dynamic-import-vars")]
   DynamicImportVars,
+  #[napi(value = "builtin:esm-external-require")]
+  EsmExternalRequire,
   #[napi(value = "builtin:import-glob")]
   ImportGlob,
   #[napi(value = "builtin:isolated-declaration")]
@@ -31,10 +33,14 @@ pub enum BindingBuiltinPluginName {
   Report,
   #[napi(value = "builtin:replace")]
   Replace,
-  #[napi(value = "builtin:esm-external-require")]
-  RequireToImport,
   #[napi(value = "builtin:transform")]
   Transform,
+  #[napi(value = "builtin:vite-css")]
+  ViteCSS,
+  #[napi(value = "builtin:vite-css-post")]
+  ViteCSSPost,
+  #[napi(value = "builtin:vite-html")]
+  ViteHtml,
   #[napi(value = "builtin:vite-resolve")]
   ViteResolve,
   #[napi(value = "builtin:wasm-fallback")]

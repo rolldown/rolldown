@@ -92,7 +92,8 @@ impl FileEmitter {
       "The `PluginContext.emitFile` with `type: 'chunk'` only work at `buildStart/resolveId/load/transform/moduleParsed` hooks.",
     )?
     .send(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg { chunk: Arc::clone(&chunk), reference_id: reference_id.clone(), preserve_entry_signatures: chunk.preserve_entry_signatures })))
-    .await?;
+    .await
+    .context("FileEmitter: failed to send AddEntryModule message - module loader shut down during file emission")?;
     self.chunks.insert(reference_id.clone(), chunk);
     Ok(reference_id)
   }
@@ -188,6 +189,7 @@ impl FileEmitter {
       let mut filename = filename_template
         .render(
           name,
+          None,
           Some(extension.unwrap_or_default()),
           Some(|len: Option<usize>| &hash[..len.map_or(8, |len| len.min(21))]),
         )

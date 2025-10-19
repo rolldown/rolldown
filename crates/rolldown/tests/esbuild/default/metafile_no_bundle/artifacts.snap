@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg' in entry.css
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -21,12 +22,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg2' in entry.css
 
 ```
+
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -39,6 +42,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 # Assets
 
 ## entry.js
@@ -55,6 +59,7 @@ let exported;
 //#endregion
 export { exported };
 ```
+
 ## entry2.css
 
 ```css
@@ -62,6 +67,7 @@ a { background: url(pkg2) }
 a { background: url(./file2) }
 
 ```
+
 ## entry2.js
 
 ```js

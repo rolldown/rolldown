@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { foo as foo$1 } from "./foo.js";
+import { t as foo$1 } from "./foo.js";
 import assert from "node:assert";
 
 //#region main.js
@@ -16,13 +16,15 @@ assert.strictEqual(foo.name, "foo");
 //#endregion
 export { foo };
 ```
+
 ## entry2.js
 
 ```js
-import { foo } from "./foo.js";
+import { t as foo } from "./foo.js";
 
 export { foo };
 ```
+
 ## foo.js
 
 ```js
@@ -30,5 +32,5 @@ export { foo };
 const foo = 0;
 
 //#endregion
-export { foo };
+export { foo as t };
 ```

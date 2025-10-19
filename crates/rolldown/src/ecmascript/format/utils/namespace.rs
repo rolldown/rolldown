@@ -9,7 +9,10 @@ use std::fmt::Write as _;
 use arcstr::ArcStr;
 use rolldown_common::OutputExports;
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_utils::{concat_string, ecmascript::is_validate_assignee_identifier_name};
+use rolldown_utils::{
+  concat_string,
+  ecmascript::{is_validate_assignee_identifier_name, is_validate_identifier_name},
+};
 
 use crate::types::generator::GenerateContext;
 
@@ -124,10 +127,10 @@ pub fn generate_identifier(
 
 /// It is a helper function to generate a caller for the given name.
 ///
-/// - If the name is not a reserved word and not an invalid identifier, it will generate a caller like `.name`.
-/// - Otherwise, it will generate a caller like `["if"]`.
+/// - If the name is not an invalid identifier, it will generate a caller like `.name`.
+/// - Otherwise, it will generate a caller like `["-foo"]`.
 pub fn render_property_access(name: &str) -> String {
-  if is_validate_assignee_identifier_name(name) {
+  if is_validate_identifier_name(name) {
     concat_string!(".", name)
   } else {
     concat_string!("[\"", name, "\"]")
@@ -146,13 +149,20 @@ mod tests {
   }
 
   #[test]
-  fn test_reserved_identifier_as_name() {
+  fn test_non_identifier_as_name() {
     let result = generate_namespace_definition("1.2.3", "this", ";\n");
     assert_eq!(
       result.0,
       "this[\"1\"] = this[\"1\"] || {};\nthis[\"1\"][\"2\"] = this[\"1\"][\"2\"] || {};\n"
     );
     assert_eq!(result.1, "this[\"1\"][\"2\"][\"3\"]");
+  }
+
+  #[test]
+  fn test_reserved_identifier_as_name() {
+    let result = generate_namespace_definition("if.else", "this", ";\n");
+    assert_eq!(result.0, "this.if = this.if || {};\n");
+    assert_eq!(result.1, "this.if.else");
   }
 
   #[test]

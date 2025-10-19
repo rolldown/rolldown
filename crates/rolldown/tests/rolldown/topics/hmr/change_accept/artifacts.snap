@@ -38,6 +38,7 @@ main_hot.accept("parent.js", () => {});
 
 //#endregion
 ```
+
 # HMR Step 0
 
 ## Code
@@ -65,12 +66,15 @@ var init_parent_0 = __rolldown_runtime__.createEsmInitializer((function() {
 init_parent_0()
 __rolldown_runtime__.applyUpdates([['main.js', 'parent.js']]);
 ```
+
 ## Meta
 
 - update type: patch
+
 ### Hmr Boundaries
 
 - boundary: main.js, accepted_via: parent.js
+
 # HMR Step 1
 
 ## Code
@@ -90,9 +94,11 @@ var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
 init_child_0()
 __rolldown_runtime__.applyUpdates([['parent.js', 'child.js']]);
 ```
+
 ## Meta
 
 - update type: patch
+
 ### Hmr Boundaries
 
 - boundary: parent.js, accepted_via: child.js

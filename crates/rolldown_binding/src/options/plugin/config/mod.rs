@@ -12,6 +12,9 @@ mod binding_react_refresh_wrapper_plugin_config;
 mod binding_replace_plugin_config;
 mod binding_reporter_plugin_config;
 mod binding_transform_plugin_config;
+mod binding_vite_css_plugin_config;
+mod binding_vite_css_post_plugin_config;
+mod binding_vite_html_plugin_config;
 mod binding_vite_resolve_plugin_config;
 mod binding_wasm_helper_plugin_config;
 
@@ -29,5 +32,8 @@ pub use binding_react_refresh_wrapper_plugin_config::BindingReactRefreshWrapperP
 pub use binding_replace_plugin_config::BindingReplacePluginConfig;
 pub use binding_reporter_plugin_config::BindingReporterPluginConfig;
 pub use binding_transform_plugin_config::BindingTransformPluginConfig;
+pub use binding_vite_css_plugin_config::BindingViteCSSPluginConfig;
+pub use binding_vite_css_post_plugin_config::BindingViteCSSPostPluginConfig;
+pub use binding_vite_html_plugin_config::BindingViteHtmlPluginConfig;
 pub use binding_vite_resolve_plugin_config::BindingViteResolvePluginConfig;
 pub use binding_wasm_helper_plugin_config::BindingWasmHelperPluginConfig;

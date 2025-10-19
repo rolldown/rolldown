@@ -1,10 +1,6 @@
-use core::str;
-use std::fmt::Write as _;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::{
-  borrow::Cow,
-  ffi::OsStr,
   fs,
   io::{Read, Write},
   path::Path,
@@ -19,9 +15,7 @@ use rolldown::{
   plugin::__inner::SharedPluginable,
 };
 use rolldown::{DevEngine, NormalizedBundlerOptions};
-use rolldown_common::{HmrUpdate, Output};
-use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosticOptions};
-use rolldown_sourcemap::SourcemapVisualizer;
+use rolldown_error::BuildResult;
 use rolldown_testing_config::TestMeta;
 use serde_json::{Map, Value};
 use sugar_path::SugarPath;
@@ -31,7 +25,9 @@ use crate::hmr_files::{
   apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
   copy_non_hmr_edit_files_to_hmr_temp_dir, get_changed_files_from_hmr_edit_files,
 };
-use crate::utils::tweak_snapshot;
+use crate::types::{
+  BuildArtifactsSnapshot, BuildRoundOutput, DevArtifactsSnapshot, DevRoundOutput,
+};
 
 #[derive(Default)]
 pub struct IntegrationTest {
@@ -89,38 +85,35 @@ impl IntegrationTest {
       .await;
   }
 
-  #[expect(clippy::too_many_lines)]
-  #[expect(clippy::unnecessary_debug_formatting)]
-  pub async fn run_multiple(
+  /// Determine if output should be executed based on test meta
+  fn should_execute_output(&self) -> bool {
+    self.test_meta.expect_executed && !self.test_meta.expect_error && self.test_meta.write_to_disk
+  }
+
+  /// Run multiple bundler configurations in HMR mode
+  async fn run_multiple_for_dev(
     &self,
     multiple_options: Vec<NamedBundlerOptions>,
     plugins: Vec<SharedPluginable>,
-  ) {
-    // Example: crates/rolldown/tests/rolldown/topics/hmr/runtime_correctness
+    hmr_steps: &[Vec<PathBuf>],
+  ) -> DevArtifactsSnapshot {
     let test_folder_path = &self.test_folder_path;
-
     let hmr_temp_dir_path = test_folder_path.join("hmr-temp");
-    let hmr_steps = collect_hmr_edit_files(test_folder_path, &hmr_temp_dir_path);
-    let hmr_mode_enabled = !hmr_steps.is_empty();
+    let mut artifacts_snapshot = DevArtifactsSnapshot::default();
 
-    let mut snapshot_outputs = vec![];
     for mut named_options in multiple_options {
-      self.apply_test_defaults(&mut named_options.options);
-      let allow_to_collect_snapshot = named_options.snapshot.unwrap_or(self.test_meta.snapshot);
-      let mut collect_snapshot = |content: String| {
-        if allow_to_collect_snapshot {
-          snapshot_outputs.push(content);
-        }
+      let mut build_snapshot = DevRoundOutput {
+        overwritten_test_meta_snapshot: named_options.snapshot.unwrap_or(self.test_meta.snapshot),
+        ..Default::default()
       };
 
-      if hmr_mode_enabled {
-        fs::remove_dir_all(&hmr_temp_dir_path)
-          .or_else(|err| if err.kind() == std::io::ErrorKind::NotFound { Ok(()) } else { Err(err) })
-          .unwrap();
-        copy_non_hmr_edit_files_to_hmr_temp_dir(test_folder_path, &hmr_temp_dir_path);
+      // Setup HMR temp directory
+      fs::remove_dir_all(&hmr_temp_dir_path)
+        .or_else(|err| if err.kind() == std::io::ErrorKind::NotFound { Ok(()) } else { Err(err) })
+        .unwrap();
+      copy_non_hmr_edit_files_to_hmr_temp_dir(test_folder_path, &hmr_temp_dir_path);
 
-        named_options.options.cwd = Some(hmr_temp_dir_path.clone());
-      }
+      named_options.options.cwd = Some(hmr_temp_dir_path.clone());
 
       let output_dir = format!(
         "{}/{}",
@@ -130,192 +123,257 @@ impl IntegrationTest {
 
       let debug_title = named_options.description.clone().unwrap_or_else(String::new);
       if !debug_title.is_empty() {
-        collect_snapshot("\n---\n\n".to_string());
-        collect_snapshot(format!("Variant: {debug_title}\n\n"));
+        build_snapshot.debug_title = Some(debug_title.clone());
       }
 
-      if hmr_mode_enabled {
-        let options = named_options.options.clone();
-        // FIXME: hyf0 we shouln't use the same bundler for both hmr and non-hmr mode.
-        let bundler =
-          Bundler::with_plugins(options, plugins.clone()).expect("Failed to create bundler");
-        let cwd = bundler.options().cwd.clone();
-        let bundler = Arc::new(Mutex::new(bundler));
+      // Create bundler and DevEngine
+      let cwd = named_options.options.cwd.clone().unwrap_or_else(|| self.test_folder_path.clone());
 
-        let hmr_update_infos = Arc::new(std::sync::Mutex::new(vec![]));
-        let build_outputs = Arc::new(std::sync::Mutex::new(vec![]));
-        let dev_engine = DevEngine::with_bundler(
-          Arc::clone(&bundler),
-          DevOptions {
-            on_hmr_updates: {
-              let hmr_update_infos = Arc::clone(&hmr_update_infos);
-              Some(Arc::new(move |updates, changed_files| {
-                hmr_update_infos.lock().unwrap().push((updates, changed_files));
-              }))
-            },
-            on_output: {
-              let build_outputs = Arc::clone(&build_outputs);
-              Some(Arc::new(move |bundle_output| {
-                build_outputs.lock().unwrap().push(bundle_output);
-              }))
-            },
-            watch: Some(DevWatchOptions {
-              disable_watcher: Some(true),
-              skip_write: Some(!self.test_meta.write_to_disk),
-              ..Default::default()
-            }),
-            ..Default::default()
-          },
-        )
-        .unwrap();
+      let bundler_result = Bundler::with_plugins(named_options.options.clone(), plugins.clone());
 
-        dev_engine.run().await.unwrap();
-        dev_engine.create_client_for_testing().await;
-
-        for hmr_edit_files in &hmr_steps {
-          apply_hmr_edit_files_to_hmr_temp_dir(
-            test_folder_path,
-            &hmr_temp_dir_path,
-            hmr_edit_files,
-          );
-          let changed_files = get_changed_files_from_hmr_edit_files(
-            test_folder_path,
-            &hmr_temp_dir_path,
-            hmr_edit_files,
-          );
-          dev_engine
-            .ensure_task_with_changed_files(changed_files.into_iter().map(Into::into).collect())
-            .await;
+      let bundler = match bundler_result {
+        Ok(bundler) => {
+          build_snapshot.cwd = Some(bundler.options().cwd.clone());
+          bundler
         }
-        drop(dev_engine);
+        Err(errs) => {
+          // Set cwd and error, then skip this build round
+          build_snapshot.cwd = Some(cwd);
+          build_snapshot.initial_output = Some(Err(errs));
+          artifacts_snapshot.builds.push(build_snapshot);
+          continue;
+        }
+      };
+      let bundler = Arc::new(Mutex::new(bundler));
 
-        let mut build_outputs = std::mem::take(&mut *build_outputs.lock().unwrap());
-        let hmr_update_infos = std::mem::take(&mut *hmr_update_infos.lock().unwrap());
+      let hmr_update_infos = Arc::new(std::sync::Mutex::new(vec![]));
+      let build_results = Arc::new(std::sync::Mutex::new(vec![]));
+      let dev_engine = DevEngine::with_bundler(
+        Arc::clone(&bundler),
+        DevOptions {
+          on_hmr_updates: {
+            let hmr_update_infos = Arc::clone(&hmr_update_infos);
+            Some(Arc::new(move |result| {
+              hmr_update_infos.lock().unwrap().push(result);
+            }))
+          },
+          on_output: {
+            let build_results = Arc::clone(&build_results);
+            Some(Arc::new(move |bundle_result| {
+              build_results.lock().unwrap().push(bundle_result);
+            }))
+          },
+          watch: Some(DevWatchOptions {
+            disable_watcher: Some(true),
+            skip_write: Some(!self.test_meta.write_to_disk),
+            ..Default::default()
+          }),
+          ..Default::default()
+        },
+      )
+      .unwrap();
 
-        let execute_output = self.test_meta.expect_executed
-          && !self.test_meta.expect_error
-          && self.test_meta.write_to_disk;
+      // Run initial build
+      dev_engine.run().await.unwrap();
+      dev_engine.create_client_for_testing();
 
-        let bundle_output: BuildResult<BundleOutput> = Ok(build_outputs.pop().unwrap());
+      // Process HMR steps
+      for hmr_edit_files in hmr_steps {
+        apply_hmr_edit_files_to_hmr_temp_dir(test_folder_path, &hmr_temp_dir_path, hmr_edit_files);
+        let changed_files = get_changed_files_from_hmr_edit_files(
+          test_folder_path,
+          &hmr_temp_dir_path,
+          hmr_edit_files,
+        );
+        dev_engine
+          .ensure_task_with_changed_files(changed_files.into_iter().map(Into::into).collect())
+          .await;
+      }
+      drop(dev_engine);
 
-        match bundle_output {
-          Ok(bundle_output) => {
-            assert!(
-              !self.test_meta.expect_error,
-              "Expected the bundling to be failed with diagnosable errors, but got success"
-            );
+      // Collect results
+      let mut bundle_results = std::mem::take(&mut *build_results.lock().unwrap());
+      let hmr_update_infos = std::mem::take(&mut *hmr_update_infos.lock().unwrap());
 
-            let snapshot_content = self.render_bundle_output_to_string(bundle_output, vec![], &cwd);
-            collect_snapshot(snapshot_content);
+      // We consider the first build output as the initial build output
+      let build_result: BuildResult<BundleOutput> = bundle_results.remove(0);
 
-            let mut patch_chunks: Vec<String> = vec![];
-            for (step, (hmr_updates, _changed_files)) in hmr_update_infos.iter().enumerate() {
-              for hmr_update in hmr_updates {
-                let snapshot_content =
-                  self.render_hmr_output_to_string(step, &hmr_update.update, vec![], &cwd);
-                collect_snapshot(snapshot_content);
-                match &hmr_update.update {
-                  rolldown_common::HmrUpdate::Patch(patch) => {
-                    let output_path = format!("{}/{}", &output_dir, &patch.filename);
-                    fs::write(&output_path, &patch.code).unwrap();
-                    patch_chunks.push(format!("./{}", patch.filename));
-                  }
-                  rolldown_common::HmrUpdate::FullReload { reason } => {
-                    assert!(
-                      !execute_output,
-                      "execute_output should be false when full reload happens; reason: {reason:?}"
-                    );
-                  }
-                  rolldown_common::HmrUpdate::Noop => {}
+      // Verify result and process HMR if successful
+      match &build_result {
+        Ok(_) => {
+          assert!(
+            !self.test_meta.expect_error,
+            "Expected the bundling to be failed with diagnosable errors, but got success"
+          );
+
+          // Process HMR updates and patches
+          let mut patch_chunks: Vec<String> = vec![];
+          for (hmr_updates, _changed_files) in hmr_update_infos.iter().flatten() {
+            for hmr_update in hmr_updates {
+              match &hmr_update.update {
+                rolldown_common::HmrUpdate::Patch(patch) => {
+                  let output_path = format!("{}/{}", &output_dir, &patch.filename);
+                  fs::write(&output_path, &patch.code).unwrap();
+                  patch_chunks.push(format!("./{}", patch.filename));
                 }
+                rolldown_common::HmrUpdate::FullReload { reason } => {
+                  assert!(
+                    !self.should_execute_output(),
+                    "execute_output should be false when full reload happens; reason: {reason:?}"
+                  );
+                }
+                rolldown_common::HmrUpdate::Noop => {}
               }
             }
-
-            if execute_output {
-              Self::execute_output_assets(
-                &*bundler.lock().await,
-                &debug_title,
-                &patch_chunks,
-                named_options
-                  .config_name
-                  .as_deref()
-                  .map(Some)
-                  .unwrap_or(self.test_meta.config_name.as_deref()),
-              );
-            } else {
-              // do nothing
-            }
           }
-          Err(errs) => {
-            assert!(
-              self.test_meta.expect_error,
-              "Expected the bundling to be success, but got diagnosable errors: {errs:#?}"
+          build_snapshot.rebuild_results = bundle_results;
+          build_snapshot.hmr_updates_by_steps = hmr_update_infos;
+
+          // Execute output if needed
+          if self.should_execute_output() {
+            Self::execute_output_assets(
+              &*bundler.lock().await,
+              &debug_title,
+              &patch_chunks,
+              named_options
+                .config_name
+                .as_deref()
+                .map(Some)
+                .unwrap_or(self.test_meta.config_name.as_deref()),
             );
-            let snapshot_content =
-              self.render_bundle_output_to_string(BundleOutput::default(), errs.into_vec(), &cwd);
-            collect_snapshot(snapshot_content);
           }
         }
-      } else {
-        let mut bundler = Bundler::with_plugins(named_options.options, plugins.clone())
-          .expect("Failed to create bundler");
-
-        let cwd = bundler.options().cwd.clone();
-
-        let bundle_output = if self.test_meta.write_to_disk {
-          let abs_output_dir = cwd.join(&bundler.options().out_dir);
-          if abs_output_dir.is_dir() {
-            std::fs::remove_dir_all(&abs_output_dir)
-              .context(format!("{abs_output_dir:?}"))
-              .expect("Failed to clean the output directory");
-          }
-          bundler.write().await
-        } else {
-          bundler.generate().await
-        };
-
-        let execute_output = self.test_meta.expect_executed
-          && !self.test_meta.expect_error
-          && self.test_meta.write_to_disk;
-
-        match bundle_output {
-          Ok(bundle_output) => {
-            assert!(
-              !self.test_meta.expect_error,
-              "Expected the bundling to be failed with diagnosable errors, but got success"
-            );
-
-            let snapshot_content = self.render_bundle_output_to_string(bundle_output, vec![], &cwd);
-            collect_snapshot(snapshot_content);
-
-            if execute_output {
-              Self::execute_output_assets(
-                &bundler,
-                &debug_title,
-                &[],
-                named_options
-                  .config_name
-                  .as_deref()
-                  .map(Some)
-                  .unwrap_or(self.test_meta.config_name.as_deref()),
-              );
-            } else {
-              // do nothing
-            }
-          }
-          Err(errs) => {
-            assert!(
-              self.test_meta.expect_error,
-              "Expected the bundling to be success, but got diagnosable errors: {errs:#?}"
-            );
-            let snapshot_content =
-              self.render_bundle_output_to_string(BundleOutput::default(), errs.into_vec(), &cwd);
-            collect_snapshot(snapshot_content);
-          }
+        Err(errs) => {
+          assert!(
+            self.test_meta.expect_error,
+            "Expected the bundling to be success, but got diagnosable errors: {errs:#?}"
+          );
         }
       }
+
+      build_snapshot.initial_output = Some(build_result);
+      artifacts_snapshot.builds.push(build_snapshot);
     }
-    self.snapshot_bundle_output(test_folder_path, &snapshot_outputs.concat());
+
+    artifacts_snapshot
+  }
+
+  /// Run multiple bundler configurations in normal (non-HMR) mode
+  async fn run_multiple_for_build(
+    &self,
+    multiple_options: Vec<NamedBundlerOptions>,
+    plugins: Vec<SharedPluginable>,
+  ) -> BuildArtifactsSnapshot {
+    let mut artifacts_snapshot = BuildArtifactsSnapshot::default();
+
+    for named_options in multiple_options {
+      let mut build_snapshot = BuildRoundOutput {
+        overwritten_test_meta_snapshot: named_options.snapshot.unwrap_or(self.test_meta.snapshot),
+        ..Default::default()
+      };
+
+      let debug_title = named_options.description.clone().unwrap_or_else(String::new);
+      if !debug_title.is_empty() {
+        build_snapshot.debug_title = Some(debug_title.clone());
+      }
+
+      // Try to create bundler
+      let cwd = named_options.options.cwd.clone().unwrap_or_else(|| self.test_folder_path.clone());
+
+      let bundler_result = Bundler::with_plugins(named_options.options, plugins.clone());
+
+      let mut bundler = match bundler_result {
+        Ok(bundler) => {
+          build_snapshot.cwd = Some(bundler.options().cwd.clone());
+          bundler
+        }
+        Err(errs) => {
+          // Set cwd and error, then skip this build round
+          build_snapshot.cwd = Some(cwd);
+          build_snapshot.initial_output = Some(Err(errs));
+          artifacts_snapshot.builds.push(build_snapshot);
+          continue;
+        }
+      };
+
+      let cwd = bundler.options().cwd.clone();
+      let bundle_output = if self.test_meta.write_to_disk {
+        let abs_output_dir = cwd.join(&bundler.options().out_dir);
+        if abs_output_dir.is_dir() {
+          std::fs::remove_dir_all(&abs_output_dir)
+            .context(format!("{}", abs_output_dir.display()))
+            .expect("Failed to clean the output directory");
+        }
+        bundler.write().await
+      } else {
+        bundler.generate().await
+      };
+
+      // Verify result and execute output if needed
+      match &bundle_output {
+        Ok(_) => {
+          assert!(
+            !self.test_meta.expect_error,
+            "Expected the bundling to be failed with diagnosable errors, but got success"
+          );
+          if self.should_execute_output() {
+            Self::execute_output_assets(
+              &bundler,
+              &debug_title,
+              &[],
+              named_options
+                .config_name
+                .as_deref()
+                .map(Some)
+                .unwrap_or(self.test_meta.config_name.as_deref()),
+            );
+          }
+        }
+        Err(errs) => {
+          assert!(
+            self.test_meta.expect_error,
+            "Expected the bundling to be success, but got diagnosable errors: {errs:#?}"
+          );
+        }
+      }
+
+      build_snapshot.initial_output = Some(bundle_output);
+      artifacts_snapshot.builds.push(build_snapshot);
+    }
+
+    artifacts_snapshot
+  }
+
+  /// Dispatcher that routes to HMR or normal build based on presence of HMR edit files
+  pub async fn run_multiple(
+    &self,
+    mut multiple_options: Vec<NamedBundlerOptions>,
+    plugins: Vec<SharedPluginable>,
+  ) {
+    let test_folder_path = &self.test_folder_path;
+
+    // Detect HMR mode by checking for HMR edit files
+    let hmr_temp_dir_path = test_folder_path.join("hmr-temp");
+    let hmr_steps = collect_hmr_edit_files(test_folder_path, &hmr_temp_dir_path);
+    let hmr_mode_enabled = !hmr_steps.is_empty();
+
+    // Apply test defaults to all options
+    for named_options in &mut multiple_options {
+      self.apply_test_defaults(&mut named_options.options);
+    }
+
+    // Dispatch to appropriate build method and generate snapshot
+    let snapshot_content = if hmr_mode_enabled {
+      let artifacts_snapshot =
+        self.run_multiple_for_dev(multiple_options, plugins, &hmr_steps).await;
+      artifacts_snapshot.render(&self.test_meta)
+    } else {
+      let artifacts_snapshot = self.run_multiple_for_build(multiple_options, plugins).await;
+      artifacts_snapshot.render(&self.test_meta)
+    };
+
+    // Generate snapshot
+    self.snapshot_bundle_output(test_folder_path, &snapshot_content);
   }
 
   fn apply_test_defaults(&self, options: &mut BundlerOptions) {
@@ -367,295 +425,6 @@ impl IntegrationTest {
         }
       }
     }
-  }
-
-  #[expect(clippy::too_many_lines)]
-  #[expect(clippy::if_not_else)]
-  fn render_bundle_output_to_string(
-    &self,
-    bundle_output: BundleOutput,
-    errs: Vec<BuildDiagnostic>,
-    cwd: &Path,
-  ) -> String {
-    let mut errors = errs;
-    let errors_section = if !errors.is_empty() {
-      let mut snapshot = String::new();
-      snapshot.push_str("# Errors\n\n");
-      errors.sort_by_key(|e| e.kind().to_string());
-      let diagnostics = errors
-        .into_iter()
-        .map(|e| (e.kind(), e.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
-
-      let mut rendered_diagnostics = diagnostics
-        .map(|(code, diagnostic)| {
-          [
-            Cow::Owned(format!("## {code}\n")),
-            "```text".into(),
-            Cow::Owned(diagnostic.to_string()),
-            "```".into(),
-          ]
-          .join("\n")
-        })
-        .collect::<Vec<_>>();
-      rendered_diagnostics.sort();
-      let rendered = rendered_diagnostics.join("\n");
-      snapshot.push_str(&rendered);
-      snapshot
-    } else {
-      String::default()
-    };
-
-    let warnings = bundle_output.warnings;
-    let warnings_section = if !warnings.is_empty() {
-      let mut snapshot = String::new();
-      snapshot.push_str("# warnings\n\n");
-      let diagnostics = warnings
-        .into_iter()
-        .map(|e| (e.kind(), e.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
-      let mut rendered_diagnostics = diagnostics
-        .map(|(code, diagnostic)| {
-          [
-            Cow::Owned(format!("## {code}\n")),
-            "```text".into(),
-            Cow::Owned(diagnostic.to_string()),
-            "```".into(),
-          ]
-          .join("\n")
-        })
-        .collect::<Vec<_>>();
-
-      // Make the snapshot consistent
-      rendered_diagnostics.sort();
-      snapshot.push_str(&rendered_diagnostics.join("\n"));
-      snapshot
-    } else {
-      String::new()
-    };
-
-    let mut assets = bundle_output.assets;
-
-    let assets_section = if !assets.is_empty() {
-      let mut snapshot = String::new();
-      snapshot.push_str("# Assets\n\n");
-      assets.sort_by_key(|c| c.filename().to_string());
-      let artifacts = assets
-        .iter()
-        .filter_map(|asset| {
-          let filename = asset.filename();
-          let file_ext = filename.as_path().extension().and_then(OsStr::to_str).map_or(
-            "unknown",
-            |ext| match ext {
-              "mjs" | "cjs" => "js",
-              _ => ext,
-            },
-          );
-
-          match asset {
-            Output::Chunk(output_chunk) => {
-              let content = &output_chunk.code;
-              let content = tweak_snapshot(content, self.test_meta.hidden_runtime_module, true);
-
-              Some(vec![
-                Cow::Owned(format!("## {}\n", asset.filename())),
-                Cow::Owned(format!("```{file_ext}")),
-                content,
-                "```".into(),
-              ])
-            }
-            Output::Asset(output_asset) => {
-              if file_ext == "map" {
-                // Skip sourcemap for now
-                return None;
-              }
-              match &output_asset.source {
-                rolldown_common::StrOrBytes::Str(content) => Some(vec![
-                  Cow::Owned(format!("## {}\n", asset.filename())),
-                  Cow::Owned(format!("```{file_ext}")),
-                  Cow::Borrowed(content),
-                  "```".into(),
-                ]),
-                rolldown_common::StrOrBytes::Bytes(bytes) => {
-                  let mut ret = vec![Cow::Owned(format!("## {}\n", asset.filename()))];
-                  if self.test_meta.snapshot_bytes {
-                    ret.extend([
-                      Cow::Owned(format!("```{file_ext}")),
-                      String::from_utf8_lossy(bytes),
-                      "```".into(),
-                    ]);
-                  }
-                  Some(ret)
-                }
-              }
-            }
-          }
-        })
-        .flatten()
-        .collect::<Vec<_>>()
-        .join("\n");
-      snapshot.push_str(&artifacts);
-      snapshot
-    } else {
-      String::new()
-    };
-
-    let output_stats_section = if self.test_meta.snapshot_output_stats {
-      let mut snapshot = String::new();
-      snapshot.push_str("## Output Stats\n\n");
-      let stats = assets
-        .iter()
-        .flat_map(|asset| match asset {
-          Output::Chunk(chunk) => {
-            vec![Cow::Owned(format!(
-              "- {}, is_entry {}, is_dynamic_entry {}, exports {:?}",
-              chunk.filename.as_str(),
-              chunk.is_entry,
-              chunk.is_dynamic_entry,
-              chunk.exports.iter().map(ToString::to_string).collect::<Vec<_>>()
-            ))]
-          }
-          Output::Asset(_) => vec![],
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
-      snapshot.push_str(&stats);
-      snapshot
-    } else {
-      String::new()
-    };
-
-    let visualize_sourcemap_section = if self.test_meta.visualize_sourcemap {
-      let mut snapshot = String::new();
-      snapshot.push_str("# Sourcemap Visualizer\n\n");
-      snapshot.push_str("```\n");
-      let visualizer_result = assets
-        .iter()
-        .filter_map(|asset| match asset {
-          Output::Chunk(chunk) => chunk
-            .map
-            .as_ref()
-            .map(|sourcemap| SourcemapVisualizer::new(&chunk.code, sourcemap).get_text()),
-          Output::Asset(_) => None,
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
-      snapshot.push_str(&visualizer_result);
-      snapshot.push_str("```");
-      snapshot
-    } else {
-      String::new()
-    };
-    [
-      errors_section,
-      warnings_section,
-      assets_section,
-      output_stats_section,
-      visualize_sourcemap_section,
-    ]
-    .join("\n")
-    .trim()
-    .to_owned()
-  }
-
-  #[expect(clippy::if_not_else)]
-  fn render_hmr_output_to_string(
-    &self,
-    step: usize,
-    hmr_update: &HmrUpdate,
-    errs: Vec<BuildDiagnostic>,
-    cwd: &Path,
-  ) -> String {
-    let mut errors = errs;
-    let errors_section = if !errors.is_empty() {
-      let mut snapshot = String::new();
-      snapshot.push_str("## Errors\n\n");
-      errors.sort_by_key(|e| e.kind().to_string());
-      let diagnostics = errors
-        .into_iter()
-        .map(|e| (e.kind(), e.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
-
-      let mut rendered_diagnostics = diagnostics
-        .map(|(code, diagnostic)| {
-          [
-            Cow::Owned(format!("### {code}\n")),
-            "```text".into(),
-            Cow::Owned(diagnostic.to_string()),
-            "```".into(),
-          ]
-          .join("\n")
-        })
-        .collect::<Vec<_>>();
-      rendered_diagnostics.sort();
-      let rendered = rendered_diagnostics.join("\n");
-      snapshot.push_str(&rendered);
-      snapshot
-    } else {
-      String::default()
-    };
-
-    let code_section = match hmr_update {
-      HmrUpdate::Patch(hmr_patch) if !hmr_patch.code.is_empty() => {
-        let mut snapshot = String::new();
-        write!(snapshot, "## Code\n\n").unwrap();
-        let file_ext = hmr_patch.filename.as_path().extension().and_then(OsStr::to_str).map_or(
-          "unknown",
-          |ext| match ext {
-            "mjs" | "cjs" => "js",
-            _ => ext,
-          },
-        );
-        writeln!(snapshot, "```{file_ext}").unwrap();
-        snapshot.push_str(&tweak_snapshot(
-          &hmr_patch.code,
-          self.test_meta.hidden_runtime_module,
-          true,
-        ));
-        snapshot.push_str("\n```");
-        snapshot
-      }
-      _ => String::new(),
-    };
-
-    let meta_section = {
-      let mut snapshot = String::new();
-      snapshot.push_str("## Meta\n\n");
-      writeln!(
-        snapshot,
-        "- update type: {}",
-        match hmr_update {
-          HmrUpdate::Patch(_) => "patch",
-          HmrUpdate::FullReload { .. } => "full-reload",
-          HmrUpdate::Noop => "noop",
-        }
-      )
-      .unwrap();
-
-      match hmr_update {
-        HmrUpdate::Patch(hmr_patch) => {
-          write!(snapshot, "### Hmr Boundaries\n\n").unwrap();
-          let meta = hmr_patch
-            .hmr_boundaries
-            .iter()
-            .map(|boundary| {
-              format!(
-                "- boundary: {}, accepted_via: {}",
-                boundary.boundary.as_str(),
-                boundary.accepted_via.as_str()
-              )
-            })
-            .collect::<Vec<_>>();
-          snapshot.push_str(&meta.join("\n"));
-        }
-        HmrUpdate::FullReload { reason } => {
-          writeln!(snapshot, "- reason: {reason}").unwrap();
-        }
-        HmrUpdate::Noop => {}
-      }
-
-      snapshot
-    };
-
-    "\n".to_owned()
-      + [format!("# HMR Step {step}"), errors_section, code_section, meta_section].join("\n").trim()
   }
 
   fn snapshot_bundle_output(&self, path: &Path, content: &str) {

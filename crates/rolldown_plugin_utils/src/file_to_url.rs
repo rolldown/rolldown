@@ -49,7 +49,7 @@ impl FileToUrlEnv<'_> {
     self.file_to_built_url(id, false, None).await
   }
 
-  async fn file_to_built_url(
+  pub async fn file_to_built_url(
     &self,
     id: &str,
     skip_public_check: bool,

@@ -6,6 +6,7 @@ homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
+description = "Rolldown plugin for build reporting"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -20,6 +21,7 @@ cow-utils = { workspace = true }
 flate2 = { workspace = true }
 itoa = { workspace = true }
 num-format = { workspace = true }
+owo-colors = { workspace = true, features = ["supports-colors"] }
 rayon = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }

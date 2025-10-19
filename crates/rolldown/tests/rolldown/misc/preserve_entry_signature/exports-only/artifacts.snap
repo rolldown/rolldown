@@ -6,23 +6,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-import { value } from "./main.js";
+import { t as value } from "./main.js";
 
 //#region dynamic.js
 console.log(`shared: `, value);
 
 //#endregion
 ```
+
 ## dynamic2.js
 
 ```js
-import { value } from "./lib2.js";
+import { t as value } from "./lib2.js";
 
 //#region dynamic2.js
 console.log(`shared: `, value);
 
 //#endregion
 ```
+
 ## lib2.js
 
 ```js
@@ -30,8 +32,9 @@ console.log(`shared: `, value);
 const value = "lib2";
 
 //#endregion
-export { value };
+export { value as t };
 ```
+
 ## main.js
 
 ```js
@@ -44,12 +47,13 @@ import("./dynamic.js");
 console.log(`shared: `, value);
 
 //#endregion
-export { value };
+export { value as t };
 ```
+
 ## main2.js
 
 ```js
-import { value } from "./lib2.js";
+import { t as value } from "./lib2.js";
 
 //#region main2.js
 import("./dynamic2.js");

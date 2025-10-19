@@ -64,7 +64,6 @@ impl<'a> GenerateStage<'a> {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  #[expect(clippy::too_many_lines)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
     self.plugin_driver.render_start(self.options).await?;
 
@@ -261,7 +260,6 @@ impl<'a> GenerateStage<'a> {
   /// Notices:
   /// - Should generate filenames that are stable cross builds and os.
   #[tracing::instrument(level = "debug", skip_all)]
-  #[expect(clippy::too_many_lines)]
   async fn generate_chunk_name_and_preliminary_filenames(
     &self,
     chunk_graph: &mut ChunkGraph,
@@ -403,7 +401,7 @@ impl<'a> GenerateStage<'a> {
           });
 
           let mut filename =
-            asset_filename_template.render(Some(&name), extension, hash_replacer).into();
+            asset_filename_template.render(Some(&name), None, extension, hash_replacer).into();
           filename = make_unique_name(&filename, &used_name_counts);
           let preliminary = PreliminaryFilename::new(filename, hash_placeholder);
 

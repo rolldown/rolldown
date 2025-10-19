@@ -19,6 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 ## COMMONJS_VARIABLE_IN_ESM
 
 ```text
@@ -35,6 +36,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ───╯
 
 ```
+
 # Assets
 
 ## main.js

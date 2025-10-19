@@ -32,7 +32,6 @@ oxc_parser_napi = { workspace = true }
 oxc_resolver_napi = { workspace = true }
 oxc_transform_napi = { workspace = true }
 rolldown = { workspace = true }
-rolldown_binding_watcher = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_debug = { workspace = true }
 rolldown_error = { workspace = true, features = ["napi"] }
@@ -54,6 +53,9 @@ rolldown_plugin_replace = { workspace = true }
 rolldown_plugin_reporter = { workspace = true }
 rolldown_plugin_transform = { workspace = true }
 rolldown_plugin_utils = { workspace = true }
+rolldown_plugin_vite_css = { workspace = true }
+rolldown_plugin_vite_css_post = { workspace = true }
+rolldown_plugin_vite_html = { workspace = true }
 rolldown_plugin_vite_resolve = { workspace = true }
 rolldown_plugin_wasm_fallback = { workspace = true }
 rolldown_plugin_wasm_helper = { workspace = true }
@@ -63,6 +65,7 @@ rolldown_tracing = { workspace = true }
 rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
 string_wizard = { workspace = true }
+sugar_path = { workspace = true }
 tracing = { workspace = true }
 url = { workspace = true }
 

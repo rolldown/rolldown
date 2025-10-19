@@ -1529,15 +1529,15 @@ export interface BindingAliasPluginConfig {
 }
 
 export interface BindingAssetPluginConfig {
-  isLib?: boolean
-  isSsr?: boolean
-  isWorker?: boolean
-  urlBase?: string
-  publicDir?: string
-  decodedBase?: string
-  isSkipAssets?: boolean
-  assetsInclude?: Array<BindingStringOrRegex>
-  assetInlineLimit?: number | ((file: string, content: Buffer) => boolean | undefined)
+  isLib: boolean
+  isSsr: boolean
+  isWorker: boolean
+  urlBase: string
+  publicDir: string
+  decodedBase: string
+  isSkipAssets: boolean
+  assetsInclude: Array<BindingStringOrRegex>
+  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => MaybePromise<VoidNullable<string | BindingRenderBuiltUrlRet>>
 }
 

@@ -14,8 +14,9 @@ use oxc::{
 };
 use rolldown_common::{
   AstScopes, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx, ImportRecordMeta,
-  MemberExprRefResolution, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType,
-  OutputFormat, Platform, RenderedConcatenatedModuleParts, SymbolRef, WrapKind,
+  InlineConstMode, MemberExprRefResolution, Module, ModuleIdx, ModuleNamespaceIncludedReason,
+  ModuleType, NamespaceAlias, OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier,
+  SymbolRef, WrapKind,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
@@ -237,8 +238,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let mut canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
     let mut canonical_symbol = self.ctx.symbol_db.get(canonical_ref);
-    let namespace_alias = &canonical_symbol.namespace_alias;
+    let namespace_alias = canonical_symbol.namespace_alias.as_ref();
     if let Some(ns_alias) = namespace_alias {
+      if let Some(expr) = self.try_inline_constant_from_namespace_alias(symbol_ref, ns_alias) {
+        return expr;
+      }
       canonical_ref = ns_alias.namespace_ref;
       canonical_symbol = self.ctx.symbol_db.get(canonical_ref);
     }
@@ -306,6 +310,37 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
 
     expr
+  }
+
+  fn try_inline_constant_from_namespace_alias(
+    &self,
+    original_ref: SymbolRef,
+    namespace_alias: &NamespaceAlias,
+  ) -> Option<ast::Expression<'ast>> {
+    let inline_options = self.ctx.options.optimization.inline_const?;
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(original_ref);
+    let named_import = self.ctx.module.named_imports.get(&canonical_ref)?;
+
+    if !matches!(&named_import.imported, Specifier::Literal(lit) if lit != "default") {
+      return None;
+    }
+
+    let import_record = &self.ctx.module.import_records[named_import.record_id];
+    let importee = &self.ctx.modules[import_record.resolved_module].as_normal()?;
+
+    let resolved_export =
+      self.ctx.linking_infos[importee.idx].resolved_exports.get(&namespace_alias.property_name)?;
+    let export_symbol = resolved_export.symbol_ref;
+    let canonical_export_ref = self.ctx.symbol_db.canonical_ref_for(export_symbol);
+
+    let constant_meta = self.ctx.constant_value_map.get(&canonical_export_ref)?;
+
+    if matches!(inline_options.mode, InlineConstMode::Smart)
+      && (!self.state.contains(TraverseState::SmartInlineConst) || !constant_meta.safe_to_inline)
+    {
+      return None;
+    }
+    Some(constant_meta.value.to_expression(AstBuilder::new(self.alloc)))
   }
 
   fn var_declaration_to_expr_seq_and_bindings(

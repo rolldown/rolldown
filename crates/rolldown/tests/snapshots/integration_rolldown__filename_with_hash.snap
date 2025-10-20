@@ -5068,6 +5068,10 @@ expression: output
 
 - main-!~{000}~.js => main-RyfaQvKc.js
 
+# tests/rolldown/optimization/inline_const/issue_6081
+
+- main-!~{000}~.js => main-kJmmV5ey.js
+
 # tests/rolldown/optimization/inline_const/issue_6246
 
 - main-!~{000}~.js => main-CQPYVIDg.js
@@ -5842,7 +5846,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/commonjs_inline_const
 
-- main-!~{000}~.js => main-Dd55o2C8.js
+- main-!~{000}~.js => main-Vnsk6jWN.js
 
 # tests/rolldown/tree_shaking/commonjs_mixed
 

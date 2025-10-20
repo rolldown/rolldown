@@ -76,8 +76,8 @@ assert.equal("basic-ref-with-named-default-a", "basic-ref-with-named-default-a")
 assert.equal("basic-ref-with-named-default-a".startsWith("b"), true);
 assert.equal("export-star-from-cjs-a", "export-star-from-cjs-a");
 assert.equal("export-star-from-cjs-a", "export-star-from-cjs-a");
-assert.equal(named_import_export_star_from_cjs_exports.a, "named-import-export-star-from-cjs-a");
-assert.equal(named_import_export_star_from_cjs_exports.a.startsWith("n"), true);
+assert.equal("named-import-export-star-from-cjs-a", "named-import-export-star-from-cjs-a");
+assert.equal("named-import-export-star-from-cjs-a".startsWith("n"), true);
 assert.equal("nested-export-star-from-cjs-a", "nested-export-star-from-cjs-a");
 assert.equal("nested-export-star-from-cjs-a".startsWith("n"), true);
 assert.equal("react-like-a", "react-like-a");

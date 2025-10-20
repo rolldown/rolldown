@@ -7,9 +7,7 @@ export default defineTest({
     input: 'main.jsx',
     external: ['react'],
     transform: {
-      jsx: {
-        runtime: 'classic'
-      }
+      jsx: 'react'
     },
   },
   afterTest: (output) => {

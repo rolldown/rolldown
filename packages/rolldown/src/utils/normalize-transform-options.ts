@@ -67,6 +67,9 @@ export function normalizeTransformOptions(
     } = transform;
     // Only set oxcTransformOptions if there are actual options
     if (Object.keys(rest).length > 0) {
+      if (rest.jsx === false) {
+        rest.jsx = 'disable' as any;
+      }
       oxcTransformOptions = rest as OxcTransformOptions;
     }
   }

@@ -4,6 +4,7 @@ use oxc::transformer::EngineTargets;
 use rolldown_common::{BundlerTransformOptions, Either, JsxOptions, JsxPreset, TransformOptions};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 
+#[expect(clippy::too_many_lines)]
 pub fn normalize_transform_options_with_tsconfig(
   mut transform_options: BundlerTransformOptions,
   tsconfig: Option<Arc<rolldown_resolver::TsConfig>>,
@@ -18,20 +19,34 @@ pub fn normalize_transform_options_with_tsconfig(
 
   let mut jsx_preset = JsxPreset::Enable;
 
-  if let Some(Either::Left(jsx)) = &mut transform_options.jsx {
-    jsx_preset = match jsx.as_str() {
-      "preserve" => JsxPreset::Preserve,
+  if let Some(Either::Left(jsx_str)) = &mut transform_options.jsx {
+    match jsx_str.as_str() {
+      "react" => {
+        transform_options.jsx = Some(Either::Right(JsxOptions {
+          runtime: Some(String::from("classic")),
+          ..Default::default()
+        }));
+      }
+      "react-jsx" => {
+        transform_options.jsx = Some(Either::Right(JsxOptions::default()));
+      }
+      // Keep JSX syntax as-is in the output (parser enabled, transformer disabled)
+      "preserve" => jsx_preset = JsxPreset::Preserve,
+      // Disable JSX parser and transformer entirely - will error if JSX syntax is encountered
       "disable" => {
-        "preserve".clone_into(jsx);
-        JsxPreset::Disable
+        jsx_preset = JsxPreset::Disable;
+        "preserve".clone_into(jsx_str);
       }
       _ => {
-        return Err(BuildDiagnostic::bundler_initialize_error(
-          format!("Invalid jsx option: `{jsx}`."),
-          Some("Valid options are 'preserve' to keep JSX as-is, or omit the option to use default transform.".to_owned()),
+        Err(BuildDiagnostic::bundler_initialize_error(
+          format!("Invalid jsx option: `{jsx_str}`."),
+          Some(
+            "Valid options are `false | 'react' | 'react-jsx' | 'preserve'`, or jsx options."
+              .to_owned(),
+          ),
         ))?;
       }
-    };
+    }
   }
 
   if let Some(tsconfig) = tsconfig {

@@ -6,10 +6,9 @@ test('jsx false should report error', async () => {
     const build = await rolldown({
       input: './main.jsx',
       cwd: import.meta.dirname,
-      moduleTypes: {
-        '.jsx': 'js',
-        '.tsx': 'ts',
-      },
+      transform: {
+        jsx: false,
+      }
     })
     await build.write({})
   } catch (e: any) {

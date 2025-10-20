@@ -1,4 +1,7 @@
-import type { TransformOptions as OxcTransformOptions } from '../binding';
+import type {
+  JsxOptions,
+  TransformOptions as OxcTransformOptions,
+} from '../binding';
 
 export interface TransformOptions extends
   Omit<
@@ -113,5 +116,5 @@ export interface TransformOptions extends
    * ```
    */
   dropLabels?: string[];
-  jsx?: OxcTransformOptions['jsx'];
+  jsx?: false | 'react' | 'react-jsx' | 'preserve' | JsxOptions;
 }

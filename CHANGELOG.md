@@ -1,4 +1,137 @@
 
+## [1.0.0-beta.44] - 2025-10-20
+
+### 💥 BREAKING CHANGES
+
+- enable `output.minifyInternalExports` for `format: 'es'` or `minify: true` (#6594) by @sapphi-red
+- node/options: remove `InputOptions.jsx`, prefer `transform.jsx` always (#6548) by @hyf0
+
+### 🚀 Features
+
+- support jsx preset for `transform.jsx` (#6630) by @shulaoda
+- rolldown_plugin_vite_html: align `inject_to_body` function (#6622) by @shulaoda
+- rolldown_vite_css_post_plugin: tweak `is_legacy` field (#6620) by @shulaoda
+- native-plugin: expose `viteHtmlPlugin` (#6609) by @shulaoda
+- native-plugin: expose `viteCSSPostPlugin` (#6606) by @shulaoda
+- builtin-plugin: expose `viteCSSPlugin` (#6605) by @shulaoda
+- rolldown_plugin_vite_html: complete plugin binding (#6604) by @shulaoda
+- rolldown_plugin_vite_css: support plugin binding (#6598) by @shulaoda
+- add TypedArray constructors to side-effect free globals (#6592) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: align process src attr logic (#6572) by @shulaoda
+- rolldown: support `output.clearDir` to clean up `dir` before build (#6486) by @aprosail
+- dev: return `RolldownOutput` instead of `BindingOutputs` from `onOutput` (#6563) by @sapphi-red
+- rolldown_plugin_vite_html: align process srcset logic (#6560) by @shulaoda
+- rolldown_plugin_vite_html: align process src function (#6559) by @shulaoda
+- rolldown_plugin_vite_html: align parse secset function (#6558) by @shulaoda
+- node/options: deprecate `dropLabels` and add `transform.dropLabels` (#6557) by @hyf0
+- node/options: deprecate `keepNames` and add `output.keepNames` (#6556) by @hyf0
+- node/options: deprecate `profilerNames` and add `output.generatedCode.profilerNames` (#6555) by @hyf0
+- node/options: deprecate top level `inject` and `define` and add `transform.define`, `transform.inject` (#6544) by @hyf0
+- rolldown_plugin_vite_html: initialize attributes handle logic (#6543) by @shulaoda
+- rolldown: oxc v0.95.0 (#6541) by @Boshen
+- rolldown_plugin_vite_html: align inject css logic (#6528) by @shulaoda
+- rolldown_plugin_vite_html: align modulepreload inject logic (#6526) by @shulaoda
+- rolldown_plugin_vite_html: align css bundle output inject logic (#6524) by @shulaoda
+- rolldown_plugin_vite_html: support inject_to_head function (#6522) by @shulaoda
+- rolldown_plugin_vite_html: align emit and delete logic (#6521) by @shulaoda
+- rolldown_vite_html: align handle html asset url logic (#6518) by @shulaoda
+- add an example how to transform code and generate sourcemap with `experimental.nativeMagicString` (#6514) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: align handle inline css logic (#6517) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- native-plugin: use correct config for assetPlugin (#6638) by @shulaoda
+- no_color not being respected on reporter (#6615) by @H4ad
+- improve tree shaking for JSON default imports (#6626) by @IWANABETHATGUY
+- cjs treeshaking removes used code (#6597) by @IWANABETHATGUY
+- plugin/vite-resolve: return `package_json_path` from resolveId hook (#6434) by @sapphi-red
+- dev: `should have idx` error happens with `deferSyncScanData` + incremental rebuild (#6568) by @sapphi-red
+- rolldown: sync scoping properly in pre_process_ecma_ast (#6537) by @Boshen
+- process CJS tree shaking bailout modules before eliminating unused dynamic entries (#6549) by @IWANABETHATGUY
+- rust/dev: error of `bundler.scan`doesn't get handled (#6547) by @Copilot
+- inline only self referenced json module properties (#6519) by @IWANABETHATGUY
+- avoid processing native MagicString sourcemap when `sourcemap` is disabled (#6510) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- rolldown_binding: unify `BindingAssetInlineLimit` (#6625) by @shulaoda
+- rolldown_binding: tweak `BindingAssetPluginConfig` (#6624) by @shulaoda
+- tweak `viteCSSPlugin` config (#6610) by @shulaoda
+- rust/dev: remove unnecessary bundler cache management of dev engine (#6576) by @hyf0
+- rust/dev: refactor `TaskInput` into enum to reduce invalid states (#6575) by @hyf0
+- improve the error message of `ScanStageCache#merge` (#6564) by @IWANABETHATGUY
+- rust/dev: use `client_id` to check if module is executed for test environment (#6566) by @hyf0
+- rust/binding: mark napi object that won't be received from js side (#6531) by @hyf0
+- rust/binding: mark napi object struct that won't be passed to js explicitly (#6525) by @hyf0
+- rust/binding: use `&str` or `JsString` to avoid unnecessary clone (#6523) by @hyf0
+- rust/binding: use `&str` to avoid unnecessary clone (#6520) by @hyf0
+- rust: replace unwrap with expect for better error handling in message sending (#6509) by @hyf0
+
+### 📚 Documentation
+
+- add redirect from `/guide/in-depth/` to `/in-depth/` (#6554) by @Copilot
+- guide: polish notable features page (#6535) by @sapphi-red
+- builtin-plugins: add replace plugin docs (#6534) by @sapphi-red
+- add `Additional Thanks` in `acknowledgements` page (#6507) by @hyf0
+- polish doc for `experimental.nativeMagicString` (#6504) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- cli: advance `createTokioRuntime` (#6618) by @hyf0
+- rolldown: reduce unnecessary Vec allocate (#6601) by @Brooooooklyn
+- rolldown: make derived assets generation more parallel (#6600) by @Brooooooklyn
+- rolldown: make chunks generation more parallel (#6599) by @Brooooooklyn
+- rolldown_utils: only allocate HASH_PLACEHOLDER_LEFT once (#6595) by @Brooooooklyn
+- rolldown: use oxc-resolver with simd-json (#6591) by @Boshen
+- rolldown: avoid allocate the sourcemap sources on non Windows os (#6590) by @Brooooooklyn
+- resolver: use optimized fs.read_to_string impl (#6589) by @Brooooooklyn
+- deps: upgrade json-escape-simd and add simdutf8 dependency (#6579) by @Brooooooklyn
+- rust/dev: remove unncessary clone for `ClientInput` (#6565) by @hyf0
+- visit ast in `cross_module_optimization` stage parallel (#6552) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- json module prop conflict with normal module declaration binding (#6540) by @IWANABETHATGUY
+- vite-tests: fix rolldown overrides (#6532) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- remove string conversion warning in `replacePlugin` to compatible with rollup (#6639) by @IWANABETHATGUY
+- deps: update dependency dprint-json to v0.21.0 (#6637) by @renovate[bot]
+- deps: lock file maintenance (#6635) by @renovate[bot]
+- deps: lock file maintenance npm packages (#6632) by @renovate[bot]
+- node: use built-in styleText (#6340) by @dumbmatter
+- deps: update actions/setup-node action to v6 (#6629) by @renovate[bot]
+- deps: update github-actions (#6628) by @renovate[bot]
+- deps: update dependency dprint-markdown to v0.20.0 (#6627) by @renovate[bot]
+- Switch color dependencies (ansis and picocolors) to built-in styleText (#6619) by @IWANABETHATGUY
+- native-plugin: tweak assetPlugin (#6623) by @shulaoda
+- remove deprecated warning in `build.ts` (#6621) by @IWANABETHATGUY
+- deps: update dependency tsdown to v0.15.8 (#6617) by @renovate[bot]
+- rolldown_binding: rename vite css plugin config field (#6611) by @shulaoda
+- add colored deprecation warnings for top-level options (#6612) by @IWANABETHATGUY
+- rust: make `cargo publish --workspace` work (#6287) by @Boshen
+- deps: update dependency rolldown-plugin-dts to v0.16.12 (#6608) by @renovate[bot]
+- test: add `opposite_minify_internal_exports` and remove `minify_internal_exports` extend test (#6596) by @hyf0
+- test: render snapshot for build and dev independently (#6584) by @hyf0
+- test: split test logic for normal build and dev engine (#6580) by @hyf0
+- fix rolldown build self warning (#6578) by @IWANABETHATGUY
+- tweak `BindingBuiltinPluginName` (#6574) by @shulaoda
+- rust: use forked `notify` crate (#6573) by @Boshen
+- add `.len()` and `.is_empty()` to `HybridIndexVec` (#6570) by @sapphi-red
+- ai: improve `AGENT.md` with verified prompts (#6533) by @hyf0
+- clippy: set `too-many-lines-threshold` to 200 (#6530) by @shulaoda
+- clean up examples/basic-vue (#6515) by @IWANABETHATGUY
+- deps: update dependency tsdown to v0.15.7 (#6512) by @renovate[bot]
+- add shulaoda to release PR assignees (#6505) by @shulaoda
+
+### ❤️ New Contributors
+
+* @dumbmatter made their first contribution in [#6340](https://github.com/rolldown/rolldown/pull/6340)
+* @H4ad made their first contribution in [#6615](https://github.com/rolldown/rolldown/pull/6615)
+* @aprosail made their first contribution in [#6486](https://github.com/rolldown/rolldown/pull/6486)
+
+
 ## [1.0.0-beta.43] - 2025-10-13
 
 ### 🚀 Features

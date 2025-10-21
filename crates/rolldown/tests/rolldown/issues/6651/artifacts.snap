@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+//#region lib.json
+var lib_exports = /* @__PURE__ */ __export({
+	a: () => a,
+	b: () => b,
+	c: () => c,
+	default: () => lib_default
+});
+var a = 1;
+var b = 2;
+var c = "example";
+var lib_default = {
+	a,
+	b,
+	c
+};
+
+//#endregion
+//#region main.js
+assert.deepEqual(JSON.parse(JSON.stringify(lib_exports)).default, {
+	a: 1,
+	b: 2,
+	c: "example"
+});
+
+//#endregion
+```

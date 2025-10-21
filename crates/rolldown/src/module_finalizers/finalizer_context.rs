@@ -60,7 +60,8 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
       let (oxc_program, alloc) = (fields.program, fields.allocator);
 
       let need_inline_json_prop = matches!(self.module.module_type, ModuleType::Json)
-        && !self.module.exports_kind.is_commonjs();
+        && !self.module.exports_kind.is_commonjs()
+        && !mutable_state.module_namespace_included;
       let mut finalizer = ScopeHoistingFinalizer {
         alloc,
         ctx: self,

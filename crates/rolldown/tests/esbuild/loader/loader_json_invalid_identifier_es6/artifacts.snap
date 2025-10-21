@@ -16,7 +16,8 @@ var test2_exports = /* @__PURE__ */ __export({
 	default: () => test2_default,
 	"invalid-identifier": () => invalid_identifier
 });
-var test2_default = { "invalid-identifier": true };
+var invalid_identifier = true;
+var test2_default = { "invalid-identifier": invalid_identifier };
 
 //#endregion
 //#region entry.js

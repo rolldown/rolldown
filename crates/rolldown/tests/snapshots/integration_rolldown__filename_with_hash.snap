@@ -2368,7 +2368,7 @@ expression: output
 
 # tests/esbuild/loader/loader_json_invalid_identifier_es6
 
-- entry-!~{000}~.js => entry-CMMWNBUK.js
+- entry-!~{000}~.js => entry-u_TCkpaS.js
 
 # tests/esbuild/loader/loader_json_no_bundle
 
@@ -4798,6 +4798,10 @@ expression: output
 - main-!~{000}~.js => main-C51avVP1.js
 - chunk-!~{001}~.js => chunk-H6kpAueX.js
 - lib-!~{003}~.js => lib-mlnvUzca.js
+
+# tests/rolldown/issues/6651
+
+- main-!~{000}~.js => main-CjM0X7y1.js
 
 # tests/rolldown/issues/rolldown_vite_289
 

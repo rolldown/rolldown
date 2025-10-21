@@ -322,8 +322,8 @@ impl Plugin for ReporterPlugin {
           let mut info = String::new();
           let _ = write!(
             &mut info,
-            "{}/",
-            out_dir.if_supports_color(Stream::Stdout, |text| text.dimmed())
+            "{}",
+            format!("{out_dir}/").if_supports_color(Stream::Stdout, |text| text.dimmed())
           );
 
           let is_asset = !self.is_lib && Path::new(log_entry.name).starts_with(&self.assets_dir);
@@ -377,8 +377,9 @@ impl Plugin for ReporterPlugin {
             let size = utils::display_size(compressed_size);
             let _ = write!(
               &mut info,
-              " │ gzip: {:>compress_pad$}",
-              size.if_supports_color(Stream::Stdout, |text| text.dimmed())
+              "{}",
+              format!(" │ gzip: {size:>compress_pad$}")
+                .if_supports_color(Stream::Stdout, |text| text.dimmed())
             );
           }
 
@@ -386,8 +387,9 @@ impl Plugin for ReporterPlugin {
             let size = utils::display_size(map_size);
             let _ = write!(
               &mut info,
-              " │ map: {:>map_pad$}",
-              size.if_supports_color(Stream::Stdout, |text| text.dimmed())
+              "{}",
+              format!(" │ map: {size:>map_pad$}")
+                .if_supports_color(Stream::Stdout, |text| text.dimmed())
             );
           }
 
@@ -406,10 +408,8 @@ impl Plugin for ReporterPlugin {
     if self.warn_large_chunks && has_large_chunks {
       let message = format!(
         "\n(!) Some chunks are larger than {} kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
-        itoa::Buffer::new()
-          .format(self.chunk_limit)
-          .if_supports_color(Stream::Stdout, |text| { text.bold().yellow().to_string() }),
-      );
+        itoa::Buffer::new().format(self.chunk_limit)
+      ).if_supports_color(Stream::Stdout, |text| { text.bold().yellow().to_string() }).to_string();
       ctx.warn(rolldown_common::LogWithoutPlugin { message, ..Default::default() });
     }
     Ok(())

@@ -83,12 +83,18 @@ test('clean outdir hooks', async () => {
     input,
     cwd: root,
   });
+  
   await bundler.write({
     dir: outdir,
     entryFileNames: 'index.js',
     cleanDir: true,
   });
-  expect(existsSync(join(outdir, generateBundleFile))).toBe(false);
+
+  expect(existsSync(join(outdir, generateBundleFile))).toBe(true);
+  expect(readFileSync(join(outdir, generateBundleFile), 'utf-8')).toBe(
+    generateBundleContent,
+  );
+
   expect(existsSync(join(outdir, writeBundleFile))).toBe(true);
   expect(readFileSync(join(outdir, writeBundleFile), 'utf-8')).toBe(
     writeBundleContent,

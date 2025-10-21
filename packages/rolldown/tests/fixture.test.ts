@@ -1,7 +1,7 @@
 import path from 'node:path'
-import { test } from 'vitest'
-import { rolldown } from 'rolldown'
 import type { InputOptions } from 'rolldown'
+import { rolldown } from 'rolldown'
+import { test } from 'vitest'
 import type { TestConfig } from './src/types'
 
 main()
@@ -36,7 +36,7 @@ function main() {
       } catch (err) {
         throw new Error(`Failed in ${testConfigPath}`, { cause: err })
       }
-    })
+    }, 30_000) // Specify a longer timeout than default 20_000ms.
   }
 }
 

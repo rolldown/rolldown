@@ -9,30 +9,35 @@
     "directory": "packages/pluginutils"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "exports": {
+      ".": "./dist/index.js",
+      "./package.json": "./package.json"
+    }
   },
-  "main": "./dist/index.mjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.mts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.mjs",
+    ".": {
+      "dev": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsdown",
+    "build": "oxnode -C dev ./build.ts",
     "test": "vitest --typecheck"
   },
   "devDependencies": {
+    "@oxc-node/cli": "catalog:",
     "@types/picomatch": "catalog:",
+    "rolldown-plugin-dts": "catalog:",
     "picomatch": "catalog:",
-    "tsdown": "catalog:",
-    "vitest": "catalog:"
-  },
-  "tsdown": {
-    "exports": true,
-    "fixedExtension": true
+    "vitest": "catalog:",
+    "typescript": "catalog:"
   }
 }

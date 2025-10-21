@@ -5714,6 +5714,10 @@ expression: output
 - main-!~{000}~.js => main-ab8umXFV.js
 - async-entry-!~{001}~.js => async-entry-BG8MStYS.js
 
+# tests/rolldown/topics/live_bindings/default_export_snapshot_not_live
+
+- main-!~{000}~.js => main-D6Ubb9hN.js
+
 # tests/rolldown/topics/live_bindings/named_exports
 
 - main-!~{000}~.js => main-W2ZfqE3v.js

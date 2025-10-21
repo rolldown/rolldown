@@ -236,7 +236,7 @@ export interface OutputOptions {
     meta: { getModuleInfo: (moduleId: string) => ModuleInfo | null },
   ) => string | NullValue;
   /**
-   * Allows you to do manual chunking. For deeper understanding, please refer to the in-depth [documentation](https://rolldown.rs/guide/in-depth/advanced-chunks).
+   * Allows you to do manual chunking. For deeper understanding, please refer to the in-depth [documentation](https://rolldown.rs/in-depth/advanced-chunks).
    */
   advancedChunks?: {
     /**

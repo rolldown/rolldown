@@ -7,8 +7,24 @@ from = "/about/"
 to = "/guide/"
 
 [[redirects]]
+from = "/plugins/hook-filters"
+to = "/apis/plugin-hook-filters"
+
+[[redirects]]
 from = "/guide/plugin-development"
 to = "/plugins/"
+
+[[redirects]]
+from = "/reference/"
+to = "/apis/"
+
+[[redirects]]
+from = "/guide/in-depth/"
+to = "/in-depth/"
+
+[[redirects]]
+from = "/apis/config-options/"
+to = "/options/input/"
 
 # https://github.com/okineadev/vitepress-plugin-llms#netlify
 [[redirects]]

@@ -14,6 +14,7 @@ pub mod binding_hook_transform_output;
 pub mod binding_limited_boolean;
 pub mod binding_plugin_context_resolve_options;
 pub mod binding_plugin_transform_extra_args;
+pub mod binding_render_built_url;
 pub mod binding_render_chunk_meta_chunks;
 pub mod binding_resolved_external;
 pub mod binding_vite_plugin_custom;

@@ -1,14 +1,13 @@
 use std::sync::Arc;
 
 use napi::{Either, bindgen_prelude::FnArgs};
-use rolldown_plugin_utils::{RenderBuiltUrl, RenderBuiltUrlConfig};
 use rolldown_plugin_vite_html::{ResolveDependenciesEither, ViteHtmlPlugin};
 use rolldown_utils::dashmap::FxDashMap;
 
 use crate::{
-  options::plugin::{
-    config::binding_asset_plugin_config::{BindingRenderBuiltUrlConfig, BindingRenderBuiltUrlRet},
-    types::binding_asset_inline_limit::BindingAssetInlineLimit,
+  options::plugin::types::{
+    binding_asset_inline_limit::BindingAssetInlineLimit,
+    binding_render_built_url::BindingRenderBuiltUrl,
   },
   types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _},
 };
@@ -26,14 +25,9 @@ pub struct BindingViteHtmlPluginConfig {
   #[napi(ts_type = "number | ((file: string, content: Buffer) => boolean | undefined)")]
   pub asset_inline_limit: BindingAssetInlineLimit,
   #[napi(
-    ts_type = "(filename: string, type: BindingRenderBuiltUrlConfig) => MaybePromise<VoidNullable<string | BindingRenderBuiltUrlRet>>"
+    ts_type = "(filename: string, type: BindingRenderBuiltUrlConfig) => Promise<undefined | string | BindingRenderBuiltUrlRet>"
   )]
-  pub render_built_url: Option<
-    MaybeAsyncJsCallback<
-      FnArgs<(String, BindingRenderBuiltUrlConfig)>,
-      Option<Either<String, BindingRenderBuiltUrlRet>>,
-    >,
-  >,
+  pub render_built_url: Option<BindingRenderBuiltUrl>,
   #[napi(
     ts_type = "boolean | ((filename: string, dependencies: string[], context: { hostId: string, hostType: 'html' | 'js' }) => Promise<string[]>)"
   )]
@@ -56,26 +50,6 @@ pub struct BindingResolveDependenciesContext {
 
 impl From<BindingViteHtmlPluginConfig> for ViteHtmlPlugin {
   fn from(value: BindingViteHtmlPluginConfig) -> Self {
-    let render_built_url = value.render_built_url.map(|render_built_url| -> Arc<RenderBuiltUrl> {
-      Arc::new(move |filename: &str, config: &RenderBuiltUrlConfig| {
-        let render_built_url = Arc::clone(&render_built_url);
-        let filename = filename.to_string();
-        let config = config.into();
-        Box::pin(async move {
-          render_built_url
-            .await_call((filename, config).into())
-            .await
-            .map(|v| {
-              v.map(|v| match v {
-                Either::A(v) => itertools::Either::Left(v),
-                Either::B(v) => itertools::Either::Right(v.into()),
-              })
-            })
-            .map_err(anyhow::Error::from)
-        })
-      })
-    });
-
     let resolve_dependencies = match value.resolve_dependencies {
       Some(Either::A(true)) => Some(ResolveDependenciesEither::True),
       Some(Either::B(resolve_dependencies)) => Some(ResolveDependenciesEither::Fn(Arc::new(
@@ -107,7 +81,7 @@ impl From<BindingViteHtmlPluginConfig> for ViteHtmlPlugin {
       css_code_split: value.css_code_split,
       module_preload_polyfill: value.module_preload_polyfill,
       asset_inline_limit: value.asset_inline_limit.into(),
-      render_built_url,
+      render_built_url: value.render_built_url.map(Into::into),
       resolve_dependencies,
       html_result_map: FxDashMap::default(),
     }

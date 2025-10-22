@@ -1,13 +1,9 @@
 use std::sync::{Arc, atomic::AtomicBool};
 
-use napi::{Either, bindgen_prelude::FnArgs};
-use rolldown_plugin_utils::{RenderBuiltUrl, RenderBuiltUrlConfig};
 use rolldown_plugin_vite_css_post::{CSSMinifyFn, IsLegacyFn, ViteCSSPostPlugin};
 
 use crate::{
-  options::plugin::config::binding_asset_plugin_config::{
-    BindingRenderBuiltUrlConfig, BindingRenderBuiltUrlRet,
-  },
+  options::plugin::types::binding_render_built_url::BindingRenderBuiltUrl,
   types::js_callback::{
     JsCallback, JsCallbackExt as _, MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _,
   },
@@ -31,14 +27,9 @@ pub struct BindingViteCSSPostPluginConfig {
   #[napi(ts_type = "(css: string) => Promise<string>")]
   pub css_minify: Option<MaybeAsyncJsCallback<String, String>>,
   #[napi(
-    ts_type = "(filename: string, type: BindingRenderBuiltUrlConfig) => MaybePromise<VoidNullable<string | BindingRenderBuiltUrlRet>>"
+    ts_type = "(filename: string, type: BindingRenderBuiltUrlConfig) => Promise<undefined | string | BindingRenderBuiltUrlRet>"
   )]
-  pub render_built_url: Option<
-    MaybeAsyncJsCallback<
-      FnArgs<(String, BindingRenderBuiltUrlConfig)>,
-      Option<Either<String, BindingRenderBuiltUrlRet>>,
-    >,
-  >,
+  pub render_built_url: Option<BindingRenderBuiltUrl>,
 }
 
 impl From<BindingViteCSSPostPluginConfig> for ViteCSSPostPlugin {
@@ -60,25 +51,7 @@ impl From<BindingViteCSSPostPluginConfig> for ViteCSSPostPlugin {
           Box::pin(async move { is_legacy_fn.invoke_async(()).await.map_err(anyhow::Error::from) })
         })
       }),
-      render_built_url: value.render_built_url.map(|render_built_url| -> Arc<RenderBuiltUrl> {
-        Arc::new(move |filename: &str, config: &RenderBuiltUrlConfig| {
-          let render_built_url = Arc::clone(&render_built_url);
-          let filename = filename.to_string();
-          let config = config.into();
-          Box::pin(async move {
-            render_built_url
-              .await_call((filename, config).into())
-              .await
-              .map(|v| {
-                v.map(|v| match v {
-                  Either::A(v) => itertools::Either::Left(v),
-                  Either::B(v) => itertools::Either::Right(v.into()),
-                })
-              })
-              .map_err(anyhow::Error::from)
-          })
-        })
-      }),
+      render_built_url: value.render_built_url.map(Into::into),
       css_minify: value.css_minify.map(|css_minify| -> Arc<CSSMinifyFn> {
         Arc::new(move |css: String| {
           let css_minify = Arc::clone(&css_minify);

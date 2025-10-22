@@ -47,7 +47,7 @@ impl ViteMetadata {
 
 #[derive(Debug, Default)]
 pub struct CSSEntriesCache {
-  pub inner: FxDashSet<ArcStr>,
+  pub inner: FxDashMap<String, ArcStr>,
 }
 
 #[derive(Debug, Default)]

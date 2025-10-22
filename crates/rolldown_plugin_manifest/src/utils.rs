@@ -59,11 +59,13 @@ impl ManifestPlugin {
     }
   }
 
-  pub fn create_asset(asset: &OutputAsset, src: String, is_entry: bool) -> ManifestChunk {
+  pub fn create_asset(asset: &OutputAsset, src: String, name: Option<String>) -> ManifestChunk {
+    let is_entry = name.is_some();
     ManifestChunk {
       is_entry,
       src: Some(src),
       file: asset.filename.to_string(),
+      name,
       names: is_entry.then(|| asset.names.clone()),
       ..Default::default()
     }

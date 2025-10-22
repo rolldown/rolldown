@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rolldown_plugin_manifest::{IsLegacyFn, ManifestPlugin};
-use rustc_hash::FxHashSet;
+use rustc_hash::FxHashMap;
 
 use crate::types::js_callback::{JsCallback, JsCallbackExt as _};
 
@@ -11,8 +11,8 @@ pub struct BindingManifestPluginConfig {
   pub out_path: String,
   #[napi(ts_type = "() => boolean")]
   pub is_legacy: Option<JsCallback<(), bool>>,
-  #[napi(ts_type = "() => Set<string>")]
-  pub css_entries: JsCallback<(), FxHashSet<String>>,
+  #[napi(ts_type = "() => Map<string, string>")]
+  pub css_entries: JsCallback<(), FxHashMap<String, String>>,
 }
 
 impl From<BindingManifestPluginConfig> for ManifestPlugin {

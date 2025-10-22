@@ -30,12 +30,12 @@ impl From<(Mime, bool)> for MimeExt {
 }
 
 impl TryFrom<RawMimeExt> for MimeExt {
+  type Error = anyhow::Error;
+
   fn try_from(raw_mime_ext: RawMimeExt) -> Result<Self, Self::Error> {
     let mime = Mime::from_str(raw_mime_ext.mime_str)?;
     Ok(MimeExt { mime, is_utf8_encoded: raw_mime_ext.is_utf8_encoded })
   }
-
-  type Error = anyhow::Error;
 }
 
 // second param is whether the data is utf8 encoded

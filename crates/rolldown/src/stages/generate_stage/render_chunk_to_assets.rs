@@ -9,7 +9,7 @@ use rolldown_common::{
   SymbolRef,
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
-use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult};
+use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, SingleBuildResult};
 use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, ParallelIterator},
@@ -34,7 +34,7 @@ use super::GenerateStage;
 
 type ChunkGeneratorFuture<'a> = Pin<
   Box<
-    dyn Future<Output = Result<Result<GenerateOutput, BatchedBuildDiagnostic>, anyhow::Error>>
+    dyn Future<Output = SingleBuildResult<Result<GenerateOutput, BatchedBuildDiagnostic>>>
       + 'a
       + Send,
   >,
@@ -150,7 +150,7 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
     errors: &mut Vec<BuildDiagnostic>,
     warnings: &mut Vec<BuildDiagnostic>,
-  ) -> BuildResult<(IndexInstantiatedChunks, IndexChunkToInstances)> {
+  ) -> SingleBuildResult<(IndexInstantiatedChunks, IndexChunkToInstances)> {
     let mut index_chunk_to_instances: IndexChunkToInstances =
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
     let mut index_instantiated_chunks: IndexInstantiatedChunks =

@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
 
+use rolldown_error::SingleBuildResult;
 use rolldown_utils::dashmap::FxDashMap;
 use rolldown_utils::url::clean_url;
 use rolldown_utils::{dataurl::encode_as_shortest_dataurl, mime::guess_mime};
@@ -18,7 +19,7 @@ const GIT_LFS_PREFIX: &[u8; 34] = b"version https://git-lfs.github.com";
 #[derive(Default)]
 pub struct AssetCache(pub FxDashMap<String, String>);
 
-type AssetInlineLimitFn = dyn (Fn(&str, &[u8]) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<bool>>> + Send + Sync>>)
+type AssetInlineLimitFn = dyn (Fn(&str, &[u8]) -> Pin<Box<dyn Future<Output = SingleBuildResult<Option<bool>>> + Send + Sync>>)
   + Send
   + Sync;
 
@@ -45,7 +46,7 @@ pub struct FileToUrlEnv<'a> {
 }
 
 impl FileToUrlEnv<'_> {
-  pub async fn file_to_url(&self, id: &str) -> anyhow::Result<String> {
+  pub async fn file_to_url(&self, id: &str) -> SingleBuildResult<String> {
     self.file_to_built_url(id, false, None).await
   }
 
@@ -54,7 +55,7 @@ impl FileToUrlEnv<'_> {
     id: &str,
     skip_public_check: bool,
     force_inline: Option<bool>,
-  ) -> anyhow::Result<String> {
+  ) -> SingleBuildResult<String> {
     let mut id = Cow::Borrowed(id);
     if !skip_public_check {
       if let Some(public_file) = check_public_file(&id, self.public_dir) {
@@ -74,7 +75,10 @@ impl FileToUrlEnv<'_> {
     }
 
     let file = clean_url(&id);
-    let content = std::fs::read(file)?;
+    let content = {
+      use rolldown_error::ResultExt;
+      std::fs::read(file).map_err_to_unhandleable()?
+    };
 
     let url = if self.should_inline(file, &id, &content, force_inline).await? {
       self.asset_to_data_url(file.as_path(), &content)?
@@ -109,7 +113,7 @@ impl FileToUrlEnv<'_> {
     id: &str,
     content: &[u8],
     force_inline: Option<bool>,
-  ) -> anyhow::Result<bool> {
+  ) -> SingleBuildResult<bool> {
     if find_special_query(id, b"no-inline").is_some() {
       return Ok(false);
     }

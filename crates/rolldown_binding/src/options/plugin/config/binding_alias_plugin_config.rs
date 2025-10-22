@@ -1,3 +1,4 @@
+use rolldown_error::BuildDiagnostic;
 use rolldown_plugin_alias::{Alias, AliasPlugin};
 
 use crate::types::binding_string_or_regex::BindingStringOrRegex;
@@ -16,7 +17,7 @@ pub struct BindingAliasPluginAlias {
 }
 
 impl TryFrom<BindingAliasPluginConfig> for AliasPlugin {
-  type Error = anyhow::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(value: BindingAliasPluginConfig) -> Result<Self, Self::Error> {
     let mut ret = Vec::with_capacity(value.entries.len());

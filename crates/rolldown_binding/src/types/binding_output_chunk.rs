@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use napi_derive::napi;
+use rolldown_error::SingleBuildResult;
 use rolldown_sourcemap::SourceMap;
 use rustc_hash::FxBuildHasher;
 
@@ -120,7 +121,7 @@ pub struct JsOutputChunk {
 pub fn update_output_chunk(
   chunk: &mut Arc<rolldown_common::OutputChunk>,
   js_chunk: JsOutputChunk,
-) -> anyhow::Result<()> {
+) -> SingleBuildResult<()> {
   let old_chunk = (**chunk).clone();
   *chunk = Arc::new(rolldown_common::OutputChunk {
     code: js_chunk.code,

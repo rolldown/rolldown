@@ -12,7 +12,7 @@ use crate::{
     binding_outputs::{BindingOutputs, to_binding_error},
     error::{BindingError, BindingErrors, BindingResult},
   },
-  utils::{handle_result, normalize_binding_options::normalize_binding_options},
+  utils::normalize_binding_options::normalize_binding_options,
 };
 use napi::{
   Env,
@@ -23,7 +23,8 @@ use napi_derive::napi;
 use rolldown::{Bundler as NativeBundler, BundlerBuilder, LogLevel, NormalizedBundlerOptions};
 use rolldown_common::ScanMode;
 use rolldown_error::{
-  BuildDiagnostic, BuildResult, DiagnosticOptions, filter_out_disabled_diagnostics,
+  BuildDiagnostic, BuildResult, DiagnosticOptions, SingleBuildResult,
+  filter_out_disabled_diagnostics,
 };
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -174,7 +175,7 @@ impl BindingBundlerImpl {
     match output {
       Ok(output) => {
         if let Err(err) = Self::handle_warnings(output.warnings, bundler_core.options()).await {
-          let error = to_binding_error(&err.into(), bundler_core.options().cwd.clone());
+          let error = to_binding_error(&err, bundler_core.options().cwd.clone());
           return Ok(napi::Either::A(BindingErrors::new(vec![error])));
         }
       }
@@ -205,7 +206,7 @@ impl BindingBundlerImpl {
     };
 
     if let Err(err) = Self::handle_warnings(outputs.warnings, bundler_core.options()).await {
-      let error = to_binding_error(&err.into(), bundler_core.options().cwd.clone());
+      let error = to_binding_error(&err, bundler_core.options().cwd.clone());
       return Ok(napi::Either::A(BindingErrors::new(vec![error])));
     }
 
@@ -229,20 +230,16 @@ impl BindingBundlerImpl {
     };
 
     if let Err(err) = Self::handle_warnings(bundle_output.warnings, bundler_core.options()).await {
-      let error = to_binding_error(&err.into(), bundler_core.options().cwd.clone());
+      let error = to_binding_error(&err, bundler_core.options().cwd.clone());
       return Ok(napi::Either::A(BindingErrors::new(vec![error])));
     }
 
     Ok(napi::Either::B(bundle_output.assets.into()))
   }
 
-  #[expect(clippy::significant_drop_tightening)]
   pub async fn close_impl(&self) -> napi::Result<()> {
     let mut bundler_core = self.inner.lock().await;
-
-    handle_result(bundler_core.close().await)?;
-
-    Ok(())
+    Ok(bundler_core.close().await?)
   }
 
   pub fn into_inner(self) -> Arc<Mutex<NativeBundler>> {
@@ -264,7 +261,7 @@ impl BindingBundlerImpl {
   async fn handle_warnings(
     warnings: Vec<BuildDiagnostic>,
     options: &NormalizedBundlerOptions,
-  ) -> anyhow::Result<()> {
+  ) -> SingleBuildResult<()> {
     if options.log_level == Some(LogLevel::Silent) {
       return Ok(());
     }

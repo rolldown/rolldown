@@ -1,6 +1,7 @@
 use std::{path::Path, pin::Pin};
 
 use itertools::Either;
+use rolldown_error::SingleBuildResult;
 use sugar_path::SugarPath as _;
 
 use super::{join_url_segments, uri::encode_uri_path};
@@ -9,7 +10,7 @@ pub type RenderBuiltUrl = dyn Fn(
     &str,
     &RenderBuiltUrlConfig,
   ) -> Pin<
-    Box<dyn Future<Output = anyhow::Result<Option<Either<String, RenderBuiltUrlRet>>>> + Send>,
+    Box<dyn Future<Output = SingleBuildResult<Option<Either<String, RenderBuiltUrlRet>>>> + Send>,
   > + Send
   + Sync;
 
@@ -64,7 +65,7 @@ impl ToOutputFilePathEnv<'_> {
     host_type: &str,
     is_public_asset: bool,
     to_relative: impl Fn(&Path, &Path) -> AssetUrlResult,
-  ) -> anyhow::Result<AssetUrlResult> {
+  ) -> SingleBuildResult<AssetUrlResult> {
     let mut relative = self.url_base.is_empty() || self.url_base == "./";
     if let Some(render_built_url) = self.render_built_url {
       if let Some(result) = render_built_url(
@@ -85,7 +86,7 @@ impl ToOutputFilePathEnv<'_> {
               if matches!(host_type, "css" | "html") {
                 return Err(anyhow::anyhow!(
                   "The `{{ runtime: '{runtime}' }}` is not supported for assets in {host_type} files: {filename}"
-                ));
+                ))?;
               }
               return Ok(AssetUrlResult::WithRuntime(runtime));
             }

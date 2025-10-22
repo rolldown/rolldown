@@ -79,10 +79,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
             let raw_id = raw_id.to_owned();
             let importer = importer.map(ToString::to_string);
             Box::pin(async move {
-              finalizer_fn
-                .invoke_async((resolved_id, raw_id, importer).into())
-                .await
-                .map_err(anyhow::Error::from)
+              finalizer_fn.invoke_async((resolved_id, raw_id, importer).into()).await
             })
           })
         },
@@ -93,12 +90,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
             let finalizer_fn = Arc::clone(&finalizer_fn);
             let resolved_id = resolved_id.to_owned();
             let raw_id = raw_id.to_owned();
-            Box::pin(async move {
-              finalizer_fn
-                .invoke_async((resolved_id, raw_id).into())
-                .await
-                .map_err(anyhow::Error::from)
-            })
+            Box::pin(async move { finalizer_fn.invoke_async((resolved_id, raw_id).into()).await })
           })
         },
       ),
@@ -107,28 +99,21 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
           let resolve_fn = Arc::clone(&value.resolve_subpath_imports);
           let id = id.to_owned();
           let importer = importer.map(std::string::ToString::to_string);
-          Box::pin(async move {
-            resolve_fn
-              .invoke_async((id, importer, is_require, scan).into())
-              .await
-              .map_err(anyhow::Error::from)
-          })
+          Box::pin(
+            async move { resolve_fn.invoke_async((id, importer, is_require, scan).into()).await },
+          )
         },
       ),
       on_warn: value.on_warn.map(|on_warn| -> Arc<OnLogCallback> {
         Arc::new(move |message: String| {
           let on_warn = Arc::clone(&on_warn);
-          Box::pin(async move {
-            on_warn.invoke_async((message,).into()).await?.await.map_err(anyhow::Error::from)
-          })
+          Box::pin(async move { Ok(on_warn.invoke_async((message,).into()).await?.await?) })
         })
       }),
       on_debug: value.on_debug.map(|on_debug| -> Arc<OnLogCallback> {
         Arc::new(move |message: String| {
           let on_debug = Arc::clone(&on_debug);
-          Box::pin(async move {
-            on_debug.invoke_async((message,).into()).await?.await.map_err(anyhow::Error::from)
-          })
+          Box::pin(async move { Ok(on_debug.invoke_async((message,).into()).await?.await?) })
         })
       }),
     }

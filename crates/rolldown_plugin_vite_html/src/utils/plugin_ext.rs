@@ -2,6 +2,7 @@ use std::{borrow::Cow, path::Path, sync::Arc};
 
 use html5gum::Span;
 use rolldown_common::OutputChunk;
+use rolldown_error::SingleBuildResult;
 use rolldown_plugin::PluginContext;
 use rolldown_plugin_utils::{
   AssetUrlItem, AssetUrlIter, AssetUrlResult, PublicAssetUrlCache, ToOutputFilePathEnv,
@@ -91,7 +92,7 @@ impl ViteHtmlPlugin {
     url: &str,
     importer: &str,
     force_inline: Option<bool>,
-  ) -> anyhow::Result<String> {
+  ) -> SingleBuildResult<String> {
     if rolldown_plugin_utils::check_public_file(url, &self.public_dir).is_some() {
       let env = rolldown_plugin_utils::PublicFileToBuiltUrlEnv::new(ctx);
       return Ok(env.public_file_to_built_url(url));
@@ -127,7 +128,7 @@ impl ViteHtmlPlugin {
     ctx: &PluginContext,
     src: &str,
     importer: &str,
-  ) -> anyhow::Result<String> {
+  ) -> SingleBuildResult<String> {
     let candidates = parse_srcset(src);
     let mut count = candidates.len().saturating_sub(1);
     let mut result = String::with_capacity(src.len());
@@ -171,7 +172,7 @@ impl ViteHtmlPlugin {
     url: &'a str,
     importer: &str,
     should_inline: Option<bool>,
-  ) -> anyhow::Result<Cow<'a, str>> {
+  ) -> SingleBuildResult<Cow<'a, str>> {
     let is_named_output = ctx.options().input.iter().any(|input_item| {
       input_item.import == url || url.strip_prefix('/').is_some_and(|url| url == input_item.import)
     });
@@ -242,7 +243,7 @@ impl ViteHtmlPlugin {
     assets_base: &str,
     is_public_asset: bool,
     relative_url_path: &str,
-  ) -> anyhow::Result<String> {
+  ) -> SingleBuildResult<String> {
     let env = ToOutputFilePathEnv {
       is_ssr: self.is_ssr,
       host_id: relative_url_path,
@@ -273,7 +274,7 @@ impl ViteHtmlPlugin {
     chunk: Option<&Arc<OutputChunk>>,
     assets_base: &str,
     relative_url_path: &str,
-  ) -> anyhow::Result<Option<String>> {
+  ) -> SingleBuildResult<Option<String>> {
     let mut s = None;
     let mut end = 0;
     for item in AssetUrlIter::from(html).into_asset_url_iter() {

@@ -5,6 +5,7 @@ use itertools::Itertools;
 use rolldown_common::{
   ImportKind, ModuleDefFormat, PackageJson, Platform, ResolveOptions, ResolvedId,
 };
+use rolldown_error::SingleBuildResult;
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_utils::{dashmap::FxDashMap, indexmap::FxIndexMap};
 use std::{
@@ -36,10 +37,12 @@ pub struct Resolver<T: FileSystem = OsFileSystem> {
 }
 
 impl<F: FileSystem> Resolver<F> {
-  pub fn try_get_package_json_or_create(&self, path: &Path) -> anyhow::Result<Arc<PackageJson>> {
-    self
-      .inner_try_get_package_json_or_create(path)
-      .with_context(|| format!("Failed to read or parse package.json: {}", path.display()))
+  pub fn try_get_package_json_or_create(&self, path: &Path) -> SingleBuildResult<Arc<PackageJson>> {
+    Ok(
+      self
+        .inner_try_get_package_json_or_create(path)
+        .with_context(|| format!("Failed to read or parse package.json: {}", path.display()))?,
+    )
   }
 
   fn inner_try_get_package_json_or_create(&self, path: &Path) -> anyhow::Result<Arc<PackageJson>> {

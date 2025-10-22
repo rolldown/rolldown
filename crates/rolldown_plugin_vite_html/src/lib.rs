@@ -7,6 +7,7 @@ use cow_utils::CowUtils as _;
 use html5gum::Span;
 use oxc::ast_visit::Visit;
 use rolldown_common::side_effects::HookSideEffects;
+use rolldown_error::SingleBuildResult;
 use rolldown_plugin::{HookTransformOutput, HookUsage, LogWithoutPlugin, Plugin};
 use rolldown_plugin_utils::{
   AssetUrlResult, RenderBuiltUrl, ToOutputFilePathEnv, UsizeOrFunction,
@@ -28,7 +29,7 @@ pub type ResolveDependenciesFn = dyn Fn(
     Vec<String>,
     &str,
     &str,
-  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<String>>> + Send>>
+  ) -> Pin<Box<dyn Future<Output = SingleBuildResult<Vec<String>>> + Send>>
   + Send
   + Sync;
 
@@ -230,10 +231,10 @@ impl Plugin for ViteHtmlPlugin {
                         .iter()
                         .find(|e| e.severity == oxc::diagnostics::Severity::Error)
                     {
-                      return Err(anyhow::anyhow!(format!(
+                      Err(anyhow::anyhow!(format!(
                         "Failed to parse inline script in '{}': {:?}",
                         public_path, err.message
-                      )));
+                      )))?;
                     }
                     let mut visitor = utils::ScriptInlineImportVisitor {
                       offset: span.start,

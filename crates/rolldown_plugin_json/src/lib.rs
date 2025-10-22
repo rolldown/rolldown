@@ -49,8 +49,12 @@ impl Plugin for JsonPlugin {
     if !is_name_exports && is_stringify {
       let json = if self.minify {
         // TODO(perf): find better way than https://github.com/rolldown/vite/blob/3bf86e3f/packages/vite/src/node/plugins/json.ts#L55-L57
-        let value = serde_json::from_str::<Value>(code)?;
-        Cow::Owned(serde_json::to_string(&value)?)
+        let value = serde_json::from_str::<Value>(code)
+          .map_err(|e| anyhow::anyhow!("Failed to parse JSON: {e}"))?;
+        Cow::Owned(
+          serde_json::to_string(&value)
+            .map_err(|e| anyhow::anyhow!("Failed to stringify JSON: {e}"))?,
+        )
       } else {
         Cow::Borrowed(code)
       };
@@ -58,7 +62,8 @@ impl Plugin for JsonPlugin {
       return Ok(Some(HookTransformOutput {
         code: Some(concat_string!(
           "export default /*#__PURE__*/ JSON.parse(",
-          serde_json::to_string(&json)?,
+          serde_json::to_string(&json)
+            .map_err(|e| anyhow::anyhow!("Failed to stringify JSON: {e}"))?,
           ")"
         )),
         map: Some(SourceMap::default()),
@@ -67,7 +72,8 @@ impl Plugin for JsonPlugin {
       }));
     }
 
-    let value = serde_json::from_str(code)?;
+    let value =
+      serde_json::from_str(code).map_err(|e| anyhow::anyhow!("Failed to parse JSON: {e}"))?;
     Ok(Some(HookTransformOutput {
       code: Some(data_to_esm(&value, self.named_exports)),
       map: Some(SourceMap::default()),

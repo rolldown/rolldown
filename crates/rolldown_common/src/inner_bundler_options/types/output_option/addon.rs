@@ -1,13 +1,15 @@
-use derive_more::Debug;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
+
+use derive_more::Debug;
+use rolldown_error::SingleBuildResult;
 
 use crate::RollupRenderedChunk;
 
 pub type AddonFunction = dyn Fn(
     Arc<RollupRenderedChunk>,
-  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<String>>> + Send + 'static>>
+  ) -> Pin<Box<dyn Future<Output = SingleBuildResult<Option<String>>> + Send + 'static>>
   + Send
   + Sync;
 
@@ -20,7 +22,7 @@ pub enum AddonOutputOption {
 }
 
 impl AddonOutputOption {
-  pub async fn call(&self, chunk: Arc<RollupRenderedChunk>) -> anyhow::Result<Option<String>> {
+  pub async fn call(&self, chunk: Arc<RollupRenderedChunk>) -> SingleBuildResult<Option<String>> {
     match self {
       Self::String(value) => Ok(value.clone()),
       Self::Fn(value) => value(chunk).await,

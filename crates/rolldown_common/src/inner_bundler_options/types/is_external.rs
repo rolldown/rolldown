@@ -1,13 +1,14 @@
 use std::{future::Future, pin::Pin, sync::Arc};
 
 use derive_more::Debug;
+use rolldown_error::SingleBuildResult;
 use rolldown_utils::pattern_filter::StringOrRegex;
 
 type IsExternalFn = dyn Fn(
     &str,         // specifier
     Option<&str>, // importer
     bool,         // is_resolved
-  ) -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send + 'static>>
+  ) -> Pin<Box<dyn Future<Output = SingleBuildResult<bool>> + Send + 'static>>
   + Send
   + Sync;
 
@@ -37,7 +38,7 @@ impl IsExternal {
     specifier: &str,
     importer: Option<&str>,
     is_resolved: bool,
-  ) -> anyhow::Result<bool> {
+  ) -> SingleBuildResult<bool> {
     Ok(match self {
       IsExternal::StringOrRegex(patterns) => patterns.iter().any(|p| match p {
         StringOrRegex::String(s) => s == specifier,

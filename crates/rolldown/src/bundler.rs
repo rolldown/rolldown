@@ -11,14 +11,13 @@ use crate::{
   types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
   utils::fs_utils::clean_dir,
 };
-use anyhow::Result;
 use arcstr::ArcStr;
 use rolldown_common::{
   ClientHmrInput, ClientHmrUpdate, GetLocalDbMut, HmrUpdate, Module, ScanMode, SharedFileEmitter,
   SymbolRefDb,
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
-use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
+use rolldown_error::{BuildDiagnostic, BuildResult, Severity, SingleBuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   __inner::SharedPluginable, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver,
@@ -103,7 +102,7 @@ impl Bundler {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn close(&mut self) -> Result<()> {
+  pub async fn close(&mut self) -> SingleBuildResult<()> {
     self.inner_close().await
   }
 
@@ -311,7 +310,7 @@ impl Bundler {
     .await
   }
 
-  async fn inner_close(&mut self) -> Result<()> {
+  async fn inner_close(&mut self) -> SingleBuildResult<()> {
     if self.closed {
       return Ok(());
     }

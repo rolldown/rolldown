@@ -7,7 +7,9 @@ use rolldown_common::{
   ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleType,
   NormalizedBundlerOptions, RUNTIME_MODULE_KEY, RawImportRecord, ResolvedId,
 };
-use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosableArcstr, EventKind};
+use rolldown_error::{
+  BuildDiagnostic, BuildResult, DiagnosableArcstr, EventKind, SingleBuildResult,
+};
 use rolldown_plugin::{__inner::resolve_id_check_external, PluginDriver, SharedPluginDriver};
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::ecmascript::{self};
@@ -22,7 +24,7 @@ pub async fn resolve_id(
   importer: &str,
   specifier: &str,
   kind: ImportKind,
-) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
+) -> SingleBuildResult<Result<ResolvedId, ResolveError>> {
   // Check runtime module
   if specifier == RUNTIME_MODULE_KEY {
     return Ok(Ok(ResolvedId {

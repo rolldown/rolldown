@@ -83,8 +83,13 @@ impl Plugin for AssetPlugin {
 
       ctx.add_watch_file(&path);
 
-      let content = std::fs::read_to_string(path.as_ref())?;
-      let code = arcstr::format!("export default {}", serde_json::to_string(&content)?);
+      let content = std::fs::read_to_string(path.as_ref())
+        .map_err(|e| anyhow::anyhow!("Failed to read file: {e}"))?;
+      let code = arcstr::format!(
+        "export default {}",
+        serde_json::to_string(&content)
+          .map_err(|e| anyhow::anyhow!("Failed to serialize content: {e}"))?
+      );
       return Ok(Some(rolldown_plugin::HookLoadOutput {
         code,
         module_type: Some(ModuleType::Js),
@@ -116,7 +121,11 @@ impl Plugin for AssetPlugin {
     };
 
     let url = rolldown_plugin_utils::uri::encode_uri_path(env.file_to_url(&id).await?);
-    let code = arcstr::format!("export default {}", serde_json::to_string(&Value::String(url))?);
+    let code = arcstr::format!(
+      "export default {}",
+      serde_json::to_string(&Value::String(url))
+        .map_err(|e| anyhow::anyhow!("Failed to serialize URL: {e}"))?
+    );
     Ok(Some(rolldown_plugin::HookLoadOutput {
       code,
       side_effects: Some(side_effects),

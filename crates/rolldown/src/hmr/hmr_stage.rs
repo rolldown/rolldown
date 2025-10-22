@@ -272,7 +272,7 @@ impl<'a> HmrStage<'a> {
           .collect::<Vec<_>>(),
       );
 
-      self.cache.merge(module_loader_output.into()).map_err(|e| vec![anyhow::anyhow!(e).into()])?;
+      self.cache.merge(module_loader_output.into())?;
 
       let options = Arc::clone(&self.options);
       let resolver = Arc::clone(&self.resolver);
@@ -373,7 +373,7 @@ impl<'a> HmrStage<'a> {
       );
       modules_to_be_updated
         .extend(module_loader_output.new_added_modules_from_partial_scan.clone());
-      self.cache.merge(module_loader_output.into()).map_err(|e| vec![anyhow::anyhow!(e).into()])?;
+      self.cache.merge(module_loader_output.into())?;
       let options = Arc::clone(&self.options);
       let resolver = Arc::clone(&self.resolver);
       self.cache.update_defer_sync_data(&options, &resolver).await?;

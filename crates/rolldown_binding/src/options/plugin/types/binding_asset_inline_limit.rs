@@ -25,12 +25,9 @@ impl FromNapiValue for BindingAssetInlineLimit {
             let file = file.to_string();
             let content = Buffer::from(content);
             let asset_inline_limit_fn = Arc::clone(&func);
-            Box::pin(async move {
-              asset_inline_limit_fn
-                .invoke_async((file, content).into())
-                .await
-                .map_err(anyhow::Error::from)
-            })
+            Box::pin(
+              async move { asset_inline_limit_fn.invoke_async((file, content).into()).await },
+            )
           }))
         }
       }))

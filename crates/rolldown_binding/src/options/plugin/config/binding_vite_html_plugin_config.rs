@@ -62,16 +62,12 @@ impl From<BindingViteHtmlPluginConfig> for ViteHtmlPlugin {
         let filename = filename.to_string();
         let config = config.into();
         Box::pin(async move {
-          render_built_url
-            .await_call((filename, config).into())
-            .await
-            .map(|v| {
-              v.map(|v| match v {
-                Either::A(v) => itertools::Either::Left(v),
-                Either::B(v) => itertools::Either::Right(v.into()),
-              })
+          render_built_url.await_call((filename, config).into()).await.map(|v| {
+            v.map(|v| match v {
+              Either::A(v) => itertools::Either::Left(v),
+              Either::B(v) => itertools::Either::Right(v.into()),
             })
-            .map_err(anyhow::Error::from)
+          })
         })
       })
     });
@@ -88,10 +84,7 @@ impl From<BindingViteHtmlPluginConfig> for ViteHtmlPlugin {
 
           let resolve_dependencies = Arc::clone(&resolve_dependencies);
           Box::pin(async move {
-            resolve_dependencies
-              .await_call((filename, deps, context).into())
-              .await
-              .map_err(anyhow::Error::from)
+            resolve_dependencies.await_call((filename, deps, context).into()).await
           })
         },
       ))),

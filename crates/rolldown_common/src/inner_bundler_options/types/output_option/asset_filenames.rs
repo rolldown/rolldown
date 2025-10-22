@@ -1,11 +1,13 @@
-use derive_more::Debug;
 use std::{future::Future, pin::Pin, sync::Arc};
+
+use derive_more::Debug;
+use rolldown_error::SingleBuildResult;
 
 use crate::RollupPreRenderedAsset;
 
 type AssetFilenamesFunction = dyn Fn(
     &RollupPreRenderedAsset,
-  ) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + 'static>>
+  ) -> Pin<Box<dyn Future<Output = SingleBuildResult<String>> + Send + 'static>>
   + Send
   + Sync;
 
@@ -18,7 +20,7 @@ pub enum AssetFilenamesOutputOption {
 }
 
 impl AssetFilenamesOutputOption {
-  pub async fn call(&self, asset: &RollupPreRenderedAsset) -> anyhow::Result<String> {
+  pub async fn call(&self, asset: &RollupPreRenderedAsset) -> SingleBuildResult<String> {
     match self {
       Self::String(value) => Ok(value.clone()),
       Self::Fn(value) => value(asset).await,

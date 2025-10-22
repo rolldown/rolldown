@@ -10,7 +10,7 @@ use super::{
 };
 use napi::Either;
 use napi_derive::napi;
-use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
+use rolldown_error::{BuildDiagnostic, DiagnosticOptions, SingleBuildResult};
 use rustc_hash::FxBuildHasher;
 
 // The `BindingOutputs` take the data to js side, the rust side will not use it anymore.
@@ -63,7 +63,7 @@ impl JsChangedOutputs {
   pub fn apply_changes(
     &mut self,
     outputs: &mut Vec<rolldown_common::Output>,
-  ) -> anyhow::Result<()> {
+  ) -> SingleBuildResult<()> {
     let mut result = Ok(());
     if !self.deleted.is_empty() || !self.changes.is_empty() {
       outputs.retain_mut(|output| {

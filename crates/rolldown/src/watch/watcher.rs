@@ -6,7 +6,7 @@ use notify::Watcher as _;
 use notify::{Config, RecommendedWatcher, event::ModifyKind};
 
 use rolldown_common::{NotifyOption, WatcherChangeKind};
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildResult, SingleBuildResult};
 use rolldown_utils::dashmap::FxDashSet;
 use std::{
   ops::Deref,
@@ -151,7 +151,7 @@ impl WatcherImpl {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn close(&self) -> anyhow::Result<()> {
+  pub async fn close(&self) -> SingleBuildResult<()> {
     // close channel
     self
       .tx

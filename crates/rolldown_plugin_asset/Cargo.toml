@@ -17,6 +17,7 @@ doctest = false
 workspace = true
 
 [dependencies]
+anyhow = { workspace = true, features = ["std"] }
 arcstr = { workspace = true }
 cow-utils = { workspace = true }
 derive_more = { workspace = true }

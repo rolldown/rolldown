@@ -1,4 +1,5 @@
 use rolldown::ModuleType;
+use rolldown_error::BuildDiagnostic;
 
 use super::binding_hook_side_effects::BindingHookSideEffects;
 use crate::types::binding_sourcemap::BindingSourcemap;
@@ -17,7 +18,7 @@ pub struct BindingHookLoadOutput {
 }
 
 impl TryFrom<BindingHookLoadOutput> for rolldown_plugin::HookLoadOutput {
-  type Error = anyhow::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(value: BindingHookLoadOutput) -> Result<Self, Self::Error> {
     Ok(rolldown_plugin::HookLoadOutput {

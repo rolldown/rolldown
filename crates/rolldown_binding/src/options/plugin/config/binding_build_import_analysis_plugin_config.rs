@@ -1,3 +1,4 @@
+use rolldown_error::BuildDiagnostic;
 use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
 
 #[napi_derive::napi(object)]
@@ -12,7 +13,7 @@ pub struct BindingBuildImportAnalysisPluginConfig {
 }
 
 impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlugin {
-  type Error = anyhow::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(value: BindingBuildImportAnalysisPluginConfig) -> Result<Self, Self::Error> {
     Ok(Self {

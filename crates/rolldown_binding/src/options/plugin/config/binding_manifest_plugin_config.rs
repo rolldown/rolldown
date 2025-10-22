@@ -23,12 +23,12 @@ impl From<BindingManifestPluginConfig> for ManifestPlugin {
       is_legacy: value.is_legacy.map(|cb| -> Arc<IsLegacyFn> {
         Arc::new(move || {
           let is_legacy_fn = Arc::clone(&cb);
-          Box::pin(async move { is_legacy_fn.invoke_async(()).await.map_err(anyhow::Error::from) })
+          Box::pin(async move { is_legacy_fn.invoke_async(()).await })
         })
       }),
       css_entries: Arc::new(move || {
         let css_entries_fn = Arc::clone(&value.css_entries);
-        Box::pin(async move { css_entries_fn.invoke_async(()).await.map_err(anyhow::Error::from) })
+        Box::pin(async move { css_entries_fn.invoke_async(()).await })
       }),
     }
   }

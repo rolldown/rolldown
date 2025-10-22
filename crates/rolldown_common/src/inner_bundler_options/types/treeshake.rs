@@ -1,6 +1,7 @@
 use std::{future::Future, ops::Deref, pin::Pin, sync::Arc};
 
 use derive_more::Debug;
+use rolldown_error::SingleBuildResult;
 use rolldown_utils::js_regex::HybridRegex;
 use rustc_hash::FxHashSet;
 #[cfg(feature = "deserialize_bundler_options")]
@@ -118,7 +119,7 @@ pub enum ModuleSideEffects {
 type ModuleSideEffectsFn = dyn Fn(
     &str, // id
     bool, // external
-  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<bool>>> + Send + 'static>>
+  ) -> Pin<Box<dyn Future<Output = SingleBuildResult<Option<bool>>> + Send + 'static>>
   + Send
   + Sync
   + 'static;
@@ -165,7 +166,11 @@ impl ModuleSideEffects {
   /// resolve the side effects from the ffi function
   /// # Panic
   /// Panics if the side effects are not defined as a function
-  pub async fn ffi_resolve(&self, path: &str, is_external: bool) -> anyhow::Result<Option<bool>> {
+  pub async fn ffi_resolve(
+    &self,
+    path: &str,
+    is_external: bool,
+  ) -> SingleBuildResult<Option<bool>> {
     match self {
       ModuleSideEffects::Function(f) => Ok(f(path, is_external).await?),
       _ => unreachable!(),

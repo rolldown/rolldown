@@ -1,4 +1,5 @@
 use napi::Either;
+use rolldown_error::BuildDiagnostic;
 
 // This struct is used to both pass to JS and receive from JS:
 // - Pass to JS: `From<JSONSourceMap>` impl (line 61) used in hook outputs
@@ -10,12 +11,12 @@ pub struct BindingSourcemap {
 }
 
 impl TryFrom<BindingSourcemap> for rolldown_sourcemap::SourceMap {
-  type Error = anyhow::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(value: BindingSourcemap) -> Result<Self, Self::Error> {
     match value.inner {
       Either::A(s) => rolldown_sourcemap::SourceMap::from_json_string(&s)
-        .map_err(|e| anyhow::format_err!("Convert string sourcemap error: {e:?}")),
+        .map_err(|e| anyhow::anyhow!("Convert string sourcemap error: {e:?}").into()),
       Either::B(v) => v.try_into(),
     }
   }
@@ -40,7 +41,7 @@ pub struct BindingJsonSourcemap {
 }
 
 impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
-  type Error = anyhow::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(value: BindingJsonSourcemap) -> Result<Self, Self::Error> {
     let map = rolldown_sourcemap::SourceMap::from_json(rolldown_sourcemap::JSONSourceMap {

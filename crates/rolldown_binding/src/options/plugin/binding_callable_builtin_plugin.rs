@@ -65,20 +65,23 @@ impl BindingCallableBuiltinPlugin {
     let context = Arc::clone(&self.context);
     crate::start_async_runtime();
     AsyncBlockBuilder::with(async move {
-      plugin
-        .call_resolve_id(
-          &context.inner,
-          &HookResolveIdArgs {
-            specifier: &id,
-            importer: importer.as_deref(),
-            is_entry: options.as_ref().is_some_and(|options| options.is_entry.unwrap_or_default()),
-            kind: rolldown_common::ImportKind::Import,
-            custom: options.map(Into::into).unwrap_or_default(),
-          },
-        )
-        .await
-        .map_err(AnyHowMaybeNapiError::into_napi_error)
-        .map(|result| result.map(Into::into))
+      Ok(
+        plugin
+          .call_resolve_id(
+            &context.inner,
+            &HookResolveIdArgs {
+              specifier: &id,
+              importer: importer.as_deref(),
+              is_entry: options
+                .as_ref()
+                .is_some_and(|options| options.is_entry.unwrap_or_default()),
+              kind: rolldown_common::ImportKind::Import,
+              custom: options.map(Into::into).unwrap_or_default(),
+            },
+          )
+          .await
+          .map(|result| result.map(Into::into))?,
+      )
     })
     .with_dispose(|_| {
       crate::shutdown_async_runtime();
@@ -97,11 +100,12 @@ impl BindingCallableBuiltinPlugin {
     let context = Arc::clone(&self.context);
     crate::start_async_runtime();
     AsyncBlockBuilder::with(async move {
-      plugin
-        .call_load(&context.inner, &HookLoadArgs { id: &id })
-        .await
-        .map_err(AnyHowMaybeNapiError::into_napi_error)
-        .map(|result| result.map(Into::into))
+      Ok(
+        plugin
+          .call_load(&context.inner, &HookLoadArgs { id: &id })
+          .await
+          .map(|result| result.map(Into::into))?,
+      )
     })
     .with_dispose(|_| {
       crate::shutdown_async_runtime();
@@ -123,14 +127,15 @@ impl BindingCallableBuiltinPlugin {
     let context = Arc::clone(&self.context);
     crate::start_async_runtime();
     AsyncBlockBuilder::with(async move {
-      plugin
-        .call_transform(
-          context,
-          &HookTransformArgs { id: &id, code: &code, module_type: &module_type },
-        )
-        .await
-        .map_err(AnyHowMaybeNapiError::into_napi_error)
-        .map(|result| result.map(Into::into))
+      Ok(
+        plugin
+          .call_transform(
+            context,
+            &HookTransformArgs { id: &id, code: &code, module_type: &module_type },
+          )
+          .await
+          .map(|result| result.map(Into::into))?,
+      )
     })
     .with_dispose(|_| {
       crate::shutdown_async_runtime();
@@ -151,10 +156,7 @@ impl BindingCallableBuiltinPlugin {
     let context = Arc::clone(&self.context);
     crate::start_async_runtime();
     AsyncBlockBuilder::with(async move {
-      plugin
-        .call_watch_change(&context.inner, &path, kind)
-        .await
-        .map_err(AnyHowMaybeNapiError::into_napi_error)
+      Ok(plugin.call_watch_change(&context.inner, &path, kind).await?)
     })
     .with_dispose(|_| {
       crate::shutdown_async_runtime();
@@ -237,19 +239,6 @@ impl BindingJsWatchChangeEvent {
       "delete" => Ok(WatcherChangeKind::Delete),
       "update" => Ok(WatcherChangeKind::Update),
       _ => Err(napi::Error::new(napi::Status::InvalidArg, "Invalid watcher change kind")),
-    }
-  }
-}
-
-trait AnyHowMaybeNapiError {
-  fn into_napi_error(self) -> napi::Error;
-}
-
-impl AnyHowMaybeNapiError for anyhow::Error {
-  fn into_napi_error(self) -> napi::Error {
-    match self.downcast::<napi::Error>() {
-      Ok(napi_error) => napi_error,
-      Err(original_error) => original_error.into(),
     }
   }
 }

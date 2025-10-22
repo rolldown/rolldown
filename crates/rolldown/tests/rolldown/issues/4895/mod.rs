@@ -2,6 +2,7 @@ use std::{borrow::Cow, sync::Arc};
 
 use rolldown::{BundlerOptions, PreserveEntrySignatures};
 use rolldown_common::EmittedChunk;
+use rolldown_error::SingleBuildResult;
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
@@ -17,7 +18,7 @@ impl Plugin for Test {
     &self,
     ctx: &PluginContext,
     _args: &rolldown_plugin::HookBuildStartArgs<'_>,
-  ) -> Result<(), anyhow::Error> {
+  ) -> SingleBuildResult<()> {
     ctx
       .emit_chunk(EmittedChunk {
         id: "./strict/main.js".into(),

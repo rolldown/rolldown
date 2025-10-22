@@ -7,8 +7,6 @@ use napi_derive::napi;
 use crate::binding_bundler_impl::{BindingBundlerImpl, BindingBundlerOptions};
 use crate::types::binding_watcher_event::BindingWatcherEvent;
 
-use crate::utils::handle_result;
-
 use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt};
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -55,7 +53,7 @@ impl BindingWatcher {
   #[tracing::instrument(level = "debug", skip_all)]
   #[napi]
   pub async fn close(&self) -> napi::Result<()> {
-    handle_result(self.inner.close().await)
+    Ok(self.inner.close().await?)
   }
 
   #[tracing::instrument(level = "debug", skip_all)]

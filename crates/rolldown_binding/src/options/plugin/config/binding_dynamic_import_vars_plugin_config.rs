@@ -25,9 +25,7 @@ impl From<BindingDynamicImportVarsPluginConfig> for DynamicImportVarsPlugin {
       resolver: value.resolver.map(|resolver| -> Arc<ResolverFn> {
         Arc::new(move |id: String, importer: String| {
           let resolver = Arc::clone(&resolver);
-          Box::pin(async move {
-            resolver.await_call((id, importer).into()).await.map_err(anyhow::Error::from)
-          })
+          Box::pin(async move { resolver.await_call((id, importer).into()).await })
         })
       }),
     }

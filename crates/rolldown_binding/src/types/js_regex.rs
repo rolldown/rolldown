@@ -8,6 +8,7 @@ use napi::{
   sys,
 };
 
+use rolldown_error::BuildDiagnostic;
 use rolldown_utils::js_regex::HybridRegex;
 
 #[derive(Debug, Default, Clone)]
@@ -48,9 +49,9 @@ impl FromNapiValue for JsRegExp {
 }
 
 impl TryFrom<JsRegExp> for HybridRegex {
-  type Error = anyhow::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(value: JsRegExp) -> Result<Self, Self::Error> {
-    HybridRegex::with_flags(&value.source, &value.flags)
+    Ok(HybridRegex::with_flags(&value.source, &value.flags)?)
   }
 }

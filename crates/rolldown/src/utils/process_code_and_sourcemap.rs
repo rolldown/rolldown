@@ -3,7 +3,7 @@ use std::path::Path;
 use futures::future::try_join_all;
 use oxc::ast::CommentKind;
 use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
-use rolldown_error::{BuildResult, ResultExt};
+use rolldown_error::{ResultExt, SingleBuildResult};
 use rolldown_sourcemap::SourceMap;
 use sugar_path::SugarPath;
 use url::Url;
@@ -18,7 +18,7 @@ pub async fn process_code_and_sourcemap(
   filename: &str,
   debug_id: u128,
   is_css: bool,
-) -> BuildResult<Option<OutputAsset>> {
+) -> SingleBuildResult<Option<OutputAsset>> {
   let source_map_link_comment_kind = if is_css { CommentKind::Block } else { CommentKind::Line };
   let file_base_name = Path::new(filename).file_name().expect("should have file name");
   map.set_file(file_base_name.to_string_lossy().as_ref());
@@ -63,11 +63,11 @@ pub async fn process_code_and_sourcemap(
       #[cfg(windows)]
       {
         // Normalize the windows path.
-        Ok::<_, anyhow::Error>(source.replace(std::path::MAIN_SEPARATOR, "/"))
+        Ok::<_, rolldown_error::BuildDiagnostic>(source.replace(std::path::MAIN_SEPARATOR, "/"))
       }
       #[cfg(not(windows))]
       {
-        Ok::<_, anyhow::Error>(source)
+        Ok::<_, rolldown_error::BuildDiagnostic>(source)
       }
     }))
     .await?;
@@ -162,9 +162,9 @@ pub async fn process_code_and_sourcemap(
 
 fn process_sourcemap_related_reference(
   source: &mut String,
-  mut reference_body_processor: impl FnMut(&mut String) -> BuildResult<()>,
+  mut reference_body_processor: impl FnMut(&mut String) -> SingleBuildResult<()>,
   comment_kind: CommentKind,
-) -> BuildResult<()> {
+) -> SingleBuildResult<()> {
   source.push('\n');
   match comment_kind {
     CommentKind::Line => {

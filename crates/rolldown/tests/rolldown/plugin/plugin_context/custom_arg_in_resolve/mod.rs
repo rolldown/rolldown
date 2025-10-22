@@ -1,6 +1,7 @@
 use std::{borrow::Cow, sync::Arc};
 
 use rolldown::{BundlerOptions, InputItem};
+use rolldown_error::ResultExt;
 use rolldown_plugin::{
   CustomField, HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, HookUsage, Plugin,
   PluginContext, PluginContextResolveOptions, typedmap::TypedMapKey,
@@ -37,7 +38,8 @@ impl Plugin for TestPluginCaller {
           None,
           Some(PluginContextResolveOptions { custom: Arc::new(custom), ..Default::default() }),
         )
-        .await??;
+        .await?
+        .map_err_to_unhandleable()?;
 
       if custom_resolve_ret.id == "hello, world" {
         Ok(Some(HookResolveIdOutput {

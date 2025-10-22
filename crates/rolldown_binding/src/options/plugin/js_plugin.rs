@@ -5,7 +5,7 @@ use crate::{
     binding_normalized_options::BindingNormalizedOptions,
     binding_outputs::{JsChangedOutputs, to_binding_error},
     binding_rendered_chunk::BindingRenderedChunk,
-    js_callback::MaybeAsyncJsCallbackExt,
+    js_callback::MaybeAsyncJsCallbackExt as _,
   },
 };
 use napi::bindgen_prelude::FnArgs;
@@ -112,21 +112,19 @@ impl Plugin for JsPlugin {
         .map(|v| *v),
     };
 
-    Ok(
-      cb.await_call(
-        (
-          ctx.clone().into(),
-          args.specifier.to_string(),
-          args.importer.map(str::to_string),
-          extra_args,
-        )
-          .into(),
+    cb.await_call(
+      (
+        ctx.clone().into(),
+        args.specifier.to_string(),
+        args.importer.map(str::to_string),
+        extra_args,
       )
-      .instrument(debug_span!("resolve_id_hook", plugin_name = self.name))
-      .await?
-      .map(TryInto::try_into)
-      .transpose()?,
+        .into(),
     )
+    .instrument(debug_span!("resolve_id_hook", plugin_name = self.name))
+    .await?
+    .map(TryInto::try_into)
+    .transpose()
   }
 
   fn resolve_id_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
@@ -307,9 +305,7 @@ impl Plugin for JsPlugin {
           (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
         )
         .instrument(debug_span!("banner_hook", plugin_name = self.name))
-        .await?
-        .map(TryInto::try_into)
-        .transpose()?,
+        .await?,
       ),
       _ => Ok(None),
     }
@@ -330,9 +326,7 @@ impl Plugin for JsPlugin {
           (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
         )
         .instrument(debug_span!("intro_hook", plugin_name = self.name))
-        .await?
-        .map(TryInto::try_into)
-        .transpose()?,
+        .await?,
       ),
       _ => Ok(None),
     }
@@ -353,9 +347,7 @@ impl Plugin for JsPlugin {
           (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
         )
         .instrument(debug_span!("outro_hook", plugin_name = self.name))
-        .await?
-        .map(TryInto::try_into)
-        .transpose()?,
+        .await?,
       ),
       _ => Ok(None),
     }
@@ -376,9 +368,7 @@ impl Plugin for JsPlugin {
           (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
         )
         .instrument(debug_span!("footer_hook", plugin_name = self.name))
-        .await?
-        .map(TryInto::try_into)
-        .transpose()?,
+        .await?,
       ),
       _ => Ok(None),
     }

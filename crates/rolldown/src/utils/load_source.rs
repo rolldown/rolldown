@@ -4,22 +4,27 @@ use rolldown_common::{
   ModuleType, NormalizedBundlerOptions, ResolvedId, SourcemapChainElement, StrOrBytes,
   side_effects::HookSideEffects,
 };
+use rolldown_error::{BuildDiagnostic, SingleBuildResult, UnloadableDependencyContext};
 use rolldown_fs::FileSystem;
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
+
+use crate::module_loader::module_task::ModuleTaskOwner;
 
 #[expect(clippy::too_many_arguments)]
 pub async fn load_source<Fs: FileSystem + 'static>(
   plugin_driver: &PluginDriver,
   resolved_id: &ResolvedId,
   fs: Fs,
+  cwd: &Path,
   sourcemap_chain: &mut Vec<SourcemapChainElement>,
   side_effects: &mut Option<HookSideEffects>,
   options: &NormalizedBundlerOptions,
   asserted_module_type: Option<&ModuleType>,
   is_read_from_disk: &mut bool,
-) -> anyhow::Result<(StrOrBytes, ModuleType)> {
+  module_owner: Option<&ModuleTaskOwner>,
+) -> SingleBuildResult<(StrOrBytes, ModuleType)> {
   let (maybe_source, maybe_module_type) =
     match plugin_driver.load(&HookLoadArgs { id: &resolved_id.id }).await? {
       Some(load_hook_output) => {
@@ -53,66 +58,18 @@ pub async fn load_source<Fs: FileSystem + 'static>(
     *is_read_from_disk = false;
   }
 
-  match (maybe_source, maybe_module_type) {
-    (Some(source), Some(module_type)) => Ok((source.into(), module_type)),
-    (source, None) => {
-      let guessed = get_module_loader_from_file_extension(&resolved_id.id, &options.module_types);
-      match (source, guessed) {
-        (None, None) => {
-          // - Unknown module type,
-          // - No loader to load corresponding module
-          // - User don't specify moduleTypeMapping, we treated it as JS
-          Ok((
-            StrOrBytes::Str({
-              #[cfg(not(target_family = "wasm"))]
-              {
-                let id = resolved_id.id.clone();
-                tokio::runtime::Handle::current()
-                  .spawn_blocking(move || fs.read_to_string(id.as_path()))
-                  .await??
-              }
-              #[cfg(target_family = "wasm")]
-              {
-                fs.read_to_string(resolved_id.id.as_path())?
-              }
-            }),
-            ModuleType::Js,
-          ))
-        }
-        (source, Some(guessed)) => match &guessed {
-          ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl | ModuleType::Asset => {
+  let result = async {
+    match (maybe_source, maybe_module_type) {
+      (Some(source), Some(module_type)) => Ok((source.into(), module_type)),
+      (source, None) => {
+        let guessed = get_module_loader_from_file_extension(&resolved_id.id, &options.module_types);
+        match (source, guessed) {
+          (None, None) => {
+            // - Unknown module type,
+            // - No loader to load corresponding module
+            // - User don't specify moduleTypeMapping, we treated it as JS
             Ok((
-              StrOrBytes::Bytes({
-                match source {
-                  Some(s) => s.into_bytes(),
-                  None => {
-                    if cfg!(target_family = "wasm") {
-                      fs.read(resolved_id.id.as_path())?
-                    } else {
-                      let id = resolved_id.id.clone();
-                      tokio::runtime::Handle::current()
-                        .spawn_blocking(move || fs.read(id.as_path()))
-                        .await??
-                    }
-                  }
-                }
-              }),
-              guessed,
-            ))
-          }
-          ModuleType::Js
-          | ModuleType::Jsx
-          | ModuleType::Ts
-          | ModuleType::Tsx
-          | ModuleType::Json
-          | ModuleType::Text
-          | ModuleType::Empty
-          | ModuleType::Css
-          | ModuleType::Custom(_) => Ok((
-            StrOrBytes::Str({
-              if let Some(s) = source {
-                s
-              } else {
+              StrOrBytes::Str({
                 #[cfg(not(target_family = "wasm"))]
                 {
                   let id = resolved_id.id.clone();
@@ -124,22 +81,84 @@ pub async fn load_source<Fs: FileSystem + 'static>(
                 {
                   fs.read_to_string(resolved_id.id.as_path())?
                 }
-              }
-            }),
-            guessed,
-          )),
-        },
-        (Some(source), None) => Ok((StrOrBytes::Str(source), ModuleType::Js)),
+              }),
+              ModuleType::Js,
+            ))
+          }
+          (source, Some(guessed)) => match &guessed {
+            ModuleType::Base64 | ModuleType::Binary | ModuleType::Dataurl | ModuleType::Asset => {
+              Ok((
+                StrOrBytes::Bytes({
+                  match source {
+                    Some(s) => s.into_bytes(),
+                    None => {
+                      if cfg!(target_family = "wasm") {
+                        fs.read(resolved_id.id.as_path())?
+                      } else {
+                        let id = resolved_id.id.clone();
+                        tokio::runtime::Handle::current()
+                          .spawn_blocking(move || fs.read(id.as_path()))
+                          .await??
+                      }
+                    }
+                  }
+                }),
+                guessed,
+              ))
+            }
+            ModuleType::Js
+            | ModuleType::Jsx
+            | ModuleType::Ts
+            | ModuleType::Tsx
+            | ModuleType::Json
+            | ModuleType::Text
+            | ModuleType::Empty
+            | ModuleType::Css
+            | ModuleType::Custom(_) => Ok((
+              StrOrBytes::Str({
+                if let Some(s) = source {
+                  s
+                } else {
+                  #[cfg(not(target_family = "wasm"))]
+                  {
+                    let id = resolved_id.id.clone();
+                    tokio::runtime::Handle::current()
+                      .spawn_blocking(move || fs.read_to_string(id.as_path()))
+                      .await??
+                  }
+                  #[cfg(target_family = "wasm")]
+                  {
+                    fs.read_to_string(resolved_id.id.as_path())?
+                  }
+                }
+              }),
+              guessed,
+            )),
+          },
+          (Some(source), None) => Ok((StrOrBytes::Str(source), ModuleType::Js)),
+        }
+      }
+      (None, Some(ty)) => {
+        if asserted_module_type.is_some() {
+          Ok((read_file_by_module_type(resolved_id.id.as_path(), &ty, fs).await?, ty))
+        } else {
+          unreachable!("Invalid state")
+        }
       }
     }
-    (None, Some(ty)) => {
-      if asserted_module_type.is_some() {
-        Ok((read_file_by_module_type(resolved_id.id.as_path(), &ty, fs).await?, ty))
-      } else {
-        unreachable!("Invalid state")
-      }
-    }
-  }
+  };
+
+  result.await.map_err(|err: anyhow::Error| {
+    BuildDiagnostic::unloadable_dependency(
+      resolved_id.debug_id(cwd).into(),
+      module_owner.map(|owner| UnloadableDependencyContext {
+        importer_id: owner.importer_id.as_str().into(),
+        importee_span: owner.importee_span,
+        source: owner.source.clone(),
+      }),
+      err.to_string().into(),
+    )
+  })
 }
 
 /// ref: https://github.com/evanw/esbuild/blob/9c13ae1f06dfa909eb4a53882e3b7e4216a503fe/internal/bundler/bundler.go#L1161-L1183

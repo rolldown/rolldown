@@ -11,18 +11,18 @@ use crate::{
     hook_transform_output::HookTransformOutput,
   },
 };
-use anyhow::Result;
 use rolldown_common::{ModuleInfo, NormalModule, RollupRenderedChunk, WatcherChangeKind};
 use rolldown_ecmascript::EcmaAst;
+use rolldown_error::SingleBuildResult;
 
-pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>>;
-pub type HookTransformAstReturn = Result<EcmaAst>;
-pub type HookTransformReturn = Result<Option<HookTransformOutput>>;
-pub type HookLoadReturn = Result<Option<HookLoadOutput>>;
-pub type HookNoopReturn = Result<()>;
-pub type HookRenderChunkReturn = Result<Option<HookRenderChunkOutput>>;
-pub type HookAugmentChunkHashReturn = Result<Option<String>>;
-pub type HookInjectionOutputReturn = Result<Option<String>>;
+pub type HookResolveIdReturn = SingleBuildResult<Option<HookResolveIdOutput>>;
+pub type HookTransformAstReturn = SingleBuildResult<EcmaAst>;
+pub type HookTransformReturn = SingleBuildResult<Option<HookTransformOutput>>;
+pub type HookLoadReturn = SingleBuildResult<Option<HookLoadOutput>>;
+pub type HookNoopReturn = SingleBuildResult<()>;
+pub type HookRenderChunkReturn = SingleBuildResult<Option<HookRenderChunkOutput>>;
+pub type HookAugmentChunkHashReturn = SingleBuildResult<Option<String>>;
+pub type HookInjectionOutputReturn = SingleBuildResult<Option<String>>;
 
 pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn name(&self) -> Cow<'static, str>;

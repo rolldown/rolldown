@@ -1,3 +1,5 @@
+use rolldown_error::BuildDiagnostic;
+
 use super::{
   binding_hook_side_effects::BindingHookSideEffects,
   binding_resolved_external::BindingResolvedExternal,
@@ -21,7 +23,7 @@ pub struct BindingHookResolveIdOutput {
 }
 
 impl TryFrom<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutput {
-  type Error = napi::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(value: BindingHookResolveIdOutput) -> Result<Self, Self::Error> {
     Ok(Self {

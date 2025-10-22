@@ -5,6 +5,7 @@ use std::{borrow::Cow, path::Path, pin::Pin, sync::Arc};
 
 use derive_more::Debug;
 use oxc::{ast::AstBuilder, ast_visit::VisitMut};
+use rolldown_error::SingleBuildResult;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, HookUsage, Plugin,
@@ -18,7 +19,7 @@ use sugar_path::SugarPath as _;
 
 pub const DYNAMIC_IMPORT_HELPER: &str = "\0rolldown_dynamic_import_helper.js";
 
-pub type ResolverFn = dyn Fn(String, String) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<String>>> + Send>>
+pub type ResolverFn = dyn Fn(String, String) -> Pin<Box<dyn Future<Output = SingleBuildResult<Option<String>>> + Send>>
   + Send
   + Sync;
 

@@ -1,3 +1,4 @@
+use rolldown_error::SingleBuildResult;
 use rolldown_utils::url::clean_url;
 
 use super::{
@@ -13,7 +14,7 @@ pub struct RenderAssetUrlInJsEnv<'a> {
 }
 
 impl RenderAssetUrlInJsEnv<'_> {
-  pub async fn render_asset_url_in_js(&self) -> anyhow::Result<Option<String>> {
+  pub async fn render_asset_url_in_js(&self) -> SingleBuildResult<Option<String>> {
     // __VITE_ASSET__([\w$]+)__(?:\$_(.*?)__ -> 14 && __VITE_ASSET_PUBLIC__([a-z\d]{8})__ -> 21
     let mut vite_asset_iter = self.code.match_indices("__VITE_ASSET_").peekable();
 

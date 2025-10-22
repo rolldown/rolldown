@@ -1,14 +1,15 @@
 use crate::types::generator::{GenerateContext, GenerateOutput, Generator};
 
-use anyhow::Result;
 use rolldown_common::{InstantiatedChunk, InstantiationKind};
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildResult, SingleBuildResult};
 use rolldown_std_utils::OptionExt;
 
 pub struct AssetGenerator;
 
 impl Generator for AssetGenerator {
-  async fn instantiate_chunk(ctx: &mut GenerateContext<'_>) -> Result<BuildResult<GenerateOutput>> {
+  async fn instantiate_chunk(
+    ctx: &mut GenerateContext<'_>,
+  ) -> SingleBuildResult<BuildResult<GenerateOutput>> {
     let asset_modules = ctx
       .chunk
       .modules

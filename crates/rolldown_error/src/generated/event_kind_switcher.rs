@@ -36,6 +36,5 @@ bitflags! {
     const ConfigurationFieldConflict = 1 << 28;
     const PreferBuiltinFeature = 1 << 29;
     const BundlerInitializeError = 1 << 30;
-    const PluginError = 1 << 31;
   }
 }

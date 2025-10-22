@@ -5,7 +5,6 @@ use std::{
   sync::{Arc, atomic::AtomicBool},
 };
 
-use anyhow::Context;
 use arcstr::ArcStr;
 use futures::{FutureExt, future::Shared};
 use rolldown_common::ClientHmrUpdate;
@@ -211,9 +210,7 @@ impl DevEngine {
     }
 
     // Send close message to build driver service
-    self.ctx.build_channel_tx.send(BuildMessage::Close)
-      .map_err_to_unhandleable()
-      .context("DevEngine: failed to send Close message to build service - service may have already terminated")?;
+    self.ctx.build_channel_tx.send(BuildMessage::Close).map_err_to_unhandleable()?;
 
     // Clean up watcher
     let watcher =

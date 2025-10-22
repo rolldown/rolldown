@@ -1,4 +1,5 @@
 use napi_derive::napi;
+use rolldown_error::BuildDiagnostic;
 use rolldown_plugin_json::{JsonPlugin, JsonPluginStringify};
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -10,7 +11,7 @@ pub struct BindingJsonPluginConfig {
 }
 
 impl TryFrom<BindingJsonPluginConfig> for JsonPlugin {
-  type Error = anyhow::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(config: BindingJsonPluginConfig) -> Result<Self, Self::Error> {
     Ok(Self {
@@ -26,7 +27,7 @@ impl TryFrom<BindingJsonPluginConfig> for JsonPlugin {
 pub struct BindingJsonPluginStringify(napi::Either<bool, String>);
 
 impl TryFrom<BindingJsonPluginStringify> for JsonPluginStringify {
-  type Error = napi::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(value: BindingJsonPluginStringify) -> Result<Self, Self::Error> {
     Ok(match value {
@@ -34,10 +35,10 @@ impl TryFrom<BindingJsonPluginStringify> for JsonPluginStringify {
       BindingJsonPluginStringify(napi::Either::A(false)) => JsonPluginStringify::False,
       BindingJsonPluginStringify(napi::Either::B(s)) if s == "auto" => JsonPluginStringify::Auto,
       BindingJsonPluginStringify(napi::Either::B(s)) => {
-        return Err(napi::Error::new(
+        return Err(BuildDiagnostic::napi_error(napi::Error::new(
           napi::Status::InvalidArg,
           format!("Invalid stringify option: {s}"),
-        ));
+        )));
       }
     })
   }

@@ -14,7 +14,7 @@ use crate::watch::event::{BundleEndEventData, BundleEvent, WatcherEvent};
 use arcstr::ArcStr;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use rolldown_common::{OutputsDiagnostics, WatcherChangeKind};
-use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
+use rolldown_error::{BuildResult, ResultExt, SingleBuildResult};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
 use tokio::sync::Mutex;
 
@@ -164,7 +164,7 @@ impl WatcherTask {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn close(&self) -> anyhow::Result<()> {
+  pub async fn close(&self) -> SingleBuildResult<()> {
     let bundler = self.bundler.lock().await;
     bundler.plugin_driver.close_watcher().await?;
     Ok(())
@@ -200,10 +200,7 @@ impl WatcherTask {
     let bundler = self.bundler.lock().await;
     let _ = bundler.plugin_driver.watch_change(path, kind).await.map_err(|e| {
       self.emitter.emit(WatcherEvent::Event(BundleEvent::Error(BundleErrorEventData {
-        error: OutputsDiagnostics {
-          diagnostics: vec![BuildDiagnostic::unhandleable_error(e)],
-          cwd: bundler.options.cwd.clone(),
-        },
+        error: OutputsDiagnostics { diagnostics: vec![e], cwd: bundler.options.cwd.clone() },
         result: Arc::clone(&self.bundler),
       })))
     });

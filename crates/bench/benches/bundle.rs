@@ -37,7 +37,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             rolldown::Bundler::new(item.options.clone()).expect("Failed to create bundler");
           let result = bundler.generate().await;
           if let Err(e) = result {
-            panic!("Failed to bundle: {e}");
+            panic!("Failed to bundle: {e:?}");
           }
         });
       });

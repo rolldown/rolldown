@@ -26,7 +26,6 @@ use super::events::json_parse::JsonParse;
 use super::events::missing_global_name::MissingGlobalName;
 use super::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
 use super::events::missing_name_option_for_umd_export::MissingNameOptionForUmdExport;
-use super::events::plugin_error::{CausedPlugin, PluginError};
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
 use super::events::resolve_error::DiagnosableResolveError;
 use super::events::unhandleable_error::UnhandleableError;
@@ -323,9 +322,5 @@ impl BuildDiagnostic {
 
   pub fn bundler_initialize_error(message: String, hint: Option<String>) -> Self {
     Self::new_inner(BundlerInitializeError { message, hint })
-  }
-
-  pub fn plugin_error(caused_plugin: CausedPlugin, err: anyhow::Error) -> Self {
-    Self::new_inner(PluginError { plugin: caused_plugin, error: err })
   }
 }

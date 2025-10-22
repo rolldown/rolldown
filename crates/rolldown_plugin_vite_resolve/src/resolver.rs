@@ -7,6 +7,7 @@ use std::{
 
 use oxc_resolver::{PackageJson, ResolveOptions, TsconfigOptions, TsconfigReferences};
 use rolldown_common::side_effects::HookSideEffects;
+use rolldown_error::ResultExt;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
 use rolldown_utils::{dashmap::FxDashMap, url::clean_url};
 use rustc_hash::FxHashSet;
@@ -417,7 +418,9 @@ impl Resolver {
     let base_dir = get_base_dir(specifier, importer, dedupe).unwrap_or(&self.root);
 
     let oxc_resolved_result = self.resolve_raw(base_dir, specifier, external);
-    let resolved = self.normalize_oxc_resolver_result(importer, dedupe, &oxc_resolved_result)?;
+    let resolved = self
+      .normalize_oxc_resolver_result(importer, dedupe, &oxc_resolved_result)
+      .map_err_to_unhandleable()?;
     if let Some(mut resolved) = resolved {
       if !external || !can_externalize_file(&resolved.id) {
         return Ok(Some(resolved));

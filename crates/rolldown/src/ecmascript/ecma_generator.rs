@@ -5,12 +5,11 @@ use crate::{
   utils::{chunk::generate_rendered_chunk, render_ecma_module::render_ecma_module},
 };
 
-use anyhow::Result;
 use rolldown_common::{
   AddonRenderContext, EcmaAssetMeta, InstantiatedChunk, InstantiationKind, ModuleId, ModuleIdx,
   OutputFormat, RenderedModule,
 };
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildResult, SingleBuildResult};
 use rolldown_plugin::HookAddonArgs;
 use rolldown_sourcemap::Source;
 #[cfg(not(target_family = "wasm"))]
@@ -43,7 +42,9 @@ impl RenderedModuleSource {
 pub struct EcmaGenerator;
 
 impl Generator for EcmaGenerator {
-  async fn instantiate_chunk(ctx: &mut GenerateContext<'_>) -> Result<BuildResult<GenerateOutput>> {
+  async fn instantiate_chunk(
+    ctx: &mut GenerateContext<'_>,
+  ) -> SingleBuildResult<BuildResult<GenerateOutput>> {
     let module_id_to_codegen_ret = std::mem::take(&mut ctx.module_id_to_codegen_ret);
     let rendered_module_sources: RenderedModuleSources = ctx
       .chunk

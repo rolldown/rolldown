@@ -14,6 +14,7 @@ use arcstr::ArcStr;
 use derive_more::Debug;
 use owo_colors::OwoColorize;
 use rolldown_common::{ImportKind, WatcherChangeKind, side_effects::HookSideEffects};
+use rolldown_error::{ResultExt, SingleBuildResult};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookUsage, Plugin, PluginContext, typedmap::TypedMapKey,
@@ -58,11 +59,11 @@ pub type FinalizeBareSpecifierCallback = dyn (Fn(
     &str,
     &str,
     Option<&str>,
-  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync>>)
+  ) -> Pin<Box<dyn Future<Output = SingleBuildResult<Option<String>>> + Send + Sync>>)
   + Send
   + Sync;
 
-pub type FinalizeOtherSpecifiersCallback = dyn (Fn(&str, &str) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync>>)
+pub type FinalizeOtherSpecifiersCallback = dyn (Fn(&str, &str) -> Pin<Box<dyn Future<Output = SingleBuildResult<Option<String>>> + Send + Sync>>)
   + Send
   + Sync;
 
@@ -71,12 +72,13 @@ pub type ResolveSubpathImportsCallback = dyn (Fn(
     Option<&str>,
     bool,
     bool,
-  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync>>)
+  ) -> Pin<Box<dyn Future<Output = SingleBuildResult<Option<String>>> + Send + Sync>>)
   + Send
   + Sync;
 
-pub type OnLogCallback =
-  dyn (Fn(String) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + Sync>>) + Send + Sync;
+pub type OnLogCallback = dyn (Fn(String) -> Pin<Box<dyn Future<Output = SingleBuildResult<()>> + Send + Sync>>)
+  + Send
+  + Sync;
 
 #[derive(Debug)]
 pub struct ViteResolveResolveOptions {
@@ -183,7 +185,7 @@ impl ViteResolvePlugin {
     }
   }
 
-  async fn warn(&self, ctx: &PluginContext, message: String) -> anyhow::Result<()> {
+  async fn warn(&self, ctx: &PluginContext, message: String) -> SingleBuildResult<()> {
     if let Some(on_warn) = &self.on_warn {
       on_warn(message).await
     } else {
@@ -193,7 +195,7 @@ impl ViteResolvePlugin {
   }
 
   #[inline]
-  async fn debug_log<T: FnOnce() -> String>(&self, message: T) -> anyhow::Result<()> {
+  async fn debug_log<T: FnOnce() -> String>(&self, message: T) -> SingleBuildResult<()> {
     if let Some(on_debug) = &self.on_debug { on_debug(message()).await } else { Ok(()) }
   }
 }
@@ -387,7 +389,7 @@ impl Plugin for ViteResolvePlugin {
             ". Consider disabling environments.{}.noExternal or remove the built-in dependency.",
             self.environment_name
           ));
-          return Err(anyhow!(message));
+          return Err(anyhow!(message))?;
         }
 
         if !self.resolve_options.as_src {
@@ -427,11 +429,13 @@ impl Plugin for ViteResolvePlugin {
       .map(|i| Path::new(i).parent().and_then(|p| p.to_str()).unwrap_or(i))
       .unwrap_or(&self.resolve_options.root);
     let specifier = normalize_leading_slashes(&id);
-    let resolved = resolver.normalize_oxc_resolver_result(
-      args.importer,
-      &self.dedupe,
-      &resolver.resolve_raw(base_dir, specifier, false),
-    )?;
+    let resolved = resolver
+      .normalize_oxc_resolver_result(
+        args.importer,
+        &self.dedupe,
+        &resolver.resolve_raw(base_dir, specifier, false),
+      )
+      .map_err_to_unhandleable()?;
     if let Some(mut resolved) = resolved {
       if !scan {
         if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {

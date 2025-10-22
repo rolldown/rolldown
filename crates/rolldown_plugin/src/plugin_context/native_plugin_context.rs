@@ -11,6 +11,7 @@ use rolldown_common::{
   LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleInfo, ModuleLoaderMsg, PackageJson, PluginIdx,
   ResolvedId, SharedFileEmitter, SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
 };
+use rolldown_error::{BuildDiagnostic, SingleBuildResult};
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use tokio::sync::Mutex;
@@ -48,7 +49,7 @@ impl NativePluginContextImpl {
     specifier: &str,
     side_effects: Option<HookSideEffects>,
     module_def_format: ModuleDefFormat,
-  ) -> anyhow::Result<()> {
+  ) -> SingleBuildResult<()> {
     // Clone out the sender under the lock, then drop the lock before awaiting.
     let sender = {
       let guard = self.tx.lock().await.clone();
@@ -71,7 +72,7 @@ impl NativePluginContextImpl {
     Ok(())
   }
 
-  pub fn try_get_package_json_or_create(&self, path: &Path) -> anyhow::Result<Arc<PackageJson>> {
+  pub fn try_get_package_json_or_create(&self, path: &Path) -> SingleBuildResult<Arc<PackageJson>> {
     self.resolver.try_get_package_json_or_create(path)
   }
 
@@ -81,11 +82,10 @@ impl NativePluginContextImpl {
     specifier: &str,
     importer: Option<&str>,
     extra_options: Option<PluginContextResolveOptions>,
-  ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
-    let plugin_driver = self
-      .plugin_driver
-      .upgrade()
-      .ok_or_else(|| anyhow::anyhow!("Plugin driver is already dropped."))?;
+  ) -> SingleBuildResult<Result<ResolvedId, ResolveError>> {
+    let plugin_driver = self.plugin_driver.upgrade().ok_or_else(|| {
+      BuildDiagnostic::unhandleable_error(anyhow::anyhow!("Plugin driver is already dropped."))
+    })?;
 
     let normalized_extra_options = extra_options.unwrap_or_default();
     let skipped_resolve_calls = if normalized_extra_options.skip_self {
@@ -141,7 +141,7 @@ impl NativePluginContextImpl {
   pub async fn emit_file_async(
     &self,
     file: rolldown_common::EmittedAsset,
-  ) -> anyhow::Result<ArcStr> {
+  ) -> SingleBuildResult<ArcStr> {
     let asset_filename = self.options.asset_filename_with_file(&file).await?;
     let sanitized_file_name = self.options.sanitize_file_name_with_file(&file).await?;
     Ok(self.file_emitter.emit_file(file, asset_filename.map(Into::into), sanitized_file_name))

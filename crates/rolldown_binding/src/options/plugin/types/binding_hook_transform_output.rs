@@ -1,4 +1,5 @@
 use rolldown::ModuleType;
+use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::HookTransformOutput;
 
 use super::binding_hook_side_effects::BindingHookSideEffects;
@@ -17,7 +18,7 @@ pub struct BindingHookTransformOutput {
 }
 
 impl TryFrom<BindingHookTransformOutput> for HookTransformOutput {
-  type Error = anyhow::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(value: BindingHookTransformOutput) -> Result<Self, Self::Error> {
     Ok(Self {

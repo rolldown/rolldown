@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
-use rolldown_error::EventKindSwitcher;
+use rolldown_error::{EventKindSwitcher, SingleBuildResult};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::advanced_chunks_options::AdvancedChunksOptions;
@@ -213,14 +213,14 @@ impl NormalizedBundlerOptions {
   pub async fn asset_filename_template(
     &self,
     rollup_pre_rendered_asset: &RollupPreRenderedAsset,
-  ) -> anyhow::Result<FilenameTemplate> {
+  ) -> SingleBuildResult<FilenameTemplate> {
     Ok(FilenameTemplate::new(self.asset_filenames.call(rollup_pre_rendered_asset).await?))
   }
 
   pub async fn asset_filename_with_file(
     &self,
     file: &EmittedAsset,
-  ) -> anyhow::Result<Option<String>> {
+  ) -> SingleBuildResult<Option<String>> {
     if file.file_name.is_some() {
       return Ok(None);
     }
@@ -240,7 +240,7 @@ impl NormalizedBundlerOptions {
   pub async fn sanitize_file_name_with_file(
     &self,
     file: &EmittedAsset,
-  ) -> anyhow::Result<Option<ArcStr>> {
+  ) -> SingleBuildResult<Option<ArcStr>> {
     match file.file_name {
       Some(_) => Ok(None),
       None => Ok(Some(self.sanitize_filename.call(file.name_for_sanitize()).await?)),

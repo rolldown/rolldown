@@ -8,6 +8,7 @@ use derive_more::Debug;
 use rolldown_common::{
   LogWithoutPlugin, ModuleDefFormat, ResolvedId, side_effects::HookSideEffects,
 };
+use rolldown_error::SingleBuildResult;
 
 use crate::{
   PluginContextResolveOptions, plugin_context::PluginContextMeta,
@@ -70,7 +71,7 @@ impl PluginContext {
     specifier: &str,
     side_effects: Option<HookSideEffects>,
     module_def_format: ModuleDefFormat,
-  ) -> anyhow::Result<()> {
+  ) -> SingleBuildResult<()> {
     call_native_only!(self, "load", ctx => ctx.load(specifier, side_effects, module_def_format).await)
   }
 
@@ -79,7 +80,7 @@ impl PluginContext {
     specifier: &str,
     importer: Option<&str>,
     extra_options: Option<PluginContextResolveOptions>,
-  ) -> anyhow::Result<Result<ResolvedId, rolldown_resolver::ResolveError>> {
+  ) -> SingleBuildResult<Result<ResolvedId, rolldown_resolver::ResolveError>> {
     call_native_only!(self, "resolve", ctx => ctx.resolve(specifier, importer, extra_options).await)
   }
 
@@ -99,7 +100,7 @@ impl PluginContext {
   pub async fn emit_file_async(
     &self,
     file: rolldown_common::EmittedAsset,
-  ) -> anyhow::Result<ArcStr> {
+  ) -> SingleBuildResult<ArcStr> {
     call_native_only!(self, "emit_file_async", ctx => ctx.emit_file_async(file).await)
   }
 

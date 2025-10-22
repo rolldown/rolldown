@@ -1,4 +1,5 @@
 use rolldown_common::DeferSyncScanData;
+use rolldown_error::BuildDiagnostic;
 
 use crate::options::plugin::types::binding_hook_side_effects::BindingHookSideEffects;
 
@@ -12,7 +13,7 @@ pub struct BindingDeferSyncScanData {
 }
 
 impl TryFrom<BindingDeferSyncScanData> for DeferSyncScanData {
-  type Error = napi::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(data: BindingDeferSyncScanData) -> Result<Self, Self::Error> {
     Ok(Self { id: data.id, side_effects: data.side_effects.map(TryInto::try_into).transpose()? })

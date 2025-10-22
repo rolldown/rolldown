@@ -1,5 +1,6 @@
 use napi::bindgen_prelude::*;
 use rolldown_common::{InlineConstConfig, InlineConstMode, InlineConstOption};
+use rolldown_error::BuildDiagnostic;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
@@ -17,7 +18,7 @@ pub struct BindingOptimization {
 }
 
 impl TryFrom<BindingOptimization> for rolldown_common::OptimizationOption {
-  type Error = napi::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(value: BindingOptimization) -> std::result::Result<Self, Self::Error> {
     let inline_const = match value.inline_const {
@@ -28,9 +29,9 @@ impl TryFrom<BindingOptimization> for rolldown_common::OptimizationOption {
             "all" => Some(InlineConstMode::All),
             "smart" => Some(InlineConstMode::Smart),
             _ => {
-              return Err(napi::Error::from_reason(
+              return Err(BuildDiagnostic::napi_error(napi::Error::from_reason(
                 "Invalid value for inline_const.mode: expected 'all' or 'smart'".to_string(),
-              ));
+              )));
             }
           }
         } else {

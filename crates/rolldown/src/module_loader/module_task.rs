@@ -10,9 +10,7 @@ use rolldown_common::{
   FlatOptions, ImportKind, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType,
   NormalModule, NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, StrOrBytes,
 };
-use rolldown_error::{
-  BuildDiagnostic, BuildResult, UnloadableDependencyContext, downcast_napi_error_diagnostics,
-};
+use rolldown_error::BuildResult;
 use rolldown_std_utils::PathExt;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 
@@ -27,9 +25,9 @@ use crate::{
 use super::{resolve_utils::resolve_dependencies, task_context::TaskContext};
 
 pub struct ModuleTaskOwner {
-  source: ArcStr,
-  importer_id: CompactStr,
-  importee_span: Span,
+  pub source: ArcStr,
+  pub importer_id: CompactStr,
+  pub importee_span: Span,
 }
 
 impl ModuleTaskOwner {
@@ -239,35 +237,24 @@ impl ModuleTask {
     magic_string_tx: Option<std::sync::Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
   ) -> BuildResult<(StrOrBytes, ModuleType)> {
     let mut is_read_from_disk = true;
-    let result = load_source(
+    let (source, mut module_type) = load_source(
       &self.ctx.plugin_driver,
       &self.resolved_id,
       self.ctx.fs.clone(),
+      &self.ctx.options.cwd,
       sourcemap_chain,
       hook_side_effects,
       &self.ctx.options,
       self.asserted_module_type.as_ref(),
       &mut is_read_from_disk,
+      self.owner.as_ref(),
     )
-    .await;
+    .await?;
     if is_read_from_disk {
       // - Only add watch files for files read from disk.
       // - Add watch files as early as possible for we might be able to recover from build errors.
       self.ctx.plugin_driver.watch_files.insert(self.resolved_id.id.clone());
     }
-    let (source, mut module_type) = result.map_err(|err| {
-      downcast_napi_error_diagnostics(err).unwrap_or_else(|e| {
-        BuildDiagnostic::unloadable_dependency(
-          self.resolved_id.debug_id(self.ctx.options.cwd.as_path()).into(),
-          self.owner.as_ref().map(|owner| UnloadableDependencyContext {
-            importer_id: owner.importer_id.as_str().into(),
-            importee_span: owner.importee_span,
-            source: owner.source.clone(),
-          }),
-          e.to_string().into(),
-        )
-      })
-    })?;
     if let Some(asserted) = &self.asserted_module_type {
       module_type = asserted.clone();
     }

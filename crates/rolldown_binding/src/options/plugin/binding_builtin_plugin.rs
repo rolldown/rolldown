@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use napi::{Unknown, bindgen_prelude::FromNapiValue};
+use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_alias::AliasPlugin;
 use rolldown_plugin_asset::AssetPlugin;
@@ -61,7 +62,7 @@ impl std::fmt::Debug for BindingBuiltinPlugin<'_> {
 }
 
 impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
-  type Error = napi::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
@@ -86,10 +87,10 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         let config = if let Some(options) = plugin.options {
           BindingBuildImportAnalysisPluginConfig::from_unknown(options)?
         } else {
-          return Err(napi::Error::new(
+          return Err(BuildDiagnostic::napi_error(napi::Error::new(
             napi::Status::InvalidArg,
             "Missing options for BuildImportAnalysisPlugin",
-          ));
+          )));
         };
         Arc::new(BuildImportAnalysisPlugin::try_from(config)?)
       }
@@ -138,10 +139,10 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         let plugin: ManifestPlugin = if let Some(options) = plugin.options {
           BindingManifestPluginConfig::from_unknown(options)?.into()
         } else {
-          return Err(napi::Error::new(
+          return Err(BuildDiagnostic::napi_error(napi::Error::new(
             napi::Status::InvalidArg,
             "Missing options for ManifestPlugin",
-          ));
+          )));
         };
         Arc::new(plugin)
       }
@@ -157,10 +158,10 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         let config = if let Some(options) = plugin.options {
           BindingReactRefreshWrapperPluginConfig::from_unknown(options)?
         } else {
-          return Err(napi::Error::new(
+          return Err(BuildDiagnostic::napi_error(napi::Error::new(
             napi::Status::InvalidArg,
             "Missing options for ReactRefreshWrapperPlugin",
-          ));
+          )));
         };
         Arc::new(ReactRefreshWrapperPlugin::new(config.into()))
       }
@@ -168,10 +169,10 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         let plugin: ReporterPlugin = if let Some(options) = plugin.options {
           BindingReporterPluginConfig::from_unknown(options)?.into()
         } else {
-          return Err(napi::Error::new(
+          return Err(BuildDiagnostic::napi_error(napi::Error::new(
             napi::Status::InvalidArg,
             "Missing options for ReportPlugin",
-          ));
+          )));
         };
         Arc::new(plugin)
       }
@@ -195,10 +196,10 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         let plugin: ViteCSSPlugin = if let Some(options) = plugin.options {
           BindingViteCSSPluginConfig::from_unknown(options)?.into()
         } else {
-          return Err(napi::Error::new(
+          return Err(BuildDiagnostic::napi_error(napi::Error::new(
             napi::Status::InvalidArg,
             "Missing options for ViteCSSPlugin",
-          ));
+          )));
         };
         Arc::new(plugin)
       }
@@ -214,10 +215,10 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         let plugin: ViteHtmlPlugin = if let Some(options) = plugin.options {
           BindingViteHtmlPluginConfig::from_unknown(options)?.into()
         } else {
-          return Err(napi::Error::new(
+          return Err(BuildDiagnostic::napi_error(napi::Error::new(
             napi::Status::InvalidArg,
             "Missing options for ViteHtmlPlugin",
-          ));
+          )));
         };
         Arc::new(plugin)
       }
@@ -225,10 +226,10 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         let config = if let Some(options) = plugin.options {
           BindingViteResolvePluginConfig::from_unknown(options)?
         } else {
-          return Err(napi::Error::new(
+          return Err(BuildDiagnostic::napi_error(napi::Error::new(
             napi::Status::InvalidArg,
             "Missing options for ViteResolvePlugin",
-          ));
+          )));
         };
         Arc::new(ViteResolvePlugin::new(config.into()))
       }

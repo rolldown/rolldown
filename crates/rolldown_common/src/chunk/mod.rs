@@ -14,6 +14,7 @@ pub mod types;
 
 use arcstr::ArcStr;
 use oxc::span::CompactStr;
+use rolldown_error::SingleBuildResult;
 use rolldown_std_utils::PathExt;
 use rolldown_utils::{
   BitSet,
@@ -144,7 +145,7 @@ impl Chunk {
     &self,
     options: &NormalizedBundlerOptions,
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
-  ) -> anyhow::Result<FilenameTemplate> {
+  ) -> SingleBuildResult<FilenameTemplate> {
     // https://github.com/rollup/rollup/blob/061a0387c8654222620f602471d66afd3c582048/src/Chunk.ts?plain=1#L526-L529
     let ret = if matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry))
       || options.preserve_modules
@@ -161,7 +162,7 @@ impl Chunk {
     &self,
     options: &NormalizedBundlerOptions,
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
-  ) -> anyhow::Result<FilenameTemplate> {
+  ) -> SingleBuildResult<FilenameTemplate> {
     let ret = if matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry))
     {
       options.css_entry_filenames.call(rollup_pre_rendered_chunk).await?
@@ -179,7 +180,7 @@ impl Chunk {
     chunk_name: &ArcStr,
     hash_placeholder_generator: &mut HashPlaceholderGenerator,
     used_name_counts: &FxDashMap<ArcStr, u32>,
-  ) -> anyhow::Result<PreliminaryFilename> {
+  ) -> SingleBuildResult<PreliminaryFilename> {
     if let Some(file) = &options.file {
       let basename = PathBuf::from(file)
         .file_name()
@@ -254,7 +255,7 @@ impl Chunk {
     chunk_name: &ArcStr,
     hash_placeholder_generator: &mut HashPlaceholderGenerator,
     used_name_counts: &FxDashMap<ArcStr, u32>,
-  ) -> anyhow::Result<PreliminaryFilename> {
+  ) -> SingleBuildResult<PreliminaryFilename> {
     if let Some(file) = &options.file {
       let mut file = PathBuf::from(file);
       file.set_extension("css");

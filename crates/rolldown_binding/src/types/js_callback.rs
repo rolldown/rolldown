@@ -6,6 +6,7 @@ use napi::{
   bindgen_prelude::{FromNapiValue, JsValuesTupleIntoVec, Promise},
   threadsafe_function::{ThreadsafeFunction, UnknownReturnValue},
 };
+use rolldown_error::{BuildDiagnostic, SingleBuildResult};
 use rolldown_utils::debug::pretty_type_name;
 
 /// `JsCallback`  is a type alias for `ThreadsafeFunction`. It represents a JavaScript function that passed to Rust side.
@@ -74,8 +75,8 @@ pub type JsCallback<Args = (), Ret = ()> =
 pub type MaybeAsyncJsCallback<Args = (), Ret = ()> = JsCallback<Args, Either<Promise<Ret>, Ret>>;
 
 pub trait JsCallbackExt<Args, Ret> {
-  fn invoke_async(&self, args: Args) -> impl Future<Output = Result<Ret, napi::Error>> + Send;
-  fn invoke_sync(&self, args: Args) -> Result<Ret, napi::Error>;
+  fn invoke_async(&self, args: Args) -> impl Future<Output = SingleBuildResult<Ret>> + Send;
+  fn invoke_sync(&self, args: Args) -> SingleBuildResult<Ret>;
 }
 
 impl<Args, Ret> JsCallbackExt<Args, Ret> for JsCallback<Args, Ret>
@@ -84,14 +85,14 @@ where
   Ret: 'static + Send + FromNapiValue,
   napi::Either<Ret, UnknownReturnValue>: FromNapiValue,
 {
-  async fn invoke_async(&self, args: Args) -> Result<Ret, napi::Error> {
+  async fn invoke_async(&self, args: Args) -> SingleBuildResult<Ret> {
     match self.call_async(args).await? {
       Either::A(ret) => Ok(ret),
       Either::B(_unknown) => create_unknown_return_error::<Ret, Self>(),
     }
   }
 
-  fn invoke_sync(&self, args: Args) -> Result<Ret, napi::Error> {
+  fn invoke_sync(&self, args: Args) -> SingleBuildResult<Ret> {
     let init_value = Ok(Either::B(UnknownReturnValue));
     let pair = Arc::new((Mutex::new(init_value), Condvar::new()));
     let pair_clone = Arc::clone(&pair);
@@ -110,11 +111,17 @@ where
     let (lock, cvar) = &*pair_clone;
     let notified = lock.lock().unwrap();
     let mut res = cvar.wait(notified).map_err(|err| {
-      napi::Error::new(napi::Status::GenericFailure, format!("PoisonError: {err:?}",))
+      BuildDiagnostic::napi_error(napi::Error::new(
+        napi::Status::GenericFailure,
+        format!("PoisonError: {err:?}",),
+      ))
     })?;
-    let res = res
-      .as_mut()
-      .map_err(|err| napi::Error::new(napi::Status::GenericFailure, format!("{err:?}",)))?;
+    let res = res.as_mut().map_err(|err| {
+      BuildDiagnostic::napi_error(napi::Error::new(
+        napi::Status::GenericFailure,
+        format!("{err:?}",),
+      ))
+    })?;
 
     match std::mem::replace(res, Either::B(UnknownReturnValue)) {
       Either::A(ret) => Ok(ret),
@@ -123,23 +130,23 @@ where
   }
 }
 
-fn create_unknown_return_error<Ret, T>() -> Result<Ret, napi::Error> {
+fn create_unknown_return_error<Ret, T>() -> SingleBuildResult<Ret> {
   // TODO: should provide more information about the unknown return value
   let js_type = "unknown";
   let expected_rust_type = pretty_type_name::<Ret>();
 
-  Err(napi::Error::new(
+  Err(BuildDiagnostic::napi_error(napi::Error::new(
     napi::Status::InvalidArg,
     format!(
       "UNKNOWN_RETURN_VALUE. Cannot convert {js_type} to `{expected_rust_type}` in {}.",
       pretty_type_name::<T>(),
     ),
-  ))
+  )))
 }
 
 pub trait MaybeAsyncJsCallbackExt<Args, Ret> {
   /// Call Js function asynchronously in rust. If the Js function returns `Promise<T>`, it will unwrap/await the promise and return `T`.
-  fn await_call(&self, args: Args) -> impl Future<Output = Result<Ret, napi::Error>> + Send;
+  fn await_call(&self, args: Args) -> impl Future<Output = SingleBuildResult<Ret>> + Send;
 }
 
 impl<Args, Ret> MaybeAsyncJsCallbackExt<Args, Ret> for JsCallback<Args, Either<Promise<Ret>, Ret>>
@@ -149,23 +156,25 @@ where
   napi::Either<napi::Either<Promise<Ret>, Ret>, UnknownReturnValue>: FromNapiValue,
 {
   #[expect(clippy::manual_async_fn)]
-  fn await_call(&self, args: Args) -> impl Future<Output = Result<Ret, napi::Error>> + Send {
+  fn await_call(&self, args: Args) -> impl Future<Output = SingleBuildResult<Ret>> + Send {
     async move {
       match self.call_async(args).await? {
-        Either::A(Either::A(promise)) => promise.await,
+        Either::A(Either::A(promise)) => Ok(promise.await?),
         Either::A(Either::B(ret)) => Ok(ret),
         Either::B(_unknown) => {
           // TODO: should provide more information about the unknown return value
           let js_type = "unknown";
           let expected_rust_type = pretty_type_name::<Ret>();
 
-          Err(napi::Error::new(
+          let napi_error = napi::Error::new(
             napi::Status::InvalidArg,
             format!(
               "UNKNOWN_RETURN_VALUE. Cannot convert {js_type} to `{expected_rust_type}` in {}.",
               pretty_type_name::<Self>(),
             ),
-          ))
+          );
+
+          Err(BuildDiagnostic::napi_error(napi_error))
         }
       }
     }

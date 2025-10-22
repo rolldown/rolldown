@@ -2,9 +2,10 @@ use std::sync::Arc;
 use std::{future::Future, pin::Pin};
 
 use derive_more::Debug;
+use rolldown_error::SingleBuildResult;
 use rolldown_utils::pattern_filter::StringOrRegex;
 
-pub type SourceMapIgnoreListFn = dyn Fn(&str, &str) -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send + 'static>>
+pub type SourceMapIgnoreListFn = dyn Fn(&str, &str) -> Pin<Box<dyn Future<Output = SingleBuildResult<bool>> + Send + 'static>>
   + Send
   + Sync;
 
@@ -42,7 +43,7 @@ impl SourceMapIgnoreList {
     }
   }
 
-  pub async fn exec_dynamic(&self, source: &str, sourcemap_path: &str) -> anyhow::Result<bool> {
+  pub async fn exec_dynamic(&self, source: &str, sourcemap_path: &str) -> SingleBuildResult<bool> {
     match self {
       Self::Boolean(_) | Self::StringOrRegex(_) => {
         unreachable!("exec_dynamic should only be called for Fn variant")

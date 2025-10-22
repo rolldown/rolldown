@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use anyhow::Result;
 use futures::future::try_join_all;
 use rolldown_common::InstantiationKind;
+use rolldown_error::{BuildDiagnostic, SingleBuildResult};
 use rolldown_plugin::SharedPluginDriver;
 
 use crate::type_alias::IndexInstantiatedChunks;
@@ -11,7 +11,7 @@ use crate::type_alias::IndexInstantiatedChunks;
 pub async fn augment_chunk_hash(
   plugin_driver: &SharedPluginDriver,
   assets: &mut IndexInstantiatedChunks,
-) -> Result<()> {
+) -> SingleBuildResult<()> {
   try_join_all(assets.iter_mut().map(|asset| async move {
     if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
       let augment_chunk_hash =
@@ -21,7 +21,7 @@ pub async fn augment_chunk_hash(
       }
     }
 
-    Ok::<(), anyhow::Error>(())
+    Ok::<(), BuildDiagnostic>(())
   }))
   .await?;
 

@@ -1,3 +1,5 @@
+use rolldown_error::BuildDiagnostic;
+
 use crate::types::binding_sourcemap::BindingSourcemap;
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -8,7 +10,7 @@ pub struct BindingHookRenderChunkOutput {
 }
 
 impl TryFrom<BindingHookRenderChunkOutput> for rolldown_plugin::HookRenderChunkOutput {
-  type Error = anyhow::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(value: BindingHookRenderChunkOutput) -> Result<Self, Self::Error> {
     Ok(rolldown_plugin::HookRenderChunkOutput {

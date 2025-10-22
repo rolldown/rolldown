@@ -1,13 +1,15 @@
 use napi::Either;
 use napi_derive::napi;
 use rolldown_common::side_effects::HookSideEffects;
+use rolldown_error::BuildDiagnostic;
 
 #[derive(Debug)]
 #[napi(transparent)]
 pub struct BindingHookSideEffects(Either<bool, String>);
 
 impl TryFrom<BindingHookSideEffects> for HookSideEffects {
-  type Error = napi::Error;
+  type Error = BuildDiagnostic;
+
   fn try_from(value: BindingHookSideEffects) -> Result<Self, Self::Error> {
     Ok(match value.0 {
       Either::A(true) => Self::True,
@@ -15,10 +17,10 @@ impl TryFrom<BindingHookSideEffects> for HookSideEffects {
       Either::B(s) => match s.as_str() {
         "no-treeshake" => Self::NoTreeshake,
         _ => {
-          return Err(napi::Error::new(
+          return Err(BuildDiagnostic::napi_error(napi::Error::new(
             napi::Status::InvalidArg,
             format!("Invalid string option: {s}"),
-          ));
+          )));
         }
       },
     })

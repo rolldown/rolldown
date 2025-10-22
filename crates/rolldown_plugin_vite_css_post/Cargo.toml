@@ -22,6 +22,7 @@ cow-utils = { workspace = true }
 derive_more = { workspace = true }
 regex = { workspace = true }
 rolldown_common = { workspace = true }
+rolldown_error = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_plugin_utils = { workspace = true }
 rolldown_utils = { workspace = true }

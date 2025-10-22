@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use rolldown_common::NotifyOption;
+use rolldown_error::SingleBuildResult;
 use tokio::sync::Mutex;
 
 use crate::{
@@ -26,7 +27,7 @@ impl Watcher {
     self.0.start().await;
   }
 
-  pub async fn close(&self) -> Result<()> {
+  pub async fn close(&self) -> SingleBuildResult<()> {
     self.0.close().await
   }
 

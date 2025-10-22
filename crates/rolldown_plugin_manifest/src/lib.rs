@@ -3,15 +3,17 @@ mod utils;
 use std::{borrow::Cow, collections::BTreeMap, path::Path, pin::Pin, sync::Arc};
 
 use rolldown_common::{EmittedAsset, Output};
+use rolldown_error::{ResultExt as _, SingleBuildResult};
 use rolldown_plugin::{HookNoopReturn, HookUsage, Plugin, PluginContext};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::FxHashSet;
 
 pub type IsLegacyFn =
-  dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send>> + Send + Sync;
+  dyn Fn() -> Pin<Box<dyn Future<Output = SingleBuildResult<bool>> + Send>> + Send + Sync;
 
-pub type CssEntriesFn =
-  dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<FxHashSet<String>>> + Send>> + Send + Sync;
+pub type CssEntriesFn = dyn Fn() -> Pin<Box<dyn Future<Output = SingleBuildResult<FxHashSet<String>>> + Send>>
+  + Send
+  + Sync;
 
 #[derive(derive_more::Debug)]
 pub struct ManifestPlugin {
@@ -104,7 +106,7 @@ impl Plugin for ManifestPlugin {
     ctx
       .emit_file_async(EmittedAsset {
         file_name: Some(self.out_path.as_str().into()),
-        source: (serde_json::to_string_pretty(&manifest)?).into(),
+        source: { serde_json::to_string_pretty(&manifest).map_err_to_unhandleable()?.into() },
         ..Default::default()
       })
       .await?;

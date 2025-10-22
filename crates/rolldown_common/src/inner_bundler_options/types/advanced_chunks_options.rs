@@ -1,6 +1,6 @@
 use std::{borrow::Cow, ops::Deref, pin::Pin, sync::Arc};
 
-use rolldown_error::BuildResult;
+use rolldown_error::SingleBuildResult;
 use rolldown_utils::js_regex::HybridRegex;
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
@@ -53,7 +53,7 @@ pub struct MatchGroup {
   pub max_module_size: Option<f64>,
 }
 
-type MatchGroupTestFn = dyn Fn(&str) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<bool>>> + Send + 'static>>
+type MatchGroupTestFn = dyn Fn(&str) -> Pin<Box<dyn Future<Output = SingleBuildResult<Option<bool>>> + Send + 'static>>
   + Send
   + Sync;
 
@@ -80,7 +80,7 @@ where
 type MatchGroupNameFn = dyn Fn(
     /* module id */ &str,
     /* chunking context */ &ChunkingContext,
-  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<String>>> + Send + 'static>>
+  ) -> Pin<Box<dyn Future<Output = SingleBuildResult<Option<String>>> + Send + 'static>>
   + Send
   + Sync;
 
@@ -96,7 +96,7 @@ impl MatchGroupName {
     &'a self,
     ctx: &ChunkingContext,
     module_id: &str,
-  ) -> BuildResult<Option<Cow<'a, str>>> {
+  ) -> SingleBuildResult<Option<Cow<'a, str>>> {
     match self {
       Self::Static(name) => Ok(Some(Cow::Borrowed(name))),
       Self::Dynamic(func) => {

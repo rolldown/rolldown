@@ -3,18 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Errors
 
-## PLUGIN_ERROR
+## UNHANDLEABLE_ERROR
 
 ```text
 [plugin-error-test] Error: Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
 A
-
-```
-
-## PLUGIN_ERROR
-
-```text
-[plugin-error-test] Error: Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
-B
 
 ```

@@ -3,7 +3,7 @@ use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkIdx, InstantiatedChunk, ModuleRenderOutput, NormalizedBundlerOptions, SymbolRef,
 };
-use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_error::{BuildDiagnostic, BuildResult, SingleBuildResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{ecmascript::property_access_str, indexmap::FxIndexMap};
 use rustc_hash::FxHashMap;
@@ -110,5 +110,5 @@ pub struct GenerateOutput {
 pub trait Generator {
   async fn instantiate_chunk(
     ctx: &mut GenerateContext,
-  ) -> anyhow::Result<BuildResult<GenerateOutput>>;
+  ) -> SingleBuildResult<BuildResult<GenerateOutput>>;
 }

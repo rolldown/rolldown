@@ -1,6 +1,5 @@
 use std::{borrow::Cow, sync::Arc};
 
-use anyhow::Ok;
 use rolldown::{AssetFilenamesOutputOption, BundlerOptions, InputItem};
 use rolldown_common::EmittedAsset;
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
@@ -29,7 +28,6 @@ impl Plugin for TestPlugin {
       None,
       None,
     );
-
     Ok(None)
   }
 

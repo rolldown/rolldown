@@ -1,9 +1,10 @@
 use derive_more::Debug;
+use rolldown_error::SingleBuildResult;
 use std::sync::Arc;
 
 use rustc_hash::FxHashMap;
 
-pub type PathsFunction = dyn Fn(&str) -> anyhow::Result<String> + 'static + Send + Sync;
+pub type PathsFunction = dyn Fn(&str) -> SingleBuildResult<String> + 'static + Send + Sync;
 
 #[derive(Clone, Debug)]
 pub enum PathsOutputOption {

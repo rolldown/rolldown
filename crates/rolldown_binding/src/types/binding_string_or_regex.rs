@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use napi::bindgen_prelude::{TypeName, ValidateNapiValue};
 use napi::{Either, bindgen_prelude::FromNapiValue, sys};
 
+use rolldown_error::BuildDiagnostic;
 use rolldown_utils::js_regex::HybridRegex;
 use rolldown_utils::pattern_filter::StringOrRegex;
 
@@ -68,13 +69,13 @@ impl AsRef<StringOrRegex> for BindingStringOrRegex {
 }
 
 impl TryFrom<BindingStringOrRegex> for HybridRegex {
-  type Error = anyhow::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(value: BindingStringOrRegex) -> Result<Self, Self::Error> {
-    match value.0 {
-      StringOrRegex::String(value) => HybridRegex::new(&value),
-      StringOrRegex::Regex(value) => Ok(value),
-    }
+    Ok(match value.0 {
+      StringOrRegex::String(value) => HybridRegex::new(&value)?,
+      StringOrRegex::Regex(value) => value,
+    })
   }
 }
 

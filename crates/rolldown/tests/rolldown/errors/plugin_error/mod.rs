@@ -1,7 +1,7 @@
 use std::{borrow::Cow, sync::Arc};
 
 use rolldown::{BundlerOptions, InputItem};
-use rolldown_error::BatchedBuildDiagnostic;
+use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
@@ -22,10 +22,7 @@ impl Plugin for PluginErrorTest {
     _ctx: &PluginContext,
     _args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
-    Err(BatchedBuildDiagnostic::new(vec![
-      anyhow::anyhow!("A").into(),
-      anyhow::anyhow!("B").into(),
-    ]))?
+    Err::<_, BuildDiagnostic>(anyhow::anyhow!("A").into())
   }
 }
 

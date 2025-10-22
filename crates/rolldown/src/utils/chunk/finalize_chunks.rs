@@ -8,7 +8,7 @@ use rolldown_common::{
   Asset, HashCharacters, InsChunkIdx, InstantiationKind, NormalizedBundlerOptions, SourceMapType,
   StrOrBytes,
 };
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildDiagnostic, BuildResult};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
@@ -192,7 +192,7 @@ pub async fn finalize_assets(
   // apply sourcemap related logic
 
   let derived_assets = try_join_all(assets.iter_mut().map(async |asset| {
-    let mut derived_asset: Result<Option<Asset>, anyhow::Error> = Ok(None::<Asset>);
+    let mut derived_asset = Ok::<_, BuildDiagnostic>(None::<Asset>);
     match &mut asset.meta {
       InstantiationKind::Ecma(ecma_meta) => {
         let asset_code = mem::take(&mut asset.content);

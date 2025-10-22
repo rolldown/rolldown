@@ -1,5 +1,6 @@
 use std::{future::Future, pin::Pin, sync::Arc};
 
+use rolldown_error::SingleBuildResult;
 use rolldown_plugin::{HookLoadOutput, HookTransformOutput, HookUsage, LogWithoutPlugin, Plugin};
 use rolldown_plugin_utils::{
   FileToUrlEnv, PublicFileToBuiltUrlEnv, UsizeOrFunction, check_public_file,
@@ -12,14 +13,14 @@ use rustc_hash::{FxHashMap, FxHashSet};
 type ResolveUrl = dyn (Fn(
     &str,
     Option<&str>,
-  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync>>)
+  ) -> Pin<Box<dyn Future<Output = SingleBuildResult<Option<String>>> + Send + Sync>>)
   + Send
   + Sync;
 
 pub type UrlResolver = dyn Fn(
     String,
     Option<String>,
-  ) -> Pin<Box<dyn Future<Output = anyhow::Result<(String, Option<String>)>> + Send>>
+  ) -> Pin<Box<dyn Future<Output = SingleBuildResult<(String, Option<String>)>> + Send>>
   + Send
   + Sync;
 
@@ -27,7 +28,7 @@ type CompileCSS = dyn (Fn(
     &str,
     &str,
     Arc<UrlResolver>,
-  ) -> Pin<Box<dyn Future<Output = anyhow::Result<CompileCSSResult>> + Send + Sync>>)
+  ) -> Pin<Box<dyn Future<Output = SingleBuildResult<CompileCSSResult>> + Send + Sync>>)
   + Send
   + Sync;
 
@@ -75,16 +76,17 @@ impl Plugin for ViteCSSPlugin {
   ) -> rolldown_plugin::HookLoadReturn {
     if is_css_request(args.id) && find_special_query(args.id, b"url").is_some() {
       if rolldown_plugin_utils::css::is_css_module(args.id) {
-        return Err(anyhow::anyhow!(
+        Err(anyhow::anyhow!(
           "?url is not supported with CSS modules. (tried to import '{}')",
           args.id
-        ));
+        ))?;
       }
 
       let url = remove_special_query(args.id, b"url");
       let code = rolldown_utils::concat_string!(
         "import ",
-        serde_json::to_string(&inject_query(&url, "transform-only"))?,
+        serde_json::to_string(&inject_query(&url, "transform-only"))
+          .map_err(|e| anyhow::anyhow!("Failed to serialize JSON: {e}"))?,
         "; export default '__VITE_CSS_URL__",
         base64_simd::STANDARD.encode_to_string(url.as_bytes()),
         "__'"

@@ -1,4 +1,5 @@
 use napi::bindgen_prelude::Either;
+use rolldown_error::BuildDiagnostic;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
@@ -19,7 +20,7 @@ pub struct BindingExperimentalOptions {
 }
 
 impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
-  type Error = napi::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(value: BindingExperimentalOptions) -> Result<Self, Self::Error> {
     Ok(Self {
@@ -43,10 +44,10 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
             if v == "boundary" {
               Some(rolldown_common::SourcemapHires::Boundary)
             } else {
-              return Err(napi::Error::new(
+              return Err(BuildDiagnostic::napi_error(napi::Error::new(
                 napi::Status::InvalidArg,
                 format!("Invalid transform hires sourcemap: {v}"),
-              ));
+              )));
             }
           }
         }

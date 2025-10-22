@@ -11,6 +11,7 @@ use rolldown_common::{
   AssetFilenamesOutputOption, EmittedAsset, Output, OutputChunk, OutputFormat,
   RollupPreRenderedAsset,
 };
+use rolldown_error::{BuildDiagnostic, ResultExt, SingleBuildResult};
 use rolldown_plugin::{HookRenderChunkArgs, PluginContext};
 use rolldown_plugin_utils::{
   AssetUrlItem, AssetUrlIter, AssetUrlResult, PublicAssetUrlCache, RenderAssetUrlInJsEnv,
@@ -89,7 +90,7 @@ impl ViteCSSPostPlugin {
     ctx: &FinalizedContext<'a, '_, '_>,
     css_styles: &CSSStyles,
     magic_string: &mut Option<MagicString<'a>>,
-  ) -> anyhow::Result<()> {
+  ) -> SingleBuildResult<()> {
     let mut css_url_iter = ctx.args.code.match_indices("__VITE_CSS_URL__").peekable();
     if css_url_iter.peek().is_some() {
       let indices = css_url_iter.map(|(index, _)| index).collect::<Vec<_>>();
@@ -99,7 +100,7 @@ impl ViteCSSPostPlugin {
           return Err(anyhow::anyhow!(
             "Invalid __VITE_CSS_URL__ in '{}', expected '__VITE_CSS_URL__<base64>__'",
             ctx.args.chunk.name
-          ));
+          ))?;
         };
 
         let id = unsafe {
@@ -111,7 +112,7 @@ impl ViteCSSPostPlugin {
         };
 
         let Some(style) = css_styles.inner.get(&id) else {
-          return Err(anyhow::anyhow!("CSS content for  '{id}' was not found"));
+          return Err(anyhow::anyhow!("CSS content for  '{id}' was not found"))?;
         };
 
         let original_file_name = clean_url(&id).to_string();
@@ -154,7 +155,10 @@ impl ViteCSSPostPlugin {
           )
           .await?;
 
-        Ok(UrlEmitTasks { range: (index, index + pos + 2), replacement: url.to_asset_url_in_js()? })
+        Ok::<_, BuildDiagnostic>(UrlEmitTasks {
+          range: (index, index + pos + 2),
+          replacement: url.to_asset_url_in_js()?,
+        })
       });
 
       let magic_string =
@@ -173,7 +177,7 @@ impl ViteCSSPostPlugin {
     css_chunk: String,
     is_pure_css_chunk: bool,
     magic_string: &mut Option<MagicString<'a>>,
-  ) -> anyhow::Result<()> {
+  ) -> SingleBuildResult<()> {
     if css_chunk.is_empty() {
       return Ok(());
     }
@@ -266,16 +270,17 @@ impl ViteCSSPostPlugin {
               &RE_UMD
             };
             let Some(m) = regex.find(&ctx.args.code) else {
-              return Err(anyhow::anyhow!("Injection point for inlined CSS not found"));
+              return Err(anyhow::anyhow!("Injection point for inlined CSS not found"))?;
             };
             m.end()
           }
           OutputFormat::Cjs => {
-            return Err(anyhow::anyhow!("CJS format is not supported for CSS injection"));
+            return Err(anyhow::anyhow!("CJS format is not supported for CSS injection"))?;
           }
         };
 
-        let content = serde_json::to_string(&self.finalize_css(css_chunk).await?)?;
+        let content =
+          serde_json::to_string(&self.finalize_css(css_chunk).await?).map_err_to_unhandleable()?;
         let env =
           RenderAssetUrlInJsEnv { ctx, env: ctx.env, code: &content, is_worker: self.is_worker };
 
@@ -313,7 +318,7 @@ impl ViteCSSPostPlugin {
     css_chunk: String,
     css_asset_name: &str,
     css_file_names: &AssetFilenamesOutputOption,
-  ) -> anyhow::Result<String> {
+  ) -> SingleBuildResult<String> {
     let css_asset_dirname = if self.url_base.is_empty() || self.url_base == "./" {
       Some(self.get_css_asset_dir_name(css_asset_name, css_file_names).await?)
     } else {
@@ -413,7 +418,7 @@ impl ViteCSSPostPlugin {
     Ok(if let Some(magic_string) = magic_string { magic_string.to_string() } else { css_chunk })
   }
 
-  pub async fn finalize_css(&self, mut content: String) -> anyhow::Result<String> {
+  pub async fn finalize_css(&self, mut content: String) -> SingleBuildResult<String> {
     // hoist external @imports and @charset to the top of the CSS chunk per spec (#1845 and #6333)
     if content.contains("@import") || content.contains("@charset") {
       content = Self::hoist_at_rules(&content);
@@ -463,7 +468,7 @@ impl ViteCSSPostPlugin {
     &self,
     css_asset_name: &str,
     css_file_names: &AssetFilenamesOutputOption,
-  ) -> anyhow::Result<String> {
+  ) -> SingleBuildResult<String> {
     match css_file_names {
       AssetFilenamesOutputOption::String(css_file_names) => {
         let assets_dir = if css_file_names.is_empty() {
@@ -534,7 +539,7 @@ impl ViteCSSPostPlugin {
     &self,
     ctx: &PluginContext,
     bundle: &mut [Output],
-  ) -> anyhow::Result<()> {
+  ) -> SingleBuildResult<()> {
     if !self.css_code_split && !self.has_emitted.load(Ordering::Relaxed) {
       fn collect(
         ctx: &PluginContext,

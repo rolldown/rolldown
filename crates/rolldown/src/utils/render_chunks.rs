@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use anyhow::Result;
 use arcstr::ArcStr;
 use futures::future::try_join_all;
 use rolldown_common::{
   InsChunkIdx, InstantiationKind, RollupRenderedChunk, SharedNormalizedBundlerOptions,
 };
+use rolldown_error::{BuildDiagnostic, SingleBuildResult};
 use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
 use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
 use rustc_hash::FxHashMap;
@@ -17,7 +17,7 @@ pub async fn render_chunks(
   plugin_driver: &SharedPluginDriver,
   assets: &mut IndexInstantiatedChunks,
   options: &SharedNormalizedBundlerOptions,
-) -> Result<()> {
+) -> SingleBuildResult<()> {
   let chunks = Arc::new(
     assets
       .iter()
@@ -48,7 +48,7 @@ pub async fn render_chunks(
         return Ok(Some((index.into(), render_chunk_ret)));
       }
 
-      Ok::<Option<(InsChunkIdx, (String, Vec<SourceMap>))>, anyhow::Error>(None)
+      Ok::<Option<(InsChunkIdx, (String, Vec<SourceMap>))>, BuildDiagnostic>(None)
     }
   }))
   .await?;

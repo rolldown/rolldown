@@ -1,4 +1,5 @@
 use derive_more::Debug;
+use rolldown_error::BuildDiagnostic;
 use rustc_hash::{FxBuildHasher, FxHashSet};
 use std::{collections::HashSet, sync::Arc};
 
@@ -61,7 +62,9 @@ pub struct BindingModuleSideEffectsRule {
 }
 
 impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
-  fn try_from(value: BindingTreeshake) -> anyhow::Result<Self> {
+  type Error = BuildDiagnostic;
+
+  fn try_from(value: BindingTreeshake) -> Result<Self, Self::Error> {
     let module_side_effects = match value.module_side_effects {
       Either4::A(value) => ModuleSideEffects::Boolean(value),
       Either4::B(rules) => ModuleSideEffects::IdSet(rules),
@@ -84,9 +87,7 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
         ModuleSideEffects::Function(Arc::new(move |id: &str, is_external: bool| {
           let id = id.to_string();
           let ts_fn = Arc::clone(&ts_fn);
-          Box::pin(async move {
-            ts_fn.invoke_async((id.clone(), is_external).into()).await.map_err(anyhow::Error::from)
-          })
+          Box::pin(async move { ts_fn.invoke_async((id.clone(), is_external).into()).await })
         }))
       }
     };
@@ -111,6 +112,4 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
       property_write_side_effects,
     }))
   }
-
-  type Error = anyhow::Error;
 }

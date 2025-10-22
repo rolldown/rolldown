@@ -6,7 +6,7 @@ use oxc::semantic::{ScopeId, SymbolId};
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_debug::{action, trace_action, trace_action_enabled};
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_std_utils::OptionExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -273,7 +273,7 @@ impl<'a> GenerateStage<'a> {
       async move {
         if let Some(name) = &chunk.name {
           let name = sanitize_filename.call(name).await?;
-          return anyhow::Ok((name.clone(), name));
+          return Ok::<_, BuildDiagnostic>((name.clone(), name));
         }
         match chunk.kind {
           ChunkKind::EntryPoint { module: entry_module_id, meta, .. } => {

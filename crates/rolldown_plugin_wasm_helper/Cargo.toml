@@ -17,6 +17,7 @@ doctest = false
 workspace = true
 
 [dependencies]
+anyhow = { workspace = true, features = ["std"] }
 arcstr = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }

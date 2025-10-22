@@ -86,16 +86,12 @@ impl From<BindingAssetPluginConfig> for AssetPlugin {
           let filename = filename.to_string();
           let config = config.into();
           Box::pin(async move {
-            render_built_url
-              .await_call((filename, config).into())
-              .await
-              .map(|v| {
-                v.map(|v| match v {
-                  Either::A(v) => itertools::Either::Left(v),
-                  Either::B(v) => itertools::Either::Right(v.into()),
-                })
+            render_built_url.await_call((filename, config).into()).await.map(|v| {
+              v.map(|v| match v {
+                Either::A(v) => itertools::Either::Left(v),
+                Either::B(v) => itertools::Either::Right(v.into()),
               })
-              .map_err(anyhow::Error::from)
+            })
           })
         })
       }),

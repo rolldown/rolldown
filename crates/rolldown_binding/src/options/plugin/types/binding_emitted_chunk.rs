@@ -1,3 +1,5 @@
+use rolldown_error::BuildDiagnostic;
+
 use crate::types::preserve_entry_signatures::BindingPreserveEntrySignatures;
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -11,7 +13,8 @@ pub struct BindingEmittedChunk {
 }
 
 impl TryFrom<BindingEmittedChunk> for rolldown_common::EmittedChunk {
-  type Error = napi::Error;
+  type Error = BuildDiagnostic;
+
   fn try_from(value: BindingEmittedChunk) -> Result<Self, Self::Error> {
     Ok(Self {
       name: value.name.map(Into::into),

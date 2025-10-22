@@ -1,12 +1,13 @@
 use napi::Either;
 use rolldown_common::ResolvedExternal;
+use rolldown_error::BuildDiagnostic;
 
 #[derive(Debug)]
 #[napi_derive::napi(transparent)]
 pub struct BindingResolvedExternal(Either<bool, String>);
 
 impl TryFrom<BindingResolvedExternal> for ResolvedExternal {
-  type Error = napi::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(value: BindingResolvedExternal) -> Result<Self, Self::Error> {
     Ok(match value.0 {
@@ -15,10 +16,10 @@ impl TryFrom<BindingResolvedExternal> for ResolvedExternal {
         "absolute" => Self::Absolute,
         "relative" => Self::Relative,
         _ => {
-          return Err(napi::Error::new(
+          return Err(BuildDiagnostic::napi_error(napi::Error::new(
             napi::Status::InvalidArg,
             format!("Invalid string option: {s}"),
-          ));
+          )));
         }
       },
     })

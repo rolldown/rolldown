@@ -11,7 +11,6 @@ use crate::{
     hook_write_bundle_args::HookWriteBundleArgs,
   },
 };
-use anyhow::Ok;
 use rolldown_common::{ModuleInfo, NormalModule, RollupRenderedChunk, WatcherChangeKind};
 
 pub use crate::plugin::HookAugmentChunkHashReturn;

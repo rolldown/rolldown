@@ -1,12 +1,12 @@
 use std::sync::Arc;
 use std::sync::mpsc::Sender;
 
-use anyhow::Result;
 use rolldown_common::ModuleType;
 use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
   ModuleIdx, ResolvedId, SourcemapChainElement, side_effects::HookSideEffects,
 };
+use rolldown_error::SingleBuildResult;
 use rolldown_plugin::PluginDriver;
 
 #[inline]
@@ -21,7 +21,7 @@ pub async fn transform_source(
   side_effects: &mut Option<HookSideEffects>,
   module_type: &mut ModuleType,
   magic_string_tx: Option<Arc<Sender<SourceMapGenMsg>>>,
-) -> Result<String> {
+) -> SingleBuildResult<String> {
   plugin_driver
     .transform(
       &resolved_id.id,

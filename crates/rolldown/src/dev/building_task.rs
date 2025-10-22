@@ -41,7 +41,7 @@ impl BundlingTask {
     tracing::trace!("Start running bundling task: {:#?}", self.input);
     if let Err(err) = self.run_inner().await {
       // FIXME: Should handle the error properly.
-      eprintln!("Build error: {err}"); // FIXME: handle this error
+      eprintln!("Build error: {err:?}"); // FIXME: handle this error
     }
 
     let mut build_state = self.dev_context.state.lock().await;

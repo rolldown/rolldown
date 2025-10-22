@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use napi::bindgen_prelude::FnArgs;
+use rolldown_error::BuildDiagnostic;
 use rolldown_plugin_vite_css::{CompileCSSResult, UrlResolver, ViteCSSPlugin};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -34,7 +35,7 @@ impl BindingUrlResolver {
     url: String,
     importer: Option<String>,
   ) -> napi::Result<(String, Option<String>)> {
-    (self.inner)(url, importer).await.map_err(napi::Error::from)
+    Ok((self.inner)(url, importer).await?)
   }
 }
 
@@ -47,7 +48,7 @@ pub struct BindingCompileCSSResult {
 }
 
 impl TryFrom<BindingCompileCSSResult> for CompileCSSResult {
-  type Error = anyhow::Error;
+  type Error = BuildDiagnostic;
 
   fn try_from(value: BindingCompileCSSResult) -> Result<Self, Self::Error> {
     Ok(Self {
@@ -93,7 +94,6 @@ impl From<BindingViteCSSPluginConfig> for ViteCSSPlugin {
           compile_css
             .await_call((url, importer, BindingUrlResolver::new(url_resolver)).into())
             .await
-            .map_err(anyhow::Error::from)
             .and_then(TryInto::try_into)
         })
       }),
@@ -101,9 +101,7 @@ impl From<BindingViteCSSPluginConfig> for ViteCSSPlugin {
         let url = url.to_string();
         let importer = importer.map(String::from);
         let resolve_url = Arc::clone(&value.resolve_url);
-        Box::pin(async move {
-          resolve_url.await_call((url, importer).into()).await.map_err(anyhow::Error::from)
-        })
+        Box::pin(async move { resolve_url.await_call((url, importer).into()).await })
       }),
       asset_inline_limit: value.asset_inline_limit.into(),
     }

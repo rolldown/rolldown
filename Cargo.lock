@@ -3080,6 +3080,7 @@ dependencies = [
 name = "rolldown_plugin_asset"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "arcstr",
  "cow-utils",
  "derive_more",
@@ -3114,6 +3115,7 @@ version = "0.1.0"
 dependencies = [
  "arcstr",
  "rolldown_common",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_utils",
  "rustc-hash",
@@ -3128,6 +3130,7 @@ dependencies = [
  "arcstr",
  "base64-simd",
  "rolldown_common",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_utils",
  "simdutf8",
@@ -3144,6 +3147,7 @@ dependencies = [
  "derive_more",
  "memchr",
  "oxc",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_utils",
  "sugar_path",
@@ -3203,6 +3207,7 @@ dependencies = [
 name = "rolldown_plugin_json"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "memchr",
  "rolldown_common",
  "rolldown_plugin",
@@ -3224,11 +3229,11 @@ dependencies = [
 name = "rolldown_plugin_manifest"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "arcstr",
  "cow-utils",
  "derive_more",
  "rolldown_common",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_utils",
  "rustc-hash",
@@ -3326,6 +3331,7 @@ dependencies = [
  "memchr",
  "percent-encoding",
  "rolldown_common",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_sourcemap",
  "rolldown_utils",
@@ -3341,6 +3347,7 @@ dependencies = [
  "anyhow",
  "base64-simd",
  "derive_more",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_sourcemap",
@@ -3360,6 +3367,7 @@ dependencies = [
  "derive_more",
  "regex",
  "rolldown_common",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_utils",
@@ -3382,6 +3390,7 @@ dependencies = [
  "oxc",
  "regex",
  "rolldown_common",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_utils",
@@ -3404,6 +3413,7 @@ dependencies = [
  "owo-colors",
  "oxc_resolver",
  "rolldown_common",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_utils",
@@ -3427,6 +3437,7 @@ dependencies = [
 name = "rolldown_plugin_wasm_helper"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "arcstr",
  "rolldown_common",
  "rolldown_plugin",
@@ -3452,6 +3463,7 @@ dependencies = [
  "itertools",
  "oxc_resolver",
  "rolldown_common",
+ "rolldown_error",
  "rolldown_fs",
  "rolldown_utils",
  "sugar_path",

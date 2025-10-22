@@ -57,7 +57,7 @@ impl From<BindingViteCSSPostPluginConfig> for ViteCSSPostPlugin {
       is_legacy: value.is_legacy.map(|cb| -> Arc<IsLegacyFn> {
         Arc::new(move || {
           let is_legacy_fn = Arc::clone(&cb);
-          Box::pin(async move { is_legacy_fn.invoke_async(()).await.map_err(anyhow::Error::from) })
+          Box::pin(async move { is_legacy_fn.invoke_async(()).await })
         })
       }),
       render_built_url: value.render_built_url.map(|render_built_url| -> Arc<RenderBuiltUrl> {
@@ -66,23 +66,19 @@ impl From<BindingViteCSSPostPluginConfig> for ViteCSSPostPlugin {
           let filename = filename.to_string();
           let config = config.into();
           Box::pin(async move {
-            render_built_url
-              .await_call((filename, config).into())
-              .await
-              .map(|v| {
-                v.map(|v| match v {
-                  Either::A(v) => itertools::Either::Left(v),
-                  Either::B(v) => itertools::Either::Right(v.into()),
-                })
+            render_built_url.await_call((filename, config).into()).await.map(|v| {
+              v.map(|v| match v {
+                Either::A(v) => itertools::Either::Left(v),
+                Either::B(v) => itertools::Either::Right(v.into()),
               })
-              .map_err(anyhow::Error::from)
+            })
           })
         })
       }),
       css_minify: value.css_minify.map(|css_minify| -> Arc<CSSMinifyFn> {
         Arc::new(move |css: String| {
           let css_minify = Arc::clone(&css_minify);
-          Box::pin(async move { css_minify.await_call(css).await.map_err(anyhow::Error::from) })
+          Box::pin(async move { css_minify.await_call(css).await })
         })
       }),
       has_emitted: AtomicBool::default(),

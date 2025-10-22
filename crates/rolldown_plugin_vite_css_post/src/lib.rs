@@ -11,6 +11,7 @@ use std::{
 
 use cow_utils::CowUtils;
 use rolldown_common::{ModuleType, Output, StrOrBytes, side_effects::HookSideEffects};
+use rolldown_error::{ResultExt, SingleBuildResult};
 use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plugin};
 use rolldown_plugin_utils::{
   RenderBuiltUrl, ToOutputFilePathEnv,
@@ -24,10 +25,10 @@ use rolldown_utils::{url::clean_url, xxhash::xxhash_with_base};
 use string_wizard::SourceMapOptions;
 
 pub type IsLegacyFn =
-  dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send>> + Send + Sync;
+  dyn Fn() -> Pin<Box<dyn Future<Output = SingleBuildResult<bool>> + Send>> + Send + Sync;
 
 pub type CSSMinifyFn =
-  dyn Fn(String) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send>> + Send + Sync;
+  dyn Fn(String) -> Pin<Box<dyn Future<Output = SingleBuildResult<String>> + Send>> + Send + Sync;
 
 #[expect(clippy::struct_excessive_bools)]
 #[derive(derive_more::Debug, Default)]
@@ -91,7 +92,7 @@ impl Plugin for ViteCSSPostPlugin {
         css = Cow::Owned(css.cow_replace('"', "&quot;").into_owned());
       }
       let Some(index) = utils::extract_index(args.id) else {
-        return Err(anyhow::anyhow!("HTML proxy index in '{}' not found", args.id));
+        Err(anyhow::anyhow!("HTML proxy index in '{}' not found", args.id))?
       };
 
       let hash = xxhash_with_base(clean_url(args.id).as_bytes(), 16);
@@ -118,12 +119,15 @@ impl Plugin for ViteCSSPostPlugin {
       if let Some(ref css_minify) = self.css_minify {
         css = Cow::Owned(css_minify(css.into_owned()).await?);
       }
-      rolldown_utils::concat_string!("export default ", serde_json::to_string(&css)?)
+      rolldown_utils::concat_string!(
+        "export default ",
+        serde_json::to_string(&css).map_err_to_unhandleable()?
+      )
     } else {
       let styles = ctx.meta().get::<CSSStyles>().expect("CSSStyles missing");
       styles.inner.insert(args.id.to_string(), css.into_owned());
       if let Some(modules) = modules {
-        let data = serde_json::to_value(&*modules)?;
+        let data = serde_json::to_value(&*modules).map_err_to_unhandleable()?;
         data_to_esm(&data, true)
       } else {
         String::new()

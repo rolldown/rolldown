@@ -1,8 +1,7 @@
-use crate::HookNoopReturn;
-use crate::PluginDriver;
-use anyhow::Context;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::CausedPlugin;
+
+use crate::{HookNoopReturn, PluginDriver};
 
 impl PluginDriver {
   pub async fn watch_change(&self, path: &str, event: WatcherChangeKind) -> HookNoopReturn {
@@ -11,7 +10,7 @@ impl PluginDriver {
       plugin
         .call_watch_change(ctx, path, event)
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?;
     }
     Ok(())
   }
@@ -23,7 +22,7 @@ impl PluginDriver {
       plugin
         .call_close_watcher(ctx)
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?;
     }
     Ok(())
   }

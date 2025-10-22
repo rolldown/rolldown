@@ -1,10 +1,11 @@
 use derive_more::Debug;
+use rolldown_error::SingleBuildResult;
 use std::{future::Future, pin::Pin, sync::Arc};
 
 use arcstr::ArcStr;
 use rolldown_utils::sanitize_filename::default_sanitize_file_name;
 
-type SanitizeFileNameFunction = dyn Fn(&str) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + 'static>>
+type SanitizeFileNameFunction = dyn Fn(&str) -> Pin<Box<dyn Future<Output = SingleBuildResult<String>> + Send + 'static>>
   + Send
   + Sync;
 
@@ -23,7 +24,7 @@ impl Default for SanitizeFilename {
 }
 
 impl SanitizeFilename {
-  pub async fn call(&self, name: &str) -> anyhow::Result<ArcStr> {
+  pub async fn call(&self, name: &str) -> SingleBuildResult<ArcStr> {
     match self {
       Self::Boolean(value) => {
         if *value {

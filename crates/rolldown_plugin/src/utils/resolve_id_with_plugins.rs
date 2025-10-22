@@ -5,6 +5,7 @@ use crate::{
 use rolldown_common::{
   ImportKind, ModuleDefFormat, PackageJson, ResolvedId, is_existing_node_builtin_modules,
 };
+use rolldown_error::SingleBuildResult;
 use rolldown_resolver::{ResolveError, Resolver};
 use std::{path::Path, sync::Arc};
 use sugar_path::SugarPath;
@@ -61,7 +62,7 @@ pub async fn resolve_id_with_plugins(
   skipped_resolve_calls: Option<Vec<Arc<HookResolveIdSkipped>>>,
   custom: Arc<CustomField>,
   is_user_defined_entry: bool,
-) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
+) -> SingleBuildResult<Result<ResolvedId, ResolveError>> {
   if matches!(import_kind, ImportKind::DynamicImport) {
     if let Some(r) = plugin_driver
       .resolve_dynamic_import(

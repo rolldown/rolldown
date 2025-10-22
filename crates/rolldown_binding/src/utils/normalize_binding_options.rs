@@ -62,10 +62,7 @@ fn normalize_addon_option(
     AddonOutputOption::Fn(Arc::new(move |chunk| {
       let fn_js = Arc::clone(&value);
       Box::pin(async move {
-        fn_js
-          .await_call(FnArgs { data: (BindingRenderedChunk::new(chunk),) })
-          .await
-          .map_err(anyhow::Error::from)
+        fn_js.await_call(FnArgs { data: (BindingRenderedChunk::new(chunk),) }).await
       })
     }))
   })
@@ -80,9 +77,7 @@ fn normalize_chunk_file_names_option(
       Either::B(func) => Ok(ChunkFilenamesOutputOption::Fn(Arc::new(move |chunk| {
         let func = Arc::clone(&func);
         let chunk = (chunk.clone().into(),);
-        Box::pin(async move {
-          func.invoke_async(FnArgs { data: chunk }).await.map_err(anyhow::Error::from)
-        })
+        Box::pin(async move { func.invoke_async(FnArgs { data: chunk }).await })
       }))),
     })
     .transpose()
@@ -97,9 +92,7 @@ fn normalize_sanitize_filename(
       Either::B(func) => Ok(SanitizeFilename::Fn(Arc::new(move |name| {
         let func = Arc::clone(&func);
         let name = name.to_string();
-        Box::pin(async move {
-          func.invoke_async(FnArgs { data: (name,) }).await.map_err(anyhow::Error::from)
-        })
+        Box::pin(async move { func.invoke_async(FnArgs { data: (name,) }).await })
       }))),
     })
     .transpose()
@@ -114,9 +107,7 @@ fn normalize_asset_file_names_option(
       Either::B(func) => Ok(AssetFilenamesOutputOption::Fn(Arc::new(move |asset| {
         let func = Arc::clone(&func);
         let asset = (asset.clone().into(),);
-        Box::pin(async move {
-          func.invoke_async(FnArgs { data: asset }).await.map_err(anyhow::Error::from)
-        })
+        Box::pin(async move { func.invoke_async(FnArgs { data: asset }).await })
       }))),
     })
     .transpose()
@@ -130,7 +121,7 @@ fn normalize_globals_option(
     Either::B(func) => rolldown_common::GlobalsOutputOption::Fn(Arc::new(move |name| {
       let func = Arc::clone(&func);
       let name = name.to_string();
-      Box::pin(async move { func.invoke_async((name,).into()).await.map_err(anyhow::Error::from) })
+      Box::pin(async move { func.invoke_async((name,).into()).await })
     })),
   })
 }
@@ -143,7 +134,7 @@ fn normalize_paths_option(
     Either::B(func) => rolldown_common::PathsOutputOption::Fn(Arc::new(move |id| {
       let func = Arc::clone(&func);
       let id = id.to_string();
-      func.invoke_sync((id,).into()).map_err(anyhow::Error::from)
+      func.invoke_sync((id,).into())
     })),
   })
 }
@@ -167,10 +158,7 @@ pub fn normalize_binding_options(
         let importer = importer.map(ToString::to_string);
         let is_external = Arc::clone(&is_external);
         Box::pin(async move {
-          is_external
-            .invoke_async((source.to_string(), importer, is_resolved).into())
-            .await
-            .map_err(anyhow::Error::from)
+          is_external.invoke_async((source.to_string(), importer, is_resolved).into()).await
         })
       })))
     }
@@ -180,13 +168,9 @@ pub fn normalize_binding_options(
     DeferSyncScanDataOption::new(move || {
       let ts_fn = Arc::clone(&ts_fn);
       Box::pin(async move {
-        ts_fn
-          .invoke_async(())
-          .await
-          .and_then(|ret| {
-            ret.into_iter().map(TryInto::try_into).collect::<Result<Vec<DeferSyncScanData>, _>>()
-          })
-          .map_err(anyhow::Error::from)
+        ts_fn.invoke_async(()).await.and_then(|ret| {
+          ret.into_iter().map(TryInto::try_into).collect::<Result<Vec<DeferSyncScanData>, _>>()
+        })
       })
     })
   });
@@ -201,9 +185,7 @@ pub fn normalize_binding_options(
         let ts_fn = Arc::clone(&ts_fn);
         let source = source.to_string();
         let sourcemap_path = sourcemap_path.to_string();
-        Box::pin(async move {
-          ts_fn.invoke_async((source, sourcemap_path).into()).await.map_err(anyhow::Error::from)
-        })
+        Box::pin(async move { ts_fn.invoke_async((source, sourcemap_path).into()).await })
       }))
     }
   });
@@ -213,29 +195,23 @@ pub fn normalize_binding_options(
       let ts_fn = Arc::clone(&ts_fn);
       let source = source.to_string();
       let sourcemap_path = sourcemap_path.to_string();
-      Box::pin(async move {
-        ts_fn.invoke_async((source, sourcemap_path).into()).await.map_err(anyhow::Error::from)
-      })
+      Box::pin(async move { ts_fn.invoke_async((source, sourcemap_path).into()).await })
     }))
   });
 
   let invalidate_js_side_cache = input_options.invalidate_js_side_cache.map(|ts_fn| {
     rolldown::InvalidateJsSideCache::new(Arc::new(move || {
       let ts_fn = Arc::clone(&ts_fn);
-      Box::pin(async move { ts_fn.invoke_async(()).await.map_err(anyhow::Error::from) })
+      Box::pin(async move { ts_fn.invoke_async(()).await })
     }))
   });
 
   let on_log = input_options.on_log.map(|ts_fn| {
     rolldown::OnLog::new(Arc::new(move |level, log| {
       let ts_fn = Arc::clone(&ts_fn);
-      Box::pin(async move {
-        ts_fn
-          .invoke_async((level.to_string(), log.into()).into())
-          .await?
-          .await
-          .map_err(anyhow::Error::from)
-      })
+      Box::pin(
+        async move { ts_fn.invoke_async((level.to_string(), log.into()).into()).await?.await },
+      )
     }))
   });
 
@@ -402,7 +378,6 @@ pub fn normalize_binding_options(
                     func
                       .invoke_async((module_id, BindingChunkingContext::new(owned_ctx)).into())
                       .await
-                      .map_err(anyhow::Error::from)
                   })
                 }))
               }
@@ -414,9 +389,7 @@ pub fn normalize_binding_options(
               Either::B(func) => rolldown::MatchGroupTest::Function(Arc::new(move |id: &str| {
                 let id = id.to_string();
                 let func = Arc::clone(&func);
-                Box::pin(async move {
-                  func.invoke_async((id,).into()).await.map_err(anyhow::Error::from)
-                })
+                Box::pin(async move { func.invoke_async((id,).into()).await })
               })),
             }),
             priority: item.priority,

@@ -20,6 +20,7 @@ arcstr = { workspace = true }
 cow-utils = { workspace = true }
 derive_more = { workspace = true }
 rolldown_common = { workspace = true }
+rolldown_error = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }

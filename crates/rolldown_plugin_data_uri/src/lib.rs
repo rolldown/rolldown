@@ -2,6 +2,7 @@ use std::borrow::Cow;
 
 use arcstr::ArcStr;
 use rolldown_common::ModuleType;
+use rolldown_error::ResultExt as _;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookUsage, Plugin, PluginContext,
@@ -46,13 +47,15 @@ impl Plugin for DataUriPlugin {
         }
       };
 
-      let data = if parsed.is_base64 {
-        let data = base64_simd::STANDARD.decode_to_vec(parsed.data)?;
-        simdutf8::basic::from_utf8(&data)?;
-        // SAFETY: `data` is valid utf8
-        unsafe { String::from_utf8_unchecked(data) }.into()
-      } else {
-        urlencoding::decode(parsed.data)?.as_ref().into()
+      let data = {
+        if parsed.is_base64 {
+          let data = base64_simd::STANDARD.decode_to_vec(parsed.data).map_err_to_unhandleable()?;
+          simdutf8::basic::from_utf8(&data).map_err_to_unhandleable()?;
+          // SAFETY: `data` is valid utf8
+          unsafe { String::from_utf8_unchecked(data) }.into()
+        } else {
+          urlencoding::decode(parsed.data).map_err_to_unhandleable()?.as_ref().into()
+        }
       };
 
       self

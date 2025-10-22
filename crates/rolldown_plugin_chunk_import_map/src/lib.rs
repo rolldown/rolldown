@@ -6,6 +6,7 @@ use std::{
 
 use arcstr::ArcStr;
 use rolldown_common::{EmittedAsset, Output};
+use rolldown_error::ResultExt as _;
 use rolldown_plugin::{HookRenderChunkOutput, HookUsage, Plugin};
 use rolldown_utils::{
   dashmap::FxDashMap,
@@ -126,10 +127,11 @@ impl Plugin for ChunkImportMapPlugin {
         file_name: Some(
           self.file_name.as_ref().map_or(arcstr::literal!("importmap.json"), ArcStr::from),
         ),
-        source: (serde_json::to_string_pretty(
-          &serde_json::json!({ "imports": chunk_import_map }),
-        )?)
-        .into(),
+        source: {
+          serde_json::to_string_pretty(&serde_json::json!({ "imports": chunk_import_map }))
+            .map_err_to_unhandleable()?
+            .into()
+        },
         ..Default::default()
       })
       .await?;

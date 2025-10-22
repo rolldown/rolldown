@@ -3,6 +3,7 @@ mod utils;
 use std::{borrow::Cow, collections::BTreeMap, path::Path, pin::Pin, sync::Arc};
 
 use rolldown_common::{EmittedAsset, Output};
+use rolldown_error::ResultExt as _;
 use rolldown_plugin::{HookNoopReturn, HookUsage, Plugin, PluginContext};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::FxHashSet;
@@ -104,7 +105,7 @@ impl Plugin for ManifestPlugin {
     ctx
       .emit_file_async(EmittedAsset {
         file_name: Some(self.out_path.as_str().into()),
-        source: (serde_json::to_string_pretty(&manifest)?).into(),
+        source: { serde_json::to_string_pretty(&manifest).map_err_to_unhandleable()?.into() },
         ..Default::default()
       })
       .await?;

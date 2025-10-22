@@ -2,9 +2,10 @@ use std::sync::Arc;
 use std::{future::Future, pin::Pin};
 
 use derive_more::Debug;
+use rolldown_error::SingleBuildResult;
 
 pub type InvalidateJsSideCacheFn =
-  dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + 'static>> + Send + Sync;
+  dyn Fn() -> Pin<Box<dyn Future<Output = SingleBuildResult<()>> + Send + 'static>> + Send + Sync;
 
 #[derive(Clone, Debug)]
 #[debug("InvalidateJsSideCacheFn::Fn(...)")]
@@ -15,7 +16,7 @@ impl InvalidateJsSideCache {
     Self(f)
   }
 
-  pub async fn call(&self) -> anyhow::Result<()> {
+  pub async fn call(&self) -> SingleBuildResult<()> {
     self.0().await
   }
 }

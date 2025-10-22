@@ -6,6 +6,7 @@ use arcstr::ArcStr;
 use rolldown_common::{
   ImportKind, MakeAbsoluteExternalsRelative, NormalizedBundlerOptions, ResolvedExternal, ResolvedId,
 };
+use rolldown_error::SingleBuildResult;
 use rolldown_resolver::{ResolveError, Resolver};
 use std::{path::Path, sync::Arc};
 use sugar_path::SugarPath;
@@ -26,7 +27,7 @@ pub async fn resolve_id_check_external(
   custom: Arc<CustomField>,
   is_user_defined_entry: bool,
   bundle_options: &NormalizedBundlerOptions,
-) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
+) -> SingleBuildResult<Result<ResolvedId, ResolveError>> {
   // Check external with unresolved path
   if bundle_options.external.call(specifier, importer, false).await? {
     return Ok(Ok(resolve_external(bundle_options, specifier, importer, true).await?.unwrap()));
@@ -98,7 +99,7 @@ async fn resolve_external(
   specifier: &str,
   importer: Option<&str>,
   is_external: bool,
-) -> anyhow::Result<Option<ResolvedId>> {
+) -> SingleBuildResult<Option<ResolvedId>> {
   let id = if options.make_absolute_externals_relative.is_enabled() {
     normalize_relative_external_id(&options.cwd, specifier, importer)
   } else {

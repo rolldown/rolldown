@@ -8,7 +8,7 @@ use oxc::{
   isolated_declarations::{IsolatedDeclarations, IsolatedDeclarationsOptions},
 };
 use rolldown_common::{ModuleType, ResolvedExternal};
-use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, Severity};
+use rolldown_error::{BuildDiagnostic, Severity};
 use rolldown_plugin::{HookUsage, Plugin, PluginHookMeta, PluginOrder};
 use rolldown_utils::stabilize_id::stabilize_id;
 use sugar_path::SugarPath;
@@ -39,7 +39,10 @@ impl Plugin for IsolatedDeclarationPlugin {
       });
 
       for specifier in type_import_specifiers {
-        let resolved_id = ctx.resolve(&specifier, Some(args.id), None).await??;
+        let resolved_id = {
+          use rolldown_error::ResultExt;
+          ctx.resolve(&specifier, Some(args.id), None).await?.map_err_to_unhandleable()?
+        };
         if matches!(resolved_id.external, ResolvedExternal::Bool(false)) {
           ctx.load(&resolved_id.id, None, resolved_id.module_def_format).await?;
         }
@@ -54,12 +57,14 @@ impl Plugin for IsolatedDeclarationPlugin {
       });
 
       if !ret.errors.is_empty() {
-        return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
+        let diagnostics = BuildDiagnostic::from_oxc_diagnostics(
           ret.errors,
           &ArcStr::from(ret.program.source_text),
           &stabilize_id(args.id, ctx.cwd()),
           &Severity::Error,
-        )))?;
+        );
+        // Return the first diagnostic as SingleBuildResult only accepts one error
+        return Err(diagnostics.into_iter().next().expect("errors is not empty"));
       }
 
       let codegen_ret = Codegen::new().build(&ret.program);

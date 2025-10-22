@@ -2,10 +2,11 @@ use std::sync::Arc;
 use std::{future::Future, pin::Pin};
 
 use derive_more::Debug;
+use rolldown_error::SingleBuildResult;
 
 use super::log_level::LogLevel;
 
-pub type OnLogFn = dyn Fn(LogLevel, Log) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + 'static>>
+pub type OnLogFn = dyn Fn(LogLevel, Log) -> Pin<Box<dyn Future<Output = SingleBuildResult<()>> + Send + 'static>>
   + Send
   + Sync;
 
@@ -18,7 +19,7 @@ impl OnLog {
     Self(f)
   }
 
-  pub async fn call(&self, log_level: LogLevel, log: Log) -> anyhow::Result<()> {
+  pub async fn call(&self, log_level: LogLevel, log: Log) -> SingleBuildResult<()> {
     self.0(log_level, log).await
   }
 }

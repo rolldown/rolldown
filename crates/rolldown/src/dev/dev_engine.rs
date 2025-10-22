@@ -18,12 +18,12 @@ use tokio::sync::{Mutex, mpsc::unbounded_channel};
 use crate::{
   Bundler, BundlerBuilder,
   dev::{
-    SharedClients,
+    DevOptions, SharedClients,
     build_driver::{BuildDriver, SharedBuildDriver},
     build_driver_service::{BuildDriverService, BuildMessage},
     build_state_machine::BuildStateMachine,
     dev_context::{DevContext, PinBoxSendStaticFuture, SharedDevContext},
-    dev_options::{DevOptions, normalize_dev_options},
+    normalize_dev_options,
     types::{client_session::ClientSession, task_input::TaskInput},
   },
 };

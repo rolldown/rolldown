@@ -28,7 +28,6 @@ arcstr = { workspace = true }
 bitflags = { workspace = true }
 commondir = { workspace = true }
 css-module-lexer = { workspace = true }
-derive_more = { workspace = true }
 dunce = { workspace = true }
 futures = { workspace = true }
 indexmap = { workspace = true }
@@ -46,6 +45,7 @@ rayon = { workspace = true }
 rolldown-notify = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_debug = { workspace = true }
+rolldown_dev_common = { workspace = true }
 rolldown_ecmascript = { workspace = true }
 rolldown_ecmascript_utils = { workspace = true }
 rolldown_error = { workspace = true }

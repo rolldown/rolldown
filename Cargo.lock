@@ -2766,7 +2766,6 @@ dependencies = [
  "bitflags 2.9.4",
  "commondir",
  "css-module-lexer",
- "derive_more",
  "dunce",
  "futures",
  "glob",
@@ -2786,6 +2785,7 @@ dependencies = [
  "rolldown-notify",
  "rolldown_common",
  "rolldown_debug",
+ "rolldown_dev_common",
  "rolldown_ecmascript",
  "rolldown_ecmascript_utils",
  "rolldown_error",
@@ -2982,6 +2982,15 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "ts-rs",
+]
+
+[[package]]
+name = "rolldown_dev_common"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "rolldown_common",
+ "rolldown_error",
 ]
 
 [[package]]

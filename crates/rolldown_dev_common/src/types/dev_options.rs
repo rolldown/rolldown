@@ -3,34 +3,15 @@ use rolldown_common::ClientHmrUpdate;
 use rolldown_error::BuildResult;
 use std::sync::Arc;
 
+use super::bundle_output::BundleOutput;
+use super::dev_watch_options::DevWatchOptions;
 use super::rebuild_strategy::RebuildStrategy;
-use crate::types::bundle_output::BundleOutput;
 
 pub type OnHmrUpdatesCallback =
   Arc<dyn Fn(BuildResult<(Vec<ClientHmrUpdate>, Vec<String>)>) + Send + Sync>;
 pub type OnOutputCallback = Arc<dyn Fn(BuildResult<BundleOutput>) + Send + Sync>;
 
 pub type SharedNormalizedDevOptions = Arc<NormalizedDevOptions>;
-
-#[derive(Debug, Default)]
-pub struct DevWatchOptions {
-  /// If `true`, watcher will be disabled.
-  pub disable_watcher: Option<bool>,
-  /// If `true`, files are not written to disk.
-  pub skip_write: Option<bool>,
-  /// If `true`, use polling instead of native file system events for watching
-  pub use_polling: Option<bool>,
-  /// Poll interval in milliseconds (only used when use_polling is true)
-  pub poll_interval: Option<u64>,
-  /// If `true`, use debounced watcher. If `false`, use non-debounced watcher
-  pub use_debounce: Option<bool>,
-  /// Debounce duration in milliseconds (only used when use_debounce is true)
-  pub debounce_duration: Option<u64>,
-  /// Whether to compare file contents for poll-based watchers (only used when use_polling is true)
-  pub compare_contents_for_polling: Option<bool>,
-  /// Tick rate in milliseconds for debounced watchers (only used when use_debounce is true)
-  pub debounce_tick_rate: Option<u64>,
-}
 
 #[derive(Debug, Default)]
 pub struct DevOptions {

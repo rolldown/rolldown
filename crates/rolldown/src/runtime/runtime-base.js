@@ -33,12 +33,25 @@ export var __reExport = (target, mod, secondTarget) => (
   __copyProps(target, mod, 'default'),
   secondTarget && __copyProps(secondTarget, mod, 'default')
 )
+var mergedDefaultExports = /* @__PURE__ */ Symbol()
 export var __toESM = (mod, isNodeMode, target) => (
   target = mod != null ? __create(__getProtoOf(mod)) : {},
   __copyProps(
-    isNodeMode || !mod || !mod.__esModule
+    !mod || !mod.__esModule
       ? __defProp(target, 'default', { value: mod, enumerable: true })
-      : target,
+      : isNodeMode
+        ? __defProp(target, 'default', {
+            value: mergedDefaultExports in mod
+              ? mod[mergedDefaultExports]
+              : (
+                  mod[mergedDefaultExports] =
+                    typeof mod.default === 'object' && mod.default
+                      ? __copyProps(__copyProps(__create(__getProtoOf(mod.default)), mod.default), mod)
+                      : mod
+                ),
+            enumerable: true
+          })
+        : target,
     mod)
 )
 export var __toCommonJS = mod => __copyProps(__defProp({}, '__esModule', { value: true }), mod)

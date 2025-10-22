@@ -46,8 +46,12 @@ export default defineTest({
       		}
       		return to;
       	};
-      	var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
+      	var mergedDefaultExports = /* @__PURE__ */ Symbol();
+      	var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(!mod || !mod.__esModule ? __defProp(target, "default", {
       		value: mod,
+      		enumerable: true
+      	}) : isNodeMode ? __defProp(target, "default", {
+      		value: mergedDefaultExports in mod ? mod[mergedDefaultExports] : mod[mergedDefaultExports] = typeof mod.default === "object" && mod.default ? __copyProps(__copyProps(__create(__getProtoOf(mod.default)), mod.default), mod) : mod,
       		enumerable: true
       	}) : target, mod));
 

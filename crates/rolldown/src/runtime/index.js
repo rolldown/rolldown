@@ -60,20 +60,37 @@ export var __reExport = (target, mod, secondTarget) => (
   secondTarget && __copyProps(secondTarget, mod, 'default')
 )
 
-// Converts the module from CommonJS to ESM. When in node mode (i.e. in an
-// ".mjs" file, package.json has "type: module", or the "__esModule" export
-// in the CommonJS file is falsy or missing), the "default" property is
-// overridden to point to the original CommonJS exports object instead.
+// This is used to cache the merged default exports so that the reference is the same across multiple calls.
+// A symbol property is used instead of a WeakMap for better performance and polyfillability.
+var mergedDefaultExports = /* @__PURE__ */ Symbol()
+
+// Converts the module from CommonJS to ESM.
+// By default, the "default" property points to the original CommonJS exports object.
+// If the module is transpiled from ESM (i.e. the "__esModule" property is truthy) and
+// not in node mode (i.e. in an ".mjs" file, package.json has "type: module"), then the
+// "default" property points to the "default" property of the original CommonJS exports object.
+// If the module is transpiled from ESM and in node mode, then the "default" property
+// points to a coloned copy of the original "default" property of the CommonJS exports object
+// that has all of the named exports copied over as well.
 export var __toESM = (mod, isNodeMode, target) => (
   target = mod != null ? __create(__getProtoOf(mod)) : {},
   __copyProps(
-    // If the importer is in node compatibility mode or this is not an ESM
-    // file that has been converted to a CommonJS file using a Babel-
-    // compatible transform (i.e. "__esModule" has not been set), then set
-    // "default" to the CommonJS "module.exports" for node compatibility.
-    isNodeMode || !mod || !mod.__esModule
+    !mod || !mod.__esModule
       ? __defProp(target, 'default', { value: mod, enumerable: true })
-      : target,
+      : isNodeMode
+        ? __defProp(target, 'default', {
+            value: mergedDefaultExports in mod
+              ? mod[mergedDefaultExports]
+              : (
+                  mod[mergedDefaultExports] =
+                    // If mod.default is a literal, we cannot merge it
+                    typeof mod.default === 'object' && mod.default
+                      ? __copyProps(__copyProps(__create(__getProtoOf(mod.default)), mod.default), mod)
+                      : mod
+                ),
+            enumerable: true
+          })
+        : target,
     mod)
 )
 

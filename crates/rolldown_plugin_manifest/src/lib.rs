@@ -9,10 +9,9 @@ use rustc_hash::FxHashMap;
 pub type IsLegacyFn =
   dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send>> + Send + Sync;
 
-pub type CssEntriesFn =
-  dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<FxHashMap<String, String>>> + Send>>
-    + Send
-    + Sync;
+pub type CssEntriesFn = dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<FxHashMap<String, String>>> + Send>>
+  + Send
+  + Sync;
 
 #[derive(derive_more::Debug)]
 pub struct ManifestPlugin {
@@ -56,7 +55,7 @@ impl Plugin for ManifestPlugin {
               let css_entries_map = (self.css_entries)().await?;
               let mut filenames = FxHashMap::with_capacity_and_hasher(
                 css_entries_map.len(),
-                Default::default(),
+                rustc_hash::FxBuildHasher,
               );
               for (name, reference_id) in css_entries_map {
                 if let Ok(filename) = ctx.get_file_name(&reference_id) {

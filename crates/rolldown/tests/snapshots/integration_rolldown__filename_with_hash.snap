@@ -4716,10 +4716,10 @@ expression: output
 
 # tests/rolldown/issues/5044
 
-- main-!~{000}~.js => main-OKtGn7An.js
+- main-!~{000}~.js => main-DWFco5eU.js
 - _virtual/rolldown_runtime-!~{001}~.js => _virtual/rolldown_runtime-mwmJao_F.js
-- cube-!~{003}~.js => cube-BXW_EK5r.js
-- lib-!~{005}~.js => lib-BHNBR_-C.js
+- cube-!~{003}~.js => cube-CABAECs4.js
+- lib-!~{005}~.js => lib-Bzb1p9Wg.js
 
 # tests/rolldown/issues/5139
 

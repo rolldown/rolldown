@@ -3474,6 +3474,7 @@ name = "rolldown_std_utils"
 version = "0.1.0"
 dependencies = [
  "regex",
+ "sugar_path",
 ]
 
 [[package]]

@@ -1,4 +1,10 @@
-use std::{borrow::Cow, ffi::OsStr, path::Path};
+use std::{
+  borrow::Cow,
+  ffi::OsStr,
+  path::{Path, PathBuf},
+};
+
+use sugar_path::SugarPath;
 
 pub trait PathExt {
   fn expect_to_str(&self) -> &str;
@@ -50,11 +56,31 @@ impl PathExt for Path {
 }
 
 /// The first one is for chunk name, the second element is used for generate absolute file name
-pub fn representative_file_name_for_preserve_modules(path: &Path) -> (Cow<'_, str>, String) {
-  let file_name =
-    path.file_stem().map_or_else(|| path.to_string_lossy(), |stem| stem.to_string_lossy());
+///
+/// When `preserve_modules_root` is provided, the chunk name will be relative to that root.
+/// Otherwise, it will be relative to `input_base`.
+pub fn representative_file_name_for_preserve_modules(
+  path: &Path,
+  input_base: &str,
+  preserve_modules_root: Option<&str>,
+) -> (String, String) {
   let ab_path = path.with_extension("").to_string_lossy().into_owned();
-  (file_name, ab_path)
+
+  // Compute the chunk name (relative path with directory structure)
+  // Try to strip preserve_modules_root first
+  let chunk_name = if let Some(root) = preserve_modules_root {
+    if ab_path.starts_with(root) {
+      ab_path[root.len()..].trim_start_matches(['/', '\\']).to_string()
+    } else {
+      // Fall back to making it relative to input_base
+      PathBuf::from(&ab_path).relative(input_base).to_slash_lossy().into_owned()
+    }
+  } else {
+    // Make it relative to input_base
+    PathBuf::from(&ab_path).relative(input_base).to_slash_lossy().into_owned()
+  };
+
+  (chunk_name, ab_path)
 }
 
 #[test]
@@ -70,12 +96,25 @@ fn test_representative_file_name() {
   assert_eq!(path.representative_file_name(), "vue");
 
   let path = cwd.join("x.jsx");
-  let (_, ab_path) = representative_file_name_for_preserve_modules(&path);
+  let input_base = cwd.to_str().unwrap();
+  let (chunk_name, ab_path) = representative_file_name_for_preserve_modules(&path, input_base, None);
   assert_eq!(Path::new(&ab_path).file_name().unwrap().to_string_lossy(), "x");
+  assert_eq!(chunk_name, "x");
 
   #[cfg(not(target_os = "windows"))]
   {
     let path = cwd.join("src").join("vue.js");
-    assert_eq!(representative_file_name_for_preserve_modules(&path).1, "./project/src/vue");
+    let input_base = cwd.to_str().unwrap();
+    assert_eq!(representative_file_name_for_preserve_modules(&path, input_base, None).1, "./project/src/vue");
+    assert_eq!(representative_file_name_for_preserve_modules(&path, input_base, None).0, "src/vue");
+
+    // Test with preserve_modules_root
+    let preserve_modules_root = cwd.join("src").to_str().map(|s| s.to_string());
+    let (chunk_name, _) = representative_file_name_for_preserve_modules(
+      &path,
+      input_base,
+      preserve_modules_root.as_deref(),
+    );
+    assert_eq!(chunk_name, "vue");
   }
 }

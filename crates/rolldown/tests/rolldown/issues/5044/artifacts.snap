@@ -14,29 +14,29 @@ exports.__toESM = __toESM;
 ## cube.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+const require_____________rolldown_runtime = require('./_virtual/rolldown_runtime.js');
 let preact = require("preact");
-preact = require_rolldown_runtime.__toESM(preact);
+preact = require_____________rolldown_runtime.__toESM(preact);
 
 ```
 
 ## lib.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+const require_____________rolldown_runtime = require('./_virtual/rolldown_runtime.js');
 require('./cube.js');
 let preact = require("preact");
-preact = require_rolldown_runtime.__toESM(preact);
+preact = require_____________rolldown_runtime.__toESM(preact);
 
 ```
 
 ## main.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+const require_____________rolldown_runtime = require('./_virtual/rolldown_runtime.js');
 require('./lib.js');
 let preact = require("preact");
-preact = require_rolldown_runtime.__toESM(preact);
+preact = require_____________rolldown_runtime.__toESM(preact);
 
 Object.defineProperty(exports, 'createContext', {
   enumerable: true,

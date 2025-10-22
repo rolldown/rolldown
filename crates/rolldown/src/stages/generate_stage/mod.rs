@@ -281,7 +281,11 @@ impl<'a> GenerateStage<'a> {
             let generated = if self.options.preserve_modules {
               let module_id = module.id();
               let (chunk_name, absolute_chunk_file_name) =
-                representative_file_name_for_preserve_modules(module_id.as_path());
+                representative_file_name_for_preserve_modules(
+                  module_id.as_path(),
+                  chunk.input_base.as_str(),
+                  self.options.preserve_modules_root.as_deref(),
+                );
 
               let sanitized_absolute_filename =
                 sanitize_filename.call(absolute_chunk_file_name.as_str()).await?;

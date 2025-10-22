@@ -16,3 +16,4 @@ workspace = true
 
 [dependencies]
 regex = { workspace = true }
+sugar_path = { workspace = true }

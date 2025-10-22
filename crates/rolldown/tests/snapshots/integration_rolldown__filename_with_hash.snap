@@ -5860,6 +5860,10 @@ expression: output
 
 - main-!~{000}~.js => main-Bt9y0mwn.js
 
+# tests/rolldown/tree_shaking/commonjs_redefine_export
+
+- main-!~{000}~.js => main-hpAV8Isq.js
+
 # tests/rolldown/tree_shaking/derived_side_effects_should_have_high_priority
 
 - main-!~{000}~.js => main-DiUzpIWs.js

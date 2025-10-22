@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+//#region scope.js
+var require_scope = /* @__PURE__ */ __commonJS({ "scope.js": ((exports) => {
+	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.scope = exports.path = void 0;
+	exports.scope = /* @__PURE__ */ new WeakMap();
+	function clearScope() {
+		exports.scope = scope = /* @__PURE__ */ new WeakMap();
+	}
+}) });
+
+//#endregion
+//#region main.js
+var import_scope = /* @__PURE__ */ __toESM(require_scope());
+assert.ok(import_scope.scope instanceof WeakMap);
+
+//#endregion
+```

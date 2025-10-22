@@ -71,7 +71,7 @@ pub struct ScanResult {
   /// `named_exports`, the `foo` will be overridden by the `exports.foo` and cause a bug(Because we
   /// may not know if it is a esm at the time, a simple case would be swap the order of two export
   /// stmt).
-  pub commonjs_exports: FxHashMap<CompactStr, LocalExport>,
+  pub commonjs_exports: FxHashMap<CompactStr, Vec<LocalExport>>,
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub default_export_ref: SymbolRef,
@@ -350,16 +350,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // has side effects, so that they should not be removed in linking stage.
     let mut bailout_inlined_cjs_exports_symbol_ids = FxHashSet::default();
     for (name, usage) in &self.cjs_named_exports_usage {
-      if let Some(resolved) = self.result.commonjs_exports.get(name) {
-        if !usage.can_be_removed() {
-          let stmt_info_idx_list =
-            self.result.stmt_infos.declared_stmts_by_symbol(&resolved.referenced).to_vec();
-          for idx in stmt_info_idx_list {
-            self.result.stmt_infos[idx].side_effect |= SideEffectDetail::Unknown;
+      if let Some(resolved_list) = self.result.commonjs_exports.get(name) {
+        for resolved in resolved_list {
+          if !usage.can_be_removed() {
+            let stmt_info_idx_list =
+              self.result.stmt_infos.declared_stmts_by_symbol(&resolved.referenced).to_vec();
+            for idx in stmt_info_idx_list {
+              self.result.stmt_infos[idx].side_effect |= SideEffectDetail::Unknown;
+            }
           }
-        }
-        if !usage.can_be_inlined() {
-          bailout_inlined_cjs_exports_symbol_ids.insert(resolved.referenced.symbol);
+          if !usage.can_be_inlined() {
+            bailout_inlined_cjs_exports_symbol_ids.insert(resolved.referenced.symbol);
+          }
         }
       }
     }

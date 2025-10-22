@@ -245,8 +245,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
                     .add_constant_symbol(exported_symbol.symbol, ConstExportMeta::new(value, true));
                 }
 
-                self.result.commonjs_exports.insert(
-                  export_name.into(),
+                self.result.commonjs_exports.entry(export_name.into()).or_default().push(
                   LocalExport { referenced: exported_symbol, span, came_from_commonjs: true },
                 );
               }

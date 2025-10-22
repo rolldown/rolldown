@@ -76,7 +76,12 @@ pub async fn create_ecma_view(
     constant_export_map,
     import_attribute_map,
   } = scanner.scan(ast.program())?;
-  named_exports.extend(commonjs_exports);
+  // If a export symbol in commonjs defined in multiple time, we just bailout treeshake it.
+  for (k, v) in commonjs_exports {
+    if v.len() == 1 {
+      named_exports.insert(k, v[0]);
+    }
+  }
 
   if !errors.is_empty() {
     return Err(errors.into());

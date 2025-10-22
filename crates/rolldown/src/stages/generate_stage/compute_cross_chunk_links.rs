@@ -38,7 +38,7 @@ impl GenerateStage<'_> {
       index_vec![FxHashMap::<SymbolRef, Vec<CompactStr>>::default(); chunk_graph.chunk_table.len()];
     let mut index_chunk_direct_imports_from_external_modules: IndexChunkImportsFromExternalModules = index_vec![FxHashMap::<ModuleIdx, Vec<(ModuleIdx, NamedImport)>>::default(); chunk_graph.chunk_table.len()];
     // Used for cjs,umd,iife only
-    let mut index_chunk_import_symbols_from_external_modules: IndexChunkAllImportsFromExternalModules =
+    let mut index_chunk_indirect_imports_from_external_modules: IndexChunkAllImportsFromExternalModules =
       index_vec![FxIndexSet::<ModuleIdx>::default(); chunk_graph.chunk_table.len()];
 
     let mut index_imports_from_other_chunks: IndexImportsFromOtherChunks = index_vec![FxHashMap::<ChunkIdx, Vec<CrossChunkImportItem>>::default(); chunk_graph.chunk_table.len()];
@@ -60,7 +60,7 @@ impl GenerateStage<'_> {
       &mut index_chunk_exported_symbols,
       &mut index_cross_chunk_imports,
       &mut index_imports_from_other_chunks,
-      &mut index_chunk_import_symbols_from_external_modules,
+      &mut index_chunk_indirect_imports_from_external_modules,
     );
     self.deconflict_exported_names(chunk_graph, &index_chunk_exported_symbols);
 
@@ -114,7 +114,7 @@ impl GenerateStage<'_> {
       index_sorted_imports_from_external_modules,
       index_sorted_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
-      index_chunk_import_symbols_from_external_modules,
+      index_chunk_indirect_imports_from_external_modules,
     ))
     .par_bridge()
     .for_each(
@@ -124,18 +124,18 @@ impl GenerateStage<'_> {
         imports_from_external_modules,
         cross_chunk_imports,
         cross_chunk_dynamic_imports,
-        mut all_imports_from_external_modules,
+        mut chunk_indirect_imports_from_external_modules,
       )| {
         // deduplicated
         for (module_idx, _) in &imports_from_external_modules {
-          all_imports_from_external_modules.shift_remove(module_idx);
+          chunk_indirect_imports_from_external_modules.shift_remove(module_idx);
         }
         chunk.imports_from_other_chunks = sorted_imports_from_other_chunks;
         chunk.direct_imports_from_external_modules = imports_from_external_modules;
         chunk.cross_chunk_imports = cross_chunk_imports;
         chunk.cross_chunk_dynamic_imports =
           cross_chunk_dynamic_imports.into_iter().collect::<Vec<_>>();
-        chunk.import_symbol_from_external_modules = all_imports_from_external_modules;
+        chunk.import_symbol_from_external_modules = chunk_indirect_imports_from_external_modules;
       },
     );
   }

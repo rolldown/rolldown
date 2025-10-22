@@ -1,0 +1,16 @@
+{
+  "config": {
+    "external": ["test"],
+    "input": [
+      {
+        "name": "entry",
+        "import": "./entry.js"
+      },
+      {
+        "name": "entryb",
+        "import": "./entryb.js"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

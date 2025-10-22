@@ -455,11 +455,11 @@ export type ModuleType =  'module'|
  */
 export interface NapiResolveOptions {
   /**
-   * Path to TypeScript configuration file.
+   * Discover tsconfig automatically or use the specified tsconfig.json path.
    *
    * Default `None`
    */
-  tsconfig?: TsconfigOptions
+  tsconfig?: 'auto' | TsconfigOptions
   /**
    * Alias for [ResolveOptions::alias] and [ResolveOptions::fallback].
    *

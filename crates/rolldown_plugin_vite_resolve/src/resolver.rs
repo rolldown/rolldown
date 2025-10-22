@@ -1,14 +1,14 @@
 use std::{
   ffi::OsString,
   fs,
-  path::{self, Path, PathBuf},
+  path::{self, Path},
   sync::Arc,
 };
 
-use oxc_resolver::{PackageJson, ResolveOptions, TsconfigOptions, TsconfigReferences};
+use oxc_resolver::{PackageJson, ResolveOptions, TsconfigDiscovery};
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
-use rolldown_utils::{dashmap::FxDashMap, url::clean_url};
+use rolldown_utils::url::clean_url;
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
@@ -75,7 +75,6 @@ impl From<u8> for AdditionalOptions {
 pub struct Resolvers {
   resolvers: [Resolver; RESOLVER_COUNT as usize],
   external_resolver: Arc<Resolver>,
-  tsconfig_resolver: Arc<TsconfigResolver>,
 }
 
 impl Resolvers {
@@ -88,9 +87,6 @@ impl Resolvers {
 
     let base_resolver = oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions::default());
 
-    let tsconfig_resolver =
-      Arc::new(TsconfigResolver::new(base_resolver.clone_with_options(ResolveOptions::default())));
-
     let resolvers = (0..RESOLVER_COUNT)
       .map(|v| {
         Resolver::new(
@@ -98,7 +94,6 @@ impl Resolvers {
           base_options,
           v.into(),
           external_conditions,
-          base_options.tsconfig_paths.then(|| Arc::clone(&tsconfig_resolver)),
           Arc::clone(&builtin_checker),
           Arc::clone(&package_json_cache),
         )
@@ -112,12 +107,11 @@ impl Resolvers {
       &BaseOptions { is_production: false, conditions: external_conditions, ..*base_options },
       AdditionalOptions { is_require: false, prefer_relative: false },
       external_conditions,
-      base_options.tsconfig_paths.then(|| Arc::clone(&tsconfig_resolver)),
       Arc::clone(&builtin_checker),
       Arc::clone(&package_json_cache),
     );
 
-    Self { resolvers, external_resolver: Arc::new(external_resolver), tsconfig_resolver }
+    Self { resolvers, external_resolver: Arc::new(external_resolver) }
   }
 
   pub fn get(&self, additional_options: AdditionalOptions) -> &Resolver {
@@ -135,7 +129,6 @@ impl Resolvers {
   pub fn clear_cache(&self) {
     self.resolvers.iter().for_each(|v| v.clear_cache());
     self.external_resolver.clear_cache();
-    self.tsconfig_resolver.clear_cache();
   }
 }
 
@@ -149,6 +142,7 @@ fn get_resolve_options(
   let main_fields = base_options.main_fields.clone();
 
   oxc_resolver::ResolveOptions {
+    tsconfig: base_options.tsconfig_paths.then_some(TsconfigDiscovery::Auto),
     alias_fields: if base_options.main_fields.iter().any(|field| field == "browser") {
       vec![vec!["browser".to_string()]]
     } else {
@@ -224,7 +218,6 @@ fn u8_to_bools<const N: usize>(n: u8) -> [bool; N] {
 pub struct Resolver {
   inner: oxc_resolver::Resolver,
   inner_for_external: oxc_resolver::Resolver,
-  tsconfig_resolver: Option<Arc<TsconfigResolver>>,
   built_in_checker: Arc<BuiltinChecker>,
   package_json_cache: Arc<PackageJsonCache>,
   root: String,
@@ -237,7 +230,6 @@ impl Resolver {
     base_options: &BaseOptions,
     additional_options: AdditionalOptions,
     external_conditions: &[String],
-    tsconfig_resolver: Option<Arc<TsconfigResolver>>,
     built_in_checker: Arc<BuiltinChecker>,
     package_json_cache: Arc<PackageJsonCache>,
   ) -> Self {
@@ -252,7 +244,6 @@ impl Resolver {
     Self {
       inner,
       inner_for_external,
-      tsconfig_resolver,
       built_in_checker,
       package_json_cache,
       root: base_options.root.to_owned(),
@@ -267,19 +258,6 @@ impl Resolver {
     external: bool,
   ) -> Result<oxc_resolver::Resolution, oxc_resolver::ResolveError> {
     let inner_resolver = if external { &self.inner_for_external } else { &self.inner };
-    let inner_resolver = if let Some(tsconfig) =
-      self.tsconfig_resolver.as_ref().and_then(|r| r.load_nearest_tsconfig(directory.as_ref()))
-    {
-      &inner_resolver.clone_with_options(ResolveOptions {
-        tsconfig: Some(TsconfigOptions {
-          config_file: tsconfig,
-          references: TsconfigReferences::Disabled,
-        }),
-        ..inner_resolver.options().clone()
-      })
-    } else {
-      inner_resolver
-    };
 
     let result = inner_resolver.resolve(directory.as_ref(), specifier);
     match result {
@@ -480,64 +458,4 @@ fn should_dedupe(specifier: &str, dedupe: &FxHashSet<String>) -> bool {
 
   let pkg_id = get_npm_package_name(specifier).unwrap_or(clean_url(specifier));
   dedupe.contains(pkg_id)
-}
-
-#[derive(Debug)]
-pub struct TsconfigResolver {
-  inner: oxc_resolver::Resolver,
-  tsconfig_dir_existence: FxDashMap<PathBuf, bool>,
-}
-
-impl TsconfigResolver {
-  pub fn new(inner: oxc_resolver::Resolver) -> Self {
-    Self { inner, tsconfig_dir_existence: FxDashMap::default() }
-  }
-
-  pub fn load_nearest_tsconfig(&self, path: &Path) -> Option<PathBuf> {
-    // don't load tsconfig for paths in node_modules like esbuild does
-    if rolldown_plugin_utils::is_in_node_modules(path) {
-      return None;
-    }
-
-    if let Some(tsconfig) = self.find_nearest_tsconfig(path) {
-      // TODO: need to handle references and include/exclude
-      self.inner.resolve_tsconfig(&tsconfig).ok().map(|_| tsconfig)
-    } else {
-      None
-    }
-  }
-
-  fn find_nearest_tsconfig(&self, path: &Path) -> Option<PathBuf> {
-    // skip virtual IDs (e.g. `virtual:something`)
-    if !path.is_absolute() {
-      return None;
-    }
-
-    let mut dir = path.to_path_buf();
-
-    loop {
-      if let Some(r) = self.tsconfig_dir_existence.get(&dir) {
-        if *r.value() {
-          return Some(dir.join("tsconfig.json"));
-        }
-      } else {
-        let tsconfig_json = dir.join("tsconfig.json");
-        if tsconfig_json.exists() {
-          self.tsconfig_dir_existence.insert(dir.clone(), true);
-          return Some(tsconfig_json);
-        } else {
-          self.tsconfig_dir_existence.insert(dir.clone(), false);
-        }
-      }
-
-      let Some(parent) = dir.parent() else { break };
-      dir = parent.to_path_buf();
-    }
-    None
-  }
-
-  pub fn clear_cache(&self) {
-    self.inner.clear_cache();
-    self.tsconfig_dir_existence.clear();
-  }
 }

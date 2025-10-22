@@ -225,8 +225,8 @@ oxc_traverse = { version = "0.95.0" }
 # Versions must be relaxed for usage in oxc.
 # Please update with `cargo update oxc_resolver oxc_resolver_napi oxc_sourcemap oxc_index oxc-browserslist`
 oxc_index = { version = "4", features = ["rayon", "serde"] } # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver = { version = "11", features = ["yarn_pnp"] } # https://github.com/oxc-project/oxc-resolver
-oxc_resolver_napi = { version = "11", default-features = false, features = ["yarn_pnp"] }
+oxc_resolver = { version = "11.11.1", features = ["yarn_pnp"] } # https://github.com/oxc-project/oxc-resolver
+oxc_resolver_napi = { version = "11.11.1", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "6" } # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.dev]

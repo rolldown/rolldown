@@ -108,9 +108,11 @@ impl<F: FileSystem + Clone> Resolver<F> {
 
     let resolve_options_with_default_conditions = OxcResolverOptions {
       cwd: Some(cwd.clone()),
-      tsconfig: tsconfig.map(|tsconfig| oxc_resolver::TsconfigOptions {
-        config_file: tsconfig,
-        references: oxc_resolver::TsconfigReferences::Disabled,
+      tsconfig: tsconfig.map(|tsconfig| {
+        oxc_resolver::TsconfigDiscovery::Manual(oxc_resolver::TsconfigOptions {
+          config_file: tsconfig,
+          references: oxc_resolver::TsconfigReferences::Disabled,
+        })
       }),
       alias: raw_resolve
         .alias

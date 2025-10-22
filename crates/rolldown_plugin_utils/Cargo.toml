@@ -24,6 +24,7 @@ itertools = { workspace = true }
 memchr = { workspace = true }
 percent-encoding = { workspace = true }
 rolldown_common = { workspace = true }
+rolldown_error = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_utils = { workspace = true }

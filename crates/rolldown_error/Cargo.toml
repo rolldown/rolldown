@@ -21,6 +21,7 @@ workspace = true
 anyhow = { workspace = true }
 arcstr = { workspace = true }
 ariadne = { workspace = true }
+base64-simd = { workspace = true }
 bitflags = { workspace = true }
 derive_more = { workspace = true }
 heck = { workspace = true }
@@ -30,4 +31,6 @@ oxc_resolver = { workspace = true }
 rolldown_utils = { workspace = true }
 ropey = { workspace = true }
 rustc-hash = { workspace = true }
+serde_json = { workspace = true }
+simdutf8 = { workspace = true }
 sugar_path = { workspace = true }

@@ -43,7 +43,6 @@ pub enum EventKind {
   ConfigurationFieldConflict = 28,
   PreferBuiltinFeature = 29,
   BundlerInitializeError = 30,
-  PluginError = 31,
 }
 
 impl Display for EventKind {
@@ -88,7 +87,6 @@ impl Display for EventKind {
       EventKind::ConfigurationFieldConflict => write!(f, "CONFIGURATION_FIELD_CONFLICT"),
       EventKind::PreferBuiltinFeature => write!(f, "PREFER_BUILTIN_FEATURE"),
       EventKind::BundlerInitializeError => write!(f, "BUNDLER_INITIALIZE_ERROR"),
-      EventKind::PluginError => write!(f, "PLUGIN_ERROR"),
     }
   }
 }

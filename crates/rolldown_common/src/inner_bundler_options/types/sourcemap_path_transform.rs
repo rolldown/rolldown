@@ -1,8 +1,9 @@
 use derive_more::Debug;
+use rolldown_error::SingleBuildResult;
 use std::sync::Arc;
 use std::{future::Future, pin::Pin};
 
-type SourceMapPathTransformFn = dyn Fn(&str, &str) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + 'static>>
+type SourceMapPathTransformFn = dyn Fn(&str, &str) -> Pin<Box<dyn Future<Output = SingleBuildResult<String>> + Send + 'static>>
   + Send
   + Sync;
 
@@ -15,7 +16,7 @@ impl SourceMapPathTransform {
     Self(f)
   }
 
-  pub async fn call(&self, source: &str, sourcemap_path: &str) -> anyhow::Result<String> {
+  pub async fn call(&self, source: &str, sourcemap_path: &str) -> SingleBuildResult<String> {
     self.0(source, sourcemap_path).await
   }
 }

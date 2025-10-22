@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
+use rolldown_common::{Output, RollupRenderedChunk, SharedNormalizedBundlerOptions};
+use rolldown_debug::{action, trace_action};
+use rolldown_error::{BuildDiagnostic, CausedPlugin, SingleBuildResult};
+use rolldown_sourcemap::SourceMap;
+use tracing::Instrument;
+
 use crate::types::hook_render_error::HookRenderErrorArgs;
 use crate::{HookAddonArgs, PluginDriver};
 use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
-use anyhow::{Context, Ok, Result};
-use rolldown_common::{Output, RollupRenderedChunk, SharedNormalizedBundlerOptions};
-use rolldown_debug::{action, trace_action};
-use rolldown_error::{BuildDiagnostic, CausedPlugin};
-use rolldown_sourcemap::SourceMap;
-use tracing::Instrument;
 
 impl PluginDriver {
   pub async fn render_start(&self, opts: &SharedNormalizedBundlerOptions) -> HookNoopReturn {
@@ -17,17 +17,21 @@ impl PluginDriver {
       plugin
         .call_render_start(ctx, &crate::HookRenderStartArgs { options: opts })
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?;
     }
     Ok(())
   }
 
-  pub async fn banner(&self, args: HookAddonArgs, mut banner: String) -> Result<Option<String>> {
+  pub async fn banner(
+    &self,
+    args: HookAddonArgs,
+    mut banner: String,
+  ) -> SingleBuildResult<Option<String>> {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_banner_meta) {
       if let Some(r) = plugin
         .call_banner(ctx, &args)
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?
       {
         banner.push('\n');
         banner.push_str(r.as_str());
@@ -39,12 +43,16 @@ impl PluginDriver {
     Ok(Some(banner))
   }
 
-  pub async fn footer(&self, args: HookAddonArgs, mut footer: String) -> Result<Option<String>> {
+  pub async fn footer(
+    &self,
+    args: HookAddonArgs,
+    mut footer: String,
+  ) -> SingleBuildResult<Option<String>> {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_footer_meta) {
       if let Some(r) = plugin
         .call_footer(ctx, &args)
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?
       {
         footer.push('\n');
         footer.push_str(r.as_str());
@@ -56,12 +64,16 @@ impl PluginDriver {
     Ok(Some(footer))
   }
 
-  pub async fn intro(&self, args: HookAddonArgs, mut intro: String) -> Result<Option<String>> {
+  pub async fn intro(
+    &self,
+    args: HookAddonArgs,
+    mut intro: String,
+  ) -> SingleBuildResult<Option<String>> {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_intro_meta) {
       if let Some(r) = plugin
         .call_intro(ctx, &args)
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?
       {
         intro.push('\n');
         intro.push_str(r.as_str());
@@ -73,12 +85,16 @@ impl PluginDriver {
     Ok(Some(intro))
   }
 
-  pub async fn outro(&self, args: HookAddonArgs, mut outro: String) -> Result<Option<String>> {
+  pub async fn outro(
+    &self,
+    args: HookAddonArgs,
+    mut outro: String,
+  ) -> SingleBuildResult<Option<String>> {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_outro_meta) {
       if let Some(r) = plugin
         .call_outro(ctx, &args)
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?
       {
         outro.push('\n');
         outro.push_str(r.as_str());
@@ -93,7 +109,7 @@ impl PluginDriver {
   pub async fn render_chunk(
     &self,
     mut args: HookRenderChunkArgs<'_>,
-  ) -> Result<(String, Vec<SourceMap>)> {
+  ) -> SingleBuildResult<(String, Vec<SourceMap>)> {
     let mut sourcemap_chain = vec![];
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_render_chunk_meta)
@@ -109,7 +125,7 @@ impl PluginDriver {
         if let Some(r) = plugin
           .call_render_chunk(ctx, &args)
           .await
-          .with_context(|| CausedPlugin::new(plugin.call_name()))?
+          .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?
         {
           args.code = r.code;
           if let Some(map) = r.map {
@@ -131,8 +147,7 @@ impl PluginDriver {
             content: None,
           });
         }
-
-        Ok(())
+        Ok::<(), BuildDiagnostic>(())
       }
       .instrument(tracing::trace_span!(
         "HookRenderChunk",
@@ -154,7 +169,7 @@ impl PluginDriver {
       if let Some(plugin_hash) = plugin
         .call_augment_chunk_hash(ctx, Arc::clone(&chunk))
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?
       {
         hash.get_or_insert_with(String::default).push_str(&plugin_hash);
       }
@@ -168,7 +183,7 @@ impl PluginDriver {
       plugin
         .call_render_error(ctx, args)
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?;
     }
     Ok(())
   }
@@ -187,7 +202,7 @@ impl PluginDriver {
       plugin
         .call_generate_bundle(ctx, &mut args)
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?;
       ctx.file_emitter().add_additional_files(bundle, warnings);
     }
     Ok(())
@@ -205,7 +220,7 @@ impl PluginDriver {
       plugin
         .call_write_bundle(ctx, &mut args)
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?;
       ctx.file_emitter().add_additional_files(bundle, warnings);
     }
     Ok(())
@@ -214,7 +229,10 @@ impl PluginDriver {
   pub async fn close_bundle(&self) -> HookNoopReturn {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_close_bundle_meta)
     {
-      plugin.call_close_bundle(ctx).await.with_context(|| CausedPlugin::new(plugin.call_name()))?;
+      plugin
+        .call_close_bundle(ctx)
+        .await
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?;
     }
     Ok(())
   }

@@ -1,11 +1,12 @@
 use derive_more::Debug;
+use rolldown_error::SingleBuildResult;
 use std::{future::Future, pin::Pin, sync::Arc};
 
 use crate::RollupPreRenderedChunk;
 
 type ChunkFilenamesFunction = dyn Fn(
     &RollupPreRenderedChunk,
-  ) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + 'static>>
+  ) -> Pin<Box<dyn Future<Output = SingleBuildResult<String>> + Send + 'static>>
   + Send
   + Sync;
 
@@ -18,7 +19,7 @@ pub enum ChunkFilenamesOutputOption {
 }
 
 impl ChunkFilenamesOutputOption {
-  pub async fn call(&self, chunk: &RollupPreRenderedChunk) -> anyhow::Result<String> {
+  pub async fn call(&self, chunk: &RollupPreRenderedChunk) -> SingleBuildResult<String> {
     match self {
       Self::String(value) => Ok(value.clone()),
       Self::Fn(value) => value(chunk).await,

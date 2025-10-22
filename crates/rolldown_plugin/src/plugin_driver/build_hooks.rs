@@ -1,5 +1,16 @@
 use std::sync::Arc;
 
+use rolldown_common::{
+  ModuleInfo, ModuleType, NormalModule, PluginIdx, SharedNormalizedBundlerOptions,
+  SourcemapChainElement, SourcemapHires, side_effects::HookSideEffects,
+};
+use rolldown_debug::{action, trace_action};
+use rolldown_error::{BuildDiagnostic, CausedPlugin, SingleBuildResult};
+use rolldown_sourcemap::SourceMap;
+use rolldown_utils::unique_arc::UniqueArc;
+use string_wizard::{MagicString, SourceMapOptions};
+use tracing::{Instrument, debug_span};
+
 use crate::{
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
   HookResolveIdReturn, HookTransformArgs, PluginContext, PluginDriver, TransformPluginContext,
@@ -8,17 +19,6 @@ use crate::{
     hook_resolve_id_skipped::HookResolveIdSkipped, hook_transform_ast_args::HookTransformAstArgs,
   },
 };
-use anyhow::{Context, Result};
-use rolldown_common::{
-  ModuleInfo, ModuleType, NormalModule, PluginIdx, SharedNormalizedBundlerOptions,
-  SourcemapChainElement, SourcemapHires, side_effects::HookSideEffects,
-};
-use rolldown_debug::{action, trace_action};
-use rolldown_error::CausedPlugin;
-use rolldown_sourcemap::SourceMap;
-use rolldown_utils::unique_arc::UniqueArc;
-use string_wizard::{MagicString, SourceMapOptions};
-use tracing::{Instrument, debug_span};
 
 impl PluginDriver {
   #[tracing::instrument(level = "trace", skip_all)]
@@ -28,7 +28,7 @@ impl PluginDriver {
       plugin
         .call_build_start(ctx, &crate::HookBuildStartArgs { options: opts })
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?;
     }
 
     Ok(())
@@ -102,7 +102,7 @@ impl PluginDriver {
             trigger: "${hook_resolve_id_trigger}",
             call_id: "${call_id}",
           });
-          anyhow::Ok(Some(r))
+          Ok(Some(r))
         } else {
           trace_action!(action::HookResolveIdCallEnd {
             action: "HookResolveIdCallEnd",
@@ -121,7 +121,9 @@ impl PluginDriver {
         CONTEXT_call_id = rolldown_utils::uuid::uuid_v4()
       ))
       .await
-      .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+      .map_err(|err: BuildDiagnostic| {
+        err.with_caused_plugin(CausedPlugin::new(plugin.call_name()))
+      })?;
       if ret.is_some() {
         return Ok(ret);
       }
@@ -158,7 +160,7 @@ impl PluginDriver {
           args,
         )
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?
       {
         return Ok(Some(r));
       }
@@ -187,7 +189,7 @@ impl PluginDriver {
             plugin_id: plugin_idx.raw(),
             call_id: "${call_id}",
           });
-          anyhow::Ok(Some(r))
+          Ok(Some(r))
         } else {
           trace_action!(action::HookLoadCallEnd {
             action: "HookLoadCallEnd",
@@ -205,7 +207,9 @@ impl PluginDriver {
         CONTEXT_call_id = rolldown_utils::uuid::uuid_v4()
       ))
       .await
-      .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+      .map_err(|err: BuildDiagnostic| {
+        err.with_caused_plugin(CausedPlugin::new(plugin.call_name()))
+      })?;
       if ret.is_some() {
         return Ok(ret);
       }
@@ -224,7 +228,7 @@ impl PluginDriver {
     side_effects: &mut Option<HookSideEffects>,
     module_type: &mut ModuleType,
     magic_string_tx: Option<Arc<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>>,
-  ) -> Result<String> {
+  ) -> SingleBuildResult<String> {
     let mut code = original_code;
     let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
     let mut plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
@@ -255,7 +259,7 @@ impl PluginDriver {
           &HookTransformArgs { id, code: &code, module_type: &*module_type },
         )
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?
       {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
         if let Some(map) = self.normalize_transform_sourcemap(r.map, id, &code, r.code.as_ref()) {
@@ -355,7 +359,7 @@ impl PluginDriver {
         )
         .instrument(debug_span!("transform_ast_hook", plugin_name = plugin.call_name().as_ref()))
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?;
     }
     Ok(args.ast)
   }
@@ -371,7 +375,7 @@ impl PluginDriver {
       plugin
         .call_module_parsed(ctx, Arc::clone(&module_info), normal_module)
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?;
     }
     Ok(())
   }
@@ -381,7 +385,7 @@ impl PluginDriver {
       plugin
         .call_build_end(ctx, args)
         .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+        .map_err(|err| err.with_caused_plugin(CausedPlugin::new(plugin.call_name())))?;
     }
     Ok(())
   }

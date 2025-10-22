@@ -3019,6 +3019,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arcstr",
+ "base64-simd",
  "bitflags 2.9.4",
  "derive_more",
  "heck",
@@ -3029,6 +3030,8 @@ dependencies = [
  "rolldown_utils",
  "ropey",
  "rustc-hash",
+ "serde_json",
+ "simdutf8",
  "sugar_path",
 ]
 
@@ -3123,6 +3126,7 @@ version = "0.1.0"
 dependencies = [
  "arcstr",
  "rolldown_common",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_utils",
  "rustc-hash",
@@ -3137,6 +3141,7 @@ dependencies = [
  "arcstr",
  "base64-simd",
  "rolldown_common",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_utils",
  "simdutf8",
@@ -3238,6 +3243,7 @@ dependencies = [
  "cow-utils",
  "derive_more",
  "rolldown_common",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_utils",
  "rustc-hash",
@@ -3335,6 +3341,7 @@ dependencies = [
  "memchr",
  "percent-encoding",
  "rolldown_common",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_sourcemap",
  "rolldown_utils",
@@ -3461,6 +3468,7 @@ dependencies = [
  "itertools",
  "oxc_resolver",
  "rolldown_common",
+ "rolldown_error",
  "rolldown_fs",
  "rolldown_utils",
  "sugar_path",

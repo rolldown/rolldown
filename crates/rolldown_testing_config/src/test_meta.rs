@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::{extended_tests::ExtendedTests, utils::true_by_default};
+use crate::{dev_test_meta::DevTestMeta, extended_tests::ExtendedTests, utils::true_by_default};
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -42,6 +42,9 @@ pub struct TestMeta {
   #[serde(default)]
   /// Value will be injected into the `globalThis.__configName`
   pub config_name: Option<String>,
+  #[serde(default)]
+  /// Controls test behavior in the dev scenario
+  pub dev: DevTestMeta,
 }
 
 impl Default for TestMeta {

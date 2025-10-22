@@ -1,4 +1,5 @@
 mod config_variant;
+mod dev_test_meta;
 mod extended_tests;
 mod test_config;
 mod test_meta;

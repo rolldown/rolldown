@@ -72,6 +72,10 @@
         "null"
       ],
       "default": null
+    },
+    "dev": {
+      "description": "Controls test behavior in the dev scenario",
+      "$ref": "#/$defs/DevTestMeta"
     }
   },
   "additionalProperties": false,
@@ -1658,6 +1662,10 @@
           "default": true
         }
       },
+      "additionalProperties": false
+    },
+    "DevTestMeta": {
+      "type": "object",
       "additionalProperties": false
     }
   }

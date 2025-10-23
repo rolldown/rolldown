@@ -3,6 +3,11 @@ use rolldown_common::ClientHmrUpdate;
 use rolldown_error::BuildResult;
 use std::sync::Arc;
 
+#[cfg(feature = "deserialize_dev_options")]
+use schemars::JsonSchema;
+#[cfg(feature = "deserialize_dev_options")]
+use serde::Deserialize;
+
 use super::bundle_output::BundleOutput;
 use super::dev_watch_options::DevWatchOptions;
 use super::rebuild_strategy::RebuildStrategy;
@@ -14,10 +19,17 @@ pub type OnOutputCallback = Arc<dyn Fn(BuildResult<BundleOutput>) + Send + Sync>
 pub type SharedNormalizedDevOptions = Arc<NormalizedDevOptions>;
 
 #[derive(Debug, Default)]
+#[cfg_attr(feature = "deserialize_dev_options", derive(Deserialize, JsonSchema))]
+#[cfg_attr(
+  feature = "deserialize_dev_options",
+  serde(rename_all = "camelCase", deny_unknown_fields)
+)]
 pub struct DevOptions {
   #[debug(skip)]
+  #[cfg_attr(feature = "deserialize_dev_options", serde(skip))]
   pub on_hmr_updates: Option<OnHmrUpdatesCallback>,
   #[debug(skip)]
+  #[cfg_attr(feature = "deserialize_dev_options", serde(skip))]
   pub on_output: Option<OnOutputCallback>,
   pub rebuild_strategy: Option<RebuildStrategy>,
   pub watch: Option<DevWatchOptions>,

@@ -175,8 +175,8 @@ catalogs:
       specifier: ^2.10.0
       version: 2.32.0
     rolldown-plugin-dts:
-      specifier: ^0.16.0
-      version: 0.16.12
+      specifier: ^0.17.0
+      version: 0.17.0
     rollup:
       specifier: ^4.18.0
       version: 4.52.5
@@ -514,7 +514,7 @@ importers:
         version: 4.0.3
       rolldown-plugin-dts:
         specifier: 'catalog:'
-        version: 0.16.12(oxc-resolver@11.10.0)(rolldown@packages+rolldown)(typescript@5.9.3)
+        version: 0.17.0(oxc-resolver@11.10.0)(rolldown@packages+rolldown)(typescript@5.9.3)
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
@@ -569,7 +569,7 @@ importers:
         version: 'link:'
       rolldown-plugin-dts:
         specifier: 'catalog:'
-        version: 0.16.12(oxc-resolver@11.10.0)(rolldown@packages+rolldown)(typescript@5.9.3)
+        version: 0.17.0(oxc-resolver@11.10.0)(rolldown@packages+rolldown)(typescript@5.9.3)
       rollup:
         specifier: 'catalog:'
         version: 4.52.5
@@ -4060,8 +4060,8 @@ packages:
   get-them-args@1.3.2:
     resolution: {integrity: sha512-LRn8Jlk+DwZE4GTlDbT3Hikd1wSHgLMme/+7ddlqKd7ldwR6LjJgTVWzBnR01wnYGe4KgrXjg287RaI22UHmAw==}
 
-  get-tsconfig@4.12.0:
-    resolution: {integrity: sha512-LScr2aNr2FbjAjZh2C6X6BxRx1/x+aTDExct/xyq2XKbYOiG5c0aK7pMsSuyc0brz3ibr/lbQiHD9jzt4lccJw==}
+  get-tsconfig@4.13.0:
+    resolution: {integrity: sha512-1VKTZJCwBrvbd+Wn3AOgQP/2Av+TfTCOlE4AcRJE72W1ksZXbAx8PPBR9RzgTeSPzlPMHrbANMH3LbltH73wxQ==}
 
   glob-parent@5.1.2:
     resolution: {integrity: sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow==}
@@ -5012,13 +5012,13 @@ packages:
     engines: {node: 20 || >=22}
     hasBin: true
 
-  rolldown-plugin-dts@0.16.12:
-    resolution: {integrity: sha512-9dGjm5oqtKcbZNhpzyBgb8KrYiU616A7IqcFWG7Msp1RKAXQ/hapjivRg+g5IYWSiFhnk3OKYV5T4Ft1t8Cczg==}
+  rolldown-plugin-dts@0.17.0:
+    resolution: {integrity: sha512-dZlFs5D6Qemo8Ch4Pz2tD2lhmfh74XSq8r+fUvVXJaP8iiunrF5wIQaoT7QIB/Q3HLMn8ETMR9mRn+Zh96FdNg==}
     engines: {node: '>=20.18.0'}
     peerDependencies:
       '@ts-macro/tsc': ^0.3.6
       '@typescript/native-preview': '>=7.0.0-dev.20250601.1'
-      rolldown: ^1.0.0-beta.9
+      rolldown: ^1.0.0-beta.44
       typescript: ^5.0.0
       vue-tsc: ~3.1.0
     peerDependenciesMeta:
@@ -8841,7 +8841,7 @@ snapshots:
 
   get-them-args@1.3.2: {}
 
-  get-tsconfig@4.12.0:
+  get-tsconfig@4.13.0:
     dependencies:
       resolve-pkg-maps: 1.0.0
 
@@ -9941,7 +9941,7 @@ snapshots:
       glob: 11.0.3
       package-json-from-dist: 1.0.1
 
-  rolldown-plugin-dts@0.16.12(oxc-resolver@11.10.0)(rolldown@packages+rolldown)(typescript@5.9.3):
+  rolldown-plugin-dts@0.17.0(oxc-resolver@11.10.0)(rolldown@packages+rolldown)(typescript@5.9.3):
     dependencies:
       '@babel/generator': 7.28.3
       '@babel/parser': 7.28.4
@@ -9950,7 +9950,7 @@ snapshots:
       birpc: 2.6.1
       debug: 4.4.3(supports-color@8.1.1)
       dts-resolver: 2.1.2(oxc-resolver@11.10.0)
-      get-tsconfig: 4.12.0
+      get-tsconfig: 4.13.0
       magic-string: 0.30.19
       rolldown: link:packages/rolldown
     optionalDependencies:
@@ -10002,7 +10002,7 @@ snapshots:
       debug: 4.4.3(supports-color@8.1.1)
       es-module-lexer: 1.7.0
       esbuild: 0.25.11
-      get-tsconfig: 4.12.0
+      get-tsconfig: 4.13.0
       rollup: 4.52.5
       unplugin-utils: 0.2.5
     transitivePeerDependencies:
@@ -10330,7 +10330,7 @@ snapshots:
   tsx@4.20.6:
     dependencies:
       esbuild: 0.25.11
-      get-tsconfig: 4.12.0
+      get-tsconfig: 4.13.0
     optionalDependencies:
       fsevents: 2.3.3
 

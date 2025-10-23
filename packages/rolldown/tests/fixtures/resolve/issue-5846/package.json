@@ -1,4 +1,8 @@
 {
   "name": "5846",
-  "sideEffects": false
+  "sideEffects": false,
+  "dependencies": {
+    "rolldown-tests": "workspace:*"
+  },
+  "private": true
 }

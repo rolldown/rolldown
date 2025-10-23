@@ -1,10 +1,12 @@
+use rolldown_dev_common::types::DevOptions;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct DevTestMeta {
-  // Empty for now - will be used to control test behavior in the dev scenario
+  #[serde(default)]
+  pub config: Option<DevOptions>,
 }
 
 impl Default for DevTestMeta {

@@ -1,4 +1,14 @@
+#[cfg(feature = "deserialize_dev_options")]
+use schemars::JsonSchema;
+#[cfg(feature = "deserialize_dev_options")]
+use serde::Deserialize;
+
 #[derive(Debug, Default)]
+#[cfg_attr(feature = "deserialize_dev_options", derive(Deserialize, JsonSchema))]
+#[cfg_attr(
+  feature = "deserialize_dev_options",
+  serde(rename_all = "camelCase", deny_unknown_fields)
+)]
 pub struct DevWatchOptions {
   /// If `true`, watcher will be disabled.
   pub disable_watcher: Option<bool>,

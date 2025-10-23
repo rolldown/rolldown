@@ -2991,6 +2991,8 @@ dependencies = [
  "derive_more",
  "rolldown_common",
  "rolldown_error",
+ "schemars",
+ "serde",
 ]
 
 [[package]]
@@ -3515,6 +3517,7 @@ name = "rolldown_testing_config"
 version = "0.1.0"
 dependencies = [
  "rolldown_common",
+ "rolldown_dev_common",
  "schemars",
  "serde",
  "serde_json",

@@ -42,7 +42,8 @@ const members = [
     name: 'Boshen',
     links: [
       { icon: 'github', link: 'https://github.com/boshen' },
-      { icon: 'twitter', link: 'https://twitter.com/boshen_c' }
+      { icon: 'twitter', link: 'https://twitter.com/boshen_c' },
+      { icon: 'bluesky', link: 'https://bsky.app/profile/boshen.github.io' }
     ]
   },
   {
@@ -51,6 +52,33 @@ const members = [
     links: [
       { icon: 'github', link: 'https://github.com/shulaoda' },
       { icon: 'twitter', link: 'https://x.com/dalaoshv' }
+    ]
+  },
+  {
+    name: 'Kevin Deng (sxzz)',
+    avatar: 'https://www.github.com/sxzz.png',
+    links: [
+      { icon: 'github', link: 'https://github.com/sxzz' },
+      { icon: 'twitter', link: 'https://x.com/sanxiaozhizi' },
+      { icon: 'bluesky', link: 'https://bsky.app/profile/sxzz.dev' }
+    ]
+  },
+  {
+    name: '翠 (sapphi-red)',
+    avatar: 'https://www.github.com/sapphi-red.png',
+    links: [
+      { icon: 'github', link: 'https://github.com/sapphi-red' },
+      { icon: 'twitter', link: 'https://x.com/sapphi_red' },
+      { icon: 'bluesky', link: 'https://bsky.app/profile/sapphi.red' }
+    ]
+  },
+  {
+    name: 'Alexander Lichter',
+    avatar: 'https://www.github.com/TheAlexLichter.png',
+    links: [
+      { icon: 'github', link: 'https://github.com/TheAlexLichter' },
+      { icon: 'twitter', link: 'https://x.com/TheAlexLichter' },
+      { icon: 'bluesky', link: 'https://bsky.app/profile/thealexlichter.com' }
     ]
   }
 ]

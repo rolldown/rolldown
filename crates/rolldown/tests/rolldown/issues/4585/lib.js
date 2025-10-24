@@ -1,9 +1,7 @@
-import {minproc} from './proc.js'
-
+import { minproc } from "./proc.js";
 
 export class VFile {
   constructor() {
-    console.log(minproc)
+    console.log(minproc);
   }
 }
-

@@ -700,7 +700,7 @@ export default {
 
 Clean the output directory ([`output.dir`](#dir)) before emitting output.
 
-This feature cleans the output directory before `writeBundle` hooks are called. If you have advanced use cases like having multiple outputs with the same `output.dir`, we suggest you to run `rm` by yourself.
+The cleanup happens before the `generateBundle` hook is called. This ensures that files created by plugins during `generateBundle` or `writeBundle` hooks are preserved.
 
 ### Examples
 
@@ -711,6 +711,14 @@ export default {
   },
 };
 ```
+
+### In-depth
+
+The timing of the directory cleanup is important for plugin compatibility:
+
+- The cleanup occurs **before** the `generateBundle` hook
+- Files created by plugins in `generateBundle` or `writeBundle` hooks are **not** deleted
+- If you have advanced use cases like multiple outputs with the same `output.dir`, consider using a separate cleanup script instead
 
 ## minifyInternalExports
 

@@ -7,8 +7,8 @@ use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind,
   ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
-  RUNTIME_HELPER_NAMES, RuntimeHelper, SideEffectDetail, StmtInfoIdx, StmtInfoMeta, StmtInfos,
-  SymbolIdExt, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  RUNTIME_HELPER_NAMES, RUNTIME_MODULE_ID, RuntimeHelper, SideEffectDetail, StmtInfoIdx,
+  StmtInfoMeta, StmtInfos, SymbolIdExt, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
@@ -20,6 +20,10 @@ use rolldown_utils::rayon::{
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec};
+
+type StmtInclusionVec = IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>;
+type ModuleInclusionVec = IndexVec<ModuleIdx, bool>;
+type ModuleNamespaceReasonVec = IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>;
 
 bitflags::bitflags! {
     #[derive(Debug, Clone, Copy)]
@@ -42,8 +46,8 @@ bitflags::bitflags! {
 struct Context<'a> {
   modules: &'a IndexModules,
   symbols: &'a SymbolRefDb,
-  is_included_vec: &'a mut IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
-  is_module_included_vec: &'a mut IndexVec<ModuleIdx, bool>,
+  is_included_vec: &'a mut StmtInclusionVec,
+  is_module_included_vec: &'a mut ModuleInclusionVec,
   tree_shaking: bool,
   inline_const_smart: bool,
   runtime_id: ModuleIdx,
@@ -56,7 +60,7 @@ struct Context<'a> {
   /// see [rolldown_common::ecmascript::ecma_view::EcmaViewMeta]
   bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
   may_partial_namespace: bool,
-  module_namespace_included_reason: &'a mut IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>,
+  module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
   json_module_none_self_reference_included_symbol: FxHashMap<ModuleIdx, FxHashSet<SymbolRef>>,
 }
 
@@ -79,7 +83,7 @@ fn include_cjs_bailout_exports(
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(&mut self) {
-    let mut is_included_vec: IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>> = self
+    let mut is_included_vec: StmtInclusionVec = self
       .module_table
       .modules
       .iter()
@@ -90,9 +94,9 @@ impl LinkStage<'_> {
       })
       .collect::<IndexVec<ModuleIdx, _>>();
     let mut used_symbol_refs = FxHashSet::default();
-    let mut is_module_included_vec: IndexVec<ModuleIdx, bool> =
+    let mut is_module_included_vec: ModuleInclusionVec =
       oxc_index::index_vec![false; self.module_table.modules.len()];
-    let mut module_namespace_included_reason: IndexVec<ModuleIdx, ModuleNamespaceIncludedReason> =
+    let mut module_namespace_included_reason: ModuleNamespaceReasonVec =
       oxc_index::index_vec![ModuleNamespaceIncludedReason::empty(); self.module_table.len()];
     let context = &mut Context {
       modules: &self.module_table.modules,
@@ -225,8 +229,12 @@ impl LinkStage<'_> {
             stmt_info_idxs.iter().any(|stmt_info_idx| is_included_vec[module.idx][*stmt_info_idx]);
           #[expect(clippy::cast_possible_truncation)]
           // It is alright, since the `RuntimeHelper` is a bitmask and the index is guaranteed to be less than 32.
-          normalized_runtime_helper
-            .set(RuntimeHelper::from_bits(1 << index as u32).unwrap(), any_included);
+          normalized_runtime_helper.set(
+            RuntimeHelper::from_bits(1 << index as u32).unwrap(),
+            any_included || (module.id != RUNTIME_MODULE_ID && !is_module_included_vec[idx]),
+          );
+          // We also need to process the runtime helper of the eliminate module so that we
+          // could propagate them to its importers later
         }
         meta.depended_runtime_helper = normalized_runtime_helper;
         meta.module_namespace_included_reason = module_namespace_included_reason[module.idx];
@@ -396,7 +404,7 @@ impl LinkStage<'_> {
     (!is_lived).then_some(ret)
   }
 
-  fn include_runtime_symbol(
+  pub fn include_runtime_symbol(
     &mut self,
     is_stmt_included_vec: &mut IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
     is_module_included_vec: &mut IndexVec<ModuleIdx, bool>,

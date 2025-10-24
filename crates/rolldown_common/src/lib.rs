@@ -18,7 +18,9 @@ mod types;
 pub mod bundler_options {
   pub use crate::generated::{
     checks_options::ChecksOptions,
-    runtime_helper::{RUNTIME_HELPER_NAMES, RuntimeHelper},
+    runtime_helper::{
+      DependedRuntimeHelperMap, DependedRuntimeHelperMapExt, RUNTIME_HELPER_NAMES, RuntimeHelper,
+    },
   };
 
   #[cfg(feature = "deserialize_bundler_options")]

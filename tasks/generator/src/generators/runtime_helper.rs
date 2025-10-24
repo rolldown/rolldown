@@ -72,7 +72,7 @@ pub const RUNTIME_HELPER_NAMES: [&str; {}] = [
     top_level_items.len()
   );
 
-  let runtime_helper_impl = r"
+  let runtime_helper_impl = r#"
 impl RuntimeHelper {
   /// # Use with caution
   /// Only used when there is only one bit is set in the `RuntimeHelper`.
@@ -82,7 +82,25 @@ impl RuntimeHelper {
     self.bits().trailing_zeros() as usize
   }
 }
-  ";
+use crate::StmtInfoIdx;
+pub type DependedRuntimeHelperMap = [Vec<StmtInfoIdx>; RUNTIME_HELPER_NAMES.len()];
+pub trait DependedRuntimeHelperMapExt {
+  /// Debug function to print runtime names and their associated statement indices
+  fn debug_print(&self);
+}
+impl DependedRuntimeHelperMapExt for DependedRuntimeHelperMap {
+  fn debug_print(&self) {
+    eprintln!("DependedRuntimeHelperMap debug:");
+    for (idx, stmt_infos) in self.iter().enumerate() {
+      if let Some(runtime_name) = RUNTIME_HELPER_NAMES.get(idx) {
+        eprintln!("  {runtime_name} (idx: {idx}): {stmt_infos:?}");
+      } else {
+        eprintln!("  Unknown runtime (idx: {idx}): {stmt_infos:?}");
+      }
+    }
+  }
+}
+  "#;
 
   format!("{runtime_helper_flag}\n{runtime_helper_impl}\n{runtime_helper_names_code}")
 }

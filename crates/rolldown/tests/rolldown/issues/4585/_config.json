@@ -1,6 +1,5 @@
 {
   "config": {
-    "external": ["node:process"],
     "format": "cjs"
   },
   "expectExecuted": false

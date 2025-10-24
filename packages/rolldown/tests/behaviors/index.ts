@@ -1,3 +1,3 @@
 export function placeholder(...values: number[]) {
-  return values.reduce((acc, cur) => acc + cur, 0)
+  return values.reduce((acc, cur) => acc + cur, 0);
 }

@@ -47,7 +47,7 @@ export default defineConfig({
 
             html = html.replace(
               /<script\s+type="importmap"[^>]*>[\s\S]*?<\/script>/i,
-              `<script type="importmap">${importMap}</script>`,
+              `<script type="importmap">${importMap.toString()}</script>`,
             );
 
             let oldImportMap = importMap;

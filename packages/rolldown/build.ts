@@ -345,7 +345,10 @@ function generateRuntimeTypes() {
 }
 
 function getTsconfigCompilerOptionsForFile(file: string) {
-  const tsconfigPath = ts.findConfigFile(file, ts.sys.fileExists);
+  const tsconfigPath = ts.findConfigFile(
+    file,
+    (path) => ts.sys.fileExists(path),
+  );
   let compilerOptions = ts.getDefaultCompilerOptions();
   if (tsconfigPath) {
     const parsedConfig = ts.getParsedCommandLineOfConfigFile(

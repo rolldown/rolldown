@@ -9,7 +9,7 @@
     "module": "ESNext", /* Specify what module code is generated. */
     "rootDir": "./src", /* Specify the root folder within your source files. */
     "declaration": true, /* Generate .d.ts files from TypeScript and JavaScript files in your project. */
-    "outDir": "./dist/esm", /* Specify an output folder for all emitted files. */
+    "outDir": "./dist", /* Specify an output folder for all emitted files. */
     "esModuleInterop": true, /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */
     // "preserveSymlinks": true,                         /* Disable resolving symlinks to their realpath. This correlates to the same flag in node. */
     "forceConsistentCasingInFileNames": true, /* Ensure that casing is correct in imports. */

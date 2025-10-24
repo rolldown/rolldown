@@ -25,7 +25,7 @@ export async function bundleWithConfig(
   const config = await loadConfig(configPath);
 
   if (!config) {
-    logger.error(`No configuration found at ${config}`);
+    logger.error(`No configuration found at ${configPath}`);
     process.exit(1);
   }
 

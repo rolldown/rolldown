@@ -18,13 +18,13 @@ interface Input {
   };
   children?: Input[];
   type?: {
-    type?: (string & 'reflection') | 'array';
+    type?: 'reflection' | 'array';
     declaration?: {
       children?: Input[];
     };
     target?: number;
     elementType?: {
-      type?: (string & 'reflection') | 'array';
+      type?: 'reflection' | 'array';
       declaration?: Input;
     };
   };

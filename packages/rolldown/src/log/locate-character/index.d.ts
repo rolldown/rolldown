@@ -1,15 +1,15 @@
 export function getLocator(
   source: string,
-  options?: Options | undefined,
+  options?: Options,
 ): (
   search: string | number,
-  index?: number | undefined,
+  index?: number,
 ) => Location | undefined;
 
 export function locate(
   source: string,
   search: string | number,
-  options?: Options | undefined,
+  options?: Options,
 ): Location | undefined;
 export type Location = Location_1;
 interface Options {

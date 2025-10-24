@@ -15,8 +15,6 @@ pub struct ManifestChunk {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub name: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  pub names: Option<Vec<String>>,
-  #[serde(skip_serializing_if = "Option::is_none")]
   pub src: Option<String>,
   #[serde(skip_serializing_if = "std::ops::Not::not")]
   pub is_entry: bool,
@@ -59,12 +57,13 @@ impl ManifestPlugin {
     }
   }
 
-  pub fn create_asset(asset: &OutputAsset, src: String, is_entry: bool) -> ManifestChunk {
+  pub fn create_asset(asset: &OutputAsset, src: String, name: Option<String>) -> ManifestChunk {
+    let is_entry = name.is_some();
     ManifestChunk {
+      name,
       is_entry,
       src: Some(src),
       file: asset.filename.to_string(),
-      names: is_entry.then(|| asset.names.clone()),
       ..Default::default()
     }
   }
@@ -84,7 +83,6 @@ impl ManifestPlugin {
       is_dynamic_entry: chunk.is_dynamic_entry,
       imports: self.get_internal_imports(bundle, &chunk.imports, is_legacy),
       dynamic_imports: self.get_internal_imports(bundle, &chunk.dynamic_imports, is_legacy),
-      ..Default::default()
     }
   }
 

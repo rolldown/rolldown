@@ -123,6 +123,7 @@ impl EcmaCompiler {
         ..codegen_options
       })
       .with_scoping(ret.scoping)
+      .with_private_member_mappings(ret.class_private_mappings)
       .build(&program);
     (ret.code, ret.map)
   }

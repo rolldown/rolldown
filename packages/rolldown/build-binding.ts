@@ -1,44 +1,38 @@
-import { globSync } from 'glob';
-import { spawnSync } from 'node:child_process';
 import { rmSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { createBuildCommand, NapiCli } from '@napi-rs/cli';
+import { globSync } from 'glob';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const args = process.argv.slice(2);
 
-const napiArgs = [
-  'napi',
-  'build',
-  '-o=./src',
-  '--manifest-path',
-  '../../crates/rolldown_binding/Cargo.toml',
-  '--platform',
-  '-p',
-  'rolldown_binding',
-  '--esm',
-  '--js',
-  'binding.js',
-  '--dts',
-  'binding.d.ts',
-  '--no-const-enum',
-  ...args,
-];
+const napiCli = new NapiCli();
+const buildCommand = createBuildCommand(args);
+
+const argsOptions = buildCommand.getOptions();
+
+const napiArgs = {
+  ...argsOptions,
+  outputDir: './src',
+  manifestPath: '../../crates/rolldown_binding/Cargo.toml',
+  platform: true,
+  package: 'rolldown_binding',
+  jsBinding: 'binding.cjs',
+  dts: 'binding.d.cts',
+  constEnum: false,
+};
+
 console.info('args:', napiArgs);
 
-const cmd = spawnSync(
-  'pnpm',
-  napiArgs,
-  {
-    stdio: 'inherit', // Directly inherit stdio (preserves colors)
-    env: { ...process.env, RUSTC_COLOR: 'always' }, // Force color output
-    shell: true,
-    cwd: __dirname,
-  },
-);
-
-if (cmd.status !== 0) {
+try {
+  const { task } = await napiCli.build(napiArgs);
+  await task;
+} catch (error) {
+  // remove previous build artifacts
+  console.error(error);
   globSync('src/rolldown-binding.*.node', {
     absolute: true,
     cwd: __dirname,
@@ -53,6 +47,5 @@ if (cmd.status !== 0) {
     rmSync(file, { recursive: true, force: true });
   });
 
-  console.error('Command failed!');
-  process.exit(cmd.status);
+  process.exit(1);
 }

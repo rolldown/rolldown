@@ -1,7 +1,7 @@
 import type {
   JsxOptions,
   TransformOptions as OxcTransformOptions,
-} from '../binding';
+} from '../binding.cjs';
 
 export interface TransformOptions extends
   Omit<

@@ -1,4 +1,4 @@
-import type { BindingAssetPluginConfig } from '../binding';
+import type { BindingAssetPluginConfig } from '../binding.cjs';
 import { BuiltinPlugin } from './utils';
 
 export function assetPlugin(config: BindingAssetPluginConfig): BuiltinPlugin {

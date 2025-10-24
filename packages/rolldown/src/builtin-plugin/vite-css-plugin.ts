@@ -2,7 +2,7 @@ import type { SourceMapInput } from '..';
 import type {
   BindingUrlResolver,
   BindingViteCssPluginConfig,
-} from '../binding';
+} from '../binding.cjs';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { BuiltinPlugin } from './utils';
 

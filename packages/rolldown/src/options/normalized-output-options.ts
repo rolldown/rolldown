@@ -1,5 +1,5 @@
 import type { RolldownPlugin } from '..';
-import type { BindingNormalizedOptions } from '../binding';
+import type { BindingNormalizedOptions } from '../binding.cjs';
 import type {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,

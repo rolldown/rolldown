@@ -1,4 +1,4 @@
-import { type BindingPluginHookMeta, BindingPluginOrder } from '../binding';
+import { type BindingPluginHookMeta, BindingPluginOrder } from '../binding.cjs';
 import type { ObjectHookMeta, PluginOrder } from '.';
 
 export function bindingifyPluginHookMeta(

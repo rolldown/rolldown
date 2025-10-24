@@ -97,7 +97,6 @@
     "build-browser-pkg:debug": "TARGET='browser' pnpm run --sequential '/^build-(binding|binding:wasi|node)$/'",
     "build-browser-pkg:release": "TARGET='browser' pnpm run --sequential '/^build-(binding|binding:wasi:release|node)$/'",
     "# Scrips for docs #": "_",
-    "extract-options-doc": "typedoc",
     "prepublishOnly": "napi pre-publish -t npm --no-gh-release"
   },
   "napi": {
@@ -150,7 +149,6 @@
     "signal-exit": "catalog:",
     "source-map": "catalog:",
     "tsx": "catalog:",
-    "typedoc": "catalog:",
     "typescript": "catalog:",
     "valibot": "catalog:"
   },

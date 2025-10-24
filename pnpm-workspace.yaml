@@ -4,6 +4,8 @@ packages:
   - packages/test-dev-server/tests
   - packages/test-dev-server/tests/fixtures/*
   - packages/test-dev-server/tests/tmp/fixtures/*
+  - packages/rolldown/tests/fixtures/resolve/issue-5846
+  - packages/rolldown/tests/fixtures/resolve/issue-5846-2
   - docs
   - examples/*
   - scripts
@@ -51,7 +53,7 @@ catalog:
   'tsdown': '0.15.9'
   'typescript': '^5.8.3'
   'tsx': '^4.19.4'
-  'vitest': '^3.0.1'
+  'vitest': '^4.0.1'
   'vite': '^7.0.0'
   '@types/node': '24.8.1'
   'esbuild': '^0.25.0'

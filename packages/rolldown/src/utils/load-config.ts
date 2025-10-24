@@ -112,7 +112,7 @@ function isFilePathESM(filePath: string): boolean {
   }
 }
 
-function findNearestPackageData(basedir: string): any | null {
+function findNearestPackageData(basedir: string): any {
   while (basedir) {
     const pkgPath = path.join(basedir, 'package.json');
     if (tryStatSync(pkgPath)?.isFile()) {

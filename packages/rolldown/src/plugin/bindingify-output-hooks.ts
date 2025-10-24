@@ -121,7 +121,7 @@ export function bindingifyAugmentChunkHash(
 
   return {
     plugin: async (ctx, chunk) => {
-      return await handler.call(
+      return handler.call(
         new PluginContextImpl(
           args.outputOptions,
           ctx,

@@ -1,8 +1,19 @@
 import type { BuildOptions } from 'esbuild';
-import type { RolldownOptions } from 'rolldown';
-import type { RollupOptions } from 'rollup';
+import type { OutputOptions, RolldownOptions } from 'rolldown';
+import type {
+  OutputOptions as RollupOutputOptions,
+  RollupOptions,
+} from 'rollup';
 
 type BundlerName = 'rolldown' | 'rollup' | 'esbuild';
+
+type RolldownOptionsWithSingleOutput = Omit<RolldownOptions, 'output'> & {
+  output?: RolldownOutputOptions;
+};
+
+type RollupOptionsWithSingleOutput = Omit<RollupOptions, 'output'> & {
+  output?: RollupOutputOptions;
+};
 
 export interface BenchSuite {
   derived?: {
@@ -16,9 +27,9 @@ export interface BenchSuite {
   // Multiple rolldown options will result in multiple runs with different options.
   // This is useful for benchmarking different options with the same input in rolldown.
   rolldownOptions?:
-    | RolldownOptions
-    | { name: string; options: RolldownOptions }[];
-  rollupOptions?: RollupOptions;
+    | RolldownOptionsWithSingleOutput
+    | { name: string; options: RolldownOptionsWithSingleOutput }[];
+  rollupOptions?: RollupOptionsWithSingleOutput;
   esbuildOptions?: BuildOptions;
 }
 
@@ -26,5 +37,5 @@ export interface RolldownBenchSuite {
   suiteName: string;
   title: string;
   inputs: string[];
-  options?: RolldownOptions;
+  options?: RolldownOptionsWithSingleOutput;
 }

@@ -1,3 +1,4 @@
 import { DevEngine } from './dev-engine';
 
-export var dev: typeof DevEngine.create = DevEngine.create;
+export const dev: typeof DevEngine.create = (...args) =>
+  DevEngine.create(...args);

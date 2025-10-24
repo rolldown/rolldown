@@ -327,9 +327,6 @@ importers:
       vitepress-plugin-llms:
         specifier: 'catalog:'
         version: 1.8.0
-      zx:
-        specifier: 'catalog:'
-        version: 8.8.5
 
   examples/basic-typescript:
     devDependencies:

@@ -2263,6 +2263,7 @@ export interface BindingViteResolvePluginConfig {
   resolveSubpathImports: (id: string, importer: string, isRequire: boolean, scan: boolean) => VoidNullable<string>
   onWarn?: (message: string) => void
   onDebug?: (message: string) => void
+  yarnPnp: boolean
 }
 
 export interface BindingViteResolvePluginResolveOptions {

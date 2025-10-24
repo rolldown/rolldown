@@ -11,7 +11,7 @@
     "execa": "^9.2.0",
     "kill-port": "^2.0.1",
     "rimraf": "^6.0.1",
-    "vitest": "^3.0.1",
+    "vitest": "catalog:",
     "fast-glob": "catalog:"
   }
 }

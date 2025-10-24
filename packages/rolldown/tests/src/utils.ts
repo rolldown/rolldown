@@ -103,7 +103,7 @@ export function getLocation(source: string, search: string | number) {
 export async function waitUtil(expectFn: () => void) {
   for (let tries = 0; tries < 20; tries++) {
     try {
-      await expectFn()
+      expectFn()
       return
     } catch {}
     await sleep(50)

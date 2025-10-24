@@ -20,7 +20,7 @@ export function normalizedStringOrRegex<
 
 // For https://github.com/microsoft/TypeScript/issues/17002
 function isReadonlyArray<T extends unknown[] | readonly unknown[]>(
-  input: T | unknown,
+  input: unknown,
 ): input is T {
   return Array.isArray(input);
 }

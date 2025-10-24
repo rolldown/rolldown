@@ -69,7 +69,7 @@ export interface PluginContext extends MinimalPluginContext {
         PartialNull<ModuleOptions>
       >,
   ): Promise<ModuleInfo>;
-  parse(input: string, options?: ParserOptions | undefined | null): Program;
+  parse(input: string, options?: ParserOptions | null): Program;
   resolve(
     source: string,
     importer?: string,
@@ -238,7 +238,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
 
   public parse(
     input: string,
-    options?: ParserOptions | undefined | null,
+    options?: ParserOptions | null,
   ): Program {
     return parseAst(input, options);
   }

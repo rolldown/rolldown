@@ -15,33 +15,33 @@ impl BindingOutputAsset {
     Self { inner }
   }
 
-  #[napi(getter)]
-  pub fn file_name(&self) -> &str {
+  #[napi]
+  pub fn get_file_name(&self) -> &str {
     &self.inner.filename
   }
 
-  #[napi(getter)]
-  pub fn original_file_name(&self) -> Option<&str> {
+  #[napi]
+  pub fn get_original_file_name(&self) -> Option<&str> {
     self.inner.original_file_names.first().map(AsRef::as_ref)
   }
 
-  #[napi(getter)]
-  pub fn original_file_names(&self) -> Vec<&str> {
+  #[napi]
+  pub fn get_original_file_names(&self) -> Vec<&str> {
     self.inner.original_file_names.iter().map(AsRef::as_ref).collect()
   }
 
-  #[napi(getter)]
-  pub fn source(&self) -> BindingAssetSource {
+  #[napi]
+  pub fn get_source(&self) -> BindingAssetSource {
     self.inner.source.clone().into()
   }
 
-  #[napi(getter)]
-  pub fn name(&self) -> Option<&str> {
+  #[napi]
+  pub fn get_name(&self) -> Option<&str> {
     self.inner.names.first().map(AsRef::as_ref)
   }
 
-  #[napi(getter)]
-  pub fn names(&self) -> Vec<&str> {
+  #[napi]
+  pub fn get_names(&self) -> Vec<&str> {
     self.inner.names.iter().map(AsRef::as_ref).collect()
   }
 }

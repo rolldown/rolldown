@@ -1396,6 +1396,7 @@ export declare class BindingNormalizedOptions {
 }
 
 export declare class BindingOutputAsset {
+  dropInner(): boolean
   get fileName(): string
   get originalFileName(): string | null
   get originalFileNames(): Array<string>
@@ -1405,6 +1406,7 @@ export declare class BindingOutputAsset {
 }
 
 export declare class BindingOutputChunk {
+  dropInner(): boolean
   get isEntry(): boolean
   get isDynamicEntry(): boolean
   get facadeModuleId(): string | null

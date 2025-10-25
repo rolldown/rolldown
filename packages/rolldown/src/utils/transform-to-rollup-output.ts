@@ -7,6 +7,7 @@ import type {
   JsOutputChunk,
 } from '../binding';
 import type { PluginContext } from '../plugin/plugin-context';
+import { symbolForExternalMemoryHandle } from '../types/external-memory-handle';
 import type { OutputBundle } from '../types/output-bundle';
 import type {
   OutputAsset,
@@ -71,6 +72,9 @@ function transformToRollupOutputChunk(
     },
     sourcemapFileName: bindingChunk.sourcemapFileName || null,
     preliminaryFileName: bindingChunk.preliminaryFileName,
+    [symbolForExternalMemoryHandle]: () => {
+      return bindingChunk.dropInner();
+    },
   } as OutputChunk;
   const cache: Record<string | symbol, any> = {};
   return new Proxy(chunk, {
@@ -159,6 +163,9 @@ function transformToRollupOutputAsset(
     },
     name: bindingAsset.name ?? undefined,
     names: bindingAsset.names,
+    [symbolForExternalMemoryHandle]: () => {
+      return bindingAsset.dropInner();
+    },
   } as OutputAsset;
   const cache: Record<string | symbol, any> = {};
   return new Proxy(asset, {
@@ -169,6 +176,10 @@ function transformToRollupOutputAsset(
       const value = target[p as keyof OutputAsset];
       cache[p] = value;
       return value;
+    },
+    has(target, p): boolean {
+      if (p in cache) return true;
+      return p in target;
     },
   });
 }

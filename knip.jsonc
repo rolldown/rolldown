@@ -39,6 +39,7 @@
         "src/parallel-plugin-worker.ts",
         "src/rolldown-binding.wasi-browser.js",
         "src/{wasi,webcontainer}-*.*",
+        "src/api/experimental.ts",
       ],
       "ignore": [
         "src/binding.js",

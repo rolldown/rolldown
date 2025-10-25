@@ -1421,11 +1421,6 @@ export declare class BindingOutputChunk {
   get name(): string
 }
 
-export declare class BindingOutputs {
-  get chunks(): Array<BindingOutputChunk>
-  get assets(): Array<BindingOutputAsset>
-}
-
 export declare class BindingPluginContext {
   load(specifier: string, sideEffects: boolean | 'no-treeshake' | undefined, packageJsonPath?: string): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
@@ -1999,6 +1994,11 @@ export interface BindingOutputOptions {
   topLevelVar?: boolean
   minifyInternalExports?: boolean
   cleanDir?: boolean
+}
+
+export interface BindingOutputs {
+  chunks: Array<BindingOutputChunk>
+  assets: Array<BindingOutputAsset>
 }
 
 export interface BindingPluginContextResolvedId {

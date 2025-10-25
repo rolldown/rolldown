@@ -9,8 +9,6 @@ use super::{
   binding_sourcemap::BindingSourcemap,
 };
 
-// Here using `napi` `getter` fields to avoid the cost of serialize larger data to js side.
-
 #[napi]
 pub struct BindingOutputChunk {
   inner: Arc<rolldown_common::OutputChunk>,
@@ -22,76 +20,76 @@ impl BindingOutputChunk {
     Self { inner }
   }
 
-  #[napi(getter)]
-  pub fn is_entry(&self) -> bool {
+  #[napi]
+  pub fn get_is_entry(&self) -> bool {
     self.inner.is_entry
   }
 
-  #[napi(getter)]
-  pub fn is_dynamic_entry(&self) -> bool {
+  #[napi]
+  pub fn get_is_dynamic_entry(&self) -> bool {
     self.inner.is_dynamic_entry
   }
 
-  #[napi(getter)]
-  pub fn facade_module_id(&self) -> Option<&str> {
+  #[napi]
+  pub fn get_facade_module_id(&self) -> Option<&str> {
     self.inner.facade_module_id.as_deref()
   }
 
-  #[napi(getter)]
-  pub fn module_ids(&self) -> Vec<&str> {
+  #[napi]
+  pub fn get_module_ids(&self) -> Vec<&str> {
     self.inner.module_ids.iter().map(AsRef::as_ref).collect()
   }
 
-  #[napi(getter)]
-  pub fn exports(&self) -> Vec<&str> {
+  #[napi]
+  pub fn get_exports(&self) -> Vec<&str> {
     self.inner.exports.iter().map(AsRef::as_ref).collect()
   }
 
   // RenderedChunk
-  #[napi(getter)]
-  pub fn file_name(&self) -> &str {
+  #[napi]
+  pub fn get_file_name(&self) -> &str {
     &self.inner.filename
   }
 
-  #[napi(getter)]
-  pub fn modules(&self) -> BindingModules {
+  #[napi]
+  pub fn get_modules(&self) -> BindingModules {
     (&self.inner.modules).into()
   }
 
-  #[napi(getter)]
-  pub fn imports(&self) -> Vec<&str> {
+  #[napi]
+  pub fn get_imports(&self) -> Vec<&str> {
     self.inner.imports.iter().map(AsRef::as_ref).collect()
   }
 
-  #[napi(getter)]
-  pub fn dynamic_imports(&self) -> Vec<&str> {
+  #[napi]
+  pub fn get_dynamic_imports(&self) -> Vec<&str> {
     self.inner.dynamic_imports.iter().map(AsRef::as_ref).collect()
   }
 
   // OutputChunk
-  #[napi(getter)]
-  pub fn code(&self) -> &str {
+  #[napi]
+  pub fn get_code(&self) -> &str {
     &self.inner.code
   }
 
-  #[napi(getter)]
+  #[napi]
   // TODO: claude code - Cannot change to Option<&str>: performs JSON serialization via to_json_string()
-  pub fn map(&self) -> napi::Result<Option<String>> {
+  pub fn get_map(&self) -> napi::Result<Option<String>> {
     Ok(self.inner.map.as_ref().map(SourceMap::to_json_string))
   }
 
-  #[napi(getter)]
-  pub fn sourcemap_file_name(&self) -> Option<&str> {
+  #[napi]
+  pub fn get_sourcemap_file_name(&self) -> Option<&str> {
     self.inner.sourcemap_filename.as_deref()
   }
 
-  #[napi(getter)]
-  pub fn preliminary_file_name(&self) -> &str {
+  #[napi]
+  pub fn get_preliminary_file_name(&self) -> &str {
     &self.inner.preliminary_filename
   }
 
-  #[napi(getter)]
-  pub fn name(&self) -> &str {
+  #[napi]
+  pub fn get_name(&self) -> &str {
     &self.inner.name
   }
 }

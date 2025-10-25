@@ -1,6 +1,6 @@
 use crate::{ChunkMeta, ModuleIdx};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ChunkKind {
   EntryPoint { meta: ChunkMeta, bit: u32, module: ModuleIdx },
   Common,

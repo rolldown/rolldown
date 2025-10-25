@@ -1,7 +1,7 @@
-use std::{borrow::Cow, hash::Hash, mem};
+use std::{borrow::Cow, hash::Hash, mem, sync::Arc};
 
 use arcstr::ArcStr;
-use futures::future::try_join_all;
+use futures::{TryFutureExt, future::try_join_all};
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
@@ -33,13 +33,14 @@ use crate::{
 };
 
 #[tracing::instrument(level = "debug", skip_all)]
+#[expect(clippy::too_many_lines)]
 pub async fn finalize_assets(
   chunk_graph: &ChunkGraph,
   link_output: &LinkStageOutput,
   index_instantiated_chunks: IndexInstantiatedChunks,
   index_chunk_to_instances: &IndexChunkToInstances,
   hash_characters: HashCharacters,
-  options: &NormalizedBundlerOptions,
+  options: &Arc<NormalizedBundlerOptions>,
 ) -> BuildResult<AssetVec> {
   let ins_chunk_idx_by_placeholder = index_instantiated_chunks
     .iter_enumerated()
@@ -191,81 +192,97 @@ pub async fn finalize_assets(
 
   // apply sourcemap related logic
 
-  let derived_assets = try_join_all(assets.iter_mut().map(async |asset| {
-    let mut derived_asset: Result<Option<Asset>, anyhow::Error> = Ok(None::<Asset>);
-    match &mut asset.meta {
-      InstantiationKind::Ecma(ecma_meta) => {
-        let asset_code = mem::take(&mut asset.content);
-        let mut code = asset_code.try_into_string()?;
-        if let Some(map) = asset.map.as_mut() {
-          if let Some(sourcemap_asset) = process_code_and_sourcemap(
-            options,
-            &mut code,
-            map,
-            &ecma_meta.file_dir,
-            asset.filename.as_str(),
-            ecma_meta.debug_id,
-            /*is_css*/ false,
-          )
-          .await?
-          {
-            derived_asset = Ok(Some(Asset {
-              originate_from: None,
-              content: sourcemap_asset.source,
-              filename: sourcemap_asset.filename.clone(),
-              map: None,
-              meta: InstantiationKind::Sourcemap(Box::new(rolldown_common::SourcemapAssetMeta {
-                names: sourcemap_asset.names,
-                original_file_names: sourcemap_asset.original_file_names,
-              })),
-            }));
-          }
-        }
+  let assets_len = assets.len();
 
-        let sourcemap_filename = if matches!(options.sourcemap, Some(SourceMapType::Inline) | None)
-        {
-          None
-        } else {
-          Some(concat_string!(asset.filename, ".map"))
-        };
-        ecma_meta.sourcemap_filename = sourcemap_filename;
-        asset.content = code.into();
-      }
-      InstantiationKind::Css(css_meta) => {
-        let asset_code = mem::take(&mut asset.content);
-        let mut code = asset_code.try_into_string()?;
-        if let Some(map) = asset.map.as_mut() {
-          if let Some(sourcemap_asset) = process_code_and_sourcemap(
-            options,
-            &mut code,
-            map,
-            &css_meta.file_dir,
-            asset.filename.as_str(),
-            css_meta.debug_id,
-            /*is_css*/ true,
-          )
-          .await?
-          {
-            derived_asset = Ok(Some(Asset {
-              originate_from: None,
-              content: sourcemap_asset.source,
-              filename: sourcemap_asset.filename,
-              map: None,
-              meta: InstantiationKind::None,
-            }));
+  let assets = try_join_all(assets.into_iter().map(|mut asset| {
+    let mut derived_asset: Option<Asset> = None;
+    let options = Arc::clone(options);
+    tokio::spawn(async move {
+      match &mut asset.meta {
+        InstantiationKind::Ecma(ecma_meta) => {
+          if let Some(map) = asset.map.as_mut() {
+            let content = mem::take(&mut asset.content);
+            let mut code = content.try_into_string()?;
+            let output_asset = process_code_and_sourcemap(
+              &options,
+              &mut code,
+              map,
+              &ecma_meta.file_dir,
+              &asset.filename,
+              ecma_meta.debug_id,
+              /*is_css*/ false,
+            )
+            .await?;
+            if let Some(sourcemap_asset) = output_asset {
+              derived_asset = Some(Asset {
+                originate_from: None,
+                content: sourcemap_asset.source,
+                filename: sourcemap_asset.filename.clone(),
+                map: None,
+                meta: InstantiationKind::Sourcemap(Box::new(rolldown_common::SourcemapAssetMeta {
+                  names: sourcemap_asset.names,
+                  original_file_names: sourcemap_asset.original_file_names,
+                })),
+              });
+            }
+            asset.content = code.into();
           }
-        }
 
-        asset.content = code.into();
+          let sourcemap_filename =
+            if matches!(options.sourcemap, Some(SourceMapType::Inline) | None) {
+              None
+            } else {
+              Some(concat_string!(asset.filename, ".map"))
+            };
+          ecma_meta.sourcemap_filename = sourcemap_filename;
+        }
+        InstantiationKind::Css(css_meta) => {
+          let asset_code = mem::take(&mut asset.content);
+          let mut code = asset_code.try_into_string()?;
+          if let Some(map) = asset.map.as_mut() {
+            if let Some(sourcemap_asset) = process_code_and_sourcemap(
+              &options,
+              &mut code,
+              map,
+              &css_meta.file_dir,
+              asset.filename.as_str(),
+              css_meta.debug_id,
+              /*is_css*/ true,
+            )
+            .await?
+            {
+              derived_asset = Some(Asset {
+                originate_from: None,
+                content: sourcemap_asset.source,
+                filename: sourcemap_asset.filename,
+                map: None,
+                meta: InstantiationKind::None,
+              });
+            }
+          }
+
+          asset.content = code.into();
+        }
+        InstantiationKind::None | InstantiationKind::Sourcemap(_) => {}
       }
-      InstantiationKind::None | InstantiationKind::Sourcemap(_) => {}
-    }
-    derived_asset
+      Ok((asset, derived_asset))
+    })
+    .map_err(anyhow::Error::from)
   }))
-  .await?;
-
-  assets.extend(derived_assets.into_iter().flatten());
-
+  .await?
+  .into_iter()
+  .try_fold(
+    Vec::with_capacity(assets_len * 2),
+    |mut acc, assets: anyhow::Result<(Asset, Option<Asset>)>| {
+      let (asset, derived_asset) = assets?;
+      if let Some(derived_asset) = derived_asset {
+        acc.extend([asset, derived_asset]);
+      } else {
+        acc.push(asset);
+      }
+      Ok::<_, anyhow::Error>(acc)
+    },
+  )?;
   Ok(assets)
 }
 

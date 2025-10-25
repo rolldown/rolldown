@@ -91,7 +91,6 @@ catalog:
   '@types/serve-static': '^1.15.7'
   'ws': '^8.18.1'
   '@types/ws': '^8.18.0'
-  'typedoc': '^0.28.0'
   'vitepress': '^2.0.0-alpha.12'
   'vitepress-plugin-group-icons': '^1.0.0'
   'vitepress-plugin-llms': '^1.1.0'

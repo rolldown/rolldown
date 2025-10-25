@@ -2258,6 +2258,7 @@ export interface BindingViteResolvePluginConfig {
   external: true | string[]
   noExternal: true | Array<string | RegExp>
   dedupe: Array<string>
+  legacyInconsistentCjsInterop?: boolean
   finalizeBareSpecifier?: (resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>
   finalizeOtherSpecifiers?: (resolvedId: string, rawId: string) => VoidNullable<string>
   resolveSubpathImports: (id: string, importer: string, isRequire: boolean, scan: boolean) => VoidNullable<string>

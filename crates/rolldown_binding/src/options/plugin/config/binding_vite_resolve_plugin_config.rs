@@ -27,6 +27,7 @@ pub struct BindingViteResolvePluginConfig {
   #[napi(ts_type = "true | Array<string | RegExp>")]
   pub no_external: napi::Either<BindingTrueValue, Vec<BindingStringOrRegex>>,
   pub dedupe: Vec<String>,
+  pub legacy_inconsistent_cjs_interop: Option<bool>,
   #[debug("{}", if finalize_bare_specifier.is_some() { "Some(<finalize_bare_specifier>)" } else { "None" })]
   #[napi(
     ts_type = "(resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>"
@@ -71,6 +72,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
       external,
       no_external,
       dedupe: value.dedupe,
+      legacy_inconsistent_cjs_interop: value.legacy_inconsistent_cjs_interop.unwrap_or_default(),
       finalize_bare_specifier: value.finalize_bare_specifier.map(
         |finalizer_fn| -> Arc<FinalizeBareSpecifierCallback> {
           Arc::new(move |resolved_id: &str, raw_id: &str, importer: Option<&str>| {

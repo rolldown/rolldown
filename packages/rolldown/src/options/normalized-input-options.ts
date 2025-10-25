@@ -1,5 +1,5 @@
 import type { InputOptions } from '..';
-import { BindingNormalizedOptions } from '../binding';
+import { BindingNormalizedOptions } from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 
 export interface NormalizedInputOptions {

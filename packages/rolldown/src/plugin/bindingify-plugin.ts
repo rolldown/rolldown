@@ -1,4 +1,4 @@
-import type { BindingPluginOptions } from '../binding';
+import type { BindingPluginOptions } from '../binding.cjs';
 import {
   bindingifyBuildEnd,
   bindingifyBuildStart,

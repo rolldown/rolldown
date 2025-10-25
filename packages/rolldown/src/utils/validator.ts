@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import type { PreRenderedChunk } from '../binding';
+import type { PreRenderedChunk } from '../binding.cjs';
 import type { PreRenderedAsset } from '../options/output-options';
 import type {
   RolldownOutputPluginOption,

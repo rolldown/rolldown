@@ -1,4 +1,4 @@
-import { type BindingError, type BindingResult } from '../binding';
+import { type BindingError, type BindingResult } from '../binding.cjs';
 import type { RollupError } from '../log/logging';
 
 export function unwrapBindingResult<T>(

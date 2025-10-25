@@ -1,7 +1,7 @@
 import type {
   MinifyOptions as BindingMinifyOptions,
   PreRenderedChunk,
-} from '../binding';
+} from '../binding.cjs';
 import type { RolldownOutputPluginOption } from '../plugin';
 import type {
   SourcemapIgnoreListOption,

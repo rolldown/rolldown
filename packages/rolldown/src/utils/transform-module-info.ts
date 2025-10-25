@@ -1,5 +1,5 @@
 import type { ModuleOptions } from '..';
-import type { BindingModuleInfo } from '../binding';
+import type { BindingModuleInfo } from '../binding.cjs';
 import type { ModuleInfo } from '../types/module-info';
 import { unsupported } from './misc';
 

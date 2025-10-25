@@ -58,7 +58,16 @@ impl Plugin for ViteCSSPostPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::Transform | HookUsage::RenderChunk
+    HookUsage::BuildStart | HookUsage::Transform | HookUsage::RenderStart | HookUsage::RenderChunk
+  }
+
+  async fn build_start(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    ctx.meta().insert(Arc::new(CSSStyles::default()));
+    Ok(())
   }
 
   async fn render_start(

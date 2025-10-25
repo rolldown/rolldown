@@ -40,7 +40,58 @@ function transformToRollupSourceMap(map: string): SourceMap {
 
 function transformToRollupOutputChunk(
   bindingChunk: BindingOutputChunk,
-  changed?: ChangedOutputs,
+): OutputChunk {
+  const chunk = {
+    type: 'chunk',
+    get code() {
+      return bindingChunk.code;
+    },
+    fileName: bindingChunk.fileName,
+    name: bindingChunk.name,
+    get modules() {
+      return transformChunkModules(bindingChunk.modules);
+    },
+    get imports() {
+      return bindingChunk.imports;
+    },
+    get dynamicImports() {
+      return bindingChunk.dynamicImports;
+    },
+    exports: bindingChunk.exports,
+    isEntry: bindingChunk.isEntry,
+    facadeModuleId: bindingChunk.facadeModuleId || null,
+    isDynamicEntry: bindingChunk.isDynamicEntry,
+    get moduleIds() {
+      return bindingChunk.moduleIds;
+    },
+    get map() {
+      return bindingChunk.map
+        ? transformToRollupSourceMap(bindingChunk.map)
+        : null;
+    },
+    sourcemapFileName: bindingChunk.sourcemapFileName || null,
+    preliminaryFileName: bindingChunk.preliminaryFileName,
+  } as OutputChunk;
+  const cache: Record<string | symbol, any> = {};
+  return new Proxy(chunk, {
+    get(target, p) {
+      if (p in cache) {
+        return cache[p];
+      }
+      const value = target[p as keyof OutputChunk];
+      cache[p] = value;
+      return value;
+    },
+    has(target, p): boolean {
+      if (p in cache) return true;
+      return p in target;
+    },
+  });
+}
+
+function transformToMutableRollupOutputChunk(
+  bindingChunk: BindingOutputChunk,
+  changed: ChangedOutputs,
 ): OutputChunk {
   const chunk = {
     type: 'chunk',
@@ -85,7 +136,7 @@ function transformToRollupOutputChunk(
     },
     set(_target, p, newValue): boolean {
       cache[p] = newValue;
-      changed?.updated.add(bindingChunk.fileName);
+      changed.updated.add(bindingChunk.fileName);
       return true;
     },
     has(target, p): boolean {
@@ -97,7 +148,34 @@ function transformToRollupOutputChunk(
 
 function transformToRollupOutputAsset(
   bindingAsset: BindingOutputAsset,
-  changed?: ChangedOutputs,
+): OutputAsset {
+  const asset = {
+    type: 'asset',
+    fileName: bindingAsset.fileName,
+    originalFileName: bindingAsset.originalFileName || null,
+    originalFileNames: bindingAsset.originalFileNames,
+    get source(): AssetSource {
+      return transformAssetSource(bindingAsset.source);
+    },
+    name: bindingAsset.name ?? undefined,
+    names: bindingAsset.names,
+  } as OutputAsset;
+  const cache: Record<string | symbol, any> = {};
+  return new Proxy(asset, {
+    get(target, p) {
+      if (p in cache) {
+        return cache[p];
+      }
+      const value = target[p as keyof OutputAsset];
+      cache[p] = value;
+      return value;
+    },
+  });
+}
+
+function transformToMutableRollupOutputAsset(
+  bindingAsset: BindingOutputAsset,
+  changed: ChangedOutputs,
 ): OutputAsset {
   const asset = {
     type: 'asset',
@@ -122,7 +200,7 @@ function transformToRollupOutputAsset(
     },
     set(_target, p, newValue): boolean {
       cache[p] = newValue;
-      changed?.updated.add(bindingAsset.fileName);
+      changed.updated.add(bindingAsset.fileName);
       return true;
     },
   });
@@ -130,13 +208,29 @@ function transformToRollupOutputAsset(
 
 export function transformToRollupOutput(
   output: BindingOutputs,
-  changed?: ChangedOutputs,
 ): RolldownOutput {
   const { chunks, assets } = output;
   return {
     output: [
-      ...chunks.map((chunk) => transformToRollupOutputChunk(chunk, changed)),
-      ...assets.map((asset) => transformToRollupOutputAsset(asset, changed)),
+      ...chunks.map((chunk) => transformToRollupOutputChunk(chunk)),
+      ...assets.map((asset) => transformToRollupOutputAsset(asset)),
+    ],
+  } as RolldownOutput;
+}
+
+function transformToMutableRollupOutput(
+  output: BindingOutputs,
+  changed: ChangedOutputs,
+): RolldownOutput {
+  const { chunks, assets } = output;
+  return {
+    output: [
+      ...chunks.map((chunk) =>
+        transformToMutableRollupOutputChunk(chunk, changed)
+      ),
+      ...assets.map((asset) =>
+        transformToMutableRollupOutputAsset(asset, changed)
+      ),
     ],
   } as RolldownOutput;
 }
@@ -147,7 +241,7 @@ export function transformToOutputBundle(
   changed: ChangedOutputs,
 ): OutputBundle {
   const bundle = Object.fromEntries(
-    transformToRollupOutput(output, changed).output.map((item) => [
+    transformToMutableRollupOutput(output, changed).output.map((item) => [
       item.fileName,
       item,
     ]),

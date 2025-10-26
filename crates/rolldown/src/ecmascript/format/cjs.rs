@@ -22,24 +22,20 @@ pub fn render_cjs<'code>(
   warnings: &mut Vec<BuildDiagnostic>,
 ) -> BuildResult<SourceJoiner<'code>> {
   let mut source_joiner = SourceJoiner::default();
-  let AddonRenderContext { hashbang, banner, intro, outro, footer, directives } =
+  let AddonRenderContext { hashbang, banner: _, intro: _, outro: _, footer: _, directives } =
     addon_render_context;
 
   if let Some(hashbang) = hashbang {
     source_joiner.append_source(hashbang);
   }
-  if let Some(banner) = banner {
-    source_joiner.append_source(banner);
-  }
+  // Banner, intro, outro, and footer are now applied after minification
 
   if !directives.is_empty() {
     source_joiner.append_source(render_chunk_directives(directives.iter()));
     source_joiner.append_source("");
   }
 
-  if let Some(intro) = intro {
-    source_joiner.append_source(intro);
-  }
+  // intro removed - will be applied after minification
 
   // Note that the determined `export_mode` should be used in `render_chunk_exports` to render exports.
   // We also need to get the export mode for rendering the namespace markers.
@@ -85,13 +81,7 @@ pub fn render_cjs<'code>(
     source_joiner.append_source(exports);
   }
 
-  if let Some(outro) = outro {
-    source_joiner.append_source(outro);
-  }
-
-  if let Some(footer) = footer {
-    source_joiner.append_source(footer);
-  }
+  // outro and footer are now applied after minification
 
   Ok(source_joiner)
 }

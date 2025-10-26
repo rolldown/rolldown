@@ -23,16 +23,15 @@ pub fn render_esm<'code>(
   module_sources: &'code RenderedModuleSources,
 ) -> SourceJoiner<'code> {
   let mut source_joiner = SourceJoiner::default();
-  let AddonRenderContext { hashbang, banner, intro, outro, footer, directives } =
+  let AddonRenderContext { hashbang, banner: _, intro: _, outro: _, footer: _, directives } =
     addon_render_context;
 
   if let Some(hashbang) = hashbang {
     source_joiner.append_source(hashbang);
   }
 
-  if let Some(banner) = banner {
-    source_joiner.append_source(banner);
-  }
+  // Banner, intro, outro, and footer are now applied after minification
+  // and are not included in the initial source_joiner
 
   // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/linker/linker.go#L5686-L5698
   if !directives.is_empty() {
@@ -44,9 +43,7 @@ pub fn render_esm<'code>(
     source_joiner.append_source("");
   }
 
-  if let Some(intro) = intro {
-    source_joiner.append_source(intro);
-  }
+  // intro removed - will be applied after minification
 
   if let Some(imports) = render_esm_chunk_imports(ctx) {
     source_joiner.append_source(imports);
@@ -75,13 +72,7 @@ pub fn render_esm<'code>(
     source_joiner.append_source(exports);
   }
 
-  if let Some(outro) = outro {
-    source_joiner.append_source(outro);
-  }
-
-  if let Some(footer) = footer {
-    source_joiner.append_source(footer);
-  }
+  // outro and footer are now applied after minification
 
   source_joiner
 }

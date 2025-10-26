@@ -15,4 +15,9 @@ pub struct EcmaAssetMeta {
   pub sourcemap_filename: Option<String>,
   pub file_dir: PathBuf,
   pub preliminary_filename: PreliminaryFilename,
+  // Addons to be applied after minification
+  pub banner: Option<String>,
+  pub intro: Option<String>,
+  pub outro: Option<String>,
+  pub footer: Option<String>,
 }

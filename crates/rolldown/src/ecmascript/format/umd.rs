@@ -29,10 +29,8 @@ pub async fn render_umd<'code>(
   warnings: &mut Vec<BuildDiagnostic>,
 ) -> BuildResult<SourceJoiner<'code>> {
   let mut source_joiner = SourceJoiner::default();
-  let AddonRenderContext { banner, intro, outro, footer, directives, .. } = addon_render_context;
-  if let Some(banner) = banner {
-    source_joiner.append_source(banner);
-  }
+  let AddonRenderContext { banner: _, intro: _, outro: _, footer: _, directives, .. } = addon_render_context;
+  // Banner, intro, outro, and footer are now applied after minification
 
   if !directives.is_empty() {
     source_joiner.append_source(render_chunk_directives(directives.iter()));
@@ -90,9 +88,7 @@ pub async fn render_umd<'code>(
 }})({global_argument}function({factory_parameters}) {{",
   ));
 
-  if let Some(intro) = intro {
-    source_joiner.append_source(intro);
-  }
+  // intro removed - will be applied after minification
 
   if named_exports && entry_module.exports_kind.is_esm() {
     if let Some(marker) = render_namespace_markers(
@@ -121,16 +117,12 @@ pub async fn render_umd<'code>(
     source_joiner.append_source(exports);
   }
 
-  if let Some(outro) = outro {
-    source_joiner.append_source(outro);
-  }
+  // outro removed - will be applied after minification
 
   // umd wrapper end
   source_joiner.append_source("});");
 
-  if let Some(footer) = footer {
-    source_joiner.append_source(footer);
-  }
+  // footer removed - will be applied after minification
 
   Ok(source_joiner)
 }

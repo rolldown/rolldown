@@ -197,6 +197,31 @@ pub async fn finalize_assets(
       InstantiationKind::Ecma(ecma_meta) => {
         let asset_code = mem::take(&mut asset.content);
         let mut code = asset_code.try_into_string()?;
+        
+        // Apply banner/intro/outro/footer after minification
+        let has_banner = ecma_meta.banner.is_some();
+        let has_intro = ecma_meta.intro.is_some();
+        let has_outro = ecma_meta.outro.is_some();
+        let has_footer = ecma_meta.footer.is_some();
+        
+        if has_banner || has_intro || has_outro || has_footer {
+          let mut parts = Vec::new();
+          if let Some(banner) = &ecma_meta.banner {
+            parts.push(banner.clone());
+          }
+          if let Some(intro) = &ecma_meta.intro {
+            parts.push(intro.clone());
+          }
+          parts.push(code);
+          if let Some(outro) = &ecma_meta.outro {
+            parts.push(outro.clone());
+          }
+          if let Some(footer) = &ecma_meta.footer {
+            parts.push(footer.clone());
+          }
+          code = parts.join("\n");
+        }
+        
         if let Some(map) = asset.map.as_mut() {
           if let Some(sourcemap_asset) = process_code_and_sourcemap(
             options,

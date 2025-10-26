@@ -52,15 +52,13 @@ pub async fn render_iife<'code>(
   warnings: &mut Vec<BuildDiagnostic>,
 ) -> BuildResult<SourceJoiner<'code>> {
   let mut source_joiner = SourceJoiner::default();
-  let AddonRenderContext { hashbang, banner, intro, outro, footer, directives } =
+  let AddonRenderContext { hashbang, banner: _, intro: _, outro: _, footer: _, directives } =
     addon_render_context;
   if let Some(hashbang) = hashbang {
     source_joiner.append_source(hashbang);
   }
 
-  if let Some(banner) = banner {
-    source_joiner.append_source(banner);
-  }
+  // Banner, intro, outro, and footer are now applied after minification
 
   if !directives.is_empty() {
     source_joiner.append_source(render_chunk_directives(directives.iter()));
@@ -125,9 +123,7 @@ pub async fn render_iife<'code>(
     ") {\n"
   ));
 
-  if let Some(intro) = intro {
-    source_joiner.append_source(intro);
-  }
+  // intro removed - will be applied after minification
 
   if named_exports && entry_module.exports_kind.is_esm() {
     if let Some(marker) = render_namespace_markers(
@@ -156,9 +152,7 @@ pub async fn render_iife<'code>(
     source_joiner.append_source(exports);
   }
 
-  if let Some(outro) = outro {
-    source_joiner.append_source(outro);
-  }
+  // outro removed - will be applied after minification
 
   if named_exports && has_exports && !ctx.options.extend {
     // We need to add `return exports;` here only if using `named`, because the default value is returned when using `default` in `render_chunk_exports`.
@@ -170,9 +164,7 @@ pub async fn render_iife<'code>(
     render_iife_factory_arguments(warnings, ctx, &externals, exports_prefix).await;
   source_joiner.append_source(concat_string!("})(", factory_arguments, ");"));
 
-  if let Some(footer) = footer {
-    source_joiner.append_source(footer);
-  }
+  // footer removed - will be applied after minification
 
   Ok(source_joiner)
 }

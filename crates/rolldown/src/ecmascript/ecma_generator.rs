@@ -164,10 +164,10 @@ impl Generator for EcmaGenerator {
 
     let addon_render_context = AddonRenderContext {
       hashbang,
-      banner: banner.as_deref(),
-      intro: intro.as_deref(),
-      outro: outro.as_deref(),
-      footer: footer.as_deref(),
+      banner: None,  // Applied after minification
+      intro: None,   // Applied after minification
+      outro: None,   // Applied after minification
+      footer: None,  // Applied after minification
       directives: &directives,
     };
     let mut source_joiner = match ctx.options.format {
@@ -231,6 +231,10 @@ impl Generator for EcmaGenerator {
             .preliminary_filename
             .clone()
             .expect("should have preliminary filename"),
+          banner,
+          intro,
+          outro,
+          footer,
         }),
         preliminary_filename: ctx
           .chunk

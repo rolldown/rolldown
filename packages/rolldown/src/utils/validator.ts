@@ -1,6 +1,33 @@
 import * as v from 'valibot';
-import type { PreRenderedChunk } from '../binding';
-import type { PreRenderedAsset } from '../options/output-options';
+import type {
+  CompressOptions,
+  MangleOptions,
+  MangleOptionsKeepNames,
+  MinifyOptions,
+  PreRenderedChunk,
+} from '../binding';
+import type { LogOrStringHandler } from '../log/logging';
+import type {
+  ExternalOption,
+  ExternalOptionFunction,
+  InputOptions,
+  OnLogFunction,
+  OnwarnFunction,
+  OptimizationOptions,
+} from '../options/input-options';
+import type {
+  AddonFunction,
+  AdvancedChunksNameFunction,
+  AdvancedChunksTestFunction,
+  AssetFileNamesFunction,
+  ChunkFileNamesFunction,
+  GlobalsFunction,
+  ManualChunksFunction,
+  OutputOptions,
+  PathsFunction,
+  PreRenderedAsset,
+  SanitizeFileNameFunction,
+} from '../options/output-options';
 import type {
   RolldownOutputPluginOption,
   RolldownPluginOption,
@@ -10,10 +37,19 @@ import type {
   SourcemapPathTransformOption,
 } from '../types/misc';
 import type { RenderedChunk } from '../types/rolldown-output';
+import type { AnyFn } from '../types/utils';
 import { flattenValibotSchema } from './flatten-valibot-schema';
 import { styleText } from './style-text';
 
 const StringOrRegExpSchema = v.union([v.string(), v.instance(RegExp)]);
+
+// A helper function to create a valibot schema for a function. It assumes the
+// passed function is a properly defined function type with expected argument and return
+// type.
+// See https://github.com/fabian-hiller/valibot/issues/1342
+function vFunction<T extends AnyFn>(): v.GenericSchema<T> {
+  return v.function() as unknown as v.GenericSchema<T>;
+}
 
 const LogLevelSchema = v.union([
   v.literal('debug'),
@@ -35,15 +71,17 @@ const InputOptionSchema = v.union([
   v.record(v.string(), v.string()),
 ]);
 
-const ExternalSchema = v.union([
+const ExternalOptionFunctionSchema = v.pipe(
+  vFunction<ExternalOptionFunction>(),
+  v.args(v.tuple([v.string(), v.optional(v.string()), v.boolean()])),
+  v.returns(v.nullish(v.boolean())),
+) satisfies v.GenericSchema<ExternalOptionFunction>;
+
+const ExternalOptionSchema = v.union([
   StringOrRegExpSchema,
   v.array(StringOrRegExpSchema),
-  v.pipe(
-    v.function(),
-    v.args(v.tuple([v.string(), v.optional(v.string()), v.boolean()])),
-    v.returns(v.nullish(v.boolean())),
-  ),
-]);
+  ExternalOptionFunctionSchema,
+]) satisfies v.GenericSchema<ExternalOption>;
 
 const ModuleTypesSchema = v.record(
   v.string(),
@@ -76,7 +114,7 @@ const JsxOptionsSchema = v.strictObject({
     v.description('Development specific information'),
   ),
   throwIfNamespace: v.pipe(
-    v.optional(v.string()),
+    v.optional(v.boolean()),
     v.description(
       'Toggles whether to throw an error when a tag name uses an XML namespace',
     ),
@@ -299,8 +337,8 @@ const ChecksOptionsSchema = v.strictObject({
 });
 
 const CompressOptionsKeepNamesSchema = v.strictObject({
-  function: v.optional(v.boolean()),
-  class: v.optional(v.boolean()),
+  function: v.boolean(),
+  class: v.boolean(),
 });
 
 const CompressOptionsSchema = v.strictObject({
@@ -321,18 +359,18 @@ const CompressOptionsSchema = v.strictObject({
   dropDebugger: v.optional(v.boolean()),
   keepNames: v.optional(CompressOptionsKeepNamesSchema),
   unused: v.optional(v.union([v.boolean(), v.literal('keep_assign')])),
-});
+}) satisfies v.GenericSchema<CompressOptions>;
 
 const MangleOptionsKeepNamesSchema = v.strictObject({
-  function: v.optional(v.boolean()),
-  class: v.optional(v.boolean()),
-});
+  function: v.boolean(),
+  class: v.boolean(),
+}) satisfies v.GenericSchema<MangleOptionsKeepNames>;
 
 const MangleOptionsSchema = v.strictObject({
   toplevel: v.optional(v.boolean()),
   keepNames: v.optional(v.union([v.boolean(), MangleOptionsKeepNamesSchema])),
   debug: v.optional(v.boolean()),
-});
+}) satisfies v.GenericSchema<MangleOptions>;
 
 const CodegenOptionsSchema = v.strictObject({
   removeWhitespace: v.optional(v.boolean()),
@@ -342,7 +380,7 @@ const MinifyOptionsSchema = v.strictObject({
   compress: v.optional(v.union([v.boolean(), CompressOptionsSchema])),
   mangle: v.optional(v.union([v.boolean(), MangleOptionsSchema])),
   codegen: v.optional(v.union([v.boolean(), CodegenOptionsSchema])),
-});
+}) satisfies v.GenericSchema<MinifyOptions>;
 
 const ResolveOptionsSchema = v.strictObject({
   alias: v.optional(
@@ -384,7 +422,6 @@ const OptimizationOptionsSchema = v.strictObject({
   inlineConst: v.pipe(
     v.optional(v.union([
       v.boolean(),
-      v.literal('smart'),
       v.strictObject({
         mode: v.optional(v.union([v.literal('all'), v.literal('smart')])),
         pass: v.optional(v.number()),
@@ -396,41 +433,43 @@ const OptimizationOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Use PIFE pattern for module wrappers'),
   ),
-});
+}) satisfies v.GenericSchema<OptimizationOptions>;
+
+const LogOrStringHandlerSchema = v.pipe(
+  vFunction<LogOrStringHandler>(),
+  v.args(v.tuple([LogLevelWithErrorSchema, RollupLogWithStringSchema])),
+) satisfies v.GenericSchema<LogOrStringHandler>;
 
 const OnLogSchema = v.pipe(
-  v.function(),
+  vFunction<OnLogFunction>(),
   v.args(
     v.tuple([
       LogLevelSchema,
       RollupLogSchema,
-      v.pipe(
-        v.function(),
-        v.args(v.tuple([LogLevelWithErrorSchema, RollupLogWithStringSchema])),
-      ),
+      LogOrStringHandlerSchema,
     ]),
   ),
-);
+) satisfies v.GenericSchema<OnLogFunction>;
 
 const OnwarnSchema = v.pipe(
-  v.function(),
+  vFunction<OnwarnFunction>(),
   v.args(
     v.tuple([
       RollupLogSchema,
       v.pipe(
-        v.function(),
+        vFunction(),
         v.args(
           v.tuple([
             v.union([
               RollupLogWithStringSchema,
-              v.pipe(v.function(), v.returns(RollupLogWithStringSchema)),
+              v.pipe(vFunction(), v.returns(RollupLogWithStringSchema)),
             ]),
           ]),
         ),
       ),
     ]),
   ),
-);
+) satisfies v.GenericSchema<OnwarnFunction>;
 
 const HmrSchema = v.union([
   v.boolean(),
@@ -445,7 +484,7 @@ const HmrSchema = v.union([
 const InputOptionsSchema = v.strictObject({
   input: v.optional(InputOptionSchema),
   plugins: v.optional(v.custom<RolldownPluginOption>(() => true)),
-  external: v.optional(ExternalSchema),
+  external: v.optional(ExternalOptionSchema),
   makeAbsoluteExternalsRelative: v.optional(
     v.union([v.boolean(), v.literal('ifRelativeSource')]),
   ),
@@ -558,7 +597,7 @@ const InputOptionsSchema = v.strictObject({
     v.optional(v.string()),
     v.description('Path to the tsconfig.json file.'),
   ),
-});
+}) satisfies v.GenericSchema<InputOptions>;
 
 const InputCliOverrideSchema = v.strictObject({
   input: v.pipe(
@@ -622,7 +661,7 @@ const ModuleFormatSchema = v.union([
 ]);
 
 const AddonFunctionSchema = v.pipe(
-  v.function(),
+  vFunction<AddonFunction>(),
   v.args(v.tuple([v.custom<RenderedChunk>(() => true)])),
   v.returnsAsync(
     v.unionAsync([
@@ -630,42 +669,70 @@ const AddonFunctionSchema = v.pipe(
       v.pipeAsync(v.promise(), v.awaitAsync(), v.string()),
     ]),
   ),
-);
+) satisfies v.GenericSchema<AddonFunction>;
+
+const ChunkFileNamesFunctionSchema = v.pipe(
+  vFunction<ChunkFileNamesFunction>(),
+  v.args(v.tuple([v.custom<PreRenderedChunk>(() => true)])),
+  v.returns(v.string()),
+) satisfies v.GenericSchema<ChunkFileNamesFunction>;
 
 const ChunkFileNamesSchema = v.union([
   v.string(),
-  v.pipe(
-    v.function(),
-    v.args(v.tuple([v.custom<PreRenderedChunk>(() => true)])),
-    v.returns(v.string()),
-  ),
+  ChunkFileNamesFunctionSchema,
 ]);
+
+const AssetFileNamesFunctionSchema = v.pipe(
+  vFunction<AssetFileNamesFunction>(),
+  v.args(v.tuple([v.custom<PreRenderedAsset>(() => true)])),
+  v.returns(v.string()),
+) satisfies v.GenericSchema<AssetFileNamesFunction>;
 
 const AssetFileNamesSchema = v.union([
   v.string(),
-  v.pipe(
-    v.function(),
-    v.args(v.tuple([v.custom<PreRenderedAsset>(() => true)])),
-    v.returns(v.string()),
-  ),
+  AssetFileNamesFunctionSchema,
 ]);
+
+const SanitizeFileNameFunctionSchema = v.pipe(
+  vFunction<SanitizeFileNameFunction>(),
+  v.args(v.tuple([v.string()])),
+  v.returns(v.string()),
+) satisfies v.GenericSchema<SanitizeFileNameFunction>;
 
 const SanitizeFileNameSchema = v.union([
   v.boolean(),
-  v.pipe(v.function(), v.args(v.tuple([v.string()])), v.returns(v.string())),
+  SanitizeFileNameFunctionSchema,
 ]);
 
 const GlobalsFunctionSchema = v.pipe(
-  v.function(),
+  vFunction<GlobalsFunction>(),
   v.args(v.tuple([v.string()])),
   v.returns(v.string()),
-);
+) satisfies v.GenericSchema<GlobalsFunction>;
 
 const PathsFunctionSchema = v.pipe(
-  v.function(),
+  vFunction<PathsFunction>(),
   v.args(v.tuple([v.string()])),
   v.returns(v.string()),
-);
+) satisfies v.GenericSchema<PathsFunction>;
+
+const ManualChunksFunctionSchema = v.pipe(
+  vFunction<ManualChunksFunction>(),
+  v.args(v.tuple([v.string(), v.object({})])),
+  v.returns(v.nullish(v.string())),
+) satisfies v.GenericSchema<ManualChunksFunction>;
+
+const AdvancedChunksNameFunctionSchema = v.pipe(
+  vFunction<AdvancedChunksNameFunction>(),
+  v.args(v.tuple([v.string(), v.object({})])),
+  v.returns(v.nullish(v.string())),
+) satisfies v.GenericSchema<AdvancedChunksNameFunction>;
+
+const AdvancedChunksTestFunctionSchema = v.pipe(
+  vFunction<AdvancedChunksTestFunction>(),
+  v.args(v.tuple([v.string()])),
+  v.returns(v.union([v.boolean(), v.void(), v.undefined()])),
+) satisfies v.GenericSchema<AdvancedChunksTestFunction>;
 
 const AdvancedChunksSchema = v.strictObject({
   includeDependenciesRecursively: v.optional(v.boolean()),
@@ -679,21 +746,12 @@ const AdvancedChunksSchema = v.strictObject({
       v.strictObject({
         name: v.union([
           v.string(),
-          v.pipe(
-            v.function(),
-            v.args(v.tuple([v.string()])),
-            v.returns(v.nullish(v.string())),
-          ),
+          AdvancedChunksNameFunctionSchema,
         ]),
         test: v.optional(
           v.union([
-            v.string(),
-            v.instance(RegExp),
-            v.pipe(
-              v.function(),
-              v.args(v.tuple([v.string()])),
-              v.returns(v.union([v.nullish(v.boolean()), v.void()])),
-            ),
+            StringOrRegExpSchema,
+            AdvancedChunksTestFunctionSchema,
           ]),
         ),
         priority: v.optional(v.number()),
@@ -811,7 +869,7 @@ const OutputOptionsSchema = v.strictObject({
   sanitizeFileName: v.optional(SanitizeFileNameSchema),
   minify: v.pipe(
     v.optional(
-      v.union([v.boolean(), v.string('dce-only'), MinifyOptionsSchema]),
+      v.union([v.boolean(), v.literal('dce-only'), MinifyOptionsSchema]),
     ),
     v.description('Minify the bundled file'),
   ),
@@ -849,13 +907,7 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Inline dynamic imports'),
   ),
-  manualChunks: v.optional(
-    v.pipe(
-      v.function(),
-      v.args(v.tuple([v.string(), v.object({})])),
-      v.returns(v.union([v.string(), v.nullish(v.string())])),
-    ),
-  ),
+  manualChunks: v.optional(ManualChunksFunctionSchema),
   advancedChunks: v.optional(AdvancedChunksSchema),
   legalComments: v.pipe(
     v.optional(v.union([v.literal('none'), v.literal('inline')])),
@@ -866,14 +918,7 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Disable require polyfill injection'),
   ),
-  hoistTransitiveImports: v.optional(
-    v.custom<boolean, () => string>((input) => {
-      if (input) {
-        return false;
-      }
-      return true;
-    }, () => `The 'true' value is not supported`),
-  ),
+  hoistTransitiveImports: v.optional(v.literal(false)),
   preserveModules: v.pipe(
     v.optional(v.boolean()),
     v.description('Preserve module structure'),
@@ -899,7 +944,7 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Keep function and class names after bundling'),
   ),
-});
+}) satisfies v.GenericSchema<OutputOptions>;
 
 const getAddonDescription = (
   placement: 'bottom' | 'top',

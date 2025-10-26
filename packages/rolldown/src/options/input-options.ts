@@ -13,14 +13,16 @@ import type { TransformOptions } from './transform-options';
 
 export type InputOption = string | string[] | Record<string, string>;
 
+export type ExternalOptionFunction = (
+  id: string,
+  parentId: string | undefined,
+  isResolved: boolean,
+) => NullValue<boolean>;
+
 export type ExternalOption =
   | StringOrRegExp
   | StringOrRegExp[]
-  | ((
-    id: string,
-    parentId: string | undefined,
-    isResolved: boolean,
-  ) => NullValue<boolean>);
+  | ExternalOptionFunction;
 
 export type ModuleTypes = Record<
   string,
@@ -100,11 +102,29 @@ export type OptimizationOptions = {
    * @default false
    */
   inlineConst?: boolean | { mode?: 'all' | 'smart'; pass?: number };
+
+  /**
+   * Use PIFE pattern for module wrappers
+   */
+  pifeForModuleWrappers?: boolean;
 };
 
 export type AttachDebugOptions = 'none' | 'simple' | 'full';
 
 type ChunkModulesOrder = 'exec-order' | 'module-id';
+
+export type OnLogFunction = (
+  level: LogLevel,
+  log: RollupLog,
+  defaultHandler: LogOrStringHandler,
+) => void;
+
+export type OnwarnFunction = (
+  warning: RollupLog,
+  defaultHandler: (
+    warning: RollupLogWithString | (() => RollupLogWithString),
+  ) => void,
+) => void;
 
 export interface InputOptions {
   input?: InputOption;
@@ -155,17 +175,8 @@ export interface InputOptions {
   shimMissingExports?: boolean;
   treeshake?: boolean | TreeshakingOptions;
   logLevel?: LogLevelOption;
-  onLog?: (
-    level: LogLevel,
-    log: RollupLog,
-    defaultHandler: LogOrStringHandler,
-  ) => void;
-  onwarn?: (
-    warning: RollupLog,
-    defaultHandler: (
-      warning: RollupLogWithString | (() => RollupLogWithString),
-    ) => void,
-  ) => void;
+  onLog?: OnLogFunction;
+  onwarn?: OnwarnFunction;
   moduleTypes?: ModuleTypes;
   experimental?: {
     /**

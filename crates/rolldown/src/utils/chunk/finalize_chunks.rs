@@ -199,25 +199,21 @@ pub async fn finalize_assets(
         let mut code = asset_code.try_into_string()?;
         
         // Apply banner/intro/outro/footer after minification
-        let has_banner = ecma_meta.banner.is_some();
-        let has_intro = ecma_meta.intro.is_some();
-        let has_outro = ecma_meta.outro.is_some();
-        let has_footer = ecma_meta.footer.is_some();
-        
-        if has_banner || has_intro || has_outro || has_footer {
-          let mut parts = Vec::new();
-          if let Some(banner) = &ecma_meta.banner {
-            parts.push(banner.clone());
+        if ecma_meta.banner.is_some() || ecma_meta.intro.is_some() 
+          || ecma_meta.outro.is_some() || ecma_meta.footer.is_some() {
+          let mut parts: Vec<&str> = Vec::new();
+          if let Some(ref banner) = ecma_meta.banner {
+            parts.push(banner);
           }
-          if let Some(intro) = &ecma_meta.intro {
-            parts.push(intro.clone());
+          if let Some(ref intro) = ecma_meta.intro {
+            parts.push(intro);
           }
-          parts.push(code);
-          if let Some(outro) = &ecma_meta.outro {
-            parts.push(outro.clone());
+          parts.push(&code);
+          if let Some(ref outro) = ecma_meta.outro {
+            parts.push(outro);
           }
-          if let Some(footer) = &ecma_meta.footer {
-            parts.push(footer.clone());
+          if let Some(ref footer) = ecma_meta.footer {
+            parts.push(footer);
           }
           code = parts.join("\n");
         }

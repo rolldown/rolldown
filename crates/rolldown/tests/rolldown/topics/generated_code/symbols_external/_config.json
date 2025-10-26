@@ -1,0 +1,10 @@
+{
+  "config": {
+    "format": "cjs",
+    "external": ["external"],
+    "generatedCode": {
+      "symbols": true
+    }
+  },
+  "expectExecuted": false
+}

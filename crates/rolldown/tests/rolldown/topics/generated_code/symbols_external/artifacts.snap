@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+let external = require("external");
+external = __toESM(external);
+
+//#region main.js
+console.log(external);
+
+//#endregion
+```

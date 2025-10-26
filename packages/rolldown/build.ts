@@ -152,6 +152,9 @@ function withShared(
     },
     transform: {
       target: 'node22',
+      decorator: {
+        legacy: true,
+      },
       define: {
         'import.meta.browserBuild': String(isBrowserBuild),
       },

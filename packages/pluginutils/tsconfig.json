@@ -14,6 +14,8 @@
     // "preserveSymlinks": true,                         /* Disable resolving symlinks to their realpath. This correlates to the same flag in node. */
     "forceConsistentCasingInFileNames": true, /* Ensure that casing is correct in imports. */
     "isolatedDeclarations": true,
+    // This is for `rolldown` which uses decorators. This is a limitation of oxnode, which should infer tsconfig.json respecting project.
+    "experimentalDecorators": true,
 
     /* Type Checking */
     "strict": true, /* Enable all strict type-checking options. */

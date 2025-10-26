@@ -41,7 +41,7 @@ export var __toESM = (mod, isNodeMode, target) => (
       : target,
     mod)
 )
-// Alias: when symbols support is not needed, this is the same as __toESM
+// Variant with Symbol.toStringTag support for ES2015+ environments
 export var __toESMWithSymbols = (mod, isNodeMode, target) => (
   target = mod != null ? __create(__getProtoOf(mod), { [Symbol.toStringTag]: { value: 'Module' } }) : {},
   __copyProps(

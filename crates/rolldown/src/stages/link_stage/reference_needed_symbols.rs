@@ -102,7 +102,8 @@ impl LinkStage<'_> {
                         stmt_info.side_effect = true.into();
                         depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
                           .push(stmt_info_idx);
-                        // Also include ToEsmWithSymbols so it's available during generate stage
+                        // Also include ToEsmWithSymbols so both helpers are available during generate stage,
+                        // where the choice between them is made based on generatedCode.symbols option
                         depended_runtime_helper_map[RuntimeHelper::ToEsmWithSymbols.bit_index()]
                           .push(stmt_info_idx);
                       }
@@ -167,7 +168,8 @@ impl LinkStage<'_> {
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
                             .push(stmt_info_idx);
-                          // Also include ToEsmWithSymbols so it's available during generate stage
+                          // Also include ToEsmWithSymbols so both helpers are available during generate stage,
+                          // where the choice between them is made based on generatedCode.symbols option
                           depended_runtime_helper_map[RuntimeHelper::ToEsmWithSymbols.bit_index()]
                             .push(stmt_info_idx);
                           depended_runtime_helper_map[RuntimeHelper::ReExport.bit_index()]
@@ -186,7 +188,8 @@ impl LinkStage<'_> {
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
                             .push(stmt_info_idx);
-                          // Also include ToEsmWithSymbols so it's available during generate stage
+                          // Also include ToEsmWithSymbols so both helpers are available during generate stage,
+                          // where the choice between them is made based on generatedCode.symbols option
                           depended_runtime_helper_map[RuntimeHelper::ToEsmWithSymbols.bit_index()]
                             .push(stmt_info_idx);
                           symbols_to_be_declared.push((rec.namespace_ref, stmt_info_idx));
@@ -263,7 +266,8 @@ impl LinkStage<'_> {
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
                             .push(stmt_info_idx);
-                          // Also include ToEsmWithSymbols so it's available during generate stage
+                          // Also include ToEsmWithSymbols so both helpers are available during generate stage,
+                          // where the choice between them is made based on generatedCode.symbols option
                           depended_runtime_helper_map[RuntimeHelper::ToEsmWithSymbols.bit_index()]
                             .push(stmt_info_idx);
                         }

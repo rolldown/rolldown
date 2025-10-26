@@ -11,8 +11,7 @@
     "oxc-minify": "catalog:",
     "vitepress": "catalog:",
     "vitepress-plugin-group-icons": "catalog:",
-    "vitepress-plugin-llms": "catalog:",
-    "zx": "catalog:"
+    "vitepress-plugin-llms": "catalog:"
   },
   "dependencies": {
     "@vueuse/core": "catalog:",

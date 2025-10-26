@@ -301,6 +301,7 @@ impl Resolver {
     &self,
     importer: Option<&str>,
     dedupe: &FxHashSet<String>,
+    legacy_inconsistent_cjs_interop: bool,
     result: &Result<oxc_resolver::Resolution, oxc_resolver::ResolveError>,
   ) -> Result<Option<HookResolveIdOutput>, oxc_resolver::ResolveError> {
     match result {
@@ -328,9 +329,9 @@ impl Resolver {
         Ok(Some(HookResolveIdOutput {
           id: path.into(),
           side_effects,
-          package_json_path: result
-            .package_json()
-            .map(|pj| pj.realpath().to_str().unwrap().to_string()),
+          package_json_path: (!legacy_inconsistent_cjs_interop)
+            .then(|| result.package_json().map(|pj| pj.realpath().to_str().unwrap().to_string()))
+            .flatten(),
           ..Default::default()
         }))
       }
@@ -391,11 +392,17 @@ impl Resolver {
     importer: Option<&str>,
     external: bool,
     dedupe: &FxHashSet<String>,
+    legacy_inconsistent_cjs_interop: bool,
   ) -> HookResolveIdReturn {
     let base_dir = get_base_dir(specifier, importer, dedupe).unwrap_or(&self.root);
 
     let oxc_resolved_result = self.resolve_raw(base_dir, specifier, external);
-    let resolved = self.normalize_oxc_resolver_result(importer, dedupe, &oxc_resolved_result)?;
+    let resolved = self.normalize_oxc_resolver_result(
+      importer,
+      dedupe,
+      legacy_inconsistent_cjs_interop,
+      &oxc_resolved_result,
+    )?;
     if let Some(mut resolved) = resolved {
       if !external || !can_externalize_file(&resolved.id) {
         return Ok(Some(resolved));

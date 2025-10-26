@@ -708,31 +708,31 @@ const GlobalsFunctionSchema = v.pipe(
   vFunction<GlobalsFunction>(),
   v.args(v.tuple([v.string()])),
   v.returns(v.string()),
-);
+) satisfies v.GenericSchema<GlobalsFunction>;
 
 const PathsFunctionSchema = v.pipe(
   vFunction<PathsFunction>(),
   v.args(v.tuple([v.string()])),
   v.returns(v.string()),
-);
+) satisfies v.GenericSchema<PathsFunction>;
 
 const ManualChunksFunctionSchema = v.pipe(
   vFunction<ManualChunksFunction>(),
   v.args(v.tuple([v.string(), v.object({})])),
-  v.returns(v.union([v.string(), v.void(), v.undefined(), v.null()])),
-);
+  v.returns(v.nullish(v.string())),
+) satisfies v.GenericSchema<ManualChunksFunction>;
 
 const AdvancedChunksNameFunctionSchema = v.pipe(
   vFunction<AdvancedChunksNameFunction>(),
   v.args(v.tuple([v.string(), v.object({})])),
   v.returns(v.nullish(v.string())),
-);
+) satisfies v.GenericSchema<AdvancedChunksNameFunction>;
 
 const AdvancedChunksTestFunctionSchema = v.pipe(
   vFunction<AdvancedChunksTestFunction>(),
   v.args(v.tuple([v.string()])),
   v.returns(v.union([v.boolean(), v.void(), v.undefined()])),
-);
+) satisfies v.GenericSchema<AdvancedChunksTestFunction>;
 
 const AdvancedChunksSchema = v.strictObject({
   includeDependenciesRecursively: v.optional(v.boolean()),

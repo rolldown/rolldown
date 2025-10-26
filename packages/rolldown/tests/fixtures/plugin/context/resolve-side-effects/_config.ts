@@ -40,6 +40,7 @@ export default defineTest({
         external: [],
         noExternal: [],
         dedupe: [],
+        legacyInconsistentCjsInterop: false,
         resolveSubpathImports() {
           throw new Error('Not implemented')
         }

@@ -31,7 +31,7 @@ catalog:
 
   # --- Vue related ---
   'vue': '^3.5.13'
-  '@vueuse/core': '^13.1.0'
+  '@vueuse/core': '^14.0.0'
 
   # --- React related ---
   'react': '^19.0.0'

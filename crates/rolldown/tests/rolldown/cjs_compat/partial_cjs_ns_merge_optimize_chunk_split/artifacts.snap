@@ -20,7 +20,7 @@ function test() {
 }
 
 //#endregion
-export { require_cjs as n, __toESM as r, test as t };
+export { __toESMWithSymbols as i, require_cjs as n, __toESM as r, test as t };
 ```
 
 ## entry.js
@@ -38,7 +38,7 @@ export { entry };
 ## main.js
 
 ```js
-import { n as require_cjs, r as __toESM, t as test } from "./a.js";
+import { i as __toESMWithSymbols, n as require_cjs, r as __toESM, t as test } from "./a.js";
 
 //#region b.js
 var import_cjs = /* @__PURE__ */ __toESM(require_cjs());

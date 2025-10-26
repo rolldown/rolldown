@@ -65,17 +65,17 @@ assert.equal(import_cjs.a, void 0);
 
 ```
 - ../esm-export-cjs-export.js
-(0:0) "module." --> (29:0) "module."
-(0:7) "exports = " --> (29:7) "exports = "
-(0:17) "1;\n" --> (29:17) "1;\n"
+(0:0) "module." --> (33:0) "module."
+(0:7) "exports = " --> (33:7) "exports = "
+(0:17) "1;\n" --> (33:17) "1;\n"
 - ../esm-import-cjs-export.js
-(1:0) "module." --> (42:0) "\tmodule."
-(1:7) "exports = " --> (42:8) "exports = "
-(1:17) "1" --> (42:18) "1;\n"
+(1:0) "module." --> (46:0) "\tmodule."
+(1:7) "exports = " --> (46:8) "exports = "
+(1:17) "1" --> (46:18) "1;\n"
 - ../cjs.js
-(0:0) "module." --> (48:0) "\tmodule."
-(0:7) "exports = " --> (48:8) "exports = "
-(0:17) "1;" --> (48:18) "1;\n"
+(0:0) "module." --> (52:0) "\tmodule."
+(0:7) "exports = " --> (52:8) "exports = "
+(0:17) "1;" --> (52:18) "1;\n"
 - ../esm-import-cjs-require.js
-(3:0) "assert.equal(a, undefined)\n" --> (56:0) "assert.equal(import_cjs.a, void 0);\n"
+(3:0) "assert.equal(a, undefined)\n" --> (60:0) "assert.equal(import_cjs.a, void 0);\n"
 ```

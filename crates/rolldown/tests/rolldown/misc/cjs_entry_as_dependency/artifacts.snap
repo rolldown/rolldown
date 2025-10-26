@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { n as __commonJS, r as __toESM, t as require_main2 } from "./main22.js";
+import { i as __toESMWithSymbols, n as __commonJS, r as __toESM, t as require_main2 } from "./main22.js";
 
 //#region main.js
 var require_main = /* @__PURE__ */ __commonJS({ "main.js": ((exports, module) => {
@@ -38,5 +38,5 @@ var require_main2 = /* @__PURE__ */ __commonJS({ "main2.js": ((exports, module) 
 }) });
 
 //#endregion
-export { __commonJS as n, __toESM as r, require_main2 as t };
+export { __toESMWithSymbols as i, __commonJS as n, __toESM as r, require_main2 as t };
 ```

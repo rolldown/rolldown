@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __toDynamicImportESM as n, __toESM as r, __commonJS as t };
+export { __toESMWithSymbols as i, __toDynamicImportESM as n, __toESM as r, __commonJS as t };
 ```
 
 ## lib.js
@@ -29,7 +29,7 @@ export default require_lib();
 ## main.js
 
 ```js
-import { n as __toDynamicImportESM, r as __toESM, t as __commonJS } from "./chunk.js";
+import { i as __toESMWithSymbols, n as __toDynamicImportESM, r as __toESM, t as __commonJS } from "./chunk.js";
 import nodeAssert from "node:assert";
 
 //#region non-node-mode.js
@@ -96,6 +96,12 @@ Object.defineProperty(exports, '__toESM', {
   enumerable: true,
   get: function () {
     return __toESM;
+  }
+});
+Object.defineProperty(exports, '__toESMWithSymbols', {
+  enumerable: true,
+  get: function () {
+    return __toESMWithSymbols;
   }
 });
 ```

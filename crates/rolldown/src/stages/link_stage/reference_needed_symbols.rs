@@ -102,6 +102,9 @@ impl LinkStage<'_> {
                         stmt_info.side_effect = true.into();
                         depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
                           .push(stmt_info_idx);
+                        // Also include ToEsmWithSymbols so it's available during generate stage
+                        depended_runtime_helper_map[RuntimeHelper::ToEsmWithSymbols.bit_index()]
+                          .push(stmt_info_idx);
                       }
                     }
                   }
@@ -164,6 +167,9 @@ impl LinkStage<'_> {
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
                             .push(stmt_info_idx);
+                          // Also include ToEsmWithSymbols so it's available during generate stage
+                          depended_runtime_helper_map[RuntimeHelper::ToEsmWithSymbols.bit_index()]
+                            .push(stmt_info_idx);
                           depended_runtime_helper_map[RuntimeHelper::ReExport.bit_index()]
                             .push(stmt_info_idx);
                           if !commonjs_treeshake {
@@ -179,6 +185,9 @@ impl LinkStage<'_> {
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
+                            .push(stmt_info_idx);
+                          // Also include ToEsmWithSymbols so it's available during generate stage
+                          depended_runtime_helper_map[RuntimeHelper::ToEsmWithSymbols.bit_index()]
                             .push(stmt_info_idx);
                           symbols_to_be_declared.push((rec.namespace_ref, stmt_info_idx));
                           symbol_db.ast_scopes.set_symbol_name(
@@ -253,6 +262,9 @@ impl LinkStage<'_> {
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
+                            .push(stmt_info_idx);
+                          // Also include ToEsmWithSymbols so it's available during generate stage
+                          depended_runtime_helper_map[RuntimeHelper::ToEsmWithSymbols.bit_index()]
                             .push(stmt_info_idx);
                         }
                         WrapKind::Esm => {

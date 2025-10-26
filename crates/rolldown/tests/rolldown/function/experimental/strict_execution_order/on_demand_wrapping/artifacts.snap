@@ -23,13 +23,13 @@ var require_dynamic = /* @__PURE__ */ __commonJS({ "dynamic.js": ((exports, modu
 }) });
 
 //#endregion
-export { __esm as n, __toESM as r, require_dynamic as t };
+export { __toESMWithSymbols as i, __esm as n, __toESM as r, require_dynamic as t };
 ```
 
 ## main.js
 
 ```js
-import { n as __esm, r as __toESM, t as require_dynamic } from "./dynamic2.js";
+import { i as __toESMWithSymbols, n as __esm, r as __toESM, t as require_dynamic } from "./dynamic2.js";
 import { strictEqual } from "node:assert";
 
 function foo() {

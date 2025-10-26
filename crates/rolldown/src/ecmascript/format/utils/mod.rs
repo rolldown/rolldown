@@ -39,10 +39,15 @@ pub fn render_chunk_external_imports<'a>(
       let external_module_symbol_name = &ctx.chunk.canonical_names[&importee.namespace_ref];
 
       if ctx.link_output.used_symbol_refs.contains(&importee.namespace_ref) {
+        let to_esm_helper = if ctx.options.generated_code.symbols {
+          "__toESMWithSymbols"
+        } else {
+          "__toESM"
+        };
         let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
           .link_output
           .symbol_db
-          .canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
+          .canonical_ref_for(ctx.link_output.runtime.resolve_symbol(to_esm_helper))];
 
         import_code.push_str(external_module_symbol_name);
         import_code.push_str(" = ");

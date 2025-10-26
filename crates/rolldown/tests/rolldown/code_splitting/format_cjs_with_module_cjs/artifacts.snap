@@ -50,6 +50,12 @@ Object.defineProperty(exports, '__toESM', {
     return __toESM;
   }
 });
+Object.defineProperty(exports, '__toESMWithSymbols', {
+  enumerable: true,
+  get: function () {
+    return __toESMWithSymbols;
+  }
+});
 Object.defineProperty(exports, 'require_share', {
   enumerable: true,
   get: function () {

@@ -14,6 +14,12 @@ Object.defineProperty(exports, '__toESM', {
     return __toESM;
   }
 });
+Object.defineProperty(exports, '__toESMWithSymbols', {
+  enumerable: true,
+  get: function () {
+    return __toESMWithSymbols;
+  }
+});
 ```
 
 ## main.js

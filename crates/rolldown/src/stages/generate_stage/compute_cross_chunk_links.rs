@@ -378,7 +378,7 @@ impl GenerateStage<'_> {
           continue;
         }
         // If the symbol from external module and the format is commonjs, we need to insert runtime
-        // symbol ref `__toESM`
+        // symbol ref `__toESM` or `__toESMWithSymbols` depending on generatedCode.symbols
         // related to https://github.com/rolldown/rolldown/blob/c100a53c6cfc67b4f92e230da072eef8494862ef/crates/rolldown/src/ecmascript/format/cjs.rs?plain=1#L120-L124
         let import_ref = if self.link_output.module_table[import_ref.owner].is_external() {
           index_chunk_indirect_imports_from_external_modules[chunk_id].insert(import_ref.owner);
@@ -386,12 +386,17 @@ impl GenerateStage<'_> {
             continue;
           }
 
-          // Note: the `__toESM` should always referenced before during `collect_depended_symbols` phase
+          // Note: the `__toESM` (or `__toESMWithSymbols`) should always referenced before during `collect_depended_symbols` phase
           // Before deduplicated the indirect_imports_from_external_modules, there should exists
           // two scenarios:
           // 1. The symbol is directly imported from an external modules, then it should be referenced in https://github.com/rolldown/rolldown/blob/c100a53c6cfc67b4f92e230da072eef8494862ef/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs?plain=1#L85-L94,
           // 2. The symbol indirectly imported from an external module, then the `__toESM` should be referenced in other modules, see also **1**
-          self.link_output.runtime.resolve_symbol("__toESM")
+          let to_esm_helper = if self.options.generated_code.symbols {
+            "__toESMWithSymbols"
+          } else {
+            "__toESM"
+          };
+          self.link_output.runtime.resolve_symbol(to_esm_helper)
         } else {
           import_ref
         };

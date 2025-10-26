@@ -34,6 +34,15 @@ export var __reExport = (target, mod, secondTarget) => (
   secondTarget && __copyProps(secondTarget, mod, 'default')
 )
 export var __toESM = (mod, isNodeMode, target) => (
+  target = mod != null ? __create(__getProtoOf(mod)) : {},
+  __copyProps(
+    isNodeMode || !mod || !mod.__esModule
+      ? __defProp(target, 'default', { value: mod, enumerable: true })
+      : target,
+    mod)
+)
+// Alias: when symbols support is not needed, this is the same as __toESM
+export var __toESMWithSymbols = (mod, isNodeMode, target) => (
   target = mod != null ? __create(__getProtoOf(mod), { [Symbol.toStringTag]: { value: 'Module' } }) : {},
   __copyProps(
     isNodeMode || !mod || !mod.__esModule

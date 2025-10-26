@@ -20,11 +20,12 @@ bitflags! {
     const CopyProps = 1 << 12;
     const ReExport = 1 << 13;
     const ToEsm = 1 << 14;
-    const ToCommonJs = 1 << 15;
-    const ToBinaryNode = 1 << 16;
-    const ToBinary = 1 << 17;
-    const ToDynamicImportEsm = 1 << 18;
-    const Require = 1 << 19;
+    const ToEsmWithSymbols = 1 << 15;
+    const ToCommonJs = 1 << 16;
+    const ToBinaryNode = 1 << 17;
+    const ToBinary = 1 << 18;
+    const ToDynamicImportEsm = 1 << 19;
+    const Require = 1 << 20;
   }
 }
 
@@ -56,7 +57,7 @@ impl DependedRuntimeHelperMapExt for DependedRuntimeHelperMap {
   }
 }
 
-pub const RUNTIME_HELPER_NAMES: [&str; 20] = [
+pub const RUNTIME_HELPER_NAMES: [&str; 21] = [
   "__create",
   "__defProp",
   "__name",
@@ -72,6 +73,7 @@ pub const RUNTIME_HELPER_NAMES: [&str; 20] = [
   "__copyProps",
   "__reExport",
   "__toESM",
+  "__toESMWithSymbols",
   "__toCommonJS",
   "__toBinaryNode",
   "__toBinary",

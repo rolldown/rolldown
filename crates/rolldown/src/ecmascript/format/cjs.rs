@@ -137,6 +137,12 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         // generate code like:
         // let external_module_symbol_name = require("external-module");
         // external_module_symbol_name = __toESM(external_module_symbol_name);
+        // or __toESMWithSymbols if generatedCode.symbols is true
+        let to_esm_helper = if ctx.options.generated_code.symbols {
+          "__toESMWithSymbols"
+        } else {
+          "__toESM"
+        };
         let require_external = concat_string!(
           "let ",
           external_module_symbol_name,
@@ -146,7 +152,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
           external_module_symbol_name,
           " = ",
           ctx.finalized_string_pattern_for_symbol_ref(
-            ctx.link_output.runtime.resolve_symbol("__toESM"),
+            ctx.link_output.runtime.resolve_symbol(to_esm_helper),
             ctx.chunk_idx,
             &ctx.chunk.canonical_names,
           ),

@@ -29,13 +29,11 @@
     "dist"
   ],
   "scripts": {
-    "build": "oxnode -C dev ./build.ts",
+    "build": "tsc",
     "test": "vitest --typecheck"
   },
   "devDependencies": {
-    "@oxc-node/cli": "catalog:",
     "@types/picomatch": "catalog:",
-    "rolldown-plugin-dts": "catalog:",
     "picomatch": "catalog:",
     "vitest": "catalog:",
     "typescript": "catalog:"

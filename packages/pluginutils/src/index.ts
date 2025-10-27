@@ -1,3 +1,3 @@
-export * from './composable-filters';
-export * from './filter-vite-plugins';
-export * from './simple-filters';
+export * from './composable-filters.js';
+export * from './filter-vite-plugins.js';
+export * from './simple-filters.js';

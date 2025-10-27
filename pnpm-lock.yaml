@@ -500,18 +500,12 @@ importers:
 
   packages/pluginutils:
     devDependencies:
-      '@oxc-node/cli':
-        specifier: 'catalog:'
-        version: 0.0.32
       '@types/picomatch':
         specifier: 'catalog:'
         version: 4.0.2
       picomatch:
         specifier: 'catalog:'
         version: 4.0.3
-      rolldown-plugin-dts:
-        specifier: 'catalog:'
-        version: 0.17.1(oxc-resolver@11.11.1)(rolldown@packages+rolldown)(typescript@5.9.3)
       typescript:
         specifier: 'catalog:'
         version: 5.9.3

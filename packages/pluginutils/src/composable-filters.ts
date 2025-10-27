@@ -1,4 +1,4 @@
-import { cleanUrl, extractQueryWithoutFragment } from './utils';
+import { cleanUrl, extractQueryWithoutFragment } from './utils.js';
 
 type StringOrRegExp = string | RegExp;
 

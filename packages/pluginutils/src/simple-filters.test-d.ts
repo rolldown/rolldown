@@ -1,5 +1,5 @@
 import { describe, expectTypeOf, test } from 'vitest';
-import { makeIdFiltersToMatchWithQuery } from './simple-filters';
+import { makeIdFiltersToMatchWithQuery } from './simple-filters.js';
 
 describe('makeIdFiltersToMatchWithQuery', () => {
   test('single string input', () => {

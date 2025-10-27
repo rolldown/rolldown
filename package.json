@@ -3,7 +3,7 @@
   "description": "Rollup in Rust",
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@10.18.3",
+  "packageManager": "pnpm@10.19.0",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },
@@ -33,8 +33,8 @@
     "knip": "^5.61.3",
     "lint-staged": "^16.1.2",
     "oxlint": "^1.23.0",
-    "oxlint-tsgolint": "0.2.0",
-    "remove-unused-vars": "^0.0.8",
+    "oxlint-tsgolint": "0.3.0",
+    "remove-unused-vars": "^0.0.9",
     "rolldown": "workspace:*",
     "typescript": "catalog:"
   },

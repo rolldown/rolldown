@@ -55,7 +55,7 @@ catalog:
   'tsx': '^4.19.4'
   'vitest': '^4.0.1'
   'vite': '^7.0.0'
-  '@types/node': '24.8.1'
+  '@types/node': '24.9.1'
   'esbuild': '^0.25.0'
   'rollup': '^4.18.0'
   'terser': '^5.31.1'

@@ -152,6 +152,10 @@ function withShared(
     },
     transform: {
       target: 'node22',
+      decorator: {
+        // Legacy decorators are required for the @lazy and @nonEnumerable decorators
+        legacy: true,
+      },
       define: {
         'import.meta.browserBuild': String(isBrowserBuild),
       },

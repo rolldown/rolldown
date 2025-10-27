@@ -1,7 +1,8 @@
 import type { BindingRenderedChunk } from '../binding';
 import type { AssetSource } from '../utils/asset-source';
+import type { ExternalMemoryHandle } from './external-memory-handle';
 
-export interface OutputAsset {
+export interface OutputAsset extends ExternalMemoryHandle {
   type: 'asset';
   fileName: string;
   /** @deprecated Use "originalFileNames" instead. */
@@ -48,7 +49,7 @@ export interface RenderedChunk extends Omit<BindingRenderedChunk, 'modules'> {
   dynamicImports: Array<string>;
 }
 
-export interface OutputChunk {
+export interface OutputChunk extends ExternalMemoryHandle {
   type: 'chunk';
   code: string;
   name: string;
@@ -68,6 +69,6 @@ export interface OutputChunk {
   preliminaryFileName: string;
 }
 
-export interface RolldownOutput {
+export interface RolldownOutput extends ExternalMemoryHandle {
   output: [OutputChunk, ...(OutputChunk | OutputAsset)[]];
 }

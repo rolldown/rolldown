@@ -91,6 +91,9 @@ export class RolldownBuild {
     return new RolldownOutputImpl(unwrapBindingResult(output));
   }
 
+  /**
+   * Close the build and free resources.
+   */
   async close(): Promise<void> {
     if (this.#bundlerImpl) {
       await this.#bundlerImpl.stopWorkers?.();

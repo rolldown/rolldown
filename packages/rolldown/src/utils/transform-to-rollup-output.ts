@@ -7,7 +7,9 @@ import type {
   JsOutputChunk,
 } from '../binding';
 import type { PluginContext } from '../plugin/plugin-context';
+import { OutputAssetImpl } from '../types/output-asset-impl';
 import type { OutputBundle } from '../types/output-bundle';
+import { OutputChunkImpl } from '../types/output-chunk-impl';
 import type {
   OutputAsset,
   OutputChunk,
@@ -22,7 +24,7 @@ import {
 } from './asset-source';
 import { transformChunkModules } from './transform-rendered-chunk';
 
-function transformToRollupSourceMap(map: string): SourceMap {
+export function transformToRollupSourceMap(map: string): SourceMap {
   const parsed: Omit<SourceMap, 'toString' | 'toUrl'> = JSON.parse(map);
   const obj: SourceMap = {
     ...parsed,
@@ -41,52 +43,7 @@ function transformToRollupSourceMap(map: string): SourceMap {
 function transformToRollupOutputChunk(
   bindingChunk: BindingOutputChunk,
 ): OutputChunk {
-  const chunk = {
-    type: 'chunk',
-    get code() {
-      return bindingChunk.code;
-    },
-    fileName: bindingChunk.fileName,
-    name: bindingChunk.name,
-    get modules() {
-      return transformChunkModules(bindingChunk.modules);
-    },
-    get imports() {
-      return bindingChunk.imports;
-    },
-    get dynamicImports() {
-      return bindingChunk.dynamicImports;
-    },
-    exports: bindingChunk.exports,
-    isEntry: bindingChunk.isEntry,
-    facadeModuleId: bindingChunk.facadeModuleId || null,
-    isDynamicEntry: bindingChunk.isDynamicEntry,
-    get moduleIds() {
-      return bindingChunk.moduleIds;
-    },
-    get map() {
-      return bindingChunk.map
-        ? transformToRollupSourceMap(bindingChunk.map)
-        : null;
-    },
-    sourcemapFileName: bindingChunk.sourcemapFileName || null,
-    preliminaryFileName: bindingChunk.preliminaryFileName,
-  } as OutputChunk;
-  const cache: Record<string | symbol, any> = {};
-  return new Proxy(chunk, {
-    get(target, p) {
-      if (p in cache) {
-        return cache[p];
-      }
-      const value = target[p as keyof OutputChunk];
-      cache[p] = value;
-      return value;
-    },
-    has(target, p): boolean {
-      if (p in cache) return true;
-      return p in target;
-    },
-  });
+  return new OutputChunkImpl(bindingChunk);
 }
 
 function transformToMutableRollupOutputChunk(
@@ -149,28 +106,7 @@ function transformToMutableRollupOutputChunk(
 function transformToRollupOutputAsset(
   bindingAsset: BindingOutputAsset,
 ): OutputAsset {
-  const asset = {
-    type: 'asset',
-    fileName: bindingAsset.fileName,
-    originalFileName: bindingAsset.originalFileName || null,
-    originalFileNames: bindingAsset.originalFileNames,
-    get source(): AssetSource {
-      return transformAssetSource(bindingAsset.source);
-    },
-    name: bindingAsset.name ?? undefined,
-    names: bindingAsset.names,
-  } as OutputAsset;
-  const cache: Record<string | symbol, any> = {};
-  return new Proxy(asset, {
-    get(target, p) {
-      if (p in cache) {
-        return cache[p];
-      }
-      const value = target[p as keyof OutputAsset];
-      cache[p] = value;
-      return value;
-    },
-  });
+  return new OutputAssetImpl(bindingAsset);
 }
 
 function transformToMutableRollupOutputAsset(

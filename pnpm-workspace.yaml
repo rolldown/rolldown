@@ -52,7 +52,6 @@ catalog:
   'rolldown-plugin-dts': '^0.17.0'
   'tsdown': '0.15.10'
   'typescript': '^5.8.3'
-  'tsx': '^4.19.4'
   'vitest': '^4.0.1'
   'vite': '^7.0.0'
   '@types/node': '24.9.1'
@@ -110,3 +109,4 @@ catalog:
   'estree-toolkit': '^1.7.8'
   'web-tree-sitter': '^0.25.0'
   'valibot': '1.1.0'
+  'tsx': '^4.20.6'

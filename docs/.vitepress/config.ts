@@ -41,6 +41,7 @@ const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
       { text: 'Top Level Await', link: '/in-depth/tla-in-rolldown.md' },
       { text: 'Advanced Chunks', link: '/in-depth/advanced-chunks.md' },
       { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
+      { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
       {
         text: 'Why Plugin Hook Filter',
         link: '/in-depth/why-plugin-hook-filter.md',
@@ -191,22 +192,31 @@ export default defineConfig({
   lastUpdated: true,
   cleanUrls: true,
   head: [
-    ['link', {
-      rel: 'icon',
-      type: 'image/svg+xml',
-      href: '/lightning-down.svg',
-    }],
+    [
+      'link',
+      {
+        rel: 'icon',
+        type: 'image/svg+xml',
+        href: '/lightning-down.svg',
+      },
+    ],
     ['meta', { name: 'theme-color', content: '#ff7e17' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:locale', content: 'en' }],
-    ['meta', {
-      property: 'og:title',
-      content: 'Rolldown | Rust bundler for JavaScript',
-    }],
-    ['meta', {
-      property: 'og:image',
-      content: 'https://rolldown.rs/og-image.png',
-    }],
+    [
+      'meta',
+      {
+        property: 'og:title',
+        content: 'Rolldown | Rust bundler for JavaScript',
+      },
+    ],
+    [
+      'meta',
+      {
+        property: 'og:image',
+        content: 'https://rolldown.rs/og-image.png',
+      },
+    ],
     ['meta', { property: 'og:site_name', content: 'Rolldown' }],
     ['meta', { property: 'og:url', content: 'https://rolldown.rs/' }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],

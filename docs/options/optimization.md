@@ -1,14 +1,14 @@
 # Optimization Options
 
 - **Type:** `object`
-- **Default:** `{ inlineConst: false }`
 
 Configure optimization features for the bundler.
 
-## optimization.inlineConst
+## inlineConst
 
 - **Type:** `boolean | { mode?: 'all' | 'smart'; pass?: number }`
 - **Default:** `false`
+- **Path:** `optimization.inlineConst`
 
 Inline imported constant values during bundling instead of preserving variable references.
 

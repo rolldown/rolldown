@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use arcstr::ArcStr;
-use futures::future::try_join_all;
+use futures::future::{Either, FutureExt, try_join_all};
 use rolldown_common::{
   InsChunkIdx, InstantiationKind, RollupRenderedChunk, SharedNormalizedBundlerOptions,
 };
@@ -33,22 +33,38 @@ pub async fn render_chunks(
 
   let result = try_join_all(assets.iter_mut().enumerate().map(|(index, asset)| {
     let chunks = Arc::clone(&chunks);
-    async move {
-      if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
-        let render_chunk_ret = plugin_driver
-          .render_chunk(HookRenderChunkArgs {
-            code: std::mem::take(&mut asset.content).try_into_inner_string()?,
-            chunk: Arc::clone(
-              chunks.get(&ecma_meta.rendered_chunk.filename).expect("should have chunk"),
-            ),
-            options,
-            chunks,
-          })
-          .await?;
-        return Ok(Some((index.into(), render_chunk_ret)));
-      }
+    if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
+      let plugin_driver = Arc::clone(plugin_driver);
+      let options = Arc::clone(options);
+      let asset_content = std::mem::take(&mut asset.content);
+      let Some(chunk) = chunks.get(&ecma_meta.rendered_chunk.filename) else {
+        return Either::Right(futures::future::ready(Err(anyhow::anyhow!("should have chunk"))));
+      };
 
-      Ok::<Option<(InsChunkIdx, (String, Vec<SourceMap>))>, anyhow::Error>(None)
+      let chunk = Arc::clone(chunk);
+      Either::Left(
+        tokio::spawn(async move {
+          let render_chunk_ret = plugin_driver
+            .render_chunk(HookRenderChunkArgs {
+              code: asset_content.try_into_inner_string()?,
+              chunk,
+              options: &options,
+              chunks,
+            })
+            .await?;
+          Ok::<_, anyhow::Error>(render_chunk_ret)
+        })
+        .map(move |ret| {
+          ret
+            .map_err(anyhow::Error::from)
+            .and_then(|ret| ret.map(|render_chunk_ret| Some((index.into(), render_chunk_ret))))
+        }),
+      )
+    } else {
+      Either::Right(futures::future::ready(Ok::<
+        Option<(InsChunkIdx, (String, Vec<SourceMap>))>,
+        anyhow::Error,
+      >(None)))
     }
   }))
   .await?;

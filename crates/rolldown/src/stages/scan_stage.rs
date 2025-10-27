@@ -1,7 +1,8 @@
 use std::{sync::Arc, thread};
 
 use arcstr::ArcStr;
-use futures::future::join_all;
+use futures::FutureExt;
+use futures::future::try_join_all;
 use oxc_index::IndexVec;
 #[cfg(not(target_os = "macos"))]
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
@@ -37,12 +38,18 @@ pub async fn resolve_user_defined_entries(
   resolver: &SharedResolver,
   plugin_driver: &SharedPluginDriver,
 ) -> BuildResult<Vec<(Option<ArcStr>, ResolvedId)>> {
-  let resolved_ids = join_all(options.input.iter().map(|input_item| async move {
-    let resolved = load_entry_module(resolver, plugin_driver, &input_item.import, None).await;
+  let resolved_ids = try_join_all(options.input.iter().map(|input_item| {
+    let resolver = Arc::clone(resolver);
+    let plugin_driver = Arc::clone(plugin_driver);
+    let import = input_item.import.clone();
 
-    resolved.map(|info| (input_item.name.as_ref().map(Into::into), info))
+    tokio::spawn(async move { load_entry_module(&resolver, &plugin_driver, &import, None).await })
+      .map(|info| {
+        info.map(|info| info.map(|info| (input_item.name.as_ref().map(Into::into), info)))
+      })
   }))
-  .await;
+  .await
+  .map_err(anyhow::Error::from)?;
 
   let mut ret = Vec::with_capacity(options.input.len());
 
@@ -330,12 +337,17 @@ impl ScanStage {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
 
-    let resolved_ids = join_all(ids.iter().map(|input_item| async move {
+    let resolved_ids = try_join_all(ids.iter().map(|input_item| {
       // The importer is useless, since all path is absolute path
-
-      load_entry_module(resolver, plugin_driver, input_item, None).await
+      let resolver = Arc::clone(resolver);
+      let plugin_driver = Arc::clone(plugin_driver);
+      let input_item = input_item.clone();
+      tokio::spawn(
+        async move { load_entry_module(&resolver, &plugin_driver, &input_item, None).await },
+      )
     }))
-    .await;
+    .await
+    .map_err(anyhow::Error::from)?;
 
     let mut ret = Vec::with_capacity(ids.len());
 

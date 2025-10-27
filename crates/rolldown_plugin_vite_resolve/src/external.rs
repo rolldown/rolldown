@@ -69,7 +69,6 @@ pub struct ExternalDeciderOptions {
   pub external: ResolveOptionsExternal,
   pub no_external: Arc<ResolveOptionsNoExternal>,
   pub dedupe: Arc<FxHashSet<String>>,
-  pub legacy_inconsistent_cjs_interop: bool,
   pub is_build: bool,
 }
 
@@ -141,13 +140,7 @@ impl ExternalDecider {
     // unresolvable from root (which would be unresolvable from output bundles also)
     let importer = if self.options.is_build { None } else { importer };
 
-    let result = self.resolver.resolve_bare_import(
-      id,
-      importer,
-      false,
-      &self.options.dedupe,
-      self.options.legacy_inconsistent_cjs_interop,
-    );
+    let result = self.resolver.resolve_bare_import(id, importer, false, &self.options.dedupe);
     match result {
       Ok(result) => {
         let resolved = match result {

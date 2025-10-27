@@ -58,8 +58,6 @@ export type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>;
 
 export type ChunkFileNamesFunction = (chunkInfo: PreRenderedChunk) => string;
 
-export type SanitizeFileNameFunction = (name: string) => string;
-
 export interface PreRenderedAsset {
   type: 'asset';
   name?: string;
@@ -71,23 +69,7 @@ export interface PreRenderedAsset {
 
 export type AssetFileNamesFunction = (chunkInfo: PreRenderedAsset) => string;
 
-export type PathsFunction = (id: string) => string;
-
-export type ManualChunksFunction = (
-  moduleId: string,
-  meta: { getModuleInfo: (moduleId: string) => ModuleInfo | null },
-) => string | NullValue;
-
 export type GlobalsFunction = (name: string) => string;
-
-export type AdvancedChunksNameFunction = (
-  moduleId: string,
-  ctx: ChunkingContext,
-) => string | NullValue;
-
-export type AdvancedChunksTestFunction = (
-  id: string,
-) => boolean | undefined | void;
 
 export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap'>;
 
@@ -157,7 +139,7 @@ export interface OutputOptions {
   chunkFileNames?: string | ChunkFileNamesFunction;
   cssEntryFileNames?: string | ChunkFileNamesFunction;
   cssChunkFileNames?: string | ChunkFileNamesFunction;
-  sanitizeFileName?: boolean | SanitizeFileNameFunction;
+  sanitizeFileName?: boolean | ((name: string) => string);
   /**
    * Control code minification.
    *
@@ -201,7 +183,7 @@ export interface OutputOptions {
    * }
    * ```
    */
-  paths?: Record<string, string> | PathsFunction;
+  paths?: Record<string, string> | ((id: string) => string);
   generatedCode?: Partial<GeneratedCodeOptions>;
   externalLiveBindings?: boolean;
   inlineDynamicImports?: boolean;
@@ -249,7 +231,10 @@ export interface OutputOptions {
    *
    * @deprecated Please use `advancedChunks` instead.
    */
-  manualChunks?: ManualChunksFunction;
+  manualChunks?: (
+    moduleId: string,
+    meta: { getModuleInfo: (moduleId: string) => ModuleInfo | null },
+  ) => string | NullValue;
   /**
    * Allows you to do manual chunking. For deeper understanding, please refer to the in-depth [documentation](https://rolldown.rs/in-depth/advanced-chunks).
    */
@@ -355,7 +340,7 @@ export interface OutputOptions {
        */
       name:
         | string
-        | AdvancedChunksNameFunction;
+        | ((moduleId: string, ctx: ChunkingContext) => string | NullValue);
       /**
        * - Type: `string | RegExp | ((id: string) => boolean | undefined | void);`
        *
@@ -372,7 +357,7 @@ export interface OutputOptions {
        * - ❌ Not recommended: `/node_modules/react/`
        * :::
        */
-      test?: StringOrRegExp | AdvancedChunksTestFunction;
+      test?: StringOrRegExp | ((id: string) => boolean | undefined | void);
       /**
        * - Type: `number`
        * - Default: `0`

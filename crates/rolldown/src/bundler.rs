@@ -227,6 +227,8 @@ impl Bundler {
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
+    let mut output = self.bundle_up(scan_stage_output, /* is_write */ true).await?;
+
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
 
     if self.options.clean_dir && self.options.dir.is_some() {
@@ -235,8 +237,6 @@ impl Bundler {
           .context(err)
       })?;
     }
-
-    let mut output = self.bundle_up(scan_stage_output, /* is_write */ true).await?;
 
     self.fs.create_dir_all(&dist_dir).map_err(|err| {
       anyhow::anyhow!("Could not create directory for output chunks: {}", dist_dir.display())

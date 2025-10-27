@@ -173,12 +173,6 @@ jobs:
 
       - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
 
-      - name: Build @rolldown/pluginutils
-        run: pnpm --filter '@rolldown/pluginutils' build
-
-      - name: Build rolldown
-        run: pnpm run --filter 'rolldown' build-node
-
       - name: Lint Code
         run: pnpm lint-code
 

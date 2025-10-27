@@ -4185,7 +4185,7 @@ expression: output
 
 # tests/rolldown/function/format/cjs/plain_import_should_not_introduce_to_esm
 
-- main-!~{000}~.js => main-CmMYW0wP.js
+- main-!~{000}~.js => main-fYGzYGiR.js
 
 # tests/rolldown/function/format/cjs/share_chunk_without_symbol
 
@@ -4792,11 +4792,6 @@ expression: output
 - main-!~{000}~.js => main-DJLQ7AhO.js
 - chunk-!~{001}~.js => chunk--zchQUYv.js
 - dynamic-!~{003}~.js => dynamic-C-F4zVAd.js
-
-# tests/rolldown/issues/6587
-
-- entry-!~{000}~.js => entry-C1HSdQDe.js
-- entryb-!~{001}~.js => entryb-CoFrmpqC.js
 
 # tests/rolldown/issues/6593
 

@@ -58,21 +58,7 @@ impl Plugin for ViteCSSPostPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::BuildStart
-      | HookUsage::Transform
-      | HookUsage::RenderStart
-      | HookUsage::RenderChunk
-      | HookUsage::AugmentChunkHash
-      | HookUsage::GenerateBundle
-  }
-
-  async fn build_start(
-    &self,
-    ctx: &rolldown_plugin::PluginContext,
-    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
-  ) -> rolldown_plugin::HookNoopReturn {
-    ctx.meta().insert(Arc::new(CSSStyles::default()));
-    Ok(())
+    HookUsage::Transform | HookUsage::RenderChunk
   }
 
   async fn render_start(
@@ -223,11 +209,11 @@ impl Plugin for ViteCSSPostPlugin {
   ) -> rolldown_plugin::HookAugmentChunkHashReturn {
     Ok(ctx.meta().get::<ViteMetadata>().and_then(|vite_metadata| {
       vite_metadata.get(&chunk.filename).and_then(|metadata| {
-        (!metadata.imported_css.is_empty()).then(|| {
-          let capacity = metadata.imported_css.iter().fold(0, |acc, s| acc + s.len());
+        (!metadata.imported_assets.is_empty()).then(|| {
+          let capacity = metadata.imported_assets.iter().fold(0, |acc, s| acc + s.len());
           let mut hash = String::with_capacity(capacity);
-          for id in metadata.imported_css.iter() {
-            hash.push_str(&id);
+          for asset in metadata.imported_assets.iter() {
+            hash.push_str(&asset);
           }
           hash
         })

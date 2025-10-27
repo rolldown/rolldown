@@ -8,9 +8,11 @@ import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import type { HasProperty, TypeAssert } from '../../types/assert';
 import type { RolldownOutput } from '../../types/rolldown-output';
-import { RolldownOutputImpl } from '../../types/rolldown-output-impl';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { unwrapBindingResult } from '../../utils/error';
+import {
+  transformToRollupOutput,
+} from '../../utils/transform-to-rollup-output';
 import { validateOption } from '../../utils/validator';
 
 interface BundlerImplWithStopWorker {
@@ -81,14 +83,14 @@ export class RolldownBuild {
     validateOption('output', outputOptions);
     const { impl } = await this.#getBundlerWithStopWorker(outputOptions);
     const output = await impl.generate();
-    return new RolldownOutputImpl(unwrapBindingResult(output));
+    return transformToRollupOutput(unwrapBindingResult(output));
   }
 
   async write(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
     const { impl } = await this.#getBundlerWithStopWorker(outputOptions);
     const output = await impl.write();
-    return new RolldownOutputImpl(unwrapBindingResult(output));
+    return transformToRollupOutput(unwrapBindingResult(output));
   }
 
   async close(): Promise<void> {

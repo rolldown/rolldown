@@ -54,7 +54,7 @@ const defaultParserOptions: ParserOptions = {
 
 export function parseAst(
   sourceText: string,
-  options?: ParserOptions | null,
+  options?: ParserOptions | undefined | null,
   filename?: string,
 ): Program {
   let ast = parseSync(filename ?? 'file.js', sourceText, {
@@ -69,7 +69,7 @@ export function parseAst(
 
 export async function parseAstAsync(
   sourceText: string,
-  options?: ParserOptions | null,
+  options?: ParserOptions | undefined | null,
   filename?: string,
 ): Promise<Program> {
   return wrap(

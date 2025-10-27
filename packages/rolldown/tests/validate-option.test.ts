@@ -54,5 +54,5 @@ test('give a warning for hoistTransitiveImports: true', async () => {
       hoistTransitiveImports: true
     })
     expect(consoleSpy).toHaveBeenCalledWith(`\x1b[33mWarning: Invalid output options (1 issue found)
-- For the "hoistTransitiveImports". Invalid type: Expected false but received true. \x1b[0m`)
+- For the "hoistTransitiveImports". The 'true' value is not supported. \x1b[0m`)
 })

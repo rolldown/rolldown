@@ -8,7 +8,7 @@
     "node": "^20.19.0 || >=22.12.0"
   },
   "scripts": {
-    "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings --type-aware",
+    "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings",
     "lint-knip": "knip",
     "fmt": "dprint fmt",
     "build": "echo \"Use just build\"",
@@ -32,8 +32,7 @@
     "husky": "^9.1.7",
     "knip": "^5.61.3",
     "lint-staged": "^16.1.2",
-    "oxlint": "^1.23.0",
-    "oxlint-tsgolint": "0.2.0",
+    "oxlint": "^1.6.0",
     "remove-unused-vars": "^0.0.8",
     "rolldown": "workspace:*",
     "typescript": "catalog:"

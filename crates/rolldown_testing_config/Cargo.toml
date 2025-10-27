@@ -15,7 +15,6 @@ test = false
 
 [dependencies]
 rolldown_common = { workspace = true, features = ["deserialize_bundler_options"] }
-rolldown_dev_common = { workspace = true, features = ["deserialize_dev_options"] }
 schemars = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

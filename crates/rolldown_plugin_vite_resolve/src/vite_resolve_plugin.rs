@@ -41,7 +41,6 @@ pub struct ViteResolveOptions {
   pub external: external::ResolveOptionsExternal,
   pub no_external: external::ResolveOptionsNoExternal,
   pub dedupe: Vec<String>,
-  pub legacy_inconsistent_cjs_interop: bool,
   #[debug(skip)]
   pub finalize_bare_specifier: Option<Arc<FinalizeBareSpecifierCallback>>,
   #[debug(skip)]
@@ -112,7 +111,6 @@ pub struct ViteResolvePlugin {
   external: external::ResolveOptionsExternal,
   no_external: Arc<external::ResolveOptionsNoExternal>,
   dedupe: Arc<FxHashSet<String>>,
-  legacy_inconsistent_cjs_interop: bool,
   environment_consumer: String,
   environment_name: String,
   #[debug(skip)]
@@ -159,7 +157,6 @@ impl ViteResolvePlugin {
       external: options.external.clone(),
       no_external: Arc::clone(&no_external),
       dedupe: Arc::clone(&dedupe),
-      legacy_inconsistent_cjs_interop: options.legacy_inconsistent_cjs_interop,
       environment_consumer: options.environment_consumer,
       environment_name: options.environment_name,
       finalize_bare_specifier: options.finalize_bare_specifier,
@@ -174,7 +171,6 @@ impl ViteResolvePlugin {
           external: options.external,
           no_external: Arc::clone(&no_external),
           dedupe,
-          legacy_inconsistent_cjs_interop: options.legacy_inconsistent_cjs_interop,
           is_build: options.resolve_options.is_build,
         },
         resolvers.get_for_external(),
@@ -255,14 +251,10 @@ impl Plugin for ViteResolvePlugin {
           .is_some_and(|v| v.is_sub_imports_pattern())
         {
           let path = Path::new(&self.resolve_options.root).join(id.as_ref()).normalize();
-          let package_json_path = (!self.legacy_inconsistent_cjs_interop)
-            .then(|| {
-              self
-                .resolvers
-                .get_nearest_package_json(path.to_str().unwrap())
-                .map(|pj| pj.realpath().to_str().unwrap().to_string())
-            })
-            .flatten();
+          let package_json_path = self
+            .resolvers
+            .get_nearest_package_json(path.to_str().unwrap())
+            .map(|pj| pj.realpath().to_str().unwrap().to_string());
           return Ok(Some(HookResolveIdOutput {
             id: path.to_slash_lossy().into(),
             package_json_path,
@@ -296,14 +288,10 @@ impl Plugin for ViteResolvePlugin {
           res = finalized;
         }
       }
-      let package_json_path = (!self.legacy_inconsistent_cjs_interop)
-        .then(|| {
-          self
-            .resolvers
-            .get_nearest_package_json(&path)
-            .map(|pj| pj.realpath().to_str().unwrap().to_string())
-        })
-        .flatten();
+      let package_json_path = self
+        .resolvers
+        .get_nearest_package_json(&path)
+        .map(|pj| pj.realpath().to_str().unwrap().to_string());
       return Ok(Some(HookResolveIdOutput {
         id: res.into(),
         package_json_path,
@@ -328,13 +316,7 @@ impl Plugin for ViteResolvePlugin {
       let external = self.resolve_options.is_build
         && self.environment_consumer == "server"
         && self.external_decider.is_external(&id, args.importer);
-      let result = resolver.resolve_bare_import(
-        &id,
-        args.importer,
-        external,
-        &self.dedupe,
-        self.legacy_inconsistent_cjs_interop,
-      )?;
+      let result = resolver.resolve_bare_import(&id, args.importer, external, &self.dedupe)?;
       if let Some(mut result) = result {
         if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier {
           if !scan && rolldown_plugin_utils::is_in_node_modules(Path::new(result.id.as_str())) {
@@ -448,7 +430,6 @@ impl Plugin for ViteResolvePlugin {
     let resolved = resolver.normalize_oxc_resolver_result(
       args.importer,
       &self.dedupe,
-      self.legacy_inconsistent_cjs_interop,
       &resolver.resolve_raw(base_dir, specifier, false),
     )?;
     if let Some(mut resolved) = resolved {

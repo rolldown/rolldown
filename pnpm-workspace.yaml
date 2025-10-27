@@ -4,8 +4,6 @@ packages:
   - packages/test-dev-server/tests
   - packages/test-dev-server/tests/fixtures/*
   - packages/test-dev-server/tests/tmp/fixtures/*
-  - packages/rolldown/tests/fixtures/resolve/issue-5846
-  - packages/rolldown/tests/fixtures/resolve/issue-5846-2
   - docs
   - examples/*
   - scripts
@@ -26,7 +24,7 @@ catalog:
   'oxc-minify': '^0.95.0'
 
   # --- NAPI-RS related ---
-  '@napi-rs/cli': '^3.4.0'
+  '@napi-rs/cli': '^3.2.0'
   '@napi-rs/wasm-runtime': '^1.0.0'
 
   # --- Vue related ---
@@ -49,11 +47,11 @@ catalog:
   '@oxc-node/cli': '^0.0.32'
   '@oxc-node/core': '^0.0.32'
   'fast-glob': '^3.3.3'
-  'rolldown-plugin-dts': '^0.17.0'
-  'tsdown': '0.15.10'
+  'rolldown-plugin-dts': '^0.16.0'
+  'tsdown': '0.15.9'
   'typescript': '^5.8.3'
   'tsx': '^4.19.4'
-  'vitest': '^4.0.1'
+  'vitest': '^3.0.1'
   'vite': '^7.0.0'
   '@types/node': '24.8.1'
   'esbuild': '^0.25.0'
@@ -91,6 +89,7 @@ catalog:
   '@types/serve-static': '^1.15.7'
   'ws': '^8.18.1'
   '@types/ws': '^8.18.0'
+  'typedoc': '^0.28.0'
   'vitepress': '^2.0.0-alpha.12'
   'vitepress-plugin-group-icons': '^1.0.0'
   'vitepress-plugin-llms': '^1.1.0'

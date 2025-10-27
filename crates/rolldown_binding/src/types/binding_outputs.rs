@@ -13,10 +13,28 @@ use napi_derive::napi;
 use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
 use rustc_hash::FxBuildHasher;
 
-#[napi(object, object_from_js = false)]
+// The `BindingOutputs` take the data to js side, the rust side will not use it anymore.
+#[napi]
 pub struct BindingOutputs {
-  pub chunks: Vec<BindingOutputChunk>,
-  pub assets: Vec<BindingOutputAsset>,
+  chunks: Vec<BindingOutputChunk>,
+  assets: Vec<BindingOutputAsset>,
+}
+
+#[napi]
+impl BindingOutputs {
+  pub(crate) fn chunk_len(&self) -> usize {
+    self.chunks.len()
+  }
+
+  #[napi(getter)]
+  pub fn chunks(&mut self) -> Vec<BindingOutputChunk> {
+    std::mem::take(&mut self.chunks)
+  }
+
+  #[napi(getter)]
+  pub fn assets(&mut self) -> Vec<BindingOutputAsset> {
+    std::mem::take(&mut self.assets)
+  }
 }
 
 impl From<Vec<rolldown_common::Output>> for BindingOutputs {

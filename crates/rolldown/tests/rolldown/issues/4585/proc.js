@@ -1,1 +1,1 @@
-export { default as minproc } from "node:process";
+export {default as minproc} from 'node:process'

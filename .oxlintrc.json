@@ -39,10 +39,7 @@
         "argsIgnorePattern": "^_"
       }
     ],
-    "unicorn/prefer-node-protocol": "error",
-    "typescript/no-base-to-string": "allow",
-    "typescript/no-floating-promises": "allow",
-    "typescript/restrict-template-expressions": "allow"
+    "unicorn/prefer-node-protocol": "error"
   },
   "overrides": [
     {

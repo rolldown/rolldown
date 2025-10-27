@@ -8,7 +8,8 @@ use std::{
 };
 
 use anyhow::Context;
-use rolldown::dev::{DevOptions, DevWatchOptions};
+use rolldown::dev::DevOptions;
+use rolldown::dev::dev_options::DevWatchOptions;
 use rolldown::{
   BundleOutput, Bundler, BundlerOptions, IsExternal, OutputFormat, Platform, SourceMapType,
   plugin::__inner::SharedPluginable,

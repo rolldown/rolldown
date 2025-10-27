@@ -74,7 +74,7 @@ jobs:
         run: git reset --hard # fix pnpm install add new line for package.json
 
       - name: Download Binding Artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           path: packages/rolldown/artifacts
 
@@ -89,31 +89,31 @@ jobs:
         shell: bash
 
       - name: Download Node Artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           path: packages/rolldown/dist
           name: node-artifact
 
       - name: Download `@rolldown/browser` Artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           path: packages/browser/dist
           name: browser-artifact
 
       - name: Download Pluginutils Artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           path: packages/pluginutils/dist
           name: pluginutils-artifact
 
       - name: Download `@rolldown/debug` Artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           path: packages/debug/dist
           name: debug-artifact
 
       - name: Download `rolldown-version.txt`
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: rolldown-version
 

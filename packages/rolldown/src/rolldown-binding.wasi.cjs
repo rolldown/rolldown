@@ -139,6 +139,7 @@ module.exports.BindingModuleInfo = __napiModule.exports.BindingModuleInfo
 module.exports.BindingNormalizedOptions = __napiModule.exports.BindingNormalizedOptions
 module.exports.BindingOutputAsset = __napiModule.exports.BindingOutputAsset
 module.exports.BindingOutputChunk = __napiModule.exports.BindingOutputChunk
+module.exports.BindingOutputs = __napiModule.exports.BindingOutputs
 module.exports.BindingPluginContext = __napiModule.exports.BindingPluginContext
 module.exports.BindingRenderedChunk = __napiModule.exports.BindingRenderedChunk
 module.exports.BindingRenderedChunkMeta = __napiModule.exports.BindingRenderedChunkMeta

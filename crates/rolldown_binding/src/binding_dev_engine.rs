@@ -1,6 +1,6 @@
 use napi_derive::napi;
 use rolldown::dev::dev_context::BuildProcessFuture;
-use rolldown::dev::{OnHmrUpdatesCallback, OnOutputCallback};
+use rolldown::dev::{OnHmrUpdatesCallback, dev_options::OnOutputCallback};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -106,7 +106,7 @@ impl BindingDevEngine {
       || compare_contents_for_polling.is_some()
       || debounce_tick_rate.is_some()
     {
-      Some(rolldown::dev::DevWatchOptions {
+      Some(rolldown::dev::dev_options::DevWatchOptions {
         disable_watcher: None,
         skip_write,
         use_polling,
@@ -120,7 +120,7 @@ impl BindingDevEngine {
       None
     };
 
-    let rolldown_dev_options = rolldown::dev::DevOptions {
+    let rolldown_dev_options = rolldown::dev::dev_options::DevOptions {
       on_hmr_updates,
       on_output,
       rebuild_strategy,

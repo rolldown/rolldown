@@ -248,7 +248,7 @@ impl ViteCSSPostPlugin {
             .get::<CSSEntriesCache>()
             .expect("CSSEntriesCache missing")
             .inner
-            .insert(ctx.args.chunk.name.clone(), reference_id);
+            .insert(reference_id);
         }
       } else if self.is_client {
         let injection_point = match ctx.args.options.format {

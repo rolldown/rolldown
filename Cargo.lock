@@ -590,9 +590,9 @@ dependencies = [
 
 [[package]]
 name = "ctor"
-version = "0.6.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59c9b8bdf64ee849747c1b12eb861d21aa47fa161564f48332f1afe2373bf899"
+checksum = "67773048316103656a637612c4a62477603b777d91d9c62ff2290f9cde178fdb"
 dependencies = [
  "ctor-proc-macro",
  "dtor",
@@ -600,9 +600,9 @@ dependencies = [
 
 [[package]]
 name = "ctor-proc-macro"
-version = "0.0.7"
+version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52560adf09603e58c9a7ee1fe1dcb95a16927b17c127f0ac02d6e768a0e25bc1"
+checksum = "e2931af7e13dc045d8e9d26afccc6fa115d64e115c9c84b1166288b46f6782c2"
 
 [[package]]
 name = "dashmap"
@@ -1334,9 +1334,9 @@ dependencies = [
 
 [[package]]
 name = "is-terminal"
-version = "0.4.17"
+version = "0.4.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
+checksum = "e04d7f318608d35d4b61ddd75cbdaee86b023ebe2bd5a66ee0915f0bf93095a9"
 dependencies = [
  "hermit-abi",
  "libc",
@@ -1579,9 +1579,9 @@ dependencies = [
 
 [[package]]
 name = "napi"
-version = "3.4.0"
+version = "3.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3a1135cfe16ca43ac82ac05858554fc39c037d8e4592f2b4a83d7ef8e822f43"
+checksum = "f1b74e3dce5230795bb4d2821b941706dee733c7308752507254b0497f39cad7"
 dependencies = [
  "anyhow",
  "bitflags 2.9.4",
@@ -1597,15 +1597,15 @@ dependencies = [
 
 [[package]]
 name = "napi-build"
-version = "2.2.4"
+version = "2.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ae82775d1b06f3f07efd0666e59bbc175da8383bc372051031d7a447e94fbea"
+checksum = "dcae8ad5609d14afb3a3b91dee88c757016261b151e9dcecabf1b2a31a6cab14"
 
 [[package]]
 name = "napi-derive"
-version = "3.3.0"
+version = "3.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78665d6bdf10e9a4e6b38123efb0f66962e6197c1aea2f07cff3f159a374696d"
+checksum = "7552d5a579b834614bbd496db5109f1b9f1c758f08224b0dee1e408333adf0d0"
 dependencies = [
  "convert_case",
  "ctor",
@@ -1617,9 +1617,9 @@ dependencies = [
 
 [[package]]
 name = "napi-derive-backend"
-version = "3.0.0"
+version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42d55d01423e7264de3acc13b258fa48ca7cf38a4d25db848908ec3c1304a85a"
+checksum = "5f6a81ac7486b70f2532a289603340862c06eea5a1e650c1ffeda2ce1238516a"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -1630,9 +1630,9 @@ dependencies = [
 
 [[package]]
 name = "napi-sys"
-version = "3.0.1"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ed8f0e23a62a3ce0fbb6527cdc056e9282ddd9916b068c46f8923e18eed5ee6"
+checksum = "3e4e7135a8f97aa0f1509cce21a8a1f9dcec1b50d8dee006b48a5adb69a9d64d"
 dependencies = [
  "libloading",
 ]
@@ -2766,6 +2766,7 @@ dependencies = [
  "bitflags 2.9.4",
  "commondir",
  "css-module-lexer",
+ "derive_more",
  "dunce",
  "futures",
  "glob",
@@ -2785,7 +2786,6 @@ dependencies = [
  "rolldown-notify",
  "rolldown_common",
  "rolldown_debug",
- "rolldown_dev_common",
  "rolldown_ecmascript",
  "rolldown_ecmascript_utils",
  "rolldown_error",
@@ -2982,17 +2982,6 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "ts-rs",
-]
-
-[[package]]
-name = "rolldown_dev_common"
-version = "0.1.0"
-dependencies = [
- "derive_more",
- "rolldown_common",
- "rolldown_error",
- "schemars",
- "serde",
 ]
 
 [[package]]
@@ -3517,7 +3506,6 @@ name = "rolldown_testing_config"
 version = "0.1.0"
 dependencies = [
  "rolldown_common",
- "rolldown_dev_common",
  "schemars",
  "serde",
  "serde_json",

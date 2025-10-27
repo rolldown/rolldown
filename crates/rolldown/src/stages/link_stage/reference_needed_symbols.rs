@@ -98,7 +98,8 @@ impl LinkStage<'_> {
                       if matches!(
                         self.options.format,
                         OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd
-                      ) {
+                      ) && !rec.meta.contains(ImportRecordMeta::IsPlainImport)
+                      {
                         stmt_info.side_effect = true.into();
                         depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
                           .push(stmt_info_idx);

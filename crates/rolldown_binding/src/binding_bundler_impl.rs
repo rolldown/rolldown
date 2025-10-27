@@ -120,7 +120,7 @@ impl BindingBundlerImpl {
       },
       move |env, outputs| {
         if let napi::Either::B(ref binding_outputs) = outputs {
-          let chunk_size = binding_outputs.chunks.len();
+          let chunk_size = binding_outputs.chunk_len();
           // 16mb per chunk, it's just a hint, so it doesn't need to be accurate
           #[expect(clippy::cast_possible_wrap)]
           let memory_consumption = chunk_size as i64 * 1024 * 1024 * 16;

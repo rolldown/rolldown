@@ -109,7 +109,7 @@ function requireNative() {
     }
   } else if (process.platform === 'win32') {
     if (process.arch === 'x64') {
-      if (process.config?.variables?.shlib_suffix === 'dll.a' || process.config?.variables?.node_target_type === 'shared_library') {
+      if (process.report?.getReport?.()?.header?.osName?.startsWith?.('MINGW')) {
         try {
         return require('./rolldown-binding.win32-x64-gnu.node')
       } catch (e) {
@@ -575,7 +575,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { minify, Severity, ParseResult, ExportExportNameKind, ExportImportNameKind, ExportLocalNameKind, ImportNameKind, parseAsync, parseSync, rawTransferSupported, ResolverFactory, EnforceExtension, ModuleType, sync, HelperMode, isolatedDeclaration, moduleRunnerTransform, transform, transformAsync, BindingBundleEndEventData, BindingBundleErrorEventData, BindingBundler, BindingBundlerImpl, BindingCallableBuiltinPlugin, BindingChunkingContext, BindingDevEngine, BindingMagicString, BindingModuleInfo, BindingNormalizedOptions, BindingOutputAsset, BindingOutputChunk, BindingPluginContext, BindingRenderedChunk, BindingRenderedChunkMeta, BindingRenderedModule, BindingTransformPluginContext, BindingUrlResolver, BindingWatcher, BindingWatcherChangeData, BindingWatcherEvent, ParallelJsPluginRegistry, ScheduledBuild, TraceSubscriberGuard, BindingAttachDebugInfo, BindingBuiltinPluginName, BindingChunkModuleOrderBy, BindingLogLevel, BindingPluginOrder, BindingPropertyReadSideEffects, BindingPropertyWriteSideEffects, BindingRebuildStrategy, createTokioRuntime, FilterTokenKind, initTraceSubscriber, registerPlugins, shutdownAsyncRuntime, startAsyncRuntime } = nativeBinding
+const { minify, Severity, ParseResult, ExportExportNameKind, ExportImportNameKind, ExportLocalNameKind, ImportNameKind, parseAsync, parseSync, rawTransferSupported, ResolverFactory, EnforceExtension, ModuleType, sync, HelperMode, isolatedDeclaration, moduleRunnerTransform, transform, transformAsync, BindingBundleEndEventData, BindingBundleErrorEventData, BindingBundler, BindingBundlerImpl, BindingCallableBuiltinPlugin, BindingChunkingContext, BindingDevEngine, BindingMagicString, BindingModuleInfo, BindingNormalizedOptions, BindingOutputAsset, BindingOutputChunk, BindingOutputs, BindingPluginContext, BindingRenderedChunk, BindingRenderedChunkMeta, BindingRenderedModule, BindingTransformPluginContext, BindingUrlResolver, BindingWatcher, BindingWatcherChangeData, BindingWatcherEvent, ParallelJsPluginRegistry, ScheduledBuild, TraceSubscriberGuard, BindingAttachDebugInfo, BindingBuiltinPluginName, BindingChunkModuleOrderBy, BindingLogLevel, BindingPluginOrder, BindingPropertyReadSideEffects, BindingPropertyWriteSideEffects, BindingRebuildStrategy, createTokioRuntime, FilterTokenKind, initTraceSubscriber, registerPlugins, shutdownAsyncRuntime, startAsyncRuntime } = nativeBinding
 export { minify }
 export { Severity }
 export { ParseResult }
@@ -607,6 +607,7 @@ export { BindingModuleInfo }
 export { BindingNormalizedOptions }
 export { BindingOutputAsset }
 export { BindingOutputChunk }
+export { BindingOutputs }
 export { BindingPluginContext }
 export { BindingRenderedChunk }
 export { BindingRenderedChunkMeta }

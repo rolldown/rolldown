@@ -4,15 +4,14 @@ use std::{borrow::Cow, collections::BTreeMap, path::Path, pin::Pin, sync::Arc};
 
 use rolldown_common::{EmittedAsset, Output};
 use rolldown_plugin::{HookNoopReturn, HookUsage, Plugin, PluginContext};
-use rolldown_utils::rustc_hash::FxHashMapExt as _;
-use rustc_hash::FxHashMap;
+use rolldown_utils::rustc_hash::FxHashSetExt;
+use rustc_hash::FxHashSet;
 
 pub type IsLegacyFn =
   dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send>> + Send + Sync;
 
-pub type CssEntriesFn = dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<FxHashMap<String, String>>> + Send>>
-  + Send
-  + Sync;
+pub type CssEntriesFn =
+  dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<FxHashSet<String>>> + Send>> + Send + Sync;
 
 #[derive(derive_more::Debug)]
 pub struct ManifestPlugin {
@@ -54,10 +53,10 @@ impl Plugin for ManifestPlugin {
           if !asset.names.is_empty() {
             if css_entries.is_none() {
               let reference_ids = (self.css_entries)().await?;
-              let mut filenames = FxHashMap::with_capacity(reference_ids.len());
-              for (name, reference_id) in reference_ids {
+              let mut filenames = FxHashSet::with_capacity(reference_ids.len());
+              for reference_id in reference_ids {
                 if let Ok(filename) = ctx.get_file_name(&reference_id) {
-                  filenames.insert(filename, name);
+                  filenames.insert(filename);
                 }
               }
               css_entries = Some(filenames);
@@ -78,7 +77,7 @@ impl Plugin for ManifestPlugin {
             let asset_manifest = Arc::new(Self::create_asset(
               asset,
               file.to_string(),
-              css_entries.get(&asset.filename).map(ToString::to_string),
+              css_entries.contains(&asset.filename),
             ));
 
             // If JS chunk and asset chunk are both generated from the same source file,

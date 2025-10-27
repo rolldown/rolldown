@@ -94,6 +94,7 @@ export const BindingModuleInfo = __napiModule.exports.BindingModuleInfo
 export const BindingNormalizedOptions = __napiModule.exports.BindingNormalizedOptions
 export const BindingOutputAsset = __napiModule.exports.BindingOutputAsset
 export const BindingOutputChunk = __napiModule.exports.BindingOutputChunk
+export const BindingOutputs = __napiModule.exports.BindingOutputs
 export const BindingPluginContext = __napiModule.exports.BindingPluginContext
 export const BindingRenderedChunk = __napiModule.exports.BindingRenderedChunk
 export const BindingRenderedChunkMeta = __napiModule.exports.BindingRenderedChunkMeta

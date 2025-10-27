@@ -6,23 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## indirect.js
 
 ```js
-import { t as read } from "./indirect2.js";
+import { t as read } from "./main.js";
 
 export { read };
-```
-
-## indirect2.js
-
-```js
-import { read } from "node:fs";
-
-export { read as t };
 ```
 
 ## main.js
 
 ```js
-import { t as read } from "./indirect2.js";
+import { read } from "node:fs";
 
 //#region read.js
 console.log(1);
@@ -33,4 +25,5 @@ console.log(read);
 import("./indirect.js").then(console.log);
 
 //#endregion
+export { read as t };
 ```

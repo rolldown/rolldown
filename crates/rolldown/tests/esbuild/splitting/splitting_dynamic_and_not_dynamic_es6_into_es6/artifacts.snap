@@ -6,28 +6,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { t as bar } from "./foo2.js";
+//#region foo.js
+let bar = 123;
 
+//#endregion
 //#region entry.js
 import("./foo.js").then(({ bar: b }) => console.log(bar, b));
 
 //#endregion
+export { bar as t };
 ```
 
 ## foo.js
 
 ```js
-import { t as bar } from "./foo2.js";
+import { t as bar } from "./entry.js";
 
 export { bar };
-```
-
-## foo2.js
-
-```js
-//#region foo.js
-let bar = 123;
-
-//#endregion
-export { bar as t };
 ```

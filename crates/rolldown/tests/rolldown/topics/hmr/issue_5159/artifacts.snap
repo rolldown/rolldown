@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bar.js
 
 ```js
-import { t as __export } from "./chunk.js";
+import { t as __export } from "./main.js";
 import { t as trim } from "./string.js";
 
 //#region bar.js
@@ -21,17 +21,10 @@ function bar_default() {
 export { bar_default as default };
 ```
 
-## chunk.js
-
-```js
-// HIDDEN [rolldown:runtime]
-export { __toESM as a, __toDynamicImportESM as i, __reExport as n, __toCommonJS as r, __export as t };
-```
-
 ## foo.js
 
 ```js
-import { t as __export } from "./chunk.js";
+import { t as __export } from "./main.js";
 import { n as unused, t as trim } from "./string.js";
 
 //#region utils/index.js
@@ -58,8 +51,7 @@ export { foo_default as default };
 ## main.js
 
 ```js
-import { a as __toESM, i as __toDynamicImportESM, n as __reExport, r as __toCommonJS, t as __export } from "./chunk.js";
-
+// HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region main.js
 var main_exports = {};
@@ -71,12 +63,13 @@ const routes = {
 };
 
 //#endregion
+export { __export as t };
 ```
 
 ## string.js
 
 ```js
-import { t as __export } from "./chunk.js";
+import { t as __export } from "./main.js";
 
 //#region utils/string.js
 var string_exports = /* @__PURE__ */ __export({

@@ -12,6 +12,10 @@ pub struct ExtendedTests {
   /// If the default resolves to `false` (e.g., format: 'cjs' without minify), tests with `true`.
   #[serde(default = "true_by_default")]
   pub opposite_minify_internal_exports: bool,
+  /// Run the test case with `preserveEntrySignatures: 'strict'` in addition to the default.
+  /// If `preserveEntrySignatures` is explicitly set in the config, this option has no effect.
+  #[serde(default = "true_by_default")]
+  pub preserve_entry_signatures_strict: bool,
 }
 
 impl Default for ExtendedTests {

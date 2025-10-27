@@ -3,17 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## chunk.js
-
-```js
-// HIDDEN [rolldown:runtime]
-export { __toDynamicImportESM as a, __toCommonJS as i, __export as n, __toESM as o, __reExport as r, __commonJS as t };
-```
-
 ## exist-dep-cjs.js
 
 ```js
-import { t as __commonJS } from "./chunk.js";
+import { t as __commonJS } from "./main.js";
 
 //#region exist-dep-cjs.js
 var require_exist_dep_cjs = /* @__PURE__ */ __commonJS({ "exist-dep-cjs.js": ((exports, module) => {
@@ -30,7 +23,7 @@ export default require_exist_dep_cjs();
 ## exist-dep-esm.js
 
 ```js
-import { n as __export } from "./chunk.js";
+import { n as __export } from "./main.js";
 
 //#region exist-dep-esm.js
 var exist_dep_esm_exports = /* @__PURE__ */ __export({ value: () => value });
@@ -45,8 +38,7 @@ export { value };
 ## main.js
 
 ```js
-import { a as __toDynamicImportESM, i as __toCommonJS, n as __export, o as __toESM, r as __reExport } from "./chunk.js";
-
+// HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region hmr.js
 var hmr_exports = /* @__PURE__ */ __export({ foo: () => foo });
@@ -69,6 +61,7 @@ const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 //#endregion
+export { __export as n, __commonJS as t };
 ```
 
 # HMR Step 0

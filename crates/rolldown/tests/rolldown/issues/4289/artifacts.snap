@@ -3,17 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## chunk.js
-
-```js
-// HIDDEN [rolldown:runtime]
-export { __toDynamicImportESM as n, __toESM as r, __commonJS as t };
-```
-
 ## lib.js
 
 ```js
-import { t as __commonJS } from "./chunk.js";
+import { t as __commonJS } from "./main.js";
 
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJS({ "lib.js": ((exports) => {
@@ -29,9 +22,9 @@ export default require_lib();
 ## main.js
 
 ```js
-import { n as __toDynamicImportESM, r as __toESM, t as __commonJS } from "./chunk.js";
 import nodeAssert from "node:assert";
 
+// HIDDEN [rolldown:runtime]
 //#region non-node-mode.js
 async function main$2() {
 	const exports = await import("./lib.js").then(__toDynamicImportESM());
@@ -69,44 +62,20 @@ var require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJS({ "node-mode
 var import_node_mode_by_cjs_extension = /* @__PURE__ */ __toESM(require_node_mode_by_cjs_extension());
 
 //#endregion
+export { __commonJS as t };
 ```
 
 # Variant: [format: Cjs]
 
 ## Assets
 
-### chunk.js
-
-```js
-// HIDDEN [rolldown:runtime]
-
-Object.defineProperty(exports, '__commonJS', {
-  enumerable: true,
-  get: function () {
-    return __commonJS;
-  }
-});
-Object.defineProperty(exports, '__toDynamicImportESM', {
-  enumerable: true,
-  get: function () {
-    return __toDynamicImportESM;
-  }
-});
-Object.defineProperty(exports, '__toESM', {
-  enumerable: true,
-  get: function () {
-    return __toESM;
-  }
-});
-```
-
 ### lib.js
 
 ```js
-const require_chunk = require('./chunk.js');
+const require_main = require('./main.js');
 
 //#region lib.js
-var require_lib = /* @__PURE__ */ require_chunk.__commonJS({ "lib.js": ((exports) => {
+var require_lib = /* @__PURE__ */ require_main.__commonJS({ "lib.js": ((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.parse = "parse";
 }) });
@@ -123,13 +92,13 @@ Object.defineProperty(exports, 'default', {
 ### main.js
 
 ```js
-const require_chunk = require('./chunk.js');
+// HIDDEN [rolldown:runtime]
 let node_assert = require("node:assert");
-node_assert = require_chunk.__toESM(node_assert);
+node_assert = __toESM(node_assert);
 
 //#region non-node-mode.js
 async function main$2() {
-	const exports$1 = await Promise.resolve().then(() => require_chunk.__toDynamicImportESM()(require("./lib.js")));
+	const exports$1 = await Promise.resolve().then(() => __toDynamicImportESM()(require("./lib.js")));
 	node_assert.default.deepEqual(Object.keys(exports$1).sort(), ["parse"]);
 	node_assert.default.strictEqual(exports$1.parse, "parse", "Expected export exists and is correct");
 	node_assert.default.strictEqual(exports$1.default, void 0, "Target has __esModule, so no auto-generated default export");
@@ -139,7 +108,7 @@ main$2();
 //#endregion
 //#region node-mode-by-mjs-extension.mjs
 async function main$1() {
-	const exports$1 = await Promise.resolve().then(() => require_chunk.__toDynamicImportESM(1)(require("./lib.js")));
+	const exports$1 = await Promise.resolve().then(() => __toDynamicImportESM(1)(require("./lib.js")));
 	node_assert.default.deepEqual(Object.keys(exports$1).sort(), ["default", "parse"]);
 	node_assert.default.strictEqual(exports$1.parse, "parse", "Expected export exists and is correct");
 	node_assert.default.strictEqual(exports$1.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
@@ -148,9 +117,9 @@ main$1();
 
 //#endregion
 //#region node-mode-by-cjs-extension.cjs
-var require_node_mode_by_cjs_extension = /* @__PURE__ */ require_chunk.__commonJS({ "node-mode-by-cjs-extension.cjs": ((exports, module) => {
+var require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJS({ "node-mode-by-cjs-extension.cjs": ((exports, module) => {
 	async function main() {
-		const exports$1 = await Promise.resolve().then(() => require_chunk.__toDynamicImportESM(1)(require("./lib.js")));
+		const exports$1 = await Promise.resolve().then(() => __toDynamicImportESM(1)(require("./lib.js")));
 		node_assert.default.deepEqual(Object.keys(exports$1).sort(), ["default", "parse"]);
 		node_assert.default.strictEqual(exports$1.parse, "parse", "Expected export exists and is correct");
 		node_assert.default.strictEqual(exports$1.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
@@ -161,9 +130,10 @@ var require_node_mode_by_cjs_extension = /* @__PURE__ */ require_chunk.__commonJ
 
 //#endregion
 //#region main.js
-var import_node_mode_by_cjs_extension = /* @__PURE__ */ require_chunk.__toESM(require_node_mode_by_cjs_extension());
+var import_node_mode_by_cjs_extension = /* @__PURE__ */ __toESM(require_node_mode_by_cjs_extension());
 
 //#endregion
+exports.__commonJS = __commonJS;
 ```
 
 # Variant: [inline_dynamic_imports: true]

@@ -8,6 +8,7 @@ use crate::{
   test_config::read_test_config,
 };
 use rolldown::{BundlerOptions, plugin::__inner::SharedPluginable};
+use rolldown_common::PreserveEntrySignatures;
 use rolldown_testing_config::{ConfigVariant, TestConfig, TestMeta};
 
 pub struct Fixture {
@@ -94,6 +95,17 @@ impl Fixture {
       config_variants.push(ConfigVariant {
         config_name: Some("extended-minify-internal-exports".to_string()),
         minify_internal_exports: Some(test_value),
+        snapshot: Some(false),
+        ..Default::default()
+      });
+    }
+
+    if meta.extended_tests.preserve_entry_signatures_strict
+      && options.preserve_entry_signatures.is_none()
+    {
+      config_variants.push(ConfigVariant {
+        config_name: Some("extended-preserve-entry-signatures-strict".to_string()),
+        preserve_entry_signatures: Some(PreserveEntrySignatures::Strict),
         snapshot: Some(false),
         ..Default::default()
       });

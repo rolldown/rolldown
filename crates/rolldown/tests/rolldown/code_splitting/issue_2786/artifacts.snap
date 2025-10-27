@@ -6,21 +6,27 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as share_default } from "./share2.js";
-import { t as share_default$1 } from "./share4.js";
+//#region share.js
+var share_default = "shared";
 
+//#endregion
+//#region share.json
+var share_default$1 = {};
+
+//#endregion
 //#region main.js
 console.log(share_default, share_default$1);
 import("./share.js").then(console.log);
-import("./share3.js").then(console.log);
+import("./share2.js").then(console.log);
 
 //#endregion
+export { share_default as n, share_default$1 as t };
 ```
 
 ## share.js
 
 ```js
-import { t as share_default } from "./share2.js";
+import { n as share_default } from "./main.js";
 
 export { share_default as default };
 ```
@@ -28,27 +34,7 @@ export { share_default as default };
 ## share2.js
 
 ```js
-//#region share.js
-var share_default = "shared";
-
-//#endregion
-export { share_default as t };
-```
-
-## share3.js
-
-```js
-import { t as share_default } from "./share4.js";
+import { t as share_default } from "./main.js";
 
 export { share_default as default };
-```
-
-## share4.js
-
-```js
-//#region share.json
-var share_default = {};
-
-//#endregion
-export { share_default as t };
 ```

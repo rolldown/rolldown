@@ -1660,6 +1660,11 @@
           "description": "Run the test case with the opposite value of `minifyInternalExports` compared to what the default would be.\nIf it's explicitly set in the config, this option has no effect.\nIf the default resolves to `true` (e.g., format: 'es' or minify: true), tests with `false`.\nIf the default resolves to `false` (e.g., format: 'cjs' without minify), tests with `true`.",
           "type": "boolean",
           "default": true
+        },
+        "preserveEntrySignaturesStrict": {
+          "description": "Run the test case with `preserveEntrySignatures: 'strict'` in addition to the default.\nIf `preserveEntrySignatures` is explicitly set in the config, this option has no effect.",
+          "type": "boolean",
+          "default": true
         }
       },
       "additionalProperties": false

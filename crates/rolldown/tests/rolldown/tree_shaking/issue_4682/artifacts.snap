@@ -12,7 +12,7 @@ console.log("dynamic no-treeshake");
 //#endregion
 //#region dynamic.js
 const lazyLoad = async () => {
-	await import("./static2.js");
+	await import("./static.js");
 	document.body.classList.add("loaded");
 };
 
@@ -23,8 +23,10 @@ export { lazyLoad };
 ## main.js
 
 ```js
-import "./static.js";
+//#region static.no-treeshake.js
+console.log("static no-treeshake");
 
+//#endregion
 //#region main.js
 import("./dynamic.js").then(async ({ lazyLoad }) => {
 	await lazyLoad();
@@ -36,15 +38,5 @@ import("./dynamic.js").then(async ({ lazyLoad }) => {
 ## static.js
 
 ```js
-//#region static.no-treeshake.js
-console.log("static no-treeshake");
-
-//#endregion
-```
-
-## static2.js
-
-```js
-import "./static.js";
 
 ```

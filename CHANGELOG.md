@@ -1,4 +1,85 @@
 
+## [1.0.0-beta.45] - 2025-10-27
+
+### 🚀 Features
+
+- plugin/vite-resolve: add `legacyInconsistentCjsInterop` option (#6687) by @sapphi-red
+- rolldown_plugin_vite_css_post: initialize `CSSStyles` (#6691) by @shulaoda
+- rolldown_plugin_manifest: align with `vitejs/vite#20585` (#6684) by @shulaoda
+- enabling mangle private class members (#6679) by @IWANABETHATGUY
+- rolldown_resolver: auto tsconfig discovery (#6602) by @Boshen
+- support named imports + CJS by optimization.inlineConst (#6644) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- rolldown_binding: use Record instead of Map (#6715) by @shulaoda
+- validate valibot schema against existing type (#6703) by @ocavue
+- rolldown_plugin_vite_css_post: align some logic (#6697) by @shulaoda
+- node/options: should validate `transform.jsx` correctly (#6698) by @ocavue
+- inherit runtime helpers from eliminated dependencies (#6689) by @IWANABETHATGUY
+- clean-dir: advance clean outdir to allow `generateBundle` outputs (#6647) by @aprosail
+- rename variable to better reflect its purpose and fix CJS imports (#6663) by @IWANABETHATGUY
+- bailout tree shake commonjs export when it is defined multiple time (#6659) by @IWANABETHATGUY
+- rolldown_plugin_reporter: color dimmed text correctly (#6649) by @sapphi-red
+- don't inline json module when used as a namespace reference (#6652) by @IWANABETHATGUY
+- avoid `define` deprecation warning when loading a config file (#6641) by @sapphi-red
+
+### 💼 Other
+
+- pluginutils: switch to tsc to solve the issue of loading conflicting binary (#6708) by @hyf0
+
+### 🚜 Refactor
+
+- node: only call `transformToRollupOutput` when needed (#6695) by @hyf0
+- node: split `transformToRollupOutput` into mutable and immutable versions (#6693) by @hyf0
+- remove unnecessaey lazy data passing for `BindingOutputs` (#6692) by @hyf0
+- rolldown_plugin_utils: tweak `CSSEntriesCache` (#6685) by @shulaoda
+- rolldown_binding: use unified `BindingRenderBuiltUrl` (#6653) by @shulaoda
+
+### 📚 Documentation
+
+- in-depth about `experimental.nativeMagicString` (#6713) by @IWANABETHATGUY
+- polish `optimization` (#6719) by @IWANABETHATGUY
+- clarify `output.cleanDir` timing behavior for plugin compatibility (#6682) by @Copilot
+- add Kevin Deng, 翠 (sapphi-red), and Alexander Lichter to team page with Bluesky links (#6664) by @Copilot
+- polish `preserveEntrySignature` doc (#6661) by @IWANABETHATGUY
+- set up redirects via netlify (#6654) by @TheAlexLichter
+- polish doc about `treeshake` (#6650) by @IWANABETHATGUY
+- rework options documentation first round (#6542) by @hyf0
+
+### ⚡ Performance
+
+- rolldown: upgrade sugar_path (#6646) by @Brooooooklyn
+
+### 🧪 Testing
+
+- add live bindings test for default export snapshot semantics (#6538) by @Copilot
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance npm packages (#6714) by @renovate[bot]
+- deps: update github-actions (#6710) by @renovate[bot]
+- deps: update dependency @vueuse/core to v14 (#6711) by @renovate[bot]
+- deps: update github-actions (major) (#6712) by @renovate[bot]
+- deps: update dependency tsdown to v0.15.10 (#6706) by @renovate[bot]
+- remove `typedoc` dependency and cleanup unused documentation generation (#6686) by @Copilot
+- deps: update dependency rolldown-plugin-dts to v0.17.1 (#6690) by @renovate[bot]
+- lint: `oxlint --type-aware` (#5660) by @Boshen
+- rolldown: update napi and js binding (#6676) by @Brooooooklyn
+- deps: update vitest to v4 (#6673) by @sapphi-red
+- test: support `DevTestMeta#dev` (#6672) by @hyf0
+- deps: update dependency rolldown-plugin-dts to ^0.17.0 (#6671) by @renovate[bot]
+- test: move dev related options to rolldown_dev_common (#6667) by @hyf0
+- test: add `DevTestMeta` under `TestMeta#dev` to control dev related behaviors (#6666) by @hyf0
+- deps: update dependency vite to v7.1.11 [security] (#6645) by @renovate[bot]
+- pluginutils: use rolldown to build plugutils (#6642) by @Brooooooklyn
+- deps: update dependency tsdown to v0.15.9 (#6643) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @ocavue made their first contribution in [#6703](https://github.com/rolldown/rolldown/pull/6703)
+
+
 ## [1.0.0-beta.44] - 2025-10-20
 
 ### 💥 BREAKING CHANGES

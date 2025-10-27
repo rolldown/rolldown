@@ -13,7 +13,7 @@ export default defineTest({
       manifestPlugin({
         root: path.resolve(import.meta.dirname),
         outPath: path.resolve(import.meta.dirname, 'dist/manifest.json'),
-        cssEntries: () => new Map(),
+        cssEntries: () => (Object.fromEntries(new Map().entries())),
       }),
       {
         name: 'test',

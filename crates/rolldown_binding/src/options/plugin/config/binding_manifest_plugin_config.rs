@@ -11,7 +11,7 @@ pub struct BindingManifestPluginConfig {
   pub out_path: String,
   #[napi(ts_type = "() => boolean")]
   pub is_legacy: Option<JsCallback<(), bool>>,
-  #[napi(ts_type = "() => Map<string, string>")]
+  #[napi(ts_type = "() => Record<string, string>")]
   pub css_entries: JsCallback<(), FxHashMap<String, String>>,
 }
 

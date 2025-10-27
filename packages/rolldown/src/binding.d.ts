@@ -1915,7 +1915,7 @@ export interface BindingManifestPluginConfig {
   root: string
   outPath: string
   isLegacy?: () => boolean
-  cssEntries: () => Map<string, string>
+  cssEntries: () => Record<string, string>
 }
 
 export interface BindingMatchGroup {

@@ -19,7 +19,7 @@ impl DevArtifactsSnapshot {
   pub fn render(self, test_meta: &TestMeta) -> String {
     let mut root_section = SnapshotSection::root();
 
-    for mut build_round in self.builds {
+    for build_round in self.builds {
       if !build_round.overwritten_test_meta_snapshot {
         continue;
       }
@@ -51,12 +51,12 @@ impl DevArtifactsSnapshot {
       }
 
       // Render `# HMR Steps N`
-      for (step, hmr_result) in build_round.hmr_updates_by_steps.into_iter().enumerate() {
+      for (step_index, step_output) in build_round.hmr_steps.into_iter().enumerate() {
         let hmr_sections = Self::create_hmr_step_sections(
           test_meta,
-          step,
-          hmr_result,
-          &mut build_round.rebuild_results,
+          step_index,
+          step_output.hmr_updates,
+          step_output.build_outputs,
           cwd,
         );
         build_round_sections.extend(hmr_sections);
@@ -91,7 +91,7 @@ impl DevArtifactsSnapshot {
     test_meta: &TestMeta,
     step: usize,
     hmr_result: BuildResult<(Vec<rolldown_common::ClientHmrUpdate>, Vec<String>)>,
-    rebuild_results: &mut Vec<BuildResult<BundleOutput>>,
+    mut build_outputs: Vec<BuildResult<BundleOutput>>,
     cwd: &Path,
   ) -> Vec<SnapshotSection> {
     match hmr_result {
@@ -103,7 +103,7 @@ impl DevArtifactsSnapshot {
             step,
             &hmr_update.update,
             vec![],
-            rebuild_results,
+            &mut build_outputs,
             cwd,
           )
         })

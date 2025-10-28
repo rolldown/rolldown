@@ -25,7 +25,7 @@ use crate::hmr_files::{
   copy_non_hmr_edit_files_to_hmr_temp_dir, get_changed_files_from_hmr_edit_files,
 };
 use crate::types::{
-  BuildArtifactsSnapshot, BuildRoundOutput, DevArtifactsSnapshot, DevRoundOutput,
+  BuildArtifactsSnapshot, BuildRoundOutput, DevArtifactsSnapshot, DevRoundOutput, HmrStepOutput,
 };
 
 #[derive(Default)]
@@ -101,6 +101,14 @@ impl IntegrationTest {
     let mut artifacts_snapshot = DevArtifactsSnapshot::default();
 
     for mut named_options in multiple_options {
+      // Type aliases for nested callback tracking
+      type HmrUpdatesBySteps = Arc<
+        std::sync::Mutex<
+          Vec<Vec<BuildResult<(Vec<rolldown_common::ClientHmrUpdate>, Vec<String>)>>>,
+        >,
+      >;
+      type BuildResultsBySteps = Arc<std::sync::Mutex<Vec<Vec<BuildResult<BundleOutput>>>>>;
+
       let mut build_snapshot = DevRoundOutput {
         overwritten_test_meta_snapshot: named_options.snapshot.unwrap_or(self.test_meta.snapshot),
         ..Default::default()
@@ -145,21 +153,33 @@ impl IntegrationTest {
       };
       let bundler = Arc::new(Mutex::new(bundler));
 
-      let hmr_update_infos = Arc::new(std::sync::Mutex::new(vec![]));
-      let build_results = Arc::new(std::sync::Mutex::new(vec![]));
+      // Use nested vecs to track which step each callback belongs to
+      let hmr_updates_by_steps: HmrUpdatesBySteps = Arc::new(std::sync::Mutex::new(vec![]));
+      let build_results_by_steps: BuildResultsBySteps = Arc::new(std::sync::Mutex::new(vec![]));
+
       let dev_engine = DevEngine::with_bundler(
         Arc::clone(&bundler),
         DevOptions {
           on_hmr_updates: {
-            let hmr_update_infos = Arc::clone(&hmr_update_infos);
+            let hmr_updates_by_steps = Arc::clone(&hmr_updates_by_steps);
             Some(Arc::new(move |result| {
-              hmr_update_infos.lock().unwrap().push(result);
+              hmr_updates_by_steps
+                .lock()
+                .unwrap()
+                .last_mut()
+                .expect("Expected a vec to collect HMR outputs for current step")
+                .push(result);
             }))
           },
           on_output: {
-            let build_results = Arc::clone(&build_results);
+            let build_results_by_steps = Arc::clone(&build_results_by_steps);
             Some(Arc::new(move |bundle_result| {
-              build_results.lock().unwrap().push(bundle_result);
+              build_results_by_steps
+                .lock()
+                .unwrap()
+                .last_mut()
+                .expect("Expected a vec to collect build outputs for current step")
+                .push(bundle_result);
             }))
           },
           watch: Some(DevWatchOptions {
@@ -172,12 +192,17 @@ impl IntegrationTest {
       )
       .unwrap();
 
-      // Run initial build
+      // Run initial build (step 0)
+      build_results_by_steps.lock().unwrap().push(vec![]);
       dev_engine.run().await.unwrap();
       dev_engine.create_client_for_testing();
 
       // Process HMR steps
       for hmr_edit_files in hmr_steps {
+        // Prepare new vecs for this step's callbacks
+        hmr_updates_by_steps.lock().unwrap().push(vec![]);
+        build_results_by_steps.lock().unwrap().push(vec![]);
+
         apply_hmr_edit_files_to_hmr_temp_dir(test_folder_path, &hmr_temp_dir_path, hmr_edit_files);
         let changed_files = get_changed_files_from_hmr_edit_files(
           test_folder_path,
@@ -187,46 +212,68 @@ impl IntegrationTest {
         dev_engine
           .ensure_task_with_changed_files(changed_files.into_iter().map(Into::into).collect())
           .await;
+
+        // Optionally wait for async builds to complete
+        if self.test_meta.dev.ensure_latest_build_output_for_each_step {
+          dev_engine.ensure_latest_build_output().await.unwrap();
+        }
       }
       drop(dev_engine);
 
       // Collect results
-      let mut bundle_results = std::mem::take(&mut *build_results.lock().unwrap());
-      let hmr_update_infos = std::mem::take(&mut *hmr_update_infos.lock().unwrap());
+      let mut build_results_by_steps = std::mem::take(&mut *build_results_by_steps.lock().unwrap());
+      let hmr_updates_by_steps = std::mem::take(&mut *hmr_updates_by_steps.lock().unwrap());
 
-      // We consider the first build output as the initial build output
-      let build_result: BuildResult<BundleOutput> = bundle_results.remove(0);
+      // Extract initial build output (first build_results vec)
+      let initial_build_results = build_results_by_steps.remove(0);
+      let initial_build_output =
+        initial_build_results.into_iter().next().expect("Expected initial build output");
+
+      // Transform nested vecs into HmrStepOutput
+      let hmr_steps_output: Vec<HmrStepOutput> = hmr_updates_by_steps
+        .into_iter()
+        .zip(build_results_by_steps.into_iter())
+        .map(|(hmr_updates_vec, build_outputs_vec)| {
+          // Each step should have exactly one HMR update callback
+          let hmr_updates =
+            hmr_updates_vec.into_iter().next().expect("Expected HMR update for step");
+
+          HmrStepOutput { hmr_updates, build_outputs: build_outputs_vec }
+        })
+        .collect();
 
       // Verify result and process HMR if successful
-      match &build_result {
+      match &initial_build_output {
         Ok(_) => {
           assert!(
             !self.test_meta.expect_error,
             "Expected the bundling to be failed with diagnosable errors, but got success"
           );
 
-          // Process HMR updates and patches
+          // Process HMR updates and patches for execution
           let mut patch_chunks: Vec<String> = vec![];
-          for (hmr_updates, _changed_files) in hmr_update_infos.iter().flatten() {
-            for hmr_update in hmr_updates {
-              match &hmr_update.update {
-                rolldown_common::HmrUpdate::Patch(patch) => {
-                  let output_path = format!("{}/{}", &output_dir, &patch.filename);
-                  fs::write(&output_path, &patch.code).unwrap();
-                  patch_chunks.push(format!("./{}", patch.filename));
+          for step_output in &hmr_steps_output {
+            if let Ok((client_updates, _changed_files)) = &step_output.hmr_updates {
+              for hmr_update in client_updates {
+                match &hmr_update.update {
+                  rolldown_common::HmrUpdate::Patch(patch) => {
+                    let output_path = format!("{}/{}", &output_dir, &patch.filename);
+                    fs::write(&output_path, &patch.code).unwrap();
+                    patch_chunks.push(format!("./{}", patch.filename));
+                  }
+                  rolldown_common::HmrUpdate::FullReload { reason } => {
+                    assert!(
+                      !self.should_execute_output(),
+                      "execute_output should be false when full reload happens; reason: {reason:?}"
+                    );
+                  }
+                  rolldown_common::HmrUpdate::Noop => {}
                 }
-                rolldown_common::HmrUpdate::FullReload { reason } => {
-                  assert!(
-                    !self.should_execute_output(),
-                    "execute_output should be false when full reload happens; reason: {reason:?}"
-                  );
-                }
-                rolldown_common::HmrUpdate::Noop => {}
               }
             }
           }
-          build_snapshot.rebuild_results = bundle_results;
-          build_snapshot.hmr_updates_by_steps = hmr_update_infos;
+
+          build_snapshot.hmr_steps = hmr_steps_output;
 
           // Execute output if needed
           if self.should_execute_output() {
@@ -250,7 +297,7 @@ impl IntegrationTest {
         }
       }
 
-      build_snapshot.initial_output = Some(build_result);
+      build_snapshot.initial_output = Some(initial_build_output);
       artifacts_snapshot.builds.push(build_snapshot);
     }
 

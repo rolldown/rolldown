@@ -1665,6 +1665,11 @@
           "description": "Run the test case with `preserveEntrySignatures: 'strict'` in addition to the default.\nIf `preserveEntrySignatures` is explicitly set in the config, this option has no effect.",
           "type": "boolean",
           "default": true
+        },
+        "preserveEntrySignaturesAllowExtension": {
+          "description": "Run the test case with `preserveEntrySignatures: 'allow-extension'` in addition to the default.\nIf `preserveEntrySignatures` is explicitly set in the config, this option has no effect.",
+          "type": "boolean",
+          "default": true
         }
       },
       "additionalProperties": false

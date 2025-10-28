@@ -4751,6 +4751,13 @@ expression: output
 
 - main-!~{000}~.js => main-RTlOtn4-.js
 
+# tests/rolldown/issues/5871
+
+- main-!~{000}~.js => main-B-ooqssY.js
+- 1-!~{005}~.js => 1-DUyWXQPn.js
+- 2-!~{001}~.js => 2-D233SgmS.js
+- 3-!~{003}~.js => 3-CI00DqeK.js
+
 # tests/rolldown/issues/5923
 
 - main-!~{000}~.js => main-DgJmHtwB.js

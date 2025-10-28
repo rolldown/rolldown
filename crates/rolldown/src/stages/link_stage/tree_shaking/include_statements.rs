@@ -292,17 +292,17 @@ impl LinkStage<'_> {
     dynamic_entries: &mut [EntryPoint],
   ) -> FxHashSet<ModuleIdx> {
     let mut graph: DiGraphMap<ModuleIdx, ()> = DiGraphMap::new();
+
+    // TODO: Since we don't skip visited node, If a project has a lot of dynamic entries,
+    // and they are all connected, the performance may be impacted. But this seems rare in real world,
+    // we could optimize it later if needed.
     for entry in dynamic_entries.iter() {
       let mut entry_module_idx = entry.idx;
       let cur = entry_module_idx;
-      if graph.contains_node(cur) {
-        continue;
-      }
       let mut visited = FxHashSet::default();
       self.construct_dynamic_entry_graph(&mut graph, &mut visited, &mut entry_module_idx, cur);
     }
     let mut cycled_dynamic_entries = FxHashSet::default();
-
     // https://docs.rs/petgraph/latest/petgraph/algo/fn.tarjan_scc.html
     // the order of struct connected component is sorted by reverse topological sort.
     let idx_to_order_map = petgraph::algo::tarjan_scc(&graph)

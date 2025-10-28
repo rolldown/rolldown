@@ -20,10 +20,15 @@ impl BuildEvent for UnresolvedEntry {
       vec![format!("Cannot resolve entry module {}.", opts.stabilize_path(&self.unresolved_id))];
 
     match &self.resolve_error {
-      Some(ResolveError::PackagePathNotExported(pkg_subpath, pkg_json_path)) => {
+      Some(ResolveError::PackagePathNotExported {
+        subpath,
+        package_path: _,
+        package_json_path,
+        conditions: _,
+      }) => {
         message.push(format!(
-          r#"- Package subpath '{pkg_subpath}' is not defined by "exports" in {pkg_json_path}"#,
-          pkg_json_path = opts.stabilize_path(pkg_json_path),
+          r#"- Package subpath '{subpath}' is not defined by "exports" in {package_json_path}"#,
+          package_json_path = opts.stabilize_path(package_json_path),
         ));
       }
       _ => {}

@@ -20,9 +20,12 @@ pub fn oxc_resolve_error_to_reason(e: &ResolveError) -> String {
     ResolveError::Json(_) => "JSON parse error".to_string(),
     ResolveError::InvalidModuleSpecifier(_, _) => "Invalid module specifier".to_string(),
     ResolveError::InvalidPackageTarget(_, _, _) => "Invalid package target".to_string(),
-    ResolveError::PackagePathNotExported(_, _) => {
-      "Package subpath is not defined by exports".to_string()
-    }
+    ResolveError::PackagePathNotExported {
+      subpath: _,
+      package_path: _,
+      package_json_path: _,
+      conditions: _,
+    } => "Package subpath is not defined by exports".to_string(),
     ResolveError::InvalidPackageConfig(_) => "Invalid package config".to_string(),
     ResolveError::InvalidPackageConfigDefault(_) => {
       "Default condition should be last one in package config".to_string()

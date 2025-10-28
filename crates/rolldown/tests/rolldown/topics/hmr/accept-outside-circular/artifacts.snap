@@ -45,9 +45,16 @@ main_hot.accept((newMod) => {
 
 # HMR Step 0
 
-## Assets
+## Meta
 
-### main.js
+- update type: full-reload
+- reason: circular import chain: c.js -> b.js -> c.js
+
+## Build Output
+
+### Assets
+
+#### main.js
 
 ```js
 import assert from "node:assert";
@@ -86,8 +93,3 @@ main_hot.accept((newMod) => {
 
 //#endregion
 ```
-
-## Meta
-
-- update type: full-reload
-- reason: circular import chain: c.js -> b.js -> c.js

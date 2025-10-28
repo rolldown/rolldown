@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Expected a semicolon or an implicit semicolon after a statement, but found none
+   ╭─[ main.js:1:8 ]
+   │
+ 1 │ invalid syntax
+   │        │ 
+   │        ╰─ 
+   │ 
+   │ Help: Try insert a semicolon here
+───╯
+
+```
+
+# HMR Step 0
+
+## Meta
+
+- update type: noop
+
+## Build Output
+
+### Errors
+
+#### UNHANDLEABLE_ERROR
+
+```text
+[UNHANDLEABLE_ERROR] Error: Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
+module_table must be normalized to IndexVec first
+
+```

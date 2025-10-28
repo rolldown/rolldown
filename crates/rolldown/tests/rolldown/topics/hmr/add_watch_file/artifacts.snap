@@ -20,9 +20,16 @@ console.log(content);
 
 # HMR Step 0
 
-## Assets
+## Meta
 
-### entry.js
+- update type: full-reload
+- reason: no hmr boundary found for module `entry.js`
+
+## Build Output
+
+### Assets
+
+#### entry.js
 
 ```js
 // HIDDEN [rolldown:runtime]
@@ -36,8 +43,3 @@ console.log(content);
 
 //#endregion
 ```
-
-## Meta
-
-- update type: full-reload
-- reason: no hmr boundary found for module `entry.js`

@@ -242,6 +242,9 @@ impl IntegrationTest {
         })
         .collect();
 
+      // Always assign HMR steps (regardless of initial build success/failure)
+      build_snapshot.hmr_steps = hmr_steps_output;
+
       // Verify result and process HMR if successful
       match &initial_build_output {
         Ok(_) => {
@@ -252,7 +255,7 @@ impl IntegrationTest {
 
           // Process HMR updates and patches for execution
           let mut patch_chunks: Vec<String> = vec![];
-          for step_output in &hmr_steps_output {
+          for step_output in &build_snapshot.hmr_steps {
             if let Ok((client_updates, _changed_files)) = &step_output.hmr_updates {
               for hmr_update in client_updates {
                 match &hmr_update.update {
@@ -272,8 +275,6 @@ impl IntegrationTest {
               }
             }
           }
-
-          build_snapshot.hmr_steps = hmr_steps_output;
 
           // Execute output if needed
           if self.should_execute_output() {

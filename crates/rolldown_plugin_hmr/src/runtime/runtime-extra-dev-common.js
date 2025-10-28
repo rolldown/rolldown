@@ -30,12 +30,17 @@ class Module {
   }
 }
 
+/**
+ * @typedef {{ type: 'hmr:module-registered', modules: string[] }} DevRuntimeMessage
+ * @typedef {{ send(message: DevRuntimeMessage): void }} Messenger
+ */
+
 export class DevRuntime {
   /**
-   * @param {WebSocket} socket
+   * @param {Messenger} messenger
    */
-  constructor(socket) {
-    this.socket = socket;
+  constructor(messenger) {
+    this.messenger = messenger;
   }
 
   /**
@@ -114,7 +119,7 @@ export class DevRuntime {
      * @param {string} module
      */
     return function sendModuleRegisteredMessage(module) {
-      if (!self.socket) {
+      if (!self.messenger) {
         return;
       }
       cache.push(module);
@@ -128,20 +133,11 @@ export class DevRuntime {
               return;
             }
 
-            if (self.socket.readyState === WebSocket.OPEN) {
-              self.socket.send(JSON.stringify({
-                type: 'hmr:module-registered',
-                modules: cache,
-              }));
-              cache.length = 0;
-            } else if (self.socket.readyState === WebSocket.CLOSED) {
-              // Do nothing
-            } else {
-              self.socket.onopen = function() {
-                flushCache();
-              };
-            }
-
+            self.messenger.send({
+              type: 'hmr:module-registered',
+              modules: cache,
+            });
+            cache.length = 0;
             timeout = null;
             timeoutSetLength = 0;
           },

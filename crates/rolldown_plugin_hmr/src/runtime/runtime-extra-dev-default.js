@@ -4,6 +4,9 @@
 // @ts-expect-error -- there's no way to declare a variable by JSDoc
 var BaseDevRuntime = DevRuntime;
 
+/** @typedef {import('./runtime-extra-dev-common.js').Messenger} Messenger */
+/** @typedef {import('./runtime-extra-dev-common.js').DevRuntimeMessage} DevRuntimeMessage */
+
 class ModuleHotContext {
   /**
    * @type {{ deps: [string], fn: (moduleExports: Record<string, any>[]) => void }[]}
@@ -54,7 +57,28 @@ class DefaultDevRuntime extends BaseDevRuntime {
    * @param {WebSocket} socket
    */
   constructor(socket) {
-    super(socket);
+    /** @type {string[]} */
+    const queuedMessages = [];
+    /** @type {Messenger} */
+    const messenger = {
+      send(message) {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify(message));
+        } else if (socket.readyState === WebSocket.CLOSED) {
+          // Do nothing
+        } else {
+          queuedMessages.push(JSON.stringify(message));
+        }
+      },
+    };
+    socket.onopen = () => {
+      for (const message of queuedMessages) {
+        socket.send(message);
+      }
+      socket.onopen = null;
+    };
+
+    super(messenger);
   }
 
   /**

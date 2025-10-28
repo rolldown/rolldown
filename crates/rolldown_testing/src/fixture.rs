@@ -110,5 +110,16 @@ impl Fixture {
         ..Default::default()
       });
     }
+
+    if meta.extended_tests.preserve_entry_signatures_allow_extension
+      && options.preserve_entry_signatures.is_none()
+    {
+      config_variants.push(ConfigVariant {
+        config_name: Some("extended-preserve-entry-signatures-allow-extension".to_string()),
+        preserve_entry_signatures: Some(PreserveEntrySignatures::AllowExtension),
+        snapshot: Some(false),
+        ..Default::default()
+      });
+    }
   }
 }

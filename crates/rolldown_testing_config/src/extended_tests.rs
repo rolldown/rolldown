@@ -16,6 +16,10 @@ pub struct ExtendedTests {
   /// If `preserveEntrySignatures` is explicitly set in the config, this option has no effect.
   #[serde(default = "true_by_default")]
   pub preserve_entry_signatures_strict: bool,
+  /// Run the test case with `preserveEntrySignatures: 'allow-extension'` in addition to the default.
+  /// If `preserveEntrySignatures` is explicitly set in the config, this option has no effect.
+  #[serde(default = "true_by_default")]
+  pub preserve_entry_signatures_allow_extension: bool,
 }
 
 impl Default for ExtendedTests {

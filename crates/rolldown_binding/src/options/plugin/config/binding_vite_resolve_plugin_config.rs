@@ -49,6 +49,7 @@ pub struct BindingViteResolvePluginConfig {
   #[debug("{}", if on_debug.is_some() { "Some(<on_debug>)" } else { "None" })]
   #[napi(ts_type = "(message: string) => void")]
   pub on_debug: Option<JsCallback<FnArgs<(String,)>, Promise<()>>>,
+  pub yarn_pnp: bool,
 }
 
 impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
@@ -133,6 +134,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
           })
         })
       }),
+      yarn_pnp: value.yarn_pnp,
     }
   }
 }

@@ -37,9 +37,12 @@ pub async fn load_entry_module(
     }
     Err(e) => match e {
       ResolveError::NotFound(_) => Err(BuildDiagnostic::unresolved_entry(id, None)),
-      ResolveError::PackagePathNotExported(..) => {
-        Err(BuildDiagnostic::unresolved_entry(id, Some(e)))
-      }
+      ResolveError::PackagePathNotExported {
+        subpath: _,
+        package_path: _,
+        package_json_path: _,
+        conditions: _,
+      } => Err(BuildDiagnostic::unresolved_entry(id, Some(e))),
       _ => Err(e).map_err_to_unhandleable()?,
     },
   }

@@ -1,4 +1,4 @@
-import type { BindingRenderedModule } from '../binding';
+import type { BindingRenderedModule } from '../binding.cjs';
 import type { RenderedModule } from '../types/rolldown-output';
 
 export function transformToRenderedModule(

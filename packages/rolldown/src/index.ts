@@ -8,8 +8,7 @@ import type {
   RolldownWatcher,
   RolldownWatcherEvent,
 } from './api/watch/watch-emitter';
-import type { PreRenderedChunk } from './binding';
-export { BindingMagicString } from './binding.js';
+import type { PreRenderedChunk } from './binding.cjs';
 import type {
   LoggingFunction,
   WarningHandlerWithDefault,
@@ -113,7 +112,7 @@ import { defineConfig } from './utils/define-config';
 
 export { build, defineConfig, rolldown, watch };
 export const VERSION: string = version;
-
+export { BindingMagicString } from './binding.cjs';
 export type {
   AddonFunction,
   AsyncPluginHooks,

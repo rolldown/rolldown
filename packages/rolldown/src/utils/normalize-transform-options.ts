@@ -1,4 +1,4 @@
-import type { TransformOptions as OxcTransformOptions } from '../binding';
+import type { TransformOptions as OxcTransformOptions } from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN } from '../log/logging';
 import {

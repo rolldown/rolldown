@@ -1,6 +1,6 @@
 import type { Program } from '@oxc-project/types';
-import { parseAsync, parseSync } from './binding';
-import type { ParseResult, ParserOptions } from './binding';
+import { parseAsync, parseSync } from './binding.cjs';
+import type { ParseResult, ParserOptions } from './binding.cjs';
 import { locate } from './log/locate-character';
 import { error, logParseError } from './log/logs';
 import { getCodeFrame } from './utils/code-frame';

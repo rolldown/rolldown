@@ -5,7 +5,7 @@ import type {
   MangleOptionsKeepNames,
   MinifyOptions,
   PreRenderedChunk,
-} from '../binding';
+} from '../binding.cjs';
 import type { LogOrStringHandler } from '../log/logging';
 import type {
   ExternalOption,

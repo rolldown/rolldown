@@ -1,6 +1,6 @@
 import os from 'node:os';
 import { Worker } from 'node:worker_threads';
-import { ParallelJsPluginRegistry } from '../binding';
+import { ParallelJsPluginRegistry } from '../binding.cjs';
 import type { RolldownPlugin } from '../plugin';
 
 export type WorkerData = {

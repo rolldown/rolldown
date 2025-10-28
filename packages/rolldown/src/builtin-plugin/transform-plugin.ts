@@ -1,6 +1,6 @@
 import { BuiltinPlugin } from './utils';
 
-import type { BindingTransformPluginConfig } from '../binding';
+import type { BindingTransformPluginConfig } from '../binding.cjs';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
 
 type TransformPattern = string | RegExp | readonly (RegExp | string)[];

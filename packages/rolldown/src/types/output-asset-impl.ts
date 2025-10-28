@@ -1,4 +1,4 @@
-import type { BindingOutputAsset } from '../binding';
+import type { BindingOutputAsset } from '../binding.cjs';
 import { getLazyFields, lazy } from '../decorators/lazy';
 import { nonEnumerable } from '../decorators/non-enumerable';
 import type { AssetSource } from '../utils/asset-source';

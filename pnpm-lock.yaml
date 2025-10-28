@@ -16,7 +16,7 @@ catalogs:
       specifier: ^7.24.7
       version: 7.28.5
     '@napi-rs/cli':
-      specifier: ^3.4.0
+      specifier: ^3.4.1
       version: 3.4.1
     '@napi-rs/wasm-runtime':
       specifier: ^1.0.0

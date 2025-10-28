@@ -3,6 +3,7 @@ export { DevEngine } from './api/dev/dev-engine';
 export type { DevOptions, DevWatchOptions } from './api/dev/dev-options';
 export { freeExternalMemory, scan } from './api/experimental';
 export {
+  type BindingClientHmrUpdate,
   BindingRebuildStrategy,
   isolatedDeclaration,
   type IsolatedDeclarationsOptions,
@@ -14,8 +15,7 @@ export {
   transform,
   type TransformOptions,
   type TransformResult,
-} from './binding';
-export type { BindingClientHmrUpdate } from './binding';
+} from './binding.cjs';
 export { defineParallelPlugin } from './plugin/parallel-plugin';
 // Builtin plugin factory
 export {

@@ -1,4 +1,4 @@
-import type { BindingOutputs } from '../binding';
+import type { BindingOutputs } from '../binding.cjs';
 import { lazy } from '../decorators/lazy';
 import { nonEnumerable } from '../decorators/non-enumerable';
 import { transformToRollupOutput } from '../utils/transform-to-rollup-output';

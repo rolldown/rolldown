@@ -1,4 +1,4 @@
-import type { BindingClientHmrUpdate } from '../../binding';
+import type { BindingClientHmrUpdate } from '../../binding.cjs';
 import type { RolldownOutput } from '../../types/rolldown-output';
 
 type DevOnHmrUpdates = (

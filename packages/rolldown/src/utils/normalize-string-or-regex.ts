@@ -1,4 +1,4 @@
-import type { BindingStringOrRegex } from '../binding';
+import type { BindingStringOrRegex } from '../binding.cjs';
 
 /*
  * Normalize single or multiple string or regex patterns to an array of BindingStringOrRegex

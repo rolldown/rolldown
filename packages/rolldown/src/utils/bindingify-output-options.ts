@@ -1,4 +1,4 @@
-import type { BindingOutputOptions } from '../binding';
+import type { BindingOutputOptions } from '../binding.cjs';
 import type { OutputOptions } from '../options/output-options';
 import { ChunkingContextImpl } from '../types/chunking-context';
 import { transformAssetSource } from './asset-source';

@@ -1,4 +1,4 @@
-import type { BindingOutputChunk } from '../binding';
+import type { BindingOutputChunk } from '../binding.cjs';
 import { getLazyFields, lazy } from '../decorators/lazy';
 import { nonEnumerable } from '../decorators/non-enumerable';
 import { transformChunkModules } from '../utils/transform-rendered-chunk';

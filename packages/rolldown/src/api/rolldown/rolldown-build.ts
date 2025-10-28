@@ -1,9 +1,9 @@
-import type { BindingBundlerImpl } from '../../binding';
+import type { BindingBundlerImpl } from '../../binding.cjs';
 import {
   BindingBundler,
   shutdownAsyncRuntime,
   startAsyncRuntime,
-} from '../../binding';
+} from '../../binding.cjs';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import type { HasProperty, TypeAssert } from '../../types/assert';

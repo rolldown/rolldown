@@ -8,7 +8,7 @@ import type {
 import {
   type BindingNormalizedOptions,
   BindingPluginContext,
-} from '../binding';
+} from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import { NormalizedInputOptionsImpl } from '../options/normalized-input-options';
 import { NormalizedOutputOptionsImpl } from '../options/normalized-output-options';

@@ -1,9 +1,11 @@
-import { globSync } from 'glob';
 import fs from 'node:fs';
 import nodePath from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { dts } from 'rolldown-plugin-dts';
 import * as ts from 'typescript';
+
+import { CopyAddonPlugin } from './copy-addon-plugin';
 import { build, BuildOptions, type Plugin } from './src/index';
 import { styleText } from './src/utils/style-text';
 
@@ -104,7 +106,6 @@ if (buildMeta.target === 'browser-pkg') {
     await build(config);
   }
   generateRuntimeTypes();
-  copy();
 })();
 
 function withShared(
@@ -133,8 +134,8 @@ function withShared(
       extensions: ['.js', '.cjs', '.mjs', '.ts'],
     },
     external: [
-      /rolldown-binding\..*\.node/,
       /@rolldown\/binding-.*/,
+      /rolldown-binding\.wasi\.cjs/,
       ...Object.keys(buildMeta.pkgJson.dependencies ?? {}),
     ],
     // Do not move this line up or down, it's here for a reason
@@ -142,6 +143,11 @@ function withShared(
     plugins: [
       buildMeta.desireWasmFiles &&
       resolveWasiBinding(isBrowserBuild),
+      CopyAddonPlugin({
+        isCI: buildMeta.isCI,
+        isReleasingPkgInCI: buildMeta.isReleasingPkgInCI,
+        desireWasmFiles: buildMeta.desireWasmFiles,
+      }),
       isBrowserBuild && removeBuiltModules(),
       options.plugins,
     ],
@@ -197,7 +203,8 @@ function removeBuiltModules(): Plugin {
         }
         if (
           id === 'node:os' || id === 'node:worker_threads' ||
-          id === 'node:url' || id === 'node:fs/promises' || id === 'node:util'
+          id === 'node:url' || id === 'node:fs/promises' || id === 'node:fs' ||
+          id === 'node:util'
         ) {
           // conditional import
           return { id, external: true, moduleSideEffects: false };
@@ -213,13 +220,11 @@ function patchBindingJs(): Plugin {
     name: 'patch-binding-js',
     transform: {
       filter: {
-        id: 'src/binding.js',
+        id: 'src/binding.cjs',
       },
       handler(code) {
         return (
           code
-            // strip off unneeded createRequire in cjs, which breaks mjs
-            .replace('const require = createRequire(import.meta.url)', '')
             // inject binding auto download fallback for webcontainer
             .replace(
               '\nif (!nativeBinding) {',
@@ -238,81 +243,6 @@ if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
       },
     },
   };
-}
-
-function copy() {
-  // wasm build rely on `.node` binaries. But we don't want to copy `.node` files
-  // to the dist folder, so we need to distinguish between `.wasm` and `.node` files.
-  const wasmFiles = globSync('./src/rolldown-binding.*.wasm', {
-    absolute: true,
-  });
-  const nodeFiles = globSync('./src/rolldown-binding.*.node', {
-    absolute: true,
-  });
-
-  // Binary build is on the separate step on CI
-  if (!buildMeta.isCI) {
-    if (buildMeta.desireWasmFiles && !wasmFiles.length) {
-      throw new Error('No WASM files found.');
-    }
-    if (!buildMeta.desireWasmFiles && !nodeFiles.length) {
-      throw new Error('No Node files found.');
-    }
-  }
-
-  const copyTo = nodePath.resolve(buildMeta.buildOutputDir);
-  fs.mkdirSync(copyTo, { recursive: true });
-
-  if (!buildMeta.isReleasingPkgInCI) {
-    // Released `rolldown` package import binary via `@rolldown/binding-<platform>` packages.
-    // There's no need to copy binary files to dist folder.
-
-    if (buildMeta.desireWasmFiles) {
-      // Move the wasm file to dist
-      wasmFiles.forEach((file) => {
-        const fileName = nodePath.basename(file);
-        if (buildMeta.desireWasmFiles && fileName.includes('debug')) {
-          // NAPI-RS now generates a debug wasm binary no matter how and we don't want to ship it to npm.
-          console.log(styleText('yellow', '[build:done]'), 'Skipping', file);
-        } else {
-          console.log(
-            styleText('green', '[build:done]'),
-            'Copying',
-            file,
-            `to ${copyTo}`,
-          );
-          fs.cpSync(file, nodePath.join(copyTo, fileName));
-        }
-      });
-
-      const browserShims = globSync(
-        './src/*wasi*js',
-        { absolute: true },
-      );
-      browserShims.forEach((file) => {
-        const fileName = nodePath.basename(file);
-        console.log(
-          styleText('green', '[build:done]'),
-          'Copying',
-          file,
-          `to ${copyTo}`,
-        );
-        fs.cpSync(file, nodePath.join(copyTo, fileName));
-      });
-    } else {
-      // Move the binary file to dist
-      nodeFiles.forEach((file) => {
-        const fileName = nodePath.basename(file);
-        console.log(
-          styleText('green', '[build:done]'),
-          'Copying',
-          file,
-          `to ${copyTo}`,
-        );
-        fs.cpSync(file, nodePath.join(copyTo, fileName));
-      });
-    }
-  }
 }
 
 function generateRuntimeTypes() {

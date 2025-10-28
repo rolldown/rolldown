@@ -2,7 +2,7 @@ import {
   type BindingBuiltinPlugin,
   type BindingBuiltinPluginName,
   BindingCallableBuiltinPlugin,
-} from '../binding';
+} from '../binding.cjs';
 import { error, logPluginError } from '../log/logs';
 
 type BindingCallableBuiltinPluginLike = {

@@ -1,5 +1,5 @@
 import { parentPort, workerData } from 'node:worker_threads';
-import { registerPlugins } from './binding';
+import { registerPlugins } from './binding.cjs';
 import type { InputOptions } from './options/input-options';
 import type { OutputOptions } from './options/output-options';
 import type { defineParallelPluginImplementation } from './parallel-plugin';

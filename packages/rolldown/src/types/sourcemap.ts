@@ -1,4 +1,4 @@
-import type { BindingSourcemap } from '../binding';
+import type { BindingSourcemap } from '../binding.cjs';
 import type { SourceMap } from './rolldown-output';
 
 export interface ExistingRawSourceMap {

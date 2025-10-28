@@ -1,4 +1,4 @@
-import type { BindingReplacePluginConfig } from '../binding';
+import type { BindingReplacePluginConfig } from '../binding.cjs';
 import { BuiltinPlugin } from './utils';
 
 /**

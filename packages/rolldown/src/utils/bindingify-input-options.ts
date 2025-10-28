@@ -4,14 +4,14 @@ import {
   BindingLogLevel,
   BindingPropertyReadSideEffects,
   BindingPropertyWriteSideEffects,
-} from '../binding';
+} from '../binding.cjs';
 import type {
   BindingDeferSyncScanData,
   BindingExperimentalOptions,
   BindingInjectImportNamed,
   BindingInjectImportNamespace,
   BindingInputOptions,
-} from '../binding';
+} from '../binding.cjs';
 import { BuiltinPlugin } from '../builtin-plugin/utils';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';

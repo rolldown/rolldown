@@ -1,4 +1,4 @@
-import type { BindingChunkingContext } from '../binding';
+import type { BindingChunkingContext } from '../binding.cjs';
 import { transformModuleInfo } from '../utils/transform-module-info';
 import type { ModuleInfo } from './module-info';
 

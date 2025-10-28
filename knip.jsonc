@@ -42,7 +42,7 @@
         "src/api/experimental.ts",
       ],
       "ignore": [
-        "src/binding.js",
+        "src/binding.cjs",
         "src/rolldown-binding.wasi.cjs",
         "src/plugin/generated/hook-usage.ts",
         "src/browser.js",

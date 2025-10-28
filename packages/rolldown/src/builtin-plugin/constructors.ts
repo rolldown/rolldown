@@ -13,7 +13,7 @@ import type {
   BindingViteHtmlPluginConfig,
   BindingViteResolvePluginConfig,
   BindingWasmHelperPluginConfig,
-} from '../binding';
+} from '../binding.cjs';
 import type { StringOrRegExp } from '../types/utils';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
 import { BuiltinPlugin, makeBuiltinPluginCallable } from './utils';

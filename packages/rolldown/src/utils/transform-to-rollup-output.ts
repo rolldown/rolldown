@@ -5,7 +5,7 @@ import type {
   JsChangedOutputs,
   JsOutputAsset,
   JsOutputChunk,
-} from '../binding';
+} from '../binding.cjs';
 import type { PluginContext } from '../plugin/plugin-context';
 import { OutputAssetImpl } from '../types/output-asset-impl';
 import type { OutputBundle } from '../types/output-bundle';

@@ -17,6 +17,7 @@
   },
   "references": [
     { "path": "./crates/rolldown/src/runtime" },
+    { "path": "./crates/rolldown_plugin_hmr/src/runtime" },
     { "path": "./packages/bench" },
     { "path": "./packages/rolldown" },
     { "path": "./packages/rolldown/tests" },

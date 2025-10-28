@@ -30,7 +30,6 @@ class Module {
   }
 }
 
-// oxlint-disable-next-line no-unused-vars
 export class DevRuntime {
   /**
    * @param {WebSocket} socket
@@ -50,7 +49,7 @@ export class DevRuntime {
     throw new Error('createModuleHotContext should be implemented');
   }
   /**
-   * @param {string[]} _boundaries
+   * @param {[string, string][]} _boundaries
    */
   applyUpdates(_boundaries) {
     throw new Error('applyUpdates should be implemented');

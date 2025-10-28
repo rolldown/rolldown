@@ -1,0 +1,12 @@
+{
+  "extends": "../../../../tsconfig.json",
+  "include": ["./**/*"],
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "isolatedDeclarations": false,
+    "allowJs": true
+  }
+}

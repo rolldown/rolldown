@@ -70,6 +70,9 @@
       ".": "./dist/index.mjs",
       "./config": "./dist/config.mjs",
       "./experimental": "./dist/experimental-index.mjs",
+      "./experimental/runtime-types": {
+        "types": "./dist/experimental-runtime-types.d.ts"
+      },
       "./filter": "./dist/filter-index.mjs",
       "./parallelPlugin": "./dist/parallel-plugin.mjs",
       "./parseAst": "./dist/parse-ast-index.mjs",

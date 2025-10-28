@@ -1,5 +1,9 @@
 // @ts-check
 
+/** @type {typeof import('./runtime-extra-dev-common.js').DevRuntime} */
+// @ts-expect-error -- there's no way to declare a variable by JSDoc
+var BaseDevRuntime = DevRuntime;
+
 class ModuleHotContext {
   /**
    * @type {{ deps: [string], fn: (moduleExports: Record<string, any>[]) => void }[]}
@@ -7,7 +11,7 @@ class ModuleHotContext {
   acceptCallbacks = [];
   /**
    * @param {string} moduleId
-   * @param {DevRuntime} devRuntime
+   * @param {InstanceType<BaseDevRuntime>} devRuntime
    */
   constructor(moduleId, devRuntime) {
     this.moduleId = moduleId;
@@ -45,7 +49,7 @@ class ModuleHotContext {
   }
 }
 
-class DefaultDevRuntime extends DevRuntime {
+class DefaultDevRuntime extends BaseDevRuntime {
   /**
    * @param {WebSocket} socket
    */

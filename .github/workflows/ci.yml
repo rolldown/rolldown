@@ -171,13 +171,19 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@1ff88fdaffd6ae35c0fb32ccc159340b37d0beac # v1.0.7
+        with:
+          tools: just
+          cache-key: debug-build
+
       - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
+
+      - name: Build Native Rolldown
+        run: just build-rolldown
 
       - name: Build @rolldown/pluginutils
         run: pnpm --filter '@rolldown/pluginutils' build
-
-      - name: Build rolldown
-        run: pnpm run --filter 'rolldown' build-node
 
       - name: Lint Code
         run: pnpm lint-code

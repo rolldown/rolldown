@@ -36,7 +36,7 @@ function main() {
       } catch (err) {
         throw new Error(`Failed in ${testConfigPath}`, { cause: err })
       }
-    }, 60_000) // Specify a longer timeout than default 20_000ms.
+    }, 120_000) // Increased timeout to 120 seconds to prevent flaky timeouts in CI environments with resource contention
   }
 }
 

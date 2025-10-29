@@ -4729,6 +4729,10 @@ expression: output
 - liblib/index-!~{005}~.js => liblib/index-DqRd8AZE.js
 - liblib/lib-!~{003}~.js => liblib/lib-DRgkpSHt.js
 
+# tests/rolldown/issues/5482
+
+- main-!~{000}~.js => main-D4oup9vL.js
+
 # tests/rolldown/issues/5531
 
 - main-!~{000}~.js => main-CHBb07AE.js

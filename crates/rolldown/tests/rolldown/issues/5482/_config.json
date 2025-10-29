@@ -1,0 +1,9 @@
+{
+  "config": {
+    "legalComments": "inline",
+    "experimental": {
+      "attachDebugInfo": "none"
+    }
+  },
+  "snapshot": true
+}

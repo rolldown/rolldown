@@ -1081,8 +1081,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let is_module_decl = top_stmt.is_module_declaration_with_source();
 
         if let Some(import_decl) = top_stmt.as_import_declaration() {
+          let span = import_decl.span;
           let rec_id = self.ctx.module.imports[&import_decl.span];
           if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_id) {
+            for comment in &mut program.comments {
+              if comment.attached_to == span.start {
+                comment.attached_to = 0;
+              }
+              if comment.attached_to > span.start {
+                break;
+              }
+            }
             return;
           }
         } else if let Some(export_all_decl) = top_stmt.as_export_all_declaration() {

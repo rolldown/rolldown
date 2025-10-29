@@ -1,0 +1,42 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+/*! 
+* FOO.TS (ABOVE EXPORT)
+*/
+const foo = "foo";
+/*! 
+* FOO.TS (BELOW EXPORT)
+*/
+/*! 
+* FOO.TS (ABOVE EXPORT)
+*/
+const bar = "bar";
+/*! 
+* FOO.TS (BELOW EXPORT)
+*/
+/*! 
+* INDEX.TS (ABOVE IMPORT)
+* THIS COMMENT IS NOT PRESERVED
+*/
+/*! 
+* INDEX.TS (ABOVE IMPORT)
+* THIS COMMENT IS NOT PRESERVED
+*/
+/*! 
+* INDEX.TS (BELOW IMPORT)
+*/
+/*! 
+* INDEX.TS (ABOVE EXPORT)
+*/
+var main_default = foo + bar;
+/*! 
+* INDEX.TS (BELOW EXPORT)
+*/
+export { main_default as default };
+```

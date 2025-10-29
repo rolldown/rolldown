@@ -291,7 +291,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
           let is_special_property =
             static_name == "url" || static_name == "dirname" || static_name == "filename";
           let format = &self.immutable_ctx.options.format;
-          !is_special_property || matches!(format, OutputFormat::Iife | OutputFormat::Umd);
+          !is_special_property || matches!(format, OutputFormat::Iife | OutputFormat::Umd)
         })
         // Here we need to set it to `true` to emit warnings when leaving `import.meta` alone along with the logic head of this.
         .unwrap_or(true);

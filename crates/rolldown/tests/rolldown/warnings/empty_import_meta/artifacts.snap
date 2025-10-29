@@ -20,9 +20,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [EMPTY_IMPORT_META] Warning: `import.meta` is not available with the `cjs` output format and will be empty.
-   ╭─[ main.js:4:13 ]
+   ╭─[ main.js:5:13 ]
    │
- 4 │ console.log(import.meta);
+ 5 │ console.log(import.meta);
    │             ─────┬─────  
    │                  ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
 ───╯
@@ -37,9 +37,189 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region main.js
 console.log({}.hello);
+console.log(__dirname);
 console.log(__filename);
 console.log(require("url").pathToFileURL(__filename).href);
 console.log({});
 
 //#endregion
+```
+
+# Variant: [format: Iife]
+
+## warnings
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] Warning: `import.meta` is not available with the `iife` output format and will be empty.
+   ╭─[ main.js:1:13 ]
+   │
+ 1 │ console.log(import.meta.hello);
+   │             ─────┬─────  
+   │                  ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+───╯
+
+```
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] Warning: `import.meta` is not available with the `iife` output format and will be empty.
+   ╭─[ main.js:2:13 ]
+   │
+ 2 │ console.log(import.meta.dirname);
+   │             ─────┬─────  
+   │                  ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+───╯
+
+```
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] Warning: `import.meta` is not available with the `iife` output format and will be empty.
+   ╭─[ main.js:3:13 ]
+   │
+ 3 │ console.log(import.meta.filename);
+   │             ─────┬─────  
+   │                  ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+───╯
+
+```
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] Warning: `import.meta` is not available with the `iife` output format and will be empty.
+   ╭─[ main.js:4:13 ]
+   │
+ 4 │ console.log(import.meta.url);
+   │             ─────┬─────  
+   │                  ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+───╯
+
+```
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] Warning: `import.meta` is not available with the `iife` output format and will be empty.
+   ╭─[ main.js:5:13 ]
+   │
+ 5 │ console.log(import.meta);
+   │             ─────┬─────  
+   │                  ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+───╯
+
+```
+
+## Assets
+
+### main.js
+
+```js
+(function() {
+
+
+//#region main.js
+	console.log({}.hello);
+	console.log({}.dirname);
+	console.log({}.filename);
+	console.log({}.url);
+	console.log({});
+
+//#endregion
+})();
+```
+
+# Variant: [format: Umd]
+
+## warnings
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] Warning: `import.meta` is not available with the `umd` output format and will be empty.
+   ╭─[ main.js:1:13 ]
+   │
+ 1 │ console.log(import.meta.hello);
+   │             ─────┬─────  
+   │                  ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+───╯
+
+```
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] Warning: `import.meta` is not available with the `umd` output format and will be empty.
+   ╭─[ main.js:2:13 ]
+   │
+ 2 │ console.log(import.meta.dirname);
+   │             ─────┬─────  
+   │                  ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+───╯
+
+```
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] Warning: `import.meta` is not available with the `umd` output format and will be empty.
+   ╭─[ main.js:3:13 ]
+   │
+ 3 │ console.log(import.meta.filename);
+   │             ─────┬─────  
+   │                  ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+───╯
+
+```
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] Warning: `import.meta` is not available with the `umd` output format and will be empty.
+   ╭─[ main.js:4:13 ]
+   │
+ 4 │ console.log(import.meta.url);
+   │             ─────┬─────  
+   │                  ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+───╯
+
+```
+
+### EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] Warning: `import.meta` is not available with the `umd` output format and will be empty.
+   ╭─[ main.js:5:13 ]
+   │
+ 5 │ console.log(import.meta);
+   │             ─────┬─────  
+   │                  ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+───╯
+
+```
+
+## Assets
+
+### main.js
+
+```js
+(function(factory) {
+  
+  typeof define === 'function' && define.amd ? define([], factory) :
+  factory();
+})(function() {
+
+//#region main.js
+console.log({}.hello);
+console.log({}.dirname);
+console.log({}.filename);
+console.log({}.url);
+console.log({});
+
+//#endregion
+});
 ```

@@ -1,5 +1,13 @@
 {
   "config": {
     "format": "cjs"
-  }
+  },
+  "configVariants": [
+    {
+      "format": "iife"
+    },
+    {
+      "format": "umd"
+    }
+  ]
 }

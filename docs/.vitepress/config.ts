@@ -88,6 +88,10 @@ const sidebarForOptions: UserConfig['themeConfig']['sidebar'] = [
         text: 'output.advancedChunks',
         link: '/options/output-advanced-chunks.md',
       },
+      {
+        text: 'output.cleanDir',
+        link: '/options/output-clean-dir.md',
+      },
     ],
   },
 ];

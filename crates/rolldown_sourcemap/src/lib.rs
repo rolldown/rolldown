@@ -13,7 +13,16 @@ pub use crate::source::{Source, SourceMapSource};
 
 use rolldown_utils::rustc_hash::FxHashMapExt;
 
-/// Filter out tokens with invalid source positions (beyond source content bounds)
+/// Filter out tokens with invalid source positions (beyond source content bounds).
+/// 
+/// Invalid tokens can be generated when:
+/// 1. oxc_codegen adds punctuation (semicolons, newlines) and creates sourcemap tokens
+///    that reference positions beyond the original source line ends
+/// 2. Rolldown's PreProcessor generates unique AST spans at positions beyond the source
+///    (program.span.end + 1) for deduplication, which oxc_codegen then uses
+///
+/// This is a workaround until oxc_codegen is fixed to not generate tokens for positions
+/// beyond the source content bounds.
 fn is_token_valid(token: &Token, sourcemap: &SourceMap) -> bool {
   let Some(source_id) = token.get_source_id() else {
     return true; // Tokens without source_id are considered valid
@@ -39,7 +48,11 @@ fn is_token_valid(token: &Token, sourcemap: &SourceMap) -> bool {
   src_col < line_len_utf16
 }
 
-/// Remove invalid tokens from a sourcemap
+/// Remove invalid tokens from a sourcemap.
+///
+/// This function filters out sourcemap tokens that have source positions beyond the
+/// actual source content bounds. See `is_token_valid()` for details on why these
+/// invalid tokens are generated.
 pub fn filter_invalid_tokens(sourcemap: SourceMap) -> SourceMap {
   let valid_tokens: Vec<Token> = sourcemap
     .get_tokens()

@@ -26,6 +26,7 @@ pub struct ConfigVariant {
   #[serde(deserialize_with = "deserialize_inline_const", default)]
   pub inline_const: Option<InlineConstOption>,
   pub top_level_var: Option<bool>,
+  pub preserve_modules: Option<bool>,
   // --- non-bundler options are start with `_`
   /// Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]
@@ -79,6 +80,9 @@ impl ConfigVariant {
     }
     if let Some(top_level_var) = &self.top_level_var {
       config.top_level_var = Some(*top_level_var);
+    }
+    if let Some(preserve_modules) = &self.preserve_modules {
+      config.preserve_modules = Some(*preserve_modules);
     }
 
     if let Some(pife_for_module_wrappers) = &self.pife_for_module_wrappers {
@@ -137,6 +141,9 @@ impl ConfigVariant {
     }
     if let Some(top_level_var) = &self.top_level_var {
       fields.push(format!("top_level_var: {top_level_var:?}"));
+    }
+    if let Some(preserve_modules) = &self.preserve_modules {
+      fields.push(format!("preserve_modules: {preserve_modules:?}"));
     }
     if let Some(inline_const) = &self.inline_const {
       fields.push(format!("inline_const: {inline_const:?}"));

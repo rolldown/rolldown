@@ -1,0 +1,10 @@
+{
+  "config": {
+    "format": "cjs"
+  },
+  "configVariants": [
+    {
+      "preserveModules": true
+    }
+  ]
+}

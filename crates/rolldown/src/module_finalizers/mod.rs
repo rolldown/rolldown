@@ -51,6 +51,13 @@ bitflags! {
     }
 }
 
+bitflags! {
+  #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+  pub struct FinalizedExprProcessHint: u8 {
+      const FromCjsWrapKindEntry = 1;
+  }
+}
+
 /// Finalizer for emitting output code with scope hoisting.
 pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub ctx: ScopeHoistingFinalizerContext<'me>,
@@ -102,7 +109,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   pub fn finalized_expr_for_runtime_symbol(&self, name: &str) -> ast::Expression<'ast> {
-    self.finalized_expr_for_symbol_ref(self.ctx.runtime.resolve_symbol(name), false, false)
+    let (expr, _) =
+      self.finalized_expr_for_symbol_ref(self.ctx.runtime.resolve_symbol(name), false, false);
+    expr
   }
 
   /// If return true the import stmt should be removed,
@@ -143,7 +152,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
 
         // `require_foo`
-        let importee_wrapper_ref_name = self.finalized_expr_for_symbol_ref(
+        let (importee_wrapper_ref_name, hint) = self.finalized_expr_for_symbol_ref(
           importee_linking_info.wrapper_ref.unwrap(),
           false,
           false,
@@ -155,13 +164,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           binding_name_for_wrapper_call_ret,
           self.snippet.wrap_with_to_esm(
             to_esm_fn_name,
-            self.snippet.builder.expression_call(
-              SPAN,
-              importee_wrapper_ref_name,
-              NONE,
-              self.snippet.builder.vec(),
-              false,
-            ),
+            if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
+              importee_wrapper_ref_name
+            } else {
+              self.snippet.builder.expression_call(
+                SPAN,
+                importee_wrapper_ref_name,
+                NONE,
+                self.snippet.builder.vec(),
+                false,
+              )
+            },
             self.ctx.module.should_consider_node_esm_spec_for_static_import(),
           ),
         );
@@ -183,7 +196,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         self.generated_init_esm_importee_ids.insert(importee.idx);
         // `init_foo`
-        let wrapper_ref_expr = self.finalized_expr_for_symbol_ref(
+        let (wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(
           importee_linking_info.wrapper_ref.unwrap(),
           false,
           false,
@@ -230,10 +243,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     symbol_ref: SymbolRef,
     preserve_this_semantic_if_needed: bool,
     optimize_namespace_alias_transform: bool,
-  ) -> ast::Expression<'ast> {
+  ) -> (ast::Expression<'ast>, FinalizedExprProcessHint) {
     if !symbol_ref.is_declared_in_root_scope(self.ctx.symbol_db) {
       // No fancy things on none root scope symbols
-      return self.snippet.id_ref_expr(self.canonical_name_for(symbol_ref), SPAN);
+      return (
+        self.snippet.id_ref_expr(self.canonical_name_for(symbol_ref), SPAN),
+        FinalizedExprProcessHint::empty(),
+      );
     }
 
     let mut canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
@@ -250,10 +266,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       if !self.ctx.options.optimization.is_inline_const_smart_mode()
         || (self.state.contains(TraverseState::SmartInlineConst) || meta.safe_to_inline)
       {
-        return meta.value.to_expression(AstBuilder::new(self.alloc));
+        return (
+          meta.value.to_expression(AstBuilder::new(self.alloc)),
+          FinalizedExprProcessHint::empty(),
+        );
       }
     }
-
+    let mut hint = FinalizedExprProcessHint::empty();
     let mut expr = if self.ctx.modules[canonical_ref.owner].is_external() {
       self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
     } else {
@@ -277,13 +296,21 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             // If `foo` is split into another chunk, we need to convert the code `console.log(foo);` to `console.log(require_xxxx.foo);`
             // instead of keeping `console.log(foo)` as we did in esm output. The reason here is we need to keep live binding in cjs output.
 
-            let exported_name = &self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
-              .exports_to_other_chunks[&canonical_ref][0];
-
             let require_binding = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
               .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
 
-            self.snippet.literal_prop_access_member_expr_expr(require_binding, exported_name)
+            if self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol].entry_module_idx()
+              == Some(canonical_ref.owner)
+              && matches!(self.ctx.linking_infos[canonical_ref.owner].wrap_kind(), WrapKind::Cjs)
+            {
+              hint.insert(FinalizedExprProcessHint::FromCjsWrapKindEntry);
+              self.snippet.literal_prop_access_member_expr_expr(require_binding, "default")
+            } else {
+              let exported_name = &self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
+                .exports_to_other_chunks[&canonical_ref][0];
+
+              self.snippet.literal_prop_access_member_expr_expr(require_binding, exported_name)
+            }
           } else {
             self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
           }
@@ -309,14 +336,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
     }
 
-    expr
+    (expr, hint)
   }
 
   fn try_inline_constant_from_namespace_alias(
     &self,
     original_ref: SymbolRef,
     namespace_alias: &NamespaceAlias,
-  ) -> Option<ast::Expression<'ast>> {
+  ) -> Option<(ast::Expression<'ast>, FinalizedExprProcessHint)> {
     let inline_options = self.ctx.options.optimization.inline_const?;
     let canonical_ref = self.ctx.symbol_db.canonical_ref_for(original_ref);
     let named_import = self.ctx.module.named_imports.get(&canonical_ref)?;
@@ -340,7 +367,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     {
       return None;
     }
-    Some(constant_meta.value.to_expression(AstBuilder::new(self.alloc)))
+    Some((
+      constant_meta.value.to_expression(AstBuilder::new(self.alloc)),
+      FinalizedExprProcessHint::empty(),
+    ))
   }
 
   fn var_declaration_to_expr_seq_and_bindings(
@@ -404,7 +434,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       |(export, resolved_export)| {
         // prop_name: () => returned
         let prop_name = export;
-        let returned = self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
+        let (returned, _) =
+          self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
         ast::ObjectPropertyKind::ObjectProperty(
           ast::ObjectProperty {
             key: if is_validate_identifier_name(prop_name) {
@@ -491,7 +522,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             // Insert `__reExport(importer_exports, require('ext'))`
             let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
             // importer_exports
-            let importer_namespace_ref_expr = self.finalized_expr_for_symbol_ref(
+            let (importer_namespace_ref_expr, _) = self.finalized_expr_for_symbol_ref(
               self.ctx.module.namespace_object_ref,
               false,
               false,
@@ -707,12 +738,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             is_inlined_commonjs_export = true;
             export_meta.value.to_expression(AstBuilder::new(self.alloc))
           } else {
-            self.finalized_expr_for_symbol_ref(
+            let (object_ref_expr, _) = self.finalized_expr_for_symbol_ref(
               object_ref,
               false,
               target_commonjs_exported_symbol_meta
                 .is_some_and(|(_symbol, is_exports_default)| !is_exports_default),
-            )
+            );
+            object_ref_expr
           };
           self.snippet.member_expr_or_ident_ref(
             object_ref_expr,
@@ -809,7 +841,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
                 // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports).default)`
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                let wrap_ref_expr = self.finalized_expr_for_symbol_ref(
+                let (wrap_ref_expr, _) = self.finalized_expr_for_symbol_ref(
                   importee_linking_info.wrapper_ref.unwrap(),
                   false,
                   false,
@@ -819,7 +851,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     self.snippet.alloc_simple_call_expr(wrap_ref_expr),
                   ))
                 } else {
-                  let ns_name =
+                  let (ns_name, _) =
                     self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
                   let to_commonjs_ref_name = self.finalized_expr_for_runtime_symbol("__toCommonJS");
                   Some(
@@ -846,22 +878,26 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               _ => {
                 // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                // `init_xxx`
-                let wrap_ref_expr = self.finalized_expr_for_symbol_ref(
+                // `init_xxx` or `require_xxx`
+                let (wrap_ref_expr, hint) = self.finalized_expr_for_symbol_ref(
                   importee_linking_info.wrapper_ref.unwrap(),
                   false,
                   false,
                 );
 
-                // `init_xxx()`
+                // `init_xxx()` or `require_xxx()` or `require_xxx`
                 let wrap_ref_call_expr =
-                  ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-                    SPAN,
-                    wrap_ref_expr,
-                    NONE,
-                    self.snippet.builder.vec(),
-                    false,
-                  ));
+                  if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
+                    wrap_ref_expr
+                  } else {
+                    ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+                      SPAN,
+                      wrap_ref_expr,
+                      NONE,
+                      self.snippet.builder.vec(),
+                      false,
+                    ))
+                  };
 
                 if matches!(importee.exports_kind, ExportsKind::CommonJs)
                   || rec.meta.contains(ImportRecordMeta::IsRequireUnused)
@@ -870,7 +906,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   Some(wrap_ref_call_expr)
                 } else {
                   // `xxx_exports`
-                  let namespace_object_ref_expr =
+                  let (namespace_object_ref_expr, _) =
                     self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
 
                   let is_json_module = rec.meta.contains(ImportRecordMeta::JsonModule);
@@ -1124,13 +1160,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     if importee_linking_info.has_dynamic_exports {
                       let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
                       // exports
-                      let importer_namespace_ref = self.finalized_expr_for_symbol_ref(
+                      let (importer_namespace_ref, _) = self.finalized_expr_for_symbol_ref(
                         self.ctx.module.namespace_object_ref,
                         false,
                         false,
                       );
                       // otherExports
-                      let importee_namespace_ref = self.finalized_expr_for_symbol_ref(
+                      let (importee_namespace_ref, _) = self.finalized_expr_for_symbol_ref(
                         importee.namespace_object_ref,
                         false,
                         false,
@@ -1159,7 +1195,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     let re_export_fn_name = self.finalized_expr_for_runtime_symbol("__reExport");
 
                     // importer_exports
-                    let importer_namespace_ref = self.finalized_expr_for_symbol_ref(
+                    let (importer_namespace_ref, _) = self.finalized_expr_for_symbol_ref(
                       self.ctx.module.namespace_object_ref,
                       false,
                       false,
@@ -1169,7 +1205,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     let to_esm_fn_ref = self.finalized_expr_for_runtime_symbol("__toESM");
 
                     // require_foo
-                    let importee_wrapper_ref_expr = self.finalized_expr_for_symbol_ref(
+                    let (importee_wrapper_ref_expr, _) = self.finalized_expr_for_symbol_ref(
                       importee_linking_info.wrapper_ref.unwrap(),
                       false,
                       false,
@@ -1334,7 +1370,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let original_name: CompactStr = CompactStr::new(original_name);
 
     let name_ref = self.canonical_ref_for_runtime("__name");
-    let finalized_callee = self.finalized_expr_for_symbol_ref(name_ref, false, false);
+    let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
     Some(self.snippet.static_block_keep_name_helper(&original_name, finalized_callee))
   }
 

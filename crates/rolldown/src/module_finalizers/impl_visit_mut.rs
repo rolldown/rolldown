@@ -164,7 +164,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           self.canonical_ref_for_runtime("__commonJSMin")
         };
 
-        let commonjs_ref_expr = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
+        let (commonjs_ref_expr, _) = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
 
         let mut stmts_inside_closure = allocator::Vec::new_in(self.alloc);
         stmts_inside_closure.append(&mut program.body);
@@ -262,7 +262,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         } else {
           self.canonical_ref_for_runtime("__esmMin")
         };
-        let esm_ref_expr = self.finalized_expr_for_symbol_ref(esm_ref, false, false);
+        let (esm_ref_expr, _) = self.finalized_expr_for_symbol_ref(esm_ref, false, false);
         let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
 
         if matches!(
@@ -355,7 +355,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // TODO: perf it
     for (stmt_index, original_name, new_name) in self.keep_name_statement_to_insert.iter().rev() {
       let name_ref = self.canonical_ref_for_runtime("__name");
-      let finalized_callee = self.finalized_expr_for_symbol_ref(name_ref, false, false);
+      let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
       let target =
         self.snippet.builder.expression_identifier(SPAN, self.snippet.builder.atom(new_name));
       it.insert(
@@ -661,7 +661,8 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
                 let fn_expr = init.take_in(self.alloc);
 
                 let name_ref = self.canonical_ref_for_runtime("__name");
-                let finalized_callee = self.finalized_expr_for_symbol_ref(name_ref, false, false);
+                let (finalized_callee, _) =
+                  self.finalized_expr_for_symbol_ref(name_ref, false, false);
                 *init =
                   self.snippet.keep_name_call_expr(&original_name, fn_expr, finalized_callee, true);
               }

@@ -43,11 +43,13 @@ Some technical details are simplified for better illustration. The native MagicS
 
 ### Without Native MagicString
 
-<img width="3426" height="1699" alt="js-magic-string" src="https://github.com/user-attachments/assets/c9e81f8a-fad0-4f99-99c4-c71c67b8912e" />
+<img width="3426" height="1699" alt="js-magic-string" src="https://github.com/user-attachments/assets/c9e81f8a-fad0-4f99-99c4-c71c67b8912e" style="background: white;" />
+
+(Correction in the image: "rolldown without js magic-string" should be "rolldown without native magic-string")
 
 ### With Native MagicString
 
-<img width="3343" height="1659" alt="native-magic-string" src="https://github.com/user-attachments/assets/71ca5d7b-9b40-46ce-86dd-bfa4bdd73f4b" />
+<img width="3343" height="1659" alt="native-magic-string" src="https://github.com/user-attachments/assets/71ca5d7b-9b40-46ce-86dd-bfa4bdd73f4b" style="background: white;" />
 
 **Key Difference**: The native implementation is written in Rust, providing both Rust's performance advantages and background thread source map generation. Offloading to background threads improves overall CPU usage and enables significant performance improvements.
 

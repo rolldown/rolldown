@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 
+use rolldown_common::OutputChunk;
 use rolldown_plugin::typedmap::TypedMapKey;
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rustc_hash::FxHashMap;
@@ -88,3 +89,8 @@ pub struct CSSChunkCache {
 
 #[derive(Debug, Default)]
 pub struct CSSBundleName(pub String);
+
+#[derive(Debug, Default)]
+pub struct RemovedPureCSSFilesCache {
+  pub inner: FxDashMap<ArcStr, Arc<OutputChunk>>,
+}

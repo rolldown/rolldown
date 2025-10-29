@@ -798,7 +798,20 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
     use oxc::ast::ast::ExportDefaultDeclarationKind;
     let local_binding_for_default_export = match &decl.declaration {
-      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
+      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => {
+        // Check if the expression is a simple identifier reference
+        // If so, we can directly export that identifier without creating an intermediate variable
+        decl.declaration.as_expression().and_then(|expr| {
+          if let Expression::Identifier(id_ref) = expr {
+            self.resolve_symbol_from_reference(id_ref).map(|symbol_id| {
+              self.result.default_export_ref.symbol = symbol_id;
+              (symbol_id, id_ref.span)
+            })
+          } else {
+            None
+          }
+        })
+      }
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
         if fn_decl.is_side_effect_free() || fn_decl.pure {
           self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);

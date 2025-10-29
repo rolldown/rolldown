@@ -1224,12 +1224,32 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           match &mut default_decl.declaration {
             decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
               let expr = decl.to_expression_mut();
-              // "export default foo;" => "var default = foo;"
-              let canonical_name_for_default_export_ref =
-                self.canonical_name_for(self.ctx.module.default_export_ref);
-              top_stmt = self
-                .snippet
-                .var_decl_stmt(canonical_name_for_default_export_ref, expr.take_in(self.alloc));
+              // Check if the expression is a simple identifier reference that was already tracked
+              // during scanning. If so, we don't need to create a variable assignment.
+              let should_create_assignment = if let Expression::Identifier(id_ref) = expr {
+                // Check if the identifier reference resolves to the same symbol as default_export_ref
+                let reference_id = id_ref.reference_id.get();
+                let resolved_symbol = reference_id.and_then(|ref_id| self.scope.symbol_id_for(ref_id));
+                // If the resolved symbol doesn't match default_export_ref.symbol, we need an assignment
+                resolved_symbol != Some(self.ctx.module.default_export_ref.symbol)
+              } else {
+                // For non-identifier expressions, we always need an assignment
+                true
+              };
+
+              if should_create_assignment {
+                // "export default foo + 1;" => "var default = foo + 1;"
+                let canonical_name_for_default_export_ref =
+                  self.canonical_name_for(self.ctx.module.default_export_ref);
+                top_stmt = self
+                  .snippet
+                  .var_decl_stmt(canonical_name_for_default_export_ref, expr.take_in(self.alloc));
+              } else {
+                // "export default foo;" where foo is already a variable
+                // Just remove the export statement; the variable is already declared
+                // and will be exported via the export list
+                return;
+              }
             }
             ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
               // "export default function() {}" => "function default() {}"

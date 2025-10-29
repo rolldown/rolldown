@@ -1821,6 +1821,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxc-sourcemap-repro"
+version = "0.1.0"
+dependencies = [
+ "oxc",
+ "oxc_sourcemap",
+]
+
+[[package]]
 name = "oxc_allocator"
 version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

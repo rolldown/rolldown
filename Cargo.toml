@@ -1,5 +1,5 @@
 [workspace]
-members = ["./crates/*", "tasks/*"]
+members = ["./crates/*", "scripts/oxc-sourcemap-repro", "tasks/*"]
 resolver = "3"
 
 [workspace.package]

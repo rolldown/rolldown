@@ -9,7 +9,7 @@ use oxc::{
 };
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
-  MemberExprObjectReferencedType, RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoMeta,
+  MemberExprObjectReferencedType, OutputFormat, RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoMeta,
   SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
@@ -284,17 +284,22 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       return;
     }
     if let Some(parent) = self.visit_path.last() {
-      if !parent
+      let should_warn = parent
         .as_member_expression_kind()
         .map(|member_expr| {
           let static_name = member_expr.static_property_name().unwrap_or(ast::Atom::from(""));
-          static_name == "url" || static_name == "dirname" || static_name == "filename"
+          let is_special_property = static_name == "url" || static_name == "dirname" || static_name == "filename";
+          let format = &self.immutable_ctx.options.format;
+          let is_unsupported_format = matches!(format, OutputFormat::Iife | OutputFormat::Umd);
+          
+          // Warn if it's NOT a special property (bare import.meta or other properties)
+          // OR if it IS a special property but in an unsupported format (IIFE/UMD)
+          !is_special_property || is_unsupported_format
         })
-        // Here we need to set it to `false` to emit warnings when leaving `import.meta` alone along with the logic `not` head of this.
-        .unwrap_or(false)
-        && it.meta.name == "import"
-        && it.property.name == "meta"
-      {
+        // Here we need to set it to `true` to emit warnings when leaving `import.meta` alone along with the logic head of this.
+        .unwrap_or(true);
+      
+      if should_warn && it.meta.name == "import" && it.property.name == "meta" {
         self.result.warnings.push(
           BuildDiagnostic::empty_import_meta(
             self

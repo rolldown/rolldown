@@ -6032,6 +6032,14 @@ expression: output
 
 - main-!~{000}~.js => main-DfcONHmG.js
 
+# tests/rolldown/warnings/empty_import_meta_iife
+
+- main-!~{000}~.js => main-D5MWdPuW.js
+
+# tests/rolldown/warnings/empty_import_meta_umd
+
+- main-!~{000}~.js => main-BnPGI7XG.js
+
 # tests/rolldown/warnings/eval
 
 - main-!~{000}~.js => main-CHVi3gu4.js

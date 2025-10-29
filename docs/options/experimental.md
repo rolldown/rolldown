@@ -95,7 +95,7 @@ Attach debug information to the output bundle.
 
 The available modes:
 
-- `'none'`: No debug information is attached
+- `'none'`: No debug information is attached. Use this option to remove `//#region` and `//#endregion` comments from the bundled code
 - `'simple'`: Attach comments indicating which files the bundled code comes from. These comments could be removed by the minifier
 - `'full'`: Attach detailed debug information to the output bundle. These comments are using legal comment syntax, so they won't be removed by the minifier
 

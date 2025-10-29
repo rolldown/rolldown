@@ -9,6 +9,7 @@ pub struct BindingBuildImportAnalysisPluginConfig {
   pub optimize_module_preload_relative_paths: bool,
   pub render_built_url: bool,
   pub is_relative_base: bool,
+  pub is_test_v2: Option<bool>,
 }
 
 impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlugin {
@@ -20,6 +21,7 @@ impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlug
       insert_preload: value.insert_preload,
       render_built_url: value.render_built_url,
       is_relative_base: value.is_relative_base,
+      is_test_v2: value.is_test_v2.unwrap_or_default(),
     })
   }
 }

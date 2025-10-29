@@ -18,11 +18,13 @@ use self::ast_visit::BuildImportAnalysisVisitor;
 const PRELOAD_HELPER_ID: &str = "\0vite/preload-helper.js";
 
 #[derive(Debug)]
+#[expect(clippy::struct_excessive_bools)]
 pub struct BuildImportAnalysisPlugin {
   pub preload_code: ArcStr,
   pub insert_preload: bool,
   pub render_built_url: bool,
   pub is_relative_base: bool,
+  pub is_test_v2: bool,
 }
 
 impl Plugin for BuildImportAnalysisPlugin {
@@ -68,7 +70,22 @@ impl Plugin for BuildImportAnalysisPlugin {
     Ok(ast)
   }
 
+  async fn generate_bundle(
+    &self,
+    _ctx: &PluginContext,
+    args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    if !args.options.format.is_esm() {
+      return Ok(());
+    }
+    todo!()
+  }
+
   fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst
+    if self.is_test_v2 {
+      HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst | HookUsage::GenerateBundle
+    } else {
+      HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst
+    }
   }
 }

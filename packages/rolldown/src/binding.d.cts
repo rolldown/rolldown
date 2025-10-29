@@ -1554,6 +1554,7 @@ export interface BindingBuildImportAnalysisPluginConfig {
   optimizeModulePreloadRelativePaths: boolean
   renderBuiltUrl: boolean
   isRelativeBase: boolean
+  isTestV2?: boolean
 }
 
 export interface BindingBuiltinPlugin {

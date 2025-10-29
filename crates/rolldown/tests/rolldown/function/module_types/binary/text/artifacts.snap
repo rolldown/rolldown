@@ -15,8 +15,7 @@ var text_default = __toBinary("IidgKz0vQCMkJCVeJiooCuS9oOWlve+8jOS4lueVjArQn9GA0
 //#endregion
 //#region main.js
 assert(text_default instanceof Uint8Array);
-var main_default = text_default;
 
 //#endregion
-export { main_default as default };
+export { text_default as default };
 ```

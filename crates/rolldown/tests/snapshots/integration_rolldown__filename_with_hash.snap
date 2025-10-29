@@ -141,7 +141,7 @@ expression: output
 
 # tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
 
-- entry-!~{000}~.js => entry-DfyB5mIL.js
+- entry-!~{000}~.js => entry-BDHO1jQ1.js
 
 # tests/esbuild/dce/drop_labels
 
@@ -3362,7 +3362,7 @@ expression: output
 
 # tests/esbuild/ts/ts_export_default_type_issue316
 
-- entry-!~{000}~.js => entry-ezzTSP9M.js
+- entry-!~{000}~.js => entry-BoEXpSAd.js
 
 # tests/esbuild/ts/ts_export_equals
 
@@ -3625,12 +3625,12 @@ expression: output
 
 # tests/rolldown/cjs_compat/partial_cjs_ns_merge_optimize
 
-- main-!~{000}~.js => main-D8jvRMNG.js
+- main-!~{000}~.js => main-BM4il41R.js
 
 # tests/rolldown/cjs_compat/partial_cjs_ns_merge_optimize_chunk_split
 
 - entry-!~{000}~.js => entry-BIPYXcTF.js
-- main-!~{001}~.js => main-BCT6wsUq.js
+- main-!~{001}~.js => main-Bn7ddF9P.js
 - a-!~{002}~.js => a-BamTTcZb.js
 
 # tests/rolldown/cjs_compat/react-like
@@ -4310,9 +4310,9 @@ expression: output
 
 # tests/rolldown/function/module_types/asset
 
-- main-!~{000}~.js => main-BYCQS-ki.js
+- main-!~{000}~.js => main-C5-SaVS2.js
 - assets/foo-D91Zmg_q.txt
-- main-BYCQS-ki.js.map
+- main-C5-SaVS2.js.map
 
 # tests/rolldown/function/module_types/base64/binary
 
@@ -4336,11 +4336,11 @@ expression: output
 
 # tests/rolldown/function/module_types/binary/node
 
-- main-!~{000}~.js => main-D7ClqlDG.js
+- main-!~{000}~.js => main-CuAxS_Kh.js
 
 # tests/rolldown/function/module_types/binary/text
 
-- main-!~{000}~.js => main-CIxS1K5q.js
+- main-!~{000}~.js => main-C9E9IvnQ.js
 
 # tests/rolldown/function/module_types/dataurl/binary
 
@@ -4630,7 +4630,7 @@ expression: output
 
 # tests/rolldown/issues/376
 
-- main-!~{000}~.js => main-DHfleDDi.js
+- main-!~{000}~.js => main-B7HeseNe.js
 
 # tests/rolldown/issues/3821
 
@@ -4639,7 +4639,7 @@ expression: output
 
 # tests/rolldown/issues/4006
 
-- main-!~{000}~.js => main-C2pFBQES.js
+- main-!~{000}~.js => main-B2IAmFRr.js
 
 # tests/rolldown/issues/4129
 
@@ -4745,7 +4745,7 @@ expression: output
 
 # tests/rolldown/issues/5696
 
-- main-!~{000}~.js => main-DOD2BqGQ.js
+- main-!~{000}~.js => main-DghMYgvA.js
 
 # tests/rolldown/issues/5778
 
@@ -4885,7 +4885,7 @@ expression: output
 
 # tests/rolldown/misc/invalid_ident_repr
 
-- main-!~{000}~.js => main-CW2mE44C.js
+- main-!~{000}~.js => main-vQf62pn5.js
 
 # tests/rolldown/misc/merge_external_import
 
@@ -4991,15 +4991,15 @@ expression: output
 
 # tests/rolldown/misc/preserve_modules/multi_entry
 
-- a-!~{001}~.js => a-9EeU3Xa2.js
-- b-!~{002}~.js => b-_WUCLyHa.js
-- main-!~{000}~.js => main-Bq02Itoe.js
+- a-!~{001}~.js => a-wylCShmu.js
+- b-!~{002}~.js => b-DW0qzFEK.js
+- main-!~{000}~.js => main-Bemu9RQC.js
 
 # tests/rolldown/misc/preserve_modules/preserve_default_export_instead_of_named_export
 
-- main-!~{000}~.js => main-TBSEQj2D.js
+- main-!~{000}~.js => main-DM8h66dw.js
 - class-!~{001}~.js => class-f6wXflQl.js
-- default-!~{003}~.js => default-csOjIx0W.js
+- default-!~{003}~.js => default-_xHg4N9P.js
 - function-!~{005}~.js => function-GN8nKCiR.js
 
 # tests/rolldown/misc/reexport_star
@@ -5818,7 +5818,7 @@ expression: output
 
 # tests/rolldown/topics/tla/inline_dynamic_import
 
-- main-!~{000}~.js => main-II5eFd1E.js
+- main-!~{000}~.js => main-D4ByO0yF.js
 
 # tests/rolldown/topics/tla/inside_try_block
 

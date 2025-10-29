@@ -800,12 +800,27 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let local_binding_for_default_export = match &decl.declaration {
       oxc::ast::match_expression!(ExportDefaultDeclarationKind) => {
         // Check if the expression is a simple identifier reference
-        // If so, we can directly export that identifier without creating an intermediate variable
+        // We can only optimize this if the identifier is const or not reassigned,
+        // otherwise we need to snapshot the value to match ES6 semantics
         decl.declaration.as_expression().and_then(|expr| {
           if let Expression::Identifier(id_ref) = expr {
-            self.resolve_symbol_from_reference(id_ref).map(|symbol_id| {
-              self.result.default_export_ref.symbol = symbol_id;
-              (symbol_id, id_ref.span)
+            self.resolve_symbol_from_reference(id_ref).and_then(|symbol_id| {
+              // Check if the symbol is declared by const using oxc semantic info
+              let is_const = self.result.symbol_ref_db.scoping().symbol_flags(symbol_id).is_const_variable();
+              
+              // Check if there are any write references (reassignments) to this symbol
+              let is_reassigned =
+                self.result.symbol_ref_db.get_resolved_references(symbol_id).any(Reference::is_write);
+              
+              // Only reuse the symbol if it's safe (won't create a live binding when we need a snapshot)
+              // Safe = const or never reassigned
+              if is_const || !is_reassigned {
+                self.result.default_export_ref.symbol = symbol_id;
+                Some((symbol_id, id_ref.span))
+              } else {
+                // For reassignable variables, we need to create a snapshot
+                None
+              }
             })
           } else {
             None

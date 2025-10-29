@@ -6030,7 +6030,7 @@ expression: output
 
 # tests/rolldown/warnings/empty_import_meta
 
-- main-!~{000}~.js => main-DfcONHmG.js
+- main-!~{000}~.js => main-BGwZ-Sb3.js
 
 # tests/rolldown/warnings/eval
 

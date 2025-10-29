@@ -20,7 +20,7 @@ const foo = "foo";
 //#endregion
 //#region main.js
 console.log(foo);
-import("./foo.js").then((mod) => console.log(mod.foo));
+Promise.resolve().then(() => ({ foo })).then((mod) => console.log(mod.foo));
 
 //#endregion
 export { foo as t };

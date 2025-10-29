@@ -16,8 +16,8 @@ var share_default$1 = {};
 //#endregion
 //#region main.js
 console.log(share_default, share_default$1);
-import("./share.js").then(console.log);
-import("./share2.js").then(console.log);
+Promise.resolve().then(() => ({ default: share_default })).then(console.log);
+Promise.resolve().then(() => ({ default: share_default$1 })).then(console.log);
 
 //#endregion
 export { share_default as n, share_default$1 as t };

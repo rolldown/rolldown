@@ -22,7 +22,7 @@ console.log(1);
 //#endregion
 //#region main.js
 console.log(read);
-import("./indirect.js").then(console.log);
+Promise.resolve().then(() => ({ read })).then(console.log);
 
 //#endregion
 export { read as t };

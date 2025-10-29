@@ -1392,15 +1392,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
               // Check if the imported module is in the same chunk as the current module
               // If so, we can inline the dynamic import with Promise.resolve()
-              if self.ctx.chunk.modules.contains(&importee_id) {
-                // The module is in the same chunk, inline it
-                // Create: Promise.resolve().then(() => ({ /* exports */ }))
+              // Only inline ESM modules, not CommonJS or wrapped modules
+              let importee_linking_info = &self.ctx.linking_infos[importee_id];
+              let is_wrapped = importee_linking_info.wrapper_ref.is_some();
+              let is_commonjs = matches!(importee.exports_kind, ExportsKind::CommonJs);
+              
+              if self.ctx.chunk.modules.contains(&importee_id) && !is_wrapped && !is_commonjs {
+                // The module is in the same chunk and is a pure ESM module, inline it
+                // Create: Promise.resolve().then(() => ({ export1: value1, export2: value2, ... }))
                 
-                // Get the linking info for the imported module to access its exports
-                let importee_linking_info = &self.ctx.linking_infos[importee_id];
-                
-                // Build the namespace object with exports
-                // Create object with getters for each export
+                // Build the namespace object with exports as simple properties
                 let mut properties = self.snippet.builder.vec();
                 for (export_name, resolved_export) in importee_linking_info.canonical_exports(false) {
                   let exported_value = self.finalized_expr_for_symbol_ref(
@@ -1408,7 +1409,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     false,
                     false,
                   );
-                  // Create property: exportName: () => exportedValue
+                  // Create property: exportName: exportedValue
                   properties.push(ast::ObjectPropertyKind::ObjectProperty(
                     ast::ObjectProperty {
                       key: if is_validate_identifier_name(export_name) {
@@ -1420,40 +1421,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                           self.snippet.alloc_string_literal(export_name, SPAN)
                         )
                       },
-                      value: self.snippet.only_return_arrow_expr(exported_value),
+                      value: exported_value,
                       ..ast::ObjectProperty::dummy(self.alloc)
                     }
                     .into_in(self.alloc),
                   ));
                 }
                 
-                // Create the namespace object expression
-                // If there are no exports, use empty object, otherwise use __export
-                let namespace_expr = if properties.is_empty() {
-                  self.snippet.builder.expression_object(
-                    SPAN,
-                    properties,
-                    NONE,
-                  )
-                } else {
-                  // Use __export({ prop: () => value, ... })
-                  self.snippet.builder.expression_call_with_pure(
-                    SPAN,
-                    self.finalized_expr_for_runtime_symbol("__export"),
-                    NONE,
-                    self.snippet.builder.vec1(
-                      ast::Argument::ObjectExpression(
-                        ast::ObjectExpression {
-                          span: SPAN,
-                          properties,
-                          trailing_comma: None,
-                        }.into_in(self.alloc)
-                      )
-                    ),
-                    false,
-                    true,
-                  )
-                };
+                // Create simple namespace object without __export
+                let namespace_expr = self.snippet.builder.expression_object(SPAN, properties);
 
                 // Create arrow function: () => namespace_obj
                 let arrow_fn = self.snippet.only_return_arrow_expr(namespace_expr);

@@ -1592,7 +1592,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_allowed_import_with_splitting
 
-- entry-!~{000}~.js => entry-gDVpDR8o.js
+- entry-!~{000}~.js => entry-B33WtFO1.js
 - a-!~{009}~.js => a-BLSSHOs9.js
 - b-!~{005}~.js => b-C4OoNJaI.js
 - b-!~{007}~.js => b-Dutt_QGh.js
@@ -3078,11 +3078,11 @@ expression: output
 
 # tests/esbuild/splitting/edge_case_issue2793_with_splitting
 
-- index-!~{000}~.js => index-BG6ixNRK.js
+- index-!~{000}~.js => index-Ck5gUVbW.js
 
 # tests/esbuild/splitting/edge_case_issue2793_without_splitting
 
-- index-!~{000}~.js => index-BG6ixNRK.js
+- index-!~{000}~.js => index-Ck5gUVbW.js
 
 # tests/esbuild/splitting/splitting_assign_to_local
 
@@ -3131,8 +3131,8 @@ expression: output
 
 # tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_es6_into_es6
 
-- entry-!~{000}~.js => entry-HL_DagOc.js
-- foo-!~{001}~.js => foo-CQXqzJUL.js
+- entry-!~{000}~.js => entry-DAmjAdtJ.js
+- foo-!~{001}~.js => foo-7xXtjHic.js
 
 # tests/esbuild/splitting/splitting_dynamic_common_js_into_es6
 
@@ -3676,8 +3676,8 @@ expression: output
 
 # tests/rolldown/code_splitting/dynamic_import_and_static_import_one_file
 
-- main-!~{000}~.js => main-_-aR40H2.js
-- foo-!~{001}~.js => foo-CrbqNkDq.js
+- main-!~{000}~.js => main-BH3Hms9Q.js
+- foo-!~{001}~.js => foo-Clv7tBug.js
 
 # tests/rolldown/code_splitting/ensure_safe_identifier
 
@@ -3717,9 +3717,9 @@ expression: output
 
 # tests/rolldown/code_splitting/issue_2786
 
-- main-!~{000}~.js => main-B5YHu2JI.js
-- share-!~{001}~.js => share-C9WmgANT.js
-- share-!~{003}~.js => share-hE1clfub.js
+- main-!~{000}~.js => main-fDOhUWOU.js
+- share-!~{001}~.js => share-B_trx_Rx.js
+- share-!~{003}~.js => share-CSgGKhD2.js
 
 # tests/rolldown/dce/conditional_exports
 
@@ -4138,8 +4138,8 @@ expression: output
 
 # tests/rolldown/function/external/splitting_indirect_external_symbol
 
-- main-!~{000}~.js => main-EFjNd84_.js
-- indirect-!~{001}~.js => indirect-mBi_xyt4.js
+- main-!~{000}~.js => main-BVeVO2MH.js
+- indirect-!~{001}~.js => indirect-CtZwLcbX.js
 
 # tests/rolldown/function/external/splitting_with_external_module
 
@@ -4559,7 +4559,7 @@ expression: output
 
 # tests/rolldown/issues/2859/2
 
-- main-!~{000}~.js => main-BsGtt3NE.js
+- main-!~{000}~.js => main-A6RRzjaB.js
 
 # tests/rolldown/issues/2903
 
@@ -5650,6 +5650,11 @@ expression: output
 
 - main-!~{000}~.js => main-DuxQNW7D.js
 - main-DuxQNW7D.js.map
+
+# tests/rolldown/topics/inline_dynamic_import/static_and_dynamic_import
+
+- main-!~{000}~.js => main-Fy1Z1Jk8.js
+- foo-!~{001}~.js => foo-BK7XMg8f.js
 
 # tests/rolldown/topics/json/preserved_key
 

@@ -21,7 +21,7 @@ const foo = 1;
 
 //#endregion
 //#region main.js
-import("./foo.js").then(console.log);
+Promise.resolve().then(() => ({ foo })).then(console.log);
 console.log(foo_exports);
 
 //#endregion

@@ -48,7 +48,7 @@ await 0;
 import("./a.js");
 import("./b.js");
 import("./c.js");
-import("./entry.js");
+Promise.resolve().then(() => ({}));
 await 0;
 
 //#endregion

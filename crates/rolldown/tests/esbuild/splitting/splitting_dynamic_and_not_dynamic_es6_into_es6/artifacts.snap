@@ -11,7 +11,7 @@ let bar = 123;
 
 //#endregion
 //#region entry.js
-import("./foo.js").then(({ bar: b }) => console.log(bar, b));
+Promise.resolve().then(() => ({ bar })).then(({ bar: b }) => console.log(bar, b));
 
 //#endregion
 export { bar as t };

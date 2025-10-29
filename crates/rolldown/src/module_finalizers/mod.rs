@@ -1396,19 +1396,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               let importee_linking_info = &self.ctx.linking_infos[importee_id];
               let is_wrapped = importee_linking_info.wrapper_ref.is_some();
               let is_commonjs = matches!(importee.exports_kind, ExportsKind::CommonJs);
-              
+
               if self.ctx.chunk.modules.contains(&importee_id) && !is_wrapped && !is_commonjs {
                 // The module is in the same chunk and is a pure ESM module, inline it
                 // Create: Promise.resolve().then(() => ({ export1: value1, export2: value2, ... }))
-                
+
                 // Build the namespace object with exports as simple properties
                 let mut properties = self.snippet.builder.vec();
-                for (export_name, resolved_export) in importee_linking_info.canonical_exports(false) {
-                  let exported_value = self.finalized_expr_for_symbol_ref(
-                    resolved_export.symbol_ref,
-                    false,
-                    false,
-                  );
+                for (export_name, resolved_export) in importee_linking_info.canonical_exports(false)
+                {
+                  let exported_value =
+                    self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
                   // Create property: exportName: exportedValue
                   properties.push(ast::ObjectPropertyKind::ObjectProperty(
                     ast::ObjectProperty {
@@ -1418,7 +1416,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                         )
                       } else {
                         ast::PropertyKey::StringLiteral(
-                          self.snippet.alloc_string_literal(export_name, SPAN)
+                          self.snippet.alloc_string_literal(export_name, SPAN),
                         )
                       },
                       value: exported_value,
@@ -1427,7 +1425,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     .into_in(self.alloc),
                   ));
                 }
-                
+
                 // Create simple namespace object without __export
                 let namespace_expr = self.snippet.builder.expression_object(SPAN, properties);
 
@@ -1435,10 +1433,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 let arrow_fn = self.snippet.only_return_arrow_expr(namespace_expr);
 
                 // Create: Promise.resolve()
-                let promise_ident = self.snippet.builder.expression_identifier(
-                  SPAN,
-                  "Promise",
-                );
+                let promise_ident = self.snippet.builder.expression_identifier(SPAN, "Promise");
                 let promise_resolve = self.snippet.builder.expression_call(
                   SPAN,
                   ast::Expression::StaticMemberExpression(
@@ -1447,7 +1442,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       promise_ident,
                       self.snippet.builder.identifier_name(SPAN, "resolve"),
                       false,
-                    )
+                    ),
                   ),
                   NONE,
                   self.snippet.builder.vec(),
@@ -1463,7 +1458,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       promise_resolve,
                       self.snippet.builder.identifier_name(SPAN, "then"),
                       false,
-                    )
+                    ),
                   ),
                   NONE,
                   self.snippet.builder.vec1(ast::Argument::from(arrow_fn)),

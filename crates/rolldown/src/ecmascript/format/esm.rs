@@ -216,13 +216,13 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
           .get(&item.import_ref)
           .expect("should have export item index")[0];
         if alias == imported {
-          Some(alias.as_str().into())
+          Some(to_module_import_export_name(alias.as_str()))
         } else {
           if alias.as_str() == "default" {
             default_alias.push(imported.as_str().into());
             return None;
           }
-          Some(concat_string!(alias, " as ", imported))
+          Some(concat_string!(to_module_import_export_name(alias), " as ", imported))
         }
       })
       .collect::<Vec<_>>();

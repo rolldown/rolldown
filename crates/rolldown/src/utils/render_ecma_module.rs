@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rolldown_common::{ModuleRenderOutput, NormalModule, NormalizedBundlerOptions};
-use rolldown_sourcemap::{Source, SourceMapSource, collapse_sourcemaps};
+use rolldown_sourcemap::{Source, SourceMapSource, collapse_sourcemaps, filter_invalid_tokens};
 use rolldown_utils::concat_string;
 
 pub fn render_ecma_module(
@@ -25,7 +25,7 @@ pub fn render_ecma_module(
 
     if enable_sourcemap {
       let sourcemap = if module.sourcemap_chain.is_empty() {
-        render_output.map
+        render_output.map.map(filter_invalid_tokens)
       } else {
         let mut sourcemap_chain = module
           .sourcemap_chain

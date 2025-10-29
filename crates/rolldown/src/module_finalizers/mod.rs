@@ -1390,6 +1390,114 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 self.ctx.chunk_graph.entry_module_to_entry_chunk[&rec.resolved_module];
               let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
 
+              // Check if the imported module is in the same chunk as the current module
+              // If so, we can inline the dynamic import with Promise.resolve()
+              if self.ctx.chunk.modules.contains(&importee_id) {
+                // The module is in the same chunk, inline it
+                // Create: Promise.resolve().then(() => ({ /* exports */ }))
+                
+                // Get the linking info for the imported module to access its exports
+                let importee_linking_info = &self.ctx.linking_infos[importee_id];
+                
+                // Build the namespace object with exports
+                // Create object with getters for each export
+                let mut properties = self.snippet.builder.vec();
+                for (export_name, resolved_export) in importee_linking_info.canonical_exports(false) {
+                  let exported_value = self.finalized_expr_for_symbol_ref(
+                    resolved_export.symbol_ref,
+                    false,
+                    false,
+                  );
+                  // Create property: exportName: () => exportedValue
+                  properties.push(ast::ObjectPropertyKind::ObjectProperty(
+                    ast::ObjectProperty {
+                      key: if is_validate_identifier_name(export_name) {
+                        ast::PropertyKey::StaticIdentifier(
+                          self.snippet.id_name(export_name, SPAN).into_in(self.alloc),
+                        )
+                      } else {
+                        ast::PropertyKey::StringLiteral(
+                          self.snippet.alloc_string_literal(export_name, SPAN)
+                        )
+                      },
+                      value: self.snippet.only_return_arrow_expr(exported_value),
+                      ..ast::ObjectProperty::dummy(self.alloc)
+                    }
+                    .into_in(self.alloc),
+                  ));
+                }
+                
+                // Create the namespace object expression
+                // If there are no exports, use empty object, otherwise use __export
+                let namespace_expr = if properties.is_empty() {
+                  self.snippet.builder.expression_object(
+                    SPAN,
+                    properties,
+                    NONE,
+                  )
+                } else {
+                  // Use __export({ prop: () => value, ... })
+                  self.snippet.builder.expression_call_with_pure(
+                    SPAN,
+                    self.finalized_expr_for_runtime_symbol("__export"),
+                    NONE,
+                    self.snippet.builder.vec1(
+                      ast::Argument::ObjectExpression(
+                        ast::ObjectExpression {
+                          span: SPAN,
+                          properties,
+                          trailing_comma: None,
+                        }.into_in(self.alloc)
+                      )
+                    ),
+                    false,
+                    true,
+                  )
+                };
+
+                // Create arrow function: () => namespace_obj
+                let arrow_fn = self.snippet.only_return_arrow_expr(namespace_expr);
+
+                // Create: Promise.resolve()
+                let promise_ident = self.snippet.builder.expression_identifier(
+                  SPAN,
+                  "Promise",
+                );
+                let promise_resolve = self.snippet.builder.expression_call(
+                  SPAN,
+                  ast::Expression::StaticMemberExpression(
+                    self.snippet.builder.alloc_static_member_expression(
+                      SPAN,
+                      promise_ident,
+                      self.snippet.builder.identifier_name(SPAN, "resolve"),
+                      false,
+                    )
+                  ),
+                  NONE,
+                  self.snippet.builder.vec(),
+                  false,
+                );
+
+                // Create: Promise.resolve().then(() => namespace_obj)
+                let then_call = self.snippet.builder.expression_call(
+                  SPAN,
+                  ast::Expression::StaticMemberExpression(
+                    self.snippet.builder.alloc_static_member_expression(
+                      SPAN,
+                      promise_resolve,
+                      self.snippet.builder.identifier_name(SPAN, "then"),
+                      false,
+                    )
+                  ),
+                  NONE,
+                  self.snippet.builder.vec1(ast::Argument::from(arrow_fn)),
+                  false,
+                );
+
+                *node = then_call;
+                return true;
+              }
+
               let import_path = self.ctx.chunk.import_path_for(importee_chunk);
               expr.source = Expression::StringLiteral(
                 self.snippet.alloc_string_literal(&import_path, expr.source.span()),

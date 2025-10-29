@@ -63,19 +63,19 @@ use [rolldown/benchmarks](https://github.com/rolldown/benchmarks/) as benchmark 
 
 ### Build time
 
-| Runs       | babel + js magicString | oxc raw transfer + native magicstring | Time Saved | Speedup |
-| ---------- | ---------------------- | ------------------------------------- | ---------- | ------- |
-| apps/1000  | 730.7 ms               | 431.1 ms                              | 299.6 ms   | 1.69x   |
-| apps/5000  | 1.747 s                | 894.5 ms                              | 852.5 ms   | 1.95x   |
-| apps/10000 | 2.992 s                | 1.368 s                               | 1.624 s    | 2.19x   |
+| Runs       | oxc raw transfer + js magicString | oxc raw transfer + native magicString | Time Saved | Speedup |
+| ---------- | --------------------------------- | ------------------------------------- | ---------- | ------- |
+| apps/1000  | 497.6 ms                          | 431.1 ms                              | 66.5 ms    | 1.15x   |
+| apps/5000  | 1.100 s                           | 894.5 ms                              | 205.5 ms   | 1.23x   |
+| apps/10000 | 1.814 s                           | 1.368 s                               | 446.0 ms   | 1.33x   |
 
 ### Plugin transform time (build time - noop plugin build time)
 
-| Runs  | Transform Time (babel + js magicString) | Transform Time (oxc raw transfer + native magicString) | Time Saved | Speedup |
-| ----- | --------------------------------------- | ------------------------------------------------------ | ---------- | ------- |
-| 1000  | 405.1 ms                                | 105.5 ms                                               | 299.6 ms   | 3.84x   |
-| 5000  | 1102.4 ms                               | 249.9 ms                                               | 852.5 ms   | 4.41x   |
-| 10000 | 1977.0 ms                               | 353.0 ms                                               | 1624.0 ms  | 5.60x   |
+| Runs  | Transform Time (oxc raw transfer + js magicString) | Transform Time (oxc raw transfer + native magicString) | Time Saved | Speedup |
+| ----- | -------------------------------------------------- | ------------------------------------------------------ | ---------- | ------- |
+| 1000  | 172.0 ms                                           | 105.5 ms                                               | 66.5 ms    | 1.63x   |
+| 5000  | 455.4 ms                                           | 249.9 ms                                               | 205.5 ms   | 1.82x   |
+| 10000 | 799.0 ms                                           | 353.0 ms                                               | 446.0 ms   | 2.26x   |
 
 For detailed benchmark results, see the [benchmark pull request](https://github.com/rolldown/benchmarks/pull/9/files).
 

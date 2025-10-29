@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+let x = 42;
+x = 43;
+var main_default = x;
+
+//#endregion
+export { main_default as default };
+```

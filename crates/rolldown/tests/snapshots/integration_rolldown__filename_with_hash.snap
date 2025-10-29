@@ -5563,6 +5563,14 @@ expression: output
 - main-!~{000}~.js => main-CzUffRKc.js
 - main-CzUffRKc.js.map
 
+# tests/rolldown/topics/default_export/no_optimize_reassigned
+
+- main-!~{000}~.js => main-DJPV-J4v.js
+
+# tests/rolldown/topics/default_export/optimize_simple_identifier
+
+- main-!~{000}~.js => main-COAhL80h.js
+
 # tests/rolldown/topics/generated_code/symbols
 
 - main-!~{000}~.js => main-D9Bb16oY.js

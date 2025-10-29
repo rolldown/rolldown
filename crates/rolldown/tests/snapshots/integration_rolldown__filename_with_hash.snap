@@ -3709,6 +3709,12 @@ expression: output
 - main2-!~{001}~.js => main2-BUcRTHXC.js
 - share-!~{002}~.js => share-C5QPUyyJ.js
 
+# tests/rolldown/code_splitting/import_export_unicode
+
+- main-!~{000}~.js => main-loo5zflG.js
+- foo-!~{001}~.js => foo-lkM6U-gR.js
+- foo-!~{003}~.js => foo-wNcveKNc.js
+
 # tests/rolldown/code_splitting/issue_2786
 
 - main-!~{000}~.js => main-B5YHu2JI.js

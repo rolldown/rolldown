@@ -57,5 +57,8 @@
     "*.@(js|ts|tsx)": [
       "pnpm lint-code -- --fix"
     ]
+  },
+  "stackblitz": {
+    "startCommand": "pnpm --filter='./packages/rolldown' run dev"
   }
 }

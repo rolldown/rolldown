@@ -3,14 +3,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## foo.js
-
-```js
-import { t as foo } from "./main.js";
-
-export { foo };
-```
-
 ## main.js
 
 ```js
@@ -23,5 +15,4 @@ console.log(foo);
 Promise.resolve().then(() => ({ foo })).then((mod) => console.log(mod.foo));
 
 //#endregion
-export { foo as t };
 ```

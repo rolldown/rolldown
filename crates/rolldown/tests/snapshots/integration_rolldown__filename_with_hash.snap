@@ -3131,8 +3131,7 @@ expression: output
 
 # tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_es6_into_es6
 
-- entry-!~{000}~.js => entry-DAmjAdtJ.js
-- foo-!~{001}~.js => foo-7xXtjHic.js
+- entry-!~{000}~.js => entry-BggD1Eho.js
 
 # tests/esbuild/splitting/splitting_dynamic_common_js_into_es6
 
@@ -3676,8 +3675,7 @@ expression: output
 
 # tests/rolldown/code_splitting/dynamic_import_and_static_import_one_file
 
-- main-!~{000}~.js => main-BH3Hms9Q.js
-- foo-!~{001}~.js => foo-Clv7tBug.js
+- main-!~{000}~.js => main-BagwePdz.js
 
 # tests/rolldown/code_splitting/ensure_safe_identifier
 
@@ -3711,15 +3709,11 @@ expression: output
 
 # tests/rolldown/code_splitting/import_export_unicode
 
-- main-!~{000}~.js => main-loo5zflG.js
-- foo-!~{001}~.js => foo-lkM6U-gR.js
-- foo-!~{003}~.js => foo-wNcveKNc.js
+- main-!~{000}~.js => main-DOICfSuS.js
 
 # tests/rolldown/code_splitting/issue_2786
 
-- main-!~{000}~.js => main-fDOhUWOU.js
-- share-!~{001}~.js => share-B_trx_Rx.js
-- share-!~{003}~.js => share-CSgGKhD2.js
+- main-!~{000}~.js => main-BDsHtqk7.js
 
 # tests/rolldown/dce/conditional_exports
 
@@ -4138,8 +4132,7 @@ expression: output
 
 # tests/rolldown/function/external/splitting_indirect_external_symbol
 
-- main-!~{000}~.js => main-BVeVO2MH.js
-- indirect-!~{001}~.js => indirect-CtZwLcbX.js
+- main-!~{000}~.js => main-CKWe8tO5.js
 
 # tests/rolldown/function/external/splitting_with_external_module
 
@@ -4600,13 +4593,7 @@ expression: output
 
 # tests/rolldown/issues/3438
 
-- main-!~{000}~.js => main-Cjgl__GU.js
-- repro1-!~{003}~.js => repro1-Bk4VJTxt.js
-- repro1-!~{001}~.js => repro1-C8ZGrNz2.js
-- repro2-!~{007}~.js => repro2-DV6zg7do.js
-- repro2-!~{005}~.js => repro2-Da24K2hB.js
-- repro3-!~{009}~.js => repro3-B5AQg-Rz.js
-- repro3-!~{00b}~.js => repro3-DhMBk37L.js
+- main-!~{000}~.js => main-B4Zg9cLV.js
 
 # tests/rolldown/issues/3456
 
@@ -5055,9 +5042,7 @@ expression: output
 
 # tests/rolldown/optimization/inline_const/5197
 
-- main-!~{000}~.js => main-DlSsvnGL.js
-- bar-!~{001}~.js => bar-BrfnPKgg.js
-- bar-!~{003}~.js => bar-Dl9ffZcq.js
+- main-!~{000}~.js => main-m6z5_sWl.js
 
 # tests/rolldown/optimization/inline_const/6101
 
@@ -5653,8 +5638,7 @@ expression: output
 
 # tests/rolldown/topics/inline_dynamic_import/static_and_dynamic_import
 
-- main-!~{000}~.js => main-Fy1Z1Jk8.js
-- foo-!~{001}~.js => foo-BK7XMg8f.js
+- main-!~{000}~.js => main-B-C00nRf.js
 
 # tests/rolldown/topics/json/preserved_key
 
@@ -5962,9 +5946,8 @@ expression: output
 
 # tests/rolldown/tree_shaking/issue_4682
 
-- main-!~{000}~.js => main-DXSgrfFn.js
-- dynamic-!~{003}~.js => dynamic-DMbJfHVz.js
-- static-!~{001}~.js => static-ikTkxIsd.js
+- main-!~{000}~.js => main-A64AG2tP.js
+- dynamic-!~{001}~.js => dynamic-CeUg7ITb.js
 
 # tests/rolldown/tree_shaking/json_default_import
 

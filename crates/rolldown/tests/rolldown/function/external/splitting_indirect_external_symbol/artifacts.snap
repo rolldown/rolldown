@@ -3,14 +3,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## indirect.js
-
-```js
-import { t as read } from "./main.js";
-
-export { read };
-```
-
 ## main.js
 
 ```js
@@ -25,5 +17,4 @@ console.log(read);
 Promise.resolve().then(() => ({ read })).then(console.log);
 
 //#endregion
-export { read as t };
 ```

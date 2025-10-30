@@ -34,9 +34,3 @@ import("./dynamic.js").then(async ({ lazyLoad }) => {
 
 //#endregion
 ```
-
-## static.js
-
-```js
-
-```

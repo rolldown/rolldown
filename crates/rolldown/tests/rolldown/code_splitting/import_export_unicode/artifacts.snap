@@ -3,31 +3,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## foo.js
-
-```js
-import { t as devil } from "./foo2.js";
-
-export { devil as "😈" };
-```
-
-## foo2.js
+## main.js
 
 ```js
 //#region foo.js
 const devil = "devil";
 
 //#endregion
-export { devil as t };
-```
-
-## main.js
-
-```js
-import { t as devil } from "./foo2.js";
-
 //#region main.js
-const moduleFoo = import("./foo.js");
+const moduleFoo = Promise.resolve().then(() => ({ "😈": devil }));
 
 //#endregion
 export { moduleFoo, devil as "😈" };

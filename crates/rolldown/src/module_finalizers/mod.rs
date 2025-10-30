@@ -1386,10 +1386,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let importee_id = rec.resolved_module;
           match &self.ctx.modules[importee_id] {
             Module::Normal(importee) => {
-              let importee_chunk_id =
-                self.ctx.chunk_graph.entry_module_to_entry_chunk[&rec.resolved_module];
-              let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
-
               // Check if the imported module is in the same chunk as the current module
               // If so, we can inline the dynamic import with Promise.resolve()
               // Only inline ESM modules, not CommonJS or wrapped modules
@@ -1469,10 +1465,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 return true;
               }
 
-              let import_path = self.ctx.chunk.import_path_for(importee_chunk);
-              expr.source = Expression::StringLiteral(
-                self.snippet.alloc_string_literal(&import_path, expr.source.span()),
-              );
+              // Module is in a different chunk, update the import path
+              if let Some(&importee_chunk_id) =
+                self.ctx.chunk_graph.entry_module_to_entry_chunk.get(&rec.resolved_module)
+              {
+                let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
+                let import_path = self.ctx.chunk.import_path_for(importee_chunk);
+                expr.source = Expression::StringLiteral(
+                  self.snippet.alloc_string_literal(&import_path, expr.source.span()),
+                );
+              }
               needs_to_esm_helper = importee.exports_kind.is_commonjs();
             }
             Module::External(importee) => {

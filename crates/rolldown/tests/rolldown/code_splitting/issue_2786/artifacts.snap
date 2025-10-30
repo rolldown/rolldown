@@ -20,21 +20,4 @@ Promise.resolve().then(() => ({ default: share_default })).then(console.log);
 Promise.resolve().then(() => ({ default: share_default$1 })).then(console.log);
 
 //#endregion
-export { share_default as n, share_default$1 as t };
-```
-
-## share.js
-
-```js
-import { n as share_default } from "./main.js";
-
-export { share_default as default };
-```
-
-## share2.js
-
-```js
-import { t as share_default } from "./main.js";
-
-export { share_default as default };
 ```

@@ -1,0 +1,19 @@
+{
+  "config": {
+    "inject": [
+      {
+        "type": "named",
+        "imported": "default",
+        "alias": "a",
+        "from": "foo\""
+      },
+      {
+        "type": "named",
+        "imported": "default",
+        "alias": "b",
+        "from": "foo\\bar"
+      }
+    ]
+  },
+  "expectExecuted": false
+}

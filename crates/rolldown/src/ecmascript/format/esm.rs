@@ -13,6 +13,7 @@ use crate::{
   types::generator::GenerateContext,
   utils::chunk::render_chunk_exports::{render_chunk_exports, render_wrapped_entry_chunk},
 };
+use json_escape_simd::escape;
 
 use super::utils::render_chunk_directives;
 
@@ -294,15 +295,13 @@ fn create_import_declaration(
     }
     ret.push_str("{ ");
     ret.push_str(&specifiers.join(", "));
-    ret.push_str(" } from \"");
-    ret.push_str(path);
-    ret.push('"');
+    ret.push_str(" } from ");
+    ret.push_str(&escape(path));
   } else if let Some(first_default_alias) = first_default_alias {
     ret.push_str("import ");
     ret.push_str(first_default_alias);
-    ret.push_str(" from \"");
-    ret.push_str(path);
-    ret.push('"');
+    ret.push_str(" from ");
+    ret.push_str(&escape(path));
   } else {
     ret.push_str("import \"");
     ret.push_str(path);
@@ -346,9 +345,9 @@ where
           *is_importee_rendered = true;
           s.push_str("import * as ");
           s.push_str(alias);
-          s.push_str(" from \"");
-          s.push_str(&importee.get_import_path(ctx.chunk, ctx.options.paths.as_ref()));
-          s.push_str("\";\n");
+          s.push_str(" from ");
+          s.push_str(&escape(&importee.get_import_path(ctx.chunk, ctx.options.paths.as_ref())));
+          s.push_str(";\n");
           None
         }
         Specifier::Literal(imported) => {

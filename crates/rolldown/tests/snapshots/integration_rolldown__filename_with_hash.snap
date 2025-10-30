@@ -4253,6 +4253,10 @@ expression: output
 
 - main-!~{000}~.js => main-Bz6bTHfJ.js
 
+# tests/rolldown/function/inject_escape_special_chars
+
+- main-!~{000}~.js => main-BjynQL1Y.js
+
 # tests/rolldown/function/inline_dynamic_imports/cjs
 
 - main-!~{000}~.js => main-D-mRkfFo.js

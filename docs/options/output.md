@@ -554,13 +554,47 @@ Allows manual control over chunk creation.
 
 Advanced chunking configuration. See [output.advancedChunks](./output-advanced-chunks.md) for nested options.
 
+## comments
+
+- **Type:** `'none' | 'inline' | 'all'`
+- **Default:** `'all'`
+- **Path:** `output.comments`
+
+Control all comments in the output, including JSDoc comments and legal comments.
+
+### Examples
+
+```js
+export default {
+  output: {
+    comments: 'none', // Remove all comments
+  },
+};
+```
+
+### In-depth
+
+The available options:
+
+- `'none'`: Remove all comments from the output
+- `'inline'`: Preserve only legal comments (containing `@license`, `@preserve`, or starting with `//!` or `/*!`)
+- `'all'`: Keep all comments, including JSDoc and legal comments (default)
+
+:::tip
+When generating npm packages with separate type definitions (`.d.ts` files), use `comments: 'none'` or `comments: 'inline'` to reduce bundle size. The type definitions will preserve JSDoc comments for documentation purposes.
+:::
+
 ## legalComments
 
 - **Type:** `'none' | 'inline'`
 - **Default:** `'inline'`
 - **Path:** `output.legalComments`
 
-Control comments in the output.
+:::warning Deprecated
+This option is deprecated. Use [`comments`](#comments) instead for more granular control over comment output.
+:::
+
+Control legal comments in the output (a subset of the `comments` option).
 
 ### Examples
 
@@ -576,7 +610,7 @@ export default {
 
 The available options:
 
-- `'none'`: Remove all comments
+- `'none'`: Remove all legal comments
 - `'inline'`: Preserve comments containing `@license`, `@preserve`, or starting with `//!` or `/*!`
 
 ## polyfillRequire

@@ -4811,6 +4811,11 @@ expression: output
 
 - main-!~{000}~.js => main-CjM0X7y1.js
 
+# tests/rolldown/issues/6756
+
+- entry-!~{000}~.js => entry-Dhci23E6.js
+- lib-!~{001}~.js => lib-CHYtbTMJ.js
+
 # tests/rolldown/issues/rolldown_vite_289
 
 - main-!~{000}~.js => main-Bldhf8JA.js

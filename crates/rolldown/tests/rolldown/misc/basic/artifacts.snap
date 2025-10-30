@@ -31,9 +31,11 @@ assert.equal(a, "shared.js");
 (3:0) "assert." --> (7:0) "assert."
 (3:7) "equal(a, 'index.js')\n" --> (7:7) "equal("
 (2:10) "'index.js'\n" --> (7:13) "\"index.js\", "
-(3:16) "'index.js')\n" --> (7:25) "\"index.js\");\n"
+(3:16) "'index.js')" --> (7:25) "\"index.js\")"
+(3:27) "\n" --> (7:36) ";\n"
 (4:0) "assert." --> (8:0) "assert."
 (4:7) "equal(" --> (8:7) "equal("
 (4:13) "a2, " --> (8:13) "a, "
-(4:17) "'shared.js')\n" --> (8:16) "\"shared.js\");\n"
+(4:17) "'shared.js')" --> (8:16) "\"shared.js\")"
+(4:29) "\n" --> (8:28) ";\n"
 ```

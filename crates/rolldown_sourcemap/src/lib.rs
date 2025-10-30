@@ -13,63 +13,6 @@ pub use crate::source::{Source, SourceMapSource};
 
 use rolldown_utils::rustc_hash::FxHashMapExt;
 
-/// Filter out tokens with invalid source positions (beyond source content bounds).
-/// 
-/// Invalid tokens can be generated when:
-/// 1. oxc_codegen adds punctuation (semicolons, newlines) and creates sourcemap tokens
-///    that reference positions beyond the original source line ends
-/// 2. Rolldown's PreProcessor generates unique AST spans at positions beyond the source
-///    (program.span.end + 1) for deduplication, which oxc_codegen then uses
-///
-/// This is a workaround until oxc_codegen is fixed to not generate tokens for positions
-/// beyond the source content bounds.
-fn is_token_valid(token: &Token, sourcemap: &SourceMap) -> bool {
-  let Some(source_id) = token.get_source_id() else {
-    return true; // Tokens without source_id are considered valid
-  };
-  
-  let Some(source_content) = sourcemap.get_source_content(source_id) else {
-    return true; // If no source content, we can't validate, so assume valid
-  };
-  
-  // Split source into lines and check if the token's position is valid
-  let source_lines: Vec<&str> = source_content.split('\n').collect();
-  let src_line = token.get_src_line() as usize;
-  let src_col = token.get_src_col() as usize;
-  
-  if src_line >= source_lines.len() {
-    return false;
-  }
-  
-  let line_content = source_lines[src_line];
-  // Calculate UTF-16 length of the line
-  let line_len_utf16: usize = line_content.chars().map(|c| c.len_utf16()).sum();
-  
-  src_col < line_len_utf16
-}
-
-/// Remove invalid tokens from a sourcemap.
-///
-/// This function filters out sourcemap tokens that have source positions beyond the
-/// actual source content bounds. See `is_token_valid()` for details on why these
-/// invalid tokens are generated.
-pub fn filter_invalid_tokens(sourcemap: SourceMap) -> SourceMap {
-  let valid_tokens: Vec<Token> = sourcemap
-    .get_tokens()
-    .filter(|token| is_token_valid(&token, &sourcemap))
-    .collect();
-  
-  SourceMap::new(
-    sourcemap.get_file().map(Arc::clone),
-    sourcemap.get_names().map(Arc::clone).collect(),
-    None,
-    sourcemap.get_sources().map(Arc::clone).collect(),
-    sourcemap.get_source_contents().map(|x| x.map(Arc::clone)).collect(),
-    valid_tokens.into_boxed_slice(),
-    None,
-  )
-}
-
 // <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>
 #[expect(clippy::cast_possible_truncation)]
 pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
@@ -111,29 +54,8 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
           )
         },
       );
-      original_token.and_then(|original_token| {
-        // Validate that the source position is within bounds of the source content
-        let source_id = original_token.get_source_id()?;
-        let source_content = first_map.get_source_content(source_id)?;
-        
-        // Split source into lines and check if the token's position is valid
-        let source_lines: Vec<&str> = source_content.split('\n').collect();
-        let src_line = original_token.get_src_line() as usize;
-        let src_col = original_token.get_src_col() as usize;
-        
-        if src_line >= source_lines.len() {
-          return None;
-        }
-        
-        let line_content = source_lines[src_line];
-        // Calculate UTF-16 length of the line
-        let line_len_utf16: usize = line_content.chars().map(|c| c.len_utf16()).sum();
-        
-        if src_col >= line_len_utf16 {
-          return None;
-        }
-        
-        Some(Token::new(
+      original_token.map(|original_token| {
+        Token::new(
           token.get_dst_line(),
           token.get_dst_col(),
           original_token.get_src_line(),
@@ -147,7 +69,7 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
               .copied()
           }),
           original_token.get_name_id(),
-        ))
+        )
       })
     })
     .collect::<Vec<_>>();

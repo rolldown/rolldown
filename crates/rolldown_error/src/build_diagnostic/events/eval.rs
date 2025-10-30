@@ -25,7 +25,7 @@ impl BuildEvent for Eval {
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!(
-      "Use of `eval` function in '{}' is strongly discouraged as it poses security risks and may cause issues with minification.",
+      "Use of direct `eval` in '{}' is strongly discouraged as it poses security risks and may cause issues with minification.",
       self.filename
     )
   }
@@ -35,13 +35,15 @@ impl BuildEvent for Eval {
     let file_id = diagnostic.add_file(filename, self.source.clone());
 
     diagnostic.title = String::from(
-      "Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.",
+      "Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.",
     );
 
     diagnostic.add_label(
       &file_id,
       self.span.start..self.span.end,
-      String::from("Use of `eval` function here."),
+      String::from("Use of direct `eval` here."),
     );
+
+    diagnostic.add_help(String::from("Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval"));
   }
 }

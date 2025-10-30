@@ -6,12 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## EVAL
 
 ```text
-[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+[EVAL] Warning: Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
    ╭─[ main.js:2:1 ]
    │
  2 │ eval("ns.a")
    │ ──┬─  
-   │   ╰─── Use of `eval` function here.
+   │   ╰─── Use of direct `eval` here.
+   │ 
+   │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
 ───╯
 
 ```

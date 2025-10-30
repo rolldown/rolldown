@@ -6,12 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## EVAL
 
 ```text
-[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+[EVAL] Warning: Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
    ╭─[ nested-eval.js:3:17 ]
    │
  3 │     console.log(x, eval('x'))
    │                    ──┬─  
-   │                      ╰─── Use of `eval` function here.
+   │                      ╰─── Use of direct `eval` here.
+   │ 
+   │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
 ───╯
 
 ```
@@ -19,12 +21,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## EVAL
 
 ```text
-[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+[EVAL] Warning: Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
    ╭─[ top-level-eval.js:2:16 ]
    │
  2 │ console.log(x, eval('x'))
    │                ──┬─  
-   │                  ╰─── Use of `eval` function here.
+   │                  ╰─── Use of direct `eval` here.
+   │ 
+   │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
 ───╯
 
 ```
@@ -32,12 +36,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## EVAL
 
 ```text
-[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+[EVAL] Warning: Use of direct `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
    ╭─[ ts-namespace-eval.ts:3:17 ]
    │
  3 │     console.log(x, eval('x'))
    │                    ──┬─  
-   │                      ╰─── Use of `eval` function here.
+   │                      ╰─── Use of direct `eval` here.
+   │ 
+   │ Help: Consider using indirect eval. For more information, check the documentation: https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval
 ───╯
 
 ```

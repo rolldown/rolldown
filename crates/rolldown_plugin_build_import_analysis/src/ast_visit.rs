@@ -1,14 +1,20 @@
+use std::path::PathBuf;
+
 use oxc::{
   allocator::CloneIn as _,
   ast::{
     NONE,
-    ast::{BindingPatternKind, Expression, ImportOrExportKind, Statement, VariableDeclaration},
+    ast::{
+      self, BindingPatternKind, Expression, ImportOrExportKind, Statement, VariableDeclaration,
+    },
   },
   ast_visit::{VisitMut, walk_mut},
   semantic::ScopeFlags,
   span::SPAN,
 };
 use rolldown_ecmascript_utils::AstSnippet;
+use rolldown_plugin_utils::constants::RemovedPureCSSFilesCache;
+use sugar_path::SugarPath;
 
 use super::PRELOAD_HELPER_ID;
 
@@ -118,5 +124,46 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
 
   fn leave_scope(&mut self) {
     self.scope_stack.pop();
+  }
+}
+
+pub struct DynamicImportVisitor<'a, 'b> {
+  pub snippet: AstSnippet<'a>,
+  pub chunk_filename: PathBuf,
+  pub removed_pure_css_files: &'b RemovedPureCSSFilesCache,
+}
+
+impl<'a> VisitMut<'a> for DynamicImportVisitor<'a, '_> {
+  fn visit_expression(&mut self, it: &mut Expression<'a>) {
+    if let Expression::ImportExpression(expr) = &it {
+      let value = match &expr.source {
+        Expression::StringLiteral(s) => Some(s.value),
+        Expression::TemplateLiteral(t) => t.single_quasi(),
+        _ => None,
+      };
+      if let Some(url) = value {
+        let normalized = self.chunk_filename.join(url.as_str()).normalize();
+        if self.removed_pure_css_files.inner.contains_key(normalized.to_string_lossy().as_ref()) {
+          *it = ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+            SPAN,
+            ast::Expression::StaticMemberExpression(
+              self.snippet.builder.alloc_static_member_expression(
+                SPAN,
+                self.snippet.id_ref_expr("Promise", SPAN),
+                self.snippet.id_name("resolve", SPAN),
+                false,
+              ),
+            ),
+            NONE,
+            self.snippet.builder.vec1(ast::Argument::from(ast::Expression::ObjectExpression(
+              self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec()),
+            ))),
+            false,
+          ));
+          return;
+        }
+      }
+    }
+    walk_mut::walk_expression(self, it);
   }
 }

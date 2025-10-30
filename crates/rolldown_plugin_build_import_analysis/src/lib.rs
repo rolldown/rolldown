@@ -1,17 +1,21 @@
 mod ast_utils;
 mod ast_visit;
+mod utils;
 
 use std::borrow::Cow;
 
 use arcstr::ArcStr;
 use oxc::ast_visit::VisitMut;
-use rolldown_common::side_effects::HookSideEffects;
+use rolldown_common::{Output, side_effects::HookSideEffects};
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, HookUsage, Plugin,
   PluginContext,
 };
+use rolldown_plugin_utils::constants::RemovedPureCSSFilesCache;
+
+use crate::ast_visit::DynamicImportVisitor;
 
 use self::ast_visit::BuildImportAnalysisVisitor;
 
@@ -72,10 +76,47 @@ impl Plugin for BuildImportAnalysisPlugin {
 
   async fn generate_bundle(
     &self,
-    _ctx: &PluginContext,
+    ctx: &PluginContext,
     args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     if !args.options.format.is_esm() {
+      return Ok(());
+    }
+    if !self.insert_preload {
+      if let Some(removed_pure_css_files) = ctx.meta().get::<RemovedPureCSSFilesCache>()
+        && !removed_pure_css_files.inner.is_empty()
+      {
+        let mut bundle_iter = args.bundle.iter_mut();
+        while let Some(Output::Chunk(chunk)) = bundle_iter.next() {
+          // TODO: Maybe we should use `chunk.dynamicImports`?
+          if utils::DYNAMIC_IMPORT_RE.is_match(&chunk.code) {
+            let allocator = oxc::allocator::Allocator::default();
+            let mut parser_ret = oxc::parser::Parser::new(
+              &allocator,
+              chunk.code.as_ref(),
+              oxc::span::SourceType::default(),
+            )
+            .parse();
+            if parser_ret.panicked
+              && let Some(err) =
+                parser_ret.errors.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
+            {
+              return Err(anyhow::anyhow!(format!(
+                "Failed to parse code in '{}': {:?}",
+                chunk.filename, err.message
+              )));
+            }
+
+            let mut visitor = DynamicImportVisitor {
+              snippet: AstSnippet::new(&allocator),
+              chunk_filename: chunk.filename.as_str().into(),
+              removed_pure_css_files: &removed_pure_css_files,
+            };
+
+            visitor.visit_program(&mut parser_ret.program);
+          }
+        }
+      }
       return Ok(());
     }
     todo!()

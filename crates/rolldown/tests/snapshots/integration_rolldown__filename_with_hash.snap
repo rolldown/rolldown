@@ -5152,7 +5152,7 @@ expression: output
 
 # tests/rolldown/resolve/oxc_resolver_integration
 
-- main-!~{000}~.js => main-B8zfY-Fo.js
+- main-!~{000}~.js => main-BR_lFROm.js
 
 # tests/rolldown/resolve/package_exports_wildcard
 

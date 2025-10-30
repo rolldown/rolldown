@@ -377,8 +377,8 @@ impl GenerateStage<'_> {
         if !self.link_output.used_symbol_refs.contains(&import_ref) {
           continue;
         }
-        // If the symbol from external module and the format is commonjs, we need to insert runtime
-        // symbol ref `__toESM`
+        // If the symbol from external module and the format is commonjs, we might need to insert runtime
+        // symbol ref `__toESM` if it's being used (for namespace or default imports)
         // related to https://github.com/rolldown/rolldown/blob/c100a53c6cfc67b4f92e230da072eef8494862ef/crates/rolldown/src/ecmascript/format/cjs.rs?plain=1#L120-L124
         let import_ref = if self.link_output.module_table[import_ref.owner].is_external() {
           index_chunk_indirect_imports_from_external_modules[chunk_id].insert(import_ref.owner);
@@ -386,12 +386,19 @@ impl GenerateStage<'_> {
             continue;
           }
 
-          // Note: the `__toESM` should always referenced before during `collect_depended_symbols` phase
-          // Before deduplicated the indirect_imports_from_external_modules, there should exists
-          // two scenarios:
-          // 1. The symbol is directly imported from an external modules, then it should be referenced in https://github.com/rolldown/rolldown/blob/c100a53c6cfc67b4f92e230da072eef8494862ef/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs?plain=1#L85-L94,
-          // 2. The symbol indirectly imported from an external module, then the `__toESM` should be referenced in other modules, see also **1**
-          self.link_output.runtime.resolve_symbol("__toESM")
+          // Note: the `__toESM` might have been referenced during `collect_depended_symbols` phase
+          // for namespace or default imports from external modules.
+          // For named-only imports, we don't use __toESM, so we should not try to resolve it.
+          // Check if __toESM is actually used before trying to resolve it.
+          let to_esm_ref = self.link_output.runtime.resolve_symbol("__toESM");
+          if self.link_output.symbol_db.get(to_esm_ref).chunk_id.is_some() {
+            // __toESM is in a chunk, so it's being used
+            to_esm_ref
+          } else {
+            // __toESM is not being used, so skip this import
+            // This happens for named-only imports from external modules where we don't need interop
+            continue;
+          }
         } else {
           import_ref
         };

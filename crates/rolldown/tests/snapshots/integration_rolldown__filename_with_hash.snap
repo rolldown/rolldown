@@ -926,7 +926,7 @@ expression: output
 
 # tests/esbuild/default/inject
 
-- entry-!~{000}~.js => entry-CMsYa2Ai.js
+- entry-!~{000}~.js => entry-D5R3Ubj1.js
 
 # tests/esbuild/default/inject_assign
 
@@ -1588,7 +1588,7 @@ expression: output
 
 # tests/esbuild/default/to_esm_wrapper_omission
 
-- entry-!~{000}~.js => entry-UF0FcqKy.js
+- entry-!~{000}~.js => entry-C73CEcdw.js
 
 # tests/esbuild/default/top_level_await_allowed_import_with_splitting
 
@@ -1702,14 +1702,14 @@ expression: output
 # tests/esbuild/default/warn_common_js_exports_in_esm_bundle
 
 - cjs-in-esm-!~{000}~.js => cjs-in-esm-plvIZEyb.js
-- import-in-cjs-!~{001}~.js => import-in-cjs-Dfaom-sA.js
+- import-in-cjs-!~{001}~.js => import-in-cjs-BBw1yeDo.js
 - no-warnings-here-!~{002}~.js => no-warnings-here-BnKOXmVw.js
 
 # tests/esbuild/default/warn_common_js_exports_in_esm_convert
 
 - cjs-in-esm-!~{000}~.js => cjs-in-esm-plvIZEyb.js
 - cjs-in-esm2-!~{001}~.js => cjs-in-esm2-DFD0Tg0r.js
-- import-in-cjs-!~{002}~.js => import-in-cjs-B1s24v9X.js
+- import-in-cjs-!~{002}~.js => import-in-cjs-DF6X_Gpj.js
 - no-warnings-here-!~{003}~.js => no-warnings-here-83rFFOtF.js
 
 # tests/esbuild/glob/glob_basic_no_bundle
@@ -2179,7 +2179,7 @@ expression: output
 
 # tests/esbuild/loader/jsx_automatic_no_name_collision
 
-- entry-!~{000}~.js => entry-mZlFHYQF.js
+- entry-!~{000}~.js => entry-Ct2m38Hd.js
 
 # tests/esbuild/loader/jsx_preserve_capital_letter
 
@@ -4149,7 +4149,7 @@ expression: output
 
 # tests/rolldown/function/external_live_bindings
 
-- main-!~{000}~.js => main-LEyzep5p.js
+- main-!~{000}~.js => main-B8aUep9f.js
 
 # tests/rolldown/function/file/css
 
@@ -4175,7 +4175,7 @@ expression: output
 
 # tests/rolldown/function/format/cjs/plain_import_should_not_introduce_to_esm
 
-- main-!~{000}~.js => main-CmMYW0wP.js
+- main-!~{000}~.js => main-fYGzYGiR.js
 
 # tests/rolldown/function/format/cjs/share_chunk_without_symbol
 
@@ -4668,7 +4668,7 @@ expression: output
 
 # tests/rolldown/issues/4406
 
-- main-!~{000}~.js => main-BwJAASiK.js
+- main-!~{000}~.js => main-BMcjiCg_.js
 
 # tests/rolldown/issues/4443
 
@@ -4676,7 +4676,7 @@ expression: output
 
 # tests/rolldown/issues/4459
 
-- main-!~{000}~.js => main-BidJk8ta.js
+- main-!~{000}~.js => main-qUb-JFlj.js
 
 # tests/rolldown/issues/4472
 
@@ -4688,7 +4688,7 @@ expression: output
 
 # tests/rolldown/issues/4585
 
-- main-!~{000}~.js => main-DA4Ptp8j.js
+- main-!~{000}~.js => main-DEt6rN7-.js
 
 # tests/rolldown/issues/4780
 
@@ -4705,10 +4705,9 @@ expression: output
 
 # tests/rolldown/issues/5044
 
-- main-!~{000}~.js => main-OKtGn7An.js
-- _virtual/rolldown_runtime-!~{001}~.js => _virtual/rolldown_runtime-mwmJao_F.js
-- cube-!~{003}~.js => cube-BXW_EK5r.js
-- lib-!~{005}~.js => lib-BHNBR_-C.js
+- main-!~{000}~.js => main-Bi1a19d7.js
+- cube-!~{001}~.js => cube-CPU7B1lQ.js
+- lib-!~{003}~.js => lib-3LCT-mx8.js
 
 # tests/rolldown/issues/5139
 
@@ -5482,7 +5481,7 @@ expression: output
 
 # tests/rolldown/topics/cjs_module_lexer_compat/import_and_reexport
 
-- main-!~{000}~.js => main-BTFDcswM.js
+- main-!~{000}~.js => main-BBLTFHyN.js
 
 # tests/rolldown/topics/css/align_vite
 
@@ -5780,7 +5779,7 @@ expression: output
 
 # tests/rolldown/topics/npm_packages/util_deprecate
 
-- main-!~{000}~.js => main-BBYHgJpL.js
+- main-!~{000}~.js => main-BC27d8JA.js
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export
 
@@ -6071,7 +6070,7 @@ expression: output
 
 # tests/rolldown/warnings/missing_global_name
 
-- main-!~{000}~.js => main-CHKrxru-.js
+- main-!~{000}~.js => main-DgSIEq9N.js
 
 # tests/rolldown/warnings/missing_name_option_for_iife_export
 

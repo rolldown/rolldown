@@ -93,3 +93,23 @@ experimental plugins (do we want to document these?)
 - `@rollup/plugin-dynamic-import-vars`: `import { dynamicImportVarsPlugin } from 'rolldown/experimental'`
 
 -->
+
+## Avoiding Direct `eval`
+
+The `eval()` function evaluates a string of JavaScript code. `eval()` calls have two modes: direct eval and indirect eval. Direct eval refers to the case where the global `eval` function is called directly. Differently from indirect eval, direct eval allows the passed string to access the local scope variables of the caller.
+
+Direct eval is problematic when bundling the code for many reasons:
+
+- Rolldown applies an optimization called "scope hoisting" that puts multiple files into a single scope. However, this means code evaluated by direct `eval` can read and write variables in a different file in the bundle! This is a correctness issue because the evaluated code may try to access a global variable but may accidentally access a private variable with the same name from another file instead. **It can potentially even be a security issue** if a private variable in another file has sensitive data.
+- Rolldown may rename some variables in the bundle to avoid name collisions. While this is not a problem when not using direct eval, it is a problem for direct eval because the code evaluated by direct eval may try to reference the renamed variables by the original name.
+- Minifiers avoid mangling variable names that may be referenced from the direct eval code for correctness. There are also other optimizations prevented by direct eval. This means the output code would not be reduced efficiently.
+
+Luckily, it is usually easy to avoid using direct eval. There are two commonly-used alternatives that avoid all of the drawbacks mentioned above:
+
+- `(0, eval)('x')`
+
+  This is most common way to use indirect eval. There are also other ways to trigger indirect eval. For example, `var eval2 = eval; eval2('x')` and `[eval][0]('x')` and `window.eval('x')` are all indirect eval calls. When you use indirect eval, the code is evaluated in the global scope instead of in the inline scope of the caller.
+
+- `new Function('x')`
+
+  This constructs a new function object at run-time. It is as if you wrote `function() { x }` in the global scope except that `x` can be an arbitrary string of code. This form is sometimes convenient because you can add arguments to the function, and use those arguments to expose variables to the evaluated code. For example, `(new Function('env', 'x'))(someEnv)` is as if you wrote `(function(env) { x })(someEnv)`. This is often a sufficient alternative for direct `eval` when the evaluated code needs to access local variables because you can pass the local variables in as arguments.

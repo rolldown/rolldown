@@ -1,0 +1,18 @@
+{
+  "references": [
+    {
+      "path": "./tsconfig.2.json"
+    }
+  ],
+  "compilerOptions": {
+    "baseUrl": "./",
+    "paths": {
+      "@app/*": [
+        "foo/*"
+      ],
+    }
+  },
+  "include": [
+    "foo.ts"
+  ]
+}

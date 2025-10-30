@@ -1,0 +1,15 @@
+{
+  "references": [
+    {
+      "path": "./tsconfig.2.json"
+    }
+  ],
+  "compilerOptions": {
+    "baseUrl": "./",
+    "jsx": "react",
+    "jsxFactory": "f"
+  },
+  "include": [
+    "foo.tsx"
+  ]
+}

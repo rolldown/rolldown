@@ -123,24 +123,24 @@ impl<'a> LinkStage<'a> {
       let mut statically_reachable = FxHashSet::default();
       let mut required_modules = FxHashSet::default();
       let mut queue = VecDeque::new();
-      
+
       // Collect all user-defined entry modules
       for entry in &scan_stage_output.entry_points {
         if matches!(entry.kind, EntryPointKind::UserDefined) {
           queue.push_back(entry.idx);
         }
       }
-      
+
       // BFS to find all statically reachable modules and track which are required
       while let Some(module_idx) = queue.pop_front() {
         if !statically_reachable.insert(module_idx) {
           continue; // Already visited
         }
-        
+
         let Some(module) = scan_stage_output.module_table.modules.get(module_idx) else {
           continue;
         };
-        
+
         // Follow static imports (not dynamic imports)
         for rec in module.import_records() {
           match rec.kind {
@@ -159,23 +159,23 @@ impl<'a> LinkStage<'a> {
           }
         }
       }
-      
+
       // Filter out dynamic import entries that are statically reachable
       // Only filter pure ESM modules that aren't required
       rest.retain(|entry| {
         if !matches!(entry.kind, EntryPointKind::DynamicImport) {
           return true; // Keep non-dynamic entries
         }
-        
+
         if !statically_reachable.contains(&entry.idx) {
           return true; // Keep dynamic entries that aren't statically reachable
         }
-        
+
         // Check if this module is required - if so, keep it as it may need wrapping
         if required_modules.contains(&entry.idx) {
           return true;
         }
-        
+
         // For statically reachable dynamic entries that aren't required,
         // only filter out pure ESM modules
         let module = &scan_stage_output.module_table.modules[entry.idx];
@@ -183,7 +183,7 @@ impl<'a> LinkStage<'a> {
           // Only inline if it's pure ESM (not CommonJS)
           !matches!(m.exports_kind, ExportsKind::CommonJs)
         });
-        
+
         !can_inline // Keep if can't inline, filter out if can inline
       });
     }

@@ -24,7 +24,7 @@ use crate::{
   type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
   types::generator::{GenerateContext, GenerateOutput, Generator},
   utils::{
-    augment_chunk_hash::augment_chunk_hash,
+    chunk::augment_chunk_hash::augment_chunk_hash,
     chunk::{finalize_chunks::finalize_assets, render_chunk_exports::get_export_items},
     render_chunks::render_chunks,
   },

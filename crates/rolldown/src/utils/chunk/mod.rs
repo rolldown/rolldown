@@ -8,6 +8,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
 
+pub mod augment_chunk_hash;
 pub mod deconflict_chunk_symbols;
 pub mod determine_export_mode;
 pub mod determine_use_strict;

@@ -15,7 +15,8 @@ use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plu
 use rolldown_plugin_utils::{
   RenderBuiltUrl, ToOutputFilePathEnv,
   constants::{
-    CSSChunkCache, CSSModuleCache, CSSStyles, HTMLProxyResult, PureCSSChunks, ViteMetadata,
+    CSSChunkCache, CSSModuleCache, CSSStyles, HTMLProxyResult, PureCSSChunks,
+    RemovedPureCSSFilesCache, ViteMetadata,
   },
   css::is_css_request,
   data_to_esm, find_special_query, is_special_query,
@@ -72,6 +73,7 @@ impl Plugin for ViteCSSPostPlugin {
     _args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     ctx.meta().insert(Arc::new(CSSStyles::default()));
+    ctx.meta().insert(Arc::new(RemovedPureCSSFilesCache::default()));
     Ok(())
   }
 

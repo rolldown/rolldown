@@ -16,7 +16,8 @@ use rolldown_plugin_utils::{
   AssetUrlItem, AssetUrlIter, AssetUrlResult, PublicAssetUrlCache, RenderAssetUrlInJsEnv,
   ToOutputFilePathEnv,
   constants::{
-    CSSBundleName, CSSChunkCache, CSSEntriesCache, CSSStyles, PureCSSChunks, ViteMetadata,
+    CSSBundleName, CSSChunkCache, CSSEntriesCache, CSSStyles, PureCSSChunks,
+    RemovedPureCSSFilesCache, ViteMetadata,
   },
   create_to_import_meta_url_based_relative_runtime,
   css::is_css_request,
@@ -720,9 +721,19 @@ impl ViteCSSPostPlugin {
         *chunk = Arc::new(new_chunk);
       }
 
-      // TODO: Verify this change (not set `removedPureCssFilesCache`)
       args.bundle.retain(|output| !match output {
-        Output::Chunk(chunk) => pure_css_chunk_names.contains(&chunk.filename),
+        Output::Chunk(chunk) => {
+          let is_pure_css_chunk = pure_css_chunk_names.contains(&chunk.filename);
+          if is_pure_css_chunk {
+            ctx
+              .meta()
+              .get::<RemovedPureCSSFilesCache>()
+              .expect("RemovedPureCSSFilesCache missing")
+              .inner
+              .insert(chunk.filename.clone(), Arc::<OutputChunk>::clone(chunk));
+          }
+          is_pure_css_chunk
+        }
         Output::Asset(asset) => pure_css_chunk_names
           .contains(&rolldown_utils::concat_string!(asset.filename, ".map").into()),
       });

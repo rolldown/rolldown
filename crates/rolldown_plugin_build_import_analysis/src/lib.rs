@@ -2,7 +2,7 @@ mod ast_utils;
 mod ast_visit;
 mod utils;
 
-use std::borrow::Cow;
+use std::{borrow::Cow, path::PathBuf, sync::Arc};
 
 use arcstr::ArcStr;
 use oxc::ast_visit::VisitMut;
@@ -107,13 +107,25 @@ impl Plugin for BuildImportAnalysisPlugin {
               )));
             }
 
+            let mut s = None;
             let mut visitor = DynamicImportVisitor {
-              snippet: AstSnippet::new(&allocator),
-              chunk_filename: chunk.filename.as_str().into(),
+              s: &mut s,
+              code: &chunk.code,
               removed_pure_css_files: &removed_pure_css_files,
+              chunk_filename_dir: PathBuf::from(chunk.filename.as_str())
+                .parent()
+                .unwrap()
+                .to_path_buf(),
             };
 
             visitor.visit_program(&mut parser_ret.program);
+
+            if let Some(s) = s {
+              *chunk = Arc::new(rolldown_common::OutputChunk {
+                code: s.to_string(),
+                ..chunk.as_ref().clone()
+              });
+            }
           }
         }
       }

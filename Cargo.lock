@@ -3020,6 +3020,7 @@ dependencies = [
  "rolldown_ecmascript_utils",
  "rolldown_plugin",
  "rolldown_plugin_utils",
+ "string_wizard",
  "sugar_path",
 ]
 

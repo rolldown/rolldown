@@ -23,6 +23,7 @@ pub fn compress_options_to_napi_compress_options(
     target: Some(napi::Either::A(compress.target.to_string())),
     drop_console: Some(compress.drop_console),
     drop_debugger: Some(compress.drop_debugger),
+    drop_labels: Some(compress.drop_labels.iter().cloned().collect()),
     unused: Some(match compress.unused {
       oxc::minifier::CompressOptionsUnused::Remove => napi::Either::A(true),
       oxc::minifier::CompressOptionsUnused::KeepAssign => napi::Either::B("keep-assign".to_owned()),

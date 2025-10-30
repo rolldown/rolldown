@@ -1,8 +1,8 @@
-import { expect } from 'vitest'
-import path from 'node:path'
-import { defineTest } from 'rolldown-tests'
+import path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
-const entry = path.join(__dirname, './main.js')
+const entry = path.join(__dirname, './main.js');
 
 export default defineTest({
   config: {
@@ -43,9 +43,9 @@ export default defineTest({
     ],
   },
   afterTest: (output) => {
-    expect(output.output[0].code).toMatch(/\/\*banner1\*\/\n\/\*banner2\*\//)
-    expect(output.output[0].code).toMatch(/\/\*footer1\*\/\n\/\*footer2\*\//)
-    expect(output.output[0].code).toMatch(/\/\*intro1\*\/\n\/\*intro2\*\//)
-    expect(output.output[0].code).toMatch(/\/\*outro1\*\/\n\/\*outro2\*\//)
+    expect(output.output[0].code).toMatch(/\/\*banner1\*\/\n\/\*banner2\*\//);
+    expect(output.output[0].code).toMatch(/\/\*footer1\*\/\n\/\*footer2\*\//);
+    expect(output.output[0].code).toMatch(/\/\*intro1\*\/\n\/\*intro2\*\//);
+    expect(output.output[0].code).toMatch(/\/\*outro1\*\/\n\/\*outro2\*\//);
   },
-})
+});

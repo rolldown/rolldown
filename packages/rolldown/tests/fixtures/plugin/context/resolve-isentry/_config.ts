@@ -1,8 +1,8 @@
-import { defineTest } from 'rolldown-tests'
-import { expect, vi } from 'vitest'
-import nodePath from 'node:path'
+import nodePath from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { expect, vi } from 'vitest';
 
-const fn = vi.fn()
+const fn = vi.fn();
 
 export default defineTest({
   config: {
@@ -10,9 +10,11 @@ export default defineTest({
       {
         name: 'test-plugin-context',
         async buildStart(this) {
-          const ret = await this.resolve('./sub.js', undefined, { isEntry: true })
+          const ret = await this.resolve('./sub.js', undefined, {
+            isEntry: true,
+          });
           if (!ret) {
-            throw new Error('resolve failed')
+            throw new Error('resolve failed');
           }
         },
       },
@@ -20,15 +22,15 @@ export default defineTest({
         name: 'test-plugin-isentry',
         resolveId(id, _importer, options) {
           if (id === './sub.js') {
-            expect(options.isEntry).toBe(true)
-            fn()
-            return nodePath.resolve(import.meta.dirname, 'main.js')
+            expect(options.isEntry).toBe(true);
+            fn();
+            return nodePath.resolve(import.meta.dirname, 'main.js');
           }
-        }
-      }
+        },
+      },
     ],
   },
   afterTest: () => {
-    expect(fn).toHaveBeenCalledTimes(1)
+    expect(fn).toHaveBeenCalledTimes(1);
   },
-})
+});

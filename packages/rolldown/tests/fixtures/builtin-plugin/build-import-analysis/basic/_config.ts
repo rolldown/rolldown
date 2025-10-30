@@ -1,6 +1,6 @@
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
-import { buildImportAnalysisPlugin } from 'rolldown/experimental'
+import { defineTest } from 'rolldown-tests';
+import { buildImportAnalysisPlugin } from 'rolldown/experimental';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -10,10 +10,10 @@ export default defineTest({
         // insert some dummy runtime flag to assert the runtime behavior
         name: 'insert_dummy_flag',
         transform(code) {
-          let runtimeCode = `const __VITE_IS_MODERN__ = false;`
+          let runtimeCode = `const __VITE_IS_MODERN__ = false;`;
           return {
             code: runtimeCode + code,
-          }
+          };
         },
       },
       buildImportAnalysisPlugin({
@@ -27,11 +27,11 @@ export default defineTest({
     external: ['node:assert'],
   },
   async afterTest(output) {
-    await import('./assert.mjs')
+    await import('./assert.mjs');
     output.output.forEach((item) => {
       if (item.type === 'chunk' && item.name === 'main') {
-        expect(item.code).to.not.includes('import.meta.url')
+        expect(item.code).to.not.includes('import.meta.url');
       }
-    })
+    });
   },
-})
+});

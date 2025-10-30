@@ -1,11 +1,11 @@
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
+import { defineTest } from 'rolldown-tests';
 import {
   getLocation,
   getOutputAsset,
   getOutputChunk,
-} from 'rolldown-tests/utils'
-import { SourceMapConsumer } from 'source-map'
+} from 'rolldown-tests/utils';
+import { SourceMapConsumer } from 'source-map';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -31,7 +31,7 @@ console.log('foo');
               mappings:
                 'AAAA,OAAO,CAAC,GAAG,CAAC,KAAK;;ACCjB,OAAO,CAAC,GAAG,CAAC,KAAK',
             },
-          }
+          };
         },
       },
     ],
@@ -40,14 +40,14 @@ console.log('foo');
     },
   },
   afterTest: async (output) => {
-    const code = getOutputChunk(output)[0].code
-    const map = getOutputAsset(output)[0].source as string
-    const smc = await new SourceMapConsumer(JSON.parse(map))
+    const code = getOutputChunk(output)[0].code;
+    const map = getOutputAsset(output)[0].source as string;
+    const smc = await new SourceMapConsumer(JSON.parse(map));
 
-    const generatedLoc = getLocation(code, code.indexOf(`"bar"`))
-    const originalLoc = smc.originalPositionFor(generatedLoc)
+    const generatedLoc = getLocation(code, code.indexOf(`"bar"`));
+    const originalLoc = smc.originalPositionFor(generatedLoc);
 
-    expect(originalLoc.line).toBe(1)
-    expect(originalLoc.column).toBe(12)
+    expect(originalLoc.line).toBe(1);
+    expect(originalLoc.column).toBe(12);
   },
-})
+});

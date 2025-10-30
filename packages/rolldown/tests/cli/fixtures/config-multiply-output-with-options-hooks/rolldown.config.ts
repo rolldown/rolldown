@@ -1,4 +1,4 @@
-import { defineConfig } from 'rolldown'
+import { defineConfig } from 'rolldown';
 
 export default defineConfig({
   input: 'index.js',
@@ -14,12 +14,12 @@ export default defineConfig({
   ],
   plugins: [
     {
-      options: function () {
-        console.log('called options hook')
+      options: function() {
+        console.log('called options hook');
       },
-      outputOptions: function () {
-        console.log('called output options hook')
+      outputOptions: function() {
+        console.log('called output options hook');
       },
     },
   ],
-})
+});

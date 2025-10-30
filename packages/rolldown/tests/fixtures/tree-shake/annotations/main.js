@@ -1,5 +1,5 @@
 function test() {
-  console.log('hello')
+  console.log('hello');
 }
 
-/* #__PURE__ */test();
+/* #__PURE__ */ test();

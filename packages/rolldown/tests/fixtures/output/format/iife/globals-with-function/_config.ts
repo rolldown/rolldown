@@ -1,5 +1,5 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -9,10 +9,10 @@ export default defineTest({
       name: 'module',
       globals: (name: string): string => {
         if (name === 'node:path') {
-          return 'path'
+          return 'path';
         }
 
-        return ''
+        return '';
       },
     },
   },
@@ -27,6 +27,6 @@ export default defineTest({
       //#endregion
       return main_default;
       })(path);"
-    `)
+    `);
   },
-})
+});

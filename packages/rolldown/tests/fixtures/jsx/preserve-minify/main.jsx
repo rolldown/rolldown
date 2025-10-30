@@ -3,4 +3,3 @@ export const Hello = (props) => {
 };
 
 export const foo = 'foo';
-

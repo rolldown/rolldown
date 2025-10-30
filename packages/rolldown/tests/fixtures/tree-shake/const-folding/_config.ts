@@ -1,6 +1,6 @@
-import type { OutputChunk as RolldownOutputChunk } from 'rolldown'
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import type { OutputChunk as RolldownOutputChunk } from 'rolldown';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -11,8 +11,8 @@ export default defineTest({
           const res = code.replace(
             'process.env.NODE_ENV',
             JSON.stringify('development'),
-          )
-          return res
+          );
+          return res;
         },
       },
     ],
@@ -21,9 +21,9 @@ export default defineTest({
     output.output
       .filter(({ type }) => type === 'chunk')
       .forEach((chunk) => {
-        let code = (chunk as RolldownOutputChunk).code
-        expect(code.includes(`production`)).toBe(false)
-        expect(code.includes(`development`)).toBe(true)
-      })
+        let code = (chunk as RolldownOutputChunk).code;
+        expect(code.includes(`production`)).toBe(false);
+        expect(code.includes(`development`)).toBe(true);
+      });
   },
-})
+});

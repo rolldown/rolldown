@@ -1,7 +1,5 @@
-import * as lib from './lib'
-
+import * as lib from './lib';
 
 export default {
   lib: lib.lib,
-}
-
+};

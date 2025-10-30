@@ -1,6 +1,6 @@
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
-import { transformPlugin } from 'rolldown/experimental'
+import { defineTest } from 'rolldown-tests';
+import { transformPlugin } from 'rolldown/experimental';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -11,13 +11,13 @@ export default defineTest({
         name: 'test',
         transform(code) {
           // after transform there should be no `interface`
-          expect(code).not.include('interface')
-          return null
+          expect(code).not.include('interface');
+          return null;
         },
       },
     ],
   },
   async afterTest() {
-    await import('./assert.mjs')
+    await import('./assert.mjs');
   },
-})
+});

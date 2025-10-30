@@ -1,3 +1,3 @@
-import './share'
+import './share';
 
-console.log()
+console.log();

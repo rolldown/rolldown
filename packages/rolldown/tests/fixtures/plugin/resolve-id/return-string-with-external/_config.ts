@@ -1,8 +1,8 @@
-import path from 'node:path'
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
+import path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
-const entry = path.join(__dirname, './main.js')
+const entry = path.join(__dirname, './main.js');
 
 export default defineTest({
   config: {
@@ -17,8 +17,8 @@ export default defineTest({
       },
       buildEnd() {
         const target = [...this.getModuleIds()].find((v) => v === './bar.js');
-        expect(target).toBeDefined()
+        expect(target).toBeDefined();
       },
     }],
-  }
-})
+  },
+});

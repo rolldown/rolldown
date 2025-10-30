@@ -1,3 +1,3 @@
-import largeNamedJson, { legalName } from "./large.json"
+import largeNamedJson, { legalName } from './large.json';
 
-export const name = 1
+export const name = 1;

@@ -1,24 +1,24 @@
-import { defineTest } from "rolldown-tests";
-import { expect } from "vitest";
-import { stripAnsi } from "consola/utils";
+import { stripAnsi } from 'consola/utils';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 let warnings: string[] = [];
 export default defineTest({
-	config: {
-		plugins: [
-			{
-				name: "json",
-			},
-			{
-				name: "inject",
-			},
-		],
-		onwarn(warning, ctx) {
-			warnings.push(stripAnsi(warning.message));
-		},
-	},
-	afterTest() {
-		expect(warnings).toMatchInlineSnapshot(`
+  config: {
+    plugins: [
+      {
+        name: 'json',
+      },
+      {
+        name: 'inject',
+      },
+    ],
+    onwarn(warning, ctx) {
+      warnings.push(stripAnsi(warning.message));
+    },
+  },
+  afterTest() {
+    expect(warnings).toMatchInlineSnapshot(`
 			[
 			  "[PREFER_BUILTIN_FEATURE] Warning: The functionality provided by \`@rollup/plugin-json\` is already covered natively, maybe you could remove the plugin from your configuration
 			  │ 
@@ -30,5 +30,5 @@ export default defineTest({
 			",
 			]
 		`);
-	},
+  },
 });

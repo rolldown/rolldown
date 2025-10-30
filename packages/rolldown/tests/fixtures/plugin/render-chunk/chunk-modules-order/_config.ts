@@ -1,6 +1,6 @@
-import { expect } from 'vitest'
-import path from 'node:path'
-import { defineTest } from 'rolldown-tests'
+import path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -9,8 +9,8 @@ export default defineTest({
         name: 'test-plugin',
         renderChunk: (_code, chunk) => {
           let keys = Object.keys(chunk.modules).map((item) => {
-            return path.basename(item)
-          })
+            return path.basename(item);
+          });
           expect(keys).toEqual([
             'aa.js',
             'ab.js',
@@ -19,9 +19,9 @@ export default defineTest({
             'bb.js',
             'b.js',
             'main.js',
-          ])
+          ]);
         },
       },
     ],
   },
-})
+});

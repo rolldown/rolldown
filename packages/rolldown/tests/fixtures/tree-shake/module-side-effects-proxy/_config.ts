@@ -1,6 +1,6 @@
-import type { OutputChunk as RolldownOutputChunk } from 'rolldown'
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import type { OutputChunk as RolldownOutputChunk } from 'rolldown';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -9,14 +9,14 @@ export default defineTest({
         name: 'loader',
         async transform(code, id) {
           if (id.includes('foo.js')) {
-            const moduleInfo = this.getModuleInfo(id)
+            const moduleInfo = this.getModuleInfo(id);
             if (moduleInfo) {
-              moduleInfo.moduleSideEffects = false
+              moduleInfo.moduleSideEffects = false;
             }
           }
           return {
             code,
-          }
+          };
         },
       },
     ],
@@ -25,8 +25,8 @@ export default defineTest({
     output.output
       .filter(({ type }) => type === 'chunk')
       .forEach((chunk) => {
-        let code = (chunk as RolldownOutputChunk).code
-        expect(code.includes(`sideeffects`)).toBe(false)
-      })
+        let code = (chunk as RolldownOutputChunk).code;
+        expect(code.includes(`sideeffects`)).toBe(false);
+      });
   },
-})
+});

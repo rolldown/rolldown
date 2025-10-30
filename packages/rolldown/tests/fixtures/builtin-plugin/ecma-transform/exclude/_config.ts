@@ -1,8 +1,8 @@
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
-import { transformPlugin } from 'rolldown/experimental'
+import { defineTest } from 'rolldown-tests';
+import { transformPlugin } from 'rolldown/experimental';
+import { expect } from 'vitest';
 
-let transformed: string[] = []
+let transformed: string[] = [];
 export default defineTest({
   config: {
     input: './main.ts',
@@ -14,14 +14,16 @@ export default defineTest({
         name: 'test',
         transform(_, id, meta) {
           if (meta.moduleType === 'js') {
-            transformed.push(id)
+            transformed.push(id);
           }
-          return null
+          return null;
         },
       },
     ],
   },
   async afterTest() {
-    expect(transformed.splice(0).filter((id) => id.includes('node_modules')).length).toBe(0)
+    expect(
+      transformed.splice(0).filter((id) => id.includes('node_modules')).length,
+    ).toBe(0);
   },
-})
+});

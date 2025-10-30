@@ -1,1 +1,1 @@
-export const a = console.log(1)
+export const a = console.log(1);

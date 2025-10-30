@@ -1,2 +1,2 @@
-import 'foo'
-import 'bar'
+import 'foo';
+import 'bar';

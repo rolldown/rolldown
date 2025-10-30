@@ -1,5 +1,5 @@
-import * as ui from 'lib-ui'
-import * as libA from 'lib-npm-a'
-import * as libB from 'lib-npm-b'
+import * as libA from 'lib-npm-a';
+import * as libB from 'lib-npm-b';
+import * as ui from 'lib-ui';
 
-export { ui, libA, libB }
+export { libA, libB, ui };

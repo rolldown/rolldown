@@ -3,7 +3,7 @@ function parseImportMap(importMapJSONString, baseURL) {
   const parsed = JSON.parse(importMapJSONString);
   if (typeof parsed !== 'object' || !parsed) {
     throw new TypeError(
-      'parseImportMap: Top-level value needs to be a JSON object'
+      'parseImportMap: Top-level value needs to be a JSON object',
     );
   }
   let sortedAndNormalizedImports = /* @__PURE__ */ new Map();
@@ -11,7 +11,7 @@ function parseImportMap(importMapJSONString, baseURL) {
   if (imports) {
     if (typeof imports !== 'object') {
       throw new TypeError(
-        'parseImportMap: "imports" top-level key needs to be a JSON object'
+        'parseImportMap: "imports" top-level key needs to be a JSON object',
       );
     }
     sortedAndNormalizedImports = sortAndNormalizeSpecifierMap(imports, baseURL);
@@ -21,7 +21,7 @@ function parseImportMap(importMapJSONString, baseURL) {
   if (scopes) {
     if (typeof scopes !== 'object') {
       throw new TypeError(
-        'parseImportMap: "scopes" top-level key needs to be a JSON object'
+        'parseImportMap: "scopes" top-level key needs to be a JSON object',
       );
     }
     sortedAndNormalizedScopes = sortAndNormalizeScopes(scopes, baseURL);
@@ -54,7 +54,7 @@ function sortAndNormalizeSpecifierMap(originalMap, baseURL) {
     }
     if (specifierKey.endsWith('/') && !addressURL.toString().endsWith('/')) {
       console.warn(
-        `parseImportMap: invalid address for specifier "${specifierKey}"; since specifier ends in a slash, the address needs to as well`
+        `parseImportMap: invalid address for specifier "${specifierKey}"; since specifier ends in a slash, the address needs to as well`,
       );
       normalized.set(normalizedSpecifierKey, null);
       continue;
@@ -67,12 +67,14 @@ function sortAndNormalizeSpecifierMap(originalMap, baseURL) {
 }
 function sortAndNormalizeScopes(originalMap, baseURL) {
   const normalized = /* @__PURE__ */ new Map();
-  for (const [scopePrefix, potentialSpecifierMap] of Object.entries(
-    originalMap
-  )) {
+  for (
+    const [scopePrefix, potentialSpecifierMap] of Object.entries(
+      originalMap,
+    )
+  ) {
     if (typeof potentialSpecifierMap !== 'object' || !potentialSpecifierMap) {
       throw new TypeError(
-        `parseImportMap: value of the scope with prefix "${scopePrefix}" needs to be a JSON object`
+        `parseImportMap: value of the scope with prefix "${scopePrefix}" needs to be a JSON object`,
       );
     }
     try {
@@ -80,11 +82,11 @@ function sortAndNormalizeScopes(originalMap, baseURL) {
       const normalizedScopePrefix = scopePrefixURL.toString();
       normalized.set(
         normalizedScopePrefix,
-        sortAndNormalizeSpecifierMap(potentialSpecifierMap, baseURL)
+        sortAndNormalizeSpecifierMap(potentialSpecifierMap, baseURL),
       );
     } catch {
       console.warn(
-        `parseImportMap: scope prefix "${scopePrefix}" was not parseable`
+        `parseImportMap: scope prefix "${scopePrefix}" was not parseable`,
       );
     }
   }
@@ -111,7 +113,7 @@ function revertSortKeyComparator(a, b) {
 class UnresolvableSpecifierError extends TypeError {
   constructor(specifier) {
     super(
-      `Bare specifier "${specifier}" was not remapped to anything by importMap`
+      `Bare specifier "${specifier}" was not remapped to anything by importMap`,
     );
     this.specifier = specifier;
   }
@@ -129,7 +131,7 @@ function resolveModuleSpecifier(importMap, specifier, baseURL) {
         const scopeImportsMatch = resolveImportsMatch(
           normalizedSpecifier,
           asURL,
-          scopeImports
+          scopeImports,
         );
         if (scopeImportsMatch) return scopeImportsMatch;
       }
@@ -138,7 +140,7 @@ function resolveModuleSpecifier(importMap, specifier, baseURL) {
   const topLevelImportsMatch = resolveImportsMatch(
     normalizedSpecifier,
     asURL,
-    importMap.imports
+    importMap.imports,
   );
   if (topLevelImportsMatch) return topLevelImportsMatch;
   if (asURL) return asURL;
@@ -155,25 +157,25 @@ function resolveImportsMatch(normalizedSpecifier, asURL, specifierMap) {
     ) {
       if (resolutionResult === null) {
         throw new TypeError(
-          `Resolution of "${specifierKey}" was blocked by a null entry`
+          `Resolution of "${specifierKey}" was blocked by a null entry`,
         );
       }
       const afterPrefix = normalizedSpecifier.split(specifierKey, 2)[1];
       assert(
         resolutionResult.toString().endsWith('/'),
-        'Expected resolutionResult to end in a slash, as enforced during parsing'
+        'Expected resolutionResult to end in a slash, as enforced during parsing',
       );
       let url;
       try {
         url = new URL(afterPrefix, resolutionResult);
       } catch {
         throw new TypeError(
-          `Resolution of "${normalizedSpecifier}" was blocked since the "${afterPrefix}" portion could not be URL-parsed relative to the "${resolutionResult}" mapped to by the "${specifierKey}" prefix`
+          `Resolution of "${normalizedSpecifier}" was blocked since the "${afterPrefix}" portion could not be URL-parsed relative to the "${resolutionResult}" mapped to by the "${specifierKey}" prefix`,
         );
       }
       if (!url.toString().startsWith(resolutionResult.toString())) {
         throw new TypeError(
-          `Resolution of "${normalizedSpecifier}" was blocked due to it backtracking above its prefix "${specifierKey}"`
+          `Resolution of "${normalizedSpecifier}" was blocked due to it backtracking above its prefix "${specifierKey}"`,
         );
       }
       return url;
@@ -189,7 +191,7 @@ function parseURLLikeImportSpecifier(specifier, baseURL) {
   ) {
     if (!baseURL) {
       throw new Error(
-        `Specifier "${specifier}" starts with /, ./, or ../, but baseURL is null`
+        `Specifier "${specifier}" starts with /, ./, or ../, but baseURL is null`,
       );
     }
     try {
@@ -208,7 +210,7 @@ function parseURLLikeImportSpecifier(specifier, baseURL) {
 }
 function isSpecialURL(url) {
   return ['ftp:', 'file:', 'http:', 'https:', 'ws:', 'wss:'].includes(
-    url.protocol
+    url.protocol,
   );
 }
-export { UnresolvableSpecifierError, parseImportMap, resolveModuleSpecifier };
+export { parseImportMap, resolveModuleSpecifier, UnresolvableSpecifierError };

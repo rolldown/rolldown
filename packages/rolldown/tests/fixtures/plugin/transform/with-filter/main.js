@@ -1,2 +1,2 @@
-import './foo'
-import './a.ts'
+import './foo';
+import './a.ts';

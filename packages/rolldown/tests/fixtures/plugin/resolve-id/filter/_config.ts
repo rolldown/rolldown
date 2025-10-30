@@ -1,7 +1,7 @@
-import { defineTest } from 'rolldown-tests'
-import { expect, vi } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { expect, vi } from 'vitest';
 
-const resolveIdFn = vi.fn()
+const resolveIdFn = vi.fn();
 
 export default defineTest({
   config: {
@@ -16,15 +16,15 @@ export default defineTest({
             },
           },
           handler() {
-            resolveIdFn()
-            return null
+            resolveIdFn();
+            return null;
           },
         },
       },
     ],
   },
   afterTest: () => {
-    expect(resolveIdFn).toHaveBeenCalledTimes(2)
-    resolveIdFn.mockReset()
+    expect(resolveIdFn).toHaveBeenCalledTimes(2);
+    resolveIdFn.mockReset();
   },
-})
+});

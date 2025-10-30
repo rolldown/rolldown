@@ -1,8 +1,8 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -18,7 +18,7 @@ export default defineTest({
         name: 'svg-resolver',
         resolveId(source, importer) {
           if (source.endsWith('.svg')) {
-            return path.resolve(path.dirname(importer!), source)
+            return path.resolve(path.dirname(importer!), source);
           }
         },
         load(id) {
@@ -27,24 +27,24 @@ export default defineTest({
               type: 'asset',
               name: path.basename(id),
               source: fs.readFileSync(id),
-            })
-            return `export default import.meta.ROLLUP_FILE_URL_${referenceId};`
+            });
+            return `export default import.meta.ROLLUP_FILE_URL_${referenceId};`;
           }
         },
       },
     ],
   },
   afterTest: async () => {
-    const mod = await import('./dist/entries/main.mjs' as string)
-    const assetPath = fileURLToPath(mod.default)
+    const mod = await import('./dist/entries/main.mjs' as string);
+    const assetPath = fileURLToPath(mod.default);
     expect(
       path.relative(import.meta.dirname, assetPath).replace(/\\/g, '/'),
-    ).toBe('dist/assets/main-test.svg')
-    const emitted = fs.readFileSync(assetPath, 'utf-8')
+    ).toBe('dist/assets/main-test.svg');
+    const emitted = fs.readFileSync(assetPath, 'utf-8');
     const original = fs.readFileSync(
       path.join(import.meta.dirname, 'main.svg'),
       'utf-8',
-    )
-    expect(emitted).toBe(original)
+    );
+    expect(emitted).toBe(original);
   },
-})
+});

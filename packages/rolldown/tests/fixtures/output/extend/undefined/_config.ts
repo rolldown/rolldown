@@ -1,5 +1,5 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -21,6 +21,6 @@ export default defineTest({
       exports.main = main;
       return exports;
       })({});"
-    `)
+    `);
   },
-})
+});

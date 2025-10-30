@@ -1,4 +1,4 @@
-import { defineTest } from 'rolldown-tests'
+import { defineTest } from 'rolldown-tests';
 
 export default defineTest({
   config: {
@@ -10,7 +10,7 @@ export default defineTest({
     // polyfill for node.js `Websocket`
     (global as any).WebSocket = class {
       send() {}
-    }
-    await import('./assert.mjs')
+    };
+    await import('./assert.mjs');
   },
-})
+});

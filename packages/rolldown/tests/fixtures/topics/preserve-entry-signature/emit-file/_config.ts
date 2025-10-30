@@ -1,6 +1,5 @@
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
-
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -13,14 +12,13 @@ export default defineTest({
             id: './main.js',
             name: 'main',
             preserveSignature: false,
-          })
+          });
         },
-      }
+      },
     ],
-    output: {
-    }
+    output: {},
   },
   afterTest: async (output) => {
-    await import('./_test.mjs')
+    await import('./_test.mjs');
   },
-})
+});

@@ -1,5 +1,5 @@
-import { defineConfig } from 'vitest/config'
-import nodePath from 'node:path'
+import nodePath from 'node:path';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
@@ -24,4 +24,4 @@ export default defineConfig({
   esbuild: {
     target: 'node18',
   },
-})
+});

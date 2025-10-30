@@ -1,11 +1,11 @@
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
+import { defineTest } from 'rolldown-tests';
 import {
   getLocation,
   getOutputAsset,
   getOutputChunk,
-} from 'rolldown-tests/utils'
-import { SourceMapConsumer } from 'source-map'
+} from 'rolldown-tests/utils';
+import { SourceMapConsumer } from 'source-map';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -15,7 +15,7 @@ export default defineTest({
         transform(code) {
           return {
             code: code + '\nconsole.log("added")',
-          }
+          };
         },
       },
     ],
@@ -24,22 +24,22 @@ export default defineTest({
     },
   },
   afterTest: async (output) => {
-    const code = getOutputChunk(output)[0].code
-    const map = getOutputAsset(output)[0].source as string
-    const smc = await new SourceMapConsumer(JSON.parse(map))
+    const code = getOutputChunk(output)[0].code;
+    const map = getOutputAsset(output)[0].source as string;
+    const smc = await new SourceMapConsumer(JSON.parse(map));
 
-    const generatedLoc = getLocation(code, code.indexOf(`"main"`))
-    const originalLoc = smc.originalPositionFor(generatedLoc)
-    expect(originalLoc.line).toBe(1)
-    expect(originalLoc.column).toBe(12)
+    const generatedLoc = getLocation(code, code.indexOf(`"main"`));
+    const originalLoc = smc.originalPositionFor(generatedLoc);
+    expect(originalLoc.line).toBe(1);
+    expect(originalLoc.column).toBe(12);
     expect(smc.sourceContentFor(originalLoc.source!)).toBe(
-      "console.log('main')",
-    )
+      "console.log('main');\n",
+    );
 
-    const generatedLoc2 = getLocation(code, code.indexOf(`"added"`))
-    const originalLoc2 = smc.originalPositionFor(generatedLoc2)
-    expect(originalLoc2.line).toBe(null)
-    expect(originalLoc2.column).toBe(null)
-    expect(originalLoc2.source).toBe(null)
+    const generatedLoc2 = getLocation(code, code.indexOf(`"added"`));
+    const originalLoc2 = smc.originalPositionFor(generatedLoc2);
+    expect(originalLoc2.line).toBe(null);
+    expect(originalLoc2.column).toBe(null);
+    expect(originalLoc2.source).toBe(null);
   },
-})
+});

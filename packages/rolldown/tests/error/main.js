@@ -1,1 +1,1 @@
-console.log('plugin test entry')
+console.log('plugin test entry');

@@ -1,10 +1,10 @@
-import { expect } from 'vitest'
-import path from 'node:path'
-import { defineTest } from 'rolldown-tests'
-import { loadFallbackPlugin } from 'rolldown/experimental'
-import { RolldownPlugin } from 'rolldown'
+import path from 'node:path';
+import { RolldownPlugin } from 'rolldown';
+import { defineTest } from 'rolldown-tests';
+import { loadFallbackPlugin } from 'rolldown/experimental';
+import { expect } from 'vitest';
 
-const entry = path.join(__dirname, './main.js')
+const entry = path.join(__dirname, './main.js');
 
 function removeConsoleForPathWithQuery(): RolldownPlugin[] {
   return [
@@ -12,10 +12,10 @@ function removeConsoleForPathWithQuery(): RolldownPlugin[] {
     {
       name: 'remove-console',
       transform(code) {
-        return code.replace('console.log', '')
+        return code.replace('console.log', '');
       },
     },
-  ]
+  ];
 }
 export default defineTest({
   config: {
@@ -29,7 +29,7 @@ export default defineTest({
     ],
   },
   afterTest: async (output) => {
-    expect(output.output[0].code).toContain('/* Lorem ipsum */')
-    await import('./assert.mjs')
+    expect(output.output[0].code).toContain('/* Lorem ipsum */');
+    await import('./assert.mjs');
   },
-})
+});

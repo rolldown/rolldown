@@ -1,6 +1,6 @@
-import type { OutputChunk as RolldownOutputChunk } from 'rolldown'
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import type { OutputChunk as RolldownOutputChunk } from 'rolldown';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -9,17 +9,17 @@ export default defineTest({
         name: 'loader',
         async transform(code, id) {
           if (id.includes('bar.js')) {
-            const resolved = await this.resolve('./foo.js', id)
-            const moduleInfo = this.getModuleInfo(resolved!.id)
-            moduleInfo!.moduleSideEffects = true
+            const resolved = await this.resolve('./foo.js', id);
+            const moduleInfo = this.getModuleInfo(resolved!.id);
+            moduleInfo!.moduleSideEffects = true;
 
             // mutate sideEffects of bar.js to `false`
-            const moduleInfo1 = this.getModuleInfo(id)
-            moduleInfo1!.moduleSideEffects = false
+            const moduleInfo1 = this.getModuleInfo(id);
+            moduleInfo1!.moduleSideEffects = false;
           }
           return {
             code,
-          }
+          };
         },
       },
     ],
@@ -28,9 +28,9 @@ export default defineTest({
     output.output
       .filter(({ type }) => type === 'chunk')
       .forEach((chunk) => {
-        let code = (chunk as RolldownOutputChunk).code
-        expect(code.includes(`sideeffects`)).toBe(true)
-        expect(code.includes(`bar`)).toBe(false)
-      })
+        let code = (chunk as RolldownOutputChunk).code;
+        expect(code.includes(`sideeffects`)).toBe(true);
+        expect(code.includes(`bar`)).toBe(false);
+      });
   },
-})
+});

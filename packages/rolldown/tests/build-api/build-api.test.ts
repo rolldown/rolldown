@@ -119,5 +119,5 @@ test('closeBundle hook is not called if closed directly', async () => {
     });
     await bundle.close();
   };
-  await expect(task()).resolves.not.toThrow()
+  await expect(task()).resolves.not.toThrow();
 });

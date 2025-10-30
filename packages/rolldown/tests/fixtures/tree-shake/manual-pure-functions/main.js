@@ -11,4 +11,3 @@ styled().div(); // removed
 
 let another = console.log;
 another(); // retained
-

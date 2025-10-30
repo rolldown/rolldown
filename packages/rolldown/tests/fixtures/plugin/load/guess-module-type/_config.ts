@@ -1,5 +1,5 @@
-import { defineTest } from 'rolldown-tests'
-import * as fs from 'fs'
+import * as fs from 'fs';
+import { defineTest } from 'rolldown-tests';
 
 export default defineTest({
   config: {
@@ -7,14 +7,14 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        load: function (id) {
-          let code = fs.readFileSync(id).toString()
+        load: function(id) {
+          let code = fs.readFileSync(id).toString();
           return {
             code,
-          }
+          };
         },
       },
     ],
     external: ['react/jsx-runtime'],
   },
-})
+});

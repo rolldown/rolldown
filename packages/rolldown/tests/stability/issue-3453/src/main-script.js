@@ -1,6 +1,6 @@
+import * as Framer from 'framer';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom/client';
-import * as Framer from 'framer';
 
 const routes = {
   DeL0q0H0v: {
@@ -84,14 +84,14 @@ export async function getPageRoot({ routeId, pathVariables, localeId }) {
         useGranularSuspense: true,
         wrapUpdatesInTransitions: true,
       },
-    }
+    },
   );
 
   const contentWithGracefullyDegradingErrorBoundary = React.createElement(
     Framer.GracefullyDegradingErrorBoundary,
     {
       children: contentWithFeaturesContext,
-    }
+    },
   );
 
   const effect = {
@@ -151,8 +151,7 @@ if (isBrowser) {
   window.__framer_importFromPackage =
     (packageAndFilename, exportIdentifier) => () => {
       return React.createElement(Framer.ErrorPlaceholder, {
-        error:
-          'Package component not supported: "' +
+        error: 'Package component not supported: "' +
           exportIdentifier +
           '" in "' +
           packageAndFilename +
@@ -194,13 +193,13 @@ async function main(shouldHydrate, container) {
       console.warn(
         'Recoverable error during hydration. Please check any custom code or code overrides to fix server/client mismatches:\n',
         error,
-        componentStack
+        componentStack,
       );
       // we only want to collect 1%, because this can be quite noisy (floods the data pipeline)
       if (Math.random() > 0.01) return;
     } else {
       console.error(
-        'Fatal crash during hydration. If you are the author of this website, please report this issue to the Framer team via https://www.framer.community/'
+        'Fatal crash during hydration. If you are the author of this website, please report this issue to the Framer team via https://www.framer.community/',
       );
     }
     track(
@@ -215,7 +214,7 @@ async function main(shouldHydrate, container) {
           : error instanceof Error && typeof error.stack === 'string'
           ? error.stack
           : null,
-      }
+      },
     );
   }
 
@@ -232,7 +231,7 @@ async function main(shouldHydrate, container) {
         routes,
         decodeURIComponent(location.pathname),
         true,
-        locales
+        locales,
       );
       routeId = routeData.routeId;
       localeId = routeData.localeId;

@@ -1,2 +1,1 @@
-
-console.log('no sideeffects')
+console.log('no sideeffects');

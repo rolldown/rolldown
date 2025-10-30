@@ -1,8 +1,8 @@
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
-import { Plugin } from 'rolldown-tests/types'
+import { defineTest } from 'rolldown-tests';
+import { Plugin } from 'rolldown-tests/types';
+import { expect } from 'vitest';
 
-const plugins: Plugin[] = []
+const plugins: Plugin[] = [];
 const hooks = [
   'augmentChunkHash',
   'buildEnd',
@@ -28,34 +28,34 @@ const hooks = [
   'intro',
   'outro',
   'onLog',
-]
+];
 
-const calledHooks: Record<string, string[]> = {}
+const calledHooks: Record<string, string[]> = {};
 for (const hook of hooks) {
-  calledHooks[hook] = []
+  calledHooks[hook] = [];
 }
 
-addPlugin(null)
-addPlugin('pre')
-addPlugin('post')
-addPlugin('post')
-addPlugin('pre')
-addPlugin()
+addPlugin(null);
+addPlugin('pre');
+addPlugin('post');
+addPlugin('post');
+addPlugin('pre');
+addPlugin();
 function addPlugin(order?: 'pre' | 'post' | null) {
-  const name = `${order}-${plugins.length}`
-  const plugin = { name } as Plugin
+  const name = `${order}-${plugins.length}`;
+  const plugin = { name } as Plugin;
   for (const hook of hooks) {
     // @ts-expect-error hook is keyof Plugin
     plugin[hook] = {
       order,
       handler() {
         if (!calledHooks[hook].includes(name)) {
-          calledHooks[hook].push(name)
+          calledHooks[hook].push(name);
         }
       },
-    }
+    };
   }
-  plugins.push(plugin)
+  plugins.push(plugin);
 }
 
 export default defineTest({
@@ -65,7 +65,7 @@ export default defineTest({
       {
         name: 'add-log',
         buildStart() {
-          this.warn('a warning')
+          this.warn('a warning');
         },
       },
     ],
@@ -79,7 +79,7 @@ export default defineTest({
         'undefined-5',
         'post-2',
         'post-3',
-      ])
+      ]);
     }
   },
-})
+});

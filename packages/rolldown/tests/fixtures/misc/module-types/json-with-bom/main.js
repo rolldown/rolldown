@@ -1,3 +1,3 @@
-import obj from './obj.json'
+import obj from './obj.json';
 
-console.log(obj)
+console.log(obj);

@@ -1,7 +1,7 @@
-import { defineTest } from 'rolldown-tests'
-import { getLocation } from 'rolldown-tests/utils'
-import { SourceMapConsumer } from 'source-map'
-import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { getLocation } from 'rolldown-tests/utils';
+import { SourceMapConsumer } from 'source-map';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -16,16 +16,16 @@ export default defineTest({
             return {
               code: `export default "dep2-generated"`,
               map: { mappings: '' },
-            }
+            };
           }
         },
       },
     ],
   },
   async afterTest(output) {
-    const chunk = output.output[0]
-    const code = chunk.code
-    const smc = await new SourceMapConsumer(chunk.map!)
+    const chunk = output.output[0];
+    const code = chunk.code;
+    const smc = await new SourceMapConsumer(chunk.map!);
     expect([
       smc.originalPositionFor(getLocation(code, code.indexOf(`dep1-test`))),
       smc.originalPositionFor(
@@ -53,6 +53,6 @@ export default defineTest({
           "source": "../dep3.js",
         },
       ]
-    `)
+    `);
   },
-})
+});

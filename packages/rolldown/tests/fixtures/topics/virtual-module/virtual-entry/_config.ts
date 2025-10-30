@@ -1,5 +1,5 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -9,12 +9,12 @@ export default defineTest({
         name: 'virtual-module',
         resolveId(id) {
           if (id === 'test') {
-            return '\0virtual:test'
+            return '\0virtual:test';
           }
         },
         load(id) {
           if (id === '\0virtual:test') {
-            return 'export default "test"'
+            return 'export default "test"';
           }
         },
       },
@@ -22,7 +22,7 @@ export default defineTest({
   },
   async afterTest() {
     // @ts-ignore Ther will be a MODULE NOT FOUND error before the test is executed
-    const exports = await import('./dist/_virtual_test.js')
-    expect(exports.default).toBe('test')
+    const exports = await import('./dist/_virtual_test.js');
+    expect(exports.default).toBe('test');
   },
-})
+});

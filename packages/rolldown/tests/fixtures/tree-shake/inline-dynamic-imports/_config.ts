@@ -1,5 +1,5 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -8,7 +8,7 @@ export default defineTest({
     },
   },
   afterTest: (output) => {
-    expect(output.output.length).toEqual(1)
-    expect(output.output[0].code).toContain('"b"')
+    expect(output.output.length).toEqual(1);
+    expect(output.output[0].code).toContain('"b"');
   },
-})
+});

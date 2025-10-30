@@ -1,3 +1,3 @@
-import('./side-effects.ts')
+import('./side-effects.ts');
 
-console.log('main')
+console.log('main');

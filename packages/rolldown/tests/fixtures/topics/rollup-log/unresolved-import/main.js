@@ -1,1 +1,1 @@
-import "@rolldown/test-unresolved-import";
+import '@rolldown/test-unresolved-import';

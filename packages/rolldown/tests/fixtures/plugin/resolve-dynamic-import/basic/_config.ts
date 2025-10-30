@@ -1,10 +1,10 @@
-import { defineTest } from 'rolldown-tests'
-import { expect, vi } from 'vitest'
-import path from 'node:path'
+import path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { expect, vi } from 'vitest';
 
-const entry = path.join(__dirname, './main.js')
+const entry = path.join(__dirname, './main.js');
 
-const resolveDynamicImport = vi.fn()
+const resolveDynamicImport = vi.fn();
 
 export default defineTest({
   config: {
@@ -12,19 +12,19 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        resolveDynamicImport: function (id, importer) {
-          resolveDynamicImport()
+        resolveDynamicImport: function(id, importer) {
+          resolveDynamicImport();
           if (id === 'foo') {
-            expect(importer).toStrictEqual(entry)
+            expect(importer).toStrictEqual(entry);
             return {
               id: path.join(__dirname, './foo.js'),
-            }
+            };
           }
         },
       },
     ],
   },
   afterTest: (output) => {
-    expect(resolveDynamicImport).toHaveBeenCalledTimes(1)
+    expect(resolveDynamicImport).toHaveBeenCalledTimes(1);
   },
-})
+});

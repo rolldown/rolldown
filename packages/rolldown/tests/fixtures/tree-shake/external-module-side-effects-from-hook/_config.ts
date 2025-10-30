@@ -1,8 +1,8 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
-import path from 'node:path'
+import path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
-const entry = path.join(__dirname, './main.js')
+const entry = path.join(__dirname, './main.js');
 
 export default defineTest({
   config: {
@@ -10,19 +10,19 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        resolveId: function (id, importer, options) {
+        resolveId: function(id, importer, options) {
           if (id === 'external') {
             return {
               id,
               external: true,
               moduleSideEffects: false,
-            }
+            };
           }
         },
       },
     ],
   },
   afterTest: (output) => {
-    expect(output.output[0].code.includes('external')).toBe(false)
+    expect(output.output[0].code.includes('external')).toBe(false);
   },
-})
+});

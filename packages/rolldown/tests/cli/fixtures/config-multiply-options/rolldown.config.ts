@@ -1,4 +1,4 @@
-import { defineConfig } from 'rolldown'
+import { defineConfig } from 'rolldown';
 
 export default defineConfig([
   {
@@ -15,4 +15,4 @@ export default defineConfig([
       entryFileNames: 'cjs.js',
     },
   },
-])
+]);

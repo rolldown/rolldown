@@ -1,6 +1,6 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
-import path from 'node:path'
+import path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -13,13 +13,13 @@ export default defineTest({
               path.join(__dirname, 'foo.js'),
               path.join(__dirname, 'foo.js'),
             ].map(async (id) => {
-              return await this.load({ id })
-            })
-            const result = await Promise.all(promises)
-            expect(result[0].code!.includes('foo')).toBe(true)
+              return await this.load({ id });
+            });
+            const result = await Promise.all(promises);
+            expect(result[0].code!.includes('foo')).toBe(true);
           }
         },
       },
     ],
   },
-})
+});

@@ -1,4 +1,4 @@
-import { defineTest } from 'rolldown-tests'
+import { defineTest } from 'rolldown-tests';
 
 export default defineTest({
   config: {
@@ -6,9 +6,9 @@ export default defineTest({
       {
         name: 'remove-chunk',
         generateBundle(outputOptions, bundle) {
-          delete bundle['main.js']
+          delete bundle['main.js'];
         },
       },
     ],
   },
-})
+});

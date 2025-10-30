@@ -1,3 +1,2 @@
-import './foo'
+import './foo';
 console.log('i', import.meta.url);
-

@@ -1,5 +1,5 @@
-import foo from './foo.js'
+import foo from './foo.js';
 
-require.resolve('')
+require.resolve('');
 
 export default foo;

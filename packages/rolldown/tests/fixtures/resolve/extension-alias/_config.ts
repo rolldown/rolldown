@@ -1,6 +1,6 @@
-import { defineTest } from 'rolldown-tests'
-import path from 'node:path'
-const entry = path.join(__dirname, './main.ts')
+import path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+const entry = path.join(__dirname, './main.ts');
 
 export default defineTest({
   config: {
@@ -9,4 +9,4 @@ export default defineTest({
       extensionAlias: { '.js': ['.ts', '.js'] },
     },
   },
-})
+});

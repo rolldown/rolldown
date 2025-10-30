@@ -1,4 +1,4 @@
 Object.defineProperties(exports, {
-  __esModule: { value: true }
+  __esModule: { value: true },
 });
 module.exports.default = 'default';

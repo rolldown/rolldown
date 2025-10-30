@@ -1,2 +1,2 @@
-export const lib = 'lib'
-export const a = 'a'
+export const lib = 'lib';
+export const a = 'a';

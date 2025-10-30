@@ -1,4 +1,4 @@
-import { defineTest } from 'rolldown-tests'
+import { defineTest } from 'rolldown-tests';
 
 export default defineTest({
   config: {
@@ -6,4 +6,4 @@ export default defineTest({
       modules: ['custom-node-modules'],
     },
   },
-})
+});

@@ -1,5 +1,5 @@
-import { replacePlugin } from 'rolldown/experimental'
-import { defineTest } from 'rolldown-tests'
+import { defineTest } from 'rolldown-tests';
+import { replacePlugin } from 'rolldown/experimental';
 
 export default defineTest({
   config: {
@@ -9,4 +9,4 @@ export default defineTest({
       }),
     ],
   },
-})
+});

@@ -1,2 +1,2 @@
-export const foo = 100
-export default foo
+export const foo = 100;
+export default foo;

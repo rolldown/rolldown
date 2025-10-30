@@ -1,6 +1,6 @@
-import { jsonPlugin } from 'rolldown/experimental'
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { jsonPlugin } from 'rolldown/experimental';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -11,7 +11,7 @@ export default defineTest({
   async afterTest(output) {
     expect(output.output[0].code).toContain(
       `const name = "@test-fixture/named-exports";`,
-    )
-    await import('./assert.mjs')
+    );
+    await import('./assert.mjs');
   },
-})
+});

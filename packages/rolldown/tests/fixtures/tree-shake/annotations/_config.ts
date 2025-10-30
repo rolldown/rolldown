@@ -1,6 +1,6 @@
-import type { OutputChunk as RolldownOutputChunk } from 'rolldown'
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import type { OutputChunk as RolldownOutputChunk } from 'rolldown';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -12,8 +12,8 @@ export default defineTest({
     output.output
       .filter(({ type }) => type === 'chunk')
       .forEach((chunk) => {
-        let code = (chunk as RolldownOutputChunk).code
-        expect(code.includes(`hello`)).toBe(true)
-      })
+        let code = (chunk as RolldownOutputChunk).code;
+        expect(code.includes(`hello`)).toBe(true);
+      });
   },
-})
+});

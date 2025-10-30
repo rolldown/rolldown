@@ -1,7 +1,7 @@
-import path from 'node:path'
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
-import { manifestPlugin } from 'rolldown/experimental'
+import path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { manifestPlugin } from 'rolldown/experimental';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -23,16 +23,16 @@ export default defineTest({
             name: 'asset.txt',
             source: 'hello world',
             originalFileName: 'asset.txt',
-          })
+          });
         },
       },
     ],
   },
   async afterTest() {
     // @ts-ignore
-    const manifest = await import('./dist/manifest.json')
+    const manifest = await import('./dist/manifest.json');
     await expect(manifest.default).toMatchFileSnapshot(
-      path.resolve(import.meta.dirname, "manifest.json.snap")
-    )
+      path.resolve(import.meta.dirname, 'manifest.json.snap'),
+    );
   },
-})
+});

@@ -83,7 +83,7 @@ test('clean outdir hooks', async () => {
     input,
     cwd: root,
   });
-  
+
   await bundler.write({
     dir: outdir,
     entryFileNames: 'index.js',

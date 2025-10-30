@@ -1,2 +1,2 @@
-import "\0virtual";
-console.log("bar");
+import '\0virtual';
+console.log('bar');

@@ -1,3 +1,3 @@
 function App() {
-  return <div>test</div>
+  return <div>test</div>;
 }

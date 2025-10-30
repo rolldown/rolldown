@@ -1,2 +1,2 @@
-export * as c from './foo'
-globalThis.aa = true
+export * as c from './foo';
+globalThis.aa = true;

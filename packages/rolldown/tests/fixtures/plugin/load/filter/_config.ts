@@ -1,7 +1,7 @@
-import { defineTest } from 'rolldown-tests'
-import { expect, vi } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { expect, vi } from 'vitest';
 
-const loadFn = vi.fn()
+const loadFn = vi.fn();
 
 export default defineTest({
   config: {
@@ -12,7 +12,7 @@ export default defineTest({
           if (id === 'foo') {
             return {
               id,
-            }
+            };
           }
         },
         load: {
@@ -22,23 +22,23 @@ export default defineTest({
             },
           },
           handler(id) {
-            loadFn()
+            loadFn();
             if (id === 'foo') {
               return {
                 code: `console.log('foo')`,
-              }
+              };
             }
           },
         },
-        transform: function (id, code) {
+        transform: function(id, code) {
           if (id === 'foo') {
-            expect(code).toStrictEqual('')
+            expect(code).toStrictEqual('');
           }
         },
       },
     ],
   },
   afterTest: () => {
-    expect(loadFn).toHaveBeenCalledTimes(1)
+    expect(loadFn).toHaveBeenCalledTimes(1);
   },
-})
+});

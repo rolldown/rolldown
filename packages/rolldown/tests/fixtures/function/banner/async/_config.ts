@@ -1,8 +1,8 @@
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
-const bannerTxt = '/* banner */'
-const banner = async () => bannerTxt
+const bannerTxt = '/* banner */';
+const banner = async () => bannerTxt;
 
 export default defineTest({
   config: {
@@ -11,6 +11,6 @@ export default defineTest({
     },
   },
   afterTest: (output) => {
-    expect(output.output[0].code.startsWith(bannerTxt)).toBe(true)
+    expect(output.output[0].code.startsWith(bannerTxt)).toBe(true);
   },
-})
+});

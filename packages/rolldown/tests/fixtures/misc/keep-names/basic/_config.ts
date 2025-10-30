@@ -1,4 +1,4 @@
-import { defineTest } from 'rolldown-tests'
+import { defineTest } from 'rolldown-tests';
 
 export default defineTest({
   config: {
@@ -6,6 +6,6 @@ export default defineTest({
     external: ['node:assert'],
   },
   afterTest: async () => {
-    await import('./assert.mjs')
+    await import('./assert.mjs');
   },
-})
+});

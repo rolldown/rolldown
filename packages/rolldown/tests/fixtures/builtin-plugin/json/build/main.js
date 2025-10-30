@@ -1,3 +1,3 @@
-import json from './data.json'
+import json from './data.json';
 
-export const name = json.name
+export const name = json.name;

@@ -1,2 +1,2 @@
 import './share';
-console.log('dynamic')
+console.log('dynamic');

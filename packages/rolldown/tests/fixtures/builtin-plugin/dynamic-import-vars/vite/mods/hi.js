@@ -1,3 +1,3 @@
 export function hi() {
-  return 'hi'
+  return 'hi';
 }

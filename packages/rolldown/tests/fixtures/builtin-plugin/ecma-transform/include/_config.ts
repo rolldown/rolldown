@@ -1,9 +1,8 @@
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
-import { transformPlugin } from 'rolldown/experimental'
+import { defineTest } from 'rolldown-tests';
+import { transformPlugin } from 'rolldown/experimental';
+import { expect } from 'vitest';
 
-
-let transformed: string[] = []
+let transformed: string[] = [];
 
 // The test is valid, since we process none js by default
 // The only thing we need to track file that has `moduleType` as `js`
@@ -18,15 +17,15 @@ export default defineTest({
         name: 'test',
         transform(_, id, meta) {
           if (meta.moduleType === 'js') {
-            transformed.push(id)
+            transformed.push(id);
           }
-          return null
+          return null;
         },
       },
     ],
   },
   async afterTest() {
-    expect(transformed.length).toBe(1)
-    expect(transformed.splice(0)[0].includes('node_modules')).toBeTruthy()
+    expect(transformed.length).toBe(1);
+    expect(transformed.splice(0)[0].includes('node_modules')).toBeTruthy();
   },
-})
+});

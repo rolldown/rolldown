@@ -1,3 +1,3 @@
-import { a } from './index.vue'
+import { a } from './index.vue';
 
-export { a }
+export { a };

@@ -1,7 +1,7 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
-import { getOutputChunkNames } from 'rolldown-tests/utils'
+import { getOutputChunkNames } from 'rolldown-tests/utils';
 
 export default defineTest({
   config: {
@@ -11,12 +11,12 @@ export default defineTest({
         name: 'virtual-module',
         resolveId(id) {
           if (id === '\0module') {
-            return id
+            return id;
           }
         },
         load(id) {
           if (id === '\0module') {
-            return `export default 'module'`
+            return `export default 'module'`;
           }
         },
       },
@@ -24,14 +24,14 @@ export default defineTest({
     output: {
       preserveModules: true,
       virtualDirname: 'custom-virtual',
-    }
+    },
   },
-    afterTest(output) {
+  afterTest(output) {
     if (process.platform !== 'win32') {
       expect(getOutputChunkNames(output)).toStrictEqual([
         'main.js',
         'custom-virtual/_module.js',
-      ])
+      ]);
     }
   },
-})
+});

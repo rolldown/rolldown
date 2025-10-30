@@ -1,6 +1,6 @@
-import { replacePlugin } from 'rolldown/experimental'
-import { defineTest } from 'rolldown-tests'
-import {expect} from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { replacePlugin } from 'rolldown/experimental';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -36,6 +36,6 @@ export default defineTest({
       console.log(123);
 
       //#endregion"
-    `)
-  }
-})
+    `);
+  },
+});

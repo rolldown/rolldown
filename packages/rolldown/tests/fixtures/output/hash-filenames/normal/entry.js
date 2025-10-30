@@ -1,3 +1,3 @@
-import { value } from './shared.js'
+import { value } from './shared.js';
 
-console.log(value)
+console.log(value);

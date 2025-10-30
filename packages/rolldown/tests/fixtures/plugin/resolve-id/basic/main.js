@@ -1,5 +1,5 @@
-import './foo'
+import './foo';
 
-require('external')
+require('external');
 
-import('dynamic')
+import('dynamic');

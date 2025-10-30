@@ -1,2 +1,2 @@
-import 'foo'
-import './lib.js'
+import 'foo';
+import './lib.js';

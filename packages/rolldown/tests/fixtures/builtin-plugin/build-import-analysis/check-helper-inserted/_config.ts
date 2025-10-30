@@ -1,5 +1,5 @@
-import { defineTest } from 'rolldown-tests'
-import { buildImportAnalysisPlugin } from 'rolldown/experimental'
+import { defineTest } from 'rolldown-tests';
+import { buildImportAnalysisPlugin } from 'rolldown/experimental';
 
 export default defineTest({
   config: {
@@ -8,10 +8,10 @@ export default defineTest({
       {
         name: 'insert_dummy_flag',
         transform(code) {
-          let runtimeCode = `const __VITE_IS_MODERN__ = false;`
+          let runtimeCode = `const __VITE_IS_MODERN__ = false;`;
           return {
             code: runtimeCode + code,
-          }
+          };
         },
       },
       buildImportAnalysisPlugin({
@@ -24,6 +24,6 @@ export default defineTest({
     ],
   },
   async afterTest() {
-    await import('./assert.mjs')
+    await import('./assert.mjs');
   },
-})
+});

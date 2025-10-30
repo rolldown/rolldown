@@ -1,9 +1,9 @@
-import { importGlobPlugin } from 'rolldown/experimental'
-import { RolldownOutput } from 'rolldown'
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
-import * as fs from 'node:fs'
-import * as path from 'path'
+import * as fs from 'node:fs';
+import * as path from 'path';
+import { RolldownOutput } from 'rolldown';
+import { defineTest } from 'rolldown-tests';
+import { importGlobPlugin } from 'rolldown/experimental';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -12,9 +12,9 @@ export default defineTest({
       {
         name: 'load-file-with-query',
         load(id: string) {
-          const [p, _] = id.split('?')
-          const res = fs.readFileSync(p, 'utf-8')
-          return res
+          const [p, _] = id.split('?');
+          const res = fs.readFileSync(p, 'utf-8');
+          return res;
         },
       },
     ],
@@ -26,18 +26,18 @@ export default defineTest({
           case 'b': {
             await expect(chunk.code).toMatchFileSnapshot(
               path.resolve(import.meta.dirname, 'dir/b.js.snap'),
-            )
-            break
+            );
+            break;
           }
           case 'dir_index': {
             await expect(chunk.code).toMatchFileSnapshot(
               path.resolve(import.meta.dirname, 'dir/index.js.snap'),
-            )
-            break
+            );
+            break;
           }
         }
       }
-    })
-    await import('./assert.mjs')
+    });
+    await import('./assert.mjs');
   },
-})
+});

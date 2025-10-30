@@ -1,33 +1,33 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
-import { Plugin as RolldownPlugin } from 'rolldown'
+import { Plugin as RolldownPlugin } from 'rolldown';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 let plugins: RolldownPlugin[] = [
   {
     name: 'test-plugin',
-    transform: function (code, id, meta) {
+    transform: function(code, id, meta) {
       if (id.endsWith('foo.js')) {
-        expect(code).toStrictEqual('')
-        expect(meta.moduleType).toEqual('js')
+        expect(code).toStrictEqual('');
+        expect(meta.moduleType).toEqual('js');
         return {
           code: `console.log('transformed')`,
-        }
+        };
       }
     },
   },
   {
     name: 'test-2',
     transform() {
-      return null
+      return null;
     },
   },
-]
+];
 
 export default defineTest({
   config: {
     plugins,
   },
   afterTest: (output) => {
-    expect(output.output[0].code).contains('transformed')
+    expect(output.output[0].code).contains('transformed');
   },
-})
+});

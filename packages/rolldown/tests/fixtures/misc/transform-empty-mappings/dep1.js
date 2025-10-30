@@ -1,1 +1,1 @@
-export default "dep1-test"
+export default 'dep1-test';

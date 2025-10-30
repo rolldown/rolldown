@@ -1,5 +1,5 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -9,12 +9,12 @@ export default defineTest({
           {
             name: 'ab',
             test: (id) => {
-              return /[ab]\.js/.test(id)
+              return /[ab]\.js/.test(id);
             },
           },
           {
             name: 'cd',
-            test: /[cd]\.js/
+            test: /[cd]\.js/,
           },
         ],
       },
@@ -22,23 +22,25 @@ export default defineTest({
   },
   afterTest(output) {
     function findChunkStartWith(prefix: string) {
-      return output.output.find(chunk => chunk.type === 'chunk' && chunk.fileName.startsWith(prefix));
+      return output.output.find(chunk =>
+        chunk.type === 'chunk' && chunk.fileName.startsWith(prefix)
+      );
     }
-    const ab = findChunkStartWith('ab-')
-    const cd = findChunkStartWith('cd-')
+    const ab = findChunkStartWith('ab-');
+    const cd = findChunkStartWith('cd-');
 
     if (ab?.type !== 'chunk' || cd?.type !== 'chunk') {
-      throw new Error('should be chunk')
+      throw new Error('should be chunk');
     }
 
     expect(ab.moduleIds).toMatchObject([
       /a.js$/,
-      /b.js$/
-    ])
+      /b.js$/,
+    ]);
 
     expect(cd.moduleIds).toMatchObject([
       /c.js$/,
       /d.js$/,
-    ])
+    ]);
   },
-})
+});

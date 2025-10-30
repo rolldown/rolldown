@@ -1,6 +1,6 @@
-import { defineTest } from "rolldown-tests";
-import { expect } from "vitest";
-import * as path from "node:path";
+import * as path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -9,12 +9,12 @@ export default defineTest({
     },
     plugins: [
       {
-        name: "test-plugin",
+        name: 'test-plugin',
         buildStart() {
           this.emitFile({
-            type: "chunk",
-            id: "main.js",
-            fileName: "main.d.ts",
+            type: 'chunk',
+            id: 'main.js',
+            fileName: 'main.d.ts',
           });
         },
       },
@@ -22,13 +22,13 @@ export default defineTest({
   },
   afterTest: async (output) => {
     for (const o of output.output) {
-      if (o.type !== "chunk") {
+      if (o.type !== 'chunk') {
         await expect(o.source).toMatchFileSnapshot(
           path.resolve(import.meta.dirname, 'snap', `${o.fileName}.snap`),
         );
       } else {
         await expect(o.code).toMatchFileSnapshot(
-          path.resolve(import.meta.dirname, 'snap',`${o.fileName}.snap`),
+          path.resolve(import.meta.dirname, 'snap', `${o.fileName}.snap`),
         );
       }
     }

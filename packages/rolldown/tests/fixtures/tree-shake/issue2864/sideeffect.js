@@ -1,2 +1,2 @@
-export { foo } from './foo'
-globalThis.aa = true
+export { foo } from './foo';
+globalThis.aa = true;

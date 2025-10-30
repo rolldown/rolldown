@@ -1,3 +1,3 @@
-console.log('should be included')
+console.log('should be included');
 
-export type T = 'foo'
+export type T = 'foo';

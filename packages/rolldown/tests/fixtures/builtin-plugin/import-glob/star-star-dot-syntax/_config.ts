@@ -1,6 +1,6 @@
-import { importGlobPlugin } from 'rolldown/experimental'
-import { defineTest } from 'rolldown-tests'
-import * as path from 'node:path'
+import * as path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { importGlobPlugin } from 'rolldown/experimental';
 
 export default defineTest({
   config: {
@@ -11,6 +11,6 @@ export default defineTest({
     ],
   },
   async afterTest() {
-    await import('./assert.mjs')
+    await import('./assert.mjs');
   },
-})
+});

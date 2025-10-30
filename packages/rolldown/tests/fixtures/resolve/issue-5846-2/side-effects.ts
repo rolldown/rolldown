@@ -1,1 +1,1 @@
-console.log('sideEffects')
+console.log('sideEffects');

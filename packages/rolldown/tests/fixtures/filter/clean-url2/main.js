@@ -1,1 +1,1 @@
-import './foo.js?test=hello'
+import './foo.js?test=hello';

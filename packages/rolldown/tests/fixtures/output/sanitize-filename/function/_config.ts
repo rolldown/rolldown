@@ -1,13 +1,13 @@
-import { defineTest } from 'rolldown-tests'
-import { getOutputFileNames } from 'rolldown-tests/utils'
-import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { getOutputFileNames } from 'rolldown-tests/utils';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
     input: ['main.js'],
     output: {
       sanitizeFileName: (name) => {
-        return `sanitized-${name}`
+        return `sanitized-${name}`;
       },
     },
     plugins: [
@@ -18,11 +18,11 @@ export default defineTest({
             type: 'asset',
             name: '+emitted.txt',
             source: 'emitted',
-          })
+          });
           this.emitFile({
             type: 'asset',
             source: 'without-name-and-file-name',
-          })
+          });
         },
       },
     ],
@@ -35,6 +35,6 @@ export default defineTest({
         "sanitized-dynamic-B5x-7dgY.js",
         "sanitized-main.js",
       ]
-    `)
+    `);
   },
-})
+});

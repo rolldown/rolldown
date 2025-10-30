@@ -1,7 +1,7 @@
-import path from 'node:path'
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
-import { dynamicImportVarsPlugin } from 'rolldown/experimental'
+import path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { dynamicImportVarsPlugin } from 'rolldown/experimental';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -9,8 +9,8 @@ export default defineTest({
       dynamicImportVarsPlugin({
         async resolver(id) {
           return id
-            .replace("@", path.resolve(import.meta.dirname, "./mods/"))
-            .replace("#", path.resolve(import.meta.dirname, "../../"))
+            .replace('@', path.resolve(import.meta.dirname, './mods/'))
+            .replace('#', path.resolve(import.meta.dirname, '../../'));
         },
       }),
     ],
@@ -20,8 +20,8 @@ export default defineTest({
       if (chunk.type === 'chunk') {
         await expect(chunk.code).toMatchFileSnapshot(
           path.resolve(import.meta.dirname, 'main.js.snap'),
-        )
+        );
       }
     }
   },
-})
+});

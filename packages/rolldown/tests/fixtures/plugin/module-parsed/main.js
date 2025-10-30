@@ -1,3 +1,3 @@
-import { foo } from './static.js'
+import { foo } from './static.js';
 
-export const result = [foo, import('./dynamic.js')]
+export const result = [foo, import('./dynamic.js')];

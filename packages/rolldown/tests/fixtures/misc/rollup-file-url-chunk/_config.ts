@@ -1,6 +1,6 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
-import fs from 'node:fs'
+import fs from 'node:fs';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -10,7 +10,7 @@ export default defineTest({
         load(id) {
           // similar to vite:load-fallback
           if (id.endsWith('?chunk-url')) {
-            return fs.readFileSync(id.replace('?chunk-url', ''), 'utf-8')
+            return fs.readFileSync(id.replace('?chunk-url', ''), 'utf-8');
           }
         },
         transform(_code, id) {
@@ -19,20 +19,20 @@ export default defineTest({
             const referenceId = this.emitFile({
               type: 'chunk',
               id: id.replace('?chunk-url', ''),
-            })
-            return `export default import.meta.ROLLUP_FILE_URL_${referenceId}`
+            });
+            return `export default import.meta.ROLLUP_FILE_URL_${referenceId}`;
           }
         },
       },
     ],
   },
   afterTest: async () => {
-    const main = await import('./dist/main.js' as string)
+    const main = await import('./dist/main.js' as string);
     const depUrl = new URL(
       main.default,
       new URL('./dist/main.js', import.meta.url),
-    ).href
-    const dep = await import(depUrl)
-    expect(dep.default).toBe('dep.js')
+    ).href;
+    const dep = await import(depUrl);
+    expect(dep.default).toBe('dep.js');
   },
-})
+});

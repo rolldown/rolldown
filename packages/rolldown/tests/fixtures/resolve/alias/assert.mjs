@@ -1,5 +1,5 @@
-import assert from 'node:assert'
-import { foo, ignored } from './dist/main.js'
+import assert from 'node:assert';
+import { foo, ignored } from './dist/main.js';
 
-assert.strictEqual(foo, 'foo')
-assert.strictEqual(ignored, void 0)
+assert.strictEqual(foo, 'foo');
+assert.strictEqual(ignored, void 0);

@@ -1,4 +1,4 @@
-import { defineTest } from 'rolldown-tests'
+import { defineTest } from 'rolldown-tests';
 
 export default defineTest({
   config: {
@@ -8,6 +8,6 @@ export default defineTest({
     },
   },
   afterTest() {
-    import('./assert.mjs')
+    import('./assert.mjs');
   },
-})
+});

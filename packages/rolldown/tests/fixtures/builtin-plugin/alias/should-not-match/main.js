@@ -1,2 +1,2 @@
-import { a } from 'rolldownlib.js'
-export { a }
+import { a } from 'rolldownlib.js';
+export { a };

@@ -1,13 +1,13 @@
-import { defineTest } from 'rolldown-tests'
-import { getOutputAsset } from 'rolldown-tests/utils'
-import { expect } from 'vitest'
-import fs from 'node:fs'
-import path from 'node:path'
-import type { PluginContext } from 'rolldown'
+import fs from 'node:fs';
+import path from 'node:path';
+import type { PluginContext } from 'rolldown';
+import { defineTest } from 'rolldown-tests';
+import { getOutputAsset } from 'rolldown-tests/utils';
+import { expect } from 'vitest';
 
-let referenceId: string
+let referenceId: string;
 
-const ORIGINAL_FILE_NAME = 'original.txt'
+const ORIGINAL_FILE_NAME = 'original.txt';
 
 export default defineTest({
   config: {
@@ -24,52 +24,52 @@ export default defineTest({
             name: '+emitted.txt',
             source: 'emitted',
             originalFileName: ORIGINAL_FILE_NAME,
-          })
-          testEmitFileThis(this.emitFile)
+          });
+          testEmitFileThis(this.emitFile);
         },
         generateBundle() {
           expect(this.getFileName(referenceId)).toMatchInlineSnapshot(
             `"_emitted-C6bBH0W1.txt"`,
-          )
+          );
           // emit asset buffer source
           this.emitFile({
             type: 'asset',
             name: 'icon.png',
             source: fs.readFileSync(path.join(__dirname, 'icon.png')),
-          })
+          });
         },
       },
     ],
   },
   afterTest: (output) => {
-    const assets = getOutputAsset(output)
+    const assets = getOutputAsset(output);
     for (const asset of assets) {
       switch (asset.name) {
         case '+emitted.txt':
-          expect(asset.names).toStrictEqual(['+emitted.txt'])
+          expect(asset.names).toStrictEqual(['+emitted.txt']);
           expect(asset.fileName).toMatchInlineSnapshot(
             `"_emitted-C6bBH0W1.txt"`,
-          )
-          expect(asset.originalFileName).toBe(ORIGINAL_FILE_NAME)
-          expect(asset.originalFileNames).toStrictEqual([ORIGINAL_FILE_NAME])
-          break
+          );
+          expect(asset.originalFileName).toBe(ORIGINAL_FILE_NAME);
+          expect(asset.originalFileNames).toStrictEqual([ORIGINAL_FILE_NAME]);
+          break;
 
         case 'icon.png':
-          expect(asset.fileName).toMatchInlineSnapshot(`"icon-B5SRLC-l.png"`)
-          break
+          expect(asset.fileName).toMatchInlineSnapshot(`"icon-B5SRLC-l.png"`);
+          break;
 
         default:
-          break
+          break;
       }
     }
   },
-})
+});
 
 function testEmitFileThis(emitFile: PluginContext['emitFile']) {
   const emitted = emitFile({
     type: 'asset',
     name: 'emitFileThis.txt',
     source: 'emitFileThis',
-  })
-  expect(emitted).toBeTypeOf('string')
+  });
+  expect(emitted).toBeTypeOf('string');
 }

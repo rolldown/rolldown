@@ -1,2 +1,2 @@
-export const key = 'ifDefaultPropTrue'
-export const value = true
+export const key = 'ifDefaultPropTrue';
+export const value = true;

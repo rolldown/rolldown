@@ -1,2 +1,2 @@
-export default 'dir'
-export const value = 1
+export default 'dir';
+export const value = 1;

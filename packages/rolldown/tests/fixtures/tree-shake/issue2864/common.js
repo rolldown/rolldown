@@ -1,1 +1,1 @@
-export { foo } from './sideeffect'
+export { foo } from './sideeffect';

@@ -1,7 +1,7 @@
-import { expect, vi } from 'vitest'
-import { defineTest } from 'rolldown-tests'
+import { defineTest } from 'rolldown-tests';
+import { expect, vi } from 'vitest';
 
-const renderChunkFn = vi.fn()
+const renderChunkFn = vi.fn();
 
 export default defineTest({
   config: {
@@ -15,14 +15,14 @@ export default defineTest({
             },
           },
           handler(_) {
-            renderChunkFn()
-            return null
+            renderChunkFn();
+            return null;
           },
         },
       },
     ],
   },
   afterTest: () => {
-    expect(renderChunkFn).toHaveBeenCalledTimes(0)
+    expect(renderChunkFn).toHaveBeenCalledTimes(0);
   },
-})
+});

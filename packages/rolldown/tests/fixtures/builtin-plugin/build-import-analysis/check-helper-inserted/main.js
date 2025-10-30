@@ -1,1 +1,1 @@
-export const { foo } = await import('./lib.js')
+export const { foo } = await import('./lib.js');

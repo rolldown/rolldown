@@ -1,16 +1,16 @@
-import path from 'node:path'
-import { defineTest } from 'rolldown-tests'
+import path from 'node:path';
+import { defineTest } from 'rolldown-tests';
 import {
   dynamicImportVarsPlugin,
   importGlobPlugin,
-} from 'rolldown/experimental'
+} from 'rolldown/experimental';
 
 export default defineTest({
   config: {
     plugins: [
       dynamicImportVarsPlugin({
         async resolver(id) {
-          return id.replace("@", path.resolve(import.meta.dirname, "./dir/a"))
+          return id.replace('@', path.resolve(import.meta.dirname, './dir/a'));
         },
       }),
       importGlobPlugin({
@@ -19,6 +19,6 @@ export default defineTest({
     ],
   },
   async afterTest() {
-    await import('./assert.mjs')
+    await import('./assert.mjs');
   },
-})
+});

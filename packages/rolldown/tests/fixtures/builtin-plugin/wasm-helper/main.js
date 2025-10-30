@@ -1,5 +1,5 @@
-import init from './add.wasm?init'
+import init from './add.wasm?init';
 
 init().then(({ exports }) => {
-  exports.add(1, 2) === 3
-})
+  exports.add(1, 2) === 3;
+});

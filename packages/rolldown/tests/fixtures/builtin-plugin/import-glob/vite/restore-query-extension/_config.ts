@@ -1,13 +1,13 @@
-import * as fs from 'node:fs'
-import * as path from 'node:path'
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
-import { importGlobPlugin } from 'rolldown/experimental'
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { importGlobPlugin } from 'rolldown/experimental';
+import { expect } from 'vitest';
 
 const root = path.join(
   path.dirname(path.resolve(import.meta.dirname)),
   'fixtures',
-)
+);
 
 export default defineTest({
   config: {
@@ -21,20 +21,20 @@ export default defineTest({
         name: 'load-file-with-query',
         resolveId(id) {
           if (id.startsWith('/')) {
-            return path.join(root, id)
+            return path.join(root, id);
           }
         },
         load(id: string) {
           if (id.includes('?raw')) {
-            const res = fs.readFileSync(id.split('?')[0], 'utf-8')
-            return `export default ${JSON.stringify(res)}`
+            const res = fs.readFileSync(id.split('?')[0], 'utf-8');
+            return `export default ${JSON.stringify(res)}`;
           }
           if (id.includes('?url')) {
-            return `export default '/path/to/module.js'`
+            return `export default '/path/to/module.js'`;
           }
           if (id.includes('?base64')) {
-            const res = fs.readFileSync(id.split('?')[0], 'utf-8')
-            return `export default ${JSON.stringify(btoa(res))}`
+            const res = fs.readFileSync(id.split('?')[0], 'utf-8');
+            return `export default ${JSON.stringify(btoa(res))}`;
           }
         },
       },
@@ -43,6 +43,6 @@ export default defineTest({
   async afterTest(output) {
     await expect(output.output[0].code).toMatchFileSnapshot(
       path.resolve(import.meta.dirname, 'index.ts.snap'),
-    )
+    );
   },
-})
+});

@@ -1,1 +1,1 @@
-export const bar = 'dynamic'
+export const bar = 'dynamic';

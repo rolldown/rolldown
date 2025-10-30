@@ -1,5 +1,5 @@
-import { expect, test, vi, describe } from 'vitest'
-import { rolldown, Plugin } from 'rolldown'
+import { Plugin, rolldown } from 'rolldown';
+import { describe, expect, test, vi } from 'vitest';
 
 async function buildWithPlugin(plugin: Plugin) {
   try {
@@ -7,80 +7,80 @@ async function buildWithPlugin(plugin: Plugin) {
       input: './main.js',
       cwd: import.meta.dirname,
       plugins: [plugin],
-    })
-    await build.write({})
+    });
+    await build.write({});
   } catch (e) {
-    return e as Error
+    return e as Error;
   }
 }
 
 test('Plugin renderError hook', async () => {
-  const renderErrorFn = vi.fn()
-  const renderChunkFn = vi.fn()
+  const renderErrorFn = vi.fn();
+  const renderChunkFn = vi.fn();
   const error = await buildWithPlugin({
     name: 'test',
     renderStart() {
-      renderChunkFn()
-      throw new Error('renderStart error')
+      renderChunkFn();
+      throw new Error('renderStart error');
     },
     renderError: (error) => {
-      renderErrorFn()
-      expect(error!.message).toContain('renderStart error')
+      renderErrorFn();
+      expect(error!.message).toContain('renderStart error');
     },
-  })
-  expect(error!.message).toContain('renderStart error')
-  expect(renderErrorFn).toHaveBeenCalledTimes(1)
-})
+  });
+  expect(error!.message).toContain('renderStart error');
+  expect(renderErrorFn).toHaveBeenCalledTimes(1);
+});
 
 describe('Plugin buildEnd hook', async () => {
   test('call buildEnd hook with error', async () => {
-    const buildEndFn = vi.fn()
+    const buildEndFn = vi.fn();
     const error = await buildWithPlugin({
       name: 'test',
       buildStart() {
-        throw new Error('buildStart error')
+        throw new Error('buildStart error');
       },
       buildEnd: (error) => {
-        buildEndFn()
-        expect(error!.message).toContain('buildStart error')
+        buildEndFn();
+        expect(error!.message).toContain('buildStart error');
       },
-    })
-    expect(error!.message).toContain('buildStart error')
-    expect(buildEndFn).toHaveBeenCalledTimes(1)
-  })
+    });
+    expect(error!.message).toContain('buildStart error');
+    expect(buildEndFn).toHaveBeenCalledTimes(1);
+  });
 
   test('call buildEnd hook without error', async () => {
-    const buildEndFn = vi.fn()
+    const buildEndFn = vi.fn();
     const error = await buildWithPlugin({
       name: 'test',
       buildEnd: (error) => {
-        buildEndFn()
-        expect(error).toBeUndefined()
+        buildEndFn();
+        expect(error).toBeUndefined();
       },
-    })
-    expect(error).toBeUndefined()
-    expect(buildEndFn).toHaveBeenCalledTimes(1)
-  })
-})
+    });
+    expect(error).toBeUndefined();
+    expect(buildEndFn).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('Plugin closeBundle hook', async () => {
   test('call closeBundle hook if has error', async () => {
-    const closeBundleFn = vi.fn()
+    const closeBundleFn = vi.fn();
     const error = await buildWithPlugin({
       name: 'test',
       load() {
-        throw new Error('load error')
+        throw new Error('load error');
       },
       closeBundle: () => {
-        closeBundleFn()
+        closeBundleFn();
       },
-    })
-    expect(error!.message).toContain('load error')
-    expect(closeBundleFn).toHaveBeenCalledTimes(1)
-  })
+    });
+    expect(error!.message).toContain('load error');
+    expect(closeBundleFn).toHaveBeenCalledTimes(1);
+  });
 
   test('call closeBundle with bundle close', async () => {
-    const closeBundleFn = vi.fn()
+    const closeBundleFn = vi.fn();
     const build = await rolldown({
       input: './main.js',
       cwd: import.meta.dirname,
@@ -88,53 +88,55 @@ describe('Plugin closeBundle hook', async () => {
         {
           name: 'test',
           closeBundle: () => {
-            closeBundleFn()
+            closeBundleFn();
           },
         },
       ],
-    })
-    await build.generate()
-    await build.close()
-    expect(closeBundleFn).toHaveBeenCalledTimes(1)
-  })
+    });
+    await build.generate();
+    await build.close();
+    expect(closeBundleFn).toHaveBeenCalledTimes(1);
+  });
 
   test('should error at generate if bundle already closed', async () => {
     try {
       const build = await rolldown({
         input: './main.js',
         cwd: import.meta.dirname,
-      })
-      await build.close()
-      await build.write()
+      });
+      await build.close();
+      await build.write();
     } catch (error: any) {
       expect(error.message).toMatch(
         `Rolldown internal error: Bundle is already closed, no more calls to 'generate' or 'write' are allowed.`,
-      )
+      );
     }
-  })
-})
+  });
+});
 
 test('call transformContext error', async () => {
   const error = await buildWithPlugin({
     name: 'test',
     transform() {
-      this.error('transform hook error')
+      this.error('transform hook error');
     },
-  })
-  expect(error!.message).toContain('transform hook error')
-})
+  });
+  expect(error!.message).toContain('transform hook error');
+});
 
 // #4141
 test('should print original error if it can not be assigned', async () => {
   const error = await buildWithPlugin({
     name: 'test',
     transform() {
-      const proxy = new Proxy({ a: 1 }, {})
-      structuredClone(proxy)
+      const proxy = new Proxy({ a: 1 }, {});
+      structuredClone(proxy);
     },
-  })
-  expect(error!.message).toContain('DataCloneError: #<Object> could not be cloned')
-})
+  });
+  expect(error!.message).toContain(
+    'DataCloneError: #<Object> could not be cloned',
+  );
+});
 
 describe('Error output format', () => {
   test('should correctly output the custom error defined on the rust side', async () => {
@@ -142,30 +144,30 @@ describe('Error output format', () => {
       const build = await rolldown({
         input: './error.js',
         cwd: import.meta.dirname,
-      })
-      await build.write()
+      });
+      await build.write();
     } catch (error: any) {
-      expect(removeAnsiColors(error.message)).toMatchSnapshot()
+      expect(removeAnsiColors(error.message)).toMatchSnapshot();
     }
-  })
+  });
 
   test('bundler initialize error occurs', async () => {
     try {
-    const build = await rolldown({
+      const build = await rolldown({
         input: './main.js',
         cwd: import.meta.dirname,
         transform: {
-          target: 'es5'
-        }
-      })
-      await build.write({})
+          target: 'es5',
+        },
+      });
+      await build.write({});
     } catch (error: any) {
-      expect(removeAnsiColors(error.message)).toMatchSnapshot()
+      expect(removeAnsiColors(error.message)).toMatchSnapshot();
     }
-  })
-})
+  });
+});
 
 // oxlint-disable no-control-regex
 function removeAnsiColors(str: string) {
-  return str.replace(/\x1b\[[0-9;]*m/g, '')
+  return str.replace(/\x1b\[[0-9;]*m/g, '');
 }

@@ -1,9 +1,9 @@
-import { test, expect, describe } from 'vitest'
-import { scan } from 'rolldown/experimental'
+import { scan } from 'rolldown/experimental';
+import { describe, expect, test } from 'vitest';
 
 describe('experimental_scan', () => {
   test('call options hook', async () => {
-    expect.assertions(1)
+    expect.assertions(1);
 
     await scan({
       input: 'virtual',
@@ -11,16 +11,16 @@ describe('experimental_scan', () => {
         {
           name: 'test',
           options(opts) {
-            expect(opts).toBeTruthy()
+            expect(opts).toBeTruthy();
           },
           resolveId(id) {
-            if (id === 'virtual') return '\0' + id
+            if (id === 'virtual') return '\0' + id;
           },
           load(id) {
-            if (id === '\0virtual') return ''
-          }
-        }
-      ]
-    })
-  })
-})
+            if (id === '\0virtual') return '';
+          },
+        },
+      ],
+    });
+  });
+});

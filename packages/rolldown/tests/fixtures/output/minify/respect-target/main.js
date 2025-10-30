@@ -1,3 +1,3 @@
 export function hello(opts) {
-  console.log(opts?.name)
+  console.log(opts?.name);
 }

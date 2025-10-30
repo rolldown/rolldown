@@ -1,2 +1,2 @@
-export default 'ifDefaultPropTrue'
-export const value = true
+export default 'ifDefaultPropTrue';
+export const value = true;

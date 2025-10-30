@@ -1,5 +1,5 @@
-import { aliasPlugin } from 'rolldown/experimental'
-import { defineTest } from 'rolldown-tests'
+import { defineTest } from 'rolldown-tests';
+import { aliasPlugin } from 'rolldown/experimental';
 
 export default defineTest({
   config: {
@@ -11,6 +11,6 @@ export default defineTest({
     ],
   },
   async afterTest() {
-    await import('./assert.mjs')
+    await import('./assert.mjs');
   },
-})
+});

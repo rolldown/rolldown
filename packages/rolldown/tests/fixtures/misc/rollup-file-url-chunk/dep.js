@@ -1,1 +1,1 @@
-export default "dep.js"
+export default 'dep.js';

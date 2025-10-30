@@ -1,5 +1,5 @@
-import { defineTest } from 'rolldown-tests'
-import fs from 'node:fs'
+import fs from 'node:fs';
+import { defineTest } from 'rolldown-tests';
 
 export default defineTest({
   config: {
@@ -7,17 +7,17 @@ export default defineTest({
     plugins: [
       {
         name: 'rewrite-module-type',
-        load: function (id) {
-          debugger
+        load: function(id) {
+          debugger;
           return {
             code: fs.readFileSync(id, 'utf-8'),
             moduleType: 'ts',
-          }
+          };
         },
       },
     ],
   },
   afterTest: async (output) => {
-    await import('./assert.mjs')
+    await import('./assert.mjs');
   },
-})
+});

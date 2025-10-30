@@ -1,1 +1,1 @@
-import 'external'
+import 'external';

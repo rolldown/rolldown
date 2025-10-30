@@ -1,2 +1,2 @@
-import mod from "virtual:test.tsx";
-export default mod
+import mod from 'virtual:test.tsx';
+export default mod;

@@ -1,19 +1,19 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
-import { getOutputChunk } from 'rolldown-tests/utils'
+import { defineTest } from 'rolldown-tests';
+import { getOutputChunk } from 'rolldown-tests/utils';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
     input: 'main.jsx',
     transform: {
-      jsx: 'preserve'
+      jsx: 'preserve',
     },
     output: {
       minify: true,
     },
   },
   afterTest: (output) => {
-    const chunk = getOutputChunk(output)[0]
-    expect(chunk.code.includes('<div>Hello World!</div>')).toBe(true)
+    const chunk = getOutputChunk(output)[0];
+    expect(chunk.code.includes('<div>Hello World!</div>')).toBe(true);
   },
-})
+});

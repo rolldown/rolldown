@@ -1,7 +1,7 @@
-import { defineTest } from 'rolldown-tests'
-import { expect, vi } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { expect, vi } from 'vitest';
 
-const fn = vi.fn()
+const fn = vi.fn();
 
 export default defineTest({
   config: {
@@ -10,15 +10,15 @@ export default defineTest({
         name: 'test-plugin-context',
         async load(id) {
           if (id.endsWith('main.js')) {
-            fn()
-            const stat = await this.fs.stat(id)
-            expect(stat.isFile()).toBe(true)
+            fn();
+            const stat = await this.fs.stat(id);
+            expect(stat.isFile()).toBe(true);
           }
         },
       },
     ],
   },
   afterTest: () => {
-    expect(fn).toHaveBeenCalledTimes(1)
+    expect(fn).toHaveBeenCalledTimes(1);
   },
-})
+});

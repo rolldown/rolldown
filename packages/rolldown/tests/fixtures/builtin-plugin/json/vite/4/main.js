@@ -1,1 +1,1 @@
-export * from './data.json'
+export * from './data.json';

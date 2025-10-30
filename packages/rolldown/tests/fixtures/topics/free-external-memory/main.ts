@@ -1,22 +1,21 @@
 // Test if `freeExternalMemory` could be called satisfying the type requirements
 
-import { rolldown } from 'rolldown'
-import { freeExternalMemory } from 'rolldown/experimental'
+import { rolldown } from 'rolldown';
+import { freeExternalMemory } from 'rolldown/experimental';
 
 async function testFreeExternalMemory() {
   const build = await rolldown({
     input: './main.ts',
-  })
+  });
 
-  const bundle = await build.generate()
-  
+  const bundle = await build.generate();
 
   function _usage() {
-    freeExternalMemory(bundle)
+    freeExternalMemory(bundle);
     for (const item of bundle.output) {
-      freeExternalMemory(item)
+      freeExternalMemory(item);
     }
   }
 }
 
-export default testFreeExternalMemory
+export default testFreeExternalMemory;

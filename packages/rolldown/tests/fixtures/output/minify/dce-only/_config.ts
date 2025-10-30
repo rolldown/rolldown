@@ -1,5 +1,5 @@
-import { defineTest } from "rolldown-tests";
-import { expect } from "vitest";
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -9,7 +9,7 @@ export default defineTest({
   },
   afterTest: (output) => {
     const code = output.output[0].code;
-    expect(code).toContain('varNameIsNotMangled')
+    expect(code).toContain('varNameIsNotMangled');
     expect(code).toContain('legal comment is kept');
     expect(code).toContain('annotation comment is kept');
   },

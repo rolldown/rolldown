@@ -4,6 +4,6 @@ const m = import.meta.glob('./dir/*.js', {
     b: 'test',
     c: 10000,
   },
-})
+});
 
-export { m }
+export { m };

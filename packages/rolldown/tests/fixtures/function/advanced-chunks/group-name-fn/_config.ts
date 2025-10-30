@@ -1,4 +1,4 @@
-import { defineTest } from 'rolldown-tests'
+import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
 export default defineTest({
@@ -9,7 +9,7 @@ export default defineTest({
           {
             name(id, ctx) {
               if (id != 'rolldown:runtime') {
-                expect(ctx.getModuleInfo(id), id).not.toBeNull()
+                expect(ctx.getModuleInfo(id), id).not.toBeNull();
               }
               if (/node_modules[\\/]+lib-ui/.test(id)) {
                 return 'ui';
@@ -19,34 +19,35 @@ export default defineTest({
               }
 
               return null;
-            }
+            },
           },
-          
         ],
       },
     },
   },
   afterTest(output) {
     function findChunkStartWith(prefix: string) {
-      const finded = output.output.find(chunk => chunk.type === 'chunk' && chunk.fileName.startsWith(prefix));
+      const finded = output.output.find(chunk =>
+        chunk.type === 'chunk' && chunk.fileName.startsWith(prefix)
+      );
       if (!finded) {
-        throw new Error(`chunk ${prefix} not found`)
+        throw new Error(`chunk ${prefix} not found`);
       }
       if (finded.type !== 'chunk') {
-        throw new Error('should be chunk')
+        throw new Error('should be chunk');
       }
       return finded;
     }
-    const ui = findChunkStartWith('ui-')
-    const otherLibs = findChunkStartWith('other-libs-')
+    const ui = findChunkStartWith('ui-');
+    const otherLibs = findChunkStartWith('other-libs-');
 
     expect(ui.moduleIds).toMatchObject([
       /lib-ui[\\/]index.js$/,
-    ])
+    ]);
 
     expect(otherLibs.moduleIds).toMatchObject([
       /lib-npm-a[\\/]index.js$/,
       /lib-npm-b[\\/]index.js$/,
-    ])
+    ]);
   },
-})
+});

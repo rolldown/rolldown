@@ -1,6 +1,6 @@
-import type { OutputChunk as RolldownOutputChunk } from 'rolldown'
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import type { OutputChunk as RolldownOutputChunk } from 'rolldown';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -15,21 +15,21 @@ export default defineTest({
     expect(
       output.output.find((chunk) => (chunk as RolldownOutputChunk).isEntry)
         ?.fileName,
-    ).toBe('main-test.js')
+    ).toBe('main-test.js');
     expect(
       output.output.find((chunk) => !(chunk as RolldownOutputChunk).isEntry)
         ?.fileName,
-    ).toBe('test-chunk.js')
+    ).toBe('test-chunk.js');
 
     expect(
       output.output.find(
         (chunk) => (chunk as RolldownOutputChunk).fileName === 'main-test.css',
       ),
-    ).toBeTruthy()
+    ).toBeTruthy();
     expect(
       output.output.find(
         (chunk) => (chunk as RolldownOutputChunk).fileName === 'test-chunk.css',
       ),
-    ).toBeTruthy()
+    ).toBeTruthy();
   },
-})
+});

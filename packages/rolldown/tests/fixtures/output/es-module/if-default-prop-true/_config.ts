@@ -1,8 +1,8 @@
-import type { OutputChunk as RolldownOutputChunk } from 'rolldown'
-import { defineTest } from 'rolldown-tests'
-import { expect, vi } from 'vitest'
+import type { OutputChunk as RolldownOutputChunk } from 'rolldown';
+import { defineTest } from 'rolldown-tests';
+import { expect, vi } from 'vitest';
 
-const onLogFn = vi.fn()
+const onLogFn = vi.fn();
 
 export default defineTest({
   config: {
@@ -12,14 +12,14 @@ export default defineTest({
       esModule: 'if-default-prop',
     },
     onLog(level, log) {
-      expect(level).toBe('warn')
-      expect(log.code).toBe('MISSING_NAME_OPTION_FOR_IIFE_EXPORT')
-      expect(log.plugin).toBeUndefined()
-      onLogFn()
+      expect(level).toBe('warn');
+      expect(log.code).toBe('MISSING_NAME_OPTION_FOR_IIFE_EXPORT');
+      expect(log.plugin).toBeUndefined();
+      onLogFn();
     },
   },
   afterTest: (output) => {
-    expect(onLogFn).toHaveBeenCalledTimes(1)
+    expect(onLogFn).toHaveBeenCalledTimes(1);
 
     expect(
       output.output
@@ -27,8 +27,8 @@ export default defineTest({
         .every((chunk) =>
           (chunk as RolldownOutputChunk).code.includes(
             "Object.defineProperty(exports, '__esModule', { value: true });",
-          ),
+          )
         ),
-    ).toBe(true)
+    ).toBe(true);
   },
-})
+});

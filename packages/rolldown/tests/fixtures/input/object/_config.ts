@@ -1,6 +1,6 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
-import { getOutputChunkNames } from 'rolldown-tests/utils'
+import { defineTest } from 'rolldown-tests';
+import { getOutputChunkNames } from 'rolldown-tests/utils';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -10,6 +10,6 @@ export default defineTest({
     },
   },
   afterTest: (output) => {
-    expect(getOutputChunkNames(output)).toStrictEqual(['entry.js', 'main.js'])
+    expect(getOutputChunkNames(output)).toStrictEqual(['entry.js', 'main.js']);
   },
-})
+});

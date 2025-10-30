@@ -1,6 +1,6 @@
-import { defineTest } from 'rolldown-tests'
-import { getOutputFileNames } from 'rolldown-tests/utils'
-import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { getOutputFileNames } from 'rolldown-tests/utils';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -16,7 +16,7 @@ export default defineTest({
             type: 'asset',
             name: '+emitted.txt',
             source: 'emitted',
-          })
+          });
         },
       },
     ],
@@ -27,6 +27,6 @@ export default defineTest({
         "assets/+emitted-C6bBH0W1.txt",
         "main.js",
       ]
-    `)
+    `);
   },
-})
+});

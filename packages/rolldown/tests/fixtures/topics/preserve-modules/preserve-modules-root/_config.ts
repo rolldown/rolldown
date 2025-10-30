@@ -1,7 +1,6 @@
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
-import { getOutputChunkNames } from '../../../../src/utils'
-
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
+import { getOutputChunkNames } from '../../../../src/utils';
 
 export default defineTest({
   config: {
@@ -9,16 +8,15 @@ export default defineTest({
     output: {
       preserveModules: true,
       preserveModulesRoot: 'src',
-    }
+    },
   },
   afterTest: (output) => {
     if (process.platform !== 'win32') {
       expect(getOutputChunkNames(output)).toStrictEqual([
         'index.js',
         'package.json.js',
-        'utils/index.js'
-      ])
+        'utils/index.js',
+      ]);
     }
   },
-})
-
+});

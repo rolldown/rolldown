@@ -1,4 +1,4 @@
-import { defineConfig } from 'rolldown'
+import { defineConfig } from 'rolldown';
 
 export default defineConfig({
   input: './index.js',
@@ -6,8 +6,8 @@ export default defineConfig({
     {
       name: 'test',
       closeBundle() {
-        console.log('[test:closeBundle]')
+        console.log('[test:closeBundle]');
       },
     },
   ],
-})
+});

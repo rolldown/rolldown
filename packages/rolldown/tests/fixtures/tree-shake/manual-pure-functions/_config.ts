@@ -1,5 +1,5 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -9,7 +9,7 @@ export default defineTest({
     external: ['styled-components'],
   },
   afterTest: (output) => {
-    let code = output.output[0].code
+    let code = output.output[0].code;
 
     expect(code).toMatchInlineSnapshot(`
           "import "styled-components";
@@ -19,6 +19,6 @@ export default defineTest({
           another();
 
           //#endregion"
-        `)
+        `);
   },
-})
+});

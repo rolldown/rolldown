@@ -1,31 +1,31 @@
 import type {
   OutputChunk as RolldownOutputChunk,
   PreRenderedChunk,
-} from 'rolldown'
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+} from 'rolldown';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
-let preRenderedEntry: PreRenderedChunk
-let preRenderedChunk: PreRenderedChunk
+let preRenderedEntry: PreRenderedChunk;
+let preRenderedChunk: PreRenderedChunk;
 
 export default defineTest({
   config: {
     output: {
       entryFileNames: (chunk) => {
-        preRenderedEntry = chunk
-        return '[name]-test.js'
+        preRenderedEntry = chunk;
+        return '[name]-test.js';
       },
       chunkFileNames: (chunk) => {
-        preRenderedChunk = chunk
-        return '[name]-chunk.js'
+        preRenderedChunk = chunk;
+        return '[name]-chunk.js';
       },
       cssEntryFileNames: (chunk) => {
-        preRenderedEntry = chunk
-        return '[name]-test.css'
+        preRenderedEntry = chunk;
+        return '[name]-test.css';
       },
       cssChunkFileNames: (chunk) => {
-        preRenderedChunk = chunk
-        return '[name]-chunk.css'
+        preRenderedChunk = chunk;
+        return '[name]-chunk.css';
       },
     },
   },
@@ -33,22 +33,22 @@ export default defineTest({
     expect(
       output.output.find((chunk) => (chunk as RolldownOutputChunk).isEntry)
         ?.fileName,
-    ).toBe('main-test.js')
+    ).toBe('main-test.js');
     expect(
       output.output.find((chunk) => !(chunk as RolldownOutputChunk).isEntry)
         ?.fileName,
-    ).toBe('test-chunk.js')
+    ).toBe('test-chunk.js');
 
     expect(
       output.output.find(
         (chunk) => (chunk as RolldownOutputChunk).fileName === 'main-test.css',
       ),
-    ).toBeTruthy()
+    ).toBeTruthy();
     expect(
       output.output.find(
         (chunk) => (chunk as RolldownOutputChunk).fileName === 'test-chunk.css',
       ),
-    ).toBeTruthy()
+    ).toBeTruthy();
 
     expect(preRenderedEntry).toMatchObject({
       name: 'main',
@@ -60,7 +60,7 @@ export default defineTest({
         expect.stringMatching(/main\.css$/),
         expect.stringMatching(/main\.js$/),
       ],
-    })
+    });
 
     expect(preRenderedChunk).toMatchObject({
       name: 'test',
@@ -72,6 +72,6 @@ export default defineTest({
         expect.stringMatching(/test\.css$/),
         expect.stringMatching(/test\.js$/),
       ],
-    })
+    });
   },
-})
+});

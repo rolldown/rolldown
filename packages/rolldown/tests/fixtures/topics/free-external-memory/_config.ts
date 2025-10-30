@@ -1,6 +1,6 @@
-import { defineTest } from 'rolldown-tests'
-import { freeExternalMemory } from 'rolldown/experimental'
-import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { freeExternalMemory } from 'rolldown/experimental';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -13,7 +13,7 @@ export default defineTest({
             type: 'asset',
             name: 'test.txt',
             source: 'test content for type checking',
-          })
+          });
         },
       },
     ],
@@ -24,25 +24,25 @@ export default defineTest({
     // Here we just verify the API works at runtime as well
 
     // Test 1: Can call freeExternalMemory on RolldownOutput
-    const result1 = freeExternalMemory(output)
-    expect(typeof result1).toBe('boolean')
+    const result1 = freeExternalMemory(output);
+    expect(typeof result1).toBe('boolean');
 
     // Test 2: Can call freeExternalMemory on OutputChunk
-    const chunk = output.output.find((item) => item.type === 'chunk')
-    expect(chunk).toBeDefined()
+    const chunk = output.output.find((item) => item.type === 'chunk');
+    expect(chunk).toBeDefined();
     if (chunk) {
-      const result2 = freeExternalMemory(chunk)
-      expect(typeof result2).toBe('boolean')
+      const result2 = freeExternalMemory(chunk);
+      expect(typeof result2).toBe('boolean');
       // After freeing, accessing properties should throw
-      expect(() => chunk.name).toThrow()
+      expect(() => chunk.name).toThrow();
     }
 
     // Test 3: Can call freeExternalMemory on OutputAsset
-    const asset = output.output.find((item) => item.type === 'asset')
-    expect(asset).toBeDefined()
+    const asset = output.output.find((item) => item.type === 'asset');
+    expect(asset).toBeDefined();
     if (asset) {
-      const result3 = freeExternalMemory(asset)
-      expect(typeof result3).toBe('boolean')
+      const result3 = freeExternalMemory(asset);
+      expect(typeof result3).toBe('boolean');
     }
   },
-})
+});

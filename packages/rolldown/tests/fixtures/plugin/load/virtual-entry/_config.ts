@@ -1,9 +1,9 @@
-import { defineTest } from 'rolldown-tests'
-import path from 'node:path'
-import { expect } from 'vitest'
+import path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
-const entryName = 'virtual:entry'
-const idList: string[] = []
+const entryName = 'virtual:entry';
+const idList: string[] = [];
 
 export default defineTest({
   config: {
@@ -15,7 +15,7 @@ export default defineTest({
         name: 'virtual-entry',
         resolveId(source) {
           if (source === entryName) {
-            return source
+            return source;
           }
         },
         load(id) {
@@ -23,19 +23,22 @@ export default defineTest({
             return `
               import * as lib from "./main.js";
               console.log(lib);
-            `
+            `;
           }
         },
         transform(_, id) {
-          idList.push(id)
+          idList.push(id);
         },
       },
     ],
   },
   beforeTest: () => {
-    idList.length = 0
+    idList.length = 0;
   },
   afterTest: () => {
-    expect(idList).toStrictEqual([entryName, path.join(__dirname, './main.js')])
+    expect(idList).toStrictEqual([
+      entryName,
+      path.join(__dirname, './main.js'),
+    ]);
   },
-})
+});

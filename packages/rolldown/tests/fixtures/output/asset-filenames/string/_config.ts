@@ -1,6 +1,6 @@
-import { defineTest } from 'rolldown-tests'
-import { getOutputAssetNames, getOutputFileNames } from 'rolldown-tests/utils'
-import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { getOutputAssetNames, getOutputFileNames } from 'rolldown-tests/utils';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -16,18 +16,18 @@ export default defineTest({
             type: 'asset',
             name: 'emitted.txt',
             source: 'emitted',
-          })
+          });
           this.emitFile({
             type: 'asset',
             name: 'emitted.txt',
             source: 'emitted',
-          })
+          });
           // the asset file name should be deconflict
           this.emitFile({
             type: 'asset',
             name: 'emitted.txt',
             source: 'foo',
-          })
+          });
         },
       },
     ],
@@ -36,6 +36,6 @@ export default defineTest({
     expect(getOutputAssetNames(output)).toStrictEqual([
       'emitted.txt',
       'emitted2.txt',
-    ])
+    ]);
   },
-})
+});

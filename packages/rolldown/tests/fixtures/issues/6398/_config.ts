@@ -1,5 +1,5 @@
-import { defineTest } from 'rolldown-tests'
-import nodePath from 'node:path'
+import nodePath from 'node:path';
+import { defineTest } from 'rolldown-tests';
 
 export default defineTest({
   config: {
@@ -9,15 +9,21 @@ export default defineTest({
       async resolveId(specifier, importer, _extraArgs) {
         if (specifier === 'dep') {
           return {
-            id: nodePath.resolve(import.meta.dirname, 'node_modules/dep/lib.js'),
-            packageJsonPath: nodePath.resolve(import.meta.dirname, 'node_modules/dep/package.json'),
-          }
+            id: nodePath.resolve(
+              import.meta.dirname,
+              'node_modules/dep/lib.js',
+            ),
+            packageJsonPath: nodePath.resolve(
+              import.meta.dirname,
+              'node_modules/dep/package.json',
+            ),
+          };
         }
-      }
-    }]
+      },
+    }],
   },
   async afterTest() {
-     // @ts-ignore
-     await import('./dist/main')
+    // @ts-ignore
+    await import('./dist/main');
   },
-})
+});

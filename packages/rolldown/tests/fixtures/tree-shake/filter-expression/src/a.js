@@ -1,4 +1,4 @@
-import {a} from './lib'
+import { a } from './lib';
 
 export function b() {
   return a;

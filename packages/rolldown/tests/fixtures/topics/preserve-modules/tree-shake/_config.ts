@@ -1,13 +1,12 @@
-import { defineTest } from 'rolldown-tests'
-
+import { defineTest } from 'rolldown-tests';
 
 export default defineTest({
   config: {
     output: {
-      preserveModules: true
-    }
+      preserveModules: true,
+    },
   },
   afterTest: async (output) => {
-    await import('./_test.mjs')
+    await import('./_test.mjs');
   },
-})
+});

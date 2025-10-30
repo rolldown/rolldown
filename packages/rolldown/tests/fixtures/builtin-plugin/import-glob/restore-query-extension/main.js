@@ -3,6 +3,6 @@ const m1 = import.meta.glob('./dir/*.js', {
     a: 1000,
     b: 'test',
   },
-})
+});
 
-export { m1 }
+export { m1 };

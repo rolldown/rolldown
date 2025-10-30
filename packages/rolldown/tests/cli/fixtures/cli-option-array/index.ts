@@ -1,5 +1,5 @@
-import { join } from 'node:path'
-import { resolve } from 'node:url'
+import { join } from 'node:path';
+import { resolve } from 'node:url';
 
-join('a', 'b')
-resolve('a', 'b')
+join('a', 'b');
+resolve('a', 'b');

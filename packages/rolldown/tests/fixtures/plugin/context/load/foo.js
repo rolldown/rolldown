@@ -1,1 +1,1 @@
-globalThis.foo = true
+globalThis.foo = true;

@@ -1,9 +1,9 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   afterTest: (output) => {
-    let code = output.output[0].code
+    let code = output.output[0].code;
 
     expect(code).toMatchInlineSnapshot(`
       "//#region main.js
@@ -11,6 +11,6 @@ export default defineTest({
       angular.element;
 
       //#endregion"
-    `)
+    `);
   },
-})
+});

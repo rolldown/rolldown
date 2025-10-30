@@ -1,8 +1,8 @@
-import { defineTest } from 'rolldown-tests'
-import { expect, vi } from 'vitest'
-import nodePath from 'node:path'
+import nodePath from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { expect, vi } from 'vitest';
 
-const fn = vi.fn()
+const fn = vi.fn();
 
 export default defineTest({
   config: {
@@ -10,19 +10,19 @@ export default defineTest({
       {
         name: 'test-plugin-context',
         async buildStart(this) {
-          const ret = await this.resolve('./main.js')
+          const ret = await this.resolve('./main.js');
           if (!ret) {
-            throw new Error('resolve failed')
+            throw new Error('resolve failed');
           }
-          const { id, external } = ret
-          expect(external).toBe(false)
-          expect(id).toEqual(nodePath.join(import.meta.dirname, 'main.js'))
-          fn()
+          const { id, external } = ret;
+          expect(external).toBe(false);
+          expect(id).toEqual(nodePath.join(import.meta.dirname, 'main.js'));
+          fn();
         },
       },
     ],
   },
   afterTest: () => {
-    expect(fn).toHaveBeenCalledTimes(1)
+    expect(fn).toHaveBeenCalledTimes(1);
   },
-})
+});

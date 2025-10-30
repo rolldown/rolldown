@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest'
-import { rolldown } from 'rolldown'
+import { rolldown } from 'rolldown';
+import { expect, test } from 'vitest';
 
 test('jsx false should report error', async () => {
   try {
@@ -8,10 +8,10 @@ test('jsx false should report error', async () => {
       cwd: import.meta.dirname,
       transform: {
         jsx: false,
-      }
-    })
-    await build.write({})
+      },
+    });
+    await build.write({});
   } catch (e: any) {
-    expect(e.message).toContain('PARSE_ERROR')
+    expect(e.message).toContain('PARSE_ERROR');
   }
-})
+});

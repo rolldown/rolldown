@@ -1,4 +1,4 @@
-import assert from 'node:assert'
-import foo from 'foo'
+import foo from 'foo';
+import assert from 'node:assert';
 
-assert.strictEqual(foo, 'foo')
+assert.strictEqual(foo, 'foo');

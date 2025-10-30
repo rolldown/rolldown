@@ -1,18 +1,18 @@
-import { parseAst, parseAstAsync } from 'rolldown/parseAst'
-import { test, expect } from 'vitest'
+import { parseAst, parseAstAsync } from 'rolldown/parseAst';
+import { expect, test } from 'vitest';
 
 test('rolldown/parseAst parseSync', async () => {
-  const result = parseAst('console.log("hello")')
-  expect(result.type).toBe('Program')
-})
+  const result = parseAst('console.log("hello")');
+  expect(result.type).toBe('Program');
+});
 
 test('rolldown/parseAst parseAstAsync', async () => {
-  const result = await parseAstAsync('console.log("hello")')
-  expect(result.type).toBe('Program')
-})
+  const result = await parseAstAsync('console.log("hello")');
+  expect(result.type).toBe('Program');
+});
 
 test('rolldown/parseAst non json value', async () => {
-  const result = await parseAstAsync('1n')
+  const result = await parseAstAsync('1n');
   expect(result.body[0]).toMatchInlineSnapshot(`
     {
       "end": 2,
@@ -27,13 +27,13 @@ test('rolldown/parseAst non json value', async () => {
       "start": 0,
       "type": "ExpressionStatement",
     }
-  `)
-})
+  `);
+});
 
 test('rolldown/parseAst parseSync + error', async () => {
   try {
-    parseAst('\nconso le.log("hello")')
-    expect.unreachable()
+    parseAst('\nconso le.log("hello")');
+    expect.unreachable();
   } catch (error: any) {
     expect(error.message).toMatchInlineSnapshot(`
       "Parse failed with 1 error:
@@ -41,6 +41,6 @@ test('rolldown/parseAst parseSync + error', async () => {
       1: 
       2: conso le.log("hello")
               ^"
-    `)
+    `);
   }
-})
+});

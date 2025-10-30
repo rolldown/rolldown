@@ -1,4 +1,4 @@
-import { defineTest } from 'rolldown-tests'
+import { defineTest } from 'rolldown-tests';
 
 export default defineTest({
   config: {
@@ -11,6 +11,6 @@ export default defineTest({
     },
   },
   afterTest: async () => {
-    await import('./assert.cjs')
+    await import('./assert.cjs');
   },
-})
+});

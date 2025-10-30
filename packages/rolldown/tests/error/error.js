@@ -1,3 +1,3 @@
-import hello from './world'
+import hello from './world';
 
-console.log(hello)
+console.log(hello);

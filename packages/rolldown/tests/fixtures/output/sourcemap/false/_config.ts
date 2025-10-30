@@ -1,6 +1,6 @@
-import { expect } from 'vitest'
-import { getOutputFileNames } from 'rolldown-tests/utils'
-import { defineTest } from 'rolldown-tests'
+import { defineTest } from 'rolldown-tests';
+import { getOutputFileNames } from 'rolldown-tests/utils';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -9,7 +9,7 @@ export default defineTest({
       sourcemap: false,
     },
   },
-  afterTest: function (output) {
-    expect(getOutputFileNames(output)).toStrictEqual(['main.js'])
+  afterTest: function(output) {
+    expect(getOutputFileNames(output)).toStrictEqual(['main.js']);
   },
-})
+});

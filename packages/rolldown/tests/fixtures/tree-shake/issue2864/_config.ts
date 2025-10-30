@@ -1,5 +1,5 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -12,12 +12,12 @@ export default defineTest({
         transform(_code, id) {
           return {
             moduleSideEffects: id.endsWith('sideeffect.js'),
-          }
+          };
         },
       },
     ],
   },
   afterTest: (output) => {
-    expect(output.output[0].code).toContain('globalThis.aa = true')
+    expect(output.output[0].code).toContain('globalThis.aa = true');
   },
-})
+});

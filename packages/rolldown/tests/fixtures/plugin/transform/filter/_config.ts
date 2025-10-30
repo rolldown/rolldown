@@ -1,9 +1,9 @@
-import { defineTest } from 'rolldown-tests'
-import { expect, vi } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { expect, vi } from 'vitest';
 
-const transformFn = vi.fn()
-const transformFn2 = vi.fn()
-const transformFn3 = vi.fn()
+const transformFn = vi.fn();
+const transformFn2 = vi.fn();
+const transformFn3 = vi.fn();
 
 export default defineTest({
   config: {
@@ -17,11 +17,11 @@ export default defineTest({
             },
           },
           handler(_, id) {
-            transformFn()
+            transformFn();
             if (id.endsWith('foo.js')) {
               return {
                 code: `console.log('transformed')`,
-              }
+              };
             }
           },
         },
@@ -33,8 +33,8 @@ export default defineTest({
             moduleType: ['js'],
           },
           handler(_) {
-            transformFn2()
-            return null
+            transformFn2();
+            return null;
           },
         },
       },
@@ -47,16 +47,16 @@ export default defineTest({
             },
           },
           handler(_) {
-            transformFn3()
-            return null
+            transformFn3();
+            return null;
           },
         },
       },
     ],
   },
   afterTest: () => {
-    expect(transformFn).toHaveBeenCalledTimes(1)
-    expect(transformFn2).toHaveBeenCalledTimes(2)
-    expect(transformFn3).toHaveBeenCalledTimes(0)
+    expect(transformFn).toHaveBeenCalledTimes(1);
+    expect(transformFn2).toHaveBeenCalledTimes(2);
+    expect(transformFn3).toHaveBeenCalledTimes(0);
   },
-})
+});

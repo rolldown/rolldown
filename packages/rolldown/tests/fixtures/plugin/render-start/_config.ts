@@ -1,14 +1,14 @@
-import { expect, vi } from 'vitest'
-import path from 'node:path'
-import { defineTest } from 'rolldown-tests'
-import type { NormalizedInputOptions } from 'rolldown'
+import path from 'node:path';
+import type { NormalizedInputOptions } from 'rolldown';
+import { defineTest } from 'rolldown-tests';
+import { expect, vi } from 'vitest';
 
-const entry = path.join(__dirname, './main.js')
-const entryFileNames = '[name]-render-start.js'
+const entry = path.join(__dirname, './main.js');
+const entryFileNames = '[name]-render-start.js';
 
-const renderStartFn = vi.fn()
+const renderStartFn = vi.fn();
 
-let buildStartInputOptions: NormalizedInputOptions
+let buildStartInputOptions: NormalizedInputOptions;
 
 export default defineTest({
   config: {
@@ -20,22 +20,22 @@ export default defineTest({
       {
         name: 'test-plugin-render-start',
         renderStart: (outputOptions, inputOptions) => {
-          renderStartFn()
-          expect(inputOptions.input).toStrictEqual([entry])
-          expect(outputOptions.entryFileNames).toBe(entryFileNames)
+          renderStartFn();
+          expect(inputOptions.input).toStrictEqual([entry]);
+          expect(outputOptions.entryFileNames).toBe(entryFileNames);
           // ensure same reference
-          expect(inputOptions).toBe(buildStartInputOptions)
+          expect(inputOptions).toBe(buildStartInputOptions);
         },
       },
       {
         name: 'test-plugin-save-build-start-input-options',
         buildStart: (inputOptions) => {
-          buildStartInputOptions = inputOptions
+          buildStartInputOptions = inputOptions;
         },
-      }
+      },
     ],
   },
   afterTest: () => {
-    expect(renderStartFn).toHaveBeenCalledTimes(1)
+    expect(renderStartFn).toHaveBeenCalledTimes(1);
   },
-})
+});

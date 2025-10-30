@@ -1,14 +1,14 @@
 // @ts-nocheck
-import assert from "node:assert";
-import { dynamicImport } from "./dist/main";
+import assert from 'node:assert';
+import { dynamicImport } from './dist/main';
 
 async function test() {
   try {
-    await dynamicImport("a");
+    await dynamicImport('a');
   } catch (e) {
     return assert.strictEqual(
       e.message,
-      "Unknown variable dynamic import: ./mod/a.js"
+      'Unknown variable dynamic import: ./mod/a.js',
     );
   }
   assert.fail('Should be exclueded');

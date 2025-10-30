@@ -1,6 +1,6 @@
-import type { OutputChunk as RolldownOutputChunk } from 'rolldown'
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import type { OutputChunk as RolldownOutputChunk } from 'rolldown';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -8,7 +8,7 @@ export default defineTest({
       moduleSideEffects: false,
     },
     output: {
-      minify: 'dce-only'
+      minify: 'dce-only',
     },
     plugins: [
       {
@@ -16,17 +16,17 @@ export default defineTest({
         renderChunk(code) {
           return code.replace('FOO', 'true');
         },
-      }
-    ]
+      },
+    ],
   },
   afterTest: (output) => {
     output.output
-    .filter(({ type }) => type === 'chunk')
-    .forEach((chunk) => {
-      let code = (chunk as RolldownOutputChunk).code
-      expect(code).not.includes('FOO')
-      expect(code).not.includes('true')
-      expect(code).includes('console.log("foo")')
-    })
+      .filter(({ type }) => type === 'chunk')
+      .forEach((chunk) => {
+        let code = (chunk as RolldownOutputChunk).code;
+        expect(code).not.includes('FOO');
+        expect(code).not.includes('true');
+        expect(code).includes('console.log("foo")');
+      });
   },
-})
+});

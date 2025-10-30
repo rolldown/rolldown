@@ -1,3 +1,3 @@
-export const foo: string = 'foo'
+export const foo: string = 'foo';
 /** @internal */
-export const bar = 42
+export const bar = 42;

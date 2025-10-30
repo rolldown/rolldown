@@ -1,8 +1,8 @@
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
-const outroText = '/* outro test */\n'
-const outro = () => outroText
+const outroText = '/* outro test */\n';
+const outro = () => outroText;
 
 export default defineTest({
   config: {
@@ -11,6 +11,6 @@ export default defineTest({
     },
   },
   afterTest(output) {
-    expect(output.output[0].code.includes(outroText)).toBe(true)
+    expect(output.output[0].code.includes(outroText)).toBe(true);
   },
-})
+});

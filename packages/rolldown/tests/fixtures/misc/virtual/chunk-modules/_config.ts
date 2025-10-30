@@ -1,14 +1,14 @@
-import { defineTest } from 'rolldown-tests'
-import { expect, vi, assert } from 'vitest'
+import { defineTest } from 'rolldown-tests';
+import { assert, expect, vi } from 'vitest';
 
-const fn = vi.fn()
+const fn = vi.fn();
 
 export default defineTest({
   config: {
     output: {
       banner(chunk) {
-        fn('config.banner', chunk.modules['\0module'].code)
-        return ''
+        fn('config.banner', chunk.modules['\0module'].code);
+        return '';
       },
     },
     plugins: [
@@ -16,25 +16,25 @@ export default defineTest({
         name: 'virtual-module',
         resolveId(id) {
           if (id === '\0module') {
-            return id
+            return id;
           }
         },
         load(id) {
           if (id === '\0module') {
-            return `export default '[ok]'`
+            return `export default '[ok]'`;
           }
         },
         renderChunk(_, chunk) {
-          fn('plugin.renderChunk', chunk.modules['\0module'].code)
+          fn('plugin.renderChunk', chunk.modules['\0module'].code);
         },
         banner(chunk) {
-          fn('plugin.banner', chunk.modules['\0module'].code)
-          return ''
+          fn('plugin.banner', chunk.modules['\0module'].code);
+          return '';
         },
         generateBundle(_, bundle) {
-          const chunk = bundle['main.js']
-          assert(chunk.type === 'chunk')
-          chunk.code += '\n// edit!\n'
+          const chunk = bundle['main.js'];
+          assert(chunk.type === 'chunk');
+          chunk.code += '\n// edit!\n';
         },
       },
     ],
@@ -46,7 +46,7 @@ export default defineTest({
         ['plugin.banner', expect.stringContaining('[ok]')],
         ['plugin.renderChunk', expect.stringContaining('[ok]')],
       ]),
-    )
-    expect(output.output[0].modules['\0module'].code).toContain('[ok]')
+    );
+    expect(output.output[0].modules['\0module'].code).toContain('[ok]');
   },
-})
+});

@@ -1,1 +1,1 @@
-import 'vite/modulepreload-polyfill'
+import 'vite/modulepreload-polyfill';

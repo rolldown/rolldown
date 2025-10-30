@@ -1,7 +1,7 @@
-import path from 'node:path'
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
-import { jsonPlugin } from 'rolldown/experimental'
+import path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { jsonPlugin } from 'rolldown/experimental';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -14,10 +14,10 @@ export default defineTest({
           if (id.endsWith('.json')) {
             await expect(code).toMatchFileSnapshot(
               path.resolve(import.meta.dirname, `${path.basename(id)}.snap`),
-            )
+            );
           }
         },
       },
     ],
   },
-})
+});

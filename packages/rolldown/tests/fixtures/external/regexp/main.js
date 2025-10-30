@@ -1,2 +1,2 @@
-import external from 'external'
-console.log(external)
+import external from 'external';
+console.log(external);

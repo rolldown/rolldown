@@ -1,4 +1,4 @@
-import { a } from './dist/main'
-import assert from 'node:assert'
+import assert from 'node:assert';
+import { a } from './dist/main';
 
-assert(a === 1)
+assert(a === 1);

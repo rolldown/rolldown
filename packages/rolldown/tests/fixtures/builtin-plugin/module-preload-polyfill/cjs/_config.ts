@@ -1,6 +1,6 @@
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
-import { modulePreloadPolyfillPlugin } from 'rolldown/experimental'
+import { defineTest } from 'rolldown-tests';
+import { modulePreloadPolyfillPlugin } from 'rolldown/experimental';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -10,6 +10,6 @@ export default defineTest({
     plugins: [modulePreloadPolyfillPlugin()],
   },
   async afterTest(output) {
-    expect(output.output[0].code.length).toBe(0)
+    expect(output.output[0].code.length).toBe(0);
   },
-})
+});

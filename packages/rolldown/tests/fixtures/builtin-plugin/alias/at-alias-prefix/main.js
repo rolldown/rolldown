@@ -1,3 +1,3 @@
-import { b } from '@utils/index.js'
+import { b } from '@utils/index.js';
 
-export { b }
+export { b };

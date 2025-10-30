@@ -1,12 +1,12 @@
-import path from 'node:path'
-import { expect } from 'vitest'
-import { defineTest } from 'rolldown-tests'
-import { importGlobPlugin } from 'rolldown/experimental'
+import path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { importGlobPlugin } from 'rolldown/experimental';
+import { expect } from 'vitest';
 
 const root = path.join(
   path.dirname(path.resolve(import.meta.dirname)),
   'fixtures/a',
-)
+);
 
 export default defineTest({
   config: {
@@ -21,10 +21,10 @@ export default defineTest({
         name: 'virtual:module',
         resolveId(id) {
           if (id === 'virtual:module') {
-            return 'virtual:module'
+            return 'virtual:module';
           }
           if (id.startsWith('/../b') || id.startsWith('/modules')) {
-            return { id, external: true }
+            return { id, external: true };
           }
         },
         load(id) {
@@ -33,16 +33,16 @@ export default defineTest({
               "export const a = import.meta.glob('/modules/*.ts')",
               "export const b = import.meta.glob(['/../b/*.ts'])",
               "import.meta.glob(['./*.ts'], { base: '/modules' })",
-            ].join('\n')
-            return code
+            ].join('\n');
+            return code;
           }
-        }
-      }
+        },
+      },
     ],
   },
   async afterTest(output) {
     await expect(output.output[0].code).toMatchFileSnapshot(
       path.resolve(import.meta.dirname, 'index.ts.snap'),
-    )
+    );
   },
-})
+});

@@ -1,2 +1,2 @@
-import depUrl from './dep.js?chunk-url'
-export default depUrl
+import depUrl from './dep.js?chunk-url';
+export default depUrl;

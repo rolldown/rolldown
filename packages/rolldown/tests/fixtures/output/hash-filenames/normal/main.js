@@ -1,5 +1,5 @@
-import { value } from './shared.js'
+import { value } from './shared.js';
 
-console.log(value)
+console.log(value);
 
-import('./dynamic.js')
+import('./dynamic.js');

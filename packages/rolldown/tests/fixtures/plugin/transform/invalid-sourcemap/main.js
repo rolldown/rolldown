@@ -1,1 +1,2 @@
-export let foo = 'bar'; foo += 'baz';
+export let foo = 'bar';
+foo += 'baz';

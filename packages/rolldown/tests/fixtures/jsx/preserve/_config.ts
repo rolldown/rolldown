@@ -1,16 +1,18 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
-import { getOutputChunk } from 'rolldown-tests/utils'
+import { defineTest } from 'rolldown-tests';
+import { getOutputChunk } from 'rolldown-tests/utils';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
     input: 'main.jsx',
     transform: {
-      jsx: 'preserve'
-    }
+      jsx: 'preserve',
+    },
   },
   afterTest: (output) => {
-    const chunk = getOutputChunk(output)[0]
-    expect(chunk.code.replace(/\s+/g, '')).toBe(`//#regionmain.jsxconsole.log(<div>test</div>);//#endregion`)
+    const chunk = getOutputChunk(output)[0];
+    expect(chunk.code.replace(/\s+/g, '')).toBe(
+      `//#regionmain.jsxconsole.log(<div>test</div>);//#endregion`,
+    );
   },
-})
+});

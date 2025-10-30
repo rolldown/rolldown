@@ -1,4 +1,4 @@
-import { a } from './src/index.js'
-import foo from './lib.js'
+import foo from './lib.js';
+import { a } from './src/index.js';
 
-console.log(foo, a)
+console.log(foo, a);

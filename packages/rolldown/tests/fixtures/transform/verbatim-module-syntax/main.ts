@@ -1,6 +1,6 @@
-import { type T } from './a.ts'
+import { type T } from './a.ts';
 
 class Foo {
-  t?: T
+  t?: T;
 }
-console.log(new Foo())
+console.log(new Foo());

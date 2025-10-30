@@ -1,1 +1,1 @@
-import('./dynamic')
+import('./dynamic');

@@ -1,2 +1,2 @@
-import './foo'
-import './dir/a.js'
+import './foo';
+import './dir/a.js';

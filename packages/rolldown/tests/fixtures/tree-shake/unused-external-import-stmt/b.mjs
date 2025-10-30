@@ -1,3 +1,3 @@
-export const b = 100
+export const b = 100;
 
-console.log('b module')
+console.log('b module');

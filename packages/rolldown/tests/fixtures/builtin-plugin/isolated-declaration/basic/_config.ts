@@ -1,7 +1,7 @@
-import { isolatedDeclarationPlugin } from 'rolldown/experimental'
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
-import { getOutputFileNames } from 'rolldown-tests/utils'
+import { defineTest } from 'rolldown-tests';
+import { getOutputFileNames } from 'rolldown-tests/utils';
+import { isolatedDeclarationPlugin } from 'rolldown/experimental';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -19,6 +19,6 @@ export default defineTest({
         "main.d.ts",
         "main.js",
       ]
-    `)
+    `);
   },
-})
+});

@@ -25,7 +25,7 @@
     "packages/rolldown/src/rolldown-binding.wasi.cjs",
     "packages/rolldown/src/wasi-worker-browser.mjs",
     "packages/rolldown/src/wasi-worker.mjs",
-    "packages/rolldown/tests",
+    "packages/rolldown/tests/fixtures/misc/error/diagnostics",
     "packages/rollup-tests",
     "packages/rollup/test",
     "packages/vite-tests",

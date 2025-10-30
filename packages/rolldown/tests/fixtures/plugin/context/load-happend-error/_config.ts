@@ -1,6 +1,6 @@
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
-import path from 'node:path'
+import path from 'node:path';
+import { defineTest } from 'rolldown-tests';
+import { expect } from 'vitest';
 
 export default defineTest({
   config: {
@@ -9,7 +9,7 @@ export default defineTest({
         name: 'test-plugin-context-load-happend-error',
         load(id) {
           if (id.endsWith('foo.js')) {
-            throw new Error('load foo.js error')
+            throw new Error('load foo.js error');
           }
         },
         async transform(code, id) {
@@ -17,7 +17,7 @@ export default defineTest({
             await this.load({
               id: path.join(__dirname, 'foo.js'),
               moduleSideEffects: false,
-            })
+            });
           }
         },
       },
@@ -25,7 +25,7 @@ export default defineTest({
   },
   catchError: (err: any) => {
     expect(err.message).toMatch(
-      'load foo.js error'
-    )
-  }
-})
+      'load foo.js error',
+    );
+  },
+});

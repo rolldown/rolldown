@@ -173,10 +173,7 @@ impl Generator for EcmaGenerator {
     let mut source_joiner = match ctx.options.format {
       OutputFormat::Esm => render_esm(ctx, addon_render_context, &rendered_module_sources),
       OutputFormat::Cjs => {
-        match render_cjs(ctx, addon_render_context, &rendered_module_sources, &mut warnings) {
-          Ok(source_joiner) => source_joiner,
-          Err(errors) => return Ok(Err(errors)),
-        }
+        render_cjs(ctx, addon_render_context, &rendered_module_sources, &mut warnings)
       }
       OutputFormat::Iife => {
         match render_iife(ctx, addon_render_context, &rendered_module_sources, &mut warnings).await

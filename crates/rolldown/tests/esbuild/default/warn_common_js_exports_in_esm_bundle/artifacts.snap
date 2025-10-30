@@ -54,9 +54,7 @@ exports.foo = foo;
 ## import-in-cjs.js
 
 ```js
-// HIDDEN [rolldown:runtime]
 let bar = require("bar");
-bar = __toESM(bar);
 
 //#region import-in-cjs.js
 exports.foo = bar.foo;

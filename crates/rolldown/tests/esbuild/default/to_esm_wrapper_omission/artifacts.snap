@@ -84,12 +84,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'g_WRAP' in entry.js
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'g_nowrap' in entry.js
     ╭─[ entry.js:17:33 ]
     │
- 17 │ import { __esModule as g } from 'g_WRAP'
-    │                                 ────┬───  
-    │                                     ╰───── Module not found, treating it as an external dependency
+ 17 │ import { __esModule as g } from 'g_nowrap'
+    │                                 ─────┬────  
+    │                                      ╰────── Module not found, treating it as an external dependency
 ────╯
 
 ```
@@ -154,15 +154,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 require("a_nowrap");
 let b_nowrap = require("b_nowrap");
-b_nowrap = __toESM(b_nowrap);
 let d_WRAP = require("d_WRAP");
 d_WRAP = __toESM(d_WRAP);
 let e_WRAP = require("e_WRAP");
 e_WRAP = __toESM(e_WRAP);
 let f_WRAP = require("f_WRAP");
 f_WRAP = __toESM(f_WRAP);
-let g_WRAP = require("g_WRAP");
-g_WRAP = __toESM(g_WRAP);
+let g_nowrap = require("g_nowrap");
 let h_WRAP = require("h_WRAP");
 h_WRAP = __toESM(h_WRAP);
 let i_WRAP = require("i_WRAP");
@@ -175,7 +173,7 @@ j_WRAP = __toESM(j_WRAP);
 x = d_WRAP.x;
 (0, e_WRAP.default)();
 (0, f_WRAP.default)();
-(0, g_WRAP.__esModule)();
+(0, g_nowrap.__esModule)();
 x = h_WRAP;
 i_WRAP.x();
 j_WRAP.x``;

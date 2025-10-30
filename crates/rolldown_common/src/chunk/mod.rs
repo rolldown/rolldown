@@ -5,8 +5,8 @@ use std::{
 
 use crate::{
   ChunkIdx, ChunkKind, FilenameTemplate, ImportRecordIdx, ModuleIdx, ModuleTable, NamedImport,
-  NormalModule, NormalizedBundlerOptions, PreserveEntrySignatures, RenderedConcatenatedModuleParts,
-  RollupPreRenderedChunk, RuntimeHelper, SymbolRef,
+  NormalModule, NormalizedBundlerOptions, OutputExports, PreserveEntrySignatures,
+  RenderedConcatenatedModuleParts, RollupPreRenderedChunk, RuntimeHelper, SymbolRef,
   chunk::types::{chunk_reason_type::ChunkReasonType, module_group::ModuleGroup},
 };
 pub mod chunk_table;
@@ -85,6 +85,8 @@ pub struct Chunk {
   pub module_idx_to_group_idx: FxHashMap<ModuleIdx, usize>,
   pub module_idx_to_render_concatenated_module:
     FxHashMap<ModuleIdx, RenderedConcatenatedModuleParts>,
+  /// Pre-computed export mode for the chunk
+  pub output_exports: OutputExports,
 }
 
 impl Chunk {

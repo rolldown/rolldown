@@ -6,9 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
 let node_fs = require("node:fs");
-node_fs = __toESM(node_fs);
 
 //#region main.js
 const nonExternal = "nonExternal";

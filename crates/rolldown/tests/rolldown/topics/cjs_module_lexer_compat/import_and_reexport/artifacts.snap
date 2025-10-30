@@ -6,9 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
 let external = require("external");
-external = __toESM(external);
 
 exports.readFileSync = external.readFileSync;
 Object.keys(external).forEach(function (k) {

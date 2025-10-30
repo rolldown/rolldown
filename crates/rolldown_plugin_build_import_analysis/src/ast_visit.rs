@@ -128,42 +128,61 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
 }
 
 pub struct DynamicImportVisitor<'a, 'b> {
-  pub snippet: AstSnippet<'a>,
-  pub chunk_filename: PathBuf,
-  pub removed_pure_css_files: &'b RemovedPureCSSFilesCache,
+  pub chunk_filename_dir: PathBuf,
+  pub removed_pure_css_files: &'a RemovedPureCSSFilesCache,
+  pub s: &'a mut Option<string_wizard::MagicString<'b>>,
+  pub code: &'b str,
 }
 
-impl<'a> VisitMut<'a> for DynamicImportVisitor<'a, '_> {
-  fn visit_expression(&mut self, it: &mut Expression<'a>) {
-    if let Expression::ImportExpression(expr) = &it {
-      let value = match &expr.source {
-        Expression::StringLiteral(s) => Some(s.value),
-        Expression::TemplateLiteral(t) => t.single_quasi(),
-        _ => None,
-      };
-      if let Some(url) = value {
-        let normalized = self.chunk_filename.join(url.as_str()).normalize();
-        if self.removed_pure_css_files.inner.contains_key(normalized.to_string_lossy().as_ref()) {
-          *it = ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-            SPAN,
-            ast::Expression::StaticMemberExpression(
-              self.snippet.builder.alloc_static_member_expression(
-                SPAN,
-                self.snippet.id_ref_expr("Promise", SPAN),
-                self.snippet.id_name("resolve", SPAN),
-                false,
-              ),
-            ),
-            NONE,
-            self.snippet.builder.vec1(ast::Argument::from(ast::Expression::ObjectExpression(
-              self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec()),
-            ))),
-            false,
-          ));
-          return;
-        }
+impl VisitMut<'_> for DynamicImportVisitor<'_, '_> {
+  fn visit_import_expression(&mut self, it: &mut ast::ImportExpression<'_>) {
+    let value = match &it.source {
+      Expression::StringLiteral(s) => Some(s.value),
+      Expression::TemplateLiteral(t) => t.single_quasi(),
+      _ => None,
+    };
+    if let Some(url) = value {
+      let normalized = self.chunk_filename_dir.join(url.as_str()).normalize();
+      if self.removed_pure_css_files.inner.contains_key(normalized.to_string_lossy().as_ref()) {
+        let s = self.s.get_or_insert_with(|| string_wizard::MagicString::new(self.code));
+        s.update(
+          it.span.start as usize,
+          it.span.end as usize,
+          format!(
+            "Promise.resolve({{{:width$}}})",
+            "",
+            width = (it.span.end - it.span.start).saturating_sub(19) as usize
+          ),
+        );
+        return;
       }
     }
-    walk_mut::walk_expression(self, it);
+    walk_mut::walk_import_expression(self, it);
+  }
+}
+
+#[expect(dead_code)]
+pub struct DynamicImport {
+  pub start: usize,
+  pub end: usize,
+  pub source: Option<String>,
+}
+
+pub struct DynamicImportCollectVisitor<'a> {
+  pub imports: &'a mut Vec<DynamicImport>,
+}
+
+impl VisitMut<'_> for DynamicImportCollectVisitor<'_> {
+  fn visit_import_expression(&mut self, it: &mut ast::ImportExpression<'_>) {
+    let url = match &it.source {
+      Expression::StringLiteral(s) => Some(s.value.to_string()),
+      Expression::TemplateLiteral(t) => t.single_quasi().map(|s| s.to_string()),
+      _ => None,
+    };
+    self.imports.push(DynamicImport {
+      start: it.span.start as usize,
+      end: it.span.end as usize,
+      source: url,
+    });
   }
 }

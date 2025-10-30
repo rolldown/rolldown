@@ -8,7 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 let node_process = require("node:process");
-node_process = __toESM(node_process);
 
 //#region lib.js
 var VFile = class {

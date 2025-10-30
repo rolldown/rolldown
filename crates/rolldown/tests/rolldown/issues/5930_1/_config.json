@@ -1,0 +1,17 @@
+{
+  "config": {
+    "format": "cjs",
+    "input": [
+      {
+        "name": "entry",
+        "import": "main.js"
+      },
+      {
+        "name": "rule",
+        "import": "rule.js"
+      }
+    ],
+    "preserveModules": true
+  },
+  "configVariants": []
+}

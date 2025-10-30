@@ -3014,12 +3014,14 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arcstr",
+ "derive_more",
  "oxc",
  "regex",
  "rolldown_common",
  "rolldown_ecmascript_utils",
  "rolldown_plugin",
  "rolldown_plugin_utils",
+ "string_wizard",
  "sugar_path",
 ]
 

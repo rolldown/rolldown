@@ -14,7 +14,7 @@ e()
 import { default as f } from 'f_WRAP'
 f()
 
-import { __esModule as g } from 'g_WRAP'
+import { __esModule as g } from 'g_nowrap'
 g()
 
 import * as h from 'h_WRAP'

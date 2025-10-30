@@ -28,7 +28,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
 require("@remix-run/react");
 require("react");
 

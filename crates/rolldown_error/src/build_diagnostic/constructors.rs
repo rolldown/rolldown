@@ -197,12 +197,19 @@ impl BuildDiagnostic {
     Self::new_inner(UnsupportedFeature { filename, source, span, error_message })
   }
 
-  pub fn empty_import_meta(filename: String, source: ArcStr, span: Span, format: ArcStr) -> Self {
+  pub fn empty_import_meta(
+    filename: String,
+    source: ArcStr,
+    span: Span,
+    format: ArcStr,
+    is_import_meta_url: bool,
+  ) -> Self {
     Self::new_inner(super::events::empty_import_meta::EmptyImportMeta {
       filename,
       source,
       span,
       format,
+      is_import_meta_url,
     })
   }
 

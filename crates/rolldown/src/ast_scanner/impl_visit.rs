@@ -315,6 +315,9 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
               .to_string()
               .parse()
               .expect("should be a valid format"),
+            parent.as_member_expression_kind().is_some_and(|member_expr| {
+              member_expr.static_property_name().is_some_and(|static_name| static_name == "url")
+            }),
           )
           .with_severity_warning(),
         );

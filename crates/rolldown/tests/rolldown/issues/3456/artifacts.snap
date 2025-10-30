@@ -18,9 +18,7 @@ export { test as "\n\"\\'" };
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
 let external = require("external");
-external = __toESM(external);
 
 exports["\n\"\\'"] = external["\n\"\\'"];
 ```

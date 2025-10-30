@@ -5,6 +5,7 @@ use rolldown_sourcemap::SourceJoiner;
 use crate::{
   ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
   types::generator::GenerateContext,
+  utils::external_import_interop::external_import_needs_interop,
 };
 
 pub mod namespace;
@@ -31,7 +32,7 @@ pub fn render_chunk_external_imports<'a>(
     .chunk
     .direct_imports_from_external_modules
     .iter()
-    .filter_map(|(importee_id, _)| {
+    .filter_map(|(importee_id, named_imports)| {
       let importee = ctx.link_output.module_table[*importee_id]
         .as_external()
         .expect("Should be external module here");
@@ -39,17 +40,21 @@ pub fn render_chunk_external_imports<'a>(
       let external_module_symbol_name = &ctx.chunk.canonical_names[&importee.namespace_ref];
 
       if ctx.link_output.used_symbol_refs.contains(&importee.namespace_ref) {
-        let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
-          .link_output
-          .symbol_db
-          .canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
+        // Check if this import needs __toESM
+        let needs_interop = external_import_needs_interop(named_imports);
+        if needs_interop {
+          let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
+            .link_output
+            .symbol_db
+            .canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
 
-        import_code.push_str(external_module_symbol_name);
-        import_code.push_str(" = ");
-        import_code.push_str(to_esm_fn_name);
-        import_code.push('(');
-        import_code.push_str(external_module_symbol_name);
-        import_code.push_str(");\n");
+          import_code.push_str(external_module_symbol_name);
+          import_code.push_str(" = ");
+          import_code.push_str(to_esm_fn_name);
+          import_code.push('(');
+          import_code.push_str(external_module_symbol_name);
+          import_code.push_str(");\n");
+        }
         Some(importee)
       } else if importee.side_effects.has_side_effects() {
         Some(importee)

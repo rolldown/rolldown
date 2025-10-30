@@ -6,11 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
 let external_pkg = require("external-pkg");
-external_pkg = __toESM(external_pkg);
 let external_pkg2 = require("external-pkg2");
-external_pkg2 = __toESM(external_pkg2);
 
 //#region replacement.js
 let replace = { test() {} };

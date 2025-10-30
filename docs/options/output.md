@@ -577,11 +577,11 @@ export default {
 The available options:
 
 - `'none'`: Remove all comments from the output
-- `'inline'`: Preserve only legal comments (containing `@license`, `@preserve`, or starting with `//!` or `/*!`)
+- `'inline'`: Preserve only comments marked with special tags (`@license`, `@preserve`, `//!`, `/*!`)
 - `'all'`: Keep all comments, including JSDoc and legal comments (default)
 
 :::tip
-When generating npm packages with separate type definitions (`.d.ts` files), use `comments: 'none'` or `comments: 'inline'` to reduce bundle size. The type definitions will preserve JSDoc comments for documentation purposes.
+When generating npm packages with separate type definitions (`.d.ts` files), use `comments: 'inline'` to keep only legal/license comments while removing JSDoc comments, as the type definitions will preserve JSDoc comments for documentation purposes. If you don't need legal comments for licensing compliance, you can use `comments: 'none'` to minimize bundle size.
 :::
 
 ## legalComments

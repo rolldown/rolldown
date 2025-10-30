@@ -2134,7 +2134,7 @@ dependencies = [
 [[package]]
 name = "oxc_resolver"
 version = "11.12.0"
-source = "git+https://github.com/oxc-project/oxc-resolver.git?branch=fix%2Fdont-drop-canonicalized-path-by-cache-clear#9db02d1425ef827d0216650d1e6567760cc3b815"
+source = "git+https://github.com/oxc-project/oxc-resolver.git?branch=fix%2Fdont-drop-canonicalized-path-by-cache-clear#3fbd44050f094a0d74a4c4aa0757855e7a9272d1"
 dependencies = [
  "cfg-if",
  "indexmap",
@@ -2158,7 +2158,7 @@ dependencies = [
 [[package]]
 name = "oxc_resolver_napi"
 version = "11.12.0"
-source = "git+https://github.com/oxc-project/oxc-resolver.git?branch=fix%2Fdont-drop-canonicalized-path-by-cache-clear#9db02d1425ef827d0216650d1e6567760cc3b815"
+source = "git+https://github.com/oxc-project/oxc-resolver.git?branch=fix%2Fdont-drop-canonicalized-path-by-cache-clear#3fbd44050f094a0d74a4c4aa0757855e7a9272d1"
 dependencies = [
  "fancy-regex",
  "napi",

@@ -18,9 +18,9 @@ use rolldown_utils::{
 use crate::{
   BundleOutput,
   asset::asset_generator::AssetGenerator,
-  stages::generate_stage::ChunkGraph,
   css::css_generator::CssGenerator,
   ecmascript::ecma_generator::EcmaGenerator,
+  stages::generate_stage::ChunkGraph,
   type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
   types::generator::{GenerateContext, GenerateOutput, Generator},
   utils::{

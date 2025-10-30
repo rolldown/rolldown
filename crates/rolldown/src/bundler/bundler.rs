@@ -4,9 +4,9 @@ use crate::{
   hmr::hmr_stage::{HmrStage, HmrStageInput},
   module_loader::deferred_scan_data::defer_sync_scan_data,
   stages::{
-    link_stage::LinkStage,
-    scan_stage::{ScanStage, ScanStageOutput, NormalizedScanStageOutput},
     generate_stage::GenerateStage,
+    link_stage::LinkStage,
+    scan_stage::{NormalizedScanStageOutput, ScanStage, ScanStageOutput},
   },
   types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
   utils::fs_utils::clean_dir,

@@ -25,8 +25,8 @@ pub use crate::{
   dev::dev_engine::DevEngine,
   types::bundle_output::BundleOutput,
   watch::{
-    event::{BundleEvent, WatcherEvent},
     Watcher,
+    event::{BundleEvent, WatcherEvent},
   },
 };
 

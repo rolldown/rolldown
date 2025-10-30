@@ -6,8 +6,8 @@ use rolldown_plugin::{__inner::SharedPluginable, PluginDriver};
 use rustc_hash::FxHashMap;
 
 use crate::{
-  bundler::bundler::Bundler,
   BundlerOptions,
+  bundler::bundler::Bundler,
   types::scan_stage_cache::ScanStageCache,
   utils::{
     apply_inner_plugins::apply_inner_plugins,

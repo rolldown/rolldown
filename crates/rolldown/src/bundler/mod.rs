@@ -1,5 +1,5 @@
-mod bundler;
 mod builder;
+mod bundler;
 
-pub use bundler::Bundler;
 pub use builder::BundlerBuilder;
+pub use bundler::Bundler;

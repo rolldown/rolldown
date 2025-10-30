@@ -41,6 +41,10 @@ const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
       { text: 'Top Level Await', link: '/in-depth/tla-in-rolldown.md' },
       { text: 'Advanced Chunks', link: '/in-depth/advanced-chunks.md' },
       { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
+      {
+        text: 'Non ESM Output Formats',
+        link: '/in-depth/non-esm-output-formats.md',
+      },
       { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
       {
         text: 'Why Plugin Hook Filter',

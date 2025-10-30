@@ -15,13 +15,13 @@ use rolldown_plugin::{
 };
 use rolldown_plugin_utils::constants::RemovedPureCSSFilesCache;
 
-use crate::ast_visit::DynamicImportVisitor;
+use crate::ast_visit::{DynamicImportCollectVisitor, DynamicImportVisitor};
 
 use self::ast_visit::BuildImportAnalysisVisitor;
 
 const PRELOAD_HELPER_ID: &str = "\0vite/preload-helper.js";
 
-#[derive(Debug)]
+#[derive(derive_more::Debug)]
 #[expect(clippy::struct_excessive_bools)]
 pub struct BuildImportAnalysisPlugin {
   pub preload_code: ArcStr,
@@ -29,6 +29,10 @@ pub struct BuildImportAnalysisPlugin {
   pub render_built_url: bool,
   pub is_relative_base: bool,
   pub is_test_v2: bool,
+  // pub sourcemap: bool,
+  // pub is_module_preload: bool,
+  // #[debug(skip)]
+  // pub resolve_dependencies: Option<Arc<ResolveDependenciesFn>>,
 }
 
 impl Plugin for BuildImportAnalysisPlugin {
@@ -131,7 +135,44 @@ impl Plugin for BuildImportAnalysisPlugin {
       }
       return Ok(());
     }
-    todo!()
+
+    let mut bundle_iter = args.bundle.iter_mut();
+    // can't use chunk.dynamicImports.length here since some modules e.g.
+    // dynamic import to constant json may get inlined.
+    while let Some(Output::Chunk(chunk)) = bundle_iter.next()
+      && chunk.code.contains("__VITE_PRELOAD__")
+    {
+      let mut imports = Vec::new();
+
+      {
+        let allocator = oxc::allocator::Allocator::default();
+        let mut parser_ret = oxc::parser::Parser::new(
+          &allocator,
+          chunk.code.as_ref(),
+          oxc::span::SourceType::default(),
+        )
+        .parse();
+        if parser_ret.panicked
+          && let Some(err) =
+            parser_ret.errors.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
+        {
+          return Err(anyhow::anyhow!(format!(
+            "Failed to parse code in '{}': {:?}",
+            chunk.filename, err.message
+          )));
+        }
+
+        let mut visitor = DynamicImportCollectVisitor { imports: &mut imports };
+
+        visitor.visit_program(&mut parser_ret.program);
+      }
+
+      for _import in imports {
+        todo!()
+      }
+    }
+
+    Ok(())
   }
 
   fn register_hook_usage(&self) -> HookUsage {

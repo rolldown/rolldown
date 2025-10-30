@@ -3014,6 +3014,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arcstr",
+ "derive_more",
  "oxc",
  "regex",
  "rolldown_common",

@@ -160,3 +160,29 @@ impl VisitMut<'_> for DynamicImportVisitor<'_, '_> {
     walk_mut::walk_import_expression(self, it);
   }
 }
+
+#[expect(dead_code)]
+pub struct DynamicImport {
+  pub start: usize,
+  pub end: usize,
+  pub source: Option<String>,
+}
+
+pub struct DynamicImportCollectVisitor<'a> {
+  pub imports: &'a mut Vec<DynamicImport>,
+}
+
+impl VisitMut<'_> for DynamicImportCollectVisitor<'_> {
+  fn visit_import_expression(&mut self, it: &mut ast::ImportExpression<'_>) {
+    let url = match &it.source {
+      Expression::StringLiteral(s) => Some(s.value.to_string()),
+      Expression::TemplateLiteral(t) => t.single_quasi().map(|s| s.to_string()),
+      _ => None,
+    };
+    self.imports.push(DynamicImport {
+      start: it.span.start as usize,
+      end: it.span.end as usize,
+      source: url,
+    });
+  }
+}

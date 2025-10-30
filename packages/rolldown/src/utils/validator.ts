@@ -909,9 +909,17 @@ const OutputOptionsSchema = v.strictObject({
   ),
   manualChunks: v.optional(ManualChunksFunctionSchema),
   advancedChunks: v.optional(AdvancedChunksSchema),
+  comments: v.pipe(
+    v.optional(
+      v.union([v.literal('none'), v.literal('inline'), v.literal('all')]),
+    ),
+    v.description('Control all comments in the output (including JSDoc)'),
+  ),
   legalComments: v.pipe(
     v.optional(v.union([v.literal('none'), v.literal('inline')])),
-    v.description('Control comments in the output'),
+    v.description(
+      'Control legal comments in the output (deprecated, use comments instead)',
+    ),
   ),
   plugins: v.optional(v.custom<RolldownOutputPluginOption>(() => true)),
   polyfillRequire: v.pipe(

@@ -96,7 +96,10 @@ if (foo) {}
 
 ```js
 //#region 2.js
-if (foo) eval("");
+if (foo) {
+	function x() {}
+	eval("");
+}
 
 //#endregion
 ```
@@ -106,6 +109,7 @@ if (foo) eval("");
 ```js
 //#region 3.js
 if (foo) {
+	function x() {}
 	if (bar) eval("");
 }
 
@@ -116,7 +120,10 @@ if (foo) {
 
 ```js
 //#region 4.js
-if (foo) eval("");
+if (foo) {
+	eval("");
+	function x() {}
+}
 
 //#endregion
 ```
@@ -134,7 +141,10 @@ if (foo) {}
 
 ```js
 //#region 6.js
-if (foo) eval("");
+if (foo) {
+	function x() {}
+	eval("");
+}
 
 //#endregion
 ```
@@ -144,6 +154,7 @@ if (foo) eval("");
 ```js
 //#region 7.js
 if (foo) {
+	function x() {}
 	if (bar) eval("");
 }
 
@@ -154,7 +165,10 @@ if (foo) {
 
 ```js
 //#region 8.js
-if (foo) eval("");
+if (foo) {
+	eval("");
+	function x() {}
+}
 
 //#endregion
 ```

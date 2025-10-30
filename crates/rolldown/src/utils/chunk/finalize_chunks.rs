@@ -26,8 +26,8 @@ use rustc_hash::FxHashMap;
 use xxhash_rust::xxh3::Xxh3;
 
 use crate::{
-  chunk_graph::ChunkGraph,
-  stages::{generate_stage::GenerateStage, link_stage::LinkStageOutput},
+  stages::generate_stage::{ChunkGraph, GenerateStage},
+  stages::link_stage::LinkStageOutput,
   type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
   utils::process_code_and_sourcemap::process_code_and_sourcemap,
 };

@@ -8,7 +8,7 @@ use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::{ecmascript::property_access_str, indexmap::FxIndexMap};
 use rustc_hash::FxHashMap;
 
-use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
+use crate::{stages::generate_stage::ChunkGraph, stages::link_stage::LinkStageOutput};
 
 pub struct GenerateContext<'a> {
   pub chunk_idx: ChunkIdx,

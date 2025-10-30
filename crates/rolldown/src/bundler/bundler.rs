@@ -1,12 +1,12 @@
-use super::stages::{link_stage::LinkStage, scan_stage::NormalizedScanStageOutput};
 use crate::{
   BundlerOptions, SharedOptions, SharedResolver,
-  bundler_builder::BundlerBuilder,
+  bundler::builder::BundlerBuilder,
   hmr::hmr_stage::{HmrStage, HmrStageInput},
   module_loader::deferred_scan_data::defer_sync_scan_data,
   stages::{
+    link_stage::LinkStage,
+    scan_stage::{ScanStage, ScanStageOutput, NormalizedScanStageOutput},
     generate_stage::GenerateStage,
-    scan_stage::{ScanStage, ScanStageOutput},
   },
   types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
   utils::fs_utils::clean_dir,

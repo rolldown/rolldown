@@ -31,7 +31,6 @@ use tracing::debug_span;
 
 use crate::{
   BundleOutput, SharedOptions,
-  chunk_graph::ChunkGraph,
   module_finalizers::{FinalizerMutableState, ScopeHoistingFinalizerContext},
   stages::link_stage::LinkStageOutput,
   types::generator::GenerateContext,
@@ -45,11 +44,14 @@ use crate::{
 
 mod advanced_chunks;
 mod chunk_ext;
+mod chunk_graph;
 mod code_splitting;
 mod compute_cross_chunk_links;
 mod minify_assets;
 mod on_demand_wrapping;
 mod render_chunk_to_assets;
+
+pub use chunk_graph::ChunkGraph;
 
 pub struct GenerateStage<'a> {
   link_output: &'a mut LinkStageOutput,

@@ -8,7 +8,7 @@ use rolldown_common::{
 use rolldown_error::BuildResult;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec};
+use crate::{stages::generate_stage::ChunkGraph, types::linking_metadata::LinkingMetadataVec};
 
 use super::{
   GenerateStage,

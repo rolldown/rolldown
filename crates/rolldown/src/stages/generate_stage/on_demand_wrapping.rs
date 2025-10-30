@@ -7,7 +7,7 @@ use rolldown_common::{
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::chunk_graph::ChunkGraph;
+use crate::stages::generate_stage::ChunkGraph;
 
 use super::GenerateStage;
 

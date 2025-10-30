@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, collections::VecDeque, path::Path};
 
 use crate::{
-  chunk_graph::ChunkGraph, stages::generate_stage::chunk_ext::ChunkDebugExt,
+  stages::generate_stage::{ChunkGraph, chunk_ext::ChunkDebugExt},
   types::linking_metadata::LinkingMetadataVec, utils::chunk::normalize_preserve_entry_signature,
 };
 use arcstr::ArcStr;

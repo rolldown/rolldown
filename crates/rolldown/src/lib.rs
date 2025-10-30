@@ -1,8 +1,6 @@
 mod asset;
 mod ast_scanner;
 mod bundler;
-mod bundler_builder;
-mod chunk_graph;
 mod css;
 pub mod dev;
 mod ecmascript;
@@ -14,7 +12,6 @@ mod type_alias;
 mod types;
 mod utils;
 mod watch;
-mod watcher;
 use std::sync::Arc;
 
 use rolldown_fs::OsFileSystem;
@@ -24,12 +21,13 @@ pub(crate) type SharedResolver = Arc<Resolver<OsFileSystem>>;
 pub(crate) type SharedOptions = SharedNormalizedBundlerOptions;
 
 pub use crate::{
-  bundler::Bundler,
-  bundler_builder::BundlerBuilder,
+  bundler::{Bundler, BundlerBuilder},
   dev::dev_engine::DevEngine,
   types::bundle_output::BundleOutput,
-  watch::event::{BundleEvent, WatcherEvent},
-  watcher::Watcher,
+  watch::{
+    event::{BundleEvent, WatcherEvent},
+    Watcher,
+  },
 };
 
 pub use rolldown_common::bundler_options::*;

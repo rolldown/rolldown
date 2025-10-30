@@ -433,6 +433,18 @@ pub fn normalize_binding_options(
     checks: input_options.checks.map(Into::into),
     profiler_names: input_options.profiler_names,
     watch: input_options.watch.map(TryInto::try_into).transpose()?,
+    comments: output_options
+      .comments
+      .map(|inner| match inner.as_str() {
+        "none" => Ok(rolldown::Comments::None),
+        "inline" => Ok(rolldown::Comments::Inline),
+        "all" => Ok(rolldown::Comments::All),
+        _ => Err(napi::Error::new(
+          napi::Status::GenericFailure,
+          format!("Invalid value for `comments` option: {inner}"),
+        )),
+      })
+      .transpose()?,
     legal_comments: output_options
       .legal_comments
       .map(|inner| match inner.as_str() {

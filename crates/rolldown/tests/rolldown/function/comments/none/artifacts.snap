@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+function hello(name) {
+	return `Hello ${name}`;
+}
+const foo = "bar";
+const preserved = "value";
+
+//#endregion
+export { foo, hello, preserved };
+```

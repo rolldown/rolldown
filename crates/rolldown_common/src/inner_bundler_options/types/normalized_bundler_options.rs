@@ -11,6 +11,7 @@ use rolldown_error::EventKindSwitcher;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::advanced_chunks_options::AdvancedChunksOptions;
+use super::comments::Comments;
 use super::experimental_options::ExperimentalOptions;
 use super::generated_code_options::GeneratedCodeOptions;
 use super::legal_comments::LegalComments;
@@ -89,6 +90,7 @@ pub struct NormalizedBundlerOptions {
   pub checks: EventKindSwitcher,
   pub profiler_names: bool,
   pub watch: WatchOption,
+  pub comments: Comments,
   pub legal_comments: LegalComments,
   pub drop_labels: FxHashSet<String>,
   pub polyfill_require: bool,
@@ -162,6 +164,7 @@ impl Default for NormalizedBundlerOptions {
       checks: Default::default(),
       profiler_names: Default::default(),
       watch: Default::default(),
+      comments: Comments::All,
       legal_comments: LegalComments::None,
       drop_labels: Default::default(),
       polyfill_require: Default::default(),

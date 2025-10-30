@@ -481,6 +481,7 @@ impl<'a> HmrStage<'a> {
             sourcemap: enable_sourcemap,
             filename: affected_module.id.to_string(),
             print_legal_comments: false, // ignore hmr chunk comments
+            print_jsdoc_comments: false, // ignore hmr chunk comments
             initial_indent: 0,
           },
         );
@@ -663,6 +664,7 @@ impl<'a> HmrStage<'a> {
             sourcemap: enable_sourcemap,
             filename: affected_module.id.to_string(),
             print_legal_comments: false, // ignore hmr chunk comments
+            print_jsdoc_comments: false, // ignore hmr chunk comments
             initial_indent: 0,
           },
         );

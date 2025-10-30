@@ -127,6 +127,8 @@ pub struct BindingOutputOptions<'env> {
   #[napi(ts_type = "boolean | 'dce-only' | MinifyOptions")]
   pub minify: Option<Either3<bool, String, oxc_minify_napi::MinifyOptions>>,
   pub advanced_chunks: Option<BindingAdvancedChunksOptions>,
+  #[napi(ts_type = "'none' | 'inline' | 'all'")]
+  pub comments: Option<String>,
   #[napi(ts_type = "'none' | 'inline'")]
   pub legal_comments: Option<String>,
   pub polyfill_require: Option<bool>,

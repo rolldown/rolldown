@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region node_modules/self-ref-lib/internal/mod.js
+const internalValue = "internal-value";
+
+//#endregion
+//#region node_modules/self-ref-lib/index.js
+const internal = internalValue;
+
+//#endregion
+//#region main.js
+assert.strictEqual(internal, "internal-value");
+
+//#endregion
+```

@@ -5134,6 +5134,14 @@ expression: output
 
 - main-!~{000}~.js => main-Dhp9LlkD.js
 
+# tests/rolldown/resolve/browser_field_resolution
+
+- main-!~{000}~.js => main-BdoUNTe0.js
+
+# tests/rolldown/resolve/extensionless_typescript
+
+- main-!~{000}~.js => main-Dz8P3jwD.js
+
 # tests/rolldown/resolve/hash_tag_as_dir_name
 
 - main-!~{000}~.js => main-tpAxLMZ5.js
@@ -5141,6 +5149,18 @@ expression: output
 # tests/rolldown/resolve/natural_platform_without_mainfields
 
 - main-!~{000}~.js => main-1wxvB78i.js
+
+# tests/rolldown/resolve/oxc_resolver_integration
+
+- main-!~{000}~.js => main-B8zfY-Fo.js
+
+# tests/rolldown/resolve/package_exports_wildcard
+
+- main-!~{000}~.js => main-BXTmQEgi.js
+
+# tests/rolldown/resolve/self_referencing_package
+
+- main-!~{000}~.js => main-_OAS3Gue.js
 
 # tests/rolldown/resolve/ts_config_merge_decorator_metadata
 

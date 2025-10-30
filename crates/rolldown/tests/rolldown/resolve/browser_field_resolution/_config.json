@@ -1,0 +1,6 @@
+{
+  "config": {
+    "platform": "browser"
+  },
+  "expectExecuted": true
+}

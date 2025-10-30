@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region node_modules/conditional-exports-lib/import.js
+const value = "import-condition";
+
+//#endregion
+//#region node_modules/subpath-exports-lib/utils/index.js
+const util = "utility-function";
+
+//#endregion
+//#region node_modules/nested-conditions-lib/browser-import.js
+const helper = "browser-helper-value";
+
+//#endregion
+//#region main.js
+assert.strictEqual(value, "import-condition");
+assert.strictEqual(util, "utility-function");
+assert.strictEqual(helper, "browser-helper-value");
+
+//#endregion
+```

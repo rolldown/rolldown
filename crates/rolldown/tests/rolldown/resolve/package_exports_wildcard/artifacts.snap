@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region node_modules/wildcard-lib/features/feature1.js
+const feature1 = "feature-one";
+
+//#endregion
+//#region node_modules/wildcard-lib/features/feature2.js
+const feature2 = "feature-two";
+
+//#endregion
+//#region node_modules/wildcard-lib/utils/utilA.js
+const utilA = "util-a";
+
+//#endregion
+//#region main.js
+assert.strictEqual(feature1, "feature-one");
+assert.strictEqual(feature2, "feature-two");
+assert.strictEqual(utilA, "util-a");
+
+//#endregion
+```

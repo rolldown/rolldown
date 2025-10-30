@@ -1517,9 +1517,9 @@ dependencies = [
 
 [[package]]
 name = "napi-build"
-version = "2.2.4"
+version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ae82775d1b06f3f07efd0666e59bbc175da8383bc372051031d7a447e94fbea"
+checksum = "68064c4cf827376751236ee6785e0e38a6461f83a7a7f227c89f6256f3e96cc2"
 
 [[package]]
 name = "napi-derive"
@@ -2127,8 +2127,7 @@ dependencies = [
 [[package]]
 name = "oxc_resolver"
 version = "11.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ab3f270c313ac7f814ce73a64f4bdf36a183dcae4593b2f96c6e6afea8c99d0"
+source = "git+https://github.com/oxc-project/oxc-resolver?branch=11-07-fix_re-calculate_cachedpathimpl_parent_and_cachedpathimpl_node_modules_if_the_cache_is_dropped#edc530aee899d27de6de006cd4c77243b26988e9"
 dependencies = [
  "cfg-if",
  "indexmap",
@@ -2152,8 +2151,7 @@ dependencies = [
 [[package]]
 name = "oxc_resolver_napi"
 version = "11.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c779320dd5440f02a4a185dd6da6b02616775d6a07e1f6ebee724379d07f6e22"
+source = "git+https://github.com/oxc-project/oxc-resolver?branch=11-07-fix_re-calculate_cachedpathimpl_parent_and_cachedpathimpl_node_modules_if_the_cache_is_dropped#edc530aee899d27de6de006cd4c77243b26988e9"
 dependencies = [
  "fancy-regex",
  "napi",
@@ -2460,14 +2458,14 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "pnp"
-version = "0.12.4"
+version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7adbc1ab7344e1e77be663e91cb129e989e398c319df7a9b8dbda9dd6758df38"
+checksum = "2acd0b1e3a154e7c4610b9ab31491c32e9f47db2adc0c12047301f3bacc71597"
 dependencies = [
  "byteorder",
  "concurrent_lru",
  "fancy-regex",
- "miniz_oxide",
+ "flate2",
  "pathdiff",
  "radix_trie",
  "rustc-hash",

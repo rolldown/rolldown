@@ -22,9 +22,9 @@ expression: output
 
 # tests/esbuild/dce/const_value_inlining_direct_eval
 
-- nested-eval-!~{003}~.js => nested-eval-xuneCMVW.js
+- nested-eval-!~{003}~.js => nested-eval-BuMO5kcB.js
 - nested-no-eval-!~{002}~.js => nested-no-eval-hu2an2ND.js
-- top-level-eval-!~{001}~.js => top-level-eval-_Es_7W8n.js
+- top-level-eval-!~{001}~.js => top-level-eval-D-WVAwe-.js
 - top-level-no-eval-!~{000}~.js => top-level-no-eval-DNRRZxKw.js
 - ts-namespace-eval-!~{005}~.js => ts-namespace-eval-DvzfvVfA.js
 - ts-namespace-no-eval-!~{004}~.js => ts-namespace-no-eval-DP-3jFed.js
@@ -2540,13 +2540,13 @@ expression: output
 # tests/esbuild/lower/lower_nested_function_direct_eval
 
 - 1-!~{000}~.js => 1-B-jgQGiR.js
-- 2-!~{001}~.js => 2-B5-vDtKB.js
-- 3-!~{002}~.js => 3-CLLzrSuj.js
-- 4-!~{003}~.js => 4-BQEU1B8F.js
+- 2-!~{001}~.js => 2-CE2PB3IR.js
+- 3-!~{002}~.js => 3-DzbeOeSh.js
+- 4-!~{003}~.js => 4-Xj5EgsIT.js
 - 5-!~{004}~.js => 5-TxPJUhc1.js
-- 6-!~{005}~.js => 6-JwcW2KXv.js
-- 7-!~{006}~.js => 7-9wpZ-A4q.js
-- 8-!~{007}~.js => 8-my4xG5vP.js
+- 6-!~{005}~.js => 6-DSj00aoq.js
+- 7-!~{006}~.js => 7-joSvqK1F.js
+- 8-!~{007}~.js => 8-CnbagrAq.js
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 

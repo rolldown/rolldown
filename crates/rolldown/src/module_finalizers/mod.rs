@@ -1405,7 +1405,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 let mut properties = self.snippet.builder.vec();
                 for (export_name, resolved_export) in importee_linking_info.canonical_exports(false)
                 {
-                  let exported_value =
+                  let (exported_value, _hint) =
                     self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
                   // Create property: exportName: exportedValue
                   properties.push(ast::ObjectPropertyKind::ObjectProperty(

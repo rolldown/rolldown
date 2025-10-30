@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## file.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region file.json
+var require_file = /* @__PURE__ */ __commonJS({ "file.json": ((exports, module) => {
+	module.exports = { "foo": "bar" };
+}) });
+
+//#endregion
+export { __toDynamicImportESM as n, require_file as t };
+```
+
+## file2.js
+
+```js
+import { t as require_file } from "./file.js";
+
+export default require_file();
+
+```
+
+## main.js
+
+```js
+import { n as __toDynamicImportESM, t as require_file } from "./file.js";
+import assert from "node:assert";
+
+//#region main.js
+const required = require_file();
+const dynamicRes = await import("./file2.js").then(__toDynamicImportESM());
+assert.strictEqual(required.foo, "bar");
+assert.strictEqual(dynamicRes.default.foo, "bar");
+
+//#endregion
+```

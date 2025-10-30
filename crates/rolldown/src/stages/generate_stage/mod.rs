@@ -6,15 +6,15 @@ use oxc::semantic::{ScopeId, SymbolId};
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_debug::{action, trace_action, trace_action_enabled};
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_std_utils::OptionExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use rolldown_common::{
   ChunkIdx, ChunkKind, ConcatenateWrappedModuleKind, CssAssetNameReplacer, EcmaViewMeta,
-  ImportMetaRolldownAssetReplacer, ImportRecordIdx, Module, ModuleIdx, PreliminaryFilename,
-  PrependRenderedImport, RenderedConcatenatedModuleParts, RollupPreRenderedAsset, SymbolRef,
-  SymbolRefFlags,
+  ImportMetaRolldownAssetReplacer, ImportRecordIdx, Module, ModuleIdx, OutputExports,
+  PreliminaryFilename, PrependRenderedImport, RenderedConcatenatedModuleParts,
+  RollupPreRenderedAsset, SymbolRef, SymbolRefFlags,
 };
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{PathBufExt, PathExt, representative_file_name_for_preserve_modules};
@@ -34,8 +34,11 @@ use crate::{
   chunk_graph::ChunkGraph,
   module_finalizers::{FinalizerMutableState, ScopeHoistingFinalizerContext},
   stages::link_stage::LinkStageOutput,
+  types::generator::GenerateContext,
   utils::chunk::{
-    deconflict_chunk_symbols::deconflict_chunk_symbols, generate_pre_rendered_chunk,
+    deconflict_chunk_symbols::deconflict_chunk_symbols,
+    determine_export_mode::determine_export_mode, generate_pre_rendered_chunk,
+    render_chunk_exports::get_chunk_export_names,
     validate_options_for_multi_chunk_output::validate_options_for_multi_chunk_output,
   },
 };
@@ -66,7 +69,6 @@ impl<'a> GenerateStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
     self.plugin_driver.render_start(self.options).await?;
-
     let mut chunk_graph = self.generate_chunks().await?;
 
     if chunk_graph.chunk_table.len() > 1 {
@@ -82,6 +84,12 @@ impl<'a> GenerateStage<'a> {
     self.merge_cjs_namespace(&mut chunk_graph);
 
     self.trace_action_chunks_infos(&chunk_graph);
+
+    let mut warnings = vec![];
+    self.compute_chunk_output_exports(&mut chunk_graph, &mut warnings)?;
+    if !self.options.format.is_esm() {
+      self.link_output.warnings.extend(warnings);
+    }
 
     let index_chunk_id_to_name =
       self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
@@ -464,6 +472,51 @@ impl<'a> GenerateStage<'a> {
         }
       });
     });
+  }
+
+  fn compute_chunk_output_exports(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    warnings: &mut Vec<BuildDiagnostic>,
+  ) -> BuildResult<()> {
+    // Collect all the chunk data we need first
+    let mut chunk_export_data = Vec::new();
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      if let Some(entry_module) = chunk.user_defined_entry_module(&self.link_output.module_table) {
+        let export_names = get_chunk_export_names(chunk, self.link_output);
+        chunk_export_data.push((chunk_idx, entry_module, export_names));
+      }
+    }
+
+    // Now compute the export modes for each chunk
+    for (chunk_idx, entry_module, export_names) in chunk_export_data {
+      let export_mode = determine_export_mode(
+        warnings,
+        &GenerateContext {
+          chunk: &chunk_graph.chunk_table[chunk_idx],
+          options: self.options,
+          link_output: self.link_output,
+          chunk_graph,
+          plugin_driver: self.plugin_driver,
+          warnings: Vec::new(),
+          module_id_to_codegen_ret: Vec::new(),
+          render_export_items_index_vec: &IndexVec::default(),
+          chunk_idx,
+        },
+        entry_module,
+        &export_names,
+      )?;
+      chunk_graph.chunk_table[chunk_idx].output_exports = export_mode;
+    }
+
+    // Set common chunks to Named
+    for chunk in chunk_graph.chunk_table.iter_mut() {
+      if chunk.user_defined_entry_module(&self.link_output.module_table).is_none() {
+        chunk.output_exports = OutputExports::Named;
+      }
+    }
+
+    Ok(())
   }
 
   fn trace_action_chunks_infos(&self, chunk_graph: &ChunkGraph) {

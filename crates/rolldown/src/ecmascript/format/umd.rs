@@ -9,7 +9,6 @@ use crate::{
   },
   types::generator::GenerateContext,
   utils::chunk::{
-    determine_export_mode::determine_export_mode,
     namespace_marker::render_namespace_markers,
     render_chunk_exports::{
       get_chunk_export_names_with_ctx, render_chunk_exports, render_wrapped_entry_chunk,
@@ -41,7 +40,9 @@ pub async fn render_umd<'code>(
 
   // umd wrapper start
 
-  // Analyze the export information of the chunk.
+  // Use pre-computed output_exports from the chunk
+  let export_mode = ctx.chunk.output_exports;
+
   let export_names = get_chunk_export_names_with_ctx(ctx);
   let has_exports = !export_names.is_empty();
   let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
@@ -50,9 +51,6 @@ pub async fn render_umd<'code>(
     .chunk
     .entry_module(&ctx.link_output.module_table)
     .expect("iife format only have entry chunk");
-
-  // We need to transform the `OutputExports::Auto` to suitable `OutputExports`.
-  let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_names)?;
 
   let named_exports = matches!(&export_mode, OutputExports::Named);
 

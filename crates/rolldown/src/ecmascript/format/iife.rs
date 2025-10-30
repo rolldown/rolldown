@@ -28,11 +28,8 @@ use crate::utils::chunk::render_chunk_exports::{
   get_chunk_export_names_with_ctx, render_wrapped_entry_chunk,
 };
 use crate::{
-  ecmascript::ecma_generator::RenderedModuleSources,
-  types::generator::GenerateContext,
-  utils::chunk::{
-    determine_export_mode::determine_export_mode, render_chunk_exports::render_chunk_exports,
-  },
+  ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext,
+  utils::chunk::render_chunk_exports::render_chunk_exports,
 };
 use rolldown_common::{AddonRenderContext, ExternalModule, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -69,7 +66,9 @@ pub async fn render_iife<'code>(
 
   // iife wrapper start
 
-  // Analyze the export information of the chunk.
+  // Use pre-computed output_exports from the chunk
+  let export_mode = ctx.chunk.output_exports;
+
   let export_names = get_chunk_export_names_with_ctx(ctx);
   let has_exports = !export_names.is_empty();
   let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
@@ -78,9 +77,6 @@ pub async fn render_iife<'code>(
     .chunk
     .entry_module(&ctx.link_output.module_table)
     .expect("iife format only have entry chunk");
-
-  // We need to transform the `OutputExports::Auto` to suitable `OutputExports`.
-  let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_names)?;
 
   let named_exports = matches!(&export_mode, OutputExports::Named);
 

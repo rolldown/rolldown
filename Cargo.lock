@@ -2134,8 +2134,7 @@ dependencies = [
 [[package]]
 name = "oxc_resolver"
 version = "11.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dfefc4ba2297f3fe15323d6c4ef0fc9a07cbf08d205ff453ee1dfed8dd0c9f8b"
+source = "git+https://github.com/oxc-project/oxc-resolver.git?branch=fix%2Fdont-drop-canonicalized-path-by-cache-clear#ddeeaf429af60c585cafbc9a7e3e08d1f9bc9763"
 dependencies = [
  "cfg-if",
  "indexmap",
@@ -2159,8 +2158,7 @@ dependencies = [
 [[package]]
 name = "oxc_resolver_napi"
 version = "11.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5355c552d89c378b99e7d59c3e266558dfb0dff3872e46e6c3e5eaf77a26d8a"
+source = "git+https://github.com/oxc-project/oxc-resolver.git?branch=fix%2Fdont-drop-canonicalized-path-by-cache-clear#ddeeaf429af60c585cafbc9a7e3e08d1f9bc9763"
 dependencies = [
  "fancy-regex",
  "napi",

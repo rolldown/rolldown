@@ -87,7 +87,8 @@ pub fn render_chunk_exports(
   export_mode: Option<&OutputExports>,
 ) -> Option<String> {
   let GenerateContext { chunk, link_output, options, .. } = ctx;
-  let export_items: Vec<(CompactStr, SymbolRef)> = ctx.render_export_items_index_vec[ctx.chunk_idx]
+  let mut export_items: Vec<(CompactStr, SymbolRef)> = ctx.render_export_items_index_vec
+    [ctx.chunk_idx]
     .clone()
     .into_iter()
     .flat_map(|(symbol_ref, names)| names.into_iter().map(|name| (name, symbol_ref)).collect_vec())
@@ -95,6 +96,15 @@ pub fn render_chunk_exports(
 
   match options.format {
     OutputFormat::Esm => {
+      // If this is an entry point with a CJS wrapper, render_wrapped_entry_chunk already handles
+      // the default export, so we should filter it out from export_items to avoid duplicates.
+      if let ChunkKind::EntryPoint { module: entry_id, .. } = chunk.kind {
+        let entry_meta = &link_output.metas[entry_id];
+        if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
+          export_items.retain(|(exported_name, _)| exported_name.as_str() != "default");
+        }
+      }
+
       if export_items.is_empty() && !matches!(ctx.options.platform, Platform::Node) {
         return None;
       }

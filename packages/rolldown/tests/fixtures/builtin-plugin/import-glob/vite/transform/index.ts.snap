@@ -1,14 +1,54 @@
-import { n as name$1, t as a_exports } from "./a2.js";
-import { n as name$2, t as b_exports } from "./b2.js";
-import { n as modules_exports, r as name$3 } from "./modules2.js";
-import { t as a_default } from "./a4.js";
-import { t as b_default } from "./b4.js";
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (all) => {
+	let target = {};
+	for (var name$4 in all) __defProp(target, name$4, {
+		get: all[name$4],
+		enumerable: true
+	});
+	return target;
+};
 
+//#endregion
+//#region ../fixtures/a/modules/a.ts
+var a_exports = /* @__PURE__ */ __export({ name: () => name$1 });
+const name$1 = "a";
+
+//#endregion
+//#region ../fixtures/a/modules/b.ts
+var b_exports = /* @__PURE__ */ __export({ name: () => name$2 });
+const name$2 = "b";
+
+//#endregion
+//#region ../fixtures/a/modules/index.ts
+var modules_exports = /* @__PURE__ */ __export({
+	a: () => name$1,
+	b: () => name$2,
+	default: () => modules_default,
+	name: () => name$3
+});
+const name$3 = "index";
+var modules_default = "indexDefault";
+
+//#endregion
+//#region ../fixtures/a/modules/a.ts?raw
+var a_default = "export const name = 'a'\n";
+
+//#endregion
+//#region ../fixtures/a/modules/b.ts?raw
+var b_default = "export const name = 'b'\n";
+
+//#endregion
 //#region ../fixtures/a/index.ts
 const basic = {
-	"./modules/a.ts": () => import("./a.js"),
-	"./modules/b.ts": () => import("./b.js"),
-	"./modules/index.ts": () => import("./modules.js")
+	"./modules/a.ts": () => Promise.resolve().then(() => ({ name: name$1 })),
+	"./modules/b.ts": () => Promise.resolve().then(() => ({ name: name$2 })),
+	"./modules/index.ts": () => Promise.resolve().then(() => ({
+		a: name$1,
+		b: name$2,
+		default: modules_default,
+		name: name$3
+	}))
 };
 const basicWithObjectKeys = Object.keys({
 	"./modules/a.ts": 0,
@@ -16,9 +56,14 @@ const basicWithObjectKeys = Object.keys({
 	"./modules/index.ts": 0
 });
 const basicWithObjectValues = Object.values([
-	() => import("./a.js"),
-	() => import("./b.js"),
-	() => import("./modules.js")
+	() => Promise.resolve().then(() => ({ name: name$1 })),
+	() => Promise.resolve().then(() => ({ name: name$2 })),
+	() => Promise.resolve().then(() => ({
+		a: name$1,
+		b: name$2,
+		default: modules_default,
+		name: name$3
+	}))
 ]);
 const basicEager = {
 	"./modules/a.ts": a_exports,
@@ -36,14 +81,14 @@ const basicEagerWithObjectValues = Object.values([
 	modules_exports
 ]);
 const ignore = {
-	"./modules/a.ts": () => import("./a.js"),
-	"./modules/b.ts": () => import("./b.js")
+	"./modules/a.ts": () => Promise.resolve().then(() => ({ name: name$1 })),
+	"./modules/b.ts": () => Promise.resolve().then(() => ({ name: name$2 }))
 };
 const ignoreWithObjectKeys = Object.keys({
 	"./modules/a.ts": 0,
 	"./modules/b.ts": 0
 });
-const ignoreWithObjectValues = Object.values([() => import("./a.js"), () => import("./b.js")]);
+const ignoreWithObjectValues = Object.values([() => Promise.resolve().then(() => ({ name: name$1 })), () => Promise.resolve().then(() => ({ name: name$2 }))]);
 const namedEager = {
 	"./modules/a.ts": name$1,
 	"./modules/b.ts": name$2,
@@ -60,9 +105,14 @@ const namedEagerWithObjectValues = Object.values([
 	name$3
 ]);
 const namedDefault = {
-	"./modules/a.ts": () => import("./a.js").then((m) => m.default),
-	"./modules/b.ts": () => import("./b.js").then((m) => m.default),
-	"./modules/index.ts": () => import("./modules.js").then((m) => m.default)
+	"./modules/a.ts": () => Promise.resolve().then(() => ({ name: name$1 })).then((m) => m.default),
+	"./modules/b.ts": () => Promise.resolve().then(() => ({ name: name$2 })).then((m) => m.default),
+	"./modules/index.ts": () => Promise.resolve().then(() => ({
+		a: name$1,
+		b: name$2,
+		default: modules_default,
+		name: name$3
+	})).then((m) => m.default)
 };
 const namedDefaultWithObjectKeys = Object.keys({
 	"./modules/a.ts": 0,
@@ -70,49 +120,59 @@ const namedDefaultWithObjectKeys = Object.keys({
 	"./modules/index.ts": 0
 });
 const namedDefaultWithObjectValues = Object.values([
-	() => import("./a.js").then((m) => m.default),
-	() => import("./b.js").then((m) => m.default),
-	() => import("./modules.js").then((m) => m.default)
+	() => Promise.resolve().then(() => ({ name: name$1 })).then((m) => m.default),
+	() => Promise.resolve().then(() => ({ name: name$2 })).then((m) => m.default),
+	() => Promise.resolve().then(() => ({
+		a: name$1,
+		b: name$2,
+		default: modules_default,
+		name: name$3
+	})).then((m) => m.default)
 ]);
 const eagerAs = {
 	"./modules/a.ts": a_default,
 	"./modules/b.ts": b_default
 };
 const rawImportModule = {
-	"./modules/a.ts": () => import("./a3.js"),
-	"./modules/b.ts": () => import("./b3.js")
+	"./modules/a.ts": () => Promise.resolve().then(() => ({ default: a_default })),
+	"./modules/b.ts": () => Promise.resolve().then(() => ({ default: b_default }))
 };
 const excludeSelf = { "./sibling.ts": () => import("./sibling.js") };
 const excludeSelfRaw = { "./sibling.ts": () => import("./sibling3.js") };
 const customQueryString = { "./sibling.ts": () => import("./sibling2.js") };
 const parent = {};
 const rootMixedRelative = {
-	"/b/a.ts": () => import("./a7.js").then((m) => m.default),
-	"/b/b.ts": () => import("./b7.js").then((m) => m.default),
-	"/b/index.ts": () => import("./b9.js").then((m) => m.default)
+	"/b/a.ts": () => import("./a3.js").then((m) => m.default),
+	"/b/b.ts": () => import("./b3.js").then((m) => m.default),
+	"/b/index.ts": () => import("./b5.js").then((m) => m.default)
 };
 const cleverCwd1 = { "./node_modules/framework/pages/hello.page.js": () => import("./hello.page.js") };
 const cleverCwd2 = {
-	"./modules/a.ts": () => import("./a.js"),
-	"./modules/b.ts": () => import("./b.js"),
-	"../b/a.ts": () => import("./a5.js"),
-	"../b/b.ts": () => import("./b5.js")
+	"./modules/a.ts": () => Promise.resolve().then(() => ({ name: name$1 })),
+	"./modules/b.ts": () => Promise.resolve().then(() => ({ name: name$2 })),
+	"../b/a.ts": () => import("./a.js"),
+	"../b/b.ts": () => import("./b.js")
 };
 const customBase = {
-	"./modules/a.ts": () => import("./a.js"),
-	"./modules/b.ts": () => import("./b.js"),
-	"./modules/index.ts": () => import("./modules.js"),
+	"./modules/a.ts": () => Promise.resolve().then(() => ({ name: name$1 })),
+	"./modules/b.ts": () => Promise.resolve().then(() => ({ name: name$2 })),
+	"./modules/index.ts": () => Promise.resolve().then(() => ({
+		a: name$1,
+		b: name$2,
+		default: modules_default,
+		name: name$3
+	})),
 	"./sibling.ts": () => import("./sibling.js")
 };
 const customRootBase = {
-	"./a.ts": () => import("./a5.js"),
-	"./b.ts": () => import("./b5.js"),
-	"./index.ts": () => import("./b8.js")
+	"./a.ts": () => import("./a.js"),
+	"./b.ts": () => import("./b.js"),
+	"./index.ts": () => import("./b4.js")
 };
 const customBaseParent = {
-	"../b/a.ts": () => import("./a5.js"),
-	"../b/b.ts": () => import("./b5.js"),
-	"../b/index.ts": () => import("./b8.js")
+	"../b/a.ts": () => import("./a.js"),
+	"../b/b.ts": () => import("./b.js"),
+	"../b/index.ts": () => import("./b4.js")
 };
 
 //#endregion

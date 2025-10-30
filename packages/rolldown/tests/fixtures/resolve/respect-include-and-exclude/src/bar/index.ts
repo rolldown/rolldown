@@ -1,1 +1,1 @@
-export default 'bar'
+export default 'bar';

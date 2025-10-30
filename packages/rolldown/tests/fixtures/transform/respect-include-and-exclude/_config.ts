@@ -1,4 +1,4 @@
-import { defineTest } from 'rolldown-tests'
+import { defineTest } from 'rolldown-tests';
 
 export default defineTest({
   config: {
@@ -6,6 +6,6 @@ export default defineTest({
     tsconfig: './src/tsconfig.json',
   },
   async afterTest() {
-   await import('./assert.mjs')
+    await import('./assert.mjs');
   },
-})
+});

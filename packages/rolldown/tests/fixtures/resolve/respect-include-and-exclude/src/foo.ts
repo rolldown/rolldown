@@ -1,3 +1,3 @@
-import app from '@app/index'
+import app from '@app/index';
 
 export default app;

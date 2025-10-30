@@ -5,7 +5,7 @@
     "paths": {
       "@app/*": [
         "bar/*"
-      ],
+      ]
     }
   },
   "include": [

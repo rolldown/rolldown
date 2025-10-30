@@ -3,32 +3,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## bar.js
-
-```js
-import { t as bar_default } from "./bar2.js";
-
-export { bar_default as default };
-```
-
-## bar2.js
-
-```js
-//#region bar.mjs
-var bar_default = "bar";
-
-//#endregion
-export { bar_default as t };
-```
-
 ## main.js
 
 ```js
-import { t as bar_default } from "./bar2.js";
 import assert from "node:assert";
 
 //#region main.js
-const glob = { "./bar.css": () => import("./bar.js") };
+const glob = { "./bar.css": () => Promise.resolve().then(() => ({ default: "bar" })) };
 const globEager = { "./bar.css": "bar" };
 assert.strictEqual(globEager["./bar.css"], "bar");
 

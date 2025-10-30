@@ -1386,14 +1386,21 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let importee_id = rec.resolved_module;
           match &self.ctx.modules[importee_id] {
             Module::Normal(importee) => {
-              // Check if the imported module is in the same chunk as the current module
-              // If so, we can inline the dynamic import with Promise.resolve()
+              // Check if we should inline this dynamic import
+              // Inline if: 
+              // 1. The module is in the same chunk, OR
+              // 2. The module has no separate dynamic entry chunk (was filtered out during link stage)
               // Only inline ESM modules, not CommonJS or wrapped modules
               let importee_linking_info = &self.ctx.linking_infos[importee_id];
               let is_wrapped = importee_linking_info.wrapper_ref.is_some();
               let is_commonjs = matches!(importee.exports_kind, ExportsKind::CommonJs);
+              
+              // Check if module is in same chunk OR has no separate dynamic entry
+              let in_same_chunk = self.ctx.chunk.modules.contains(&importee_id);
+              let has_no_dynamic_entry = !self.ctx.chunk_graph.entry_module_to_entry_chunk.contains_key(&importee_id);
+              let should_inline = (in_same_chunk || has_no_dynamic_entry) && !is_wrapped && !is_commonjs;
 
-              if self.ctx.chunk.modules.contains(&importee_id) && !is_wrapped && !is_commonjs {
+              if should_inline {
                 // The module is in the same chunk and is a pure ESM module, inline it
                 // Create: Promise.resolve().then(() => ({ export1: value1, export2: value2, ... }))
 
@@ -1401,6 +1408,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 let mut properties = self.snippet.builder.vec();
                 for (export_name, resolved_export) in importee_linking_info.canonical_exports(false)
                 {
+                  // Skip exports that were tree-shaken (don't have canonical names)
+                  if self.ctx.symbol_db.canonical_name_for(resolved_export.symbol_ref, &self.ctx.chunk.canonical_names).is_none() {
+                    continue;
+                  }
+                  
                   let (exported_value, _hint) =
                     self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
                   // Create property: exportName: exportedValue

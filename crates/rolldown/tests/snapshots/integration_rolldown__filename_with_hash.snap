@@ -5042,7 +5042,7 @@ expression: output
 
 # tests/rolldown/optimization/inline_const/5197
 
-- main-!~{000}~.js => main-m6z5_sWl.js
+- main-!~{000}~.js => main-BtvicZ6m.js
 
 # tests/rolldown/optimization/inline_const/6101
 
@@ -5946,8 +5946,8 @@ expression: output
 
 # tests/rolldown/tree_shaking/issue_4682
 
-- main-!~{000}~.js => main-A64AG2tP.js
-- dynamic-!~{001}~.js => dynamic-CeUg7ITb.js
+- main-!~{000}~.js => main-1ahiNgMi.js
+- dynamic-!~{001}~.js => dynamic-DEnxjHw7.js
 
 # tests/rolldown/tree_shaking/json_default_import
 

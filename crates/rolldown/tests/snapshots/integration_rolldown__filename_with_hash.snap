@@ -4813,8 +4813,8 @@ expression: output
 
 # tests/rolldown/issues/6756
 
-- entry-!~{000}~.js => entry-Dhci23E6.js
-- lib-!~{001}~.js => lib-CHYtbTMJ.js
+- main-!~{000}~.js => main-D7G5mb2I.js
+- dynamic-!~{001}~.js => dynamic-BMZTHQfH.js
 
 # tests/rolldown/issues/rolldown_vite_289
 

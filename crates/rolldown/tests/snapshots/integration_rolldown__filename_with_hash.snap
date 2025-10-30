@@ -4769,6 +4769,13 @@ expression: output
 
 - main-!~{000}~.js => main-CG_fOlqG.js
 
+# tests/rolldown/issues/5930_1
+
+- entry-!~{000}~.js => entry-D45Yl-CM.js
+- rule-!~{001}~.js => rule-FzKBW_ib.js
+- _virtual/rolldown_runtime-!~{002}~.js => _virtual/rolldown_runtime-DaG2u6hd.js
+- lib-!~{004}~.js => lib-B4TXXfuK.js
+
 # tests/rolldown/issues/6036
 
 - main-!~{000}~.js => main-QBmbik0c.js

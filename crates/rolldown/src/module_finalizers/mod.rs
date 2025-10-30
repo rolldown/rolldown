@@ -15,8 +15,8 @@ use oxc::{
 use rolldown_common::{
   AstScopes, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx, ImportRecordMeta,
   InlineConstMode, MemberExprRefResolution, Module, ModuleIdx, ModuleNamespaceIncludedReason,
-  ModuleType, NamespaceAlias, OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier,
-  SymbolRef, WrapKind,
+  ModuleType, NamespaceAlias, OutputExports, OutputFormat, Platform,
+  RenderedConcatenatedModuleParts, Specifier, SymbolRef, WrapKind,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
@@ -299,12 +299,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let require_binding = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
               .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
 
-            if self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol].entry_module_idx()
-              == Some(canonical_ref.owner)
+            let chunk = &self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol];
+            if chunk.entry_module_idx() == Some(canonical_ref.owner)
               && matches!(self.ctx.linking_infos[canonical_ref.owner].wrap_kind(), WrapKind::Cjs)
             {
               hint.insert(FinalizedExprProcessHint::FromCjsWrapKindEntry);
-              self.snippet.literal_prop_access_member_expr_expr(require_binding, "default")
+              // see https://github.com/rolldown/rolldown/blob/16349a4efa8d841d3b5ca8e2ebabf24a1e1c406f/crates/rolldown/src/utils/chunk/render_chunk_exports.rs?plain=1#L159-L182
+              if matches!(chunk.output_exports, OutputExports::Default) {
+                self.snippet.id_ref_expr(require_binding, SPAN)
+              } else {
+                self.snippet.literal_prop_access_member_expr_expr(require_binding, "default")
+              }
             } else {
               let exported_name = &self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
                 .exports_to_other_chunks[&canonical_ref][0];

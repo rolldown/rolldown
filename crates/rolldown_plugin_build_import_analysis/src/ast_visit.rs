@@ -161,7 +161,6 @@ impl VisitMut<'_> for DynamicImportVisitor<'_, '_> {
   }
 }
 
-#[expect(dead_code)]
 pub struct DynamicImport {
   pub start: usize,
   pub end: usize,

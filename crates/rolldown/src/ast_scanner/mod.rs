@@ -1047,7 +1047,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.result.constant_export_map.insert(symbol_id, value);
   }
 
-  fn is_imoprt_expr_ignored_by_comment(&mut self, expr: &ImportExpression<'ast>) -> bool {
+  fn is_import_expr_ignored_by_comment(&mut self, expr: &ImportExpression<'ast>) -> bool {
     let mut should_ignore = false;
     while self.current_comment_idx < self.immutable_ctx.comments.len() {
       let comment = &self.immutable_ctx.comments[self.current_comment_idx];

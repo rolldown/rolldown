@@ -1,4 +1,4 @@
-import type { BindingOutputs } from '../binding.cjs';
+import type { BindingOutputs, ExternalMemoryStatus } from '../binding.cjs';
 import { lazy } from '../decorators/lazy';
 import { nonEnumerable } from '../decorators/non-enumerable';
 import { transformToRollupOutput } from '../utils/transform-to-rollup-output';
@@ -17,13 +17,27 @@ export class RolldownOutputImpl
   }
 
   @nonEnumerable
-  __rolldown_external_memory_handle__(keepDataAlive?: boolean): boolean {
-    let allFreed = true;
+  __rolldown_external_memory_handle__(
+    keepDataAlive?: boolean,
+  ): ExternalMemoryStatus {
     const outputs = this.output;
-    for (const item of outputs) {
-      allFreed = allFreed &&
-        item.__rolldown_external_memory_handle__(keepDataAlive);
+    const results = outputs.map((item) =>
+      item.__rolldown_external_memory_handle__(keepDataAlive)
+    );
+
+    const allFreed = results.every((r) => r.freed);
+    if (!allFreed) {
+      const reasons = results
+        .filter((r) => !r.freed)
+        .map((r) => r.reason)
+        .filter(Boolean);
+      return {
+        freed: false,
+        reason: `Failed to free ${reasons.length} item(s): ${
+          reasons.join('; ')
+        }`,
+      };
     }
-    return allFreed;
+    return { freed: true };
   }
 }

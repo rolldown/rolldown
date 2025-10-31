@@ -1404,7 +1404,7 @@ export declare class BindingNormalizedOptions {
 }
 
 export declare class BindingOutputAsset {
-  dropInner(): boolean
+  dropInner(): ExternalMemoryStatus
   get fileName(): string
   get originalFileName(): string | null
   get originalFileNames(): Array<string>
@@ -1414,7 +1414,7 @@ export declare class BindingOutputAsset {
 }
 
 export declare class BindingOutputChunk {
-  dropInner(): boolean
+  dropInner(): ExternalMemoryStatus
   get isEntry(): boolean
   get isDynamicEntry(): boolean
   get facadeModuleId(): string | null
@@ -2312,6 +2312,11 @@ export declare function createTokioRuntime(blockingThreads?: number | undefined 
 export interface ExtensionAliasItem {
   target: string
   replacements: Array<string>
+}
+
+export interface ExternalMemoryStatus {
+  freed: boolean
+  reason?: string
 }
 
 export type FilterTokenKind =  'Id'|

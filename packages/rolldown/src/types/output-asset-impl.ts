@@ -1,4 +1,4 @@
-import type { BindingOutputAsset } from '../binding.cjs';
+import type { BindingOutputAsset, ExternalMemoryStatus } from '../binding.cjs';
 import { getLazyFields, lazy } from '../decorators/lazy';
 import { nonEnumerable } from '../decorators/non-enumerable';
 import type { AssetSource } from '../utils/asset-source';
@@ -42,7 +42,9 @@ export class OutputAssetImpl implements OutputAsset {
   }
 
   @nonEnumerable
-  __rolldown_external_memory_handle__(keepDataAlive?: boolean): boolean {
+  __rolldown_external_memory_handle__(
+    keepDataAlive?: boolean,
+  ): ExternalMemoryStatus {
     if (keepDataAlive) {
       this.#evaluateAllLazyFields();
     }

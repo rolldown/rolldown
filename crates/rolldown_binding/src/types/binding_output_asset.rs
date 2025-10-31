@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use napi_derive::napi;
 
-use crate::options::plugin::types::binding_asset_source::BindingAssetSource;
+use crate::{
+  options::plugin::types::binding_asset_source::BindingAssetSource,
+  types::external_memory_status::ExternalMemoryStatus,
+};
 
 #[napi]
 pub struct BindingOutputAsset {
@@ -24,8 +27,31 @@ impl BindingOutputAsset {
   }
 
   #[napi(enumerable = false)]
-  pub fn drop_inner(&mut self) -> bool {
-    self.inner.take().is_some()
+  pub fn drop_inner(&mut self) -> ExternalMemoryStatus {
+    match self.inner.take() {
+      None => ExternalMemoryStatus {
+        freed: false,
+        reason: Some("Memory has already been freed".to_string()),
+      },
+      Some(arc) => {
+        let strong_count = Arc::strong_count(&arc);
+        if strong_count > 1 {
+          // Drop our reference, but others exist
+          // Arc drops here automatically
+          ExternalMemoryStatus {
+            freed: false,
+            reason: Some(format!(
+              "Data has been dropped, but there are {} other strong reference(s) referring to this data on the native side, so the memory may not be released.",
+              strong_count - 1
+            )),
+          }
+        } else {
+          // Last reference - memory will be freed
+          // Arc drops here automatically
+          ExternalMemoryStatus { freed: true, reason: None }
+        }
+      }
+    }
   }
 
   #[napi(getter)]

@@ -1,4 +1,4 @@
-import type { BindingOutputChunk } from '../binding.cjs';
+import type { BindingOutputChunk, ExternalMemoryStatus } from '../binding.cjs';
 import { getLazyFields, lazy } from '../decorators/lazy';
 import { nonEnumerable } from '../decorators/non-enumerable';
 import { transformChunkModules } from '../utils/transform-rendered-chunk';
@@ -84,7 +84,9 @@ export class OutputChunkImpl implements OutputChunk {
   }
 
   @nonEnumerable
-  __rolldown_external_memory_handle__(keepDataAlive?: boolean): boolean {
+  __rolldown_external_memory_handle__(
+    keepDataAlive?: boolean,
+  ): ExternalMemoryStatus {
     if (keepDataAlive) {
       this.#evaluateAllLazyFields();
     }

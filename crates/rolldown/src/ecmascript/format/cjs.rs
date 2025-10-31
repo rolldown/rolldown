@@ -53,11 +53,13 @@ pub fn render_cjs<'code>(
 
     // Only `named` export can we render the namespace markers.
     if entry_module.exports_kind.is_esm() {
+      // Symbol.toStringTag should only be added to module facades (chunks that represent a specific module)
+      let is_module_facade = ctx.chunk.entry_module(&ctx.link_output.module_table).is_some();
       if let Some(marker) = render_namespace_markers(
         ctx.options.es_module,
         has_default_export,
         &ctx.options.generated_code,
-        true,
+        is_module_facade,
       ) {
         source_joiner.append_source(marker);
       }

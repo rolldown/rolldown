@@ -37,6 +37,25 @@ impl PreProcessEcmaAst {
     has_lazy_export: bool,
   ) -> BuildResult<ParseToEcmaAstResult> {
     let source = ast.source().clone();
+
+    // Step 0: Move directive comments attached to 0 so that it's not removed when the directives are removed
+    if !ast.program().directives.is_empty() && !ast.program().comments.is_empty() {
+      ast.program.with_mut(|WithMutFields { program, .. }| {
+        let mut i = 0;
+        for directive in &program.directives {
+          while i < program.comments.len() {
+            let comment = &mut program.comments[i];
+            if comment.attached_to == directive.span.start {
+              comment.attached_to = 0;
+            } else if comment.attached_to > directive.span.start {
+              break;
+            }
+            i += 1;
+          }
+        }
+      });
+    }
+
     // Step 1: Build initial semantic data and check for semantic errors.
     let semantic_ret = ast.program.with_dependent(|_owner, dep| {
       SemanticBuilder::new().with_check_syntax_error(true).build(&dep.program)

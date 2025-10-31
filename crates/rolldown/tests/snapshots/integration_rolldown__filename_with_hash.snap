@@ -406,15 +406,15 @@ expression: output
 
 # tests/esbuild/dce/preserve_directives_minify_bundle
 
-- entry-!~{000}~.js => entry-DY-eGl64.js
+- entry-!~{000}~.js => entry-DPYC1VPs.js
 
 # tests/esbuild/dce/preserve_directives_minify_iife
 
-- entry-!~{000}~.js => entry-D7XpJncY.js
+- entry-!~{000}~.js => entry-Dx2Yl_G6.js
 
 # tests/esbuild/dce/preserve_directives_minify_pass_through
 
-- entry-!~{000}~.js => entry-DOewPIgg.js
+- entry-!~{000}~.js => entry-BXsyf608.js
 
 # tests/esbuild/dce/pure_calls_with_spread
 
@@ -4280,6 +4280,10 @@ expression: output
 # tests/rolldown/function/intro/iife
 
 - main-!~{000}~.js => main-BLQ_fRpz.js
+
+# tests/rolldown/function/legal_comments/directive_with_inline
+
+- main-!~{000}~.js => main-C-3bH3Q6.js
 
 # tests/rolldown/function/legal_comments/inline
 

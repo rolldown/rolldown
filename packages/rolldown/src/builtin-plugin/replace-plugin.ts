@@ -1,5 +1,5 @@
 import type { BindingReplacePluginConfig } from '../binding.cjs';
-import { BuiltinPlugin } from './utils';
+import { BuiltinPlugin, makeBuiltinPluginCallable } from './utils';
 
 /**
  * Replaces targeted strings in files while bundling.
@@ -35,5 +35,7 @@ export function replacePlugin(
     }
   });
 
-  return new BuiltinPlugin('builtin:replace', { ...options, values });
+  return makeBuiltinPluginCallable(
+    new BuiltinPlugin('builtin:replace', { ...options, values }),
+  );
 }

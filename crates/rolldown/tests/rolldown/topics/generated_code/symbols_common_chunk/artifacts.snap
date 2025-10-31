@@ -1,0 +1,46 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry1.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+const require_shared = require('./shared.js');
+
+//#region entry1.js
+const a = require_shared.shared + 1;
+
+//#endregion
+exports.a = a;
+```
+
+## entry2.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+const require_shared = require('./shared.js');
+
+//#region entry2.js
+const b = require_shared.shared + 2;
+
+//#endregion
+exports.b = b;
+```
+
+## shared.js
+
+```js
+
+//#region shared.js
+const shared = 42;
+
+//#endregion
+Object.defineProperty(exports, 'shared', {
+  enumerable: true,
+  get: function () {
+    return shared;
+  }
+});
+```

@@ -91,11 +91,20 @@ The `__toESM` helper ensures that CommonJS exports are properly converted to ES 
 
 ## `require` external modules
 
-When [`platform: 'node'`](../guide/notable-features.md#platform-presets) is set, Rolldown will generate a `require` function from [`module.createRequire`](https://nodejs.org/docs/latest/api/module.html#modulecreaterequirefilename).
+By default, Rolldown tries to keep the semantics of `require` and does not convert `require` against external modules to `import`. This is because the semantics of `require` are different from `import` in ES modules. For example, `require` are evaluated lazily, while `import` are evaluated before the code is executed.
 
-For other platforms, Rolldown will leave it as it is, so ensure that the running environment provides a `require` function or inject one manually.
+::: tip Still want to convert `require` to `import`?
 
-For example, you can inject the `require` function that returns the value obtained by `import` by using [`inject` feature](../guide/notable-features.md#inject).
+If you want to convert `require` calls to `import` statements, you can use [the built-in `esmExternalRequirePlugin`](/builtin-plugins/esm-external-require).
+
+:::
+
+For [`platform: 'node'`](../guide/notable-features.md#platform-presets), Rolldown will generate a `require` function from [`module.createRequire`](https://nodejs.org/docs/latest/api/module.html#modulecreaterequirefilename). This keeps the semantics of `require` completely intact. Note that compared to converting to `import`, there's two downsides to this approach:
+
+1. Requires the `module.createRequire` function support in the runtime, which may not be available in partially Node compatible environments
+2. Unsuitable for libraries that expects to be bundled as the `require` function will be a local variable and that makes it harder for bundlers to statically analyze the code
+
+For other platforms, Rolldown will leave it as-is, allowing the running environment to provide a `require` function or inject one manually. For example, you can inject the `require` function that returns the value obtained by `import` by using [`inject` feature](../guide/notable-features.md#inject).
 
 ::: code-group
 
@@ -120,8 +129,6 @@ export default (id) => {
 ```
 
 :::
-
-You can also use [the built-in `esmExternalRequirePlugin`](/builtin-plugins/esm-external-require) to convert `require()` calls to `import` statements.
 
 ## Future Plans
 

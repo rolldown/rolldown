@@ -167,6 +167,19 @@ export default {
 };
 ```
 
+:::warning
+
+When using `output.banner` or `output.footer` with minification enabled, the banner content may be stripped out unless it is formatted as a legal comment. To ensure your banner persists through minification, use one of these comment formats:
+
+- Comments starting with `/*!` (e.g., `/*! My banner */`)
+- Comments containing `@license` (e.g., `/* @license My banner */`)
+- Comments containing `@preserve` (e.g., `/* @preserve My banner */`)
+- Comments starting with `//!` (for single-line comments)
+
+This behavior is controlled by the [`output.legalComments`](#legalcomments) option, which defaults to `'inline'` and preserves these special comment formats.
+
+:::
+
 ## footer
 
 - **Type:** `string | ((chunk: RenderedChunk) => string | Promise<string>)`
@@ -184,6 +197,19 @@ export default {
   },
 };
 ```
+
+:::warning
+
+When using `output.banner` or `output.footer` with minification enabled, the banner content may be stripped out unless it is formatted as a legal comment. To ensure your banner persists through minification, use one of these comment formats:
+
+- Comments starting with `/*!` (e.g., `/*! My banner */`)
+- Comments containing `@license` (e.g., `/* @license My banner */`)
+- Comments containing `@preserve` (e.g., `/* @preserve My banner */`)
+- Comments starting with `//!` (for single-line comments)
+
+This behavior is controlled by the [`output.legalComments`](#legalcomments) option, which defaults to `'inline'` and preserves these special comment formats.
+
+:::
 
 ## intro
 

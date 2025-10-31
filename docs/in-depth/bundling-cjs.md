@@ -89,7 +89,9 @@ console.log(import_foo.value);
 
 The `__toESM` helper ensures that CommonJS exports are properly converted to ES module format, allowing seamless access to the exported values.
 
-## `require` external modules
+## Caveats
+
+### `require` external modules
 
 By default, Rolldown tries to keep the semantics of `require` and does not convert `require` against external modules to `import`. This is because the semantics of `require` are different from `import` in ES modules. For example, `require` are evaluated lazily, while `import` are evaluated before the code is executed.
 
@@ -130,7 +132,7 @@ export default (id) => {
 
 :::
 
-## Ambiguous `default` import from CJS modules
+### Ambiguous `default` import from CJS modules
 
 In the ecosystem, there's two common ways to handle imports from CJS modules. While Rolldown tries to support both interpretations automatically, they are **incompatible for `default` imports**. In that case, Rolldown uses a similar heuristic to [Webpack](https://webpack.js.org/) and [esbuild](https://esbuild.github.io/) to determine the value of `default` imports.
 
@@ -176,7 +178,7 @@ Rolldown's heuristic is based on the assumption that the files affected by Node.
 
 :::
 
-### Recommendations for Library Authors
+#### Recommendations for Library Authors
 
 If you are writing a new code, we strongly recommend you to **publish your code as ESM syntax**. With [the `require(ESM)` feature](https://nodejs.org/api/modules.html#loading-ecmascript-modules-using-require) shipped in Node.js, there's no major blocker to do so.
 If you still need to publish your code as CJS syntax, we strongly recommend to **avoid using the `default` export**.
@@ -193,7 +195,7 @@ console.log(foo);
 
 This code will print `foo` in both interpretations. Note that TypeScript may show a type error when using this code; this is because [TypeScript does not support this behavior](https://github.com/microsoft/TypeScript/issues/54102), but it is safe to ignore the error.
 
-### Recommendations for Library Users
+#### Recommendations for Library Users
 
 If you find an issue that seems to be caused by this incompatibility, try using [publint](https://publint.dev/) to check the package. It has [a rule that detects the incompatibility](https://publint.dev/rules#cjs_with_esmodule_default_export) (note that it only checks some of the files in the package, not all of them).
 

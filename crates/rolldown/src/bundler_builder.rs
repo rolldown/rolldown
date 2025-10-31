@@ -39,9 +39,24 @@ impl BundlerBuilder {
 
     let file_emitter = Arc::new(FileEmitter::new(Arc::clone(&options)));
 
+    // Create build span for this build
+    let build_id = rolldown_debug::generate_build_id(self.build_count);
+    let build_span = Arc::new(tracing::info_span!(
+      parent: &session.span,
+      "build",
+      CONTEXT_build_id = build_id.as_ref()
+    ));
+
     Ok(Bundler {
       closed: false,
-      plugin_driver: PluginDriver::new_shared(self.plugins, &resolver, &file_emitter, &options),
+      plugin_driver: PluginDriver::new_shared(
+        self.plugins,
+        &resolver,
+        &file_emitter,
+        &options,
+        &session,
+        &build_span,
+      ),
       file_emitter,
       resolver,
       options,
@@ -50,7 +65,6 @@ impl BundlerBuilder {
       _log_guard: maybe_guard,
       cache: ScanStageCache::default(),
       session,
-      build_count: self.build_count,
     })
   }
 

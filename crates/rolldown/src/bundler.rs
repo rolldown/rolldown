@@ -29,7 +29,6 @@ use std::{
   any::Any,
   sync::{Arc, atomic::AtomicU32},
 };
-use tracing::Instrument;
 
 pub struct Bundler {
   pub closed: bool,
@@ -42,7 +41,6 @@ pub struct Bundler {
   pub(crate) _log_guard: Option<Box<dyn Any + Send>>,
   pub(crate) cache: ScanStageCache,
   pub(crate) session: rolldown_debug::Session,
-  pub(crate) build_count: u32,
 }
 
 impl Bundler {
@@ -62,7 +60,7 @@ impl Bundler {
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
     self.create_error_if_closed()?;
-    let build_count = self.build_count;
+
     async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
@@ -72,17 +70,13 @@ impl Bundler {
       trace_action!(action::BuildEnd { action: "BuildEnd" });
       ret
     }
-    .instrument(tracing::info_span!(
-      "write",
-      CONTEXT_build_id = &*rolldown_debug::generate_build_id(build_count)
-    ))
     .await
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
     self.create_error_if_closed()?;
-    let build_count = self.build_count;
+
     async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
@@ -95,10 +89,6 @@ impl Bundler {
       trace_action!(action::BuildEnd { action: "BuildEnd" });
       ret
     }
-    .instrument(tracing::info_span!(
-      "generate",
-      CONTEXT_build_id = &*rolldown_debug::generate_build_id(build_count)
-    ))
     .await
   }
 

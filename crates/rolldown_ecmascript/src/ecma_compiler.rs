@@ -90,7 +90,7 @@ impl EcmaCompiler {
           // These option will be configurable when we begin to support `ignore-annotations`
           // https://esbuild.github.io/api/#ignore-annotations
           jsdoc: options.print_jsdoc_comments,
-          annotation: options.print_jsdoc_comments,
+          annotation: true,
         },
         initial_indent: options.initial_indent,
         source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),

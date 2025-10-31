@@ -5604,6 +5604,10 @@ expression: output
 
 - main-!~{000}~.js => main-Re9cDZbQ.js
 
+# tests/rolldown/topics/hmr/delete_file_not_used_anymore
+
+- main-!~{000}~.js => main-CEYxQYgu.js
+
 # tests/rolldown/topics/hmr/dynamic_import
 
 - main-!~{000}~.js => main-Dm2OTPV3.js

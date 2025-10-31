@@ -59,7 +59,11 @@ export { foo, hello, preserved };
 function hello(name) {
 	return `Hello ${name}`;
 }
+/*! This is a legal comment with @license */
 const foo = "bar";
+/**
+* @preserve This should be preserved
+*/
 const preserved = "value";
 
 //#endregion

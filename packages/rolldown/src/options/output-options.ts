@@ -446,20 +446,22 @@ export interface OutputOptions {
   /**
    * Control comments in the output.
    *
-   * - `'none'`: Remove all comments from the output
-   * - `'inline'`: Preserve comments marked with special tags (e.g., `/*!`, `//!`, `@license`, `@preserve`)
-   * - `'all'`: Keep all comments, including JSDoc and legal comments
+   * - `'none'`: Remove JSDoc comments (legal comments controlled by `legalComments`)
+   * - `'inline'`: Remove JSDoc comments (legal comments controlled by `legalComments`)
+   * - `'all'`: Keep all comments, including JSDoc (legal comments controlled by `legalComments`)
    *
    * @default 'all'
    */
   comments?: 'none' | 'inline' | 'all';
   /**
-   * Control comments in the output.
+   * Control legal comments in the output.
    *
-   * - `none`: no comments
+   * - `none`: remove legal comments
    * - `inline`: preserve comments that contain `@license`, `@preserve` or starts with `//!` `/*!`
    *
-   * @deprecated Use `comments` option instead
+   * This option overrides the legal comment behavior when used with `comments`.
+   *
+   * @default 'inline'
    */
   legalComments?: 'none' | 'inline';
   plugins?: RolldownOutputPluginOption;

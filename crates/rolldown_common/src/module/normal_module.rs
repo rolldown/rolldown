@@ -197,10 +197,11 @@ impl NormalModule {
         let enable_sourcemap = options.sourcemap.is_some() && !self.is_virtual();
 
         // Determine comment settings based on the comments option
-        let (print_legal_comments, print_jsdoc_comments) = match options.comments {
-          Comments::None => (false, false),
-          Comments::Inline => (matches!(options.legal_comments, LegalComments::Inline), false),
-          Comments::All => (matches!(options.legal_comments, LegalComments::Inline), true),
+        // legal_comments always controls legal comments regardless of comments setting
+        let print_legal_comments = matches!(options.legal_comments, LegalComments::Inline);
+        let print_jsdoc_comments = match options.comments {
+          Comments::None | Comments::Inline => false,
+          Comments::All => true,
         };
 
         // Because oxc codegen sourcemap is last of sourcemap chain,

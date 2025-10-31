@@ -584,24 +584,25 @@ The available options:
 When generating npm packages with separate type definitions (`.d.ts` files), use `comments: 'inline'` to keep only legal/license comments while removing JSDoc comments, as the type definitions will preserve JSDoc comments for documentation purposes. If you don't need legal comments for licensing compliance, you can use `comments: 'none'` to minimize bundle size.
 :::
 
+:::info
+The [`legalComments`](#legalcomments) option can be used to override just the legal comment behavior while keeping the JSDoc behavior from `comments`.
+:::
+
 ## legalComments
 
 - **Type:** `'none' | 'inline'`
 - **Default:** `'inline'`
 - **Path:** `output.legalComments`
 
-:::warning Deprecated
-This option is deprecated. Use [`comments`](#comments) instead for more granular control over comment output.
-:::
-
-Control legal comments in the output (a subset of the `comments` option).
+Control legal comments in the output. When specified, this option overrides the legal comment behavior from the [`comments`](#comments) option.
 
 ### Examples
 
 ```js
 export default {
   output: {
-    legalComments: 'inline',
+    comments: 'all', // Keep all comments
+    legalComments: 'none', // But remove legal comments
   },
 };
 ```
@@ -612,6 +613,8 @@ The available options:
 
 - `'none'`: Remove all legal comments
 - `'inline'`: Preserve comments containing `@license`, `@preserve`, or starting with `//!` or `/*!`
+
+This option is useful when you want fine-grained control over legal comments independently from JSDoc comments. For example, you can keep JSDoc comments but remove legal comments, or vice versa.
 
 ## polyfillRequire
 

@@ -316,18 +316,8 @@ pub fn prepare_build_context(
     checks: raw_options.checks.unwrap_or_default().into(),
     watch: raw_options.watch.unwrap_or_default(),
     // Handle comments and legal_comments options
-    // If comments is specified, use it; otherwise fall back to legal_comments for backward compatibility
-    comments: if let Some(comments) = raw_options.comments {
-      comments
-    } else if let Some(legal_comments) = raw_options.legal_comments {
-      // Map legal_comments to comments for backward compatibility
-      match legal_comments {
-        LegalComments::None => Comments::Inline,  // legal_comments: none -> only JSDoc, no legal
-        LegalComments::Inline => Comments::All,   // legal_comments: inline -> JSDoc + legal
-      }
-    } else {
-      Comments::All  // Default to all comments
-    },
+    // comments controls JSDoc, legal_comments controls legal comments independently
+    comments: raw_options.comments.unwrap_or(Comments::All),
     legal_comments: raw_options.legal_comments.unwrap_or(LegalComments::Inline),
     drop_labels: FxHashSet::from_iter(raw_options.drop_labels.unwrap_or_default()),
     keep_names: raw_options.keep_names.unwrap_or_default(),

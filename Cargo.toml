@@ -230,6 +230,10 @@ oxc_resolver = { version = "11.11.1", features = ["yarn_pnp"] } # https://github
 oxc_resolver_napi = { version = "11.11.1", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "6" } # https://github.com/oxc-project/oxc-sourcemap
 
+[patch.crates-io]
+oxc_resolver = { git = "https://github.com/oxc-project/oxc-resolver.git", branch = "fix/dont-drop-canonicalized-path-by-cache-clear" }
+oxc_resolver_napi = { git = "https://github.com/oxc-project/oxc-resolver.git", branch = "fix/dont-drop-canonicalized-path-by-cache-clear" }
+
 [profile.dev]
 # Minimal debug info to speed up local and CI builds.
 debug = "line-tables-only"

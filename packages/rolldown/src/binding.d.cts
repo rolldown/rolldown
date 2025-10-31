@@ -1405,30 +1405,30 @@ export declare class BindingNormalizedOptions {
 
 export declare class BindingOutputAsset {
   dropInner(): ExternalMemoryStatus
-  get fileName(): string
-  get originalFileName(): string | null
-  get originalFileNames(): Array<string>
-  get source(): BindingAssetSource
-  get name(): string | null
-  get names(): Array<string>
+  getFileName(): string
+  getOriginalFileName(): string | null
+  getOriginalFileNames(): Array<string>
+  getSource(): BindingAssetSource
+  getName(): string | null
+  getNames(): Array<string>
 }
 
 export declare class BindingOutputChunk {
   dropInner(): ExternalMemoryStatus
-  get isEntry(): boolean
-  get isDynamicEntry(): boolean
-  get facadeModuleId(): string | null
-  get moduleIds(): Array<string>
-  get exports(): Array<string>
-  get fileName(): string
-  get modules(): BindingModules
-  get imports(): Array<string>
-  get dynamicImports(): Array<string>
-  get code(): string
-  get map(): string | null
-  get sourcemapFileName(): string | null
-  get preliminaryFileName(): string
-  get name(): string
+  getIsEntry(): boolean
+  getIsDynamicEntry(): boolean
+  getFacadeModuleId(): string | null
+  getModuleIds(): Array<string>
+  getExports(): Array<string>
+  getFileName(): string
+  getModules(): BindingModules
+  getImports(): Array<string>
+  getDynamicImports(): Array<string>
+  getCode(): string
+  getMap(): string | null
+  getSourcemapFileName(): string | null
+  getPreliminaryFileName(): string
+  getName(): string
 }
 
 export declare class BindingPluginContext {

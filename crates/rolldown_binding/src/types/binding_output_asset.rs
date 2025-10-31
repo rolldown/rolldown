@@ -54,33 +54,33 @@ impl BindingOutputAsset {
     }
   }
 
-  #[napi(getter)]
-  pub fn file_name(&self) -> napi::Result<&str> {
+  #[napi]
+  pub fn get_file_name(&self) -> napi::Result<&str> {
     Ok(&self.try_get_inner()?.filename)
   }
 
-  #[napi(getter)]
-  pub fn original_file_name(&self) -> napi::Result<Option<&str>> {
+  #[napi]
+  pub fn get_original_file_name(&self) -> napi::Result<Option<&str>> {
     Ok(self.try_get_inner()?.original_file_names.first().map(AsRef::as_ref))
   }
 
-  #[napi(getter)]
-  pub fn original_file_names(&self) -> napi::Result<Vec<&str>> {
+  #[napi]
+  pub fn get_original_file_names(&self) -> napi::Result<Vec<&str>> {
     Ok(self.try_get_inner()?.original_file_names.iter().map(AsRef::as_ref).collect())
   }
 
-  #[napi(getter)]
-  pub fn source(&self) -> napi::Result<BindingAssetSource> {
+  #[napi]
+  pub fn get_source(&self) -> napi::Result<BindingAssetSource> {
     Ok(self.try_get_inner()?.source.clone().into())
   }
 
-  #[napi(getter)]
-  pub fn name(&self) -> napi::Result<Option<&str>> {
+  #[napi]
+  pub fn get_name(&self) -> napi::Result<Option<&str>> {
     Ok(self.try_get_inner()?.names.first().map(AsRef::as_ref))
   }
 
-  #[napi(getter)]
-  pub fn names(&self) -> napi::Result<Vec<&str>> {
+  #[napi]
+  pub fn get_names(&self) -> napi::Result<Vec<&str>> {
     Ok(self.try_get_inner()?.names.iter().map(AsRef::as_ref).collect())
   }
 }

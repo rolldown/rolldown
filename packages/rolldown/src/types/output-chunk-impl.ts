@@ -13,74 +13,73 @@ export class OutputChunkImpl implements OutputChunk {
 
   @lazy
   get fileName(): string {
-    return this.bindingChunk.fileName;
+    return this.bindingChunk.getFileName();
   }
 
   @lazy
   get name(): string {
-    return this.bindingChunk.name;
+    return this.bindingChunk.getName();
   }
 
   @lazy
   get exports(): string[] {
-    return this.bindingChunk.exports;
+    return this.bindingChunk.getExports();
   }
 
   @lazy
   get isEntry(): boolean {
-    return this.bindingChunk.isEntry;
+    return this.bindingChunk.getIsEntry();
   }
 
   @lazy
   get facadeModuleId(): string | null {
-    return this.bindingChunk.facadeModuleId || null;
+    return this.bindingChunk.getFacadeModuleId() || null;
   }
 
   @lazy
   get isDynamicEntry(): boolean {
-    return this.bindingChunk.isDynamicEntry;
+    return this.bindingChunk.getIsDynamicEntry();
   }
 
   @lazy
   get sourcemapFileName(): string | null {
-    return this.bindingChunk.sourcemapFileName || null;
+    return this.bindingChunk.getSourcemapFileName() || null;
   }
 
   @lazy
   get preliminaryFileName(): string {
-    return this.bindingChunk.preliminaryFileName;
+    return this.bindingChunk.getPreliminaryFileName();
   }
 
   @lazy
   get code(): string {
-    return this.bindingChunk.code;
+    return this.bindingChunk.getCode();
   }
 
   @lazy
   get modules(): { [id: string]: RenderedModule } {
-    return transformChunkModules(this.bindingChunk.modules);
+    return transformChunkModules(this.bindingChunk.getModules());
   }
 
   @lazy
   get imports(): string[] {
-    return this.bindingChunk.imports;
+    return this.bindingChunk.getImports();
   }
 
   @lazy
   get dynamicImports(): string[] {
-    return this.bindingChunk.dynamicImports;
+    return this.bindingChunk.getDynamicImports();
   }
 
   @lazy
   get moduleIds(): string[] {
-    return this.bindingChunk.moduleIds;
+    return this.bindingChunk.getModuleIds();
   }
 
   @lazy
   get map(): SourceMap | null {
-    return this.bindingChunk.map
-      ? transformToRollupSourceMap(this.bindingChunk.map)
-      : null;
+    const mapString = this.bindingChunk.getMap();
+    return mapString ? transformToRollupSourceMap(mapString) : null;
   }
 
   @nonEnumerable

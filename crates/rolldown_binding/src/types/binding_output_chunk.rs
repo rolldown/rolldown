@@ -9,8 +9,6 @@ use super::{
   binding_sourcemap::BindingSourcemap, external_memory_status::ExternalMemoryStatus,
 };
 
-// Here using `napi` `getter` fields to avoid the cost of serialize larger data to js side.
-
 #[napi]
 pub struct BindingOutputChunk {
   inner: Option<Arc<rolldown_common::OutputChunk>>,
@@ -58,76 +56,76 @@ impl BindingOutputChunk {
     }
   }
 
-  #[napi(getter)]
-  pub fn is_entry(&self) -> napi::Result<bool> {
+  #[napi]
+  pub fn get_is_entry(&self) -> napi::Result<bool> {
     Ok(self.try_get_inner()?.is_entry)
   }
 
-  #[napi(getter)]
-  pub fn is_dynamic_entry(&self) -> napi::Result<bool> {
+  #[napi]
+  pub fn get_is_dynamic_entry(&self) -> napi::Result<bool> {
     Ok(self.try_get_inner()?.is_dynamic_entry)
   }
 
-  #[napi(getter)]
-  pub fn facade_module_id(&self) -> napi::Result<Option<&str>> {
+  #[napi]
+  pub fn get_facade_module_id(&self) -> napi::Result<Option<&str>> {
     Ok(self.try_get_inner()?.facade_module_id.as_deref())
   }
 
-  #[napi(getter)]
-  pub fn module_ids(&self) -> napi::Result<Vec<&str>> {
+  #[napi]
+  pub fn get_module_ids(&self) -> napi::Result<Vec<&str>> {
     Ok(self.try_get_inner()?.module_ids.iter().map(AsRef::as_ref).collect())
   }
 
-  #[napi(getter)]
-  pub fn exports(&self) -> napi::Result<Vec<&str>> {
+  #[napi]
+  pub fn get_exports(&self) -> napi::Result<Vec<&str>> {
     Ok(self.try_get_inner()?.exports.iter().map(AsRef::as_ref).collect())
   }
 
   // RenderedChunk
-  #[napi(getter)]
-  pub fn file_name(&self) -> napi::Result<&str> {
+  #[napi]
+  pub fn get_file_name(&self) -> napi::Result<&str> {
     Ok(&self.try_get_inner()?.filename)
   }
 
-  #[napi(getter)]
-  pub fn modules(&self) -> napi::Result<BindingModules> {
+  #[napi]
+  pub fn get_modules(&self) -> napi::Result<BindingModules> {
     Ok((&self.try_get_inner()?.modules).into())
   }
 
-  #[napi(getter)]
-  pub fn imports(&self) -> napi::Result<Vec<&str>> {
+  #[napi]
+  pub fn get_imports(&self) -> napi::Result<Vec<&str>> {
     Ok(self.try_get_inner()?.imports.iter().map(AsRef::as_ref).collect())
   }
 
-  #[napi(getter)]
-  pub fn dynamic_imports(&self) -> napi::Result<Vec<&str>> {
+  #[napi]
+  pub fn get_dynamic_imports(&self) -> napi::Result<Vec<&str>> {
     Ok(self.try_get_inner()?.dynamic_imports.iter().map(AsRef::as_ref).collect())
   }
 
   // OutputChunk
-  #[napi(getter)]
-  pub fn code(&self) -> napi::Result<&str> {
+  #[napi]
+  pub fn get_code(&self) -> napi::Result<&str> {
     Ok(&self.try_get_inner()?.code)
   }
 
-  #[napi(getter)]
+  #[napi]
   // TODO: claude code - Cannot change to Option<&str>: performs JSON serialization via to_json_string()
-  pub fn map(&self) -> napi::Result<Option<String>> {
+  pub fn get_map(&self) -> napi::Result<Option<String>> {
     Ok(self.try_get_inner()?.map.as_ref().map(SourceMap::to_json_string))
   }
 
-  #[napi(getter)]
-  pub fn sourcemap_file_name(&self) -> napi::Result<Option<&str>> {
+  #[napi]
+  pub fn get_sourcemap_file_name(&self) -> napi::Result<Option<&str>> {
     Ok(self.try_get_inner()?.sourcemap_filename.as_deref())
   }
 
-  #[napi(getter)]
-  pub fn preliminary_file_name(&self) -> napi::Result<&str> {
+  #[napi]
+  pub fn get_preliminary_file_name(&self) -> napi::Result<&str> {
     Ok(&self.try_get_inner()?.preliminary_filename)
   }
 
-  #[napi(getter)]
-  pub fn name(&self) -> napi::Result<&str> {
+  #[napi]
+  pub fn get_name(&self) -> napi::Result<&str> {
     Ok(&self.try_get_inner()?.name)
   }
 }

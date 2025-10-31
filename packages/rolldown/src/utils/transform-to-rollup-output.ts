@@ -53,33 +53,32 @@ function transformToMutableRollupOutputChunk(
   const chunk = {
     type: 'chunk',
     get code() {
-      return bindingChunk.code;
+      return bindingChunk.getCode();
     },
-    fileName: bindingChunk.fileName,
-    name: bindingChunk.name,
+    fileName: bindingChunk.getFileName(),
+    name: bindingChunk.getName(),
     get modules() {
-      return transformChunkModules(bindingChunk.modules);
+      return transformChunkModules(bindingChunk.getModules());
     },
     get imports() {
-      return bindingChunk.imports;
+      return bindingChunk.getImports();
     },
     get dynamicImports() {
-      return bindingChunk.dynamicImports;
+      return bindingChunk.getDynamicImports();
     },
-    exports: bindingChunk.exports,
-    isEntry: bindingChunk.isEntry,
-    facadeModuleId: bindingChunk.facadeModuleId || null,
-    isDynamicEntry: bindingChunk.isDynamicEntry,
+    exports: bindingChunk.getExports(),
+    isEntry: bindingChunk.getIsEntry(),
+    facadeModuleId: bindingChunk.getFacadeModuleId() || null,
+    isDynamicEntry: bindingChunk.getIsDynamicEntry(),
     get moduleIds() {
-      return bindingChunk.moduleIds;
+      return bindingChunk.getModuleIds();
     },
     get map() {
-      return bindingChunk.map
-        ? transformToRollupSourceMap(bindingChunk.map)
-        : null;
+      const map = bindingChunk.getMap();
+      return map ? transformToRollupSourceMap(map) : null;
     },
-    sourcemapFileName: bindingChunk.sourcemapFileName || null,
-    preliminaryFileName: bindingChunk.preliminaryFileName,
+    sourcemapFileName: bindingChunk.getSourcemapFileName() || null,
+    preliminaryFileName: bindingChunk.getPreliminaryFileName(),
   } as OutputChunk;
   const cache: Record<string | symbol, any> = {};
   return new Proxy(chunk, {
@@ -93,7 +92,7 @@ function transformToMutableRollupOutputChunk(
     },
     set(_target, p, newValue): boolean {
       cache[p] = newValue;
-      changed.updated.add(bindingChunk.fileName);
+      changed.updated.add(bindingChunk.getFileName());
       return true;
     },
     has(target, p): boolean {
@@ -115,14 +114,14 @@ function transformToMutableRollupOutputAsset(
 ): OutputAsset {
   const asset = {
     type: 'asset',
-    fileName: bindingAsset.fileName,
-    originalFileName: bindingAsset.originalFileName || null,
-    originalFileNames: bindingAsset.originalFileNames,
+    fileName: bindingAsset.getFileName(),
+    originalFileName: bindingAsset.getOriginalFileName() || null,
+    originalFileNames: bindingAsset.getOriginalFileNames(),
     get source(): AssetSource {
-      return transformAssetSource(bindingAsset.source);
+      return transformAssetSource(bindingAsset.getSource());
     },
-    name: bindingAsset.name ?? undefined,
-    names: bindingAsset.names,
+    name: bindingAsset.getName() ?? undefined,
+    names: bindingAsset.getNames(),
   } as OutputAsset;
   const cache: Record<string | symbol, any> = {};
   return new Proxy(asset, {
@@ -136,7 +135,7 @@ function transformToMutableRollupOutputAsset(
     },
     set(_target, p, newValue): boolean {
       cache[p] = newValue;
-      changed.updated.add(bindingAsset.fileName);
+      changed.updated.add(bindingAsset.getFileName());
       return true;
     },
   });

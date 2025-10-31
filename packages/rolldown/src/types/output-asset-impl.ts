@@ -13,32 +13,32 @@ export class OutputAssetImpl implements OutputAsset {
 
   @lazy
   get fileName(): string {
-    return this.bindingAsset.fileName;
+    return this.bindingAsset.getFileName();
   }
 
   @lazy
   get originalFileName(): string | null {
-    return this.bindingAsset.originalFileName || null;
+    return this.bindingAsset.getOriginalFileName() || null;
   }
 
   @lazy
   get originalFileNames(): string[] {
-    return this.bindingAsset.originalFileNames;
+    return this.bindingAsset.getOriginalFileNames();
   }
 
   @lazy
   get name(): string | undefined {
-    return this.bindingAsset.name ?? undefined;
+    return this.bindingAsset.getName() ?? undefined;
   }
 
   @lazy
   get names(): string[] {
-    return this.bindingAsset.names;
+    return this.bindingAsset.getNames();
   }
 
   @lazy
   get source(): AssetSource {
-    return transformAssetSource(this.bindingAsset.source);
+    return transformAssetSource(this.bindingAsset.getSource());
   }
 
   @nonEnumerable

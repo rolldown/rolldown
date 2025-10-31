@@ -66,20 +66,29 @@ impl BundlerBuilder {
       // key is the name property of the plugin
       // the first element of value is the npm package name of the plugin
       // the second element of value is the preferred builtin feature, `None` if the feature is not configured
-      ("inject", ("@rollup/plugin-inject", Some("inject"))),
-      ("node-resolve", (" @rollup/plugin-node-resolve", None)),
-      ("commonjs", ("@rollup/plugin-commonjs", None)),
-      ("json", ("@rollup/plugin-json", None)),
+      // the third element of value is an additional message to show
+      ("inject", ("@rollup/plugin-inject", Some("inject"), None)),
+      ("node-resolve", ("@rollup/plugin-node-resolve", None, None)),
+      (
+        "commonjs",
+        (
+          "@rollup/plugin-commonjs",
+          None,
+          Some(" Check https://rolldown.rs/in-depth/bundling-cjs for more details."),
+        ),
+      ),
+      ("json", ("@rollup/plugin-json", None, None)),
     ]);
     for plugin in plugins {
       let name = plugin.call_name();
-      let Some((package_name, feature)) = map.get(name.as_ref()) else {
+      let Some((package_name, feature, additional_message)) = map.get(name.as_ref()) else {
         continue;
       };
       warning.push(
         BuildDiagnostic::prefer_builtin_feature(
           feature.map(String::from),
           (*package_name).to_string(),
+          *additional_message,
         )
         .with_severity_warning(),
       );

@@ -6,6 +6,7 @@ pub struct PreferBuiltinFeature {
   /// If it is none, it means there is no options to turn the feature off.
   pub builtin_feature: Option<String>,
   pub plugin_name: String,
+  pub additional_message: Option<&'static str>,
 }
 
 impl BuildEvent for PreferBuiltinFeature {
@@ -16,13 +17,15 @@ impl BuildEvent for PreferBuiltinFeature {
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     if let Some(feature) = &self.builtin_feature {
       format!(
-        "Rolldown supports `{feature}` natively, please refer https://rolldown.rs/apis/config-options for more details, this is performant than passing `{}` to plugins option.",
-        self.plugin_name
+        "Rolldown supports `{feature}` natively, please refer https://rolldown.rs/apis/config-options for more details, this is performant than passing `{}` to plugins option.{}",
+        self.plugin_name,
+        self.additional_message.unwrap_or_default()
       )
     } else {
       format!(
-        "The functionality provided by `{}` is already covered natively, maybe you could remove the plugin from your configuration",
-        self.plugin_name
+        "The functionality provided by `{}` is already covered natively, maybe you could remove the plugin from your configuration.{}",
+        self.plugin_name,
+        self.additional_message.unwrap_or_default()
       )
     }
   }

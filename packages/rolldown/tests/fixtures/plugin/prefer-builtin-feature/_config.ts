@@ -20,7 +20,7 @@ export default defineTest({
   afterTest() {
     expect(warnings).toMatchInlineSnapshot(`
 			[
-			  "[PREFER_BUILTIN_FEATURE] Warning: The functionality provided by \`@rollup/plugin-json\` is already covered natively, maybe you could remove the plugin from your configuration
+			  "[PREFER_BUILTIN_FEATURE] Warning: The functionality provided by \`@rollup/plugin-json\` is already covered natively, maybe you could remove the plugin from your configuration.
 			  │ 
 			  │ Help: This diagnostic may be false positive, you could turn it off via \`checks.preferBuiltinFeature\`
 			",

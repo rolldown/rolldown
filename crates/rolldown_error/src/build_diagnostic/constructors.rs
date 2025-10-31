@@ -302,8 +302,12 @@ impl BuildDiagnostic {
     Self::new_inner(AssignToImport { filename, source, span, name })
   }
 
-  pub fn prefer_builtin_feature(builtin_feature: Option<String>, plugin_name: String) -> Self {
-    Self::new_inner(PreferBuiltinFeature { builtin_feature, plugin_name })
+  pub fn prefer_builtin_feature(
+    builtin_feature: Option<String>,
+    plugin_name: String,
+    additional_message: Option<&'static str>,
+  ) -> Self {
+    Self::new_inner(PreferBuiltinFeature { builtin_feature, plugin_name, additional_message })
   }
 
   #[expect(clippy::cast_possible_truncation)]

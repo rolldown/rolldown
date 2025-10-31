@@ -4821,6 +4821,11 @@ expression: output
 
 - main-!~{000}~.js => main-CjM0X7y1.js
 
+# tests/rolldown/issues/6756
+
+- main-!~{000}~.js => main-D7G5mb2I.js
+- dynamic-!~{001}~.js => dynamic-BMZTHQfH.js
+
 # tests/rolldown/issues/duplicate_default_export
 
 - main-!~{000}~.js => main-Dtyy4j8x.js

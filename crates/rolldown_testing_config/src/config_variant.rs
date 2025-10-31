@@ -1,6 +1,7 @@
 use rolldown_common::{
-  BundlerOptions, ExperimentalOptions, InlineConstOption, OptimizationOption, OutputExports,
-  OutputFormat, PreserveEntrySignatures, TreeshakeOptions, deserialize_inline_const,
+  BundlerOptions, Comments, ExperimentalOptions, InlineConstOption, OptimizationOption,
+  OutputExports, OutputFormat, PreserveEntrySignatures, TreeshakeOptions,
+  deserialize_inline_const,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -27,6 +28,7 @@ pub struct ConfigVariant {
   pub inline_const: Option<InlineConstOption>,
   pub top_level_var: Option<bool>,
   pub preserve_modules: Option<bool>,
+  pub comments: Option<Comments>,
   // --- non-bundler options are start with `_`
   /// Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]
@@ -83,6 +85,10 @@ impl ConfigVariant {
     }
     if let Some(preserve_modules) = &self.preserve_modules {
       config.preserve_modules = Some(*preserve_modules);
+    }
+
+    if let Some(comments) = &self.comments {
+      config.comments = Some(*comments);
     }
 
     if let Some(pife_for_module_wrappers) = &self.pife_for_module_wrappers {
@@ -147,6 +153,9 @@ impl ConfigVariant {
     }
     if let Some(inline_const) = &self.inline_const {
       fields.push(format!("inline_const: {inline_const:?}"));
+    }
+    if let Some(comments) = &self.comments {
+      fields.push(format!("comments: {comments:?}"));
     }
     let mut result = String::new();
     self.config_name.as_ref().inspect(|config_name| {

@@ -3829,17 +3829,9 @@ expression: output
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-DeTcrHyD.js
 - ui-!~{003}~.js => ui-Bb4v178j.js
 
-# tests/rolldown/function/comments/all
+# tests/rolldown/function/comments
 
 - main-!~{000}~.js => main-CnwWkDWU.js
-
-# tests/rolldown/function/comments/inline
-
-- main-!~{000}~.js => main-Bwru4nkx.js
-
-# tests/rolldown/function/comments/none
-
-- main-!~{000}~.js => main-CogibG5I.js
 
 # tests/rolldown/function/context/defined
 

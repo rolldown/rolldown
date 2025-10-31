@@ -1,0 +1,14 @@
+{
+  "config": {
+    "comments": "all"
+  },
+  "configVariants": [
+    {
+      "comments": "inline"
+    },
+    {
+      "comments": "none"
+    }
+  ],
+  "expectExecuted": false
+}

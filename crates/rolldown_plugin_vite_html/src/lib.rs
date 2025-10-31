@@ -502,7 +502,7 @@ impl Plugin for ViteHtmlPlugin {
     for item in &self.html_result_map {
       let ((id, assets_base), (html, is_async)) = item.pair();
 
-      let mut result = html.to_string();
+      let mut result = html.clone();
 
       let path = id.relative(ctx.cwd());
       let path_lossy = path.to_string_lossy();
@@ -664,7 +664,7 @@ impl Plugin for ViteHtmlPlugin {
       ctx
         .emit_file_async(rolldown_common::EmittedAsset {
           name: None,
-          original_file_name: Some(id.to_string()),
+          original_file_name: Some(id.clone()),
           file_name: Some(relative_url_path.into()),
           source: rolldown_common::StrOrBytes::Str(result),
         })

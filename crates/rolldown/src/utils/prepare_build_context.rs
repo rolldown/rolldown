@@ -37,7 +37,7 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
   if let Some(entity) = raw_options.context.as_ref() {
     if !is_validate_identifier_name(entity) {
       warnings.push(
-        BuildDiagnostic::invalid_option(InvalidOptionType::InvalidContext(entity.to_string()))
+        BuildDiagnostic::invalid_option(InvalidOptionType::InvalidContext(entity.clone()))
           .with_severity_warning(),
       );
     }

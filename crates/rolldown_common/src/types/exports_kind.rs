@@ -1,7 +1,8 @@
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum ExportsKind {
   Esm,
   CommonJs,
+  #[default]
   None,
 }
 
@@ -12,11 +13,5 @@ impl ExportsKind {
 
   pub fn is_commonjs(&self) -> bool {
     matches!(self, Self::CommonJs)
-  }
-}
-
-impl Default for ExportsKind {
-  fn default() -> Self {
-    Self::None
   }
 }

@@ -212,7 +212,7 @@ impl Plugin for JsPlugin {
     cb.await_call(
       (
         BindingTransformPluginContext::new(Arc::clone(&ctx)),
-        args.code.to_string(),
+        args.code.clone(),
         args.id.to_string(),
         extra_args,
       )
@@ -410,7 +410,7 @@ impl Plugin for JsPlugin {
     cb.await_call(
       (
         ctx.clone().into(),
-        args.code.to_string(),
+        args.code.clone(),
         BindingRenderedChunk::new(Arc::clone(&args.chunk)),
         BindingNormalizedOptions::new(Arc::clone(args.options)),
         BindingRenderedChunkMeta::new(Arc::clone(&args.chunks)),

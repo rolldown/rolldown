@@ -110,7 +110,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                 ) => {
                   self.import_bindings.insert(
                     import_namespace_specifier.local.expect_symbol_id(),
-                    binding_name.to_string(),
+                    binding_name.clone(),
                   );
                 }
               });

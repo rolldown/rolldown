@@ -22,7 +22,7 @@ impl BuildEvent for ForbidConstAssign {
   }
 
   fn id(&self) -> Option<String> {
-    Some(self.filename.to_string())
+    Some(self.filename.clone())
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {

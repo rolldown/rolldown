@@ -124,7 +124,7 @@ where
               let mut exist_hash_set =
                 EXIST_HASH_BY_SESSION.entry(session_id.to_string()).or_default();
               if !exist_hash_set.contains(&hash) {
-                exist_hash_set.insert(hash.to_string());
+                exist_hash_set.insert(hash.clone());
                 let mut map = serializer.serialize_map(None)?;
                 map.serialize_entry("action", "StringRef")?;
                 map.serialize_entry("id", &hash)?;
@@ -161,7 +161,7 @@ where
               let mut exist_hash_set =
                 EXIST_HASH_BY_SESSION.entry(session_id.to_string()).or_default();
               if !exist_hash_set.contains(&hash) {
-                exist_hash_set.insert(hash.to_string());
+                exist_hash_set.insert(hash.clone());
                 let mut map = serializer.serialize_map(None)?;
                 map.serialize_entry("action", "StringRef")?;
                 map.serialize_entry("id", &hash)?;

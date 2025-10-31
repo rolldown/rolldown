@@ -14,8 +14,13 @@ use rolldown_plugin::{
   PluginContext,
 };
 use rolldown_plugin_utils::constants::RemovedPureCSSFilesCache;
+use rustc_hash::{FxHashMap, FxHashSet};
+use sugar_path::SugarPath as _;
 
-use crate::ast_visit::{DynamicImportCollectVisitor, DynamicImportVisitor};
+use crate::{
+  ast_visit::{DynamicImportCollectVisitor, DynamicImportVisitor},
+  utils::AddDeps,
+};
 
 use self::ast_visit::BuildImportAnalysisVisitor;
 
@@ -136,6 +141,12 @@ impl Plugin for BuildImportAnalysisPlugin {
       return Ok(());
     }
 
+    let bundle = args
+      .bundle
+      .iter()
+      .map(|output| (output.filename().to_string(), output.clone()))
+      .collect::<FxHashMap<_, _>>();
+
     let mut bundle_iter = args.bundle.iter_mut();
     // can't use chunk.dynamicImports.length here since some modules e.g.
     // dynamic import to constant json may get inlined.
@@ -167,7 +178,32 @@ impl Plugin for BuildImportAnalysisPlugin {
         visitor.visit_program(&mut parser_ret.program);
       }
 
-      for _import in imports {
+      let mut s = string_wizard::MagicString::new(&chunk.code);
+
+      for import in imports {
+        let mut deps = FxHashSet::default();
+        let mut has_removed_pure_css_chunks = false;
+
+        let _normalized_file = import.source.map(|url| {
+          let file = PathBuf::from(chunk.filename.as_str());
+          let file_dir = file.parent().unwrap();
+          let normalized_file =
+            file_dir.join(url.as_str()).normalize().to_string_lossy().into_owned();
+
+          let mut collector = AddDeps {
+            s: &mut s,
+            ctx,
+            deps: &mut deps,
+            owner_filename: chunk.filename.to_string(),
+            analyzed: FxHashSet::default(),
+            has_removed_pure_css_chunks: &mut has_removed_pure_css_chunks,
+            expr_range: import.start..import.end,
+          };
+
+          collector.add_deps(&bundle, &normalized_file);
+          normalized_file
+        });
+
         todo!()
       }
     }

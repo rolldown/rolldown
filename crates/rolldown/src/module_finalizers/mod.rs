@@ -1044,7 +1044,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // Convert `import('./foo.mjs')` to `Promise.resolve().then(function() { return require('foo.mjs') })`
       match &self.ctx.modules[importee_id] {
         Module::Normal(importee) => {
-          let importee_chunk_id = self.ctx.chunk_graph.entry_module_to_entry_chunk[&importee_id];
+          // Try entry_module_to_entry_chunk first (for code-split dynamic imports),
+          // fall back to module_to_chunk (for modules bundled in same chunk)
+          let importee_chunk_id = self.ctx.chunk_graph.entry_module_to_entry_chunk
+            .get(&importee_id)
+            .copied()
+            .or_else(|| self.ctx.chunk_graph.module_to_chunk[importee_id])
+            .expect("Module should be assigned to a chunk");
           let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
           let import_path = self.ctx.chunk.import_path_for(importee_chunk);
 
@@ -1391,8 +1397,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let importee_id = rec.resolved_module;
           match &self.ctx.modules[importee_id] {
             Module::Normal(importee) => {
-              let importee_chunk_id =
-                self.ctx.chunk_graph.entry_module_to_entry_chunk[&rec.resolved_module];
+              // Try entry_module_to_entry_chunk first (for code-split dynamic imports),
+              // fall back to module_to_chunk (for modules bundled in same chunk)
+              let importee_chunk_id = self.ctx.chunk_graph.entry_module_to_entry_chunk
+                .get(&importee_id)
+                .copied()
+                .or_else(|| self.ctx.chunk_graph.module_to_chunk[importee_id])
+                .expect("Module should be assigned to a chunk");
               let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
 
               let import_path = self.ctx.chunk.import_path_for(importee_chunk);

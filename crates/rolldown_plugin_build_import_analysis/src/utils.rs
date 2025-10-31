@@ -27,7 +27,7 @@ impl AddDeps<'_, '_> {
       return;
     }
     self.analyzed.insert(filename.to_string());
-    if let Some(chunk) = bundle.get(&self.owner_filename) {
+    if let Some(chunk) = bundle.get(filename) {
       self.deps.insert(chunk.filename().to_string());
       if let Output::Chunk(chunk) = chunk {
         for dep in &chunk.imports {

@@ -5,7 +5,7 @@ use rolldown_common::NotifyOption;
 use tokio::sync::Mutex;
 
 use crate::{
-  Bundler,
+  bundler::Bundler,
   watch::watcher::{WatcherImpl, wait_for_change},
 };
 

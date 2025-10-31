@@ -1,5 +1,4 @@
 pub mod apply_inner_plugins;
-pub mod augment_chunk_hash;
 pub mod chunk;
 pub mod determine_minify_internal_exports_default;
 pub mod external_import_interop;

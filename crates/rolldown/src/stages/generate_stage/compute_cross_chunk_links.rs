@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::cmp::Reverse;
 
 use super::GenerateStage;
-use crate::chunk_graph::ChunkGraph;
+use crate::stages::generate_stage::ChunkGraph;
 use crate::utils::chunk::normalize_preserve_entry_signature;
 use itertools::{Itertools, multizip};
 use oxc::span::CompactStr;

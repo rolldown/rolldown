@@ -26,8 +26,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   SharedOptions,
-  chunk_graph::ChunkGraph,
   module_finalizers::{ScopeHoistingFinalizer, TraverseState},
+  stages::generate_stage::ChunkGraph,
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 

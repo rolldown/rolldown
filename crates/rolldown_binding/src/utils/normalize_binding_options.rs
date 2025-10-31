@@ -168,7 +168,7 @@ pub fn normalize_binding_options(
         let is_external = Arc::clone(&is_external);
         Box::pin(async move {
           is_external
-            .invoke_async((source.to_string(), importer, is_resolved).into())
+            .invoke_async((source.clone(), importer, is_resolved).into())
             .await
             .map_err(anyhow::Error::from)
         })

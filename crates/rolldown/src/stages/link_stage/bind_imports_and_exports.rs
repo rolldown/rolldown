@@ -442,7 +442,7 @@ impl LinkStage<'_> {
                           module.source.clone(),
                           member_expr_ref.span,
                           ArcStr::from(name.as_str()),
-                          canonical_ref_owner.stable_id.to_string(),
+                          canonical_ref_owner.stable_id.clone(),
                         )
                         .with_severity_warning(),
                       );
@@ -658,7 +658,7 @@ impl BindImportsAndExportsContext<'_> {
               exporter.push(AmbiguousExternalNamespaceModule {
                 source: owner.source.clone(),
                 module_id: owner.id.to_string(),
-                stable_id: owner.stable_id.to_string(),
+                stable_id: owner.stable_id.clone(),
                 span_of_identifier: named_export.span,
               });
             }
@@ -671,7 +671,7 @@ impl BindImportsAndExportsContext<'_> {
               return Some(AmbiguousExternalNamespaceModule {
                 source: normal_module.source.clone(),
                 module_id: normal_module.id.to_string(),
-                stable_id: normal_module.stable_id.to_string(),
+                stable_id: normal_module.stable_id.clone(),
                 span_of_identifier: named_export.span,
               });
             }
@@ -685,7 +685,7 @@ impl BindImportsAndExportsContext<'_> {
             AmbiguousExternalNamespaceModule {
               source: module.source.clone(),
               module_id: module.id.to_string(),
-              stable_id: module.stable_id.to_string(),
+              stable_id: module.stable_id.clone(),
               span_of_identifier: named_import.span_imported,
             },
             exporter,
@@ -717,7 +717,7 @@ impl BindImportsAndExportsContext<'_> {
             ) && matches!(module.module_type, ModuleType::Ts | ModuleType::Tsx);
           let mut diagnostic = BuildDiagnostic::missing_export(
             module.id.to_string(),
-            module.stable_id.to_string(),
+            module.stable_id.clone(),
             importee.stable_id().to_string(),
             module.source.clone(),
             named_import.imported.to_string(),

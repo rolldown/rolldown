@@ -270,7 +270,7 @@ impl PluginDriver {
           trace_action!(action::HookTransformCallEnd {
             action: "HookTransformCallEnd",
             module_id: id.to_string(),
-            content: Some(code.to_string()),
+            content: Some(code.clone()),
             plugin_name: plugin.call_name().to_string(),
             plugin_id: plugin_idx.raw(),
             call_id: call_id.unwrap_or_default()
@@ -283,7 +283,7 @@ impl PluginDriver {
         trace_action!(action::HookTransformCallEnd {
           action: "HookTransformCallEnd",
           module_id: id.to_string(),
-          content: Some(code.to_string()),
+          content: Some(code.clone()),
           plugin_name: plugin.call_name().to_string(),
           plugin_id: plugin_idx.raw(),
           call_id: call_id.unwrap_or_default()

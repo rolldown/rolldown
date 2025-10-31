@@ -38,7 +38,7 @@ impl BindingWatcherEvent {
   pub fn bundle_end_data(&self) -> BindingBundleEndEventData {
     match &self.inner {
       WatcherEvent::Event(BundleEvent::BundleEnd(data)) => BindingBundleEndEventData {
-        output: data.output.to_string(),
+        output: data.output.clone(),
         duration: data.duration,
         result: Arc::clone(&data.result),
       },

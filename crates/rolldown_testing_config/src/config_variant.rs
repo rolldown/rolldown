@@ -48,14 +48,14 @@ impl ConfigVariant {
       config.extend = Some(*extend);
     }
     if let Some(name) = &self.name {
-      config.name = Some(name.to_string());
+      config.name = Some(name.clone());
     }
     if let Some(strict_execution_order) = &self.strict_execution_order {
       config.experimental.get_or_insert_default().strict_execution_order =
         Some(*strict_execution_order);
     }
     if let Some(entry_filenames) = &self.entry_filenames {
-      config.entry_filenames = Some(entry_filenames.to_string().into());
+      config.entry_filenames = Some(entry_filenames.clone().into());
     }
     if let Some(inline_dynamic_imports) = &self.inline_dynamic_imports {
       config.inline_dynamic_imports = Some(*inline_dynamic_imports);

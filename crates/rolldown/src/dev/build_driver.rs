@@ -156,7 +156,7 @@ impl BuildDriver {
           Arc::clone(&self.next_hmr_patch_id),
         )
         .await?;
-      updates.push(ClientHmrUpdate { client_id: client.key().to_string(), update });
+      updates.push(ClientHmrUpdate { client_id: client.key().clone(), update });
     }
 
     Ok(updates)

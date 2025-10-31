@@ -188,7 +188,7 @@ async fn render_iife_factory_arguments(
   for external in externals {
     let global = globals.call(external.id.as_str()).await;
     let target = match &global {
-      Some(global_name) => global_name.to_string(),
+      Some(global_name) => global_name.clone(),
       None => {
         warnings.push(
           BuildDiagnostic::missing_global_name(

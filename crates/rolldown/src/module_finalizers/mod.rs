@@ -1046,7 +1046,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         Module::Normal(importee) => {
           // Try entry_module_to_entry_chunk first (for code-split dynamic imports),
           // fall back to module_to_chunk (for modules bundled in same chunk)
-          let importee_chunk_id = self.ctx.chunk_graph.entry_module_to_entry_chunk
+          let importee_chunk_id = self
+            .ctx
+            .chunk_graph
+            .entry_module_to_entry_chunk
             .get(&importee_id)
             .copied()
             .or_else(|| self.ctx.chunk_graph.module_to_chunk[importee_id])
@@ -1399,7 +1402,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             Module::Normal(importee) => {
               // Try entry_module_to_entry_chunk first (for code-split dynamic imports),
               // fall back to module_to_chunk (for modules bundled in same chunk)
-              let importee_chunk_id = self.ctx.chunk_graph.entry_module_to_entry_chunk
+              let importee_chunk_id = self
+                .ctx
+                .chunk_graph
+                .entry_module_to_entry_chunk
                 .get(&importee_id)
                 .copied()
                 .or_else(|| self.ctx.chunk_graph.module_to_chunk[importee_id])

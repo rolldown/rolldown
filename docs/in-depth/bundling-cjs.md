@@ -130,6 +130,75 @@ export default (id) => {
 
 :::
 
+## Ambiguous `default` import from CJS modules
+
+In the ecosystem, there's two common ways to handle imports from CJS modules. While Rolldown tries to support both interpretations automatically, they are **incompatible for `default` imports**. In that case, Rolldown uses a similar heuristic to [Webpack](https://webpack.js.org/) and [esbuild](https://esbuild.github.io/) to determine the value of `default` imports.
+
+In the conditions below, the `default` import is the `module.exports` value of the importee CJS module. Otherwise, the `default` import is the `module.exports.default` value of the importee CJS module.
+
+- The importer is `.mjs` or `.mts`
+- (When it's a dynamic import) The importer is `.cjs` or `.cts`
+- The closest `package.json` for the importer has a `type` field set to `module`
+- (When it's a dynamic import) The closest `package.json` for the importer has a `type` field set to `commonjs`
+- The `module.exports.__esModule` value of the importee CJS module is not set to `true`
+
+:::: details Behavior in details
+
+Let's assume the following ESM importer module and CJS importee module:
+
+::: code-group
+
+```js [index.js]
+import foo from './importee.cjs';
+console.log(foo);
+```
+
+```js [importee.cjs]
+Object.defineProperty(module.exports, '__esModule', {
+  value: true,
+});
+module.exports.default = 'foo';
+```
+
+:::
+
+In the first interpretation, the way [Babel](https://babel.dev/) interprets, this code will print `foo`. In this interpretation, the behavior is changed based on the `__esModule` flag. `__esModule` is commonly set by transformers to indicate that the module was written in ESM syntax (e.g. `export default 'foo'` in this case) and was transformed to CJS syntax. The rationale for this behavior is that the transformed module should behave the same as the original module did without the transformation. [`@rollup/plugin-commonjs`](https://github.com/rollup/plugins/tree/master/packages/commonjs) uses this interpretation by default.
+
+In the second interpretation, the way Node.js interprets, this code will print `{ default: 'foo' }`. The rationale for this behavior is that CJS modules sets the export keys dynamically while ESM requires the export keys to be statically known, so to allow accessing all the exports, the entire `module.exports` is exposed as the default export. `@rollup/plugin-commonjs` uses this interpretation when `defaultIsModuleExports: false` is set.
+
+These two interpretations expects different values for `default` imports and Rolldown has to decide which one to use.
+
+::::
+
+::: details What is the rationale for this heuristic?
+
+Rolldown's heuristic is based on the assumption that the files affected by Node.js's module determination concept are expected to be runnable in Node.js. For ESM files to be runnable in Node.js, they need to have `.mjs` or the closest `package.json` to have a `type` field set to `module` ([so that the ESM loader is used](https://nodejs.org/api/packages.html#determining-module-system)), and the code should be written in a way that expects the Node.js interpretation. On the otherhand, for files written in ESM syntax but not marked as ESM in the Node.js's module determination concept, the code is highly likely to be transformed by other tools, which commonly follows the Babel's interpretation.
+
+:::
+
+### Recommendations for Library Authors
+
+If you are writing a new code, we strongly recommend you to **publish your code as ESM syntax**. With [the `require(ESM)` feature](https://nodejs.org/api/modules.html#loading-ecmascript-modules-using-require) shipped in Node.js, there's no major blocker to do so.
+If you still need to publish your code as CJS syntax, we strongly recommend to **avoid using the `default` export**.
+
+When importing a default export from a CJS module, we recommend to write a code that handles both interpretations. For example, you can use the following code to handle both interpretations:
+
+```js
+import rawFoo from './importee.cjs';
+const foo = typeof rawFoo === 'object' && rawFoo !== null && rawFoo.__esModule
+  ? rawFoo.default
+  : rawFoo;
+console.log(foo);
+```
+
+This code will print `foo` in both interpretations. Note that TypeScript may show a type error when using this code; this is because [TypeScript does not support this behavior](https://github.com/microsoft/TypeScript/issues/54102), but it is safe to ignore the error.
+
+### Recommendations for Library Users
+
+If you find an issue that seems to be caused by this incompatibility, try using [publint](https://publint.dev/) to check the package. It has [a rule that detects the incompatibility](https://publint.dev/rules#cjs_with_esmodule_default_export) (note that it only checks some of the files in the package, not all of them).
+
+If the heuristic is not working for you, you can use the code in the section above that handles both interpretations. If the import is in a dependency, we recommend to raise an issue to the dependency. In the meantime, you can use [`patch-package`](https://github.com/ds300/patch-package) or [`pnpm patch`](https://pnpm.io/cli/patch) or alternatives as an escape hatch.
+
 ## Future Plans
 
 Rolldown's first-class support for CommonJS modules enables several potential optimizations:

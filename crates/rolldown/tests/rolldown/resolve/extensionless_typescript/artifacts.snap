@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region module.ts
+const valueFromTs = "typescript-value";
+
+//#endregion
+//#region util.mts
+const utilFromMts = "mts-value";
+
+//#endregion
+//#region main.js
+assert.strictEqual(valueFromTs, "typescript-value");
+assert.strictEqual(utilFromMts, "mts-value");
+
+//#endregion
+```

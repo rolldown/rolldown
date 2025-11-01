@@ -7,12 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region foo.js
-const devil = "devil";
+const foo = "foo";
 
 //#endregion
 //#region main.js
-const moduleFoo = Promise.resolve().then(() => ({ "😈": devil }));
+console.log(foo);
+Promise.resolve().then(() => ({ foo })).then((mod) => console.log(mod.foo));
 
 //#endregion
-export { moduleFoo, devil as "😈" };
 ```

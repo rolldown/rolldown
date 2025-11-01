@@ -13,7 +13,11 @@ const foo = "foo";
 let bar = "";
 bar = "bar";
 var main_default = "default";
-import("./main.js").then((exports) => assert.deepStrictEqual({ ...exports }, {
+Promise.resolve().then(() => ({
+	bar,
+	default: main_default,
+	foo
+})).then((exports) => assert.deepStrictEqual({ ...exports }, {
 	foo: "foo",
 	bar: "bar",
 	default: "default"

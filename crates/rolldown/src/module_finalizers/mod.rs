@@ -1391,14 +1391,114 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let importee_id = rec.resolved_module;
           match &self.ctx.modules[importee_id] {
             Module::Normal(importee) => {
-              let importee_chunk_id =
-                self.ctx.chunk_graph.entry_module_to_entry_chunk[&rec.resolved_module];
-              let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
+              // Check if we should inline this dynamic import
+              // Inline if:
+              // 1. The module is in the same chunk, OR
+              // 2. The module has no separate dynamic entry chunk (was filtered out during link stage)
+              // Only inline ESM modules, not CommonJS or wrapped modules
+              let importee_linking_info = &self.ctx.linking_infos[importee_id];
+              let is_wrapped = importee_linking_info.wrapper_ref.is_some();
+              let is_commonjs = matches!(importee.exports_kind, ExportsKind::CommonJs);
 
-              let import_path = self.ctx.chunk.import_path_for(importee_chunk);
-              expr.source = Expression::StringLiteral(
-                self.snippet.alloc_string_literal(&import_path, expr.source.span()),
-              );
+              // Check if module is in same chunk OR has no separate dynamic entry
+              let in_same_chunk = self.ctx.chunk.modules.contains(&importee_id);
+              let has_no_dynamic_entry =
+                !self.ctx.chunk_graph.entry_module_to_entry_chunk.contains_key(&importee_id);
+              let should_inline =
+                (in_same_chunk || has_no_dynamic_entry) && !is_wrapped && !is_commonjs;
+
+              if should_inline {
+                // The module is in the same chunk and is a pure ESM module, inline it
+                // Create: Promise.resolve().then(() => ({ export1: value1, export2: value2, ... }))
+
+                // Build the namespace object with exports as simple properties
+                let mut properties = self.snippet.builder.vec();
+                for (export_name, resolved_export) in importee_linking_info.canonical_exports(false)
+                {
+                  // Skip exports that were tree-shaken (don't have canonical names)
+                  if self
+                    .ctx
+                    .symbol_db
+                    .canonical_name_for(resolved_export.symbol_ref, &self.ctx.chunk.canonical_names)
+                    .is_none()
+                  {
+                    continue;
+                  }
+
+                  let (exported_value, _hint) =
+                    self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
+                  // Create property: exportName: exportedValue
+                  properties.push(ast::ObjectPropertyKind::ObjectProperty(
+                    ast::ObjectProperty {
+                      key: if is_validate_identifier_name(export_name) {
+                        ast::PropertyKey::StaticIdentifier(
+                          self.snippet.id_name(export_name, SPAN).into_in(self.alloc),
+                        )
+                      } else {
+                        ast::PropertyKey::StringLiteral(
+                          self.snippet.alloc_string_literal(export_name, SPAN),
+                        )
+                      },
+                      value: exported_value,
+                      ..ast::ObjectProperty::dummy(self.alloc)
+                    }
+                    .into_in(self.alloc),
+                  ));
+                }
+
+                // Create simple namespace object without __export
+                let namespace_expr = self.snippet.builder.expression_object(SPAN, properties);
+
+                // Create arrow function: () => namespace_obj
+                let arrow_fn = self.snippet.only_return_arrow_expr(namespace_expr);
+
+                // Create: Promise.resolve()
+                let promise_ident = self.snippet.builder.expression_identifier(SPAN, "Promise");
+                let promise_resolve = self.snippet.builder.expression_call(
+                  SPAN,
+                  ast::Expression::StaticMemberExpression(
+                    self.snippet.builder.alloc_static_member_expression(
+                      SPAN,
+                      promise_ident,
+                      self.snippet.builder.identifier_name(SPAN, "resolve"),
+                      false,
+                    ),
+                  ),
+                  NONE,
+                  self.snippet.builder.vec(),
+                  false,
+                );
+
+                // Create: Promise.resolve().then(() => namespace_obj)
+                let then_call = self.snippet.builder.expression_call(
+                  SPAN,
+                  ast::Expression::StaticMemberExpression(
+                    self.snippet.builder.alloc_static_member_expression(
+                      SPAN,
+                      promise_resolve,
+                      self.snippet.builder.identifier_name(SPAN, "then"),
+                      false,
+                    ),
+                  ),
+                  NONE,
+                  self.snippet.builder.vec1(ast::Argument::from(arrow_fn)),
+                  false,
+                );
+
+                *node = then_call;
+                return true;
+              }
+
+              // Module is in a different chunk, update the import path
+              if let Some(&importee_chunk_id) =
+                self.ctx.chunk_graph.entry_module_to_entry_chunk.get(&rec.resolved_module)
+              {
+                let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
+                let import_path = self.ctx.chunk.import_path_for(importee_chunk);
+                expr.source = Expression::StringLiteral(
+                  self.snippet.alloc_string_literal(&import_path, expr.source.span()),
+                );
+              }
               needs_to_esm_helper = importee.exports_kind.is_commonjs();
             }
             Module::External(importee) => {

@@ -30,11 +30,7 @@ export default defineTest({
 
       Object.defineProperty(exports, '__esModule', { value: true });
 
-      //#region main.js
-      	var main_default = node_path.join;
-
-      //#endregion
-      exports.default = main_default;
+      exports.default = node_path.join;
       return exports;
       })({}, node_path);"
     `);

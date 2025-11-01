@@ -576,15 +576,13 @@ impl<'a> ModuleLoader<'a> {
           let module_idx = self.try_spawn_new_task(
             resolved_id,
             None,
-            true,
+            false,
             None,
             Arc::clone(&user_defined_entries),
           );
           if let Some(preserve_entry_signatures) = data.preserve_entry_signatures {
             overrode_preserve_entry_signature_map.insert(module_idx, preserve_entry_signatures);
           }
-
-          user_defined_entry_ids.insert(module_idx);
 
           let entry = EntryPoint {
             name: data.name.clone(),

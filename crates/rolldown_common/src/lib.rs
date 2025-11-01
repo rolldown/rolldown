@@ -46,6 +46,7 @@ pub mod bundler_options {
       input_item::InputItem,
       invalidate_js_side_cache::InvalidateJsSideCache,
       is_external::IsExternal,
+      comments::Comments,
       legal_comments::LegalComments,
       log_level::LogLevel,
       make_absolute_externals_relative::MakeAbsoluteExternalsRelative,

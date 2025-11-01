@@ -421,6 +421,16 @@
             }
           ]
         },
+        "comments": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Comments"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "legalComments": {
           "anyOf": [
             {
@@ -1394,6 +1404,25 @@
         "skipWrite"
       ]
     },
+    "Comments": {
+      "oneOf": [
+        {
+          "description": "Don't preserve any comment",
+          "type": "string",
+          "const": "none"
+        },
+        {
+          "description": "Preserve legal comments (marked with @license, @preserve, //!, /*!)",
+          "type": "string",
+          "const": "inline"
+        },
+        {
+          "description": "Preserve all comments including JSDoc and legal comments",
+          "type": "string",
+          "const": "all"
+        }
+      ]
+    },
     "LegalComments": {
       "oneOf": [
         {
@@ -1641,6 +1670,16 @@
           "type": [
             "boolean",
             "null"
+          ]
+        },
+        "comments": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Comments"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "_snapshot": {

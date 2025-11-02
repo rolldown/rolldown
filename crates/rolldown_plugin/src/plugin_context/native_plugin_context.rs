@@ -14,6 +14,7 @@ use rolldown_common::{
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use tokio::sync::Mutex;
+use tracing::Instrument;
 
 use crate::{
   PluginDriver,
@@ -40,6 +41,8 @@ pub struct NativePluginContextImpl {
   pub(crate) watch_files: Arc<FxDashSet<ArcStr>>,
   pub(crate) modules: Arc<FxDashMap<ArcStr, Arc<ModuleInfo>>>,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
+  pub(crate) session: rolldown_debug::Session,
+  pub(crate) build_span: Arc<tracing::Span>,
 }
 
 impl NativePluginContextImpl {
@@ -75,7 +78,6 @@ impl NativePluginContextImpl {
     self.resolver.try_get_package_json_or_create(path)
   }
 
-  #[tracing::instrument(skip_all, fields(CONTEXT_hook_resolve_id_trigger = "manual"))]
   pub async fn resolve(
     &self,
     specifier: &str,
@@ -103,18 +105,34 @@ impl NativePluginContextImpl {
       None
     };
 
-    resolve_id_check_external(
-      &self.resolver,
-      &plugin_driver,
-      specifier,
-      importer,
-      normalized_extra_options.is_entry,
-      normalized_extra_options.import_kind,
-      skipped_resolve_calls,
-      normalized_extra_options.custom,
-      false,
-      &self.options,
-    )
+    // Create a resolve span as a child of the build span.
+    // When PluginContext.resolve() is called from JavaScript via NAPI, the tracing span
+    // context is lost across the async boundary. By making the resolve span a child of
+    // the build span (which is a child of the session span), we ensure that both
+    // CONTEXT_session_id and CONTEXT_build_id are inherited automatically.
+    // The plugin contexts are recreated at the start of each write/generate with the new build span.
+    let resolve_span = tracing::debug_span!(
+      parent: self.build_span.as_ref(),
+      "plugin_context_resolve",
+      CONTEXT_hook_resolve_id_trigger = "manual"
+    );
+
+    async {
+      resolve_id_check_external(
+        &self.resolver,
+        &plugin_driver,
+        specifier,
+        importer,
+        normalized_extra_options.is_entry,
+        normalized_extra_options.import_kind,
+        skipped_resolve_calls,
+        normalized_extra_options.custom,
+        false,
+        &self.options,
+      )
+      .await
+    }
+    .instrument(resolve_span)
     .await
   }
 

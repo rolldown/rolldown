@@ -51,12 +51,17 @@ impl PluginDriver {
     resolver: &Arc<Resolver>,
     file_emitter: &SharedFileEmitter,
     options: &SharedNormalizedBundlerOptions,
+    session: &rolldown_debug::Session,
+    initial_build_span: &Arc<tracing::Span>,
   ) -> SharedPluginDriver {
     let watch_files = Arc::new(DashSet::default());
     let modules = Arc::new(DashMap::default());
     let meta = Arc::new(PluginContextMeta::default());
     let tx = Arc::new(Mutex::new(None));
     let mut plugin_usage_vec = IndexVec::new();
+
+    // Clone the Arc to share across contexts
+    let build_span_arc = Arc::clone(initial_build_span);
 
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(plugins.len());
@@ -77,6 +82,8 @@ impl PluginDriver {
           options: Arc::clone(options),
           watch_files: Arc::clone(&watch_files),
           tx: Arc::clone(&tx),
+          session: session.clone(),
+          build_span: Arc::clone(&build_span_arc),
         })));
       });
 

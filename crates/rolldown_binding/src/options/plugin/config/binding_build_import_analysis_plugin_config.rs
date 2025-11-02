@@ -7,13 +7,23 @@ use rolldown_plugin_build_import_analysis::{
 use rolldown_plugin_vite_html::ResolveDependenciesFn;
 
 use crate::{
-  options::plugin::config::binding_vite_html_plugin_config::BindingResolveDependenciesContext,
+  options::plugin::{
+    config::binding_vite_html_plugin_config::BindingResolveDependenciesContext,
+    types::binding_render_built_url::BindingRenderBuiltUrl,
+  },
   types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _},
 };
 
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingBuildImportAnalysisPluginV2Config {
+  pub is_ssr: bool,
+  pub url_base: String,
+  pub decoded_base: String,
   pub is_module_preload: Option<bool>,
+  #[napi(
+    ts_type = "(filename: string, type: BindingRenderBuiltUrlConfig) => Promise<undefined | string | BindingRenderBuiltUrlRet>"
+  )]
+  pub render_built_url: Option<BindingRenderBuiltUrl>,
   #[napi(
     ts_type = "boolean | ((filename: string, dependencies: string[], context: { hostId: string, hostType: 'html' | 'js' }) => Promise<string[]>)"
   )]
@@ -66,8 +76,12 @@ impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlug
           },
         );
         BuildImportAnalysisPluginV2 {
-          is_module_preload: v2_config.is_module_preload.unwrap_or(true),
           resolve_dependencies,
+          is_ssr: v2_config.is_ssr,
+          url_base: v2_config.url_base,
+          decoded_base: v2_config.decoded_base,
+          render_built_url: v2_config.render_built_url.map(Into::into),
+          is_module_preload: v2_config.is_module_preload.unwrap_or(true),
         }
       }),
     })

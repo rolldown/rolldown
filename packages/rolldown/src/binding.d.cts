@@ -1566,7 +1566,11 @@ export interface BindingBuildImportAnalysisPluginConfig {
 }
 
 export interface BindingBuildImportAnalysisPluginV2Config {
+  isSsr: boolean
+  urlBase: string
+  decodedBase: string
   isModulePreload?: boolean
+  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => Promise<undefined | string | BindingRenderBuiltUrlRet>
   resolveDependencies?: boolean | ((filename: string, dependencies: string[], context: { hostId: string, hostType: 'html' | 'js' }) => Promise<string[]>)
 }
 

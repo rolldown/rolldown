@@ -2,7 +2,11 @@ mod ast_utils;
 mod ast_visit;
 mod utils;
 
-use std::{borrow::Cow, path::PathBuf, sync::Arc};
+use std::{
+  borrow::Cow,
+  path::{Path, PathBuf},
+  sync::Arc,
+};
 
 use arcstr::ArcStr;
 use oxc::ast_visit::VisitMut;
@@ -13,13 +17,15 @@ use rolldown_plugin::{
   HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, HookUsage, Plugin,
   PluginContext,
 };
-use rolldown_plugin_utils::constants::RemovedPureCSSFilesCache;
+use rolldown_plugin_utils::{
+  AssetUrlResult, RenderBuiltUrl, ToOutputFilePathEnv, constants::RemovedPureCSSFilesCache,
+};
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath as _;
 
 use crate::{
   ast_visit::{DynamicImportCollectVisitor, DynamicImportVisitor},
-  utils::{AddDeps, ResolveDependenciesFn},
+  utils::{AddDeps, FileDeps, ResolveDependenciesFn},
 };
 
 use self::ast_visit::BuildImportAnalysisVisitor;
@@ -28,7 +34,12 @@ const PRELOAD_HELPER_ID: &str = "\0vite/preload-helper.js";
 
 #[derive(derive_more::Debug)]
 pub struct BuildImportAnalysisPluginV2 {
+  pub is_ssr: bool,
+  pub url_base: String,
+  pub decoded_base: String,
   pub is_module_preload: bool,
+  #[debug(skip)]
+  pub render_built_url: Option<Arc<RenderBuiltUrl>>,
   #[debug(skip)]
   pub resolve_dependencies: Option<Arc<ResolveDependenciesFn>>,
 }
@@ -94,7 +105,14 @@ impl Plugin for BuildImportAnalysisPlugin {
       return Ok(());
     }
 
-    let Some(BuildImportAnalysisPluginV2 { is_module_preload, ref resolve_dependencies }) = self.v2
+    let Some(BuildImportAnalysisPluginV2 {
+      is_ssr,
+      is_module_preload,
+      ref url_base,
+      ref decoded_base,
+      ref render_built_url,
+      ref resolve_dependencies,
+    }) = self.v2
     else {
       return Ok(());
     };
@@ -258,6 +276,39 @@ impl Plugin for BuildImportAnalysisPlugin {
             );
             deps_arr.extend(css_deps);
           }
+
+          let mut file_deps = FileDeps(Vec::with_capacity(deps_arr.len()));
+          let mut render_deps = Vec::with_capacity(deps_arr.len());
+          if render_built_url.is_some() {
+            let env = ToOutputFilePathEnv {
+              is_ssr,
+              host_id: &chunk.filename,
+              url_base,
+              decoded_base,
+              render_built_url: render_built_url.as_deref(),
+            };
+            for dep in deps_arr {
+              let result = env
+                .to_output_file_path(&dep, "js", false, |filename: &Path, importer: &Path| {
+                  let path = filename.relative(importer.parent().unwrap());
+                  let file = path.to_slash_lossy();
+                  if file.starts_with('.') {
+                    AssetUrlResult::WithoutRuntime(file.into_owned())
+                  } else {
+                    AssetUrlResult::WithoutRuntime(format!("./{file}"))
+                  }
+                })
+                .await?;
+              render_deps.push(match result {
+                AssetUrlResult::WithRuntime(s) => file_deps.add_file_deps(s, true),
+                AssetUrlResult::WithoutRuntime(s) => file_deps.add_file_deps(s, false),
+              });
+            }
+          } else {
+            todo!();
+          }
+
+          todo!()
         }
 
         todo!()

@@ -6,7 +6,7 @@
 
 ## What is MagicString?
 
-MagicString is a JavaScript library developed by Rich Harris (the creator of Rollup, Svelte, and Vite) that provides efficient string manipulation with automatic source map generation. It's commonly used by bundlers and build tools for:
+MagicString is a JavaScript library developed by Rich Harris (the creator of Rollup and Svelte) that provides efficient string manipulation with automatic source map generation. It's commonly used by bundlers and build tools for:
 
 - Code transformation in plugins
 - Source map generation

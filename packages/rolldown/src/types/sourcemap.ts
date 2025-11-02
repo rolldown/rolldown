@@ -27,7 +27,7 @@ export function bindingifySourcemap(
         // according to the spec, `sourceRoot: null` is not valid,
         // but some tools returns a sourcemap with it.
         // in that case, napi-rs outputs an error which is difficult
-        // to understand by users ("Value is non of these types `String`, `BindingJsonSourcemap`").
+        // to understand by users ("Value is none of these types `String`, `BindingJsonSourcemap`").
         // we convert it to undefined to skip that error.
         // note that if `sourceRoot: null` is included in a string sourcemap,
         // it will be converted to None by serde-json.

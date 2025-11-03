@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "1.0.0-beta.45",
+  "version": "1.0.0-beta.46",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "type": "module",
   "homepage": "https://rolldown.rs/",
@@ -137,6 +137,7 @@
   "devDependencies": {
     "@napi-rs/cli": "catalog:",
     "@napi-rs/wasm-runtime": "catalog:",
+    "@oxc-node/cli": "catalog:",
     "@rollup/plugin-json": "catalog:",
     "buble": "catalog:",
     "consola": "catalog:",
@@ -150,7 +151,6 @@
     "rollup": "catalog:",
     "signal-exit": "catalog:",
     "source-map": "catalog:",
-    "@oxc-node/cli": "catalog:",
     "typescript": "catalog:",
     "valibot": "catalog:"
   },

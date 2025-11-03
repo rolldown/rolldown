@@ -169,7 +169,7 @@ export default {
 
 :::warning
 
-When using `output.banner` or `output.footer` with minification enabled, the banner content may be stripped out unless it is formatted as a legal comment. To ensure your banner persists through minification, use one of these comment formats:
+When using `output.banner` or `output.footer` with minification enabled, the banner or footer content may be stripped out unless it is formatted as a legal comment. To ensure your banner or footer persists through minification, use one of these comment formats:
 
 - Comments starting with `/*!` (e.g., `/*! My banner */`)
 - Comments containing `@license` (e.g., `/* @license My banner */`)

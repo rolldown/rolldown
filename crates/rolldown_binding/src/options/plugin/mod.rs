@@ -5,12 +5,14 @@ mod binding_plugin_options;
 mod binding_transform_context;
 mod config;
 mod js_plugin;
+mod plugin_filter_overrides;
 
 pub mod binding_plugin_context;
 pub mod types;
 
 pub use binding_plugin_options::*;
 pub use js_plugin::*;
+pub use plugin_filter_overrides::*;
 
 #[cfg(not(target_family = "wasm"))]
 mod parallel_js_plugin;

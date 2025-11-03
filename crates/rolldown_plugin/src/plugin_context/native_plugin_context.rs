@@ -181,6 +181,14 @@ impl NativePluginContextImpl {
     self.resolver.cwd()
   }
 
+  pub fn plugin_idx(&self) -> PluginIdx {
+    self.plugin_idx
+  }
+
+  pub fn meta(&self) -> &Arc<PluginContextMeta> {
+    &self.meta
+  }
+
   pub fn add_watch_file(&self, file: &str) {
     self.watch_files.insert(file.into());
   }

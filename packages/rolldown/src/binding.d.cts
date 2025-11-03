@@ -1444,6 +1444,7 @@ export declare class BindingPluginContext {
   getModuleInfo(moduleId: string): BindingModuleInfo | null
   getModuleIds(): Array<string>
   addWatchFile(file: string): void
+  setHookFilter(resolveIdFilter?: BindingHookFilter | undefined | null, loadFilter?: BindingHookFilter | undefined | null, transformFilter?: BindingHookFilter | undefined | null): void
 }
 
 export declare class BindingRenderedChunk {

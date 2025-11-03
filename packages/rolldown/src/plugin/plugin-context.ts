@@ -75,6 +75,11 @@ export interface PluginContext extends MinimalPluginContext {
     importer?: string,
     options?: PluginContextResolveOptions,
   ): Promise<ResolvedId | null>;
+  setHookFilter(filters: {
+    resolveId?: Pick<import('./index').HookFilterExtension<'resolveId'>, 'filter'>['filter'];
+    load?: Pick<import('./index').HookFilterExtension<'load'>, 'filter'>['filter'];
+    transform?: Pick<import('./index').HookFilterExtension<'transform'>, 'filter'>['filter'];
+  }): void;
 }
 
 export class PluginContextImpl extends MinimalPluginContextImpl {
@@ -234,6 +239,34 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
 
   public addWatchFile(id: string): void {
     this.context.addWatchFile(id);
+  }
+
+  public setHookFilter(filters: {
+    resolveId?: Pick<import('./index').HookFilterExtension<'resolveId'>, 'filter'>['filter'];
+    load?: Pick<import('./index').HookFilterExtension<'load'>, 'filter'>['filter'];
+    transform?: Pick<import('./index').HookFilterExtension<'transform'>, 'filter'>['filter'];
+  }): void {
+    const {
+      bindingifyResolveIdFilter,
+      bindingifyLoadFilter,
+      bindingifyTransformFilter,
+    } = require('./bindingify-hook-filter');
+
+    const resolveIdFilter = filters.resolveId
+      ? bindingifyResolveIdFilter(filters.resolveId)
+      : undefined;
+    const loadFilter = filters.load
+      ? bindingifyLoadFilter(filters.load)
+      : undefined;
+    const transformFilter = filters.transform
+      ? bindingifyTransformFilter(filters.transform)
+      : undefined;
+
+    this.context.setHookFilter(
+      resolveIdFilter,
+      loadFilter,
+      transformFilter,
+    );
   }
 
   public parse(

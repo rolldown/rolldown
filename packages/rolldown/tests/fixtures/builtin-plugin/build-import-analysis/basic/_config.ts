@@ -10,7 +10,7 @@ export default defineTest({
         // insert some dummy runtime flag to assert the runtime behavior
         name: 'insert_dummy_flag',
         transform(code) {
-          let runtimeCode = `const __VITE_IS_MODERN__ = false;`;
+          let runtimeCode = `const __VITE_PRELOAD__ = [];`;
           return {
             code: runtimeCode + code,
           };

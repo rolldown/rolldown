@@ -29,6 +29,7 @@ pub struct BuildImportAnalysisVisitor<'a> {
   pub need_prepend_helper: bool,
   pub render_built_url: bool,
   pub is_relative_base: bool,
+  pub is_modern: bool,
 }
 
 impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {

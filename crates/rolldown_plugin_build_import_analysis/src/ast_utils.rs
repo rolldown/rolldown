@@ -15,17 +15,18 @@ use rolldown_ecmascript_utils::{AstSnippet, BindingPatternExt as _};
 
 use super::ast_visit::BuildImportAnalysisVisitor;
 
-const IS_MODERN_FLAG: &str = "__VITE_IS_MODERN__";
-
 impl<'a> BuildImportAnalysisVisitor<'a> {
+  #[expect(clippy::fn_params_excessive_bools)]
   pub fn new(
     snippet: AstSnippet<'a>,
     insert_preload: bool,
     render_built_url: bool,
     is_relative_base: bool,
+    is_modern: bool,
   ) -> Self {
     Self {
       snippet,
+      is_modern,
       insert_preload,
       render_built_url,
       is_relative_base,
@@ -182,13 +183,13 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
         let append_import_meta_url = self.render_built_url || self.is_relative_base;
         let capacity = if append_import_meta_url { 3 } else { 2 };
         let mut items = self.snippet.builder.vec_with_capacity(capacity);
+
         items.push(argument);
-        items.push(Argument::from(self.snippet.builder.expression_conditional(
-          SPAN,
-          self.snippet.id_ref_expr(IS_MODERN_FLAG, SPAN),
-          self.snippet.id_ref_expr("__VITE_PRELOAD__", SPAN),
-          self.snippet.void_zero(),
-        )));
+        items.push(Argument::from(if self.is_modern {
+          self.snippet.id_ref_expr("__VITE_PRELOAD__", SPAN)
+        } else {
+          self.snippet.void_zero()
+        }));
         if append_import_meta_url {
           items.push(Argument::from(Expression::from(
             self.snippet.builder.member_expression_static(

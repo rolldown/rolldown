@@ -78,3 +78,15 @@ impl AddDeps<'_, '_> {
 pub fn find_marker_pos(code: &str, pos: usize) -> Option<usize> {
   code[pos..].find("__VITE_PRELOAD__").map(|offset| pos + offset)
 }
+
+pub struct FileDeps(pub Vec<(String, bool)>);
+
+impl FileDeps {
+  pub fn add_file_deps(&mut self, dep: String, is_runtime: bool) -> usize {
+    if let Some(pos) = self.0.iter().position(|(s, _)| s == &dep) {
+      return pos;
+    }
+    self.0.push((dep, is_runtime));
+    self.0.len() - 1
+  }
+}

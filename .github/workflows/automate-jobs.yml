@@ -13,7 +13,7 @@ jobs:
     permissions:
       issues: write
     steps:
-      - uses: actions-cool/issues-helper@45d75b6cf72bf4f254be6230cb887ad002702491 # v3.6.3
+      - uses: actions-cool/issues-helper@ca1b238fecb728f25584d2beb288d7f1727f9fa6 # v3.7.0
         with:
           actions: 'remove-labels'
           token: ${{ secrets.GITHUB_TOKEN }}

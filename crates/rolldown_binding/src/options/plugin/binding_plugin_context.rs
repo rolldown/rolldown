@@ -133,31 +133,23 @@ impl BindingPluginContext {
     use itertools::Itertools;
     use rolldown_utils::filter_expression;
 
-    let mut cache = FilterExprCache::default();
-
-    if let Some(tokenss) = resolve_id_filter.and_then(|f| f.value) {
-      let filter_kind = tokenss
-        .into_iter()
-        .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
-        .collect_vec();
-      cache.resolve_id = Some(filter_kind);
+    fn process_filter(
+      filter: Option<BindingHookFilter>,
+    ) -> Option<Vec<rolldown_utils::filter_expression::FilterExprKind>> {
+      filter.and_then(|f| f.value).map(|tokenss| {
+        tokenss
+          .into_iter()
+          .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
+          .collect_vec()
+      })
     }
 
-    if let Some(tokenss) = load_filter.and_then(|f| f.value) {
-      let filter_kind = tokenss
-        .into_iter()
-        .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
-        .collect_vec();
-      cache.load = Some(filter_kind);
-    }
-
-    if let Some(tokenss) = transform_filter.and_then(|f| f.value) {
-      let filter_kind = tokenss
-        .into_iter()
-        .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
-        .collect_vec();
-      cache.transform = Some(filter_kind);
-    }
+    let cache = FilterExprCache {
+      resolve_id: process_filter(resolve_id_filter),
+      load: process_filter(load_filter),
+      transform: process_filter(transform_filter),
+      render_chunk: None,
+    };
 
     let overrides = self.inner.meta().get_or_insert_default::<PluginFilterOverrides>();
     let plugin_idx = self.inner.plugin_idx();

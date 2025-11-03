@@ -19,6 +19,11 @@ import type { PartialNull } from '../types/utils';
 import { type AssetSource, bindingAssetSource } from '../utils/asset-source';
 import { bindingifyPreserveEntrySignatures } from '../utils/bindingify-input-options';
 import { unimplemented, unreachable } from '../utils/misc';
+import {
+  bindingifyLoadFilter,
+  bindingifyResolveIdFilter,
+  bindingifyTransformFilter,
+} from './bindingify-hook-filter';
 import { fsModule, type RolldownFsModule } from './fs';
 import type {
   CustomPluginOptions,
@@ -264,12 +269,6 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       'filter'
     >['filter'];
   }): void {
-    const {
-      bindingifyResolveIdFilter,
-      bindingifyLoadFilter,
-      bindingifyTransformFilter,
-    } = require('./bindingify-hook-filter');
-
     const resolveIdFilter = filters.resolveId
       ? bindingifyResolveIdFilter(filters.resolveId)
       : undefined;

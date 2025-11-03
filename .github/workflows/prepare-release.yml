@@ -58,7 +58,7 @@ jobs:
           add-paths: |
             CHANGELOG.md
             packages/**/package.json
-            packages/rolldown/src/binding.js
+            packages/rolldown/src/binding.cjs
           commit-message: 'release: v${{ env.VERSION }}'
           body: ${{ steps.changelog.outputs.content }}
           branch: release-v${{ env.VERSION }}

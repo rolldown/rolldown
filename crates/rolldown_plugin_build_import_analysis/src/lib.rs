@@ -35,7 +35,7 @@ pub struct BuildImportAnalysisPlugin {
   pub is_relative_base: bool,
   pub is_test_v2: bool,
   // pub sourcemap: bool,
-  // pub is_module_preload: bool,
+  pub is_module_preload: bool,
   // #[debug(skip)]
   // pub resolve_dependencies: Option<Arc<ResolveDependenciesFn>>,
 }
@@ -179,6 +179,7 @@ impl Plugin for BuildImportAnalysisPlugin {
       }
 
       let mut s = string_wizard::MagicString::new(&chunk.code);
+      let imports_len = imports.len();
 
       for import in imports {
         let mut deps = FxHashSet::default();
@@ -203,6 +204,35 @@ impl Plugin for BuildImportAnalysisPlugin {
           collector.add_deps(&bundle, &normalized_file);
           normalized_file
         });
+
+        let mut marker_start = utils::find_marker_pos(&chunk.code, import.end);
+
+        if marker_start.is_none() && imports_len == 1 {
+          marker_start = utils::find_marker_pos(&chunk.code, 0);
+        }
+
+        if let Some(marker_start) = marker_start
+          && marker_start > 0
+        {
+          // the dep list includes the main chunk, so only need to reload when there are actual other deps.
+          let _deps_arr = if deps.len() > 1 ||
+              // main chunk is removed
+              (has_removed_pure_css_chunks && !deps.is_empty())
+          {
+            if self.is_module_preload {
+              deps
+            } else {
+              // CSS deps use the same mechanism as module preloads, so even if disabled,
+              // we still need to pass these deps to the preload helper in dynamic imports.
+              deps.retain(|dep| dep.ends_with(".css"));
+              deps
+            }
+          } else {
+            FxHashSet::default()
+          };
+
+          todo!()
+        }
 
         todo!()
       }

@@ -63,3 +63,7 @@ impl AddDeps<'_, '_> {
     }
   }
 }
+
+pub fn find_marker_pos(code: &str, pos: usize) -> Option<usize> {
+  code[pos..].find("__VITE_PRELOAD__").map(|offset| pos + offset)
+}

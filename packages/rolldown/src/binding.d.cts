@@ -1563,6 +1563,7 @@ export interface BindingBuildImportAnalysisPluginConfig {
   renderBuiltUrl: boolean
   isRelativeBase: boolean
   isTestV2?: boolean
+  isModulePreload?: boolean
 }
 
 export interface BindingBuiltinPlugin {

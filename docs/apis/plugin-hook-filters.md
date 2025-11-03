@@ -118,3 +118,41 @@ The following properties are supported by each hook:
 > `id` is treated as a glob pattern when you pass a `string`, and treated as a regular expression when you pass a `RegExp`.
 > In the `resolve` hook, `id` must be a `RegExp`. `string`s are not allowed.
 > This is because the `id` value in `resolveId` is the exact text written in the import statement and usually not an absolute path, while glob patterns are designed to match absolute paths.
+
+## Dynamic Filter Setting
+
+Filters can also be set dynamically after the `buildStart` hook using the `setHookFilter` method on the plugin context. This is useful when you need to determine filtering logic based on build configuration or project structure:
+
+```js
+export default function myPlugin() {
+  return {
+    name: 'example',
+    buildStart(options) {
+      // Determine filter based on build configuration
+      const shouldProcessTests = options.input.includes('test');
+
+      if (shouldProcessTests) {
+        // Dynamically set filter to include test files
+        this.setHookFilter({
+          transform: {
+            id: { include: [/\.test\.js$/, /\.spec\.js$/] },
+          },
+        });
+      } else {
+        // Only process source files
+        this.setHookFilter({
+          transform: {
+            id: { exclude: [/\.test\.js$/, /\.spec\.js$/] },
+          },
+        });
+      }
+    },
+    transform(code, id) {
+      // Transform logic here
+      return transformedCode;
+    },
+  };
+}
+```
+
+The `setHookFilter` method accepts an object with optional `resolveId`, `load`, and `transform` properties, each following the same filter format as described above. When set, these filters override any filters defined in the plugin's hook configuration.

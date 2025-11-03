@@ -91,20 +91,21 @@ impl Plugin for JsPlugin {
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     let Some(cb) = &self.resolve_id else { return Ok(None) };
-    
+
     // Check for filter override first, then fall back to pre-compiled filter
     let should_skip = {
       use super::PluginFilterOverrides;
-      
-      let override_cache = ctx.meta()
+
+      let override_cache = ctx
+        .meta()
         .get::<PluginFilterOverrides>()
         .and_then(|overrides| overrides.get(ctx.plugin_idx()));
-      
+
       let filter = match &override_cache {
         Some(cache) => cache.resolve_id.as_ref(),
         None => self.filter_expr_cache.resolve_id.as_ref(),
       };
-        
+
       if let Some(v) = filter {
         !filter_exprs_interpreter(
           v,
@@ -117,7 +118,7 @@ impl Plugin for JsPlugin {
         false
       }
     };
-    
+
     if should_skip {
       return Ok(None);
     }
@@ -186,16 +187,17 @@ impl Plugin for JsPlugin {
     // Check for filter override first, then fall back to pre-compiled filter
     let should_skip = {
       use super::PluginFilterOverrides;
-      
-      let override_cache = ctx.meta()
+
+      let override_cache = ctx
+        .meta()
         .get::<PluginFilterOverrides>()
         .and_then(|overrides| overrides.get(ctx.plugin_idx()));
-      
+
       let filter = match &override_cache {
         Some(cache) => cache.load.as_ref(),
         None => self.filter_expr_cache.load.as_ref(),
       };
-        
+
       if let Some(v) = filter {
         !filter_exprs_interpreter(
           v,
@@ -208,7 +210,7 @@ impl Plugin for JsPlugin {
         false
       }
     };
-    
+
     if should_skip {
       return Ok(None);
     }
@@ -231,20 +233,21 @@ impl Plugin for JsPlugin {
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     let Some(cb) = &self.transform else { return Ok(None) };
-    
+
     // Check for filter override first, then fall back to pre-compiled filter
     let should_skip = {
       use super::PluginFilterOverrides;
-      
-      let override_cache = ctx.meta()
+
+      let override_cache = ctx
+        .meta()
         .get::<PluginFilterOverrides>()
         .and_then(|overrides| overrides.get(ctx.plugin_idx()));
-      
+
       let filter = match &override_cache {
         Some(cache) => cache.transform.as_ref(),
         None => self.filter_expr_cache.transform.as_ref(),
       };
-        
+
       if let Some(v) = filter {
         !filter_exprs_interpreter(
           v,
@@ -257,7 +260,7 @@ impl Plugin for JsPlugin {
         false
       }
     };
-    
+
     if should_skip {
       return Ok(None);
     }

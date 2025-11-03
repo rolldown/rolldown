@@ -76,9 +76,18 @@ export interface PluginContext extends MinimalPluginContext {
     options?: PluginContextResolveOptions,
   ): Promise<ResolvedId | null>;
   setHookFilter(filters: {
-    resolveId?: Pick<import('./index').HookFilterExtension<'resolveId'>, 'filter'>['filter'];
-    load?: Pick<import('./index').HookFilterExtension<'load'>, 'filter'>['filter'];
-    transform?: Pick<import('./index').HookFilterExtension<'transform'>, 'filter'>['filter'];
+    resolveId?: Pick<
+      import('./index').HookFilterExtension<'resolveId'>,
+      'filter'
+    >['filter'];
+    load?: Pick<
+      import('./index').HookFilterExtension<'load'>,
+      'filter'
+    >['filter'];
+    transform?: Pick<
+      import('./index').HookFilterExtension<'transform'>,
+      'filter'
+    >['filter'];
   }): void;
 }
 
@@ -242,9 +251,18 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
   }
 
   public setHookFilter(filters: {
-    resolveId?: Pick<import('./index').HookFilterExtension<'resolveId'>, 'filter'>['filter'];
-    load?: Pick<import('./index').HookFilterExtension<'load'>, 'filter'>['filter'];
-    transform?: Pick<import('./index').HookFilterExtension<'transform'>, 'filter'>['filter'];
+    resolveId?: Pick<
+      import('./index').HookFilterExtension<'resolveId'>,
+      'filter'
+    >['filter'];
+    load?: Pick<
+      import('./index').HookFilterExtension<'load'>,
+      'filter'
+    >['filter'];
+    transform?: Pick<
+      import('./index').HookFilterExtension<'transform'>,
+      'filter'
+    >['filter'];
   }): void {
     const {
       bindingifyResolveIdFilter,

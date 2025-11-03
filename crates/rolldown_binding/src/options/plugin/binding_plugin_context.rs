@@ -129,9 +129,9 @@ impl BindingPluginContext {
     transform_filter: Option<BindingHookFilter>,
   ) -> napi::Result<()> {
     use super::binding_plugin_options::FilterExprCache;
-    use rolldown_utils::filter_expression;
     use super::types::binding_filter_expression::normalized_tokens;
     use itertools::Itertools;
+    use rolldown_utils::filter_expression;
 
     let mut cache = FilterExprCache::default();
 

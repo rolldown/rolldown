@@ -30,6 +30,8 @@ export default defineTest({
   afterTest: (_output) => {
     // Transform should only be called for foo.txt, not main.js
     expect(transformFn).toHaveBeenCalledTimes(1);
-    expect(transformFn).toHaveBeenCalledWith(expect.stringContaining('foo.txt'));
+    expect(transformFn).toHaveBeenCalledWith(
+      expect.stringContaining('foo.txt'),
+    );
   },
 });

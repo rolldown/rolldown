@@ -1,3 +1,5 @@
+use std::pin::Pin;
+
 use regex::Regex;
 use rolldown_common::Output;
 use rolldown_plugin::PluginContext;
@@ -7,6 +9,15 @@ use string_wizard::MagicString;
 
 pub static DYNAMIC_IMPORT_RE: std::sync::LazyLock<Regex> =
   std::sync::LazyLock::new(|| Regex::new(r#"\bimport\s*\(\s*['\"`]"#).unwrap());
+
+pub type ResolveDependenciesFn = dyn Fn(
+    &str,
+    Vec<String>,
+    &str,
+    &str,
+  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<String>>> + Send>>
+  + Send
+  + Sync;
 
 pub struct AddDeps<'a, 'b> {
   pub s: &'a mut MagicString<'b>,

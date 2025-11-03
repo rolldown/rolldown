@@ -1564,6 +1564,7 @@ export interface BindingBuildImportAnalysisPluginConfig {
   isRelativeBase: boolean
   isTestV2?: boolean
   isModulePreload?: boolean
+  resolveDependencies?: boolean | ((filename: string, dependencies: string[], context: { hostId: string, hostType: 'html' | 'js' }) => Promise<string[]>)
 }
 
 export interface BindingBuiltinPlugin {

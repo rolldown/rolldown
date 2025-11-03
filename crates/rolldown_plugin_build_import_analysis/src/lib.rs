@@ -19,7 +19,7 @@ use sugar_path::SugarPath as _;
 
 use crate::{
   ast_visit::{DynamicImportCollectVisitor, DynamicImportVisitor},
-  utils::AddDeps,
+  utils::{AddDeps, ResolveDependenciesFn},
 };
 
 use self::ast_visit::BuildImportAnalysisVisitor;
@@ -36,8 +36,8 @@ pub struct BuildImportAnalysisPlugin {
   pub is_test_v2: bool,
   // pub sourcemap: bool,
   pub is_module_preload: bool,
-  // #[debug(skip)]
-  // pub resolve_dependencies: Option<Arc<ResolveDependenciesFn>>,
+  #[debug(skip)]
+  pub resolve_dependencies: Option<Arc<ResolveDependenciesFn>>,
 }
 
 impl Plugin for BuildImportAnalysisPlugin {
@@ -185,7 +185,7 @@ impl Plugin for BuildImportAnalysisPlugin {
         let mut deps = FxHashSet::default();
         let mut has_removed_pure_css_chunks = false;
 
-        let _normalized_file = import.source.map(|url| {
+        let normalized_file = import.source.map(|url| {
           let file = PathBuf::from(chunk.filename.as_str());
           let file_dir = file.parent().unwrap();
           let normalized_file =
@@ -215,23 +215,41 @@ impl Plugin for BuildImportAnalysisPlugin {
           && marker_start > 0
         {
           // the dep list includes the main chunk, so only need to reload when there are actual other deps.
-          let _deps_arr = if deps.len() > 1 ||
+          let mut deps_arr = if deps.len() > 1 ||
               // main chunk is removed
               (has_removed_pure_css_chunks && !deps.is_empty())
           {
             if self.is_module_preload {
-              deps
+              deps.into_iter().collect()
             } else {
               // CSS deps use the same mechanism as module preloads, so even if disabled,
               // we still need to pass these deps to the preload helper in dynamic imports.
-              deps.retain(|dep| dep.ends_with(".css"));
-              deps
+              deps.into_iter().filter(|dep| dep.ends_with(".css")).collect()
             }
           } else {
-            FxHashSet::default()
+            vec![]
           };
 
-          todo!()
+          if let Some(resolve_dependencies) = self.resolve_dependencies.as_ref()
+            && let Some(normalized_file) = normalized_file
+          {
+            // We can't let the user remove css deps as these aren't really preloads, they are just using
+            // the same mechanism as module preloads for this chunk
+            let mut css_deps = vec![];
+            let mut other_deps = vec![];
+            for dep in deps_arr.drain(..) {
+              if dep.ends_with(".css") {
+                css_deps.push(dep);
+              } else {
+                other_deps.push(dep);
+              }
+            }
+            deps_arr.clear();
+            deps_arr.extend(
+              resolve_dependencies(&normalized_file, other_deps, &chunk.filename, "js").await?,
+            );
+            deps_arr.extend(css_deps);
+          }
         }
 
         todo!()

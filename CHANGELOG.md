@@ -1,4 +1,97 @@
 
+## [1.0.0-beta.46] - 2025-11-03
+
+### 💥 BREAKING CHANGES
+
+- default `preserveEntrySignatures` to `'exports-only'` to align with Rollup (#6723) by @Copilot
+
+### 🚀 Features
+
+- link to docs for commonjs prefer_builtin_feature diagnostic (#6793) by @sapphi-red
+- rolldown_plugin_build_import_analysis: align partial logic (#6789) by @shulaoda
+- improve `EVAL` warning message (#6776) by @sapphi-red
+- rolldown: oxc v0.96.0 (#6774) by @Boshen
+- rolldown_plugin_build_import_analysis: align partial logic (#6773) by @shulaoda
+- skip `__toESM` when not needed to reduce output size (#6751) by @Copilot
+- improve `EMPTY_IMPORT_META` warning message (#6761) by @sapphi-red
+- rolldown_plugin_build_import_analysis: align no preload logic (#6762) by @shulaoda
+- rolldown_plugin_vite_css_post: align `RemovedPureCSSFilesCache` logic (#6745) by @shulaoda
+- rolldown_plugin_build_import_analysis: initialize `generateBundle` logic (#6744) by @shulaoda
+- experimental: introduce `freeExternalMemory` to free external memory immediately (#6721) by @hyf0
+
+### 🐛 Bug Fixes
+
+- plugins: wrap replacePlugin with makeBuiltinPluginCallable (#6782) by @huang-julien
+- debug: make sure `this.resolve` is also tracked under corresponding session (#6798) by @hyf0
+- legal comments above directives are not preserved (#6787) by @shulaoda
+- panic when rendering exports to other chunks (#6765) by @Copilot
+- transform/inject: escape special characters in import source (#6778) by @Copilot
+- handle default exports from CJS modules correctly (#6767) by @IWANABETHATGUY
+- rolldown_plugin_build_import_analysis: correct aligned logic (#6768) by @shulaoda
+- duplicate default export when using both import and require (#6764) by @Copilot
+- handle arbitrary module namespace identifiers in `preserveEntrySignatures: 'allow-extension'` (#6753) by @Copilot
+- TypeError when loading CJS files after bundling mixed CJS+TS project  (#6743) by @IWANABETHATGUY
+- add warnings for import.meta.dirname/filename/url in UMD and IIFE formats (#6747) by @Copilot
+- rolldown_plugin_manifest: should keep `names` field (#6742) by @shulaoda
+- legal comments above import statements are not preserved (#6717) by @shulaoda
+- remove redundant node check in dynamic entry graph construction (#6730) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- remove unnecessary `#[napi(gettter)]`, use function call directly (#6694) by @hyf0
+- explain the reason if memory doesn't get dropped by `freeExternalMemory` (#6781) by @hyf0
+- pre compute exports (#6755) by @IWANABETHATGUY
+- dev: receive an interface for DevRuntime rather than WebSocket directly (#6734) by @sapphi-red
+- dev: fix types for the runtime file and expose it properly (#6731) by @sapphi-red
+
+### 📚 Documentation
+
+- fix magicstring credit (#6812) by @TheAlexLichter
+- in-depth/bundling-cjs: wrap some sections with caveats section (#6796) by @sapphi-red
+- in-depth/bundling-cjs: add "Ambiguous `default` import from CJS modules" section (#6795) by @sapphi-red
+- in-depth/bundling-cjs: make `esmExternalRequirePlugin` link more prominent (#6792) by @sapphi-red
+- add explanation about direct eval (#6775) by @sapphi-red
+- add "Non-ESM Output Formats" page (#6760) by @sapphi-red
+- use oxc for benchmark comparison in native magic string doc (#6740) by @sapphi-red
+- polish `cleanDir` option (#6741) by @hyf0
+- fix image in native magic string doc (#6739) by @sapphi-red
+- update description about `attachDebugInfo: 'none'` (#6738) by @IWANABETHATGUY
+- add warning about cleanDir behavior with multiple configs (#6735) by @Copilot
+
+### 🧪 Testing
+
+- skip paths function test (#6771) by @IWANABETHATGUY
+- rust/dev: add test about recover from initial build error (#6567) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- correct prepare release binding file (#6817) by @shulaoda
+- deps: update github-actions (#6806) by @renovate[bot]
+- deps: lock file maintenance npm packages (#6814) by @renovate[bot]
+- use correct node version (#6809) by @shulaoda
+- deps: lock file maintenance rust crates (#6815) by @renovate[bot]
+- deps: update npm packages (major) (#6813) by @renovate[bot]
+- deps: update dependency dprint-typescript to v0.95.12 (#6805) by @renovate[bot]
+- fix typo (#6801) by @iiio2
+- fix typo in is_import_expr_ignored_by_comment method name (#6797) by @sapphi-red
+- deps: update crate-ci/typos action to v1.39.0 (#6794) by @renovate[bot]
+- deps: upgrade Rust to v1.91.0 and fix new clippy lints (#6785) by @Copilot
+- allow dprint to format `packages/rolldown/tests` except diagnostics directory (#6772) by @Copilot
+- deps: update dependency tsdown to v0.15.12 (#6759) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.17.3 (#6758) by @renovate[bot]
+- test/dev: collect multiple build outputs for each step (#6736) by @hyf0
+- rolldown: change the NAPI-RS binding file to the cjs (#6688) by @Brooooooklyn
+- test: automatically run extra test with `preserve_entry_signatures: 'allow-extension'` (#6727) by @Copilot
+- deps: update dependency rolldown-plugin-dts to v0.17.2 (#6732) by @renovate[bot]
+- fix node validation (#6728) by @shulaoda
+- deps: lock file maintenance rust crates (#6636) by @renovate[bot]
+- deps: update dependency tsdown to v0.15.11 (#6725) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @huang-julien made their first contribution in [#6782](https://github.com/rolldown/rolldown/pull/6782)
+
+
 ## [1.0.0-beta.45] - 2025-10-27
 
 ### 🚀 Features

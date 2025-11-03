@@ -1351,6 +1351,10 @@ export declare class BindingMagicString {
   hasChanged(): boolean
   length(): number
   isEmpty(): boolean
+  remove(start: number, end: number): void
+  update(start: number, end: number, content: string): void
+  relocate(start: number, end: number, to: number): void
+  indent(indentor?: string | undefined | null): void
 }
 
 export declare class BindingModuleInfo {

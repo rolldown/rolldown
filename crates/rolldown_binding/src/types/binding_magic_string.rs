@@ -124,4 +124,44 @@ impl BindingMagicString<'_> {
   pub fn is_empty(&self) -> bool {
     self.inner.is_empty()
   }
+
+  #[napi]
+  pub fn remove(&mut self, start: u32, end: u32) {
+    let start_byte =
+      self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
+    let end_byte =
+      self.char_to_byte_mapper.char_to_byte(end as usize).expect("Invalid end character index");
+    self.inner.remove(start_byte, end_byte);
+  }
+
+  #[napi]
+  pub fn update(&mut self, start: u32, end: u32, content: String) {
+    let start_byte =
+      self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
+    let end_byte =
+      self.char_to_byte_mapper.char_to_byte(end as usize).expect("Invalid end character index");
+    self.inner.update(start_byte, end_byte, content);
+  }
+
+  #[napi]
+  pub fn relocate(&mut self, start: u32, end: u32, to: u32) {
+    let start_byte =
+      self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
+    let end_byte =
+      self.char_to_byte_mapper.char_to_byte(end as usize).expect("Invalid end character index");
+    let to_byte =
+      self.char_to_byte_mapper.char_to_byte(to as usize).expect("Invalid to character index");
+    self.inner.relocate(start_byte, end_byte, to_byte);
+  }
+
+  #[napi]
+  pub fn indent(&mut self, indentor: Option<String>) {
+    if let Some(indentor) = indentor {
+      self
+        .inner
+        .indent_with(string_wizard::IndentOptions { indentor: Some(&indentor), exclude: &[] });
+    } else {
+      self.inner.indent();
+    }
+  }
 }

@@ -57,6 +57,45 @@ Some technical details are simplified for better illustration. The native MagicS
 
 The native implementation maintains API compatibility with the JavaScript version. The most commonly used APIs are already implemented, with the remaining APIs planned for completion in future releases.
 
+### Implemented Methods
+
+The following MagicString methods are currently available in the native implementation:
+
+**String Manipulation:**
+
+- `append(content)` - Appends content to the end of the string
+- `prepend(content)` - Prepends content to the beginning of the string
+- `appendLeft(index, content)` - Appends content to the left of a specific index
+- `appendRight(index, content)` - Appends content to the right of a specific index
+- `prependLeft(index, content)` - Prepends content to the left of a specific index
+- `prependRight(index, content)` - Prepends content to the right of a specific index
+- `overwrite(start, end, content)` - Replaces content in a range
+- `update(start, end, content)` - Updates content in a range
+- `remove(start, end)` - Removes content in a range
+- `replace(from, to)` - Replaces the first occurrence of a pattern
+- `replaceAll(from, to)` - Replaces all occurrences of a pattern
+
+**Transformations:**
+
+- `indent(indentor?)` - Indents the content with optional custom indentation string
+- `relocate(start, end, to)` - Moves content from one position to another
+
+**Utilities:**
+
+- `toString()` - Returns the transformed string
+- `hasChanged()` - Checks if the string has been modified
+- `length()` - Returns the length of the transformed string
+- `isEmpty()` - Checks if the string is empty
+
+### Not Yet Implemented
+
+The following features are planned for future releases:
+
+- Advanced source map options (`generateMap()`, `generateDecodedMap()`)
+- `clone()` method
+- `trim()` / `trimStart()` / `trimEnd()` methods
+- `snip()` method
+
 ## Real-World Performance
 
 use [rolldown/benchmarks](https://github.com/rolldown/benchmarks/) as benchmark cases

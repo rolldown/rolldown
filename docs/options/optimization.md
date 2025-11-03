@@ -61,13 +61,14 @@ export const SHORT = 'dev';
 
 **Output with `{ mode: 'smart' }`:**
 
-````js
+```js
 // #region index.js
 const MODE = 'production';
 console.log(MODE); // Not inlined (not in special context, string > 3 chars)
 if ('production' === 'production') console.log('Production mode');
 console.log(true);
 console.log('dev');
+```
 
 **Output with `{ mode: 'all' }`:**
 
@@ -78,4 +79,4 @@ if ('production' === 'production') {
 }
 console.log(true);
 console.log('dev');
-````
+```

@@ -4,6 +4,12 @@
 Rolldown is currently in beta status. While it can already handle most production use cases, there may still be bugs and rough edges. Most notably, the built-in minification feature is still in early work-in-progress status.
 :::
 
+:::tip Looking for specific use cases?
+For most applications, using [Rolldown through Vite](https://vite.dev/guide/rolldown.html#how-to-try-rolldown) is the recommended approach, as it provides a complete development experience with dev server, HMR, and optimized production builds.
+
+For library bundling, check out [tsdown](https://tsdown.dev/).
+:::
+
 ## Installation
 
 ::: code-group

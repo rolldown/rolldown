@@ -10,11 +10,7 @@
     "strict": true,
     "noUnusedLocals": true,
     "skipLibCheck": true,
-    "jsx": "preserve",
-    "baseUrl": ".",
-    "paths": {
-      "@theme/*": [".vitepress/theme/*"]
-    }
+    "jsx": "preserve"
   },
   "include": ["env.d.ts", "src/**/*", ".vitepress/**/*"]
 }

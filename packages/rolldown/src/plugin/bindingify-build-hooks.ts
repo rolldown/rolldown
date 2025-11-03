@@ -1,3 +1,4 @@
+import type { Program } from '@oxc-project/types';
 import path from 'node:path';
 import type {
   BindingHookFilter,
@@ -230,14 +231,22 @@ export function bindingifyTransform(
 
   return {
     plugin: async (ctx, code, id, meta) => {
+      let magicStringInstance: BindingMagicString, astInstance: Program;
       Object.defineProperties(meta, {
         magicString: {
           get() {
-            return new BindingMagicString(code);
+            if (magicStringInstance) {
+              return magicStringInstance;
+            }
+            magicStringInstance = new BindingMagicString(code);
+            return magicStringInstance;
           },
         },
         ast: {
           get() {
+            if (astInstance) {
+              return astInstance;
+            }
             let lang: 'js' | 'jsx' | 'tsx' | 'ts' = 'js';
             switch (meta.moduleType) {
               case 'js':
@@ -249,10 +258,11 @@ export function bindingifyTransform(
               default:
                 break;
             }
-            return parseAst(code, {
+            astInstance = parseAst(code, {
               astType: meta.moduleType.includes('ts') ? 'ts' : 'js',
               lang,
             });
+            return astInstance;
           },
         },
       });

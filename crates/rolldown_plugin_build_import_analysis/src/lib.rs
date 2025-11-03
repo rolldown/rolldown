@@ -27,17 +27,19 @@ use self::ast_visit::BuildImportAnalysisVisitor;
 const PRELOAD_HELPER_ID: &str = "\0vite/preload-helper.js";
 
 #[derive(derive_more::Debug)]
-#[expect(clippy::struct_excessive_bools)]
+pub struct BuildImportAnalysisPluginV2 {
+  pub is_module_preload: bool,
+  #[debug(skip)]
+  pub resolve_dependencies: Option<Arc<ResolveDependenciesFn>>,
+}
+
+#[derive(derive_more::Debug)]
 pub struct BuildImportAnalysisPlugin {
   pub preload_code: ArcStr,
   pub insert_preload: bool,
   pub render_built_url: bool,
   pub is_relative_base: bool,
-  pub is_test_v2: bool,
-  // pub sourcemap: bool,
-  pub is_module_preload: bool,
-  #[debug(skip)]
-  pub resolve_dependencies: Option<Arc<ResolveDependenciesFn>>,
+  pub v2: Option<BuildImportAnalysisPluginV2>,
 }
 
 impl Plugin for BuildImportAnalysisPlugin {
@@ -91,6 +93,12 @@ impl Plugin for BuildImportAnalysisPlugin {
     if !args.options.format.is_esm() {
       return Ok(());
     }
+
+    let Some(BuildImportAnalysisPluginV2 { is_module_preload, ref resolve_dependencies }) = self.v2
+    else {
+      return Ok(());
+    };
+
     if !self.insert_preload {
       if let Some(removed_pure_css_files) = ctx.meta().get::<RemovedPureCSSFilesCache>()
         && !removed_pure_css_files.inner.is_empty()
@@ -219,7 +227,7 @@ impl Plugin for BuildImportAnalysisPlugin {
               // main chunk is removed
               (has_removed_pure_css_chunks && !deps.is_empty())
           {
-            if self.is_module_preload {
+            if is_module_preload {
               deps.into_iter().collect()
             } else {
               // CSS deps use the same mechanism as module preloads, so even if disabled,
@@ -230,7 +238,7 @@ impl Plugin for BuildImportAnalysisPlugin {
             vec![]
           };
 
-          if let Some(resolve_dependencies) = self.resolve_dependencies.as_ref()
+          if let Some(resolve_dependencies) = resolve_dependencies
             && let Some(normalized_file) = normalized_file
           {
             // We can't let the user remove css deps as these aren't really preloads, they are just using
@@ -260,7 +268,7 @@ impl Plugin for BuildImportAnalysisPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    if self.is_test_v2 {
+    if self.v2.is_some() {
       HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst | HookUsage::GenerateBundle
     } else {
       HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst

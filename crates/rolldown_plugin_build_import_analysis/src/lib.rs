@@ -66,7 +66,7 @@ impl Plugin for BuildImportAnalysisPlugin {
 
   async fn transform_ast(
     &self,
-    _ctx: &PluginContext,
+    ctx: &PluginContext,
     args: HookTransformAstArgs<'_>,
   ) -> HookTransformAstReturn {
     let mut ast = args.ast;
@@ -77,6 +77,7 @@ impl Plugin for BuildImportAnalysisPlugin {
         self.insert_preload,
         self.render_built_url,
         self.is_relative_base,
+        ctx.options().format.is_esm(),
       );
       visitor.visit_program(fields.program);
     });

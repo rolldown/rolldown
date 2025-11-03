@@ -58,7 +58,7 @@ const buildMeta = (function makeBuildMeta() {
   };
 })();
 
-const bindingFile = nodePath.resolve('src/binding.js');
+const bindingFile = nodePath.resolve('src/binding.cjs');
 const bindingFileWasi = nodePath.resolve('src/rolldown-binding.wasi.cjs');
 const bindingFileWasiBrowser = nodePath.resolve(
   'src/rolldown-binding.wasi-browser.js',

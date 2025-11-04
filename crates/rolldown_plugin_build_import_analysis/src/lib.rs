@@ -20,6 +20,7 @@ use rolldown_plugin::{
 };
 use rolldown_plugin_utils::{
   AssetUrlResult, RenderBuiltUrl, ToOutputFilePathEnv, constants::RemovedPureCSSFilesCache,
+  to_string_literal,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath as _;
@@ -207,8 +208,9 @@ impl Plugin for BuildImportAnalysisPlugin {
         visitor.visit_program(&mut parser_ret.program);
       }
 
-      let mut s = string_wizard::MagicString::new(&chunk.code);
       let imports_len = imports.len();
+      let mut file_deps = FileDeps(Vec::with_capacity(imports.len()));
+      let mut s = string_wizard::MagicString::new(&chunk.code);
 
       for import in imports {
         let mut deps = FxHashSet::default();
@@ -280,7 +282,6 @@ impl Plugin for BuildImportAnalysisPlugin {
             deps_arr.extend(css_deps);
           }
 
-          let mut file_deps = FileDeps(Vec::with_capacity(deps_arr.len()));
           let mut render_deps = Vec::with_capacity(deps_arr.len());
           if render_built_url.is_some() {
             let env = ToOutputFilePathEnv {
@@ -336,6 +337,26 @@ impl Plugin for BuildImportAnalysisPlugin {
               )
             },
           );
+        }
+      }
+
+      if !file_deps.0.is_empty() {
+        let map_deps_code = format!(
+          "const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=[{}])))=>i.map(i=>d[i]);\n",
+          file_deps
+            .0
+            .into_iter()
+            .map(|(s, is_runtime)| if is_runtime { s } else { to_string_literal(&s) })
+            .join(",")
+        );
+        // inject extra code at the top or next line of hashbang
+        if chunk.code.starts_with("#!") {
+          s.prepend_left(
+            chunk.code.find('\n').map(|pos| pos + 1).unwrap_or_default(),
+            map_deps_code,
+          );
+        } else {
+          s.prepend(map_deps_code);
         }
       }
 

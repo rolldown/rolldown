@@ -57,9 +57,9 @@ impl AddDeps<'_, '_> {
             }
             *self.has_removed_pure_css_chunks = true;
           }
-          self.s.update(self.expr_range.start, self.expr_range.end, "Promise.resolve({})");
         }
       }
+      self.s.update(self.expr_range.start, self.expr_range.end, "Promise.resolve({})");
     }
   }
 }

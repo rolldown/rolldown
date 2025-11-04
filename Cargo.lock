@@ -3008,6 +3008,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "derive_more",
+ "itertools",
  "oxc",
  "regex",
  "rolldown_common",

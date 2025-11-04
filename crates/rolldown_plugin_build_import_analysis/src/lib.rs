@@ -9,6 +9,7 @@ use std::{
 };
 
 use arcstr::ArcStr;
+use itertools::Itertools as _;
 use oxc::ast_visit::VisitMut;
 use rolldown_common::{Output, side_effects::HookSideEffects};
 use rolldown_ecmascript_utils::AstSnippet;
@@ -97,6 +98,7 @@ impl Plugin for BuildImportAnalysisPlugin {
     Ok(ast)
   }
 
+  #[expect(clippy::too_many_lines)]
   async fn generate_bundle(
     &self,
     ctx: &PluginContext,
@@ -306,14 +308,38 @@ impl Plugin for BuildImportAnalysisPlugin {
               });
             }
           } else {
-            todo!();
+            for dep in deps_arr {
+              // Don't include the assets dir if the default asset file names
+              // are used, the path will be reconstructed by the import preload helper
+              render_deps.push(if self.is_relative_base {
+                let path = dep.relative(chunk.filename.as_path().parent().unwrap());
+                let file = path.to_slash_lossy();
+                file_deps.add_file_deps(
+                  if file.starts_with('.') { file.into_owned() } else { format!("./{file}") },
+                  false,
+                )
+              } else {
+                file_deps.add_file_deps(dep, false)
+              });
+            }
           }
 
-          todo!()
+          s.update(
+            marker_start,
+            marker_start + 16, // __VITE_PRELOAD__
+            if render_deps.is_empty() {
+              "[]".to_string()
+            } else {
+              format!(
+                "__vite__mapDeps([{}])",
+                render_deps.into_iter().map(|u| u.to_string()).join(",")
+              )
+            },
+          );
         }
-
-        todo!()
       }
+
+      todo!()
     }
 
     Ok(())

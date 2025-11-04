@@ -20,6 +20,7 @@ workspace = true
 anyhow = { workspace = true }
 arcstr = { workspace = true }
 derive_more = { workspace = true }
+itertools = { workspace = true }
 oxc = { workspace = true }
 regex = { workspace = true }
 rolldown_common = { workspace = true }

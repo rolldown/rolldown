@@ -1,7 +1,7 @@
 mod html;
 mod utils;
 
-use std::{borrow::Cow, path::Path, pin::Pin, rc::Rc, sync::Arc};
+use std::{borrow::Cow, path::Path, rc::Rc, sync::Arc};
 
 use cow_utils::CowUtils as _;
 use html5gum::Span;
@@ -9,7 +9,7 @@ use oxc::ast_visit::Visit;
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookTransformOutput, HookUsage, LogWithoutPlugin, Plugin};
 use rolldown_plugin_utils::{
-  AssetUrlResult, RenderBuiltUrl, ToOutputFilePathEnv, UsizeOrFunction,
+  AssetUrlResult, ModulePreload, RenderBuiltUrl, ToOutputFilePathEnv, UsizeOrFunction,
   constants::{CSSBundleName, HTMLProxyMapItem},
   partial_encode_url_path,
 };
@@ -23,22 +23,7 @@ use crate::utils::{
   inject_to_head,
 };
 
-pub type ResolveDependenciesFn = dyn Fn(
-    &str,
-    Vec<String>,
-    &str,
-    &str,
-  ) -> Pin<Box<dyn Future<Output = anyhow::Result<Vec<String>>> + Send>>
-  + Send
-  + Sync;
-
-pub enum ResolveDependenciesEither {
-  True,
-  Fn(Arc<ResolveDependenciesFn>),
-}
-
-#[expect(clippy::struct_excessive_bools)]
-#[derive(derive_more::Debug, Default)]
+#[derive(derive_more::Debug)]
 pub struct ViteHtmlPlugin {
   pub is_lib: bool,
   pub is_ssr: bool,
@@ -46,13 +31,11 @@ pub struct ViteHtmlPlugin {
   pub public_dir: String,
   pub decoded_base: String,
   pub css_code_split: bool,
-  pub module_preload_polyfill: bool,
+  pub module_preload: ModulePreload,
   #[debug(skip)]
   pub asset_inline_limit: UsizeOrFunction,
   #[debug(skip)]
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
-  #[debug(skip)]
-  pub resolve_dependencies: Option<ResolveDependenciesEither>,
   // internal state
   pub html_result_map: FxDashMap<(String, String), (String, bool)>,
 }
@@ -458,7 +441,9 @@ impl Plugin for ViteHtmlPlugin {
       .html_result_map
       .insert((args.id.to_string(), public_path), (s.to_string(), every_script_is_async));
 
-    if self.module_preload_polyfill && (some_scripts_are_async || some_scripts_are_defer) {
+    if self.module_preload.options().is_some_and(|v| v.polyfill)
+      && (some_scripts_are_async || some_scripts_are_defer)
+    {
       js = rolldown_utils::concat_string!(
         "import \"",
         utils::constant::MODULE_PRELOAD_POLYFILL,
@@ -569,7 +554,7 @@ impl Plugin for ViteHtmlPlugin {
             }
             tag
           }];
-          if let Some(resolve_dependencies) = &self.resolve_dependencies {
+          if let Some(module_preload) = self.module_preload.options() {
             let imports_filenames = imports
               .iter()
               .filter_map(|c| match c {
@@ -577,11 +562,9 @@ impl Plugin for ViteHtmlPlugin {
                 utils::ImportedChunk::External(_) => None,
               })
               .collect::<Vec<_>>();
-            let resolved_deps = match resolve_dependencies {
-              ResolveDependenciesEither::True => imports_filenames,
-              ResolveDependenciesEither::Fn(r) => {
-                r(&chunk.filename, imports_filenames, &relative_url_path, "html").await?
-              }
+            let resolved_deps = match &module_preload.resolve_dependencies {
+              None => imports_filenames,
+              Some(r) => r(&chunk.filename, imports_filenames, &relative_url_path, "html").await?,
             };
             for dep in resolved_deps {
               let mut tag = HtmlTagDescriptor::new("link");

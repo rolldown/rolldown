@@ -2187,11 +2187,6 @@ export interface BindingResolveDependenciesContext {
   hostType: string
 }
 
-export interface BindingResolveDependenciesContext {
-  hostId: string
-  hostType: string
-}
-
 export type BindingResolvedExternal =
   boolean | string
 
@@ -2273,10 +2268,9 @@ export interface BindingViteHtmlPluginConfig {
   publicDir: string
   decodedBase: string
   cssCodeSplit: boolean
-  modulePreloadPolyfill: boolean
+  modulePreload: false | BindingModulePreloadOptions
   assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
-  resolveDependencies?: boolean | ((filename: string, dependencies: string[], context: { hostId: string, hostType: 'html' | 'js' }) => Promise<string[]>)
 }
 
 export interface BindingVitePluginCustom {

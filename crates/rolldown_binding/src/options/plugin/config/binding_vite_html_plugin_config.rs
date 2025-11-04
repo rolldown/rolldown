@@ -25,7 +25,7 @@ pub struct BindingViteHtmlPluginConfig {
   #[napi(ts_type = "number | ((file: string, content: Buffer) => boolean | undefined)")]
   pub asset_inline_limit: BindingAssetInlineLimit,
   #[napi(
-    ts_type = "(filename: string, type: BindingRenderBuiltUrlConfig) => Promise<undefined | string | BindingRenderBuiltUrlRet>"
+    ts_type = "(filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet"
   )]
   pub render_built_url: Option<BindingRenderBuiltUrl>,
   #[napi(

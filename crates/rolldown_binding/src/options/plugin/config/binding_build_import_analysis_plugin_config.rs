@@ -20,7 +20,7 @@ pub struct BindingBuildImportAnalysisPluginV2Config {
   pub url_base: String,
   pub decoded_base: String,
   #[napi(
-    ts_type = "(filename: string, type: BindingRenderBuiltUrlConfig) => Promise<undefined | string | BindingRenderBuiltUrlRet>"
+    ts_type = "(filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet"
   )]
   pub render_built_url: Option<BindingRenderBuiltUrl>,
   #[napi(

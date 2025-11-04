@@ -1547,7 +1547,7 @@ export interface BindingAssetPluginConfig {
   isSkipAssets: boolean
   assetsInclude: Array<BindingStringOrRegex>
   assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
-  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => Promise<undefined | string | BindingRenderBuiltUrlRet>
+  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
 }
 
 export interface BindingAssetSource {
@@ -1573,7 +1573,7 @@ export interface BindingBuildImportAnalysisPluginV2Config {
   isSsr: boolean
   urlBase: string
   decodedBase: string
-  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => Promise<undefined | string | BindingRenderBuiltUrlRet>
+  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
   resolveDependencies?: boolean | ((filename: string, dependencies: string[], context: { hostId: string, hostType: 'html' | 'js' }) => Promise<string[]>)
 }
 
@@ -2253,7 +2253,7 @@ export interface BindingViteCssPostPluginConfig {
   libCssFilename?: string
   isLegacy?: () => boolean
   cssMinify?: (css: string) => Promise<string>
-  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => Promise<undefined | string | BindingRenderBuiltUrlRet>
+  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
 }
 
 export interface BindingViteHtmlPluginConfig {
@@ -2265,7 +2265,7 @@ export interface BindingViteHtmlPluginConfig {
   cssCodeSplit: boolean
   modulePreloadPolyfill: boolean
   assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
-  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => Promise<undefined | string | BindingRenderBuiltUrlRet>
+  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
   resolveDependencies?: boolean | ((filename: string, dependencies: string[], context: { hostId: string, hostType: 'html' | 'js' }) => Promise<string[]>)
 }
 

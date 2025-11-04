@@ -7,7 +7,7 @@ use napi::{
 };
 use rolldown_plugin_utils::{RenderBuiltUrl, RenderBuiltUrlConfig, RenderBuiltUrlRet};
 
-use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _};
+use crate::types::js_callback::{JsCallback, JsCallbackExt as _};
 
 #[napi_derive::napi(object, object_from_js = false)]
 pub struct BindingRenderBuiltUrlConfig {
@@ -47,7 +47,7 @@ pub struct BindingRenderBuiltUrl(Arc<RenderBuiltUrl>);
 impl FromNapiValue for BindingRenderBuiltUrl {
   unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> napi::Result<Self> {
     unsafe {
-      let render_built_url = MaybeAsyncJsCallback::<
+      let render_built_url = JsCallback::<
         FnArgs<(String, BindingRenderBuiltUrlConfig)>,
         Option<Either<String, BindingRenderBuiltUrlRet>>,
       >::from_napi_value(env, napi_val)?;
@@ -57,7 +57,7 @@ impl FromNapiValue for BindingRenderBuiltUrl {
         let config = config.into();
         Box::pin(async move {
           render_built_url
-            .await_call((filename, config).into())
+            .invoke_async((filename, config).into())
             .await
             .map(|v| {
               v.map(|v| match v {

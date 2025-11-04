@@ -1,6 +1,8 @@
+import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { UserConfig } from 'vitepress';
-import { defineConfig } from 'vitepress';
+import { DefaultTheme, defineConfig } from 'vitepress';
 import {
   groupIconMdPlugin,
   groupIconVitePlugin,
@@ -8,9 +10,10 @@ import {
 } from 'vitepress-plugin-group-icons';
 import llmstxt from 'vitepress-plugin-llms';
 
+const require = createRequire(import.meta.url);
 const CONFIG_LINK = '/options/input.md';
 
-const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
+const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
   {
     text: 'Guide',
     items: [
@@ -52,7 +55,7 @@ const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
   },
 ];
 
-const sidebarForInDepth: UserConfig['themeConfig']['sidebar'] = [{
+const sidebarForInDepth: DefaultTheme.SidebarItem[] = [{
   text: 'In-Depth',
   items: [
     { text: 'Why Bundlers', link: '/in-depth/why-bundlers.md' },
@@ -74,7 +77,52 @@ const sidebarForInDepth: UserConfig['themeConfig']['sidebar'] = [{
   ],
 }];
 
-const sidebarForOptions: UserConfig['themeConfig']['sidebar'] = [
+function getTypedocSidebar() {
+  const filepath = path.resolve(
+    import.meta.dirname,
+    '../reference/typedoc-sidebar.json',
+  );
+  if (!existsSync(filepath)) return [];
+
+  try {
+    return require(filepath) as DefaultTheme.SidebarItem[];
+  } catch (error) {
+    console.error('Failed to load typedoc sidebar:', error);
+    return [];
+  }
+}
+
+const typedocSidebar = getTypedocSidebar().map((item) => ({
+  ...item,
+  collapsed: false,
+})).sort((a) => {
+  if (a.text === 'Functions') return -1;
+  return 0;
+});
+
+const sidebarForReference: DefaultTheme.SidebarItem[] = [
+  {
+    text: 'Quick Links',
+    items: [
+      {
+        text: 'Input Options',
+        link: '/reference/Interface.InputOptions.md',
+      },
+      {
+        text: 'Output Options',
+        link: '/reference/Interface.OutputOptions.md',
+      },
+      {
+        text: 'Build Options',
+        link: '/reference/Interface.BuildOptions.md',
+      },
+      { text: 'Bundler API', link: '/reference/Function.rolldown.md' },
+    ],
+  },
+  { text: 'API Reference', base: '/reference', items: typedocSidebar },
+];
+
+const sidebarForOptions: DefaultTheme.SidebarItem[] = [
   {
     text: 'Rolldown Options',
     items: [
@@ -118,7 +166,7 @@ const sidebarForOptions: UserConfig['themeConfig']['sidebar'] = [
   },
 ];
 
-const sidebarForDevGuide: UserConfig['themeConfig']['sidebar'] = [
+const sidebarForDevGuide: DefaultTheme.SidebarItem[] = [
   {
     text: 'Contribution Guide',
     items: [
@@ -166,7 +214,7 @@ const sidebarForDevGuide: UserConfig['themeConfig']['sidebar'] = [
   },
 ];
 
-const sidebarForGlossary: UserConfig['themeConfig']['sidebar'] = [
+const sidebarForGlossary: DefaultTheme.SidebarItem[] = [
   {
     text: 'Glossary',
     items: [
@@ -178,7 +226,7 @@ const sidebarForGlossary: UserConfig['themeConfig']['sidebar'] = [
   },
 ];
 
-const sidebarForResources: UserConfig['themeConfig']['sidebar'] = [
+const sidebarForResources: DefaultTheme.SidebarItem[] = [
   {
     text: 'Team',
     link: '/team.md',
@@ -301,6 +349,8 @@ export default defineConfig({
       '/in-depth/': sidebarForInDepth,
       // --- Options ---
       '/options/': sidebarForOptions,
+      // --- Reference ---
+      '/reference/': sidebarForReference,
       // --- Glossary ---
       '/glossary/': sidebarForGlossary,
       // --- Contribute ---

@@ -16,6 +16,10 @@ packages:
 shellEmulator: true
 verifyDepsBeforeRun: install
 trustPolicy: no-downgrade
+trustPolicyExclude:
+  - semver@6.3.1
+  - chokidar@4.0.3
+  - rxjs@7.8.2
 
 # Define a catalog of version ranges.
 catalog:

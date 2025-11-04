@@ -1954,7 +1954,7 @@ export interface BindingMatchGroup {
 
 export interface BindingModulePreloadOptions {
   polyfill: boolean
-  resolveDependencies?: (filename: string, deps: string[], context: { hostId: string, hostType: 'html' | 'js' }) => Promise<string[]>
+  resolveDependencies?: (filename: string, deps: string[], context: { hostId: string, hostType: 'html' | 'js' }) => string[]
 }
 
 export interface BindingModulePreloadPolyfillPluginConfig {

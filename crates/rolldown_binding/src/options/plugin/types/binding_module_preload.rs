@@ -19,7 +19,7 @@ pub struct BindingResolveDependenciesContext {
 pub struct BindingModulePreloadOptions {
   pub polyfill: bool,
   #[napi(
-    ts_type = "(filename: string, deps: string[], context: { hostId: string, hostType: 'html' | 'js' }) => Promise<string[]>"
+    ts_type = "(filename: string, deps: string[], context: { hostId: string, hostType: 'html' | 'js' }) => string[]"
   )]
   pub resolve_dependencies: Option<
     JsCallback<FnArgs<(String, Vec<String>, BindingResolveDependenciesContext)>, Vec<String>>,

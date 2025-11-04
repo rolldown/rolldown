@@ -107,10 +107,20 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     private onLog: LogHandler,
     logLevel: LogLevelOption,
     watchMode: boolean,
+    filterStorage?: import('./plugin-filter-storage').PluginFilterStorage,
     private currentLoadingModule?: string,
   ) {
-    super(onLog, logLevel, plugin.name!, watchMode);
+    super(onLog, logLevel, plugin.name!, watchMode, filterStorage);
     this.getModuleInfo = (id: string) => this.data.getModuleInfo(id, context);
+
+    // Apply any pending filters that were set before the binding context was available
+    if (this.filterStorage && typeof this.filterStorage.getPendingFilters === 'function' && !this.filterStorage.hasBeenApplied()) {
+      const pendingFilters = this.filterStorage.getPendingFilters();
+      if (pendingFilters) {
+        this.setHookFilter(pendingFilters);
+        this.filterStorage.markAsApplied();
+      }
+    }
   }
 
   public async load(

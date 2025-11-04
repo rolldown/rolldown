@@ -2,6 +2,7 @@ import path from 'node:path';
 import { VERSION } from '..';
 import type { InputOptions } from '../options/input-options';
 import type { Plugin } from '../plugin';
+import type { MinimalPluginContext } from '../plugin/minimal-plugin-context';
 import { getSortedPlugins } from '../plugin/plugin-driver';
 import {
   type LoggingFunction,
@@ -69,7 +70,11 @@ export function getLogger(
               },
               warn: getLogHandler(LOG_LEVEL_WARN),
               pluginName: plugin.name || 'unknown',
-            },
+              setHookFilter: () => {
+                // setHookFilter is not supported in onLog hook
+                throw new Error('setHookFilter is not available in the onLog hook');
+              },
+            } satisfies MinimalPluginContext,
             level,
             log,
           ) === false

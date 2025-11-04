@@ -29,6 +29,7 @@ import {
 } from './bindingify-plugin-hook-meta';
 import type { PluginHooks, SourceDescription } from './index';
 import { PluginContextImpl } from './plugin-context';
+import { getOrCreateFilterStorage } from './plugin-filter-storage-map';
 import { TransformPluginContextImpl } from './transform-plugin-context';
 
 export function bindingifyBuildStart(
@@ -42,6 +43,7 @@ export function bindingifyBuildStart(
 
   return {
     plugin: async (ctx, opts) => {
+      const filterStorage = getOrCreateFilterStorage(args.plugin.name!);
       await handler.call(
         new PluginContextImpl(
           args.outputOptions,
@@ -51,6 +53,7 @@ export function bindingifyBuildStart(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          filterStorage,
         ),
         args.pluginContextData.getInputOptions(opts),
       );
@@ -69,6 +72,7 @@ export function bindingifyBuildEnd(
 
   return {
     plugin: async (ctx, err) => {
+      const filterStorage = getOrCreateFilterStorage(args.plugin.name!);
       await handler.call(
         new PluginContextImpl(
           args.outputOptions,
@@ -78,6 +82,7 @@ export function bindingifyBuildEnd(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          filterStorage,
         ),
         err ? aggregateBindingErrorsIntoJsError(err) : undefined,
       );
@@ -113,6 +118,7 @@ export function bindingifyResolveId(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          getOrCreateFilterStorage(args.plugin.name!),
         ),
         specifier,
         importer ?? undefined,
@@ -175,6 +181,7 @@ export function bindingifyResolveDynamicImport(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          getOrCreateFilterStorage(args.plugin.name!),
         ),
         specifier,
         importer ?? undefined,
@@ -256,6 +263,7 @@ export function bindingifyTransform(
           },
         },
       });
+      const filterStorage = getOrCreateFilterStorage(args.plugin.name!);
       const transformCtx = new TransformPluginContextImpl(
         args.outputOptions,
         ctx.inner(),
@@ -267,6 +275,7 @@ export function bindingifyTransform(
         args.onLog,
         args.logLevel,
         args.watchMode,
+        filterStorage,
       );
       const ret = await handler.call(transformCtx, code, id, meta);
 
@@ -326,6 +335,7 @@ export function bindingifyLoad(
 
   return {
     plugin: async (ctx, id) => {
+      const filterStorage = getOrCreateFilterStorage(args.plugin.name!);
       const ret = await handler.call(
         new PluginContextImpl(
           args.outputOptions,
@@ -335,6 +345,7 @@ export function bindingifyLoad(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          filterStorage,
           id,
         ),
         id,
@@ -410,6 +421,7 @@ export function bindingifyModuleParsed(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          getOrCreateFilterStorage(args.plugin.name!),
         ),
         transformModuleInfo(
           moduleInfo,

@@ -18,6 +18,7 @@ import {
   type PluginHookWithBindingExt,
 } from './bindingify-plugin-hook-meta';
 import { PluginContextImpl } from './plugin-context';
+import { getOrCreateFilterStorage } from './plugin-filter-storage-map';
 
 export function bindingifyRenderStart(
   args: BindingifyPluginArgs,
@@ -39,6 +40,7 @@ export function bindingifyRenderStart(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          getOrCreateFilterStorage(args.plugin.name!),
         ),
         args.pluginContextData.getOutputOptions(opts),
         args.pluginContextData.getInputOptions(opts),
@@ -81,6 +83,7 @@ export function bindingifyRenderChunk(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          getOrCreateFilterStorage(args.plugin.name!),
         ),
         code,
         transformRenderedChunk(chunk),
@@ -130,6 +133,7 @@ export function bindingifyAugmentChunkHash(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          getOrCreateFilterStorage(args.plugin.name!),
         ),
         transformRenderedChunk(chunk),
       );
@@ -158,6 +162,7 @@ export function bindingifyRenderError(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          getOrCreateFilterStorage(args.plugin.name!),
         ),
         aggregateBindingErrorsIntoJsError(err),
       );
@@ -189,7 +194,8 @@ export function bindingifyGenerateBundle(
         args.onLog,
         args.logLevel,
         args.watchMode,
-      );
+          getOrCreateFilterStorage(args.plugin.name!),
+        );
       const output = transformToOutputBundle(
         context,
         unwrapBindingResult(bundle),
@@ -230,7 +236,8 @@ export function bindingifyWriteBundle(
         args.onLog,
         args.logLevel,
         args.watchMode,
-      );
+          getOrCreateFilterStorage(args.plugin.name!),
+        );
       const output = transformToOutputBundle(
         context,
         unwrapBindingResult(bundle),
@@ -267,6 +274,7 @@ export function bindingifyCloseBundle(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          getOrCreateFilterStorage(args.plugin.name!),
         ),
       );
     },
@@ -298,6 +306,7 @@ export function bindingifyBanner(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          getOrCreateFilterStorage(args.plugin.name!),
         ),
         transformRenderedChunk(chunk),
       );
@@ -331,6 +340,7 @@ export function bindingifyFooter(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          getOrCreateFilterStorage(args.plugin.name!),
         ),
         transformRenderedChunk(chunk),
       );
@@ -364,6 +374,7 @@ export function bindingifyIntro(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          getOrCreateFilterStorage(args.plugin.name!),
         ),
         transformRenderedChunk(chunk),
       );
@@ -397,6 +408,7 @@ export function bindingifyOutro(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          getOrCreateFilterStorage(args.plugin.name!),
         ),
         transformRenderedChunk(chunk),
       );

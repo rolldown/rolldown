@@ -7,6 +7,7 @@ import {
 } from './bindingify-plugin-hook-meta';
 import type { ChangeEvent } from './index';
 import { PluginContextImpl } from './plugin-context';
+import { getOrCreateFilterStorage } from './plugin-filter-storage-map';
 
 export function bindingifyWatchChange(
   args: BindingifyPluginArgs,
@@ -28,6 +29,7 @@ export function bindingifyWatchChange(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          getOrCreateFilterStorage(args.plugin.name!),
         ),
         id,
         { event: event as ChangeEvent },
@@ -57,6 +59,7 @@ export function bindingifyCloseWatcher(
           args.onLog,
           args.logLevel,
           args.watchMode,
+          getOrCreateFilterStorage(args.plugin.name!),
         ),
       );
     },

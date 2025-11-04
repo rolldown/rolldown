@@ -14,6 +14,8 @@ import {
 } from '../log/logging';
 import { error, logPluginError } from '../log/logs';
 import type { Extends, TypeAssert } from '../types/assert';
+import type { HookFilterExtension } from './index';
+import { PluginFilterStorage, type PendingFilterOverride } from './plugin-filter-storage';
 
 export interface PluginContextMeta {
   rollupVersion: string;
@@ -28,6 +30,11 @@ export interface MinimalPluginContext {
   warn: LoggingFunction;
   debug: LoggingFunction;
   meta: PluginContextMeta;
+  setHookFilter(filters: {
+    resolveId?: Pick<HookFilterExtension<'resolveId'>, 'filter'>['filter'];
+    load?: Pick<HookFilterExtension<'load'>, 'filter'>['filter'];
+    transform?: Pick<HookFilterExtension<'transform'>, 'filter'>['filter'];
+  }): void;
 }
 
 export class MinimalPluginContextImpl {
@@ -35,12 +42,14 @@ export class MinimalPluginContextImpl {
   warn: LoggingFunction;
   debug: LoggingFunction;
   meta: PluginContextMeta;
+  protected filterStorage: PluginFilterStorage;
 
   constructor(
     onLog: LogHandler,
     logLevel: LogLevelOption,
     readonly pluginName: string,
     watchMode: boolean,
+    filterStorage?: PluginFilterStorage,
     private readonly hookName?: string,
   ) {
     this.debug = getLogHandler(
@@ -70,6 +79,12 @@ export class MinimalPluginContextImpl {
       rolldownVersion: VERSION,
       watchMode,
     };
+
+    this.filterStorage = filterStorage || new PluginFilterStorage();
+  }
+
+  public setHookFilter(filters: PendingFilterOverride): void {
+    this.filterStorage.setPendingFilters(filters);
   }
 
   public error(e: RollupError | string): never {

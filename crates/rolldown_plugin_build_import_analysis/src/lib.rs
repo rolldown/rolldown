@@ -209,6 +209,7 @@ impl Plugin for BuildImportAnalysisPlugin {
       }
 
       let imports_len = imports.len();
+      let mut rewrote_marker_start_pos = FxHashSet::default();
       let mut file_deps = FileDeps(Vec::with_capacity(imports.len()));
       let mut s = string_wizard::MagicString::new(&chunk.code);
 
@@ -337,6 +338,8 @@ impl Plugin for BuildImportAnalysisPlugin {
               )
             },
           );
+
+          rewrote_marker_start_pos.insert(marker_start);
         }
       }
 
@@ -360,7 +363,19 @@ impl Plugin for BuildImportAnalysisPlugin {
         }
       }
 
-      todo!()
+      // there may still be markers due to inlined dynamic imports, remove
+      // all the markers regardless
+      for (start, _) in chunk.code.match_indices("__VITE_PRELOAD__") {
+        if !rewrote_marker_start_pos.contains(&start) {
+          s.update(start, start + 16, "void 0");
+        }
+      }
+
+      if s.has_changed() {
+        *chunk =
+          Arc::new(rolldown_common::OutputChunk { code: s.to_string(), ..chunk.as_ref().clone() });
+        // TODO: update sourcemap
+      }
     }
 
     Ok(())

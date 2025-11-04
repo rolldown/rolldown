@@ -12,6 +12,7 @@ pub mod binding_hook_resolve_id_output;
 pub mod binding_hook_side_effects;
 pub mod binding_hook_transform_output;
 pub mod binding_limited_boolean;
+pub mod binding_module_preload;
 pub mod binding_plugin_context_resolve_options;
 pub mod binding_plugin_transform_extra_args;
 pub mod binding_render_built_url;

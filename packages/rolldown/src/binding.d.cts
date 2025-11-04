@@ -1952,6 +1952,11 @@ export interface BindingMatchGroup {
   maxSize?: number
 }
 
+export interface BindingModulePreloadOptions {
+  polyfill: boolean
+  resolveDependencies?: (filename: string, deps: string[], context: { hostId: string, hostType: 'html' | 'js' }) => Promise<string[]>
+}
+
 export interface BindingModulePreloadPolyfillPluginConfig {
   isServer?: boolean
 }
@@ -2175,6 +2180,11 @@ export interface BindingReporterPluginConfig {
   shouldLogInfo: boolean
   warnLargeChunks: boolean
   reportCompressedSize: boolean
+}
+
+export interface BindingResolveDependenciesContext {
+  hostId: string
+  hostType: string
 }
 
 export interface BindingResolveDependenciesContext {

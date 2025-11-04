@@ -20,6 +20,7 @@ workspace = true
 anyhow = { workspace = true }
 arcstr = { workspace = true }
 cow-utils = { workspace = true }
+derive_more = { workspace = true }
 itertools = { workspace = true }
 memchr = { workspace = true }
 percent-encoding = { workspace = true }

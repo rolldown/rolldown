@@ -3234,6 +3234,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "cow-utils",
+ "derive_more",
  "itertools",
  "memchr",
  "percent-encoding",

@@ -241,7 +241,7 @@ impl ViteCSSPostPlugin {
         let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
         let chunk_metadata = vite_metadata.get_or_insert_default(ctx.env.host_id.into());
 
-        chunk_metadata.imported_assets.insert(ctx.get_file_name(&reference_id)?);
+        chunk_metadata.imported_css.insert(ctx.get_file_name(&reference_id)?);
 
         if ctx.args.chunk.is_entry && is_pure_css_chunk {
           ctx

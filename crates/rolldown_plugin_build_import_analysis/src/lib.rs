@@ -218,7 +218,7 @@ impl Plugin for BuildImportAnalysisPlugin {
           let file = PathBuf::from(chunk.filename.as_str());
           let file_dir = file.parent().unwrap();
           let normalized_file =
-            file_dir.join(url.as_str()).normalize().to_string_lossy().into_owned();
+            file_dir.join(url.as_str()).normalize().to_slash_lossy().into_owned();
 
           let mut collector = AddDeps {
             s: &mut s,

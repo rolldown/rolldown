@@ -39,7 +39,6 @@ pub struct BuildImportAnalysisPluginV2 {
   pub is_ssr: bool,
   pub url_base: String,
   pub decoded_base: String,
-  pub is_module_preload: bool,
   #[debug(skip)]
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
   #[debug(skip)]
@@ -111,7 +110,6 @@ impl Plugin for BuildImportAnalysisPlugin {
 
     let Some(BuildImportAnalysisPluginV2 {
       is_ssr,
-      is_module_preload,
       ref url_base,
       ref decoded_base,
       ref render_built_url,
@@ -251,7 +249,7 @@ impl Plugin for BuildImportAnalysisPlugin {
               // main chunk is removed
               (has_removed_pure_css_chunks && !deps.is_empty())
           {
-            if is_module_preload {
+            if resolve_dependencies.is_some() {
               deps.into_iter().collect()
             } else {
               // CSS deps use the same mechanism as module preloads, so even if disabled,

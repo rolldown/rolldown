@@ -9,9 +9,26 @@ pub type ResolveDependenciesFn = dyn Fn(
   + Send
   + Sync;
 
+#[derive(Debug)]
 pub enum ModulePreload {
   False,
   Options(ModulePreloadOptions),
+}
+
+impl ModulePreload {
+  pub fn is_false(&self) -> bool {
+    match self {
+      ModulePreload::False => true,
+      ModulePreload::Options(_) => false,
+    }
+  }
+
+  pub fn options(&self) -> Option<&ModulePreloadOptions> {
+    match self {
+      ModulePreload::False => None,
+      ModulePreload::Options(options) => Some(options),
+    }
+  }
 }
 
 #[derive(derive_more::Debug)]

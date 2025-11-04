@@ -19,15 +19,15 @@ use rolldown_plugin::{
   PluginContext,
 };
 use rolldown_plugin_utils::{
-  AssetUrlResult, RenderBuiltUrl, ToOutputFilePathEnv, constants::RemovedPureCSSFilesCache,
-  to_string_literal,
+  AssetUrlResult, ModulePreload, RenderBuiltUrl, ToOutputFilePathEnv,
+  constants::RemovedPureCSSFilesCache, to_string_literal,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath as _;
 
 use crate::{
   ast_visit::{DynamicImportCollectVisitor, DynamicImportVisitor},
-  utils::{AddDeps, FileDeps, ResolveDependenciesFn},
+  utils::{AddDeps, FileDeps},
 };
 
 use self::ast_visit::BuildImportAnalysisVisitor;
@@ -39,10 +39,9 @@ pub struct BuildImportAnalysisPluginV2 {
   pub is_ssr: bool,
   pub url_base: String,
   pub decoded_base: String,
+  pub module_preload: ModulePreload,
   #[debug(skip)]
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
-  #[debug(skip)]
-  pub resolve_dependencies: Option<Arc<ResolveDependenciesFn>>,
 }
 
 #[derive(derive_more::Debug)]
@@ -112,8 +111,8 @@ impl Plugin for BuildImportAnalysisPlugin {
       is_ssr,
       ref url_base,
       ref decoded_base,
+      ref module_preload,
       ref render_built_url,
-      ref resolve_dependencies,
     }) = self.v2
     else {
       return Ok(());
@@ -249,18 +248,19 @@ impl Plugin for BuildImportAnalysisPlugin {
               // main chunk is removed
               (has_removed_pure_css_chunks && !deps.is_empty())
           {
-            if resolve_dependencies.is_some() {
-              deps.into_iter().collect()
-            } else {
+            if module_preload.is_false() {
               // CSS deps use the same mechanism as module preloads, so even if disabled,
               // we still need to pass these deps to the preload helper in dynamic imports.
               deps.into_iter().filter(|dep| dep.ends_with(".css")).collect()
+            } else {
+              deps.into_iter().collect()
             }
           } else {
             vec![]
           };
 
-          if let Some(resolve_dependencies) = resolve_dependencies
+          if let Some(resolve_dependencies) =
+            module_preload.options().and_then(|v| v.resolve_dependencies.as_ref())
             && let Some(normalized_file) = normalized_file
           {
             // We can't let the user remove css deps as these aren't really preloads, they are just using

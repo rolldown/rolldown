@@ -8,6 +8,7 @@ use rolldown_plugin_asset_import_meta_url::AssetImportMetaUrlPlugin;
 use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
+use rolldown_plugin_html_inline_proxy::HtmlInlineProxyPlugin;
 use rolldown_plugin_import_glob::ImportGlobPlugin;
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
 use rolldown_plugin_json::JsonPlugin;
@@ -109,6 +110,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         };
         Arc::new(plugin)
       }
+      BindingBuiltinPluginName::HtmlInlineProxy => Arc::new(HtmlInlineProxyPlugin),
       BindingBuiltinPluginName::ImportGlob => {
         let plugin = if let Some(options) = plugin.options {
           BindingImportGlobPluginConfig::from_unknown(options)?.into()

@@ -1588,6 +1588,7 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:build-import-analysis'|
 'builtin:dynamic-import-vars'|
 'builtin:esm-external-require'|
+'builtin:html-inline-proxy'|
 'builtin:import-glob'|
 'builtin:isolated-declaration'|
 'builtin:json'|

@@ -25,6 +25,7 @@ export {
   buildImportAnalysisPlugin,
   dynamicImportVarsPlugin,
   esmExternalRequirePlugin,
+  htmlInlineProxyPlugin,
   importGlobPlugin,
   isolatedDeclarationPlugin,
   jsonPlugin,

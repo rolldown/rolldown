@@ -44,7 +44,6 @@ OPTIONS
   --css-entry-file-names <css-entry-file-names>Name pattern for emitted css entry chunks.
   --cwd <cwd>                 Current working directory.
   --debug.session-id <debug.session-id>Used to name the build.
-  --define <define>           Define global variables.
   --drop-labels <drop-labels> Remove labeled statements with these label names.
   --entry-file-names <name>   Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
@@ -56,7 +55,6 @@ OPTIONS
   --generated-code.profiler-names Whether to add readable names to internal variables for profiling purposes.
   --generated-code.symbols    Whether to use Symbol.toStringTag for namespace objects.
   --hash-characters <hash-characters>Use the specified character set for file hashes.
-  --inject <inject>           Inject import statements on demand.
   --inline-dynamic-imports    Inline dynamic imports.
   --input <input>             Entry file.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).

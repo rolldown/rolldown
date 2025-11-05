@@ -249,7 +249,7 @@ function bindingifyResolve(
 }
 
 function bindingifyInject(
-  inject: InputOptions['inject'],
+  inject: Record<string, string | [string, string]> | undefined,
 ): BindingInputOptions['inject'] {
   if (inject) {
     return Object.entries(inject).map(

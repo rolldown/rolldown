@@ -12,7 +12,8 @@ interface NormalizedTransformOptions {
 }
 
 /**
- * Normalizes transform options by extracting `define`, `inject`, and `dropLabels` separately from OXC transform options.
+ * Normalizes transform options by extracting `define`, `inject`, and `dropLabels` from transform options,
+ * with backward compatibility for deprecated top-level `dropLabels`.
  */
 export function normalizeTransformOptions(
   inputOptions: InputOptions,

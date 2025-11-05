@@ -10,8 +10,6 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   MULTIPLY_NOTIFY_OPTION = 'MULTIPLY_NOTIFY_OPTION',
   PARSE_ERROR = 'PARSE_ERROR',
   NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER',
-  DEPRECATED_DEFINE = 'DEPRECATED_DEFINE',
-  DEPRECATED_INJECT = 'DEPRECATED_INJECT',
   DEPRECATED_PROFILER_NAMES = 'DEPRECATED_PROFILER_NAMES',
   DEPRECATED_KEEP_NAMES = 'DEPRECATED_KEEP_NAMES',
   DEPRECATED_DROP_LABELS = 'DEPRECATED_DROP_LABELS';
@@ -66,24 +64,6 @@ export function logNoFileSystemInBrowser(method: string): RollupLog {
     code: NO_FS_IN_BROWSER,
     message:
       `Cannot access the file system (via "${method}") when using the browser build of Rolldown.`,
-  };
-}
-
-export function logDeprecatedDefine(): RollupLog {
-  return {
-    code: DEPRECATED_DEFINE,
-    message: `${
-      styleText(['yellow', 'bold'], '⚠ Deprecation Warning:')
-    } The top-level "define" option is deprecated. Use "transform.define" instead.`,
-  };
-}
-
-export function logDeprecatedInject(): RollupLog {
-  return {
-    code: DEPRECATED_INJECT,
-    message: `${
-      styleText(['yellow', 'bold'], '⚠ Deprecation Warning:')
-    } The top-level "inject" option is deprecated. Use "transform.inject" instead.`,
   };
 }
 

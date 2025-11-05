@@ -552,16 +552,6 @@ const InputOptionsSchema = v.strictObject({
       nativeMagicString: v.optional(v.boolean()),
     }),
   ),
-  define: v.pipe(
-    v.optional(v.record(v.string(), v.string())),
-    v.description('Define global variables'),
-  ),
-  inject: v.optional(
-    v.record(
-      v.string(),
-      v.union([v.string(), v.tuple([v.string(), v.string()])]),
-    ),
-  ),
   profilerNames: v.optional(v.boolean()),
   transform: v.optional(TransformOptionsSchema),
   watch: v.optional(v.union([WatchOptionsSchema, v.literal(false)])),
@@ -609,10 +599,6 @@ const InputCliOverrideSchema = v.strictObject({
     v.description(
       'Comma-separated list of module ids to exclude from the bundle `<module-id>,...`',
     ),
-  ),
-  inject: v.pipe(
-    v.optional(v.record(v.string(), v.string())),
-    v.description('Inject import statements on demand'),
   ),
   treeshake: v.pipe(
     v.optional(v.boolean()),

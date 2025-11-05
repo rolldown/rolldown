@@ -316,22 +316,6 @@ export interface InputOptions {
     nativeMagicString?: boolean;
   };
   /**
-   * Replace global variables or [property accessors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Property_accessors) with the provided values.
-   *
-   * @deprecated Use `transform.define` instead. This top-level option will be removed in a future release.
-   *
-   * See `transform.define` for detailed documentation and examples.
-   */
-  define?: Record<string, string>;
-  /**
-   * Inject import statements on demand.
-   *
-   * @deprecated Use `transform.inject` instead. This top-level option will be removed in a future release.
-   *
-   * See `transform.inject` for detailed documentation and examples.
-   */
-  inject?: Record<string, string | [string, string]>;
-  /**
    * Whether to add readable names to internal variables for profiling purposes.
    *
    * When enabled, generated code will use descriptive variable names that correspond

@@ -33,6 +33,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
 use crate::hmr::utils::HmrAstBuilder;
+use crate::utils::external_import_interop::import_record_needs_interop;
 
 mod hmr;
 mod rename;
@@ -114,17 +115,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     expr
   }
 
-  /// Check if the import needs `__toESM` helper based on the named imports.
-  /// Only namespace imports (`import * as foo`) and default imports (`import foo`)
-  /// need the `__toESM` helper. Named imports (`import { foo }`) do not need it.
-  fn import_needs_interop(&self, rec_id: ImportRecordIdx) -> bool {
-    self.ctx.module.named_imports.values().any(|import| {
-      import.record_id == rec_id
-        && (matches!(import.imported, Specifier::Star)
-          || matches!(import.imported, Specifier::Literal(ref name) if name.as_str() == "default"))
-    })
-  }
-
   /// If return true the import stmt should be removed,
   /// or transform the import stmt to target form.
   fn transform_or_remove_import_export_stmt(
@@ -180,7 +170,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         };
 
         // Check if we need __toESM or can use require_foo() directly
-        let needs_interop = self.import_needs_interop(rec_id);
+        let needs_interop = import_record_needs_interop(self.ctx.module, rec_id);
 
         let init_expr = if needs_interop {
           // `__toESM`

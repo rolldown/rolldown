@@ -2,8 +2,8 @@ use std::ptr::addr_of;
 
 use rolldown_common::{
   ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
-  NormalModule, OutputFormat, ResolvedImportRecord, RuntimeHelper, Specifier, StmtInfoMeta,
-  SymbolRefDb, TaggedSymbolRef, WrapKind, side_effects::DeterminedSideEffects,
+  OutputFormat, ResolvedImportRecord, RuntimeHelper, StmtInfoMeta, SymbolRefDb, TaggedSymbolRef,
+  WrapKind, side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -13,6 +13,7 @@ use rolldown_utils::{
 };
 
 use super::LinkStage;
+use crate::utils::external_import_interop::import_record_needs_interop;
 
 fn is_external_dynamic_import(
   table: &ModuleTable,
@@ -22,30 +23,6 @@ fn is_external_dynamic_import(
   record.kind == ImportKind::DynamicImport
     && table.modules[module_idx].as_normal().is_some_and(|module| module.is_user_defined_entry)
     && record.resolved_module != module_idx
-}
-
-/// Check if an import from an external module needs the `__toESM` helper.
-/// Only namespace imports (`import * as foo`) and default imports (`import foo`)
-/// need the `__toESM` helper. Named imports (`import { foo }`) and side-effect
-/// imports (`import 'foo'`) do not need it.
-fn external_import_needs_interop(importer: &NormalModule, rec_id: ImportRecordIdx) -> bool {
-  // Check if there are any imports from this import record
-  importer.named_imports.values().any(|named_import| {
-    if named_import.record_id != rec_id {
-      return false;
-    }
-    // Namespace imports need interop
-    if matches!(named_import.imported, Specifier::Star) {
-      return true;
-    }
-    // Default imports need interop
-    if let Specifier::Literal(ref name) = named_import.imported {
-      if name.as_str() == "default" {
-        return true;
-      }
-    }
-    false
-  })
 }
 
 struct DeferUpdateInfo {
@@ -125,7 +102,7 @@ impl LinkStage<'_> {
                       ) {
                         stmt_info.side_effect = true.into();
                         // Only reference __toESM if this import needs interop (namespace or default import)
-                        if external_import_needs_interop(importer, *rec_id) {
+                        if import_record_needs_interop(importer, *rec_id) {
                           depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
                             .push(stmt_info_idx);
                         }
@@ -207,7 +184,7 @@ impl LinkStage<'_> {
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           // Only reference __toESM if this import needs interop (namespace or default import)
-                          if external_import_needs_interop(importer, *rec_id) {
+                          if import_record_needs_interop(importer, *rec_id) {
                             depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
                               .push(stmt_info_idx);
                           }

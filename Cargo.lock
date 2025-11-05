@@ -3085,8 +3085,11 @@ dependencies = [
 name = "rolldown_plugin_html_inline_proxy"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "rolldown_common",
  "rolldown_plugin",
  "rolldown_plugin_utils",
+ "rolldown_utils",
 ]
 
 [[package]]

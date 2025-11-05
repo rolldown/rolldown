@@ -324,7 +324,7 @@ export default {
 
 Pattern for naming entry chunk files.
 
-Placeholders: `[name]`, `[hash]`, `[ext]`
+Placeholders: `[name]`, `[hash]`
 
 ### Examples
 
@@ -344,7 +344,7 @@ export default {
 
 Pattern for naming non-entry chunk files (code-split chunks).
 
-Placeholders: `[name]`, `[hash]`, `[ext]`
+Placeholders: `[name]`, `[hash]`
 
 ### Examples
 

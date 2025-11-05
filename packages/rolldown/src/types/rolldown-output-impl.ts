@@ -1,17 +1,19 @@
 import type { BindingOutputs, ExternalMemoryStatus } from '../binding.cjs';
-import { lazy } from '../decorators/lazy';
+import { lazyProp } from '../decorators/lazy';
 import { nonEnumerable } from '../decorators/non-enumerable';
 import { transformToRollupOutput } from '../utils/transform-to-rollup-output';
 import type { ExternalMemoryHandle } from './external-memory-handle';
+import { PlainObjectLike } from './plain-object-like';
 import type { RolldownOutput } from './rolldown-output';
 
-export class RolldownOutputImpl
+export class RolldownOutputImpl extends PlainObjectLike
   implements RolldownOutput, ExternalMemoryHandle
 {
   constructor(private bindingOutputs: BindingOutputs) {
+    super();
   }
 
-  @lazy
+  @lazyProp
   get output(): RolldownOutput['output'] {
     return transformToRollupOutput(this.bindingOutputs).output;
   }

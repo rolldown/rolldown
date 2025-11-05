@@ -1,42 +1,44 @@
 import type { BindingOutputAsset, ExternalMemoryStatus } from '../binding.cjs';
-import { getLazyFields, lazy } from '../decorators/lazy';
+import { lazyProp } from '../decorators/lazy';
 import { nonEnumerable } from '../decorators/non-enumerable';
 import type { AssetSource } from '../utils/asset-source';
 import { transformAssetSource } from '../utils/asset-source';
+import { getLazyFields, PlainObjectLike } from './plain-object-like';
 import type { OutputAsset } from './rolldown-output';
 
-export class OutputAssetImpl implements OutputAsset {
+export class OutputAssetImpl extends PlainObjectLike implements OutputAsset {
   readonly type = 'asset' as const;
 
   constructor(private bindingAsset: BindingOutputAsset) {
+    super();
   }
 
-  @lazy
+  @lazyProp
   get fileName(): string {
     return this.bindingAsset.getFileName();
   }
 
-  @lazy
+  @lazyProp
   get originalFileName(): string | null {
     return this.bindingAsset.getOriginalFileName() || null;
   }
 
-  @lazy
+  @lazyProp
   get originalFileNames(): string[] {
     return this.bindingAsset.getOriginalFileNames();
   }
 
-  @lazy
+  @lazyProp
   get name(): string | undefined {
     return this.bindingAsset.getName() ?? undefined;
   }
 
-  @lazy
+  @lazyProp
   get names(): string[] {
     return this.bindingAsset.getNames();
   }
 
-  @lazy
+  @lazyProp
   get source(): AssetSource {
     return transformAssetSource(this.bindingAsset.getSource());
   }
@@ -53,7 +55,7 @@ export class OutputAssetImpl implements OutputAsset {
 
   #evaluateAllLazyFields(): void {
     for (const field of getLazyFields(this)) {
-      // Accessing the property triggers lazy evaluation via the @lazy decorator.
+      // Accessing the property triggers lazy evaluation via the @lazyProp decorator.
       const _value = (this as any)[field];
     }
   }

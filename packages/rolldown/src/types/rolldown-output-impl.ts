@@ -1,6 +1,5 @@
 import type { BindingOutputs, ExternalMemoryStatus } from '../binding.cjs';
 import { lazyProp } from '../decorators/lazy';
-import { nonEnumerable } from '../decorators/non-enumerable';
 import { transformToRollupOutput } from '../utils/transform-to-rollup-output';
 import type { ExternalMemoryHandle } from './external-memory-handle';
 import { PlainObjectLike } from './plain-object-like';
@@ -18,7 +17,6 @@ export class RolldownOutputImpl extends PlainObjectLike
     return transformToRollupOutput(this.bindingOutputs).output;
   }
 
-  @nonEnumerable
   __rolldown_external_memory_handle__(
     keepDataAlive?: boolean,
   ): ExternalMemoryStatus {

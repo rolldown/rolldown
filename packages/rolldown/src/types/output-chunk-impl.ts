@@ -1,6 +1,5 @@
 import type { BindingOutputChunk, ExternalMemoryStatus } from '../binding.cjs';
 import { lazyProp } from '../decorators/lazy';
-import { nonEnumerable } from '../decorators/non-enumerable';
 import { transformChunkModules } from '../utils/transform-rendered-chunk';
 import { transformToRollupSourceMap } from '../utils/transform-to-rollup-output';
 import { getLazyFields, PlainObjectLike } from './plain-object-like';
@@ -84,7 +83,6 @@ export class OutputChunkImpl extends PlainObjectLike implements OutputChunk {
     return mapString ? transformToRollupSourceMap(mapString) : null;
   }
 
-  @nonEnumerable
   __rolldown_external_memory_handle__(
     keepDataAlive?: boolean,
   ): ExternalMemoryStatus {

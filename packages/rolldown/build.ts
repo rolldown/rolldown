@@ -159,7 +159,7 @@ function withShared(
     transform: {
       target: 'node22',
       decorator: {
-        // Legacy decorators are required for the @lazy and @nonEnumerable decorators
+        // Legacy decorators are required for the @lazyProp decorator
         legacy: true,
       },
       define: {

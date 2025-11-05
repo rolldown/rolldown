@@ -1,6 +1,5 @@
 import type { BindingOutputAsset, ExternalMemoryStatus } from '../binding.cjs';
 import { lazyProp } from '../decorators/lazy';
-import { nonEnumerable } from '../decorators/non-enumerable';
 import type { AssetSource } from '../utils/asset-source';
 import { transformAssetSource } from '../utils/asset-source';
 import { getLazyFields, PlainObjectLike } from './plain-object-like';
@@ -43,7 +42,6 @@ export class OutputAssetImpl extends PlainObjectLike implements OutputAsset {
     return transformAssetSource(this.bindingAsset.getSource());
   }
 
-  @nonEnumerable
   __rolldown_external_memory_handle__(
     keepDataAlive?: boolean,
   ): ExternalMemoryStatus {

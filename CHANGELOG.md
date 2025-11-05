@@ -1,4 +1,56 @@
 
+## [1.0.0-beta.47] - 2025-11-05
+
+### 💥 BREAKING CHANGES
+
+- `meta.magicString` and `meta.ast` now only initialized once (#6828) by @IWANABETHATGUY
+
+### 🚀 Features
+
+- rolldown_plugin_utils: support common module preload config (#6839) by @shulaoda
+- expose `minify` function (#6836) by @sapphi-red
+- rolldown_plugin_build_import_analysis: remove all `__VITE_PRELOAD__` (#6833) by @shulaoda
+- rolldown_plugin_build_import_analysis: inject __vite__mapDeps (#6832) by @shulaoda
+- rolldown_plugin_build_import_analysis: align partial logic (#6831) by @shulaoda
+- expose more magic string method in js binding (#6819) by @IWANABETHATGUY
+- rolldown_plugin_build_import_analysis: align renderBuiltUrl logic (#6808) by @shulaoda
+- rolldown_plugin_build_import_analysis: align resolve dependencies logic (#6803) by @shulaoda
+- rolldown_plugin_build_import_analysis: align partial logic (#6802) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_build_import_analysis: correct unaligned code (#6845) by @shulaoda
+- rolldown_binding: resolveDependencies shouldn't return Promise (#6844) by @shulaoda
+- browser: correct binding file (#6830) by @sxzz
+
+### 🚜 Refactor
+
+- rolldown_plugin_vite_html: use module preload instead (#6843) by @shulaoda
+- rolldown_plugin_build_import_analysis: use module preload config instead (#6841) by @shulaoda
+- rolldown_binding: correct `renderBuiltUrl` (#6835) by @shulaoda
+- rolldown_plugin_build_import_analysis: remove unnecessary is_module_preload (#6834) by @shulaoda
+- rolldown_plugin_build_import_analysis: remove unnecessary `IS_MODERN_FLAG` (#6823) by @shulaoda
+- rolldown_plugin_build_import_analysis: tweak v2 config (#6804) by @shulaoda
+
+### 📚 Documentation
+
+- add link to Native MagicString In-Depth Guide and fix broken markdown syntax (#6827) by @IWANABETHATGUY
+- update current status of native magic string (#6820) by @IWANABETHATGUY
+- add specific use cases (#6822) by @shulaoda
+- add minification preservation instructions for banner/footer options (#6786) by @ZiuChen
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: bump oxc-resolver to v11.13.1 (#6847) by @renovate[bot]
+- deps: update dependency tsdown to v0.16.0 (#6840) by @renovate[bot]
+- README.md: fix broken documentation link to getting started guide (#6837) by @Cheng-fung
+
+### ❤️ New Contributors
+
+* @Cheng-fung made their first contribution in [#6837](https://github.com/rolldown/rolldown/pull/6837)
+* @ZiuChen made their first contribution in [#6786](https://github.com/rolldown/rolldown/pull/6786)
+
+
 ## [1.0.0-beta.46] - 2025-11-03
 
 ### 💥 BREAKING CHANGES

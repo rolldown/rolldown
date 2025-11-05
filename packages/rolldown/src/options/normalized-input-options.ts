@@ -1,6 +1,8 @@
 import type { InputOptions } from '..';
 import { BindingNormalizedOptions } from '../binding.cjs';
+import { lazyProp } from '../decorators/lazy';
 import type { LogHandler } from '../log/log-handler';
+import { PlainObjectLike } from '../types/plain-object-like';
 
 export interface NormalizedInputOptions {
   input: string[] | Record<string, string>;
@@ -10,32 +12,39 @@ export interface NormalizedInputOptions {
   context: string;
 }
 
-// TODO: I guess we make these getters enumerable so it act more like a plain object
-export class NormalizedInputOptionsImpl implements NormalizedInputOptions {
+export class NormalizedInputOptionsImpl extends PlainObjectLike
+  implements NormalizedInputOptions
+{
   inner: BindingNormalizedOptions;
   constructor(
     inner: BindingNormalizedOptions,
     public onLog: LogHandler,
   ) {
+    super();
     this.inner = inner;
   }
 
+  @lazyProp
   get shimMissingExports(): boolean {
     return this.inner.shimMissingExports;
   }
 
+  @lazyProp
   get input(): string[] | Record<string, string> {
     return this.inner.input;
   }
 
+  @lazyProp
   get cwd(): string | undefined {
     return this.inner.cwd ?? undefined;
   }
 
+  @lazyProp
   get platform(): 'browser' | 'node' | 'neutral' {
     return this.inner.platform;
   }
 
+  @lazyProp
   get context(): string {
     return this.inner.context;
   }

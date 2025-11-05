@@ -2126,18 +2126,18 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "11.13.0"
+version = "11.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f811e55cc95a77ee2b44868b98c06affe406f67398401d3b7bf6fcbd0fbdb446"
+checksum = "8ab3f270c313ac7f814ce73a64f4bdf36a183dcae4593b2f96c6e6afea8c99d0"
 dependencies = [
  "cfg-if",
  "indexmap",
  "json-strip-comments",
- "libc",
  "once_cell",
  "papaya",
  "pnp",
  "rustc-hash",
+ "rustix",
  "self_cell",
  "serde",
  "serde_json",
@@ -2151,9 +2151,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver_napi"
-version = "11.13.0"
+version = "11.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d621e692d91623ddc542f643023b717a1faaaf23e3e36ff8102ee1918beedeae"
+checksum = "c779320dd5440f02a4a185dd6da6b02616775d6a07e1f6ebee724379d07f6e22"
 dependencies = [
  "fancy-regex",
  "napi",

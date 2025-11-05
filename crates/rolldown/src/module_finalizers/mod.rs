@@ -114,6 +114,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     expr
   }
 
+  /// Check if the import needs `__toESM` helper based on the named imports.
+  /// Only namespace imports (`import * as foo`) and default imports (`import foo`)
+  /// need the `__toESM` helper. Named imports (`import { foo }`) do not need it.
+  fn import_needs_interop(&self, rec_id: ImportRecordIdx) -> bool {
+    self.ctx.module.named_imports.values().any(|import| {
+      import.record_id == rec_id
+        && (matches!(import.imported, Specifier::Star)
+          || matches!(import.imported, Specifier::Literal(ref name) if name.as_str() == "default"))
+    })
+  }
+
   /// If return true the import stmt should be removed,
   /// or transform the import stmt to target form.
   fn transform_or_remove_import_export_stmt(
@@ -147,9 +158,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
 
         // Replace the statement with something like `var import_foo = __toESM(require_foo())`
-
-        // `__toESM`
-        let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
+        // or `var import_foo = require_foo()` if only named imports are used
 
         // `require_foo`
         let (importee_wrapper_ref_name, hint) = self.finalized_expr_for_symbol_ref(
@@ -158,26 +167,37 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           false,
         );
 
-        // `import_foo`
-        let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
-        *stmt = self.snippet.var_decl_stmt(
-          binding_name_for_wrapper_call_ret,
+        let require_call = if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
+          importee_wrapper_ref_name
+        } else {
+          self.snippet.builder.expression_call(
+            SPAN,
+            importee_wrapper_ref_name,
+            NONE,
+            self.snippet.builder.vec(),
+            false,
+          )
+        };
+
+        // Check if we need __toESM or can use require_foo() directly
+        let needs_interop = self.import_needs_interop(rec_id);
+        
+        let init_expr = if needs_interop {
+          // `__toESM`
+          let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
           self.snippet.wrap_with_to_esm(
             to_esm_fn_name,
-            if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
-              importee_wrapper_ref_name
-            } else {
-              self.snippet.builder.expression_call(
-                SPAN,
-                importee_wrapper_ref_name,
-                NONE,
-                self.snippet.builder.vec(),
-                false,
-              )
-            },
+            require_call,
             self.ctx.module.should_consider_node_esm_spec_for_static_import(),
-          ),
-        );
+          )
+        } else {
+          require_call
+        };
+
+        // `import_foo`
+        let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
+        *stmt = self.snippet.var_decl_stmt(binding_name_for_wrapper_call_ret, init_expr);
+        
         if self.transferred_import_record.contains_key(&rec_id) {
           self.transferred_import_record.insert(rec_id, stmt.to_source_string());
           return true;

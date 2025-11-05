@@ -28,7 +28,7 @@ var require_leaflet_toolbar = /* @__PURE__ */ __commonJS({ "leaflet-toolbar.js":
 
 //#endregion
 //#region lib.js
-var import_leaflet = /* @__PURE__ */ __toESM(require_leaflet());
+var import_leaflet = require_leaflet();
 require_leaflet_toolbar();
 
 //#endregion

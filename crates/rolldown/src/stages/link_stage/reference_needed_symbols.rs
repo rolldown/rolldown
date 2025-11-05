@@ -200,13 +200,17 @@ impl LinkStage<'_> {
                           stmt_info.side_effect = importee.side_effects.has_side_effects().into();
 
                           // Turn `import * as bar from 'bar_cjs'` into `var import_bar_cjs = __toESM(require_bar_cjs())`
-                          // Turn `import { prop } from 'bar_cjs'; prop;` into `var import_bar_cjs = __toESM(require_bar_cjs()); import_bar_cjs.prop;`
+                          // Turn `import foo from 'bar_cjs'; foo;` into `var import_bar_cjs = __toESM(require_bar_cjs()); import_bar_cjs.default;`
+                          // Turn `import { prop } from 'bar_cjs'; prop;` into `var import_bar_cjs = require_bar_cjs(); import_bar_cjs.prop;`
                           // Reference to `require_bar_cjs`
                           stmt_info
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
-                          depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
-                            .push(stmt_info_idx);
+                          // Only reference __toESM if this import needs interop (namespace or default import)
+                          if external_import_needs_interop(importer, *rec_id) {
+                            depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
+                              .push(stmt_info_idx);
+                          }
                           symbols_to_be_declared.push((rec.namespace_ref, stmt_info_idx));
                           symbol_db.ast_scopes.set_symbol_name(
                             rec.namespace_ref.symbol,

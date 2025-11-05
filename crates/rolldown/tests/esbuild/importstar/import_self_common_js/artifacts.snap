@@ -12,7 +12,7 @@ node_assert = __toESM(node_assert);
 
 //#region entry.js
 var require_entry = /* @__PURE__ */ __commonJS({ "entry.js": ((exports) => {
-	var import_entry = /* @__PURE__ */ __toESM(require_entry());
+	var import_entry = require_entry();
 	exports.foo = 123;
 	node_assert.default.equal(import_entry.foo, void 0);
 }) });

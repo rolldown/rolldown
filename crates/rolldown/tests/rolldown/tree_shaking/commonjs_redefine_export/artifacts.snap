@@ -21,7 +21,7 @@ var require_scope = /* @__PURE__ */ __commonJS({ "scope.js": ((exports) => {
 
 //#endregion
 //#region main.js
-var import_scope = /* @__PURE__ */ __toESM(require_scope());
+var import_scope = require_scope();
 assert.ok(import_scope.scope instanceof WeakMap);
 
 //#endregion

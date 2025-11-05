@@ -59,7 +59,7 @@ var require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJS({ "node-mode
 
 //#endregion
 //#region main.js
-var import_node_mode_by_cjs_extension = /* @__PURE__ */ __toESM(require_node_mode_by_cjs_extension());
+var import_node_mode_by_cjs_extension = require_node_mode_by_cjs_extension();
 
 //#endregion
 export { __commonJS as t };
@@ -130,7 +130,7 @@ var require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJS({ "node-mode
 
 //#endregion
 //#region main.js
-var import_node_mode_by_cjs_extension = /* @__PURE__ */ __toESM(require_node_mode_by_cjs_extension());
+var import_node_mode_by_cjs_extension = require_node_mode_by_cjs_extension();
 
 //#endregion
 exports.__commonJS = __commonJS;
@@ -187,7 +187,7 @@ var require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJS({ "node-mode
 
 //#endregion
 //#region main.js
-var import_node_mode_by_cjs_extension = /* @__PURE__ */ __toESM(require_node_mode_by_cjs_extension());
+var import_node_mode_by_cjs_extension = require_node_mode_by_cjs_extension();
 
 //#endregion
 ```

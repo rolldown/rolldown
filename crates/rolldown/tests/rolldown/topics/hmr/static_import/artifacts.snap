@@ -19,7 +19,7 @@ var require_dep_cjs = /* @__PURE__ */ __commonJS({ "modules/dep-cjs.js": ((expor
 
 //#endregion
 //#region modules/dep-esm.js
-var import_dep_cjs = /* @__PURE__ */ __toESM(require_dep_cjs());
+var import_dep_cjs = require_dep_cjs();
 var dep_esm_exports = /* @__PURE__ */ __export({ value: () => value$1 });
 const dep_esm_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-esm.js");
 __rolldown_runtime__.registerModule("modules/dep-esm.js", { exports: dep_esm_exports });
@@ -51,7 +51,7 @@ var require_dep_cjs_named = /* @__PURE__ */ __commonJS({ "modules/dep-cjs-named.
 
 //#endregion
 //#region modules/dep-esm-named.js
-var import_dep_cjs_named = /* @__PURE__ */ __toESM(require_dep_cjs_named());
+var import_dep_cjs_named = require_dep_cjs_named();
 var dep_esm_named_exports = /* @__PURE__ */ __export({ named: () => named });
 const dep_esm_named_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-esm-named.js");
 __rolldown_runtime__.registerModule("modules/dep-esm-named.js", { exports: dep_esm_named_exports });

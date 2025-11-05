@@ -32,7 +32,7 @@ var require_sub = /* @__PURE__ */ __commonJS({ "sub.cjs": ((exports, module) => 
 
 //#endregion
 //#region main.js
-var import_sub = /* @__PURE__ */ __toESM(require_sub());
+var import_sub = require_sub();
 const main = "main";
 
 //#endregion

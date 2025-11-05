@@ -33,6 +33,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
 use crate::hmr::utils::HmrAstBuilder;
+use crate::utils::external_import_interop::import_record_needs_interop;
 
 mod hmr;
 mod rename;
@@ -147,9 +148,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
 
         // Replace the statement with something like `var import_foo = __toESM(require_foo())`
-
-        // `__toESM`
-        let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
+        // or `var import_foo = require_foo()` if only named imports are used
 
         // `require_foo`
         let (importee_wrapper_ref_name, hint) = self.finalized_expr_for_symbol_ref(
@@ -158,26 +157,35 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           false,
         );
 
-        // `import_foo`
-        let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
-        *stmt = self.snippet.var_decl_stmt(
-          binding_name_for_wrapper_call_ret,
+        let require_call = if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
+          importee_wrapper_ref_name
+        } else {
+          self.snippet.builder.expression_call(
+            SPAN,
+            importee_wrapper_ref_name,
+            NONE,
+            self.snippet.builder.vec(),
+            false,
+          )
+        };
+
+        // Check if we need __toESM or can use require_foo() directly
+        let init_expr = if import_record_needs_interop(self.ctx.module, rec_id) {
+          // `__toESM`
+          let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
           self.snippet.wrap_with_to_esm(
             to_esm_fn_name,
-            if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
-              importee_wrapper_ref_name
-            } else {
-              self.snippet.builder.expression_call(
-                SPAN,
-                importee_wrapper_ref_name,
-                NONE,
-                self.snippet.builder.vec(),
-                false,
-              )
-            },
+            require_call,
             self.ctx.module.should_consider_node_esm_spec_for_static_import(),
-          ),
-        );
+          )
+        } else {
+          require_call
+        };
+
+        // `import_foo`
+        let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
+        *stmt = self.snippet.var_decl_stmt(binding_name_for_wrapper_call_ret, init_expr);
+
         if self.transferred_import_record.contains_key(&rec_id) {
           self.transferred_import_record.insert(rec_id, stmt.to_source_string());
           return true;

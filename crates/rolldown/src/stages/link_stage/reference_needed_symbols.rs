@@ -2,8 +2,8 @@ use std::ptr::addr_of;
 
 use rolldown_common::{
   ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
-  NormalModule, OutputFormat, ResolvedImportRecord, RuntimeHelper, Specifier, StmtInfoMeta,
-  SymbolRefDb, TaggedSymbolRef, WrapKind, side_effects::DeterminedSideEffects,
+  OutputFormat, ResolvedImportRecord, RuntimeHelper, StmtInfoMeta, SymbolRefDb, TaggedSymbolRef,
+  WrapKind, side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -13,6 +13,7 @@ use rolldown_utils::{
 };
 
 use super::LinkStage;
+use crate::utils::external_import_interop::import_record_needs_interop;
 
 fn is_external_dynamic_import(
   table: &ModuleTable,
@@ -22,30 +23,6 @@ fn is_external_dynamic_import(
   record.kind == ImportKind::DynamicImport
     && table.modules[module_idx].as_normal().is_some_and(|module| module.is_user_defined_entry)
     && record.resolved_module != module_idx
-}
-
-/// Check if an import from an external module needs the `__toESM` helper.
-/// Only namespace imports (`import * as foo`) and default imports (`import foo`)
-/// need the `__toESM` helper. Named imports (`import { foo }`) and side-effect
-/// imports (`import 'foo'`) do not need it.
-fn external_import_needs_interop(importer: &NormalModule, rec_id: ImportRecordIdx) -> bool {
-  // Check if there are any imports from this import record
-  importer.named_imports.values().any(|named_import| {
-    if named_import.record_id != rec_id {
-      return false;
-    }
-    // Namespace imports need interop
-    if matches!(named_import.imported, Specifier::Star) {
-      return true;
-    }
-    // Default imports need interop
-    if let Specifier::Literal(ref name) = named_import.imported {
-      if name.as_str() == "default" {
-        return true;
-      }
-    }
-    false
-  })
 }
 
 struct DeferUpdateInfo {
@@ -125,7 +102,7 @@ impl LinkStage<'_> {
                       ) {
                         stmt_info.side_effect = true.into();
                         // Only reference __toESM if this import needs interop (namespace or default import)
-                        if external_import_needs_interop(importer, *rec_id) {
+                        if import_record_needs_interop(importer, *rec_id) {
                           depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
                             .push(stmt_info_idx);
                         }
@@ -200,13 +177,17 @@ impl LinkStage<'_> {
                           stmt_info.side_effect = importee.side_effects.has_side_effects().into();
 
                           // Turn `import * as bar from 'bar_cjs'` into `var import_bar_cjs = __toESM(require_bar_cjs())`
-                          // Turn `import { prop } from 'bar_cjs'; prop;` into `var import_bar_cjs = __toESM(require_bar_cjs()); import_bar_cjs.prop;`
+                          // Turn `import foo from 'bar_cjs'; foo;` into `var import_bar_cjs = __toESM(require_bar_cjs()); import_bar_cjs.default;`
+                          // Turn `import { prop } from 'bar_cjs'; prop;` into `var import_bar_cjs = require_bar_cjs(); import_bar_cjs.prop;`
                           // Reference to `require_bar_cjs`
                           stmt_info
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
-                          depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
-                            .push(stmt_info_idx);
+                          // Only reference __toESM if this import needs interop (namespace or default import)
+                          if import_record_needs_interop(importer, *rec_id) {
+                            depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
+                              .push(stmt_info_idx);
+                          }
                           symbols_to_be_declared.push((rec.namespace_ref, stmt_info_idx));
                           symbol_db.ast_scopes.set_symbol_name(
                             rec.namespace_ref.symbol,

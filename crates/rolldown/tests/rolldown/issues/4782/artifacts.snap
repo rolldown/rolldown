@@ -19,7 +19,7 @@ var require_leaflet = /* @__PURE__ */ __commonJS({ "leaflet.js": ((exports, modu
 
 //#endregion
 //#region leaflet-toolbar.js
-var import_leaflet = /* @__PURE__ */ __toESM(require_leaflet());
+var import_leaflet = require_leaflet();
 (function(t) {
 	t.L.Toolbar = L.foo;
 })(global);

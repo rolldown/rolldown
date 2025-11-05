@@ -146,3 +146,7 @@ export function viteHtmlPlugin(
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-html', config);
 }
+
+export function htmlInlineProxyPlugin(): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:html-inline-proxy');
+}

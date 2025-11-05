@@ -2796,6 +2796,7 @@ dependencies = [
  "rolldown_plugin_build_import_analysis",
  "rolldown_plugin_dynamic_import_vars",
  "rolldown_plugin_esm_external_require",
+ "rolldown_plugin_html_inline_proxy",
  "rolldown_plugin_import_glob",
  "rolldown_plugin_isolated_declaration",
  "rolldown_plugin_json",
@@ -3079,6 +3080,17 @@ dependencies = [
  "oxc",
  "rolldown_common",
  "rolldown_plugin",
+]
+
+[[package]]
+name = "rolldown_plugin_html_inline_proxy"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "rolldown_common",
+ "rolldown_plugin",
+ "rolldown_plugin_utils",
+ "rolldown_utils",
 ]
 
 [[package]]

@@ -121,3 +121,27 @@ test('closeBundle hook is not called if closed directly', async () => {
   };
   await expect(task()).resolves.not.toThrow();
 });
+
+test('output properties are enumerable and can be spread', async () => {
+  const bundle = await rolldown({
+    input: './main.js',
+    cwd: import.meta.dirname,
+  });
+  const result = await bundle.generate({ format: 'esm' });
+
+  // Test that fileName is enumerable
+  expect(Object.keys(result.output[0])).toContain('fileName');
+
+  // Test that spreading the output object preserves all properties including fileName
+  const spread = { ...result.output[0] };
+  expect(spread.fileName).toBeDefined();
+  expect(spread.fileName).toBe(result.output[0].fileName);
+
+  // Test the exact scenario from the issue
+  const fileNames = result.output.map((o) => ({ ...o })).map((o) => o.fileName);
+  expect(fileNames).toEqual(['main.js']);
+
+  // Ensure other lazy properties are also enumerable
+  expect(Object.keys(result.output[0])).toContain('code');
+  expect(Object.keys(result.output[0])).toContain('exports');
+});

@@ -1,88 +1,88 @@
 import type { BindingOutputChunk, ExternalMemoryStatus } from '../binding.cjs';
-import { getLazyFields, lazy } from '../decorators/lazy';
-import { nonEnumerable } from '../decorators/non-enumerable';
+import { lazyProp } from '../decorators/lazy';
 import { transformChunkModules } from '../utils/transform-rendered-chunk';
 import { transformToRollupSourceMap } from '../utils/transform-to-rollup-output';
+import { getLazyFields, PlainObjectLike } from './plain-object-like';
 import type { OutputChunk, RenderedModule, SourceMap } from './rolldown-output';
 
-export class OutputChunkImpl implements OutputChunk {
+export class OutputChunkImpl extends PlainObjectLike implements OutputChunk {
   readonly type = 'chunk' as const;
 
   constructor(private bindingChunk: BindingOutputChunk) {
+    super();
   }
 
-  @lazy
+  @lazyProp
   get fileName(): string {
     return this.bindingChunk.getFileName();
   }
 
-  @lazy
+  @lazyProp
   get name(): string {
     return this.bindingChunk.getName();
   }
 
-  @lazy
+  @lazyProp
   get exports(): string[] {
     return this.bindingChunk.getExports();
   }
 
-  @lazy
+  @lazyProp
   get isEntry(): boolean {
     return this.bindingChunk.getIsEntry();
   }
 
-  @lazy
+  @lazyProp
   get facadeModuleId(): string | null {
     return this.bindingChunk.getFacadeModuleId() || null;
   }
 
-  @lazy
+  @lazyProp
   get isDynamicEntry(): boolean {
     return this.bindingChunk.getIsDynamicEntry();
   }
 
-  @lazy
+  @lazyProp
   get sourcemapFileName(): string | null {
     return this.bindingChunk.getSourcemapFileName() || null;
   }
 
-  @lazy
+  @lazyProp
   get preliminaryFileName(): string {
     return this.bindingChunk.getPreliminaryFileName();
   }
 
-  @lazy
+  @lazyProp
   get code(): string {
     return this.bindingChunk.getCode();
   }
 
-  @lazy
+  @lazyProp
   get modules(): { [id: string]: RenderedModule } {
     return transformChunkModules(this.bindingChunk.getModules());
   }
 
-  @lazy
+  @lazyProp
   get imports(): string[] {
     return this.bindingChunk.getImports();
   }
 
-  @lazy
+  @lazyProp
   get dynamicImports(): string[] {
     return this.bindingChunk.getDynamicImports();
   }
 
-  @lazy
+  @lazyProp
   get moduleIds(): string[] {
     return this.bindingChunk.getModuleIds();
   }
 
-  @lazy
+  @lazyProp
   get map(): SourceMap | null {
     const mapString = this.bindingChunk.getMap();
     return mapString ? transformToRollupSourceMap(mapString) : null;
   }
 
-  @nonEnumerable
   __rolldown_external_memory_handle__(
     keepDataAlive?: boolean,
   ): ExternalMemoryStatus {
@@ -94,7 +94,7 @@ export class OutputChunkImpl implements OutputChunk {
 
   #evaluateAllLazyFields(): void {
     for (const field of getLazyFields(this)) {
-      // Accessing the property triggers lazy evaluation via the @lazy decorator.
+      // Accessing the property triggers lazy evaluation via the @lazyProp decorator.
       const _value = (this as any)[field];
     }
   }

@@ -15,6 +15,8 @@ pub enum BindingBuiltinPluginName {
   DynamicImportVars,
   #[napi(value = "builtin:esm-external-require")]
   EsmExternalRequire,
+  #[napi(value = "builtin:html-inline-proxy")]
+  HtmlInlineProxy,
   #[napi(value = "builtin:import-glob")]
   ImportGlob,
   #[napi(value = "builtin:isolated-declaration")]

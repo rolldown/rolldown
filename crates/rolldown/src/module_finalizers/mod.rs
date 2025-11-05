@@ -181,7 +181,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
         // Check if we need __toESM or can use require_foo() directly
         let needs_interop = self.import_needs_interop(rec_id);
-        
+
         let init_expr = if needs_interop {
           // `__toESM`
           let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
@@ -197,7 +197,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // `import_foo`
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
         *stmt = self.snippet.var_decl_stmt(binding_name_for_wrapper_call_ret, init_expr);
-        
+
         if self.transferred_import_record.contains_key(&rec_id) {
           self.transferred_import_record.insert(rec_id, stmt.to_source_string());
           return true;

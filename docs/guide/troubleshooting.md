@@ -113,3 +113,39 @@ Luckily, it is usually easy to avoid using direct eval. There are two commonly-u
 - `new Function('x')`
 
   This constructs a new function object at run-time. It is as if you wrote `function() { x }` in the global scope except that `x` can be an arbitrary string of code. This form is sometimes convenient because you can add arguments to the function, and use those arguments to expose variables to the evaluated code. For example, `(new Function('env', 'x'))(someEnv)` is as if you wrote `(function(env) { x })(someEnv)`. This is often a sufficient alternative for direct `eval` when the evaluated code needs to access local variables because you can pass the local variables in as arguments.
+
+## Avoid relying on `this` in exported functions
+
+In JavaScript, `this` is a special variable that is bound to a different value normally depending on how the function is called. For example, when the function is called as a method on an object, the `this` variable is bound to the object.
+
+```js
+const obj = {
+  method() {
+    console.log(this); // `this` is `obj` here
+  },
+};
+obj.method();
+```
+
+Similar to this, when a function is exported from a module and is called via a module namespace object, based on the ECMAScript spec, the `this` variable is bound to the module namespace object.
+
+```js
+// imported.js
+export function method() {
+  console.log(this); // `this` is the module namespace object of `imported.js` here
+}
+
+// main.js
+import * as namespace from './imported.js';
+namespace.method();
+```
+
+However, **Rolldown does not necessarily preserve the value of `this`** for this case. For this reason, it is recommended to avoid relying on `this` in exported functions. That said, this behavior is common across most bundlers and would not be a problem in practice.
+
+The reason for this behavior is because preserving the value of `this` limits the possibilities of tree-shaking. For example, if the `this` variable needs to be bound to the module namespace object, all the exports in that module cannot be tree-shaken even if they are not used through the `import`s.
+
+::: tip A similar issue when outputting your code as CJS
+
+Similar to the issue described above, Rolldown does not necessarily preserve the value of `this` of exported functions when outputting your code as CJS. In this case, `this` that should be `undefined` may be bound to the `module.exports` object instead.
+
+:::

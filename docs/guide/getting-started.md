@@ -34,24 +34,24 @@ $ bun add -D rolldown
 
 ::: details Using a minor platform (CPU architecture, OS) ?
 
-Prebuilt binaries are distributed for the following platforms (grouped by [Node.js v22 platform support tier](https://github.com/nodejs/node/blob/v22.x/BUILDING.md#platform-list)):
+Prebuilt binaries are distributed for the following platforms (grouped by [Node.js v24 platform support tier](https://github.com/nodejs/node/blob/v24.x/BUILDING.md#platform-list)):
 
 - Tier 1
   - Linux x64 glibc (`x86_64-unknown-linux-gnu`)
   - Linux arm64 glibc (`aarch64-unknown-linux-gnu`)
-  - Linux armv7 (`armv7-unknown-linux-gnueabihf`)
   - Windows x64 (`x86_64-pc-windows-msvc`)
-  - Windows x86 (`i686-pc-windows-msvc`)
   - Apple x64 (`x86_64-apple-darwin`)
   - Apple arm64 (`aarch64-apple-darwin`)
 - Tier 2
   - Windows arm64 (`aarch64-pc-windows-msvc`)
 - Experimental
   - Linux x64 musl (`x86_64-unknown-linux-musl`)
+  - Linux armv7 (`armv7-unknown-linux-gnueabihf`)
   - FreeBSD x64 (`x86_64-unknown-freebsd`)
   - OpenHarmony arm64 (`aarch64-unknown-linux-ohos`)
 - Other
   - Linux arm64 musl (`aarch64-unknown-linux-musl`)
+  - Windows x86 (`i686-pc-windows-msvc`)
   - Android arm64 (`aarch64-linux-android`)
   - Wasm + Wasi (`wasm32-wasip1-threads`)
 

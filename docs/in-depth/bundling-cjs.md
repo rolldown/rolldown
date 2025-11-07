@@ -136,7 +136,7 @@ export default (id) => {
 
 In the ecosystem, there's two common ways to handle imports from CJS modules. While Rolldown tries to support both interpretations automatically, they are **incompatible for `default` imports**. In that case, Rolldown uses a similar heuristic to [Webpack](https://webpack.js.org/) and [esbuild](https://esbuild.github.io/) to determine the value of `default` imports.
 
-In the conditions below, the `default` import is the `module.exports` value of the importee CJS module. Otherwise, the `default` import is the `module.exports.default` value of the importee CJS module.
+If it matches one of the conditions below, the `default` import is the `module.exports` value of the importee CJS module. Otherwise, the `default` import is the `module.exports.default` value of the importee CJS module.
 
 - The importer is `.mjs` or `.mts`
 - (When it's a dynamic import) The importer is `.cjs` or `.cts`

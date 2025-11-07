@@ -337,17 +337,12 @@ impl<'a> SideEffectDetector<'a> {
     //   return StmtSideEffect::Unknown;
     // }
 
-    // Check if this is a side-effect-free global function call like Symbol()
-    let is_side_effect_free_global_call = if let Expression::Identifier(ident) = &expr.callee {
-      if self.is_unresolved_reference(ident) && ident.name == "Symbol" {
-        // Symbol() constructor is side-effect-free
-        true
-      } else {
-        false
-      }
-    } else {
-      false
-    };
+    // Check if this is the Symbol() constructor, which is side-effect-free
+    let is_side_effect_free_global_call = matches!(
+      &expr.callee,
+      Expression::Identifier(ident)
+        if self.is_unresolved_reference(ident) && ident.name == "Symbol"
+    );
 
     let is_pure = !self.flat_options.ignore_annotations()
       && (expr.pure

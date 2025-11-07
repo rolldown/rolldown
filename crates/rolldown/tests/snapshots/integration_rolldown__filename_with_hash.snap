@@ -4825,6 +4825,12 @@ expression: output
 
 - main-!~{000}~.js => main-CjM0X7y1.js
 
+# tests/rolldown/issues/6660
+
+- index-!~{000}~.js => index-Bmv_v0O_.js
+- c-!~{001}~.js => c-BJV0Yxp6.js
+- e-!~{003}~.js => e-B8Qa8iZp.js
+
 # tests/rolldown/issues/6756
 
 - main-!~{000}~.js => main-D7G5mb2I.js

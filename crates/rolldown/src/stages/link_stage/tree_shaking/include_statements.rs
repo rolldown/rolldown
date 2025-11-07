@@ -146,50 +146,43 @@ impl LinkStage<'_> {
 
     let mut unused_record_idxs = vec![];
     let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
+    let mut previous_included_module_count =
+      context.is_module_included_vec.iter().filter(|item| **item).count();
+    let mut included_dynamic_entry = FxHashSet::default();
+    loop {
+      // It could be safely take since it is no more used.
+      // We extract bailout_modules first to avoid borrowing conflict:
+      // passing `context` requires a mutable borrow, which conflicts with
+      // borrowing `context.bailout_cjs_tree_shaking_modules` inside the call.
+      let bailout_modules = std::mem::take(&mut context.bailout_cjs_tree_shaking_modules);
+      include_cjs_bailout_exports(context, &self.metas, bailout_modules);
 
-    // It could be safely take since it is no more used.
-    // We extract bailout_modules first to avoid borrowing conflict:
-    // passing `context` requires a mutable borrow, which conflicts with
-    // borrowing `context.bailout_cjs_tree_shaking_modules` inside the call.
-    let bailout_modules = std::mem::take(&mut context.bailout_cjs_tree_shaking_modules);
-    include_cjs_bailout_exports(context, &self.metas, bailout_modules);
-
-    dynamic_entries.retain(|entry| {
-      if !cycled_idx.contains(&entry.idx) {
-        if let Some(item) = self.is_dynamic_entry_alive(entry, context.is_included_vec) {
-          unused_record_idxs.extend(item);
-          return false;
+      dynamic_entries.iter().for_each(|entry| {
+        if included_dynamic_entry.contains(&entry.idx) {
+          return;
         }
+        let included = self.process_and_retain_dynamic_entry(
+          entry,
+          &cycled_idx,
+          context,
+          &mut unused_record_idxs,
+        );
+        if included {
+          included_dynamic_entry.insert(entry.idx);
+        }
+      });
+
+      let current_included_module_count =
+        context.is_module_included_vec.iter().filter(|item| **item).count();
+
+      if current_included_module_count == previous_included_module_count {
+        break;
       }
-      let module = match &self.module_table[entry.idx] {
-        Module::Normal(module) => module,
-        Module::External(_module) => {
-          // Case: import('external').
-          return true;
-        }
-      };
-      let meta = &self.metas[entry.idx];
-      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
-        |(symbol_ref, _came_from_cjs)| {
-          if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
-            module.stmt_infos.declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
-              |stmt_info_id| {
-                include_statement(context, module, stmt_info_id);
-              },
-            );
-            include_symbol(context, *symbol_ref, SymbolIncludeReason::EntryExport);
-          }
-        },
-      );
-      include_module(context, module);
-      true
-    });
 
-    // We extract bailout_modules first to avoid borrowing conflict:
-    // passing `context` requires a mutable borrow, which conflicts with
-    // borrowing `context.bailout_cjs_tree_shaking_modules` inside the call.
-    let bailout_modules = std::mem::take(&mut context.bailout_cjs_tree_shaking_modules);
-    include_cjs_bailout_exports(context, &self.metas, bailout_modules);
+      previous_included_module_count = current_included_module_count;
+    }
+
+    dynamic_entries.retain(|entry| included_dynamic_entry.contains(&entry.idx));
 
     // update entries with lived only.
     self.entries = user_defined_entries.into_iter().chain(dynamic_entries).collect();
@@ -258,6 +251,43 @@ impl LinkStage<'_> {
         .map(NormalModule::to_debug_normal_module_for_tree_shaking)
         .collect::<Vec<_>>()
     );
+  }
+
+  /// Process a dynamic entry and determine if it should be retained.
+  /// Returns `true` if the entry should be kept, `false` if it should be filtered out.
+  fn process_and_retain_dynamic_entry(
+    &self,
+    entry: &EntryPoint,
+    cycled_idx: &FxHashSet<ModuleIdx>,
+    context: &mut Context,
+    unused_record_idxs: &mut Vec<(ModuleIdx, ImportRecordIdx)>,
+  ) -> bool {
+    if !cycled_idx.contains(&entry.idx) {
+      if let Some(item) = self.is_dynamic_entry_alive(entry, context.is_included_vec) {
+        unused_record_idxs.extend(item);
+        return false;
+      }
+    }
+    let module = match &self.module_table[entry.idx] {
+      Module::Normal(module) => module,
+      Module::External(_module) => {
+        // Case: import('external').
+        return true;
+      }
+    };
+    let meta = &self.metas[entry.idx];
+    meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|(symbol_ref, _came_from_cjs)| {
+      if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
+        module.stmt_infos.declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
+          |stmt_info_id| {
+            include_statement(context, module, stmt_info_id);
+          },
+        );
+        include_symbol(context, *symbol_ref, SymbolIncludeReason::EntryExport);
+      }
+    });
+    include_module(context, module);
+    true
   }
 
   /// # Description

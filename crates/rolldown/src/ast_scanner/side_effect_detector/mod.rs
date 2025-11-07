@@ -17,7 +17,7 @@ use rolldown_utils::global_reference::{
 use rustc_hash::FxHashSet;
 use utils::{
   can_change_strict_to_loose, is_side_effect_free_unbound_identifier_ref,
-  maybe_side_effect_free_global_constructor,
+  maybe_side_effect_free_global_constructor, maybe_side_effect_free_global_function_call,
 };
 
 use self::utils::{PrimitiveType, known_primitive_type};
@@ -337,40 +337,12 @@ impl<'a> SideEffectDetector<'a> {
     //   return StmtSideEffect::Unknown;
     // }
 
-    // Check if this is the Symbol() constructor with safe arguments
-    // Symbol() is side-effect-free only when:
-    // 1. It has no arguments, OR
-    // 2. All arguments are known primitive types (calling toString() on primitives is safe)
-    let is_side_effect_free_symbol_call = if let Expression::Identifier(ident) = &expr.callee {
-      if self.is_unresolved_reference(ident) && ident.name == "Symbol" {
-        // Check if all arguments are safe (primitives or no arguments)
-        expr.arguments.iter().all(|arg| {
-          if matches!(arg, Argument::SpreadElement(_)) {
-            return false;
-          }
-          let arg_expr = arg.to_expression();
-          let prim_type = known_primitive_type(self.scope, arg_expr);
-          // Only safe if it's a known primitive type (not Unknown or Mixed)
-          matches!(
-            prim_type,
-            PrimitiveType::Null
-              | PrimitiveType::Undefined
-              | PrimitiveType::Boolean
-              | PrimitiveType::Number
-              | PrimitiveType::String
-              | PrimitiveType::BigInt
-          )
-        })
-      } else {
-        false
-      }
-    } else {
-      false
-    };
+    let is_side_effect_free_global_call =
+      maybe_side_effect_free_global_function_call(self.scope, expr);
 
     let is_pure = !self.flat_options.ignore_annotations()
       && (expr.pure
-        || is_side_effect_free_symbol_call
+        || is_side_effect_free_global_call
         || self
           .side_effect_free_function_symbol_ref
           .is_some_and(|map| map.contains(&Address::from_ptr(expr))));

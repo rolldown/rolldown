@@ -449,3 +449,44 @@ pub fn maybe_side_effect_free_global_constructor(
   }
   false
 }
+
+/// Check if a global function call (not constructor) is side-effect-free.
+/// This is similar to `maybe_side_effect_free_global_constructor` but for function calls.
+pub fn maybe_side_effect_free_global_function_call(
+  scope: &AstScopes,
+  expr: &ast::CallExpression<'_>,
+) -> bool {
+  let Some(ident) = expr.callee.as_identifier() else {
+    return false;
+  };
+
+  if scope.is_unresolved(ident.reference_id()) {
+    match ident.name.as_str() {
+      // Symbol() is side-effect-free only when arguments are primitive types
+      // Calling toString() on an object can have side effects
+      "Symbol" => {
+        // Check if all arguments are safe (primitives or no arguments)
+        expr.arguments.iter().all(|arg| {
+          if matches!(arg, ast::Argument::SpreadElement(_)) {
+            return false;
+          }
+          let arg_expr = arg.to_expression();
+          let prim_type = known_primitive_type(scope, arg_expr);
+          // Only safe if it's a known primitive type (not Unknown or Mixed)
+          matches!(
+            prim_type,
+            PrimitiveType::Null
+              | PrimitiveType::Undefined
+              | PrimitiveType::Boolean
+              | PrimitiveType::Number
+              | PrimitiveType::String
+              | PrimitiveType::BigInt
+          )
+        })
+      }
+      _ => false,
+    }
+  } else {
+    false
+  }
+}

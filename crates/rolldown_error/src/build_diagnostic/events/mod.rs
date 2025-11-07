@@ -11,6 +11,7 @@ use crate::{
 #[cfg(feature = "napi")]
 pub mod napi_error;
 
+pub mod already_closed;
 pub mod ambiguous_external_namespace;
 pub mod assign_to_import;
 pub mod bundler_initialize_error;

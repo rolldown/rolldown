@@ -109,8 +109,7 @@ describe('Plugin closeBundle hook', async () => {
     } catch (error: any) {
       expect(error.message).toMatchInlineSnapshot(
         `
-        "[UNHANDLEABLE_ERROR] Error: Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
-        Bundle is already closed, no more calls to 'generate' or 'write' are allowed.
+        "[ALREADY_CLOSED] Error: Bundle is already closed, no more calls to "generate" or "write" are allowed.
         "
       `,
       );

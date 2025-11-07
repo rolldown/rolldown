@@ -13,6 +13,7 @@ use super::events::napi_error::NapiError;
 use super::BuildDiagnostic;
 use super::Severity;
 use super::events::DiagnosableArcstr;
+use super::events::already_closed::AlreadyClosed;
 use super::events::assign_to_import::AssignToImport;
 use super::events::bundler_initialize_error::BundlerInitializeError;
 use super::events::configuration_field_conflict::ConfigurationFieldConflict;
@@ -326,6 +327,10 @@ impl BuildDiagnostic {
 
   pub fn invalid_define_config(message: String) -> Self {
     Self::new_inner(InvalidDefineConfig { message })
+  }
+
+  pub fn already_closed() -> Self {
+    Self::new_inner(AlreadyClosed {})
   }
 
   pub fn unhandleable_error(err: anyhow::Error) -> Self {

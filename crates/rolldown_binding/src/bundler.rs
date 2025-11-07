@@ -31,12 +31,7 @@ impl Bundler {
     plugins: Vec<SharedPluginable>,
   ) -> BuildResult<(Build, Vec<rolldown_error::BuildDiagnostic>)> {
     if self.closed {
-      return Err(
-        anyhow::anyhow!(
-          "Bundle is already closed, no more calls to 'generate' or 'write' are allowed."
-        )
-        .into(),
-      );
+      return Err(rolldown_error::BuildDiagnostic::already_closed().into());
     }
     self.enable_debug_tracing_if_needed(&bundler_options);
 

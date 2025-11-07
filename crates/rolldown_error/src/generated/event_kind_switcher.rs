@@ -4,7 +4,7 @@
 use bitflags::bitflags;
 bitflags! {
   #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-  pub struct EventKindSwitcher: u32 {
+  pub struct EventKindSwitcher: u64 {
     const AmbiguousExternalNamespaceError = 1 << 0;
     const CircularDependency = 1 << 1;
     const Eval = 1 << 2;
@@ -37,5 +37,6 @@ bitflags! {
     const PreferBuiltinFeature = 1 << 29;
     const BundlerInitializeError = 1 << 30;
     const PluginError = 1 << 31;
+    const AlreadyClosedError = 1 << 32;
   }
 }

@@ -44,6 +44,7 @@ pub enum EventKind {
   PreferBuiltinFeature = 29,
   BundlerInitializeError = 30,
   PluginError = 31,
+  AlreadyClosedError = 32,
 }
 
 impl Display for EventKind {
@@ -89,6 +90,7 @@ impl Display for EventKind {
       EventKind::PreferBuiltinFeature => write!(f, "PREFER_BUILTIN_FEATURE"),
       EventKind::BundlerInitializeError => write!(f, "BUNDLER_INITIALIZE_ERROR"),
       EventKind::PluginError => write!(f, "PLUGIN_ERROR"),
+      EventKind::AlreadyClosedError => write!(f, "ALREADY_CLOSED"),
     }
   }
 }

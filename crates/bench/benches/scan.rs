@@ -1,7 +1,7 @@
 use bench::{DeriveOptions, derive_benchmark_items};
 use criterion::{Criterion, criterion_group, criterion_main};
 
-use rolldown_common::{BundlerOptions, ScanMode};
+use rolldown_common::BundlerOptions;
 use rolldown_testing::bundler_options_presets::{rome_ts, threejs};
 
 fn items() -> Vec<(&'static str, BundlerOptions)> {
@@ -32,8 +32,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         .iter(|| async {
           let mut rolldown_bundler =
             rolldown::Bundler::new(item.options.clone()).expect("Failed to create bundler");
-          let _output =
-            rolldown_bundler.scan(ScanMode::Full).await.expect("should not failed in scan");
+          rolldown_bundler.scan().await.expect("should not failed in scan");
         });
       });
     });

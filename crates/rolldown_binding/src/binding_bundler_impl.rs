@@ -21,7 +21,6 @@ use napi::{
 };
 use napi_derive::napi;
 use rolldown::{Bundler as NativeBundler, BundlerBuilder, NormalizedBundlerOptions};
-use rolldown_common::ScanMode;
 use rolldown_error::BuildResult;
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -166,12 +165,11 @@ impl BindingBundlerImpl {
   #[expect(clippy::significant_drop_tightening)]
   pub async fn scan_impl(&self) -> napi::Result<BindingResult<BindingOutputs>> {
     let mut bundler_core = self.inner.lock().await;
-    let output =
-      Self::handle_result(bundler_core.scan(ScanMode::Full).await, bundler_core.options());
+    let output = Self::handle_result(bundler_core.scan().await, bundler_core.options());
 
     match output {
-      Ok(output) => {
-        if let Err(err) = handle_warnings(output.warnings, bundler_core.options()).await {
+      Ok(_output) => {
+        if let Err(err) = handle_warnings(vec![], bundler_core.options()).await {
           let error = to_binding_error(&err.into(), bundler_core.options().cwd.clone());
           return Ok(napi::Either::A(BindingErrors::new(vec![error])));
         }

@@ -16,7 +16,7 @@ test = false
 
 [dependencies]
 criterion2 = { workspace = true, features = ["async_tokio"] }
-rolldown = { workspace = true }
+rolldown = { workspace = true, features = ["experimental"] }
 rolldown_common = { workspace = true }
 rolldown_testing = { workspace = true }
 rolldown_workspace = { workspace = true }

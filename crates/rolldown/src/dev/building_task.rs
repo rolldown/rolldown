@@ -186,6 +186,7 @@ impl BundlingTask {
   async fn rebuild(&self) -> BuildResult<()> {
     let mut bundler = self.bundler.lock().await;
 
+    // TODO: hyf0 `skip_write` in watch mode won't trigger generate stage, need to investigate why.
     let skip_write = self.dev_context.options.skip_write;
 
     let scan_mode = if self.input.requires_full_rebuild() {
@@ -195,16 +196,11 @@ impl BundlingTask {
         self.input.changed_files().iter().map(|p| p.to_string_lossy().into()).collect(),
       )
     };
-    let scan_output = bundler.scan(scan_mode).await;
-    let build_result = match scan_output {
-      Ok(scan_output) => {
-        if skip_write {
-          bundler.bundle_generate(scan_output).await
-        } else {
-          bundler.bundle_write(scan_output).await
-        }
-      }
-      Err(scan_error) => Err(scan_error),
+
+    let build_result = if skip_write {
+      bundler.incremental_generate(scan_mode).await
+    } else {
+      bundler.incremental_write(scan_mode).await
     };
 
     if build_result.is_err() {

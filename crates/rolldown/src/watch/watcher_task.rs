@@ -65,26 +65,27 @@ impl WatcherTask {
       } else {
         rolldown_common::ScanMode::Full
       };
-      let result = bundler.scan(scan_mode).await;
-      let watched_files = Arc::clone(bundler.watch_files());
-      self.watch_files(&watched_files, &bundler.options).await?;
-      match result {
-        Ok(scan_stage_output) => {
-          if bundler.options.watch.skip_write {
+
+      // https://github.com/rollup/rollup/blob/ecff5325941ec36599f9967731ed6871186a72ee/src/watch/watch.ts#L206
+      bundler
+        .with_incremental_build(async |build| {
+          let middle_output_result = build.scan_modules(scan_mode).await;
+          let watched_files = Arc::clone(build.get_watch_files());
+          // Watch no matter scan success or failed, so we might have a chance to recover from errors.
+          self.watch_files(&watched_files, &build.options).await?;
+          let middle_output = middle_output_result?;
+
+          if build.options.watch.skip_write {
             Ok(())
           } else {
-            // avoid watching scan stage files twice
+            let output_result = build.bundle_write(middle_output).await;
+            // avoid watching scan stage files twice // TODO: hyf0: A bad code smell here.
             watched_files.clear();
-            let output = bundler.bundle_write(scan_stage_output).await;
-            self.watch_files(&watched_files, &bundler.options).await?;
-            match output {
-              Ok(_) => Ok(()),
-              Err(errs) => Err(errs),
-            }
+            self.watch_files(&watched_files, &build.options).await?;
+            output_result.map(|_| ())
           }
-        }
-        Err(errs) => Err(errs),
-      }
+        })
+        .await
     };
 
     match result {

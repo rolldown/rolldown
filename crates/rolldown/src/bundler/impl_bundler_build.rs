@@ -19,6 +19,16 @@ impl Bundler {
     build.generate().await
   }
 
+  #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
+  #[cfg(feature = "experimental")]
+  pub async fn scan(&mut self) -> BuildResult<()> {
+    self.create_error_if_closed()?;
+    let build = self.build_factory.create_build();
+    build.scan().await?;
+
+    Ok(())
+  }
+
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn close(&mut self) -> Result<()> {
     self.inner_close().await

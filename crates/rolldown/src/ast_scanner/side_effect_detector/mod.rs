@@ -337,16 +337,40 @@ impl<'a> SideEffectDetector<'a> {
     //   return StmtSideEffect::Unknown;
     // }
 
-    // Check if this is the Symbol() constructor, which is side-effect-free
-    let is_side_effect_free_global_call = matches!(
-      &expr.callee,
-      Expression::Identifier(ident)
-        if self.is_unresolved_reference(ident) && ident.name == "Symbol"
-    );
+    // Check if this is the Symbol() constructor with safe arguments
+    // Symbol() is side-effect-free only when:
+    // 1. It has no arguments, OR
+    // 2. All arguments are known primitive types (calling toString() on primitives is safe)
+    let is_side_effect_free_symbol_call = if let Expression::Identifier(ident) = &expr.callee {
+      if self.is_unresolved_reference(ident) && ident.name == "Symbol" {
+        // Check if all arguments are safe (primitives or no arguments)
+        expr.arguments.iter().all(|arg| {
+          if matches!(arg, Argument::SpreadElement(_)) {
+            return false;
+          }
+          let arg_expr = arg.to_expression();
+          let prim_type = known_primitive_type(self.scope, arg_expr);
+          // Only safe if it's a known primitive type (not Unknown or Mixed)
+          matches!(
+            prim_type,
+            PrimitiveType::Null
+              | PrimitiveType::Undefined
+              | PrimitiveType::Boolean
+              | PrimitiveType::Number
+              | PrimitiveType::String
+              | PrimitiveType::BigInt
+          )
+        })
+      } else {
+        false
+      }
+    } else {
+      false
+    };
 
     let is_pure = !self.flat_options.ignore_annotations()
       && (expr.pure
-        || is_side_effect_free_global_call
+        || is_side_effect_free_symbol_call
         || self
           .side_effect_free_function_symbol_ref
           .is_some_and(|map| map.contains(&Address::from_ptr(expr))));
@@ -1280,17 +1304,25 @@ mod test {
 
   #[test]
   fn test_symbol_call() {
-    // Symbol() constructor call is side-effect-free
+    // Symbol() constructor call is side-effect-free with no args or primitive literals
     assert!(!get_statements_side_effect("const VOID = Symbol(\"p-void\")"));
     assert!(!get_statements_side_effect("const sym = Symbol()"));
     assert!(!get_statements_side_effect("let a = Symbol('test')"));
     assert!(!get_statements_side_effect("Symbol('foo')"));
+    assert!(!get_statements_side_effect("Symbol(123)"));
+    assert!(!get_statements_side_effect("Symbol(true)"));
+    assert!(!get_statements_side_effect("Symbol(null)"));
+    assert!(!get_statements_side_effect("Symbol(undefined)"));
 
-    // Symbol with expression argument
-    assert!(!get_statements_side_effect("const x = 'test'; Symbol(x)"));
-
+    // Symbol with variable argument should have side effect (could have custom toString)
+    assert!(get_statements_side_effect("const x = 'test'; Symbol(x)"));
     // Symbol with side-effectful argument should still have side effect
     assert!(get_statements_side_effect("Symbol(test())"));
+    // Symbol with unknown variable should have side effect (could have toString that throws)
+    assert!(get_statements_side_effect("Symbol(unknownVariable)"));
+    // Symbol with object literal should have side effect
+    assert!(get_statements_side_effect("Symbol({ toString() { throw new Error() } })"));
+    assert!(get_statements_side_effect("Symbol({})"));
   }
 
   #[test]

@@ -7,6 +7,8 @@ pub mod normalize_binding_options;
 use std::any::Any;
 
 use napi_derive::napi;
+use rolldown::{LogLevel, NormalizedBundlerOptions};
+use rolldown_error::{BuildDiagnostic, DiagnosticOptions, filter_out_disabled_diagnostics};
 use rolldown_tracing::try_init_tracing;
 
 pub use normalize_binding_transform_options::normalize_binding_transform_options;
@@ -36,4 +38,32 @@ pub fn handle_result<T>(result: anyhow::Result<T>) -> napi::Result<T> {
     Ok(e) => e,
     Err(e) => napi::Error::from_reason(format!("Rolldown internal error: {e}")),
   })
+}
+
+pub async fn handle_warnings(
+  warnings: Vec<BuildDiagnostic>,
+  options: &NormalizedBundlerOptions,
+) -> anyhow::Result<()> {
+  if options.log_level == Some(LogLevel::Silent) {
+    return Ok(());
+  }
+  if let Some(on_log) = options.on_log.as_ref() {
+    for warning in filter_out_disabled_diagnostics(warnings, &options.checks) {
+      on_log
+        .call(
+          LogLevel::Warn,
+          rolldown::Log {
+            id: warning.id(),
+            exporter: warning.exporter(),
+            code: Some(warning.kind().to_string()),
+            message: warning
+              .to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() })
+              .to_color_string(),
+            plugin: None,
+          },
+        )
+        .await?;
+    }
+  }
+  Ok(())
 }

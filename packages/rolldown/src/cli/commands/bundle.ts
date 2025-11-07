@@ -159,18 +159,18 @@ async function bundleInner(
   for (const config of configList) {
     const outputList = arraify(config.output || {});
     const build = await rolldown({ ...config, ...cliOptions.input });
-    for (const output of outputList) {
-      // run multiply instance at sequential
-      try {
+    try {
+      for (const output of outputList) {
+        // run multiply instance at sequential
         result.push(
           await build.write({
             ...output,
             ...cliOptions.output,
           }),
         );
-      } finally {
-        await build.close();
       }
+    } finally {
+      await build.close();
     }
   }
 

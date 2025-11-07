@@ -1,4 +1,3 @@
-import type { BindingBundlerImpl } from '../../binding.cjs';
 import {
   BindingBundler,
   shutdownAsyncRuntime,
@@ -13,19 +12,13 @@ import { createBundlerOptions } from '../../utils/create-bundler-option';
 import { unwrapBindingResult } from '../../utils/error';
 import { validateOption } from '../../utils/validator';
 
-interface BundlerImplWithStopWorker {
-  impl: BindingBundlerImpl;
-  stopWorkers?: () => Promise<void>;
-  shutdown: () => void;
-}
-
 // @ts-expect-error TS2540: the polyfill of `asyncDispose`.
 Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose');
 
 export class RolldownBuild {
   #inputOptions: InputOptions;
   #bundler: BindingBundler;
-  #bundlerImpl?: BundlerImplWithStopWorker;
+  #stopWorkers?: () => Promise<void>;
 
   static asyncRuntimeShutdown = false;
 
@@ -35,17 +28,68 @@ export class RolldownBuild {
   }
 
   get closed(): boolean {
-    return this.#bundlerImpl?.impl.closed ?? true;
+    return this.#bundler.closed;
   }
 
-  // Create bundler for each `bundle.write/generate`
-  async #getBundlerWithStopWorker(
-    outputOptions: OutputOptions,
-  ): Promise<BundlerImplWithStopWorker> {
-    if (this.#bundlerImpl) {
-      await this.#bundlerImpl.stopWorkers?.();
+  async scan(): Promise<void> {
+    await this.#stopWorkers?.();
+
+    const option = await createBundlerOptions(
+      this.#inputOptions,
+      {},
+      false,
+    );
+
+    if (RolldownBuild.asyncRuntimeShutdown) {
+      startAsyncRuntime();
     }
 
+    try {
+      this.#stopWorkers = option.stopWorkers;
+      const output = await this.#bundler.scan(option.bundlerOptions);
+      unwrapBindingResult(output);
+    } catch (e) {
+      await option.stopWorkers?.();
+      throw e;
+    }
+  }
+
+  async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
+    return this.#build(false, outputOptions);
+  }
+
+  async write(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
+    return this.#build(true, outputOptions);
+  }
+
+  /**
+   * Close the build and free resources.
+   */
+  async close(): Promise<void> {
+    await this.#stopWorkers?.();
+    await this.#bundler.close();
+    shutdownAsyncRuntime();
+    RolldownBuild.asyncRuntimeShutdown = true;
+    this.#stopWorkers = void 0;
+  }
+
+  async [Symbol.asyncDispose](): Promise<void> {
+    await this.close();
+  }
+
+  // TODO(shulaoda)
+  // The `watchFiles` method returns a promise, but Rollup does not.
+  // Converting it to a synchronous API might cause a deadlock if the user calls `write` and `watchFiles` simultaneously.
+  get watchFiles(): Promise<string[]> {
+    return Promise.resolve(this.#bundler.getWatchFiles());
+  }
+
+  async #build(
+    isWrite: boolean,
+    outputOptions: OutputOptions,
+  ): Promise<RolldownOutput> {
+    validateOption('output', outputOptions);
+    await this.#stopWorkers?.();
     const option = await createBundlerOptions(
       this.#inputOptions,
       outputOptions,
@@ -57,61 +101,18 @@ export class RolldownBuild {
     }
 
     try {
-      return this.#bundlerImpl = {
-        impl: this.#bundler.createImpl(option.bundlerOptions),
-        stopWorkers: option.stopWorkers,
-        shutdown: () => {
-          shutdownAsyncRuntime();
-          RolldownBuild.asyncRuntimeShutdown = true;
-        },
-      };
+      this.#stopWorkers = option.stopWorkers;
+      let output: Awaited<ReturnType<BindingBundler['generate']>>;
+      if (isWrite) {
+        output = await this.#bundler.write(option.bundlerOptions);
+      } else {
+        output = await this.#bundler.generate(option.bundlerOptions);
+      }
+      return new RolldownOutputImpl(unwrapBindingResult(output));
     } catch (e) {
       await option.stopWorkers?.();
       throw e;
     }
-  }
-
-  async scan(): Promise<void> {
-    const { impl } = await this.#getBundlerWithStopWorker({});
-    const output = await impl.scan();
-    unwrapBindingResult(output);
-  }
-
-  async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
-    validateOption('output', outputOptions);
-    const { impl } = await this.#getBundlerWithStopWorker(outputOptions);
-    const output = await impl.generate();
-    return new RolldownOutputImpl(unwrapBindingResult(output));
-  }
-
-  async write(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
-    validateOption('output', outputOptions);
-    const { impl } = await this.#getBundlerWithStopWorker(outputOptions);
-    const output = await impl.write();
-    return new RolldownOutputImpl(unwrapBindingResult(output));
-  }
-
-  /**
-   * Close the build and free resources.
-   */
-  async close(): Promise<void> {
-    if (this.#bundlerImpl) {
-      await this.#bundlerImpl.stopWorkers?.();
-      await this.#bundlerImpl.impl.close();
-      this.#bundlerImpl.shutdown();
-      this.#bundlerImpl = void 0;
-    }
-  }
-
-  async [Symbol.asyncDispose](): Promise<void> {
-    await this.close();
-  }
-
-  // TODO(shulaoda)
-  // The `watchFiles` method returns a promise, but Rollup does not.
-  // Converting it to a synchronous API might cause a deadlock if the user calls `write` and `watchFiles` simultaneously.
-  get watchFiles(): Promise<string[]> {
-    return this.#bundlerImpl?.impl.getWatchFiles() ?? Promise.resolve([]);
   }
 }
 

@@ -12,7 +12,7 @@ use crate::{
     binding_outputs::{BindingOutputs, to_binding_error},
     error::{BindingError, BindingErrors, BindingResult},
   },
-  utils::{handle_result, normalize_binding_options::normalize_binding_options},
+  utils::{handle_result, handle_warnings, normalize_binding_options::normalize_binding_options},
 };
 use napi::{
   Env,
@@ -20,11 +20,9 @@ use napi::{
   tokio::sync::Mutex,
 };
 use napi_derive::napi;
-use rolldown::{Bundler as NativeBundler, BundlerBuilder, LogLevel, NormalizedBundlerOptions};
+use rolldown::{Bundler as NativeBundler, BundlerBuilder, NormalizedBundlerOptions};
 use rolldown_common::ScanMode;
-use rolldown_error::{
-  BuildDiagnostic, BuildResult, DiagnosticOptions, filter_out_disabled_diagnostics,
-};
+use rolldown_error::BuildResult;
 
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingBundlerOptions<'env> {
@@ -173,7 +171,7 @@ impl BindingBundlerImpl {
 
     match output {
       Ok(output) => {
-        if let Err(err) = Self::handle_warnings(output.warnings, bundler_core.options()).await {
+        if let Err(err) = handle_warnings(output.warnings, bundler_core.options()).await {
           let error = to_binding_error(&err.into(), bundler_core.options().cwd.clone());
           return Ok(napi::Either::A(BindingErrors::new(vec![error])));
         }
@@ -204,7 +202,7 @@ impl BindingBundlerImpl {
       }
     };
 
-    if let Err(err) = Self::handle_warnings(outputs.warnings, bundler_core.options()).await {
+    if let Err(err) = handle_warnings(outputs.warnings, bundler_core.options()).await {
       let error = to_binding_error(&err.into(), bundler_core.options().cwd.clone());
       return Ok(napi::Either::A(BindingErrors::new(vec![error])));
     }
@@ -228,7 +226,7 @@ impl BindingBundlerImpl {
       }
     };
 
-    if let Err(err) = Self::handle_warnings(bundle_output.warnings, bundler_core.options()).await {
+    if let Err(err) = handle_warnings(bundle_output.warnings, bundler_core.options()).await {
       let error = to_binding_error(&err.into(), bundler_core.options().cwd.clone());
       return Ok(napi::Either::A(BindingErrors::new(vec![error])));
     }
@@ -259,33 +257,5 @@ impl BindingBundlerImpl {
         .map(|diagnostic| to_binding_error(diagnostic, options.cwd.clone()))
         .collect()
     })
-  }
-
-  async fn handle_warnings(
-    warnings: Vec<BuildDiagnostic>,
-    options: &NormalizedBundlerOptions,
-  ) -> anyhow::Result<()> {
-    if options.log_level == Some(LogLevel::Silent) {
-      return Ok(());
-    }
-    if let Some(on_log) = options.on_log.as_ref() {
-      for warning in filter_out_disabled_diagnostics(warnings, &options.checks) {
-        on_log
-          .call(
-            LogLevel::Warn,
-            rolldown::Log {
-              id: warning.id(),
-              exporter: warning.exporter(),
-              code: Some(warning.kind().to_string()),
-              message: warning
-                .to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() })
-                .to_color_string(),
-              plugin: None,
-            },
-          )
-          .await?;
-      }
-    }
-    Ok(())
   }
 }

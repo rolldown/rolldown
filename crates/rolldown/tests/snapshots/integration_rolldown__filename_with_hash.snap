@@ -6039,6 +6039,10 @@ expression: output
 
 - main-!~{000}~.js => main-Cjd6Ep5g.js
 
+# tests/rolldown/tree_shaking/symbol_constructor
+
+- main-!~{000}~.js => main-DM5cXcNM.js
+
 # tests/rolldown/tree_shaking/unused_dynamic_imported_chunk
 
 - main-!~{000}~.js => main-DDrUsxgl.js

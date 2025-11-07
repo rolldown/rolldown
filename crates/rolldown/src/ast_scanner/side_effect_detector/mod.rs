@@ -1290,10 +1290,10 @@ mod test {
     assert!(!get_statements_side_effect("const sym = Symbol()"));
     assert!(!get_statements_side_effect("let a = Symbol('test')"));
     assert!(!get_statements_side_effect("Symbol('foo')"));
-    
+
     // Symbol with expression argument
     assert!(!get_statements_side_effect("const x = 'test'; Symbol(x)"));
-    
+
     // Symbol with side-effectful argument should still have side effect
     assert!(get_statements_side_effect("Symbol(test())"));
   }

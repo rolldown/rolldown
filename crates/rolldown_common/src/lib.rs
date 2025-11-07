@@ -75,11 +75,15 @@ pub mod bundler_options {
         PluginsOptions, ReactRefreshOptions, StyledComponentsOptions,
         TransformOptions as BundlerTransformOptions, TypeScriptOptions,
       },
-      transform_options::{JsxPreset, TransformOptions},
+      transform_options::{
+        JsxPreset, RawTransformOptions, TransformOptions, TransformOptionsInner,
+        merge_transform_options_with_tsconfig,
+      },
       treeshake::{
         InnerOptions, ModuleSideEffects, ModuleSideEffectsRule, PropertyReadSideEffects,
         PropertyWriteSideEffects, TreeshakeOptions,
       },
+      tsconfig::TsConfig,
       watch_option::{NotifyOption, OnInvalidate, WatchOption},
     },
   };

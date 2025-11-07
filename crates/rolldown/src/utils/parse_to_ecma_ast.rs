@@ -84,6 +84,7 @@ pub async fn parse_to_ecma_ast(
   PreProcessEcmaAst::default().build(
     ecma_ast,
     stable_id,
+    resolved_id.id.as_str(),
     &parsed_type,
     replace_global_define_config.as_ref(),
     options,

@@ -13,7 +13,7 @@ use oxc::transformer_plugins::{
 
 use rolldown_common::NormalizedBundlerOptions;
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
-use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
+use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Severity};
 
 use crate::types::oxc_parse_type::OxcParseType;
 
@@ -27,10 +27,12 @@ pub struct PreProcessEcmaAst {
 }
 
 impl PreProcessEcmaAst {
+  #[expect(clippy::too_many_arguments)]
   pub fn build(
     &mut self,
     mut ast: EcmaAst,
     path: &str,
+    resolved_id: &str,
     parsed_type: &OxcParseType,
     replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
     bundle_options: &NormalizedBundlerOptions,
@@ -64,7 +66,7 @@ impl PreProcessEcmaAst {
     let (errors, warnings): (Vec<_>, Vec<_>) =
       semantic_ret.errors.into_iter().partition(|w| w.severity == OxcSeverity::Error);
 
-    let warnings = if errors.is_empty() {
+    let mut warnings = if errors.is_empty() {
       BuildDiagnostic::from_oxc_diagnostics(warnings, &source, path, &Severity::Warning)
     } else {
       return Err(BuildDiagnostic::from_oxc_diagnostics(errors, &source, path, &Severity::Error))?;
@@ -86,13 +88,15 @@ impl PreProcessEcmaAst {
 
     // Step 3: Transform TypeScript and jsx.
     // Note: Currently, oxc_transform supports es syntax up to ES2024 (unicode-sets-regex).
-    if !matches!(parsed_type, OxcParseType::Js)
-      || bundle_options.transform_options.env.regexp.set_notation
-    {
+    let is_not_js = !matches!(parsed_type, OxcParseType::Js);
+    if is_not_js || bundle_options.transform_options.should_transform_js() {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
-        let transform_options = &bundle_options.transform_options;
+        let transform_options = bundle_options
+          .transform_options
+          .options_for_file(is_not_js.then_some(Path::new(resolved_id)), &mut warnings)?;
+
         let scoping = self.recreate_scoping(&mut scoping, program, false);
-        let ret = Transformer::new(allocator, Path::new(path), transform_options)
+        let ret = Transformer::new(allocator, Path::new(path), &transform_options)
           .build_with_scoping(scoping, program);
         // TODO: emit diagnostic, aiming to pass more tests,
         // we ignore warning for now
@@ -102,12 +106,12 @@ impl PreProcessEcmaAst {
             .into_iter()
             .filter(|item| matches!(item.severity, OxcSeverity::Error))
             .collect_vec();
-          return Err(BuildDiagnostic::from_oxc_diagnostics(
+          return Err(BatchedBuildDiagnostic::from(BuildDiagnostic::from_oxc_diagnostics(
             errors,
             &source,
             path,
             &Severity::Error,
-          ));
+          )));
         }
         Ok(())
       })?;

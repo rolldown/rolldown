@@ -1,70 +1,45 @@
-use super::stages::{link_stage::LinkStage, scan_stage::NormalizedScanStageOutput};
-use crate::{
-  BundlerOptions, SharedOptions, SharedResolver,
-  bundler_builder::BundlerBuilder,
-  hmr::hmr_stage::{HmrStage, HmrStageInput},
+use crate::build::build_context::BuildContext;
+
+use super::super::{
+  SharedOptions, SharedResolver,
+  bundler::CacheGuard,
   module_loader::deferred_scan_data::defer_sync_scan_data,
   stages::{
     generate_stage::GenerateStage,
-    scan_stage::{ScanStage, ScanStageOutput},
+    link_stage::LinkStage,
+    scan_stage::{NormalizedScanStageOutput, ScanStage, ScanStageOutput},
   },
   types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
   utils::fs_utils::clean_dir,
 };
-use anyhow::Result;
 use arcstr::ArcStr;
-use rolldown_common::{
-  ClientHmrInput, ClientHmrUpdate, GetLocalDbMut, HmrUpdate, Module, ScanMode, SharedFileEmitter,
-  SymbolRefDb,
-};
+use rolldown_common::{GetLocalDbMut, Module, ScanMode, SharedFileEmitter, SymbolRefDb};
 use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 use rolldown_fs::{FileSystem, OsFileSystem};
-use rolldown_plugin::{
-  __inner::SharedPluginable, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver,
-};
+use rolldown_plugin::{HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver};
 use rolldown_utils::dashmap::FxDashSet;
-use rustc_hash::FxHashSet;
-use std::{
-  any::Any,
-  sync::{Arc, atomic::AtomicU32},
-};
+use std::sync::Arc;
 
-pub struct Bundler {
-  pub closed: bool,
+pub struct Build {
   pub(crate) fs: OsFileSystem,
   pub(crate) options: SharedOptions,
   pub(crate) resolver: SharedResolver,
   pub(crate) file_emitter: SharedFileEmitter,
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) warnings: Vec<BuildDiagnostic>,
-  pub(crate) _log_guard: Option<Box<dyn Any + Send>>,
   pub(crate) cache: ScanStageCache,
   pub(crate) session: rolldown_debug::Session,
 }
 
-impl Bundler {
-  // --- Public API ---
-
-  pub fn new(options: BundlerOptions) -> BuildResult<Self> {
-    BundlerBuilder::default().with_options(options).build()
-  }
-
-  pub fn with_plugins(
-    options: BundlerOptions,
-    plugins: Vec<SharedPluginable>,
-  ) -> BuildResult<Self> {
-    BundlerBuilder::default().with_options(options).with_plugins(plugins).build()
-  }
-
+impl Build {
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
-  pub async fn write(&mut self) -> BuildResult<BundleOutput> {
-    self.create_error_if_closed()?;
-
+  /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
+  pub async fn write(mut self) -> BuildResult<BundleOutput> {
     async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
-      let scan_stage_output = self.scan(ScanMode::Full).await?;
+      let scan_stage_output = self.scan_modules(ScanMode::Full).await?;
 
       let ret = self.bundle_write(scan_stage_output).await;
       trace_action!(action::BuildEnd { action: "BuildEnd" });
@@ -74,13 +49,12 @@ impl Bundler {
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
-  pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
-    self.create_error_if_closed()?;
-
+  /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
+  pub async fn generate(mut self) -> BuildResult<BundleOutput> {
     async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
-      let scan_stage_output = self.scan(ScanMode::Full).await?;
+      let scan_stage_output = self.scan_modules(ScanMode::Full).await?;
 
       let ret = self.bundle_generate(scan_stage_output).await.map(|mut output| {
         output.warnings.append(&mut self.warnings);
@@ -92,17 +66,18 @@ impl Bundler {
     .await
   }
 
-  #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn close(&mut self) -> Result<()> {
-    self.inner_close().await
+  /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
+  pub async fn scan(mut self) -> BuildResult<()> {
+    self.scan_modules(ScanMode::Full).await?;
+
+    Ok(())
   }
 
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
-  pub async fn scan(
+  async fn scan_modules(
     &mut self,
     scan_mode: ScanMode<ArcStr>,
   ) -> BuildResult<NormalizedScanStageOutput> {
-    self.create_error_if_closed()?;
     trace_action!(action::BuildStart { action: "BuildStart" });
     let is_full_scan_mode = scan_mode.is_full();
 
@@ -155,65 +130,14 @@ impl Bundler {
     &self.plugin_driver.watch_files
   }
 
-  // --- Internal API ---
-
-  fn create_error_if_closed(&self) -> BuildResult<()> {
-    if self.closed {
-      Err(anyhow::anyhow!("Bundler is closed"))?;
+  pub fn context(&self) -> BuildContext {
+    BuildContext {
+      options: Arc::clone(&self.options),
+      plugin_driver: Arc::clone(&self.plugin_driver),
     }
-    Ok(())
   }
 
-  // The rollup always crate a new build at watch mode, it cloud be call multiply times.
-  // Here only reset the closed flag to make it possible to call again.
-  pub(crate) fn reset_closed_for_watch_mode(&mut self) {
-    self.closed = false;
-  }
-
-  pub(crate) async fn compute_hmr_update_for_file_changes(
-    &mut self,
-    changed_file_paths: &[String],
-    clients: &[ClientHmrInput<'_>],
-    next_hmr_patch_id: Arc<AtomicU32>,
-  ) -> BuildResult<Vec<ClientHmrUpdate>> {
-    let mut hmr_stage = HmrStage::new(HmrStageInput {
-      fs: self.fs.clone(),
-      options: Arc::clone(&self.options),
-      resolver: Arc::clone(&self.resolver),
-      plugin_driver: Arc::clone(&self.plugin_driver),
-      cache: &mut self.cache,
-      next_hmr_patch_id,
-    });
-    hmr_stage.compute_hmr_update_for_file_changes(changed_file_paths, clients).await
-  }
-
-  pub(crate) async fn compute_update_for_calling_invalidate(
-    &mut self,
-    invalidate_caller: String,
-    first_invalidated_by: Option<String>,
-    client_id: &str,
-    executed_modules: &FxHashSet<String>,
-    next_hmr_patch_id: Arc<AtomicU32>,
-  ) -> BuildResult<HmrUpdate> {
-    let mut hmr_stage = HmrStage::new(HmrStageInput {
-      fs: self.fs.clone(),
-      options: Arc::clone(&self.options),
-      resolver: Arc::clone(&self.resolver),
-      plugin_driver: Arc::clone(&self.plugin_driver),
-      cache: &mut self.cache,
-      next_hmr_patch_id,
-    });
-    hmr_stage
-      .compute_update_for_calling_invalidate(
-        invalidate_caller,
-        first_invalidated_by,
-        client_id,
-        executed_modules,
-      )
-      .await
-  }
-
-  pub(crate) async fn bundle_write(
+  async fn bundle_write(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
@@ -237,10 +161,7 @@ impl Bundler {
       let dest = dist_dir.join(chunk.filename());
       if let Some(p) = dest.parent() {
         if !self.fs.exists(p) {
-          self.fs.create_dir_all(p).map_err(|err| {
-            anyhow::anyhow!("Could not create directory for output chunks: {}", p.display())
-              .context(err)
-          })?;
+          self.fs.create_dir_all(p).unwrap();
         }
       }
       self.fs.write(&dest, chunk.content_as_bytes()).map_err(|err| {
@@ -304,37 +225,11 @@ impl Bundler {
     .await
   }
 
-  async fn inner_close(&mut self) -> Result<()> {
-    if self.closed {
-      return Ok(());
-    }
-
-    self.closed = true;
-    self.plugin_driver.close_bundle().await?;
-
-    // Clean up resources
-    self.plugin_driver.clear();
-    self.cache = ScanStageCache::default();
-    self.resolver.clear_cache();
-    self.warnings.clear();
-
-    Ok(())
-  }
-
   async fn bundle_up(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
     is_write: bool,
   ) -> BuildResult<BundleOutput> {
-    if self.closed {
-      return Err(
-        anyhow::anyhow!(
-          "Bundle is already closed, no more calls to 'generate' or 'write' are allowed."
-        )
-        .into(),
-      );
-    }
-
     let mut link_stage_output = LinkStage::new(scan_stage_output, &self.options).link();
 
     let bundle_output =
@@ -447,32 +342,4 @@ impl Bundler {
       });
     }
   }
-}
-
-pub struct CacheGuard<'a> {
-  pub is_incremental_build_enabled: bool,
-  pub cache: &'a mut ScanStageCache,
-}
-impl CacheGuard<'_> {
-  pub fn inner(&mut self) -> &mut ScanStageCache {
-    self.cache
-  }
-}
-
-impl Drop for CacheGuard<'_> {
-  fn drop(&mut self) {
-    if !self.is_incremental_build_enabled {
-      std::mem::take(self.cache);
-    }
-  }
-}
-
-fn _test_bundler() {
-  fn assert_send(_foo: impl Send) {}
-  let mut bundler = Bundler::new(BundlerOptions::default()).expect("Failed to create bundler");
-  let write_fut = bundler.write();
-  assert_send(write_fut);
-  let mut bundler = Bundler::new(BundlerOptions::default()).expect("Failed to create bundler");
-  let generate_fut = bundler.generate();
-  assert_send(generate_fut);
 }

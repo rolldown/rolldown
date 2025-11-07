@@ -1300,7 +1300,12 @@ export declare class BindingBundleErrorEventData {
 
 export declare class BindingBundler {
   constructor()
-  createImpl(options: BindingBundlerOptions): BindingBundlerImpl
+  generate(options: BindingBundlerOptions): Promise<BindingResult<BindingOutputs>>
+  write(options: BindingBundlerOptions): Promise<BindingResult<BindingOutputs>>
+  scan(options: BindingBundlerOptions): Promise<BindingResult<BindingOutputs>>
+  close(): Promise<undefined>
+  get closed(): boolean
+  getWatchFiles(): Array<string>
 }
 
 export declare class BindingBundlerImpl {

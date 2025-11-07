@@ -337,8 +337,21 @@ impl<'a> SideEffectDetector<'a> {
     //   return StmtSideEffect::Unknown;
     // }
 
+    // Check if this is a side-effect-free global function call like Symbol()
+    let is_side_effect_free_global_call = if let Expression::Identifier(ident) = &expr.callee {
+      if self.is_unresolved_reference(ident) && ident.name == "Symbol" {
+        // Symbol() constructor is side-effect-free
+        true
+      } else {
+        false
+      }
+    } else {
+      false
+    };
+
     let is_pure = !self.flat_options.ignore_annotations()
       && (expr.pure
+        || is_side_effect_free_global_call
         || self
           .side_effect_free_function_symbol_ref
           .is_some_and(|map| map.contains(&Address::from_ptr(expr))));
@@ -1268,6 +1281,21 @@ mod test {
     assert!(get_statements_side_effect("import('foo')"));
     assert!(get_statements_side_effect("let a; a``"));
     assert!(get_statements_side_effect("let a; a++"));
+  }
+
+  #[test]
+  fn test_symbol_call() {
+    // Symbol() constructor call is side-effect-free
+    assert!(!get_statements_side_effect("const VOID = Symbol(\"p-void\")"));
+    assert!(!get_statements_side_effect("const sym = Symbol()"));
+    assert!(!get_statements_side_effect("let a = Symbol('test')"));
+    assert!(!get_statements_side_effect("Symbol('foo')"));
+    
+    // Symbol with expression argument
+    assert!(!get_statements_side_effect("const x = 'test'; Symbol(x)"));
+    
+    // Symbol with side-effectful argument should still have side effect
+    assert!(get_statements_side_effect("Symbol(test())"));
   }
 
   #[test]

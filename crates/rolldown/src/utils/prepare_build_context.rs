@@ -253,10 +253,15 @@ pub fn prepare_build_context(
   let resolver =
     Arc::new(Resolver::new(fs.clone(), cwd.clone(), platform, tsconfig.clone(), raw_resolve));
 
-  // TODO: Handle below errors
   let transform_options = Box::new(normalize_transform_options_with_tsconfig(
     raw_options.transform.unwrap_or_default(),
-    tsconfig.as_ref().map(|path| resolver.resolve_tsconfig(&path)).transpose().unwrap(),
+    tsconfig.as_ref().map(|path| resolver.resolve_tsconfig(&path)).transpose().map_err(|err| {
+      anyhow::anyhow!(
+        "Failed to resolve `tsconfig` option: {}",
+        tsconfig.as_ref().unwrap().display()
+      )
+      .context(err)
+    })?,
     &mut warnings,
   )?);
 

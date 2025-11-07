@@ -356,7 +356,7 @@ export interface InputOptions {
    * When a tsconfig path is specified, the module resolver will respect `compilerOptions.paths` from the specified `tsconfig.json`,
    * and the tsconfig options will be merged with the top-level `transform` options, with the `transform` options taking precedence.
    */
-  tsconfig?: string;
+  tsconfig?: true | string;
 }
 
 interface OverwriteInputOptionsForCli {

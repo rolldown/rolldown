@@ -106,5 +106,6 @@ pub struct BindingInputOptions<'env> {
   pub preserve_entry_signatures: Option<BindingPreserveEntrySignatures>,
   pub optimization: Option<BindingOptimization>,
   pub context: Option<String>,
-  pub tsconfig: Option<String>,
+  #[napi(ts_type = "true | string")]
+  pub tsconfig: Option<Either<bool, String>>,
 }

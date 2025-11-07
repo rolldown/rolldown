@@ -164,8 +164,8 @@ impl DevEngine {
     drop(build_service_state);
 
     let bundler = self.build_driver.bundler.lock().await;
-    // hyf0 TODO: `get_watch_files` is not a proper API to tell which files should be watched.
-    let watch_files = bundler.get_watch_files();
+    // hyf0 TODO: `watch_files` is not a proper API to tell which files should be watched.
+    let watch_files = bundler.watch_files();
 
     let mut watcher = self.watcher.lock().await;
     let mut paths_mut = watcher.paths_mut();

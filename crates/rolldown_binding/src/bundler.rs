@@ -29,13 +29,13 @@ impl Bundler {
     &mut self,
     bundler_options: BundlerOptions,
     plugins: Vec<SharedPluginable>,
-  ) -> BuildResult<(Build, Vec<rolldown_error::BuildDiagnostic>)> {
+  ) -> BuildResult<Build> {
     if self.closed {
       return Err(rolldown_error::BuildDiagnostic::already_closed().into());
     }
     self.enable_debug_tracing_if_needed(&bundler_options);
 
-    let (mut build_factory, warnings) = BuildFactory::new(BuildFactoryOptions {
+    let mut build_factory = BuildFactory::new(BuildFactoryOptions {
       bundler_options,
       plugins,
       session: Some(self.session.clone()),
@@ -46,7 +46,7 @@ impl Bundler {
 
     self.last_build_context = Some(build.context());
 
-    Ok((build, warnings))
+    Ok(build)
   }
 
   #[must_use = "Future must be awaited to do the actual cleanup work"]

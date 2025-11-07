@@ -31,13 +31,15 @@ pub struct BuildFactory {
   pub resolver: SharedResolver,
   pub file_emitter: SharedFileEmitter,
   pub plugin_driver: SharedPluginDriver,
-  /// Warnings collected during build factory creation
+  /// Warnings collected during build factory creation.
+  /// These warnings are transferred to the first created `Build` via `create_build()` or `create_incremental_build()`.
+  pub warnings: Vec<BuildDiagnostic>,
   pub session: rolldown_debug::Session,
   pub(crate) _log_guard: Option<Box<dyn Any + Send>>,
 }
 
 impl BuildFactory {
-  pub fn new(mut opts: BuildFactoryOptions) -> BuildResult<(Self, Vec<BuildDiagnostic>)> {
+  pub fn new(mut opts: BuildFactoryOptions) -> BuildResult<Self> {
     let session = opts.session.unwrap_or_else(rolldown_debug::Session::dummy);
 
     let maybe_guard =
@@ -60,25 +62,23 @@ impl BuildFactory {
       CONTEXT_build_id = build_id.as_ref()
     ));
 
-    Ok((
-      Self {
-        plugin_driver: PluginDriver::new_shared(
-          opts.plugins,
-          &resolver,
-          &file_emitter,
-          &options,
-          &session,
-          &build_span,
-        ),
-        file_emitter,
-        resolver,
-        options,
-        fs,
-        _log_guard: maybe_guard,
-        session,
-      },
+    Ok(Self {
+      plugin_driver: PluginDriver::new_shared(
+        opts.plugins,
+        &resolver,
+        &file_emitter,
+        &options,
+        &session,
+        &build_span,
+      ),
+      file_emitter,
+      resolver,
+      options,
+      fs,
       warnings,
-    ))
+      _log_guard: maybe_guard,
+      session,
+    })
   }
 
   pub fn create_build(&mut self) -> Build {
@@ -88,9 +88,22 @@ impl BuildFactory {
       resolver: Arc::clone(&self.resolver),
       file_emitter: Arc::clone(&self.file_emitter),
       plugin_driver: Arc::clone(&self.plugin_driver),
-      warnings: Vec::new(),
+      warnings: std::mem::take(&mut self.warnings),
       session: self.session.clone(),
       cache: ScanStageCache::default(),
+    }
+  }
+
+  pub fn create_incremental_build(&mut self, cache: ScanStageCache) -> Build {
+    Build {
+      fs: self.fs.clone(),
+      options: Arc::clone(&self.options),
+      resolver: Arc::clone(&self.resolver),
+      file_emitter: Arc::clone(&self.file_emitter),
+      plugin_driver: Arc::clone(&self.plugin_driver),
+      warnings: std::mem::take(&mut self.warnings),
+      session: self.session.clone(),
+      cache,
     }
   }
 
@@ -135,36 +148,3 @@ impl BuildFactory {
     }
   }
 }
-
-// impl BundlerBuilder {
-
-//   #[must_use]
-//   pub fn with_options(mut self, options: BundlerOptions) -> Self {
-//     self.options = options;
-//     self
-//   }
-
-//   #[must_use]
-//   pub fn with_plugins(mut self, plugins: Vec<SharedPluginable>) -> Self {
-//     self.plugins = plugins;
-//     self
-//   }
-
-//   #[must_use]
-//   pub fn with_build_count(mut self, build_count: u32) -> Self {
-//     self.build_count = build_count;
-//     self
-//   }
-
-//   #[must_use]
-//   pub fn with_session(mut self, session: rolldown_debug::Session) -> Self {
-//     self.session = Some(session);
-//     self
-//   }
-
-//   #[must_use]
-//   pub fn with_disable_tracing_setup(mut self, disable: bool) -> Self {
-//     self.disable_tracing_setup = disable;
-//     self
-//   }
-// }

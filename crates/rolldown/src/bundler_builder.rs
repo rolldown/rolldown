@@ -1,18 +1,7 @@
-use std::sync::Arc;
+use rolldown_error::BuildResult;
+use rolldown_plugin::__inner::SharedPluginable;
 
-use rolldown_common::{FileEmitter, NormalizedBundlerOptions};
-use rolldown_error::{BuildDiagnostic, BuildResult, EventKindSwitcher};
-use rolldown_plugin::{__inner::SharedPluginable, PluginDriver};
-use rustc_hash::FxHashMap;
-
-use crate::{
-  Bundler, BundlerOptions,
-  types::scan_stage_cache::ScanStageCache,
-  utils::{
-    apply_inner_plugins::apply_inner_plugins,
-    prepare_build_context::{PrepareBuildContext, prepare_build_context},
-  },
-};
+use crate::{Bundler, BundlerOptions};
 
 #[derive(Debug, Default)]
 pub struct BundlerBuilder {
@@ -24,89 +13,13 @@ pub struct BundlerBuilder {
 }
 
 impl BundlerBuilder {
-  pub fn build(mut self) -> BuildResult<Bundler> {
-    let session = self.session.unwrap_or_else(rolldown_debug::Session::dummy);
-
-    let maybe_guard =
-      if self.disable_tracing_setup { None } else { rolldown_tracing::try_init_tracing() };
-
-    let PrepareBuildContext { fs, resolver, options, mut warnings } =
-      prepare_build_context(self.options)?;
-
-    Self::check_prefer_builtin_feature(self.plugins.as_slice(), &options, &mut warnings);
-
-    apply_inner_plugins(&options, &mut self.plugins);
-
-    let file_emitter = Arc::new(FileEmitter::new(Arc::clone(&options)));
-
-    // Create build span for this build
-    let build_id = rolldown_debug::generate_build_id(self.build_count);
-    let build_span = Arc::new(tracing::info_span!(
-      parent: &session.span,
-      "build",
-      CONTEXT_build_id = build_id.as_ref()
-    ));
-
-    Ok(Bundler {
-      closed: false,
-      plugin_driver: PluginDriver::new_shared(
-        self.plugins,
-        &resolver,
-        &file_emitter,
-        &options,
-        &session,
-        &build_span,
-      ),
-      file_emitter,
-      resolver,
-      options,
-      fs,
-      warnings,
-      _log_guard: maybe_guard,
-      cache: ScanStageCache::default(),
-      session,
-    })
-  }
-
-  fn check_prefer_builtin_feature(
-    plugins: &[SharedPluginable],
-    options: &NormalizedBundlerOptions,
-    warning: &mut Vec<BuildDiagnostic>,
-  ) {
-    if !options.checks.contains(EventKindSwitcher::PreferBuiltinFeature) {
-      return;
-    }
-    let map = FxHashMap::from_iter([
-      // key is the name property of the plugin
-      // the first element of value is the npm package name of the plugin
-      // the second element of value is the preferred builtin feature, `None` if the feature is not configured
-      // the third element of value is an additional message to show
-      ("inject", ("@rollup/plugin-inject", Some("inject"), None)),
-      ("node-resolve", ("@rollup/plugin-node-resolve", None, None)),
-      (
-        "commonjs",
-        (
-          "@rollup/plugin-commonjs",
-          None,
-          Some(" Check https://rolldown.rs/in-depth/bundling-cjs for more details."),
-        ),
-      ),
-      ("json", ("@rollup/plugin-json", None, None)),
-    ]);
-    for plugin in plugins {
-      let name = plugin.call_name();
-      let Some((package_name, feature, additional_message)) = map.get(name.as_ref()) else {
-        continue;
-      };
-      warning.push(
-        BuildDiagnostic::prefer_builtin_feature(
-          feature.map(String::from),
-          (*package_name).to_string(),
-          *additional_message,
-        )
-        .with_severity_warning(),
-      );
-    }
+  pub fn build(self) -> BuildResult<Bundler> {
+    Bundler::with_builder_options(
+      self.options,
+      self.plugins,
+      self.session,
+      self.disable_tracing_setup,
+    )
   }
 
   #[must_use]

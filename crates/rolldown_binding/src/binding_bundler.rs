@@ -39,14 +39,14 @@ impl BindingBundler {
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let normalized = Self::normalize_binding_options(options)?;
     let maybe_build = self.inner.create_build(normalized.bundler_options, normalized.plugins);
-    if let Ok((build, _)) = &maybe_build {
+    if let Ok(build) = &maybe_build {
       // Extract build context before consuming the build
       self.last_build_context = Some(build.context());
     }
 
     let fut = async move {
       // TODO: we probably advance error handling here instead of waiting for an async call
-      let (build, mut warnings_for_creating_build) = maybe_build.map_err(|err| {
+      let build = maybe_build.map_err(|err| {
         napi::Error::new(
           napi::Status::GenericFailure,
           err.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
@@ -66,9 +66,7 @@ impl BindingBundler {
         }
       };
 
-      warnings_for_creating_build.extend(bundle_output.warnings);
-
-      if let Err(err) = handle_warnings(warnings_for_creating_build, &options).await {
+      if let Err(err) = handle_warnings(bundle_output.warnings, &options).await {
         let error = to_binding_error(&err.into(), cwd.clone());
         return Ok(napi::Either::A(BindingErrors::new(vec![error])));
       }
@@ -86,13 +84,13 @@ impl BindingBundler {
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let normalized = Self::normalize_binding_options(options)?;
     let maybe_build = self.inner.create_build(normalized.bundler_options, normalized.plugins);
-    if let Ok((build, _)) = &maybe_build {
+    if let Ok(build) = &maybe_build {
       // Extract build context before consuming the build
       self.last_build_context = Some(build.context());
     }
 
     let fut = async move {
-      let (build, mut warnings_for_creating_build) = maybe_build.map_err(|err| {
+      let build = maybe_build.map_err(|err| {
         napi::Error::new(
           napi::Status::GenericFailure,
           err.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
@@ -112,9 +110,7 @@ impl BindingBundler {
         }
       };
 
-      warnings_for_creating_build.extend(bundle_output.warnings);
-
-      if let Err(err) = handle_warnings(warnings_for_creating_build, &options).await {
+      if let Err(err) = handle_warnings(bundle_output.warnings, &options).await {
         let error = to_binding_error(&err.into(), cwd.clone());
         return Ok(napi::Either::A(BindingErrors::new(vec![error])));
       }
@@ -132,13 +128,13 @@ impl BindingBundler {
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let normalized = Self::normalize_binding_options(options)?;
     let maybe_build = self.inner.create_build(normalized.bundler_options, normalized.plugins);
-    if let Ok((build, _)) = &maybe_build {
+    if let Ok(build) = &maybe_build {
       // Extract build context before consuming the build
       self.last_build_context = Some(build.context());
     }
 
     let fut = async move {
-      let (build, _warnings_for_creating_build) = maybe_build.map_err(|err| {
+      let build = maybe_build.map_err(|err| {
         napi::Error::new(
           napi::Status::GenericFailure,
           err.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),

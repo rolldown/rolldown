@@ -151,14 +151,14 @@ impl BindingBundlerImpl {
   #[napi(getter)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn get_closed(&self) -> napi::Result<bool> {
-    Ok(napi::bindgen_prelude::block_on(async { self.inner.lock().await.closed }))
+    Ok(napi::bindgen_prelude::block_on(async { self.inner.lock().await.closed() }))
   }
 
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn get_watch_files(&self) -> napi::Result<Vec<String>> {
     let bundler_core = self.inner.lock().await;
-    Ok(bundler_core.get_watch_files().iter().map(|s| s.to_string()).collect())
+    Ok(bundler_core.watch_files().iter().map(|s| s.to_string()).collect())
   }
 }
 

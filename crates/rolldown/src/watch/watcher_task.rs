@@ -66,7 +66,7 @@ impl WatcherTask {
         rolldown_common::ScanMode::Full
       };
       let result = bundler.scan(scan_mode).await;
-      let watched_files = Arc::clone(bundler.get_watch_files());
+      let watched_files = Arc::clone(bundler.watch_files());
       self.watch_files(&watched_files, &bundler.options).await?;
       match result {
         Ok(scan_stage_output) => {

@@ -1,9 +1,9 @@
 // TODO: add reasons about why creating `BindingBundler` instead of reusing `Bundler` of `rolldown` crate.
 
 use crate::{
-  binding_bundler_impl::BindingBundlerOptions,
   classic_bundler::ClassicBundler,
   types::{
+    binding_bundler_options::BindingBundlerOptions,
     binding_outputs::{BindingOutputs, to_binding_error},
     error::{BindingError, BindingErrors, BindingResult},
   },

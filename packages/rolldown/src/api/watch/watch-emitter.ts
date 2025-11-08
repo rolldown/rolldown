@@ -1,5 +1,5 @@
 import {
-  type BindingBundlerImpl,
+  type BindingWatcherBundler,
   type BindingWatcherEvent,
 } from '../../binding.cjs';
 import type { MaybePromise } from '../../types/utils';
@@ -10,7 +10,7 @@ type WatcherEvent = 'close' | 'event' | 'restart' | 'change';
 type ChangeEvent = 'create' | 'update' | 'delete';
 
 // TODO: find a way use `RolldownBuild` instead of `Bundler`.
-type RolldownWatchBuild = BindingBundlerImpl;
+type RolldownWatchBuild = BindingWatcherBundler;
 
 export type RolldownWatcherEvent =
   | { code: 'START' }

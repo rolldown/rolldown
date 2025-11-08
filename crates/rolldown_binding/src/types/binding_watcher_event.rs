@@ -4,6 +4,7 @@ use napi::tokio::sync::Mutex;
 use napi_derive::napi;
 
 use super::{binding_outputs::to_binding_error, error::BindingError};
+use crate::binding_watcher_bundler::BindingWatcherBundler;
 use rolldown::{BundleEvent, Bundler, WatcherEvent};
 
 #[napi]
@@ -93,8 +94,8 @@ pub struct BindingBundleEndEventData {
 #[napi]
 impl BindingBundleEndEventData {
   #[napi(getter)]
-  pub fn result(&self) -> crate::binding_bundler_impl::BindingBundlerImpl {
-    crate::binding_bundler_impl::BindingBundlerImpl::new_with_bundler(Arc::clone(&self.result))
+  pub fn result(&self) -> BindingWatcherBundler {
+    BindingWatcherBundler::new(Arc::clone(&self.result))
   }
 }
 
@@ -107,8 +108,8 @@ pub struct BindingBundleErrorEventData {
 #[napi]
 impl BindingBundleErrorEventData {
   #[napi(getter)]
-  pub fn result(&self) -> crate::binding_bundler_impl::BindingBundlerImpl {
-    crate::binding_bundler_impl::BindingBundlerImpl::new_with_bundler(Arc::clone(&self.result))
+  pub fn result(&self) -> BindingWatcherBundler {
+    BindingWatcherBundler::new(Arc::clone(&self.result))
   }
 
   #[napi(getter)]

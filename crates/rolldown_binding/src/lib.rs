@@ -30,9 +30,9 @@ use napi_derive::napi;
 static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
 
 pub mod binding_bundler;
-pub mod binding_bundler_impl;
 pub mod binding_dev_engine;
 pub mod binding_dev_options;
+pub mod binding_watcher_bundler;
 pub mod classic_bundler;
 mod generated;
 pub mod options;

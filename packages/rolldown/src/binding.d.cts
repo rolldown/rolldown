@@ -1290,11 +1290,11 @@ export interface TypeScriptOptions {
 export declare class BindingBundleEndEventData {
   output: string
   duration: number
-  get result(): BindingBundlerImpl
+  get result(): BindingWatcherBundler
 }
 
 export declare class BindingBundleErrorEventData {
-  get result(): BindingBundlerImpl
+  get result(): BindingWatcherBundler
   get error(): Array<BindingError>
 }
 
@@ -1306,15 +1306,6 @@ export declare class BindingBundler {
   close(): Promise<undefined>
   get closed(): boolean
   getWatchFiles(): Array<string>
-}
-
-export declare class BindingBundlerImpl {
-  write(): Promise<BindingResult<BindingOutputs>>
-  generate(): Promise<BindingResult<BindingOutputs>>
-  scan(): Promise<BindingResult<BindingOutputs>>
-  close(): Promise<void>
-  get closed(): boolean
-  getWatchFiles(): Promise<Array<string>>
 }
 
 export declare class BindingCallableBuiltinPlugin {
@@ -1488,6 +1479,14 @@ export declare class BindingWatcher {
   constructor(options: Array<BindingBundlerOptions>, notifyOption?: BindingNotifyOption | undefined | null)
   close(): Promise<void>
   start(listener: (data: BindingWatcherEvent) => void): Promise<void>
+}
+
+/**
+ * Minimal wrapper around the core `Bundler` for watcher events.
+ * This is returned from watcher event data to allow access to the bundler instance.
+ */
+export declare class BindingWatcherBundler {
+  close(): Promise<void>
 }
 
 export declare class BindingWatcherChangeData {

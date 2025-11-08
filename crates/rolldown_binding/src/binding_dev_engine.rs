@@ -1,14 +1,16 @@
+use napi::tokio;
 use napi_derive::napi;
 use rolldown::dev::dev_context::BuildProcessFuture;
 use rolldown::dev::{OnHmrUpdatesCallback, OnOutputCallback};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::binding_bundler_impl::{BindingBundlerImpl, BindingBundlerOptions};
 use crate::binding_dev_options::BindingDevOptions;
+use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_client_hmr_update::BindingClientHmrUpdate;
 use crate::types::binding_outputs::{BindingOutputs, to_binding_error};
 use crate::types::error::{BindingErrors, BindingResult};
+use crate::utils::create_bundler_from_binding_options::create_bundler_from_binding_options;
 use napi::bindgen_prelude::FnArgs;
 use napi::{Either, Env, threadsafe_function::ThreadsafeFunctionCallMode};
 
@@ -48,8 +50,8 @@ impl BindingDevEngine {
     let debounce_tick_rate = watch_options.and_then(|watch| watch.debounce_tick_rate);
 
     // Create bundler
-    let bundler =
-      BindingBundlerImpl::new(options, rolldown_debug::Session::dummy(), 0)?.into_inner();
+    let bundler: Arc<napi::tokio::sync::Mutex<rolldown::Bundler>> =
+      Arc::new(tokio::sync::Mutex::new(create_bundler_from_binding_options(options)?));
 
     // If callback is provided, wrap it to convert BuildResult<(Vec<ClientHmrUpdate>, Vec<String>)> to BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)>
     let on_hmr_updates = on_hmr_updates_callback.map(|js_callback| {

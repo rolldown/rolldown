@@ -4,9 +4,10 @@ use std::time::Duration;
 use napi::bindgen_prelude::FnArgs;
 use napi_derive::napi;
 
-use crate::binding_bundler_impl::{BindingBundlerImpl, BindingBundlerOptions};
+use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_watcher_event::BindingWatcherEvent;
 
+use crate::utils::create_bundler_from_binding_options::create_bundler_from_binding_options;
 use crate::utils::handle_result;
 
 use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt};
@@ -42,10 +43,10 @@ impl BindingWatcher {
   ) -> napi::Result<Self> {
     let bundlers = options
       .into_iter()
-      .map(|option| {
+      .map(|options| {
         // TODO(hyf0): support emit debug data for builtin watch
-        BindingBundlerImpl::new(option, rolldown_debug::Session::dummy(), 0)
-          .map(BindingBundlerImpl::into_inner)
+        create_bundler_from_binding_options(options)
+          .map(|inner| Arc::new(napi::tokio::sync::Mutex::new(inner)))
       })
       .collect::<Result<Vec<_>, _>>()?;
 

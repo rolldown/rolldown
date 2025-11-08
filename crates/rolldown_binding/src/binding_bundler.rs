@@ -125,7 +125,7 @@ impl BindingBundler {
     &mut self,
     env: &'env Env,
     options: BindingBundlerOptions<'env>,
-  ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
+  ) -> napi::Result<PromiseRaw<'env, BindingResult<()>>> {
     let normalized = Self::normalize_binding_options(options)?;
     let maybe_bundle = self.inner.create_bundle(normalized.bundler_options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
@@ -144,7 +144,7 @@ impl BindingBundler {
       match bundle.scan().await {
         Ok(()) => {
           // scan() returns no useful output, just return empty
-          Ok(napi::Either::B(vec![].into()))
+          Ok(napi::Either::B(()))
         }
         Err(errs) => {
           let errors: Vec<BindingError> = errs

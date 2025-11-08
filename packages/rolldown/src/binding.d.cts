@@ -1302,7 +1302,7 @@ export declare class BindingBundler {
   constructor()
   generate(options: BindingBundlerOptions): Promise<BindingResult<BindingOutputs>>
   write(options: BindingBundlerOptions): Promise<BindingResult<BindingOutputs>>
-  scan(options: BindingBundlerOptions): Promise<BindingResult<BindingOutputs>>
+  scan(options: BindingBundlerOptions): Promise<BindingResult<undefined>>
   close(): Promise<undefined>
   get closed(): boolean
   getWatchFiles(): Array<string>

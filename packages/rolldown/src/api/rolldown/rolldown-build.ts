@@ -31,29 +31,6 @@ export class RolldownBuild {
     return this.#bundler.closed;
   }
 
-  async scan(): Promise<void> {
-    await this.#stopWorkers?.();
-
-    const option = await createBundlerOptions(
-      this.#inputOptions,
-      {},
-      false,
-    );
-
-    if (RolldownBuild.asyncRuntimeShutdown) {
-      startAsyncRuntime();
-    }
-
-    try {
-      this.#stopWorkers = option.stopWorkers;
-      const output = await this.#bundler.scan(option.bundlerOptions);
-      unwrapBindingResult(output);
-    } catch (e) {
-      await option.stopWorkers?.();
-      throw e;
-    }
-  }
-
   async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
     return this.#build(false, outputOptions);
   }

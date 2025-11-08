@@ -1,6 +1,6 @@
 // TODO: add reasons about why we creating another `Bundler` instead of reusing `Bundler` of `rolldown` crate.
 
-use rolldown::{Build, BuildContext, BuildFactory, BuildFactoryOptions, BundlerOptions};
+use rolldown::{Bundle, BundleContext, BundleFactory, BundleFactoryOptions, BundlerOptions};
 use rolldown_error::BuildResult;
 use rolldown_plugin::__inner::SharedPluginable;
 use std::sync::Arc;
@@ -10,7 +10,7 @@ pub struct Bundler {
   debug_tracer: Option<rolldown_debug::DebugTracer>,
   session: rolldown_debug::Session,
   closed: bool,
-  last_build_context: Option<BuildContext>,
+  last_bundle_context: Option<BundleContext>,
 }
 
 impl Bundler {
@@ -21,38 +21,38 @@ impl Bundler {
       debug_tracer: None,
       session: rolldown_debug::Session::dummy(),
       closed: false,
-      last_build_context: None,
+      last_bundle_context: None,
     }
   }
 
-  pub fn create_build(
+  pub fn create_bundle(
     &mut self,
     bundler_options: BundlerOptions,
     plugins: Vec<SharedPluginable>,
-  ) -> BuildResult<Build> {
+  ) -> BuildResult<Bundle> {
     if self.closed {
       return Err(rolldown_error::BuildDiagnostic::already_closed().into());
     }
     self.enable_debug_tracing_if_needed(&bundler_options);
 
-    let mut build_factory = BuildFactory::new(BuildFactoryOptions {
+    let mut bundle_factory = BundleFactory::new(BundleFactoryOptions {
       bundler_options,
       plugins,
       session: Some(self.session.clone()),
       disable_tracing_setup: true,
     })?;
 
-    let build = build_factory.create_build();
+    let bundle = bundle_factory.create_bundle();
 
-    self.last_build_context = Some(build.context());
+    self.last_bundle_context = Some(bundle.context());
 
-    Ok(build)
+    Ok(bundle)
   }
 
   #[must_use = "Future must be awaited to do the actual cleanup work"]
   pub fn close(&mut self) -> impl Future<Output = anyhow::Result<()>> + Send + 'static {
     let is_closed = self.closed;
-    let last_build_context = self.last_build_context.clone();
+    let last_bundle_context = self.last_bundle_context.clone();
     if !is_closed {
       self.closed = true;
     }
@@ -60,7 +60,7 @@ impl Bundler {
     // - We need the future to be `Send + 'static` for napi-rs, so we can't use `async fn` directly here.
     // - Read `BindingBundler#close` in `crates/rolldown_binding/src/binding_bundler.rs` for more details.
     async move {
-      if let Some(context) = last_build_context {
+      if let Some(context) = last_bundle_context {
         let plugin_driver = context.plugin_driver();
         plugin_driver.close_bundle().await?;
       }

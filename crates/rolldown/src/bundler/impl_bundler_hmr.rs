@@ -13,10 +13,10 @@ impl Bundler {
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     let mut hmr_stage = HmrStage::new(HmrStageInput {
-      fs: self.build_factory.fs.clone(),
-      options: Arc::clone(&self.build_factory.options),
-      resolver: Arc::clone(&self.build_factory.resolver),
-      plugin_driver: Arc::clone(&self.build_factory.plugin_driver),
+      fs: self.bundle_factory.fs.clone(),
+      options: Arc::clone(&self.bundle_factory.options),
+      resolver: Arc::clone(&self.bundle_factory.resolver),
+      plugin_driver: Arc::clone(&self.bundle_factory.plugin_driver),
       cache: &mut self.cache,
       next_hmr_patch_id,
     });
@@ -32,10 +32,10 @@ impl Bundler {
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<HmrUpdate> {
     let mut hmr_stage = HmrStage::new(HmrStageInput {
-      fs: self.build_factory.fs.clone(),
-      options: Arc::clone(&self.build_factory.options),
-      resolver: Arc::clone(&self.build_factory.resolver),
-      plugin_driver: Arc::clone(&self.build_factory.plugin_driver),
+      fs: self.bundle_factory.fs.clone(),
+      options: Arc::clone(&self.bundle_factory.options),
+      resolver: Arc::clone(&self.bundle_factory.resolver),
+      plugin_driver: Arc::clone(&self.bundle_factory.plugin_driver),
       cache: &mut self.cache,
       next_hmr_patch_id,
     });

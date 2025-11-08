@@ -1,6 +1,6 @@
 mod asset;
 mod ast_scanner;
-mod build;
+mod bundle;
 mod bundler;
 mod bundler_builder;
 mod chunk_graph;
@@ -25,10 +25,10 @@ pub(crate) type SharedResolver = Arc<Resolver<OsFileSystem>>;
 pub(crate) type SharedOptions = SharedNormalizedBundlerOptions;
 
 pub use crate::{
-  build::{
-    build::Build,
-    build_context::BuildContext,
-    build_factory::{BuildFactory, BuildFactoryOptions},
+  bundle::{
+    bundle::Bundle,
+    bundle_context::BundleContext,
+    bundle_factory::{BundleFactory, BundleFactoryOptions},
   },
   bundler::Bundler,
   bundler_builder::BundlerBuilder,

@@ -1,4 +1,4 @@
-use crate::build::build_context::BuildContext;
+use crate::bundle::bundle_context::BundleContext;
 
 use super::super::{
   SharedOptions, SharedResolver,
@@ -21,7 +21,7 @@ use rolldown_plugin::{HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver}
 use rolldown_utils::dashmap::FxDashSet;
 use std::sync::Arc;
 
-pub struct Build {
+pub struct Bundle {
   pub(crate) fs: OsFileSystem,
   pub(crate) options: SharedOptions,
   pub(crate) resolver: SharedResolver,
@@ -32,7 +32,7 @@ pub struct Build {
   pub(crate) session: rolldown_debug::Session,
 }
 
-impl Build {
+impl Bundle {
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn write(mut self) -> BuildResult<BundleOutput> {
@@ -130,8 +130,8 @@ impl Build {
     &self.plugin_driver.watch_files
   }
 
-  pub fn context(&self) -> BuildContext {
-    BuildContext {
+  pub fn context(&self) -> BundleContext {
+    BundleContext {
       options: Arc::clone(&self.options),
       plugin_driver: Arc::clone(&self.plugin_driver),
     }

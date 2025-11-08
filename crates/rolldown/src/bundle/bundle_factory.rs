@@ -7,7 +7,7 @@ use rolldown_plugin::{__inner::SharedPluginable, PluginDriver, SharedPluginDrive
 use rustc_hash::FxHashMap;
 
 use crate::{
-  Build,
+  Bundle,
   types::scan_stage_cache::ScanStageCache,
   utils::{
     apply_inner_plugins::apply_inner_plugins,
@@ -18,28 +18,28 @@ use crate::{
 use super::super::{SharedOptions, SharedResolver};
 
 #[derive(Debug, Default)]
-pub struct BuildFactoryOptions {
+pub struct BundleFactoryOptions {
   pub bundler_options: BundlerOptions,
   pub plugins: Vec<SharedPluginable>,
   pub session: Option<rolldown_debug::Session>,
   pub disable_tracing_setup: bool,
 }
 
-pub struct BuildFactory {
+pub struct BundleFactory {
   pub fs: OsFileSystem,
   pub options: SharedOptions,
   pub resolver: SharedResolver,
   pub file_emitter: SharedFileEmitter,
   pub plugin_driver: SharedPluginDriver,
-  /// Warnings collected during build factory creation.
-  /// These warnings are transferred to the first created `Build` via `create_build()` or `create_incremental_build()`.
+  /// Warnings collected during bundle factory creation.
+  /// These warnings are transferred to the first created `Bundle` via `create_bundle()` or `create_incremental_bundle()`.
   pub warnings: Vec<BuildDiagnostic>,
   pub session: rolldown_debug::Session,
   pub(crate) _log_guard: Option<Box<dyn Any + Send>>,
 }
 
-impl BuildFactory {
-  pub fn new(mut opts: BuildFactoryOptions) -> BuildResult<Self> {
+impl BundleFactory {
+  pub fn new(mut opts: BundleFactoryOptions) -> BuildResult<Self> {
     let session = opts.session.unwrap_or_else(rolldown_debug::Session::dummy);
 
     let maybe_guard =
@@ -81,8 +81,8 @@ impl BuildFactory {
     })
   }
 
-  pub fn create_build(&mut self) -> Build {
-    Build {
+  pub fn create_bundle(&mut self) -> Bundle {
+    Bundle {
       fs: self.fs.clone(),
       options: Arc::clone(&self.options),
       resolver: Arc::clone(&self.resolver),
@@ -94,8 +94,8 @@ impl BuildFactory {
     }
   }
 
-  pub fn create_incremental_build(&mut self, cache: ScanStageCache) -> Build {
-    Build {
+  pub fn create_incremental_bundle(&mut self, cache: ScanStageCache) -> Bundle {
+    Bundle {
       fs: self.fs.clone(),
       options: Arc::clone(&self.options),
       resolver: Arc::clone(&self.resolver),

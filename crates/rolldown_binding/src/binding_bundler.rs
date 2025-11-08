@@ -14,13 +14,13 @@ use crate::{
 };
 use napi::{Env, bindgen_prelude::PromiseRaw};
 use napi_derive::napi;
-use rolldown::BuildContext;
+use rolldown::BundleContext;
 use std::sync::Arc;
 
 #[napi]
 pub struct BindingBundler {
   inner: Bundler,
-  last_build_context: Option<BuildContext>,
+  last_bundle_context: Option<BundleContext>,
 }
 
 #[napi]
@@ -28,7 +28,7 @@ impl BindingBundler {
   #[napi(constructor)]
   pub fn new() -> napi::Result<Self> {
     let inner = Bundler::new();
-    Ok(Self { inner, last_build_context: None })
+    Ok(Self { inner, last_bundle_context: None })
   }
 
   #[napi]
@@ -38,23 +38,23 @@ impl BindingBundler {
     options: BindingBundlerOptions<'env>,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let normalized = Self::normalize_binding_options(options)?;
-    let maybe_build = self.inner.create_build(normalized.bundler_options, normalized.plugins);
-    if let Ok(build) = &maybe_build {
-      // Extract build context before consuming the build
-      self.last_build_context = Some(build.context());
+    let maybe_bundle = self.inner.create_bundle(normalized.bundler_options, normalized.plugins);
+    if let Ok(bundle) = &maybe_bundle {
+      // Extract bundle context before consuming the bundle
+      self.last_bundle_context = Some(bundle.context());
     }
 
     let fut = async move {
       // TODO: we probably advance error handling here instead of waiting for an async call
-      let build = maybe_build.map_err(|err| {
+      let bundle = maybe_bundle.map_err(|err| {
         napi::Error::new(
           napi::Status::GenericFailure,
           err.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
         )
       })?;
-      let cwd = build.options().cwd.clone();
-      let options = Arc::clone(build.options());
-      let bundle_output = match build.generate().await {
+      let cwd = bundle.options().cwd.clone();
+      let options = Arc::clone(bundle.options());
+      let bundle_output = match bundle.generate().await {
         Ok(output) => output,
         Err(errs) => {
           let errors: Vec<BindingError> = errs
@@ -83,22 +83,22 @@ impl BindingBundler {
     options: BindingBundlerOptions<'env>,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let normalized = Self::normalize_binding_options(options)?;
-    let maybe_build = self.inner.create_build(normalized.bundler_options, normalized.plugins);
-    if let Ok(build) = &maybe_build {
-      // Extract build context before consuming the build
-      self.last_build_context = Some(build.context());
+    let maybe_bundle = self.inner.create_bundle(normalized.bundler_options, normalized.plugins);
+    if let Ok(bundle) = &maybe_bundle {
+      // Extract bundle context before consuming the bundle
+      self.last_bundle_context = Some(bundle.context());
     }
 
     let fut = async move {
-      let build = maybe_build.map_err(|err| {
+      let bundle = maybe_bundle.map_err(|err| {
         napi::Error::new(
           napi::Status::GenericFailure,
           err.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
         )
       })?;
-      let cwd = build.options().cwd.clone();
-      let options = Arc::clone(build.options());
-      let bundle_output = match build.write().await {
+      let cwd = bundle.options().cwd.clone();
+      let options = Arc::clone(bundle.options());
+      let bundle_output = match bundle.write().await {
         Ok(output) => output,
         Err(errs) => {
           let errors: Vec<BindingError> = errs
@@ -127,21 +127,21 @@ impl BindingBundler {
     options: BindingBundlerOptions<'env>,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let normalized = Self::normalize_binding_options(options)?;
-    let maybe_build = self.inner.create_build(normalized.bundler_options, normalized.plugins);
-    if let Ok(build) = &maybe_build {
-      // Extract build context before consuming the build
-      self.last_build_context = Some(build.context());
+    let maybe_bundle = self.inner.create_bundle(normalized.bundler_options, normalized.plugins);
+    if let Ok(bundle) = &maybe_bundle {
+      // Extract bundle context before consuming the bundle
+      self.last_bundle_context = Some(bundle.context());
     }
 
     let fut = async move {
-      let build = maybe_build.map_err(|err| {
+      let bundle = maybe_bundle.map_err(|err| {
         napi::Error::new(
           napi::Status::GenericFailure,
           err.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
         )
       })?;
-      let cwd = build.options().cwd.clone();
-      match build.scan().await {
+      let cwd = bundle.options().cwd.clone();
+      match bundle.scan().await {
         Ok(()) => {
           // scan() returns no useful output, just return empty
           Ok(napi::Either::B(vec![].into()))
@@ -182,7 +182,7 @@ impl BindingBundler {
   #[napi]
   pub fn get_watch_files(&self) -> Vec<String> {
     self
-      .last_build_context
+      .last_bundle_context
       .as_ref()
       .map(|context| context.watch_files().iter().map(|s| s.to_string()).collect())
       .unwrap_or_default()

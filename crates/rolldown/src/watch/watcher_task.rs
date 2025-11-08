@@ -68,20 +68,20 @@ impl WatcherTask {
 
       // https://github.com/rollup/rollup/blob/ecff5325941ec36599f9967731ed6871186a72ee/src/watch/watch.ts#L206
       bundler
-        .with_incremental_build(async |build| {
-          let middle_output_result = build.scan_modules(scan_mode).await;
-          let watched_files = Arc::clone(build.get_watch_files());
+        .with_incremental_bundle(async |bundle| {
+          let middle_output_result = bundle.scan_modules(scan_mode).await;
+          let watched_files = Arc::clone(bundle.get_watch_files());
           // Watch no matter scan success or failed, so we might have a chance to recover from errors.
-          self.watch_files(&watched_files, &build.options).await?;
+          self.watch_files(&watched_files, &bundle.options).await?;
           let middle_output = middle_output_result?;
 
-          if build.options.watch.skip_write {
+          if bundle.options.watch.skip_write {
             Ok(())
           } else {
-            let output_result = build.bundle_write(middle_output).await;
+            let output_result = bundle.bundle_write(middle_output).await;
             // avoid watching scan stage files twice // TODO: hyf0: A bad code smell here.
             watched_files.clear();
-            self.watch_files(&watched_files, &build.options).await?;
+            self.watch_files(&watched_files, &bundle.options).await?;
             output_result.map(|_| ())
           }
         })

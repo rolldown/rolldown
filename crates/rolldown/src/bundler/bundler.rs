@@ -1,4 +1,4 @@
-use crate::{BuildFactory, BundlerOptions, types::scan_stage_cache::ScanStageCache};
+use crate::{BundleFactory, BundlerOptions, types::scan_stage_cache::ScanStageCache};
 use anyhow::Result;
 use rolldown_error::BuildResult;
 use rolldown_plugin::__inner::SharedPluginable;
@@ -6,16 +6,16 @@ use std::ops::Deref;
 
 // TODO: hyf0 This's for avoiding having too many changes for watcher API. Will remove this later.
 impl Deref for Bundler {
-  type Target = BuildFactory;
+  type Target = BundleFactory;
 
   fn deref(&self) -> &Self::Target {
-    &self.build_factory
+    &self.bundle_factory
   }
 }
 
 pub struct Bundler {
   pub(super) session: rolldown_debug::Session,
-  pub(super) build_factory: BuildFactory,
+  pub(super) bundle_factory: BundleFactory,
   pub(super) cache: ScanStageCache,
   pub(super) closed: bool,
 }
@@ -29,14 +29,14 @@ impl Bundler {
     options: BundlerOptions,
     plugins: Vec<SharedPluginable>,
   ) -> BuildResult<Self> {
-    let build_factory = BuildFactory::new(crate::BuildFactoryOptions {
+    let bundle_factory = BundleFactory::new(crate::BundleFactoryOptions {
       bundler_options: options,
       plugins,
       session: None,
       disable_tracing_setup: true,
     })?;
     Ok(Self {
-      build_factory,
+      bundle_factory,
       closed: false,
       session: rolldown_debug::Session::dummy(),
       cache: ScanStageCache::default(),
@@ -49,14 +49,14 @@ impl Bundler {
     session: Option<rolldown_debug::Session>,
     disable_tracing_setup: bool,
   ) -> BuildResult<Self> {
-    let build_factory = BuildFactory::new(crate::BuildFactoryOptions {
+    let bundle_factory = BundleFactory::new(crate::BundleFactoryOptions {
       bundler_options: options,
       plugins,
       session: session.clone(),
       disable_tracing_setup,
     })?;
     Ok(Self {
-      build_factory,
+      bundle_factory,
       closed: false,
       session: session.unwrap_or_else(rolldown_debug::Session::dummy),
       cache: ScanStageCache::default(),
@@ -88,12 +88,12 @@ impl Bundler {
     }
 
     self.closed = true;
-    self.build_factory.plugin_driver.close_bundle().await?;
+    self.bundle_factory.plugin_driver.close_bundle().await?;
 
     // Clean up resources
-    self.build_factory.plugin_driver.clear();
+    self.bundle_factory.plugin_driver.clear();
     self.cache = ScanStageCache::default();
-    self.build_factory.resolver.clear_cache();
+    self.bundle_factory.resolver.clear_cache();
     Ok(())
   }
 }

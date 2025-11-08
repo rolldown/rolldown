@@ -2,7 +2,7 @@
 
 use crate::{
   binding_bundler_impl::BindingBundlerOptions,
-  bundler::Bundler,
+  classic_bundler::ClassicBundler,
   types::{
     binding_outputs::{BindingOutputs, to_binding_error},
     error::{BindingError, BindingErrors, BindingResult},
@@ -19,7 +19,7 @@ use std::sync::Arc;
 
 #[napi]
 pub struct BindingBundler {
-  inner: Bundler,
+  inner: ClassicBundler,
   last_bundle_context: Option<BundleContext>,
 }
 
@@ -27,7 +27,7 @@ pub struct BindingBundler {
 impl BindingBundler {
   #[napi(constructor)]
   pub fn new() -> napi::Result<Self> {
-    let inner = Bundler::new();
+    let inner = ClassicBundler::new();
     Ok(Self { inner, last_bundle_context: None })
   }
 

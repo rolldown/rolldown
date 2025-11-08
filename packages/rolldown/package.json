@@ -50,6 +50,10 @@
       "dev": "./src/filter-index.ts",
       "default": "./dist/filter-index.mjs"
     },
+    "./getLogFilter": {
+      "dev": "./src/get-log-filter.ts",
+      "default": "./dist/get-log-filter.mjs"
+    },
     "./parallelPlugin": {
       "dev": "./src/parallel-plugin.ts",
       "default": "./dist/parallel-plugin.mjs"
@@ -78,6 +82,7 @@
         "types": "./dist/experimental-runtime-types.d.ts"
       },
       "./filter": "./dist/filter-index.mjs",
+      "./getLogFilter": "./dist/get-log-filter.mjs",
       "./parallelPlugin": "./dist/parallel-plugin.mjs",
       "./parseAst": "./dist/parse-ast-index.mjs",
       "./package.json": "./package.json",

@@ -43,7 +43,7 @@ pub struct NativePluginContextImpl {
   pub(crate) module_infos: SharedModuleInfoDashMap,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
   pub(crate) session: rolldown_debug::Session,
-  pub(crate) build_span: Arc<tracing::Span>,
+  pub(crate) bundle_span: Arc<tracing::Span>,
 }
 
 impl NativePluginContextImpl {
@@ -106,14 +106,14 @@ impl NativePluginContextImpl {
       None
     };
 
-    // Create a resolve span as a child of the build span.
+    // Create a resolve span as a child of the bundle span.
     // When PluginContext.resolve() is called from JavaScript via NAPI, the tracing span
     // context is lost across the async boundary. By making the resolve span a child of
-    // the build span (which is a child of the session span), we ensure that both
-    // CONTEXT_session_id and CONTEXT_build_id are inherited automatically.
-    // The plugin contexts are recreated at the start of each write/generate with the new build span.
+    // the bundle span (which is a child of the session span), we ensure that both
+    // CONTEXT_session_id and CONTEXT_bundle_id are inherited automatically.
+    // The plugin contexts are recreated at the start of each write/generate with the new bundle span.
     let resolve_span = tracing::debug_span!(
-      parent: self.build_span.as_ref(),
+      parent: self.bundle_span.as_ref(),
       "plugin_context_resolve",
       CONTEXT_hook_resolve_id_trigger = "manual"
     );

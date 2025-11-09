@@ -60,8 +60,8 @@ impl PluginDriver {
   ) -> HookResolveIdReturn {
     let skipped_plugins =
       Self::get_resolve_call_skipped_plugins(args.specifier, args.importer, skipped_resolve_calls);
-    // Get build_span from the first context for proper span hierarchy
-    let build_span = self.contexts.first().and_then(|ctx| ctx.build_span());
+    // Get bundle_span from the first context for proper span hierarchy
+    let bundle_span = self.contexts.first().and_then(|ctx| ctx.bundle_span());
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_resolve_id_meta)
     {
@@ -115,9 +115,9 @@ impl PluginDriver {
           Ok(None)
         }
       }
-      .instrument(if let Some(build_span) = build_span {
+      .instrument(if let Some(bundle_span) = bundle_span {
         tracing::trace_span!(
-          parent: build_span.as_ref(),
+          parent: bundle_span.as_ref(),
           "HookResolveIdCall",
           CONTEXT_call_id = rolldown_utils::uuid::uuid_v4()
         )

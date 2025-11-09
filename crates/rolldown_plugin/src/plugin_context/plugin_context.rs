@@ -62,7 +62,7 @@ impl PluginContext {
         module_infos: Arc::clone(&ctx.module_infos),
         tx: Arc::clone(&ctx.tx),
         session: ctx.session.clone(),
-        build_span: Arc::clone(&ctx.build_span),
+        bundle_span: Arc::clone(&ctx.bundle_span),
       })),
     }
   }
@@ -159,10 +159,10 @@ impl PluginContext {
     call_native_only!(self, "debug", ctx => ctx.debug(log));
   }
 
-  pub(crate) fn build_span(&self) -> Option<&Arc<tracing::Span>> {
+  pub(crate) fn bundle_span(&self) -> Option<&Arc<tracing::Span>> {
     match self {
       PluginContext::Napi(_) => None,
-      PluginContext::Native(ctx) => Some(&ctx.build_span),
+      PluginContext::Native(ctx) => Some(&ctx.bundle_span),
     }
   }
 }

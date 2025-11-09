@@ -29,7 +29,7 @@ impl PluginDriverFactory {
     file_emitter: &SharedFileEmitter,
     options: &SharedNormalizedBundlerOptions,
     session: &rolldown_debug::Session,
-    initial_build_span: &Arc<tracing::Span>,
+    initial_bundle_span: &Arc<tracing::Span>,
     module_infos: SharedModuleInfoDashMap,
   ) -> Arc<crate::plugin_driver::PluginDriver> {
     let watch_files = Arc::new(FxDashSet::default());
@@ -38,7 +38,7 @@ impl PluginDriverFactory {
     let mut plugin_usage_vec = IndexVec::new();
 
     // Clone the Arc to share across contexts
-    let build_span_arc = Arc::clone(initial_build_span);
+    let bundle_span_arc = Arc::clone(initial_bundle_span);
 
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(self.plugins.len());
@@ -60,7 +60,7 @@ impl PluginDriverFactory {
           watch_files: Arc::clone(&watch_files),
           tx: Arc::clone(&tx),
           session: session.clone(),
-          build_span: Arc::clone(&build_span_arc),
+          bundle_span: Arc::clone(&bundle_span_arc),
         })));
       });
 

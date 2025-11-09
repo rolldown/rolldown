@@ -70,9 +70,9 @@ impl Bundler {
 
     self.closed = true;
     // TODO: This infers that `close_bundle` will not be called if there is no bundle happened. Is this expected?
-    if let Some(last_bundle_context) = &self.last_bundle_context {
-      last_bundle_context.plugin_driver.close_bundle().await?;
-      last_bundle_context.plugin_driver.clear();
+    if let Some(last_bundle_handle) = &self.last_bundle_handle {
+      last_bundle_handle.plugin_driver.close_bundle().await?;
+      last_bundle_handle.plugin_driver.clear();
     }
 
     // Clean up resources

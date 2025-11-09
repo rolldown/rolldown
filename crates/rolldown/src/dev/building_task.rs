@@ -64,7 +64,7 @@ impl BundlingTask {
       let bundler = self.bundler.lock().await;
       for changed_file in self.input.changed_files() {
         if let Some(plugin_driver) =
-          bundler.last_bundle_context.as_ref().map(|ctx| &ctx.plugin_driver)
+          bundler.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver)
         {
           plugin_driver
             // FIXME: use proper WatcherChangeKind for created/removed files.

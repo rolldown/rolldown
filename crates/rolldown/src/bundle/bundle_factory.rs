@@ -9,7 +9,7 @@ use rolldown_plugin::{__inner::SharedPluginable, PluginDriverFactory};
 use rustc_hash::FxHashMap;
 
 use crate::{
-  Bundle, BundleContext,
+  Bundle, BundleHandle,
   types::scan_stage_cache::ScanStageCache,
   utils::{
     apply_inner_plugins::apply_inner_plugins,
@@ -38,7 +38,7 @@ pub struct BundleFactory {
   pub warnings: Vec<BuildDiagnostic>,
   pub session: rolldown_debug::Session,
   pub(crate) _log_guard: Option<Box<dyn Any + Send>>,
-  pub last_bundle_context: Option<BundleContext>,
+  pub last_bundle_handle: Option<BundleHandle>,
 
   // Used to share module info across multiple plugin drivers for incremental builds
   module_infos_for_incremental_build: SharedModuleInfoDashMap,
@@ -75,7 +75,7 @@ impl BundleFactory {
       _log_guard: maybe_guard,
       session,
       bundle_id_seed: 0,
-      last_bundle_context: None,
+      last_bundle_handle: None,
       module_infos_for_incremental_build: Arc::default(),
     })
   }
@@ -113,7 +113,7 @@ impl BundleFactory {
       session: self.session.clone(),
       cache: ScanStageCache::default(),
     };
-    self.last_bundle_context = Some(bundle.context());
+    self.last_bundle_handle = Some(bundle.context());
     bundle
   }
 
@@ -141,7 +141,7 @@ impl BundleFactory {
       session: self.session.clone(),
       cache,
     };
-    self.last_bundle_context = Some(bundle.context());
+    self.last_bundle_handle = Some(bundle.context());
     bundle
   }
 

@@ -27,8 +27,8 @@ pub(crate) type SharedOptions = SharedNormalizedBundlerOptions;
 pub use crate::{
   bundle::{
     bundle::Bundle,
-    bundle_context::BundleContext,
     bundle_factory::{BundleFactory, BundleFactoryOptions},
+    bundle_handle::BundleHandle,
   },
   bundler::Bundler,
   bundler_builder::BundlerBuilder,

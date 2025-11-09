@@ -57,8 +57,8 @@ impl WatcherTask {
     self.emitter.emit(WatcherEvent::Event(BundleEvent::BundleStart))?;
 
     bundler.reset_closed_for_watch_mode();
-    if let Some(last_bundle_context) = &bundler.last_bundle_context {
-      last_bundle_context.plugin_driver.clear();
+    if let Some(last_bundle_handle) = &bundler.last_bundle_handle {
+      last_bundle_handle.plugin_driver.clear();
     }
 
     let result = {
@@ -169,8 +169,8 @@ impl WatcherTask {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn close(&self) -> anyhow::Result<()> {
     let bundler = self.bundler.lock().await;
-    if let Some(last_bundle_context) = &bundler.last_bundle_context {
-      last_bundle_context.plugin_driver.close_watcher().await?;
+    if let Some(last_bundle_handle) = &bundler.last_bundle_handle {
+      last_bundle_handle.plugin_driver.close_watcher().await?;
     }
     Ok(())
   }
@@ -203,8 +203,7 @@ impl WatcherTask {
   #[tracing::instrument(level = "debug", skip(self))]
   pub async fn on_change(&self, path: &str, kind: WatcherChangeKind) {
     let bundler = self.bundler.lock().await;
-    if let Some(plugin_driver) = bundler.last_bundle_context.as_ref().map(|ctx| &ctx.plugin_driver)
-    {
+    if let Some(plugin_driver) = bundler.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver) {
       let _ = plugin_driver.watch_change(path, kind).await.map_err(|e| {
         self.emitter.emit(WatcherEvent::Event(BundleEvent::Error(BundleErrorEventData {
           error: OutputsDiagnostics {

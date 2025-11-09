@@ -14,13 +14,13 @@ use crate::{
 };
 use napi::{Env, bindgen_prelude::PromiseRaw};
 use napi_derive::napi;
-use rolldown::BundleContext;
+use rolldown::BundleHandle;
 use std::sync::Arc;
 
 #[napi]
 pub struct BindingBundler {
   inner: ClassicBundler,
-  last_bundle_context: Option<BundleContext>,
+  last_bundle_handle: Option<BundleHandle>,
 }
 
 #[napi]
@@ -28,7 +28,7 @@ impl BindingBundler {
   #[napi(constructor)]
   pub fn new() -> napi::Result<Self> {
     let inner = ClassicBundler::new();
-    Ok(Self { inner, last_bundle_context: None })
+    Ok(Self { inner, last_bundle_handle: None })
   }
 
   #[napi]
@@ -40,8 +40,8 @@ impl BindingBundler {
     let normalized = Self::normalize_binding_options(options)?;
     let maybe_bundle = self.inner.create_bundle(normalized.bundler_options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
-      // Extract bundle context before consuming the bundle
-      self.last_bundle_context = Some(bundle.context());
+      // Extract bundle handle before consuming the bundle
+      self.last_bundle_handle = Some(bundle.context());
     }
 
     let fut = async move {
@@ -85,8 +85,8 @@ impl BindingBundler {
     let normalized = Self::normalize_binding_options(options)?;
     let maybe_bundle = self.inner.create_bundle(normalized.bundler_options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
-      // Extract bundle context before consuming the bundle
-      self.last_bundle_context = Some(bundle.context());
+      // Extract bundle handle before consuming the bundle
+      self.last_bundle_handle = Some(bundle.context());
     }
 
     let fut = async move {
@@ -129,8 +129,8 @@ impl BindingBundler {
     let normalized = Self::normalize_binding_options(options)?;
     let maybe_bundle = self.inner.create_bundle(normalized.bundler_options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
-      // Extract bundle context before consuming the bundle
-      self.last_bundle_context = Some(bundle.context());
+      // Extract bundle handle before consuming the bundle
+      self.last_bundle_handle = Some(bundle.context());
     }
 
     let fut = async move {
@@ -182,9 +182,9 @@ impl BindingBundler {
   #[napi]
   pub fn get_watch_files(&self) -> Vec<String> {
     self
-      .last_bundle_context
+      .last_bundle_handle
       .as_ref()
-      .map(|context| context.watch_files().iter().map(|s| s.to_string()).collect())
+      .map(|handle| handle.watch_files().iter().map(|s| s.to_string()).collect())
       .unwrap_or_default()
   }
 }

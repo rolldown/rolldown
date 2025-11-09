@@ -59,7 +59,7 @@
 /// - Both `ClassicBundler` and core `Bundler` benefit from `Bundle` improvements
 /// - The codebase maintains clear separation of concerns, preventing the wrong mental model that caused bugs previously
 /// - Development is more maintainable as changes are made at the appropriate abstraction level
-use rolldown::{Bundle, BundleContext, BundleFactory, BundleFactoryOptions, BundlerOptions};
+use rolldown::{Bundle, BundleFactory, BundleFactoryOptions, BundleHandle, BundlerOptions};
 use rolldown_error::BuildResult;
 use rolldown_plugin::__inner::SharedPluginable;
 use std::sync::Arc;
@@ -69,7 +69,7 @@ pub struct ClassicBundler {
   debug_tracer: Option<rolldown_debug::DebugTracer>,
   session: rolldown_debug::Session,
   closed: bool,
-  last_bundle_context: Option<BundleContext>,
+  last_bundle_handle: Option<BundleHandle>,
 }
 
 impl ClassicBundler {
@@ -80,7 +80,7 @@ impl ClassicBundler {
       debug_tracer: None,
       session: rolldown_debug::Session::dummy(),
       closed: false,
-      last_bundle_context: None,
+      last_bundle_handle: None,
     }
   }
 
@@ -103,7 +103,7 @@ impl ClassicBundler {
 
     let bundle = bundle_factory.create_bundle();
 
-    self.last_bundle_context = Some(bundle.context());
+    self.last_bundle_handle = Some(bundle.context());
 
     Ok(bundle)
   }
@@ -111,7 +111,7 @@ impl ClassicBundler {
   #[must_use = "Future must be awaited to do the actual cleanup work"]
   pub fn close(&mut self) -> impl Future<Output = anyhow::Result<()>> + Send + 'static {
     let is_closed = self.closed;
-    let last_bundle_context = self.last_bundle_context.clone();
+    let last_bundle_handle = self.last_bundle_handle.clone();
     if !is_closed {
       self.closed = true;
     }
@@ -119,8 +119,8 @@ impl ClassicBundler {
     // - We need the future to be `Send + 'static` for napi-rs, so we can't use `async fn` directly here.
     // - Read `BindingBundler#close` in `crates/rolldown_binding/src/binding_bundler.rs` for more details.
     async move {
-      if let Some(context) = last_bundle_context {
-        let plugin_driver = context.plugin_driver();
+      if let Some(handle) = last_bundle_handle {
+        let plugin_driver = handle.plugin_driver();
         plugin_driver.close_bundle().await?;
       }
       Ok(())

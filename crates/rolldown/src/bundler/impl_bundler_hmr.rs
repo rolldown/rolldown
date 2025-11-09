@@ -12,8 +12,7 @@ impl Bundler {
     clients: &[ClientHmrInput<'_>],
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
-    let Some(plugin_driver) = self.last_bundle_context.as_ref().map(|ctx| &ctx.plugin_driver)
-    else {
+    let Some(plugin_driver) = self.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver) else {
       return Err(anyhow::format_err!(
         "HMR requires to run at least one bundle before invalidation"
       ))?;
@@ -37,8 +36,7 @@ impl Bundler {
     executed_modules: &FxHashSet<String>,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<HmrUpdate> {
-    let Some(plugin_driver) = self.last_bundle_context.as_ref().map(|ctx| &ctx.plugin_driver)
-    else {
+    let Some(plugin_driver) = self.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver) else {
       return Err(anyhow::format_err!(
         "HMR requires to run at least one bundle before invalidation"
       ))?;

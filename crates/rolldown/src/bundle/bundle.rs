@@ -1,4 +1,4 @@
-use crate::bundle::bundle_context::BundleContext;
+use crate::bundle::bundle_handle::BundleHandle;
 
 use super::super::{
   SharedOptions, SharedResolver,
@@ -130,8 +130,8 @@ impl Bundle {
     &self.plugin_driver.watch_files
   }
 
-  pub fn context(&self) -> BundleContext {
-    BundleContext {
+  pub fn context(&self) -> BundleHandle {
+    BundleHandle {
       options: Arc::clone(&self.options),
       plugin_driver: Arc::clone(&self.plugin_driver),
     }

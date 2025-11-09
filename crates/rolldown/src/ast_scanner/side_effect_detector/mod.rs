@@ -1326,6 +1326,18 @@ mod test {
 
     // Symbol() with unknown variable has side effects (could be an object)
     assert!(get_statements_side_effect("let unknownVariable; Symbol(unknownVariable)"));
+
+    // Test fallback logic for global constructors with primitive arguments
+    // String, Number, Boolean, Object constructors are side-effect-free with primitives
+    assert!(!get_statements_side_effect("new String()"));
+
+    assert!(!get_statements_side_effect("new Number()"));
+
+    assert!(!get_statements_side_effect("new Boolean()"));
+
+    assert!(!get_statements_side_effect("new Object()"));
+
+    assert!(get_statements_side_effect("new BigInt(123)"));
   }
 
   #[test]

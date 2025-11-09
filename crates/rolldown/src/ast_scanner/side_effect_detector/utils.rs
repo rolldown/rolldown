@@ -444,10 +444,86 @@ pub fn maybe_side_effect_free_global_constructor(
         }
         _ => {}
       },
-      _ => {}
+      _ => {
+        return check_global_free_constructor_args(
+          ident.name.as_str(),
+          &expr.arguments,
+          InvocationKind::New,
+          scope,
+        );
+      }
     }
   }
   false
+}
+
+/// Represents the kind of invocation expression
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InvocationKind {
+  /// CallExpression: `foo()`
+  Call,
+  /// NewExpression: `new Foo()`
+  New,
+}
+
+/// Checks if the arguments for a global free constructor/function are safe (side-effect free).
+/// This function validates that all arguments are primitive types appropriate for the given symbol.
+///
+/// # Arguments
+/// * `symbol_name` - The name of the global constructor/function (e.g., "Symbol", "BigInt", "String")
+/// * `arguments` - The arguments being passed to the constructor/function
+/// * `kind` - Whether this is a CallExpression or NewExpression
+/// * `scope` - The AST scopes for type checking
+///
+/// # Note
+/// The caller is responsible for ensuring that the symbol is global (unresolved) before calling this function.
+pub fn check_global_free_constructor_args<'a>(
+  symbol_name: &str,
+  arguments: &oxc::allocator::Vec<'a, ast::Argument<'a>>,
+  kind: InvocationKind,
+  scope: &AstScopes,
+) -> bool {
+  // Note: `_kind` is reserved for future use to differentiate between Call and New expression logic
+  match symbol_name {
+    // Symbol() is side-effect-free only when arguments are primitive types
+    // Calling toString() on an object can have side effects
+    "Symbol" | "String" | "Number" | "Boolean" | "BigInt" | "Object" => {
+      // Check if all arguments are safe (primitives or no arguments)
+      let is_side_effect_free = arguments.iter().all(|arg| {
+        if matches!(arg, ast::Argument::SpreadElement(_)) {
+          return false;
+        }
+        let arg_expr = arg.to_expression();
+        let prim_type = known_primitive_type(scope, arg_expr);
+        if symbol_name == "BigInt" {
+          matches!(
+            prim_type,
+            PrimitiveType::Boolean
+              | PrimitiveType::Number
+              | PrimitiveType::String
+              | PrimitiveType::BigInt
+          )
+        } else {
+          matches!(
+            prim_type,
+            PrimitiveType::Null
+              | PrimitiveType::Undefined
+              | PrimitiveType::Boolean
+              | PrimitiveType::Number
+              | PrimitiveType::String
+              | PrimitiveType::BigInt
+          )
+        }
+      });
+
+      if matches!(kind, InvocationKind::New) {
+        matches!(symbol_name, "Object" | "Number" | "String" | "Boolean") && is_side_effect_free
+      } else {
+        is_side_effect_free
+      }
+    }
+    _ => false,
+  }
 }
 
 pub fn maybe_side_effect_free_global_function_call(
@@ -459,36 +535,12 @@ pub fn maybe_side_effect_free_global_function_call(
   };
 
   if scope.is_unresolved(ident.reference_id()) {
-    match ident.name.as_str() {
-      // Symbol() is side-effect-free only when arguments are primitive types
-      // Calling toString() on an object can have side effects
-      "Symbol" | "String" | "Number" | "Boolean" | "BigInt" | "Object" => {
-        // Check if all arguments are safe (primitives or no arguments)
-        expr.arguments.iter().all(|arg| {
-          if matches!(arg, ast::Argument::SpreadElement(_)) {
-            return false;
-          }
-          let arg_expr = arg.to_expression();
-          let prim_type = known_primitive_type(scope, arg_expr);
-          if ident.name == "BigInt" {
-            matches!(prim_type, |PrimitiveType::Boolean| PrimitiveType::Number
-              | PrimitiveType::String
-              | PrimitiveType::BigInt)
-          } else {
-            matches!(
-              prim_type,
-              PrimitiveType::Null
-                | PrimitiveType::Undefined
-                | PrimitiveType::Boolean
-                | PrimitiveType::Number
-                | PrimitiveType::String
-                | PrimitiveType::BigInt
-            )
-          }
-        })
-      }
-      _ => false,
-    }
+    check_global_free_constructor_args(
+      ident.name.as_str(),
+      &expr.arguments,
+      InvocationKind::Call,
+      scope,
+    )
   } else {
     false
   }

@@ -1,7 +1,8 @@
 use std::{any::Any, sync::Arc};
 
 use rolldown_common::{
-  BundlerOptions, FileEmitter, NormalizedBundlerOptions, SharedFileEmitter, SharedModuleInfoDashMap,
+  BundleMode, BundlerOptions, FileEmitter, NormalizedBundlerOptions, SharedFileEmitter,
+  SharedModuleInfoDashMap,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, EventKindSwitcher};
 use rolldown_fs::OsFileSystem;
@@ -90,38 +91,30 @@ impl BundleFactory {
     ))
   }
 
-  pub fn create_bundle(&mut self) -> Bundle {
+  pub fn create_bundle(
+    &mut self,
+    bundle_mode: BundleMode,
+    cache: Option<ScanStageCache>,
+  ) -> BuildResult<Bundle> {
     let bundle_span = self.generate_unique_bundle_span();
 
-    // Reset module infos for normal bundle
-    self.module_infos_for_incremental_build = Arc::default();
-
-    let plugin_driver = self.plugin_driver_factory.create_plugin_driver(
-      &self.file_emitter,
-      &self.options,
-      &self.session,
-      &bundle_span,
-      Arc::clone(&self.module_infos_for_incremental_build),
-    );
-    let bundle = Bundle {
-      fs: self.fs.clone(),
-      options: Arc::clone(&self.options),
-      resolver: Arc::clone(&self.resolver),
-      file_emitter: Arc::clone(&self.file_emitter),
-      plugin_driver,
-      warnings: std::mem::take(&mut self.warnings),
-      session: self.session.clone(),
-      cache: ScanStageCache::default(),
+    let cache = if bundle_mode.is_incremental() {
+      if let Some(cache) = cache {
+        cache
+      } else {
+        Err(anyhow::anyhow!(
+          "Incremental bundle requires a valid ScanStageCache, but none was provided."
+        ))?
+      }
+    } else {
+      // Use a default cache as placeholder for full build
+      ScanStageCache::default()
     };
-    self.last_bundle_handle = Some(bundle.context());
-    bundle
-  }
 
-  pub fn create_incremental_bundle(&mut self, cache: ScanStageCache) -> Bundle {
-    let bundle_span = self.generate_unique_bundle_span();
-
-    // Reuse module infos for incremental bundle
-    // TODO: hyf0 or should we reset it?
+    if bundle_mode.is_full_build() {
+      // Reset module infos for full bundle and store it for potential incremental builds
+      self.module_infos_for_incremental_build = Arc::default();
+    }
     let module_infos = Arc::clone(&self.module_infos_for_incremental_build);
 
     let plugin_driver = self.plugin_driver_factory.create_plugin_driver(
@@ -142,7 +135,7 @@ impl BundleFactory {
       cache,
     };
     self.last_bundle_handle = Some(bundle.context());
-    bundle
+    Ok(bundle)
   }
 
   fn check_prefer_builtin_feature(

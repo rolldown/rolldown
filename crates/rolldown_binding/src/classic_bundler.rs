@@ -60,6 +60,7 @@
 /// - The codebase maintains clear separation of concerns, preventing the wrong mental model that caused bugs previously
 /// - Development is more maintainable as changes are made at the appropriate abstraction level
 use rolldown::{Bundle, BundleFactory, BundleFactoryOptions, BundleHandle, BundlerOptions};
+use rolldown_common::BundleMode;
 use rolldown_error::BuildResult;
 use rolldown_plugin::__inner::SharedPluginable;
 use std::sync::Arc;
@@ -101,7 +102,7 @@ impl ClassicBundler {
       disable_tracing_setup: true,
     })?;
 
-    let bundle = bundle_factory.create_bundle();
+    let bundle = bundle_factory.create_bundle(BundleMode::FullBuild, None)?;
 
     self.last_bundle_handle = Some(bundle.context());
 

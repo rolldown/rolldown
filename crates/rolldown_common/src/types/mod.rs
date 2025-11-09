@@ -2,6 +2,7 @@ pub mod asset;
 pub mod asset_meta;
 pub mod ast_scope_idx;
 pub mod ast_scopes;
+pub mod bundle_mode;
 pub mod chunk_idx;
 pub mod chunk_kind;
 pub mod concatenate_wrapped_module;

@@ -1,5 +1,6 @@
 use crate::types::bundle_output::BundleOutput;
 use anyhow::Result;
+use rolldown_common::{BundleMode, ScanMode};
 use rolldown_error::BuildResult;
 
 use super::bundler::Bundler;
@@ -8,24 +9,33 @@ impl Bundler {
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
     self.create_error_if_closed()?;
-    let bundle = self.bundle_factory.create_bundle();
-    bundle.write().await
+    // TODO: hyf0: Bad code smell: this overlaps with `incremental_write/xxx` APIs.
+    if self.options.experimental.is_incremental_build_enabled() {
+      self.incremental_write(ScanMode::Full).await
+    } else {
+      let bundle = self.bundle_factory.create_bundle(BundleMode::FullBuild, None)?;
+      bundle.write().await
+    }
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
     self.create_error_if_closed()?;
-    let bundle = self.bundle_factory.create_bundle();
-    bundle.generate().await
+    if self.options.experimental.is_incremental_build_enabled() {
+      self.incremental_generate(ScanMode::Full).await
+    } else {
+      let bundle = self.bundle_factory.create_bundle(BundleMode::FullBuild, None)?;
+      bundle.generate().await
+    }
   }
 
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
   #[cfg(feature = "experimental")]
   pub async fn scan(&mut self) -> BuildResult<()> {
     self.create_error_if_closed()?;
-    let bundle = self.bundle_factory.create_bundle();
-    bundle.scan().await?;
 
+    let bundle = self.bundle_factory.create_bundle(BundleMode::FullBuild, None)?;
+    bundle.scan().await?;
     Ok(())
   }
 

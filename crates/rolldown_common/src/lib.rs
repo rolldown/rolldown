@@ -136,6 +136,7 @@ pub use crate::{
   types::asset_meta::{InstantiationKind, SourcemapAssetMeta},
   types::ast_scope_idx::AstScopeIdx,
   types::ast_scopes::AstScopes,
+  types::bundle_mode::BundleMode,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
   types::concatenate_wrapped_module::{

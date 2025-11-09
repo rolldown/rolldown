@@ -50,7 +50,6 @@ impl WatcherTask {
       return Ok(());
     }
     let mut bundler = self.bundler.lock().await;
-    let is_incremental = bundler.options.experimental.is_incremental_build_enabled();
 
     let start_time = Instant::now();
 
@@ -62,15 +61,21 @@ impl WatcherTask {
     }
 
     let result = {
+      let is_incremental = bundler.options.experimental.is_incremental_build_enabled();
+
       let scan_mode = if is_incremental && !changed_files.is_empty() {
         rolldown_common::ScanMode::Partial(changed_files.to_vec())
       } else {
         rolldown_common::ScanMode::Full
       };
+      let bundle_mode = match scan_mode {
+        rolldown_common::ScanMode::Full => rolldown_common::BundleMode::IncrementalFullBuild,
+        rolldown_common::ScanMode::Partial(_) => rolldown_common::BundleMode::IncrementalBuild,
+      };
 
       // https://github.com/rollup/rollup/blob/ecff5325941ec36599f9967731ed6871186a72ee/src/watch/watch.ts#L206
       bundler
-        .with_incremental_bundle(async |bundle| {
+        .with_cached_bundle(bundle_mode, async |bundle| {
           let middle_output_result = bundle.scan_modules(scan_mode).await;
           let watched_files = Arc::clone(bundle.get_watch_files());
           // Watch no matter scan success or failed, so we might have a chance to recover from errors.

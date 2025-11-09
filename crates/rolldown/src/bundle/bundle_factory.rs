@@ -1,13 +1,15 @@
 use std::{any::Any, sync::Arc};
 
-use rolldown_common::{BundlerOptions, FileEmitter, NormalizedBundlerOptions, SharedFileEmitter};
+use rolldown_common::{
+  BundlerOptions, FileEmitter, NormalizedBundlerOptions, SharedFileEmitter, SharedModuleInfoDashMap,
+};
 use rolldown_error::{BuildDiagnostic, BuildResult, EventKindSwitcher};
 use rolldown_fs::OsFileSystem;
-use rolldown_plugin::{__inner::SharedPluginable, PluginDriver, SharedPluginDriver};
+use rolldown_plugin::{__inner::SharedPluginable, PluginDriverFactory};
 use rustc_hash::FxHashMap;
 
 use crate::{
-  Bundle,
+  Bundle, BundleContext,
   types::scan_stage_cache::ScanStageCache,
   utils::{
     apply_inner_plugins::apply_inner_plugins,
@@ -26,16 +28,23 @@ pub struct BundleFactoryOptions {
 }
 
 pub struct BundleFactory {
+  pub plugin_driver_factory: PluginDriverFactory,
   pub fs: OsFileSystem,
   pub options: SharedOptions,
   pub resolver: SharedResolver,
   pub file_emitter: SharedFileEmitter,
-  pub plugin_driver: SharedPluginDriver,
   /// Warnings collected during bundle factory creation.
   /// These warnings are transferred to the first created `Bundle` via `create_bundle()` or `create_incremental_bundle()`.
   pub warnings: Vec<BuildDiagnostic>,
   pub session: rolldown_debug::Session,
   pub(crate) _log_guard: Option<Box<dyn Any + Send>>,
+  pub last_bundle_context: Option<BundleContext>,
+
+  // Used to share module info across multiple plugin drivers for incremental builds
+  module_infos_for_incremental_build: SharedModuleInfoDashMap,
+
+  // Used to generate unique id for each bundle process
+  bundle_id_seed: u32,
 }
 
 impl BundleFactory {
@@ -54,23 +63,10 @@ impl BundleFactory {
 
     let file_emitter = Arc::new(FileEmitter::new(Arc::clone(&options)));
 
-    // FIXME: shouldn't crate build span here, but for satisfying the previous code
-    let build_id = rolldown_debug::generate_build_id(0);
-    let build_span = Arc::new(tracing::info_span!(
-      parent: &session.span,
-      "build",
-      CONTEXT_build_id = build_id.as_ref()
-    ));
+    let plugin_driver_factory = PluginDriverFactory::new(opts.plugins, &resolver);
 
     Ok(Self {
-      plugin_driver: PluginDriver::new_shared(
-        opts.plugins,
-        &resolver,
-        &file_emitter,
-        &options,
-        &session,
-        &build_span,
-      ),
+      plugin_driver_factory,
       file_emitter,
       resolver,
       options,
@@ -78,33 +74,75 @@ impl BundleFactory {
       warnings,
       _log_guard: maybe_guard,
       session,
+      bundle_id_seed: 0,
+      last_bundle_context: None,
+      module_infos_for_incremental_build: Arc::default(),
     })
   }
 
+  fn generate_unique_bundle_span(&mut self) -> Arc<tracing::Span> {
+    let bundle_id = rolldown_debug::generate_build_id(self.bundle_id_seed);
+    self.bundle_id_seed += 1;
+    Arc::new(tracing::info_span!(
+      parent: &self.session.span,
+      "build",
+      CONTEXT_build_id = bundle_id.as_ref()
+    ))
+  }
+
   pub fn create_bundle(&mut self) -> Bundle {
-    Bundle {
+    let bundle_span = self.generate_unique_bundle_span();
+
+    // Reset module infos for normal bundle
+    self.module_infos_for_incremental_build = Arc::default();
+
+    let plugin_driver = self.plugin_driver_factory.create_plugin_driver(
+      &self.file_emitter,
+      &self.options,
+      &self.session,
+      &bundle_span,
+      Arc::clone(&self.module_infos_for_incremental_build),
+    );
+    let bundle = Bundle {
       fs: self.fs.clone(),
       options: Arc::clone(&self.options),
       resolver: Arc::clone(&self.resolver),
       file_emitter: Arc::clone(&self.file_emitter),
-      plugin_driver: Arc::clone(&self.plugin_driver),
+      plugin_driver,
       warnings: std::mem::take(&mut self.warnings),
       session: self.session.clone(),
       cache: ScanStageCache::default(),
-    }
+    };
+    self.last_bundle_context = Some(bundle.context());
+    bundle
   }
 
   pub fn create_incremental_bundle(&mut self, cache: ScanStageCache) -> Bundle {
-    Bundle {
+    let bundle_span = self.generate_unique_bundle_span();
+
+    // Reuse module infos for incremental bundle
+    // TODO: hyf0 or should we reset it?
+    let module_infos = Arc::clone(&self.module_infos_for_incremental_build);
+
+    let plugin_driver = self.plugin_driver_factory.create_plugin_driver(
+      &self.file_emitter,
+      &self.options,
+      &self.session,
+      &bundle_span,
+      module_infos,
+    );
+    let bundle = Bundle {
       fs: self.fs.clone(),
       options: Arc::clone(&self.options),
       resolver: Arc::clone(&self.resolver),
       file_emitter: Arc::clone(&self.file_emitter),
-      plugin_driver: Arc::clone(&self.plugin_driver),
+      plugin_driver,
       warnings: std::mem::take(&mut self.warnings),
       session: self.session.clone(),
       cache,
-    }
+    };
+    self.last_bundle_context = Some(bundle.context());
+    bundle
   }
 
   fn check_prefer_builtin_feature(

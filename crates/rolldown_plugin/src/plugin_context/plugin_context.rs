@@ -43,7 +43,7 @@ impl PluginContext {
   }
 
   #[must_use]
-  pub fn new_shared_with_skipped_resolve_calls(
+  pub fn fork_with_skipped_resolve_calls(
     &self,
     skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
   ) -> Self {
@@ -59,7 +59,7 @@ impl PluginContext {
         file_emitter: Arc::clone(&ctx.file_emitter),
         options: Arc::clone(&ctx.options),
         watch_files: Arc::clone(&ctx.watch_files),
-        modules: Arc::clone(&ctx.modules),
+        module_infos: Arc::clone(&ctx.module_infos),
         tx: Arc::clone(&ctx.tx),
         session: ctx.session.clone(),
         build_span: Arc::clone(&ctx.build_span),

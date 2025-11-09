@@ -1,22 +1,19 @@
 mod build_hooks;
 mod hook_orders;
 mod output_hooks;
+mod plugin_driver_factory;
 mod watch_hooks;
 
-use std::{
-  ops::Deref,
-  sync::{Arc, Weak},
-  vec,
-};
+pub use plugin_driver_factory::PluginDriverFactory;
+
+use std::{ops::Deref, sync::Arc};
 
 use arcstr::ArcStr;
-use dashmap::{DashMap, DashSet};
-use oxc_index::IndexVec;
+use dashmap::DashMap;
 use rolldown_common::{
   ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, PluginIdx, SharedFileEmitter,
   SharedModuleInfoDashMap, SharedNormalizedBundlerOptions,
 };
-use rolldown_resolver::Resolver;
 use rolldown_utils::dashmap::FxDashSet;
 use sugar_path::SugarPath;
 use tokio::sync::{Mutex, broadcast};
@@ -24,7 +21,6 @@ use tokio::sync::{Mutex, broadcast};
 use crate::{
   __inner::SharedPluginable,
   PluginContext,
-  plugin_context::{NativePluginContextImpl, PluginContextMeta},
   plugin_driver::hook_orders::PluginHookOrders,
   type_aliases::{IndexPluginContext, IndexPluginable},
 };
@@ -38,7 +34,7 @@ pub struct PluginDriver {
   options: SharedNormalizedBundlerOptions,
   pub file_emitter: SharedFileEmitter,
   pub watch_files: Arc<FxDashSet<ArcStr>>,
-  pub modules: SharedModuleInfoDashMap,
+  pub module_infos: SharedModuleInfoDashMap,
   /// Transform dependencies per module, tracked during transform hooks
   pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
   context_load_completion_manager: ContextLoadCompletionManager,
@@ -46,72 +42,16 @@ pub struct PluginDriver {
 }
 
 impl PluginDriver {
-  pub fn new_shared(
-    plugins: Vec<SharedPluginable>,
-    resolver: &Arc<Resolver>,
-    file_emitter: &SharedFileEmitter,
-    options: &SharedNormalizedBundlerOptions,
-    session: &rolldown_debug::Session,
-    initial_build_span: &Arc<tracing::Span>,
-  ) -> SharedPluginDriver {
-    let watch_files = Arc::new(DashSet::default());
-    let modules = Arc::new(DashMap::default());
-    let meta = Arc::new(PluginContextMeta::default());
-    let tx = Arc::new(Mutex::new(None));
-    let mut plugin_usage_vec = IndexVec::new();
-
-    // Clone the Arc to share across contexts
-    let build_span_arc = Arc::clone(initial_build_span);
-
-    Arc::new_cyclic(|plugin_driver| {
-      let mut index_plugins = IndexPluginable::with_capacity(plugins.len());
-      let mut index_contexts = IndexPluginContext::with_capacity(plugins.len());
-
-      plugins.into_iter().for_each(|plugin| {
-        let plugin_idx = index_plugins.push(Arc::clone(&plugin));
-        plugin_usage_vec.push(plugin.call_hook_usage());
-        index_contexts.push(PluginContext::Native(Arc::new(NativePluginContextImpl {
-          plugin_name: plugin.call_name(),
-          skipped_resolve_calls: vec![],
-          plugin_idx,
-          plugin_driver: Weak::clone(plugin_driver),
-          meta: Arc::clone(&meta),
-          resolver: Arc::clone(resolver),
-          file_emitter: Arc::clone(file_emitter),
-          modules: Arc::clone(&modules),
-          options: Arc::clone(options),
-          watch_files: Arc::clone(&watch_files),
-          tx: Arc::clone(&tx),
-          session: session.clone(),
-          build_span: Arc::clone(&build_span_arc),
-        })));
-      });
-
-      Self {
-        hook_orders: PluginHookOrders::new(&index_plugins, &plugin_usage_vec),
-        plugins: index_plugins,
-        contexts: index_contexts,
-        file_emitter: Arc::clone(file_emitter),
-        watch_files,
-        modules,
-        transform_dependencies: Arc::new(DashMap::default()),
-        context_load_completion_manager: ContextLoadCompletionManager::default(),
-        tx,
-        options: Arc::clone(options),
-      }
-    })
-  }
-
   pub fn clear(&self) {
     self.watch_files.clear();
-    self.modules.clear();
+    self.module_infos.clear();
     self.transform_dependencies.clear();
     self.context_load_completion_manager.clear();
     self.file_emitter.clear();
   }
 
   pub fn set_module_info(&self, module_id: &ModuleId, module_info: Arc<ModuleInfo>) {
-    self.modules.insert(module_id.resource_id().into(), module_info);
+    self.module_infos.insert(module_id.resource_id().into(), module_info);
   }
 
   pub async fn set_context_load_modules_tx(

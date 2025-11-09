@@ -8,11 +8,12 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleInfo, ModuleLoaderMsg, PackageJson, PluginIdx,
-  ResolvedId, SharedFileEmitter, SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
+  LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleLoaderMsg, PackageJson, PluginIdx, ResolvedId,
+  SharedFileEmitter, SharedModuleInfoDashMap, SharedNormalizedBundlerOptions,
+  side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
-use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
+use rolldown_utils::dashmap::FxDashSet;
 use tokio::sync::Mutex;
 use tracing::Instrument;
 
@@ -39,7 +40,7 @@ pub struct NativePluginContextImpl {
   pub(crate) file_emitter: SharedFileEmitter,
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) watch_files: Arc<FxDashSet<ArcStr>>,
-  pub(crate) modules: Arc<FxDashMap<ArcStr, Arc<ModuleInfo>>>,
+  pub(crate) module_infos: SharedModuleInfoDashMap,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
   pub(crate) session: rolldown_debug::Session,
   pub(crate) build_span: Arc<tracing::Span>,
@@ -170,11 +171,11 @@ impl NativePluginContextImpl {
   }
 
   pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {
-    self.modules.get(module_id).map(|v| Arc::<rolldown_common::ModuleInfo>::clone(v.value()))
+    self.module_infos.get(module_id).map(|v| Arc::<rolldown_common::ModuleInfo>::clone(v.value()))
   }
 
   pub fn get_module_ids(&self) -> Vec<ArcStr> {
-    self.modules.iter().map(|v| v.key().clone()).collect()
+    self.module_infos.iter().map(|v| v.key().clone()).collect()
   }
 
   pub fn cwd(&self) -> &PathBuf {

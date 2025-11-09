@@ -57,7 +57,9 @@ impl WatcherTask {
     self.emitter.emit(WatcherEvent::Event(BundleEvent::BundleStart))?;
 
     bundler.reset_closed_for_watch_mode();
-    bundler.plugin_driver.clear();
+    if let Some(last_bundle_context) = &bundler.last_bundle_context {
+      last_bundle_context.plugin_driver.clear();
+    }
 
     let result = {
       let scan_mode = if is_incremental && !changed_files.is_empty() {
@@ -167,7 +169,9 @@ impl WatcherTask {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn close(&self) -> anyhow::Result<()> {
     let bundler = self.bundler.lock().await;
-    bundler.plugin_driver.close_watcher().await?;
+    if let Some(last_bundle_context) = &bundler.last_bundle_context {
+      last_bundle_context.plugin_driver.close_watcher().await?;
+    }
     Ok(())
   }
 
@@ -199,14 +203,17 @@ impl WatcherTask {
   #[tracing::instrument(level = "debug", skip(self))]
   pub async fn on_change(&self, path: &str, kind: WatcherChangeKind) {
     let bundler = self.bundler.lock().await;
-    let _ = bundler.plugin_driver.watch_change(path, kind).await.map_err(|e| {
-      self.emitter.emit(WatcherEvent::Event(BundleEvent::Error(BundleErrorEventData {
-        error: OutputsDiagnostics {
-          diagnostics: vec![BuildDiagnostic::unhandleable_error(e)],
-          cwd: bundler.options.cwd.clone(),
-        },
-        result: Arc::clone(&self.bundler),
-      })))
-    });
+    if let Some(plugin_driver) = bundler.last_bundle_context.as_ref().map(|ctx| &ctx.plugin_driver)
+    {
+      let _ = plugin_driver.watch_change(path, kind).await.map_err(|e| {
+        self.emitter.emit(WatcherEvent::Event(BundleEvent::Error(BundleErrorEventData {
+          error: OutputsDiagnostics {
+            diagnostics: vec![BuildDiagnostic::unhandleable_error(e)],
+            cwd: bundler.options.cwd.clone(),
+          },
+          result: Arc::clone(&self.bundler),
+        })))
+      });
+    }
   }
 }

@@ -11,7 +11,7 @@ pub struct BundlerBuilder {
 
 impl BundlerBuilder {
   pub fn build(self) -> BuildResult<Bundler> {
-    Bundler::with_builder_options(self.options, self.plugins, None, true)
+    Bundler::with_plugins(self.options, self.plugins)
   }
 
   #[must_use]

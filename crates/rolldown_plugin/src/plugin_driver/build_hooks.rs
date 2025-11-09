@@ -85,10 +85,7 @@ impl PluginDriver {
             &skipped_resolve_calls.map_or_else(
               || ctx.clone(),
               |skipped_resolve_calls| {
-                PluginContext::new_shared_with_skipped_resolve_calls(
-                  ctx,
-                  skipped_resolve_calls.clone(),
-                )
+                PluginContext::fork_with_skipped_resolve_calls(ctx, skipped_resolve_calls.clone())
               },
             ),
             args,
@@ -156,10 +153,7 @@ impl PluginDriver {
           &skipped_resolve_calls.map_or_else(
             || ctx.clone(),
             |skipped_resolve_calls| {
-              PluginContext::new_shared_with_skipped_resolve_calls(
-                ctx,
-                skipped_resolve_calls.clone(),
-              )
+              PluginContext::fork_with_skipped_resolve_calls(ctx, skipped_resolve_calls.clone())
             },
           ),
           args,

@@ -125,7 +125,7 @@ impl GenerateStage<'_> {
           }
         }
 
-        let ctx = ChunkingContext::new(Arc::clone(&self.plugin_driver.modules));
+        let ctx = ChunkingContext::new(Arc::clone(&self.plugin_driver.module_infos));
 
         let Some(group_name) = match_group.name.value(&ctx, &normal_module.id).await? else {
           // Group which doesn't have a name will be ignored.

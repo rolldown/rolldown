@@ -35,30 +35,11 @@ impl Bundler {
       session: None,
       disable_tracing_setup: true,
     })?;
+
     Ok(Self {
       bundle_factory,
       closed: false,
       session: rolldown_debug::Session::dummy(),
-      cache: ScanStageCache::default(),
-    })
-  }
-
-  pub fn with_builder_options(
-    options: BundlerOptions,
-    plugins: Vec<SharedPluginable>,
-    session: Option<rolldown_debug::Session>,
-    disable_tracing_setup: bool,
-  ) -> BuildResult<Self> {
-    let bundle_factory = BundleFactory::new(crate::BundleFactoryOptions {
-      bundler_options: options,
-      plugins,
-      session: session.clone(),
-      disable_tracing_setup,
-    })?;
-    Ok(Self {
-      bundle_factory,
-      closed: false,
-      session: session.unwrap_or_else(rolldown_debug::Session::dummy),
       cache: ScanStageCache::default(),
     })
   }
@@ -88,10 +69,13 @@ impl Bundler {
     }
 
     self.closed = true;
-    self.bundle_factory.plugin_driver.close_bundle().await?;
+    // TODO: This infers that `close_bundle` will not be called if there is no bundle happened. Is this expected?
+    if let Some(last_bundle_context) = &self.last_bundle_context {
+      last_bundle_context.plugin_driver.close_bundle().await?;
+      last_bundle_context.plugin_driver.clear();
+    }
 
     // Clean up resources
-    self.bundle_factory.plugin_driver.clear();
     self.cache = ScanStageCache::default();
     self.bundle_factory.resolver.clear_cache();
     Ok(())

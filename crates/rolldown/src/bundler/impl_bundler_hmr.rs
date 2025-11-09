@@ -12,11 +12,17 @@ impl Bundler {
     clients: &[ClientHmrInput<'_>],
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
+    let Some(plugin_driver) = self.last_bundle_context.as_ref().map(|ctx| &ctx.plugin_driver)
+    else {
+      return Err(anyhow::format_err!(
+        "HMR requires to run at least one bundle before invalidation"
+      ))?;
+    };
     let mut hmr_stage = HmrStage::new(HmrStageInput {
       fs: self.bundle_factory.fs.clone(),
       options: Arc::clone(&self.bundle_factory.options),
       resolver: Arc::clone(&self.bundle_factory.resolver),
-      plugin_driver: Arc::clone(&self.bundle_factory.plugin_driver),
+      plugin_driver: Arc::clone(plugin_driver),
       cache: &mut self.cache,
       next_hmr_patch_id,
     });
@@ -31,11 +37,17 @@ impl Bundler {
     executed_modules: &FxHashSet<String>,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<HmrUpdate> {
+    let Some(plugin_driver) = self.last_bundle_context.as_ref().map(|ctx| &ctx.plugin_driver)
+    else {
+      return Err(anyhow::format_err!(
+        "HMR requires to run at least one bundle before invalidation"
+      ))?;
+    };
     let mut hmr_stage = HmrStage::new(HmrStageInput {
       fs: self.bundle_factory.fs.clone(),
       options: Arc::clone(&self.bundle_factory.options),
       resolver: Arc::clone(&self.bundle_factory.resolver),
-      plugin_driver: Arc::clone(&self.bundle_factory.plugin_driver),
+      plugin_driver: Arc::clone(plugin_driver),
       cache: &mut self.cache,
       next_hmr_patch_id,
     });

@@ -30,7 +30,7 @@ pub use crate::{
   plugin_context::{
     PluginContext, SharedNativePluginContext, SharedTransformPluginContext, TransformPluginContext,
   },
-  plugin_driver::{PluginDriver, SharedPluginDriver},
+  plugin_driver::{PluginDriver, PluginDriverFactory, SharedPluginDriver},
   pluginable::Pluginable,
   types::custom_field::CustomField,
   types::hook_addon_args::HookAddonArgs,

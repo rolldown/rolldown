@@ -63,11 +63,14 @@ impl BundlingTask {
     {
       let bundler = self.bundler.lock().await;
       for changed_file in self.input.changed_files() {
-        bundler
-          .plugin_driver
-          // FIXME: use proper WatcherChangeKind for created/removed files.
-          .watch_change(changed_file.to_str().unwrap(), WatcherChangeKind::Update)
-          .await?;
+        if let Some(plugin_driver) =
+          bundler.last_bundle_context.as_ref().map(|ctx| &ctx.plugin_driver)
+        {
+          plugin_driver
+            // FIXME: use proper WatcherChangeKind for created/removed files.
+            .watch_change(changed_file.to_str().unwrap(), WatcherChangeKind::Update)
+            .await?;
+        }
       }
     }
 

@@ -17,7 +17,7 @@ use rolldown_utils::global_reference::{
 use rustc_hash::FxHashSet;
 use utils::{
   can_change_strict_to_loose, is_side_effect_free_unbound_identifier_ref,
-  maybe_side_effect_free_global_constructor,
+  maybe_side_effect_free_global_constructor, maybe_side_effect_free_global_function_call,
 };
 
 use self::utils::{PrimitiveType, known_primitive_type};
@@ -358,7 +358,13 @@ impl<'a> SideEffectDetector<'a> {
       }
       detail
     } else {
-      true.into()
+      let is_side_effect_free_global_function =
+        maybe_side_effect_free_global_function_call(self.scope, expr);
+      if is_side_effect_free_global_function {
+        SideEffectDetail::GlobalVarAccess
+      } else {
+        true.into()
+      }
     }
   }
 
@@ -1297,6 +1303,87 @@ mod test {
     assert!(get_statements_side_effect("new Float32Array(20)"));
     assert!(get_statements_side_effect("new BigInt64Array(8)"));
     assert!(get_statements_side_effect("new Uint8ClampedArray(256)"));
+
+    // Symbol is not a constructor - using 'new' throws TypeError
+    // All of these should have side effects (they throw errors)
+    assert!(get_statements_side_effect("new Symbol()"));
+    assert!(get_statements_side_effect("new Symbol('string')"));
+    assert!(get_statements_side_effect("new Symbol(null)"));
+    assert!(get_statements_side_effect("new Symbol(undefined)"));
+    assert!(get_statements_side_effect("new Symbol({ toString() { throw new Error() } })"));
+    assert!(get_statements_side_effect("let unknownVariable; new Symbol(unknownVariable)"));
+
+    // Symbol() as a function call (without 'new') is side-effect-free with primitives
+    assert!(!get_statements_side_effect("Symbol()"));
+    assert!(!get_statements_side_effect("Symbol('string')"));
+    assert!(!get_statements_side_effect("Symbol(null)"));
+    assert!(!get_statements_side_effect("Symbol(undefined)"));
+    assert!(!get_statements_side_effect("Symbol(123)"));
+    assert!(!get_statements_side_effect("Symbol(true)"));
+
+    // Symbol() with object argument has side effects (could call toString)
+    assert!(get_statements_side_effect("Symbol({ toString() { throw new Error() } })"));
+
+    // Symbol() with unknown variable has side effects (could be an object)
+    assert!(get_statements_side_effect("let unknownVariable; Symbol(unknownVariable)"));
+  }
+
+  #[test]
+  fn test_primitive_global_function_calls() {
+    // String() - side-effect-free with primitive arguments only
+    // Object conversion can call valueOf/toString with side effects
+    assert!(!get_statements_side_effect("String()"));
+    assert!(!get_statements_side_effect("String('hello')"));
+    assert!(!get_statements_side_effect("String(123)"));
+    assert!(!get_statements_side_effect("String(null)"));
+    assert!(!get_statements_side_effect("String(undefined)"));
+    assert!(!get_statements_side_effect("String(true)"));
+
+    // String() with objects/unknown values has side effects
+    assert!(get_statements_side_effect("String({})"));
+    assert!(get_statements_side_effect("String([1, 2, 3])"));
+    assert!(get_statements_side_effect("let obj; String(obj)"));
+
+    // Number() - side-effect-free with primitive arguments only
+    assert!(!get_statements_side_effect("Number()"));
+    assert!(!get_statements_side_effect("Number('123')"));
+    assert!(!get_statements_side_effect("Number(456)"));
+    assert!(!get_statements_side_effect("Number(null)"));
+    assert!(!get_statements_side_effect("Number(undefined)"));
+    assert!(!get_statements_side_effect("Number(true)"));
+
+    // Number() with objects/unknown values has side effects
+    assert!(get_statements_side_effect("Number({})"));
+    assert!(get_statements_side_effect("let val; Number(val)"));
+
+    // Boolean() - side-effect-free with primitive arguments only
+    assert!(!get_statements_side_effect("Boolean()"));
+    assert!(!get_statements_side_effect("Boolean(true)"));
+    assert!(!get_statements_side_effect("Boolean('text')"));
+    assert!(!get_statements_side_effect("Boolean(0)"));
+    assert!(!get_statements_side_effect("Boolean(null)"));
+    assert!(!get_statements_side_effect("Boolean(undefined)"));
+
+    // Boolean() with objects/unknown values has side effects
+    assert!(get_statements_side_effect("Boolean({})"));
+    assert!(get_statements_side_effect("let val; Boolean(val)"));
+
+    // BigInt() - side-effect-free with primitive arguments only
+    assert!(!get_statements_side_effect("BigInt(123)"));
+    assert!(!get_statements_side_effect("BigInt('456')"));
+    assert!(!get_statements_side_effect("BigInt(true)"));
+    // these two will throw `TypeError`
+    assert!(get_statements_side_effect("BigInt(undefined)"));
+    assert!(get_statements_side_effect("BigInt(null)"));
+
+    // BigInt() with unknown or object arguments has side effects
+    assert!(get_statements_side_effect("let val; BigInt(val)"));
+    assert!(get_statements_side_effect("BigInt({})"));
+
+    // Spread elements should have side effects
+    assert!(get_statements_side_effect("let args; String(...args)"));
+    assert!(get_statements_side_effect("let args; Number(...args)"));
+    assert!(get_statements_side_effect("let args; Boolean(...args)"));
   }
 
   #[test]

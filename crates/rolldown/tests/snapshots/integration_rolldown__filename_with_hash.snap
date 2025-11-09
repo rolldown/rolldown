@@ -4841,6 +4841,11 @@ expression: output
 - main-!~{000}~.js => main-BPdKtNG3.js
 - test-!~{001}~.js => test-CBAt4BGl.js
 
+# tests/rolldown/issues/6881_2
+
+- main-!~{000}~.js => main-uyjEQE00.js
+- lib-!~{001}~.js => lib-CTg-KV6l.js
+
 # tests/rolldown/issues/duplicate_default_export
 
 - main-!~{000}~.js => main-Dtyy4j8x.js

@@ -131,7 +131,7 @@ impl BundleFactory {
       file_emitter: Arc::clone(&self.file_emitter),
       plugin_driver,
       warnings: std::mem::take(&mut self.warnings),
-      session: self.session.clone(),
+      bundle_span,
       cache,
     };
     self.last_bundle_handle = Some(bundle.context());

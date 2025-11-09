@@ -21,6 +21,10 @@ use rolldown_plugin::{HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver}
 use rolldown_utils::dashmap::FxDashSet;
 use std::sync::Arc;
 
+#[expect(
+  clippy::struct_field_names,
+  reason = "`bundle_span` emphasizes this's a span for this bundle, not a session level span"
+)]
 pub struct Bundle {
   pub(crate) fs: OsFileSystem,
   pub(crate) options: SharedOptions,
@@ -29,11 +33,11 @@ pub struct Bundle {
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) cache: ScanStageCache,
-  pub(crate) session: rolldown_debug::Session,
+  pub(crate) bundle_span: Arc<tracing::Span>,
 }
 
 impl Bundle {
-  #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn write(mut self) -> BuildResult<BundleOutput> {
     async {
@@ -48,7 +52,7 @@ impl Bundle {
     .await
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn generate(mut self) -> BuildResult<BundleOutput> {
     async {
@@ -66,6 +70,7 @@ impl Bundle {
     .await
   }
 
+  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn scan(mut self) -> BuildResult<()> {
     self.scan_modules(ScanMode::Full).await?;
@@ -73,7 +78,7 @@ impl Bundle {
     Ok(())
   }
 
-  #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
   pub(crate) async fn scan_modules(
     &mut self,
     scan_mode: ScanMode<ArcStr>,
@@ -137,6 +142,7 @@ impl Bundle {
     }
   }
 
+  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
   pub async fn bundle_write(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,
@@ -179,6 +185,7 @@ impl Bundle {
     Ok(output)
   }
 
+  #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
   pub(crate) async fn bundle_generate(
     &mut self,
     scan_stage_output: NormalizedScanStageOutput,

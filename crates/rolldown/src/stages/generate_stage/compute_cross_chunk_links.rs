@@ -478,7 +478,6 @@ impl GenerateStage<'_> {
     let is_preserve_modules_enabled = self.options.preserve_modules;
     let allow_to_minify_internal_exports =
       !is_preserve_modules_enabled && self.options.minify_internal_exports;
-
     // Generate cross-chunk exports. These must be computed before cross-chunk
     // imports because of export alias renaming, which must consider all export
     // aliases simultaneously to avoid collisions.
@@ -490,11 +489,12 @@ impl GenerateStage<'_> {
 
         let mut processed_entry_exports = FxHashSet::default();
         if let Some(entry_module_idx) = chunk.entry_module_idx() {
+          let exported_chunk_symbols = &index_chunk_exported_symbols[chunk_id];
           // If this's an entry point, we need to make sure the entry modules' exports are not minified.
           let entry_module = &self.link_output.metas[entry_module_idx];
           entry_module.canonical_exports(false).for_each(|(name, export)| {
             let export_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
-            if !self.link_output.used_symbol_refs.contains(&export_ref) {
+            if !exported_chunk_symbols.contains_key(&export.symbol_ref) {
               // Rolldown supports tree-shaking on dynamic entries, so not all exports are used.
               return;
             }

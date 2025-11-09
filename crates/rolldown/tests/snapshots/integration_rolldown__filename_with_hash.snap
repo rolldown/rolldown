@@ -4836,6 +4836,11 @@ expression: output
 - main-!~{000}~.js => main-D7G5mb2I.js
 - dynamic-!~{001}~.js => dynamic-BMZTHQfH.js
 
+# tests/rolldown/issues/6881
+
+- main-!~{000}~.js => main-BPdKtNG3.js
+- test-!~{001}~.js => test-CBAt4BGl.js
+
 # tests/rolldown/issues/duplicate_default_export
 
 - main-!~{000}~.js => main-Dtyy4j8x.js
@@ -4962,11 +4967,11 @@ expression: output
 
 # tests/rolldown/misc/preserve_entry_signature/issue-4880
 
-- dynamic-!~{003}~.js => dynamic-BuO4HKk2.js
-- foo-!~{001}~.js => foo-Cz3zB3do.js
-- foo2-!~{002}~.js => foo2-DnbetzBn.js
-- main-!~{000}~.js => main-B0YiAGyE.js
-- foo2-!~{004}~.js => foo2-CnPhrzGD.js
+- dynamic-!~{003}~.js => dynamic-CEM7Bh_1.js
+- foo-!~{001}~.js => foo-C_HSrIG8.js
+- foo2-!~{002}~.js => foo2-DwvJeq-4.js
+- main-!~{000}~.js => main-CxgQHNBf.js
+- foo2-!~{004}~.js => foo2-CfjRXF79.js
 
 # tests/rolldown/misc/preserve_entry_signature/issue_5026
 

@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region main.js
+const testJson = await import("./test.js").then((r) => {
+	assert.deepEqual(r.default, { hello: "Hola" });
+});
+
+//#endregion
+export { testJson };
+```
+
+## test.js
+
+```js
+//#region test.json
+var test_default = { hello: "Hola" };
+
+//#endregion
+export { test_default as default };
+```

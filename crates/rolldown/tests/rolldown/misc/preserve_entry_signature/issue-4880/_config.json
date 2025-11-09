@@ -18,6 +18,14 @@
         "name": "dynamic",
         "import": "./dynamic.js"
       }
-    ]
-  }
+    ],
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  },
+  "configVariants": [
+    {
+      "preserveEntrySignatures": "allow-extension"
+    }
+  ]
 }

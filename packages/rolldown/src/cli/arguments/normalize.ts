@@ -27,7 +27,21 @@ export function normalizeCliOptions(
   cliOptions: CliOptions,
   positionals: string[],
 ): NormalizedCliOptions {
-  const [data, errors] = validateCliOptions<CliOptions>(cliOptions);
+  const prototypePollutionKeys = ['__proto__', 'constructor', 'prototype'];
+  const unflattenedCliOptions: Record<string, any> = {};
+  for (let [key, value] of Object.entries(cliOptions)) {
+    if (prototypePollutionKeys.includes(key)) {
+      // ignore prototype pollution keys
+    } else if (key.includes('.')) {
+      const [parentKey] = key.split('.');
+      unflattenedCliOptions[parentKey] ??= {};
+      setNestedProperty(unflattenedCliOptions, key, value);
+    } else {
+      unflattenedCliOptions[key] = value;
+    }
+  }
+
+  const [data, errors] = validateCliOptions<CliOptions>(unflattenedCliOptions);
   if (errors?.length) {
     errors.forEach((error) => {
       logger.error(`${error}. You can use \`rolldown -h\` to see the help.`);

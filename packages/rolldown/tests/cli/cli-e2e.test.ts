@@ -116,6 +116,15 @@ describe('cli options for bundling', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
+  it('should handle nested options', async () => {
+    const cwd = cliFixturesDir('cli-option-nested');
+    const status = await $({
+      cwd,
+    })`rolldown index.js --transform.define __DEFINE__=defined`;
+    expect(status.exitCode).toBe(0);
+    expect(cleanStdout(status.stdout)).toMatchSnapshot();
+  });
+
   it('cli default options', async () => {
     const cwd = cliFixturesDir('cli-default-option');
     const status = await $({ cwd })`rolldown -c`;

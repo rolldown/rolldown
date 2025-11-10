@@ -181,6 +181,14 @@ return exports;
 })({}, node_fs);"
 `;
 
+exports[`cli options for bundling > should handle nested options 1`] = `
+"//#region index.js
+var cli_option_nested_default = defined;
+
+//#endregion
+export { cli_option_nested_default as default };"
+`;
+
 exports[`cli options for bundling > should handle pass \`-s\` options 1`] = `
 "<DIR>/index.js.map  asset │ size: 0.20 kB
 <DIR>/index.js      chunk │ size: 0.19 kB

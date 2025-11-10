@@ -2,8 +2,10 @@ import { defineTest } from 'rolldown-tests';
 
 export default defineTest({
   config: {
-    keepNames: true,
     external: ['node:assert'],
+    output: {
+      keepNames: true,
+    },
   },
   afterTest: async () => {
     await import('./assert.mjs');

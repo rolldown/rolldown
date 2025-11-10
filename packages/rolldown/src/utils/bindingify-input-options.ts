@@ -15,8 +15,7 @@ import type {
 import { BuiltinPlugin } from '../builtin-plugin/utils';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
-import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
-import { logDeprecatedKeepNames } from '../log/logs';
+import type { LogLevelOption } from '../log/logging';
 import type {
   AttachDebugOptions,
   HmrOptions,
@@ -70,16 +69,6 @@ export function bindingifyInputOptions(
   // Normalize transform options to extract define, inject, and oxc transform options
   const normalizedTransform = normalizeTransformOptions(inputOptions, onLog);
 
-  // Normalize keepNames - prefer output.keepNames over top-level keepNames
-  let keepNames: boolean | undefined;
-  if (outputOptions.keepNames !== undefined) {
-    keepNames = outputOptions.keepNames;
-  } else if (inputOptions.keepNames !== undefined) {
-    // Warn about deprecated top-level keepNames
-    onLog(LOG_LEVEL_WARN, logDeprecatedKeepNames());
-    keepNames = inputOptions.keepNames;
-  }
-
   return {
     input: bindingifyInput(inputOptions.input),
     plugins,
@@ -103,7 +92,7 @@ export function bindingifyInputOptions(
     transform: normalizedTransform.oxcTransformOptions,
     watch: bindingifyWatch(inputOptions.watch),
     dropLabels: normalizedTransform.dropLabels,
-    keepNames,
+    keepNames: outputOptions.keepNames,
     checks: inputOptions.checks,
     deferSyncScanData: () => {
       let ret: BindingDeferSyncScanData[] = [];

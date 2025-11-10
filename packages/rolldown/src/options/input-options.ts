@@ -342,14 +342,6 @@ export interface InputOptions {
    * See `transform.dropLabels` for detailed documentation and examples.
    */
   dropLabels?: string[];
-  /**
-   * Keep function and class names after bundling.
-   *
-   * @deprecated Use `output.keepNames` instead. This top-level option will be removed in a future release.
-   *
-   * See `output.keepNames` for detailed documentation.
-   */
-  keepNames?: boolean;
   checks?: ChecksOptions;
   makeAbsoluteExternalsRelative?: MakeAbsoluteExternalsRelative;
   debug?: {

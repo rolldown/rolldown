@@ -565,10 +565,6 @@ const InputOptionsSchema = v.strictObject({
     v.description('Remove labeled statements with these label names'),
   ),
   checks: v.optional(ChecksOptionsSchema),
-  keepNames: v.pipe(
-    v.optional(v.boolean()),
-    v.description('Keep function/class name'),
-  ),
   debug: v.pipe(
     v.optional(v.object({
       sessionId: v.pipe(

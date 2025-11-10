@@ -44,6 +44,10 @@ pub struct NativePluginContextImpl {
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
   pub(crate) session: rolldown_debug::Session,
   pub(crate) bundle_span: Arc<tracing::Span>,
+  // `resolve_id` hook not only will be triggered by the rolldown's resolve process, but also could be triggered
+  // by manual calls of `PluginContext.resolve()`. We use a dedicated span here to distinguish whether the call is
+  // - automatic (by rolldown) or manual (by `PluginContext.resolve()`)
+  pub(crate) manual_resolve_span: Arc<tracing::Span>,
 }
 
 impl NativePluginContextImpl {
@@ -106,18 +110,12 @@ impl NativePluginContextImpl {
       None
     };
 
-    // Create a resolve span as a child of the bundle span.
+    // Use the pre-created manual resolve span.
     // When PluginContext.resolve() is called from JavaScript via NAPI, the tracing span
     // context is lost across the async boundary. By making the resolve span a child of
     // the bundle span (which is a child of the session span), we ensure that both
     // CONTEXT_session_id and CONTEXT_bundle_id are inherited automatically.
     // The plugin contexts are recreated at the start of each write/generate with the new bundle span.
-    let resolve_span = tracing::debug_span!(
-      parent: self.bundle_span.as_ref(),
-      "plugin_context_resolve",
-      CONTEXT_hook_resolve_id_trigger = "manual"
-    );
-
     async {
       resolve_id_check_external(
         &self.resolver,
@@ -133,7 +131,7 @@ impl NativePluginContextImpl {
       )
       .await
     }
-    .instrument(resolve_span)
+    .instrument(self.manual_resolve_span.as_ref().clone())
     .await
   }
 

@@ -26,7 +26,11 @@ test(`emit data for devtool`, async () => {
   expect(debugDataDir).toContain('meta.json');
 
   // Ensure there are no invalid uninjected variables in the logs
-  const variables = ['${build_id}', '${session_id}'];
+  const variables = [
+    '${build_id}',
+    '${session_id}',
+    '${hook_resolve_id_trigger}',
+  ];
   const logsContent = readFileSync(
     join(
       dotRolldownFileName,

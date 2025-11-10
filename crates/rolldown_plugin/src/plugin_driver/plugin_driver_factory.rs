@@ -40,6 +40,13 @@ impl PluginDriverFactory {
     // Clone the Arc to share across contexts
     let bundle_span_arc = Arc::clone(initial_bundle_span);
 
+    // Create derived span for manual resolve calls
+    let manual_resolve_span_arc = Arc::new(tracing::debug_span!(
+      parent: bundle_span_arc.as_ref(),
+      "plugin_context_resolve",
+      CONTEXT_hook_resolve_id_trigger = "manual"
+    ));
+
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(self.plugins.len());
       let mut index_contexts = IndexPluginContext::with_capacity(self.plugins.len());
@@ -61,6 +68,7 @@ impl PluginDriverFactory {
           tx: Arc::clone(&tx),
           session: session.clone(),
           bundle_span: Arc::clone(&bundle_span_arc),
+          manual_resolve_span: Arc::clone(&manual_resolve_span_arc),
         })));
       });
 

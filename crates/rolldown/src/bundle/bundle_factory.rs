@@ -87,7 +87,10 @@ impl BundleFactory {
     Arc::new(tracing::info_span!(
       parent: &self.session.span,
       "build",
-      CONTEXT_build_id = bundle_id.as_ref()
+      CONTEXT_build_id = bundle_id.as_ref(),
+      // - This behaves like default value for `${hook_resolve_id_trigger}`.
+      // - For case like injecting `manual`, we will override this field by adding a child span to shadow this one.
+      CONTEXT_hook_resolve_id_trigger = "automatic"
     ))
   }
 

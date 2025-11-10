@@ -10,6 +10,8 @@ pub struct HookResolveIdCallEnd {
   /// The index of the plugin in the plugin list. It's unique to each plugin.
   pub plugin_id: u32,
   #[ts(type = "'automatic' | 'manual'")]
+  /// - `automatic` means the resolve call is triggered by the bundler automatically.
+  /// - `manual` means the resolve call is triggered manually by `this.resolve(...)`
   pub trigger: &'static str,
   pub call_id: &'static str,
 }

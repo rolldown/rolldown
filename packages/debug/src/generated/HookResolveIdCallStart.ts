@@ -10,6 +10,10 @@ export type HookResolveIdCallStart = {
    * The index of the plugin in the plugin list. It's unique to each plugin.
    */
   plugin_id: number;
+  /**
+   * - `automatic` means the resolve call is triggered by the bundler automatically.
+   * - `manual` means the resolve call is triggered manually by `this.resolve(...)`
+   */
   trigger: 'automatic' | 'manual';
   call_id: string;
 };

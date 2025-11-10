@@ -10,7 +10,6 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   MULTIPLY_NOTIFY_OPTION = 'MULTIPLY_NOTIFY_OPTION',
   PARSE_ERROR = 'PARSE_ERROR',
   NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER',
-  DEPRECATED_PROFILER_NAMES = 'DEPRECATED_PROFILER_NAMES',
   DEPRECATED_KEEP_NAMES = 'DEPRECATED_KEEP_NAMES',
   DEPRECATED_DROP_LABELS = 'DEPRECATED_DROP_LABELS';
 
@@ -64,14 +63,6 @@ export function logNoFileSystemInBrowser(method: string): RollupLog {
     code: NO_FS_IN_BROWSER,
     message:
       `Cannot access the file system (via "${method}") when using the browser build of Rolldown.`,
-  };
-}
-
-export function logDeprecatedProfilerNames(): RollupLog {
-  return {
-    code: DEPRECATED_PROFILER_NAMES,
-    message:
-      'The top-level "profilerNames" option is deprecated. Use "output.generatedCode.profilerNames" instead.',
   };
 }
 

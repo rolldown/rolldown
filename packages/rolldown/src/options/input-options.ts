@@ -316,17 +316,6 @@ export interface InputOptions {
     nativeMagicString?: boolean;
   };
   /**
-   * Whether to add readable names to internal variables for profiling purposes.
-   *
-   * When enabled, generated code will use descriptive variable names that correspond
-   * to the original module names, making it easier to profile and debug the bundled code.
-   *
-   * @default true when minification is disabled, false when minification is enabled
-   *
-   * @deprecated Use `output.generatedCode.profilerNames` instead. This top-level option will be removed in a future release.
-   */
-  profilerNames?: boolean;
-  /**
    * Configure how the code is transformed. This process happens after the `transform` hook.
    *
    * To transpile [legacy decorators](https://github.com/tc39/proposal-decorators/tree/4ac0f4cd31bd0f2e8170cb4c5136e51671e46c8d), you could use
@@ -402,7 +391,6 @@ export type InputCliOptions =
     | 'onLog'
     | 'resolve'
     | 'experimental'
-    | 'profilerNames'
     | 'watch'
   >
   & OverwriteInputOptionsForCli;

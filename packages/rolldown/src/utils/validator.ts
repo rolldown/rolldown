@@ -558,7 +558,6 @@ const InputOptionsSchema = v.strictObject({
       nativeMagicString: v.optional(v.boolean()),
     }),
   ),
-  profilerNames: v.optional(v.boolean()),
   transform: v.optional(TransformOptionsSchema),
   watch: v.optional(v.union([WatchOptionsSchema, v.literal(false)])),
   dropLabels: v.pipe(
@@ -635,7 +634,6 @@ const InputCliOptionsSchema = v.omit(
     'onLog',
     'resolve',
     'experimental',
-    'profilerNames',
     'watch',
   ],
 );

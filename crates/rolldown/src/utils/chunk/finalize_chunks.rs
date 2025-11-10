@@ -174,7 +174,12 @@ pub async fn finalize_assets(
           chunk
             .direct_imports_from_external_modules
             .iter()
-            .map(|(idx, _)| link_output.module_table[*idx].id().into()),
+            .map(|(idx, _)| {
+              link_output.module_table[*idx]
+                .as_external()
+                .expect("direct_imports_from_external_modules should only contain external modules")
+                .get_file_name(options.paths.as_ref())
+            }),
         )
         .collect();
 

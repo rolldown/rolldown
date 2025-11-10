@@ -1,4 +1,18 @@
 
+## [1.0.0-beta.49] - 2025-11-10
+
+### 🐛 Bug Fixes
+
+- node/exports: export `./plugins` in `publishConfig` for `rolldown` (#6926) by @Copilot
+- add type of `meta.ast`  for transform hook (#6919) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update dependency rust to v1.91.1 (#6927) by @renovate[bot]
+- deps: update dependency oxlint to v1.28.0 (#6924) by @renovate[bot]
+- update example with `meta.ast` + `meta.nativeString` (#6922) by @IWANABETHATGUY
+
+
 ## [1.0.0-beta.48] - 2025-11-10
 
 ### 💥 BREAKING CHANGES

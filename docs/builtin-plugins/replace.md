@@ -132,15 +132,6 @@ replacePlugin({ 'env': '"production"' });
 
 This behavior ensures that replacing `env` doesn't accidentally break `environment` or property accesses like `process.env`. You can customize this with the `delimiters` option if needed.
 
-### Type Conversion
-
-Non-string values are auto-converted with a warning:
-
-```js
-replacePlugin({ '__buildVersion': 15 }); // Converts to "15"
-// Warning: Some values provided to `replacePlugin` are not strings...
-```
-
 ## Migration from @rollup/plugin-replace
 
 ### Feature Comparison
@@ -150,7 +141,6 @@ replacePlugin({ '__buildVersion': 15 }); // Converts to "15"
 | API             | `replace({ values: {...} })` | `replacePlugin({...}, options)` |
 | Function values | ✅ `() => value`             | ❌ Static values only           |
 | File filtering  | ✅ include/exclude           | ❌ All files                    |
-| Type conversion | Manual                       | Auto (with warning)             |
 | Performance     | JavaScript                   | Rust (faster)                   |
 
 ### Migration Example

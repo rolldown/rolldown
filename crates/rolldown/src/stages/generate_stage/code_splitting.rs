@@ -646,6 +646,7 @@ impl GenerateStage<'_> {
             let mut meta = ChunkMeta::default();
             meta.set(ChunkMeta::UserDefinedEntry, module.is_user_defined_entry);
             meta.set(ChunkMeta::DynamicImported, !module.dynamic_importers.is_empty());
+            meta.set(ChunkMeta::EmittedChunk, entry_point.kind.is_emitted_user_defined());
             meta
           },
           bit: count,

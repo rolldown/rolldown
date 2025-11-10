@@ -36,6 +36,8 @@ bitflags::bitflags! {
         /// is not a user defined entry point.
         const DynamicImported = 1;
         const UserDefinedEntry = 1 << 1;
+        /// `true` if the chunk was emitted via `this.emitFile({ type: 'chunk' })`
+        const EmittedChunk = 1 << 2;
     }
 }
 #[derive(Debug, Default)]
@@ -148,7 +150,8 @@ impl Chunk {
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
   ) -> anyhow::Result<FilenameTemplate> {
     // https://github.com/rollup/rollup/blob/061a0387c8654222620f602471d66afd3c582048/src/Chunk.ts?plain=1#L526-L529
-    let ret = if matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry))
+    // Emitted chunks should always use chunk_filenames, not entry_filenames
+    let ret = if matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) && !meta.contains(ChunkMeta::EmittedChunk))
       || options.preserve_modules
     {
       options.entry_filenames.call(rollup_pre_rendered_chunk).await?
@@ -164,7 +167,8 @@ impl Chunk {
     options: &NormalizedBundlerOptions,
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
   ) -> anyhow::Result<FilenameTemplate> {
-    let ret = if matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry))
+    // Emitted chunks should always use chunk_filenames, not entry_filenames
+    let ret = if matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) && !meta.contains(ChunkMeta::EmittedChunk))
     {
       options.css_entry_filenames.call(rollup_pre_rendered_chunk).await?
     } else {

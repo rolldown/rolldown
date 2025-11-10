@@ -560,10 +560,6 @@ const InputOptionsSchema = v.strictObject({
   ),
   transform: v.optional(TransformOptionsSchema),
   watch: v.optional(v.union([WatchOptionsSchema, v.literal(false)])),
-  dropLabels: v.pipe(
-    v.optional(v.array(v.string())),
-    v.description('Remove labeled statements with these label names'),
-  ),
   checks: v.optional(ChecksOptionsSchema),
   debug: v.pipe(
     v.optional(v.object({

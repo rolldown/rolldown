@@ -67,7 +67,7 @@ export function bindingifyInputOptions(
   });
 
   // Normalize transform options to extract define, inject, and oxc transform options
-  const normalizedTransform = normalizeTransformOptions(inputOptions, onLog);
+  const normalizedTransform = normalizeTransformOptions(inputOptions);
 
   return {
     input: bindingifyInput(inputOptions.input),

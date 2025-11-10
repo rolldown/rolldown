@@ -1,7 +1,4 @@
 import type { TransformOptions as OxcTransformOptions } from '../binding.cjs';
-import type { LogHandler } from '../log/log-handler';
-import { LOG_LEVEL_WARN } from '../log/logging';
-import { logDeprecatedDropLabels } from '../log/logs';
 import type { InputOptions } from '../options/input-options';
 
 export interface NormalizedTransformOptions {
@@ -18,7 +15,6 @@ export interface NormalizedTransformOptions {
  */
 export function normalizeTransformOptions(
   inputOptions: InputOptions,
-  onLog: LogHandler,
 ): NormalizedTransformOptions {
   const transform = inputOptions.transform;
 
@@ -26,16 +22,7 @@ export function normalizeTransformOptions(
     ? Object.entries(transform.define)
     : undefined;
   const inject = transform?.inject;
-
-  // Extract dropLabels - prefer transform.dropLabels over top-level dropLabels
-  let dropLabels: string[] | undefined;
-  if (transform?.dropLabels) {
-    dropLabels = transform.dropLabels;
-  } else if (inputOptions.dropLabels) {
-    // Warn about deprecated top-level dropLabels
-    onLog(LOG_LEVEL_WARN, logDeprecatedDropLabels());
-    dropLabels = inputOptions.dropLabels;
-  }
+  const dropLabels = transform?.dropLabels;
 
   // Extract OXC transform options (excluding define, inject, and dropLabels)
   let oxcTransformOptions: OxcTransformOptions | undefined;

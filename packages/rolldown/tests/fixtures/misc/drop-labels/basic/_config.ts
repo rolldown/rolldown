@@ -3,7 +3,9 @@ import { expect } from 'vitest';
 
 export default defineTest({
   config: {
-    dropLabels: ['DROP'],
+    transform: {
+      dropLabels: ['DROP'],
+    },
   },
   afterTest: (output) => {
     expect(output.output[0].code).not.toContain('DROP');

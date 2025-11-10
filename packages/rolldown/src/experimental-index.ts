@@ -28,7 +28,6 @@ export { defineParallelPlugin } from './plugin/parallel-plugin';
 export {
   buildImportAnalysisPlugin,
   dynamicImportVarsPlugin,
-  esmExternalRequirePlugin,
   htmlInlineProxyPlugin,
   importGlobPlugin,
   isolatedDeclarationPlugin,
@@ -48,6 +47,5 @@ export {
 
 export { aliasPlugin } from './builtin-plugin/alias-plugin';
 export { assetPlugin } from './builtin-plugin/asset-plugin';
-export { replacePlugin } from './builtin-plugin/replace-plugin';
 export { transformPlugin } from './builtin-plugin/transform-plugin';
 export { viteCSSPlugin } from './builtin-plugin/vite-css-plugin';

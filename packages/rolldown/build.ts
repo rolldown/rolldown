@@ -116,6 +116,7 @@ function withShared(
   return {
     input: {
       index: './src/index',
+      'plugins-index': './src/plugins-index',
       'experimental-index': './src/experimental-index',
       ...!isBrowserBuild
         ? {

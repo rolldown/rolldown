@@ -31,7 +31,10 @@ import { bindingifyPlugin } from '../plugin/bindingify-plugin';
 import { PluginContextData } from '../plugin/plugin-context-data';
 import { arraify } from './misc';
 import { normalizedStringOrRegex } from './normalize-string-or-regex';
-import { normalizeTransformOptions } from './normalize-transform-options';
+import {
+  type NormalizedTransformOptions,
+  normalizeTransformOptions,
+} from './normalize-transform-options';
 
 export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
@@ -249,7 +252,7 @@ function bindingifyResolve(
 }
 
 function bindingifyInject(
-  inject: InputOptions['inject'],
+  inject: NormalizedTransformOptions['inject'],
 ): BindingInputOptions['inject'] {
   if (inject) {
     return Object.entries(inject).map(

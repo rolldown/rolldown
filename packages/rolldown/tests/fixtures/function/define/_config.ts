@@ -4,8 +4,10 @@ import { expect } from 'vitest';
 
 export default defineTest({
   config: {
-    define: {
-      'process.env.NODE_ENV': '"production"',
+    transform: {
+      define: {
+        'process.env.NODE_ENV': '"production"',
+      },
     },
     external: ['node:assert'],
   },

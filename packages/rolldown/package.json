@@ -80,7 +80,8 @@
       "./filter": "./dist/filter-index.mjs",
       "./parallelPlugin": "./dist/parallel-plugin.mjs",
       "./parseAst": "./dist/parse-ast-index.mjs",
-      "./package.json": "./package.json"
+      "./package.json": "./package.json",
+      "./plugins": "./dist/plugins-index.mjs"
     }
   },
   "scripts": {

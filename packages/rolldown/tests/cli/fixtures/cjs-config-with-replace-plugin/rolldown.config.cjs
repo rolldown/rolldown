@@ -1,5 +1,5 @@
 const rolldown = require('rolldown');
-const plugin = require('rolldown/experimental');
+const plugin = require('rolldown/plugins');
 
 module.exports = rolldown.defineConfig({
   input: './index.js',

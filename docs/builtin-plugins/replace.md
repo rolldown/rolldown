@@ -4,11 +4,11 @@ The `replacePlugin` is a built-in Rolldown plugin that replaces the code based o
 
 ## Usage
 
-Import and use the plugin from Rolldown's experimental exports:
+Import and use the plugin from Rolldown's plugins exports:
 
 ```js
 import { defineConfig } from 'rolldown';
-import { replacePlugin } from 'rolldown/experimental';
+import { replacePlugin } from 'rolldown/plugins';
 
 export default defineConfig({
   input: 'src/index.js',

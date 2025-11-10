@@ -1,5 +1,5 @@
 import { defineTest } from 'rolldown-tests';
-import { replacePlugin } from 'rolldown/experimental';
+import { replacePlugin } from 'rolldown/plugins';
 import { expect } from 'vitest';
 
 export default defineTest({

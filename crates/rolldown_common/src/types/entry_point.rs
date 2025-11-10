@@ -47,6 +47,11 @@ impl EntryPointKind {
   }
 
   #[inline]
+  pub fn is_emitted_user_defined(&self) -> bool {
+    matches!(self, EntryPointKind::EmittedUserDefined)
+  }
+
+  #[inline]
   pub fn is_dynamic_import(&self) -> bool {
     matches!(self, EntryPointKind::DynamicImport)
   }

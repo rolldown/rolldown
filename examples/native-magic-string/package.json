@@ -6,6 +6,7 @@
     "build": "rolldown --config ./rolldown.config.js"
   },
   "devDependencies": {
-    "rolldown": "workspace:*"
+    "rolldown": "workspace:*",
+    "oxc-walker": "^0.5.2"
   }
 }

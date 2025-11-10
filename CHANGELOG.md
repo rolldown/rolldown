@@ -1,4 +1,85 @@
 
+## [1.0.0-beta.48] - 2025-11-10
+
+### 💥 BREAKING CHANGES
+
+- `this.emitFile` does not respect `chunkFileNames` (#6868) by @Copilot
+- remove deprecated top-level `dropLabels` option (#6915) by @sapphi-red
+- remove deprecated top-level `keepNames` option (#6914) by @sapphi-red
+- remove deprecated top-level `profilerNames` option (#6913) by @sapphi-red
+- remove deprecated top-level `define` and `inject` options (#6912) by @sapphi-red
+- move stable plugins from experimental to `rolldown/plugins` (#6303) by @shulaoda
+- node: remove experimental `RolldownBuild#scan`, only expose it from `rolldown/experimental` (#6889) by @hyf0
+
+### 🚀 Features
+
+- add side-effect detection for global constructors with primitive arguments (#6898) by @IWANABETHATGUY
+- rust: use `BundleMode` to handle incremental build exhaustively (#6894) by @hyf0
+- detect side-effect-free global function calls (#6897) by @IWANABETHATGUY
+- expose `parseSync` / `parseAsync` function (#6866) by @sapphi-red
+- skip `__toESM` helper when only named imports are used from CJS modules (#6850) by @Copilot
+- rolldown_binding: expose `htmlInlineProxyPlugin` (#6856) by @shulaoda
+- rolldown_plugin_html_inline_proxy: align `load` hook logic (#6855) by @shulaoda
+- rolldown_plugin_html_inline_proxy: align `resolveId` hook logic (#6854) by @shulaoda
+- rolldown_plugin_html_inline_proxy: initialize (#6853) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- cli: support nested options in CLI properly (#6911) by @sapphi-red
+- debug: ensure injecting `hook_resolve_id_trigger` correctly (#6908) by @hyf0
+- use chunk-specific exports for entry module export detection (#6904) by @IWANABETHATGUY
+- debug: ensure build get injected and add tests (#6896) by @hyf0
+- error: return friendly error for bundler already closed scenario (#6878) by @hyf0
+- improve dynamic entry processing with iterative approach (#6869) by @IWANABETHATGUY
+- handle tsconfig option resolve error (#6871) by @sapphi-red
+- handle error when creating output chunk directories (#6870) by @sapphi-red
+- node: `NormalizedOutputOptionsImpl` and `NormalizedInputOptionsImpl` enumerable (#6861) by @hyf0
+- node: keys of `RolldownOutput` should be enumerable (#6852) by @Copilot
+
+### 🚜 Refactor
+
+- rust: rename `BundleContext` to `BundleHandle` (#6893) by @hyf0
+- rust: rename `build_span` to `bundle_span` (#6892) by @hyf0
+- rust: introduce `PluginDriverFactory` to manage creation of `PluginDriver` (#6891) by @hyf0
+- crates/rolldown_binding: remove useless `BindingBundlerImpl` (#6888) by @hyf0
+- crates/rolldown_binding: rename `Bundler` to `ClassicBundler` and clarify the purpose (#6887) by @hyf0
+- rust: rename `BuildFactory/Build` to `BundleFactory/Bundle` (#6886) by @hyf0
+- rust: tweak incremental build related methods of `Bundler` (#6884) by @hyf0
+- rust: manage build via `BuildFactory` for `Bundler` (#6883) by @hyf0
+- node: implement a new `Bundler` that satisfy the usage of `RolldownBuild` (#6877) by @hyf0
+- node: remove useless `nonEnumerable` decorator (#6862) by @hyf0
+
+### 📚 Documentation
+
+- add documentation for native replace plugin (#6315) by @shulaoda
+- in-depth/directives: expand description of how directives are handled (#6882) by @sapphi-red
+- in-depth/bundling-cjs: clarify the condition of `default` export interop (#6875) by @sapphi-red
+- add troubleshooting section for `this` in exported functions (#6865) by @sapphi-red
+- update prebuilt binaries list based on Node 24 platform support tier (#6864) by @sapphi-red
+- remove unsupported [ext] placeholder from entryFileNames and chunkFileNames (#6859) by @Copilot
+
+### ⚡ Performance
+
+- rolldown: improve sourcemap chain processing (#6858) by @Brooooooklyn
+
+### 🧪 Testing
+
+- add test case for issue #6881 with scientific notation (#6906) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update npm packages (#6918) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.17.5 (#6917) by @renovate[bot]
+- deps: lock file maintenance (#6907) by @renovate[bot]
+- deps: update rust crates (#6905) by @renovate[bot]
+- deps: update npm packages (#6903) by @renovate[bot]
+- deps: update github-actions (#6902) by @renovate[bot]
+- deps: update `oxc_resolver` and `oxc_resolver_napi` (#6901) by @shulaoda
+- deps: update dependency rolldown-plugin-dts to v0.17.4 (#6895) by @renovate[bot]
+- deps: update dependency tsdown to v0.16.1 (#6885) by @renovate[bot]
+- deps: upgrade napi to remove linker args that skip missing symbols (#6867) by @Boshen
+
+
 ## [1.0.0-beta.47] - 2025-11-05
 
 ### 💥 BREAKING CHANGES

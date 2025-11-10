@@ -1,3 +1,4 @@
+import type { Program } from '@oxc-project/types';
 import type { InputOptions, OutputOptions } from '..';
 import type {
   BindingHookResolveIdExtraArgs,
@@ -91,7 +92,7 @@ export type LoadResult = NullValue | string | SourceDescription;
 export type TransformResult =
   | NullValue
   | string
-  | Omit<SourceDescription, 'code'> & { code?: string | BindingMagicString };
+  | (Omit<SourceDescription, 'code'> & { code?: string | BindingMagicString });
 
 export type RenderedChunkMeta = { chunks: Record<string, RenderedChunk> };
 
@@ -149,6 +150,7 @@ export interface FunctionPluginHooks {
     meta: BindingTransformHookExtraArgs & {
       moduleType: ModuleType;
       magicString?: BindingMagicString;
+      ast?: Program;
     },
   ) => TransformResult;
 
@@ -254,12 +256,7 @@ type SequentialPluginHooks = DefinedHookNames[
   | 'transform'
 ];
 
-type AddonHooks = DefinedHookNames[
-  | 'banner'
-  | 'footer'
-  | 'intro'
-  | 'outro'
-];
+type AddonHooks = DefinedHookNames['banner' | 'footer' | 'intro' | 'outro'];
 
 type OutputPluginHooks = DefinedHookNames[
   | 'augmentChunkHash'
@@ -282,12 +279,14 @@ export type ParallelPluginHooks = Exclude<
 export type HookFilterExtension<K extends keyof FunctionPluginHooks> = K extends
   'transform' ? { filter?: TUnionWithTopLevelFilterExpressionArray<HookFilter> }
   : K extends 'load' ? {
-      filter?: TUnionWithTopLevelFilterExpressionArray<Pick<HookFilter, 'id'>>;
+      filter?: TUnionWithTopLevelFilterExpressionArray<
+        Pick<HookFilter, 'id'>
+      >;
     }
   : K extends 'resolveId' ? {
-      filter?: TUnionWithTopLevelFilterExpressionArray<
-        { id?: GeneralHookFilter<RegExp> }
-      >;
+      filter?: TUnionWithTopLevelFilterExpressionArray<{
+        id?: GeneralHookFilter<RegExp>;
+      }>;
     }
   : K extends 'renderChunk' ? {
       filter?: TUnionWithTopLevelFilterExpressionArray<

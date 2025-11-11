@@ -13,8 +13,6 @@
   },
   "devDependencies": {
     "@rolldown/test-dev-server": "workspace:*",
-    "@types/react": "catalog:",
-    "@types/react-dom": "catalog:",
     "rolldown": "workspace:*"
   }
 }

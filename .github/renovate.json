@@ -11,12 +11,6 @@
   ],
   "packageRules": [
     {
-      "groupName": "tsdown",
-      "matchManagers": ["npm"],
-      "matchPackageNames": ["tsdown"],
-      "schedule": ["at any time"]
-    },
-    {
       "groupName": "rolldown-plugin-dts",
       "matchManagers": ["npm"],
       "matchPackageNames": ["rolldown-plugin-dts"],

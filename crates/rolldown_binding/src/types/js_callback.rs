@@ -1,5 +1,4 @@
 use std::sync::{Arc, Condvar, Mutex};
-use std::time::Duration;
 
 use futures::Future;
 use napi::{
@@ -110,25 +109,9 @@ where
 
     let (lock, cvar) = &*pair_clone;
     let notified = lock.lock().unwrap();
-
-    // Use wait_timeout to prevent indefinite hangs
-    // Set a reasonable timeout of 30 seconds
-    let timeout = Duration::from_secs(30);
-    let (mut res, timeout_result) = cvar.wait_timeout(notified, timeout).map_err(|err| {
+    let mut res = cvar.wait(notified).map_err(|err| {
       napi::Error::new(napi::Status::GenericFailure, format!("PoisonError: {err:?}",))
     })?;
-
-    // Check if we timed out
-    if timeout_result.timed_out() {
-      return Err(napi::Error::new(
-        napi::Status::GenericFailure,
-        format!(
-          "Timeout waiting for JavaScript callback to complete in {}. The callback did not respond within {} seconds.",
-          pretty_type_name::<Self>(),
-          timeout.as_secs()
-        ),
-      ));
-    }
     let res = res
       .as_mut()
       .map_err(|err| napi::Error::new(napi::Status::GenericFailure, format!("{err:?}",)))?;

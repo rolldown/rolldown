@@ -1,0 +1,43 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'node:module' in main.js
+   ╭─[ main.js:1:31 ]
+   │
+ 1 │ import { createRequire } from "node:module";
+   │                               ──────┬──────  
+   │                                     ╰──────── Module not found, treating it as an external dependency
+───╯
+
+```
+
+# Assets
+
+## out.js
+
+```js
+import "node:module";
+
+// HIDDEN [rolldown:runtime]
+//#region dynamic.js
+var dynamic_exports = /* @__PURE__ */ __export({ value: () => value });
+var value;
+var init_dynamic = __esm({ "dynamic.js": (() => {
+	value = 42;
+}) });
+
+//#endregion
+//#region main.js
+async function test() {
+	const mod = await Promise.resolve().then(() => (init_dynamic(), dynamic_exports));
+	console.log(mod.value);
+}
+test();
+
+//#endregion
+```

@@ -1,0 +1,7 @@
+{
+  "config": {
+    "file": "dist/out.js",
+    "inlineDynamicImports": true
+  },
+  "expectExecuted": false
+}

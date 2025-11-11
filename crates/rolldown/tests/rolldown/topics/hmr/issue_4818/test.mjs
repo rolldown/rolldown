@@ -1,5 +1,5 @@
-import assert from 'assert';
-import json from './dist/main';
+import assert from 'node:assert';
+import json from './dist/main.js';
 
 assert.deepEqual(
   json.foo,

@@ -38,6 +38,10 @@ impl BindingBundler {
     options: BindingBundlerOptions<'env>,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let normalized = Self::normalize_binding_options(options)?;
+    if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "generate") {
+      return env.spawn_future(async move { Ok(result) });
+    }
+
     let maybe_bundle = self.inner.create_bundle(normalized.bundler_options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
@@ -83,6 +87,10 @@ impl BindingBundler {
     options: BindingBundlerOptions<'env>,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<BindingOutputs>>> {
     let normalized = Self::normalize_binding_options(options)?;
+    if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "write") {
+      return env.spawn_future(async move { Ok(result) });
+    }
+
     let maybe_bundle = self.inner.create_bundle(normalized.bundler_options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
@@ -127,6 +135,10 @@ impl BindingBundler {
     options: BindingBundlerOptions<'env>,
   ) -> napi::Result<PromiseRaw<'env, BindingResult<()>>> {
     let normalized = Self::normalize_binding_options(options)?;
+    if let Some(result) = Self::validate_hmr_not_allowed(&normalized, "scan") {
+      return env.spawn_future(async move { Ok(result) });
+    }
+
     let maybe_bundle = self.inner.create_bundle(normalized.bundler_options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
@@ -220,5 +232,24 @@ impl BindingBundler {
     )?;
 
     Ok(ret)
+  }
+
+  /// Validates that HMR is not enabled for the given API.
+  /// Returns an error result if HMR is enabled.
+  fn validate_hmr_not_allowed<T>(
+    normalized: &NormalizeBindingOptionsReturn,
+    api_name: &str,
+  ) -> Option<BindingResult<T>> {
+    if normalized.bundler_options.experimental.as_ref().and_then(|e| e.hmr.as_ref()).is_some() {
+      let message = format!(
+        "The \"experimental.hmr\" option is only supported with the \"dev\" API. It cannot be used with \"{api_name}\". Please use the \"dev\" API for HMR functionality."
+      );
+      let error = rolldown_error::BuildDiagnostic::bundler_initialize_error(message, None);
+      let cwd = normalized.bundler_options.cwd.clone().unwrap_or_default();
+      let binding_error = to_binding_error(&error, cwd);
+      Some(napi::Either::A(BindingErrors::new(vec![binding_error])))
+    } else {
+      None
+    }
   }
 }

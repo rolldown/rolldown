@@ -5642,6 +5642,10 @@ expression: output
 
 - main-!~{000}~.js => main-DdYV9Ght.js
 
+# tests/rolldown/topics/hmr/issue_4818
+
+- main-!~{000}~.js => main-BrX7qiI-.js
+
 # tests/rolldown/topics/hmr/issue_5149
 
 - main-!~{000}~.js => main-CKLZqYya.js

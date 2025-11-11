@@ -136,6 +136,10 @@
  - rollup@form@custom-module-context-function: allows custom module-specific context with a function option
  - rollup@form@custom-module-context: allows custom module-specific context@generates es
 
+### Tests with snapshot differences (variable naming/deconfliction)
+ - rollup@form@paths-function: external paths (#754)@generates es (paths transformation works, but variable names differ)
+ - rollup@function@re-export-own: avoid using export.hasOwnProperty (hasOwnProperty behavior differs)
+
 ### The `output.compact` is not supported
  - rollup@function@inlined-dynamic-namespace-compact: properly resolves inlined dynamic namespaces in compact mode
  - rollup@function@compact: compact output with compact: true

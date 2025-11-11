@@ -4156,6 +4156,10 @@ expression: output
 - out.css => out.css
 - dist/out.css
 
+# tests/rolldown/function/file/inline_dynamic_imports
+
+- out.js => out.js
+
 # tests/rolldown/function/file/js
 
 - out.js => out.js

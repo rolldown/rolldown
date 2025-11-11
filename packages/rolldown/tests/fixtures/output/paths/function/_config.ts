@@ -2,7 +2,6 @@ import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
 export default defineTest({
-  skip: true,
   config: {
     external: ['d3', 'd4'],
     output: {

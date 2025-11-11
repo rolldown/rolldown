@@ -10,7 +10,6 @@ export default defineConfig({
     mockReset: true,
     pool: 'forks',
     maxWorkers: 1,
-    isolate: false,
   },
   resolve: {
     alias: {

@@ -136,13 +136,6 @@
  - rollup@form@custom-module-context-function: allows custom module-specific context with a function option
  - rollup@form@custom-module-context: allows custom module-specific context@generates es
 
-### The `output.paths` is not supported
- - rollup@function@re-export-own: avoid using export.hasOwnProperty
- - rollup@function@mixed-external-paths: allows using the path option selectively
- - rollup@form@paths-function: external paths (#754)@generates es
- - rollup@form@paths-relative: external paths (#754)@generates es
- - rollup@form@paths: external paths (#754)@generates es
-
 ### The `output.compact` is not supported
  - rollup@function@inlined-dynamic-namespace-compact: properly resolves inlined dynamic namespaces in compact mode
  - rollup@function@compact: compact output with compact: true

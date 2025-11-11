@@ -20,18 +20,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 # HMR Step 0
 
-## Meta
-
-- update type: noop
-
 ## Build Output
 
-### Errors
+### Assets
 
-#### UNHANDLEABLE_ERROR
+#### main.js
 
-```text
-[UNHANDLEABLE_ERROR] Error: Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
-module_table must be normalized to IndexVec first
+```js
+// HIDDEN [rolldown:runtime]
+// HIDDEN [rolldown:hmr]
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+console.log("main.js");
 
+//#endregion
 ```

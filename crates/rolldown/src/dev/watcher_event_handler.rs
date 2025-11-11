@@ -1,14 +1,14 @@
 use rolldown_watcher::EventHandler;
 
-use crate::dev::build_driver_service::{BuildChannelTx, BuildMessage};
+use crate::dev::{type_aliases::CoordinatorSender, types::coordinator_msg::CoordinatorMsg};
 
 pub struct WatcherEventHandler {
-  pub service_tx: BuildChannelTx,
+  pub coordinator_tx: CoordinatorSender,
 }
 impl EventHandler for WatcherEventHandler {
   fn handle_event(&mut self, event: rolldown_watcher::FileChangeResult) {
-    self.service_tx.send(BuildMessage::WatchEvent(event)).expect(
-      "Build service channel closed while sending file change event - build service terminated unexpectedly"
+    self.coordinator_tx.send(CoordinatorMsg::WatchEvent(event)).expect(
+      "Coordinator channel closed while sending file change event - coordinator terminated unexpectedly"
     );
   }
 }

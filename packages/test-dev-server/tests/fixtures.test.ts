@@ -37,7 +37,7 @@ function main() {
     for (const fixtureName of fixtureNames) {
       // Skip if it's not a valid fixture
       if (
-        !nodeFs.existsSync(
+        fixtureName.includes('edit-reload') || !nodeFs.existsSync(
           nodePath.join(fixturesPath, fixtureName, 'package.json'),
         )
       ) {

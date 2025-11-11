@@ -26,7 +26,10 @@ mod debounced_recommended_watcher;
 #[cfg(not(target_family = "wasm"))]
 pub use debounced_recommended_watcher::DebouncedRecommendedWatcher;
 
-pub use crate::{event::EventResult as FileChangeResult, event_handler::EventHandler};
+pub use crate::{
+  event::{Event, EventResult as FileChangeResult},
+  event_handler::EventHandler,
+};
 pub use noop_watcher::NoopWatcher;
 pub use notify::RecursiveMode;
 pub use paths_mut::PathsMut;

@@ -1,7 +1,6 @@
 use std::{
   ops::{Deref, DerefMut},
   sync::{Arc, atomic::AtomicU32},
-  time::Duration,
 };
 
 use rolldown_common::{ClientHmrInput, ScanMode, WatcherChangeKind};
@@ -11,7 +10,8 @@ use tokio::sync::Mutex;
 use crate::{
   Bundler,
   dev::{
-    build_driver_service::BuildMessage, dev_context::SharedDevContext, types::task_input::TaskInput,
+    dev_context::SharedDevContext,
+    types::{coordinator_msg::CoordinatorMsg, task_input::TaskInput},
   },
 };
 
@@ -39,27 +39,25 @@ impl DerefMut for BundlingTask {
 impl BundlingTask {
   pub async fn run(mut self) {
     tracing::trace!("Start running bundling task: {:#?}", self.input);
-    if let Err(err) = self.run_inner().await {
+    let task_run_result = self.run_inner().await;
+
+    if let Err(err) = &task_run_result {
       // FIXME: Should handle the error properly.
-      eprintln!("Build error: {err}"); // FIXME: handle this error
+      eprintln!("Bundling task run with error: {err}"); // FIXME: handle this error
     }
 
-    let mut build_state = self.dev_context.state.lock().await;
-    if let Err(err) = build_state.try_to_idle() {
-      eprintln!("TODO: should handle this error {err:#?}");
-      build_state.reset_to_idle();
-    }
-    build_state.has_stale_build_output = !self.input.requires_rebuild();
-    drop(build_state);
+    // Check final task type after run_inner (task may have been converted)
+    let task_required_rebuild = self.input.requires_rebuild();
 
-    self.dev_context.build_channel_tx.send(BuildMessage::BuildFinish).expect(
-      "Build service channel closed while sending BuildFinish - build service terminated unexpectedly"
+    self.dev_context.coordinator_tx.send(CoordinatorMsg::BuildCompleted {
+      result: task_run_result,
+      task_required_rebuild,
+    }).expect(
+      "Coordinator channel closed while sending BuildCompleted - coordinator terminated unexpectedly"
     );
   }
 
   async fn run_inner(&mut self) -> BuildResult<()> {
-    self.delay_to_merge_incoming_changes().await?;
-
     {
       let bundler = self.bundler.lock().await;
       for changed_file in self.input.changed_files() {
@@ -93,37 +91,6 @@ impl BundlingTask {
     if self.input.requires_rebuild() {
       self.rebuild().await?;
     }
-
-    Ok(())
-  }
-
-  async fn delay_to_merge_incoming_changes(&self) -> BuildResult<()> {
-    let build_delay = 0;
-
-    let mut build_status = if build_delay > 0 {
-      loop {
-        tokio::time::sleep(Duration::from_millis(build_delay)).await;
-        let build_status = self.dev_context.state.lock().await;
-
-        let has_no_changes = true; // TODO: implement delay merge behavior
-
-        if has_no_changes {
-          break build_status;
-        }
-
-        drop(build_status);
-      }
-    } else {
-      self.dev_context.state.lock().await
-    };
-
-    tracing::trace!(
-      "`BuildStatus` is in building with changed files: {:#?}",
-      self.input.changed_files()
-    );
-    build_status.try_to_building()?;
-
-    drop(build_status);
 
     Ok(())
   }
@@ -206,9 +173,13 @@ impl BundlingTask {
       bundler.incremental_write(scan_mode).await
     };
 
-    if build_result.is_err() {
+    let ret = if build_result.is_err() {
       tracing::error!("Build failed for changed files: {:#?}", self.input.changed_files());
-    }
+      Err(anyhow::format_err!("Err"))
+    } else {
+      tracing::info!("Build succeeded for changed files: {:#?}", self.input.changed_files());
+      Ok(())
+    };
 
     // Call on_output callback if provided
     if let Some(on_output) = self.dev_context.options.on_output.as_ref() {
@@ -219,6 +190,8 @@ impl BundlingTask {
       "`BuildStatus` finished building with changed files: {:#?}",
       self.input.changed_files()
     );
+
+    ret?;
     Ok(())
   }
 }

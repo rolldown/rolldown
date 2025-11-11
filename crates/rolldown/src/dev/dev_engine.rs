@@ -1,46 +1,47 @@
-use std::{
-  collections::VecDeque,
-  ops::Deref,
-  path::PathBuf,
-  sync::{Arc, atomic::AtomicBool},
+use std::sync::{
+  Arc,
+  atomic::{AtomicBool, AtomicU32},
 };
 
 use anyhow::Context;
-use arcstr::ArcStr;
 use futures::{FutureExt, future::Shared};
 use rolldown_common::ClientHmrUpdate;
 use rolldown_error::{BuildResult, ResultExt};
-use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexSet};
-use rolldown_watcher::{DynWatcher, NoopWatcher, Watcher, WatcherConfig, WatcherExt};
-use sugar_path::SugarPath;
+use rolldown_watcher::{NoopWatcher, Watcher, WatcherConfig, WatcherExt};
 use tokio::sync::{Mutex, mpsc::unbounded_channel};
 
 use crate::{
   Bundler, BundlerBuilder,
   dev::{
     DevOptions, SharedClients,
-    build_driver::{BuildDriver, SharedBuildDriver},
-    build_driver_service::{BuildDriverService, BuildMessage},
-    build_state_machine::BuildStateMachine,
-    dev_context::{DevContext, PinBoxSendStaticFuture, SharedDevContext},
+    bundle_coordinator::BundleCoordinator,
+    dev_context::{DevContext, PinBoxSendStaticFuture},
     normalize_dev_options,
-    types::{client_session::ClientSession, task_input::TaskInput},
+    type_aliases::CoordinatorSender,
+    types::coordinator_msg::CoordinatorMsg,
   },
 };
 
-pub struct BuildDriverServiceState {
-  service: Option<BuildDriverService>,
+#[cfg(feature = "testing")]
+use crate::dev::ClientSession;
+#[cfg(feature = "testing")]
+use rolldown_utils::indexmap::FxIndexSet;
+#[cfg(feature = "testing")]
+use std::path::PathBuf;
+
+pub struct CoordinatorState {
+  coordinator: Option<BundleCoordinator>,
   handle: Option<Shared<PinBoxSendStaticFuture<()>>>,
 }
 
 pub struct DevEngine {
-  build_driver: SharedBuildDriver,
-  watcher: Mutex<DynWatcher>,
-  watched_files: FxDashSet<ArcStr>,
-  build_driver_service_state: Mutex<BuildDriverServiceState>,
-  ctx: SharedDevContext,
+  coordinator_tx: CoordinatorSender,
+  bundler: Arc<Mutex<Bundler>>,
+  coordinator_state: Mutex<CoordinatorState>,
   pub clients: SharedClients,
   is_closed: AtomicBool,
+  /// Counter for HMR patch IDs used by invalidate() method
+  next_invalidate_patch_id: Arc<AtomicU32>,
 }
 
 impl DevEngine {
@@ -51,23 +52,16 @@ impl DevEngine {
   pub fn with_bundler(bundler: Arc<Mutex<Bundler>>, options: DevOptions) -> BuildResult<Self> {
     let normalized_options = normalize_dev_options(options);
 
-    let (build_channel_tx, build_channel_rx) = unbounded_channel::<BuildMessage>();
+    let (coordinator_tx, coordinator_rx) = unbounded_channel::<CoordinatorMsg>();
 
     let clients = SharedClients::default();
 
     let ctx = Arc::new(DevContext {
-      state: Mutex::new(BuildStateMachine {
-        queued_tasks: VecDeque::from([TaskInput::new_initial_build_task()]),
-        ..BuildStateMachine::new()
-      }),
       options: normalized_options,
-      build_channel_tx,
+      coordinator_tx: coordinator_tx.clone(),
       clients: Arc::clone(&clients),
     });
-    let build_driver = Arc::new(BuildDriver::new(bundler, Arc::clone(&ctx)));
 
-    let build_driver_service =
-      BuildDriverService::new(Arc::clone(&build_driver), Arc::clone(&ctx), build_channel_rx);
     let watcher_config = WatcherConfig {
       poll_interval: ctx.options.poll_interval,
       debounce_delay: ctx.options.debounce_duration,
@@ -75,13 +69,11 @@ impl DevEngine {
       debounce_tick_rate: ctx.options.debounce_tick_rate,
     };
 
+    let event_handler = BundleCoordinator::create_watcher_event_handler(coordinator_tx.clone());
+
     let watcher = {
       if ctx.options.disable_watcher {
-        NoopWatcher::with_config(
-          build_driver_service.create_watcher_event_handler(),
-          watcher_config,
-        )?
-        .into_dyn_watcher()
+        NoopWatcher::with_config(event_handler, watcher_config)?.into_dyn_watcher()
       } else {
         #[cfg(not(target_family = "wasm"))]
         {
@@ -91,29 +83,22 @@ impl DevEngine {
 
           match (ctx.options.use_polling, ctx.options.use_debounce) {
             // Polling + no debounce = PollWatcher
-            (true, false) => PollWatcher::with_config(
-              build_driver_service.create_watcher_event_handler(),
-              watcher_config,
-            )?
-            .into_dyn_watcher(),
+            (true, false) => {
+              PollWatcher::with_config(event_handler, watcher_config)?.into_dyn_watcher()
+            }
             // Polling + debounce = DebouncedPollWatcher
-            (true, true) => DebouncedPollWatcher::with_config(
-              build_driver_service.create_watcher_event_handler(),
-              watcher_config,
-            )?
-            .into_dyn_watcher(),
+            (true, true) => {
+              DebouncedPollWatcher::with_config(event_handler, watcher_config)?.into_dyn_watcher()
+            }
             // No polling + no debounce = RecommendedWatcher
-            (false, false) => RecommendedWatcher::with_config(
-              build_driver_service.create_watcher_event_handler(),
-              watcher_config,
-            )?
-            .into_dyn_watcher(),
+            (false, false) => {
+              RecommendedWatcher::with_config(event_handler, watcher_config)?.into_dyn_watcher()
+            }
             // No polling + debounce = DebouncedRecommendedWatcher
-            (false, true) => DebouncedRecommendedWatcher::with_config(
-              build_driver_service.create_watcher_event_handler(),
-              watcher_config,
-            )?
-            .into_dyn_watcher(),
+            (false, true) => {
+              DebouncedRecommendedWatcher::with_config(event_handler, watcher_config)?
+                .into_dyn_watcher()
+            }
           }
         }
         #[cfg(target_family = "wasm")]
@@ -121,78 +106,145 @@ impl DevEngine {
           use rolldown_watcher::RecommendedWatcher;
           // For WASM, always use NotifyWatcher (which is PollWatcher in WASM)
           // Use the Watcher trait implementation
-          RecommendedWatcher::with_config(
-            build_driver_service.create_watcher_event_handler(),
-            watcher_config,
-          )?
-          .into_dyn_watcher()
+          RecommendedWatcher::with_config(event_handler, watcher_config)?.into_dyn_watcher()
         }
       }
     };
 
+    let coordinator =
+      BundleCoordinator::new(Arc::clone(&bundler), Arc::clone(&ctx), coordinator_rx, watcher);
+
     Ok(Self {
-      build_driver,
-      watcher: Mutex::new(watcher),
-      watched_files: FxDashSet::default(),
-      build_driver_service_state: Mutex::new(BuildDriverServiceState {
-        service: Some(build_driver_service),
+      coordinator_tx,
+      bundler,
+      coordinator_state: Mutex::new(CoordinatorState {
+        coordinator: Some(coordinator),
         handle: None,
       }),
-      ctx,
       clients,
       is_closed: AtomicBool::new(false),
+      next_invalidate_patch_id: Arc::new(AtomicU32::new(0)),
     })
   }
 
   pub async fn run(&self) -> BuildResult<()> {
-    let mut build_service_state = self.build_driver_service_state.lock().await;
+    let mut coordinator_state = self.coordinator_state.lock().await;
 
-    if build_service_state.service.is_none() {
-      // The watcher service is already running.
+    if coordinator_state.coordinator.is_none() {
+      // The coordinator is already running.
       return Ok(());
     }
 
-    self.build_driver.ensure_latest_build_output().await.expect("FIXME: Should not fail");
-
-    if let Some(watcher_service) = build_service_state.service.take() {
-      let join_handle = tokio::spawn(watcher_service.run());
-      let watcher_service_handle = Box::pin(async move {
+    // Spawn the coordinator
+    if let Some(coordinator) = coordinator_state.coordinator.take() {
+      let join_handle = tokio::spawn(coordinator.run());
+      let coordinator_handle = Box::pin(async move {
         join_handle.await.unwrap();
       }) as PinBoxSendStaticFuture;
-      build_service_state.handle = Some(watcher_service_handle.shared());
+      coordinator_state.handle = Some(coordinator_handle.shared());
     }
-    drop(build_service_state);
+    drop(coordinator_state);
 
-    let bundler = self.build_driver.bundler.lock().await;
-    // hyf0 TODO: `watch_files` is not a proper API to tell which files should be watched.
-    let watch_files = bundler.watch_files();
+    // Wait for initial build to complete. It's ok if the initial build fails, we just let it pass.
+    // Recovering from errors is handled by other parts of the system.
+    self.ensure_latest_build_output().await?;
 
-    let mut watcher = self.watcher.lock().await;
-    let mut paths_mut = watcher.paths_mut();
-    for watch_file in watch_files.iter() {
-      let watch_file = &**watch_file;
-      tracing::trace!("watch file: {:?}", watch_file);
-      if !self.watched_files.contains(watch_file) {
-        self.watched_files.insert(watch_file.to_string().into());
-        paths_mut.add(watch_file.as_path(), notify::RecursiveMode::NonRecursive)?;
-      }
-    }
-    paths_mut.commit()?;
     Ok(())
   }
 
-  pub async fn wait_for_build_driver_service_close(&self) -> BuildResult<()> {
+  /// TODO: do we really need this as a public API? What's the use case?
+  pub async fn wait_for_close(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
-    let service_state = self.build_driver_service_state.lock().await;
-    if let Some(service_handle) = service_state.handle.clone() {
-      service_handle.await;
+    let coordinator_state = self.coordinator_state.lock().await;
+    if let Some(coordinator_handle) = coordinator_state.handle.clone() {
+      coordinator_handle.await;
     }
     Ok(())
   }
 
   pub async fn ensure_current_build_finish(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
-    self.ctx.ensure_current_build_finish().await;
+    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+    self
+      .coordinator_tx
+      .send(CoordinatorMsg::EnsureCurrentBuildFinish { reply: reply_tx })
+      .map_err_to_unhandleable()
+      .context("DevEngine: failed to send EnsureCurrentBuildFinish to coordinator")?;
+    reply_rx
+      .await
+      .map_err_to_unhandleable()
+      .context("DevEngine: coordinator closed before responding to EnsureCurrentBuildFinish")?;
+    Ok(())
+  }
+
+  pub async fn has_latest_build_output(&self) -> bool {
+    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+    if self.coordinator_tx.send(CoordinatorMsg::HasLatestBuildOutput { reply: reply_tx }).is_err() {
+      return false;
+    }
+    reply_rx.await.unwrap_or(false)
+  }
+
+  pub async fn ensure_latest_build_output(&self) -> BuildResult<()> {
+    self.create_error_if_closed()?;
+
+    let mut count = 0;
+
+    loop {
+      count += 1;
+      if count > 1000 {
+        eprintln!(
+          "Debug: `ensure_latest_build_output` wait for 1000 times build, something might be wrong"
+        );
+        break;
+      }
+
+      // Get current build status from coordinator
+      let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+      self
+        .coordinator_tx
+        .send(CoordinatorMsg::GetBuildStatus { reply: reply_tx })
+        .map_err_to_unhandleable()
+        .context("DevEngine: failed to send GetBuildStatus to coordinator")?;
+      let status = reply_rx
+        .await
+        .map_err_to_unhandleable()
+        .context("DevEngine: coordinator closed before responding to GetBuildStatus")?;
+
+      if let Some(building_future) = status.current_build_future {
+        tracing::trace!("Waiting for current build to finish...; {:?}", status.initial_build_state);
+        building_future.await;
+      } else {
+        tracing::trace!("No current build in progress...");
+        if status.has_stale_output {
+          // Need to schedule a build
+          let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+          self
+            .coordinator_tx
+            .send(CoordinatorMsg::ScheduleBuild { reply: reply_tx })
+            .map_err_to_unhandleable()
+            .context("DevEngine: failed to send ScheduleBuild to coordinator")?;
+
+          let schedule_result = reply_rx
+            .await
+            .map_err_to_unhandleable()
+            .context("DevEngine: coordinator closed before responding to ScheduleBuild")??;
+
+          if let Some((building_future, _)) = schedule_result {
+            building_future.await;
+          } else {
+            // No build was scheduled, which means there's no task in queue
+            // Queue the appropriate task based on initial build state
+            // This shouldn't normally happen as coordinator queues initial task
+            break;
+          }
+        } else {
+          // Build output is fresh, we're done
+          break;
+        }
+      }
+    }
+
     Ok(())
   }
 
@@ -202,7 +254,24 @@ impl DevEngine {
     first_invalidated_by: Option<String>,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     self.create_error_if_closed()?;
-    self.build_driver.invalidate(caller, first_invalidated_by).await
+
+    // Use bundler directly for invalidation (avoid message roundtrip)
+    let mut updates = Vec::new();
+    for client in self.clients.iter() {
+      let mut bundler = self.bundler.lock().await;
+      let update = bundler
+        .compute_update_for_calling_invalidate(
+          caller.clone(),
+          first_invalidated_by.clone(),
+          client.key(),
+          &client.executed_modules,
+          Arc::clone(&self.next_invalidate_patch_id),
+        )
+        .await?;
+      updates.push(ClientHmrUpdate { client_id: client.key().clone(), update });
+    }
+
+    Ok(updates)
   }
 
   pub async fn close(&self) -> BuildResult<()> {
@@ -210,36 +279,56 @@ impl DevEngine {
       return Ok(());
     }
 
-    // Send close message to build driver service
-    self.ctx.build_channel_tx.send(BuildMessage::Close)
+    // Send close message to coordinator
+    self.coordinator_tx.send(CoordinatorMsg::Close)
       .map_err_to_unhandleable()
-      .context("DevEngine: failed to send Close message to build service - service may have already terminated")?;
-
-    // Clean up watcher
-    let watcher =
-      std::mem::replace(&mut *self.watcher.lock().await, NoopWatcher.into_dyn_watcher());
-    std::mem::drop(watcher);
+      .context("DevEngine: failed to send Close message to coordinator - coordinator may have already terminated")?;
 
     // Close the bundler
-    let mut bundler = self.build_driver.bundler.lock().await;
+    let mut bundler = self.bundler.lock().await;
     bundler.close().await?;
 
-    // Wait for build driver service to close
-    let service_state = self.build_driver_service_state.lock().await;
-    if let Some(service_handle) = service_state.handle.clone() {
-      service_handle.await;
+    // Wait for coordinator to close (coordinator handles watcher cleanup)
+    let coordinator_state = self.coordinator_state.lock().await;
+    if let Some(coordinator_handle) = coordinator_state.handle.clone() {
+      coordinator_handle.await;
     }
     Ok(())
   }
 
-  /// For testing purpose.
+  pub fn is_closed(&self) -> bool {
+    self.is_closed.load(std::sync::atomic::Ordering::SeqCst)
+  }
+
+  #[cfg(feature = "testing")]
   pub async fn ensure_task_with_changed_files(&self, changed_files: FxIndexSet<PathBuf>) {
-    self.build_driver.handle_file_changes(changed_files).await;
-    if let Some(status) = self.build_driver.schedule_build_if_stale().await.unwrap() {
-      status.0.await;
+    // Create a synthetic file change event to simulate real file system changes
+    let notify_event = notify::Event {
+      kind: notify::EventKind::Modify(notify::event::ModifyKind::Data(
+        notify::event::DataChange::Any,
+      )),
+      paths: changed_files.into_iter().collect(),
+      attrs: notify::event::EventAttributes::default(),
+    };
+
+    let event = rolldown_watcher::Event { detail: notify_event, time: std::time::Instant::now() };
+
+    // Send WatchEvent message to coordinator (simulates real file change)
+    // The coordinator will automatically schedule a build via handle_file_changes
+    let _ = self.coordinator_tx.send(CoordinatorMsg::WatchEvent(Ok(vec![event])));
+
+    // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
+    // and get the build future to wait on
+    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+    let _ = self.coordinator_tx.send(CoordinatorMsg::ScheduleBuild { reply: reply_tx });
+
+    // Wait for the build that was triggered by the file change
+    if let Ok(Ok(Some((future, _)))) = reply_rx.await {
+      future.await;
     }
   }
 
+  #[cfg(feature = "testing")]
   pub fn create_client_for_testing(&self) {
     let client_session = ClientSession::default();
     // Use special client ID "rolldown-tests" which will be recognized by HMR logic
@@ -247,22 +336,10 @@ impl DevEngine {
     self.clients.insert("rolldown-tests".to_string(), client_session);
   }
 
-  pub fn is_closed(&self) -> bool {
-    self.is_closed.load(std::sync::atomic::Ordering::SeqCst)
-  }
-
   fn create_error_if_closed(&self) -> BuildResult<()> {
     if self.is_closed.load(std::sync::atomic::Ordering::SeqCst) {
       Err(anyhow::anyhow!("Dev engine is closed"))?;
     }
     Ok(())
-  }
-}
-
-impl Deref for DevEngine {
-  type Target = BuildDriver;
-
-  fn deref(&self) -> &Self::Target {
-    &self.build_driver
   }
 }

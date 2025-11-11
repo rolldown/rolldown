@@ -234,9 +234,10 @@ impl IntegrationTest {
         .into_iter()
         .zip(build_results_by_steps.into_iter())
         .map(|(hmr_updates_vec, build_outputs_vec)| {
-          // Each step should have exactly one HMR update callback
+          // A step may have 0 or 1 HMR update callbacks
+          // (e.g., initial builds don't generate HMR updates)
           let hmr_updates =
-            hmr_updates_vec.into_iter().next().expect("Expected HMR update for step");
+            hmr_updates_vec.into_iter().next().unwrap_or_else(|| Ok((vec![], vec![])));
 
           HmrStepOutput { hmr_updates, build_outputs: build_outputs_vec }
         })

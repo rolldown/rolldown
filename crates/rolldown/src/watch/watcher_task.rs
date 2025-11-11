@@ -7,7 +7,7 @@ use std::{
   time::Instant,
 };
 
-use crate::{Bundler, SharedOptions};
+use crate::SharedOptions;
 
 use super::{emitter::SharedWatcherEmitter, event::BundleErrorEventData};
 use crate::watch::event::{BundleEndEventData, BundleEvent, WatcherEvent};
@@ -17,6 +17,8 @@ use rolldown_common::{OutputsDiagnostics, WatcherChangeKind};
 use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
 use tokio::sync::Mutex;
+
+use crate::Bundler;
 
 pub struct WatcherTask {
   pub emitter: SharedWatcherEmitter,

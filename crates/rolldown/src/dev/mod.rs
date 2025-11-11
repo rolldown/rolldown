@@ -1,9 +1,9 @@
-pub mod build_driver;
-pub mod build_driver_service;
 pub mod build_state_machine;
-pub mod building_task;
+pub mod bundle_coordinator;
+pub mod bundling_task;
 pub mod dev_context;
 pub mod dev_engine;
+pub mod type_aliases;
 pub mod types;
 pub mod watcher_event_handler;
 

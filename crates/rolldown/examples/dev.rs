@@ -33,5 +33,5 @@ async fn main() {
   )
   .unwrap();
   dev_engine.run().await.unwrap();
-  dev_engine.wait_for_build_driver_service_close().await.unwrap();
+  dev_engine.wait_for_close().await.unwrap();
 }

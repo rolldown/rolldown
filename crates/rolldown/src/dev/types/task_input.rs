@@ -55,7 +55,7 @@ impl TaskInput {
 
   pub fn is_mergeable_with(&self, other: &Self) -> bool {
     match self {
-      // Full Rebuild absorbs everything
+      // FullRebuild absorbs everything
       // - Incoming hmr update task would be meaningless, because full rebuild will bundle with latest disk files' contents.
       // - The build output will contains latest contents, it's no need to and we can't generate hmr updates for such situation.
       // - The incoming incremental rebuild task would be meaningless, because the build output will contains latest contents.
@@ -73,7 +73,7 @@ impl TaskInput {
   // You should call `is_mergeable_with` first to check if the two tasks are mergeable in business logic.
   pub fn merge_with(&mut self, other: Self) {
     match (self, other) {
-      // FullRebuild absorbs everything and stays FullRebuild
+      // FullRebuild absorbs everything and stays the same
       (Self::FullRebuild, _) => {}
       // Rebuild + Rebuild = Rebuild with merged files
       // Hmr + Hmr = Hmr with merged files

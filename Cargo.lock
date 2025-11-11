@@ -2128,8 +2128,7 @@ dependencies = [
 [[package]]
 name = "oxc_resolver"
 version = "11.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ab3f270c313ac7f814ce73a64f4bdf36a183dcae4593b2f96c6e6afea8c99d0"
+source = "git+https://github.com/oxc-project/oxc-resolver?branch=11-07-fix_re-calculate_cachedpathimpl_parent_and_cachedpathimpl_node_modules_if_the_cache_is_dropped#edc530aee899d27de6de006cd4c77243b26988e9"
 dependencies = [
  "cfg-if",
  "indexmap",
@@ -2153,8 +2152,7 @@ dependencies = [
 [[package]]
 name = "oxc_resolver_napi"
 version = "11.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c779320dd5440f02a4a185dd6da6b02616775d6a07e1f6ebee724379d07f6e22"
+source = "git+https://github.com/oxc-project/oxc-resolver?branch=11-07-fix_re-calculate_cachedpathimpl_parent_and_cachedpathimpl_node_modules_if_the_cache_is_dropped#edc530aee899d27de6de006cd4c77243b26988e9"
 dependencies = [
  "fancy-regex",
  "napi",

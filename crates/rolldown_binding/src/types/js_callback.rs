@@ -110,14 +110,14 @@ where
 
     let (lock, cvar) = &*pair_clone;
     let notified = lock.lock().unwrap();
-    
+
     // Use wait_timeout to prevent indefinite hangs
     // Set a reasonable timeout of 30 seconds
     let timeout = Duration::from_secs(30);
     let (mut res, timeout_result) = cvar.wait_timeout(notified, timeout).map_err(|err| {
       napi::Error::new(napi::Status::GenericFailure, format!("PoisonError: {err:?}",))
     })?;
-    
+
     // Check if we timed out
     if timeout_result.timed_out() {
       return Err(napi::Error::new(

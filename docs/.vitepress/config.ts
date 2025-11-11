@@ -199,6 +199,9 @@ export default defineConfig({
     'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
   lastUpdated: true,
   cleanUrls: true,
+  sitemap: {
+    hostname: 'https://rolldown.rs',
+  },
   head: [
     [
       'link',

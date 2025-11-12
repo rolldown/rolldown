@@ -66,7 +66,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             return None;
           }
           let parent_parent_kind = self.visit_path.get(cursor - 1)?;
-          // panic!();
           match parent_parent_kind {
             parent_parent_kind if parent_parent_kind.is_member_expression_kind() => {
               let parent_parent = parent_parent_kind.as_member_expression_kind().unwrap();

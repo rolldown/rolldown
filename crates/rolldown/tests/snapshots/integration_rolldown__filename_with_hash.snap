@@ -3575,19 +3575,19 @@ expression: output
 
 # tests/rolldown/cjs_compat/module.exports_export/basic
 
-- main-!~{000}~.js => main-7x-H3rqN.js
+- main-!~{000}~.js => main-DWwkzQRL.js
 
 # tests/rolldown/cjs_compat/module.exports_export/fallback
 
-- main-!~{000}~.js => main-ChPoeRcN.js
+- main-!~{000}~.js => main-BtHQdcSN.js
 
 # tests/rolldown/cjs_compat/module.exports_export/priority
 
-- main-!~{000}~.js => main-Yl7th83R.js
+- main-!~{000}~.js => main-ETlOwhp6.js
 
 # tests/rolldown/cjs_compat/module.exports_export/with_default
 
-- main-!~{000}~.js => main-Dhnw3o1A.js
+- main-!~{000}~.js => main-_6MMR3Ch.js
 
 # tests/rolldown/cjs_compat/multiple_circle_cjs_entries
 

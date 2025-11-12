@@ -1,4 +1,4 @@
 // Test that module.exports takes precedence over default export
-const assert = require('node:assert');
-const result = require('./esm.js');
+import assert from 'node:assert';
+import result from './cjs.js';
 assert.deepStrictEqual(result, { customExport: 'custom' });

@@ -1,4 +1,45 @@
 
+## [1.0.0-beta.50] - 2025-11-12
+
+### 🚀 Features
+
+- rolldown: oxc_resolver v11.13.2 (#6956) by @Boshen
+- rolldown: oxc v0.97.0 (#6940) by @Boshen
+
+### 🐛 Bug Fixes
+
+- handle error when creating output chunk directories (#6953) by @sapphi-red
+- throw error if `experimental.hmr` is set for APIs other than `dev` (#6860) by @Copilot
+- apply output.paths transformation to chunk.imports and generated code (#6923) by @Copilot
+
+### 🚜 Refactor
+
+- use `anyhow::Context::context` where applicable (#6952) by @sapphi-red
+- dev: use actor design pattern and allow to recover from intial build error (#6936) by @hyf0
+
+### 📚 Documentation
+
+- add sitemap (#6929) by @mdong1909
+
+### 🧪 Testing
+
+- validate publishConfig.exports matches exports field (#6950) by @Copilot
+- re-enable output/paths/function test (#6934) by @Copilot
+
+### ⚙️ Miscellaneous Tasks
+
+- rename `rolldown_watcher` to `rolldown_fs_watcher` (#6958) by @hyf0
+- enable trust policy (#6948) by @iiio2
+- deps: update napi (#6951) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.17.6 (#6947) by @renovate[bot]
+- deps: update npm packages (#6937) by @renovate[bot]
+- deps: update dependency tsdown to v0.16.2 (#6933) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @mdong1909 made their first contribution in [#6929](https://github.com/rolldown/rolldown/pull/6929)
+
+
 ## [1.0.0-beta.49] - 2025-11-10
 
 ### 🐛 Bug Fixes

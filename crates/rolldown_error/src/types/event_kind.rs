@@ -45,6 +45,7 @@ pub enum EventKind {
   BundlerInitializeError = 30,
   PluginError = 31,
   AlreadyClosedError = 32,
+  CouldNotCleanDirectory = 33,
 }
 
 impl Display for EventKind {
@@ -91,6 +92,7 @@ impl Display for EventKind {
       EventKind::BundlerInitializeError => write!(f, "BUNDLER_INITIALIZE_ERROR"),
       EventKind::PluginError => write!(f, "PLUGIN_ERROR"),
       EventKind::AlreadyClosedError => write!(f, "ALREADY_CLOSED"),
+      EventKind::CouldNotCleanDirectory => write!(f, "COULD_NOT_CLEAN_DIRECTORY"),
     }
   }
 }

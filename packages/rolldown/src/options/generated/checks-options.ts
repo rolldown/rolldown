@@ -79,4 +79,10 @@ export interface ChecksOptions {
    * @default true
    */
   preferBuiltinFeature?: boolean;
+
+  /**
+   * Whether to emit warning when detecting could not clean directory
+   * @default true
+   */
+  couldNotCleanDirectory?: boolean;
 }

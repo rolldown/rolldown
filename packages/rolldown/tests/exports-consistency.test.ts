@@ -1,4 +1,4 @@
-import { assert, describe, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import pkg from '../package.json';
 
 describe('package.json exports consistency', () => {
@@ -6,10 +6,6 @@ describe('package.json exports consistency', () => {
     const exportsKeys = Object.keys(pkg.exports).sort();
     const publishExportsKeys = Object.keys(pkg.publishConfig.exports).sort();
 
-    assert.deepStrictEqual(
-      exportsKeys,
-      publishExportsKeys,
-      'publishConfig.exports keys must match exports keys',
-    );
+    expect(exportsKeys).toStrictEqual(publishExportsKeys);
   });
 });

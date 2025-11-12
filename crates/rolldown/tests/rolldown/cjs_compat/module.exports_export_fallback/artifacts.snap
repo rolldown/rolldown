@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region esm.js
+var esm_exports = /* @__PURE__ */ __export({
+	bar: () => bar,
+	default: () => esm_default,
+	foo: () => foo
+});
+var foo, bar, esm_default;
+var init_esm = __esm({ "esm.js": (() => {
+	foo = "foo";
+	bar = "bar";
+	esm_default = { defaultValue: "default" };
+}) });
+
+//#endregion
+//#region main.js
+var require_main = /* @__PURE__ */ __commonJS({ "main.js": ((exports, module) => {
+	const result = (init_esm(), __toCommonJS(esm_exports));
+	console.log("result:", result);
+	console.log("should have __esModule: true, default, foo, bar");
+	module.exports = result;
+}) });
+
+//#endregion
+export default require_main();
+
+```

@@ -101,7 +101,9 @@ export var __toESM = (mod, isNodeMode, target) => (
 // object with the addition of a non-enumerable "__esModule" property set
 // to "true", which overwrites any existing export named "__esModule".
 export var __toCommonJS = mod =>
-  __copyProps(__defProp({}, '__esModule', { value: true }), mod);
+  __hasOwnProp.call(mod, 'module.exports')
+    ? mod['module.exports']
+    : __copyProps(__defProp({}, '__esModule', { value: true }), mod);
 
 // This is for the "binary" loader (custom code is ~2x faster than "atob")
 export var __toBinaryNode = base64 =>

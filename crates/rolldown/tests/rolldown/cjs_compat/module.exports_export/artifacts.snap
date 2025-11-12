@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region esm-with-module-exports.js
+var esm_with_module_exports_exports = /* @__PURE__ */ __export({
+	__esModule: () => __esModule,
+	bar: () => bar,
+	default: () => esm_with_module_exports_default,
+	foo: () => foo,
+	"module.exports": () => moduleExports
+});
+var foo, bar, esm_with_module_exports_default, __esModule, moduleExports;
+var init_esm_with_module_exports = __esm({ "esm-with-module-exports.js": (() => {
+	foo = "foo";
+	bar = "bar";
+	esm_with_module_exports_default = { default: "default-value" };
+	__esModule = true;
+	moduleExports = { foo: "foo" };
+}) });
+
+//#endregion
+//#region commonjs.js
+var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.js": ((exports, module) => {
+	const esm = (init_esm_with_module_exports(), __toCommonJS(esm_with_module_exports_exports));
+	module.exports = esm;
+}) });
+
+//#endregion
+//#region main.js
+var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
+console.log("result:", import_commonjs.default);
+console.log("result should be { foo: \"foo\" }");
+
+//#endregion
+```

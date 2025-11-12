@@ -25,7 +25,7 @@ var init_esm = __esm({ "esm.js": (() => {
 //#endregion
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
-	const result$1 = (init_esm(), __toCommonJS(esm_exports));
+	const result$1 = (init_esm(), esm_exports["module.exports"]);
 	module.exports = result$1;
 }) });
 

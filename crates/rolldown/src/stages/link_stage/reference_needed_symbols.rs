@@ -13,7 +13,7 @@ use rolldown_utils::{
 };
 
 use super::LinkStage;
-use crate::utils::external_import_interop::import_record_needs_interop;
+use crate::utils::external_import_interop::{import_record_needs_interop, require_needs_to_commonjs};
 
 fn is_external_dynamic_import(
   table: &ModuleTable,
@@ -246,8 +246,15 @@ impl LinkStage<'_> {
                       stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
 
                       if !rec.meta.contains(ImportRecordMeta::IsRequireUnused) {
-                        depended_runtime_helper_map[RuntimeHelper::ToCommonJs.bit_index()]
-                          .push(stmt_info_idx);
+                        // Only reference __toCommonJS if the module doesn't have a 'module.exports' export
+                        if require_needs_to_commonjs(
+                          importee.idx,
+                          importee.exports_kind,
+                          &self.metas,
+                        ) {
+                          depended_runtime_helper_map[RuntimeHelper::ToCommonJs.bit_index()]
+                            .push(stmt_info_idx);
+                        }
                       }
                     }
                   },

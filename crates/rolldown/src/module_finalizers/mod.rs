@@ -33,7 +33,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
 use crate::hmr::utils::HmrAstBuilder;
-use crate::utils::external_import_interop::import_record_needs_interop;
+use crate::utils::external_import_interop::{import_record_needs_interop, require_needs_to_commonjs};
 
 mod hmr;
 mod rename;
@@ -891,6 +891,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               }
               _ => {
                 // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports))`
+                // or `(init_xxx(), xxx_exports['module.exports'])` if we know module.exports exists
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
                 // `init_xxx` or `require_xxx`
                 let (wrap_ref_expr, hint) = self.finalized_expr_for_symbol_ref(
@@ -925,31 +926,62 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
                   let is_json_module = rec.meta.contains(ImportRecordMeta::JsonModule);
 
-                  // `__toCommonJS`
-                  let to_commonjs_expr = self.finalized_expr_for_runtime_symbol("__toCommonJS");
-                  // `__toCommonJS(xxx_exports)`
-                  let to_commonjs_call_expr =
-                    ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-                      SPAN,
-                      to_commonjs_expr,
-                      NONE,
-                      self.snippet.builder.vec1(ast::Argument::from(namespace_object_ref_expr)),
-                      false,
-                    ));
+                  // Check if we can skip __toCommonJS by directly accessing module.exports
+                  let needs_to_commonjs = require_needs_to_commonjs(
+                    importee.idx,
+                    importee.exports_kind,
+                    self.ctx.linking_infos,
+                  );
 
-                  let final_expr = if is_json_module {
-                    // `__toCommonJS(xxx_exports).default`
-                    Expression::from(self.snippet.builder.member_expression_static(
-                      SPAN,
-                      to_commonjs_call_expr,
-                      self.snippet.id_name("default", SPAN),
-                      false,
-                    ))
+                  let final_expr = if !needs_to_commonjs {
+                    // Can skip __toCommonJS - directly access xxx_exports['module.exports']
+                    let module_exports_member = ast::Expression::ComputedMemberExpression(
+                      self.snippet.builder.alloc_computed_member_expression(
+                        SPAN,
+                        namespace_object_ref_expr.clone_in(self.alloc),
+                        self.snippet.string_literal_expr("module.exports", SPAN),
+                        false,
+                      ),
+                    );
+                    if is_json_module {
+                      // `xxx_exports['module.exports'].default`
+                      Expression::from(self.snippet.builder.member_expression_static(
+                        SPAN,
+                        module_exports_member,
+                        self.snippet.id_name("default", SPAN),
+                        false,
+                      ))
+                    } else {
+                      module_exports_member
+                    }
                   } else {
-                    to_commonjs_call_expr
+                    // Need __toCommonJS
+                    // `__toCommonJS`
+                    let to_commonjs_expr = self.finalized_expr_for_runtime_symbol("__toCommonJS");
+                    // `__toCommonJS(xxx_exports)`
+                    let to_commonjs_call_expr =
+                      ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+                        SPAN,
+                        to_commonjs_expr,
+                        NONE,
+                        self.snippet.builder.vec1(ast::Argument::from(namespace_object_ref_expr)),
+                        false,
+                      ));
+
+                    if is_json_module {
+                      // `__toCommonJS(xxx_exports).default`
+                      Expression::from(self.snippet.builder.member_expression_static(
+                        SPAN,
+                        to_commonjs_call_expr,
+                        self.snippet.id_name("default", SPAN),
+                        false,
+                      ))
+                    } else {
+                      to_commonjs_call_expr
+                    }
                   };
 
-                  // `(init_xxx(), __toCommonJS(xxx_exports))`
+                  // `(init_xxx(), __toCommonJS(xxx_exports))` or `(init_xxx(), xxx_exports['module.exports'])`
                   Some(self.snippet.seq2_in_paren_expr(wrap_ref_call_expr, final_expr))
                 }
               }

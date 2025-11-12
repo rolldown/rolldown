@@ -193,7 +193,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CjsGlobalAssignmentType {
   ModuleExportsAssignment,
   ExportsAssignment,

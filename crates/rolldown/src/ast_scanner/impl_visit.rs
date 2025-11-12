@@ -431,14 +431,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         match ident_ref.name.as_str() {
           "module" => {
             self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
-            let v =
-              self.commonjs_export_analyzer(&CjsGlobalAssignmentType::ModuleExportsAssignment);
+            let v = self.commonjs_export_analyzer(CjsGlobalAssignmentType::ModuleExportsAssignment);
             self.update_ast_usage_for_commonjs_export(v.as_ref());
           }
           "exports" => {
             self.result.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
             // exports = {} will not change the module.exports object, so we just ignore it;
-            let v = self.commonjs_export_analyzer(&CjsGlobalAssignmentType::ExportsAssignment);
+            let v = self.commonjs_export_analyzer(CjsGlobalAssignmentType::ExportsAssignment);
             self.update_ast_usage_for_commonjs_export(v.as_ref());
             match v {
               // Do nothing since we need to tree shake `exports.<prop>` access

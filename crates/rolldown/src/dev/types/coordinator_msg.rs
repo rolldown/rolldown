@@ -1,5 +1,5 @@
 use rolldown_error::BuildResult;
-use rolldown_watcher::FileChangeResult;
+use rolldown_fs_watcher::FileChangeResult;
 
 use crate::dev::type_aliases::{
   EnsureCurrentBuildFinishSender, GetBuildStatusSender, HasLatestBuildOutputSender,

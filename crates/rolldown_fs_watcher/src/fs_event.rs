@@ -2,11 +2,11 @@ use std::time::Instant;
 
 use notify::{Error as NotifyError, Event as NotifyEvent};
 
-pub type EventResult = Result<Vec<Event>, Vec<NotifyError>>;
+pub type FsEventResult = Result<Vec<FsEvent>, Vec<NotifyError>>;
 
 /// A debounced event is emitted after a short delay.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Event {
+pub struct FsEvent {
   /// The original event.
   pub detail: NotifyEvent,
 

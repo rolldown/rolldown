@@ -1,28 +1,28 @@
 use crate::{
-  EventHandler, Watcher, WatcherConfig,
+  FsEventHandler, FsWatcher, FsWatcherConfig,
   utils::{DebounceEventHandlerAdapter, NotifyPathsMutAdapter},
 };
-use notify::RecommendedWatcher;
+use notify::PollWatcher;
 use notify_debouncer_full::{Debouncer, RecommendedCache, new_debouncer_opt};
 use rolldown_error::{BuildResult, ResultExt};
 
-// We have to use newtype pattern because when we implement `Watcher` for `Debouncer<RecommendedWatcher, RecommendedCache>`.
-// `RecommendedWatcher` might be `PollWatcher` in some platforms and this will cause a compile error of duplicate implementation.
-pub struct DebouncedRecommendedWatcher(Debouncer<RecommendedWatcher, RecommendedCache>);
+// We have to use newtype pattern because when we implement `FsWatcher` for `Debouncer<notify::RecommendedWatcher, RecommendedCache>`.
+// `notify::RecommendedWatcher` might be `PollWatcher` in some platforms and this will cause a compile error of duplicate implementation.
+pub struct DebouncedPollFsWatcher(Debouncer<PollWatcher, RecommendedCache>);
 
-impl Watcher for DebouncedRecommendedWatcher {
-  fn new<F: EventHandler>(event_handler: F) -> BuildResult<Self>
+impl FsWatcher for DebouncedPollFsWatcher {
+  fn new<F: FsEventHandler>(event_handler: F) -> BuildResult<Self>
   where
     Self: Sized,
   {
-    Self::with_config(event_handler, WatcherConfig::default())
+    Self::with_config(event_handler, FsWatcherConfig::default())
   }
 
-  fn with_config<F: EventHandler>(event_handler: F, config: WatcherConfig) -> BuildResult<Self>
+  fn with_config<F: FsEventHandler>(event_handler: F, config: FsWatcherConfig) -> BuildResult<Self>
   where
     Self: Sized,
   {
-    let inner = new_debouncer_opt::<_, RecommendedWatcher, RecommendedCache>(
+    let inner = new_debouncer_opt::<_, PollWatcher, RecommendedCache>(
       config.debounce_delay_duration(),
       config.debounce_tick_rate(),
       DebounceEventHandlerAdapter(event_handler),

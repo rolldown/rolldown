@@ -1,22 +1,22 @@
 use crate::{
-  EventHandler, Watcher, WatcherConfig,
+  FsEventHandler, FsWatcher, FsWatcherConfig,
   utils::{NotifyEventHandlerAdapter, NotifyPathsMutAdapter},
 };
 use notify::{PollWatcher as NotifyPollWatcher, Watcher as NotifyWatcherTrait};
 use rolldown_error::{BuildResult, ResultExt};
 
-/// A non-debounced polling-based watcher that checks for file changes at regular intervals.
-pub struct PollWatcher(NotifyPollWatcher);
+/// A non-debounced polling-based filesystem watcher that checks for file changes at regular intervals.
+pub struct PollFsWatcher(NotifyPollWatcher);
 
-impl Watcher for PollWatcher {
-  fn new<F: EventHandler>(event_handler: F) -> BuildResult<Self>
+impl FsWatcher for PollFsWatcher {
+  fn new<F: FsEventHandler>(event_handler: F) -> BuildResult<Self>
   where
     Self: Sized,
   {
-    Self::with_config(event_handler, WatcherConfig::default())
+    Self::with_config(event_handler, FsWatcherConfig::default())
   }
 
-  fn with_config<F: EventHandler>(event_handler: F, config: WatcherConfig) -> BuildResult<Self>
+  fn with_config<F: FsEventHandler>(event_handler: F, config: FsWatcherConfig) -> BuildResult<Self>
   where
     Self: Sized,
   {

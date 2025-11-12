@@ -1,22 +1,22 @@
 use crate::{
-  EventHandler, Watcher, WatcherConfig,
+  FsEventHandler, FsWatcher, FsWatcherConfig,
   utils::{NotifyEventHandlerAdapter, NotifyPathsMutAdapter},
 };
 use notify::{RecommendedWatcher as NotifyRecommendedWatcher, Watcher as NotifyWatcherTrait};
 use rolldown_error::{BuildResult, ResultExt};
 
-/// Will use the ideal watcher under the hood based on the platform.
-pub struct RecommendedWatcher(NotifyRecommendedWatcher);
+/// Will use the ideal filesystem watcher under the hood based on the platform.
+pub struct RecommendedFsWatcher(NotifyRecommendedWatcher);
 
-impl Watcher for RecommendedWatcher {
-  fn new<F: EventHandler>(event_handler: F) -> BuildResult<Self>
+impl FsWatcher for RecommendedFsWatcher {
+  fn new<F: FsEventHandler>(event_handler: F) -> BuildResult<Self>
   where
     Self: Sized,
   {
-    Self::with_config(event_handler, WatcherConfig::default())
+    Self::with_config(event_handler, FsWatcherConfig::default())
   }
 
-  fn with_config<F: EventHandler>(event_handler: F, config: WatcherConfig) -> BuildResult<Self>
+  fn with_config<F: FsEventHandler>(event_handler: F, config: FsWatcherConfig) -> BuildResult<Self>
   where
     Self: Sized,
   {

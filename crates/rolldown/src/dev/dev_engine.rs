@@ -7,7 +7,7 @@ use anyhow::Context;
 use futures::{FutureExt, future::Shared};
 use rolldown_common::ClientHmrUpdate;
 use rolldown_error::{BuildResult, ResultExt};
-use rolldown_watcher::{NoopWatcher, Watcher, WatcherConfig, WatcherExt};
+use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, FsWatcherExt, NoopFsWatcher};
 use tokio::sync::{Mutex, mpsc::unbounded_channel};
 
 use crate::{
@@ -62,7 +62,7 @@ impl DevEngine {
       clients: Arc::clone(&clients),
     });
 
-    let watcher_config = WatcherConfig {
+    let watcher_config = FsWatcherConfig {
       poll_interval: ctx.options.poll_interval,
       debounce_delay: ctx.options.debounce_duration,
       compare_contents_for_polling: ctx.options.compare_contents_for_polling,
@@ -73,40 +73,39 @@ impl DevEngine {
 
     let watcher = {
       if ctx.options.disable_watcher {
-        NoopWatcher::with_config(event_handler, watcher_config)?.into_dyn_watcher()
+        NoopFsWatcher::with_config(event_handler, watcher_config)?.into_dyn_fs_watcher()
       } else {
         #[cfg(not(target_family = "wasm"))]
         {
-          use rolldown_watcher::{
-            DebouncedPollWatcher, DebouncedRecommendedWatcher, PollWatcher, RecommendedWatcher,
+          use rolldown_fs_watcher::{
+            DebouncedPollFsWatcher, DebouncedRecommendedFsWatcher, PollFsWatcher,
+            RecommendedFsWatcher,
           };
 
           match (ctx.options.use_polling, ctx.options.use_debounce) {
-            // Polling + no debounce = PollWatcher
+            // Polling + no debounce = PollFsWatcher
             (true, false) => {
-              PollWatcher::with_config(event_handler, watcher_config)?.into_dyn_watcher()
+              PollFsWatcher::with_config(event_handler, watcher_config)?.into_dyn_fs_watcher()
             }
-            // Polling + debounce = DebouncedPollWatcher
-            (true, true) => {
-              DebouncedPollWatcher::with_config(event_handler, watcher_config)?.into_dyn_watcher()
-            }
-            // No polling + no debounce = RecommendedWatcher
-            (false, false) => {
-              RecommendedWatcher::with_config(event_handler, watcher_config)?.into_dyn_watcher()
-            }
-            // No polling + debounce = DebouncedRecommendedWatcher
+            // Polling + debounce = DebouncedPollFsWatcher
+            (true, true) => DebouncedPollFsWatcher::with_config(event_handler, watcher_config)?
+              .into_dyn_fs_watcher(),
+            // No polling + no debounce = RecommendedFsWatcher
+            (false, false) => RecommendedFsWatcher::with_config(event_handler, watcher_config)?
+              .into_dyn_fs_watcher(),
+            // No polling + debounce = DebouncedRecommendedFsWatcher
             (false, true) => {
-              DebouncedRecommendedWatcher::with_config(event_handler, watcher_config)?
-                .into_dyn_watcher()
+              DebouncedRecommendedFsWatcher::with_config(event_handler, watcher_config)?
+                .into_dyn_fs_watcher()
             }
           }
         }
         #[cfg(target_family = "wasm")]
         {
-          use rolldown_watcher::RecommendedWatcher;
+          use rolldown_fs_watcher::RecommendedFsWatcher;
           // For WASM, always use NotifyWatcher (which is PollWatcher in WASM)
-          // Use the Watcher trait implementation
-          RecommendedWatcher::with_config(event_handler, watcher_config)?.into_dyn_watcher()
+          // Use the FsWatcher trait implementation
+          RecommendedFsWatcher::with_config(event_handler, watcher_config)?.into_dyn_fs_watcher()
         }
       }
     };
@@ -311,7 +310,8 @@ impl DevEngine {
       attrs: notify::event::EventAttributes::default(),
     };
 
-    let event = rolldown_watcher::Event { detail: notify_event, time: std::time::Instant::now() };
+    let event =
+      rolldown_fs_watcher::FsEvent { detail: notify_event, time: std::time::Instant::now() };
 
     // Send WatchEvent message to coordinator (simulates real file change)
     // The coordinator will automatically schedule a build via handle_file_changes

@@ -7,8 +7,8 @@ use std::{
 use arcstr::ArcStr;
 use futures::FutureExt;
 use rolldown_error::BuildResult;
+use rolldown_fs_watcher::{DynFsWatcher, FileChangeResult};
 use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexSet};
-use rolldown_watcher::{DynWatcher, FileChangeResult};
 use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
@@ -32,7 +32,7 @@ pub struct BundleCoordinator {
   ctx: SharedDevContext,
   next_hmr_patch_id: Arc<AtomicU32>,
   rx: CoordinatorReceiver,
-  watcher: Mutex<DynWatcher>,
+  watcher: Mutex<DynFsWatcher>,
   watched_files: FxDashSet<ArcStr>,
   /// Tracks the state of the initial build
   initial_build_state: InitialBuildState,
@@ -49,7 +49,7 @@ impl BundleCoordinator {
     bundler: Arc<Mutex<Bundler>>,
     ctx: SharedDevContext,
     rx: CoordinatorReceiver,
-    watcher: DynWatcher,
+    watcher: DynFsWatcher,
   ) -> Self {
     Self {
       bundler,

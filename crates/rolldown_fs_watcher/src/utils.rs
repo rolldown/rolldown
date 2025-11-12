@@ -1,4 +1,4 @@
-use crate::{EventHandler, event::Event};
+use crate::{FsEventHandler, fs_event::FsEvent};
 use notify::RecursiveMode;
 use rolldown_error::{BuildResult, ResultExt};
 use std::{path::Path, time::Instant};
@@ -6,7 +6,7 @@ use std::{path::Path, time::Instant};
 #[cfg(not(target_family = "wasm"))]
 pub use non_wasm::*;
 
-pub struct NotifyEventHandlerAdapter<T: EventHandler>(pub T);
+pub struct NotifyEventHandlerAdapter<T: FsEventHandler>(pub T);
 
 /// Adapter that wraps notify's PathsMut to implement rolldown's PathsMut trait.
 /// This allows non-debounced watchers to provide batch path manipulation functionality.
@@ -34,12 +34,12 @@ impl crate::PathsMut for NotifyPathsMutAdapter<'_> {
 
 impl<T> notify::EventHandler for NotifyEventHandlerAdapter<T>
 where
-  T: EventHandler,
+  T: FsEventHandler,
 {
   fn handle_event(&mut self, event_result: notify::Result<notify::Event>) {
     let mapped = event_result
       .map_err(|err| vec![err])
-      .map(|evt| vec![Event { detail: evt, time: Instant::now() }]);
+      .map(|evt| vec![FsEvent { detail: evt, time: Instant::now() }]);
 
     self.0.handle_event(mapped);
   }
@@ -48,20 +48,20 @@ where
 #[cfg(not(target_family = "wasm"))]
 mod non_wasm {
 
-  use crate::{EventHandler, event::Event};
+  use crate::{FsEventHandler, fs_event::FsEvent};
   use notify_debouncer_full::{DebounceEventHandler, DebounceEventResult};
 
   /// This makes a Rolldown `EventHandler` to be a compatible `DebounceEventHandler`.
   /// So we could pass a Rolldown `EventHandler` to notify-debouncer-full `Debouncer`.
-  pub struct DebounceEventHandlerAdapter<T: EventHandler>(pub T);
+  pub struct DebounceEventHandlerAdapter<T: FsEventHandler>(pub T);
 
   impl<T> DebounceEventHandler for DebounceEventHandlerAdapter<T>
   where
-    T: EventHandler,
+    T: FsEventHandler,
   {
     fn handle_event(&mut self, event: DebounceEventResult) {
       self.0.handle_event(event.map(|events| {
-        events.into_iter().map(|event| Event { detail: event.event, time: event.time }).collect()
+        events.into_iter().map(|event| FsEvent { detail: event.event, time: event.time }).collect()
       }));
     }
   }

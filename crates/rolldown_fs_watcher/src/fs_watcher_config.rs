@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
-pub struct WatcherConfig {
+pub struct FsWatcherConfig {
   /// Debounce delay for debounced watchers (in milliseconds).
   /// Default to 10ms.
   ///
@@ -29,7 +29,7 @@ pub struct WatcherConfig {
   pub debounce_tick_rate: Option<u64>,
 }
 
-impl Default for WatcherConfig {
+impl Default for FsWatcherConfig {
   fn default() -> Self {
     Self {
       debounce_delay: 10,
@@ -41,7 +41,7 @@ impl Default for WatcherConfig {
   }
 }
 
-impl WatcherConfig {
+impl FsWatcherConfig {
   pub fn debounce_delay_duration(&self) -> Duration {
     Duration::from_millis(self.debounce_delay)
   }

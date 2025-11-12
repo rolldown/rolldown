@@ -2,14 +2,14 @@ use notify::RecursiveMode;
 use rolldown_error::BuildResult;
 use std::path::Path;
 
-use crate::{EventHandler, PathsMut, WatcherConfig};
+use crate::{FsEventHandler, FsWatcherConfig, PathsMut};
 
-pub trait Watcher {
-  fn new<F: EventHandler>(event_handler: F) -> BuildResult<Self>
+pub trait FsWatcher {
+  fn new<F: FsEventHandler>(event_handler: F) -> BuildResult<Self>
   where
     Self: Sized;
 
-  fn with_config<F: EventHandler>(event_handler: F, config: WatcherConfig) -> BuildResult<Self>
+  fn with_config<F: FsEventHandler>(event_handler: F, config: FsWatcherConfig) -> BuildResult<Self>
   where
     Self: Sized;
 
@@ -34,7 +34,7 @@ pub trait Watcher {
   fn paths_mut<'me>(&'me mut self) -> Box<dyn PathsMut + 'me> {
     struct DefaultPathsMut<'a, T: ?Sized>(&'a mut T);
 
-    impl<T: Watcher + ?Sized> PathsMut for DefaultPathsMut<'_, T> {
+    impl<T: FsWatcher + ?Sized> PathsMut for DefaultPathsMut<'_, T> {
       fn add(&mut self, path: &Path, recursive_mode: RecursiveMode) -> BuildResult<()> {
         self.0.watch(path, recursive_mode)
       }

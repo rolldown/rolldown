@@ -15,6 +15,7 @@ packages:
 
 shellEmulator: true
 verifyDepsBeforeRun: install
+trustPolicy: no-downgrade
 
 # Define a catalog of version ranges.
 catalog:

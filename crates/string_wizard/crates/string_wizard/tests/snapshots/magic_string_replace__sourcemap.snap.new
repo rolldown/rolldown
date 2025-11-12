@@ -1,0 +1,10 @@
+---
+source: crates/string_wizard/tests/magic_string_replace.rs
+assertion_line: 88
+expression: visualizer.get_text()
+---
+- * 2 * 4
+(0:0) "*" --> (0:0) "#"
+(0:1) " 2 " --> (0:1) " 2 "
+(0:4) "*" --> (0:4) "#"
+(0:5) " 4" --> (0:5) " 4"

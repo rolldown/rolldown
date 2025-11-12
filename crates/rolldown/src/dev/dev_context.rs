@@ -7,7 +7,9 @@ use crate::dev::{NormalizedDevOptions, SharedClients, type_aliases::CoordinatorS
 pub type SharedDevContext = Arc<DevContext>;
 
 pub type PinBoxSendStaticFuture<T = ()> = Pin<Box<dyn Future<Output = T> + Send + 'static>>;
-pub type BuildProcessFuture = Shared<PinBoxSendStaticFuture<()>>;
+
+// The future represents an ongoing `BundlingTask`
+pub type BundlingFuture = Shared<PinBoxSendStaticFuture<()>>;
 
 pub struct DevContext {
   pub options: NormalizedDevOptions,

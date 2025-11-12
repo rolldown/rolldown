@@ -35,7 +35,7 @@ pub struct CoordinatorState {
 }
 
 pub struct DevEngine {
-  coordinator_tx: CoordinatorSender,
+  coordinator_sender: CoordinatorSender,
   bundler: Arc<Mutex<Bundler>>,
   coordinator_state: Mutex<CoordinatorState>,
   pub clients: SharedClients,
@@ -114,7 +114,7 @@ impl DevEngine {
       BundleCoordinator::new(Arc::clone(&bundler), Arc::clone(&ctx), coordinator_rx, watcher);
 
     Ok(Self {
-      coordinator_tx,
+      coordinator_sender: coordinator_tx,
       bundler,
       coordinator_state: Mutex::new(CoordinatorState {
         coordinator: Some(coordinator),
@@ -161,24 +161,36 @@ impl DevEngine {
     Ok(())
   }
 
-  pub async fn ensure_current_build_finish(&self) -> BuildResult<()> {
+  // Wait for ongoing bundle to finish if there is one
+  pub async fn wait_for_ongoing_bundle(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+
+    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
     self
-      .coordinator_tx
-      .send(CoordinatorMsg::EnsureCurrentBuildFinish { reply: reply_tx })
+      .coordinator_sender
+      .send(CoordinatorMsg::GetStatus { reply: reply_sender })
       .map_err_to_unhandleable()
-      .context("DevEngine: failed to send EnsureCurrentBuildFinish to coordinator")?;
-    reply_rx
+      .context("DevEngine: failed to send GetStatus to coordinator")?;
+
+    let status = reply_receiver
       .await
       .map_err_to_unhandleable()
-      .context("DevEngine: coordinator closed before responding to EnsureCurrentBuildFinish")?;
+      .context("DevEngine: coordinator closed before responding to GetStatus")?;
+
+    if let Some(bundling_future) = status.current_build_future {
+      bundling_future.await;
+    }
+
     Ok(())
   }
 
   pub async fn has_latest_build_output(&self) -> bool {
     let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    if self.coordinator_tx.send(CoordinatorMsg::HasLatestBuildOutput { reply: reply_tx }).is_err() {
+    if self
+      .coordinator_sender
+      .send(CoordinatorMsg::HasLatestBuildOutput { reply: reply_tx })
+      .is_err()
+    {
       return false;
     }
     reply_rx.await.unwrap_or(false)
@@ -201,10 +213,10 @@ impl DevEngine {
       // Get current build status from coordinator
       let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
       self
-        .coordinator_tx
-        .send(CoordinatorMsg::GetBuildStatus { reply: reply_tx })
+        .coordinator_sender
+        .send(CoordinatorMsg::GetStatus { reply: reply_tx })
         .map_err_to_unhandleable()
-        .context("DevEngine: failed to send GetBuildStatus to coordinator")?;
+        .context("DevEngine: failed to send GetStatus to coordinator")?;
       let status = reply_rx
         .await
         .map_err_to_unhandleable()
@@ -219,7 +231,7 @@ impl DevEngine {
           // Need to schedule a build
           let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
           self
-            .coordinator_tx
+            .coordinator_sender
             .send(CoordinatorMsg::ScheduleBuild { reply: reply_tx })
             .map_err_to_unhandleable()
             .context("DevEngine: failed to send ScheduleBuild to coordinator")?;
@@ -279,7 +291,7 @@ impl DevEngine {
     }
 
     // Send close message to coordinator
-    self.coordinator_tx.send(CoordinatorMsg::Close)
+    self.coordinator_sender.send(CoordinatorMsg::Close)
       .map_err_to_unhandleable()
       .context("DevEngine: failed to send Close message to coordinator - coordinator may have already terminated")?;
 
@@ -315,12 +327,12 @@ impl DevEngine {
 
     // Send WatchEvent message to coordinator (simulates real file change)
     // The coordinator will automatically schedule a build via handle_file_changes
-    let _ = self.coordinator_tx.send(CoordinatorMsg::WatchEvent(Ok(vec![event])));
+    let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(Ok(vec![event])));
 
     // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
     // and get the build future to wait on
     let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    let _ = self.coordinator_tx.send(CoordinatorMsg::ScheduleBuild { reply: reply_tx });
+    let _ = self.coordinator_sender.send(CoordinatorMsg::ScheduleBuild { reply: reply_tx });
 
     // Wait for the build that was triggered by the file change
     if let Ok(Ok(Some((future, _)))) = reply_rx.await {

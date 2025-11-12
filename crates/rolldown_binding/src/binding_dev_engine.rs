@@ -1,6 +1,6 @@
 use napi::tokio;
 use napi_derive::napi;
-use rolldown::dev::dev_context::BuildProcessFuture;
+use rolldown::dev::dev_context::BundlingFuture;
 use rolldown::dev::{OnHmrUpdatesCallback, OnOutputCallback};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -145,7 +145,7 @@ impl BindingDevEngine {
   pub async fn ensure_current_build_finish(&self) -> napi::Result<()> {
     self
       .inner
-      .ensure_current_build_finish()
+      .wait_for_ongoing_bundle()
       .await
       .map_err(|_e| napi::Error::from_reason("Failed to ensure current build finish"))?;
     Ok(())
@@ -197,7 +197,7 @@ impl BindingDevEngine {
 
 #[napi]
 pub struct ScheduledBuild {
-  future: BuildProcessFuture,
+  future: BundlingFuture,
   already_scheduled: bool,
 }
 

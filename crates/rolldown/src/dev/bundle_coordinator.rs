@@ -16,10 +16,10 @@ use crate::{
   Bundler,
   dev::{
     bundling_task::BundlingTask,
-    dev_context::{BuildProcessFuture, PinBoxSendStaticFuture, SharedDevContext},
+    dev_context::{BundlingFuture, PinBoxSendStaticFuture, SharedDevContext},
     type_aliases::{CoordinatorReceiver, CoordinatorSender},
     types::{
-      bundling_status::BundlingStatus, coordinator_msg::CoordinatorMsg,
+      coordinator_msg::CoordinatorMsg, coordinator_status::CoordinatorStatus,
       initial_build_state::InitialBuildState, task_input::TaskInput,
     },
     watcher_event_handler::WatcherEventHandler,
@@ -41,7 +41,7 @@ pub struct BundleCoordinator {
   /// Build state - managed directly by coordinator
   queued_tasks: VecDeque<TaskInput>,
   has_stale_build_output: bool,
-  current_build: Option<BuildProcessFuture>,
+  current_bundling_future: Option<BundlingFuture>,
 }
 
 impl BundleCoordinator {
@@ -64,7 +64,7 @@ impl BundleCoordinator {
       // Initialize build state with initial build task
       queued_tasks: VecDeque::from([TaskInput::new_initial_build_task()]),
       has_stale_build_output: true,
-      current_build: None,
+      current_bundling_future: None,
     }
   }
 
@@ -94,15 +94,9 @@ impl BundleCoordinator {
           let has_latest = self.has_latest_build_output();
           let _ = reply.send(has_latest);
         }
-        CoordinatorMsg::GetBuildStatus { reply } => {
-          let status = self.get_build_status();
+        CoordinatorMsg::GetStatus { reply } => {
+          let status = self.create_status();
           let _ = reply.send(status);
-        }
-        CoordinatorMsg::EnsureCurrentBuildFinish { reply } => {
-          if let Some(building_future) = self.current_build.clone() {
-            building_future.await;
-          }
-          let _ = reply.send(());
         }
         CoordinatorMsg::Close => {
           break;
@@ -207,7 +201,7 @@ impl BundleCoordinator {
     tracing::trace!("BundleCoordinator received BuildCompleted: {:?}", result.is_ok());
 
     // Clear current build
-    self.current_build = None;
+    self.current_bundling_future = None;
 
     // Update has_stale_build_output based on task type and result
     if result.is_ok() {
@@ -261,9 +255,9 @@ impl BundleCoordinator {
   #[expect(clippy::unused_async)]
   async fn schedule_build_if_stale(
     &mut self,
-  ) -> BuildResult<Option<(BuildProcessFuture, /* already scheduled */ bool)>> {
+  ) -> BuildResult<Option<(BundlingFuture, /* already scheduled */ bool)>> {
     tracing::trace!("Calling `schedule_build_if_stale`");
-    if let Some(building_future) = self.current_build.clone() {
+    if let Some(building_future) = self.current_bundling_future.clone() {
       tracing::trace!("A build is running, return the future immediately");
 
       // If there's build running, it will be responsible to handle new changed files.
@@ -294,7 +288,7 @@ impl BundleCoordinator {
       let bundling_future = (Box::pin(bundling_task.run()) as PinBoxSendStaticFuture).shared();
       tokio::spawn(bundling_future.clone());
 
-      self.current_build = Some(bundling_future.clone());
+      self.current_bundling_future = Some(bundling_future.clone());
 
       Ok(Some((bundling_future, false)))
     } else {
@@ -308,9 +302,9 @@ impl BundleCoordinator {
   }
 
   /// Get current build status - atomic operation that doesn't block
-  fn get_build_status(&self) -> BundlingStatus {
-    BundlingStatus {
-      current_build_future: self.current_build.clone(),
+  fn create_status(&self) -> CoordinatorStatus {
+    CoordinatorStatus {
+      current_build_future: self.current_bundling_future.clone(),
       has_stale_output: self.has_stale_build_output,
       initial_build_state: self.initial_build_state,
     }

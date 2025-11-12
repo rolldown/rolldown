@@ -1,10 +1,7 @@
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::FileChangeResult;
 
-use crate::dev::type_aliases::{
-  EnsureCurrentBuildFinishSender, GetBuildStatusSender, HasLatestBuildOutputSender,
-  ScheduleBuildSender,
-};
+use crate::dev::type_aliases::{GetStatusSender, HasLatestBuildOutputSender, ScheduleBuildSender};
 
 /// Messages sent to the BundleCoordinator
 pub enum CoordinatorMsg {
@@ -17,9 +14,7 @@ pub enum CoordinatorMsg {
   /// Check if we have latest build output
   HasLatestBuildOutput { reply: HasLatestBuildOutputSender },
   /// Get current build status (atomic operation)
-  GetBuildStatus { reply: GetBuildStatusSender },
-  /// Ensure current build finishes (if any)
-  EnsureCurrentBuildFinish { reply: EnsureCurrentBuildFinishSender },
+  GetStatus { reply: GetStatusSender },
   /// Close the coordinator
   Close,
 }

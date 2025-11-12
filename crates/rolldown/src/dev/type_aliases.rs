@@ -5,25 +5,21 @@ use tokio::sync::{
 };
 
 use super::{
-  dev_context::BuildProcessFuture,
-  types::{bundling_status::BundlingStatus, coordinator_msg::CoordinatorMsg},
+  dev_context::BundlingFuture,
+  types::{coordinator_msg::CoordinatorMsg, coordinator_status::CoordinatorStatus},
 };
 
 // GetBuildStatus message
-pub type GetBuildStatusSender = oneshot::Sender<BundlingStatus>;
-pub type GetBuildStatusReceiver = oneshot::Receiver<BundlingStatus>;
+pub type GetStatusSender = oneshot::Sender<CoordinatorStatus>;
+pub type GetStatusReceiver = oneshot::Receiver<CoordinatorStatus>;
 
 // ScheduleBuild message
-pub type ScheduleBuildSender = oneshot::Sender<BuildResult<Option<(BuildProcessFuture, bool)>>>;
-pub type ScheduleBuildReceiver = oneshot::Receiver<BuildResult<Option<(BuildProcessFuture, bool)>>>;
+pub type ScheduleBuildSender = oneshot::Sender<BuildResult<Option<(BundlingFuture, bool)>>>;
+pub type ScheduleBuildReceiver = oneshot::Receiver<BuildResult<Option<(BundlingFuture, bool)>>>;
 
 // HasLatestBuildOutput message
 pub type HasLatestBuildOutputSender = oneshot::Sender<bool>;
 pub type HasLatestBuildOutputReceiver = oneshot::Receiver<bool>;
-
-// EnsureCurrentBuildFinish message
-pub type EnsureCurrentBuildFinishSender = oneshot::Sender<()>;
-pub type EnsureCurrentBuildFinishReceiver = oneshot::Receiver<()>;
 
 // Coordinator channel
 pub type CoordinatorSender = UnboundedSender<CoordinatorMsg>;

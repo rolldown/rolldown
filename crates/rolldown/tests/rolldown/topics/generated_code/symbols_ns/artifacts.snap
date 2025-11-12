@@ -1,0 +1,79 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "assert";
+
+// HIDDEN [rolldown:runtime]
+//#region import.js
+var import_exports = /* @__PURE__ */ __export({ default: () => import_default }, 1);
+var import_default = "hi";
+
+//#endregion
+//#region main.js
+assert.deepStrictEqual(Object.getOwnPropertyNames(import_exports), ["default"]);
+assert.equal(String(import_exports), "[object Module]");
+
+//#endregion
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+let assert = require("assert");
+assert = __toESM(assert);
+
+//#region import.js
+var import_exports = /* @__PURE__ */ __export({ default: () => import_default }, 1);
+var import_default = "hi";
+
+//#endregion
+//#region main.js
+assert.default.deepStrictEqual(Object.getOwnPropertyNames(import_exports), ["default"]);
+assert.default.equal(String(import_exports), "[object Module]");
+
+//#endregion
+```
+
+# Variant: [format: Iife]
+
+## warnings
+
+### MISSING_GLOBAL_NAME
+
+```text
+[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "assert" in "output.globals" – guessing "assert".
+
+```
+
+## Assets
+
+### main.js
+
+```js
+(function(assert) {
+
+// HIDDEN [rolldown:runtime]
+assert = __toESM(assert);
+
+//#region import.js
+	var import_exports = /* @__PURE__ */ __export({ default: () => import_default }, 1);
+	var import_default = "hi";
+
+//#endregion
+//#region main.js
+	assert.default.deepStrictEqual(Object.getOwnPropertyNames(import_exports), ["default"]);
+	assert.default.equal(String(import_exports), "[object Module]");
+
+//#endregion
+})(assert);
+```

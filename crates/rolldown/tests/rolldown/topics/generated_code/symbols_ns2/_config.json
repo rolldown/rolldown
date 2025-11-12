@@ -1,0 +1,16 @@
+{
+  "config": {
+    "format": "esm",
+    "generatedCode": {
+      "symbols": true
+    }
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    },
+    {
+      "format": "iife"
+    }
+  ]
+}

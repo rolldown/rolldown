@@ -331,4 +331,11 @@ impl Chunk {
   pub fn is_async_entry(&self) -> bool {
     matches!(&self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::DynamicImported))
   }
+
+  /// Check if this chunk is a module facade (represents a specific module).
+  /// Module facades are entry point chunks (user-defined or dynamic), not common chunks.
+  /// This is used to determine if Symbol.toStringTag should be added when generatedCode.symbols is true.
+  pub fn is_module_facade(&self) -> bool {
+    matches!(&self.kind, ChunkKind::EntryPoint { .. })
+  }
 }

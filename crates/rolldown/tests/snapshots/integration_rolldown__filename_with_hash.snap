@@ -5614,6 +5614,20 @@ expression: output
 
 - main-!~{000}~.js => main-D9Bb16oY.js
 
+# tests/rolldown/topics/generated_code/symbols_common_chunk
+
+- entry1-!~{000}~.js => entry1-Bjm1wyFo.js
+- entry2-!~{001}~.js => entry2-DDU8mZW3.js
+- shared-!~{002}~.js => shared-DeIwpPuK.js
+
+# tests/rolldown/topics/generated_code/symbols_ns
+
+- main-!~{000}~.js => main-vaSjO_Xa.js
+
+# tests/rolldown/topics/generated_code/symbols_ns2
+
+- main-!~{000}~.js => main-DNw9WvFh.js
+
 # tests/rolldown/topics/hmr/accept-outside-circular
 
 - main-!~{000}~.js => main-yqbJQRPS.js

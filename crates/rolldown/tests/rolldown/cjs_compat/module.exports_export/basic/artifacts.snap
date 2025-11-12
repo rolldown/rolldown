@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+//#region esm.js
+var esm_exports = /* @__PURE__ */ __export({
+	__esModule: () => __esModule,
+	bar: () => bar,
+	default: () => esm_default,
+	foo: () => foo,
+	"module.exports": () => moduleExports
+});
+var foo, bar, esm_default, __esModule, moduleExports;
+var init_esm = __esm({ "esm.js": (() => {
+	foo = "foo";
+	bar = "bar";
+	esm_default = { default: "default-value" };
+	__esModule = true;
+	moduleExports = { foo: "foo" };
+}) });
+
+//#endregion
+//#region main.js
+const assert = require("node:assert");
+const esm = (init_esm(), __toCommonJS(esm_exports));
+assert.deepStrictEqual(esm, { foo: "foo" });
+
+//#endregion
+```

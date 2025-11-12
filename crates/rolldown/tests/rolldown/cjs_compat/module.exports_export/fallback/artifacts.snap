@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
+
 //#region esm.js
 var esm_exports = /* @__PURE__ */ __export({
 	bar: () => bar,
@@ -22,14 +23,12 @@ var init_esm = __esm({ "esm.js": (() => {
 
 //#endregion
 //#region main.js
-var require_main = /* @__PURE__ */ __commonJS({ "main.js": ((exports, module) => {
-	const result = (init_esm(), __toCommonJS(esm_exports));
-	console.log("result:", result);
-	console.log("should have __esModule: true, default, foo, bar");
-	module.exports = result;
-}) });
+const assert = require("node:assert");
+const result = (init_esm(), __toCommonJS(esm_exports));
+assert.deepStrictEqual(result.__esModule, true);
+assert.deepStrictEqual(result.foo, "foo");
+assert.deepStrictEqual(result.bar, "bar");
+assert.deepStrictEqual(result.default, { defaultValue: "default" });
 
 //#endregion
-export default require_main();
-
 ```

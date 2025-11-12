@@ -3573,21 +3573,21 @@ expression: output
 - main-!~{000}~.js => main-wmuulVfI.js
 - main-wmuulVfI.js.map
 
-# tests/rolldown/cjs_compat/module.exports_export
+# tests/rolldown/cjs_compat/module.exports_export/basic
 
-- main-!~{000}~.js => main-9US6piOs.js
+- main-!~{000}~.js => main-7x-H3rqN.js
 
-# tests/rolldown/cjs_compat/module.exports_export_fallback
+# tests/rolldown/cjs_compat/module.exports_export/fallback
 
-- main-!~{000}~.js => main-WTaW2SIn.js
+- main-!~{000}~.js => main-ChPoeRcN.js
 
-# tests/rolldown/cjs_compat/module.exports_export_priority
+# tests/rolldown/cjs_compat/module.exports_export/priority
 
-- main-!~{000}~.js => main-Dl7tompi.js
+- main-!~{000}~.js => main-Yl7th83R.js
 
-# tests/rolldown/cjs_compat/module.exports_export_with_default
+# tests/rolldown/cjs_compat/module.exports_export/with_default
 
-- main-!~{000}~.js => main-DHrn7Bj-.js
+- main-!~{000}~.js => main-Dhnw3o1A.js
 
 # tests/rolldown/cjs_compat/multiple_circle_cjs_entries
 

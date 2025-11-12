@@ -97,9 +97,10 @@ export var __toESM = (mod, isNodeMode, target) => (
     )
 );
 
-// Converts the module from ESM to CommonJS. This clones the input module
-// object with the addition of a non-enumerable "__esModule" property set
-// to "true", which overwrites any existing export named "__esModule".
+// Converts the module from ESM to CommonJS. If the module has a "module.exports"
+// export (Node.js ESM feature), use that directly. Otherwise, clone the input module
+// object with the addition of a non-enumerable "__esModule" property set to "true",
+// which overwrites any existing export named "__esModule".
 export var __toCommonJS = mod =>
   __hasOwnProp.call(mod, 'module.exports')
     ? mod['module.exports']

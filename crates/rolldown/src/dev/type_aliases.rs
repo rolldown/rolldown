@@ -14,9 +14,13 @@ pub type GetStatusSender = oneshot::Sender<CoordinatorStatus>;
 pub type GetStatusReceiver = oneshot::Receiver<CoordinatorStatus>;
 
 // ScheduleBuild message
-pub type ScheduleBuildSender = oneshot::Sender<BuildResult<Option<(BundlingFuture, bool)>>>;
-pub type ScheduleBuildReceiver = oneshot::Receiver<BuildResult<Option<(BundlingFuture, bool)>>>;
+pub type ScheduleBuildIfStaleSender = oneshot::Sender<BuildResult<Option<(BundlingFuture, bool)>>>;
+pub type ScheduleBuildIfStaleReceiver =
+  oneshot::Receiver<BuildResult<Option<(BundlingFuture, bool)>>>;
 
 // Coordinator channel
 pub type CoordinatorSender = UnboundedSender<CoordinatorMsg>;
 pub type CoordinatorReceiver = UnboundedReceiver<CoordinatorMsg>;
+
+pub type EnsureLatestBundleOutputSender = oneshot::Sender<BuildResult<Option<BundlingFuture>>>;
+pub type EnsureLatestBundleOutputReceiver = oneshot::Receiver<BuildResult<Option<BundlingFuture>>>;

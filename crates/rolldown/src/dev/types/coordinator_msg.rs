@@ -1,18 +1,17 @@
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::FileChangeResult;
+use rolldown_fs_watcher::FsEventResult;
 
-use crate::dev::type_aliases::{GetStatusSender, ScheduleBuildSender};
+use crate::dev::type_aliases::{
+  EnsureLatestBundleOutputSender, GetStatusSender, ScheduleBuildIfStaleSender,
+};
 
 /// Messages sent to the BundleCoordinator
+#[derive(Debug)]
 pub enum CoordinatorMsg {
-  /// File system change event from watcher
-  WatchEvent(FileChangeResult),
-  /// Build task completed
+  WatchEvent(FsEventResult),
   BundleCompleted { result: BuildResult<()>, has_generated_bundle_output: bool },
-  /// Request to schedule a build if stale
-  ScheduleBuild { reply: ScheduleBuildSender },
-  /// Get current build status (atomic operation)
+  ScheduleBuildIfStale { reply: ScheduleBuildIfStaleSender },
   GetStatus { reply: GetStatusSender },
-  /// Close the coordinator
+  EnsureLatestBundleOutput { reply: EnsureLatestBundleOutputSender },
   Close,
 }

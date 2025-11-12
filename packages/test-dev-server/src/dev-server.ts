@@ -84,8 +84,9 @@ class DevServer {
     this.#devEngine = devEngine;
     process.stdin.on('data', async data => {
       if (data.toString() === 'r') {
-        if (!await devEngine.hasLatestBuildOutput()) {
-          void devEngine.ensureLatestBuildOutput();
+        const hasLatestOutput = await devEngine.hasLatestBuildOutput();
+        if (!hasLatestOutput) {
+          await devEngine.ensureLatestBuildOutput();
         }
       }
     }).unref();

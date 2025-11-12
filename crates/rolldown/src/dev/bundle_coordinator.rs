@@ -7,7 +7,7 @@ use std::{
 use arcstr::ArcStr;
 use futures::FutureExt;
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::{DynFsWatcher, FileChangeResult};
+use rolldown_fs_watcher::{DynFsWatcher, FsEventResult};
 use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexSet};
 use sugar_path::SugarPath;
 use tokio::sync::Mutex;
@@ -40,7 +40,7 @@ pub struct BundleCoordinator {
   queued_file_changes: FxIndexSet<PathBuf>,
   /// Build state - managed directly by coordinator
   queued_tasks: VecDeque<TaskInput>,
-  has_stale_build_output: bool,
+  has_stale_bundle_output: bool,
   current_bundling_future: Option<BundlingFuture>,
 }
 
@@ -63,7 +63,7 @@ impl BundleCoordinator {
       queued_file_changes: FxIndexSet::default(),
       // Initialize build state with initial build task
       queued_tasks: VecDeque::from([TaskInput::new_initial_build_task()]),
-      has_stale_build_output: true,
+      has_stale_bundle_output: true,
       current_bundling_future: None,
     }
   }
@@ -75,10 +75,9 @@ impl BundleCoordinator {
 
   /// Run the coordinator message loop
   pub async fn run(mut self) {
-    while let Some(msg) = {
-      tracing::trace!("`BundleCoordinator` is waiting for messages.");
-      self.rx.recv().await
-    } {
+    tracing::trace!("[BundleCoordinator] starts running");
+    while let Some(msg) = self.rx.recv().await {
+      tracing::trace!("[BundleCoordinator] received message\n - message: {msg:#?}");
       match msg {
         CoordinatorMsg::WatchEvent(watch_event) => {
           self.handle_watch_event(watch_event).await;
@@ -86,13 +85,17 @@ impl BundleCoordinator {
         CoordinatorMsg::BundleCompleted { result, has_generated_bundle_output } => {
           self.handle_bundle_completed(result, has_generated_bundle_output).await;
         }
-        CoordinatorMsg::ScheduleBuild { reply } => {
+        CoordinatorMsg::ScheduleBuildIfStale { reply } => {
           let result = self.schedule_build_if_stale().await;
           let _ = reply.send(result);
         }
         CoordinatorMsg::GetStatus { reply } => {
           let status = self.create_status();
           let _ = reply.send(status);
+        }
+        CoordinatorMsg::EnsureLatestBundleOutput { reply } => {
+          let result = self.ensure_latest_bundle_output().await;
+          let _ = reply.send(result);
         }
         CoordinatorMsg::Close => {
           break;
@@ -102,11 +105,9 @@ impl BundleCoordinator {
   }
 
   /// Handle file change events from watcher
-  async fn handle_watch_event(&mut self, watch_event: FileChangeResult) {
+  async fn handle_watch_event(&mut self, watch_event: FsEventResult) {
     match watch_event {
       Ok(batched_events) => {
-        tracing::debug!(target: "hmr", "Received batched events: {:#?}", batched_events);
-
         let mut changed_files = FxIndexSet::default();
         batched_events.into_iter().for_each(|batched_event| match &batched_event.detail.kind {
           #[cfg(target_os = "macos")]
@@ -140,11 +141,6 @@ impl BundleCoordinator {
     match self.initial_build_state {
       // If initial build in progress, queue the file changes
       InitialBuildState::InProgress => {
-        tracing::debug!(
-          "Initial build is {:?}, queuing {} file changes",
-          self.initial_build_state,
-          changed_files.len()
-        );
         self.queued_file_changes.extend(changed_files);
       }
 
@@ -164,12 +160,6 @@ impl BundleCoordinator {
 
       // If initial build failed, create FullRebuild task and clear queue
       InitialBuildState::Failed => {
-        tracing::info!(
-          "Initial build failed, scheduling retry due to {:?}. Clearing {} queued changes.",
-          changed_files,
-          self.queued_file_changes.len()
-        );
-
         // Clear the queued file changes - they'll be picked up by the full rebuild
         self.queued_file_changes.clear();
 
@@ -179,14 +169,9 @@ impl BundleCoordinator {
         // Reset to InProgress since we're retrying
         let schedule_result = self.schedule_build_if_stale().await;
         if let Ok(Some((_, already_scheduled))) = &schedule_result {
-          if *already_scheduled {
-            tracing::info!("A build is already scheduled to retry the initial build.");
-          } else {
+          if !*already_scheduled {
             self.set_initial_build_state(InitialBuildState::InProgress);
-            tracing::info!("Scheduled a build to retry the initial build.");
           }
-        } else if let Err(e) = &schedule_result {
-          tracing::error!("Failed to schedule build to retry initial build: {:?}", e);
         }
       }
     }
@@ -198,44 +183,34 @@ impl BundleCoordinator {
     result: BuildResult<()>,
     has_generated_bundle_output: bool,
   ) {
-    tracing::trace!("BundleCoordinator received BundleCompleted: {:?}", result.is_ok());
-
     // Clear current build
     self.current_bundling_future = None;
 
     // Update has_stale_build_output based on task type and result
     if result.is_ok() {
       // Output is fresh if task included a rebuild
-      self.has_stale_build_output = !has_generated_bundle_output;
+      self.has_stale_bundle_output = !has_generated_bundle_output;
     } else {
       // Output is stale if build failed
-      self.has_stale_build_output = true;
+      self.has_stale_bundle_output = true;
     }
 
     match self.initial_build_state {
       InitialBuildState::InProgress => {
         if result.is_ok() {
           // Initial build succeeded!
-          tracing::info!("Initial build succeeded");
           self.set_initial_build_state(InitialBuildState::Succeeded);
 
           // Update watch paths after initial build succeeds
-          if let Err(e) = self.update_watch_paths().await {
-            tracing::error!("Failed to update watch paths: {:?}", e);
-          }
+          let _ = self.update_watch_paths().await;
 
           // Process any queued file changes
           if !self.queued_file_changes.is_empty() {
             let queued_changes = std::mem::take(&mut self.queued_file_changes);
-            tracing::info!(
-              "Processing {} file changes that arrived during initial build",
-              queued_changes.len()
-            );
             self.handle_file_changes(queued_changes).await;
           }
         } else {
           // Initial build failed
-          tracing::error!("Initial build failed");
           self.set_initial_build_state(InitialBuildState::Failed);
           // Keep queued file changes - they'll trigger retry when next change comes
         }
@@ -243,7 +218,6 @@ impl BundleCoordinator {
 
       InitialBuildState::Succeeded | InitialBuildState::Failed => {
         // Incremental builds don't change initial build state
-        tracing::trace!("Incremental build completed");
       }
     }
 
@@ -256,26 +230,31 @@ impl BundleCoordinator {
   async fn schedule_build_if_stale(
     &mut self,
   ) -> BuildResult<Option<(BundlingFuture, /* already scheduled */ bool)>> {
-    tracing::trace!("Calling `schedule_build_if_stale`");
+    tracing::trace!("[BundleCoordinator] scheduling build if stale");
     if let Some(building_future) = self.current_bundling_future.clone() {
-      tracing::trace!("A build is running, return the future immediately");
-
+      tracing::trace!("[BundleCoordinator] found running build");
       // If there's build running, it will be responsible to handle new changed files.
       // So, we only need to wait for the latest build to finish.
       Ok(Some((building_future, true)))
     } else if let Some(mut task_input) = self.queued_tasks.pop_front() {
       tracing::trace!(
-        "Schedule a build to consume pending changed files due to task{task_input:#?}",
+        "[BundleCoordinator] scheduling new build task\n - task_input: {task_input:#?}"
       );
-
+      let mut merged_task_count = 0;
       // Merge mergeable task inputs into one.
       while let Some(peeked) = self.queued_tasks.pop_front() {
         if task_input.is_mergeable_with(&peeked) {
           task_input.merge_with(peeked);
+          merged_task_count += 1;
         } else {
           self.queued_tasks.push_front(peeked);
           break;
         }
+      }
+      if merged_task_count > 0 {
+        tracing::trace!(
+          "[BundleCoordinator] merged {merged_task_count} extra tasks into one\n - merged_task_input: {task_input:#?}"
+        );
       }
 
       let bundling_task = BundlingTask::new(
@@ -292,8 +271,43 @@ impl BundleCoordinator {
 
       Ok(Some((bundling_future, false)))
     } else {
-      tracing::trace!("Nothing to do due to no task in queue; {:?}", self.initial_build_state);
+      tracing::trace!("[BundleCoordinator] doesn't have any build to schedule");
       Ok(None)
+    }
+  }
+
+  /// Ensure latest bundle output is available
+  /// Returns Some(future) if there's a build to wait for, None if output is already fresh
+  async fn ensure_latest_bundle_output(&mut self) -> BuildResult<Option<BundlingFuture>> {
+    tracing::trace!("[BundleCoordinator] is ensuring latest bundle output");
+
+    // If there's a build running, return its future
+    if let Some(building_future) = self.current_bundling_future.clone() {
+      tracing::trace!("[BundleCoordinator] found running build and end ensuring");
+      return Ok(Some(building_future));
+    }
+
+    if self.queued_tasks.is_empty() {
+      if self.has_stale_bundle_output {
+        // No queued tasks - create a new FullRebuild task
+        tracing::trace!(
+          "[BundleCoordinator] output is stale with no queued tasks, ends ensuring by scheduling a new FullRebuild task"
+        );
+        self.queued_tasks.push_back(TaskInput::FullRebuild);
+        let schedule_result = self.schedule_build_if_stale().await?;
+        Ok(schedule_result.map(|(future, _)| future))
+      } else {
+        tracing::trace!(
+          "[BundleCoordinator] output is already fresh with no queued tasks, ends ensuring"
+        );
+        Ok(None)
+      }
+    } else {
+      tracing::trace!(
+        "[BundleCoordinator] found queued tasks, ends ensuring by scheduling queued tasks"
+      );
+      let schedule_result = self.schedule_build_if_stale().await?;
+      Ok(schedule_result.map(|(future, _)| future))
     }
   }
 
@@ -301,21 +315,14 @@ impl BundleCoordinator {
   fn create_status(&self) -> CoordinatorStatus {
     CoordinatorStatus {
       running_future: self.current_bundling_future.clone(),
-      has_stale_output: self.has_stale_build_output,
+      has_stale_output: self.has_stale_bundle_output,
       initial_build_state: self.initial_build_state,
     }
   }
 
   /// Set initial build state with logging
   fn set_initial_build_state(&mut self, new_state: InitialBuildState) {
-    if self.initial_build_state != new_state {
-      tracing::debug!(
-        "Initial build state transition: {:?} -> {:?}",
-        self.initial_build_state,
-        new_state
-      );
-      self.initial_build_state = new_state;
-    }
+    self.initial_build_state = new_state;
   }
 
   /// Update watcher paths based on current build output
@@ -327,7 +334,6 @@ impl BundleCoordinator {
     let mut paths_mut = watcher.paths_mut();
     for watch_file in watch_files.iter() {
       let watch_file = &**watch_file;
-      tracing::trace!("watch file: {:?}", watch_file);
       if !self.watched_files.contains(watch_file) {
         self.watched_files.insert(watch_file.to_string().into());
         paths_mut.add(watch_file.as_path(), notify::RecursiveMode::NonRecursive)?;

@@ -83,16 +83,12 @@ impl BundleCoordinator {
         CoordinatorMsg::WatchEvent(watch_event) => {
           self.handle_watch_event(watch_event).await;
         }
-        CoordinatorMsg::BuildCompleted { result, task_required_rebuild } => {
-          self.handle_build_completed(result, task_required_rebuild).await;
+        CoordinatorMsg::BundleCompleted { result, has_generated_bundle_output } => {
+          self.handle_bundle_completed(result, has_generated_bundle_output).await;
         }
         CoordinatorMsg::ScheduleBuild { reply } => {
           let result = self.schedule_build_if_stale().await;
           let _ = reply.send(result);
-        }
-        CoordinatorMsg::HasLatestBuildOutput { reply } => {
-          let has_latest = self.has_latest_build_output();
-          let _ = reply.send(has_latest);
         }
         CoordinatorMsg::GetStatus { reply } => {
           let status = self.create_status();
@@ -197,8 +193,12 @@ impl BundleCoordinator {
   }
 
   /// Handle build completion notification
-  async fn handle_build_completed(&mut self, result: BuildResult<()>, task_required_rebuild: bool) {
-    tracing::trace!("BundleCoordinator received BuildCompleted: {:?}", result.is_ok());
+  async fn handle_bundle_completed(
+    &mut self,
+    result: BuildResult<()>,
+    has_generated_bundle_output: bool,
+  ) {
+    tracing::trace!("BundleCoordinator received BundleCompleted: {:?}", result.is_ok());
 
     // Clear current build
     self.current_bundling_future = None;
@@ -206,7 +206,7 @@ impl BundleCoordinator {
     // Update has_stale_build_output based on task type and result
     if result.is_ok() {
       // Output is fresh if task included a rebuild
-      self.has_stale_build_output = !task_required_rebuild;
+      self.has_stale_build_output = !has_generated_bundle_output;
     } else {
       // Output is stale if build failed
       self.has_stale_build_output = true;
@@ -278,12 +278,12 @@ impl BundleCoordinator {
         }
       }
 
-      let bundling_task = BundlingTask {
-        input: task_input,
-        bundler: Arc::clone(&self.bundler),
-        dev_context: Arc::clone(&self.ctx),
-        next_hmr_patch_id: Arc::clone(&self.next_hmr_patch_id),
-      };
+      let bundling_task = BundlingTask::new(
+        task_input,
+        Arc::clone(&self.bundler),
+        Arc::clone(&self.ctx),
+        Arc::clone(&self.next_hmr_patch_id),
+      );
 
       let bundling_future = (Box::pin(bundling_task.run()) as PinBoxSendStaticFuture).shared();
       tokio::spawn(bundling_future.clone());
@@ -297,14 +297,10 @@ impl BundleCoordinator {
     }
   }
 
-  fn has_latest_build_output(&self) -> bool {
-    !self.has_stale_build_output
-  }
-
   /// Get current build status - atomic operation that doesn't block
   fn create_status(&self) -> CoordinatorStatus {
     CoordinatorStatus {
-      current_build_future: self.current_bundling_future.clone(),
+      running_future: self.current_bundling_future.clone(),
       has_stale_output: self.has_stale_build_output,
       initial_build_state: self.initial_build_state,
     }

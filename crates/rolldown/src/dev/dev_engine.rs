@@ -146,7 +146,7 @@ impl DevEngine {
 
     // Wait for initial build to complete. It's ok if the initial build fails, we just let it pass.
     // Recovering from errors is handled by other parts of the system.
-    self.ensure_latest_build_output().await?;
+    self.ensure_latest_bundle_output().await?;
 
     Ok(())
   }
@@ -154,6 +154,7 @@ impl DevEngine {
   /// TODO: do we really need this as a public API? What's the use case?
   pub async fn wait_for_close(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
+
     let coordinator_state = self.coordinator_state.lock().await;
     if let Some(coordinator_handle) = coordinator_state.handle.clone() {
       coordinator_handle.await;
@@ -177,26 +178,35 @@ impl DevEngine {
       .map_err_to_unhandleable()
       .context("DevEngine: coordinator closed before responding to GetStatus")?;
 
-    if let Some(bundling_future) = status.current_build_future {
+    if let Some(bundling_future) = status.running_future {
       bundling_future.await;
     }
 
     Ok(())
   }
 
-  pub async fn has_latest_build_output(&self) -> bool {
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    if self
+  pub async fn has_latest_bundle_output(&self) -> BuildResult<bool> {
+    self.create_error_if_closed()?;
+
+    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    self
       .coordinator_sender
-      .send(CoordinatorMsg::HasLatestBuildOutput { reply: reply_tx })
-      .is_err()
-    {
-      return false;
-    }
-    reply_rx.await.unwrap_or(false)
+      .send(CoordinatorMsg::GetStatus { reply: reply_sender })
+      .map_err_to_unhandleable()
+      .context(
+        "DevEngine: failed to send GetStatus to coordinator within has_latest_bundle_output",
+      )?;
+
+    let status = reply_receiver
+      .await
+      .map_err_to_unhandleable()
+      .context("DevEngine: coordinator closed before responding to GetStatus within has_latest_bundle_output")?;
+
+    Ok(!status.has_stale_output)
   }
 
-  pub async fn ensure_latest_build_output(&self) -> BuildResult<()> {
+  // Ensure there's latest bundle output available for browser loading/reloading scenarios
+  pub async fn ensure_latest_bundle_output(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
 
     let mut count = 0;
@@ -205,7 +215,7 @@ impl DevEngine {
       count += 1;
       if count > 1000 {
         eprintln!(
-          "Debug: `ensure_latest_build_output` wait for 1000 times build, something might be wrong"
+          "Debug: `ensure_latest_bundle_output` wait for 1000 times build, something might be wrong"
         );
         break;
       }
@@ -220,9 +230,9 @@ impl DevEngine {
       let status = reply_rx
         .await
         .map_err_to_unhandleable()
-        .context("DevEngine: coordinator closed before responding to GetBuildStatus")?;
+        .context("DevEngine: coordinator closed before responding to GetStatus")?;
 
-      if let Some(building_future) = status.current_build_future {
+      if let Some(building_future) = status.running_future {
         tracing::trace!("Waiting for current build to finish...; {:?}", status.initial_build_state);
         building_future.await;
       } else {

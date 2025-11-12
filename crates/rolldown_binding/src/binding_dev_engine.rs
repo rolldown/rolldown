@@ -152,13 +152,17 @@ impl BindingDevEngine {
   }
 
   #[napi]
-  pub async fn has_latest_build_output(&self) -> bool {
-    self.inner.has_latest_build_output().await
+  pub async fn has_latest_build_output(&self) -> napi::Result<bool> {
+    self
+      .inner
+      .has_latest_bundle_output()
+      .await
+      .map_err(|_e| napi::Error::from_reason("Failed to check latest build output"))
   }
 
   #[napi]
   pub async fn ensure_latest_build_output(&self) -> napi::Result<()> {
-    self.inner.ensure_latest_build_output().await.expect("Should handle this error");
+    self.inner.ensure_latest_bundle_output().await.expect("Should handle this error");
     Ok(())
   }
 

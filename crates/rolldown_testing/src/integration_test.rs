@@ -215,7 +215,7 @@ impl IntegrationTest {
 
         // Optionally wait for async builds to complete
         if self.test_meta.dev.ensure_latest_build_output_for_each_step {
-          dev_engine.ensure_latest_build_output().await.unwrap();
+          dev_engine.ensure_latest_bundle_output().await.unwrap();
         }
       }
       drop(dev_engine);

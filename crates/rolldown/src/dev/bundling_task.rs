@@ -20,6 +20,7 @@ pub struct BundlingTask {
   pub bundler: Arc<Mutex<Bundler>>,
   pub dev_context: SharedDevContext,
   pub next_hmr_patch_id: Arc<AtomicU32>,
+  has_rebuild_happen: bool,
 }
 
 impl Deref for BundlingTask {
@@ -37,6 +38,15 @@ impl DerefMut for BundlingTask {
 }
 
 impl BundlingTask {
+  pub fn new(
+    input: TaskInput,
+    bundler: Arc<Mutex<Bundler>>,
+    dev_context: SharedDevContext,
+    next_hmr_patch_id: Arc<AtomicU32>,
+  ) -> Self {
+    Self { input, bundler, dev_context, next_hmr_patch_id, has_rebuild_happen: false }
+  }
+
   pub async fn run(mut self) {
     tracing::trace!("Start running bundling task: {:#?}", self.input);
     let task_run_result = self.run_inner().await;
@@ -46,14 +56,11 @@ impl BundlingTask {
       eprintln!("Bundling task run with error: {err}"); // FIXME: handle this error
     }
 
-    // Check final task type after run_inner (task may have been converted)
-    let task_required_rebuild = self.input.requires_rebuild();
-
-    self.dev_context.coordinator_tx.send(CoordinatorMsg::BuildCompleted {
+    self.dev_context.coordinator_tx.send(CoordinatorMsg::BundleCompleted {
       result: task_run_result,
-      task_required_rebuild,
+      has_generated_bundle_output: self.has_rebuild_happen,
     }).expect(
-      "Coordinator channel closed while sending BuildCompleted - coordinator terminated unexpectedly"
+      "Coordinator channel closed while sending BundleCompleted - coordinator terminated unexpectedly"
     );
   }
 
@@ -89,6 +96,7 @@ impl BundlingTask {
     }
 
     if self.input.requires_rebuild() {
+      self.has_rebuild_happen = true;
       self.rebuild().await?;
     }
 

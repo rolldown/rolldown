@@ -935,52 +935,40 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     self.ctx.linking_infos,
                   );
 
-                  let final_expr = if needs_to_commonjs {
+                  let base_expr = if needs_to_commonjs {
                     // Need __toCommonJS
                     // `__toCommonJS`
                     let to_commonjs_expr = self.finalized_expr_for_runtime_symbol("__toCommonJS");
                     // `__toCommonJS(xxx_exports)`
-                    let to_commonjs_call_expr =
-                      ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-                        SPAN,
-                        to_commonjs_expr,
-                        NONE,
-                        self.snippet.builder.vec1(ast::Argument::from(namespace_object_ref_expr)),
-                        false,
-                      ));
-
-                    if is_json_module {
-                      // `__toCommonJS(xxx_exports).default`
-                      Expression::from(self.snippet.builder.member_expression_static(
-                        SPAN,
-                        to_commonjs_call_expr,
-                        self.snippet.id_name("default", SPAN),
-                        false,
-                      ))
-                    } else {
-                      to_commonjs_call_expr
-                    }
+                    ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+                      SPAN,
+                      to_commonjs_expr,
+                      NONE,
+                      self.snippet.builder.vec1(ast::Argument::from(namespace_object_ref_expr)),
+                      false,
+                    ))
                   } else {
                     // Can skip __toCommonJS - directly access xxx_exports['module.exports']
-                    let module_exports_member = ast::Expression::ComputedMemberExpression(
+                    ast::Expression::ComputedMemberExpression(
                       self.snippet.builder.alloc_computed_member_expression(
                         SPAN,
                         namespace_object_ref_expr.clone_in(self.alloc),
                         self.snippet.string_literal_expr("module.exports", SPAN),
                         false,
                       ),
-                    );
-                    if is_json_module {
-                      // `xxx_exports['module.exports'].default`
-                      Expression::from(self.snippet.builder.member_expression_static(
-                        SPAN,
-                        module_exports_member,
-                        self.snippet.id_name("default", SPAN),
-                        false,
-                      ))
-                    } else {
-                      module_exports_member
-                    }
+                    )
+                  };
+
+                  let final_expr = if is_json_module {
+                    // Add `.default` for JSON modules
+                    Expression::from(self.snippet.builder.member_expression_static(
+                      SPAN,
+                      base_expr,
+                      self.snippet.id_name("default", SPAN),
+                      false,
+                    ))
+                  } else {
+                    base_expr
                   };
 
                   // `(init_xxx(), __toCommonJS(xxx_exports))` or `(init_xxx(), xxx_exports['module.exports'])`

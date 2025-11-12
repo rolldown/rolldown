@@ -24,15 +24,19 @@ impl DebugTracer {
       return tracer;
     }
 
+    let devtools_event_filter = FilterFn::new(|metadata| {
+      const ALLOW: bool = true;
+      const REJECT: bool = false;
+      if metadata.is_event() {
+        if metadata.fields().field("devtoolsAction").is_some() { ALLOW } else { REJECT }
+      } else {
+        // Spans for devtool don't have character data so far.
+        ALLOW
+      }
+    });
+
     tracing_subscriber::registry()
-      .with(DebugDataPropagateLayer.with_filter(FilterFn::new(|metadata| {
-        if metadata.is_event() {
-          metadata.fields().field("meta").is_some()
-        } else {
-          // Spans for devtool don't have character data so far.
-          true
-        }
-      })))
+      .with(DebugDataPropagateLayer.with_filter(devtools_event_filter))
       .with(fmt::layer().event_format(DebugFormatter))
       .init();
 

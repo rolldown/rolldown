@@ -221,7 +221,7 @@ pub struct ActionMetaExtractor {
 
 impl tracing::field::Visit for ActionMetaExtractor {
   fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
-    if field.name() == "meta" {
+    if field.name() == "devtoolsAction" {
       self.meta = Some(serde_json::from_str(value).unwrap());
     }
   }

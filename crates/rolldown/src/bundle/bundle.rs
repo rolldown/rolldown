@@ -151,9 +151,15 @@ impl Bundle {
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
 
     if self.options.clean_dir && self.options.dir.is_some() {
-      clean_dir(&self.fs, &dist_dir).with_context(|| {
-        format!("Could not clean directory for output chunks: {}", dist_dir.display())
-      })?;
+      if let Err(err) = clean_dir(&self.fs, &dist_dir) {
+        self.warnings.push(
+          BuildDiagnostic::could_not_clean_directory(
+            dist_dir.display().to_string(),
+            err.to_string(),
+          )
+          .with_severity_warning(),
+        );
+      }
     }
 
     let mut output = self.bundle_up(scan_stage_output, /* is_write */ true).await?;

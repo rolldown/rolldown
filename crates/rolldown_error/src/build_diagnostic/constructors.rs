@@ -17,6 +17,7 @@ use super::events::already_closed::AlreadyClosed;
 use super::events::assign_to_import::AssignToImport;
 use super::events::bundler_initialize_error::BundlerInitializeError;
 use super::events::configuration_field_conflict::ConfigurationFieldConflict;
+use super::events::could_not_clean_directory::CouldNotCleanDirectory;
 use super::events::export_undefined_variable::ExportUndefinedVariable;
 use super::events::filename_conflict::FilenameConflict;
 use super::events::illegal_identifier_as_name::IllegalIdentifierAsName;
@@ -343,5 +344,9 @@ impl BuildDiagnostic {
 
   pub fn plugin_error(caused_plugin: CausedPlugin, err: anyhow::Error) -> Self {
     Self::new_inner(PluginError { plugin: caused_plugin, error: err })
+  }
+
+  pub fn could_not_clean_directory(dir: String, reason: String) -> Self {
+    Self::new_inner(CouldNotCleanDirectory { dir, reason })
   }
 }

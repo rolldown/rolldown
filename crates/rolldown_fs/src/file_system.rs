@@ -26,11 +26,6 @@ pub trait FileSystem: Send + Sync + OxcResolverFileSystem {
   /// * See [std::path::Path::exists]
   fn exists(&self, path: &Path) -> bool;
 
-  /// # Errors
-  ///
-  /// * See [std::fs::read]
-  fn read(&self, path: &Path) -> io::Result<Vec<u8>>;
-
   /// Returns a vector of absolute paths to the directory entries.
   ///
   /// Here we don't return [`std::fs::ReadDir`] because

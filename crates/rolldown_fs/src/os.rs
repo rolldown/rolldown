@@ -35,10 +35,6 @@ impl FileSystem for OsFileSystem {
     path.exists()
   }
 
-  fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
-    std::fs::read(path)
-  }
-
   fn read_dir(&self, path: &Path) -> io::Result<Vec<PathBuf>> {
     let entries = std::fs::read_dir(path)?;
     let mut paths = Vec::new();
@@ -57,6 +53,10 @@ impl FileSystem for OsFileSystem {
 impl OxcResolverFileSystem for OsFileSystem {
   fn new(yarn_pnp: bool) -> Self {
     Self(Arc::new(FileSystemOs::new(yarn_pnp)))
+  }
+
+  fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
+    self.0.read(path)
   }
 
   fn read_to_string(&self, path: &Path) -> io::Result<String> {

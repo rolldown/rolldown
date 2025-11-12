@@ -76,16 +76,6 @@ impl FileSystem for MemoryFileSystem {
     self.fs.exists(path.to_string_lossy().as_ref()).is_ok()
   }
 
-  fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
-    let mut buf = Vec::new();
-    self
-      .fs
-      .open_file(&path.to_string_lossy())
-      .map_err(|err| io::Error::new(io::ErrorKind::NotFound, err))?
-      .read_to_end(&mut buf)?;
-    Ok(buf)
-  }
-
   fn read_dir(&self, path: &Path) -> io::Result<Vec<PathBuf>> {
     let path_str = path.to_string_lossy();
     let entries = self
@@ -112,6 +102,16 @@ impl FileSystem for MemoryFileSystem {
 impl OxcResolverFileSystem for MemoryFileSystem {
   fn new(_yarn_pnp: bool) -> Self {
     Self::default()
+  }
+
+  fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
+    let mut buf = Vec::new();
+    self
+      .fs
+      .open_file(&path.to_string_lossy())
+      .map_err(|err| io::Error::new(io::ErrorKind::NotFound, err))?
+      .read_to_end(&mut buf)?;
+    Ok(buf)
   }
 
   fn read_to_string(&self, path: &Path) -> io::Result<String> {

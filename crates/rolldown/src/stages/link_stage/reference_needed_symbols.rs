@@ -13,7 +13,9 @@ use rolldown_utils::{
 };
 
 use super::LinkStage;
-use crate::utils::external_import_interop::{import_record_needs_interop, require_needs_to_commonjs};
+use crate::utils::external_import_interop::{
+  import_record_needs_interop, require_needs_to_commonjs,
+};
 
 fn is_external_dynamic_import(
   table: &ModuleTable,

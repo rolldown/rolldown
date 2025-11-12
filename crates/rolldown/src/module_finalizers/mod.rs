@@ -33,7 +33,9 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
 use crate::hmr::utils::HmrAstBuilder;
-use crate::utils::external_import_interop::{import_record_needs_interop, require_needs_to_commonjs};
+use crate::utils::external_import_interop::{
+  import_record_needs_interop, require_needs_to_commonjs,
+};
 
 mod hmr;
 mod rename;
@@ -933,28 +935,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     self.ctx.linking_infos,
                   );
 
-                  let final_expr = if !needs_to_commonjs {
-                    // Can skip __toCommonJS - directly access xxx_exports['module.exports']
-                    let module_exports_member = ast::Expression::ComputedMemberExpression(
-                      self.snippet.builder.alloc_computed_member_expression(
-                        SPAN,
-                        namespace_object_ref_expr.clone_in(self.alloc),
-                        self.snippet.string_literal_expr("module.exports", SPAN),
-                        false,
-                      ),
-                    );
-                    if is_json_module {
-                      // `xxx_exports['module.exports'].default`
-                      Expression::from(self.snippet.builder.member_expression_static(
-                        SPAN,
-                        module_exports_member,
-                        self.snippet.id_name("default", SPAN),
-                        false,
-                      ))
-                    } else {
-                      module_exports_member
-                    }
-                  } else {
+                  let final_expr = if needs_to_commonjs {
                     // Need __toCommonJS
                     // `__toCommonJS`
                     let to_commonjs_expr = self.finalized_expr_for_runtime_symbol("__toCommonJS");
@@ -978,6 +959,27 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       ))
                     } else {
                       to_commonjs_call_expr
+                    }
+                  } else {
+                    // Can skip __toCommonJS - directly access xxx_exports['module.exports']
+                    let module_exports_member = ast::Expression::ComputedMemberExpression(
+                      self.snippet.builder.alloc_computed_member_expression(
+                        SPAN,
+                        namespace_object_ref_expr.clone_in(self.alloc),
+                        self.snippet.string_literal_expr("module.exports", SPAN),
+                        false,
+                      ),
+                    );
+                    if is_json_module {
+                      // `xxx_exports['module.exports'].default`
+                      Expression::from(self.snippet.builder.member_expression_static(
+                        SPAN,
+                        module_exports_member,
+                        self.snippet.id_name("default", SPAN),
+                        false,
+                      ))
+                    } else {
+                      module_exports_member
                     }
                   };
 

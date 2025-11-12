@@ -1,4 +1,6 @@
-use rolldown_common::{ExportsKind, ImportRecordIdx, ModuleIdx, NamedImport, NormalModule, Specifier};
+use rolldown_common::{
+  ExportsKind, ImportRecordIdx, ModuleIdx, NamedImport, NormalModule, Specifier,
+};
 
 use crate::types::linking_metadata::LinkingMetadataVec;
 

@@ -21,7 +21,7 @@ impl CausedPlugin {
 
 impl Display for CausedPlugin {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(f, "caused by plugin `{}`", self.name)
+    write!(f, "plugin `{}` threw an error", self.name)
   }
 }
 
@@ -40,7 +40,7 @@ impl BuildEvent for PluginError {
     if self.error.downcast_ref::<BuildDiagnostic>().is_some() {
       String::default()
     } else {
-      self.error.root_cause().to_string()
+      format!("{:?}", self.error)
     }
   }
 

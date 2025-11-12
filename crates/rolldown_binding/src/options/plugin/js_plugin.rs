@@ -8,6 +8,7 @@ use crate::{
     js_callback::MaybeAsyncJsCallbackExt,
   },
 };
+use anyhow::Context;
 use napi::bindgen_prelude::FnArgs;
 use rolldown_common::NormalModule;
 use rolldown_plugin::{__inner::SharedPluginable, HookUsage, Plugin, typedmap::TypedMapKey};
@@ -76,7 +77,8 @@ impl Plugin for JsPlugin {
         (ctx.clone().into(), BindingNormalizedOptions::new(Arc::clone(args.options))).into(),
       )
       .instrument(debug_span!("build_start_hook", plugin_name = self.name))
-      .await?;
+      .await
+      .context("buildStart hook threw an error")?;
     }
     Ok(())
   }
@@ -112,21 +114,26 @@ impl Plugin for JsPlugin {
         .map(|v| *v),
     };
 
-    Ok(
-      cb.await_call(
-        (
-          ctx.clone().into(),
-          args.specifier.to_string(),
-          args.importer.map(str::to_string),
-          extra_args,
-        )
-          .into(),
+    cb.await_call(
+      (
+        ctx.clone().into(),
+        args.specifier.to_string(),
+        args.importer.map(str::to_string),
+        extra_args,
       )
-      .instrument(debug_span!("resolve_id_hook", plugin_name = self.name))
-      .await?
-      .map(TryInto::try_into)
-      .transpose()?,
+        .into(),
     )
+    .instrument(debug_span!("resolve_id_hook", plugin_name = self.name))
+    .await?
+    .map(TryInto::try_into)
+    .transpose()
+    .with_context(|| {
+      format!(
+        "resolveId hook threw an error for specifier={} importer={}",
+        args.specifier,
+        args.importer.unwrap_or("undefined")
+      )
+    })
   }
 
   fn resolve_id_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
@@ -139,16 +146,22 @@ impl Plugin for JsPlugin {
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     match &self.resolve_dynamic_import {
-      Some(cb) => Ok(
-        cb.await_call(
+      Some(cb) => cb
+        .await_call(
           (ctx.clone().into(), args.specifier.to_string(), args.importer.map(str::to_string))
             .into(),
         )
         .instrument(debug_span!("resolve_dynamic_import_hook", plugin_name = self.name))
         .await?
         .map(TryInto::try_into)
-        .transpose()?,
-      ),
+        .transpose()
+        .with_context(|| {
+          format!(
+            "resolveDynamicImport hook threw an error for specifier={} importer={}",
+            args.specifier,
+            args.importer.unwrap_or("undefined")
+          )
+        }),
       _ => Ok(None),
     }
   }
@@ -182,6 +195,7 @@ impl Plugin for JsPlugin {
       .await?
       .map(TryInto::try_into)
       .transpose()
+      .with_context(|| format!("load hook threw an error for id={}", args.id,))
   }
 
   fn load_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
@@ -222,6 +236,7 @@ impl Plugin for JsPlugin {
     .await?
     .map(TryInto::try_into)
     .transpose()
+    .with_context(|| format!("transform hook threw an error for id={}", args.id))
   }
 
   fn transform_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
@@ -235,9 +250,12 @@ impl Plugin for JsPlugin {
     _normal_module: &NormalModule,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.module_parsed {
-      cb.await_call((ctx.clone().into(), BindingModuleInfo::new(module_info)).into())
+      cb.await_call((ctx.clone().into(), BindingModuleInfo::new(Arc::clone(&module_info))).into())
         .instrument(debug_span!("module_parsed_hook", plugin_name = self.name))
-        .await?;
+        .await
+        .with_context(|| {
+          format!("moduleParsed hook threw an error for id={}", module_info.id.as_ref())
+        })?;
     }
     Ok(())
   }
@@ -266,7 +284,8 @@ impl Plugin for JsPlugin {
           .into(),
       )
       .instrument(debug_span!("build_end_hook", plugin_name = self.name))
-      .await?;
+      .await
+      .context("buildEnd hook threw an error")?;
     }
     Ok(())
   }
@@ -287,7 +306,8 @@ impl Plugin for JsPlugin {
         (ctx.clone().into(), BindingNormalizedOptions::new(Arc::clone(args.options))).into(),
       )
       .instrument(debug_span!("render_start_hook", plugin_name = self.name))
-      .await?;
+      .await
+      .context("renderStart hook threw an error")?;
     }
     Ok(())
   }
@@ -309,7 +329,8 @@ impl Plugin for JsPlugin {
         .instrument(debug_span!("banner_hook", plugin_name = self.name))
         .await?
         .map(TryInto::try_into)
-        .transpose()?,
+        .transpose()
+        .with_context(|| format!("banner hook threw an error for chunkName={}", args.chunk.name))?,
       ),
       _ => Ok(None),
     }
@@ -332,7 +353,8 @@ impl Plugin for JsPlugin {
         .instrument(debug_span!("intro_hook", plugin_name = self.name))
         .await?
         .map(TryInto::try_into)
-        .transpose()?,
+        .transpose()
+        .with_context(|| format!("intro hook threw an error for chunkName={}", args.chunk.name))?,
       ),
       _ => Ok(None),
     }
@@ -355,7 +377,8 @@ impl Plugin for JsPlugin {
         .instrument(debug_span!("outro_hook", plugin_name = self.name))
         .await?
         .map(TryInto::try_into)
-        .transpose()?,
+        .transpose()
+        .with_context(|| format!("outro hook threw an error for chunkName={}", args.chunk.name))?,
       ),
       _ => Ok(None),
     }
@@ -378,7 +401,8 @@ impl Plugin for JsPlugin {
         .instrument(debug_span!("footer_hook", plugin_name = self.name))
         .await?
         .map(TryInto::try_into)
-        .transpose()?,
+        .transpose()
+        .with_context(|| format!("footer hook threw an error for chunkName={}", args.chunk.name))?,
       ),
       _ => Ok(None),
     }
@@ -421,6 +445,7 @@ impl Plugin for JsPlugin {
     .await?
     .map(TryInto::try_into)
     .transpose()
+    .with_context(|| format!("renderChunk hook threw an error for chunkName={}", args.chunk.name))
   }
 
   fn render_chunk_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
@@ -434,9 +459,12 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookAugmentChunkHashReturn {
     match &self.augment_chunk_hash {
       Some(cb) => Ok(
-        cb.await_call((ctx.clone().into(), BindingRenderedChunk::new(chunk)).into())
+        cb.await_call((ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&chunk))).into())
           .instrument(debug_span!("augment_chunk_hash_hook", plugin_name = self.name))
-          .await?,
+          .await
+          .with_context(|| {
+            format!("augmentChunkHash hook threw an error for chunkName={}", chunk.name)
+          })?,
       ),
       _ => Ok(None),
     }
@@ -464,7 +492,8 @@ impl Plugin for JsPlugin {
           .into(),
       )
       .instrument(debug_span!("render_error_hook", plugin_name = self.name))
-      .await?;
+      .await
+      .context("renderError hook threw an error")?;
     }
     Ok(())
   }
@@ -490,7 +519,8 @@ impl Plugin for JsPlugin {
             .into(),
         )
         .instrument(debug_span!("generate_bundle_hook", plugin_name = self.name))
-        .await?;
+        .await
+        .context("generateBundle hook threw an error")?;
       changed.apply_changes(args.bundle)?;
     }
     Ok(())
@@ -516,7 +546,8 @@ impl Plugin for JsPlugin {
             .into(),
         )
         .instrument(debug_span!("write_bundle_hook", plugin_name = self.name))
-        .await?;
+        .await
+        .context("writeBundle hook threw an error")?;
       changed.apply_changes(args.bundle)?;
     }
     Ok(())
@@ -533,7 +564,8 @@ impl Plugin for JsPlugin {
     if let Some(cb) = &self.close_bundle {
       cb.await_call(FnArgs { data: (ctx.clone().into(),) })
         .instrument(debug_span!("close_bundle_hook", plugin_name = self.name))
-        .await?;
+        .await
+        .context("closeBundle hook threw an error")?;
     }
     Ok(())
   }
@@ -551,7 +583,10 @@ impl Plugin for JsPlugin {
     if let Some(cb) = &self.watch_change {
       cb.await_call((ctx.clone().into(), path.to_string(), event.to_string()).into())
         .instrument(debug_span!("watch_change_hook", plugin_name = self.name))
-        .await?;
+        .await
+        .with_context(|| {
+          format!("watchChange hook threw an error for path={path} event={event}")
+        })?;
     }
     Ok(())
   }
@@ -567,7 +602,8 @@ impl Plugin for JsPlugin {
     if let Some(cb) = &self.close_watcher {
       cb.await_call(FnArgs { data: (ctx.clone().into(),) })
         .instrument(debug_span!("close_watcher_hook", plugin_name = self.name))
-        .await?;
+        .await
+        .context("closeWatcher hook threw an error")?;
     }
     Ok(())
   }

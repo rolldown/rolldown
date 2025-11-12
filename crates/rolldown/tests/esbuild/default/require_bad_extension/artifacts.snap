@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Errors
 
@@ -14,7 +13,7 @@ snapshot_kind: text
    │     │ 
    │     ╰─ 
    │ 
-   │ Help: Try insert a semicolon here
+   │ Help: Try inserting a semicolon here
 ───╯
 
 ```

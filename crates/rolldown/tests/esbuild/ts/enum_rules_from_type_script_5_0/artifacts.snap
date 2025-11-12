@@ -60,12 +60,12 @@ var Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1["X21"] = "Infinity";
 	Foo$1["X22"] = "-Infinity";
 	Foo$1["X23"] = "0";
-	Foo$1["X24"] = "ABxC";
+	Foo$1["X24"] = "A0BxC-31246D";
 	Foo$1[Foo$1["X25"] = 321] = "X25";
 	Foo$1[Foo$1["X26"] = 123] = "X26";
 	Foo$1["X27"] = "123x";
 	Foo$1["X28"] = "x123";
-	Foo$1["X29"] = "a";
+	Foo$1["X29"] = "a123b";
 	Foo$1[Foo$1["X30"] = Foo$1.X0] = "X30";
 	Foo$1[Foo$1["X31"] = Foo$1.X0 + "x"] = "X31";
 	Foo$1[Foo$1["X32"] = "x" + Foo$1.X0] = "X32";
@@ -73,7 +73,7 @@ var Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1["X34"] = "x";
 	Foo$1["X35"] = "xy";
 	Foo$1["X36"] = "yx";
-	Foo$1["X37"] = "ax";
+	Foo$1["X37"] = "axb";
 	Foo$1[Foo$1["X38"] = Foo$1["X1"]] = "X38";
 	Foo$1[Foo$1["X39"] = Foo$1["X1"] + "y"] = "X39";
 	Foo$1[Foo$1["X40"] = "y" + Foo$1["X1"]] = "X40";

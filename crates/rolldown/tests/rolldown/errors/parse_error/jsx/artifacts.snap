@@ -6,12 +6,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Expected `,` but found `class`
+[PARSE_ERROR] Error: Expected `,` or `)` but found `class`
    ╭─[ main.jsx:8:8 ]
    │
+ 4 │   return (
+   │          ┬  
+   │          ╰── Opened here
+   │ 
  8 │     <a class="the">
    │        ──┬──  
-   │          ╰──── `,` expected
+   │          ╰──── `,` or `)` expected
 ───╯
 
 ```
@@ -20,15 +24,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [PARSE_ERROR] Error: Expected corresponding JSX closing tag for 'b'.
-   ╭─[ main.jsx:5:6 ]
+   ╭─[ main.jsx:7:7 ]
    │
  5 │     <b>
    │      ┬  
-   │      ╰── 
+   │      ╰── Opened here
    │ 
  7 │     </a>
    │       ┬  
-   │       ╰── 
+   │       ╰── Expected `</b>`
 ───╯
 
 ```

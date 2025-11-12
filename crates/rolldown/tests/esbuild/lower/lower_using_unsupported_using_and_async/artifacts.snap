@@ -1,44 +1,94 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Assets
+# Errors
 
-## entry.js
+## PARSE_ERROR
 
-```js
+```text
+[PARSE_ERROR] Error: Using declaration cannot appear in the bare case statement.
+    ╭─[ switch.js:10:11 ]
+    │
+ 10 │        case 0: using c = d
+    │                ─────┬─────  
+    │                     ╰─────── 
+    │ 
+    │ Help: Wrap this declaration in a block statement
+────╯
 
 ```
 
-## loops.js
+## PARSE_ERROR
 
-```js
-//#region loops.js
-for (using a of b) c(() => a);
-if (nested) for (using a of b) c(() => a);
+```text
+[PARSE_ERROR] Error: Using declaration cannot appear in the bare case statement.
+    ╭─[ switch.js:11:12 ]
+    │
+ 11 │        default: using e = f
+    │                 ─────┬─────  
+    │                      ╰─────── 
+    │ 
+    │ Help: Wrap this declaration in a block statement
+────╯
 
-//#endregion
 ```
 
-## switch.js
+## PARSE_ERROR
 
-```js
-//#region switch.js
-using x = y;
-switch (foo) {
-	case 0: using c = d;
-	default: using e = f;
-}
-async function foo() {
-	using x$1 = y;
-	switch (foo) {
-		case 0: using c = d;
-		default: using e = f;
-	}
-	switch (foo) {
-		case 0: await using c = d;
-		default: using e = f;
-	}
-}
+```text
+[PARSE_ERROR] Error: Using declaration cannot appear in the bare case statement.
+    ╭─[ switch.js:14:11 ]
+    │
+ 14 │        case 0: await using c = d
+    │                ────────┬────────  
+    │                        ╰────────── 
+    │ 
+    │ Help: Wrap this declaration in a block statement
+────╯
 
-//#endregion
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Using declaration cannot appear in the bare case statement.
+    ╭─[ switch.js:15:12 ]
+    │
+ 15 │        default: using e = f
+    │                 ─────┬─────  
+    │                      ╰─────── 
+    │ 
+    │ Help: Wrap this declaration in a block statement
+────╯
+
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Using declaration cannot appear in the bare case statement.
+   ╭─[ switch.js:3:10 ]
+   │
+ 3 │     case 0: using c = d
+   │             ─────┬─────  
+   │                  ╰─────── 
+   │ 
+   │ Help: Wrap this declaration in a block statement
+───╯
+
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Using declaration cannot appear in the bare case statement.
+   ╭─[ switch.js:4:11 ]
+   │
+ 4 │     default: using e = f
+   │              ─────┬─────  
+   │                   ╰─────── 
+   │ 
+   │ Help: Wrap this declaration in a block statement
+───╯
+
 ```

@@ -39,6 +39,8 @@ pub fn compress_options_to_napi_compress_options(
     join_vars: Some(compress.join_vars),
     sequences: Some(compress.sequences),
     max_iterations: compress.max_iterations,
+    // available in the root treeshake options
+    treeshake: None,
   }
 }
 

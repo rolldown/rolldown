@@ -15,5 +15,7 @@
       }
     ]
   },
-  "expectExecuted": false
+  "expectExecuted": false,
+  "_comment": "expectError is true because of https://github.com/evanw/esbuild/issues/4323",
+  "expectError": true
 }

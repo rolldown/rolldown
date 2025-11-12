@@ -2704,12 +2704,6 @@ expression: output
 
 - entry-!~{000}~.js => entry-CMXZovLt.js
 
-# tests/esbuild/lower/lower_using
-
-- entry-!~{000}~.js => entry-B3IANQX3.js
-- loops-!~{001}~.js => loops-jV2n8FiX.js
-- switch-!~{002}~.js => switch-BASDpxdg.js
-
 # tests/esbuild/lower/lower_using_hoisting
 
 - hoist-directive-!~{001}~.js => hoist-directive-aLVAy9nS.js
@@ -2735,18 +2729,6 @@ expression: output
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
 - entry-!~{000}~.js => entry-WEiDann8.js
-
-# tests/esbuild/lower/lower_using_unsupported_async
-
-- entry-!~{000}~.js => entry-CMXZovLt.js
-- loops-!~{001}~.js => loops-CgXuEPfh.js
-- switch-!~{002}~.js => switch-Co85tZ-f.js
-
-# tests/esbuild/lower/lower_using_unsupported_using_and_async
-
-- entry-!~{000}~.js => entry-CMXZovLt.js
-- loops-!~{001}~.js => loops-CgXuEPfh.js
-- switch-!~{002}~.js => switch-Co85tZ-f.js
 
 # tests/esbuild/lower/static_class_block_es2021
 
@@ -3212,7 +3194,7 @@ expression: output
 # tests/esbuild/ts/enum_rules_from_type_script_5_0
 
 - not-supported-!~{001}~.js => not-supported-BslC2gdM.js
-- supported-!~{000}~.js => supported-B0txwxjS.js
+- supported-!~{000}~.js => supported-gWLBl1oC.js
 
 # tests/esbuild/ts/export_type_issue379
 

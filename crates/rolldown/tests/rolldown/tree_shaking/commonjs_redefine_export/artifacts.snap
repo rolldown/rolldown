@@ -12,6 +12,7 @@ import assert from "node:assert";
 //#region scope.js
 var require_scope = /* @__PURE__ */ __commonJS({ "scope.js": ((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.clearScope = clearScope;
 	exports.scope = exports.path = void 0;
 	exports.scope = /* @__PURE__ */ new WeakMap();
 	function clearScope() {

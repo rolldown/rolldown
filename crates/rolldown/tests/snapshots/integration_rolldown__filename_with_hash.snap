@@ -5106,11 +5106,11 @@ expression: output
 
 # tests/rolldown/optimization/inline_const/6101
 
-- main-!~{000}~.js => main-DAhy7DVy.js
+- main-!~{000}~.js => main-DjtLP-Uj.js
 
 # tests/rolldown/optimization/inline_const/basic
 
-- main-!~{000}~.js => main-CRqWbML8.js
+- main-!~{000}~.js => main-Lw_a_aUU.js
 
 # tests/rolldown/optimization/inline_const/issue_4786
 
@@ -5949,7 +5949,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/commonjs_redefine_export
 
-- main-!~{000}~.js => main-BRr_BRUm.js
+- main-!~{000}~.js => main-DYL9pNj2.js
 
 # tests/rolldown/tree_shaking/derived_side_effects_should_have_high_priority
 

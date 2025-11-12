@@ -4,6 +4,7 @@ use oxc::ast::{
   ast::{self, AssignmentExpression, Expression, PropertyKey},
 };
 use oxc::span::CompactStr;
+use oxc_allocator::Address;
 use rolldown_common::{AstScopes, EcmaModuleAstUsage};
 use rolldown_ecmascript_utils::ExpressionExt;
 
@@ -68,7 +69,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                 self.visit_path.get(cursor - 2)?,
               )
             }
-            AstKind::Argument(arg) => self.check_object_define_property(arg, cursor - 1),
+            AstKind::CallExpression(arg) => {
+              if let Some(arg) =
+                arg.arguments.iter().find(|arg| arg.address() == Address::from_ptr(parent))
+              {
+                self.check_object_define_property(arg, cursor - 1)
+              } else {
+                None
+              }
+            }
             AstKind::AssignmentExpression(assignment_expr) => {
               self.check_assignment_is_cjs_reexport(assignment_expr)
             }
@@ -82,10 +91,16 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           Self::check_assignment_target_property(&member_expr, self.visit_path.get(cursor - 1)?)
         }
       },
-      AstKind::Argument(arg) => {
+      AstKind::CallExpression(arg) => {
         // one scenario:
         // 1. Object.defineProperty(exports, "__esModule", { value: true });
-        self.check_object_define_property(arg, cursor)
+        if let Some(arg) =
+          arg.arguments.iter().find(|arg| arg.address() == Address::from_ptr(parent))
+        {
+          self.check_object_define_property(arg, cursor)
+        } else {
+          None
+        }
       }
       _ => None,
     }

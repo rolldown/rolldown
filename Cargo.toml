@@ -216,13 +216,13 @@ napi-build = { version = "2.2.2" }
 napi-derive = { version = "3.0.0", default-features = false, features = ["type-def"] }
 
 # oxc crates with the same version
-oxc = { version = "0.97.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
-oxc_allocator = { version = "0.97.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.97.0" }
-oxc_minify_napi = { version = "0.97.0" }
-oxc_parser_napi = { version = "0.97.0" }
-oxc_transform_napi = { version = "0.97.0" }
-oxc_traverse = { version = "0.97.0" }
+oxc = { git = "https://github.com/oxc-project/oxc", package = "oxc", rev = "98585f01a", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
+oxc_allocator = { git = "https://github.com/oxc-project/oxc", package = "oxc_allocator", rev = "98585f01a", features = ["pool"] }
+oxc_ecmascript = { git = "https://github.com/oxc-project/oxc", package = "oxc_ecmascript", rev = "98585f01a" }
+oxc_minify_napi = { git = "https://github.com/oxc-project/oxc", package = "oxc_minify_napi", rev = "98585f01a" }
+oxc_parser_napi = { git = "https://github.com/oxc-project/oxc", package = "oxc_parser_napi", rev = "98585f01a" }
+oxc_transform_napi = { git = "https://github.com/oxc-project/oxc", package = "oxc_transform_napi", rev = "98585f01a" }
+oxc_traverse = { git = "https://github.com/oxc-project/oxc", package = "oxc_traverse", rev = "98585f01a" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

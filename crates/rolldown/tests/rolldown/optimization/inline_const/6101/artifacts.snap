@@ -18,7 +18,7 @@ var require_react = /* @__PURE__ */ __commonJS({ "react.js": ((exports) => {
 //#endregion
 //#region main.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
-console.log(import_react.version);
+console.log("1.0.0");
 
 //#endregion
 ```

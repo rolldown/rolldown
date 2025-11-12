@@ -166,7 +166,9 @@ impl Bundle {
       let dest = dist_dir.join(chunk.filename());
       if let Some(p) = dest.parent() {
         if !self.fs.exists(p) {
-          self.fs.create_dir_all(p).unwrap();
+          self.fs.create_dir_all(p).with_context(|| {
+            format!("Could not create directory for output chunks: {}", p.display())
+          })?;
         }
       }
       self

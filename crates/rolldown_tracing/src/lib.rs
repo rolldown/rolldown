@@ -9,6 +9,7 @@ use std::{any::Any, str::FromStr};
 
 use tracing_chrome::ChromeLayerBuilder;
 use tracing_chrome::TraceStyle;
+use tracing_subscriber::filter::filter_fn;
 use tracing_subscriber::{
   filter::Targets,
   fmt::{self, format::FmtSpan},
@@ -31,6 +32,16 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
 
   let output_mode = std::env::var(LOG_OUTPUT_ENV_NAME).unwrap_or_else(|_| "stdout".to_string());
 
+  // Remove events that have `devtoolsAction` field, as those events are only for devtools.
+  let filter_for_removing_devtools_event = filter_fn(|metadata| {
+    const ALLOW: bool = true;
+    const REJECT: bool = false;
+    if metadata.is_event() && metadata.fields().field("devtoolsAction").is_some() {
+      return REJECT;
+    }
+    ALLOW
+  });
+
   match output_mode.as_str() {
     "chrome-json" | "chrome-json-threaded" => {
       let trace_style =
@@ -39,7 +50,7 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
         ChromeLayerBuilder::new().trace_style(trace_style).include_args(true).build();
       tracing_subscriber::registry()
         .with(Targets::from_str(&env_var).unwrap())
-        .with(chrome_layer)
+        .with(chrome_layer.with_filter(filter_for_removing_devtools_event))
         .init();
       Some(Box::new(guard))
     }
@@ -50,6 +61,7 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
     }
     _ => {
       tracing_subscriber::registry()
+        .with(filter_for_removing_devtools_event)
         .with(Targets::from_str(&env_var).unwrap())
         .with(fmt::layer().pretty().with_span_events(FmtSpan::CLOSE | FmtSpan::ENTER))
         .init();

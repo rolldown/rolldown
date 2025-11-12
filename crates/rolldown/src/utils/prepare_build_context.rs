@@ -1,5 +1,6 @@
 use std::{borrow::Cow, path::Path, sync::Arc};
 
+use anyhow::Context;
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_common::{
   AttachDebugInfo, GlobalsOutputOption, InjectImport, LegalComments, MinifyOptions, ModuleType,
@@ -255,13 +256,9 @@ pub fn prepare_build_context(
 
   let transform_options = Box::new(normalize_transform_options_with_tsconfig(
     raw_options.transform.unwrap_or_default(),
-    tsconfig.as_ref().map(|path| resolver.resolve_tsconfig(&path)).transpose().map_err(|err| {
-      anyhow::anyhow!(
-        "Failed to resolve `tsconfig` option: {}",
-        tsconfig.as_ref().unwrap().display()
-      )
-      .context(err)
-    })?,
+    tsconfig.as_ref().map(|path| resolver.resolve_tsconfig(&path)).transpose().with_context(
+      || format!("Failed to resolve `tsconfig` option: {}", tsconfig.as_ref().unwrap().display()),
+    )?,
     &mut warnings,
   )?);
 

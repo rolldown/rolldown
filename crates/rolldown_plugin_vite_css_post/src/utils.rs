@@ -5,6 +5,7 @@ use std::{
   sync::{Arc, LazyLock, atomic::Ordering},
 };
 
+use anyhow::Context;
 use arcstr::ArcStr;
 use regex::Regex;
 use rolldown_common::{
@@ -107,7 +108,7 @@ impl ViteCSSPostPlugin {
           String::from_utf8_unchecked(
             base64_simd::STANDARD
               .decode_to_vec(&ctx.args.code[start..start + pos])
-              .map_err(|_| anyhow::anyhow!("Invalid base64 in '__VITE_CSS_URL__'"))?,
+              .context("Invalid base64 in '__VITE_CSS_URL__'")?,
           )
         };
 

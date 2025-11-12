@@ -1,3 +1,4 @@
+use anyhow::Context;
 use napi::Either;
 
 // This struct is used to both pass to JS and receive from JS:
@@ -15,7 +16,7 @@ impl TryFrom<BindingSourcemap> for rolldown_sourcemap::SourceMap {
   fn try_from(value: BindingSourcemap) -> Result<Self, Self::Error> {
     match value.inner {
       Either::A(s) => rolldown_sourcemap::SourceMap::from_json_string(&s)
-        .map_err(|e| anyhow::format_err!("Convert string sourcemap error: {e:?}")),
+        .context("Failed to convert string sourcemap to struct"),
       Either::B(v) => v.try_into(),
     }
   }
@@ -43,7 +44,7 @@ impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
   type Error = anyhow::Error;
 
   fn try_from(value: BindingJsonSourcemap) -> Result<Self, Self::Error> {
-    let map = rolldown_sourcemap::SourceMap::from_json(rolldown_sourcemap::JSONSourceMap {
+    rolldown_sourcemap::SourceMap::from_json(rolldown_sourcemap::JSONSourceMap {
       version: 3,
       file: value.file,
       mappings: value.mappings.unwrap_or_default(),
@@ -59,8 +60,7 @@ impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
       debug_id: value.debug_id,
       x_google_ignore_list: value.x_google_ignore_list,
     })
-    .map_err(|e| anyhow::format_err!("Convert json sourcemap error: {e:?}"))?;
-    Ok(map)
+    .context("Failed to convert json sourcemap to struct")
   }
 }
 

@@ -12,6 +12,7 @@ use super::super::{
   types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
   utils::fs_utils::clean_dir,
 };
+use anyhow::Context;
 use arcstr::ArcStr;
 use rolldown_common::{GetLocalDbMut, Module, ScanMode, SharedFileEmitter, SymbolRefDb};
 use rolldown_debug::{action, trace_action, trace_action_enabled};
@@ -150,17 +151,15 @@ impl Bundle {
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
 
     if self.options.clean_dir && self.options.dir.is_some() {
-      clean_dir(&self.fs, &dist_dir).map_err(|err| {
-        anyhow::anyhow!("Could not clean directory for output chunks: {}", dist_dir.display())
-          .context(err)
+      clean_dir(&self.fs, &dist_dir).with_context(|| {
+        format!("Could not clean directory for output chunks: {}", dist_dir.display())
       })?;
     }
 
     let mut output = self.bundle_up(scan_stage_output, /* is_write */ true).await?;
 
-    self.fs.create_dir_all(&dist_dir).map_err(|err| {
-      anyhow::anyhow!("Could not create directory for output chunks: {}", dist_dir.display())
-        .context(err)
+    self.fs.create_dir_all(&dist_dir).with_context(|| {
+      format!("Could not create directory for output chunks: {}", dist_dir.display())
     })?;
 
     for chunk in &output.assets {
@@ -170,9 +169,10 @@ impl Bundle {
           self.fs.create_dir_all(p).unwrap();
         }
       }
-      self.fs.write(&dest, chunk.content_as_bytes()).map_err(|err| {
-        anyhow::anyhow!("Failed to write file in {}", dest.display()).context(err)
-      })?;
+      self
+        .fs
+        .write(&dest, chunk.content_as_bytes())
+        .with_context(|| format!("Failed to write file in {}", dest.display()))?;
     }
 
     self

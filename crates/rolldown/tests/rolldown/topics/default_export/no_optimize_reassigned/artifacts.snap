@@ -7,8 +7,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region main.js
-const test = "hello world";
+let x = 42;
+x = 43;
+var main_default = x;
 
 //#endregion
-export { test as default };
+export { main_default as default };
 ```

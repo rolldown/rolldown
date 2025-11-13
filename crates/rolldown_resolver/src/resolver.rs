@@ -115,6 +115,16 @@ impl<F: FileSystem> Resolver<F> {
     }
   }
 
+  /// Resolves a module specifier to an absolute path.
+  ///
+  /// # Arguments
+  /// * `importer` - The file that is importing the module (if any)
+  /// * `specifier` - The module specifier to resolve (e.g., "./foo", "lodash")
+  /// * `import_kind` - The type of import (ESM, CommonJS, CSS, etc.)
+  /// * `is_user_defined_entry` - Whether this is a user-defined entry point
+  ///
+  /// # Errors
+  /// Returns a `ResolveError` if the module cannot be resolved.
   pub fn resolve(
     &self,
     importer: Option<&Path>,
@@ -131,35 +141,32 @@ impl<F: FileSystem> Resolver<F> {
       ImportKind::AtImport | ImportKind::UrlImport => &self.css_resolver,
     };
 
-    let importer_dir = importer.and_then(|importer| importer.parent()).and_then(|inner| {
-      if inner.components().next().is_none() {
-        // Empty path `Path::new("")`
-        None
-      } else {
-        Some(inner)
-      }
-    });
+    let importer_dir = importer
+      .and_then(|importer_path| importer_path.parent())
+      .and_then(|parent_dir| parent_dir.components().next().is_some().then_some(parent_dir))
+      .unwrap_or(self.cwd.as_path());
 
-    let context_dir = importer_dir.unwrap_or(self.cwd.as_path());
+    let mut resolution = selected_resolver.resolve(importer_dir, specifier);
 
-    let mut resolution = selected_resolver.resolve(context_dir, specifier);
-
-    if resolution.is_err() && is_user_defined_entry {
-      let is_specifier_path_like = specifier.starts_with('.') || specifier.starts_with('/');
-      let need_rollup_resolve_compat = !is_specifier_path_like;
-      if need_rollup_resolve_compat {
-        // Rolldown doesn't pursue to have the same resolve behavior as Rollup. Even though, in most cases, rolldown have the same resolve result as Rollup. And in this branch, it's the case that rolldown will perform differently from Rollup.
-
-        // The case is user writes config like `{ input: 'main' }`. `main` would be treated as a npm package name in rolldown
-        // and try to resolve it from `node_modules`. But rollup will resolve it to `<CWD>/main.{js,mjs,cjs}`.
-
-        // So in this branch, to improve rollup-compatibility, we try to simulate the Rollup's resolve behavior in this case.
-        // // Related rollup code: https://github.com/rollup/rollup/blob/680912e2ceb42c8d5e571e01c6ece0e4889aecbb/src/utils/resolveId.ts#L56.
-        let fallback = selected_resolver
-          .resolve(context_dir, &self.cwd.join(specifier).normalize().to_string_lossy());
-        if fallback.is_ok() {
-          resolution = fallback;
-        }
+    if resolution.is_err()
+      && is_user_defined_entry
+      && !specifier.starts_with('.')
+      && !specifier.starts_with('/')
+    {
+      // Attempts to resolve using Rollup compatibility mode.
+      //
+      // Rolldown doesn't pursue the exact same resolve behavior as Rollup, but in most cases
+      // the results are the same. This function handles a special case for better compatibility.
+      //
+      // When a user writes config like `{ input: 'main' }`, `main` would be treated as a npm
+      // package name in Rolldown and try to resolve it from `node_modules`. But Rollup will
+      // resolve it to `<CWD>/main.{js,mjs,cjs}`.
+      //
+      // Related Rollup code: https://github.com/rollup/rollup/blob/680912e2/src/utils/resolveId.ts#L56
+      let fallback = selected_resolver
+        .resolve(importer_dir, &self.cwd.join(specifier).normalize().to_string_lossy());
+      if fallback.is_ok() {
+        resolution = fallback;
       }
     }
 

@@ -38,5 +38,6 @@ bitflags! {
     const BundlerInitializeError = 1 << 30;
     const PluginError = 1 << 31;
     const AlreadyClosedError = 1 << 32;
+    const CouldNotCleanDirectory = 1 << 33;
   }
 }

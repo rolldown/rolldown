@@ -1,0 +1,17 @@
+{
+  "config": {
+    "format": "esm",
+    "external": ["assert"],
+    "generatedCode": {
+      "symbols": true
+    }
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    },
+    {
+      "format": "iife"
+    }
+  ]
+}

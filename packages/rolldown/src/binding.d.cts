@@ -1667,6 +1667,7 @@ export interface BindingChecksOptions {
   emptyImportMeta?: boolean
   configurationFieldConflict?: boolean
   preferBuiltinFeature?: boolean
+  couldNotCleanDirectory?: boolean
 }
 
 export interface BindingChunkImportMap {

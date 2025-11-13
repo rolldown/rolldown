@@ -17,6 +17,7 @@ pub struct BindingChecksOptions {
   pub empty_import_meta: Option<bool>,
   pub configuration_field_conflict: Option<bool>,
   pub prefer_builtin_feature: Option<bool>,
+  pub could_not_clean_directory: Option<bool>,
 }
 impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
   fn from(value: BindingChecksOptions) -> Self {
@@ -34,6 +35,7 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       empty_import_meta: value.empty_import_meta,
       configuration_field_conflict: value.configuration_field_conflict,
       prefer_builtin_feature: value.prefer_builtin_feature,
+      could_not_clean_directory: value.could_not_clean_directory,
     }
   }
 }

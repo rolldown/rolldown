@@ -1352,6 +1352,12 @@
             "boolean",
             "null"
           ]
+        },
+        "couldNotCleanDirectory": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

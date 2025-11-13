@@ -18,6 +18,7 @@ pub mod bundler_initialize_error;
 pub mod circular_dependency;
 pub mod commonjs_variable_in_esm;
 pub mod configuration_field_conflict;
+pub mod could_not_clean_directory;
 pub mod empty_import_meta;
 pub mod eval;
 pub mod export_undefined_variable;

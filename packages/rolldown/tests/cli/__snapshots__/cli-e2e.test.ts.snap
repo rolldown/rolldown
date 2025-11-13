@@ -27,6 +27,7 @@ OPTIONS
   --checks.circular-dependency Whether to emit warning when detecting circular dependency.
   --checks.common-js-variable-in-esm Whether to emit warning when detecting common js variable in esm.
   --checks.configuration-field-conflict Whether to emit warning when detecting configuration field conflict.
+  --checks.could-not-clean-directory Whether to emit warning when detecting could not clean directory.
   --checks.empty-import-meta  Whether to emit warning when detecting empty import meta.
   --checks.eval               Whether to emit warning when detecting eval.
   --checks.filename-conflict  Whether to emit warning when detecting filename conflict.

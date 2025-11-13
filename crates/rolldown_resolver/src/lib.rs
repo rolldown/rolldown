@@ -1,7 +1,8 @@
-// An wrapper around the `oxc_resolver` crate to provide a more rolldown-specific API.
+//! A wrapper around the `oxc_resolver` crate to provide a more rolldown-specific API.
+
+mod resolver;
 
 pub mod error;
-mod resolver;
 
 pub use crate::resolver::{ResolveReturn, Resolver};
 

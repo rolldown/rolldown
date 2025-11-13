@@ -1,6 +1,7 @@
 //! A wrapper around the `oxc_resolver` crate to provide a more rolldown-specific API.
 
 mod resolver;
+mod resolver_config;
 
 pub mod error;
 

@@ -1,5 +1,3 @@
-mod config;
-
 use std::{
   path::{Path, PathBuf},
   sync::Arc,
@@ -18,7 +16,7 @@ use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_utils::dashmap::FxDashMap;
 use sugar_path::SugarPath as _;
 
-use config::ResolverConfig;
+use crate::resolver_config::ResolverConfig;
 
 /// A wrapper around oxc_resolver that provides a rolldown-specific API.
 ///

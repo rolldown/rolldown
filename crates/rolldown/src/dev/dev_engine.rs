@@ -318,8 +318,8 @@ impl DevEngine {
     let _ = self.coordinator_sender.send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
 
     // Wait for the build that was triggered by the file change
-    if let Ok(Ok(Some((future, _)))) = reply_rx.await {
-      future.await;
+    if let Ok(Ok(Some(ret))) = reply_rx.await {
+      ret.future.await;
     }
   }
 

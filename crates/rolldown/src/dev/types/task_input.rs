@@ -4,8 +4,8 @@ use rolldown_utils::indexmap::FxIndexSet;
 
 #[derive(Debug)]
 pub enum TaskInput {
-  /// Initial full rebuild from scratch
-  FullRebuild,
+  /// A full build
+  FullBuild,
   /// Incremental rebuild only (no HMR updates)
   Rebuild { changed_files: FxIndexSet<PathBuf> },
   /// Generate HMR updates only (no rebuild)
@@ -16,12 +16,12 @@ pub enum TaskInput {
 
 impl TaskInput {
   pub fn new_initial_build_task() -> Self {
-    Self::FullRebuild
+    Self::FullBuild
   }
 
   pub fn changed_files(&self) -> &FxIndexSet<PathBuf> {
     match self {
-      Self::FullRebuild => {
+      Self::FullBuild => {
         use std::sync::OnceLock;
         static EMPTY: OnceLock<FxIndexSet<PathBuf>> = OnceLock::new();
         EMPTY.get_or_init(FxIndexSet::default)
@@ -34,7 +34,7 @@ impl TaskInput {
 
   pub fn changed_files_mut(&mut self) -> Option<&mut FxIndexSet<PathBuf>> {
     match self {
-      Self::FullRebuild => None,
+      Self::FullBuild => None,
       Self::Rebuild { changed_files }
       | Self::Hmr { changed_files }
       | Self::HmrRebuild { changed_files } => Some(changed_files),
@@ -42,7 +42,7 @@ impl TaskInput {
   }
 
   pub fn requires_full_rebuild(&self) -> bool {
-    matches!(self, Self::FullRebuild)
+    matches!(self, Self::FullBuild)
   }
 
   pub fn require_generate_hmr_update(&self) -> bool {
@@ -50,7 +50,7 @@ impl TaskInput {
   }
 
   pub fn requires_rebuild(&self) -> bool {
-    matches!(self, Self::FullRebuild | Self::Rebuild { .. } | Self::HmrRebuild { .. })
+    matches!(self, Self::FullBuild | Self::Rebuild { .. } | Self::HmrRebuild { .. })
   }
 
   pub fn is_mergeable_with(&self, other: &Self) -> bool {
@@ -59,7 +59,7 @@ impl TaskInput {
       // - Incoming hmr update task would be meaningless, because full rebuild will bundle with latest disk files' contents.
       // - The build output will contains latest contents, it's no need to and we can't generate hmr updates for such situation.
       // - The incoming incremental rebuild task would be meaningless, because the build output will contains latest contents.
-      Self::FullRebuild => true,
+      Self::FullBuild => true,
       // Rebuild only task can only merge with other rebuild only task.
       // If we merge a hmr update task, we'll involve files that're not intend to be involved in the hmr generation.
       Self::Rebuild { .. } => matches!(other, Self::Rebuild { .. }),
@@ -74,7 +74,7 @@ impl TaskInput {
   pub fn merge_with(&mut self, other: Self) {
     match (self, other) {
       // FullRebuild absorbs everything and stays the same
-      (Self::FullRebuild, _) => {}
+      (Self::FullBuild, _) => {}
       // Rebuild + Rebuild = Rebuild with merged files
       // Hmr + Hmr = Hmr with merged files
       // HmrRebuild + Hmr = HmrRebuild with merged files

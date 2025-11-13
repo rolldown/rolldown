@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 use std::fmt::Write as _;
 
-use itertools::Itertools;
 use oxc::span::CompactStr;
 use rolldown_common::{
   Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions, OutputExports,
@@ -91,7 +90,7 @@ pub fn render_chunk_exports(
     [ctx.chunk_idx]
     .clone()
     .into_iter()
-    .flat_map(|(symbol_ref, names)| names.into_iter().map(|name| (name, symbol_ref)).collect_vec())
+    .flat_map(|(symbol_ref, names)| names.into_iter().map(move |name| (name, symbol_ref)))
     .collect();
 
   match options.format {

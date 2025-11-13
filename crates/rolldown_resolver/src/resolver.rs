@@ -7,7 +7,7 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::DashMap;
 use oxc_resolver::{
-  ModuleType, PackageJson as OxcPackageJson, Resolution, ResolveError, ResolverGeneric, TsConfig,
+  ModuleType, PackageJson as OxcPackageJson, ResolveError, ResolverGeneric, TsConfig,
 };
 use rolldown_common::{
   ImportKind, ModuleDefFormat, PackageJson, Platform, ResolveOptions, ResolvedId,
@@ -95,6 +95,10 @@ impl<F: FileSystem> Resolver<F> {
     self.package_json_cache.clear();
   }
 
+  pub fn resolve_tsconfig<T: AsRef<Path>>(&self, path: &T) -> Result<Arc<TsConfig>, ResolveError> {
+    self.default_resolver.resolve_tsconfig(path)
+  }
+
   pub fn try_get_package_json_or_create(&self, path: &Path) -> anyhow::Result<Arc<PackageJson>> {
     self
       .inner_try_get_package_json_or_create(path)
@@ -164,8 +168,36 @@ impl<F: FileSystem> Resolver<F> {
     }
 
     resolution.map(|info| {
-      let package_json = info.package_json().map(|p| self.cached_package_json(p));
-      let module_def_format = infer_module_def_format(&info);
+      let package_json = info.package_json().map(|oxc_pkg_json| {
+        match self.package_json_cache.get(&oxc_pkg_json.realpath) {
+          Some(v) => Arc::clone(v.value()),
+          _ => {
+            let pkg_json = Arc::new(PackageJson::from_oxc_pkg_json(oxc_pkg_json));
+            self.package_json_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
+            pkg_json
+          }
+        }
+      });
+
+      // Infer module format from file extension and package.json type field
+      // Reference: https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L1446-L1460
+      let mut module_def_format = ModuleDefFormat::from_path(info.path());
+      if matches!(module_def_format, ModuleDefFormat::Unknown) {
+        let is_js_like = info
+          .path()
+          .extension()
+          .is_some_and(|ext| matches!(ext.to_str(), Some("js" | "jsx" | "ts" | "tsx")));
+        if is_js_like {
+          if let Some(module_type) = info.module_type() {
+            module_def_format = match module_type {
+              ModuleType::CommonJs => ModuleDefFormat::CjsPackageJson,
+              ModuleType::Module => ModuleDefFormat::EsmPackageJson,
+              ModuleType::Json | ModuleType::Wasm | ModuleType::Addon => ModuleDefFormat::Unknown,
+            };
+          }
+        }
+      }
+
       ResolveReturn {
         path: info.full_path().to_str().expect("Should be valid utf8").into(),
         module_def_format,
@@ -173,42 +205,4 @@ impl<F: FileSystem> Resolver<F> {
       }
     })
   }
-
-  fn cached_package_json(&self, oxc_pkg_json: &OxcPackageJson) -> Arc<PackageJson> {
-    match self.package_json_cache.get(&oxc_pkg_json.realpath) {
-      Some(v) => Arc::clone(v.value()),
-      _ => {
-        let pkg_json = Arc::new(PackageJson::from_oxc_pkg_json(oxc_pkg_json));
-        self.package_json_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
-        pkg_json
-      }
-    }
-  }
-
-  pub fn resolve_tsconfig<T: AsRef<Path>>(&self, path: &T) -> Result<Arc<TsConfig>, ResolveError> {
-    self.default_resolver.resolve_tsconfig(path)
-  }
-}
-
-/// https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L1446-L1460
-fn infer_module_def_format(info: &Resolution) -> ModuleDefFormat {
-  let fmt = ModuleDefFormat::from_path(info.path());
-
-  if !matches!(fmt, ModuleDefFormat::Unknown) {
-    return fmt;
-  }
-  let is_js_like_extension = info
-    .path()
-    .extension()
-    .is_some_and(|ext| matches!(ext.to_str(), Some("js" | "jsx" | "ts" | "tsx")));
-  if is_js_like_extension {
-    if let Some(module_type) = info.module_type() {
-      return match module_type {
-        ModuleType::CommonJs => ModuleDefFormat::CjsPackageJson,
-        ModuleType::Module => ModuleDefFormat::EsmPackageJson,
-        ModuleType::Json | ModuleType::Wasm | ModuleType::Addon => ModuleDefFormat::Unknown,
-      };
-    }
-  }
-  ModuleDefFormat::Unknown
 }

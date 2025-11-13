@@ -97,11 +97,14 @@ export var __toESM = (mod, isNodeMode, target) => (
     )
 );
 
-// Converts the module from ESM to CommonJS. This clones the input module
-// object with the addition of a non-enumerable "__esModule" property set
-// to "true", which overwrites any existing export named "__esModule".
+// Converts the module from ESM to CommonJS. If the module has a "module.exports"
+// export (Node.js require(ESM) feature), use that directly. Otherwise, clone the input module
+// object with the addition of a non-enumerable "__esModule" property set to "true",
+// which overwrites any existing export named "__esModule".
 export var __toCommonJS = mod =>
-  __copyProps(__defProp({}, '__esModule', { value: true }), mod);
+  __hasOwnProp.call(mod, 'module.exports')
+    ? mod['module.exports']
+    : __copyProps(__defProp({}, '__esModule', { value: true }), mod);
 
 // This is for the "binary" loader (custom code is ~2x faster than "atob")
 export var __toBinaryNode = base64 =>

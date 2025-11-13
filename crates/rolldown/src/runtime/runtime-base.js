@@ -64,7 +64,9 @@ export var __toESM = (mod, isNodeMode, target) => (
     )
 );
 export var __toCommonJS = (mod) =>
-  __copyProps(__defProp({}, '__esModule', { value: true }), mod);
+  __hasOwnProp.call(mod, 'module.exports')
+    ? mod['module.exports']
+    : __copyProps(__defProp({}, '__esModule', { value: true }), mod);
 export var __toBinaryNode = (base64) =>
   new Uint8Array(Buffer.from(base64, 'base64'));
 export var __toBinary = /* @__PURE__ */ (() => {

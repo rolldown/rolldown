@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+//#region esm.js
+var esm_exports = /* @__PURE__ */ __export({
+	default: () => myFunction,
+	"module.exports": () => moduleExports
+});
+function myFunction() {
+	return "function value";
+}
+var moduleExports;
+var init_esm = __esm({ "esm.js": (() => {
+	moduleExports = { customExport: "custom" };
+}) });
+
+//#endregion
+//#region cjs.js
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
+	const result$1 = (init_esm(), __toCommonJS(esm_exports));
+	module.exports = result$1;
+}) });
+
+//#endregion
+//#region main.js
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
+assert.deepStrictEqual(import_cjs.default, { customExport: "custom" });
+
+//#endregion
+```

@@ -1,22 +1,22 @@
-use anyhow::Context;
-use arcstr::ArcStr;
-use dashmap::DashMap;
-use itertools::Itertools;
-use rolldown_common::{
-  ImportKind, ModuleDefFormat, PackageJson, Platform, ResolveOptions, ResolvedId,
-};
-use rolldown_fs::{FileSystem, OsFileSystem};
-use rolldown_utils::{dashmap::FxDashMap, indexmap::FxIndexMap};
 use std::{
   path::{Path, PathBuf},
   sync::Arc,
 };
-use sugar_path::SugarPath;
 
+use anyhow::Context;
+use arcstr::ArcStr;
+use dashmap::DashMap;
 use oxc_resolver::{
-  EnforceExtension, ModuleType, PackageJson as OxcPackageJson, Resolution, ResolveError,
-  ResolveOptions as OxcResolverOptions, ResolverGeneric, TsConfig,
+  ModuleType, PackageJson as OxcPackageJson, Resolution, ResolveError, ResolverGeneric, TsConfig,
 };
+use rolldown_common::{
+  ImportKind, ModuleDefFormat, PackageJson, Platform, ResolveOptions, ResolvedId,
+};
+use rolldown_fs::{FileSystem, OsFileSystem};
+use rolldown_utils::dashmap::FxDashMap;
+use sugar_path::SugarPath as _;
+
+use crate::resolver_config::ResolverConfig;
 
 #[derive(Debug)]
 #[expect(clippy::struct_field_names)]
@@ -57,137 +57,24 @@ impl<F: FileSystem> Resolver<F> {
   }
 }
 
-impl<F: FileSystem + Clone> Resolver<F> {
+impl<Fs: FileSystem + Clone> Resolver<Fs> {
+  /// Creates a new resolver with the specified options.
   pub fn new(
-    fs: F,
+    fs: Fs,
     cwd: PathBuf,
     platform: Platform,
     tsconfig: Option<PathBuf>,
-    raw_resolve: ResolveOptions,
+    resolve_options: ResolveOptions,
   ) -> Self {
-    let mut default_conditions = vec!["default".to_string()];
-    let mut import_conditions = vec!["import".to_string()];
-    let mut require_conditions = vec!["require".to_string()];
-
-    default_conditions.extend(raw_resolve.condition_names.clone().unwrap_or_default());
-    match platform {
-      Platform::Node => {
-        default_conditions.push("node".to_string());
-      }
-      Platform::Browser => {
-        default_conditions.push("browser".to_string());
-      }
-      Platform::Neutral => {}
-    }
-    default_conditions = default_conditions.into_iter().unique().collect();
-    import_conditions.extend(default_conditions.clone());
-    require_conditions.extend(default_conditions.clone());
-    import_conditions = import_conditions.into_iter().unique().collect();
-    require_conditions = require_conditions.into_iter().unique().collect();
-
-    let main_fields = raw_resolve.main_fields.clone().unwrap_or_else(|| match platform {
-      Platform::Node => {
-        vec!["main".to_string(), "module".to_string()]
-      }
-      Platform::Browser => vec!["browser".to_string(), "module".to_string(), "main".to_string()],
-      Platform::Neutral => vec![],
-    });
-
-    let alias_fields = raw_resolve.alias_fields.clone().unwrap_or_else(|| match platform {
-      Platform::Browser => vec![vec!["browser".to_string()]],
-      _ => vec![],
-    });
-
-    let builtin_modules = match platform {
-      Platform::Node => true,
-      Platform::Browser | Platform::Neutral => false,
-    };
-
-    let mut extension_alias = raw_resolve.extension_alias.clone().unwrap_or_default();
-    impl_rewritten_file_extensions_via_extension_alias(&mut extension_alias);
-
-    let resolve_options_with_default_conditions = OxcResolverOptions {
-      cwd: Some(cwd.clone()),
-      tsconfig: tsconfig.map(|tsconfig| {
-        oxc_resolver::TsconfigDiscovery::Manual(oxc_resolver::TsconfigOptions {
-          config_file: tsconfig,
-          references: oxc_resolver::TsconfigReferences::Disabled,
-        })
-      }),
-      alias: raw_resolve
-        .alias
-        .map(|alias| {
-          alias
-            .into_iter()
-            .map(|(key, value)| {
-              (
-                key,
-                value
-                  .into_iter()
-                  .map(|v| match v {
-                    None => oxc_resolver::AliasValue::Ignore,
-                    Some(path) => oxc_resolver::AliasValue::Path(path),
-                  })
-                  .collect::<Vec<_>>(),
-              )
-            })
-            .collect::<Vec<_>>()
-        })
-        .unwrap_or_default(),
-      imports_fields: vec![vec!["imports".to_string()]],
-      alias_fields,
-      condition_names: default_conditions,
-      enforce_extension: EnforceExtension::Auto,
-      exports_fields: raw_resolve
-        .exports_fields
-        .unwrap_or_else(|| vec![vec!["exports".to_string()]]),
-      extension_alias,
-      extensions: raw_resolve.extensions.unwrap_or_else(|| {
-        [".tsx", ".ts", ".jsx", ".js", ".json"].into_iter().map(str::to_string).collect()
-      }),
-      fallback: vec![],
-      fully_specified: false,
-      main_fields,
-      main_files: raw_resolve.main_files.unwrap_or_else(|| vec!["index".to_string()]),
-      modules: raw_resolve.modules.unwrap_or_else(|| vec!["node_modules".into()]),
-      resolve_to_context: false,
-      prefer_relative: false,
-      prefer_absolute: false,
-      restrictions: vec![],
-      roots: vec![],
-      symlinks: raw_resolve.symlinks.unwrap_or(true),
-      builtin_modules,
-      module_type: true,
-      allow_package_exports_in_directory_resolve: false,
-      yarn_pnp: raw_resolve.yarn_pnp.unwrap_or(false),
-    };
-    let resolve_options_with_import_conditions = OxcResolverOptions {
-      condition_names: import_conditions,
-      ..resolve_options_with_default_conditions.clone()
-    };
-    let resolve_options_with_require_conditions = OxcResolverOptions {
-      condition_names: require_conditions,
-      ..resolve_options_with_default_conditions.clone()
-    };
-
-    let resolve_options_for_css = OxcResolverOptions {
-      prefer_relative: true,
-      ..resolve_options_with_default_conditions.clone()
-    };
-
-    let resolve_options_for_new_url = OxcResolverOptions {
-      prefer_relative: true,
-      ..resolve_options_with_default_conditions.clone()
-    };
+    let config = ResolverConfig::build(&cwd, platform, tsconfig, resolve_options);
 
     let default_resolver =
-      ResolverGeneric::new_with_file_system(fs.clone(), resolve_options_with_default_conditions);
-    let import_resolver =
-      default_resolver.clone_with_options(resolve_options_with_import_conditions);
-    let require_resolver =
-      default_resolver.clone_with_options(resolve_options_with_require_conditions);
-    let css_resolver = default_resolver.clone_with_options(resolve_options_for_css);
-    let new_url_resolver = default_resolver.clone_with_options(resolve_options_for_new_url);
+      ResolverGeneric::new_with_file_system(fs.clone(), config.default_options);
+    let import_resolver = default_resolver.clone_with_options(config.import_options);
+    let require_resolver = default_resolver.clone_with_options(config.require_options);
+    let css_resolver = default_resolver.clone_with_options(config.css_options);
+    let new_url_resolver = default_resolver.clone_with_options(config.new_url_options);
+
     Self {
       fs,
       cwd,
@@ -326,28 +213,4 @@ fn infer_module_def_format(info: &Resolution) -> ModuleDefFormat {
     }
   }
   ModuleDefFormat::Unknown
-}
-
-// Support esbuild's `rewrittenFileExtensions` feature. https://github.com/evanw/esbuild/blob/a08f30db4a475472aa09cd89e2279a822266f6c7/internal/resolver/resolver.go#L1622-L1644
-// Some notices:
-// - We are using `extension_alias` feature to simulate the esbuild's `rewrittenFileExtensions` feature. But there are differences things, so we need to handle them carefully.
-// - `rewrittenFileExtensions` is not overridable by user config.
-// - `rewrittenFileExtensions` couldn't override user's config.
-fn impl_rewritten_file_extensions_via_extension_alias(
-  extension_alias: &mut Vec<(String, Vec<String>)>,
-) {
-  // The first alias is the original extension to make sure that `foo.js` will be resolved to `foo.js` if `foo.js` exists.
-  let mut rewritten_file_extensions = FxIndexMap::from_iter([
-    (".js".to_string(), vec![".js".to_string(), ".ts".to_string(), ".tsx".to_string()]),
-    (".jsx".to_string(), vec![".jsx".to_string(), ".ts".to_string(), ".tsx".to_string()]),
-    (".mjs".to_string(), vec![".mjs".to_string(), ".mts".to_string()]),
-    (".cjs".to_string(), vec![".cjs".to_string(), ".cts".to_string()]),
-  ]);
-  extension_alias.iter_mut().for_each(|(ext, aliases)| {
-    if let Some(rewrites) = rewritten_file_extensions.shift_remove(ext) {
-      aliases.extend(rewrites);
-    }
-  });
-
-  extension_alias.extend(rewritten_file_extensions);
 }

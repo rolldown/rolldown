@@ -35,28 +35,6 @@ pub struct Resolver<T: FileSystem = OsFileSystem> {
   package_json_cache: FxDashMap<PathBuf, Arc<PackageJson>>,
 }
 
-impl<F: FileSystem> Resolver<F> {
-  pub fn try_get_package_json_or_create(&self, path: &Path) -> anyhow::Result<Arc<PackageJson>> {
-    self
-      .inner_try_get_package_json_or_create(path)
-      .with_context(|| format!("Failed to read or parse package.json: {}", path.display()))
-  }
-
-  fn inner_try_get_package_json_or_create(&self, path: &Path) -> anyhow::Result<Arc<PackageJson>> {
-    if let Some(v) = self.package_json_cache.get(path) {
-      Ok(Arc::clone(v.value()))
-    } else {
-      // User have has the responsibility to ensure `path` is real path if needed. We just pass it through.
-      let realpath = path.to_path_buf();
-      let json_bytes = self.fs.read(path)?;
-      let oxc_pkg_json = OxcPackageJson::parse(&self.fs, path.to_path_buf(), realpath, json_bytes)?;
-      let pkg_json = Arc::new(PackageJson::from_oxc_pkg_json(&oxc_pkg_json));
-      self.package_json_cache.insert(path.to_path_buf(), Arc::clone(&pkg_json));
-      Ok(pkg_json)
-    }
-  }
-}
-
 impl<Fs: FileSystem + Clone> Resolver<Fs> {
   /// Creates a new resolver with the specified options.
   pub fn new(
@@ -86,16 +64,6 @@ impl<Fs: FileSystem + Clone> Resolver<Fs> {
       package_json_cache: DashMap::default(),
     }
   }
-
-  pub fn cwd(&self) -> &PathBuf {
-    &self.cwd
-  }
-
-  pub fn clear_cache(&self) {
-    // All resolvers share the same cache, so just clear one of them is ok.
-    self.default_resolver.clear_cache();
-    self.package_json_cache.clear();
-  }
 }
 
 #[derive(Debug)]
@@ -117,6 +85,36 @@ impl From<ResolveReturn> for ResolvedId {
 }
 
 impl<F: FileSystem> Resolver<F> {
+  pub fn cwd(&self) -> &PathBuf {
+    &self.cwd
+  }
+
+  pub fn clear_cache(&self) {
+    // All resolvers share the same cache, so just clear one of them is ok.
+    self.default_resolver.clear_cache();
+    self.package_json_cache.clear();
+  }
+
+  pub fn try_get_package_json_or_create(&self, path: &Path) -> anyhow::Result<Arc<PackageJson>> {
+    self
+      .inner_try_get_package_json_or_create(path)
+      .with_context(|| format!("Failed to read or parse package.json: {}", path.display()))
+  }
+
+  fn inner_try_get_package_json_or_create(&self, path: &Path) -> anyhow::Result<Arc<PackageJson>> {
+    if let Some(v) = self.package_json_cache.get(path) {
+      Ok(Arc::clone(v.value()))
+    } else {
+      // User have has the responsibility to ensure `path` is real path if needed. We just pass it through.
+      let realpath = path.to_path_buf();
+      let json_bytes = self.fs.read(path)?;
+      let oxc_pkg_json = OxcPackageJson::parse(&self.fs, path.to_path_buf(), realpath, json_bytes)?;
+      let pkg_json = Arc::new(PackageJson::from_oxc_pkg_json(&oxc_pkg_json));
+      self.package_json_cache.insert(path.to_path_buf(), Arc::clone(&pkg_json));
+      Ok(pkg_json)
+    }
+  }
+
   pub fn resolve(
     &self,
     importer: Option<&Path>,

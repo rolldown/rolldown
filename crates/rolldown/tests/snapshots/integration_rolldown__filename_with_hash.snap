@@ -3575,7 +3575,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/module.exports_export/basic
 
-- main-!~{000}~.js => main-Chmqxvey.js
+- main-!~{000}~.js => main-DehUq81S.js
 
 # tests/rolldown/cjs_compat/module.exports_export/external_require
 
@@ -3587,11 +3587,11 @@ expression: output
 
 # tests/rolldown/cjs_compat/module.exports_export/priority
 
-- main-!~{000}~.js => main-BrZbMYh1.js
+- main-!~{000}~.js => main-ZJT4ai8D.js
 
 # tests/rolldown/cjs_compat/module.exports_export/with_default
 
-- main-!~{000}~.js => main-Ddy4jCZW.js
+- main-!~{000}~.js => main-1pQMzDgf.js
 
 # tests/rolldown/cjs_compat/multiple_circle_cjs_entries
 
@@ -5986,6 +5986,10 @@ expression: output
 # tests/rolldown/tree_shaking/dynamic_require_unused_by_function
 
 - main-!~{000}~.js => main-CBm9wgkW.js
+
+# tests/rolldown/tree_shaking/esm_with_module_exports
+
+- main-!~{000}~.js => main-DvKVUsGh.js
 
 # tests/rolldown/tree_shaking/export_default
 

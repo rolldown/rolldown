@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region lib.js
+var lib_exports = /* @__PURE__ */ __export({
+	"module.exports": () => moduleExports,
+	moduleExports: () => moduleExports,
+	used: () => used
+});
+var used, moduleExports;
+var init_lib = __esm({ "lib.js": (() => {
+	used = "used value";
+	moduleExports = { used };
+}) });
+
+//#endregion
+//#region main.js
+const lib = (init_lib(), lib_exports["module.exports"]);
+console.log(lib.used);
+
+//#endregion
+```

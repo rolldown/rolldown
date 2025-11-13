@@ -10,15 +10,9 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region esm.js
-var esm_exports = /* @__PURE__ */ __export({
-	default: () => esm_default,
-	"module.exports": () => moduleExports,
-	namedExport: () => namedExport
-});
-var namedExport, esm_default, moduleExports;
+var esm_exports = /* @__PURE__ */ __export({ "module.exports": () => moduleExports });
+var moduleExports;
 var init_esm = __esm({ "esm.js": (() => {
-	namedExport = "named";
-	esm_default = { defaultValue: "default" };
 	moduleExports = { priorityValue: "module.exports wins" };
 }) });
 

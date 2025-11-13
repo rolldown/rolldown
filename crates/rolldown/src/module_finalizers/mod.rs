@@ -445,13 +445,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // construct `{ prop_name: () => returned, ... }`
     let mut arg_obj_expr = ast::ObjectExpression::dummy(self.alloc);
 
-    arg_obj_expr.properties.extend(self.ctx.linking_info.canonical_exports(false).map(
+    arg_obj_expr.properties.extend(self.ctx.linking_info.canonical_exports(false).filter_map(
       |(export, resolved_export)| {
+        // Only include exports that were actually included in tree-shaking
+        // Check if the symbol has a canonical name
+        if self.ctx.symbol_db.canonical_name_for(resolved_export.symbol_ref, &self.ctx.chunk.canonical_names).is_none() {
+          return None;
+        }
+
         // prop_name: () => returned
         let prop_name = export;
         let (returned, _) =
           self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
-        ast::ObjectPropertyKind::ObjectProperty(
+        Some(ast::ObjectPropertyKind::ObjectProperty(
           ast::ObjectProperty {
             key: if is_validate_identifier_name(prop_name) {
               ast::PropertyKey::StaticIdentifier(
@@ -464,7 +470,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             ..ast::ObjectProperty::dummy(self.alloc)
           }
           .into_in(self.alloc),
-        )
+        ))
       },
     ));
 

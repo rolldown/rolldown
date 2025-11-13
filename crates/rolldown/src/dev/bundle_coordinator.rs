@@ -21,6 +21,7 @@ use crate::{
     types::{
       coordinator_msg::CoordinatorMsg, coordinator_state::CoordinatorState,
       coordinator_state_snapshot::CoordinatorStateSnapshot,
+      ensure_latest_bundle_output_return::EnsureLatestBundleOutputReturn,
       schedule_build_return::ScheduleBuildReturn, task_input::TaskInput,
     },
     watcher_event_handler::WatcherEventHandler,
@@ -320,8 +321,10 @@ impl BundleCoordinator {
   }
 
   /// Ensure latest bundle output is available
-  /// Returns Some(future) if there's a build to wait for, None if output is already fresh
-  async fn ensure_latest_bundle_output(&mut self) -> BuildResult<Option<BundlingFuture>> {
+  /// Returns Some(EnsureLatestBundleOutputReturn) if there's a build to wait for, None if output is already fresh
+  async fn ensure_latest_bundle_output(
+    &mut self,
+  ) -> BuildResult<Option<EnsureLatestBundleOutputReturn>> {
     tracing::trace!("[BundleCoordinator] is ensuring latest bundle output");
     match self.state {
       CoordinatorState::Initialized => {
@@ -341,7 +344,10 @@ impl BundleCoordinator {
               .queued_tasks
               .push_back(TaskInput::Rebuild { changed_files: FxIndexSet::default() });
             let schedule_result = self.schedule_build_if_stale().await?;
-            Ok(schedule_result.map(|ret| ret.future))
+            Ok(schedule_result.map(|ret| EnsureLatestBundleOutputReturn {
+              future: ret.future,
+              is_ensure_latest_bundle_output_future: true,
+            }))
           } else {
             tracing::trace!(
               "[BundleCoordinator] output is fresh, no build needed to ensure latest output"
@@ -350,20 +356,29 @@ impl BundleCoordinator {
           }
         } else {
           let schedule_result = self.schedule_build_if_stale().await?;
-          Ok(schedule_result.map(|ret| ret.future))
+          Ok(schedule_result.map(|ret| EnsureLatestBundleOutputReturn {
+            future: ret.future,
+            is_ensure_latest_bundle_output_future: false,
+          }))
         }
       }
       CoordinatorState::FullBuildInProgress | CoordinatorState::InProgress => {
         tracing::trace!("[BundleCoordinator] found running build and end ensuring");
         // If there's a build running, return its future
-        Ok(Some(self.current_bundling_future.clone().unwrap()))
+        Ok(Some(EnsureLatestBundleOutputReturn {
+          future: self.current_bundling_future.clone().unwrap(),
+          is_ensure_latest_bundle_output_future: false,
+        }))
       }
       CoordinatorState::FullBuildFailed => {
         // Clear all queued tasks and schedule a new full build
         self.queued_tasks.clear();
         self.queued_tasks.push_back(TaskInput::FullBuild);
         let schedule_result = self.schedule_build_if_stale().await?;
-        Ok(schedule_result.map(|ret| ret.future))
+        Ok(schedule_result.map(|ret| EnsureLatestBundleOutputReturn {
+          future: ret.future,
+          is_ensure_latest_bundle_output_future: true,
+        }))
       }
       CoordinatorState::Failed => {
         todo!("how we're gonna handle this?")

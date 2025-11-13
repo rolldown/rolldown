@@ -4,12 +4,10 @@ use tokio::sync::{
   oneshot,
 };
 
-use super::{
-  dev_context::BundlingFuture,
-  types::{
-    coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot,
-    schedule_build_return::ScheduleBuildReturn,
-  },
+use super::types::{
+  coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot,
+  ensure_latest_bundle_output_return::EnsureLatestBundleOutputReturn,
+  schedule_build_return::ScheduleBuildReturn,
 };
 
 // GetBuildStatus message
@@ -24,5 +22,7 @@ pub type ScheduleBuildIfStaleReceiver = oneshot::Receiver<BuildResult<Option<Sch
 pub type CoordinatorSender = UnboundedSender<CoordinatorMsg>;
 pub type CoordinatorReceiver = UnboundedReceiver<CoordinatorMsg>;
 
-pub type EnsureLatestBundleOutputSender = oneshot::Sender<BuildResult<Option<BundlingFuture>>>;
-pub type EnsureLatestBundleOutputReceiver = oneshot::Receiver<BuildResult<Option<BundlingFuture>>>;
+pub type EnsureLatestBundleOutputSender =
+  oneshot::Sender<BuildResult<Option<EnsureLatestBundleOutputReturn>>>;
+pub type EnsureLatestBundleOutputReceiver =
+  oneshot::Receiver<BuildResult<Option<EnsureLatestBundleOutputReturn>>>;

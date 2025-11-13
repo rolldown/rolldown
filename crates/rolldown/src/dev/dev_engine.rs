@@ -209,12 +209,19 @@ impl DevEngine {
   pub async fn ensure_latest_bundle_output(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
 
-    let mut loop_counter = 0u32;
+    let mut loop_count = 0u32;
     loop {
-      if loop_counter > 1000 {
-        eprintln!(
-          "[DevEngine] ensure_latest_bundle_output has looped {loop_counter} times, something might be wrong",
-        );
+      loop_count += 1;
+      if loop_count > 100 {
+        if cfg!(debug_assertions) {
+          panic!(
+            "[DevEngine] ensure_latest_bundle_output has looped {loop_count} times, something is definitely wrong",
+          );
+        } else {
+          eprintln!(
+            "[DevEngine] ensure_latest_bundle_output has looped {loop_count} times, something might be wrong",
+          );
+        }
         break;
       }
       let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
@@ -224,19 +231,21 @@ impl DevEngine {
         .map_err_to_unhandleable()
         .context("DevEngine: failed to send EnsureLatestBundleOutput to coordinator")?;
 
-      let bundling_future = reply_receiver
+      let received = reply_receiver
         .await
         .map_err_to_unhandleable()
         .context("DevEngine: coordinator closed before responding to EnsureLatestBundleOutput")??;
 
       // Wait for the build if one is running or was scheduled
-      if let Some(future) = bundling_future {
+      if let Some(ret) = received {
         // Either a build is ongoing, or a new build was scheduled - wait for it to complete
-        future.await;
+        ret.future.await;
+        if ret.is_ensure_latest_bundle_output_future {
+          break;
+        }
       } else {
         break;
       }
-      loop_counter += 1;
     }
 
     Ok(())

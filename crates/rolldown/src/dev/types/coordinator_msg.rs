@@ -2,7 +2,7 @@ use rolldown_error::BuildResult;
 use rolldown_fs_watcher::FsEventResult;
 
 use crate::dev::type_aliases::{
-  EnsureLatestBundleOutputSender, GetStatusSender, ScheduleBuildIfStaleSender,
+  EnsureLatestBundleOutputSender, GetStateSender, ScheduleBuildIfStaleSender,
 };
 
 /// Messages sent to the BundleCoordinator
@@ -11,7 +11,7 @@ pub enum CoordinatorMsg {
   WatchEvent(FsEventResult),
   BundleCompleted { result: BuildResult<()>, has_generated_bundle_output: bool },
   ScheduleBuildIfStale { reply: ScheduleBuildIfStaleSender },
-  GetStatus { reply: GetStatusSender },
+  GetState { reply: GetStateSender },
   EnsureLatestBundleOutput { reply: EnsureLatestBundleOutputSender },
   Close,
 }

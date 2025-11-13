@@ -7,14 +7,14 @@ use tokio::sync::{
 use super::{
   dev_context::BundlingFuture,
   types::{
-    coordinator_msg::CoordinatorMsg, coordinator_status::CoordinatorStatus,
+    coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot,
     schedule_build_return::ScheduleBuildReturn,
   },
 };
 
 // GetBuildStatus message
-pub type GetStatusSender = oneshot::Sender<CoordinatorStatus>;
-pub type GetStatusReceiver = oneshot::Receiver<CoordinatorStatus>;
+pub type GetStateSender = oneshot::Sender<CoordinatorStateSnapshot>;
+pub type GetStateReceiver = oneshot::Receiver<CoordinatorStateSnapshot>;
 
 // ScheduleBuild message
 pub type ScheduleBuildIfStaleSender = oneshot::Sender<BuildResult<Option<ScheduleBuildReturn>>>;

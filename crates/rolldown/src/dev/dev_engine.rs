@@ -169,9 +169,9 @@ impl DevEngine {
     let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
     self
       .coordinator_sender
-      .send(CoordinatorMsg::GetStatus { reply: reply_sender })
+      .send(CoordinatorMsg::GetState { reply: reply_sender })
       .map_err_to_unhandleable()
-      .context("DevEngine: failed to send GetStatus to coordinator")?;
+      .context("DevEngine: failed to send GetState to coordinator")?;
 
     let status = reply_receiver
       .await
@@ -191,10 +191,10 @@ impl DevEngine {
     let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
     self
       .coordinator_sender
-      .send(CoordinatorMsg::GetStatus { reply: reply_sender })
+      .send(CoordinatorMsg::GetState { reply: reply_sender })
       .map_err_to_unhandleable()
       .context(
-        "DevEngine: failed to send GetStatus to coordinator within has_latest_bundle_output",
+        "DevEngine: failed to send GetState to coordinator within has_latest_bundle_output",
       )?;
 
     let status = reply_receiver

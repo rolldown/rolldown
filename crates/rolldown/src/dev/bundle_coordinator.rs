@@ -20,8 +20,8 @@ use crate::{
     type_aliases::{CoordinatorReceiver, CoordinatorSender},
     types::{
       coordinator_msg::CoordinatorMsg, coordinator_state::CoordinatorState,
-      coordinator_status::CoordinatorStatus, schedule_build_return::ScheduleBuildReturn,
-      task_input::TaskInput,
+      coordinator_state_snapshot::CoordinatorStateSnapshot,
+      schedule_build_return::ScheduleBuildReturn, task_input::TaskInput,
     },
     watcher_event_handler::WatcherEventHandler,
   },
@@ -105,8 +105,8 @@ impl BundleCoordinator {
           let result = self.schedule_build_if_stale().await;
           let _ = reply.send(result);
         }
-        CoordinatorMsg::GetStatus { reply } => {
-          let status = self.create_status();
+        CoordinatorMsg::GetState { reply } => {
+          let status = self.create_state_snapshot();
           let _ = reply.send(status);
         }
         CoordinatorMsg::EnsureLatestBundleOutput { reply } => {
@@ -372,11 +372,10 @@ impl BundleCoordinator {
   }
 
   /// Get current build status - atomic operation that doesn't block
-  fn create_status(&self) -> CoordinatorStatus {
-    CoordinatorStatus {
+  fn create_state_snapshot(&self) -> CoordinatorStateSnapshot {
+    CoordinatorStateSnapshot {
       running_future: self.current_bundling_future.clone(),
       has_stale_output: self.has_stale_bundle_output,
-      initial_build_state: self.state,
     }
   }
 

@@ -1,0 +1,19 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "main.mjs"
+      }
+    ],
+    "format": "cjs",
+    "generatedCode": {
+      "symbols": true
+    }
+  },
+  "configVariants": [
+    {
+      "format": "esm"
+    }
+  ]
+}

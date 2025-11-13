@@ -57,6 +57,24 @@ impl<'ast> AstSnippet<'ast> {
     self.builder.expression_identifier(span, self.builder.atom(name))
   }
 
+  /// Helper function to create a `__reExport` call expression with optional symbol arguments
+  pub fn re_export_call_expr(
+    &self,
+    re_export_fn_ref: Expression<'ast>,
+    first_arg: Expression<'ast>,
+    second_arg: Expression<'ast>,
+    enable_generated_code_symbols: bool,
+  ) -> ast::CallExpression<'ast> {
+    let mut args = self.builder.vec_from_iter([first_arg.into(), second_arg.into()]);
+    if enable_generated_code_symbols {
+      args.extend([
+        self.void_zero().into(),
+        self.builder.expression_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal).into(),
+      ]);
+    }
+    self.builder.call_expression(SPAN, re_export_fn_ref, NONE, args, false)
+  }
+
   pub fn member_expr_or_ident_ref(
     &self,
     object: ast::Expression<'ast>,

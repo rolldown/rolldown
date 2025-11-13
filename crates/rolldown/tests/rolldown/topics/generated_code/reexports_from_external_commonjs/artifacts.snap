@@ -1,0 +1,55 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+
+//#region cjs.js
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
+	module.exports = { a: 1 };
+}) });
+
+//#endregion
+//#region reexports.mjs
+var reexports_exports = {};
+__reExport(reexports_exports, /* @__PURE__ */ __toESM(require_cjs(), 1), void 0, 1);
+
+//#endregion
+//#region main.mjs
+node_assert.default.equal(String(reexports_exports), "[object Module]");
+
+//#endregion
+```
+
+# Variant: [format: Esm]
+
+## Assets
+
+### main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+//#region cjs.js
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
+	module.exports = { a: 1 };
+}) });
+
+//#endregion
+//#region reexports.mjs
+var reexports_exports = {};
+__reExport(reexports_exports, /* @__PURE__ */ __toESM(require_cjs(), 1), void 0, 1);
+
+//#endregion
+//#region main.mjs
+assert.equal(String(reexports_exports), "[object Module]");
+
+//#endregion
+```

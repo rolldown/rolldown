@@ -505,6 +505,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if !export_all_externals_rec_ids.is_empty() {
       // construct `__reExport(importer_exports, importee_exports)`
       let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
+      let enable_generated_code_symbols = self.ctx.options.generated_code.symbols;
       match self.ctx.options.format {
         OutputFormat::Esm => {
           let stmts = export_all_externals_rec_ids.iter().copied().flat_map(|idx| {
@@ -526,17 +527,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             };
             let importee_name =
               &module.get_import_path(self.ctx.chunk, self.ctx.options.paths.as_ref());
+            let call_expr = self.snippet.re_export_call_expr(
+              re_export_fn_ref.clone_in(self.alloc),
+              self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN),
+              self.snippet.id_ref_expr(importee_namespace_name, SPAN),
+              enable_generated_code_symbols,
+            );
             vec![
               // Insert `import * as ns from 'ext'`external module in esm format
               self.snippet.import_star_stmt(importee_name, importee_namespace_name),
               // Insert `__reExport(foo_exports, ns)`
               self.snippet.builder.statement_expression(
                 SPAN,
-                self.snippet.call_expr_with_2arg_expr(
-                  re_export_fn_ref.clone_in(self.alloc),
-                  self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN),
-                  self.snippet.id_ref_expr(importee_namespace_name, SPAN),
-                ),
+                Expression::CallExpression(call_expr.into_in(self.alloc)),
               ),
             ]
           });
@@ -546,6 +549,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let stmts = export_all_externals_rec_ids.iter().copied().map(|idx| {
             // Insert `__reExport(importer_exports, require('ext'))`
             let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
+            let enable_generated_code_symbols = self.ctx.options.generated_code.symbols;
             // importer_exports
             let (importer_namespace_ref_expr, _) = self.finalized_expr_for_symbol_ref(
               self.ctx.module.namespace_object_ref,
@@ -554,16 +558,20 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             );
             let rec = &self.ctx.module.import_records[idx];
             let importee = &self.ctx.modules[rec.resolved_module];
-            let expression = self.snippet.call_expr_with_2arg_expr(
-              re_export_fn_ref,
+
+            let re_export_call_expr = self.snippet.re_export_call_expr(
+              re_export_fn_ref.clone_in(self.alloc),
               importer_namespace_ref_expr,
               self.snippet.call_expr_with_arg_expr_expr(
                 "require",
                 self.snippet.string_literal_expr(importee.id(), SPAN),
               ),
+              enable_generated_code_symbols,
             );
-            ast::Statement::ExpressionStatement(
-              ast::ExpressionStatement { span: expression.span(), expression }.into_in(self.alloc),
+
+            self.snippet.builder.statement_expression(
+              SPAN,
+              Expression::CallExpression(re_export_call_expr.into_in(self.alloc)),
             )
           });
           re_export_external_stmts = Some(stmts.collect());
@@ -1127,6 +1135,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     None
   }
 
+  #[expect(clippy::too_many_lines)]
   fn remove_unused_top_level_stmt(&mut self, program: &mut ast::Program<'ast>) -> usize {
     let mut last_import_stmt_idx = None;
 
@@ -1196,15 +1205,20 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                         false,
                         false,
                       );
-                      // __reExport(exports, otherExports)
-                      let expression = self.snippet.call_expr_with_2arg_expr(
+
+                      let enable_generated_code_symbols = self.ctx.options.generated_code.symbols;
+                      let call_expr = self.snippet.re_export_call_expr(
                         re_export_fn_ref,
                         importer_namespace_ref,
                         importee_namespace_ref,
+                        enable_generated_code_symbols,
                       );
+                      // __reExport(exports, otherExports)
                       let stmt = ast::Statement::ExpressionStatement(
-                        ast::ExpressionStatement { span: expression.span(), expression }
-                          .into_in(self.alloc),
+                        self.builder().alloc_expression_statement(
+                          SPAN,
+                          Expression::CallExpression(call_expr.into_in(self.alloc)),
+                        ),
                       );
                       program.body.push(stmt);
                     }
@@ -1236,30 +1250,34 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       false,
                     );
 
-                    // __reExport(importer_exports, __toESM(require_foo()))
-                    program.body.push(ast::Statement::ExpressionStatement(
-                      ast::ExpressionStatement {
-                        span: SPAN,
-                        expression: self.snippet.call_expr_with_2arg_expr_expr(
-                          re_export_fn_name,
-                          importer_namespace_ref,
-                          self.snippet.wrap_with_to_esm(
-                            to_esm_fn_ref,
-                            ast::Expression::CallExpression(
-                              self.snippet.builder.alloc_call_expression(
-                                SPAN,
-                                importee_wrapper_ref_expr,
-                                NONE,
-                                self.snippet.builder.vec(),
-                                false,
-                              ),
-                            ),
-                            self.ctx.module.should_consider_node_esm_spec_for_static_import(),
+                    let enable_generated_code_symbols = self.ctx.options.generated_code.symbols;
+                    let call_expr = self.snippet.re_export_call_expr(
+                      re_export_fn_name,
+                      importer_namespace_ref,
+                      self.snippet.wrap_with_to_esm(
+                        to_esm_fn_ref,
+                        ast::Expression::CallExpression(
+                          self.snippet.builder.alloc_call_expression(
+                            SPAN,
+                            importee_wrapper_ref_expr,
+                            NONE,
+                            self.snippet.builder.vec(),
+                            false,
                           ),
                         ),
-                      }
-                      .into_in(self.alloc),
-                    ));
+                        self.ctx.module.should_consider_node_esm_spec_for_static_import(),
+                      ),
+                      enable_generated_code_symbols,
+                    );
+
+                    // __reExport(importer_exports, __toESM(require_foo()))
+                    let stmt = ast::Statement::ExpressionStatement(
+                      self.builder().alloc_expression_statement(
+                        SPAN,
+                        Expression::CallExpression(call_expr.into_in(self.alloc)),
+                      ),
+                    );
+                    program.body.push(stmt);
                   }
                   ExportsKind::None => {}
                 }

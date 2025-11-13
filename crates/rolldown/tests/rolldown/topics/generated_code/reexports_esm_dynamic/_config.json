@@ -1,0 +1,19 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "main.mjs"
+      }
+    ],
+    "external": ["foo", "node:assert"],
+    "generatedCode": {
+      "symbols": true
+    }
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

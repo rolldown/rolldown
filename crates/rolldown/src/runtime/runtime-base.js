@@ -50,10 +50,15 @@ export var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
-export var __reExport = (target, mod, secondTarget) => (
+export var __reExport = (target, mod, secondTarget, symbols) => {
+  if (symbols) {
+    __defProp(target, Symbol.toStringTag, { value: 'Module' });
+    secondTarget &&
+      __defProp(secondTarget, Symbol.toStringTag, { value: 'Module' });
+  }
   __copyProps(target, mod, 'default'),
-    secondTarget && __copyProps(secondTarget, mod, 'default')
-);
+    secondTarget && __copyProps(secondTarget, mod, 'default');
+};
 export var __toESM = (mod, isNodeMode, target) => (
   (target = mod != null ? __create(__getProtoOf(mod)) : {}),
     __copyProps(

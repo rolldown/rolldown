@@ -143,7 +143,6 @@ pub async fn resolve_dependencies(
               ));
           }
           e => {
-            let reason = rolldown_resolver::error::oxc_resolve_error_to_reason(e);
             build_errors.push(BuildDiagnostic::resolve_error(
               source.clone(),
               self_resolved_id.id.clone(),
@@ -152,7 +151,7 @@ pub async fn resolve_dependencies(
               } else {
                 DiagnosableArcstr::Span(dep.state.span)
               },
-              reason,
+              rolldown_resolver::error::resolve_error_to_message(e),
               EventKind::ResolveError,
               None,
             ));

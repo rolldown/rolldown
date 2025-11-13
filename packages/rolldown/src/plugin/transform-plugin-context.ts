@@ -15,7 +15,7 @@ import type { Extends, TypeAssert } from '../types/assert';
 import type { SourceMap } from '../types/rolldown-output';
 import type { Plugin } from './index';
 import { type PluginContext, PluginContextImpl } from './plugin-context';
-import { PluginContextData } from './plugin-context-data';
+import type { PluginContextData } from './plugin-context-data';
 
 export interface TransformPluginContext extends PluginContext {
   debug: LoggingFunctionWithPosition;

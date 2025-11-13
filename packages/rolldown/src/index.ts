@@ -2,7 +2,7 @@ import './setup';
 import { version } from '../package.json';
 import { build, type BuildOptions } from './api/build';
 import { rolldown } from './api/rolldown';
-import { RolldownBuild } from './api/rolldown/rolldown-build';
+import type { RolldownBuild } from './api/rolldown/rolldown-build';
 import { watch } from './api/watch';
 import type {
   RolldownWatcher,

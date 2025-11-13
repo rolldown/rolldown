@@ -34,7 +34,7 @@ import {
 } from './bindingify-watch-hooks';
 import { extractHookUsage } from './generated/hook-usage';
 import type { Plugin, RolldownPlugin } from './index';
-import { PluginContextData } from './plugin-context-data';
+import type { PluginContextData } from './plugin-context-data';
 
 export interface BindingifyPluginArgs {
   plugin: Plugin;

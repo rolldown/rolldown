@@ -1,4 +1,4 @@
-import { WebSocket } from 'ws';
+import type { WebSocket } from 'ws';
 
 let id = 0;
 

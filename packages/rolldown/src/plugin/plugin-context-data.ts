@@ -5,10 +5,8 @@ import type {
   OutputOptions,
   RolldownPlugin,
 } from '..';
-import {
-  type BindingNormalizedOptions,
-  BindingPluginContext,
-} from '../binding.cjs';
+import type { BindingPluginContext } from '../binding.cjs';
+import { type BindingNormalizedOptions } from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import { NormalizedInputOptionsImpl } from '../options/normalized-input-options';
 import { NormalizedOutputOptionsImpl } from '../options/normalized-output-options';

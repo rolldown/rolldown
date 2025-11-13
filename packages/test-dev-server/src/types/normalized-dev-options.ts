@@ -1,4 +1,4 @@
-import { Platform } from './dev-options';
+import type { Platform } from './dev-options';
 
 export interface NormalizedDevOptions {
   platform: Platform;

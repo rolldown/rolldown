@@ -1,5 +1,5 @@
 import type { BuildOptions } from 'rolldown';
-import { DevOptions } from '../types/dev-options';
+import type { DevOptions } from '../types/dev-options';
 
 export interface DevConfig {
   build?: BuildOptions;

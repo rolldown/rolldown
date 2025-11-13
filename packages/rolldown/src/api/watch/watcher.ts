@@ -8,7 +8,7 @@ import {
   createBundlerOptions,
 } from '../../utils/create-bundler-option';
 import { arraify } from '../../utils/misc';
-import { WatcherEmitter } from './watch-emitter';
+import type { WatcherEmitter } from './watch-emitter';
 
 class Watcher {
   closed: boolean;

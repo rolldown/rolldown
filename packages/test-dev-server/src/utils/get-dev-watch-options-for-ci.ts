@@ -1,4 +1,4 @@
-import { DevWatchOptions } from 'rolldown/experimental';
+import type { DevWatchOptions } from 'rolldown/experimental';
 
 export function getDevWatchOptionsForCi() {
   return {

@@ -26,7 +26,7 @@ import type {
   Plugin,
   ResolvedId,
 } from './index';
-import { PluginContextData } from './plugin-context-data';
+import type { PluginContextData } from './plugin-context-data';
 
 export interface EmittedAsset {
   type: 'asset';

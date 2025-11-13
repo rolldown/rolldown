@@ -1,4 +1,5 @@
-import { Plugin, rolldown } from 'rolldown';
+import type { Plugin } from 'rolldown';
+import { rolldown } from 'rolldown';
 import { describe, expect, test, vi } from 'vitest';
 
 async function buildWithPlugin(plugin: Plugin) {

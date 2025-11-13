@@ -6,8 +6,8 @@ import { dts } from 'rolldown-plugin-dts';
 import * as ts from 'typescript';
 
 import { CopyAddonPlugin } from './copy-addon-plugin';
-import type { Plugin } from './src/index';
-import { build, BuildOptions } from './src/index';
+import type { BuildOptions, Plugin } from './src/index';
+import { build } from './src/index';
 import { styleText } from './src/utils/style-text';
 
 const __dirname = nodePath.join(fileURLToPath(import.meta.url), '..');

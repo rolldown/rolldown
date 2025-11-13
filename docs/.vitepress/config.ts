@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
-import { defineConfig, UserConfig } from 'vitepress';
+import type { UserConfig } from 'vitepress';
+import { defineConfig } from 'vitepress';
 import {
   groupIconMdPlugin,
   groupIconVitePlugin,

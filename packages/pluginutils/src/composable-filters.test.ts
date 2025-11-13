@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import type { QueryFilterObject } from './composable-filters';
 import {
   and,
   exclude,
@@ -7,7 +8,6 @@ import {
   or,
   queries,
   query,
-  QueryFilterObject,
 } from './composable-filters';
 
 function queryFilter(

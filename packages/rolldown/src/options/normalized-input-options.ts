@@ -1,5 +1,5 @@
 import type { InputOptions } from '..';
-import { BindingNormalizedOptions } from '../binding.cjs';
+import type { BindingNormalizedOptions } from '../binding.cjs';
 import { lazyProp } from '../decorators/lazy';
 import type { LogHandler } from '../log/log-handler';
 import { PlainObjectLike } from '../types/plain-object-like';

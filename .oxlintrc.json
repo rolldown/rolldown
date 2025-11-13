@@ -42,6 +42,7 @@
     "unicorn/prefer-node-protocol": "error",
     "typescript/no-base-to-string": "allow",
     "typescript/no-floating-promises": "allow",
+    "typescript/consistent-type-imports": "error",
     "typescript/restrict-template-expressions": "allow"
   },
   "overrides": [

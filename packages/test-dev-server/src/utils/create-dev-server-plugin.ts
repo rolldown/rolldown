@@ -1,5 +1,5 @@
-import { Plugin } from 'rolldown';
-import { NormalizedDevOptions } from '../types/normalized-dev-options';
+import type { Plugin } from 'rolldown';
+import type { NormalizedDevOptions } from '../types/normalized-dev-options';
 
 export function createDevServerPlugin(
   devOptions: NormalizedDevOptions,

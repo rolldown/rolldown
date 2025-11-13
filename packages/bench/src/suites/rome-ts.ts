@@ -1,7 +1,7 @@
 import { builtinModules } from 'node:module';
 import nodePath from 'node:path';
 
-import { ExternalOption } from 'rolldown';
+import type { ExternalOption } from 'rolldown';
 import { babelPlugin } from '../parallel-babel-plugin/impl';
 import { default as parallelBabelPlugin } from '../parallel-babel-plugin/index';
 import type { BenchSuite } from '../types';

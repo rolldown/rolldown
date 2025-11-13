@@ -1,6 +1,6 @@
-import { RawData } from 'ws';
+import type { RawData } from 'ws';
 
-import { ClientMessage } from '../types/client-message';
+import type { ClientMessage } from '../types/client-message';
 
 function rawDataToString(data: Buffer | ArrayBuffer | Buffer[]): string {
   if (Buffer.isBuffer(data)) {

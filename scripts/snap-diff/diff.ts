@@ -7,7 +7,7 @@ import {
   rewriteEsbuild,
   rewriteRolldown,
 } from './rewrite.js';
-import { DebugConfig } from './types';
+import type { DebugConfig } from './types';
 
 type Resolver = (
   esbuildFilename: string,

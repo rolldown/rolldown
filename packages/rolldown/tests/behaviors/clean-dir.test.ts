@@ -6,7 +6,8 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
-import { rolldown, RolldownPlugin } from 'rolldown';
+import type { RolldownPlugin } from 'rolldown';
+import { rolldown } from 'rolldown';
 import { expect, test } from 'vitest';
 
 const root = import.meta.dirname;

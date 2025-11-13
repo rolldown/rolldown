@@ -2,7 +2,8 @@
 
 import chalk from 'chalk';
 import { sortBy } from 'lodash-es';
-import { Bench, BenchOptions } from 'tinybench';
+import type { BenchOptions } from 'tinybench';
+import { Bench } from 'tinybench';
 
 export function group(
   name: string,

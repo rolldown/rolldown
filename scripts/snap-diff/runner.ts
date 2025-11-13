@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import { aggregateReason } from './aggregate-reason.js';
 import { diffCase } from './diff';
 import { parseEsbuildSnap, parseRolldownSnap } from './snap-parser.js';
-import { DebugConfig, UnwrapPromise } from './types';
+import type { DebugConfig, UnwrapPromise } from './types';
 const esbuildTestDir = path.join(
   import.meta.dirname,
   '../../crates/rolldown/tests/esbuild',

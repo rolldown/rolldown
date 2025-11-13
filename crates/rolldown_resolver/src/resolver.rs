@@ -20,18 +20,18 @@ use crate::resolver_config::ResolverConfig;
 
 #[derive(Debug)]
 #[expect(clippy::struct_field_names)]
-pub struct Resolver<T: FileSystem = OsFileSystem> {
-  fs: T,
+pub struct Resolver<Fs: FileSystem = OsFileSystem> {
+  fs: Fs,
   cwd: PathBuf,
-  default_resolver: ResolverGeneric<T>,
+  default_resolver: ResolverGeneric<Fs>,
   // Resolver for `import '...'` and `import(...)`
-  import_resolver: ResolverGeneric<T>,
+  import_resolver: ResolverGeneric<Fs>,
   // Resolver for `require('...')`
-  require_resolver: ResolverGeneric<T>,
+  require_resolver: ResolverGeneric<Fs>,
   // Resolver for `@import '...'` and `url('...')`
-  css_resolver: ResolverGeneric<T>,
+  css_resolver: ResolverGeneric<Fs>,
   // Resolver for `new URL(..., import.meta.url)`
-  new_url_resolver: ResolverGeneric<T>,
+  new_url_resolver: ResolverGeneric<Fs>,
   package_json_cache: FxDashMap<PathBuf, Arc<PackageJson>>,
 }
 
@@ -84,7 +84,7 @@ impl From<ResolveReturn> for ResolvedId {
   }
 }
 
-impl<F: FileSystem> Resolver<F> {
+impl<Fs: FileSystem> Resolver<Fs> {
   pub fn cwd(&self) -> &PathBuf {
     &self.cwd
   }
@@ -194,7 +194,7 @@ impl<F: FileSystem> Resolver<F> {
   /// Related Rollup code: https://github.com/rollup/rollup/blob/680912e2ceb42c8d5e571e01c6ece0e4889aecbb/src/utils/resolveId.ts#L56
   fn try_rollup_compatibility_resolve(
     &self,
-    resolver: &ResolverGeneric<F>,
+    resolver: &ResolverGeneric<Fs>,
     importer_dir: &Path,
     specifier: &str,
     original_resolution: Result<Resolution, ResolveError>,

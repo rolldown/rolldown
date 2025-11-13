@@ -332,10 +332,10 @@ impl Chunk {
     matches!(&self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::DynamicImported))
   }
 
-  /// Check if this chunk is a module facade (represents a specific module).
-  /// Module facades are entry point chunks (user-defined or dynamic), not common chunks.
-  /// This is used to determine if Symbol.toStringTag should be added when generatedCode.symbols is true.
-  pub fn is_module_facade(&self) -> bool {
+  /// Returns true if this chunk is an entry point.
+  /// Entry points include both user-defined entries and dynamically imported modules.
+  /// When `generatedCode.symbols` is enabled, entry point chunks get `Symbol.toStringTag` defined.
+  pub fn is_entry_point(&self) -> bool {
     matches!(&self.kind, ChunkKind::EntryPoint { .. })
   }
 }

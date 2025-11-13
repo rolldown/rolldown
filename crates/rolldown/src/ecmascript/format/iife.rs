@@ -131,7 +131,7 @@ pub async fn render_iife<'code>(
       ctx.options.es_module,
       has_default_export,
       &ctx.options.generated_code,
-      ctx.chunk.is_module_facade(),
+      ctx.chunk.is_entry_point(),
     ) {
       source_joiner.append_source(marker);
     }

@@ -27,7 +27,7 @@ mod debounced_recommended_fs_watcher;
 pub use debounced_recommended_fs_watcher::DebouncedRecommendedFsWatcher;
 
 pub use crate::{
-  fs_event::{FsEvent, FsEventResult as FileChangeResult},
+  fs_event::{FsEvent, FsEventResult},
   fs_event_handler::FsEventHandler,
 };
 pub use fs_watcher::FsWatcher;

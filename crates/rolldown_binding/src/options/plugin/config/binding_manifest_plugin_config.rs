@@ -9,6 +9,7 @@ use crate::types::js_callback::{JsCallback, JsCallbackExt as _};
 pub struct BindingManifestPluginConfig {
   pub root: String,
   pub out_path: String,
+  pub is_enable_v2: Option<bool>,
   #[napi(ts_type = "() => boolean")]
   pub is_legacy: Option<JsCallback<(), bool>>,
   #[napi(ts_type = "() => Record<string, string>")]
@@ -20,6 +21,7 @@ impl From<BindingManifestPluginConfig> for ManifestPlugin {
     Self {
       root: value.root,
       out_path: value.out_path,
+      is_enable_v2: value.is_enable_v2.unwrap_or_default(),
       is_legacy: value.is_legacy.map(|cb| -> Arc<IsLegacyFn> {
         Arc::new(move || {
           let is_legacy_fn = Arc::clone(&cb);

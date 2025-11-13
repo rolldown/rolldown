@@ -59,6 +59,17 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
       // See `crates/rolldown_debug`
       unimplemented!()
     }
+    "readable" => {
+      tracing_subscriber::registry()
+        .with(filter_for_removing_devtools_event)
+        .with(Targets::from_str(&env_var).unwrap())
+        .with(
+          fmt::layer().pretty().with_span_events(FmtSpan::NONE).with_level(true).with_target(false),
+        )
+        .init();
+      tracing::debug!("Tracing initialized");
+      None
+    }
     _ => {
       tracing_subscriber::registry()
         .with(filter_for_removing_devtools_event)

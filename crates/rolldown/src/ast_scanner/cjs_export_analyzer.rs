@@ -45,7 +45,7 @@ pub enum CommonJsAstType {
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
-  pub fn commonjs_export_analyzer(&self, ty: &CjsGlobalAssignmentType) -> Option<CommonJsAstType> {
+  pub fn commonjs_export_analyzer(&self, ty: CjsGlobalAssignmentType) -> Option<CommonJsAstType> {
     let cursor = self.visit_path.len() - 1;
     let parent = self.visit_path.get(cursor)?;
     match parent {
@@ -175,6 +175,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum CjsGlobalAssignmentType {
   ModuleExportsAssignment,
   ExportsAssignment,

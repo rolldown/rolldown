@@ -169,9 +169,9 @@ impl DevEngine {
     let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
     self
       .coordinator_sender
-      .send(CoordinatorMsg::GetStatus { reply: reply_sender })
+      .send(CoordinatorMsg::GetState { reply: reply_sender })
       .map_err_to_unhandleable()
-      .context("DevEngine: failed to send GetStatus to coordinator")?;
+      .context("DevEngine: failed to send GetState to coordinator")?;
 
     let status = reply_receiver
       .await
@@ -191,10 +191,10 @@ impl DevEngine {
     let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
     self
       .coordinator_sender
-      .send(CoordinatorMsg::GetStatus { reply: reply_sender })
+      .send(CoordinatorMsg::GetState { reply: reply_sender })
       .map_err_to_unhandleable()
       .context(
-        "DevEngine: failed to send GetStatus to coordinator within has_latest_bundle_output",
+        "DevEngine: failed to send GetState to coordinator within has_latest_bundle_output",
       )?;
 
     let status = reply_receiver
@@ -209,60 +209,42 @@ impl DevEngine {
   pub async fn ensure_latest_bundle_output(&self) -> BuildResult<()> {
     self.create_error_if_closed()?;
 
-    let mut count = 0;
-
+    let mut loop_count = 0u32;
     loop {
-      count += 1;
-      if count > 1000 {
-        eprintln!(
-          "Debug: `ensure_latest_bundle_output` wait for 1000 times build, something might be wrong"
-        );
+      loop_count += 1;
+      if loop_count > 100 {
+        if cfg!(debug_assertions) {
+          panic!(
+            "[DevEngine] ensure_latest_bundle_output has looped {loop_count} times, something is definitely wrong",
+          );
+        } else {
+          eprintln!(
+            "[DevEngine] ensure_latest_bundle_output has looped {loop_count} times, something might be wrong",
+          );
+        }
         break;
       }
-
-      // Get current build status from coordinator
-      let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+      let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
       self
         .coordinator_sender
-        .send(CoordinatorMsg::GetStatus { reply: reply_tx })
+        .send(CoordinatorMsg::EnsureLatestBundleOutput { reply: reply_sender })
         .map_err_to_unhandleable()
-        .context("DevEngine: failed to send GetStatus to coordinator")?;
-      let status = reply_rx
+        .context("DevEngine: failed to send EnsureLatestBundleOutput to coordinator")?;
+
+      let received = reply_receiver
         .await
         .map_err_to_unhandleable()
-        .context("DevEngine: coordinator closed before responding to GetStatus")?;
+        .context("DevEngine: coordinator closed before responding to EnsureLatestBundleOutput")??;
 
-      if let Some(building_future) = status.running_future {
-        tracing::trace!("Waiting for current build to finish...; {:?}", status.initial_build_state);
-        building_future.await;
-      } else {
-        tracing::trace!("No current build in progress...");
-        if status.has_stale_output {
-          // Need to schedule a build
-          let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-          self
-            .coordinator_sender
-            .send(CoordinatorMsg::ScheduleBuild { reply: reply_tx })
-            .map_err_to_unhandleable()
-            .context("DevEngine: failed to send ScheduleBuild to coordinator")?;
-
-          let schedule_result = reply_rx
-            .await
-            .map_err_to_unhandleable()
-            .context("DevEngine: coordinator closed before responding to ScheduleBuild")??;
-
-          if let Some((building_future, _)) = schedule_result {
-            building_future.await;
-          } else {
-            // No build was scheduled, which means there's no task in queue
-            // Queue the appropriate task based on initial build state
-            // This shouldn't normally happen as coordinator queues initial task
-            break;
-          }
-        } else {
-          // Build output is fresh, we're done
+      // Wait for the build if one is running or was scheduled
+      if let Some(ret) = received {
+        // Either a build is ongoing, or a new build was scheduled - wait for it to complete
+        ret.future.await;
+        if ret.is_ensure_latest_bundle_output_future {
           break;
         }
+      } else {
+        break;
       }
     }
 
@@ -342,11 +324,11 @@ impl DevEngine {
     // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
     // and get the build future to wait on
     let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    let _ = self.coordinator_sender.send(CoordinatorMsg::ScheduleBuild { reply: reply_tx });
+    let _ = self.coordinator_sender.send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
 
     // Wait for the build that was triggered by the file change
-    if let Ok(Ok(Some((future, _)))) = reply_rx.await {
-      future.await;
+    if let Ok(Ok(Some(ret))) = reply_rx.await {
+      ret.future.await;
     }
   }
 

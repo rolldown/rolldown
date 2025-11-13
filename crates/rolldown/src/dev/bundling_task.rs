@@ -48,17 +48,24 @@ impl BundlingTask {
   }
 
   pub async fn run(mut self) {
-    tracing::trace!("Start running bundling task: {:#?}", self.input);
+    tracing::trace!("[BundlingTask] starts to run.\n - Task Input: {:#?}", self.input);
     let task_run_result = self.run_inner().await;
 
     if let Err(err) = &task_run_result {
+      tracing::error!("[BundlingTask] fails to run");
       // FIXME: Should handle the error properly.
       eprintln!("Bundling task run with error: {err}"); // FIXME: handle this error
     }
 
+    let has_generated_bundle_output = self.has_rebuild_happen;
+
+    tracing::trace!(
+      "[BundlingTask] completed\n - has_generated_bundle_output: {has_generated_bundle_output:?}",
+    );
+
     self.dev_context.coordinator_tx.send(CoordinatorMsg::BundleCompleted {
       result: task_run_result,
-      has_generated_bundle_output: self.has_rebuild_happen,
+      has_generated_bundle_output,
     }).expect(
       "Coordinator channel closed while sending BundleCompleted - coordinator terminated unexpectedly"
     );
@@ -81,6 +88,7 @@ impl BundlingTask {
 
     let mut has_full_reload_update = false;
     if self.input.require_generate_hmr_update() {
+      tracing::trace!("[BundlingTask] starts to generate HMR updates");
       self.generate_hmr_updates(&mut has_full_reload_update).await?;
     }
 
@@ -90,6 +98,7 @@ impl BundlingTask {
       && has_full_reload_update
       && !self.input.requires_rebuild()
     {
+      tracing::trace!("[BundlingTask] detects full reload HMR update, upgrading to HmrRebuild");
       if let Some(changed_files) = self.input.changed_files_mut() {
         self.input = TaskInput::HmrRebuild { changed_files: std::mem::take(changed_files) };
       }
@@ -145,6 +154,10 @@ impl BundlingTask {
       }
     }
 
+    if let Err(err) = &hmr_result {
+      tracing::error!("[BundlingTask] failed to generate HMR updates: {:?}", err);
+    }
+
     // Call on_hmr_updates callback if provided
     if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref() {
       match hmr_result {
@@ -175,17 +188,19 @@ impl BundlingTask {
       )
     };
 
+    tracing::trace!(
+      "[BundlingTask] starts to perform rebuild\n - skip_write: {skip_write:?}\n - scan_mode: {scan_mode:?}"
+    );
     let build_result = if skip_write {
       bundler.incremental_generate(scan_mode).await
     } else {
       bundler.incremental_write(scan_mode).await
     };
 
-    let ret = if build_result.is_err() {
-      tracing::error!("Build failed for changed files: {:#?}", self.input.changed_files());
+    let ret = if let Err(err) = &build_result {
+      tracing::error!("[BundlingTask] rebuild failed: {:?}", err);
       Err(anyhow::format_err!("Err"))
     } else {
-      tracing::info!("Build succeeded for changed files: {:#?}", self.input.changed_files());
       Ok(())
     };
 
@@ -193,11 +208,6 @@ impl BundlingTask {
     if let Some(on_output) = self.dev_context.options.on_output.as_ref() {
       on_output(build_result);
     }
-
-    tracing::trace!(
-      "`BuildStatus` finished building with changed files: {:#?}",
-      self.input.changed_files()
-    );
 
     ret?;
     Ok(())

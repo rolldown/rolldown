@@ -449,9 +449,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       |(export, resolved_export)| {
         // Only include exports that were actually included in tree-shaking
         // Check if the symbol has a canonical name
-        if self.ctx.symbol_db.canonical_name_for(resolved_export.symbol_ref, &self.ctx.chunk.canonical_names).is_none() {
-          return None;
-        }
+        self
+          .ctx
+          .symbol_db
+          .canonical_name_for(resolved_export.symbol_ref, &self.ctx.chunk.canonical_names)?;
 
         // prop_name: () => returned
         let prop_name = export;

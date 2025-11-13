@@ -607,9 +607,8 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_reason: Symb
       // Check if this ESM module has a "module.exports" export
       // If it does, we should only include that export instead of bailing out
       let module = ctx.modules[canonical_ref.owner].as_normal().unwrap();
-      let has_module_exports_export =
-        matches!(module.exports_kind, ExportsKind::Esm)
-          && ctx.metas[canonical_ref.owner].resolved_exports.contains_key("module.exports");
+      let has_module_exports_export = matches!(module.exports_kind, ExportsKind::Esm)
+        && ctx.metas[canonical_ref.owner].resolved_exports.contains_key("module.exports");
 
       if !has_module_exports_export {
         // Only bailout if there's no "module.exports" export

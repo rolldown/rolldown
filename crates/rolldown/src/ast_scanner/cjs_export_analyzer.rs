@@ -1,8 +1,7 @@
 use oxc::allocator::GetAddress;
-use oxc::ast::ast::IdentifierReference;
 use oxc::ast::{
   AstKind, MemberExpressionKind,
-  ast::{self, AssignmentExpression, Expression, PropertyKey},
+  ast::{self, AssignmentExpression, Expression, IdentifierReference, PropertyKey},
 };
 use oxc::span::CompactStr;
 use oxc_allocator::Address;

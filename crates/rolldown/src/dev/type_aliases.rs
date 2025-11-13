@@ -1,4 +1,3 @@
-use rolldown_error::BuildResult;
 use tokio::sync::{
   mpsc::{UnboundedReceiver, UnboundedSender},
   oneshot,
@@ -15,14 +14,13 @@ pub type GetStateSender = oneshot::Sender<CoordinatorStateSnapshot>;
 pub type GetStateReceiver = oneshot::Receiver<CoordinatorStateSnapshot>;
 
 // ScheduleBuild message
-pub type ScheduleBuildIfStaleSender = oneshot::Sender<BuildResult<Option<ScheduleBuildReturn>>>;
-pub type ScheduleBuildIfStaleReceiver = oneshot::Receiver<BuildResult<Option<ScheduleBuildReturn>>>;
+pub type ScheduleBuildIfStaleSender = oneshot::Sender<Option<ScheduleBuildReturn>>;
+pub type ScheduleBuildIfStaleReceiver = oneshot::Receiver<Option<ScheduleBuildReturn>>;
 
 // Coordinator channel
 pub type CoordinatorSender = UnboundedSender<CoordinatorMsg>;
 pub type CoordinatorReceiver = UnboundedReceiver<CoordinatorMsg>;
 
-pub type EnsureLatestBundleOutputSender =
-  oneshot::Sender<BuildResult<Option<EnsureLatestBundleOutputReturn>>>;
+pub type EnsureLatestBundleOutputSender = oneshot::Sender<Option<EnsureLatestBundleOutputReturn>>;
 pub type EnsureLatestBundleOutputReceiver =
-  oneshot::Receiver<BuildResult<Option<EnsureLatestBundleOutputReturn>>>;
+  oneshot::Receiver<Option<EnsureLatestBundleOutputReturn>>;

@@ -234,7 +234,7 @@ impl DevEngine {
       let received = reply_receiver
         .await
         .map_err_to_unhandleable()
-        .context("DevEngine: coordinator closed before responding to EnsureLatestBundleOutput")??;
+        .context("DevEngine: coordinator closed before responding to EnsureLatestBundleOutput")?;
 
       // Wait for the build if one is running or was scheduled
       if let Some(ret) = received {
@@ -327,7 +327,7 @@ impl DevEngine {
     let _ = self.coordinator_sender.send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
 
     // Wait for the build that was triggered by the file change
-    if let Ok(Ok(Some(ret))) = reply_rx.await {
+    if let Ok(Some(ret)) = reply_rx.await {
       ret.future.await;
     }
   }

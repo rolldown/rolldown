@@ -604,7 +604,17 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_reason: Symb
     if ctx.modules[canonical_ref.owner].as_normal().map(|m| m.namespace_object_ref)
       == Some(canonical_ref)
     {
-      ctx.bailout_cjs_tree_shaking_modules.insert(canonical_ref.owner);
+      // Check if this ESM module has a "module.exports" export
+      // If it does, we should only include that export instead of bailing out
+      let module = ctx.modules[canonical_ref.owner].as_normal().unwrap();
+      let has_module_exports_export =
+        matches!(module.exports_kind, ExportsKind::Esm)
+          && ctx.metas[canonical_ref.owner].resolved_exports.contains_key("module.exports");
+
+      if !has_module_exports_export {
+        // Only bailout if there's no "module.exports" export
+        ctx.bailout_cjs_tree_shaking_modules.insert(canonical_ref.owner);
+      }
     }
   }
 
@@ -731,7 +741,36 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
     include_kind |= SymbolIncludeReason::JsonDefaultExportSelfReference;
   }
 
+  // Check if this is a namespace statement for an ESM module with "module.exports"
+  // If so, only include the "module.exports" export, not all exports
+  let is_esm_with_module_exports = stmt_info_id == StmtInfos::NAMESPACE_STMT_IDX
+    && matches!(module.exports_kind, ExportsKind::Esm)
+    && ctx.metas[module.idx].resolved_exports.contains_key("module.exports");
+
   stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
+    // Skip non-"module.exports" exports if this is an ESM module with "module.exports"
+    if is_esm_with_module_exports {
+      if let SymbolOrMemberExprRef::Symbol(symbol_ref) = reference_ref {
+        // Check if this symbol is an export symbol
+        let is_export_symbol = ctx.metas[module.idx]
+          .resolved_exports
+          .values()
+          .any(|export| export.symbol_ref == *symbol_ref);
+
+        if is_export_symbol {
+          // Only include the "module.exports" symbol
+          if let Some(module_exports_export) =
+            ctx.metas[module.idx].resolved_exports.get("module.exports")
+          {
+            if module_exports_export.symbol_ref != *symbol_ref {
+              // This is not the "module.exports" symbol, skip it
+              return;
+            }
+          }
+        }
+      }
+    }
+
     if let Some(member_expr_resolution) = match reference_ref {
       SymbolOrMemberExprRef::Symbol(_) => None,
       SymbolOrMemberExprRef::MemberExpr(member_expr_ref) => {

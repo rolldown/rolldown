@@ -99,8 +99,8 @@ impl BundleCoordinator {
         CoordinatorMsg::WatchEvent(watch_event) => {
           self.handle_watch_event(watch_event).await;
         }
-        CoordinatorMsg::BundleCompleted { result, has_generated_bundle_output } => {
-          self.handle_bundle_completed(result, has_generated_bundle_output).await;
+        CoordinatorMsg::BundleCompleted { has_encountered_error, has_generated_bundle_output } => {
+          self.handle_bundle_completed(has_encountered_error, has_generated_bundle_output).await;
         }
         CoordinatorMsg::ScheduleBuildIfStale { reply } => {
           let result = self.schedule_build_if_stale().await;
@@ -161,6 +161,9 @@ impl BundleCoordinator {
         self.queued_file_changes_waited_for_full_build.extend(changed_files);
       }
       CoordinatorState::Idle | CoordinatorState::InProgress | CoordinatorState::Failed => {
+        // The metal model for being `CoordinatorState::Failed` and receiving file changes is a bit of non-intuitive.
+        // Like the file is edited 2 times, the first edit is invalid and the second edit fixes the error.
+        // We just think the file is changed to second edit directly, ignoring the first invalid edit and follow the usual flow.
         let task_input = if self.ctx.options.rebuild_strategy.is_always() {
           TaskInput::HmrRebuild { changed_files }
         } else {
@@ -192,7 +195,7 @@ impl BundleCoordinator {
   /// Handle build completion notification
   async fn handle_bundle_completed(
     &mut self,
-    result: BuildResult<()>,
+    has_encountered_error: bool,
     has_generated_bundle_output: bool,
   ) {
     match self.state {
@@ -208,7 +211,10 @@ impl BundleCoordinator {
       CoordinatorState::FullBuildInProgress => {
         self.current_bundling_future = None;
 
-        if result.is_ok() {
+        if has_encountered_error {
+          self.set_initial_build_state(CoordinatorState::FullBuildFailed);
+          self.has_stale_bundle_output = true;
+        } else {
           self.has_stale_bundle_output = false;
           let _ = self.update_watch_paths().await;
 
@@ -218,9 +224,6 @@ impl BundleCoordinator {
               std::mem::take(&mut self.queued_file_changes_waited_for_full_build);
             self.handle_file_changes(queued_changes).await;
           }
-        } else {
-          self.set_initial_build_state(CoordinatorState::FullBuildFailed);
-          self.has_stale_bundle_output = true;
         }
         // We wouldn't try to schedule next build for FullBuildInProgress
         // - If it failed, we wait for external trigger
@@ -230,13 +233,13 @@ impl BundleCoordinator {
         // Clear current build
         self.current_bundling_future = None;
 
-        if result.is_ok() {
+        if has_encountered_error {
+          self.set_initial_build_state(CoordinatorState::Failed);
+          self.has_stale_bundle_output = true;
+        } else {
           self.has_stale_bundle_output = !has_generated_bundle_output;
 
           self.set_initial_build_state(CoordinatorState::Idle);
-        } else {
-          self.set_initial_build_state(CoordinatorState::Failed);
-          self.has_stale_bundle_output = true;
         }
         // Succeed or fail, always try to schedule next build as it might fix the error
         let _ = self.schedule_build_if_stale().await;
@@ -368,7 +371,7 @@ impl BundleCoordinator {
           is_ensure_latest_bundle_output_future: false,
         })
       }
-      CoordinatorState::FullBuildFailed => {
+      CoordinatorState::FullBuildFailed | CoordinatorState::Failed => {
         // Clear all queued tasks and schedule a new full build
         self.queued_tasks.clear();
         self.queued_tasks.push_back(TaskInput::FullBuild);
@@ -377,9 +380,6 @@ impl BundleCoordinator {
           future: ret.future,
           is_ensure_latest_bundle_output_future: true,
         })
-      }
-      CoordinatorState::Failed => {
-        todo!("how we're gonna handle this?")
       }
     }
   }

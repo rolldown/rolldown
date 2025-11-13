@@ -20,6 +20,7 @@ pub struct BundlingTask {
   pub bundler: Arc<Mutex<Bundler>>,
   pub dev_context: SharedDevContext,
   pub next_hmr_patch_id: Arc<AtomicU32>,
+  has_encountered_error: bool,
   has_rebuild_happen: bool,
 }
 
@@ -44,7 +45,14 @@ impl BundlingTask {
     dev_context: SharedDevContext,
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> Self {
-    Self { input, bundler, dev_context, next_hmr_patch_id, has_rebuild_happen: false }
+    Self {
+      input,
+      bundler,
+      dev_context,
+      next_hmr_patch_id,
+      has_rebuild_happen: false,
+      has_encountered_error: false,
+    }
   }
 
   pub async fn run(mut self) {
@@ -58,13 +66,14 @@ impl BundlingTask {
     }
 
     let has_generated_bundle_output = self.has_rebuild_happen;
+    let has_encountered_error = self.has_encountered_error || task_run_result.is_err();
 
     tracing::trace!(
       "[BundlingTask] completed\n - has_generated_bundle_output: {has_generated_bundle_output:?}",
     );
 
     self.dev_context.coordinator_tx.send(CoordinatorMsg::BundleCompleted {
-      result: task_run_result,
+      has_encountered_error,
       has_generated_bundle_output,
     }).expect(
       "Coordinator channel closed while sending BundleCompleted - coordinator terminated unexpectedly"
@@ -156,6 +165,7 @@ impl BundlingTask {
 
     if let Err(err) = &hmr_result {
       tracing::error!("[BundlingTask] failed to generate HMR updates: {:?}", err);
+      self.has_encountered_error = true;
     }
 
     // Call on_hmr_updates callback if provided
@@ -174,7 +184,7 @@ impl BundlingTask {
     }
   }
 
-  async fn rebuild(&self) -> BuildResult<()> {
+  async fn rebuild(&mut self) -> BuildResult<()> {
     let mut bundler = self.bundler.lock().await;
 
     // TODO: hyf0 `skip_write` in watch mode won't trigger generate stage, need to investigate why.
@@ -197,19 +207,16 @@ impl BundlingTask {
       bundler.incremental_write(scan_mode).await
     };
 
-    let ret = if let Err(err) = &build_result {
+    if let Err(err) = &build_result {
       tracing::error!("[BundlingTask] rebuild failed: {:?}", err);
-      Err(anyhow::format_err!("Err"))
-    } else {
-      Ok(())
-    };
+      self.has_encountered_error = true;
+    }
 
     // Call on_output callback if provided
     if let Some(on_output) = self.dev_context.options.on_output.as_ref() {
       on_output(build_result);
     }
 
-    ret?;
     Ok(())
   }
 }

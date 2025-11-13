@@ -1,0 +1,96 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+// HIDDEN [rolldown:hmr]
+//#region dep.js
+var dep_exports = /* @__PURE__ */ __export({ value: () => value });
+const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
+__rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
+const value = "dep";
+if (dep_hot) {
+	dep_hot.accept();
+}
+
+//#endregion
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+console.log(value);
+
+//#endregion
+```
+
+# HMR Step 0
+
+## Errors
+
+### PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Expected a semicolon or an implicit semicolon after a statement, but found none
+   ╭─[ dep.js:1:8 ]
+   │
+ 1 │ invalid syntax
+   │        │ 
+   │        ╰─ 
+   │ 
+   │ Help: Try inserting a semicolon here
+───╯
+
+```
+
+## Build Output
+
+### Errors
+
+#### PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Expected a semicolon or an implicit semicolon after a statement, but found none
+   ╭─[ dep.js:1:8 ]
+   │
+ 1 │ invalid syntax
+   │        │ 
+   │        ╰─ 
+   │ 
+   │ Help: Try inserting a semicolon here
+───╯
+
+```
+
+# HMR Step 1
+
+## Build Output
+
+### Assets
+
+#### main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+// HIDDEN [rolldown:hmr]
+//#region dep.js
+var dep_exports = /* @__PURE__ */ __export({ value: () => value });
+const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
+__rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
+const value = "dep";
+if (dep_hot) {
+	dep_hot.accept();
+}
+
+//#endregion
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+console.log(value);
+
+//#endregion
+```

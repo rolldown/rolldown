@@ -1,4 +1,3 @@
-use rolldown_error::BuildResult;
 use rolldown_fs_watcher::FsEventResult;
 
 use crate::dev::type_aliases::{
@@ -9,7 +8,7 @@ use crate::dev::type_aliases::{
 #[derive(Debug)]
 pub enum CoordinatorMsg {
   WatchEvent(FsEventResult),
-  BundleCompleted { result: BuildResult<()>, has_generated_bundle_output: bool },
+  BundleCompleted { has_encountered_error: bool, has_generated_bundle_output: bool },
   ScheduleBuildIfStale { reply: ScheduleBuildIfStaleSender },
   GetState { reply: GetStateSender },
   EnsureLatestBundleOutput { reply: EnsureLatestBundleOutputSender },

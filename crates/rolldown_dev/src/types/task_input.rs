@@ -15,6 +15,7 @@ pub enum TaskInput {
 }
 
 impl TaskInput {
+  #[expect(dead_code)]
   pub fn new_initial_build_task() -> Self {
     Self::FullBuild
   }

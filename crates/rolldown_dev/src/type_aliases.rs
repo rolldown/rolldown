@@ -11,10 +11,12 @@ use super::types::{
 
 // GetBuildStatus message
 pub type GetStateSender = oneshot::Sender<CoordinatorStateSnapshot>;
+#[expect(dead_code)]
 pub type GetStateReceiver = oneshot::Receiver<CoordinatorStateSnapshot>;
 
 // ScheduleBuild message
 pub type ScheduleBuildIfStaleSender = oneshot::Sender<Option<ScheduleBuildReturn>>;
+#[expect(dead_code)]
 pub type ScheduleBuildIfStaleReceiver = oneshot::Receiver<Option<ScheduleBuildReturn>>;
 
 // Coordinator channel
@@ -22,5 +24,6 @@ pub type CoordinatorSender = UnboundedSender<CoordinatorMsg>;
 pub type CoordinatorReceiver = UnboundedReceiver<CoordinatorMsg>;
 
 pub type EnsureLatestBundleOutputSender = oneshot::Sender<Option<EnsureLatestBundleOutputReturn>>;
+#[expect(dead_code)]
 pub type EnsureLatestBundleOutputReceiver =
   oneshot::Receiver<Option<EnsureLatestBundleOutputReturn>>;

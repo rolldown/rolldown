@@ -10,20 +10,19 @@ use rolldown_error::{BuildResult, ResultExt};
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, FsWatcherExt, NoopFsWatcher};
 use tokio::sync::{Mutex, mpsc::unbounded_channel};
 
+use rolldown::{Bundler, BundlerBuilder};
+
 use crate::{
-  Bundler, BundlerBuilder,
-  dev::{
-    DevOptions, SharedClients,
-    bundle_coordinator::BundleCoordinator,
-    dev_context::{DevContext, PinBoxSendStaticFuture},
-    normalize_dev_options,
-    type_aliases::CoordinatorSender,
-    types::coordinator_msg::CoordinatorMsg,
-  },
+  DevOptions, SharedClients,
+  bundle_coordinator::BundleCoordinator,
+  dev_context::{DevContext, PinBoxSendStaticFuture},
+  normalize_dev_options,
+  type_aliases::CoordinatorSender,
+  types::coordinator_msg::CoordinatorMsg,
 };
 
 #[cfg(feature = "testing")]
-use crate::dev::ClientSession;
+use crate::ClientSession;
 #[cfg(feature = "testing")]
 use rolldown_utils::indexmap::FxIndexSet;
 #[cfg(feature = "testing")]

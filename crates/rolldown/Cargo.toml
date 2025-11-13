@@ -51,7 +51,6 @@ rolldown_ecmascript = { workspace = true }
 rolldown_ecmascript_utils = { workspace = true }
 rolldown_error = { workspace = true }
 rolldown_fs = { workspace = true, features = ["os"] }
-rolldown_fs_watcher = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_plugin_chunk_import_map = { workspace = true }
 rolldown_plugin_data_uri = { workspace = true }
@@ -75,6 +74,7 @@ xxhash-rust = { workspace = true, features = ["xxh3"] }
 [dev-dependencies]
 glob = { workspace = true }
 insta = { workspace = true }
+rolldown_dev = { path = "../rolldown_dev" }
 rolldown_testing = { path = "../rolldown_testing" }
 rolldown_workspace = { workspace = true }
 sugar_path = { workspace = true }

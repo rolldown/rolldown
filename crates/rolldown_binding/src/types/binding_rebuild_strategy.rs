@@ -8,7 +8,7 @@ pub enum BindingRebuildStrategy {
   Never,
 }
 
-impl From<BindingRebuildStrategy> for rolldown::dev::RebuildStrategy {
+impl From<BindingRebuildStrategy> for rolldown_dev::RebuildStrategy {
   fn from(value: BindingRebuildStrategy) -> Self {
     match value {
       BindingRebuildStrategy::Always => Self::Always,

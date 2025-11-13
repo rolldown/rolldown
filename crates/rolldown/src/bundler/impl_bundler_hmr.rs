@@ -6,7 +6,8 @@ use rustc_hash::FxHashSet;
 use std::sync::{Arc, atomic::AtomicU32};
 
 impl Bundler {
-  pub(crate) async fn compute_hmr_update_for_file_changes(
+  #[cfg(feature = "experimental")]
+  pub async fn compute_hmr_update_for_file_changes(
     &mut self,
     changed_file_paths: &[String],
     clients: &[ClientHmrInput<'_>],
@@ -28,7 +29,8 @@ impl Bundler {
     hmr_stage.compute_hmr_update_for_file_changes(changed_file_paths, clients).await
   }
 
-  pub(crate) async fn compute_update_for_calling_invalidate(
+  #[cfg(feature = "experimental")]
+  pub async fn compute_update_for_calling_invalidate(
     &mut self,
     invalidate_caller: String,
     first_invalidated_by: Option<String>,

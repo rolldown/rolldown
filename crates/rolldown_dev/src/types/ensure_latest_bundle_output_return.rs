@@ -1,4 +1,4 @@
-use crate::dev::dev_context::BundlingFuture;
+use crate::dev_context::BundlingFuture;
 
 /// Return value for `ensure_latest_bundle_output` containing the bundling future to await
 #[derive(Debug, Clone)]

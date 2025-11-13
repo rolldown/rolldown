@@ -18,14 +18,16 @@ impl Bundler {
     Ok(ret)
   }
 
-  pub(crate) async fn incremental_write(
+  #[cfg(feature = "experimental")]
+  pub async fn incremental_write(
     &mut self,
     scan_mode: ScanMode<ArcStr>,
   ) -> BuildResult<BundleOutput> {
     self.incremental_bundle(true, scan_mode).await
   }
 
-  pub(crate) async fn incremental_generate(
+  #[cfg(feature = "experimental")]
+  pub async fn incremental_generate(
     &mut self,
     scan_mode: ScanMode<ArcStr>,
   ) -> BuildResult<BundleOutput> {

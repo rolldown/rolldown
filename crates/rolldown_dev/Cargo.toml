@@ -1,0 +1,36 @@
+[package]
+name = "rolldown_dev"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+publish = true
+repository.workspace = true
+description = "Dev mode orchestration for Rolldown bundler"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+doctest = false
+
+[lints]
+workspace = true
+
+[features]
+testing = []
+
+[dependencies]
+anyhow = { workspace = true }
+arcstr = { workspace = true }
+futures = { workspace = true }
+rolldown = { workspace = true, features = ["experimental"] }
+rolldown-notify = { workspace = true }
+rolldown_common = { workspace = true }
+rolldown_dev_common = { workspace = true }
+rolldown_error = { workspace = true }
+rolldown_fs_watcher = { workspace = true }
+rolldown_utils = { workspace = true }
+rustc-hash = { workspace = true }
+sugar_path = { workspace = true }
+tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
+tracing = { workspace = true }

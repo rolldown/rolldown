@@ -1,6 +1,6 @@
 use rolldown_fs_watcher::FsEventHandler;
 
-use crate::dev::{type_aliases::CoordinatorSender, types::coordinator_msg::CoordinatorMsg};
+use crate::{type_aliases::CoordinatorSender, types::coordinator_msg::CoordinatorMsg};
 
 pub struct WatcherEventHandler {
   pub coordinator_tx: CoordinatorSender,

@@ -6,26 +6,26 @@ use std::{
 
 use arcstr::ArcStr;
 use futures::FutureExt;
+use notify::EventKind;
 use rolldown_error::BuildResult;
-use rolldown_fs_watcher::{DynFsWatcher, FsEventResult};
+use rolldown_fs_watcher::{DynFsWatcher, FsEventResult, RecursiveMode};
 use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexSet};
 use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
+use rolldown::Bundler;
+
 use crate::{
-  Bundler,
-  dev::{
-    bundling_task::BundlingTask,
-    dev_context::{BundlingFuture, PinBoxSendStaticFuture, SharedDevContext},
-    type_aliases::{CoordinatorReceiver, CoordinatorSender},
-    types::{
-      coordinator_msg::CoordinatorMsg, coordinator_state::CoordinatorState,
-      coordinator_state_snapshot::CoordinatorStateSnapshot,
-      ensure_latest_bundle_output_return::EnsureLatestBundleOutputReturn,
-      schedule_build_return::ScheduleBuildReturn, task_input::TaskInput,
-    },
-    watcher_event_handler::WatcherEventHandler,
+  bundling_task::BundlingTask,
+  dev_context::{BundlingFuture, PinBoxSendStaticFuture, SharedDevContext},
+  type_aliases::{CoordinatorReceiver, CoordinatorSender},
+  types::{
+    coordinator_msg::CoordinatorMsg, coordinator_state::CoordinatorState,
+    coordinator_state_snapshot::CoordinatorStateSnapshot,
+    ensure_latest_bundle_output_return::EnsureLatestBundleOutputReturn,
+    schedule_build_return::ScheduleBuildReturn, task_input::TaskInput,
   },
+  watcher_event_handler::WatcherEventHandler,
 };
 
 /// BundleCoordinator - coordinates build tasks and manages initial build state
@@ -128,14 +128,14 @@ impl BundleCoordinator {
         let mut changed_files = FxIndexSet::default();
         batched_events.into_iter().for_each(|batched_event| match &batched_event.detail.kind {
           #[cfg(target_os = "macos")]
-          notify::EventKind::Modify(notify::event::ModifyKind::Metadata(_))
+          EventKind::Modify(notify::event::ModifyKind::Metadata(_))
             if !self.ctx.options.use_polling =>
           {
             // When using kqueue on mac, ignore metadata changes as it happens frequently and doesn't affect the build in most cases
             // Note that when using polling, we shouldn't ignore metadata changes as the polling watcher prefer to emit them over
             // content change events
           }
-          notify::EventKind::Modify(_modify_kind) => {
+          EventKind::Modify(_modify_kind) => {
             changed_files.extend(batched_event.detail.paths);
           }
           _ => {}
@@ -408,7 +408,7 @@ impl BundleCoordinator {
       let watch_file = &**watch_file;
       if !self.watched_files.contains(watch_file) {
         self.watched_files.insert(watch_file.to_string().into());
-        paths_mut.add(watch_file.as_path(), notify::RecursiveMode::NonRecursive)?;
+        paths_mut.add(watch_file.as_path(), RecursiveMode::NonRecursive)?;
       }
     }
     paths_mut.commit()?;

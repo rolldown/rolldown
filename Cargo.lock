@@ -2679,12 +2679,12 @@ dependencies = [
  "rolldown-notify",
  "rolldown_common",
  "rolldown_debug",
+ "rolldown_dev",
  "rolldown_dev_common",
  "rolldown_ecmascript",
  "rolldown_ecmascript_utils",
  "rolldown_error",
  "rolldown_fs",
- "rolldown_fs_watcher",
  "rolldown_plugin",
  "rolldown_plugin_chunk_import_map",
  "rolldown_plugin_data_uri",
@@ -2789,6 +2789,7 @@ dependencies = [
  "rolldown",
  "rolldown_common",
  "rolldown_debug",
+ "rolldown_dev",
  "rolldown_error",
  "rolldown_plugin",
  "rolldown_plugin_alias",
@@ -2877,6 +2878,26 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "ts-rs",
+]
+
+[[package]]
+name = "rolldown_dev"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arcstr",
+ "futures",
+ "rolldown",
+ "rolldown-notify",
+ "rolldown_common",
+ "rolldown_dev_common",
+ "rolldown_error",
+ "rolldown_fs_watcher",
+ "rolldown_utils",
+ "rustc-hash",
+ "sugar_path",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -3425,6 +3446,7 @@ dependencies = [
  "regex",
  "rolldown",
  "rolldown_common",
+ "rolldown_dev",
  "rolldown_error",
  "rolldown_sourcemap",
  "rolldown_testing_config",

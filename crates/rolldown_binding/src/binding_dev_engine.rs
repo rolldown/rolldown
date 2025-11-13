@@ -1,7 +1,6 @@
 use napi::tokio;
 use napi_derive::napi;
-use rolldown::dev::dev_context::BundlingFuture;
-use rolldown::dev::{OnHmrUpdatesCallback, OnOutputCallback};
+use rolldown_dev::{BundlingFuture, OnHmrUpdatesCallback, OnOutputCallback};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -16,7 +15,7 @@ use napi::{Either, Env, threadsafe_function::ThreadsafeFunctionCallMode};
 
 #[napi]
 pub struct BindingDevEngine {
-  inner: rolldown::DevEngine,
+  inner: rolldown_dev::DevEngine,
   _session_id: Arc<str>,
   _session: rolldown_debug::Session,
 }
@@ -108,7 +107,7 @@ impl BindingDevEngine {
       || compare_contents_for_polling.is_some()
       || debounce_tick_rate.is_some()
     {
-      Some(rolldown::dev::DevWatchOptions {
+      Some(rolldown_dev::DevWatchOptions {
         disable_watcher: None,
         skip_write,
         use_polling,
@@ -122,14 +121,14 @@ impl BindingDevEngine {
       None
     };
 
-    let rolldown_dev_options = rolldown::dev::DevOptions {
+    let rolldown_dev_options = rolldown_dev::DevOptions {
       on_hmr_updates,
       on_output,
       rebuild_strategy,
       watch: dev_watch_options,
     };
 
-    let inner = rolldown::DevEngine::with_bundler(bundler, rolldown_dev_options)
+    let inner = rolldown_dev::DevEngine::with_bundler(bundler, rolldown_dev_options)
       .map_err(|e| napi::Error::from_reason(format!("Fail to create dev engine: {e:#?}")))?;
 
     Ok(Self { inner, _session_id: session_id, _session: session })

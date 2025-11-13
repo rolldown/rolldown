@@ -1,4 +1,4 @@
-use crate::dev::dev_context::BundlingFuture;
+use crate::dev_context::BundlingFuture;
 
 /// Response containing current coordinator status
 #[derive(Debug, Clone)]

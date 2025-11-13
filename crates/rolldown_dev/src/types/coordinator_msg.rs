@@ -1,6 +1,6 @@
 use rolldown_fs_watcher::FsEventResult;
 
-use crate::dev::type_aliases::{
+use crate::type_aliases::{
   EnsureLatestBundleOutputSender, GetStateSender, ScheduleBuildIfStaleSender,
 };
 

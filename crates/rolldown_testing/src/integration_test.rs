@@ -8,12 +8,12 @@ use std::{
 };
 
 use anyhow::Context;
-use rolldown::dev::{DevOptions, DevWatchOptions};
+use rolldown::NormalizedBundlerOptions;
 use rolldown::{
   BundleOutput, Bundler, BundlerOptions, IsExternal, OutputFormat, Platform, SourceMapType,
   plugin::__inner::SharedPluginable,
 };
-use rolldown::{DevEngine, NormalizedBundlerOptions};
+use rolldown_dev::{DevEngine, DevOptions, DevWatchOptions};
 use rolldown_error::BuildResult;
 use rolldown_testing_config::TestMeta;
 use serde_json::{Map, Value};

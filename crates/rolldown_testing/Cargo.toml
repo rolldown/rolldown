@@ -26,6 +26,7 @@ jsonschema = { workspace = true }
 regex = { workspace = true }
 rolldown = { workspace = true, features = ["testing"] }
 rolldown_common = { workspace = true }
+rolldown_dev = { workspace = true, features = ["testing"] }
 rolldown_error = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_testing_config = { workspace = true }

@@ -5,7 +5,6 @@ mod bundler;
 mod bundler_builder;
 mod chunk_graph;
 mod css;
-pub mod dev;
 mod ecmascript;
 mod hmr;
 mod module_finalizers;
@@ -32,7 +31,6 @@ pub use crate::{
   },
   bundler::Bundler,
   bundler_builder::BundlerBuilder,
-  dev::dev_engine::DevEngine,
   types::bundle_output::BundleOutput,
   watch::event::{BundleEvent, WatcherEvent},
   watcher::Watcher,

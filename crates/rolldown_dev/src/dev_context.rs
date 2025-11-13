@@ -2,7 +2,7 @@ use std::{future::Future, pin::Pin, sync::Arc};
 
 use futures::future::Shared;
 
-use crate::dev::{NormalizedDevOptions, SharedClients, type_aliases::CoordinatorSender};
+use crate::{NormalizedDevOptions, SharedClients, type_aliases::CoordinatorSender};
 
 pub type SharedDevContext = Arc<DevContext>;
 

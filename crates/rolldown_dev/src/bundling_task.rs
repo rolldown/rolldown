@@ -7,12 +7,11 @@ use rolldown_common::{ClientHmrInput, ScanMode, WatcherChangeKind};
 use rolldown_error::BuildResult;
 use tokio::sync::Mutex;
 
+use rolldown::Bundler;
+
 use crate::{
-  Bundler,
-  dev::{
-    dev_context::SharedDevContext,
-    types::{coordinator_msg::CoordinatorMsg, task_input::TaskInput},
-  },
+  dev_context::SharedDevContext,
+  types::{coordinator_msg::CoordinatorMsg, task_input::TaskInput},
 };
 
 pub struct BundlingTask {
@@ -85,7 +84,7 @@ impl BundlingTask {
       let bundler = self.bundler.lock().await;
       for changed_file in self.input.changed_files() {
         if let Some(plugin_driver) =
-          bundler.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver)
+          bundler.last_bundle_handle.as_ref().map(rolldown::BundleHandle::plugin_driver)
         {
           plugin_driver
             // FIXME: use proper WatcherChangeKind for created/removed files.

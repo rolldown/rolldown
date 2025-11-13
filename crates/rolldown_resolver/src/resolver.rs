@@ -95,6 +95,10 @@ impl<F: FileSystem> Resolver<F> {
     self.package_json_cache.clear();
   }
 
+  pub fn resolve_tsconfig<T: AsRef<Path>>(&self, path: &T) -> Result<Arc<TsConfig>, ResolveError> {
+    self.default_resolver.resolve_tsconfig(path)
+  }
+
   pub fn try_get_package_json_or_create(&self, path: &Path) -> anyhow::Result<Arc<PackageJson>> {
     self
       .inner_try_get_package_json_or_create(path)
@@ -105,16 +109,26 @@ impl<F: FileSystem> Resolver<F> {
     if let Some(v) = self.package_json_cache.get(path) {
       Ok(Arc::clone(v.value()))
     } else {
-      // User have has the responsibility to ensure `path` is real path if needed. We just pass it through.
+      // User has the responsibility to ensure `path` is real path if needed. We just pass it through.
       let realpath = path.to_path_buf();
       let json_bytes = self.fs.read(path)?;
-      let oxc_pkg_json = OxcPackageJson::parse(&self.fs, path.to_path_buf(), realpath, json_bytes)?;
+      let oxc_pkg_json = OxcPackageJson::parse(&self.fs, realpath.clone(), realpath, json_bytes)?;
       let pkg_json = Arc::new(PackageJson::from_oxc_pkg_json(&oxc_pkg_json));
       self.package_json_cache.insert(path.to_path_buf(), Arc::clone(&pkg_json));
       Ok(pkg_json)
     }
   }
 
+  /// Resolves a module specifier to an absolute path.
+  ///
+  /// # Arguments
+  /// * `importer` - The file that is importing the module (if any)
+  /// * `specifier` - The module specifier to resolve (e.g., "./foo", "lodash")
+  /// * `import_kind` - The type of import (ESM, CommonJS, CSS, etc.)
+  /// * `is_user_defined_entry` - Whether this is a user-defined entry point
+  ///
+  /// # Errors
+  /// Returns a `ResolveError` if the module cannot be resolved.
   pub fn resolve(
     &self,
     importer: Option<&Path>,
@@ -131,36 +145,20 @@ impl<F: FileSystem> Resolver<F> {
       ImportKind::AtImport | ImportKind::UrlImport => &self.css_resolver,
     };
 
-    let importer_dir = importer.and_then(|importer| importer.parent()).and_then(|inner| {
-      if inner.components().next().is_none() {
-        // Empty path `Path::new("")`
-        None
-      } else {
-        Some(inner)
-      }
-    });
+    let importer_dir = importer
+      .and_then(|importer_path| importer_path.parent())
+      .and_then(|parent_dir| parent_dir.components().next().is_some().then_some(parent_dir))
+      .unwrap_or(self.cwd.as_path());
 
-    let context_dir = importer_dir.unwrap_or(self.cwd.as_path());
-
-    let mut resolution = selected_resolver.resolve(context_dir, specifier);
+    let mut resolution = selected_resolver.resolve(importer_dir, specifier);
 
     if resolution.is_err() && is_user_defined_entry {
-      let is_specifier_path_like = specifier.starts_with('.') || specifier.starts_with('/');
-      let need_rollup_resolve_compat = !is_specifier_path_like;
-      if need_rollup_resolve_compat {
-        // Rolldown doesn't pursue to have the same resolve behavior as Rollup. Even though, in most cases, rolldown have the same resolve result as Rollup. And in this branch, it's the case that rolldown will perform differently from Rollup.
-
-        // The case is user writes config like `{ input: 'main' }`. `main` would be treated as a npm package name in rolldown
-        // and try to resolve it from `node_modules`. But rollup will resolve it to `<CWD>/main.{js,mjs,cjs}`.
-
-        // So in this branch, to improve rollup-compatibility, we try to simulate the Rollup's resolve behavior in this case.
-        // // Related rollup code: https://github.com/rollup/rollup/blob/680912e2ceb42c8d5e571e01c6ece0e4889aecbb/src/utils/resolveId.ts#L56.
-        let fallback = selected_resolver
-          .resolve(context_dir, &self.cwd.join(specifier).normalize().to_string_lossy());
-        if fallback.is_ok() {
-          resolution = fallback;
-        }
-      }
+      resolution = self.try_rollup_compatibility_resolve(
+        selected_resolver,
+        importer_dir,
+        specifier,
+        resolution,
+      );
     }
 
     resolution.map(|info| {
@@ -175,25 +173,47 @@ impl<F: FileSystem> Resolver<F> {
   }
 
   fn cached_package_json(&self, oxc_pkg_json: &OxcPackageJson) -> Arc<PackageJson> {
-    match self.package_json_cache.get(&oxc_pkg_json.realpath) {
-      Some(v) => Arc::clone(v.value()),
-      _ => {
-        let pkg_json = Arc::new(PackageJson::from_oxc_pkg_json(oxc_pkg_json));
-        self.package_json_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
-        pkg_json
-      }
-    }
+    Arc::clone(
+      self
+        .package_json_cache
+        .entry(oxc_pkg_json.realpath.clone())
+        .or_insert_with(|| Arc::new(PackageJson::from_oxc_pkg_json(oxc_pkg_json)))
+        .value(),
+    )
   }
 
-  pub fn resolve_tsconfig<T: AsRef<Path>>(&self, path: &T) -> Result<Arc<TsConfig>, ResolveError> {
-    self.default_resolver.resolve_tsconfig(path)
+  /// Attempts to resolve using Rollup compatibility mode.
+  ///
+  /// Rolldown doesn't pursue the exact same resolve behavior as Rollup, but in most cases
+  /// the results are the same. This function handles a special case for better compatibility.
+  ///
+  /// When a user writes config like `{ input: 'main' }`, `main` would be treated as a npm
+  /// package name in Rolldown and try to resolve it from `node_modules`. But Rollup will
+  /// resolve it to `<CWD>/main.{js,mjs,cjs}`.
+  ///
+  /// Related Rollup code: https://github.com/rollup/rollup/blob/680912e2ceb42c8d5e571e01c6ece0e4889aecbb/src/utils/resolveId.ts#L56
+  fn try_rollup_compatibility_resolve(
+    &self,
+    resolver: &ResolverGeneric<F>,
+    importer_dir: &Path,
+    specifier: &str,
+    original_resolution: Result<Resolution, ResolveError>,
+  ) -> Result<Resolution, ResolveError> {
+    if specifier.starts_with('.') || specifier.starts_with('/') {
+      return original_resolution;
+    }
+
+    // Try resolving relative to cwd as a fallback
+    let specifier_path = self.cwd.join(specifier).normalize();
+    let fallback = resolver.resolve(importer_dir, &specifier_path.to_string_lossy());
+    if fallback.is_ok() { fallback } else { original_resolution }
   }
 }
 
-/// https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L1446-L1460
+/// Infer module format from file extension and package.json type field
+/// Reference: https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L1446-L1460
 fn infer_module_def_format(info: &Resolution) -> ModuleDefFormat {
   let fmt = ModuleDefFormat::from_path(info.path());
-
   if !matches!(fmt, ModuleDefFormat::Unknown) {
     return fmt;
   }

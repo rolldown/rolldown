@@ -1,15 +1,32 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'node:assert' in main.js
+   ╭─[ main.js:3:20 ]
+   │
+ 3 │ import assert from 'node:assert';
+   │                    ──────┬──────  
+   │                          ╰──────── Module not found, treating it as an external dependency
+───╯
+
+```
+
 # Assets
 
 ## main.js
 
 ```js
+import assert from "node:assert";
+
 // HIDDEN [rolldown:runtime]
 //#region main.js
 const external = __require("./external.mjs");
-console.log(external);
+assert.deepStrictEqual(external, { value: "external module" });
 
 //#endregion
 ```

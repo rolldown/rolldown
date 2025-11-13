@@ -1,7 +1,7 @@
 import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import { Application, type TypeDocOptions } from 'typedoc';
-
+import type { PluginOptions } from 'typedoc-plugin-markdown';
 console.log('📚 Generating reference...');
 
 // Generate API documentation
@@ -21,27 +21,25 @@ async function runTypedoc(): Promise<void> {
     '../../..',
   );
 
-  const options:
-    & TypeDocOptions
-    & import('typedoc-plugin-markdown').PluginOptions = {
-      tsconfig: path.resolve(
-        root,
-        'packages/rolldown/tsconfig.json',
-      ),
-      plugin: ['typedoc-plugin-markdown', 'typedoc-vitepress-theme'],
-      out: './reference',
-      entryPoints: [
-        path.resolve(root, 'packages/rolldown/src/index.ts'),
-      ],
-      excludeInternal: true,
+  const options: TypeDocOptions & PluginOptions = {
+    tsconfig: path.resolve(
+      root,
+      'packages/rolldown/tsconfig.json',
+    ),
+    plugin: ['typedoc-plugin-markdown', 'typedoc-vitepress-theme'],
+    out: './reference',
+    entryPoints: [
+      path.resolve(root, 'packages/rolldown/src/index.ts'),
+    ],
+    excludeInternal: true,
 
-      hideBreadcrumbs: true,
-      useCodeBlocks: true,
-      flattenOutputFiles: true,
+    hideBreadcrumbs: true,
+    useCodeBlocks: true,
+    flattenOutputFiles: true,
 
-      // @ts-expect-error VitePress config
-      docsRoot: './reference',
-    };
+    // @ts-expect-error VitePress config
+    docsRoot: './reference',
+  };
   const app = await Application.bootstrapWithPlugins(options);
 
   // May be undefined if errors are encountered.

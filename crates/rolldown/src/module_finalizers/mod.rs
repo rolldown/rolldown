@@ -936,7 +936,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   );
 
                   let base_expr = if needs_to_commonjs {
-                    // Need __toCommonJS
                     // `__toCommonJS`
                     let to_commonjs_expr = self.finalized_expr_for_runtime_symbol("__toCommonJS");
                     // `__toCommonJS(xxx_exports)`
@@ -948,7 +947,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       false,
                     ))
                   } else {
-                    // Can skip __toCommonJS - directly access xxx_exports['module.exports']
+                    // xxx_exports['module.exports']
                     ast::Expression::ComputedMemberExpression(
                       self.snippet.builder.alloc_computed_member_expression(
                         SPAN,

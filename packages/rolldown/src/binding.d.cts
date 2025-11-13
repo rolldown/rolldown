@@ -1979,6 +1979,7 @@ export type BindingMakeAbsoluteExternalsRelative =
 export interface BindingManifestPluginConfig {
   root: string
   outPath: string
+  isEnableV2?: boolean
   isLegacy?: () => boolean
   cssEntries: () => Record<string, string>
 }

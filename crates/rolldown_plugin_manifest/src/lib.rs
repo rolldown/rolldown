@@ -4,6 +4,7 @@ use std::{borrow::Cow, collections::BTreeMap, path::Path, pin::Pin, sync::Arc};
 
 use rolldown_common::{EmittedAsset, Output};
 use rolldown_plugin::{HookNoopReturn, HookUsage, Plugin, PluginContext};
+use rolldown_plugin_utils::constants::{CSSEntriesCache, ViteMetadata};
 use rolldown_utils::rustc_hash::FxHashMapExt as _;
 use rustc_hash::FxHashMap;
 
@@ -18,6 +19,7 @@ pub type CssEntriesFn = dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<F
 pub struct ManifestPlugin {
   pub root: String,
   pub out_path: String,
+  pub is_enable_v2: bool,
   #[debug(skip)]
   pub is_legacy: Option<Arc<IsLegacyFn>>,
   #[debug(skip)]
@@ -47,13 +49,37 @@ impl Plugin for ManifestPlugin {
       match file {
         Output::Chunk(chunk) => {
           let name = self.get_chunk_name(chunk, is_legacy);
-          let chunk_manifest = Arc::new(self.create_chunk(args.bundle, chunk, &name, is_legacy));
+          let vite_metadata = if self.is_enable_v2 {
+            ctx.meta().get::<ViteMetadata>().and_then(|cache| {
+              cache.inner.get(chunk.preliminary_filename.as_str()).map(|v| v.clone())
+            })
+          } else {
+            None
+          };
+          let chunk_manifest = Arc::new(self.create_chunk(
+            args.bundle,
+            chunk,
+            &name,
+            is_legacy,
+            vite_metadata.as_ref(),
+          ));
           manifest.insert(name, chunk_manifest);
         }
         Output::Asset(asset) => {
           if !asset.names.is_empty() {
             if css_entries.is_none() {
-              let reference_ids = (self.css_entries)().await?;
+              let reference_ids = if self.is_enable_v2 {
+                ctx
+                  .meta()
+                  .get::<CSSEntriesCache>()
+                  .expect("CSSEntriesCache is missing")
+                  .inner
+                  .iter()
+                  .map(|entry| (entry.key().to_string(), entry.value().to_string()))
+                  .collect::<FxHashMap<_, _>>()
+              } else {
+                (self.css_entries)().await?
+              };
               let mut filenames = FxHashMap::with_capacity(reference_ids.len());
               for (name, reference_id) in reference_ids {
                 if let Ok(filename) = ctx.get_file_name(&reference_id) {

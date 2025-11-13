@@ -229,6 +229,35 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
               && member_expr.static_property_name() == Some("exports")
             {
               self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
+              
+              // Handle `module.exports = { prop1: val1, prop2: val2 }`
+              if let Expression::ObjectExpression(obj_expr) = &node.right {
+                for obj_prop in &obj_expr.properties {
+                  if let ast::ObjectPropertyKind::ObjectProperty(prop) = obj_prop {
+                    // Only handle static property keys (not computed)
+                    if !prop.computed {
+                      if let ast::PropertyKey::StaticIdentifier(key) = &prop.key {
+                        let export_name = key.name.as_str();
+                        let exported_symbol =
+                          self.result.symbol_ref_db.create_facade_root_symbol_ref(export_name);
+
+                        self.declare_link_only_symbol_ref(exported_symbol.symbol);
+
+                        if let Some(value) = self.extract_constant_value_from_expr(Some(&prop.value)) {
+                          self.add_constant_symbol(
+                            exported_symbol.symbol,
+                            ConstExportMeta::new(value, true),
+                          );
+                        }
+
+                        self.result.commonjs_exports.entry(export_name.into()).or_default().push(
+                          LocalExport { referenced: exported_symbol, span: key.span, came_from_commonjs: true },
+                        );
+                      }
+                    }
+                  }
+                }
+              }
             }
             if id.name == "exports" && self.is_global_identifier_reference(id) {
               self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));

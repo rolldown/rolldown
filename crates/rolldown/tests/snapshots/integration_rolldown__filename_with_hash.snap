@@ -3607,7 +3607,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/optimize_interop_default_with_cjs_bailout2
 
-- main-!~{000}~.js => main-DkIeTPdn.js
+- main-!~{000}~.js => main-CEn_yX_8.js
 
 # tests/rolldown/cjs_compat/optimize_interop_default_with_none_default_ns_property_name
 
@@ -3641,7 +3641,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/reexports_from_cjs
 
-- main-!~{000}~.js => main-B5ThuvVa.js
+- main-!~{000}~.js => main-CnmWNHC1.js
 
 # tests/rolldown/cjs_compat/require/create_require
 
@@ -5172,7 +5172,7 @@ expression: output
 
 # tests/rolldown/resolve/attach_correct_package_json
 
-- main-!~{000}~.js => main-C89yJEVM.js
+- main-!~{000}~.js => main-fW_zmh7o.js
 
 # tests/rolldown/resolve/hash_tag_as_dir_name
 

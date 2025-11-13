@@ -4,7 +4,7 @@ use oxc::ast::NONE;
 use oxc::ast::ast::{self, BindingPatternKind, Declaration, ImportOrExportKind, Statement};
 use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::span::{GetSpanMut, SPAN, Span};
-use rolldown_ecmascript_utils::{AstSnippet, StatementExt};
+use rolldown_ecmascript_utils::{AstSnippet, ExpressionExt, StatementExt};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.
@@ -85,6 +85,75 @@ impl<'ast> PreProcessor<'ast> {
       })
       .collect_vec()
   }
+
+  /// Transform `module.exports = { prop1: val1, prop2: val2 }` into separate
+  /// `exports.prop1 = val1; exports.prop2 = val2;` statements for tree-shaking
+  fn try_split_module_exports_object(
+    &self,
+    assign_expr: &mut ast::AssignmentExpression<'ast>,
+  ) -> Option<Vec<Statement<'ast>>> {
+    // Check if this is `module.exports = ...`
+    let member_expr = assign_expr.left.as_member_expression()?;
+    let id = member_expr.object().as_identifier()?;
+    if id.name != "module" || member_expr.static_property_name()? != "exports" {
+      return None;
+    }
+
+    // Check if the right side is an object expression
+    let ast::Expression::ObjectExpression(obj_expr) = &mut assign_expr.right else {
+      return None;
+    };
+
+    // Transform each property into `exports.prop = value`
+    let mut stmts = Vec::new();
+    for obj_prop in obj_expr.properties.take_in(self.snippet.alloc()) {
+      let ast::ObjectPropertyKind::ObjectProperty(mut prop) = obj_prop else {
+        // If we encounter a spread property, we can't transform it, so return None
+        return None;
+      };
+
+      // Only handle static property keys (not computed)
+      if prop.computed {
+        return None;
+      }
+
+      let prop_name = match &prop.key {
+        ast::PropertyKey::StaticIdentifier(id) => id.name.as_str(),
+        ast::PropertyKey::StringLiteral(lit) => lit.value.as_str(),
+        _ => return None,
+      };
+
+      // Create `exports.propName = value`
+      let exports_member = self.snippet.builder.member_expression_static(
+        SPAN,
+        self.snippet.id_ref_expr("exports", SPAN),
+        self.snippet.builder.identifier_name(SPAN, prop_name),
+        false,
+      );
+
+      let assignment_target = ast::AssignmentTarget::from(
+        ast::SimpleAssignmentTarget::from(exports_member)
+      );
+
+      let prop_value = prop.value.take_in(self.snippet.alloc());
+
+      let assignment_expr = self.snippet.builder.expression_assignment(
+        SPAN,
+        ast::AssignmentOperator::Assign,
+        assignment_target,
+        prop_value,
+      );
+
+      let expr_stmt = self.snippet.builder.alloc_expression_statement(
+        SPAN,
+        assignment_expr,
+      );
+
+      stmts.push(Statement::ExpressionStatement(expr_stmt));
+    }
+
+    Some(stmts)
+  }
 }
 
 impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
@@ -145,9 +214,19 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
 
   /// If `keep_names` is true, we will keep the names of (function/class) variable declarations even it is not top level.
   fn visit_statements(&mut self, it: &mut oxc::allocator::Vec<'ast, Statement<'ast>>) {
-    if self.keep_names {
-      let stmts = it.take_in(self.snippet.alloc());
-      for mut stmt in stmts {
+    let stmts = it.take_in(self.snippet.alloc());
+    for mut stmt in stmts {
+      // Check if this is `module.exports = { ... }` before walking
+      if let Statement::ExpressionStatement(expr_stmt) = &mut stmt {
+        if let ast::Expression::AssignmentExpression(assign_expr) = &mut expr_stmt.expression {
+          if let Some(new_stmts) = self.try_split_module_exports_object(assign_expr) {
+            it.extend(new_stmts);
+            continue;
+          }
+        }
+      }
+
+      if self.keep_names {
         let stmt_addr = Address::from_ptr(&raw const stmt);
         self.statement_stack.push(stmt_addr);
         walk_mut::walk_statement(self, &mut stmt);
@@ -158,9 +237,10 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
         } else {
           it.push(stmt);
         }
+      } else {
+        walk_mut::walk_statement(self, &mut stmt);
+        it.push(stmt);
       }
-    } else {
-      walk_mut::walk_statements(self, it);
     }
   }
 

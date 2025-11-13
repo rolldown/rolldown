@@ -1,5 +1,5 @@
 {
   "config": {
-    "external": ["./external.mjs"]
+    "external": ["./external.mjs", "node:assert"]
   }
 }

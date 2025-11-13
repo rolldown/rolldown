@@ -1,21 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'node:assert' in main.js
-   ╭─[ main.js:3:20 ]
-   │
- 3 │ import assert from 'node:assert';
-   │                    ──────┬──────  
-   │                          ╰──────── Module not found, treating it as an external dependency
-───╯
-
-```
-
 # Assets
 
 ## main.js

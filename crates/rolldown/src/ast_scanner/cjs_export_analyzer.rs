@@ -74,14 +74,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                 self.visit_path.get(cursor - 2)?,
               )
             }
-            AstKind::CallExpression(call_expr) => {
-              if let Some(arg) =
-                call_expr.arguments.iter().find(|arg| arg.address() == Address::from_ptr(parent))
-              {
-                self.check_object_define_property(call_expr, arg)
-              } else {
-                None
-              }
+            AstKind::CallExpression(call_expr)
+              if call_expr
+                .arguments
+                .first()
+                .is_some_and(|arg| arg.address() == parent.address()) =>
+            {
+              self.check_object_define_property(call_expr)
             }
             AstKind::AssignmentExpression(assignment_expr) => {
               self.check_assignment_is_cjs_reexport(assignment_expr)
@@ -96,16 +95,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           Self::check_assignment_target_property(&member_expr, self.visit_path.get(cursor - 1)?)
         }
       },
-      AstKind::CallExpression(call_expr) => {
+      AstKind::CallExpression(call_expr)
+        if call_expr
+          .arguments
+          .first()
+          .is_some_and(|arg| arg.address() == Address::from_ptr(ident_ref)) =>
+      {
         // one scenario:
         // 1. Object.defineProperty(exports, "__esModule", { value: true });
-        if let Some(arg) =
-          call_expr.arguments.iter().find(|arg| arg.address() == Address::from_ptr(ident_ref))
-        {
-          self.check_object_define_property(call_expr, arg)
-        } else {
-          None
-        }
+        self.check_object_define_property(call_expr)
       }
       _ => None,
     }
@@ -133,13 +131,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn check_object_define_property(
     &self,
     call_expr: &ast::CallExpression<'_>,
-    arg: &ast::Argument<'_>,
   ) -> Option<CommonJsAstType> {
-    let first = call_expr.arguments.first()?;
-    let is_same_member_expr = arg.address() == first.address();
-    if !is_same_member_expr {
-      return None;
-    }
     is_object_define_property_es_module(&self.result.symbol_ref_db.ast_scopes, call_expr)
   }
 

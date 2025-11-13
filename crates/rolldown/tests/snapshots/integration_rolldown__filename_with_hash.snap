@@ -3575,7 +3575,11 @@ expression: output
 
 # tests/rolldown/cjs_compat/module.exports_export/basic
 
-- main-!~{000}~.js => main-CgNgdbCW.js
+- main-!~{000}~.js => main-Chmqxvey.js
+
+# tests/rolldown/cjs_compat/module.exports_export/external_require
+
+- main-!~{000}~.js => main-DjDHpsm0.js
 
 # tests/rolldown/cjs_compat/module.exports_export/fallback
 
@@ -3583,11 +3587,11 @@ expression: output
 
 # tests/rolldown/cjs_compat/module.exports_export/priority
 
-- main-!~{000}~.js => main-CyXErZEn.js
+- main-!~{000}~.js => main-BrZbMYh1.js
 
 # tests/rolldown/cjs_compat/module.exports_export/with_default
 
-- main-!~{000}~.js => main-sM_bLnf_.js
+- main-!~{000}~.js => main-Ddy4jCZW.js
 
 # tests/rolldown/cjs_compat/multiple_circle_cjs_entries
 

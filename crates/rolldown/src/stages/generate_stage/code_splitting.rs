@@ -451,6 +451,54 @@ impl GenerateStage<'_> {
     }
   }
 
+  /// Finalizes which module namespace objects should be included in the output bundle.
+  ///
+  /// This method determines whether each ESM module's namespace object (e.g., `import * as ns from './module'`)
+  /// should be kept in the final bundle based on how it's used. This is an optimization to avoid
+  /// generating unnecessary namespace objects that aren't actually referenced.
+  ///
+  /// The decision is based on three cases:
+  /// 1. **Unknown usage**: Keep the namespace (conservative approach when we can't prove it's unused)
+  /// 2. **Re-exporting external modules**: Keep only if the module has dynamic exports after flattening
+  ///    entry-level external modules (see [`find_entry_level_external_module`]), this is used for
+  ///    indirect external module re-exports optimization.
+  /// 3. **All other cases**: Remove the namespace object
+  ///
+  pub fn finalized_module_namespace_ref_usage(&mut self) {
+    let to_eliminate = self
+      .link_output
+      .module_table
+      .iter_enumerated()
+      .filter_map(|(module_idx, module)| {
+        let m = module.as_normal()?;
+        let meta = &self.link_output.metas[module_idx];
+
+        let module_namespace_included_reason = &meta.module_namespace_included_reason;
+        let is_namespace_referenced = matches!(m.exports_kind, ExportsKind::Esm)
+          && if module_namespace_included_reason.contains(ModuleNamespaceIncludedReason::Unknown) {
+            true
+          } else if module_namespace_included_reason
+            .contains(ModuleNamespaceIncludedReason::ReExportExternalModule)
+          {
+            // If the module namespace is only used to reexport external module,
+            // then we need to ensure if it is still has dynamic exports after flatten entry level
+            // external module, see `find_entry_level_external_module`
+            meta.has_dynamic_exports
+          } else {
+            false
+          };
+        Some((m.namespace_object_ref, is_namespace_referenced))
+      })
+      .collect_vec();
+    for (namespace_ref, flag) in to_eliminate {
+      if flag {
+        self.link_output.used_symbol_refs.insert(namespace_ref);
+      } else {
+        self.link_output.used_symbol_refs.remove(&namespace_ref);
+      }
+    }
+  }
+
   /// Find all entry level external modules, and re propagate `has_dynamic_exports` for affected modules.
   fn find_entry_level_external_module(&mut self, chunk_graph: &mut ChunkGraph) {
     let module_to_entry_level_external_rec_list_maps = chunk_graph

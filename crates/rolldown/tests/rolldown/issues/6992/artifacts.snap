@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## _virtual/rolldown_runtime.js
+
+```js
+// HIDDEN [rolldown:runtime]
+export { __reExport };
+```
+
+## main.js
+
+```js
+import { __reExport } from "./_virtual/rolldown_runtime.js";
+import "./server/index.js";
+
+export * from "@sentry/node"
+
+//#region main.js
+var main_exports = {};
+
+//#endregion
+```
+
+## server/index.js
+
+```js
+import { __reExport } from "../_virtual/rolldown_runtime.js";
+
+export * from "@sentry/node"
+
+```

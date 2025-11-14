@@ -2314,6 +2314,7 @@ export interface BindingViteHtmlPluginConfig {
   modulePreload: false | BindingModulePreloadOptions
   assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
+  transformIndexHtml: (html: string, path: string, filename: string, hook: 'transform' | 'generateBundle', output?: BindingOutputs, chunk?: BindingOutputChunk) => Promise<string>
 }
 
 export interface BindingVitePluginCustom {

@@ -23,6 +23,8 @@ use crate::utils::{
   inject_to_head,
 };
 
+pub use utils::constant::TransformIndexHtml;
+
 #[derive(derive_more::Debug)]
 pub struct ViteHtmlPlugin {
   pub is_lib: bool,
@@ -36,6 +38,8 @@ pub struct ViteHtmlPlugin {
   pub asset_inline_limit: UsizeOrFunction,
   #[debug(skip)]
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
+  #[debug(skip)]
+  pub transform_index_html: Arc<TransformIndexHtml>,
   // internal state
   pub html_result_map: FxDashMap<(String, String), (String, bool)>,
 }
@@ -89,6 +93,10 @@ impl Plugin for ViteHtmlPlugin {
       render_built_url: self.render_built_url.as_deref(),
     };
 
+    // Pre-transform
+    let html =
+      (self.transform_index_html)(args.code, &public_path, &id, None, None, "transform").await?;
+
     let mut js = String::new();
     let mut inline_module_count = 0usize;
     let mut every_script_is_async = true;
@@ -103,11 +111,11 @@ impl Plugin for ViteHtmlPlugin {
     let mut src_tasks = Vec::new();
     let mut srcset_tasks = Vec::new();
     let mut overwrite_attrs = Vec::new();
-    let mut s = string_wizard::MagicString::new(args.code);
+    let mut s = string_wizard::MagicString::new(&html);
 
     // TODO: Extract into a function
     {
-      let dom = html::parser::parse_html(args.code);
+      let dom = html::parser::parse_html(&html);
       let mut stack = vec![dom.document];
       while let Some(node) = stack.pop() {
         match &node.data {
@@ -629,8 +637,15 @@ impl Plugin for ViteHtmlPlugin {
         result = s.to_string();
       }
 
-      // TODO: applyHtmlTransforms
-      // result = await applyHtmlTransforms(..)
+      result = (self.transform_index_html)(
+        &result,
+        &format!("/{relative_url_path}"),
+        &normalize_path(id),
+        Some(args.bundle.clone()),
+        chunk.map(Arc::clone),
+        "generateBundle",
+      )
+      .await?;
 
       if let Some(s) =
         self.handle_html_asset_url(ctx, html, chunk, assets_base, &relative_url_path).await?

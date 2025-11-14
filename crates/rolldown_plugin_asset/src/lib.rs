@@ -7,7 +7,8 @@ use rolldown_common::{ModuleType, Output, side_effects::HookSideEffects};
 use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_plugin_utils::{
   AssetCache, FileToUrlEnv, PublicAssetUrlCache, RenderAssetUrlInJsEnv, RenderBuiltUrl,
-  ToOutputFilePathEnv, UsizeOrFunction, check_public_file, find_special_query,
+  ToOutputFilePathEnv, UsizeOrFunction, check_public_file, constants::CSSEntriesCache,
+  find_special_query,
 };
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter::StringOrRegex, url::clean_url};
 use serde_json::Value;
@@ -49,6 +50,7 @@ impl Plugin for AssetPlugin {
     _args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     ctx.meta().insert(Arc::new(AssetCache::default()));
+    ctx.meta().insert(Arc::new(CSSEntriesCache::default()));
     ctx.meta().insert(Arc::new(PublicAssetUrlCache::default()));
     Ok(())
   }

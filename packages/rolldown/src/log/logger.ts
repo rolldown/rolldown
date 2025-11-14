@@ -1,8 +1,8 @@
 import path from 'node:path';
-import { VERSION } from '..';
 import type { InputOptions } from '../options/input-options';
 import type { Plugin } from '../plugin';
 import { getSortedPlugins } from '../plugin/plugin-driver';
+import { VERSION } from '../version';
 import {
   type LoggingFunction,
   type LogHandler,

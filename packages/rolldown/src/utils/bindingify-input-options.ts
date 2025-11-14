@@ -12,7 +12,10 @@ import type {
   BindingInjectImportNamespace,
   BindingInputOptions,
 } from '../binding.cjs';
-import { BuiltinPlugin } from '../builtin-plugin/utils';
+import {
+  bindingifyViteHtmlPlugin,
+  BuiltinPlugin,
+} from '../builtin-plugin/utils';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
@@ -52,7 +55,10 @@ export function bindingifyInputOptions(
       return undefined;
     }
     if (plugin instanceof BuiltinPlugin) {
-      return bindingifyBuiltInPlugin(plugin as BuiltinPlugin);
+      if (plugin.name === 'builtin:vite-html') {
+        return bindingifyViteHtmlPlugin(plugin, onLog, logLevel, watchMode);
+      }
+      return bindingifyBuiltInPlugin(plugin);
     }
     return bindingifyPlugin(
       plugin,

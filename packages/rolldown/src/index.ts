@@ -1,5 +1,4 @@
 import './setup';
-import { version } from '../package.json';
 import { build, type BuildOptions } from './api/build';
 import { rolldown } from './api/rolldown';
 import type { RolldownBuild } from './api/rolldown/rolldown-build';
@@ -109,9 +108,9 @@ import type {
 import type { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap';
 import type { PartialNull } from './types/utils';
 import { defineConfig } from './utils/define-config';
+import { VERSION } from './version';
 
-export { build, defineConfig, rolldown, watch };
-export const VERSION: string = version;
+export { build, defineConfig, rolldown, VERSION, watch };
 export { BindingMagicString } from './binding.cjs';
 export type {
   AddonFunction,

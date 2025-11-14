@@ -1,4 +1,3 @@
-import { VERSION } from '..';
 import {
   getLogHandler,
   type LoggingFunction,
@@ -14,6 +13,7 @@ import {
 } from '../log/logging';
 import { error, logPluginError } from '../log/logs';
 import type { Extends, TypeAssert } from '../types/assert';
+import { VERSION } from '../version';
 
 export interface PluginContextMeta {
   rollupVersion: string;

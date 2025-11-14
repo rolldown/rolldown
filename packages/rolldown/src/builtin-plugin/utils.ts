@@ -2,8 +2,24 @@ import {
   type BindingBuiltinPlugin,
   type BindingBuiltinPluginName,
   BindingCallableBuiltinPlugin,
+  type BindingOutputChunk,
+  type BindingOutputs,
 } from '../binding.cjs';
+import type { LogHandler } from '../log/log-handler';
+import type { LogLevelOption } from '../log/logging';
 import { error, logPluginError } from '../log/logs';
+import {
+  type MinimalPluginContext,
+  MinimalPluginContextImpl,
+} from '../plugin/minimal-plugin-context';
+import {
+  transformToOutputBundle,
+  transformToRollupOutputChunk,
+} from '../utils/transform-to-rollup-output';
+import type {
+  IndexHtmlTransformContext,
+  ViteHtmlPluginOptions,
+} from './vite-html-plugin';
 
 type BindingCallableBuiltinPluginLike = {
   [K in keyof BindingCallableBuiltinPlugin]: BindingCallableBuiltinPlugin[K];
@@ -58,6 +74,74 @@ export function makeBuiltinPluginCallable(
 export function bindingifyBuiltInPlugin(
   plugin: BuiltinPlugin,
 ): BindingBuiltinPlugin {
+  return {
+    __name: plugin.name,
+    options: plugin._options,
+  };
+}
+
+export function bindingifyViteHtmlPlugin(
+  plugin: BuiltinPlugin,
+  onLog: LogHandler,
+  logLevel: LogLevelOption,
+  watchMode: boolean,
+): BindingBuiltinPlugin {
+  const { preHooks, normalHooks, postHooks, applyHtmlTransforms, ...options } =
+    plugin
+      ._options as ViteHtmlPluginOptions;
+  if (preHooks.length + normalHooks.length + postHooks.length > 0) {
+    return {
+      __name: plugin.name,
+      options: {
+        ...options,
+        transformIndexHtml: async (
+          html: string,
+          path: string,
+          filename: string,
+          output?: BindingOutputs,
+          chunk?: BindingOutputChunk,
+          hook: 'transform' | 'generateBundle' = 'transform',
+        ): Promise<string> => {
+          const pluginContext = new MinimalPluginContextImpl(
+            onLog,
+            logLevel,
+            plugin.name,
+            watchMode,
+            'transformIndexHtml',
+          ) as MinimalPluginContext;
+
+          const context: IndexHtmlTransformContext = {
+            path,
+            filename,
+            bundle: output
+              ? transformToOutputBundle(pluginContext, output, {
+                updated: new Set(),
+                deleted: new Set(),
+              })
+              : undefined,
+            chunk: chunk ? transformToRollupOutputChunk(chunk) : undefined,
+          };
+
+          switch (hook) {
+            case 'transform':
+              return await applyHtmlTransforms(
+                html,
+                preHooks,
+                pluginContext,
+                context,
+              );
+            case 'generateBundle':
+              return await applyHtmlTransforms(
+                html,
+                [...normalHooks, ...postHooks],
+                pluginContext,
+                context,
+              );
+          }
+        },
+      },
+    };
+  }
   return {
     __name: plugin.name,
     options: plugin._options,

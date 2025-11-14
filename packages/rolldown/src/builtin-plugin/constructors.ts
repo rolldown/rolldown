@@ -10,7 +10,6 @@ import type {
   BindingReactRefreshWrapperPluginConfig,
   BindingReporterPluginConfig,
   BindingViteCssPostPluginConfig,
-  BindingViteHtmlPluginConfig,
   BindingViteResolvePluginConfig,
   BindingWasmHelperPluginConfig,
 } from '../binding.cjs';
@@ -139,12 +138,6 @@ export function viteCSSPostPlugin(
   config?: BindingViteCssPostPluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-css-post', config);
-}
-
-export function viteHtmlPlugin(
-  config?: BindingViteHtmlPluginConfig,
-): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:vite-html', config);
 }
 
 export function htmlInlineProxyPlugin(): BuiltinPlugin {

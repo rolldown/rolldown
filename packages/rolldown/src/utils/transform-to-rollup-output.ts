@@ -6,7 +6,7 @@ import type {
   JsOutputAsset,
   JsOutputChunk,
 } from '../binding.cjs';
-import type { PluginContext } from '../plugin/plugin-context';
+import type { MinimalPluginContext } from '../plugin/minimal-plugin-context';
 import { OutputAssetImpl } from '../types/output-asset-impl';
 import type { OutputBundle } from '../types/output-bundle';
 import { OutputChunkImpl } from '../types/output-chunk-impl';
@@ -40,7 +40,7 @@ export function transformToRollupSourceMap(map: string): SourceMap {
   return obj;
 }
 
-function transformToRollupOutputChunk(
+export function transformToRollupOutputChunk(
   bindingChunk: BindingOutputChunk,
 ): OutputChunk {
   return new OutputChunkImpl(bindingChunk);
@@ -171,7 +171,7 @@ function transformToMutableRollupOutput(
 }
 
 export function transformToOutputBundle(
-  context: PluginContext,
+  context: MinimalPluginContext,
   output: BindingOutputs,
   changed: ChangedOutputs,
 ): OutputBundle {

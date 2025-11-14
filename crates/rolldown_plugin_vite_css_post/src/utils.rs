@@ -585,11 +585,12 @@ impl ViteCSSPostPlugin {
       let mut dynamic_imports = FxIndexSet::default();
       // The bundle is guaranteed to be deterministic, if not then we have a bug in rollup.
       // So we use it to ensure a deterministic order of styles
-      let mut bundle_iter = bundle.iter();
-      while let Some(Output::Chunk(chunk)) = bundle_iter.next()
-        && chunk.is_entry
-      {
-        collect(ctx, chunk, &chunks, &mut collected, &mut dynamic_imports, &mut extracted_css);
+      for output in bundle.iter() {
+        if let Output::Chunk(chunk) = output
+          && chunk.is_entry
+        {
+          collect(ctx, chunk, &chunks, &mut collected, &mut dynamic_imports, &mut extracted_css);
+        }
       }
       // Now collect the dynamic chunks, this is done last to have the styles overwrite the previous ones
       while let imports = std::mem::take(&mut dynamic_imports)
@@ -628,10 +629,10 @@ impl ViteCSSPostPlugin {
       && !pure_css_chunks.inner.is_empty()
     {
       let mut pure_css_chunk_names = Vec::with_capacity(pure_css_chunks.inner.len());
-
-      let mut bundle_iter = args.bundle.iter();
-      while let Some(Output::Chunk(chunk)) = bundle_iter.next() {
-        if pure_css_chunks.inner.contains(chunk.preliminary_filename.as_str()) {
+      for output in args.bundle.iter() {
+        if let Output::Chunk(chunk) = output
+          && pure_css_chunks.inner.contains(chunk.preliminary_filename.as_str())
+        {
           pure_css_chunk_names.push(chunk.filename.clone());
         }
       }
@@ -669,57 +670,58 @@ impl ViteCSSPostPlugin {
           Output::Asset(_) => None,
         })
         .collect::<FxHashMap<_, _>>();
-      let mut bundle_iter = args.bundle.iter_mut();
-      while let Some(Output::Chunk(chunk)) = bundle_iter.next() {
-        let mut chunk_imports_pure_css_chunk = false;
-        let mut new_chunk = (**chunk).clone();
-        // remove pure css chunk from other chunk's imports, and also
-        // register the emitted CSS files under the importer chunks instead.
-        let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
-        let chunk_metadata =
-          vite_metadata.get_or_insert_default(chunk.preliminary_filename.as_str().into());
-        new_chunk.imports = new_chunk
-          .imports
-          .into_iter()
-          .filter(|file| {
-            if pure_css_chunk_names.contains(file) {
-              let chunk = &chunks[file];
-              let file_metadata =
-                vite_metadata.get(&chunk.preliminary_filename.as_str().into()).unwrap();
-              file_metadata.imported_css.iter().for_each(|file| {
-                chunk_metadata.imported_css.insert(file.clone());
-              });
-              file_metadata.imported_assets.iter().for_each(|file| {
-                chunk_metadata.imported_assets.insert(file.clone());
-              });
-              chunk_imports_pure_css_chunk = true;
-              return false;
-            }
-            true
-          })
-          .collect::<Vec<_>>();
-        if chunk_imports_pure_css_chunk {
-          new_chunk.code = empty_chunk_re
-            .replace_all(&chunk.code, |captures: &regex::Captures<'_>| {
-              let len = captures.get(0).unwrap().len();
-              if args.options.format.is_esm() {
-                return format!("/* empty css {:<width$}*/", "", width = len.saturating_sub(15));
+      for output in args.bundle.iter_mut() {
+        if let Output::Chunk(chunk) = output {
+          let mut chunk_imports_pure_css_chunk = false;
+          let mut new_chunk = (**chunk).clone();
+          // remove pure css chunk from other chunk's imports, and also
+          // register the emitted CSS files under the importer chunks instead.
+          let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
+          let chunk_metadata =
+            vite_metadata.get_or_insert_default(chunk.preliminary_filename.as_str().into());
+          new_chunk.imports = new_chunk
+            .imports
+            .into_iter()
+            .filter(|file| {
+              if pure_css_chunk_names.contains(file) {
+                let chunk = &chunks[file];
+                let file_metadata =
+                  vite_metadata.get(&chunk.preliminary_filename.as_str().into()).unwrap();
+                file_metadata.imported_css.iter().for_each(|file| {
+                  chunk_metadata.imported_css.insert(file.clone());
+                });
+                file_metadata.imported_assets.iter().for_each(|file| {
+                  chunk_metadata.imported_assets.insert(file.clone());
+                });
+                chunk_imports_pure_css_chunk = true;
+                return false;
               }
-              if let Some(p2) = captures.get(2)
-                && p2.as_str() == ";"
-              {
-                return format!(";/* empty css {:<width$}*/", "", width = len.saturating_sub(16));
-              }
-              let p1 = captures.get(1).map_or("", |m| m.as_str());
-              format!(
-                "{p1}/* empty css {:<width$}*/",
-                "",
-                width = len.saturating_sub(15 + p1.len())
-              )
+              true
             })
-            .into_owned();
+            .collect::<Vec<_>>();
+          if chunk_imports_pure_css_chunk {
+            new_chunk.code = empty_chunk_re
+              .replace_all(&chunk.code, |captures: &regex::Captures<'_>| {
+                let len = captures.get(0).unwrap().len();
+                if args.options.format.is_esm() {
+                  return format!("/* empty css {:<width$}*/", "", width = len.saturating_sub(15));
+                }
+                if let Some(p2) = captures.get(2)
+                  && p2.as_str() == ";"
+                {
+                  return format!(";/* empty css {:<width$}*/", "", width = len.saturating_sub(16));
+                }
+                let p1 = captures.get(1).map_or("", |m| m.as_str());
+                format!(
+                  "{p1}/* empty css {:<width$}*/",
+                  "",
+                  width = len.saturating_sub(15 + p1.len())
+                )
+              })
+              .into_owned();
+          }
+          *chunk = Arc::new(new_chunk);
         }
-        *chunk = Arc::new(new_chunk);
       }
 
       args.bundle.retain(|output| !match output {

@@ -254,20 +254,21 @@ impl Plugin for ViteCSSPostPlugin {
     // remove empty css chunks and their imports
     self.prune_pure_css_chunks(ctx, args);
 
-    let mut bundle_iter = args.bundle.iter_mut();
-    while let Some(Output::Asset(asset)) = bundle_iter.next()
-      && asset.filename.ends_with(".css")
-    {
-      if let StrOrBytes::Str(ref s) = asset.source {
-        let Cow::Owned(source) = s.cow_replace(utils::VITE_HASH_UPDATE_MARKER, "") else {
-          continue;
-        };
-        *asset = Arc::new(rolldown_common::OutputAsset {
-          names: asset.names.clone(),
-          source: StrOrBytes::Str(source),
-          filename: asset.filename.clone(),
-          original_file_names: asset.original_file_names.clone(),
-        });
+    for output in args.bundle.iter_mut() {
+      if let Output::Asset(asset) = output
+        && asset.filename.ends_with(".css")
+      {
+        if let StrOrBytes::Str(ref s) = asset.source
+          && s.contains(utils::VITE_HASH_UPDATE_MARKER)
+        {
+          let source = s.cow_replace(utils::VITE_HASH_UPDATE_MARKER, "");
+          *asset = Arc::new(rolldown_common::OutputAsset {
+            names: asset.names.clone(),
+            source: StrOrBytes::Str(source.into_owned()),
+            filename: asset.filename.clone(),
+            original_file_names: asset.original_file_names.clone(),
+          });
+        }
       }
     }
     Ok(())

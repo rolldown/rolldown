@@ -98,9 +98,9 @@ export function bindingifyViteHtmlPlugin(
           html: string,
           path: string,
           filename: string,
+          hook: 'transform' | 'generateBundle',
           output?: BindingOutputs,
           chunk?: BindingOutputChunk,
-          hook: 'transform' | 'generateBundle' = 'transform',
         ): Promise<string> => {
           const pluginContext = new MinimalPluginContextImpl(
             onLog,

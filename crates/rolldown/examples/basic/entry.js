@@ -1,4 +1,4 @@
-// MULTIPLE ENTRY MODULES
-import hyperCube from './hyper-cube.js';
-
-console.log(hyperCube(5));
+exports.foo = function a() {
+  'use strict';
+  return 'foo';
+};

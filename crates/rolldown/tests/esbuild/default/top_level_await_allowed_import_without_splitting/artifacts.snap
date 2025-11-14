@@ -8,16 +8,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region c.js
-var require_c = /* @__PURE__ */ __commonJS({ "c.js": (() => {
+var c_exports = {};
+var init_c = __esm({ "c.js": (async () => {
 	await 0;
 }) });
 
 //#endregion
 //#region b.js
 var b_exports = {};
-var import_c;
 var init_b = __esm({ "b.js": (async () => {
-	import_c = require_c();
+	await init_c();
 }) });
 
 //#endregion
@@ -29,15 +29,15 @@ var init_a = __esm({ "a.js": (async () => {
 
 //#endregion
 //#region entry.js
-var require_entry = /* @__PURE__ */ __commonJS({ "entry.js": (() => {
+var entry_exports = {};
+var init_entry = __esm({ "entry.js": (async () => {
 	init_a().then(() => a_exports);
 	init_b().then(() => b_exports);
-	Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_c()));
-	Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_entry()));
+	init_c().then(() => c_exports);
+	init_entry().then(() => entry_exports);
 	await 0;
 }) });
 
 //#endregion
-export default require_entry();
-
+await init_entry();
 ```

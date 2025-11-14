@@ -44,7 +44,7 @@ import { n as __toDynamicImportESM } from "./chunk.js";
 import assert from "node:assert";
 
 //#region entry.js
-const mod = await import("./lib.js").then(__toDynamicImportESM());
+const mod = await import("./lib.js").then(__toDynamicImportESM(1));
 assert.strictEqual(mod.default().name, "plugin");
 
 //#endregion

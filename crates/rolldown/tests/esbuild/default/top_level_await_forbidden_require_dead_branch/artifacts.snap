@@ -1,15 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
-
-```text
-[MISSING_NAME_OPTION_FOR_IIFE_EXPORT] Warning: If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
-
-```
-
 # Assets
 
 ## entry.js
@@ -20,7 +11,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 
 //#region c.js
-	var require_c = /* @__PURE__ */ __commonJS({ "c.js": (() => {}) });
+	var c_exports = {};
+	var init_c = __esm({ "c.js": (() => {}) });
 
 //#endregion
 //#region b.js
@@ -34,15 +26,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#endregion
 //#region entry.js
-	var require_entry = /* @__PURE__ */ __commonJS({ "entry.js": (() => {
+	var entry_exports = {};
+	var init_entry = __esm({ "entry.js": (() => {
 		init_a();
 		init_b();
-		require_c();
-		require_entry();
+		init_c();
+		init_entry();
 	}) });
 
 //#endregion
-return require_entry();
-
+init_entry();
 })();
 ```

@@ -6,22 +6,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+// HIDDEN [rolldown:runtime]
 //#region \0@oxc-project+runtime@0.97.0/helpers/decorateMetadata.js
+var decorateMetadata_exports = /* @__PURE__ */ __export({ default: () => __decorateMetadata });
 function __decorateMetadata(k, v) {
 	if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 }
+var init_decorateMetadata = __esm({ "\\0@oxc-project+runtime@0.97.0/helpers/decorateMetadata.js": (() => {}) });
 
 //#endregion
 //#region \0@oxc-project+runtime@0.97.0/helpers/decorate.js
+var decorate_exports = /* @__PURE__ */ __export({ default: () => __decorate });
 function __decorate(decorators, target, key, desc) {
 	var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
 	if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
 	else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
 	return c > 3 && r && Object.defineProperty(target, key, r), r;
 }
+var init_decorate = __esm({ "\\0@oxc-project+runtime@0.97.0/helpers/decorate.js": (() => {}) });
 
 //#endregion
 //#region main.tsx
+var _decorateMetadata = (init_decorateMetadata(), __toCommonJS(decorateMetadata_exports));
+var _decorate = (init_decorate(), __toCommonJS(decorate_exports));
 function LogMethod(target, propertyKey, descriptor) {
 	console.log(target);
 	console.log(propertyKey);
@@ -30,13 +37,13 @@ function LogMethod(target, propertyKey, descriptor) {
 var Demo = class {
 	foo(bar) {}
 };
-__decorate([
+_decorate([
 	LogMethod,
-	__decorateMetadata("design:type", Function),
-	__decorateMetadata("design:paramtypes", [Number]),
-	__decorateMetadata("design:returntype", void 0)
+	_decorateMetadata("design:type", Function),
+	_decorateMetadata("design:paramtypes", [Number]),
+	_decorateMetadata("design:returntype", void 0)
 ], Demo.prototype, "foo", null);
-new Demo();
+const demo = new Demo();
 
 //#endregion
 ```

@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "./index.cjs"
+      }
+    ],
+    "format": "cjs"
+  }
+}

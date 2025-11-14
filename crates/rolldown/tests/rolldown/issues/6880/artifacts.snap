@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region index.cjs
+var require__6880 = /* @__PURE__ */ __commonJS({ "index.cjs": ((exports) => {
+	exports.foo = function a() {
+		"use strict";
+		return "foo";
+	};
+}) });
+
+//#endregion
+export default require__6880();
+
+```

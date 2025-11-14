@@ -1,5 +1,5 @@
 import type { Program } from '@oxc-project/types';
-import { parseAsync, parseSync } from './binding.cjs';
+import { parse as parseAsync, parseSync } from './binding.cjs';
 import type { ParseResult, ParserOptions } from './binding.cjs';
 import { locate } from './log/locate-character';
 import { error, logParseError } from './log/logs';
@@ -61,10 +61,7 @@ export function parseAst(
     ...defaultParserOptions,
     ...options,
   });
-  return wrap(
-    ast,
-    sourceText,
-  );
+  return wrap(ast, sourceText);
 }
 
 export async function parseAstAsync(

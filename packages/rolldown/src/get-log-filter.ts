@@ -68,5 +68,4 @@ const testFilter = (
 };
 
 export default getLogFilter;
-export { getLogFilter };
 export type { RollupLog };

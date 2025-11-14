@@ -33,7 +33,6 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
 use crate::hmr::utils::HmrAstBuilder;
-use crate::utils::external_import_interop::import_record_needs_interop;
 
 mod hmr;
 mod rename;
@@ -170,7 +169,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         };
 
         // Check if we need __toESM or can use require_foo() directly
-        let init_expr = if import_record_needs_interop(self.ctx.module, rec_id) {
+        // Use the global flag that tracks if ANY import from ANY module uses default/namespace imports
+        let init_expr = if importee_linking_info.needs_interop {
           // `__toESM`
           let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
           self.snippet.wrap_with_to_esm(

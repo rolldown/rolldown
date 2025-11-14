@@ -27,6 +27,7 @@ use crate::{
 use super::scan_stage::NormalizedScanStageOutput;
 
 mod bind_imports_and_exports;
+mod compute_interop_needs;
 mod compute_tla;
 mod create_exports_for_ecma_modules;
 mod cross_module_optimization;
@@ -177,6 +178,7 @@ impl<'a> LinkStage<'a> {
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();
     self.reference_needed_symbols();
+    self.compute_interop_needs(); // Compute which wrapped CJS modules need interop globally
     self.cross_module_optimization();
     self.include_statements();
     self.patch_module_dependencies();

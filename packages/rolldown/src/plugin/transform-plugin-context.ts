@@ -40,6 +40,7 @@ export class TransformPluginContextImpl extends PluginContextImpl {
     onLog: LogHandler,
     LogLevelOption: LogLevelOption,
     watchMode: boolean,
+    filterStorage?: import('./plugin-filter-storage').PluginFilterStorage,
   ) {
     super(
       outputOptions,
@@ -49,6 +50,7 @@ export class TransformPluginContextImpl extends PluginContextImpl {
       onLog,
       LogLevelOption,
       watchMode,
+      filterStorage,
       moduleId,
     );
     const getLogHandler =

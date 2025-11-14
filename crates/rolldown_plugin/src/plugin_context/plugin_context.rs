@@ -122,6 +122,10 @@ impl PluginContext {
     call_native_only!(self, "cwd", ctx => ctx.cwd())
   }
 
+  pub fn plugin_idx(&self) -> rolldown_common::PluginIdx {
+    call_native_only!(self, "plugin_idx", ctx => ctx.plugin_idx())
+  }
+
   /// Add a file as a dependency.
   ///
   /// * file - The file to add as a watch dependency. This should be a normalized absolute path.

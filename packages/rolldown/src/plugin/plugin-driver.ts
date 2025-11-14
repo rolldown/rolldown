@@ -7,6 +7,7 @@ import { normalizeHook } from '../utils/normalize-hook';
 import { normalizePluginOption } from '../utils/normalize-plugin-option';
 import type { Plugin } from './';
 import { MinimalPluginContextImpl } from './minimal-plugin-context';
+import { getOrCreateFilterStorage } from './plugin-filter-storage-map';
 
 export class PluginDriver {
   public static async callOptionsHook(
@@ -30,12 +31,14 @@ export class PluginDriver {
       const options = plugin.options;
       if (options) {
         const { handler } = normalizeHook(options);
+        const filterStorage = getOrCreateFilterStorage(name);
         const result = await handler.call(
           new MinimalPluginContextImpl(
             logger,
             logLevel,
             name,
             watchMode,
+            filterStorage,
             'onLog',
           ),
           inputOptions,
@@ -67,8 +70,15 @@ export class PluginDriver {
       const options = plugin.outputOptions;
       if (options) {
         const { handler } = normalizeHook(options);
+        const filterStorage = getOrCreateFilterStorage(name);
         const result = handler.call(
-          new MinimalPluginContextImpl(onLog, logLevel, name, watchMode),
+          new MinimalPluginContextImpl(
+            onLog,
+            logLevel,
+            name,
+            watchMode,
+            filterStorage,
+          ),
           outputOptions,
         );
 

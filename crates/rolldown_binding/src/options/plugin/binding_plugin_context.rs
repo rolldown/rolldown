@@ -6,11 +6,14 @@ use sugar_path::SugarPath;
 use rolldown_plugin::__inner::infer_module_def_format;
 use rolldown_plugin::{PluginContext, SharedNativePluginContext};
 
-use super::types::{
-  binding_emitted_asset::BindingEmittedAsset, binding_emitted_chunk::BindingEmittedChunk,
-  binding_hook_side_effects::BindingHookSideEffects,
-  binding_plugin_context_resolve_options::BindingPluginContextResolveOptions,
-  binding_resolved_external::BindingResolvedExternal,
+use super::{
+  PluginFilterOverrides,
+  types::{
+    binding_emitted_asset::BindingEmittedAsset, binding_emitted_chunk::BindingEmittedChunk,
+    binding_hook_filter::BindingHookFilter, binding_hook_side_effects::BindingHookSideEffects,
+    binding_plugin_context_resolve_options::BindingPluginContextResolveOptions,
+    binding_resolved_external::BindingResolvedExternal,
+  },
 };
 
 use crate::{types::binding_module_info::BindingModuleInfo, utils::napi_error};
@@ -116,6 +119,43 @@ impl BindingPluginContext {
   #[napi]
   pub fn add_watch_file(&self, file: String) {
     self.inner.add_watch_file(&file);
+  }
+
+  #[napi]
+  pub fn set_hook_filter(
+    &self,
+    resolve_id_filter: Option<BindingHookFilter>,
+    load_filter: Option<BindingHookFilter>,
+    transform_filter: Option<BindingHookFilter>,
+  ) -> napi::Result<()> {
+    use super::binding_plugin_options::FilterExprCache;
+    use super::types::binding_filter_expression::normalized_tokens;
+    use itertools::Itertools;
+    use rolldown_utils::filter_expression;
+
+    fn process_filter(
+      filter: Option<BindingHookFilter>,
+    ) -> Option<Vec<rolldown_utils::filter_expression::FilterExprKind>> {
+      filter.and_then(|f| f.value).map(|tokenss| {
+        tokenss
+          .into_iter()
+          .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
+          .collect_vec()
+      })
+    }
+
+    let cache = FilterExprCache {
+      resolve_id: process_filter(resolve_id_filter),
+      load: process_filter(load_filter),
+      transform: process_filter(transform_filter),
+      render_chunk: None,
+    };
+
+    let overrides = self.inner.meta().get_or_insert_default::<PluginFilterOverrides>();
+    let plugin_idx = self.inner.plugin_idx();
+    overrides.set(plugin_idx, cache);
+
+    Ok(())
   }
 }
 

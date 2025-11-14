@@ -19,6 +19,11 @@ import type { PartialNull } from '../types/utils';
 import { type AssetSource, bindingAssetSource } from '../utils/asset-source';
 import { bindingifyPreserveEntrySignatures } from '../utils/bindingify-input-options';
 import { unimplemented, unreachable } from '../utils/misc';
+import {
+  bindingifyLoadFilter,
+  bindingifyResolveIdFilter,
+  bindingifyTransformFilter,
+} from './bindingify-hook-filter';
 import { fsModule, type RolldownFsModule } from './fs';
 import type {
   CustomPluginOptions,
@@ -75,6 +80,20 @@ export interface PluginContext extends MinimalPluginContext {
     importer?: string,
     options?: PluginContextResolveOptions,
   ): Promise<ResolvedId | null>;
+  setHookFilter(filters: {
+    resolveId?: Pick<
+      import('./index').HookFilterExtension<'resolveId'>,
+      'filter'
+    >['filter'];
+    load?: Pick<
+      import('./index').HookFilterExtension<'load'>,
+      'filter'
+    >['filter'];
+    transform?: Pick<
+      import('./index').HookFilterExtension<'transform'>,
+      'filter'
+    >['filter'];
+  }): void;
 }
 
 export class PluginContextImpl extends MinimalPluginContextImpl {
@@ -88,10 +107,20 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     private onLog: LogHandler,
     logLevel: LogLevelOption,
     watchMode: boolean,
+    filterStorage?: import('./plugin-filter-storage').PluginFilterStorage,
     private currentLoadingModule?: string,
   ) {
-    super(onLog, logLevel, plugin.name!, watchMode);
+    super(onLog, logLevel, plugin.name!, watchMode, filterStorage);
     this.getModuleInfo = (id: string) => this.data.getModuleInfo(id, context);
+
+    // Apply any pending filters that were set before the binding context was available
+    if (this.filterStorage && typeof this.filterStorage.getPendingFilters === 'function' && !this.filterStorage.hasBeenApplied()) {
+      const pendingFilters = this.filterStorage.getPendingFilters();
+      if (pendingFilters) {
+        this.setHookFilter(pendingFilters);
+        this.filterStorage.markAsApplied();
+      }
+    }
   }
 
   public async load(
@@ -234,6 +263,37 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
 
   public addWatchFile(id: string): void {
     this.context.addWatchFile(id);
+  }
+
+  public setHookFilter(filters: {
+    resolveId?: Pick<
+      import('./index').HookFilterExtension<'resolveId'>,
+      'filter'
+    >['filter'];
+    load?: Pick<
+      import('./index').HookFilterExtension<'load'>,
+      'filter'
+    >['filter'];
+    transform?: Pick<
+      import('./index').HookFilterExtension<'transform'>,
+      'filter'
+    >['filter'];
+  }): void {
+    const resolveIdFilter = filters.resolveId
+      ? bindingifyResolveIdFilter(filters.resolveId)
+      : undefined;
+    const loadFilter = filters.load
+      ? bindingifyLoadFilter(filters.load)
+      : undefined;
+    const transformFilter = filters.transform
+      ? bindingifyTransformFilter(filters.transform)
+      : undefined;
+
+    this.context.setHookFilter(
+      resolveIdFilter,
+      loadFilter,
+      transformFilter,
+    );
   }
 
   public parse(

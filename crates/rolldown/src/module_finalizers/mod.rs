@@ -170,7 +170,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         };
 
         // Check if we need __toESM or can use require_foo() directly
-        let init_expr = if import_record_needs_interop(self.ctx.module, rec_id) {
+        // Always use __toESM when SafelyMergeCjsNs optimization is enabled to ensure
+        // proper handling of default exports when namespaces are merged
+        let init_expr = if rec.meta.contains(ImportRecordMeta::SafelyMergeCjsNs)
+          || import_record_needs_interop(self.ctx.module, rec_id)
+        {
           // `__toESM`
           let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
           self.snippet.wrap_with_to_esm(

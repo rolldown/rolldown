@@ -122,10 +122,11 @@ impl Plugin for BuildImportAnalysisPlugin {
       if let Some(removed_pure_css_files) = ctx.meta().get::<RemovedPureCSSFilesCache>()
         && !removed_pure_css_files.inner.is_empty()
       {
-        let mut bundle_iter = args.bundle.iter_mut();
-        while let Some(Output::Chunk(chunk)) = bundle_iter.next() {
+        for output in args.bundle.iter_mut() {
           // TODO: Maybe we should use `chunk.dynamicImports`?
-          if utils::DYNAMIC_IMPORT_RE.is_match(&chunk.code) {
+          if let Output::Chunk(chunk) = output
+            && utils::DYNAMIC_IMPORT_RE.is_match(&chunk.code)
+          {
             let allocator = oxc::allocator::Allocator::default();
             let mut parser_ret = oxc::parser::Parser::new(
               &allocator,
@@ -174,205 +175,208 @@ impl Plugin for BuildImportAnalysisPlugin {
       .map(|output| (output.filename().to_string(), output.clone()))
       .collect::<FxHashMap<_, _>>();
 
-    let mut bundle_iter = args.bundle.iter_mut();
     // can't use chunk.dynamicImports.length here since some modules e.g.
     // dynamic import to constant json may get inlined.
-    while let Some(Output::Chunk(chunk)) = bundle_iter.next()
-      && chunk.code.contains("__VITE_PRELOAD__")
-    {
-      let mut imports = Vec::new();
-
+    for output in args.bundle.iter_mut() {
+      if let Output::Chunk(chunk) = output
+        && chunk.code.contains("__VITE_PRELOAD__")
       {
-        let allocator = oxc::allocator::Allocator::default();
-        let mut parser_ret = oxc::parser::Parser::new(
-          &allocator,
-          chunk.code.as_ref(),
-          oxc::span::SourceType::default(),
-        )
-        .parse();
-        if parser_ret.panicked
-          && let Some(err) =
-            parser_ret.errors.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
+        let mut imports = Vec::new();
+
         {
-          return Err(anyhow::anyhow!(format!(
-            "Failed to parse code in '{}': {:?}",
-            chunk.filename, err.message
-          )));
+          let allocator = oxc::allocator::Allocator::default();
+          let mut parser_ret = oxc::parser::Parser::new(
+            &allocator,
+            chunk.code.as_ref(),
+            oxc::span::SourceType::default(),
+          )
+          .parse();
+          if parser_ret.panicked
+            && let Some(err) =
+              parser_ret.errors.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
+          {
+            return Err(anyhow::anyhow!(format!(
+              "Failed to parse code in '{}': {:?}",
+              chunk.filename, err.message
+            )));
+          }
+
+          let mut visitor = DynamicImportCollectVisitor { imports: &mut imports };
+
+          visitor.visit_program(&mut parser_ret.program);
         }
 
-        let mut visitor = DynamicImportCollectVisitor { imports: &mut imports };
+        let imports_len = imports.len();
+        let mut rewrote_marker_start_pos = FxHashSet::default();
+        let mut file_deps = FileDeps(Vec::with_capacity(imports.len()));
+        let mut s = string_wizard::MagicString::new(&chunk.code);
 
-        visitor.visit_program(&mut parser_ret.program);
-      }
+        for import in imports {
+          let mut deps = FxHashSet::default();
+          let mut has_removed_pure_css_chunks = false;
 
-      let imports_len = imports.len();
-      let mut rewrote_marker_start_pos = FxHashSet::default();
-      let mut file_deps = FileDeps(Vec::with_capacity(imports.len()));
-      let mut s = string_wizard::MagicString::new(&chunk.code);
+          let normalized_file = import.source.map(|url| {
+            let file = PathBuf::from(chunk.filename.as_str());
+            let file_dir = file.parent().unwrap();
+            let normalized_file =
+              file_dir.join(url.as_str()).normalize().to_slash_lossy().into_owned();
 
-      for import in imports {
-        let mut deps = FxHashSet::default();
-        let mut has_removed_pure_css_chunks = false;
+            let mut collector = AddDeps {
+              s: &mut s,
+              ctx,
+              deps: &mut deps,
+              owner_filename: chunk.filename.to_string(),
+              analyzed: FxHashSet::default(),
+              has_removed_pure_css_chunks: &mut has_removed_pure_css_chunks,
+              expr_range: import.start..import.end,
+            };
 
-        let normalized_file = import.source.map(|url| {
-          let file = PathBuf::from(chunk.filename.as_str());
-          let file_dir = file.parent().unwrap();
-          let normalized_file =
-            file_dir.join(url.as_str()).normalize().to_slash_lossy().into_owned();
+            collector.add_deps(&bundle, &normalized_file);
+            normalized_file
+          });
 
-          let mut collector = AddDeps {
-            s: &mut s,
-            ctx,
-            deps: &mut deps,
-            owner_filename: chunk.filename.to_string(),
-            analyzed: FxHashSet::default(),
-            has_removed_pure_css_chunks: &mut has_removed_pure_css_chunks,
-            expr_range: import.start..import.end,
-          };
+          let mut marker_start = utils::find_marker_pos(&chunk.code, import.end);
 
-          collector.add_deps(&bundle, &normalized_file);
-          normalized_file
-        });
+          if marker_start.is_none() && imports_len == 1 {
+            marker_start = utils::find_marker_pos(&chunk.code, 0);
+          }
 
-        let mut marker_start = utils::find_marker_pos(&chunk.code, import.end);
-
-        if marker_start.is_none() && imports_len == 1 {
-          marker_start = utils::find_marker_pos(&chunk.code, 0);
-        }
-
-        if let Some(marker_start) = marker_start
-          && marker_start > 0
-        {
-          // the dep list includes the main chunk, so only need to reload when there are actual other deps.
-          let mut deps_arr = if deps.len() > 1 ||
+          if let Some(marker_start) = marker_start
+            && marker_start > 0
+          {
+            // the dep list includes the main chunk, so only need to reload when there are actual other deps.
+            let mut deps_arr = if deps.len() > 1 ||
               // main chunk is removed
               (has_removed_pure_css_chunks && !deps.is_empty())
-          {
-            if module_preload.is_false() {
-              // CSS deps use the same mechanism as module preloads, so even if disabled,
-              // we still need to pass these deps to the preload helper in dynamic imports.
-              deps.into_iter().filter(|dep| dep.ends_with(".css")).collect()
-            } else {
-              deps.into_iter().collect()
-            }
-          } else {
-            vec![]
-          };
-
-          if let Some(resolve_dependencies) =
-            module_preload.options().and_then(|v| v.resolve_dependencies.as_ref())
-            && let Some(normalized_file) = normalized_file
-          {
-            // We can't let the user remove css deps as these aren't really preloads, they are just using
-            // the same mechanism as module preloads for this chunk
-            let mut css_deps = vec![];
-            let mut other_deps = vec![];
-            for dep in deps_arr.drain(..) {
-              if dep.ends_with(".css") {
-                css_deps.push(dep);
+            {
+              if module_preload.is_false() {
+                // CSS deps use the same mechanism as module preloads, so even if disabled,
+                // we still need to pass these deps to the preload helper in dynamic imports.
+                deps.into_iter().filter(|dep| dep.ends_with(".css")).collect()
               } else {
-                other_deps.push(dep);
+                deps.into_iter().collect()
+              }
+            } else {
+              vec![]
+            };
+
+            if let Some(resolve_dependencies) =
+              module_preload.options().and_then(|v| v.resolve_dependencies.as_ref())
+              && let Some(normalized_file) = normalized_file
+            {
+              // We can't let the user remove css deps as these aren't really preloads, they are just using
+              // the same mechanism as module preloads for this chunk
+              let mut css_deps = vec![];
+              let mut other_deps = vec![];
+              for dep in deps_arr.drain(..) {
+                if dep.ends_with(".css") {
+                  css_deps.push(dep);
+                } else {
+                  other_deps.push(dep);
+                }
+              }
+              deps_arr.clear();
+              deps_arr.extend(
+                resolve_dependencies(&normalized_file, other_deps, &chunk.filename, "js").await?,
+              );
+              deps_arr.extend(css_deps);
+            }
+
+            let mut render_deps = Vec::with_capacity(deps_arr.len());
+            if render_built_url.is_some() {
+              let env = ToOutputFilePathEnv {
+                is_ssr,
+                host_id: &chunk.filename,
+                url_base,
+                decoded_base,
+                render_built_url: render_built_url.as_deref(),
+              };
+              for dep in deps_arr {
+                let result = env
+                  .to_output_file_path(&dep, "js", false, |filename: &Path, importer: &Path| {
+                    let path = filename.relative(importer.parent().unwrap());
+                    let file = path.to_slash_lossy();
+                    if file.starts_with('.') {
+                      AssetUrlResult::WithoutRuntime(file.into_owned())
+                    } else {
+                      AssetUrlResult::WithoutRuntime(format!("./{file}"))
+                    }
+                  })
+                  .await?;
+                render_deps.push(match result {
+                  AssetUrlResult::WithRuntime(s) => file_deps.add_file_deps(s, true),
+                  AssetUrlResult::WithoutRuntime(s) => file_deps.add_file_deps(s, false),
+                });
+              }
+            } else {
+              for dep in deps_arr {
+                // Don't include the assets dir if the default asset file names
+                // are used, the path will be reconstructed by the import preload helper
+                render_deps.push(if self.is_relative_base {
+                  let path = dep.relative(chunk.filename.as_path().parent().unwrap());
+                  let file = path.to_slash_lossy();
+                  file_deps.add_file_deps(
+                    if file.starts_with('.') { file.into_owned() } else { format!("./{file}") },
+                    false,
+                  )
+                } else {
+                  file_deps.add_file_deps(dep, false)
+                });
               }
             }
-            deps_arr.clear();
-            deps_arr.extend(
-              resolve_dependencies(&normalized_file, other_deps, &chunk.filename, "js").await?,
-            );
-            deps_arr.extend(css_deps);
-          }
 
-          let mut render_deps = Vec::with_capacity(deps_arr.len());
-          if render_built_url.is_some() {
-            let env = ToOutputFilePathEnv {
-              is_ssr,
-              host_id: &chunk.filename,
-              url_base,
-              decoded_base,
-              render_built_url: render_built_url.as_deref(),
-            };
-            for dep in deps_arr {
-              let result = env
-                .to_output_file_path(&dep, "js", false, |filename: &Path, importer: &Path| {
-                  let path = filename.relative(importer.parent().unwrap());
-                  let file = path.to_slash_lossy();
-                  if file.starts_with('.') {
-                    AssetUrlResult::WithoutRuntime(file.into_owned())
-                  } else {
-                    AssetUrlResult::WithoutRuntime(format!("./{file}"))
-                  }
-                })
-                .await?;
-              render_deps.push(match result {
-                AssetUrlResult::WithRuntime(s) => file_deps.add_file_deps(s, true),
-                AssetUrlResult::WithoutRuntime(s) => file_deps.add_file_deps(s, false),
-              });
-            }
-          } else {
-            for dep in deps_arr {
-              // Don't include the assets dir if the default asset file names
-              // are used, the path will be reconstructed by the import preload helper
-              render_deps.push(if self.is_relative_base {
-                let path = dep.relative(chunk.filename.as_path().parent().unwrap());
-                let file = path.to_slash_lossy();
-                file_deps.add_file_deps(
-                  if file.starts_with('.') { file.into_owned() } else { format!("./{file}") },
-                  false,
-                )
+            s.update(
+              marker_start,
+              marker_start + 16, // __VITE_PRELOAD__
+              if render_deps.is_empty() {
+                "[]".to_string()
               } else {
-                file_deps.add_file_deps(dep, false)
-              });
-            }
+                format!(
+                  "__vite__mapDeps([{}])",
+                  render_deps.into_iter().map(|u| u.to_string()).join(",")
+                )
+              },
+            );
+
+            rewrote_marker_start_pos.insert(marker_start);
           }
+        }
 
-          s.update(
-            marker_start,
-            marker_start + 16, // __VITE_PRELOAD__
-            if render_deps.is_empty() {
-              "[]".to_string()
-            } else {
-              format!(
-                "__vite__mapDeps([{}])",
-                render_deps.into_iter().map(|u| u.to_string()).join(",")
-              )
-            },
+        if !file_deps.0.is_empty() {
+          let map_deps_code = format!(
+            "const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=[{}])))=>i.map(i=>d[i]);\n",
+            file_deps
+              .0
+              .into_iter()
+              .map(|(s, is_runtime)| if is_runtime { s } else { to_string_literal(&s) })
+              .join(",")
           );
-
-          rewrote_marker_start_pos.insert(marker_start);
+          // inject extra code at the top or next line of hashbang
+          if chunk.code.starts_with("#!") {
+            s.prepend_left(
+              chunk.code.find('\n').map(|pos| pos + 1).unwrap_or_default(),
+              map_deps_code,
+            );
+          } else {
+            s.prepend(map_deps_code);
+          }
         }
-      }
 
-      if !file_deps.0.is_empty() {
-        let map_deps_code = format!(
-          "const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=[{}])))=>i.map(i=>d[i]);\n",
-          file_deps
-            .0
-            .into_iter()
-            .map(|(s, is_runtime)| if is_runtime { s } else { to_string_literal(&s) })
-            .join(",")
-        );
-        // inject extra code at the top or next line of hashbang
-        if chunk.code.starts_with("#!") {
-          s.prepend_left(
-            chunk.code.find('\n').map(|pos| pos + 1).unwrap_or_default(),
-            map_deps_code,
-          );
-        } else {
-          s.prepend(map_deps_code);
+        // there may still be markers due to inlined dynamic imports, remove
+        // all the markers regardless
+        for (start, _) in chunk.code.match_indices("__VITE_PRELOAD__") {
+          if !rewrote_marker_start_pos.contains(&start) {
+            s.update(start, start + 16, "void 0");
+          }
         }
-      }
 
-      // there may still be markers due to inlined dynamic imports, remove
-      // all the markers regardless
-      for (start, _) in chunk.code.match_indices("__VITE_PRELOAD__") {
-        if !rewrote_marker_start_pos.contains(&start) {
-          s.update(start, start + 16, "void 0");
+        if s.has_changed() {
+          *chunk = Arc::new(rolldown_common::OutputChunk {
+            code: s.to_string(),
+            ..chunk.as_ref().clone()
+          });
+          // TODO: update sourcemap
         }
-      }
-
-      if s.has_changed() {
-        *chunk =
-          Arc::new(rolldown_common::OutputChunk { code: s.to_string(), ..chunk.as_ref().clone() });
-        // TODO: update sourcemap
       }
     }
 

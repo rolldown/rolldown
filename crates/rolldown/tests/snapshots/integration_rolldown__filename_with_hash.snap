@@ -3585,6 +3585,14 @@ expression: output
 
 - main-!~{000}~.js => main-D1C-gG3C.js
 
+# tests/rolldown/cjs_compat/module.exports_export/safely_merge_cjs_ns_with_default_import
+
+- entry-!~{000}~.js => entry-BSt4hXiV.js
+
+# tests/rolldown/cjs_compat/module.exports_export/safely_merge_cjs_ns_with_separate_imports
+
+- entry-!~{000}~.js => entry-BSt4hXiV.js
+
 # tests/rolldown/cjs_compat/module.exports_export/with_default
 
 - main-!~{000}~.js => main-ByXK5mjC.js
@@ -5508,14 +5516,6 @@ expression: output
 # tests/rolldown/topics/bundler_esm_cjs_tests/64
 
 - entry-!~{000}~.js => entry-CmKA3i8Q.js
-
-# tests/rolldown/topics/bundler_esm_cjs_tests/65
-
-- entry-!~{000}~.js => entry-BSt4hXiV.js
-
-# tests/rolldown/topics/bundler_esm_cjs_tests/66
-
-- entry-!~{000}~.js => entry-BSt4hXiV.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/7
 

@@ -3587,11 +3587,11 @@ expression: output
 
 # tests/rolldown/cjs_compat/module.exports_export/safely_merge_cjs_ns_with_default_import
 
-- entry-!~{000}~.js => entry-BSt4hXiV.js
+- entry-!~{000}~.js => entry-B0qRPq32.js
 
 # tests/rolldown/cjs_compat/module.exports_export/safely_merge_cjs_ns_with_separate_imports
 
-- entry-!~{000}~.js => entry-BSt4hXiV.js
+- entry-!~{000}~.js => entry-B0qRPq32.js
 
 # tests/rolldown/cjs_compat/module.exports_export/with_default
 

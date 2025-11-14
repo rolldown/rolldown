@@ -120,6 +120,7 @@ impl Plugin for ViteHtmlPlugin {
       while let Some(node) = stack.pop() {
         match &node.data {
           html::sink::NodeData::Element { name, attrs, span } => {
+            let span = span.get();
             let mut should_remove = false;
             if &**name == "script" {
               let mut src = None;

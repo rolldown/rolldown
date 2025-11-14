@@ -27,7 +27,7 @@ pub fn parse_html(html: &str) -> RcDom {
       }
       Ok(Token::EndTag(tag)) => {
         let name = unsafe { String::from_utf8_unchecked(tag.name.0) };
-        dom_builder.close_element(&name);
+        dom_builder.close_element(&name, tag.span);
       }
       Ok(Token::String(s)) => {
         let contents = unsafe { String::from_utf8_unchecked(s.0.clone()) };

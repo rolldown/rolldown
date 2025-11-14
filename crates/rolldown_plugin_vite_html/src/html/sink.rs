@@ -27,8 +27,8 @@ pub enum NodeData {
     name: Atom,
     /// Attributes of the element
     attrs: RefCell<Vec<Attribute>>,
-    /// Source position of this element
-    span: Span,
+    /// Source position of this element (initially start tag, updated to full element when closed)
+    span: Cell<Span>,
   },
 }
 
@@ -118,7 +118,8 @@ impl RcDomEmitter {
   }
 
   pub fn add_element(&mut self, name: Atom, attrs: Vec<Attribute>, span: Span, self_closing: bool) {
-    let element = Node::new(NodeData::Element { name, attrs: RefCell::new(attrs), span });
+    let element =
+      Node::new(NodeData::Element { name, attrs: RefCell::new(attrs), span: Cell::new(span) });
 
     append(&self.current_node, Rc::clone(&element));
 
@@ -128,11 +129,13 @@ impl RcDomEmitter {
     }
   }
 
-  pub fn close_element(&mut self, name: &str) {
-    // Find the matching open element and close it
+  pub fn close_element(&mut self, name: &str, end_span: Span) {
     for i in (0..self.open_elements.len()).rev() {
-      if let NodeData::Element { name: ref elem_name, .. } = self.open_elements[i].data {
+      if let NodeData::Element { name: ref elem_name, span: ref elem_span, .. } =
+        self.open_elements[i].data
+      {
         if elem_name == name {
+          elem_span.set(Span { start: elem_span.get().start, end: end_span.end });
           self.open_elements.truncate(i);
           if !self.open_elements.is_empty() {
             self.current_node = Rc::clone(self.open_elements.last().unwrap());

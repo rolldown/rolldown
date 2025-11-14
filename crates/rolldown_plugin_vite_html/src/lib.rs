@@ -120,7 +120,7 @@ impl Plugin for ViteHtmlPlugin {
       while let Some(node) = stack.pop() {
         match &node.data {
           html::sink::NodeData::Element { name, attrs, span } => {
-            let span = span.get();
+            let elem_span = span.get();
             let mut should_remove = false;
             if &**name == "script" {
               let mut src = None;
@@ -299,7 +299,7 @@ impl Plugin for ViteHtmlPlugin {
                         js.push_str("import ");
                         js.push_str(&rolldown_plugin_utils::to_string_literal(&decode_url));
                         js.push_str(";\n");
-                        style_urls.push((decode_url, attr.span));
+                        style_urls.push((decode_url, elem_span));
                       }
                     } else {
                       let should_inline = (&**name == "link"
@@ -353,7 +353,7 @@ impl Plugin for ViteHtmlPlugin {
             }
 
             if should_remove {
-              s.remove(span.start, span.end);
+              s.remove(elem_span.start, elem_span.end);
             }
           }
           _ => {}

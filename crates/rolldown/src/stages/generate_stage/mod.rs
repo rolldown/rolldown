@@ -75,6 +75,8 @@ impl<'a> GenerateStage<'a> {
       validate_options_for_multi_chunk_output(self.options)?;
     }
 
+    self.finalized_module_namespace_ref_usage();
+
     self.compute_cross_chunk_links(&mut chunk_graph);
 
     self.ensure_lazy_module_initialization_order(&mut chunk_graph);

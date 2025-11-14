@@ -4844,6 +4844,12 @@ expression: output
 - main-!~{000}~.js => main-uyjEQE00.js
 - lib-!~{001}~.js => lib-CTg-KV6l.js
 
+# tests/rolldown/issues/6992
+
+- main-!~{000}~.js => main-D2QP9LbS.js
+- _virtual/rolldown_runtime-!~{001}~.js => _virtual/rolldown_runtime-CRC6Pc46.js
+- server/index-!~{003}~.js => server/index-ChpZggGM.js
+
 # tests/rolldown/issues/duplicate_default_export
 
 - main-!~{000}~.js => main-BvtLtePT.js
@@ -5672,7 +5678,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/issue_4818
 
-- main-!~{000}~.js => main-CX-_NZJb.js
+- main-!~{000}~.js => main-CpnnrpTq.js
 
 # tests/rolldown/topics/hmr/issue_5149
 

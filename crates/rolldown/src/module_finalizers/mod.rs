@@ -418,22 +418,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   fn generate_declaration_of_module_namespace_object(&self) -> Vec<ast::Statement<'ast>> {
-    let module_namespace_included_reason = self.ctx.linking_info.module_namespace_included_reason;
-    let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
-      && if module_namespace_included_reason.contains(ModuleNamespaceIncludedReason::Unknown) {
-        true
-      } else if module_namespace_included_reason
-        .contains(ModuleNamespaceIncludedReason::ReExportExternalModule)
-      {
-        // If the module namespace is only used to reexport external module,
-        // then we need to ensure if it is still has dynamic exports after flatten entry level
-        // external module, see `find_entry_level_external_module`
-        self.ctx.linking_info.has_dynamic_exports
-      } else {
-        false
-      };
-
-    if !is_namespace_referenced {
+    if !self.module_namespace_included {
       return vec![];
     }
 

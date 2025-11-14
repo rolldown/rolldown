@@ -6,6 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+import assert from "node:assert";
+
 // HIDDEN [rolldown:runtime]
 //#region node_modules/this-is-only-used-for-testing/index.js
 var require_this_is_only_used_for_testing = /* @__PURE__ */ __commonJS({ "node_modules/this-is-only-used-for-testing/index.js": ((exports, module) => {
@@ -21,9 +23,9 @@ var require_this_is_only_used_for_testing = /* @__PURE__ */ __commonJS({ "node_m
 //#endregion
 //#region entry.js
 var import_this_is_only_used_for_testing = /* @__PURE__ */ __toESM(require_this_is_only_used_for_testing());
-console.log(import_this_is_only_used_for_testing.default);
-console.log(import_this_is_only_used_for_testing.default.default);
-console.log(import_this_is_only_used_for_testing.useState);
+assert.deepStrictEqual(typeof import_this_is_only_used_for_testing.default, "function");
+assert.deepStrictEqual(import_this_is_only_used_for_testing.default, import_this_is_only_used_for_testing.default.default);
+assert.deepStrictEqual(typeof import_this_is_only_used_for_testing.useState, "function");
 
 //#endregion
 ```

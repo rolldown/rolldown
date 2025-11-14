@@ -1,6 +1,7 @@
 // Test case for SafelyMergeCjsNs optimization with both named and default imports
+import assert from 'node:assert';
 import React, { useState } from 'this-is-only-used-for-testing';
 
-console.log(React);
-console.log(React.default);
-console.log(useState);
+assert.deepStrictEqual(typeof React, 'function');
+assert.deepStrictEqual(React, React.default);
+assert.deepStrictEqual(typeof useState, 'function');

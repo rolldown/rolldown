@@ -11,6 +11,7 @@ export default defineTest({
     input: './main.ts',
     plugins: [
       transformPlugin({
+        root: __dirname,
         include: ['**/node_modules/**'],
       }),
       {

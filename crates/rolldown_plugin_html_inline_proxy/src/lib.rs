@@ -1,12 +1,15 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, path::PathBuf};
 
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookLoadOutput, HookResolveIdOutput, HookUsage, Plugin};
 use rolldown_plugin_utils::constants::{HTMLProxyMap, HTMLProxyMapItem};
-use rolldown_utils::{pattern_filter::normalize_path, url::clean_url};
+use rolldown_utils::url::clean_url;
+use sugar_path::SugarPath as _;
 
 #[derive(Debug)]
-pub struct HtmlInlineProxyPlugin;
+pub struct HtmlInlineProxyPlugin {
+  pub root: PathBuf,
+}
 
 impl Plugin for HtmlInlineProxyPlugin {
   fn name(&self) -> Cow<'static, str> {
@@ -74,8 +77,7 @@ impl Plugin for HtmlInlineProxyPlugin {
 
     // Clean URL and normalize path
     let file = clean_url(args.id);
-    let root = ctx.cwd().to_string_lossy();
-    let url = file.strip_prefix(normalize_path(&root).as_ref()).unwrap_or(file);
+    let url = file.strip_prefix(self.root.to_slash_lossy().as_ref()).unwrap_or(file);
 
     // Get HTMLProxyMap from context metadata and find the cached result
     if let Some(html_proxy_map) =

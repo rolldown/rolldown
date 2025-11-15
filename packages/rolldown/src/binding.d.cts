@@ -1870,6 +1870,10 @@ export interface BindingHookTransformOutput {
   moduleType?: string
 }
 
+export interface BindingHtmlInlineProxyPluginConfig {
+  root: string
+}
+
 export interface BindingImportGlobPluginConfig {
   root?: string
   restoreQueryExtension?: boolean

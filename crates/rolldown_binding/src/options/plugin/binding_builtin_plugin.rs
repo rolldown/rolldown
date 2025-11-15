@@ -28,9 +28,10 @@ use rolldown_plugin_wasm_helper::WasmHelperPlugin;
 use rolldown_plugin_web_worker_post::WebWorkerPostPlugin;
 
 use crate::options::plugin::config::{
-  BindingEsmExternalRequirePluginConfig, BindingModulePreloadPolyfillPluginConfig,
-  BindingReactRefreshWrapperPluginConfig, BindingViteCSSPluginConfig,
-  BindingViteCSSPostPluginConfig, BindingViteHtmlPluginConfig, BindingWasmHelperPluginConfig,
+  BindingEsmExternalRequirePluginConfig, BindingHtmlInlineProxyPluginConfig,
+  BindingModulePreloadPolyfillPluginConfig, BindingReactRefreshWrapperPluginConfig,
+  BindingViteCSSPluginConfig, BindingViteCSSPostPluginConfig, BindingViteHtmlPluginConfig,
+  BindingWasmHelperPluginConfig,
 };
 
 use super::{
@@ -110,7 +111,17 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         };
         Arc::new(plugin)
       }
-      BindingBuiltinPluginName::HtmlInlineProxy => Arc::new(HtmlInlineProxyPlugin),
+      BindingBuiltinPluginName::HtmlInlineProxy => {
+        let plugin: HtmlInlineProxyPlugin = if let Some(options) = plugin.options {
+          BindingHtmlInlineProxyPluginConfig::from_unknown(options)?.into()
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for HtmlInlineProxyPlugin",
+          ));
+        };
+        Arc::new(plugin)
+      }
       BindingBuiltinPluginName::ImportGlob => {
         let plugin = if let Some(options) = plugin.options {
           BindingImportGlobPluginConfig::from_unknown(options)?.into()

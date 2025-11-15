@@ -5,8 +5,13 @@ const CSS_LANGS: [&str; 9] =
 
 #[inline]
 pub fn is_css_request(id: &str) -> bool {
-  let cleaned_id = clean_url(id);
-  CSS_LANGS.iter().any(|ext| cleaned_id.ends_with(ext))
+  // Match pattern: /\.(css|less|sass|scss|styl|stylus|pcss|postcss|sss)(?:$|\?)/
+  CSS_LANGS.iter().any(|ext| {
+    id.rfind(ext).is_some_and(|pos| {
+      let after = pos + ext.len();
+      after == id.len() || id.as_bytes().get(after) == Some(&b'?')
+    })
+  })
 }
 
 #[inline]

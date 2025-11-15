@@ -53,7 +53,7 @@ impl ViteHtmlPlugin {
     is_style_attribute: bool,
     (value, span): (&str, Span),
   ) -> anyhow::Result<()> {
-    *inline_module_count += 1;
+    let index = *inline_module_count;
 
     js.push_str("import \"");
     js.push_str(id);
@@ -62,13 +62,13 @@ impl ViteHtmlPlugin {
       js.push_str("&style-attr");
     }
     js.push_str("&index=");
-    js.push_str(itoa::Buffer::new().format(*inline_module_count - 1));
+    js.push_str(itoa::Buffer::new().format(index));
     js.push_str(".css\"\n");
 
     self.add_to_html_proxy_cache(
       ctx,
       file_path,
-      *inline_module_count,
+      index,
       HTMLProxyMapItem { code: value.into(), map: None },
     );
 
@@ -76,9 +76,11 @@ impl ViteHtmlPlugin {
       "__VITE_INLINE_CSS__",
       xxhash_with_base(clean_url(id).as_bytes(), 16),
       "_",
-      itoa::Buffer::new().format(*inline_module_count - 1),
+      itoa::Buffer::new().format(index),
       "__"
     );
+
+    *inline_module_count += 1;
 
     if is_style_attribute {
       super::overwrite_check_public_file(s, span.start..span.end, value)?;

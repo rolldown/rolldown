@@ -42,7 +42,7 @@ pub struct NativePluginContextImpl {
   pub(crate) watch_files: Arc<FxDashSet<ArcStr>>,
   pub(crate) module_infos: SharedModuleInfoDashMap,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
-  pub(crate) session: rolldown_debug::Session,
+  pub(crate) session: rolldown_devtools::Session,
   pub(crate) bundle_span: Arc<tracing::Span>,
   // `resolve_id` hook not only will be triggered by the rolldown's resolve process, but also could be triggered
   // by manual calls of `PluginContext.resolve()`. We use a dedicated span here to distinguish whether the call is

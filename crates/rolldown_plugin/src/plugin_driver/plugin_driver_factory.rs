@@ -28,7 +28,7 @@ impl PluginDriverFactory {
     &self,
     file_emitter: &SharedFileEmitter,
     options: &SharedNormalizedBundlerOptions,
-    session: &rolldown_debug::Session,
+    session: &rolldown_devtools::Session,
     initial_bundle_span: &Arc<tracing::Span>,
     module_infos: SharedModuleInfoDashMap,
   ) -> Arc<crate::plugin_driver::PluginDriver> {

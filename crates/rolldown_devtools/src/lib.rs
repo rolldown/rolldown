@@ -6,7 +6,7 @@ mod trace_action_macro;
 mod type_alias;
 mod utils;
 
-pub use rolldown_debug_action as action;
+pub use rolldown_devtools_action as action;
 
 pub use {
   init_tracing::{DebugTracer, Session},

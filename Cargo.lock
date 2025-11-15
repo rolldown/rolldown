@@ -2678,9 +2678,9 @@ dependencies = [
  "rayon",
  "rolldown-notify",
  "rolldown_common",
- "rolldown_debug",
  "rolldown_dev",
  "rolldown_dev_common",
+ "rolldown_devtools",
  "rolldown_ecmascript",
  "rolldown_ecmascript_utils",
  "rolldown_error",
@@ -2788,8 +2788,8 @@ dependencies = [
  "oxc_transform_napi",
  "rolldown",
  "rolldown_common",
- "rolldown_debug",
  "rolldown_dev",
+ "rolldown_devtools",
  "rolldown_error",
  "rolldown_plugin",
  "rolldown_plugin_alias",
@@ -2859,28 +2859,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_debug"
-version = "0.1.0"
-dependencies = [
- "blake3",
- "dashmap",
- "rolldown_debug_action",
- "rustc-hash",
- "serde",
- "serde_json",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "rolldown_debug_action"
-version = "0.1.0"
-dependencies = [
- "serde",
- "ts-rs",
-]
-
-[[package]]
 name = "rolldown_dev"
 version = "0.1.0"
 dependencies = [
@@ -2909,6 +2887,28 @@ dependencies = [
  "rolldown_error",
  "schemars",
  "serde",
+]
+
+[[package]]
+name = "rolldown_devtools"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "dashmap",
+ "rolldown_devtools_action",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "rolldown_devtools_action"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "ts-rs",
 ]
 
 [[package]]
@@ -2987,7 +2987,7 @@ dependencies = [
  "derive_more",
  "oxc_index",
  "rolldown_common",
- "rolldown_debug",
+ "rolldown_devtools",
  "rolldown_ecmascript",
  "rolldown_error",
  "rolldown_resolver",

@@ -13,7 +13,7 @@ use rolldown_common::{
   ModuleInfo, ModuleType, NormalModule, PluginIdx, SharedNormalizedBundlerOptions,
   SourcemapChainElement, SourcemapHires, side_effects::HookSideEffects,
 };
-use rolldown_debug::{action, trace_action};
+use rolldown_devtools::{action, trace_action};
 use rolldown_error::CausedPlugin;
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::unique_arc::UniqueArc;

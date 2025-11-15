@@ -67,19 +67,19 @@ use std::sync::Arc;
 
 pub struct ClassicBundler {
   session_id: Arc<str>,
-  debug_tracer: Option<rolldown_debug::DebugTracer>,
-  session: rolldown_debug::Session,
+  debug_tracer: Option<rolldown_devtools::DebugTracer>,
+  session: rolldown_devtools::Session,
   closed: bool,
   last_bundle_handle: Option<BundleHandle>,
 }
 
 impl ClassicBundler {
   pub fn new() -> Self {
-    let session_id = rolldown_debug::generate_session_id();
+    let session_id = rolldown_devtools::generate_session_id();
     Self {
       session_id,
       debug_tracer: None,
-      session: rolldown_debug::Session::dummy(),
+      session: rolldown_devtools::Session::dummy(),
       closed: false,
       last_bundle_handle: None,
     }
@@ -134,12 +134,12 @@ impl ClassicBundler {
 
   fn enable_debug_tracing_if_needed(&mut self, options: &BundlerOptions) {
     if self.debug_tracer.is_none() && options.debug.is_some() {
-      self.debug_tracer = Some(rolldown_debug::DebugTracer::init(Arc::clone(&self.session_id)));
+      self.debug_tracer = Some(rolldown_devtools::DebugTracer::init(Arc::clone(&self.session_id)));
       // Caveat: `Span` must be created after initialization of `DebugTracer`, we need it to inject data to the tracking system.
       let session_span =
         tracing::debug_span!("session", CONTEXT_session_id = self.session_id.as_ref());
       // Update the `session` with the actual session span
-      self.session = rolldown_debug::Session::new(Arc::clone(&self.session_id), session_span);
+      self.session = rolldown_devtools::Session::new(Arc::clone(&self.session_id), session_span);
     }
   }
 }

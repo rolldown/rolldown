@@ -8,7 +8,7 @@ use rolldown_common::{
   ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk, SharedFileEmitter,
   SymbolRef,
 };
-use rolldown_debug::{action, trace_action, trace_action_enabled};
+use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult};
 use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},

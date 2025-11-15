@@ -175,7 +175,7 @@ crates/rolldown/tests/rolldown/warnings/eval2/node_modules
 .spr.yml
 
 # generated bindings type
-crates/rolldown_debug_action/bindings/**
+crates/rolldown_devtools_action/bindings/**
 
 # AI config
 .claude

@@ -413,11 +413,7 @@ impl Plugin for ViteHtmlPlugin {
       } else {
         continue;
       };
-      utils::overwrite_check_public_file(
-        &mut s,
-        range,
-        partial_encode_url_path(&url).into_owned(),
-      )?;
+      s.update(range.start, range.end, partial_encode_url_path(&url).into_owned());
     }
 
     let resolved_style_urls = rolldown_utils::futures::block_on_spawn_all(

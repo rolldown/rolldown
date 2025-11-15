@@ -306,17 +306,17 @@ impl Plugin for ViteHtmlPlugin {
                         js.push_str(&rolldown_plugin_utils::to_string_literal(&decode_url));
                         js.push_str(";\n");
                         style_urls.push((decode_url, elem_span));
+                      } else {
+                        let should_inline = (&**name == "link"
+                          && attr_map.get("rel").is_some_and(|attr| {
+                            utils::parse_rel_attr(&attr.value).into_iter().any(|v| {
+                              ["icon", "apple-touch-icon", "apple-touch-startup-image", "manifest"]
+                                .contains(&v.as_str())
+                            })
+                          }))
+                        .then_some(false);
+                        src_tasks.push((decode_url, attr.span, should_inline));
                       }
-                    } else {
-                      let should_inline = (&**name == "link"
-                        && attr_map.get("rel").is_some_and(|attr| {
-                          utils::parse_rel_attr(&attr.value).into_iter().any(|v| {
-                            ["icon", "apple-touch-icon", "apple-touch-startup-image", "manifest"]
-                              .contains(&v.as_str())
-                          })
-                        }))
-                      .then_some(false);
-                      src_tasks.push((decode_url, attr.span, should_inline));
                     }
                   }
                 }

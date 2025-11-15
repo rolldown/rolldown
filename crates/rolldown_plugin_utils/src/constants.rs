@@ -94,3 +94,8 @@ pub struct CSSBundleName(pub String);
 pub struct RemovedPureCSSFilesCache {
   pub inner: FxDashMap<ArcStr, Arc<OutputChunk>>,
 }
+
+#[derive(Debug, Default)]
+pub struct CSSUrlCache {
+  pub inner: FxDashMap<String, String>,
+}

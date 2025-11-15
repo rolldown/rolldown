@@ -17,7 +17,7 @@ use rolldown_plugin_utils::{
   AssetUrlItem, AssetUrlIter, AssetUrlResult, PublicAssetUrlCache, RenderAssetUrlInJsEnv,
   ToOutputFilePathEnv,
   constants::{
-    CSSBundleName, CSSChunkCache, CSSEntriesCache, CSSStyles, PureCSSChunks,
+    CSSBundleName, CSSChunkCache, CSSEntriesCache, CSSStyles, CSSUrlCache, PureCSSChunks,
     RemovedPureCSSFilesCache, ViteMetadata,
   },
   create_to_import_meta_url_based_relative_runtime,
@@ -92,6 +92,7 @@ impl ViteCSSPostPlugin {
       let magic_string =
         magic_string.get_or_insert_with(|| string_wizard::MagicString::new(&ctx.args.code));
 
+      let url_cache = ctx.meta().get_or_insert_default::<CSSUrlCache>();
       for index in indices {
         let start = index + "__VITE_CSS_URL__".len();
         let Some(pos) = ctx.args.code[start..].find("__") else {
@@ -108,6 +109,11 @@ impl ViteCSSPostPlugin {
               .context("Invalid base64 in '__VITE_CSS_URL__'")?,
           )
         };
+
+        if let Some(url) = url_cache.inner.get(&id) {
+          magic_string.update(index, index + pos + 2, url.clone());
+          continue;
+        }
 
         let Some(style) = css_styles.inner.get(&id) else {
           return Err(anyhow::anyhow!("CSS content for  '{id}' was not found"));
@@ -151,9 +157,11 @@ impl ViteCSSPostPlugin {
             false,
             create_to_import_meta_url_based_relative_runtime(ctx.options().format, self.is_worker),
           )
-          .await?;
+          .await?
+          .to_asset_url_in_js()?;
 
-        magic_string.update(index, index + pos + 2, url.to_asset_url_in_js()?);
+        url_cache.inner.insert(id, url.clone());
+        magic_string.update(index, index + pos + 2, url);
       }
     }
     Ok(())

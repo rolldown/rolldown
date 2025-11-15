@@ -82,10 +82,10 @@ impl Plugin for ViteCSSPlugin {
         ));
       }
 
-      let url = remove_special_query(args.id, b"url");
+      let url = inject_query(&remove_special_query(args.id, b"url"), "transform-only");
       let code = rolldown_utils::concat_string!(
         "import ",
-        serde_json::to_string(&inject_query(&url, "transform-only"))?,
+        serde_json::to_string(&url)?,
         "; export default '__VITE_CSS_URL__",
         base64_simd::STANDARD.encode_to_string(url.as_bytes()),
         "__'"

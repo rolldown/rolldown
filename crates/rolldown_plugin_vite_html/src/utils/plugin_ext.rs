@@ -179,11 +179,18 @@ impl ViteHtmlPlugin {
     let is_named_output = ctx.options().input.iter().any(|input_item| {
       input_item.import == url || url.strip_prefix('/').is_some_and(|url| url == input_item.import)
     });
-    if is_named_output {
-      Ok(Cow::Borrowed(url))
-    } else {
-      self.url_to_built_url(ctx, url, importer, should_inline).await.map(Cow::Owned)
+    if !is_named_output {
+      let result = self.url_to_built_url(ctx, url, importer, should_inline).await.map(Cow::Owned);
+      let is_not_found_error = result.as_ref().is_err_and(|err| {
+        err
+          .downcast_ref::<std::io::Error>()
+          .is_some_and(|e| e.kind() == std::io::ErrorKind::NotFound)
+      });
+      if !is_not_found_error {
+        return result;
+      }
     }
+    Ok(Cow::Borrowed(url))
   }
 
   pub fn handle_inline_css<'a>(ctx: &PluginContext, html: &'a str) -> Option<MagicString<'a>> {

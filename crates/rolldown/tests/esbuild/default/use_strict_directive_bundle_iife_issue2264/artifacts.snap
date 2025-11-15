@@ -15,6 +15,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+'use strict';
+
+
 (function(exports) {
 
 

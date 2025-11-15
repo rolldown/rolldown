@@ -14,6 +14,7 @@ var require_leaflet = /* @__PURE__ */ __commonJS({ "leaflet.js": ((exports, modu
 	(function(global$1, factory) {
 		typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global$1 = typeof globalThis !== "undefined" ? globalThis : global$1 || self, factory(global$1.leaflet = {}));
 	})(exports, function(exports$1) {
+		"use strict";
 		exports$1.foo = "foo";
 		global.L = exports$1;
 	});

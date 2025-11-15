@@ -1,8 +1,9 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use napi::bindgen_prelude::FnArgs;
 use rolldown_plugin_vite_css::{CompileCSSResult, UrlResolver, ViteCSSPlugin};
 use rustc_hash::{FxHashMap, FxHashSet};
+use sugar_path::SugarPath as _;
 
 use crate::{
   options::plugin::types::binding_asset_inline_limit::BindingAssetInlineLimit,
@@ -61,6 +62,7 @@ impl TryFrom<BindingCompileCSSResult> for CompileCSSResult {
 
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingViteCSSPluginConfig {
+  pub root: String,
   pub is_lib: bool,
   pub public_dir: String,
   #[napi(
@@ -83,6 +85,7 @@ pub struct BindingViteCSSPluginConfig {
 impl From<BindingViteCSSPluginConfig> for ViteCSSPlugin {
   fn from(value: BindingViteCSSPluginConfig) -> Self {
     Self {
+      root: PathBuf::from(value.root).normalize(),
       is_lib: value.is_lib,
       public_dir: value.public_dir,
       compile_css: Arc::new(move |url: &str, importer: &str, url_resolver: Arc<UrlResolver>| {

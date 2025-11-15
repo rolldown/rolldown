@@ -2283,6 +2283,7 @@ export interface BindingTreeshake {
 }
 
 export interface BindingViteCssPluginConfig {
+  root: string
   isLib: boolean
   publicDir: string
   compileCSS: (url: string, importer: string, resolver: BindingUrlResolver) => Promise<{

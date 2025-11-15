@@ -25,7 +25,7 @@ use rolldown_plugin_utils::{
   get_chunk_original_name,
   uri::encode_uri_path,
 };
-use rolldown_utils::{futures::block_on_spawn_all, indexmap::FxIndexSet, url::clean_url};
+use rolldown_utils::{indexmap::FxIndexSet, url::clean_url};
 use rustc_hash::{FxHashMap, FxHashSet};
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
@@ -65,12 +65,6 @@ pub fn extract_index(id: &str) -> Option<&str> {
   (end > 0).then_some(&s[..end])
 }
 
-#[derive(Debug, Default)]
-pub struct UrlEmitTasks {
-  pub range: (usize, usize),
-  pub replacement: String,
-}
-
 pub struct FinalizedContext<'a, 'b, 'c> {
   pub plugin_ctx: &'a PluginContext,
   pub env: &'a ToOutputFilePathEnv<'b>,
@@ -95,7 +89,10 @@ impl ViteCSSPostPlugin {
     let mut css_url_iter = ctx.args.code.match_indices("__VITE_CSS_URL__").peekable();
     if css_url_iter.peek().is_some() {
       let indices = css_url_iter.map(|(index, _)| index).collect::<Vec<_>>();
-      let tasks = indices.into_iter().map(|index| async move {
+      let magic_string =
+        magic_string.get_or_insert_with(|| string_wizard::MagicString::new(&ctx.args.code));
+
+      for index in indices {
         let start = index + "__VITE_CSS_URL__".len();
         let Some(pos) = ctx.args.code[start..].find("__") else {
           return Err(anyhow::anyhow!(
@@ -156,14 +153,7 @@ impl ViteCSSPostPlugin {
           )
           .await?;
 
-        Ok(UrlEmitTasks { range: (index, index + pos + 2), replacement: url.to_asset_url_in_js()? })
-      });
-
-      let magic_string =
-        magic_string.get_or_insert_with(|| string_wizard::MagicString::new(&ctx.args.code));
-      for task in block_on_spawn_all(tasks).await {
-        let UrlEmitTasks { range: (start, end), replacement } = task?;
-        magic_string.update(start, end, replacement);
+        magic_string.update(index, index + pos + 2, url.to_asset_url_in_js()?);
       }
     }
     Ok(())

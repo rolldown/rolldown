@@ -27,7 +27,7 @@ export default defineTest({
 
     // Find the button/index chunk
 
-    expect(capturedChunks[0]);
+    expect(capturedChunks[0]).toBeDefined();
     expect(capturedChunks[0]?.name).toBe('components/button/index');
 
     // Find the input/index chunk

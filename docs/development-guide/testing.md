@@ -30,16 +30,16 @@ Due to the nature of Rolldown being a **bundler**, we prefer integration tests t
 
 Generally, there are two types of tests we use:
 
-- Convention-based tests: The test runner will look for test cases that follow certain conventions (e.g., folder structure, file naming) and run them automatically. This is the primary way we add new tests.
-- Manual tests: For more complex scenarios that cannot be easily expressed with conventions, we write manual test code that sets up the test environment, runs the bundler with specific options, and verifies the output programmatically.
+- Data-driven testing: The test runner will look for test cases that follow certain conventions (e.g., folder structure, file naming) and run them automatically. This is the primary way we add new tests.
+- Manual testing: For more complex scenarios that cannot be easily expressed with data-driven approaches, we write manual test code that sets up the test environment, runs the bundler with specific options, and verifies the output programmatically.
 
 ## Rust
 
 We use Rust's built-in test framework for writing and running tests. Test cases are stored in the `crates/rolldown/tests` folder.
 
-### Convention-based tests
+### Data-driven testing
 
-A convention-based test case is a folder that contains a `_config.json` file. The test runner will read the configuration from `_config.json`, bundle the input files, and execute the output files to verify the behavior.
+A data-driven test case is a folder that contains a `_config.json` file. The test runner will read the configuration from `_config.json`, bundle the input files, and execute the output files to verify the behavior.
 
 `_config.json` contains the configuration for the test suite. If everything works right, you should be able to have auto-completion while editing `_config.json` due to the [config](https://github.com/rolldown/rolldown/blob/main/.vscode/settings.json#L36-L40).
 
@@ -48,7 +48,7 @@ For all available options, you could refer to
 - [Bundler Options](https://github.com/rolldown/rolldown/blob/100c6ee13cef9c50529b8d6425292378ea99eae9/crates/rolldown_common/src/inner_bundler_options/mod.rs#L53)
 - [JSON Schema file](https://github.com/rolldown/rolldown/blob/main/crates/rolldown_testing/_config.schema.json)
 
-#### What does convention-based test do?
+#### What does data-driven testing do?
 
 - It generates snapshots of the build artifacts, including:
   - Bundled output files
@@ -62,13 +62,13 @@ For all available options, you could refer to
 
 - Snapshots would be updated automatically when you run Rust tests. No extra command is needed.
 
-#### Function-complete convention-based tests
+#### Function-complete data-driven testing
 
 `_config.json` has its limitations, so we also support writing tests with Rust directly. You could refer to
 
 [`crates/rolldown/tests/rolldown/errors/plugin_error`](https://github.com/rolldown/rolldown/blob/86c7aa6557a2bb7eef03133b148b1703f4e21167/crates/rolldown/tests/rolldown/errors/plugin_error)
 
-It basically just replaces the `_config.json` with Rust code that configures the bundler directly. Everything else works the same way as convention-based tests.
+It basically just replaces the `_config.json` with Rust code that configures the bundler directly. Everything else works the same way as data-driven testing.
 
 #### HMR tests
 
@@ -109,9 +109,9 @@ The test will go through these steps:
 
 :::
 
-### Manual tests
+### Manual testing
 
-For more complex scenarios that cannot be easily expressed with conventions, we write manual test code that sets up the test environment, runs the bundler with specific options, and verifies the output programmatically.
+For more complex scenarios that cannot be easily expressed with data-driven approaches, we write manual test code that sets up the test environment, runs the bundler with specific options, and verifies the output programmatically.
 
 Not much to tell here, basically just write normal Rust test code that uses Rolldown to perform bundling and verification.
 
@@ -124,13 +124,13 @@ Tests located in `packages/rolldown/tests` are used to test Rolldown's Node.js A
 - `just test-node-rolldown` will run rolldown tests.
 - `just test-node-rolldown --update` will run tests and update snapshots.
 
-### Convention-based tests
+### Data-driven testing
 
-Convention-based tests are located in `packages/rolldown/tests/fixtures`.
+Data-driven tests are located in `packages/rolldown/tests/fixtures`.
 
-A convention-based test case is a folder that contains a `_config.ts` file. The test runner will read the configuration from `_config.ts`, bundle the input files, and verify the output against expected results.
+A data-driven test case is a folder that contains a `_config.ts` file. The test runner will read the configuration from `_config.ts`, bundle the input files, and verify the output against expected results.
 
-### Manual tests
+### Manual testing
 
 Not much to tell here either, basically just write normal JavaScript/TypeScript test code that uses Rolldown to perform bundling and verification.
 

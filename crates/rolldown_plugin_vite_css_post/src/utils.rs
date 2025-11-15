@@ -241,7 +241,6 @@ impl ViteCSSPostPlugin {
 
         let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
         let chunk_metadata = vite_metadata.get_or_insert_default(ctx.env.host_id.into());
-
         chunk_metadata.imported_css.insert(ctx.get_file_name(&reference_id)?);
 
         if ctx.args.chunk.is_entry && is_pure_css_chunk {
@@ -316,14 +315,10 @@ impl ViteCSSPostPlugin {
     css_asset_name: &str,
     css_file_names: &AssetFilenamesOutputOption,
   ) -> anyhow::Result<String> {
-    let css_asset_dirname = if self.url_base.is_empty() || self.url_base == "./" {
-      Some(self.get_css_asset_dir_name(css_asset_name, css_file_names).await?)
-    } else {
-      None
-    };
+    let css_asset_dirname = self.get_css_asset_dir_name(css_asset_name, css_file_names).await?;
 
     let to_relative = |filename: &Path, _host_id: &Path| {
-      let relative_path = filename.relative(css_asset_dirname.as_ref().unwrap());
+      let relative_path = filename.relative(css_asset_dirname.as_str());
       let relative_path = relative_path.to_slash_lossy();
       if relative_path.starts_with('.') {
         AssetUrlResult::WithoutRuntime(relative_path.into_owned())
@@ -390,7 +385,7 @@ impl ViteCSSPostPlugin {
             render_built_url: self.render_built_url.as_deref(),
           };
 
-          let relative_path = self.root.relative(css_asset_dirname.as_ref().unwrap());
+          let relative_path = self.root.relative(css_asset_dirname.as_str());
           let relative_path = relative_path.to_slash_lossy();
 
           s.update(

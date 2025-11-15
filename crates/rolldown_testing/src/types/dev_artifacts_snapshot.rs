@@ -79,27 +79,56 @@ impl DevArtifactsSnapshot {
   fn create_hmr_step_sections(
     test_meta: &TestMeta,
     step: usize,
-    hmr_result: BuildResult<(Vec<rolldown_common::ClientHmrUpdate>, Vec<String>)>,
+    hmr_results: Vec<BuildResult<(Vec<rolldown_common::ClientHmrUpdate>, Vec<String>)>>,
     build_outputs: Vec<BuildResult<BundleOutput>>,
     cwd: &Path,
   ) -> Vec<SnapshotSection> {
     let mut step_section = SnapshotSection::with_title(format!("HMR Step {step}"));
 
-    // 1. Render HMR updates (always)
-    match hmr_result {
-      Ok((hmr_updates, _changed_files)) => {
-        for hmr_update in hmr_updates {
-          // Add HMR update details as children (Code, Meta)
-          if let Some(code_section) = Self::create_hmr_code_section(test_meta, &hmr_update.update) {
-            step_section.add_child(code_section);
+    // 1. Render HMR updates
+    if hmr_results.len() > 1 {
+      // Multiple updates: wrap each in its own subsection
+      for (update_index, hmr_result) in hmr_results.into_iter().enumerate() {
+        let mut update_section = SnapshotSection::with_title(format!("HMR Update {update_index}"));
+        match hmr_result {
+          Ok((hmr_updates, _changed_files)) => {
+            for hmr_update in hmr_updates {
+              if let Some(code_section) =
+                Self::create_hmr_code_section(test_meta, &hmr_update.update)
+              {
+                update_section.add_child(code_section);
+              }
+              let meta_section = Self::create_hmr_meta_section(&hmr_update.update);
+              update_section.add_child(meta_section);
+            }
           }
-          let meta_section = Self::create_hmr_meta_section(&hmr_update.update);
-          step_section.add_child(meta_section);
+          Err(errs) => {
+            let errors_section = snapshot_utils::create_error_section(errs.into_vec(), cwd);
+            update_section.add_child(errors_section);
+          }
         }
+        step_section.add_child(update_section);
       }
-      Err(errs) => {
-        let errors_section = snapshot_utils::create_error_section(errs.into_vec(), cwd);
-        step_section.add_child(errors_section);
+    } else {
+      // Single update: keep flat structure
+      for hmr_result in hmr_results {
+        match hmr_result {
+          Ok((hmr_updates, _changed_files)) => {
+            for hmr_update in hmr_updates {
+              if let Some(code_section) =
+                Self::create_hmr_code_section(test_meta, &hmr_update.update)
+              {
+                step_section.add_child(code_section);
+              }
+              let meta_section = Self::create_hmr_meta_section(&hmr_update.update);
+              step_section.add_child(meta_section);
+            }
+          }
+          Err(errs) => {
+            let errors_section = snapshot_utils::create_error_section(errs.into_vec(), cwd);
+            step_section.add_child(errors_section);
+          }
+        }
       }
     }
 

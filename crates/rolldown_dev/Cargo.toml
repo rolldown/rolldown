@@ -34,3 +34,8 @@ rustc-hash = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
 tracing = { workspace = true }
+
+[dev-dependencies]
+rolldown_testing = { path = "../rolldown_testing" }
+sugar_path = { workspace = true }
+tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }

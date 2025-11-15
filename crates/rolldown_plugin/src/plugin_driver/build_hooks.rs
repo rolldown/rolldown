@@ -235,6 +235,11 @@ impl PluginDriver {
         plugin_id: plugin_idx.raw(),
         call_id: call_id.clone().unwrap_or_default(),
       });
+      tracing::trace!(
+        "[PluginDriver] Transform hook called\n - plugin: {}\n - module_id: {}",
+        plugin.call_name(),
+        id
+      );
       if let Some(r) = plugin
         .call_transform(
           Arc::new(TransformPluginContext::new(
@@ -283,6 +288,11 @@ impl PluginDriver {
           call_id: call_id.unwrap_or_default()
         });
       }
+      tracing::trace!(
+        "[PluginDriver] Transform hook finished\n - plugin: {}\n - module_id: {}",
+        plugin.call_name(),
+        id
+      );
     }
     *sourcemap_chain = plugin_sourcemap_chain.into_inner();
     Ok(code)

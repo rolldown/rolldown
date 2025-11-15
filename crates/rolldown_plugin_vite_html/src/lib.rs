@@ -158,7 +158,7 @@ impl Plugin for ViteHtmlPlugin {
                   rolldown_plugin_utils::check_public_file(s, &self.public_dir).is_some()
                 });
                 if is_public_file && let Some((ref url, span)) = src {
-                  overwrite_attrs.push((url[1..].to_owned(), span));
+                  overwrite_attrs.push((url.to_owned(), span, true));
                 }
                 if is_module {
                   inline_module_count += 1;
@@ -296,7 +296,7 @@ impl Plugin for ViteHtmlPlugin {
                     if rolldown_plugin_utils::check_public_file(&decode_url, &self.public_dir)
                       .is_some()
                     {
-                      overwrite_attrs.push((decode_url, attr.span));
+                      overwrite_attrs.push((decode_url, attr.span, true));
                     } else if !utils::is_excluded_url(&decode_url) {
                       if &**name == "link"
                         && rolldown_plugin_utils::css::is_css_request(&decode_url)
@@ -373,23 +373,30 @@ impl Plugin for ViteHtmlPlugin {
     for (url, span, should_inline) in src_tasks {
       let processed_encoded_url = self.process_asset_url(&ctx, &url, &id, should_inline).await?;
       if processed_encoded_url != url {
-        overwrite_attrs.push((processed_encoded_url.into_owned(), span));
+        overwrite_attrs.push((processed_encoded_url.into_owned(), span, false));
       }
     }
 
     for (task, span) in srcset_tasks {
       let processed_encoded_url = self.process_src_set(&ctx, &task, &id).await?;
       if processed_encoded_url != task {
-        overwrite_attrs.push((processed_encoded_url, span));
+        overwrite_attrs.push((processed_encoded_url, span, false));
       }
     }
 
-    for (url, span) in overwrite_attrs {
-      let asset_url = env.to_output_file_path(&url, "html", true, public_to_relative).await?;
+    for (url, span, needs_resolution) in overwrite_attrs {
+      let asset_url = if needs_resolution {
+        env
+          .to_output_file_path(&url[1..], "html", true, public_to_relative)
+          .await?
+          .to_asset_url_in_css_or_html()
+      } else {
+        url
+      };
       utils::overwrite_check_public_file(
         &mut s,
         span.start..span.end,
-        partial_encode_url_path(&asset_url.to_asset_url_in_css_or_html()).into_owned(),
+        partial_encode_url_path(&asset_url).into_owned(),
       )?;
     }
 

@@ -214,7 +214,7 @@ impl ViteCSSPostPlugin {
         };
 
         let original_file_name = get_chunk_original_name(
-          ctx.cwd(),
+          &self.root,
           is_legacy,
           &ctx.args.chunk.name,
           ctx.args.chunk.facade_module_id.as_ref(),
@@ -390,7 +390,7 @@ impl ViteCSSPostPlugin {
             render_built_url: self.render_built_url.as_deref(),
           };
 
-          let relative_path = ctx.cwd().relative(css_asset_dirname.as_ref().unwrap());
+          let relative_path = self.root.relative(css_asset_dirname.as_ref().unwrap());
           let relative_path = relative_path.to_slash_lossy();
 
           s.update(
@@ -499,7 +499,7 @@ impl ViteCSSPostPlugin {
         if let Some(lib_css_filename) = &self.lib_css_filename {
           lib_css_filename.to_owned()
         } else {
-          let mut base_dir = ctx.cwd().to_owned();
+          let mut base_dir = self.root.clone();
           loop {
             let pkg_path = base_dir.join("package.json");
             if pkg_path.is_file() {

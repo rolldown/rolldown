@@ -2,6 +2,7 @@ mod utils;
 
 use std::{
   borrow::Cow,
+  path::PathBuf,
   pin::Pin,
   sync::{
     Arc,
@@ -33,6 +34,7 @@ pub type CSSMinifyFn =
 #[expect(clippy::struct_excessive_bools)]
 #[derive(derive_more::Debug, Default)]
 pub struct ViteCSSPostPlugin {
+  pub root: PathBuf,
   pub is_lib: bool,
   pub is_ssr: bool,
   pub is_worker: bool,

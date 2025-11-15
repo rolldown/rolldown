@@ -39,7 +39,7 @@ We use Rust's built-in test framework for writing and running tests. Test cases 
 
 ### Convention-based tests
 
-A convention-based test case is a folder that contains `_config.json` file. The test runner will read the configuration from `_config.json`, bundle the input files, and execute the output files to verify the behavior.
+A convention-based test case is a folder that contains a `_config.json` file. The test runner will read the configuration from `_config.json`, bundle the input files, and execute the output files to verify the behavior.
 
 `_config.json` contains the configuration for the test suite. If everything works right, you should be able to have auto-completion while editing `_config.json` due to the [config](https://github.com/rolldown/rolldown/blob/main/.vscode/settings.json#L36-L40).
 
@@ -60,7 +60,7 @@ For all available options, you could refer to
 
 #### Tips
 
-- Snapshots would be updated automatically when you run rust tests. No extra command is needed.
+- Snapshots would be updated automatically when you run Rust tests. No extra command is needed.
 
 #### Function-complete convention-based tests
 

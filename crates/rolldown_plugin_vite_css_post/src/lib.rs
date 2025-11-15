@@ -116,7 +116,7 @@ impl Plugin for ViteCSSPostPlugin {
       };
 
       let hash = xxhash_with_base(clean_url(args.id).as_bytes(), 16);
-      let cache = ctx.meta().get::<HTMLProxyResult>().expect("HTMLProxyResult missing");
+      let cache = ctx.meta().get_or_insert_default::<HTMLProxyResult>();
       cache.inner.insert(rolldown_utils::concat_string!(hash, "_", index), css.into_owned());
       return Ok(Some(HookTransformOutput {
         code: Some("export default ''".to_owned()),

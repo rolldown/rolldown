@@ -1,9 +1,10 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use napi::bindgen_prelude::FnArgs;
 use rolldown_common::{Output, OutputChunk};
 use rolldown_plugin_vite_html::{TransformIndexHtml, ViteHtmlPlugin};
 use rolldown_utils::dashmap::FxDashMap;
+use sugar_path::SugarPath as _;
 
 use crate::{
   options::plugin::types::{
@@ -19,6 +20,7 @@ use crate::{
 
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingViteHtmlPluginConfig {
+  pub root: String,
   pub is_lib: bool,
   pub is_ssr: bool,
   pub url_base: String,
@@ -75,6 +77,7 @@ impl From<BindingViteHtmlPluginConfig> for ViteHtmlPlugin {
     );
 
     Self {
+      root: PathBuf::from(value.root).normalize(),
       is_lib: value.is_lib,
       is_ssr: value.is_ssr,
       url_base: value.url_base,

@@ -97,14 +97,14 @@ impl ViteHtmlPlugin {
       return Ok(env.public_file_to_built_url(url));
     }
     let path = if url.starts_with('/') {
-      ctx.cwd().join(url)
+      self.root.join(url)
     } else {
       Path::new(importer).parent().unwrap().join(url)
     };
     let path = path.normalize();
     let env = rolldown_plugin_utils::FileToUrlEnv {
       ctx,
-      root: ctx.cwd(),
+      root: &self.root,
       is_lib: self.is_lib,
       public_dir: &self.public_dir,
       asset_inline_limit: &self.asset_inline_limit,

@@ -14,7 +14,7 @@ impl Deref for Bundler {
 }
 
 pub struct Bundler {
-  pub(super) session: rolldown_debug::Session,
+  pub(super) session: rolldown_devtools::Session,
   pub(super) bundle_factory: BundleFactory,
   pub(super) cache: ScanStageCache,
   pub(super) closed: bool,
@@ -39,7 +39,7 @@ impl Bundler {
     Ok(Self {
       bundle_factory,
       closed: false,
-      session: rolldown_debug::Session::dummy(),
+      session: rolldown_devtools::Session::dummy(),
       cache: ScanStageCache::default(),
     })
   }

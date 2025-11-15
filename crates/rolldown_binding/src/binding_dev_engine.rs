@@ -17,7 +17,7 @@ use napi::{Either, Env, threadsafe_function::ThreadsafeFunctionCallMode};
 pub struct BindingDevEngine {
   inner: rolldown_dev::DevEngine,
   _session_id: Arc<str>,
-  _session: rolldown_debug::Session,
+  _session: rolldown_devtools::Session,
 }
 
 #[napi]
@@ -28,8 +28,8 @@ impl BindingDevEngine {
     options: BindingBundlerOptions,
     dev_options: Option<BindingDevOptions>,
   ) -> napi::Result<Self> {
-    let session_id = rolldown_debug::generate_session_id();
-    let session = rolldown_debug::Session::dummy();
+    let session_id = rolldown_devtools::generate_session_id();
+    let session = rolldown_devtools::Session::dummy();
 
     let on_hmr_updates_callback = dev_options.as_ref().and_then(|opts| opts.on_hmr_updates.clone());
     let on_output_callback = dev_options.as_ref().and_then(|opts| opts.on_output.clone());

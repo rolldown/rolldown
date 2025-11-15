@@ -81,10 +81,10 @@ collapsible_if = "allow"
 # publish = true
 rolldown = { version = "0.1.0", path = "crates/rolldown" }
 rolldown_common = { version = "0.1.0", path = "crates/rolldown_common" }
-rolldown_debug = { version = "0.1.0", path = "crates/rolldown_debug" }
-rolldown_debug_action = { version = "0.1.0", path = "crates/rolldown_debug_action" }
 rolldown_dev = { version = "0.1.0", path = "crates/rolldown_dev" }
 rolldown_dev_common = { version = "0.1.0", path = "crates/rolldown_dev_common" }
+rolldown_devtools = { version = "0.1.0", path = "crates/rolldown_devtools" }
+rolldown_devtools_action = { version = "0.1.0", path = "crates/rolldown_devtools_action" }
 rolldown_ecmascript = { version = "0.1.0", path = "crates/rolldown_ecmascript" }
 rolldown_ecmascript_utils = { version = "0.1.0", path = "crates/rolldown_ecmascript_utils" }
 rolldown_error = { version = "0.1.0", path = "crates/rolldown_error" }

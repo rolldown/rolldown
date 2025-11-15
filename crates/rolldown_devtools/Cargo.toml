@@ -1,12 +1,12 @@
 [package]
-name = "rolldown_debug"
+name = "rolldown_devtools"
 version = "0.1.0"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
 publish = true
 repository.workspace = true
-description = "Debugging utilities for Rolldown"
+description = "DevTools utilities for Rolldown"
 
 [lints]
 workspace = true
@@ -17,7 +17,7 @@ doctest = false
 [dependencies]
 blake3 = { workspace = true }
 dashmap = { workspace = true }
-rolldown_debug_action = { workspace = true }
+rolldown_devtools_action = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, features = ["derive", "rc"] }
 serde_json = { workspace = true }

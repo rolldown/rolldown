@@ -10,7 +10,6 @@ console.log('✅ Reference generated successfully!');
 console.log('📚 Beautifying reference structure...');
 
 await rm('reference/api/index.md', { force: true });
-await rm('reference/api/_media', { recursive: true, force: true });
 
 /**
  * Run TypeDoc with the specified tsconfig

@@ -34,8 +34,7 @@ impl Watcher {
     let bundlers = options_and_plugins
       .into_iter()
       .map(|(options, plugins)| {
-        Bundler::with_plugins(options, plugins)
-          .map(|bundler| Arc::new(Mutex::new(bundler)))
+        Bundler::with_plugins(options, plugins).map(|bundler| Arc::new(Mutex::new(bundler)))
       })
       .collect::<BuildResult<Vec<_>>>()?;
 

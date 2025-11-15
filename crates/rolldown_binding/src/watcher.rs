@@ -7,8 +7,8 @@ use napi_derive::napi;
 use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_watcher_event::BindingWatcherEvent;
 
-use crate::utils::normalize_binding_options::normalize_binding_options;
 use crate::utils::handle_result;
+use crate::utils::normalize_binding_options::normalize_binding_options;
 
 use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt};
 
@@ -82,11 +82,7 @@ impl BindingWatcher {
       .map_err(|err| {
         napi::Error::new(
           napi::Status::GenericFailure,
-          err
-            .iter()
-            .map(|e| e.to_diagnostic().to_string())
-            .collect::<Vec<_>>()
-            .join("\n"),
+          err.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
         )
       })?;
 

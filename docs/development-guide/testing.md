@@ -1,7 +1,9 @@
 # Testing
 
+## Quick Guide
+
 :::tip TLDR
-run `just test-update` to run all tests and update snapshots automatically
+run `just test-update` to run all rust and node.js tests and update snapshots automatically
 :::
 
 We have two groups of test suites: one for Rust, and one for Node.js.
@@ -10,65 +12,75 @@ We have two groups of test suites: one for Rust, and one for Node.js.
 
 1. When adding new feature with options, always make sure adding related tests in JavaScript side if possible.
 
-Here is some details about how to choose test technique [details](#how-to-choose-test-technique)\
+Here are some details about how to choose a test technique [details](#how-to-choose-test-technique)
 :::
 
-## Summary
-
 - `just test` for running all tests.
-- `just test-update` running all tests and update snapshots automatically
+- `just test-update` for running all tests and updating snapshots automatically
 - `just test-rust` for running all Rust tests.
 - `just test-node` for running all Node.js tests.
 - `just test-node-rolldown` for running only Rolldown's Node.js tests.
 - `just test-node-rollup` for running only Rollup's tests.
 
-## Rust Tests
+## Concepts
 
-Rust tests cases are stored in
+Testing is a crucial part of Rolldown's development process. It helps us ensure the correctness, stability, and performance of the bundler as we add new features and make changes.
 
-- `/crates/rolldown/tests/esbuild`
-- `/crates/rolldown/tests/fixtures`
+Due to the nature of Rolldown being a **bundler**, we prefer integration tests that cover end-to-end scenarios, rather than unit tests that test individual components in isolation. This allows us to verify that the entire bundling process works as expected, from input files to output bundles.
 
-### How test cases are defined
+Generally, there are two types of tests we use:
 
-A test case is a folder that contains `_config.json`.
+- Data-driven testing: The test runner will look for test cases that follow certain conventions (e.g., folder structure, file naming) and run them automatically. This is the primary way we add new tests.
+- Manual testing: For more complex scenarios that cannot be easily expressed with data-driven approaches, we write manual test code that sets up the test environment, runs the bundler with specific options, and verifies the output programmatically.
+
+## Rust
+
+We use Rust's built-in test framework for writing and running tests. Test cases are stored in the `crates/rolldown/tests` folder.
+
+### Data-driven testing
+
+A data-driven test case is a folder that contains a `_config.json` file. The test runner will read the configuration from `_config.json`, bundle the input files, and execute the output files to verify the behavior.
 
 `_config.json` contains the configuration for the test suite. If everything works right, you should be able to have auto-completion while editing `_config.json` due to the [config](https://github.com/rolldown/rolldown/blob/main/.vscode/settings.json#L36-L40).
 
 For all available options, you could refer to
 
-- https://github.com/rolldown/rolldown/blob/main/crates/rolldown_testing_config/src/lib.rs
-- https://github.com/rolldown/rolldown/blob/main/crates/rolldown_common/src/inner_bundler_options/mod.rs
-- https://github.com/rolldown/rolldown/blob/main/crates/rolldown_testing/_config.schema.json
+- [Bundler Options](https://github.com/rolldown/rolldown/blob/100c6ee13cef9c50529b8d6425292378ea99eae9/crates/rolldown_common/src/inner_bundler_options/mod.rs#L53)
+- [JSON Schema file](https://github.com/rolldown/rolldown/blob/main/crates/rolldown_testing/_config.schema.json)
 
-- `main.js` is the default entry of the test case, if `config.input` is not specified in `_config.json`.
-- Rolldown will bundle the input into `/dist`, and execute every entry file in `/dist` orderly. You might thinking it as running `node --import ./dist/entry1.mjs --import ./dist/entry2.mjs --import ./dist/entry3.mjs --eval ""`.
-  - If there is a `_test.mjs`/`_test.cjs` in the test case folder, only `_test.mjs`/`_test.cjs` will be executed. If you want to execute compiled entries, you need to import them manually in `_test.mjs`/`_test.cjs`.
+#### What does data-driven testing do?
 
-### Function-complete tests in Rust
+- It generates snapshots of the build artifacts, including:
+  - Bundled output files
+  - Warnings and errors emitted during bundling
 
-`_config.json` has it's limitations, so we also support writing tests with Rust directly. You could refer to
+- If `_test.mjs` doesn't exist, run the output files in Node.js environment to verify the runtime behavior. You might think of it as running `node --import ./dist/entry1.mjs --import ./dist/entry2.mjs --import ./dist/entry3.mjs --eval ""`.
 
-- https://github.com/rolldown/rolldown/commit/7d32cc70e194c52fa932cefbd4f926a9c3e3315f
+- Run `_test.mjs` if exists to verify more complex behaviors.
 
-#### Snapshot testing
+#### Tips
 
-Rolldown uses [insta](https://insta.rs/docs/cli/) for Rust snapshot testing. You can use:
+- Snapshots would be updated automatically when you run Rust tests. No extra command is needed.
 
-- `cargo insta review` to review the new snapshot one by one.
-- `cargo insta accept` to accept all new snapshots at once.
+#### Function-complete data-driven testing
 
-### HMR tests
+`_config.json` has its limitations, so we also support writing tests with Rust directly. You could refer to
+
+[`crates/rolldown/tests/rolldown/errors/plugin_error`](https://github.com/rolldown/rolldown/blob/86c7aa6557a2bb7eef03133b148b1703f4e21167/crates/rolldown/tests/rolldown/errors/plugin_error)
+
+It basically just replaces the `_config.json` with Rust code that configures the bundler directly. Everything else works the same way as data-driven testing.
+
+#### HMR tests
 
 If a test case folder contains any files named `*.hmr-*.js`, the test will run in HMR enabled mode.
 
-#### HMR edit files
+##### HMR edit files
 
 - Files that match the pattern `*.hmr-*.js` are called **HMR edit files**.
 - These files represent changes to existing source files.
 - The part after `hmr-` indicates the **step number** of the change. For example, `main.hmr-1.js` means a change applied in **step 1**.
 
-#### How the test works
+##### How the test works
 
 1. All non-HMR files are copied to a temporary directory.
 2. An initial build is generated from these files.
@@ -97,22 +109,32 @@ The test will go through these steps:
 
 :::
 
-## Node.js Tests
+### Manual testing
 
-:::tip
-Make sure to [build Node.js bindings](./building-and-running.md) before running these tests.
-:::
+For more complex scenarios that cannot be easily expressed with data-driven approaches, we write manual test code that sets up the test environment, runs the bundler with specific options, and verifies the output programmatically.
 
-### Node.js API tests
+Not much to tell here, basically just write normal Rust test code that uses Rolldown to perform bundling and verification.
+
+## Node.js
+
+Rolldown uses [Vitest](https://vitest.dev/) for testing the Node.js side code.
 
 Tests located in `packages/rolldown/tests` are used to test Rolldown's Node.js API (i.e. the API of the `rolldown` package published on NPM).
-
-It is our goal to align Rolldown's Node.js API with that of Rollup's as much as possible, and the tests are used to verify API alignment and track the progress. Currently, there are many Rollup options that are not yet supported. If you implemented support for additional options from rollup, please add corresponding test cases for them.
 
 - `just test-node-rolldown` will run rolldown tests.
 - `just test-node-rolldown --update` will run tests and update snapshots.
 
-#### Run tests of the specific file
+### Data-driven testing
+
+Data-driven tests are located in `packages/rolldown/tests/fixtures`.
+
+A data-driven test case is a folder that contains a `_config.ts` file. The test runner will read the configuration from `_config.ts`, bundle the input files, and verify the output against expected results.
+
+### Manual testing
+
+Not much to tell here either, basically just write normal JavaScript/TypeScript test code that uses Rolldown to perform bundling and verification.
+
+### Run tests of the specific file
 
 To run tests of the specific file, you could use
 
@@ -121,6 +143,8 @@ just test-node-rolldown test-file-name
 ```
 
 For example, to run tests in `fixture.test.ts`, you could use `just test-node-rolldown fixture`.
+
+### Tips
 
 #### Run the specific test
 
@@ -142,7 +166,7 @@ To run the `tests/fixtures/resolve/alias` test, you could use `just test-node-ro
 
 :::
 
-### Rollup behavior alignment tests
+## Rollup behavior alignment tests
 
 We also aim for behavior alignment with Rollup by running Rollup's own tests against Rolldown.
 
@@ -155,7 +179,7 @@ In `/packages/rollup-tests`:
 - `just test-node-rollup` will run rollup tests.
 - `just test-node-rollup --update` will run and update the tests' status.
 
-### How to choose test technique
+## How to choose test technique
 
 Our Rust test infra is powerful enough to cover most of the case of JavaScript (plugin, passing function inside config).
 But since JavaScript side user is still our first class user, try to put tests in JavaScript side if possible.

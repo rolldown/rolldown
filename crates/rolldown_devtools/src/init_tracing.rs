@@ -3,8 +3,8 @@ use std::sync::atomic::AtomicBool;
 
 use tracing_subscriber::{filter::FilterFn, fmt, prelude::*};
 
-use crate::debug_data_propagate_layer::DebugDataPropagateLayer;
-use crate::debug_formatter::DebugFormatter;
+use crate::devtools_formatter::DevtoolsFormatter;
+use crate::devtools_layer::DevtoolsLayer;
 use crate::static_data::EXIST_HASH_BY_SESSION;
 use crate::static_data::OPENED_FILE_HANDLES;
 use crate::static_data::OPENED_FILES_BY_SESSION;
@@ -36,8 +36,8 @@ impl DebugTracer {
     });
 
     tracing_subscriber::registry()
-      .with(DebugDataPropagateLayer.with_filter(devtools_event_filter))
-      .with(fmt::layer().event_format(DebugFormatter))
+      .with(DevtoolsLayer.with_filter(devtools_event_filter))
+      .with(fmt::layer().event_format(DevtoolsFormatter))
       .init();
 
     tracer

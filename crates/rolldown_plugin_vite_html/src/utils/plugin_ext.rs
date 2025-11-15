@@ -72,17 +72,21 @@ impl ViteHtmlPlugin {
       HTMLProxyMapItem { code: value.into(), map: None },
     );
 
-    super::overwrite_check_public_file(
-      s,
-      span.start..span.end,
-      rolldown_utils::concat_string!(
-        "__VITE_INLINE_CSS__",
-        xxhash_with_base(clean_url(id).as_bytes(), 16),
-        "_",
-        itoa::Buffer::new().format(*inline_module_count - 1),
-        "__"
-      ),
-    )
+    let value = rolldown_utils::concat_string!(
+      "__VITE_INLINE_CSS__",
+      xxhash_with_base(clean_url(id).as_bytes(), 16),
+      "_",
+      itoa::Buffer::new().format(*inline_module_count - 1),
+      "__"
+    );
+
+    if is_style_attribute {
+      super::overwrite_check_public_file(s, span.start..span.end, value)?;
+    } else {
+      s.update(span.start, span.end, value);
+    }
+
+    Ok(())
   }
 
   pub async fn url_to_built_url(

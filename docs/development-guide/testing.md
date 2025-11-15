@@ -12,7 +12,7 @@ We have two groups of test suites: one for Rust, and one for Node.js.
 
 1. When adding new feature with options, always make sure adding related tests in JavaScript side if possible.
 
-Here are some details about how to choose test technique [details](#how-to-choose-test-technique)
+Here are some details about how to choose a test technique [details](#how-to-choose-test-technique)
 :::
 
 - `just test` for running all tests.
@@ -128,7 +128,7 @@ Tests located in `packages/rolldown/tests` are used to test Rolldown's Node.js A
 
 Convention-based tests are located in `packages/rolldown/tests/fixtures`.
 
-A convention-based test case is a folder that contains `_config.ts` file. The test runner will read the configuration from `_config.ts`, bundle the input files.
+A convention-based test case is a folder that contains a `_config.ts` file. The test runner will read the configuration from `_config.ts`, bundle the input files, and verify the output against expected results.
 
 ### Manual tests
 

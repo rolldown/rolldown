@@ -2221,6 +2221,7 @@ export interface BindingReplacePluginConfig {
 }
 
 export interface BindingReporterPluginConfig {
+  root: string
   isTty: boolean
   isLib: boolean
   assetsDir: string

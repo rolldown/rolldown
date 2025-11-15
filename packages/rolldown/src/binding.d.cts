@@ -2314,6 +2314,7 @@ export interface BindingViteCssPostPluginConfig {
 }
 
 export interface BindingViteHtmlPluginConfig {
+  root: string
   isLib: boolean
   isSsr: boolean
   urlBase: string

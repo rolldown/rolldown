@@ -1,7 +1,12 @@
 mod html;
 mod utils;
 
-use std::{borrow::Cow, path::Path, rc::Rc, sync::Arc};
+use std::{
+  borrow::Cow,
+  path::{Path, PathBuf},
+  rc::Rc,
+  sync::Arc,
+};
 
 use cow_utils::CowUtils as _;
 use html5gum::Span;
@@ -27,6 +32,7 @@ pub use utils::constant::TransformIndexHtml;
 
 #[derive(derive_more::Debug)]
 pub struct ViteHtmlPlugin {
+  pub root: PathBuf,
   pub is_lib: bool,
   pub is_ssr: bool,
   pub url_base: String,
@@ -73,7 +79,7 @@ impl Plugin for ViteHtmlPlugin {
     }
 
     let id = normalize_path(args.id);
-    let path = args.id.relative(ctx.cwd());
+    let path = args.id.relative(&self.root);
     let path_lossy = path.to_string_lossy();
     let relative_url_path = normalize_path(&path_lossy);
 
@@ -498,7 +504,7 @@ impl Plugin for ViteHtmlPlugin {
 
       let mut result = html.clone();
 
-      let path = id.relative(ctx.cwd());
+      let path = id.relative(&self.root);
       let path_lossy = path.to_string_lossy();
       let relative_url_path = normalize_path(&path_lossy);
 

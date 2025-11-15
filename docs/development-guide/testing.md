@@ -12,7 +12,7 @@ We have two groups of test suites: one for Rust, and one for Node.js.
 
 1. When adding new feature with options, always make sure adding related tests in JavaScript side if possible.
 
-Here is some details about how to choose test technique [details](#how-to-choose-test-technique)
+Here are some details about how to choose test technique [details](#how-to-choose-test-technique)
 :::
 
 - `just test` for running all tests.
@@ -28,7 +28,7 @@ Testing is a crucial part of Rolldown's development process. It helps us ensure 
 
 Due to the nature of Rolldown being a **bundler**, we prefer integration tests that cover end-to-end scenarios, rather than unit tests that test individual components in isolation. This allows us to verify that the entire bundling process works as expected, from input files to output bundles.
 
-Generally, there're two types of tests we use:
+Generally, there are two types of tests we use:
 
 - Convention-based tests: The test runner will look for test cases that follow certain conventions (e.g., folder structure, file naming) and run them automatically. This is the primary way we add new tests.
 - Manual tests: For more complex scenarios that cannot be easily expressed with conventions, we write manual test code that sets up the test environment, runs the bundler with specific options, and verifies the output programmatically.
@@ -53,7 +53,9 @@ For all available options, you could refer to
 - It generates snapshots of the build artifacts, including:
   - Bundled output files
   - Warnings and errors emitted during bundling
-- If `_test.mjs` doesn't exist, Run the output files in Node.js environment to verify the runtime behavior. You might thinking it as running `node --import ./dist/entry1.mjs --import ./dist/entry2.mjs --import ./dist/entry3.mjs --eval ""`.
+
+- If `_test.mjs` doesn't exist, Run the output files in Node.js environment to verify the runtime behavior. You might think of it as running `node --import ./dist/entry1.mjs --import ./dist/entry2.mjs --import ./dist/entry3.mjs --eval ""`.
+
 - Run `_test.mjs` if exists to verify more complex behaviors.
 
 #### Tips
@@ -111,7 +113,7 @@ The test will go through these steps:
 
 For more complex scenarios that cannot be easily expressed with conventions, we write manual test code that sets up the test environment, runs the bundler with specific options, and verifies the output programmatically.
 
-No much to tell here, basicially just write normal Rust test code that uses Rolldown to perform bundling and verification.
+No much to tell here, basically just write normal Rust test code that uses Rolldown to perform bundling and verification.
 
 ## Node.js
 

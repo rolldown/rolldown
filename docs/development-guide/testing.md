@@ -64,11 +64,11 @@ For all available options, you could refer to
 
 #### Function-complete convention-based tests
 
-`_config.json` has it's limitations, so we also support writing tests with Rust directly. You could refer to
+`_config.json` has its limitations, so we also support writing tests with Rust directly. You could refer to
 
-- https://github.com/rolldown/rolldown/blob/86c7aa6557a2bb7eef03133b148b1703f4e21167/crates/rolldown/tests/rolldown/errors/plugin_error
+[`crates/rolldown/tests/rolldown/errors/plugin_error`](https://github.com/rolldown/rolldown/blob/86c7aa6557a2bb7eef03133b148b1703f4e21167/crates/rolldown/tests/rolldown/errors/plugin_error)
 
-It basically just replace the `_config.json` with Rust code that configures the bundler directly. Everything else works the same way as convention-based tests.
+It basically just replaces the `_config.json` with Rust code that configures the bundler directly. Everything else works the same way as convention-based tests.
 
 #### HMR tests
 
@@ -113,7 +113,7 @@ The test will go through these steps:
 
 For more complex scenarios that cannot be easily expressed with conventions, we write manual test code that sets up the test environment, runs the bundler with specific options, and verifies the output programmatically.
 
-No much to tell here, basically just write normal Rust test code that uses Rolldown to perform bundling and verification.
+Not much to tell here, basically just write normal Rust test code that uses Rolldown to perform bundling and verification.
 
 ## Node.js
 
@@ -132,7 +132,7 @@ A convention-based test case is a folder that contains `_config.ts` file. The te
 
 ### Manual tests
 
-No much to tell here either, basically just write normal JavaScript/TypeScript test code that uses Rolldown to perform bundling and verification.
+Not much to tell here either, basically just write normal JavaScript/TypeScript test code that uses Rolldown to perform bundling and verification.
 
 ### Run tests of the specific file
 

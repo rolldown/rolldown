@@ -1,5 +1,8 @@
+use std::path::PathBuf;
+
 use oxc_transform_napi::TransformOptions;
 use rolldown_plugin_transform::TransformPlugin;
+use sugar_path::SugarPath;
 
 use crate::{
   types::binding_string_or_regex::{BindingStringOrRegex, bindingify_string_or_regex_array},
@@ -9,6 +12,8 @@ use crate::{
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Default)]
 pub struct BindingTransformPluginConfig {
+  pub root: String,
+
   pub include: Option<Vec<BindingStringOrRegex>>,
   pub exclude: Option<Vec<BindingStringOrRegex>>,
   pub jsx_refresh_include: Option<Vec<BindingStringOrRegex>>,
@@ -23,6 +28,7 @@ pub struct BindingTransformPluginConfig {
 impl From<BindingTransformPluginConfig> for TransformPlugin {
   fn from(value: BindingTransformPluginConfig) -> Self {
     Self {
+      root: PathBuf::from(value.root).normalize(),
       include: value.include.map(bindingify_string_or_regex_array).unwrap_or_default(),
       exclude: value.exclude.map(bindingify_string_or_regex_array).unwrap_or_default(),
       jsx_refresh_include: value

@@ -95,7 +95,10 @@ impl Plugin for ViteCSSPostPlugin {
     ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
-    if !is_css_request(args.id) || is_special_query(args.id) {
+    if !is_css_request(args.id)
+      || find_special_query(args.id, b"commonjs-proxy").is_some()
+      || is_special_query(args.id)
+    {
       return Ok(None);
     }
 

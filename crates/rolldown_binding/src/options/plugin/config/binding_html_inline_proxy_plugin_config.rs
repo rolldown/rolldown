@@ -4,7 +4,7 @@ use rolldown_plugin_html_inline_proxy::HtmlInlineProxyPlugin;
 use sugar_path::SugarPath as _;
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct BindingHtmlInlineProxyPluginConfig {
   pub root: String,
 }

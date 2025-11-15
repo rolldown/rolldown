@@ -2882,6 +2882,7 @@ dependencies = [
  "rolldown_dev_common",
  "rolldown_error",
  "rolldown_fs_watcher",
+ "rolldown_testing",
  "rolldown_utils",
  "rustc-hash",
  "sugar_path",

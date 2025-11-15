@@ -274,7 +274,10 @@ impl BundleCoordinator {
         );
         // If there's build running, it will be responsible to handle new changed files.
         // So, we only need to wait for the latest build to finish.
-        Some(ScheduleBuildReturn { future: self.current_bundling_future.clone().unwrap() })
+        Some(ScheduleBuildReturn {
+          future: self.current_bundling_future.clone().unwrap(),
+          is_previous_task: false,
+        })
       }
       CoordinatorState::Idle | CoordinatorState::FullBuildFailed | CoordinatorState::Failed => {
         if let Some(mut task_input) = self.queued_tasks.pop_front() {
@@ -315,7 +318,7 @@ impl BundleCoordinator {
 
           self.current_bundling_future = Some(bundling_future.clone());
 
-          Some(ScheduleBuildReturn { future: bundling_future })
+          Some(ScheduleBuildReturn { future: bundling_future, is_previous_task: true })
         } else {
           tracing::trace!(
             "[BundleCoordinator] doesn't have any build to schedule\n - state: {:?}",

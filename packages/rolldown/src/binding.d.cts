@@ -2297,6 +2297,7 @@ export interface BindingViteCssPluginConfig {
   }
 
 export interface BindingViteCssPostPluginConfig {
+  root: string
   isLib: boolean
   isSsr: boolean
   isWorker: boolean

@@ -1,6 +1,10 @@
-use std::sync::{Arc, atomic::AtomicBool};
+use std::{
+  path::PathBuf,
+  sync::{Arc, atomic::AtomicBool},
+};
 
 use rolldown_plugin_vite_css_post::{CSSMinifyFn, IsLegacyFn, ViteCSSPostPlugin};
+use sugar_path::SugarPath as _;
 
 use crate::{
   options::plugin::types::binding_render_built_url::BindingRenderBuiltUrl,
@@ -12,6 +16,7 @@ use crate::{
 #[expect(clippy::struct_excessive_bools)]
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingViteCSSPostPluginConfig {
+  pub root: String,
   pub is_lib: bool,
   pub is_ssr: bool,
   pub is_worker: bool,
@@ -35,6 +40,7 @@ pub struct BindingViteCSSPostPluginConfig {
 impl From<BindingViteCSSPostPluginConfig> for ViteCSSPostPlugin {
   fn from(value: BindingViteCSSPostPluginConfig) -> Self {
     Self {
+      root: PathBuf::from(value.root).normalize(),
       is_lib: value.is_lib,
       is_ssr: value.is_ssr,
       is_worker: value.is_worker,

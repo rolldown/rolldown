@@ -6,6 +6,7 @@ export {
   type BindingClientHmrUpdate,
   BindingRebuildStrategy,
   isolatedDeclaration,
+  isolatedDeclarationSync,
   type IsolatedDeclarationsOptions,
   type IsolatedDeclarationsResult,
   minify,

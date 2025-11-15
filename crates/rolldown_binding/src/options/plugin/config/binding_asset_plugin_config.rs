@@ -1,5 +1,8 @@
+use std::path::PathBuf;
+
 use rolldown_plugin_asset::AssetPlugin;
 use rolldown_utils::dashmap::FxDashSet;
+use sugar_path::SugarPath;
 
 use crate::options::plugin::types::binding_asset_inline_limit::BindingAssetInlineLimit;
 use crate::options::plugin::types::binding_render_built_url::BindingRenderBuiltUrl;
@@ -10,6 +13,7 @@ use crate::types::binding_string_or_regex::{
 #[expect(clippy::struct_excessive_bools)]
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingAssetPluginConfig {
+  pub root: String,
   pub is_lib: bool,
   pub is_ssr: bool,
   pub is_worker: bool,
@@ -29,6 +33,7 @@ pub struct BindingAssetPluginConfig {
 impl From<BindingAssetPluginConfig> for AssetPlugin {
   fn from(config: BindingAssetPluginConfig) -> Self {
     Self {
+      root: PathBuf::from(config.root).normalize(),
       is_lib: config.is_lib,
       is_ssr: config.is_ssr,
       is_worker: config.is_worker,

@@ -1,6 +1,6 @@
 mod utils;
 
-use std::{borrow::Cow, sync::Arc};
+use std::{borrow::Cow, path::PathBuf, sync::Arc};
 
 use derive_more::Debug;
 use rolldown_common::{ModuleType, Output, side_effects::HookSideEffects};
@@ -16,6 +16,7 @@ use serde_json::Value;
 #[expect(clippy::struct_excessive_bools)]
 #[derive(Debug, Default)]
 pub struct AssetPlugin {
+  pub root: PathBuf,
   pub is_lib: bool,
   pub is_ssr: bool,
   pub is_worker: bool,
@@ -57,10 +58,10 @@ impl Plugin for AssetPlugin {
 
   async fn resolve_id(
     &self,
-    ctx: &rolldown_plugin::PluginContext,
+    _ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
-    if self.check_invalid_assets(ctx.cwd(), args.specifier).is() {
+    if self.check_invalid_assets(&self.root, args.specifier).is() {
       return Ok(None);
     }
     Ok(check_public_file(clean_url(args.specifier), &self.public_dir).map(|_| {
@@ -94,7 +95,7 @@ impl Plugin for AssetPlugin {
       }));
     }
 
-    match self.check_invalid_assets(ctx.cwd(), args.id) {
+    match self.check_invalid_assets(&self.root, args.id) {
       utils::InvalidAsset::True => return Ok(None),
       utils::InvalidAsset::False => {}
       utils::InvalidAsset::Special => {
@@ -105,7 +106,7 @@ impl Plugin for AssetPlugin {
     let id = rolldown_plugin_utils::remove_special_query(args.id, b"url");
     let env = FileToUrlEnv {
       ctx,
-      root: ctx.cwd(),
+      root: &self.root,
       is_lib: self.is_lib,
       public_dir: &self.public_dir,
       asset_inline_limit: &self.asset_inline_limit,

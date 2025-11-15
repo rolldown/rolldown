@@ -1578,6 +1578,7 @@ export interface BindingAliasPluginConfig {
 }
 
 export interface BindingAssetPluginConfig {
+  root: string
   isLib: boolean
   isSsr: boolean
   isWorker: boolean

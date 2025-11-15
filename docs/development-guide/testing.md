@@ -16,7 +16,7 @@ Here are some details about how to choose test technique [details](#how-to-choos
 :::
 
 - `just test` for running all tests.
-- `just test-update` running all tests and update snapshots automatically
+- `just test-update` for running all tests and updating snapshots automatically
 - `just test-rust` for running all Rust tests.
 - `just test-node` for running all Node.js tests.
 - `just test-node-rolldown` for running only Rolldown's Node.js tests.
@@ -35,7 +35,7 @@ Generally, there are two types of tests we use:
 
 ## Rust
 
-We use Rust's built-in test framework for writing and running tests. Test cases are stored in the `crates/rolldown/tests` folder;
+We use Rust's built-in test framework for writing and running tests. Test cases are stored in the `crates/rolldown/tests` folder.
 
 ### Convention-based tests
 
@@ -54,7 +54,7 @@ For all available options, you could refer to
   - Bundled output files
   - Warnings and errors emitted during bundling
 
-- If `_test.mjs` doesn't exist, Run the output files in Node.js environment to verify the runtime behavior. You might think of it as running `node --import ./dist/entry1.mjs --import ./dist/entry2.mjs --import ./dist/entry3.mjs --eval ""`.
+- If `_test.mjs` doesn't exist, run the output files in Node.js environment to verify the runtime behavior. You might think of it as running `node --import ./dist/entry1.mjs --import ./dist/entry2.mjs --import ./dist/entry3.mjs --eval ""`.
 
 - Run `_test.mjs` if exists to verify more complex behaviors.
 

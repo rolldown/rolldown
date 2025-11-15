@@ -1,4 +1,4 @@
-import { build, rolldown } from 'rolldown';
+import { build, rolldown, watch } from 'rolldown';
 import { scan } from 'rolldown/experimental';
 import { describe, expect, test } from 'vitest';
 
@@ -89,6 +89,45 @@ describe('HMR validation', () => {
         ],
       }),
     ).rejects.toThrow(/experimental\.hmr.*only supported with.*dev.*API/i);
+  });
+
+  // Note: The watch API currently doesn't properly surface construction errors synchronously
+  // due to the async nature of createWatcher(). However, the validation is now properly
+  // done in the Rust layer when BindingWatcher is constructed, which will cause the
+  // promise to reject. This test verifies the error is thrown (as an unhandled rejection).
+  test('should throw error when using HMR with watch API', async () => {
+    // Track unhandled rejections
+    const rejections: Error[] = [];
+    const handler = (reason: Error) => {
+      rejections.push(reason);
+    };
+    process.on('unhandledRejection', handler);
+
+    try {
+      watch({
+        input: 'virtual',
+        experimental: { hmr: true },
+        plugins: [
+          {
+            name: 'test',
+            resolveId(id) {
+              if (id === 'virtual') return '\0' + id;
+            },
+            load(id) {
+              if (id === '\0virtual') return 'export default 1';
+            },
+          },
+        ],
+      });
+
+      // Wait for the unhandled rejection
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      
+      expect(rejections.length).toBeGreaterThan(0);
+      expect(rejections[0].message).toMatch(/experimental\.hmr.*only supported with.*dev.*API/i);
+    } finally {
+      process.off('unhandledRejection', handler);
+    }
   });
 
   // FIXME: watch API validation is tested manually because watch() does not handle errors properly

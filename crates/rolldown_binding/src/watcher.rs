@@ -7,7 +7,7 @@ use napi_derive::napi;
 use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_watcher_event::BindingWatcherEvent;
 
-use crate::utils::create_bundler_from_binding_options::create_bundler_from_binding_options;
+use crate::utils::normalize_binding_options::normalize_binding_options;
 use crate::utils::handle_result;
 
 use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt};
@@ -41,23 +41,56 @@ impl BindingWatcher {
     options: Vec<BindingBundlerOptions>,
     notify_option: Option<BindingNotifyOption>,
   ) -> napi::Result<Self> {
-    let bundlers = options
+    let options_and_plugins = options
       .into_iter()
       .map(|options| {
         // TODO(hyf0): support emit debug data for builtin watch
-        create_bundler_from_binding_options(options)
-          .and_then(|inner| {
-            if inner.options.experimental.hmr.is_some() {
-              return Err(napi::Error::new(
-                napi::Status::GenericFailure,
-                "The \"experimental.hmr\" option is only supported with the \"dev\" API. It cannot be used with \"watch\". Please use the \"dev\" API for HMR functionality.",
-              ));
-            }
-            Ok(Arc::new(napi::tokio::sync::Mutex::new(inner)))})
-      })
-      .collect::<Result<Vec<_>, _>>()?;
+        let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } =
+          options;
 
-    Ok(Self { inner: rolldown::Watcher::new(bundlers, notify_option.map(Into::into))? })
+        #[cfg(not(target_family = "wasm"))]
+        let worker_count = parallel_plugins_registry
+          .as_ref()
+          .map(|registry| registry.worker_count)
+          .unwrap_or_default();
+        #[cfg(not(target_family = "wasm"))]
+        let parallel_plugins_map =
+          parallel_plugins_registry.map(|registry| registry.take_plugin_values());
+
+        #[cfg(not(target_family = "wasm"))]
+        let worker_manager = if worker_count > 0 {
+          use crate::worker_manager::WorkerManager;
+          Some(WorkerManager::new(worker_count))
+        } else {
+          None
+        };
+
+        let normalized = normalize_binding_options(
+          input_options,
+          output_options,
+          #[cfg(not(target_family = "wasm"))]
+          parallel_plugins_map,
+          #[cfg(not(target_family = "wasm"))]
+          worker_manager,
+        )?;
+
+        Ok((normalized.bundler_options, normalized.plugins))
+      })
+      .collect::<Result<Vec<_>, napi::Error>>()?;
+
+    let inner = rolldown::Watcher::new(options_and_plugins, notify_option.map(Into::into))
+      .map_err(|err| {
+        napi::Error::new(
+          napi::Status::GenericFailure,
+          err
+            .iter()
+            .map(|e| e.to_diagnostic().to_string())
+            .collect::<Vec<_>>()
+            .join("\n"),
+        )
+      })?;
+
+    Ok(Self { inner })
   }
 
   #[tracing::instrument(level = "debug", skip_all)]

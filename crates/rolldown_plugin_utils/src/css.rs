@@ -1,5 +1,3 @@
-use rolldown_utils::url::clean_url;
-
 const CSS_LANGS: [&str; 9] =
   [".css", ".less", ".sass", ".scss", ".styl", ".stylus", ".pcss", ".postcss", ".sss"];
 
@@ -16,5 +14,13 @@ pub fn is_css_request(id: &str) -> bool {
 
 #[inline]
 pub fn is_css_module(id: &str) -> bool {
-  memchr::memrchr(b'.', clean_url(id).as_bytes()).is_some_and(|i| id[..i].ends_with(".module"))
+  // Match pattern: /\.module\.(css|less|sass|scss|styl|stylus|pcss|postcss|sss)(?:$|\?)/
+  CSS_LANGS.iter().any(|ext| {
+    id.rfind(ext).is_some_and(|pos| {
+      let after = pos + ext.len();
+      let after_ok = after == id.len() || id.as_bytes().get(after) == Some(&b'?');
+      let before_ok = id[..pos].ends_with(".module");
+      after_ok && before_ok
+    })
+  })
 }

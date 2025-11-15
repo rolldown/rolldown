@@ -3122,6 +3122,7 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_utils",
+ "sugar_path",
 ]
 
 [[package]]

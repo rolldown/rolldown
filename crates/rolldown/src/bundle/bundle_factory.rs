@@ -155,7 +155,16 @@ impl BundleFactory {
       // the second element of value is the preferred builtin feature, `None` if the feature is not configured
       // the third element of value is an additional message to show
       ("inject", ("@rollup/plugin-inject", Some("inject"), None)),
-      ("node-resolve", ("@rollup/plugin-node-resolve", None, None)),
+      (
+        "node-resolve",
+        (
+          "@rollup/plugin-node-resolve",
+          None,
+          Some(
+            " This plugin is redundant and may cause confusing errors such as 'MISSING_EXPORT' when bundling. Rolldown handles module resolution natively.",
+          ),
+        ),
+      ),
       (
         "commonjs",
         (

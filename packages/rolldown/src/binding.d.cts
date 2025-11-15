@@ -2262,6 +2262,7 @@ export interface BindingTransformHookExtraArgs {
 }
 
 export interface BindingTransformPluginConfig {
+  root: string
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   jsxRefreshInclude?: Array<BindingStringOrRegex>

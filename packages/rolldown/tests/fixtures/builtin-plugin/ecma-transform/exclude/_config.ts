@@ -8,6 +8,7 @@ export default defineTest({
     input: './main.ts',
     plugins: [
       transformPlugin({
+        root: __dirname,
         exclude: ['**/node_modules/**'],
       }),
       {

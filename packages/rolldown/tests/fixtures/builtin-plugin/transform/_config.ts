@@ -8,6 +8,7 @@ export default defineTest({
   config: {
     plugins: [
       transformPlugin({
+        root: __dirname,
         jsxRefreshInclude: [/.abc$/],
         transformOptions: {
           jsx: {

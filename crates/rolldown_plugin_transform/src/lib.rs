@@ -1,7 +1,7 @@
 mod utils;
 
 use std::borrow::Cow;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use arcstr::ArcStr;
 use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions};
@@ -17,6 +17,7 @@ use rolldown_utils::{
 
 #[derive(Debug, Default)]
 pub struct TransformPlugin {
+  pub root: PathBuf,
   pub include: Vec<StringOrRegex>,
   pub exclude: Vec<StringOrRegex>,
   pub jsx_refresh_include: Vec<StringOrRegex>,
@@ -38,7 +39,7 @@ impl Plugin for TransformPlugin {
     ctx: SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
-    let cwd = ctx.cwd().to_string_lossy();
+    let cwd = self.root.to_string_lossy();
     let extension = Path::new(args.id).extension().map(|s| s.to_string_lossy());
     let extension = extension.as_ref().map(|s| clean_url(s));
     let module_type = extension.map(ModuleType::from_str_with_fallback);
@@ -55,7 +56,7 @@ impl Plugin for TransformPlugin {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         ret.errors,
         &ArcStr::from(args.code.as_str()),
-        &stabilize_id(args.id, ctx.cwd()),
+        &stabilize_id(args.id, &self.root),
         &Severity::Error,
       )))?;
     }
@@ -68,7 +69,7 @@ impl Plugin for TransformPlugin {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         transformer_return.errors,
         &ArcStr::from(args.code.as_str()),
-        &stabilize_id(args.id, ctx.cwd()),
+        &stabilize_id(args.id, &self.root),
         &Severity::Error,
       )))?;
     }

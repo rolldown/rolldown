@@ -4850,6 +4850,10 @@ expression: output
 - _virtual/rolldown_runtime-!~{001}~.js => _virtual/rolldown_runtime-CRC6Pc46.js
 - server/index-!~{003}~.js => server/index-ChpZggGM.js
 
+# tests/rolldown/issues/7021
+
+- main-!~{000}~.js => main-CGMZke6c.js
+
 # tests/rolldown/issues/duplicate_default_export
 
 - main-!~{000}~.js => main-BvtLtePT.js

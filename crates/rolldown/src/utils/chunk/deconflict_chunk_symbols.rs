@@ -18,6 +18,25 @@ pub fn deconflict_chunk_symbols(
 ) {
   let mut renamer = Renamer::new(&link_output.symbol_db, format);
 
+  chunk
+    .modules
+    .iter()
+    .copied()
+    .filter_map(|id| link_output.module_table[id].as_normal())
+    .flat_map(|m| {
+      link_output.symbol_db[m.idx]
+        .as_ref()
+        .unwrap()
+        .ast_scopes
+        .scoping()
+        .root_unresolved_references()
+        .keys()
+    })
+    .for_each(|name| {
+      // global names should be reserved
+      renamer.reserve(CompactStr::new(name));
+    });
+
   if matches!(format, OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs) {
     // deconflict iife introduce symbols by external
     // Also AMD, but we don't support them yet.
@@ -53,25 +72,6 @@ pub fn deconflict_chunk_symbols(
       None => {}
     }
   }
-
-  chunk
-    .modules
-    .iter()
-    .copied()
-    .filter_map(|id| link_output.module_table[id].as_normal())
-    .flat_map(|m| {
-      link_output.symbol_db[m.idx]
-        .as_ref()
-        .unwrap()
-        .ast_scopes
-        .scoping()
-        .root_unresolved_references()
-        .keys()
-    })
-    .for_each(|name| {
-      // global names should be reserved
-      renamer.reserve(CompactStr::new(name));
-    });
 
   match chunk.kind {
     ChunkKind::EntryPoint { module, .. } => {

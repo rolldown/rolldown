@@ -3,7 +3,7 @@ mod utils;
 use std::{
   borrow::Cow,
   fmt::Write as _,
-  path::Path,
+  path::{Path, PathBuf},
   sync::{
     Arc, RwLock,
     atomic::{AtomicBool, AtomicU32, Ordering},
@@ -21,48 +21,20 @@ use sugar_path::SugarPath as _;
 #[derive(Debug)]
 #[expect(clippy::struct_excessive_bools)]
 pub struct ReporterPlugin {
-  assets_dir: String,
-  is_lib: bool,
-  is_tty: bool,
-  warn_large_chunks: bool,
-  should_log_info: bool,
-  chunk_limit: usize,
-  chunk_count: AtomicU32,
-  compressed_count: AtomicU32,
-  report_compressed_size: bool,
-  has_rendered_chunk: AtomicBool,
-  has_transformed: AtomicBool,
-  transformed_count: AtomicU32,
-  latest_checkpoint: Arc<RwLock<Instant>>,
-}
-
-impl ReporterPlugin {
-  #[expect(clippy::fn_params_excessive_bools)]
-  pub fn new(
-    is_tty: bool,
-    should_log_info: bool,
-    chunk_limit: usize,
-    report_compressed_size: bool,
-    assets_dir: String,
-    is_lib: bool,
-    warn_large_chunks: bool,
-  ) -> Self {
-    Self {
-      assets_dir,
-      is_lib,
-      is_tty,
-      should_log_info,
-      warn_large_chunks,
-      chunk_limit,
-      chunk_count: AtomicU32::new(0),
-      compressed_count: AtomicU32::new(0),
-      report_compressed_size,
-      has_rendered_chunk: AtomicBool::new(false),
-      has_transformed: AtomicBool::new(false),
-      transformed_count: AtomicU32::new(0),
-      latest_checkpoint: Arc::new(RwLock::new(Instant::now())),
-    }
-  }
+  pub root: PathBuf,
+  pub assets_dir: String,
+  pub is_lib: bool,
+  pub is_tty: bool,
+  pub warn_large_chunks: bool,
+  pub should_log_info: bool,
+  pub chunk_limit: usize,
+  pub report_compressed_size: bool,
+  pub chunk_count: AtomicU32,
+  pub compressed_count: AtomicU32,
+  pub has_rendered_chunk: AtomicBool,
+  pub has_transformed: AtomicBool,
+  pub transformed_count: AtomicU32,
+  pub latest_checkpoint: Arc<RwLock<Instant>>,
 }
 
 impl Plugin for ReporterPlugin {
@@ -72,7 +44,7 @@ impl Plugin for ReporterPlugin {
 
   async fn transform(
     &self,
-    ctx: rolldown_plugin::SharedTransformPluginContext,
+    _ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     let transformed_count = self.transformed_count.fetch_add(1, Ordering::SeqCst);
@@ -89,7 +61,7 @@ impl Plugin for ReporterPlugin {
           "transforming ({}) {}",
           itoa::Buffer::new().format(transformed_count),
           Path::new(args.id)
-            .relative(ctx.cwd())
+            .relative(&self.root)
             .to_string_lossy()
             .if_supports_color(Stream::Stdout, |text| { text.dimmed() })
         ));

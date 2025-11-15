@@ -334,8 +334,8 @@ impl<'a> GenerateStage<'a> {
                 } else {
                   PathBuf::from(virtual_dirname.as_str()).join(p).to_slash_lossy().into_owned()
                 };
-                // the p is a absolute path without extension, now we need to add it back when generate
-                // relative chunk name.
+                // `p` may be an absolute or relative path without extension, depending on the module path.
+                // Now we need to add the extension back when generating the relative chunk name.
                 // skip some common extension https://github.com/rollup/rollup/pull/4565/files
                 match ext {
                   Some(ext)

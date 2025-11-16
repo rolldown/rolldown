@@ -7,13 +7,13 @@ use std::{
   time::Instant,
 };
 
-use rolldown_plugin_reporter::ReporterPlugin;
+use rolldown_plugin_vite_reporter::ViteReporterPlugin;
 use sugar_path::SugarPath as _;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 #[expect(clippy::struct_excessive_bools)]
-pub struct BindingReporterPluginConfig {
+pub struct BindingViteReporterPluginConfig {
   pub root: String,
   pub is_tty: bool,
   pub is_lib: bool,
@@ -24,8 +24,8 @@ pub struct BindingReporterPluginConfig {
   pub report_compressed_size: bool,
 }
 
-impl From<BindingReporterPluginConfig> for ReporterPlugin {
-  fn from(config: BindingReporterPluginConfig) -> Self {
+impl From<BindingViteReporterPluginConfig> for ViteReporterPlugin {
+  fn from(config: BindingViteReporterPluginConfig) -> Self {
     Self {
       root: PathBuf::from(config.root).normalize(),
       is_lib: config.is_lib,

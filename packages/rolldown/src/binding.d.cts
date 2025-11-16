@@ -1586,7 +1586,6 @@ export interface BindingBuiltinPlugin {
 export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:isolated-declaration'|
 'builtin:react-refresh-wrapper'|
-'builtin:reporter'|
 'builtin:replace'|
 'builtin:transform'|
 'builtin:vite-alias'|
@@ -1603,6 +1602,7 @@ export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:vite-load-fallback'|
 'builtin:vite-manifest'|
 'builtin:vite-module-preload-polyfill'|
+'builtin:vite-reporter'|
 'builtin:vite-resolve'|
 'builtin:wasm-fallback'|
 'builtin:wasm-helper'|
@@ -2144,17 +2144,6 @@ export interface BindingReplacePluginConfig {
   sourcemap?: boolean
 }
 
-export interface BindingReporterPluginConfig {
-  root: string
-  isTty: boolean
-  isLib: boolean
-  assetsDir: string
-  chunkLimit: number
-  shouldLogInfo: boolean
-  warnLargeChunks: boolean
-  reportCompressedSize: boolean
-}
-
 export interface BindingResolveDependenciesContext {
   hostId: string
   hostType: string
@@ -2329,6 +2318,17 @@ export interface BindingViteModulePreloadPolyfillPluginConfig {
 
 export interface BindingVitePluginCustom {
   'vite:import-glob'?: ViteImportGlobMeta
+}
+
+export interface BindingViteReporterPluginConfig {
+  root: string
+  isTty: boolean
+  isLib: boolean
+  assetsDir: string
+  chunkLimit: number
+  shouldLogInfo: boolean
+  warnLargeChunks: boolean
+  reportCompressedSize: boolean
 }
 
 export interface BindingViteResolvePluginConfig {

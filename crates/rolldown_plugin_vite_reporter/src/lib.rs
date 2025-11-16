@@ -20,7 +20,7 @@ use sugar_path::SugarPath as _;
 
 #[derive(Debug)]
 #[expect(clippy::struct_excessive_bools)]
-pub struct ReporterPlugin {
+pub struct ViteReporterPlugin {
   pub root: PathBuf,
   pub assets_dir: String,
   pub is_lib: bool,
@@ -37,9 +37,9 @@ pub struct ReporterPlugin {
   pub latest_checkpoint: Arc<RwLock<Instant>>,
 }
 
-impl Plugin for ReporterPlugin {
+impl Plugin for ViteReporterPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:reporter")
+    Cow::Borrowed("builtin:vite-reporter")
   }
 
   async fn transform(

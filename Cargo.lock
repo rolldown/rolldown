@@ -2800,7 +2800,6 @@ dependencies = [
  "rolldown_plugin_isolated_declaration",
  "rolldown_plugin_react_refresh_wrapper",
  "rolldown_plugin_replace",
- "rolldown_plugin_reporter",
  "rolldown_plugin_transform",
  "rolldown_plugin_utils",
  "rolldown_plugin_vite_alias",
@@ -2817,6 +2816,7 @@ dependencies = [
  "rolldown_plugin_vite_load_fallback",
  "rolldown_plugin_vite_manifest",
  "rolldown_plugin_vite_module_preload_polyfill",
+ "rolldown_plugin_vite_reporter",
  "rolldown_plugin_vite_resolve",
  "rolldown_plugin_wasm_fallback",
  "rolldown_plugin_wasm_helper",
@@ -3106,23 +3106,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_plugin_reporter"
-version = "0.1.0"
-dependencies = [
- "cow-utils",
- "flate2",
- "itoa",
- "num-format",
- "owo-colors",
- "rayon",
- "rolldown_common",
- "rolldown_plugin",
- "rolldown_plugin_utils",
- "sugar_path",
- "terminal_size",
-]
-
-[[package]]
 name = "rolldown_plugin_transform"
 version = "0.1.0"
 dependencies = [
@@ -3351,6 +3334,23 @@ dependencies = [
  "arcstr",
  "rolldown_common",
  "rolldown_plugin",
+]
+
+[[package]]
+name = "rolldown_plugin_vite_reporter"
+version = "0.1.0"
+dependencies = [
+ "cow-utils",
+ "flate2",
+ "itoa",
+ "num-format",
+ "owo-colors",
+ "rayon",
+ "rolldown_common",
+ "rolldown_plugin",
+ "rolldown_plugin_utils",
+ "sugar_path",
+ "terminal_size",
 ]
 
 [[package]]

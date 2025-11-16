@@ -41,7 +41,6 @@ rolldown_plugin_esm_external_require = { workspace = true }
 rolldown_plugin_isolated_declaration = { workspace = true }
 rolldown_plugin_react_refresh_wrapper = { workspace = true }
 rolldown_plugin_replace = { workspace = true }
-rolldown_plugin_reporter = { workspace = true }
 rolldown_plugin_transform = { workspace = true }
 rolldown_plugin_utils = { workspace = true }
 rolldown_plugin_vite_alias = { workspace = true }
@@ -58,6 +57,7 @@ rolldown_plugin_vite_json = { workspace = true }
 rolldown_plugin_vite_load_fallback = { workspace = true }
 rolldown_plugin_vite_manifest = { workspace = true }
 rolldown_plugin_vite_module_preload_polyfill = { workspace = true }
+rolldown_plugin_vite_reporter = { workspace = true }
 rolldown_plugin_vite_resolve = { workspace = true }
 rolldown_plugin_wasm_fallback = { workspace = true }
 rolldown_plugin_wasm_helper = { workspace = true }

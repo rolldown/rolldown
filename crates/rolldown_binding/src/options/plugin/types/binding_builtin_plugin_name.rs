@@ -5,8 +5,6 @@ use napi_derive::napi;
 pub enum BindingBuiltinPluginName {
   #[napi(value = "builtin:esm-external-require")]
   EsmExternalRequire,
-  #[napi(value = "builtin:html-inline-proxy")]
-  HtmlInlineProxy,
   #[napi(value = "builtin:import-glob")]
   ImportGlob,
   #[napi(value = "builtin:isolated-declaration")]
@@ -43,6 +41,8 @@ pub enum BindingBuiltinPluginName {
   ViteDynamicImportVars,
   #[napi(value = "builtin:vite-html")]
   ViteHtml,
+  #[napi(value = "builtin:vite-html-inline-proxy")]
+  ViteHtmlInlineProxy,
   #[napi(value = "builtin:vite-resolve")]
   ViteResolve,
   #[napi(value = "builtin:wasm-fallback")]

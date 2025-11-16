@@ -1584,7 +1584,6 @@ export interface BindingBuiltinPlugin {
 }
 
 export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
-'builtin:html-inline-proxy'|
 'builtin:import-glob'|
 'builtin:isolated-declaration'|
 'builtin:json'|
@@ -1603,6 +1602,7 @@ export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:vite-css-post'|
 'builtin:vite-dynamic-import-vars'|
 'builtin:vite-html'|
+'builtin:vite-html-inline-proxy'|
 'builtin:vite-resolve'|
 'builtin:wasm-fallback'|
 'builtin:wasm-helper'|
@@ -1823,10 +1823,6 @@ export interface BindingHookTransformOutput {
   moduleSideEffects?: BindingHookSideEffects
   map?: BindingSourcemap
   moduleType?: string
-}
-
-export interface BindingHtmlInlineProxyPluginConfig {
-  root: string
 }
 
 export interface BindingImportGlobPluginConfig {
@@ -2311,6 +2307,10 @@ export interface BindingViteDynamicImportVarsPluginConfig {
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   resolver?: (id: string, importer: string) => MaybePromise<string | undefined>
+}
+
+export interface BindingViteHtmlInlineProxyPluginConfig {
+  root: string
 }
 
 export interface BindingViteHtmlPluginConfig {

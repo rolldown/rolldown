@@ -26,7 +26,7 @@ pub enum ViteJsonPluginStringify {
 
 impl Plugin for ViteJsonPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:json")
+    Cow::Borrowed("builtin:vite-json")
   }
 
   async fn transform(

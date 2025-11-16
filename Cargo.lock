@@ -2798,7 +2798,6 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_plugin_esm_external_require",
  "rolldown_plugin_isolated_declaration",
- "rolldown_plugin_react_refresh_wrapper",
  "rolldown_plugin_replace",
  "rolldown_plugin_utils",
  "rolldown_plugin_vite_alias",
@@ -2815,6 +2814,7 @@ dependencies = [
  "rolldown_plugin_vite_load_fallback",
  "rolldown_plugin_vite_manifest",
  "rolldown_plugin_vite_module_preload_polyfill",
+ "rolldown_plugin_vite_react_refresh_wrapper",
  "rolldown_plugin_vite_reporter",
  "rolldown_plugin_vite_resolve",
  "rolldown_plugin_vite_transform",
@@ -3079,18 +3079,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_plugin_react_refresh_wrapper"
-version = "0.1.0"
-dependencies = [
- "arcstr",
- "memchr",
- "regex",
- "rolldown_plugin",
- "rolldown_plugin_utils",
- "rolldown_utils",
-]
-
-[[package]]
 name = "rolldown_plugin_replace"
 version = "0.1.0"
 dependencies = [
@@ -3318,6 +3306,18 @@ dependencies = [
  "arcstr",
  "rolldown_common",
  "rolldown_plugin",
+]
+
+[[package]]
+name = "rolldown_plugin_vite_react_refresh_wrapper"
+version = "0.1.0"
+dependencies = [
+ "arcstr",
+ "memchr",
+ "regex",
+ "rolldown_plugin",
+ "rolldown_plugin_utils",
+ "rolldown_utils",
 ]
 
 [[package]]

@@ -1585,7 +1585,6 @@ export interface BindingBuiltinPlugin {
 
 export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:isolated-declaration'|
-'builtin:react-refresh-wrapper'|
 'builtin:replace'|
 'builtin:vite-alias'|
 'builtin:vite-asset'|
@@ -1601,6 +1600,7 @@ export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:vite-load-fallback'|
 'builtin:vite-manifest'|
 'builtin:vite-module-preload-polyfill'|
+'builtin:vite-react-refresh-wrapper'|
 'builtin:vite-reporter'|
 'builtin:vite-resolve'|
 'builtin:vite-transform'|
@@ -2110,14 +2110,6 @@ export declare enum BindingPropertyWriteSideEffects {
   False = 1
 }
 
-export interface BindingReactRefreshWrapperPluginConfig {
-  cwd: string
-  include?: Array<BindingStringOrRegex>
-  exclude?: Array<BindingStringOrRegex>
-  jsxImportSource: string
-  reactRefreshHost: string
-}
-
 export declare enum BindingRebuildStrategy {
   Always = 0,
   Auto = 1,
@@ -2307,6 +2299,14 @@ export interface BindingViteModulePreloadPolyfillPluginConfig {
 
 export interface BindingVitePluginCustom {
   'vite:import-glob'?: ViteImportGlobMeta
+}
+
+export interface BindingViteReactRefreshWrapperPluginConfig {
+  cwd: string
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  jsxImportSource: string
+  reactRefreshHost: string
 }
 
 export interface BindingViteReporterPluginConfig {

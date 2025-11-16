@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use rolldown_plugin_manifest::{IsLegacyFn, ManifestPlugin};
+use rolldown_plugin_vite_manifest::{IsLegacyFn, ViteManifestPlugin};
 use rustc_hash::FxHashMap;
 
 use crate::types::js_callback::{JsCallback, JsCallbackExt as _};
 
 #[napi_derive::napi(object, object_to_js = false)]
-pub struct BindingManifestPluginConfig {
+pub struct BindingViteManifestPluginConfig {
   pub root: String,
   pub out_path: String,
   pub is_enable_v2: Option<bool>,
@@ -16,8 +16,8 @@ pub struct BindingManifestPluginConfig {
   pub css_entries: JsCallback<(), FxHashMap<String, String>>,
 }
 
-impl From<BindingManifestPluginConfig> for ManifestPlugin {
-  fn from(value: BindingManifestPluginConfig) -> Self {
+impl From<BindingViteManifestPluginConfig> for ViteManifestPlugin {
+  fn from(value: BindingViteManifestPluginConfig) -> Self {
     Self {
       root: value.root,
       out_path: value.out_path,

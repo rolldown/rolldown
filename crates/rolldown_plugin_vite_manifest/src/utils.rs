@@ -7,7 +7,7 @@ use rolldown_plugin_utils::constants::ChunkMetadata;
 use rolldown_utils::pattern_filter::normalize_path;
 use serde::Serialize;
 
-use super::ManifestPlugin;
+use super::ViteManifestPlugin;
 
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -33,7 +33,7 @@ pub struct ManifestChunk {
   pub assets: Option<Vec<String>>,
 }
 
-impl ManifestPlugin {
+impl ViteManifestPlugin {
   pub fn get_chunk_name(&self, chunk: &OutputChunk, is_legacy: bool) -> String {
     match &chunk.facade_module_id {
       Some(module_id) => {

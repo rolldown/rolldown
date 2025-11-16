@@ -13,13 +13,13 @@ and outputs a manifest JSON. Useful for server-side rendering or asset injection
 
 ```js
 import { defineConfig } from 'rolldown';
-import { manifestPlugin } from 'rolldown/experimental';
+import { viteManifestPlugin } from 'rolldown/experimental';
 
 export default defineConfig({
   input: {
     entry: './main.ts',
   },
-  plugins: [manifestPlugin({
+  plugins: [viteManifestPlugin({
     root: path.resolve(import.meta.dirname),
     outPath: path.resolve(import.meta.dirname, 'dist/manifest.json'),
   })],

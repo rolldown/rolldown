@@ -2798,7 +2798,6 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_plugin_esm_external_require",
  "rolldown_plugin_isolated_declaration",
- "rolldown_plugin_manifest",
  "rolldown_plugin_module_preload_polyfill",
  "rolldown_plugin_react_refresh_wrapper",
  "rolldown_plugin_replace",
@@ -2817,6 +2816,7 @@ dependencies = [
  "rolldown_plugin_vite_import_glob",
  "rolldown_plugin_vite_json",
  "rolldown_plugin_vite_load_fallback",
+ "rolldown_plugin_vite_manifest",
  "rolldown_plugin_vite_resolve",
  "rolldown_plugin_wasm_fallback",
  "rolldown_plugin_wasm_helper",
@@ -3066,23 +3066,6 @@ dependencies = [
  "rolldown_utils",
  "sugar_path",
  "testing_macros",
-]
-
-[[package]]
-name = "rolldown_plugin_manifest"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arcstr",
- "cow-utils",
- "derive_more",
- "rolldown_common",
- "rolldown_plugin",
- "rolldown_plugin_utils",
- "rolldown_utils",
- "rustc-hash",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -3351,6 +3334,23 @@ version = "0.1.0"
 dependencies = [
  "memchr",
  "rolldown_plugin",
+]
+
+[[package]]
+name = "rolldown_plugin_vite_manifest"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arcstr",
+ "cow-utils",
+ "derive_more",
+ "rolldown_common",
+ "rolldown_plugin",
+ "rolldown_plugin_utils",
+ "rolldown_utils",
+ "rustc-hash",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

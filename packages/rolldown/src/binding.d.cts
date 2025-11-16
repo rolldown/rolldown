@@ -1585,7 +1585,6 @@ export interface BindingBuiltinPlugin {
 
 export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:isolated-declaration'|
-'builtin:manifest'|
 'builtin:module-preload-polyfill'|
 'builtin:react-refresh-wrapper'|
 'builtin:reporter'|
@@ -1603,6 +1602,7 @@ export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:vite-import-glob'|
 'builtin:vite-json'|
 'builtin:vite-load-fallback'|
+'builtin:vite-manifest'|
 'builtin:vite-resolve'|
 'builtin:wasm-fallback'|
 'builtin:wasm-helper'|
@@ -1916,14 +1916,6 @@ export declare enum BindingLogLevel {
 export type BindingMakeAbsoluteExternalsRelative =
   | { type: 'Bool', field0: boolean }
   | { type: 'IfRelativeSource' }
-
-export interface BindingManifestPluginConfig {
-  root: string
-  outPath: string
-  isEnableV2?: boolean
-  isLegacy?: () => boolean
-  cssEntries: () => Record<string, string>
-}
 
 export interface BindingMatchGroup {
   name: string | ((id: string, ctx: BindingChunkingContext) => VoidNullable<string>)
@@ -2326,6 +2318,14 @@ export interface BindingViteJsonPluginConfig {
 
 export type BindingViteJsonPluginStringify =
   boolean | string
+
+export interface BindingViteManifestPluginConfig {
+  root: string
+  outPath: string
+  isEnableV2?: boolean
+  isLegacy?: () => boolean
+  cssEntries: () => Record<string, string>
+}
 
 export interface BindingVitePluginCustom {
   'vite:import-glob'?: ViteImportGlobMeta

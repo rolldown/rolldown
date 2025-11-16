@@ -1,7 +1,6 @@
 import type {
   BindingEsmExternalRequirePluginConfig,
   BindingIsolatedDeclarationPluginConfig,
-  BindingManifestPluginConfig,
   BindingModulePreloadPolyfillPluginConfig,
   BindingReactRefreshWrapperPluginConfig,
   BindingReporterPluginConfig,
@@ -11,6 +10,7 @@ import type {
   BindingViteHtmlInlineProxyPluginConfig,
   BindingViteImportGlobPluginConfig,
   BindingViteJsonPluginConfig,
+  BindingViteManifestPluginConfig,
   BindingViteResolvePluginConfig,
   BindingWasmHelperPluginConfig,
 } from '../binding.cjs';
@@ -56,10 +56,10 @@ export function reporterPlugin(
   return new BuiltinPlugin('builtin:reporter', config);
 }
 
-export function manifestPlugin(
-  config?: BindingManifestPluginConfig,
+export function viteManifestPlugin(
+  config?: BindingViteManifestPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:manifest', config);
+  return new BuiltinPlugin('builtin:vite-manifest', config);
 }
 
 export function wasmHelperPlugin(

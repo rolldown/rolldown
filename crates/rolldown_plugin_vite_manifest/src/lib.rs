@@ -16,7 +16,7 @@ pub type CssEntriesFn = dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<F
   + Sync;
 
 #[derive(derive_more::Debug)]
-pub struct ManifestPlugin {
+pub struct ViteManifestPlugin {
   pub root: String,
   pub out_path: String,
   pub is_enable_v2: bool,
@@ -26,9 +26,9 @@ pub struct ManifestPlugin {
   pub css_entries: Arc<CssEntriesFn>,
 }
 
-impl Plugin for ManifestPlugin {
+impl Plugin for ViteManifestPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:manifest")
+    Cow::Borrowed("builtin:vite-manifest")
   }
 
   async fn generate_bundle(

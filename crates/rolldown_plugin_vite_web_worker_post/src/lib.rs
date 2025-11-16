@@ -13,7 +13,7 @@ pub struct ViteWebWorkerPostPlugin;
 
 impl Plugin for ViteWebWorkerPostPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:web-worker-post")
+    Cow::Borrowed("builtin:vite-web-worker-post")
   }
 
   fn register_hook_usage(&self) -> HookUsage {

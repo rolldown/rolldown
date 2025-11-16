@@ -16,7 +16,7 @@ static REACT_COMP_RE: LazyLock<Regex> =
 const REFRESH_CONTENT: &str = "$RefreshReg$(";
 
 #[derive(Debug)]
-pub struct ReactRefreshWrapperPluginOptions {
+pub struct ViteReactRefreshWrapperPluginOptions {
   pub cwd: String,
   pub include: Vec<StringOrRegex>,
   pub exclude: Vec<StringOrRegex>,
@@ -25,7 +25,7 @@ pub struct ReactRefreshWrapperPluginOptions {
 }
 
 #[derive(Debug)]
-pub struct ReactRefreshWrapperPlugin {
+pub struct ViteReactRefreshWrapperPlugin {
   cwd: String,
   include: Vec<StringOrRegex>,
   exclude: Vec<StringOrRegex>,
@@ -34,8 +34,8 @@ pub struct ReactRefreshWrapperPlugin {
   react_refresh_host: String,
 }
 
-impl ReactRefreshWrapperPlugin {
-  pub fn new(options: ReactRefreshWrapperPluginOptions) -> Self {
+impl ViteReactRefreshWrapperPlugin {
+  pub fn new(options: ViteReactRefreshWrapperPluginOptions) -> Self {
     let jsx_import_source = options.jsx_import_source;
     Self {
       cwd: options.cwd,
@@ -95,9 +95,9 @@ function $RefreshSig$() {{ return RefreshRuntime.createSignatureFunctionForTrans
   }
 }
 
-impl Plugin for ReactRefreshWrapperPlugin {
+impl Plugin for ViteReactRefreshWrapperPlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
-    Cow::Borrowed("builtin:react-refresh-wrapper")
+    Cow::Borrowed("builtin:vite-react-refresh-wrapper")
   }
 
   async fn resolve_id(

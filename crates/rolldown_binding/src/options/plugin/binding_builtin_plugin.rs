@@ -4,7 +4,6 @@ use napi::{Unknown, bindgen_prelude::FromNapiValue};
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
-use rolldown_plugin_react_refresh_wrapper::ReactRefreshWrapperPlugin;
 use rolldown_plugin_replace::ReplacePlugin;
 use rolldown_plugin_vite_alias::ViteAliasPlugin;
 use rolldown_plugin_vite_asset::ViteAssetPlugin;
@@ -20,6 +19,7 @@ use rolldown_plugin_vite_json::ViteJsonPlugin;
 use rolldown_plugin_vite_load_fallback::ViteLoadFallbackPlugin;
 use rolldown_plugin_vite_manifest::ViteManifestPlugin;
 use rolldown_plugin_vite_module_preload_polyfill::ViteModulePreloadPolyfillPlugin;
+use rolldown_plugin_vite_react_refresh_wrapper::ViteReactRefreshWrapperPlugin;
 use rolldown_plugin_vite_reporter::ViteReporterPlugin;
 use rolldown_plugin_vite_resolve::ViteResolvePlugin;
 use rolldown_plugin_vite_transform::ViteTransformPlugin;
@@ -28,10 +28,10 @@ use rolldown_plugin_vite_wasm_helper::ViteWasmHelperPlugin;
 use rolldown_plugin_vite_web_worker_post::ViteWebWorkerPostPlugin;
 
 use crate::options::plugin::config::{
-  BindingEsmExternalRequirePluginConfig, BindingReactRefreshWrapperPluginConfig,
-  BindingViteCSSPluginConfig, BindingViteCSSPostPluginConfig,
-  BindingViteHtmlInlineProxyPluginConfig, BindingViteHtmlPluginConfig,
-  BindingViteModulePreloadPolyfillPluginConfig, BindingViteWasmHelperPluginConfig,
+  BindingEsmExternalRequirePluginConfig, BindingViteCSSPluginConfig,
+  BindingViteCSSPostPluginConfig, BindingViteHtmlInlineProxyPluginConfig,
+  BindingViteHtmlPluginConfig, BindingViteModulePreloadPolyfillPluginConfig,
+  BindingViteReactRefreshWrapperPluginConfig, BindingViteWasmHelperPluginConfig,
 };
 
 use super::{
@@ -83,17 +83,6 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           IsolatedDeclarationPlugin::default()
         };
         Arc::new(plugin)
-      }
-      BindingBuiltinPluginName::ReactRefreshWrapper => {
-        let config = if let Some(options) = plugin.options {
-          BindingReactRefreshWrapperPluginConfig::from_unknown(options)?
-        } else {
-          return Err(napi::Error::new(
-            napi::Status::InvalidArg,
-            "Missing options for ReactRefreshWrapperPlugin",
-          ));
-        };
-        Arc::new(ReactRefreshWrapperPlugin::new(config.into()))
       }
       BindingBuiltinPluginName::Replace => {
         let config = if let Some(options) = plugin.options {
@@ -215,6 +204,17 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           ViteModulePreloadPolyfillPlugin::default()
         };
         Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteReactRefreshWrapper => {
+        let config = if let Some(options) = plugin.options {
+          BindingViteReactRefreshWrapperPluginConfig::from_unknown(options)?
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteReactRefreshWrapperPlugin",
+          ));
+        };
+        Arc::new(ViteReactRefreshWrapperPlugin::new(config.into()))
       }
       BindingBuiltinPluginName::ViteReporter => {
         let plugin: ViteReporterPlugin = if let Some(options) = plugin.options {

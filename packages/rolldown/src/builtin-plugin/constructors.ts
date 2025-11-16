@@ -1,7 +1,6 @@
 import type {
   BindingEsmExternalRequirePluginConfig,
   BindingIsolatedDeclarationPluginConfig,
-  BindingReactRefreshWrapperPluginConfig,
   BindingViteBuildImportAnalysisPluginConfig,
   BindingViteCssPostPluginConfig,
   BindingViteDynamicImportVarsPluginConfig,
@@ -10,6 +9,7 @@ import type {
   BindingViteJsonPluginConfig,
   BindingViteManifestPluginConfig,
   BindingViteModulePreloadPolyfillPluginConfig,
+  BindingViteReactRefreshWrapperPluginConfig,
   BindingViteReporterPluginConfig,
   BindingViteResolvePluginConfig,
   BindingViteWasmHelperPluginConfig,
@@ -113,9 +113,9 @@ export function esmExternalRequirePlugin(
   return new BuiltinPlugin('builtin:esm-external-require', config);
 }
 
-type ReactRefreshWrapperPluginConfig =
+type ViteReactRefreshWrapperPluginConfig =
   & Omit<
-    BindingReactRefreshWrapperPluginConfig,
+    BindingViteReactRefreshWrapperPluginConfig,
     'include' | 'exclude'
   >
   & {
@@ -123,15 +123,15 @@ type ReactRefreshWrapperPluginConfig =
     exclude?: StringOrRegExp | StringOrRegExp[];
   };
 
-export function reactRefreshWrapperPlugin(
-  config: ReactRefreshWrapperPluginConfig,
+export function viteReactRefreshWrapperPlugin(
+  config: ViteReactRefreshWrapperPluginConfig,
 ): BuiltinPlugin {
   if (config) {
     config.include = normalizedStringOrRegex(config.include);
     config.exclude = normalizedStringOrRegex(config.exclude);
   }
   const builtinPlugin = new BuiltinPlugin(
-    'builtin:react-refresh-wrapper',
+    'builtin:vite-react-refresh-wrapper',
     config,
   );
   return makeBuiltinPluginCallable(builtinPlugin);

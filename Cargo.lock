@@ -2800,7 +2800,6 @@ dependencies = [
  "rolldown_plugin_isolated_declaration",
  "rolldown_plugin_react_refresh_wrapper",
  "rolldown_plugin_replace",
- "rolldown_plugin_transform",
  "rolldown_plugin_utils",
  "rolldown_plugin_vite_alias",
  "rolldown_plugin_vite_asset",
@@ -2818,6 +2817,7 @@ dependencies = [
  "rolldown_plugin_vite_module_preload_polyfill",
  "rolldown_plugin_vite_reporter",
  "rolldown_plugin_vite_resolve",
+ "rolldown_plugin_vite_transform",
  "rolldown_plugin_wasm_fallback",
  "rolldown_plugin_wasm_helper",
  "rolldown_plugin_web_worker_post",
@@ -3106,22 +3106,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_plugin_transform"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arcstr",
- "itertools",
- "memchr",
- "oxc",
- "rolldown_common",
- "rolldown_error",
- "rolldown_plugin",
- "rolldown_plugin_utils",
- "rolldown_utils",
-]
-
-[[package]]
 name = "rolldown_plugin_utils"
 version = "0.1.0"
 dependencies = [
@@ -3375,6 +3359,22 @@ dependencies = [
  "sugar_path",
  "url",
  "urlencoding",
+]
+
+[[package]]
+name = "rolldown_plugin_vite_transform"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arcstr",
+ "itertools",
+ "memchr",
+ "oxc",
+ "rolldown_common",
+ "rolldown_error",
+ "rolldown_plugin",
+ "rolldown_plugin_utils",
+ "rolldown_utils",
 ]
 
 [[package]]

@@ -6,7 +6,6 @@ use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
 use rolldown_plugin_react_refresh_wrapper::ReactRefreshWrapperPlugin;
 use rolldown_plugin_replace::ReplacePlugin;
-use rolldown_plugin_transform::TransformPlugin;
 use rolldown_plugin_vite_alias::ViteAliasPlugin;
 use rolldown_plugin_vite_asset::ViteAssetPlugin;
 use rolldown_plugin_vite_asset_import_meta_url::ViteAssetImportMetaUrlPlugin;
@@ -23,6 +22,7 @@ use rolldown_plugin_vite_manifest::ViteManifestPlugin;
 use rolldown_plugin_vite_module_preload_polyfill::ViteModulePreloadPolyfillPlugin;
 use rolldown_plugin_vite_reporter::ViteReporterPlugin;
 use rolldown_plugin_vite_resolve::ViteResolvePlugin;
+use rolldown_plugin_vite_transform::ViteTransformPlugin;
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
 use rolldown_plugin_web_worker_post::WebWorkerPostPlugin;
@@ -37,11 +37,11 @@ use crate::options::plugin::config::{
 use super::{
   config::{
     BindingIsolatedDeclarationPluginConfig, BindingReplacePluginConfig,
-    BindingTransformPluginConfig, BindingViteAliasPluginConfig, BindingViteAssetPluginConfig,
+    BindingViteAliasPluginConfig, BindingViteAssetPluginConfig,
     BindingViteBuildImportAnalysisPluginConfig, BindingViteDynamicImportVarsPluginConfig,
     BindingViteImportGlobPluginConfig, BindingViteJsonPluginConfig,
     BindingViteManifestPluginConfig, BindingViteReporterPluginConfig,
-    BindingViteResolvePluginConfig,
+    BindingViteResolvePluginConfig, BindingViteTransformPluginConfig,
   },
   types::binding_builtin_plugin_name::BindingBuiltinPluginName,
 };
@@ -102,14 +102,6 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           BindingReplacePluginConfig::default()
         };
         Arc::new(ReplacePlugin::with_options(config.into()))
-      }
-      BindingBuiltinPluginName::Transform => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingTransformPluginConfig::from_unknown(options)?.into()
-        } else {
-          TransformPlugin::default()
-        };
-        Arc::new(plugin)
       }
       BindingBuiltinPluginName::ViteAlias => {
         let plugin = if let Some(options) = plugin.options {
@@ -245,6 +237,14 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           ));
         };
         Arc::new(ViteResolvePlugin::new(config.into()))
+      }
+      BindingBuiltinPluginName::ViteTransform => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingViteTransformPluginConfig::from_unknown(options)?.into()
+        } else {
+          ViteTransformPlugin::default()
+        };
+        Arc::new(plugin)
       }
       BindingBuiltinPluginName::WasmFallback => Arc::new(WasmFallbackPlugin),
       BindingBuiltinPluginName::WasmHelper => {

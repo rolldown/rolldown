@@ -11,8 +11,6 @@ pub enum BindingBuiltinPluginName {
   ReactRefreshWrapper,
   #[napi(value = "builtin:replace")]
   Replace,
-  #[napi(value = "builtin:transform")]
-  Transform,
   #[napi(value = "builtin:vite-alias")]
   ViteAlias,
   #[napi(value = "builtin:vite-asset")]
@@ -45,6 +43,8 @@ pub enum BindingBuiltinPluginName {
   ViteReporter,
   #[napi(value = "builtin:vite-resolve")]
   ViteResolve,
+  #[napi(value = "builtin:vite-transform")]
+  ViteTransform,
   #[napi(value = "builtin:wasm-fallback")]
   WasmFallback,
   #[napi(value = "builtin:wasm-helper")]

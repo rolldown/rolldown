@@ -7,7 +7,7 @@ use rolldown_common::{JsxOptions, ModuleType};
 use rolldown_plugin::SharedTransformPluginContext;
 use rolldown_utils::{pattern_filter::filter as pattern_filter, url::clean_url};
 
-use super::TransformPlugin;
+use super::ViteTransformPlugin;
 
 pub enum JsxRefreshFilter {
   None,
@@ -15,7 +15,7 @@ pub enum JsxRefreshFilter {
   False,
 }
 
-impl TransformPlugin {
+impl ViteTransformPlugin {
   pub fn filter(&self, id: &str, cwd: &str, module_type: &Option<ModuleType>) -> bool {
     // rollup `createFilter` always skips when id includes null byte
     // https://github.com/rollup/plugins/blob/ad58c8d87c5ab4864e25b5a777290fdf12a3879f/packages/pluginutils/src/createFilter.ts#L51

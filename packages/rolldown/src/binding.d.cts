@@ -1585,7 +1585,6 @@ export interface BindingBuiltinPlugin {
 
 export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:isolated-declaration'|
-'builtin:module-preload-polyfill'|
 'builtin:react-refresh-wrapper'|
 'builtin:reporter'|
 'builtin:replace'|
@@ -1603,6 +1602,7 @@ export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:vite-json'|
 'builtin:vite-load-fallback'|
 'builtin:vite-manifest'|
+'builtin:vite-module-preload-polyfill'|
 'builtin:vite-resolve'|
 'builtin:wasm-fallback'|
 'builtin:wasm-helper'|
@@ -1931,10 +1931,6 @@ export interface BindingMatchGroup {
 export interface BindingModulePreloadOptions {
   polyfill: boolean
   resolveDependencies?: (filename: string, deps: string[], context: { hostId: string, hostType: 'html' | 'js' }) => string[]
-}
-
-export interface BindingModulePreloadPolyfillPluginConfig {
-  isServer?: boolean
 }
 
 export interface BindingModules {
@@ -2325,6 +2321,10 @@ export interface BindingViteManifestPluginConfig {
   isEnableV2?: boolean
   isLegacy?: () => boolean
   cssEntries: () => Record<string, string>
+}
+
+export interface BindingViteModulePreloadPolyfillPluginConfig {
+  isServer?: boolean
 }
 
 export interface BindingVitePluginCustom {

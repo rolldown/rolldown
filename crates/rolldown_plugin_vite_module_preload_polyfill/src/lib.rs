@@ -11,13 +11,13 @@ const MODULE_PRELOAD_POLYFILL: &str = "vite/modulepreload-polyfill";
 const RESOLVED_MODULE_PRELOAD_POLYFILL_ID: &str = "\0vite/modulepreload-polyfill.js";
 
 #[derive(Debug, Default)]
-pub struct ModulePreloadPolyfillPlugin {
+pub struct ViteModulePreloadPolyfillPlugin {
   pub is_server: bool,
 }
 
-impl Plugin for ModulePreloadPolyfillPlugin {
+impl Plugin for ViteModulePreloadPolyfillPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:module-preload-polyfill")
+    Cow::Borrowed("builtin:vite-module-preload-polyfill")
   }
 
   async fn resolve_id(

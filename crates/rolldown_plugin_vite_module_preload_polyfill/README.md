@@ -18,13 +18,13 @@ By default, it injects a polyfill for `rel="modulepreload"` into each entry modu
 
 ```js
 import { defineConfig } from 'rolldown';
-import { modulePreloadPolyfillPlugin } from 'rolldown/experimental';
+import { viteModulePreloadPolyfillPlugin } from 'rolldown/experimental';
 
 export default defineConfig({
   input: {
     entry: './index.ts',
   },
-  plugins: [modulePreloadPolyfillPlugin()],
+  plugins: [viteModulePreloadPolyfillPlugin()],
 });
 ```
 

@@ -1,5 +1,5 @@
 import { defineTest } from 'rolldown-tests';
-import { modulePreloadPolyfillPlugin } from 'rolldown/experimental';
+import { viteModulePreloadPolyfillPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
@@ -7,7 +7,7 @@ export default defineTest({
     output: {
       format: 'cjs',
     },
-    plugins: [modulePreloadPolyfillPlugin()],
+    plugins: [viteModulePreloadPolyfillPlugin()],
   },
   async afterTest(output) {
     expect(output.output[0].code.length).toBe(0);

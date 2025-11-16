@@ -4,7 +4,6 @@ use napi::{Unknown, bindgen_prelude::FromNapiValue};
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
-use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
 use rolldown_plugin_react_refresh_wrapper::ReactRefreshWrapperPlugin;
 use rolldown_plugin_replace::ReplacePlugin;
 use rolldown_plugin_reporter::ReporterPlugin;
@@ -22,16 +21,17 @@ use rolldown_plugin_vite_import_glob::ViteImportGlobPlugin;
 use rolldown_plugin_vite_json::ViteJsonPlugin;
 use rolldown_plugin_vite_load_fallback::ViteLoadFallbackPlugin;
 use rolldown_plugin_vite_manifest::ViteManifestPlugin;
+use rolldown_plugin_vite_module_preload_polyfill::ViteModulePreloadPolyfillPlugin;
 use rolldown_plugin_vite_resolve::ViteResolvePlugin;
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
 use rolldown_plugin_web_worker_post::WebWorkerPostPlugin;
 
 use crate::options::plugin::config::{
-  BindingEsmExternalRequirePluginConfig, BindingModulePreloadPolyfillPluginConfig,
-  BindingReactRefreshWrapperPluginConfig, BindingViteCSSPluginConfig,
-  BindingViteCSSPostPluginConfig, BindingViteHtmlInlineProxyPluginConfig,
-  BindingViteHtmlPluginConfig, BindingWasmHelperPluginConfig,
+  BindingEsmExternalRequirePluginConfig, BindingReactRefreshWrapperPluginConfig,
+  BindingViteCSSPluginConfig, BindingViteCSSPostPluginConfig,
+  BindingViteHtmlInlineProxyPluginConfig, BindingViteHtmlPluginConfig,
+  BindingViteModulePreloadPolyfillPluginConfig, BindingWasmHelperPluginConfig,
 };
 
 use super::{
@@ -80,14 +80,6 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           BindingIsolatedDeclarationPluginConfig::from_unknown(options)?.into()
         } else {
           IsolatedDeclarationPlugin::default()
-        };
-        Arc::new(plugin)
-      }
-      BindingBuiltinPluginName::ModulePreloadPolyfill => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingModulePreloadPolyfillPluginConfig::from_unknown(options)?.into()
-        } else {
-          ModulePreloadPolyfillPlugin::default()
         };
         Arc::new(plugin)
       }
@@ -231,6 +223,14 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
             napi::Status::InvalidArg,
             "Missing options for ViteManifestPlugin",
           ));
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteModulePreloadPolyfill => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingViteModulePreloadPolyfillPluginConfig::from_unknown(options)?.into()
+        } else {
+          ViteModulePreloadPolyfillPlugin::default()
         };
         Arc::new(plugin)
       }

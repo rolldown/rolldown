@@ -197,7 +197,7 @@ impl ViteHtmlPlugin {
 
   pub fn handle_inline_css<'a>(ctx: &PluginContext, html: &'a str) -> Option<MagicString<'a>> {
     let mut s = None;
-    for (start, _) in "__VITE_INLINE_CSS__".match_indices(html) {
+    for (start, _) in html.match_indices("__VITE_INLINE_CSS__") {
       let prefix_end = start + 19; // "__VITE_INLINE_CSS__".len()
       let bytes = html.as_bytes();
 

@@ -658,7 +658,7 @@ impl Plugin for ViteHtmlPlugin {
       .await?;
 
       if let Some(s) =
-        self.handle_html_asset_url(ctx, html, chunk, assets_base, &relative_url_path).await?
+        self.handle_html_asset_url(ctx, &result, chunk, assets_base, &relative_url_path).await?
       {
         result = s;
       }

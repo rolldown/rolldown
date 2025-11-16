@@ -1,10 +1,10 @@
 import { defineTest } from 'rolldown-tests';
-import { wasmHelperPlugin } from 'rolldown/experimental';
+import { viteWasmHelperPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
   config: {
-    plugins: [wasmHelperPlugin()],
+    plugins: [viteWasmHelperPlugin()],
   },
   async afterTest(output) {
     expect(output.output[1].fileName).toBe('assets/add-Bodj1WnG.wasm');

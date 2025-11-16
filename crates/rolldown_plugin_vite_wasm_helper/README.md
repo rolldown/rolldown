@@ -30,12 +30,12 @@ export default opts => initWasm(opts, 'assets/module-HASH.wasm');
 
 ```js
 import { defineConfig } from 'rolldown';
-import { wasmHelperPlugin } from 'rolldown/experimental';
+import { viteWasmHelperPlugin } from 'rolldown/experimental';
 
 export default defineConfig({
   input: {
     entry: './main.ts',
   },
-  plugins: [wasmHelperPlugin()],
+  plugins: [viteWasmHelperPlugin()],
 });
 ```

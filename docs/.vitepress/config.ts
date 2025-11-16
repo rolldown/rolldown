@@ -13,7 +13,6 @@ const CONFIG_LINK = '/options/input.md';
 const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
   {
     text: 'Guide',
-    link: '/guide/getting-started.md',
     items: [
       { text: 'Introduction', link: '/guide/introduction.md' },
       { text: 'Getting Started', link: '/guide/getting-started.md' },
@@ -34,28 +33,29 @@ const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
       { text: 'Command Line Interface', link: '/apis/cli.md' },
     ],
   },
-  {
-    text: 'In Depth',
-    items: [
-      { text: 'Why Bundlers', link: '/in-depth/why-bundlers.md' },
-      { text: 'Module Types', link: '/in-depth/module-types.md' },
-      { text: 'Top Level Await', link: '/in-depth/tla-in-rolldown.md' },
-      { text: 'Advanced Chunks', link: '/in-depth/advanced-chunks.md' },
-      { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
-      {
-        text: 'Non ESM Output Formats',
-        link: '/in-depth/non-esm-output-formats.md',
-      },
-      { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
-      {
-        text: 'Why Plugin Hook Filter',
-        link: '/in-depth/why-plugin-hook-filter.md',
-      },
-      // { text: 'Code Splitting', link: '/in-depth/code-splitting.md' },
-      { text: 'Directives', link: '/in-depth/directives.md' },
-    ],
-  },
 ];
+
+const sidebarForConcepts: UserConfig['themeConfig']['sidebar'] = [{
+  text: 'Concepts',
+  items: [
+    { text: 'Why Bundlers', link: '/concepts/why-bundlers.md' },
+    { text: 'Module Types', link: '/concepts/module-types.md' },
+    { text: 'Top Level Await', link: '/concepts/tla-in-rolldown.md' },
+    { text: 'Advanced Chunks', link: '/concepts/advanced-chunks.md' },
+    { text: 'Bundling CJS', link: '/concepts/bundling-cjs.md' },
+    {
+      text: 'Non ESM Output Formats',
+      link: '/concepts/non-esm-output-formats.md',
+    },
+    { text: 'Native MagicString', link: '/concepts/native-magic-string.md' },
+    {
+      text: 'Why Plugin Hook Filter',
+      link: '/concepts/why-plugin-hook-filter.md',
+    },
+    // { text: 'Code Splitting', link: '/concepts/code-splitting.md' },
+    { text: 'Directives', link: '/concepts/directives.md' },
+  ],
+}];
 
 const sidebarForOptions: UserConfig['themeConfig']['sidebar'] = [
   {
@@ -172,7 +172,6 @@ const sidebarForPluginGuide: UserConfig['themeConfig']['sidebar'] = [
 const sidebarForGlossary: UserConfig['themeConfig']['sidebar'] = [
   {
     text: 'Glossary',
-    link: '/glossary/',
     items: [
       { text: 'Entry', link: '/glossary/entry.md' },
       { text: 'Entry Chunk', link: '/glossary/entry-chunk.md' },
@@ -248,51 +247,60 @@ export default defineConfig({
 
     // https://vitepress.dev/reference/default-theme-config
     nav: [
-      { text: 'Guide', link: '/guide/getting-started.md' },
-      { text: 'Config', link: CONFIG_LINK },
-      { text: 'Plugins', link: '/builtin-plugins/' },
-      { text: 'Contribute', link: '/contribution-guide/' },
       {
-        text: 'Resources',
+        text: 'Docs',
+        activeMatch: '/(guide|concepts|glossary|apis)',
         items: [
           {
-            text: 'Team',
-            link: '/team.md',
+            text: 'Guide',
+            activeMatch: '/(guide|apis)',
+            link: '/guide/getting-started.md',
+          },
+          {
+            text: 'Concepts',
+            activeMatch: '/concepts',
+            link: '/concepts/why-bundlers.md',
           },
           {
             text: 'Glossary',
+            activeMatch: '/glossary',
             link: '/glossary/',
           },
+        ],
+      },
+      { text: 'References', link: CONFIG_LINK },
+      { text: 'REPL', link: 'https://repl.rolldown.rs/' },
+      {
+        text: 'Resources',
+        activeMatch:
+          '/(team|acknowledgements|contribution-guide|development-guide)',
+        items: [
+          {
+            text: 'Team',
+            activeMatch: '/(team|acknowledgements)',
+            link: '/team.md',
+          },
+          {
+            text: 'Contribute',
+            activeMatch: '/(contribution-guide|development-guide)',
+
+            link: '/contribution-guide/',
+          },
+
           {
             text: 'Roadmap',
             link: 'https://github.com/rolldown/rolldown/discussions/153',
           },
-          {
-            items: [
-              {
-                text: 'Twitter',
-                link: 'https://twitter.com/rolldown_rs',
-              },
-              {
-                text: 'Bluesky',
-                link: 'https://bsky.app/profile/rolldown.rs',
-              },
-              {
-                text: 'Discord Chat',
-                link: 'https://chat.rolldown.rs',
-              },
-            ],
-          },
         ],
       },
-      { text: 'REPL', link: 'https://repl.rolldown.rs/' },
     ],
 
     sidebar: {
       // --- Guide ---
       '/guide/': sidebarForUserGuide,
       '/apis/': sidebarForUserGuide,
-      '/in-depth/': sidebarForUserGuide,
+      // --- Concepts ---
+      '/concepts/': sidebarForConcepts,
       // --- Options ---
       '/options/': sidebarForOptions,
       // --- Plugin ---

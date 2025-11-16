@@ -7,7 +7,7 @@ pub struct ViteWasmFallbackPlugin;
 
 impl Plugin for ViteWasmFallbackPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:wasm-fallback")
+    Cow::Borrowed("builtin:vite-wasm-fallback")
   }
 
   async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {

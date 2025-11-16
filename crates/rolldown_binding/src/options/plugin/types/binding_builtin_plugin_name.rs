@@ -7,8 +7,6 @@ pub enum BindingBuiltinPluginName {
   EsmExternalRequire,
   #[napi(value = "builtin:isolated-declaration")]
   IsolatedDeclaration,
-  #[napi(value = "builtin:module-preload-polyfill")]
-  ModulePreloadPolyfill,
   #[napi(value = "builtin:react-refresh-wrapper")]
   ReactRefreshWrapper,
   #[napi(value = "builtin:reporter")]
@@ -43,6 +41,8 @@ pub enum BindingBuiltinPluginName {
   ViteLoadFallback,
   #[napi(value = "builtin:vite-manifest")]
   ViteManifest,
+  #[napi(value = "builtin:vite-module-preload-polyfill")]
+  ViteModulePreloadPolyfill,
   #[napi(value = "builtin:vite-resolve")]
   ViteResolve,
   #[napi(value = "builtin:wasm-fallback")]

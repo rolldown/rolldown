@@ -27,7 +27,6 @@ export { defineParallelPlugin } from './plugin/parallel-plugin';
 // Builtin plugin factory
 export {
   isolatedDeclarationPlugin,
-  modulePreloadPolyfillPlugin,
   reactRefreshWrapperPlugin,
   reporterPlugin,
   viteBuildImportAnalysisPlugin,
@@ -38,6 +37,7 @@ export {
   viteJsonPlugin,
   viteLoadFallbackPlugin,
   viteManifestPlugin,
+  viteModulePreloadPolyfillPlugin,
   viteResolvePlugin,
   wasmFallbackPlugin,
   wasmHelperPlugin,

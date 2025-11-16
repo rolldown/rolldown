@@ -1,7 +1,6 @@
 import type {
   BindingEsmExternalRequirePluginConfig,
   BindingIsolatedDeclarationPluginConfig,
-  BindingModulePreloadPolyfillPluginConfig,
   BindingReactRefreshWrapperPluginConfig,
   BindingReporterPluginConfig,
   BindingViteBuildImportAnalysisPluginConfig,
@@ -11,6 +10,7 @@ import type {
   BindingViteImportGlobPluginConfig,
   BindingViteJsonPluginConfig,
   BindingViteManifestPluginConfig,
+  BindingViteModulePreloadPolyfillPluginConfig,
   BindingViteResolvePluginConfig,
   BindingWasmHelperPluginConfig,
 } from '../binding.cjs';
@@ -18,10 +18,10 @@ import type { StringOrRegExp } from '../types/utils';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
 import { BuiltinPlugin, makeBuiltinPluginCallable } from './utils';
 
-export function modulePreloadPolyfillPlugin(
-  config?: BindingModulePreloadPolyfillPluginConfig,
+export function viteModulePreloadPolyfillPlugin(
+  config?: BindingViteModulePreloadPolyfillPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:module-preload-polyfill', config);
+  return new BuiltinPlugin('builtin:vite-module-preload-polyfill', config);
 }
 
 type DynamicImportVarsPluginConfig =

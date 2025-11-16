@@ -1,11 +1,11 @@
 import path from 'node:path';
 import { defineTest } from 'rolldown-tests';
-import { modulePreloadPolyfillPlugin } from 'rolldown/experimental';
+import { viteModulePreloadPolyfillPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
   config: {
-    plugins: [modulePreloadPolyfillPlugin()],
+    plugins: [viteModulePreloadPolyfillPlugin()],
   },
   async afterTest(output) {
     await expect(output.output[0].code).toMatchFileSnapshot(

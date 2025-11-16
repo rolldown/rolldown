@@ -2798,7 +2798,6 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_plugin_esm_external_require",
  "rolldown_plugin_isolated_declaration",
- "rolldown_plugin_module_preload_polyfill",
  "rolldown_plugin_react_refresh_wrapper",
  "rolldown_plugin_replace",
  "rolldown_plugin_reporter",
@@ -2817,6 +2816,7 @@ dependencies = [
  "rolldown_plugin_vite_json",
  "rolldown_plugin_vite_load_fallback",
  "rolldown_plugin_vite_manifest",
+ "rolldown_plugin_vite_module_preload_polyfill",
  "rolldown_plugin_vite_resolve",
  "rolldown_plugin_wasm_fallback",
  "rolldown_plugin_wasm_helper",
@@ -3066,15 +3066,6 @@ dependencies = [
  "rolldown_utils",
  "sugar_path",
  "testing_macros",
-]
-
-[[package]]
-name = "rolldown_plugin_module_preload_polyfill"
-version = "0.1.0"
-dependencies = [
- "arcstr",
- "rolldown_common",
- "rolldown_plugin",
 ]
 
 [[package]]
@@ -3351,6 +3342,15 @@ dependencies = [
  "rustc-hash",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "rolldown_plugin_vite_module_preload_polyfill"
+version = "0.1.0"
+dependencies = [
+ "arcstr",
+ "rolldown_common",
+ "rolldown_plugin",
 ]
 
 [[package]]

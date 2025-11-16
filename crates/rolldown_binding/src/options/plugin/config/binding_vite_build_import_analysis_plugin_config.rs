@@ -1,5 +1,5 @@
-use rolldown_plugin_build_import_analysis::{
-  BuildImportAnalysisPlugin, BuildImportAnalysisPluginV2,
+use rolldown_plugin_vite_build_import_analysis::{
+  ViteBuildImportAnalysisPlugin, ViteBuildImportAnalysisPluginV2,
 };
 
 use crate::options::plugin::types::{
@@ -7,7 +7,7 @@ use crate::options::plugin::types::{
 };
 
 #[napi_derive::napi(object, object_to_js = false)]
-pub struct BindingBuildImportAnalysisPluginV2Config {
+pub struct BindingViteBuildImportAnalysisPluginV2Config {
   pub is_ssr: bool,
   pub url_base: String,
   pub decoded_base: String,
@@ -21,25 +21,25 @@ pub struct BindingBuildImportAnalysisPluginV2Config {
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[expect(clippy::struct_excessive_bools)]
-pub struct BindingBuildImportAnalysisPluginConfig {
+pub struct BindingViteBuildImportAnalysisPluginConfig {
   pub preload_code: String,
   pub insert_preload: bool,
   pub optimize_module_preload_relative_paths: bool,
   pub render_built_url: bool,
   pub is_relative_base: bool,
-  pub v2: Option<BindingBuildImportAnalysisPluginV2Config>,
+  pub v2: Option<BindingViteBuildImportAnalysisPluginV2Config>,
 }
 
-impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlugin {
+impl TryFrom<BindingViteBuildImportAnalysisPluginConfig> for ViteBuildImportAnalysisPlugin {
   type Error = anyhow::Error;
 
-  fn try_from(value: BindingBuildImportAnalysisPluginConfig) -> Result<Self, Self::Error> {
+  fn try_from(value: BindingViteBuildImportAnalysisPluginConfig) -> Result<Self, Self::Error> {
     Ok(Self {
       preload_code: value.preload_code.into(),
       insert_preload: value.insert_preload,
       render_built_url: value.render_built_url,
       is_relative_base: value.is_relative_base,
-      v2: value.v2.map(|v2_config| BuildImportAnalysisPluginV2 {
+      v2: value.v2.map(|v2_config| ViteBuildImportAnalysisPluginV2 {
         is_ssr: v2_config.is_ssr,
         url_base: v2_config.url_base,
         decoded_base: v2_config.decoded_base,

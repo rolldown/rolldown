@@ -1,5 +1,4 @@
 import type {
-  BindingBuildImportAnalysisPluginConfig,
   BindingDynamicImportVarsPluginConfig,
   BindingEsmExternalRequirePluginConfig,
   BindingHtmlInlineProxyPluginConfig,
@@ -10,6 +9,7 @@ import type {
   BindingModulePreloadPolyfillPluginConfig,
   BindingReactRefreshWrapperPluginConfig,
   BindingReporterPluginConfig,
+  BindingViteBuildImportAnalysisPluginConfig,
   BindingViteCssPostPluginConfig,
   BindingViteResolvePluginConfig,
   BindingWasmHelperPluginConfig,
@@ -82,10 +82,10 @@ export function jsonPlugin(config?: BindingJsonPluginConfig): BuiltinPlugin {
   return makeBuiltinPluginCallable(builtinPlugin);
 }
 
-export function buildImportAnalysisPlugin(
-  config: BindingBuildImportAnalysisPluginConfig,
+export function viteBuildImportAnalysisPlugin(
+  config: BindingViteBuildImportAnalysisPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:build-import-analysis', config);
+  return new BuiltinPlugin('builtin:vite-build-import-analysis', config);
 }
 
 export function viteResolvePlugin(

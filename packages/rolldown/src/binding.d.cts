@@ -1578,30 +1578,12 @@ export declare enum BindingAttachDebugInfo {
   Full = 2
 }
 
-export interface BindingBuildImportAnalysisPluginConfig {
-  preloadCode: string
-  insertPreload: boolean
-  optimizeModulePreloadRelativePaths: boolean
-  renderBuiltUrl: boolean
-  isRelativeBase: boolean
-  v2?: BindingBuildImportAnalysisPluginV2Config
-}
-
-export interface BindingBuildImportAnalysisPluginV2Config {
-  isSsr: boolean
-  urlBase: string
-  decodedBase: string
-  modulePreload: false | BindingModulePreloadOptions
-  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
-}
-
 export interface BindingBuiltinPlugin {
   __name: BindingBuiltinPluginName
   options?: unknown
 }
 
-export type BindingBuiltinPluginName =  'builtin:build-import-analysis'|
-'builtin:dynamic-import-vars'|
+export type BindingBuiltinPluginName =  'builtin:dynamic-import-vars'|
 'builtin:esm-external-require'|
 'builtin:html-inline-proxy'|
 'builtin:import-glob'|
@@ -1617,6 +1599,7 @@ export type BindingBuiltinPluginName =  'builtin:build-import-analysis'|
 'builtin:vite-alias'|
 'builtin:vite-asset'|
 'builtin:vite-asset-import-meta-url'|
+'builtin:vite-build-import-analysis'|
 'builtin:vite-css'|
 'builtin:vite-css-post'|
 'builtin:vite-html'|
@@ -2279,6 +2262,23 @@ export interface BindingViteAssetPluginConfig {
   isSkipAssets: boolean
   assetsInclude: Array<BindingStringOrRegex>
   assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
+  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
+}
+
+export interface BindingViteBuildImportAnalysisPluginConfig {
+  preloadCode: string
+  insertPreload: boolean
+  optimizeModulePreloadRelativePaths: boolean
+  renderBuiltUrl: boolean
+  isRelativeBase: boolean
+  v2?: BindingViteBuildImportAnalysisPluginV2Config
+}
+
+export interface BindingViteBuildImportAnalysisPluginV2Config {
+  isSsr: boolean
+  urlBase: string
+  decodedBase: string
+  modulePreload: false | BindingModulePreloadOptions
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
 }
 

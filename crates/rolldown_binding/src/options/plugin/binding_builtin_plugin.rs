@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use napi::{Unknown, bindgen_prelude::FromNapiValue};
 use rolldown_plugin::__inner::Pluginable;
-use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
 use rolldown_plugin_html_inline_proxy::HtmlInlineProxyPlugin;
@@ -19,6 +18,7 @@ use rolldown_plugin_transform::TransformPlugin;
 use rolldown_plugin_vite_alias::ViteAliasPlugin;
 use rolldown_plugin_vite_asset::ViteAssetPlugin;
 use rolldown_plugin_vite_asset_import_meta_url::ViteAssetImportMetaUrlPlugin;
+use rolldown_plugin_vite_build_import_analysis::ViteBuildImportAnalysisPlugin;
 use rolldown_plugin_vite_css::ViteCSSPlugin;
 use rolldown_plugin_vite_css_post::ViteCSSPostPlugin;
 use rolldown_plugin_vite_html::ViteHtmlPlugin;
@@ -36,11 +36,11 @@ use crate::options::plugin::config::{
 
 use super::{
   config::{
-    BindingBuildImportAnalysisPluginConfig, BindingDynamicImportVarsPluginConfig,
-    BindingImportGlobPluginConfig, BindingIsolatedDeclarationPluginConfig, BindingJsonPluginConfig,
-    BindingManifestPluginConfig, BindingReplacePluginConfig, BindingReporterPluginConfig,
-    BindingTransformPluginConfig, BindingViteAliasPluginConfig, BindingViteAssetPluginConfig,
-    BindingViteResolvePluginConfig,
+    BindingDynamicImportVarsPluginConfig, BindingImportGlobPluginConfig,
+    BindingIsolatedDeclarationPluginConfig, BindingJsonPluginConfig, BindingManifestPluginConfig,
+    BindingReplacePluginConfig, BindingReporterPluginConfig, BindingTransformPluginConfig,
+    BindingViteAliasPluginConfig, BindingViteAssetPluginConfig,
+    BindingViteBuildImportAnalysisPluginConfig, BindingViteResolvePluginConfig,
   },
   types::binding_builtin_plugin_name::BindingBuiltinPluginName,
 };
@@ -67,17 +67,6 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
 
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
-      BindingBuiltinPluginName::BuildImportAnalysis => {
-        let config = if let Some(options) = plugin.options {
-          BindingBuildImportAnalysisPluginConfig::from_unknown(options)?
-        } else {
-          return Err(napi::Error::new(
-            napi::Status::InvalidArg,
-            "Missing options for BuildImportAnalysisPlugin",
-          ));
-        };
-        Arc::new(BuildImportAnalysisPlugin::try_from(config)?)
-      }
       BindingBuiltinPluginName::DynamicImportVars => {
         let plugin = if let Some(options) = plugin.options {
           BindingDynamicImportVarsPluginConfig::from_unknown(options)?.into()
@@ -204,6 +193,17 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         Arc::new(plugin)
       }
       BindingBuiltinPluginName::ViteAssetImportMetaUrl => Arc::new(ViteAssetImportMetaUrlPlugin),
+      BindingBuiltinPluginName::ViteBuildImportAnalysis => {
+        let config = if let Some(options) = plugin.options {
+          BindingViteBuildImportAnalysisPluginConfig::from_unknown(options)?
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteBuildImportAnalysisPlugin",
+          ));
+        };
+        Arc::new(ViteBuildImportAnalysisPlugin::try_from(config)?)
+      }
       BindingBuiltinPluginName::ViteCSS => {
         let plugin: ViteCSSPlugin = if let Some(options) = plugin.options {
           BindingViteCSSPluginConfig::from_unknown(options)?.into()

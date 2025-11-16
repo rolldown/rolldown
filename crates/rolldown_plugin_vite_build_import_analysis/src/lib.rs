@@ -35,7 +35,7 @@ use self::ast_visit::BuildImportAnalysisVisitor;
 const PRELOAD_HELPER_ID: &str = "\0vite/preload-helper.js";
 
 #[derive(derive_more::Debug)]
-pub struct BuildImportAnalysisPluginV2 {
+pub struct ViteBuildImportAnalysisPluginV2 {
   pub is_ssr: bool,
   pub url_base: String,
   pub decoded_base: String,
@@ -45,17 +45,17 @@ pub struct BuildImportAnalysisPluginV2 {
 }
 
 #[derive(derive_more::Debug)]
-pub struct BuildImportAnalysisPlugin {
+pub struct ViteBuildImportAnalysisPlugin {
   pub preload_code: ArcStr,
   pub insert_preload: bool,
   pub render_built_url: bool,
   pub is_relative_base: bool,
-  pub v2: Option<BuildImportAnalysisPluginV2>,
+  pub v2: Option<ViteBuildImportAnalysisPluginV2>,
 }
 
-impl Plugin for BuildImportAnalysisPlugin {
+impl Plugin for ViteBuildImportAnalysisPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:build-import-analysis")
+    Cow::Borrowed("builtin:vite-build-import-analysis")
   }
 
   async fn resolve_id(
@@ -107,7 +107,7 @@ impl Plugin for BuildImportAnalysisPlugin {
       return Ok(());
     }
 
-    let Some(BuildImportAnalysisPluginV2 {
+    let Some(ViteBuildImportAnalysisPluginV2 {
       is_ssr,
       ref url_base,
       ref decoded_base,

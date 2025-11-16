@@ -3,7 +3,6 @@ use std::sync::Arc;
 use napi::{Unknown, bindgen_prelude::FromNapiValue};
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
-use rolldown_plugin_html_inline_proxy::HtmlInlineProxyPlugin;
 use rolldown_plugin_import_glob::ImportGlobPlugin;
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
 use rolldown_plugin_json::JsonPlugin;
@@ -22,16 +21,17 @@ use rolldown_plugin_vite_css::ViteCSSPlugin;
 use rolldown_plugin_vite_css_post::ViteCSSPostPlugin;
 use rolldown_plugin_vite_dynamic_import_vars::ViteDynamicImportVarsPlugin;
 use rolldown_plugin_vite_html::ViteHtmlPlugin;
+use rolldown_plugin_vite_html_inline_proxy::ViteHtmlInlineProxyPlugin;
 use rolldown_plugin_vite_resolve::ViteResolvePlugin;
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
 use rolldown_plugin_web_worker_post::WebWorkerPostPlugin;
 
 use crate::options::plugin::config::{
-  BindingEsmExternalRequirePluginConfig, BindingHtmlInlineProxyPluginConfig,
-  BindingModulePreloadPolyfillPluginConfig, BindingReactRefreshWrapperPluginConfig,
-  BindingViteCSSPluginConfig, BindingViteCSSPostPluginConfig, BindingViteHtmlPluginConfig,
-  BindingWasmHelperPluginConfig,
+  BindingEsmExternalRequirePluginConfig, BindingModulePreloadPolyfillPluginConfig,
+  BindingReactRefreshWrapperPluginConfig, BindingViteCSSPluginConfig,
+  BindingViteCSSPostPluginConfig, BindingViteHtmlInlineProxyPluginConfig,
+  BindingViteHtmlPluginConfig, BindingWasmHelperPluginConfig,
 };
 
 use super::{
@@ -72,17 +72,6 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           BindingEsmExternalRequirePluginConfig::from_unknown(options)?.into()
         } else {
           EsmExternalRequirePlugin::default()
-        };
-        Arc::new(plugin)
-      }
-      BindingBuiltinPluginName::HtmlInlineProxy => {
-        let plugin: HtmlInlineProxyPlugin = if let Some(options) = plugin.options {
-          BindingHtmlInlineProxyPluginConfig::from_unknown(options)?.into()
-        } else {
-          return Err(napi::Error::new(
-            napi::Status::InvalidArg,
-            "Missing options for HtmlInlineProxyPlugin",
-          ));
         };
         Arc::new(plugin)
       }
@@ -230,6 +219,17 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           return Err(napi::Error::new(
             napi::Status::InvalidArg,
             "Missing options for ViteHtmlPlugin",
+          ));
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteHtmlInlineProxy => {
+        let plugin: ViteHtmlInlineProxyPlugin = if let Some(options) = plugin.options {
+          BindingViteHtmlInlineProxyPluginConfig::from_unknown(options)?.into()
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteHtmlInlineProxyPlugin",
           ));
         };
         Arc::new(plugin)

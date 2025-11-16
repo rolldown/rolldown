@@ -7,13 +7,13 @@ use rolldown_utils::url::clean_url;
 use sugar_path::SugarPath as _;
 
 #[derive(Debug)]
-pub struct HtmlInlineProxyPlugin {
+pub struct ViteHtmlInlineProxyPlugin {
   pub root: PathBuf,
 }
 
-impl Plugin for HtmlInlineProxyPlugin {
+impl Plugin for ViteHtmlInlineProxyPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:html-inline-proxy")
+    Cow::Borrowed("builtin:vite-html-inline-proxy")
   }
 
   fn register_hook_usage(&self) -> HookUsage {

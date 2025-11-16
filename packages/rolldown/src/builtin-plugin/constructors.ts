@@ -1,6 +1,5 @@
 import type {
   BindingEsmExternalRequirePluginConfig,
-  BindingHtmlInlineProxyPluginConfig,
   BindingImportGlobPluginConfig,
   BindingIsolatedDeclarationPluginConfig,
   BindingJsonPluginConfig,
@@ -11,6 +10,7 @@ import type {
   BindingViteBuildImportAnalysisPluginConfig,
   BindingViteCssPostPluginConfig,
   BindingViteDynamicImportVarsPluginConfig,
+  BindingViteHtmlInlineProxyPluginConfig,
   BindingViteResolvePluginConfig,
   BindingWasmHelperPluginConfig,
 } from '../binding.cjs';
@@ -141,8 +141,8 @@ export function viteCSSPostPlugin(
   return new BuiltinPlugin('builtin:vite-css-post', config);
 }
 
-export function htmlInlineProxyPlugin(
-  config: BindingHtmlInlineProxyPluginConfig,
+export function viteHtmlInlineProxyPlugin(
+  config: BindingViteHtmlInlineProxyPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:html-inline-proxy', config);
+  return new BuiltinPlugin('builtin:vite-html-inline-proxy', config);
 }

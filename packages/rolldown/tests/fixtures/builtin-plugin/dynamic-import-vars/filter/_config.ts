@@ -1,8 +1,8 @@
 import path from 'node:path';
 import { defineTest } from 'rolldown-tests';
 import {
-  importGlobPlugin,
   viteDynamicImportVarsPlugin,
+  viteImportGlobPlugin,
 } from 'rolldown/experimental';
 
 export default defineTest({
@@ -11,7 +11,7 @@ export default defineTest({
       viteDynamicImportVarsPlugin({
         exclude: [/main\.js$/],
       }),
-      importGlobPlugin({
+      viteImportGlobPlugin({
         root: path.resolve(import.meta.dirname),
       }),
     ],

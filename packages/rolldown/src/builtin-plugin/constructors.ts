@@ -1,6 +1,5 @@
 import type {
   BindingEsmExternalRequirePluginConfig,
-  BindingImportGlobPluginConfig,
   BindingIsolatedDeclarationPluginConfig,
   BindingJsonPluginConfig,
   BindingManifestPluginConfig,
@@ -11,6 +10,7 @@ import type {
   BindingViteCssPostPluginConfig,
   BindingViteDynamicImportVarsPluginConfig,
   BindingViteHtmlInlineProxyPluginConfig,
+  BindingViteImportGlobPluginConfig,
   BindingViteResolvePluginConfig,
   BindingWasmHelperPluginConfig,
 } from '../binding.cjs';
@@ -44,10 +44,10 @@ export function viteDynamicImportVarsPlugin(
   return new BuiltinPlugin('builtin:vite-dynamic-import-vars', config);
 }
 
-export function importGlobPlugin(
-  config?: BindingImportGlobPluginConfig,
+export function viteImportGlobPlugin(
+  config?: BindingViteImportGlobPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:import-glob', config);
+  return new BuiltinPlugin('builtin:vite-import-glob', config);
 }
 
 export function reporterPlugin(

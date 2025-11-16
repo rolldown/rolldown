@@ -22,7 +22,7 @@ use rolldown_plugin_utils::{
   css::is_css_request,
   data_to_esm, find_special_query, is_special_query,
 };
-use rolldown_utils::{url::clean_url, xxhash::xxhash_with_base};
+use rolldown_utils::url::clean_url;
 use string_wizard::SourceMapOptions;
 
 pub type IsLegacyFn =
@@ -115,7 +115,7 @@ impl Plugin for ViteCSSPostPlugin {
         return Err(anyhow::anyhow!("HTML proxy index in '{}' not found", args.id));
       };
 
-      let hash = xxhash_with_base(clean_url(args.id).as_bytes(), 16);
+      let hash = rolldown_plugin_utils::get_hash(clean_url(args.id));
       let cache = ctx.meta().get_or_insert_default::<HTMLProxyResult>();
       cache.inner.insert(rolldown_utils::concat_string!(hash, "_", index), css.into_owned());
       return Ok(Some(HookTransformOutput {

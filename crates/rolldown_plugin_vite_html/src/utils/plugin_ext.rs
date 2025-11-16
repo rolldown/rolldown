@@ -8,7 +8,7 @@ use rolldown_plugin_utils::{
   constants::{HTMLProxyMap, HTMLProxyMapItem, HTMLProxyResult, ViteMetadata},
   uri::encode_uri_path,
 };
-use rolldown_utils::{pattern_filter::normalize_path, url::clean_url, xxhash::xxhash_with_base};
+use rolldown_utils::{pattern_filter::normalize_path, url::clean_url};
 use string_wizard::MagicString;
 use sugar_path::SugarPath as _;
 
@@ -74,7 +74,7 @@ impl ViteHtmlPlugin {
 
     let value = rolldown_utils::concat_string!(
       "__VITE_INLINE_CSS__",
-      xxhash_with_base(clean_url(id).as_bytes(), 16),
+      rolldown_plugin_utils::get_hash(clean_url(id)),
       "_",
       itoa::Buffer::new().format(index),
       "__"

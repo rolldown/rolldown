@@ -2819,7 +2819,7 @@ dependencies = [
  "rolldown_plugin_vite_resolve",
  "rolldown_plugin_vite_transform",
  "rolldown_plugin_vite_wasm_fallback",
- "rolldown_plugin_wasm_helper",
+ "rolldown_plugin_vite_wasm_helper",
  "rolldown_plugin_web_worker_post",
  "rolldown_sourcemap",
  "rolldown_tracing",
@@ -3386,7 +3386,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_plugin_wasm_helper"
+name = "rolldown_plugin_vite_wasm_helper"
 version = "0.1.0"
 dependencies = [
  "arcstr",

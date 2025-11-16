@@ -12,7 +12,7 @@ import type {
   BindingViteModulePreloadPolyfillPluginConfig,
   BindingViteReporterPluginConfig,
   BindingViteResolvePluginConfig,
-  BindingWasmHelperPluginConfig,
+  BindingViteWasmHelperPluginConfig,
 } from '../binding.cjs';
 import type { StringOrRegExp } from '../types/utils';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
@@ -62,10 +62,10 @@ export function viteManifestPlugin(
   return new BuiltinPlugin('builtin:vite-manifest', config);
 }
 
-export function wasmHelperPlugin(
-  config?: BindingWasmHelperPluginConfig,
+export function viteWasmHelperPlugin(
+  config?: BindingViteWasmHelperPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:wasm-helper', config);
+  return new BuiltinPlugin('builtin:vite-wasm-helper', config);
 }
 
 export function viteWasmFallbackPlugin(): BuiltinPlugin {

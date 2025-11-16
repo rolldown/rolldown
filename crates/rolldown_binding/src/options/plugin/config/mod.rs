@@ -17,7 +17,7 @@ mod binding_vite_module_preload_polyfill_plugin_config;
 mod binding_vite_reporter_plugin_config;
 mod binding_vite_resolve_plugin_config;
 mod binding_vite_transform_plugin_config;
-mod binding_wasm_helper_plugin_config;
+mod binding_vite_wasm_helper_plugin_config;
 
 pub use binding_esm_external_require_plugin_config::BindingEsmExternalRequirePluginConfig;
 pub use binding_isolated_declaration_plugin_config::BindingIsolatedDeclarationPluginConfig;
@@ -38,4 +38,4 @@ pub use binding_vite_module_preload_polyfill_plugin_config::BindingViteModulePre
 pub use binding_vite_reporter_plugin_config::BindingViteReporterPluginConfig;
 pub use binding_vite_resolve_plugin_config::BindingViteResolvePluginConfig;
 pub use binding_vite_transform_plugin_config::BindingViteTransformPluginConfig;
-pub use binding_wasm_helper_plugin_config::BindingWasmHelperPluginConfig;
+pub use binding_vite_wasm_helper_plugin_config::BindingViteWasmHelperPluginConfig;

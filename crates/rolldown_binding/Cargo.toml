@@ -60,7 +60,7 @@ rolldown_plugin_vite_reporter = { workspace = true }
 rolldown_plugin_vite_resolve = { workspace = true }
 rolldown_plugin_vite_transform = { workspace = true }
 rolldown_plugin_vite_wasm_fallback = { workspace = true }
-rolldown_plugin_wasm_helper = { workspace = true }
+rolldown_plugin_vite_wasm_helper = { workspace = true }
 rolldown_plugin_web_worker_post = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_tracing = { workspace = true }

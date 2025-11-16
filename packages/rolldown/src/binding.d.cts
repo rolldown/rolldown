@@ -1577,20 +1577,6 @@ export interface BindingAliasPluginConfig {
   entries: Array<BindingAliasPluginAlias>
 }
 
-export interface BindingAssetPluginConfig {
-  root: string
-  isLib: boolean
-  isSsr: boolean
-  isWorker: boolean
-  urlBase: string
-  publicDir: string
-  decodedBase: string
-  isSkipAssets: boolean
-  assetsInclude: Array<BindingStringOrRegex>
-  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
-  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
-}
-
 export interface BindingAssetSource {
   inner: string | Uint8Array
 }
@@ -1624,7 +1610,6 @@ export interface BindingBuiltinPlugin {
 }
 
 export type BindingBuiltinPluginName =  'builtin:alias'|
-'builtin:asset'|
 'builtin:asset-import-meta-url'|
 'builtin:build-import-analysis'|
 'builtin:dynamic-import-vars'|
@@ -1640,6 +1625,7 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:reporter'|
 'builtin:replace'|
 'builtin:transform'|
+'builtin:vite-asset'|
 'builtin:vite-css'|
 'builtin:vite-css-post'|
 'builtin:vite-html'|
@@ -2280,6 +2266,20 @@ export interface BindingTreeshake {
   commonjs?: boolean
   propertyReadSideEffects?: BindingPropertyReadSideEffects
   propertyWriteSideEffects?: BindingPropertyWriteSideEffects
+}
+
+export interface BindingViteAssetPluginConfig {
+  root: string
+  isLib: boolean
+  isSsr: boolean
+  isWorker: boolean
+  urlBase: string
+  publicDir: string
+  decodedBase: string
+  isSkipAssets: boolean
+  assetsInclude: Array<BindingStringOrRegex>
+  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
+  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
 }
 
 export interface BindingViteCssPluginConfig {

@@ -3,7 +3,6 @@ use std::sync::Arc;
 use napi::{Unknown, bindgen_prelude::FromNapiValue};
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_alias::AliasPlugin;
-use rolldown_plugin_asset::AssetPlugin;
 use rolldown_plugin_asset_import_meta_url::AssetImportMetaUrlPlugin;
 use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
@@ -19,6 +18,7 @@ use rolldown_plugin_react_refresh_wrapper::ReactRefreshWrapperPlugin;
 use rolldown_plugin_replace::ReplacePlugin;
 use rolldown_plugin_reporter::ReporterPlugin;
 use rolldown_plugin_transform::TransformPlugin;
+use rolldown_plugin_vite_asset::ViteAssetPlugin;
 use rolldown_plugin_vite_css::ViteCSSPlugin;
 use rolldown_plugin_vite_css_post::ViteCSSPostPlugin;
 use rolldown_plugin_vite_html::ViteHtmlPlugin;
@@ -36,11 +36,11 @@ use crate::options::plugin::config::{
 
 use super::{
   config::{
-    BindingAliasPluginConfig, BindingAssetPluginConfig, BindingBuildImportAnalysisPluginConfig,
+    BindingAliasPluginConfig, BindingBuildImportAnalysisPluginConfig,
     BindingDynamicImportVarsPluginConfig, BindingImportGlobPluginConfig,
     BindingIsolatedDeclarationPluginConfig, BindingJsonPluginConfig, BindingManifestPluginConfig,
     BindingReplacePluginConfig, BindingReporterPluginConfig, BindingTransformPluginConfig,
-    BindingViteResolvePluginConfig,
+    BindingViteAssetPluginConfig, BindingViteResolvePluginConfig,
   },
   types::binding_builtin_plugin_name::BindingBuiltinPluginName,
 };
@@ -72,14 +72,6 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           BindingAliasPluginConfig::from_unknown(options)?.try_into()?
         } else {
           AliasPlugin::default()
-        };
-        Arc::new(plugin)
-      }
-      BindingBuiltinPluginName::Asset => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingAssetPluginConfig::from_unknown(options)?.into()
-        } else {
-          AssetPlugin::default()
         };
         Arc::new(plugin)
       }
@@ -201,6 +193,14 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           BindingTransformPluginConfig::from_unknown(options)?.into()
         } else {
           TransformPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteAsset => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingViteAssetPluginConfig::from_unknown(options)?.into()
+        } else {
+          ViteAssetPlugin::default()
         };
         Arc::new(plugin)
       }

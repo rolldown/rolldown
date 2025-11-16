@@ -15,7 +15,7 @@ use serde_json::Value;
 
 #[expect(clippy::struct_excessive_bools)]
 #[derive(Debug, Default)]
-pub struct AssetPlugin {
+pub struct ViteAssetPlugin {
   pub root: PathBuf,
   pub is_lib: bool,
   pub is_ssr: bool,
@@ -32,9 +32,9 @@ pub struct AssetPlugin {
   pub handled_asset_ids: FxDashSet<String>,
 }
 
-impl Plugin for AssetPlugin {
+impl Plugin for ViteAssetPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:asset")
+    Cow::Borrowed("builtin:vite-asset")
   }
 
   fn register_hook_usage(&self) -> HookUsage {

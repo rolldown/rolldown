@@ -7,6 +7,8 @@ use rolldown_utils::{
   url::clean_url,
 };
 
+use super::ViteAssetPlugin;
+
 pub const KNOWN_ASSET_TYPES: [&str; 34] = [
   // images
   "apng",
@@ -60,7 +62,7 @@ impl InvalidAsset {
   }
 }
 
-impl super::AssetPlugin {
+impl ViteAssetPlugin {
   pub fn is_assets_include(&self, cwd: &Path, cleaned_id: &str) -> bool {
     if let Some(ext) = Path::new(cleaned_id).extension().and_then(|e| e.to_str()) {
       if KNOWN_ASSET_TYPES.contains(&ext.cow_to_ascii_lowercase().as_ref()) {

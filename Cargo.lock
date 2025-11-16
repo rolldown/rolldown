@@ -2793,7 +2793,6 @@ dependencies = [
  "rolldown_error",
  "rolldown_plugin",
  "rolldown_plugin_alias",
- "rolldown_plugin_asset",
  "rolldown_plugin_asset_import_meta_url",
  "rolldown_plugin_build_import_analysis",
  "rolldown_plugin_dynamic_import_vars",
@@ -2810,6 +2809,7 @@ dependencies = [
  "rolldown_plugin_reporter",
  "rolldown_plugin_transform",
  "rolldown_plugin_utils",
+ "rolldown_plugin_vite_asset",
  "rolldown_plugin_vite_css",
  "rolldown_plugin_vite_css_post",
  "rolldown_plugin_vite_html",
@@ -3010,20 +3010,6 @@ dependencies = [
  "cow-utils",
  "rolldown_plugin",
  "rolldown_utils",
-]
-
-[[package]]
-name = "rolldown_plugin_asset"
-version = "0.1.0"
-dependencies = [
- "arcstr",
- "cow-utils",
- "derive_more",
- "rolldown_common",
- "rolldown_plugin",
- "rolldown_plugin_utils",
- "rolldown_utils",
- "serde_json",
 ]
 
 [[package]]
@@ -3290,6 +3276,20 @@ dependencies = [
  "rustc-hash",
  "serde_json",
  "sugar_path",
+]
+
+[[package]]
+name = "rolldown_plugin_vite_asset"
+version = "0.1.0"
+dependencies = [
+ "arcstr",
+ "cow-utils",
+ "derive_more",
+ "rolldown_common",
+ "rolldown_plugin",
+ "rolldown_plugin_utils",
+ "rolldown_utils",
+ "serde_json",
 ]
 
 [[package]]

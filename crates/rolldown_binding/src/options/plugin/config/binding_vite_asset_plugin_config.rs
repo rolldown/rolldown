@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use rolldown_plugin_asset::AssetPlugin;
+use rolldown_plugin_vite_asset::ViteAssetPlugin;
 use rolldown_utils::dashmap::FxDashSet;
 use sugar_path::SugarPath;
 
@@ -12,7 +12,7 @@ use crate::types::binding_string_or_regex::{
 
 #[expect(clippy::struct_excessive_bools)]
 #[napi_derive::napi(object, object_to_js = false)]
-pub struct BindingAssetPluginConfig {
+pub struct BindingViteAssetPluginConfig {
   pub root: String,
   pub is_lib: bool,
   pub is_ssr: bool,
@@ -30,8 +30,8 @@ pub struct BindingAssetPluginConfig {
   pub render_built_url: Option<BindingRenderBuiltUrl>,
 }
 
-impl From<BindingAssetPluginConfig> for AssetPlugin {
-  fn from(config: BindingAssetPluginConfig) -> Self {
+impl From<BindingViteAssetPluginConfig> for ViteAssetPlugin {
+  fn from(config: BindingViteAssetPluginConfig) -> Self {
     Self {
       root: PathBuf::from(config.root).normalize(),
       is_lib: config.is_lib,

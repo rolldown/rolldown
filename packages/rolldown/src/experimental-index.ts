@@ -45,7 +45,7 @@ export {
 } from './builtin-plugin/constructors';
 
 export { aliasPlugin } from './builtin-plugin/alias-plugin';
-export { assetPlugin } from './builtin-plugin/asset-plugin';
+export { viteAssetPlugin } from './builtin-plugin/asset-plugin';
 export { transformPlugin } from './builtin-plugin/transform-plugin';
 export { viteCSSPlugin } from './builtin-plugin/vite-css-plugin';
 export {

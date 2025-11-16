@@ -24,7 +24,6 @@ impl RenderAssetUrlInJsEnv<'_> {
     let mut last = 0;
     let mut code = None;
     for (start, _) in vite_asset_iter {
-      last = start;
       let (end, filename, is_public_asset) = if self.code[start + 13..].starts_with('_') {
         let start = start + 14;
         let Some((reference_id, mut end)) =
@@ -99,7 +98,7 @@ impl RenderAssetUrlInJsEnv<'_> {
         .await?;
 
       let code = code.get_or_insert_with(|| String::with_capacity(self.code.len()));
-      code.push_str(&self.code[..last]);
+      code.push_str(&self.code[last..start]);
       code.push_str(&url.to_asset_url_in_js()?);
       last = end;
     }

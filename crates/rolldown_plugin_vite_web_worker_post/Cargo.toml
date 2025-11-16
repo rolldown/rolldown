@@ -1,10 +1,10 @@
 [package]
-name = "rolldown_plugin_web_worker_post"
+name = "rolldown_plugin_vite_web_worker_post"
 version = "0.1.0"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
-publish = true
+publish = false
 repository.workspace = true
 description = "Rolldown plugin for Web Worker post-processing"
 

@@ -119,7 +119,7 @@ rolldown_plugin_vite_resolve = { version = "0.1.0", path = "crates/rolldown_plug
 rolldown_plugin_vite_transform = { version = "0.1.0", path = "crates/rolldown_plugin_vite_transform" }
 rolldown_plugin_vite_wasm_fallback = { version = "0.1.0", path = "crates/rolldown_plugin_vite_wasm_fallback" }
 rolldown_plugin_vite_wasm_helper = { version = "0.1.0", path = "crates/rolldown_plugin_vite_wasm_helper" }
-rolldown_plugin_web_worker_post = { version = "0.1.0", path = "crates/rolldown_plugin_web_worker_post" }
+rolldown_plugin_vite_web_worker_post = { version = "0.1.0", path = "crates/rolldown_plugin_vite_web_worker_post" }
 rolldown_resolver = { version = "0.1.0", path = "crates/rolldown_resolver" }
 rolldown_sourcemap = { version = "0.1.0", path = "crates/rolldown_sourcemap" }
 rolldown_std_utils = { version = "0.1.0", path = "crates/rolldown_std_utils" }

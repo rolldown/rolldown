@@ -12,13 +12,13 @@ This plugin processes JSON files and transforms them into JavaScript modules. Th
 
 ```js
 import { defineConfig } from 'rolldown';
-import { jsonPlugin } from 'rolldown/experimental';
+import { viteJsonPlugin } from 'rolldown/experimental';
 
 export default defineConfig({
   input: {
     entry: './main.ts',
   },
-  plugins: [jsonPlugin({
+  plugins: [viteJsonPlugin({
     minify: false,
     namedExports: false,
     stringify: 'auto',

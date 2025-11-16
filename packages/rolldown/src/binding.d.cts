@@ -1585,7 +1585,6 @@ export interface BindingBuiltinPlugin {
 
 export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:isolated-declaration'|
-'builtin:json'|
 'builtin:load-fallback'|
 'builtin:manifest'|
 'builtin:module-preload-polyfill'|
@@ -1603,6 +1602,7 @@ export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:vite-html'|
 'builtin:vite-html-inline-proxy'|
 'builtin:vite-import-glob'|
+'builtin:vite-json'|
 'builtin:vite-resolve'|
 'builtin:wasm-fallback'|
 'builtin:wasm-helper'|
@@ -1882,15 +1882,6 @@ export interface BindingInputOptions {
 export interface BindingIsolatedDeclarationPluginConfig {
   stripInternal?: boolean
 }
-
-export interface BindingJsonPluginConfig {
-  minify?: boolean
-  namedExports?: boolean
-  stringify?: BindingJsonPluginStringify
-}
-
-export type BindingJsonPluginStringify =
-  boolean | string
 
 export interface BindingJsonSourcemap {
   file?: string
@@ -2326,6 +2317,15 @@ export interface BindingViteImportGlobPluginConfig {
   root?: string
   restoreQueryExtension?: boolean
 }
+
+export interface BindingViteJsonPluginConfig {
+  minify?: boolean
+  namedExports?: boolean
+  stringify?: BindingViteJsonPluginStringify
+}
+
+export type BindingViteJsonPluginStringify =
+  boolean | string
 
 export interface BindingVitePluginCustom {
   'vite:import-glob'?: ViteImportGlobMeta

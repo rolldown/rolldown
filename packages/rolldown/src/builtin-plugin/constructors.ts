@@ -1,7 +1,6 @@
 import type {
   BindingEsmExternalRequirePluginConfig,
   BindingIsolatedDeclarationPluginConfig,
-  BindingJsonPluginConfig,
   BindingManifestPluginConfig,
   BindingModulePreloadPolyfillPluginConfig,
   BindingReactRefreshWrapperPluginConfig,
@@ -11,6 +10,7 @@ import type {
   BindingViteDynamicImportVarsPluginConfig,
   BindingViteHtmlInlineProxyPluginConfig,
   BindingViteImportGlobPluginConfig,
+  BindingViteJsonPluginConfig,
   BindingViteResolvePluginConfig,
   BindingWasmHelperPluginConfig,
 } from '../binding.cjs';
@@ -77,8 +77,10 @@ export function loadFallbackPlugin(): BuiltinPlugin {
   return new BuiltinPlugin('builtin:load-fallback');
 }
 
-export function jsonPlugin(config?: BindingJsonPluginConfig): BuiltinPlugin {
-  const builtinPlugin = new BuiltinPlugin('builtin:json', config);
+export function viteJsonPlugin(
+  config?: BindingViteJsonPluginConfig,
+): BuiltinPlugin {
+  const builtinPlugin = new BuiltinPlugin('builtin:vite-json', config);
   return makeBuiltinPluginCallable(builtinPlugin);
 }
 

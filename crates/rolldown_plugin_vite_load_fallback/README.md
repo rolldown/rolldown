@@ -12,13 +12,13 @@ This plugin provides a fallback mechanism for module IDs with query (`?`) or has
 
 ```js
 import { defineConfig } from 'rolldown';
-import { loadFallbackPlugin } from 'rolldown/experimental';
+import { viteLoadFallbackPlugin } from 'rolldown/experimental';
 
 export default defineConfig({
   input: {
     entry: './main.ts',
   },
-  plugins: [loadFallbackPlugin()],
+  plugins: [viteLoadFallbackPlugin()],
 });
 ```
 

@@ -1585,7 +1585,6 @@ export interface BindingBuiltinPlugin {
 
 export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:isolated-declaration'|
-'builtin:load-fallback'|
 'builtin:manifest'|
 'builtin:module-preload-polyfill'|
 'builtin:react-refresh-wrapper'|
@@ -1603,6 +1602,7 @@ export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:vite-html-inline-proxy'|
 'builtin:vite-import-glob'|
 'builtin:vite-json'|
+'builtin:vite-load-fallback'|
 'builtin:vite-resolve'|
 'builtin:wasm-fallback'|
 'builtin:wasm-helper'|

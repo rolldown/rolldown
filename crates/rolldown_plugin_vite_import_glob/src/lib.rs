@@ -9,21 +9,21 @@ use rolldown_plugin::{
 use sugar_path::SugarPath;
 
 #[derive(Debug, Default)]
-pub struct ImportGlobPlugin {
-  pub config: ImportGlobPluginConfig,
+pub struct ViteImportGlobPlugin {
+  pub config: ViteImportGlobPluginConfig,
 }
 
 #[derive(Debug, Default)]
-pub struct ImportGlobPluginConfig {
+pub struct ViteImportGlobPluginConfig {
   /// vite also support `source_map` config, but we can't support it now.
   /// Since the source map now follow the codegen option.
   pub root: Option<String>,
   pub restore_query_extension: bool,
 }
 
-impl Plugin for ImportGlobPlugin {
+impl Plugin for ViteImportGlobPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:import-glob")
+    Cow::Borrowed("builtin:vite-import-glob")
   }
 
   async fn transform_ast(

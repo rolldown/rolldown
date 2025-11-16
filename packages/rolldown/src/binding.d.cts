@@ -1584,7 +1584,6 @@ export interface BindingBuiltinPlugin {
 }
 
 export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
-'builtin:import-glob'|
 'builtin:isolated-declaration'|
 'builtin:json'|
 'builtin:load-fallback'|
@@ -1603,6 +1602,7 @@ export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:vite-dynamic-import-vars'|
 'builtin:vite-html'|
 'builtin:vite-html-inline-proxy'|
+'builtin:vite-import-glob'|
 'builtin:vite-resolve'|
 'builtin:wasm-fallback'|
 'builtin:wasm-helper'|
@@ -1823,11 +1823,6 @@ export interface BindingHookTransformOutput {
   moduleSideEffects?: BindingHookSideEffects
   map?: BindingSourcemap
   moduleType?: string
-}
-
-export interface BindingImportGlobPluginConfig {
-  root?: string
-  restoreQueryExtension?: boolean
 }
 
 export interface BindingInjectImportNamed {
@@ -2325,6 +2320,11 @@ export interface BindingViteHtmlPluginConfig {
   assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
   transformIndexHtml: (html: string, path: string, filename: string, hook: 'transform' | 'generateBundle', output?: BindingOutputs, chunk?: BindingOutputChunk) => Promise<string>
+}
+
+export interface BindingViteImportGlobPluginConfig {
+  root?: string
+  restoreQueryExtension?: boolean
 }
 
 export interface BindingVitePluginCustom {

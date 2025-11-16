@@ -2,13 +2,13 @@ import * as fs from 'node:fs';
 import * as path from 'path';
 import { RolldownOutput } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
-import { importGlobPlugin } from 'rolldown/experimental';
+import { viteImportGlobPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
   config: {
     plugins: [
-      importGlobPlugin({
+      viteImportGlobPlugin({
         restoreQueryExtension: true,
       }),
       {

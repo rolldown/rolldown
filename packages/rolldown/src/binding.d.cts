@@ -1583,8 +1583,7 @@ export interface BindingBuiltinPlugin {
   options?: unknown
 }
 
-export type BindingBuiltinPluginName =  'builtin:dynamic-import-vars'|
-'builtin:esm-external-require'|
+export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:html-inline-proxy'|
 'builtin:import-glob'|
 'builtin:isolated-declaration'|
@@ -1602,6 +1601,7 @@ export type BindingBuiltinPluginName =  'builtin:dynamic-import-vars'|
 'builtin:vite-build-import-analysis'|
 'builtin:vite-css'|
 'builtin:vite-css-post'|
+'builtin:vite-dynamic-import-vars'|
 'builtin:vite-html'|
 'builtin:vite-resolve'|
 'builtin:wasm-fallback'|
@@ -1678,12 +1678,6 @@ export interface BindingDevWatchOptions {
   debounceDuration?: number
   compareContentsForPolling?: boolean
   debounceTickRate?: number
-}
-
-export interface BindingDynamicImportVarsPluginConfig {
-  include?: Array<BindingStringOrRegex>
-  exclude?: Array<BindingStringOrRegex>
-  resolver?: (id: string, importer: string) => MaybePromise<string | undefined>
 }
 
 export interface BindingEmittedAsset {
@@ -2311,6 +2305,12 @@ export interface BindingViteCssPostPluginConfig {
   isLegacy?: () => boolean
   cssMinify?: (css: string) => Promise<string>
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
+}
+
+export interface BindingViteDynamicImportVarsPluginConfig {
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  resolver?: (id: string, importer: string) => MaybePromise<string | undefined>
 }
 
 export interface BindingViteHtmlPluginConfig {

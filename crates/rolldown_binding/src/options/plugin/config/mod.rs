@@ -1,4 +1,3 @@
-mod binding_dynamic_import_vars_plugin_config;
 mod binding_esm_external_require_plugin_config;
 mod binding_html_inline_proxy_plugin_config;
 mod binding_import_glob_plugin_config;
@@ -15,11 +14,11 @@ mod binding_vite_asset_plugin_config;
 mod binding_vite_build_import_analysis_plugin_config;
 mod binding_vite_css_plugin_config;
 mod binding_vite_css_post_plugin_config;
+mod binding_vite_dynamic_import_vars_plugin_config;
 mod binding_vite_html_plugin_config;
 mod binding_vite_resolve_plugin_config;
 mod binding_wasm_helper_plugin_config;
 
-pub use binding_dynamic_import_vars_plugin_config::BindingDynamicImportVarsPluginConfig;
 pub use binding_esm_external_require_plugin_config::BindingEsmExternalRequirePluginConfig;
 pub use binding_html_inline_proxy_plugin_config::BindingHtmlInlineProxyPluginConfig;
 pub use binding_import_glob_plugin_config::BindingImportGlobPluginConfig;
@@ -36,6 +35,7 @@ pub use binding_vite_asset_plugin_config::BindingViteAssetPluginConfig;
 pub use binding_vite_build_import_analysis_plugin_config::BindingViteBuildImportAnalysisPluginConfig;
 pub use binding_vite_css_plugin_config::BindingViteCSSPluginConfig;
 pub use binding_vite_css_post_plugin_config::BindingViteCSSPostPluginConfig;
+pub use binding_vite_dynamic_import_vars_plugin_config::BindingViteDynamicImportVarsPluginConfig;
 pub use binding_vite_html_plugin_config::BindingViteHtmlPluginConfig;
 pub use binding_vite_resolve_plugin_config::BindingViteResolvePluginConfig;
 pub use binding_wasm_helper_plugin_config::BindingWasmHelperPluginConfig;

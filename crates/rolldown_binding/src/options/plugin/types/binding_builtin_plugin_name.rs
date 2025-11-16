@@ -3,8 +3,6 @@ use napi_derive::napi;
 #[derive(Debug)]
 #[napi(string_enum)]
 pub enum BindingBuiltinPluginName {
-  #[napi(value = "builtin:dynamic-import-vars")]
-  DynamicImportVars,
   #[napi(value = "builtin:esm-external-require")]
   EsmExternalRequire,
   #[napi(value = "builtin:html-inline-proxy")]
@@ -41,6 +39,8 @@ pub enum BindingBuiltinPluginName {
   ViteCSS,
   #[napi(value = "builtin:vite-css-post")]
   ViteCSSPost,
+  #[napi(value = "builtin:vite-dynamic-import-vars")]
+  ViteDynamicImportVars,
   #[napi(value = "builtin:vite-html")]
   ViteHtml,
   #[napi(value = "builtin:vite-resolve")]

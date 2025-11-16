@@ -1,5 +1,4 @@
 import type {
-  BindingDynamicImportVarsPluginConfig,
   BindingEsmExternalRequirePluginConfig,
   BindingHtmlInlineProxyPluginConfig,
   BindingImportGlobPluginConfig,
@@ -11,6 +10,7 @@ import type {
   BindingReporterPluginConfig,
   BindingViteBuildImportAnalysisPluginConfig,
   BindingViteCssPostPluginConfig,
+  BindingViteDynamicImportVarsPluginConfig,
   BindingViteResolvePluginConfig,
   BindingWasmHelperPluginConfig,
 } from '../binding.cjs';
@@ -26,7 +26,7 @@ export function modulePreloadPolyfillPlugin(
 
 type DynamicImportVarsPluginConfig =
   & Omit<
-    BindingDynamicImportVarsPluginConfig,
+    BindingViteDynamicImportVarsPluginConfig,
     'include' | 'exclude'
   >
   & {
@@ -34,14 +34,14 @@ type DynamicImportVarsPluginConfig =
     exclude?: StringOrRegExp | StringOrRegExp[];
   };
 
-export function dynamicImportVarsPlugin(
+export function viteDynamicImportVarsPlugin(
   config?: DynamicImportVarsPluginConfig,
 ): BuiltinPlugin {
   if (config) {
     config.include = normalizedStringOrRegex(config.include);
     config.exclude = normalizedStringOrRegex(config.exclude);
   }
-  return new BuiltinPlugin('builtin:dynamic-import-vars', config);
+  return new BuiltinPlugin('builtin:vite-dynamic-import-vars', config);
 }
 
 export function importGlobPlugin(

@@ -1,10 +1,10 @@
 [package]
-name = "rolldown_plugin_dynamic_import_vars"
+name = "rolldown_plugin_vite_dynamic_import_vars"
 version = "0.1.0"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
-publish = true
+publish = false
 repository.workspace = true
 description = "Rolldown plugin for dynamic import with template literals"
 

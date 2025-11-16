@@ -1,14 +1,14 @@
 import path from 'node:path';
 import { defineTest } from 'rolldown-tests';
 import {
-  dynamicImportVarsPlugin,
   importGlobPlugin,
+  viteDynamicImportVarsPlugin,
 } from 'rolldown/experimental';
 
 export default defineTest({
   config: {
     plugins: [
-      dynamicImportVarsPlugin({
+      viteDynamicImportVarsPlugin({
         exclude: [/main\.js$/],
       }),
       importGlobPlugin({

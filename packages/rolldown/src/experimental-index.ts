@@ -26,7 +26,6 @@ export {
 export { defineParallelPlugin } from './plugin/parallel-plugin';
 // Builtin plugin factory
 export {
-  dynamicImportVarsPlugin,
   htmlInlineProxyPlugin,
   importGlobPlugin,
   isolatedDeclarationPlugin,
@@ -38,6 +37,7 @@ export {
   reporterPlugin,
   viteBuildImportAnalysisPlugin,
   viteCSSPostPlugin,
+  viteDynamicImportVarsPlugin,
   viteResolvePlugin,
   wasmFallbackPlugin,
   wasmHelperPlugin,

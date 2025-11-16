@@ -23,14 +23,14 @@ pub type ResolverFn = dyn Fn(String, String) -> Pin<Box<dyn Future<Output = anyh
   + Sync;
 
 #[derive(Debug, Default)]
-pub struct DynamicImportVarsPlugin {
+pub struct ViteDynamicImportVarsPlugin {
   pub include: Vec<StringOrRegex>,
   pub exclude: Vec<StringOrRegex>,
   #[debug(skip)]
   pub resolver: Option<Arc<ResolverFn>>,
 }
 
-impl DynamicImportVarsPlugin {
+impl ViteDynamicImportVarsPlugin {
   fn filter(&self, id: &str, cwd: &Path) -> bool {
     if self.include.is_empty() && self.exclude.is_empty() {
       return true;
@@ -42,9 +42,9 @@ impl DynamicImportVarsPlugin {
   }
 }
 
-impl Plugin for DynamicImportVarsPlugin {
+impl Plugin for ViteDynamicImportVarsPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:dynamic-import-vars")
+    Cow::Borrowed("builtin:vite-dynamic-import-vars")
   }
 
   async fn resolve_id(

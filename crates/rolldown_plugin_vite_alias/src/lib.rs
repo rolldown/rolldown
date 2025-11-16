@@ -8,7 +8,7 @@ use rolldown_plugin::{
 use rolldown_utils::pattern_filter::StringOrRegex;
 
 #[derive(Debug, Default)]
-pub struct AliasPlugin {
+pub struct ViteAliasPlugin {
   // We don't support `customResolver` and `resolverFunction`, it will generate many threadSafeFunction in queue,
   // and slowdown the performance, downstream user should fallback to js alias plugin when needs advance feature.
   pub entries: Vec<Alias>,
@@ -20,9 +20,9 @@ pub struct Alias {
   pub replacement: String,
 }
 
-impl Plugin for AliasPlugin {
+impl Plugin for ViteAliasPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:alias")
+    Cow::Borrowed("builtin:vite-alias")
   }
 
   async fn resolve_id(

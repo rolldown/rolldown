@@ -1,11 +1,11 @@
 import { defineTest } from 'rolldown-tests';
-import { aliasPlugin } from 'rolldown/experimental';
+import { viteAliasPlugin } from 'rolldown/experimental';
 
 export default defineTest({
   config: {
     input: './main.js',
     plugins: [
-      aliasPlugin({
+      viteAliasPlugin({
         entries: [{ find: /\d+/, replacement: '' }],
       }),
     ],

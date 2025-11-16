@@ -1568,15 +1568,6 @@ export interface BindingAdvancedChunksOptions {
   maxModuleSize?: number
 }
 
-export interface BindingAliasPluginAlias {
-  find: BindingStringOrRegex
-  replacement: string
-}
-
-export interface BindingAliasPluginConfig {
-  entries: Array<BindingAliasPluginAlias>
-}
-
 export interface BindingAssetSource {
   inner: string | Uint8Array
 }
@@ -1609,8 +1600,7 @@ export interface BindingBuiltinPlugin {
   options?: unknown
 }
 
-export type BindingBuiltinPluginName =  'builtin:alias'|
-'builtin:asset-import-meta-url'|
+export type BindingBuiltinPluginName =  'builtin:asset-import-meta-url'|
 'builtin:build-import-analysis'|
 'builtin:dynamic-import-vars'|
 'builtin:esm-external-require'|
@@ -1625,6 +1615,7 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:reporter'|
 'builtin:replace'|
 'builtin:transform'|
+'builtin:vite-alias'|
 'builtin:vite-asset'|
 'builtin:vite-css'|
 'builtin:vite-css-post'|
@@ -2266,6 +2257,15 @@ export interface BindingTreeshake {
   commonjs?: boolean
   propertyReadSideEffects?: BindingPropertyReadSideEffects
   propertyWriteSideEffects?: BindingPropertyWriteSideEffects
+}
+
+export interface BindingViteAliasPluginAlias {
+  find: BindingStringOrRegex
+  replacement: string
+}
+
+export interface BindingViteAliasPluginConfig {
+  entries: Array<BindingViteAliasPluginAlias>
 }
 
 export interface BindingViteAssetPluginConfig {

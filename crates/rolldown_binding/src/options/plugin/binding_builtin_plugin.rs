@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use napi::{Unknown, bindgen_prelude::FromNapiValue};
 use rolldown_plugin::__inner::Pluginable;
-use rolldown_plugin_alias::AliasPlugin;
 use rolldown_plugin_asset_import_meta_url::AssetImportMetaUrlPlugin;
 use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
@@ -18,6 +17,7 @@ use rolldown_plugin_react_refresh_wrapper::ReactRefreshWrapperPlugin;
 use rolldown_plugin_replace::ReplacePlugin;
 use rolldown_plugin_reporter::ReporterPlugin;
 use rolldown_plugin_transform::TransformPlugin;
+use rolldown_plugin_vite_alias::ViteAliasPlugin;
 use rolldown_plugin_vite_asset::ViteAssetPlugin;
 use rolldown_plugin_vite_css::ViteCSSPlugin;
 use rolldown_plugin_vite_css_post::ViteCSSPostPlugin;
@@ -36,11 +36,11 @@ use crate::options::plugin::config::{
 
 use super::{
   config::{
-    BindingAliasPluginConfig, BindingBuildImportAnalysisPluginConfig,
-    BindingDynamicImportVarsPluginConfig, BindingImportGlobPluginConfig,
-    BindingIsolatedDeclarationPluginConfig, BindingJsonPluginConfig, BindingManifestPluginConfig,
-    BindingReplacePluginConfig, BindingReporterPluginConfig, BindingTransformPluginConfig,
-    BindingViteAssetPluginConfig, BindingViteResolvePluginConfig,
+    BindingBuildImportAnalysisPluginConfig, BindingDynamicImportVarsPluginConfig,
+    BindingImportGlobPluginConfig, BindingIsolatedDeclarationPluginConfig, BindingJsonPluginConfig,
+    BindingManifestPluginConfig, BindingReplacePluginConfig, BindingReporterPluginConfig,
+    BindingTransformPluginConfig, BindingViteAliasPluginConfig, BindingViteAssetPluginConfig,
+    BindingViteResolvePluginConfig,
   },
   types::binding_builtin_plugin_name::BindingBuiltinPluginName,
 };
@@ -67,14 +67,6 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
 
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
-      BindingBuiltinPluginName::Alias => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingAliasPluginConfig::from_unknown(options)?.try_into()?
-        } else {
-          AliasPlugin::default()
-        };
-        Arc::new(plugin)
-      }
       BindingBuiltinPluginName::AssetImportMetaUrl => Arc::new(AssetImportMetaUrlPlugin),
       BindingBuiltinPluginName::BuildImportAnalysis => {
         let config = if let Some(options) = plugin.options {
@@ -193,6 +185,14 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           BindingTransformPluginConfig::from_unknown(options)?.into()
         } else {
           TransformPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteAlias => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingViteAliasPluginConfig::from_unknown(options)?.try_into()?
+        } else {
+          ViteAliasPlugin::default()
         };
         Arc::new(plugin)
       }

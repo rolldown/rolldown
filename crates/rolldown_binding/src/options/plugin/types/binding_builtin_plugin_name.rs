@@ -3,8 +3,6 @@ use napi_derive::napi;
 #[derive(Debug)]
 #[napi(string_enum)]
 pub enum BindingBuiltinPluginName {
-  #[napi(value = "builtin:alias")]
-  Alias,
   #[napi(value = "builtin:asset-import-meta-url")]
   AssetImportMetaUrl,
   #[napi(value = "builtin:build-import-analysis")]
@@ -35,6 +33,8 @@ pub enum BindingBuiltinPluginName {
   Replace,
   #[napi(value = "builtin:transform")]
   Transform,
+  #[napi(value = "builtin:vite-alias")]
+  ViteAlias,
   #[napi(value = "builtin:vite-asset")]
   ViteAsset,
   #[napi(value = "builtin:vite-css")]

@@ -159,7 +159,9 @@ impl Plugin for AssetPlugin {
     _ctx: &rolldown_plugin::PluginContext,
     args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
-    let mut deleted_files = vec![0u8; args.bundle.len().div_ceil(8)];
+    // TODO(shulaoda): improve below logic later
+    let len = args.bundle.len().div_ceil(8);
+    let mut deleted_files = vec![0u8; len];
     for (index, file) in args.bundle.iter().enumerate() {
       match file {
         Output::Chunk(chunk) => {
@@ -185,7 +187,10 @@ impl Plugin for AssetPlugin {
     for (i, e) in deleted_files.into_iter().rev().enumerate() {
       'outer: for j in (0..8).rev() {
         if e & (1 << j) != 0 {
-          let index = i * 8 + j;
+          let index = (len - 1 - i) * 8 + j;
+          if index >= args.bundle.len() {
+            continue;
+          }
           if let Output::Chunk(item) = &args.bundle[index] {
             for file in args.bundle.iter() {
               if let Output::Chunk(chunk) = file {

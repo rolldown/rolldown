@@ -2792,7 +2792,6 @@ dependencies = [
  "rolldown_devtools",
  "rolldown_error",
  "rolldown_plugin",
- "rolldown_plugin_asset_import_meta_url",
  "rolldown_plugin_build_import_analysis",
  "rolldown_plugin_dynamic_import_vars",
  "rolldown_plugin_esm_external_require",
@@ -2810,6 +2809,7 @@ dependencies = [
  "rolldown_plugin_utils",
  "rolldown_plugin_vite_alias",
  "rolldown_plugin_vite_asset",
+ "rolldown_plugin_vite_asset_import_meta_url",
  "rolldown_plugin_vite_css",
  "rolldown_plugin_vite_css_post",
  "rolldown_plugin_vite_html",
@@ -3001,13 +3001,6 @@ dependencies = [
  "tokio",
  "tracing",
  "typedmap",
-]
-
-[[package]]
-name = "rolldown_plugin_asset_import_meta_url"
-version = "0.1.0"
-dependencies = [
- "rolldown_plugin",
 ]
 
 [[package]]
@@ -3290,6 +3283,13 @@ dependencies = [
  "rolldown_plugin_utils",
  "rolldown_utils",
  "serde_json",
+]
+
+[[package]]
+name = "rolldown_plugin_vite_asset_import_meta_url"
+version = "0.1.0"
+dependencies = [
+ "rolldown_plugin",
 ]
 
 [[package]]

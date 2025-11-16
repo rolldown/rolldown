@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use napi::{Unknown, bindgen_prelude::FromNapiValue};
 use rolldown_plugin::__inner::Pluginable;
-use rolldown_plugin_asset_import_meta_url::AssetImportMetaUrlPlugin;
 use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
@@ -19,6 +18,7 @@ use rolldown_plugin_reporter::ReporterPlugin;
 use rolldown_plugin_transform::TransformPlugin;
 use rolldown_plugin_vite_alias::ViteAliasPlugin;
 use rolldown_plugin_vite_asset::ViteAssetPlugin;
+use rolldown_plugin_vite_asset_import_meta_url::ViteAssetImportMetaUrlPlugin;
 use rolldown_plugin_vite_css::ViteCSSPlugin;
 use rolldown_plugin_vite_css_post::ViteCSSPostPlugin;
 use rolldown_plugin_vite_html::ViteHtmlPlugin;
@@ -67,7 +67,6 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
 
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
-      BindingBuiltinPluginName::AssetImportMetaUrl => Arc::new(AssetImportMetaUrlPlugin),
       BindingBuiltinPluginName::BuildImportAnalysis => {
         let config = if let Some(options) = plugin.options {
           BindingBuildImportAnalysisPluginConfig::from_unknown(options)?
@@ -204,6 +203,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         };
         Arc::new(plugin)
       }
+      BindingBuiltinPluginName::ViteAssetImportMetaUrl => Arc::new(ViteAssetImportMetaUrlPlugin),
       BindingBuiltinPluginName::ViteCSS => {
         let plugin: ViteCSSPlugin = if let Some(options) = plugin.options {
           BindingViteCSSPluginConfig::from_unknown(options)?.into()

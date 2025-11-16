@@ -1600,8 +1600,7 @@ export interface BindingBuiltinPlugin {
   options?: unknown
 }
 
-export type BindingBuiltinPluginName =  'builtin:asset-import-meta-url'|
-'builtin:build-import-analysis'|
+export type BindingBuiltinPluginName =  'builtin:build-import-analysis'|
 'builtin:dynamic-import-vars'|
 'builtin:esm-external-require'|
 'builtin:html-inline-proxy'|
@@ -1617,6 +1616,7 @@ export type BindingBuiltinPluginName =  'builtin:asset-import-meta-url'|
 'builtin:transform'|
 'builtin:vite-alias'|
 'builtin:vite-asset'|
+'builtin:vite-asset-import-meta-url'|
 'builtin:vite-css'|
 'builtin:vite-css-post'|
 'builtin:vite-html'|

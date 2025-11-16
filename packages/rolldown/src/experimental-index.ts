@@ -41,7 +41,7 @@ export {
   viteResolvePlugin,
   viteWasmFallbackPlugin,
   viteWasmHelperPlugin,
-  webWorkerPostPlugin,
+  viteWebWorkerPostPlugin,
 } from './builtin-plugin/constructors';
 
 export { viteAliasPlugin } from './builtin-plugin/alias-plugin';

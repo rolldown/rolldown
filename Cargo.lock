@@ -2820,7 +2820,7 @@ dependencies = [
  "rolldown_plugin_vite_transform",
  "rolldown_plugin_vite_wasm_fallback",
  "rolldown_plugin_vite_wasm_helper",
- "rolldown_plugin_web_worker_post",
+ "rolldown_plugin_vite_web_worker_post",
  "rolldown_sourcemap",
  "rolldown_tracing",
  "rolldown_utils",
@@ -3396,7 +3396,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_plugin_web_worker_post"
+name = "rolldown_plugin_vite_web_worker_post"
 version = "0.1.0"
 dependencies = [
  "oxc",

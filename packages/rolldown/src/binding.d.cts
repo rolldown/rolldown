@@ -1606,7 +1606,7 @@ export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:vite-transform'|
 'builtin:vite-wasm-fallback'|
 'builtin:vite-wasm-helper'|
-'builtin:web-worker-post';
+'builtin:vite-web-worker-post';
 
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions

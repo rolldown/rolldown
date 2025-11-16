@@ -25,7 +25,7 @@ use rolldown_plugin_vite_resolve::ViteResolvePlugin;
 use rolldown_plugin_vite_transform::ViteTransformPlugin;
 use rolldown_plugin_vite_wasm_fallback::ViteWasmFallbackPlugin;
 use rolldown_plugin_vite_wasm_helper::ViteWasmHelperPlugin;
-use rolldown_plugin_web_worker_post::WebWorkerPostPlugin;
+use rolldown_plugin_vite_web_worker_post::ViteWebWorkerPostPlugin;
 
 use crate::options::plugin::config::{
   BindingEsmExternalRequirePluginConfig, BindingReactRefreshWrapperPluginConfig,
@@ -255,7 +255,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         };
         Arc::new(plugin)
       }
-      BindingBuiltinPluginName::WebWorkerPost => Arc::new(WebWorkerPostPlugin),
+      BindingBuiltinPluginName::ViteWebWorkerPost => Arc::new(ViteWebWorkerPostPlugin),
     })
   }
 }

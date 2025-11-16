@@ -9,9 +9,9 @@ use rolldown_plugin::{HookUsage, Plugin, PluginHookMeta, PluginOrder};
 use crate::ast_visitor::WebWorkerPostVisitor;
 
 #[derive(Debug)]
-pub struct WebWorkerPostPlugin;
+pub struct ViteWebWorkerPostPlugin;
 
-impl Plugin for WebWorkerPostPlugin {
+impl Plugin for ViteWebWorkerPostPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:web-worker-post")
   }

@@ -103,8 +103,8 @@ export function isolatedDeclarationPlugin(
   return new BuiltinPlugin('builtin:isolated-declaration', config);
 }
 
-export function webWorkerPostPlugin(): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:web-worker-post');
+export function viteWebWorkerPostPlugin(): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:vite-web-worker-post');
 }
 
 export function esmExternalRequirePlugin(

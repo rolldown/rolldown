@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use oxc_transform_napi::TransformOptions;
-use rolldown_plugin_transform::TransformPlugin;
+use rolldown_plugin_vite_transform::ViteTransformPlugin;
 use sugar_path::SugarPath;
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Default)]
-pub struct BindingTransformPluginConfig {
+pub struct BindingViteTransformPluginConfig {
   pub root: String,
 
   pub include: Option<Vec<BindingStringOrRegex>>,
@@ -25,8 +25,8 @@ pub struct BindingTransformPluginConfig {
   pub transform_options: Option<TransformOptions>,
 }
 
-impl From<BindingTransformPluginConfig> for TransformPlugin {
-  fn from(value: BindingTransformPluginConfig) -> Self {
+impl From<BindingViteTransformPluginConfig> for ViteTransformPlugin {
+  fn from(value: BindingViteTransformPluginConfig) -> Self {
     Self {
       root: PathBuf::from(value.root).normalize(),
       include: value.include.map(bindingify_string_or_regex_array).unwrap_or_default(),

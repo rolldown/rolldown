@@ -46,7 +46,7 @@ export {
 
 export { viteAliasPlugin } from './builtin-plugin/alias-plugin';
 export { viteAssetPlugin } from './builtin-plugin/asset-plugin';
-export { transformPlugin } from './builtin-plugin/transform-plugin';
+export { viteTransformPlugin } from './builtin-plugin/transform-plugin';
 export { viteCSSPlugin } from './builtin-plugin/vite-css-plugin';
 export {
   viteHtmlPlugin,

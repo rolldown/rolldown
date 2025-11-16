@@ -1,11 +1,11 @@
 import { defineTest } from 'rolldown-tests';
-import { transformPlugin } from 'rolldown/experimental';
+import { viteTransformPlugin } from 'rolldown/experimental';
 
 export default defineTest({
   config: {
     input: './main.js',
     plugins: [
-      transformPlugin(),
+      viteTransformPlugin(),
       {
         name: 'virtual',
         resolveId(source) {

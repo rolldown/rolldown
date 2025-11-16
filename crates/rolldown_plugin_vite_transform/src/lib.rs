@@ -16,7 +16,7 @@ use rolldown_utils::{
 };
 
 #[derive(Debug, Default)]
-pub struct TransformPlugin {
+pub struct ViteTransformPlugin {
   pub root: PathBuf,
   pub include: Vec<StringOrRegex>,
   pub exclude: Vec<StringOrRegex>,
@@ -29,9 +29,9 @@ pub struct TransformPlugin {
 }
 
 /// only handle ecma like syntax, `jsx`,`tsx`,`ts`
-impl Plugin for TransformPlugin {
+impl Plugin for ViteTransformPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:transform")
+    Cow::Borrowed("builtin:vite-transform")
   }
 
   async fn transform(

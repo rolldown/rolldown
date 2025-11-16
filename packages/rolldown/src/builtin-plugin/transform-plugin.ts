@@ -1,6 +1,6 @@
 import { BuiltinPlugin } from './utils';
 
-import type { BindingTransformPluginConfig } from '../binding.cjs';
+import type { BindingViteTransformPluginConfig } from '../binding.cjs';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
 
 type TransformPattern = string | RegExp | readonly (RegExp | string)[];
@@ -8,7 +8,7 @@ type TransformPattern = string | RegExp | readonly (RegExp | string)[];
 // A temp config type for giving better user experience
 type TransformPluginConfig =
   & Omit<
-    BindingTransformPluginConfig,
+    BindingViteTransformPluginConfig,
     'include' | 'exclude' | 'jsxRefreshInclude' | 'jsxRefreshExclude'
   >
   & {
@@ -18,7 +18,9 @@ type TransformPluginConfig =
     jsxRefreshExclude?: TransformPattern;
   };
 
-export function transformPlugin(config?: TransformPluginConfig): BuiltinPlugin {
+export function viteTransformPlugin(
+  config?: TransformPluginConfig,
+): BuiltinPlugin {
   if (config) {
     config = {
       ...config,
@@ -28,5 +30,5 @@ export function transformPlugin(config?: TransformPluginConfig): BuiltinPlugin {
       jsxRefreshExclude: normalizedStringOrRegex(config.jsxRefreshExclude),
     };
   }
-  return new BuiltinPlugin('builtin:transform', config);
+  return new BuiltinPlugin('builtin:vite-transform', config);
 }

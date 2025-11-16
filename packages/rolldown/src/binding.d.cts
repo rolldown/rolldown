@@ -1587,7 +1587,6 @@ export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:isolated-declaration'|
 'builtin:react-refresh-wrapper'|
 'builtin:replace'|
-'builtin:transform'|
 'builtin:vite-alias'|
 'builtin:vite-asset'|
 'builtin:vite-asset-import-meta-url'|
@@ -1604,6 +1603,7 @@ export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:vite-module-preload-polyfill'|
 'builtin:vite-reporter'|
 'builtin:vite-resolve'|
+'builtin:vite-transform'|
 'builtin:wasm-fallback'|
 'builtin:wasm-helper'|
 'builtin:web-worker-post';
@@ -2174,17 +2174,6 @@ export interface BindingTransformHookExtraArgs {
   moduleType: string
 }
 
-export interface BindingTransformPluginConfig {
-  root: string
-  include?: Array<BindingStringOrRegex>
-  exclude?: Array<BindingStringOrRegex>
-  jsxRefreshInclude?: Array<BindingStringOrRegex>
-  jsxRefreshExclude?: Array<BindingStringOrRegex>
-  isServerConsumer?: boolean
-  jsxInject?: string
-  transformOptions?: TransformOptions
-}
-
 export interface BindingTreeshake {
   moduleSideEffects: boolean | ReadonlyArray<string> | BindingModuleSideEffectsRule[] | ((id: string, external: boolean) => boolean | undefined)
   annotations?: boolean
@@ -2363,6 +2352,17 @@ export interface BindingViteResolvePluginResolveOptions {
   tryPrefix?: string
   preserveSymlinks: boolean
   tsconfigPaths: boolean
+}
+
+export interface BindingViteTransformPluginConfig {
+  root: string
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  jsxRefreshInclude?: Array<BindingStringOrRegex>
+  jsxRefreshExclude?: Array<BindingStringOrRegex>
+  isServerConsumer?: boolean
+  jsxInject?: string
+  transformOptions?: TransformOptions
 }
 
 export interface BindingWasmHelperPluginConfig {

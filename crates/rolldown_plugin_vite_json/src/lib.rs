@@ -10,23 +10,23 @@ use rolldown_utils::concat_string;
 use serde_json::Value;
 
 #[derive(Debug, Default)]
-pub struct JsonPlugin {
+pub struct ViteJsonPlugin {
   pub minify: bool,
   pub named_exports: bool,
-  pub stringify: JsonPluginStringify,
+  pub stringify: ViteJsonPluginStringify,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum JsonPluginStringify {
+pub enum ViteJsonPluginStringify {
   #[default]
   Auto,
   True,
   False,
 }
 
-impl Plugin for JsonPlugin {
+impl Plugin for ViteJsonPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:json")
+    Cow::Borrowed("builtin:vite-json")
   }
 
   async fn transform(
@@ -44,8 +44,9 @@ impl Plugin for JsonPlugin {
     let code = rolldown_plugin_utils::strip_bom(args.code);
 
     let is_name_exports = self.named_exports && code.trim_start().starts_with('{');
-    let is_stringify = self.stringify != JsonPluginStringify::False
-      && (self.stringify == JsonPluginStringify::True || code.len() > constants::THRESHOLD_SIZE);
+    let is_stringify = self.stringify != ViteJsonPluginStringify::False
+      && (self.stringify == ViteJsonPluginStringify::True
+        || code.len() > constants::THRESHOLD_SIZE);
     if !is_name_exports && is_stringify {
       let json = if self.minify {
         // TODO(perf): find better way than https://github.com/rolldown/vite/blob/3bf86e3f/packages/vite/src/node/plugins/json.ts#L55-L57

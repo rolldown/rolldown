@@ -4,7 +4,6 @@ use napi::{Unknown, bindgen_prelude::FromNapiValue};
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
-use rolldown_plugin_json::JsonPlugin;
 use rolldown_plugin_load_fallback::LoadFallbackPlugin;
 use rolldown_plugin_manifest::ManifestPlugin;
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
@@ -22,6 +21,7 @@ use rolldown_plugin_vite_dynamic_import_vars::ViteDynamicImportVarsPlugin;
 use rolldown_plugin_vite_html::ViteHtmlPlugin;
 use rolldown_plugin_vite_html_inline_proxy::ViteHtmlInlineProxyPlugin;
 use rolldown_plugin_vite_import_glob::ViteImportGlobPlugin;
+use rolldown_plugin_vite_json::ViteJsonPlugin;
 use rolldown_plugin_vite_resolve::ViteResolvePlugin;
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
@@ -36,11 +36,11 @@ use crate::options::plugin::config::{
 
 use super::{
   config::{
-    BindingIsolatedDeclarationPluginConfig, BindingJsonPluginConfig, BindingManifestPluginConfig,
+    BindingIsolatedDeclarationPluginConfig, BindingManifestPluginConfig,
     BindingReplacePluginConfig, BindingReporterPluginConfig, BindingTransformPluginConfig,
     BindingViteAliasPluginConfig, BindingViteAssetPluginConfig,
     BindingViteBuildImportAnalysisPluginConfig, BindingViteDynamicImportVarsPluginConfig,
-    BindingViteImportGlobPluginConfig, BindingViteResolvePluginConfig,
+    BindingViteImportGlobPluginConfig, BindingViteJsonPluginConfig, BindingViteResolvePluginConfig,
   },
   types::binding_builtin_plugin_name::BindingBuiltinPluginName,
 };
@@ -80,14 +80,6 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           BindingIsolatedDeclarationPluginConfig::from_unknown(options)?.into()
         } else {
           IsolatedDeclarationPlugin::default()
-        };
-        Arc::new(plugin)
-      }
-      BindingBuiltinPluginName::Json => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingJsonPluginConfig::from_unknown(options)?.try_into()?
-        } else {
-          JsonPlugin::default()
         };
         Arc::new(plugin)
       }
@@ -231,6 +223,14 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           BindingViteImportGlobPluginConfig::from_unknown(options)?.into()
         } else {
           ViteImportGlobPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteJson => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingViteJsonPluginConfig::from_unknown(options)?.try_into()?
+        } else {
+          ViteJsonPlugin::default()
         };
         Arc::new(plugin)
       }

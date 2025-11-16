@@ -1,14 +1,14 @@
 import path from 'node:path';
 import { RolldownPlugin } from 'rolldown';
 import { defineTest } from 'rolldown-tests';
-import { loadFallbackPlugin } from 'rolldown/experimental';
+import { viteLoadFallbackPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 const entry = path.join(__dirname, './main.js');
 
 function removeConsoleForPathWithQuery(): RolldownPlugin[] {
   return [
-    loadFallbackPlugin(),
+    viteLoadFallbackPlugin(),
     {
       name: 'remove-console',
       transform(code) {

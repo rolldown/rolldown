@@ -73,8 +73,8 @@ export function wasmFallbackPlugin(): BuiltinPlugin {
   return makeBuiltinPluginCallable(builtinPlugin);
 }
 
-export function loadFallbackPlugin(): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:load-fallback');
+export function viteLoadFallbackPlugin(): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:vite-load-fallback');
 }
 
 export function viteJsonPlugin(

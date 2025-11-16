@@ -5,11 +5,11 @@ use rolldown_plugin::{
 };
 
 #[derive(Debug)]
-pub struct LoadFallbackPlugin;
+pub struct ViteLoadFallbackPlugin;
 
-impl Plugin for LoadFallbackPlugin {
+impl Plugin for ViteLoadFallbackPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:load-fallback")
+    Cow::Borrowed("builtin:vite-load-fallback")
   }
 
   async fn load(&self, ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {

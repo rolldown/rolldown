@@ -1604,7 +1604,7 @@ export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:vite-reporter'|
 'builtin:vite-resolve'|
 'builtin:vite-transform'|
-'builtin:wasm-fallback'|
+'builtin:vite-wasm-fallback'|
 'builtin:wasm-helper'|
 'builtin:web-worker-post';
 

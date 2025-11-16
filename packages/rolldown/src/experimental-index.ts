@@ -39,7 +39,7 @@ export {
   viteModulePreloadPolyfillPlugin,
   viteReporterPlugin,
   viteResolvePlugin,
-  wasmFallbackPlugin,
+  viteWasmFallbackPlugin,
   wasmHelperPlugin,
   webWorkerPostPlugin,
 } from './builtin-plugin/constructors';

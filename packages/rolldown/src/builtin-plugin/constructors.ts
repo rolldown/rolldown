@@ -68,8 +68,8 @@ export function wasmHelperPlugin(
   return new BuiltinPlugin('builtin:wasm-helper', config);
 }
 
-export function wasmFallbackPlugin(): BuiltinPlugin {
-  const builtinPlugin = new BuiltinPlugin('builtin:wasm-fallback');
+export function viteWasmFallbackPlugin(): BuiltinPlugin {
+  const builtinPlugin = new BuiltinPlugin('builtin:vite-wasm-fallback');
   return makeBuiltinPluginCallable(builtinPlugin);
 }
 

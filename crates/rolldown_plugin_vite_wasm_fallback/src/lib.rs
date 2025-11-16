@@ -3,9 +3,9 @@ use std::borrow::Cow;
 use rolldown_plugin::{HookLoadArgs, HookLoadReturn, HookUsage, Plugin, PluginContext};
 
 #[derive(Debug)]
-pub struct WasmFallbackPlugin;
+pub struct ViteWasmFallbackPlugin;
 
-impl Plugin for WasmFallbackPlugin {
+impl Plugin for ViteWasmFallbackPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:wasm-fallback")
   }

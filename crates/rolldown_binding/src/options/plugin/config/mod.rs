@@ -2,7 +2,6 @@ mod binding_esm_external_require_plugin_config;
 mod binding_isolated_declaration_plugin_config;
 mod binding_react_refresh_wrapper_plugin_config;
 mod binding_replace_plugin_config;
-mod binding_reporter_plugin_config;
 mod binding_transform_plugin_config;
 mod binding_vite_alias_plugin_config;
 mod binding_vite_asset_plugin_config;
@@ -16,6 +15,7 @@ mod binding_vite_import_glob_plugin_config;
 mod binding_vite_json_plugin_config;
 mod binding_vite_manifest_plugin_config;
 mod binding_vite_module_preload_polyfill_plugin_config;
+mod binding_vite_reporter_plugin_config;
 mod binding_vite_resolve_plugin_config;
 mod binding_wasm_helper_plugin_config;
 
@@ -23,7 +23,6 @@ pub use binding_esm_external_require_plugin_config::BindingEsmExternalRequirePlu
 pub use binding_isolated_declaration_plugin_config::BindingIsolatedDeclarationPluginConfig;
 pub use binding_react_refresh_wrapper_plugin_config::BindingReactRefreshWrapperPluginConfig;
 pub use binding_replace_plugin_config::BindingReplacePluginConfig;
-pub use binding_reporter_plugin_config::BindingReporterPluginConfig;
 pub use binding_transform_plugin_config::BindingTransformPluginConfig;
 pub use binding_vite_alias_plugin_config::BindingViteAliasPluginConfig;
 pub use binding_vite_asset_plugin_config::BindingViteAssetPluginConfig;
@@ -37,5 +36,6 @@ pub use binding_vite_import_glob_plugin_config::BindingViteImportGlobPluginConfi
 pub use binding_vite_json_plugin_config::BindingViteJsonPluginConfig;
 pub use binding_vite_manifest_plugin_config::BindingViteManifestPluginConfig;
 pub use binding_vite_module_preload_polyfill_plugin_config::BindingViteModulePreloadPolyfillPluginConfig;
+pub use binding_vite_reporter_plugin_config::BindingViteReporterPluginConfig;
 pub use binding_vite_resolve_plugin_config::BindingViteResolvePluginConfig;
 pub use binding_wasm_helper_plugin_config::BindingWasmHelperPluginConfig;

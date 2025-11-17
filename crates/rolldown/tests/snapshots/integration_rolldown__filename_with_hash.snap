@@ -3585,6 +3585,10 @@ expression: output
 
 - main-!~{000}~.js => main-D1C-gG3C.js
 
+# tests/rolldown/cjs_compat/module.exports_export/safely_merge_cjs_ns_only_named
+
+- entry-!~{000}~.js => entry-PmYJA9nw.js
+
 # tests/rolldown/cjs_compat/module.exports_export/safely_merge_cjs_ns_with_default_import
 
 - entry-!~{000}~.js => entry-B0qRPq32.js

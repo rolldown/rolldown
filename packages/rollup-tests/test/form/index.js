@@ -155,8 +155,8 @@ async function generateAndTestBundle(bundle, outputOptions, expectedFile, { show
 function formatter(input) {
   // TODO: It's better to have a print comments option in the oxc-transform.
   input = stripComments(input);
-  
-	const { code, errors } = oxc.transform(
+
+	const { code, errors } = oxc.transformSync(
 		'test.js',
 		input,
 		{}
@@ -164,5 +164,5 @@ function formatter(input) {
 	if (errors.length > 0) {
 		throw new Error('oxc formatter code found error: ' + errors.join(', '))
 	}
-	return code 
+	return code
 }

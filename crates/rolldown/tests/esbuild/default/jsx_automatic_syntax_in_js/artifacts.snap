@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Errors
 
@@ -11,9 +10,9 @@ snapshot_kind: text
    ╭─[ entry.js:1:13 ]
    │
  1 │ console.log(<div/>)
-   │             ───┬──
-   │                ╰────
-   │
+   │             ───┬──  
+   │                ╰──── 
+   │ 
    │ Help: JSX syntax is disabled and should be enabled via the parser options
 ───╯
 

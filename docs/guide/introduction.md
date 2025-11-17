@@ -6,7 +6,7 @@ In JavaScript development, a bundler is responsible for compiling small pieces o
 
 For web applications, this makes your application load and run significantly faster (even with HTTP/2). For libraries, this can avoid your consuming application having to bundle the source again, and can also improve runtime execution performance.
 
-For those interested in the details, we have written a deeper analysis on [why bundlers are still needed](/concepts/why-bundlers).
+For those interested in the details, we have written a deeper analysis on [why bundlers are still needed](/in-depth/why-bundlers).
 
 ## Why Rolldown
 

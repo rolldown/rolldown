@@ -35,25 +35,25 @@ const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
   },
 ];
 
-const sidebarForConcepts: UserConfig['themeConfig']['sidebar'] = [{
-  text: 'Concepts',
+const sidebarForInDepth: UserConfig['themeConfig']['sidebar'] = [{
+  text: 'In-Depth',
   items: [
-    { text: 'Why Bundlers', link: '/concepts/why-bundlers.md' },
-    { text: 'Module Types', link: '/concepts/module-types.md' },
-    { text: 'Top Level Await', link: '/concepts/tla-in-rolldown.md' },
-    { text: 'Advanced Chunks', link: '/concepts/advanced-chunks.md' },
-    { text: 'Bundling CJS', link: '/concepts/bundling-cjs.md' },
+    { text: 'Why Bundlers', link: '/in-depth/why-bundlers.md' },
+    { text: 'Module Types', link: '/in-depth/module-types.md' },
+    { text: 'Top Level Await', link: '/in-depth/tla-in-rolldown.md' },
+    { text: 'Advanced Chunks', link: '/in-depth/advanced-chunks.md' },
+    { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
     {
       text: 'Non ESM Output Formats',
-      link: '/concepts/non-esm-output-formats.md',
+      link: '/in-depth/non-esm-output-formats.md',
     },
-    { text: 'Native MagicString', link: '/concepts/native-magic-string.md' },
+    { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
     {
       text: 'Why Plugin Hook Filter',
-      link: '/concepts/why-plugin-hook-filter.md',
+      link: '/in-depth/why-plugin-hook-filter.md',
     },
-    // { text: 'Code Splitting', link: '/concepts/code-splitting.md' },
-    { text: 'Directives', link: '/concepts/directives.md' },
+    // { text: 'Code Splitting', link: '/in-depth/code-splitting.md' },
+    { text: 'Directives', link: '/in-depth/directives.md' },
   ],
 }];
 
@@ -249,7 +249,7 @@ export default defineConfig({
     nav: [
       {
         text: 'Docs',
-        activeMatch: '/(guide|concepts|glossary|apis)',
+        activeMatch: '/(guide|in-depth|glossary|apis)',
         items: [
           {
             text: 'Guide',
@@ -257,9 +257,9 @@ export default defineConfig({
             link: '/guide/getting-started.md',
           },
           {
-            text: 'Concepts',
-            activeMatch: '/concepts',
-            link: '/concepts/why-bundlers.md',
+            text: 'In-Depth',
+            activeMatch: '/in-depth',
+            link: '/in-depth/why-bundlers.md',
           },
           {
             text: 'Glossary',
@@ -299,8 +299,8 @@ export default defineConfig({
       // --- Guide ---
       '/guide/': sidebarForUserGuide,
       '/apis/': sidebarForUserGuide,
-      // --- Concepts ---
-      '/concepts/': sidebarForConcepts,
+      // --- In-Depth ---
+      '/in-depth/': sidebarForInDepth,
       // --- Options ---
       '/options/': sidebarForOptions,
       // --- Plugin ---

@@ -277,4 +277,4 @@ A module can only be captured if its size is larger or equal to this value.
 
 ## See Also
 
-- [In-depth: Advanced Chunks](../concepts/advanced-chunks.md)
+- [In-depth: Advanced Chunks](../in-depth/advanced-chunks.md)

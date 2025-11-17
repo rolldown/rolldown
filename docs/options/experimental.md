@@ -214,5 +214,5 @@ This is an experimental feature. While it aims to provide identical behavior to 
 
 For a complete working example, see [examples/native-magic-string](https://github.com/rolldown/rolldown/tree/main/examples/native-magic-string)
 
-For comprehensive documentation including API compatibility, performance benchmarks, usage examples, and common pitfalls, see [Native MagicString In-Depth Guide](/in-depth/native-magic-string).
+For comprehensive documentation including API compatibility, performance benchmarks, usage examples, and common pitfalls, see [Native MagicString In-Depth Guide](/concepts/native-magic-string).
 :::

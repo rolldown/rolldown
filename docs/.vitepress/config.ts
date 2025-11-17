@@ -268,7 +268,7 @@ export default defineConfig({
           },
         ],
       },
-      { text: 'References', link: CONFIG_LINK },
+      { text: 'Options & APIs', activeMatch: '/options', link: CONFIG_LINK },
       { text: 'REPL', link: 'https://repl.rolldown.rs/' },
       {
         text: 'Resources',

@@ -184,7 +184,9 @@ impl LinkStage<'_> {
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           // Only reference __toESM if this import needs interop (namespace or default import)
-                          if import_record_needs_interop(importer, *rec_id) {
+                          if rec.meta.contains(ImportRecordMeta::SafelyMergeCjsNs)
+                            || import_record_needs_interop(importer, *rec_id)
+                          {
                             depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
                               .push(stmt_info_idx);
                           }

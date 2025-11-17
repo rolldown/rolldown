@@ -29,7 +29,7 @@ export default {
 ### In-depth
 
 :::warning
-`resolve.alias` will not call `resolveId` hooks of other plugins. If you want to call `resolveId` hooks of other plugins, use `aliasPlugin` from `rolldown/experimental` instead. See [this issue](https://github.com/rolldown/rolldown/issues/3615) for more discussion.
+`resolve.alias` will not call `resolveId` hooks of other plugins. If you want to call `resolveId` hooks of other plugins, use `viteAliasPlugin` from `rolldown/experimental` instead. See [this issue](https://github.com/rolldown/rolldown/issues/3615) for more discussion.
 :::
 
 ## aliasFields

@@ -1,5 +1,5 @@
 import { defineTest } from 'rolldown-tests';
-import { buildImportAnalysisPlugin } from 'rolldown/experimental';
+import { viteBuildImportAnalysisPlugin } from 'rolldown/experimental';
 
 export default defineTest({
   config: {
@@ -14,7 +14,7 @@ export default defineTest({
           };
         },
       },
-      buildImportAnalysisPlugin({
+      viteBuildImportAnalysisPlugin({
         preloadCode: `export const __vitePreload = (v) => { return v() };`,
         insertPreload: true,
         optimizeModulePreloadRelativePaths: false,

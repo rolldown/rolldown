@@ -248,7 +248,7 @@ impl Chunk {
       }
       p.relative(self.input_base.as_str())
     } else {
-      PathBuf::from(&options.virtual_dirname).join(p)
+      PathBuf::from(options.virtual_dirname.as_str()).join(p)
     };
     Cow::Owned(p.to_slash_lossy().into_owned())
   }

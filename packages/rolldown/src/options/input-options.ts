@@ -134,7 +134,7 @@ export interface InputOptions {
     /**
      * > [!WARNING]
      * > `resolve.alias` will not call `resolveId` hooks of other plugin.
-     * > If you want to call `resolveId` hooks of other plugin, use `aliasPlugin` from `rolldown/experimental` instead.
+     * > If you want to call `resolveId` hooks of other plugin, use `viteAliasPlugin` from `rolldown/experimental` instead.
      * > You could find more discussion in [this issue](https://github.com/rolldown/rolldown/issues/3615)
      */
     alias?: Record<string, string[] | string | false>;

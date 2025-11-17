@@ -1,6 +1,7 @@
 use std::{borrow::Cow, path::Path, sync::Arc};
 
 use anyhow::Context;
+use arcstr::ArcStr;
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_common::{
   AttachDebugInfo, GlobalsOutputOption, InjectImport, LegalComments, MinifyOptions, ModuleType,
@@ -330,7 +331,7 @@ pub fn prepare_build_context(
     log_level: raw_options.log_level,
     on_log: raw_options.on_log,
     preserve_modules: raw_options.preserve_modules.unwrap_or_default(),
-    virtual_dirname: raw_options.virtual_dirname.unwrap_or_else(|| "_virtual".to_string()),
+    virtual_dirname: raw_options.virtual_dirname.map(ArcStr::from).unwrap_or_else(|| arcstr::literal!("_virtual")),
     preserve_modules_root: raw_options.preserve_modules_root.map(|preserve_modules_root| {
       let p = Path::new(&preserve_modules_root);
       if p.is_absolute() {

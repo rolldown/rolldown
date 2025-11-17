@@ -1,32 +1,32 @@
 import type {
-  BindingBuildImportAnalysisPluginConfig,
-  BindingDynamicImportVarsPluginConfig,
   BindingEsmExternalRequirePluginConfig,
-  BindingHtmlInlineProxyPluginConfig,
-  BindingImportGlobPluginConfig,
   BindingIsolatedDeclarationPluginConfig,
-  BindingJsonPluginConfig,
-  BindingManifestPluginConfig,
-  BindingModulePreloadPolyfillPluginConfig,
-  BindingReactRefreshWrapperPluginConfig,
-  BindingReporterPluginConfig,
+  BindingViteBuildImportAnalysisPluginConfig,
   BindingViteCssPostPluginConfig,
+  BindingViteDynamicImportVarsPluginConfig,
+  BindingViteHtmlInlineProxyPluginConfig,
+  BindingViteImportGlobPluginConfig,
+  BindingViteJsonPluginConfig,
+  BindingViteManifestPluginConfig,
+  BindingViteModulePreloadPolyfillPluginConfig,
+  BindingViteReactRefreshWrapperPluginConfig,
+  BindingViteReporterPluginConfig,
   BindingViteResolvePluginConfig,
-  BindingWasmHelperPluginConfig,
+  BindingViteWasmHelperPluginConfig,
 } from '../binding.cjs';
 import type { StringOrRegExp } from '../types/utils';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
 import { BuiltinPlugin, makeBuiltinPluginCallable } from './utils';
 
-export function modulePreloadPolyfillPlugin(
-  config?: BindingModulePreloadPolyfillPluginConfig,
+export function viteModulePreloadPolyfillPlugin(
+  config?: BindingViteModulePreloadPolyfillPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:module-preload-polyfill', config);
+  return new BuiltinPlugin('builtin:vite-module-preload-polyfill', config);
 }
 
 type DynamicImportVarsPluginConfig =
   & Omit<
-    BindingDynamicImportVarsPluginConfig,
+    BindingViteDynamicImportVarsPluginConfig,
     'include' | 'exclude'
   >
   & {
@@ -34,58 +34,60 @@ type DynamicImportVarsPluginConfig =
     exclude?: StringOrRegExp | StringOrRegExp[];
   };
 
-export function dynamicImportVarsPlugin(
+export function viteDynamicImportVarsPlugin(
   config?: DynamicImportVarsPluginConfig,
 ): BuiltinPlugin {
   if (config) {
     config.include = normalizedStringOrRegex(config.include);
     config.exclude = normalizedStringOrRegex(config.exclude);
   }
-  return new BuiltinPlugin('builtin:dynamic-import-vars', config);
+  return new BuiltinPlugin('builtin:vite-dynamic-import-vars', config);
 }
 
-export function importGlobPlugin(
-  config?: BindingImportGlobPluginConfig,
+export function viteImportGlobPlugin(
+  config?: BindingViteImportGlobPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:import-glob', config);
+  return new BuiltinPlugin('builtin:vite-import-glob', config);
 }
 
-export function reporterPlugin(
-  config?: BindingReporterPluginConfig,
+export function viteReporterPlugin(
+  config?: BindingViteReporterPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:reporter', config);
+  return new BuiltinPlugin('builtin:vite-reporter', config);
 }
 
-export function manifestPlugin(
-  config?: BindingManifestPluginConfig,
+export function viteManifestPlugin(
+  config?: BindingViteManifestPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:manifest', config);
+  return new BuiltinPlugin('builtin:vite-manifest', config);
 }
 
-export function wasmHelperPlugin(
-  config?: BindingWasmHelperPluginConfig,
+export function viteWasmHelperPlugin(
+  config?: BindingViteWasmHelperPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:wasm-helper', config);
+  return new BuiltinPlugin('builtin:vite-wasm-helper', config);
 }
 
-export function wasmFallbackPlugin(): BuiltinPlugin {
-  const builtinPlugin = new BuiltinPlugin('builtin:wasm-fallback');
+export function viteWasmFallbackPlugin(): BuiltinPlugin {
+  const builtinPlugin = new BuiltinPlugin('builtin:vite-wasm-fallback');
   return makeBuiltinPluginCallable(builtinPlugin);
 }
 
-export function loadFallbackPlugin(): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:load-fallback');
+export function viteLoadFallbackPlugin(): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:vite-load-fallback');
 }
 
-export function jsonPlugin(config?: BindingJsonPluginConfig): BuiltinPlugin {
-  const builtinPlugin = new BuiltinPlugin('builtin:json', config);
+export function viteJsonPlugin(
+  config?: BindingViteJsonPluginConfig,
+): BuiltinPlugin {
+  const builtinPlugin = new BuiltinPlugin('builtin:vite-json', config);
   return makeBuiltinPluginCallable(builtinPlugin);
 }
 
-export function buildImportAnalysisPlugin(
-  config: BindingBuildImportAnalysisPluginConfig,
+export function viteBuildImportAnalysisPlugin(
+  config: BindingViteBuildImportAnalysisPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:build-import-analysis', config);
+  return new BuiltinPlugin('builtin:vite-build-import-analysis', config);
 }
 
 export function viteResolvePlugin(
@@ -101,8 +103,8 @@ export function isolatedDeclarationPlugin(
   return new BuiltinPlugin('builtin:isolated-declaration', config);
 }
 
-export function webWorkerPostPlugin(): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:web-worker-post');
+export function viteWebWorkerPostPlugin(): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:vite-web-worker-post');
 }
 
 export function esmExternalRequirePlugin(
@@ -111,9 +113,9 @@ export function esmExternalRequirePlugin(
   return new BuiltinPlugin('builtin:esm-external-require', config);
 }
 
-type ReactRefreshWrapperPluginConfig =
+type ViteReactRefreshWrapperPluginConfig =
   & Omit<
-    BindingReactRefreshWrapperPluginConfig,
+    BindingViteReactRefreshWrapperPluginConfig,
     'include' | 'exclude'
   >
   & {
@@ -121,15 +123,15 @@ type ReactRefreshWrapperPluginConfig =
     exclude?: StringOrRegExp | StringOrRegExp[];
   };
 
-export function reactRefreshWrapperPlugin(
-  config: ReactRefreshWrapperPluginConfig,
+export function viteReactRefreshWrapperPlugin(
+  config: ViteReactRefreshWrapperPluginConfig,
 ): BuiltinPlugin {
   if (config) {
     config.include = normalizedStringOrRegex(config.include);
     config.exclude = normalizedStringOrRegex(config.exclude);
   }
   const builtinPlugin = new BuiltinPlugin(
-    'builtin:react-refresh-wrapper',
+    'builtin:vite-react-refresh-wrapper',
     config,
   );
   return makeBuiltinPluginCallable(builtinPlugin);
@@ -141,8 +143,8 @@ export function viteCSSPostPlugin(
   return new BuiltinPlugin('builtin:vite-css-post', config);
 }
 
-export function htmlInlineProxyPlugin(
-  config: BindingHtmlInlineProxyPluginConfig,
+export function viteHtmlInlineProxyPlugin(
+  config: BindingViteHtmlInlineProxyPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:html-inline-proxy', config);
+  return new BuiltinPlugin('builtin:vite-html-inline-proxy', config);
 }

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use arcstr::ArcStr;
 use futures::future::try_join_all;
@@ -28,6 +28,18 @@ use rolldown_utils::{
 };
 use sugar_path::SugarPath;
 use tracing::debug_span;
+
+#[derive(Debug)]
+struct PreGeneratedChunkName {
+  /// The representative name used for symbol deconflicting and chunk binding references.
+  representative_chunk_name: ArcStr,
+  /// The full chunk name including directory structure relative to `preserveModulesRoot`.
+  /// This appears in `PreRenderedChunk.name` and hooks like `entryFileNames`.
+  chunk_name: ArcStr,
+  /// The base filename for generating preliminary filenames.
+  /// Absolute path without extension, used as input to filename templates.
+  chunk_filename: ArcStr,
+}
 
 use crate::{
   BundleOutput, SharedOptions,
@@ -270,48 +282,114 @@ impl<'a> GenerateStage<'a> {
   /// Notices:
   /// - Should generate filenames that are stable cross builds and os.
   #[tracing::instrument(level = "debug", skip_all)]
+  #[expect(clippy::too_many_lines)]
   async fn generate_chunk_name_and_preliminary_filenames(
     &self,
     chunk_graph: &mut ChunkGraph,
   ) -> BuildResult<FxHashMap<ChunkIdx, ArcStr>> {
     let modules = &self.link_output.module_table.modules;
 
-    let mut index_chunk_id_to_name = FxHashMap::default();
+    let mut index_chunk_id_to_representative_name = FxHashMap::default();
 
     let index_pre_generated_names_futures = chunk_graph.chunk_table.iter().map(|chunk| {
       let sanitize_filename = self.options.sanitize_filename.clone();
+      let preserve_modules_root = self.options.preserve_modules_root.clone();
+      let input_base = chunk.input_base.clone();
+      let virtual_dirname = self.options.virtual_dirname.clone();
       async move {
         if let Some(name) = &chunk.name {
           let name = sanitize_filename.call(name).await?;
-          return anyhow::Ok((name.clone(), name));
+          return anyhow::Ok(PreGeneratedChunkName {
+            representative_chunk_name: name.clone(),
+            chunk_name: name.clone(),
+            chunk_filename: name,
+          });
         }
         match chunk.kind {
           ChunkKind::EntryPoint { module: entry_module_id, meta, .. } => {
             let module = &modules[entry_module_id];
             let generated = if self.options.preserve_modules {
               let module_id = module.id();
-              let (chunk_name, absolute_chunk_file_name) =
+              let (representative_chunk_name, absolute_chunk_file_name, ext) =
                 representative_file_name_for_preserve_modules(module_id.as_path());
 
               let sanitized_absolute_filename =
                 sanitize_filename.call(absolute_chunk_file_name.as_str()).await?;
 
-              let sanitized_chunk_name = sanitize_filename.call(&chunk_name).await?;
-              (sanitized_chunk_name, sanitized_absolute_filename)
+              // Apply the same logic as get_preserve_modules_chunk_name to include directory structure
+              let chunk_name = {
+                let p = PathBuf::from(&absolute_chunk_file_name);
+                let relative_path = if p.is_absolute() {
+                  if let Some(ref preserve_modules_root) = preserve_modules_root {
+                    if absolute_chunk_file_name.starts_with(preserve_modules_root.as_str()) {
+                      absolute_chunk_file_name[preserve_modules_root.len()..]
+                        .trim_start_matches(['/', '\\'])
+                        .to_string()
+                    } else {
+                      p.relative(input_base.as_str()).to_slash_lossy().into_owned()
+                    }
+                  } else {
+                    p.relative(input_base.as_str()).to_slash_lossy().into_owned()
+                  }
+                } else {
+                  PathBuf::from(virtual_dirname.as_str()).join(p).to_slash_lossy().into_owned()
+                };
+                // `p` may be an absolute or relative path without extension, depending on the module path.
+                // Now we need to add the extension back when generating the relative chunk name.
+                // skip some common extension https://github.com/rollup/rollup/pull/4565/files
+                match ext {
+                  Some(ext)
+                    if ext == "js"
+                      || ext == "jsx"
+                      || ext == "mjs"
+                      || ext == "cjs"
+                      || ext == "ts"
+                      || ext == "tsx"
+                      || ext == "mts"
+                      || ext == "cts" =>
+                  {
+                    relative_path
+                  }
+                  Some(ext) if !ext.is_empty() => {
+                    format!("{relative_path}.{ext}")
+                  }
+                  _ => relative_path,
+                }
+              };
+
+              let sanitized_representative_chunk_name =
+                sanitize_filename.call(&representative_chunk_name).await?;
+              PreGeneratedChunkName {
+                representative_chunk_name: sanitized_representative_chunk_name,
+                chunk_name: chunk_name.into(),
+                chunk_filename: sanitized_absolute_filename,
+              }
             } else if meta.contains(rolldown_common::ChunkMeta::UserDefinedEntry) {
               // try extract meaningful input name from path
               if let Some(file_stem) = module.id().as_path().file_stem().and_then(|f| f.to_str()) {
                 let name = sanitize_filename.call(file_stem).await?;
-                (name.clone(), name)
+                PreGeneratedChunkName {
+                  chunk_name: name.clone(),
+                  representative_chunk_name: name.clone(),
+                  chunk_filename: name,
+                }
               } else {
                 let name = arcstr::literal!("input");
-                (name.clone(), name)
+                PreGeneratedChunkName {
+                  representative_chunk_name: name.clone(),
+                  chunk_name: name.clone(),
+                  chunk_filename: name,
+                }
               }
             } else {
               let chunk_name =
                 sanitize_filename.call(&module.id().as_path().representative_file_name()).await?;
 
-              (chunk_name.clone(), chunk_name)
+              PreGeneratedChunkName {
+                representative_chunk_name: chunk_name.clone(),
+                chunk_name: chunk_name.clone(),
+                chunk_filename: chunk_name,
+              }
             };
             Ok(generated)
           }
@@ -325,18 +403,25 @@ impl<'a> GenerateStage<'a> {
               let module_id = module.id();
               let name = module_id.as_path().representative_file_name();
               let sanitized_filename = sanitize_filename.call(&name).await?;
-              Ok((sanitized_filename.clone(), sanitized_filename))
+              Ok(PreGeneratedChunkName {
+                representative_chunk_name: sanitized_filename.clone(),
+                chunk_name: sanitized_filename.clone(),
+                chunk_filename: sanitized_filename,
+              })
             } else {
               let name = arcstr::literal!("chunk");
-              Ok((name.clone(), name))
+              Ok(PreGeneratedChunkName {
+                representative_chunk_name: name.clone(),
+                chunk_name: name.clone(),
+                chunk_filename: name,
+              })
             }
           }
         }
       }
     });
 
-    // First one is chunk_name, the second one is chunk filename
-    let mut index_pre_generated_names: IndexVec<ChunkIdx, (ArcStr, ArcStr)> =
+    let mut index_pre_generated_names: IndexVec<ChunkIdx, PreGeneratedChunkName> =
       try_join_all(index_pre_generated_names_futures).await?.into();
 
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
@@ -352,15 +437,16 @@ impl<'a> GenerateStage<'a> {
 
       let pre_generated_chunk_name = &mut index_pre_generated_names[*chunk_id];
       // Notice we didn't used deconflict name here, chunk names are allowed to be duplicated.
-      index_chunk_id_to_name.insert(*chunk_id, pre_generated_chunk_name.0.clone());
+      index_chunk_id_to_representative_name
+        .insert(*chunk_id, pre_generated_chunk_name.representative_chunk_name.clone());
       let pre_rendered_chunk =
-        generate_pre_rendered_chunk(chunk, &pre_generated_chunk_name.0, self.link_output);
+        generate_pre_rendered_chunk(chunk, &pre_generated_chunk_name.chunk_name, self.link_output);
 
       let preliminary_filename = chunk
         .generate_preliminary_filename(
           self.options,
           &pre_rendered_chunk,
-          &pre_generated_chunk_name.1,
+          &pre_generated_chunk_name.chunk_filename,
           &mut hash_placeholder_generator,
           &used_name_counts,
         )
@@ -370,7 +456,7 @@ impl<'a> GenerateStage<'a> {
         .generate_css_preliminary_filename(
           self.options,
           &pre_rendered_chunk,
-          &pre_generated_chunk_name.1,
+          &pre_generated_chunk_name.chunk_filename,
           &mut hash_placeholder_generator,
           &used_name_counts,
         )
@@ -378,7 +464,7 @@ impl<'a> GenerateStage<'a> {
 
       // Defer chunk name assignment to make sure at this point only entry chunk have a name
       // if user provided one.
-      chunk.name = Some(pre_generated_chunk_name.0.clone());
+      chunk.name = Some(pre_generated_chunk_name.chunk_name.clone());
 
       for module in chunk.modules.iter().copied().filter_map(|idx| modules[idx].as_normal()) {
         if let Some(asset_view) = module.asset_view.as_ref() {
@@ -440,7 +526,7 @@ impl<'a> GenerateStage<'a> {
       chunk.preliminary_filename = Some(preliminary_filename);
       chunk.css_preliminary_filename = Some(css_preliminary_filename);
     }
-    Ok(index_chunk_id_to_name)
+    Ok(index_chunk_id_to_representative_name)
   }
 
   pub fn patch_asset_modules(&mut self, chunk_graph: &ChunkGraph) {

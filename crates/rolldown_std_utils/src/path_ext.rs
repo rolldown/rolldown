@@ -50,11 +50,13 @@ impl PathExt for Path {
 }
 
 /// The first one is for chunk name, the second element is used for generate absolute file name
-pub fn representative_file_name_for_preserve_modules(path: &Path) -> (Cow<'_, str>, String) {
+pub fn representative_file_name_for_preserve_modules(
+  path: &Path,
+) -> (Cow<'_, str>, String, Option<Cow<'_, str>>) {
   let file_name =
     path.file_stem().map_or_else(|| path.to_string_lossy(), |stem| stem.to_string_lossy());
   let ab_path = path.with_extension("").to_string_lossy().into_owned();
-  (file_name, ab_path)
+  (file_name, ab_path, path.extension().map(|item| item.to_string_lossy()))
 }
 
 #[test]
@@ -70,7 +72,7 @@ fn test_representative_file_name() {
   assert_eq!(path.representative_file_name(), "vue");
 
   let path = cwd.join("x.jsx");
-  let (_, ab_path) = representative_file_name_for_preserve_modules(&path);
+  let (_, ab_path, _) = representative_file_name_for_preserve_modules(&path);
   assert_eq!(Path::new(&ab_path).file_name().unwrap().to_string_lossy(), "x");
 
   #[cfg(not(target_os = "windows"))]

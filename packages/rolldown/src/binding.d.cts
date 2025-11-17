@@ -1986,6 +1986,7 @@ export interface BindingOutputOptions {
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
   minify?: boolean | 'dce-only' | MinifyOptions
   advancedChunks?: BindingAdvancedChunksOptions
+  comments?: 'none' | 'inline' | 'all'
   legalComments?: 'none' | 'inline'
   polyfillRequire?: boolean
   preserveModules?: boolean

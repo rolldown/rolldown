@@ -446,8 +446,22 @@ export interface OutputOptions {
   /**
    * Control comments in the output.
    *
-   * - `none`: no comments
+   * - `'none'`: Remove JSDoc comments (legal comments controlled by `legalComments`)
+   * - `'inline'`: Remove JSDoc comments (legal comments controlled by `legalComments`)
+   * - `'all'`: Keep all comments, including JSDoc (legal comments controlled by `legalComments`)
+   *
+   * @default 'all'
+   */
+  comments?: 'none' | 'inline' | 'all';
+  /**
+   * Control legal comments in the output.
+   *
+   * - `none`: remove legal comments
    * - `inline`: preserve comments that contain `@license`, `@preserve` or starts with `//!` `/*!`
+   *
+   * This option overrides the legal comment behavior when used with `comments`.
+   *
+   * @default 'inline'
    */
   legalComments?: 'none' | 'inline';
   plugins?: RolldownOutputPluginOption;

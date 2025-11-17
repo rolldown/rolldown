@@ -3839,6 +3839,10 @@ expression: output
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-2NVd3BEo.js
 - ui-!~{003}~.js => ui-cYo0VLjL.js
 
+# tests/rolldown/function/comments
+
+- main-!~{000}~.js => main-CnwWkDWU.js
+
 # tests/rolldown/function/context/defined
 
 - main-!~{000}~.js => main-CRCfOHFz.js
@@ -4702,7 +4706,7 @@ expression: output
 
 # tests/rolldown/issues/4491
 
-- main-!~{000}~.js => main-BOUZhfES.js
+- main-!~{000}~.js => main-wFhybaYU.js
 
 # tests/rolldown/issues/4585
 

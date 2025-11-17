@@ -89,7 +89,7 @@ impl EcmaCompiler {
           legal,
           // These option will be configurable when we begin to support `ignore-annotations`
           // https://esbuild.github.io/api/#ignore-annotations
-          jsdoc: true,
+          jsdoc: options.print_jsdoc_comments,
           annotation: true,
         },
         initial_indent: options.initial_indent,
@@ -139,6 +139,7 @@ fn basic_test() {
 
 pub struct PrintOptions {
   pub print_legal_comments: bool,
+  pub print_jsdoc_comments: bool,
   pub filename: String,
   pub sourcemap: bool,
   pub initial_indent: u32,

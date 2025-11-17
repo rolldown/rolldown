@@ -2,6 +2,7 @@ use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::FxHashMap;
 use std::{fmt::Debug, path::PathBuf};
 use types::advanced_chunks_options::AdvancedChunksOptions;
+use types::comments::Comments;
 use types::debug_options::DebugOptions;
 use types::generated_code_options::GeneratedCodeOptions;
 use types::inject_import::InjectImport;
@@ -196,6 +197,7 @@ pub struct BundlerOptions {
   )]
   pub transform: Option<BundlerTransformOptions>,
   pub watch: Option<WatchOption>,
+  pub comments: Option<Comments>,
   pub legal_comments: Option<LegalComments>,
   pub polyfill_require: Option<bool>,
   #[cfg_attr(

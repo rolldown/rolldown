@@ -580,20 +580,20 @@ Allows manual control over chunk creation.
 
 Advanced chunking configuration. See [output.advancedChunks](./output-advanced-chunks.md) for nested options.
 
-## legalComments
+## comments
 
-- **Type:** `'none' | 'inline'`
-- **Default:** `'inline'`
-- **Path:** `output.legalComments`
+- **Type:** `'none' | 'inline' | 'all'`
+- **Default:** `'all'`
+- **Path:** `output.comments`
 
-Control comments in the output.
+Control all comments in the output, including JSDoc comments and legal comments.
 
 ### Examples
 
 ```js
 export default {
   output: {
-    legalComments: 'inline',
+    comments: 'none', // Remove all comments
   },
 };
 ```
@@ -602,8 +602,45 @@ export default {
 
 The available options:
 
-- `'none'`: Remove all comments
+- `'none'`: Remove all comments from the output
+- `'inline'`: Preserve only comments marked with special tags (`@license`, `@preserve`, `//!`, `/*!`)
+- `'all'`: Keep all comments, including JSDoc and legal comments (default)
+
+:::tip
+When generating npm packages with separate type definitions (`.d.ts` files), use `comments: 'inline'` to keep only legal/license comments while removing JSDoc comments, as the type definitions will preserve JSDoc comments for documentation purposes. If you don't need legal comments for licensing compliance, you can use `comments: 'none'` to minimize bundle size.
+:::
+
+:::info
+The [`legalComments`](#legalcomments) option can be used to override just the legal comment behavior while keeping the JSDoc behavior from `comments`.
+:::
+
+## legalComments
+
+- **Type:** `'none' | 'inline'`
+- **Default:** `'inline'`
+- **Path:** `output.legalComments`
+
+Control legal comments in the output. When specified, this option overrides the legal comment behavior from the [`comments`](#comments) option.
+
+### Examples
+
+```js
+export default {
+  output: {
+    comments: 'all', // Keep all comments
+    legalComments: 'none', // But remove legal comments
+  },
+};
+```
+
+### In-depth
+
+The available options:
+
+- `'none'`: Remove all legal comments
 - `'inline'`: Preserve comments containing `@license`, `@preserve`, or starting with `//!` or `/*!`
+
+This option is useful when you want fine-grained control over legal comments independently from JSDoc comments. For example, you can keep JSDoc comments but remove legal comments, or vice versa.
 
 ## polyfillRequire
 

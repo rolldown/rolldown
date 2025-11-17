@@ -4,9 +4,9 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_common::{
-  AttachDebugInfo, GlobalsOutputOption, InjectImport, LegalComments, MinifyOptions, ModuleType,
-  NormalizedBundlerOptions, OutputFormat, Platform, PreserveEntrySignatures, TreeshakeOptions,
-  normalize_optimization_option,
+  AttachDebugInfo, Comments, GlobalsOutputOption, InjectImport, LegalComments, MinifyOptions,
+  ModuleType, NormalizedBundlerOptions, OutputFormat, Platform, PreserveEntrySignatures,
+  TreeshakeOptions, normalize_optimization_option,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_fs::{OsFileSystem, OxcResolverFileSystem as _};
@@ -318,6 +318,9 @@ pub fn prepare_build_context(
     advanced_chunks: raw_options.advanced_chunks,
     checks: raw_options.checks.unwrap_or_default().into(),
     watch: raw_options.watch.unwrap_or_default(),
+    // Handle comments and legal_comments options
+    // comments controls JSDoc, legal_comments controls legal comments independently
+    comments: raw_options.comments.unwrap_or(Comments::All),
     legal_comments: raw_options.legal_comments.unwrap_or(LegalComments::Inline),
     drop_labels: FxHashSet::from_iter(raw_options.drop_labels.unwrap_or_default()),
     keep_names: raw_options.keep_names.unwrap_or_default(),

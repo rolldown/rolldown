@@ -4,11 +4,8 @@ permissions: {}
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        type: string
-        required: true
-        description: version without leading `v`
+  schedule:
+    - cron: '0 0 * * 3' # Every Wednesday at 8am Shanghai time (UTC+8 = 00:00 UTC)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
@@ -21,8 +18,6 @@ jobs:
     permissions:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request
-    env:
-      VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
@@ -34,6 +29,15 @@ jobs:
           tool: just
 
       - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
+
+      - name: Get and bump version
+        run: |
+          VERSION=$(node -e "
+            const pkg = require('./packages/rolldown/package.json');
+            const [, base, beta] = pkg.version.match(/^(\d+\.\d+\.\d+)-beta\.(\d+)$/);
+            console.log(\`\${base}-beta.\${parseInt(beta) + 1}\`);
+          ")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - run: just bump-packages ${VERSION}
 

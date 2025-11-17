@@ -29,6 +29,8 @@ use rolldown_utils::{
 use sugar_path::SugarPath;
 use tracing::debug_span;
 
+const COMMON_JS_EXTENSIONS: &[&str] = &["js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts"];
+
 #[derive(Debug)]
 struct PreGeneratedChunkName {
   /// The representative name used for symbol deconflicting and chunk binding references.
@@ -282,7 +284,6 @@ impl<'a> GenerateStage<'a> {
   /// Notices:
   /// - Should generate filenames that are stable cross builds and os.
   #[tracing::instrument(level = "debug", skip_all)]
-  #[expect(clippy::too_many_lines)]
   async fn generate_chunk_name_and_preliminary_filenames(
     &self,
     chunk_graph: &mut ChunkGraph,
@@ -337,22 +338,9 @@ impl<'a> GenerateStage<'a> {
                 // `p` may be an absolute or relative path without extension, depending on the module path.
                 // Now we need to add the extension back when generating the relative chunk name.
                 // skip some common extension https://github.com/rollup/rollup/pull/4565/files
-                match ext {
-                  Some(ext)
-                    if ext == "js"
-                      || ext == "jsx"
-                      || ext == "mjs"
-                      || ext == "cjs"
-                      || ext == "ts"
-                      || ext == "tsx"
-                      || ext == "mts"
-                      || ext == "cts" =>
-                  {
-                    relative_path
-                  }
-                  Some(ext) if !ext.is_empty() => {
-                    format!("{relative_path}.{ext}")
-                  }
+                match ext.as_deref() {
+                  Some(e) if COMMON_JS_EXTENSIONS.contains(&e) => relative_path,
+                  Some(e) if !e.is_empty() => format!("{relative_path}.{e}"),
                   _ => relative_path,
                 }
               };

@@ -46,11 +46,11 @@ export {
 
 export {
   /**
-   * @deprecated Use `viteDynamicImportVarsPlugin` instead.
+   * Alias of `viteDynamicImportVarsPlugin`. Note that this plugin is only intended to be used by Vite.
    */
   viteDynamicImportVarsPlugin as dynamicImportVarsPlugin,
   /**
-   * @deprecated Use `viteImportGlobPlugin` instead.
+   * Alias of `viteImportGlobPlugin`. Note that this plugin is only intended to be used by Vite.
    */
   viteImportGlobPlugin as importGlobPlugin,
 } from './builtin-plugin/constructors';

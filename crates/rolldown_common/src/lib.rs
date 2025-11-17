@@ -112,6 +112,7 @@ pub use crate::{
     module_idx::ModuleIdx,
     node_builtin_modules::is_existing_node_builtin_modules,
     symbol_id_ext::SymbolIdExt,
+    verify_span::SpanVerifier,
   },
   file_emitter::{EmittedAsset, EmittedChunk, EmittedChunkInfo, FileEmitter, SharedFileEmitter},
   hmr::{

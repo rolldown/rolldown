@@ -2,7 +2,9 @@ use std::{borrow::Cow, path::Path};
 
 use json_escape_simd::escape;
 use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
-use rolldown_common::{ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes};
+use rolldown_common::{
+  ModuleDefFormat, ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes,
+};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookTransformAstArgs;
@@ -14,14 +16,19 @@ use super::pre_process_ecma_ast::PreProcessEcmaAst;
 use crate::types::{module_factory::CreateModuleContext, oxc_parse_type::OxcParseType};
 
 #[inline]
-fn pure_esm_js_oxc_source_type() -> OxcSourceType {
-  let pure_esm_js = OxcSourceType::default().with_module(true);
-  debug_assert!(pure_esm_js.is_javascript());
-  debug_assert!(!pure_esm_js.is_jsx());
-  debug_assert!(pure_esm_js.is_module());
-  debug_assert!(pure_esm_js.is_strict());
+fn pure_esm_js_oxc_source_type(module_def_format: ModuleDefFormat) -> OxcSourceType {
+  let source_type = OxcSourceType::unambiguous();
+  let source_type = match module_def_format {
+    ModuleDefFormat::CJS | ModuleDefFormat::Cts | ModuleDefFormat::CjsPackageJson => {
+      source_type.with_script(true)
+    }
+    ModuleDefFormat::EsmPackageJson | ModuleDefFormat::EsmMjs | ModuleDefFormat::EsmMts => {
+      source_type.with_module(true)
+    }
+    ModuleDefFormat::Unknown => source_type,
+  };
 
-  pure_esm_js
+  source_type
 }
 
 pub struct ParseToEcmaAstResult {
@@ -35,6 +42,8 @@ pub async fn parse_to_ecma_ast(
   ctx: &CreateModuleContext<'_>,
   source: StrOrBytes,
 ) -> BuildResult<ParseToEcmaAstResult> {
+  dbg!(&ctx.resolved_id.id);
+  dbg!(&ctx.resolved_id.module_def_format);
   let CreateModuleContext {
     options,
     stable_id,
@@ -52,13 +61,13 @@ pub async fn parse_to_ecma_ast(
     pre_process_source(path, source, module_type, is_user_defined_entry, options)?;
 
   let oxc_source_type = {
-    let default = pure_esm_js_oxc_source_type();
+    let source_type = pure_esm_js_oxc_source_type(ctx.resolved_id.module_def_format);
     match parsed_type {
-      OxcParseType::Js => default,
-      OxcParseType::Jsx => default.with_jsx(!options.transform_options.is_jsx_disabled()),
-      OxcParseType::Ts => default.with_typescript(true),
+      OxcParseType::Js => source_type,
+      OxcParseType::Jsx => source_type.with_jsx(!options.transform_options.is_jsx_disabled()),
+      OxcParseType::Ts => source_type.with_typescript(true),
       OxcParseType::Tsx => {
-        default.with_typescript(true).with_jsx(!options.transform_options.is_jsx_disabled())
+        source_type.with_typescript(true).with_jsx(!options.transform_options.is_jsx_disabled())
       }
     }
   };

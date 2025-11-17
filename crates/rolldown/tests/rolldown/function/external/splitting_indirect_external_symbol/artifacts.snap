@@ -17,7 +17,8 @@ export { read };
 import { read } from "node:fs";
 
 //#region read.js
-console.log(1);
+const read$1 = 1;
+console.log(read$1);
 
 //#endregion
 //#region main.js

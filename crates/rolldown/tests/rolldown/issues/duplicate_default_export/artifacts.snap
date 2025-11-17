@@ -33,7 +33,7 @@ import assert from "node:assert";
 
 //#region main.js
 const required = require_file();
-const dynamicRes = await import("./file2.js").then(__toDynamicImportESM());
+const dynamicRes = await import("./file2.js").then(__toDynamicImportESM(1));
 assert.strictEqual(required.foo, "bar");
 assert.strictEqual(dynamicRes.default.foo, "bar");
 

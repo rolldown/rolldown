@@ -44,6 +44,17 @@ export {
   viteWebWorkerPostPlugin,
 } from './builtin-plugin/constructors';
 
+export {
+  /**
+   * @deprecated Use `viteDynamicImportVarsPlugin` instead.
+   */
+  viteDynamicImportVarsPlugin as dynamicImportVarsPlugin,
+  /**
+   * @deprecated Use `viteImportGlobPlugin` instead.
+   */
+  viteImportGlobPlugin as importGlobPlugin,
+} from './builtin-plugin/constructors';
+
 export { viteAliasPlugin } from './builtin-plugin/alias-plugin';
 export { viteAssetPlugin } from './builtin-plugin/asset-plugin';
 export { viteTransformPlugin } from './builtin-plugin/transform-plugin';

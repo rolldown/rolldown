@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { defineTest } from 'rolldown-tests';
-import { importGlobPlugin } from 'rolldown/experimental';
+import { viteImportGlobPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 const root = path.join(
@@ -16,7 +16,7 @@ export default defineTest({
       chunkFileNames: '[name].js',
     },
     plugins: [
-      importGlobPlugin({ root, restoreQueryExtension: true }),
+      viteImportGlobPlugin({ root, restoreQueryExtension: true }),
       {
         name: 'load-file-with-query',
         resolveId(id) {

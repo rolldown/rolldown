@@ -1568,29 +1568,6 @@ export interface BindingAdvancedChunksOptions {
   maxModuleSize?: number
 }
 
-export interface BindingAliasPluginAlias {
-  find: BindingStringOrRegex
-  replacement: string
-}
-
-export interface BindingAliasPluginConfig {
-  entries: Array<BindingAliasPluginAlias>
-}
-
-export interface BindingAssetPluginConfig {
-  root: string
-  isLib: boolean
-  isSsr: boolean
-  isWorker: boolean
-  urlBase: string
-  publicDir: string
-  decodedBase: string
-  isSkipAssets: boolean
-  assetsInclude: Array<BindingStringOrRegex>
-  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
-  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
-}
-
 export interface BindingAssetSource {
   inner: string | Uint8Array
 }
@@ -1601,52 +1578,35 @@ export declare enum BindingAttachDebugInfo {
   Full = 2
 }
 
-export interface BindingBuildImportAnalysisPluginConfig {
-  preloadCode: string
-  insertPreload: boolean
-  optimizeModulePreloadRelativePaths: boolean
-  renderBuiltUrl: boolean
-  isRelativeBase: boolean
-  v2?: BindingBuildImportAnalysisPluginV2Config
-}
-
-export interface BindingBuildImportAnalysisPluginV2Config {
-  isSsr: boolean
-  urlBase: string
-  decodedBase: string
-  modulePreload: false | BindingModulePreloadOptions
-  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
-}
-
 export interface BindingBuiltinPlugin {
   __name: BindingBuiltinPluginName
   options?: unknown
 }
 
-export type BindingBuiltinPluginName =  'builtin:alias'|
-'builtin:asset'|
-'builtin:asset-import-meta-url'|
-'builtin:build-import-analysis'|
-'builtin:dynamic-import-vars'|
-'builtin:esm-external-require'|
-'builtin:html-inline-proxy'|
-'builtin:import-glob'|
+export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:isolated-declaration'|
-'builtin:json'|
-'builtin:load-fallback'|
-'builtin:manifest'|
-'builtin:module-preload-polyfill'|
-'builtin:react-refresh-wrapper'|
-'builtin:reporter'|
 'builtin:replace'|
-'builtin:transform'|
+'builtin:vite-alias'|
+'builtin:vite-asset'|
+'builtin:vite-asset-import-meta-url'|
+'builtin:vite-build-import-analysis'|
 'builtin:vite-css'|
 'builtin:vite-css-post'|
+'builtin:vite-dynamic-import-vars'|
 'builtin:vite-html'|
+'builtin:vite-html-inline-proxy'|
+'builtin:vite-import-glob'|
+'builtin:vite-json'|
+'builtin:vite-load-fallback'|
+'builtin:vite-manifest'|
+'builtin:vite-module-preload-polyfill'|
+'builtin:vite-react-refresh-wrapper'|
+'builtin:vite-reporter'|
 'builtin:vite-resolve'|
-'builtin:wasm-fallback'|
-'builtin:wasm-helper'|
-'builtin:web-worker-post';
+'builtin:vite-transform'|
+'builtin:vite-wasm-fallback'|
+'builtin:vite-wasm-helper'|
+'builtin:vite-web-worker-post';
 
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions
@@ -1718,12 +1678,6 @@ export interface BindingDevWatchOptions {
   debounceDuration?: number
   compareContentsForPolling?: boolean
   debounceTickRate?: number
-}
-
-export interface BindingDynamicImportVarsPluginConfig {
-  include?: Array<BindingStringOrRegex>
-  exclude?: Array<BindingStringOrRegex>
-  resolver?: (id: string, importer: string) => MaybePromise<string | undefined>
 }
 
 export interface BindingEmittedAsset {
@@ -1871,15 +1825,6 @@ export interface BindingHookTransformOutput {
   moduleType?: string
 }
 
-export interface BindingHtmlInlineProxyPluginConfig {
-  root: string
-}
-
-export interface BindingImportGlobPluginConfig {
-  root?: string
-  restoreQueryExtension?: boolean
-}
-
 export interface BindingInjectImportNamed {
   tagNamed: true
   imported: string
@@ -1938,15 +1883,6 @@ export interface BindingIsolatedDeclarationPluginConfig {
   stripInternal?: boolean
 }
 
-export interface BindingJsonPluginConfig {
-  minify?: boolean
-  namedExports?: boolean
-  stringify?: BindingJsonPluginStringify
-}
-
-export type BindingJsonPluginStringify =
-  boolean | string
-
 export interface BindingJsonSourcemap {
   file?: string
   mappings?: string
@@ -1981,14 +1917,6 @@ export type BindingMakeAbsoluteExternalsRelative =
   | { type: 'Bool', field0: boolean }
   | { type: 'IfRelativeSource' }
 
-export interface BindingManifestPluginConfig {
-  root: string
-  outPath: string
-  isEnableV2?: boolean
-  isLegacy?: () => boolean
-  cssEntries: () => Record<string, string>
-}
-
 export interface BindingMatchGroup {
   name: string | ((id: string, ctx: BindingChunkingContext) => VoidNullable<string>)
   test?: string | RegExp | ((id: string) => VoidNullable<boolean>)
@@ -2003,10 +1931,6 @@ export interface BindingMatchGroup {
 export interface BindingModulePreloadOptions {
   polyfill: boolean
   resolveDependencies?: (filename: string, deps: string[], context: { hostId: string, hostType: 'html' | 'js' }) => string[]
-}
-
-export interface BindingModulePreloadPolyfillPluginConfig {
-  isServer?: boolean
 }
 
 export interface BindingModules {
@@ -2186,14 +2110,6 @@ export declare enum BindingPropertyWriteSideEffects {
   False = 1
 }
 
-export interface BindingReactRefreshWrapperPluginConfig {
-  cwd: string
-  include?: Array<BindingStringOrRegex>
-  exclude?: Array<BindingStringOrRegex>
-  jsxImportSource: string
-  reactRefreshHost: string
-}
-
 export declare enum BindingRebuildStrategy {
   Always = 0,
   Auto = 1,
@@ -2218,17 +2134,6 @@ export interface BindingReplacePluginConfig {
   preventAssignment?: boolean
   objectGuards?: boolean
   sourcemap?: boolean
-}
-
-export interface BindingReporterPluginConfig {
-  root: string
-  isTty: boolean
-  isLib: boolean
-  assetsDir: string
-  chunkLimit: number
-  shouldLogInfo: boolean
-  warnLargeChunks: boolean
-  reportCompressedSize: boolean
 }
 
 export interface BindingResolveDependenciesContext {
@@ -2261,17 +2166,6 @@ export interface BindingTransformHookExtraArgs {
   moduleType: string
 }
 
-export interface BindingTransformPluginConfig {
-  root: string
-  include?: Array<BindingStringOrRegex>
-  exclude?: Array<BindingStringOrRegex>
-  jsxRefreshInclude?: Array<BindingStringOrRegex>
-  jsxRefreshExclude?: Array<BindingStringOrRegex>
-  isServerConsumer?: boolean
-  jsxInject?: string
-  transformOptions?: TransformOptions
-}
-
 export interface BindingTreeshake {
   moduleSideEffects: boolean | ReadonlyArray<string> | BindingModuleSideEffectsRule[] | ((id: string, external: boolean) => boolean | undefined)
   annotations?: boolean
@@ -2280,6 +2174,46 @@ export interface BindingTreeshake {
   commonjs?: boolean
   propertyReadSideEffects?: BindingPropertyReadSideEffects
   propertyWriteSideEffects?: BindingPropertyWriteSideEffects
+}
+
+export interface BindingViteAliasPluginAlias {
+  find: BindingStringOrRegex
+  replacement: string
+}
+
+export interface BindingViteAliasPluginConfig {
+  entries: Array<BindingViteAliasPluginAlias>
+}
+
+export interface BindingViteAssetPluginConfig {
+  root: string
+  isLib: boolean
+  isSsr: boolean
+  isWorker: boolean
+  urlBase: string
+  publicDir: string
+  decodedBase: string
+  isSkipAssets: boolean
+  assetsInclude: Array<BindingStringOrRegex>
+  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
+  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
+}
+
+export interface BindingViteBuildImportAnalysisPluginConfig {
+  preloadCode: string
+  insertPreload: boolean
+  optimizeModulePreloadRelativePaths: boolean
+  renderBuiltUrl: boolean
+  isRelativeBase: boolean
+  v2?: BindingViteBuildImportAnalysisPluginV2Config
+}
+
+export interface BindingViteBuildImportAnalysisPluginV2Config {
+  isSsr: boolean
+  urlBase: string
+  decodedBase: string
+  modulePreload: false | BindingModulePreloadOptions
+  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
 }
 
 export interface BindingViteCssPluginConfig {
@@ -2313,6 +2247,16 @@ export interface BindingViteCssPostPluginConfig {
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
 }
 
+export interface BindingViteDynamicImportVarsPluginConfig {
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  resolver?: (id: string, importer: string) => MaybePromise<string | undefined>
+}
+
+export interface BindingViteHtmlInlineProxyPluginConfig {
+  root: string
+}
+
 export interface BindingViteHtmlPluginConfig {
   root: string
   isLib: boolean
@@ -2327,8 +2271,53 @@ export interface BindingViteHtmlPluginConfig {
   transformIndexHtml: (html: string, path: string, filename: string, hook: 'transform' | 'generateBundle', output?: BindingOutputs, chunk?: BindingOutputChunk) => Promise<string>
 }
 
+export interface BindingViteImportGlobPluginConfig {
+  root?: string
+  restoreQueryExtension?: boolean
+}
+
+export interface BindingViteJsonPluginConfig {
+  minify?: boolean
+  namedExports?: boolean
+  stringify?: BindingViteJsonPluginStringify
+}
+
+export type BindingViteJsonPluginStringify =
+  boolean | string
+
+export interface BindingViteManifestPluginConfig {
+  root: string
+  outPath: string
+  isEnableV2?: boolean
+  isLegacy?: () => boolean
+  cssEntries: () => Record<string, string>
+}
+
+export interface BindingViteModulePreloadPolyfillPluginConfig {
+  isServer?: boolean
+}
+
 export interface BindingVitePluginCustom {
   'vite:import-glob'?: ViteImportGlobMeta
+}
+
+export interface BindingViteReactRefreshWrapperPluginConfig {
+  cwd: string
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  jsxImportSource: string
+  reactRefreshHost: string
+}
+
+export interface BindingViteReporterPluginConfig {
+  root: string
+  isTty: boolean
+  isLib: boolean
+  assetsDir: string
+  chunkLimit: number
+  shouldLogInfo: boolean
+  warnLargeChunks: boolean
+  reportCompressedSize: boolean
 }
 
 export interface BindingViteResolvePluginConfig {
@@ -2365,7 +2354,18 @@ export interface BindingViteResolvePluginResolveOptions {
   tsconfigPaths: boolean
 }
 
-export interface BindingWasmHelperPluginConfig {
+export interface BindingViteTransformPluginConfig {
+  root: string
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  jsxRefreshInclude?: Array<BindingStringOrRegex>
+  jsxRefreshExclude?: Array<BindingStringOrRegex>
+  isServerConsumer?: boolean
+  jsxInject?: string
+  transformOptions?: TransformOptions
+}
+
+export interface BindingViteWasmHelperPluginConfig {
   decodedBase: string
 }
 

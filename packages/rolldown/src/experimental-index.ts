@@ -26,27 +26,38 @@ export {
 export { defineParallelPlugin } from './plugin/parallel-plugin';
 // Builtin plugin factory
 export {
-  buildImportAnalysisPlugin,
-  dynamicImportVarsPlugin,
-  htmlInlineProxyPlugin,
-  importGlobPlugin,
   isolatedDeclarationPlugin,
-  jsonPlugin,
-  loadFallbackPlugin,
-  manifestPlugin,
-  modulePreloadPolyfillPlugin,
-  reactRefreshWrapperPlugin,
-  reporterPlugin,
+  viteBuildImportAnalysisPlugin,
   viteCSSPostPlugin,
+  viteDynamicImportVarsPlugin,
+  viteHtmlInlineProxyPlugin,
+  viteImportGlobPlugin,
+  viteJsonPlugin,
+  viteLoadFallbackPlugin,
+  viteManifestPlugin,
+  viteModulePreloadPolyfillPlugin,
+  viteReactRefreshWrapperPlugin,
+  viteReporterPlugin,
   viteResolvePlugin,
-  wasmFallbackPlugin,
-  wasmHelperPlugin,
-  webWorkerPostPlugin,
+  viteWasmFallbackPlugin,
+  viteWasmHelperPlugin,
+  viteWebWorkerPostPlugin,
 } from './builtin-plugin/constructors';
 
-export { aliasPlugin } from './builtin-plugin/alias-plugin';
-export { assetPlugin } from './builtin-plugin/asset-plugin';
-export { transformPlugin } from './builtin-plugin/transform-plugin';
+export {
+  /**
+   * Alias of `viteDynamicImportVarsPlugin`. Note that this plugin is only intended to be used by Vite.
+   */
+  viteDynamicImportVarsPlugin as dynamicImportVarsPlugin,
+  /**
+   * Alias of `viteImportGlobPlugin`. Note that this plugin is only intended to be used by Vite.
+   */
+  viteImportGlobPlugin as importGlobPlugin,
+} from './builtin-plugin/constructors';
+
+export { viteAliasPlugin } from './builtin-plugin/alias-plugin';
+export { viteAssetPlugin } from './builtin-plugin/asset-plugin';
+export { viteTransformPlugin } from './builtin-plugin/transform-plugin';
 export { viteCSSPlugin } from './builtin-plugin/vite-css-plugin';
 export {
   viteHtmlPlugin,

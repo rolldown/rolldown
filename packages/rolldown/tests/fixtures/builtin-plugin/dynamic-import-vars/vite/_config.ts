@@ -1,12 +1,12 @@
 import path from 'node:path';
 import { defineTest } from 'rolldown-tests';
-import { dynamicImportVarsPlugin } from 'rolldown/experimental';
+import { viteDynamicImportVarsPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
   config: {
     plugins: [
-      dynamicImportVarsPlugin({
+      viteDynamicImportVarsPlugin({
         async resolver(id) {
           return id
             .replace('@', path.resolve(import.meta.dirname, './mods/'))

@@ -90,7 +90,7 @@ For example, the following common Rollup plugins may be replaced with Rolldown's
 <!--
 experimental plugins (do we want to document these?)
 
-- `@rollup/plugin-dynamic-import-vars`: `import { dynamicImportVarsPlugin } from 'rolldown/experimental'`
+- `@rollup/plugin-dynamic-import-vars`: `import { viteDynamicImportVarsPlugin } from 'rolldown/experimental'`
 
 -->
 

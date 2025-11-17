@@ -1,10 +1,10 @@
 import { defineTest } from 'rolldown-tests';
-import { jsonPlugin } from 'rolldown/experimental';
+import { viteJsonPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
   config: {
-    plugins: [jsonPlugin({ stringify: true, minify: true })],
+    plugins: [viteJsonPlugin({ stringify: true, minify: true })],
   },
   async afterTest(output) {
     expect(output.output[0].code).toContain(

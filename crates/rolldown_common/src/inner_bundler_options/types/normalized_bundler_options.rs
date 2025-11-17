@@ -99,7 +99,7 @@ pub struct NormalizedBundlerOptions {
   pub log_level: Option<LogLevel>,
   pub on_log: Option<OnLog>,
   pub preserve_modules: bool,
-  pub virtual_dirname: String,
+  pub virtual_dirname: ArcStr,
   pub preserve_modules_root: Option<String>,
   pub preserve_entry_signatures: PreserveEntrySignatures,
   pub debug: bool,

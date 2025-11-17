@@ -37,7 +37,7 @@ The following transforms are supported:
 
 Rolldown supports mixed ESM / CJS module graphs out of the box, without the need for `@rollup/plugin-commonjs`. It largely follows esbuild's semantics and [passes all esbuild ESM / CJS interop tests](https://github.com/rolldown/bundler-esm-cjs-tests).
 
-See [Bundling CJS](/in-depth/bundling-cjs) for more details.
+See [Bundling CJS](/concepts/bundling-cjs) for more details.
 
 ## Module resolution
 
@@ -79,13 +79,13 @@ Rolldown supports bundling CSS imported from JS out of the box. Note this featur
 
 Rolldown allows controlling the chunking behavior granularly, similar to webpack's [`optimization.splitChunks`](https://webpack.js.org/plugins/split-chunks-plugin/#optimizationsplitchunks) feature.
 
-See [Advanced Chunks](/in-depth/advanced-chunks) for more details.
+See [Advanced Chunks](/concepts/advanced-chunks) for more details.
 
 ## Module types
 
 - ⚠️ Experimental
 
-This is conceptually similar to [esbuild's `loader` option](https://esbuild.github.io/api/#loader), allowing users to globally associate file extensions to built-in module types via the `moduleTypes` option, or specify module type of a specific module in plugin hooks. It is discussed in more details [here](/in-depth/module-types).
+This is conceptually similar to [esbuild's `loader` option](https://esbuild.github.io/api/#loader), allowing users to globally associate file extensions to built-in module types via the `moduleTypes` option, or specify module type of a specific module in plugin hooks. It is discussed in more details [here](/concepts/module-types).
 
 ## Minification
 

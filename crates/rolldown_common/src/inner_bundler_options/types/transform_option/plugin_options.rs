@@ -9,6 +9,7 @@ impl From<PluginsOptions> for oxc::transformer::PluginsOptions {
       styled_components: options
         .styled_components
         .map(oxc::transformer::StyledComponentsOptions::from),
+      tagged_template_transform: false,
     }
   }
 }

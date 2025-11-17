@@ -44,6 +44,17 @@ export {
   viteWebWorkerPostPlugin,
 } from './builtin-plugin/constructors';
 
+export {
+  /**
+   * Alias of `viteDynamicImportVarsPlugin`. Note that this plugin is only intended to be used by Vite.
+   */
+  viteDynamicImportVarsPlugin as dynamicImportVarsPlugin,
+  /**
+   * Alias of `viteImportGlobPlugin`. Note that this plugin is only intended to be used by Vite.
+   */
+  viteImportGlobPlugin as importGlobPlugin,
+} from './builtin-plugin/constructors';
+
 export { viteAliasPlugin } from './builtin-plugin/alias-plugin';
 export { viteAssetPlugin } from './builtin-plugin/asset-plugin';
 export { viteTransformPlugin } from './builtin-plugin/transform-plugin';

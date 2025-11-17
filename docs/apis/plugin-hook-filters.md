@@ -1,7 +1,7 @@
 # Plugin hook filters
 
 > [!note]
-> For more details about **why you need plugin hook filter** please refer [why-plugin-hook-filter](/in-depth/why-plugin-hook-filter)
+> For more details about **why you need plugin hook filter** please refer [why-plugin-hook-filter](/concepts/why-plugin-hook-filter)
 
 One important thing to note for JavaScript plugins in Rolldown is that every plugin hook call incurs a small communication overhead between Rust and the JavaScript runtime (i.e. Node.js).
 
@@ -114,7 +114,6 @@ The following properties are supported by each hook:
 - `load` hook: `id`
 - `transform` hook: `id`, `moduleType`, `code`
 
-> [!NOTE]
-> `id` is treated as a glob pattern when you pass a `string`, and treated as a regular expression when you pass a `RegExp`.
+> [!NOTE] > `id` is treated as a glob pattern when you pass a `string`, and treated as a regular expression when you pass a `RegExp`.
 > In the `resolve` hook, `id` must be a `RegExp`. `string`s are not allowed.
 > This is because the `id` value in `resolveId` is the exact text written in the import statement and usually not an absolute path, while glob patterns are designed to match absolute paths.

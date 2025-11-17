@@ -7,12 +7,14 @@ snapshot_kind: text
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Unexpected token
+[PARSE_ERROR] Error: Unexpected JSX expression
    ╭─[ entry.js:1:13 ]
    │
  1 │ console.log(<div/>)
-   │             ┬  
-   │             ╰── 
+   │             ───┬──
+   │                ╰────
+   │
+   │ Help: JSX syntax is disabled and should be enabled via the parser options
 ───╯
 
 ```

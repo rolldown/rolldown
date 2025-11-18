@@ -406,15 +406,15 @@ expression: output
 
 # tests/esbuild/dce/preserve_directives_minify_bundle
 
-- entry-!~{000}~.js => entry-DPYC1VPs.js
+- entry-!~{000}~.js => entry-D_Z8-mUJ.js
 
 # tests/esbuild/dce/preserve_directives_minify_iife
 
-- entry-!~{000}~.js => entry-Dx2Yl_G6.js
+- entry-!~{000}~.js => entry-BcRjHC-g.js
 
 # tests/esbuild/dce/preserve_directives_minify_pass_through
 
-- entry-!~{000}~.js => entry-BXsyf608.js
+- entry-!~{000}~.js => entry-B1hZeGcp.js
 
 # tests/esbuild/dce/pure_calls_with_spread
 
@@ -815,7 +815,7 @@ expression: output
 
 # tests/esbuild/default/hashbang_banner_use_strict_order
 
-- entry-!~{000}~.js => entry-mKdgM7Ty.js
+- entry-!~{000}~.js => entry-8V-Tydtr.js
 
 # tests/esbuild/default/hashbang_bundle
 
@@ -1673,15 +1673,15 @@ expression: output
 
 # tests/esbuild/default/use_strict_directive_bundle_cjs_issue2264
 
-- entry-!~{000}~.js => entry-wRKbsRr5.js
+- entry-!~{000}~.js => entry-Tn__zxkI.js
 
 # tests/esbuild/default/use_strict_directive_bundle_esm_issue2264
 
-- entry-!~{000}~.js => entry-hXtm27Ye.js
+- entry-!~{000}~.js => entry-DK-XPZv9.js
 
 # tests/esbuild/default/use_strict_directive_bundle_iife_issue2264
 
-- entry-!~{000}~.js => entry-Kjxmfydm.js
+- entry-!~{000}~.js => entry-DyW_VbPa.js
 
 # tests/esbuild/default/use_strict_directive_bundle_issue1837
 
@@ -1689,7 +1689,7 @@ expression: output
 
 # tests/esbuild/default/use_strict_directive_minify_no_bundle
 
-- entry-!~{000}~.js => entry-CjDlf40U.js
+- entry-!~{000}~.js => entry-BpbNQABO.js
 
 # tests/esbuild/default/var_relocating_bundle
 
@@ -2543,10 +2543,10 @@ expression: output
 - 2-!~{001}~.js => 2-CE2PB3IR.js
 - 3-!~{002}~.js => 3-DzbeOeSh.js
 - 4-!~{003}~.js => 4-Xj5EgsIT.js
-- 5-!~{004}~.js => 5-COWf4txy.js
-- 6-!~{005}~.js => 6-B73foMl5.js
-- 7-!~{006}~.js => 7-Df7UDLmG.js
-- 8-!~{007}~.js => 8-BhHOtKb5.js
+- 5-!~{004}~.js => 5-TxPJUhc1.js
+- 6-!~{005}~.js => 6-DSj00aoq.js
+- 7-!~{006}~.js => 7-joSvqK1F.js
+- 8-!~{007}~.js => 8-CnbagrAq.js
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
@@ -2706,7 +2706,7 @@ expression: output
 
 # tests/esbuild/lower/lower_using_hoisting
 
-- hoist-directive-!~{001}~.js => hoist-directive-aLVAy9nS.js
+- hoist-directive-!~{001}~.js => hoist-directive-Wrz2CUrf.js
 - hoist-export-class-direct-!~{008}~.js => hoist-export-class-direct-Z2-HxYi7.js
 - hoist-export-class-indirect-!~{009}~.js => hoist-export-class-indirect-7eZKih0X.js
 - hoist-export-clause-!~{005}~.js => hoist-export-clause-DeiYAT2f.js
@@ -2724,7 +2724,7 @@ expression: output
 - hoist-export-local-indirect-!~{007}~.js => hoist-export-local-indirect-HSZBlKOb.js
 - hoist-export-star-!~{003}~.js => hoist-export-star-DCnWupSR.js
 - hoist-import-!~{002}~.js => hoist-import-BYxW8d9R.js
-- hoist-use-strict-!~{000}~.js => hoist-use-strict-DM6Qkml6.js
+- hoist-use-strict-!~{000}~.js => hoist-use-strict-5K0QF0XB.js
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
@@ -4293,7 +4293,7 @@ expression: output
 
 # tests/rolldown/function/legal_comments/directive_with_inline
 
-- main-!~{000}~.js => main-CdqtvNwC.js
+- main-!~{000}~.js => main-C-3bH3Q6.js
 
 # tests/rolldown/function/legal_comments/inline
 
@@ -4848,7 +4848,7 @@ expression: output
 
 # tests/rolldown/issues/6879
 
-- main-!~{000}~.js => main-D96cflln.js
+- main-!~{000}~.js => main-9vfNU47B.js
 
 # tests/rolldown/issues/6880
 
@@ -4924,8 +4924,8 @@ expression: output
 
 # tests/rolldown/misc/chunk_level_directives
 
-- entry2-!~{001}~.js => entry2-D1s0QnHI.js
-- main-!~{000}~.js => main-BHPAQRgL.js
+- entry2-!~{001}~.js => entry2-DmmqtisX.js
+- main-!~{000}~.js => main-DqG9LQpA.js
 - shared-!~{002}~.js => shared-y1NHBW2S.js
 
 # tests/rolldown/misc/cjs_entry_as_dependency
@@ -5014,8 +5014,8 @@ expression: output
 
 # tests/rolldown/misc/preserve_modules/directives
 
-- main-!~{000}~.js => main-BOE28hLL.js
-- mod-!~{001}~.js => mod-DR3Ueu23.js
+- main-!~{000}~.js => main-BxGx4cYH.js
+- mod-!~{001}~.js => mod-DeoMBXDW.js
 
 # tests/rolldown/misc/preserve_modules/issue-4622
 
@@ -5107,7 +5107,7 @@ expression: output
 
 # tests/rolldown/misc/use_strict/esm
 
-- main-!~{000}~.js => main-D9u3cdMj.js
+- main-!~{000}~.js => main-BWqPfUEa.js
 
 # tests/rolldown/misc/use_strict/ignore_treeshaked_modules
 

@@ -4020,7 +4020,7 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/top_level_await_syntax_minify
 
-- main-!~{000}~.js => main-LH9tIU3F.js
+- main-!~{000}~.js => main-vqRlgn7i.js
 
 # tests/rolldown/function/export_mode/cjs/auto/default
 
@@ -4225,7 +4225,7 @@ expression: output
 
 # tests/rolldown/function/format/iife/iife_with_name_with_minify
 
-- main-!~{000}~.js => main-fJkDORp8.js
+- main-!~{000}~.js => main-BA6qDRj_.js
 
 # tests/rolldown/function/format/iife/namespaced_name
 
@@ -4301,7 +4301,7 @@ expression: output
 
 # tests/rolldown/function/legal_comments/inline_minify
 
-- main-!~{000}~.js => main-DRZIeHwa.js
+- main-!~{000}~.js => main-DJbyjpQq.js
 
 # tests/rolldown/function/legal_comments/none
 
@@ -4309,16 +4309,16 @@ expression: output
 
 # tests/rolldown/function/minify/basic
 
-- main-!~{000}~.js => main-NoWHFa4t.js
-- main-NoWHFa4t.js.map
+- main-!~{000}~.js => main-tR8BdT51.js
+- main-tR8BdT51.js.map
 
 # tests/rolldown/function/minify/exports
 
-- main-!~{000}~.js => main-D2tiPUbr.js
+- main-!~{000}~.js => main-D6mwfp37.js
 
 # tests/rolldown/function/minify/inject_node_env
 
-- main-!~{000}~.js => main-CihG9yyg.js
+- main-!~{000}~.js => main-uSKcoRC9.js
 
 # tests/rolldown/function/minify_internal_exports/basic
 
@@ -4702,7 +4702,7 @@ expression: output
 
 # tests/rolldown/issues/4491
 
-- main-!~{000}~.js => main-BOUZhfES.js
+- main-!~{000}~.js => main-C_1wlTcR.js
 
 # tests/rolldown/issues/4585
 
@@ -4781,7 +4781,7 @@ expression: output
 
 # tests/rolldown/issues/5923
 
-- main-!~{000}~.js => main-Bae-32ir.js
+- main-!~{000}~.js => main-avDGXSwj.js
 
 # tests/rolldown/issues/5930
 
@@ -4928,7 +4928,7 @@ expression: output
 
 # tests/rolldown/misc/common_js_min
 
-- main-!~{000}~.js => main-DpzD9J-O.js
+- main-!~{000}~.js => main-BB0ZAx_l.js
 
 # tests/rolldown/misc/duplicate_entries
 
@@ -5130,8 +5130,8 @@ expression: output
 
 # tests/rolldown/optimization/inline_const/issue_4786
 
-- page-a-!~{000}~.js => page-a-CEB9NEBh.js
-- page-b-!~{001}~.js => page-b-CatnFucT.js
+- page-a-!~{000}~.js => page-a-BcsFNE-q.js
+- page-b-!~{001}~.js => page-b-C9I8yjGD.js
 
 # tests/rolldown/optimization/inline_const/issue_5516
 
@@ -5151,9 +5151,9 @@ expression: output
 
 # tests/rolldown/optimization/inline_const/multi_pass
 
-- pagea-!~{000}~.js => pagea-BMjIpLFS.js
-- pageb-!~{001}~.js => pageb-BPz-jE-d.js
-- foo-!~{002}~.js => foo-3tP7DyUD.js
+- pagea-!~{000}~.js => pagea-DPatJ5wU.js
+- pageb-!~{001}~.js => pageb-BFCQ4ggL.js
+- foo-!~{002}~.js => foo-CUa9ehQs.js
 
 # tests/rolldown/optimization/inline_const/ns_chain
 
@@ -5161,7 +5161,7 @@ expression: output
 
 # tests/rolldown/optimization/inline_const/propagation
 
-- main-!~{000}~.js => main-B8_4kzog.js
+- main-!~{000}~.js => main-Dmz_kmiL.js
 
 # tests/rolldown/optimization/inline_const/smart_mode
 
@@ -5169,12 +5169,12 @@ expression: output
 
 # tests/rolldown/optimization/inline_empty_function_call/basic
 
-- main-!~{000}~.js => main-BbnV7Uu1.js
-- b-!~{001}~.js => b-BTVziTgp.js
+- main-!~{000}~.js => main-00sjF12P.js
+- b-!~{001}~.js => b-C4kE5Dgl.js
 
 # tests/rolldown/optimization/inline_empty_function_call/class_like
 
-- main-!~{000}~.js => main-CyCzjYr_.js
+- main-!~{000}~.js => main-qcBKJ6Rw.js
 
 # tests/rolldown/optimization/pife_for_module_wrappers/basic
 

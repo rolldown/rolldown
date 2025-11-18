@@ -9,15 +9,15 @@ use rolldown_error::BuildResult;
 use rolldown_sourcemap::collapse_sourcemaps;
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 
-use crate::type_alias::AssetVec;
+use crate::type_alias::IndexInstantiatedChunks;
 
 use super::GenerateStage;
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn minify_assets(
+  pub fn minify_chunks(
     options: &NormalizedBundlerOptions,
-    assets: &mut AssetVec,
+    chunks: &mut IndexInstantiatedChunks,
   ) -> BuildResult<()> {
     let (compress, minify_option, remove_whitespace) = match &options.minify {
       MinifyOptions::Disabled => return Ok(()),
@@ -35,11 +35,11 @@ impl GenerateStage<'_> {
       MinifyOptions::Enabled((options, remove_whitespace)) => (true, options, *remove_whitespace),
     };
     let allocator_pool = AllocatorPool::new(rayon::current_num_threads());
-    assets.par_iter_mut().try_for_each(|asset| -> anyhow::Result<()> {
-      if test_d_ts_pattern(&asset.filename) {
+    chunks.par_iter_mut().try_for_each(|chunk| -> anyhow::Result<()> {
+      if test_d_ts_pattern(chunk.preliminary_filename.as_str()) {
         return Ok(());
       }
-      match asset.meta {
+      match chunk.kind {
         rolldown_common::InstantiationKind::Ecma(_) => {
           let codegen_options = CodegenOptions {
             minify: remove_whitespace,
@@ -59,24 +59,24 @@ impl GenerateStage<'_> {
           };
 
           let allocator_guard = allocator_pool.get();
-          // TODO: Do we need to ensure `asset.filename` to be absolute path?
+          // TODO: Do we need to ensure `chunk.preliminary_filename` to be absolute path?
           let (minified_content, new_map) = EcmaCompiler::dce_or_minify(
             &allocator_guard,
-            asset.content.try_as_inner_str()?,
+            chunk.content.try_as_inner_str()?,
             options.format.source_type().with_jsx(true),
-            asset.map.is_some(),
-            &asset.filename,
+            chunk.map.is_some(),
+            chunk.preliminary_filename.as_str(),
             compress,
             minify_option.clone(),
             codegen_options,
           );
-          asset.content = minified_content.into();
-          match (&asset.map, &new_map) {
+          chunk.content = minified_content.into();
+          match (&chunk.map, &new_map) {
             (Some(origin_map), Some(new_map)) => {
-              asset.map = Some(collapse_sourcemaps(&[origin_map, new_map]));
+              chunk.map = Some(collapse_sourcemaps(&[origin_map, new_map]));
             }
             _ => {
-              // TODO: Map is dirty. Should we reset the `asset.map` to `None`?
+              // TODO: Map is dirty. Should we reset the `chunk.map` to `None`?
             }
           }
         }

@@ -61,7 +61,7 @@ mod advanced_chunks;
 mod chunk_ext;
 mod code_splitting;
 mod compute_cross_chunk_links;
-mod minify_assets;
+mod minify_chunks;
 mod on_demand_wrapping;
 mod render_chunk_to_assets;
 

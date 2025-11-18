@@ -4846,6 +4846,14 @@ expression: output
 - main-!~{000}~.js => main-D7G5mb2I.js
 - dynamic-!~{001}~.js => dynamic-BMZTHQfH.js
 
+# tests/rolldown/issues/6879
+
+- main-!~{000}~.js => main-D96cflln.js
+
+# tests/rolldown/issues/6880
+
+- main-!~{000}~.js => main-BSKNgUKW.js
+
 # tests/rolldown/issues/6881
 
 - main-!~{000}~.js => main-BPdKtNG3.js

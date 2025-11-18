@@ -88,7 +88,7 @@ export default {
 
 By default, each group will also include captured modules' dependencies. This reduces the chance of generating circular chunks.
 
-### concepts
+### In-depth
 
 If you want to disable this behavior, it's recommended to both set:
 
@@ -189,7 +189,7 @@ Constraints like `minSize`, `maxSize`, etc. are applied separately for different
 
 Controls which modules are captured in this group.
 
-#### concepts
+#### In-depth
 
 The available options:
 

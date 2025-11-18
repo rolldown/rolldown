@@ -16,27 +16,17 @@ When `output.format` is not `esm`, Rolldown will output the `"use strict"` direc
 - The directive is in the top-level scope and the module is a entry module ([REPL](https://repl.rolldown.rs/#eNptUEtuhDAMvYqVDVCN6Kobuuw12FBwpqmCQx2nTYVy9zGD5qPRbJK8Z7+PshprutU4mjC333F7k+lu+GBGhVWKCFHYjVK99+TmJbDA1/+C/JE+ESyHGar2Nf6kgVF121ZPY6AYPLY+HOvrcv3WNDpVZzSdcMJyMFfdJf9GPC3QE+ZzhQntkLyATTSKCwS7sM4NrD0BMEpiggwvkFVXNFfjOHg/hT9qtaB1x7vcJ5O9wEPe2vNmH5IsSboLBLCB50GJatQ/2MmyXefDFM3+VTM/CEYx5QSMo4I7))
 - The directive is in the top-level scope and `output.preserveModules` is enabled ([REPL](https://repl.rolldown.rs/#eNptkE1uhDAMha9iZQNUiK66ocuuewM2FJwpVYip40ypUO5eZxAz1Wg2Sfzz/L14M9a0m5n8iGvzFfLbm/YW12bQsIgBIQhPgxSvnZ/mhVjg83dBfosfCJZphqJ5Dt+xZ1Rd7ur8QD6Qw8bRqbw2ly9VpVWdjKYVjphqc9Ud/FvioQFcLwZGtH10Ajb6QSbysMvKtYKt8wCMEtnDCk+wqiopVWFMzo304xu1Z6fTP+qDyo6/420d5/EUZYnSHiGAJZ57TRSDbqA+sgtjQD7jO43RYWghf3ovpnxdDpPU2VlRrhcMYtIfQpqMFA==))
 
-If you want to append `"use strict"` to all files, you can use the `output.banner` option:
+If you want to append `"use strict"` to all files, you can use the `output.intro` option:
 
 ```ts
 import { defineConfig } from 'rolldown';
 
 export default defineConfig({
   output: {
-    banner: "'use strict';",
+    intro: "'use strict';",
   },
 });
 ```
-
-::: danger TODO
-
-The description above may not be correct:
-
-- is it correct to say that the non top-level directives are preserved? <https://github.com/rolldown/rolldown/issues/6880>
-- all REPLs are not working as described
-- should we implement `output.strict` and recommend that here?
-
-:::
 
 ## Other directives
 

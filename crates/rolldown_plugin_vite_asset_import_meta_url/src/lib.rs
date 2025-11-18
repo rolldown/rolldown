@@ -1,3 +1,4 @@
+mod ast_utils;
 mod ast_visit;
 mod utils;
 
@@ -22,7 +23,7 @@ impl Plugin for ViteAssetImportMetaUrlPlugin {
 
   async fn transform(
     &self,
-    _ctx: rolldown_plugin::SharedTransformPluginContext,
+    ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     if args.id == utils::PRELOAD_HELPER_ID
@@ -45,9 +46,20 @@ impl Plugin for ViteAssetImportMetaUrlPlugin {
       )));
     }
 
-    let mut visitor = ast_visit::NewUrlVisitor { urls: Vec::new() };
+    let mut s: Option<string_wizard::MagicString> = None;
+
+    let mut visitor = ast_visit::NewUrlVisitor {
+      urls: Vec::new(),
+      s: &mut s,
+      code: parser_ret.program.source_text,
+      ctx: &ctx,
+    };
     visitor.visit_program(&mut parser_ret.program);
 
-    Ok(None)
+    // TODO: generate source map
+    Ok(s.map(|s| rolldown_plugin::HookTransformOutput {
+      code: Some(s.to_string()),
+      ..Default::default()
+    }))
   }
 }

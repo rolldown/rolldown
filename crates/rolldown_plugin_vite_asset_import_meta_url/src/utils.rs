@@ -91,6 +91,34 @@ pub fn contains_asset_import_meta_url(code: &str) -> bool {
   false
 }
 
+/// Splits a raw URL into pure URL and query string.
+///
+/// Returns a tuple of (pure_url, query_string):
+/// - If query delimiter is found: pure_url is the part before '?', query_string is from '?' to the second-to-last character
+/// - If no query delimiter: pure_url is the original URL and query_string is empty
+///
+/// Note: The query delimiter '?' is searched ignoring '?' characters inside curly braces.
+pub fn split_url_and_query(raw_url: &str) -> (&str, &str) {
+  let bytes = raw_url.as_bytes();
+  let mut brackets_stack = 0;
+
+  // Find the index of query delimiter '?' outside curly braces
+  for (i, &byte) in bytes.iter().enumerate() {
+    match byte {
+      b'{' => brackets_stack += 1,
+      b'}' => brackets_stack -= 1,
+      b'?' if brackets_stack == 0 => {
+        let pure_url = &raw_url[..i];
+        let query_string = &raw_url[i..];
+        return (pure_url, query_string);
+      }
+      _ => {}
+    }
+  }
+
+  (raw_url, "")
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;

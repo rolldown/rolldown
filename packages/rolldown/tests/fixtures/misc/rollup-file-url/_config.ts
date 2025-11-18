@@ -8,8 +8,8 @@ export default defineTest({
   config: {
     output: {
       // tweak directory structure to test relative path reference
-      entryFileNames: './entries/[name].mjs',
-      assetFileNames: './assets/[name]-test.[ext]',
+      entryFileNames: 'entries/[name].mjs',
+      assetFileNames: 'assets/[name]-test.[ext]',
     },
     plugins: [
       // example plugin from

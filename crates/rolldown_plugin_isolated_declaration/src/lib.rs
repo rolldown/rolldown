@@ -76,7 +76,7 @@ impl Plugin for IsolatedDeclarationPlugin {
         },
         None,
         None,
-      );
+      )?;
     }
     Ok(args.ast)
   }

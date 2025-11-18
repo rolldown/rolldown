@@ -28,7 +28,7 @@ impl Plugin for TestPlugin {
       },
       None,
       None,
-    );
+    )?;
 
     Ok(None)
   }

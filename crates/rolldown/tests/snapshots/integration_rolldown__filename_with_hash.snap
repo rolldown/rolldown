@@ -3857,21 +3857,21 @@ expression: output
 
 # tests/rolldown/function/dir/should_generate_correct_relative_import_path
 
-- ./entries/a.mjs => ./entries/a.mjs
-- ./entries/b.mjs => ./entries/b.mjs
-- ./chunks/async.mjs => ./chunks/async.mjs
-- ./chunks/shared.mjs => ./chunks/shared.mjs
+- entries/a.mjs => entries/a.mjs
+- entries/b.mjs => entries/b.mjs
+- chunks/async.mjs => chunks/async.mjs
+- chunks/shared.mjs => chunks/shared.mjs
 
 # tests/rolldown/function/entry_filenames/should_generate_correct_relative_import_path
 
-- ./entries/a.mjs => ./entries/a.mjs
-- ./entries/b.mjs => ./entries/b.mjs
-- ./chunks/async.mjs => ./chunks/async.mjs
-- ./chunks/shared.mjs => ./chunks/shared.mjs
+- entries/a.mjs => entries/a.mjs
+- entries/b.mjs => entries/b.mjs
+- chunks/async.mjs => chunks/async.mjs
+- chunks/shared.mjs => chunks/shared.mjs
 
 # tests/rolldown/function/entry_filenames/should_generate_specified_hash_length
 
-- ./entries/!~{000}~-!~{000001}~-!~{2}~-!~{0000000000000003}~.js => ./entries/DdSsPkRG-DdSsPkRG2Yj-DdSsPk-DdSsPkRG2Yjs97Y7JepQN.js
+- entries/!~{000}~-!~{000001}~-!~{2}~-!~{0000000000000003}~.js => entries/C9xVeX1M-C9xVeX1M2a8-C9xVeX-C9xVeX1M2a84T2-Cu0BhH.js
 
 # tests/rolldown/function/es-target
 

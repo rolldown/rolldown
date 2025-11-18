@@ -80,7 +80,11 @@ impl BindingPluginContext {
     asset_filename: Option<String>,
     fn_sanitized_file_name: Option<String>,
   ) -> napi::Result<napi::JsString<'env>> {
-    env.create_string(self.inner.emit_file(file.into(), asset_filename, fn_sanitized_file_name))
+    let reference_id = self
+      .inner
+      .emit_file(file.into(), asset_filename, fn_sanitized_file_name)
+      .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    env.create_string(&reference_id)
   }
 
   #[napi]

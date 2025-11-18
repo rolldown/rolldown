@@ -103,7 +103,7 @@ impl FileEmitter {
     mut file: EmittedAsset,
     asset_filename_template: Option<FilenameTemplate>,
     sanitized_file_name: Option<ArcStr>,
-  ) -> ArcStr {
+  ) -> anyhow::Result<ArcStr> {
     let hash: ArcStr =
       xxhash_with_base(file.source.as_bytes(), self.options.hash_characters.base()).into();
     // Deduplicate assets if an explicit fileName is not provided
@@ -117,7 +117,7 @@ impl FileEmitter {
             entry.original_file_names.push(original_file_name);
           }
         });
-        return reference_id.value().clone();
+        return Ok(reference_id.value().clone());
       }
     }
 
@@ -126,7 +126,7 @@ impl FileEmitter {
       self.source_hash_to_reference_id.insert(hash.clone(), reference_id.clone());
     }
 
-    self.generate_file_name(&mut file, &hash, asset_filename_template, sanitized_file_name);
+    self.generate_file_name(&mut file, &hash, asset_filename_template, sanitized_file_name)?;
     self.files.insert(
       reference_id.clone(),
       OutputAsset {
@@ -137,7 +137,7 @@ impl FileEmitter {
           .map_or(vec![], |original_file_name| vec![original_file_name]),
       },
     );
-    reference_id
+    Ok(reference_id)
   }
 
   pub fn get_file_name(&self, reference_id: &str) -> anyhow::Result<ArcStr> {
@@ -177,7 +177,7 @@ impl FileEmitter {
     hash: &ArcStr,
     filename_template: Option<FilenameTemplate>,
     sanitized_file_name: Option<ArcStr>,
-  ) {
+  ) -> anyhow::Result<()> {
     if file.file_name.is_none() {
       let sanitized_file_name = sanitized_file_name.expect("should has sanitized file name");
       let path = Path::new(sanitized_file_name.as_str());
@@ -188,11 +188,12 @@ impl FileEmitter {
 
       let mut filename = filename_template
         .render(
+          "assetFileNames",
           name,
           None,
           Some(extension.unwrap_or_default()),
           Some(|len: Option<usize>| &hash[..len.map_or(8, |len| len.min(21))]),
-        )
+        )?
         .into();
 
       // deconflict file name
@@ -201,6 +202,7 @@ impl FileEmitter {
 
       file.file_name = Some(filename);
     }
+    Ok(())
   }
 
   pub fn add_additional_files(

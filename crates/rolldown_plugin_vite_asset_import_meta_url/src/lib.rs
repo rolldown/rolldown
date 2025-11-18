@@ -1,7 +1,9 @@
+mod ast_visit;
 mod utils;
 
 use std::borrow::Cow;
 
+use oxc::ast_visit::VisitMut;
 use rolldown_plugin::{HookUsage, Plugin};
 
 #[derive(Debug)]
@@ -29,6 +31,22 @@ impl Plugin for ViteAssetImportMetaUrlPlugin {
     {
       return Ok(None);
     }
+
+    let allocator = oxc::allocator::Allocator::default();
+    let mut parser_ret =
+      oxc::parser::Parser::new(&allocator, args.code, oxc::span::SourceType::default()).parse();
+    if parser_ret.panicked
+      && let Some(err) =
+        parser_ret.errors.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)
+    {
+      return Err(anyhow::anyhow!(format!(
+        "Failed to parse code in '{}': {:?}",
+        args.id, err.message
+      )));
+    }
+
+    let mut visitor = ast_visit::NewUrlVisitor { urls: Vec::new() };
+    visitor.visit_program(&mut parser_ret.program);
 
     Ok(None)
   }

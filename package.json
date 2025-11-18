@@ -32,7 +32,7 @@
     "husky": "^9.1.7",
     "knip": "^5.61.3",
     "lint-staged": "^16.1.2",
-    "oxlint": "^1.23.0",
+    "oxlint": "^1.29.0",
     "oxlint-tsgolint": "0.7.1",
     "remove-unused-vars": "^0.0.9",
     "rolldown": "workspace:*",

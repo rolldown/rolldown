@@ -2205,6 +2205,10 @@ export interface BindingViteAliasPluginConfig {
   entries: Array<BindingViteAliasPluginAlias>
 }
 
+export interface BindingViteAssetImportMetaUrlPluginConfig {
+  clientEntry: string
+}
+
 export interface BindingViteAssetPluginConfig {
   root: string
   isLib: boolean

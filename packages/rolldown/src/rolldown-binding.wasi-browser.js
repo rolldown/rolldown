@@ -64,13 +64,14 @@ const {
 })
 export default __napiModule.exports
 export const minify = __napiModule.exports.minify
+export const minifySync = __napiModule.exports.minifySync
 export const Severity = __napiModule.exports.Severity
 export const ParseResult = __napiModule.exports.ParseResult
 export const ExportExportNameKind = __napiModule.exports.ExportExportNameKind
 export const ExportImportNameKind = __napiModule.exports.ExportImportNameKind
 export const ExportLocalNameKind = __napiModule.exports.ExportLocalNameKind
 export const ImportNameKind = __napiModule.exports.ImportNameKind
-export const parseAsync = __napiModule.exports.parseAsync
+export const parse = __napiModule.exports.parse
 export const parseSync = __napiModule.exports.parseSync
 export const rawTransferSupported = __napiModule.exports.rawTransferSupported
 export const ResolverFactory = __napiModule.exports.ResolverFactory
@@ -79,9 +80,11 @@ export const ModuleType = __napiModule.exports.ModuleType
 export const sync = __napiModule.exports.sync
 export const HelperMode = __napiModule.exports.HelperMode
 export const isolatedDeclaration = __napiModule.exports.isolatedDeclaration
+export const isolatedDeclarationSync = __napiModule.exports.isolatedDeclarationSync
 export const moduleRunnerTransform = __napiModule.exports.moduleRunnerTransform
+export const moduleRunnerTransformSync = __napiModule.exports.moduleRunnerTransformSync
 export const transform = __napiModule.exports.transform
-export const transformAsync = __napiModule.exports.transformAsync
+export const transformSync = __napiModule.exports.transformSync
 export const BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 export const BindingBundleErrorEventData = __napiModule.exports.BindingBundleErrorEventData
 export const BindingBundler = __napiModule.exports.BindingBundler

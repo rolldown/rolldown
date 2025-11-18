@@ -815,7 +815,7 @@ expression: output
 
 # tests/esbuild/default/hashbang_banner_use_strict_order
 
-- entry-!~{000}~.js => entry-BAzNWaPX.js
+- entry-!~{000}~.js => entry-mKdgM7Ty.js
 
 # tests/esbuild/default/hashbang_bundle
 
@@ -1673,15 +1673,15 @@ expression: output
 
 # tests/esbuild/default/use_strict_directive_bundle_cjs_issue2264
 
-- entry-!~{000}~.js => entry-Bvo4BYro.js
+- entry-!~{000}~.js => entry-wRKbsRr5.js
 
 # tests/esbuild/default/use_strict_directive_bundle_esm_issue2264
 
-- entry-!~{000}~.js => entry-DK-XPZv9.js
+- entry-!~{000}~.js => entry-hXtm27Ye.js
 
 # tests/esbuild/default/use_strict_directive_bundle_iife_issue2264
 
-- entry-!~{000}~.js => entry-CTAM4RIy.js
+- entry-!~{000}~.js => entry-Kjxmfydm.js
 
 # tests/esbuild/default/use_strict_directive_bundle_issue1837
 
@@ -2483,11 +2483,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-B8XU3m3N.js
+- entry-!~{000}~.js => entry-BcAiBbX3.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-B8XU3m3N.js
+- entry-!~{000}~.js => entry-BcAiBbX3.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2543,14 +2543,14 @@ expression: output
 - 2-!~{001}~.js => 2-CE2PB3IR.js
 - 3-!~{002}~.js => 3-DzbeOeSh.js
 - 4-!~{003}~.js => 4-Xj5EgsIT.js
-- 5-!~{004}~.js => 5-TxPJUhc1.js
-- 6-!~{005}~.js => 6-DSj00aoq.js
-- 7-!~{006}~.js => 7-joSvqK1F.js
-- 8-!~{007}~.js => 8-CnbagrAq.js
+- 5-!~{004}~.js => 5-COWf4txy.js
+- 6-!~{005}~.js => 6-B73foMl5.js
+- 7-!~{006}~.js => 7-Df7UDLmG.js
+- 8-!~{007}~.js => 8-BhHOtKb5.js
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-CIYJz9rD.js
+- entry-!~{000}~.js => entry-Bs7x33Sk.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -2724,11 +2724,11 @@ expression: output
 - hoist-export-local-indirect-!~{007}~.js => hoist-export-local-indirect-HSZBlKOb.js
 - hoist-export-star-!~{003}~.js => hoist-export-star-DCnWupSR.js
 - hoist-import-!~{002}~.js => hoist-import-BYxW8d9R.js
-- hoist-use-strict-!~{000}~.js => hoist-use-strict-5K0QF0XB.js
+- hoist-use-strict-!~{000}~.js => hoist-use-strict-DM6Qkml6.js
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
-- entry-!~{000}~.js => entry-WEiDann8.js
+- entry-!~{000}~.js => entry-Fhdmt75u.js
 
 # tests/esbuild/lower/static_class_block_es2021
 
@@ -4293,7 +4293,7 @@ expression: output
 
 # tests/rolldown/function/legal_comments/directive_with_inline
 
-- main-!~{000}~.js => main-C-3bH3Q6.js
+- main-!~{000}~.js => main-CdqtvNwC.js
 
 # tests/rolldown/function/legal_comments/inline
 
@@ -4714,8 +4714,8 @@ expression: output
 
 # tests/rolldown/issues/4782
 
-- main-!~{000}~.js => main-BdoBHeWP.js
-- lib-!~{001}~.js => lib-BXyBWPbT.js
+- main-!~{000}~.js => main-Bq27vHl3.js
+- lib-!~{001}~.js => lib-BTmLRRj1.js
 
 # tests/rolldown/issues/4993
 
@@ -4752,7 +4752,7 @@ expression: output
 
 # tests/rolldown/issues/5531
 
-- main-!~{000}~.js => main-C-d4mftm.js
+- main-!~{000}~.js => main-hWsHv6Re.js
 
 # tests/rolldown/issues/5557
 
@@ -5099,7 +5099,7 @@ expression: output
 
 # tests/rolldown/misc/use_strict/esm
 
-- main-!~{000}~.js => main-BWqPfUEa.js
+- main-!~{000}~.js => main-D9u3cdMj.js
 
 # tests/rolldown/misc/use_strict/ignore_treeshaked_modules
 
@@ -5206,11 +5206,11 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_merge_decorator_metadata
 
-- main-!~{000}~.js => main-Dtp-PGhK.js
+- main-!~{000}~.js => main-BXxkw9at.js
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-BpDdqKq-.js
+- main-!~{000}~.js => main-C09b1FYO.js
 
 # tests/rolldown/resolve/wildcard_alias
 

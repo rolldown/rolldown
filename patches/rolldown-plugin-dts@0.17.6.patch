@@ -1,0 +1,22 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 609782b559d06aeaa4422c96f3d0fa5ca4d0ebb9..14ff2467360d01eeb96a32c110ef994b548fc3dd 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -27,7 +27,7 @@ const {
+   tmpdir
+ } = globalThis.process.getBuiltinModule("node:os");
+ const path = globalThis.process.getBuiltinModule("node:path");
+-import { ResolverFactory, isolatedDeclaration } from "rolldown/experimental";
++import { ResolverFactory, isolatedDeclarationSync } from "rolldown/experimental";
+ const process = globalThis.process;
+ import { getTsconfig, parseTsconfig } from "get-tsconfig";
+ import { createResolver } from "dts-resolver";
+@@ -726,7 +726,7 @@ function createGeneratePlugin({ tsconfig, tsconfigRaw, build, incremental, cwd,
+ 						throw new Error(`tsgo did not generate dts file for ${id}, please check your tsconfig.`);
+ 					}
+ 				} else if (oxc && !RE_VUE.test(id)) {
+-					const result = isolatedDeclaration(id, code, oxc);
++					const result = isolatedDeclarationSync(id, code, oxc);
+ 					if (result.errors.length) {
+ 						const [error] = result.errors;
+ 						return this.error({

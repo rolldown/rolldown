@@ -1,5 +1,5 @@
 import type { Program } from '@oxc-project/types';
-import { parseAsync, parseSync } from './binding.cjs';
+import { parse, parseSync } from './binding.cjs';
 import type { ParseResult, ParserOptions } from './binding.cjs';
 import { locate } from './log/locate-character';
 import { error, logParseError } from './log/logs';
@@ -73,7 +73,7 @@ export async function parseAstAsync(
   filename?: string,
 ): Promise<Program> {
   return wrap(
-    await parseAsync(filename ?? 'file.js', sourceText, {
+    await parse(filename ?? 'file.js', sourceText, {
       ...defaultParserOptions,
       ...options,
     }),

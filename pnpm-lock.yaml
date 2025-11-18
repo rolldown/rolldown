@@ -130,8 +130,8 @@ catalogs:
       specifier: ^11.2.0
       version: 11.3.2
     glob:
-      specifier: ^11.0.0
-      version: 11.0.3
+      specifier: ^12.0.0
+      version: 12.0.0
     lodash-es:
       specifier: ^4.17.21
       version: 4.17.21
@@ -541,7 +541,7 @@ importers:
         version: 9.6.0
       glob:
         specifier: 'catalog:'
-        version: 11.0.3
+        version: 12.0.0
       oxc-parser:
         specifier: 'catalog:'
         version: 0.98.0
@@ -4329,8 +4329,13 @@ packages:
     resolution: {integrity: sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==}
     hasBin: true
 
-  glob@11.0.3:
-    resolution: {integrity: sha512-2Nim7dha1KVkaiF4q6Dj+ngPPMdfvLJEOpZk/jKiUAkqKebpGAWQXAq9z1xu9HKu5lWfqw/FASuccEjyznjPaA==}
+  glob@11.1.0:
+    resolution: {integrity: sha512-vuNwKSaKiqm7g0THUBu2x7ckSs3XJLXE+2ssL7/MfTGPLLcrJQ/4Uq1CjPTtO5cCIiRxqvN6Twy1qOwhL0Xjcw==}
+    engines: {node: 20 || >=22}
+    hasBin: true
+
+  glob@12.0.0:
+    resolution: {integrity: sha512-5Qcll1z7IKgHr5g485ePDdHcNQY0k2dtv/bjYy0iuyGxQw2qSOiiXUXJ+AYQpg3HNoUMHqAruX478Jeev7UULw==}
     engines: {node: 20 || >=22}
     hasBin: true
 
@@ -8336,7 +8341,7 @@ snapshots:
 
   '@types/glob@9.0.0':
     dependencies:
-      glob: 11.0.3
+      glob: 12.0.0
 
   '@types/hast@3.0.4':
     dependencies:
@@ -9239,7 +9244,16 @@ snapshots:
       package-json-from-dist: 1.0.1
       path-scurry: 1.11.1
 
-  glob@11.0.3:
+  glob@11.1.0:
+    dependencies:
+      foreground-child: 3.3.1
+      jackspeak: 4.1.1
+      minimatch: 10.1.1
+      minipass: 7.1.2
+      package-json-from-dist: 1.0.1
+      path-scurry: 2.0.1
+
+  glob@12.0.0:
     dependencies:
       foreground-child: 3.3.1
       jackspeak: 4.1.1
@@ -10344,7 +10358,7 @@ snapshots:
 
   rimraf@6.1.0:
     dependencies:
-      glob: 11.0.3
+      glob: 11.1.0
       package-json-from-dist: 1.0.1
 
   rolldown-plugin-dts@0.17.6(patch_hash=db0b89574d11810db01e781a2a968a0da700c0cf494128c6d2722f502e3c0a07)(ms@2.1.3)(oxc-resolver@11.13.1)(rolldown@packages+rolldown)(typescript@5.9.3):

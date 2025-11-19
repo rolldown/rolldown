@@ -1,0 +1,15 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+let x;
+null == x && (x = true);
+
+//#endregion
+export { x };
+```

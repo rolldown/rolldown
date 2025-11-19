@@ -27,7 +27,7 @@ use xxhash_rust::xxh3::Xxh3;
 
 use crate::{
   chunk_graph::ChunkGraph,
-  stages::{generate_stage::GenerateStage, link_stage::LinkStageOutput},
+  stages::link_stage::LinkStageOutput,
   type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
   utils::process_code_and_sourcemap::process_code_and_sourcemap,
 };
@@ -186,8 +186,6 @@ pub async fn finalize_assets(
         .collect();
     }
   });
-
-  GenerateStage::minify_assets(options, &mut assets)?;
 
   // apply sourcemap related logic
 

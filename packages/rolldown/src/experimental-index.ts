@@ -8,12 +8,14 @@ export {
   isolatedDeclaration,
   type IsolatedDeclarationsOptions,
   type IsolatedDeclarationsResult,
+  isolatedDeclarationSync,
   minify,
   type MinifyOptions,
   type MinifyResult,
+  minifySync,
   moduleRunnerTransform,
   type NapiResolveOptions as ResolveOptions,
-  parseAsync,
+  parse,
   type ParseResult,
   type ParserOptions,
   parseSync,
@@ -22,11 +24,13 @@ export {
   transform,
   type TransformOptions,
   type TransformResult,
+  transformSync,
 } from './binding.cjs';
 export { defineParallelPlugin } from './plugin/parallel-plugin';
 // Builtin plugin factory
 export {
   isolatedDeclarationPlugin,
+  viteAssetImportMetaUrlPlugin,
   viteBuildImportAnalysisPlugin,
   viteCSSPostPlugin,
   viteDynamicImportVarsPlugin,

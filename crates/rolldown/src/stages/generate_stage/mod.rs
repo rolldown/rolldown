@@ -61,7 +61,7 @@ mod advanced_chunks;
 mod chunk_ext;
 mod code_splitting;
 mod compute_cross_chunk_links;
-mod minify_assets;
+mod minify_chunks;
 mod on_demand_wrapping;
 mod render_chunk_to_assets;
 
@@ -484,8 +484,9 @@ impl<'a> GenerateStage<'a> {
             }
           });
 
-          let mut filename =
-            asset_filename_template.render(Some(&name), None, extension, hash_replacer).into();
+          let mut filename = asset_filename_template
+            .render("assetFileNames", Some(&name), None, extension, hash_replacer)?
+            .into();
           filename = make_unique_name(&filename, &used_name_counts);
           let preliminary = PreliminaryFilename::new(filename, hash_placeholder);
 

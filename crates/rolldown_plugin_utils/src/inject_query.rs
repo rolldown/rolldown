@@ -23,6 +23,7 @@ pub fn inject_query(url: &str, query: &str) -> String {
 
 #[test]
 fn test() {
+  assert_eq!(inject_query("?", "url"), "?url&");
   assert_eq!(inject_query("a/b", "url"), "a/b?url");
   assert_eq!(inject_query("a/b?c", "url"), "a/b?url&c");
   assert_eq!(inject_query("a/b?c&d=e", "url"), "a/b?url&c&d=e");

@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use oxc::allocator::{Address, Allocator, TakeIn};
+use oxc::allocator::{Address, Allocator, GetAddress, TakeIn};
 use oxc::ast::NONE;
 use oxc::ast::ast::{self, BindingPatternKind, Declaration, ImportOrExportKind, Statement};
 use oxc::ast_visit::{VisitMut, walk_mut};
@@ -99,7 +99,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
     );
 
     for mut stmt in original_body {
-      let stmt_addr = Address::from_ptr(&raw const stmt);
+      let stmt_addr = stmt.address();
       self.statement_stack.push(stmt_addr);
       walk_mut::walk_statement(self, &mut stmt);
       self.statement_stack.pop();
@@ -125,7 +125,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
   /// Since we already intercept `visit_statements`, these two visitor now are mutually exclusive.
   fn visit_statement(&mut self, it: &mut Statement<'ast>) {
     if self.keep_names {
-      let stmt_addr = Address::from_ptr(it);
+      let stmt_addr = it.address();
       self.statement_stack.push(stmt_addr);
       walk_mut::walk_statement(self, it);
       self.statement_stack.pop();
@@ -148,7 +148,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
     if self.keep_names {
       let stmts = it.take_in(self.snippet.alloc());
       for mut stmt in stmts {
-        let stmt_addr = Address::from_ptr(&raw const stmt);
+        let stmt_addr = stmt.address();
         self.statement_stack.push(stmt_addr);
         walk_mut::walk_statement(self, &mut stmt);
         self.statement_stack.pop();

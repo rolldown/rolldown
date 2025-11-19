@@ -60,8 +60,10 @@ pub async fn render_iife<'code>(
   }
 
   if !directives.is_empty() {
-    source_joiner.append_source(render_chunk_directives(directives.iter()));
-    source_joiner.append_source("");
+    let rendered_chunk_directives = render_chunk_directives(directives.iter());
+    if !rendered_chunk_directives.is_empty() {
+      source_joiner.append_source(rendered_chunk_directives);
+    }
   }
 
   // iife wrapper start

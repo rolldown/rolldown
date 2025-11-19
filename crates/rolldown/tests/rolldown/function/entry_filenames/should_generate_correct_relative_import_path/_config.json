@@ -10,9 +10,10 @@
         "import": "./b.js"
       }
     ],
-    "entryFilenames": "./entries/[name].mjs",
-    "chunkFilenames": "./chunks/[name].mjs"
+    "entryFilenames": "entries/[name].mjs",
+    "chunkFilenames": "chunks/[name].mjs"
   },
   "_comment": "See comments in `crates/rolldown/tests/common/fixture.rs`",
   "expectExecuted": false
 }
+

@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::Address,
+  allocator::{Address, UnstableAddress},
   ast::{
     AstBuilder,
     ast::{
@@ -294,7 +294,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
         .unwrap_or(false);
 
       if is_side_effects_free_function {
-        self.side_effect_free_call_expr_addr.insert(Address::from_ptr(it));
+        self.side_effect_free_call_expr_addr.insert(it.unstable_address());
       }
     }
     walk::walk_call_expression(self, it);

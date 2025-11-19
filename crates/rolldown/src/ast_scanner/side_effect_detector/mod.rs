@@ -8,7 +8,7 @@ use oxc::ast::ast::{
   VariableDeclarationKind,
 };
 use oxc::ast::{match_expression, match_member_expression};
-use oxc_allocator::Address;
+use oxc_allocator::{Address, UnstableAddress};
 use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, SideEffectDetail};
 use rolldown_utils::global_reference::{
   is_global_ident_ref, is_side_effect_free_member_expr_of_len_three,
@@ -341,7 +341,7 @@ impl<'a> SideEffectDetector<'a> {
       && (expr.pure
         || self
           .side_effect_free_function_symbol_ref
-          .is_some_and(|map| map.contains(&Address::from_ptr(expr))));
+          .is_some_and(|map| map.contains(&expr.unstable_address())));
     if is_pure {
       // Even it is pure, we also wants to know if the callee has access global var
       // But we need to ignore the `Unknown` flag, since it is already marked as `pure`.

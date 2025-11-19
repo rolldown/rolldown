@@ -28,10 +28,11 @@ use rolldown_plugin_vite_wasm_helper::ViteWasmHelperPlugin;
 use rolldown_plugin_vite_web_worker_post::ViteWebWorkerPostPlugin;
 
 use crate::options::plugin::config::{
-  BindingEsmExternalRequirePluginConfig, BindingViteCSSPluginConfig,
-  BindingViteCSSPostPluginConfig, BindingViteHtmlInlineProxyPluginConfig,
-  BindingViteHtmlPluginConfig, BindingViteModulePreloadPolyfillPluginConfig,
-  BindingViteReactRefreshWrapperPluginConfig, BindingViteWasmHelperPluginConfig,
+  BindingEsmExternalRequirePluginConfig, BindingViteAssetImportMetaUrlPluginConfig,
+  BindingViteCSSPluginConfig, BindingViteCSSPostPluginConfig,
+  BindingViteHtmlInlineProxyPluginConfig, BindingViteHtmlPluginConfig,
+  BindingViteModulePreloadPolyfillPluginConfig, BindingViteReactRefreshWrapperPluginConfig,
+  BindingViteWasmHelperPluginConfig,
 };
 
 use super::{
@@ -108,7 +109,17 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         };
         Arc::new(plugin)
       }
-      BindingBuiltinPluginName::ViteAssetImportMetaUrl => Arc::new(ViteAssetImportMetaUrlPlugin),
+      BindingBuiltinPluginName::ViteAssetImportMetaUrl => {
+        let plugin: ViteAssetImportMetaUrlPlugin = if let Some(options) = plugin.options {
+          BindingViteAssetImportMetaUrlPluginConfig::from_unknown(options)?.into()
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteAssetImportMetaUrlPlugin",
+          ));
+        };
+        Arc::new(plugin)
+      }
       BindingBuiltinPluginName::ViteBuildImportAnalysis => {
         let config = if let Some(options) = plugin.options {
           BindingViteBuildImportAnalysisPluginConfig::from_unknown(options)?

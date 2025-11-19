@@ -54,6 +54,8 @@ impl GenerateStage<'_> {
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
 
+    Self::minify_chunks(self.options, &mut instantiated_chunks)?;
+
     let assets = finalize_assets(
       chunk_graph,
       self.link_output,

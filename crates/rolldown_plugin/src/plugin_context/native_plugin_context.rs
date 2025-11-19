@@ -144,7 +144,7 @@ impl NativePluginContextImpl {
     file: rolldown_common::EmittedAsset,
     fn_asset_filename: Option<String>,
     fn_sanitized_file_name: Option<String>,
-  ) -> ArcStr {
+  ) -> anyhow::Result<ArcStr> {
     let file_name_is_none = file.file_name.is_none();
     let asset_filename_template =
       file_name_is_none.then(|| self.options.asset_filenames.value(fn_asset_filename).into());
@@ -161,7 +161,7 @@ impl NativePluginContextImpl {
   ) -> anyhow::Result<ArcStr> {
     let asset_filename = self.options.asset_filename_with_file(&file).await?;
     let sanitized_file_name = self.options.sanitize_file_name_with_file(&file).await?;
-    Ok(self.file_emitter.emit_file(file, asset_filename.map(Into::into), sanitized_file_name))
+    self.file_emitter.emit_file(file, asset_filename.map(Into::into), sanitized_file_name)
   }
 
   pub fn get_file_name(&self, reference_id: &str) -> anyhow::Result<ArcStr> {

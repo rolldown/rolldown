@@ -37,6 +37,19 @@ impl VisitMut<'_> for NewUrlVisitor<'_, '_> {
               }
             };
 
+            // Validate that the URL starts with a relative path
+            if !glob.starts_with("./") && !glob.starts_with("../") {
+              self.ctx.warn(LogWithoutPlugin {
+                message: format!(
+                  "new URL() with import.meta.url must use a relative path. Original: {}, Generated glob: `{}`",
+                  template.span.source_text(self.code),
+                  glob
+                ),
+                ..Default::default()
+              });
+              return;
+            }
+
             let s = self.s.get_or_insert_with(|| string_wizard::MagicString::new(self.code));
 
             let span = template.span.shrink(1);

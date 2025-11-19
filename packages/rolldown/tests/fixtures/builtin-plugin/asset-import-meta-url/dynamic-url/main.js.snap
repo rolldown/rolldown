@@ -28,11 +28,7 @@ function twoVariablesBetweenSlash(dir, dir2) {
 	})["./foo/${dir}${dir2}/index.js"], import.meta.url);
 }
 function ignoreStartingWithAVariable(file) {
-	return new URL(import.meta.glob("*.js", {
-		eager: true,
-		import: "default",
-		query: "?url"
-	})["${file}.js"], import.meta.url);
+	return new URL(`${file}.js`, import.meta.url);
 }
 
 //#endregion

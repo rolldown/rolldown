@@ -188,7 +188,6 @@ impl FileEmitter {
 
       let mut filename = filename_template
         .render(
-          "assetFileNames",
           name,
           None,
           Some(extension.unwrap_or_default()),

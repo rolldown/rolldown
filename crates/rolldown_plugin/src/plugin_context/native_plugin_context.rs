@@ -8,9 +8,9 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleLoaderMsg, PackageJson, PluginIdx, ResolvedId,
-  SharedFileEmitter, SharedModuleInfoDashMap, SharedNormalizedBundlerOptions,
-  side_effects::HookSideEffects,
+  FilenameTemplate, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleLoaderMsg, PackageJson,
+  PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
+  SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::FxDashSet;
@@ -146,8 +146,9 @@ impl NativePluginContextImpl {
     fn_sanitized_file_name: Option<String>,
   ) -> anyhow::Result<ArcStr> {
     let file_name_is_none = file.file_name.is_none();
-    let asset_filename_template =
-      file_name_is_none.then(|| self.options.asset_filenames.value(fn_asset_filename).into());
+    let asset_filename_template = file_name_is_none.then(|| {
+      FilenameTemplate::new(self.options.asset_filenames.value(fn_asset_filename), "assetFileNames")
+    });
     let sanitized_file_name = file_name_is_none.then(|| {
       self.options.sanitize_filename.value(file.name_for_sanitize(), fn_sanitized_file_name)
     });
@@ -161,7 +162,7 @@ impl NativePluginContextImpl {
   ) -> anyhow::Result<ArcStr> {
     let asset_filename = self.options.asset_filename_with_file(&file).await?;
     let sanitized_file_name = self.options.sanitize_file_name_with_file(&file).await?;
-    self.file_emitter.emit_file(file, asset_filename.map(Into::into), sanitized_file_name)
+    self.file_emitter.emit_file(file, asset_filename, sanitized_file_name)
   }
 
   pub fn get_file_name(&self, reference_id: &str) -> anyhow::Result<ArcStr> {

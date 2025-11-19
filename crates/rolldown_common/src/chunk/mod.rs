@@ -151,15 +151,18 @@ impl Chunk {
   ) -> anyhow::Result<FilenameTemplate> {
     // https://github.com/rollup/rollup/blob/061a0387c8654222620f602471d66afd3c582048/src/Chunk.ts?plain=1#L526-L529
     // Emitted chunks should always use chunk_filenames, not entry_filenames
-    let ret = if matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) && !meta.contains(ChunkMeta::EmittedChunk))
-      || options.preserve_modules
-    {
+    let is_entry = matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) && !meta.contains(ChunkMeta::EmittedChunk))
+      || options.preserve_modules;
+
+    let ret = if is_entry {
       options.entry_filenames.call(rollup_pre_rendered_chunk).await?
     } else {
       options.chunk_filenames.call(rollup_pre_rendered_chunk).await?
     };
 
-    Ok(FilenameTemplate::new(ret))
+    let pattern_name = if is_entry { "entryFileNames" } else { "chunkFileNames" };
+
+    Ok(FilenameTemplate::new(ret, pattern_name))
   }
 
   pub async fn css_filename_template(
@@ -168,14 +171,17 @@ impl Chunk {
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
   ) -> anyhow::Result<FilenameTemplate> {
     // Emitted chunks should always use chunk_filenames, not entry_filenames
-    let ret = if matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) && !meta.contains(ChunkMeta::EmittedChunk))
-    {
+    let is_entry = matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) && !meta.contains(ChunkMeta::EmittedChunk));
+
+    let ret = if is_entry {
       options.css_entry_filenames.call(rollup_pre_rendered_chunk).await?
     } else {
       options.css_chunk_filenames.call(rollup_pre_rendered_chunk).await?
     };
 
-    Ok(FilenameTemplate::new(ret))
+    let pattern_name = if is_entry { "cssEntryFileNames" } else { "cssChunkFileNames" };
+
+    Ok(FilenameTemplate::new(ret, pattern_name))
   }
 
   pub async fn generate_preliminary_filename(
@@ -213,17 +219,8 @@ impl Chunk {
     });
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
 
-    // Determine the pattern name for error messages
-    let pattern_name = if matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) && !meta.contains(ChunkMeta::EmittedChunk))
-      || options.preserve_modules
-    {
-      "entryFileNames"
-    } else {
-      "chunkFileNames"
-    };
-
     let filename = filename_template
-      .render(pattern_name, Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
+      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
       .into();
 
     let name = make_unique_name(&filename, used_name_counts);
@@ -294,16 +291,8 @@ impl Chunk {
     });
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
 
-    // Determine the pattern name for error messages
-    let pattern_name = if matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) && !meta.contains(ChunkMeta::EmittedChunk))
-    {
-      "cssEntryFileNames"
-    } else {
-      "cssChunkFileNames"
-    };
-
     let filename = filename_template
-      .render(pattern_name, Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
+      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
       .into();
 
     let name = make_unique_name(&filename, used_name_counts);

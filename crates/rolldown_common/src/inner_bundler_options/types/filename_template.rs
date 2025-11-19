@@ -31,33 +31,33 @@ fn is_path_fragment(name: &str) -> bool {
 #[derive(Debug)]
 pub struct FilenameTemplate {
   template: String,
+  pattern_name: &'static str,
 }
 
 impl FilenameTemplate {
-  pub fn new(template: String) -> Self {
-    Self { template }
+  pub fn new(template: String, pattern_name: &'static str) -> Self {
+    Self { template, pattern_name }
   }
 
   pub fn template(&self) -> &str {
     &self.template
   }
-}
 
-impl From<String> for FilenameTemplate {
-  fn from(template: String) -> Self {
-    Self::new(template)
+  pub fn pattern_name(&self) -> &str {
+    self.pattern_name
   }
 }
 
 impl FilenameTemplate {
   pub fn render(
     self,
-    pattern_name: &str,
     name: Option<&str>,
     format: Option<&str>,
     extension: Option<&str>,
     hash_replacer: Option<impl Replacer>,
   ) -> anyhow::Result<String> {
+    let pattern_name = &self.pattern_name;
+
     // Validate the template pattern itself
     if is_path_fragment(&self.template) {
       anyhow::bail!(
@@ -83,13 +83,6 @@ impl FilenameTemplate {
     }
 
     if let Some(format) = format {
-      // Validate the format replacement
-      if is_path_fragment(format) {
-        anyhow::bail!(
-          "Invalid substitution \"{format}\" for placeholder \"[format]\" in \"{pattern_name}\" pattern, \
-           can be neither absolute nor relative path."
-        );
-      }
       tmp = tmp.replace_all("[format]", format);
     }
 
@@ -98,13 +91,6 @@ impl FilenameTemplate {
     }
 
     if let Some(ext) = extension {
-      // Validate the extension replacement
-      if is_path_fragment(ext) {
-        anyhow::bail!(
-          "Invalid substitution \"{ext}\" for placeholder \"[ext]\" in \"{pattern_name}\" pattern, \
-           can be neither absolute nor relative path."
-        );
-      }
       let extname = if ext.is_empty() { "" } else { &format!(".{ext}") };
       tmp = tmp.replace_all("[ext]", ext);
       tmp = tmp.replace_all("[extname]", extname);
@@ -128,20 +114,20 @@ mod tests {
 
   #[test]
   fn basic() {
-    FilenameTemplate::new("[name]-[hash:8].js".to_string());
+    FilenameTemplate::new("[name]-[hash:8].js".to_string(), "entryFileNames");
   }
 
   #[test]
   fn hash_with_len() {
-    let filename_template = FilenameTemplate::new("[name]-[hash:3]-[hash:3].js".to_string());
+    let filename_template =
+      FilenameTemplate::new("[name]-[hash:3]-[hash:3].js".to_string(), "entryFileNames");
 
     let mut hash_iter = ["abc", "def"].iter();
     let hash_replacer =
       filename_template.has_hash_pattern().then_some(|_| hash_iter.next().unwrap());
 
-    let filename = filename_template
-      .render("entryFileNames", Some("hello"), None, None, hash_replacer)
-      .expect("should render");
+    let filename =
+      filename_template.render(Some("hello"), None, None, hash_replacer).expect("should render");
 
     assert_eq!(filename, "hello-abc-def.js");
   }
@@ -167,8 +153,8 @@ mod tests {
 
   #[test]
   fn test_invalid_pattern() {
-    let template = FilenameTemplate::new("/absolute/path/[name].js".to_string());
-    let result = template.render("entryFileNames", Some("test"), None, None, None::<&str>);
+    let template = FilenameTemplate::new("/absolute/path/[name].js".to_string(), "entryFileNames");
+    let result = template.render(Some("test"), None, None, None::<&str>);
     assert!(result.is_err());
     assert!(
       result.unwrap_err().to_string().contains("patterns can be neither absolute nor relative")
@@ -177,9 +163,8 @@ mod tests {
 
   #[test]
   fn test_invalid_name_substitution() {
-    let template = FilenameTemplate::new("[name].js".to_string());
-    let result =
-      template.render("entryFileNames", Some("/absolute/name"), None, None, None::<&str>);
+    let template = FilenameTemplate::new("[name].js".to_string(), "entryFileNames");
+    let result = template.render(Some("/absolute/name"), None, None, None::<&str>);
     assert!(result.is_err());
     assert!(
       result
@@ -190,23 +175,9 @@ mod tests {
   }
 
   #[test]
-  fn test_invalid_format_substitution() {
-    let template = FilenameTemplate::new("[name]-[format].js".to_string());
-    let result =
-      template.render("entryFileNames", Some("test"), Some("./relative"), None, None::<&str>);
-    assert!(result.is_err());
-    assert!(
-      result
-        .unwrap_err()
-        .to_string()
-        .contains("Invalid substitution \"./relative\" for placeholder \"[format]\"")
-    );
-  }
-
-  #[test]
   fn test_valid_subdirectory() {
-    let template = FilenameTemplate::new("dist/[name].js".to_string());
-    let result = template.render("entryFileNames", Some("test"), None, None, None::<&str>);
+    let template = FilenameTemplate::new("dist/[name].js".to_string(), "entryFileNames");
+    let result = template.render(Some("test"), None, None, None::<&str>);
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "dist/test.js");
   }

@@ -6,29 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main1.js
 
 ```js
-const require_shared = require('./shared.js');
-
-//#region main1.js
-function main() {
-	require_shared.shared();
-}
-main();
-
-//#endregion
-//# sourceMappingURL=main1.js.map
-```
-
-## main2.js
-
-```js
-const require_shared = require('./shared.js');
-
-exports.shared = require_shared.shared;
-```
-
-## shared.js
-
-```js
 
 //#region shared.js
 function shared() {
@@ -36,27 +13,28 @@ function shared() {
 }
 
 //#endregion
-Object.defineProperty(exports, 'shared', {
-  enumerable: true,
-  get: function () {
-    return shared;
-  }
-});
-//# sourceMappingURL=shared.js.map
+//#region main1.js
+function main() {
+	shared();
+}
+main();
+
+//#endregion
+exports.shared = shared;
+//# sourceMappingURL=main1.js.map
+```
+
+## main2.js
+
+```js
+const require_main1 = require('./main1.js');
+
+exports.shared = require_main1.shared;
 ```
 
 # Sourcemap Visualizer
 
 ```
-- ../main1.js
-(2:0) "function " --> (3:0) "function "
-(2:9) "main() " --> (3:9) "main() "
-(2:16) "{\n" --> (3:16) "{\n"
-(3:2) "shared()" --> (4:0) "\trequire_shared.shared()"
-(3:10) ";\n" --> (4:24) ";\n"
-(6:0) "main()" --> (6:0) "main()"
-(6:6) "\n" --> (6:6) ";\n"
-
 - ../shared.js
 (0:0) "export function " --> (2:0) "function "
 (0:16) "shared() " --> (2:9) "shared() "
@@ -65,4 +43,12 @@ Object.defineProperty(exports, 'shared', {
 (1:10) "trace(" --> (3:9) "trace("
 (1:16) "\"shared\")" --> (3:15) "\"shared\")"
 (1:25) "\n" --> (3:24) ";\n"
+- ../main1.js
+(2:0) "function " --> (8:0) "function "
+(2:9) "main() " --> (8:9) "main() "
+(2:16) "{\n" --> (8:16) "{\n"
+(3:2) "shared()" --> (9:0) "\tshared()"
+(3:10) ";\n" --> (9:9) ";\n"
+(6:0) "main()" --> (11:0) "main()"
+(6:6) "\n" --> (11:6) ";\n"
 ```

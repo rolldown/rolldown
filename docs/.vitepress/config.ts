@@ -33,6 +33,23 @@ const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
       { text: 'Command Line Interface', link: '/apis/cli.md' },
     ],
   },
+  {
+    text: 'Builtin Plugins',
+    items: [
+      {
+        text: 'Introduction',
+        link: '/builtin-plugins/',
+      },
+      {
+        text: 'builtin:esm-external-require',
+        link: '/builtin-plugins/esm-external-require.md',
+      },
+      {
+        text: 'builtin:replace',
+        link: '/builtin-plugins/replace.md',
+      },
+    ],
+  },
 ];
 
 const sidebarForInDepth: UserConfig['themeConfig']['sidebar'] = [{
@@ -149,26 +166,6 @@ const sidebarForDevGuide: UserConfig['themeConfig']['sidebar'] = [
   },
 ];
 
-const sidebarForPluginGuide: UserConfig['themeConfig']['sidebar'] = [
-  {
-    text: 'Builtin Plugins',
-    items: [
-      {
-        text: 'Introduction',
-        link: '/builtin-plugins/',
-      },
-      {
-        text: 'builtin:esm-external-require',
-        link: '/builtin-plugins/esm-external-require.md',
-      },
-      {
-        text: 'builtin:replace',
-        link: '/builtin-plugins/replace.md',
-      },
-    ],
-  },
-];
-
 const sidebarForGlossary: UserConfig['themeConfig']['sidebar'] = [
   {
     text: 'Glossary',
@@ -249,11 +246,11 @@ export default defineConfig({
     nav: [
       {
         text: 'Docs',
-        activeMatch: '/(guide|in-depth|glossary|apis)',
+        activeMatch: '/(guide|in-depth|glossary|apis|builtin-plugins)',
         items: [
           {
             text: 'Guide',
-            activeMatch: '/(guide|apis)',
+            activeMatch: '/(guide|apis|builtin-plugins)',
             link: '/guide/getting-started.md',
           },
           {
@@ -299,12 +296,11 @@ export default defineConfig({
       // --- Guide ---
       '/guide/': sidebarForUserGuide,
       '/apis/': sidebarForUserGuide,
+      '/builtin-plugins/': sidebarForUserGuide,
       // --- In-Depth ---
       '/in-depth/': sidebarForInDepth,
       // --- Options ---
       '/options/': sidebarForOptions,
-      // --- Plugin ---
-      '/builtin-plugins/': sidebarForPluginGuide,
       // --- Glossary ---
       '/glossary/': sidebarForGlossary,
       // --- Contribute ---

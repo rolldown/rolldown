@@ -4880,6 +4880,10 @@ expression: output
 - file-!~{001}~.js => file-CWkOwWCN.js
 - file-!~{003}~.js => file-D5RHgTpL.js
 
+# tests/rolldown/issues/nullish_coalescing_es6
+
+- main-!~{000}~.js => main-DozygQqR.js
+
 # tests/rolldown/issues/rolldown_vite_289
 
 - main-!~{000}~.js => main-Bsm9sDEj.js

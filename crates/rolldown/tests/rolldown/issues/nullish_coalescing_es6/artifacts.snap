@@ -9,7 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region main.js
 let x;
 null == x && (x = true);
+let y = { a: { b: 1 } };
+let z = y && y.a && y.a.b;
 
 //#endregion
-export { x };
+export { x, z };
 ```

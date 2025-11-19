@@ -15,10 +15,8 @@ export {
   minifySync,
   moduleRunnerTransform,
   type NapiResolveOptions as ResolveOptions,
-  parse,
   type ParseResult,
   type ParserOptions,
-  parseSync,
   type ResolveResult,
   ResolverFactory,
   transform,
@@ -27,6 +25,7 @@ export {
   transformSync,
 } from './binding.cjs';
 export { defineParallelPlugin } from './plugin/parallel-plugin';
+export { parse, parseSync } from './utils/parse';
 // Builtin plugin factory
 export {
   isolatedDeclarationPlugin,

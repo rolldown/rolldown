@@ -48,10 +48,7 @@
       "esbuild",
       "oxc-resolver",
       "tree-sitter"
-    ],
-    "patchedDependencies": {
-      "rolldown-plugin-dts@0.17.6": "patches/rolldown-plugin-dts@0.17.6.patch"
-    }
+    ]
   },
   "lint-staged": {
     "*.@(js|ts|tsx|yml|yaml|md|json|html|toml)": [

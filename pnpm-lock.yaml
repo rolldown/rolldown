@@ -169,8 +169,8 @@ catalogs:
       specifier: ^2.10.0
       version: 2.32.0
     rolldown-plugin-dts:
-      specifier: ^0.17.0
-      version: 0.17.6
+      specifier: ^0.18.0
+      version: 0.18.0
     rollup:
       specifier: ^4.18.0
       version: 4.53.2
@@ -243,11 +243,6 @@ catalogs:
 
 overrides:
   vitepress>vite: npm:rolldown-vite@latest
-
-patchedDependencies:
-  rolldown-plugin-dts@0.17.6:
-    hash: db0b89574d11810db01e781a2a968a0da700c0cf494128c6d2722f502e3c0a07
-    path: patches/rolldown-plugin-dts@0.17.6.patch
 
 importers:
 
@@ -556,7 +551,7 @@ importers:
         version: 'link:'
       rolldown-plugin-dts:
         specifier: 'catalog:'
-        version: 0.17.6(patch_hash=db0b89574d11810db01e781a2a968a0da700c0cf494128c6d2722f502e3c0a07)(ms@2.1.3)(oxc-resolver@11.13.1)(rolldown@packages+rolldown)(typescript@5.9.3)
+        version: 0.18.0(ms@2.1.3)(oxc-resolver@11.13.1)(rolldown@packages+rolldown)(typescript@5.9.3)
       rollup:
         specifier: 'catalog:'
         version: 4.53.2
@@ -4926,8 +4921,8 @@ packages:
     resolution: {integrity: sha512-9qny7Z9DsQU8Ou39ERsPU4OZQlSTP47ShQzuKZ6PRXpYLtIFgl/DEBYEXKlvcEa+9tHVcK8CF81Y2V72qaZhWA==}
     engines: {node: '>=18'}
 
-  obug@0.1.1:
-    resolution: {integrity: sha512-idmtuvNcQDncavr1pJDd9oCsU+2HWDlg+M/LquTUoi8HTEvm5PtY/dws7whAP1iu3vbrigdTVE/iUvMeKILBDg==}
+  obug@2.0.0:
+    resolution: {integrity: sha512-dpSQuPXoKUjulinHmXjZV1YIRhOLEqBl1J6PYi9mRQR2dYcSK+OULRr+GuT1vufk2f40mtIOqmSL/aTikjmq5Q==}
     peerDependencies:
       ms: ^2.0.0
     peerDependenciesMeta:
@@ -5293,13 +5288,13 @@ packages:
     engines: {node: 20 || >=22}
     hasBin: true
 
-  rolldown-plugin-dts@0.17.6:
-    resolution: {integrity: sha512-yX7kDS7Pm9HyVdKKtgfLiRS4wwu+dA4c7KUmOTWKgheu3he4pcT6Wk0Ht59Xm+1pHuoWYv3DvFPqxeF1AyW82A==}
-    engines: {node: '>=20.18.0'}
+  rolldown-plugin-dts@0.18.0:
+    resolution: {integrity: sha512-2CJtKYa9WPClZxkJeCt4bGUegQvQKQ1VJp9jFJzG0h8I/80XI6qDgoWfVJUOEhT2swbsRQh/42N1RIWvbXT4rA==}
+    engines: {node: '>=20.19.0'}
     peerDependencies:
       '@ts-macro/tsc': ^0.3.6
       '@typescript/native-preview': '>=7.0.0-dev.20250601.1'
-      rolldown: ^1.0.0-beta.44
+      rolldown: ^1.0.0-beta.51
       typescript: ^5.0.0
       vue-tsc: ~3.1.0
     peerDependenciesMeta:
@@ -9931,7 +9926,7 @@ snapshots:
       path-key: 4.0.0
       unicorn-magic: 0.3.0
 
-  obug@0.1.1(ms@2.1.3):
+  obug@2.0.0(ms@2.1.3):
     optionalDependencies:
       ms: 2.1.3
 
@@ -10361,7 +10356,7 @@ snapshots:
       glob: 11.1.0
       package-json-from-dist: 1.0.1
 
-  rolldown-plugin-dts@0.17.6(patch_hash=db0b89574d11810db01e781a2a968a0da700c0cf494128c6d2722f502e3c0a07)(ms@2.1.3)(oxc-resolver@11.13.1)(rolldown@packages+rolldown)(typescript@5.9.3):
+  rolldown-plugin-dts@0.18.0(ms@2.1.3)(oxc-resolver@11.13.1)(rolldown@packages+rolldown)(typescript@5.9.3):
     dependencies:
       '@babel/generator': 7.28.5
       '@babel/parser': 7.28.5
@@ -10371,7 +10366,7 @@ snapshots:
       dts-resolver: 2.1.3(oxc-resolver@11.13.1)
       get-tsconfig: 4.13.0
       magic-string: 0.30.21
-      obug: 0.1.1(ms@2.1.3)
+      obug: 2.0.0(ms@2.1.3)
       rolldown: link:packages/rolldown
     optionalDependencies:
       typescript: 5.9.3

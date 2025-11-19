@@ -1,6 +1,7 @@
 import type {
   BindingEsmExternalRequirePluginConfig,
   BindingIsolatedDeclarationPluginConfig,
+  BindingViteAssetImportMetaUrlPluginConfig,
   BindingViteBuildImportAnalysisPluginConfig,
   BindingViteCssPostPluginConfig,
   BindingViteDynamicImportVarsPluginConfig,
@@ -147,4 +148,10 @@ export function viteHtmlInlineProxyPlugin(
   config: BindingViteHtmlInlineProxyPluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-html-inline-proxy', config);
+}
+
+export function viteAssetImportMetaUrlPlugin(
+  config: BindingViteAssetImportMetaUrlPluginConfig,
+): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:vite-asset-import-meta-url', config);
 }

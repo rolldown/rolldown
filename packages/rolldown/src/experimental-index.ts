@@ -30,6 +30,7 @@ export { defineParallelPlugin } from './plugin/parallel-plugin';
 // Builtin plugin factory
 export {
   isolatedDeclarationPlugin,
+  viteAssetImportMetaUrlPlugin,
   viteBuildImportAnalysisPlugin,
   viteCSSPostPlugin,
   viteDynamicImportVarsPlugin,

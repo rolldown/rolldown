@@ -4269,15 +4269,19 @@ expression: output
 
 # tests/rolldown/function/inline_dynamic_imports/cjs
 
-- main-!~{000}~.js => main-j4VH_7R-.js
+- main-!~{000}~.js => main-5xT0bCgM.js
 
 # tests/rolldown/function/inline_dynamic_imports/esm
 
-- main-!~{000}~.js => main-CTE7AN26.js
+- main-!~{000}~.js => main-DRpP5LDP.js
 
 # tests/rolldown/function/inline_dynamic_imports/iife
 
-- main-!~{000}~.js => main-RPAa584s.js
+- main-!~{000}~.js => main-D4KDQmxd.js
+
+# tests/rolldown/function/inline_dynamic_imports/issue-6935
+
+- main-!~{000}~.js => main-FRcDF-nx.js
 
 # tests/rolldown/function/intro/cjs
 

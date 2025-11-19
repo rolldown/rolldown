@@ -130,10 +130,9 @@ impl<'a> LinkStage<'a> {
             .import_records()
             .iter()
             .filter_map(|rec| match rec.kind {
-              ImportKind::DynamicImport => {
-                options.inline_dynamic_imports.then_some(rec.resolved_module)
-              }
-              ImportKind::Require => None,
+              // Dynamically imported modules are included automatically by `include_statements`
+              // when `inlineDynamicImports` is enabled.
+              ImportKind::DynamicImport | ImportKind::Require => None,
               _ => Some(rec.resolved_module),
             })
             .collect();

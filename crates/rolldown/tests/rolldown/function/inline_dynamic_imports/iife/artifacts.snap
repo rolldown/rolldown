@@ -29,9 +29,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#endregion
 //#region main.js
-	Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_foo()));
+	Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
 	Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs()));
-	Promise.resolve().then(() => (init_esm(), esm_exports));
+	Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
 
 //#endregion
 })();

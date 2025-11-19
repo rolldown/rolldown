@@ -185,7 +185,14 @@ impl LinkStage<'_> {
     dynamic_entries.retain(|entry| included_dynamic_entry.contains(&entry.idx));
 
     // update entries with lived only.
-    self.entries = user_defined_entries.into_iter().chain(dynamic_entries).collect();
+    self.entries = user_defined_entries
+      .into_iter()
+      .chain(if self.options.inline_dynamic_imports {
+        itertools::Either::Left(std::iter::empty())
+      } else {
+        itertools::Either::Right(dynamic_entries.into_iter())
+      })
+      .collect();
 
     // Setting the json module none self reference included symbol map
     for (mi, set) in std::mem::take(&mut context.json_module_none_self_reference_included_symbol) {

@@ -1,0 +1,14 @@
+{
+  "config": {
+    "inlineDynamicImports": true
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    },
+    {
+      "format": "iife"
+    }
+  ]
+}
+

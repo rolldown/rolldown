@@ -1,4 +1,147 @@
 
+## [1.0.0-beta.51] - 2025-11-19
+
+### 💥 BREAKING CHANGES
+
+- rolldown_plugin_vite_react_refresh_wrapper: add vite prefix (#7086) by @shulaoda
+- rolldown_plugin_vite_web_worker_post: add vite prefix (#7085) by @shulaoda
+- rolldown_plugin_vite_wasm_helper: add vite prefix (#7084) by @shulaoda
+- rolldown_plugin_vite_wasm_fallback: add vite prefix (#7083) by @shulaoda
+- rolldown_plugin_vite_transform: add vite prefix (#7082) by @shulaoda
+- rolldown_plugin_vite_reporter: add vite prefix (#7081) by @shulaoda
+- rolldown_plugin_vite_module_preload_polyfill: add vite prefix (#7080) by @shulaoda
+- rolldown_plugin_vite_manifest: add vite prefix (#7079) by @shulaoda
+- rolldown_plugin_vite_load_fallback: add vite prefix (#7072) by @shulaoda
+- rolldown_plugin_vite_json: add vite prefix (#7071) by @shulaoda
+- rolldown_plugin_vite_import_glob: add vite prefix (#7070) by @shulaoda
+- rolldown_plugin_vite_html_inline_proxy: add vite prefix (#7069) by @shulaoda
+- rolldown_plugin_vite_dynamic_import_vars: add vite prefix (#7068) by @shulaoda
+- rolldown_plugin_vite_build_import_analysis: add vite prefix (#7067) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: add vite prefix (#7066) by @shulaoda
+- rolldown_plugin_vite_alias: add vite prefix (#7065) by @shulaoda
+- rolldown_plugin_vite_asset_plugin: add vite prefix (#7064) by @shulaoda
+
+### 🚀 Features
+
+- rolldown_plugin_vite_asset_import_meta_url: implement template literal support for dynamic URLs (#7118) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: implement AST-based URL detection (#7113) by @shulaoda
+- add isPathFragment validation for filename patterns (rollup compat) (#7101) by @IWANABETHATGUY
+- rolldown_plugin_vite_asset_import_meta_url: align filter logic (#7103) by @shulaoda
+- rolldown: oxc v0.98.0 (#6961) by @camc314
+- show error contexts for unhandleable errors (#7095) by @sapphi-red
+- rolldown_plugin_utils: extract `get_hash` utility function (#7059) by @shulaoda
+- rolldown_plugin_asset: initialize `CSSEntriesCache` (#7015) by @shulaoda
+- rolldown_plugin_vite_html: align `transformIndexHtml` logic (#7010) by @shulaoda
+- builtin-plugin: support `bindingifyViteHtmlPlugin` (#7008) by @shulaoda
+- impl `generatedCode.symbols` for reexport dynamic modules. (#6993) by @IWANABETHATGUY
+- rolldown_plugin_manifest: support v2 logic (#6979) by @shulaoda
+- support Node.js `module.exports` ESM export (#6967) by @Copilot
+- change "could not clean directory" from error to warning (#6955) by @Copilot
+- rolldown_binding: add context to errors thrown by plugin hooks (#6964) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- content hash should be affected by the minify behavior (#7102) by @hyf0
+- `canonical name not found for "__toESM"` error when only named imports are used from a CJS module (#7094) by @sapphi-red
+- preserve directory structure in chunk names with preserveModules (#6872) by @IWANABETHATGUY
+- rolldown_plugin_asset: correct bundle deletion index calculation (#7063) by @shulaoda
+- rolldown_plugin_utils: correct string slicing in `render_asset_url_in_js` (#7061) by @shulaoda
+- rolldown_plugin_vite_html: use transformed result in asset URL handling (#7060) by @shulaoda
+- rolldown_plugin_vite_html: skip redundant path resolution for processed URLs (#7058) by @shulaoda
+- rolldown_plugin_vite_css_post: data race in CSS URL processing (#7055) by @shulaoda
+- rolldown_plugin_vite_css_post: always compute css asset dirname in build command (#7054) by @shulaoda
+- rolldown_plugin_vite_css: ensure consistent url in import and export (#7053) by @shulaoda
+- rolldown_plugin_vite_css_post: use `get_or_insert_default` for `HTMLProxyResult` (#7052) by @shulaoda
+- rolldown_plugin_vite_css: skip `commonjs-proxy` CSS requests (#7050) by @shulaoda
+- rolldown_plugin_utils: correct `is_css_module` (#7049) by @shulaoda
+- rolldown_plugin_utils: correct `is_css_request` (#7048) by @shulaoda
+- rolldown_plugin_vite_html: use correct inline module index (#7046) by @shulaoda
+- rolldown_plugin_vite_html: correct scripts url update logic (#7045) by @shulaoda
+- rolldown_plugin_vite_html: fallback to original url on NotFound error (#7043) by @shulaoda
+- rolldown_plugin_vite_html: move src_tasks to correct branch (#7040) by @shulaoda
+- rolldown_plugin_vite_html: correct `handle_style_tag_or_attribute` (#7038) by @shulaoda
+- builtin-plugin: add `config` to `htmlInlineProxyPlugin` (#7036) by @shulaoda
+- missing CJS default export when SafelyMergeCjsNs optimization is enabled (#7006) by @Copilot
+- reserve global names before deconflicting external symbols (#7022) by @IWANABETHATGUY
+- rolldown_plugin_build_import_analysis: process all bundle outputs correctly (#7020) by @shulaoda
+- rolldown_plugin_vite_css_post: process all bundle outputs correctly (#7019) by @shulaoda
+- rolldown_plugin_vite_css_post: remove `/*$vite$:1*/` correctly (#7018) by @shulaoda
+- rolldown_plugin_vite_html: use correct span for `style_urls` (#7017) by @shulaoda
+- rolldown_plugin_vite_html: track full element span from start to end tag (#7016) by @shulaoda
+- builtin-plugin: correct `viteHtmlPlugin` related logic (#7013) by @shulaoda
+- remove unused module namespace object exporting  (#7002) by @IWANABETHATGUY
+- rust/dev: allow to recover from hmr rebuild failure (#6991) by @hyf0
+- rust/dev: `ensure_latest_bundle_output` shouldn't loop infinitely (#6974) by @hyf0
+- rust/dev: `DevEngine#ensure_latest_bundle_output` should schedule a rebuild task if there're no queued tasks (#6968) by @hyf0
+- add Symbol.toStringTag to module facades when generatedCode.symbols is enabled (#6784) by @Copilot
+
+### 🚜 Refactor
+
+- extension checking to use constant array (#7057) by @Copilot
+- rust/devtools: tweak namings and introduction comments (#7028) by @hyf0
+- rolldown_plugin_vite_html: use `root` instead of `cwd` (#7035) by @shulaoda
+- rolldown_plugin_vite_css_post: use `root` instead of `cwd` (#7034) by @shulaoda
+- rolldown_plugin_vite_css: use `root` instead of `cwd` (#7033) by @shulaoda
+- rolldown_plugin_transform: use `root` instead of `cwd` (#7032) by @shulaoda
+- rolldown_plugin_reporter: use `root` instead of `cwd` (#7031) by @shulaoda
+- rolldown_plugin_asset: use `root` instead of `cwd` (#7030) by @shulaoda
+- rolldown_plugin_html_inline_proxy: use `root` instead of `cwd` (#7029) by @shulaoda
+- rust/dev: remove dead code of `rolldown_dev` crate (#6997) by @hyf0
+- rust: move dev related code into new `rolldown_dev` crate (#6996) by @hyf0
+- rolldown_resolver: use consistent generic parameter name `Fs` (#6998) by @shulaoda
+- rolldown_resolver: improve resolve method clarity and documentation (#6986) by @shulaoda
+- rename `is_module_facade()` to `is_entry_point()` for clarity (#6994) by @IWANABETHATGUY
+- rust/dev: unwrap `Result<_>` from the return type of `BundleCoordinator::schedule_build_if_stale` (#6980) by @sapphi-red
+- rolldown_resolver: reorganize impl blocks (#6984) by @shulaoda
+- rolldown_resolver: extract configuration logic into separate module (#6983) by @shulaoda
+- rolldown_resolver: improve error messages (#6982) by @shulaoda
+- rust/dev: rename `CoordinatorStatus` to `CoordinatorStateSnapshot` (#6973) by @hyf0
+- rust/dev: replace `InitialBuildState` with `CoordinatorState` (#6972) by @hyf0
+- ast_scanner: derive `Debug`, `Clone`, `Copy` for `CjsGlobalAssignmentType` (#6971) by @camc314
+- rust: filter out devtools specific events for normal tracing (#6965) by @hyf0
+- rust/dev: replace `CoordinatorMsg::HasLatestBuildOutput` with `GetStatus` (#6960) by @hyf0
+- rust/dev: `ensure_current_build_finish` shouldn't block the coordinator's event loop (#6959) by @hyf0
+
+### 📚 Documentation
+
+- in-depth/directives: remove TODOs and fix code (#7112) by @sapphi-red
+- clarify concepts of rolldown's test infra (#7047) by @hyf0
+- contrib/style: add suggestions about choosing file names (#6989) by @hyf0
+
+### ⚡ Performance
+
+- rolldown_plugin_vite_css_post: cache CSS URL processing results (#7056) by @shulaoda
+- remove unnecessary `collect_vec` (#6999) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- add testcase for #6880 and #6879 (#7107) by @IWANABETHATGUY
+- vite-tests: use integration branch for vite compatibility tests (#7091) by @shulaoda
+
+### ⚙️ Miscellaneous Tasks
+
+- remove redundant chunk level linefeed (#7109) by @IWANABETHATGUY
+- pin oxc-minify to 0.97.0 (#7108) by @IWANABETHATGUY
+- deps: update oxc apps (#7104) by @renovate[bot]
+- deps: update glob for security (#7105) by @shulaoda
+- rolldown: add aliases for renamed vite plugins (#7087) by @shulaoda
+- automate weekly beta releases (#7089) by @Boshen
+- deps: update dependency oxlint-tsgolint to v0.7.0 (#7088) by @renovate[bot]
+- deps: update github-actions (#7075) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.6.0 (#7037) by @renovate[bot]
+- deps: update npm packages (#7076) by @renovate[bot]
+- deps: update rust crates (#7077) by @renovate[bot]
+- add retry to flaky tests (#7041) by @sapphi-red
+- rust: rename `rolldown_debug` to `rolldown_devtools` (#7026) by @hyf0
+- deps: update crate-ci/typos action to v1.39.2 (#7001) by @renovate[bot]
+- ai/github: make copilot review check rust api style (#6988) by @hyf0
+- move test `recover_from_initial_build_error` to `error_recovery/from_initial_build_syntax_error` (#6990) by @hyf0
+- oxlint: enable `typescript/consistent-type-imports` rule (#6987) by @shulaoda
+- deps: update crate-ci/typos action to v1.39.1 (#6975) by @renovate[bot]
+- build.ts: separate import type (#6921) by @iiio2
+- format rolldown runtime (#6966) by @IWANABETHATGUY
+
+
 ## [1.0.0-beta.50] - 2025-11-12
 
 ### 🚀 Features

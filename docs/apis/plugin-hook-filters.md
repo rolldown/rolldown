@@ -114,6 +114,7 @@ The following properties are supported by each hook:
 - `load` hook: `id`
 - `transform` hook: `id`, `moduleType`, `code`
 
-> [!NOTE] > `id` is treated as a glob pattern when you pass a `string`, and treated as a regular expression when you pass a `RegExp`.
+> [!NOTE]
+> `id` is treated as a glob pattern when you pass a `string`, and treated as a regular expression when you pass a `RegExp`.
 > In the `resolve` hook, `id` must be a `RegExp`. `string`s are not allowed.
 > This is because the `id` value in `resolveId` is the exact text written in the import statement and usually not an absolute path, while glob patterns are designed to match absolute paths.

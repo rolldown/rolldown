@@ -8,7 +8,7 @@ use regex::Regex;
 use rolldown_utils::base64::to_standard_base64;
 use rolldown_utils::concat_string;
 use rolldown_utils::dashmap::FxDashMap;
-use rolldown_utils::mime::guess_mime;
+use rolldown_utils::mime::guess_mime_skip_utf8_check;
 use rolldown_utils::url::clean_url;
 use sugar_path::SugarPath;
 
@@ -151,7 +151,7 @@ impl FileToUrlEnv<'_> {
     if path.extension().is_some_and(|ext| ext == "svg") {
       Ok(svg_to_data_url(content))
     } else {
-      guess_mime(path, content).map(|guessed_mime| {
+      guess_mime_skip_utf8_check(path, content).map(|guessed_mime| {
         let base64 = to_standard_base64(content);
         concat_string!("data:", guessed_mime.to_string(), ";base64,", base64)
       })

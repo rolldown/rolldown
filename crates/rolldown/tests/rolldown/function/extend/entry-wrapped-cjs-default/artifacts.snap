@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region main.js
-var require_main = /* @__PURE__ */ __commonJS({ "main.js": (() => {
+var require_main = /* @__PURE__ */ __commonJSMin((() => {
 	require_main();
-}) });
+}));
 
 //#endregion
 export default require_main();
@@ -27,9 +27,9 @@ export default require_main();
 // HIDDEN [rolldown:runtime]
 
 //#region main.js
-var require_main = /* @__PURE__ */ __commonJS({ "main.js": (() => {
+var require_main = /* @__PURE__ */ __commonJSMin((() => {
 	require_main();
-}) });
+}));
 
 //#endregion
 module.exports = require_main();
@@ -48,9 +48,9 @@ this.module = (function() {
 // HIDDEN [rolldown:runtime]
 
 //#region main.js
-	var require_main = /* @__PURE__ */ __commonJS({ "main.js": (() => {
+	var require_main = /* @__PURE__ */ __commonJSMin((() => {
 		require_main();
-	}) });
+	}));
 
 //#endregion
 return require_main();
@@ -73,9 +73,9 @@ return require_main();
 // HIDDEN [rolldown:runtime]
 
 //#region main.js
-var require_main = /* @__PURE__ */ __commonJS({ "main.js": (() => {
+var require_main = /* @__PURE__ */ __commonJSMin((() => {
 	require_main();
-}) });
+}));
 
 //#endregion
 return require_main();

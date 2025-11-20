@@ -14,7 +14,7 @@ var foo_exports = /* @__PURE__ */ __export({ foo: () => foo$1 });
 function foo$1() {
 	return "foo";
 }
-var init_foo = __esm({ "foo.js": (() => {}) });
+var init_foo = __esmMin((() => {}));
 
 //#endregion
 //#region bar.js
@@ -22,7 +22,7 @@ var bar_exports = /* @__PURE__ */ __export({ bar: () => bar$1 });
 function bar$1() {
 	return "bar";
 }
-var init_bar = __esm({ "bar.js": (() => {}) });
+var init_bar = __esmMin((() => {}));
 
 //#endregion
 //#region entry.js

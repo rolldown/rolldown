@@ -6,13 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lazy-chunk.js
 
 ```js
-import { n as init_user_lib, r as __esm, t as foo } from "./main.js";
+import { n as init_user_lib, r as __esmMin, t as foo } from "./main.js";
 
 //#region lazy-chunk.js
-var init_lazy_chunk = __esm({ "lazy-chunk.js": (() => {
+var init_lazy_chunk = __esmMin((() => {
 	init_user_lib();
 	foo();
-}) });
+}));
 
 //#endregion
 init_lazy_chunk();
@@ -23,28 +23,28 @@ init_lazy_chunk();
 ```js
 // HIDDEN [rolldown:runtime]
 //#region polyfill.js
-var init_polyfill = __esm({ "polyfill.js": (() => {
+var init_polyfill = __esmMin((() => {
 	Object.somePolyfilledFunction = () => {};
-}) });
+}));
 
 //#endregion
 //#region user-lib.js
 async function foo() {
 	return import("./lazy-chunk.js");
 }
-var init_user_lib = __esm({ "user-lib.js": (() => {
+var init_user_lib = __esmMin((() => {
 	Object.somePolyfilledFunction();
-}) });
+}));
 
 //#endregion
 //#region main.js
-var init_main = __esm({ "main.js": (() => {
+var init_main = __esmMin((() => {
 	init_polyfill();
 	init_user_lib();
 	foo();
-}) });
+}));
 
 //#endregion
 init_main();
-export { init_user_lib as n, __esm as r, foo as t };
+export { init_user_lib as n, __esmMin as r, foo as t };
 ```

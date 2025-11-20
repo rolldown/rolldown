@@ -20,19 +20,19 @@ function hoisted_fn() {
 	const bar = 1;
 }
 var esm_named_var, esm_named_class, hoisted_var, hoisted_class;
-var init_esm = __esm({ "esm.js": (() => {
+var init_esm = __esmMin((() => {
 	esm_named_var = 1;
 	esm_named_class = class {};
 	hoisted_var = 1;
 	hoisted_class = class {};
-}) });
+}));
 
 //#endregion
 //#region commonjs.js
-var require_commonjs$1 = /* @__PURE__ */ __commonJS({ "commonjs.js": ((exports, module) => {
+var require_commonjs$1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var value = (init_esm(), __toCommonJS(esm_exports));
 	module.exports = value;
-}) });
+}));
 
 //#endregion
 //#region main.js

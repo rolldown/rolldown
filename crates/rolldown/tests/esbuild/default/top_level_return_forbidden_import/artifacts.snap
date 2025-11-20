@@ -25,7 +25,7 @@ import "foo";
 
 // HIDDEN [rolldown:runtime]
 //#region entry.js
-var require_entry = /* @__PURE__ */ __commonJS({ "entry.js": (() => {}) });
+var require_entry = /* @__PURE__ */ __commonJSMin((() => {}));
 
 //#endregion
 export default require_entry();

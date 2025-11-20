@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 
-var init_main = __esm({"main.js": (() => {
+var init_main = __esmMin((() => {
 //#region setup.js
 	globalThis.globalValue = "foo";
 
@@ -17,7 +17,7 @@ var init_main = __esm({"main.js": (() => {
 	console.log("main");
 
 //#endregion
-})});
+}));
 
 init_main();
 ```
@@ -54,7 +54,7 @@ init_main();
 ```js
 // HIDDEN [rolldown:runtime]
 
-var init_main = __esm({"main.js": () => {
+var init_main = __esmMin(() => {
 //#region setup.js
 	globalThis.globalValue = "foo";
 
@@ -63,7 +63,7 @@ var init_main = __esm({"main.js": () => {
 	console.log("main");
 
 //#endregion
-}});
+});
 
 init_main();
 ```

@@ -12,13 +12,13 @@ import assert from "node:assert";
 //#region json.js
 var json_exports = /* @__PURE__ */ __export({ default: () => json_default });
 var json_default;
-var init_json = __esm({ "json.js": (() => {
+var init_json = __esmMin((() => {
 	json_default = JSON.parse("[1, 2, 3]");
-}) });
+}));
 
 //#endregion
 //#region commonjs.js
-var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.js": ((exports) => {
+var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	var __importDefault = exports && exports.__importDefault || function(mod$1) {
 		return mod$1 && mod$1.__esModule ? mod$1 : { "default": mod$1 };
 	};
@@ -26,7 +26,7 @@ var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.js": ((exports) =>
 	const timezones_json_1 = __importDefault((init_json(), __toCommonJS(json_exports)));
 	exports.default = timezones_json_1.default;
 	exports.foo = 1;
-}) });
+}));
 
 //#endregion
 //#region main.js

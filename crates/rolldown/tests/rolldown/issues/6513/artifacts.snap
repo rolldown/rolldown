@@ -10,9 +10,9 @@ const require_main = require('./main.js');
 
 //#region dynamic.js
 var ddd;
-var init_dynamic = require_main.__esm({ "dynamic.js": (() => {
+var init_dynamic = require_main.__esmMin((() => {
 	ddd = 100;
-}) });
+}));
 
 //#endregion
 init_dynamic();
@@ -27,12 +27,12 @@ let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 
 //#region lib.js
-var require_lib = /* @__PURE__ */ __commonJS({ "lib.js": ((exports) => {
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
 	const remoteProvider = async function() {
 		return await Promise.resolve().then(() => require("./dynamic.js"));
 	};
 	exports.defaultProvider = remoteProvider;
-}) });
+}));
 
 //#endregion
 //#region entry.js
@@ -42,5 +42,5 @@ var import_lib = require_lib();
 })();
 
 //#endregion
-exports.__esm = __esm;
+exports.__esmMin = __esmMin;
 ```

@@ -20,9 +20,9 @@ var _if = "test keyword imports";
 
 //#endregion
 //#region x.json
-var require_x = /* @__PURE__ */ __commonJS({ "x.json": ((exports, module) => {
+var require_x = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { "x": true };
-}) });
+}));
 
 //#endregion
 //#region entry.js

@@ -305,8 +305,7 @@ pub fn prepare_build_context(
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
     module_types,
     experimental,
-    // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L2767
-    profiler_names: raw_options.profiler_names.unwrap_or(!raw_minify.is_enabled()),
+    profiler_names: raw_options.profiler_names.unwrap_or(false),
     // Use placeholder for minify options at first
     minify: MinifyOptions::Disabled,
     define,

@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region file.json
-var require_file = /* @__PURE__ */ __commonJS({ "file.json": ((exports, module) => {
+var require_file = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = { "foo": "bar" };
-}) });
+}));
 
 //#endregion
 export { __toDynamicImportESM as n, require_file as t };

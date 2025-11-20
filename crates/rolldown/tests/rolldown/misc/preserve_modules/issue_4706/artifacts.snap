@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __commonJS };
+export { __commonJSMin };
 ```
 
 ## child.js
@@ -25,12 +25,12 @@ console.log(m);
 ## cjs.js
 
 ```js
-import { __commonJS } from "./_virtual/rolldown_runtime.js";
+import { __commonJSMin } from "./_virtual/rolldown_runtime.js";
 
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1e4;
-}) });
+}));
 
 //#endregion
 export default require_cjs();

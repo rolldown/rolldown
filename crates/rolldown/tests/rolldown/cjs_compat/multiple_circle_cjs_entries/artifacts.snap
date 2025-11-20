@@ -17,17 +17,17 @@ export default require_a();
 ```js
 // HIDDEN [rolldown:runtime]
 //#region b.js
-var require_b = /* @__PURE__ */ __commonJS({ "b.js": ((exports, module) => {
+var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var import_a = require_a();
 	module.exports = "b";
-}) });
+}));
 
 //#endregion
 //#region a.js
-var require_a = /* @__PURE__ */ __commonJS({ "a.js": ((exports, module) => {
+var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var import_b = require_b();
 	module.exports = "a";
-}) });
+}));
 
 //#endregion
 export { require_b as n, require_a as t };

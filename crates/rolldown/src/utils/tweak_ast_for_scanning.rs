@@ -178,7 +178,8 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
       | Declaration::TSInterfaceDeclaration(_)
       | Declaration::TSEnumDeclaration(_)
       | Declaration::TSModuleDeclaration(_)
-      | Declaration::TSImportEqualsDeclaration(_) => unreachable!(),
+      | Declaration::TSImportEqualsDeclaration(_)
+      | Declaration::TSGlobalDeclaration(_) => unreachable!(),
     }
     walk_mut::walk_declaration(self, it);
   }

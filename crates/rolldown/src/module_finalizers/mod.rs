@@ -1313,7 +1313,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
                 // When keep_names is enabled, preserve "default" as the function name
                 if self.ctx.options.keep_names {
-                  let insert_position = self.cur_stmt_index + 1;
+                  // current statement will be pushed to program.body, so the insert position is program.body.len() + 1
+                  let insert_position = program.body.len() + 1;
                   self.keep_name_statement_to_insert.push((
                     insert_position,
                     CompactStr::new("default"),
@@ -1334,7 +1335,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
                 // When keep_names is enabled, preserve "default" as the class name
                 if self.ctx.options.keep_names {
-                  let insert_position = self.cur_stmt_index + 1;
+                  // current statement will be pushed to program.body, so the insert position is program.body.len() + 1
+                  let insert_position = program.body.len() + 1;
                   self.keep_name_statement_to_insert.push((
                     insert_position,
                     CompactStr::new("default"),

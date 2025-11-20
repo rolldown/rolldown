@@ -2206,8 +2206,10 @@ export interface BindingViteAliasPluginConfig {
 }
 
 export interface BindingViteAssetImportMetaUrlPluginConfig {
+  publicDir: string
   clientEntry: string
   tryFsResolve: (id: string, importer: string) => string | undefined
+  assetResolver: (id: string, importer: string) => Promise<string | undefined>
 }
 
 export interface BindingViteAssetPluginConfig {

@@ -1310,6 +1310,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 let canonical_name_for_default_export_ref =
                   self.canonical_name_for(self.ctx.module.default_export_ref);
                 func.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
+
+                // When keep_names is enabled, preserve "default" as the function name
+                if self.ctx.options.keep_names {
+                  let insert_position = self.cur_stmt_index + 1;
+                  self.keep_name_statement_to_insert.push((
+                    insert_position,
+                    CompactStr::new("default"),
+                    canonical_name_for_default_export_ref.clone(),
+                  ));
+                }
               }
               let func = func.as_mut().take_in(self.alloc);
               top_stmt = ast::Statement::FunctionDeclaration(ArenaBox::new_in(func, self.alloc));
@@ -1321,6 +1331,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 let canonical_name_for_default_export_ref =
                   self.canonical_name_for(self.ctx.module.default_export_ref);
                 class.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
+
+                // When keep_names is enabled, preserve "default" as the class name
+                if self.ctx.options.keep_names {
+                  let insert_position = self.cur_stmt_index + 1;
+                  self.keep_name_statement_to_insert.push((
+                    insert_position,
+                    CompactStr::new("default"),
+                    canonical_name_for_default_export_ref.clone(),
+                  ));
+                }
               }
 
               // Class should be handled specially, because the `ClassDecl` will be transformed again.
@@ -1408,6 +1428,27 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let name_ref = self.canonical_ref_for_runtime("__name");
     let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
     Some(self.snippet.static_block_keep_name_helper(&original_name, finalized_callee))
+  }
+
+  /// Inserts `__name()` call statements for keeping function/class names.
+  /// This method processes the pending keep_name insertions in reverse order.
+  fn insert_keep_name_statements(
+    &self,
+    statements: &mut allocator::Vec<'ast, ast::Statement<'ast>>,
+  ) {
+    for (stmt_index, original_name, new_name) in self.keep_name_statement_to_insert.iter().rev() {
+      let name_ref = self.canonical_ref_for_runtime("__name");
+      let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
+      let target =
+        self.snippet.builder.expression_identifier(SPAN, self.snippet.builder.atom(new_name));
+      statements.insert(
+        *stmt_index,
+        self.snippet.builder.statement_expression(
+          SPAN,
+          self.snippet.keep_name_call_expr(original_name, target, finalized_callee, false),
+        ),
+      );
+    }
   }
 
   fn try_rewrite_import_expression(&self, node: &mut ast::Expression<'ast>) -> bool {

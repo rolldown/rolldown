@@ -106,6 +106,7 @@ impl<'ast> VisitMut<'ast> for NewUrlVisitor<'_, '_, 'ast> {
         _ => return,
       };
 
+      let span = span.shrink(1);
       self.urls.push((url, span.start as usize..span.end as usize, it.span.source_text(self.code)));
     }
     walk_new_expression(self, it);

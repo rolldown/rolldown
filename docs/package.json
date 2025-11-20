@@ -9,6 +9,7 @@
   },
   "devDependencies": {
     "oxc-minify": "catalog:",
+    "sharp": "^0.34.5",
     "vitepress": "catalog:",
     "vitepress-plugin-group-icons": "catalog:",
     "vitepress-plugin-llms": "catalog:"

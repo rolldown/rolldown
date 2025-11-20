@@ -91,7 +91,7 @@ catalog:
   'vitepress': '^2.0.0-alpha.12'
   'vitepress-plugin-group-icons': '^1.0.0'
   'vitepress-plugin-llms': '^1.1.0'
-  'vitepress-plugin-og': '^0.0.1'
+  'vitepress-plugin-og': '^0.0.2'
   'zx': '^8.1.2'
   '@rollup/plugin-commonjs': '^29.0.0'
   '@rollup/plugin-node-resolve': '^16.0.0'

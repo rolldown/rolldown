@@ -1,7 +1,9 @@
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
+
+use regex::Regex;
 
 use rolldown_utils::base64::to_standard_base64;
 use rolldown_utils::concat_string;
@@ -146,11 +148,56 @@ impl FileToUrlEnv<'_> {
         ..Default::default()
       });
     }
-    // TODO: It needs to be validated during subsequent usage
-    // https://github.com/vitejs/vite/pull/14643/files#r1376247460
-    // https://github.com/vitejs/rolldown-vite/blob/c252dee/packages/vite/src/node/plugins/asset.ts#L533-L539
-    let guessed_mime = guess_mime(path, content)?;
+    if path.extension().is_some_and(|ext| ext == "svg") {
+      Ok(svg_to_data_url(content))
+    } else {
+      guess_mime(path, content).map(|guessed_mime| {
+        let base64 = to_standard_base64(content);
+        concat_string!("data:", guessed_mime.to_string(), ";base64,", base64)
+      })
+    }
+  }
+}
+
+static WHITESPACE_BETWEEN_TAGS_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r">\s+<").unwrap());
+
+static WHITESPACE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s+").unwrap());
+
+// Pattern to detect nested quotes like "foo'bar" or 'foo"bar'
+static NESTED_QUOTES_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r#""[^"']*'[^"]*"|'[^'"]*"[^']*'"#).unwrap());
+
+/// Inspired by https://github.com/iconify/iconify/blob/main/packages/utils/src/svg/url.ts
+fn svg_to_data_url(content: &[u8]) -> String {
+  let string_content = String::from_utf8_lossy(content);
+
+  // If the SVG contains some text or HTML, any transformation is unsafe, and given that double quotes would then
+  // need to be escaped, the gain to use a data URI would be ridiculous if not negative
+  if string_content.contains("<text")
+    || string_content.contains("<foreignObject")
+    || NESTED_QUOTES_RE.is_match(&string_content)
+  {
     let base64 = to_standard_base64(content);
-    Ok(concat_string!("data:", guessed_mime.to_string(), ";base64,", base64))
+    concat_string!("data:image/svg+xml;base64,", base64)
+  } else {
+    let mut result = string_content.trim().to_string();
+
+    // Replace whitespace between tags
+    result = WHITESPACE_BETWEEN_TAGS_RE.replace_all(&result, "><").to_string();
+
+    // Replace characters - % must be first to avoid double-encoding
+    result = result.replace('%', "%25");
+    result = result.replace('#', "%23");
+    result = result.replace('<', "%3c");
+    result = result.replace('>', "%3e");
+    result = result.replace('"', "'");
+
+    // Spaces are not valid in srcset it has some use cases
+    // it can make the uncompressed URI slightly higher than base64, but will compress way better
+    // https://github.com/vitejs/vite/pull/14643#issuecomment-1766288673
+    result = WHITESPACE_RE.replace_all(&result, "%20").to_string();
+
+    concat_string!("data:image/svg+xml,", result)
   }
 }

@@ -777,7 +777,8 @@ impl<'a> SideEffectDetector<'a> {
       | Declaration::TSInterfaceDeclaration(_)
       | Declaration::TSEnumDeclaration(_)
       | Declaration::TSModuleDeclaration(_)
-      | Declaration::TSImportEqualsDeclaration(_) => unreachable!("ts should be transpiled"),
+      | Declaration::TSImportEqualsDeclaration(_)
+      | Declaration::TSGlobalDeclaration(_) => unreachable!("ts should be transpiled"),
     }
   }
 

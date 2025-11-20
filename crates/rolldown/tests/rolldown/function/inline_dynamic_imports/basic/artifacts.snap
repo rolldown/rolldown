@@ -8,21 +8,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region foo.js
-var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": (() => {}) });
+var require_foo = /* @__PURE__ */ __commonJSMin((() => {}));
 
 //#endregion
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1;
-}) });
+}));
 
 //#endregion
 //#region esm.js
 var esm_exports = /* @__PURE__ */ __export({ value: () => value });
 var value;
-var init_esm = __esm({ "esm.js": (() => {
+var init_esm = __esmMin((() => {
 	value = 1;
-}) });
+}));
 
 //#endregion
 //#region main.js
@@ -43,21 +43,21 @@ Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }))
 // HIDDEN [rolldown:runtime]
 
 //#region foo.js
-var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": (() => {}) });
+var require_foo = /* @__PURE__ */ __commonJSMin((() => {}));
 
 //#endregion
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1;
-}) });
+}));
 
 //#endregion
 //#region esm.js
 var esm_exports = /* @__PURE__ */ __export({ value: () => value });
 var value;
-var init_esm = __esm({ "esm.js": (() => {
+var init_esm = __esmMin((() => {
 	value = 1;
-}) });
+}));
 
 //#endregion
 //#region main.js
@@ -80,21 +80,21 @@ Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }))
 // HIDDEN [rolldown:runtime]
 
 //#region foo.js
-	var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": (() => {}) });
+	var require_foo = /* @__PURE__ */ __commonJSMin((() => {}));
 
 //#endregion
 //#region cjs.js
-	var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
+	var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		module.exports = 1;
-	}) });
+	}));
 
 //#endregion
 //#region esm.js
 	var esm_exports = /* @__PURE__ */ __export({ value: () => value });
 	var value;
-	var init_esm = __esm({ "esm.js": (() => {
+	var init_esm = __esmMin((() => {
 		value = 1;
-	}) });
+	}));
 
 //#endregion
 //#region main.js

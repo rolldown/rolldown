@@ -10,17 +10,17 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region lib/cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "lib/cjs.js": ((exports) => {
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	let foo = "default";
 	exports.default = foo;
 	exports.foo = "foo";
-}) });
+}));
 
 //#endregion
 //#region lib/index.js
-var require_lib = /* @__PURE__ */ __commonJS({ "lib/index.js": ((exports, module) => {
+var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = require_cjs();
-}) });
+}));
 
 //#endregion
 //#region main.js

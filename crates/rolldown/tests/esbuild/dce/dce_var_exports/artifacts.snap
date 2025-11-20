@@ -6,13 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { t as __commonJS } from "./chunk.js";
+import { t as __commonJSMin } from "./chunk.js";
 
 //#region a.js
-var require_a = /* @__PURE__ */ __commonJS({ "a.js": ((exports, module) => {
+var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var foo = { bar: 123 };
 	module.exports = foo;
-}) });
+}));
 
 //#endregion
 export default require_a();
@@ -22,13 +22,13 @@ export default require_a();
 ## b.js
 
 ```js
-import { t as __commonJS } from "./chunk.js";
+import { t as __commonJSMin } from "./chunk.js";
 
 //#region b.js
-var require_b = /* @__PURE__ */ __commonJS({ "b.js": ((exports, module) => {
+var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var exports = { bar: 123 };
 	module.exports = exports;
-}) });
+}));
 
 //#endregion
 export default require_b();
@@ -38,13 +38,13 @@ export default require_b();
 ## c.js
 
 ```js
-import { t as __commonJS } from "./chunk.js";
+import { t as __commonJSMin } from "./chunk.js";
 
 //#region c.js
-var require_c = /* @__PURE__ */ __commonJS({ "c.js": ((exports) => {
+var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
 	var module = { bar: 123 };
 	exports.foo = module;
-}) });
+}));
 
 //#endregion
 export default require_c();
@@ -55,5 +55,5 @@ export default require_c();
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __commonJS as t };
+export { __commonJSMin as t };
 ```

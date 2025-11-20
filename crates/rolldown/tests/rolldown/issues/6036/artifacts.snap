@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region react.ts
-var require_react = /* @__PURE__ */ __commonJS({ "react.ts": ((exports, module) => {
+var require_react = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = {};
-}) });
+}));
 
 //#endregion
 //#region component/hello.tsx

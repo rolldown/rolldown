@@ -24,9 +24,9 @@ var y_default = "assets/y-DBJZ7rtI.txt";
 
 //#endregion
 //#region x.txt
-var require_x = /* @__PURE__ */ __commonJS({ "x.txt": ((exports, module) => {
+var require_x = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "assets/x-BA9VvU_1.txt";
-}) });
+}));
 
 //#endregion
 //#region entry.js

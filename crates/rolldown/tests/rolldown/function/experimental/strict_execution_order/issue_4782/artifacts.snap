@@ -8,25 +8,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region dep-a.js
-var require_dep_a = /* @__PURE__ */ __commonJS({ "dep-a.js": ((exports, module) => {
+var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const sideEffect$1 = {};
 	globalThis.sideEffect = {};
 	module.exports = sideEffect$1;
-}) });
+}));
 
 //#endregion
 //#region dep-b.js
-var init_dep_b = __esm({ "dep-b.js": (() => {
+var init_dep_b = __esmMin((() => {
 	sideEffect.touched = true;
-}) });
+}));
 
 //#endregion
 //#region main.js
 var import_dep_a;
-var init_main = __esm({ "main.js": (() => {
+var init_main = __esmMin((() => {
 	import_dep_a = require_dep_a();
 	init_dep_b();
-}) });
+}));
 
 //#endregion
 init_main();
@@ -41,16 +41,16 @@ init_main();
 ```js
 // HIDDEN [rolldown:runtime]
 //#region dep-a.js
-var require_dep_a = /* @__PURE__ */ __commonJS({ "dep-a.js": ((exports, module) => {
+var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const sideEffect$1 = {};
 	globalThis.sideEffect = {};
 	module.exports = sideEffect$1;
-}) });
+}));
 
 //#endregion
 
 var import_dep_a;
-var init_main = __esm({"main.js": (() => {
+var init_main = __esmMin((() => {
 //#region dep-b.js
 	sideEffect.touched = true;
 
@@ -59,7 +59,7 @@ var init_main = __esm({"main.js": (() => {
 	import_dep_a = require_dep_a();
 
 //#endregion
-})});
+}));
 
 init_main();
 ```

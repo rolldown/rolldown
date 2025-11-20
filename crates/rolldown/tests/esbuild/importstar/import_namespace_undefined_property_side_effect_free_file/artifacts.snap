@@ -86,9 +86,9 @@ console.log(void 0, void 0, import_no_side_effects.nope);
 ```js
 // HIDDEN [rolldown:runtime]
 //#region foo/no-side-effects.cjs
-var require_no_side_effects = /* @__PURE__ */ __commonJS({ "foo/no-side-effects.cjs": (() => {
+var require_no_side_effects = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("cjs");
-}) });
+}));
 
 //#endregion
 export { __toESM as n, require_no_side_effects as t };

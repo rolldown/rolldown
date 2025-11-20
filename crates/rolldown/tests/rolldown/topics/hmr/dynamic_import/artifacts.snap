@@ -6,14 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## exist-dep-cjs.js
 
 ```js
-import { t as __commonJS } from "./main.js";
+import { t as __commonJSMin } from "./main.js";
 
 //#region exist-dep-cjs.js
-var require_exist_dep_cjs = /* @__PURE__ */ __commonJS({ "exist-dep-cjs.js": ((exports, module) => {
+var require_exist_dep_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const exist_dep_cjs_hot = __rolldown_runtime__.createModuleHotContext("exist-dep-cjs.js");
 	__rolldown_runtime__.registerModule("exist-dep-cjs.js", module);
 	exports.value = "exist-cjs";
-}) });
+}));
 
 //#endregion
 export default require_exist_dep_cjs();
@@ -61,7 +61,7 @@ const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 //#endregion
-export { __export as n, __commonJS as t };
+export { __export as n, __commonJSMin as t };
 ```
 
 # HMR Step 0

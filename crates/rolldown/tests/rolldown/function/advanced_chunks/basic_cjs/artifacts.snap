@@ -24,18 +24,18 @@ export default require_b();
 ## common.js
 
 ```js
-import { t as __commonJS } from "./rolldown-runtime.js";
+import { t as __commonJSMin } from "./rolldown-runtime.js";
 
 //#region a.cjs
-var require_a = /* @__PURE__ */ __commonJS({ "a.cjs": ((exports) => {
+var require_a = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.a = "a";
-}) });
+}));
 
 //#endregion
 //#region b.cjs
-var require_b = /* @__PURE__ */ __commonJS({ "b.cjs": ((exports) => {
+var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.b = "b";
-}) });
+}));
 
 //#endregion
 export { require_a as n, require_b as t };
@@ -45,7 +45,7 @@ export { require_a as n, require_b as t };
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __commonJS as t };
+export { __commonJSMin as t };
 ```
 
 # Variant: no-profiler-names: [profiler_names: false]

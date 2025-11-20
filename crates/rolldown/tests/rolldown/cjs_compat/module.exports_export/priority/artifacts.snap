@@ -16,18 +16,18 @@ var esm_exports = /* @__PURE__ */ __export({
 	namedExport: () => namedExport
 });
 var namedExport, esm_default, moduleExports;
-var init_esm = __esm({ "esm.js": (() => {
+var init_esm = __esmMin((() => {
 	namedExport = "named";
 	esm_default = { defaultValue: "default" };
 	moduleExports = { priorityValue: "module.exports wins" };
-}) });
+}));
 
 //#endregion
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const result$1 = (init_esm(), __toCommonJS(esm_exports));
 	module.exports = result$1;
-}) });
+}));
 
 //#endregion
 //#region main.js

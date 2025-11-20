@@ -7,18 +7,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __toDynamicImportESM as n, __commonJS as t };
+export { __toDynamicImportESM as n, __commonJSMin as t };
 ```
 
 ## cjs.js
 
 ```js
-import { t as __commonJS } from "./chunk.js";
+import { t as __commonJSMin } from "./chunk.js";
 
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "cjs";
-}) });
+}));
 
 //#endregion
 export default require_cjs();

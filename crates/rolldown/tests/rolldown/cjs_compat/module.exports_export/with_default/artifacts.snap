@@ -18,16 +18,16 @@ function myFunction() {
 	return "function value";
 }
 var moduleExports;
-var init_esm = __esm({ "esm.js": (() => {
+var init_esm = __esmMin((() => {
 	moduleExports = { customExport: "custom" };
-}) });
+}));
 
 //#endregion
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const result$1 = (init_esm(), __toCommonJS(esm_exports));
 	module.exports = result$1;
-}) });
+}));
 
 //#endregion
 //#region main.js

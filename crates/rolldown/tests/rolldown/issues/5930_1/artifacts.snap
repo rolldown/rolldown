@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 
-exports.__commonJS = __commonJS;
+exports.__commonJSMin = __commonJSMin;
 exports.__toESM = __toESM;
 ```
 
@@ -36,9 +36,9 @@ module.exports = main_default;
 const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
 
 //#region lib.js
-var require_lib = /* @__PURE__ */ require_rolldown_runtime.__commonJS({ "lib.js": ((exports, module) => {
+var require_lib = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports, module) => {
 	module.exports = {};
-}) });
+}));
 
 //#endregion
 Object.defineProperty(exports, 'default', {
@@ -56,7 +56,7 @@ const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
 const require_lib$1 = require('./lib.js');
 
 //#region rule.js
-var require_rule = /* @__PURE__ */ require_rolldown_runtime.__commonJS({ "rule.js": ((exports, module) => {
+var require_rule = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports, module) => {
 	const mod = require_lib$1.default;
 	module.exports = {
 		meta: 4 + String(mod).length,
@@ -64,7 +64,7 @@ var require_rule = /* @__PURE__ */ require_rolldown_runtime.__commonJS({ "rule.j
 			console.log("loaded rule");
 		}
 	};
-}) });
+}));
 
 //#endregion
 module.exports = require_rule();

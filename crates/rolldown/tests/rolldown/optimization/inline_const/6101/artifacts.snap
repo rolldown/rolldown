@@ -8,12 +8,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region react.js
-var require_react = /* @__PURE__ */ __commonJS({ "react.js": ((exports) => {
+var require_react = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.version = "1.0.0";
 	Object.defineProperty(exports, "version", { get() {
 		throw new Error();
 	} });
-}) });
+}));
 
 //#endregion
 //#region main.js

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## c.js
 
 ```js
-import { i as __toCommonJS, n as __esm, r as __export, t as __commonJS } from "./index.js";
+import { i as __toCommonJS, n as __esmMin, r as __export, t as __commonJSMin } from "./index.js";
 
 //#region d.js
 var d_exports = /* @__PURE__ */ __export({ loadEventStreamCapability: () => loadEventStreamCapability });
@@ -14,17 +14,17 @@ async function loadEventStreamCapability() {
 	const { EventStreamSerde } = await import("./e.js");
 	console.log(`EventStreamSerde: `, EventStreamSerde);
 }
-var init_d = __esm({ "d.js": (() => {
+var init_d = __esmMin((() => {
 	loadEventStreamCapability();
-}) });
+}));
 
 //#endregion
 //#region c.js
-var require_c = /* @__PURE__ */ __commonJS({ "c.js": ((exports) => {
+var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.validateSsoProfile = function test() {
 		return init_d(), __toCommonJS(d_exports);
 	};
-}) });
+}));
 
 //#endregion
 export default require_c();
@@ -34,12 +34,12 @@ export default require_c();
 ## e.js
 
 ```js
-import { n as __esm } from "./index.js";
+import { n as __esmMin } from "./index.js";
 
 //#region e.js
-var init_e = __esm({ "e.js": (() => {
+var init_e = __esmMin((() => {
 	console.log("event");
-}) });
+}));
 
 //#endregion
 init_e();
@@ -50,17 +50,17 @@ init_e();
 ```js
 // HIDDEN [rolldown:runtime]
 //#region b.js
-var require_b = /* @__PURE__ */ __commonJS({ "b.js": ((exports) => {
+var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.defaultProvider = async function test() {
 		const { fromIni } = await import("./c.js").then(__toDynamicImportESM());
 		console.log(fromIni);
 	};
-}) });
+}));
 
 //#endregion
 //#region a.js
 require_b();
 
 //#endregion
-export { __toCommonJS as i, __esm as n, __export as r, __commonJS as t };
+export { __toCommonJS as i, __esmMin as n, __export as r, __commonJSMin as t };
 ```

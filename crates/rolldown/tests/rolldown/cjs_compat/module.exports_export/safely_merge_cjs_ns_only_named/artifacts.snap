@@ -10,7 +10,7 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region node_modules/this-is-only-used-for-testing/index.js
-var require_this_is_only_used_for_testing = /* @__PURE__ */ __commonJS({ "node_modules/this-is-only-used-for-testing/index.js": ((exports, module) => {
+var require_this_is_only_used_for_testing = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	function React() {}
 	React.useState = function() {
 		return "useState";
@@ -18,7 +18,7 @@ var require_this_is_only_used_for_testing = /* @__PURE__ */ __commonJS({ "node_m
 	module.exports = React;
 	module.exports.default = React;
 	module.exports.useState = React.useState;
-}) });
+}));
 
 //#endregion
 //#region entry.js

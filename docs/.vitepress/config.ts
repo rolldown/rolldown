@@ -7,8 +7,7 @@ import {
   localIconLoader,
 } from 'vitepress-plugin-group-icons';
 import llmstxt from 'vitepress-plugin-llms';
-import { addOgImage } from 'vitepress-plugin-og'
-
+import { addOgImage } from 'vitepress-plugin-og';
 
 const CONFIG_LINK = '/options/input.md';
 
@@ -338,7 +337,7 @@ export default defineConfig({
     if (!pageData.frontmatter.image && pageData.filePath !== 'index.md') {
       await addOgImage(pageData, {
         domain: 'https://rolldown.rs',
-        maxTitleSizePerLine: 16
+        maxTitleSizePerLine: 16,
       });
     }
   },

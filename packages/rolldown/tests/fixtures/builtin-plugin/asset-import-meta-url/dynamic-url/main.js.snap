@@ -30,6 +30,13 @@ function twoVariablesBetweenSlash(dir, dir2) {
 function ignoreStartingWithAVariable(file) {
 	return new URL(`${file}.js`, import.meta.url);
 }
+function viteIgnore(dir) {
+	return new URL(
+		/* @vite-ignore */
+		`./foo/${dir}.js`,
+		import.meta.url
+	);
+}
 
 //#endregion
-export { ignoreStartingWithAVariable, twoVariables, twoVariablesBetweenSlash, variableBeforeNonSlash, variableBetweenSlash };
+export { ignoreStartingWithAVariable, twoVariables, twoVariablesBetweenSlash, variableBeforeNonSlash, variableBetweenSlash, viteIgnore };

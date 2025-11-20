@@ -70,9 +70,15 @@ impl Plugin for ViteAssetImportMetaUrlPlugin {
         )));
       }
 
-      let mut visitor =
-        ast_visit::NewUrlVisitor { urls: &mut urls, s: &mut s, code: args.code, ctx: &ctx };
-      visitor.visit_program(&mut parser_ret.program);
+      let mut visitor = ast_visit::NewUrlVisitor {
+        urls: &mut urls,
+        s: &mut s,
+        code: args.code,
+        ctx: &ctx,
+        comments: parser_ret.program.comments,
+        current_comment: 0,
+      };
+      visitor.visit_statements(&mut parser_ret.program.body);
     }
 
     let env = FileToUrlEnv {

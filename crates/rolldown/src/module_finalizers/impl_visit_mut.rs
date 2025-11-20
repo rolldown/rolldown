@@ -155,6 +155,22 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     walk_mut::walk_program(self, program);
     self.leave_scope();
 
+    // Insert keep_name statements for top-level declarations
+    for (stmt_index, original_name, new_name) in self.keep_name_statement_to_insert.iter().rev() {
+      let name_ref = self.canonical_ref_for_runtime("__name");
+      let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
+      let target =
+        self.snippet.builder.expression_identifier(SPAN, self.snippet.builder.atom(new_name));
+      program.body.insert(
+        *stmt_index,
+        self.snippet.builder.statement_expression(
+          SPAN,
+          self.snippet.keep_name_call_expr(original_name, target, finalized_callee, false),
+        ),
+      );
+    }
+    self.keep_name_statement_to_insert.clear();
+
     match included_wrap_kind {
       Some(WrapKind::Cjs) => {
         let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());

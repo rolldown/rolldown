@@ -1306,6 +1306,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 let canonical_name_for_default_export_ref =
                   self.canonical_name_for(self.ctx.module.default_export_ref);
                 func.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
+                
+                // When keep_names is enabled, preserve "default" as the function name
+                if self.ctx.options.keep_names {
+                  let insert_position = self.cur_stmt_index + 1;
+                  self.keep_name_statement_to_insert.push((
+                    insert_position,
+                    CompactStr::new("default"),
+                    canonical_name_for_default_export_ref.clone(),
+                  ));
+                }
               }
               let func = func.as_mut().take_in(self.alloc);
               top_stmt = ast::Statement::FunctionDeclaration(ArenaBox::new_in(func, self.alloc));
@@ -1317,6 +1327,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 let canonical_name_for_default_export_ref =
                   self.canonical_name_for(self.ctx.module.default_export_ref);
                 class.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
+                
+                // When keep_names is enabled, preserve "default" as the class name
+                if self.ctx.options.keep_names {
+                  let insert_position = self.cur_stmt_index + 1;
+                  self.keep_name_statement_to_insert.push((
+                    insert_position,
+                    CompactStr::new("default"),
+                    canonical_name_for_default_export_ref.clone(),
+                  ));
+                }
               }
 
               // Class should be handled specially, because the `ClassDecl` will be transformed again.

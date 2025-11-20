@@ -863,15 +863,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
                 // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports).default)`
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                let (wrap_ref_expr, _) = self.finalized_expr_for_symbol_ref(
+                let (wrap_ref_expr, hint) = self.finalized_expr_for_symbol_ref(
                   importee_linking_info.wrapper_ref.unwrap(),
                   false,
                   false,
                 );
                 if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-                  Some(ast::Expression::CallExpression(
-                    self.snippet.alloc_simple_call_expr(wrap_ref_expr),
-                  ))
+                  if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
+                    Some(wrap_ref_expr)
+                  } else {
+                    Some(ast::Expression::CallExpression(
+                      self.snippet.alloc_simple_call_expr(wrap_ref_expr),
+                    ))
+                  }
                 } else {
                   let (ns_name, _) =
                     self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);

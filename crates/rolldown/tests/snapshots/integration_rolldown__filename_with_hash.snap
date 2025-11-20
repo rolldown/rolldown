@@ -4870,6 +4870,12 @@ expression: output
 
 - main-!~{000}~.js => main-CGMZke6c.js
 
+# tests/rolldown/issues/7146
+
+- main-!~{000}~.js => main-DbMB5WIV.js
+- _virtual/rolldown_runtime-!~{001}~.js => _virtual/rolldown_runtime-C32Qc0pU.js
+- config-!~{003}~.js => config-CEwavChU.js
+
 # tests/rolldown/issues/7150
 
 - main-!~{000}~.js => main-DuEwjL39.js

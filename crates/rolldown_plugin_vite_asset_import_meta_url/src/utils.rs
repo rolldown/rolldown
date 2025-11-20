@@ -91,14 +91,22 @@ pub fn contains_asset_import_meta_url(code: &str) -> bool {
   false
 }
 
-/// Splits a raw URL into pure URL and query string.
+/// Strips the query string from a URL.
 ///
-/// Returns a tuple of (pure_url, query_string):
-/// - If query delimiter is found: pure_url is the part before '?', query_string is from '?' to the second-to-last character
-/// - If no query delimiter: pure_url is the original URL and query_string is empty
+/// Returns the URL part before the query delimiter '?':
+/// - If query delimiter is found: returns the part before '?'
+/// - If no query delimiter: returns the original URL
 ///
 /// Note: The query delimiter '?' is searched ignoring '?' characters inside curly braces.
-pub fn split_url_and_query(raw_url: &str) -> (&str, &str) {
+///
+/// # Examples
+///
+/// ```
+/// assert_eq!(strip_query("./foo/bar.js?raw"), "./foo/bar.js");
+/// assert_eq!(strip_query("./foo/bar.js"), "./foo/bar.js");
+/// assert_eq!(strip_query("./foo/${x ? 'a' : 'b'}.js"), "./foo/${x ? 'a' : 'b'}.js");
+/// ```
+pub fn strip_query(raw_url: &str) -> &str {
   let bytes = raw_url.as_bytes();
   let mut brackets_stack = 0;
 
@@ -108,15 +116,13 @@ pub fn split_url_and_query(raw_url: &str) -> (&str, &str) {
       b'{' => brackets_stack += 1,
       b'}' => brackets_stack -= 1,
       b'?' if brackets_stack == 0 => {
-        let pure_url = &raw_url[..i];
-        let query_string = &raw_url[i..];
-        return (pure_url, query_string);
+        return &raw_url[..i];
       }
       _ => {}
     }
   }
 
-  (raw_url, "")
+  raw_url
 }
 
 #[cfg(test)]

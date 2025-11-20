@@ -450,7 +450,6 @@ export async function genOg(content: { title: string }, output: string) {
   const data: Record<string, string> = {
     line1: lines[0],
     line2: lines[1],
-    line3: lines[2],
   };
 
   const svg = ogSvg.replace(/\{\{([^}]+)\}\}/g, (_, name) => data[name] || '');

@@ -8,10 +8,10 @@ import {
 } from 'vitepress-plugin-group-icons';
 import llmstxt from 'vitepress-plugin-llms';
 
-import { Buffer } from 'node:buffer'
-import { existsSync, mkdirSync, readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import sharp from 'sharp'
+import { Buffer } from 'node:buffer';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import sharp from 'sharp';
 
 const CONFIG_LINK = '/options/input.md';
 
@@ -337,9 +337,9 @@ export default defineConfig({
     },
   },
   async transformPageData(pageData) {
-     // Automatically handle OG images for all markdown files.
+    // Automatically handle OG images for all markdown files.
     if (!pageData.frontmatter.image) {
-      await addImage(pageData)
+      await addImage(pageData);
     }
   },
 
@@ -387,63 +387,80 @@ export default defineConfig({
 
 export async function addImage(pageData: PageData) {
   if (pageData.filePath === 'index.md') {
-    return
+    return;
   }
 
-  const imageName = pageData.filePath.replace(/\.md$/, '').replace(/\//g, '-')
-  const imagePath = join('public', 'og', `${imageName}.png`)
+  const imageName = pageData.filePath.replace(/\.md$/, '').replace(/\//g, '-');
+  const imagePath = join('public', 'og', `${imageName}.png`);
 
-  const title = pageData.title
+  const title = pageData.title;
   // Ensure title exists
   if (!title) {
-    throw new Error(`Page ${pageData.filePath} has no title`)
+    throw new Error(`Page ${pageData.filePath} has no title`);
   }
 
   await genOg(
     { title },
     imagePath,
-  )
+  );
 
-  const imageUrl = `https://rolldown.rs/og/${imageName}.png`
-  pageData.frontmatter.head ||= []
-  pageData.frontmatter.head.push(['meta', { name: 'twitter:image', content: imageUrl }])
-  pageData.frontmatter.head.push(['meta', { property: 'og:image', content: imageUrl }])
+  const imageUrl = `https://rolldown.rs/og/${imageName}.png`;
+  pageData.frontmatter.head ||= [];
+  pageData.frontmatter.head.push(['meta', {
+    name: 'twitter:image',
+    content: imageUrl,
+  }]);
+  pageData.frontmatter.head.push(['meta', {
+    property: 'og:image',
+    content: imageUrl,
+  }]);
   // Could be moved to `config.head` object, but the current `og-image.png` is 3800*1904 which is too large
-  pageData.frontmatter.head.push(['meta', { property: 'og:image:width', content: '1200' }])
-  pageData.frontmatter.head.push(['meta', { property: 'og:image:height', content: '630' }])
-  pageData.frontmatter.head.push(['meta', { property: 'og:image:type', content: 'image/png' }])
+  pageData.frontmatter.head.push(['meta', {
+    property: 'og:image:width',
+    content: '1200',
+  }]);
+  pageData.frontmatter.head.push(['meta', {
+    property: 'og:image:height',
+    content: '630',
+  }]);
+  pageData.frontmatter.head.push(['meta', {
+    property: 'og:image:type',
+    content: 'image/png',
+  }]);
 }
 
-const ogSvg = readFileSync(join('.vitepress', './og-template.svg'), 'utf-8')
+const ogSvg = readFileSync(join('.vitepress', './og-template.svg'), 'utf-8');
 
 /**
  * Inspired from Antfu's implementation
  * @see https://github.com/antfu/antfu.me/blob/edd2924d9fc7d2c74251347a27e2621e65dc4d31/vite.config.ts#L245-L270
  */
 export async function genOg(content: { title: string }, output: string) {
-  if (existsSync(output))
-    return
+  if (existsSync(output)) {
+    return;
+  }
 
-  mkdirSync(dirname(output), { recursive: true })
+  mkdirSync(dirname(output), { recursive: true });
 
   // breakline every 16 chars
-  const lines = content.title.trim().split(/(.{0,16})(?:\s|$)/g).filter(Boolean)
+  const lines = content.title.trim().split(/(.{0,16})(?:\s|$)/g).filter(
+    Boolean,
+  );
 
   const data: Record<string, string> = {
     line1: lines[0],
     line2: lines[1],
     line3: lines[2],
-  }
+  };
 
-  const svg = ogSvg.replace(/\{\{([^}]+)\}\}/g, (_, name) => data[name] || '')
+  const svg = ogSvg.replace(/\{\{([^}]+)\}\}/g, (_, name) => data[name] || '');
 
   try {
     await sharp(Buffer.from(svg))
       .resize(1440, 810)
       .png()
-      .toFile(output)
-  }
-  catch (e) {
-    console.error('Failed to generate og image', e)
+      .toFile(output);
+  } catch (e) {
+    console.error('Failed to generate og image', e);
   }
 }

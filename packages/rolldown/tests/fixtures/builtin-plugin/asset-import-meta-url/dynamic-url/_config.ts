@@ -7,8 +7,11 @@ export default defineTest({
   config: {
     plugins: [
       viteAssetImportMetaUrlPlugin({
+        root: '',
+        isLib: false,
         publicDir: '',
         clientEntry: '',
+        assetInlineLimit: 0,
         tryFsResolve: () => void 0,
         assetResolver: async () => void 0,
       }),

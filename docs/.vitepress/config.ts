@@ -16,6 +16,7 @@ import {
 >>>>>>> 222beaba9 (docs: add dynamic og)
 import llmstxt from 'vitepress-plugin-llms';
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { addOgImage } from 'vitepress-plugin-og';
 import { hooksGraphPlugin } from './markdown-hooks-graph.ts';
 
@@ -37,6 +38,9 @@ import sharp from 'sharp';
 import { addOgImage } from 'vitepress-plugin-og'
 
 >>>>>>> e43f8d79e (docs: migrate to plugin)
+=======
+import { addOgImage } from 'vitepress-plugin-og';
+>>>>>>> ed7320bd1 ([autofix.ci] apply automated fixes)
 
 const CONFIG_LINK = '/options/input.md';
 
@@ -431,7 +435,7 @@ const config = defineConfig({
     if (!pageData.frontmatter.image && pageData.filePath !== 'index.md') {
       await addOgImage(pageData, {
         domain: 'https://rolldown.rs',
-        maxTitleSizePerLine: 16
+        maxTitleSizePerLine: 16,
       });
     }
   },

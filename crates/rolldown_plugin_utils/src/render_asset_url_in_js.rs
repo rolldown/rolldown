@@ -1,7 +1,7 @@
 use rolldown_utils::url::clean_url;
 
 use super::{
-  PublicAssetUrlCache, ToOutputFilePathEnv, constants::ViteMetadata,
+  AssetUrlItem, AssetUrlIter, PublicAssetUrlCache, ToOutputFilePathEnv, constants::ViteMetadata,
   to_relative_runtime_path::create_to_import_meta_url_based_relative_runtime,
 };
 
@@ -14,74 +14,42 @@ pub struct RenderAssetUrlInJsEnv<'a> {
 
 impl RenderAssetUrlInJsEnv<'_> {
   pub async fn render_asset_url_in_js(&self) -> anyhow::Result<Option<String>> {
-    // __VITE_ASSET__([\w$]+)__(?:\$_(.*?)__ -> 14 && __VITE_ASSET_PUBLIC__([a-z\d]{8})__ -> 21
-    let mut vite_asset_iter = self.code.match_indices("__VITE_ASSET_").peekable();
-
-    if vite_asset_iter.peek().is_none() {
-      return Ok(None);
-    }
-
     let mut last = 0;
     let mut code = None;
-    for (start, _) in vite_asset_iter {
-      let (end, filename, is_public_asset) = if self.code[start + 13..].starts_with('_') {
-        let start = start + 14;
-        let Some((reference_id, mut end)) = self.code[start..].find("__").and_then(|i| {
-          let reference_id = &self.code[start..start + i];
-          reference_id
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'$')
-            .then_some((reference_id, start + i + 2))
-        }) else {
-          continue;
-        };
+    for item in AssetUrlIter::from(self.code).into_asset_url_iter() {
+      let (range, filename, is_public_asset) = match item {
+        AssetUrlItem::Asset((range, reference_id, postfix)) => {
+          let file = self.ctx.get_file_name(reference_id)?;
+          let vite_metadata = self.ctx.meta().get_or_insert_default::<ViteMetadata>();
+          let chunk_metadata = vite_metadata.get_or_insert_default(self.env.host_id.into());
 
-        let file = self.ctx.get_file_name(reference_id)?;
-        let vite_metadata = self.ctx.meta().get_or_insert_default::<ViteMetadata>();
-        let chunk_metadata = vite_metadata.get_or_insert_default(self.env.host_id.into());
+          chunk_metadata.imported_assets.insert(clean_url(&file).into());
 
-        chunk_metadata.imported_assets.insert(clean_url(&file).into());
+          let filename = if let Some(postfix) = postfix {
+            rolldown_utils::concat_string!(file, postfix)
+          } else {
+            file.to_string()
+          };
 
-        let postfix = self.code[end..].starts_with("$_").then(|| {
-          self.code[end + 2..].find("__").map_or("", |i| {
-            let v = &self.code[end + 2..end + 2 + i];
-            end = end + 2 + i + 2;
-            v
-          })
-        });
+          (range, filename, false)
+        }
+        AssetUrlItem::PublicAsset((range, hash)) => {
+          let cache = self
+            .ctx
+            .meta()
+            .get::<PublicAssetUrlCache>()
+            .ok_or_else(|| anyhow::anyhow!("PublicAssetUrlCache missing"))?;
 
-        let filename = if let Some(postfix) = postfix {
-          rolldown_utils::concat_string!(file, postfix)
-        } else {
-          file.to_string()
-        };
+          let filename = cache
+            .0
+            .get(hash)
+            .ok_or_else(|| {
+              anyhow::anyhow!("Can't find the cache of {}", &self.code[range.start..range.end])
+            })?
+            .to_string();
 
-        (end, filename, false)
-      } else if self.code[start + 13..].starts_with("PUBLIC__") {
-        let start = start + 21;
-        let Some((hash, end)) = self.code[start..].find("__").and_then(|i| {
-          let hash = &self.code[start..start + i];
-          (i == 8 && hash.bytes().all(|b| (b'a'..=b'f').contains(&b) || b.is_ascii_digit()))
-            .then_some((hash, start + 8 + 2))
-        }) else {
-          continue;
-        };
-
-        let cache = self
-          .ctx
-          .meta()
-          .get::<PublicAssetUrlCache>()
-          .ok_or_else(|| anyhow::anyhow!("PublicAssetUrlCache missing"))?;
-
-        let filename = cache
-          .0
-          .get(hash)
-          .ok_or_else(|| anyhow::anyhow!("Can't find the cache of {}", &self.code[start..end]))?
-          .to_string();
-
-        (end, filename, true)
-      } else {
-        continue;
+          (range, filename, true)
+        }
       };
 
       let url = self
@@ -98,9 +66,9 @@ impl RenderAssetUrlInJsEnv<'_> {
         .await?;
 
       let code = code.get_or_insert_with(|| String::with_capacity(self.code.len()));
-      code.push_str(&self.code[last..start]);
+      code.push_str(&self.code[last..range.start]);
       code.push_str(&url.to_asset_url_in_js()?);
-      last = end;
+      last = range.end;
     }
 
     if let Some(code) = &mut code {

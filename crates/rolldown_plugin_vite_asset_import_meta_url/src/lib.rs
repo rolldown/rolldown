@@ -13,11 +13,18 @@ pub type TryFsResolve = dyn Fn(&str) -> Pin<Box<dyn Future<Output = anyhow::Resu
   + Send
   + Sync;
 
+pub type AssetResolver = dyn Fn(&str, &str) -> Pin<Box<dyn Future<Output = anyhow::Result<Option<String>>> + Send>>
+  + Send
+  + Sync;
+
 #[derive(derive_more::Debug)]
 pub struct ViteAssetImportMetaUrlPlugin {
+  pub public_dir: PathBuf,
   pub client_entry: String,
   #[debug(skip)]
   pub try_fs_resolve: Arc<TryFsResolve>,
+  #[debug(skip)]
+  pub asset_resolver: Arc<AssetResolver>,
 }
 
 impl Plugin for ViteAssetImportMetaUrlPlugin {
@@ -76,7 +83,14 @@ impl Plugin for ViteAssetImportMetaUrlPlugin {
         let file = path.to_slash_lossy().into_owned();
         (self.try_fs_resolve)(&file).await?.unwrap_or(file)
       } else {
-        todo!();
+        (self.asset_resolver)(&url, args.id).await?.unwrap_or_else(|| {
+          if let Some(stripped) = url.strip_prefix('/') {
+            self.public_dir.join(stripped).to_slash_lossy().into_owned()
+          } else {
+            let path = PathBuf::from(args.id).parent().unwrap().join(&url).normalize();
+            path.to_slash_lossy().into_owned()
+          }
+        })
       };
       todo!()
     }

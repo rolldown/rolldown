@@ -17,3 +17,7 @@ export function twoVariablesBetweenSlash(dir, dir2) {
 export function ignoreStartingWithAVariable(file) {
   return new URL(`${file}.js`, import.meta.url);
 }
+
+export function viteIgnore(dir) {
+  return new URL(/* @vite-ignore */ `./foo/${dir}.js`, import.meta.url);
+}

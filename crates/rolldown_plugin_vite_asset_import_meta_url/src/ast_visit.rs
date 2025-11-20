@@ -1,28 +1,50 @@
 use std::ops::Range;
 
 use oxc::{
-  ast::ast::Argument,
+  ast::{Comment, ast::Argument},
   ast_visit::{VisitMut, walk_mut::walk_new_expression},
 };
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_plugin_utils::inject_query;
 
-pub struct NewUrlVisitor<'a, 'b> {
+pub struct NewUrlVisitor<'a, 'b, 'ast> {
   pub urls: &'a mut Vec<(String, Range<usize>, &'b str)>,
   pub s: &'a mut Option<string_wizard::MagicString<'b>>,
   pub code: &'b str,
   pub ctx: &'a PluginContext,
+  pub current_comment: usize,
+  pub comments: oxc::allocator::Vec<'ast, Comment>,
 }
 
-impl VisitMut<'_> for NewUrlVisitor<'_, '_> {
-  fn visit_new_expression(&mut self, it: &mut oxc::ast::ast::NewExpression<'_>) {
+impl NewUrlVisitor<'_, '_, '_> {
+  /// Respects @vite-ignore comment (e.g., import(/* @vite-ignore */ `..`))
+  fn is_vite_ignore_comment(&mut self, span: oxc::span::Span) -> bool {
+    if self.current_comment < self.comments.len() {
+      for comment in &self.comments[self.current_comment..] {
+        if comment.attached_to > span.start {
+          break;
+        }
+        self.current_comment += 1;
+        if comment.attached_to == span.start && comment.is_vite() {
+          return true;
+        }
+      }
+    }
+    false
+  }
+}
+
+impl<'ast> VisitMut<'ast> for NewUrlVisitor<'_, '_, 'ast> {
+  fn visit_new_expression(&mut self, it: &mut oxc::ast::ast::NewExpression<'ast>) {
     if it.callee.is_specific_id("URL") && it.arguments.len() == 2 {
       if !it.arguments[1].as_expression().is_some_and(ExpressionExt::is_import_meta_url) {
         return;
       }
 
       let (url, span) = match &it.arguments[0] {
+        Argument::StringLiteral(lit) if self.is_vite_ignore_comment(lit.span) => return,
+        Argument::TemplateLiteral(template) if self.is_vite_ignore_comment(template.span) => return,
         Argument::StringLiteral(lit) => (lit.value.to_string(), lit.span),
         Argument::TemplateLiteral(template) => {
           if let Some(lit) = template.single_quasi() {

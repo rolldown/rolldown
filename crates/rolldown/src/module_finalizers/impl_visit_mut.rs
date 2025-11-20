@@ -156,19 +156,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     self.leave_scope();
 
     // Insert keep_name statements for top-level declarations
-    for (stmt_index, original_name, new_name) in self.keep_name_statement_to_insert.iter().rev() {
-      let name_ref = self.canonical_ref_for_runtime("__name");
-      let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
-      let target =
-        self.snippet.builder.expression_identifier(SPAN, self.snippet.builder.atom(new_name));
-      program.body.insert(
-        *stmt_index,
-        self.snippet.builder.statement_expression(
-          SPAN,
-          self.snippet.keep_name_call_expr(original_name, target, finalized_callee, false),
-        ),
-      );
-    }
+    self.insert_keep_name_statements(&mut program.body);
     self.keep_name_statement_to_insert.clear();
 
     match included_wrap_kind {
@@ -368,20 +356,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       self.visit_statement(stmt);
     }
 
-    // TODO: perf it
-    for (stmt_index, original_name, new_name) in self.keep_name_statement_to_insert.iter().rev() {
-      let name_ref = self.canonical_ref_for_runtime("__name");
-      let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
-      let target =
-        self.snippet.builder.expression_identifier(SPAN, self.snippet.builder.atom(new_name));
-      it.insert(
-        *stmt_index,
-        self.snippet.builder.statement_expression(
-          SPAN,
-          self.snippet.keep_name_call_expr(original_name, target, finalized_callee, false),
-        ),
-      );
-    }
+    self.insert_keep_name_statements(it);
     self.cur_stmt_index = previous_stmt_index;
     self.keep_name_statement_to_insert = previous_keep_name_statement;
   }

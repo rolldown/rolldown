@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+//#region dep.js
+function dep_default() {
+	return "anonymous default function";
+}
+__name(dep_default, "default");
+
+//#endregion
+//#region dep-class.js
+var dep_class_default = class {
+	constructor() {
+		this.type = "anonymous default class";
+	}
+};
+__name(dep_class_default, "default");
+
+//#endregion
+//#region main.js
+assert.strictEqual(dep_default.name, "default", "Anonymous default export function name should be \"default\"");
+assert.strictEqual(dep_class_default.name, "default", "Anonymous default export class name should be \"default\"");
+
+//#endregion
+```

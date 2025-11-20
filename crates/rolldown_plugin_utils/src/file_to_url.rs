@@ -3,9 +3,11 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
 
+use rolldown_utils::base64::to_standard_base64;
+use rolldown_utils::concat_string;
 use rolldown_utils::dashmap::FxDashMap;
+use rolldown_utils::mime::guess_mime;
 use rolldown_utils::url::clean_url;
-use rolldown_utils::{dataurl::encode_as_shortest_dataurl, mime::guess_mime};
 use sugar_path::SugarPath;
 
 use crate::{PublicFileToBuiltUrlEnv, remove_special_query};
@@ -148,6 +150,7 @@ impl FileToUrlEnv<'_> {
     // https://github.com/vitejs/vite/pull/14643/files#r1376247460
     // https://github.com/vitejs/rolldown-vite/blob/c252dee/packages/vite/src/node/plugins/asset.ts#L533-L539
     let guessed_mime = guess_mime(path, content)?;
-    Ok(encode_as_shortest_dataurl(&guessed_mime, content))
+    let base64 = to_standard_base64(content);
+    Ok(concat_string!("data:", guessed_mime.to_string(), ";base64,", base64))
   }
 }

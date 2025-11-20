@@ -2206,10 +2206,13 @@ export interface BindingViteAliasPluginConfig {
 }
 
 export interface BindingViteAssetImportMetaUrlPluginConfig {
+  root: string
+  isLib: boolean
   publicDir: string
   clientEntry: string
-  tryFsResolve: (id: string, importer: string) => string | undefined
+  tryFsResolve: (id: string) => string | undefined
   assetResolver: (id: string, importer: string) => Promise<string | undefined>
+  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
 }
 
 export interface BindingViteAssetPluginConfig {

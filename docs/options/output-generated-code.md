@@ -59,8 +59,9 @@ export default {
 
 When enabled, generated code will use descriptive variable names that correspond to the original module names, making it easier to profile and debug the bundled code. This can be helpful when using browser profiling tools to identify function execution times, as anonymous functions will have descriptive names.
 
-:::warning Important
-Enabling `profilerNames` makes the generated output more difficult to minify effectively. The descriptive variable names interfere with the minifier's ability to optimize and compress the code. For this reason, **it should generally be avoided for libraries and production builds**.
+:::warning Note
+
+Enabling `profilerNames` makes the generated output more difficult to minify effectively. For this reason, **it should generally be avoided for libraries and production builds**.
 
 Only enable this option when you specifically need better profiling support during development or debugging.
 :::

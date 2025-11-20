@@ -3142,6 +3142,7 @@ name = "rolldown_plugin_vite_asset_import_meta_url"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cow-utils",
  "derive_more",
  "oxc",
  "rolldown_ecmascript_utils",

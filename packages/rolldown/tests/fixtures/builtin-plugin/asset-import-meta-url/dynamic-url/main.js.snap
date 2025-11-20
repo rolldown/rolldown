@@ -14,14 +14,14 @@ function variableBeforeNonSlash(dir) {
 	})[`./foo/${dir}.js`], import.meta.url);
 }
 function twoVariables(dir, file) {
-	return new URL(import.meta.glob("./foo/**.js", {
+	return new URL(import.meta.glob("./foo/*.js", {
 		eager: true,
 		import: "default",
 		query: "?url"
 	})[`./foo/${dir}${file}.js`], import.meta.url);
 }
 function twoVariablesBetweenSlash(dir, dir2) {
-	return new URL(import.meta.glob("./foo/**/index.js", {
+	return new URL(import.meta.glob("./foo/*/index.js", {
 		eager: true,
 		import: "default",
 		query: "?url"
@@ -37,6 +37,20 @@ function viteIgnore(dir) {
 		import.meta.url
 	);
 }
+function withQueryString(dir) {
+	return new URL(import.meta.glob("./foo/*/index.js", {
+		eager: true,
+		import: "default",
+		query: "?url&raw"
+	})[`./foo/${dir}/index.js`], import.meta.url);
+}
+function questionMarkInsideBraces(dir) {
+	return new URL(import.meta.glob("./foo/*/index.js", {
+		eager: true,
+		import: "default",
+		query: "?url"
+	})[`./foo/${dir ? "a" : "b"}/index.js`], import.meta.url);
+}
 
 //#endregion
-export { ignoreStartingWithAVariable, twoVariables, twoVariablesBetweenSlash, variableBeforeNonSlash, variableBetweenSlash, viteIgnore };
+export { ignoreStartingWithAVariable, questionMarkInsideBraces, twoVariables, twoVariablesBetweenSlash, variableBeforeNonSlash, variableBetweenSlash, viteIgnore, withQueryString };

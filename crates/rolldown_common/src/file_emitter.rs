@@ -4,7 +4,7 @@ use crate::{
 };
 use anyhow::Context;
 use arcstr::ArcStr;
-use dashmap::{DashMap, DashSet};
+use dashmap::{DashMap, DashSet, Entry};
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rolldown_utils::make_unique_name::make_unique_name;
@@ -106,26 +106,37 @@ impl FileEmitter {
   ) -> anyhow::Result<ArcStr> {
     let hash: ArcStr =
       xxhash_with_base(file.source.as_bytes(), self.options.hash_characters.base()).into();
+
     // Deduplicate assets if an explicit fileName is not provided
-    if file.file_name.is_none() {
-      if let Some(reference_id) = self.source_hash_to_reference_id.get(&hash) {
-        self.files.entry(reference_id.clone()).and_modify(|entry| {
-          if let Some(name) = file.name {
-            entry.names.push(name);
-          }
-          if let Some(original_file_name) = file.original_file_name {
-            entry.original_file_names.push(original_file_name);
-          }
-        });
-        return Ok(reference_id.value().clone());
+    let reference_id = if file.file_name.is_none() {
+      // Use entry API to atomically check and insert
+      match self.source_hash_to_reference_id.entry(hash.clone()) {
+        Entry::Occupied(entry) => {
+          // File already exists, add metadata and return existing reference_id
+          let reference_id = entry.get().clone();
+          self.files.entry(reference_id.clone()).and_modify(|output| {
+            if let Some(name) = file.name {
+              output.names.push(name);
+            }
+            if let Some(original_file_name) = file.original_file_name {
+              output.original_file_names.push(original_file_name);
+            }
+          });
+          return Ok(reference_id);
+        }
+        Entry::Vacant(entry) => {
+          // First time seeing this file, generate reference_id and continue
+          let reference_id = self.assign_reference_id(None);
+          entry.insert(reference_id.clone());
+          reference_id
+        }
       }
-    }
+    } else {
+      // File has explicit fileName, no deduplication needed
+      self.assign_reference_id(file.file_name.clone())
+    };
 
-    let reference_id = self.assign_reference_id(file.file_name.clone());
-    if file.file_name.is_none() {
-      self.source_hash_to_reference_id.insert(hash.clone(), reference_id.clone());
-    }
-
+    // Generate filename and insert into files map
     self.generate_file_name(&mut file, &hash, asset_filename_template, sanitized_file_name)?;
     self.files.insert(
       reference_id.clone(),

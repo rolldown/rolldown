@@ -1,3 +1,6 @@
 [submodule "rollup"]
 	path = rollup
 	url = https://github.com/rollup/rollup.git
+[submodule "test262"]
+	path = test262
+	url = https://github.com/tc39/test262.git

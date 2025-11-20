@@ -6,12 +6,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+// HIDDEN [rolldown:runtime]
 //#region dep.js
 var dep_default = (function() {});
+__name(dep_default, "default");
+
+//#endregion
+//#region dep-class.js
+var dep_class_default = class {};
+__name(dep_class_default, "default");
 
 //#endregion
 //#region main.js
 console.log(dep_default.name);
+console.log(dep_class_default.name);
 
 //#endregion
 ```

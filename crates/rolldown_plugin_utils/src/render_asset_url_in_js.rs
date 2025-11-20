@@ -26,13 +26,13 @@ impl RenderAssetUrlInJsEnv<'_> {
     for (start, _) in vite_asset_iter {
       let (end, filename, is_public_asset) = if self.code[start + 13..].starts_with('_') {
         let start = start + 14;
-        let Some((reference_id, mut end)) =
-          self.code[start..].find(|c: char| !c.is_alphanumeric() && c != '&').and_then(|i| {
-            self.code[start + i..]
-              .starts_with("__")
-              .then_some((&self.code[start..start + i], start + i + 2))
-          })
-        else {
+        let Some((reference_id, mut end)) = self.code[start..].find("__").and_then(|i| {
+          let reference_id = &self.code[start..start + i];
+          reference_id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'$')
+            .then_some((reference_id, start + i + 2))
+        }) else {
           continue;
         };
 

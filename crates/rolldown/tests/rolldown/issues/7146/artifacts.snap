@@ -1,0 +1,88 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## _virtual/rolldown_runtime.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+exports.__commonJSMin = __commonJSMin;
+```
+
+## config.js
+
+```js
+const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+
+//#region config.json
+var require_config = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports, module) => {
+	module.exports = { "foo": 1 };
+}));
+
+//#endregion
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return require_config();
+  }
+});
+```
+
+## main.js
+
+```js
+const require_config$1 = require('./config.js');
+
+//#region main.js
+const assert = require("assert");
+const config = require_config$1.default;
+assert.deepEqual(config, { foo: 1 });
+
+//#endregion
+```
+
+# Variant: [format: Esm]
+
+## Assets
+
+### _virtual/rolldown_runtime.js
+
+```js
+import { createRequire } from "node:module";
+
+// HIDDEN [rolldown:runtime]
+export { __commonJSMin, __require };
+```
+
+### config.js
+
+```js
+import { __commonJSMin } from "./_virtual/rolldown_runtime.js";
+
+//#region config.json
+var require_config = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = { "foo": 1 };
+}));
+
+//#endregion
+export default require_config();
+
+export { require_config };
+```
+
+### main.js
+
+```js
+import { __require } from "./_virtual/rolldown_runtime.js";
+import { require_config } from "./config.js";
+
+//#region main.js
+const assert = __require("assert");
+const config = require_config();
+assert.deepEqual(config, { foo: 1 });
+
+//#endregion
+export {  };
+```

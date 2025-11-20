@@ -114,6 +114,10 @@ impl BundleCoordinator {
           let result = self.ensure_latest_bundle_output().await;
           let _ = reply.send(result);
         }
+        CoordinatorMsg::GetWatchedFiles { reply } => {
+          let result = self.watched_files.iter().map(|s| s.to_string()).collect();
+          let _ = reply.send(result);
+        }
         CoordinatorMsg::Close => {
           break;
         }
@@ -211,12 +215,15 @@ impl BundleCoordinator {
       CoordinatorState::FullBuildInProgress => {
         self.current_bundling_future = None;
 
+        // Even if the build failed, update the watch paths
+        // so that a new full build is triggered by the change for those files
+        let _ = self.update_watch_paths().await;
+
         if has_encountered_error {
           self.set_initial_build_state(CoordinatorState::FullBuildFailed);
           self.has_stale_bundle_output = true;
         } else {
           self.has_stale_bundle_output = false;
-          let _ = self.update_watch_paths().await;
 
           self.set_initial_build_state(CoordinatorState::Idle);
           if !self.queued_file_changes_waited_for_full_build.is_empty() {

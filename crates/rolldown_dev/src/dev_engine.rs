@@ -8,6 +8,8 @@ use futures::{FutureExt, future::Shared};
 use rolldown_common::ClientHmrUpdate;
 use rolldown_error::{BuildResult, ResultExt};
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, FsWatcherExt, NoopFsWatcher};
+#[cfg(feature = "testing")]
+use rustc_hash::FxHashSet;
 use tokio::sync::{Mutex, mpsc::unbounded_channel};
 
 use rolldown::{Bundler, BundlerBuilder};
@@ -328,6 +330,26 @@ impl DevEngine {
     if let Ok(Some(ret)) = reply_rx.await {
       ret.future.await;
     }
+  }
+
+  #[cfg(feature = "testing")]
+  pub async fn get_watched_files(&self) -> BuildResult<FxHashSet<String>> {
+    self.create_error_if_closed()?;
+
+    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    self
+      .coordinator_sender
+      .send(CoordinatorMsg::GetWatchedFiles { reply: reply_sender })
+      .map_err_to_unhandleable()
+      .context(
+        "DevEngine: failed to send GetWatchedFiles to coordinator within get_watched_files",
+      )?;
+
+    let watched_files = reply_receiver.await.map_err_to_unhandleable().context(
+      "DevEngine: coordinator closed before responding to GetWatchedFiles within get_watched_files",
+    )?;
+
+    Ok(watched_files)
   }
 
   #[cfg(feature = "testing")]

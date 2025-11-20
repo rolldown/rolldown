@@ -1,3 +1,4 @@
+use rustc_hash::FxHashSet;
 use tokio::sync::{
   mpsc::{UnboundedReceiver, UnboundedSender},
   oneshot,
@@ -20,3 +21,5 @@ pub type CoordinatorSender = UnboundedSender<CoordinatorMsg>;
 pub type CoordinatorReceiver = UnboundedReceiver<CoordinatorMsg>;
 
 pub type EnsureLatestBundleOutputSender = oneshot::Sender<Option<EnsureLatestBundleOutputReturn>>;
+
+pub type GetWatchedFilesSender = oneshot::Sender<FxHashSet<String>>;

@@ -209,6 +209,11 @@ impl IntegrationTest {
           &hmr_temp_dir_path,
           hmr_edit_files,
         );
+        let watched_files = dev_engine.get_watched_files().await.unwrap();
+        assert!(
+          changed_files.iter().all(|file| watched_files.contains(file)),
+          "All changed files must be in watched files: {changed_files:#?} not in {watched_files:#?}"
+        );
         dev_engine
           .ensure_task_with_changed_files(changed_files.into_iter().map(Into::into).collect())
           .await;

@@ -132,7 +132,7 @@ export default function myPlugin() {
     transform: {
       // Filter is used by Rolldown and newer Rollup/Vite versions
       filter: {
-        id: /\.data$/
+        id: /\.data$/,
       },
       // Handler is called when filter matches
       handler(code, id) {
@@ -143,13 +143,14 @@ export default function myPlugin() {
         }
         // perform actual transform
         return transformedCode;
-      }
-    }
-  }
+      },
+    },
+  };
 }
 ```
 
 This approach ensures your plugin will:
+
 - Use filters for optimal performance in Rolldown and newer Rollup/Vite versions
 - Still work correctly in older versions (they will call the handler for all files, but the internal check ensures correct behavior)
 

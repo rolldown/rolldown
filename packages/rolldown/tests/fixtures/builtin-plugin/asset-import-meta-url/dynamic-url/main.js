@@ -21,3 +21,11 @@ export function ignoreStartingWithAVariable(file) {
 export function viteIgnore(dir) {
   return new URL(/* @vite-ignore */ `./foo/${dir}.js`, import.meta.url);
 }
+
+export function withQueryString(dir) {
+  return new URL(`./foo/${dir}/index.js?raw`, import.meta.url);
+}
+
+export function questionMarkInsideBraces(dir) {
+  return new URL(`./foo/${dir ? 'a' : 'b'}/index.js`, import.meta.url);
+}

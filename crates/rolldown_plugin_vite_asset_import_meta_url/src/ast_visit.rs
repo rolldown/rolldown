@@ -1,5 +1,6 @@
 use std::ops::Range;
 
+use cow_utils::CowUtils as _;
 use oxc::{
   ast::{Comment, ast::Argument},
   ast_visit::{VisitMut, walk_mut::walk_new_expression},
@@ -76,8 +77,15 @@ impl<'ast> VisitMut<'ast> for NewUrlVisitor<'_, '_, 'ast> {
 
             let s = self.s.get_or_insert_with(|| string_wizard::MagicString::new(self.code));
 
+            let glob = glob.cow_replace("**", "*");
+            let (glob, query) = {
+              let index = glob.rfind('/').unwrap_or(0);
+              let index = glob[index..].find('?').map_or(glob.len(), |i| i + index);
+              glob.split_at(index)
+            };
+
             let span = template.span.shrink(1);
-            let (pure_url, query) = super::utils::split_url_and_query(span.source_text(self.code));
+            let pure_url = super::utils::strip_query(span.source_text(self.code));
 
             let injected_query = inject_query(query, "url");
             let options = rolldown_utils::concat_string!(

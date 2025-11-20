@@ -6,7 +6,7 @@ import { type DefaultTheme, defineConfig } from 'vitepress';
 import { groupIconMdPlugin, groupIconVitePlugin } from 'vitepress-plugin-group-icons';
 =======
 import { fileURLToPath } from 'node:url';
-import type { PageData, UserConfig } from 'vitepress';
+import type { UserConfig } from 'vitepress';
 import { defineConfig } from 'vitepress';
 import {
   groupIconMdPlugin,
@@ -15,6 +15,7 @@ import {
 } from 'vitepress-plugin-group-icons';
 >>>>>>> 222beaba9 (docs: add dynamic og)
 import llmstxt from 'vitepress-plugin-llms';
+<<<<<<< HEAD
 import { addOgImage } from 'vitepress-plugin-og';
 import { hooksGraphPlugin } from './markdown-hooks-graph.ts';
 
@@ -32,6 +33,10 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import sharp from 'sharp';
 >>>>>>> 42afd405d ([autofix.ci] apply automated fixes)
+=======
+import { addOgImage } from 'vitepress-plugin-og'
+
+>>>>>>> e43f8d79e (docs: migrate to plugin)
 
 const CONFIG_LINK = '/options/input.md';
 
@@ -423,8 +428,11 @@ const config = defineConfig({
   },
   async transformPageData(pageData) {
     // Automatically handle OG images for all markdown files.
-    if (!pageData.frontmatter.image) {
-      await addImage(pageData);
+    if (!pageData.frontmatter.image && pageData.filePath !== 'index.md') {
+      await addOgImage(pageData, {
+        domain: 'https://rolldown.rs',
+        maxTitleSizePerLine: 16
+      });
     }
   },
 
@@ -467,6 +475,7 @@ const config = defineConfig({
     }
   },
 });
+<<<<<<< HEAD
 
 <<<<<<< HEAD
 export default extendConfig(config);
@@ -550,3 +559,5 @@ export async function genOg(content: { title: string }, output: string) {
   }
 }
 >>>>>>> 222beaba9 (docs: add dynamic og)
+=======
+>>>>>>> e43f8d79e (docs: migrate to plugin)

@@ -16,8 +16,13 @@
     "sharp": "^0.34.5",
     "vitepress": "catalog:",
     "vitepress-plugin-group-icons": "catalog:",
+<<<<<<< HEAD
     "vitepress-plugin-llms": "catalog:"
 >>>>>>> 222beaba9 (docs: add dynamic og)
+=======
+    "vitepress-plugin-llms": "catalog:",
+    "vitepress-plugin-og": "^0.0.1"
+>>>>>>> e43f8d79e (docs: migrate to plugin)
   },
   "dependencies": {
     "vue": "catalog:"

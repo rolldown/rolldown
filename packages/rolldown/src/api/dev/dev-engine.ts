@@ -1,4 +1,5 @@
 import {
+  type BindingBundleState,
   type BindingClientHmrUpdate,
   BindingDevEngine,
   type BindingDevOptions,
@@ -109,8 +110,8 @@ export class DevEngine {
     return promise;
   }
 
-  async hasLatestBuildOutput(): Promise<boolean> {
-    return this.#inner.hasLatestBuildOutput();
+  async getBundleState(): Promise<BindingBundleState> {
+    return this.#inner.getBundleState();
   }
 
   async ensureLatestBuildOutput(): Promise<void> {

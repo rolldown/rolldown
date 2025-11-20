@@ -385,6 +385,7 @@ impl BundleCoordinator {
   fn create_state_snapshot(&self) -> CoordinatorStateSnapshot {
     CoordinatorStateSnapshot {
       running_future: self.current_bundling_future.clone(),
+      last_full_build_failed: self.state == CoordinatorState::FullBuildFailed,
       has_stale_output: self.has_stale_bundle_output,
     }
   }

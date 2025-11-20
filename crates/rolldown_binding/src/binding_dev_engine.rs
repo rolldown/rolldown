@@ -1,6 +1,6 @@
 use napi::tokio;
 use napi_derive::napi;
-use rolldown_dev::{BundlingFuture, OnHmrUpdatesCallback, OnOutputCallback};
+use rolldown_dev::{BundleState, BundlingFuture, OnHmrUpdatesCallback, OnOutputCallback};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -151,12 +151,13 @@ impl BindingDevEngine {
   }
 
   #[napi]
-  pub async fn has_latest_build_output(&self) -> napi::Result<bool> {
+  pub async fn get_bundle_state(&self) -> napi::Result<BindingBundleState> {
     self
       .inner
-      .has_latest_bundle_output()
+      .get_bundle_state()
       .await
-      .map_err(|_e| napi::Error::from_reason("Failed to check latest build output"))
+      .map(Into::into)
+      .map_err(|_e| napi::Error::from_reason("Failed to get bundle state"))
   }
 
   #[napi]
@@ -215,5 +216,20 @@ impl ScheduledBuild {
   #[napi]
   pub fn already_scheduled(&self) -> bool {
     self.already_scheduled
+  }
+}
+
+#[napi(object)]
+pub struct BindingBundleState {
+  pub last_full_build_failed: bool,
+  pub has_stale_output: bool,
+}
+
+impl From<BundleState> for BindingBundleState {
+  fn from(state: BundleState) -> Self {
+    Self {
+      last_full_build_failed: state.last_full_build_failed,
+      has_stale_output: state.has_stale_output,
+    }
   }
 }

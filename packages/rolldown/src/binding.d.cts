@@ -1380,7 +1380,7 @@ export declare class BindingDevEngine {
   constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
   run(): Promise<void>
   ensureCurrentBuildFinish(): Promise<void>
-  hasLatestBuildOutput(): Promise<boolean>
+  getBundleState(): Promise<BindingBundleState>
   ensureLatestBuildOutput(): Promise<void>
   invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<Array<BindingClientHmrUpdate>>
   registerModules(clientId: string, modules: Array<string>): void
@@ -1632,6 +1632,11 @@ export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions
   outputOptions: BindingOutputOptions
   parallelPluginsRegistry?: ParallelJsPluginRegistry
+}
+
+export interface BindingBundleState {
+  lastFullBuildFailed: boolean
+  hasStaleOutput: boolean
 }
 
 export interface BindingChecksOptions {

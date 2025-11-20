@@ -85,8 +85,8 @@ class DevServer {
     this.#devEngine = devEngine;
     process.stdin.on('data', async data => {
       if (data.toString() === 'r') {
-        const hasLatestOutput = await devEngine.hasLatestBuildOutput();
-        if (!hasLatestOutput) {
+        const { hasStaleOutput } = await devEngine.getBundleState();
+        if (hasStaleOutput) {
           await devEngine.ensureLatestBuildOutput();
         }
       }

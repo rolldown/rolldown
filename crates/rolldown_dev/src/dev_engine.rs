@@ -18,7 +18,7 @@ use crate::{
   dev_context::{DevContext, PinBoxSendStaticFuture},
   normalize_dev_options,
   type_aliases::CoordinatorSender,
-  types::coordinator_msg::CoordinatorMsg,
+  types::{coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot},
 };
 
 #[cfg(feature = "testing")]
@@ -184,7 +184,7 @@ impl DevEngine {
     Ok(())
   }
 
-  pub async fn has_latest_bundle_output(&self) -> BuildResult<bool> {
+  pub async fn get_bundle_state(&self) -> BuildResult<BundleState> {
     self.create_error_if_closed()?;
 
     let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
@@ -196,12 +196,11 @@ impl DevEngine {
         "DevEngine: failed to send GetState to coordinator within has_latest_bundle_output",
       )?;
 
-    let status = reply_receiver
-      .await
-      .map_err_to_unhandleable()
-      .context("DevEngine: coordinator closed before responding to GetStatus within has_latest_bundle_output")?;
+    let status = reply_receiver.await.map_err_to_unhandleable().context(
+      "DevEngine: coordinator closed before responding to GetStatus within get_bundle_state",
+    )?;
 
-    Ok(!status.has_stale_output)
+    Ok(status.into())
   }
 
   // Ensure there's latest bundle output available for browser loading/reloading scenarios
@@ -344,5 +343,20 @@ impl DevEngine {
       Err(anyhow::anyhow!("Dev engine is closed"))?;
     }
     Ok(())
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct BundleState {
+  pub last_full_build_failed: bool,
+  pub has_stale_output: bool,
+}
+
+impl From<CoordinatorStateSnapshot> for BundleState {
+  fn from(snapshot: CoordinatorStateSnapshot) -> Self {
+    Self {
+      last_full_build_failed: snapshot.last_full_build_failed,
+      has_stale_output: snapshot.has_stale_output,
+    }
   }
 }

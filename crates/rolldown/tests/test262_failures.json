@@ -1,0 +1,234 @@
+{
+  "language/module-code/parse-err-return.js": {
+    "reason": "Rolldown treats files with top level return as CommonJS modules"
+  },
+  "language/module-code/eval-export-dflt-expr-cls-anon.js": {
+    "reason": "The name property of an anonymous default exported class is not kept correctly when wrapped with parentheses",
+    "issue": "https://github.com/rolldown/rolldown/issues/7154"
+  },
+  "language/module-code/eval-export-dflt-expr-fn-anon.js": {
+    "reason": "The name property of an anonymous default exported function is not kept correctly when wrapped with parentheses",
+    "issue": "https://github.com/rolldown/rolldown/issues/7154"
+  },
+  "language/module-code/eval-export-dflt-expr-gen-anon.js": {
+    "reason": "The name property of an anonymous default exported function is not kept correctly when wrapped with parentheses",
+    "issue": "https://github.com/rolldown/rolldown/issues/7154"
+  },
+  "language/module-code/export-expname-binding-index.js": {
+    "reason": "Rolldown makes exported bindings non-writable, but does not throw on assignment"
+  },
+  "language/module-code/instn-iee-bndng-cls.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/instn-iee-bndng-const.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/instn-iee-bndng-fun.js": {
+    "reason": "Rolldown treats assignments to const as bundle errors instead of runtime errors"
+  },
+  "language/module-code/instn-iee-bndng-gen.js": {
+    "reason": "Rolldown treats assignments to const as bundle errors instead of runtime errors"
+  },
+  "language/module-code/instn-iee-bndng-let.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/instn-iee-bndng-var.js": {
+    "reason": "Rolldown treats assignments to const as bundle errors instead of runtime errors"
+  },
+  "language/module-code/instn-iee-err-circular-as.js": {
+    "reason": "CIRCULAR_REEXPORT error not implemented yet",
+    "issue": "https://github.com/rolldown/rolldown/issues/6780"
+  },
+  "language/module-code/instn-iee-err-circular.js": {
+    "reason": "CIRCULAR_REEXPORT error not implemented yet",
+    "issue": "https://github.com/rolldown/rolldown/issues/6780"
+  },
+  "language/module-code/instn-local-bndng-cls.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/instn-local-bndng-const.js": {
+    "reason": "Rolldown treats assignments to const as bundle errors instead of runtime errors"
+  },
+  "language/module-code/instn-local-bndng-export-cls.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/instn-local-bndng-export-const.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/instn-local-bndng-export-let.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/instn-local-bndng-let.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/instn-named-bndng-cls.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/instn-named-bndng-const.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/instn-named-bndng-dflt-cls.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/instn-named-bndng-dflt-expr.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/instn-named-bndng-dflt-named.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/instn-named-bndng-dflt-star.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/instn-named-bndng-fun.js": {
+    "reason": "Rolldown treats assignments to const as bundle errors instead of runtime errors"
+  },
+  "language/module-code/instn-named-bndng-gen.js": {
+    "reason": "Rolldown treats assignments to const as bundle errors instead of runtime errors"
+  },
+  "language/module-code/instn-named-bndng-let.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/instn-named-bndng-trlng-comma.js": {
+    "reason": "Rolldown treats assignments to const as bundle errors instead of runtime errors"
+  },
+  "language/module-code/instn-named-bndng-var.js": {
+    "reason": "Rolldown treats assignments to const as bundle errors instead of runtime errors"
+  },
+  "language/module-code/instn-star-binding.js": {
+    "reason": "Rolldown treats assignments to const as bundle errors instead of runtime errors"
+  },
+  "language/module-code/namespace/Symbol.toStringTag.js": {
+    "reason": "Symbol.toStringTag not properly set on module namespace objects for self-imports",
+    "issue": "https://github.com/rolldown/rolldown/issues/7152"
+  },
+  "language/module-code/namespace/internals/define-own-property.js": {
+    "reason": "Rolldown allows defining properties on module namespace objects"
+  },
+  "language/module-code/namespace/internals/delete-exported-init.js": {
+    "reason": "Rolldown treats deletions of export bindings as bundle errors instead of runtime errors"
+  },
+  "language/module-code/namespace/internals/delete-exported-uninit.js": {
+    "reason": "Rolldown treats deletions of export bindings as bundle errors instead of runtime errors"
+  },
+  "language/module-code/namespace/internals/delete-non-exported.js": {
+    "reason": "Rolldown treats deletions of export bindings as bundle errors instead of runtime errors"
+  },
+  "language/module-code/namespace/internals/enumerate-binding-uninit.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/namespace/internals/get-own-property-str-found-init.js": {
+    "reason": "Rolldown uses a getter instead of a data property to support live bindings"
+  },
+  "language/module-code/namespace/internals/get-own-property-str-found-uninit.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/namespace/internals/get-own-property-sym.js": {
+    "reason": "Symbol.toStringTag not properly set on module namespace objects for self-imports",
+    "issue": "https://github.com/rolldown/rolldown/issues/7152"
+  },
+  "language/module-code/namespace/internals/get-prototype-of.js": {
+    "reason": "Rolldown does not use null as the prototype of module namespace objects"
+  },
+  "language/module-code/namespace/internals/get-str-found-uninit.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/namespace/internals/get-sym-found.js": {
+    "reason": "Symbol.toStringTag not properly set on module namespace objects for self-imports",
+    "issue": "https://github.com/rolldown/rolldown/issues/7152"
+  },
+  "language/module-code/namespace/internals/has-property-str-not-found.js": {
+    "reason": "Rolldown does not use null as the prototype of module namespace objects"
+  },
+  "language/module-code/namespace/internals/has-property-sym-found.js": {
+    "reason": "Symbol.toStringTag not properly set on module namespace objects for self-imports",
+    "issue": "https://github.com/rolldown/rolldown/issues/7152"
+  },
+  "language/module-code/namespace/internals/is-extensible.js": {
+    "reason": "Rolldown does not freeze module namespace objects"
+  },
+  "language/module-code/namespace/internals/object-hasOwnProperty-binding-uninit.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/namespace/internals/object-keys-binding-uninit.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/namespace/internals/object-propertyIsEnumerable-binding-uninit.js": {
+    "reason": "Rolldown does not preserve TDZ semantics"
+  },
+  "language/module-code/namespace/internals/set-prototype-of.js": {
+    "reason": "Rolldown allows setting the prototype of module namespace objects"
+  },
+  "language/module-code/namespace/internals/set.js": {
+    "reason": "Rolldown treats assignments to const as bundle errors instead of runtime errors"
+  },
+  "language/module-code/top-level-await/async-module-does-not-block-sibling-modules.js": {
+    "reason": "Rolldown does not support preserving TLA semantics perfectly"
+  },
+  "language/module-code/top-level-await/fulfillment-order.js": {
+    "reason": "Rolldown does not support preserving TLA semantics perfectly"
+  },
+  "language/module-code/top-level-await/module-self-import-async-resolution-ticks.js": {
+    "reason": "Rolldown does not support preserving TLA semantics perfectly"
+  },
+  "language/module-code/top-level-await/new-await-script-code.js": {
+    "reason": "Rolldown treats files as ESM by default"
+  },
+  "language/module-code/top-level-await/rejection-order.js": {
+    "reason": "Rolldown does not support preserving TLA semantics perfectly"
+  },
+  "language/module-code/top-level-await/unobservable-global-async-evaluation-count-reset.js": {
+    "reason": "Rolldown does not support preserving TLA semantics perfectly"
+  },
+  "language/module-code/eval-export-dflt-cls-anon-semi.js": {
+    "reason": "Bug related to __name injection for anonymous default exported values",
+    "issue": "https://github.com/rolldown/rolldown/issues/7153"
+  },
+  "language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-array-literal.js": {
+    "reason": "Bug related to __name injection for anonymous default exported values",
+    "issue": "https://github.com/rolldown/rolldown/issues/7153"
+  },
+  "language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-func-expression.js": {
+    "reason": "Bug related to __name injection for anonymous default exported values",
+    "issue": "https://github.com/rolldown/rolldown/issues/7153"
+  },
+  "language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-identifier.js": {
+    "reason": "Bug related to __name injection for anonymous default exported values",
+    "issue": "https://github.com/rolldown/rolldown/issues/7153"
+  },
+  "language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-literal-number.js": {
+    "reason": "Bug related to __name injection for anonymous default exported values",
+    "issue": "https://github.com/rolldown/rolldown/issues/7153"
+  },
+  "language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-literal-string.js": {
+    "reason": "Bug related to __name injection for anonymous default exported values",
+    "issue": "https://github.com/rolldown/rolldown/issues/7153"
+  },
+  "language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-nested.js": {
+    "reason": "Bug related to __name injection for anonymous default exported values",
+    "issue": "https://github.com/rolldown/rolldown/issues/7153"
+  },
+  "language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-new-expr.js": {
+    "reason": "Bug related to __name injection for anonymous default exported values",
+    "issue": "https://github.com/rolldown/rolldown/issues/7153"
+  },
+  "language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-null.js": {
+    "reason": "Bug related to __name injection for anonymous default exported values",
+    "issue": "https://github.com/rolldown/rolldown/issues/7153"
+  },
+  "language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-obj-literal.js": {
+    "reason": "Bug related to __name injection for anonymous default exported values",
+    "issue": "https://github.com/rolldown/rolldown/issues/7153"
+  },
+  "language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-regexp.js": {
+    "reason": "Bug related to __name injection for anonymous default exported values",
+    "issue": "https://github.com/rolldown/rolldown/issues/7153"
+  },
+  "language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-template-literal.js": {
+    "reason": "Bug related to __name injection for anonymous default exported values",
+    "issue": "https://github.com/rolldown/rolldown/issues/7153"
+  },
+  "language/module-code/top-level-await/syntax/export-dft-class-decl-await-expr-this.js": {
+    "reason": "Bug related to __name injection for anonymous default exported values",
+    "issue": "https://github.com/rolldown/rolldown/issues/7153"
+  }
+}

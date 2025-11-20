@@ -71,9 +71,9 @@ impl VisitMut<'_> for NewUrlVisitor<'_, '_> {
                 glob,
                 "', ",
                 options,
-                "))['",
+                "))[`",
                 pure_url,
-                "']"
+                "`]"
               ),
             );
             return;

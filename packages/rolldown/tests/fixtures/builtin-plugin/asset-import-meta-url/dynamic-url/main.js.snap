@@ -4,28 +4,28 @@ function variableBetweenSlash(dir) {
 		eager: true,
 		import: "default",
 		query: "?url"
-	})["./foo/${dir}/index.js"], import.meta.url);
+	})[`./foo/${dir}/index.js`], import.meta.url);
 }
 function variableBeforeNonSlash(dir) {
 	return new URL(import.meta.glob("./foo/*.js", {
 		eager: true,
 		import: "default",
 		query: "?url"
-	})["./foo/${dir}.js"], import.meta.url);
+	})[`./foo/${dir}.js`], import.meta.url);
 }
 function twoVariables(dir, file) {
 	return new URL(import.meta.glob("./foo/**.js", {
 		eager: true,
 		import: "default",
 		query: "?url"
-	})["./foo/${dir}${file}.js"], import.meta.url);
+	})[`./foo/${dir}${file}.js`], import.meta.url);
 }
 function twoVariablesBetweenSlash(dir, dir2) {
 	return new URL(import.meta.glob("./foo/**/index.js", {
 		eager: true,
 		import: "default",
 		query: "?url"
-	})["./foo/${dir}${dir2}/index.js"], import.meta.url);
+	})[`./foo/${dir}${dir2}/index.js`], import.meta.url);
 }
 function ignoreStartingWithAVariable(file) {
 	return new URL(`${file}.js`, import.meta.url);

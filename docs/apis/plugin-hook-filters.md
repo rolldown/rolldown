@@ -3,6 +3,17 @@
 > [!note]
 > For more details about **why you need plugin hook filter** please refer [why-plugin-hook-filter](/in-depth/why-plugin-hook-filter)
 
+## Compatibility
+
+Plugin hook filters are supported in:
+- **Rollup**: 4.38.0 and later
+- **Vite**: 6.3.0 and later
+- **Rolldown**: All versions
+
+If you're authoring a plugin that needs to support older versions of these tools, see the [Fallback Implementation](#fallback-implementation) section below.
+
+## Overview
+
 One important thing to note for JavaScript plugins in Rolldown is that every plugin hook call incurs a small communication overhead between Rust and the JavaScript runtime (i.e. Node.js).
 
 Consider the following plugin:
@@ -118,3 +129,132 @@ The following properties are supported by each hook:
 > `id` is treated as a glob pattern when you pass a `string`, and treated as a regular expression when you pass a `RegExp`.
 > In the `resolve` hook, `id` must be a `RegExp`. `string`s are not allowed.
 > This is because the `id` value in `resolveId` is the exact text written in the import statement and usually not an absolute path, while glob patterns are designed to match absolute paths.
+
+## Fallback Implementation
+
+If you're authoring a plugin that needs to support older versions of Rollup (< 4.38.0) or Vite (< 6.3.0), you can provide a fallback implementation that works in both environments.
+
+The strategy is to use the object hook format with filters when available, and fall back to a regular function that checks conditions internally for older versions:
+
+```js
+export default function myPlugin() {
+  return {
+    name: 'my-plugin',
+    transform: {
+      // Filter is used by Rolldown and newer Rollup/Vite versions
+      filter: {
+        id: /\.data$/
+      },
+      // Handler is called when filter matches
+      handler(code, id) {
+        // Double-check in handler for compatibility with older versions
+        // that might not support filters
+        if (!id.endsWith('.data')) {
+          return null;
+        }
+        // perform actual transform
+        return transformedCode;
+      }
+    }
+  }
+}
+```
+
+This approach ensures your plugin will:
+- Use filters for optimal performance in Rolldown and newer Rollup/Vite versions
+- Still work correctly in older versions (they will call the handler for all files, but the internal check ensures correct behavior)
+
+> [!TIP]
+> When supporting older versions, keep both the filter pattern and the internal check in sync to avoid confusion.
+
+## Verifying Filters Work Correctly
+
+When developing plugins with filters, it's important to verify that the filters are working as expected and your hooks are only being called for the intended files. Here are some strategies:
+
+### Using Assertions in Development
+
+Add assertions in your plugin hooks during development to ensure filters are working:
+
+```js
+export default function myPlugin() {
+  return {
+    name: 'my-plugin',
+    transform: {
+      filter: {
+        id: /\.css$/
+      },
+      handler(code, id) {
+        // Assert that the filter is working correctly
+        if (process.env.NODE_ENV !== 'production') {
+          console.assert(
+            id.endsWith('.css'),
+            `Filter failed: expected CSS file but got ${id}`
+          );
+        }
+        
+        // Your transform logic
+        return transformedCode;
+      }
+    }
+  }
+}
+```
+
+### Counting Hook Invocations
+
+Track how many times your hooks are called to verify filters are reducing unnecessary invocations:
+
+```js
+export default function myPlugin() {
+  let callCount = 0;
+  
+  return {
+    name: 'my-plugin',
+    transform: {
+      filter: {
+        id: /\.css$/
+      },
+      handler(code, id) {
+        callCount++;
+        
+        // Your transform logic
+        return transformedCode;
+      }
+    },
+    buildEnd() {
+      // Report statistics
+      console.log(`[my-plugin] transform called ${callCount} times`);
+    }
+  }
+}
+```
+
+Compare the count with and without filters - you should see significantly fewer calls when filters are active.
+
+### Testing Filter Patterns
+
+Create test cases to verify your filter patterns match the intended files:
+
+```js
+// test-filter.js
+import { describe, it, expect } from 'vitest';
+
+describe('Plugin filter patterns', () => {
+  it('should match CSS files', () => {
+    const pattern = /\.css$/;
+    
+    expect(pattern.test('/path/to/styles.css')).toBe(true);
+    expect(pattern.test('/path/to/component.js')).toBe(false);
+  });
+  
+  it('should match files in specific directory', () => {
+    const pattern = /\/src\/.*\.js$/;
+    
+    expect(pattern.test('/src/index.js')).toBe(true);
+    expect(pattern.test('/node_modules/lib.js')).toBe(false);
+  });
+});
+```
+
+> [!TIP]
+> Use console.log or a debugging flag to print the `id` of files being processed during development. This helps you understand what's being passed to your hooks and refine your filter patterns.

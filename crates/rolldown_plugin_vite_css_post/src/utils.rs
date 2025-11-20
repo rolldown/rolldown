@@ -111,7 +111,7 @@ impl ViteCSSPostPlugin {
         };
 
         if let Some(url) = url_cache.inner.get(&id) {
-          magic_string.update(index, index + pos + 2, url.clone());
+          magic_string.update(index, start + pos + 2, url.clone());
           continue;
         }
 
@@ -161,7 +161,7 @@ impl ViteCSSPostPlugin {
           .to_asset_url_in_js()?;
 
         url_cache.inner.insert(id, url.clone());
-        magic_string.update(index, index + pos + 2, url);
+        magic_string.update(index, start + pos + 2, url);
       }
     }
     Ok(())

@@ -5,8 +5,19 @@
   "scripts": {
     "dev": "vitepress dev",
     "build": "vitepress build",
+<<<<<<< HEAD
     "preview": "vitepress preview",
     "generate": "node .vitepress/scripts/generate-reference.ts"
+=======
+    "preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "oxc-minify": "catalog:",
+    "sharp": "^0.34.5",
+    "vitepress": "catalog:",
+    "vitepress-plugin-group-icons": "catalog:",
+    "vitepress-plugin-llms": "catalog:"
+>>>>>>> 222beaba9 (docs: add dynamic og)
   },
   "dependencies": {
     "vue": "catalog:"

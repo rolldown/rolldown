@@ -156,7 +156,10 @@ pkg/
 
 # vitepress
 docs/.vitepress/cache
+<<<<<<< HEAD
 docs/reference
+=======
+>>>>>>> 222beaba9 (docs: add dynamic og)
 docs/public/og
 
 # ci release avoid lerna error: Working tree has uncommitted changes
@@ -179,6 +182,7 @@ crates/rolldown_devtools_action/bindings/**
 # AI config
 .claude
 CLAUDE.local.md
+<<<<<<< HEAD
 .sisyphus
 
 # workaround for https://github.com/anthropics/claude-code/issues/4928
@@ -186,3 +190,5 @@ nul
 
 # Zed local config
 .zed
+=======
+>>>>>>> 222beaba9 (docs: add dynamic og)

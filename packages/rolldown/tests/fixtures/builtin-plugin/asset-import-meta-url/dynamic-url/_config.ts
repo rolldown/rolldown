@@ -8,6 +8,7 @@ export default defineTest({
     plugins: [
       viteAssetImportMetaUrlPlugin({
         clientEntry: '',
+        tryFsResolve: () => undefined,
       }),
     ],
   },

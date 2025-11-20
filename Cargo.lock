@@ -3141,12 +3141,14 @@ name = "rolldown_plugin_vite_asset_import_meta_url"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "derive_more",
  "oxc",
  "rolldown_ecmascript_utils",
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_utils",
  "string_wizard",
+ "sugar_path",
 ]
 
 [[package]]

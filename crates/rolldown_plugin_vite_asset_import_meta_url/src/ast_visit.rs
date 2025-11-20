@@ -7,7 +7,7 @@ use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_plugin_utils::inject_query;
 
 pub struct NewUrlVisitor<'a, 'b> {
-  pub urls: Vec<(String, oxc::span::Span)>,
+  pub urls: &'a mut Vec<(String, oxc::span::Span)>,
   pub s: &'a mut Option<string_wizard::MagicString<'b>>,
   pub code: &'b str,
   pub ctx: &'a PluginContext,

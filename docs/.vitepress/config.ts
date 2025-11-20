@@ -430,10 +430,10 @@ const config = defineConfig({
       text: 'Edit this page on GitHub',
     },
   },
-  async transformPageData(pageData) {
+  async transformPageData(pageData, ctx) {
     // Automatically handle OG images for all markdown files.
     if (!pageData.frontmatter.image && pageData.filePath !== 'index.md') {
-      await addOgImage(pageData, {
+      await addOgImage(pageData, ctx, {
         domain: 'https://rolldown.rs',
         maxTitleSizePerLine: 16,
       });

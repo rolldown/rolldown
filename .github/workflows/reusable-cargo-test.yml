@@ -18,7 +18,10 @@ jobs:
     name: Cargo Test
     runs-on: ${{ inputs.os }}
     steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          submodules: true # Pull submodules for additional files
+          persist-credentials: false
 
       - name: Setup Rust
         uses: oxc-project/setup-rust@ecabb7322a2ba5aeedb3612d2a40b86a85cee235 # v1.0.11

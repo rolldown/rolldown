@@ -155,7 +155,11 @@ impl<'a> HmrStage<'a> {
     changed_file_paths: &[String],
     clients: &[ClientHmrInput<'_>],
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
-    tracing::debug!(target: "hmr", "compute_hmr_update_for_file_changes: {:?}", changed_file_paths);
+    tracing::trace!(
+      "[HmrStage] starts computing HMR updates\n - changed_file_paths: {:#?}\n - clients: {:#?}",
+      changed_file_paths,
+      clients.iter().map(|c| c.client_id).collect::<Vec<_>>(),
+    );
 
     // 1. Identify changed modules
     let mut changed_modules = FxIndexSet::default();
@@ -176,10 +180,10 @@ impl<'a> HmrStage<'a> {
       }
     }
 
-    tracing::debug!(
-      target: "hmr",
-      "initial changed modules {:?}",
-      changed_modules.iter()
+    tracing::trace!(
+      "[HmrStage] map changed file paths to module idxs\n - changed_modules: {:#?}",
+      changed_modules
+        .iter()
         .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
         .collect::<Vec<_>>(),
     );
@@ -212,16 +216,16 @@ impl<'a> HmrStage<'a> {
       let prerequisites =
         self.compute_out_hmr_prerequisites(stale_modules, first_invalidated_by.as_deref(), client);
 
-      tracing::debug!(
-        target: "hmr",
-        "computed prerequisites for client {}: boundaries {:?}, require_full_reload: {}",
+      tracing::trace!(
+        "[HmrStage] computed prerequisites for client {}\n - require_full_reload: {}\n - boundaries: {:#?}",
         client.client_id,
-        prerequisites.boundaries.iter()
+        prerequisites.require_full_reload,
+        prerequisites
+          .boundaries
+          .iter()
           .map(|boundary| self.module_table().modules[boundary.boundary].stable_id())
           .collect::<Vec<_>>(),
-        prerequisites.require_full_reload,
       );
-
       clients_prerequisites.push((client.client_id.to_string(), prerequisites));
     }
 
@@ -779,6 +783,10 @@ impl<'a> HmrStage<'a> {
     }
 
     if module.is_hmr_self_accepting_module() {
+      tracing::trace!(
+        "[HmrStage] module {} is self-accepting, stop propagation here",
+        module.stable_id,
+      );
       hmr_boundaries.insert(HmrBoundary { boundary: module_idx, accepted_via: module_idx });
       return PropagateUpdateStatus::ReachHmrBoundary;
     } else if module.importers_idx.is_empty() {
@@ -798,11 +806,22 @@ impl<'a> HmrStage<'a> {
       };
 
       if !client.is_module_executed(&importer.stable_id) {
+        tracing::trace!(
+          "[HmrStage] skip importer module since it's not executed\n - importer: {}, importee: {}, client: {}",
+          self.module_table().modules[importer_idx].stable_id(),
+          module.stable_id,
+          client.client_id,
+        );
         // If this module is not registered, we simply ignore it.
         continue;
       }
 
       if importer.can_accept_hmr_dependency_for(&module.id) {
+        tracing::trace!(
+          "[HmrStage] importer {} can accept update for dependency {}, stop propagation here",
+          importer.stable_id,
+          module.stable_id,
+        );
         modules_to_be_updated.insert(module_idx);
         hmr_boundaries.insert(HmrBoundary { boundary: importer_idx, accepted_via: module_idx });
         continue;
@@ -831,6 +850,16 @@ impl<'a> HmrStage<'a> {
     first_invalidated_by: Option<&str>,
     client: &ClientHmrInput,
   ) -> HmrPrerequisites {
+    tracing::trace!(
+      "[HmrStage] starts to compute_out_hmr_prerequisites\n - client_id: {}, stale_modules: {:#?}, first_invalidated_by: {:?}",
+      client.client_id,
+      stale_modules
+        .iter()
+        .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
+        .collect::<Vec<_>>(),
+      first_invalidated_by,
+    );
+
     let mut hmr_boundaries = FxIndexSet::default();
     let mut require_full_reload = false;
     let mut full_reload_reason = None;
@@ -843,10 +872,14 @@ impl<'a> HmrStage<'a> {
       let mut boundaries = FxIndexSet::default();
 
       if !client.is_module_executed(self.module_table().modules[stale_module].stable_id()) {
+        tracing::trace!(
+          "[HmrStage] skip stale module {:?} for client {} since it's not executed",
+          self.module_table().modules[stale_module].stable_id(),
+          client.client_id,
+        );
         // If this module is not registered, we simply ignore it.
         continue;
       }
-
       let propagate_update_status = self.propagate_update(
         stale_module,
         &mut boundaries,
@@ -857,6 +890,14 @@ impl<'a> HmrStage<'a> {
 
       match propagate_update_status {
         PropagateUpdateStatus::Circular(cycle_chain) => {
+          tracing::trace!(
+            "[HmrStage] detected {} propagate into a circular import chain\n - chain: {:#?}",
+            self.module_table().modules[stale_module].stable_id(),
+            cycle_chain
+              .iter()
+              .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
+              .collect::<Vec<_>>(),
+          );
           require_full_reload = true;
           full_reload_reason = Some(format!(
             "circular import chain: {}",
@@ -869,13 +910,23 @@ impl<'a> HmrStage<'a> {
           break;
         }
         PropagateUpdateStatus::NoBoundary(idx) => {
+          tracing::trace!(
+            "[HmrStage] detected {} propagate update to {} which has no hmr boundary",
+            self.module_table().modules[stale_module].stable_id(),
+            self.module_table().modules[idx].stable_id(),
+          );
           require_full_reload = true;
           let module = &self.module_table().modules[idx];
           full_reload_reason =
             Some(format!("no hmr boundary found for module `{}`", module.stable_id()));
           break;
         }
-        PropagateUpdateStatus::ReachHmrBoundary => {}
+        PropagateUpdateStatus::ReachHmrBoundary => {
+          tracing::trace!(
+            "[HmrStage] detected {} propagate update with hmr boundaries",
+            self.module_table().modules[stale_module].stable_id(),
+          );
+        }
       }
 
       // If import.meta.hot.invalidate was already called on that module for the same update,
@@ -902,6 +953,7 @@ impl<'a> HmrStage<'a> {
   }
 }
 
+#[derive(Debug)]
 struct HmrPrerequisites {
   boundaries: FxIndexSet<HmrBoundary>,
   modules_to_be_updated: FxIndexSet<ModuleIdx>,

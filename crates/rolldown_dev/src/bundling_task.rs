@@ -98,6 +98,9 @@ impl BundlingTask {
     if self.input.require_generate_hmr_update() {
       tracing::trace!("[BundlingTask] starts to generate HMR updates");
       self.generate_hmr_updates(&mut has_full_reload_update).await?;
+      tracing::trace!(
+        "[BundlingTask] completed generating HMR updates\n - has_full_reload_update: {has_full_reload_update}"
+      );
     }
 
     // If the rebuild strategy is auto and there's a full reload update, we need to rebuild.

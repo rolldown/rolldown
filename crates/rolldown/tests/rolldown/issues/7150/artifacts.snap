@@ -3,12 +3,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
+## chunk.js
+
+```js
+// HIDDEN [rolldown:runtime]
+export { __name as t };
+```
+
 ## main.js
 
 ```js
+import { t as __name } from "./chunk.js";
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
 //#region dep.js
 function dep_default() {
 	return "anonymous default function";
@@ -26,8 +33,29 @@ __name(dep_class_default, "default");
 
 //#endregion
 //#region main.js
+var count = 100;
 assert.strictEqual(dep_default.name, "default", "Anonymous default export function name should be \"default\"");
 assert.strictEqual(dep_class_default.name, "default", "Anonymous default export class name should be \"default\"");
+var main_default = class {};
+__name(main_default, "default");
+assert.strictEqual(count, 100);
 
 //#endregion
+export { main_default as default };
+```
+
+## main2.js
+
+```js
+import { t as __name } from "./chunk.js";
+import assert from "node:assert";
+
+//#region main2.js
+var count = 100;
+function main2_default() {}
+__name(main2_default, "default");
+assert.strictEqual(count, 100);
+
+//#endregion
+export { main2_default as default };
 ```

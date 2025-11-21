@@ -4878,7 +4878,9 @@ expression: output
 
 # tests/rolldown/issues/7150
 
-- main-!~{000}~.js => main-DuEwjL39.js
+- main-!~{000}~.js => main-CLqA2wpn.js
+- main2-!~{001}~.js => main2---eBAgtF.js
+- chunk-!~{002}~.js => chunk-CALPBdpR.js
 
 # tests/rolldown/issues/duplicate_default_export
 

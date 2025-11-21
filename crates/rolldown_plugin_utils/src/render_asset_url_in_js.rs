@@ -34,21 +34,14 @@ impl RenderAssetUrlInJsEnv<'_> {
           (range, filename, false)
         }
         AssetUrlItem::PublicAsset((range, hash)) => {
-          let cache = self
-            .ctx
-            .meta()
-            .get::<PublicAssetUrlCache>()
-            .ok_or_else(|| anyhow::anyhow!("PublicAssetUrlCache missing"))?;
+          let cache =
+            self.ctx.meta().get::<PublicAssetUrlCache>().expect("PublicAssetUrlCache missing");
 
-          let filename = cache
-            .0
-            .get(hash)
-            .ok_or_else(|| {
-              anyhow::anyhow!("Can't find the cache of {}", &self.code[range.start..range.end])
-            })?
-            .to_string();
+          let url = cache.0.get(hash).ok_or_else(|| {
+            anyhow::anyhow!("Can't find the cache of {}", &self.code[range.start..range.end])
+          })?;
 
-          (range, filename, true)
+          (range, url[1..].to_owned(), true)
         }
       };
 

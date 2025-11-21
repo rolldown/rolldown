@@ -362,18 +362,11 @@ impl ViteCSSPostPlugin {
           );
         }
         AssetUrlItem::PublicAsset((range, hash)) => {
-          let cache = ctx
-            .meta()
-            .get::<PublicAssetUrlCache>()
-            .ok_or_else(|| anyhow::anyhow!("PublicAssetUrlCache missing"))?;
-
-          let public_url = cache
-            .0
-            .get(hash)
-            .ok_or_else(|| {
-              anyhow::anyhow!("Can't find the cache of {}", &css_chunk[range.clone()])
-            })?
-            .to_string();
+          let cache = ctx.meta().get::<PublicAssetUrlCache>().expect("PublicAssetUrlCache missing");
+          let url = cache.0.get(hash).ok_or_else(|| {
+            anyhow::anyhow!("Can't find the cache of {}", &css_chunk[range.clone()])
+          })?;
+          let public_url = url[1..].to_owned();
 
           let env = ToOutputFilePathEnv {
             is_ssr: self.is_ssr,

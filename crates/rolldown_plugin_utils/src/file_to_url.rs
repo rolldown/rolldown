@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::{Arc, LazyLock};
 
+use dashmap::Entry;
 use regex::Regex;
 
 use rolldown_utils::base64::to_standard_base64;
@@ -73,10 +74,14 @@ impl FileToUrlEnv<'_> {
 
     let cache =
       self.ctx.meta().get::<AssetCache>().ok_or_else(|| anyhow::anyhow!("AssetCache missing"))?;
+
+    // Fast path: check if already cached
     if let Some(cached) = cache.0.get(id.as_ref()) {
       return Ok(cached.to_string());
     }
 
+    // Slow path: compute the URL
+    // Note: We compute outside the lock to avoid holding it across await points
     let file = clean_url(&id);
     let content = std::fs::read(file)?;
 
@@ -103,8 +108,21 @@ impl FileToUrlEnv<'_> {
       rolldown_utils::concat_string!("__VITE_ASSET__", reference_id, "__", postfix)
     };
 
-    cache.0.insert(id.to_string(), url.clone());
-    Ok(url)
+    // Use entry API to atomically insert only if not present
+    // If another thread inserted while we were computing, use their value instead
+    let final_url = match cache.0.entry(id.to_string()) {
+      Entry::Occupied(entry) => {
+        // Another thread already inserted a value, use theirs to maintain consistency
+        entry.get().clone()
+      }
+      Entry::Vacant(entry) => {
+        // We're the first, insert our computed value
+        entry.insert(url.clone());
+        url
+      }
+    };
+
+    Ok(final_url)
   }
 
   async fn should_inline(

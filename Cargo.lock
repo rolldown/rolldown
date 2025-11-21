@@ -3100,6 +3100,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "cow-utils",
+ "dashmap",
  "derive_more",
  "itertools",
  "memchr",

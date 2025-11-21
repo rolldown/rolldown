@@ -147,7 +147,7 @@ impl ViteCSSPostPlugin {
         let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
         let chunk_metadata = vite_metadata.get_or_insert_default(ctx.env.host_id.into());
 
-        chunk_metadata.imported_assets.insert(clean_url(&reference_id).into());
+        chunk_metadata.imported_assets.insert(clean_url(&filename).into());
 
         let url = ctx
           .env

@@ -1299,35 +1299,24 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               let canonical_name_for_default_export_ref =
                 self.canonical_name_for(self.ctx.module.default_export_ref);
 
-              // Check if we need to add __name() helper for parenthesized function/class expressions
+              // Check if we need to add __name() helper for anonymous function/class expressions or arrow functions
               let init_expr = expr.take_in(self.alloc);
               if self.ctx.options.keep_names {
-                // Unwrap parenthesized expressions to check the inner expression
                 let inner_expr = init_expr.without_parentheses();
-                // Check if it's an anonymous function or class
                 let binding = match inner_expr {
-                  ast::Expression::FunctionExpression(func) => Some(
-                    func
-                      .id
-                      .as_ref()
-                      .map(|item| item.name.into_compact_str())
-                      .unwrap_or_else(|| CompactStr::from("default")),
-                  ),
-                  ast::Expression::ClassExpression(class) => Some(
-                    class
-                      .id
-                      .as_ref()
-                      .map(|binding| binding.name.into_compact_str())
-                      .unwrap_or_else(|| CompactStr::from("default")),
-                  ),
+                  ast::Expression::FunctionExpression(func) if func.id.is_none() => {
+                    Some(CompactStr::from("default"))
+                  }
+                  ast::Expression::ClassExpression(class) if class.id.is_none() => {
+                    Some(CompactStr::from("default"))
+                  }
+                  ast::Expression::ArrowFunctionExpression(_) => {
+                    Some(CompactStr::from("default"))
+                  }
                   _ => None,
                 };
 
                 if let Some(binding) = binding {
-                  // Schedule a separate __name() call statement, similar to FunctionExpression in VariableDeclaration
-                  // We need to do this here instead of during visit_declaration because this is an export default
-                  // Note: We can't use canonical_ref_for_runtime here because the runtime module might not be finalized yet
-                  // Instead, we mark this for later processing by scheduling it as a statement to insert
                   let insert_position = self.cur_stmt_index + 1;
                   self.keep_name_statement_to_insert.push((
                     insert_position,

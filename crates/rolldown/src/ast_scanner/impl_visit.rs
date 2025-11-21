@@ -433,13 +433,15 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       }
       decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
         let inner_expr = decl.to_expression().without_parentheses();
-        // Unwrap parenthesized expressions to check the inner expression
         match inner_expr {
-          Expression::FunctionExpression(_func) => {
+          Expression::FunctionExpression(func) if func.id.is_none() => {
             self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
           }
-          Expression::ClassExpression(_class) => {
+          Expression::ClassExpression(class) if class.id.is_none() => {
             self.current_stmt_info.meta.insert(StmtInfoMeta::ClassExpr);
+          }
+          Expression::ArrowFunctionExpression(_) => {
+            self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
           }
           _ => {}
         }

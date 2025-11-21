@@ -455,9 +455,10 @@ impl Plugin for ViteHtmlPlugin {
       }
     }
 
-    self
-      .html_result_map
-      .insert((args.id.to_string(), public_path), (s.to_string(), every_script_is_async));
+    self.html_result_map.insert(
+      (args.id.to_string(), public_base.to_string()),
+      (s.to_string(), every_script_is_async),
+    );
 
     if self.module_preload.options().is_some_and(|v| v.polyfill)
       && (some_scripts_are_async || some_scripts_are_defer)

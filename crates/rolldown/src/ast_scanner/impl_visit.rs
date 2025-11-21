@@ -432,12 +432,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         }
       }
       decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
-        let expr = decl.to_expression();
+        let inner_expr = decl.to_expression().without_parentheses();
         // Unwrap parenthesized expressions to check the inner expression
-        let inner_expr = match expr {
-          Expression::ParenthesizedExpression(paren) => &paren.expression,
-          _ => expr,
-        };
         // Check if it's an anonymous function or class
         match inner_expr {
           Expression::FunctionExpression(func) if func.id.is_none() => {

@@ -6,6 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+import assert from "node:assert";
+
 // HIDDEN [rolldown:runtime]
 //#region dep.js
 var dep_default = (function() {});
@@ -17,9 +19,15 @@ var dep_class_default = class {};
 __name(dep_class_default, "default");
 
 //#endregion
+//#region dep-named-default.js
+var dep_named_default_default = (function name() {});
+__name(dep_named_default_default, "name");
+
+//#endregion
 //#region main.js
-console.log(dep_default.name);
-console.log(dep_class_default.name);
+assert.strictEqual(dep_default.name, "default");
+assert.strictEqual(dep_class_default.name, "default");
+assert.strictEqual(dep_named_default_default.name, "name");
 
 //#endregion
 ```

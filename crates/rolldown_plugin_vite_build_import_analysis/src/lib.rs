@@ -14,9 +14,9 @@ use oxc::ast_visit::VisitMut;
 use rolldown_common::{Output, side_effects::HookSideEffects};
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_plugin::{
-  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, HookUsage, Plugin,
-  PluginContext,
+  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookRenderChunkOutput, HookResolveIdArgs,
+  HookResolveIdOutput, HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn,
+  HookUsage, Plugin, PluginContext,
 };
 use rolldown_plugin_utils::{
   AssetUrlResult, ModulePreload, RenderBuiltUrl, ToOutputFilePathEnv,
@@ -32,6 +32,7 @@ use crate::{
 
 use self::ast_visit::BuildImportAnalysisVisitor;
 
+const IS_MODERN_FLAG: &str = "__VITE_IS_MODERN__";
 const PRELOAD_HELPER_ID: &str = "\0vite/preload-helper.js";
 
 #[derive(derive_more::Debug)]
@@ -56,6 +57,18 @@ pub struct ViteBuildImportAnalysisPlugin {
 impl Plugin for ViteBuildImportAnalysisPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-build-import-analysis")
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    if self.v2.is_some() {
+      HookUsage::ResolveId
+        | HookUsage::Load
+        | HookUsage::TransformAst
+        | HookUsage::RenderChunk
+        | HookUsage::GenerateBundle
+    } else {
+      HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst
+    }
   }
 
   async fn resolve_id(
@@ -95,6 +108,29 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
       visitor.visit_program(fields.program);
     });
     Ok(ast)
+  }
+
+  async fn render_chunk(
+    &self,
+    _ctx: &PluginContext,
+    args: &rolldown_plugin::HookRenderChunkArgs<'_>,
+  ) -> rolldown_plugin::HookRenderChunkReturn {
+    if args.code.contains(IS_MODERN_FLAG) {
+      let is_modern = args.options.format.is_esm();
+      let replacement = if is_modern { "true" } else { "false" };
+
+      let mut code = args.code.clone();
+      for (index, _) in args.code.match_indices(IS_MODERN_FLAG) {
+        let bytes = unsafe { code.as_bytes_mut() };
+        let replacement_bytes = replacement.as_bytes();
+        bytes[index..index + replacement_bytes.len()].copy_from_slice(replacement_bytes);
+        bytes[index + replacement_bytes.len()..index + IS_MODERN_FLAG.len()].fill(b' ');
+      }
+
+      Ok(Some(HookRenderChunkOutput { code, map: None }))
+    } else {
+      Ok(None)
+    }
   }
 
   #[expect(clippy::too_many_lines)]
@@ -381,13 +417,5 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
     }
 
     Ok(())
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    if self.v2.is_some() {
-      HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst | HookUsage::GenerateBundle
-    } else {
-      HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst
-    }
   }
 }

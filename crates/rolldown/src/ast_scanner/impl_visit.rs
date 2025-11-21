@@ -434,7 +434,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
         let inner_expr = decl.to_expression().without_parentheses();
         // Unwrap parenthesized expressions to check the inner expression
-        // Check if it's an anonymous function or class
         match inner_expr {
           Expression::FunctionExpression(_func) => {
             self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);

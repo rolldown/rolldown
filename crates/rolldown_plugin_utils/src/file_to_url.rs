@@ -90,7 +90,7 @@ impl FileToUrlEnv<'_> {
     } else {
       let path = Path::new(file);
       let name = path.file_name().map(|v| v.to_string_lossy().into());
-      let original_file_name = path.relative(self.root).to_string_lossy().into_owned();
+      let original_file_name = path.relative(self.root).to_slash_lossy().into_owned();
       let emitted_asset = rolldown_common::EmittedAsset {
         name,
         source: content.into(),

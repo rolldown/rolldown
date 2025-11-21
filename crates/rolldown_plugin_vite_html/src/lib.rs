@@ -672,7 +672,7 @@ impl Plugin for ViteHtmlPlugin {
       ctx
         .emit_file_async(rolldown_common::EmittedAsset {
           name: None,
-          original_file_name: Some(id.clone()),
+          original_file_name: Some(normalize_path(id).into_owned()),
           file_name: Some(relative_url_path.into()),
           source: rolldown_common::StrOrBytes::Str(result),
         })

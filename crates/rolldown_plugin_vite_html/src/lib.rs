@@ -587,9 +587,8 @@ impl Plugin for ViteHtmlPlugin {
             };
             for dep in resolved_deps {
               let mut tag = HtmlTagDescriptor::new("link");
-              let url = self
-                .to_output_file_path(&chunk.filename, assets_base, false, &relative_url_path)
-                .await?;
+              let url =
+                self.to_output_file_path(&dep, assets_base, false, &relative_url_path).await?;
               tag.attrs = Some(FxHashMap::from_iter([
                 ("rel", AttrValue::String("modulepreload".to_owned())),
                 ("crossorigin", AttrValue::Boolean(true)),

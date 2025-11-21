@@ -642,15 +642,15 @@ impl ViteCSSPostPlugin {
 
         Regex::new(&if args.options.format.is_esm() {
           rolldown_utils::concat_string!(
-            r#"\\bimport\\s*["'][^"']*(?:"#,
+            r#"\bimport\s*["'][^"']*(?:"#,
             empty_chunk_files,
             r#")["'];"#
           )
         } else {
           rolldown_utils::concat_string!(
-            r#"(\\b|,\\s*)require\\(\\s*["'\`][^"'\`]*(?:"#,
+            r#"(\b|,\s*)require\(\s*["'\`][^"'\`]*(?:"#,
             empty_chunk_files,
-            r#")["'\`]\\)(;|,)"#
+            r#")["'\`]\)(;|,)"#
           )
         })
         .unwrap()

@@ -448,8 +448,17 @@ impl LinkStage<'_> {
     module_namespace_included_reason: &mut IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>,
     used_symbol_refs: &mut FxHashSet<SymbolRef>,
   ) {
-    // Including all depended runtime symbol
-    let iter = self.metas.par_iter().map(|item| item.depended_runtime_helper);
+    // Including all depended runtime symbol from included modules only.
+    // Eliminated modules may have runtime helpers set (for propagation to importers),
+    // but we should only include the runtime if an included module actually needs it.
+    let iter = self.module_table.modules.par_iter().zip_eq(self.metas.par_iter()).filter_map(
+      |(module, meta)| {
+        module
+          .as_normal()
+          .filter(|m| is_module_included_vec[m.idx])
+          .map(|_| meta.depended_runtime_helper)
+      },
+    );
 
     #[cfg(not(target_family = "wasm"))]
     let depended_runtime_helper = iter.reduce(RuntimeHelper::default, |a, b| a | b);

@@ -4702,7 +4702,7 @@ expression: output
 
 # tests/rolldown/issues/4585
 
-- main-!~{000}~.js => main-EaDHUnOh.js
+- main-!~{000}~.js => main-qqQZYPJE.js
 
 # tests/rolldown/issues/4780
 
@@ -4859,6 +4859,10 @@ expression: output
 
 - main-!~{000}~.js => main-uyjEQE00.js
 - lib-!~{001}~.js => lib-CTg-KV6l.js
+
+# tests/rolldown/issues/6943
+
+- main.js => main.js
 
 # tests/rolldown/issues/6992
 

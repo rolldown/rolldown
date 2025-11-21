@@ -1298,24 +1298,32 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               let expr = decl.to_expression_mut();
               let canonical_name_for_default_export_ref =
                 self.canonical_name_for(self.ctx.module.default_export_ref);
-              
+
               // Check if we need to add __name() helper for anonymous functions/classes in parentheses
               let init_expr = expr.take_in(self.alloc);
               if self.ctx.options.keep_names {
                 // Unwrap parenthesized expressions to check the inner expression
-                let inner_expr = match &init_expr {
-                  ast::Expression::ParenthesizedExpression(paren) => &paren.expression,
-                  _ => &init_expr,
-                };
-                
+                let inner_expr = init_expr.without_parentheses();
                 // Check if it's an anonymous function or class
-                let is_anonymous = match inner_expr {
-                  ast::Expression::FunctionExpression(func) => func.id.is_none(),
-                  ast::Expression::ClassExpression(class) => class.id.is_none(),
-                  _ => false,
+                let binding = match inner_expr {
+                  ast::Expression::FunctionExpression(func) => Some(
+                    func
+                      .id
+                      .as_ref()
+                      .map(|item| item.name.into_compact_str())
+                      .unwrap_or_else(|| CompactStr::from("default")),
+                  ),
+                  ast::Expression::ClassExpression(class) => Some(
+                    class
+                      .id
+                      .as_ref()
+                      .map(|binding| binding.name.into_compact_str())
+                      .unwrap_or_else(|| CompactStr::from("default")),
+                  ),
+                  _ => None,
                 };
-                
-                if is_anonymous {
+
+                if let Some(binding) = binding {
                   // Wrap the expression with __name() call, similar to FunctionExpression in VariableDeclaration
                   // We need to do this here instead of during visit_declaration because this is an export default
                   // Note: We can't use canonical_ref_for_runtime here because the runtime module might not be finalized yet
@@ -1323,15 +1331,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   let insert_position = self.cur_stmt_index + 1;
                   self.keep_name_statement_to_insert.push((
                     insert_position,
-                    CompactStr::new("default"),
+                    binding,
                     canonical_name_for_default_export_ref.clone(),
                   ));
                 }
               }
-              
-              top_stmt = self
-                .snippet
-                .var_decl_stmt(canonical_name_for_default_export_ref, init_expr);
+
+              top_stmt =
+                self.snippet.var_decl_stmt(canonical_name_for_default_export_ref, init_expr);
             }
             ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
               // "export default function() {}" => "function default() {}"

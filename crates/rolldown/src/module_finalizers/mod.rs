@@ -1299,7 +1299,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               let canonical_name_for_default_export_ref =
                 self.canonical_name_for(self.ctx.module.default_export_ref);
 
-              // Check if we need to add __name() helper for anonymous functions/classes in parentheses
+              // Check if we need to add __name() helper for parenthesized function/class expressions
               let init_expr = expr.take_in(self.alloc);
               if self.ctx.options.keep_names {
                 // Unwrap parenthesized expressions to check the inner expression

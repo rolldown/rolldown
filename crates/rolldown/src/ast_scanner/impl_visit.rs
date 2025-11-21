@@ -436,10 +436,10 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         // Unwrap parenthesized expressions to check the inner expression
         // Check if it's an anonymous function or class
         match inner_expr {
-          Expression::FunctionExpression(func) if func.id.is_none() => {
+          Expression::FunctionExpression(_func) => {
             self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
           }
-          Expression::ClassExpression(class) if class.id.is_none() => {
+          Expression::ClassExpression(_class) => {
             self.current_stmt_info.meta.insert(StmtInfoMeta::ClassExpr);
           }
           _ => {}

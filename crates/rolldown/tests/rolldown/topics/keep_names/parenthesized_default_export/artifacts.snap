@@ -19,14 +19,19 @@ var dep_class_default = class {};
 __name(dep_class_default, "default");
 
 //#endregion
+//#region dep-arrow.js
+var dep_arrow_default = (() => {});
+__name(dep_arrow_default, "default");
+
+//#endregion
 //#region dep-named-default.js
 var dep_named_default_default = (function name() {});
-__name(dep_named_default_default, "name");
 
 //#endregion
 //#region main.js
 assert.strictEqual(dep_default.name, "default");
 assert.strictEqual(dep_class_default.name, "default");
+assert.strictEqual(dep_arrow_default.name, "default");
 assert.strictEqual(dep_named_default_default.name, "name");
 
 //#endregion

@@ -1324,7 +1324,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 };
 
                 if let Some(binding) = binding {
-                  // Wrap the expression with __name() call, similar to FunctionExpression in VariableDeclaration
+                  // Schedule a separate __name() call statement, similar to FunctionExpression in VariableDeclaration
                   // We need to do this here instead of during visit_declaration because this is an export default
                   // Note: We can't use canonical_ref_for_runtime here because the runtime module might not be finalized yet
                   // Instead, we mark this for later processing by scheduling it as a statement to insert

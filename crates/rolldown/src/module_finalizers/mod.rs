@@ -1310,9 +1310,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   ast::Expression::ClassExpression(class) if class.id.is_none() => {
                     Some(CompactStr::from("default"))
                   }
-                  ast::Expression::ArrowFunctionExpression(_) => {
-                    Some(CompactStr::from("default"))
-                  }
+                  ast::Expression::ArrowFunctionExpression(_) => Some(CompactStr::from("default")),
                   _ => None,
                 };
 

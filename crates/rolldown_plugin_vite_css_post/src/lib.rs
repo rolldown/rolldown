@@ -28,8 +28,9 @@ use string_wizard::SourceMapOptions;
 pub type IsLegacyFn =
   dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send>> + Send + Sync;
 
-pub type CSSMinifyFn =
-  dyn Fn(String) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send>> + Send + Sync;
+pub type CSSMinifyFn = dyn Fn(String, bool) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send>>
+  + Send
+  + Sync;
 
 #[expect(clippy::struct_excessive_bools)]
 #[derive(derive_more::Debug, Default)]
@@ -137,7 +138,7 @@ impl Plugin for ViteCSSPostPlugin {
 
     let code = if inlined {
       if let Some(ref css_minify) = self.css_minify {
-        css = Cow::Owned(css_minify(css.into_owned()).await?);
+        css = Cow::Owned(css_minify(css.into_owned(), true).await?);
       }
       rolldown_utils::concat_string!("export default ", serde_json::to_string(&css)?)
     } else {

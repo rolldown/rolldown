@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region foo.json
+var foo_default = [[1, 2]];
+
+//#endregion
+//#region main.js
+assert.deepEqual(foo_default.flat(), [1, 2]);
+
+//#endregion
+```

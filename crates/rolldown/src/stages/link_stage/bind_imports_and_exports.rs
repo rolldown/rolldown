@@ -410,10 +410,11 @@ impl LinkStage<'_> {
                     Module::Normal(module) => module,
                     Module::External(_) => return,
                   };
-                let mut is_namespace_ref = canonical_ref_owner.namespace_object_ref
-                  == canonical_ref
-                  || (matches!(canonical_ref_owner.module_type, ModuleType::Json)
+                let is_json_import_ns =
+                  (matches!(canonical_ref_owner.module_type, ModuleType::Json)
                     && member_expr_ref.object_ref_type == MemberExprObjectReferencedType::Default);
+                let mut is_namespace_ref =
+                  canonical_ref_owner.namespace_object_ref == canonical_ref || is_json_import_ns;
                 let mut cursor = 0;
                 while cursor < member_expr_ref.prop_and_span_list.len() && is_namespace_ref {
                   let (name, _related_span) = &member_expr_ref.prop_and_span_list[cursor];
@@ -429,13 +430,17 @@ impl LinkStage<'_> {
                       resolved_map.insert(
                         member_expr_ref.span,
                         MemberExprRefResolution {
-                          resolved: None,
+                          resolved: if is_json_import_ns { Some(canonical_ref) } else { None },
                           prop_and_related_span_list: member_expr_ref.prop_and_span_list[cursor..]
                             .to_vec(),
                           depended_refs: vec![],
                           target_commonjs_exported_symbol: None,
                         },
                       );
+                    }
+                    if !self.metas[canonical_ref_owner.idx].has_dynamic_exports
+                      && !is_json_import_ns
+                    {
                       warnings.push(
                         BuildDiagnostic::import_is_undefined(
                           module.id.resource_id().clone(),

@@ -6092,6 +6092,10 @@ expression: output
 
 - main-!~{000}~.js => main-DmP_iUaI.js
 
+# tests/rolldown/tree_shaking/json_undefined_property
+
+- main-!~{000}~.js => main-CeMP5Msy.js
+
 # tests/rolldown/tree_shaking/multi-declarator
 
 - main-!~{000}~.js => main-BnY28741.js

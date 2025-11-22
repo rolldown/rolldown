@@ -45,22 +45,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 # Assets
 
-## assets/file-kQXAkSQM.file
-
-## copy.js
-
-```js
-//#region file.file
-var file_default = "assets/file-kQXAkSQM.file";
-
-//#endregion
-//#region copy.copy
-copy;
-var default$1 = void 0;
-
-//#endregion
-export { file_default as n, default$1 as t };
-```
+## assets/file-CaFPrvHq.file
 
 ## dynamic.js
 
@@ -75,7 +60,7 @@ export { dynamic_default as default };
 ## entry.js
 
 ```js
-import { n as file_default, t as default$1 } from "./copy.js";
+import { n as file_default, t as default$1 } from "./entry2.js";
 import a from "extern-esm";
 
 // HIDDEN [rolldown:runtime]
@@ -105,7 +90,7 @@ export { exported };
 
 ```css
 a { background: url(inline.svg) }
-b { background: url(file.file) }
+b { background: url(assets/file-CaFPrvHq.file) }
 c { background: url(copy.copy) }
 d { background: url(extern.png) }
 
@@ -114,6 +99,14 @@ d { background: url(extern.png) }
 ## entry2.js
 
 ```js
-import "./copy.js";
+//#region file.file
+var file_default = "assets/file-CaFPrvHq.file";
 
+//#endregion
+//#region copy.copy
+copy;
+var default$1 = void 0;
+
+//#endregion
+export { file_default as n, default$1 as t };
 ```

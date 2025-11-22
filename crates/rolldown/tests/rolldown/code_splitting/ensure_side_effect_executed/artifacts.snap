@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry.js
+## entry2_js.js
 
 ```js
 //#region entry.js
@@ -12,16 +12,8 @@ globalThis.sideEffectExecuted = true;
 //#endregion
 ```
 
-## entry2_js.js
-
-```js
-import "./entry.js";
-
-```
-
 ## entry_js.js
 
 ```js
-import "./entry.js";
 
 ```

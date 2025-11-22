@@ -124,6 +124,7 @@ impl GenerateStage<'_> {
         // bits_to_chunk.insert(bits, chunk); // This line is intentionally commented out because `bits_to_chunk` is not used in this loop. It is updated elsewhere in the `init_entry_point` and `split_chunks` methods.
         entry_module_to_entry_chunk.insert(module.idx, chunk_idx);
       }
+      chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
     } else {
       self.init_entry_point(
         &mut chunk_graph,
@@ -132,6 +133,7 @@ impl GenerateStage<'_> {
         entries_len,
         &input_base,
       );
+      chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
       self
         .split_chunks(&mut index_splitting_info, &mut chunk_graph, &mut bits_to_chunk, &input_base)
         .await?;
@@ -238,7 +240,6 @@ impl GenerateStage<'_> {
       .collect::<Vec<_>>();
 
     chunk_graph.sorted_chunk_idx_vec = sorted_chunk_idx_vec;
-    chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
 
     self.find_entry_level_external_module(&mut chunk_graph);
 
@@ -824,7 +825,15 @@ impl GenerateStage<'_> {
       chunk_graph.chunk_table.iter_enumerated().map(|(idx, _)| idx).collect::<FxHashSet<_>>();
     // extract entry chunk module relation
     // this means `key_chunk` also referenced all entry module in value `vec`
-    for (bits, modules) in pending_common_chunks {
+    for (bits, mut modules) in pending_common_chunks {
+      let included_entry_chunk = modules
+        .iter()
+        .filter_map(|item| {
+          let chunk_idx = chunk_graph.entry_module_to_entry_chunk.get(item)?;
+          let chunk = &chunk_graph.chunk_table[*chunk_idx];
+          matches!(chunk.kind, ChunkKind::EntryPoint { meta, ..} if meta.contains(ChunkMeta::UserDefinedEntry)).then_some(*chunk_idx)
+        })
+        .collect::<FxHashSet<ChunkIdx>>();
       let chunk_idxs = bits
         .index_of_one()
         .into_iter()
@@ -833,8 +842,20 @@ impl GenerateStage<'_> {
         // refer https://github.com/rolldown/rolldown/blob/d373794f5ce5b793ac751bbfaf101cc9cdd261d9/crates/rolldown/src/stages/generate_stage/code_splitting.rs?plain=1#L311-L313
         .filter(|idx| entry_chunk_idx.contains(idx))
         .collect_vec();
-      let item =
-        Self::try_insert_into_exists_chunk(&chunk_idxs, &static_entry_chunk_reference, chunk_graph);
+
+      let item = Self::try_insert_into_exists_chunk(
+        &chunk_idxs,
+        &included_entry_chunk,
+        &static_entry_chunk_reference,
+        chunk_graph,
+      );
+      dbg!(&item);
+      for m in modules.iter() {
+        dbg!(&self.link_output.module_table[*m].stable_id());
+        let item = chunk_graph.entry_module_to_entry_chunk.get(m);
+        dbg!(item);
+      }
+      dbg!(&chunk_idxs);
       match item {
         CombineChunkRet::Entry(chunk_idx)
           if !matches!(
@@ -875,11 +896,17 @@ impl GenerateStage<'_> {
           bits_to_chunk.insert(bits, chunk_id);
         }
       }
+
+      // for m in modules.iter() {
+      //   dbg!(&self.link_output.module_table[*m].stable_id());
+      //   dbg!(&chunk_graph.entry_module_to_entry_chunk.get(m));
+      // }
     }
   }
 
   fn try_insert_into_exists_chunk(
     chunk_idxs: &[ChunkIdx],
+    included_entry_chunk: &FxHashSet<ChunkIdx>,
     entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
     chunk_graph: &ChunkGraph,
   ) -> CombineChunkRet {
@@ -908,9 +935,18 @@ impl GenerateStage<'_> {
         let mid = chunk_idxs.len() / 2;
         let left = &chunk_idxs[0..mid];
         let right = &chunk_idxs[mid..];
-        let left_ret = Self::try_insert_into_exists_chunk(left, entry_chunk_reference, chunk_graph);
-        let right_ret =
-          Self::try_insert_into_exists_chunk(right, entry_chunk_reference, chunk_graph);
+        let left_ret = Self::try_insert_into_exists_chunk(
+          left,
+          included_entry_chunk,
+          entry_chunk_reference,
+          chunk_graph,
+        );
+        let right_ret = Self::try_insert_into_exists_chunk(
+          right,
+          included_entry_chunk,
+          entry_chunk_reference,
+          chunk_graph,
+        );
         match (left_ret, right_ret) {
           (CombineChunkRet::DynamicVec(mut left), CombineChunkRet::DynamicVec(right)) => {
             left.extend(right);
@@ -925,9 +961,44 @@ impl GenerateStage<'_> {
             });
             if ret { CombineChunkRet::Entry(chunk_idx) } else { CombineChunkRet::None }
           }
-          (_, CombineChunkRet::None)
-          | (CombineChunkRet::None, _)
-          | (CombineChunkRet::Entry(_), CombineChunkRet::Entry(_)) => CombineChunkRet::None,
+          (_, CombineChunkRet::None) | (CombineChunkRet::None, _) => CombineChunkRet::None,
+          (CombineChunkRet::Entry(chunk1), CombineChunkRet::Entry(chunk2)) => {
+            dbg!(&chunk1);
+            dbg!(&chunk2);
+            // // When two entries need a shared module, only merge if exactly one allows it
+            // // to avoid potential symbol conflicts when both entries have local declarations
+            let chunk1_allow = !matches!(
+              chunk_graph.chunk_table[chunk1].preserve_entry_signature,
+              Some(PreserveEntrySignatures::Strict)
+            );
+            let chunk2_allow = !matches!(
+              chunk_graph.chunk_table[chunk2].preserve_entry_signature,
+              Some(PreserveEntrySignatures::Strict)
+            );
+            //
+            match (chunk1_allow, chunk2_allow) {
+              (true, false) if !included_entry_chunk.contains(&chunk2) => {
+                CombineChunkRet::Entry(chunk1)
+              }
+              (false, true) if !included_entry_chunk.contains(&chunk1) => {
+                CombineChunkRet::Entry(chunk2)
+              }
+              (true, true) => {
+                if included_entry_chunk.contains(&chunk1) && included_entry_chunk.contains(&chunk2)
+                {
+                  CombineChunkRet::None
+                } else if included_entry_chunk.contains(&chunk1) {
+                  CombineChunkRet::Entry(chunk1)
+                } else if included_entry_chunk.contains(&chunk2) {
+                  CombineChunkRet::Entry(chunk2)
+                } else {
+                  CombineChunkRet::None
+                }
+              }
+              // Both strict or both non-strict: create Common chunk
+              _ => CombineChunkRet::None,
+            }
+          }
           (CombineChunkRet::Entry(chunk_idx), CombineChunkRet::DynamicVec(dynamic_entry_idxs)) => {
             let ret = dynamic_entry_idxs.iter().all(|idx| {
               entry_chunk_reference

@@ -680,9 +680,8 @@ expression: output
 
 # tests/esbuild/default/duplicate_entry_point
 
-- entry-!~{000}~.js => entry-DEiUr_IG.js
-- entry2-!~{001}~.js => entry2-DrdYK-Uc.js
-- entry-!~{002}~.js => entry-CSdCysp8.js
+- entry-!~{000}~.js => entry-CMXZovLt.js
+- entry2-!~{001}~.js => entry2-BgX5zP6J.js
 
 # tests/esbuild/default/duplicate_property_warning
 
@@ -1267,11 +1266,10 @@ expression: output
 
 # tests/esbuild/default/metafile_various_cases
 
-- entry-!~{001}~.js => entry-C8lVrsYF.js
-- entry-!~{000}~.js => entry-DA1vO8rv.js
-- copy-!~{002}~.js => copy-DDA5F9k1.js
-- dynamic-!~{005}~.js => dynamic-BHpZ7YgO.js
-- assets/file-C2vEMN7j.file
+- entry-!~{000}~.js => entry-Bvni9alx.js
+- entry-!~{001}~.js => entry-CBf1HsXX.js
+- dynamic-!~{003}~.js => dynamic-7T5zXGBa.js
+- assets/file-CLC8VbDV.file
 - entry2.css
 
 # tests/esbuild/default/metafile_very_long_external_paths
@@ -1359,9 +1357,8 @@ expression: output
 # tests/esbuild/default/no_warn_common_js_exports_in_esm_pass_through
 
 - cjs-in-esm-!~{000}~.js => cjs-in-esm-CAiwlB1I.js
-- import-in-cjs-!~{001}~.js => import-in-cjs-Bcir5erx.js
-- no-warnings-here-!~{002}~.js => no-warnings-here-BanhC04J.js
-- chunk-!~{003}~.js => chunk-Bvc18byM.js
+- import-in-cjs-!~{001}~.js => import-in-cjs-WJ2azyXF.js
+- no-warnings-here-!~{002}~.js => no-warnings-here-c6CeAqsb.js
 
 # tests/esbuild/default/node_annotation_false_positive_issue3544
 
@@ -3697,9 +3694,8 @@ expression: output
 
 # tests/rolldown/code_splitting/ensure_side_effect_executed
 
-- entry2_js-!~{001}~.js => entry2_js-C-4lkxNh.js
-- entry_js-!~{000}~.js => entry_js-qvNCMxkS.js
-- entry-!~{002}~.js => entry-DL7u_x-T.js
+- entry2_js-!~{001}~.js => entry2_js-D8jbP1QK.js
+- entry_js-!~{000}~.js => entry_js-GP_-VWxw.js
 
 # tests/rolldown/code_splitting/ensure_side_effect_executed2
 
@@ -3927,9 +3923,8 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/ensure_lazy_module_eval
 
-- dynamic-!~{001}~.js => dynamic-vd-mUgQv.js
-- main-!~{000}~.js => main-8WamxVEQ.js
-- dynamic-!~{002}~.js => dynamic-38uNuTl4.js
+- dynamic-!~{001}~.js => dynamic-ClvtsKRL.js
+- main-!~{000}~.js => main-CQou-hqt.js
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/non_strict
 
@@ -3994,9 +3989,8 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/on_demand_wrapping
 
-- dynamic-!~{001}~.js => dynamic-BMsRrWLt.js
-- main-!~{000}~.js => main-BsOTjrR4.js
-- dynamic-!~{002}~.js => dynamic-D5Bj1gzJ.js
+- dynamic-!~{001}~.js => dynamic-CBPsNV9H.js
+- main-!~{000}~.js => main-BMt7SIc7.js
 
 # tests/rolldown/function/experimental/strict_execution_order/react-like
 
@@ -4189,9 +4183,8 @@ expression: output
 
 # tests/rolldown/function/format/cjs/share_chunk_without_symbol
 
-- entry1-!~{000}~.js => entry1-Bf2XwgoE.js
-- entry2-!~{001}~.js => entry2-1vShj1WI.js
-- main-!~{002}~.js => main-e6AWdJbi.js
+- entry1-!~{000}~.js => entry1-CpuHOdsx.js
+- entry2-!~{001}~.js => entry2-DK9qf7gj.js
 
 # tests/rolldown/function/format/cjs/shared_entry_modules
 
@@ -4906,16 +4899,15 @@ expression: output
 
 # tests/rolldown/misc/assign_chunk_name_order
 
-- file-!~{001}~.js => file-DHIYDjyn.js
-- main-!~{000}~.js => main-C4RrUU-s.js
-- file-!~{004}~.js => file-BBxOZ0E2.js
-- file-!~{002}~.js => file-BI7EZMIP.js
-- file-!~{00e}~.js => file-BXlY9EkH.js
-- file-!~{006}~.js => file-Byy_geWO.js
-- file-!~{008}~.js => file-ChgXelW9.js
-- file-!~{00a}~.js => file-Di-ZwFsg.js
-- file-!~{00g}~.js => file-ObfqZf8B.js
-- file-!~{00c}~.js => file-yOKLnaIe.js
+- file-!~{001}~.js => file-DtSKmXE0.js
+- main-!~{000}~.js => main-iuwgANMK.js
+- file-!~{00e}~.js => file-B6vWkw1F.js
+- file-!~{00c}~.js => file-Bqy6_34c.js
+- file-!~{004}~.js => file-C6OYUCZj.js
+- file-!~{002}~.js => file-CrQ8eNSr.js
+- file-!~{00a}~.js => file-Cwm5eaHa.js
+- file-!~{008}~.js => file-I6vMkZhj.js
+- file-!~{006}~.js => file-TwjCrqrp.js
 
 # tests/rolldown/misc/banner/cjs
 
@@ -4942,9 +4934,8 @@ expression: output
 
 # tests/rolldown/misc/cjs_entry_as_dependency
 
-- main-!~{000}~.js => main-CREcZgXQ.js
-- main2-!~{001}~.js => main2-CkRhLsqM.js
-- main2-!~{002}~.js => main2-DImQOWhU.js
+- main-!~{000}~.js => main-BHLT31QS.js
+- main2-!~{001}~.js => main2-BT6uYMl0.js
 
 # tests/rolldown/misc/common_js_min
 
@@ -5014,9 +5005,8 @@ expression: output
 
 - dynamic-!~{003}~.js => dynamic-CEM7Bh_1.js
 - foo-!~{001}~.js => foo-C_HSrIG8.js
-- foo2-!~{002}~.js => foo2-DwvJeq-4.js
-- main-!~{000}~.js => main-CxgQHNBf.js
-- foo2-!~{004}~.js => foo2-CfjRXF79.js
+- foo2-!~{002}~.js => foo2-GjqLKQuv.js
+- main-!~{000}~.js => main-agkD0YOF.js
 
 # tests/rolldown/misc/preserve_entry_signature/issue_5026
 
@@ -5238,15 +5228,13 @@ expression: output
 
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries
 
-- entry-!~{000}~.js => entry-BwonpDjl.js
-- entry2-!~{001}~.js => entry2-BcOrPL42.js
-- main-!~{002}~.js => main-DjORokmf.js
+- entry-!~{000}~.js => entry-CxgeOhbL.js
+- entry2-!~{001}~.js => entry2-BkB6eB4n.js
 
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries_cjs
 
-- entry-!~{000}~.js => entry-LF56xhXL.js
-- entry2-!~{001}~.js => entry2-BT2gMT21.js
-- main-!~{002}~.js => main-DjORokmf.js
+- entry-!~{000}~.js => entry-B6lNnaCT.js
+- entry2-!~{001}~.js => entry2-gka8c-Fb.js
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry
 
@@ -5279,11 +5267,9 @@ expression: output
 
 # tests/rolldown/sourcemap/live_binding
 
-- main1-!~{000}~.js => main1-DuhB17iW.js
-- main2-!~{001}~.js => main2-DJ4J9Dvy.js
-- shared-!~{002}~.js => shared-Bisfm5lw.js
-- main1-DuhB17iW.js.map
-- shared-Bisfm5lw.js.map
+- main1-!~{000}~.js => main1-Cm0JAH8g.js
+- main2-!~{001}~.js => main2-DJGvAzyk.js
+- main1-Cm0JAH8g.js.map
 
 # tests/rolldown/topics/allow_different_variant_unit_test
 

@@ -5087,6 +5087,12 @@ expression: output
 - default-!~{003}~.js => default-csOjIx0W.js
 - function-!~{005}~.js => function-GN8nKCiR.js
 
+# tests/rolldown/misc/preserve_modules/transitive_export_star_cjs
+
+- index-!~{000}~.js => index-BYXdauAF.js
+- _virtual/rolldown_runtime-!~{001}~.js => _virtual/rolldown_runtime-D2VJOnTr.js
+- server-!~{003}~.js => server-QE6T68Bn.js
+
 # tests/rolldown/misc/reexport_star
 
 - entry-!~{001}~.js => entry-CTZ8dXyc.js

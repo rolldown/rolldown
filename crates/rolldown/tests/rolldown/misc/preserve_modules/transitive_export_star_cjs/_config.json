@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      {
+        "import": "./index.js"
+      }
+    ],
+    "format": "cjs",
+    "preserveModules": true,
+    "external": ["external-lib"]
+  },
+  "expectExecuted": false
+}

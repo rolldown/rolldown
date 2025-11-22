@@ -237,6 +237,74 @@ pub fn render_chunk_exports(
           }
           s.push_str(&import_stmt);
         });
+
+          // FIX FOR ISSUE #7115: Handle star exports from internal/normal modules
+          // When preserveModules is enabled, each module becomes its own chunk,
+          // so we need to re-export from other chunks (transitive exports)
+          if options.preserve_modules {
+            let internal_star_export_modules = module
+              .star_export_module_ids()
+              .filter_map(|module_idx| {
+                // Only consider normal (internal) modules, not external ones
+                match &ctx.link_output.module_table[module_idx] {
+                  rolldown_common::Module::Normal(_) => {
+                    // Find which chunk this module belongs to
+                    ctx.chunk_graph.module_to_chunk[module_idx]
+                      .map(|chunk_idx| (module_idx, chunk_idx))
+                  }
+                  rolldown_common::Module::External(_) => None,
+                }
+              })
+              .collect::<Vec<_>>();
+
+            // Track already required chunks to avoid duplicates
+            let mut required_chunks: FxHashSet<rolldown_common::ChunkIdx> = FxHashSet::default();
+
+            for (_module_idx, chunk_idx) in internal_star_export_modules {
+              // Skip if we've already required this chunk
+              if !required_chunks.insert(chunk_idx) {
+                continue;
+              }
+
+              // Get the chunk that contains the star-exported module
+              let importee_chunk = &ctx.chunk_graph.chunk_table[chunk_idx];
+
+              // Generate a unique binding name for this require
+              // Use the chunk's preliminary filename as basis for the binding name
+              let importee_filename = importee_chunk
+                .preliminary_filename
+                .as_deref()
+                .expect("chunk should have preliminary_filename");
+
+              // Generate a valid identifier from the filename
+              // Remove extension and convert to valid identifier
+              let binding_name = {
+                let name_without_ext = std::path::Path::new(importee_filename.as_str())
+                  .file_stem()
+                  .and_then(|s| s.to_str())
+                  .unwrap_or("module");
+                // Replace invalid chars with underscores to create valid identifier
+                let safe_name =
+                  name_without_ext.replace(|c: char| !c.is_alphanumeric() && c != '_', "_");
+                concat_string!("require_", safe_name)
+              };
+
+              // Generate the require statement and re-export code
+              let import_path = chunk.import_path_for(importee_chunk);
+
+              let import_stmt =
+"Object.keys($NAME).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return $NAME[k]; }
+  });
+});\n".replace("$NAME", &binding_name);
+
+              s.push('\n');
+              writeln!(s, "var {} = require(\"{}\");", binding_name, import_path).unwrap();
+              s.push_str(&import_stmt);
+            }
+          }
         }
         ChunkKind::Common => {
           let rendered_items = export_items

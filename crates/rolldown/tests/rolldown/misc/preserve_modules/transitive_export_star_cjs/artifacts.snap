@@ -1,0 +1,49 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## _virtual/rolldown_runtime.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+exports.__reExport = __reExport;
+```
+
+## index.js
+
+```js
+const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+require('./server.js');
+
+//#region index.js
+var transitive_export_star_cjs_exports = {};
+
+//#endregion
+
+var require_server = require("./server.js");
+Object.keys(require_server).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return require_server[k]; }
+  });
+});
+
+```
+
+## server.js
+
+```js
+const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+
+
+var external_lib = require("external-lib");
+Object.keys(external_lib).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return external_lib[k]; }
+  });
+});
+
+```

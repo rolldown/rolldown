@@ -3,6 +3,7 @@ use std::{
   sync::{Arc, atomic::AtomicBool},
 };
 
+use napi::bindgen_prelude::FnArgs;
 use rolldown_plugin_vite_css_post::{CSSMinifyFn, IsLegacyFn, ViteCSSPostPlugin};
 use sugar_path::SugarPath as _;
 
@@ -29,8 +30,8 @@ pub struct BindingViteCSSPostPluginConfig {
   pub lib_css_filename: Option<String>,
   #[napi(ts_type = "() => boolean")]
   pub is_legacy: Option<JsCallback<(), bool>>,
-  #[napi(ts_type = "(css: string) => Promise<string>")]
-  pub css_minify: Option<MaybeAsyncJsCallback<String, String>>,
+  #[napi(ts_type = "(css: string, inline: boolean) => Promise<string>")]
+  pub css_minify: Option<MaybeAsyncJsCallback<FnArgs<(String, bool)>, String>>,
   #[napi(
     ts_type = "(filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet"
   )]
@@ -59,9 +60,11 @@ impl From<BindingViteCSSPostPluginConfig> for ViteCSSPostPlugin {
       }),
       render_built_url: value.render_built_url.map(Into::into),
       css_minify: value.css_minify.map(|css_minify| -> Arc<CSSMinifyFn> {
-        Arc::new(move |css: String| {
+        Arc::new(move |css: String, inline: bool| {
           let css_minify = Arc::clone(&css_minify);
-          Box::pin(async move { css_minify.await_call(css).await.map_err(anyhow::Error::from) })
+          Box::pin(async move {
+            css_minify.await_call((css, inline).into()).await.map_err(anyhow::Error::from)
+          })
         })
       }),
       has_emitted: AtomicBool::default(),

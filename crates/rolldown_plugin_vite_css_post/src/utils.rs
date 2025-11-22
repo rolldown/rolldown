@@ -415,7 +415,7 @@ impl ViteCSSPostPlugin {
     }
     // TODO: Maybe we should use internal lightningcss minify
     if let Some(css_minify) = &self.css_minify {
-      content = (css_minify)(content).await?;
+      content = (css_minify)(content, false).await?;
     }
     // inject an additional string to generate a different hash for https://github.com/vitejs/vite/issues/18038
     //

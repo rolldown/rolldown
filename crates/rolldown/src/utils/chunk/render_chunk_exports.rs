@@ -301,7 +301,7 @@ pub fn render_chunk_exports(
 });\n".replace("$NAME", &binding_name);
 
               s.push('\n');
-              writeln!(s, "var {} = require(\"{}\");", binding_name, import_path).unwrap();
+              writeln!(s, "var {binding_name} = require(\"{import_path}\");").unwrap();
               s.push_str(&import_stmt);
             }
           }

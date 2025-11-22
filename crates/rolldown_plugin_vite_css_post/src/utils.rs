@@ -145,7 +145,7 @@ impl ViteCSSPostPlugin {
 
         let filename = ctx.get_file_name(&reference_id)?;
         let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
-        let chunk_metadata = vite_metadata.get_or_insert_default(ctx.env.host_id.into());
+        let chunk_metadata = vite_metadata.get(ctx.env.host_id.into());
 
         chunk_metadata.imported_assets.insert(clean_url(&filename).into());
 
@@ -238,7 +238,7 @@ impl ViteCSSPostPlugin {
           .await?;
 
         let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
-        let chunk_metadata = vite_metadata.get_or_insert_default(ctx.env.host_id.into());
+        let chunk_metadata = vite_metadata.get(ctx.env.host_id.into());
         chunk_metadata.imported_css.insert(ctx.get_file_name(&reference_id)?);
 
         if ctx.args.chunk.is_entry && is_pure_css_chunk {
@@ -338,7 +338,7 @@ impl ViteCSSPostPlugin {
           };
 
           let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
-          let chunk_metadata = vite_metadata.get_or_insert_default(ctx.env.host_id.into());
+          let chunk_metadata = vite_metadata.get(ctx.env.host_id.into());
 
           chunk_metadata.imported_assets.insert(clean_url(&filename).into());
 
@@ -670,8 +670,7 @@ impl ViteCSSPostPlugin {
           // remove pure css chunk from other chunk's imports, and also
           // register the emitted CSS files under the importer chunks instead.
           let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
-          let chunk_metadata =
-            vite_metadata.get_or_insert_default(chunk.preliminary_filename.as_str().into());
+          let chunk_metadata = vite_metadata.get(chunk.preliminary_filename.as_str().into());
           new_chunk.imports = new_chunk
             .imports
             .into_iter()

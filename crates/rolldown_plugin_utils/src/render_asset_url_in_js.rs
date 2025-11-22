@@ -21,7 +21,7 @@ impl RenderAssetUrlInJsEnv<'_> {
         AssetUrlItem::Asset((range, reference_id, postfix)) => {
           let file = self.ctx.get_file_name(reference_id)?;
           let vite_metadata = self.ctx.meta().get_or_insert_default::<ViteMetadata>();
-          let chunk_metadata = vite_metadata.get_or_insert_default(self.env.host_id.into());
+          let chunk_metadata = vite_metadata.get(self.env.host_id.into());
 
           chunk_metadata.imported_assets.insert(clean_url(&file).into());
 

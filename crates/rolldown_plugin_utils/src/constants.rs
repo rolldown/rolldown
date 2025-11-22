@@ -40,10 +40,6 @@ impl ViteMetadata {
   pub fn get(&self, key: ArcStr) -> Arc<ChunkMetadata> {
     self.inner.entry(key).or_default().clone()
   }
-
-  pub fn get_or_insert_default(&self, key: ArcStr) -> Arc<ChunkMetadata> {
-    self.inner.entry(key).or_insert_with(|| Arc::new(ChunkMetadata::default())).clone()
-  }
 }
 
 #[derive(Debug, Default)]

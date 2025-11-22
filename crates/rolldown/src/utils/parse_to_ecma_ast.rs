@@ -1,8 +1,11 @@
 use std::{borrow::Cow, path::Path};
 
+use anyhow::Context;
 use json_escape_simd::escape;
 use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
-use rolldown_common::{ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes};
+use rolldown_common::{
+  ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, SpanVerifier, StrOrBytes,
+};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookTransformAstArgs;
@@ -70,6 +73,9 @@ pub async fn parse_to_ecma_ast(
     _ => EcmaCompiler::parse(stable_id, source, oxc_source_type)?,
   };
 
+  SpanVerifier::verify(ecma_ast.program())
+    .with_context(|| format!("Invalid span1 in module {}", ctx.stable_id))?;
+
   ecma_ast = plugin_driver
     .transform_ast(HookTransformAstArgs {
       cwd: &options.cwd,
@@ -81,14 +87,22 @@ pub async fn parse_to_ecma_ast(
     })
     .await?;
 
-  PreProcessEcmaAst::default().build(
+  SpanVerifier::verify(ecma_ast.program())
+    .with_context(|| format!("Invalid span2 in module {}", ctx.stable_id))?;
+
+  let result = PreProcessEcmaAst::default().build(
     ecma_ast,
     stable_id,
     &parsed_type,
     replace_global_define_config.as_ref(),
     options,
     has_lazy_export,
-  )
+  )?;
+
+  SpanVerifier::verify(result.ast.program())
+    .with_context(|| format!("Invalid span3 in module {}", ctx.stable_id))?;
+
+  Ok(result)
 }
 
 fn pre_process_source(

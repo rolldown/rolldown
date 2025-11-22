@@ -1,8 +1,10 @@
+use anyhow::Context;
 use arcstr::ArcStr;
 use oxc::span::CompactStr;
 use oxc::span::Span;
 use oxc_index::IndexVec;
 use rolldown_common::SourcemapChainElement;
+use rolldown_common::SpanVerifier;
 use std::sync::Arc;
 use sugar_path::SugarPath;
 
@@ -158,6 +160,10 @@ impl ModuleTask {
       ecma_related,
       raw_import_records: ecma_raw_import_records,
     } = ret;
+
+    #[cfg(debug_assertions)]
+    SpanVerifier::verify(ecma_related.ast.program())
+      .with_context(|| format!("Invalid span in module {stable_id}"))?;
 
     if css_view.is_none() {
       raw_import_records = ecma_raw_import_records;

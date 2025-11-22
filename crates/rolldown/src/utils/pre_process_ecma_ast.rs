@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use anyhow::Context;
 use itertools::Itertools;
 use oxc::ast::ast::Program;
 use oxc::ast_visit::VisitMut;
@@ -11,7 +12,7 @@ use oxc::transformer_plugins::{
   InjectGlobalVariables, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig,
 };
 
-use rolldown_common::NormalizedBundlerOptions;
+use rolldown_common::{NormalizedBundlerOptions, SpanVerifier};
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 
@@ -56,6 +57,9 @@ impl PreProcessEcmaAst {
       });
     }
 
+    SpanVerifier::verify(ast.program())
+      .with_context(|| format!("Invalid span2a in module {path}"))?;
+
     // Step 1: Build initial semantic data and check for semantic errors.
     let semantic_ret = ast.program.with_dependent(|_owner, dep| {
       SemanticBuilder::new().with_check_syntax_error(true).build(&dep.program)
@@ -83,6 +87,8 @@ impl PreProcessEcmaAst {
         }
       });
     }
+    SpanVerifier::verify(ast.program())
+      .with_context(|| format!("Invalid span2b in module {path}"))?;
 
     // Step 3: Transform TypeScript and jsx.
     // Note: Currently, oxc_transform supports es syntax up to ES2024 (unicode-sets-regex).
@@ -112,6 +118,8 @@ impl PreProcessEcmaAst {
         Ok(())
       })?;
     }
+    SpanVerifier::verify(ast.program())
+      .with_context(|| format!("Invalid span2c in module {path}"))?;
 
     // Step 4: Run inject plugin.
     if !bundle_options.inject.is_empty() {
@@ -124,6 +132,8 @@ impl PreProcessEcmaAst {
         }
       });
     }
+    SpanVerifier::verify(ast.program())
+      .with_context(|| format!("Invalid span2d in module {path}"))?;
 
     // Step 5: Run DCE.
     // Avoid DCE for lazy export.
@@ -138,6 +148,8 @@ impl PreProcessEcmaAst {
         Compressor::new(allocator).dead_code_elimination_with_scoping(program, scoping, options);
       });
     }
+    SpanVerifier::verify(ast.program())
+      .with_context(|| format!("Invalid span2e in module {path}"))?;
 
     // Step 6: Modify AST for Rolldown.
     let scoping = ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
@@ -145,6 +157,8 @@ impl PreProcessEcmaAst {
       pre_processor.visit_program(program);
       self.recreate_scoping(&mut None, program, true)
     });
+    SpanVerifier::verify(ast.program())
+      .with_context(|| format!("Invalid span2f in module {path}"))?;
 
     Ok(ParseToEcmaAstResult { ast, scoping, has_lazy_export, warnings })
   }

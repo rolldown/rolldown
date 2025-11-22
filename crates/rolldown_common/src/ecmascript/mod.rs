@@ -5,3 +5,4 @@ pub mod ecma_view;
 pub mod module_idx;
 pub mod node_builtin_modules;
 pub mod symbol_id_ext;
+pub mod verify_span;

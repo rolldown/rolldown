@@ -118,3 +118,47 @@ The following properties are supported by each hook:
 > `id` is treated as a glob pattern when you pass a `string`, and treated as a regular expression when you pass a `RegExp`.
 > In the `resolve` hook, `id` must be a `RegExp`. `string`s are not allowed.
 > This is because the `id` value in `resolveId` is the exact text written in the import statement and usually not an absolute path, while glob patterns are designed to match absolute paths.
+
+## Improving interoperability
+
+Plugin hook filters are supported in Rollup 4.38.0+, Vite 6.3.0+, and all versions of Rolldown. However, if you're authoring a plugin that needs to support older versions of Rollup (< 4.38.0) or Vite (< 6.3.0), you can provide a fallback implementation that works in both environments.
+
+The strategy is to use the object hook format with filters when available, and fall back to a regular function that checks conditions internally for older versions:
+
+```js
+const idFilter = /\.data$/;
+
+export default function myPlugin() {
+  return {
+    name: 'my-plugin',
+    transform: {
+      // Filter is used by Rolldown and newer Rollup/Vite versions
+      filter: { id: idFilter },
+      // Handler is called when filter matches
+      handler(code, id) {
+        // Double-check in handler for compatibility with older versions
+        // This is only necessary if you're supporting older versions
+        if (!idFilter.test(id)) {
+          return null;
+        }
+        // perform actual transform
+        return transformedCode;
+      },
+    },
+  };
+}
+```
+
+This approach ensures your plugin will:
+
+- Use filters for optimal performance in Rolldown and newer Rollup/Vite versions
+- Still work correctly in older versions (they will call the handler for all files, but the internal check ensures correct behavior)
+
+> [!TIP]
+> When supporting older versions, keep both the filter pattern and the internal check in sync to avoid confusion.
+
+::: tip `moduleType` filter is not supported by Rollup / Vite 7 and below
+
+[Module Type concept](/in-depth/module-types) does not exist in Rollup / Vite 7 and below. For that reason, `moduleType` filter is not supported by those tools and will be ignored.
+
+:::

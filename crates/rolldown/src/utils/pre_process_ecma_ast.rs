@@ -27,10 +27,12 @@ pub struct PreProcessEcmaAst {
 }
 
 impl PreProcessEcmaAst {
+  #[expect(clippy::too_many_arguments)]
   pub fn build(
     &mut self,
     mut ast: EcmaAst,
     path: &str,
+    resolved_id: &str,
     parsed_type: &OxcParseType,
     replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
     bundle_options: &NormalizedBundlerOptions,
@@ -87,12 +89,14 @@ impl PreProcessEcmaAst {
     // Step 3: Transform TypeScript and jsx.
     // Note: Currently, oxc_transform supports es syntax up to ES2024 (unicode-sets-regex).
     if !matches!(parsed_type, OxcParseType::Js)
-      || bundle_options.transform_options.env.regexp.set_notation
+      || bundle_options.transform_options.should_transform_js()
     {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
-        let transform_options = &bundle_options.transform_options;
+        let transform_options =
+          bundle_options.transform_options.options_for_file(Path::new(resolved_id));
+
         let scoping = self.recreate_scoping(&mut scoping, program, false);
-        let ret = Transformer::new(allocator, Path::new(path), transform_options)
+        let ret = Transformer::new(allocator, Path::new(path), &transform_options)
           .build_with_scoping(scoping, program);
         // TODO: emit diagnostic, aiming to pass more tests,
         // we ignore warning for now

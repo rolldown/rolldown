@@ -7,10 +7,11 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::DashMap;
 use oxc_resolver::{
-  ModuleType, PackageJson as OxcPackageJson, Resolution, ResolveError, ResolverGeneric, TsConfig,
+  ModuleType, PackageJson as OxcPackageJson, Resolution, ResolveError, ResolverGeneric,
+  TsConfig as OxcTsConfig,
 };
 use rolldown_common::{
-  ImportKind, ModuleDefFormat, PackageJson, Platform, ResolveOptions, ResolvedId,
+  ImportKind, ModuleDefFormat, PackageJson, Platform, ResolveOptions, ResolvedId, TsConfig,
 };
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_utils::dashmap::FxDashMap;
@@ -41,7 +42,7 @@ impl<Fs: FileSystem + Clone> Resolver<Fs> {
     fs: Fs,
     cwd: PathBuf,
     platform: Platform,
-    tsconfig: Option<PathBuf>,
+    tsconfig: Option<&TsConfig>,
     resolve_options: ResolveOptions,
   ) -> Self {
     let config = ResolverConfig::build(&cwd, platform, tsconfig, resolve_options);
@@ -95,7 +96,10 @@ impl<Fs: FileSystem> Resolver<Fs> {
     self.package_json_cache.clear();
   }
 
-  pub fn resolve_tsconfig<T: AsRef<Path>>(&self, path: &T) -> Result<Arc<TsConfig>, ResolveError> {
+  pub fn resolve_tsconfig<T: AsRef<Path>>(
+    &self,
+    path: &T,
+  ) -> Result<Arc<OxcTsConfig>, ResolveError> {
     self.default_resolver.resolve_tsconfig(path)
   }
 

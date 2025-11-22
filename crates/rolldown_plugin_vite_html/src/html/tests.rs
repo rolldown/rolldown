@@ -159,4 +159,41 @@ mod parser_tests {
       }
     }
   }
+
+  #[test]
+  fn test_script_with_html_string_content() {
+    // Test that HTML-like strings inside script tags are treated as text, not parsed as HTML
+    let html = r#"<script type="module">
+    import { msgFromA } from '@vitejs/test-dep-a'
+    console.log(msgFromA)
+
+    import './src/main.js'
+    document
+      .querySelector('h1')
+      .insertAdjacentHTML('afterEnd', '<div id="done">ran js</div>')
+  </script>"#;
+
+    let dom = parse_html(html);
+    let scripts = find_elements_by_tag(&dom, "script");
+
+    assert_eq!(scripts.len(), 1, "Should have exactly one script element");
+
+    let script_children = scripts[0].children.borrow();
+    assert_eq!(script_children.len(), 1, "Script should have exactly one child (text node)");
+
+    // Verify the child is a text node containing the full JavaScript code
+    let NodeData::Text { ref contents, .. } = script_children[0].data else {
+      panic!("Script's child should be a text node, got: {:?}", script_children[0].data);
+    };
+
+    assert!(
+      contents.contains("<div id=\"done\">ran js</div>"),
+      "Script text content should contain the HTML string literal"
+    );
+    assert!(contents.contains("insertAdjacentHTML"), "Script text should contain the full JS code");
+
+    // Verify that no div elements were incorrectly parsed from script content
+    let divs = find_elements_by_tag(&dom, "div");
+    assert_eq!(divs.len(), 0, "No div elements should be parsed from script content");
+  }
 }

@@ -5,7 +5,11 @@ use super::sink::{Attribute, RcDom, RcDomEmitter};
 
 pub fn parse_html(html: &str) -> RcDom {
   let mut dom_builder = RcDomEmitter::new();
-  let tokenizer = Tokenizer::new_with_emitter(html, DefaultEmitter::<usize>::new_with_span());
+  let mut emitter = DefaultEmitter::<usize>::new_with_span();
+
+  emitter.naively_switch_states(true);
+
+  let tokenizer = Tokenizer::new_with_emitter(html, emitter);
 
   for token in tokenizer {
     match token {

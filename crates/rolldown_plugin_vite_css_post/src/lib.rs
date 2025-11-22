@@ -229,15 +229,14 @@ impl Plugin for ViteCSSPostPlugin {
     chunk: Arc<rolldown_common::RollupRenderedChunk>,
   ) -> rolldown_plugin::HookAugmentChunkHashReturn {
     Ok(ctx.meta().get::<ViteMetadata>().and_then(|vite_metadata| {
-      vite_metadata.get(&chunk.filename).and_then(|metadata| {
-        (!metadata.imported_css.is_empty()).then(|| {
-          let capacity = metadata.imported_css.iter().fold(0, |acc, s| acc + s.len());
-          let mut hash = String::with_capacity(capacity);
-          for id in metadata.imported_css.iter() {
-            hash.push_str(&id);
-          }
-          hash
-        })
+      let metadata = vite_metadata.get(chunk.filename.clone());
+      (!metadata.imported_css.is_empty()).then(|| {
+        let capacity = metadata.imported_css.iter().fold(0, |acc, s| acc + s.len());
+        let mut hash = String::with_capacity(capacity);
+        for id in metadata.imported_css.iter() {
+          hash.push_str(&id);
+        }
+        hash
       })
     }))
   }

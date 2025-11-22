@@ -678,8 +678,7 @@ impl ViteCSSPostPlugin {
             .filter(|file| {
               if pure_css_chunk_names.contains(file) {
                 let chunk = &chunks[file];
-                let file_metadata =
-                  vite_metadata.get(&chunk.preliminary_filename.as_str().into()).unwrap();
+                let file_metadata = vite_metadata.get(chunk.preliminary_filename.as_str().into());
                 file_metadata.imported_css.iter().for_each(|file| {
                   chunk_metadata.imported_css.insert(file.clone());
                 });

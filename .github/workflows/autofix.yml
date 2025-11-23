@@ -23,7 +23,7 @@ jobs:
           key: dprint-${{ hashFiles('dprint.json') }}
           path: ~/.cache/dprint
 
-      - uses: oxc-project/setup-rust@83350c0ef69ec34f00be596f1cb9302179b9f43d # v1.0.9
+      - uses: oxc-project/setup-rust@eb5c2bf64ce11cc9557c576d6766c164d064fdb7 # v1.0.10
         with:
           restore-cache: false
           tools: dprint,cargo-shear@1.3.0

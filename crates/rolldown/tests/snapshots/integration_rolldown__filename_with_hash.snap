@@ -5115,6 +5115,10 @@ expression: output
 
 - main-!~{000}~.js => main-DKngZ6kI.js
 
+# tests/rolldown/misc/transitive_export_star_cjs_bundled
+
+- index-!~{000}~.js => index-Df-bUDa9.js
+
 # tests/rolldown/misc/use_strict/emit_use_strict_with_strict_cjs_in_cjs_format
 
 - main-!~{000}~.js => main-Cp6Qz5JP.js

@@ -5806,7 +5806,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/parenthesized_default_export
 
-- main-!~{000}~.js => main-Du06d7rC.js
+- main-!~{000}~.js => main-4opC75UP.js
 
 # tests/rolldown/topics/live_bindings/default_export_binding
 

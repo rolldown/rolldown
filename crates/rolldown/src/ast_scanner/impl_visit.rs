@@ -415,6 +415,41 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     self.try_extract_hmr_info_from_hot_accept_call(it);
     walk::walk_call_expression(self, it);
   }
+
+  fn visit_export_default_declaration(&mut self, it: &ast::ExportDefaultDeclaration<'ast>) {
+    // Mark export default declarations with anonymous function/class expressions
+    // so that __name helper will be included in the runtime
+    use ast::ExportDefaultDeclarationKind;
+    match &it.declaration {
+      ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
+        if func.id.is_none() {
+          self.current_stmt_info.meta.insert(StmtInfoMeta::FnDecl);
+        }
+      }
+      ExportDefaultDeclarationKind::ClassDeclaration(class) => {
+        if class.id.is_none() {
+          self.current_stmt_info.meta.insert(StmtInfoMeta::ClassDecl);
+        }
+      }
+      decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
+        let inner_expr = decl.to_expression().without_parentheses();
+        match inner_expr {
+          Expression::FunctionExpression(func) if func.id.is_none() => {
+            self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
+          }
+          Expression::ClassExpression(class) if class.id.is_none() => {
+            self.current_stmt_info.meta.insert(StmtInfoMeta::ClassExpr);
+          }
+          Expression::ArrowFunctionExpression(_) => {
+            self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
+          }
+          _ => {}
+        }
+      }
+      _ => {}
+    }
+    walk::walk_export_default_declaration(self, it);
+  }
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {

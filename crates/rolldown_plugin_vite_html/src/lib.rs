@@ -549,11 +549,15 @@ impl Plugin for ViteHtmlPlugin {
                   .await?
               }
             };
-            tag.attrs = Some(FxHashMap::from_iter([
+            let mut attrs = FxHashMap::from_iter([
               ("type", AttrValue::String("module".to_owned())),
               ("crossorigin", AttrValue::Boolean(true)),
               ("src", AttrValue::String(url)),
-            ]));
+            ]);
+            if *is_async {
+              attrs.insert("async", AttrValue::Boolean(true));
+            }
+            tag.attrs = Some(attrs);
             tags.push(tag);
           }
           tags
@@ -563,14 +567,15 @@ impl Plugin for ViteHtmlPlugin {
             let url = self
               .to_output_file_path(&chunk.filename, assets_base, false, &relative_url_path)
               .await?;
-            tag.attrs = Some(FxHashMap::from_iter([
+            let mut attrs = FxHashMap::from_iter([
               ("type", AttrValue::String("module".to_owned())),
               ("crossorigin", AttrValue::Boolean(true)),
               ("src", AttrValue::String(url)),
-            ]));
+            ]);
             if *is_async {
-              tag.attrs.as_mut().unwrap().insert("async", AttrValue::Boolean(true));
+              attrs.insert("async", AttrValue::Boolean(true));
             }
+            tag.attrs = Some(attrs);
             tag
           }];
           if let Some(module_preload) = self.module_preload.options() {

@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+//#region index.js
+var transitive_export_star_cjs_bundled_exports = {};
+
+//#endregion
+
+var external_lib = require("external-lib");
+Object.keys(external_lib).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return external_lib[k]; }
+  });
+});
+
+```

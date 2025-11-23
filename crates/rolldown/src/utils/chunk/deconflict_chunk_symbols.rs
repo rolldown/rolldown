@@ -68,6 +68,30 @@ pub fn deconflict_chunk_symbols(
             renamer.add_symbol_in_root_scope(external_module.namespace_ref);
           },
         );
+
+        // FIX FOR ISSUE #7115: Also add transitive external star exports
+        // This handles cases like: index.js → export * from './server.js' → export * from 'external-lib'
+        let mut visited = rustc_hash::FxHashSet::default();
+        let mut queue = vec![entry_module.idx];
+        while let Some(module_idx) = queue.pop() {
+          if !visited.insert(module_idx) {
+            continue;
+          }
+          let rolldown_common::Module::Normal(module) = &link_output.module_table[module_idx]
+          else {
+            continue;
+          };
+          for star_export_idx in module.star_export_module_ids() {
+            match &link_output.module_table[star_export_idx] {
+              rolldown_common::Module::Normal(_) => {
+                queue.push(star_export_idx);
+              }
+              rolldown_common::Module::External(external) => {
+                renamer.add_symbol_in_root_scope(external.namespace_ref);
+              }
+            }
+          }
+        }
       }
       None => {}
     }

@@ -15,6 +15,146 @@ use rustc_hash::FxHashSet;
 
 use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
 
+/// Collects and renders transitive external star exports when modules are bundled together.
+/// This handles cases like: index.js → export * from './server.js' → export * from 'external-lib'
+/// where the entry module doesn't directly export from external, but does so transitively (issue #7115).
+fn collect_and_render_transitive_external_star_exports(
+  ctx: &GenerateContext<'_>,
+  s: &mut String,
+  imported_external_modules: &mut FxHashSet<SymbolRef>,
+) {
+  let Some(entry_normal_module) = ctx.chunk.entry_module(&ctx.link_output.module_table) else {
+    return;
+  };
+
+  // Collect all external modules that are star-exported transitively through internal modules
+  let mut visited = FxHashSet::default();
+  let mut queue = vec![entry_normal_module.idx];
+  let mut transitive_external_star_exports = FxHashSet::default();
+
+  while let Some(module_idx) = queue.pop() {
+    if !visited.insert(module_idx) {
+      continue;
+    }
+
+    let rolldown_common::Module::Normal(module) = &ctx.link_output.module_table[module_idx] else {
+      continue;
+    };
+
+    for star_export_idx in module.star_export_module_ids() {
+      match &ctx.link_output.module_table[star_export_idx] {
+        rolldown_common::Module::Normal(_) => {
+          // Internal module - traverse it
+          queue.push(star_export_idx);
+        }
+        rolldown_common::Module::External(_) => {
+          // External module - collect it
+          transitive_external_star_exports.insert(star_export_idx);
+        }
+      }
+    }
+  }
+
+  // Render re-export code for all collected external modules
+  for external_idx in transitive_external_star_exports {
+    let external =
+      &ctx.link_output.module_table[external_idx].as_external().expect("Should be external module");
+
+    // Skip if already imported
+    if !imported_external_modules.insert(external.namespace_ref) {
+      continue;
+    }
+
+    let binding_ref_name = &ctx.chunk.canonical_names[&external.namespace_ref];
+    let import_stmt = "Object.keys($NAME).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return $NAME[k]; }
+  });
+});\n"
+      .replace("$NAME", binding_ref_name);
+
+    s.push('\n');
+    writeln!(
+      s,
+      "var {} = require(\"{}\");",
+      binding_ref_name,
+      &external.get_import_path(ctx.chunk, None)
+    )
+    .unwrap();
+    s.push_str(&import_stmt);
+  }
+}
+
+/// Renders re-export code for star exports from internal modules when preserveModules is enabled.
+/// This handles transitive `export *` statements in CJS format (issue #7115).
+fn render_internal_star_exports(ctx: &GenerateContext<'_>, s: &mut String) {
+  let Some(entry_normal_module) = ctx.chunk.entry_module(&ctx.link_output.module_table) else {
+    return;
+  };
+
+  let internal_star_export_modules = entry_normal_module
+    .star_export_module_ids()
+    .filter_map(|module_idx| {
+      // Only consider normal (internal) modules, not external ones
+      match &ctx.link_output.module_table[module_idx] {
+        rolldown_common::Module::Normal(_) => {
+          // Find which chunk this module belongs to
+          ctx.chunk_graph.module_to_chunk[module_idx].map(|chunk_idx| (module_idx, chunk_idx))
+        }
+        rolldown_common::Module::External(_) => None,
+      }
+    })
+    .collect::<Vec<_>>();
+
+  // Track already required chunks to avoid duplicates
+  let mut required_chunks: FxHashSet<rolldown_common::ChunkIdx> = FxHashSet::default();
+
+  for (_module_idx, chunk_idx) in internal_star_export_modules {
+    // Skip if we've already required this chunk
+    if !required_chunks.insert(chunk_idx) {
+      continue;
+    }
+
+    // Get the chunk that contains the star-exported module
+    let importee_chunk = &ctx.chunk_graph.chunk_table[chunk_idx];
+
+    // Generate a unique binding name for this require
+    // Use the chunk's preliminary filename as basis for the binding name
+    let importee_filename = importee_chunk
+      .preliminary_filename
+      .as_deref()
+      .expect("chunk should have preliminary_filename");
+
+    // Generate a valid identifier from the filename
+    // Remove extension and convert to valid identifier
+    let binding_name = {
+      let name_without_ext = std::path::Path::new(importee_filename.as_str())
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("module");
+      // Replace invalid chars with underscores to create valid identifier
+      let safe_name = name_without_ext.replace(|c: char| !c.is_alphanumeric() && c != '_', "_");
+      concat_string!("require_", safe_name)
+    };
+
+    // Generate the require statement and re-export code
+    let import_path = ctx.chunk.import_path_for(importee_chunk);
+
+    let import_stmt = "Object.keys($NAME).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return $NAME[k]; }
+  });
+});\n"
+      .replace("$NAME", &binding_name);
+
+    s.push('\n');
+    writeln!(s, "var {binding_name} = require(\"{import_path}\");").unwrap();
+    s.push_str(&import_stmt);
+  }
+}
+
 pub fn render_wrapped_entry_chunk(
   ctx: &GenerateContext<'_>,
   export_mode: Option<&OutputExports>,
@@ -242,68 +382,17 @@ pub fn render_chunk_exports(
           // When preserveModules is enabled, each module becomes its own chunk,
           // so we need to re-export from other chunks (transitive exports)
           if options.preserve_modules {
-            let internal_star_export_modules = module
-              .star_export_module_ids()
-              .filter_map(|module_idx| {
-                // Only consider normal (internal) modules, not external ones
-                match &ctx.link_output.module_table[module_idx] {
-                  rolldown_common::Module::Normal(_) => {
-                    // Find which chunk this module belongs to
-                    ctx.chunk_graph.module_to_chunk[module_idx]
-                      .map(|chunk_idx| (module_idx, chunk_idx))
-                  }
-                  rolldown_common::Module::External(_) => None,
-                }
-              })
-              .collect::<Vec<_>>();
-
-            // Track already required chunks to avoid duplicates
-            let mut required_chunks: FxHashSet<rolldown_common::ChunkIdx> = FxHashSet::default();
-
-            for (_module_idx, chunk_idx) in internal_star_export_modules {
-              // Skip if we've already required this chunk
-              if !required_chunks.insert(chunk_idx) {
-                continue;
-              }
-
-              // Get the chunk that contains the star-exported module
-              let importee_chunk = &ctx.chunk_graph.chunk_table[chunk_idx];
-
-              // Generate a unique binding name for this require
-              // Use the chunk's preliminary filename as basis for the binding name
-              let importee_filename = importee_chunk
-                .preliminary_filename
-                .as_deref()
-                .expect("chunk should have preliminary_filename");
-
-              // Generate a valid identifier from the filename
-              // Remove extension and convert to valid identifier
-              let binding_name = {
-                let name_without_ext = std::path::Path::new(importee_filename.as_str())
-                  .file_stem()
-                  .and_then(|s| s.to_str())
-                  .unwrap_or("module");
-                // Replace invalid chars with underscores to create valid identifier
-                let safe_name =
-                  name_without_ext.replace(|c: char| !c.is_alphanumeric() && c != '_', "_");
-                concat_string!("require_", safe_name)
-              };
-
-              // Generate the require statement and re-export code
-              let import_path = chunk.import_path_for(importee_chunk);
-
-              let import_stmt =
-"Object.keys($NAME).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return $NAME[k]; }
-  });
-});\n".replace("$NAME", &binding_name);
-
-              s.push('\n');
-              writeln!(s, "var {binding_name} = require(\"{import_path}\");").unwrap();
-              s.push_str(&import_stmt);
-            }
+            render_internal_star_exports(ctx, &mut s);
+          } else {
+            // When modules are bundled together (no preserveModules), we still need to handle
+            // transitive star exports. For example: index.js → export * from './server.js'
+            // and server.js → export * from 'external-lib'. The entry module's star_exports_from_external_modules
+            // only contains direct external star exports, missing transitive ones.
+            collect_and_render_transitive_external_star_exports(
+              ctx,
+              &mut s,
+              &mut imported_external_modules,
+            );
           }
         }
         ChunkKind::Common => {

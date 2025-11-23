@@ -446,7 +446,7 @@ impl Plugin for ViteHtmlPlugin {
               &rolldown_utils::concat_string!(
                 "import ",
                 rolldown_plugin_utils::to_string_literal(&url),
-                "\n"
+                ";\n"
               ),
               "",
             )

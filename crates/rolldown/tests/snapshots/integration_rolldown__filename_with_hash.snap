@@ -4892,6 +4892,10 @@ expression: output
 - file-!~{001}~.js => file-DkuDnLxQ.js
 - file-!~{003}~.js => file-hC2GaOdU.js
 
+# tests/rolldown/issues/nullish_coalescing_es6
+
+- main-!~{000}~.js => main-DozygQqR.js
+
 # tests/rolldown/issues/rolldown_vite_289
 
 - main-!~{000}~.js => main-CX_hZBSn.js

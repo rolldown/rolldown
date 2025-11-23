@@ -5804,6 +5804,10 @@ expression: output
 - entry2-!~{001}~.js => entry2-Eow-pZuM.js
 - foo-!~{002}~.js => foo-V6MEsHyi.js
 
+# tests/rolldown/topics/keep_names/parenthesized_default_export
+
+- main-!~{000}~.js => main-4opC75UP.js
+
 # tests/rolldown/topics/live_bindings/default_export_binding
 
 - main-!~{000}~.js => main-DPODtWAZ.js

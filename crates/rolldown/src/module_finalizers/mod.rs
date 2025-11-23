@@ -1296,12 +1296,36 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           match &mut default_decl.declaration {
             decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
               let expr = decl.to_expression_mut();
-              // "export default foo;" => "var default = foo;"
               let canonical_name_for_default_export_ref =
                 self.canonical_name_for(self.ctx.module.default_export_ref);
-              top_stmt = self
-                .snippet
-                .var_decl_stmt(canonical_name_for_default_export_ref, expr.take_in(self.alloc));
+
+              // Check if we need to add __name() helper for anonymous function/class expressions or arrow functions
+              let init_expr = expr.take_in(self.alloc);
+              if self.ctx.options.keep_names {
+                let inner_expr = init_expr.without_parentheses();
+                let binding = match inner_expr {
+                  ast::Expression::FunctionExpression(func) if func.id.is_none() => {
+                    Some(CompactStr::from("default"))
+                  }
+                  ast::Expression::ClassExpression(class) if class.id.is_none() => {
+                    Some(CompactStr::from("default"))
+                  }
+                  ast::Expression::ArrowFunctionExpression(_) => Some(CompactStr::from("default")),
+                  _ => None,
+                };
+
+                if let Some(binding) = binding {
+                  let insert_position = self.cur_stmt_index + 1;
+                  self.keep_name_statement_to_insert.push((
+                    insert_position,
+                    binding,
+                    canonical_name_for_default_export_ref.clone(),
+                  ));
+                }
+              }
+
+              top_stmt =
+                self.snippet.var_decl_stmt(canonical_name_for_default_export_ref, init_expr);
             }
             ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
               // "export default function() {}" => "function default() {}"

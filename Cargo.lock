@@ -718,7 +718,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -966,7 +966,7 @@ dependencies = [
  "cow-utils",
  "heck",
  "oxc",
- "oxc_resolver",
+ "oxc_resolver 11.13.2 (git+https://github.com/oxc-project/oxc-resolver?branch=11-22-feat_add_resolve_file_api_for_tsconfig_auto_discovery_to_work)",
  "prettyplease",
  "proc-macro2",
  "quote",
@@ -1262,7 +1262,7 @@ checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
 dependencies = [
  "hermit-abi",
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1310,9 +1310,9 @@ checksum = "a3c2a6c0b4b5637c41719973ef40c6a1cf564f9db6958350de6193fbee9c23f5"
 
 [[package]]
 name = "json-strip-comments"
-version = "3.0.1"
+version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4135b29c84322dbc3327272084360785665452213a576a991b3ac2f63148e82"
+checksum = "25376d12b2f6ae53f986f86e2a808a56af03d72284ae24fc35a2e290d09ee3c3"
 dependencies = [
  "memchr",
 ]
@@ -1614,7 +1614,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2153,6 +2153,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxc_resolver"
+version = "11.13.2"
+source = "git+https://github.com/oxc-project/oxc-resolver?branch=11-22-feat_add_resolve_file_api_for_tsconfig_auto_discovery_to_work#b38832c51392ffbc7b49b729013d3c014a3664dd"
+dependencies = [
+ "cfg-if",
+ "fast-glob",
+ "indexmap",
+ "json-strip-comments",
+ "once_cell",
+ "papaya",
+ "parking_lot",
+ "pnp",
+ "rustc-hash",
+ "rustix",
+ "self_cell",
+ "serde",
+ "serde_json",
+ "simd-json",
+ "simdutf8",
+ "thiserror 2.0.17",
+ "tracing",
+ "url",
+ "windows",
+]
+
+[[package]]
 name = "oxc_resolver_napi"
 version = "11.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2162,7 +2188,7 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
- "oxc_resolver",
+ "oxc_resolver 11.13.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2845,7 +2871,7 @@ dependencies = [
  "oxc",
  "oxc_ecmascript",
  "oxc_index",
- "oxc_resolver",
+ "oxc_resolver 11.13.2 (git+https://github.com/oxc-project/oxc-resolver?branch=11-22-feat_add_resolve_file_api_for_tsconfig_auto_discovery_to_work)",
  "rolldown_ecmascript",
  "rolldown_error",
  "rolldown_sourcemap",
@@ -2945,7 +2971,7 @@ dependencies = [
  "heck",
  "napi",
  "oxc",
- "oxc_resolver",
+ "oxc_resolver 11.13.2 (git+https://github.com/oxc-project/oxc-resolver?branch=11-22-feat_add_resolve_file_api_for_tsconfig_auto_discovery_to_work)",
  "rolldown-ariadne",
  "rolldown_utils",
  "ropey",
@@ -2965,7 +2991,7 @@ dependencies = [
 name = "rolldown_fs"
 version = "0.1.0"
 dependencies = [
- "oxc_resolver",
+ "oxc_resolver 11.13.2 (git+https://github.com/oxc-project/oxc-resolver?branch=11-22-feat_add_resolve_file_api_for_tsconfig_auto_discovery_to_work)",
  "vfs",
 ]
 
@@ -3358,7 +3384,7 @@ dependencies = [
  "derive_more",
  "fast-glob",
  "owo-colors",
- "oxc_resolver",
+ "oxc_resolver 11.13.2 (git+https://github.com/oxc-project/oxc-resolver?branch=11-22-feat_add_resolve_file_api_for_tsconfig_auto_discovery_to_work)",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_plugin_utils",
@@ -3422,7 +3448,7 @@ dependencies = [
  "arcstr",
  "dashmap",
  "itertools",
- "oxc_resolver",
+ "oxc_resolver 11.13.2 (git+https://github.com/oxc-project/oxc-resolver?branch=11-22-feat_add_resolve_file_api_for_tsconfig_auto_discovery_to_work)",
  "rolldown_common",
  "rolldown_fs",
  "rolldown_utils",
@@ -3561,7 +3587,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3623,7 +3649,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b55fb86dfd3a2f5f76ea78310a88f96c4ea21a3031f8d212443d56123fd0521"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -4353,7 +4379,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

@@ -74,4 +74,8 @@ impl OxcResolverFileSystem for OsFileSystem {
   fn read_link(&self, path: &Path) -> Result<PathBuf, ResolveError> {
     self.0.read_link(path)
   }
+
+  fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
+    self.0.canonicalize(path)
+  }
 }

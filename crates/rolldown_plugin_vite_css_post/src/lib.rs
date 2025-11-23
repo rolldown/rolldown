@@ -256,6 +256,7 @@ impl Plugin for ViteCSSPostPlugin {
 
     // extract as single css bundle if no codesplit
     self.emit_non_codesplit_css_bundle(ctx, args.bundle).await?;
+    // TODO: we can't handle above emitted css assets in the following code
     // remove empty css chunks and their imports
     self.prune_pure_css_chunks(ctx, args);
 

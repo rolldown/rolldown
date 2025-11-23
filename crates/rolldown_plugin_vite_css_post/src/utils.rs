@@ -492,6 +492,7 @@ impl ViteCSSPostPlugin {
         if let Some(lib_css_filename) = &self.lib_css_filename {
           lib_css_filename.to_owned()
         } else {
+          // TODO: Maybe we should use try_get_package_json_or_create for cache
           let mut base_dir = self.root.clone();
           loop {
             let pkg_path = base_dir.join("package.json");
@@ -500,11 +501,16 @@ impl ViteCSSPostPlugin {
               let json = json.trim_start_matches("\u{feff}");
               let raw_json = serde_json::from_str::<serde_json::Value>(json)?;
               if let Some(json_object) = raw_json.as_object() {
-                break json_object
+                let name = json_object
                   .get("name")
                   .and_then(|field| field.as_str())
-                  .map(ToString::to_string)
                   .ok_or_else(|| anyhow::anyhow!("Name in package.json is required if option 'build.lib.cssFileName' is not provided."))?;
+                let name = if name.starts_with('@') {
+                  name.split_once('/').map(|(_, second)| second).unwrap_or(name)
+                } else {
+                  name
+                };
+                break format!("{name}.css");
               }
             }
             base_dir = match base_dir.parent() {

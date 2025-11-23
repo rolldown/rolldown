@@ -130,8 +130,8 @@ catalogs:
       specifier: ^11.2.0
       version: 11.3.2
     glob:
-      specifier: ^12.0.0
-      version: 12.0.0
+      specifier: ^13.0.0
+      version: 13.0.0
     lodash-es:
       specifier: ^4.17.21
       version: 4.17.21
@@ -536,7 +536,7 @@ importers:
         version: 9.6.0
       glob:
         specifier: 'catalog:'
-        version: 12.0.0
+        version: 13.0.0
       oxc-parser:
         specifier: 'catalog:'
         version: 0.98.0
@@ -4326,6 +4326,10 @@ packages:
     resolution: {integrity: sha512-5Qcll1z7IKgHr5g485ePDdHcNQY0k2dtv/bjYy0iuyGxQw2qSOiiXUXJ+AYQpg3HNoUMHqAruX478Jeev7UULw==}
     engines: {node: 20 || >=22}
     hasBin: true
+
+  glob@13.0.0:
+    resolution: {integrity: sha512-tvZgpqk6fz4BaNZ66ZsRaZnbHvP/jG3uKJvAZOwEVUL4RTA5nJeeLYfyN9/VA8NX/V3IBG+hkeuGpKjvELkVhA==}
+    engines: {node: 20 || >=22}
 
   globals@15.15.0:
     resolution: {integrity: sha512-7ACyT3wmyp3I61S4fG682L0VA2RGD9otkqGJIwNUMF1SWUombIIk+af1unuDYgMm082aHYwD+mzJvv9Iu8dsgg==}
@@ -9244,6 +9248,12 @@ snapshots:
       minimatch: 10.1.1
       minipass: 7.1.2
       package-json-from-dist: 1.0.1
+      path-scurry: 2.0.1
+
+  glob@13.0.0:
+    dependencies:
+      minimatch: 10.1.1
+      minipass: 7.1.2
       path-scurry: 2.0.1
 
   globals@15.15.0: {}

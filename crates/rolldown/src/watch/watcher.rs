@@ -3,7 +3,10 @@ use anyhow::Context;
 use arcstr::ArcStr;
 #[cfg(not(target_family = "wasm"))]
 use notify::Watcher as _;
-use notify::{Config, RecommendedWatcher, event::ModifyKind};
+use notify::{
+  Config, RecommendedWatcher,
+  event::{ModifyKind, RenameMode},
+};
 
 use rolldown_common::{NotifyOption, WatcherChangeKind};
 use rolldown_error::BuildResult;
@@ -81,18 +84,12 @@ impl WatcherImpl {
       },
       watch_option,
     )?));
-    let notify_watch_files = Arc::new(FxDashSet::default());
     let emitter = Arc::new(WatcherEmitter::new());
 
     let tasks = bundlers
       .iter()
       .map(|bundler| {
-        WatcherTask::new(
-          Arc::clone(bundler),
-          Arc::clone(&emitter),
-          Arc::clone(&notify_watcher),
-          Arc::clone(&notify_watch_files),
-        )
+        WatcherTask::new(Arc::clone(bundler), Arc::clone(&emitter), Arc::clone(&notify_watcher))
       })
       .collect();
 
@@ -246,6 +243,10 @@ pub fn wait_for_change(watcher: Arc<WatcherImpl>) {
                     ModifyKind::Data(_) | ModifyKind::Any, /* windows*/
                   ) => {
                     tracing::debug!(name= "notify updated content", path = ?id.as_ref(), content= ?std::fs::read_to_string(id.as_ref()).unwrap());
+                    Some(WatcherChangeKind::Update)
+                  }
+                  notify::EventKind::Modify(ModifyKind::Name(RenameMode::To)) => {
+                    tracing::debug!(name= "notify renamed file", path = ?id.as_ref(), content= ?std::fs::read_to_string(id.as_ref()).unwrap());
                     Some(WatcherChangeKind::Update)
                   }
                   notify::EventKind::Remove(_) => Some(WatcherChangeKind::Delete),

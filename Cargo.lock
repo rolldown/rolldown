@@ -2735,9 +2735,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify"
-version = "8.2.1"
+version = "9.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "858a3e78503d89287b47d66fb042b4f04e34b237774506fbb48d7c3e5eb445cf"
+checksum = "c8a75fb66f0da1e39ec40e57ebac8d77b9a9b3754c59f24253182615ab4d9d8c"
 dependencies = [
  "bitflags 2.10.0",
  "fsevent-sys",
@@ -2753,9 +2753,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify-debouncer-full"
-version = "0.6.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45e06775bbad4fa50fb0c07a1dfbb5ec3356131b6f0e19679910cb698aa54068"
+checksum = "2fe1b1fee3fa8b779fdf0046951d01196dfe788801f4a3b66a6f355eac37a54e"
 dependencies = [
  "log",
  "rolldown-file-id",

@@ -342,6 +342,7 @@ test.sequential('#5260', async () => {
 
   watcher.clear('event');
 
+  await sleep(100); // wait for watch ready
   fs.writeFileSync(path.join(cwd, 'main.js'), `import('./foo.js')`);
 
   await waitBuildFinished(watcher);
@@ -350,7 +351,7 @@ test.sequential('#5260', async () => {
 
 test.sequential('incremental-watch-modify-entry-module', async () => {
   createTestWithMultiFiles('incremental-watch-modify-entry-module', {
-    'main.js': ` 
+    'main.js': `
 import {a} from './foo.js'
 console.log(a)
 `,
@@ -376,9 +377,10 @@ console.log(a)
   watcher.clear('event');
   expect(fs.readdirSync(path.join(cwd, 'dist'))).toHaveLength(1);
 
+  await sleep(100); // wait for watch ready
   fs.writeFileSync(
     path.join(cwd, 'main.js'),
-    ` 
+    `
 import {a} from './foo.js'
 console.log(a + 1000)
 `,
@@ -414,6 +416,7 @@ test.sequential('watch sync ast of newly added ast', async () => {
 
   watcher.clear('event');
 
+  await sleep(100); // wait for watch ready
   fs.writeFileSync(
     path.join(cwd, 'main.js'),
     `import ('./d1.js').then(console.log);import ('./d2.js').then(console.log)`,
@@ -437,6 +440,7 @@ test.sequential('watch buildDelay', async () => {
   const restartFn = vi.fn();
   watcher.on('restart', restartFn);
 
+  await sleep(100); // wait for watch ready
   fs.writeFileSync(input, 'console.log(4)');
   await sleep(20);
   fs.writeFileSync(input, 'console.log(5)');
@@ -482,6 +486,7 @@ test.sequential('PluginContext addWatchFile', async () => {
   });
 
   // edit file
+  await sleep(100); // wait for watch ready
   fs.writeFileSync(foo, 'console.log(2)\n');
   await waitUtil(() => {
     expect(changeFn).toBeCalled();
@@ -567,6 +572,7 @@ test.sequential('error handling', async () => {
     expect(errors[0].includes('PARSE_ERROR')).toBe(true);
   });
 
+  await sleep(100); // wait for watch ready
   fs.writeFileSync(input, 'console.log(2)');
   await waitBuildFinished(watcher);
 
@@ -618,6 +624,7 @@ test.sequential('error handling + plugin error', async () => {
   });
 
   errors.length = 0;
+  await sleep(100); // wait for watch ready
   fs.writeFileSync(input, 'console.log(2)');
   await waitUtil(() => {
     // The different platform maybe emit multiple events
@@ -660,6 +667,7 @@ test.sequential('watch multiply options', async () => {
     );
   });
 
+  await sleep(100); // wait for watch ready
   fs.writeFileSync(input, 'console.log(2)');
   await waitUtil(() => {
     expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(

@@ -619,27 +619,31 @@ impl Plugin for ViteHtmlPlugin {
       }
 
       if !self.css_code_split {
-        let css_bundle_name = ctx.meta().get::<CSSBundleName>();
-        if let Some(css_bundle_name) = css_bundle_name
-          && args.bundle.iter().any(
-            |o| matches!(o, rolldown_common::Output::Asset(asset) if asset.names.contains(&css_bundle_name.0)),
-          )
-        {
-          let url = self.to_output_file_path(&css_bundle_name.0, assets_base, false, &relative_url_path).await?;
-          result = utils::inject_to_head(&result, &[
-            HtmlTagDescriptor {
+        let filename = ctx.meta().get::<CSSBundleName>().and_then(|css_bundle_name| {
+          args.bundle.iter().find_map(|o| match o {
+            rolldown_common::Output::Asset(asset) if asset.names.contains(&css_bundle_name.0) => {
+              Some(asset.filename.as_str())
+            }
+            _ => None,
+          })
+        });
+        if let Some(filename) = filename {
+          let url =
+            self.to_output_file_path(filename, assets_base, false, &relative_url_path).await?;
+          result = utils::inject_to_head(
+            &result,
+            &[HtmlTagDescriptor {
               tag: "link",
               attrs: Some(FxHashMap::from_iter([
                 ("rel", AttrValue::String("stylesheet".to_owned())),
                 ("crossorigin", AttrValue::Boolean(true)),
-                (
-                  "href",
-                  AttrValue::String(url),
-                ),
+                ("href", AttrValue::String(url)),
               ])),
-                ..Default::default()
-            }
-          ], false).into_owned();
+              ..Default::default()
+            }],
+            false,
+          )
+          .into_owned();
         }
       }
 

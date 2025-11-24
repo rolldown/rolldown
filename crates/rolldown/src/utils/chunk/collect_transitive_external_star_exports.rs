@@ -3,8 +3,8 @@ use rustc_hash::FxHashSet;
 
 /// Collects all external module indices that are transitively star-exported through internal modules.
 ///
-/// This function performs a BFS traversal starting from the given entry module, following `export *`
-/// statements through internal (normal) modules and collecting all external modules encountered.
+/// This function performs a graph traversal (order does not affect correctness) starting from the given entry module,
+/// following `export *` statements through internal (normal) modules and collecting all external modules encountered.
 ///
 /// # Example
 /// Consider this module graph:

@@ -51,7 +51,8 @@ use crate::{
   types::generator::GenerateContext,
   utils::chunk::{
     deconflict_chunk_symbols::{deconflict_chunk_symbols, generate_star_reexport_binding_names},
-    determine_export_mode::determine_export_mode, generate_pre_rendered_chunk,
+    determine_export_mode::determine_export_mode,
+    generate_pre_rendered_chunk,
     render_chunk_exports::get_chunk_export_names,
     validate_options_for_multi_chunk_output::validate_options_for_multi_chunk_output,
   },

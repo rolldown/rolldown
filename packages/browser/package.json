@@ -39,6 +39,10 @@
       "browser": "./dist/experimental-index.browser.mjs",
       "default": "./dist/experimental-index.mjs"
     },
+    "./plugins": {
+      "browser": "./dist/plugins-index.browser.mjs",
+      "default": "./dist/plugins-index.mjs"
+    },
     "./filter": "./dist/filter-index.mjs",
     "./parallelPlugin": "./dist/parallel-plugin.mjs",
     "./parseAst": "./dist/parse-ast-index.mjs",

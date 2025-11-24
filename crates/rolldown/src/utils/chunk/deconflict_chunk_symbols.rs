@@ -1,6 +1,12 @@
 use oxc::span::CompactStr;
 
-use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
+use crate::{
+  stages::link_stage::LinkStageOutput,
+  utils::{
+    chunk::collect_transitive_external_star_exports::collect_transitive_external_star_exports,
+    renamer::Renamer,
+  },
+};
 use arcstr::ArcStr;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleScopeSymbolIdMap, OutputFormat, TaggedSymbolRef,
@@ -71,26 +77,13 @@ pub fn deconflict_chunk_symbols(
 
         // FIX FOR ISSUE #7115: Also add transitive external star exports
         // This handles cases like: index.js → export * from './server.js' → export * from 'external-lib'
-        let mut visited = rustc_hash::FxHashSet::default();
-        let mut queue = vec![entry_module.idx];
-        while let Some(module_idx) = queue.pop() {
-          if !visited.insert(module_idx) {
-            continue;
-          }
-          let rolldown_common::Module::Normal(module) = &link_output.module_table[module_idx]
-          else {
-            continue;
-          };
-          for star_export_idx in module.star_export_module_ids() {
-            match &link_output.module_table[star_export_idx] {
-              rolldown_common::Module::Normal(_) => {
-                queue.push(star_export_idx);
-              }
-              rolldown_common::Module::External(external) => {
-                renamer.add_symbol_in_root_scope(external.namespace_ref);
-              }
-            }
-          }
+        let transitive_external_star_exports =
+          collect_transitive_external_star_exports(entry_module.idx, &link_output.module_table);
+        for external_idx in transitive_external_star_exports {
+          let external = &link_output.module_table[external_idx]
+            .as_external()
+            .expect("Should be external module");
+          renamer.add_symbol_in_root_scope(external.namespace_ref);
         }
       }
       None => {}

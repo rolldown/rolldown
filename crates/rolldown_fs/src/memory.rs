@@ -4,7 +4,7 @@ use std::{
   sync::Arc,
 };
 
-use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem, PathUtil, ResolveError};
+use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem, ResolveError};
 use vfs::{FileSystem as _, MemoryFS};
 
 use crate::file_system::FileSystem;

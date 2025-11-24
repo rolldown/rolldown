@@ -50,7 +50,7 @@ use crate::{
   stages::link_stage::LinkStageOutput,
   types::generator::GenerateContext,
   utils::chunk::{
-    deconflict_chunk_symbols::deconflict_chunk_symbols,
+    deconflict_chunk_symbols::{deconflict_chunk_symbols, generate_star_reexport_binding_names},
     determine_export_mode::determine_export_mode, generate_pre_rendered_chunk,
     render_chunk_exports::get_chunk_export_names,
     validate_options_for_multi_chunk_output::validate_options_for_multi_chunk_output,
@@ -146,6 +146,21 @@ impl<'a> GenerateStage<'a> {
         );
       });
     });
+
+    // Generate binding names for star reexports after deconfliction
+    // This is done in a second pass because we need access to chunk_graph.module_to_chunk
+    if self.options.preserve_modules {
+      debug_span!("generate_star_reexport_binding_names").in_scope(|| {
+        chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
+          generate_star_reexport_binding_names(
+            chunk,
+            self.link_output,
+            &chunk_graph.module_to_chunk,
+            &index_chunk_id_to_name,
+          );
+        });
+      });
+    }
     let side_effect_free_function_symbols = self
       .link_output
       .module_table

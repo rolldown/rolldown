@@ -22,11 +22,11 @@ var transitive_export_star_cjs_exports = {};
 
 //#endregion
 
-var require_server = require("./server.js");
-Object.keys(require_server).forEach(function (k) {
+var require_server$1 = require("./server.js");
+Object.keys(require_server$1).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
     enumerable: true,
-    get: function () { return require_server[k]; }
+    get: function () { return require_server$1[k]; }
   });
 });
 

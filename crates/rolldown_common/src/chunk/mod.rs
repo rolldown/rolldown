@@ -64,6 +64,9 @@ pub struct Chunk {
   pub imports_from_other_chunks: Vec<(ChunkIdx, Vec<CrossChunkImportItem>)>,
   // Only meaningful for cjs format
   pub require_binding_names_for_other_chunks: FxHashMap<ChunkIdx, String>,
+  // Only meaningful for cjs format with preserveModules
+  // Maps chunk indices to binding names for star reexports (e.g., "require_server" for export * from './server.js')
+  pub require_binding_names_for_star_reexports: FxHashMap<ChunkIdx, String>,
   /// The first element of tuple is module idx of external module
   /// the second element is the related named import of external module.
   /// The second `ModuleIdx` is the importer of the named import which is used to look up related

@@ -182,3 +182,66 @@ pub fn deconflict_chunk_symbols(
 
   chunk.canonical_names = renamer.into_canonical_names();
 }
+
+/// Generates deconflicted binding names for star reexports in preserveModules mode.
+/// This must be called after `deconflict_chunk_symbols` has run for all chunks.
+///
+/// This handles cases like: `export * from './server.js'` when both files are separate chunks.
+/// The generated names (e.g., "require_server") are stored in the chunk for use during rendering.
+#[tracing::instrument(level = "trace", skip_all)]
+pub fn generate_star_reexport_binding_names(
+  chunk: &mut Chunk,
+  link_output: &LinkStageOutput,
+  module_to_chunk: &oxc_index::IndexVec<rolldown_common::ModuleIdx, Option<ChunkIdx>>,
+  index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
+) {
+  let Some(entry_module_idx) = chunk.entry_module_idx() else {
+    return;
+  };
+
+  let entry_module =
+    link_output.module_table[entry_module_idx].as_normal().expect("should be normal module");
+
+  // Collect star-exported modules that are internal/normal modules
+  let internal_star_export_chunk_ids: std::collections::BTreeSet<ChunkIdx> = entry_module
+    .star_export_module_ids()
+    .filter_map(|module_idx| {
+      // Only consider normal (internal) modules, not external ones
+      match &link_output.module_table[module_idx] {
+        rolldown_common::Module::Normal(_) => {
+          // Find which chunk this module belongs to
+          module_to_chunk.get(module_idx).and_then(|opt| *opt)
+        }
+        rolldown_common::Module::External(_) => None,
+      }
+    })
+    .collect();
+
+  // Create a renamer initialized with all existing canonical names in this chunk
+  // This ensures the generated star reexport binding names don't conflict with existing symbols
+  let mut renamer = Renamer::new(&link_output.symbol_db, OutputFormat::Cjs);
+
+  // Reserve all existing canonical names to avoid conflicts
+  for name in chunk.canonical_names.values() {
+    renamer.reserve(name.clone());
+  }
+
+  // Reserve existing require binding names
+  for name in chunk.require_binding_names_for_other_chunks.values() {
+    renamer.reserve(CompactStr::new(name));
+  }
+
+  // Generate conflict-free binding names for star reexports
+  chunk.require_binding_names_for_star_reexports = internal_star_export_chunk_ids
+    .into_iter()
+    .map(|chunk_idx| {
+      (
+        chunk_idx,
+        renamer.create_conflictless_name(&legitimize_identifier_name(&format!(
+          "require_{}",
+          index_chunk_id_to_name[&chunk_idx]
+        ))),
+      )
+    })
+    .collect();
+}

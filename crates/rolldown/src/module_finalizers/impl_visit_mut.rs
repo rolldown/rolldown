@@ -684,7 +684,8 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       | ast::Declaration::TSInterfaceDeclaration(_)
       | ast::Declaration::TSEnumDeclaration(_)
       | ast::Declaration::TSModuleDeclaration(_)
-      | ast::Declaration::TSImportEqualsDeclaration(_) => unreachable!(),
+      | ast::Declaration::TSImportEqualsDeclaration(_)
+      | ast::Declaration::TSGlobalDeclaration(_) => unreachable!(),
     }
 
     walk_mut::walk_declaration(self, it);

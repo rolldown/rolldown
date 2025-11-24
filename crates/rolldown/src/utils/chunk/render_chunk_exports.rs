@@ -11,7 +11,7 @@ use rolldown_utils::{
   ecmascript::{property_access_str, to_module_import_export_name},
   indexmap::FxIndexSet,
 };
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   stages::link_stage::LinkStageOutput, types::generator::GenerateContext,
@@ -95,6 +95,10 @@ fn render_internal_star_exports(ctx: &GenerateContext<'_>, s: &mut String) {
   // Track already required chunks to avoid duplicates
   let mut required_chunks: FxHashSet<rolldown_common::ChunkIdx> = FxHashSet::default();
 
+  // Track generated binding names to prevent collisions
+  // Maps base name (e.g., "require_foo_bar") to count of how many times it's been used
+  let mut binding_name_usage: FxHashMap<String, usize> = FxHashMap::default();
+
   for (_module_idx, chunk_idx) in internal_star_export_modules {
     // Skip if we've already required this chunk
     if !required_chunks.insert(chunk_idx) {
@@ -113,7 +117,7 @@ fn render_internal_star_exports(ctx: &GenerateContext<'_>, s: &mut String) {
 
     // Generate a valid identifier from the filename
     // Remove extension and convert to valid identifier
-    let binding_name = {
+    let base_binding_name = {
       let name_without_ext = std::path::Path::new(importee_filename.as_str())
         .file_stem()
         .and_then(|s| s.to_str())
@@ -121,6 +125,18 @@ fn render_internal_star_exports(ctx: &GenerateContext<'_>, s: &mut String) {
       // Replace invalid chars with underscores to create valid identifier
       let safe_name = name_without_ext.replace(|c: char| !c.is_alphanumeric() && c != '_', "_");
       concat_string!("require_", safe_name)
+    };
+
+    // Deconflict the binding name by adding numeric suffix if needed
+    let binding_name = match binding_name_usage.get_mut(&base_binding_name) {
+      Some(count) => {
+        *count += 1;
+        concat_string!(&base_binding_name, "$", itoa::Buffer::new().format(*count))
+      }
+      None => {
+        binding_name_usage.insert(base_binding_name.clone(), 0);
+        base_binding_name
+      }
     };
 
     // Generate the require statement and re-export code

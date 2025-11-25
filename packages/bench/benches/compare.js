@@ -16,8 +16,8 @@ for (const suite of expandSuitesWithDerived(suites)) {
   const excludedBundlers = Array.isArray(suite.disableBundler)
     ? suite.disableBundler
     : suite.disableBundler
-    ? [suite.disableBundler]
-    : [];
+      ? [suite.disableBundler]
+      : [];
 
   const group = bencher.group(suite.title, (bench) => {
     if (!excludedBundlers.includes(`rolldown`)) {

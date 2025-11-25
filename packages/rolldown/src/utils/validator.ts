@@ -103,10 +103,7 @@ const ModuleTypesSchema = v.record(
 
 const JsxOptionsSchema = v.strictObject({
   runtime: v.pipe(
-    v.optional(v.union([
-      v.literal('classic'),
-      v.literal('automatic'),
-    ])),
+    v.optional(v.union([v.literal('classic'), v.literal('automatic')])),
     v.description('Which runtime to use'),
   ),
   development: v.pipe(
@@ -130,9 +127,7 @@ const JsxOptionsSchema = v.strictObject({
     v.description('Jsx element transformation'),
   ),
   pragmaFrag: v.pipe(
-    v.optional(
-      v.string(),
-    ),
+    v.optional(v.string()),
     v.description('Jsx fragment transformation'),
   ),
   refresh: v.pipe(
@@ -249,12 +244,7 @@ const WatchOptionsSchema = v.strictObject({
     v.description('Whether to clear the screen when a rebuild is triggered'),
   ),
   onInvalidate: v.pipe(
-    v.optional(
-      v.pipe(
-        v.function(),
-        v.args(v.tuple([v.string()])),
-      ),
-    ),
+    v.optional(v.pipe(v.function(), v.args(v.tuple([v.string()])))),
     v.description(
       'An optional function that will be called immediately every time a module changes that is part of the build.',
     ),
@@ -264,21 +254,15 @@ const WatchOptionsSchema = v.strictObject({
 const ChecksOptionsSchema = v.strictObject({
   circularDependency: v.pipe(
     v.optional(v.boolean()),
-    v.description(
-      'Whether to emit warning when detecting circular dependency',
-    ),
+    v.description('Whether to emit warning when detecting circular dependency'),
   ),
   eval: v.pipe(
     v.optional(v.boolean()),
-    v.description(
-      'Whether to emit warning when detecting eval',
-    ),
+    v.description('Whether to emit warning when detecting eval'),
   ),
   missingGlobalName: v.pipe(
     v.optional(v.boolean()),
-    v.description(
-      'Whether to emit warning when detecting missing global name',
-    ),
+    v.description('Whether to emit warning when detecting missing global name'),
   ),
   missingNameOptionForIifeExport: v.pipe(
     v.optional(v.boolean()),
@@ -288,27 +272,19 @@ const ChecksOptionsSchema = v.strictObject({
   ),
   mixedExport: v.pipe(
     v.optional(v.boolean()),
-    v.description(
-      'Whether to emit warning when detecting mixed export',
-    ),
+    v.description('Whether to emit warning when detecting mixed export'),
   ),
   unresolvedEntry: v.pipe(
     v.optional(v.boolean()),
-    v.description(
-      'Whether to emit warning when detecting unresolved entry',
-    ),
+    v.description('Whether to emit warning when detecting unresolved entry'),
   ),
   unresolvedImport: v.pipe(
     v.optional(v.boolean()),
-    v.description(
-      'Whether to emit warning when detecting unresolved import',
-    ),
+    v.description('Whether to emit warning when detecting unresolved import'),
   ),
   filenameConflict: v.pipe(
     v.optional(v.boolean()),
-    v.description(
-      'Whether to emit warning when detecting filename conflict',
-    ),
+    v.description('Whether to emit warning when detecting filename conflict'),
   ),
   commonJsVariableInEsm: v.pipe(
     v.optional(v.boolean()),
@@ -318,15 +294,11 @@ const ChecksOptionsSchema = v.strictObject({
   ),
   importIsUndefined: v.pipe(
     v.optional(v.boolean()),
-    v.description(
-      'Whether to emit warning when detecting import is undefined',
-    ),
+    v.description('Whether to emit warning when detecting import is undefined'),
   ),
   emptyImportMeta: v.pipe(
     v.optional(v.boolean()),
-    v.description(
-      'Whether to emit warning when detecting empty import meta',
-    ),
+    v.description('Whether to emit warning when detecting empty import meta'),
   ),
   configurationFieldConflict: v.pipe(
     v.optional(v.boolean()),
@@ -354,19 +326,21 @@ const CompressOptionsKeepNamesSchema = v.strictObject({
 });
 
 const CompressOptionsSchema = v.strictObject({
-  target: v.optional(v.union([
-    v.literal('esnext'),
-    v.literal('es2015'),
-    v.literal('es2016'),
-    v.literal('es2017'),
-    v.literal('es2018'),
-    v.literal('es2019'),
-    v.literal('es2020'),
-    v.literal('es2021'),
-    v.literal('es2022'),
-    v.literal('es2023'),
-    v.literal('es2024'),
-  ])),
+  target: v.optional(
+    v.union([
+      v.literal('esnext'),
+      v.literal('es2015'),
+      v.literal('es2016'),
+      v.literal('es2017'),
+      v.literal('es2018'),
+      v.literal('es2019'),
+      v.literal('es2020'),
+      v.literal('es2021'),
+      v.literal('es2022'),
+      v.literal('es2023'),
+      v.literal('es2024'),
+    ]),
+  ),
   dropConsole: v.optional(v.boolean()),
   dropDebugger: v.optional(v.boolean()),
   keepNames: v.optional(CompressOptionsKeepNamesSchema),
@@ -432,13 +406,15 @@ const TreeshakingOptionsSchema = v.union([
 
 const OptimizationOptionsSchema = v.strictObject({
   inlineConst: v.pipe(
-    v.optional(v.union([
-      v.boolean(),
-      v.strictObject({
-        mode: v.optional(v.union([v.literal('all'), v.literal('smart')])),
-        pass: v.optional(v.number()),
-      }),
-    ])),
+    v.optional(
+      v.union([
+        v.boolean(),
+        v.strictObject({
+          mode: v.optional(v.union([v.literal('all'), v.literal('smart')])),
+          pass: v.optional(v.number()),
+        }),
+      ]),
+    ),
     v.description('Enable crossmodule constant inlining'),
   ),
   pifeForModuleWrappers: v.pipe(
@@ -454,13 +430,7 @@ const LogOrStringHandlerSchema = v.pipe(
 
 const OnLogSchema = v.pipe(
   vFunction<OnLogFunction>(),
-  v.args(
-    v.tuple([
-      LogLevelSchema,
-      RollupLogSchema,
-      LogOrStringHandlerSchema,
-    ]),
-  ),
+  v.args(v.tuple([LogLevelSchema, RollupLogSchema, LogOrStringHandlerSchema])),
 ) satisfies v.GenericSchema<OnLogFunction>;
 
 const OnwarnSchema = v.pipe(
@@ -510,9 +480,10 @@ const InputOptionsSchema = v.strictObject({
       v.union([v.literal('browser'), v.literal('neutral'), v.literal('node')]),
     ),
     v.description(
-      `Platform for which the code should be generated (node, ${
-        styleText('underline', 'browser')
-      }, neutral)`,
+      `Platform for which the code should be generated (node, ${styleText(
+        'underline',
+        'browser',
+      )}, neutral)`,
     ),
   ),
   shimMissingExports: v.pipe(
@@ -524,9 +495,10 @@ const InputOptionsSchema = v.strictObject({
   logLevel: v.pipe(
     v.optional(LogLevelOptionSchema),
     v.description(
-      `Log level (${styleText('dim', 'silent')}, ${
-        styleText(['underline', 'gray'], 'info')
-      }, debug, ${styleText('yellow', 'warn')})`,
+      `Log level (${styleText('dim', 'silent')}, ${styleText(
+        ['underline', 'gray'],
+        'info',
+      )}, debug, ${styleText('yellow', 'warn')})`,
     ),
   ),
   onLog: v.optional(OnLogSchema),
@@ -545,22 +517,21 @@ const InputOptionsSchema = v.strictObject({
       onDemandWrapping: v.optional(v.boolean()),
       incrementalBuild: v.optional(v.boolean()),
       hmr: v.optional(HmrSchema),
-      attachDebugInfo: v.optional(v.union([
-        v.literal('none'),
-        v.literal('simple'),
-        v.literal('full'),
-      ])),
-      chunkModulesOrder: v.optional(v.union([
-        v.literal('module-id'),
-        v.literal('exec-order'),
-      ])),
-      chunkImportMap: v.optional(v.union([
-        v.boolean(),
-        v.object({
-          baseUrl: v.optional(v.string()),
-          fileName: v.optional(v.string()),
-        }),
-      ])),
+      attachDebugInfo: v.optional(
+        v.union([v.literal('none'), v.literal('simple'), v.literal('full')]),
+      ),
+      chunkModulesOrder: v.optional(
+        v.union([v.literal('module-id'), v.literal('exec-order')]),
+      ),
+      chunkImportMap: v.optional(
+        v.union([
+          v.boolean(),
+          v.object({
+            baseUrl: v.optional(v.string()),
+            fileName: v.optional(v.string()),
+          }),
+        ]),
+      ),
       nativeMagicString: v.optional(v.boolean()),
     }),
   ),
@@ -568,23 +539,27 @@ const InputOptionsSchema = v.strictObject({
   watch: v.optional(v.union([WatchOptionsSchema, v.literal(false)])),
   checks: v.optional(ChecksOptionsSchema),
   debug: v.pipe(
-    v.optional(v.object({
-      sessionId: v.pipe(
-        v.optional(v.string()),
-        v.description('Used to name the build.'),
-      ),
-    })),
+    v.optional(
+      v.object({
+        sessionId: v.pipe(
+          v.optional(v.string()),
+          v.description('Used to name the build.'),
+        ),
+      }),
+    ),
     v.description(
       'Enable debug mode. Emit debug information to disk. This might slow down the build process significantly.',
     ),
   ),
   preserveEntrySignatures: v.pipe(
-    v.optional(v.union([
-      v.literal('strict'),
-      v.literal('allow-extension'),
-      v.literal('exports-only'),
-      v.literal(false),
-    ])),
+    v.optional(
+      v.union([
+        v.literal('strict'),
+        v.literal('allow-extension'),
+        v.literal('exports-only'),
+        v.literal(false),
+      ]),
+    ),
   ),
   tsconfig: v.pipe(
     v.optional(v.string()),
@@ -593,10 +568,7 @@ const InputOptionsSchema = v.strictObject({
 }) satisfies v.GenericSchema<InputOptions>;
 
 const InputCliOverrideSchema = v.strictObject({
-  input: v.pipe(
-    v.optional(v.array(v.string())),
-    v.description('Entry file'),
-  ),
+  input: v.pipe(v.optional(v.array(v.string())), v.description('Entry file')),
   external: v.pipe(
     v.optional(v.array(v.string())),
     v.description(
@@ -626,14 +598,7 @@ const InputCliOptionsSchema = v.omit(
     ...InputOptionsSchema.entries,
     ...InputCliOverrideSchema.entries,
   }),
-  [
-    'plugins',
-    'onwarn',
-    'onLog',
-    'resolve',
-    'experimental',
-    'watch',
-  ],
+  ['plugins', 'onwarn', 'onLog', 'resolve', 'experimental', 'watch'],
 );
 
 /// --- OutputSchema ---
@@ -732,15 +697,9 @@ const AdvancedChunksSchema = v.strictObject({
   groups: v.optional(
     v.array(
       v.strictObject({
-        name: v.union([
-          v.string(),
-          AdvancedChunksNameFunctionSchema,
-        ]),
+        name: v.union([v.string(), AdvancedChunksNameFunctionSchema]),
         test: v.optional(
-          v.union([
-            StringOrRegExpSchema,
-            AdvancedChunksTestFunctionSchema,
-          ]),
+          v.union([StringOrRegExpSchema, AdvancedChunksTestFunctionSchema]),
         ),
         priority: v.optional(v.number()),
         minSize: v.optional(v.number()),
@@ -788,9 +747,10 @@ const OutputOptionsSchema = v.strictObject({
       ]),
     ),
     v.description(
-      `Specify a export mode (${
-        styleText('underline', 'auto')
-      }, named, default, none)`,
+      `Specify a export mode (${styleText(
+        'underline',
+        'auto',
+      )}, named, default, none)`,
     ),
   ),
   hashCharacters: v.pipe(
@@ -802,9 +762,10 @@ const OutputOptionsSchema = v.strictObject({
   format: v.pipe(
     v.optional(ModuleFormatSchema),
     v.description(
-      `Output format of the generated bundle (supports ${
-        styleText('underline', 'esm')
-      }, cjs, and iife)`,
+      `Output format of the generated bundle (supports ${styleText(
+        'underline',
+        'esm',
+      )}, cjs, and iife)`,
     ),
   ),
   sourcemap: v.pipe(
@@ -812,12 +773,10 @@ const OutputOptionsSchema = v.strictObject({
       v.union([v.boolean(), v.literal('inline'), v.literal('hidden')]),
     ),
     v.description(
-      `Generate sourcemap (\`-s inline\` for inline, or ${
-        styleText(
-          'bold',
-          'pass the `-s` on the last argument if you want to generate `.map` file',
-        )
-      })`,
+      `Generate sourcemap (\`-s inline\` for inline, or ${styleText(
+        'bold',
+        'pass the `-s` on the last argument if you want to generate `.map` file',
+      )})`,
     ),
   ),
   sourcemapBaseUrl: v.pipe(
@@ -877,14 +836,10 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(
       v.union([v.record(v.string(), v.string()), PathsFunctionSchema]),
     ),
-    v.description(
-      'Maps external module IDs to paths',
-    ),
+    v.description('Maps external module IDs to paths'),
   ),
   generatedCode: v.pipe(
-    v.optional(
-      v.partial(GeneratedCodeOptionsSchema),
-    ),
+    v.optional(v.partial(GeneratedCodeOptionsSchema)),
     v.description('Generated code options'),
   ),
   externalLiveBindings: v.pipe(
@@ -938,9 +893,10 @@ const getAddonDescription = (
   placement: 'bottom' | 'top',
   wrapper: 'inside' | 'outside',
 ) => {
-  return `Code to insert the ${
-    styleText('bold', placement)
-  } of the bundled file (${styleText('bold', wrapper)} the wrapper function)`;
+  return `Code to insert the ${styleText(
+    'bold',
+    placement,
+  )} of the bundled file (${styleText('bold', wrapper)} the wrapper function)`;
 };
 
 const OutputCliOverrideSchema = v.strictObject({
@@ -1088,9 +1044,9 @@ const outputHelperMsgRecord: HelperMsgRecord = {};
 export function validateOption<T>(key: 'input' | 'output', options: T): void {
   if (typeof options !== 'object') {
     throw new Error(
-      `Invalid ${key} options. Expected an Object but received ${
-        JSON.stringify(options)
-      }.`,
+      `Invalid ${key} options. Expected an Object but received ${JSON.stringify(
+        options,
+      )}.`,
     );
   }
 
@@ -1120,15 +1076,15 @@ export function validateOption<T>(key: 'input' | 'output', options: T): void {
           }
         }
         const stringPath = issuePaths.join('.');
-        const helper = key === 'input'
-          ? inputHelperMsgRecord[stringPath]
-          : outputHelperMsgRecord[stringPath];
+        const helper =
+          key === 'input'
+            ? inputHelperMsgRecord[stringPath]
+            : outputHelperMsgRecord[stringPath];
         if (helper && helper.ignored) {
           return '';
         }
         return `- For the "${stringPath}". ${
-          helper?.issueMsg ||
-          issueMsg + '.'
+          helper?.issueMsg || issueMsg + '.'
         } ${helper?.help ? `\n  Help: ${helper.help}` : ''}`;
       })
       .filter(Boolean);

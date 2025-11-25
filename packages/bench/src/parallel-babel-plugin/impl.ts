@@ -32,8 +32,8 @@ export const babelPlugin = (): Plugin => {
           throw new Error('failed to parse');
         }
         let diffAst = performance.now() - now;
-        const ret = /** @type {babel.BabelFileResult} */ babel
-          .transformFromAstSync(
+        const ret =
+          /** @type {babel.BabelFileResult} */ babel.transformFromAstSync(
             ast,
             code,
             {

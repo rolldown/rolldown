@@ -22,21 +22,21 @@ function generalHookFilterMatcherToFilterExprs<T extends StringOrRegExp>(
   }
   if (Array.isArray(matcher)) {
     return matcher.map((m) =>
-      filter.include(generateAtomMatcher(stringKind, m))
+      filter.include(generateAtomMatcher(stringKind, m)),
     );
   }
   let ret: filter.TopLevelFilterExpression[] = [];
   if (matcher.exclude) {
     ret.push(
       ...arraify(matcher.exclude).map((m) =>
-        filter.exclude(generateAtomMatcher(stringKind, m))
+        filter.exclude(generateAtomMatcher(stringKind, m)),
       ),
     );
   }
   if (matcher.include) {
     ret.push(
       ...arraify(matcher.include).map((m) =>
-        filter.include(generateAtomMatcher(stringKind, m))
+        filter.include(generateAtomMatcher(stringKind, m)),
       ),
     );
   }
@@ -82,7 +82,7 @@ function transformFilterMatcherToFilterExprs(
   if (moduleType) {
     let moduleTypes = Array.isArray(moduleType)
       ? moduleType
-      : moduleType.include ?? [];
+      : (moduleType.include ?? []);
     andExprList.push(
       filter.or(...moduleTypes.map((m) => filter.moduleType(m))),
     );
@@ -112,8 +112,8 @@ function bindingifyGeneralHookFilter<
   }
   return ret.length > 0
     ? {
-      value: ret,
-    }
+        value: ret,
+      }
     : undefined;
 }
 

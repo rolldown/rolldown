@@ -179,9 +179,9 @@ export interface FunctionPluginHooks {
     | NullValue
     | string
     | {
-      code: string;
-      map?: SourceMapInput;
-    };
+        code: string;
+        map?: SourceMapInput;
+      };
 
   [DEFINED_HOOK_NAMES.augmentChunkHash]: (
     this: PluginContext,
@@ -225,8 +225,7 @@ export type ObjectHook<T, O = {}> = T | ({ handler: T } & ObjectHookMeta & O);
 type SyncPluginHooks = DefinedHookNames[
   | 'augmentChunkHash'
   | 'onLog'
-  | 'outputOptions'
-];
+  | 'outputOptions'];
 // | 'renderDynamicImport'
 // | 'resolveFileUrl'
 // | 'resolveImportMeta'
@@ -241,8 +240,7 @@ type FirstPluginHooks = DefinedHookNames[
   // | 'renderDynamicImport'
   | 'resolveDynamicImport'
   // | 'resolveFileUrl'
-  | 'resolveId'
-];
+  | 'resolveId'];
 // | 'resolveImportMeta'
 // | 'shouldTransformCachedModule'
 
@@ -253,8 +251,7 @@ type SequentialPluginHooks = DefinedHookNames[
   | 'options'
   | 'outputOptions'
   | 'renderChunk'
-  | 'transform'
-];
+  | 'transform'];
 
 type AddonHooks = DefinedHookNames['banner' | 'footer' | 'intro' | 'outro'];
 
@@ -268,47 +265,52 @@ type OutputPluginHooks = DefinedHookNames[
   | 'renderStart'
   // | 'resolveFileUrl'
   // | 'resolveImportMeta'
-  | 'writeBundle'
-];
+  | 'writeBundle'];
 
 export type ParallelPluginHooks = Exclude<
   keyof FunctionPluginHooks | AddonHooks,
   FirstPluginHooks | SequentialPluginHooks
 >;
 
-export type HookFilterExtension<K extends keyof FunctionPluginHooks> = K extends
-  'transform' ? { filter?: TUnionWithTopLevelFilterExpressionArray<HookFilter> }
-  : K extends 'load' ? {
-      filter?: TUnionWithTopLevelFilterExpressionArray<
-        Pick<HookFilter, 'id'>
-      >;
-    }
-  : K extends 'resolveId' ? {
-      filter?: TUnionWithTopLevelFilterExpressionArray<{
-        id?: GeneralHookFilter<RegExp>;
-      }>;
-    }
-  : K extends 'renderChunk' ? {
-      filter?: TUnionWithTopLevelFilterExpressionArray<
-        Pick<HookFilter, 'code'>
-      >;
-    }
-  : {};
+export type HookFilterExtension<K extends keyof FunctionPluginHooks> =
+  K extends 'transform'
+    ? { filter?: TUnionWithTopLevelFilterExpressionArray<HookFilter> }
+    : K extends 'load'
+      ? {
+          filter?: TUnionWithTopLevelFilterExpressionArray<
+            Pick<HookFilter, 'id'>
+          >;
+        }
+      : K extends 'resolveId'
+        ? {
+            filter?: TUnionWithTopLevelFilterExpressionArray<{
+              id?: GeneralHookFilter<RegExp>;
+            }>;
+          }
+        : K extends 'renderChunk'
+          ? {
+              filter?: TUnionWithTopLevelFilterExpressionArray<
+                Pick<HookFilter, 'code'>
+              >;
+            }
+          : {};
 
 export type PluginHooks = {
   [K in keyof FunctionPluginHooks]: ObjectHook<
-    K extends AsyncPluginHooks ? MakeAsync<FunctionPluginHooks[K]>
+    K extends AsyncPluginHooks
+      ? MakeAsync<FunctionPluginHooks[K]>
       : FunctionPluginHooks[K],
-    & HookFilterExtension<K>
-    & (K extends ParallelPluginHooks ? {
-        /**
-         * @deprecated
-         * this is only for rollup Plugin type compatibility.
-         * hooks always work as `sequential: true`.
-         */
-        sequential?: boolean;
-      }
-      : {})
+    HookFilterExtension<K> &
+      (K extends ParallelPluginHooks
+        ? {
+            /**
+             * @deprecated
+             * this is only for rollup Plugin type compatibility.
+             * hooks always work as `sequential: true`.
+             */
+            sequential?: boolean;
+          }
+        : {})
   >;
 };
 
@@ -322,8 +324,7 @@ type AddonHook = string | AddonHookFunction;
 interface OutputPlugin
   extends
     Partial<{ [K in OutputPluginHooks]: PluginHooks[K] }>,
-    Partial<{ [K in AddonHooks]: ObjectHook<AddonHook> }>
-{
+    Partial<{ [K in AddonHooks]: ObjectHook<AddonHook> }> {
   // cacheKey?: string
   name: string;
   // version?: string

@@ -2,15 +2,15 @@ import type { BindingClientHmrUpdate } from '../../binding.cjs';
 import type { RolldownOutput } from '../../types/rolldown-output';
 
 type DevOnHmrUpdates = (
-  result: Error | {
-    updates: BindingClientHmrUpdate[];
-    changedFiles: string[];
-  },
+  result:
+    | Error
+    | {
+        updates: BindingClientHmrUpdate[];
+        changedFiles: string[];
+      },
 ) => void | Promise<void>;
 
-type DevOnOutput = (
-  result: Error | RolldownOutput,
-) => void | Promise<void>;
+type DevOnOutput = (result: Error | RolldownOutput) => void | Promise<void>;
 
 export interface DevWatchOptions {
   /**

@@ -83,14 +83,16 @@ class DevServer {
       watch: getDevWatchOptionsForCi(),
     });
     this.#devEngine = devEngine;
-    process.stdin.on('data', async data => {
-      if (data.toString() === 'r') {
-        const { hasStaleOutput } = await devEngine.getBundleState();
-        if (hasStaleOutput) {
-          await devEngine.ensureLatestBuildOutput();
+    process.stdin
+      .on('data', async (data) => {
+        if (data.toString() === 'r') {
+          const { hasStaleOutput } = await devEngine.getBundleState();
+          if (hasStaleOutput) {
+            await devEngine.ensureLatestBuildOutput();
+          }
         }
-      }
-    }).unref();
+      })
+      .unref();
     this.#prepareHttpServerAfterCreateDevEngine(devEngine);
     await devEngine.run();
     this.#readyHttpServer();
@@ -208,9 +210,9 @@ class DevServer {
         output.code,
       );
       const patchUriForBrowser = `/${path}`;
-      const patchUriForFile = nodeUrl.pathToFileURL(
-        nodePath.join(process.cwd(), 'dist', path),
-      ).toString();
+      const patchUriForFile = nodeUrl
+        .pathToFileURL(nodePath.join(process.cwd(), 'dist', path))
+        .toString();
       console.log(
         'Patch:',
         JSON.stringify({
@@ -226,22 +228,18 @@ class DevServer {
       });
     } else {
       console.debug(
-        `Failed to send update to client due to ${
-          JSON.stringify(
-            {
-              hasCode: output.code != null,
-            },
-            null,
-            2,
-          )
-        }`,
+        `Failed to send update to client due to ${JSON.stringify(
+          {
+            hasCode: output.code != null,
+          },
+          null,
+          2,
+        )}`,
       );
     }
   }
 
-  async #handleHmrInvalidate(
-    msg: HmrInvalidateMessage,
-  ): Promise<void> {
+  async #handleHmrInvalidate(msg: HmrInvalidateMessage): Promise<void> {
     console.log('Invalidating...');
     // Always invalidate - sendMessage will handle empty client lists
     const updates = await this.#devEngine!.invalidate(msg.moduleId);

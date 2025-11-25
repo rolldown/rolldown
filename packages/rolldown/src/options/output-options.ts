@@ -355,9 +355,7 @@ export interface OutputOptions {
        * Constraints like `minSize`, `maxSize`, etc. are applied separately for different names returned by the function.
        * :::
        */
-      name:
-        | string
-        | AdvancedChunksNameFunction;
+      name: string | AdvancedChunksNameFunction;
       /**
        * - Type: `string | RegExp | ((id: string) => boolean | undefined | void);`
        *
@@ -496,11 +494,10 @@ interface OverwriteOutputOptionsForCli {
   };
 }
 
-export type OutputCliOptions =
-  & Omit<
-    OutputOptions,
-    | keyof OverwriteOutputOptionsForCli
-    | 'sourcemapIgnoreList'
-    | 'sourcemapPathTransform'
-  >
-  & OverwriteOutputOptionsForCli;
+export type OutputCliOptions = Omit<
+  OutputOptions,
+  | keyof OverwriteOutputOptionsForCli
+  | 'sourcemapIgnoreList'
+  | 'sourcemapPathTransform'
+> &
+  OverwriteOutputOptionsForCli;

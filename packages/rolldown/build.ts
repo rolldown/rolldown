@@ -42,9 +42,10 @@ const buildMeta = (function makeBuildMeta() {
       }
     })();
 
-  const pkgRoot = target === 'browser-pkg'
-    ? nodePath.resolve(__dirname, '../browser')
-    : __dirname;
+  const pkgRoot =
+    target === 'browser-pkg'
+      ? nodePath.resolve(__dirname, '../browser')
+      : __dirname;
 
   return {
     isCI: !!process.env.CI,
@@ -93,9 +94,7 @@ if (buildMeta.target === 'browser-pkg') {
     // But in browser build, we don't have `process.`, so we polyfill them
     'process.env.ROLLDOWN_TEST': 'false',
   };
-  configs.push(
-    init,
-  );
+  configs.push(init);
 }
 
 (async () => {
@@ -109,27 +108,26 @@ if (buildMeta.target === 'browser-pkg') {
   generateRuntimeTypes();
 })();
 
-function withShared(
-  { browserBuild: isBrowserBuild, ...options }:
-    & { browserBuild?: boolean }
-    & BuildOptions,
-): BuildOptions {
+function withShared({
+  browserBuild: isBrowserBuild,
+  ...options
+}: { browserBuild?: boolean } & BuildOptions): BuildOptions {
   return {
     input: {
       index: './src/index',
       'plugins-index': './src/plugins-index',
       'experimental-index': './src/experimental-index',
-      ...!isBrowserBuild
+      ...(!isBrowserBuild
         ? {
-          'cli-setup': './src/cli/setup-index',
-          cli: './src/cli/index',
-          config: './src/config',
-          'parallel-plugin': './src/parallel-plugin',
-          'parallel-plugin-worker': './src/parallel-plugin-worker',
-          'filter-index': './src/filter-index',
-          'parse-ast-index': './src/parse-ast-index',
-        }
-        : {},
+            'cli-setup': './src/cli/setup-index',
+            cli: './src/cli/index',
+            config: './src/config',
+            'parallel-plugin': './src/parallel-plugin',
+            'parallel-plugin-worker': './src/parallel-plugin-worker',
+            'filter-index': './src/filter-index',
+            'parse-ast-index': './src/parse-ast-index',
+          }
+        : {}),
     },
     platform: isBrowserBuild ? 'browser' : 'node',
     resolve: {
@@ -143,8 +141,7 @@ function withShared(
     // Do not move this line up or down, it's here for a reason
     ...options,
     plugins: [
-      buildMeta.desireWasmFiles &&
-      resolveWasiBinding(isBrowserBuild),
+      buildMeta.desireWasmFiles && resolveWasiBinding(isBrowserBuild),
       CopyAddonPlugin({
         isCI: buildMeta.isCI,
         isReleasingPkgInCI: buildMeta.isReleasingPkgInCI,
@@ -154,9 +151,7 @@ function withShared(
       options.plugins,
     ],
     treeshake: {
-      moduleSideEffects: [
-        { test: /\/signal-exit\//, sideEffects: false },
-      ],
+      moduleSideEffects: [{ test: /\/signal-exit\//, sideEffects: false }],
     },
     transform: {
       target: 'node22',
@@ -182,9 +177,7 @@ function resolveWasiBinding(isBrowserBuild?: boolean): Plugin {
         const resolution = await this.resolve(id, importer, options);
 
         if (resolution?.id === bindingFile) {
-          const id = isBrowserBuild
-            ? bindingFileWasiBrowser
-            : bindingFileWasi;
+          const id = isBrowserBuild ? bindingFileWasiBrowser : bindingFileWasi;
           return { id, external: 'relative' };
         }
 
@@ -204,8 +197,11 @@ function removeBuiltModules(): Plugin {
           return this.resolve('pathe');
         }
         if (
-          id === 'node:os' || id === 'node:worker_threads' ||
-          id === 'node:url' || id === 'node:fs/promises' || id === 'node:fs' ||
+          id === 'node:os' ||
+          id === 'node:worker_threads' ||
+          id === 'node:url' ||
+          id === 'node:fs/promises' ||
+          id === 'node:fs' ||
           id === 'node:util'
         ) {
           // conditional import
@@ -281,9 +277,8 @@ function generateRuntimeTypes() {
 }
 
 function getTsconfigCompilerOptionsForFile(file: string) {
-  const tsconfigPath = ts.findConfigFile(
-    file,
-    (path) => ts.sys.fileExists(path),
+  const tsconfigPath = ts.findConfigFile(file, (path) =>
+    ts.sys.fileExists(path),
   );
   let compilerOptions = ts.getDefaultCompilerOptions();
   if (tsconfigPath) {

@@ -30,9 +30,8 @@ export async function bundleWithConfig(
   }
 
   // If config is a function, call it with raw command line arguments
-  const resolvedConfig = typeof config === 'function'
-    ? await config(rawArgs)
-    : config;
+  const resolvedConfig =
+    typeof config === 'function' ? await config(rawArgs) : config;
 
   // TODO: Could add more validation/diagnostics here to emit a nice error message
   if (cliOptions.watch) {
@@ -117,9 +116,10 @@ async function watchInner(
       case 'BUNDLE_START':
         if (changedFile.length > 0) {
           logger.log(
-            `Found ${
-              styleText('bold', changedFile.map(relativeId).join(', '))
-            } changed, rebuilding...`,
+            `Found ${styleText(
+              'bold',
+              changedFile.map(relativeId).join(', '),
+            )} changed, rebuilding...`,
           );
         }
         changedFile.length = 0;
@@ -128,9 +128,10 @@ async function watchInner(
       case 'BUNDLE_END':
         await event.result.close();
         logger.success(
-          `Rebuilt ${styleText('bold', relativeId(event.output[0]))} in ${
-            styleText('green', ms(event.duration))
-          }.`,
+          `Rebuilt ${styleText('bold', relativeId(event.output[0]))} in ${styleText(
+            'green',
+            ms(event.duration),
+          )}.`,
         );
         break;
 
@@ -203,9 +204,10 @@ function collectOutputEntries(output: RolldownOutput['output']): OutputEntry[] {
   return output.map((chunk) => ({
     type: chunk.type,
     fileName: chunk.fileName,
-    size: chunk.type === 'chunk'
-      ? Buffer.byteLength(chunk.code)
-      : Buffer.byteLength(chunk.source),
+    size:
+      chunk.type === 'chunk'
+        ? Buffer.byteLength(chunk.code)
+        : Buffer.byteLength(chunk.source),
   }));
 }
 

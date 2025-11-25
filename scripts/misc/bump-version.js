@@ -86,7 +86,7 @@ if (!inputVersion) {
   throw new Error('You must pass a version to bump');
 }
 
-const newVersion = await (async function() {
+const newVersion = await (async function () {
   if (isPresetArg(inputVersion)) {
     return await genVersionByPreset(inputVersion);
   } else {

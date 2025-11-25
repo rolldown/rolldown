@@ -19,9 +19,9 @@ export async function initializeParallelPlugins(
   plugins: RolldownPlugin[],
 ): Promise<
   | {
-    registry: ParallelJsPluginRegistry;
-    stopWorkers: () => Promise<void>;
-  }
+      registry: ParallelJsPluginRegistry;
+      stopWorkers: () => Promise<void>;
+    }
   | undefined
 > {
   const pluginInfos: ParallelPluginInfo[] = [];
@@ -53,9 +53,8 @@ function initializeWorkers(
   pluginInfos: ParallelPluginInfo[],
 ): Promise<Worker[]> {
   return Promise.all(
-    Array.from(
-      { length: count },
-      (_, i) => initializeWorker(registryId, pluginInfos, i),
+    Array.from({ length: count }, (_, i) =>
+      initializeWorker(registryId, pluginInfos, i),
     ),
   );
 }

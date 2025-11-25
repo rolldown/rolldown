@@ -25,15 +25,13 @@ export function viteModulePreloadPolyfillPlugin(
   return new BuiltinPlugin('builtin:vite-module-preload-polyfill', config);
 }
 
-type DynamicImportVarsPluginConfig =
-  & Omit<
-    BindingViteDynamicImportVarsPluginConfig,
-    'include' | 'exclude'
-  >
-  & {
-    include?: StringOrRegExp | StringOrRegExp[];
-    exclude?: StringOrRegExp | StringOrRegExp[];
-  };
+type DynamicImportVarsPluginConfig = Omit<
+  BindingViteDynamicImportVarsPluginConfig,
+  'include' | 'exclude'
+> & {
+  include?: StringOrRegExp | StringOrRegExp[];
+  exclude?: StringOrRegExp | StringOrRegExp[];
+};
 
 export function viteDynamicImportVarsPlugin(
   config?: DynamicImportVarsPluginConfig,
@@ -114,15 +112,13 @@ export function esmExternalRequirePlugin(
   return new BuiltinPlugin('builtin:esm-external-require', config);
 }
 
-type ViteReactRefreshWrapperPluginConfig =
-  & Omit<
-    BindingViteReactRefreshWrapperPluginConfig,
-    'include' | 'exclude'
-  >
-  & {
-    include?: StringOrRegExp | StringOrRegExp[];
-    exclude?: StringOrRegExp | StringOrRegExp[];
-  };
+type ViteReactRefreshWrapperPluginConfig = Omit<
+  BindingViteReactRefreshWrapperPluginConfig,
+  'include' | 'exclude'
+> & {
+  include?: StringOrRegExp | StringOrRegExp[];
+  exclude?: StringOrRegExp | StringOrRegExp[];
+};
 
 export function viteReactRefreshWrapperPlugin(
   config: ViteReactRefreshWrapperPluginConfig,

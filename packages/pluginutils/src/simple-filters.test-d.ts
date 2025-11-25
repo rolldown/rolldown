@@ -7,9 +7,9 @@ describe('makeIdFiltersToMatchWithQuery', () => {
     expectTypeOf(makeIdFiltersToMatchWithQuery(input)).toEqualTypeOf<string>();
 
     // string literal should return normal string
-    expectTypeOf(makeIdFiltersToMatchWithQuery('foo')).not.toEqualTypeOf<
-      'foo'
-    >();
+    expectTypeOf(
+      makeIdFiltersToMatchWithQuery('foo'),
+    ).not.toEqualTypeOf<'foo'>();
     expectTypeOf(makeIdFiltersToMatchWithQuery('foo')).toEqualTypeOf<string>();
   });
 

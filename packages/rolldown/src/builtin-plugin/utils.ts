@@ -31,8 +31,7 @@ export class BuiltinPlugin {
     public name: BindingBuiltinPluginName,
     // NOTE: has `_` to avoid conflict with `options` hook
     public _options?: unknown,
-  ) {
-  }
+  ) {}
 }
 
 export function makeBuiltinPluginCallable(
@@ -42,12 +41,11 @@ export function makeBuiltinPluginCallable(
     bindingifyBuiltInPlugin(plugin),
   );
 
-  const wrappedPlugin:
-    & Partial<BindingCallableBuiltinPluginLike>
-    & BuiltinPlugin = plugin;
+  const wrappedPlugin: Partial<BindingCallableBuiltinPluginLike> &
+    BuiltinPlugin = plugin;
   for (const key in callablePlugin) {
     // @ts-expect-error
-    wrappedPlugin[key] = async function(...args) {
+    wrappedPlugin[key] = async function (...args) {
       try {
         // @ts-expect-error
         return await callablePlugin[key](...args);
@@ -87,8 +85,7 @@ export function bindingifyViteHtmlPlugin(
   watchMode: boolean,
 ): BindingBuiltinPlugin {
   const { preHooks, normalHooks, postHooks, applyHtmlTransforms, ...options } =
-    plugin
-      ._options as ViteHtmlPluginOptions;
+    plugin._options as ViteHtmlPluginOptions;
   if (preHooks.length + normalHooks.length + postHooks.length > 0) {
     return {
       __name: plugin.name,
@@ -115,9 +112,9 @@ export function bindingifyViteHtmlPlugin(
             filename,
             bundle: output
               ? transformToOutputBundle(pluginContext, output, {
-                updated: new Set(),
-                deleted: new Set(),
-              })
+                  updated: new Set(),
+                  deleted: new Set(),
+                })
               : undefined,
             chunk: chunk ? transformToRollupOutputChunk(chunk) : undefined,
           };

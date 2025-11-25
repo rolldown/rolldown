@@ -67,10 +67,12 @@ export function filterVitePlugins<T = any>(
           // If function throws, include the plugin to be safe
           result.push(plugin);
         }
-      } // If apply is 'serve', skip this plugin
+      }
+      // If apply is 'serve', skip this plugin
       else if (applyValue === 'serve') {
         continue;
-      } // If apply is 'build' or anything else, include it
+      }
+      // If apply is 'build' or anything else, include it
       else {
         result.push(plugin);
       }

@@ -232,6 +232,10 @@ oxc_resolver = { version = "11.14.0", features = ["yarn_pnp"] } # https://github
 oxc_resolver_napi = { version = "11.13.1", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "6" } # https://github.com/oxc-project/oxc-sourcemap
 
+[patch.crates-io]
+rolldown-notify = { git = "https://github.com/rolldown/notify", branch = "fix/filter-out-unrelated-events" }
+rolldown-notify-debouncer-full = { git = "https://github.com/rolldown/notify", branch = "fix/filter-out-unrelated-events" }
+
 [profile.dev]
 # Minimal debug info to speed up local and CI builds.
 debug = "line-tables-only"

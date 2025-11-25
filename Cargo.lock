@@ -2727,8 +2727,7 @@ dependencies = [
 [[package]]
 name = "rolldown-file-id"
 version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "987e6977d7746be897071f69d1f8ec72b25a246c8130cf7985c1a536f6eaf1be"
+source = "git+https://github.com/rolldown/notify?branch=fix%2Ffilter-out-unrelated-events#781fac7cecccbbfda4b3896fb499d9d6a9fbbeae"
 dependencies = [
  "windows-sys 0.61.2",
 ]
@@ -2736,8 +2735,7 @@ dependencies = [
 [[package]]
 name = "rolldown-notify"
 version = "9.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8a75fb66f0da1e39ec40e57ebac8d77b9a9b3754c59f24253182615ab4d9d8c"
+source = "git+https://github.com/rolldown/notify?branch=fix%2Ffilter-out-unrelated-events#781fac7cecccbbfda4b3896fb499d9d6a9fbbeae"
 dependencies = [
  "bitflags 2.10.0",
  "fsevent-sys",
@@ -2754,8 +2752,7 @@ dependencies = [
 [[package]]
 name = "rolldown-notify-debouncer-full"
 version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fe1b1fee3fa8b779fdf0046951d01196dfe788801f4a3b66a6f355eac37a54e"
+source = "git+https://github.com/rolldown/notify?branch=fix%2Ffilter-out-unrelated-events#781fac7cecccbbfda4b3896fb499d9d6a9fbbeae"
 dependencies = [
  "log",
  "rolldown-file-id",
@@ -2767,8 +2764,7 @@ dependencies = [
 [[package]]
 name = "rolldown-notify-types"
 version = "2.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "598d3e49d0f0fb6f5be6664efc3138634d7aa0c9fc5d1186a0a435dd76e6660f"
+source = "git+https://github.com/rolldown/notify?branch=fix%2Ffilter-out-unrelated-events#781fac7cecccbbfda4b3896fb499d9d6a9fbbeae"
 
 [[package]]
 name = "rolldown_binding"

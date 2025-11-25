@@ -72,6 +72,8 @@ impl WatcherTask {
         rolldown_common::ScanMode::Partial(_) => rolldown_common::BundleMode::IncrementalBuild,
       };
 
+      tracing::debug!(name= "watcher task run", is_incremental, ?bundle_mode);
+
       // https://github.com/rollup/rollup/blob/ecff5325941ec36599f9967731ed6871186a72ee/src/watch/watch.ts#L206
       bundler
         .with_cached_bundle(bundle_mode, async |bundle| {

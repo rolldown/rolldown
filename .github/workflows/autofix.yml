@@ -29,6 +29,8 @@ jobs:
           tools: dprint,cargo-shear@1.3.0
           components: rustfmt
 
+      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+
       - name: cargo-shear
         id: shear
         shell: bash
@@ -41,7 +43,7 @@ jobs:
         run: cargo check --workspace --all-features --all-targets
         if: ${{ steps.shear.outputs.shear == 'true' }}
 
-      - run: dprint fmt
+      - run: pnpm run fmt
 
       - run: cargo fmt --all
 

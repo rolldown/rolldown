@@ -26,6 +26,16 @@ pub struct ViteTransformPlugin {
   pub is_server_consumer: bool,
   pub sourcemap: bool,
   pub transform_options: BundlerTransformOptions,
+  pub resolver: oxc_resolver::Resolver,
+}
+
+impl ViteTransformPlugin {
+  pub fn new_resolver() -> oxc_resolver::Resolver {
+    oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions {
+      tsconfig: Some(oxc_resolver::TsconfigDiscovery::Auto),
+      ..Default::default()
+    })
+  }
 }
 
 /// only handle ecma like syntax, `jsx`,`tsx`,`ts`

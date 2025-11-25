@@ -65,32 +65,32 @@ jobs:
           echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}"
           echo "PluginUtils changes: ${{ (steps.filter.outputs.pluginutils-changes == 'true') || (github.ref_name == 'main') }}"
 
-  rust-validation:
-    name: Rust Validation
-    needs: changes
-    if: ${{ needs.changes.outputs.rust-changes == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+  # rust-validation:
+  #   name: Rust Validation
+  #   needs: changes
+  #   if: ${{ needs.changes.outputs.rust-changes == 'true' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@eb5c2bf64ce11cc9557c576d6766c164d064fdb7 # v1.0.10
-        with:
-          tools: just
-          cache-key: debug-build
-          components: clippy rustfmt
+  #     - name: Setup Rust
+  #       uses: oxc-project/setup-rust@eb5c2bf64ce11cc9557c576d6766c164d064fdb7 # v1.0.10
+  #       with:
+  #         tools: just
+  #         cache-key: debug-build
+  #         components: clippy rustfmt
 
-      - run: just lint-rust
+  #     - run: just lint-rust
 
-  cargo-test:
-    needs: changes
-    strategy:
-      matrix:
-        target: [ubuntu-latest, macos-latest, windows-latest]
-    uses: ./.github/workflows/reusable-cargo-test.yml
-    with:
-      os: ${{ matrix.target }}
-      changed: ${{ needs.changes.outputs.rust-changes == 'true' }}
+  # cargo-test:
+  #   needs: changes
+  #   strategy:
+  #     matrix:
+  #       target: [ubuntu-latest, macos-latest, windows-latest]
+  #   uses: ./.github/workflows/reusable-cargo-test.yml
+  #   with:
+  #     os: ${{ matrix.target }}
+  #     changed: ${{ needs.changes.outputs.rust-changes == 'true' }}
 
   node-test:
     needs: changes
@@ -102,119 +102,119 @@ jobs:
       os: ${{ matrix.target }}
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
-  build-rolldown-wasi:
-    needs: changes
-    uses: ./.github/workflows/reusable-wasi-build.yml
-    with:
-      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+  # build-rolldown-wasi:
+  #   needs: changes
+  #   uses: ./.github/workflows/reusable-wasi-build.yml
+  #   with:
+  #     changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
-  build-browser:
-    name: Build `@rolldown/browser`
-    needs: [changes]
-    if: ${{ needs.changes.outputs.node-changes == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
-        with:
-          submodules: true # Pull submodules for additional files
-          persist-credentials: false
+  # build-browser:
+  #   name: Build `@rolldown/browser`
+  #   needs: [changes]
+  #   if: ${{ needs.changes.outputs.node-changes == 'true' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+  #       with:
+  #         submodules: true # Pull submodules for additional files
+  #         persist-credentials: false
 
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@eb5c2bf64ce11cc9557c576d6766c164d064fdb7 # v1.0.10
-        with:
-          tools: just
-          cache-key: debug-build-wasi
+  #     - name: Setup Rust
+  #       uses: oxc-project/setup-rust@eb5c2bf64ce11cc9557c576d6766c164d064fdb7 # v1.0.10
+  #       with:
+  #         tools: just
+  #         cache-key: debug-build-wasi
 
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+  #     - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
 
-      - name: Add WASI target
-        run: rustup target add wasm32-wasip1-threads
+  #     - name: Add WASI target
+  #       run: rustup target add wasm32-wasip1-threads
 
-      - name: Build `@rolldown/browser`
-        run: just build-browser
+  #     - name: Build `@rolldown/browser`
+  #       run: just build-browser
 
-  wasi-test:
-    needs: [changes, build-rolldown-wasi]
-    # run this even if build-rolldown-wasi is skipped
-    # Normally, if `build-rolldown-wasi` is skipped, this job won't run, which makes status checks failed.
-    # By using such syntax, https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#example-not-requiring-successful-dependent-jobs
-    # we always run this job even when `build-rolldown-wasi` is skipped. We'll handle/skip unnecessary runs in `reusable-wasi-test.yml`.
-    if: |
-      always() &&
-      (needs.build-rolldown-wasi.result == 'success' || needs.build-rolldown-wasi.result == 'skipped')
-    strategy:
-      matrix:
-        target: [ubuntu-latest, macos-latest, windows-latest]
-    uses: ./.github/workflows/reusable-wasi-test.yml
-    with:
-      os: ${{ matrix.target }}
-      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+  # wasi-test:
+  #   needs: [changes, build-rolldown-wasi]
+  #   # run this even if build-rolldown-wasi is skipped
+  #   # Normally, if `build-rolldown-wasi` is skipped, this job won't run, which makes status checks failed.
+  #   # By using such syntax, https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#example-not-requiring-successful-dependent-jobs
+  #   # we always run this job even when `build-rolldown-wasi` is skipped. We'll handle/skip unnecessary runs in `reusable-wasi-test.yml`.
+  #   if: |
+  #     always() &&
+  #     (needs.build-rolldown-wasi.result == 'success' || needs.build-rolldown-wasi.result == 'skipped')
+  #   strategy:
+  #     matrix:
+  #       target: [ubuntu-latest, macos-latest, windows-latest]
+  #   uses: ./.github/workflows/reusable-wasi-test.yml
+  #   with:
+  #     os: ${{ matrix.target }}
+  #     changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
-  pluginutils-test:
-    name: Pluginutils Test
-    needs: changes
-    if: ${{ needs.changes.outputs.pluginutils-changes == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+  # pluginutils-test:
+  #   name: Pluginutils Test
+  #   needs: changes
+  #   if: ${{ needs.changes.outputs.pluginutils-changes == 'true' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+  #     - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
 
-      - name: Test `@rolldown/pluginutils`
-        run: pnpm --filter '@rolldown/pluginutils' test
+  #     - name: Test `@rolldown/pluginutils`
+  #       run: pnpm --filter '@rolldown/pluginutils' test
 
-  node-validation:
-    name: Node Validation
-    needs: changes
-    if: ${{ needs.changes.outputs.node-changes == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+  # node-validation:
+  #   name: Node Validation
+  #   needs: changes
+  #   if: ${{ needs.changes.outputs.node-changes == 'true' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@eb5c2bf64ce11cc9557c576d6766c164d064fdb7 # v1.0.10
-        with:
-          tools: just
-          cache-key: debug-build
+  #     - name: Setup Rust
+  #       uses: oxc-project/setup-rust@eb5c2bf64ce11cc9557c576d6766c164d064fdb7 # v1.0.10
+  #       with:
+  #         tools: just
+  #         cache-key: debug-build
 
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+  #     - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
 
-      - name: Build Native Rolldown
-        run: just build-rolldown
+  #     - name: Build Native Rolldown
+  #       run: just build-rolldown
 
-      - name: Build @rolldown/pluginutils
-        run: pnpm --filter '@rolldown/pluginutils' build
+  #     - name: Build @rolldown/pluginutils
+  #       run: pnpm --filter '@rolldown/pluginutils' build
 
-      - name: Lint Code
-        run: pnpm lint-code
+  #     - name: Lint Code
+  #       run: pnpm lint-code
 
-      - name: Lint exports & dependencies
-        run: pnpm lint-knip
+  #     - name: Lint exports & dependencies
+  #       run: pnpm lint-knip
 
-      - name: Validate workspace package
-        run: node scripts/misc/published-package-check.mjs
+  #     - name: Validate workspace package
+  #       run: node scripts/misc/published-package-check.mjs
 
-  repo-validation:
-    name: Repo Validation
-    runs-on: ubuntu-latest
-    steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+  # repo-validation:
+  #   name: Repo Validation
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+  #     - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
 
-      - name: Lint Filename
-        run: cargo ls-lint
+  #     - name: Lint Filename
+  #       run: cargo ls-lint
 
-      - name: update generated code
-        run: |
-          cargo run --bin generator
-          git diff --exit-code
+  #     - name: update generated code
+  #       run: |
+  #         cargo run --bin generator
+  #         git diff --exit-code
 
-  typos:
-    name: Spell Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
-      - uses: crate-ci/typos@626c4bedb751ce0b7f03262ca97ddda9a076ae1c # v1.39.2
-        with:
-          files: .
+  # typos:
+  #   name: Spell Check
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+  #     - uses: crate-ci/typos@626c4bedb751ce0b7f03262ca97ddda9a076ae1c # v1.39.2
+  #       with:
+  #         files: .

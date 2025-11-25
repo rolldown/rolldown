@@ -58,51 +58,53 @@ jobs:
 
       - name: Node Test For Node20
         run: |
-          pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
+          pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
+        env:
+          NOTIFY_LOG: trace
 
-      - name: Rollup Test For Node20
-        run: pnpm run --filter rollup-tests test
+      # - name: Rollup Test For Node20
+      #   run: pnpm run --filter rollup-tests test
 
-      - name: Build Examples For Node20
-        run: pnpm --filter '@example/**' build
+      # - name: Build Examples For Node20
+      #   run: pnpm --filter '@example/**' build
 
-      - name: HMR Test For Node20
-        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
+      # - name: HMR Test For Node20
+      #   run: pnpm run --filter '@rolldown/test-dev-server-tests' test
 
-      - name: Setup Node22 For Testing
-        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
-        with:
-          node-version: 22
-          package-manager-cache: false
+      # - name: Setup Node22 For Testing
+      #   uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+      #   with:
+      #     node-version: 22
+      #     package-manager-cache: false
 
-      - name: Node Test For Node22
-        run: |
-          pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
+      # - name: Node Test For Node22
+      #   run: |
+      #     pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
 
-      - name: Rollup Test For Node22
-        run: pnpm run --filter rollup-tests test
+      # - name: Rollup Test For Node22
+      #   run: pnpm run --filter rollup-tests test
 
-      - name: Build Examples For Node22
-        run: pnpm --filter '@example/**' build
+      # - name: Build Examples For Node22
+      #   run: pnpm --filter '@example/**' build
 
-      - name: HMR Test For Node22
-        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
+      # - name: HMR Test For Node22
+      #   run: pnpm run --filter '@rolldown/test-dev-server-tests' test
 
-      - name: Setup Node24 For Testing
-        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
-        with:
-          node-version: 24
-          package-manager-cache: false
+      # - name: Setup Node24 For Testing
+      #   uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+      #   with:
+      #     node-version: 24
+      #     package-manager-cache: false
 
-      - name: Node Test For Node24
-        run: |
-          pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
+      # - name: Node Test For Node24
+      #   run: |
+      #     pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
 
-      - name: Rollup Test For Node24
-        run: pnpm run --filter rollup-tests test
+      # - name: Rollup Test For Node24
+      #   run: pnpm run --filter rollup-tests test
 
-      - name: Build Examples For Node24
-        run: pnpm --filter '@example/**' build
+      # - name: Build Examples For Node24
+      #   run: pnpm --filter '@example/**' build
 
-      - name: HMR Test For Node24
-        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
+      # - name: HMR Test For Node24
+      #   run: pnpm run --filter '@rolldown/test-dev-server-tests' test

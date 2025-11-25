@@ -32,21 +32,30 @@ test.sequential('watch', async () => {
       },
     ],
   });
-  onTestFinished(() => watcher.close());
-  // should run build once
-  await waitBuildFinished(watcher);
 
-  // edit file
-  fs.writeFileSync(input, 'console.log(2)');
-  await waitUtil(() => {
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
-      true,
-    );
-    // The different platform maybe emit multiple events
-    expect(watchChangeFn).toBeCalled();
-  });
+  let errored = false;
+  try {
+    // should run build once
+    await waitBuildFinished(watcher);
 
-  expect(closeWatcherFn).toBeCalledTimes(1);
+    // edit file
+    fs.writeFileSync(input, 'console.log(2)');
+    await waitUtil(() => {
+      expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
+        true,
+      );
+      // The different platform maybe emit multiple events
+      expect(watchChangeFn).toBeCalled();
+    });
+  } catch (e) {
+    errored = true;
+    throw e;
+  } finally {
+    await watcher.close();
+    if (!errored) {
+      expect(closeWatcherFn).toBeCalledTimes(1);
+    }
+  }
 });
 
 test.sequential('watch files after scan stage', async () => {

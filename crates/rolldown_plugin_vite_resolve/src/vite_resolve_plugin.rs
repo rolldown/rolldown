@@ -142,7 +142,7 @@ impl ViteResolvePlugin {
       try_index: options.resolve_options.try_index,
       try_prefix: &options.resolve_options.try_prefix,
       as_src: options.resolve_options.as_src,
-      root: &options.resolve_options.root,
+      root: PathBuf::from(&options.resolve_options.root),
       preserve_symlinks: options.resolve_options.preserve_symlinks,
       tsconfig_paths: options.resolve_options.tsconfig_paths,
     };
@@ -440,16 +440,12 @@ impl Plugin for ViteResolvePlugin {
       }
     }
 
-    let base_dir = args
-      .importer
-      .map(|i| Path::new(i).parent().and_then(|p| p.to_str()).unwrap_or(i))
-      .unwrap_or(&self.resolve_options.root);
     let specifier = normalize_leading_slashes(&id);
     let resolved = resolver.normalize_oxc_resolver_result(
       args.importer,
       &self.dedupe,
       self.legacy_inconsistent_cjs_interop,
-      &resolver.resolve_raw(base_dir, specifier, false),
+      &resolver.resolve_raw(specifier, args.importer, false),
     )?;
     if let Some(mut resolved) = resolved {
       if !scan {

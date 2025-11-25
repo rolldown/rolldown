@@ -1,7 +1,7 @@
 use std::{
   ffi::OsString,
   fs,
-  path::{self, Path},
+  path::{self, Path, PathBuf},
   sync::Arc,
 };
 
@@ -21,6 +21,7 @@ use crate::{
   },
 };
 
+#[derive(Debug, Clone)]
 pub struct BaseOptions<'a> {
   pub main_fields: &'a Vec<String>,
   pub conditions: &'a Vec<String>,
@@ -29,7 +30,7 @@ pub struct BaseOptions<'a> {
   pub try_index: bool,
   pub try_prefix: &'a Option<String>,
   pub as_src: bool,
-  pub root: &'a str,
+  pub root: PathBuf,
   pub preserve_symlinks: bool,
   pub tsconfig_paths: bool,
 }
@@ -104,7 +105,11 @@ impl Resolvers {
 
     let external_resolver = Resolver::new(
       &base_resolver,
-      &BaseOptions { is_production: false, conditions: external_conditions, ..*base_options },
+      &BaseOptions {
+        is_production: false,
+        conditions: external_conditions,
+        ..(*base_options).clone()
+      },
       AdditionalOptions { is_require: false, prefer_relative: false },
       external_conditions,
       Arc::clone(&builtin_checker),
@@ -170,7 +175,7 @@ fn get_resolve_options(
       vec!["index".to_string()]
     },
     prefer_relative: additional_options.prefer_relative,
-    roots: if base_options.as_src { vec![base_options.root.into()] } else { vec![] },
+    roots: if base_options.as_src { vec![base_options.root.clone()] } else { vec![] },
     symlinks: !base_options.preserve_symlinks,
     // This is not part of the spec, but required to align with rollup based vite.
     allow_package_exports_in_directory_resolve: true,
@@ -220,7 +225,7 @@ pub struct Resolver {
   inner_for_external: oxc_resolver::Resolver,
   built_in_checker: Arc<BuiltinChecker>,
   package_json_cache: Arc<PackageJsonCache>,
-  root: String,
+  root: PathBuf,
   try_prefix: Option<String>,
 }
 
@@ -246,20 +251,24 @@ impl Resolver {
       inner_for_external,
       built_in_checker,
       package_json_cache,
-      root: base_options.root.to_owned(),
+      root: base_options.root.clone(),
       try_prefix: base_options.try_prefix.clone(),
     }
   }
 
-  pub fn resolve_raw<P: AsRef<Path>>(
+  pub fn resolve_raw(
     &self,
-    directory: P,
     specifier: &str,
+    importer: Option<&str>,
     external: bool,
   ) -> Result<oxc_resolver::Resolution, oxc_resolver::ResolveError> {
     let inner_resolver = if external { &self.inner_for_external } else { &self.inner };
+    let result = if let Some(importer) = importer {
+      inner_resolver.resolve_file(self.root.join(importer), specifier)
+    } else {
+      inner_resolver.resolve(&self.root, specifier)
+    };
 
-    let result = inner_resolver.resolve(directory.as_ref(), specifier);
     match result {
       Err(
         oxc_resolver::ResolveError::Ignored(_)
@@ -294,7 +303,11 @@ impl Resolver {
 
     // this allows resolving `@pkg/pkg/foo.scss` to `@pkg/pkg/_foo.scss`, which is probably not allowed by sass's resolver
     // but that's an edge case so we ignore it here
-    inner_resolver.resolve(directory.as_ref(), path_with_prefix)
+    if let Some(importer) = importer {
+      inner_resolver.resolve_file(self.root.join(importer), path_with_prefix)
+    } else {
+      inner_resolver.resolve(&self.root, path_with_prefix)
+    }
   }
 
   pub fn normalize_oxc_resolver_result(
@@ -340,8 +353,8 @@ impl Resolver {
         // if so, we can resolve to a special id that errors only when imported.
         if is_bare_import(id) && !self.built_in_checker.is_builtin(id) && !id.contains('\0') {
           if let Some(pkg_name) = get_npm_package_name(id) {
-            let base_dir = get_base_dir(id, importer, dedupe).unwrap_or(&self.root);
-            if base_dir != self.root {
+            let base_dir = get_base_dir(id, importer, dedupe);
+            if base_dir.is_some_and(|dir| dir != self.root.to_str().unwrap()) {
               if let Some(package_json) =
                 self.get_nearest_package_json_optional_peer_deps(importer.unwrap())
               {
@@ -394,9 +407,11 @@ impl Resolver {
     dedupe: &FxHashSet<String>,
     legacy_inconsistent_cjs_interop: bool,
   ) -> HookResolveIdReturn {
-    let base_dir = get_base_dir(specifier, importer, dedupe).unwrap_or(&self.root);
-
-    let oxc_resolved_result = self.resolve_raw(base_dir, specifier, external);
+    let oxc_resolved_result = self.resolve_raw(
+      specifier,
+      if should_dedupe(specifier, dedupe) { None } else { importer },
+      external,
+    );
     let resolved = self.normalize_oxc_resolver_result(
       importer,
       dedupe,

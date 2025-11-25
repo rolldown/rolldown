@@ -2156,9 +2156,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver_napi"
-version = "11.13.2"
+version = "11.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "915f8f50b9ce98bec9755d51025d43ecdcad3b36a1c956032aba5b926ac96271"
+checksum = "6006e3dc9f0da1769c1dc9d06afd3b82d2b78651855c8d16f41f4e1e7cbfa7a8"
 dependencies = [
  "fancy-regex",
  "napi",

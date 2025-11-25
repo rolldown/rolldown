@@ -97,6 +97,7 @@ jobs:
     strategy:
       matrix:
         target: [ubuntu-latest, macos-latest, windows-latest]
+      fail-fast: false
     uses: ./.github/workflows/reusable-node-test.yml
     with:
       os: ${{ matrix.target }}

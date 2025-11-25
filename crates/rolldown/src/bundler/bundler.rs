@@ -2,12 +2,7 @@ use crate::{BundleFactory, BundlerOptions, types::scan_stage_cache::ScanStageCac
 use anyhow::Result;
 use rolldown_error::BuildResult;
 use rolldown_plugin::__inner::SharedPluginable;
-use std::{
-  ops::Deref,
-  sync::atomic::{AtomicBool, Ordering},
-};
-
-static LOGGER_INIT_DONE: AtomicBool = AtomicBool::new(false);
+use std::ops::Deref;
 
 // TODO: hyf0 This's for avoiding having too many changes for watcher API. Will remove this later.
 impl Deref for Bundler {
@@ -34,10 +29,6 @@ impl Bundler {
     options: BundlerOptions,
     plugins: Vec<SharedPluginable>,
   ) -> BuildResult<Self> {
-    if LOGGER_INIT_DONE.compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed).is_ok()
-    {
-      env_logger::init_from_env("NOTIFY_LOG");
-    }
     let bundle_factory = BundleFactory::new(crate::BundleFactoryOptions {
       bundler_options: options,
       plugins,

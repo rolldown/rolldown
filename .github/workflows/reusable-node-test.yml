@@ -60,7 +60,7 @@ jobs:
         run: |
           pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
         env:
-          NOTIFY_LOG: trace
+          RD_LOG: rolldown::watch::watcher=debug,notify=trace
 
       # - name: Rollup Test For Node20
       #   run: pnpm run --filter rollup-tests test

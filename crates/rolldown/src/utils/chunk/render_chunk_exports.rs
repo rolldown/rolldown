@@ -202,6 +202,7 @@ pub fn render_chunk_exports(
             .star_exports_from_external_modules
             .iter()
             .map(|rec_idx| module.ecma_view.import_records[*rec_idx].resolved_module)
+            .chain(ctx.chunk.entry_level_external_module_idx.iter().copied())
             .collect::<FxIndexSet<ModuleIdx>>();
 
           // Track already imported external modules to avoid duplicates
@@ -217,7 +218,6 @@ pub fn render_chunk_exports(
               external.namespace_ref
             })
             .collect();
-
           external_modules.iter().for_each(|idx| {
           let external = &ctx.link_output.module_table[*idx].as_external().expect("Should be external module here");
           let binding_ref_name =

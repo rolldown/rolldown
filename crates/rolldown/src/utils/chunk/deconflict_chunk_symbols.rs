@@ -43,7 +43,9 @@ pub fn deconflict_chunk_symbols(
     chunk
       .direct_imports_from_external_modules
       .iter()
-      .filter_map(|(idx, _)| link_output.module_table[*idx].as_external())
+      .map(|(idx, _)| *idx)
+      .chain(chunk.entry_level_external_module_idx.iter().copied())
+      .filter_map(|idx| link_output.module_table[idx].as_external())
       .for_each(|external_module| {
         renamer.add_symbol_in_root_scope(external_module.namespace_ref);
       });

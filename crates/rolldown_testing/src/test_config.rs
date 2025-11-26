@@ -39,7 +39,7 @@ pub fn read_test_config(config_path: &std::path::Path) -> TestConfig {
   let errors = COMPILED_SCHEMA.iter_errors(&config_json);
   let mut msg = String::new();
   for error in errors {
-    writeln!(msg, "Validation error: {} in {}", error, error.instance_path).unwrap();
+    writeln!(msg, "Validation error: {} in {}", error, error.instance_path()).unwrap();
   }
   assert!(msg.is_empty(), "Failed to validate test config {config_path:?}. Got {msg}");
 

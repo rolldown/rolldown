@@ -3382,10 +3382,10 @@ dependencies = [
  "itertools",
  "memchr",
  "oxc",
+ "oxc_resolver",
  "rolldown_common",
  "rolldown_error",
  "rolldown_plugin",
- "rolldown_plugin_utils",
  "rolldown_utils",
 ]
 

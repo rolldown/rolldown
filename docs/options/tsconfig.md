@@ -12,7 +12,7 @@ Configures TypeScript configuration file resolution and usage.
 
 When set to `true`, Rolldown enables auto-discovery mode (similar to Vite). For each module, both the resolver and transformer will find the nearest `tsconfig.json`.
 
-If the tsconfig has `references`, the file extension is allowed, and the tsconfig's `include`/`exclude` patterns don't match the file, the referenced tsconfigs will be searched for a match. Falls back to the original tsconfig if no match is found.
+If the tsconfig has `references` and certain conditions are met (the file extension is allowed and the tsconfig's `include`/`exclude` patterns don't match the file), then the referenced tsconfigs will be searched for a match. If no match is found, it falls back to the original tsconfig.
 
 ```js
 export default {

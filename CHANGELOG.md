@@ -1,4 +1,104 @@
 
+## [1.0.0-beta.52] - 2025-11-26
+
+### 💥 BREAKING CHANGES
+
+- change `output.generatedCode.profilerNames` default to false (#7139) by @Copilot
+
+### 🚀 Features
+
+- support vite-style tsconfig resolution (#6873) by @shulaoda
+- rolldown: oxc v0.99.0  (#7165) by @camc314
+- browser: export `plugins` (#7210) by @sxzz
+- rolldown_plugin_vite_css_post: add `inline` parameter to `cssMinify` callback (#7191) by @shulaoda
+- rolldown_plugin_vite_build_import_analysis: implement `render_chunk` to replace `__VITE_IS_MODERN__` flag (#7178) by @shulaoda
+- rolldown_plugin_utils: optimize SVG data URL encoding (#7156) by @shulaoda
+- dev: replace `DevEngine::hasLatestBuildOutput` with `DevEngine::getBundleState` (#7145) by @sapphi-red
+- rolldown_plugin_vite_asset_import_meta_url: support `@vite-ignore` comment (#7141) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: implement static URL processing (#7140) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: align `asset_resolver` logic (#7137) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: align `try_fs_resolve` logic (#7136) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: validate relative paths (#7120) by @shulaoda
+- export `viteAssetImportMetaUrlPlugin` and add dynamic URL tests (#7119) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- watch overwrite rename event on linux (#7201) by @sapphi-red
+- preserve name for parenthesized anonymous default exports and arrow functions with keepNames (#7159) by @Copilot
+- rolldown_plugin_vite_html: add missing async attribute for inlined entry scripts (#7202) by @shulaoda
+- respect target setting in DCE to prevent modern syntax generation (#7128) by @Copilot
+- rolldown_plugin_vite_html: add semicolon to import statement in CSS removal (#7200) by @shulaoda
+- rolldown_plugin_vite_html: use correct CSS asset filename in HTML injection (#7199) by @shulaoda
+- rolldown_plugin_vite_css_post: handle scoped package names in lib CSS filename (#7198) by @shulaoda
+- rolldown_plugin_vite_html: use patched `html5gum` with correct span tracking (#7193) by @shulaoda
+- rolldown_plugin_vite_html: handle HTML strings in script tags correctly (#7192) by @shulaoda
+- handle JSON import namespace property access correctly (#7190) by @IWANABETHATGUY
+- only include runtime helpers from included modules (#7183) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: normalize paths to use forward slashes in `original_file_name` (#7175) by @shulaoda
+- rolldown_plugin_vite_css_post: use `filename` instead of `reference_id` for imported assets (#7174) by @shulaoda
+- rolldown_plugin_vite_css_post: correct regex escaping in pure CSS chunk pruning (#7173) by @shulaoda
+- rolldown_plugin_vite_html: use correct dependency path for modulepreload links (#7172) by @shulaoda
+- update cur_stmt_index when processing top level statements (#7157) by @IWANABETHATGUY
+- rolldown_plugin_utils: strip leading character from public asset URL (#7170) by @shulaoda
+- rolldown_plugin_vite_html: use correct `public_base` for `html_result_map` key (#7169) by @shulaoda
+- rolldown_plugin_utils: correct runtime handling and escape single quotes in asset paths (#7168) by @shulaoda
+- rolldown_plugin_utils: prevent data race in `file_to_url` cache (#7166) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: correct glob pattern and query string handling in dynamic URLs (#7162) by @shulaoda
+- rolldown_plugin_vite_css_post: use correct start position in magic string updates (#7158) by @shulaoda
+- data race in `FileEmitter::emit_file` causing duplicate asset emissions (#7164) by @shulaoda
+- dev: watch files even if the build failed (#7149) by @sapphi-red
+- rolldown_plugin_utils: always use base64 encoding for data URLs (#7148) by @shulaoda
+- preserve "default" name for anonymous default exports with keepNames (#7151) by @Copilot
+- correctly handle cjs json module as entry point (#7147) by @IWANABETHATGUY
+- rolldown_plugin_utils: correct `reference_id` parsing in `render_asset_url_in_js` (#7143) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: exclude quotes from URL span (#7142) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: use template literal for glob result indexing (#7134) by @shulaoda
+- tree shake unused dynamic entry when `inlineDynamicImports` is enabled (#7129) by @IWANABETHATGUY
+- correct return value of `parse` / `parseSync` functions (#7127) by @sapphi-red
+
+### 🚜 Refactor
+
+- rolldown_plugin_vite_transform: use `oxc_resolver` for tsconfig discovery (#7220) by @shulaoda
+- rolldown_plugin_vite_resolve: use `resolve_file` for tsconfig discovery (#7216) by @shulaoda
+- rolldown_plugin_utils: remove redundant `ViteMetadata::get_or_insert_default()` (#7189) by @shulaoda
+- rolldown_plugin_utils: simplify `ViteMetadata::get()` to always return a value (#7188) by @shulaoda
+- rolldown_utils: add `guess_mime_skip_utf8_check` for binary assets (#7161) by @shulaoda
+- rolldown_plugin_utils: extract asset URL parsing into `AssetUrlIter` (#7144) by @shulaoda
+- store pattern name in FilenameTemplate (#7132) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- tsconfig: document auto-discovery mode and improve structure (#7228) by @shulaoda
+- add plugin hook filter compatibility and fallback guide (#7138) by @Copilot
+- update top level navigation (#7092) by @mdong1909
+
+### 🧪 Testing
+
+- add tsconfig include/exclude/files matching test cases (#6899) by @shulaoda
+- vite-tests: run `playwright install` in case playwright binary is missing (#7226) by @sapphi-red
+- watch: close watcher when an error occured in the test cases (#7225) by @sapphi-red
+- watch: reject `waitBuildFinished` if `ERROR` event occurs (#7224) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- example: revert accidental changes to basic-typescript (#7227) by @shulaoda
+- deps: update oxc apps (#7212) by @renovate[bot]
+- deps: update rust crates (#7204) by @renovate[bot]
+- deps: update `oxc_resolver_napi` to 11.14.0 (#7217) by @shulaoda
+- deps: update oxc_resolver (#6909) by @shulaoda
+- deps: update dependency glob to v13 (#7208) by @renovate[bot]
+- deps: update actions/checkout action to v6 (#7207) by @renovate[bot]
+- deps: update npm packages (#7206) by @renovate[bot]
+- deps: update github-actions (#7205) by @renovate[bot]
+- add missing status code comment (#7185) by @iiio2
+- deps: update dependency oxlint-tsgolint to v0.8.1 (#7197) by @renovate[bot]
+- rust: add more tracing log for hmr + dev logic (#7179) by @hyf0
+- deps: update dependency oxlint-tsgolint to v0.8.0 (#7167) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.7.3 (#7133) by @renovate[bot]
+- merge similar inlineDynamicImports test case (#7131) by @IWANABETHATGUY
+- deps: update `rolldown-plugin-dts` to 0.18.0 (#7125) by @shulaoda
+
+
 ## [1.0.0-beta.51] - 2025-11-19
 
 ### 💥 BREAKING CHANGES

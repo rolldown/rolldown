@@ -305,7 +305,7 @@ pub fn prepare_build_context(
     // - None/Manual: Create Normal mode (resolve tsconfig once now)
     match tsconfig {
       Some(TsConfig::Manual(path)) => {
-        // None or Manual mode: Resolve tsconfig now and create Normal mode
+        // Manual mode: Resolve tsconfig now and create Normal mode
         let resolved_tsconfig = resolver.resolve_tsconfig(&path).map_err(|err| {
           anyhow::anyhow!("Failed to resolve `tsconfig` option: {}", path.display()).context(err)
         })?;

@@ -15,21 +15,21 @@ type RolldownWatchBuild = BindingWatcherBundler;
 export type RolldownWatcherEvent =
   | { code: 'START' }
   | {
-    code: 'BUNDLE_START'; /* input?: InputOption; output: readonly string[] */
-  }
+      code: 'BUNDLE_START' /* input?: InputOption; output: readonly string[] */;
+    }
   | {
-    code: 'BUNDLE_END';
-    duration: number;
-    // input?: InputOption
-    output: readonly string[];
-    result: RolldownWatchBuild;
-  }
+      code: 'BUNDLE_END';
+      duration: number;
+      // input?: InputOption
+      output: readonly string[];
+      result: RolldownWatchBuild;
+    }
   | { code: 'END' }
   | {
-    code: 'ERROR';
-    error: Error; /* the error is not compilable with rollup */
-    result: RolldownWatchBuild;
-  };
+      code: 'ERROR';
+      error: Error /* the error is not compilable with rollup */;
+      result: RolldownWatchBuild;
+    };
 
 export class WatcherEmitter {
   listeners: Map<

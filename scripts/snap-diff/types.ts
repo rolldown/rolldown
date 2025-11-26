@@ -4,6 +4,5 @@ export type DebugConfig = {
   caseNames: string[];
 };
 
-export type UnwrapPromise<T extends Promise<any>> = T extends Promise<infer U>
-  ? U
-  : T;
+export type UnwrapPromise<T extends Promise<any>> =
+  T extends Promise<infer U> ? U : T;

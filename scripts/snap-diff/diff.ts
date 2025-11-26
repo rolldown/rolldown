@@ -59,12 +59,12 @@ export async function diffCase(
   debugConfig?: DebugConfig,
 ): Promise<
   | {
-    esbuildName: string;
-    rolldownName: string;
-    esbuild: string;
-    rolldown: string;
-    diff: string;
-  }[]
+      esbuildName: string;
+      rolldownName: string;
+      esbuild: string;
+      rolldown: string;
+      diff: string;
+    }[]
   | 'bypass'
   | 'missing'
   | 'same'

@@ -1,9 +1,5 @@
 {
   "lineWidth": 80,
-  "typescript": {
-    "quoteStyle": "preferSingle",
-    "binaryExpression.operatorPosition": "sameLine"
-  },
   "json": {
     "indentWidth": 2
   },
@@ -14,29 +10,17 @@
   "excludes": [
     "CHANGELOG-*.md",
     "CHANGELOG.md",
-    "crates/rolldown/tests",
     "crates/rolldown_testing/_config.schema.json",
-    "packages/rolldown/src/binding.d.cts",
-    "packages/rolldown/src/binding.cjs",
-    "packages/rolldown/src/browser.js",
-    "packages/rolldown/src/rolldown-binding.wasi-browser.js",
-    "packages/rolldown/src/rolldown-binding.wasi.cjs",
-    "packages/rolldown/src/wasi-worker-browser.mjs",
-    "packages/rolldown/src/wasi-worker.mjs",
-    "packages/rolldown/tests/fixtures/misc/error/diagnostics",
-    "packages/rollup-tests",
-    "packages/rollup/test",
-    "packages/vite-tests",
     "pnpm-lock.yaml",
-    "rollup",
+    "**/diff.md",
+    "**/bypass.md",
+    "crates/rolldown/tests",
     "scripts/snap-diff/stats",
     "scripts/snap-diff/summary",
-    "**/.pnp.cjs",
-    "**/diff.md",
-    "**/bypass.md"
+    "packages/rollup-tests",
+    "packages/rollup/test"
   ],
   "plugins": [
-    "https://plugins.dprint.dev/typescript-0.95.12.wasm",
     "https://plugins.dprint.dev/json-0.21.0.wasm",
     "https://plugins.dprint.dev/markdown-0.20.0.wasm",
     "https://plugins.dprint.dev/g-plane/pretty_yaml-v0.5.1.wasm",

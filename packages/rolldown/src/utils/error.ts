@@ -1,11 +1,10 @@
 import { type BindingError, type BindingResult } from '../binding.cjs';
 import type { RollupError } from '../log/logging';
 
-export function unwrapBindingResult<T>(
-  container: BindingResult<T>,
-): T {
+export function unwrapBindingResult<T>(container: BindingResult<T>): T {
   if (
-    typeof container === 'object' && container !== null &&
+    typeof container === 'object' &&
+    container !== null &&
     'isBindingErrors' in container &&
     container.isBindingErrors
   ) {
@@ -18,7 +17,8 @@ export function normalizeBindingResult<T>(
   container: BindingResult<T>,
 ): T | Error {
   if (
-    typeof container === 'object' && container !== null &&
+    typeof container === 'object' &&
+    container !== null &&
     'isBindingErrors' in container &&
     container.isBindingErrors
   ) {
@@ -31,10 +31,10 @@ function normalizeBindingError(e: BindingError): Error {
   return e.type === 'JsError'
     ? e.field0
     : Object.assign(new Error(), {
-      kind: e.field0.kind,
-      message: e.field0.message,
-      stack: undefined,
-    });
+        kind: e.field0.kind,
+        message: e.field0.message,
+        stack: undefined,
+      });
 }
 
 export function aggregateBindingErrorsIntoJsError(
@@ -107,9 +107,10 @@ function getErrorMessage(e: RollupError): string {
     s = joinNewLine(s, 'Caused by:');
     s = joinNewLine(
       s,
-      getErrorMessage(e.cause as any).split('\n').map(line => '  ' + line).join(
-        '\n',
-      ),
+      getErrorMessage(e.cause as any)
+        .split('\n')
+        .map((line) => '  ' + line)
+        .join('\n'),
     );
   }
   return s;

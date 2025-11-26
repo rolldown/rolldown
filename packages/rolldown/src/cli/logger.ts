@@ -4,13 +4,13 @@ import { type ConsolaInstance, createConsola } from 'consola';
  * Console logger
  */
 export const logger: Record<string, any> | ConsolaInstance = process.env
-    .ROLLDOWN_TEST
+  .ROLLDOWN_TEST
   ? createTestingLogger()
   : createConsola({
-    formatOptions: {
-      date: false,
-    },
-  });
+      formatOptions: {
+        date: false,
+      },
+    });
 
 function createTestingLogger() {
   const types = [

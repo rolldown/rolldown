@@ -6,8 +6,7 @@ const rolldownPkg = JSON.parse(
 );
 const version = rolldownPkg.version;
 const baseDir = `/tmp/rolldown-${version}`;
-const bindingEntry =
-  `${baseDir}/node_modules/@rolldown/binding-wasm32-wasi/rolldown-binding.wasi.cjs`;
+const bindingEntry = `${baseDir}/node_modules/@rolldown/binding-wasm32-wasi/rolldown-binding.wasi.cjs`;
 
 if (!fs.existsSync(bindingEntry)) {
   const bindingPkg = `@rolldown/binding-wasm32-wasi@${version}`;

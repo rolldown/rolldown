@@ -47,14 +47,16 @@ export function getCodeFrame(
 
       let displayedLine = tabsToSpaces(sourceLine);
       if (displayedLine.length > maxLineLength) {
-        displayedLine = `${
-          displayedLine.slice(0, maxLineLength - ELLIPSIS.length)
-        }${ELLIPSIS}`;
+        displayedLine = `${displayedLine.slice(
+          0,
+          maxLineLength - ELLIPSIS.length,
+        )}${ELLIPSIS}`;
       }
       if (isErrorLine) {
-        const indicator = spaces(
-          digits + 2 + tabsToSpaces(sourceLine.slice(0, column)).length,
-        ) + '^';
+        const indicator =
+          spaces(
+            digits + 2 + tabsToSpaces(sourceLine.slice(0, column)).length,
+          ) + '^';
         return `${lineNumber}: ${displayedLine}\n${indicator}`;
       }
 

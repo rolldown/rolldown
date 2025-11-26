@@ -99,9 +99,7 @@ export function makeIdFiltersToMatchWithQuery(
   return input.map((i) => makeIdFilterToMatchWithQuery(i));
 }
 
-function makeIdFilterToMatchWithQuery(
-  input: string | RegExp,
-): string | RegExp {
+function makeIdFilterToMatchWithQuery(input: string | RegExp): string | RegExp {
   if (typeof input === 'string') {
     return `${input}{?*,}`;
   }

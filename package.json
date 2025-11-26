@@ -10,7 +10,7 @@
   "scripts": {
     "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings --type-aware",
     "lint-knip": "knip",
-    "fmt": "dprint fmt",
+    "fmt": "oxfmt && dprint fmt",
     "build": "echo \"Use just build\"",
     "build:release": "echo \"Use just build native release\"",
     "test": "echo \"Use just test-node\"",
@@ -32,6 +32,7 @@
     "husky": "^9.1.7",
     "knip": "^5.61.3",
     "lint-staged": "^16.1.2",
+    "oxfmt": "^0.15.0",
     "oxlint": "^1.29.0",
     "oxlint-tsgolint": "0.8.1",
     "remove-unused-vars": "^0.0.9",
@@ -51,10 +52,11 @@
     ]
   },
   "lint-staged": {
-    "*.@(js|ts|tsx|yml|yaml|md|json|html|toml)": [
-      "dprint fmt --staged"
+    "*.@(yml|yaml|md|json|html|toml)": [
+      "pnpm dprint fmt --staged"
     ],
-    "*.@(js|ts|tsx)": [
+    "*.@(js|jsx|cjs|mjs|ts|tsx)": [
+      "pnpm oxfmt",
       "pnpm lint-code -- --fix"
     ]
   }

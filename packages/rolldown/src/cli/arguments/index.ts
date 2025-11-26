@@ -18,7 +18,8 @@ export const options: {
     environment?: string | string[];
   };
 } = Object.fromEntries(
-  Object.entries(schemaInfo).filter(([_key, info]) => info.type !== 'never')
+  Object.entries(schemaInfo)
+    .filter(([_key, info]) => info.type !== 'never')
     .map(([key, info]) => {
       const config = Object.getOwnPropertyDescriptor(alias, key)?.value as
         | OptionConfig
@@ -102,9 +103,9 @@ export function parseCliArguments(): NormalizedCliOptions & {
           writable: true,
         });
       } else if (type === 'object' && typeof option.value === 'string') {
-        const [key, value] = option.value.split(',').map((x) =>
-          x.split('=')
-        )[0];
+        const [key, value] = option.value
+          .split(',')
+          .map((x) => x.split('='))[0];
         if (!values[option.name]) {
           Object.defineProperty(values, option.name, {
             value: {},
@@ -157,7 +158,8 @@ export function parseCliArguments(): NormalizedCliOptions & {
           writable: true,
         });
       }
-    }).filter((item) => {
+    })
+    .filter((item) => {
       return item !== undefined;
     });
 
@@ -168,7 +170,7 @@ export function parseCliArguments(): NormalizedCliOptions & {
   if (invalid_options.length !== 0) {
     let single = invalid_options.length === 1;
     logger.warn(
-      `Option \`${invalid_options.map(item => item.name).join(',')}\` ${
+      `Option \`${invalid_options.map((item) => item.name).join(',')}\` ${
         single ? 'is' : 'are'
       } unrecognized. We will ignore ${single ? 'this' : 'those'} option${
         single ? '' : 's'

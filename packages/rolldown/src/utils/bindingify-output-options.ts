@@ -202,9 +202,10 @@ function bindingifyAdvancedChunks(
 
       return {
         ...restGroup,
-        name: typeof name === 'function'
-          ? (id, ctx) => name(id, new ChunkingContextImpl(ctx))
-          : name,
+        name:
+          typeof name === 'function'
+            ? (id, ctx) => name(id, new ChunkingContextImpl(ctx))
+            : name,
       };
     }),
   };

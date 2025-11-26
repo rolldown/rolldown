@@ -63,11 +63,9 @@ export interface PluginContext extends MinimalPluginContext {
   getModuleInfo: GetModuleInfo;
   addWatchFile(id: string): void;
   load(
-    options:
-      & { id: string; resolveDependencies?: boolean }
-      & Partial<
-        PartialNull<ModuleOptions>
-      >,
+    options: { id: string; resolveDependencies?: boolean } & Partial<
+      PartialNull<ModuleOptions>
+    >,
   ): Promise<ModuleInfo>;
   parse(input: string, options?: ParserOptions | null): Program;
   resolve(
@@ -95,11 +93,9 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
   }
 
   public async load(
-    options:
-      & { id: string; resolveDependencies?: boolean }
-      & Partial<
-        PartialNull<ModuleOptions>
-      >,
+    options: { id: string; resolveDependencies?: boolean } & Partial<
+      PartialNull<ModuleOptions>
+    >,
   ): Promise<ModuleInfo> {
     const id = options.id;
     if (id === this.currentLoadingModule) {
@@ -122,15 +118,17 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
 
     let loadPromise = this.data.loadModulePromiseMap.get(id);
     if (!loadPromise) {
-      loadPromise = this.context.load(
-        id,
-        options.moduleSideEffects ?? undefined,
-        options.packageJsonPath ?? undefined,
-      ).catch(() => {
-        // avoid reusing the promise if it's an error
-        // because the error may happen only in non-supported hooks (e.g. `buildStart` hook)
-        this.data.loadModulePromiseMap.delete(id);
-      });
+      loadPromise = this.context
+        .load(
+          id,
+          options.moduleSideEffects ?? undefined,
+          options.packageJsonPath ?? undefined,
+        )
+        .catch(() => {
+          // avoid reusing the promise if it's an error
+          // because the error may happen only in non-supported hooks (e.g. `buildStart` hook)
+          this.data.loadModulePromiseMap.delete(id);
+        });
       this.data.loadModulePromiseMap.set(id, loadPromise);
     }
 
@@ -170,14 +168,15 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     const info = this.data.getModuleOption(res.id) || ({} as ModuleOptions);
     return {
       ...res,
-      external: res.external === 'relative'
-        ? unreachable(
-          `The PluginContext resolve result external couldn't be 'relative'`,
-        )
-        : res.external,
+      external:
+        res.external === 'relative'
+          ? unreachable(
+              `The PluginContext resolve result external couldn't be 'relative'`,
+            )
+          : res.external,
       ...info,
-      moduleSideEffects: info.moduleSideEffects ?? res.moduleSideEffects ??
-        null,
+      moduleSideEffects:
+        info.moduleSideEffects ?? res.moduleSideEffects ?? null,
       packageJsonPath: res.packageJsonPath,
     };
   }
@@ -236,10 +235,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     this.context.addWatchFile(id);
   }
 
-  public parse(
-    input: string,
-    options?: ParserOptions | null,
-  ): Program {
+  public parse(input: string, options?: ParserOptions | null): Program {
     return parseAst(input, options);
   }
 }

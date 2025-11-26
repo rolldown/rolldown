@@ -14,9 +14,7 @@ function queryFilter(
   id: string,
   queryFilterObject: QueryFilterObject,
 ): boolean {
-  let topLevelFilterExpression = include(
-    queries(queryFilterObject),
-  );
+  let topLevelFilterExpression = include(queries(queryFilterObject));
   return interpreter([topLevelFilterExpression], undefined, id, undefined);
 }
 describe('queryFilter', () => {
@@ -107,47 +105,39 @@ describe('queryFilter', () => {
       query('url', true),
       and(
         query('svelte', false),
-        or(
-          query('raw', true),
-          query('direct', true),
-        ),
+        or(query('raw', true), query('direct', true)),
       ),
     );
     // include `url`, should return `false`
-    expect(interpreter(
-      [exclude(
-        filterExpr,
-      )],
-      undefined,
-      '/foo/bar?url=1',
-      undefined,
-    )).toBe(false);
+    expect(
+      interpreter(
+        [exclude(filterExpr)],
+        undefined,
+        '/foo/bar?url=1',
+        undefined,
+      ),
+    ).toBe(false);
     // don't have `svelte` and has `raw`, should return `false`
-    expect(interpreter(
-      [exclude(
-        filterExpr,
-      )],
-      undefined,
-      '/foo/bar?raw=1',
-      undefined,
-    )).toBe(false);
+    expect(
+      interpreter(
+        [exclude(filterExpr)],
+        undefined,
+        '/foo/bar?raw=1',
+        undefined,
+      ),
+    ).toBe(false);
     // don't have `svelte`, but don't have `raw` and `direct` neither, should return `true`
-    expect(interpreter(
-      [exclude(
-        filterExpr,
-      )],
-      undefined,
-      '/foo/bar',
-      undefined,
-    )).toBe(true);
+    expect(
+      interpreter([exclude(filterExpr)], undefined, '/foo/bar', undefined),
+    ).toBe(true);
     // have `url` should return `false` even query also has `svelte`
-    expect(interpreter(
-      [exclude(
-        filterExpr,
-      )],
-      undefined,
-      '/foo/bar?url=1111&svelte=true',
-      undefined,
-    )).toBe(false);
+    expect(
+      interpreter(
+        [exclude(filterExpr)],
+        undefined,
+        '/foo/bar?url=1111&svelte=true',
+        undefined,
+      ),
+    ).toBe(false);
   });
 });

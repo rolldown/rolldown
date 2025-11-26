@@ -33,32 +33,32 @@ export class DevEngine {
     const userOnHmrUpdates = devOptions.onHmrUpdates;
     const bindingOnHmrUpdates: BindingDevOptions['onHmrUpdates'] =
       userOnHmrUpdates
-        ? function(
-          rawResult: BindingResult<[BindingClientHmrUpdate[], string[]]>,
-        ) {
-          const result = normalizeBindingResult(rawResult);
-          if (result instanceof Error) {
-            userOnHmrUpdates(result);
-            return;
+        ? function (
+            rawResult: BindingResult<[BindingClientHmrUpdate[], string[]]>,
+          ) {
+            const result = normalizeBindingResult(rawResult);
+            if (result instanceof Error) {
+              userOnHmrUpdates(result);
+              return;
+            }
+            const [updates, changedFiles] = result;
+            userOnHmrUpdates({
+              updates,
+              changedFiles,
+            });
           }
-          const [updates, changedFiles] = result;
-          userOnHmrUpdates({
-            updates,
-            changedFiles,
-          });
-        }
         : undefined;
 
     const userOnOutput = devOptions.onOutput;
     const bindingOnOutput: BindingDevOptions['onOutput'] = userOnOutput
-      ? function(rawResult) {
-        const result = normalizeBindingResult(rawResult);
-        if (result instanceof Error) {
-          userOnOutput(result);
-          return;
+      ? function (rawResult) {
+          const result = normalizeBindingResult(rawResult);
+          if (result instanceof Error) {
+            userOnOutput(result);
+            return;
+          }
+          userOnOutput(transformToRollupOutput(result));
         }
-        userOnOutput(transformToRollupOutput(result));
-      }
       : undefined;
 
     const bindingDevOptions: BindingDevOptions = {
@@ -68,8 +68,8 @@ export class DevEngine {
         ? devOptions.rebuildStrategy === 'always'
           ? BindingRebuildStrategy.Always
           : devOptions.rebuildStrategy === 'auto'
-          ? BindingRebuildStrategy.Auto
-          : BindingRebuildStrategy.Never
+            ? BindingRebuildStrategy.Auto
+            : BindingRebuildStrategy.Never
         : undefined,
       watch: devOptions.watch && {
         skipWrite: devOptions.watch.skipWrite,
@@ -102,10 +102,9 @@ export class DevEngine {
     if (this.#cachedBuildFinishPromise) {
       return this.#cachedBuildFinishPromise;
     }
-    const promise = this.#inner.ensureCurrentBuildFinish()
-      .then(() => {
-        this.#cachedBuildFinishPromise = null;
-      });
+    const promise = this.#inner.ensureCurrentBuildFinish().then(() => {
+      this.#cachedBuildFinishPromise = null;
+    });
     this.#cachedBuildFinishPromise = promise;
     return promise;
   }

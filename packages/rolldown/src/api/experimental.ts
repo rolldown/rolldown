@@ -36,11 +36,7 @@ export const scan = async (
 
   const inputOptions = await PluginDriver.callOptionsHook(rawInputOptions);
 
-  const ret = await createBundlerOptions(
-    inputOptions,
-    rawOutputOptions,
-    false,
-  );
+  const ret = await createBundlerOptions(inputOptions, rawOutputOptions, false);
 
   const bundler = new BindingBundler();
 

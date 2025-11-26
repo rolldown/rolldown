@@ -238,12 +238,12 @@ export function exprInterpreter(
   switch (expr.kind) {
     case 'and': {
       return expr.args.every((e) =>
-        exprInterpreter(e, code, id, moduleType, ctx)
+        exprInterpreter(e, code, id, moduleType, ctx),
       );
     }
     case 'or': {
       return expr.args.some((e) =>
-        exprInterpreter(e, code, id, moduleType, ctx)
+        exprInterpreter(e, code, id, moduleType, ctx),
       );
     }
     case 'not': {

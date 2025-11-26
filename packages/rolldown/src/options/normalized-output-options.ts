@@ -62,7 +62,8 @@ export interface NormalizedOutputOptions {
   minifyInternalExports?: boolean;
 }
 
-export class NormalizedOutputOptionsImpl extends PlainObjectLike
+export class NormalizedOutputOptionsImpl
+  extends PlainObjectLike
   implements NormalizedOutputOptions
 {
   constructor(
@@ -115,14 +116,16 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
 
   @lazyProp
   get cssEntryFileNames(): string | ChunkFileNamesFunction {
-    return this.inner.cssEntryFilenames ||
-      this.outputOptions.cssEntryFileNames!;
+    return (
+      this.inner.cssEntryFilenames || this.outputOptions.cssEntryFileNames!
+    );
   }
 
   @lazyProp
   get cssChunkFileNames(): string | ChunkFileNamesFunction {
-    return this.inner.cssChunkFilenames ||
-      this.outputOptions.cssChunkFileNames!;
+    return (
+      this.inner.cssChunkFilenames || this.outputOptions.cssChunkFileNames!
+    );
   }
 
   @lazyProp
@@ -205,8 +208,7 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
     | boolean
     | SourcemapIgnoreListOption
     | StringOrRegExp
-    | undefined
-  {
+    | undefined {
     return this.outputOptions.sourcemapIgnoreList;
   }
 

@@ -69,9 +69,8 @@ export function bindingifyPlugin(
     normalizedOutputPlugins,
   };
 
-  const { plugin: buildStart, meta: buildStartMeta } = bindingifyBuildStart(
-    args,
-  );
+  const { plugin: buildStart, meta: buildStartMeta } =
+    bindingifyBuildStart(args);
 
   const {
     plugin: resolveId,
@@ -103,31 +102,25 @@ export function bindingifyPlugin(
     plugin: renderChunk,
     meta: renderChunkMeta,
     filter: renderChunkFilter,
-  } = bindingifyRenderChunk(
-    args,
-  );
+  } = bindingifyRenderChunk(args);
 
   const { plugin: augmentChunkHash, meta: augmentChunkHashMeta } =
     bindingifyAugmentChunkHash(args);
 
-  const { plugin: renderStart, meta: renderStartMeta } = bindingifyRenderStart(
-    args,
-  );
+  const { plugin: renderStart, meta: renderStartMeta } =
+    bindingifyRenderStart(args);
 
-  const { plugin: renderError, meta: renderErrorMeta } = bindingifyRenderError(
-    args,
-  );
+  const { plugin: renderError, meta: renderErrorMeta } =
+    bindingifyRenderError(args);
 
   const { plugin: generateBundle, meta: generateBundleMeta } =
     bindingifyGenerateBundle(args);
 
-  const { plugin: writeBundle, meta: writeBundleMeta } = bindingifyWriteBundle(
-    args,
-  );
+  const { plugin: writeBundle, meta: writeBundleMeta } =
+    bindingifyWriteBundle(args);
 
-  const { plugin: closeBundle, meta: closeBundleMeta } = bindingifyCloseBundle(
-    args,
-  );
+  const { plugin: closeBundle, meta: closeBundleMeta } =
+    bindingifyCloseBundle(args);
 
   const { plugin: banner, meta: bannerMeta } = bindingifyBanner(args);
 
@@ -137,9 +130,8 @@ export function bindingifyPlugin(
 
   const { plugin: outro, meta: outroMeta } = bindingifyOutro(args);
 
-  const { plugin: watchChange, meta: watchChangeMeta } = bindingifyWatchChange(
-    args,
-  );
+  const { plugin: watchChange, meta: watchChangeMeta } =
+    bindingifyWatchChange(args);
 
   const { plugin: closeWatcher, meta: closeWatcherMeta } =
     bindingifyCloseWatcher(args);
@@ -198,30 +190,28 @@ export function bindingifyPlugin(
 }
 
 function wrapHandlers(plugin: BindingPluginOptions): BindingPluginOptions {
-  for (
-    const hookName of [
-      'buildStart',
-      'resolveId',
-      'resolveDynamicImport',
-      'buildEnd',
-      'transform',
-      'moduleParsed',
-      'load',
-      'renderChunk',
-      'augmentChunkHash',
-      'renderStart',
-      'renderError',
-      'generateBundle',
-      'writeBundle',
-      'closeBundle',
-      'banner',
-      'footer',
-      'intro',
-      'outro',
-      'watchChange',
-      'closeWatcher',
-    ] as const
-  ) {
+  for (const hookName of [
+    'buildStart',
+    'resolveId',
+    'resolveDynamicImport',
+    'buildEnd',
+    'transform',
+    'moduleParsed',
+    'load',
+    'renderChunk',
+    'augmentChunkHash',
+    'renderStart',
+    'renderError',
+    'generateBundle',
+    'writeBundle',
+    'closeBundle',
+    'banner',
+    'footer',
+    'intro',
+    'outro',
+    'watchChange',
+    'closeWatcher',
+  ] as const) {
     const handler = plugin[hookName] as any;
     if (handler) {
       plugin[hookName] = async (...args: any[]) => {

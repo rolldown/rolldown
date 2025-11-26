@@ -6,9 +6,7 @@ import type { BindingStringOrRegex } from '../binding.cjs';
  */
 export function normalizedStringOrRegex<
   T extends Array<BindingStringOrRegex> | ReadonlyArray<BindingStringOrRegex>,
->(
-  pattern?: T | BindingStringOrRegex,
-): T | undefined {
+>(pattern?: T | BindingStringOrRegex): T | undefined {
   if (!pattern) {
     return undefined;
   }

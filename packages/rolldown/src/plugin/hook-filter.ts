@@ -6,9 +6,9 @@ import type { StringOrRegExp } from '../types/utils';
 export type GeneralHookFilter<Value = StringOrRegExp> =
   | MaybeArray<Value>
   | {
-    include?: MaybeArray<Value>;
-    exclude?: MaybeArray<Value>;
-  };
+      include?: MaybeArray<Value>;
+      exclude?: MaybeArray<Value>;
+    };
 
 interface FormalModuleTypeFilter {
   include?: ModuleType[];

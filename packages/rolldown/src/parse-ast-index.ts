@@ -25,7 +25,8 @@ function normalizeParseError(
       break;
     }
     const e = errors[i];
-    message += e.message +
+    message +=
+      e.message +
       '\n' +
       e.labels
         .map((label: any) => {
@@ -57,10 +58,7 @@ export function parseAst(
     ...defaultParserOptions,
     ...options,
   });
-  return wrap(
-    ast,
-    sourceText,
-  );
+  return wrap(ast, sourceText);
 }
 
 export async function parseAstAsync(

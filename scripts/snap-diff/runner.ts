@@ -187,26 +187,29 @@ function generateStatsMarkdown(
   markdown += `# Compatibility metric\n`;
   markdown += `- total: ${stats.total}\n`;
   markdown += `- passed: ${stats.total - stats.failed}\n`;
-  markdown += `- passed ratio: ${
-    (((stats.total - stats.failed) / stats.total) * 100).toFixed(2)
-  }%\n`;
+  markdown += `- passed ratio: ${(
+    ((stats.total - stats.failed) / stats.total) *
+    100
+  ).toFixed(2)}%\n`;
 
   let totalWithoutNotSupport = stats.total - unsupportedCaseCount;
   markdown += `# Compatibility metric without not supported case\n`;
   markdown += `- total: ${totalWithoutNotSupport}\n`;
   markdown += `- passed: ${stats.total - stats.failed}\n`;
-  markdown += `- passed ratio: ${
-    (((stats.total - stats.failed) / totalWithoutNotSupport) * 100).toFixed(2)
-  }%\n`;
+  markdown += `- passed ratio: ${(
+    ((stats.total - stats.failed) / totalWithoutNotSupport) *
+    100
+  ).toFixed(2)}%\n`;
 
   markdown += `# Compatibility metric details\n`;
   Object.entries(details).forEach(([category, stats]) => {
     markdown += `## ${category}\n`;
     markdown += `- total: ${stats.total}\n`;
     markdown += `- passed: ${stats.total - stats.failed}\n`;
-    markdown += `- passed ratio: ${
-      (((stats.total - stats.failed) / stats.total) * 100).toFixed(2)
-    }%\n`;
+    markdown += `- passed ratio: ${(
+      ((stats.total - stats.failed) / stats.total) *
+      100
+    ).toFixed(2)}%\n`;
   });
   fs.writeFileSync(
     path.resolve(import.meta.dirname, './stats/stats.md'),

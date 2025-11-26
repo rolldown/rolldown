@@ -12,7 +12,8 @@ export interface NormalizedInputOptions {
   context: string;
 }
 
-export class NormalizedInputOptionsImpl extends PlainObjectLike
+export class NormalizedInputOptionsImpl
+  extends PlainObjectLike
   implements NormalizedInputOptions
 {
   inner: BindingNormalizedOptions;

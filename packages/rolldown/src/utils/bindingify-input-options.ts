@@ -126,9 +126,7 @@ export function bindingifyInputOptions(
   };
 }
 
-function bindingifyHmr(
-  hmr?: HmrOptions,
-): BindingExperimentalOptions['hmr'] {
+function bindingifyHmr(hmr?: HmrOptions): BindingExperimentalOptions['hmr'] {
   if (hmr) {
     if (typeof hmr === 'boolean') {
       return hmr ? {} : undefined;
@@ -190,9 +188,7 @@ function bindingifyExperimental(
     viteMode: experimental?.viteMode,
     resolveNewUrlToAsset: experimental?.resolveNewUrlToAsset,
     hmr: bindingifyHmr(experimental?.hmr),
-    attachDebugInfo: bindingifyAttachDebugInfo(
-      experimental?.attachDebugInfo,
-    ),
+    attachDebugInfo: bindingifyAttachDebugInfo(experimental?.attachDebugInfo),
     chunkModulesOrder,
     chunkImportMap: experimental?.chunkImportMap,
     onDemandWrapping: experimental?.onDemandWrapping,
@@ -211,17 +207,16 @@ function bindingifyResolve(
     return {
       alias: alias
         ? Object.entries(alias).map(([name, replacement]) => ({
-          find: name,
-          replacements: replacement === false
-            ? [undefined]
-            : arraify(replacement),
-        }))
+            find: name,
+            replacements:
+              replacement === false ? [undefined] : arraify(replacement),
+          }))
         : undefined,
       extensionAlias: extensionAlias
         ? Object.entries(extensionAlias).map(([name, value]) => ({
-          target: name,
-          replacements: value,
-        }))
+            target: name,
+            replacements: value,
+          }))
         : undefined,
       yarnPnp,
       ...rest,
@@ -240,8 +235,7 @@ function bindingifyInject(
     return Object.entries(inject).map(
       ([alias, item]):
         | BindingInjectImportNamed
-        | BindingInjectImportNamespace =>
-      {
+        | BindingInjectImportNamespace => {
         if (Array.isArray(item)) {
           // import * as fs from 'node:fs'
           // fs: ['node:fs', '*' ],

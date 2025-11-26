@@ -9,10 +9,7 @@ describe('filterVitePlugins', () => {
   });
 
   test('includes plugins without apply property', () => {
-    const plugins = [
-      { name: 'plugin1' },
-      { name: 'plugin2' },
-    ];
+    const plugins = [{ name: 'plugin1' }, { name: 'plugin2' }];
 
     const result = filterVitePlugins(plugins);
     expect(result).toEqual(plugins);
@@ -132,10 +129,7 @@ describe('filterVitePlugins', () => {
     ];
 
     const result = filterVitePlugins(plugins);
-    expect(result).toEqual([
-      { name: 'plugin1' },
-      { name: 'plugin2' },
-    ]);
+    expect(result).toEqual([{ name: 'plugin1' }, { name: 'plugin2' }]);
   });
 
   test('handles single plugin (not in array)', () => {

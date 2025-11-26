@@ -40,11 +40,9 @@ async function bundleTsConfig(
             const injectValues =
               `const ${dirnameVarName} = ${JSON.stringify(path.dirname(id))};` +
               `const ${filenameVarName} = ${JSON.stringify(id)};` +
-              `const ${importMetaUrlVarName} = ${
-                JSON.stringify(
-                  pathToFileURL(id).href,
-                )
-              };`;
+              `const ${importMetaUrlVarName} = ${JSON.stringify(
+                pathToFileURL(id).href,
+              )};`;
             return { code: injectValues + code, map: null };
           },
         },
@@ -58,9 +56,9 @@ async function bundleTsConfig(
     sourcemap: 'inline',
     // respect the original file extension, mts -> mjs, cts -> cjs
     // mts should be generate mjs, it avoid add `type: module` at package.json
-    entryFileNames: `rolldown.config.[hash]${
-      path.extname(configFile).replace('ts', 'js')
-    }`,
+    entryFileNames: `rolldown.config.[hash]${path
+      .extname(configFile)
+      .replace('ts', 'js')}`,
   });
   const fileName = result.output.find(
     (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,
@@ -140,7 +138,7 @@ function tryStatSync(file: string): fs.Stats | undefined {
 
 export async function loadConfig(configPath: string): Promise<ConfigExport> {
   const ext = path.extname(
-    configPath = configPath || (await findConfigFileNameInCwd()),
+    (configPath = configPath || (await findConfigFileNameInCwd())),
   );
 
   try {
@@ -155,9 +153,9 @@ export async function loadConfig(configPath: string): Promise<ConfigExport> {
       return await loadTsConfig(rawConfigPath);
     } else {
       throw new Error(
-        `Unsupported config format. Expected: \`${
-          SUPPORTED_CONFIG_FORMATS.join(',')
-        }\` but got \`${ext}\``,
+        `Unsupported config format. Expected: \`${SUPPORTED_CONFIG_FORMATS.join(
+          ',',
+        )}\` but got \`${ext}\``,
       );
     }
   } catch (err) {

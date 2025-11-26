@@ -8,16 +8,14 @@ import {
 import { expandSuitesWithDerived } from '../src/suites/index.js';
 import { suiteRomeTsWithBabelAndParallelism } from '../src/suites/rome-ts.js';
 
-for (
-  const suite of expandSuitesWithDerived([
-    suiteRomeTsWithBabelAndParallelism,
-  ])
-) {
+for (const suite of expandSuitesWithDerived([
+  suiteRomeTsWithBabelAndParallelism,
+])) {
   const excludedBundlers = Array.isArray(suite.disableBundler)
     ? suite.disableBundler
     : suite.disableBundler
-    ? [suite.disableBundler]
-    : [];
+      ? [suite.disableBundler]
+      : [];
 
   const group = bencher.group(suite.title, (bench) => {
     if (!excludedBundlers.includes(`rolldown`)) {

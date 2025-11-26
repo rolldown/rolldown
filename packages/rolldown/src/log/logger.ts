@@ -52,9 +52,8 @@ export function getLogger(
             logger(level, normalizeLog(log), new Set(skipped).add(plugin));
         };
 
-        const handler = 'handler' in pluginOnLog!
-          ? pluginOnLog.handler
-          : pluginOnLog!;
+        const handler =
+          'handler' in pluginOnLog! ? pluginOnLog.handler : pluginOnLog!;
         if (
           handler.call(
             {
@@ -112,13 +111,14 @@ const getDefaultOnLog = (
 ): LogHandler =>
   onwarn
     ? (level, log) => {
-      if (level === LOG_LEVEL_WARN) {
-        onwarn(addLogToString(log), (warning) =>
-          printLog(LOG_LEVEL_WARN, normalizeLog(warning)));
-      } else {
-        printLog(level, log);
+        if (level === LOG_LEVEL_WARN) {
+          onwarn(addLogToString(log), (warning) =>
+            printLog(LOG_LEVEL_WARN, normalizeLog(warning)),
+          );
+        } else {
+          printLog(level, log);
+        }
       }
-    }
     : printLog;
 
 const addLogToString = (log: RollupLog): RollupLog => {
@@ -151,9 +151,9 @@ const getExtendedLogMessage = (log: RollupLog): string => {
     prefix += `(${log.plugin} plugin) `;
   }
   if (log.loc) {
-    prefix += `${
-      relativeId(log.loc.file!)
-    } (${log.loc.line}:${log.loc.column}) `;
+    prefix += `${relativeId(
+      log.loc.file!,
+    )} (${log.loc.line}:${log.loc.column}) `;
   }
 
   return prefix + log.message;

@@ -32,9 +32,10 @@ export function transformToRollupSourceMap(map: string): SourceMap {
       return JSON.stringify(obj);
     },
     toUrl() {
-      return `data:application/json;charset=utf-8;base64,${
-        Buffer.from(obj.toString(), 'utf-8').toString('base64')
-      }`;
+      return `data:application/json;charset=utf-8;base64,${Buffer.from(
+        obj.toString(),
+        'utf-8',
+      ).toString('base64')}`;
     },
   };
   return obj;
@@ -161,10 +162,10 @@ function transformToMutableRollupOutput(
   return {
     output: [
       ...chunks.map((chunk) =>
-        transformToMutableRollupOutputChunk(chunk, changed)
+        transformToMutableRollupOutputChunk(chunk, changed),
       ),
       ...assets.map((asset) =>
-        transformToMutableRollupOutputAsset(asset, changed)
+        transformToMutableRollupOutputAsset(asset, changed),
       ),
     ],
   } as RolldownOutput;

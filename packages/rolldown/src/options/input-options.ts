@@ -55,11 +55,13 @@ export interface WatcherOptions {
 
 type MakeAbsoluteExternalsRelative = boolean | 'ifRelativeSource';
 
-export type HmrOptions = boolean | {
-  host?: string;
-  port?: number;
-  implement?: string;
-};
+export type HmrOptions =
+  | boolean
+  | {
+      host?: string;
+      port?: number;
+      implement?: string;
+    };
 
 export type OptimizationOptions = {
   /**
@@ -365,16 +367,15 @@ interface OverwriteInputOptionsForCli {
   treeshake?: boolean;
 }
 
-export type InputCliOptions =
-  & Omit<
-    InputOptions,
-    | keyof OverwriteInputOptionsForCli
-    | 'input'
-    | 'plugins'
-    | 'onwarn'
-    | 'onLog'
-    | 'resolve'
-    | 'experimental'
-    | 'watch'
-  >
-  & OverwriteInputOptionsForCli;
+export type InputCliOptions = Omit<
+  InputOptions,
+  | keyof OverwriteInputOptionsForCli
+  | 'input'
+  | 'plugins'
+  | 'onwarn'
+  | 'onLog'
+  | 'resolve'
+  | 'experimental'
+  | 'watch'
+> &
+  OverwriteInputOptionsForCli;

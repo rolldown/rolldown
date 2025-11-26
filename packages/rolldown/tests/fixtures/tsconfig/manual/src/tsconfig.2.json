@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "baseUrl": "./",
+    "paths": {
+      "@app/*": [
+        "bar/*"
+      ]
+    },
+    "jsx": "react",
+    "jsxFactory": "b"
+  },
+  "include": [
+    "bar.tsx"
+  ]
+}

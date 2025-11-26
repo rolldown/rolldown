@@ -530,9 +530,13 @@
           ]
         },
         "tsconfig": {
-          "type": [
-            "string",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TsConfig"
+            },
+            {
+              "type": "null"
+            }
           ]
         }
       },
@@ -1527,6 +1531,16 @@
       "enum": [
         "all",
         "smart"
+      ]
+    },
+    "TsConfig": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string"
+        }
       ]
     },
     "ConfigVariant": {

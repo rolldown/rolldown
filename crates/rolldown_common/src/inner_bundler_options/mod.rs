@@ -34,7 +34,7 @@ use self::types::{
   hash_characters::HashCharacters, input_item::InputItem, is_external::IsExternal,
   output_exports::OutputExports, output_format::OutputFormat, output_option::AddonOutputOption,
   platform::Platform, resolve_options::ResolveOptions, source_map_type::SourceMapType,
-  sourcemap_path_transform::SourceMapPathTransform,
+  sourcemap_path_transform::SourceMapPathTransform, tsconfig::TsConfig,
 };
 
 use crate::{
@@ -228,7 +228,7 @@ pub struct BundlerOptions {
   pub minify_internal_exports: Option<bool>,
   pub clean_dir: Option<bool>,
   pub context: Option<String>,
-  pub tsconfig: Option<String>,
+  pub tsconfig: Option<TsConfig>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

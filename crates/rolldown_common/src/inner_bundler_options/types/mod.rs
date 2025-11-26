@@ -35,4 +35,5 @@ pub mod target;
 pub mod transform_option;
 pub mod transform_options;
 pub mod treeshake;
+pub mod tsconfig;
 pub mod watch_option;

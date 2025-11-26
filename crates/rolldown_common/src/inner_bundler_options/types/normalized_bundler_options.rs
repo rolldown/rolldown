@@ -108,7 +108,6 @@ pub struct NormalizedBundlerOptions {
   pub minify_internal_exports: bool,
   pub clean_dir: bool,
   pub context: String,
-  pub tsconfig: Option<PathBuf>,
 }
 
 // This is only used for testing
@@ -181,7 +180,6 @@ impl Default for NormalizedBundlerOptions {
       minify_internal_exports: Default::default(),
       clean_dir: false,
       context: Default::default(),
-      tsconfig: Default::default(),
     }
   }
 }

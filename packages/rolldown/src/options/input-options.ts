@@ -347,16 +347,27 @@ export interface InputOptions {
   optimization?: OptimizationOptions;
   context?: string;
   /**
-   * Allows you to specify where to find the TypeScript configuration file.
+   * Configures TypeScript configuration file resolution and usage.
    *
-   * You may provide:
-   * - a relative path to the configuration file. It will be resolved relative to cwd.
-   * - an absolute path to the configuration file.
+   * ## Options
    *
-   * When a tsconfig path is specified, the module resolver will respect `compilerOptions.paths` from the specified `tsconfig.json`,
-   * and the tsconfig options will be merged with the top-level `transform` options, with the `transform` options taking precedence.
+   * - `true`: Auto-discovery mode (similar to Vite). For each module, both resolver and transformer
+   *   will find the nearest tsconfig.json. If the tsconfig has `references`, the file extension is
+   *   allowed, and the tsconfig's `include`/`exclude` patterns don't match the file, the referenced
+   *   tsconfigs will be searched for a match. Falls back to the original tsconfig if no match is found.
+   * - `string`: Path to a specific tsconfig.json file (relative to cwd or absolute path).
+   *
+   * ## What's used from tsconfig
+   *
+   * - **Resolver**: Uses `compilerOptions.paths` and `compilerOptions.baseUrl` for path mapping
+   * - **Transformer**: Uses select compiler options (jsx, decorators, typescript, etc.)
+   *
+   * > [!NOTE]
+   * > Priority: Top-level `transform` options always take precedence over tsconfig settings.
+   *
+   * @default undefined (no tsconfig resolution)
    */
-  tsconfig?: string;
+  tsconfig?: true | string;
 }
 
 interface OverwriteInputOptionsForCli {

@@ -789,12 +789,17 @@ async function waitBuildFinished(
   watcher: RolldownWatcher,
   updateFn?: () => void,
 ) {
-  return new Promise<void>((resolve) => {
-    let listening = false;
+  return new Promise<void>((resolve, reject) => {
+    let listened = false;
     watcher.on('event', (event) => {
-      if (event.code === 'BUNDLE_END' && !listening) {
-        listening = true;
+      if (listened) return;
+
+      if (event.code === 'BUNDLE_END') {
+        listened = true;
         resolve();
+      } else if (event.code === 'ERROR') {
+        listened = true;
+        reject(event.error);
       }
     });
     updateFn && updateFn();

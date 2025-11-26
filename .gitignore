@@ -159,6 +159,7 @@ justfile*
 
 # vitepress
 docs/.vitepress/cache
+docs/public/og
 
 # ci release avoid lerna error: Working tree has uncommitted changes
 crates/rolldown_binding/artifacts/

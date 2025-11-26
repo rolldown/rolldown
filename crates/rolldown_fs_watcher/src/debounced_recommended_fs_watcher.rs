@@ -39,7 +39,10 @@ impl FsWatcher for DebouncedRecommendedFsWatcher {
     path: &std::path::Path,
     recursive_mode: notify::RecursiveMode,
   ) -> BuildResult<()> {
-    self.0.watch(path, recursive_mode).map_err_to_unhandleable()?;
+    self
+      .0
+      .watch(path, notify::WatchMode { recursive_mode, target_mode: notify::TargetMode::TrackPath })
+      .map_err_to_unhandleable()?;
 
     Ok(())
   }

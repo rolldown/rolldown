@@ -2735,32 +2735,32 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify"
-version = "8.2.1"
+version = "9.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "858a3e78503d89287b47d66fb042b4f04e34b237774506fbb48d7c3e5eb445cf"
+checksum = "58d681610d5f1818f4bd2a3c5ccaf92d494abf5ba5cabab1f707a652d9f7c5d8"
 dependencies = [
  "bitflags 2.10.0",
  "fsevent-sys",
  "inotify",
  "kqueue",
  "libc",
- "log",
  "mio",
  "rolldown-notify-types",
+ "tracing",
  "walkdir",
  "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "rolldown-notify-debouncer-full"
-version = "0.6.1"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45e06775bbad4fa50fb0c07a1dfbb5ec3356131b6f0e19679910cb698aa54068"
+checksum = "8b121fd204ec8103827384d823041c3a97804ae71cef019e58cdde4298b639dc"
 dependencies = [
- "log",
  "rolldown-file-id",
  "rolldown-notify",
  "rolldown-notify-types",
+ "tracing",
  "walkdir",
 ]
 

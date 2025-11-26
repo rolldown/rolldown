@@ -68,6 +68,10 @@ await runCmdAndPipeOrExit(
   ['pnpm', ['install', '--no-frozen-lockfile'], { nodeOptions: { cwd: REPO_PATH } }],
 );
 await runCmdAndPipeOrExit(
+  '# Running `pnpm exec playwright install chromium`...',
+  ['pnpm', ['exec', 'playwright', 'install', 'chromium'], { nodeOptions: { cwd: REPO_PATH } }],
+);
+await runCmdAndPipeOrExit(
   '# Running `pnpm run build`...',
   ['pnpm', ['run', 'build'], { nodeOptions: { cwd: REPO_PATH } }],
 );

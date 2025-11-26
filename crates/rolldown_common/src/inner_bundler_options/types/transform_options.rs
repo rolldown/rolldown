@@ -28,7 +28,7 @@ pub enum JsxPreset {
 #[derive(Debug, Clone)]
 pub struct RawTransformOptions {
   pub base_options: Arc<BundlerTransformOptions>,
-  /// Cache key: tsconfig path, or "/" for files without tsconfig
+  /// Cache key: tsconfig path, or empty PathBuf for files without tsconfig
   pub cache: FxDashMap<PathBuf, Arc<OxcTransformOptions>>,
   resolver: Arc<Resolver>,
 }

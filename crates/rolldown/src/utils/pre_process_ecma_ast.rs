@@ -91,6 +91,8 @@ impl PreProcessEcmaAst {
     let is_not_js = !matches!(parsed_type, OxcParseType::Js);
     if is_not_js || bundle_options.transform_options.should_transform_js() {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
+        // Pass file path only for non-JS modules (TS/TSX/JSX) to enable tsconfig discovery.
+        // For plain JS files, we skip tsconfig lookup since they don't need TS-specific transformations.
         let transform_options = bundle_options
           .transform_options
           .options_for_file(is_not_js.then_some(Path::new(resolved_id)), &mut warnings)?;

@@ -51,7 +51,6 @@ Prebuilt binaries are distributed for the following platforms (grouped by [Node.
   - OpenHarmony arm64 (`aarch64-unknown-linux-ohos`)
 - Other
   - Linux arm64 musl (`aarch64-unknown-linux-musl`)
-  - Windows x86 (`i686-pc-windows-msvc`)
   - Android arm64 (`aarch64-linux-android`)
   - Wasm + Wasi (`wasm32-wasip1-threads`)
 

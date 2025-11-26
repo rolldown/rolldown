@@ -302,10 +302,10 @@ pub fn prepare_build_context(
 
     // Create TransformOptions based on tsconfig mode:
     // - Auto: Create Raw mode (will resolve tsconfig per file)
-    // - None/Special: Create Normal mode (resolve tsconfig once now)
+    // - None/Manual: Create Normal mode (resolve tsconfig once now)
     match tsconfig {
       Some(TsConfig::Manual(path)) => {
-        // None or Special mode: Resolve tsconfig now and create Normal mode
+        // None or Manual mode: Resolve tsconfig now and create Normal mode
         let resolved_tsconfig = resolver.resolve_tsconfig(&path).map_err(|err| {
           anyhow::anyhow!("Failed to resolve `tsconfig` option: {}", path.display()).context(err)
         })?;

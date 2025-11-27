@@ -211,17 +211,13 @@ pub fn render_chunk_exports(
             .chunk
             .direct_imports_from_external_modules
             .iter()
-            .map(|(idx, _)| {
-              let external = &ctx.link_output.module_table[*idx]
-                .as_external()
-                .expect("Should be external module here");
-              external.namespace_ref
+            .filter_map(|(idx, _)| {
+             ctx.link_output.module_table[*idx]
+                .as_external().map(|extenral| extenral.namespace_ref)
             })
-            .chain(ctx.chunk.import_symbol_from_external_modules.iter().map(|idx| {
-              let external = &ctx.link_output.module_table[*idx]
-                .as_external()
-                .expect("Should be external module here");
-              external.namespace_ref
+            .chain(ctx.chunk.import_symbol_from_external_modules.iter().filter_map(|idx| {
+              ctx.link_output.module_table[*idx]
+                .as_external().map(|external| external.namespace_ref)
             }))
             .collect();
           external_modules.iter().for_each(|idx| {

@@ -66,6 +66,13 @@ describe('cli options for bundling', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
+  it('should silence CLI output with --silent', async () => {
+    const cwd = cliFixturesDir('cli-option-boolean');
+    const status = await $({ cwd })`rolldown index.ts --silent -d dist`;
+    expect(status.exitCode).toBe(0);
+    expect(cleanStdout(status.stdout)).toBe('');
+  });
+
   it('should handle single boolean short options', async () => {
     const cwd = cliFixturesDir('cli-option-short-boolean');
     const status = await $({ cwd })`rolldown index.ts -m -d dist`;

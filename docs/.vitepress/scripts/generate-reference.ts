@@ -21,14 +21,21 @@ async function runTypedoc(): Promise<void> {
   );
 
   const options: TypeDocOptions & PluginOptions = {
-    tsconfig: path.resolve(
-      root,
-      'packages/rolldown/tsconfig.json',
-    ),
-    plugin: ['typedoc-plugin-markdown', 'typedoc-vitepress-theme'],
+    tsconfig: path.join(root, 'packages/rolldown/tsconfig.json').split(
+      path.sep,
+    ).join(path.posix.sep),
+    plugin: [
+      'typedoc-plugin-markdown',
+      'typedoc-vitepress-theme',
+      path.join(import.meta.dirname, 'custom-plugin.ts').split(path.sep).join(
+        path.posix.sep,
+      ),
+    ],
     out: './reference',
     entryPoints: [
-      path.resolve(root, 'packages/rolldown/src/index.ts'),
+      path.join(root, 'packages/rolldown/src/index.ts').split(path.sep).join(
+        path.posix.sep,
+      ),
     ],
     excludeInternal: true,
 
@@ -36,8 +43,13 @@ async function runTypedoc(): Promise<void> {
     useCodeBlocks: true,
     flattenOutputFiles: true,
 
+    categoryOrder: ['Options', 'Programmatic API', 'Plugin API', '*'],
+
     // @ts-expect-error VitePress config
     docsRoot: './reference',
+    sidebar: {
+      pretty: true,
+    },
   };
   const app = await Application.bootstrapWithPlugins(options);
 

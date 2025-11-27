@@ -4892,6 +4892,19 @@ expression: output
 - main2-!~{001}~.js => main2---eBAgtF.js
 - chunk-!~{002}~.js => chunk-CALPBdpR.js
 
+# tests/rolldown/issues/7233
+
+- index-!~{000}~.js => index-1kB3Vgqb.js
+- _virtual/rolldown_runtime-!~{001}~.js => _virtual/rolldown_runtime-CyrW_3gl.js
+- server-!~{003}~.js => server-zSw44YMI.js
+
+# tests/rolldown/issues/7233_chain
+
+- index-!~{000}~.js => index-yu2ot_m9.js
+- _virtual/rolldown_runtime-!~{001}~.js => _virtual/rolldown_runtime-CyrW_3gl.js
+- middle-!~{005}~.js => middle-y2s8K8wc.js
+- server-!~{003}~.js => server-DFjxxrlr.js
+
 # tests/rolldown/issues/duplicate_default_export
 
 - main-!~{000}~.js => main-D5owKpO2.js

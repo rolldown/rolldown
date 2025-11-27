@@ -4,7 +4,3 @@ mod _1733;
 mod _4895;
 #[path = "./5011/mod.rs"]
 mod _5011;
-#[path = "./7233/mod.rs"]
-mod _7233;
-#[path = "./7233_chain/mod.rs"]
-mod _7233_chain;

@@ -22,6 +22,7 @@
         ".vitepress/theme/components/overrides/VPHero.vue",
         "data-loading/*.data.{js,ts}",
       ],
+      "ignoreDependencies": ["typedoc-vitepress-theme"],
     },
     "packages/bench": {
       "entry": ["vue-entry.js"],

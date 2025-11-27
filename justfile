@@ -101,8 +101,13 @@ t-node-rollup command="":
   pnpm run --filter rollup-tests test{{ command }}
 
 # Run specific rust test without enabling extended tests.
+[unix]
 t-run *args:
   NEEDS_EXTENDED=false cargo run-fixture {{ args }}
+
+[windows]
+t-run *args:
+  $env:NEEDS_EXTENDED="false"; cargo run-fixture {{ args }}
 
 # --- `fix` series commands aim to fix fixable issues.
 
@@ -239,4 +244,3 @@ update-generated-code:
 # Run the `rolldown` cli using node.
 run *args:
   pnpm rolldown {{ args }}
-  

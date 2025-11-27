@@ -1,0 +1,65 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## _virtual/rolldown_runtime.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+exports.__export = __export;
+exports.__reExport = __reExport;
+```
+
+## index.js
+
+```js
+const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+require('./server.js');
+let zod = require("zod");
+
+//#region index.ts
+var _7233_exports = /* @__PURE__ */ require_rolldown_runtime.__export({
+	object: () => zod.object,
+	string: () => zod.string
+});
+
+//#endregion
+Object.defineProperty(exports, 'object', {
+  enumerable: true,
+  get: function () {
+    return zod.object;
+  }
+});
+Object.defineProperty(exports, 'string', {
+  enumerable: true,
+  get: function () {
+    return zod.string;
+  }
+});
+var zod = require("zod");
+Object.keys(zod).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return zod[k]; }
+  });
+});
+
+```
+
+## server.js
+
+```js
+const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+let zod = require("zod");
+
+
+Object.keys(zod).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return zod[k]; }
+  });
+});
+
+```

@@ -353,8 +353,14 @@ impl Resolver {
         // if so, we can resolve to a special id that errors only when imported.
         if is_bare_import(id) && !self.built_in_checker.is_builtin(id) && !id.contains('\0') {
           if let Some(pkg_name) = get_npm_package_name(id) {
-            let base_dir = get_base_dir(id, importer, dedupe);
-            if base_dir.is_some_and(|dir| dir != self.root.to_str().unwrap()) {
+            let resolved_importer_dir = should_use_importer(id, importer, dedupe)
+              .then(|| {
+                importer.map(|importer| {
+                  Path::new(importer).parent().map(|i| i.to_str().unwrap()).unwrap_or(importer)
+                })
+              })
+              .flatten();
+            if resolved_importer_dir.is_some_and(|dir| dir != self.root.to_str().unwrap()) {
               if let Some(package_json) =
                 self.get_nearest_package_json_optional_peer_deps(importer.unwrap())
               {
@@ -409,7 +415,7 @@ impl Resolver {
   ) -> HookResolveIdReturn {
     let oxc_resolved_result = self.resolve_raw(
       specifier,
-      if should_dedupe(specifier, dedupe) { None } else { importer },
+      if should_use_importer(specifier, importer, dedupe) { importer } else { None },
       external,
     );
     let resolved = self.normalize_oxc_resolver_result(
@@ -450,13 +456,13 @@ impl Resolver {
   }
 }
 
-fn get_base_dir<'a>(
+fn should_use_importer(
   specifier: &'_ str,
-  importer: Option<&'a str>,
+  importer: Option<&'_ str>,
   dedupe: &FxHashSet<String>,
-) -> Option<&'a str> {
+) -> bool {
   if should_dedupe(specifier, dedupe) {
-    return None;
+    return false;
   }
 
   if let Some(importer) = importer {
@@ -467,10 +473,10 @@ fn get_base_dir<'a>(
         importer.ends_with('*') || fs::exists(clean_url(importer)).unwrap_or(false)
       )
     {
-      return Some(imp.parent().map(|i| i.to_str().unwrap()).unwrap_or(importer));
+      return true;
     }
   }
-  None
+  false
 }
 
 fn should_dedupe(specifier: &str, dedupe: &FxHashSet<String>) -> bool {

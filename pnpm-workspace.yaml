@@ -106,5 +106,5 @@ catalog:
   'diff': '^8.0.0'
   'estree-toolkit': '^1.7.8'
   'web-tree-sitter': '^0.25.0'
-  'valibot': '1.1.0'
+  'valibot': '1.2.0'
   'tsx': '^4.20.6'

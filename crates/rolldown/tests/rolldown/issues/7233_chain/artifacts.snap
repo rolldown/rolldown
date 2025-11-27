@@ -38,7 +38,6 @@ Object.defineProperty(exports, 'string', {
     return zod.string;
   }
 });
-var zod = require("zod");
 Object.keys(zod).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
     enumerable: true,
@@ -56,7 +55,6 @@ require('./server.js');
 let zod = require("zod");
 
 
-var zod = require("zod");
 Object.keys(zod).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
     enumerable: true,

@@ -217,6 +217,12 @@ pub fn render_chunk_exports(
                 .expect("Should be external module here");
               external.namespace_ref
             })
+            .chain(ctx.chunk.import_symbol_from_external_modules.iter().map(|idx| {
+              let external = &ctx.link_output.module_table[*idx]
+                .as_external()
+                .expect("Should be external module here");
+              external.namespace_ref
+            }))
             .collect();
           external_modules.iter().for_each(|idx| {
           let external = &ctx.link_output.module_table[*idx].as_external().expect("Should be external module here");

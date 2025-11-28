@@ -41,7 +41,25 @@ Enable Vite compatibility mode.
 - **Default:** `false`
 - **Path:** `experimental.resolveNewUrlToAsset`
 
-Resolve `new URL()` to asset references.
+When enable, `new URL()` calls will be transformed to a stable asset URL which including the updated name and content hash.
+It is necessary to pass `import.meta.url` as second argument to the `new URL` constructor, otherwise no transform will be applied..
+
+### Examples
+
+```js
+// main.js
+const url = new URL('./styles.css', import.meta.url)
+console.log(url)
+
+// Example output after bundling WITHOUT the option (default)
+const url = new URL("./styles.css", import.meta.url);
+console.log(url);
+
+
+// Example output after bundling WITH `experimental.resolveNewUrlToAsset` set to `true`
+const url = new URL("assets/styles-CjdrdY7X.css", import.meta.url);
+console.log(url);
+```
 
 ## hmr
 

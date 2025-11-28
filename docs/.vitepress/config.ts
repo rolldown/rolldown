@@ -100,25 +100,23 @@ const typedocSidebar = getTypedocSidebar().map((item) => ({
   return 0;
 });
 
+function getOptionsSidebar() {
+  const filepath = path.resolve(
+    import.meta.dirname,
+    '../reference/options-sidebar.json',
+  );
+  if (!existsSync(filepath)) return [];
+
+  try {
+    return require(filepath) as DefaultTheme.SidebarItem[];
+  } catch (error) {
+    console.error('Failed to load options sidebar:', error);
+    return [];
+  }
+}
+
 const sidebarForReference: DefaultTheme.SidebarItem[] = [
-  {
-    text: 'Quick Links',
-    items: [
-      {
-        text: 'Input Options',
-        link: '/reference/Interface.InputOptions.md',
-      },
-      {
-        text: 'Output Options',
-        link: '/reference/Interface.OutputOptions.md',
-      },
-      {
-        text: 'Build Options',
-        link: '/reference/Interface.BuildOptions.md',
-      },
-      { text: 'Bundler API', link: '/reference/Function.rolldown.md' },
-    ],
-  },
+  { text: 'Option Reference', base: '/reference', items: getOptionsSidebar() },
   { text: 'API Reference', base: '/reference', items: typedocSidebar },
 ];
 

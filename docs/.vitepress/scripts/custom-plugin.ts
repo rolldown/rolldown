@@ -2,13 +2,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as td from 'typedoc';
 
-// Escape a string for use in a RegExp
 function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// Try to extract the markdown section for a given property name from a
-// parent page's rendered markdown `contents`.
 function extractPropertySection(
   contents: string,
   propertyName: string,
@@ -16,7 +13,6 @@ function extractPropertySection(
   if (!contents) return undefined;
   const namePattern = escapeRegex(propertyName);
 
-  // Match a heading that contains the property name (allow backticks around it).
   const headingRe = new RegExp(
     '^(#{1,6})\\s*(?:`?' + namePattern + '`?).*$',
     'm',
@@ -27,7 +23,6 @@ function extractPropertySection(
   const startIndex = m.index ?? 0;
   const startLevel = m[1].length;
 
-  // Find next heading with level <= startLevel
   const nextHeadingRe = /^#{1,6}.*$/gm;
   nextHeadingRe.lastIndex = startIndex + (m[0]?.length ?? 0);
   let endIndex = contents.length;
@@ -46,13 +41,12 @@ function extractPropertySection(
 }
 
 export function load(app: td.Application) {
-  // Track generated pages so we can update the sidebar after render.
-  const generated: Record<string, Array<{ text: string; link: string }>> = {};
+  const generatedPage: Record<string, Array<{ text: string; link: string }>> =
+    {};
 
   app.renderer.on(
     td.Renderer.EVENT_END_PAGE,
     (page) => {
-      // We only care about the specific pages you want to split
       if (
         page.model?.name === 'InputOptions' ||
         page.model?.name === 'OutputOptions'
@@ -63,61 +57,50 @@ export function load(app: td.Application) {
         const parentContents = String(page.contents ?? '');
 
         for (const property of parentReflection.children) {
-          // Create a PageEvent for the single property reflection.
           const newPage = new td.PageEvent(property);
 
-          // Set project, filename and url for the property's dedicated file.
           newPage.project = page.project;
           newPage.filename = `${parentReflection.name}.${property.name}.md`;
           newPage.url = `${parentReflection.name}.${property.name}.md`;
 
-          // Try to extract the exact rendered markdown for this property from the
-          // parent page contents. If that fails, fall back to a small generated
-          // markdown file.
           const extracted = extractPropertySection(
             parentContents,
             property.name,
           );
           newPage.contents = extracted;
 
-          // Write the generated markdown directly into the configured output
-          // directory.
-          const outDir = app.options?.getValue?.('out') ||
-            './reference';
+          const outDir = app.options?.getValue?.('out');
           const abs = path.resolve(outDir, newPage.url);
           fs.mkdirSync(path.dirname(abs), { recursive: true });
           fs.writeFileSync(abs, newPage.contents ?? '', 'utf8');
+
           // Record for later sidebar modification
-          generated[parentReflection.name] ??= [];
-          generated[parentReflection.name].push({
+          generatedPage[parentReflection.name] ??= [];
+          generatedPage[parentReflection.name].push({
             text: property.name,
             link: `/${newPage.url.replace(/\\/g, '/')}`,
           });
         }
-
-        // Prevent the original parent page from being written
-        page.contents = '';
       }
     },
   );
 
   app.renderer.on(td.Renderer.EVENT_END, () => {
-    const outDir = app.options?.getValue?.('out') || './reference';
+    const outDir = app.options?.getValue?.('out');
     const optionsPath = path.resolve(outDir, 'options-sidebar.json');
 
     const sidebarArray = [];
-    if (generated.InputOptions) {
-      for (const item of generated.InputOptions) sidebarArray.push(item);
+    if (generatedPage.InputOptions) {
+      for (const item of generatedPage.InputOptions) sidebarArray.push(item);
     }
 
-    // For remaining groups, add them as grouped collapsed entries
-    for (const parent of Object.keys(generated)) {
+    // Add Output options as grouped collapsed entries
+    for (const parent of Object.keys(generatedPage)) {
       if (parent === 'InputOptions') continue;
-      const shortName = parent.replace(/Options$/, '') || parent;
       sidebarArray.push({
-        text: shortName,
+        text: 'Output',
         collapsed: true,
-        items: generated[parent],
+        items: generatedPage[parent],
       });
     }
 
@@ -144,7 +127,6 @@ export function load(app: td.Application) {
   });
 }
 
-// Recursively filter out sidebar entries by text name
 function filterSidebarEntries(
   items: unknown[],
   namesToRemove: string[],

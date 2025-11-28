@@ -271,6 +271,7 @@ type OutputPluginHooks = DefinedHookNames[
   | 'writeBundle'
 ];
 
+/** @internal */
 export type ParallelPluginHooks = Exclude<
   keyof FunctionPluginHooks | AddonHooks,
   FirstPluginHooks | SequentialPluginHooks

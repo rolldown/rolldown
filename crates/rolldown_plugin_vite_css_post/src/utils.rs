@@ -170,13 +170,13 @@ impl ViteCSSPostPlugin {
   pub async fn finalize_css_chunk<'a>(
     &self,
     ctx: &FinalizedContext<'a, '_, '_>,
-    css_chunk: String,
+    css_chunk: Option<String>,
     is_pure_css_chunk: bool,
     magic_string: &mut Option<MagicString<'a>>,
   ) -> anyhow::Result<()> {
-    if css_chunk.is_empty() {
+    let Some(css_chunk) = css_chunk else {
       return Ok(());
-    }
+    };
 
     if is_pure_css_chunk && ctx.args.options.format.is_esm_or_cjs() {
       ctx

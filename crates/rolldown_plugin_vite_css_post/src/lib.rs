@@ -180,7 +180,7 @@ impl Plugin for ViteCSSPostPlugin {
     let styles = ctx.meta().get::<CSSStyles>().expect("CSSStyles missing");
     let css_scope_to_map = ctx.meta().get::<CSSScopeToMap>().expect("CSSScopeToMap missing");
     let mut is_pure_css_chunk = args.chunk.exports.is_empty();
-    let mut css_chunk = String::new();
+    let mut css_chunk: Option<String> = None;
     for module_id in &args.chunk.module_ids {
       let id = module_id.resource_id().as_str();
       if let Some(css) = styles.inner.get(id) {
@@ -214,7 +214,7 @@ impl Plugin for ViteCSSPostPlugin {
           is_pure_css_chunk = false;
         }
 
-        css_chunk.push_str(css.as_str());
+        css_chunk.get_or_insert_default().push_str(css.as_str());
       } else if !is_js_chunk_empty {
         // If the chunk has other JS code, it is not a pure CSS chunk
         is_pure_css_chunk = false;

@@ -6,20 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## file.js
 
 ```js
-import "./file2.js";
-
-```
-
-## file2.js
-
-```js
 //#region file.js
 console.log("file");
 
 //#endregion
 ```
 
-## file3.js
+## file2.js
 
 ```js
 //#region 1/file.js
@@ -29,7 +22,7 @@ const value = "a";
 export { value };
 ```
 
-## file4.js
+## file3.js
 
 ```js
 //#region 2/file.js
@@ -39,7 +32,7 @@ const value = "b";
 export { value };
 ```
 
-## file5.js
+## file4.js
 
 ```js
 //#region 3/file.js
@@ -49,7 +42,7 @@ const value = "c";
 export { value };
 ```
 
-## file6.js
+## file5.js
 
 ```js
 //#region 4/file.js
@@ -59,7 +52,7 @@ const value = "d";
 export { value };
 ```
 
-## file7.js
+## file6.js
 
 ```js
 //#region 5/file.js
@@ -69,7 +62,7 @@ const value = "e";
 export { value };
 ```
 
-## file8.js
+## file7.js
 
 ```js
 //#region 6/file.js
@@ -79,7 +72,7 @@ const value = "f";
 export { value };
 ```
 
-## file9.js
+## file8.js
 
 ```js
 //#region 7/file.js
@@ -92,16 +85,16 @@ export { value };
 ## main.js
 
 ```js
-import "./file2.js";
+import "./file.js";
 
 //#region main.js
+import("./file2.js").then(console.log);
 import("./file3.js").then(console.log);
 import("./file4.js").then(console.log);
 import("./file5.js").then(console.log);
 import("./file6.js").then(console.log);
 import("./file7.js").then(console.log);
 import("./file8.js").then(console.log);
-import("./file9.js").then(console.log);
 
 //#endregion
 ```

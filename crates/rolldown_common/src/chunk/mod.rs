@@ -61,7 +61,7 @@ pub struct Chunk {
   pub cross_chunk_imports: Vec<ChunkIdx>,
   pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,
   pub bits: BitSet,
-  pub imports_from_other_chunks: Vec<(ChunkIdx, Vec<CrossChunkImportItem>)>,
+  pub imports_from_other_chunks: FxIndexMap<ChunkIdx, Vec<CrossChunkImportItem>>,
   // Only meaningful for cjs format
   pub require_binding_names_for_other_chunks: FxHashMap<ChunkIdx, String>,
   /// The first element of tuple is module idx of external module

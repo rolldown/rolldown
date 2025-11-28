@@ -137,7 +137,8 @@ impl Plugin for ViteCSSPostPlugin {
     let css_module_cache = ctx.meta().get::<CSSModuleCache>().expect("CSSModuleCache missing");
 
     let modules = css_module_cache.inner.get(args.id);
-    let inlined = find_special_query(args.id, b"inline").is_some();
+    let inlined = find_special_query(args.id, b"inline").is_some()
+      || find_special_query(args.id, b"inline=true").is_some();
 
     let side_effects = if !inlined && modules.is_none() {
       HookSideEffects::NoTreeshake

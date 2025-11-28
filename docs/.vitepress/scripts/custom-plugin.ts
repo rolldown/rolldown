@@ -46,6 +46,9 @@ function extractPropertySection(
 }
 
 export function load(app: td.Application) {
+  // Track generated pages so we can update the sidebar after render.
+  const generated: Record<string, Array<{ text: string; link: string }>> = {};
+
   app.renderer.on(
     td.Renderer.EVENT_END_PAGE,
     (page) => {
@@ -61,10 +64,10 @@ export function load(app: td.Application) {
 
         for (const property of parentReflection.children) {
           // Create a PageEvent for the single property reflection.
-          const newPage = new td.PageEvent(property as any);
+          const newPage = new td.PageEvent(property);
 
           // Set project, filename and url for the property's dedicated file.
-          newPage.project = page.project as any;
+          newPage.project = page.project;
           newPage.filename = `${parentReflection.name}.${property.name}.md`;
           newPage.url = `${parentReflection.name}.${property.name}.md`;
 
@@ -73,38 +76,88 @@ export function load(app: td.Application) {
           // markdown file.
           const extracted = extractPropertySection(
             parentContents,
-            (property as any).name,
+            property.name,
           );
           newPage.contents = extracted;
 
           // Write the generated markdown directly into the configured output
           // directory.
-          const outDir = (app.options as any)?.getValue?.('out') ||
+          const outDir = app.options?.getValue?.('out') ||
             './reference';
           const abs = path.resolve(outDir, newPage.url);
           fs.mkdirSync(path.dirname(abs), { recursive: true });
           fs.writeFileSync(abs, newPage.contents ?? '', 'utf8');
+          // Record for later sidebar modification
+          generated[parentReflection.name] ??= [];
+          generated[parentReflection.name].push({
+            text: property.name,
+            link: `/${newPage.url.replace(/\\/g, '/')}`,
+          });
         }
 
-        // Optional: Stop the original page from being rendered if you only want the split files.
-        // The typed definitions don't declare `preventDefault`, so call it via `any` if available.
-        (page as any).preventDefault?.();
+        // Prevent the original parent page from being written
+        page.contents = '';
       }
     },
   );
+
+  app.renderer.on(td.Renderer.EVENT_END, () => {
+    const outDir = app.options?.getValue?.('out') || './reference';
+    const optionsPath = path.resolve(outDir, 'options-sidebar.json');
+
+    const sidebarArray = [];
+    if (generated.InputOptions) {
+      for (const item of generated.InputOptions) sidebarArray.push(item);
+    }
+
+    // For remaining groups, add them as grouped collapsed entries
+    for (const parent of Object.keys(generated)) {
+      if (parent === 'InputOptions') continue;
+      const shortName = parent.replace(/Options$/, '') || parent;
+      sidebarArray.push({
+        text: shortName,
+        collapsed: true,
+        items: generated[parent],
+      });
+    }
+
+    fs.writeFileSync(
+      optionsPath,
+      JSON.stringify(sidebarArray, null, 2),
+      'utf8',
+    );
+
+    // Remove InputOptions and OutputOptions from typedoc-sidebar.json
+    const typedocSidebarPath = path.resolve(outDir, 'typedoc-sidebar.json');
+    if (fs.existsSync(typedocSidebarPath)) {
+      const sidebar = JSON.parse(fs.readFileSync(typedocSidebarPath, 'utf8'));
+      const filtered = filterSidebarEntries(sidebar, [
+        'InputOptions',
+        'OutputOptions',
+      ]);
+      fs.writeFileSync(
+        typedocSidebarPath,
+        JSON.stringify(filtered, null, 2),
+        'utf8',
+      );
+    }
+  });
 }
 
-// import * as td from 'typedoc';
-
-// export function load(app: td.Application) {
-//   app.renderer.on(
-//     td.Renderer.EVENT_END_PAGE,
-//     (page) => {
-//       if (page.model.name === 'InputOptions' || page.model.name === 'OutputOptions') {
-//         page.contents = `**Generated using "page.end" hook**\n\n` + page.contents;
-
-//       }
-//     },
-//       -100
-//   )
-// }
+// Recursively filter out sidebar entries by text name
+function filterSidebarEntries(
+  items: unknown[],
+  namesToRemove: string[],
+): unknown[] {
+  return items
+    .filter((item: any) => !namesToRemove.includes(item.text))
+    .map((item: any) => {
+      if (item.items) {
+        return {
+          ...item,
+          items: filterSidebarEntries(item.items, namesToRemove),
+        };
+      }
+      return item;
+    });
+}

@@ -11,6 +11,7 @@
     "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings --type-aware",
     "lint-knip": "knip",
     "fmt": "dprint fmt",
+    "fmt-check": "dprint check",
     "build": "echo \"Use just build\"",
     "build:release": "echo \"Use just build native release\"",
     "test": "echo \"Use just test-node\"",

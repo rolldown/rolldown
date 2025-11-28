@@ -152,7 +152,7 @@ lint-node:
 lint-repo:
   typos # Check if the spelling is correct.
   cargo ls-lint # Check if the file names are correct.
-  dprint check # Check if files are formatted correctly.
+  pnpm fmt-check # Check if files are formatted correctly.
 
 # --- `build` series commands aim to provide a easy way to build the project.
 

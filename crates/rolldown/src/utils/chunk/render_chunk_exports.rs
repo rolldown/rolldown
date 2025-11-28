@@ -228,13 +228,14 @@ pub fn render_chunk_exports(
           let external = &ctx.link_output.module_table[*idx].as_external().expect("Should be external module here");
           let binding_ref_name =
           &ctx.chunk.canonical_names[&external.namespace_ref];
-            let import_stmt =
-"Object.keys($NAME).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return $NAME[k]; }
-  });
-});\n".replace("$NAME", binding_ref_name);
+          let import_stmt = concat_string!(
+            "Object.keys(",binding_ref_name, ").forEach(function (k) {\n",
+            "  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {\n",
+            "    enumerable: true,\n",
+            "    get: function () { return ",binding_ref_name,"[k]; }\n",
+            "  });\n",
+            "});\n"
+          );
 
           s.push('\n');
           // Only generate require statement if this external module hasn't been imported yet

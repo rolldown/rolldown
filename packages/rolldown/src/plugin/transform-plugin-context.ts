@@ -17,6 +17,7 @@ import type { Plugin } from './index';
 import { type PluginContext, PluginContextImpl } from './plugin-context';
 import type { PluginContextData } from './plugin-context-data';
 
+/** @category Plugin APIs */
 export interface TransformPluginContext extends PluginContext {
   debug: LoggingFunctionWithPosition;
   info: LoggingFunctionWithPosition;

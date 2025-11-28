@@ -1388,6 +1388,7 @@ export declare class BindingDevEngine {
   close(): Promise<void>
 }
 
+/** @category Plugin APIs */
 export declare class BindingMagicString {
   constructor(source: string)
   replace(from: string, to: string): void
@@ -2468,6 +2469,7 @@ export interface NativeError {
   message: string
 }
 
+/** @category Plugin APIs */
 export interface PreRenderedChunk {
   name: string
   isEntry: boolean

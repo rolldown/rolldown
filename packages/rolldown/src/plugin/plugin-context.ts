@@ -28,6 +28,7 @@ import type {
 } from './index';
 import type { PluginContextData } from './plugin-context-data';
 
+/** @category Plugin APIs */
 export interface EmittedAsset {
   type: 'asset';
   name?: string;
@@ -45,6 +46,7 @@ interface EmittedChunk {
   importer?: string;
 }
 
+/** @category Plugin APIs */
 export type EmittedFile = EmittedAsset | EmittedChunk;
 
 export interface PluginContextResolveOptions {
@@ -53,8 +55,10 @@ export interface PluginContextResolveOptions {
   custom?: CustomPluginOptions;
 }
 
+/** @category Plugin APIs */
 export type GetModuleInfo = (moduleId: string) => ModuleInfo | null;
 
+/** @category Plugin APIs */
 export interface PluginContext extends MinimalPluginContext {
   fs: RolldownFsModule;
   emitFile(file: EmittedFile): string;

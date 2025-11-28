@@ -4,6 +4,7 @@ import { lazyProp } from '../decorators/lazy';
 import type { LogHandler } from '../log/log-handler';
 import { PlainObjectLike } from '../types/plain-object-like';
 
+/** @category Plugin APIs */
 export interface NormalizedInputOptions {
   input: string[] | Record<string, string>;
   cwd: string | undefined;

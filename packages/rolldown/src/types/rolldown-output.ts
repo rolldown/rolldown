@@ -2,6 +2,7 @@ import type { BindingRenderedChunk } from '../binding.cjs';
 import type { AssetSource } from '../utils/asset-source';
 import type { ExternalMemoryHandle } from './external-memory-handle';
 
+/** @category Plugin APIs */
 export interface OutputAsset extends ExternalMemoryHandle {
   type: 'asset';
   fileName: string;
@@ -14,6 +15,7 @@ export interface OutputAsset extends ExternalMemoryHandle {
   names: string[];
 }
 
+/** @category Plugin APIs */
 export interface SourceMap {
   file: string;
   mappings: string;
@@ -27,12 +29,14 @@ export interface SourceMap {
   toUrl(): string;
 }
 
+/** @category Plugin APIs */
 export interface RenderedModule {
   readonly code: string | null;
   renderedLength: number;
   renderedExports: string[];
 }
 
+/** @category Plugin APIs */
 export interface RenderedChunk extends Omit<BindingRenderedChunk, 'modules'> {
   type: 'chunk';
   modules: {
@@ -49,6 +53,7 @@ export interface RenderedChunk extends Omit<BindingRenderedChunk, 'modules'> {
   dynamicImports: Array<string>;
 }
 
+/** @category Plugin APIs */
 export interface OutputChunk extends ExternalMemoryHandle {
   type: 'chunk';
   code: string;

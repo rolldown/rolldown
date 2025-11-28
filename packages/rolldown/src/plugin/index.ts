@@ -35,6 +35,7 @@ type ModuleSideEffects = boolean | 'no-treeshake' | null;
 export { withFilter } from './with-filter';
 
 // ref: https://github.com/microsoft/TypeScript/issues/33471#issuecomment-1376364329
+/** @category Plugin APIs */
 export type ModuleType =
   | 'js'
   | 'jsx'
@@ -48,12 +49,15 @@ export type ModuleType =
   | 'empty'
   | (string & {});
 
+/** @category Plugin APIs */
 export type ImportKind = BindingHookResolveIdExtraArgs['kind'];
 
+/** @category Plugin APIs */
 export interface CustomPluginOptions {
   [plugin: string]: any;
 }
 
+/** @category Plugin APIs */
 export interface ModuleOptions {
   moduleSideEffects: ModuleSideEffects;
   meta: CustomPluginOptions;
@@ -63,32 +67,39 @@ export interface ModuleOptions {
   packageJsonPath?: string;
 }
 
+/** @category Plugin APIs */
 export interface ResolvedId extends ModuleOptions {
   external: boolean | 'absolute';
   id: string;
 }
 
+/** @category Plugin APIs */
 export interface PartialResolvedId extends Partial<PartialNull<ModuleOptions>> {
   external?: boolean | 'absolute' | 'relative';
   id: string;
 }
 
+/** @category Plugin APIs */
 export interface SourceDescription extends Partial<PartialNull<ModuleOptions>> {
   code: string;
   map?: SourceMapInput;
   moduleType?: ModuleType;
 }
 
+/** @category Plugin APIs */
 export interface ResolveIdExtraOptions {
   custom?: CustomPluginOptions;
   isEntry: boolean;
   kind: BindingHookResolveIdExtraArgs['kind'];
 }
 
+/** @category Plugin APIs */
 export type ResolveIdResult = string | NullValue | false | PartialResolvedId;
 
+/** @category Plugin APIs */
 export type LoadResult = NullValue | string | SourceDescription;
 
+/** @category Plugin APIs */
 export type TransformResult =
   | NullValue
   | string
@@ -96,6 +107,7 @@ export type TransformResult =
 
 export type RenderedChunkMeta = { chunks: Record<string, RenderedChunk> };
 
+/** @category Plugin APIs */
 export interface FunctionPluginHooks {
   [DEFINED_HOOK_NAMES.onLog]: (
     this: MinimalPluginContext,
@@ -221,6 +233,7 @@ export type PluginOrder = 'pre' | 'post' | null;
 
 export type ObjectHookMeta = { order?: PluginOrder };
 
+/** @category Plugin APIs */
 export type ObjectHook<T, O = {}> = T | ({ handler: T } & ObjectHookMeta & O);
 type SyncPluginHooks = DefinedHookNames[
   | 'augmentChunkHash'
@@ -231,6 +244,7 @@ type SyncPluginHooks = DefinedHookNames[
 // | 'resolveFileUrl'
 // | 'resolveImportMeta'
 
+/** @category Plugin APIs */
 export type AsyncPluginHooks = Exclude<
   keyof FunctionPluginHooks,
   SyncPluginHooks
@@ -277,6 +291,7 @@ export type ParallelPluginHooks = Exclude<
   FirstPluginHooks | SequentialPluginHooks
 >;
 
+/** @category Plugin APIs */
 export type HookFilterExtension<K extends keyof FunctionPluginHooks> = K extends
   'transform' ? { filter?: TUnionWithTopLevelFilterExpressionArray<HookFilter> }
   : K extends 'load' ? {
@@ -330,6 +345,7 @@ interface OutputPlugin
   // version?: string
 }
 
+/** @category Plugin APIs */
 export interface Plugin<A = any> extends OutputPlugin, Partial<PluginHooks> {
   // for inter-plugin communication
   api?: A;

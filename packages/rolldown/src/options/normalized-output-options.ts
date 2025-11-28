@@ -18,8 +18,10 @@ import type {
 
 type PathsFunction = (id: string) => string;
 
+/** @category Plugin APIs */
 export type InternalModuleFormat = 'es' | 'cjs' | 'iife' | 'umd';
 
+/** @category Plugin APIs */
 export interface NormalizedOutputOptions {
   name: string | undefined;
   file: string | undefined;

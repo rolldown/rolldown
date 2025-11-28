@@ -44,8 +44,11 @@ export interface IndexHtmlTransformContext {
   chunk?: OutputChunk;
 }
 
-export interface ViteHtmlPluginOptions
-  extends Omit<BindingViteHtmlPluginConfig, 'transformIndexHtml'>
+export interface ViteHtmlPluginOptions extends
+  Omit<
+    BindingViteHtmlPluginConfig,
+    'transformIndexHtml' | 'setModuleSideEffects'
+  >
 {
   preHooks: IndexHtmlTransformHook[];
   normalHooks: IndexHtmlTransformHook[];

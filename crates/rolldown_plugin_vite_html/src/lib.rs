@@ -112,8 +112,7 @@ impl Plugin for ViteHtmlPlugin {
     let mut style_urls = Vec::new();
     let mut script_urls = Vec::new();
 
-    // TODO: Support module_side_effects for module info
-    // let mut set_modules = Vec::new();
+    let mut set_modules = Vec::new();
     let mut src_tasks = Vec::new();
     let mut srcset_tasks = Vec::new();
     let mut overwrite_attrs = Vec::new();
@@ -166,8 +165,7 @@ impl Plugin for ViteHtmlPlugin {
                     && !is_public_file
                     && !utils::is_excluded_url(url)
                   {
-                    // TODO: Support module_side_effects for module info
-                    // set_modules.push(url);
+                    set_modules.push(url.clone());
                     // add `<script type="module" src="..."/>` as an import
                     js.push_str(&rolldown_utils::concat_string!(
                       "import ",
@@ -471,20 +469,18 @@ impl Plugin for ViteHtmlPlugin {
       );
     }
 
-    // TODO: Support module_side_effects for module info
-    // for url in set_modules {
-    //   match ctx.resolve(&url, Some(args.id), None).await? {
-    //     Ok(resolved_id) => match ctx.get_module_info(&resolved_id.id) {
-    //       Some(module_info) => module_info.module_side_effects = true,
-    //       None => {
-    //         if !resolved_id.external.is_external() {
-    //           ctx.resolve(specifier, importer, extra_options)
-    //         }
-    //       },
-    //     },
-    //     Err(_) => return Err(anyhow::anyhow!("Failed to resolve {url} from {}", args.id)),
-    //   }
-    // }
+    for url in set_modules {
+      match ctx.resolve(&url, Some(args.id), None).await? {
+        Ok(resolved_id) => {
+          if !resolved_id.external.is_external() && ctx.get_module_info(&resolved_id.id).is_none() {
+            ctx
+              .load(&resolved_id.id, Some(HookSideEffects::True), resolved_id.module_def_format)
+              .await?;
+          }
+        }
+        Err(_) => return Err(anyhow::anyhow!("Failed to resolve {url} from {}", args.id)),
+      }
+    }
 
     // Force this module to keep from being shared between other entry points.
     // If the resulting chunk is empty, it will be removed in generateBundle.

@@ -1,8 +1,10 @@
 use std::{cmp::Ordering, collections::VecDeque, path::Path};
 
 use crate::{
-  chunk_graph::ChunkGraph, stages::generate_stage::chunk_ext::ChunkDebugExt,
-  types::linking_metadata::LinkingMetadataVec, utils::chunk::normalize_preserve_entry_signature,
+  chunk_graph::ChunkGraph,
+  stages::generate_stage::chunk_ext::ChunkDebugExt,
+  types::linking_metadata::LinkingMetadataVec,
+  utils::chunk::{self, normalize_preserve_entry_signature},
 };
 use arcstr::ArcStr;
 use itertools::Itertools;
@@ -820,6 +822,14 @@ impl GenerateStage<'_> {
     // extract entry chunk module relation
     // this means `key_chunk` also referenced all entry module in value `vec`
     for (bits, modules) in pending_common_chunks {
+      let included_entry_chunk = modules
+        .iter()
+        .filter_map(|item| {
+          let chunk_idx = chunk_graph.entry_module_to_entry_chunk.get(item)?;
+          let chunk = &chunk_graph.chunk_table[*chunk_idx];
+          matches!(chunk.kind, ChunkKind::EntryPoint { meta, ..} if meta.contains(ChunkMeta::UserDefinedEntry)).then_some(*chunk_idx)
+        })
+        .collect::<FxHashSet<ChunkIdx>>();
       let chunk_idxs = bits
         .index_of_one()
         .into_iter()

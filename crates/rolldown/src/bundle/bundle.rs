@@ -207,37 +207,21 @@ impl Bundle {
     output: ScanStageOutput,
     is_full_scan_mode: bool,
   ) -> BuildResult<NormalizedScanStageOutput> {
-    if !self.options.experimental.is_incremental_build_enabled() {
-      return Ok(
-        output.try_into().expect("Should be able to convert to NormalizedScanStageOutput"),
-      );
-    }
+    let is_incremental = self.options.experimental.is_incremental_build_enabled();
 
-    if is_full_scan_mode {
-      let mut output: NormalizedScanStageOutput =
+    if is_full_scan_mode || !is_incremental {
+      let mut output =
         output.try_into().expect("Should be able to convert to NormalizedScanStageOutput");
-      self.defer_sync_scan_data(&mut output).await?;
-      self.cache.set_snapshot(output.make_copy());
-      Ok(output)
-    } else {
-      self.cache.merge(output)?;
-      self.cache.update_defer_sync_data(&self.options, &self.resolver).await?;
-      Ok(self.cache.create_output())
+      defer_sync_scan_data(&self.options, &self.resolver, &mut output).await?;
+      if is_incremental {
+        self.cache.set_snapshot(output.make_copy());
+      }
+      return Ok(output);
     }
-  }
 
-  #[expect(clippy::needless_pass_by_ref_mut, reason = "Required for Send bound across await")]
-  async fn defer_sync_scan_data(
-    &mut self,
-    scan_stage_output: &mut NormalizedScanStageOutput,
-  ) -> BuildResult<()> {
-    defer_sync_scan_data(
-      &self.options,
-      &self.cache.module_id_to_idx,
-      &self.resolver,
-      scan_stage_output,
-    )
-    .await
+    self.cache.merge(output)?;
+    self.cache.update_defer_sync_data(&self.options, &self.resolver).await?;
+    Ok(self.cache.create_output())
   }
 
   async fn bundle_up(

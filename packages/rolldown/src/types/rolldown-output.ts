@@ -69,6 +69,7 @@ export interface OutputChunk extends ExternalMemoryHandle {
   preliminaryFileName: string;
 }
 
+/** @category Programmatic APIs */
 export interface RolldownOutput extends ExternalMemoryHandle {
   output: [OutputChunk, ...(OutputChunk | OutputAsset)[]];
 }

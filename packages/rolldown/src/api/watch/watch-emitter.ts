@@ -12,6 +12,7 @@ type ChangeEvent = 'create' | 'update' | 'delete';
 // TODO: find a way use `RolldownBuild` instead of `Bundler`.
 type RolldownWatchBuild = BindingWatcherBundler;
 
+/** @category Programmatic APIs */
 export type RolldownWatcherEvent =
   | { code: 'START' }
   | {
@@ -147,4 +148,5 @@ export class WatcherEmitter {
   }
 }
 
+/** @category Programmatic APIs */
 export type RolldownWatcher = WatcherEmitter;

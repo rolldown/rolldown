@@ -2280,6 +2280,7 @@ export interface BindingViteCssPostPluginConfig {
   isLegacy?: () => boolean
   cssMinify?: (css: string, inline: boolean) => Promise<string>
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
+  cssScopeTo: () => Record<string, readonly [string, string | undefined]>
 }
 
 export interface BindingViteDynamicImportVarsPluginConfig {

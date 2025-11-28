@@ -95,3 +95,7 @@ pub struct RemovedPureCSSFilesCache {
 pub struct CSSUrlCache {
   pub inner: FxDashMap<String, String>,
 }
+
+pub struct CSSScopeToMap {
+  pub inner: FxHashMap<String, (String, Option<String>)>,
+}

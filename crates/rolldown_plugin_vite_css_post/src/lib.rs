@@ -16,13 +16,14 @@ use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plu
 use rolldown_plugin_utils::{
   RenderBuiltUrl, ToOutputFilePathEnv,
   constants::{
-    CSSChunkCache, CSSModuleCache, CSSStyles, HTMLProxyResult, PureCSSChunks,
+    CSSChunkCache, CSSModuleCache, CSSScopeToMap, CSSStyles, HTMLProxyResult, PureCSSChunks,
     RemovedPureCSSFilesCache, ViteMetadata,
   },
   css::is_css_request,
   data_to_esm, find_special_query, is_special_query,
 };
 use rolldown_utils::url::clean_url;
+use rustc_hash::FxHashMap;
 use string_wizard::SourceMapOptions;
 
 pub type IsLegacyFn =
@@ -32,8 +33,13 @@ pub type CSSMinifyFn = dyn Fn(String, bool) -> Pin<Box<dyn Future<Output = anyho
   + Send
   + Sync;
 
+pub type CSSScopeTo = dyn Fn() -> Pin<
+    Box<dyn Future<Output = anyhow::Result<FxHashMap<String, (String, Option<String>)>>> + Send>,
+  > + Send
+  + Sync;
+
 #[expect(clippy::struct_excessive_bools)]
-#[derive(derive_more::Debug, Default)]
+#[derive(derive_more::Debug)]
 pub struct ViteCSSPostPlugin {
   pub root: PathBuf,
   pub is_lib: bool,
@@ -52,6 +58,8 @@ pub struct ViteCSSPostPlugin {
   pub css_minify: Option<Arc<CSSMinifyFn>>,
   #[debug(skip)]
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
+  #[debug(skip)]
+  pub css_scope_to: Arc<CSSScopeTo>,
   // internal state
   pub has_emitted: AtomicBool,
 }
@@ -88,6 +96,7 @@ impl Plugin for ViteCSSPostPlugin {
     self.has_emitted.store(false, Ordering::Relaxed);
     ctx.meta().insert(Arc::new(CSSChunkCache::default()));
     ctx.meta().insert(Arc::new(PureCSSChunks::default()));
+    ctx.meta().insert(Arc::new(CSSScopeToMap { inner: (self.css_scope_to)().await? }));
     Ok(())
   }
 
@@ -169,6 +178,7 @@ impl Plugin for ViteCSSPostPlugin {
     // Example -> `import('./style.css')` with no other code
     let is_js_chunk_empty = args.code.is_empty() && !args.chunk.is_entry;
     let styles = ctx.meta().get::<CSSStyles>().expect("CSSStyles missing");
+    let css_scope_to_map = ctx.meta().get::<CSSScopeToMap>().expect("CSSScopeToMap missing");
     let mut is_pure_css_chunk = args.chunk.exports.is_empty();
     let mut css_chunk = String::new();
     for module_id in &args.chunk.module_ids {
@@ -179,12 +189,26 @@ impl Plugin for ViteCSSPostPlugin {
           continue;
         }
 
-        // TODO: implement cssScopeTo
-        // https://github.com/vitejs/rolldown-vite/blob/c35ec68d/packages/vite/src/node/plugins/css.ts#L661-L667
-        // const cssScopeTo = this.getModuleInfo(id)?.meta?.vite?.cssScopeTo
-        // if (cssScopeTo && !isCssScopeToRendered(cssScopeTo, renderedModules)) {
-        //   continue
-        // }
+        // If this CSS is scoped to its importers exports, check if those importers exports
+        // are rendered in the chunks. If they are not, we can skip bundling this CSS.
+        if let Some((importer_id, exp)) = css_scope_to_map.inner.get(id) {
+          let is_rendered = args.chunks.values().any(|chunk| {
+            chunk
+              .modules
+              .keys
+              .iter()
+              .zip(chunk.modules.values.iter())
+              .find(|(key, _)| key.resource_id().as_str() == importer_id)
+              .is_some_and(|(_, importer)| {
+                exp
+                  .as_ref()
+                  .is_none_or(|e| importer.rendered_exports.iter().any(|re| re.as_str() == e))
+              })
+          });
+          if !is_rendered {
+            continue;
+          }
+        }
 
         if rolldown_plugin_utils::css::is_css_module(id) {
           is_pure_css_chunk = false;

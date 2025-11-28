@@ -5,6 +5,7 @@ use std::{
 
 use napi::bindgen_prelude::FnArgs;
 use rolldown_plugin_vite_css_post::{CSSMinifyFn, IsLegacyFn, ViteCSSPostPlugin};
+use rustc_hash::FxHashMap;
 use sugar_path::SugarPath as _;
 
 use crate::{
@@ -36,6 +37,8 @@ pub struct BindingViteCSSPostPluginConfig {
     ts_type = "(filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet"
   )]
   pub render_built_url: Option<BindingRenderBuiltUrl>,
+  #[napi(ts_type = "() => Record<string, readonly [string, string | undefined]>")]
+  pub css_scope_to: JsCallback<(), FxHashMap<String, (String, Option<String>)>>,
 }
 
 impl From<BindingViteCSSPostPluginConfig> for ViteCSSPostPlugin {
@@ -66,6 +69,10 @@ impl From<BindingViteCSSPostPluginConfig> for ViteCSSPostPlugin {
             css_minify.await_call((css, inline).into()).await.map_err(anyhow::Error::from)
           })
         })
+      }),
+      css_scope_to: Arc::new(move || {
+        let css_scope_to = Arc::clone(&value.css_scope_to);
+        Box::pin(async move { css_scope_to.invoke_async(()).await.map_err(anyhow::Error::from) })
       }),
       has_emitted: AtomicBool::default(),
     }

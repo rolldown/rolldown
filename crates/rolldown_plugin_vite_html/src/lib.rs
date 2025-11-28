@@ -28,7 +28,7 @@ use crate::utils::{
   inject_to_head,
 };
 
-pub use utils::constant::TransformIndexHtml;
+pub use utils::constant::{SetModuleSideEffects, TransformIndexHtml};
 
 #[derive(derive_more::Debug)]
 pub struct ViteHtmlPlugin {
@@ -46,6 +46,8 @@ pub struct ViteHtmlPlugin {
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
   #[debug(skip)]
   pub transform_index_html: Arc<TransformIndexHtml>,
+  #[debug(skip)]
+  pub set_module_side_effects: Arc<SetModuleSideEffects>,
   // internal state
   pub html_result_map: FxDashMap<(String, String), (String, bool)>,
 }
@@ -472,7 +474,9 @@ impl Plugin for ViteHtmlPlugin {
     for url in set_modules {
       match ctx.resolve(&url, Some(args.id), None).await? {
         Ok(resolved_id) => {
-          if !resolved_id.external.is_external() && ctx.get_module_info(&resolved_id.id).is_none() {
+          if ctx.get_module_info(&resolved_id.id).is_some() {
+            (self.set_module_side_effects)(&resolved_id.id).await?;
+          } else if !resolved_id.external.is_external() {
             ctx
               .load(&resolved_id.id, Some(HookSideEffects::True), resolved_id.module_def_format)
               .await?;

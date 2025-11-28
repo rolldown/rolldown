@@ -5,6 +5,7 @@ import {
   type BindingOutputChunk,
   type BindingOutputs,
   type BindingViteCssPostPluginConfig,
+  type BindingViteHtmlPluginConfig,
 } from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
@@ -113,6 +114,7 @@ export function bindingifyViteHtmlPlugin(
   onLog: LogHandler,
   logLevel: LogLevelOption,
   watchMode: boolean,
+  pluginContextData: PluginContextData,
 ): BindingBuiltinPlugin {
   const { preHooks, normalHooks, postHooks, applyHtmlTransforms, ...options } =
     plugin
@@ -167,7 +169,15 @@ export function bindingifyViteHtmlPlugin(
               );
           }
         },
-      },
+        setModuleSideEffects(id: string) {
+          let opts = pluginContextData.getModuleOption(id);
+          pluginContextData.updateModuleOption(id, {
+            moduleSideEffects: true,
+            meta: opts.meta,
+            invalidate: true,
+          });
+        },
+      } as BindingViteHtmlPluginConfig,
     };
   }
   return {

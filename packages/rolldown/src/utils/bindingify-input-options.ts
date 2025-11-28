@@ -57,7 +57,13 @@ export function bindingifyInputOptions(
     }
     if (plugin instanceof BuiltinPlugin) {
       if (plugin.name === 'builtin:vite-html') {
-        return bindingifyViteHtmlPlugin(plugin, onLog, logLevel, watchMode);
+        return bindingifyViteHtmlPlugin(
+          plugin,
+          onLog,
+          logLevel,
+          watchMode,
+          pluginContextData,
+        );
       }
       if (plugin.name === 'builtin:vite-css-post') {
         return bindingifyCSSPostPlugin(plugin, pluginContextData);

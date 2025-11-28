@@ -48,16 +48,15 @@ It is necessary to pass `import.meta.url` as second argument to the `new URL` co
 
 ```js
 // main.js
-const url = new URL('./styles.css', import.meta.url)
-console.log(url)
-
-// Example output after bundling WITHOUT the option (default)
-const url = new URL("./styles.css", import.meta.url);
+const url = new URL('./styles.css', import.meta.url);
 console.log(url);
 
+// Example output after bundling WITHOUT the option (default)
+const url = new URL('./styles.css', import.meta.url);
+console.log(url);
 
 // Example output after bundling WITH `experimental.resolveNewUrlToAsset` set to `true`
-const url = new URL("assets/styles-CjdrdY7X.css", import.meta.url);
+const url = new URL('assets/styles-CjdrdY7X.css', import.meta.url);
 console.log(url);
 ```
 

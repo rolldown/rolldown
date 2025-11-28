@@ -127,7 +127,7 @@ impl ViteCSSPostPlugin {
         let content = self
           .resolve_asset_urls_in_css(
             ctx,
-            style.to_owned(),
+            style.as_str(),
             &css_asset_name,
             &ctx.args.options.asset_filenames,
           )
@@ -221,7 +221,7 @@ impl ViteCSSPostPlugin {
         let content = self
           .resolve_asset_urls_in_css(
             ctx,
-            css_chunk,
+            &css_chunk,
             &css_asset_name,
             &ctx.args.options.asset_filenames,
           )
@@ -295,7 +295,7 @@ impl ViteCSSPostPlugin {
         self
           .resolve_asset_urls_in_css(
             ctx,
-            css_chunk,
+            &css_chunk,
             &self.get_css_bundle_name(ctx)?,
             &ctx.args.options.asset_filenames,
           )
@@ -309,7 +309,7 @@ impl ViteCSSPostPlugin {
   pub async fn resolve_asset_urls_in_css(
     &self,
     ctx: &FinalizedContext<'_, '_, '_>,
-    css_chunk: String,
+    css_chunk: &str,
     css_asset_name: &str,
     css_file_names: &AssetFilenamesOutputOption,
   ) -> anyhow::Result<String> {
@@ -326,8 +326,8 @@ impl ViteCSSPostPlugin {
     };
 
     let mut magic_string = None;
-    for item in AssetUrlIter::from(css_chunk.as_str()).into_asset_url_iter() {
-      let s = magic_string.get_or_insert_with(|| string_wizard::MagicString::new(&css_chunk));
+    for item in AssetUrlIter::from(css_chunk).into_asset_url_iter() {
+      let s = magic_string.get_or_insert_with(|| string_wizard::MagicString::new(css_chunk));
       match item {
         AssetUrlItem::Asset((range, reference_id, postfix)) => {
           let filename = ctx.get_file_name(reference_id)?;
@@ -405,7 +405,11 @@ impl ViteCSSPostPlugin {
       }
     }
 
-    Ok(if let Some(magic_string) = magic_string { magic_string.to_string() } else { css_chunk })
+    Ok(if let Some(magic_string) = magic_string {
+      magic_string.to_string()
+    } else {
+      css_chunk.to_owned()
+    })
   }
 
   pub async fn finalize_css(&self, mut content: String) -> anyhow::Result<String> {

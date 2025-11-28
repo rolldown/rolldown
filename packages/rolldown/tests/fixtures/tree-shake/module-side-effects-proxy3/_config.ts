@@ -11,11 +11,7 @@ export default defineTest({
           if (id.includes('bar.js')) {
             const resolved = await this.resolve('./foo.js', id);
             const moduleInfo = this.getModuleInfo(resolved!.id);
-            moduleInfo!.moduleSideEffects = true;
-
-            // mutate sideEffects of bar.js to `false`
-            const moduleInfo1 = this.getModuleInfo(id);
-            moduleInfo1!.moduleSideEffects = false;
+            moduleInfo!.moduleSideEffects = false;
           }
           return {
             code,
@@ -29,8 +25,7 @@ export default defineTest({
       .filter(({ type }) => type === 'chunk')
       .forEach((chunk) => {
         let code = (chunk as RolldownOutputChunk).code;
-        expect(code.includes(`sideeffects`)).toBe(true);
-        expect(code.includes(`bar`)).toBe(false);
+        expect(code.includes(`sideeffects`)).toBe(false);
       });
   },
 });

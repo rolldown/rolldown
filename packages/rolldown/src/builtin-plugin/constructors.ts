@@ -3,7 +3,6 @@ import type {
   BindingIsolatedDeclarationPluginConfig,
   BindingViteAssetImportMetaUrlPluginConfig,
   BindingViteBuildImportAnalysisPluginConfig,
-  BindingViteCssPostPluginConfig,
   BindingViteDynamicImportVarsPluginConfig,
   BindingViteHtmlInlineProxyPluginConfig,
   BindingViteImportGlobPluginConfig,
@@ -136,12 +135,6 @@ export function viteReactRefreshWrapperPlugin(
     config,
   );
   return makeBuiltinPluginCallable(builtinPlugin);
-}
-
-export function viteCSSPostPlugin(
-  config?: BindingViteCssPostPluginConfig,
-): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:vite-css-post', config);
 }
 
 export function viteHtmlInlineProxyPlugin(

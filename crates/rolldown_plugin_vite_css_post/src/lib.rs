@@ -96,7 +96,6 @@ impl Plugin for ViteCSSPostPlugin {
     self.has_emitted.store(false, Ordering::Relaxed);
     ctx.meta().insert(Arc::new(CSSChunkCache::default()));
     ctx.meta().insert(Arc::new(PureCSSChunks::default()));
-    ctx.meta().insert(Arc::new(CSSScopeToMap { inner: (self.css_scope_to)().await? }));
     Ok(())
   }
 
@@ -179,7 +178,7 @@ impl Plugin for ViteCSSPostPlugin {
     // Example -> `import('./style.css')` with no other code
     let is_js_chunk_empty = args.code.is_empty() && !args.chunk.is_entry;
     let styles = ctx.meta().get::<CSSStyles>().expect("CSSStyles missing");
-    let css_scope_to_map = ctx.meta().get::<CSSScopeToMap>().expect("CSSScopeToMap missing");
+    let mut css_scope_to_map = ctx.meta().get::<CSSScopeToMap>();
     let mut is_pure_css_chunk = args.chunk.exports.is_empty();
     let mut css_chunk: Option<String> = None;
     for module_id in &args.chunk.module_ids {
@@ -189,6 +188,15 @@ impl Plugin for ViteCSSPostPlugin {
         if find_special_query(id, b"transform-only").is_some() {
           continue;
         }
+
+        let css_scope_to_map = match css_scope_to_map {
+          Some(ref map) => map,
+          None => {
+            let value = Arc::new(CSSScopeToMap { inner: (self.css_scope_to)().await? });
+            ctx.meta().insert(Arc::clone(&value));
+            css_scope_to_map.insert(value)
+          }
+        };
 
         // If this CSS is scoped to its importers exports, check if those importers exports
         // are rendered in the chunks. If they are not, we can skip bundling this CSS.

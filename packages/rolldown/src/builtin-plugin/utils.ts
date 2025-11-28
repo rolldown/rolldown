@@ -4,6 +4,7 @@ import {
   BindingCallableBuiltinPlugin,
   type BindingOutputChunk,
   type BindingOutputs,
+  type BindingViteCssPostPluginConfig,
 } from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
@@ -12,10 +13,12 @@ import {
   type MinimalPluginContext,
   MinimalPluginContextImpl,
 } from '../plugin/minimal-plugin-context';
+import type { PluginContextData } from '../plugin/plugin-context-data';
 import {
   transformToOutputBundle,
   transformToRollupOutputChunk,
 } from '../utils/transform-to-rollup-output';
+import type { ViteCssPostPluginConfig } from './vite-css-post-plugin';
 import type {
   IndexHtmlTransformContext,
   ViteHtmlPluginOptions,
@@ -77,6 +80,31 @@ export function bindingifyBuiltInPlugin(
   return {
     __name: plugin.name,
     options: plugin._options,
+  };
+}
+
+export function bindingifyCSSPostPlugin(
+  plugin: BuiltinPlugin,
+  pluginContextData: PluginContextData,
+): BindingBuiltinPlugin {
+  const options = plugin._options as ViteCssPostPluginConfig;
+  return {
+    __name: plugin.name,
+    options: {
+      ...options,
+      cssScopeTo() {
+        const cssScopeTo: Record<
+          string,
+          readonly [string, string | undefined]
+        > = {};
+        for (const [id, opts] of pluginContextData.moduleOptionMap.entries()) {
+          if (opts?.meta.vite?.cssScopeTo) {
+            cssScopeTo[id] = opts.meta.vite.cssScopeTo;
+          }
+        }
+        return cssScopeTo;
+      },
+    } as BindingViteCssPostPluginConfig,
   };
 }
 

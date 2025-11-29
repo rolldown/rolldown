@@ -131,9 +131,6 @@ function withShared(
         }
         : {},
     },
-    experimental: {
-      attachDebugInfo: 'full',
-    },
     platform: isBrowserBuild ? 'browser' : 'node',
     resolve: {
       extensions: ['.js', '.cjs', '.mjs', '.ts'],

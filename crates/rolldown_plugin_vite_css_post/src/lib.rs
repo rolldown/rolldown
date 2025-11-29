@@ -99,7 +99,6 @@ impl Plugin for ViteCSSPostPlugin {
     self.has_emitted.store(false, Ordering::Relaxed);
     ctx.meta().insert(Arc::new(CSSChunkCache::default()));
     ctx.meta().insert(Arc::new(PureCSSChunks::default()));
-    ctx.meta().insert(Arc::new(CSSScopeToMap { inner: (self.css_scope_to)().await? }));
     Ok(())
   }
 

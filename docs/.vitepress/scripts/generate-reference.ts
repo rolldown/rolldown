@@ -43,7 +43,7 @@ async function runTypedoc(): Promise<void> {
     useCodeBlocks: true,
     flattenOutputFiles: true,
 
-    categoryOrder: ['Options', 'Programmatic API', 'Plugin API', '*'],
+    categoryOrder: ['Programmatic APIs', 'Plugin APIs', '*'],
 
     // @ts-expect-error VitePress config
     docsRoot: './reference',

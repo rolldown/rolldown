@@ -29,7 +29,6 @@ arcstr = { workspace = true }
 bitflags = { workspace = true }
 commondir = { workspace = true }
 css-module-lexer = { workspace = true }
-dunce = { workspace = true }
 futures = { workspace = true }
 indexmap = { workspace = true }
 itertools = { workspace = true }
@@ -72,6 +71,7 @@ url = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [dev-dependencies]
+dunce = { workspace = true }
 glob = { workspace = true }
 insta = { workspace = true }
 rolldown_dev = { path = "../rolldown_dev" }

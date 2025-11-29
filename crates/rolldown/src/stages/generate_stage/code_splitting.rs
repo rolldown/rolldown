@@ -30,13 +30,6 @@ pub struct SplittingInfo {
   pub share_count: u32,
 }
 
-#[derive(Debug)]
-enum CombineChunkRet {
-  DynamicVec(Vec<ChunkIdx>),
-  Entry(ChunkIdx),
-  None,
-}
-
 pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
 
 impl GenerateStage<'_> {
@@ -836,7 +829,7 @@ impl GenerateStage<'_> {
       let item =
         Self::try_insert_into_exists_chunk(&chunk_idxs, &static_entry_chunk_reference, chunk_graph);
       match item {
-        CombineChunkRet::Entry(chunk_idx)
+        Some(chunk_idx)
           if !matches!(
             chunk_graph.chunk_table[chunk_idx].preserve_entry_signature,
             Some(PreserveEntrySignatures::Strict)
@@ -850,7 +843,7 @@ impl GenerateStage<'_> {
             );
           }
         }
-        CombineChunkRet::DynamicVec(_) | CombineChunkRet::None | CombineChunkRet::Entry(_) => {
+        _ => {
           let mut chunk = Chunk::new(
             None,
             None,
@@ -882,64 +875,38 @@ impl GenerateStage<'_> {
     chunk_idxs: &[ChunkIdx],
     entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
     chunk_graph: &ChunkGraph,
-  ) -> CombineChunkRet {
-    match chunk_idxs.len() {
-      0 => CombineChunkRet::None,
-      1 => {
-        let Some(chunk) = &chunk_graph.chunk_table.get(chunk_idxs[0]) else {
-          // Chunk idx maybe greater than the chunk table length.
-          // Largest chunk idx equals to `entry.len() -1`.
-          // But some of the bit in entry may not be created as a chunk.
-          // refer https://github.com/rolldown/rolldown/blob/d373794f5ce5b793ac751bbfaf101cc9cdd261d9/crates/rolldown/src/stages/generate_stage/code_splitting.rs?plain=1#L311-L313
-          return CombineChunkRet::None;
-        };
-        match chunk.kind {
-          ChunkKind::EntryPoint { meta, .. } => {
-            if meta.contains(ChunkMeta::UserDefinedEntry) {
-              CombineChunkRet::Entry(chunk_idxs[0])
-            } else {
-              CombineChunkRet::DynamicVec(vec![chunk_idxs[0]])
-            }
-          }
-          ChunkKind::Common => CombineChunkRet::None,
-        }
-      }
-      _ => {
-        let mid = chunk_idxs.len() / 2;
-        let left = &chunk_idxs[0..mid];
-        let right = &chunk_idxs[mid..];
-        let left_ret = Self::try_insert_into_exists_chunk(left, entry_chunk_reference, chunk_graph);
-        let right_ret =
-          Self::try_insert_into_exists_chunk(right, entry_chunk_reference, chunk_graph);
-        match (left_ret, right_ret) {
-          (CombineChunkRet::DynamicVec(mut left), CombineChunkRet::DynamicVec(right)) => {
-            left.extend(right);
-            CombineChunkRet::DynamicVec(left)
-          }
-          (CombineChunkRet::DynamicVec(dynamic_entry_idxs), CombineChunkRet::Entry(chunk_idx)) => {
-            let ret = dynamic_entry_idxs.iter().all(|idx| {
-              entry_chunk_reference
-                .get(&chunk_idx)
-                .map(|reached_dynamic_chunk| reached_dynamic_chunk.contains(idx))
-                .unwrap_or(false)
-            });
-            if ret { CombineChunkRet::Entry(chunk_idx) } else { CombineChunkRet::None }
-          }
-          (_, CombineChunkRet::None)
-          | (CombineChunkRet::None, _)
-          | (CombineChunkRet::Entry(_), CombineChunkRet::Entry(_)) => CombineChunkRet::None,
-          (CombineChunkRet::Entry(chunk_idx), CombineChunkRet::DynamicVec(dynamic_entry_idxs)) => {
-            let ret = dynamic_entry_idxs.iter().all(|idx| {
-              entry_chunk_reference
-                .get(&chunk_idx)
-                .map(|reached_dynamic_chunk| reached_dynamic_chunk.contains(idx))
-                .unwrap_or(false)
-            });
-            if ret { CombineChunkRet::Entry(chunk_idx) } else { CombineChunkRet::None }
+  ) -> Option<ChunkIdx> {
+    let mut user_defined_entry = vec![];
+    let mut dynamic_entry = vec![];
+    for &idx in chunk_idxs {
+      let Some(chunk) = chunk_graph.chunk_table.get(idx) else {
+        continue;
+      };
+      match chunk.kind {
+        ChunkKind::EntryPoint { meta, .. } => {
+          if meta.contains(ChunkMeta::UserDefinedEntry) {
+            user_defined_entry.push(idx);
+          } else {
+            dynamic_entry.push(idx);
           }
         }
+        ChunkKind::Common => return None,
       }
     }
+
+    if user_defined_entry.len() != 1 {
+      // More than one user defined entry chunk, can't combine into one chunk.
+      return None;
+    }
+    let chunk_idx = user_defined_entry.into_iter().next()?;
+
+    let ret = dynamic_entry.iter().all(|idx| {
+      entry_chunk_reference
+        .get(&chunk_idx)
+        .map(|reached_dynamic_chunk| reached_dynamic_chunk.contains(idx))
+        .unwrap_or(false)
+    });
+    ret.then_some(chunk_idx)
   }
 
   fn construct_static_entry_to_reached_dynamic_entries_map(

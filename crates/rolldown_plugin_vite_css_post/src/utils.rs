@@ -206,8 +206,9 @@ impl ViteCSSPostPlugin {
           css_asset_path.to_string_lossy().into_owned()
         };
 
+        // TODO: Cache legacy check result per chunk
         let is_legacy = match &self.is_legacy {
-          Some(is_legacy_fn) => is_legacy_fn().await?,
+          Some(is_legacy_fn) => is_legacy_fn(ctx.args.options).await?,
           None => false,
         };
 

@@ -11,7 +11,9 @@ use std::{
 };
 
 use cow_utils::CowUtils;
-use rolldown_common::{ModuleType, Output, StrOrBytes, side_effects::HookSideEffects};
+use rolldown_common::{
+  ModuleType, NormalizedBundlerOptions, Output, StrOrBytes, side_effects::HookSideEffects,
+};
 use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plugin};
 use rolldown_plugin_utils::{
   RenderBuiltUrl, ToOutputFilePathEnv,
@@ -26,8 +28,9 @@ use rolldown_utils::url::clean_url;
 use rustc_hash::FxHashMap;
 use string_wizard::SourceMapOptions;
 
-pub type IsLegacyFn =
-  dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send>> + Send + Sync;
+pub type IsLegacyFn = dyn Fn(&Arc<NormalizedBundlerOptions>) -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send>>
+  + Send
+  + Sync;
 
 pub type CSSMinifyFn = dyn Fn(String, bool) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send>>
   + Send
@@ -282,7 +285,7 @@ impl Plugin for ViteCSSPostPlugin {
   ) -> rolldown_plugin::HookNoopReturn {
     // to avoid emitting duplicate assets for modern build and legacy build
     if let Some(is_legacy_fn) = &self.is_legacy
-      && is_legacy_fn().await?
+      && is_legacy_fn(args.options).await?
     {
       return Ok(());
     }

@@ -10,8 +10,11 @@ use sugar_path::SugarPath as _;
 
 use crate::{
   options::plugin::types::binding_render_built_url::BindingRenderBuiltUrl,
-  types::js_callback::{
-    JsCallback, JsCallbackExt as _, MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _,
+  types::{
+    binding_normalized_options::BindingNormalizedOptions,
+    js_callback::{
+      JsCallback, JsCallbackExt as _, MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _,
+    },
   },
 };
 
@@ -29,8 +32,8 @@ pub struct BindingViteCSSPostPluginConfig {
   pub url_base: String,
   pub decoded_base: String,
   pub lib_css_filename: Option<String>,
-  #[napi(ts_type = "() => boolean")]
-  pub is_legacy: Option<JsCallback<(), bool>>,
+  #[napi(ts_type = "(args: BindingNormalizedOptions) => boolean")]
+  pub is_legacy: Option<JsCallback<BindingNormalizedOptions, bool>>,
   #[napi(ts_type = "(css: string, inline: boolean) => Promise<string>")]
   pub css_minify: Option<MaybeAsyncJsCallback<FnArgs<(String, bool)>, String>>,
   #[napi(
@@ -56,9 +59,15 @@ impl From<BindingViteCSSPostPluginConfig> for ViteCSSPostPlugin {
       decoded_base: value.decoded_base,
       lib_css_filename: value.lib_css_filename,
       is_legacy: value.is_legacy.map(|cb| -> Arc<IsLegacyFn> {
-        Arc::new(move || {
+        Arc::new(move |opts| {
+          let opts = Arc::clone(opts);
           let is_legacy_fn = Arc::clone(&cb);
-          Box::pin(async move { is_legacy_fn.invoke_async(()).await.map_err(anyhow::Error::from) })
+          Box::pin(async move {
+            is_legacy_fn
+              .invoke_async(BindingNormalizedOptions::new(opts))
+              .await
+              .map_err(anyhow::Error::from)
+          })
         })
       }),
       render_built_url: value.render_built_url.map(Into::into),

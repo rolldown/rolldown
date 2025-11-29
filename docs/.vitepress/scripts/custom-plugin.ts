@@ -12,9 +12,8 @@ function extractPropertySection(
 ): string | undefined {
   if (!contents) return undefined;
   const namePattern = escapeRegex(propertyName);
-
   const headingRe = new RegExp(
-    '^(#{1,6})\\s*(?:`?' + namePattern + '`?).*$',
+    '^(#{1,6})\\s*(?:~{2})?(?:`?' + namePattern + '\\b`?)(?:~{2})?.*$',
     'm',
   );
   const m = contents.match(headingRe);
@@ -37,7 +36,10 @@ function extractPropertySection(
     }
   }
 
-  return contents.slice(startIndex, endIndex).trim();
+  const section = contents.slice(startIndex, endIndex).trim();
+
+  // Upgrade each heading level by two (e.g., ### -> #)
+  return section.replace(/^(#{2,6})/gm, (match) => match.slice(2));
 }
 
 export function load(app: td.Application) {
@@ -98,7 +100,7 @@ export function load(app: td.Application) {
     for (const parent of Object.keys(generatedPage)) {
       if (parent === 'InputOptions') continue;
       sidebarArray.push({
-        text: 'Output',
+        text: 'output',
         collapsed: true,
         items: generatedPage[parent],
       });

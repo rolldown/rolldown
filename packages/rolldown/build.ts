@@ -128,6 +128,7 @@ function withShared(
           'parallel-plugin-worker': './src/parallel-plugin-worker',
           'filter-index': './src/filter-index',
           'parse-ast-index': './src/parse-ast-index',
+          'get-log-filter': './src/get-log-filter',
         }
         : {},
     },

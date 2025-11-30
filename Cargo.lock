@@ -1084,8 +1084,9 @@ checksum = "fc0fef456e4baa96da950455cd02c081ca953b141298e41db3fc7e36b1da849c"
 
 [[package]]
 name = "html5gum"
-version = "0.8.0"
-source = "git+https://github.com/shulaoda/html5gum#e97132da1637df557fe706df727d6938571fed65"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "35d7500d96557cd3dd458981d5b86f528a6c7ac1577d41408efc2928f7b06f5b"
 dependencies = [
  "jetscii",
 ]

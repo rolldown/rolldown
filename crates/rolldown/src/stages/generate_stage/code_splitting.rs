@@ -931,7 +931,7 @@ impl GenerateStage<'_> {
     }
 
     let mut merged_user_defined_chunk: Option<ChunkIdx> = None;
-    // try to merge all modules into one user_defined entry
+    // Find an entry chunk that imports all other entry chunks, allowing them to be merged into it
 
     for (chunk_idx, entry_module_idx) in
       user_defined_entry.iter().zip(user_defined_entry_modules.iter())

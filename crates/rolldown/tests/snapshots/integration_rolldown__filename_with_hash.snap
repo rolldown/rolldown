@@ -4526,24 +4526,21 @@ expression: output
 
 # tests/rolldown/issues/2038/a
 
-- main-!~{000}~.js => main-BgnQsxXI.js
-- a-!~{005}~.js => a-CqCpq_Rh.js
-- b-!~{001}~.js => b-BtrqQb1d.js
-- b-!~{003}~.js => b-C61cu37f.js
+- main-!~{000}~.js => main-DL6YC_ZY.js
+- a-!~{003}~.js => a-Dg9y4f9G.js
+- b-!~{001}~.js => b-3Qm51NZa.js
 
 # tests/rolldown/issues/2038/b
 
-- main-!~{000}~.js => main-C277pIcW.js
-- a-!~{005}~.js => a-qMb_dzgl.js
-- b-!~{001}~.js => b-BHnkA2QK.js
-- b-!~{003}~.js => b-DAwctWmk.js
+- main-!~{000}~.js => main-KDskQoqf.js
+- a-!~{003}~.js => a-BTkX_Q5o.js
+- b-!~{001}~.js => b-D50a8DC_.js
 
 # tests/rolldown/issues/2085
 
-- main-!~{000}~.js => main-Cq-2jb9r.js
-- a-!~{001}~.js => a-Jh0gDYa2.js
-- a-!~{003}~.js => a-o_4M3ted.js
-- c-!~{005}~.js => c-N5x2txYX.js
+- main-!~{000}~.js => main-CsXt7WK6.js
+- a-!~{001}~.js => a-cmIa8szB.js
+- c-!~{003}~.js => c-5eOYJ92M.js
 
 # tests/rolldown/issues/2300
 
@@ -4707,6 +4704,12 @@ expression: output
 
 - main-!~{000}~.js => main-oJwE-hb5.js
 - lib-!~{001}~.js => lib-DgD0Di8m.js
+
+# tests/rolldown/issues/4904
+
+- main-!~{000}~.js => main-DUAP2A29.js
+- mod1-!~{001}~.js => mod1-C_dytK3u.js
+- mod2-!~{003}~.js => mod2-BPOs0u5y.js
 
 # tests/rolldown/issues/4993
 

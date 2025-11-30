@@ -211,11 +211,13 @@ impl IntegrationTest {
         );
         let watched_files = dev_engine.get_watched_files().await.unwrap();
         assert!(
-          changed_files.iter().all(|file| watched_files.contains(file)),
+          changed_files.iter().all(|(file, _)| watched_files.contains(file)),
           "All changed files must be in watched files: {changed_files:#?} not in {watched_files:#?}"
         );
         dev_engine
-          .ensure_task_with_changed_files(changed_files.into_iter().map(Into::into).collect())
+          .ensure_task_with_changed_files(
+            changed_files.into_iter().map(|(p, e)| (p.into(), e)).collect(),
+          )
           .await;
 
         // Optionally wait for async builds to complete

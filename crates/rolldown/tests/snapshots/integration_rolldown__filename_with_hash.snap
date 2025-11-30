@@ -5719,6 +5719,12 @@ expression: output
 - exist-dep-cjs-!~{001}~.js => exist-dep-cjs-DCCbl9xi.js
 - exist-dep-esm-!~{003}~.js => exist-dep-esm-Dsn1lQ8Z.js
 
+# tests/rolldown/topics/hmr/dynamic_import_rebuild
+
+- main-!~{000}~.js => main-BKQYtEQb.js
+- exist-dep-cjs-!~{001}~.js => exist-dep-cjs-6jxBhtYt.js
+- exist-dep-esm-!~{003}~.js => exist-dep-esm-B8kCxQnG.js
+
 # tests/rolldown/topics/hmr/error_recovery/from_rebuild_syntax_error
 
 - main-!~{000}~.js => main-DfnFnpnQ.js

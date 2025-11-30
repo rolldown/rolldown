@@ -61,7 +61,6 @@ export interface PluginContext extends MinimalPluginContext {
   getFileName(referenceId: string): string;
   getModuleIds(): IterableIterator<string>;
   getModuleInfo: GetModuleInfo;
-  getModuleOptions(id: string): ModuleOptions;
   addWatchFile(id: string): void;
   load(
     options:
@@ -235,10 +234,6 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
 
   public addWatchFile(id: string): void {
     this.context.addWatchFile(id);
-  }
-
-  public getModuleOptions(id: string): ModuleOptions {
-    return this.data.getModuleOption(id);
   }
 
   public parse(

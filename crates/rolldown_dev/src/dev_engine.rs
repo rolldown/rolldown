@@ -321,15 +321,44 @@ impl DevEngine {
     // The coordinator will automatically schedule a build via handle_file_changes
     let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(Ok(vec![event])));
 
-    // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
-    // and get the build future to wait on
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
-    let _ = self.coordinator_sender.send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
+    loop {
+      // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
+      // and get the build future to wait on
+      let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+      let _ =
+        self.coordinator_sender.send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
 
-    // Wait for the build that was triggered by the file change
-    if let Ok(Some(ret)) = reply_rx.await {
-      ret.future.await;
+      // Wait for the build that was triggered by the file change
+      if let Ok(Some(ret)) = reply_rx.await {
+        ret.future.await;
+        if !ret.is_previous_task {
+          break;
+        }
+      }
     }
+  }
+
+  /// Like `ensure_task_with_changed_files` but doesn't wait for the build to complete.
+  /// Useful for testing overlapping file changes where the second edit happens
+  /// while the first transform is still in progress.
+  #[cfg(feature = "testing")]
+  pub fn notify_file_changes(&self, changed_files: FxIndexSet<PathBuf>) {
+    let notify_event = notify::Event {
+      kind: notify::EventKind::Modify(notify::event::ModifyKind::Data(
+        notify::event::DataChange::Any,
+      )),
+      paths: changed_files.into_iter().collect(),
+      attrs: notify::event::EventAttributes::default(),
+    };
+
+    let event =
+      rolldown_fs_watcher::FsEvent { detail: notify_event, time: std::time::Instant::now() };
+
+    let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(Ok(vec![event])));
+
+    let (reply_tx, _reply_rx) = tokio::sync::oneshot::channel();
+    let _ = self.coordinator_sender.send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
+    // Don't await - just trigger the build and return immediately
   }
 
   #[cfg(feature = "testing")]

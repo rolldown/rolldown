@@ -189,6 +189,7 @@ impl GenerateStage<'_> {
         ChunkKind::Common,
         input_base.clone(),
         None,
+        None,
       );
       let chunk_idx = chunk_graph.add_chunk(runtime_chunk);
       module_groups.iter_mut().for_each(|group| {
@@ -315,6 +316,7 @@ impl GenerateStage<'_> {
         ChunkKind::Common,
         input_base.clone(),
         None,
+        Some(this_module_group.name.clone()),
       );
       chunk.add_creation_reason(
         ChunkCreationReason::AdvancedChunkGroup(

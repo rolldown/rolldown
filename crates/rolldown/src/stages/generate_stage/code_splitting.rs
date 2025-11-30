@@ -95,6 +95,7 @@ impl GenerateStage<'_> {
           input_base.clone(),
           // The preserve_entry_signatures has no effect when `preserve_modules` is enabled.
           None,
+          None,
         );
         chunk.add_creation_reason(
           ChunkCreationReason::PreserveModules {
@@ -695,6 +696,7 @@ impl GenerateStage<'_> {
         },
         input_base.clone(),
         preserve_entry_signature,
+        None,
       );
       chunk.add_creation_reason(
         ChunkCreationReason::Entry {
@@ -776,8 +778,16 @@ impl GenerateStage<'_> {
       } else if allow_extension_optimize {
         pending_common_chunks.entry(bits.clone()).or_default().push(normal_module.idx);
       } else {
-        let mut chunk =
-          Chunk::new(None, None, bits.clone(), vec![], ChunkKind::Common, input_base.clone(), None);
+        let mut chunk = Chunk::new(
+          None,
+          None,
+          bits.clone(),
+          vec![],
+          ChunkKind::Common,
+          input_base.clone(),
+          None,
+          None,
+        );
         chunk.add_creation_reason(
           ChunkCreationReason::CommonChunk { bits, link_output: self.link_output },
           self.options,
@@ -851,6 +861,7 @@ impl GenerateStage<'_> {
             vec![],
             ChunkKind::Common,
             input_base.clone(),
+            None,
             None,
           );
           chunk.add_creation_reason(

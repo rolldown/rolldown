@@ -46,6 +46,7 @@ pub struct Chunk {
   pub kind: ChunkKind,
   pub modules: Vec<ModuleIdx>,
   pub name: Option<ArcStr>,
+  pub manual_chunk_alias: Option<ArcStr>,
   // emitted chunk specified filename, used to generate chunk filename
   pub file_name: Option<ArcStr>,
   // emitted chunk corresponding reference_id, used to `PluginContext#getFileName` to search the emitted chunk name
@@ -92,6 +93,7 @@ pub struct Chunk {
 }
 
 impl Chunk {
+  #[expect(clippy::too_many_arguments)]
   pub fn new(
     name: Option<ArcStr>,
     file_name: Option<ArcStr>,
@@ -100,6 +102,7 @@ impl Chunk {
     kind: ChunkKind,
     input_base: ArcStr,
     preserve_entry_signature: Option<PreserveEntrySignatures>,
+    manual_chunk_alias: Option<ArcStr>,
   ) -> Self {
     Self {
       exec_order: u32::MAX,
@@ -110,6 +113,7 @@ impl Chunk {
       kind,
       input_base,
       preserve_entry_signature,
+      manual_chunk_alias,
       ..Self::default()
     }
   }

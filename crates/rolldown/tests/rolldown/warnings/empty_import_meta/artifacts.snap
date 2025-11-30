@@ -218,11 +218,11 @@ console.log({});
 })(function() {
 
 //#region main.js
-console.log({}.hello);
-console.log({}.dirname);
-console.log({}.filename);
-console.log({}.url);
-console.log({});
+	console.log({}.hello);
+	console.log({}.dirname);
+	console.log({}.filename);
+	console.log({}.url);
+	console.log({});
 
 //#endregion
 });

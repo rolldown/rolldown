@@ -22,9 +22,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 })(this, function(exports, es_toolkit) {
 
 //#region main.js
-function test(str) {
-	return (0, es_toolkit.camelCase)(str);
-}
+	function test(str) {
+		return (0, es_toolkit.camelCase)(str);
+	}
 
 //#endregion
 exports.test = test;

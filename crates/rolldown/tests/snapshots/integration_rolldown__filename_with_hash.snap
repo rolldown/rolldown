@@ -4056,23 +4056,23 @@ expression: output
 
 # tests/rolldown/function/export_mode/umd/auto/none
 
-- main-!~{000}~.js => main-IeMgdfZs.js
+- main-!~{000}~.js => main-CdJgRxV0.js
 
 # tests/rolldown/function/export_mode/umd/complex_name_default
 
-- main-!~{000}~.js => main-CwH_9DLH.js
+- main-!~{000}~.js => main-H6Jw7yzR.js
 
 # tests/rolldown/function/export_mode/umd/complex_name_named
 
-- main-!~{000}~.js => main-CbK5cm17.js
+- main-!~{000}~.js => main-tn0Qu4_3.js
 
 # tests/rolldown/function/export_mode/umd/default
 
-- main-!~{000}~.js => main-DaMag9zU.js
+- main-!~{000}~.js => main-DJGX0Wbj.js
 
 # tests/rolldown/function/export_mode/umd/named
 
-- main-!~{000}~.js => main-C2UrjYp8.js
+- main-!~{000}~.js => main-CtuRWXMB.js
 
 # tests/rolldown/function/extend/entry-wrapped-cjs-default
 
@@ -4108,19 +4108,19 @@ expression: output
 
 # tests/rolldown/function/extend/umd/complex_name_default
 
-- main-!~{000}~.js => main-CwH_9DLH.js
+- main-!~{000}~.js => main-H6Jw7yzR.js
 
 # tests/rolldown/function/extend/umd/complex_name_named
 
-- main-!~{000}~.js => main-CLHcI04I.js
+- main-!~{000}~.js => main-BNLn-oCp.js
 
 # tests/rolldown/function/extend/umd/default
 
-- main-!~{000}~.js => main-DaMag9zU.js
+- main-!~{000}~.js => main-DJGX0Wbj.js
 
 # tests/rolldown/function/extend/umd/named
 
-- main-!~{000}~.js => main-gdaWMg4Y.js
+- main-!~{000}~.js => main-Cp8Ma4bH.js
 
 # tests/rolldown/function/external/commonjs_reexport_external
 
@@ -4237,27 +4237,27 @@ expression: output
 
 # tests/rolldown/function/format/umd/conflict_exports_key
 
-- main-!~{000}~.js => main-BF-HiDm_.js
+- main-!~{000}~.js => main-D49IFcQQ.js
 
 # tests/rolldown/function/format/umd/conflict_exports_key_loop
 
-- main-!~{000}~.js => main-BQRlOGjm.js
+- main-!~{000}~.js => main-DbPZDLC3.js
 
 # tests/rolldown/function/format/umd/external_modules
 
-- main-!~{000}~.js => main-S35kJMFr.js
+- main-!~{000}~.js => main-CDekkQtG.js
 
 # tests/rolldown/function/format/umd/external_modules_with_complex_globals
 
-- main-!~{000}~.js => main-ByMh1Ddy.js
+- main-!~{000}~.js => main-C-ih02hx.js
 
 # tests/rolldown/function/format/umd/external_modules_with_globals
 
-- main-!~{000}~.js => main-B8q99a9n.js
+- main-!~{000}~.js => main-DNhHV5Nw.js
 
 # tests/rolldown/function/format/umd/namespaced_name_reserved
 
-- main-!~{000}~.js => main-Ca24X2dd.js
+- main-!~{000}~.js => main-CbRrEbie.js
 
 # tests/rolldown/function/inject
 
@@ -4690,7 +4690,7 @@ expression: output
 
 # tests/rolldown/issues/4459
 
-- main-!~{000}~.js => main-qUb-JFlj.js
+- main-!~{000}~.js => main-BhytnoTA.js
 
 # tests/rolldown/issues/4472
 

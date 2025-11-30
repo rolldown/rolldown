@@ -284,6 +284,7 @@ impl<'a> GenerateStage<'a> {
   /// Notices:
   /// - Should generate filenames that are stable cross builds and os.
   #[tracing::instrument(level = "debug", skip_all)]
+  #[expect(clippy::too_many_lines)]
   async fn generate_chunk_name_and_preliminary_filenames(
     &self,
     chunk_graph: &mut ChunkGraph,
@@ -382,6 +383,15 @@ impl<'a> GenerateStage<'a> {
             Ok(generated)
           }
           ChunkKind::Common => {
+            if let Some(alias) = &chunk.manual_chunk_alias {
+              // Strip the original extension and add .js
+              let sanitized_filename = sanitize_filename.call(alias).await?;
+              return Ok(PreGeneratedChunkName {
+                representative_chunk_name: sanitized_filename.clone(),
+                chunk_name: sanitized_filename.clone(),
+                chunk_filename: sanitized_filename,
+              });
+            }
             // - rollup use the first entered/last executed module as the `[name]` of common chunks.
             // - esbuild always use 'chunk' as the `[name]`. However we try to make the name more meaningful here.
             if let Some(module_id) =

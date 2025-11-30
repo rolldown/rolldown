@@ -2277,7 +2277,7 @@ export interface BindingViteCssPostPluginConfig {
   urlBase: string
   decodedBase: string
   libCssFilename?: string
-  isLegacy?: () => boolean
+  isLegacy?: (args: BindingNormalizedOptions) => boolean
   cssMinify?: (css: string, inline: boolean) => Promise<string>
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
   cssScopeTo: () => Record<string, readonly [string, string | undefined]>

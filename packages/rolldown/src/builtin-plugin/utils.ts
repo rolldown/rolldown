@@ -88,11 +88,19 @@ export function bindingifyCSSPostPlugin(
   plugin: BuiltinPlugin,
   pluginContextData: PluginContextData,
 ): BindingBuiltinPlugin {
-  const options = plugin._options as ViteCssPostPluginConfig;
+  const { isOutputOptionsForLegacyChunks, ...options } = plugin
+    ._options as ViteCssPostPluginConfig;
   return {
     __name: plugin.name,
     options: {
       ...options,
+      isLegacy: isOutputOptionsForLegacyChunks
+        ? (opts) => {
+          return isOutputOptionsForLegacyChunks(
+            pluginContextData.getOutputOptions(opts),
+          );
+        }
+        : undefined,
       cssScopeTo() {
         const cssScopeTo: Record<
           string,

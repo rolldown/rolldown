@@ -24,7 +24,7 @@ catalog:
   '@oxc-project/types': '=0.99.0'
   'oxc-parser': '=0.99.0'
   'oxc-transform': '=0.99.0'
-  'oxc-minify': '=0.97.0'
+  'oxc-minify': '=0.99.0'
 
   # --- NAPI-RS related ---
   '@napi-rs/cli': '^3.4.1'

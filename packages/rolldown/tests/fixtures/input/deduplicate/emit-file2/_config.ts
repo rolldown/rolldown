@@ -35,6 +35,6 @@ export default defineTest({
   },
   afterTest: function() {
     // entry, main.d.ts and a shared chunk
-    expect(fn).toHaveBeenCalledTimes(3);
+    expect(fn).toHaveBeenCalledTimes(2);
   },
 });

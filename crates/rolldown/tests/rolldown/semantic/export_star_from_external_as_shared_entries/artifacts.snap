@@ -6,8 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import "./main.js";
-
 export * from "node:fs"
 
 ```
@@ -15,14 +13,8 @@ export * from "node:fs"
 ## entry2.js
 
 ```js
-import "./main.js";
+import "./entry.js";
 
 export * from "node:fs"
-
-```
-
-## main.js
-
-```js
 
 ```

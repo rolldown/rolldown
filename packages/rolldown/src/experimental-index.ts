@@ -5,6 +5,7 @@ export { freeExternalMemory, scan } from './api/experimental';
 export {
   type BindingClientHmrUpdate,
   BindingRebuildStrategy,
+  createTokioRuntime,
   isolatedDeclaration,
   type IsolatedDeclarationsOptions,
   type IsolatedDeclarationsResult,

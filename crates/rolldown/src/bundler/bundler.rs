@@ -82,24 +82,6 @@ impl Bundler {
   }
 }
 
-pub struct CacheGuard<'a> {
-  pub is_incremental_build_enabled: bool,
-  pub cache: &'a mut ScanStageCache,
-}
-impl CacheGuard<'_> {
-  pub fn inner(&mut self) -> &mut ScanStageCache {
-    self.cache
-  }
-}
-
-impl Drop for CacheGuard<'_> {
-  fn drop(&mut self) {
-    if !self.is_incremental_build_enabled {
-      std::mem::take(self.cache);
-    }
-  }
-}
-
 fn _test_bundler() {
   fn assert_send(_foo: impl Send) {}
   let mut bundler = Bundler::new(BundlerOptions::default()).expect("Failed to create bundler");

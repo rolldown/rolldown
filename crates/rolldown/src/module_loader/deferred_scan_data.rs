@@ -1,16 +1,17 @@
-use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
-use crate::module_loader::module_loader::VisitState;
-use crate::{SharedOptions, SharedResolver, stages::scan_stage::NormalizedScanStageOutput};
 use arcstr::ArcStr;
 use rolldown_common::ImportKind;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_error::BuildResult;
 use rustc_hash::FxHashMap;
 
+use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
+use crate::module_loader::module_loader::VisitState;
+use crate::{SharedOptions, SharedResolver, stages::scan_stage::NormalizedScanStageOutput};
+
 pub async fn defer_sync_scan_data(
   options: &SharedOptions,
-  module_id_to_idx: &FxHashMap<ArcStr, VisitState>,
   resolver: &SharedResolver,
+  module_id_to_idx: &FxHashMap<ArcStr, VisitState>,
   scan_stage_output: &mut NormalizedScanStageOutput,
 ) -> BuildResult<()> {
   let Some(ref func) = options.defer_sync_scan_data else {

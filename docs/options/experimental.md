@@ -41,7 +41,7 @@ Enable Vite compatibility mode.
 - **Default:** `false`
 - **Path:** `experimental.resolveNewUrlToAsset`
 
-When enable, `new URL()` calls will be transformed to a stable asset URL which including the updated name and content hash.
+When enabled, `new URL()` calls will be transformed to a stable asset URL which includes the updated name and content hash.
 It is necessary to pass `import.meta.url` as the second argument to the `new URL` constructor, otherwise no transform will be applied.
 
 ### Examples

@@ -94,11 +94,10 @@ function getTypedocSidebar() {
 
 const typedocSidebar = getTypedocSidebar().map((item) => ({
   ...item,
-  collapsed: false,
-})).sort((a) => {
-  if (a.text === 'Functions') return -1;
-  return 0;
-});
+  items: item.items?.slice().sort((a, b) =>
+    (a.text ?? '').localeCompare(b.text ?? '')
+  ),
+}));
 
 function getOptionsSidebar() {
   const filepath = path.resolve(
@@ -419,5 +418,11 @@ export default defineConfig({
     config(md) {
       md.use(groupIconMdPlugin);
     },
+  },
+  transformPageData(pageData) {
+    // Disable "Edit this page on GitHub" for auto-generated reference docs
+    if (pageData.relativePath.startsWith('reference/')) {
+      pageData.frontmatter.editLink = false;
+    }
   },
 });

@@ -926,7 +926,7 @@ impl GenerateStage<'_> {
       };
       user_defined_entry_modules.push(entry_module_idx);
     }
-    if malformed_entry || user_defined_entry.is_empty() {
+    if malformed_entry {
       return None;
     }
 
@@ -948,15 +948,52 @@ impl GenerateStage<'_> {
         break;
       }
     }
-    let chunk_idx = merged_user_defined_chunk?;
+    if !user_defined_entry.is_empty() {
+      let chunk_idx = merged_user_defined_chunk?;
 
-    let ret = dynamic_entry.iter().all(|idx| {
-      entry_chunk_reference
-        .get(&chunk_idx)
-        .map(|reached_dynamic_chunk| reached_dynamic_chunk.contains(idx))
-        .unwrap_or(false)
-    });
-    ret.then_some(chunk_idx)
+      let ret = dynamic_entry.iter().all(|idx| {
+        entry_chunk_reference
+          .get(&chunk_idx)
+          .map(|reached_dynamic_chunk| reached_dynamic_chunk.contains(idx))
+          .unwrap_or(false)
+      });
+      return ret.then_some(chunk_idx);
+    }
+
+    let mut malformed_entry = false;
+    let mut dynamic_chunk_entry_modules: Vec<ModuleIdx> = vec![];
+    for chunk_idx in &dynamic_entry {
+      let Some(entry_module_idx) =
+        chunk_graph.chunk_table.get(*chunk_idx).and_then(Chunk::entry_module_idx)
+      else {
+        malformed_entry = true;
+        break;
+      };
+      dynamic_chunk_entry_modules.push(entry_module_idx);
+    }
+
+    if malformed_entry {
+      return None;
+    }
+    let mut merged_dynamic_chunk: Option<ChunkIdx> = None;
+    // try to merge all modules into one user_defined entry
+
+    for (chunk_idx, entry_module_idx) in
+      dynamic_entry.iter().zip(dynamic_chunk_entry_modules.iter())
+    {
+      let module = module_table[*entry_module_idx].as_normal().expect("Should be normal module");
+      let ret = dynamic_entry.iter().enumerate().all(|(i, _idx)| {
+        let other_entry_module_idx = dynamic_chunk_entry_modules[i];
+        *entry_module_idx == other_entry_module_idx || {
+          module.importers_idx.contains(&other_entry_module_idx)
+        }
+      });
+      if ret {
+        merged_dynamic_chunk = Some(*chunk_idx);
+        break;
+      }
+    }
+    merged_dynamic_chunk
   }
 
   fn construct_static_entry_to_reached_dynamic_entries_map(

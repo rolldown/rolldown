@@ -107,12 +107,12 @@ const customBase = {
 const customRootBase = {
 	"./a.ts": () => import("./a5.js"),
 	"./b.ts": () => import("./b5.js"),
-	"./index.ts": () => import("./b7.js")
+	"./index.ts": () => import("./b6.js")
 };
 const customBaseParent = {
 	"../b/a.ts": () => import("./a5.js"),
 	"../b/b.ts": () => import("./b5.js"),
-	"../b/index.ts": () => import("./b7.js")
+	"../b/index.ts": () => import("./b6.js")
 };
 
 //#endregion

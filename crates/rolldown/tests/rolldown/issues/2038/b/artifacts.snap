@@ -30,16 +30,8 @@ var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
 var import_c = require_c();
 
 //#endregion
-export { import_c as t };
-```
-
-## b2.js
-
-```js
-import { t as import_c } from "./b.js";
-
 var test = import_c.test;
-export { test };
+export { import_c as t, test };
 ```
 
 ## main.js
@@ -51,7 +43,7 @@ import assert from "node:assert";
 import("./a.js").then((mod) => {
 	assert.strictEqual(mod.a, 1e3);
 });
-import("./b2.js").then((mod) => {
+import("./b.js").then((mod) => {
 	assert.strictEqual(mod.test, 1e3);
 });
 

@@ -133,6 +133,9 @@ jobs:
       - name: Build `@rolldown/browser`
         run: just build-browser
 
+      - name: Lint `@rolldown/browser` package.json
+        run: pnpm publint --strict packages/browser
+
   wasi-test:
     needs: [changes, build-rolldown-wasi]
     # run this even if build-rolldown-wasi is skipped
@@ -185,11 +188,17 @@ jobs:
       - name: Build @rolldown/pluginutils
         run: pnpm --filter '@rolldown/pluginutils' build
 
+      - name: Build @rolldown/debug
+        run: pnpm --filter '@rolldown/debug' build
+
       - name: Lint Code
         run: pnpm lint-code
 
       - name: Lint exports & dependencies
         run: pnpm lint-knip
+
+      - name: Lint package.json
+        run: pnpm lint-publint
 
       - name: Validate workspace package
         run: node scripts/misc/published-package-check.mjs

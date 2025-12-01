@@ -10,6 +10,7 @@
   "scripts": {
     "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings --type-aware",
     "lint-knip": "knip",
+    "lint-publint": "publint --strict packages/rolldown && publint --strict packages/pluginutils && publint --strict packages/debug",
     "fmt": "dprint fmt",
     "fmt-check": "dprint check",
     "build": "echo \"Use just build\"",
@@ -35,6 +36,7 @@
     "lint-staged": "^16.1.2",
     "oxlint": "^1.29.0",
     "oxlint-tsgolint": "0.8.3",
+    "publint": "^0.3.15",
     "remove-unused-vars": "^0.0.9",
     "rolldown": "workspace:*",
     "typescript": "catalog:"

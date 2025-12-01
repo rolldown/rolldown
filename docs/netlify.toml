@@ -1,6 +1,7 @@
 [build]
-# only build on netlify if there are any change in docs
-ignore = "git diff --quiet 'HEAD^' HEAD ./docs ./packages/rolldown"
+# only build on netlify if there are any change in docs or dependency files
+# include pnpm-lock.yaml and package.json to ensure cache is invalidated when dependencies change
+ignore = "git diff --quiet 'HEAD^' HEAD ./docs ./packages/rolldown pnpm-lock.yaml package.json pnpm-workspace.yaml"
 
 [[redirects]]
 from = "/about/"

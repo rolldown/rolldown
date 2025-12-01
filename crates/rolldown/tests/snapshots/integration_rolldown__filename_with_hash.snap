@@ -4711,6 +4711,11 @@ expression: output
 - mod1-!~{001}~.js => mod1-C_dytK3u.js
 - mod2-!~{003}~.js => mod2-BPOs0u5y.js
 
+# tests/rolldown/issues/4904_1
+
+- lib-!~{000}~.js => lib-DBGwrP6c.js
+- main-!~{001}~.js => main-BP6Ricut.js
+
 # tests/rolldown/issues/4993
 
 - main-!~{000}~.js => main-BQQtZSou.js

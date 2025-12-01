@@ -2,7 +2,6 @@ use crate::bundle::bundle_handle::BundleHandle;
 
 use super::super::{
   SharedOptions, SharedResolver,
-  bundler::CacheGuard,
   module_loader::deferred_scan_data::defer_sync_scan_data,
   stages::{
     generate_stage::GenerateStage,
@@ -87,19 +86,13 @@ impl Bundle {
     trace_action!(action::BuildStart { action: "BuildStart" });
     let is_full_scan_mode = scan_mode.is_full();
 
-    // Make sure the cache is reset if incremental build is not enabled.
-    let mut scan_stage_cache_guard = CacheGuard {
-      is_incremental_build_enabled: self.options.experimental.is_incremental_build_enabled(),
-      cache: &mut self.cache,
-    };
-
     let scan_stage_output = match ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
       self.fs.clone(),
       Arc::clone(&self.resolver),
     )
-    .scan(scan_mode, scan_stage_cache_guard.inner())
+    .scan(scan_mode, &mut self.cache)
     .await
     {
       Ok(v) => v,
@@ -114,12 +107,14 @@ impl Bundle {
       }
     };
 
-    // Manually drop it to avoid holding the mut reference.
-    drop(scan_stage_cache_guard);
-
     let scan_stage_output = self
       .normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode)
       .await?;
+
+    // Make sure the cache is reset if incremental build is not enabled.
+    if !self.options.experimental.is_incremental_build_enabled() {
+      std::mem::take(&mut self.cache);
+    }
 
     Self::trace_action_module_graph_ready(&scan_stage_output);
     self.plugin_driver.build_end(None).await?;
@@ -207,37 +202,27 @@ impl Bundle {
     output: ScanStageOutput,
     is_full_scan_mode: bool,
   ) -> BuildResult<NormalizedScanStageOutput> {
-    if !self.options.experimental.is_incremental_build_enabled() {
-      return Ok(
-        output.try_into().expect("Should be able to convert to NormalizedScanStageOutput"),
-      );
-    }
+    let is_incremental = self.options.experimental.is_incremental_build_enabled();
 
     if is_full_scan_mode {
       let mut output: NormalizedScanStageOutput =
         output.try_into().expect("Should be able to convert to NormalizedScanStageOutput");
-      self.defer_sync_scan_data(&mut output).await?;
-      self.cache.set_snapshot(output.make_copy());
-      Ok(output)
-    } else {
-      self.cache.merge(output)?;
-      self.cache.update_defer_sync_data(&self.options, &self.resolver).await?;
-      Ok(self.cache.create_output())
+      defer_sync_scan_data(
+        &self.options,
+        &self.resolver,
+        &self.cache.module_id_to_idx,
+        &mut output,
+      )
+      .await?;
+      if is_incremental {
+        self.cache.set_snapshot(output.make_copy());
+      }
+      return Ok(output);
     }
-  }
 
-  #[expect(clippy::needless_pass_by_ref_mut, reason = "Required for Send bound across await")]
-  async fn defer_sync_scan_data(
-    &mut self,
-    scan_stage_output: &mut NormalizedScanStageOutput,
-  ) -> BuildResult<()> {
-    defer_sync_scan_data(
-      &self.options,
-      &self.cache.module_id_to_idx,
-      &self.resolver,
-      scan_stage_output,
-    )
-    .await
+    self.cache.merge(output)?;
+    self.cache.update_defer_sync_data(&self.options, &self.resolver).await?;
+    Ok(self.cache.create_output())
   }
 
   async fn bundle_up(

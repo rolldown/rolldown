@@ -739,6 +739,54 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
+  packages/test-dev-server/tests/tmp/fixtures/client-module-execution-status:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../../..
+
+  packages/test-dev-server/tests/tmp/fixtures/defer-sync-scan-data:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../../..
+
+  packages/test-dev-server/tests/tmp/fixtures/edit:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../../..
+
+  packages/test-dev-server/tests/tmp/fixtures/edit-rebuild:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../../..
+
+  packages/test-dev-server/tests/tmp/fixtures/edit-reload:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../../..
+
+  packages/test-dev-server/tests/tmp/fixtures/invalidation:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../../..
+
+  packages/test-dev-server/tests/tmp/fixtures/multiple-edits:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../../..
+
+  packages/test-dev-server/tests/tmp/fixtures/transform-dependencies:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../../..
+
   packages/vite-tests:
     devDependencies:
       '@oxc-node/cli':

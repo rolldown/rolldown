@@ -37,7 +37,9 @@ class DevServer {
     allowRequest: false,
     allowRequestPromiseResolvers: withResolvers<void>(),
   };
-  wsServer = new WebSocketServer({ server: this.server });
+  // Use noServer: true to prevent WebSocket server from interfering with regular HTTP requests
+  // This is important when running behind a proxy (e.g., Nginx) that may modify Connection/Upgrade headers
+  wsServer = new WebSocketServer({ noServer: true });
   #clients = new Map<string, ClientSession>();
   #devOptions?: NormalizedDevOptions;
   #devEngine?: DevEngine;
@@ -103,6 +105,22 @@ class DevServer {
       } else {
         await this.serverStatus.allowRequestPromiseResolvers.promise;
         next();
+      }
+    });
+
+    // Handle WebSocket upgrade requests manually to avoid interfering with regular HTTP requests.
+    // This is crucial when running behind a proxy (e.g., Nginx) that may modify headers.
+    // Only upgrade connections that have proper WebSocket upgrade headers.
+    this.server.on('upgrade', (req, socket, head) => {
+      // Check for proper WebSocket upgrade request
+      const upgradeHeader = req.headers.upgrade;
+      if (upgradeHeader && upgradeHeader.toLowerCase() === 'websocket') {
+        this.wsServer.handleUpgrade(req, socket, head, ws => {
+          this.wsServer.emit('connection', ws, req);
+        });
+      } else {
+        // Not a WebSocket upgrade request, destroy the socket
+        socket.destroy();
       }
     });
 

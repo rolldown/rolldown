@@ -690,7 +690,7 @@ expression: output
 
 # tests/esbuild/default/dynamic_import_with_expression_cjs
 
-- a-!~{000}~.js => a-0GdMU8YF.js
+- a-!~{000}~.js => a-DhMQLJLJ.js
 
 # tests/esbuild/default/dynamic_import_with_template_iife
 
@@ -1588,7 +1588,7 @@ expression: output
 
 # tests/esbuild/default/to_esm_wrapper_omission
 
-- entry-!~{000}~.js => entry-_duncjQ7.js
+- entry-!~{000}~.js => entry-XtA6N5g_.js
 
 # tests/esbuild/default/top_level_await_allowed_import_with_splitting
 
@@ -4827,8 +4827,8 @@ expression: output
 
 # tests/rolldown/issues/6513
 
-- main-!~{000}~.js => main-Np8QlrAJ.js
-- dynamic-!~{001}~.js => dynamic-Dh1JfCdT.js
+- main-!~{000}~.js => main-Cy8jHyag.js
+- dynamic-!~{001}~.js => dynamic-CjJBkbRj.js
 
 # tests/rolldown/issues/6587
 
@@ -5856,7 +5856,7 @@ expression: output
 
 # tests/rolldown/topics/live_bindings/default_export_binding_in_common_chunks_cjs
 
-- main-!~{000}~.js => main-DjTcI1WG.js
+- main-!~{000}~.js => main-C_Ax4niA.js
 - async-entry-!~{001}~.js => async-entry-CaOk3Rc9.js
 
 # tests/rolldown/topics/live_bindings/default_export_decl
@@ -5879,7 +5879,7 @@ expression: output
 
 # tests/rolldown/topics/live_bindings/default_export_expr_in_common_chunks_cjs
 
-- main-!~{000}~.js => main-D8GksE3_.js
+- main-!~{000}~.js => main-CaMmxpqU.js
 - async-entry-!~{001}~.js => async-entry-CyHnobuq.js
 
 # tests/rolldown/topics/live_bindings/default_export_snapshot_not_live
@@ -5902,7 +5902,7 @@ expression: output
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks_cjs
 
-- main-!~{000}~.js => main-Cc0W60TT.js
+- main-!~{000}~.js => main-bppD16YD.js
 - async-entry-!~{003}~.js => async-entry-B0SGRHwK.js
 - shared-!~{001}~.js => shared-DlT5txJr.js
 

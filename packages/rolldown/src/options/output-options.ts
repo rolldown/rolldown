@@ -210,10 +210,10 @@ export interface OutputOptions {
   /**
    * Whether to use `import()` for dynamic imports in CommonJS output.
    *
-   * - `true` (default): Keep dynamic `import()` expressions as-is
-   * - `false`: Transform `import()` to `Promise.resolve().then(() => require())`
+   * - `true`: Keep dynamic `import()` expressions as-is
+   * - `false` (default): Transform `import()` to `Promise.resolve().then(() => require())`
    *
-   * @default true
+   * @default false
    */
   dynamicImportInCjs?: boolean;
   /**

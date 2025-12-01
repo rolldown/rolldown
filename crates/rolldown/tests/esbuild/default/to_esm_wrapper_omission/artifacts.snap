@@ -177,7 +177,7 @@ x = d_WRAP.x;
 x = h_WRAP;
 i_WRAP.x();
 j_WRAP.x``;
-x = import("k_WRAP");
+x = Promise.resolve().then(() => require("k_WRAP"));
 
 //#endregion
 

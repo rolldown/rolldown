@@ -158,7 +158,7 @@ impl Default for NormalizedBundlerOptions {
       oxc_inject_global_variables_config: InjectGlobalVariablesConfig::new(vec![]),
       external_live_bindings: Default::default(),
       inline_dynamic_imports: Default::default(),
-      dynamic_import_in_cjs: true, // Default to true like Rollup to preserve import() in CJS
+      dynamic_import_in_cjs: false, // Default to false to maintain backward compatibility (transform import() to require())
       advanced_chunks: Default::default(),
       checks: Default::default(),
       profiler_names: Default::default(),

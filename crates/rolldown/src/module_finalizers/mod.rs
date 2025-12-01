@@ -1063,7 +1063,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
     // When format is CJS and dynamicImportInCjs is false, transform import() to require()
     // This is the Rollup behavior: dynamicImportInCjs: false transforms import() to Promise.resolve().then(() => require())
-    if matches!(self.ctx.options.format, OutputFormat::Cjs) && !self.ctx.options.dynamic_import_in_cjs
+    if matches!(self.ctx.options.format, OutputFormat::Cjs)
+      && !self.ctx.options.dynamic_import_in_cjs
     {
       // Convert `import('./foo.mjs')` to `Promise.resolve().then(function() { return require('foo.mjs') })`
       match &self.ctx.modules[importee_id] {

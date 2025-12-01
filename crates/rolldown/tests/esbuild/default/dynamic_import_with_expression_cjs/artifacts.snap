@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region a.js
-import("foo");
+Promise.resolve().then(() => require("foo"));
 import(foo());
 
 //#endregion

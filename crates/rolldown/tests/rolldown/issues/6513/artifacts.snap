@@ -29,7 +29,7 @@ node_assert = __toESM(node_assert);
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
 	const remoteProvider = async function() {
-		return await import("./dynamic.js");
+		return await Promise.resolve().then(() => require("./dynamic.js"));
 	};
 	exports.defaultProvider = remoteProvider;
 }));

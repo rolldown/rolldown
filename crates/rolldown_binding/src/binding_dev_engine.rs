@@ -179,7 +179,12 @@ impl BindingDevEngine {
   }
 
   #[napi]
-  pub fn register_modules(&self, client_id: String, modules: Vec<String>) {
+  #[allow(
+    clippy::unused_async,
+    clippy::allow_attributes,
+    reason = "`.entry()` is acquiring a lock. Making this async to avoid blocking the nodejs thread or cause deadlock if lock is contended."
+  )]
+  pub async fn register_modules(&self, client_id: String, modules: Vec<String>) {
     self.inner.clients.entry(client_id).or_default().executed_modules.extend(modules);
   }
 

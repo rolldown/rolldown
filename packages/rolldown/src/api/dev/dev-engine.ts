@@ -125,8 +125,8 @@ export class DevEngine {
     return this.#inner.invalidate(file, firstInvalidatedBy);
   }
 
-  registerModules(clientId: string, modules: string[]): void {
-    this.#inner.registerModules(clientId, modules);
+  async registerModules(clientId: string, modules: string[]): Promise<void> {
+    await this.#inner.registerModules(clientId, modules);
   }
 
   removeClient(clientId: string): void {

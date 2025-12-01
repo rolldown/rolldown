@@ -279,8 +279,8 @@ importers:
         specifier: 0.8.3
         version: 0.8.3
       remove-unused-vars:
-        specifier: ^0.0.9
-        version: 0.0.9
+        specifier: ^0.0.10
+        version: 0.0.10
       rolldown:
         specifier: workspace:*
         version: link:packages/rolldown
@@ -5248,8 +5248,8 @@ packages:
   remeda@2.32.0:
     resolution: {integrity: sha512-BZx9DsT4FAgXDTOdgJIc5eY6ECIXMwtlSPQoPglF20ycSWigttDDe88AozEsPPT4OWk5NujroGSBC1phw5uU+w==}
 
-  remove-unused-vars@0.0.9:
-    resolution: {integrity: sha512-4XvwH94UM7TkOaqNTpkKfqGLwxNsIGnU1ojys8WIZrcfflN9rEZTiPfHYj+0xzMzqBOZsNaSSAbZXCFqt0XaUQ==}
+  remove-unused-vars@0.0.10:
+    resolution: {integrity: sha512-rEqbvfIne7QBC5lgkpYXtRKrCg6DRZvsGuZQp2XGcBxg5FZodhVqbXOA2rjkrFUbsiODfh8X4ndwIpJoyIcthQ==}
     hasBin: true
 
   require-directory@2.1.1:
@@ -10325,7 +10325,7 @@ snapshots:
     dependencies:
       type-fest: 4.41.0
 
-  remove-unused-vars@0.0.9:
+  remove-unused-vars@0.0.10:
     dependencies:
       typescript: 5.9.3
 

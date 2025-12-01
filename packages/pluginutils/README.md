@@ -17,6 +17,7 @@ import {
   exactRegex,
   makeIdFiltersToMatchWithQuery,
   prefixRegex,
+  suffixRegex,
 } from '@rolldown/pluginutils';
 
 // Match exactly 'foo.js'
@@ -24,6 +25,9 @@ const filter = exactRegex('foo.js');
 
 // Match any id starting with 'lib/'
 const prefix = prefixRegex('lib/');
+
+// Match any id ending with 'foo'
+const suffix = suffixRegex('foo');
 
 // Match ids with query params (e.g. 'foo.js?bar')
 const idFilters = makeIdFiltersToMatchWithQuery(['**/*.js', /\.ts$/]);
@@ -70,8 +74,9 @@ const myPlugin = {
 
 ### Simple Filters
 
-- `exactRegex(str: string, flags?: string): RegExp` — Matches the exact string.
-- `prefixRegex(str: string, flags?: string): RegExp` — Matches values with the given prefix.
+- `exactRegex(str: string | string[], flags?: string): RegExp` — Matches the exact string.
+- `prefixRegex(str: string | string[], flags?: string): RegExp` — Matches values with the given prefix.
+- `suffixRegex(str: string | string[], flags?: string): RegExp` — Matches values with the given suffix.
 - `makeIdFiltersToMatchWithQuery(input: string | RegExp | (string | RegExp)[]): string | RegExp | (string | RegExp)[]` — Adapts filters to match ids with query params.
 
 ### Composable Filters

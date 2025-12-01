@@ -3,6 +3,10 @@
 # include pnpm-lock.yaml and package.json to ensure cache is invalidated when dependencies change
 ignore = "git diff --quiet 'HEAD^' HEAD ./docs ./packages/rolldown pnpm-lock.yaml package.json pnpm-workspace.yaml"
 
+[build.environment]
+# Disable frozen lockfile to allow pnpm to resolve catalog mismatches when Netlify cache is stale
+NPM_FLAGS = "--no-frozen-lockfile"
+
 [[redirects]]
 from = "/about/"
 to = "/guide/"

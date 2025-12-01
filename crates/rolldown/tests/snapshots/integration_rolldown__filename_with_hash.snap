@@ -4908,6 +4908,10 @@ expression: output
 - middle-!~{005}~.js => middle-y2s8K8wc.js
 - server-!~{003}~.js => server-DFjxxrlr.js
 
+# tests/rolldown/issues/7286
+
+- main-!~{000}~.js => main-CLt3gthi.js
+
 # tests/rolldown/issues/duplicate_default_export
 
 - main-!~{000}~.js => main-D5owKpO2.js

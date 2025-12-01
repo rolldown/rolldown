@@ -1,6 +1,133 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`basic arguments > should render help message for empty args 1`] = `""`;
+exports[`basic arguments > should render help message for empty args 1`] = `
+"Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API. (rolldown VERSION)
+
+USAGE rolldown -c <config> or rolldown <input> <options>
+
+OPTIONS
+
+  --config -c, <filename>     Path to the config file (default: \`rolldown.config.js\`).
+  --dir -d, <dir>             Output directory, defaults to \`dist\` if \`file\` is not set.
+  --external -e, <external>   Comma-separated list of module ids to exclude from the bundle \`<module-id>,...\`.
+  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
+  --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: \`key=value\`).
+  --help -h,                  Show help.
+  --minify -m,                Minify the bundled file.
+  --name -n, <name>           Name for UMD / IIFE format outputs.
+  --file -o, <file>           Single output file.
+  --platform -p, <platform>   Platform for which the code should be generated (node, browser, neutral).
+  --sourcemap -s, <sourcemap> Generate sourcemap (\`-s inline\` for inline, or pass the \`-s\` on the last argument if you want to generate \`.map\` file).
+  --version -v,               Show version number.
+  --watch -w,                 Watch files in bundle and rebuild on changes.
+  --advanced-chunks.min-share-count <advanced-chunks.min-share-count>Minimum share count of the chunk.
+  --advanced-chunks.min-size <advanced-chunks.min-size>Minimum size of the chunk.
+  --asset-file-names <name>   Name pattern for asset files.
+  --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
+  --checks.circular-dependency Whether to emit warning when detecting circular dependency.
+  --checks.common-js-variable-in-esm Whether to emit warning when detecting common js variable in esm.
+  --checks.configuration-field-conflict Whether to emit warning when detecting configuration field conflict.
+  --checks.could-not-clean-directory Whether to emit warning when detecting could not clean directory.
+  --checks.empty-import-meta  Whether to emit warning when detecting empty import meta.
+  --checks.eval               Whether to emit warning when detecting eval.
+  --checks.filename-conflict  Whether to emit warning when detecting filename conflict.
+  --checks.import-is-undefined Whether to emit warning when detecting import is undefined.
+  --checks.missing-global-name Whether to emit warning when detecting missing global name.
+  --checks.missing-name-option-for-iife-export Whether to emit warning when detecting missing name option for iife export.
+  --checks.mixed-export       Whether to emit warning when detecting mixed export.
+  --checks.prefer-builtin-feature Whether to emit warning when detecting prefer builtin feature.
+  --checks.unresolved-entry   Whether to emit warning when detecting unresolved entry.
+  --checks.unresolved-import  Whether to emit warning when detecting unresolved import.
+  --chunk-file-names <name>   Name pattern for emitted secondary chunks.
+  --clean-dir                 Clean output directory before emitting output.
+  --context <context>         The entity top-level \`this\` represents.
+  --css-chunk-file-names <css-chunk-file-names>Name pattern for emitted css secondary chunks.
+  --css-entry-file-names <css-entry-file-names>Name pattern for emitted css entry chunks.
+  --cwd <cwd>                 Current working directory.
+  --debug.session-id <debug.session-id>Used to name the build.
+  --dynamic-import-in-cjs     Whether to use import() for dynamic imports in CommonJS output.
+  --entry-file-names <name>   Name pattern for emitted entry chunks.
+  --environment <environment> Pass additional settings to the config file via process.ENV.
+  --es-module                 Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).
+  --exports <exports>         Specify a export mode (auto, named, default, none).
+  --extend                    Extend global variable defined by name in IIFE / UMD formats.
+  --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
+  --generated-code.preset <generated-code.preset>.
+  --generated-code.profiler-names Whether to add readable names to internal variables for profiling purposes.
+  --generated-code.symbols    Whether to use Symbol.toStringTag for namespace objects.
+  --hash-characters <hash-characters>Use the specified character set for file hashes.
+  --inline-dynamic-imports    Inline dynamic imports.
+  --input <input>             Entry file.
+  --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
+  --keep-names                Keep function and class names after bundling.
+  --legal-comments <legal-comments>Control comments in the output.
+  --log-level <log-level>     Log level (silent, info, debug, warn).
+  --make-absolute-externals-relative Prevent normalization of external imports.
+  --minify-internal-exports   Minify internal exports.
+  --module-types <types>      Module types for customized extensions.
+  --no-external-live-bindings Disable external live bindings.
+  --no-preserve-entry-signatures Avoid facade chunks for entry points.
+  --no-treeshake              Disable treeshaking.
+  --optimization.inline-const <optimization.inline-const>Enable crossmodule constant inlining.
+  --optimization.pife-for-module-wrappers Use PIFE pattern for module wrappers.
+  --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
+  --paths <paths>             Maps external module IDs to paths.
+  --polyfill-require          Disable require polyfill injection.
+  --preserve-modules          Preserve module structure.
+  --preserve-modules-root <preserve-modules-root>Put preserved modules under this path at root level.
+  --sanitize-file-name        Sanitize file name.
+  --shim-missing-exports      Create shim variables for missing exports.
+  --sourcemap-base-url <sourcemap-base-url>Base URL used to prefix sourcemap paths.
+  --sourcemap-debug-ids       Inject sourcemap debug IDs.
+  --top-level-var             Rewrite top-level declarations to use \`var\`.
+  --transform.assumptions.ignore-function-length .
+  --transform.assumptions.no-document-all .
+  --transform.assumptions.object-rest-no-symbols .
+  --transform.assumptions.pure-getters .
+  --transform.assumptions.set-public-class-fields .
+  --transform.decorators.emit-decorator-metadata .
+  --transform.decorators.legacy .
+  --transform.define <transform.define>Define global variables.
+  --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
+  --transform.helpers.mode <transform.helpers.mode>.
+  --transform.inject <transform.inject>Inject import statements on demand.
+  --transform.jsx <transform.jsx>.
+  --transform.target <transform.target>The JavaScript target environment.
+  --transform.typescript.allow-declare-fields .
+  --transform.typescript.allow-namespaces .
+  --transform.typescript.declaration.sourcemap .
+  --transform.typescript.declaration.strip-internal .
+  --transform.typescript.jsx-pragma <transform.typescript.jsx-pragma>.
+  --transform.typescript.jsx-pragma-frag <transform.typescript.jsx-pragma-frag>.
+  --transform.typescript.only-remove-type-imports .
+  --transform.typescript.rewrite-import-extensions <transform.typescript.rewrite-import-extensions>.
+  --tsconfig <tsconfig>       Path to the tsconfig.json file.
+  --virtual-dirname <virtual-dirname>.
+
+EXAMPLES
+
+  1. Bundle with a config file \`rolldown.config.mjs\`:
+    rolldown -c rolldown.config.mjs
+
+  2. Bundle the \`src/main.ts\` to \`dist\` with \`cjs\` format:
+    rolldown src/main.ts -d dist -f cjs
+
+  3. Bundle the \`src/main.ts\` and handle the \`.png\` assets to Data URL:
+    rolldown src/main.ts -d dist --moduleTypes .png=dataurl
+
+  4. Bundle the \`src/main.tsx\` and minify the output with sourcemap:
+    rolldown src/main.tsx -d dist -m -s
+
+  5. Create self-executing IIFE using external jQuery as \`$\` and \`_\`:
+    rolldown src/main.ts -d dist -n bundle -f iife -e jQuery,window._ -g jQuery=$
+
+NOTES
+
+  * Due to the API limitation, you need to pass \`-s\` for \`.map\` sourcemap file as the last argument.
+  * If you are using the configuration, please pass the \`-c\` as the last argument if you ignore the default configuration file.
+  * CLI options will override the configuration file.
+  * For more information, please visit https://rolldown.rs/."
+`;
 
 exports[`cli options for bundling > cli default options 1`] = `
 "input cli default options {
@@ -13,14 +140,23 @@ exports[`cli options for bundling > cli default options 1`] = `
     }
   ]
 }
-output cli default options {}"
+output cli default options {}
+<DIR>/index.js  chunk │ size: 0.13 kB
+
+"
 `;
 
 exports[`cli options for bundling > should handle \`--input\` and positional args as entries 1`] = `
-"//#region 1.ts
+"
+|→ 1.js:
+
+//#region 1.ts
 console.log("1");
 
 //#endregion
+
+|→ 2.js:
+
 //#region 2.js
 console.log("2");
 
@@ -52,58 +188,142 @@ var cli_option_nested_default = defined;
 export { cli_option_nested_default as default };"
 `;
 
-exports[`cli options for bundling > should handle pass \`-s\` options 1`] = `""`;
+exports[`cli options for bundling > should handle pass \`-s\` options 1`] = `
+"<DIR>/index.js.map  asset │ size: 0.20 kB
+<DIR>/index.js      chunk │ size: 0.19 kB
 
-exports[`cli options for bundling > should handle single array options 1`] = `""`;
+"
+`;
 
-exports[`cli options for bundling > should handle single boolean option 1`] = `""`;
+exports[`cli options for bundling > should handle single array options 1`] = `
+"<DIR>/index.js  chunk │ size: 0.14 kB
 
-exports[`cli options for bundling > should handle single boolean short options 1`] = `""`;
+"
+`;
 
-exports[`cli options for bundling > should handle single object options 1`] = `""`;
+exports[`cli options for bundling > should handle single boolean option 1`] = `
+"<DIR>/index.js  chunk │ size: 0.04 kB
 
-exports[`cli options for bundling > should handle single string options 1`] = `""`;
+"
+`;
+
+exports[`cli options for bundling > should handle single boolean short options 1`] = `
+"<DIR>/index.js  chunk │ size: 0.04 kB
+
+"
+`;
+
+exports[`cli options for bundling > should handle single object options 1`] = `
+"<DIR>/index.js  chunk │ size: 0.27 kB
+
+"
+`;
+
+exports[`cli options for bundling > should handle single string options 1`] = `
+"<DIR>/index.js  chunk │ size: 0.13 kB
+
+"
+`;
 
 exports[`cli options for bundling > validate cli options 1`] = `
 "Command failed with exit code 1: rolldown index.ts --format INCORRECT
 
-[error] Invalid value for option format: Invalid type: Expected ("es" | "cjs" | "esm" | "module" | "commonjs" | "iife" | "umd") but received "INCORRECT". You can use \`rolldown -h\` to see the help."
+Invalid value for option format: Invalid type: Expected ("es" | "cjs" | "esm" | "module" | "commonjs" | "iife" | "umd") but received "INCORRECT". You can use \`rolldown -h\` to see the help."
 `;
 
-exports[`config > should allow loading cts config 1`] = `""`;
+exports[`config > should allow loading cts config 1`] = `
+"<DIR>/index.js  chunk │ size: 0.11 kB
 
-exports[`config > should allow loading mts config 1`] = `""`;
+"
+`;
 
-exports[`config > should allow loading ts config 1`] = `""`;
+exports[`config > should allow loading mts config 1`] = `
+"<DIR>/index.js  chunk │ size: 0.11 kB
 
-exports[`config > should allow loading ts config from non-working dir 1`] = `""`;
+"
+`;
 
-exports[`config > should allow loading ts config with oxnode 1`] = `""`;
+exports[`config > should allow loading ts config 1`] = `
+"<DIR>/index.js  chunk │ size: 0.11 kB
 
-exports[`config > should allow loading ts config with tsx 1`] = `""`;
+"
+`;
 
-exports[`config > should allow multiply options 1`] = `""`;
+exports[`config > should allow loading ts config from non-working dir 1`] = `
+"<DIR>/index.js  chunk │ size: 0.11 kB
+
+"
+`;
+
+exports[`config > should allow loading ts config with oxnode 1`] = `
+"<DIR>/index.js  chunk │ size: 0.11 kB
+
+"
+`;
+
+exports[`config > should allow loading ts config with tsx 1`] = `
+"<DIR>/index.js  chunk │ size: 0.11 kB
+
+"
+`;
+
+exports[`config > should allow multiply options 1`] = `
+"<DIR>/esm.js  chunk │ size: 0.14 kB
+<DIR>/cjs.js  chunk │ size: 0.14 kB
+
+"
+`;
 
 exports[`config > should allow multiply output + call options hook once  + call outputOptions hook 1`] = `
 "called options hook
 called output options hook
-called output options hook"
+called output options hook
+<DIR>/esm.js  chunk │ size: 0.18 kB
+<DIR>/cjs.js  chunk │ size: 0.17 kB
+
+"
 `;
 
-exports[`config > should allow multiply output 1`] = `""`;
+exports[`config > should allow multiply output 1`] = `
+"<DIR>/esm.js  chunk │ size: 0.14 kB
+<DIR>/cjs.js  chunk │ size: 0.14 kB
 
-exports[`config > should bundle in ext-js-syntax-cjs 1`] = `""`;
+"
+`;
 
-exports[`config > should resolve rolldown.config.cjs 1`] = `""`;
+exports[`config > should bundle in ext-js-syntax-cjs 1`] = `
+"<DIR>/index.js  chunk │ size: 0.13 kB
 
-exports[`config > should support custom cli arguments 1`] = `""`;
+"
+`;
 
-exports[`config > should support environment option 1`] = `""`;
+exports[`config > should resolve rolldown.config.cjs 1`] = `
+"<DIR>/index.js  chunk │ size: 0.13 kB
+
+"
+`;
+
+exports[`config > should support custom cli arguments 1`] = `
+"Option \`customArg\` is unrecognized. We will ignore this option.
+<DIR>/index.js  chunk │ size: 0.14 kB
+
+"
+`;
+
+exports[`config > should support environment option 1`] = `
+"<DIR>/index.js  chunk │ size: 0.14 kB
+
+"
+`;
 
 exports[`watch cli > should allow multiply output + call options hook once + call outputOptions hook 1`] = `
 "called options hook
 called output options hook
-called output options hook"
+called output options hook
+<DIR>/esm.js  chunk │ size: 0.18 kB
+<DIR>/cjs.js  chunk │ size: 0.17 kB
+
+"
 `;
 
 exports[`watch cli > should require both ROLLDOWN_WATCH and this.meta.watchMode to be false 1`] = `
@@ -124,6 +344,7 @@ closeBundle called:"
 exports[`watch cli > should require both ROLLDOWN_WATCH and this.meta.watchMode to be true 1`] = `
 "process.env.ROLLUP_WATCH true
 process.env.ROLLDOWN_WATCH true
+Waiting for changes...
 options called:
 this.meta.watchMode true
 process.env.ROLLUP_WATCH true

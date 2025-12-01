@@ -62,7 +62,7 @@ export default defineTest({
     `);
     expect(emittedChunkFilenames).toMatchInlineSnapshot(`
       [
-        "main-with-name-BAzVxPVZ.js",
+        "main-with-name-C87_COi0.js",
         "main-with-fileName.js",
       ]
     `);

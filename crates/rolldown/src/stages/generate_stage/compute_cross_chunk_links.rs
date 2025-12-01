@@ -13,7 +13,7 @@ use rolldown_common::{
   RUNTIME_HELPER_NAMES, SymbolRef, WrapKind,
 };
 use rolldown_utils::concat_string;
-use rolldown_utils::indexmap::FxIndexSet;
+use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rolldown_utils::rayon::IntoParallelIterator;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashMapExt;
@@ -82,16 +82,17 @@ impl GenerateStage<'_> {
       .collect::<Vec<_>>();
 
     let index_sorted_imports_from_other_chunks = index_imports_from_other_chunks
-      .into_iter()
-      .collect_vec()
-      .into_par_iter()
-      .map(|importee_map| {
+      .into_iter_enumerated()
+      .map(|(chunk_idx, mut importee_map)| {
+        for (idx, items) in &chunk_graph.chunk_table[chunk_idx].imports_from_other_chunks {
+          importee_map.entry(*idx).or_default().extend_from_slice(items);
+        }
         importee_map
           .into_iter()
           .sorted_by_key(|(importee_chunk_id, _)| {
             chunk_graph.chunk_table[*importee_chunk_id].exec_order
           })
-          .collect_vec()
+          .collect::<FxIndexMap<_, _>>()
       })
       .collect::<Vec<_>>();
 

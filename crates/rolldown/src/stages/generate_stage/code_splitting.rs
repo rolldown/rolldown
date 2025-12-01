@@ -9,7 +9,7 @@ use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, ExportsKind, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason,
+  ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleTable,
   PreserveEntrySignatures, SymbolRef, WrapKind,
 };
 use rolldown_error::BuildResult;
@@ -159,6 +159,7 @@ impl GenerateStage<'_> {
       }
     }
 
+    chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
 
     chunk_graph
@@ -231,7 +232,6 @@ impl GenerateStage<'_> {
       .collect::<Vec<_>>();
 
     chunk_graph.sorted_chunk_idx_vec = sorted_chunk_idx_vec;
-    chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
 
     self.find_entry_level_external_module(&mut chunk_graph);
 
@@ -798,6 +798,7 @@ impl GenerateStage<'_> {
         bits_to_chunk,
         input_base,
         pending_common_chunks,
+        &self.link_output.module_table,
       );
     }
     Ok(())
@@ -809,6 +810,7 @@ impl GenerateStage<'_> {
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
     pending_common_chunks: FxIndexMap<BitSet, Vec<ModuleIdx>>,
+    module_table: &ModuleTable,
   ) {
     let static_entry_chunk_reference: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> =
       self.construct_static_entry_to_reached_dynamic_entries_map(chunk_graph);
@@ -826,8 +828,13 @@ impl GenerateStage<'_> {
         // refer https://github.com/rolldown/rolldown/blob/d373794f5ce5b793ac751bbfaf101cc9cdd261d9/crates/rolldown/src/stages/generate_stage/code_splitting.rs?plain=1#L311-L313
         .filter(|idx| entry_chunk_idx.contains(idx))
         .collect_vec();
-      let item =
-        Self::try_insert_into_exists_chunk(&chunk_idxs, &static_entry_chunk_reference, chunk_graph);
+
+      let item = Self::try_insert_into_exists_chunk(
+        &chunk_idxs,
+        &static_entry_chunk_reference,
+        chunk_graph,
+        module_table,
+      );
       match item {
         Some(chunk_idx)
           if !matches!(
@@ -835,6 +842,20 @@ impl GenerateStage<'_> {
             Some(PreserveEntrySignatures::Strict)
           ) =>
         {
+          // Initialize imports_from_other_chunks entries for user-defined entry chunks
+          // that will reference the merged chunk, even if they don't directly import symbols.
+          // This ensures proper chunk ordering and execution.
+          for idx in chunk_idxs.iter().copied().filter(|idx| *idx != chunk_idx) {
+            let Some(chunk) = chunk_graph.chunk_table.get_mut(idx) else {
+              continue;
+            };
+            if !matches!(chunk.kind, ChunkKind::EntryPoint { meta, ..} if meta.contains(ChunkMeta::UserDefinedEntry))
+            {
+              continue;
+            }
+            chunk.imports_from_other_chunks.entry(chunk_idx).or_default();
+          }
+
           for module_idx in modules {
             chunk_graph.add_module_to_chunk(
               module_idx,
@@ -875,6 +896,7 @@ impl GenerateStage<'_> {
     chunk_idxs: &[ChunkIdx],
     entry_chunk_reference: &FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>>,
     chunk_graph: &ChunkGraph,
+    module_table: &ModuleTable,
   ) -> Option<ChunkIdx> {
     let mut user_defined_entry = vec![];
     let mut dynamic_entry = vec![];
@@ -893,12 +915,40 @@ impl GenerateStage<'_> {
         ChunkKind::Common => return None,
       }
     }
-
-    if user_defined_entry.len() != 1 {
-      // More than one user defined entry chunk, can't combine into one chunk.
+    let mut malformed_entry = false;
+    let mut user_defined_entry_modules: Vec<ModuleIdx> = vec![];
+    for chunk_idx in &user_defined_entry {
+      let Some(entry_module_idx) =
+        chunk_graph.chunk_table.get(*chunk_idx).and_then(rolldown_common::Chunk::entry_module_idx)
+      else {
+        malformed_entry = true;
+        break;
+      };
+      user_defined_entry_modules.push(entry_module_idx);
+    }
+    if malformed_entry || user_defined_entry.is_empty() {
       return None;
     }
-    let chunk_idx = user_defined_entry.into_iter().next()?;
+
+    let mut merged_user_defined_chunk: Option<ChunkIdx> = None;
+    // Find an entry chunk that imports all other entry chunks, allowing them to be merged into it
+
+    for (chunk_idx, entry_module_idx) in
+      user_defined_entry.iter().zip(user_defined_entry_modules.iter())
+    {
+      let module = module_table[*entry_module_idx].as_normal().expect("Should be normal module");
+      let ret = user_defined_entry.iter().enumerate().all(|(i, _idx)| {
+        let other_entry_module_idx = user_defined_entry_modules[i];
+        *entry_module_idx == other_entry_module_idx || {
+          module.importers_idx.contains(&other_entry_module_idx)
+        }
+      });
+      if ret {
+        merged_user_defined_chunk = Some(*chunk_idx);
+        break;
+      }
+    }
+    let chunk_idx = merged_user_defined_chunk?;
 
     let ret = dynamic_entry.iter().all(|idx| {
       entry_chunk_reference

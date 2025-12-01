@@ -13,7 +13,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 })(this, function(exports) {
 
 //#region main.js
-const a = 1;
+	const a = 1;
 
 //#endregion
 exports.a = a;

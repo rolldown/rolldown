@@ -33,26 +33,18 @@ export { foo_default as default };
 
 ```js
 //! User-defined Entry: [Entry-Module-Id: foo2.js] [Name: Some("foo2")]
-import { t as foo2_default } from "./foo22.js";
-
-```
-
-## foo22.js
-
-```js
-//! Common Chunk: [Shared-By: main.js, foo2.js]
 //#region foo2.js
 var foo2_default = "foo2";
 
 //#endregion
-export { foo2_default as t };
+export { foo2_default as default };
 ```
 
 ## main.js
 
 ```js
 //! User-defined Entry: [Entry-Module-Id: main.js] [Name: Some("main")]
-import { t as foo2_default } from "./foo22.js";
+import foo2_default from "./foo2.js";
 import assert from "node:assert";
 
 //#region main.js
@@ -95,27 +87,18 @@ export { foo_default as default };
 
 ```js
 //! User-defined Entry: [Entry-Module-Id: foo2.js] [Name: Some("foo2")]
-import { t as foo2_default } from "./foo22.js";
-
-export { foo2_default as default };
-```
-
-### foo22.js
-
-```js
-//! Common Chunk: [Shared-By: main.js, foo2.js]
 //#region foo2.js
 var foo2_default = "foo2";
 
 //#endregion
-export { foo2_default as t };
+export { foo2_default as default };
 ```
 
 ### main.js
 
 ```js
 //! User-defined Entry: [Entry-Module-Id: main.js] [Name: Some("main")]
-import { t as foo2_default } from "./foo22.js";
+import foo2_default from "./foo2.js";
 import assert from "node:assert";
 
 //#region main.js

@@ -680,9 +680,8 @@ expression: output
 
 # tests/esbuild/default/duplicate_entry_point
 
-- entry-!~{000}~.js => entry-DEiUr_IG.js
-- entry2-!~{001}~.js => entry2-DrdYK-Uc.js
-- entry-!~{002}~.js => entry-CSdCysp8.js
+- entry-!~{000}~.js => entry-BzOS4HMl.js
+- entry2-!~{001}~.js => entry2-BQ3Bh1rU.js
 
 # tests/esbuild/default/duplicate_property_warning
 
@@ -3603,9 +3602,8 @@ expression: output
 
 # tests/rolldown/cjs_compat/multiple_circle_cjs_entries
 
-- a-!~{000}~.js => a-DFIAvS1Q.js
-- b-!~{001}~.js => b-iJshT2DB.js
-- a-!~{002}~.js => a-D47KsLpR.js
+- a-!~{000}~.js => a-BhOrJQXt.js
+- b-!~{001}~.js => b-BVB9bCyP.js
 
 # tests/rolldown/cjs_compat/node_module_commonjs
 
@@ -3697,9 +3695,8 @@ expression: output
 
 # tests/rolldown/code_splitting/ensure_side_effect_executed
 
-- entry2_js-!~{001}~.js => entry2_js-C-4lkxNh.js
-- entry_js-!~{000}~.js => entry_js-qvNCMxkS.js
-- entry-!~{002}~.js => entry-DL7u_x-T.js
+- entry2_js-!~{001}~.js => entry2_js-B_-V7HnS.js
+- entry_js-!~{000}~.js => entry_js-BhICnUgH.js
 
 # tests/rolldown/code_splitting/ensure_side_effect_executed2
 
@@ -3927,9 +3924,8 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/ensure_lazy_module_eval
 
-- dynamic-!~{001}~.js => dynamic-vd-mUgQv.js
-- main-!~{000}~.js => main-8WamxVEQ.js
-- dynamic-!~{002}~.js => dynamic-38uNuTl4.js
+- dynamic-!~{001}~.js => dynamic-ClvtsKRL.js
+- main-!~{000}~.js => main-CQou-hqt.js
 
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/non_strict
 
@@ -4056,23 +4052,23 @@ expression: output
 
 # tests/rolldown/function/export_mode/umd/auto/none
 
-- main-!~{000}~.js => main-IeMgdfZs.js
+- main-!~{000}~.js => main-CdJgRxV0.js
 
 # tests/rolldown/function/export_mode/umd/complex_name_default
 
-- main-!~{000}~.js => main-CwH_9DLH.js
+- main-!~{000}~.js => main-H6Jw7yzR.js
 
 # tests/rolldown/function/export_mode/umd/complex_name_named
 
-- main-!~{000}~.js => main-CbK5cm17.js
+- main-!~{000}~.js => main-tn0Qu4_3.js
 
 # tests/rolldown/function/export_mode/umd/default
 
-- main-!~{000}~.js => main-DaMag9zU.js
+- main-!~{000}~.js => main-DJGX0Wbj.js
 
 # tests/rolldown/function/export_mode/umd/named
 
-- main-!~{000}~.js => main-C2UrjYp8.js
+- main-!~{000}~.js => main-CtuRWXMB.js
 
 # tests/rolldown/function/extend/entry-wrapped-cjs-default
 
@@ -4108,19 +4104,19 @@ expression: output
 
 # tests/rolldown/function/extend/umd/complex_name_default
 
-- main-!~{000}~.js => main-CwH_9DLH.js
+- main-!~{000}~.js => main-H6Jw7yzR.js
 
 # tests/rolldown/function/extend/umd/complex_name_named
 
-- main-!~{000}~.js => main-CLHcI04I.js
+- main-!~{000}~.js => main-BNLn-oCp.js
 
 # tests/rolldown/function/extend/umd/default
 
-- main-!~{000}~.js => main-DaMag9zU.js
+- main-!~{000}~.js => main-DJGX0Wbj.js
 
 # tests/rolldown/function/extend/umd/named
 
-- main-!~{000}~.js => main-gdaWMg4Y.js
+- main-!~{000}~.js => main-Cp8Ma4bH.js
 
 # tests/rolldown/function/external/commonjs_reexport_external
 
@@ -4189,9 +4185,8 @@ expression: output
 
 # tests/rolldown/function/format/cjs/share_chunk_without_symbol
 
-- entry1-!~{000}~.js => entry1-Bf2XwgoE.js
-- entry2-!~{001}~.js => entry2-1vShj1WI.js
-- main-!~{002}~.js => main-e6AWdJbi.js
+- entry1-!~{000}~.js => entry1-vZ5em3Jt.js
+- entry2-!~{001}~.js => entry2-CRy-OQDe.js
 
 # tests/rolldown/function/format/cjs/shared_entry_modules
 
@@ -4237,27 +4232,27 @@ expression: output
 
 # tests/rolldown/function/format/umd/conflict_exports_key
 
-- main-!~{000}~.js => main-BF-HiDm_.js
+- main-!~{000}~.js => main-D49IFcQQ.js
 
 # tests/rolldown/function/format/umd/conflict_exports_key_loop
 
-- main-!~{000}~.js => main-BQRlOGjm.js
+- main-!~{000}~.js => main-DbPZDLC3.js
 
 # tests/rolldown/function/format/umd/external_modules
 
-- main-!~{000}~.js => main-S35kJMFr.js
+- main-!~{000}~.js => main-CDekkQtG.js
 
 # tests/rolldown/function/format/umd/external_modules_with_complex_globals
 
-- main-!~{000}~.js => main-ByMh1Ddy.js
+- main-!~{000}~.js => main-C-ih02hx.js
 
 # tests/rolldown/function/format/umd/external_modules_with_globals
 
-- main-!~{000}~.js => main-B8q99a9n.js
+- main-!~{000}~.js => main-DNhHV5Nw.js
 
 # tests/rolldown/function/format/umd/namespaced_name_reserved
 
-- main-!~{000}~.js => main-Ca24X2dd.js
+- main-!~{000}~.js => main-CbRrEbie.js
 
 # tests/rolldown/function/inject
 
@@ -4531,24 +4526,21 @@ expression: output
 
 # tests/rolldown/issues/2038/a
 
-- main-!~{000}~.js => main-BgnQsxXI.js
-- a-!~{005}~.js => a-CqCpq_Rh.js
-- b-!~{001}~.js => b-BtrqQb1d.js
-- b-!~{003}~.js => b-C61cu37f.js
+- main-!~{000}~.js => main-DL6YC_ZY.js
+- a-!~{003}~.js => a-Dg9y4f9G.js
+- b-!~{001}~.js => b-3Qm51NZa.js
 
 # tests/rolldown/issues/2038/b
 
-- main-!~{000}~.js => main-C277pIcW.js
-- a-!~{005}~.js => a-qMb_dzgl.js
-- b-!~{001}~.js => b-BHnkA2QK.js
-- b-!~{003}~.js => b-DAwctWmk.js
+- main-!~{000}~.js => main-KDskQoqf.js
+- a-!~{003}~.js => a-BTkX_Q5o.js
+- b-!~{001}~.js => b-D50a8DC_.js
 
 # tests/rolldown/issues/2085
 
-- main-!~{000}~.js => main-Cq-2jb9r.js
-- a-!~{001}~.js => a-Jh0gDYa2.js
-- a-!~{003}~.js => a-o_4M3ted.js
-- c-!~{005}~.js => c-N5x2txYX.js
+- main-!~{000}~.js => main-CsXt7WK6.js
+- a-!~{001}~.js => a-cmIa8szB.js
+- c-!~{003}~.js => c-5eOYJ92M.js
 
 # tests/rolldown/issues/2300
 
@@ -4690,7 +4682,7 @@ expression: output
 
 # tests/rolldown/issues/4459
 
-- main-!~{000}~.js => main-qUb-JFlj.js
+- main-!~{000}~.js => main-BhytnoTA.js
 
 # tests/rolldown/issues/4472
 
@@ -4712,6 +4704,17 @@ expression: output
 
 - main-!~{000}~.js => main-oJwE-hb5.js
 - lib-!~{001}~.js => lib-DgD0Di8m.js
+
+# tests/rolldown/issues/4904
+
+- main-!~{000}~.js => main-DUAP2A29.js
+- mod1-!~{001}~.js => mod1-C_dytK3u.js
+- mod2-!~{003}~.js => mod2-BPOs0u5y.js
+
+# tests/rolldown/issues/4904_1
+
+- lib-!~{000}~.js => lib-DBGwrP6c.js
+- main-!~{001}~.js => main-BP6Ricut.js
 
 # tests/rolldown/issues/4993
 
@@ -4929,16 +4932,15 @@ expression: output
 
 # tests/rolldown/misc/assign_chunk_name_order
 
-- file-!~{001}~.js => file-DHIYDjyn.js
-- main-!~{000}~.js => main-C4RrUU-s.js
-- file-!~{004}~.js => file-BBxOZ0E2.js
-- file-!~{002}~.js => file-BI7EZMIP.js
-- file-!~{00e}~.js => file-BXlY9EkH.js
-- file-!~{006}~.js => file-Byy_geWO.js
-- file-!~{008}~.js => file-ChgXelW9.js
-- file-!~{00a}~.js => file-Di-ZwFsg.js
-- file-!~{00g}~.js => file-ObfqZf8B.js
-- file-!~{00c}~.js => file-yOKLnaIe.js
+- file-!~{001}~.js => file-DtSKmXE0.js
+- main-!~{000}~.js => main-lrEWpazR.js
+- file-!~{00e}~.js => file-B6vWkw1F.js
+- file-!~{00c}~.js => file-Bqy6_34c.js
+- file-!~{004}~.js => file-C6OYUCZj.js
+- file-!~{002}~.js => file-CrQ8eNSr.js
+- file-!~{00a}~.js => file-Cwm5eaHa.js
+- file-!~{008}~.js => file-I6vMkZhj.js
+- file-!~{006}~.js => file-TwjCrqrp.js
 
 # tests/rolldown/misc/banner/cjs
 
@@ -4965,9 +4967,8 @@ expression: output
 
 # tests/rolldown/misc/cjs_entry_as_dependency
 
-- main-!~{000}~.js => main-CREcZgXQ.js
-- main2-!~{001}~.js => main2-CkRhLsqM.js
-- main2-!~{002}~.js => main2-DImQOWhU.js
+- main-!~{000}~.js => main-BHLT31QS.js
+- main2-!~{001}~.js => main2-BT6uYMl0.js
 
 # tests/rolldown/misc/common_js_min
 
@@ -5037,9 +5038,8 @@ expression: output
 
 - dynamic-!~{003}~.js => dynamic-CEM7Bh_1.js
 - foo-!~{001}~.js => foo-C_HSrIG8.js
-- foo2-!~{002}~.js => foo2-DwvJeq-4.js
-- main-!~{000}~.js => main-CxgQHNBf.js
-- foo2-!~{004}~.js => foo2-CfjRXF79.js
+- foo2-!~{002}~.js => foo2-GjqLKQuv.js
+- main-!~{000}~.js => main-agkD0YOF.js
 
 # tests/rolldown/misc/preserve_entry_signature/issue_5026
 
@@ -5261,15 +5261,13 @@ expression: output
 
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries
 
-- entry-!~{000}~.js => entry-BwonpDjl.js
-- entry2-!~{001}~.js => entry2-BcOrPL42.js
-- main-!~{002}~.js => main-DjORokmf.js
+- entry-!~{000}~.js => entry-CxgeOhbL.js
+- entry2-!~{001}~.js => entry2-BvjUREj-.js
 
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries_cjs
 
-- entry-!~{000}~.js => entry-LF56xhXL.js
-- entry2-!~{001}~.js => entry2-BT2gMT21.js
-- main-!~{002}~.js => main-DjORokmf.js
+- entry-!~{000}~.js => entry-B6lNnaCT.js
+- entry2-!~{001}~.js => entry2-BLlAVRQH.js
 
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry
 

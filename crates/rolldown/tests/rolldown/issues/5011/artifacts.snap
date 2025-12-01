@@ -6,13 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## after-preload-dynamic.js
 
 ```js
-import "./after-preload-dynamic2.js";
-
-```
-
-## after-preload-dynamic2.js
-
-```js
 //#region src/after-preload-dynamic.js
 import("./dynamic-foo.js");
 console.log("after preload dynamic");
@@ -32,6 +25,6 @@ console.log("dynamic-foo");
 ## entry.js
 
 ```js
-import "./after-preload-dynamic2.js";
+import "./after-preload-dynamic.js";
 
 ```

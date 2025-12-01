@@ -50,7 +50,7 @@ impl ScanStageCache {
   ) -> BuildResult<()> {
     let snapshot = self.take_snapshot();
     if let Some(mut snapshot) = snapshot {
-      defer_sync_scan_data(options, &self.module_id_to_idx, resolver, &mut snapshot).await?;
+      defer_sync_scan_data(options, resolver, &self.module_id_to_idx, &mut snapshot).await?;
       self.set_snapshot(snapshot);
     }
     Ok(())

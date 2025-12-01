@@ -29,7 +29,6 @@ arcstr = { workspace = true }
 bitflags = { workspace = true }
 commondir = { workspace = true }
 css-module-lexer = { workspace = true }
-dunce = { workspace = true }
 futures = { workspace = true }
 indexmap = { workspace = true }
 itertools = { workspace = true }
@@ -72,14 +71,21 @@ url = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [dev-dependencies]
+cow-utils = { workspace = true }
+dunce = { workspace = true }
 glob = { workspace = true }
 insta = { workspace = true }
+regex = { workspace = true }
 rolldown_dev = { path = "../rolldown_dev" }
 rolldown_testing = { path = "../rolldown_testing" }
 rolldown_workspace = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
 sugar_path = { workspace = true }
 testing_macros = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
+walkdir = { workspace = true }
 
 [package.metadata.cargo-shear]
 # `serde_json` is used in `trace_action` macro.

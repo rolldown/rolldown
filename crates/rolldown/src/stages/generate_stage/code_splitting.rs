@@ -915,39 +915,10 @@ impl GenerateStage<'_> {
         ChunkKind::Common => return None,
       }
     }
-    let mut malformed_entry = false;
-    let mut user_defined_entry_modules: Vec<ModuleIdx> = vec![];
-    for chunk_idx in &user_defined_entry {
-      let Some(entry_module_idx) =
-        chunk_graph.chunk_table.get(*chunk_idx).and_then(rolldown_common::Chunk::entry_module_idx)
-      else {
-        malformed_entry = true;
-        break;
-      };
-      user_defined_entry_modules.push(entry_module_idx);
-    }
-    if malformed_entry {
-      return None;
-    }
+    let user_defined_entry_modules = Self::collect_entry_modules(&user_defined_entry, chunk_graph)?;
 
-    let mut merged_user_defined_chunk: Option<ChunkIdx> = None;
-    // Find an entry chunk that imports all other entry chunks, allowing them to be merged into it
-
-    for (chunk_idx, entry_module_idx) in
-      user_defined_entry.iter().zip(user_defined_entry_modules.iter())
-    {
-      let module = module_table[*entry_module_idx].as_normal().expect("Should be normal module");
-      let ret = user_defined_entry.iter().enumerate().all(|(i, _idx)| {
-        let other_entry_module_idx = user_defined_entry_modules[i];
-        *entry_module_idx == other_entry_module_idx || {
-          module.importers_idx.contains(&other_entry_module_idx)
-        }
-      });
-      if ret {
-        merged_user_defined_chunk = Some(*chunk_idx);
-        break;
-      }
-    }
+    let merged_user_defined_chunk =
+      Self::find_merge_target(&user_defined_entry, &user_defined_entry_modules, module_table);
     if !user_defined_entry.is_empty() {
       let chunk_idx = merged_user_defined_chunk?;
 
@@ -960,40 +931,39 @@ impl GenerateStage<'_> {
       return ret.then_some(chunk_idx);
     }
 
-    let mut malformed_entry = false;
-    let mut dynamic_chunk_entry_modules: Vec<ModuleIdx> = vec![];
-    for chunk_idx in &dynamic_entry {
-      let Some(entry_module_idx) =
-        chunk_graph.chunk_table.get(*chunk_idx).and_then(Chunk::entry_module_idx)
-      else {
-        malformed_entry = true;
-        break;
-      };
-      dynamic_chunk_entry_modules.push(entry_module_idx);
-    }
+    let dynamic_chunk_entry_modules = Self::collect_entry_modules(&dynamic_entry, chunk_graph)?;
+    Self::find_merge_target(&dynamic_entry, &dynamic_chunk_entry_modules, module_table)
+  }
 
-    if malformed_entry {
-      return None;
+  /// Collects entry module indices from a list of chunk indices.
+  /// Returns `None` if any chunk is missing or has no entry module.
+  fn collect_entry_modules(
+    chunk_indices: &[ChunkIdx],
+    chunk_graph: &ChunkGraph,
+  ) -> Option<Vec<ModuleIdx>> {
+    let mut ret = Vec::with_capacity(chunk_indices.len());
+    for chunk_idx in chunk_indices {
+      let chunk = chunk_graph.chunk_table.get(*chunk_idx)?;
+      ret.push(chunk.entry_module_idx()?);
     }
-    let mut merged_dynamic_chunk: Option<ChunkIdx> = None;
-    // try to merge all modules into one user_defined entry
+    Some(ret)
+  }
 
-    for (chunk_idx, entry_module_idx) in
-      dynamic_entry.iter().zip(dynamic_chunk_entry_modules.iter())
-    {
+  /// Finds a chunk that can serve as the merge target for all entries.
+  /// A chunk can be the merge target if its entry module is imported by or equal to all other entry module.
+  fn find_merge_target(
+    chunk_indices: &[ChunkIdx],
+    entry_modules: &[ModuleIdx],
+    module_table: &ModuleTable,
+  ) -> Option<ChunkIdx> {
+    chunk_indices.iter().zip(entry_modules.iter()).find_map(|(chunk_idx, entry_module_idx)| {
       let module = module_table[*entry_module_idx].as_normal().expect("Should be normal module");
-      let ret = dynamic_entry.iter().enumerate().all(|(i, _idx)| {
-        let other_entry_module_idx = dynamic_chunk_entry_modules[i];
-        *entry_module_idx == other_entry_module_idx || {
-          module.importers_idx.contains(&other_entry_module_idx)
-        }
+      let can_merge = entry_modules.iter().all(|other_entry_module_idx| {
+        *entry_module_idx == *other_entry_module_idx
+          || module.importers_idx.contains(other_entry_module_idx)
       });
-      if ret {
-        merged_dynamic_chunk = Some(*chunk_idx);
-        break;
-      }
-    }
-    merged_dynamic_chunk
+      can_merge.then_some(*chunk_idx)
+    })
   }
 
   fn construct_static_entry_to_reached_dynamic_entries_map(

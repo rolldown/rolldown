@@ -36,7 +36,7 @@ node_assert.default.strictEqual(count, count);
 ```js
 
 //#region main.js
-Promise.resolve().then(() => require("./async-entry.js"));
+import("./async-entry.js");
 
 //#endregion
 ```

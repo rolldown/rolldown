@@ -87,6 +87,7 @@ pub struct BindingOutputOptions<'env> {
   // hoistTransitiveImports: boolean;
   // indent: true | string;
   pub inline_dynamic_imports: Option<bool>,
+  pub dynamic_import_in_cjs: Option<bool>,
   // interop: GetInterop;
   #[debug(skip)]
   #[napi(ts_type = "(chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>")]

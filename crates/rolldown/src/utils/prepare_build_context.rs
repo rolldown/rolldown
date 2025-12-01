@@ -387,6 +387,8 @@ pub fn prepare_build_context(
     extend: raw_options.extend.unwrap_or(false),
     external_live_bindings: raw_options.external_live_bindings.unwrap_or(true),
     inline_dynamic_imports,
+    // Default to true to preserve import() in CJS (Rollup's default behavior)
+    dynamic_import_in_cjs: raw_options.dynamic_import_in_cjs.unwrap_or(true),
     advanced_chunks: raw_options.advanced_chunks,
     checks: raw_options.checks.unwrap_or_default().into(),
     watch: raw_options.watch.unwrap_or_default(),

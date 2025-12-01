@@ -3520,6 +3520,20 @@ expression: output
 - chunk-!~{001}~.js => chunk-DhkxgLhx.js
 - cjs-!~{003}~.js => cjs-BGgro4pb.js
 
+# tests/rolldown/cjs_compat/dynamic_import_in_cjs_external_false
+
+- main-!~{000}~.js => main-BhrTKVjc.js
+
+# tests/rolldown/cjs_compat/dynamic_import_in_cjs_false
+
+- main-!~{000}~.js => main-DD5N6-3o.js
+- lib-!~{001}~.js => lib-D7zvuObB.js
+
+# tests/rolldown/cjs_compat/dynamic_import_in_cjs_true
+
+- main-!~{000}~.js => main-oO58djPk.js
+- lib-!~{001}~.js => lib-D7zvuObB.js
+
 # tests/rolldown/cjs_compat/esm_require_cjs
 
 - main-!~{000}~.js => main-CgFAgQJr.js
@@ -4813,8 +4827,8 @@ expression: output
 
 # tests/rolldown/issues/6513
 
-- main-!~{000}~.js => main-Cy8jHyag.js
-- dynamic-!~{001}~.js => dynamic-CjJBkbRj.js
+- main-!~{000}~.js => main-Np8QlrAJ.js
+- dynamic-!~{001}~.js => dynamic-Dh1JfCdT.js
 
 # tests/rolldown/issues/6587
 
@@ -5842,7 +5856,7 @@ expression: output
 
 # tests/rolldown/topics/live_bindings/default_export_binding_in_common_chunks_cjs
 
-- main-!~{000}~.js => main-C_Ax4niA.js
+- main-!~{000}~.js => main-DjTcI1WG.js
 - async-entry-!~{001}~.js => async-entry-CaOk3Rc9.js
 
 # tests/rolldown/topics/live_bindings/default_export_decl
@@ -5865,7 +5879,7 @@ expression: output
 
 # tests/rolldown/topics/live_bindings/default_export_expr_in_common_chunks_cjs
 
-- main-!~{000}~.js => main-CaMmxpqU.js
+- main-!~{000}~.js => main-D8GksE3_.js
 - async-entry-!~{001}~.js => async-entry-CyHnobuq.js
 
 # tests/rolldown/topics/live_bindings/default_export_snapshot_not_live
@@ -5888,7 +5902,7 @@ expression: output
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks_cjs
 
-- main-!~{000}~.js => main-bppD16YD.js
+- main-!~{000}~.js => main-Cc0W60TT.js
 - async-entry-!~{003}~.js => async-entry-B0SGRHwK.js
 - shared-!~{001}~.js => shared-DlT5txJr.js
 

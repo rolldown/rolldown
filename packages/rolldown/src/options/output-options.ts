@@ -208,6 +208,15 @@ export interface OutputOptions {
   externalLiveBindings?: boolean;
   inlineDynamicImports?: boolean;
   /**
+   * Whether to use `import()` for dynamic imports in CommonJS output.
+   *
+   * - `true` (default): Keep dynamic `import()` expressions as-is
+   * - `false`: Transform `import()` to `Promise.resolve().then(() => require())`
+   *
+   * @default true
+   */
+  dynamicImportInCjs?: boolean;
+  /**
    * - Type: `((moduleId: string, meta: { getModuleInfo: (moduleId: string) => ModuleInfo | null }) => string | NullValue)`
    * - Object form is not supported.
    *

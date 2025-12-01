@@ -573,6 +573,17 @@ impl<'ast> AstSnippet<'ast> {
     ))
   }
 
+  /// `require(source)` - creates a require call expression
+  pub fn require_call_expr(&self, source: ast::Expression<'ast>) -> ast::Expression<'ast> {
+    self.builder.expression_call(
+      SPAN,
+      self.builder.expression_identifier(SPAN, self.builder.atom("require")),
+      NONE,
+      self.builder.vec1(Argument::from(source)),
+      false,
+    )
+  }
+
   pub fn callee_then_call_expr(
     &self,
     call_expr: ast::Expression<'ast>,

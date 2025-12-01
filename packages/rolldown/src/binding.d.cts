@@ -1437,6 +1437,7 @@ export declare class BindingNormalizedOptions {
   get exports(): 'default' | 'named' | 'none' | 'auto'
   get esModule(): boolean | 'if-default-prop'
   get inlineDynamicImports(): boolean
+  get dynamicImportInCjs(): boolean
   get sourcemap(): boolean | 'inline' | 'hidden'
   get sourcemapBaseUrl(): string | null
   get banner(): string | undefined | null | undefined
@@ -2000,6 +2001,7 @@ export interface BindingOutputOptions {
   globals?: Record<string, string> | ((name: string) => string)
   hashCharacters?: 'base64' | 'base36' | 'hex'
   inlineDynamicImports?: boolean
+  dynamicImportInCjs?: boolean
   intro?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
   outro?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
   paths?: Record<string, string> | ((id: string) => string)

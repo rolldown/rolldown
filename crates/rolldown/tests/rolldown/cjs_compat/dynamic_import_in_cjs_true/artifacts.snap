@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lib.js
+
+```js
+
+//#region lib.js
+const value = 42;
+
+//#endregion
+exports.value = value;
+```
+
+## main.js
+
+```js
+
+//#region main.js
+async function run() {
+	return (await import("./lib.js")).value;
+}
+
+//#endregion
+exports.run = run;
+```

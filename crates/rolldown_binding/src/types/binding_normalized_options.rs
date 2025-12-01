@@ -160,6 +160,11 @@ impl BindingNormalizedOptions {
     self.inner.inline_dynamic_imports
   }
 
+  #[napi(getter)]
+  pub fn dynamic_import_in_cjs(&self) -> bool {
+    self.inner.dynamic_import_in_cjs
+  }
+
   #[napi(getter, ts_return_type = "boolean | 'inline' | 'hidden'")]
   pub fn sourcemap(&self) -> Either<bool, &'static str> {
     match self.inner.sourcemap {

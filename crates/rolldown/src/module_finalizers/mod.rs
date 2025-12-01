@@ -1061,7 +1061,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
       }
     }
-    if matches!(self.ctx.options.format, OutputFormat::Cjs) {
+    // When format is CJS and dynamicImportInCjs is false, transform import() to require()
+    // This is the Rollup behavior: dynamicImportInCjs: false transforms import() to Promise.resolve().then(() => require())
+    if matches!(self.ctx.options.format, OutputFormat::Cjs) && !self.ctx.options.dynamic_import_in_cjs
+    {
       // Convert `import('./foo.mjs')` to `Promise.resolve().then(function() { return require('foo.mjs') })`
       match &self.ctx.modules[importee_id] {
         Module::Normal(importee) => {
@@ -1509,6 +1512,21 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               }
             }
           }
+
+          // When format is CJS and dynamic_import_in_cjs is false, transform import() to
+          // Promise.resolve().then(function() { return require('module'); })
+          if matches!(self.ctx.options.format, OutputFormat::Cjs)
+            && !self.ctx.options.dynamic_import_in_cjs
+          {
+            // Get the source expression (which has been updated above)
+            let source_expr = expr.source.clone_in(self.alloc);
+            // Create require('module')
+            let require_expr = self.snippet.require_call_expr(source_expr);
+            // Create Promise.resolve().then(() => require('module'))
+            *node = self.snippet.promise_resolve_then_call_expr(require_expr);
+            return true;
+          }
+
           if needs_to_esm_helper {
             // Turn `import('./some-cjs-module.js')` into `import('./some-cjs-module.js').then(__toDynamicImportESM(isNodeMode))`
 

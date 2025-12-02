@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration_test262.rs
 expression: snapshot
 ---
-Summary: 534 passed, 58 failed, 592 total
+Summary: 536 passed, 56 failed, 592 total
 
 ---
 
@@ -289,12 +289,9 @@ Actual: Runtime execution succeeded
 ---
 
 # language/module-code/eval-export-dflt-cls-name-meth.js
-Result: FAIL
-Reason: The name static method is overridden by the class name incorrectly
-Issue: https://github.com/rolldown/rolldown/issues/7195
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: TypeError: eval_export_dflt_cls_name_meth_default.name is not a function
+Actual: Runtime execution succeeded
 ---
 
 # language/module-code/eval-export-dflt-cls-named-semi.js
@@ -316,12 +313,9 @@ Actual: Runtime execution succeeded
 ---
 
 # language/module-code/eval-export-dflt-expr-cls-name-meth.js
-Result: FAIL
-Reason: The name static method is overridden by the class name incorrectly
-Issue: https://github.com/rolldown/rolldown/issues/7195
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: TypeError: eval_export_dflt_expr_cls_name_meth_default.name is not a function
+Actual: Runtime execution succeeded
 ---
 
 # language/module-code/eval-export-dflt-expr-cls-named.js

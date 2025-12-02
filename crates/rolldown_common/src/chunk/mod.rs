@@ -114,14 +114,8 @@ impl Chunk {
     }
   }
 
-  pub fn has_side_effect(&self, runtime_id: ModuleIdx) -> bool {
-    // TODO: remove this special case, once `NormalModule#side_effect` is implemented. Runtime module should always not have side effect
-    if self.modules.len() == 1 && self.modules[0] == runtime_id {
-      return false;
-    }
-    // TODO: Whether a chunk has side effect is determined by whether it's module has side effect
-    // Now we just return `true`
-    true
+  pub fn has_side_effect(&self, module_table: &ModuleTable) -> bool {
+    self.modules.iter().any(|&module_id| module_table[module_id].side_effects().has_side_effects())
   }
 
   pub fn import_path_for(&self, importee: &Chunk) -> String {

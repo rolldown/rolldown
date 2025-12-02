@@ -465,7 +465,7 @@ impl GenerateStage<'_> {
                 false
               } else {
                 importee_chunk.bits.has_bit(*importer_chunk_bit)
-                  && importee_chunk.has_side_effect(self.link_output.runtime.id())
+                  && importee_chunk.has_side_effect(&self.link_output.module_table)
               }
             })
             .for_each(|(importee_chunk_id, _)| {

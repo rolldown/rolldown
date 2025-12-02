@@ -28,7 +28,6 @@ console.log(foo);
 ## c.js
 
 ```js
-import "./shared.js";
 
 ```
 

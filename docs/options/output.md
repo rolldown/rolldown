@@ -569,6 +569,8 @@ export default {
 :::warning Deprecated
 This option is deprecated. Please use [`output.advancedChunks`](./output-advanced-chunks.md) instead.
 
+::: details Migration example
+
 ```js
 // Old configuration (manualChunks)
 export default {
@@ -590,6 +592,8 @@ export default {
   },
 };
 ```
+
+:::
 
 :::
 

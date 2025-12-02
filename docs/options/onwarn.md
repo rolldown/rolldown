@@ -5,11 +5,8 @@
 
 :::warning Deprecated
 This is a legacy API. Consider using [`onLog`](./on-log.md) instead for better control over all log types.
-:::
 
-Custom handler for warnings during the build process.
-
-## Migration to onLog
+::: details Migration to onLog
 
 To migrate from `onwarn` to `onLog`, check the `level` parameter to filter for warnings:
 
@@ -45,4 +42,7 @@ export default {
 };
 ```
 
-The `onLog` handler gives you additional control over all log levels (`'debug'`, `'info'`, `'warn'`), allowing you to customize how different types of messages are processed.
+:::
+:::
+
+Custom handler for warnings during the build process.

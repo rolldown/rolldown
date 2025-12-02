@@ -1383,7 +1383,7 @@ export declare class BindingDevEngine {
   getBundleState(): Promise<BindingBundleState>
   ensureLatestBuildOutput(): Promise<void>
   invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<Array<BindingClientHmrUpdate>>
-  registerModules(clientId: string, modules: Array<string>): void
+  registerModules(clientId: string, modules: Array<string>): Promise<void>
   removeClient(clientId: string): void
   close(): Promise<void>
 }

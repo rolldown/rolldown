@@ -20,7 +20,7 @@ Related to that, the `outputOptions` hook is called **before** the build hooks i
 
 ### Sequential Hook Execution
 
-In Rollup, certain hooks like [`writeBundle`](https://rollupjs.org/plugin-development/#writebundle) are "parallel" by default, meaning they run concurrently across multiple plugins. This requires plugins to explicitly set `sequential: true` if they need their hooks to run one after another (for example, [SvelteKit does this](https://github.com/sveltejs/kit/blob/5b667e48b1a5a81d9235ddc903f6e2ced4f49787/packages/kit/src/exports/vite/index.js#L538-L539) for its `writeBundle` hook).
+In Rollup, certain hooks like [`writeBundle`](https://rollupjs.org/plugin-development/#writebundle) are "parallel" by default, meaning they run concurrently across multiple plugins. This requires plugins to explicitly set `sequential: true` if they need their hooks to run one after another.
 
 In Rolldown, the `writeBundle` hook is already sequential by default, so plugins do not need to specify `sequential: true` for this hook.
 

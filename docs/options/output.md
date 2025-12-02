@@ -568,6 +568,29 @@ export default {
 
 :::warning Deprecated
 This option is deprecated. Please use [`output.advancedChunks`](./output-advanced-chunks.md) instead.
+
+```js
+// Old configuration (manualChunks)
+export default {
+  output: {
+    manualChunks(id) {
+      if (/[\\/]react(?:-dom)?/.test(id)) {
+        return 'vendor';
+      }
+    },
+  },
+};
+
+// New configuration (advancedChunks)
+export default {
+  output: {
+    advancedChunks: {
+      groups: [{ name: 'vendor', test: /[\\/]react(?:-dom)?/ }],
+    },
+  },
+};
+```
+
 :::
 
 Allows manual control over chunk creation.

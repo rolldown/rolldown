@@ -638,9 +638,10 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           };
           match init {
             ast::Expression::ClassExpression(class_expression) => {
-              if let Some(element) = self.keep_name_helper_for_class(Some(
-                class_expression.id.as_ref().unwrap_or_else(|| id),
-              )) {
+              if let Some(element) = self.keep_name_helper_for_class(
+                Some(class_expression.id.as_ref().unwrap_or_else(|| id)),
+                &class_expression.body,
+              ) {
                 class_expression.body.body.insert(0, element);
               }
             }
@@ -672,7 +673,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       ast::Declaration::ClassDeclaration(decl) => {
         // need to insert `keep_names` helper, because `get_transformed_class_decl`
         // will remove id in `class.id`
-        if let Some(element) = self.keep_name_helper_for_class(decl.id.as_ref()) {
+        if let Some(element) = self.keep_name_helper_for_class(decl.id.as_ref(), &decl.body) {
           decl.body.body.insert(0, element);
         }
         if let Some(decl) = self.get_transformed_class_decl(decl) {

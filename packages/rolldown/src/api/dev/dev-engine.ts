@@ -129,8 +129,8 @@ export class DevEngine {
     await this.#inner.registerModules(clientId, modules);
   }
 
-  removeClient(clientId: string): void {
-    this.#inner.removeClient(clientId);
+  async removeClient(clientId: string): Promise<void> {
+    await this.#inner.removeClient(clientId);
   }
 
   async close(): Promise<void> {

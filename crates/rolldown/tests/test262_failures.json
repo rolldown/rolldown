@@ -2,14 +2,6 @@
   "language/module-code/parse-err-return.js": {
     "reason": "Rolldown treats files with top level return as CommonJS modules"
   },
-  "language/module-code/eval-export-dflt-cls-name-meth.js": {
-    "reason": "The name static method is overridden by the class name incorrectly",
-    "issue": "https://github.com/rolldown/rolldown/issues/7195"
-  },
-  "language/module-code/eval-export-dflt-expr-cls-name-meth.js": {
-    "reason": "The name static method is overridden by the class name incorrectly",
-    "issue": "https://github.com/rolldown/rolldown/issues/7195"
-  },
   "language/module-code/export-expname-binding-index.js": {
     "reason": "Rolldown makes exported bindings non-writable, but does not throw on assignment"
   },

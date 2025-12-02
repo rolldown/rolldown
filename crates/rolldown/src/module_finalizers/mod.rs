@@ -1308,7 +1308,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     Some(CompactStr::from("default"))
                   }
                   ast::Expression::ClassExpression(class) if class.id.is_none() => {
-                    Some(CompactStr::from("default"))
+                    // Skip if class has static name property
+                    if Self::class_body_has_static_name(&class.body) {
+                      None
+                    } else {
+                      Some(CompactStr::from("default"))
+                    }
                   }
                   ast::Expression::ArrowFunctionExpression(_) => Some(CompactStr::from("default")),
                   _ => None,
@@ -1358,7 +1363,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 class.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
 
                 // When keep_names is enabled, preserve "default" as the class name
-                if self.ctx.options.keep_names {
+                // Skip if class has static name property
+                if self.ctx.options.keep_names && !Self::class_body_has_static_name(&class.body) {
                   // current statement will be pushed to program.body, so the insert position is program.body.len() + 1
                   let insert_position = program.body.len() + 1;
                   self.keep_name_statement_to_insert.push((
@@ -1444,8 +1450,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   fn keep_name_helper_for_class(
     &self,
     id: Option<&BindingIdentifier<'ast>>,
+    class_body: &ast::ClassBody<'ast>,
   ) -> Option<ClassElement<'ast>> {
     if !self.ctx.options.keep_names {
+      return None;
+    }
+    // Skip if the class already has a static `name` property/method
+    if Self::class_body_has_static_name(class_body) {
       return None;
     }
     let (original_name, _) = self.get_conflicted_info(id.as_ref()?)?;
@@ -1454,6 +1465,22 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let name_ref = self.canonical_ref_for_runtime("__name");
     let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
     Some(self.snippet.static_block_keep_name_helper(&original_name, finalized_callee))
+  }
+
+  /// Check if a class body has a static `name` property, method, or accessor.
+  fn class_body_has_static_name(body: &ast::ClassBody<'ast>) -> bool {
+    body.body.iter().any(|element| match element {
+      ClassElement::MethodDefinition(method) => {
+        method.r#static && method.key.static_name().is_some_and(|name| name == "name")
+      }
+      ClassElement::PropertyDefinition(prop) => {
+        prop.r#static && prop.key.static_name().is_some_and(|name| name == "name")
+      }
+      ClassElement::AccessorProperty(accessor) => {
+        accessor.r#static && accessor.key.static_name().is_some_and(|name| name == "name")
+      }
+      _ => false,
+    })
   }
 
   /// Inserts `__name()` call statements for keeping function/class names.

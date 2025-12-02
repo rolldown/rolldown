@@ -3090,9 +3090,9 @@ expression: output
 
 # tests/esbuild/splitting/splitting_cross_chunk_assignment_dependencies_recursive
 
-- a-!~{000}~.js => a-BI32jRzY.js
-- b-!~{001}~.js => b-D4fEGXw_.js
-- c-!~{002}~.js => c-DkgSDygv.js
+- a-!~{000}~.js => a-CAdl1r5_.js
+- b-!~{001}~.js => b-CngQ08On.js
+- c-!~{002}~.js => c-B6Lp_mlC.js
 - x-!~{003}~.js => x-Rk4avc83.js
 - z-!~{005}~.js => z-BEo77qFZ.js
 
@@ -3146,7 +3146,7 @@ expression: output
 
 - a-!~{000}~.js => a-Cigw7zh5.js
 - b-!~{001}~.js => b-BxVWDg0_.js
-- c-!~{002}~.js => c-l2s_7_sR.js
+- c-!~{002}~.js => c-Bxyhf-0x.js
 - shared-!~{003}~.js => shared--UPBFTGo.js
 
 # tests/esbuild/splitting/splitting_missing_lazy_export

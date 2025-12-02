@@ -566,9 +566,38 @@ export default {
 - **Optional:** Yes ✅
 - **Path:** `output.manualChunks`
 
-:::warning Deprecated
+:::: warning Deprecated
 This option is deprecated. Please use [`output.advancedChunks`](./output-advanced-chunks.md) instead.
+
+::: details Migration example
+
+```js
+// Old configuration (manualChunks)
+export default {
+  output: {
+    manualChunks(id) {
+      if (/[\\/]react(?:-dom)?/.test(id)) {
+        return 'vendor';
+      }
+    },
+  },
+};
+```
+
+```js
+// New configuration (advancedChunks)
+export default {
+  output: {
+    advancedChunks: {
+      groups: [{ name: 'vendor', test: /[\\/]react(?:-dom)?/ }],
+    },
+  },
+};
+```
+
 :::
+
+::::
 
 Allows manual control over chunk creation.
 

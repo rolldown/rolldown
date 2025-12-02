@@ -566,7 +566,7 @@ export default {
 - **Optional:** Yes ✅
 - **Path:** `output.manualChunks`
 
-:::warning Deprecated
+:::: warning Deprecated
 This option is deprecated. Please use [`output.advancedChunks`](./output-advanced-chunks.md) instead.
 
 ::: details Migration example
@@ -582,7 +582,9 @@ export default {
     },
   },
 };
+```
 
+```js
 // New configuration (advancedChunks)
 export default {
   output: {
@@ -595,7 +597,7 @@ export default {
 
 :::
 
-:::
+::::
 
 Allows manual control over chunk creation.
 

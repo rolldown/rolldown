@@ -336,6 +336,24 @@ export default {
 };
 ```
 
+```js
+// ✅ Correct: Use relative paths without leading './'
+export default {
+  output: {
+    entryFileNames: 'entries/[name]-[hash].js',
+  },
+};
+```
+
+```js
+// ❌ Incorrect: Do not use leading './' or '../'
+export default {
+  output: {
+    entryFileNames: './entries/[name].js', // This is invalid
+  },
+};
+```
+
 ## chunkFileNames
 
 - **Type:** `string | ((chunkInfo: PreRenderedChunk) => string)`
@@ -352,6 +370,24 @@ Placeholders: `[name]`, `[hash]`
 export default {
   output: {
     chunkFileNames: 'chunks/[name].[hash].js',
+  },
+};
+```
+
+```js
+// ✅ Correct: Use relative paths without leading './'
+export default {
+  output: {
+    chunkFileNames: 'chunks/[name]-[hash].js',
+  },
+};
+```
+
+```js
+// ❌ Incorrect: Do not use leading './' or '../'
+export default {
+  output: {
+    chunkFileNames: './chunks/[name].js', // This is invalid
   },
 };
 ```
@@ -376,6 +412,24 @@ export default {
 };
 ```
 
+```js
+// ✅ Correct: Use relative paths without leading './'
+export default {
+  output: {
+    cssEntryFileNames: 'styles/[name]-[hash].css',
+  },
+};
+```
+
+```js
+// ❌ Incorrect: Do not use leading './' or '../'
+export default {
+  output: {
+    cssEntryFileNames: './styles/[name].css', // This is invalid
+  },
+};
+```
+
 ## cssChunkFileNames
 
 - **Type:** `string | ((chunkInfo: PreRenderedChunk) => string)`
@@ -392,6 +446,24 @@ Placeholders: `[name]`, `[hash]`
 export default {
   output: {
     cssChunkFileNames: 'styles/chunks/[name].[hash].css',
+  },
+};
+```
+
+```js
+// ✅ Correct: Use relative paths without leading './'
+export default {
+  output: {
+    cssChunkFileNames: 'styles/chunks/[name]-[hash].css',
+  },
+};
+```
+
+```js
+// ❌ Incorrect: Do not use leading './' or '../'
+export default {
+  output: {
+    cssChunkFileNames: './styles/chunks/[name].css', // This is invalid
   },
 };
 ```

@@ -155,9 +155,97 @@ export interface OutputOptions {
   extend?: boolean;
   esModule?: boolean | 'if-default-prop';
   assetFileNames?: string | AssetFileNamesFunction;
+  /**
+   * Pattern for naming entry chunk files.
+   *
+   * - **Type:** `string | ((chunkInfo: PreRenderedChunk) => string)`
+   * - **Default:** `'[name].js'`
+   *
+   * Available placeholders:
+   * - `[name]`: The entry name
+   * - `[hash]`: Content hash of the chunk
+   *
+   * @example
+   * ```js
+   * // Correct: Relative path without leading './'
+   * entryFileNames: 'entries/[name]-[hash].js'
+   * ```
+   *
+   * @example
+   * ```js
+   * // ❌ Incorrect: Do not use leading './' or '../'
+   * // entryFileNames: './entries/[name].js'  // This is invalid
+   * ```
+   */
   entryFileNames?: string | ChunkFileNamesFunction;
+  /**
+   * Pattern for naming non-entry chunk files (code-split chunks).
+   *
+   * - **Type:** `string | ((chunkInfo: PreRenderedChunk) => string)`
+   * - **Default:** `'[name]-[hash].js'`
+   *
+   * Available placeholders:
+   * - `[name]`: The chunk name
+   * - `[hash]`: Content hash of the chunk
+   *
+   * @example
+   * ```js
+   * // Correct: Relative path without leading './'
+   * chunkFileNames: 'chunks/[name]-[hash].js'
+   * ```
+   *
+   * @example
+   * ```js
+   * // ❌ Incorrect: Do not use leading './' or '../'
+   * // chunkFileNames: './chunks/[name].js'  // This is invalid
+   * ```
+   */
   chunkFileNames?: string | ChunkFileNamesFunction;
+  /**
+   * Pattern for naming CSS entry files.
+   *
+   * - **Type:** `string | ((chunkInfo: PreRenderedChunk) => string)`
+   * - **Default:** `'[name].css'`
+   *
+   * Available placeholders:
+   * - `[name]`: The entry name
+   * - `[hash]`: Content hash of the chunk
+   *
+   * @example
+   * ```js
+   * // Correct: Relative path without leading './'
+   * cssEntryFileNames: 'styles/[name]-[hash].css'
+   * ```
+   *
+   * @example
+   * ```js
+   * // ❌ Incorrect: Do not use leading './' or '../'
+   * // cssEntryFileNames: './styles/[name].css'  // This is invalid
+   * ```
+   */
   cssEntryFileNames?: string | ChunkFileNamesFunction;
+  /**
+   * Pattern for naming CSS chunk files (non-entry CSS files).
+   *
+   * - **Type:** `string | ((chunkInfo: PreRenderedChunk) => string)`
+   * - **Default:** `'[name]-[hash].css'`
+   *
+   * Available placeholders:
+   * - `[name]`: The chunk name
+   * - `[hash]`: Content hash of the chunk
+   *
+   * @example
+   * ```js
+   * // Correct: Relative path without leading './'
+   * cssChunkFileNames: 'styles/chunks/[name]-[hash].css'
+   * ```
+   *
+   * @example
+   * ```js
+   * // ❌ Incorrect: Do not use leading './' or '../'
+   * // cssChunkFileNames: './styles/chunks/[name].css'  // This is invalid
+   * ```
+   */
   cssChunkFileNames?: string | ChunkFileNamesFunction;
   sanitizeFileName?: boolean | SanitizeFileNameFunction;
   /**

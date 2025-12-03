@@ -1,4 +1,90 @@
 
+## [1.0.0-beta.53] - 2025-12-03
+
+### 💥 BREAKING CHANGES
+
+- drop `i686-pc-windows-msvc` target support (#7230) by @sapphi-red
+
+### 🚀 Features
+
+- rolldown: export `createTokioRuntime` for tsdown (#7264) by @shulaoda
+- rolldown_plugin_vite_html: sync `moduleSideEffects` for already loaded modules (#7254) by @shulaoda
+- rolldown_plugin_vite_html: load module scripts with side effects to prevent tree-shaking (#7244) by @shulaoda
+- rolldown_plugin_vite_css_post: implement `cssScopeTo` for scoped CSS tree-shaking (#7240) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- chunk side effects calculation (#7273) by @IWANABETHATGUY
+- node: `output.generateCode.preset: 'es2015'` should set `output.generateCode.symbols: true` by default (#7314) by @sapphi-red
+- skip name helper for classes with static name property (#7312) by @IWANABETHATGUY
+- preserve chunk imports relationship after chunk merging (#7303) by @shulaoda
+- dev: make `register_modules` async (#7289) by @hyf0
+- preserve computed property in object destructuring (#7288) by @IWANABETHATGUY
+- support dynamic imports with shared dependencies (#7261) by @IWANABETHATGUY
+- call `defer_sync_scan_data` in non-incremental build mode (#7255) by @shulaoda
+- optimize chunk merging for shared entry points (#7194) by @IWANABETHATGUY
+- add indentation for UMD format output (#7263) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: pass options to `isLegacy` callback for proper legacy detection (#7260) by @shulaoda
+- rolldown_plugin_vite_css_post: also detect `?inline=true` query for inlined CSS (#7245) by @shulaoda
+- rolldown_plugin_vite_css_post: distinguish empty CSS from no CSS (#7241) by @shulaoda
+- add Windows support for t-run command (#7242) by @IWANABETHATGUY
+- cjs: prevent duplicate require declarations for external modules with preserveModules (#7234) by @logaretm
+- rolldown_plugin_vite_resolve: resolve from root for virtual modules (#7236) by @sapphi-red
+- include entry level external modules in chunk exports (#7218) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- dev: make `removeClient` async (#7313) by @hyf0
+- move chunk merging code out of code_splitting.rs (#7285) by @IWANABETHATGUY
+- extract common function util for chunk merging (#7271) by @IWANABETHATGUY
+- use iterative method to merge chunks (#7256) by @IWANABETHATGUY
+- use concat_string! instead of string replace for generating chunk level exports (#7247) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- add sequential hook execution difference in plugin-api.md (#7308) by @Copilot
+- add migration example from onwarn to onLog (#7299) by @Copilot
+- add migration example for manualChunks to advancedChunks (#7298) by @Copilot
+- deps: bump vitepress to fix build (#7307) by @sapphi-red
+- examples & text for experimental.resolveNewUrlToAsset (#7259) by @TheAlexLichter
+
+### ⚡ Performance
+
+- rolldown_plugin_vite_css_post: lazily load `cssScopeTo` from JS module options (#7253) by @shulaoda
+- rolldown_plugin_vite_css_post: avoid unnecessary string clones in `resolve_asset_urls_in_css` (#7250) by @shulaoda
+
+### 🧪 Testing
+
+- generate relative path like name in advanced chunks (#7267) by @IWANABETHATGUY
+- add test case for preserveEntrySignatures with re-exports (#7279) by @IWANABETHATGUY
+- add test262 integration tests (#7196) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update oxc (#7318) by @renovate[bot]
+- deps: update napi (#7317) by @renovate[bot]
+- deps: update oxc to v0.100.0 (#7301) by @renovate[bot]
+- deps: downgrade pnpm to 10.23.0 to fix Netlify build (#7306) by @shulaoda
+- add `trustPolicyExclude` for chokidar and semver (#7302) by @sapphi-red
+- update pnpm lockfile (#7291) by @IWANABETHATGUY
+- deps: update npm packages (#7272) by @renovate[bot]
+- deps: update rust crates (#7270) by @renovate[bot]
+- deps: update oxc (#7262) by @renovate[bot]
+- deps: update github-actions (#7269) by @renovate[bot]
+- deps: update dependency dprint-typescript to v0.95.13 (#7268) by @renovate[bot]
+- deps: update `html5gum` to 0.8.1 (#7265) by @shulaoda
+- rolldown: remove unused `getModuleOptions` from `PluginContext` (#7266) by @shulaoda
+- remove unnecessary justfile ignore (#7243) by @IWANABETHATGUY
+- deps: update oxc apps (#7238) by @renovate[bot]
+- add `nul` to workaround https://github.com/anthropics/claude-c… (#7237) by @IWANABETHATGUY
+- deps: update dependency valibot to v1.2.0 [security] (#7231) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.40.0 (#7232) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @logaretm made their first contribution in [#7234](https://github.com/rolldown/rolldown/pull/7234)
+
+
 ## [1.0.0-beta.52] - 2025-11-26
 
 ### 💥 BREAKING CHANGES

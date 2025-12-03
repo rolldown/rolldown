@@ -25,19 +25,24 @@ __name(dep_default, "default");
 //#endregion
 //#region dep-class.js
 var dep_class_default = class {
+	static {
+		__name(this, "default");
+	}
 	constructor() {
 		this.type = "anonymous default class";
 	}
 };
-__name(dep_class_default, "default");
 
 //#endregion
 //#region main.js
 var count = 100;
 assert.strictEqual(dep_default.name, "default", "Anonymous default export function name should be \"default\"");
 assert.strictEqual(dep_class_default.name, "default", "Anonymous default export class name should be \"default\"");
-var main_default = class {};
-__name(main_default, "default");
+var main_default = class {
+	static {
+		__name(this, "default");
+	}
+};
 assert.strictEqual(count, 100);
 
 //#endregion

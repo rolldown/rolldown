@@ -2326,7 +2326,7 @@ export interface BindingViteManifestPluginConfig {
   root: string
   outPath: string
   isEnableV2?: boolean
-  isLegacy?: () => boolean
+  isLegacy?: (args: BindingNormalizedOptions) => boolean
   cssEntries: () => Record<string, string>
 }
 
@@ -2365,6 +2365,7 @@ export interface BindingViteResolvePluginConfig {
   external: true | string[]
   noExternal: true | Array<string | RegExp>
   dedupe: Array<string>
+  disableCache?: boolean
   legacyInconsistentCjsInterop?: boolean
   finalizeBareSpecifier?: (resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>
   finalizeOtherSpecifiers?: (resolvedId: string, rawId: string) => VoidNullable<string>

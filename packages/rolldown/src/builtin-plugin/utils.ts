@@ -6,6 +6,7 @@ import {
   type BindingOutputs,
   type BindingViteCssPostPluginConfig,
   type BindingViteHtmlPluginConfig,
+  type BindingViteManifestPluginConfig,
 } from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
@@ -24,6 +25,7 @@ import type {
   IndexHtmlTransformContext,
   ViteHtmlPluginOptions,
 } from './vite-html-plugin';
+import type { ViteManifestPluginConfig } from './vite-manifest-plugin';
 
 type BindingCallableBuiltinPluginLike = {
   [K in keyof BindingCallableBuiltinPlugin]: BindingCallableBuiltinPlugin[K];
@@ -81,6 +83,27 @@ export function bindingifyBuiltInPlugin(
   return {
     __name: plugin.name,
     options: plugin._options,
+  };
+}
+
+export function bindingifyManifestPlugin(
+  plugin: BuiltinPlugin,
+  pluginContextData: PluginContextData,
+): BindingBuiltinPlugin {
+  const { isOutputOptionsForLegacyChunks, ...options } = plugin
+    ._options as ViteManifestPluginConfig;
+  return {
+    __name: plugin.name,
+    options: {
+      ...options,
+      isLegacy: isOutputOptionsForLegacyChunks
+        ? (opts) => {
+          return isOutputOptionsForLegacyChunks(
+            pluginContextData.getOutputOptions(opts),
+          );
+        }
+        : undefined,
+    } as BindingViteManifestPluginConfig,
   };
 }
 

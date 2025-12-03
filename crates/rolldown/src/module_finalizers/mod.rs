@@ -458,7 +458,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // if there is no export, we should generate `var ns = {}` instead of `var ns = __export({}, {})`
     // else construct `__export(ns_name, { prop_name: () => returned, ... })`
     let module_namespace_rhs = if arg_obj_expr.properties.is_empty() {
-      Expression::ObjectExpression(self.builder().alloc(arg_obj_expr))
+      if self.ctx.options.generated_code.symbols
+        && self.ctx.module.importers_idx.contains(&self.ctx.module.namespace_object_ref.owner)
+      {
+        self.snippet.object_freeze_symbol_tostringtag()
+      } else {
+        Expression::ObjectExpression(self.builder().alloc(arg_obj_expr))
+      }
     } else {
       let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc));
       let args = if self.ctx.options.generated_code.symbols {

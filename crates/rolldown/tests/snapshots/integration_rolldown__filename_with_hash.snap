@@ -5689,6 +5689,10 @@ expression: output
 
 - main-!~{000}~.js => main-CDci1JBl.js
 
+# tests/rolldown/topics/generated_code/symbol_self_import
+
+- main-!~{000}~.js => main-CAwmmxDx.js
+
 # tests/rolldown/topics/generated_code/symbols
 
 - main-!~{000}~.js => main-D9Bb16oY.js

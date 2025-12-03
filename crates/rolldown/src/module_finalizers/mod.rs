@@ -1300,20 +1300,22 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 self.canonical_name_for(self.ctx.module.default_export_ref);
 
               // Check if we need to add __name() helper for anonymous function/class expressions or arrow functions
-              let init_expr = expr.take_in(self.alloc);
+              let mut init_expr = expr.take_in(self.alloc);
               if self.ctx.options.keep_names {
-                let inner_expr = init_expr.without_parentheses();
+                let inner_expr = init_expr.without_parentheses_mut();
                 let binding = match inner_expr {
                   ast::Expression::FunctionExpression(func) if func.id.is_none() => {
                     Some(CompactStr::from("default"))
                   }
-                  ast::Expression::ClassExpression(class) if class.id.is_none() => {
-                    // Skip if class has static name property
-                    if Self::class_body_has_static_name(&class.body) {
-                      None
-                    } else {
-                      Some(CompactStr::from("default"))
+                  ast::Expression::ClassExpression(class_expression)
+                    if class_expression.id.is_none() =>
+                  {
+                    if let Some(element) =
+                      self.keep_name_helper_for_class(None, &class_expression.body, true)
+                    {
+                      class_expression.body.body.insert(0, element);
                     }
+                    None
                   }
                   ast::Expression::ArrowFunctionExpression(_) => Some(CompactStr::from("default")),
                   _ => None,
@@ -1364,14 +1366,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
                 // When keep_names is enabled, preserve "default" as the class name
                 // Skip if class has static name property
-                if self.ctx.options.keep_names && !Self::class_body_has_static_name(&class.body) {
-                  // current statement will be pushed to program.body, so the insert position is program.body.len() + 1
-                  let insert_position = program.body.len() + 1;
-                  self.keep_name_statement_to_insert.push((
-                    insert_position,
-                    CompactStr::new("default"),
-                    canonical_name_for_default_export_ref.clone(),
-                  ));
+                if self.ctx.options.keep_names {
+                  if let Some(element) = self.keep_name_helper_for_class(None, &class.body, true) {
+                    class.body.body.insert(0, element);
+                  }
                 }
               }
 
@@ -1451,6 +1449,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &self,
     id: Option<&BindingIdentifier<'ast>>,
     class_body: &ast::ClassBody<'ast>,
+    is_default: bool,
   ) -> Option<ClassElement<'ast>> {
     if !self.ctx.options.keep_names {
       return None;
@@ -1459,8 +1458,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if Self::class_body_has_static_name(class_body) {
       return None;
     }
-    let (original_name, _) = self.get_conflicted_info(id.as_ref()?)?;
-    let original_name: CompactStr = CompactStr::new(original_name);
+    let original_name = if is_default {
+      CompactStr::from("default")
+    } else {
+      let (original_name, _) = self.get_conflicted_info(id.as_ref()?)?;
+      let original_name: CompactStr = CompactStr::new(original_name);
+      original_name
+    };
 
     let name_ref = self.canonical_ref_for_runtime("__name");
     let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);

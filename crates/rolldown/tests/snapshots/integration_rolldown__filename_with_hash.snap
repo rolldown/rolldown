@@ -4891,7 +4891,7 @@ expression: output
 
 # tests/rolldown/issues/7150
 
-- main-!~{000}~.js => main-CLqA2wpn.js
+- main-!~{000}~.js => main-D8rw7uuc.js
 - main2-!~{001}~.js => main2---eBAgtF.js
 - chunk-!~{002}~.js => chunk-CALPBdpR.js
 
@@ -5827,7 +5827,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/parenthesized_default_export
 
-- main-!~{000}~.js => main-4opC75UP.js
+- main-!~{000}~.js => main-DgH0nPHk.js
 
 # tests/rolldown/topics/live_bindings/default_export_binding
 

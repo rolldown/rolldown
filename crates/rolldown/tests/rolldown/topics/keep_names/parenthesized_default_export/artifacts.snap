@@ -15,8 +15,11 @@ __name(dep_default, "default");
 
 //#endregion
 //#region dep-class.js
-var dep_class_default = class {};
-__name(dep_class_default, "default");
+var dep_class_default = class {
+	static {
+		__name(this, "default");
+	}
+};
 
 //#endregion
 //#region dep-arrow.js

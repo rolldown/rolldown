@@ -15,6 +15,7 @@ extend-exclude = [
   "/packages/rollup-tests/src/ignored-tests.js",
   "/packages/vite-tests/repo",
   "/rollup",
+  "/test262",
   "crates/rolldown/tests/esbuild/**/*",
   "packages/rolldown/src/binding.cjs",
   "packages/rolldown/src/binding.js",

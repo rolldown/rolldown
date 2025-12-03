@@ -29,6 +29,7 @@
     "packages/vite-tests",
     "pnpm-lock.yaml",
     "rollup",
+    "test262",
     "scripts/snap-diff/stats",
     "scripts/snap-diff/summary",
     "**/.pnp.cjs",

@@ -9,3 +9,4 @@ packages/rolldown/tests
 
 # Submodules
 rollup/
+test262/

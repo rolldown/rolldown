@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Based on https://github.com/vuejs/vitepress/blob/1ec84c15040bc3865461c61b651e487f72c3c271/src/client/theme-default/components/VPHero.vue
 import { type Ref, inject } from 'vue'
-import { VPButton, VPImage, type DefaultTheme } from 'vitepress/theme'
+import { VPButton, VPImage } from '@voidzero-dev/vitepress-theme'
+import { type DefaultTheme } from 'vitepress/theme'
 import RolldownVideoModal from '../RolldownVideoModal.vue'
 
 export interface HeroAction {

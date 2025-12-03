@@ -302,6 +302,12 @@ importers:
 
   docs:
     dependencies:
+      '@docsearch/css':
+        specifier: ^4.3.2
+        version: 4.3.2
+      '@docsearch/js':
+        specifier: ^4.3.2
+        version: 4.3.2
       '@vueuse/core':
         specifier: 'catalog:'
         version: 14.0.0(vue@3.5.24(typescript@5.9.3))
@@ -309,6 +315,9 @@ importers:
         specifier: 'catalog:'
         version: 3.5.24(typescript@5.9.3)
     devDependencies:
+      '@voidzero-dev/vitepress-theme':
+        specifier: link:../../vitepress-theme
+        version: link:../../vitepress-theme
       oxc-minify:
         specifier: 'catalog:'
         version: 0.101.0

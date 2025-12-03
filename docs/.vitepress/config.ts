@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { UserConfig } from 'vitepress';
 import { defineConfig } from 'vitepress';
@@ -232,6 +233,7 @@ export default defineConfig({
   ],
 
   themeConfig: {
+    variant: 'rolldown',
     search: {
       provider: 'algolia',
       options: {
@@ -333,6 +335,21 @@ export default defineConfig({
   },
 
   vite: {
+    optimizeDeps: {
+      exclude: ['@docsearch/css'],
+    },
+    server: {
+      fs: {
+        // Allow serving files from the linked theme package
+        allow: [resolve(__dirname, '..', '..', '..')],
+      },
+      watch: {
+        ignored: ['!**/node_modules/@voidzero-dev/**'],
+      },
+    },
+    ssr: {
+      noExternal: ['@voidzero-dev/vitepress-theme'],
+    },
     plugins: [
       groupIconVitePlugin({
         customIcon: {

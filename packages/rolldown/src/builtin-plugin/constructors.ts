@@ -7,7 +7,6 @@ import type {
   BindingViteHtmlInlineProxyPluginConfig,
   BindingViteImportGlobPluginConfig,
   BindingViteJsonPluginConfig,
-  BindingViteManifestPluginConfig,
   BindingViteModulePreloadPolyfillPluginConfig,
   BindingViteReactRefreshWrapperPluginConfig,
   BindingViteReporterPluginConfig,
@@ -54,12 +53,6 @@ export function viteReporterPlugin(
   config?: BindingViteReporterPluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-reporter', config);
-}
-
-export function viteManifestPlugin(
-  config?: BindingViteManifestPluginConfig,
-): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:vite-manifest', config);
 }
 
 export function viteWasmHelperPlugin(

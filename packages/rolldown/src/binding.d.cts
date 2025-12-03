@@ -2326,7 +2326,7 @@ export interface BindingViteManifestPluginConfig {
   root: string
   outPath: string
   isEnableV2?: boolean
-  isLegacy?: () => boolean
+  isLegacy?: (args: BindingNormalizedOptions) => boolean
   cssEntries: () => Record<string, string>
 }
 

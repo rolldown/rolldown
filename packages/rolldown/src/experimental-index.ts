@@ -37,7 +37,6 @@ export {
   viteImportGlobPlugin,
   viteJsonPlugin,
   viteLoadFallbackPlugin,
-  viteManifestPlugin,
   viteModulePreloadPolyfillPlugin,
   viteReactRefreshWrapperPlugin,
   viteReporterPlugin,
@@ -67,3 +66,4 @@ export {
   viteHtmlPlugin,
   type ViteHtmlPluginOptions,
 } from './builtin-plugin/vite-html-plugin';
+export { viteManifestPlugin } from './builtin-plugin/vite-manifest-plugin';

@@ -3,15 +3,18 @@ use std::sync::Arc;
 use rolldown_plugin_vite_manifest::{IsLegacyFn, ViteManifestPlugin};
 use rustc_hash::FxHashMap;
 
-use crate::types::js_callback::{JsCallback, JsCallbackExt as _};
+use crate::types::{
+  binding_normalized_options::BindingNormalizedOptions,
+  js_callback::{JsCallback, JsCallbackExt as _},
+};
 
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingViteManifestPluginConfig {
   pub root: String,
   pub out_path: String,
   pub is_enable_v2: Option<bool>,
-  #[napi(ts_type = "() => boolean")]
-  pub is_legacy: Option<JsCallback<(), bool>>,
+  #[napi(ts_type = "(args: BindingNormalizedOptions) => boolean")]
+  pub is_legacy: Option<JsCallback<BindingNormalizedOptions, bool>>,
   #[napi(ts_type = "() => Record<string, string>")]
   pub css_entries: JsCallback<(), FxHashMap<String, String>>,
 }
@@ -23,9 +26,15 @@ impl From<BindingViteManifestPluginConfig> for ViteManifestPlugin {
       out_path: value.out_path,
       is_enable_v2: value.is_enable_v2.unwrap_or_default(),
       is_legacy: value.is_legacy.map(|cb| -> Arc<IsLegacyFn> {
-        Arc::new(move || {
+        Arc::new(move |opts| {
+          let opts = Arc::clone(opts);
           let is_legacy_fn = Arc::clone(&cb);
-          Box::pin(async move { is_legacy_fn.invoke_async(()).await.map_err(anyhow::Error::from) })
+          Box::pin(async move {
+            is_legacy_fn
+              .invoke_async(BindingNormalizedOptions::new(opts))
+              .await
+              .map_err(anyhow::Error::from)
+          })
         })
       }),
       css_entries: Arc::new(move || {

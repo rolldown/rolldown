@@ -2,14 +2,15 @@ mod utils;
 
 use std::{borrow::Cow, collections::BTreeMap, path::Path, pin::Pin, sync::Arc};
 
-use rolldown_common::{EmittedAsset, Output};
+use rolldown_common::{EmittedAsset, NormalizedBundlerOptions, Output};
 use rolldown_plugin::{HookNoopReturn, HookUsage, Plugin, PluginContext};
 use rolldown_plugin_utils::constants::{CSSEntriesCache, ViteMetadata};
 use rolldown_utils::rustc_hash::FxHashMapExt as _;
 use rustc_hash::FxHashMap;
 
-pub type IsLegacyFn =
-  dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send>> + Send + Sync;
+pub type IsLegacyFn = dyn Fn(&Arc<NormalizedBundlerOptions>) -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send>>
+  + Send
+  + Sync;
 
 pub type CssEntriesFn = dyn Fn() -> Pin<Box<dyn Future<Output = anyhow::Result<FxHashMap<String, String>>> + Send>>
   + Send
@@ -37,7 +38,7 @@ impl Plugin for ViteManifestPlugin {
     args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
   ) -> HookNoopReturn {
     let is_legacy = match &self.is_legacy {
-      Some(is_legacy_fn) => is_legacy_fn().await?,
+      Some(is_legacy_fn) => is_legacy_fn(args.options).await?,
       None => false,
     };
 

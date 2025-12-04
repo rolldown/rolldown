@@ -89,67 +89,113 @@ impl GenerateStage<'_> {
         .filter(|idx| entry_chunk_idx.contains(idx))
         .collect_vec();
 
-      let item = Self::try_insert_into_existing_chunk(
+      let merge_target = Self::try_insert_into_existing_chunk(
         &chunk_idxs,
         &static_entry_chunk_reference,
         chunk_graph,
         &self.link_output.module_table,
       );
-      match item {
-        Some(chunk_idx)
-          if !matches!(
-            chunk_graph.chunk_table[chunk_idx].preserve_entry_signature,
-            Some(PreserveEntrySignatures::Strict)
-          ) =>
-        {
-          // Initialize imports_from_other_chunks entries for user-defined entry chunks
-          // that will reference the merged chunk, even if they don't directly import symbols.
-          // This ensures proper chunk ordering and execution.
-          for idx in chunk_idxs.iter().copied().filter(|idx| *idx != chunk_idx) {
-            let Some(chunk) = chunk_graph.chunk_table.get_mut(idx) else {
-              continue;
-            };
-            if !matches!(chunk.kind, ChunkKind::EntryPoint { meta, ..} if meta.contains(ChunkMeta::UserDefinedEntry))
-            {
-              continue;
-            }
-            chunk.imports_from_other_chunks.entry(chunk_idx).or_default();
-          }
 
-          for module_idx in modules {
-            chunk_graph.add_module_to_chunk(
-              module_idx,
-              chunk_idx,
-              self.link_output.metas[module_idx].depended_runtime_helper,
-            );
-          }
-        }
-        _ => {
-          let mut chunk = Chunk::new(
-            None,
-            None,
-            bits.clone(),
-            vec![],
-            ChunkKind::Common,
-            input_base.clone(),
-            None,
-          );
-          chunk.add_creation_reason(
-            ChunkCreationReason::CommonChunk { bits: &bits, link_output: self.link_output },
-            self.options,
-          );
-          let chunk_id = chunk_graph.add_chunk(chunk);
-          for module_idx in modules {
-            chunk_graph.add_module_to_chunk(
-              module_idx,
-              chunk_id,
-              self.link_output.metas[module_idx].depended_runtime_helper,
-            );
-          }
-          bits_to_chunk.insert(bits, chunk_id);
+      self.assign_modules_to_chunk(
+        merge_target,
+        &chunk_idxs,
+        modules,
+        bits,
+        chunk_graph,
+        bits_to_chunk,
+        input_base,
+      );
+    }
+  }
+
+  /// Assigns modules to either an existing entry chunk or a new common chunk.
+  ///
+  /// If a valid merge target is found (and it doesn't have strict entry signature preservation),
+  /// modules are merged into that existing chunk. Otherwise, a new common chunk is created.
+  #[expect(clippy::too_many_arguments)]
+  fn assign_modules_to_chunk(
+    &self,
+    merge_target: Option<ChunkIdx>,
+    chunk_idxs: &[ChunkIdx],
+    modules: Vec<ModuleIdx>,
+    bits: BitSet,
+    chunk_graph: &mut ChunkGraph,
+    bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
+    input_base: &ArcStr,
+  ) {
+    match merge_target {
+      Some(chunk_idx) => {
+        let chunk = &chunk_graph.chunk_table[chunk_idx];
+        let is_async_entry_only = matches!(chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta == ChunkMeta::DynamicImported);
+        if matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict))
+          && !is_async_entry_only
+        {
+          self.create_common_chunk(modules, bits, chunk_graph, bits_to_chunk, input_base);
+        } else {
+          self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, modules, chunk_graph);
         }
       }
+      _ => {
+        self.create_common_chunk(modules, bits, chunk_graph, bits_to_chunk, input_base);
+      }
     }
+  }
+
+  /// Merges modules into an existing entry chunk.
+  ///
+  /// Also initializes imports_from_other_chunks entries for user-defined entry chunks
+  /// that will reference the merged chunk, ensuring proper chunk ordering and execution.
+  fn merge_modules_into_existing_chunk(
+    &self,
+    target_chunk_idx: ChunkIdx,
+    chunk_idxs: &[ChunkIdx],
+    modules: Vec<ModuleIdx>,
+    chunk_graph: &mut ChunkGraph,
+  ) {
+    for idx in chunk_idxs.iter().copied().filter(|idx| *idx != target_chunk_idx) {
+      let Some(chunk) = chunk_graph.chunk_table.get_mut(idx) else {
+        continue;
+      };
+      if !matches!(chunk.kind, ChunkKind::EntryPoint { meta, ..} if meta.contains(ChunkMeta::UserDefinedEntry))
+      {
+        continue;
+      }
+      chunk.imports_from_other_chunks.entry(target_chunk_idx).or_default();
+    }
+
+    for module_idx in modules {
+      chunk_graph.add_module_to_chunk(
+        module_idx,
+        target_chunk_idx,
+        self.link_output.metas[module_idx].depended_runtime_helper,
+      );
+    }
+  }
+
+  /// Creates a new common chunk and assigns modules to it.
+  fn create_common_chunk(
+    &self,
+    modules: Vec<ModuleIdx>,
+    bits: BitSet,
+    chunk_graph: &mut ChunkGraph,
+    bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
+    input_base: &ArcStr,
+  ) {
+    let mut chunk =
+      Chunk::new(None, None, bits.clone(), vec![], ChunkKind::Common, input_base.clone(), None);
+    chunk.add_creation_reason(
+      ChunkCreationReason::CommonChunk { bits: &bits, link_output: self.link_output },
+      self.options,
+    );
+    let chunk_id = chunk_graph.add_chunk(chunk);
+    for module_idx in modules {
+      chunk_graph.add_module_to_chunk(
+        module_idx,
+        chunk_id,
+        self.link_output.metas[module_idx].depended_runtime_helper,
+      );
+    }
+    bits_to_chunk.insert(bits, chunk_id);
   }
 
   /// Attempts to find an existing entry chunk that can absorb modules shared between multiple entries.

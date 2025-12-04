@@ -69,6 +69,7 @@
       "entry": ["src/**/*.js", "test/**/*.{js,ts}"],
       "ignoreDependencies": [
         "acorn",
+        "acorn-import-assertions",
         "locate-character",
         "requirejs",
         "terser",

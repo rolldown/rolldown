@@ -84,6 +84,10 @@ module.exports = [
     "rollup@form@recursive-assignments: do not fail for pathological recursive algorithms and circular structures",
     "rollup@form@recursive-literal-values: do not fail for literal values from recursive return values",
     "rollup@form@relative-external-with-global: applies globals to externalised relative imports@generates es",
+    "rollup@form@optimization-in-operator: keep foo structure",
+    "rollup@form@protect-cjs-globals: prevent conflicts with cjs module globals@generates es",
+    "rollup@form@support-using-keyword: Support `using` keyword",
+    "rollup@function@deprecated@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook",
     // Passed. convert reexport to import and export
     "rollup@form@reexport-external-default-and-name: reexports a an external default as a name and imports another name from that dependency@generates es",
     "rollup@form@reexport-external-default-and-namespace: reexports a default external import as default export (when using named exports)@generates es",
@@ -100,6 +104,10 @@ module.exports = [
     "rollup@form@undefined-default-export: handles default exporting undefined",
     "rollup@form@unmodified-default-exports-function-argument: passing unbound default export to function cannot rebind it",
     "rollup@form@yield-expression@missing-space: Inserts space when simplifying yield expression without space",
+    "rollup@form@arbitrary-module-namespace-identifiers: renders exports that are not identifiers@generates es",
+    "rollup@form@arbitrary-module-namespace-identifiers2: renders exports that are not identifiers@generates es",
+    "rollup@form@export-string-name: export string name@generates es",
+    "rollup@form@index-key: index key@generates es",
     // Passed. different code due to inlining
     "rollup@form@assignment-to-exports: declares updated variable in ES output (#755)@generates es",
     "rollup@form@deep-properties-access: handles deeply nested property accesses",
@@ -108,6 +116,8 @@ module.exports = [
     "rollup@form@recursive-computed-members: handle recursive computed member access",
     "rollup@form@recursive-multi-expressions: handles recursive multi-expressions",
     "rollup@form@reexport-star-deshadow: Star reexports scope deshadowing@generates es",
+    "rollup@form@function-id-as-parameter: allows function expression parameters to shadow their id",
+    "rollup@form@remove-whitespace-of-logical-expression: remove the white space of the removed part of LogicalExpression",
 
     // Test is passed. Class related, `class A` -> `var A = class`
     "rollup@form@use-class-name-in-static-block: use the original class name instead of renderName in class body@generates es",
@@ -122,6 +132,9 @@ module.exports = [
     "rollup@form@external-empty-import-no-global: does not expect a global to be provided for empty imports (#1217)@generates es",
     "rollup@form@external-imports: prefixes global names with `global.` when creating UMD bundle (#57)@generates es",
     "rollup@form@super-classes@super-class-prototype-assignment: correctly resolves the prototype of the super class when assigning properites",
+    "rollup@form@computed-properties: computed property keys include declarations of referenced identifiers",
+    "rollup@form@support-decorators-after-export: support decorators after export",
+    "rollup@form@support-decorators-before-export: support decorators before export",
 
     // Passed, but sourcemap/code is different from rollup
     "rollup@function@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook",

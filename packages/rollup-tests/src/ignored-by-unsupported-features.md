@@ -13,6 +13,7 @@
 
 ### The `load` hook return `ast` is not supported
  - rollup@function@uses-supplied-ast: uses supplied AST
+ - rollup@form@custom-ast: supports returning a custom AST from a plugin
 
 ### The `resolveId` hook `resolvedBy` is not supported
  - rollup@function@validate-resolved-by-logic: validate resolvedBy logic
@@ -100,7 +101,12 @@
 ### The `PluginContext.error` accpet more arguments at `transform` hooks 
  - rollup@function@plugin-error-transform-pos: `this.error(...)` accepts number as second parameter (#5044)
  - rollup@function@plugin-error-loc-instead-pos: `this.error(...)` accepts { line, column } object as second parameter (#1265)
- 
+
+### `originalFileName` / `originalFileNames` is not supported properly
+- rollup@function@deprecated@emit-file@original-file-name: forwards the original file name to other hooks
+- rollup@function@emit-file@original-file-name: forwards the original file name to other hooks
+- rollup@function@emit-file@original-file-names: forwards the original file name to other hooks
+
 ## Options related
 
 ### The `output.format` systemjs is not supported
@@ -308,12 +314,17 @@
  - rollup@form@entry-with-unused-synthetic-exports: does not include unused synthetic namespace object in entry points@generates es
  - rollup@form@merge-namespaces-non-live: merges namespaces without live-bindings
  - rollup@form@merge-namespaces: merges namespaces with live-bindings
+ - rollup@form@namespace-optimization-in-operator-synthetic: disables optimization for synthetic named exports when using the in operator
 
 ### The `import.meta.url` is not compatible
  - rollup@function@import-meta-url-b: Access document.currentScript at the top level
  - rollup@form@import-meta-url: supports import.meta.url@generates es
  - rollup@form@resolve-import-meta-url-export: correctly exports resolved import.meta.url@generates es
  - rollup@form@resolve-import-meta-url: allows to configure import.meta.url@generates es
+ - rollup@function@import-meta-url-with-compact: Get the right URL with compact output
+
+### Does not avoid module-related identifiers
+ - rollup@form@system-module-reserved: does not output reserved system format identifiers@generates es
 
 ### Import Assertions is not supported
  - rollup@function@import-assertions@plugin-assertions-this-resolve: allows plugins to provide assertions for this.resolve'
@@ -333,6 +344,13 @@
  - rollup@form@import-attributes@plugin-attributes-resolveid: allows plugins to read and write import attributes in resolveId
  - rollup@form@import-attributes@removes-dynamic-attributes: keep import attributes for dynamic imports
  - rollup@form@import-attributes@removes-static-attributes: keeps any import attributes on input
+ - rollup@form@import-attributes@keep-attribute-declarations-for-external-dynamic-imports: Keep the attribute declarations for external dynamic imports
+ - rollup@form@import-attributes@keep-dynamic-attributes-assert: keep import attributes for dynamic imports with "assert" key@generates es
+ - rollup@form@import-attributes@keep-dynamic-attributes-default: keep import attributes for dynamic imports@generates es
+ - rollup@form@import-attributes@keep-dynamic-attributes-with: keep import attributes for dynamic imports with "with" key@generates es
+ - rollup@form@import-attributes@keeps-static-attributes-key-assert: keeps any import attributes on input using import attributes with "with" key@generates es
+ - rollup@form@import-attributes@keeps-static-attributes-key-default: keeps any import attributes on input using import attributes with "with" key@generates es
+ - rollup@form@import-attributes@keeps-static-attributes-key-with: keeps any import attributes on input using import attributes with "with" key@generates es
 
 ### watch behavior is not compatible yet
  - rollup@hooks@allows to enforce plugin hook order in watch mode
@@ -361,6 +379,16 @@
  - rollup@form@proper-this-context: make sure "this" respects the context for arrow functions
  - rollup@form@this-is-undefined: top-level `this` expression is rewritten as `undefined`@generates es
  - rollup@function@warn-on-top-level-this: warns on top-level this (#770)
+ - rollup@sourcemaps@warning-with-coarse-sourcemap: get correct mapping location with coarse sourcemap@generates es
+
+### `__proto__` export is not properly handled
+ - rollup@form@cjs-transpiler-re-exports-1: Disable reexporting the __proto__ from the external module if both output.externalLiveBindings and output.reExportProtoFromExternal are false@generates cjs
+ - rollup@form@cjs-transpiler-re-exports: Compatibility with CJS Transpiler Re-exports if output.externalLiveBindings is false@generates cjs
+ - rollup@form@export-__proto__-from: export __proto__ from@generates es
+ - rollup@form@export-__proto__: export __proto__@generates es
+
+### source map combine logic does not support coarse sourcemap well enough
+- rollup@sourcemaps@combined-sourcemap-3: get correct combined sourcemap of bundled code@generates es
 
 ### The error/warning information is not compatible with rollup
  - rollup@function@warn-on-eval: warns about use of eval
@@ -408,6 +436,61 @@
  - rollup@function@logging@promote-log-to-error: allows turning logs into errors
  - rollup@hooks@Throws when using the "file"" option for multiple chunks
  - rollup@hooks@supports renderError hook
+ - rollup@function@ast-validations@double-named-export: throws on duplicate named exports
+ - rollup@function@ast-validations@double-named-export: throws on duplicate named exports
+ - rollup@function@ast-validations@double-named-reexport: throws on duplicate named exports
+ - rollup@function@ast-validations@double-default-export: throws on double default exports
+ - rollup@function@ast-validations@duplicate-function-export: throws on duplicate namespace exports
+ - rollup@function@ast-validations@duplicate-import-fails: disallows duplicate imports
+ - rollup@function@ast-validations@duplicate-import-specifier-fails: disallows duplicate import specifiers
+ - rollup@function@ast-validations@duplicate-namespace-export: throws on duplicate namespace exports
+ - rollup@function@ast-validations@duplicate-parameter-name: throws on duplicate parameter names as it would when running in strict mode
+ - rollup@function@ast-validations@duplicate-var-export: throws on duplicate exports declared with "var"
+ - rollup@function@ast-validations@reassign-import-fails: disallows assignments to imported bindings
+ - rollup@function@ast-validations@reassign-import-not-at-top-level-fails: disallows assignments to imported bindings not at the top level
+ - rollup@function@ast-validations@redeclare-block-function-function: throws when redeclaring a function binding as a function in a block scope
+ - rollup@function@ast-validations@redeclare-catch-scope-local-variable-function: throws when redeclaring the parameter of a catch scope as a function
+ - rollup@function@ast-validations@redeclare-catch-scope-parameter-function: throws when redeclaring local variable in a catch scope as a function
+ - rollup@function@ast-validations@redeclare-catch-scope-parameter-var-outside-conflict: throws when redeclaring a parameter of a catch scope as a var that conflicts with an outside binding
+ - rollup@function@ast-validations@redeclare-catch-scope-pattern-parameter-var: throws when redeclaring a pattern parameter of a catch scope as a var
+ - rollup@function@ast-validations@redeclare-class-function: throws when redeclaring a class binding as a function
+ - rollup@function@ast-validations@redeclare-const-function: throws when redeclaring a const binding as a function
+ - rollup@function@ast-validations@redeclare-default-import-function: throws when redeclaring a default import with a function
+ - rollup@function@ast-validations@redeclare-import-var: throws when redeclaring an import with a var
+ - rollup@function@ast-validations@redeclare-let-function: throws when redeclaring a let binding as a function
+ - rollup@function@ast-validations@redeclare-let-nested-var: throws when redeclaring a let binding with a nested var
+ - rollup@function@ast-validations@redeclare-nested-var-let: throws when redeclaring a nested var binding with let
+ - rollup@function@ast-validations@redeclare-parameter-let: throws when redeclaring the parameter of a function as a let
+ - rollup@function@ast-validations@redeclare-top-level-function-function: throws when redeclaring a top-level function binding as a function
+ - rollup@function@ast-validations@redeclare-top-level-var-function: throws when redeclaring a top-level var binding as a function
+ - rollup@function@ast-validations@redeclare-var-class: throws when redeclaring a var binding as a class
+ - rollup@function@ast-validations@update-expression-of-import-fails: disallows updates to imported bindings
+ - rollup@function@catch-rust-panic-parse: Catch Rust panics and then throw them in Node when using this.parse
+ - rollup@function@catch-rust-panic: Catch Rust panics and then throw them in Node
+ - rollup@function@exports-are-not-defined: Throw descriptive error message for used export is not defined
+ - rollup@function@load-module-error@buildEnd: buildEnd hooks can use this.error
+ - rollup@function@load-module-error@generateBundle: generateBundle hooks can use this.error
+ - rollup@function@load-module-error@renderChunk: renderChunk hooks can use this.error
+ - rollup@function@load-module-error@renderStart: renderStart hooks can use this.error
+ - rollup@function@load-module-error@resolveId: resolveId hooks can use this.error
+ - rollup@function@logging@log-from-options: can log from the options hook
+ - rollup@function@logging@log-from-plugin-onlog-onwarn: passes logs from plugins to onLog and onwarn
+ - rollup@function@logging@log-from-plugin-onlog: passes logs from plugins to onLog
+ - rollup@function@logging@log-from-plugin-onwarn: passes warn logs from plugins to onwarn
+ - rollup@function@logging@log-from-plugin-options-onlog-onwarn: passes logs from plugins to onLog and onwarn
+ - rollup@function@logging@log-from-plugin-options-onlog: passes logs from plugins to onLog
+ - rollup@function@logging@log-from-plugin-options-onwarn: passes warn logs from plugins to onwarn
+ - rollup@function@logging@log-from-plugin-simple: prints logs from plugins via input options if there are no handlers
+ - rollup@function@logging@loglevel-debug: shows all logs for logLevel:debug
+ - rollup@function@logging@loglevel-info: does not show debug logs for logLevel:info
+ - rollup@function@logging@loglevel-warn: only shows warning logs for logLevel:warn
+ - rollup@function@logging@no-log-with-position: does not support passing a position to this.warn/info/debug outside the transform hook
+ - rollup@function@logging@plugin-order: allows to order plugins when logging
+ - rollup@function@logging@transform-log-with-position: allows passing a position to this.warn/info/debug in the transform hook
+ - rollup@function@missing-entry-export: throws when exporting something that does not exist from an entry
+ - rollup@function@plugin-warn-loc-instead-pos: `this.warn(...)` accepts { line, column } object as second parameter (#1265)
+ - rollup@function@plugin-warn: plugin transform hooks can use `this.warn({...}, char)` (#1140)
+ - 
 
 ### The error/warning not implement
  - rollup@hooks@Throws when using the "sourcemapFile" option for multiple chunks
@@ -505,3 +588,12 @@
  - rollup@function@emit-file@asset-source-missing5: throws when not setting the asset source and accessing the asset URL
  - rollup@function@emit-file@asset-source-missing: throws when not setting the asset source
  - rollup@function@emit-file@invalid-reference-id: throws for invalid reference ids
+ - rollup@form@cycles-dependency-with-TLA-await-import: throw a warn when a cycle is detected which includes a top-level await import
+ - rollup@function@deprecations@asset-filename-name: marks the "name" property of emitted assets as deprecated in assetFileNames
+ - rollup@function@deprecations@asset-filename-originalfilename: marks the "name" property of emitted assets as deprecated in assetFileNames
+ - rollup@function@deprecations@asset-name-in-bundle: marks the "name" property of emitted assets as deprecated in generateBundle
+ - rollup@function@deprecations@asset-originalfilename-in-bundle: marks the "originalFileName" property of emitted assets as deprecated in generateBundle
+ - rollup@function@deprecations@asset-render-chunk-name-in-bundle: marks the "name" property of emitted assets as deprecated in generateBundle when emitted during generate phase
+ - rollup@function@deprecations@asset-render-chunk-originalfilename-in-bundle: marks the "originalFileName" property of emitted assets as deprecated in generateBundle when emitted during generate phase
+ - rollup@function@optional-chaining-namespace: handles optional chaining with namespace
+ - rollup@function@unused-import-2: warns on unused imports ([#595])

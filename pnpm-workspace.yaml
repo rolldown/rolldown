@@ -111,3 +111,4 @@ catalog:
   'web-tree-sitter': '^0.25.0'
   'valibot': '1.2.0'
   'tsx': '^4.20.6'
+  'acorn-import-assertions': '^1.9.0'

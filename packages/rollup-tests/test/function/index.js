@@ -74,9 +74,16 @@ runTestSuiteWithSamples(
 	 * @param {import('../types').TestConfigFunction} config
 	 */
 	(directory, config) => {
+		if (
+			// this test modifies Object.prototype and would interfere with other tests
+			directory.replaceAll('\\', '/')
+				.endsWith('samples/wrap-empty-object-with-double-brackets')
+		) {
+			config.skip = true;
+		}
 		(config.skip ? it.skip : config.solo ? it.only : it)(
 			path.basename(directory) + ': ' + config.description,
-			async () => {		
+			async () => {
 				if (config.show) console.group(path.basename(directory));
 				if (config.before) {
 					await config.before();

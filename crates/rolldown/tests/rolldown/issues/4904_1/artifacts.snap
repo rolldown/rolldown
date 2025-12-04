@@ -24,3 +24,37 @@ const b = 42;
 //#endregion
 export { a, b };
 ```
+
+# Variant: [preserve_entry_signatures: Strict]
+
+## Assets
+
+### lib.js
+
+```js
+import { t as a } from "./lib2.js";
+
+export { a };
+```
+
+### lib2.js
+
+```js
+//#region lib.js
+const a = 42;
+
+//#endregion
+export { a as t };
+```
+
+### main.js
+
+```js
+import { t as a } from "./lib2.js";
+
+//#region main.js
+const b = 42;
+
+//#endregion
+export { a, b };
+```

@@ -6,14 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { n as q, t as p } from "./a2.js";
-
-export { p, q };
-```
-
-## a2.js
-
-```js
 //#region b.js
 var q = 6;
 
@@ -22,13 +14,13 @@ var q = 6;
 var p = 5;
 
 //#endregion
-export { q as n, p as t };
+export { p, q };
 ```
 
 ## b.js
 
 ```js
-import { n as q, t as p } from "./a2.js";
+import { p, q } from "./a.js";
 
 export { p, q };
 ```

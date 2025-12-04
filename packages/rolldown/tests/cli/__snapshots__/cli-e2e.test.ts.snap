@@ -162,6 +162,18 @@ console.log("2");
 //#endregion"
 `;
 
+exports[`cli options for bundling > should handle multiple define arguments with comma-separated syntax 1`] = `
+"<DIR>/index.js  chunk │ size: 0.10 kB
+
+"
+`;
+
+exports[`cli options for bundling > should handle multiple define arguments with dot syntax 1`] = `
+"<DIR>/index.js  chunk │ size: 0.10 kB
+
+"
+`;
+
 exports[`cli options for bundling > should handle negative boolean options 1`] = `
 "(function(exports, node_fs) {
 

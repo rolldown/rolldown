@@ -72,7 +72,7 @@ export function parseCliArguments(): NormalizedCliOptions & {
   // When parseArgs encounters unknown options, it treats them as boolean flags
   // and the value becomes a positional argument. We need to detect this pattern
   // and properly associate values with their options.
-  
+
   // Build a map from token index to positional array index
   const tokenIndexToPositionalIndex = new Map<number, number>();
   let positionalArrayIndex = 0;
@@ -82,10 +82,10 @@ export function parseCliArguments(): NormalizedCliOptions & {
       positionalArrayIndex++;
     }
   }
-  
+
   const consumedPositionalIndices = new Set<number>();
   const processedNestedOptions = new Set<string>();
-  
+
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
     if (token.kind === 'option') {
@@ -96,12 +96,14 @@ export function parseCliArguments(): NormalizedCliOptions & {
         const parentPath = parts.slice(0, -1).join('.');
         const parentPathCamel = kebabCaseToCamelCase(parentPath);
         const parentInfo = schemaInfo[parentPathCamel];
-        
+
         if (parentInfo && parentInfo.type === 'object') {
           // This is a nested object option, check if next token is a positional
           const nextToken = tokens[i + 1];
-          if (nextToken && nextToken.kind === 'positional' && 
-              typeof nextToken.value === 'string') {
+          if (
+            nextToken && nextToken.kind === 'positional' &&
+            typeof nextToken.value === 'string'
+          ) {
             // Associate this positional with the option
             Object.defineProperty(values, token.name, {
               value: nextToken.value,
@@ -110,7 +112,9 @@ export function parseCliArguments(): NormalizedCliOptions & {
               writable: true,
             });
             // Mark this positional as consumed by its array index
-            const positionalIndex = tokenIndexToPositionalIndex.get(nextToken.index);
+            const positionalIndex = tokenIndexToPositionalIndex.get(
+              nextToken.index,
+            );
             if (positionalIndex !== undefined) {
               consumedPositionalIndices.add(positionalIndex);
             }
@@ -123,7 +127,7 @@ export function parseCliArguments(): NormalizedCliOptions & {
   }
 
   // Remove consumed positionals
-  const filteredPositionals = positionals.filter((_, index) => 
+  const filteredPositionals = positionals.filter((_, index) =>
     !consumedPositionalIndices.has(index)
   );
 
@@ -134,7 +138,7 @@ export function parseCliArguments(): NormalizedCliOptions & {
       if (processedNestedOptions.has(option.name)) {
         return undefined;
       }
-      
+
       let negative = false;
       if (option.name.startsWith('no-')) {
         // stripe `no-` prefix

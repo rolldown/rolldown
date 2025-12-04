@@ -68,9 +68,73 @@ export function parseCliArguments(): NormalizedCliOptions & {
     strict: false,
   });
 
+  // Handle nested object options like --transform.define.KEY VALUE
+  // When parseArgs encounters unknown options, it treats them as boolean flags
+  // and the value becomes a positional argument. We need to detect this pattern
+  // and properly associate values with their options.
+  
+  // Build a map from token index to positional array index
+  const tokenIndexToPositionalIndex = new Map<number, number>();
+  let positionalArrayIndex = 0;
+  for (const token of tokens) {
+    if (token.kind === 'positional') {
+      tokenIndexToPositionalIndex.set(token.index, positionalArrayIndex);
+      positionalArrayIndex++;
+    }
+  }
+  
+  const consumedPositionalIndices = new Set<number>();
+  const processedNestedOptions = new Set<string>();
+  
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (token.kind === 'option') {
+      const parts = token.name.split('.');
+      // Check if this looks like a nested object option (at least 3 parts)
+      if (parts.length >= 3) {
+        // Check if the parent path corresponds to an object-type option
+        const parentPath = parts.slice(0, -1).join('.');
+        const parentPathCamel = kebabCaseToCamelCase(parentPath);
+        const parentInfo = schemaInfo[parentPathCamel];
+        
+        if (parentInfo && parentInfo.type === 'object') {
+          // This is a nested object option, check if next token is a positional
+          const nextToken = tokens[i + 1];
+          if (nextToken && nextToken.kind === 'positional' && 
+              typeof nextToken.value === 'string') {
+            // Associate this positional with the option
+            Object.defineProperty(values, token.name, {
+              value: nextToken.value,
+              enumerable: true,
+              configurable: true,
+              writable: true,
+            });
+            // Mark this positional as consumed by its array index
+            const positionalIndex = tokenIndexToPositionalIndex.get(nextToken.index);
+            if (positionalIndex !== undefined) {
+              consumedPositionalIndices.add(positionalIndex);
+            }
+            // Mark this option as processed
+            processedNestedOptions.add(token.name);
+          }
+        }
+      }
+    }
+  }
+
+  // Remove consumed positionals
+  const filteredPositionals = positionals.filter((_, index) => 
+    !consumedPositionalIndices.has(index)
+  );
+
   let invalid_options = tokens
     .filter((token) => token.kind === 'option')
     .map((option) => {
+      // Skip nested object options that were already processed
+      if (processedNestedOptions.has(option.name)) {
+        return undefined;
+      }
+      
       let negative = false;
       if (option.name.startsWith('no-')) {
         // stripe `no-` prefix
@@ -102,9 +166,8 @@ export function parseCliArguments(): NormalizedCliOptions & {
           writable: true,
         });
       } else if (type === 'object' && typeof option.value === 'string') {
-        const [key, value] = option.value.split(',').map((x) =>
-          x.split('=')
-        )[0];
+        // Support multiple comma-separated key=value pairs
+        const pairs = option.value.split(',').map((x) => x.split('='));
         if (!values[option.name]) {
           Object.defineProperty(values, option.name, {
             value: {},
@@ -113,14 +176,15 @@ export function parseCliArguments(): NormalizedCliOptions & {
             writable: true,
           });
         }
-        if (key && value) {
-          // TODO support multiple entries.
-          Object.defineProperty(values[option.name], key, {
-            value,
-            enumerable: true,
-            configurable: true,
-            writable: true,
-          });
+        for (const [key, value] of pairs) {
+          if (key && value) {
+            Object.defineProperty(values[option.name], key, {
+              value,
+              enumerable: true,
+              configurable: true,
+              writable: true,
+            });
+          }
         }
       } else if (type === 'array' && typeof option.value === 'string') {
         if (!values[option.name]) {
@@ -185,7 +249,7 @@ export function parseCliArguments(): NormalizedCliOptions & {
   };
   const normalizedOptions = normalizeCliOptions(
     values,
-    positionals as string[],
+    filteredPositionals as string[],
   );
   return { ...normalizedOptions, rawArgs };
 }

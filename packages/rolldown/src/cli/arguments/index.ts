@@ -82,14 +82,29 @@ export function parseCliArguments(): NormalizedCliOptions & {
           negative = true;
         }
       }
-      delete values[option.name]; // Strip the kebab-case options.
-      option.name = kebabCaseToCamelCase(option.name);
-      let originalInfo = schemaInfo[option.name];
+      const camelName = kebabCaseToCamelCase(option.name);
+      const originalInfo = schemaInfo[camelName];
       if (!originalInfo) {
         // Return the summary of invalid option.
+        delete values[option.name]; // Strip the kebab-case options.
+        option.name = camelName;
         return { name: option.name, value: option.value };
       }
-      let type = originalInfo.type;
+      const type = originalInfo.type;
+      // For object and array types, only delete if not already the correct type
+      // (to preserve accumulated values across multiple invocations)
+      if (type === 'object') {
+        if (typeof values[option.name] !== 'object' || Array.isArray(values[option.name])) {
+          delete values[option.name];
+        }
+      } else if (type === 'array') {
+        if (!Array.isArray(values[option.name])) {
+          delete values[option.name];
+        }
+      } else {
+        delete values[option.name]; // Strip the kebab-case options.
+      }
+      option.name = camelName;
       if (type === 'string' && typeof option.value !== 'string') {
         let opt = option as { name: string };
         // We should use the default value.
@@ -114,7 +129,6 @@ export function parseCliArguments(): NormalizedCliOptions & {
           });
         }
         if (key && value) {
-          // TODO support multiple entries.
           Object.defineProperty(values[option.name], key, {
             value,
             enumerable: true,

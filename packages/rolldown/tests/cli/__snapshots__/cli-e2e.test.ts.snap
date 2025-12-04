@@ -162,6 +162,13 @@ console.log("2");
 //#endregion"
 `;
 
+exports[`cli options for bundling > should handle multiple nested object options 1`] = `
+"//#region index.js
+console.log(A, B, C);
+
+//#endregion"
+`;
+
 exports[`cli options for bundling > should handle negative boolean options 1`] = `
 "(function(exports, node_fs) {
 

@@ -94,7 +94,7 @@ export function parseCliArguments(): NormalizedCliOptions & {
       // For object and array types, only delete if not already the correct type
       // (to preserve accumulated values across multiple invocations)
       if (type === 'object') {
-        if (typeof values[option.name] !== 'object' || Array.isArray(values[option.name])) {
+        if (values[option.name] == null || typeof values[option.name] !== 'object' || Array.isArray(values[option.name])) {
           delete values[option.name];
         }
       } else if (type === 'array') {

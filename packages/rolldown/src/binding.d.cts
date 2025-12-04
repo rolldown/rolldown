@@ -1492,6 +1492,7 @@ export declare class BindingPluginContext {
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
+  emitPrebuiltChunk(file: BindingEmittedPrebuiltChunk): string
   getFileName(referenceId: string): string
   getModuleInfo(moduleId: string): BindingModuleInfo | null
   getModuleIds(): Array<string>
@@ -1718,6 +1719,14 @@ export interface BindingEmittedChunk {
   id: string
   importer?: string
   preserveEntrySignatures?: BindingPreserveEntrySignatures
+}
+
+export interface BindingEmittedPrebuiltChunk {
+  fileName: string
+  code: string
+  exports?: Array<string>
+  map?: BindingSourcemap
+  sourcemapFileName?: string
 }
 
 export type BindingError =

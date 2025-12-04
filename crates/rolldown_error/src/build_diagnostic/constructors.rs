@@ -37,6 +37,7 @@ use super::events::unsupported_feature::UnsupportedFeature;
 use super::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
+  circular_reexport::CircularReexport,
   commonjs_variable_in_esm::{CjsExportSpan, CommonJsVariableInEsm},
   eval::Eval,
   external_entry::ExternalEntry,
@@ -106,6 +107,10 @@ impl BuildDiagnostic {
 
   pub fn circular_dependency(paths: Vec<String>) -> Self {
     Self::new_inner(CircularDependency { paths })
+  }
+
+  pub fn circular_reexport(importer_id: String, imported_specifier: String) -> Self {
+    Self::new_inner(CircularReexport { importer_id, imported_specifier })
   }
 
   pub fn missing_export(

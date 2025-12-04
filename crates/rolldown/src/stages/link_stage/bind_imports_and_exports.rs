@@ -824,7 +824,16 @@ impl BindImportsAndExportsContext<'_> {
         if prev_tracker.importer == tracker.importer
           && prev_tracker.imported_as == tracker.imported_as
         {
-          // Cycle import. No need to continue, just return
+          // Circular reexport detected - this is an error in Rollup
+          let importer_module = &index_modules[tracker.importer];
+          let importer_id = importer_module.stable_id().to_string();
+          let imported_specifier = tracker.imported.to_string();
+          
+          self.errors.push(BuildDiagnostic::circular_reexport(
+            importer_id,
+            imported_specifier,
+          ));
+          
           return MatchImportKind::Cycle;
         }
       }

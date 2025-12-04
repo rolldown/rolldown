@@ -324,8 +324,45 @@ export default defineConfig({
     ],
 
     footer: {
-      message: 'Released under the MIT License.',
-      copyright: 'Copyright © 2023-present VoidZero Inc.',
+      nav: [
+        {
+          title: 'Rolldown',
+          items: [
+            { text: 'Guide', link: '/guide/getting-started' },
+            { text: 'Reference', link: '/options/input' },
+            { text: 'Plugins', link: '/builtin-plugins/' },
+            { text: 'Contribute', link: '/contribution-guide/' },
+            { text: 'REPL', link: 'https://repl.rolldown.rs/' },
+          ],
+        },
+        {
+          title: 'Resources',
+          items: [
+            {
+              text: 'Roadmap',
+              link: 'https://github.com/rolldown/rolldown/discussions/153',
+            },
+            { text: 'Team', link: '/team' },
+          ],
+        },
+        /*{
+          title: 'Legal',
+          items: [
+            {
+              text: 'Terms & Conditions',
+              link: 'https://voidzero.dev/terms',
+            },
+            { text: 'Privacy Policy', link: 'https://voidzero.dev/privacy' },
+            { text: 'Cookie Policy', link: 'https://voidzero.dev/cookies' },
+          ],
+        },*/
+      ],
+      social: [
+        { icon: 'github', link: 'https://github.com/rolldown/rolldown' },
+        { icon: 'discord', link: 'https://chat.rolldown.rs' },
+        { icon: 'bluesky', link: 'https://bsky.app/profile/rolldown.rs' },
+        { icon: 'x', link: 'https://x.com/rolldown_rs' },
+      ],
     },
 
     editLink: {

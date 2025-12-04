@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration_test262.rs
 expression: snapshot
 ---
-Summary: 536 passed, 56 failed, 592 total
+Summary: 538 passed, 54 failed, 592 total
 
 ---
 
@@ -793,15 +793,20 @@ Cannot assign to import 'B'
 ---
 
 # language/module-code/instn-iee-err-circular-as.js
-Result: FAIL
+Result: PASS
 Expected: error (type: SyntaxError, phase: resolution)
-Actual: 1 chunk(s) generated
+Actual:
+'x' cannot be exported from 'instn-iee-err-circular.js' as it is imported from the same file (this will create an invalid module).
+'x' cannot be exported from 'instn-iee-err-circular_FIXTURE.js' as it is imported from the same file (this will create an invalid module).
+'x' cannot be exported from 'instn-iee-err-circular_FIXTURE.js' as it is imported from the same file (this will create an invalid module).
 ---
 
 # language/module-code/instn-iee-err-circular.js
-Result: FAIL
+Result: PASS
 Expected: error (type: SyntaxError, phase: resolution)
-Actual: 1 chunk(s) generated
+Actual:
+'x' cannot be exported from 'instn-iee-err-circular.js' as it is imported from the same file (this will create an invalid module).
+'x' cannot be exported from 'instn-iee-err-circular_FIXTURE.js' as it is imported from the same file (this will create an invalid module).
 ---
 
 # language/module-code/instn-iee-err-dflt-thru-star-as.js

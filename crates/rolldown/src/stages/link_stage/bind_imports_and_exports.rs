@@ -828,12 +828,9 @@ impl BindImportsAndExportsContext<'_> {
           let importer_module = &index_modules[tracker.importer];
           let importer_id = importer_module.stable_id().to_string();
           let imported_specifier = tracker.imported.to_string();
-          
-          self.errors.push(BuildDiagnostic::circular_reexport(
-            importer_id,
-            imported_specifier,
-          ));
-          
+
+          self.errors.push(BuildDiagnostic::circular_reexport(importer_id, imported_specifier));
+
           return MatchImportKind::Cycle;
         }
       }

@@ -267,5 +267,5 @@ const watcher = watch({
 
 watcher.on('event', () => {});
 
-await watcher.close(); // Here is different with rollup, the rolldown returned the promise at here.
+await watcher.close(); // This is different than rollup: rolldown returns a promise here.
 ```

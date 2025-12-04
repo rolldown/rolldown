@@ -6,6 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## CIRCULAR_REEXPORT
 
 ```text
-[CIRCULAR_REEXPORT] Error: 'foo' cannot be exported from 'main.js' as it is imported from the same file (this will create an invalid module).
+[CIRCULAR_REEXPORT] Error: 'foo' cannot be exported from 'main.js' as it is a reexport that references itself.
 
 ```

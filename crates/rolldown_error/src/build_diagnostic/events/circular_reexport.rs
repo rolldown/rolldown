@@ -14,7 +14,7 @@ impl BuildEvent for CircularReexport {
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!(
-      "'{}' cannot be exported from '{}' as it is imported from the same file (this will create an invalid module).",
+      "'{}' cannot be exported from '{}' as it is a reexport that references itself.",
       self.imported_specifier, self.importer_id
     )
   }

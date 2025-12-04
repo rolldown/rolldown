@@ -796,17 +796,17 @@ Cannot assign to import 'B'
 Result: PASS
 Expected: error (type: SyntaxError, phase: resolution)
 Actual:
-'x' cannot be exported from 'instn-iee-err-circular.js' as it is imported from the same file (this will create an invalid module).
-'x' cannot be exported from 'instn-iee-err-circular_FIXTURE.js' as it is imported from the same file (this will create an invalid module).
-'x' cannot be exported from 'instn-iee-err-circular_FIXTURE.js' as it is imported from the same file (this will create an invalid module).
+'x' cannot be exported from 'instn-iee-err-circular.js' as it is a reexport that references itself.
+'x' cannot be exported from 'instn-iee-err-circular_FIXTURE.js' as it is a reexport that references itself.
+'x' cannot be exported from 'instn-iee-err-circular_FIXTURE.js' as it is a reexport that references itself.
 ---
 
 # language/module-code/instn-iee-err-circular.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: resolution)
 Actual:
-'x' cannot be exported from 'instn-iee-err-circular.js' as it is imported from the same file (this will create an invalid module).
-'x' cannot be exported from 'instn-iee-err-circular_FIXTURE.js' as it is imported from the same file (this will create an invalid module).
+'x' cannot be exported from 'instn-iee-err-circular.js' as it is a reexport that references itself.
+'x' cannot be exported from 'instn-iee-err-circular_FIXTURE.js' as it is a reexport that references itself.
 ---
 
 # language/module-code/instn-iee-err-dflt-thru-star-as.js

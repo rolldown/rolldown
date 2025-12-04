@@ -467,6 +467,18 @@ export declare class ResolverFactory {
   sync(directory: string, request: string): ResolveResult
   /** Asynchronously resolve `specifier` at an absolute path to a `directory`. */
   async(directory: string, request: string): Promise<ResolveResult>
+  /**
+   * Synchronously resolve `specifier` at an absolute path to a `file`.
+   *
+   * This method automatically discovers tsconfig.json by traversing parent directories.
+   */
+  resolveFileSync(file: string, request: string): ResolveResult
+  /**
+   * Asynchronously resolve `specifier` at an absolute path to a `file`.
+   *
+   * This method automatically discovers tsconfig.json by traversing parent directories.
+   */
+  resolveFileAsync(file: string, request: string): Promise<ResolveResult>
 }
 
 /** Node.js builtin module when `Options::builtin_modules` is enabled. */
@@ -721,9 +733,8 @@ export interface TsconfigOptions {
    * Support for Typescript Project References.
    *
    * * `'auto'`: use the `references` field from tsconfig of `config_file`.
-   * * `string[]`: manually provided relative or absolute path.
    */
-  references?: 'auto' | string[]
+  references?: 'auto'
 }
 export interface SourceMap {
   file?: string

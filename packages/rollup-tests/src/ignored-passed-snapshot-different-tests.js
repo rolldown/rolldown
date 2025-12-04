@@ -1,17 +1,14 @@
 module.exports = [
     // Passed, but the output snapshot is different from rollup
-    "rollup@form@external-modules-could-not-be-passed-to-the-manualChunks: External modules couldn't be passed to the manualChunks.", // Rolldown produces the same result as rollup, but with enabling `experimental.strictExecutionOrder`
     "rollup@form@make-absolute-externals-relative@make-relative-false: does not normalize external paths when set to false",
     "rollup@function@transform-without-code: allows using the transform hook for annotations only without returning a code property and breaking sourcemaps",
     "rollup@form@catch-parameter-shadowing: the parameter of a catch block should correctly shadow an import (#1391)",// rollup not deconflict
     "rollup@form@body-less-for-loops: supports body-less for loops",// rollup not deconflict
     "rollup@form@import-specifier-deshadowing: deshadows aliased import bindings@generates es", // rollup not deconflict
-    "rollup@function@transparent-dynamic-inlining: Dynamic import inlining when resolution id is a module in the bundle",
     "rollup@form@dynamic-import-inlining: dynamic import inlining",
     "rollup@form@dynamic-import-inlining-array: supports an array with a single entry when inlining dynamic imports",
     "rollup@form@inline-with-reexport: handles inlining dynamic imports when the imported module contains reexports",
     "rollup@form@nested-inlined-dynamic-import: deconflicts variables when nested dynamic imports are inlined@generates es",
-    "rollup@function@duplicate-input-entry: handles duplicate entry modules when using the object form",
     "rollup@form@handles-empty-imports-iife: handles empty imports when generating IIFE output",
     "rollup@form@handles-empty-imports-umd: handles empty imports when generating IIFE output",
     "rollup@form@slash-in-function-parameters: handles slashes in function parameters and correctly inserts missing ids@generates es",
@@ -30,7 +27,6 @@ module.exports = [
     "rollup@form@default-export-anonymous-class-extends: handles default exported classes extending a regular expression argument (#4783)",
     "rollup@form@default-export-class: puts the export after the declaration for default exported classes in SystemJS@generates es",
     "rollup@form@default-export-mode: allows specifying the export mode to be \"default\"@generates es",
-    "rollup@form@deopt-string-concatenation: deoptimize concatenation when used as an expression statement to better support es5-shim",
     "rollup@form@effect-in-for-of-loop-in-functions: includes effects in for-of loop (#870)@generates es",
     "rollup@form@exponentiation-operator: folds exponentiation operator when considering dead code@generates es",
     "rollup@form@export-default-2: re-exporting a default export@generates es",
@@ -88,6 +84,11 @@ module.exports = [
     "rollup@form@protect-cjs-globals: prevent conflicts with cjs module globals@generates es",
     "rollup@form@support-using-keyword: Support `using` keyword",
     "rollup@function@deprecated@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook",
+    "rollup@form@namespace-tostring@inlined-namespace: adds Symbol.toStringTag property to inlined namespaces@generates es",
+    "rollup@form@emit-uint8array-no-buffer: supports emitting assets as Uint8Arrays when Buffer is not available@generates es",
+    "rollup@hooks@caches asset emission in transform hook",
+    "rollup@form@comment-before-import: preserves comments before imports@generates es",
+    "rollup@form@paths-function: external paths (#754)@generates es",
     // Passed. convert reexport to import and export
     "rollup@form@reexport-external-default-and-name: reexports a an external default as a name and imports another name from that dependency@generates es",
     "rollup@form@reexport-external-default-and-namespace: reexports a default external import as default export (when using named exports)@generates es",
@@ -118,6 +119,11 @@ module.exports = [
     "rollup@form@reexport-star-deshadow: Star reexports scope deshadowing@generates es",
     "rollup@form@function-id-as-parameter: allows function expression parameters to shadow their id",
     "rollup@form@remove-whitespace-of-logical-expression: remove the white space of the removed part of LogicalExpression",
+    "rollup@form@pure-comment-scenarios-complex: correctly handles various advanced pure comment scenarios",
+    "rollup@form@non-empty-block-statement: do not remove non an empty block statement@generates es", // https://github.com/rolldown/rolldown/pull/3541#issuecomment-2649731213
+    // Passed. different code due to better optimization
+    "rollup@form@nested-pure-comments: correctly associates pure comments before sequence expressions etc.",
+    "rollup@form@unary-expressions-preserve-constants: Preserves constant identifiers in unary expressions when constants are used elsewhere",
 
     // Test is passed. Class related, `class A` -> `var A = class`
     "rollup@form@use-class-name-in-static-block: use the original class name instead of renderName in class body@generates es",
@@ -153,5 +159,6 @@ module.exports = [
     "rollup@form@assignment-to-exports-class-declaration: does not rewrite class expression IDs@generates es",
     "rollup@form@simplify-expression-annotations: keeps correct annotations when simplifying expressinos",
     // hyf0: We can align the deconflict logic with rollup, but it requires unnecessary logic and doesn't have payoff.
-  "rollup@form@deconflict-module-priority: prioritizes entry modules over dependencies when deconflicting",
+    "rollup@form@deconflict-module-priority: prioritizes entry modules over dependencies when deconflicting",
+    "rollup@form@hoisted-vars-in-dead-branches: renders hoisted variables in dead branches" // Var hoisting happens in Rollup, but not in Rolldown
 ]

@@ -98,10 +98,6 @@
  - rollup@function@emit-file@invalid-set-asset-source-id: throws for invalid asset ids
  - rollup@hooks@keeps emitted ids stable between runs
 
-### The `PluginContext.error` accpet more arguments at `transform` hooks 
- - rollup@function@plugin-error-transform-pos: `this.error(...)` accepts number as second parameter (#5044)
- - rollup@function@plugin-error-loc-instead-pos: `this.error(...)` accepts { line, column } object as second parameter (#1265)
-
 ### `originalFileName` / `originalFileNames` is not supported properly
 - rollup@function@deprecated@emit-file@original-file-name: forwards the original file name to other hooks
 - rollup@function@emit-file@original-file-name: forwards the original file name to other hooks
@@ -141,10 +137,6 @@
 ### The `input.moduleContext` is not supported
  - rollup@form@custom-module-context-function: allows custom module-specific context with a function option
  - rollup@form@custom-module-context: allows custom module-specific context@generates es
-
-### Tests with snapshot differences (variable naming/deconfliction)
- - rollup@form@paths-function: external paths (#754)@generates es (paths transformation works, but variable names differ)
- - rollup@function@re-export-own: avoid using export.hasOwnProperty (hasOwnProperty behavior differs)
 
 ### The `output.compact` is not supported
  - rollup@function@inlined-dynamic-namespace-compact: properly resolves inlined dynamic namespaces in compact mode
@@ -186,9 +178,6 @@
  - rollup@form@generated-code-compact@object-shorthand-true: uses object shorthand syntax
  - rollup@form@generated-code-compact@reserved-names-as-props-false: escapes reserved names used as props@generates es
  - rollup@form@generated-code-compact@reserved-names-as-props-true: escapes reserved names used as props@generates es
- - rollup@form@generated-code-presets@es2015: handles generatedCode preset "es2015"
- - rollup@form@generated-code-presets@es5: handles generatedCode preset "es5"
- - rollup@form@generated-code-presets@preset-with-override: handles generatedCode preset "es2015"
  - rollup@form@generated-code@arrow-functions-false: does not use arrow functions@generates es
  - rollup@form@generated-code@arrow-functions-true: uses arrow functions@generates es
  - rollup@form@generated-code@const-bindings-false: does not use block bindings@generates es
@@ -197,19 +186,20 @@
  - rollup@form@generated-code@object-shorthand-true: uses object shorthand syntax
  - rollup@form@generated-code@reserved-names-as-props-false: escapes reserved names used as props@generates es
  - rollup@form@generated-code@reserved-names-as-props-true: escapes reserved names used as props@generates es
+ - rollup@function@unknown-generated-code-value: throws for unknown string values for the generatedCode option
 
-### The `output.generatedCode.symbols` is not supported 
- - rollup@function@reexport-ns: external namespace reexport
+### The `output.generatedCode.preset` is not supported
+ - rollup@form@generated-code-presets@es2015: handles generatedCode preset "es2015"
+ - rollup@form@generated-code-presets@es5: handles generatedCode preset "es5"
+ - rollup@form@generated-code-presets@preset-with-override: handles generatedCode preset "es2015"
+ - rollup@function@unknown-generated-code-preset: throws for unknown presets for the generatedCode option
+
+### The `output.generatedCode.symbols` is not supported properly
+ - rollup@function@name-conflict-symbol: avoids name conflicts with local variables named Symbol
  - rollup@function@namespace-tostring@dynamic-import-default-mode: adds Symbol.toStringTag property to dynamic imports of entry chunks with default export mode
  - rollup@function@namespace-tostring@dynamic-import: adds Symbol.toStringTag property to dynamic imports
- - rollup@function@namespace-tostring@entry-named: adds Symbol.toStringTag property to entry chunks with named exports
  - rollup@function@namespace-tostring@external-namespaces: adds Symbol.toStringTag property to external namespaces
- - rollup@function@namespace-tostring@inlined-namespace: adds Symbol.toStringTag property to inlined namespaces
- - rollup@function@namespace-tostring@interop-property-descriptor: generated interop namespaces should have correct Symbol.toStringTag
  - rollup@function@namespace-tostring@property-descriptor: namespace export should have @@toStringTag with correct property descriptors #4336
- - rollup@function@name-conflict-symbol: avoids name conflicts with local variables named Symbol
- - rollup@form@namespace-tostring@inlined-namespace-static-resolution: statically resolves Symbol.toStringTag for inlined namespaces
- - rollup@form@namespace-tostring@inlined-namespace: adds Symbol.toStringTag property to inlined namespaces@generates es
 
 ### The `output.preserveModules` is not compatible yet
  - rollup@function@preserve-modules-default-mode-namespace: import namespace from chunks with default export mode when preserving modules,
@@ -222,8 +212,6 @@
  - rollup@function@preserve-modules@invalid-none-export-mode: throws when using none export mode with named exports
  - rollup@function@preserve-modules@manual-chunks: Assigning manual chunks fails when preserving modules
  - rollup@function@preserve-modules@mixed-exports: warns for mixed exports in all chunks when preserving modules
- - rollup@function@preserve-modules@virtual-modules-conflict: Generates actual files for virtual modules when preserving modules
- - rollup@function@preserve-modules@virtual-modules: Generates actual files for virtual modules when preserving modules
  - rollup@function@synthetic-named-exports@preserve-modules: handles a dynamic import with synthetic named exports in preserveModules mode
  - rollup@function@circular-namespace-reexport-preserve-modules: correctly handles namespace reexports with circular dependencies when preserving modules
 
@@ -249,12 +237,6 @@
  - rollup@function@sourcemap-base-url-invalid: throws for invalid sourcemapBaseUrl
  - rollup@sourcemaps@sourcemap-base-url-without-trailing-slash: add a trailing slash automatically if it is missing@generates es
  - rollup@sourcemaps@sourcemap-base-url: adds a sourcemap base url@generates es
-
-### The `output.generatedCode.preset` is not supported 
- - rollup@function@unknown-generated-code-preset: throws for unknown presets for the generatedCode option
-
-### The `output.generatedCode` is not supported
- - rollup@function@unknown-generated-code-value: throws for unknown string values for the generatedCode option
 
 ### The `output.treeshake.preset` is not supported 
  - rollup@function@unknown-treeshake-preset: throws for unknown presets for the treeshake option
@@ -284,10 +266,8 @@
 
 ### The `import.meta.ROLLUP_FILE_URL_<referenceId>` is not supported
  - rollup@form@emit-asset-file: supports emitting assets from plugin hooks@generates es
- - rollup@form@emit-uint8array-no-buffer: supports emitting assets as Uint8Arrays when Buffer is not available@generates es
- - rollup@hooks@caches asset emission in transform hook
 
-### The rollup treat non-js-extensions module as js module, but the rolldown wiill guess the module type by externsion
+### The rollup treat non-js-extensions module as js module, but the rolldown will guess the module type by externsion
  - rollup@function@non-js-extensions: non .js extensions are preserved
 
 ### The `syntheticNamedExports` is not supported
@@ -361,25 +341,24 @@
 ### remove `use strict` from function body
  - rollup@function@function-use-strict-directive-removed: should delete use strict from function body
 
-### comment related
- - rollup@form@comment-before-import: preserves comments before imports@generates es
- - rollup@form@comment-start-inside-comment: properly remove coments above import statements@generates es
-
 ### The namespace object is not compatible with rollup
  - rollup@function@namespaces-have-null-prototype: creates namespaces with null prototypes
  - rollup@function@namespaces-are-frozen: namespaces should be non-extensible and its properties immutatable and non-configurable
  - rollup@function@namespace-override: does not warn when overriding namespace reexports with explicit ones
- - rollup@function@keep-cjs-dynamic-import: keeps dynamic imports in CJS output by default
  - rollup@function@escape-arguments: does not use "arguments" as a placeholder variable for a default export
  - rollup@function@dynamic-import-only-default: correctly imports dynamic namespaces with only a default export from entry- and non-entry-point chunks
  - rollup@function@dynamic-import-default-mode-facade: handles dynamic imports from facades using default export mode
  - rollup@function@chunking-duplicate-reexport: handles duplicate reexports when using dynamic imports
+ - rollup@function@namespace-tostring@interop-property-descriptor: generated interop namespaces should have correct Symbol.toStringTag
 
 ### Rewrite top-level `this` to `undefined`
  - rollup@form@proper-this-context: make sure "this" respects the context for arrow functions
  - rollup@form@this-is-undefined: top-level `this` expression is rewritten as `undefined`@generates es
  - rollup@function@warn-on-top-level-this: warns on top-level this (#770)
  - rollup@sourcemaps@warning-with-coarse-sourcemap: get correct mapping location with coarse sourcemap@generates es
+
+### `hasOwnProperty` export is not handled properly
+ - rollup@function@re-export-own: avoid using export.hasOwnProperty (hasOwnProperty behavior differs)
 
 ### `__proto__` export is not properly handled
  - rollup@form@cjs-transpiler-re-exports-1: Disable reexporting the __proto__ from the external module if both output.externalLiveBindings and output.reExportProtoFromExternal are false@generates cjs
@@ -490,7 +469,8 @@
  - rollup@function@missing-entry-export: throws when exporting something that does not exist from an entry
  - rollup@function@plugin-warn-loc-instead-pos: `this.warn(...)` accepts { line, column } object as second parameter (#1265)
  - rollup@function@plugin-warn: plugin transform hooks can use `this.warn({...}, char)` (#1140)
- - 
+ - rollup@function@plugin-error-transform-pos: `this.error(...)` accepts number as second parameter (#5044)
+ - rollup@function@plugin-error-loc-instead-pos: `this.error(...)` accepts { line, column } object as second parameter (#1265)
 
 ### The error/warning not implement
  - rollup@hooks@Throws when using the "sourcemapFile" option for multiple chunks

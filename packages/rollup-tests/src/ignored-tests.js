@@ -1,45 +1,33 @@
 const ignoreTests = [
-  // Integrate the test suite into Rolldown
+  // ## These tests are moved to package/rolldown/tests
   // https://github.com/rolldown/rolldown/pull/5715
   "rollup@hooks@passes errors from closeBundle hook",
   "rollup@hooks@supports closeBundle hook",
 
-  'rollup@function@bundle-facade-order: respects the order of entry points when there are additional facades for chunks', // https://github.com/rolldown/rolldown/issues/1842#issuecomment-2296345255
-
-  // Ignore skipIfWindows test avoid test status error
+  // ## Ignore skipIfWindows test avoid test status error
   'rollup@function@preserve-symlink: follows symlinks',
   'rollup@function@symlink: follows symlinks',
   "rollup@form@sourcemaps-inline: correct sourcemaps are written (inline)@generates es",
 
-  // The result is not working as expected
-  "rollup@function@module-side-effect-reexport: includes side effects of re-exporters unless they have moduleSideEffects: false",// https://github.com/rolldown/rolldown/issues/2864
-  "rollup@form@hoisted-vars-in-dead-branches: renders hoisted variables in dead branches", // https://github.com/oxc-project/oxc/issues/7209
-  "rollup@function@hoisted-variable-if-else: handles hoisted variables in chained if statements",// https://github.com/oxc-project/oxc/issues/7209
-  "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals", // need as esm if module is unknown-format and add `use strcit` to the output, https://github.com/rolldown/rolldown/issues/2394
+  // ## warning / error differences
+  "rollup@function@plugin-hook-filters: plugin hook filter is supported", // Rolldown has additional `EMPTY_IMPORT_META` warning
+  "rollup@function@warning-const-reassign: Cannot reassign a variable declared with `const`", // assignment to a const variable is an error instead of a warning in Rolldown
+  "rollup@function@generate-bundle-mutation: handles adding or deleting symbols in generateBundle", // rolldown outputs a warning when assigning to bundle[foo]
 
-  // /*@__PURE__*/ related
-  "rollup@form@pure-comment-scenarios-complex: correctly handles various advanced pure comment scenarios",// https://github.com/oxc-project/oxc/issues/7501 https://github.com/oxc-project/oxc/issues/7209#issuecomment-2503133537 The `assigned to unreferenced var will be dropped` is a minify featrue
-  "rollup@form@nested-pure-comments: correctly associates pure comments before sequence expressions etc.", // The Sequence expression/Binary expression/Calls with parentheses is not implement
+  // ## tests relying on plugins
+  "rollup@function@no-treeshake-react: passes when bundling React without tree-shaking", // relies on @rollup/plugin-node-resolve
+  "rollup@function@strip-bom-1: Works correctly with BOM files and the @rollup/plugin-commonjs plugin.", // relies on @rollup/plugin-commonjs
 
+  // ## Order not guaranteed due to parallelism
   "rollup@hooks@assigns chunk IDs before creating outputBundle chunks", // The `renderChunk` is called at parallel, collect chunk info to array is unstable.  https://github.com/rolldown/rolldown/issues/2364
   "rollup@function@external-resolved: passes both unresolved and resolved ids to the external option", // Rolldown runs in parallel. The order can be different.
-  "rollup@form@non-empty-block-statement: do not remove non an empty block statement@generates es", // https://github.com/rolldown/rolldown/pull/3541#issuecomment-2649731213
-  "rollup@function@es5-class-called-without-new: does not swallow type errors when running constructor functions without \"new\"", // rolldown align directive rendering with esbuild
-  "rollup@function@no-treeshake-react: passes when bundling React without tree-shaking", // relies on @rollup/plugin-node-resolve
-  "rollup@function@plugin-hook-filters: plugin hook filter is supported", // Rolldown has additional `EMPTY_IMPORT_META` warning
-  "rollup@function@strip-bom-1: Works correctly with BOM files and the @rollup/plugin-commonjs plugin.", // relies on @rollup/plugin-commonjs
-  "rollup@function@warning-const-reassign: Cannot reassign a variable declared with `const`", // assignment to a const variable is an error instead of a warning in Rolldown
 
-  "rollup@function@generate-bundle-mutation: handles adding or deleting symbols in generateBundle", // rolldown outputs a warning when assigning to bundle[foo]
-  "rollup@form@logical-expression@simplify-non-boolean: simplifies logical expressions that resolve statically to non-boolean values", // Oxc DCE is sub-optimal.
-  "rollup@form@unary-expressions-preserve-constants: Preserves constant identifiers in unary expressions when constants are used elsewhere", // no need to support
-
-  // `external: true` is not supported but it's not documented
+  // ## `external: true` is not supported but it's not documented
   "rollup@function@external-namespace-and-default-reexport-compat2: reexports both a namespace, the namespace as a name and the default export when using compat interop",
   "rollup@function@external-namespace-and-default-reexport-compat3: reexports both a namespace and the default export when using compat interop",
   "rollup@function@external-namespace-and-default-reexport-compat: reexports both a namespace and the default export when using compat interop",
 
-  // JSX syntax is not supported in JS files
+  // ## JSX syntax is not supported in JS files
   "rollup@form@jsx@preserves-jsx-attributes: preserves JSX with string attributes output",
   "rollup@form@jsx@preserves-jsx-child: preserves JSX children",
   "rollup@form@jsx@preserves-jsx-closing: preserves JSX closing element",
@@ -77,6 +65,11 @@ const ignoreTests = [
   "rollup@function@jsx@missing-jsx-export: throws when the JSX factory is not exported",
   "rollup@function@jsx@unknown-mode: throws when using an unknown jsx mode",
   "rollup@function@jsx@unnecessary-import-source: throws when preserving JSX syntax with an unnecessary import source",
+
+  // ## Others
+  'rollup@function@bundle-facade-order: respects the order of entry points when there are additional facades for chunks', // https://github.com/rolldown/rolldown/issues/1842#issuecomment-2296345255
+  "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals", // need as esm if module is unknown-format and add `use strcit` to the output, https://github.com/rolldown/rolldown/issues/2394
+  "rollup@function@es5-class-called-without-new: does not swallow type errors when running constructor functions without \"new\"", // rolldown align directive rendering with esbuild
 ]
 
 module.exports = {

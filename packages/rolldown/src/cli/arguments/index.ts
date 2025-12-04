@@ -91,6 +91,7 @@ export function parseCliArguments(): NormalizedCliOptions & {
     if (token.kind === 'option') {
       const parts = token.name.split('.');
       // Check if this looks like a nested object option (at least 3 parts)
+      // Example: transform.define.KEY where parts are ['transform', 'define', 'KEY']
       if (parts.length >= 3) {
         // Check if the parent path corresponds to an object-type option
         const parentPath = parts.slice(0, -1).join('.');

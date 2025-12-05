@@ -2494,6 +2494,23 @@ export interface JsOutputChunk {
 export interface NativeError {
   kind: string
   message: string
+  /** The id of the file associated with the error */
+  id?: string
+  /** The exporter associated with the error (for import/export errors) */
+  exporter?: string
+  /** Location information (line, column, file) */
+  loc?: NativeErrorLocation
+  /** Position in the source file in UTF-16 code units */
+  pos?: number
+}
+
+/** Location information for errors */
+export interface NativeErrorLocation {
+  /** 1-based */
+  line: number
+  /** 0-based position in the line in UTF-16 code units */
+  column: number
+  file?: string
 }
 
 export interface PreRenderedChunk {

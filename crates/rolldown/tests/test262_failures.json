@@ -23,14 +23,6 @@
   "language/module-code/instn-iee-bndng-var.js": {
     "reason": "Rolldown treats assignments to const as bundle errors instead of runtime errors"
   },
-  "language/module-code/instn-iee-err-circular-as.js": {
-    "reason": "CIRCULAR_REEXPORT error not implemented yet",
-    "issue": "https://github.com/rolldown/rolldown/issues/6780"
-  },
-  "language/module-code/instn-iee-err-circular.js": {
-    "reason": "CIRCULAR_REEXPORT error not implemented yet",
-    "issue": "https://github.com/rolldown/rolldown/issues/6780"
-  },
   "language/module-code/instn-local-bndng-cls.js": {
     "reason": "Rolldown does not preserve TDZ semantics"
   },

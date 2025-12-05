@@ -12,12 +12,12 @@ import assert from "node:assert";
 //#region lib.mjs
 var lib_exports = /* @__PURE__ */ __export({}, 1);
 import * as import_foo from "foo";
-__reExport(lib_exports, import_foo, void 0, 1);
+__reExport(lib_exports, import_foo);
 
 //#endregion
 //#region reexports.mjs
 var reexports_exports = /* @__PURE__ */ __export({}, 1);
-__reExport(reexports_exports, lib_exports, void 0, 1);
+__reExport(reexports_exports, lib_exports);
 
 //#endregion
 //#region main.mjs
@@ -39,12 +39,12 @@ node_assert = __toESM(node_assert);
 
 //#region lib.mjs
 var lib_exports = /* @__PURE__ */ __export({}, 1);
-__reExport(lib_exports, require("foo"), void 0, 1);
+__reExport(lib_exports, require("foo"));
 
 //#endregion
 //#region reexports.mjs
 var reexports_exports = /* @__PURE__ */ __export({}, 1);
-__reExport(reexports_exports, lib_exports, void 0, 1);
+__reExport(reexports_exports, lib_exports);
 
 //#endregion
 //#region main.mjs

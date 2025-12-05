@@ -63,15 +63,8 @@ impl<'ast> AstSnippet<'ast> {
     re_export_fn_ref: Expression<'ast>,
     first_arg: Expression<'ast>,
     second_arg: Expression<'ast>,
-    enable_generated_code_symbols: bool,
   ) -> ast::CallExpression<'ast> {
-    let mut args = self.builder.vec_from_iter([first_arg.into(), second_arg.into()]);
-    if enable_generated_code_symbols {
-      args.extend([
-        self.void_zero().into(),
-        self.builder.expression_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal).into(),
-      ]);
-    }
+    let args = self.builder.vec_from_iter([first_arg.into(), second_arg.into()]);
     self.builder.call_expression(SPAN, re_export_fn_ref, NONE, args, false)
   }
 

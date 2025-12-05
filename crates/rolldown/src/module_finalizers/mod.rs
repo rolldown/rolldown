@@ -495,7 +495,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if !export_all_externals_rec_ids.is_empty() {
       // construct `__reExport(importer_exports, importee_exports)`
       let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
-      let enable_generated_code_symbols = self.ctx.options.generated_code.symbols;
       match self.ctx.options.format {
         OutputFormat::Esm => {
           let stmts = export_all_externals_rec_ids.iter().copied().flat_map(|idx| {
@@ -521,7 +520,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               re_export_fn_ref.clone_in(self.alloc),
               self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN),
               self.snippet.id_ref_expr(importee_namespace_name, SPAN),
-              enable_generated_code_symbols,
             );
             vec![
               // Insert `import * as ns from 'ext'`external module in esm format
@@ -539,7 +537,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let stmts = export_all_externals_rec_ids.iter().copied().map(|idx| {
             // Insert `__reExport(importer_exports, require('ext'))`
             let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
-            let enable_generated_code_symbols = self.ctx.options.generated_code.symbols;
             // importer_exports
             let (importer_namespace_ref_expr, _) = self.finalized_expr_for_symbol_ref(
               self.ctx.module.namespace_object_ref,
@@ -556,7 +553,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 "require",
                 self.snippet.string_literal_expr(importee.id(), SPAN),
               ),
-              enable_generated_code_symbols,
             );
 
             self.snippet.builder.statement_expression(
@@ -1200,12 +1196,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                         false,
                       );
 
-                      let enable_generated_code_symbols = self.ctx.options.generated_code.symbols;
                       let call_expr = self.snippet.re_export_call_expr(
                         re_export_fn_ref,
                         importer_namespace_ref,
                         importee_namespace_ref,
-                        enable_generated_code_symbols,
                       );
                       // __reExport(exports, otherExports)
                       let stmt = ast::Statement::ExpressionStatement(
@@ -1244,7 +1238,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       false,
                     );
 
-                    let enable_generated_code_symbols = self.ctx.options.generated_code.symbols;
                     let call_expr = self.snippet.re_export_call_expr(
                       re_export_fn_name,
                       importer_namespace_ref,
@@ -1261,7 +1254,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                         ),
                         self.ctx.module.should_consider_node_esm_spec_for_static_import(),
                       ),
-                      enable_generated_code_symbols,
                     );
 
                     // __reExport(importer_exports, __toESM(require_foo()))

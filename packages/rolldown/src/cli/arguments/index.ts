@@ -102,7 +102,7 @@ export function parseCliArguments(): NormalizedCliOptions & {
           writable: true,
         });
       } else if (type === 'object' && typeof option.value === 'string') {
-        // Support multiple comma-separated key=value pairs
+        // `key1=value1,key2=value2`
         const pairs = option.value.split(',').map((x) => x.split('='));
         if (!values[option.name]) {
           Object.defineProperty(values, option.name, {

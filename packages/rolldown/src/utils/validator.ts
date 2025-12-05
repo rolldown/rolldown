@@ -198,9 +198,7 @@ const TransformOptionsSchema = v.object({
   ),
   define: v.pipe(
     v.optional(v.record(v.string(), v.string())),
-    v.description(
-      'Define global variables (comma-separated: key=value,key2=value2)',
-    ),
+    v.description('Define global variables (syntax: key=value,key2=value2)'),
   ),
   inject: v.pipe(
     v.optional(

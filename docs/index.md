@@ -10,6 +10,11 @@ theme: dark
 heading="Performance without sacrificing familiarity"
 />
 <RolldownFeatureGrid />
+<Sponsors
+  description="Rolldown is free and open source, made possible by a full-time team and passionate open-source contributors."
+  sponsorLinkText="Contribute"
+  sponsorLink="/contribution-guide"
+/>
 <Spacer />
 <Footer
   heading="Optimize bundling with Rolldown"

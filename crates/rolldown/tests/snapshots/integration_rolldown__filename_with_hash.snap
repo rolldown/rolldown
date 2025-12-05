@@ -5679,15 +5679,15 @@ expression: output
 
 # tests/rolldown/topics/generated_code/reexports_esm_dynamic
 
-- main-!~{000}~.js => main-D5CPHxcZ.js
+- main-!~{000}~.js => main-BfbMazEi.js
 
 # tests/rolldown/topics/generated_code/reexports_from_external
 
-- main-!~{000}~.js => main-k0XovFZf.js
+- main-!~{000}~.js => main-C8Ztp7ml.js
 
 # tests/rolldown/topics/generated_code/reexports_from_external_commonjs
 
-- main-!~{000}~.js => main-CDci1JBl.js
+- main-!~{000}~.js => main-BrYidzUG.js
 
 # tests/rolldown/topics/generated_code/symbols
 

@@ -457,32 +457,33 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     // if there is no export, we should generate `var ns = {}` instead of `var ns = __export({}, {})`
     // else construct `__export(ns_name, { prop_name: () => returned, ... })`
-    let module_namespace_rhs = if arg_obj_expr.properties.is_empty() {
-      Expression::ObjectExpression(self.builder().alloc(arg_obj_expr))
-    } else {
-      let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc));
-      let args = if self.ctx.options.generated_code.symbols {
-        self.snippet.builder.vec_from_iter([
-          obj_expr,
-          ast::Argument::NumericLiteral(self.snippet.builder.alloc_numeric_literal(
-            SPAN,
-            1.0,
-            None,
-            NumberBase::Decimal,
-          )),
-        ])
+    let module_namespace_rhs =
+      if arg_obj_expr.properties.is_empty() && !self.ctx.options.generated_code.symbols {
+        Expression::ObjectExpression(self.builder().alloc(arg_obj_expr))
       } else {
-        self.snippet.builder.vec_from_iter([obj_expr])
+        let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc));
+        let args = if self.ctx.options.generated_code.symbols {
+          self.snippet.builder.vec_from_iter([
+            obj_expr,
+            ast::Argument::NumericLiteral(self.snippet.builder.alloc_numeric_literal(
+              SPAN,
+              1.0,
+              None,
+              NumberBase::Decimal,
+            )),
+          ])
+        } else {
+          self.snippet.builder.vec_from_iter([obj_expr])
+        };
+        self.snippet.builder.expression_call_with_pure(
+          SPAN,
+          self.finalized_expr_for_runtime_symbol("__export"),
+          NONE,
+          args,
+          false,
+          true,
+        )
       };
-      self.snippet.builder.expression_call_with_pure(
-        SPAN,
-        self.finalized_expr_for_runtime_symbol("__export"),
-        NONE,
-        args,
-        false,
-        true,
-      )
-    };
 
     // construct `var [binding_name_for_namespace_object_ref] = __export(...)`
     let decl_stmt =

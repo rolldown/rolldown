@@ -17,7 +17,7 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 
 //#endregion
 //#region reexports.mjs
-var reexports_exports = {};
+var reexports_exports = /* @__PURE__ */ __export({}, 1);
 __reExport(reexports_exports, /* @__PURE__ */ __toESM(require_cjs(), 1), void 0, 1);
 
 //#endregion
@@ -44,7 +44,7 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 
 //#endregion
 //#region reexports.mjs
-var reexports_exports = {};
+var reexports_exports = /* @__PURE__ */ __export({}, 1);
 __reExport(reexports_exports, /* @__PURE__ */ __toESM(require_cjs(), 1), void 0, 1);
 
 //#endregion

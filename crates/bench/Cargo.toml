@@ -15,7 +15,6 @@ doctest = false
 test = false
 
 [dependencies]
-criterion2 = { workspace = true, features = ["async_tokio"] }
 rolldown = { workspace = true, features = ["experimental"] }
 rolldown_workspace = { workspace = true }
 
@@ -31,6 +30,7 @@ name = "scan"
 codspeed = ["criterion2/codspeed"]
 
 [dev-dependencies]
+criterion2 = { workspace = true, features = ["async_tokio"] }
 rolldown_common = { workspace = true }
 rolldown_testing = { workspace = true }
 tokio = { workspace = true, features = ["rt"] }

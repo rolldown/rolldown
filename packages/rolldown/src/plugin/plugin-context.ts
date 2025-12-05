@@ -15,10 +15,12 @@ import {
 } from '../plugin/minimal-plugin-context';
 import type { Extends, TypeAssert } from '../types/assert';
 import type { ModuleInfo } from '../types/module-info';
+import type { SourceMap } from '../types/rolldown-output';
+import { bindingifySourcemap } from '../types/sourcemap';
 import type { PartialNull } from '../types/utils';
 import { type AssetSource, bindingAssetSource } from '../utils/asset-source';
 import { bindingifyPreserveEntrySignatures } from '../utils/bindingify-input-options';
-import { unimplemented, unreachable } from '../utils/misc';
+import { unreachable } from '../utils/misc';
 import { fsModule, type RolldownFsModule } from './fs';
 import type {
   CustomPluginOptions,
@@ -45,7 +47,16 @@ interface EmittedChunk {
   importer?: string;
 }
 
-export type EmittedFile = EmittedAsset | EmittedChunk;
+export interface EmittedPrebuiltChunk {
+  type: 'prebuilt-chunk';
+  fileName: string;
+  code: string;
+  exports?: string[];
+  map?: SourceMap;
+  sourcemapFileName?: string;
+}
+
+export type EmittedFile = EmittedAsset | EmittedChunk | EmittedPrebuiltChunk;
 
 export interface PluginContextResolveOptions {
   isEntry?: boolean;
@@ -183,9 +194,14 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
   }
 
   public emitFile: PluginContext['emitFile'] = (file): string => {
-    // @ts-expect-error
     if (file.type === 'prebuilt-chunk') {
-      return unimplemented('PluginContext.emitFile with type prebuilt-chunk');
+      return this.context.emitPrebuiltChunk({
+        fileName: file.fileName,
+        code: file.code,
+        exports: file.exports,
+        map: bindingifySourcemap(file.map),
+        sourcemapFileName: file.sourcemapFileName,
+      });
     }
     if (file.type === 'chunk') {
       return this.context.emitChunk({

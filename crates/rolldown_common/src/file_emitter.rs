@@ -1,6 +1,6 @@
 use crate::{
-  AddEntryModuleMsg, FilenameTemplate, ModuleLoaderMsg, NormalizedBundlerOptions, Output,
-  OutputAsset, PreserveEntrySignatures, StrOrBytes,
+  AddEntryModuleMsg, FilenameTemplate, ModuleLoaderMsg, Modules, NormalizedBundlerOptions, Output,
+  OutputAsset, OutputChunk, PreserveEntrySignatures, StrOrBytes,
 };
 use anyhow::Context;
 use arcstr::ArcStr;
@@ -44,6 +44,15 @@ pub struct EmittedChunkInfo {
   pub filename: ArcStr,
 }
 
+#[derive(Debug, Clone)]
+pub struct EmittedPrebuiltChunk {
+  pub file_name: ArcStr,
+  pub code: String,
+  pub exports: Vec<String>,
+  pub map: Option<rolldown_sourcemap::SourceMap>,
+  pub sourcemap_filename: Option<String>,
+}
+
 #[derive(Debug)]
 pub struct FileEmitter {
   tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
@@ -51,6 +60,7 @@ pub struct FileEmitter {
   names: FxDashMap<ArcStr, u32>,
   files: FxDashMap<ArcStr, OutputAsset>,
   chunks: FxDashMap<ArcStr, Arc<EmittedChunk>>,
+  prebuilt_chunks: FxDashMap<ArcStr, Arc<EmittedPrebuiltChunk>>,
   base_reference_id: AtomicUsize,
   options: Arc<NormalizedBundlerOptions>,
   /// Mark the files that have been emitted to bundle.
@@ -67,6 +77,7 @@ impl FileEmitter {
       names: DashMap::default(),
       files: DashMap::default(),
       chunks: DashMap::default(),
+      prebuilt_chunks: DashMap::default(),
       emitted_chunks: DashMap::default(),
       base_reference_id: AtomicUsize::new(0),
       options,
@@ -96,6 +107,12 @@ impl FileEmitter {
     .context("FileEmitter: failed to send AddEntryModule message - module loader shut down during file emission")?;
     self.chunks.insert(reference_id.clone(), chunk);
     Ok(reference_id)
+  }
+
+  pub fn emit_prebuilt_chunk(&self, chunk: EmittedPrebuiltChunk) -> ArcStr {
+    let reference_id = self.assign_reference_id(Some(chunk.file_name.clone()));
+    self.prebuilt_chunks.insert(reference_id.clone(), Arc::new(chunk));
+    reference_id
   }
 
   pub fn emit_file(
@@ -165,6 +182,9 @@ impl FileEmitter {
       return Err(anyhow::anyhow!(
         "Unable to get file name for emitted chunk: {reference_id}.You can only get file names once chunks have been generated after the 'renderStart' hook."
       ));
+    }
+    if let Some(prebuilt_chunk) = self.prebuilt_chunks.get(reference_id) {
+      return Ok(prebuilt_chunk.file_name.clone());
     }
     Err(anyhow::anyhow!("Unable to get file name for unknown file: {reference_id}"))
   }
@@ -246,6 +266,40 @@ impl FileEmitter {
         source: std::mem::take(&mut value.source),
       })));
     });
+
+    // Add prebuilt chunks to the bundle
+    self.prebuilt_chunks.iter().for_each(|prebuilt_chunk| {
+      let (key, value) = prebuilt_chunk.pair();
+      if self.emitted_files.contains(key) {
+        return;
+      }
+      self.emitted_files.insert(key.clone());
+
+      // Check for filename conflicts
+      let lowercase_filename: ArcStr = value.file_name.as_str().to_lowercase().into();
+      if !self.emitted_filenames.insert(lowercase_filename) {
+        warnings.push(
+          BuildDiagnostic::filename_conflict(value.file_name.clone()).with_severity_warning(),
+        );
+      }
+
+      bundle.push(Output::Chunk(Arc::new(OutputChunk {
+        name: value.file_name.clone(),
+        is_entry: false,
+        is_dynamic_entry: false,
+        facade_module_id: None,
+        module_ids: vec![],
+        exports: value.exports.iter().map(|s| s.as_str().into()).collect(),
+        filename: value.file_name.clone(),
+        modules: Modules { keys: vec![], values: vec![] },
+        imports: vec![],
+        dynamic_imports: vec![],
+        code: value.code.clone(),
+        map: value.map.clone(),
+        sourcemap_filename: value.sourcemap_filename.clone(),
+        preliminary_filename: value.file_name.to_string(),
+      })));
+    });
   }
 
   pub async fn set_context_load_modules_tx(
@@ -259,6 +313,7 @@ impl FileEmitter {
   pub fn clear(&self) {
     self.chunks.clear();
     self.files.clear();
+    self.prebuilt_chunks.clear();
     self.names.clear();
     self.source_hash_to_reference_id.clear();
     self.base_reference_id.store(0, Ordering::Relaxed);

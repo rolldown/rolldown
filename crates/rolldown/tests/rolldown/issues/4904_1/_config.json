@@ -11,5 +11,10 @@
       }
     ],
     "preserveEntrySignatures": "allow-extension"
-  }
+  },
+  "configVariants": [
+    {
+      "preserveEntrySignatures": "strict"
+    }
+  ]
 }

@@ -88,5 +88,5 @@ tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread
 walkdir = { workspace = true }
 
 [package.metadata.cargo-shear]
-# `serde_json` is used in `trace_action` macro.
+# `serde` is used via feature flag, `serde_json` is used in `trace_action` macro.
 ignored = ["serde", "serde_json"]

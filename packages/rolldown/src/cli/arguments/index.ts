@@ -102,9 +102,8 @@ export function parseCliArguments(): NormalizedCliOptions & {
           writable: true,
         });
       } else if (type === 'object' && typeof option.value === 'string') {
-        const [key, value] = option.value.split(',').map((x) =>
-          x.split('=')
-        )[0];
+        // `key1=value1,key2=value2`
+        const pairs = option.value.split(',').map((x) => x.split('='));
         if (!values[option.name]) {
           Object.defineProperty(values, option.name, {
             value: {},
@@ -113,14 +112,15 @@ export function parseCliArguments(): NormalizedCliOptions & {
             writable: true,
           });
         }
-        if (key && value) {
-          // TODO support multiple entries.
-          Object.defineProperty(values[option.name], key, {
-            value,
-            enumerable: true,
-            configurable: true,
-            writable: true,
-          });
+        for (const [key, value] of pairs) {
+          if (key && value) {
+            Object.defineProperty(values[option.name], key, {
+              value,
+              enumerable: true,
+              configurable: true,
+              writable: true,
+            });
+          }
         }
       } else if (type === 'array' && typeof option.value === 'string') {
         if (!values[option.name]) {

@@ -30,7 +30,7 @@ use self::types::{
 };
 
 bitflags::bitflags! {
-  #[derive(Debug, Clone, Copy, Default)]
+  #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
     pub struct ChunkMeta: u8 {
         /// `true` if the chunk is dynamic imported by other modules, it would be treated as a dynamic entry if it
         /// is not a user defined entry point.

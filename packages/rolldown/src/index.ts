@@ -86,6 +86,7 @@ import type { DefineParallelPluginResult } from './plugin/parallel-plugin';
 import type {
   EmittedAsset,
   EmittedFile,
+  EmittedPrebuiltChunk,
   GetModuleInfo,
   PluginContext,
 } from './plugin/plugin-context';
@@ -124,6 +125,7 @@ export type {
   DefineParallelPluginResult,
   EmittedAsset,
   EmittedFile,
+  EmittedPrebuiltChunk,
   ExistingRawSourceMap,
   ExternalOption,
   FunctionPluginHooks,

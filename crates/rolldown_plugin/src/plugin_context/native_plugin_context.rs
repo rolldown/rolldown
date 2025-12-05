@@ -139,6 +139,10 @@ impl NativePluginContextImpl {
     self.file_emitter.emit_chunk(Arc::new(chunk)).await
   }
 
+  pub fn emit_prebuilt_chunk(&self, chunk: rolldown_common::EmittedPrebuiltChunk) -> ArcStr {
+    self.file_emitter.emit_prebuilt_chunk(chunk)
+  }
+
   pub fn emit_file(
     &self,
     file: rolldown_common::EmittedAsset,

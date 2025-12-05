@@ -77,10 +77,6 @@
   "language/module-code/instn-star-binding.js": {
     "reason": "Rolldown treats assignments to const as bundle errors instead of runtime errors"
   },
-  "language/module-code/namespace/Symbol.toStringTag.js": {
-    "reason": "Symbol.toStringTag not properly set on module namespace objects for self-imports",
-    "issue": "https://github.com/rolldown/rolldown/issues/7152"
-  },
   "language/module-code/namespace/internals/define-own-property.js": {
     "reason": "Rolldown allows defining properties on module namespace objects"
   },
@@ -102,26 +98,14 @@
   "language/module-code/namespace/internals/get-own-property-str-found-uninit.js": {
     "reason": "Rolldown does not preserve TDZ semantics"
   },
-  "language/module-code/namespace/internals/get-own-property-sym.js": {
-    "reason": "Symbol.toStringTag not properly set on module namespace objects for self-imports",
-    "issue": "https://github.com/rolldown/rolldown/issues/7152"
-  },
   "language/module-code/namespace/internals/get-prototype-of.js": {
     "reason": "Rolldown does not use null as the prototype of module namespace objects"
   },
   "language/module-code/namespace/internals/get-str-found-uninit.js": {
     "reason": "Rolldown does not preserve TDZ semantics"
   },
-  "language/module-code/namespace/internals/get-sym-found.js": {
-    "reason": "Symbol.toStringTag not properly set on module namespace objects for self-imports",
-    "issue": "https://github.com/rolldown/rolldown/issues/7152"
-  },
   "language/module-code/namespace/internals/has-property-str-not-found.js": {
     "reason": "Rolldown does not use null as the prototype of module namespace objects"
-  },
-  "language/module-code/namespace/internals/has-property-sym-found.js": {
-    "reason": "Symbol.toStringTag not properly set on module namespace objects for self-imports",
-    "issue": "https://github.com/rolldown/rolldown/issues/7152"
   },
   "language/module-code/namespace/internals/is-extensible.js": {
     "reason": "Rolldown does not freeze module namespace objects"

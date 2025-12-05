@@ -2,7 +2,7 @@
 source: crates/rolldown/tests/integration_test262.rs
 expression: snapshot
 ---
-Summary: 538 passed, 54 failed, 592 total
+Summary: 542 passed, 50 failed, 592 total
 
 ---
 
@@ -1324,14 +1324,9 @@ Actual: Runtime execution succeeded
 ---
 
 # language/module-code/namespace/Symbol.toStringTag.js
-Result: FAIL
-Reason: Symbol.toStringTag not properly set on module namespace objects for self-imports
-Issue: https://github.com/rolldown/rolldown/issues/7152
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: Test262Error {
-  message: 'Expected SameValue(«undefined», «"Module"») to be true'
-}
+Actual: Runtime execution succeeded
 ---
 
 # language/module-code/namespace/internals/define-own-property.js
@@ -1423,14 +1418,9 @@ Actual: Runtime execution succeeded
 ---
 
 # language/module-code/namespace/internals/get-own-property-sym.js
-Result: FAIL
-Reason: Symbol.toStringTag not properly set on module namespace objects for self-imports
-Issue: https://github.com/rolldown/rolldown/issues/7152
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: Test262Error {
-  message: 'Expected SameValue(«false», «true») to be true'
-}
+Actual: Runtime execution succeeded
 ---
 
 # language/module-code/namespace/internals/get-prototype-of.js
@@ -1478,14 +1468,9 @@ Actual: Runtime execution succeeded
 ---
 
 # language/module-code/namespace/internals/get-sym-found.js
-Result: FAIL
-Reason: Symbol.toStringTag not properly set on module namespace objects for self-imports
-Issue: https://github.com/rolldown/rolldown/issues/7152
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: Test262Error {
-  message: 'Expected SameValue(«"undefined"», «"string"») to be true'
-}
+Actual: Runtime execution succeeded
 ---
 
 # language/module-code/namespace/internals/get-sym-not-found.js
@@ -1517,12 +1502,9 @@ Runtime error: Failed to import test module: Test262Error {
 ---
 
 # language/module-code/namespace/internals/has-property-sym-found.js
-Result: FAIL
-Reason: Symbol.toStringTag not properly set on module namespace objects for self-imports
-Issue: https://github.com/rolldown/rolldown/issues/7152
+Result: PASS
 Expected: success
-Actual:
-Runtime error: Failed to import test module: Test262Error { message: 'in: Symbol.toStringTag' }
+Actual: Runtime execution succeeded
 ---
 
 # language/module-code/namespace/internals/has-property-sym-not-found.js

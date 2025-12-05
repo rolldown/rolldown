@@ -9,6 +9,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "acorn-import-assertions": "catalog:",
     "fixturify": "catalog:",
     "fs-extra": "catalog:",
     "mocha": "catalog:",

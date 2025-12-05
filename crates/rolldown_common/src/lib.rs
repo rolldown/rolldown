@@ -117,7 +117,10 @@ pub use crate::{
     node_builtin_modules::is_existing_node_builtin_modules,
     symbol_id_ext::SymbolIdExt,
   },
-  file_emitter::{EmittedAsset, EmittedChunk, EmittedChunkInfo, FileEmitter, SharedFileEmitter},
+  file_emitter::{
+    EmittedAsset, EmittedChunk, EmittedChunkInfo, EmittedPrebuiltChunk, FileEmitter,
+    SharedFileEmitter,
+  },
   hmr::{
     client_hmr_input::ClientHmrInput, client_hmr_update::ClientHmrUpdate,
     hmr_boundary::HmrBoundary, hmr_boundary_output::HmrBoundaryOutput, hmr_patch::HmrPatch,

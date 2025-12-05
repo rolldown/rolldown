@@ -86,7 +86,7 @@ OPTIONS
   --transform.assumptions.set-public-class-fields .
   --transform.decorators.emit-decorator-metadata .
   --transform.decorators.legacy .
-  --transform.define <transform.define>Define global variables.
+  --transform.define <transform.define>Define global variables (comma-separated: key=value,key2=value2).
   --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
   --transform.inject <transform.inject>Inject import statements on demand.

@@ -168,7 +168,6 @@ exports[`cli options for bundling > should handle multiple define arguments with
 "
 `;
 
-
 exports[`cli options for bundling > should handle negative boolean options 1`] = `
 "(function(exports, node_fs) {
 

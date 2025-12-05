@@ -228,6 +228,22 @@ impl<'ast> AstSnippet<'ast> {
     )
   }
 
+  pub fn call_expr_with_3arg_expr(
+    &self,
+    name: ast::Expression<'ast>,
+    arg1: ast::Expression<'ast>,
+    arg2: ast::Expression<'ast>,
+    arg3: ast::Expression<'ast>,
+    pure: bool,
+  ) -> ast::Expression<'ast> {
+    let mut call_expr = self.simple_call_expr(name);
+    call_expr.pure = pure;
+    call_expr.arguments.push(arg1.into());
+    call_expr.arguments.push(arg2.into());
+    call_expr.arguments.push(arg3.into());
+    ast::Expression::CallExpression(call_expr.into_in(self.alloc()))
+  }
+
   /// `name()`
   #[inline]
   pub fn call_expr_stmt(&self, name: PassedStr) -> ast::Statement<'ast> {
@@ -825,6 +841,58 @@ impl<'ast> AstSnippet<'ast> {
       ast::Expression::ObjectExpression(
         self.builder.alloc_object_expression(SPAN, self.builder.vec_from_iter([proto])),
       ),
+      true,
+    )
+  }
+
+  pub fn object_freeze_symbol_tostringtag(&self) -> Expression<'ast> {
+    //prop
+    let proto = self.builder.object_property_kind_object_property(
+      SPAN,
+      PropertyKind::Init,
+      self.builder.property_key_static_identifier(SPAN, "__proto__"),
+      ast::Expression::NullLiteral(self.builder.alloc_null_literal(SPAN)),
+      false,
+      false,
+      false,
+    );
+
+    let proto_expr = ast::Expression::ObjectExpression(
+      self.builder.alloc_object_expression(SPAN, self.builder.vec_from_iter([proto])),
+    );
+
+    let value = self.builder.object_property_kind_object_property(
+      SPAN,
+      PropertyKind::Init,
+      self.builder.property_key_static_identifier(SPAN, "value"),
+      ast::Expression::StringLiteral(self.builder.alloc_string_literal(SPAN, "Module", None)),
+      false,
+      false,
+      false,
+    );
+
+    let value_expr = ast::Expression::ObjectExpression(
+      self.builder.alloc_object_expression(SPAN, self.builder.vec_from_iter([value])),
+    );
+
+    let symbol =
+      ast::Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
+        SPAN,
+        ast::Expression::Identifier(self.builder.alloc_identifier_reference(SPAN, "Symbol")),
+        self.builder.identifier_name(SPAN, "toStringTag"),
+        false,
+      ));
+
+    let object_define_property = self.call_expr_with_3arg_expr(
+      self.literal_prop_access_member_expr_expr("Object", "defineProperty"),
+      proto_expr,
+      symbol,
+      value_expr,
+      true,
+    );
+    self.call_expr_with_arg_expr(
+      self.literal_prop_access_member_expr_expr("Object", "freeze"),
+      object_define_property,
       true,
     )
   }

@@ -1,0 +1,16 @@
+{
+  "config": {
+     "generatedCode": {
+      "symbols": true
+    }
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    },
+    {
+      "format": "iife"
+    }
+  ]
+ 
+}

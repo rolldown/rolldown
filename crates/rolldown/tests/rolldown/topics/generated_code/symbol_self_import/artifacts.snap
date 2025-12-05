@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+var main_exports = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({ __proto__: null }, Symbol.toStringTag, { value: "Module" }));
+console.log(main_exports);
+
+//#endregion
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+
+//#region main.js
+var main_exports = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({ __proto__: null }, Symbol.toStringTag, { value: "Module" }));
+console.log(main_exports);
+
+//#endregion
+```
+
+# Variant: [format: Iife]
+
+## Assets
+
+### main.js
+
+```js
+(function() {
+
+
+//#region main.js
+	var main_exports = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({ __proto__: null }, Symbol.toStringTag, { value: "Module" }));
+	console.log(main_exports);
+
+//#endregion
+})();
+```

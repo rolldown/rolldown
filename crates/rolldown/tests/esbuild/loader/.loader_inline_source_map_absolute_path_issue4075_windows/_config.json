@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": ":\\\\home\\\\user\\\\project\\\\src\\\\entry_css",
+        "import": ":\\\\home\\\\user\\\\project\\\\src\\\\entry.css"
+      }
+    ]
+  }
+}

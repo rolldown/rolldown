@@ -1,0 +1,27 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry_js",
+        "import": "entry.js"
+      }
+    ],
+    "resolve": {
+      "extensions": [
+        ".web.mjs",
+        ".mjs",
+        ".web.js",
+        ".js",
+        ".web.mts",
+        ".mts",
+        ".web.ts",
+        ".ts",
+        ".web.jsx",
+        ".jsx",
+        ".web.tsx",
+        ".tsx",
+        ".json"
+      ]
+    }
+  }
+}

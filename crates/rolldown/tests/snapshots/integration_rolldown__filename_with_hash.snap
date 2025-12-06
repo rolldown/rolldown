@@ -46,6 +46,11 @@ expression: output
 - top-level-!~{000}~.js => top-level-CU29_pPZ.js
 - type-before-!~{008}~.js => type-before-860OLV3I.js
 
+# tests/esbuild/dce/cross_module_constant_folding_computed_property_name
+
+- const-entry_js-!~{001}~.js => const-entry_js-D6lMIPDN.js
+- enum-entry_ts-!~{000}~.js => enum-entry_ts-CwpNaWQ4.js
+
 # tests/esbuild/dce/cross_module_constant_folding_number
 
 - const-entry-!~{001}~.js => const-entry-XmFaKKz7.js
@@ -91,6 +96,18 @@ expression: output
 - keep-these-!~{001}~.js => keep-these-nXLhB_4c.js
 - remove-these-!~{000}~.js => remove-these-QI2cnere.js
 
+# tests/esbuild/dce/dce_of_iterator_superclass_issue4310
+
+- entry_js-!~{000}~.js => entry_js-DS3Dq1tX.js
+
+# tests/esbuild/dce/dce_of_negated_bigints
+
+- entry_js-!~{000}~.js => entry_js-GP_-VWxw.js
+
+# tests/esbuild/dce/dce_of_symbol_for_call
+
+- entry_js-!~{000}~.js => entry_js-DuvAqYaa.js
+
 # tests/esbuild/dce/dce_of_symbol_instances
 
 - class-!~{000}~.js => class-DtODMnQf.js
@@ -134,6 +151,10 @@ expression: output
 # tests/esbuild/dce/dead_code_following_jump
 
 - entry-!~{000}~.js => entry-BVQuKz67.js
+
+# tests/esbuild/dce/dead_code_inside_empty_try
+
+- entry_js-!~{000}~.js => entry_js-DgBe4YvC.js
 
 # tests/esbuild/dce/disable_tree_shaking
 
@@ -585,6 +606,10 @@ expression: output
 # tests/esbuild/default/built_in_node_module_precedence
 
 - entry-!~{000}~.js => entry-YBSM95D0.js
+
+# tests/esbuild/default/bundle_esm_with_nested_var_issue4348
+
+- entry_js-!~{000}~.js => entry_js-DiD43zg5.js
 
 # tests/esbuild/default/bundling_files_outside_of_outbase
 
@@ -1091,6 +1116,10 @@ expression: output
 - entry-!~{000}~.js => entry-pSvoMqhS.js
 - entry2.css
 
+# tests/esbuild/default/legal_comments_merge_duplicates_issue4139
+
+- entry_js-!~{000}~.js => entry_js-GP_-VWxw.js
+
 # tests/esbuild/default/legal_comments_modify_indent
 
 - entry-!~{000}~.js => entry-B161_kiz.js
@@ -1358,6 +1387,10 @@ expression: output
 
 - entry-!~{000}~.js => entry-5VzC-1pQ.js
 
+# tests/esbuild/default/node_annotation_invalid_identifier_issue4100
+
+- entry_mjs-!~{000}~.js => entry_mjs-DXYbIR4S.js
+
 # tests/esbuild/default/node_modules
 
 - src_entry_js-!~{000}~.js => src_entry_js-DQefPcl1.js
@@ -1529,6 +1562,10 @@ expression: output
 
 - entry-!~{000}~.js => entry-CH6q1EnZ.js
 
+# tests/esbuild/default/resolve_extensions_order_issue4053
+
+- entry_js-!~{000}~.js => entry_js-Bo_C62aI.js
+
 # tests/esbuild/default/runtime_name_collision_no_bundle
 
 - entry-!~{000}~.js => entry-68bx9LeZ.js
@@ -1544,6 +1581,16 @@ expression: output
 # tests/esbuild/default/simple_es6
 
 - entry-!~{000}~.js => entry-CZaYY0Ae.js
+
+# tests/esbuild/default/source_identifier_name_index_multiple_entry
+
+- about_index_js-!~{001}~.js => about_index_js-BGOSVCgi.js
+- home_index_js-!~{000}~.js => home_index_js-BBTKwmlq.js
+- common-!~{002}~.js => common-D1JMsT3U.js
+
+# tests/esbuild/default/source_identifier_name_index_single_entry
+
+- index_js-!~{000}~.js => index_js-Bt8d1iMv.js
 
 # tests/esbuild/default/source_map
 
@@ -2410,6 +2457,10 @@ expression: output
 # tests/esbuild/loader/require_custom_extension_string
 
 - entry-!~{000}~.js => entry-BopAKz-3.js
+
+# tests/esbuild/loader/with_type_json_override_loader_glob
+
+- entry_js-!~{000}~.js => entry_js-DLYHObc5.js
 
 # tests/esbuild/lower/class_super_this_issue242_no_bundle
 

@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_js.js
+
+```js
+//#region data1.txt
+var data1_default = "\\xEF\\xBB\\xBFtext";
+
+//#endregion
+//#region data2.txt
+var data2_default = "text\\xEF\\xBB\\xBF";
+
+//#endregion
+//#region entry.js
+console.log(data1_default, data2_default);
+
+//#endregion
+```

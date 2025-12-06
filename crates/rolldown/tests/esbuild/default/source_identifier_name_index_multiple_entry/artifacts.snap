@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## about_index_js.js
+
+```js
+import { n as require_pkg, r as __commonJSMin, t as require_common } from "./common.js";
+
+//#region about/index.js
+var require_about = /* @__PURE__ */ __commonJSMin((() => {
+	require_about();
+	require_pkg();
+	require_common();
+}));
+
+//#endregion
+export default require_about();
+
+```
+
+## common.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region node_modules/pkg/index.js
+var require_pkg = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.pkg = true;
+}));
+
+//#endregion
+//#region common/index.js
+var require_common = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.common = true;
+}));
+
+//#endregion
+export { require_pkg as n, __commonJSMin as r, require_common as t };
+```
+
+## home_index_js.js
+
+```js
+import { n as require_pkg, r as __commonJSMin, t as require_common } from "./common.js";
+
+//#region home/index.js
+var require_home = /* @__PURE__ */ __commonJSMin((() => {
+	require_home();
+	require_pkg();
+	require_common();
+}));
+
+//#endregion
+export default require_home();
+
+```

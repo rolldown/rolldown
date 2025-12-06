@@ -20,7 +20,10 @@ use crate::{
   dev_context::{DevContext, PinBoxSendStaticFuture},
   normalize_dev_options,
   type_aliases::CoordinatorSender,
-  types::{coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot},
+  types::{
+    coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot,
+    schedule_build_return::ScheduleBuildReturn,
+  },
 };
 
 #[cfg(feature = "testing")]
@@ -165,44 +168,16 @@ impl DevEngine {
 
   // Wait for ongoing bundle to finish if there is one
   pub async fn wait_for_ongoing_bundle(&self) -> BuildResult<()> {
-    self.create_error_if_closed()?;
-
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
-    self
-      .coordinator_sender
-      .send(CoordinatorMsg::GetState { reply: reply_sender })
-      .map_err_to_unhandleable()
-      .context("DevEngine: failed to send GetState to coordinator")?;
-
-    let status = reply_receiver
-      .await
-      .map_err_to_unhandleable()
-      .context("DevEngine: coordinator closed before responding to GetStatus")?;
-
-    if let Some(bundling_future) = status.running_future {
+    let state = self.get_coordinator_state().await?;
+    if let Some(bundling_future) = state.running_future {
       bundling_future.await;
     }
-
     Ok(())
   }
 
   pub async fn get_bundle_state(&self) -> BuildResult<BundleState> {
-    self.create_error_if_closed()?;
-
-    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
-    self
-      .coordinator_sender
-      .send(CoordinatorMsg::GetState { reply: reply_sender })
-      .map_err_to_unhandleable()
-      .context(
-        "DevEngine: failed to send GetState to coordinator within has_latest_bundle_output",
-      )?;
-
-    let status = reply_receiver.await.map_err_to_unhandleable().context(
-      "DevEngine: coordinator closed before responding to GetStatus within get_bundle_state",
-    )?;
-
-    Ok(status.into())
+    let state = self.get_coordinator_state().await?;
+    Ok(state.into())
   }
 
   // Ensure there's latest bundle output available for browser loading/reloading scenarios
@@ -305,7 +280,15 @@ impl DevEngine {
 
   #[cfg(feature = "testing")]
   pub async fn ensure_task_with_changed_files(&self, changed_files: FxIndexSet<PathBuf>) {
-    // Create a synthetic file change event to simulate real file system changes
+    self.notify_file_changes(changed_files);
+    self.ensure_empty_task_queue().await.unwrap();
+  }
+
+  /// Like `ensure_task_with_changed_files` but doesn't wait for the build to complete.
+  /// Useful for testing overlapping file changes where the second edit happens
+  /// while the first transform is still in progress.
+  #[cfg(feature = "testing")]
+  pub fn notify_file_changes(&self, changed_files: FxIndexSet<PathBuf>) {
     let notify_event = notify::Event {
       kind: notify::EventKind::Modify(notify::event::ModifyKind::Data(
         notify::event::DataChange::Any,
@@ -317,19 +300,61 @@ impl DevEngine {
     let event =
       rolldown_fs_watcher::FsEvent { detail: notify_event, time: std::time::Instant::now() };
 
-    // Send WatchEvent message to coordinator (simulates real file change)
-    // The coordinator will automatically schedule a build via handle_file_changes
     let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(Ok(vec![event])));
 
-    // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
-    // and get the build future to wait on
-    let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+    // Trigger ScheduleBuildIfStale without awaiting - just to ensure WatchEvent is processed
+    let (reply_tx, _reply_rx) = tokio::sync::oneshot::channel();
     let _ = self.coordinator_sender.send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_tx });
+  }
 
-    // Wait for the build that was triggered by the file change
-    if let Ok(Some(ret)) = reply_rx.await {
-      ret.future.await;
+  /// Drains the task queue by awaiting all pending tasks.
+  /// - Bails out on error states (FullBuildFailed or Failed)
+  /// - Awaits if a build is in progress
+  /// - Schedules and awaits if idle with pending tasks
+  /// - Returns only when the queue is empty
+  #[cfg(feature = "testing")]
+  pub async fn ensure_empty_task_queue(&self) -> BuildResult<()> {
+    let mut loop_count = 0u32;
+    loop {
+      loop_count += 1;
+      if loop_count > 100 {
+        if cfg!(debug_assertions) {
+          panic!(
+            "[DevEngine] ensure_empty_task_queue has looped {loop_count} times, something is definitely wrong"
+          );
+        } else {
+          eprintln!(
+            "[DevEngine] ensure_empty_task_queue has looped {loop_count} times, something might be wrong"
+          );
+        }
+        break;
+      }
+
+      let state = self.get_coordinator_state().await?;
+
+      // Bailout on error state
+      if state.is_in_error_state {
+        break;
+      }
+
+      // Await if build is in progress
+      if let Some(future) = state.running_future {
+        future.await;
+        continue;
+      }
+
+      // Schedule build if there are queued tasks
+      if state.has_queued_tasks {
+        if let Some(ret) = self.schedule_build_if_stale().await? {
+          ret.future.await;
+        }
+        continue;
+      }
+
+      // Idle and no queued tasks - done
+      break;
     }
+    Ok(())
   }
 
   #[cfg(feature = "testing")]
@@ -365,6 +390,38 @@ impl DevEngine {
       Err(anyhow::anyhow!("Dev engine is closed"))?;
     }
     Ok(())
+  }
+
+  async fn get_coordinator_state(&self) -> BuildResult<CoordinatorStateSnapshot> {
+    self.create_error_if_closed()?;
+    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    self
+      .coordinator_sender
+      .send(CoordinatorMsg::GetState { reply: reply_sender })
+      .map_err_to_unhandleable()
+      .context("DevEngine: failed to send GetState")?;
+    Ok(
+      reply_receiver
+        .await
+        .map_err_to_unhandleable()
+        .context("DevEngine: coordinator closed before responding to GetState")?,
+    )
+  }
+
+  async fn schedule_build_if_stale(&self) -> BuildResult<Option<ScheduleBuildReturn>> {
+    self.create_error_if_closed()?;
+    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    self
+      .coordinator_sender
+      .send(CoordinatorMsg::ScheduleBuildIfStale { reply: reply_sender })
+      .map_err_to_unhandleable()
+      .context("DevEngine: failed to send ScheduleBuildIfStale")?;
+    Ok(
+      reply_receiver
+        .await
+        .map_err_to_unhandleable()
+        .context("DevEngine: coordinator closed before responding to ScheduleBuildIfStale")?,
+    )
   }
 }
 

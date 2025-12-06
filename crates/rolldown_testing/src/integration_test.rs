@@ -28,6 +28,26 @@ use crate::types::{
   BuildArtifactsSnapshot, BuildRoundOutput, DevArtifactsSnapshot, DevRoundOutput, HmrStepOutput,
 };
 
+// Type aliases for nested callback tracking
+type HmrUpdatesBySteps = Arc<
+  std::sync::Mutex<Vec<Vec<BuildResult<(Vec<rolldown_common::ClientHmrUpdate>, Vec<String>)>>>>,
+>;
+type BuildResultsBySteps = Arc<std::sync::Mutex<Vec<Vec<BuildResult<BundleOutput>>>>>;
+
+pub struct CustomDevTestContext<'a> {
+  pub dev_engine: &'a DevEngine,
+  pub hmr_updates_by_steps: HmrUpdatesBySteps,
+  pub build_results_by_steps: BuildResultsBySteps,
+}
+
+impl CustomDevTestContext<'_> {
+  pub fn mark_next_step(&self) {
+    self.hmr_updates_by_steps.lock().unwrap().push(vec![]);
+    self.build_results_by_steps.lock().unwrap().push(vec![]);
+    eprintln!("--- Marked next HMR step ---");
+  }
+}
+
 #[derive(Default)]
 pub struct IntegrationTest {
   test_meta: TestMeta,
@@ -84,6 +104,37 @@ impl IntegrationTest {
       .await;
   }
 
+  pub async fn run_dev_with_plugins(
+    &self,
+    options: BundlerOptions,
+    plugins: Vec<SharedPluginable>,
+    enable_custom_test_fn: bool,
+    custom_dev_test_fn: impl for<'a> AsyncFnMut(&'a CustomDevTestContext<'a>) -> BuildResult<()>,
+  ) {
+    let test_folder_path = &self.test_folder_path;
+    let hmr_temp_dir_path = test_folder_path.join("hmr-temp");
+    let hmr_steps = collect_hmr_edit_files(test_folder_path, &hmr_temp_dir_path);
+
+    let mut named_options =
+      vec![NamedBundlerOptions { options, description: None, snapshot: None, config_name: None }];
+
+    for opts in &mut named_options {
+      self.apply_test_defaults(&mut opts.options);
+    }
+
+    let artifacts_snapshot = self
+      .run_multiple_for_dev(
+        named_options,
+        plugins,
+        &hmr_steps,
+        enable_custom_test_fn,
+        custom_dev_test_fn,
+      )
+      .await;
+
+    self.snapshot_bundle_output(test_folder_path, &artifacts_snapshot.render(&self.test_meta));
+  }
+
   /// Determine if output should be executed based on test meta
   fn should_execute_output(&self) -> bool {
     self.test_meta.expect_executed && !self.test_meta.expect_error && self.test_meta.write_to_disk
@@ -95,20 +146,14 @@ impl IntegrationTest {
     multiple_options: Vec<NamedBundlerOptions>,
     plugins: Vec<SharedPluginable>,
     hmr_steps: &[Vec<PathBuf>],
+    enable_custom_test_fn: bool,
+    mut custom_test_fn: impl for<'a> AsyncFnMut(&'a CustomDevTestContext<'a>) -> BuildResult<()>,
   ) -> DevArtifactsSnapshot {
     let test_folder_path = &self.test_folder_path;
     let hmr_temp_dir_path = test_folder_path.join("hmr-temp");
     let mut artifacts_snapshot = DevArtifactsSnapshot::default();
 
     for mut named_options in multiple_options {
-      // Type aliases for nested callback tracking
-      type HmrUpdatesBySteps = Arc<
-        std::sync::Mutex<
-          Vec<Vec<BuildResult<(Vec<rolldown_common::ClientHmrUpdate>, Vec<String>)>>>,
-        >,
-      >;
-      type BuildResultsBySteps = Arc<std::sync::Mutex<Vec<Vec<BuildResult<BundleOutput>>>>>;
-
       let mut build_snapshot = DevRoundOutput {
         overwritten_test_meta_snapshot: named_options.snapshot.unwrap_or(self.test_meta.snapshot),
         ..Default::default()
@@ -197,30 +242,44 @@ impl IntegrationTest {
       dev_engine.run().await.unwrap();
       dev_engine.create_client_for_testing();
 
-      // Process HMR steps
-      for hmr_edit_files in hmr_steps {
-        // Prepare new vecs for this step's callbacks
-        hmr_updates_by_steps.lock().unwrap().push(vec![]);
-        build_results_by_steps.lock().unwrap().push(vec![]);
+      if enable_custom_test_fn {
+        custom_test_fn(&CustomDevTestContext {
+          dev_engine: &dev_engine,
+          hmr_updates_by_steps: Arc::clone(&hmr_updates_by_steps),
+          build_results_by_steps: Arc::clone(&build_results_by_steps),
+        })
+        .await
+        .unwrap();
+      } else {
+        // Process HMR steps
+        for hmr_edit_files in hmr_steps {
+          // Prepare new vecs for this step's callbacks
+          hmr_updates_by_steps.lock().unwrap().push(vec![]);
+          build_results_by_steps.lock().unwrap().push(vec![]);
 
-        apply_hmr_edit_files_to_hmr_temp_dir(test_folder_path, &hmr_temp_dir_path, hmr_edit_files);
-        let changed_files = get_changed_files_from_hmr_edit_files(
-          test_folder_path,
-          &hmr_temp_dir_path,
-          hmr_edit_files,
-        );
-        let watched_files = dev_engine.get_watched_files().await.unwrap();
-        assert!(
-          changed_files.iter().all(|file| watched_files.contains(file)),
-          "All changed files must be in watched files: {changed_files:#?} not in {watched_files:#?}"
-        );
-        dev_engine
-          .ensure_task_with_changed_files(changed_files.into_iter().map(Into::into).collect())
-          .await;
+          apply_hmr_edit_files_to_hmr_temp_dir(
+            test_folder_path,
+            &hmr_temp_dir_path,
+            hmr_edit_files,
+          );
+          let changed_files = get_changed_files_from_hmr_edit_files(
+            test_folder_path,
+            &hmr_temp_dir_path,
+            hmr_edit_files,
+          );
+          let watched_files = dev_engine.get_watched_files().await.unwrap();
+          assert!(
+            changed_files.iter().all(|file| watched_files.contains(file)),
+            "All changed files must be in watched files: {changed_files:#?} not in {watched_files:#?}"
+          );
+          dev_engine
+            .ensure_task_with_changed_files(changed_files.into_iter().map(Into::into).collect())
+            .await;
 
-        // Optionally wait for async builds to complete
-        if self.test_meta.dev.ensure_latest_build_output_for_each_step {
-          dev_engine.ensure_latest_bundle_output().await.unwrap();
+          // Optionally wait for async builds to complete
+          if self.test_meta.dev.ensure_latest_build_output_for_each_step {
+            dev_engine.ensure_latest_bundle_output().await.unwrap();
+          }
         }
       }
       drop(dev_engine);
@@ -238,13 +297,9 @@ impl IntegrationTest {
       let hmr_steps_output: Vec<HmrStepOutput> = hmr_updates_by_steps
         .into_iter()
         .zip(build_results_by_steps.into_iter())
-        .map(|(hmr_updates_vec, build_outputs_vec)| {
-          // A step may have 0 or 1 HMR update callbacks
-          // (e.g., initial builds don't generate HMR updates)
-          let hmr_updates =
-            hmr_updates_vec.into_iter().next().unwrap_or_else(|| Ok((vec![], vec![])));
-
-          HmrStepOutput { hmr_updates, build_outputs: build_outputs_vec }
+        .map(|(hmr_updates_vec, build_outputs_vec)| HmrStepOutput {
+          hmr_updates: hmr_updates_vec,
+          build_outputs: build_outputs_vec,
         })
         .collect();
 
@@ -262,7 +317,7 @@ impl IntegrationTest {
           // Process HMR updates and patches for execution
           let mut patch_chunks: Vec<String> = vec![];
           for step_output in &build_snapshot.hmr_steps {
-            if let Ok((client_updates, _changed_files)) = &step_output.hmr_updates {
+            for (client_updates, _changed_files) in step_output.hmr_updates.iter().flatten() {
               for hmr_update in client_updates {
                 match &hmr_update.update {
                   rolldown_common::HmrUpdate::Patch(patch) => {
@@ -417,8 +472,9 @@ impl IntegrationTest {
 
     // Dispatch to appropriate build method and generate snapshot
     let snapshot_content = if hmr_mode_enabled {
-      let artifacts_snapshot =
-        self.run_multiple_for_dev(multiple_options, plugins, &hmr_steps).await;
+      let artifacts_snapshot = self
+        .run_multiple_for_dev(multiple_options, plugins, &hmr_steps, false, async |_| Ok(()))
+        .await;
       artifacts_snapshot.render(&self.test_meta)
     } else {
       let artifacts_snapshot = self.run_multiple_for_build(multiple_options, plugins).await;

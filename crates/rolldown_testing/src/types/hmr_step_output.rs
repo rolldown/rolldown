@@ -5,8 +5,9 @@ use rolldown_error::BuildResult;
 /// A step consists of file changes that trigger HMR updates and potentially build outputs.
 pub struct HmrStepOutput {
   /// The HMR updates generated for this step.
-  /// Contains updates for all clients (Vec<ClientHmrUpdate>) and the changed files.
-  pub hmr_updates: BuildResult<(Vec<rolldown_common::ClientHmrUpdate>, Vec<String>)>,
+  /// Each element contains updates for all clients (Vec<ClientHmrUpdate>) and the changed files.
+  /// A step may have 0, 1, or multiple HMR update callbacks.
+  pub hmr_updates: Vec<BuildResult<(Vec<rolldown_common::ClientHmrUpdate>, Vec<String>)>>,
   /// Build outputs triggered by this HMR step.
   /// Can be empty (pure HMR patch with no rebuild),
   /// one (typical full-reload scenario),

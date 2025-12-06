@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { t as foo$1 } from "./foo.js";
+import { foo as foo$1 } from "./entry2.js";
 import assert from "node:assert";
 
 //#region main.js
@@ -20,17 +20,9 @@ export { foo };
 ## entry2.js
 
 ```js
-import { t as foo } from "./foo.js";
-
-export { foo };
-```
-
-## foo.js
-
-```js
 //#region foo.js
 const foo = 0;
 
 //#endregion
-export { foo as t };
+export { foo };
 ```

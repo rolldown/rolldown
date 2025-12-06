@@ -1433,7 +1433,7 @@ export declare class BindingModuleInfo {
 
 export declare class BindingNormalizedOptions {
   get input(): Array<string> | Record<string, string>
-  get cwd(): string | null
+  get cwd(): string
   get platform(): 'node' | 'browser' | 'neutral'
   get shimMissingExports(): boolean
   get name(): string | null

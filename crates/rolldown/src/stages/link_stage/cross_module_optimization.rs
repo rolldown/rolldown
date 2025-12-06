@@ -56,7 +56,7 @@ struct CrossModuleOptimizationConfig {
 }
 
 type ModuleIdxAndStmtIdxToDynamicImportExprAddrMap =
-  FxHashMap<ModuleIdx, FxHashMap<StmtInfoIdx, Address>>;
+  FxHashMap<ModuleIdx, FxHashMap<StmtInfoIdx, FxHashSet<Address>>>;
 
 impl LinkStage<'_> {
   fn prepare_cross_module_optimization(&mut self) -> CrossModuleOptimizationConfig {
@@ -128,7 +128,8 @@ impl LinkStage<'_> {
             .entry(*module_idx)
             .or_insert_with(FxHashMap::default)
             .entry(*stmt_idx)
-            .or_insert(*address);
+            .or_insert_with(FxHashSet::default)
+            .insert(*address);
         },
       );
     });
@@ -265,7 +266,7 @@ struct CrossModuleOptimizationImmutableCtx<'a, 'ast: 'a> {
   flat_options: FlatOptions,
   options: &'a SharedNormalizedBundlerOptions,
   ast_scope: &'a AstScopes,
-  stmt_idx_to_dynamic_import_expr_addr: &'a FxHashMap<StmtInfoIdx, Address>,
+  stmt_idx_to_dynamic_import_expr_addr: &'a FxHashMap<StmtInfoIdx, FxHashSet<Address>>,
 }
 
 struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
@@ -347,9 +348,8 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
   }
 
   fn visit_import_expression(&mut self, it: &oxc::ast::ast::ImportExpression<'ast>) {
-    // TODO: consider one top level stmt has multiple dynamic import expressions
-    if let Some(addr) = self.stmt_idx_to_dynamic_import_expr_addr.get(&self.toplevel_stmt_idx) {
-      if addr == &it.unstable_address() {
+    if let Some(addrs) = self.stmt_idx_to_dynamic_import_expr_addr.get(&self.toplevel_stmt_idx) {
+      if addrs.contains(&it.unstable_address()) {
         // search the latest side effect free call expression parent
         let side_effect_free_call = self.visit_path.iter().rev().find_map(|ast| {
           let addr = self.latest_side_effect_free_call_expr_addr.as_ref()?;

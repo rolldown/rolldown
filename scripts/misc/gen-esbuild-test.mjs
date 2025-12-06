@@ -1,4 +1,4 @@
-import { Parser } from 'web-tree-sitter';
+import { Language, Parser, Query } from 'web-tree-sitter';
 // import Go from 'tree-sitter-go'
 import chalk from 'chalk';
 import * as changeCase from 'change-case';
@@ -115,7 +115,7 @@ const suites = /** @type {const} */ ({
  * @typedef {suites[keyof suites]} TestSuite
  */
 
-/** @typedef {{files: Array<{name: string; content: string}>; entryPaths: string[]; options: void; expectedCompileLog?: string}} JsConfig */
+/** @typedef {{files: Array<{name: string; content: string}>; entryPaths: string[]; options: void; expectedCompileLog?: string; expectedScanLog?: string}} JsConfig */
 
 /**
  * Attempts to read the .go source file based on the provided test suite name. {@link suites}
@@ -224,12 +224,12 @@ function getTopLevelBinding(root) {
 
 await Parser.init();
 await ensureTreeSitterWasmGo();
-const Lang = await Parser.Language.load(TREE_SITTER_WASM_GO_FILENAME);
+const Lang = await Language.load(TREE_SITTER_WASM_GO_FILENAME);
 const parser = new Parser();
 parser.setLanguage(Lang);
 const tree = parser.parse(source);
 let topLevelBindingMap = getTopLevelBinding(tree.rootNode);
-const query = Lang.query(queryString);
+const query = new Query(Lang, queryString);
 
 /**
  * @param {string} dir - The directory path.
@@ -327,10 +327,15 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
     fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2));
     // TODO: options
 
-    let log = jsConfig['expectedCompileLog'];
-    if (log) {
+    let compileLog = jsConfig['expectedCompileLog'];
+    if (compileLog) {
       const compileLogPath = path.resolve(testDir, 'compile-log.txt');
-      fs.writeFileSync(compileLogPath, log);
+      fs.writeFileSync(compileLogPath, compileLog);
+    }
+    let scanLog = jsConfig['expectedScanLog'];
+    if (scanLog) {
+      const scanLogPath = path.resolve(testDir, 'scan-log.txt');
+      fs.writeFileSync(scanLogPath, scanLog);
     }
   }
 }
@@ -340,7 +345,7 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
  * @returns {string}
  */
 function calculatePrefixDir(paths) {
-  if (paths.length === 1) {
+  if (paths.length <= 1) {
     return '';
   }
 
@@ -497,8 +502,14 @@ function processKeyElement(node, jsConfig, binding) {
     case 'expectedCompileLog':
       jsConfig['expectedCompileLog'] = child.text.slice(1, -1);
       break;
+    case 'expectedScanLog':
+      jsConfig['expectedScanLog'] = child.text.slice(1, -1);
+      break;
+    case 'debugLogs':
+      // ignore
+      break;
     default:
-      console.log(chalk.yellow(`unknown filed ${keyValue}`));
+      console.log(chalk.yellow(`unknown field ${keyValue}`));
       break;
   }
 }

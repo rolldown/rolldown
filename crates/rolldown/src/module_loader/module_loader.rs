@@ -5,6 +5,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc::semantic::{ScopeId, Scoping};
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
+use oxc_allocator::Address;
 use oxc_index::IndexVec;
 use rolldown_common::SourceMapGenMsg;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
@@ -359,7 +360,7 @@ impl<'a> ModuleLoader<'a> {
 
     let mut dynamic_import_entry_ids: FxHashMap<
       ModuleIdx,
-      Vec<(ModuleIdx, StmtInfoIdx, ImportRecordIdx)>,
+      Vec<(ModuleIdx, StmtInfoIdx, Address, ImportRecordIdx)>,
     > = FxHashMap::default();
 
     let mut dynamic_import_exports_usage_pairs = vec![];
@@ -431,17 +432,17 @@ impl<'a> ModuleLoader<'a> {
               && !user_defined_entry_ids.contains(&idx)
             {
               match dynamic_import_entry_ids.entry(idx) {
-                Entry::Vacant(vac) => match raw_rec.related_stmt_info_idx {
-                  Some(stmt_info_idx) => {
-                    vac.insert(vec![(module.idx(), stmt_info_idx, rec_idx)]);
+                Entry::Vacant(vac) => match raw_rec.dynamic_import_expr_info.as_ref() {
+                  Some(info) => {
+                    vac.insert(vec![(module.idx(), info.stmt_info_idx, info.address, rec_idx)]);
                   }
                   None => {
                     vac.insert(vec![]);
                   }
                 },
                 Entry::Occupied(mut occ) => {
-                  if let Some(stmt_info_idx) = raw_rec.related_stmt_info_idx {
-                    occ.get_mut().push((module.idx(), stmt_info_idx, rec_idx));
+                  if let Some(info) = raw_rec.dynamic_import_expr_info.as_ref() {
+                    occ.get_mut().push((module.idx(), info.stmt_info_idx, info.address, rec_idx));
                   }
                 }
               }
@@ -522,17 +523,17 @@ impl<'a> ModuleLoader<'a> {
               && !user_defined_entry_ids.contains(&id)
             {
               match dynamic_import_entry_ids.entry(id) {
-                Entry::Vacant(vac) => match raw_rec.related_stmt_info_idx {
-                  Some(stmt_info_idx) => {
-                    vac.insert(vec![(module.idx, stmt_info_idx, rec_idx)]);
+                Entry::Vacant(vac) => match raw_rec.dynamic_import_expr_info.as_ref() {
+                  Some(info) => {
+                    vac.insert(vec![(module.idx, info.stmt_info_idx, info.address, rec_idx)]);
                   }
                   None => {
                     vac.insert(vec![]);
                   }
                 },
                 Entry::Occupied(mut occ) => {
-                  if let Some(stmt_info_idx) = raw_rec.related_stmt_info_idx {
-                    occ.get_mut().push((module.idx, stmt_info_idx, rec_idx));
+                  if let Some(info) = raw_rec.dynamic_import_expr_info.as_ref() {
+                    occ.get_mut().push((module.idx, info.stmt_info_idx, info.address, rec_idx));
                   }
                 }
               }

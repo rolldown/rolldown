@@ -134,11 +134,13 @@ impl ScanStageCache {
         let removed_module_idxs = entry_point
           .related_stmt_infos
           .iter()
-          .map(|(module_idx, _, _)| *module_idx)
+          .map(|(module_idx, _, _, _)| *module_idx)
           .collect::<FxHashSet<_>>();
-        _ = old_entry_point.related_stmt_infos.extract_if(.., |(module_idx, _stmt_info_idx, _)| {
-          removed_module_idxs.contains(module_idx)
-        });
+        _ = old_entry_point
+          .related_stmt_infos
+          .extract_if(.., |(module_idx, _stmt_info_idx, _address, _)| {
+            removed_module_idxs.contains(module_idx)
+          });
         old_entry_point.related_stmt_infos.extend(entry_point.related_stmt_infos);
       } else {
         cache.entry_points.push(entry_point);

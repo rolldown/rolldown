@@ -45,7 +45,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     self.visit_path.push(kind);
   }
 
-  fn leave_node(&mut self, _: oxc::ast::AstKind<'ast>) {
+  fn leave_node(&mut self, _it: oxc::ast::AstKind<'ast>) {
     self.visit_path.pop();
   }
 
@@ -206,14 +206,19 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     // If a `ImportExpression` is ignored by `/* @vite-ignore */` comment, we should not treat it as a dynamic import
     let should_ignore = self.is_import_expr_ignored_by_comment(expr);
     if !should_ignore && let Some(request) = expr.source.as_static_module_request() {
-      let import_rec_idx =
-        self.add_import_record(request.as_str(), ImportKind::DynamicImport, expr.source.span(), {
+      let import_rec_idx = self.add_import_record(
+        request.as_str(),
+        ImportKind::DynamicImport,
+        expr.source.span(),
+        {
           let mut meta = ImportRecordMeta::empty();
           meta.set(ImportRecordMeta::IsTopLevel, self.is_root_scope());
           meta.set(ImportRecordMeta::IsUnspannedImport, expr.source.span().is_empty());
           meta.set(ImportRecordMeta::InTryCatchBlock, self.in_side_try_catch_block());
           meta
-        });
+        },
+        Some(expr.unstable_address()),
+      );
       self.init_dynamic_import_binding_usage_info(import_rec_idx);
       self.result.imports.insert(expr.span, import_rec_idx);
     }
@@ -663,7 +668,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
     let in_side_try_catch_block = self.in_side_try_catch_block();
     init_meta.set(ImportRecordMeta::InTryCatchBlock, in_side_try_catch_block);
-    let id = self.add_import_record(value.as_ref(), ImportKind::Require, span, init_meta);
+    let id = self.add_import_record(value.as_ref(), ImportKind::Require, span, init_meta, None);
     self.result.imports.insert(expr.span, id);
     true
   }

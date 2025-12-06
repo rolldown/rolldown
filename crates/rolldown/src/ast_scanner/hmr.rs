@@ -40,6 +40,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             ImportKind::HotAccept,
             call_expr.span,
             ImportRecordMeta::empty(),
+            None,
           ),
         );
       }
@@ -64,6 +65,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                   ImportKind::HotAccept,
                   call_expr.span,
                   ImportRecordMeta::empty(),
+                  None,
                 ),
               )
             }),

@@ -1,7 +1,7 @@
 use oxc::{
-  allocator::{Address, UnstableAddress},
+  allocator::{Address, GetAddress, UnstableAddress},
   ast::{
-    AstBuilder,
+    AstBuilder, AstKind,
     ast::{
       BindingPatternKind, Declaration, ExportDefaultDeclaration, ExportDefaultDeclarationKind,
       ExportNamedDeclaration,
@@ -32,6 +32,7 @@ use super::LinkStage;
 type MutationResult = (
   Option<(ModuleIdx, FxHashMap<StmtInfoIdx, SideEffectDetail>)>,
   FxHashMap<SymbolRef, ConstExportMeta>,
+  FxHashSet<Address>,
 );
 
 #[derive(Default)]
@@ -53,6 +54,9 @@ struct CrossModuleOptimizationConfig {
   side_effects_free_function_optimization: bool,
   inline_const_optimization: bool,
 }
+
+type ModuleIdxAndStmtIdxToDynamicImportExprAddrMap =
+  FxHashMap<ModuleIdx, FxHashMap<StmtInfoIdx, Address>>;
 
 impl LinkStage<'_> {
   fn prepare_cross_module_optimization(&mut self) -> CrossModuleOptimizationConfig {
@@ -94,10 +98,10 @@ impl LinkStage<'_> {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub(super) fn cross_module_optimization(&mut self) {
+  pub(super) fn cross_module_optimization(&mut self) -> FxHashSet<Address> {
     let config = self.prepare_cross_module_optimization();
     if config.pass < 1 {
-      return;
+      return FxHashSet::default();
     }
     // Explain `inline_const.pass`:
     // - if `inline_const.pass` is 1, we don't need the extra visit pass, since we already do it in
@@ -113,21 +117,46 @@ impl LinkStage<'_> {
     // The extra passes only run when user enable `inline_const` and set `pass` greater than 1.
     let mut ctx = CrossModuleOptimizationCtx::new(config);
     let mut constant_symbol_map = std::mem::take(&mut self.global_constant_symbol_map);
+    let mut unreachable_addresses = FxHashSet::default();
+    // collect all modules that has dynamic import record
+    // two dimension map module_idx -> stmt_idx -> dynamic_import_expression_address
+    let mut module_idx_and_stmt_idx_to_dynamic_import_expr_addr_map = FxHashMap::default();
+    self.entries.iter().for_each(|entry| {
+      entry.related_stmt_infos.iter().for_each(
+        |(module_idx, stmt_idx, address, _import_record_idx)| {
+          module_idx_and_stmt_idx_to_dynamic_import_expr_addr_map
+            .entry(*module_idx)
+            .or_insert_with(FxHashMap::default)
+            .entry(*stmt_idx)
+            .or_insert(*address);
+        },
+      );
+    });
     while ctx.config.pass > 0 && ctx.changed {
       ctx.config.pass -= 1;
       ctx.changed = false;
-      self.run(&mut ctx, &mut constant_symbol_map);
+      self.run(
+        &mut ctx,
+        &mut constant_symbol_map,
+        &module_idx_and_stmt_idx_to_dynamic_import_expr_addr_map,
+        &mut unreachable_addresses,
+      );
       if !ctx.changed {
         break;
       }
     }
     self.global_constant_symbol_map = constant_symbol_map;
+    // Return all unreachable import expression addresses instead of add it as a field of LinkStage,
+    // Because this set is only used include statement stage.
+    unreachable_addresses
   }
 
   fn run(
     &mut self,
     cross_module_inline_const_ctx: &mut CrossModuleOptimizationCtx,
     constant_symbol_map: &mut FxHashMap<SymbolRef, ConstExportMeta>,
+    module_idx_and_stmt_idx_to_dynamic_import_expr_addr_map: &ModuleIdxAndStmtIdxToDynamicImportExprAddrMap,
+    all_unreachable_addresses: &mut FxHashSet<Address>,
   ) {
     let mutation_result: Vec<MutationResult> = self
       .sorted_modules
@@ -155,6 +184,11 @@ impl LinkStage<'_> {
             }),
             constant_map: &constant_map,
           };
+          let default_stmt_idx_to_dynamic_import_expr_addr = FxHashMap::default();
+          let stmt_idx_to_dynamic_import_expr_addr =
+            module_idx_and_stmt_idx_to_dynamic_import_expr_addr_map
+              .get(&module_idx)
+              .unwrap_or(&default_stmt_idx_to_dynamic_import_expr_addr);
           let mut ctx = CrossModuleOptimizationRunnerContext {
             local_constant_symbol_map: FxHashMap::default(),
             side_effect_detail_mutations: FxHashMap::default(),
@@ -171,7 +205,13 @@ impl LinkStage<'_> {
               flat_options: self.flat_options,
               options: self.options,
               ast_scope: &self.symbols.local_db(module_idx).ast_scopes,
+              stmt_idx_to_dynamic_import_expr_addr,
             },
+            // `0` is preserved for namespace stmt
+            toplevel_stmt_idx: StmtInfoIdx::from_raw_unchecked(1),
+            visit_path: vec![],
+            latest_side_effect_free_call_expr_addr: None,
+            unreachable_import_expression_addresses: FxHashSet::default(),
           };
           ctx.visit_program(&dep.program);
 
@@ -180,16 +220,22 @@ impl LinkStage<'_> {
           } else {
             Some((module_idx, ctx.side_effect_detail_mutations))
           };
-          if side_effect_mutations.is_none() && ctx.local_constant_symbol_map.is_empty() {
+          if side_effect_mutations.is_none()
+            && ctx.local_constant_symbol_map.is_empty()
+            && ctx.unreachable_import_expression_addresses.is_empty()
+          {
             return None;
           }
-          Some((side_effect_mutations, ctx.local_constant_symbol_map))
+          Some((
+            side_effect_mutations,
+            ctx.local_constant_symbol_map,
+            ctx.unreachable_import_expression_addresses,
+          ))
         })
       })
       .collect();
 
-    // Process results sequentially
-    for (side_effect_mutations, local_constants) in mutation_result {
+    for (side_effect_mutations, local_constants, unreachable_addresses) in mutation_result {
       if let Some((module_idx, mutations)) = side_effect_mutations {
         if let Some(module) = self.module_table[module_idx].as_normal_mut() {
           for (stmt_info_idx, side_effect_detail) in mutations {
@@ -202,6 +248,9 @@ impl LinkStage<'_> {
         cross_module_inline_const_ctx.changed = true;
         constant_symbol_map.extend(local_constants);
       }
+
+      // Collect all unreachable import expression addresses
+      all_unreachable_addresses.extend(unreachable_addresses);
     }
   }
 }
@@ -216,6 +265,7 @@ struct CrossModuleOptimizationImmutableCtx<'a, 'ast: 'a> {
   flat_options: FlatOptions,
   options: &'a SharedNormalizedBundlerOptions,
   ast_scope: &'a AstScopes,
+  stmt_idx_to_dynamic_import_expr_addr: &'a FxHashMap<StmtInfoIdx, Address>,
 }
 
 struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
@@ -225,6 +275,20 @@ struct CrossModuleOptimizationRunnerContext<'a, 'ast: 'a> {
   traverse_state: TraverseState,
   side_effect_free_call_expr_addr: FxHashSet<Address>,
   immutable_ctx: CrossModuleOptimizationImmutableCtx<'a, 'ast>,
+  toplevel_stmt_idx: StmtInfoIdx,
+  visit_path: Vec<AstKind<'ast>>,
+  latest_side_effect_free_call_expr_addr: Option<Address>,
+  /// Import expressions that are inside lazy paths (e.g., inside a PURE-annotated function)
+  /// and should be considered unreachable for chunk splitting purposes
+  unreachable_import_expression_addresses: FxHashSet<Address>,
+}
+
+impl<'a, 'ast: 'a> std::ops::Deref for CrossModuleOptimizationRunnerContext<'a, 'ast> {
+  type Target = CrossModuleOptimizationImmutableCtx<'a, 'ast>;
+
+  fn deref(&self) -> &Self::Target {
+    &self.immutable_ctx
+  }
 }
 
 impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast> {
@@ -240,6 +304,14 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
   fn leave_scope(&mut self) {
     self.scope_stack.pop();
     self.traverse_state.set(TraverseState::TopLevel, is_top_level(&self.scope_stack));
+  }
+
+  fn enter_node(&mut self, kind: AstKind<'ast>) {
+    self.visit_path.push(kind);
+  }
+
+  fn leave_node(&mut self, _kind: AstKind<'ast>) {
+    self.visit_path.pop();
   }
 
   fn visit_program(&mut self, program: &oxc::ast::ast::Program<'ast>) {
@@ -268,36 +340,63 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
         .detect_side_effect_of_stmt(stmt);
         self.side_effect_detail_mutations.insert(stmt_info_idx, side_effect_detail);
       }
+      self.toplevel_stmt_idx += 1;
     }
 
     self.leave_scope();
   }
 
+  fn visit_import_expression(&mut self, it: &oxc::ast::ast::ImportExpression<'ast>) {
+    // TODO: consider one top level stmt has multiple dynamic import expressions
+    if let Some(addr) = self.stmt_idx_to_dynamic_import_expr_addr.get(&self.toplevel_stmt_idx) {
+      if addr == &it.unstable_address() {
+        // search the latest side effect free call expression parent
+        let side_effect_free_call = self.visit_path.iter().rev().find_map(|ast| {
+          let addr = self.latest_side_effect_free_call_expr_addr.as_ref()?;
+          (&ast.address() == addr).then_some(ast)
+        });
+        if let Some(kind) = side_effect_free_call {
+          let is_lazy_path = is_lazy_path_from_first_lazy_node(&self.visit_path, kind);
+          if is_lazy_path {
+            // This import expression is inside a lazy path (e.g., inside a PURE-annotated
+            // function callback), so it's unreachable and can be ignored for chunk splitting
+            self.unreachable_import_expression_addresses.insert(it.unstable_address());
+          }
+        }
+      }
+    }
+    walk::walk_import_expression(self, it);
+  }
+
   fn visit_call_expression(&mut self, it: &oxc::ast::ast::CallExpression<'ast>) {
-    if self.traverse_state.contains(TraverseState::TopLevel) {
+    let mut pre_addr = None;
+    if self.traverse_state.contains(TraverseState::TopLevel)
+      || !self.immutable_ctx.stmt_idx_to_dynamic_import_expr_addr.is_empty()
+    {
       let is_side_effects_free_function = it
         .callee
         .as_identifier()
         .and_then(|item| {
-          item
-            .reference_id
-            .get()
-            .and_then(|ref_id| self.immutable_ctx.eval_ctx.scope.get_reference(ref_id).symbol_id())
-            .map(|id| {
-              let symbol_ref = self
-                .immutable_ctx
-                .symbols
-                .canonical_ref_for((self.immutable_ctx.module_idx, id).into());
-              self.immutable_ctx.global_side_effect_free_function_symbols.contains(&symbol_ref)
-            })
+          let ref_id = item.reference_id.get()?;
+          let symbol_id = self.immutable_ctx.eval_ctx.scope.get_reference(ref_id).symbol_id()?;
+
+          let symbol_ref = self
+            .immutable_ctx
+            .symbols
+            .canonical_ref_for((self.immutable_ctx.module_idx, symbol_id).into());
+          Some(self.immutable_ctx.global_side_effect_free_function_symbols.contains(&symbol_ref))
         })
         .unwrap_or(false);
 
       if is_side_effects_free_function {
         self.side_effect_free_call_expr_addr.insert(it.unstable_address());
+        pre_addr = self.latest_side_effect_free_call_expr_addr.replace(it.unstable_address());
       }
     }
     walk::walk_call_expression(self, it);
+    if let Some(addr) = pre_addr {
+      self.latest_side_effect_free_call_expr_addr = Some(addr);
+    }
   }
 
   fn visit_export_named_declaration(&mut self, it: &ExportNamedDeclaration<'ast>) {
@@ -336,9 +435,15 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
   }
 
   fn visit_export_default_declaration(&mut self, it: &ExportDefaultDeclaration<'ast>) {
-    if !self.immutable_ctx.config.inline_const_optimization {
+    // Only walk child nodes if we need to track import expressions (when
+    // `stmt_idx_to_dynamic_import_expr_addr` is not empty) or if `inline_const_optimization` is enabled.
+    // This placement ensures we skip walking when neither is needed.
+    if !self.immutable_ctx.config.inline_const_optimization
+      && self.immutable_ctx.stmt_idx_to_dynamic_import_expr_addr.is_empty()
+    {
       return;
     }
+    walk::walk_export_default_declaration(self, it);
     let Some(expr) = it.declaration.as_expression() else {
       return;
     };
@@ -362,4 +467,50 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
       }
     }
   }
+}
+
+/// If ast path from first lazy node to the terminal node are all lazy.
+/// e.g.
+/// ```js
+/// /*@__PURE__ */Foo(() => {
+///   import('mod')
+/// })
+/// ```
+/// CallExpr -> ExprStmt -> ArrowFunc -> ImportExpr(target)
+/// eager       eager       lazy        lazy
+fn is_lazy_path_from_first_lazy_node<'ast>(
+  visit_path: &[AstKind<'ast>],
+  target: &AstKind<'ast>,
+) -> bool {
+  let target_addr = target.address();
+
+  // Find the last lazy node after the target node
+  let last_lazy_idx = visit_path.iter().rposition(|kind| {
+    matches!(
+      kind,
+      AstKind::ArrowFunctionExpression(_) | AstKind::Function(_) | AstKind::FunctionBody(_)
+    )
+  });
+
+  let Some(last_lazy_idx) = last_lazy_idx else {
+    // No lazy node found, path is reachable
+    return false;
+  };
+
+  for kind in visit_path[..=last_lazy_idx].iter().rev() {
+    let addr = kind.address();
+    // All nodes from first lazy node to target must be lazy
+    if addr == target_addr {
+      return true;
+    }
+    if !matches!(
+      kind,
+      AstKind::ArrowFunctionExpression(_) | AstKind::Function(_) | AstKind::FunctionBody(_)
+    ) {
+      return false;
+    }
+  }
+
+  // If the visit path did not included the target node, return false
+  false
 }

@@ -1513,15 +1513,23 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let importee_id = rec.resolved_module;
           match &self.ctx.modules[importee_id] {
             Module::Normal(importee) => {
-              let importee_chunk_id =
-                self.ctx.chunk_graph.entry_module_to_entry_chunk[&rec.resolved_module];
-              let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
-
-              let import_path = self.ctx.chunk.import_path_for(importee_chunk);
-              expr.source = Expression::StringLiteral(
-                self.snippet.alloc_string_literal(&import_path, expr.source.span()),
-              );
-              needs_to_esm_helper = importee.exports_kind.is_commonjs();
+              if let Some(&importee_chunk_id) =
+                self.ctx.chunk_graph.entry_module_to_entry_chunk.get(&rec.resolved_module)
+              {
+                if let Some(importee_chunk) =
+                  self.ctx.chunk_graph.chunk_table.get(importee_chunk_id)
+                {
+                  let import_path = self.ctx.chunk.import_path_for(importee_chunk);
+                  expr.source = Expression::StringLiteral(
+                    self.snippet.alloc_string_literal(&import_path, expr.source.span()),
+                  );
+                  needs_to_esm_helper = importee.exports_kind.is_commonjs();
+                }
+              } else {
+                // TODO: probably we should add the reason why it is replaced with `void 0` when upstream support codegen with specific operation
+                *node = self.snippet.builder.void_0(SPAN);
+                return true;
+              }
             }
             Module::External(importee) => {
               let import_path =

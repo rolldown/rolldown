@@ -3,12 +3,25 @@ use std::{
   ops::{Deref, DerefMut},
 };
 
-use oxc::span::{CompactStr, Span};
+use oxc::{
+  allocator::Address,
+  span::{CompactStr, Span},
+};
 
 use crate::{ImportKind, ModuleIdx, ModuleType, StmtInfoIdx, SymbolRef};
 
 oxc_index::define_index_type! {
   pub struct ImportRecordIdx = u32;
+}
+
+/// Information about a dynamic import expression, used to track the relationship
+/// between an import record and its source location in the AST.
+#[derive(Debug, Clone, Copy)]
+pub struct DynamicImportExprInfo {
+  /// Index of the top-level statement containing the dynamic import expression
+  pub stmt_info_idx: StmtInfoIdx,
+  /// Address of the `ImportExpression` node in the AST
+  pub address: Address,
 }
 
 #[derive(Debug, Clone)]
@@ -71,7 +84,12 @@ pub struct ImportRecord<State: Debug + Clone> {
   /// `namespace_ref` represent the potential `import_foo` in above example. It's useless if we imported n esm module.
   pub namespace_ref: SymbolRef,
   pub meta: ImportRecordMeta,
-  pub related_stmt_info_idx: Option<StmtInfoIdx>,
+  /// Information about the dynamic import expression, if this is a dynamic import.
+  /// Contains the statement index and AST address for tracking purposes.
+  ///
+  /// Wrapped in `Box` to reduce the size of `ImportRecord` since this field is only
+  /// used for dynamic imports (a minority of import records), keeping the common case small.
+  pub dynamic_import_expr_info: Option<Box<DynamicImportExprInfo>>,
 }
 
 impl<State: Debug + Clone> ImportRecord<State> {
@@ -103,7 +121,7 @@ impl RawImportRecord {
     namespace_ref: SymbolRef,
     span: Span,
     assert_module_type: Option<ModuleType>,
-    related_stmt_info_idx: Option<StmtInfoIdx>,
+    dynamic_import_expr_info: Option<Box<DynamicImportExprInfo>>,
   ) -> RawImportRecord {
     RawImportRecord {
       module_request: specifier,
@@ -111,7 +129,7 @@ impl RawImportRecord {
       namespace_ref,
       meta: ImportRecordMeta::empty(),
       state: ImportRecordStateInit { span, asserted_module_type: assert_module_type },
-      related_stmt_info_idx,
+      dynamic_import_expr_info,
     }
   }
 
@@ -127,7 +145,7 @@ impl RawImportRecord {
       kind: self.kind,
       namespace_ref: self.namespace_ref,
       meta: self.meta,
-      related_stmt_info_idx: self.related_stmt_info_idx,
+      dynamic_import_expr_info: self.dynamic_import_expr_info,
     }
   }
 }

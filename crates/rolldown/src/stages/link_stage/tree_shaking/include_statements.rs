@@ -1,6 +1,7 @@
 use std::cmp::Reverse;
 
 use itertools::Itertools;
+use oxc_allocator::Address;
 use oxc_index::IndexVec;
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
@@ -82,7 +83,7 @@ fn include_cjs_bailout_exports(
 
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn include_statements(&mut self) {
+  pub fn include_statements(&mut self, unreachable_import_expression_addrs: &FxHashSet<Address>) {
     let mut is_included_vec: StmtInclusionVec = self
       .module_table
       .modules
@@ -166,6 +167,7 @@ impl LinkStage<'_> {
           &cycled_idx,
           context,
           &mut unused_record_idxs,
+          unreachable_import_expression_addrs,
         );
         if included {
           included_dynamic_entry.insert(entry.idx);
@@ -268,9 +270,14 @@ impl LinkStage<'_> {
     cycled_idx: &FxHashSet<ModuleIdx>,
     context: &mut Context,
     unused_record_idxs: &mut Vec<(ModuleIdx, ImportRecordIdx)>,
+    unreachable_import_expression_addr: &FxHashSet<Address>,
   ) -> bool {
     if !cycled_idx.contains(&entry.idx) {
-      if let Some(item) = self.is_dynamic_entry_alive(entry, context.is_included_vec) {
+      if let Some(item) = self.is_dynamic_entry_alive(
+        entry,
+        context.is_included_vec,
+        unreachable_import_expression_addr,
+      ) {
         unused_record_idxs.extend(item);
         return false;
       }
@@ -403,6 +410,7 @@ impl LinkStage<'_> {
     &self,
     entry_point: &EntryPoint,
     is_stmt_included_vec: &IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
+    unreachable_import_expression_addrs: &FxHashSet<Address>,
   ) -> Option<Vec<(ModuleIdx, ImportRecordIdx)>> {
     let mut ret = vec![];
     let is_lived = match entry_point.kind {
@@ -414,28 +422,33 @@ impl LinkStage<'_> {
           );
 
         // Mark the dynamic entry as lived if at least one statement that create this entry is included
-        entry_point.related_stmt_infos.iter().any(|(module_idx, stmt_idx, import_record_idx)| {
-          let module =
-            &self.module_table[*module_idx].as_normal().expect("should be a normal module");
-          let all_dead_pure_dynamic_import = {
-            let import_record = &module.import_records[*import_record_idx];
-            let importee_side_effects =
-              self.module_table[import_record.resolved_module].side_effects().has_side_effects();
+        entry_point.related_stmt_infos.iter().any(
+          |(module_idx, stmt_idx, address, import_record_idx)| {
+            if unreachable_import_expression_addrs.contains(address) {
+              return false;
+            }
+            let module =
+              &self.module_table[*module_idx].as_normal().expect("should be a normal module");
+            let all_dead_pure_dynamic_import = {
+              let import_record = &module.import_records[*import_record_idx];
+              let importee_side_effects =
+                self.module_table[import_record.resolved_module].side_effects().has_side_effects();
 
-            // Only consider it is unused if it is a top level pure dynamic import and the
-            // importee module has no side effects.
-            !importee_side_effects
-              && import_record.meta.contains(ImportRecordMeta::TopLevelPureDynamicImport)
-          };
-          let is_stmt_included = is_stmt_included_vec[*module_idx][*stmt_idx];
-          let lived = is_stmt_included
-            && (!is_dynamic_imported_module_exports_unused || !all_dead_pure_dynamic_import);
+              // Only consider it is unused if it is a top level pure dynamic import and the
+              // importee module has no side effects.
+              !importee_side_effects
+                && import_record.meta.contains(ImportRecordMeta::TopLevelPureDynamicImport)
+            };
+            let is_stmt_included = is_stmt_included_vec[*module_idx][*stmt_idx];
+            let lived = is_stmt_included
+              && (!is_dynamic_imported_module_exports_unused || !all_dead_pure_dynamic_import);
 
-          if !lived && all_dead_pure_dynamic_import {
-            ret.push((*module_idx, *import_record_idx));
-          }
-          lived
-        })
+            if !lived && all_dead_pure_dynamic_import {
+              ret.push((*module_idx, *import_record_idx));
+            }
+            lived
+          },
+        )
       }
     };
     (!is_lived).then_some(ret)

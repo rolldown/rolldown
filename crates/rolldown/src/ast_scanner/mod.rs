@@ -26,15 +26,16 @@ use oxc::{
   semantic::SymbolId,
   span::{CompactStr, GetSpan, Span},
 };
+use oxc_allocator::Address;
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
-  ConstExportMeta, ConstantValue, EcmaModuleAstUsage, EcmaViewMeta, ExportsKind, FlatOptions,
-  HmrInfo, ImportAttribute, ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport,
-  MemberExprObjectReferencedType, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport,
-  RawImportRecord, SideEffectDetail, Specifier, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos,
-  SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef, ThisExprReplaceKind,
-  generate_replace_this_expr_map,
+  ConstExportMeta, ConstantValue, DynamicImportExprInfo, EcmaModuleAstUsage, EcmaViewMeta,
+  ExportsKind, FlatOptions, HmrInfo, ImportAttribute, ImportKind, ImportRecordIdx,
+  ImportRecordMeta, LocalExport, MemberExprObjectReferencedType, MemberExprRef, ModuleDefFormat,
+  ModuleId, ModuleIdx, NamedImport, RawImportRecord, SideEffectDetail, Specifier, StmtInfo,
+  StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
+  TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt, FunctionExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -433,12 +434,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   /// `is_dummy` means if it the import record is created during ast transformation.
+  ///
+  /// `import_expression_address` - The AST address of the ImportExpression node,
+  /// required for dynamic imports to track their position for optimization purposes.
+  /// Should be `None` for static imports and `Some(addr)` for dynamic imports.
   fn add_import_record(
     &mut self,
     module_request: &str,
     kind: ImportKind,
     span: Span,
     init_meta: ImportRecordMeta,
+    import_expression_address: Option<Address>,
   ) -> ImportRecordIdx {
     // If 'foo' in `import ... from 'foo'` is finally a commonjs module, we will convert the import statement
     // to `var import_foo = __toESM(require_foo())`, so we create a symbol for `import_foo` here. Notice that we
@@ -457,7 +463,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       None,
       // The first index stmt is reserved for the facade statement that constructs Module Namespace
       // Object
-      self.current_stmt_idx.map(|idx| idx + 1),
+      import_expression_address.map(|address| {
+        Box::new(DynamicImportExprInfo {
+          stmt_info_idx: self.current_stmt_idx.expect("The current_stmt_idx should not be empty")
+            + 1,
+          address,
+        })
+      }),
     )
     .with_meta(init_meta);
 
@@ -648,6 +660,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       } else {
         ImportRecordMeta::empty()
       },
+      None,
     );
     if let Some(exported) = &decl.exported {
       // export * as ns from '...'
@@ -687,6 +700,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         } else {
           ImportRecordMeta::empty()
         },
+        None,
       );
       decl.specifiers.iter().for_each(|spec| {
         self.add_re_export(
@@ -846,6 +860,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       } else {
         ImportRecordMeta::empty()
       },
+      None,
     );
 
     if let Some(ref with_clause) = decl.with_clause {

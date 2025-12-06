@@ -5260,7 +5260,6 @@ expression: output
 # tests/rolldown/optimization/inline_empty_function_call/basic
 
 - main-!~{000}~.js => main-00sjF12P.js
-- b-!~{001}~.js => b-C4kE5Dgl.js
 
 # tests/rolldown/optimization/inline_empty_function_call/class_like
 

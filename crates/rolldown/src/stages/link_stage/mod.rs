@@ -176,8 +176,8 @@ impl<'a> LinkStage<'a> {
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();
     self.reference_needed_symbols();
-    self.cross_module_optimization();
-    self.include_statements();
+    let unreachable_import_expression_addrs = self.cross_module_optimization();
+    self.include_statements(&unreachable_import_expression_addrs);
     self.patch_module_dependencies();
 
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());

@@ -5763,6 +5763,12 @@ expression: output
 - exist-dep-cjs-!~{001}~.js => exist-dep-cjs-B-WqdnuU.js
 - exist-dep-esm-!~{003}~.js => exist-dep-esm-CvUiozan.js
 
+# tests/rolldown/topics/hmr/dynamic_import_rebuild
+
+- main-!~{000}~.js => main-BynbH03M.js
+- exist-dep-cjs-!~{001}~.js => exist-dep-cjs-BM3A0Vd2.js
+- exist-dep-esm-!~{003}~.js => exist-dep-esm-BoeD22Mx.js
+
 # tests/rolldown/topics/hmr/error_recovery/from_rebuild_syntax_error
 
 - main-!~{000}~.js => main-B-6OWCri.js

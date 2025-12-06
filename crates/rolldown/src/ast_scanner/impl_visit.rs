@@ -8,6 +8,7 @@ use oxc::{
   semantic::{ScopeFlags, SymbolId},
   span::{GetSpan, Span},
 };
+use rolldown_common::StmtInfoIdx;
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
   MemberExprObjectReferencedType, OutputFormat, RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoMeta,
@@ -80,8 +81,14 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       &program.scope_id,
     );
     // Custom visit
+
+    #[expect(
+      clippy::cast_possible_truncation,
+      reason = "We don't have a plan to support more than u32 statements in a single module"
+    )]
     for (idx, stmt) in program.body.iter().enumerate() {
-      self.current_stmt_idx = Some(idx.into());
+      // `0` is reserved for Module Namespace Object stmt info
+      self.current_stmt_idx = StmtInfoIdx::from_raw_unchecked(idx as u32 + 1);
       self.current_stmt_info.side_effect = SideEffectDetector::new(
         &self.result.symbol_ref_db.ast_scopes,
         self.immutable_ctx.flat_options,
@@ -570,7 +577,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           self
             .result
             .stmt_infos
-            .reference_stmt_for_symbol_id(self.current_stmt_idx.unwrap() + 1, root_symbol_id);
+            .reference_stmt_for_symbol_id(self.current_stmt_idx, root_symbol_id);
         }
 
         self.check_import_assign(ident_ref, root_symbol_id.symbol);

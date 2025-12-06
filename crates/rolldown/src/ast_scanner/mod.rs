@@ -139,7 +139,7 @@ pub struct AstScannerImmutableCtx<'me, 'ast> {
 pub struct AstScanner<'me, 'ast> {
   immutable_ctx: AstScannerImmutableCtx<'me, 'ast>,
   current_stmt_info: StmtInfo,
-  current_stmt_idx: Option<StmtInfoIdx>,
+  current_stmt_idx: StmtInfoIdx,
   result: ScanResult,
   esm_export_keyword: Option<Span>,
   esm_import_keyword: Option<Span>,
@@ -229,7 +229,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         flat_options,
       },
       current_stmt_info: StmtInfo::default(),
-      current_stmt_idx: None,
+      current_stmt_idx: StmtInfos::NAMESPACE_STMT_IDX,
       result,
       esm_export_keyword: None,
       esm_import_keyword: None,
@@ -452,7 +452,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let namespace_ref: SymbolRef =
       self.result.symbol_ref_db.create_facade_root_symbol_ref(&concat_string!(
         "#LOCAL_NAMESPACE_IN_",
-        itoa::Buffer::new().format(self.current_stmt_idx.unwrap_or_default().raw()),
+        itoa::Buffer::new().format(self.current_stmt_idx.raw()),
         "#"
       ));
     let mut rec = RawImportRecord::new(
@@ -464,11 +464,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       // The first index stmt is reserved for the facade statement that constructs Module Namespace
       // Object
       import_expression_address.map(|address| {
-        Box::new(DynamicImportExprInfo {
-          stmt_info_idx: self.current_stmt_idx.expect("The current_stmt_idx should not be empty")
-            + 1,
-          address,
-        })
+        Box::new(DynamicImportExprInfo { stmt_info_idx: self.current_stmt_idx, address })
       }),
     )
     .with_meta(init_meta);

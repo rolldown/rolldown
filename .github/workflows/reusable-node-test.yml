@@ -50,6 +50,10 @@ jobs:
         run: |
           pnpm run --filter rolldown-tests test:types
 
+      - name: Install Playwright
+        # does not need to explicitly set chromium after https://github.com/microsoft/playwright/issues/14862 is solved
+        run: pnpm playwright install chromium
+
       - name: Setup Node20 For Testing
         uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:

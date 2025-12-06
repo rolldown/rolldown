@@ -895,6 +895,12 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Inline dynamic imports'),
   ),
+  dynamicImportInCjs: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to use import() for dynamic imports in CommonJS output',
+    ),
+  ),
   manualChunks: v.optional(ManualChunksFunctionSchema),
   advancedChunks: v.optional(AdvancedChunksSchema),
   legalComments: v.pipe(

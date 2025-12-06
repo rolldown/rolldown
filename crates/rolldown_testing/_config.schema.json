@@ -384,6 +384,12 @@
             "null"
           ]
         },
+        "dynamicImportInCjs": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "advancedChunks": {
           "anyOf": [
             {

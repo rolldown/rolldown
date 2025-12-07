@@ -5265,6 +5265,10 @@ expression: output
 
 - main-!~{000}~.js => main-qcBKJ6Rw.js
 
+# tests/rolldown/optimization/inline_empty_function_call/multiple_dynamic_imports
+
+- main-!~{000}~.js => main-BSgOKZsF.js
+
 # tests/rolldown/optimization/pife_for_module_wrappers/basic
 
 - a-!~{000}~.js => a-BlI4VyMA.js

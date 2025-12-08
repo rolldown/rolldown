@@ -12,7 +12,7 @@ export default defineConfig({
     testTimeout: 90000,
     expect: {
       poll: {
-        timeout: 1000 * 15,
+        timeout: 1000 * 10,
       },
     },
   },

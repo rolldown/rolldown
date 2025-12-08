@@ -2,6 +2,11 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { aggregateReason } from './aggregate-reason.js';
 import { diffCase } from './diff.js';
+import {
+  ensureSnapshot,
+  SNAPSHOT_FILES,
+  type SnapshotFileName,
+} from './download-snapshots.js';
 import { parseEsbuildSnap, parseRolldownSnap } from './snap-parser.js';
 import type { DebugConfig, UnwrapPromise } from './types.js';
 const esbuildTestDir = path.join(
@@ -9,22 +14,19 @@ const esbuildTestDir = path.join(
   '../../crates/rolldown/tests/esbuild',
 );
 
-function getEsbuildSnapFile(
-  includeList: string[],
-): Array<{ normalizedName: string; content: string }> {
-  let dirname = path.resolve(import.meta.dirname, './esbuild-snapshots/');
-  let fileList = fs.readdirSync(dirname);
-  let ret = fileList
-    .filter((filename) => {
-      return includeList.length === 0 || includeList.includes(filename);
-    })
-    .map((filename) => {
-      let name = path.parse(filename).name;
-      let [_, ...rest] = name.split('_');
-      let normalizedName = rest.join('_');
-      let content = fs.readFileSync(path.join(dirname, filename), 'utf-8');
-      return { normalizedName, content };
-    });
+async function getEsbuildSnapFile(): Promise<
+  Array<{ normalizedName: string; content: string }>
+> {
+  const ret: Array<{ normalizedName: string; content: string }> = [];
+
+  for (const filename of SNAPSHOT_FILES) {
+    const name = path.parse(filename).name;
+    const [_, ...rest] = name.split('_');
+    const normalizedName = rest.join('_');
+    const content = await ensureSnapshot(filename as SnapshotFileName);
+    ret.push({ normalizedName, content });
+  }
+
   return ret;
 }
 type AggregateStats = {
@@ -38,7 +40,7 @@ type Stats = {
   failed: number;
   total: number;
 };
-export async function run(includeList: string[], debugConfig: DebugConfig) {
+export async function run(debugConfig: DebugConfig) {
   let aggregatedStats: AggregateStats = {
     stats: {
       pass: 0,
@@ -48,7 +50,7 @@ export async function run(includeList: string[], debugConfig: DebugConfig) {
     },
     details: {},
   };
-  let snapfileList = getEsbuildSnapFile(includeList);
+  let snapfileList = await getEsbuildSnapFile();
   // esbuild snapshot_x.txt
   for (let snapFile of snapfileList) {
     if (debugConfig?.debug) {

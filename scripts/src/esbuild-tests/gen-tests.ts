@@ -16,10 +16,16 @@ import {
   Query,
 } from 'web-tree-sitter';
 // import Go from 'tree-sitter-go';
+import { ESBUILD_BUNDLER_TESTS_URL } from './urls.js';
 
 const TREE_SITTER_WASM_GO_FILENAME = path.resolve(
   import.meta.dirname,
   '../../tmp/tree-sitter-go.wasm',
+);
+
+const GO_FILES_DIR = path.resolve(
+  import.meta.dirname,
+  '../../tmp/esbuild-tests',
 );
 
 /**
@@ -29,63 +35,44 @@ const TREE_SITTER_WASM_GO_FILENAME = path.resolve(
 const suites = {
   default: {
     name: 'default',
-    sourcePath: './bundler_default_test.go',
-    sourceGithubUrl:
-      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_default_test.go',
+    sourceFile: 'bundler_default_test.go',
     ignoreCases: [],
   },
   dce: {
     name: 'dce',
-    sourcePath: './bundler_dce_test.go',
-    sourceGithubUrl:
-      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_dce_test.go',
+    sourceFile: 'bundler_dce_test.go',
   },
   importstar: {
     name: 'importstar',
-    sourcePath: './bundler_importstar_test.go',
-    sourceGithubUrl:
-      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_importstar_test.go',
+    sourceFile: 'bundler_importstar_test.go',
   },
   importstar_ts: {
     name: 'importstar_ts',
-    sourcePath: './bundler_importstar_ts_test.go',
-    sourceGithubUrl:
-      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_importstar_ts_test.go',
+    sourceFile: 'bundler_importstar_ts_test.go',
   },
   ts: {
     name: 'bundler_ts',
-    sourcePath: './bundler_ts_test.go',
-    sourceGithubUrl:
-      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_ts_test.go',
+    sourceFile: 'bundler_ts_test.go',
   },
   lower: {
     name: 'lower',
-    sourcePath: './bundler_lower_test.go',
-    sourceGithubUrl:
-      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_lower_test.go',
+    sourceFile: 'bundler_lower_test.go',
   },
   loader: {
     name: 'loader',
-    sourcePath: './bundler_loader_test.go',
-    sourceGithubUrl:
-      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_loader_test.go',
+    sourceFile: 'bundler_loader_test.go',
   },
   splitting: {
     name: 'splitting',
-    sourcePath: './bundler_splitting_test.go',
-    sourceGithubUrl:
-      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_splitting_test.go',
+    sourceFile: 'bundler_splitting_test.go',
   },
   glob: {
     name: 'glob',
-    sourcePath: './bundler_glob_test.go',
-    sourceGithubUrl:
-      'https://raw.githubusercontent.com/evanw/esbuild/main/internal/bundler_tests/bundler_glob_test.go',
+    sourceFile: 'bundler_glob_test.go',
   },
 } as const satisfies Record<string, {
   name: string;
-  sourcePath: string;
-  sourceGithubUrl: string;
+  sourceFile: string;
   ignoreCases?: string[];
 }>;
 
@@ -148,6 +135,7 @@ const queryString = `
 
 /**
  * Attempts to read the .go source file based on the provided test suite name. {@link suites}
+ * Downloads the file if it doesn't exist locally.
  * @param testSuiteName - The name of the current test suite.
  * @returns The contents of the .go test source file.
  *
@@ -158,18 +146,22 @@ async function readTestSuiteSource(
   testSuiteName: TestSuiteName,
 ): Promise<string> {
   const testSuite = suites[testSuiteName];
-  const sourcePath = path.resolve(__dirname, testSuite.sourcePath);
+  const sourcePath = path.join(GO_FILES_DIR, testSuite.sourceFile);
+  const sourceGithubUrl =
+    `${ESBUILD_BUNDLER_TESTS_URL}/${testSuite.sourceFile}`;
+
   try {
     return fs.readFileSync(sourcePath).toString();
   } catch {
     console.log(`Could not read .go source file from ${sourcePath}.`);
-    console.log(`Attempting to download it from ${testSuite.sourceGithubUrl}.`);
+    console.log(`Attempting to download it from ${sourceGithubUrl}.`);
     console.log('...');
 
     try {
-      const response = await fetch(testSuite.sourceGithubUrl);
+      const response = await fetch(sourceGithubUrl);
       const text = await response.text();
       if (typeof text === 'string') {
+        await fsp.mkdir(GO_FILES_DIR, { recursive: true });
         await fsp.writeFile(sourcePath, text);
         console.log(`Downloaded and saved at ${sourcePath}.`);
         return fs.readFileSync(sourcePath).toString();
@@ -178,10 +170,10 @@ async function readTestSuiteSource(
       }
     } catch (err2) {
       console.log(
-        'Could not download .go source file. Please download it manually and save it under the "scripts" directory.',
+        'Could not download .go source file. Please download it manually.',
         err2,
       );
-      console.log(`Download link: ${testSuite.sourceGithubUrl}`);
+      console.log(`Download link: ${sourceGithubUrl}`);
       process.exit(1);
     }
   }

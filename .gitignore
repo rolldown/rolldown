@@ -149,8 +149,8 @@ dist
 # os
 .DS_Store
 
-# esbuild test
-*.go
+# esbuild test downloaded files
+scripts/tmp/
 
 pkg/
 

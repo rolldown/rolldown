@@ -845,14 +845,6 @@ expression: output
 
 - entry-!~{000}~.js => entry-uA_z3GJj.js
 
-# tests/esbuild/default/import_abs_path_as_dir
-
-- entry-!~{000}~.js => entry-CMI-Idrn.js
-
-# tests/esbuild/default/import_abs_path_as_file
-
-- entry-!~{000}~.js => entry-CMI-Idrn.js
-
 # tests/esbuild/default/import_abs_path_with_query_parameter
 
 - entry-!~{000}~.js => entry-DjSTi_hU.js
@@ -3258,7 +3250,7 @@ expression: output
 
 # tests/esbuild/ts/ts_abstract_class_field_use_assign
 
-- entry-!~{000}~.js => entry-BLhvMIut.js
+- entry-!~{000}~.js => entry-BpxXvkh6.js
 
 # tests/esbuild/ts/ts_abstract_class_field_use_define
 

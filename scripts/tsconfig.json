@@ -4,6 +4,7 @@
     "ci/**/*.js",
     "meta/**/*.js",
     "misc/**/*.js",
+    "misc/**/*.ts",
     "misc/**/*.d.ts",
     "snap-diff/**/*.ts",
     "src/**/*.ts"

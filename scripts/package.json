@@ -5,6 +5,7 @@
   "scripts": {
     "type-check": "tsc -b",
     "setup-bench": "oxnode ./misc/setup-benchmark-input/index.js",
+    "gen-esbuild-test": "oxnode ./misc/gen-esbuild-test.ts",
     "esbuild-snap-diff": "oxnode ./snap-diff/index.ts"
   },
   "dependencies": {

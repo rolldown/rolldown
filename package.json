@@ -37,6 +37,7 @@
     "oxlint-tsgolint": "0.8.3",
     "remove-unused-vars": "^0.0.11",
     "rolldown": "workspace:*",
+    "playwright-chromium": "^1.56.1",
     "typescript": "catalog:"
   },
   "pnpm": {

@@ -2,6 +2,7 @@ packages:
   - packages/*
   - packages/rolldown/tests
   - packages/test-dev-server/tests
+  - packages/test-dev-server/tests/playground/hmr-full-bundle-mode
   - packages/test-dev-server/tests/fixtures/*
   - packages/test-dev-server/tests/tmp/fixtures/*
   - packages/rolldown/tests/fixtures/resolve/issue-5846
@@ -19,7 +20,7 @@ trustPolicy: no-downgrade
 trustPolicyExclude:
   - chokidar@4.0.3 # https://github.com/paulmillr/chokidar/issues/1440
   - semver@6.3.1
-  - rxjs@7.8.2
+  - rxjs@7.8.2 # Trust downgrade when installing @vitest/browser-playwright
 
 # Define a catalog of version ranges.
 catalog:
@@ -54,7 +55,7 @@ catalog:
   'fast-glob': '^3.3.3'
   'rolldown-plugin-dts': '^0.18.0'
   'typescript': '^5.8.3'
-  'vitest': '^4.0.1'
+  'vitest': '^4.0.15'
   'vite': '^7.0.0'
   '@types/node': '24.10.1'
   'esbuild': '^0.27.0'

@@ -195,7 +195,7 @@ export interface Comment {
 }
 
 export interface ErrorLabel {
-  message?: string
+  message: string | null
   start: number
   end: number
 }
@@ -204,8 +204,8 @@ export interface OxcError {
   severity: Severity
   message: string
   labels: Array<ErrorLabel>
-  helpMessage?: string
-  codeframe?: string
+  helpMessage: string | null
+  codeframe: string | null
 }
 
 export type Severity =  'Error'|
@@ -245,9 +245,9 @@ export interface EcmaScriptModule {
 
 export interface ExportExportName {
   kind: ExportExportNameKind
-  name?: string
-  start?: number
-  end?: number
+  name: string | null
+  start: number | null
+  end: number | null
 }
 
 export type ExportExportNameKind = /** `export { name } */
@@ -259,9 +259,9 @@ export type ExportExportNameKind = /** `export { name } */
 
 export interface ExportImportName {
   kind: ExportImportNameKind
-  name?: string
-  start?: number
-  end?: number
+  name: string | null
+  start: number | null
+  end: number | null
 }
 
 export type ExportImportNameKind = /** `export { name } */
@@ -275,9 +275,9 @@ export type ExportImportNameKind = /** `export { name } */
 
 export interface ExportLocalName {
   kind: ExportLocalNameKind
-  name?: string
-  start?: number
-  end?: number
+  name: string | null
+  start: number | null
+  end: number | null
 }
 
 export type ExportLocalNameKind = /** `export { name } */
@@ -292,9 +292,9 @@ export type ExportLocalNameKind = /** `export { name } */
 
 export interface ImportName {
   kind: ImportNameKind
-  name?: string
-  start?: number
-  end?: number
+  name: string | null
+  start: number | null
+  end: number | null
 }
 
 export type ImportNameKind = /** `import { x } from "mod"` */
@@ -372,7 +372,7 @@ export interface StaticExport {
 export interface StaticExportEntry {
   start: number
   end: number
-  moduleRequest?: ValueSpan
+  moduleRequest: ValueSpan | null
   /** The name under which the desired binding is exported by the module`. */
   importName: ExportImportName
   /** The name used to export this binding by this module. */

@@ -1,7 +1,8 @@
 use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  Chunk, ChunkIdx, InstantiatedChunk, ModuleRenderOutput, NormalizedBundlerOptions, SymbolRef,
+  Chunk, ChunkIdx, InstantiatedChunk, ModuleRenderOutput, NormalizedBundlerOptions, OutputExports,
+  SymbolRef,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
@@ -72,12 +73,23 @@ impl GenerateContext<'_> {
           // If `foo` is split into another chunk, we need to convert the code `console.log(foo);` to `console.log(require_xxxx.foo);`
           // instead of keeping `console.log(foo)` as we did in esm output. The reason here is we need to keep live binding in cjs output.
 
-          let exported_name = &self.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
-            .exports_to_other_chunks[&canonical_ref][0];
-
           let require_binding = &self.chunk_graph.chunk_table[cur_chunk_idx]
             .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
-          rolldown_utils::ecmascript::property_access_str(require_binding, exported_name)
+
+          let exported_name = &self.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
+            .exports_to_other_chunks[&canonical_ref][0];
+          if exported_name == "default" {
+            match self.options.exports {
+              OutputExports::Auto => require_binding.clone(),
+              OutputExports::Default | OutputExports::Named => {
+                rolldown_utils::ecmascript::property_access_str(require_binding, exported_name)
+              }
+              // Already validated at https://github.com/rolldown/rolldown/blob/e50d4419df86af63b25b4b8d40035dad2478a3fe/crates/rolldown/src/utils/chunk/determine_export_mode.rs#L8-L66
+              OutputExports::None => unreachable!(),
+            }
+          } else {
+            rolldown_utils::ecmascript::property_access_str(require_binding, exported_name)
+          }
         } else {
           self.canonical_name_for(canonical_names, canonical_ref).to_string()
         }

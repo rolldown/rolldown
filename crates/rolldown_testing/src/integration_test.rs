@@ -525,7 +525,8 @@ impl IntegrationTest {
       package_json.write_all(serde_json::to_string_pretty(&json).unwrap().as_bytes()).unwrap();
     }
 
-    let test_script = cwd.join("_test.mjs");
+    let test_script =
+      if cwd.join("_test.cjs").exists() { cwd.join("_test.cjs") } else { cwd.join("_test.mjs") };
 
     let mut node_command = Command::new("node");
 

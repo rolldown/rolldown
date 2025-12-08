@@ -3121,9 +3121,8 @@ expression: output
 
 # tests/esbuild/splitting/splitting_circular_reference_issue251
 
-- a-!~{000}~.js => a-DKUNht4j.js
-- b-!~{001}~.js => b-Odxw2-T8.js
-- a-!~{002}~.js => a-CJ1eEqwW.js
+- a-!~{000}~.js => a-Cg-4jZHa.js
+- b-!~{001}~.js => b-ChRetgD2.js
 
 # tests/esbuild/splitting/splitting_cross_chunk_assignment_dependencies
 
@@ -3211,9 +3210,8 @@ expression: output
 
 # tests/esbuild/splitting/splitting_re_export_issue273
 
-- a-!~{000}~.js => a-BrOuVO1R.js
-- b-!~{001}~.js => b-DzQ04KD5.js
-- a-!~{002}~.js => a-FkXGUaJG.js
+- a-!~{000}~.js => a-DRUcNsSz.js
+- b-!~{001}~.js => b-D4oC_QxL.js
 
 # tests/esbuild/splitting/splitting_shared_common_js_into_es6
 
@@ -4233,9 +4231,8 @@ expression: output
 
 # tests/rolldown/function/format/cjs/shared_entry_modules
 
-- entry1-!~{000}~.js => entry1-DWJRbr2p.js
-- entry2-!~{001}~.js => entry2-CVZ0EBUB.js
-- main-!~{002}~.js => main-Cg2NbtEL.js
+- entry1-!~{000}~.js => entry1-kxF07VlD.js
+- entry2-!~{001}~.js => entry2-XWD-058X.js
 
 # tests/rolldown/function/format/esm/import_export_unicode
 
@@ -5023,9 +5020,8 @@ expression: output
 
 # tests/rolldown/misc/duplicate_entries
 
-- main-!~{000}~.js => main-CaQmUqti.js
-- main2-!~{001}~.js => main2-BnOgs1uk.js
-- main-!~{002}~.js => main-yibLZAlH.js
+- main-!~{000}~.js => main-bdrmWbkV.js
+- main2-!~{001}~.js => main2-Bna7409q.js
 
 # tests/rolldown/misc/footer/cjs
 
@@ -5203,6 +5199,11 @@ expression: output
 
 - main-!~{000}~.js => main-Bwxjz2Xq.js
 - main-Bwxjz2Xq.js.map
+
+# tests/rolldown/optimization/chunk_merging/cjs_format
+
+- dep-!~{001}~.js => dep-DNFy2xKJ.js
+- main-!~{000}~.js => main-DoomfFj7.js
 
 # tests/rolldown/optimization/inline_const/5197
 
@@ -5705,9 +5706,8 @@ expression: output
 
 # tests/rolldown/topics/deconflict/issue_5737
 
-- entry-!~{000}~.js => entry-C5JzlZ9O.js
-- entry2-!~{001}~.js => entry2-Hb7mqraD.js
-- foo-!~{002}~.js => foo-Bd0y3rit.js
+- entry-!~{000}~.js => entry-BTIw6rME.js
+- entry2-!~{001}~.js => entry2-3fEQ_Gt4.js
 
 # tests/rolldown/topics/deconflict/issue_6227
 
@@ -5930,15 +5930,13 @@ expression: output
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks
 
-- main-!~{000}~.js => main-gOSUDD_4.js
-- async-entry-!~{003}~.js => async-entry-CTnpuzS1.js
-- shared-!~{001}~.js => shared-Br_j6oXj.js
+- main-!~{000}~.js => main-BQTM1L-4.js
+- async-entry-!~{001}~.js => async-entry-C1Eo3lHc.js
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks_cjs
 
-- main-!~{000}~.js => main-bppD16YD.js
-- async-entry-!~{003}~.js => async-entry-B0SGRHwK.js
-- shared-!~{001}~.js => shared-DlT5txJr.js
+- main-!~{000}~.js => main-BH7A1AV7.js
+- async-entry-!~{001}~.js => async-entry-CsMLzOr2.js
 
 # tests/rolldown/topics/live_bindings/on_demand_shorthand_pattern_cjs
 
@@ -5986,15 +5984,13 @@ expression: output
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries
 
-- entry-!~{000}~.js => entry--3VwUqRZ.js
-- entry2-!~{001}~.js => entry2-l2vVxF13.js
-- main-!~{002}~.js => main-CwTwUdfG.js
+- entry-!~{000}~.js => entry-Ct6SbMUp.js
+- entry2-!~{001}~.js => entry2-Dq-VsMVl.js
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_shared_entries_cjs
 
-- entry-!~{000}~.js => entry-D4yeLkoa.js
-- entry2-!~{001}~.js => entry2-CEONwpTQ.js
-- main-!~{002}~.js => main-DSLChd1Z.js
+- entry-!~{000}~.js => entry-D81lP1Oc.js
+- entry2-!~{001}~.js => entry2-BGA5rrZE.js
 
 # tests/rolldown/topics/preserve_semantic_of_entries_exports/named_export_in_wrapped
 

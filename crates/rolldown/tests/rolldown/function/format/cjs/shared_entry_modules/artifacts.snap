@@ -6,31 +6,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry1.js
 
 ```js
-const require_main = require('./main.js');
-
-exports.value = require_main.value;
-```
-
-## entry2.js
-
-```js
-const require_main = require('./main.js');
-
-exports.value = require_main.value;
-```
-
-## main.js
-
-```js
 
 //#region main.js
 const value = "main";
 
 //#endregion
-Object.defineProperty(exports, 'value', {
-  enumerable: true,
-  get: function () {
-    return value;
-  }
-});
+exports.value = value;
+```
+
+## entry2.js
+
+```js
+const require_entry1 = require('./entry1.js');
+
+exports.value = require_entry1.value;
 ```

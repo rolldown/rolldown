@@ -127,10 +127,16 @@ impl GenerateStage<'_> {
       Some(chunk_idx) => {
         let chunk = &chunk_graph.chunk_table[chunk_idx];
         let is_async_entry_only = matches!(chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta == ChunkMeta::DynamicImported);
-        if matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict))
-          && !is_async_entry_only
-        {
-          self.create_common_chunk(modules, bits, chunk_graph, bits_to_chunk, input_base);
+        if matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict)) {
+          // 1. If the target chunk is an async entry, we can merge safely.
+          // 2. If the user defined entry chunk has strict preserve entry signature, but all pending
+          // modules will not change the entry signature after merge into it, we can still merge them.
+          if is_async_entry_only || self.can_merge_without_changing_entry_signature(chunk, &modules)
+          {
+            self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, modules, chunk_graph);
+          } else {
+            self.create_common_chunk(modules, bits, chunk_graph, bits_to_chunk, input_base);
+          }
         } else {
           self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, modules, chunk_graph);
         }
@@ -259,6 +265,46 @@ impl GenerateStage<'_> {
       ret.push(chunk.entry_module_idx()?);
     }
     Some(ret)
+  }
+
+  /// Checks if merging the given modules into an entry chunk would change the entry's export signature.
+  ///
+  /// With `preserveEntrySignatures: 'strict'`, we need to ensure that merging modules doesn't add
+  /// new exports to the entry chunk. A module is safe to merge if:
+  /// 1. It has no exports of its own (purely internal implementation code), OR
+  /// 2. All its exports are already part of the entry's resolved exports (re-exported by the entry)
+  fn can_merge_without_changing_entry_signature(
+    &self,
+    chunk: &Chunk,
+    modules: &[ModuleIdx],
+  ) -> bool {
+    let Some(entry_module_idx) = chunk.entry_module_idx() else {
+      return false;
+    };
+    let metas = &self.link_output.metas;
+    let module_table = &self.link_output.module_table;
+
+    let entry_exports = &metas[entry_module_idx].resolved_exports;
+
+    modules.iter().all(|&module_idx| {
+      // Skip the entry module itself - it's always safe
+      if module_idx == entry_module_idx || module_table[module_idx].as_normal().is_none() {
+        return true;
+      }
+
+      let module_meta = &metas[module_idx];
+
+      // A module is safe to merge if all its exports are already covered by the entry's exports.
+      // This means either:
+      // 1. The module has no exports (empty resolved_exports)
+      // 2. All of the module's exports point to symbols that the entry also exports
+      module_meta.resolved_exports.iter().all(|(export_name, resolved_export)| {
+        // Check if the entry has an export with the same name that resolves to the same symbol
+        entry_exports
+          .get(export_name)
+          .is_some_and(|entry_export| entry_export.symbol_ref == resolved_export.symbol_ref)
+      })
+    })
   }
 
   /// Finds a chunk that can serve as the merge target for all entries.

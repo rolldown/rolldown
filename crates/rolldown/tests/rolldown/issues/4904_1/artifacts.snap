@@ -32,25 +32,17 @@ export { a, b };
 ### lib.js
 
 ```js
-import { t as a } from "./lib2.js";
-
-export { a };
-```
-
-### lib2.js
-
-```js
 //#region lib.js
 const a = 42;
 
 //#endregion
-export { a as t };
+export { a };
 ```
 
 ### main.js
 
 ```js
-import { t as a } from "./lib2.js";
+import { a } from "./lib.js";
 
 //#region main.js
 const b = 42;

@@ -1,5 +1,5 @@
 // To use this script, run:
-//    pnpm run gen-esbuild-test <test-suite-name>
+//    pnpm run gen-esbuild-tests <test-suite-name>
 
 import chalk from 'chalk';
 import * as changeCase from 'change-case';
@@ -128,7 +128,7 @@ const __dirname = import.meta.dirname;
 
 const TESTS_ROOT_DIR = path.resolve(
   __dirname,
-  '../../crates/rolldown/tests/esbuild',
+  '../../../crates/rolldown/tests/esbuild',
   SUITE_NAME,
 );
 

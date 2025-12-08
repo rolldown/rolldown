@@ -30,8 +30,8 @@
     "pnpm-lock.yaml",
     "rollup",
     "test262",
-    "scripts/snap-diff/stats",
-    "scripts/snap-diff/summary",
+    "scripts/src/esbuild-tests/snap-diff/stats",
+    "scripts/src/esbuild-tests/snap-diff/summary",
     "**/.pnp.cjs",
     "**/diff.md",
     "**/bypass.md"

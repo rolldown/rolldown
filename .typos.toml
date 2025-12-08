@@ -21,7 +21,7 @@ extend-exclude = [
   "packages/rolldown/src/binding.js",
   "packages/rolldown/tests/fixtures/",
   "packages/rolldown/tests/stability/",
-  "scripts/snap-diff/**/*.{txt,md}",
+  "scripts/src/esbuild-tests/snap-diff/**/*.{txt,md}",
 ]
 
 [default.extend-words]

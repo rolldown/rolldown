@@ -1,9 +1,9 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { aggregateReason } from './aggregate-reason.js';
-import { diffCase } from './diff';
+import { diffCase } from './diff.js';
 import { parseEsbuildSnap, parseRolldownSnap } from './snap-parser.js';
-import type { DebugConfig, UnwrapPromise } from './types';
+import type { DebugConfig, UnwrapPromise } from './types.js';
 const esbuildTestDir = path.join(
   import.meta.dirname,
   '../../crates/rolldown/tests/esbuild',

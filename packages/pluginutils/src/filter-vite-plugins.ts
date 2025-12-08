@@ -25,9 +25,7 @@
  * });
  * ```
  */
-export function filterVitePlugins<T = any>(
-  plugins: T | T[] | null | undefined | false,
-): T[] {
+export function filterVitePlugins<T = any>(plugins: T | T[] | null | undefined | false): T[] {
   if (!plugins) {
     return [];
   }

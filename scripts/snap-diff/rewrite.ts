@@ -44,10 +44,7 @@ export function rewriteRolldown(code: string, config: RewriteConfig) {
     ImportDeclaration(path) {
       let sourceList = ['assert', 'node:assert'];
       let node = path.node as acorn.ImportDeclaration;
-      if (
-        node.source.value &&
-        sourceList.includes(node.source.value.toString())
-      ) {
+      if (node.source.value && sourceList.includes(node.source.value.toString())) {
         path.remove();
       }
     },
@@ -99,9 +96,7 @@ export function rewriteRolldown(code: string, config: RewriteConfig) {
   });
 }
 
-function extractAssertArgument(
-  node: acorn.CallExpression,
-): acorn.Expression | undefined {
+function extractAssertArgument(node: acorn.CallExpression): acorn.Expression | undefined {
   let callee = node.callee;
   // extract assert.strictEqual(test, 1)
   // extract assert.equal(test, 1)

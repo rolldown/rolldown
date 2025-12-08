@@ -67,10 +67,7 @@
     },
     "configName": {
       "description": "Value will be injected into the `globalThis.__configName`",
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "default": null
     },
     "dev": {
@@ -84,25 +81,16 @@
       "type": "object",
       "properties": {
         "input": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/InputItem"
           }
         },
         "cwd": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "external": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "type": "string"
           }
@@ -118,64 +106,34 @@
           ]
         },
         "shimMissingExports": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "name": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "entryFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "chunkFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "cssEntryFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "cssChunkFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "assetFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "sanitizeFilename": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "dir": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "file": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "format": {
           "anyOf": [
@@ -198,19 +156,13 @@
           ]
         },
         "globals": {
-          "type": [
-            "object",
-            "null"
-          ],
+          "type": ["object", "null"],
           "additionalProperties": {
             "type": "string"
           }
         },
         "paths": {
-          "type": [
-            "object",
-            "null"
-          ],
+          "type": ["object", "null"],
           "additionalProperties": {
             "type": "string"
           }
@@ -246,10 +198,7 @@
           ]
         },
         "dropLabels": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "type": "string"
           }
@@ -265,47 +214,26 @@
           ]
         },
         "banner": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "footer": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "intro": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "outro": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "sourcemapBaseUrl": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "sourcemapDebugIds": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "moduleTypes": {
           "description": "Key is the file extension. The extension should start with a `.`. E.g. `\".txt\"`.",
-          "type": [
-            "object",
-            "null"
-          ],
+          "type": ["object", "null"],
           "additionalProperties": {
             "$ref": "#/$defs/ModuleType"
           }
@@ -337,52 +265,31 @@
           "$ref": "#/$defs/SimpleMinifyOptions"
         },
         "define": {
-          "type": [
-            "object",
-            "null"
-          ],
+          "type": ["object", "null"],
           "additionalProperties": {
             "type": "string"
           }
         },
         "extend": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "profilerNames": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "keepNames": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "inject": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/InjectImport"
           }
         },
         "externalLiveBindings": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "inlineDynamicImports": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "advancedChunks": {
           "anyOf": [
@@ -405,10 +312,7 @@
           ]
         },
         "transform": {
-          "type": [
-            "object",
-            "null"
-          ],
+          "type": ["object", "null"],
           "additionalProperties": true
         },
         "watch": {
@@ -432,10 +336,7 @@
           ]
         },
         "polyfillRequire": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "makeAbsoluteExternalsRelative": {
           "anyOf": [
@@ -468,22 +369,13 @@
           ]
         },
         "preserveModules": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "virtualDirname": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "preserveModulesRoot": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "preserveEntrySignatures": {
           "anyOf": [
@@ -506,28 +398,16 @@
           ]
         },
         "topLevelVar": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "minifyInternalExports": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "cleanDir": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "context": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "tsconfig": {
           "anyOf": [
@@ -546,27 +426,19 @@
       "type": "object",
       "properties": {
         "name": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "import": {
           "type": "string"
         }
       },
-      "required": [
-        "import"
-      ]
+      "required": ["import"]
     },
     "Platform": {
       "oneOf": [
         {
           "type": "string",
-          "enum": [
-            "browser",
-            "neutral"
-          ]
+          "enum": ["browser", "neutral"]
         },
         {
           "description": "Represents the Node.js platform.",
@@ -577,21 +449,11 @@
     },
     "OutputFormat": {
       "type": "string",
-      "enum": [
-        "esm",
-        "cjs",
-        "iife",
-        "umd"
-      ]
+      "enum": ["esm", "cjs", "iife", "umd"]
     },
     "OutputExports": {
       "type": "string",
-      "enum": [
-        "auto",
-        "default",
-        "named",
-        "none"
-      ]
+      "enum": ["auto", "default", "named", "none"]
     },
     "GeneratedCodeOptions": {
       "type": "object",
@@ -610,24 +472,15 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "symbols"
-      ]
+      "required": ["symbols"]
     },
     "GeneratedCodePreset": {
       "type": "string",
-      "enum": [
-        "es5",
-        "es2015"
-      ]
+      "enum": ["es5", "es2015"]
     },
     "SourceMapType": {
       "type": "string",
-      "enum": [
-        "File",
-        "Inline",
-        "Hidden"
-      ]
+      "enum": ["File", "Inline", "Hidden"]
     },
     "EsModuleFlag": {
       "description": "This configuration determines how the bundler should handle the synthetic `__esModule` property in the CJS and IIFE format.\nIt is rollup-capable, and the rollup default is `IfDefaultProp`.\nYou may find rollup explanation [here](https://rollupjs.org/configuration-options/#output-esmodule).\n\n> Whether to add a `__esModule: true` property when generating exports for non-ES formats.\n> This property signifies that the exported value is the namespace of an ES module and that the default\n> export of this module corresponds to the `.default` property of the exported object.\n>\n> *From rollupjs.org*",
@@ -651,11 +504,7 @@
     },
     "HashCharacters": {
       "type": "string",
-      "enum": [
-        "base64",
-        "base36",
-        "hex"
-      ]
+      "enum": ["base64", "base36", "hex"]
     },
     "ModuleType": {
       "oneOf": [
@@ -683,9 +532,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "custom"
-          ],
+          "required": ["custom"],
           "additionalProperties": false
         }
       ]
@@ -695,10 +542,7 @@
       "type": "object",
       "properties": {
         "alias": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "type": "array",
             "prefixItems": [
@@ -708,10 +552,7 @@
               {
                 "type": "array",
                 "items": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
+                  "type": ["string", "null"]
                 }
               }
             ],
@@ -720,10 +561,7 @@
           }
         },
         "aliasFields": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "type": "array",
             "items": {
@@ -732,19 +570,13 @@
           }
         },
         "conditionNames": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "type": "string"
           }
         },
         "exportsFields": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "type": "array",
             "items": {
@@ -753,19 +585,13 @@
           }
         },
         "extensions": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "type": "string"
           }
         },
         "extensionAlias": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "type": "array",
             "prefixItems": [
@@ -784,43 +610,28 @@
           }
         },
         "mainFields": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "type": "string"
           }
         },
         "mainFiles": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "type": "string"
           }
         },
         "modules": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "type": "string"
           }
         },
         "symlinks": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "yarnPnp": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         }
       },
       "additionalProperties": false
@@ -839,38 +650,23 @@
       "type": "object",
       "properties": {
         "moduleSideEffects": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "annotations": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "manualPureFunctions": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "uniqueItems": true,
           "items": {
             "type": "string"
           }
         },
         "unknownGlobalSideEffects": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "commonjs": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "propertyReadSideEffects": {
           "anyOf": [
@@ -897,50 +693,29 @@
     },
     "PropertyReadSideEffects": {
       "type": "string",
-      "enum": [
-        "always",
-        "false"
-      ]
+      "enum": ["always", "false"]
     },
     "PropertyWriteSideEffects": {
       "type": "string",
-      "enum": [
-        "always",
-        "false"
-      ]
+      "enum": ["always", "false"]
     },
     "ExperimentalOptions": {
       "type": "object",
       "properties": {
         "strictExecutionOrder": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "disableLiveBindings": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "viteMode": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "resolveNewUrlToAsset": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "incrementalBuild": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "hmr": {
           "anyOf": [
@@ -983,10 +758,7 @@
           ]
         },
         "onDemandWrapping": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "transformHiresSourcemap": {
           "anyOf": [
@@ -999,10 +771,7 @@
           ]
         },
         "nativeMagicString": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         }
       },
       "additionalProperties": false
@@ -1012,71 +781,47 @@
       "properties": {
         "host": {
           "description": "IP addresses that `DevRuntime` will connect to using WebSocket.",
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "port": {
           "description": "Port that `DevRuntime` will connect to using WebSocket.",
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": ["integer", "null"],
           "format": "uint16",
           "minimum": 0,
           "maximum": 65535
         },
         "implement": {
           "description": "Custom hmr runtime implementation.",
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         }
       },
       "additionalProperties": false
     },
     "AttachDebugInfo": {
       "type": "string",
-      "enum": [
-        "none",
-        "simple",
-        "full"
-      ]
+      "enum": ["none", "simple", "full"]
     },
     "ChunkImportMap": {
       "type": "object",
       "properties": {
         "baseUrl": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "fileName": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         }
       },
       "additionalProperties": false
     },
     "ChunkModulesOrderBy": {
       "type": "string",
-      "enum": [
-        "execOrder",
-        "moduleId"
-      ]
+      "enum": ["execOrder", "moduleId"]
     },
     "SourcemapHires": {
       "oneOf": [
         {
           "type": "string",
-          "enum": [
-            "boundary"
-          ]
+          "enum": ["boundary"]
         },
         {
           "type": "object",
@@ -1085,9 +830,7 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "boolean"
-          ],
+          "required": ["boolean"],
           "additionalProperties": false
         }
       ]
@@ -1114,10 +857,7 @@
               "type": "string"
             },
             "alias": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "from": {
               "type": "string"
@@ -1128,11 +868,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type",
-            "imported",
-            "from"
-          ]
+          "required": ["type", "imported", "from"]
         },
         {
           "type": "object",
@@ -1149,11 +885,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type",
-            "alias",
-            "from"
-          ]
+          "required": ["type", "alias", "from"]
         }
       ]
     },
@@ -1161,52 +893,31 @@
       "type": "object",
       "properties": {
         "minShareCount": {
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": ["integer", "null"],
           "format": "uint32",
           "minimum": 0
         },
         "minSize": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "format": "double"
         },
         "maxSize": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "format": "double"
         },
         "minModuleSize": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "format": "double"
         },
         "maxModuleSize": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "format": "double"
         },
         "includeDependenciesRecursively": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "groups": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/MatchGroup"
           }
@@ -1221,147 +932,82 @@
           "type": "string"
         },
         "test": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "priority": {
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": ["integer", "null"],
           "format": "uint32",
           "minimum": 0
         },
         "minSize": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "format": "double"
         },
         "maxSize": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "format": "double"
         },
         "minShareCount": {
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": ["integer", "null"],
           "format": "uint32",
           "minimum": 0
         },
         "minModuleSize": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "format": "double"
         },
         "maxModuleSize": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "format": "double"
         }
       },
       "additionalProperties": false,
-      "required": [
-        "name"
-      ]
+      "required": ["name"]
     },
     "ChecksOptions": {
       "type": "object",
       "properties": {
         "circularDependency": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "eval": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "missingGlobalName": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "missingNameOptionForIifeExport": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "mixedExport": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "unresolvedEntry": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "unresolvedImport": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "filenameConflict": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "commonJsVariableInEsm": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "importIsUndefined": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "emptyImportMeta": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "configurationFieldConflict": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "preferBuiltinFeature": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "couldNotCleanDirectory": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         }
       },
       "additionalProperties": false
@@ -1373,36 +1019,25 @@
           "type": "boolean"
         },
         "buildDelay": {
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": ["integer", "null"],
           "format": "uint32",
           "minimum": 0
         },
         "include": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "type": "string"
           }
         },
         "exclude": {
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "type": "string"
           }
         }
       },
       "additionalProperties": false,
-      "required": [
-        "skipWrite"
-      ]
+      "required": ["skipWrite"]
     },
     "LegalComments": {
       "oneOf": [
@@ -1422,9 +1057,7 @@
       "oneOf": [
         {
           "type": "string",
-          "enum": [
-            "IfRelativeSource"
-          ]
+          "enum": ["IfRelativeSource"]
         },
         {
           "type": "object",
@@ -1433,9 +1066,7 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "Bool"
-          ],
+          "required": ["Bool"],
           "additionalProperties": false
         }
       ]
@@ -1444,31 +1075,18 @@
       "type": "object",
       "properties": {
         "sessionId": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         }
       },
       "additionalProperties": false
     },
     "LogLevel": {
       "type": "string",
-      "enum": [
-        "silent",
-        "warn",
-        "info",
-        "debug"
-      ]
+      "enum": ["silent", "warn", "info", "debug"]
     },
     "PreserveEntrySignatures": {
       "type": "string",
-      "enum": [
-        "allow-extension",
-        "strict",
-        "exports-only",
-        "false"
-      ]
+      "enum": ["allow-extension", "strict", "exports-only", "false"]
     },
     "OptimizationOption": {
       "type": "object",
@@ -1486,10 +1104,7 @@
         },
         "pifeForModuleWrappers": {
           "description": "Use PIFE patterns for module wrappers so that JS engines can compile the functions eagerly.\nThis improves the initial execution performance.\nSee <https://v8.dev/blog/preparser#pife> for more details about the optimization.",
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         }
       },
       "additionalProperties": false
@@ -1528,10 +1143,7 @@
     },
     "InlineConstMode": {
       "type": "string",
-      "enum": [
-        "all",
-        "smart"
-      ]
+      "enum": ["all", "smart"]
     },
     "TsConfig": {
       "anyOf": [
@@ -1557,17 +1169,11 @@
           ]
         },
         "extend": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "name": {
           "description": "If specified, it will be set to `BundlerOptions.name` for the variant.",
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "exports": {
           "anyOf": [
@@ -1580,22 +1186,13 @@
           ]
         },
         "strictExecutionOrder": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "entryFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "inlineDynamicImports": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "preserveEntrySignatures": {
           "anyOf": [
@@ -1618,28 +1215,16 @@
           ]
         },
         "minifyInternalExports": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "onDemandWrapping": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "profilerNames": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "pifeForModuleWrappers": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "inlineConst": {
           "anyOf": [
@@ -1652,35 +1237,20 @@
           ]
         },
         "topLevelVar": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "preserveModules": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "minify": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "_snapshot": {
           "description": "Whether to include the output in the snapshot for this config variant.",
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "_configName": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         }
       },
       "additionalProperties": false
@@ -1777,63 +1347,39 @@
       "properties": {
         "disableWatcher": {
           "description": "If `true`, watcher will be disabled.",
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "skipWrite": {
           "description": "If `true`, files are not written to disk.",
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "usePolling": {
           "description": "If `true`, use polling instead of native file system events for watching",
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "pollInterval": {
           "description": "Poll interval in milliseconds (only used when use_polling is true)",
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": ["integer", "null"],
           "format": "uint64",
           "minimum": 0
         },
         "useDebounce": {
           "description": "If `true`, use debounced watcher. If `false`, use non-debounced watcher",
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "debounceDuration": {
           "description": "Debounce duration in milliseconds (only used when use_debounce is true)",
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": ["integer", "null"],
           "format": "uint64",
           "minimum": 0
         },
         "compareContentsForPolling": {
           "description": "Whether to compare file contents for poll-based watchers (only used when use_polling is true)",
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": ["boolean", "null"]
         },
         "debounceTickRate": {
           "description": "Tick rate in milliseconds for debounced watchers (only used when use_debounce is true)",
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": ["integer", "null"],
           "format": "uint64",
           "minimum": 0
         }

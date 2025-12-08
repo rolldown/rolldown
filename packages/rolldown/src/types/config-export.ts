@@ -4,7 +4,4 @@ import type { RolldownOptionsFunction } from './rolldown-options-function';
 /**
  * Type for `default export` of `rolldown.config.js` file.
  */
-export type ConfigExport =
-  | RolldownOptions
-  | RolldownOptions[]
-  | RolldownOptionsFunction;
+export type ConfigExport = RolldownOptions | RolldownOptions[] | RolldownOptionsFunction;

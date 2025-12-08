@@ -3,10 +3,7 @@ import type { BindingModuleInfo } from '../binding.cjs';
 import type { ModuleInfo } from '../types/module-info';
 import { unsupported } from './misc';
 
-export function transformModuleInfo(
-  info: BindingModuleInfo,
-  option: ModuleOptions,
-): ModuleInfo {
+export function transformModuleInfo(info: BindingModuleInfo, option: ModuleOptions): ModuleInfo {
   return {
     get ast() {
       return unsupported('ModuleInfo#ast');

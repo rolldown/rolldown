@@ -62,8 +62,5 @@ export { viteAssetPlugin } from './builtin-plugin/asset-plugin';
 export { viteTransformPlugin } from './builtin-plugin/transform-plugin';
 export { viteCSSPlugin } from './builtin-plugin/vite-css-plugin';
 export { viteCSSPostPlugin } from './builtin-plugin/vite-css-post-plugin';
-export {
-  viteHtmlPlugin,
-  type ViteHtmlPluginOptions,
-} from './builtin-plugin/vite-html-plugin';
+export { viteHtmlPlugin, type ViteHtmlPluginOptions } from './builtin-plugin/vite-html-plugin';
 export { viteManifestPlugin } from './builtin-plugin/vite-manifest-plugin';

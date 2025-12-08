@@ -4,10 +4,7 @@ import { aggregateReason } from './aggregate-reason.js';
 import { diffCase } from './diff';
 import { parseEsbuildSnap, parseRolldownSnap } from './snap-parser.js';
 import type { DebugConfig, UnwrapPromise } from './types';
-const esbuildTestDir = path.join(
-  import.meta.dirname,
-  '../../crates/rolldown/tests/esbuild',
-);
+const esbuildTestDir = path.join(import.meta.dirname, '../../crates/rolldown/tests/esbuild');
 
 function getEsbuildSnapFile(
   includeList: string[],
@@ -59,10 +56,7 @@ export async function run(includeList: string[], debugConfig: DebugConfig) {
     // singleEsbuildSnapshot
     let diffList = [];
     for (let snap of parsedEsbuildSnap) {
-      if (
-        debugConfig.caseNames?.length > 0 &&
-        !debugConfig.caseNames.includes(snap.name)
-      ) {
+      if (debugConfig.caseNames?.length > 0 && !debugConfig.caseNames.includes(snap.name)) {
         continue;
       }
       if (debugConfig.debug) {
@@ -71,12 +65,7 @@ export async function run(includeList: string[], debugConfig: DebugConfig) {
       let rolldownTestPath = path.join(esbuildTestDir, snapCategory, snap.name);
       let rolldownSnap = getRolldownSnap(rolldownTestPath);
       let parsedRolldownSnap = parseRolldownSnap(rolldownSnap);
-      let diffResult = await diffCase(
-        snap,
-        parsedRolldownSnap,
-        rolldownTestPath,
-        debugConfig,
-      );
+      let diffResult = await diffCase(snap, parsedRolldownSnap, rolldownTestPath, debugConfig);
       // if the testDir has a `bypass.md`, we skip generate `diff.md`,
       // append the diff result to `bypass.md` instead
       let bypassMarkdownPath = path.join(rolldownTestPath, 'bypass.md');
@@ -95,10 +84,7 @@ export async function run(includeList: string[], debugConfig: DebugConfig) {
           fs.rmSync(diffMarkdownPath, {});
         }
       } else {
-        updateBypassOrDiffMarkdown(
-          path.join(rolldownTestPath, 'diff.md'),
-          diffResult,
-        );
+        updateBypassOrDiffMarkdown(path.join(rolldownTestPath, 'diff.md'), diffResult);
       }
       diffList.push({ diffResult, name: snap.name });
     }
@@ -140,15 +126,9 @@ function generateAggregateMarkdown() {
     }
   }
 
+  fs.writeFileSync(path.resolve(import.meta.dirname, './stats/aggregated-reason.md'), markdown);
   fs.writeFileSync(
-    path.resolve(import.meta.dirname, './stats/aggregated-reason.md'),
-    markdown,
-  );
-  fs.writeFileSync(
-    path.resolve(
-      import.meta.dirname,
-      './stats/aggregated-reason-without-not-support.md',
-    ),
+    path.resolve(import.meta.dirname, './stats/aggregated-reason-without-not-support.md'),
     markdownSkipUnsupported,
   );
   return unsupportedCase;
@@ -161,9 +141,7 @@ function getRolldownSnap(caseDir: string) {
   }
 }
 
-function getDiffMarkdown(
-  diffResult: UnwrapPromise<ReturnType<typeof diffCase>>,
-) {
+function getDiffMarkdown(diffResult: UnwrapPromise<ReturnType<typeof diffCase>>) {
   if (typeof diffResult === 'string') {
     throw new Error('diffResult should not be string');
   }
@@ -177,41 +155,36 @@ function getDiffMarkdown(
   return markdown;
 }
 
-function generateStatsMarkdown(
-  aggregateStats: AggregateStats,
-  unsupportedCaseCount: number,
-) {
+function generateStatsMarkdown(aggregateStats: AggregateStats, unsupportedCaseCount: number) {
   const { stats, details } = aggregateStats;
   let markdown = '';
 
   markdown += `# Compatibility metric\n`;
   markdown += `- total: ${stats.total}\n`;
   markdown += `- passed: ${stats.total - stats.failed}\n`;
-  markdown += `- passed ratio: ${
-    (((stats.total - stats.failed) / stats.total) * 100).toFixed(2)
-  }%\n`;
+  markdown += `- passed ratio: ${(((stats.total - stats.failed) / stats.total) * 100).toFixed(
+    2,
+  )}%\n`;
 
   let totalWithoutNotSupport = stats.total - unsupportedCaseCount;
   markdown += `# Compatibility metric without not supported case\n`;
   markdown += `- total: ${totalWithoutNotSupport}\n`;
   markdown += `- passed: ${stats.total - stats.failed}\n`;
-  markdown += `- passed ratio: ${
-    (((stats.total - stats.failed) / totalWithoutNotSupport) * 100).toFixed(2)
-  }%\n`;
+  markdown += `- passed ratio: ${(
+    ((stats.total - stats.failed) / totalWithoutNotSupport) *
+    100
+  ).toFixed(2)}%\n`;
 
   markdown += `# Compatibility metric details\n`;
   Object.entries(details).forEach(([category, stats]) => {
     markdown += `## ${category}\n`;
     markdown += `- total: ${stats.total}\n`;
     markdown += `- passed: ${stats.total - stats.failed}\n`;
-    markdown += `- passed ratio: ${
-      (((stats.total - stats.failed) / stats.total) * 100).toFixed(2)
-    }%\n`;
+    markdown += `- passed ratio: ${(((stats.total - stats.failed) / stats.total) * 100).toFixed(
+      2,
+    )}%\n`;
   });
-  fs.writeFileSync(
-    path.resolve(import.meta.dirname, './stats/stats.md'),
-    markdown,
-  );
+  fs.writeFileSync(path.resolve(import.meta.dirname, './stats/stats.md'), markdown);
 }
 
 type Summary = {
@@ -241,10 +214,7 @@ function getSummaryMarkdownAndStats(
   let markdown = `# Failed Cases\n`;
   for (let diff of failedList) {
     let testDir = path.join(esbuildTestDir, snapshotCategory, diff.name);
-    let relativePath = path.relative(
-      path.join(import.meta.dirname, 'summary'),
-      testDir,
-    );
+    let relativePath = path.relative(path.join(import.meta.dirname, 'summary'), testDir);
     const posixPath = relativePath.replaceAll('\\', '/');
     if (diff.diffResult === 'missing') {
       markdown += `## ${diff.name}\n`;
@@ -260,10 +230,7 @@ function getSummaryMarkdownAndStats(
   markdown += `# Passed Cases\n`;
   for (let diff of passList) {
     let testDir = path.join(esbuildTestDir, snapshotCategory, diff.name);
-    let relativePath = path.relative(
-      path.join(import.meta.dirname, 'summary'),
-      testDir,
-    );
+    let relativePath = path.relative(path.join(import.meta.dirname, 'summary'), testDir);
     const posixPath = relativePath.replaceAll('\\', '/');
     markdown += `## [${diff.name}](${posixPath})\n`;
   }
@@ -271,10 +238,7 @@ function getSummaryMarkdownAndStats(
   markdown += `# Bypassed Cases\n`;
   for (let diff of bypassList) {
     let testDir = path.join(esbuildTestDir, snapshotCategory, diff.name);
-    let relativePath = path.relative(
-      path.join(import.meta.dirname, 'summary'),
-      testDir,
-    );
+    let relativePath = path.relative(path.join(import.meta.dirname, 'summary'), testDir);
     const posixPath = relativePath.replaceAll('\\', '/');
     markdown += `## [${diff.name}](${posixPath}/bypass.md)\n`;
   }

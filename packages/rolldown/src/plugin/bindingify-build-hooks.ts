@@ -7,10 +7,7 @@ import type {
 } from '../binding.cjs';
 import { BindingMagicString } from '../binding.cjs';
 import { parseAst } from '../parse-ast-index';
-import {
-  bindingifySourcemap,
-  type ExistingRawSourceMap,
-} from '../types/sourcemap';
+import { bindingifySourcemap, type ExistingRawSourceMap } from '../types/sourcemap';
 import { aggregateBindingErrorsIntoJsError } from '../utils/error';
 import { normalizeHook } from '../utils/normalize-hook';
 import { transformModuleInfo } from '../utils/transform-module-info';
@@ -89,10 +86,7 @@ export function bindingifyBuildEnd(
 
 export function bindingifyResolveId(
   args: BindingifyPluginArgs,
-): PluginHookWithBindingExt<
-  BindingPluginOptions['resolveId'],
-  BindingHookFilter | undefined
-> {
+): PluginHookWithBindingExt<BindingPluginOptions['resolveId'], BindingHookFilter | undefined> {
   const hook = args.plugin.resolveId as unknown as PluginHooks['resolveId'];
   if (!hook) {
     return {};
@@ -101,9 +95,10 @@ export function bindingifyResolveId(
 
   return {
     plugin: async (ctx, specifier, importer, extraOptions) => {
-      const contextResolveOptions = extraOptions.custom != null
-        ? args.pluginContextData.getSavedResolveOptions(extraOptions.custom)
-        : undefined;
+      const contextResolveOptions =
+        extraOptions.custom != null
+          ? args.pluginContextData.getSavedResolveOptions(extraOptions.custom)
+          : undefined;
 
       const ret = await handler.call(
         new PluginContextImpl(
@@ -219,10 +214,7 @@ export function bindingifyResolveDynamicImport(
 
 export function bindingifyTransform(
   args: BindingifyPluginArgs,
-): PluginHookWithBindingExt<
-  BindingPluginOptions['transform'],
-  BindingHookFilter | undefined
-> {
+): PluginHookWithBindingExt<BindingPluginOptions['transform'], BindingHookFilter | undefined> {
   const hook = args.plugin.transform;
   if (!hook) {
     return {};
@@ -310,9 +302,7 @@ export function bindingifyTransform(
 
       return {
         code: normalizedCode,
-        map: bindingifySourcemap(
-          normalizeTransformHookSourcemap(id, code, map),
-        ),
+        map: bindingifySourcemap(normalizeTransformHookSourcemap(id, code, map)),
         moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
         moduleType: ret.moduleType,
       };
@@ -324,10 +314,7 @@ export function bindingifyTransform(
 
 export function bindingifyLoad(
   args: BindingifyPluginArgs,
-): PluginHookWithBindingExt<
-  BindingPluginOptions['load'],
-  BindingHookFilter | undefined
-> {
+): PluginHookWithBindingExt<BindingPluginOptions['load'], BindingHookFilter | undefined> {
   const hook = args.plugin.load;
   if (!hook) {
     return {};
@@ -385,17 +372,13 @@ function preProcessSourceMap(
   if (!ret.map) {
     return;
   }
-  let map = typeof ret.map === 'object'
-    ? ret.map
-    : (JSON.parse(ret.map) as ExistingRawSourceMap);
+  let map = typeof ret.map === 'object' ? ret.map : (JSON.parse(ret.map) as ExistingRawSourceMap);
   if (!isEmptySourcemapFiled(map.sources)) {
     // normalize original sourcemap sources
     // Port form https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts#L180-L188.
     const directory = path.dirname(id) || '.';
     const sourceRoot = map.sourceRoot || '.';
-    map.sources = map.sources!.map((source) =>
-      path.resolve(directory, sourceRoot, source!)
-    );
+    map.sources = map.sources!.map((source) => path.resolve(directory, sourceRoot, source!));
   }
   return map;
 }
@@ -421,10 +404,7 @@ export function bindingifyModuleParsed(
           args.logLevel,
           args.watchMode,
         ),
-        transformModuleInfo(
-          moduleInfo,
-          args.pluginContextData.getModuleOption(moduleInfo.id),
-        ),
+        transformModuleInfo(moduleInfo, args.pluginContextData.getModuleOption(moduleInfo.id)),
       );
     },
     meta: bindingifyPluginHookMeta(meta),

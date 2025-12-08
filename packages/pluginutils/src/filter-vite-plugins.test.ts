@@ -9,10 +9,7 @@ describe('filterVitePlugins', () => {
   });
 
   test('includes plugins without apply property', () => {
-    const plugins = [
-      { name: 'plugin1' },
-      { name: 'plugin2' },
-    ];
+    const plugins = [{ name: 'plugin1' }, { name: 'plugin2' }];
 
     const result = filterVitePlugins(plugins);
     expect(result).toEqual(plugins);
@@ -26,10 +23,7 @@ describe('filterVitePlugins', () => {
     ];
 
     const result = filterVitePlugins(plugins);
-    expect(result).toEqual([
-      { name: 'plugin1', apply: 'build' },
-      { name: 'plugin3' },
-    ]);
+    expect(result).toEqual([{ name: 'plugin1', apply: 'build' }, { name: 'plugin3' }]);
   });
 
   test('includes plugins with apply: "build"', () => {
@@ -123,19 +117,10 @@ describe('filterVitePlugins', () => {
   });
 
   test('filters out falsy values in array', () => {
-    const plugins = [
-      { name: 'plugin1' },
-      null,
-      undefined,
-      false,
-      { name: 'plugin2' },
-    ];
+    const plugins = [{ name: 'plugin1' }, null, undefined, false, { name: 'plugin2' }];
 
     const result = filterVitePlugins(plugins);
-    expect(result).toEqual([
-      { name: 'plugin1' },
-      { name: 'plugin2' },
-    ]);
+    expect(result).toEqual([{ name: 'plugin1' }, { name: 'plugin2' }]);
   });
 
   test('handles single plugin (not in array)', () => {
@@ -155,11 +140,7 @@ describe('filterVitePlugins', () => {
       { name: 'plugin1' },
       [
         { name: 'plugin2', apply: 'serve' },
-        [
-          { name: 'plugin3', apply: 'build' },
-          null,
-          { name: 'plugin4', apply: 'serve' },
-        ],
+        [{ name: 'plugin3', apply: 'build' }, null, { name: 'plugin4', apply: 'serve' }],
       ],
       false,
       { name: 'plugin5', apply: () => true },
@@ -167,10 +148,6 @@ describe('filterVitePlugins', () => {
     ];
 
     const result = filterVitePlugins(plugins);
-    expect(result.map((p: any) => p.name)).toEqual([
-      'plugin1',
-      'plugin3',
-      'plugin5',
-    ]);
+    expect(result.map((p: any) => p.name)).toEqual(['plugin1', 'plugin3', 'plugin5']);
   });
 });

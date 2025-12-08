@@ -12,20 +12,16 @@ function wrap(result: ParseResult, sourceText: string) {
   return result.program;
 }
 
-function normalizeParseError(
-  sourceText: string,
-  errors: ParseResult['errors'],
-) {
-  let message = `Parse failed with ${errors.length} error${
-    errors.length < 2 ? '' : 's'
-  }:\n`;
+function normalizeParseError(sourceText: string, errors: ParseResult['errors']) {
+  let message = `Parse failed with ${errors.length} error${errors.length < 2 ? '' : 's'}:\n`;
   for (let i = 0; i < errors.length; i++) {
     if (i >= 5) {
       message += '\n...';
       break;
     }
     const e = errors[i];
-    message += e.message +
+    message +=
+      e.message +
       '\n' +
       e.labels
         .map((label: any) => {
@@ -57,10 +53,7 @@ export function parseAst(
     ...defaultParserOptions,
     ...options,
   });
-  return wrap(
-    ast,
-    sourceText,
-  );
+  return wrap(ast, sourceText);
 }
 
 export async function parseAstAsync(

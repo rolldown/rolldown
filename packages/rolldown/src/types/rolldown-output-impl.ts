@@ -5,7 +5,8 @@ import type { ExternalMemoryHandle } from './external-memory-handle';
 import { PlainObjectLike } from './plain-object-like';
 import type { RolldownOutput } from './rolldown-output';
 
-export class RolldownOutputImpl extends PlainObjectLike
+export class RolldownOutputImpl
+  extends PlainObjectLike
   implements RolldownOutput, ExternalMemoryHandle
 {
   constructor(private bindingOutputs: BindingOutputs) {
@@ -17,13 +18,9 @@ export class RolldownOutputImpl extends PlainObjectLike
     return transformToRollupOutput(this.bindingOutputs).output;
   }
 
-  __rolldown_external_memory_handle__(
-    keepDataAlive?: boolean,
-  ): ExternalMemoryStatus {
+  __rolldown_external_memory_handle__(keepDataAlive?: boolean): ExternalMemoryStatus {
     const outputs = this.output;
-    const results = outputs.map((item) =>
-      item.__rolldown_external_memory_handle__(keepDataAlive)
-    );
+    const results = outputs.map((item) => item.__rolldown_external_memory_handle__(keepDataAlive));
 
     const allFreed = results.every((r) => r.freed);
     if (!allFreed) {
@@ -33,9 +30,7 @@ export class RolldownOutputImpl extends PlainObjectLike
         .filter(Boolean);
       return {
         freed: false,
-        reason: `Failed to free ${reasons.length} item(s): ${
-          reasons.join('; ')
-        }`,
+        reason: `Failed to free ${reasons.length} item(s): ${reasons.join('; ')}`,
       };
     }
     return { freed: true };

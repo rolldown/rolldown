@@ -2,9 +2,7 @@ import type { BindingRenderedChunk } from '../binding.cjs';
 import type { RenderedChunk } from '../types/rolldown-output';
 import { transformToRenderedModule } from './transform-rendered-module';
 
-export function transformRenderedChunk(
-  chunk: BindingRenderedChunk,
-): RenderedChunk {
+export function transformRenderedChunk(chunk: BindingRenderedChunk): RenderedChunk {
   let modules: null | RenderedChunk['modules'] = null;
   return {
     type: 'chunk',

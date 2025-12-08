@@ -5,8 +5,8 @@
     "allowJs": true,
     "isolatedDeclarations": false,
     "outDir": "./dist",
-    "tsBuildInfoFile": ".tsbuildinfo"
+    "tsBuildInfoFile": ".tsbuildinfo",
   },
   "references": [{ "path": "../rolldown" }],
-  "include": ["./src/**/*.ts", "vite.config.ts"]
+  "include": ["./src/**/*.ts", "vite.config.ts"],
 }

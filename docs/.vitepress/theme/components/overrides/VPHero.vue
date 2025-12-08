@@ -40,7 +40,6 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 
         <div v-if="actions" class="actions">
           <div v-for="action in actions" :key="action.link" class="action">
-            
             <VPButton
               v-if="!action.openVideoModal"
               tag="a"

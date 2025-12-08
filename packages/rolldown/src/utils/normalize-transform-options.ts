@@ -13,26 +13,17 @@ export interface NormalizedTransformOptions {
  *
  * Prioritizes values from `transform.define`, `transform.inject`, and `transform.dropLabels` over deprecated top-level options.
  */
-export function normalizeTransformOptions(
-  inputOptions: InputOptions,
-): NormalizedTransformOptions {
+export function normalizeTransformOptions(inputOptions: InputOptions): NormalizedTransformOptions {
   const transform = inputOptions.transform;
 
-  const define = transform?.define
-    ? Object.entries(transform.define)
-    : undefined;
+  const define = transform?.define ? Object.entries(transform.define) : undefined;
   const inject = transform?.inject;
   const dropLabels = transform?.dropLabels;
 
   // Extract OXC transform options (excluding define, inject, and dropLabels)
   let oxcTransformOptions: OxcTransformOptions | undefined;
   if (transform) {
-    const {
-      define: _define,
-      inject: _inject,
-      dropLabels: _dropLabels,
-      ...rest
-    } = transform;
+    const { define: _define, inject: _inject, dropLabels: _dropLabels, ...rest } = transform;
     // Only set oxcTransformOptions if there are actual options
     if (Object.keys(rest).length > 0) {
       if (rest.jsx === false) {

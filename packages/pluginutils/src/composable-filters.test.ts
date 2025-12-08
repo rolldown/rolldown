@@ -1,22 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import type { QueryFilterObject } from './composable-filters';
-import {
-  and,
-  exclude,
-  include,
-  interpreter,
-  or,
-  queries,
-  query,
-} from './composable-filters';
+import { and, exclude, include, interpreter, or, queries, query } from './composable-filters';
 
-function queryFilter(
-  id: string,
-  queryFilterObject: QueryFilterObject,
-): boolean {
-  let topLevelFilterExpression = include(
-    queries(queryFilterObject),
-  );
+function queryFilter(id: string, queryFilterObject: QueryFilterObject): boolean {
+  let topLevelFilterExpression = include(queries(queryFilterObject));
   return interpreter([topLevelFilterExpression], undefined, id, undefined);
 }
 describe('queryFilter', () => {
@@ -105,49 +92,17 @@ describe('queryFilter', () => {
     // https://github.com/sveltejs/vite-plugin-svelte/blob/3589433cd19464c484f560516d41e670e5d40710/packages/vite-plugin-svelte/src/utils/id.js#L35-L40
     let filterExpr = or(
       query('url', true),
-      and(
-        query('svelte', false),
-        or(
-          query('raw', true),
-          query('direct', true),
-        ),
-      ),
+      and(query('svelte', false), or(query('raw', true), query('direct', true))),
     );
     // include `url`, should return `false`
-    expect(interpreter(
-      [exclude(
-        filterExpr,
-      )],
-      undefined,
-      '/foo/bar?url=1',
-      undefined,
-    )).toBe(false);
+    expect(interpreter([exclude(filterExpr)], undefined, '/foo/bar?url=1', undefined)).toBe(false);
     // don't have `svelte` and has `raw`, should return `false`
-    expect(interpreter(
-      [exclude(
-        filterExpr,
-      )],
-      undefined,
-      '/foo/bar?raw=1',
-      undefined,
-    )).toBe(false);
+    expect(interpreter([exclude(filterExpr)], undefined, '/foo/bar?raw=1', undefined)).toBe(false);
     // don't have `svelte`, but don't have `raw` and `direct` neither, should return `true`
-    expect(interpreter(
-      [exclude(
-        filterExpr,
-      )],
-      undefined,
-      '/foo/bar',
-      undefined,
-    )).toBe(true);
+    expect(interpreter([exclude(filterExpr)], undefined, '/foo/bar', undefined)).toBe(true);
     // have `url` should return `false` even query also has `svelte`
-    expect(interpreter(
-      [exclude(
-        filterExpr,
-      )],
-      undefined,
-      '/foo/bar?url=1111&svelte=true',
-      undefined,
-    )).toBe(false);
+    expect(
+      interpreter([exclude(filterExpr)], undefined, '/foo/bar?url=1111&svelte=true', undefined),
+    ).toBe(false);
   });
 });

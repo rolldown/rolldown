@@ -13,7 +13,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
   },
   "references": [
     { "path": "./crates/rolldown/src/runtime" },
@@ -23,6 +23,6 @@
     { "path": "./packages/rolldown/tests" },
     { "path": "./packages/rollup-tests" },
     { "path": "./packages/test-dev-server" },
-    { "path": "./packages/vite-tests" }
-  ]
+    { "path": "./packages/vite-tests" },
+  ],
 }

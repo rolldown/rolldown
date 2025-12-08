@@ -52,27 +52,29 @@ const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
   },
 ];
 
-const sidebarForInDepth: UserConfig['themeConfig']['sidebar'] = [{
-  text: 'In-Depth',
-  items: [
-    { text: 'Why Bundlers', link: '/in-depth/why-bundlers.md' },
-    { text: 'Module Types', link: '/in-depth/module-types.md' },
-    { text: 'Top Level Await', link: '/in-depth/tla-in-rolldown.md' },
-    { text: 'Advanced Chunks', link: '/in-depth/advanced-chunks.md' },
-    { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
-    {
-      text: 'Non ESM Output Formats',
-      link: '/in-depth/non-esm-output-formats.md',
-    },
-    { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
-    {
-      text: 'Why Plugin Hook Filter',
-      link: '/in-depth/why-plugin-hook-filter.md',
-    },
-    // { text: 'Code Splitting', link: '/in-depth/code-splitting.md' },
-    { text: 'Directives', link: '/in-depth/directives.md' },
-  ],
-}];
+const sidebarForInDepth: UserConfig['themeConfig']['sidebar'] = [
+  {
+    text: 'In-Depth',
+    items: [
+      { text: 'Why Bundlers', link: '/in-depth/why-bundlers.md' },
+      { text: 'Module Types', link: '/in-depth/module-types.md' },
+      { text: 'Top Level Await', link: '/in-depth/tla-in-rolldown.md' },
+      { text: 'Advanced Chunks', link: '/in-depth/advanced-chunks.md' },
+      { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
+      {
+        text: 'Non ESM Output Formats',
+        link: '/in-depth/non-esm-output-formats.md',
+      },
+      { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
+      {
+        text: 'Why Plugin Hook Filter',
+        link: '/in-depth/why-plugin-hook-filter.md',
+      },
+      // { text: 'Code Splitting', link: '/in-depth/code-splitting.md' },
+      { text: 'Directives', link: '/in-depth/directives.md' },
+    ],
+  },
+];
 
 const sidebarForOptions: UserConfig['themeConfig']['sidebar'] = [
   {
@@ -128,8 +130,7 @@ const sidebarForDevGuide: UserConfig['themeConfig']['sidebar'] = [
       },
       {
         text: 'Etiquette',
-        link:
-          'https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette',
+        link: 'https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette',
       },
     ],
   },
@@ -192,8 +193,7 @@ const sidebarForResources: UserConfig['themeConfig']['sidebar'] = [
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: 'Rolldown',
-  description:
-    'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
+  description: 'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
   lastUpdated: true,
   cleanUrls: true,
   sitemap: {
@@ -269,8 +269,7 @@ export default defineConfig({
       { text: 'REPL', link: 'https://repl.rolldown.rs/' },
       {
         text: 'Resources',
-        activeMatch:
-          '/(team|acknowledgements|contribution-guide|development-guide)',
+        activeMatch: '/(team|acknowledgements|contribution-guide|development-guide)',
         items: [
           {
             text: 'Team',
@@ -338,21 +337,12 @@ export default defineConfig({
         customIcon: {
           homebrew: 'logos:homebrew',
           cargo: 'vscode-icons:file-type-cargo',
-          rolldown: localIconLoader(
-            import.meta.url,
-            '../public/lightning-down.svg',
-          ),
+          rolldown: localIconLoader(import.meta.url, '../public/lightning-down.svg'),
         },
       }) as any,
       llmstxt({
-        ignoreFiles: [
-          'development-guide/**/*',
-          'index.md',
-          'README.md',
-          'team.md',
-        ],
-        description:
-          'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
+        ignoreFiles: ['development-guide/**/*', 'index.md', 'README.md', 'team.md'],
+        description: 'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
         details: '',
       }),
     ],

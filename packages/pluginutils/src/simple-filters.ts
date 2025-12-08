@@ -77,9 +77,7 @@ type WidenString<T> = T extends string ? string : T;
  * }
  * ```
  */
-export function makeIdFiltersToMatchWithQuery<T extends string | RegExp>(
-  input: T,
-): WidenString<T>;
+export function makeIdFiltersToMatchWithQuery<T extends string | RegExp>(input: T): WidenString<T>;
 export function makeIdFiltersToMatchWithQuery<T extends string | RegExp>(
   input: readonly T[],
 ): WidenString<T>[];
@@ -99,9 +97,7 @@ export function makeIdFiltersToMatchWithQuery(
   return input.map((i) => makeIdFilterToMatchWithQuery(i));
 }
 
-function makeIdFilterToMatchWithQuery(
-  input: string | RegExp,
-): string | RegExp {
+function makeIdFilterToMatchWithQuery(input: string | RegExp): string | RegExp {
   if (typeof input === 'string') {
     return `${input}{?*,}`;
   }

@@ -237,14 +237,10 @@ export function exprInterpreter(
 ): boolean {
   switch (expr.kind) {
     case 'and': {
-      return expr.args.every((e) =>
-        exprInterpreter(e, code, id, moduleType, ctx)
-      );
+      return expr.args.every((e) => exprInterpreter(e, code, id, moduleType, ctx));
     }
     case 'or': {
-      return expr.args.some((e) =>
-        exprInterpreter(e, code, id, moduleType, ctx)
-      );
+      return expr.args.some((e) => exprInterpreter(e, code, id, moduleType, ctx));
     }
     case 'not': {
       return !exprInterpreter(expr.expr, code, id, moduleType, ctx);
@@ -256,9 +252,7 @@ export function exprInterpreter(
       if (expr.params.cleanUrl) {
         id = cleanUrl(id);
       }
-      return typeof expr.pattern === 'string'
-        ? id === expr.pattern
-        : expr.pattern.test(id);
+      return typeof expr.pattern === 'string' ? id === expr.pattern : expr.pattern.test(id);
     }
     case 'moduleType': {
       if (moduleType === undefined) {

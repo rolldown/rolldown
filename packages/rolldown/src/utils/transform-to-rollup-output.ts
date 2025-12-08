@@ -10,18 +10,9 @@ import type { MinimalPluginContext } from '../plugin/minimal-plugin-context';
 import { OutputAssetImpl } from '../types/output-asset-impl';
 import type { OutputBundle } from '../types/output-bundle';
 import { OutputChunkImpl } from '../types/output-chunk-impl';
-import type {
-  OutputAsset,
-  OutputChunk,
-  RolldownOutput,
-  SourceMap,
-} from '../types/rolldown-output';
+import type { OutputAsset, OutputChunk, RolldownOutput, SourceMap } from '../types/rolldown-output';
 import { bindingifySourcemap } from '../types/sourcemap';
-import {
-  type AssetSource,
-  bindingAssetSource,
-  transformAssetSource,
-} from './asset-source';
+import { type AssetSource, bindingAssetSource, transformAssetSource } from './asset-source';
 import { transformChunkModules } from './transform-rendered-chunk';
 
 export function transformToRollupSourceMap(map: string): SourceMap {
@@ -32,17 +23,16 @@ export function transformToRollupSourceMap(map: string): SourceMap {
       return JSON.stringify(obj);
     },
     toUrl() {
-      return `data:application/json;charset=utf-8;base64,${
-        Buffer.from(obj.toString(), 'utf-8').toString('base64')
-      }`;
+      return `data:application/json;charset=utf-8;base64,${Buffer.from(
+        obj.toString(),
+        'utf-8',
+      ).toString('base64')}`;
     },
   };
   return obj;
 }
 
-export function transformToRollupOutputChunk(
-  bindingChunk: BindingOutputChunk,
-): OutputChunk {
+export function transformToRollupOutputChunk(bindingChunk: BindingOutputChunk): OutputChunk {
   return new OutputChunkImpl(bindingChunk);
 }
 
@@ -102,9 +92,7 @@ function transformToMutableRollupOutputChunk(
   });
 }
 
-function transformToRollupOutputAsset(
-  bindingAsset: BindingOutputAsset,
-): OutputAsset {
+function transformToRollupOutputAsset(bindingAsset: BindingOutputAsset): OutputAsset {
   return new OutputAssetImpl(bindingAsset);
 }
 
@@ -141,9 +129,7 @@ function transformToMutableRollupOutputAsset(
   });
 }
 
-export function transformToRollupOutput(
-  output: BindingOutputs,
-): RolldownOutput {
+export function transformToRollupOutput(output: BindingOutputs): RolldownOutput {
   const { chunks, assets } = output;
   return {
     output: [
@@ -160,12 +146,8 @@ function transformToMutableRollupOutput(
   const { chunks, assets } = output;
   return {
     output: [
-      ...chunks.map((chunk) =>
-        transformToMutableRollupOutputChunk(chunk, changed)
-      ),
-      ...assets.map((asset) =>
-        transformToMutableRollupOutputAsset(asset, changed)
-      ),
+      ...chunks.map((chunk) => transformToMutableRollupOutputChunk(chunk, changed)),
+      ...assets.map((asset) => transformToMutableRollupOutputAsset(asset, changed)),
     ],
   } as RolldownOutput;
 }
@@ -176,10 +158,7 @@ export function transformToOutputBundle(
   changed: ChangedOutputs,
 ): OutputBundle {
   const bundle = Object.fromEntries(
-    transformToMutableRollupOutput(output, changed).output.map((item) => [
-      item.fileName,
-      item,
-    ]),
+    transformToMutableRollupOutput(output, changed).output.map((item) => [item.fileName, item]),
   );
   return new Proxy(bundle, {
     set(_target, _p, _newValue, _receiver) {

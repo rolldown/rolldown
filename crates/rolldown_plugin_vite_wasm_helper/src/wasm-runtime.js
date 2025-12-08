@@ -25,10 +25,7 @@ export default async function wasmHelper(opts = {}, url) {
     // raw buffer.
     const response = await fetch(url);
     const contentType = response.headers.get('Content-Type') || '';
-    if (
-      'instantiateStreaming' in WebAssembly &&
-      contentType.startsWith('application/wasm')
-    ) {
+    if ('instantiateStreaming' in WebAssembly && contentType.startsWith('application/wasm')) {
       result = await WebAssembly.instantiateStreaming(response, opts);
     } else {
       const buffer = await response.arrayBuffer();

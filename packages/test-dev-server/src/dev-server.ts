@@ -58,10 +58,7 @@ class DevServer {
     this.#devOptions = devOptions;
     const buildOptions = devConfig.build ?? {};
     if (buildOptions.plugins == null || Array.isArray(buildOptions.plugins)) {
-      buildOptions.plugins = [
-        ...(buildOptions.plugins || []),
-        createDevServerPlugin(devOptions),
-      ];
+      buildOptions.plugins = [...(buildOptions.plugins || []), createDevServerPlugin(devOptions)];
     } else {
       throw new Error('Plugins must be an array');
     }
@@ -83,14 +80,16 @@ class DevServer {
       watch: getDevWatchOptionsForCi(),
     });
     this.#devEngine = devEngine;
-    process.stdin.on('data', async data => {
-      if (data.toString() === 'r') {
-        const { hasStaleOutput } = await devEngine.getBundleState();
-        if (hasStaleOutput) {
-          await devEngine.ensureLatestBuildOutput();
+    process.stdin
+      .on('data', async (data) => {
+        if (data.toString() === 'r') {
+          const { hasStaleOutput } = await devEngine.getBundleState();
+          if (hasStaleOutput) {
+            await devEngine.ensureLatestBuildOutput();
+          }
         }
-      }
-    }).unref();
+      })
+      .unref();
     this.#prepareHttpServerAfterCreateDevEngine(devEngine);
     await devEngine.run();
     this.#readyHttpServer();
@@ -123,10 +122,7 @@ class DevServer {
             break;
           case 'hmr:module-registered': {
             console.log('Registering modules:', clientMessage.modules);
-            this.#devEngine?.registerModules(
-              clientSession.id,
-              clientMessage.modules,
-            );
+            this.#devEngine?.registerModules(clientSession.id, clientMessage.modules);
             break;
           }
           default: {
@@ -192,10 +188,7 @@ class DevServer {
     }
   }
 
-  sendUpdateToClient(
-    socket: WebSocket,
-    output: BindingClientHmrUpdate['update'],
-  ): void {
+  sendUpdateToClient(socket: WebSocket, output: BindingClientHmrUpdate['update']): void {
     if (output.type !== 'Patch') {
       return;
     }
@@ -203,14 +196,11 @@ class DevServer {
       console.log('Patching...');
       const path = `${seed}.js`;
       seed++;
-      nodeFs.writeFileSync(
-        nodePath.join(process.cwd(), 'dist', path),
-        output.code,
-      );
+      nodeFs.writeFileSync(nodePath.join(process.cwd(), 'dist', path), output.code);
       const patchUriForBrowser = `/${path}`;
-      const patchUriForFile = nodeUrl.pathToFileURL(
-        nodePath.join(process.cwd(), 'dist', path),
-      ).toString();
+      const patchUriForFile = nodeUrl
+        .pathToFileURL(nodePath.join(process.cwd(), 'dist', path))
+        .toString();
       console.log(
         'Patch:',
         JSON.stringify({
@@ -226,22 +216,18 @@ class DevServer {
       });
     } else {
       console.debug(
-        `Failed to send update to client due to ${
-          JSON.stringify(
-            {
-              hasCode: output.code != null,
-            },
-            null,
-            2,
-          )
-        }`,
+        `Failed to send update to client due to ${JSON.stringify(
+          {
+            hasCode: output.code != null,
+          },
+          null,
+          2,
+        )}`,
       );
     }
   }
 
-  async #handleHmrInvalidate(
-    msg: HmrInvalidateMessage,
-  ): Promise<void> {
+  async #handleHmrInvalidate(msg: HmrInvalidateMessage): Promise<void> {
     console.log('Invalidating...');
     // Always invalidate - sendMessage will handle empty client lists
     const updates = await this.#devEngine!.invalidate(msg.moduleId);

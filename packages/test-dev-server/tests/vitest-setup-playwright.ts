@@ -15,9 +15,7 @@ async function killPort(port: number): Promise<void> {
   try {
     await killPortImpl(port);
   } catch (err) {
-    if (
-      err instanceof Error && err.message.includes('No process running')
-    ) {
+    if (err instanceof Error && err.message.includes('No process running')) {
       console.log(`[killPort] No process running on port ${port}`);
     } else {
       throw err;
@@ -26,24 +24,16 @@ async function killPort(port: number): Promise<void> {
 }
 
 async function createTmpPlaygroundDir() {
-  console.log(
-    '[createTmpPlaygroundDir] Creating `tests/tmp-playground` playground directory...',
-  );
+  console.log('[createTmpPlaygroundDir] Creating `tests/tmp-playground` playground directory...');
   await nodeFs.promises.rm(CONFIG.paths.tmpPlaygroundDir, {
     recursive: true,
     force: true,
   });
-  await nodeFs.promises.cp(
-    CONFIG.paths.playgroundDir,
-    CONFIG.paths.tmpPlaygroundDir,
-    {
-      recursive: true,
-      dereference: false,
-    },
-  );
-  console.log(
-    '[createTmpPlaygroundDir] Created `tests/tmp-playground` playground directory.',
-  );
+  await nodeFs.promises.cp(CONFIG.paths.playgroundDir, CONFIG.paths.tmpPlaygroundDir, {
+    recursive: true,
+    dereference: false,
+  });
+  console.log('[createTmpPlaygroundDir] Created `tests/tmp-playground` playground directory.');
 }
 
 async function waitForDevServerReady() {
@@ -55,7 +45,7 @@ async function waitForDevServerReady() {
         return;
       }
     } catch {}
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
   }
   throw new Error('Server failed to start');
 }
@@ -73,11 +63,9 @@ async function startDevServer() {
   });
 
   // Handle errors separately without chaining
-  subprocess.catch(err => {
+  subprocess.catch((err) => {
     if (err instanceof ExecaError && err.signal === 'SIGTERM') {
-      console.log(
-        '[startDevServer] Dev server process terminated with SIGTERM.',
-      );
+      console.log('[startDevServer] Dev server process terminated with SIGTERM.');
     } else {
       throw err;
     }

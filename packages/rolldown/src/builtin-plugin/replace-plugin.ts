@@ -35,7 +35,5 @@ export function replacePlugin(
     }
   });
 
-  return makeBuiltinPluginCallable(
-    new BuiltinPlugin('builtin:replace', { ...options, values }),
-  );
+  return makeBuiltinPluginCallable(new BuiltinPlugin('builtin:replace', { ...options, values }));
 }

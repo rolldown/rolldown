@@ -199,8 +199,8 @@ catalogs:
       specifier: ^5.31.1
       version: 5.44.1
     tinybench:
-      specifier: ^5.0.0
-      version: 5.1.0
+      specifier: ^6.0.0
+      version: 6.0.0
     tinyexec:
       specifier: ^1.0.1
       version: 1.0.2
@@ -481,7 +481,7 @@ importers:
         version: 4.53.3
       tinybench:
         specifier: 'catalog:'
-        version: 5.1.0
+        version: 6.0.0
 
   packages/browser:
     dependencies:
@@ -5640,8 +5640,8 @@ packages:
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
 
-  tinybench@5.1.0:
-    resolution: {integrity: sha512-LXKNtFualiKOm6gADe1UXPtf8+Nfn1CtPMEHAT33Fd2YjQatrujkDcK0+4wRC1X6t7fxUDXUs6BsvuIgfkDgDg==}
+  tinybench@6.0.0:
+    resolution: {integrity: sha512-BWlWpVbbZXaYjRV0twGLNQO00Zj4HA/sjLOQP2IvzQqGwRGp+2kh7UU3ijyJ3ywFRogYDRbiHDMrUOfaMnN56g==}
     engines: {node: '>=20.0.0'}
 
   tinyexec@1.0.2:
@@ -10683,7 +10683,7 @@ snapshots:
 
   tinybench@2.9.0: {}
 
-  tinybench@5.1.0: {}
+  tinybench@6.0.0: {}
 
   tinyexec@1.0.2: {}
 

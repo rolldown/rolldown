@@ -1,16 +1,10 @@
 {
   "extends": "../../../tsconfig.json",
-  "include": [
-    "src/*",
-    "src/**/*",
-    "**/_config.ts",
-    "**/*.test.ts",
-    "**/*.spec.ts"
-  ],
+  "include": ["src/*", "src/**/*", "**/_config.ts", "**/*.test.ts", "**/*.spec.ts"],
   "compilerOptions": {
     "types": ["node"],
     "rootDir": "./",
     "allowJs": true,
-    "isolatedDeclarations": false
-  }
+    "isolatedDeclarations": false,
+  },
 }

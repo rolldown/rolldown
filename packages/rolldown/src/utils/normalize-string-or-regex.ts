@@ -6,9 +6,7 @@ import type { BindingStringOrRegex } from '../binding.cjs';
  */
 export function normalizedStringOrRegex<
   T extends Array<BindingStringOrRegex> | ReadonlyArray<BindingStringOrRegex>,
->(
-  pattern?: T | BindingStringOrRegex,
-): T | undefined {
+>(pattern?: T | BindingStringOrRegex): T | undefined {
   if (!pattern) {
     return undefined;
   }
@@ -19,8 +17,6 @@ export function normalizedStringOrRegex<
 }
 
 // For https://github.com/microsoft/TypeScript/issues/17002
-function isReadonlyArray<T extends unknown[] | readonly unknown[]>(
-  input: unknown,
-): input is T {
+function isReadonlyArray<T extends unknown[] | readonly unknown[]>(input: unknown): input is T {
   return Array.isArray(input);
 }

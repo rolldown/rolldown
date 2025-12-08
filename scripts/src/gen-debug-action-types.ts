@@ -8,10 +8,7 @@ import { REPO_ROOT } from '../meta/constants';
 
 await $`cargo test -p rolldown_devtools_action export_bindings`;
 
-const generatedTypesDir = nodePath.resolve(
-  REPO_ROOT,
-  'crates/rolldown_devtools_action/bindings',
-);
+const generatedTypesDir = nodePath.resolve(REPO_ROOT, 'crates/rolldown_devtools_action/bindings');
 
 const generatedTypesFiles = nodeFs.readdirSync(generatedTypesDir);
 generatedTypesFiles.sort();
@@ -42,10 +39,6 @@ const barrelFile = generatedTypesFiles
   .map((file) => `export * from './${file.slice(0, -3)}.js'`) // remove `.ts` extension
   .join('\n');
 
-nodeFs.writeFileSync(
-  nodePath.resolve(targetDir, 'index.ts'),
-  barrelFile,
-  'utf-8',
-);
+nodeFs.writeFileSync(nodePath.resolve(targetDir, 'index.ts'), barrelFile, 'utf-8');
 
 console.log('✅ Successfully generated devtool action types');

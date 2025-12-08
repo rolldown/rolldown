@@ -28,10 +28,7 @@ import type { LogLevelOption } from '../log/logging';
 import { error, logPluginError } from '../log/logs';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
-import {
-  bindingifyCloseWatcher,
-  bindingifyWatchChange,
-} from './bindingify-watch-hooks';
+import { bindingifyCloseWatcher, bindingifyWatchChange } from './bindingify-watch-hooks';
 import { extractHookUsage } from './generated/hook-usage';
 import type { Plugin, RolldownPlugin } from './index';
 import type { PluginContextData } from './plugin-context-data';
@@ -69,9 +66,7 @@ export function bindingifyPlugin(
     normalizedOutputPlugins,
   };
 
-  const { plugin: buildStart, meta: buildStartMeta } = bindingifyBuildStart(
-    args,
-  );
+  const { plugin: buildStart, meta: buildStartMeta } = bindingifyBuildStart(args);
 
   const {
     plugin: resolveId,
@@ -90,44 +85,27 @@ export function bindingifyPlugin(
     filter: transformFilter,
   } = bindingifyTransform(args);
 
-  const { plugin: moduleParsed, meta: moduleParsedMeta } =
-    bindingifyModuleParsed(args);
+  const { plugin: moduleParsed, meta: moduleParsedMeta } = bindingifyModuleParsed(args);
 
-  const {
-    plugin: load,
-    meta: loadMeta,
-    filter: loadFilter,
-  } = bindingifyLoad(args);
+  const { plugin: load, meta: loadMeta, filter: loadFilter } = bindingifyLoad(args);
 
   const {
     plugin: renderChunk,
     meta: renderChunkMeta,
     filter: renderChunkFilter,
-  } = bindingifyRenderChunk(
-    args,
-  );
+  } = bindingifyRenderChunk(args);
 
-  const { plugin: augmentChunkHash, meta: augmentChunkHashMeta } =
-    bindingifyAugmentChunkHash(args);
+  const { plugin: augmentChunkHash, meta: augmentChunkHashMeta } = bindingifyAugmentChunkHash(args);
 
-  const { plugin: renderStart, meta: renderStartMeta } = bindingifyRenderStart(
-    args,
-  );
+  const { plugin: renderStart, meta: renderStartMeta } = bindingifyRenderStart(args);
 
-  const { plugin: renderError, meta: renderErrorMeta } = bindingifyRenderError(
-    args,
-  );
+  const { plugin: renderError, meta: renderErrorMeta } = bindingifyRenderError(args);
 
-  const { plugin: generateBundle, meta: generateBundleMeta } =
-    bindingifyGenerateBundle(args);
+  const { plugin: generateBundle, meta: generateBundleMeta } = bindingifyGenerateBundle(args);
 
-  const { plugin: writeBundle, meta: writeBundleMeta } = bindingifyWriteBundle(
-    args,
-  );
+  const { plugin: writeBundle, meta: writeBundleMeta } = bindingifyWriteBundle(args);
 
-  const { plugin: closeBundle, meta: closeBundleMeta } = bindingifyCloseBundle(
-    args,
-  );
+  const { plugin: closeBundle, meta: closeBundleMeta } = bindingifyCloseBundle(args);
 
   const { plugin: banner, meta: bannerMeta } = bindingifyBanner(args);
 
@@ -137,12 +115,9 @@ export function bindingifyPlugin(
 
   const { plugin: outro, meta: outroMeta } = bindingifyOutro(args);
 
-  const { plugin: watchChange, meta: watchChangeMeta } = bindingifyWatchChange(
-    args,
-  );
+  const { plugin: watchChange, meta: watchChangeMeta } = bindingifyWatchChange(args);
 
-  const { plugin: closeWatcher, meta: closeWatcherMeta } =
-    bindingifyCloseWatcher(args);
+  const { plugin: closeWatcher, meta: closeWatcherMeta } = bindingifyCloseWatcher(args);
   let hookUsage = extractHookUsage(plugin).inner();
   const result: BindingPluginOptions = {
     // The plugin name already normalized at `normalizePlugins`, see `packages/rolldown/src/utils/normalize-plugin-option.ts`
@@ -198,30 +173,28 @@ export function bindingifyPlugin(
 }
 
 function wrapHandlers(plugin: BindingPluginOptions): BindingPluginOptions {
-  for (
-    const hookName of [
-      'buildStart',
-      'resolveId',
-      'resolveDynamicImport',
-      'buildEnd',
-      'transform',
-      'moduleParsed',
-      'load',
-      'renderChunk',
-      'augmentChunkHash',
-      'renderStart',
-      'renderError',
-      'generateBundle',
-      'writeBundle',
-      'closeBundle',
-      'banner',
-      'footer',
-      'intro',
-      'outro',
-      'watchChange',
-      'closeWatcher',
-    ] as const
-  ) {
+  for (const hookName of [
+    'buildStart',
+    'resolveId',
+    'resolveDynamicImport',
+    'buildEnd',
+    'transform',
+    'moduleParsed',
+    'load',
+    'renderChunk',
+    'augmentChunkHash',
+    'renderStart',
+    'renderError',
+    'generateBundle',
+    'writeBundle',
+    'closeBundle',
+    'banner',
+    'footer',
+    'intro',
+    'outro',
+    'watchChange',
+    'closeWatcher',
+  ] as const) {
     const handler = plugin[hookName] as any;
     if (handler) {
       plugin[hookName] = async (...args: any[]) => {

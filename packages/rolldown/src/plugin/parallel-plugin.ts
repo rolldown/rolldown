@@ -8,9 +8,7 @@ export type ParallelPlugin = {
   };
 };
 
-export type DefineParallelPluginResult<Options> = (
-  options: Options,
-) => ParallelPlugin;
+export type DefineParallelPluginResult<Options> = (options: Options) => ParallelPlugin;
 
 export function defineParallelPlugin<Options>(
   pluginPath: string,

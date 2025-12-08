@@ -21,10 +21,7 @@ export interface TransformPluginContext extends PluginContext {
   debug: LoggingFunctionWithPosition;
   info: LoggingFunctionWithPosition;
   warn: LoggingFunctionWithPosition;
-  error(
-    e: RollupError | string,
-    pos?: number | { column: number; line: number },
-  ): never;
+  error(e: RollupError | string, pos?: number | { column: number; line: number }): never;
   getCombinedSourcemap(): SourceMap;
 }
 
@@ -41,16 +38,7 @@ export class TransformPluginContextImpl extends PluginContextImpl {
     LogLevelOption: LogLevelOption,
     watchMode: boolean,
   ) {
-    super(
-      outputOptions,
-      context,
-      plugin,
-      data,
-      onLog,
-      LogLevelOption,
-      watchMode,
-      moduleId,
-    );
+    super(outputOptions, context, plugin, data, onLog, LogLevelOption, watchMode, moduleId);
     const getLogHandler =
       (handler: LoggingFunctionWithPosition): LoggingFunctionWithPosition =>
       (log, pos) => {
@@ -66,10 +54,7 @@ export class TransformPluginContextImpl extends PluginContextImpl {
     this.info = getLogHandler(this.info);
   }
 
-  error(
-    e: RollupError | string,
-    pos?: number | { column: number; line: number },
-  ): never {
+  error(e: RollupError | string, pos?: number | { column: number; line: number }): never {
     if (typeof e === 'string') e = { message: e };
     if (pos) augmentCodeLocation(e, pos, this.moduleSource, this.moduleId);
     e.id = this.moduleId;
@@ -93,7 +78,5 @@ export class TransformPluginContextImpl extends PluginContextImpl {
 function _assert() {
   // adding implements to class disallows extending PluginContext by declaration merging
   // instead check that TransformPluginContextImpl is assignable to TransformPluginContext here
-  type _ = TypeAssert<
-    Extends<TransformPluginContextImpl, TransformPluginContext>
-  >;
+  type _ = TypeAssert<Extends<TransformPluginContextImpl, TransformPluginContext>>;
 }

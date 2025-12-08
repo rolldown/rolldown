@@ -30,11 +30,7 @@ const __dirname = import.meta.dirname;
 
 // 2. Set the tests root directory
 
-const TESTS_ROOT_DIR = path.resolve(
-  __dirname,
-  '../../crates/rolldown/tests/esbuild',
-  SUITE_NAME,
-);
+const TESTS_ROOT_DIR = path.resolve(__dirname, '../../crates/rolldown/tests/esbuild', SUITE_NAME);
 
 // 3. Download .go test source file located in the suites object
 //    for each suite and place it under "scripts" dir.
@@ -313,12 +309,7 @@ for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
         normalizedName = normalizedName.slice(1);
       }
       return {
-        name: normalizedName
-          .split('/')
-          .filter(Boolean)
-          .join('_')
-          .split('.')
-          .join('_'),
+        name: normalizedName.split('/').filter(Boolean).join('_').split('.').join('_'),
         import: normalizedName,
       };
     });
@@ -520,16 +511,13 @@ function ensureTreeSitterWasmGo() {
   }
   fsExtra.ensureDirSync(path.dirname(TREE_SITTER_WASM_GO_FILENAME));
   return new Promise((rsl, rej) => {
-    nodeHttps.get(
-      'https://tree-sitter.github.io/tree-sitter-go.wasm',
-      (resp) => {
-        resp.on('end', () => {
-          console.log('saved', TREE_SITTER_WASM_GO_FILENAME);
-          rsl();
-        });
-        resp.on('error', rej);
-        resp.pipe(nodeFs.createWriteStream(TREE_SITTER_WASM_GO_FILENAME));
-      },
-    );
+    nodeHttps.get('https://tree-sitter.github.io/tree-sitter-go.wasm', (resp) => {
+      resp.on('end', () => {
+        console.log('saved', TREE_SITTER_WASM_GO_FILENAME);
+        rsl();
+      });
+      resp.on('error', rej);
+      resp.pipe(nodeFs.createWriteStream(TREE_SITTER_WASM_GO_FILENAME));
+    });
   });
 }

@@ -21,18 +21,12 @@ function extractReason(source: string) {
       for (let j = 0; j < child.children.length; j++) {
         let listItem = childList[j];
         let position = listItem.children[0].position;
-        let listContent = source.slice(
-          position.start.offset,
-          position.end.offset,
-        );
+        let listContent = source.slice(position.start.offset, position.end.offset);
         ret.push(listContent);
       }
     }
     if (child.type === 'heading' && child.depth === 1) {
-      let content = source.slice(
-        child.position.start.offset,
-        child.position.end.offset,
-      );
+      let content = source.slice(child.position.start.offset, child.position.end.offset);
       if (content.trim().slice(1).trim() === 'Reason') {
         inReason = true;
       } else {

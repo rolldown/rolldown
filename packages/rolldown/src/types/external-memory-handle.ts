@@ -2,8 +2,7 @@ import type { ExternalMemoryStatus } from '../binding.cjs';
 
 // - `unique symbol` can't be used in computed properties with `isolatedDeclarations: true`
 // - https://github.com/microsoft/typescript/issues/61892
-const symbolForExternalMemoryHandle =
-  '__rolldown_external_memory_handle__' as const;
+const symbolForExternalMemoryHandle = '__rolldown_external_memory_handle__' as const;
 
 /**
  * Interface for objects that hold external memory that can be explicitly freed.
@@ -16,9 +15,7 @@ export interface ExternalMemoryHandle {
    * @returns Status object with `freed` boolean and optional `reason` string.
    * @internal
    */
-  [symbolForExternalMemoryHandle]: (
-    keepDataAlive?: boolean,
-  ) => ExternalMemoryStatus;
+  [symbolForExternalMemoryHandle]: (keepDataAlive?: boolean) => ExternalMemoryStatus;
 }
 
 /**

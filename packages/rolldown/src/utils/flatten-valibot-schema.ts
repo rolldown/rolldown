@@ -89,7 +89,8 @@ export function flattenValibotSchema(
   if (!schema || typeof schema !== 'object') return result;
 
   if (
-    schema.type === 'strict_object' || schema.type === 'object' ||
+    schema.type === 'strict_object' ||
+    schema.type === 'object' ||
     schema.type === 'loose_object'
   ) {
     if (schema.entries && typeof schema.entries === 'object') {

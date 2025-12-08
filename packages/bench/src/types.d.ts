@@ -1,9 +1,6 @@
 import type { BuildOptions } from 'esbuild';
 import type { OutputOptions, RolldownOptions } from 'rolldown';
-import type {
-  OutputOptions as RollupOutputOptions,
-  RollupOptions,
-} from 'rollup';
+import type { OutputOptions as RollupOutputOptions, RollupOptions } from 'rollup';
 
 type BundlerName = 'rolldown' | 'rollup' | 'esbuild';
 

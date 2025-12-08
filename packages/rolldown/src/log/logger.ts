@@ -29,11 +29,7 @@ export function getLogger(
   watchMode: boolean,
 ): LogHandler {
   const minimalPriority = logLevelPriority[logLevel];
-  const logger = (
-    level: LogLevel,
-    log: RollupLog,
-    skipped: ReadonlySet<Plugin> = new Set(),
-  ) => {
+  const logger = (level: LogLevel, log: RollupLog, skipped: ReadonlySet<Plugin> = new Set()) => {
     const logPriority = logLevelPriority[level];
     if (logPriority < minimalPriority) {
       return;
@@ -48,19 +44,15 @@ export function getLogger(
           if (logLevelPriority[level] < minimalPriority) {
             return () => {};
           }
-          return (log) =>
-            logger(level, normalizeLog(log), new Set(skipped).add(plugin));
+          return (log) => logger(level, normalizeLog(log), new Set(skipped).add(plugin));
         };
 
-        const handler = 'handler' in pluginOnLog!
-          ? pluginOnLog.handler
-          : pluginOnLog!;
+        const handler = 'handler' in pluginOnLog! ? pluginOnLog.handler : pluginOnLog!;
         if (
           handler.call(
             {
               debug: getLogHandler(LOG_LEVEL_DEBUG),
-              error: (log: RollupError | string): never =>
-                error(normalizeLog(log)),
+              error: (log: RollupError | string): never => error(normalizeLog(log)),
               info: getLogHandler(LOG_LEVEL_INFO),
               meta: {
                 rollupVersion: '4.23.0',
@@ -106,19 +98,15 @@ export const getOnLog = (
   return defaultOnLog;
 };
 
-const getDefaultOnLog = (
-  printLog: LogHandler,
-  onwarn?: WarningHandlerWithDefault,
-): LogHandler =>
+const getDefaultOnLog = (printLog: LogHandler, onwarn?: WarningHandlerWithDefault): LogHandler =>
   onwarn
     ? (level, log) => {
-      if (level === LOG_LEVEL_WARN) {
-        onwarn(addLogToString(log), (warning) =>
-          printLog(LOG_LEVEL_WARN, normalizeLog(warning)));
-      } else {
-        printLog(level, log);
+        if (level === LOG_LEVEL_WARN) {
+          onwarn(addLogToString(log), (warning) => printLog(LOG_LEVEL_WARN, normalizeLog(warning)));
+        } else {
+          printLog(level, log);
+        }
       }
-    }
     : printLog;
 
 const addLogToString = (log: RollupLog): RollupLog => {
@@ -151,9 +139,7 @@ const getExtendedLogMessage = (log: RollupLog): string => {
     prefix += `(${log.plugin} plugin) `;
   }
   if (log.loc) {
-    prefix += `${
-      relativeId(log.loc.file!)
-    } (${log.loc.line}:${log.loc.column}) `;
+    prefix += `${relativeId(log.loc.file!)} (${log.loc.line}:${log.loc.column}) `;
   }
 
   return prefix + log.message;

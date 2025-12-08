@@ -10,7 +10,7 @@
     "strict": true,
     "noUnusedLocals": true,
     "skipLibCheck": true,
-    "jsx": "preserve"
+    "jsx": "preserve",
   },
-  "include": ["env.d.ts", "src/**/*", ".vitepress/**/*"]
+  "include": ["env.d.ts", "src/**/*", ".vitepress/**/*"],
 }

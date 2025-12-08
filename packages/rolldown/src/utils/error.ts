@@ -1,11 +1,10 @@
 import { type BindingError, type BindingResult } from '../binding.cjs';
 import type { RollupError } from '../log/logging';
 
-export function unwrapBindingResult<T>(
-  container: BindingResult<T>,
-): T {
+export function unwrapBindingResult<T>(container: BindingResult<T>): T {
   if (
-    typeof container === 'object' && container !== null &&
+    typeof container === 'object' &&
+    container !== null &&
     'isBindingErrors' in container &&
     container.isBindingErrors
   ) {
@@ -14,11 +13,10 @@ export function unwrapBindingResult<T>(
   return container as T;
 }
 
-export function normalizeBindingResult<T>(
-  container: BindingResult<T>,
-): T | Error {
+export function normalizeBindingResult<T>(container: BindingResult<T>): T | Error {
   if (
-    typeof container === 'object' && container !== null &&
+    typeof container === 'object' &&
+    container !== null &&
     'isBindingErrors' in container &&
     container.isBindingErrors
   ) {
@@ -31,28 +29,24 @@ function normalizeBindingError(e: BindingError): Error {
   return e.type === 'JsError'
     ? e.field0
     : Object.assign(new Error(), {
-      code: e.field0.kind,
-      // kept for backward compat for old Rolldown versions
-      kind: e.field0.kind,
-      message: e.field0.message,
-      id: e.field0.id,
-      exporter: e.field0.exporter,
-      loc: e.field0.loc,
-      pos: e.field0.pos,
-      stack: undefined,
-    });
+        code: e.field0.kind,
+        // kept for backward compat for old Rolldown versions
+        kind: e.field0.kind,
+        message: e.field0.message,
+        id: e.field0.id,
+        exporter: e.field0.exporter,
+        loc: e.field0.loc,
+        pos: e.field0.pos,
+        stack: undefined,
+      });
 }
 
-export function aggregateBindingErrorsIntoJsError(
-  rawErrors: BindingError[],
-): Error {
+export function aggregateBindingErrorsIntoJsError(rawErrors: BindingError[]): Error {
   const errors = rawErrors.map(normalizeBindingError);
 
   // based on https://github.com/evanw/esbuild/blob/9eca46464ed5615cb36a3beb3f7a7b9a8ffbe7cf/lib/shared/common.ts#L1673
   // combine error messages as a top level error
-  let summary = `Build failed with ${errors.length} error${
-    errors.length < 2 ? '' : 's'
-  }:\n`;
+  let summary = `Build failed with ${errors.length} error${errors.length < 2 ? '' : 's'}:\n`;
   for (let i = 0; i < errors.length; i++) {
     summary += '\n';
     if (i >= 5) {
@@ -113,9 +107,10 @@ function getErrorMessage(e: RollupError): string {
     s = joinNewLine(s, 'Caused by:');
     s = joinNewLine(
       s,
-      getErrorMessage(e.cause as any).split('\n').map(line => '  ' + line).join(
-        '\n',
-      ),
+      getErrorMessage(e.cause as any)
+        .split('\n')
+        .map((line) => '  ' + line)
+        .join('\n'),
     );
   }
   return s;

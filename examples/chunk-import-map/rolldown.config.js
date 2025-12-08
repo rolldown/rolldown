@@ -8,8 +8,8 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
 function highlightDiff(oldStr, newStr) {
   const regex = /"([^"]*)"/g;
 
-  const oldMatches = [...oldStr.matchAll(regex)].map(m => m[0]);
-  const newMatches = [...newStr.matchAll(regex)].map(m => m[0]);
+  const oldMatches = [...oldStr.matchAll(regex)].map((m) => m[0]);
+  const newMatches = [...newStr.matchAll(regex)].map((m) => m[0]);
 
   const marked = newMatches.map((segment, i) => {
     if (segment !== oldMatches[i]) {
@@ -18,7 +18,8 @@ function highlightDiff(oldStr, newStr) {
     return segment;
   });
 
-  let result = newStr, idx = 0;
+  let result = newStr,
+    idx = 0;
   result = result.replace(regex, () => marked[idx++] || '');
   return result;
 }
@@ -60,9 +61,7 @@ export default defineConfig({
 
             html = html.replace(
               /<div\s+id="importmap"[^>]*>[\s\S]*?<\/div>/i,
-              `<div id="importmap">${
-                highlightDiff(oldImportMap, importMap)
-              }</div>`,
+              `<div id="importmap">${highlightDiff(oldImportMap, importMap)}</div>`,
             );
 
             fs.writeFileSync(htmlPath, html);

@@ -6,12 +6,12 @@
     "misc/**/*.js",
     "misc/**/*.d.ts",
     "snap-diff/**/*.ts",
-    "src/**/*.ts"
+    "src/**/*.ts",
   ],
   "compilerOptions": {
     "moduleResolution": "Bundler",
     "module": "ESNext",
     "isolatedDeclarations": false,
-    "allowJs": true
-  }
+    "allowJs": true,
+  },
 }

@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "serve"
   },
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
     "@rolldown/test-dev-server": "workspace:*"
   }

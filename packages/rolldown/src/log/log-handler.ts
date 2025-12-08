@@ -8,14 +8,12 @@ import {
 } from './logging';
 import { logInvalidLogPosition } from './logs';
 
-export const normalizeLog = (
-  log: RollupLog | string | (() => RollupLog | string),
-): RollupLog =>
+export const normalizeLog = (log: RollupLog | string | (() => RollupLog | string)): RollupLog =>
   typeof log === 'string'
     ? { message: log }
     : typeof log === 'function'
-    ? normalizeLog(log())
-    : log;
+      ? normalizeLog(log())
+      : log;
 
 export function getLogHandler(
   level: LogLevel,
@@ -41,9 +39,7 @@ export function getLogHandler(
   };
 }
 
-export type LoggingFunction = (
-  log: RollupLog | string | (() => RollupLog | string),
-) => void;
+export type LoggingFunction = (log: RollupLog | string | (() => RollupLog | string)) => void;
 
 export type LoggingFunctionWithPosition = (
   log: RollupLog | string | (() => RollupLog | string),

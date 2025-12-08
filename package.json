@@ -34,7 +34,7 @@
     "knip": "^5.61.3",
     "lint-staged": "^16.1.2",
     "oxlint": "^1.31.0",
-    "oxlint-tsgolint": "0.8.3",
+    "oxlint-tsgolint": "0.8.4",
     "remove-unused-vars": "^0.0.11",
     "rolldown": "workspace:*",
     "playwright-chromium": "^1.56.1",

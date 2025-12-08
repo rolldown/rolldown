@@ -11,6 +11,10 @@
   ],
   "packageRules": [
     {
+      "matchPackageNames": ["pnpm"],
+      "allowedVersions": "10.23.0"
+    },
+    {
       "groupName": "rolldown-plugin-dts",
       "matchManagers": ["npm"],
       "matchPackageNames": ["rolldown-plugin-dts"],

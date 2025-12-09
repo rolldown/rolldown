@@ -45,6 +45,7 @@ pub use crate::{
   types::hook_render_start_args::HookRenderStartArgs,
   types::hook_resolve_id_args::HookResolveIdArgs,
   types::hook_resolve_id_output::HookResolveIdOutput,
+  types::hook_timing::HookTimingCollector,
   types::hook_transform_args::HookTransformArgs,
   types::hook_transform_ast_args::HookTransformAstArgs,
   types::hook_transform_output::HookTransformOutput,

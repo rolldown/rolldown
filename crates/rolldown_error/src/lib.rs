@@ -13,6 +13,7 @@ pub use crate::{
   build_diagnostic::events::commonjs_variable_in_esm::CjsExportSpan,
   build_diagnostic::events::invalid_option::InvalidOptionType,
   build_diagnostic::events::plugin_error::CausedPlugin,
+  build_diagnostic::events::slow_plugins::SlowPluginInfo,
   build_diagnostic::events::unloadable_dependency::UnloadableDependencyContext,
   build_diagnostic::{BatchedBuildDiagnostic, BuildDiagnostic, Severity},
   generated::event_kind_switcher::EventKindSwitcher,

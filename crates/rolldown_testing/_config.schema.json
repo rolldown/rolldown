@@ -1003,6 +1003,12 @@
             "boolean",
             "null"
           ]
+        },
+        "warnSlowPlugins": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -1358,6 +1364,12 @@
           ]
         },
         "couldNotCleanDirectory": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "slowPlugins": {
           "type": [
             "boolean",
             "null"

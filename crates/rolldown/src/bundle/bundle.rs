@@ -15,7 +15,7 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use rolldown_common::{GetLocalDbMut, Module, ScanMode, SharedFileEmitter, SymbolRefDb};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
-use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
+use rolldown_error::{BuildDiagnostic, BuildResult, Severity, SlowPluginInfo};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver};
 use rolldown_utils::dashmap::FxDashSet;
@@ -40,7 +40,8 @@ impl Bundle {
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn write(mut self) -> BuildResult<BundleOutput> {
-    async {
+    let start = self.plugin_driver.start_timing();
+    let result = async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
       let scan_stage_output = self.scan_modules(ScanMode::Full).await?;
@@ -49,13 +50,16 @@ impl Bundle {
       trace_action!(action::BuildEnd { action: "BuildEnd" });
       ret
     }
-    .await
+    .await;
+    self.plugin_driver.set_total_build_time(start);
+    self.emit_slow_plugins_warning(result)
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn generate(mut self) -> BuildResult<BundleOutput> {
-    async {
+    let start = self.plugin_driver.start_timing();
+    let result = async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
       let scan_stage_output = self.scan_modules(ScanMode::Full).await?;
@@ -67,7 +71,9 @@ impl Bundle {
       trace_action!(action::BuildEnd { action: "BuildEnd" });
       ret
     }
-    .await
+    .await;
+    self.plugin_driver.set_total_build_time(start);
+    self.emit_slow_plugins_warning(result)
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
@@ -230,7 +236,9 @@ impl Bundle {
     scan_stage_output: NormalizedScanStageOutput,
     is_write: bool,
   ) -> BuildResult<BundleOutput> {
+    let start = self.plugin_driver.start_timing();
     let mut link_stage_output = LinkStage::new(scan_stage_output, &self.options).link();
+    self.plugin_driver.set_link_stage_time(start);
 
     let bundle_output =
       GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver)
@@ -341,5 +349,35 @@ impl Bundle {
         file: self.options.file.clone(),
       });
     }
+  }
+
+  /// Emit warning if plugins are slow
+  #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
+  fn emit_slow_plugins_warning(
+    &self,
+    result: BuildResult<BundleOutput>,
+  ) -> BuildResult<BundleOutput> {
+    result.map(|mut output| {
+      if self.plugin_driver.plugins_are_slow() {
+        if let Some(collector) = &self.plugin_driver.hook_timing_collector {
+          let summary = collector.get_summary();
+          let total_nanos: u64 = summary.iter().map(|s| s.total_duration_nanos).sum();
+          if total_nanos > 0 {
+            const MAX_PLUGINS: usize = 5;
+            let plugins = summary
+              .iter()
+              .filter(|s| summary.len() as u64 * s.total_duration_nanos >= total_nanos)
+              .take(MAX_PLUGINS)
+              .map(|s| SlowPluginInfo {
+                name: s.plugin_name.to_string(),
+                percent: (s.total_duration_nanos as f64 / total_nanos as f64 * 100.0).round() as u8,
+              })
+              .collect::<Vec<_>>();
+            output.warnings.push(BuildDiagnostic::slow_plugins(plugins).with_severity_warning());
+          }
+        }
+      }
+      output
+    })
   }
 }

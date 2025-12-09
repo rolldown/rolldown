@@ -1666,6 +1666,7 @@ export interface BindingChecksOptions {
   configurationFieldConflict?: boolean
   preferBuiltinFeature?: boolean
   couldNotCleanDirectory?: boolean
+  slowPlugins?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -1773,6 +1774,7 @@ export interface BindingExperimentalOptions {
   incrementalBuild?: boolean
   transformHiresSourcemap?: boolean | 'boundary'
   nativeMagicString?: boolean
+  warnSlowPlugins?: boolean
 }
 
 export interface BindingFilterToken {

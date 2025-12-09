@@ -314,6 +314,20 @@ export interface InputOptions {
      * > For a complete working example, see [examples/native-magic-string](https://github.com/rolldown/rolldown/tree/main/examples/native-magic-string)
      */
     nativeMagicString?: boolean;
+    /**
+     * Enable plugin performance monitoring.
+     *
+     * When enabled, rolldown will measure the time spent in each plugin hook
+     * and emit a warning if plugins are significantly impacting build performance.
+     * The warning lists slow plugins with their percentage of total plugin time.
+     *
+     * > [!NOTE]
+     * > For hooks using `ctx.resolve()` or `ctx.load()`, the reported time includes
+     * > waiting for other plugins, which may overestimate that plugin's actual cost.
+     *
+     * @default false
+     */
+    warnSlowPlugins?: boolean;
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.

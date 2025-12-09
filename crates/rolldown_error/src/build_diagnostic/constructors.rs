@@ -31,6 +31,7 @@ use super::events::missing_name_option_for_umd_export::MissingNameOptionForUmdEx
 use super::events::plugin_error::{CausedPlugin, PluginError};
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
 use super::events::resolve_error::DiagnosableResolveError;
+use super::events::slow_plugins::{SlowPluginInfo, SlowPlugins};
 use super::events::unhandleable_error::UnhandleableError;
 use super::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
 use super::events::unsupported_feature::UnsupportedFeature;
@@ -353,5 +354,9 @@ impl BuildDiagnostic {
 
   pub fn could_not_clean_directory(dir: String, reason: String) -> Self {
     Self::new_inner(CouldNotCleanDirectory { dir, reason })
+  }
+
+  pub fn slow_plugins(plugins: Vec<SlowPluginInfo>) -> Self {
+    Self::new_inner(SlowPlugins { plugins })
   }
 }

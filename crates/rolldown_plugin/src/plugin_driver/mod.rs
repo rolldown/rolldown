@@ -23,6 +23,7 @@ use crate::{
   PluginContext,
   plugin_driver::hook_orders::PluginHookOrders,
   type_aliases::{IndexPluginContext, IndexPluginable},
+  types::hook_timing::HookTimingCollector,
 };
 
 pub type SharedPluginDriver = Arc<PluginDriver>;
@@ -39,6 +40,8 @@ pub struct PluginDriver {
   pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
   context_load_completion_manager: ContextLoadCompletionManager,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
+  /// Timing collector for plugin hooks (None if plugin timing is disabled)
+  pub hook_timing_collector: Option<Arc<HookTimingCollector>>,
 }
 
 impl PluginDriver {
@@ -48,6 +51,9 @@ impl PluginDriver {
     self.transform_dependencies.clear();
     self.context_load_completion_manager.clear();
     self.file_emitter.clear();
+    if let Some(collector) = &self.hook_timing_collector {
+      collector.clear();
+    }
   }
 
   pub fn set_module_info(&self, module_id: &ModuleId, module_info: Arc<ModuleInfo>) {
@@ -97,6 +103,46 @@ impl PluginDriver {
       .entry(module_idx)
       .or_insert_with(|| Arc::new(FxDashSet::default()))
       .insert(dependency);
+  }
+
+  /// Record hook timing if timing collection is enabled.
+  /// Returns `Some(Instant)` if timing is enabled, `None` otherwise.
+  #[inline]
+  pub fn start_timing(&self) -> Option<std::time::Instant> {
+    self.hook_timing_collector.as_ref().map(|_| std::time::Instant::now())
+  }
+
+  /// Record the elapsed time for a plugin if timing collection is enabled.
+  #[inline]
+  pub fn record_timing(&self, plugin_idx: PluginIdx, start: Option<std::time::Instant>) {
+    if let (Some(collector), Some(start)) = (&self.hook_timing_collector, start) {
+      #[expect(clippy::cast_possible_truncation)]
+      collector.record(plugin_idx, start.elapsed().as_nanos() as u64);
+    }
+  }
+
+  /// Set total build time from start instant
+  #[inline]
+  pub fn set_total_build_time(&self, start: Option<std::time::Instant>) {
+    if let (Some(collector), Some(start)) = (&self.hook_timing_collector, start) {
+      #[expect(clippy::cast_possible_truncation)]
+      collector.set_total_build_nanos(start.elapsed().as_nanos() as u64);
+    }
+  }
+
+  /// Set link stage time from start instant
+  #[inline]
+  pub fn set_link_stage_time(&self, start: Option<std::time::Instant>) {
+    if let (Some(collector), Some(start)) = (&self.hook_timing_collector, start) {
+      #[expect(clippy::cast_possible_truncation)]
+      collector.set_link_stage_nanos(start.elapsed().as_nanos() as u64);
+    }
+  }
+
+  /// Check if plugins are taking too much time.
+  #[inline]
+  pub fn plugins_are_slow(&self) -> bool {
+    self.hook_timing_collector.as_ref().is_some_and(|c| c.plugins_are_slow())
   }
 }
 

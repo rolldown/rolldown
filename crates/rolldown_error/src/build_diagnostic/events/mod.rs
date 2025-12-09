@@ -41,6 +41,7 @@ pub mod parse_error;
 pub mod plugin_error;
 pub mod prefer_builtin_feature;
 pub mod resolve_error;
+pub mod slow_plugins;
 pub mod unhandleable_error;
 pub mod unloadable_dependency;
 pub mod unresolved_entry;

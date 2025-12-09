@@ -346,6 +346,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warning when detecting could not clean directory',
     ),
   ),
+  slowPlugins: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warning when detecting slow plugins',
+    ),
+  ),
 });
 
 const CompressOptionsKeepNamesSchema = v.strictObject({
@@ -562,6 +568,7 @@ const InputOptionsSchema = v.strictObject({
         }),
       ])),
       nativeMagicString: v.optional(v.boolean()),
+      warnSlowPlugins: v.optional(v.boolean()),
     }),
   ),
   transform: v.optional(TransformOptionsSchema),

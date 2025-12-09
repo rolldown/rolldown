@@ -85,4 +85,10 @@ export interface ChecksOptions {
    * @default true
    */
   couldNotCleanDirectory?: boolean;
+
+  /**
+   * Whether to emit warning when detecting slow plugins
+   * @default true
+   */
+  slowPlugins?: boolean;
 }

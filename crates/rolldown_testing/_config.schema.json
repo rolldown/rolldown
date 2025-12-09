@@ -1536,7 +1536,8 @@
     "TsConfig": {
       "anyOf": [
         {
-          "type": "null"
+          "type": "boolean",
+          "const": true
         },
         {
           "type": "string"

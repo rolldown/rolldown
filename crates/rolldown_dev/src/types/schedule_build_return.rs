@@ -5,4 +5,6 @@ use crate::dev_context::BundlingFuture;
 pub struct ScheduleBuildReturn {
   /// The bundling task future
   pub future: BundlingFuture,
+  #[expect(unused)]
+  pub is_previous_task: bool,
 }

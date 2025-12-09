@@ -1,8 +1,13 @@
 use super::Bundler;
+#[cfg(feature = "experimental")]
 use crate::hmr::hmr_stage::{HmrStage, HmrStageInput};
+#[cfg(feature = "experimental")]
 use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrUpdate};
+#[cfg(feature = "experimental")]
 use rolldown_error::BuildResult;
+#[cfg(feature = "experimental")]
 use rustc_hash::FxHashSet;
+#[cfg(feature = "experimental")]
 use std::sync::{Arc, atomic::AtomicU32};
 
 impl Bundler {

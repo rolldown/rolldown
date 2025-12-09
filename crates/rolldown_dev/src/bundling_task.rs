@@ -127,6 +127,12 @@ impl BundlingTask {
     &mut self,
     has_full_reload_update: &mut bool,
   ) -> BuildResult<()> {
+    // Yield to the tokio scheduler before acquiring the bundler lock.
+    // This gives the Node.js event loop a chance to process pending timers (e.g., setTimeout)
+    // when HMR tasks run in rapid succession. Without this, the UV loop can get starved
+    // and never reach the timer phase, causing setTimeout callbacks in plugins to never fire.
+    tokio::task::yield_now().await;
+
     let mut bundler = self.bundler.lock().await;
     let changed_files = self
       .input

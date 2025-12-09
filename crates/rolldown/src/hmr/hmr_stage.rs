@@ -231,8 +231,16 @@ impl<'a> HmrStage<'a> {
 
     // 2. Do ONE module refetch and cache merge (if needed)
     let new_added_modules = if changed_modules.is_empty() {
+      tracing::trace!("[HmrStage] no changed modules, skip refetching");
       FxIndexSet::default()
     } else {
+      tracing::trace!(
+        "[HmrStage] refetching changed modules\n - changed_modules: {:#?}",
+        changed_modules
+          .iter()
+          .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
+          .collect::<Vec<_>>(),
+      );
       let modules_to_be_refetched = changed_modules
         .iter()
         .filter_map(|module_idx| {
@@ -267,12 +275,11 @@ impl<'a> HmrStage<'a> {
 
       let new_added_modules = module_loader_output.new_added_modules_from_partial_scan.clone();
 
-      tracing::debug!(
-        target: "hmr",
-        "New added modules: {:?}",
+      tracing::trace!(
+        "[HmrStage] new added modules from refetch\n - new_added_modules: {:#?}",
         new_added_modules
           .iter()
-          .map(|module_idx| module_loader_output.module_table.get(*module_idx).stable_id())
+          .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
           .collect::<Vec<_>>(),
       );
 
@@ -281,6 +288,8 @@ impl<'a> HmrStage<'a> {
       let options = Arc::clone(&self.options);
       let resolver = Arc::clone(&self.resolver);
       self.cache.update_defer_sync_data(&options, &resolver).await?;
+
+      tracing::trace!("[HmrStage] Compute hmr update finished");
       new_added_modules
     };
 

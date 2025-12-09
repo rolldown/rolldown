@@ -1,0 +1,1 @@
+mod continuous_generate_hmr_patch;

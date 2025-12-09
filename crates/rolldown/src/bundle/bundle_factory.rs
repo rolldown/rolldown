@@ -52,8 +52,7 @@ impl BundleFactory {
   pub fn new(mut opts: BundleFactoryOptions) -> BuildResult<Self> {
     let session = opts.session.unwrap_or_else(rolldown_devtools::Session::dummy);
 
-    let maybe_guard =
-      if opts.disable_tracing_setup { None } else { rolldown_tracing::try_init_tracing() };
+    let maybe_guard = if false { None } else { rolldown_tracing::try_init_tracing() };
 
     let PrepareBuildContext { fs, resolver, options, mut warnings } =
       prepare_build_context(opts.bundler_options)?;

@@ -29,3 +29,4 @@ splitted = "splitted"
 styl = "styl"
 
 [default.extend-identifiers]
+IIFEs = "IIFEs"

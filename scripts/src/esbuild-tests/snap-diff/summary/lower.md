@@ -1,8 +1,4 @@
 # Failed Cases
-## [lower_export_star_as_name_collision](../../../../../crates/rolldown/tests/esbuild/lower/lower_export_star_as_name_collision/diff.md)
-  should not transform `export * as ns from 'mod'` above es2019
-## [static_class_block_es_next](../../../../../crates/rolldown/tests/esbuild/lower/static_class_block_es_next/diff.md)
-  pure transformation is handled by `oxc-transform`
 # Passed Cases
 ## [class_super_this_issue242_no_bundle](../../../../../crates/rolldown/tests/esbuild/lower/class_super_this_issue242_no_bundle)
 ## [java_script_auto_accessor_es_next](../../../../../crates/rolldown/tests/esbuild/lower/java_script_auto_accessor_es_next)
@@ -24,6 +20,7 @@
 ## [lower_class_field_strict_tsconfig_json2020](../../../../../crates/rolldown/tests/esbuild/lower/lower_class_field_strict_tsconfig_json2020)
 ## [lower_class_field2020_no_bundle](../../../../../crates/rolldown/tests/esbuild/lower/lower_class_field2020_no_bundle)
 ## [lower_exponentiation_operator_no_bundle](../../../../../crates/rolldown/tests/esbuild/lower/lower_exponentiation_operator_no_bundle)
+## [lower_export_star_as_name_collision](../../../../../crates/rolldown/tests/esbuild/lower/lower_export_star_as_name_collision)
 ## [lower_export_star_as_name_collision_no_bundle](../../../../../crates/rolldown/tests/esbuild/lower/lower_export_star_as_name_collision_no_bundle)
 ## [lower_for_await2015](../../../../../crates/rolldown/tests/esbuild/lower/lower_for_await2015)
 ## [lower_for_await2017](../../../../../crates/rolldown/tests/esbuild/lower/lower_for_await2017)
@@ -73,6 +70,7 @@
 ## [lower_using_inside_ts_namespace](../../../../../crates/rolldown/tests/esbuild/lower/lower_using_inside_ts_namespace)
 ## [lower_using_unsupported_async](../../../../../crates/rolldown/tests/esbuild/lower/lower_using_unsupported_async)
 ## [lower_using_unsupported_using_and_async](../../../../../crates/rolldown/tests/esbuild/lower/lower_using_unsupported_using_and_async)
+## [static_class_block_es_next](../../../../../crates/rolldown/tests/esbuild/lower/static_class_block_es_next)
 ## [static_class_block_es2021](../../../../../crates/rolldown/tests/esbuild/lower/static_class_block_es2021)
 ## [ts_lower_class_field_strict_tsconfig_json2020](../../../../../crates/rolldown/tests/esbuild/lower/ts_lower_class_field_strict_tsconfig_json2020)
 ## [ts_lower_class_field2020_no_bundle](../../../../../crates/rolldown/tests/esbuild/lower/ts_lower_class_field2020_no_bundle)

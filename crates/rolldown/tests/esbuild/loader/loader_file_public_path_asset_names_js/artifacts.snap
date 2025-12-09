@@ -5,7 +5,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ## assets/image-Dq1zDy-k.png
 
-## entries_entry.js
+## entries/entry.js
 
 ```js
 //#region images/image.png

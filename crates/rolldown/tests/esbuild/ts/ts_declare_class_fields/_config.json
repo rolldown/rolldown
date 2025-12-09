@@ -5,7 +5,11 @@
         "name": "entry",
         "import": "entry.ts"
       }
-    ]
+    ],
+    "transform": {
+      "target": "es2021"
+    },
+    "tsconfig": true
   },
   "expectExecuted": false
 }

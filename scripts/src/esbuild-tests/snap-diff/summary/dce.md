@@ -1,50 +1,14 @@
 # Failed Cases
 ## [dce_of_decorators](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_decorators/diff.md)
-  dce decorator
-## [dce_of_experimental_decorators](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_experimental_decorators/diff.md)
-  lower decorator
-## [dce_of_expr_after_keep_names_issue3195](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195/diff.md)
-  rolldown don't support keep name, it is part of minifier
+  decorators should not be removed
 ## [dce_of_iife](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_iife/diff.md)
-  don't support dce iife
-## [dce_of_using_declarations](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_using_declarations/diff.md)
-  output should be same except the comment, acorn can not recognize using stmt
-## [disable_tree_shaking](../../../../../crates/rolldown/tests/esbuild/dce/disable_tree_shaking/diff.md)
-  rollup `treeshake.annotations` only affect annotations, https://rollupjs.org/repl/?version=4.27.3&shareable=JTdCJTIyZXhhbXBsZSUyMiUzQW51bGwlMkMlMjJtb2R1bGVzJTIyJTNBJTVCJTdCJTIyY29kZSUyMiUzQSUyMmltcG9ydCUyMCU1QyUyMi4lMkZxdXguanMlNUMlMjIlNUNuJTVDbmZ1bmN0aW9uJTIwdGVzdCgpJTIwJTdCJTVDbmNvbnNvbGUubG9nKCd0ZXN0JyklNUNuJTdEJTVDbiU1Q24lMkYqJTIzX19QVVJFX18qJTJGdGVzdCgpJTNCJTIyJTJDJTIyaXNFbnRyeSUyMiUzQXRydWUlMkMlMjJuYW1lJTIyJTNBJTIybWFpbi5qcyUyMiU3RCUyQyU3QiUyMmNvZGUlMjIlM0ElMjJjb25zb2xlLmxvZygndGVzdCcpJTIyJTJDJTIyaXNFbnRyeSUyMiUzQWZhbHNlJTJDJTIybmFtZSUyMiUzQSUyMnF1eC5qcyUyMiU3RCUyQyU3QiUyMmNvZGUlMjIlM0ElMjIlN0IlNUNuJTIwJTIwJTVDJTIyc2lkZUVmZmVjdHMlNUMlMjIlM0ElMjBmYWxzZSU1Q24lN0QlMjIlMkMlMjJpc0VudHJ5JTIyJTNBZmFsc2UlMkMlMjJuYW1lJTIyJTNBJTIycGFja2FnZS5qc29uJTIyJTdEJTVEJTJDJTIyb3B0aW9ucyUyMiUzQSU3QiUyMm91dHB1dCUyMiUzQSU3QiUyMmZvcm1hdCUyMiUzQSUyMmVzJTIyJTdEJTJDJTIydHJlZXNoYWtlJTIyJTNBJTdCJTIyYW5ub3RhdGlvbnMlMjIlM0F0cnVlJTdEJTdEJTdE
-## [no_side_effects_comment](../../../../../crates/rolldown/tests/esbuild/dce/no_side_effects_comment/diff.md)
-  annotation codegen
-## [no_side_effects_comment_type_script_declare](../../../../../crates/rolldown/tests/esbuild/dce/no_side_effects_comment_type_script_declare/diff.md)
-  rolldown should not shake the namespace iife
-## [no_side_effects_comment_unused_calls](../../../../../crates/rolldown/tests/esbuild/dce/no_side_effects_comment_unused_calls/diff.md)
-  no sideEffect comment detect
-## [package_json_side_effects_array_keep_main_implicit_main](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main/diff.md)
-  double module initialization
-## [package_json_side_effects_array_keep_module_implicit_main](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main/diff.md)
-  double module initialization
-## [package_json_side_effects_array_keep_module_use_main](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_use_main/diff.md)
-  side effects detect not align
-## [package_json_side_effects_false_all_fork](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_all_fork/diff.md)
-  dynamic module not align
-## [package_json_side_effects_false_one_fork](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_one_fork/diff.md)
-  different async module impl
-## [remove_unused_no_side_effects_tagged_templates](../../../../../crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates/diff.md)
-  side effects detector not align
-## [tree_shaking_js_with_associated_css](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css/diff.md)
-  esbuild generate debug id for each css file and sub optimal output
-## [tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false/diff.md)
-  Since the `sideEffects: false`, and the `ImportDeclaration` is just plain, the whole sub tree (including css file) should be eliminated
-## [tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js/diff.md)
-  Since the `sideEffects: false`, and the `ImportDeclaration` is just plain, the whole sub tree (including css file) should be eliminated
+  sub optimal: IIFEs are not unwrapped
 ## [tree_shaking_lowered_class_static_field](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field/diff.md)
-  lowering class
-## [tree_shaking_lowered_class_static_field_assignment](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment/diff.md)
-  seems esbuild mark static field as side effects whatever, should investigate
-## [tree_shaking_lowered_class_static_field_minified](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified/diff.md)
-  lowering class
+  sub optimal: REMOVE_ME class can be removed
 ## [tree_shaking_react_elements](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_react_elements/diff.md)
-  jsx element don't have pure annotation
+  sub optimal: `React.Fragment` should be removed
 ## [tree_shaking_unary_operators](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_unary_operators/diff.md)
-  unary operator side effects
+  rejected due to https://github.com/rolldown/rolldown/issues/7009
 # Passed Cases
 ## [base64_loader_remove_unused](../../../../../crates/rolldown/tests/esbuild/dce/base64_loader_remove_unused)
 ## [const_value_inlining_bundle](../../../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_bundle)
@@ -57,10 +21,13 @@
 ## [dce_class_static_blocks](../../../../../crates/rolldown/tests/esbuild/dce/dce_class_static_blocks)
 ## [dce_class_static_blocks_minify_syntax](../../../../../crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax)
 ## [dce_of_destructuring](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_destructuring)
+## [dce_of_experimental_decorators](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_experimental_decorators)
+## [dce_of_expr_after_keep_names_issue3195](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195)
 ## [dce_of_iterator_superclass_issue4310](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_iterator_superclass_issue4310)
 ## [dce_of_negated_bigints](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_negated_bigints)
 ## [dce_of_symbol_for_call](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_for_call)
 ## [dce_of_symbol_instances](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_instances)
+## [dce_of_using_declarations](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_using_declarations)
 ## [dce_template_literal](../../../../../crates/rolldown/tests/esbuild/dce/dce_template_literal)
 ## [dce_type_of](../../../../../crates/rolldown/tests/esbuild/dce/dce_type_of)
 ## [dce_type_of_compare_string_guard_condition](../../../../../crates/rolldown/tests/esbuild/dce/dce_type_of_compare_string_guard_condition)
@@ -70,6 +37,7 @@
 ## [dce_var_exports](../../../../../crates/rolldown/tests/esbuild/dce/dce_var_exports)
 ## [dead_code_following_jump](../../../../../crates/rolldown/tests/esbuild/dce/dead_code_following_jump)
 ## [dead_code_inside_empty_try](../../../../../crates/rolldown/tests/esbuild/dce/dead_code_inside_empty_try)
+## [disable_tree_shaking](../../../../../crates/rolldown/tests/esbuild/dce/disable_tree_shaking)
 ## [drop_label_tree_shaking_bug_issue3311](../../../../../crates/rolldown/tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311)
 ## [drop_labels](../../../../../crates/rolldown/tests/esbuild/dce/drop_labels)
 ## [file_loader_remove_unused](../../../../../crates/rolldown/tests/esbuild/dce/file_loader_remove_unused)
@@ -82,8 +50,11 @@
 ## [multiple_declaration_tree_shaking](../../../../../crates/rolldown/tests/esbuild/dce/multiple_declaration_tree_shaking)
 ## [multiple_declaration_tree_shaking_minify_syntax](../../../../../crates/rolldown/tests/esbuild/dce/multiple_declaration_tree_shaking_minify_syntax)
 ## [nested_function_inlining_with_spread](../../../../../crates/rolldown/tests/esbuild/dce/nested_function_inlining_with_spread)
+## [no_side_effects_comment](../../../../../crates/rolldown/tests/esbuild/dce/no_side_effects_comment)
 ## [no_side_effects_comment_ignore_annotations](../../../../../crates/rolldown/tests/esbuild/dce/no_side_effects_comment_ignore_annotations)
 ## [no_side_effects_comment_minify_whitespace](../../../../../crates/rolldown/tests/esbuild/dce/no_side_effects_comment_minify_whitespace)
+## [no_side_effects_comment_type_script_declare](../../../../../crates/rolldown/tests/esbuild/dce/no_side_effects_comment_type_script_declare)
+## [no_side_effects_comment_unused_calls](../../../../../crates/rolldown/tests/esbuild/dce/no_side_effects_comment_unused_calls)
 ## [package_json_side_effects_array_glob](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_glob)
 ## [package_json_side_effects_array_keep](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep)
 ## [package_json_side_effects_array_keep_main_implicit_module](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_module)
@@ -92,6 +63,7 @@
 ## [package_json_side_effects_array_keep_module_implicit_module](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_module)
 ## [package_json_side_effects_array_keep_module_use_module](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_use_module)
 ## [package_json_side_effects_array_remove](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_remove)
+## [package_json_side_effects_false_all_fork](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_all_fork)
 ## [package_json_side_effects_false_cross_platform_slash](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_cross_platform_slash)
 ## [package_json_side_effects_false_intermediate_files_chain_all](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_all)
 ## [package_json_side_effects_false_intermediate_files_chain_one](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_chain_one)
@@ -105,6 +77,7 @@
 ## [package_json_side_effects_false_keep_star_import_common_js](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_star_import_common_js)
 ## [package_json_side_effects_false_keep_star_import_es6](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_star_import_es6)
 ## [package_json_side_effects_false_no_warning_in_node_modules_issue999](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_no_warning_in_node_modules_issue999)
+## [package_json_side_effects_false_one_fork](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_one_fork)
 ## [package_json_side_effects_false_remove_bare_import_common_js](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_common_js)
 ## [package_json_side_effects_false_remove_bare_import_es6](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_es6)
 ## [package_json_side_effects_false_remove_named_import_common_js](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_named_import_common_js)
@@ -133,10 +106,15 @@
 ## [tree_shaking_class_static_property](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_class_static_property)
 ## [tree_shaking_import_identifier](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier)
 ## [tree_shaking_in_esm_wrapper](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_in_esm_wrapper)
+## [tree_shaking_js_with_associated_css](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css)
 ## [tree_shaking_js_with_associated_css_export_star_side_effects_false](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false)
 ## [tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_export_star_side_effects_false_only_js)
 ## [tree_shaking_js_with_associated_css_re_export_side_effects_false](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false)
 ## [tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_re_export_side_effects_false_only_js)
+## [tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false)
+## [tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_js_with_associated_css_unused_nested_import_side_effects_false_only_js)
+## [tree_shaking_lowered_class_static_field_assignment](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment)
+## [tree_shaking_lowered_class_static_field_minified](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified)
 ## [tree_shaking_no_bundle_cjs](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_no_bundle_cjs)
 ## [tree_shaking_no_bundle_esm](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_no_bundle_esm)
 ## [tree_shaking_no_bundle_iife](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_no_bundle_iife)
@@ -146,4 +124,12 @@
   TODO
 ## [dead_code_inside_unused_cases](../../../../../crates/rolldown/tests/esbuild/dce/dead_code_inside_unused_cases)
   TODO
+## [package_json_side_effects_array_keep_main_implicit_main](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main)
+  this is a hacky behavior of esbuild, https://github.com/evanw/esbuild/commit/a766bdff31634c6ba3c659055632588f41416ef5
+## [package_json_side_effects_array_keep_module_implicit_main](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main)
+  this is a hacky behavior of esbuild, https://github.com/evanw/esbuild/commit/a766bdff31634c6ba3c659055632588f41416ef5
+## [package_json_side_effects_array_keep_module_use_main](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_use_main)
+  this is a hacky behavior of esbuild, https://github.com/evanw/esbuild/commit/a766bdff31634c6ba3c659055632588f41416ef5
+## [remove_unused_no_side_effects_tagged_templates](../../../../../crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates)
+  https://github.com/javascript-compiler-hints/compiler-notations-spec/issues/8
 # Ignored Cases (not supported)

@@ -6,17 +6,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 //#region entry.js
-var KeepMe1 = class {
-	static x = "x";
-	static y = sideEffects();
-	static z = "z";
-};
-var KeepMe2 = class {
-	static x = "x";
-	static y = "y";
-	static z = "z";
-};
+var REMOVE_ME = class {};
+_defineProperty(REMOVE_ME, "x", "x");
+_defineProperty(REMOVE_ME, "y", "y");
+_defineProperty(REMOVE_ME, "z", "z");
+var KeepMe1 = class {};
+_defineProperty(KeepMe1, "x", "x");
+_defineProperty(KeepMe1, "y", sideEffects());
+_defineProperty(KeepMe1, "z", "z");
+var KeepMe2 = class {};
+_defineProperty(KeepMe2, "x", "x");
+_defineProperty(KeepMe2, "y", "y");
+_defineProperty(KeepMe2, "z", "z");
 new KeepMe2();
 
 //#endregion

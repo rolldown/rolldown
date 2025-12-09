@@ -85,7 +85,7 @@ expression: output
 
 # tests/esbuild/dce/dce_of_experimental_decorators
 
-- keep-these-!~{000}~.js => keep-these-BkGMHk-b.js
+- keep-these-!~{000}~.js => keep-these-BhIBItjG.js
 
 # tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195
 
@@ -158,7 +158,7 @@ expression: output
 
 # tests/esbuild/dce/disable_tree_shaking
 
-- entry-!~{000}~.js => entry-BCzKZhp7.js
+- entry-!~{000}~.js => entry-BaO8KV8B.js
 
 # tests/esbuild/dce/drop_label_tree_shaking_bug_issue3311
 
@@ -287,10 +287,6 @@ expression: output
 
 - src_entry-!~{000}~.js => src_entry-B77v_527.js
 
-# tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
-
-- src_entry-!~{000}~.js => src_entry-Cgf8sg1g.js
-
 # tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_module
 
 - src_entry-!~{000}~.js => src_entry-Ca0CG93d.js
@@ -302,10 +298,6 @@ expression: output
 # tests/esbuild/dce/package_json_side_effects_array_keep_main_use_module
 
 - src_entry-!~{000}~.js => src_entry-Ca0CG93d.js
-
-# tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main
-
-- src_entry-!~{000}~.js => src_entry-BBcxXVk5.js
 
 # tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_module
 
@@ -537,11 +529,11 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field
 
-- entry-!~{000}~.js => entry-R0_l7mIp.js
+- entry-!~{000}~.js => entry-Mgw6Wqyh.js
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment
 
-- entry-!~{000}~.js => entry-DpT2y-ga.js
+- entry-!~{000}~.js => entry-tbIwjBEn.js
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
 
@@ -626,7 +618,7 @@ expression: output
 
 # tests/esbuild/default/comment_preservation_preserve_jsx
 
-- entry-!~{000}~.js => entry-ChEClsGW.js
+- entry-!~{000}~.js => entry-BETKvZfq.js
 
 # tests/esbuild/default/comment_preservation_transform_jsx
 
@@ -671,12 +663,6 @@ expression: output
 # tests/esbuild/default/define_import_meta
 
 - entry-!~{000}~.js => entry-Pr6gMpJE.js
-
-# tests/esbuild/default/define_import_meta_es5
-
-- dead-code-!~{002}~.js => dead-code-C6ix2aa8.js
-- kept-!~{001}~.js => kept-iZ3rUtxj.js
-- replaced-!~{000}~.js => replaced-z7vJ9-Pe.js
 
 # tests/esbuild/default/define_infinite_loop_issue2407
 
@@ -946,7 +932,7 @@ expression: output
 
 # tests/esbuild/default/inject_import_meta
 
-- entry-!~{000}~.js => entry-C3sdL-S0.js
+- entry-!~{000}~.js => entry-BVm_SNpK.js
 
 # tests/esbuild/default/inject_import_order
 
@@ -994,13 +980,13 @@ expression: output
 
 # tests/esbuild/default/jsx_import_meta_property
 
-- factory-!~{000}~.js => factory-ls8JgJDR.js
-- fragment-!~{001}~.js => fragment-hUXpm9qY.js
+- factory-!~{000}~.js => factory-Bpf6vL44.js
+- fragment-!~{001}~.js => fragment-Bxcnqv7u.js
 
 # tests/esbuild/default/jsx_import_meta_value
 
-- factory-!~{000}~.js => factory-DKqV8wuu.js
-- fragment-!~{001}~.js => fragment-DY5nyR3g.js
+- factory-!~{000}~.js => factory-CjMNwCaw.js
+- fragment-!~{001}~.js => fragment-B0x9QzKM.js
 
 # tests/esbuild/default/jsx_imports_common_js
 
@@ -1319,7 +1305,7 @@ expression: output
 
 # tests/esbuild/default/minified_jsx_preserve_with_object_spread
 
-- entry-!~{000}~.js => entry-RV_jH3dU.js
+- entry-!~{000}~.js => entry-CE-wgSo8.js
 
 # tests/esbuild/default/minify_identifiers_import_path_frequency_analysis
 
@@ -1425,10 +1411,6 @@ expression: output
 # tests/esbuild/default/quoted_property
 
 - entry-!~{000}~.js => entry-Bm5ihSgl.js
-
-# tests/esbuild/default/quoted_property_mangle
-
-- entry-!~{000}~.js => entry-CE5cLS9e.js
 
 # tests/esbuild/default/re_export_common_js_as_es6
 
@@ -1715,7 +1697,7 @@ expression: output
 
 # tests/esbuild/default/use_strict_directive_bundle_issue1837
 
-- entry-!~{000}~.js => entry-B36nIhUQ.js
+- entry-!~{000}~.js => entry-ButW13k4.js
 
 # tests/esbuild/default/use_strict_directive_minify_no_bundle
 
@@ -2213,7 +2195,7 @@ expression: output
 
 # tests/esbuild/loader/jsx_preserve_capital_letter
 
-- entry-!~{000}~.js => entry-B80s40TL.js
+- entry-!~{000}~.js => entry-DvrPmzp-.js
 
 # tests/esbuild/loader/jsx_preserve_capital_letter_minify
 
@@ -2321,9 +2303,9 @@ expression: output
 
 # tests/esbuild/loader/loader_file_ext_path_asset_names_js
 
-- entries_entry-!~{000}~.js => entries_entry-C4Zb7T4X.js
-- assets/file-Db4OibBB.txt
-- assets/image-7R51b9Yh.png
+- entries/entry-!~{000}~.js => entries/entry-uqN9eN45.js
+- png/image-C1OY-uUF.png
+- txt/file-D-o7EDGZ.txt
 
 # tests/esbuild/loader/loader_file_multiple_no_collision
 
@@ -2350,47 +2332,47 @@ expression: output
 
 # tests/esbuild/loader/loader_file_public_path_asset_names_css
 
-- entries_entry-!~{000}~.js => entries_entry-yprr97kA.js
+- entries/entry-!~{000}~.js => entries/entry-DpoBBbNJ.js
 - assets/image-7R51b9Yh.png
-- entries_entry.css
+- entries/entry.css
 
 # tests/esbuild/loader/loader_file_public_path_asset_names_js
 
-- entries_entry-!~{000}~.js => entries_entry-ddPOprBa.js
+- entries/entry-!~{000}~.js => entries/entry-JftZY87w.js
 - assets/image-7R51b9Yh.png
 
 # tests/esbuild/loader/loader_file_public_path_css
 
-- entries_entry-!~{000}~.js => entries_entry-yprr97kA.js
+- entries/entry-!~{000}~.js => entries/entry-DpoBBbNJ.js
 - assets/image-7R51b9Yh.png
-- entries_entry.css
+- entries/entry.css
 
 # tests/esbuild/loader/loader_file_public_path_js
 
-- entries_entry-!~{000}~.js => entries_entry-ddPOprBa.js
+- entries/entry-!~{000}~.js => entries/entry-JftZY87w.js
 - assets/image-7R51b9Yh.png
 
 # tests/esbuild/loader/loader_file_relative_path_asset_names_css
 
-- entries_entry-!~{000}~.js => entries_entry-yprr97kA.js
+- entries/entry-!~{000}~.js => entries/entry-DpoBBbNJ.js
 - assets/image-7R51b9Yh.png
-- entries_entry.css
+- entries/entry.css
 
 # tests/esbuild/loader/loader_file_relative_path_asset_names_js
 
-- entries_entry-!~{000}~.js => entries_entry-ddPOprBa.js
+- entries/entry-!~{000}~.js => entries/entry-JftZY87w.js
 - assets/image-7R51b9Yh.png
 
 # tests/esbuild/loader/loader_file_relative_path_css
 
-- entries_entry-!~{000}~.js => entries_entry-yprr97kA.js
-- assets/image-7R51b9Yh.png
-- entries_entry.css
+- entries/entry-!~{000}~.js => entries/entry-DG22QWWP.js
+- entries/entry.css
+- image-DzFdYDYb.png
 
 # tests/esbuild/loader/loader_file_relative_path_js
 
-- entries_entry-!~{000}~.js => entries_entry-ddPOprBa.js
-- assets/image-7R51b9Yh.png
+- entries/entry-!~{000}~.js => entries/entry-BqrCaGqU.js
+- image-DzFdYDYb.png
 
 # tests/esbuild/loader/loader_json_common_js_and_es6
 
@@ -3098,7 +3080,7 @@ expression: output
 
 # tests/esbuild/splitting/edge_case_issue2793_without_splitting
 
-- index-!~{000}~.js => index-BG6ixNRK.js
+- index-!~{000}~.js => index-CirrTg-v.js
 
 # tests/esbuild/splitting/splitting_assign_to_local
 
@@ -3234,11 +3216,11 @@ expression: output
 
 # tests/esbuild/ts/this_inside_function_ts
 
-- entry-!~{000}~.js => entry-CTOsCL9z.js
+- entry-!~{000}~.js => entry-CXOn78BS.js
 
 # tests/esbuild/ts/this_inside_function_ts_no_bundle
 
-- entry-!~{000}~.js => entry-CTOsCL9z.js
+- entry-!~{000}~.js => entry-CXOn78BS.js
 
 # tests/esbuild/ts/this_inside_function_ts_no_bundle_use_define_for_class_fields
 
@@ -3262,15 +3244,15 @@ expression: output
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_false
 
-- entry-!~{000}~.js => entry-CKW5b48F.js
+- entry-!~{000}~.js => entry--Z7EGA-r.js
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_true
 
-- entry-!~{000}~.js => entry-CKW5b48F.js
+- entry-!~{000}~.js => entry-Dpo67aeA.js
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_true_lower
 
-- entry-!~{000}~.js => entry-CKW5b48F.js
+- entry-!~{000}~.js => entry-C7Og7e6B.js
 
 # tests/esbuild/ts/ts_const_enum_comments
 
@@ -3278,7 +3260,7 @@ expression: output
 
 # tests/esbuild/ts/ts_declare_class_fields
 
-- entry-!~{000}~.js => entry-C1RFL1sk.js
+- entry-!~{000}~.js => entry-xO_yrfHm.js
 
 # tests/esbuild/ts/ts_declare_namespace
 
@@ -3340,35 +3322,39 @@ expression: output
 
 # tests/esbuild/ts/ts_experimental_decorator_scope_issue2147
 
-- entry-!~{000}~.js => entry-CMXZovLt.js
+- entry-!~{000}~.js => entry-DU3KG-af.js
+
+# tests/esbuild/ts/ts_experimental_decorators
+
+- entry-!~{000}~.js => entry-DuhnJ2gs.js
 
 # tests/esbuild/ts/ts_experimental_decorators_keep_names
 
-- entry-!~{000}~.js => entry-CGdtW7ci.js
+- entry-!~{000}~.js => entry-1rWTB3bm.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_assign_semantics
 
-- entry-!~{000}~.js => entry-e9MymzAS.js
+- entry-!~{000}~.js => entry-Cd3Nkb0X.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_define_semantics
 
-- entry-!~{000}~.js => entry-e9MymzAS.js
+- entry-!~{000}~.js => entry-D_g_OCT0.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_methods
 
-- entry-!~{000}~.js => entry-BXlavoDv.js
+- entry-!~{000}~.js => entry-DybCY32B.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_assign_semantics
 
-- entry-!~{000}~.js => entry-C__iy0VL.js
+- entry-!~{000}~.js => entry-CXxqTr0Y.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_define_semantics
 
-- entry-!~{000}~.js => entry-C__iy0VL.js
+- entry-!~{000}~.js => entry-CemFNmKV.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_methods
 
-- entry-!~{000}~.js => entry-D8J2QjHu.js
+- entry-!~{000}~.js => entry-2kvRP5Ld.js
 
 # tests/esbuild/ts/ts_experimental_decorators_no_config
 
@@ -3452,7 +3438,7 @@ expression: output
 
 # tests/esbuild/ts/ts_minify_derived_class
 
-- entry-!~{000}~.js => entry-CoUH4S9s.js
+- entry-!~{000}~.js => entry-w6M3Q1pA.js
 
 # tests/esbuild/ts/ts_minify_enum
 

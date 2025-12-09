@@ -12,19 +12,39 @@ const fn = () => {
 };
 
 //#endregion
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 //#region keep-these.ts
-var Field = class {
-	@fn field;
-};
+let Class = class Class$1 {};
+Class = __decorate([fn], Class);
+var Field = class {};
+__decorate([fn], Field.prototype, "field", void 0);
 var Method = class {
-	@fn method() {}
+	method() {}
 };
-var StaticField = class {
-	@fn static field;
+__decorate([fn], Method.prototype, "method", null);
+var Accessor = class {
+	accessor accessor;
 };
+__decorate([fn], Accessor.prototype, "accessor", null);
+var Parameter = class {
+	foo(bar) {}
+};
+__decorate([__decorateParam(0, fn)], Parameter.prototype, "foo", null);
+var StaticField = class {};
+__decorate([fn], StaticField, "field", void 0);
 var StaticMethod = class {
-	@fn static method() {}
+	static method() {}
 };
+__decorate([fn], StaticMethod, "method", null);
+var StaticAccessor = class {
+	static accessor accessor;
+};
+__decorate([fn], StaticAccessor, "accessor", null);
+var StaticParameter = class {
+	static foo(bar) {}
+};
+__decorate([__decorateParam(0, fn)], StaticParameter, "foo", null);
 
 //#endregion
 ```

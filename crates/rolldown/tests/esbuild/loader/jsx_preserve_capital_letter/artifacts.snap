@@ -1,28 +1,17 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'react/jsx-runtime' in entry.jsx
-
-```
-
 # Assets
 
 ## entry.js
 
 ```js
-import { jsx } from "react/jsx-runtime";
-
 //#region foo.js
-var mustStartWithUpperCaseLetter = class {};
+var MustStartWithUpperCaseLetter = class {};
 
 //#endregion
 //#region entry.jsx
-console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, {}));
+console.log(<MustStartWithUpperCaseLetter />);
 
 //#endregion
 ```

@@ -1,11 +1,9 @@
 # Failed Cases
-## [ts_import_star_common_js_capture](../../../../../crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_common_js_capture/diff.md)
-  sub optimal: could reuse `ns` binding
-## [ts_import_star_common_js_no_capture](../../../../../crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_common_js_no_capture/diff.md)
-  sub optimal: could reuse `ns` binding
 # Passed Cases
 ## [ts_import_star_and_common_js](../../../../../crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_and_common_js)
 ## [ts_import_star_capture](../../../../../crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_capture)
+## [ts_import_star_common_js_capture](../../../../../crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_common_js_capture)
+## [ts_import_star_common_js_no_capture](../../../../../crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_common_js_no_capture)
 ## [ts_import_star_common_js_unused](../../../../../crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_common_js_unused)
 ## [ts_import_star_export_import_star_capture](../../../../../crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_export_import_star_capture)
 ## [ts_import_star_export_import_star_no_capture](../../../../../crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_export_import_star_no_capture)

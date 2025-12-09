@@ -1,26 +1,4 @@
 # Failed Cases
-## [import_namespace_undefined_property_empty_file](../../../../../crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_empty_file/diff.md)
-  Wrong output
-## [import_namespace_undefined_property_side_effect_free_file](../../../../../crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file/diff.md)
-  Wrong output
-## [import_star_common_js_capture](../../../../../crates/rolldown/tests/esbuild/importstar/import_star_common_js_capture/diff.md)
-  sub optimal: esbuild try to reuse `ns` variable, we always create a new one
-## [import_star_common_js_no_capture](../../../../../crates/rolldown/tests/esbuild/importstar/import_star_common_js_no_capture/diff.md)
-  sub optimal: esbuild will reuse `ns` variable
-## [import_star_common_js_unused](../../../../../crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused/diff.md)
-  sub optimal: esbuild will reuse `ns` variable
-## [namespace_import_missing_common_js](../../../../../crates/rolldown/tests/esbuild/importstar/namespace_import_missing_common_js/diff.md)
-  sub optimal: esbuild will reuse `ns` variable
-## [namespace_import_unused_missing_common_js](../../../../../crates/rolldown/tests/esbuild/importstar/namespace_import_unused_missing_common_js/diff.md)
-  sub optimal: esbuild will reuse `ns` variable
-## [re_export_star_as_external_iife](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_iife/diff.md)
-  different iife impl
-## [re_export_star_as_iife_no_bundle](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_as_iife_no_bundle/diff.md)
-  different iife impl
-## [re_export_star_external_iife](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_external_iife/diff.md)
-  Wrong impl
-## [re_export_star_iife_no_bundle](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_iife_no_bundle/diff.md)
-  Wrong impl
 # Passed Cases
 ## [export_other_as_namespace_common_js](../../../../../crates/rolldown/tests/esbuild/importstar/export_other_as_namespace_common_js)
 ## [export_other_common_js](../../../../../crates/rolldown/tests/esbuild/importstar/export_other_common_js)
@@ -39,11 +17,16 @@
 ## [import_export_other_as_namespace_common_js](../../../../../crates/rolldown/tests/esbuild/importstar/import_export_other_as_namespace_common_js)
 ## [import_export_self_as_namespace_es6](../../../../../crates/rolldown/tests/esbuild/importstar/import_export_self_as_namespace_es6)
 ## [import_export_star_ambiguous_warning](../../../../../crates/rolldown/tests/esbuild/importstar/import_export_star_ambiguous_warning)
+## [import_namespace_undefined_property_empty_file](../../../../../crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_empty_file)
+## [import_namespace_undefined_property_side_effect_free_file](../../../../../crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file)
 ## [import_of_export_star](../../../../../crates/rolldown/tests/esbuild/importstar/import_of_export_star)
 ## [import_of_export_star_of_import](../../../../../crates/rolldown/tests/esbuild/importstar/import_of_export_star_of_import)
 ## [import_self_common_js](../../../../../crates/rolldown/tests/esbuild/importstar/import_self_common_js)
 ## [import_star_and_common_js](../../../../../crates/rolldown/tests/esbuild/importstar/import_star_and_common_js)
 ## [import_star_capture](../../../../../crates/rolldown/tests/esbuild/importstar/import_star_capture)
+## [import_star_common_js_capture](../../../../../crates/rolldown/tests/esbuild/importstar/import_star_common_js_capture)
+## [import_star_common_js_no_capture](../../../../../crates/rolldown/tests/esbuild/importstar/import_star_common_js_no_capture)
+## [import_star_common_js_unused](../../../../../crates/rolldown/tests/esbuild/importstar/import_star_common_js_unused)
 ## [import_star_export_import_star_capture](../../../../../crates/rolldown/tests/esbuild/importstar/import_star_export_import_star_capture)
 ## [import_star_export_import_star_no_capture](../../../../../crates/rolldown/tests/esbuild/importstar/import_star_export_import_star_no_capture)
 ## [import_star_export_import_star_unused](../../../../../crates/rolldown/tests/esbuild/importstar/import_star_export_import_star_unused)
@@ -64,9 +47,11 @@
 ## [import_star_of_export_star_as](../../../../../crates/rolldown/tests/esbuild/importstar/import_star_of_export_star_as)
 ## [import_star_unused](../../../../../crates/rolldown/tests/esbuild/importstar/import_star_unused)
 ## [issue176](../../../../../crates/rolldown/tests/esbuild/importstar/issue176)
+## [namespace_import_missing_common_js](../../../../../crates/rolldown/tests/esbuild/importstar/namespace_import_missing_common_js)
 ## [namespace_import_missing_es6](../../../../../crates/rolldown/tests/esbuild/importstar/namespace_import_missing_es6)
 ## [namespace_import_re_export_star_missing_es6](../../../../../crates/rolldown/tests/esbuild/importstar/namespace_import_re_export_star_missing_es6)
 ## [namespace_import_re_export_star_unused_missing_es6](../../../../../crates/rolldown/tests/esbuild/importstar/namespace_import_re_export_star_unused_missing_es6)
+## [namespace_import_unused_missing_common_js](../../../../../crates/rolldown/tests/esbuild/importstar/namespace_import_unused_missing_common_js)
 ## [namespace_import_unused_missing_es6](../../../../../crates/rolldown/tests/esbuild/importstar/namespace_import_unused_missing_es6)
 ## [other_file_export_self_as_namespace_unused_es6](../../../../../crates/rolldown/tests/esbuild/importstar/other_file_export_self_as_namespace_unused_es6)
 ## [other_file_import_export_self_as_namespace_unused_es6](../../../../../crates/rolldown/tests/esbuild/importstar/other_file_import_export_self_as_namespace_unused_es6)
@@ -78,11 +63,15 @@
 ## [re_export_star_as_es6_no_bundle](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_as_es6_no_bundle)
 ## [re_export_star_as_external_common_js](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_common_js)
 ## [re_export_star_as_external_es6](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_es6)
+## [re_export_star_as_external_iife](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_as_external_iife)
+## [re_export_star_as_iife_no_bundle](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_as_iife_no_bundle)
 ## [re_export_star_common_js_no_bundle](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_common_js_no_bundle)
 ## [re_export_star_entry_point_and_inner_file](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_entry_point_and_inner_file)
 ## [re_export_star_es6_no_bundle](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_es6_no_bundle)
 ## [re_export_star_external_common_js](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_external_common_js)
 ## [re_export_star_external_es6](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_external_es6)
+## [re_export_star_external_iife](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_external_iife)
+## [re_export_star_iife_no_bundle](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_iife_no_bundle)
 ## [re_export_star_name_collision_not_ambiguous_export](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_export)
 ## [re_export_star_name_collision_not_ambiguous_import](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_name_collision_not_ambiguous_import)
 ## [re_export_star_name_shadowing_not_ambiguous](../../../../../crates/rolldown/tests/esbuild/importstar/re_export_star_name_shadowing_not_ambiguous)

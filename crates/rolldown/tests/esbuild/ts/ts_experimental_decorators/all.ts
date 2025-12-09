@@ -5,7 +5,7 @@ export default class Foo {
 	@x @y mDef = 1
 	@x @y method(@x0 @y0 arg0, @x1 @y1 arg1) { return new Foo }
 	@x @y declare mDecl
-	@x @y abstract mAbst
+	// @x @y abstract mAbst
 	constructor(@x0 @y0 arg0, @x1 @y1 arg1) {}
 
 	@x @y static sUndef

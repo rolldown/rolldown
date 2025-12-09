@@ -10,25 +10,39 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
+## MISSING_GLOBAL_NAME
+
+```text
+[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "process" in "output.globals" – guessing "process".
+
+```
+
 # Assets
 
 ## entry.js
 
 ```js
-(function(node_assert) {
+(function(process, node_assert) {
 
 // HIDDEN [rolldown:runtime]
+process = __toESM(process);
 node_assert = __toESM(node_assert);
 
+//#region shims.js
+	var init_shims = __esmMin((() => {}));
+
+//#endregion
 //#region cjs.js
 	var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
-		exports.foo = process;
+		init_shims();
+		exports.foo = process.default;
 	}));
 
 //#endregion
 //#region entry.js
-	node_assert.default.deepEqual(require_cjs(), { foo: process });
+	init_shims();
+	node_assert.default.deepEqual(require_cjs(), { foo: process.default });
 
 //#endregion
-})(node_assert);
+})(process, node_assert);
 ```

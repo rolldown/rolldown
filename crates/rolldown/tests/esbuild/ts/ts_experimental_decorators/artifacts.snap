@@ -1,43 +1,257 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Errors
+# Assets
 
-## PARSE_ERROR
+## entry.js
 
-```text
-[PARSE_ERROR] Error: Abstract properties can only appear within an abstract class.
-   ╭─[ all.ts:8:17 ]
-   │
- 8 │     @x @y abstract mAbst
-   │                    ──┬──  
-   │                      ╰──── 
-───╯
+```js
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+//#region all.ts
+var _Foo;
+let Foo$1 = class Foo$2 {
+	static {
+		_Foo = this;
+	}
+	method(arg0, arg1) {
+		return new _Foo();
+	}
+	constructor(arg0, arg1) {
+		this.mDef = 1;
+	}
+	static {
+		this.sDef = new _Foo();
+	}
+	static sMethod(arg0, arg1) {
+		return new _Foo();
+	}
+};
+__decorate([x, y], Foo$1.prototype, "mUndef", void 0);
+__decorate([x, y], Foo$1.prototype, "mDef", void 0);
+__decorate([
+	x,
+	y,
+	__decorateParam(0, x0),
+	__decorateParam(0, y0),
+	__decorateParam(1, x1),
+	__decorateParam(1, y1)
+], Foo$1.prototype, "method", null);
+__decorate([x, y], Foo$1.prototype, "mDecl", void 0);
+__decorate([x, y], Foo$1, "sUndef", void 0);
+__decorate([
+	x,
+	y,
+	__decorateParam(0, x0),
+	__decorateParam(0, y0),
+	__decorateParam(1, x1),
+	__decorateParam(1, y1)
+], Foo$1, "sMethod", null);
+__decorate([x, y], Foo$1, "mDecl", void 0);
+Foo$1 = _Foo = __decorate([
+	x.y(),
+	new y.x(),
+	__decorateParam(0, x0),
+	__decorateParam(0, y0),
+	__decorateParam(1, x1),
+	__decorateParam(1, y1)
+], Foo$1);
+var all_default = Foo$1;
 
-```
+//#endregion
+//#region all_computed.ts
+var _ref, _ref2;
+let _mDef, _xDef, _yDef, _sDef;
+var Foo = class Foo {
+	constructor() {
+		this[_mDef] = 1;
+		this[_xDef] = 2;
+	}
+	static {
+		mDecl();
+	}
+	[_ref = (mUndef(), _mDef = mDef(), method())](arg0, arg1) {
+		return new Foo();
+	}
+	static {
+		this[_yDef] = 3;
+	}
+	static {
+		this[_sDef] = new Foo();
+	}
+	static [_ref2 = (mDecl(), xUndef(), _xDef = xDef(), yUndef(), _yDef = yDef(), sUndef(), _sDef = sDef(), sMethod())](arg0, arg1) {
+		return new Foo();
+	}
+};
+__decorate([x, y], Foo.prototype, null, void 0);
+__decorate([x, y], Foo.prototype, null, void 0);
+__decorate([
+	x,
+	y,
+	__decorateParam(0, x0),
+	__decorateParam(0, y0),
+	__decorateParam(1, x1),
+	__decorateParam(1, y1)
+], Foo.prototype, _ref, null);
+__decorate([x, y], Foo.prototype, null, void 0);
+__decorate([x, y], Foo, null, void 0);
+__decorate([
+	x,
+	y,
+	__decorateParam(0, x0),
+	__decorateParam(0, y0),
+	__decorateParam(1, x1),
+	__decorateParam(1, y1)
+], Foo, _ref2, null);
+__decorate([x, y], Foo, null, void 0);
 
-## PARSE_ERROR
+//#endregion
+//#region a.ts
+var _a_class;
+let a_class = class a_class$1 {
+	static {
+		_a_class = this;
+	}
+	fn() {
+		return new _a_class();
+	}
+	static {
+		this.z = new _a_class();
+	}
+};
+a_class = _a_class = __decorate([x(() => 0), y(() => 1)], a_class);
+let a = a_class;
 
-```text
-[PARSE_ERROR] Error: Expression must be enclosed in parentheses to be used as a decorator.
-   ╭─[ all_computed.ts:1:2 ]
-   │
- 1 │ @x?.[_ + 'y']()
-   │  ───────┬──────  
-   │         ╰──────── 
-───╯
+//#endregion
+//#region b.ts
+var _b_class;
+let b_class = class b_class$1 {
+	static {
+		_b_class = this;
+	}
+	fn() {
+		return new _b_class();
+	}
+	static {
+		this.z = new _b_class();
+	}
+};
+b_class = _b_class = __decorate([x(() => 0), y(() => 1)], b_class);
+let b = b_class;
 
-```
+//#endregion
+//#region c.ts
+var _c;
+let c = class c$1 {
+	static {
+		_c = this;
+	}
+	fn() {
+		return new _c();
+	}
+	static {
+		this.z = new _c();
+	}
+};
+c = _c = __decorate([x(() => 0), y(() => 1)], c);
 
-## PARSE_ERROR
+//#endregion
+//#region d.ts
+var _d;
+let d = class d$1 {
+	static {
+		_d = this;
+	}
+	fn() {
+		return new _d();
+	}
+	static {
+		this.z = new _d();
+	}
+};
+d = _d = __decorate([x(() => 0), y(() => 1)], d);
 
-```text
-[PARSE_ERROR] Error: Invalid optional chain from new expression.
-   ╭─[ all_computed.ts:2:7 ]
-   │
- 2 │ @new y?.[_ + 'x']()
-   │       ─┬  
-   │        ╰── 
-───╯
+//#endregion
+//#region e.ts
+let _default$2 = class {};
+_default$2 = __decorate([x(() => 0), y(() => 1)], _default$2);
+var e_default = _default$2;
 
+//#endregion
+//#region f.ts
+var _f;
+let f = class f$1 {
+	static {
+		_f = this;
+	}
+	fn() {
+		return new _f();
+	}
+	static {
+		this.z = new _f();
+	}
+};
+f = _f = __decorate([x(() => 0), y(() => 1)], f);
+var f_default = f;
+
+//#endregion
+//#region g.ts
+let _default$1 = class {};
+_default$1 = __decorate([x(() => 0), y(() => 1)], _default$1);
+var g_default = _default$1;
+
+//#endregion
+//#region h.ts
+var _h;
+let h = class h$1 {
+	static {
+		_h = this;
+	}
+	fn() {
+		return new _h();
+	}
+	static {
+		this.z = new _h();
+	}
+};
+h = _h = __decorate([x(() => 0), y(() => 1)], h);
+var h_default = h;
+
+//#endregion
+//#region i.ts
+var i_class = class {};
+__decorate([x(() => 0), y(() => 1)], i_class.prototype, "foo", void 0);
+let i = i_class;
+
+//#endregion
+//#region j.ts
+var j = class {
+	foo() {}
+};
+__decorate([x(() => 0), y(() => 1)], j.prototype, "foo", null);
+
+//#endregion
+//#region k.ts
+var _default = class {
+	foo(x$1) {}
+};
+__decorate([__decorateParam(0, x(() => 0)), __decorateParam(0, y(() => 1))], _default.prototype, "foo", null);
+
+//#endregion
+//#region arguments.ts
+function dec(x$1) {}
+function fn(x$1) {
+	var _arguments$;
+	class Foo$2 {
+		[_arguments$ = arguments[0]]() {}
+	}
+	__decorate([dec(arguments[0])], Foo$2.prototype, _arguments$, null);
+	return Foo$2;
+}
+
+//#endregion
+//#region entry.js
+console.log(all_default, Foo, a, b, c, d, e_default, f_default, g_default, h_default, i, j, _default, fn);
+
+//#endregion
 ```

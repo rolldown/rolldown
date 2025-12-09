@@ -1,10 +1,8 @@
 # Failed Cases
 ## [common_js_variable_in_esm_type_module](../../../../../crates/rolldown/tests/esbuild/packagejson/common_js_variable_in_esm_type_module/diff.md)
-  redundant `__commonJS` wrapper
+  sub optimal: redundant `__commonJS` wrapper
 ## [package_json_browser_issue2002_b](../../../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_issue2002_b/diff.md)
   `sub` is not resolved
-## [package_json_browser_map_avoid_missing](../../../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_map_avoid_missing/diff.md)
-  sub optimal
 ## [package_json_disabled_type_module_issue3367](../../../../../crates/rolldown/tests/esbuild/packagejson/package_json_disabled_type_module_issue3367/diff.md)
   ignored module debug name seems not correct
 # Passed Cases
@@ -15,6 +13,7 @@
 ## [package_json_browser_index_no_ext](../../../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_index_no_ext)
 ## [package_json_browser_issue2002_a](../../../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_issue2002_a)
 ## [package_json_browser_issue2002_c](../../../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_issue2002_c)
+## [package_json_browser_map_avoid_missing](../../../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_map_avoid_missing)
 ## [package_json_browser_map_module_disabled](../../../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_map_module_disabled)
 ## [package_json_browser_map_module_to_module](../../../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_map_module_to_module)
 ## [package_json_browser_map_module_to_relative](../../../../../crates/rolldown/tests/esbuild/packagejson/package_json_browser_map_module_to_relative)

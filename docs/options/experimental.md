@@ -239,15 +239,3 @@ For a complete working example, see [examples/native-magic-string](https://githu
 
 For comprehensive documentation including API compatibility, performance benchmarks, usage examples, and common pitfalls, see [Native MagicString In-Depth Guide](/in-depth/native-magic-string).
 :::
-
-## warnSlowPlugins
-
-- **Type:** `boolean`
-- **Default:** `false`
-- **Path:** `experimental.warnSlowPlugins`
-
-When enabled, Rolldown will measure the time spent in each plugin hook. If plugins are significantly impacting build performance, a warning will be emitted listing the slow plugins with their percentage of total plugin time.
-
-:::warning
-For hooks using `ctx.resolve()` or `ctx.load()`, the reported time includes waiting for other plugins to process the request. This may overestimate that plugin's actual CPU cost.
-:::

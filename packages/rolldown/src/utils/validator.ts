@@ -568,7 +568,6 @@ const InputOptionsSchema = v.strictObject({
         }),
       ])),
       nativeMagicString: v.optional(v.boolean()),
-      warnSlowPlugins: v.optional(v.boolean()),
     }),
   ),
   transform: v.optional(TransformOptionsSchema),

@@ -1003,12 +1003,6 @@
             "boolean",
             "null"
           ]
-        },
-        "warnSlowPlugins": {
-          "type": [
-            "boolean",
-            "null"
-          ]
         }
       },
       "additionalProperties": false

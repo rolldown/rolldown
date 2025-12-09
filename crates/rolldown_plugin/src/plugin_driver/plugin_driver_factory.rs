@@ -15,6 +15,7 @@ use crate::{
   type_aliases::{IndexPluginContext, IndexPluginable},
   types::hook_timing::HookTimingCollector,
 };
+use rolldown_error::EventKindSwitcher;
 
 pub struct PluginDriverFactory {
   plugins: Vec<SharedPluginable>,
@@ -49,8 +50,8 @@ impl PluginDriverFactory {
       CONTEXT_hook_resolve_id_trigger = "manual"
     ));
 
-    // Create timing collector only if warn_slow_plugins is enabled
-    let hook_timing_collector = if options.experimental.is_warn_slow_plugins_enabled() {
+    // Create timing collector only if checks.slowPlugins is enabled
+    let hook_timing_collector = if options.checks.contains(EventKindSwitcher::SlowPlugins) {
       Some(Arc::new(HookTimingCollector::default()))
     } else {
       None

@@ -212,7 +212,6 @@ function bindingifyExperimental(
     onDemandWrapping: experimental?.onDemandWrapping,
     incrementalBuild: experimental?.incrementalBuild,
     nativeMagicString: experimental?.nativeMagicString,
-    warnSlowPlugins: experimental?.warnSlowPlugins,
   };
 }
 

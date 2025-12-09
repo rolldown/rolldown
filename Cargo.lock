@@ -3416,6 +3416,7 @@ name = "rolldown_plugin_vite_wasm_helper"
 version = "0.1.0"
 dependencies = [
  "arcstr",
+ "derive_more",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_plugin_utils",

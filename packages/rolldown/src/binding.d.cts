@@ -2425,6 +2425,14 @@ export interface BindingViteTransformPluginConfig {
 
 export interface BindingViteWasmHelperPluginConfig {
   decodedBase: string
+  v2?: BindingViteWasmHelperPluginV2Config
+}
+
+export interface BindingViteWasmHelperPluginV2Config {
+  root: string
+  isLib: boolean
+  publicDir: string
+  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
 }
 
 export interface BindingWatchOption {

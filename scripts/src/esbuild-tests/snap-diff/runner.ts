@@ -206,8 +206,10 @@ function generateStatsMarkdown(
   const { stats, details } = aggregateStats;
   let markdown = '';
 
+  const unsupportedCaseCount = Object.keys(notSupportedReasons).length;
+
   // Exclude ignored tests from ratio calculation
-  const totalForRatio = stats.total - stats.ignored;
+  const totalForRatio = stats.total - (stats.ignored - unsupportedCaseCount);
   const passed = stats.pass;
 
   markdown += `# Compatibility metric\n`;
@@ -218,7 +220,6 @@ function generateStatsMarkdown(
     ((passed / totalForRatio) * 100).toFixed(2)
   }%\n`;
 
-  const unsupportedCaseCount = Object.keys(notSupportedReasons).length;
   let totalWithoutNotSupport = totalForRatio - unsupportedCaseCount;
   markdown += `# Compatibility metric without not supported case\n`;
   markdown += `- total: ${totalWithoutNotSupport}\n`;

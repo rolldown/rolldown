@@ -3374,6 +3374,7 @@ dependencies = [
  "fast-glob",
  "owo-colors",
  "oxc_resolver",
+ "parking_lot",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_plugin_utils",

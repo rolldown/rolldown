@@ -76,6 +76,7 @@ impl From<u8> for AdditionalOptions {
 pub struct Resolvers {
   resolvers: [Resolver; RESOLVER_COUNT as usize],
   external_resolver: Arc<Resolver>,
+  lock: Arc<ResolverLock>,
 }
 
 impl Resolvers {
@@ -86,6 +87,8 @@ impl Resolvers {
   ) -> Self {
     let package_json_cache = Arc::new(PackageJsonCache::default());
 
+    let resolver_lock = Arc::new(ResolverLock::new());
+
     let base_resolver = oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions::default());
 
     let resolvers = (0..RESOLVER_COUNT)
@@ -95,6 +98,7 @@ impl Resolvers {
           base_options,
           v.into(),
           external_conditions,
+          Arc::clone(&resolver_lock),
           Arc::clone(&builtin_checker),
           Arc::clone(&package_json_cache),
         )
@@ -112,11 +116,12 @@ impl Resolvers {
       },
       AdditionalOptions { is_require: false, prefer_relative: false },
       external_conditions,
+      Arc::clone(&resolver_lock),
       Arc::clone(&builtin_checker),
       Arc::clone(&package_json_cache),
     );
 
-    Self { resolvers, external_resolver: Arc::new(external_resolver) }
+    Self { resolvers, external_resolver: Arc::new(external_resolver), lock: resolver_lock }
   }
 
   pub fn get(&self, additional_options: AdditionalOptions) -> &Resolver {
@@ -132,6 +137,7 @@ impl Resolvers {
   }
 
   pub fn clear_cache(&self) {
+    let _guard = self.lock.lock_for_clear();
     self.resolvers.iter().for_each(|v| v.clear_cache());
     self.external_resolver.clear_cache();
   }
@@ -223,6 +229,7 @@ fn u8_to_bools<const N: usize>(n: u8) -> [bool; N] {
 pub struct Resolver {
   inner: oxc_resolver::Resolver,
   inner_for_external: oxc_resolver::Resolver,
+  lock: Arc<ResolverLock>,
   built_in_checker: Arc<BuiltinChecker>,
   package_json_cache: Arc<PackageJsonCache>,
   root: PathBuf,
@@ -235,6 +242,7 @@ impl Resolver {
     base_options: &BaseOptions,
     additional_options: AdditionalOptions,
     external_conditions: &[String],
+    resolver_lock: Arc<ResolverLock>,
     built_in_checker: Arc<BuiltinChecker>,
     package_json_cache: Arc<PackageJsonCache>,
   ) -> Self {
@@ -249,6 +257,7 @@ impl Resolver {
     Self {
       inner,
       inner_for_external,
+      lock: resolver_lock,
       built_in_checker,
       package_json_cache,
       root: base_options.root.clone(),
@@ -262,6 +271,8 @@ impl Resolver {
     importer: Option<&str>,
     external: bool,
   ) -> Result<oxc_resolver::Resolution, oxc_resolver::ResolveError> {
+    let _guard = self.lock.lock_for_update();
+
     let inner_resolver = if external { &self.inner_for_external } else { &self.inner };
     let result = if let Some(importer) = importer {
       inner_resolver.resolve_file(self.root.join(importer), specifier)
@@ -486,4 +497,24 @@ fn should_dedupe(specifier: &str, dedupe: &FxHashSet<String>) -> bool {
 
   let pkg_id = get_npm_package_name(specifier).unwrap_or(clean_url(specifier));
   dedupe.contains(pkg_id)
+}
+
+#[derive(Debug)]
+pub struct ResolverLock(
+  // we should use parking_lot instead of std::sync to avoid write starvation
+  parking_lot::RwLock<()>,
+);
+
+impl ResolverLock {
+  pub fn new() -> Self {
+    Self(parking_lot::RwLock::new(()))
+  }
+
+  pub fn lock_for_update(&self) -> parking_lot::RwLockReadGuard<'_, ()> {
+    self.0.read()
+  }
+
+  pub fn lock_for_clear(&self) -> parking_lot::RwLockWriteGuard<'_, ()> {
+    self.0.write()
+  }
 }

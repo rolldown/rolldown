@@ -1,0 +1,54 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+let test = require("test");
+test = __toESM(test);
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+
+//#region mod.js
+var _7384_exports = /* @__PURE__ */ __export({ t: () => test });
+
+//#endregion
+//#region a.js
+node_assert.default.strictEqual(test.t, 1);
+
+//#endregion
+//#region b.js
+const { t } = _7384_exports;
+node_assert.default.strictEqual(t.t, 1);
+
+//#endregion
+```
+
+# Variant: [format: Esm]
+
+## Assets
+
+### main.js
+
+```js
+import * as t$1 from "test";
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+//#region mod.js
+var _7384_exports = /* @__PURE__ */ __export({ t: () => t$1 });
+
+//#endregion
+//#region a.js
+assert.strictEqual(t$1.t, 1);
+
+//#endregion
+//#region b.js
+const { t } = _7384_exports;
+assert.strictEqual(t.t, 1);
+
+//#endregion
+```

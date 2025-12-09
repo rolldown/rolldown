@@ -249,7 +249,10 @@ impl SymbolRefDb {
   pub fn find_mut(&mut self, target: SymbolRef) -> SymbolRef {
     let mut canonical = target;
     while let Some(parent) = self.get_mut(canonical).link {
-      self.get_mut(canonical).link = self.get_mut(parent).link;
+      let parent_link = self.get_mut(parent).link;
+      if let Some(grand_parent) = parent_link {
+        self.get_mut(canonical).link = Some(grand_parent);
+      }
       canonical = parent;
     }
 

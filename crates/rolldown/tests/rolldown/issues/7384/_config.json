@@ -1,0 +1,11 @@
+{
+  "config": {
+    "format": "cjs",
+    "external": ["test", "node:assert"]
+  },
+  "configVariants": [
+    {
+      "format": "esm"
+    }
+  ]
+}

@@ -139,10 +139,28 @@ impl PluginDriver {
     }
   }
 
-  /// Check if plugins are taking too much time.
-  #[inline]
-  pub fn plugins_are_slow(&self) -> bool {
-    self.hook_timing_collector.as_ref().is_some_and(|c| c.plugins_are_slow())
+  /// Get slow plugins summary if timing collection is enabled and plugins are slow.
+  /// Returns a list of (plugin_name, percentage) pairs for plugins that are above average.
+  #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
+  pub fn get_slow_plugins_info(&self) -> Option<Vec<rolldown_error::SlowPluginInfo>> {
+    const MAX_PLUGINS: usize = 5;
+    let collector = self.hook_timing_collector.as_ref()?;
+    if !collector.plugins_are_slow() {
+      return None;
+    }
+    let summary = collector.get_summary();
+    let total_nanos = summary.iter().map(|s| s.total_duration_nanos).sum();
+    (total_nanos != 0).then(|| {
+      summary
+        .iter()
+        .filter(|s| summary.len() as u64 * s.total_duration_nanos >= total_nanos)
+        .take(MAX_PLUGINS)
+        .map(|s| rolldown_error::SlowPluginInfo {
+          name: s.plugin_name.to_string(),
+          percent: (s.total_duration_nanos as f64 / total_nanos as f64 * 100.0).round() as u8,
+        })
+        .collect::<Vec<_>>()
+    })
   }
 }
 

@@ -15,7 +15,7 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use rolldown_common::{GetLocalDbMut, Module, ScanMode, SharedFileEmitter, SymbolRefDb};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
-use rolldown_error::{BuildDiagnostic, BuildResult, Severity, SlowPluginInfo};
+use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver};
 use rolldown_utils::dashmap::FxDashSet;
@@ -52,7 +52,7 @@ impl Bundle {
     }
     .await;
     self.plugin_driver.set_total_build_time(start);
-    self.emit_slow_plugins_warning(result)
+    self.append_slow_plugins_warning(result)
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
@@ -73,7 +73,7 @@ impl Bundle {
     }
     .await;
     self.plugin_driver.set_total_build_time(start);
-    self.emit_slow_plugins_warning(result)
+    self.append_slow_plugins_warning(result)
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
@@ -351,31 +351,14 @@ impl Bundle {
     }
   }
 
-  /// Emit warning if plugins are slow
-  #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
-  fn emit_slow_plugins_warning(
+  /// Append slow plugins warning to result if applicable.
+  fn append_slow_plugins_warning(
     &self,
     result: BuildResult<BundleOutput>,
   ) -> BuildResult<BundleOutput> {
     result.map(|mut output| {
-      if self.plugin_driver.plugins_are_slow() {
-        if let Some(collector) = &self.plugin_driver.hook_timing_collector {
-          let summary = collector.get_summary();
-          let total_nanos: u64 = summary.iter().map(|s| s.total_duration_nanos).sum();
-          if total_nanos > 0 {
-            const MAX_PLUGINS: usize = 5;
-            let plugins = summary
-              .iter()
-              .filter(|s| summary.len() as u64 * s.total_duration_nanos >= total_nanos)
-              .take(MAX_PLUGINS)
-              .map(|s| SlowPluginInfo {
-                name: s.plugin_name.to_string(),
-                percent: (s.total_duration_nanos as f64 / total_nanos as f64 * 100.0).round() as u8,
-              })
-              .collect::<Vec<_>>();
-            output.warnings.push(BuildDiagnostic::slow_plugins(plugins).with_severity_warning());
-          }
-        }
+      if let Some(plugins) = self.plugin_driver.get_slow_plugins_info() {
+        output.warnings.push(BuildDiagnostic::slow_plugins(plugins).with_severity_warning());
       }
       output
     })

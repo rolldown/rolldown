@@ -1774,7 +1774,6 @@ export interface BindingExperimentalOptions {
   incrementalBuild?: boolean
   transformHiresSourcemap?: boolean | 'boundary'
   nativeMagicString?: boolean
-  warnSlowPlugins?: boolean
 }
 
 export interface BindingFilterToken {

@@ -53,6 +53,10 @@ impl HookTimingCollector {
   }
 
   /// Check if plugins are taking too much time.
+  ///
+  /// Returns `true` if plugin time (total - link stage) is more than 100x the link stage time.
+  /// This works because plugins primarily run during the scan and generate stages, not the link stage.
+  /// This 100x threshold was determined by studying plugin impact on real-world projects.
   #[expect(clippy::cast_precision_loss)]
   pub(crate) fn plugins_are_slow(&self) -> bool {
     let total = self.total_build_nanos.load(Ordering::Relaxed);
@@ -73,10 +77,7 @@ impl HookTimingCollector {
         PluginTimingSummary { plugin_name: entry.value().name.clone(), total_duration_nanos }
       })
       .collect::<Vec<_>>();
-
-    // Sort by total duration descending
     summaries.sort_by(|a, b| b.total_duration_nanos.cmp(&a.total_duration_nanos));
-
     summaries
   }
 

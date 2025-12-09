@@ -117,7 +117,7 @@ impl PluginDriver {
   pub fn record_timing(&self, plugin_idx: PluginIdx, start: Option<std::time::Instant>) {
     if let (Some(collector), Some(start)) = (&self.hook_timing_collector, start) {
       #[expect(clippy::cast_possible_truncation)]
-      collector.record(plugin_idx, start.elapsed().as_nanos() as u64);
+      collector.record(plugin_idx, start.elapsed().as_micros() as u64);
     }
   }
 
@@ -126,7 +126,7 @@ impl PluginDriver {
   pub fn set_total_build_time(&self, start: Option<std::time::Instant>) {
     if let (Some(collector), Some(start)) = (&self.hook_timing_collector, start) {
       #[expect(clippy::cast_possible_truncation)]
-      collector.set_total_build_nanos(start.elapsed().as_nanos() as u64);
+      collector.set_total_build_micros(start.elapsed().as_micros() as u64);
     }
   }
 
@@ -135,12 +135,12 @@ impl PluginDriver {
   pub fn set_link_stage_time(&self, start: Option<std::time::Instant>) {
     if let (Some(collector), Some(start)) = (&self.hook_timing_collector, start) {
       #[expect(clippy::cast_possible_truncation)]
-      collector.set_link_stage_nanos(start.elapsed().as_nanos() as u64);
+      collector.set_link_stage_micros(start.elapsed().as_micros() as u64);
     }
   }
 
   /// Get slow plugins summary if timing collection is enabled and plugins are slow.
-  /// Returns a list of (plugin_name, percentage) pairs for plugins that are above average.
+  /// Returns a list of (plugin_name, percentage) pairs for plugins at or above average time.
   #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
   pub fn get_slow_plugins_info(&self) -> Option<Vec<rolldown_error::SlowPluginInfo>> {
     const MAX_PLUGINS: usize = 5;
@@ -149,15 +149,19 @@ impl PluginDriver {
       return None;
     }
     let summary = collector.get_summary();
-    let total_nanos = summary.iter().map(|s| s.total_duration_nanos).sum();
-    (total_nanos != 0).then(|| {
+    let total_micros: u64 = summary.iter().map(|s| s.total_duration_micros).sum();
+    (total_micros != 0).then(|| {
       summary
         .iter()
-        .filter(|s| summary.len() as u64 * s.total_duration_nanos >= total_nanos)
+        .filter(|s| {
+          s.total_duration_micros
+            .checked_mul(summary.len() as u64)
+            .is_none_or(|v| v >= total_micros)
+        })
         .take(MAX_PLUGINS)
         .map(|s| rolldown_error::SlowPluginInfo {
           name: s.plugin_name.to_string(),
-          percent: (s.total_duration_nanos as f64 / total_nanos as f64 * 100.0).round() as u8,
+          percent: (s.total_duration_micros as f64 / total_micros as f64 * 100.0).round() as u8,
         })
         .collect::<Vec<_>>()
     })

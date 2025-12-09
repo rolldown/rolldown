@@ -81,7 +81,7 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
       rolldown_error::EventKindSwitcher::CouldNotCleanDirectory,
       value.could_not_clean_directory.unwrap_or(true),
     );
-    flag.set(rolldown_error::EventKindSwitcher::SlowPlugins, value.slow_plugins.unwrap_or(true));
+    flag.set(rolldown_error::EventKindSwitcher::SlowPlugins, value.slow_plugins.unwrap_or(false));
     flag
   }
 }

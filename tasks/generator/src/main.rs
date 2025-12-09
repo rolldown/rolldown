@@ -5,7 +5,7 @@ use generator::generators::{
 fn main() -> anyhow::Result<()> {
   let ctx = Context { workspace_root: rolldown_workspace::root_dir() };
   let generators: Vec<Box<dyn Generator>> = vec![
-    Box::new(CheckOptionsGenerator { disabled_event: vec!["CircularDependency"] }),
+    Box::new(CheckOptionsGenerator { disabled_event: vec!["CircularDependency", "SlowPlugins"] }),
     Box::new(HookUsageGenerator),
     Box::new(RuntimeHelperGenerator),
     Box::new(OxcRuntimeHelperGenerator),

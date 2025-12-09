@@ -88,7 +88,7 @@ export interface ChecksOptions {
 
   /**
    * Whether to emit warning when detecting slow plugins
-   * @default true
+   * @default false
    */
   slowPlugins?: boolean;
 }

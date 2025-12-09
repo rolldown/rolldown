@@ -2422,7 +2422,7 @@ expression: output
 
 # tests/esbuild/loader/loader_json_prototype
 
-- entry-!~{000}~.js => entry-ErGDKV_-.js
+- entry-!~{000}~.js => entry-B3SO6C8p.js
 
 # tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413
 

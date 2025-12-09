@@ -1638,11 +1638,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
         for ele in &mut obj_expr.properties {
           let ObjectPropertyKind::ObjectProperty(prop) = ele else {
-            return None;
+            continue;
           };
-          let identifier = prop.value.as_identifier()?;
+          let Some(identifier) = prop.value.as_identifier() else {
+            continue;
+          };
           let reference_id = identifier.reference_id();
-          let symbol_id = self.scope.symbol_id_for(reference_id)?;
+          let Some(symbol_id) = self.scope.symbol_id_for(reference_id) else {
+            continue;
+          };
           let Some(replaced_expr) = json_module_inlined_prop.remove(&symbol_id) else {
             continue;
           };

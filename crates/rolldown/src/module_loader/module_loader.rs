@@ -386,6 +386,17 @@ impl<'a> ModuleLoader<'a> {
           } = *task_result;
           all_warnings.extend(warnings);
 
+          // remove importers from previous scan
+          if !self.is_full_scan
+            && let Some(previous_module) =
+              self.cache.get_snapshot().module_table.modules.get(module.idx())
+          {
+            for rec in previous_module.import_records() {
+              self.intermediate_normal_modules.importers[rec.resolved_module]
+                .retain(|v| v.importer_idx != module.idx());
+            }
+          }
+
           let mut import_records = IndexVec::with_capacity(raw_import_records.len());
           for ((rec_idx, mut raw_rec), resolved_id) in
             raw_import_records.into_iter_enumerated().zip(resolved_deps)

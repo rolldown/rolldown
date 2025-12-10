@@ -79,40 +79,9 @@ __rolldown_runtime__.applyUpdates([['parent.js', 'parent.js']]);
 
 # HMR Step 1
 
-## Code
-
-```js
-//#region parent.js
-var init_parent_0 = __rolldown_runtime__.createEsmInitializer((function() {
-	try {
-		var __rolldown_exports__ = __rolldown_runtime__.__export({
-			childValue: () => childValue,
-			parentValue: () => parentValue
-		});
-		__rolldown_runtime__.registerModule("parent.js", { exports: __rolldown_exports__ });
-		const hot_parent = __rolldown_runtime__.createModuleHotContext("parent.js");
-		const childValue = "not-child";
-		const parentValue = "parent";
-		hot_parent.accept((newMod) => {
-			const { childValue, parentValue } = newMod;
-			assert.strictEqual(parentValue, "parent");
-			assert.strictEqual(childValue, "not-child");
-		});
-	} finally {}
-}));
-
-//#endregion
-init_parent_0()
-__rolldown_runtime__.applyUpdates([['parent.js', 'parent.js']]);
-```
-
 ## Meta
 
-- update type: patch
-
-### Hmr Boundaries
-
-- boundary: parent.js, accepted_via: parent.js
+- update type: noop
 
 # HMR Step 2
 

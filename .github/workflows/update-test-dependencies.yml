@@ -39,7 +39,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: true # for create-pull-request
 
-      - name: Get latest Rollup tag on main branch
+      - name: Get latest Rollup tag on master branch
         id: get-latest-tag
         env:
           INPUT_ROLLUP_TAG: ${{ inputs.rollup_tag }}
@@ -56,7 +56,7 @@ jobs:
               exit 1
             fi
             echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_OUTPUT
-            echo "Latest rollup tag on main: $LATEST_TAG"
+            echo "Latest rollup tag on master: $LATEST_TAG"
           fi
 
       - name: Get current and target commit SHAs

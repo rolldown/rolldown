@@ -150,6 +150,16 @@ impl SymbolRefDb {
     self
   }
 
+  /// The `facade` means the symbol does not actually exist in the original AST.
+  ///
+  /// # Panics
+  /// - If the module does not exist in the symbol database.
+  #[inline]
+  pub fn is_facade_symbol(&self, refer: SymbolRef) -> bool {
+    let local_db = self.inner[refer.owner].unpack_ref();
+    local_db.ast_scopes.is_facade_symbol(refer.symbol)
+  }
+
   #[must_use]
   pub fn clone_without_scoping(&self) -> SymbolRefDb {
     let mut vec = IndexVec::with_capacity(self.inner.len());

@@ -2920,15 +2920,15 @@ expression: output
 
 # tests/esbuild/packagejson/package_json_browser_map_module_disabled
 
-- entry-!~{000}~.js => entry-CokCsc_d.js
+- entry-!~{000}~.js => entry-CHggOgfA.js
 
 # tests/esbuild/packagejson/package_json_browser_map_module_to_module
 
-- entry-!~{000}~.js => entry-EvpPQjS8.js
+- entry-!~{000}~.js => entry-H-8iPIAN.js
 
 # tests/esbuild/packagejson/package_json_browser_map_module_to_relative
 
-- entry-!~{000}~.js => entry-DntyTuc9.js
+- entry-!~{000}~.js => entry-Cck3oj_4.js
 
 # tests/esbuild/packagejson/package_json_browser_map_native_module_disabled
 
@@ -3697,7 +3697,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/module.exports_export/basic
 
-- main-!~{000}~.js => main-CspLqlXy.js
+- main-!~{000}~.js => main-aIMfrqcR.js
 
 # tests/rolldown/cjs_compat/module.exports_export/fallback
 
@@ -3705,7 +3705,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/module.exports_export/priority
 
-- main-!~{000}~.js => main-C20GJ84n.js
+- main-!~{000}~.js => main-DXIgz-eS.js
 
 # tests/rolldown/cjs_compat/module.exports_export/safely_merge_cjs_ns_only_named
 
@@ -3713,15 +3713,15 @@ expression: output
 
 # tests/rolldown/cjs_compat/module.exports_export/safely_merge_cjs_ns_with_default_import
 
-- entry-!~{000}~.js => entry-B8Kp1CX5.js
+- entry-!~{000}~.js => entry-Bzob-Jc9.js
 
 # tests/rolldown/cjs_compat/module.exports_export/safely_merge_cjs_ns_with_separate_imports
 
-- entry-!~{000}~.js => entry-B8Kp1CX5.js
+- entry-!~{000}~.js => entry-Bzob-Jc9.js
 
 # tests/rolldown/cjs_compat/module.exports_export/with_default
 
-- main-!~{000}~.js => main-BRZVVaxM.js
+- main-!~{000}~.js => main-Be3AGnoN.js
 
 # tests/rolldown/cjs_compat/multiple_circle_cjs_entries
 
@@ -4095,7 +4095,7 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/issue_4782
 
-- main-!~{000}~.js => main-DF5sqBhl.js
+- main-!~{000}~.js => main-DVMRJZMP.js
 
 # tests/rolldown/function/experimental/strict_execution_order/issue_4920
 
@@ -4654,9 +4654,9 @@ expression: output
 
 # tests/rolldown/issues/2038/b
 
-- main-!~{000}~.js => main-KDskQoqf.js
-- a-!~{003}~.js => a-BTkX_Q5o.js
-- b-!~{001}~.js => b-D50a8DC_.js
+- main-!~{000}~.js => main-DNLf3gMA.js
+- a-!~{003}~.js => a-CyLoWnp4.js
+- b-!~{001}~.js => b-BleSi3yB.js
 
 # tests/rolldown/issues/2085
 
@@ -4742,7 +4742,7 @@ expression: output
 
 # tests/rolldown/issues/3529
 
-- main-!~{000}~.js => main-DJYrbT8f.js
+- main-!~{000}~.js => main-Cv4c1paW.js
 
 # tests/rolldown/issues/3650
 
@@ -4783,8 +4783,8 @@ expression: output
 
 # tests/rolldown/issues/4289
 
-- main-!~{000}~.js => main-CReKS0AH.js
-- lib-!~{001}~.js => lib-Cz_GHFkO.js
+- main-!~{000}~.js => main-DVgsJl3r.js
+- lib-!~{001}~.js => lib-BIqPty4I.js
 
 # tests/rolldown/issues/4324
 
@@ -4906,7 +4906,7 @@ expression: output
 
 # tests/rolldown/issues/5930
 
-- main-!~{000}~.js => main-O7Kz9q6l.js
+- main-!~{000}~.js => main-1K0--uDT.js
 
 # tests/rolldown/issues/5930_1
 
@@ -5757,6 +5757,10 @@ expression: output
 - main-!~{000}~.js => main-QTbkFQwx.js
 - main-QTbkFQwx.js.map
 
+# tests/rolldown/topics/deconflict/cjs
+
+- main-!~{000}~.js => main-151ibvXL.js
+
 # tests/rolldown/topics/deconflict/complex_params_patterns
 
 - main-!~{000}~.js => main-D6zZDeU_.js
@@ -5953,7 +5957,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/if_stmt
 
-- main-!~{000}~.js => main-CjhoZbed.js
+- main-!~{000}~.js => main-SyzTiw9m.js
 
 # tests/rolldown/topics/keep_names/issue_5294
 

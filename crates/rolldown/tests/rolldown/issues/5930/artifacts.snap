@@ -18,9 +18,9 @@ var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 //#endregion
 //#region rule.js
 var require_rule = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const mod$1 = require_lib();
+	const mod = require_lib();
 	module.exports = {
-		meta: 4 + String(mod$1).length,
+		meta: 4 + String(mod).length,
 		create: function() {
 			console.log("loaded rule");
 		}

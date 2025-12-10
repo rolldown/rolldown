@@ -29,8 +29,8 @@ var init_esm = __esmMin((() => {
 //#endregion
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const esm$1 = (init_esm(), __toCommonJS(esm_exports));
-	module.exports = esm$1;
+	const esm = (init_esm(), __toCommonJS(esm_exports));
+	module.exports = esm;
 }));
 
 //#endregion

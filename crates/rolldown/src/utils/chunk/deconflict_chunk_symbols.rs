@@ -4,6 +4,7 @@ use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use arcstr::ArcStr;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleScopeSymbolIdMap, OutputFormat, TaggedSymbolRef,
+  WrapKind,
 };
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
@@ -47,7 +48,7 @@ pub fn deconflict_chunk_symbols(
       .chain(chunk.entry_level_external_module_idx.iter().copied())
       .filter_map(|idx| link_output.module_table[idx].as_external())
       .for_each(|external_module| {
-        renamer.add_symbol_in_root_scope(external_module.namespace_ref);
+        renamer.add_symbol_in_root_scope(external_module.namespace_ref, true);
       });
 
     chunk
@@ -55,7 +56,7 @@ pub fn deconflict_chunk_symbols(
       .iter()
       .filter_map(|idx| link_output.module_table[*idx].as_external())
       .for_each(|external_module| {
-        renamer.add_symbol_in_root_scope(external_module.namespace_ref);
+        renamer.add_symbol_in_root_scope(external_module.namespace_ref, true);
       });
     match chunk.entry_module_idx() {
       Some(module) => {
@@ -67,7 +68,7 @@ pub fn deconflict_chunk_symbols(
             let external_module = &link_output.module_table[rec.resolved_module]
               .as_external()
               .expect("Should be external module here");
-            renamer.add_symbol_in_root_scope(external_module.namespace_ref);
+            renamer.add_symbol_in_root_scope(external_module.namespace_ref, true);
           },
         );
       }
@@ -81,7 +82,7 @@ pub fn deconflict_chunk_symbols(
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
         |(symbol_ref, came_from_cjs)| {
           if !came_from_cjs {
-            renamer.add_symbol_in_root_scope(*symbol_ref);
+            renamer.add_symbol_in_root_scope(*symbol_ref, true);
           }
         },
       );
@@ -94,13 +95,13 @@ pub fn deconflict_chunk_symbols(
       db.classic_data.iter_enumerated().for_each(|(symbol, _)| {
         let symbol_ref = (*module, symbol).into();
         if link_output.used_symbol_refs.contains(&symbol_ref) {
-          renamer.add_symbol_in_root_scope(symbol_ref);
+          renamer.add_symbol_in_root_scope(symbol_ref, true);
         }
       });
       for symbol_id in db.ast_scopes.facade_symbol_classic_data().keys() {
         let symbol_ref = (*module, *symbol_id).into();
         if link_output.used_symbol_refs.contains(&symbol_ref) {
-          renamer.add_symbol_in_root_scope(symbol_ref);
+          renamer.add_symbol_in_root_scope(symbol_ref, true);
         }
       }
     });
@@ -115,8 +116,14 @@ pub fn deconflict_chunk_symbols(
     .filter_map(|id| link_output.module_table[id].as_normal())
     .for_each(|module| {
       if let Some(hmr_hot_ref) = module.hmr_hot_ref {
-        renamer.add_symbol_in_root_scope(hmr_hot_ref);
+        renamer.add_symbol_in_root_scope(hmr_hot_ref, true);
       }
+      let local_symbol_db = link_output.symbol_db.local_db(module.idx);
+      // Skip deconflicting top-level symbols for CJS modules since they are wrapped in a function scope
+      // and their symbols don't pollute the chunk's root scope.
+      let meta = &link_output.metas[module.idx];
+      let is_cjs_wrapped_module = matches!(meta.wrap_kind(), WrapKind::Cjs);
+
       module
         .stmt_infos
         .iter()
@@ -128,8 +135,19 @@ pub fn deconflict_chunk_symbols(
             .filter(|item| matches!(item, TaggedSymbolRef::Normal(_)))
             .copied()
         })
-        .for_each(|symbol_ref| {
-          renamer.add_symbol_in_root_scope(symbol_ref.inner());
+        .for_each(|declared_symbol| {
+          let symbol_ref = declared_symbol.inner();
+          // For CJS wrapped modules, only facade symbols need deconflicting.
+          // Facade symbols are synthetic symbols created during linking (e.g., `require_foo` wrapper,
+          // namespace objects) that don't exist in the original AST. These are rendered at the chunk's
+          // root scope and must be deconflicted. Non-facade (real AST) symbols in CJS modules are
+          // wrapped inside the `__commonJS` closure and don't pollute the chunk's root scope.
+          let needs_deconflict = if is_cjs_wrapped_module {
+            local_symbol_db.is_facade_symbol(symbol_ref.symbol)
+          } else {
+            true
+          };
+          renamer.add_symbol_in_root_scope(symbol_ref, needs_deconflict);
         });
     });
 
@@ -139,13 +157,13 @@ pub fn deconflict_chunk_symbols(
   // point to them can be resolved in runtime.
   // So we add them in the deconflict process to generate conflict-less names in this chunk.
   chunk.imports_from_other_chunks.iter().flat_map(|(_, items)| items.iter()).for_each(|item| {
-    renamer.add_symbol_in_root_scope(item.import_ref);
+    renamer.add_symbol_in_root_scope(item.import_ref, true);
   });
 
   // Similarly, symbols in `exports_to_other_chunks` need canonical names because they are rendered
   // in the chunk's export statements. We add them to the renamer to ensure they have canonical names.
   chunk.exports_to_other_chunks.keys().for_each(|export_ref| {
-    renamer.add_symbol_in_root_scope(*export_ref);
+    renamer.add_symbol_in_root_scope(*export_ref, true);
   });
 
   chunk.require_binding_names_for_other_chunks = chunk

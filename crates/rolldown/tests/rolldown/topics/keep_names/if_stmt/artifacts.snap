@@ -11,10 +11,9 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 //#region c.js
 var require_c = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	function Router$1() {}
-	__name(Router$1, "Router");
+	function Router() {}
 	module.exports = function() {
-		return { Router: Router$1 };
+		return { Router };
 	};
 }));
 

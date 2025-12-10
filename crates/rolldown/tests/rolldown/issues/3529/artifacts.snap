@@ -9,20 +9,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 //#region b.cjs
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const a$1 = require_a();
+	const a = require_a();
 	Object.defineProperty(module.exports, "b", {
 		enumerable: true,
-		get: () => () => ({ a: a$1 })
+		get: () => () => ({ a })
 	});
 }));
 
 //#endregion
 //#region a.cjs
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const b$1 = require_b();
+	const b = require_b();
 	Object.defineProperty(module.exports, "a", {
 		enumerable: true,
-		get: () => () => ({ b: b$1 })
+		get: () => () => ({ b })
 	});
 }));
 

@@ -1,0 +1,348 @@
+name: Update Test Dependencies
+
+permissions: {}
+
+on:
+  schedule:
+    # Run weekly on Tuesday at 00:00 UTC
+    - cron: '0 0 * * 2'
+  workflow_dispatch:
+    inputs:
+      rollup_tag:
+        description: 'Rollup tag to update to (optional - will fetch latest if not provided)'
+        required: false
+        type: string
+      esbuild_version:
+        description: 'Esbuild version to update to (optional - will fetch latest if not provided)'
+        required: false
+        type: string
+      test262_sha:
+        description: 'Test262 commit SHA to update to (optional - will fetch latest if not provided)'
+        required: false
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  update-rollup:
+    name: Update Rollup Submodule
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # for create-pull-request
+      pull-requests: write # for create-pull-request
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: true
+          fetch-depth: 0
+          persist-credentials: true # for create-pull-request
+
+      - name: Get latest Rollup tag on master branch
+        id: get-latest-tag
+        env:
+          INPUT_ROLLUP_TAG: ${{ inputs.rollup_tag }}
+        run: |
+          if [ -n "$INPUT_ROLLUP_TAG" ]; then
+            echo "LATEST_TAG=$INPUT_ROLLUP_TAG" >> $GITHUB_OUTPUT
+            echo "Using provided tag: $INPUT_ROLLUP_TAG"
+          else
+            cd rollup
+            git fetch --tags origin master
+            LATEST_TAG=$(git tag --sort=-version:refname --merged origin/master | head -n 1)
+            if [ -z "$LATEST_TAG" ]; then
+              echo "Error: No tags found on rollup master branch"
+              exit 1
+            fi
+            echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_OUTPUT
+            echo "Latest rollup tag on master: $LATEST_TAG"
+          fi
+
+      - name: Get current and target commit SHAs
+        id: get-shas
+        env:
+          LATEST_TAG: ${{ steps.get-latest-tag.outputs.LATEST_TAG }}
+        run: |
+          CURRENT_SHA="$(git submodule status rollup | awk '{print $1}' | sed 's/^[-+]//')"
+          echo "CURRENT_SHA=$CURRENT_SHA" >> $GITHUB_OUTPUT
+          echo "Current rollup SHA: $CURRENT_SHA"
+          cd rollup
+          TARGET_SHA="$(git rev-list -n 1 "$LATEST_TAG")"
+          echo "TARGET_SHA=$TARGET_SHA" >> $GITHUB_OUTPUT
+          echo "Target SHA for $LATEST_TAG: $TARGET_SHA"
+
+      - name: Check if update is needed
+        id: check-update
+        env:
+          CURRENT_SHA: ${{ steps.get-shas.outputs.CURRENT_SHA }}
+          TARGET_SHA: ${{ steps.get-shas.outputs.TARGET_SHA }}
+          LATEST_TAG: ${{ steps.get-latest-tag.outputs.LATEST_TAG }}
+        run: |
+          if [ "$CURRENT_SHA" = "$TARGET_SHA" ]; then
+            echo "update_needed=false" >> $GITHUB_OUTPUT
+            echo "Rollup submodule is already at $LATEST_TAG ($TARGET_SHA)"
+          else
+            echo "update_needed=true" >> $GITHUB_OUTPUT
+            echo "Update needed: $CURRENT_SHA -> $TARGET_SHA ($LATEST_TAG)"
+          fi
+
+      - name: Update rollup submodule
+        if: steps.check-update.outputs.update_needed == 'true'
+        env:
+          TARGET_SHA: ${{ steps.get-shas.outputs.TARGET_SHA }}
+        run: |
+          cd rollup
+          git checkout "$TARGET_SHA"
+          cd ..
+          git add rollup
+
+      - name: Setup Rust
+        if: steps.check-update.outputs.update_needed == 'true'
+        uses: oxc-project/setup-rust@ecabb7322a2ba5aeedb3612d2a40b86a85cee235 # v1.0.11
+        with:
+          tools: just
+          cache-key: debug-build
+
+      - if: steps.check-update.outputs.update_needed == 'true'
+        uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+
+      - name: Update rollup snapshots
+        if: steps.check-update.outputs.update_needed == 'true'
+        run: |
+          pnpm install
+          pnpm run --filter rollup-tests test --update
+
+      - name: Create Pull Request
+        if: steps.check-update.outputs.update_needed == 'true'
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
+        with:
+          commit-message: 'chore(deps): update rollup submodule for tests to ${{ steps.get-latest-tag.outputs.LATEST_TAG }}'
+          branch: update-rollup-submodule
+          branch-suffix: timestamp
+          base: main
+          title: 'chore(deps): update rollup submodule for tests to ${{ steps.get-latest-tag.outputs.LATEST_TAG }}'
+          assignees: sapphi-red
+          body: |
+            Updates the rollup submodule to the latest tag on master branch.
+
+            ## Changes
+
+            - rollup: `${{ steps.get-shas.outputs.CURRENT_SHA }}` -> `${{ steps.get-shas.outputs.TARGET_SHA }}` (${{ steps.get-latest-tag.outputs.LATEST_TAG }})
+
+            ## Links
+
+            - [Rollup ${{ steps.get-latest-tag.outputs.LATEST_TAG }} Release](https://github.com/rollup/rollup/releases/tag/${{ steps.get-latest-tag.outputs.LATEST_TAG }})
+
+            ---
+            This PR was automatically generated by the [update-test-dependencies workflow](https://github.com/rolldown/rolldown/blob/main/.github/workflows/update-test-dependencies.yml).
+
+  update-test262:
+    name: Update Test262 Submodule
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # for create-pull-request
+      pull-requests: write # for create-pull-request
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: true
+          fetch-depth: 0
+          persist-credentials: true # for create-pull-request
+
+      - name: Get latest Test262 commit SHA
+        id: get-latest-sha
+        env:
+          INPUT_TEST262_SHA: ${{ inputs.test262_sha }}
+        run: |
+          if [ -n "$INPUT_TEST262_SHA" ]; then
+            echo "LATEST_SHA=$INPUT_TEST262_SHA" >> $GITHUB_OUTPUT
+            echo "Using provided SHA: $INPUT_TEST262_SHA"
+          else
+            cd test262
+            git fetch origin main
+            LATEST_SHA="$(git rev-list -n 1 origin/main)"
+            if [ -z "$LATEST_SHA" ]; then
+              echo "Failed to get latest test262 commit"
+              exit 1
+            fi
+            echo "LATEST_SHA=$LATEST_SHA" >> $GITHUB_OUTPUT
+            echo "Latest test262 SHA: $LATEST_SHA"
+          fi
+
+      - name: Get current Test262 SHA
+        id: get-current-sha
+        run: |
+          CURRENT_SHA="$(git submodule status test262 | awk '{print $1}' | sed 's/^[-+]//')"
+          echo "CURRENT_SHA=$CURRENT_SHA" >> $GITHUB_OUTPUT
+          echo "Current test262 SHA: $CURRENT_SHA"
+
+      - name: Check if update is needed
+        id: check-update
+        env:
+          CURRENT_SHA: ${{ steps.get-current-sha.outputs.CURRENT_SHA }}
+          LATEST_SHA: ${{ steps.get-latest-sha.outputs.LATEST_SHA }}
+        run: |
+          if [ "$CURRENT_SHA" = "$LATEST_SHA" ]; then
+            echo "update_needed=false" >> $GITHUB_OUTPUT
+            echo "Test262 submodule is already at latest ($LATEST_SHA)"
+          else
+            echo "update_needed=true" >> $GITHUB_OUTPUT
+            echo "Update needed: $CURRENT_SHA -> $LATEST_SHA"
+          fi
+
+      - name: Update test262 submodule
+        if: steps.check-update.outputs.update_needed == 'true'
+        env:
+          LATEST_SHA: ${{ steps.get-latest-sha.outputs.LATEST_SHA }}
+        run: |
+          cd test262
+          git fetch origin main
+          git checkout "$LATEST_SHA"
+          cd ..
+          git add test262
+
+      - name: Setup Rust
+        if: steps.check-update.outputs.update_needed == 'true'
+        uses: oxc-project/setup-rust@ecabb7322a2ba5aeedb3612d2a40b86a85cee235 # v1.0.11
+        with:
+          tools: just
+          cache-key: debug-build
+
+      - name: Run Test
+        if: steps.check-update.outputs.update_needed == 'true'
+        run: just test-rust
+        env:
+          # Update snapshots https://insta.rs/docs/advanced/#controlling-snapshot-updating
+          INSTA_UPDATE: always
+
+      - name: Create Pull Request
+        if: steps.check-update.outputs.update_needed == 'true'
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
+        with:
+          commit-message: 'chore(deps): update test262 submodule for tests'
+          branch: update-test262-submodule
+          branch-suffix: timestamp
+          base: main
+          title: 'chore(deps): update test262 submodule for tests'
+          assignees: sapphi-red
+          body: |
+            Updates the test262 submodule to the latest commit on main branch.
+
+            ## Changes
+
+            - test262: `${{ steps.get-current-sha.outputs.CURRENT_SHA }}` -> `${{ steps.get-latest-sha.outputs.LATEST_SHA }}`
+
+            ## Links
+
+            - [Test262 Repository](https://github.com/tc39/test262)
+
+            ---
+            This PR was automatically generated by the [update-test-dependencies workflow](https://github.com/rolldown/rolldown/blob/main/.github/workflows/update-test-dependencies.yml).
+
+  update-esbuild:
+    name: Update esbuild Version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # for create-pull-request
+      pull-requests: write # for create-pull-request
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: true # for create-pull-request
+
+      - name: Get latest esbuild version
+        id: get-latest-version
+        env:
+          INPUT_ESBUILD_VERSION: ${{ inputs.esbuild_version }}
+        run: |
+          if [ -n "$INPUT_ESBUILD_VERSION" ]; then
+            echo "LATEST_VERSION=$INPUT_ESBUILD_VERSION" >> $GITHUB_OUTPUT
+            echo "Using provided version: $INPUT_ESBUILD_VERSION"
+          else
+            response=$(curl -s -H "Authorization: token ${{ github.token }}" \
+              "https://api.github.com/repos/evanw/esbuild/releases/latest")
+            LATEST_TAG=$(echo "$response" | jq -r .tag_name)
+            if [ "$LATEST_TAG" = "null" ] || [ -z "$LATEST_TAG" ]; then
+              echo "Error: Failed to fetch latest esbuild release"
+              echo "API Response: $response"
+              exit 1
+            fi
+            # Remove 'v' prefix if present (e.g., v0.27.1 -> 0.27.1)
+            LATEST_VERSION="${LATEST_TAG#v}"
+            echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_OUTPUT
+            echo "Latest esbuild version: $LATEST_VERSION"
+          fi
+
+      - name: Get current esbuild version
+        id: get-current-version
+        run: |
+          CURRENT_VERSION=$(grep "const ESBUILD_VERSION = " scripts/src/esbuild-tests/urls.ts | \
+            sed "s/.*'\([^']*\)'.*/\1/")
+          echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current esbuild version: $CURRENT_VERSION"
+
+      - name: Check if update is needed
+        id: check-update
+        env:
+          CURRENT_VERSION: ${{ steps.get-current-version.outputs.CURRENT_VERSION }}
+          LATEST_VERSION: ${{ steps.get-latest-version.outputs.LATEST_VERSION }}
+        run: |
+          if [ "$CURRENT_VERSION" = "$LATEST_VERSION" ]; then
+            echo "update_needed=false" >> $GITHUB_OUTPUT
+            echo "esbuild is already at version $LATEST_VERSION"
+          else
+            echo "update_needed=true" >> $GITHUB_OUTPUT
+            echo "Update needed: $CURRENT_VERSION -> $LATEST_VERSION"
+          fi
+
+      - name: Update esbuild version in urls.ts
+        if: steps.check-update.outputs.update_needed == 'true'
+        env:
+          CURRENT_VERSION: ${{ steps.get-current-version.outputs.CURRENT_VERSION }}
+          LATEST_VERSION: ${{ steps.get-latest-version.outputs.LATEST_VERSION }}
+        run: |
+          sed -i "s/const ESBUILD_VERSION = '$CURRENT_VERSION'/const ESBUILD_VERSION = '$LATEST_VERSION'/" \
+            scripts/src/esbuild-tests/urls.ts
+          echo "Updated ESBUILD_VERSION from $CURRENT_VERSION to $LATEST_VERSION"
+          grep "const ESBUILD_VERSION = " scripts/src/esbuild-tests/urls.ts
+
+      - name: Setup Rust
+        if: steps.check-update.outputs.update_needed == 'true'
+        uses: oxc-project/setup-rust@ecabb7322a2ba5aeedb3612d2a40b86a85cee235 # v1.0.11
+        with:
+          tools: just
+          cache-key: debug-build
+
+      - if: steps.check-update.outputs.update_needed == 'true'
+        uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+
+      - name: Generate esbuild tests
+        if: steps.check-update.outputs.update_needed == 'true'
+        run: |
+          pnpm install
+          pnpm run --filter scripts gen-esbuild-tests
+
+      - name: Create Pull Request
+        if: steps.check-update.outputs.update_needed == 'true'
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
+        with:
+          commit-message: 'chore(deps): update esbuild for tests to ${{ steps.get-latest-version.outputs.LATEST_VERSION }}'
+          branch: update-esbuild-version
+          branch-suffix: timestamp
+          base: main
+          title: 'chore(deps): update esbuild for tests to ${{ steps.get-latest-version.outputs.LATEST_VERSION }}'
+          assignees: sapphi-red
+          body: |
+            Updates the esbuild test version to the latest release.
+
+            ## Changes
+
+            - esbuild: `${{ steps.get-current-version.outputs.CURRENT_VERSION }}` -> `${{ steps.get-latest-version.outputs.LATEST_VERSION }}`
+
+            ## Links
+
+            - [esbuild v${{ steps.get-latest-version.outputs.LATEST_VERSION }} Release](https://github.com/evanw/esbuild/releases/tag/v${{ steps.get-latest-version.outputs.LATEST_VERSION }})
+
+            ---
+            This PR was automatically generated by the [update-test-dependencies workflow](https://github.com/rolldown/rolldown/blob/main/.github/workflows/update-test-dependencies.yml).

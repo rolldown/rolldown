@@ -1,0 +1,9 @@
+import { value as childValue } from './child.js'
+export { childValue }
+export const parentValue = 'parent'
+
+import.meta.hot.accept(newMod => {
+  const { childValue, parentValue } = newMod
+  assert.strictEqual(parentValue, 'parent')
+  assert.strictEqual(childValue, 'child')
+})

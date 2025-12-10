@@ -75,18 +75,7 @@ impl PreProcessEcmaAst {
     self.stats = semantic_ret.semantic.stats();
     let mut scoping = Some(semantic_ret.semantic.into_scoping());
 
-    // Step 2: Run define plugin.
-    if let Some(replace_global_define_config) = replace_global_define_config {
-      ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
-        let ret = ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone())
-          .build(scoping.take().unwrap(), program);
-        if !ret.changed {
-          scoping = Some(ret.scoping);
-        }
-      });
-    }
-
-    // Step 3: Transform TypeScript and jsx.
+    // Step 2: Transform TypeScript and jsx.
     // Note: Currently, oxc_transform supports es syntax up to ES2024 (unicode-sets-regex).
     let is_not_js = !matches!(parsed_type, OxcParseType::Js);
     if is_not_js || bundle_options.transform_options.should_transform_js() {
@@ -117,6 +106,17 @@ impl PreProcessEcmaAst {
         }
         Ok(())
       })?;
+    }
+
+    // Step 3: Run define plugin.
+    if let Some(replace_global_define_config) = replace_global_define_config {
+      ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
+        let ret = ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone())
+          .build(scoping.take().unwrap(), program);
+        if !ret.changed {
+          scoping = Some(ret.scoping);
+        }
+      });
     }
 
     // Step 4: Run inject plugin.

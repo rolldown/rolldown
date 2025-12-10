@@ -117,6 +117,7 @@ jobs:
         if: steps.check-update.outputs.update_needed == 'true'
         uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
         with:
+          token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
           commit-message: 'chore(deps): update rollup submodule for tests to ${{ steps.get-latest-tag.outputs.LATEST_TAG }}'
           branch: update-rollup-submodule
           branch-suffix: timestamp
@@ -209,6 +210,9 @@ jobs:
           tools: just
           cache-key: debug-build
 
+      - if: steps.check-update.outputs.update_needed == 'true'
+        uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+
       - name: Run Test
         if: steps.check-update.outputs.update_needed == 'true'
         run: just test-rust
@@ -220,6 +224,7 @@ jobs:
         if: steps.check-update.outputs.update_needed == 'true'
         uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
         with:
+          token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
           commit-message: 'chore(deps): update test262 submodule for tests'
           branch: update-test262-submodule
           branch-suffix: timestamp
@@ -327,6 +332,7 @@ jobs:
         if: steps.check-update.outputs.update_needed == 'true'
         uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
         with:
+          token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
           commit-message: 'chore(deps): update esbuild for tests to ${{ steps.get-latest-version.outputs.LATEST_VERSION }}'
           branch: update-esbuild-version
           branch-suffix: timestamp

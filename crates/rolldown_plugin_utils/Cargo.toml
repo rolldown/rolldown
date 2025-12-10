@@ -24,6 +24,7 @@ dashmap = { workspace = true }
 derive_more = { workspace = true }
 itertools = { workspace = true }
 memchr = { workspace = true }
+oxc = { workspace = true }
 percent-encoding = { workspace = true }
 regex = { workspace = true }
 rolldown_common = { workspace = true }

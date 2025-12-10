@@ -11,6 +11,7 @@ use oxc::transformer::Transformer;
 use rolldown_common::{BundlerTransformOptions, ModuleType};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, Severity};
 use rolldown_plugin::{HookUsage, Plugin, SharedTransformPluginContext};
+use rolldown_plugin_utils::constants::AllocatorPool;
 use rolldown_utils::{
   concat_string, pattern_filter::StringOrRegex, stabilize_id::stabilize_id, url::clean_url,
 };
@@ -60,8 +61,9 @@ impl Plugin for ViteTransformPlugin {
     let (source_type, transform_options) =
       self.get_modified_transform_options(&ctx, args.id, &cwd, extension, args.code)?;
 
-    let allocator = oxc::allocator::Allocator::default();
-    let ret = Parser::new(&allocator, args.code, source_type).parse();
+    let allocator_pool = ctx.meta().get_or_insert_default::<AllocatorPool>();
+    let allocator_guard = allocator_pool.inner.get();
+    let ret = Parser::new(&allocator_guard, args.code, source_type).parse();
     if ret.panicked || !ret.errors.is_empty() {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         ret.errors,
@@ -73,7 +75,7 @@ impl Plugin for ViteTransformPlugin {
 
     let mut program = ret.program;
     let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
-    let transformer = Transformer::new(&allocator, Path::new(args.id), &transform_options);
+    let transformer = Transformer::new(&allocator_guard, Path::new(args.id), &transform_options);
     let transformer_return = transformer.build_with_scoping(scoping, &mut program);
     if !transformer_return.errors.is_empty() {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(

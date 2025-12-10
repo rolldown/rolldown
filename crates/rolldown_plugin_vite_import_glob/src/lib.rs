@@ -12,6 +12,7 @@ use rolldown_plugin::{
   HookTransformAstArgs, HookTransformAstReturn, HookTransformOutput, HookUsage, Plugin,
   PluginContext,
 };
+use rolldown_plugin_utils::constants::AllocatorPool;
 use sugar_path::SugarPath;
 
 #[derive(Debug, Default)]
@@ -43,7 +44,8 @@ impl Plugin for ViteImportGlobPlugin {
       ModuleType::Js | ModuleType::Ts | ModuleType::Jsx | ModuleType::Tsx
     ) && args.code.contains("import.meta.glob")
     {
-      let allocator = oxc::allocator::Allocator::default();
+      let allocator_pool = ctx.meta().get_or_insert_default::<AllocatorPool>();
+      let allocator_guard = allocator_pool.inner.get();
       let source_type = match args.module_type {
         ModuleType::Js => oxc::span::SourceType::mjs(),
         ModuleType::Jsx => oxc::span::SourceType::jsx(),
@@ -51,7 +53,7 @@ impl Plugin for ViteImportGlobPlugin {
         ModuleType::Tsx => oxc::span::SourceType::tsx(),
         _ => unreachable!(),
       };
-      let parser_ret = oxc::parser::Parser::new(&allocator, args.code, source_type).parse();
+      let parser_ret = oxc::parser::Parser::new(&allocator_guard, args.code, source_type).parse();
       if parser_ret.panicked
         && let Some(err) =
           parser_ret.errors.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)

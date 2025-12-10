@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 
+use oxc::allocator::AllocatorPool as OxcAllocatorPool;
 use rolldown_common::OutputChunk;
 use rolldown_plugin::typedmap::TypedMapKey;
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
@@ -98,4 +99,14 @@ pub struct CSSUrlCache {
 
 pub struct CSSScopeToMap {
   pub inner: FxHashMap<String, (String, Option<String>)>,
+}
+
+pub struct AllocatorPool {
+  pub inner: OxcAllocatorPool,
+}
+
+impl Default for AllocatorPool {
+  fn default() -> Self {
+    Self { inner: OxcAllocatorPool::new(0) }
+  }
 }

@@ -6,7 +6,7 @@ use std::{borrow::Cow, path::PathBuf, pin::Pin, sync::Arc};
 
 use oxc::ast_visit::VisitMut;
 use rolldown_plugin::{HookUsage, Plugin};
-use rolldown_plugin_utils::{FileToUrlEnv, UsizeOrFunction};
+use rolldown_plugin_utils::{FileToUrlEnv, UsizeOrFunction, constants::AllocatorPool};
 use rolldown_utils::dataurl::is_data_url;
 use sugar_path::SugarPath as _;
 
@@ -55,11 +55,13 @@ impl Plugin for ViteAssetImportMetaUrlPlugin {
 
     let mut urls = Vec::new();
     let mut s: Option<string_wizard::MagicString> = None;
-    let allocator = oxc::allocator::Allocator::default();
 
     {
+      let allocator_pool = ctx.meta().get_or_insert_default::<AllocatorPool>();
+      let allocator_guard = allocator_pool.inner.get();
       let mut parser_ret =
-        oxc::parser::Parser::new(&allocator, args.code, oxc::span::SourceType::default()).parse();
+        oxc::parser::Parser::new(&allocator_guard, args.code, oxc::span::SourceType::default())
+          .parse();
       if parser_ret.panicked
         && let Some(err) =
           parser_ret.errors.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)

@@ -15,7 +15,7 @@ use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookTransformOutput, HookUsage, LogWithoutPlugin, Plugin};
 use rolldown_plugin_utils::{
   AssetUrlResult, ModulePreload, RenderBuiltUrl, ToOutputFilePathEnv, UsizeOrFunction,
-  constants::{CSSBundleName, HTMLProxyMapItem},
+  constants::{AllocatorPool, CSSBundleName, HTMLProxyMapItem},
   partial_encode_url_path,
 };
 use rolldown_utils::{dashmap::FxDashMap, pattern_filter::normalize_path};
@@ -215,9 +215,10 @@ impl Plugin for ViteHtmlPlugin {
                     panic!("Expected text node but received: {:#?}", node.data);
                   };
                   if utils::constant::INLINE_IMPORT.is_match(contents) {
-                    let allocator = oxc::allocator::Allocator::default();
+                    let allocator_pool = ctx.meta().get_or_insert_default::<AllocatorPool>();
+                    let allocator_guard = allocator_pool.inner.get();
                     let parser_ret = oxc::parser::Parser::new(
-                      &allocator,
+                      &allocator_guard,
                       contents,
                       oxc::span::SourceType::default(),
                     )

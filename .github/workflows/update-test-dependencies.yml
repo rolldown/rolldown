@@ -161,7 +161,7 @@ jobs:
           else
             cd test262
             git fetch origin main
-            LATEST_SHA="$(git rev-list -n 1 main)"
+            LATEST_SHA="$(git rev-list -n 1 origin/main)"
             if [ -z "$LATEST_SHA" ]; then
               echo "Failed to get latest test262 commit"
               exit 1

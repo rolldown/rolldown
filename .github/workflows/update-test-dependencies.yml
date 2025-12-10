@@ -124,7 +124,7 @@ jobs:
           title: 'chore(deps): update rollup submodule for tests to ${{ steps.get-latest-tag.outputs.LATEST_TAG }}'
           assignees: sapphi-red
           body: |
-            Updates the rollup submodule to the latest tag on main branch.
+            Updates the rollup submodule to the latest tag on master branch.
 
             ## Changes
 

@@ -549,7 +549,22 @@ async fn test262_module_code() {
     Please ensure test262 is cloned as a submodule."
   );
 
-  let test_files = discover_test_files(&module_code_dir);
+  let filter = std::env::var("TEST262_FILTER").ok();
+  let test_files: Vec<_> = discover_test_files(&module_code_dir)
+    .into_iter()
+    .filter(|test_file| {
+      // Example: TEST262_FILTER="export-default" cargo test --test integration_test262 -- --no-capture
+      filter.as_ref().is_none_or(|filter| test_file.to_string_lossy().contains(filter))
+    })
+    .collect();
+
+  if test_files.is_empty() {
+    if let Some(ref f) = filter {
+      eprintln!("No tests matched filter: {f}");
+    }
+    return;
+  }
+  eprintln!("Running {} test(s)", test_files.len());
 
   let tasks: Vec<_> = test_files
     .into_iter()
@@ -611,6 +626,12 @@ async fn test262_module_code() {
     .map(|r| r.unwrap())
     .collect::<Result<Vec<TestResult>, anyhow::Error>>()
     .unwrap();
+
+  if filter.is_some() {
+    let snapshot = generate_snapshot(&results);
+    eprintln!("{snapshot}");
+    return;
+  }
 
   validate_no_stale_pass_metadata(&results);
   validate_known_failures(&results);

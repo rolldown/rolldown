@@ -115,6 +115,23 @@ For more complex scenarios that cannot be easily expressed with data-driven appr
 
 Not much to tell here, basically just write normal Rust test code that uses Rolldown to perform bundling and verification.
 
+### test262 Integration Tests
+
+Rolldown integrates the [test262](https://github.com/tc39/test262) test suite to verify ECMAScript specification compliance. Only the test cases under `test/language/module-code` are run because other test cases should be covered on Oxc side.
+
+The git submodule should have been initialized after running `just setup` when setting up the project, but you should also run `just update-submodule` to update the submodule before running the integration tests.
+
+You can run the test262 integration tests with the following command:
+
+```shell
+TEST262_FILTER="attribute" cargo test --test integration_test262 -- --no-capture
+```
+
+- `TEST262_FILTER` allows you to filter tests by name (e.g., `"attribute"`). If you omit this environment variable, all test cases will be run. Note that the result snapshot will not be updated if the environment variable is set.
+- The `--no-capture` option displays all test output.
+
+The test cases that are expected to fail are listed in [`crates/rolldown/tests/test262_failures.json`](https://github.com/rolldown/rolldown/blob/main/crates/rolldown/tests/test262_failures.json).
+
 ## Node.js
 
 Rolldown uses [Vitest](https://vitest.dev/) for testing the Node.js side code.

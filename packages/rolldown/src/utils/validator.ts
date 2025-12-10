@@ -346,10 +346,10 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warning when detecting could not clean directory',
     ),
   ),
-  slowPlugins: v.pipe(
+  pluginTimings: v.pipe(
     v.optional(v.boolean()),
     v.description(
-      'Whether to emit warning when detecting slow plugins',
+      'Whether to emit warning when detecting plugin timings',
     ),
   ),
 });

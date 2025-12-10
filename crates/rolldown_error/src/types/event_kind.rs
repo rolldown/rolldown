@@ -47,7 +47,7 @@ pub enum EventKind {
   PluginError = 32,
   AlreadyClosedError = 33,
   CouldNotCleanDirectory = 34,
-  SlowPlugins = 35,
+  PluginTimings = 35,
 }
 
 impl Display for EventKind {
@@ -96,7 +96,7 @@ impl Display for EventKind {
       EventKind::PluginError => write!(f, "PLUGIN_ERROR"),
       EventKind::AlreadyClosedError => write!(f, "ALREADY_CLOSED"),
       EventKind::CouldNotCleanDirectory => write!(f, "COULD_NOT_CLEAN_DIRECTORY"),
-      EventKind::SlowPlugins => write!(f, "SLOW_PLUGINS"),
+      EventKind::PluginTimings => write!(f, "PLUGIN_TIMINGS"),
     }
   }
 }

@@ -1666,7 +1666,7 @@ export interface BindingChecksOptions {
   configurationFieldConflict?: boolean
   preferBuiltinFeature?: boolean
   couldNotCleanDirectory?: boolean
-  slowPlugins?: boolean
+  pluginTimings?: boolean
 }
 
 export interface BindingChunkImportMap {

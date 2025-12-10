@@ -334,21 +334,6 @@ export interface InputOptions {
    */
   transform?: TransformOptions;
   watch?: WatcherOptions | false;
-  /**
-   * # slowPlugins
-   *
-   * Enable plugin performance monitoring.
-   *
-   * When enabled, rolldown will measure the time spent in each plugin hook
-   * and emit a warning if plugins are significantly impacting build performance.
-   * The warning lists slow plugins with their percentage of total plugin time.
-   *
-   * > [!NOTE]
-   * > For hooks using `ctx.resolve()` or `ctx.load()`, the reported time includes
-   * > waiting for other plugins, which may overestimate that plugin's actual cost.
-   *
-   * @default false
-   */
   checks?: ChecksOptions;
   makeAbsoluteExternalsRelative?: MakeAbsoluteExternalsRelative;
   debug?: {

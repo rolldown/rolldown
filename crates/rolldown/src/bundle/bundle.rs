@@ -52,7 +52,7 @@ impl Bundle {
     }
     .await;
     self.plugin_driver.set_total_build_time(start);
-    self.append_slow_plugins_warning(result)
+    self.append_plugin_timings_warning(result)
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
@@ -73,7 +73,7 @@ impl Bundle {
     }
     .await;
     self.plugin_driver.set_total_build_time(start);
-    self.append_slow_plugins_warning(result)
+    self.append_plugin_timings_warning(result)
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
@@ -351,14 +351,14 @@ impl Bundle {
     }
   }
 
-  /// Append slow plugins warning to result if applicable.
-  fn append_slow_plugins_warning(
+  /// Append plugin timings warning to result if applicable.
+  fn append_plugin_timings_warning(
     &self,
     result: BuildResult<BundleOutput>,
   ) -> BuildResult<BundleOutput> {
     result.map(|mut output| {
-      if let Some(plugins) = self.plugin_driver.get_slow_plugins_info() {
-        output.warnings.push(BuildDiagnostic::slow_plugins(plugins).with_severity_warning());
+      if let Some(plugins) = self.plugin_driver.get_plugin_timings_info() {
+        output.warnings.push(BuildDiagnostic::plugin_timings(plugins).with_severity_warning());
       }
       output
     })

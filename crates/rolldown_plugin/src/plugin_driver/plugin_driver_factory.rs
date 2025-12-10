@@ -50,8 +50,8 @@ impl PluginDriverFactory {
       CONTEXT_hook_resolve_id_trigger = "manual"
     ));
 
-    // Create timing collector only if checks.slowPlugins is enabled
-    let hook_timing_collector = if options.checks.contains(EventKindSwitcher::SlowPlugins) {
+    // Create timing collector only if checks.pluginTimings is enabled
+    let hook_timing_collector = if options.checks.contains(EventKindSwitcher::PluginTimings) {
       Some(Arc::new(HookTimingCollector::default()))
     } else {
       None

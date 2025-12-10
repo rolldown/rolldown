@@ -40,6 +40,6 @@ bitflags! {
     const PluginError = 1 << 32;
     const AlreadyClosedError = 1 << 33;
     const CouldNotCleanDirectory = 1 << 34;
-    const SlowPlugins = 1 << 35;
+    const PluginTimings = 1 << 35;
   }
 }

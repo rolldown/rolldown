@@ -108,6 +108,7 @@ impl PluginDriver {
   /// Record hook timing if timing collection is enabled.
   /// Returns `Some(Instant)` if timing is enabled, `None` otherwise.
   #[inline]
+  #[must_use]
   pub fn start_timing(&self) -> Option<std::time::Instant> {
     self.hook_timing_collector.as_ref().map(|_| std::time::Instant::now())
   }
@@ -139,10 +140,10 @@ impl PluginDriver {
     }
   }
 
-  /// Get slow plugins summary if timing collection is enabled and plugins are slow.
+  /// Get plugin timings summary if timing collection is enabled and plugins are taking significant time.
   /// Returns a list of (plugin_name, percentage) pairs for plugins at or above average time.
   #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
-  pub fn get_slow_plugins_info(&self) -> Option<Vec<rolldown_error::SlowPluginInfo>> {
+  pub fn get_plugin_timings_info(&self) -> Option<Vec<rolldown_error::PluginTimingInfo>> {
     const MAX_PLUGINS: usize = 5;
     let collector = self.hook_timing_collector.as_ref()?;
     if !collector.plugins_are_slow() {
@@ -151,15 +152,12 @@ impl PluginDriver {
     let summary = collector.get_summary();
     let total_micros: u64 = summary.iter().map(|s| s.total_duration_micros).sum();
     (total_micros != 0).then(|| {
+      let avg = total_micros / summary.len() as u64;
       summary
         .iter()
-        .filter(|s| {
-          s.total_duration_micros
-            .checked_mul(summary.len() as u64)
-            .is_none_or(|v| v >= total_micros)
-        })
+        .filter(|s| s.total_duration_micros >= avg)
         .take(MAX_PLUGINS)
-        .map(|s| rolldown_error::SlowPluginInfo {
+        .map(|s| rolldown_error::PluginTimingInfo {
           name: s.plugin_name.to_string(),
           percent: (s.total_duration_micros as f64 / total_micros as f64 * 100.0).round() as u8,
         })

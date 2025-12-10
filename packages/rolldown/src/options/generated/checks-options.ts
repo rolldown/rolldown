@@ -87,8 +87,8 @@ export interface ChecksOptions {
   couldNotCleanDirectory?: boolean;
 
   /**
-   * Whether to emit warning when detecting slow plugins
-   * @default false
+   * Whether to emit warning when detecting plugin timings
+   * @default true
    */
-  slowPlugins?: boolean;
+  pluginTimings?: boolean;
 }

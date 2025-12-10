@@ -18,7 +18,7 @@ pub struct BindingChecksOptions {
   pub configuration_field_conflict: Option<bool>,
   pub prefer_builtin_feature: Option<bool>,
   pub could_not_clean_directory: Option<bool>,
-  pub slow_plugins: Option<bool>,
+  pub plugin_timings: Option<bool>,
 }
 impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
   fn from(value: BindingChecksOptions) -> Self {
@@ -37,7 +37,7 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       configuration_field_conflict: value.configuration_field_conflict,
       prefer_builtin_feature: value.prefer_builtin_feature,
       could_not_clean_directory: value.could_not_clean_directory,
-      slow_plugins: value.slow_plugins,
+      plugin_timings: value.plugin_timings,
     }
   }
 }

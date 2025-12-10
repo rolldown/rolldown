@@ -1,4 +1,80 @@
 
+## [1.0.0-beta.54] - 2025-12-10
+
+### 🚀 Features
+
+- rolldown_plugin_vite_wasm_helper: add v2 implementation (#7402) by @shulaoda
+- expose error location and context fields on JS API error objects (#7341) by @Copilot
+- add `CIRCULAR_REEXPORT` error (#7337) by @Copilot
+- support emit prebuilt chunk (#7277) by @Copilot
+
+### 🐛 Bug Fixes
+
+- path compression in symbol linking (#7392) by @IWANABETHATGUY
+- rolldown_plugin_vite_resolve: add RwLock to avoid clearing cache while resolving (#7386) by @sapphi-red
+- handle JSON prototype properties correctly (#7383) by @IWANABETHATGUY
+- preserve entry signature strict chunk merging (#7343) by @IWANABETHATGUY
+- support eliminating multiple unused dynamic imports in a single statement (#7361) by @IWANABETHATGUY
+- eliminate unreachable dynamic entry (#7356) by @IWANABETHATGUY
+- `NormalizedInputOptions#cwd` should always exists (#7360) by @hyf0
+- cli: support multiple comma-separated define arguments (#7340) by @Copilot
+- remove redundant symbol param in __reExport runtime helper (#7346) by @IWANABETHATGUY
+- always use __export for empty namespace objects when symbols enabled (#7345) by @IWANABETHATGUY
+- relax the restriction of preserveEntrySignatures when merging chunks (#7339) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- move esbuild test related scripts to `scripts/src/esbuild-tests` (#7377) by @sapphi-red
+- rewrite gen-esbuild-test in TypeScript (#7376) by @sapphi-red
+- remove unnecessary Option in current_stmt_idx (#7359) by @IWANABETHATGUY
+- move more code into chunk optimizer (#7335) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- guide: fix grammer in getting-started (#7331) by @jakeparis
+
+### 🧪 Testing
+
+- triage esbuild failed reasons (#7391) by @sapphi-red
+- change esbuild tests stats and diff generation (#7379) by @sapphi-red
+- dev: add `continuous generate hmr patch` and `debounce bundle` tests (#7368) by @hyf0
+- add new esbuild tests (#7353) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update rust crate napi to v3.7.0 (#7393) by @renovate[bot]
+- fix esbuild compatibility metrics calculation (#7390) by @sapphi-red
+- support `tsconfig: true` in rust tests (#7389) by @sapphi-red
+- hide oxc runtime in snapshots (#7388) by @sapphi-red
+- deps: update oxc to v0.102.0 (#7385) by @camc314
+- improve esbuild tests to download snapshots automatically (#7378) by @sapphi-red
+- deps: update dependency tinybench to v6 (#7371) by @renovate[bot]
+- deps: update actions/checkout action to v6 (#7370) by @renovate[bot]
+- deps: update rust crates (#7367) by @renovate[bot]
+- deps: update dependency oxlint to v1.32.0 (#7374) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.8.4 (#7373) by @renovate[bot]
+- node/test-dev-server: support using custom html file (#7357) by @hyf0
+- test: setup browser-based e2e test for `test-dev-server` (#7351) by @hyf0
+- pin pnpm to version 10.23.0 (#7369) by @IWANABETHATGUY
+- deps: update dependency rolldown-plugin-dts to v0.18.3 (#7372) by @renovate[bot]
+- deps: update github-actions (#7365) by @renovate[bot]
+- deps: update npm packages (#7366) by @renovate[bot]
+- polish the comments about `SymbolRefFlags` (#7358) by @IWANABETHATGUY
+- deps: update dependency rolldown-plugin-dts to v0.18.2 (#7355) by @renovate[bot]
+- fix esbuild test generation script (#7352) by @sapphi-red
+- apply cargo shear suggestion (#7347) by @IWANABETHATGUY
+- deps: update oxc to v11.15.0 (#7344) by @renovate[bot]
+- deps: update dependency @napi-rs/cli to v3.5.0 (#7338) by @renovate[bot]
+- deps: update dependency oxlint to v1.31.0 (#7305) by @renovate[bot]
+- update rollup-tests results (#7333) by @sapphi-red
+- update rollup-tests Rollup version (#7332) by @sapphi-red
+- add ignore config for test262 submodule (#7326) by @Copilot
+
+### ❤️ New Contributors
+
+* @jakeparis made their first contribution in [#7331](https://github.com/rolldown/rolldown/pull/7331)
+
+
 ## [1.0.0-beta.53] - 2025-12-03
 
 ### 💥 BREAKING CHANGES

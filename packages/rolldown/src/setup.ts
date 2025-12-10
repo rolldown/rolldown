@@ -1,6 +1,6 @@
 import { isMainThread } from 'node:worker_threads';
-import { onExit } from 'signal-exit';
 import { initTraceSubscriber } from './binding.cjs';
+import { onExit } from './utils/signal-exit';
 
 if (!import.meta.browserBuild && isMainThread) {
   const subscriberGuard = initTraceSubscriber();

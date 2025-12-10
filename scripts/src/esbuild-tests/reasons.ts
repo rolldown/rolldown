@@ -32,10 +32,6 @@ export const failedReasons: Record<string, string> = {
     'should rename `require` when it is appear in param position',
   'default/jsx_dev_self_edge_cases':
     'https://github.com/oxc-project/oxc/issues/16654',
-  'default/jsx_import_meta_property':
-    '`import.meta` injected by transform.jsx is not replaced with `{}`',
-  'default/jsx_import_meta_value':
-    '`import.meta` injected by transform.jsx is not replaced with `{}`',
   'default/legal_comments_inline':
     'legal comments are not kept properly (https://github.com/rolldown/rolldown/issues/7387)',
   'default/mangle_props_import_export':

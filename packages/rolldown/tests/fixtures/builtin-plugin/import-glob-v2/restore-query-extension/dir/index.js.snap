@@ -1,0 +1,7 @@
+
+//#region dir/index.js?a=1000&b=test&lang.js
+var index_js_a_1000_b_test_lang_default = "dir";
+const value = 1;
+
+//#endregion
+export { index_js_a_1000_b_test_lang_default as default, value };

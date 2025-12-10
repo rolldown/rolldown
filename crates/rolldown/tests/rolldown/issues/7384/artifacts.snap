@@ -7,17 +7,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-let test = require("test");
-test = __toESM(test);
+let _babel_types = require("@babel/types");
+_babel_types = __toESM(_babel_types);
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 
 //#region mod.js
-var _7384_exports = /* @__PURE__ */ __export({ t: () => test });
+var _7384_exports = /* @__PURE__ */ __export({ t: () => _babel_types });
 
 //#endregion
 //#region a.js
-node_assert.default.strictEqual(test.t, 1);
+node_assert.default.strictEqual(_babel_types.t, 1);
 
 //#endregion
 //#region b.js
@@ -34,7 +34,7 @@ node_assert.default.strictEqual(t.t, 1);
 ### main.js
 
 ```js
-import * as t$1 from "test";
+import * as t$1 from "@babel/types";
 import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]

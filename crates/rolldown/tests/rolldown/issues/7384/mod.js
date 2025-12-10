@@ -1,2 +1,2 @@
-import * as t from 'test';
+import * as t from '@babel/types';
 export { t };

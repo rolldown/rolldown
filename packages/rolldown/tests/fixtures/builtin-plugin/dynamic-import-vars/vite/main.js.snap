@@ -1,5 +1,5 @@
 //#region \0rolldown_dynamic_import_helper.js
-var __rolldown_dynamic_import_helper_default = (glob, path, segments) => {
+var _rolldown_dynamic_import_helper_default = (glob, path, segments) => {
 	const query = path.lastIndexOf("?");
 	const v = glob[query === -1 || query < path.lastIndexOf("/") ? path : path.slice(0, query)];
 	if (v) return typeof v === "function" ? v() : Promise.resolve(v);
@@ -11,52 +11,52 @@ var __rolldown_dynamic_import_helper_default = (glob, path, segments) => {
 //#endregion
 //#region main.js
 function basic(base) {
-	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js"), `./mods/${base}.js`, 3);
+	return _rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js"), `./mods/${base}.js`, 3);
 }
 function aliasPath(base) {
-	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js"), `./mods/${base}.js`, 3);
+	return _rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js"), `./mods/${base}.js`, 3);
 }
 function aliasPathWithMultiParentDir(base) {
-	return __rolldown_dynamic_import_helper_default(import.meta.glob("../../*.js"), `../../${base}.js`, 3);
+	return _rolldown_dynamic_import_helper_default(import.meta.glob("../../*.js"), `../../${base}.js`, 3);
 }
 function withQuery(base) {
-	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js", { query: "?foo=bar" }), `./mods/${base}.js?foo=bar`, 3);
+	return _rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js", { query: "?foo=bar" }), `./mods/${base}.js?foo=bar`, 3);
 }
 function withQueryRaw(base) {
-	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js", {
+	return _rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js", {
 		query: "?raw",
 		import: "*"
 	}), `./mods/${base}.js?raw`, 3);
 }
 function withQueryUrl(base) {
-	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js", {
+	return _rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js", {
 		query: "?url",
 		import: "*"
 	}), `./mods/${base}.js?url`, 3);
 }
 function wildcardInVariables(base) {
-	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js", {
+	return _rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js", {
 		query: "?raw",
 		import: "*"
 	}), `./mods/${base ?? foo}.js?raw`, 3);
 }
 function wildcardInUrl(base) {
-	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js", {
+	return _rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js", {
 		query: "?raw",
 		import: "*"
 	}), `./mods/${base ?? foo}.js?raw`, 3);
 }
 function wildcardInWorker(base) {
-	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mo[?]ds/*.js", {
+	return _rolldown_dynamic_import_helper_default(import.meta.glob("./mo[?]ds/*.js", {
 		query: "?worker",
 		import: "*"
 	}), `./mo?ds/${base ?? foo}.js?worker`, 3);
 }
 function withParentDirAndItself(name) {
-	return __rolldown_dynamic_import_helper_default(import.meta.glob("../dynamicImportVar/*.js"), `../dynamicImportVar/${name}.js`, 3);
+	return _rolldown_dynamic_import_helper_default(import.meta.glob("../dynamicImportVar/*.js"), `../dynamicImportVar/${name}.js`, 3);
 }
 function withMultiParentDirAndItself(name) {
-	return __rolldown_dynamic_import_helper_default(import.meta.glob("../../plugins/dynamicImportVar/*.js"), `../../plugins/dynamicImportVar/${name}.js`, 5);
+	return _rolldown_dynamic_import_helper_default(import.meta.glob("../../plugins/dynamicImportVar/*.js"), `../../plugins/dynamicImportVar/${name}.js`, 5);
 }
 
 //#endregion

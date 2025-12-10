@@ -4512,7 +4512,7 @@ expression: output
 
 # tests/rolldown/function/module_types/json/object_with_invalid_key
 
-- main-!~{000}~.js => main-CiXafVp1.js
+- main-!~{000}~.js => main-Cd2eFFvp.js
 
 # tests/rolldown/function/module_types/json/object_with_reserved_key
 
@@ -4877,9 +4877,9 @@ expression: output
 
 # tests/rolldown/issues/5557
 
-- main-!~{000}~.js => main-Bl3y5wUL.js
-- ..y-!~{003}~.js => ..y-jkw_G_n4.js
-- .x-!~{001}~.js => .x-Duu-0G9Y.js
+- main-!~{000}~.js => main-BNloYyWi.js
+- ..y-!~{003}~.js => ..y-_KEOdCtL.js
+- .x-!~{001}~.js => .x-CELjqTAn.js
 
 # tests/rolldown/issues/5696
 
@@ -5036,7 +5036,7 @@ expression: output
 
 # tests/rolldown/issues/7384
 
-- main-!~{000}~.js => main-BLSywvt1.js
+- main-!~{000}~.js => main-DG2uveK9.js
 
 # tests/rolldown/issues/duplicate_default_export
 

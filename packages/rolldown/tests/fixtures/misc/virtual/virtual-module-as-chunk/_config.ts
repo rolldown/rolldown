@@ -25,10 +25,13 @@ export default defineTest({
     ],
   },
   afterTest(output) {
-    expect(getOutputChunkNames(output)).toStrictEqual([
-      'entry.js',
-      'main.js',
-      '_module-C0Fm2lP_.js',
-    ]);
+    expect(JSON.stringify(getOutputChunkNames(output), null, 2))
+      .toMatchInlineSnapshot(`
+      "[
+        "entry.js",
+        "main.js",
+        "_module-BJs1l2IN.js"
+      ]"
+    `);
   },
 });

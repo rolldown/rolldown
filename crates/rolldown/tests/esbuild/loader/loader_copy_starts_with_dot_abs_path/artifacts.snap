@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## UNRESOLVED_ENTRY
+
+```text
+[UNRESOLVED_ENTRY] Error: Cannot resolve entry module .htaccess.
+
+```
+
+## UNRESOLVED_ENTRY
+
+```text
+[UNRESOLVED_ENTRY] Error: Cannot resolve entry module .ts.
+
+```

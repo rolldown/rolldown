@@ -3,6 +3,8 @@
   decorators should not be removed
 ## [dce_of_iife](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_iife/diff.md)
   sub optimal: IIFEs are not unwrapped
+## [dce_of_symbol_ctor_call](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_ctor_call/diff.md)
+  `new Symbol("abc")` should not be removed as it has side effects
 ## [tree_shaking_lowered_class_static_field](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field/diff.md)
   sub optimal: REMOVE_ME class can be removed
 ## [tree_shaking_react_elements](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_react_elements/diff.md)
@@ -120,10 +122,6 @@
 ## [tree_shaking_no_bundle_iife](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_no_bundle_iife)
 ## [tree_shaking_object_property](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_object_property)
 # Ignored Cases
-## [dce_of_symbol_ctor_call](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_ctor_call)
-  TODO
-## [dead_code_inside_unused_cases](../../../../../crates/rolldown/tests/esbuild/dce/dead_code_inside_unused_cases)
-  TODO
 ## [package_json_side_effects_array_keep_main_implicit_main](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main)
   this is a hacky behavior of esbuild, https://github.com/evanw/esbuild/commit/a766bdff31634c6ba3c659055632588f41416ef5
 ## [package_json_side_effects_array_keep_module_implicit_main](../../../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main)
@@ -133,3 +131,5 @@
 ## [remove_unused_no_side_effects_tagged_templates](../../../../../crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates)
   https://github.com/javascript-compiler-hints/compiler-notations-spec/issues/8
 # Ignored Cases (not supported)
+## [dead_code_inside_unused_cases](../../../../../crates/rolldown/tests/esbuild/dce/dead_code_inside_unused_cases)
+  dce inside unused switch cases is not supported

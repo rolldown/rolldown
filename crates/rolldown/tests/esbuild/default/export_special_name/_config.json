@@ -3,11 +3,9 @@
     "input": [
       {
         "name": "entry",
-        "import": "entry.css"
+        "import": "entry.mjs"
       }
     ],
-    "moduleTypes": {
-      "": "css"
-    }
+    "format": "cjs"
   }
 }

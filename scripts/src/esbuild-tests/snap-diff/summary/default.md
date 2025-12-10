@@ -11,10 +11,16 @@
   rejected due to https://github.com/rolldown/rolldown/issues/7009, also sub optimal: eval in `test4` param position don't need to be renamed
 ## [export_forms_with_minify_identifiers_and_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle/diff.md)
   sub optimal: should not generate duplicate export binding
+## [export_special_name](../../../../../crates/rolldown/tests/esbuild/default/export_special_name/diff.md)
+  assigning __proto__ should not be done
+## [export_special_name_bundle](../../../../../crates/rolldown/tests/esbuild/default/export_special_name_bundle/diff.md)
+  { __proto__: ... } should be { ["__proto__"]: ... }
 ## [external_es6_converted_to_common_js](../../../../../crates/rolldown/tests/esbuild/default/external_es6_converted_to_common_js/diff.md)
   sub optimal: redundant `import` statements
 ## [false_require](../../../../../crates/rolldown/tests/esbuild/default/false_require/diff.md)
   should rename `require` when it is appear in param position
+## [jsx_dev_self_edge_cases](../../../../../crates/rolldown/tests/esbuild/default/jsx_dev_self_edge_cases/diff.md)
+  https://github.com/oxc-project/oxc/issues/16654
 ## [jsx_import_meta_property](../../../../../crates/rolldown/tests/esbuild/default/jsx_import_meta_property/diff.md)
   `import.meta` injected by transform.jsx is not replaced with `{}`
 ## [jsx_import_meta_value](../../../../../crates/rolldown/tests/esbuild/default/jsx_import_meta_value/diff.md)
@@ -46,6 +52,8 @@
 ## [const_with_let](../../../../../crates/rolldown/tests/esbuild/default/const_with_let)
 ## [const_with_let_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/const_with_let_no_bundle)
 ## [const_with_let_no_mangle](../../../../../crates/rolldown/tests/esbuild/default/const_with_let_no_mangle)
+## [decorator_printing_cjs](../../../../../crates/rolldown/tests/esbuild/default/decorator_printing_cjs)
+## [decorator_printing_esm](../../../../../crates/rolldown/tests/esbuild/default/decorator_printing_esm)
 ## [define_assign_warning](../../../../../crates/rolldown/tests/esbuild/default/define_assign_warning)
 ## [define_infinite_loop_issue2407](../../../../../crates/rolldown/tests/esbuild/default/define_infinite_loop_issue2407)
 ## [define_optional_chain](../../../../../crates/rolldown/tests/esbuild/default/define_optional_chain)
@@ -99,6 +107,7 @@
 ## [inject_with_define](../../../../../crates/rolldown/tests/esbuild/default/inject_with_define)
 ## [jsx_automatic_imports_common_js](../../../../../crates/rolldown/tests/esbuild/default/jsx_automatic_imports_common_js)
 ## [jsx_automatic_imports_es6](../../../../../crates/rolldown/tests/esbuild/default/jsx_automatic_imports_es6)
+## [jsx_constant_fragments](../../../../../crates/rolldown/tests/esbuild/default/jsx_constant_fragments)
 ## [jsx_imports_common_js](../../../../../crates/rolldown/tests/esbuild/default/jsx_imports_common_js)
 ## [jsx_imports_es6](../../../../../crates/rolldown/tests/esbuild/default/jsx_imports_es6)
 ## [jsx_this_property_common_js](../../../../../crates/rolldown/tests/esbuild/default/jsx_this_property_common_js)
@@ -200,6 +209,7 @@
 ## [this_inside_function](../../../../../crates/rolldown/tests/esbuild/default/this_inside_function)
 ## [this_outside_function](../../../../../crates/rolldown/tests/esbuild/default/this_outside_function)
 ## [this_undefined_warning_esm](../../../../../crates/rolldown/tests/esbuild/default/this_undefined_warning_esm)
+## [this_with_es6_syntax](../../../../../crates/rolldown/tests/esbuild/default/this_with_es6_syntax)
 ## [to_esm_wrapper_omission](../../../../../crates/rolldown/tests/esbuild/default/to_esm_wrapper_omission)
 ## [top_level_await_allowed_import_without_splitting](../../../../../crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_without_splitting)
 ## [top_level_await_cjs_dead_branch](../../../../../crates/rolldown/tests/esbuild/default/top_level_await_cjs_dead_branch)
@@ -224,30 +234,16 @@
 ## [warn_common_js_exports_in_esm_convert](../../../../../crates/rolldown/tests/esbuild/default/warn_common_js_exports_in_esm_convert)
 ## [with_statement_tainting_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/with_statement_tainting_no_bundle)
 # Ignored Cases
-## [call_import_namespace_warning](../../../../../crates/rolldown/tests/esbuild/default/call_import_namespace_warning)
-  TODO
-## [decorator_printing_cjs](../../../../../crates/rolldown/tests/esbuild/default/decorator_printing_cjs)
-  TODO
-## [decorator_printing_esm](../../../../../crates/rolldown/tests/esbuild/default/decorator_printing_esm)
-  TODO
 ## [define_import_meta_es5](../../../../../crates/rolldown/tests/esbuild/default/define_import_meta_es5)
   target: 'es5' is not supported
 ## [entry_names_no_slash_after_dir](../../../../../crates/rolldown/tests/esbuild/default/entry_names_no_slash_after_dir)
-  TODO
+  irrelevant: Rolldown does not have [dir] placeholder for `entryFileNames`
 ## [entry_names_non_portable_character](../../../../../crates/rolldown/tests/esbuild/default/entry_names_non_portable_character)
-  TODO
-## [export_special_name](../../../../../crates/rolldown/tests/esbuild/default/export_special_name)
-  TODO
-## [export_special_name_bundle](../../../../../crates/rolldown/tests/esbuild/default/export_special_name_bundle)
-  TODO
+  limitation of test infra, the test may hard to pass in CI
 ## [import_abs_path_as_dir](../../../../../crates/rolldown/tests/esbuild/default/import_abs_path_as_dir)
   limitation of test infra, the test may hard to pass in CI
 ## [import_abs_path_as_file](../../../../../crates/rolldown/tests/esbuild/default/import_abs_path_as_file)
   limitation of test infra, the test may hard to pass in CI
-## [import_with_hash_parameter](../../../../../crates/rolldown/tests/esbuild/default/import_with_hash_parameter)
-  TODO
-## [import_with_query_parameter](../../../../../crates/rolldown/tests/esbuild/default/import_with_query_parameter)
-  TODO
 ## [inject_duplicate](../../../../../crates/rolldown/tests/esbuild/default/inject_duplicate)
   inject feature is aligned with `@rollup/plugin-inject` and doesn't support injecting source file directly
 ## [inject_import_order](../../../../../crates/rolldown/tests/esbuild/default/inject_import_order)
@@ -260,35 +256,29 @@
   Rolldown replaces the function it self in `inject files`; this behavior aligns with `@rollup/plugin-inject`
 ## [inject_with_string_export_name_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/inject_with_string_export_name_no_bundle)
   Rolldown replaces the function it self in `inject files`; this behavior aligns with `@rollup/plugin-inject`
-## [jsx_constant_fragments](../../../../../crates/rolldown/tests/esbuild/default/jsx_constant_fragments)
-  TODO
-## [jsx_dev_self_edge_cases](../../../../../crates/rolldown/tests/esbuild/default/jsx_dev_self_edge_cases)
-  TODO
 ## [line_limit_minified](../../../../../crates/rolldown/tests/esbuild/default/line_limit_minified)
-  TODO
+  irrelevant: lineLimit option will not be supported
 ## [line_limit_not_minified](../../../../../crates/rolldown/tests/esbuild/default/line_limit_not_minified)
-  TODO
-## [mangle_props_jsx_transform_namespace](../../../../../crates/rolldown/tests/esbuild/default/mangle_props_jsx_transform_namespace)
-  TODO
-## [mangle_props_type_script_features](../../../../../crates/rolldown/tests/esbuild/default/mangle_props_type_script_features)
-  TODO
-## [minify_nested_labels_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/minify_nested_labels_no_bundle)
-  TODO
+  irrelevant: lineLimit option will not be supported
 ## [package_alias](../../../../../crates/rolldown/tests/esbuild/default/package_alias)
   resolve alias behavior difference
 ## [package_alias_match_longest](../../../../../crates/rolldown/tests/esbuild/default/package_alias_match_longest)
   resolve alias behavior difference
 ## [quoted_property_mangle](../../../../../crates/rolldown/tests/esbuild/default/quoted_property_mangle)
   covered by minifier
-## [this_with_es6_syntax](../../../../../crates/rolldown/tests/esbuild/default/this_with_es6_syntax)
-  TODO
 ## [warnings_inside_node_modules](../../../../../crates/rolldown/tests/esbuild/default/warnings_inside_node_modules)
   resolve alias behavior difference
 # Ignored Cases (not supported)
+## [call_import_namespace_warning](../../../../../crates/rolldown/tests/esbuild/default/call_import_namespace_warning)
+  warning not implemented
 ## [comment_preservation_import_assertions](../../../../../crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions)
   import attributes is not supported
 ## [conditional_require_resolve](../../../../../crates/rolldown/tests/esbuild/default/conditional_require_resolve)
   converting conditional `require.resolve` is not supported
+## [import_with_hash_parameter](../../../../../crates/rolldown/tests/esbuild/default/import_with_hash_parameter)
+  stripping hash parameter is not supported
+## [import_with_query_parameter](../../../../../crates/rolldown/tests/esbuild/default/import_with_query_parameter)
+  stripping query parameter is not supported
 ## [legal_comments_avoid_slash_tag_end_of_file](../../../../../crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file)
   escaping </style> in CSS is not supported
 ## [legal_comments_avoid_slash_tag_external](../../../../../crates/rolldown/tests/esbuild/default/legal_comments_avoid_slash_tag_external)
@@ -315,12 +305,18 @@
   `legalComments: 'eof'` is not supported
 ## [legal_comments_none](../../../../../crates/rolldown/tests/esbuild/default/legal_comments_none)
   `legalComments: 'none'` is not supported for CSS files
+## [mangle_props_jsx_transform_namespace](../../../../../crates/rolldown/tests/esbuild/default/mangle_props_jsx_transform_namespace)
+  mangle props is not supported by oxc minifier
+## [mangle_props_type_script_features](../../../../../crates/rolldown/tests/esbuild/default/mangle_props_type_script_features)
+  mangle props is not supported by oxc minifier
 ## [metafile_import_with_type_json](../../../../../crates/rolldown/tests/esbuild/default/metafile_import_with_type_json)
   import attributes is not supported
 ## [metafile_various_cases](../../../../../crates/rolldown/tests/esbuild/default/metafile_various_cases)
   copy loader is not supported
 ## [metafile_very_long_external_paths](../../../../../crates/rolldown/tests/esbuild/default/metafile_very_long_external_paths)
   copy loader is not supported
+## [minify_nested_labels_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/minify_nested_labels_no_bundle)
+  label mangling is not supported by oxc minifier
 ## [output_for_assert_type_json](../../../../../crates/rolldown/tests/esbuild/default/output_for_assert_type_json)
   import attributes is not supported
 ## [require_and_dynamic_import_invalid_template](../../../../../crates/rolldown/tests/esbuild/default/require_and_dynamic_import_invalid_template)

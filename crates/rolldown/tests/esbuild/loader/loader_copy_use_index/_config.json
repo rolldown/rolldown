@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "Users_user_project_src_index",
+        "import": "Users/user/project/src/index.copy"
+      }
+    ],
+    "moduleTypes": {
+    }
+  },
+  "expectExecuted": false,
+  "expectError": true // TODO: Remove this line after supporting copy loader/module type.
+}

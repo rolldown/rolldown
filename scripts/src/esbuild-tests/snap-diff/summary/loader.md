@@ -3,6 +3,8 @@
   mime type should be `data:text/plain`
 ## [loader_file_one_source_two_different_output_paths_css](../../../../../crates/rolldown/tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css/diff.md)
   generate wrong output when css as entry and has shared css
+## [loader_text_utf8_bom](../../../../../crates/rolldown/tests/esbuild/loader/loader_text_utf8_bom/diff.md)
+  UTF8 BOM should be stripped
 # Passed Cases
 ## [auto_detect_mime_type_from_extension](../../../../../crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension)
 ## [empty_loader_js](../../../../../crates/rolldown/tests/esbuild/loader/empty_loader_js)
@@ -22,6 +24,7 @@
 ## [loader_data_url_text_java_script](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_java_script)
 ## [loader_data_url_text_java_script_plus_character](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_text_java_script_plus_character)
 ## [loader_data_url_unknown_mime](../../../../../crates/rolldown/tests/esbuild/loader/loader_data_url_unknown_mime)
+## [loader_file](../../../../../crates/rolldown/tests/esbuild/loader/loader_file)
 ## [loader_file_common_js_and_es6](../../../../../crates/rolldown/tests/esbuild/loader/loader_file_common_js_and_es6)
 ## [loader_file_ext_path_asset_names_js](../../../../../crates/rolldown/tests/esbuild/loader/loader_file_ext_path_asset_names_js)
 ## [loader_file_multiple_no_collision](../../../../../crates/rolldown/tests/esbuild/loader/loader_file_multiple_no_collision)
@@ -43,41 +46,29 @@
 ## [require_custom_extension_string](../../../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_string)
 ## [with_type_json_override_loader_glob](../../../../../crates/rolldown/tests/esbuild/loader/with_type_json_override_loader_glob)
 # Ignored Cases
-## [empty_loader_css](../../../../../crates/rolldown/tests/esbuild/loader/empty_loader_css)
-  TODO
-## [extensionless_loader_css](../../../../../crates/rolldown/tests/esbuild/loader/extensionless_loader_css)
-  TODO
-## [loader_bundle_with_unknown_import_attributes_and_copy_loader](../../../../../crates/rolldown/tests/esbuild/loader/loader_bundle_with_unknown_import_attributes_and_copy_loader)
-  TODO
-## [loader_copy_entry_point_advanced](../../../../../crates/rolldown/tests/esbuild/loader/loader_copy_entry_point_advanced)
-  TODO
-## [loader_copy_explicit_output_file](../../../../../crates/rolldown/tests/esbuild/loader/loader_copy_explicit_output_file)
-  TODO
-## [loader_copy_starts_with_dot_abs_path](../../../../../crates/rolldown/tests/esbuild/loader/loader_copy_starts_with_dot_abs_path)
-  TODO
-## [loader_copy_starts_with_dot_rel_path](../../../../../crates/rolldown/tests/esbuild/loader/loader_copy_starts_with_dot_rel_path)
-  TODO
-## [loader_copy_use_index](../../../../../crates/rolldown/tests/esbuild/loader/loader_copy_use_index)
-  TODO
-## [loader_file](../../../../../crates/rolldown/tests/esbuild/loader/loader_file)
-  TODO
-## [loader_file_with_query_parameter](../../../../../crates/rolldown/tests/esbuild/loader/loader_file_with_query_parameter)
-  TODO
-## [loader_from_extension_with_query_parameter](../../../../../crates/rolldown/tests/esbuild/loader/loader_from_extension_with_query_parameter)
-  TODO
 ## [loader_inline_source_map_absolute_path_issue4075_unix](../../../../../crates/rolldown/tests/esbuild/loader/loader_inline_source_map_absolute_path_issue4075_unix)
-  TODO
+  limitation of test infra, the test may hard to pass in CI
 ## [loader_inline_source_map_absolute_path_issue4075_windows](../../../../../crates/rolldown/tests/esbuild/loader/loader_inline_source_map_absolute_path_issue4075_windows)
-  TODO
-## [loader_text_utf8_bom](../../../../../crates/rolldown/tests/esbuild/loader/loader_text_utf8_bom)
-  TODO
-## [with_type_bytes_override_loader](../../../../../crates/rolldown/tests/esbuild/loader/with_type_bytes_override_loader)
-  TODO
-## [with_type_bytes_override_loader_glob](../../../../../crates/rolldown/tests/esbuild/loader/with_type_bytes_override_loader_glob)
-  TODO
+  limitation of test infra, the test may hard to pass in CI
 # Ignored Cases (not supported)
+## [empty_loader_css](../../../../../crates/rolldown/tests/esbuild/loader/empty_loader_css)
+  empty loader is not supported in CSS files
+## [extensionless_loader_css](../../../../../crates/rolldown/tests/esbuild/loader/extensionless_loader_css)
+  extension less moduleTypes is not supported
 ## [loader_bundle_with_import_attributes](../../../../../crates/rolldown/tests/esbuild/loader/loader_bundle_with_import_attributes)
   import attributes is not supported
+## [loader_bundle_with_unknown_import_attributes_and_copy_loader](../../../../../crates/rolldown/tests/esbuild/loader/loader_bundle_with_unknown_import_attributes_and_copy_loader)
+  copy loader is not supported
+## [loader_copy_entry_point_advanced](../../../../../crates/rolldown/tests/esbuild/loader/loader_copy_entry_point_advanced)
+  copy loader is not supported
+## [loader_copy_explicit_output_file](../../../../../crates/rolldown/tests/esbuild/loader/loader_copy_explicit_output_file)
+  copy loader is not supported
+## [loader_copy_starts_with_dot_abs_path](../../../../../crates/rolldown/tests/esbuild/loader/loader_copy_starts_with_dot_abs_path)
+  copy loader is not supported
+## [loader_copy_starts_with_dot_rel_path](../../../../../crates/rolldown/tests/esbuild/loader/loader_copy_starts_with_dot_rel_path)
+  copy loader is not supported
+## [loader_copy_use_index](../../../../../crates/rolldown/tests/esbuild/loader/loader_copy_use_index)
+  copy loader is not supported
 ## [loader_copy_with_bundle_entry_point](../../../../../crates/rolldown/tests/esbuild/loader/loader_copy_with_bundle_entry_point)
   copy loader is not supported
 ## [loader_copy_with_bundle_from_css](../../../../../crates/rolldown/tests/esbuild/loader/loader_copy_with_bundle_from_css)
@@ -106,5 +97,13 @@
   bug?: file reference URL difference
 ## [loader_file_relative_path_js](../../../../../crates/rolldown/tests/esbuild/loader/loader_file_relative_path_js)
   bug?: file reference URL difference
+## [loader_file_with_query_parameter](../../../../../crates/rolldown/tests/esbuild/loader/loader_file_with_query_parameter)
+  stripping query parameter is not supported
+## [loader_from_extension_with_query_parameter](../../../../../crates/rolldown/tests/esbuild/loader/loader_from_extension_with_query_parameter)
+  stripping query parameter is not supported
+## [with_type_bytes_override_loader](../../../../../crates/rolldown/tests/esbuild/loader/with_type_bytes_override_loader)
+  import attributes is not supported
+## [with_type_bytes_override_loader_glob](../../../../../crates/rolldown/tests/esbuild/loader/with_type_bytes_override_loader_glob)
+  glob is not supported
 ## [with_type_json_override_loader](../../../../../crates/rolldown/tests/esbuild/loader/with_type_json_override_loader)
   import attributes is not supported

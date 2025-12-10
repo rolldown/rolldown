@@ -3,11 +3,13 @@
     "input": [
       {
         "name": "entry",
-        "import": "entry.js"
+        "import": "entry.jsx"
       }
     ],
-    "moduleTypes": {
-      ".txt": "asset"
+    "transform": {
+      "jsx": {
+        "runtime": "classic"
+      }
     }
   },
   "expectExecuted": false

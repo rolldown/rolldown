@@ -7,8 +7,7 @@
       }
     ],
     "moduleTypes": {
-      ".txt": "asset"
     }
   },
-  "expectExecuted": false
+  "expectError": true // TODO: Remove this line after supporting copy loader/module type.
 }

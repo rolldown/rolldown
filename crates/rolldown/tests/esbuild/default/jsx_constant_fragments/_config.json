@@ -6,8 +6,11 @@
         "import": "entry.js"
       }
     ],
-    "moduleTypes": {
-      ".txt": "asset"
+    "transform": {
+      "jsx": {
+        "runtime": "classic",
+        "pragmaFrag": "\"]\""
+      }
     }
   },
   "expectExecuted": false

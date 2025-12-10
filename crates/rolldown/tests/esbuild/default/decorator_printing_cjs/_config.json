@@ -6,9 +6,8 @@
         "import": "entry.js"
       }
     ],
-    "moduleTypes": {
-      ".txt": "asset"
-    }
+    "format": "cjs",
+    "shimMissingExports": true
   },
   "expectExecuted": false
 }

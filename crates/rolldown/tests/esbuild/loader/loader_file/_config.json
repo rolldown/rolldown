@@ -7,7 +7,7 @@
       }
     ],
     "moduleTypes": {
-      ".txt": "asset"
+      ".svg": "asset"
     }
   },
   "expectExecuted": false

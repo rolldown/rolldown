@@ -6,9 +6,7 @@
         "import": "entry.js"
       }
     ],
-    "moduleTypes": {
-      ".txt": "asset"
-    }
+    "minify": true
   },
   "expectExecuted": false
 }

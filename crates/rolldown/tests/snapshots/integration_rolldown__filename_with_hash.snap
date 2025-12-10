@@ -104,6 +104,10 @@ expression: output
 
 - entry_js-!~{000}~.js => entry_js-GP_-VWxw.js
 
+# tests/esbuild/dce/dce_of_symbol_ctor_call
+
+- entry-!~{000}~.js => entry-DYH4Y3A-.js
+
 # tests/esbuild/dce/dce_of_symbol_for_call
 
 - entry_js-!~{000}~.js => entry_js-DuvAqYaa.js
@@ -607,6 +611,15 @@ expression: output
 
 - src_entry-!~{000}~.js => src_entry-kq2AOPMO.js
 
+# tests/esbuild/default/call_import_namespace_warning
+
+- js-!~{000}~.js => js-BkmvcWIU.js
+- jsx-a-!~{003}~.js => jsx-a-MSjayW4i.js
+- jsx-b-!~{004}~.js => jsx-b-DJnt3XcL.js
+- jsx-c-!~{005}~.js => jsx-c-CrX-9iQz.js
+- jsx-components-!~{002}~.js => jsx-components-Bp7sag7O.js
+- ts-!~{001}~.js => ts-C1gGd-vc.js
+
 # tests/esbuild/default/char_freq_ignore_comments
 
 - a-!~{000}~.js => a-Chtha0Wn.js
@@ -654,6 +667,14 @@ expression: output
 # tests/esbuild/default/const_with_let_no_mangle
 
 - entry-!~{000}~.js => entry-CErdOT9E.js
+
+# tests/esbuild/default/decorator_printing_cjs
+
+- entry-!~{000}~.js => entry-Dc3CTA_w.js
+
+# tests/esbuild/default/decorator_printing_esm
+
+- entry-!~{000}~.js => entry-Ckg19Oht.js
 
 # tests/esbuild/default/define_assign_warning
 
@@ -758,6 +779,14 @@ expression: output
 # tests/esbuild/default/export_fs_node_in_common_js_module
 
 - entry-!~{000}~.js => entry-DOoU98uK.js
+
+# tests/esbuild/default/export_special_name
+
+- entry-!~{000}~.js => entry-dXucDYy1.js
+
+# tests/esbuild/default/export_special_name_bundle
+
+- entry-!~{000}~.js => entry-DtZbz_QR.js
 
 # tests/esbuild/default/export_wildcard_fs_node_common_js
 
@@ -978,6 +1007,27 @@ expression: output
 
 - entry-!~{000}~.js => entry-B4XQXAsc.js
 
+# tests/esbuild/default/jsx_constant_fragments
+
+- entry-!~{000}~.js => entry-BKzTXsBm.js
+
+# tests/esbuild/default/jsx_dev_self_edge_cases
+
+- class-this-!~{000}~.js => class-this-Cd7Opjbq.js
+- derived-constructor-!~{003}~.js => derived-constructor-BQ5NTPVC.js
+- derived-constructor-arg-!~{001}~.js => derived-constructor-arg-CjcCPw4c.js
+- derived-constructor-field-!~{002}~.js => derived-constructor-field-CLCu3GFm.js
+- function-this-!~{004}~.js => function-this-BOXKCexP.js
+- normal-constructor-arg-!~{005}~.js => normal-constructor-arg-DRCJXEfw.js
+- normal-constructor-field-!~{006}~.js => normal-constructor-field-CC5ErJqa.js
+- normal-constructor-!~{007}~.js => normal-constructor-k7c6tAIX.js
+- static-field-!~{008}~.js => static-field-B9PjFc34.js
+- top-level-this-cjs-!~{009}~.js => top-level-this-cjs-Dxq2dud4.js
+- top-level-this-esm-!~{00a}~.js => top-level-this-esm-BWlB-Fqz.js
+- tsconfig-!~{00b}~.js => tsconfig-LxWeM9SG.js
+- typescript-enum-!~{00c}~.js => typescript-enum-BcM9_iSU.js
+- typescript-namespace-!~{00d}~.js => typescript-namespace-CsxnWI1q.js
+
 # tests/esbuild/default/jsx_import_meta_property
 
 - factory-!~{000}~.js => factory-Bpf6vL44.js
@@ -1122,6 +1172,15 @@ expression: output
 - entry-!~{000}~.js => entry-hLKeUIUi.js
 - entry2.css
 
+# tests/esbuild/default/line_limit_not_minified
+
+- script-!~{000}~.js => script-BvhlB48x.js
+- style-!~{001}~.js => style--PNW2bZZ.js
+- x-!~{002}~.js => x-u4pDCUSC.js
+- assets/x-3IosnrVQ.file
+- assets/x-DYoL-ZzY.copy
+- style.css
+
 # tests/esbuild/default/mangle_no_quoted_props
 
 - entry-!~{000}~.js => entry-N8lGsSQ5.js
@@ -1157,6 +1216,10 @@ expression: output
 # tests/esbuild/default/mangle_props_jsx_transform
 
 - entry-!~{000}~.js => entry-Ne56h4Wi.js
+
+# tests/esbuild/default/mangle_props_jsx_transform_namespace
+
+- entry-!~{000}~.js => entry-DlHOrGO3.js
 
 # tests/esbuild/default/mangle_props_key_comment
 
@@ -1198,6 +1261,12 @@ expression: output
 # tests/esbuild/default/mangle_props_super_call
 
 - entry-!~{000}~.js => entry-CMXZovLt.js
+
+# tests/esbuild/default/mangle_props_type_script_features
+
+- enum-values-!~{002}~.js => enum-values-CPQKvSM8.js
+- namespace-exports-!~{001}~.js => namespace-exports-MkCnXJ9F.js
+- parameter-properties-!~{000}~.js => parameter-properties-DkrTMqNf.js
 
 # tests/esbuild/default/mangle_quoted_props
 
@@ -1311,6 +1380,10 @@ expression: output
 
 - import-!~{000}~.js => import-B-AjTqZe.js
 - require-!~{001}~.js => require-6aIPyuAC.js
+
+# tests/esbuild/default/minify_nested_labels_no_bundle
+
+- entry-!~{000}~.js => entry-FetrRQAu.js
 
 # tests/esbuild/default/minify_private_identifiers_no_bundle
 
@@ -1597,6 +1670,10 @@ expression: output
 # tests/esbuild/default/this_undefined_warning_esm
 
 - entry-!~{000}~.js => entry-9ShJS0SN.js
+
+# tests/esbuild/default/this_with_es6_syntax
+
+- entry-!~{000}~.js => entry-BRIDvGQu.js
 
 # tests/esbuild/default/to_esm_wrapper_omission
 
@@ -2180,6 +2257,12 @@ expression: output
 
 - entry-!~{000}~.js => entry-BwMiNo5a.js
 
+# tests/esbuild/loader/empty_loader_css
+
+- entry-!~{000}~.js => entry-CMXZovLt.js
+- entry.css
+- entry.css.map
+
 # tests/esbuild/loader/empty_loader_js
 
 - entry-!~{000}~.js => entry-CR2KEPxS.js
@@ -2294,6 +2377,11 @@ expression: output
 # tests/esbuild/loader/loader_data_url_unknown_mime
 
 - entry-!~{000}~.js => entry-4Im-DWsm.js
+
+# tests/esbuild/loader/loader_file
+
+- entry-!~{000}~.js => entry-Fu0QfGR7.js
+- assets/test-C9EyqxrM.svg
 
 # tests/esbuild/loader/loader_file_common_js_and_es6
 
@@ -2412,9 +2500,17 @@ expression: output
 - b-!~{001}~.js => b-CV5tiItg.js
 - data-!~{002}~.js => data-CXT8ghb6.js
 
+# tests/esbuild/loader/loader_json_with_big_int
+
+- entry-!~{000}~.js => entry-g5SujFYL.js
+
 # tests/esbuild/loader/loader_text_common_js_and_es6
 
 - entry-!~{000}~.js => entry-B2VqzfSX.js
+
+# tests/esbuild/loader/loader_text_utf8_bom
+
+- entry-!~{000}~.js => entry-CYWhudj5.js
 
 # tests/esbuild/loader/require_custom_extension_base64
 
@@ -2431,6 +2527,14 @@ expression: output
 # tests/esbuild/loader/require_custom_extension_string
 
 - entry-!~{000}~.js => entry-BopAKz-3.js
+
+# tests/esbuild/loader/with_type_bytes_override_loader
+
+- entry-!~{000}~.js => entry-BWHcDSr_.js
+
+# tests/esbuild/loader/with_type_bytes_override_loader_glob
+
+- entry-!~{000}~.js => entry-OBdC0_Xx.js
 
 # tests/esbuild/loader/with_type_json_override_loader_glob
 

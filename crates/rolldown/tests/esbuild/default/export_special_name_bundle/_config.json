@@ -6,9 +6,6 @@
         "import": "entry.js"
       }
     ],
-    "moduleTypes": {
-      ".txt": "asset"
-    }
-  },
-  "expectExecuted": false
+    "format": "cjs"
+  }
 }

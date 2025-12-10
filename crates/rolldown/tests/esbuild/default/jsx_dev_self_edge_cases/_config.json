@@ -1,0 +1,44 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "class-this",
+        "import": "class-this.jsx"
+      },
+      {
+        "name": "derived-constructor-arg",
+        "import": "derived-constructor-arg.jsx"
+      },
+      {
+        "name": "derived-constructor-field",
+        "import": "derived-constructor-field.jsx"
+      },
+      { "name": "derived-constructor", "import": "derived-constructor.jsx" },
+      { "name": "function-this", "import": "function-this.jsx" },
+      {
+        "name": "normal-constructor-arg",
+        "import": "normal-constructor-arg.jsx"
+      },
+      {
+        "name": "normal-constructor-field",
+        "import": "normal-constructor-field.tsx"
+      },
+      { "name": "normal-constructor", "import": "normal-constructor.jsx" },
+      { "name": "static-field", "import": "static-field.jsx" },
+      { "name": "top-level-this-cjs", "import": "top-level-this-cjs.jsx" },
+      { "name": "top-level-this-esm", "import": "top-level-this-esm.jsx" },
+      { "name": "tsconfig", "import": "tsconfig.json" },
+      { "name": "typescript-enum", "import": "typescript-enum.tsx" },
+      { "name": "typescript-namespace", "import": "typescript-namespace.tsx" }
+    ],
+    "external": ["react/jsx-dev-runtime"],
+    "transform": {
+      "jsx": {
+        "development": true
+      },
+      "target": "es2021"
+    },
+    "tsconfig": "./tsconfig.json"
+  },
+  "expectExecuted": false
+}

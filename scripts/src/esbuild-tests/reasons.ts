@@ -4,6 +4,8 @@
 export const failedReasons: Record<string, string> = {
   'dce/dce_of_decorators': 'decorators should not be removed',
   'dce/dce_of_iife': 'sub optimal: IIFEs are not unwrapped',
+  'dce/dce_of_symbol_ctor_call':
+    '`new Symbol("abc")` should not be removed as it has side effects',
   'dce/tree_shaking_lowered_class_static_field':
     'sub optimal: REMOVE_ME class can be removed',
   'dce/tree_shaking_react_elements':
@@ -21,10 +23,15 @@ export const failedReasons: Record<string, string> = {
     "rejected due to https://github.com/rolldown/rolldown/issues/7009, also sub optimal: eval in `test4` param position don't need to be renamed",
   'default/export_forms_with_minify_identifiers_and_no_bundle':
     'sub optimal: should not generate duplicate export binding',
+  'default/export_special_name': 'assigning __proto__ should not be done',
+  'default/export_special_name_bundle':
+    '{ __proto__: ... } should be { ["__proto__"]: ... }',
   'default/external_es6_converted_to_common_js':
     'sub optimal: redundant `import` statements',
   'default/false_require':
     'should rename `require` when it is appear in param position',
+  'default/jsx_dev_self_edge_cases':
+    'https://github.com/oxc-project/oxc/issues/16654',
   'default/jsx_import_meta_property':
     '`import.meta` injected by transform.jsx is not replaced with `{}`',
   'default/jsx_import_meta_value':
@@ -50,9 +57,16 @@ export const failedReasons: Record<string, string> = {
     'related to https://github.com/rolldown/rolldown/issues/3048, export pointing to a value declared by `declare var` should be kept',
   'ts/ts_import_equals_elimination_test':
     'See https://github.com/oxc-project/oxc/issues/16628',
+  'loader/loader_json_with_big_int':
+    'https://github.com/rolldown/rolldown/issues/7403',
+  'loader/loader_text_utf8_bom': 'UTF8 BOM should be stripped',
 };
 
 export const notSupportedReasons: Record<string, string> = {
+  'default/mangle_props_jsx_transform_namespace':
+    'mangle props is not supported by oxc minifier',
+  'default/mangle_props_type_script_features':
+    'mangle props is not supported by oxc minifier',
   'ts/ts_experimental_decorators_mangle_props_assign_semantics':
     'mangle props is not supported by oxc minifier',
   'ts/ts_experimental_decorators_mangle_props_define_semantics':
@@ -65,6 +79,9 @@ export const notSupportedReasons: Record<string, string> = {
     'mangle props is not supported by oxc minifier',
   'ts/ts_experimental_decorators_mangle_props_static_methods':
     'mangle props is not supported by oxc minifier',
+
+  'default/minify_nested_labels_no_bundle':
+    'label mangling is not supported by oxc minifier',
 
   'ts/export_type_issue379': 'verbatimModuleSyntax=false is not supported',
 
@@ -117,6 +134,13 @@ export const notSupportedReasons: Record<string, string> = {
 
   'default/metafile_various_cases': 'copy loader is not supported',
   'default/metafile_very_long_external_paths': 'copy loader is not supported',
+  'loader/loader_bundle_with_unknown_import_attributes_and_copy_loader':
+    'copy loader is not supported',
+  'loader/loader_copy_entry_point_advanced': 'copy loader is not supported',
+  'loader/loader_copy_explicit_output_file': 'copy loader is not supported',
+  'loader/loader_copy_starts_with_dot_abs_path': 'copy loader is not supported',
+  'loader/loader_copy_starts_with_dot_rel_path': 'copy loader is not supported',
+  'loader/loader_copy_use_index': 'copy loader is not supported',
   'loader/loader_copy_with_bundle_entry_point': 'copy loader is not supported',
   'loader/loader_copy_with_bundle_from_css': 'copy loader is not supported',
   'loader/loader_copy_with_bundle_from_js': 'copy loader is not supported',
@@ -125,8 +149,14 @@ export const notSupportedReasons: Record<string, string> = {
     'copy loader is not supported',
   'loader/loader_copy_with_transform': 'copy loader is not supported',
 
+  'loader/empty_loader_css': 'empty loader is not supported in CSS files',
+
+  'loader/extensionless_loader_css':
+    'extension less moduleTypes is not supported',
+
   'glob/glob_basic_no_splitting': 'glob is not supported',
   'glob/glob_basic_splitting': 'glob is not supported',
+  'glob/glob_entry_point_abs_path': 'glob is not supported',
   'glob/glob_no_matches': 'glob is not supported',
   'glob/glob_wildcard_no_slash': 'glob is not supported',
   'glob/glob_wildcard_slash': 'glob is not supported',
@@ -134,6 +164,7 @@ export const notSupportedReasons: Record<string, string> = {
   'glob/ts_glob_basic_splitting': 'glob is not supported',
   'default/require_and_dynamic_import_invalid_template':
     'glob is not supported',
+  'loader/with_type_bytes_override_loader_glob': 'glob is not supported',
 
   'loader/loader_file_public_path_js':
     'publicPath equivalent option is not supported',
@@ -158,6 +189,12 @@ export const notSupportedReasons: Record<string, string> = {
   'default/output_for_assert_type_json': 'import attributes is not supported',
   'loader/loader_bundle_with_import_attributes':
     'import attributes is not supported',
+  'loader/loader_bundle_with_unknown_import_attributes_and_js_loader':
+    'import attributes is not supported',
+  'loader/with_bad_attribute': 'import attributes is not supported',
+  'loader/with_bad_type': 'import attributes is not supported',
+  'loader/with_type_bytes_override_loader':
+    'import attributes is not supported',
   'loader/with_type_json_override_loader': 'import attributes is not supported',
 
   'default/conditional_require_resolve':
@@ -165,12 +202,32 @@ export const notSupportedReasons: Record<string, string> = {
 
   'default/require_shim_substitution':
     'require second argument is not supported',
+
+  'dce/dead_code_inside_unused_cases':
+    'dce inside unused switch cases is not supported',
+
+  'default/call_import_namespace_warning': 'warning not implemented',
+
+  'default/import_with_hash_parameter':
+    'stripping hash parameter is not supported',
+  'default/import_with_query_parameter':
+    'stripping query parameter is not supported',
+  'loader/loader_file_with_query_parameter':
+    'stripping query parameter is not supported',
+  'loader/loader_from_extension_with_query_parameter':
+    'stripping query parameter is not supported',
 };
 
 export const ignoreReasons: Record<string, string> = {
   'default/import_abs_path_as_dir':
     'limitation of test infra, the test may hard to pass in CI',
   'default/import_abs_path_as_file':
+    'limitation of test infra, the test may hard to pass in CI',
+  'default/entry_names_non_portable_character':
+    'limitation of test infra, the test may hard to pass in CI',
+  'loader/loader_inline_source_map_absolute_path_issue4075_unix':
+    'limitation of test infra, the test may hard to pass in CI',
+  'loader/loader_inline_source_map_absolute_path_issue4075_windows':
     'limitation of test infra, the test may hard to pass in CI',
 
   'dce/package_json_side_effects_array_keep_main_implicit_main':
@@ -209,47 +266,13 @@ export const ignoreReasons: Record<string, string> = {
 
   'default/quoted_property_mangle': 'covered by minifier',
 
-  // TODO: Add proper reasons for these skipped tests
-  'dce/dce_of_symbol_ctor_call': 'TODO',
-  'dce/dead_code_inside_unused_cases': 'TODO',
-  'default/assign_to_import_no_bundle': 'TODO',
-  'default/call_import_namespace_warning': 'TODO',
-  'default/decorator_printing_cjs': 'TODO',
-  'default/decorator_printing_esm': 'TODO',
-  'default/entry_names_no_slash_after_dir': 'TODO',
-  'default/entry_names_non_portable_character': 'TODO',
-  'default/error_message_crash_stdin_issue2913': 'TODO',
-  'default/export_special_name': 'TODO',
-  'default/export_special_name_bundle': 'TODO',
-  'default/import_with_hash_parameter': 'TODO',
-  'default/import_with_query_parameter': 'TODO',
-  'default/jsx_constant_fragments': 'TODO',
-  'default/jsx_dev_self_edge_cases': 'TODO',
-  'default/line_limit_minified': 'TODO',
-  'default/line_limit_not_minified': 'TODO',
-  'default/mangle_props_jsx_transform_namespace': 'TODO',
-  'default/mangle_props_type_script_features': 'TODO',
-  'default/minify_nested_labels_no_bundle': 'TODO',
-  'default/this_with_es6_syntax': 'TODO',
-  'glob/glob_entry_point_abs_path': 'TODO',
-  'loader/empty_loader_css': 'TODO',
-  'loader/extensionless_loader_css': 'TODO',
-  'loader/loader_bundle_with_unknown_import_attributes_and_copy_loader': 'TODO',
-  'loader/loader_bundle_with_unknown_import_attributes_and_js_loader': 'TODO',
-  'loader/loader_copy_entry_point_advanced': 'TODO',
-  'loader/loader_copy_explicit_output_file': 'TODO',
-  'loader/loader_copy_starts_with_dot_abs_path': 'TODO',
-  'loader/loader_copy_starts_with_dot_rel_path': 'TODO',
-  'loader/loader_copy_use_index': 'TODO',
-  'loader/loader_file': 'TODO',
-  'loader/loader_file_with_query_parameter': 'TODO',
-  'loader/loader_from_extension_with_query_parameter': 'TODO',
-  'loader/loader_inline_source_map_absolute_path_issue4075_unix': 'TODO',
-  'loader/loader_inline_source_map_absolute_path_issue4075_windows': 'TODO',
-  'loader/loader_json_with_big_int': 'TODO',
-  'loader/loader_text_utf8_bom': 'TODO',
-  'loader/with_bad_attribute': 'TODO',
-  'loader/with_bad_type': 'TODO',
-  'loader/with_type_bytes_override_loader': 'TODO',
-  'loader/with_type_bytes_override_loader_glob': 'TODO',
+  'default/entry_names_no_slash_after_dir':
+    'irrelevant: Rolldown does not have [dir] placeholder for `entryFileNames`',
+  'default/error_message_crash_stdin_issue2913':
+    'irrelevant: stdin input is not supported',
+
+  'default/line_limit_minified':
+    'irrelevant: lineLimit option will not be supported',
+  'default/line_limit_not_minified':
+    'irrelevant: lineLimit option will not be supported',
 };

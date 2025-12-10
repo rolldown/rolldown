@@ -3,12 +3,12 @@
     "input": [
       {
         "name": "entry",
-        "import": "entry.js"
+        "import": "entry.css"
       }
     ],
     "moduleTypes": {
-      ".txt": "asset"
-    }
-  },
-  "expectExecuted": false
+      ".empty": "empty"
+    },
+    "sourcemap": "File"
+  }
 }

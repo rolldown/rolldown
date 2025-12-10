@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use napi::bindgen_prelude::FnArgs;
-use rolldown_plugin_vite_dynamic_import_vars::{ResolverFn, ViteDynamicImportVarsPlugin};
+use rolldown_plugin_vite_dynamic_import_vars::{
+  ResolverFn, ViteDynamicImportVarsPlugin, ViteDynamicImportVarsPluginV2Config,
+};
 
 use crate::types::{
   binding_string_or_regex::{BindingStringOrRegex, bindingify_string_or_regex_array},
@@ -10,11 +12,18 @@ use crate::types::{
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Default)]
+pub struct BindingViteDynamicImportVarsPluginV2Config {
+  pub sourcemap: bool,
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Default)]
 pub struct BindingViteDynamicImportVarsPluginConfig {
   pub include: Option<Vec<BindingStringOrRegex>>,
   pub exclude: Option<Vec<BindingStringOrRegex>>,
   #[napi(ts_type = "(id: string, importer: string) => MaybePromise<string | undefined>")]
   pub resolver: Option<MaybeAsyncJsCallback<FnArgs<(String, String)>, Option<String>>>,
+  pub is_v2: Option<BindingViteDynamicImportVarsPluginV2Config>,
 }
 
 impl From<BindingViteDynamicImportVarsPluginConfig> for ViteDynamicImportVarsPlugin {
@@ -30,6 +39,9 @@ impl From<BindingViteDynamicImportVarsPluginConfig> for ViteDynamicImportVarsPlu
           })
         })
       }),
+      is_v2: value
+        .is_v2
+        .map(|v2_config| ViteDynamicImportVarsPluginV2Config { sourcemap: v2_config.sourcemap }),
     }
   }
 }

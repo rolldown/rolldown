@@ -3232,8 +3232,10 @@ dependencies = [
  "derive_more",
  "memchr",
  "oxc",
+ "rolldown_common",
  "rolldown_plugin",
  "rolldown_utils",
+ "string_wizard",
  "sugar_path",
 ]
 

@@ -103,7 +103,10 @@ export function viteWebWorkerPostPlugin(): BuiltinPlugin {
 export function esmExternalRequirePlugin(
   config?: BindingEsmExternalRequirePluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:esm-external-require', config);
+  const plugin = new BuiltinPlugin('builtin:esm-external-require', config);
+  // For Vite: ensure this plugin runs before other `resolveId.meta.order: 'pre'` plugins
+  plugin.enforce = 'pre';
+  return plugin;
 }
 
 type ViteReactRefreshWrapperPluginConfig =

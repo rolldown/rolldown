@@ -33,6 +33,9 @@ type BindingCallableBuiltinPluginLike = {
 
 // eslint-disable @typescript-eslint/no-unsafe-declaration-merging
 export class BuiltinPlugin {
+  /** Vite-specific option to control plugin ordering */
+  enforce?: 'pre' | 'post';
+
   constructor(
     public name: BindingBuiltinPluginName,
     // NOTE: has `_` to avoid conflict with `options` hook

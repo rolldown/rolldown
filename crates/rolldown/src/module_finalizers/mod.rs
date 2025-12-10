@@ -814,7 +814,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let import_record = &self.ctx.module.ecma_view.import_records[named_import.record_id];
     let importee_idx = import_record.resolved_module;
     let importee_linking_info = &self.ctx.linking_infos[importee_idx];
-    
+
     // Check if the property exists in the module's exports
     Some(importee_linking_info.resolved_exports.contains_key(property_name))
   }

@@ -3275,13 +3275,16 @@ dependencies = [
 name = "rolldown_plugin_vite_import_glob"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "fast-glob",
  "itoa",
  "oxc",
+ "rolldown_common",
  "rolldown_ecmascript_utils",
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_utils",
+ "string_wizard",
  "sugar_path",
  "walkdir",
 ]

@@ -2331,6 +2331,11 @@ export interface BindingViteHtmlPluginConfig {
 export interface BindingViteImportGlobPluginConfig {
   root?: string
   restoreQueryExtension?: boolean
+  isV2?: BindingViteImportGlobPluginV2Config
+}
+
+export interface BindingViteImportGlobPluginV2Config {
+  sourcemap?: boolean
 }
 
 export interface BindingViteJsonPluginConfig {

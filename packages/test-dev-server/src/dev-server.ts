@@ -10,7 +10,10 @@ import { WebSocket, WebSocketServer } from 'ws';
 import type { HmrInvalidateMessage } from './types/client-message.js';
 import { ClientSession } from './types/client-session.js';
 import type { NormalizedDevOptions } from './types/normalized-dev-options.js';
-import type { HmrUpdateMessage } from './types/server-message.js';
+import type {
+  HmrReloadMessage,
+  HmrUpdateMessage,
+} from './types/server-message.js';
 import { createDevServerPlugin } from './utils/create-dev-server-plugin.js';
 import { decodeClientMessage } from './utils/decode-client-message.js';
 import { getDevWatchOptionsForCi } from './utils/get-dev-watch-options-for-ci.js';
@@ -44,7 +47,10 @@ class DevServer {
 
   constructor() {}
 
-  #sendMessage(socket: WebSocket, message: HmrUpdateMessage): void {
+  #sendMessage(
+    socket: WebSocket,
+    message: HmrUpdateMessage | HmrReloadMessage,
+  ): void {
     if (socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify(message));
     }
@@ -178,9 +184,16 @@ class DevServer {
         }
         case 'FullReload':
           if (this.#devOptions?.platform === 'browser') {
-            // TODO: send reload message to client
+            const client = this.#clients.get(clientUpdate.clientId);
+            if (!client) {
+              console.warn(`Client ${clientUpdate.clientId} not found`);
+              break;
+            }
+            console.log(
+              `[hmr]: Sending reload message to client ${clientUpdate.clientId}`,
+            );
+            this.#sendMessage(client.ws, { type: 'hmr:reload' });
           }
-          console.warn(`Client ${clientUpdate.clientId} is reloading`);
           this.#devEngine?.ensureLatestBuildOutput();
           break;
         case 'Noop':

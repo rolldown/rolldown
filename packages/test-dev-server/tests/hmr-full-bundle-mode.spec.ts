@@ -43,8 +43,7 @@ describe('hmr-full-bundle-mode', () => {
   });
 
   // https://github.com/vitejs/rolldown-vite/blob/942cb2b51b59fd6aefe886ec78eb34fff56ead34/playground/hmr-full-bundle-mode/__tests__/hmr-full-bundle-mode.spec.ts#L49-L70
-  // FIXME: test-dev-server doesn't support auto reload yet
-  test.skip('debounce bundle', async () => {
+  test.sequential('debounce bundle', async () => {
     const page = getPage();
     editFile('main.js', (code) =>
       code.replace(

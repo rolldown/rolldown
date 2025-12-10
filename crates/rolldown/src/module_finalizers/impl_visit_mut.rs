@@ -85,6 +85,18 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     self.state = pre;
   }
 
+  fn visit_binary_expression(&mut self, it: &mut ast::BinaryExpression<'ast>) {
+    let kind = oxc::ast::AstType::BinaryExpression;
+    self.enter_node(kind);
+    self.visit_span(&mut it.span);
+    let pre = self.state;
+    self.state.insert(TraverseState::SmartInlineConst);
+    self.visit_expression(&mut it.left);
+    self.visit_expression(&mut it.right);
+    self.state = pre;
+    self.leave_node(kind);
+  }
+
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     // Drop the hashbang since we already store them in ast_scan phase and
     // we don't want oxc to generate hashbang statement and directives in module level since we already handle
@@ -447,6 +459,23 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           .and_then(|expr| self.try_rewrite_member_expr(expr))
         {
           *expr = new_expr;
+        }
+      }
+      ast::Expression::BinaryExpression(binary_expr) => {
+        // Optimize `'prop' in namespace` to a boolean literal if possible
+        if matches!(binary_expr.operator, ast::BinaryOperator::In) {
+          if let (
+            ast::Expression::StringLiteral(string_lit),
+            ast::Expression::Identifier(namespace_ref),
+          ) = (&binary_expr.left, &binary_expr.right)
+          {
+            if let Some(exists) =
+              self.try_optimize_in_operator_with_namespace(&string_lit.value, namespace_ref)
+            {
+              *expr = self.snippet.builder.expression_boolean_literal(SPAN, exists);
+              return;
+            }
+          }
         }
       }
       _ => {

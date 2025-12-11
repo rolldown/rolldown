@@ -99,6 +99,8 @@ When enabled, Rolldown measures time spent in each plugin hook. If plugins signi
 
 > [!WARNING]
 > For hooks using `ctx.resolve()` or `ctx.load()`, the reported time includes waiting for other plugins, which may overestimate that plugin's actual cost.
+>
+> Additionally, the current plugin timing statistics may not be fully accurate, as the measured duration includes Rust-side processing overhead, Tokio async scheduling overhead, NAPI data conversion overhead, and JavaScript event loop overhead. This feature is currently for reference only and will be further optimized in the future.
 
 ## preferBuiltinFeature
 

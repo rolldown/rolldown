@@ -1,0 +1,40 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## AMBIGUOUS_REEXPORT
+
+```text
+[AMBIGUOUS_REEXPORT] Warning: Found ambiguous export.
+   ╭─[ main.js:1:1 ]
+   │
+ 1 │ export * from './file.js'
+   │ │ 
+   │ ╰─ "main.js" re-exports "foo"
+   │
+   ├─[ file.js:1:12 ]
+   │
+ 1 │ export let foo = 1
+   │            ─┬─  
+   │             ╰─── One matching export is here.
+   │
+   ├─[ file2.js:1:12 ]
+   │
+ 1 │ export let foo = 2
+   │            ─┬─  
+   │             ╰─── One matching export is here.
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+console.log();
+
+//#endregion
+```

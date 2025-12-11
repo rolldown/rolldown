@@ -792,37 +792,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     (original_name != canonical_name.as_str()).then_some((original_name, canonical_name))
   }
 
-  /// Try to optimize `'prop' in namespace` expressions
-  /// Returns Some(bool) if the namespace export existence can be determined statically
-  fn try_optimize_in_operator_with_namespace(
-    &self,
-    property_name: &str,
-    namespace_ref: &IdentifierReference,
-  ) -> Option<bool> {
-    // Get the symbol reference for the namespace identifier
-    let reference_id = namespace_ref.reference_id.get()?;
-    let symbol_id = self.scope.scoping().get_reference(reference_id).symbol_id()?;
-    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
-
-    // Check if this is a namespace import (star import)
-    let named_import = self.ctx.module.ecma_view.named_imports.get(&symbol_ref)?;
-    if !named_import.imported.is_star() {
-      return None;
-    }
-
-    // Get the imported module
-    let import_record = &self.ctx.module.ecma_view.import_records[named_import.record_id];
-    let importee_idx = import_record.resolved_module;
-    let importee_linking_info = &self.ctx.linking_infos[importee_idx];
-
-    // Check if the property exists in the module's non-ambiguous exports
-    // Using sorted_and_non_ambiguous_resolved_exports ensures that ambiguous exports
-    // (which are not present in module namespace objects) return false
-    Some(
-      importee_linking_info.sorted_and_non_ambiguous_resolved_exports.contains_key(property_name),
-    )
-  }
-
   /// rewrite toplevel `class ClassName {}` to `var ClassName = class {}`
   fn get_transformed_class_decl(
     &self,

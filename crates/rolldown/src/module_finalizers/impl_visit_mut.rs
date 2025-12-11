@@ -449,23 +449,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           *expr = new_expr;
         }
       }
-      ast::Expression::BinaryExpression(binary_expr) => {
-        // Optimize `'prop' in namespace` to a boolean literal if possible
-        if matches!(binary_expr.operator, ast::BinaryOperator::In) {
-          if let (
-            ast::Expression::StringLiteral(string_lit),
-            ast::Expression::Identifier(namespace_ref),
-          ) = (&binary_expr.left, &binary_expr.right)
-          {
-            if let Some(exists) =
-              self.try_optimize_in_operator_with_namespace(&string_lit.value, namespace_ref)
-            {
-              *expr = self.snippet.builder.expression_boolean_literal(SPAN, exists);
-              return;
-            }
-          }
-        }
-      }
       _ => {
         if let Some(new_expr) =
           expr.as_member_expression().and_then(|expr| self.try_rewrite_member_expr(expr))

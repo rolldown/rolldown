@@ -54,6 +54,8 @@ pub struct ViteResolveOptions {
   pub on_warn: Option<Arc<OnLogCallback>>,
   #[debug(skip)]
   pub on_debug: Option<Arc<OnLogCallback>>,
+
+  pub yarn_pnp: bool,
 }
 
 pub type FinalizeBareSpecifierCallback = dyn (Fn(
@@ -147,6 +149,7 @@ impl ViteResolvePlugin {
       root: PathBuf::from(&options.resolve_options.root),
       preserve_symlinks: options.resolve_options.preserve_symlinks,
       tsconfig_paths: options.resolve_options.tsconfig_paths,
+      yarn_pnp: options.yarn_pnp,
     };
     let builtin_checker = Arc::new(BuiltinChecker::new(options.builtins));
     let resolvers = Resolvers::new(

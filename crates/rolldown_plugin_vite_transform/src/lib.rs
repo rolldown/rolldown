@@ -30,9 +30,10 @@ pub struct ViteTransformPlugin {
 }
 
 impl ViteTransformPlugin {
-  pub fn new_resolver() -> oxc_resolver::Resolver {
+  pub fn new_resolver(yarn_pnp: bool) -> oxc_resolver::Resolver {
     oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions {
       tsconfig: Some(oxc_resolver::TsconfigDiscovery::Auto),
+      yarn_pnp,
       ..Default::default()
     })
   }

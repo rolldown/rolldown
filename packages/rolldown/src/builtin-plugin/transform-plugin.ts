@@ -9,7 +9,11 @@ type TransformPattern = string | RegExp | readonly (RegExp | string)[];
 type TransformPluginConfig =
   & Omit<
     BindingViteTransformPluginConfig,
-    'include' | 'exclude' | 'jsxRefreshInclude' | 'jsxRefreshExclude'
+    | 'include'
+    | 'exclude'
+    | 'jsxRefreshInclude'
+    | 'jsxRefreshExclude'
+    | 'yarnPnp'
   >
   & {
     include?: TransformPattern;
@@ -30,5 +34,9 @@ export function viteTransformPlugin(
       jsxRefreshExclude: normalizedStringOrRegex(config.jsxRefreshExclude),
     };
   }
-  return new BuiltinPlugin('builtin:vite-transform', config);
+  return new BuiltinPlugin('builtin:vite-transform', {
+    ...config,
+    // process is undefined for browser build
+    yarnPnp: typeof process === 'object' && !!process.versions?.pnp,
+  });
 }

@@ -33,6 +33,7 @@ pub struct BaseOptions<'a> {
   pub root: PathBuf,
   pub preserve_symlinks: bool,
   pub tsconfig_paths: bool,
+  pub yarn_pnp: bool,
 }
 
 const ADDITIONAL_OPTIONS_FIELD_COUNT: u8 = 2;
@@ -40,7 +41,7 @@ const RESOLVER_COUNT: u8 = 2_u8.pow(ADDITIONAL_OPTIONS_FIELD_COUNT as u32);
 
 const DEV_PROD_CONDITION: &str = "development|production";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AdditionalOptions {
   is_require: bool,
   prefer_relative: bool,
@@ -89,7 +90,11 @@ impl Resolvers {
 
     let resolver_lock = Arc::new(ResolverLock::new());
 
-    let base_resolver = oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions::default());
+    let base_resolver = oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions {
+      // NOTE: yarn_pnp option affects the underlying fs cache, so it should be consistent for all resolvers
+      yarn_pnp: base_options.yarn_pnp,
+      ..oxc_resolver::ResolveOptions::default()
+    });
 
     let resolvers = (0..RESOLVER_COUNT)
       .map(|v| {
@@ -183,6 +188,7 @@ fn get_resolve_options(
     prefer_relative: additional_options.prefer_relative,
     roots: if base_options.as_src { vec![base_options.root.clone()] } else { vec![] },
     symlinks: !base_options.preserve_symlinks,
+    yarn_pnp: base_options.yarn_pnp,
     // This is not part of the spec, but required to align with rollup based vite.
     allow_package_exports_in_directory_resolve: true,
     ..Default::default()

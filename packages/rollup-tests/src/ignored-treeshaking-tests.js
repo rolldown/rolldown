@@ -14,6 +14,7 @@ const ignoreTests = [
   "rollup@form@logical-expression@mutate-logical-expression: properly handle the results of mutating logical expressions@generates es",
   "rollup@form@namespace-missing-export-effects: handles interacting with missing namespace members", // the cross module const folding
   "rollup@form@namespace-optimization-computed-string: it does dynamic lookup optimization of internal namespaces for string-literal keys@generates es",
+  "rollup@form@namespace-optimization-in-operator: it does static optimization of internal namespaces when checking whether an export exists", // Core optimization works, but Rolldown's DCE is less aggressive
   "rollup@form@nested-this-expressions: properly keep or ignore nested \"this\"-expressions",
   "rollup@form@object-expression@proto-property: Deoptimize when __proto__ is used", // minify feature
   "rollup@form@property-setters-and-getters@early-access-getter-return: handles accessing the return expression of a getter before it has been bound",

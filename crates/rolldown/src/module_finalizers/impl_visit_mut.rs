@@ -85,18 +85,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     self.state = pre;
   }
 
-  fn visit_binary_expression(&mut self, it: &mut ast::BinaryExpression<'ast>) {
-    let kind = oxc::ast::AstType::BinaryExpression;
-    self.enter_node(kind);
-    self.visit_span(&mut it.span);
-    let pre = self.state;
-    self.state.insert(TraverseState::SmartInlineConst);
-    self.visit_expression(&mut it.left);
-    self.visit_expression(&mut it.right);
-    self.state = pre;
-    self.leave_node(kind);
-  }
-
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     // Drop the hashbang since we already store them in ast_scan phase and
     // we don't want oxc to generate hashbang statement and directives in module level since we already handle

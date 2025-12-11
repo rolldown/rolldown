@@ -1,6 +1,5 @@
 module.exports = [
     // Passed, but the output snapshot is different from rollup
-    "rollup@form@namespace-optimization-in-operator: it does static optimization of internal namespaces when checking whether an export exists", // Core optimization works, but Rolldown's DCE is less aggressive
     "rollup@form@make-absolute-externals-relative@make-relative-false: does not normalize external paths when set to false",
     "rollup@function@transform-without-code: allows using the transform hook for annotations only without returning a code property and breaking sourcemaps",
     "rollup@form@catch-parameter-shadowing: the parameter of a catch block should correctly shadow an import (#1391)",// rollup not deconflict

@@ -35,7 +35,9 @@ impl BuildEvent for PluginTimings {
           .collect::<Vec<_>>()
           .join("\n");
 
-        format!("Your build spent significant time in plugins. Here is a breakdown:\n{plugins_list}")
+        format!(
+          "Your build spent significant time in plugins. Here is a breakdown:\n{plugins_list}"
+        )
       }
     }
   }

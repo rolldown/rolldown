@@ -70,6 +70,19 @@ For all available options, you could refer to
 
 It basically just replaces the `_config.json` with Rust code that configures the bundler directly. Everything else works the same way as data-driven testing.
 
+#### esbuild
+
+Rolldown also runs tests derived from esbuild's bundler test suite to verify compatibility. These tests are located in `crates/rolldown/tests/esbuild`.
+
+The `scripts` directory contains utilities for managing esbuild tests:
+
+- **`gen-esbuild-tests`** - Generates test cases from esbuild's Go test files.
+- **`esbuild-snap-diff`** - Compares Rolldown's output snapshots against esbuild's expected output. It generates diff reports and compatibility statistics, helping track how closely Rolldown's behavior matches esbuild.
+
+  The script generates summary markdown files in `scripts/src/esbuild-tests/snap-diff/summary/` and overall statistics in `scripts/src/esbuild-tests/snap-diff/stats/stats.md`.
+
+Test cases can be skipped by prefixing the folder name with `.` (e.g., `.test_case_name`). Skipped tests must have documented reasons in `scripts/src/esbuild-tests/reasons.ts`.
+
 #### HMR tests
 
 If a test case folder contains any files named `*.hmr-*.js`, the test will run in HMR enabled mode.

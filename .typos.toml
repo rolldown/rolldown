@@ -22,6 +22,7 @@ extend-exclude = [
   "packages/rolldown/tests/fixtures/",
   "packages/rolldown/tests/stability/",
   "scripts/src/esbuild-tests/snap-diff/**/*.{txt,md}",
+  "**/NUL",
 ]
 
 [default.extend-words]

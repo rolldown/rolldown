@@ -111,8 +111,9 @@ impl PreProcessEcmaAst {
     // Step 3: Run define plugin.
     if let Some(replace_global_define_config) = replace_global_define_config {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
+        let new_scoping = self.recreate_scoping(&mut scoping, program, false);
         let ret = ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone())
-          .build(scoping.take().unwrap(), program);
+          .build(new_scoping, program);
         if !ret.changed {
           scoping = Some(ret.scoping);
         }

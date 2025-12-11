@@ -384,6 +384,10 @@ impl Plugin for ViteReporterPlugin {
       ).if_supports_color(Stream::Stdout, |text| { text.bold().yellow().to_string() }).to_string();
       ctx.warn(rolldown_common::LogWithoutPlugin { message, ..Default::default() });
     }
+    // Print a newline to separate from next log
+    if self.should_log_info && self.is_tty {
+      utils::log_info("");
+    }
     Ok(())
   }
 

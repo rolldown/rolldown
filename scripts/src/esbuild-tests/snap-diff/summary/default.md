@@ -21,10 +21,6 @@
   should rename `require` when it is appear in param position
 ## [jsx_dev_self_edge_cases](../../../../../crates/rolldown/tests/esbuild/default/jsx_dev_self_edge_cases/diff.md)
   https://github.com/oxc-project/oxc/issues/16654
-## [jsx_import_meta_property](../../../../../crates/rolldown/tests/esbuild/default/jsx_import_meta_property/diff.md)
-  `import.meta` injected by transform.jsx is not replaced with `{}`
-## [jsx_import_meta_value](../../../../../crates/rolldown/tests/esbuild/default/jsx_import_meta_value/diff.md)
-  `import.meta` injected by transform.jsx is not replaced with `{}`
 ## [legal_comments_inline](../../../../../crates/rolldown/tests/esbuild/default/legal_comments_inline/diff.md)
   legal comments are not kept properly (https://github.com/rolldown/rolldown/issues/7387)
 ## [mangle_props_import_export](../../../../../crates/rolldown/tests/esbuild/default/mangle_props_import_export/diff.md)
@@ -256,6 +252,10 @@
   Rolldown replaces the function it self in `inject files`; this behavior aligns with `@rollup/plugin-inject`
 ## [inject_with_string_export_name_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/inject_with_string_export_name_no_bundle)
   Rolldown replaces the function it self in `inject files`; this behavior aligns with `@rollup/plugin-inject`
+## [jsx_import_meta_property](../../../../../crates/rolldown/tests/esbuild/default/jsx_import_meta_property)
+  due to multi pass transformer arch, `import.meta` injected by JSX transform cannot be replaced by the define plugin (define runs before JSX transform)
+## [jsx_import_meta_value](../../../../../crates/rolldown/tests/esbuild/default/jsx_import_meta_value)
+  due to multi pass transformer arch, `import.meta` injected by JSX transform cannot be replaced by the define plugin (define runs before JSX transform)
 ## [line_limit_minified](../../../../../crates/rolldown/tests/esbuild/default/line_limit_minified)
   irrelevant: lineLimit option will not be supported
 ## [line_limit_not_minified](../../../../../crates/rolldown/tests/esbuild/default/line_limit_not_minified)

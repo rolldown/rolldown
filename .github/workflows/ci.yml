@@ -40,6 +40,7 @@ jobs:
               - '.github/workflows/**'
               - 'crates/**'
               - 'tasks/**'
+              - 'scripts/src/esbuild-tests/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
               - 'rust-toolchain.toml'

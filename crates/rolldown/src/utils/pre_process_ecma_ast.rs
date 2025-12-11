@@ -175,6 +175,15 @@ impl PreProcessEcmaAst {
     ret.into_scoping()
   }
 
+  /// Run the define plugin to replace global identifiers.
+  ///
+  /// This method recreates scoping before running the plugin to ensure
+  /// accurate semantic analysis of the transformed code.
+  ///
+  /// # Arguments
+  /// * `ast` - The AST to transform
+  /// * `scoping` - Current scoping information, will be recreated
+  /// * `replace_global_define_config` - Configuration for replacements
   fn run_define_plugin(
     &mut self,
     ast: &mut EcmaAst,

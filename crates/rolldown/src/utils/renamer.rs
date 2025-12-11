@@ -96,24 +96,29 @@ impl<'name> Renamer<'name> {
     match self.canonical_names.entry(canonical_ref) {
       Entry::Vacant(vacant) => {
         let mut candidate_name = original_name.clone();
+        eprintln!("DEBUG renamer: adding symbol {:?} with original_name={}", canonical_ref, original_name);
         loop {
           match self.used_canonical_names.entry(candidate_name.clone()) {
             Entry::Occupied(mut occ) => {
               let next_conflict_index = *occ.get() + 1;
+              eprintln!("DEBUG renamer: candidate_name={} is occupied, trying {}${}", candidate_name, original_name, next_conflict_index);
               *occ.get_mut() = next_conflict_index;
               candidate_name =
                 concat_string!(original_name, "$", itoa::Buffer::new().format(next_conflict_index))
                   .into();
             }
             Entry::Vacant(vac) => {
+              eprintln!("DEBUG renamer: candidate_name={} is vacant, using it", candidate_name);
               vac.insert(0);
               break;
             }
           }
         }
+        eprintln!("DEBUG renamer: final candidate_name={}", candidate_name);
         vacant.insert(candidate_name);
       }
       Entry::Occupied(_) => {
+        eprintln!("DEBUG renamer: symbol {:?} already has a canonical name", canonical_ref);
         // The symbol is already renamed
       }
     }

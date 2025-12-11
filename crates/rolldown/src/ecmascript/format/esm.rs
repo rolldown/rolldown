@@ -338,6 +338,10 @@ where
         return None;
       }
       let alias = &ctx.chunk.canonical_names[canonical_ref];
+      let original_name = canonical_ref.name(&ctx.link_output.symbol_db);
+      eprintln!("DEBUG RENDER: importee={}, imported_as={:?}, canonical_ref={:?}, original_name={}, alias={}", 
+        importee.id, named_import.imported_as, canonical_ref, original_name, alias);
+      eprintln!("DEBUG RENDER: canonical_names has {} entries", ctx.chunk.canonical_names.len());
       match &named_import.imported {
         Specifier::Star => {
           if rendered_external_import_namespace_modules.contains(&importee.idx) {

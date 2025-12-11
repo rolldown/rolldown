@@ -82,6 +82,7 @@ pub fn deconflict_chunk_symbols(
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
         |(symbol_ref, came_from_cjs)| {
           if !came_from_cjs {
+            eprintln!("DEBUG deconflict entry: adding symbol_ref={:?}", symbol_ref);
             renamer.add_symbol_in_root_scope(*symbol_ref, true);
           }
         },
@@ -90,7 +91,7 @@ pub fn deconflict_chunk_symbols(
     ChunkKind::Common => {}
   }
   if matches!(format, OutputFormat::Esm) {
-    chunk.direct_imports_from_external_modules.iter().for_each(|(module, _)| {
+    chunk.direct_imports_from_external_modules.iter().for_each(|(module, named_imports)| {
       let db = link_output.symbol_db.local_db(*module);
       db.classic_data.iter_enumerated().for_each(|(symbol, _)| {
         let symbol_ref = (*module, symbol).into();
@@ -103,6 +104,17 @@ pub fn deconflict_chunk_symbols(
         if link_output.used_symbol_refs.contains(&symbol_ref) {
           renamer.add_symbol_in_root_scope(symbol_ref, true);
         }
+      }
+      // Also add the namespace import symbols from the importing modules
+      // We need to add both the local symbol AND its canonical ref to ensure proper deconflicting
+      for (_importer_module, named_import) in named_imports {
+        eprintln!("DEBUG deconflict: adding imported_as={:?}", named_import.imported_as);
+        // Add the local imported_as symbol (e.g., 'm' in a.js)
+        renamer.add_symbol_in_root_scope(named_import.imported_as, true);
+        // Also add its canonical ref (the external module's namespace ref)
+        let canonical_ref = link_output.symbol_db.canonical_ref_for(named_import.imported_as);
+        eprintln!("DEBUG deconflict: canonical_ref={:?}", canonical_ref);
+        renamer.add_symbol_in_root_scope(canonical_ref, true);
       }
     });
   }
@@ -137,6 +149,7 @@ pub fn deconflict_chunk_symbols(
         })
         .for_each(|declared_symbol| {
           let symbol_ref = declared_symbol.inner();
+          eprintln!("DEBUG deconflict modules: module={:?}, adding symbol_ref={:?}", module.idx, symbol_ref);
           // For CJS wrapped modules, only facade symbols need deconflicting.
           // Facade symbols are synthetic symbols created during linking (e.g., `require_foo` wrapper,
           // namespace objects) that don't exist in the original AST. These are rendered at the chunk's

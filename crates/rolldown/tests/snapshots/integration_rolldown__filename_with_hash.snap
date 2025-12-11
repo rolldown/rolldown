@@ -5038,6 +5038,10 @@ expression: output
 
 - main-!~{000}~.js => main-DG2uveK9.js
 
+# tests/rolldown/issues/7444
+
+- main-!~{000}~.js => main-DYBbCr70.js
+
 # tests/rolldown/issues/duplicate_default_export
 
 - main-!~{000}~.js => main-D5owKpO2.js

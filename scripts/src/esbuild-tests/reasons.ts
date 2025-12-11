@@ -32,10 +32,6 @@ export const failedReasons: Record<string, string> = {
     'should rename `require` when it is appear in param position',
   'default/jsx_dev_self_edge_cases':
     'https://github.com/oxc-project/oxc/issues/16654',
-  'default/jsx_import_meta_property':
-    '`import.meta` injected by transform.jsx is not replaced with `{}`',
-  'default/jsx_import_meta_value':
-    '`import.meta` injected by transform.jsx is not replaced with `{}`',
   'default/legal_comments_inline':
     'legal comments are not kept properly (https://github.com/rolldown/rolldown/issues/7387)',
   'default/mangle_props_import_export':
@@ -259,6 +255,10 @@ export const ignoreReasons: Record<string, string> = {
     "inject feature is aligned with `@rollup/plugin-inject` and doesn't support injecting source file directly",
   'default/inject_jsx':
     'due to multi pass transformer arch, this test could not be supported for now (to support this, we should `Define` first and then `Transform`).',
+  'default/jsx_import_meta_property':
+    'due to multi pass transformer arch, `import.meta` injected by JSX transform cannot be replaced by the define plugin (define runs before JSX transform)',
+  'default/jsx_import_meta_value':
+    'due to multi pass transformer arch, `import.meta` injected by JSX transform cannot be replaced by the define plugin (define runs before JSX transform)',
   'default/inject_with_string_export_name_bundle':
     'Rolldown replaces the function it self in `inject files`; this behavior aligns with `@rollup/plugin-inject`',
   'default/inject_with_string_export_name_no_bundle':

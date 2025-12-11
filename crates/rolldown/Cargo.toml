@@ -62,7 +62,7 @@ rolldown_tracing = { workspace = true }
 rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, optional = true }
-serde_json = { workspace = true }
+serde_json = { workspace = true, features = ["preserve_order"] }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }

@@ -87,7 +87,18 @@ Whether to emit warning when detecting mixed export.
 - **Type:** `boolean`
 - **Default:** `true`
 
-Whether to emit warning when detecting plugin timings.
+Whether to emit warning when plugins significantly impact build performance.
+
+When enabled, Rolldown measures time spent in each plugin hook. If plugins significantly impact build performance, a warning is emitted with a breakdown of plugin timings.
+
+**How it works:**
+
+1. **Detection threshold**: A warning is triggered when plugin time (total build time minus link stage time) exceeds 100x the link stage time. This threshold was determined by studying plugin impact on real-world projects.
+
+2. **Identifying plugins**: When the threshold is exceeded, Rolldown reports up to 5 plugins that take longer than the average plugin time, sorted by duration. Each plugin shows its percentage of total plugin time.
+
+> [!WARNING]
+> For hooks using `ctx.resolve()` or `ctx.load()`, the reported time includes waiting for other plugins, which may overestimate that plugin's actual cost.
 
 ## preferBuiltinFeature
 

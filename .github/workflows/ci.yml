@@ -48,6 +48,7 @@ jobs:
               - 'pnpm-workspace.yaml'
               - '.gitattributes'
               - 'justfile'
+              - 'test262'
             node-changes:
               - *rust-changes
               - 'packages/**'
@@ -55,6 +56,7 @@ jobs:
               - 'scripts/**'
               - 'package.json'
               - 'justfile'
+              - 'rollup'
             pluginutils-changes:
               - 'packages/pluginutils/**'
               - 'package.json'

@@ -1,0 +1,8 @@
+{
+  "config": {
+    "treeshake": {
+      "moduleSideEffects": false,
+      "commonjs": true
+    }
+  }
+}

@@ -6,12 +6,12 @@ use oxc::{
   },
   ast_visit::{Visit, walk},
   semantic::{ScopeFlags, SymbolId},
-  span::{GetSpan, Span},
+  span::{CompactStr, GetSpan, Span},
 };
 use rolldown_common::StmtInfoIdx;
 use rolldown_common::{
-  ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
-  MemberExprObjectReferencedType, OutputFormat, RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoMeta,
+  ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport,
+  MemberExprObjectReferencedType, NamedImport, OutputFormat, RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoMeta,
   SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
@@ -517,13 +517,30 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             }
           }
           "require" => {
-            let is_dummy_record = match self.visit_path.last() {
+            // First, check if we're in a CallExpression and get its span
+            let (call_expr_span, is_dummy_record) = match self.visit_path.last() {
               Some(AstKind::CallExpression(call_expr)) => {
-                !self.process_global_require_call(call_expr)
+                let span = call_expr.span;
+                let processed = self.process_global_require_call(call_expr);
+                (Some(span), !processed)
               }
-              Some(_) => true,
-              _ => false,
+              Some(_) => {
+                self.process_global_identifier_ref_by_ancestor(ident_ref);
+                return;
+              }
+              _ => return,
             };
+            
+            // Now check for destructuring if the require was processed
+            if !is_dummy_record {
+              if let Some(span) = call_expr_span {
+                // Get the import record for this require call
+                if let Some(&import_record_idx) = self.result.imports.get(&span) {
+                  self.init_require_binding_usage_info_by_span(import_record_idx);
+                }
+              }
+            }
+            
             // should not replace require in `runtime` code
             if is_dummy_record
               && self.immutable_ctx.id.as_ref() != RUNTIME_MODULE_KEY
@@ -678,5 +695,75 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let id = self.add_import_record(value.as_ref(), ImportKind::Require, span, init_meta, None);
     self.result.imports.insert(expr.span, id);
     true
+  }
+
+  fn init_require_binding_usage_info_by_span(&mut self, import_record_idx: ImportRecordIdx) -> Option<()> {
+    // Navigate through the visit path to find if this require() is inside a VariableDeclarator
+    let ast_after_remove_paren_idx = self
+      .visit_path
+      .iter()
+      .rposition(|kind| !matches!(kind, AstKind::ParenthesizedExpression(_)))?;
+    
+    // Check if the parent is a VariableDeclarator
+    if let Some(AstKind::VariableDeclarator(var_decl)) = self.visit_path.get(ast_after_remove_paren_idx) {
+      // Extract destructuring pattern and create named imports
+      self.update_require_usage_info_from_binding_pattern(
+        &var_decl.id,
+        import_record_idx,
+      );
+    }
+    
+    None
+  }
+
+  fn update_require_usage_info_from_binding_pattern(
+    &mut self,
+    binding_pattern: &ast::BindingPattern<'_>,
+    import_record_idx: ImportRecordIdx,
+  ) {
+    match &binding_pattern.kind {
+      // Handle: const foo = require('mod')
+      ast::BindingPatternKind::BindingIdentifier(_) => {
+        // No destructuring, just a normal require - no special handling needed
+      }
+      // Handle: const { foo, bar } = require('mod')
+      ast::BindingPatternKind::ObjectPattern(obj) => {
+        for binding in &obj.properties {
+          let binding_name = match &binding.key {
+            // Only handle simple property keys
+            ast::PropertyKey::StaticIdentifier(id) => id.name.as_str(),
+            _ => continue, // Skip complex patterns
+          };
+          
+          let binding_symbol_id = match &binding.value.kind {
+            ast::BindingPatternKind::BindingIdentifier(id) => id.symbol_id(),
+            _ => {
+              // For complex patterns like { a: { b } }, we skip for now
+              continue;
+            }
+          };
+          
+          // Create a NamedImport for this destructured property
+          let symbol_ref = (self.immutable_ctx.idx, binding_symbol_id).into();
+          self.result.named_imports.insert(
+            symbol_ref,
+            NamedImport {
+              imported: CompactStr::new(binding_name).into(),
+              imported_as: symbol_ref,
+              span_imported: binding.key.span(),
+              record_id: import_record_idx,
+            },
+          );
+        }
+        
+        // TODO: Handle rest patterns like { foo, ...rest } = require('mod')
+        // For now, if there's a rest pattern, we might need to mark the import as complete
+      }
+      // Handle: const [foo, bar] = require('mod')
+      ast::BindingPatternKind::ArrayPattern(_) | ast::BindingPatternKind::AssignmentPattern(_) => {
+        // Array destructuring from CommonJS is not commonly used for tree-shaking
+        // We can skip this for now
+      }
+    }
   }
 }

@@ -385,7 +385,7 @@ impl Plugin for ViteReporterPlugin {
       ctx.warn(rolldown_common::LogWithoutPlugin { message, ..Default::default() });
     }
     // Print a newline to separate from next log
-    if self.should_log_info && self.is_tty {
+    if self.should_log_info {
       utils::log_info("");
     }
     Ok(())

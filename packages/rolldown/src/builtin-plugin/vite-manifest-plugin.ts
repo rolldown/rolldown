@@ -11,7 +11,7 @@ export type ViteManifestPluginConfig =
   };
 
 export function viteManifestPlugin(
-  config?: ViteManifestPluginConfig,
+  config: ViteManifestPluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-manifest', config);
 }

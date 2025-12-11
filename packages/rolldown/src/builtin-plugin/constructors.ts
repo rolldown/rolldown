@@ -50,13 +50,13 @@ export function viteImportGlobPlugin(
 }
 
 export function viteReporterPlugin(
-  config?: BindingViteReporterPluginConfig,
+  config: BindingViteReporterPluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-reporter', config);
 }
 
 export function viteWasmHelperPlugin(
-  config?: BindingViteWasmHelperPluginConfig,
+  config: BindingViteWasmHelperPluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-wasm-helper', config);
 }
@@ -71,7 +71,7 @@ export function viteLoadFallbackPlugin(): BuiltinPlugin {
 }
 
 export function viteJsonPlugin(
-  config?: BindingViteJsonPluginConfig,
+  config: BindingViteJsonPluginConfig,
 ): BuiltinPlugin {
   const builtinPlugin = new BuiltinPlugin('builtin:vite-json', config);
   return makeBuiltinPluginCallable(builtinPlugin);

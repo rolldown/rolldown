@@ -4,7 +4,7 @@ import { expect } from 'vitest';
 
 export default defineTest({
   config: {
-    plugins: [viteWasmHelperPlugin()],
+    plugins: [viteWasmHelperPlugin({ decodedBase: '' })],
   },
   async afterTest(output) {
     expect(output.output[1].fileName).toBe('assets/add-Bodj1WnG.wasm');

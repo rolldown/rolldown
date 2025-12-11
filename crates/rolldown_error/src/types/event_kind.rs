@@ -7,7 +7,7 @@ pub enum EventKind {
   // --- These kinds are copied from rollup: https://github.com/rollup/rollup/blob/0b665c31833525c923c0fc20f43ebfca748c6670/src/utils/logs.ts#L102-L179
   AmbiguousExternalNamespaceError = 0,
   /// Whether to emit warning when detecting circular dependency
-  AmbiguousReexportError = 35,
+  AmbiguousReexportError = 36,
   CircularDependency = 1,
   CircularReexportError = 2,
   Eval = 3,

@@ -114,8 +114,11 @@ impl PreProcessEcmaAst {
     }
 
     // Step 3.5: Run define plugin again to replace any import.meta injected by JSX transform.
+    // Only run for JSX/TSX files where JSX transformation might inject new identifiers.
     if let Some(replace_global_define_config) = replace_global_define_config {
-      self.run_define_plugin(&mut ast, &mut scoping, replace_global_define_config);
+      if matches!(parsed_type, OxcParseType::Jsx | OxcParseType::Tsx) {
+        self.run_define_plugin(&mut ast, &mut scoping, replace_global_define_config);
+      }
     }
 
     // Step 4: Run inject plugin.

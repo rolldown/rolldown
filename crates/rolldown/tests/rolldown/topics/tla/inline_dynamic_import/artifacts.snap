@@ -45,7 +45,7 @@ var init_a = __esmMin((async () => {
 //#endregion
 //#region main.js
 var main_default = async () => {
-	return await init_a().then(() => a_exports).then(({ buildDevConfig: buildDevConfig$1 }) => buildDevConfig$1());
+	return await init_a().then(() => a_exports).then(({ buildDevConfig }) => buildDevConfig());
 };
 
 //#endregion

@@ -143,7 +143,6 @@ impl<'name> Renamer<'name> {
     conflictless_name.to_string()
   }
 
-  // non-top-level symbols won't be linked cross-module. So the canonical `SymbolRef` for them are themselves.
   #[tracing::instrument(level = "trace", skip_all)]
   pub fn rename_non_root_symbol(
     &mut self,
@@ -159,6 +158,7 @@ impl<'name> Renamer<'name> {
       canonical_names: &mut FxHashMap<SymbolRef, CompactStr>,
       ast_scope: &'name AstScopes,
       map: &ModuleScopeSymbolIdMap<'_>,
+      reserved_names: &FxHashMap<CompactStr, u32>,
     ) {
       let bindings = map.get(&module.idx).map(|vec| &vec[scope_id]).unwrap();
       let mut used_canonical_names_for_this_scope = FxHashMap::with_capacity(bindings.len());
@@ -170,13 +170,21 @@ impl<'name> Renamer<'name> {
         let mut candidate_name = Cow::Borrowed(binding_name);
         match canonical_names.entry(binding_ref) {
           Entry::Vacant(slot) => loop {
-            // Check for conflicts within the current scope and against reserved names only.
-            // We allow shadowing of user-defined root scope variables, which is valid JavaScript.
-            // We only prevent shadowing of reserved keywords, globals, and format-specific names.
-            let is_conflicted = stack.first().map_or(false, |reserved_names| {
+            // Check for conflicts within the current scope and against reserved names.
+            // For names containing '$' (manually suffixed names), also check against
+            // all parent scopes to avoid ambiguity when these names are used intentionally
+            // to avoid shadowing.
+            let check_parent_scopes = binding_name.contains('$');
+            let is_conflicted = if check_parent_scopes {
+              // For manually suffixed names, use the old conservative behavior
+              stack.iter().any(|used_canonical_names| {
+                used_canonical_names.contains_key(candidate_name.as_ref())
+              }) || used_canonical_names_for_this_scope.contains_key(candidate_name.as_ref())
+            } else {
+              // For regular names, only check reserved names and current scope
               reserved_names.contains_key(candidate_name.as_ref())
-            }) || used_canonical_names_for_this_scope
-              .contains_key(candidate_name.as_ref());
+                || used_canonical_names_for_this_scope.contains_key(candidate_name.as_ref())
+            };
 
             if is_conflicted {
               candidate_name =
@@ -198,12 +206,13 @@ impl<'name> Renamer<'name> {
       stack.push(Cow::Owned(used_canonical_names_for_this_scope));
       let child_scopes = ast_scope.scoping().get_scope_child_ids(scope_id);
       child_scopes.iter().for_each(|scope_id| {
-        rename_symbols_of_nested_scopes(module, *scope_id, stack, canonical_names, ast_scope, map);
+        rename_symbols_of_nested_scopes(module, *scope_id, stack, canonical_names, ast_scope, map, reserved_names);
       });
       stack.pop();
     }
 
     let modules = &link_stage_output.module_table.modules;
+    let reserved_names_ref = &self.reserved_names;
     let copied_scope_iter =
       modules_in_chunk.par_iter().copied().filter_map(|id| modules[id].as_normal()).flat_map(
         |module| {
@@ -212,7 +221,7 @@ impl<'name> Renamer<'name> {
             ast_scope.scoping().get_scope_child_ids(ast_scope.scoping().root_scope_id());
 
           child_scopes.into_par_iter().map(|child_scope_id| {
-            let mut stack = vec![Cow::Borrowed(&self.reserved_names)];
+            let mut stack = vec![Cow::Borrowed(&self.used_canonical_names)];
             let mut canonical_names = FxHashMap::default();
             rename_symbols_of_nested_scopes(
               module,
@@ -221,6 +230,7 @@ impl<'name> Renamer<'name> {
               &mut canonical_names,
               ast_scope,
               map,
+              reserved_names_ref,
             );
             canonical_names
           })

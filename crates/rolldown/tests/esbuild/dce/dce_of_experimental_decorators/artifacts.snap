@@ -15,7 +15,7 @@ const fn = () => {
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 //#region keep-these.ts
-let Class = class Class$1 {};
+let Class = class Class {};
 Class = __decorate([fn], Class);
 var Field = class {};
 __decorate([fn], Field.prototype, "field", void 0);

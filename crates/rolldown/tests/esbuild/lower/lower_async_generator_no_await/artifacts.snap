@@ -19,11 +19,11 @@ function foo() {
 function _foo() {
 	_foo = _wrapAsyncGenerator(function* () {
 		try {
-			var _usingCtx$1 = _usingCtx();
+			var _usingCtx = _usingCtx();
 			yield;
 			yield x;
 			yield* _asyncGeneratorDelegate(_asyncIterator(x));
-			const x = _usingCtx$1.a(yield _awaitAsyncGenerator(y));
+			const x = _usingCtx.a(yield _awaitAsyncGenerator(y));
 			var _iteratorAbruptCompletion = false;
 			var _didIteratorError = false;
 			var _iteratorError;
@@ -45,7 +45,7 @@ function _foo() {
 			try {
 				for (var _iterator2 = _asyncIterator(y), _step2; _iteratorAbruptCompletion2 = !(_step2 = yield _awaitAsyncGenerator(_iterator2.next())).done; _iteratorAbruptCompletion2 = false) try {
 					var _usingCtx3 = _usingCtx();
-					const x$1 = _usingCtx3.a(_step2.value);
+					const x = _usingCtx3.a(_step2.value);
 				} catch (_) {
 					_usingCtx3.e = _;
 				} finally {
@@ -62,9 +62,9 @@ function _foo() {
 				}
 			}
 		} catch (_) {
-			_usingCtx$1.e = _;
+			_usingCtx.e = _;
 		} finally {
-			yield _awaitAsyncGenerator(_usingCtx$1.d());
+			yield _awaitAsyncGenerator(_usingCtx.d());
 		}
 	});
 	return _foo.apply(this, arguments);
@@ -97,7 +97,7 @@ foo = _wrapAsyncGenerator(function* () {
 		try {
 			for (var _iterator4 = _asyncIterator(y), _step4; _iteratorAbruptCompletion4 = !(_step4 = yield _awaitAsyncGenerator(_iterator4.next())).done; _iteratorAbruptCompletion4 = false) try {
 				var _usingCtx5 = _usingCtx();
-				const x$1 = _usingCtx5.a(_step4.value);
+				const x = _usingCtx5.a(_step4.value);
 			} catch (_) {
 				_usingCtx5.e = _;
 			} finally {
@@ -148,7 +148,7 @@ foo = { bar() {
 			try {
 				for (var _iterator6 = _asyncIterator(y), _step6; _iteratorAbruptCompletion6 = !(_step6 = yield _awaitAsyncGenerator(_iterator6.next())).done; _iteratorAbruptCompletion6 = false) try {
 					var _usingCtx7 = _usingCtx();
-					const x$1 = _usingCtx7.a(_step6.value);
+					const x = _usingCtx7.a(_step6.value);
 				} catch (_) {
 					_usingCtx7.e = _;
 				} finally {
@@ -201,7 +201,7 @@ var Foo = class {
 				try {
 					for (var _iterator8 = _asyncIterator(y), _step8; _iteratorAbruptCompletion8 = !(_step8 = yield _awaitAsyncGenerator(_iterator8.next())).done; _iteratorAbruptCompletion8 = false) try {
 						var _usingCtx9 = _usingCtx();
-						const x$1 = _usingCtx9.a(_step8.value);
+						const x = _usingCtx9.a(_step8.value);
 					} catch (_) {
 						_usingCtx9.e = _;
 					} finally {
@@ -255,7 +255,7 @@ Foo = class {
 				try {
 					for (var _iterator10 = _asyncIterator(y), _step10; _iteratorAbruptCompletion10 = !(_step10 = yield _awaitAsyncGenerator(_iterator10.next())).done; _iteratorAbruptCompletion10 = false) try {
 						var _usingCtx11 = _usingCtx();
-						const x$1 = _usingCtx11.a(_step10.value);
+						const x = _usingCtx11.a(_step10.value);
 					} catch (_) {
 						_usingCtx11.e = _;
 					} finally {

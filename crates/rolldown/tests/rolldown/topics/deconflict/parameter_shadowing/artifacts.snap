@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+const num = 0;
+const config = (num) => num;
+console.log(config(42));
+console.log(num);
+
+//#endregion
+export { config, num };
+```

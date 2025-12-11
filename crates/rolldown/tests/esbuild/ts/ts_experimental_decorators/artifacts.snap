@@ -10,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 //#region all.ts
 var _Foo;
-let Foo$1 = class Foo$2 {
+let Foo$1 = class Foo {
 	static {
 		_Foo = this;
 	}
@@ -108,7 +108,7 @@ __decorate([x, y], Foo, null, void 0);
 //#endregion
 //#region a.ts
 var _a_class;
-let a_class = class a_class$1 {
+let a_class = class a_class {
 	static {
 		_a_class = this;
 	}
@@ -125,7 +125,7 @@ let a = a_class;
 //#endregion
 //#region b.ts
 var _b_class;
-let b_class = class b_class$1 {
+let b_class = class b_class {
 	static {
 		_b_class = this;
 	}
@@ -142,7 +142,7 @@ let b = b_class;
 //#endregion
 //#region c.ts
 var _c;
-let c = class c$1 {
+let c = class c {
 	static {
 		_c = this;
 	}
@@ -158,7 +158,7 @@ c = _c = __decorate([x(() => 0), y(() => 1)], c);
 //#endregion
 //#region d.ts
 var _d;
-let d = class d$1 {
+let d = class d {
 	static {
 		_d = this;
 	}
@@ -180,7 +180,7 @@ var e_default = _default$2;
 //#endregion
 //#region f.ts
 var _f;
-let f = class f$1 {
+let f = class f {
 	static {
 		_f = this;
 	}
@@ -203,7 +203,7 @@ var g_default = _default$1;
 //#endregion
 //#region h.ts
 var _h;
-let h = class h$1 {
+let h = class h {
 	static {
 		_h = this;
 	}
@@ -233,20 +233,20 @@ __decorate([x(() => 0), y(() => 1)], j.prototype, "foo", null);
 //#endregion
 //#region k.ts
 var _default = class {
-	foo(x$1) {}
+	foo(x) {}
 };
 __decorate([__decorateParam(0, x(() => 0)), __decorateParam(0, y(() => 1))], _default.prototype, "foo", null);
 
 //#endregion
 //#region arguments.ts
-function dec(x$1) {}
-function fn(x$1) {
+function dec(x) {}
+function fn(x) {
 	var _arguments$;
-	class Foo$2 {
+	class Foo {
 		[_arguments$ = arguments[0]]() {}
 	}
-	__decorate([dec(arguments[0])], Foo$2.prototype, _arguments$, null);
-	return Foo$2;
+	__decorate([dec(arguments[0])], Foo.prototype, _arguments$, null);
+	return Foo;
 }
 
 //#endregion

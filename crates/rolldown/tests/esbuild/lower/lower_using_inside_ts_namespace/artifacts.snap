@@ -11,14 +11,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 let ns;
 (function(_ns) {
 	try {
-		var _usingCtx$1 = _usingCtx();
+		var _usingCtx = _usingCtx();
 		_ns.a = b;
-		const c = _usingCtx$1.u(d);
+		const c = _usingCtx.u(d);
 		_ns.e = f;
 	} catch (_) {
-		_usingCtx$1.e = _;
+		_usingCtx.e = _;
 	} finally {
-		_usingCtx$1.d();
+		_usingCtx.d();
 	}
 })(ns || (ns = {}));
 

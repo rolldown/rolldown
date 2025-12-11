@@ -24,8 +24,8 @@ const parent_hot = __rolldown_runtime__.createModuleHotContext("parent.js");
 __rolldown_runtime__.registerModule("parent.js", { exports: parent_exports });
 const parentValue = "parent";
 parent_hot.accept((newMod) => {
-	const { childValue, parentValue: parentValue$1 } = newMod;
-	assert.strictEqual(parentValue$1, "parent");
+	const { childValue, parentValue } = newMod;
+	assert.strictEqual(parentValue, "parent");
 	assert.strictEqual(childValue, "child");
 });
 

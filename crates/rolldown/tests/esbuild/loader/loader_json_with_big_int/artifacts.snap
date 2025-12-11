@@ -1,17 +1,17 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Assets
+# Errors
 
-## entry.js
+## JSON_PARSE
 
-```js
-//#region data.json
-var data_default = { invalid: [123n] };
+```text
+[JSON_PARSE] Error: expected `,` or `]` at line 2 column 17
+   ╭─[ data.json:2:17 ]
+   │
+ 2 │     "invalid": [123n]
+   │                    │ 
+   │                    ╰─ expected `,` or `]` at line 2 column 17
+───╯
 
-//#endregion
-//#region entry.js
-console.log(data_default);
-
-//#endregion
 ```

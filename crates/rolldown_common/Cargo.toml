@@ -45,6 +45,9 @@ tokio = { workspace = true }
 
 num-bigint = { workspace = true }
 
+[dev-dependencies]
+insta = { workspace = true }
+
 [features]
 default = ["serde"]
 deserialize_bundler_options = ["dep:schemars", "dep:serde"]

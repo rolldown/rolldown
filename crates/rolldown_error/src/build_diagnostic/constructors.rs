@@ -326,8 +326,9 @@ impl BuildDiagnostic {
     column: usize,
     message: ArcStr,
   ) -> Self {
-    // `serde_json` Error is one-based https://docs.rs/serde_json/1.0.132/serde_json/struct.Error.html#method.column
-    let offset = ByteLocator::new(source.as_str()).byte_offset(line - 1, column - 1);
+    // This function expects 0-based `line` and `column` values, matching `ByteLocator::byte_offset`.
+    // Note: `serde_json::Error` reports 1-based line/column; conversion to 0-based is handled at the call site.
+    let offset = ByteLocator::new(source.as_str()).byte_offset(line, column);
     let span = Span::new(offset as u32, offset as u32);
     Self::new_inner(JsonParse { filename, source, span, message })
   }

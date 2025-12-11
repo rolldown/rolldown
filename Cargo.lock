@@ -2855,6 +2855,7 @@ dependencies = [
  "dashmap",
  "derive_more",
  "fast-glob",
+ "insta",
  "itertools",
  "num-bigint",
  "oxc",

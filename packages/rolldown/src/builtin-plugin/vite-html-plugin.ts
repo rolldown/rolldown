@@ -62,7 +62,7 @@ export interface ViteHtmlPluginOptions extends
 }
 
 export function viteHtmlPlugin(
-  config?: ViteHtmlPluginOptions,
+  config: ViteHtmlPluginOptions,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-html', config);
 }

@@ -5,7 +5,7 @@ export default defineTest({
   config: {
     input: './main.js',
     plugins: [
-      viteTransformPlugin(),
+      viteTransformPlugin({ root: __dirname }),
       {
         name: 'virtual',
         resolveId(source) {

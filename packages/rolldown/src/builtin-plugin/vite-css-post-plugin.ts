@@ -14,7 +14,7 @@ export type ViteCssPostPluginConfig =
   };
 
 export function viteCSSPostPlugin(
-  config?: ViteCssPostPluginConfig,
+  config: ViteCssPostPluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-css-post', config);
 }

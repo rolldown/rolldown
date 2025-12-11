@@ -101,8 +101,8 @@ t-node-rolldown *args="":
   pnpm run --filter rolldown-tests test:watcher {{ args }}
 
 # Run Rollup's test suite without building Rolldown.
-t-node-rollup command="":
-  pnpm run --filter rollup-tests test{{ command }}
+t-node-rollup *args="":
+  pnpm run --filter rollup-tests test {{ args }}
 
 # Run specific rust test without enabling extended tests.
 [unix]

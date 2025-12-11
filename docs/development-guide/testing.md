@@ -196,6 +196,14 @@ In `/packages/rollup-tests`:
 - `just test-node-rollup` will run rollup tests.
 - `just test-node-rollup --update` will run and update the tests' status.
 
+To run a specific test, use the `--grep` option with `just test-node-rollup`:
+
+```shell
+just test-node-rollup --grep "function"
+```
+
+This will run only tests whose names match "function". For more filtering options, see [Mocha's grep documentation](https://mochajs.org/#grep).
+
 ## How to choose test technique
 
 Our Rust test infra is powerful enough to cover most of the case of JavaScript (plugin, passing function inside config).

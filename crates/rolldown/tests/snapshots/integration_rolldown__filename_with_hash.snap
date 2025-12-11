@@ -2500,10 +2500,6 @@ expression: output
 - b-!~{001}~.js => b-CV5tiItg.js
 - data-!~{002}~.js => data-CXT8ghb6.js
 
-# tests/esbuild/loader/loader_json_with_big_int
-
-- entry-!~{000}~.js => entry-g5SujFYL.js
-
 # tests/esbuild/loader/loader_text_common_js_and_es6
 
 - entry-!~{000}~.js => entry-B2VqzfSX.js

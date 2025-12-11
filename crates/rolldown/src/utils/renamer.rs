@@ -36,6 +36,9 @@ pub struct Renamer<'name> {
   /// ```
   ///
   used_canonical_names: FxHashMap<CompactStr, u32>,
+  /// Reserved names that cannot be used (keywords, globals, format-specific names).
+  /// Nested scopes cannot shadow these names.
+  reserved_names: FxHashMap<CompactStr, u32>,
   canonical_names: FxHashMap<SymbolRef, CompactStr>,
   symbol_db: &'name SymbolRefDb,
 }
@@ -50,15 +53,17 @@ impl<'name> Renamer<'name> {
     };
     // https://github.com/rollup/rollup/blob/bfbea66569491f5466fbba99de2ba6a0225f851b/src/Chunk.ts#L1359
     manual_reserved.extend(["Object", "Promise"]);
+    let reserved_names: FxHashMap<CompactStr, u32> = manual_reserved
+      .iter()
+      .chain(RESERVED_KEYWORDS.iter())
+      .chain(GLOBAL_OBJECTS.iter())
+      .map(|s| (CompactStr::new(s), 0))
+      .collect();
     Self {
       canonical_names: FxHashMap::default(),
       symbol_db: symbols,
-      used_canonical_names: manual_reserved
-        .iter()
-        .chain(RESERVED_KEYWORDS.iter())
-        .chain(GLOBAL_OBJECTS.iter())
-        .map(|s| (CompactStr::new(s), 0))
-        .collect(),
+      used_canonical_names: reserved_names.clone(),
+      reserved_names,
     }
   }
 
@@ -165,12 +170,15 @@ impl<'name> Renamer<'name> {
         let mut candidate_name = Cow::Borrowed(binding_name);
         match canonical_names.entry(binding_ref) {
           Entry::Vacant(slot) => loop {
-            let is_shadowed = stack.iter().any(|used_canonical_names| {
-              used_canonical_names.contains_key(candidate_name.as_ref())
+            // Check for conflicts within the current scope and against reserved names only.
+            // We allow shadowing of user-defined root scope variables, which is valid JavaScript.
+            // We only prevent shadowing of reserved keywords, globals, and format-specific names.
+            let is_conflicted = stack.first().map_or(false, |reserved_names| {
+              reserved_names.contains_key(candidate_name.as_ref())
             }) || used_canonical_names_for_this_scope
               .contains_key(candidate_name.as_ref());
 
-            if is_shadowed {
+            if is_conflicted {
               candidate_name =
                 Cow::Owned(concat_string!(&binding_name, "$", itoa::Buffer::new().format(count)));
               count += 1;
@@ -204,7 +212,7 @@ impl<'name> Renamer<'name> {
             ast_scope.scoping().get_scope_child_ids(ast_scope.scoping().root_scope_id());
 
           child_scopes.into_par_iter().map(|child_scope_id| {
-            let mut stack = vec![Cow::Borrowed(&self.used_canonical_names)];
+            let mut stack = vec![Cow::Borrowed(&self.reserved_names)];
             let mut canonical_names = FxHashMap::default();
             rename_symbols_of_nested_scopes(
               module,

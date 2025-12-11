@@ -346,6 +346,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warning when detecting could not clean directory',
     ),
   ),
+  pluginTimings: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warning when detecting plugin timings',
+    ),
+  ),
 });
 
 const CompressOptionsKeepNamesSchema = v.strictObject({

@@ -12,6 +12,7 @@ pub mod hook_render_start_args;
 pub mod hook_resolve_id_args;
 pub mod hook_resolve_id_output;
 pub mod hook_resolve_id_skipped;
+pub mod hook_timing;
 pub mod hook_transform_args;
 pub mod hook_transform_ast_args;
 pub mod hook_transform_output;

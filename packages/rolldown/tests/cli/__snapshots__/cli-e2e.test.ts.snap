@@ -35,6 +35,7 @@ OPTIONS
   --checks.missing-global-name Whether to emit warning when detecting missing global name.
   --checks.missing-name-option-for-iife-export Whether to emit warning when detecting missing name option for iife export.
   --checks.mixed-export       Whether to emit warning when detecting mixed export.
+  --checks.plugin-timings     Whether to emit warning when detecting plugin timings.
   --checks.prefer-builtin-feature Whether to emit warning when detecting prefer builtin feature.
   --checks.unresolved-entry   Whether to emit warning when detecting unresolved entry.
   --checks.unresolved-import  Whether to emit warning when detecting unresolved import.

@@ -39,6 +39,7 @@ pub mod missing_name_option_for_umd_export;
 pub mod mixed_export;
 pub mod parse_error;
 pub mod plugin_error;
+pub mod plugin_timings;
 pub mod prefer_builtin_feature;
 pub mod resolve_error;
 pub mod unhandleable_error;

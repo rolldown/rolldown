@@ -1362,6 +1362,12 @@
             "boolean",
             "null"
           ]
+        },
+        "pluginTimings": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

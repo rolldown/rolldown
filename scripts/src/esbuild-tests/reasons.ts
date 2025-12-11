@@ -255,6 +255,10 @@ export const ignoreReasons: Record<string, string> = {
     "inject feature is aligned with `@rollup/plugin-inject` and doesn't support injecting source file directly",
   'default/inject_jsx':
     'due to multi pass transformer arch, this test could not be supported for now (to support this, we should `Define` first and then `Transform`).',
+  'default/jsx_import_meta_property':
+    'due to multi pass transformer arch, `import.meta` injected by JSX transform cannot be replaced by the define plugin (define runs before JSX transform to avoid breaking other tests)',
+  'default/jsx_import_meta_value':
+    'due to multi pass transformer arch, `import.meta` injected by JSX transform cannot be replaced by the define plugin (define runs before JSX transform to avoid breaking other tests)',
   'default/inject_with_string_export_name_bundle':
     'Rolldown replaces the function it self in `inject files`; this behavior aligns with `@rollup/plugin-inject`',
   'default/inject_with_string_export_name_no_bundle':

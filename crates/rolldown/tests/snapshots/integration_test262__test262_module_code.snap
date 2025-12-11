@@ -1497,7 +1497,7 @@ Reason: Rolldown does not use null as the prototype of module namespace objects
 Expected: success
 Actual:
 Runtime error: Failed to import test module: Test262Error {
-  message: 'in: __proto__ Expected SameValue(«true», «false») to be true'
+  message: 'Reflect.has: __proto__ Expected SameValue(«true», «false») to be true'
 }
 ---
 

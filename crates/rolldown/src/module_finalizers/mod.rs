@@ -815,8 +815,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let importee_idx = import_record.resolved_module;
     let importee_linking_info = &self.ctx.linking_infos[importee_idx];
 
-    // Check if the property exists in the module's exports
-    Some(importee_linking_info.resolved_exports.contains_key(property_name))
+    // Check if the property exists in the module's non-ambiguous exports
+    // Using sorted_and_non_ambiguous_resolved_exports ensures that ambiguous exports
+    // (which are not present in module namespace objects) return false
+    Some(importee_linking_info.sorted_and_non_ambiguous_resolved_exports.contains_key(property_name))
   }
 
   /// rewrite toplevel `class ClassName {}` to `var ClassName = class {}`

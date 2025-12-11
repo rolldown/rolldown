@@ -122,7 +122,7 @@ impl ClassicBundler {
     async move {
       if let Some(handle) = last_bundle_handle {
         let plugin_driver = handle.plugin_driver();
-        plugin_driver.close_bundle().await?;
+        plugin_driver.close_bundle(None).await?;
       }
       Ok(())
     }

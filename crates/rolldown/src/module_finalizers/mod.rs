@@ -818,7 +818,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // Check if the property exists in the module's non-ambiguous exports
     // Using sorted_and_non_ambiguous_resolved_exports ensures that ambiguous exports
     // (which are not present in module namespace objects) return false
-    Some(importee_linking_info.sorted_and_non_ambiguous_resolved_exports.contains_key(property_name))
+    Some(
+      importee_linking_info.sorted_and_non_ambiguous_resolved_exports.contains_key(property_name),
+    )
   }
 
   /// rewrite toplevel `class ClassName {}` to `var ClassName = class {}`

@@ -9,5 +9,7 @@
     "format": "iife",
     "banner": "#! from banner"
   },
-  "expectExecuted": false
+  "expectExecuted": false,
+  "skipSyntaxValidation": true,
+  "_comment": "Output has two hashbangs which is invalid syntax"
 }

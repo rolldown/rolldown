@@ -3481,6 +3481,7 @@ dependencies = [
  "insta",
  "json-strip-comments",
  "jsonschema",
+ "oxc",
  "regex",
  "rolldown",
  "rolldown_common",

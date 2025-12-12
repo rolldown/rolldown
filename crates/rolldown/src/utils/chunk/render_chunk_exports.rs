@@ -120,7 +120,8 @@ pub fn render_chunk_exports(
             )
           });
           if let Some(ns_alias) = &symbol.namespace_alias {
-            let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
+            let canonical_ns_ref = link_output.symbol_db.canonical_ref_for(ns_alias.namespace_ref);
+            let canonical_ns_name = &chunk.canonical_names[&canonical_ns_ref];
             let property_name = &ns_alias.property_name;
             s.push_str(&concat_string!(
               "var ",

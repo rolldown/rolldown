@@ -3707,6 +3707,10 @@ expression: output
 
 - entry-!~{000}~.js => entry-CErn9CRR.js
 
+# tests/rolldown/cjs_compat/module.exports_export/safely_merge_cjs_ns_reexport
+
+- entry-!~{000}~.js => entry-V3jYNOBp.js
+
 # tests/rolldown/cjs_compat/module.exports_export/safely_merge_cjs_ns_with_default_import
 
 - entry-!~{000}~.js => entry-Bzob-Jc9.js

@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-  ChunkIdx, ChunkKind, FilenameTemplate, ImportRecordIdx, ModuleIdx, ModuleTable, NamedImport,
+  ChunkIdx, ChunkKind, FilenameTemplate, FilenameTemplateError, ImportRecordIdx, ModuleIdx, ModuleTable, NamedImport,
   NormalModule, NormalizedBundlerOptions, OutputExports, PreserveEntrySignatures,
   RenderedConcatenatedModuleParts, RollupPreRenderedChunk, RuntimeHelper, SymbolRef,
   chunk::types::{chunk_reason_type::ChunkReasonType, module_group::ModuleGroup},
@@ -14,6 +14,7 @@ pub mod types;
 
 use arcstr::ArcStr;
 use oxc::span::CompactStr;
+use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rolldown_std_utils::PathExt;
 use rolldown_utils::{
   BitSet,
@@ -156,7 +157,23 @@ impl Chunk {
 
     let pattern_name = if is_entry { "entryFileNames" } else { "chunkFileNames" };
 
-    Ok(FilenameTemplate::new(ret, pattern_name))
+    FilenameTemplate::new(ret, pattern_name).map_err(|e| {
+      let diag = match e {
+        FilenameTemplateError::InvalidPattern { pattern, pattern_name } => {
+          BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
+            pattern,
+            pattern_name,
+          })
+        }
+        FilenameTemplateError::InvalidSubstitution { name, pattern_name } => {
+          BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenameSubstitution {
+            name,
+            pattern_name,
+          })
+        }
+      };
+      anyhow::Error::new(diag)
+    })
   }
 
   pub async fn css_filename_template(
@@ -175,7 +192,23 @@ impl Chunk {
 
     let pattern_name = if is_entry { "cssEntryFileNames" } else { "cssChunkFileNames" };
 
-    Ok(FilenameTemplate::new(ret, pattern_name))
+    FilenameTemplate::new(ret, pattern_name).map_err(|e| {
+      let diag = match e {
+        FilenameTemplateError::InvalidPattern { pattern, pattern_name } => {
+          BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
+            pattern,
+            pattern_name,
+          })
+        }
+        FilenameTemplateError::InvalidSubstitution { name, pattern_name } => {
+          BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenameSubstitution {
+            name,
+            pattern_name,
+          })
+        }
+      };
+      anyhow::Error::new(diag)
+    })
   }
 
   pub async fn generate_preliminary_filename(

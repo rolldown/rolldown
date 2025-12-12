@@ -68,8 +68,15 @@ pub struct FilenameTemplate {
 }
 
 impl FilenameTemplate {
-  pub fn new(template: String, pattern_name: &'static str) -> Self {
-    Self { template, pattern_name }
+  pub fn new(template: String, pattern_name: &'static str) -> Result<Self, FilenameTemplateError> {
+    // Validate the template pattern itself
+    if is_path_fragment(&template) {
+      return Err(FilenameTemplateError::InvalidPattern {
+        pattern: template,
+        pattern_name: pattern_name.to_string(),
+      });
+    }
+    Ok(Self { template, pattern_name })
   }
 
   pub fn template(&self) -> &str {
@@ -90,15 +97,6 @@ impl FilenameTemplate {
     hash_replacer: Option<impl Replacer>,
   ) -> Result<String, FilenameTemplateError> {
     let pattern_name = self.pattern_name;
-
-    // Validate the template pattern itself
-    if is_path_fragment(&self.template) {
-      return Err(FilenameTemplateError::InvalidPattern {
-        pattern: self.template,
-        pattern_name: pattern_name.to_string(),
-      });
-    }
-
     let mut tmp = self.template;
 
     if let Some(name) = name {
@@ -144,13 +142,13 @@ mod tests {
 
   #[test]
   fn basic() {
-    FilenameTemplate::new("[name]-[hash:8].js".to_string(), "entryFileNames");
+    FilenameTemplate::new("[name]-[hash:8].js".to_string(), "entryFileNames").expect("should create template");
   }
 
   #[test]
   fn hash_with_len() {
     let filename_template =
-      FilenameTemplate::new("[name]-[hash:3]-[hash:3].js".to_string(), "entryFileNames");
+      FilenameTemplate::new("[name]-[hash:3]-[hash:3].js".to_string(), "entryFileNames").expect("should create template");
 
     let mut hash_iter = ["abc", "def"].iter();
     let hash_replacer =
@@ -183,8 +181,7 @@ mod tests {
 
   #[test]
   fn test_invalid_pattern() {
-    let template = FilenameTemplate::new("/absolute/path/[name].js".to_string(), "entryFileNames");
-    let result = template.render(Some("test"), None, None, None::<&str>);
+    let result = FilenameTemplate::new("/absolute/path/[name].js".to_string(), "entryFileNames");
     assert!(result.is_err());
     assert!(
       result.unwrap_err().to_string().contains("patterns can be neither absolute nor relative")
@@ -193,7 +190,7 @@ mod tests {
 
   #[test]
   fn test_invalid_name_substitution() {
-    let template = FilenameTemplate::new("[name].js".to_string(), "entryFileNames");
+    let template = FilenameTemplate::new("[name].js".to_string(), "entryFileNames").expect("should create template");
     let result = template.render(Some("/absolute/name"), None, None, None::<&str>);
     assert!(result.is_err());
     assert!(
@@ -206,7 +203,7 @@ mod tests {
 
   #[test]
   fn test_valid_subdirectory() {
-    let template = FilenameTemplate::new("dist/[name].js".to_string(), "entryFileNames");
+    let template = FilenameTemplate::new("dist/[name].js".to_string(), "entryFileNames").expect("should create template");
     let result = template.render(Some("test"), None, None, None::<&str>);
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "dist/test.js");

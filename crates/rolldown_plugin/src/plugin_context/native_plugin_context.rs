@@ -150,9 +150,11 @@ impl NativePluginContextImpl {
     fn_sanitized_file_name: Option<String>,
   ) -> anyhow::Result<ArcStr> {
     let file_name_is_none = file.file_name.is_none();
-    let asset_filename_template = file_name_is_none.then(|| {
-      FilenameTemplate::new(self.options.asset_filenames.value(fn_asset_filename), "assetFileNames")
-    });
+    let asset_filename_template = if file_name_is_none {
+      Some(FilenameTemplate::new(self.options.asset_filenames.value(fn_asset_filename), "assetFileNames")?)
+    } else {
+      None
+    };
     let sanitized_file_name = file_name_is_none.then(|| {
       self.options.sanitize_filename.value(file.name_for_sanitize(), fn_sanitized_file_name)
     });

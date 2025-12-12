@@ -71,8 +71,8 @@ impl FilenameTemplate {
           }
         }
         // Malformed pattern like [hash:abc] or [hash: without closing bracket
-        // Skip past "[hash:" to avoid infinite loop
-        start = pos + HASH_BRACKET_LEN;
+        // Skip past "[hash" and continue searching
+        start = pos + HASH_PREFIX_LEN;
       } else if rest.starts_with(']') {
         lengths.push(None);
         // Skip past "[hash]"
@@ -80,7 +80,7 @@ impl FilenameTemplate {
       } else {
         // Not a valid hash pattern (e.g., [hashmap])
         // Skip past "[hash" to continue searching
-        start = pos + HASH_BRACKET_LEN;
+        start = pos + HASH_PREFIX_LEN;
       }
     }
 

@@ -27,7 +27,11 @@ runTestSuiteWithSamples(
 						const warnings = [];
 						const inputOptions = {
 							input: directory + '/main.js',
-							onwarn: warning => warnings.push(warning),
+              onLog: (level, log) => {
+                if (level === 'warn' && !config.expectedWarnings?.includes(log.code)) {
+                  warnings.push(log);
+                }
+              },
 							strictDeprecations: true,
 							...config.options
 						};

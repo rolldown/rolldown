@@ -28,6 +28,11 @@ fn is_path_fragment(name: &str) -> bool {
   Path::new(name).is_absolute()
 }
 
+// Constants for hash pattern parsing
+const HASH_PREFIX: &str = "[hash";
+const HASH_PREFIX_LEN: usize = 5; // Length of "[hash"
+const HASH_COLON_LEN: usize = 6; // Length of "[hash:"
+
 #[derive(Debug)]
 pub struct FilenameTemplate {
   template: String,
@@ -53,28 +58,28 @@ impl FilenameTemplate {
     let mut lengths = Vec::new();
     let mut start = 0;
 
-    while let Some(pos) = self.template[start..].find("[hash") {
+    while let Some(pos) = self.template[start..].find(HASH_PREFIX) {
       let pos = start + pos;
-      let rest = &self.template[pos + 5..];
+      let rest = &self.template[pos + HASH_PREFIX_LEN..];
 
       if let Some(&b':') = rest.as_bytes().first() {
         if let Some(end_bracket) = rest.find(']') {
           if let Ok(len) = rest[1..end_bracket].parse::<usize>() {
             lengths.push(Some(len));
-            start = pos + 5 + end_bracket + 1;
+            start = pos + HASH_PREFIX_LEN + end_bracket + 1;
             continue;
           }
         }
         // Malformed pattern like [hash:abc] or [hash: without closing bracket
         // Skip past this occurrence to avoid infinite loop
-        start = pos + 6;
+        start = pos + HASH_COLON_LEN;
       } else if rest.starts_with(']') {
         lengths.push(None);
-        start = pos + 6;
+        start = pos + HASH_COLON_LEN;
       } else {
         // Not a valid hash pattern (e.g., [hashmap])
         // Skip past this occurrence
-        start = pos + 6;
+        start = pos + HASH_COLON_LEN;
       }
     }
 

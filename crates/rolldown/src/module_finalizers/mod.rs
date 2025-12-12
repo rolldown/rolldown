@@ -132,11 +132,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // Remove this statement by ignoring it
       }
       WrapKind::Cjs => {
+        // Check if this CJS module's namespace can be merged with other imports
+        let merge_info = self.ctx.safely_merge_cjs_ns_map.get(&rec.resolved_module);
+
         // Consider user reference a module use relative path e.g.
         // ```js
         // import React from './node_modules/react/index.js';
         // ```
-        if rec.meta.contains(ImportRecordMeta::SafelyMergeCjsNs) {
+        if merge_info.is_some() {
           let chunk_idx = self.ctx.chunk_id;
           if let Some(symbol_ref_to_be_merged) =
             self.ctx.chunk_graph.finalized_cjs_ns_map_idx_vec[chunk_idx].get(&rec.namespace_ref)
@@ -170,11 +173,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         };
 
         // Check if we need __toESM or can use require_foo() directly
-        // Always use __toESM when SafelyMergeCjsNs optimization is enabled to ensure
-        // proper handling of default exports when namespaces are merged
-        let init_expr = if rec.meta.contains(ImportRecordMeta::SafelyMergeCjsNs)
-          || import_record_needs_interop(self.ctx.module, rec_id)
-        {
+        let needs_toesm = if let Some(info) = merge_info {
+          info.needs_interop
+        } else {
+          import_record_needs_interop(self.ctx.module, rec_id)
+        };
+        let init_expr = if needs_toesm {
           // `__toESM`
           let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
           self.snippet.wrap_with_to_esm(

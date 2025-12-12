@@ -8,7 +8,7 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
   EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures,
-  ResolvedId, RuntimeModuleBrief, ScanMode, SourcemapChainElement, SymbolRef, SymbolRefDb,
+  ResolvedId, RuntimeModuleBrief, ScanMode, SourcemapChainElement, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_ecmascript::EcmaAst;
@@ -79,7 +79,6 @@ pub struct NormalizedScanStageOutput {
   pub symbol_ref_db: SymbolRefDb,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
-  pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   // TODO: merge the preserve_entry_signatures_map in incremental build
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
@@ -109,7 +108,6 @@ impl NormalizedScanStageOutput {
       runtime: self.runtime.clone(),
       warnings: vec![],
       dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map.clone(),
-      safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map.clone(),
       overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map.clone(),
       entry_point_to_reference_ids: self.entry_point_to_reference_ids.clone(),
       flat_options: self.flat_options,
@@ -139,7 +137,6 @@ impl TryFrom<ScanStageOutput> for NormalizedScanStageOutput {
       runtime: value.runtime,
       warnings: value.warnings,
       dynamic_import_exports_usage_map: value.dynamic_import_exports_usage_map,
-      safely_merge_cjs_ns_map: value.safely_merge_cjs_ns_map,
       overrode_preserve_entry_signature_map: value.overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: value.entry_point_to_reference_ids,
       flat_options: value.flat_options,
@@ -156,7 +153,6 @@ pub struct ScanStageOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
-  pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub flat_options: FlatOptions,
@@ -223,7 +219,6 @@ impl ScanStage {
       index_ecma_ast,
       dynamic_import_exports_usage_map,
       new_added_modules_from_partial_scan: _,
-      safely_merge_cjs_ns_map,
       overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids,
       flat_options,
@@ -241,7 +236,6 @@ impl ScanStage {
       index_ecma_ast,
       dynamic_import_exports_usage_map,
       module_table,
-      safely_merge_cjs_ns_map,
       overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids,
       flat_options,
@@ -380,7 +374,6 @@ impl From<ModuleLoaderOutput> for ScanStageOutput {
       index_ecma_ast,
       dynamic_import_exports_usage_map,
       new_added_modules_from_partial_scan: _,
-      safely_merge_cjs_ns_map,
       overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids,
       flat_options,
@@ -393,7 +386,6 @@ impl From<ModuleLoaderOutput> for ScanStageOutput {
       index_ecma_ast,
       dynamic_import_exports_usage_map,
       module_table,
-      safely_merge_cjs_ns_map,
       overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids,
       flat_options,

@@ -38,7 +38,7 @@ pub mod bundler_options {
       defer_sync_scan_data_option::DeferSyncScanDataOption,
       es_module_flag::EsModuleFlag,
       experimental_options::{ExperimentalOptions, SourcemapHires},
-      filename_template::FilenameTemplate,
+      filename_template::{FilenameTemplate, FilenameTemplateError},
       generated_code_options::GeneratedCodeOptions,
       hash_characters::HashCharacters,
       hmr_options::HmrOptions,

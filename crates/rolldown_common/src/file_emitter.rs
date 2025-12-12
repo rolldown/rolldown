@@ -1,11 +1,11 @@
 use crate::{
-  AddEntryModuleMsg, FilenameTemplate, ModuleLoaderMsg, Modules, NormalizedBundlerOptions, Output,
+  AddEntryModuleMsg, FilenameTemplate, FilenameTemplateError, ModuleLoaderMsg, Modules, NormalizedBundlerOptions, Output,
   OutputAsset, OutputChunk, PreserveEntrySignatures, StrOrBytes,
 };
 use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet, Entry};
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rolldown_utils::make_unique_name::make_unique_name;
 use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
@@ -223,7 +223,21 @@ impl FileEmitter {
           None,
           Some(extension.unwrap_or_default()),
           Some(|len: Option<usize>| &hash[..len.map_or(8, |len| len.min(21))]),
-        )?
+        )
+        .map_err(|e| match e {
+          FilenameTemplateError::InvalidPattern { pattern, pattern_name } => {
+            BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
+              pattern,
+              pattern_name,
+            })
+          }
+          FilenameTemplateError::InvalidSubstitution { name, pattern_name } => {
+            BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenameSubstitution {
+              name,
+              pattern_name,
+            })
+          }
+        })?
         .into();
 
       // deconflict file name

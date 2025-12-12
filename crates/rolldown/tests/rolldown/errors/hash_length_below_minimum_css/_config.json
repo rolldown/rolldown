@@ -1,0 +1,12 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./entry.js"
+      }
+    ],
+    "cssEntryFilenames": "css/[hash:4].css"
+  },
+  "expectError": true
+}

@@ -224,19 +224,22 @@ impl FileEmitter {
           Some(extension.unwrap_or_default()),
           Some(|len: Option<usize>| &hash[..len.map_or(8, |len| len.min(21))]),
         )
-        .map_err(|e| match e {
-          FilenameTemplateError::InvalidPattern { pattern, pattern_name } => {
-            BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
-              pattern,
-              pattern_name,
-            })
-          }
-          FilenameTemplateError::InvalidSubstitution { name, pattern_name } => {
-            BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenameSubstitution {
-              name,
-              pattern_name,
-            })
-          }
+        .map_err(|e| {
+          let diag = match e {
+            FilenameTemplateError::InvalidPattern { pattern, pattern_name } => {
+              BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
+                pattern,
+                pattern_name,
+              })
+            }
+            FilenameTemplateError::InvalidSubstitution { name, pattern_name } => {
+              BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenameSubstitution {
+                name,
+                pattern_name,
+              })
+            }
+          };
+          anyhow::Error::new(diag)
         })?
         .into();
 

@@ -157,23 +157,7 @@ impl Chunk {
 
     let pattern_name = if is_entry { "entryFileNames" } else { "chunkFileNames" };
 
-    FilenameTemplate::new(ret, pattern_name).map_err(|e| {
-      let diag = match e {
-        FilenameTemplateError::InvalidPattern { pattern, pattern_name } => {
-          BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
-            pattern,
-            pattern_name,
-          })
-        }
-        FilenameTemplateError::InvalidSubstitution { name, pattern_name } => {
-          BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenameSubstitution {
-            name,
-            pattern_name,
-          })
-        }
-      };
-      anyhow::Error::new(diag)
-    })
+    Ok(FilenameTemplate::new(ret, pattern_name))
   }
 
   pub async fn css_filename_template(
@@ -192,23 +176,7 @@ impl Chunk {
 
     let pattern_name = if is_entry { "cssEntryFileNames" } else { "cssChunkFileNames" };
 
-    FilenameTemplate::new(ret, pattern_name).map_err(|e| {
-      let diag = match e {
-        FilenameTemplateError::InvalidPattern { pattern, pattern_name } => {
-          BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
-            pattern,
-            pattern_name,
-          })
-        }
-        FilenameTemplateError::InvalidSubstitution { name, pattern_name } => {
-          BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenameSubstitution {
-            name,
-            pattern_name,
-          })
-        }
-      };
-      anyhow::Error::new(diag)
-    })
+    Ok(FilenameTemplate::new(ret, pattern_name))
   }
 
   pub async fn generate_preliminary_filename(
@@ -247,7 +215,24 @@ impl Chunk {
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
 
     let filename = filename_template
-      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
+      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)
+      .map_err(|e| {
+        let diag = match e {
+          FilenameTemplateError::InvalidPattern { pattern, pattern_name } => {
+            BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
+              pattern,
+              pattern_name,
+            })
+          }
+          FilenameTemplateError::InvalidSubstitution { name, pattern_name } => {
+            BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenameSubstitution {
+              name,
+              pattern_name,
+            })
+          }
+        };
+        anyhow::Error::new(diag)
+      })?
       .into();
 
     let name = make_unique_name(&filename, used_name_counts);
@@ -319,7 +304,24 @@ impl Chunk {
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
 
     let filename = filename_template
-      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
+      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)
+      .map_err(|e| {
+        let diag = match e {
+          FilenameTemplateError::InvalidPattern { pattern, pattern_name } => {
+            BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
+              pattern,
+              pattern_name,
+            })
+          }
+          FilenameTemplateError::InvalidSubstitution { name, pattern_name } => {
+            BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenameSubstitution {
+              name,
+              pattern_name,
+            })
+          }
+        };
+        anyhow::Error::new(diag)
+      })?
       .into();
 
     let name = make_unique_name(&filename, used_name_counts);

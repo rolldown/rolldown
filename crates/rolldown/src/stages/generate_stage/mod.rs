@@ -487,19 +487,22 @@ impl<'a> GenerateStage<'a> {
 
           let mut filename = asset_filename_template
             .render(Some(&name), None, extension, hash_replacer)
-            .map_err(|e| match e {
-              FilenameTemplateError::InvalidPattern { pattern, pattern_name } => {
-                BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
-                  pattern,
-                  pattern_name,
-                })
-              }
-              FilenameTemplateError::InvalidSubstitution { name, pattern_name } => {
-                BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenameSubstitution {
-                  name,
-                  pattern_name,
-                })
-              }
+            .map_err(|e| {
+              let diag = match e {
+                FilenameTemplateError::InvalidPattern { pattern, pattern_name } => {
+                  BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
+                    pattern,
+                    pattern_name,
+                  })
+                }
+                FilenameTemplateError::InvalidSubstitution { name, pattern_name } => {
+                  BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenameSubstitution {
+                    name,
+                    pattern_name,
+                  })
+                }
+              };
+              anyhow::Error::new(diag)
             })?
             .into();
           filename = make_unique_name(&filename, &used_name_counts);

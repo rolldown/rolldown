@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
-use rolldown_error::{BuildDiagnostic, EventKindSwitcher, InvalidOptionType};
+use rolldown_error::EventKindSwitcher;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::advanced_chunks_options::AdvancedChunksOptions;
@@ -29,7 +29,7 @@ use super::{
 };
 use crate::inner_bundler_options::types::optimization::NormalizedOptimizationConfig;
 use crate::{
-  DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, FilenameTemplateError, GlobalsOutputOption,
+  DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
   HashCharacters, InjectImport, InputItem, InvalidateJsSideCache, LogLevel,
   MakeAbsoluteExternalsRelative, ModuleType, OnLog, RollupPreRenderedAsset, TransformOptions,
 };
@@ -212,27 +212,10 @@ impl NormalizedBundlerOptions {
     &self,
     rollup_pre_rendered_asset: &RollupPreRenderedAsset,
   ) -> anyhow::Result<FilenameTemplate> {
-    FilenameTemplate::new(
+    Ok(FilenameTemplate::new(
       self.asset_filenames.call(rollup_pre_rendered_asset).await?,
       "assetFileNames",
-    )
-    .map_err(|e| {
-      let diag = match e {
-        FilenameTemplateError::InvalidPattern { pattern, pattern_name } => {
-          BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
-            pattern,
-            pattern_name,
-          })
-        }
-        FilenameTemplateError::InvalidSubstitution { name, pattern_name } => {
-          BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenameSubstitution {
-            name,
-            pattern_name,
-          })
-        }
-      };
-      anyhow::Error::new(diag)
-    })
+    ))
   }
 
   pub async fn asset_filename_with_file(
@@ -252,23 +235,7 @@ impl NormalizedBundlerOptions {
         .map_or(vec![], |original_file_name| vec![original_file_name.into()]),
     };
     let asset_filename = self.asset_filenames.call(&rollup_pre_rendered_asset).await?;
-    Ok(Some(FilenameTemplate::new(asset_filename, "assetFileNames").map_err(|e| {
-      let diag = match e {
-        FilenameTemplateError::InvalidPattern { pattern, pattern_name } => {
-          BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
-            pattern,
-            pattern_name,
-          })
-        }
-        FilenameTemplateError::InvalidSubstitution { name, pattern_name } => {
-          BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenameSubstitution {
-            name,
-            pattern_name,
-          })
-        }
-      };
-      anyhow::Error::new(diag)
-    })?))
+    Ok(Some(FilenameTemplate::new(asset_filename, "assetFileNames")))
   }
 
   pub async fn sanitize_file_name_with_file(

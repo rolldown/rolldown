@@ -77,7 +77,7 @@ impl BuildEvent for InvalidOption {
         InvalidOptionType::InvalidFilenameSubstitution { name, pattern_name } => {
           format!(
             "Invalid substitution \"{name}\" for placeholder \"[name]\" in \"{pattern_name}\" pattern, \
-             can be neither absolute nor relative path."
+             can be neither absolute nor relative paths."
           )
         }
     }

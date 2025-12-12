@@ -6,13 +6,13 @@ use oxc::semantic::{ScopeId, SymbolId};
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
-use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_std_utils::OptionExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use rolldown_common::{
   ChunkIdx, ChunkKind, ConcatenateWrappedModuleKind, CssAssetNameReplacer, EcmaViewMeta,
-  FilenameTemplateError, ImportMetaRolldownAssetReplacer, ImportRecordIdx, Module, ModuleIdx, OutputExports,
+  ImportMetaRolldownAssetReplacer, ImportRecordIdx, Module, ModuleIdx, OutputExports,
   PreliminaryFilename, PrependRenderedImport, RenderedConcatenatedModuleParts,
   RollupPreRenderedAsset, SymbolRef, SymbolRefFlags,
 };
@@ -485,26 +485,8 @@ impl<'a> GenerateStage<'a> {
             }
           });
 
-          let mut filename = asset_filename_template
-            .render(Some(&name), None, extension, hash_replacer)
-            .map_err(|e| {
-              let diag = match e {
-                FilenameTemplateError::InvalidPattern { pattern, pattern_name } => {
-                  BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
-                    pattern,
-                    pattern_name,
-                  })
-                }
-                FilenameTemplateError::InvalidSubstitution { name, pattern_name } => {
-                  BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenameSubstitution {
-                    name,
-                    pattern_name,
-                  })
-                }
-              };
-              anyhow::Error::new(diag)
-            })?
-            .into();
+          let mut filename =
+            asset_filename_template.render(Some(&name), None, extension, hash_replacer)?.into();
           filename = make_unique_name(&filename, &used_name_counts);
           let preliminary = PreliminaryFilename::new(filename, hash_placeholder);
 

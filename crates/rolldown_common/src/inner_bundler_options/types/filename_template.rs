@@ -1,39 +1,7 @@
 use std::path::Path;
 
+use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rolldown_utils::replace_all_placeholder::{ReplaceAllPlaceholder, Replacer};
-
-/// Error type for filename template validation failures
-#[derive(Debug)]
-pub enum FilenameTemplateError {
-  InvalidPattern { pattern: String, pattern_name: String },
-  InvalidSubstitution { name: String, pattern_name: String },
-}
-
-impl std::fmt::Display for FilenameTemplateError {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Self::InvalidPattern { pattern, pattern_name } => {
-        write!(
-          f,
-          "Invalid pattern \"{}\" for \"{}\", patterns can be neither absolute nor relative paths. \
-           If you want your files to be stored in a subdirectory, write its name without a leading \
-           slash like this: subdirectory/pattern.",
-          pattern, pattern_name
-        )
-      }
-      Self::InvalidSubstitution { name, pattern_name } => {
-        write!(
-          f,
-          "Invalid substitution \"{}\" for placeholder \"[name]\" in \"{}\" pattern, \
-           can be neither absolute nor relative path.",
-          name, pattern_name
-        )
-      }
-    }
-  }
-}
-
-impl std::error::Error for FilenameTemplateError {}
 
 /// Check if a string is a path fragment (absolute or relative path).
 /// Patterns can be neither absolute nor relative paths.
@@ -88,15 +56,15 @@ impl FilenameTemplate {
     format: Option<&str>,
     extension: Option<&str>,
     hash_replacer: Option<impl Replacer>,
-  ) -> Result<String, FilenameTemplateError> {
+  ) -> Result<String, BuildDiagnostic> {
     let pattern_name = self.pattern_name;
 
     // Validate the template pattern itself
     if is_path_fragment(&self.template) {
-      return Err(FilenameTemplateError::InvalidPattern {
+      return Err(BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
         pattern: self.template,
         pattern_name: pattern_name.to_string(),
-      });
+      }));
     }
 
     let mut tmp = self.template;
@@ -104,10 +72,12 @@ impl FilenameTemplate {
     if let Some(name) = name {
       // Validate the name replacement
       if is_path_fragment(name) {
-        return Err(FilenameTemplateError::InvalidSubstitution {
-          name: name.to_string(),
-          pattern_name: pattern_name.to_string(),
-        });
+        return Err(BuildDiagnostic::invalid_option(
+          InvalidOptionType::InvalidFilenameSubstitution {
+            name: name.to_string(),
+            pattern_name: pattern_name.to_string(),
+          },
+        ));
       }
       tmp = tmp.replace_all("[name]", name);
     }

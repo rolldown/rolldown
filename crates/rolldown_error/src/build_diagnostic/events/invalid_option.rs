@@ -69,19 +69,15 @@ impl BuildEvent for InvalidOption {
         }
         InvalidOptionType::InvalidFilenamePattern { pattern, pattern_name } => {
           format!(
-            "Invalid pattern \"{}\" for \"{}\", patterns can be neither absolute nor relative paths. \
+            "Invalid pattern \"{pattern}\" for \"{pattern_name}\", patterns can be neither absolute nor relative paths. \
              If you want your files to be stored in a subdirectory, write its name without a leading \
-             slash like this: subdirectory/pattern.",
-            pattern,
-            pattern_name
+             slash like this: subdirectory/pattern."
           )
         }
         InvalidOptionType::InvalidFilenameSubstitution { name, pattern_name } => {
           format!(
-            "Invalid substitution \"{}\" for placeholder \"[name]\" in \"{}\" pattern, \
-             can be neither absolute nor relative path.",
-            name,
-            pattern_name
+            "Invalid substitution \"{name}\" for placeholder \"[name]\" in \"{pattern_name}\" pattern, \
+             can be neither absolute nor relative path."
           )
         }
     }

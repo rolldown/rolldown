@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-  ChunkIdx, ChunkKind, FilenameTemplate, FilenameTemplateError, ImportRecordIdx, ModuleIdx, ModuleTable, NamedImport,
+  ChunkIdx, ChunkKind, FilenameTemplate, ImportRecordIdx, ModuleIdx, ModuleTable, NamedImport,
   NormalModule, NormalizedBundlerOptions, OutputExports, PreserveEntrySignatures,
   RenderedConcatenatedModuleParts, RollupPreRenderedChunk, RuntimeHelper, SymbolRef,
   chunk::types::{chunk_reason_type::ChunkReasonType, module_group::ModuleGroup},
@@ -14,7 +14,6 @@ pub mod types;
 
 use arcstr::ArcStr;
 use oxc::span::CompactStr;
-use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rolldown_std_utils::PathExt;
 use rolldown_utils::{
   BitSet,
@@ -215,24 +214,7 @@ impl Chunk {
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
 
     let filename = filename_template
-      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)
-      .map_err(|e| {
-        let diag = match e {
-          FilenameTemplateError::InvalidPattern { pattern, pattern_name } => {
-            BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
-              pattern,
-              pattern_name,
-            })
-          }
-          FilenameTemplateError::InvalidSubstitution { name, pattern_name } => {
-            BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenameSubstitution {
-              name,
-              pattern_name,
-            })
-          }
-        };
-        anyhow::Error::new(diag)
-      })?
+      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
       .into();
 
     let name = make_unique_name(&filename, used_name_counts);
@@ -304,24 +286,7 @@ impl Chunk {
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
 
     let filename = filename_template
-      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)
-      .map_err(|e| {
-        let diag = match e {
-          FilenameTemplateError::InvalidPattern { pattern, pattern_name } => {
-            BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
-              pattern,
-              pattern_name,
-            })
-          }
-          FilenameTemplateError::InvalidSubstitution { name, pattern_name } => {
-            BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenameSubstitution {
-              name,
-              pattern_name,
-            })
-          }
-        };
-        anyhow::Error::new(diag)
-      })?
+      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
       .into();
 
     let name = make_unique_name(&filename, used_name_counts);

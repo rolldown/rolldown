@@ -262,6 +262,7 @@ impl<'ast> AstSnippet<'ast> {
   ///  or
   ///  __commonJSMin when `options.profiler_names` is false
   /// ```
+  #[expect(clippy::too_many_arguments)]
   pub fn commonjs_wrapper_stmt(
     &self,
     binding_name: PassedStr,
@@ -270,6 +271,7 @@ impl<'ast> AstSnippet<'ast> {
     ast_usage: EcmaModuleAstUsage,
     profiler_names: bool,
     stable_id: &str,
+    is_async: bool,
   ) -> ast::Statement<'ast> {
     // (exports, module) => {}
 
@@ -322,7 +324,7 @@ impl<'ast> AstSnippet<'ast> {
 
     // the callback is marked as PIFE because most require calls are evaluated in the initial load
     let mut arrow_expr =
-      self.builder.alloc_arrow_function_expression(SPAN, false, false, NONE, params, NONE, body);
+      self.builder.alloc_arrow_function_expression(SPAN, false, is_async, NONE, params, NONE, body);
     arrow_expr.pife = true;
 
     if profiler_names {

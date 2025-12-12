@@ -1690,7 +1690,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_allowed_import_without_splitting
 
-- entry-!~{000}~.js => entry-NfCW136z.js
+- entry-!~{000}~.js => entry-2MDmpQWu.js
 
 # tests/esbuild/default/top_level_await_cjs_dead_branch
 
@@ -1706,7 +1706,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_forbidden_require
 
-- entry-!~{000}~.js => entry-C5QGGgBW.js
+- entry-!~{000}~.js => entry--S-SU56k.js
 
 # tests/esbuild/default/top_level_await_forbidden_require_dead_branch
 
@@ -1758,7 +1758,7 @@ expression: output
 
 # tests/esbuild/default/top_level_return_forbidden_tla
 
-- entry-!~{000}~.js => entry-DOtv3uY1.js
+- entry-!~{000}~.js => entry-CoFhqjfB.js
 
 # tests/esbuild/default/use_strict_directive_bundle_cjs_issue2264
 

@@ -31,7 +31,7 @@ fn is_path_fragment(name: &str) -> bool {
 // Constants for hash pattern parsing
 const HASH_PREFIX: &str = "[hash";
 const HASH_PREFIX_LEN: usize = 5; // Length of "[hash"
-const HASH_COLON_LEN: usize = 6; // Length of "[hash:"
+const HASH_BRACKET_LEN: usize = 6; // Length of "[hash]" - used for skipping patterns
 
 #[derive(Debug)]
 pub struct FilenameTemplate {
@@ -71,15 +71,16 @@ impl FilenameTemplate {
           }
         }
         // Malformed pattern like [hash:abc] or [hash: without closing bracket
-        // Skip past this occurrence to avoid infinite loop
-        start = pos + HASH_COLON_LEN;
+        // Skip past "[hash:" to avoid infinite loop
+        start = pos + HASH_BRACKET_LEN;
       } else if rest.starts_with(']') {
         lengths.push(None);
-        start = pos + HASH_COLON_LEN;
+        // Skip past "[hash]"
+        start = pos + HASH_BRACKET_LEN;
       } else {
         // Not a valid hash pattern (e.g., [hashmap])
-        // Skip past this occurrence
-        start = pos + HASH_COLON_LEN;
+        // Skip past "[hash" to continue searching
+        start = pos + HASH_BRACKET_LEN;
       }
     }
 

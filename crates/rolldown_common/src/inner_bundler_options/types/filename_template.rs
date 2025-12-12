@@ -65,13 +65,17 @@ impl FilenameTemplate {
             continue;
           }
         }
+        // Malformed pattern like [hash:abc] or [hash: without closing bracket
+        // Skip past this occurrence to avoid infinite loop
+        start = pos + 6;
       } else if rest.starts_with(']') {
         lengths.push(None);
         start = pos + 6;
-        continue;
+      } else {
+        // Not a valid hash pattern (e.g., [hashmap])
+        // Skip past this occurrence
+        start = pos + 6;
       }
-
-      start = pos + 5;
     }
 
     lengths
@@ -286,5 +290,21 @@ mod tests {
     let result = template.render(Some("test"), None, None, Some("abc"));
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("must be at least 6 characters"));
+  }
+
+  #[test]
+  fn test_malformed_hash_pattern_does_not_cause_error() {
+    // Malformed patterns like [hash:abc] should not cause validation errors
+    let template = FilenameTemplate::new("[name]-[hash:abc]-[hash:8].js".to_string(), "entryFileNames");
+    let result = template.render(Some("test"), None, None, Some("abcdefgh"));
+    assert!(result.is_ok());
+  }
+
+  #[test]
+  fn test_non_hash_pattern_does_not_cause_error() {
+    // Patterns like [hashmap] should not be treated as hash patterns
+    let template = FilenameTemplate::new("[name]-[hashmap]-[hash:8].js".to_string(), "entryFileNames");
+    let result = template.render(Some("test"), None, None, Some("abcdefgh"));
+    assert!(result.is_ok());
   }
 }

@@ -16,6 +16,7 @@ use rolldown_plugin::{
   HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, HookTransformOutput,
   HookUsage, Plugin, PluginContext,
 };
+use rolldown_plugin_utils::constants::AllocatorPool;
 use rolldown_utils::{
   futures::{block_on, block_on_spawn_all},
   pattern_filter::StringOrRegex,
@@ -84,7 +85,8 @@ impl Plugin for ViteDynamicImportVarsPlugin {
       ModuleType::Js | ModuleType::Ts | ModuleType::Jsx | ModuleType::Tsx
     ) && utils::has_dynamic_import(args.code)
     {
-      let allocator = oxc::allocator::Allocator::default();
+      let allocator_pool = ctx.meta().get_or_insert_default::<AllocatorPool>();
+      let allocator_guard = allocator_pool.inner.get();
       let source_type = match args.module_type {
         ModuleType::Js => oxc::span::SourceType::mjs(),
         ModuleType::Jsx => oxc::span::SourceType::jsx(),
@@ -92,7 +94,7 @@ impl Plugin for ViteDynamicImportVarsPlugin {
         ModuleType::Tsx => oxc::span::SourceType::tsx(),
         _ => unreachable!(),
       };
-      let parser_ret = oxc::parser::Parser::new(&allocator, args.code, source_type).parse();
+      let parser_ret = oxc::parser::Parser::new(&allocator_guard, args.code, source_type).parse();
       if parser_ret.panicked
         && let Some(err) =
           parser_ret.errors.iter().find(|e| e.severity == oxc::diagnostics::Severity::Error)

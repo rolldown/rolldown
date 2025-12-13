@@ -20,7 +20,8 @@ use rolldown_plugin::{
 };
 use rolldown_plugin_utils::{
   AssetUrlResult, ModulePreload, RenderBuiltUrl, ToOutputFilePathEnv,
-  constants::RemovedPureCSSFilesCache, to_string_literal,
+  constants::{AllocatorPool, RemovedPureCSSFilesCache},
+  to_string_literal,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath as _;
@@ -163,9 +164,10 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
           if let Output::Chunk(chunk) = output
             && utils::DYNAMIC_IMPORT_RE.is_match(&chunk.code)
           {
-            let allocator = oxc::allocator::Allocator::default();
+            let allocator_pool = ctx.meta().get_or_insert_default::<AllocatorPool>();
+            let allocator_guard = allocator_pool.inner.get();
             let mut parser_ret = oxc::parser::Parser::new(
-              &allocator,
+              &allocator_guard,
               chunk.code.as_ref(),
               oxc::span::SourceType::default(),
             )
@@ -220,9 +222,10 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
         let mut imports = Vec::new();
 
         {
-          let allocator = oxc::allocator::Allocator::default();
+          let allocator_pool = ctx.meta().get_or_insert_default::<AllocatorPool>();
+          let allocator_guard = allocator_pool.inner.get();
           let mut parser_ret = oxc::parser::Parser::new(
-            &allocator,
+            &allocator_guard,
             chunk.code.as_ref(),
             oxc::span::SourceType::default(),
           )

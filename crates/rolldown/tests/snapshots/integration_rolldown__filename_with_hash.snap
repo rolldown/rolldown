@@ -1211,7 +1211,7 @@ expression: output
 
 # tests/esbuild/default/mangle_props_jsx_preserve
 
-- entry-!~{000}~.js => entry-o3LrzTH2.js
+- entry-!~{000}~.js => entry-C8ICte2C.js
 
 # tests/esbuild/default/mangle_props_jsx_transform
 
@@ -2282,11 +2282,11 @@ expression: output
 
 # tests/esbuild/loader/jsx_preserve_capital_letter_minify
 
-- entry-!~{000}~.js => entry-xn-DGzyY.js
+- entry-!~{000}~.js => entry-U_pAgu2L.js
 
 # tests/esbuild/loader/jsx_preserve_capital_letter_minify_nested
 
-- entry-!~{000}~.js => entry-BhqW4uV8.js
+- entry-!~{000}~.js => entry-P4z5EOZO.js
 
 # tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader
 

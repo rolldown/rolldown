@@ -855,11 +855,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       self.snippet.builder.vec1(self.snippet.builder.variable_declarator(
         SPAN,
         VariableDeclarationKind::Var,
-        self.snippet.builder.binding_pattern(
-          ast::BindingPatternKind::BindingIdentifier(self.snippet.builder.alloc(id)),
-          NONE,
-          false,
-        ),
+        ast::BindingPattern::BindingIdentifier(self.snippet.builder.alloc(id)),
+        NONE,
         Some(Expression::ClassExpression(ArenaBox::new_in(
           class.as_mut().take_in(self.alloc),
           self.alloc,

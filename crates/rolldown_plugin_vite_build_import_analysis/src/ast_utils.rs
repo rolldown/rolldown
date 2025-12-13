@@ -3,8 +3,8 @@ use oxc::{
   ast::{
     NONE,
     ast::{
-      Argument, BindingPattern, BindingPatternKind, CallExpression, Declaration, Expression,
-      FormalParameterKind, Statement, StaticMemberExpression, VariableDeclarationKind,
+      Argument, BindingPattern, CallExpression, Declaration, Expression, FormalParameterKind,
+      Statement, StaticMemberExpression, VariableDeclarationKind,
     },
   },
   ast_visit::walk_mut::walk_arguments,
@@ -58,27 +58,17 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
       *await_expr = Expression::AwaitExpression(self.snippet.builder.alloc_await_expression(
         SPAN,
         self.construct_vite_preload_call(
-          self.snippet.builder.binding_pattern(
-            BindingPatternKind::ObjectPattern(self.snippet.builder.alloc_object_pattern(
+          BindingPattern::ObjectPattern(self.snippet.builder.alloc_object_pattern(
+            SPAN,
+            self.snippet.builder.vec1(self.snippet.builder.binding_property(
               SPAN,
-              self.snippet.builder.vec1(self.snippet.builder.binding_property(
-                SPAN,
-                self.snippet.builder.property_key_static_identifier(SPAN, key),
-                self.snippet.builder.binding_pattern(
-                  BindingPatternKind::BindingIdentifier(
-                    self.snippet.builder.alloc_binding_identifier(SPAN, value),
-                  ),
-                  NONE,
-                  false,
-                ),
-                true,
-                false,
-              )),
-              NONE,
+              self.snippet.builder.property_key_static_identifier(SPAN, key),
+              self.snippet.builder.binding_pattern_binding_identifier(SPAN, value),
+              true,
+              false,
             )),
             NONE,
-            false,
-          ),
+          )),
           await_expr.take_in(self.snippet.alloc()),
         ),
       ));
@@ -127,7 +117,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
     binding_pat: BindingPattern<'a>,
     await_expr: Expression<'a>,
   ) -> Expression<'a> {
-    let argument = if let BindingPatternKind::BindingIdentifier(_) = binding_pat.kind {
+    let argument = if let BindingPattern::BindingIdentifier(_) = binding_pat {
       let Expression::AwaitExpression(expr) = await_expr else {
         unreachable!("The `await_expr` must be `Expression::AwaitExpression`.")
       };
@@ -155,6 +145,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
                 SPAN,
                 VariableDeclarationKind::Const,
                 binding_pat.clone_in(self.snippet.alloc()),
+                NONE,
                 Some(await_expr),
                 false,
               )),

@@ -189,15 +189,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     import_record_id: ImportRecordIdx,
     is_exported: bool,
   ) -> Option<FxHashSet<CompactStr>> {
-    let symbol_id = match &binding_pattern.kind {
-      ast::BindingPatternKind::BindingIdentifier(id) => {
+    let symbol_id = match binding_pattern {
+      ast::BindingPattern::BindingIdentifier(id) => {
         if is_exported {
           return None;
         }
         id.symbol_id()
       }
       // only care about first level destructuring, if it is nested just assume it is used
-      ast::BindingPatternKind::ObjectPattern(obj) => {
+      ast::BindingPattern::ObjectPattern(obj) => {
         let mut set = FxHashSet::default();
         for binding in &obj.properties {
           let binding_name = match &binding.key {
@@ -205,8 +205,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             ast::PropertyKey::StaticIdentifier(id) => id.name.as_str(),
             _ => return None,
           };
-          let binding_symbol_id = match &binding.value.kind {
-            ast::BindingPatternKind::BindingIdentifier(id) => id.symbol_id(),
+          let binding_symbol_id = match &binding.value {
+            ast::BindingPattern::BindingIdentifier(id) => id.symbol_id(),
             _ => {
               // for complex alias pattern, assume the key is used
               // import('mod').then(({a: {b: {c: d}}}) => {})
@@ -226,8 +226,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         }
 
         if let Some(rest) = &obj.rest {
-          match &rest.argument.kind {
-            ast::BindingPatternKind::BindingIdentifier(id) => {
+          match &rest.argument {
+            ast::BindingPattern::BindingIdentifier(id) => {
               let symbol_id = id.symbol_id();
               self
                 .dynamic_import_usage_info
@@ -246,7 +246,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
         return Some(set);
       }
-      ast::BindingPatternKind::ArrayPattern(_) | ast::BindingPatternKind::AssignmentPattern(_) => {
+      ast::BindingPattern::ArrayPattern(_) | ast::BindingPattern::AssignmentPattern(_) => {
         // TODO: handle advance pattern
         return None;
       }

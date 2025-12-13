@@ -3,7 +3,7 @@ use oxc::{
   ast::ast::{
     ArrayAssignmentTarget, ArrayExpressionElement, AssignmentTarget, AssignmentTargetMaybeDefault,
     AssignmentTargetRest, AssignmentTargetWithDefault, BindingIdentifier, BindingPattern,
-    BindingPatternKind, Expression, ObjectAssignmentTarget, ObjectPropertyKind, PropertyKind,
+    Expression, ObjectAssignmentTarget, ObjectPropertyKind, PropertyKind,
   },
   span::SPAN,
 };
@@ -23,39 +23,39 @@ pub trait BindingPatternExt<'ast> {
 
 impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
   fn binding_identifiers(&self) -> smallvec::SmallVec<[&Box<'_, BindingIdentifier<'ast>>; 1]> {
-    let mut stack = vec![&self.kind];
+    let mut stack = vec![self];
     let mut ret = SmallVec::default();
-    while let Some(binding_kind) = stack.pop() {
-      match binding_kind {
-        BindingPatternKind::BindingIdentifier(id) => {
+    while let Some(binding) = stack.pop() {
+      match binding {
+        BindingPattern::BindingIdentifier(id) => {
           ret.push(id);
         }
-        BindingPatternKind::ArrayPattern(arr_pat) => {
-          stack.extend(arr_pat.elements.iter().flatten().map(|pat| &pat.kind).rev());
+        BindingPattern::ArrayPattern(arr_pat) => {
+          stack.extend(arr_pat.elements.iter().flatten().rev());
         }
-        BindingPatternKind::ObjectPattern(obj_pat) => {
+        BindingPattern::ObjectPattern(obj_pat) => {
           if let Some(obj_pat) = &obj_pat.rest {
-            stack.push(&obj_pat.argument.kind);
+            stack.push(&obj_pat.argument);
           }
-          stack.extend(obj_pat.properties.iter().map(|prop| &prop.value.kind).rev());
+          stack.extend(obj_pat.properties.iter().map(|prop| &prop.value).rev());
         }
         //
-        BindingPatternKind::AssignmentPattern(assign_pat) => {
-          stack.push(&assign_pat.left.kind);
+        BindingPattern::AssignmentPattern(assign_pat) => {
+          stack.push(&assign_pat.left);
         }
       }
     }
     ret
   }
 
-  fn into_assignment_target(mut self, alloc: &'ast Allocator) -> AssignmentTarget<'ast> {
-    match &mut self.kind {
+  fn into_assignment_target(self, alloc: &'ast Allocator) -> AssignmentTarget<'ast> {
+    match self {
       // Turn `var a = 1` into `a = 1`
-      BindingPatternKind::BindingIdentifier(id) => {
+      BindingPattern::BindingIdentifier(id) => {
         AstSnippet::new(alloc).simple_id_assignment_target(&id.name, id.span)
       }
       // Turn `var { a, b = 2 } = ...` to `{a, b = 2} = ...`
-      BindingPatternKind::ObjectPattern(obj_pat) => {
+      BindingPattern::ObjectPattern(mut obj_pat) => {
         let mut obj_target = ObjectAssignmentTarget {
           rest: obj_pat.rest.take().map(|rest| {
             Box::new_in(
@@ -74,7 +74,7 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
         AssignmentTarget::ObjectAssignmentTarget(obj_target.into_in(alloc))
       }
       // Turn `var [a, ,c = 1] = ...` to `[a, ,c = 1] = ...`
-      BindingPatternKind::ArrayPattern(arr_pat) => {
+      BindingPattern::ArrayPattern(mut arr_pat) => {
         let mut arr_target = ArrayAssignmentTarget {
           span: arr_pat.span,
           rest: arr_pat.rest.take().map(|rest| {
@@ -89,8 +89,8 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
           elements: oxc::allocator::Vec::with_capacity_in(arr_pat.elements.len(), alloc),
         };
         arr_pat.elements.take_in(alloc).into_iter().for_each(|binding_pat| {
-          arr_target.elements.push(binding_pat.map(|binding_pat| match binding_pat.kind {
-            BindingPatternKind::AssignmentPattern(assign_pat) => {
+          arr_target.elements.push(binding_pat.map(|binding_pat| match binding_pat {
+            BindingPattern::AssignmentPattern(assign_pat) => {
               let assign_pat = assign_pat.unbox();
               AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
                 AssignmentTargetWithDefault {
@@ -106,18 +106,18 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
         });
         AssignmentTarget::ArrayAssignmentTarget(arr_target.into_in(alloc))
       }
-      BindingPatternKind::AssignmentPattern(_) => {
-        unreachable!("`BindingPatternKind::AssignmentPattern` should be pre-handled in above")
+      BindingPattern::AssignmentPattern(_) => {
+        unreachable!("`BindingPattern::AssignmentPattern` should be pre-handled in above")
       }
     }
   }
 
   fn into_expression(self, snippet: &AstSnippet<'ast>) -> Expression<'ast> {
-    match self.kind {
-      BindingPatternKind::BindingIdentifier(id) => {
+    match self {
+      BindingPattern::BindingIdentifier(id) => {
         snippet.builder.expression_identifier(SPAN, id.name)
       }
-      BindingPatternKind::ObjectPattern(mut obj_pat) => {
+      BindingPattern::ObjectPattern(mut obj_pat) => {
         let capacity = obj_pat.properties.len() + usize::from(obj_pat.rest.is_some());
         let mut properties = snippet.builder.vec_with_capacity(capacity);
         obj_pat.properties.take_in(snippet.alloc()).into_iter().for_each(|binding_prop| {
@@ -134,7 +134,7 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
           ));
         });
         if let Some(rest) = obj_pat.rest.take() {
-          let BindingPatternKind::BindingIdentifier(ref id) = rest.argument.kind else {
+          let BindingPattern::BindingIdentifier(ref id) = rest.argument else {
             unreachable!("The rest element should be `BindingIdentifier`")
           };
           properties.push(ObjectPropertyKind::ObjectProperty(
@@ -151,7 +151,7 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
         }
         Expression::ObjectExpression(snippet.builder.alloc_object_expression(SPAN, properties))
       }
-      BindingPatternKind::ArrayPattern(mut arg_pat) => {
+      BindingPattern::ArrayPattern(mut arg_pat) => {
         let capacity = arg_pat.elements.len() + usize::from(arg_pat.rest.is_some());
         let mut elements = snippet.builder.vec_with_capacity(capacity);
         arg_pat.elements.take_in(snippet.alloc()).into_iter().for_each(|binding_pat| {
@@ -161,7 +161,7 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
           ));
         });
         if let Some(rest) = arg_pat.rest.take() {
-          let BindingPatternKind::BindingIdentifier(ref id) = rest.argument.kind else {
+          let BindingPattern::BindingIdentifier(ref id) = rest.argument else {
             unreachable!("The rest element should be `BindingIdentifier`")
           };
           elements.push(ArrayExpressionElement::Identifier(
@@ -170,7 +170,7 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
         }
         Expression::ArrayExpression(snippet.builder.alloc_array_expression(SPAN, elements))
       }
-      BindingPatternKind::AssignmentPattern(mut assign_pat) => {
+      BindingPattern::AssignmentPattern(mut assign_pat) => {
         assign_pat.left.take_in(snippet.alloc()).into_expression(snippet)
       }
     }

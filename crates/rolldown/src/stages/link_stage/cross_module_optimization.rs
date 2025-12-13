@@ -3,7 +3,7 @@ use oxc::{
   ast::{
     AstBuilder, AstKind,
     ast::{
-      BindingPatternKind, Declaration, ExportDefaultDeclaration, ExportDefaultDeclarationKind,
+      BindingPattern, Declaration, ExportDefaultDeclaration, ExportDefaultDeclarationKind,
       ExportNamedDeclaration,
     },
   },
@@ -406,7 +406,7 @@ impl<'a, 'ast: 'a> Visit<'ast> for CrossModuleOptimizationRunnerContext<'a, 'ast
       && let Declaration::VariableDeclaration(var_decl) = decl
     {
       var_decl.declarations.iter().for_each(|declarator| {
-        if let BindingPatternKind::BindingIdentifier(ref binding) = declarator.id.kind {
+        if let BindingPattern::BindingIdentifier(ref binding) = declarator.id {
           let symbol_ref: SymbolRef = (self.immutable_ctx.module_idx, binding.symbol_id()).into();
           let is_not_assigned = self
             .immutable_ctx

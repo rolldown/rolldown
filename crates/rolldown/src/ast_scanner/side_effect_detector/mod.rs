@@ -3,7 +3,7 @@ use crate::ast_scanner::side_effect_detector::utils::{
 };
 use bitflags::bitflags;
 use oxc::ast::ast::{
-  self, Argument, ArrayExpressionElement, AssignmentTarget, BindingPatternKind, CallExpression,
+  self, Argument, ArrayExpressionElement, AssignmentTarget, BindingPattern, CallExpression,
   ChainElement, Expression, IdentifierReference, PropertyKey, UnaryOperator,
   VariableDeclarationKind,
 };
@@ -719,7 +719,7 @@ impl<'a> SideEffectDetector<'a> {
         let mut detail = SideEffectDetail::empty();
         for declarator in &var_decl.declarations {
           // Whether to destructure import.meta
-          if let BindingPatternKind::ObjectPattern(ref obj_pat) = declarator.id.kind {
+          if let BindingPattern::ObjectPattern(ref obj_pat) = declarator.id {
             if !obj_pat.properties.is_empty() {
               if let Some(Expression::MetaProperty(_)) = declarator.init {
                 return true.into();
@@ -727,11 +727,11 @@ impl<'a> SideEffectDetector<'a> {
             }
           }
           detail |=
-            match &declarator.id.kind {
+            match &declarator.id {
               // Destructuring the initializer has no side effects if the
               // initializer is an array, since we assume the iterator is then
               // the built-in side-effect free array iterator.
-              BindingPatternKind::ObjectPattern(_) => {
+              BindingPattern::ObjectPattern(_) => {
                 // Object destructuring only has side effects when property_read_side_effects is Always
                 if self.flat_options.property_read_side_effects() {
                   true.into()
@@ -743,10 +743,10 @@ impl<'a> SideEffectDetector<'a> {
                     .unwrap_or(false.into())
                 }
               }
-              BindingPatternKind::ArrayPattern(pat) => {
+              BindingPattern::ArrayPattern(pat) => {
                 for p in &pat.elements {
                   if p.as_ref().is_some_and(|pat| {
-                    !matches!(pat.kind, BindingPatternKind::BindingIdentifier(_))
+                    !matches!(pat, BindingPattern::BindingIdentifier(_))
                   }) {
                     return true.into();
                   }
@@ -757,8 +757,8 @@ impl<'a> SideEffectDetector<'a> {
                   .map(|init| self.detect_side_effect_of_expr(init))
                   .unwrap_or(false.into())
               }
-              BindingPatternKind::BindingIdentifier(_)
-              | BindingPatternKind::AssignmentPattern(_) => declarator
+              BindingPattern::BindingIdentifier(_)
+              | BindingPattern::AssignmentPattern(_) => declarator
                 .init
                 .as_ref()
                 .map(|init| self.detect_side_effect_of_expr(init))

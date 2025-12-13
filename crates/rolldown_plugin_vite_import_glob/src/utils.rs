@@ -262,11 +262,10 @@ impl<'ast> GlobImportVisit<'ast, '_> {
                       self.ast_builder.vec1(self.ast_builder.formal_parameter(
                         SPAN,
                         self.ast_builder.vec(),
-                        self.ast_builder.binding_pattern(
-                          self.ast_builder.binding_pattern_kind_binding_identifier(SPAN, "m"),
-                          NONE,
-                          false,
-                        ),
+                        self.ast_builder.binding_pattern_binding_identifier(SPAN, "m"),
+                        NONE,
+                        Option::<Expression<'ast>>::None,
+                        false,
                         None,
                         false,
                         false,

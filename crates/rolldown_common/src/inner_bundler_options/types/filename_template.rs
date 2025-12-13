@@ -28,6 +28,11 @@ fn is_path_fragment(name: &str) -> bool {
   Path::new(name).is_absolute()
 }
 
+// Constants for hash pattern parsing
+const HASH_PREFIX: &str = "[hash";
+const HASH_PREFIX_LEN: usize = 5; // Length of "[hash"
+const HASH_BRACKET_LEN: usize = 6; // Length of "[hash]" - used for skipping patterns
+
 #[derive(Debug)]
 pub struct FilenameTemplate {
   template: String,
@@ -45,6 +50,73 @@ impl FilenameTemplate {
 
   pub fn pattern_name(&self) -> &str {
     self.pattern_name
+  }
+
+  /// Extracts hash lengths from [hash:N] patterns in the template.
+  /// Returns a vector of lengths, or None for [hash] without a length.
+  fn extract_hash_lengths(&self) -> Vec<Option<usize>> {
+    let mut lengths = Vec::new();
+    let mut start = 0;
+
+    while let Some(pos) = self.template[start..].find(HASH_PREFIX) {
+      let pos = start + pos;
+      let rest = &self.template[pos + HASH_PREFIX_LEN..];
+
+      if let Some(&b':') = rest.as_bytes().first() {
+        if let Some(end_bracket) = rest.find(']') {
+          if let Ok(len) = rest[1..end_bracket].parse::<usize>() {
+            lengths.push(Some(len));
+            start = pos + HASH_PREFIX_LEN + end_bracket + 1;
+            continue;
+          }
+        }
+        // Malformed pattern like [hash:abc] or [hash: without closing bracket
+        // Skip past "[hash" and continue searching
+        start = pos + HASH_PREFIX_LEN;
+      } else if rest.starts_with(']') {
+        lengths.push(None);
+        // Skip past "[hash]"
+        start = pos + HASH_BRACKET_LEN;
+      } else {
+        // Not a valid hash pattern (e.g., [hashmap])
+        // Skip past "[hash" to continue searching
+        start = pos + HASH_PREFIX_LEN;
+      }
+    }
+
+    lengths
+  }
+
+  /// Validates hash lengths for entry and chunk file names.
+  /// Returns an error if any hash length is below the minimum required (6).
+  pub fn validate_hash_lengths(&self) -> anyhow::Result<()> {
+    // Only validate for entry and chunk file names, not asset file names
+    let requires_min_hash = matches!(
+      self.pattern_name,
+      "entryFileNames" | "chunkFileNames" | "cssEntryFileNames" | "cssChunkFileNames"
+    );
+
+    if !requires_min_hash {
+      return Ok(());
+    }
+
+    const MIN_HASH_LENGTH: usize = 6;
+    let hash_lengths = self.extract_hash_lengths();
+
+    for hash_length in hash_lengths {
+      if let Some(len) = hash_length {
+        if len < MIN_HASH_LENGTH {
+          anyhow::bail!(
+            "Hashes in \"{}\" must be at least {} characters, received {}.",
+            self.pattern_name,
+            MIN_HASH_LENGTH,
+            len
+          );
+        }
+      }
+    }
+
+    Ok(())
   }
 }
 
@@ -68,6 +140,9 @@ impl FilenameTemplate {
         pattern_name
       );
     }
+
+    // Validate hash lengths for entry/chunk file names
+    self.validate_hash_lengths()?;
 
     let mut tmp = self.template;
 
@@ -120,16 +195,16 @@ mod tests {
   #[test]
   fn hash_with_len() {
     let filename_template =
-      FilenameTemplate::new("[name]-[hash:3]-[hash:3].js".to_string(), "entryFileNames");
+      FilenameTemplate::new("[name]-[hash:8]-[hash:7].js".to_string(), "entryFileNames");
 
-    let mut hash_iter = ["abc", "def"].iter();
+    let mut hash_iter = ["abcdefgh", "1234567"].iter();
     let hash_replacer =
       filename_template.has_hash_pattern().then_some(|_| hash_iter.next().unwrap());
 
     let filename =
       filename_template.render(Some("hello"), None, None, hash_replacer).expect("should render");
 
-    assert_eq!(filename, "hello-abc-def.js");
+    assert_eq!(filename, "hello-abcdefgh-1234567.js");
   }
 
   #[test]
@@ -180,5 +255,62 @@ mod tests {
     let result = template.render(Some("test"), None, None, None::<&str>);
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "dist/test.js");
+  }
+
+  #[test]
+  fn test_hash_length_below_minimum_for_entry_filenames() {
+    let template = FilenameTemplate::new("[name]-[hash:2].js".to_string(), "entryFileNames");
+    let result = template.render(Some("test"), None, None, Some("abc"));
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("must be at least 6 characters"));
+  }
+
+  #[test]
+  fn test_hash_length_below_minimum_for_chunk_filenames() {
+    let template = FilenameTemplate::new("[name]-[hash:5].js".to_string(), "chunkFileNames");
+    let result = template.render(Some("test"), None, None, Some("abc"));
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("must be at least 6 characters"));
+  }
+
+  #[test]
+  fn test_hash_length_at_minimum_for_entry_filenames() {
+    let template = FilenameTemplate::new("[name]-[hash:6].js".to_string(), "entryFileNames");
+    let result = template.render(Some("test"), None, None, Some("abcdef"));
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), "test-abcdef.js");
+  }
+
+  #[test]
+  fn test_hash_length_below_minimum_allowed_for_asset_filenames() {
+    // Asset filenames should allow hash lengths below 6
+    let template = FilenameTemplate::new("[name]-[hash:2].js".to_string(), "assetFileNames");
+    let result = template.render(Some("test"), None, None, Some("ab"));
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), "test-ab.js");
+  }
+
+  #[test]
+  fn test_multiple_hash_patterns_with_invalid_length() {
+    let template = FilenameTemplate::new("[name]-[hash:8]-[hash:3].js".to_string(), "entryFileNames");
+    let result = template.render(Some("test"), None, None, Some("abc"));
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("must be at least 6 characters"));
+  }
+
+  #[test]
+  fn test_malformed_hash_pattern_does_not_cause_error() {
+    // Malformed patterns like [hash:abc] should not cause validation errors
+    let template = FilenameTemplate::new("[name]-[hash:abc]-[hash:8].js".to_string(), "entryFileNames");
+    let result = template.render(Some("test"), None, None, Some("abcdefgh"));
+    assert!(result.is_ok());
+  }
+
+  #[test]
+  fn test_non_hash_pattern_does_not_cause_error() {
+    // Patterns like [hashmap] should not be treated as hash patterns
+    let template = FilenameTemplate::new("[name]-[hashmap]-[hash:8].js".to_string(), "entryFileNames");
+    let result = template.render(Some("test"), None, None, Some("abcdefgh"));
+    assert!(result.is_ok());
   }
 }

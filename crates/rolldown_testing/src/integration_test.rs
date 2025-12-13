@@ -10,11 +10,11 @@ use std::{
 use anyhow::Context;
 use oxc::parser::{ParseOptions, Parser};
 use oxc::span::SourceType;
-use rolldown::NormalizedBundlerOptions;
 use rolldown::{
   BundleOutput, Bundler, BundlerOptions, IsExternal, OutputFormat, Platform, SourceMapType,
   plugin::__inner::SharedPluginable,
 };
+use rolldown::{ChecksOptions, NormalizedBundlerOptions};
 use rolldown_common::Output;
 use rolldown_dev::{DevEngine, DevOptions, DevWatchOptions};
 use rolldown_error::BuildResult;
@@ -529,6 +529,13 @@ impl IntegrationTest {
           hmr.implement = Some(include_str!("./hmr-runtime.js").to_owned());
         }
       }
+    }
+
+    // Disable plugin timings in tests to reduce snapshot noise
+    if let Some(checks) = &mut options.checks {
+      checks.plugin_timings = Some(false);
+    } else {
+      options.checks = Some(ChecksOptions { plugin_timings: Some(false), ..Default::default() });
     }
   }
 

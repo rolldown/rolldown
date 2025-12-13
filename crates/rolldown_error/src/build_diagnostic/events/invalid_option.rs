@@ -12,6 +12,8 @@ pub enum InvalidOptionType {
   InvalidContext(String),
   IncludeDependenciesRecursivelyWithConflictPreserveEntrySignatures(String),
   IncludeDependenciesRecursivelyWithImplicitPreserveEntrySignatures,
+  InvalidFilenamePattern { pattern: String, pattern_name: String },
+  InvalidFilenameSubstitution { name: String, pattern_name: String },
 }
 
 #[derive(Debug)]
@@ -64,6 +66,19 @@ impl BuildEvent for InvalidOption {
             "",
             "- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config",
           ].join("\n")
+        }
+        InvalidOptionType::InvalidFilenamePattern { pattern, pattern_name } => {
+          format!(
+            "Invalid pattern \"{pattern}\" for \"{pattern_name}\", patterns can be neither absolute nor relative paths. \
+             If you want your files to be stored in a subdirectory, write its name without a leading \
+             slash like this: subdirectory/pattern."
+          )
+        }
+        InvalidOptionType::InvalidFilenameSubstitution { name, pattern_name } => {
+          format!(
+            "Invalid substitution \"{name}\" for placeholder \"[name]\" in \"{pattern_name}\" pattern, \
+             can be neither absolute nor relative paths."
+          )
         }
     }
   }

@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rolldown_utils::replace_all_placeholder::{ReplaceAllPlaceholder, Replacer};
 
 /// Check if a string is a path fragment (absolute or relative path).
@@ -55,18 +56,15 @@ impl FilenameTemplate {
     format: Option<&str>,
     extension: Option<&str>,
     hash_replacer: Option<impl Replacer>,
-  ) -> anyhow::Result<String> {
-    let pattern_name = &self.pattern_name;
+  ) -> Result<String, BuildDiagnostic> {
+    let pattern_name = self.pattern_name;
 
     // Validate the template pattern itself
     if is_path_fragment(&self.template) {
-      anyhow::bail!(
-        "Invalid pattern \"{}\" for \"{}\", patterns can be neither absolute nor relative paths. \
-         If you want your files to be stored in a subdirectory, write its name without a leading \
-         slash like this: subdirectory/pattern.",
-        self.template,
-        pattern_name
-      );
+      return Err(BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
+        pattern: self.template,
+        pattern_name: pattern_name.to_string(),
+      }));
     }
 
     let mut tmp = self.template;
@@ -74,10 +72,12 @@ impl FilenameTemplate {
     if let Some(name) = name {
       // Validate the name replacement
       if is_path_fragment(name) {
-        anyhow::bail!(
-          "Invalid substitution \"{name}\" for placeholder \"[name]\" in \"{pattern_name}\" pattern, \
-           can be neither absolute nor relative path."
-        );
+        return Err(BuildDiagnostic::invalid_option(
+          InvalidOptionType::InvalidFilenameSubstitution {
+            name: name.to_string(),
+            pattern_name: pattern_name.to_string(),
+          },
+        ));
       }
       tmp = tmp.replace_all("[name]", name);
     }

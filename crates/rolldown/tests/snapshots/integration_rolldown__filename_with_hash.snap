@@ -6397,6 +6397,142 @@ expression: output
 
 - main-!~{000}~.js => main-B1ZAHt4N.js
 
+# tests/rollup/jsx/preserves-jsx-attributes
+
+- main-!~{000}~.js => main-BlPbWKJJ.js
+
+# tests/rollup/jsx/preserves-jsx-child
+
+- main-!~{000}~.js => main-DcpfHRdP.js
+
+# tests/rollup/jsx/preserves-jsx-closing
+
+- main-!~{000}~.js => main-DKxivQ6K.js
+
+# tests/rollup/jsx/preserves-jsx-empty-expression
+
+- main-!~{000}~.js => main-mRlMHe1z.js
+
+# tests/rollup/jsx/preserves-jsx-expression
+
+- main-!~{000}~.js => main-DKwBg2k7.js
+
+# tests/rollup/jsx/preserves-jsx-fragment
+
+- main-!~{000}~.js => main-hLH7oImH.js
+
+# tests/rollup/jsx/preserves-jsx-member-expression
+
+- main-!~{000}~.js => main-BkutsFDO.js
+
+# tests/rollup/jsx/preserves-jsx-self-closing
+
+- main-!~{000}~.js => main-CK7OawLZ.js
+
+# tests/rollup/jsx/preserves-jsx-spread-attribute
+
+- main-!~{000}~.js => main-64oJFEcx.js
+
+# tests/rollup/jsx/preserves-jsx-spread-child
+
+- main-!~{000}~.js => main-Cc7oiETa.js
+
+# tests/rollup/jsx/preserves-jsx-text
+
+- main-!~{000}~.js => main-BqE_9c3E.js
+
+# tests/rollup/jsx/preserves-native-elements
+
+- main-!~{000}~.js => main-DR0N-PGO.js
+
+# tests/rollup/jsx/preserves-react
+
+- main-!~{000}~.js => main-CbCf89wi.js
+
+# tests/rollup/jsx/preserves-react-global
+
+- main-!~{000}~.js => main-PV-ILZCG.js
+
+# tests/rollup/jsx/preserves-react-internal
+
+- main-!~{000}~.js => main-PV-ILZCG.js
+
+# tests/rollup/jsx/transpiles-automatic-with-defaults
+
+- main-!~{000}~.js => main-ByzzWcd8.js
+
+# tests/rollup/jsx/transpiles-classic-with-defaults
+
+- main-!~{000}~.js => main-CvLduDdG.js
+
+# tests/rollup/jsx/transpiles-empty-fragment
+
+- main-!~{000}~.js => main-Bl0H1hNK.js
+
+# tests/rollup/jsx/transpiles-jsx-attributes
+
+- main-!~{000}~.js => main-D_cC-c0B.js
+
+# tests/rollup/jsx/transpiles-jsx-child
+
+- main-!~{000}~.js => main-ChzbzDI1.js
+
+# tests/rollup/jsx/transpiles-jsx-closing
+
+- main-!~{000}~.js => main-DftSa8HD.js
+
+# tests/rollup/jsx/transpiles-jsx-empty-expression
+
+- main-!~{000}~.js => main-DftSa8HD.js
+
+# tests/rollup/jsx/transpiles-jsx-expression
+
+- main-!~{000}~.js => main-D30YH_VA.js
+
+# tests/rollup/jsx/transpiles-jsx-fragment
+
+- main-!~{000}~.js => main-BQVZzgoQ.js
+
+# tests/rollup/jsx/transpiles-jsx-member-expression
+
+- main-!~{000}~.js => main-BzIABm8p.js
+
+# tests/rollup/jsx/transpiles-jsx-self-closing
+
+- main-!~{000}~.js => main-DftSa8HD.js
+
+# tests/rollup/jsx/transpiles-jsx-spread-attribute
+
+- main-!~{000}~.js => main-CvNxwQZ_.js
+
+# tests/rollup/jsx/transpiles-jsx-spread-child
+
+- main-!~{000}~.js => main-9NTv0iuK.js
+
+# tests/rollup/jsx/transpiles-jsx-text
+
+- main-!~{000}~.js => main-DqKnUO8g.js
+
+# tests/rollup/jsx/transpiles-native-elements
+
+- main-!~{000}~.js => main-n0zKnu5d.js
+
+# tests/rollup/jsx/transpiles-react
+
+- main-!~{000}~.js => main-BzAuIluk.js
+
+# tests/rollup/jsx/transpiles-react-global
+
+- main-!~{000}~.js => main-BzAuIluk.js
+
+# tests/rollup/jsx/transpiles-react-internal
+
+- main-!~{000}~.js => main-Cf-TRIbq.js
+
+# tests/rollup/jsx/transpiles-react-jsx
+
+- main-!~{000}~.js => main-roUVQOvH.js
+
 # tests/rollup/mutations-in-imports
 
 - main-!~{000}~.js => main-Cmj6vOFb.js

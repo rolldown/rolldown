@@ -1,0 +1,14 @@
+{
+  "config": {
+    "moduleTypes": {
+      ".js": "jsx"
+    },
+    "transform": {
+      "jsx": {
+        "importSource": "./local"
+      }
+    }
+  },
+  "_comment": "Tests that an error is thrown when JSX factory is not exported",
+  "expectError": true
+}

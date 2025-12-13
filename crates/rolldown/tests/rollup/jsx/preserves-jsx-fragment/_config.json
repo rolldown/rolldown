@@ -1,0 +1,14 @@
+{
+  "config": {
+    "moduleTypes": {
+      ".js": "jsx"
+    },
+    "external": [
+      "react"
+    ],
+    "transform": {
+      "jsx": "preserve"
+    }
+  },
+  "expectExecuted": false
+}

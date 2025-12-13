@@ -8,7 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region foo.js
-var Foo = class {};
+var Foo = class {
+	static {
+		__name$1(this, "Foo");
+	}
+};
 function foo() {}
 const baz = function() {};
 function __name() {}

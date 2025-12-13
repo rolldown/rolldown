@@ -37,6 +37,7 @@ use super::events::unloadable_dependency::{UnloadableDependency, UnloadableDepen
 use super::events::unsupported_feature::UnsupportedFeature;
 use super::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
+  ambiguous_reexport::{AmbiguousReexport, AmbiguousReexportModule},
   circular_dependency::CircularDependency,
   circular_reexport::CircularReexport,
   commonjs_variable_in_esm::{CjsExportSpan, CommonJsVariableInEsm},
@@ -68,6 +69,15 @@ impl BuildDiagnostic {
       importer,
       exporter,
     })
+  }
+
+  pub fn ambiguous_reexport(
+    ambiguous_export_name: String,
+    importee: String,
+    importer: AmbiguousReexportModule,
+    exporter: Vec<AmbiguousReexportModule>,
+  ) -> Self {
+    Self::new_inner(AmbiguousReexport { ambiguous_export_name, importee, importer, exporter })
   }
 
   pub fn unresolved_entry(

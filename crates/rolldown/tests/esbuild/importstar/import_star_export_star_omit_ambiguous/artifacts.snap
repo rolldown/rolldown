@@ -1,6 +1,33 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## AMBIGUOUS_REEXPORT
+
+```text
+[AMBIGUOUS_REEXPORT] Warning: Found ambiguous export.
+   ╭─[ common.js:1:1 ]
+   │
+ 1 │ export * from './foo'
+   │ │ 
+   │ ╰─ "common.js" re-exports "y"
+   │
+   ├─[ foo.js:2:14 ]
+   │
+ 2 │ export const y = 2
+   │              ┬  
+   │              ╰── One matching export is here.
+   │
+   ├─[ bar.js:1:14 ]
+   │
+ 1 │ export const y = 3
+   │              ┬  
+   │              ╰── One matching export is here.
+───╯
+
+```
+
 # Assets
 
 ## entry.js

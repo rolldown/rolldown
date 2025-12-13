@@ -1,6 +1,39 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## AMBIGUOUS_REEXPORT
+
+```text
+[AMBIGUOUS_REEXPORT] Warning: Found ambiguous export.
+   ╭─[ entry.js:1:1 ]
+   │
+ 1 │ export * from './a'
+   │ │ 
+   │ ╰─ "entry.js" re-exports "x"
+   │
+   ├─[ a.js:1:19 ]
+   │
+ 1 │ export let a = 1, x = 2
+   │                   ┬  
+   │                   ╰── One matching export is here.
+   │
+   ├─[ b.js:1:28 ]
+   │
+ 1 │ export let b = 3; export { b as x }
+   │                            ───┬──  
+   │                               ╰──── One matching export is here.
+   │
+   ├─[ c.js:1:19 ]
+   │
+ 1 │ export let c = 4, x = 5
+   │                   ┬  
+   │                   ╰── One matching export is here.
+───╯
+
+```
+
 # Assets
 
 ## entry.js

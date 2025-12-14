@@ -169,7 +169,7 @@ export default {
 
 :::warning
 
-When using `output.banner` or `output.footer` with minification enabled, the banner content may be stripped out unless it is formatted as a legal comment. To ensure your banner persists through minification, do either:
+When using `output.banner` with minification enabled, the banner content may be stripped out unless it is formatted as a legal comment. To ensure your banner persists through minification, do either:
 
 - Use `output.postBanner` or `output.postFooter` instead, which are added after minification, or
 - Use one of these comment formats:
@@ -202,7 +202,7 @@ export default {
 
 :::warning
 
-When using `output.banner` or `output.footer` with minification enabled, the footer content may be stripped out unless it is formatted as a legal comment. To ensure your footer persists through minification, do either:
+When using `output.footer` with minification enabled, the footer content may be stripped out unless it is formatted as a legal comment. To ensure your footer persists through minification, do either:
 
 - Use `output.postFooter` instead, which is added after minification, or
 - Use one of these comment formats:
@@ -223,8 +223,8 @@ The latter way's behavior is controlled by the [`output.legalComments`](#legalco
 
 Code to prepend to the beginning of each output chunk, after minification.
 
-:::info
-When using both `banner` and `postBanner`, `postBanner` comes before `banner`.
+:::warning
+`postBanner` is prepended **before** `banner`. (since `postBanner` comes after minification, it becomes the outermost code)
 :::
 
 ## postFooter
@@ -236,7 +236,7 @@ When using both `banner` and `postBanner`, `postBanner` comes before `banner`.
 Code to append to the end of each output chunk, after minification.
 
 :::info
-When using both `footer` and `postFooter`, `postFooter` comes after `footer`.
+`postFooter` is appended **after** `footer`. (since `postFooter` comes after minification, it becomes the outermost code)
 :::
 
 ## intro

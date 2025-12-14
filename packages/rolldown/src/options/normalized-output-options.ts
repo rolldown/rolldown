@@ -163,6 +163,16 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
   }
 
   @lazyProp
+  get postBanner(): AddonFunction {
+    return normalizeAddon(this.outputOptions.postBanner);
+  }
+
+  @lazyProp
+  get postFooter(): AddonFunction {
+    return normalizeAddon(this.outputOptions.postFooter);
+  }
+
+  @lazyProp
   get intro(): AddonFunction {
     return normalizeAddon(this.outputOptions.intro);
   }

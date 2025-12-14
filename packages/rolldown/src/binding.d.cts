@@ -2009,13 +2009,15 @@ export interface BindingOutputOptions {
   cssChunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sanitizeFileName?: boolean | ((name: string) => string)
   banner?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
+  postBanner?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
+  footer?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
+  postFooter?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
   dir?: string
   file?: string
   esModule?: boolean | 'if-default-prop'
   exports?: 'default' | 'named' | 'none' | 'auto'
   extend?: boolean
   externalLiveBindings?: boolean
-  footer?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
   format?: 'es' | 'cjs' | 'iife' | 'umd'
   generatedCode?: BindingGeneratedCodeOptions
   globals?: Record<string, string> | ((name: string) => string)

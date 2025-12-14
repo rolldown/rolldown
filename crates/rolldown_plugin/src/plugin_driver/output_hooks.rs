@@ -60,6 +60,50 @@ impl PluginDriver {
     Ok(Some(footer))
   }
 
+  pub async fn post_banner(
+    &self,
+    args: HookAddonArgs,
+    mut post_banner: String,
+  ) -> Result<Option<String>> {
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_post_banner_meta)
+    {
+      let start = self.start_timing();
+      let result = plugin.call_post_banner(ctx, &args).await;
+      self.record_timing(plugin_idx, start);
+      if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
+        post_banner.push('\n');
+        post_banner.push_str(r.as_str());
+      }
+    }
+    if post_banner.is_empty() {
+      return Ok(None);
+    }
+    Ok(Some(post_banner))
+  }
+
+  pub async fn post_footer(
+    &self,
+    args: HookAddonArgs,
+    mut post_footer: String,
+  ) -> Result<Option<String>> {
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_post_footer_meta)
+    {
+      let start = self.start_timing();
+      let result = plugin.call_post_footer(ctx, &args).await;
+      self.record_timing(plugin_idx, start);
+      if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
+        post_footer.push('\n');
+        post_footer.push_str(r.as_str());
+      }
+    }
+    if post_footer.is_empty() {
+      return Ok(None);
+    }
+    Ok(Some(post_footer))
+  }
+
   pub async fn intro(&self, args: HookAddonArgs, mut intro: String) -> Result<Option<String>> {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_intro_meta)

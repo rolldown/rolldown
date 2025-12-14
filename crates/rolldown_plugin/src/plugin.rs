@@ -157,6 +157,30 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     None
   }
 
+  fn post_banner(
+    &self,
+    _ctx: &PluginContext,
+    _args: &HookAddonArgs,
+  ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
+    async { Ok(None) }
+  }
+
+  fn post_banner_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
+  fn post_footer(
+    &self,
+    _ctx: &PluginContext,
+    _args: &HookAddonArgs,
+  ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
+    async { Ok(None) }
+  }
+
+  fn post_footer_meta(&self) -> Option<PluginHookMeta> {
+    None
+  }
+
   fn intro(
     &self,
     _ctx: &PluginContext,

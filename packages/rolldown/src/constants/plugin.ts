@@ -21,8 +21,6 @@ const ENUMERATED_OUTPUT_PLUGIN_HOOK_NAMES = [
   'renderError',
   'writeBundle',
   'generateBundle',
-  'postBanner',
-  'postFooter',
 ] as const;
 
 const ENUMERATED_PLUGIN_HOOK_NAMES: [
@@ -32,6 +30,8 @@ const ENUMERATED_PLUGIN_HOOK_NAMES: [
   'banner',
   'intro',
   'outro',
+  'postBanner',
+  'postFooter',
 ] = [
   // build hooks
   ...ENUMERATED_INPUT_PLUGIN_HOOK_NAMES,
@@ -42,6 +42,8 @@ const ENUMERATED_PLUGIN_HOOK_NAMES: [
   'banner',
   'intro',
   'outro',
+  'postBanner',
+  'postFooter',
 ] as const;
 
 /**

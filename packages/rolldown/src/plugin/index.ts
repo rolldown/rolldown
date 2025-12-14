@@ -213,16 +213,6 @@ export interface FunctionPluginHooks {
   ) => void;
 
   [DEFINED_HOOK_NAMES.closeWatcher]: (this: PluginContext) => void;
-
-  [DEFINED_HOOK_NAMES.postBanner]: (
-    this: PluginContext,
-    chunk: RenderedChunk,
-  ) => string | Promise<string>;
-
-  [DEFINED_HOOK_NAMES.postFooter]: (
-    this: PluginContext,
-    chunk: RenderedChunk,
-  ) => string | Promise<string>;
 }
 
 export type ChangeEvent = 'create' | 'update' | 'delete';
@@ -266,7 +256,9 @@ type SequentialPluginHooks = DefinedHookNames[
   | 'transform'
 ];
 
-type AddonHooks = DefinedHookNames['banner' | 'footer' | 'intro' | 'outro'];
+type AddonHooks = DefinedHookNames[
+  'banner' | 'footer' | 'intro' | 'outro' | 'postBanner' | 'postFooter'
+];
 
 type OutputPluginHooks = DefinedHookNames[
   | 'augmentChunkHash'
@@ -279,8 +271,6 @@ type OutputPluginHooks = DefinedHookNames[
   // | 'resolveFileUrl'
   // | 'resolveImportMeta'
   | 'writeBundle'
-  | 'postBanner'
-  | 'postFooter'
 ];
 
 export type ParallelPluginHooks = Exclude<

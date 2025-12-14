@@ -17,6 +17,8 @@ import {
   bindingifyGenerateBundle,
   bindingifyIntro,
   bindingifyOutro,
+  bindingifyPostBanner,
+  bindingifyPostFooter,
   bindingifyRenderChunk,
   bindingifyRenderError,
   bindingifyRenderStart,
@@ -137,6 +139,14 @@ export function bindingifyPlugin(
 
   const { plugin: outro, meta: outroMeta } = bindingifyOutro(args);
 
+  const { plugin: postBanner, meta: postBannerMeta } = bindingifyPostBanner(
+    args,
+  );
+
+  const { plugin: postFooter, meta: postFooterMeta } = bindingifyPostFooter(
+    args,
+  );
+
   const { plugin: watchChange, meta: watchChangeMeta } = bindingifyWatchChange(
     args,
   );
@@ -188,6 +198,10 @@ export function bindingifyPlugin(
     introMeta,
     outro,
     outroMeta,
+    postBanner,
+    postBannerMeta,
+    postFooter,
+    postFooterMeta,
     watchChange,
     watchChangeMeta,
     closeWatcher,
@@ -218,6 +232,8 @@ function wrapHandlers(plugin: BindingPluginOptions): BindingPluginOptions {
       'footer',
       'intro',
       'outro',
+      'postBanner',
+      'postFooter',
       'watchChange',
       'closeWatcher',
     ] as const

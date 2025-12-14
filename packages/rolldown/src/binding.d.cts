@@ -1454,6 +1454,8 @@ export declare class BindingNormalizedOptions {
   get footer(): string | undefined | null | undefined
   get intro(): string | undefined | null | undefined
   get outro(): string | undefined | null | undefined
+  get postBanner(): string | undefined | null | undefined
+  get postFooter(): string | undefined | null | undefined
   get externalLiveBindings(): boolean
   get extend(): boolean
   get globals(): Record<string, string> | undefined
@@ -2124,6 +2126,10 @@ export interface BindingPluginOptions {
   introMeta?: BindingPluginHookMeta
   outro?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void
   outroMeta?: BindingPluginHookMeta
+  postBanner?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void
+  postBannerMeta?: BindingPluginHookMeta
+  postFooter?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void
+  postFooterMeta?: BindingPluginHookMeta
 }
 
 export declare enum BindingPluginOrder {

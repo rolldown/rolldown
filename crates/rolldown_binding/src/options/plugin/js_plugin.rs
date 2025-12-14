@@ -412,6 +412,58 @@ impl Plugin for JsPlugin {
     self.footer_meta.as_ref().map(Into::into)
   }
 
+  async fn post_banner(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    args: &rolldown_plugin::HookAddonArgs,
+  ) -> rolldown_plugin::HookInjectionOutputReturn {
+    match &self.post_banner {
+      Some(cb) => Ok(
+        cb.await_call(
+          (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
+        )
+        .instrument(debug_span!("post_banner_hook", plugin_name = self.name))
+        .await?
+        .map(TryInto::try_into)
+        .transpose()
+        .with_context(|| {
+          format!("postBanner hook threw an error for chunkName={}", args.chunk.name)
+        })?,
+      ),
+      _ => Ok(None),
+    }
+  }
+
+  fn post_banner_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.post_banner_meta.as_ref().map(Into::into)
+  }
+
+  async fn post_footer(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    args: &rolldown_plugin::HookAddonArgs,
+  ) -> rolldown_plugin::HookInjectionOutputReturn {
+    match &self.post_footer {
+      Some(cb) => Ok(
+        cb.await_call(
+          (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
+        )
+        .instrument(debug_span!("post_footer_hook", plugin_name = self.name))
+        .await?
+        .map(TryInto::try_into)
+        .transpose()
+        .with_context(|| {
+          format!("postFooter hook threw an error for chunkName={}", args.chunk.name)
+        })?,
+      ),
+      _ => Ok(None),
+    }
+  }
+
+  fn post_footer_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
+    self.post_footer_meta.as_ref().map(Into::into)
+  }
+
   async fn render_chunk(
     &self,
     ctx: &rolldown_plugin::PluginContext,

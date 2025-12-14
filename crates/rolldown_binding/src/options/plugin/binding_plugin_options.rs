@@ -197,6 +197,17 @@ pub struct BindingPluginOptions {
     MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, BindingRenderedChunk)>, Option<String>>,
   >,
   pub outro_meta: Option<BindingPluginHookMeta>,
+
+  #[napi(ts_type = "(ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void")]
+  pub post_banner: Option<
+    MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, BindingRenderedChunk)>, Option<String>>,
+  >,
+  pub post_banner_meta: Option<BindingPluginHookMeta>,
+  #[napi(ts_type = "(ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void")]
+  pub post_footer: Option<
+    MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, BindingRenderedChunk)>, Option<String>>,
+  >,
+  pub post_footer_meta: Option<BindingPluginHookMeta>,
 }
 
 impl Debug for BindingPluginOptions {

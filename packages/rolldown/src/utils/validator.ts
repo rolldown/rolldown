@@ -846,6 +846,8 @@ const OutputOptionsSchema = v.strictObject({
   ),
   banner: v.optional(v.union([v.string(), AddonFunctionSchema])),
   footer: v.optional(v.union([v.string(), AddonFunctionSchema])),
+  postBanner: v.optional(v.union([v.string(), AddonFunctionSchema])),
+  postFooter: v.optional(v.union([v.string(), AddonFunctionSchema])),
   intro: v.optional(v.union([v.string(), AddonFunctionSchema])),
   outro: v.optional(v.union([v.string(), AddonFunctionSchema])),
   extend: v.pipe(
@@ -982,6 +984,22 @@ const OutputCliOverrideSchema = v.strictObject({
   footer: v.pipe(
     v.optional(v.string()),
     v.description(getAddonDescription('bottom', 'outside')),
+  ),
+  postBanner: v.pipe(
+    v.optional(v.string()),
+    v.description(
+      `Code to insert after the ${
+        styleText('bold', 'top')
+      } of the bundled file after minification`,
+    ),
+  ),
+  postFooter: v.pipe(
+    v.optional(v.string()),
+    v.description(
+      `Code to insert before the ${
+        styleText('bold', 'bottom')
+      } of the bundled file after minification`,
+    ),
   ),
   intro: v.pipe(
     v.optional(v.string()),

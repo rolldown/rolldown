@@ -37,6 +37,8 @@ export interface NormalizedOutputOptions {
   externalLiveBindings: boolean;
   banner: AddonFunction;
   footer: AddonFunction;
+  postBanner: AddonFunction;
+  postFooter: AddonFunction;
   intro: AddonFunction;
   outro: AddonFunction;
   esModule: boolean | 'if-default-prop';

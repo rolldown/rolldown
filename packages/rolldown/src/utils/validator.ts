@@ -988,7 +988,7 @@ const OutputCliOverrideSchema = v.strictObject({
   postBanner: v.pipe(
     v.optional(v.string()),
     v.description(
-      `Code to insert after the ${
+      `Code to insert the ${
         styleText('bold', 'top')
       } of the bundled file after minification`,
     ),
@@ -996,7 +996,7 @@ const OutputCliOverrideSchema = v.strictObject({
   postFooter: v.pipe(
     v.optional(v.string()),
     v.description(
-      `Code to insert before the ${
+      `Code to insert the ${
         styleText('bold', 'bottom')
       } of the bundled file after minification`,
     ),

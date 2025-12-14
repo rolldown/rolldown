@@ -204,7 +204,7 @@ export default {
 
 When using `output.banner` or `output.footer` with minification enabled, the footer content may be stripped out unless it is formatted as a legal comment. To ensure your footer persists through minification, do either:
 
-- Use `output.postBanner` or `output.postFooter` instead, which are added after minification, or
+- Use `output.postFooter` instead, which is added after minification, or
 - Use one of these comment formats:
   - Comments starting with `/*!` (e.g., `/*! My banner */`)
   - Comments containing `@license` (e.g., `/* @license My banner */`)

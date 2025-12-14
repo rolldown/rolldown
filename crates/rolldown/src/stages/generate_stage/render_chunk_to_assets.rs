@@ -56,7 +56,7 @@ impl GenerateStage<'_> {
 
     Self::minify_chunks(self.options, &mut instantiated_chunks)?;
 
-    Self::post_banner_footer(&mut instantiated_chunks);
+    Self::post_banner_footer(&mut instantiated_chunks)?;
 
     let assets = finalize_assets(
       chunk_graph,

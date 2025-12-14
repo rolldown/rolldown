@@ -73,6 +73,8 @@ OPTIONS
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --paths <paths>             Maps external module IDs to paths.
   --polyfill-require          Disable require polyfill injection.
+  --post-banner <post-banner> Code to insert after the top of the bundled file after minification.
+  --post-footer <post-footer> Code to insert before the bottom of the bundled file after minification.
   --preserve-modules          Preserve module structure.
   --preserve-modules-root <preserve-modules-root>Put preserved modules under this path at root level.
   --sanitize-file-name        Sanitize file name.

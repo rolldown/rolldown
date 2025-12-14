@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+
+//#region main.js
+async function run() {
+	return (await Promise.resolve().then(() => require("some-external-lib"))).value;
+}
+
+//#endregion
+exports.run = run;
+```

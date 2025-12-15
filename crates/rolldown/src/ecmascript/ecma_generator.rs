@@ -43,7 +43,6 @@ impl RenderedModuleSource {
 pub struct EcmaGenerator;
 
 impl Generator for EcmaGenerator {
-  #[expect(clippy::too_many_lines)]
   async fn instantiate_chunk(ctx: &mut GenerateContext<'_>) -> Result<BuildResult<GenerateOutput>> {
     let module_id_to_codegen_ret = std::mem::take(&mut ctx.module_id_to_codegen_ret);
     let rendered_module_sources: RenderedModuleSources = ctx
@@ -161,32 +160,14 @@ impl Generator for EcmaGenerator {
         .await?
     };
 
-    let post_banner = {
-      let injection = match ctx.options.post_banner.as_ref() {
-        Some(hook) => hook.call(Arc::clone(&rendered_chunk)).await?,
-        None => None,
-      };
-      ctx
-        .plugin_driver
-        .post_banner(
-          HookAddonArgs { chunk: Arc::clone(&rendered_chunk) },
-          injection.unwrap_or_default(),
-        )
-        .await?
+    let post_banner = match ctx.options.post_banner.as_ref() {
+      Some(hook) => hook.call(Arc::clone(&rendered_chunk)).await?,
+      None => None,
     };
 
-    let post_footer = {
-      let injection = match ctx.options.post_footer.as_ref() {
-        Some(hook) => hook.call(Arc::clone(&rendered_chunk)).await?,
-        None => None,
-      };
-      ctx
-        .plugin_driver
-        .post_footer(
-          HookAddonArgs { chunk: Arc::clone(&rendered_chunk) },
-          injection.unwrap_or_default(),
-        )
-        .await?
+    let post_footer = match ctx.options.post_footer.as_ref() {
+      Some(hook) => hook.call(Arc::clone(&rendered_chunk)).await?,
+      None => None,
     };
 
     let mut warnings = vec![];

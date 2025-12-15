@@ -26,7 +26,5 @@ bitflags! {
     const Footer = 1 << 18;
     const Intro = 1 << 19;
     const Outro = 1 << 20;
-    const PostBanner = 1 << 21;
-    const PostFooter = 1 << 22;
   }
 }

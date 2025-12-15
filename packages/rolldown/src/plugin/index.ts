@@ -256,9 +256,7 @@ type SequentialPluginHooks = DefinedHookNames[
   | 'transform'
 ];
 
-type AddonHooks = DefinedHookNames[
-  'banner' | 'footer' | 'intro' | 'outro' | 'postBanner' | 'postFooter'
-];
+type AddonHooks = DefinedHookNames['banner' | 'footer' | 'intro' | 'outro'];
 
 type OutputPluginHooks = DefinedHookNames[
   | 'augmentChunkHash'

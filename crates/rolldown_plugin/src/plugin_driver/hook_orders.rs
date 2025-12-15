@@ -18,8 +18,6 @@ pub struct PluginHookOrders {
   pub order_by_render_start_meta: Vec<PluginIdx>,
   pub order_by_banner_meta: Vec<PluginIdx>,
   pub order_by_footer_meta: Vec<PluginIdx>,
-  pub order_by_post_banner_meta: Vec<PluginIdx>,
-  pub order_by_post_footer_meta: Vec<PluginIdx>,
   pub order_by_intro_meta: Vec<PluginIdx>,
   pub order_by_outro_meta: Vec<PluginIdx>,
   pub order_by_render_chunk_meta: Vec<PluginIdx>,
@@ -73,12 +71,6 @@ impl PluginHookOrders {
       }),
       order_by_footer_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
         plugin_usage_vec[i].contains(HookUsage::Footer).then(|| p.call_footer_meta())
-      }),
-      order_by_post_banner_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::PostBanner).then(|| p.call_post_banner_meta())
-      }),
-      order_by_post_footer_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
-        plugin_usage_vec[i].contains(HookUsage::PostFooter).then(|| p.call_post_footer_meta())
       }),
       order_by_intro_meta: Self::sort_plugins_by_hook_meta(index_plugins, |i, p| {
         plugin_usage_vec[i].contains(HookUsage::Intro).then(|| p.call_intro_meta())

@@ -127,22 +127,6 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
 
   fn call_footer_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_post_banner(
-    &self,
-    _ctx: &PluginContext,
-    _args: &HookAddonArgs,
-  ) -> HookInjectionOutputReturn;
-
-  fn call_post_banner_meta(&self) -> Option<PluginHookMeta>;
-
-  async fn call_post_footer(
-    &self,
-    _ctx: &PluginContext,
-    _args: &HookAddonArgs,
-  ) -> HookInjectionOutputReturn;
-
-  fn call_post_footer_meta(&self) -> Option<PluginHookMeta>;
-
   async fn call_intro(
     &self,
     _ctx: &PluginContext,
@@ -349,30 +333,6 @@ impl<T: Plugin> Pluginable for T {
 
   fn call_footer_meta(&self) -> Option<PluginHookMeta> {
     Plugin::footer_meta(self)
-  }
-
-  async fn call_post_banner(
-    &self,
-    ctx: &PluginContext,
-    args: &HookAddonArgs,
-  ) -> HookInjectionOutputReturn {
-    Plugin::post_banner(self, ctx, args).await
-  }
-
-  fn call_post_banner_meta(&self) -> Option<PluginHookMeta> {
-    Plugin::post_banner_meta(self)
-  }
-
-  async fn call_post_footer(
-    &self,
-    ctx: &PluginContext,
-    args: &HookAddonArgs,
-  ) -> HookInjectionOutputReturn {
-    Plugin::post_footer(self, ctx, args).await
-  }
-
-  fn call_post_footer_meta(&self) -> Option<PluginHookMeta> {
-    Plugin::post_footer_meta(self)
   }
 
   async fn call_intro(

@@ -2126,10 +2126,6 @@ export interface BindingPluginOptions {
   introMeta?: BindingPluginHookMeta
   outro?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void
   outroMeta?: BindingPluginHookMeta
-  postBanner?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void
-  postBannerMeta?: BindingPluginHookMeta
-  postFooter?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => void
-  postFooterMeta?: BindingPluginHookMeta
 }
 
 export declare enum BindingPluginOrder {

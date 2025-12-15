@@ -30,8 +30,6 @@ const ENUMERATED_PLUGIN_HOOK_NAMES: [
   'banner',
   'intro',
   'outro',
-  'postBanner',
-  'postFooter',
 ] = [
   // build hooks
   ...ENUMERATED_INPUT_PLUGIN_HOOK_NAMES,
@@ -42,8 +40,6 @@ const ENUMERATED_PLUGIN_HOOK_NAMES: [
   'banner',
   'intro',
   'outro',
-  'postBanner',
-  'postFooter',
 ] as const;
 
 /**
@@ -94,6 +90,4 @@ export const DEFINED_HOOK_NAMES: DefinedHookNames = {
   [ENUMERATED_PLUGIN_HOOK_NAMES[20]]: ENUMERATED_PLUGIN_HOOK_NAMES[20],
   [ENUMERATED_PLUGIN_HOOK_NAMES[21]]: ENUMERATED_PLUGIN_HOOK_NAMES[21],
   [ENUMERATED_PLUGIN_HOOK_NAMES[22]]: ENUMERATED_PLUGIN_HOOK_NAMES[22],
-  [ENUMERATED_PLUGIN_HOOK_NAMES[23]]: ENUMERATED_PLUGIN_HOOK_NAMES[23],
-  [ENUMERATED_PLUGIN_HOOK_NAMES[24]]: ENUMERATED_PLUGIN_HOOK_NAMES[24],
 } as const;

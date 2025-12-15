@@ -2,6 +2,7 @@ use crate::{NormalizedBundlerOptions, OutputFormat};
 use oxc::{
   mangler::{MangleOptions, MangleOptionsKeepNames},
   minifier::{CompressOptions, CompressOptionsKeepNames, TreeShakeOptions},
+  transformer::EngineTargets,
 };
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
@@ -59,7 +60,17 @@ impl RawMinifyOptions {
           MinifyOptions::Disabled
         }
       }
-      RawMinifyOptions::DeadCodeEliminationOnly => MinifyOptions::DeadCodeEliminationOnly,
+      RawMinifyOptions::DeadCodeEliminationOnly => {
+        MinifyOptions::DeadCodeEliminationOnly(oxc::minifier::MinifierOptions {
+          mangle: None,
+          compress: Some(CompressOptions {
+            // For `dce-only`, disable all syntax transforming optimizations
+            target: EngineTargets::from_target("es2015").expect("es2015 to be a valid target"),
+            treeshake: TreeShakeOptions::from(&options.treeshake),
+            ..CompressOptions::dce()
+          }),
+        })
+      }
       RawMinifyOptions::Object(value) => MinifyOptions::Enabled((
         {
           let mut opts = value.options;
@@ -90,7 +101,7 @@ impl From<bool> for RawMinifyOptions {
 #[derive(Debug, Clone)]
 pub enum MinifyOptions {
   Disabled,
-  DeadCodeEliminationOnly,
+  DeadCodeEliminationOnly(oxc::minifier::MinifierOptions),
   /// Setting all values to false in `MinifyOptionsObject` means DCE only.
   Enabled((oxc::minifier::MinifierOptions, bool)),
 }

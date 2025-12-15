@@ -1,7 +1,4 @@
-use oxc::{
-  codegen::{self, CodegenOptions, CommentOptions},
-  minifier::{CompressOptions, MinifierOptions, TreeShakeOptions},
-};
+use oxc::codegen::{self, CodegenOptions, CommentOptions};
 use oxc_allocator::AllocatorPool;
 use rolldown_common::{LegalComments, MinifyOptions, NormalizedBundlerOptions};
 use rolldown_ecmascript::EcmaCompiler;
@@ -21,17 +18,7 @@ impl GenerateStage<'_> {
   ) -> BuildResult<()> {
     let (compress, minify_option, remove_whitespace) = match &options.minify {
       MinifyOptions::Disabled => return Ok(()),
-      MinifyOptions::DeadCodeEliminationOnly => (
-        false,
-        &MinifierOptions {
-          mangle: None,
-          compress: Some(CompressOptions {
-            treeshake: TreeShakeOptions::from(&options.treeshake),
-            ..CompressOptions::dce()
-          }),
-        },
-        false,
-      ),
+      MinifyOptions::DeadCodeEliminationOnly(options) => (false, options, false),
       MinifyOptions::Enabled((options, remove_whitespace)) => (true, options, *remove_whitespace),
     };
     let allocator_pool = AllocatorPool::new(rayon::current_num_threads());

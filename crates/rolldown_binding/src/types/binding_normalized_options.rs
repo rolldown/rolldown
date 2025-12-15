@@ -270,7 +270,7 @@ impl BindingNormalizedOptions {
   pub fn minify(&self) -> Either3<bool, &'static str, oxc_minify_napi::MinifyOptions> {
     match &self.inner.minify {
       MinifyOptions::Disabled => Either3::A(false),
-      MinifyOptions::DeadCodeEliminationOnly => Either3::B("dce-only"),
+      MinifyOptions::DeadCodeEliminationOnly(_) => Either3::B("dce-only"),
       MinifyOptions::Enabled((minify_options, remove_whitespace)) => {
         Either3::C(oxc_minify_napi::MinifyOptions {
           compress: minify_options

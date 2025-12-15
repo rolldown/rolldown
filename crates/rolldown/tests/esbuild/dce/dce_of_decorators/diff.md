@@ -39,6 +39,7 @@ const fn = () => {
 
 //#endregion
 //#region keep-these.js
+var Class = @fn class {};
 var Field = class {
 	@fn field;
 };
@@ -65,7 +66,7 @@ var StaticAccessor = class {
 ===================================================================
 --- esbuild	/out/keep-these.js
 +++ rolldown	keep-these.js
-@@ -1,28 +1,27 @@
+@@ -1,28 +1,28 @@
 -// decorator.js
 -var fn = () => {
 -  console.log("side effect");
@@ -79,6 +80,7 @@ var StaticAccessor = class {
 -};
 +//#endregion
 +//#region keep-these.js
++var Class = @fn class {};
  var Field = class {
 -  @fn field;
 +	@fn field;

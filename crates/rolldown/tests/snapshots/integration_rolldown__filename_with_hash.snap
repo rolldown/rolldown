@@ -77,7 +77,7 @@ expression: output
 
 # tests/esbuild/dce/dce_of_decorators
 
-- keep-these-!~{000}~.js => keep-these-T63jyV5B.js
+- keep-these-!~{000}~.js => keep-these-B31opRnz.js
 
 # tests/esbuild/dce/dce_of_destructuring
 
@@ -85,7 +85,7 @@ expression: output
 
 # tests/esbuild/dce/dce_of_experimental_decorators
 
-- keep-these-!~{000}~.js => keep-these-BhIBItjG.js
+- keep-these-!~{000}~.js => keep-these-DaUipujP.js
 
 # tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195
 
@@ -533,7 +533,7 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field
 
-- entry-!~{000}~.js => entry-Mgw6Wqyh.js
+- entry-!~{000}~.js => entry-CaaZo_KS.js
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment
 
@@ -683,7 +683,7 @@ expression: output
 
 # tests/esbuild/default/define_import_meta
 
-- entry-!~{000}~.js => entry-Pr6gMpJE.js
+- entry-!~{000}~.js => entry-BGaLE-48.js
 
 # tests/esbuild/default/define_infinite_loop_issue2407
 
@@ -2599,11 +2599,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-BTUD-Km_.js
+- entry-!~{000}~.js => entry-CPbuwW2D.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-BTUD-Km_.js
+- entry-!~{000}~.js => entry-CPbuwW2D.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2666,7 +2666,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-DxG03SeU.js
+- entry-!~{000}~.js => entry-DYmsgpRV.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -2844,7 +2844,7 @@ expression: output
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
-- entry-!~{000}~.js => entry-D3tJo4_e.js
+- entry-!~{000}~.js => entry-SNu9crYE.js
 
 # tests/esbuild/lower/static_class_block_es2021
 
@@ -3344,15 +3344,15 @@ expression: output
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_false
 
-- entry-!~{000}~.js => entry--Z7EGA-r.js
+- entry-!~{000}~.js => entry-CfJILg_5.js
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_true
 
-- entry-!~{000}~.js => entry-Dpo67aeA.js
+- entry-!~{000}~.js => entry-PruRCKsq.js
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_true_lower
 
-- entry-!~{000}~.js => entry-C7Og7e6B.js
+- entry-!~{000}~.js => entry-CdgsyQB6.js
 
 # tests/esbuild/ts/ts_const_enum_comments
 
@@ -3360,7 +3360,7 @@ expression: output
 
 # tests/esbuild/ts/ts_declare_class_fields
 
-- entry-!~{000}~.js => entry-xO_yrfHm.js
+- entry-!~{000}~.js => entry-DuckqtFw.js
 
 # tests/esbuild/ts/ts_declare_namespace
 
@@ -3422,27 +3422,27 @@ expression: output
 
 # tests/esbuild/ts/ts_experimental_decorator_scope_issue2147
 
-- entry-!~{000}~.js => entry-DU3KG-af.js
+- entry-!~{000}~.js => entry-Cj26kLpx.js
 
 # tests/esbuild/ts/ts_experimental_decorators
 
-- entry-!~{000}~.js => entry-DuhnJ2gs.js
+- entry-!~{000}~.js => entry-3C26Xtr_.js
 
 # tests/esbuild/ts/ts_experimental_decorators_keep_names
 
-- entry-!~{000}~.js => entry-1rWTB3bm.js
+- entry-!~{000}~.js => entry-Kb24gxbb.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_assign_semantics
 
-- entry-!~{000}~.js => entry-Cd3Nkb0X.js
+- entry-!~{000}~.js => entry-B1bMAXZH.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_define_semantics
 
-- entry-!~{000}~.js => entry-D_g_OCT0.js
+- entry-!~{000}~.js => entry-QDGC2yYz.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_methods
 
-- entry-!~{000}~.js => entry-DybCY32B.js
+- entry-!~{000}~.js => entry-Cu_OyKjc.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_assign_semantics
 
@@ -3450,11 +3450,11 @@ expression: output
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_define_semantics
 
-- entry-!~{000}~.js => entry-CemFNmKV.js
+- entry-!~{000}~.js => entry-Da_2Q_V9.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_methods
 
-- entry-!~{000}~.js => entry-2kvRP5Ld.js
+- entry-!~{000}~.js => entry-C38BMr2s.js
 
 # tests/esbuild/ts/ts_experimental_decorators_no_config
 
@@ -3538,7 +3538,7 @@ expression: output
 
 # tests/esbuild/ts/ts_minify_derived_class
 
-- entry-!~{000}~.js => entry-w6M3Q1pA.js
+- entry-!~{000}~.js => entry-C804P6Z4.js
 
 # tests/esbuild/ts/ts_minify_enum
 
@@ -5390,11 +5390,11 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_merge_decorator_metadata
 
-- main-!~{000}~.js => main-Tp61ejmz.js
+- main-!~{000}~.js => main-BUlGXoWm.js
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-C97cJGtB.js
+- main-!~{000}~.js => main-D9kb5ZUn.js
 
 # tests/rolldown/resolve/wildcard_alias
 
@@ -5979,7 +5979,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/issue_7481_2
 
-- main-!~{000}~.js => main-0tvpeDlq.js
+- main-!~{000}~.js => main-B2TJpCLm.js
 
 # tests/rolldown/topics/keep_names/parenthesized_default_export
 

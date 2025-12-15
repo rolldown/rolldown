@@ -15,21 +15,21 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 //#endregion
 //#region a.js
 var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
-function test() {
+function test$1() {
 	return import_cjs.default;
 }
 
 //#endregion
 //#region b.js
-function test$1() {
+function test() {
 	console.log(import_cjs.default);
 	return import_cjs.default;
 }
 
 //#endregion
 //#region main.js
-const aa = test();
-const bb = test$1();
+const aa = test$1();
+const bb = test();
 
 //#endregion
 export { aa, bb };

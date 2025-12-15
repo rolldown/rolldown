@@ -1,0 +1,12 @@
+{
+  "config": {
+    "input": [
+      {
+        "import": "./index.cjs",
+        "name": "index"
+      }
+    ],
+    "keepNames": true
+  },
+  "expectExecuted": false
+}

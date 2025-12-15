@@ -94,11 +94,11 @@ export {
 ### rolldown
 ```js
 //#region keep/declare-class.ts
-let bar = 123;
+let bar$12 = 123;
 
 //#endregion
 //#region keep/declare-let.ts
-let bar$1 = 123;
+let bar$11 = 123;
 
 //#endregion
 //#region keep/interface-merged.ts
@@ -106,17 +106,17 @@ var foo$3 = class foo$3 {
 	static x = new foo$3();
 };
 var interface_merged_default = foo$3;
-let bar$2 = 123;
+let bar$10 = 123;
 
 //#endregion
 //#region keep/interface-nested.ts
 var interface_nested_default = foo;
-let bar$3 = 123;
+let bar$9 = 123;
 
 //#endregion
 //#region keep/type-nested.ts
 var type_nested_default = foo;
-let bar$4 = 123;
+let bar$8 = 123;
 
 //#endregion
 //#region keep/value-namespace.ts
@@ -125,7 +125,7 @@ let foo$2;
 	_foo.num = 0;
 })(foo$2 || (foo$2 = {}));
 var value_namespace_default = foo$2;
-let bar$5 = 123;
+let bar$7 = 123;
 
 //#endregion
 //#region keep/value-namespace-merged.ts
@@ -138,51 +138,51 @@ let bar$6 = 123;
 
 //#endregion
 //#region remove/interface.ts
-let bar$7 = 123;
+let bar$5 = 123;
 
 //#endregion
 //#region remove/interface-exported.ts
-let bar$8 = 123;
+let bar$4 = 123;
 
 //#endregion
 //#region remove/type.ts
-let bar$9 = 123;
+let bar$3 = 123;
 
 //#endregion
 //#region remove/type-exported.ts
-let bar$10 = 123;
+let bar$2 = 123;
 
 //#endregion
 //#region remove/type-only-namespace.ts
-let bar$11 = 123;
+let bar$1 = 123;
 
 //#endregion
 //#region remove/type-only-namespace-exported.ts
-let bar$12 = 123;
+let bar = 123;
 
 //#endregion
 //#region entry.ts
 var entry_default = [
 	dc_def,
-	bar,
+	bar$12,
 	dl_def,
-	bar$1,
+	bar$11,
 	interface_merged_default,
-	bar$2,
+	bar$10,
 	interface_nested_default,
-	bar$3,
+	bar$9,
 	type_nested_default,
-	bar$4,
+	bar$8,
 	value_namespace_default,
-	bar$5,
+	bar$7,
 	value_namespace_merged_default,
 	bar$6,
-	bar$7,
-	bar$8,
-	bar$9,
-	bar$10,
-	bar$11,
-	bar$12
+	bar$5,
+	bar$4,
+	bar$3,
+	bar$2,
+	bar$1,
+	bar
 ];
 
 //#endregion
@@ -195,14 +195,15 @@ export { entry_default as default };
 +++ rolldown	entry.js
 @@ -1,37 +1,31 @@
 -var declare_class_default = foo;
- var bar = 123;
+-var bar = 123;
 -var declare_let_default = foo;
 -var bar2 = 123;
 -var foo2 = class _foo {
 -    static {
 -        this.x = new _foo();
 -    }
-+var bar$1 = 123;
++var bar$12 = 123;
++var bar$11 = 123;
 +var foo$3 = class foo$3 {
 +    static x = new foo$3();
  };
@@ -210,11 +211,11 @@ export { entry_default as default };
 -var bar3 = 123;
 -if (true) {}
 +var interface_merged_default = foo$3;
-+var bar$2 = 123;
++var bar$10 = 123;
  var interface_nested_default = foo;
 -var bar4 = 123;
 -if (true) {}
-+var bar$3 = 123;
++var bar$9 = 123;
  var type_nested_default = foo;
 -var bar5 = 123;
 -var foo3;
@@ -236,26 +237,26 @@ export { entry_default as default };
 -var bar12 = 123;
 -var bar13 = 123;
 -var entry_default = [declare_class_default, bar, declare_let_default, bar2, interface_merged_default, bar3, interface_nested_default, bar4, type_nested_default, bar5, value_namespace_default, bar6, value_namespace_merged_default, bar7, bar8, bar9, bar10, bar11, bar12, bar13];
-+var bar$4 = 123;
++var bar$8 = 123;
 +var foo$2;
 +(function (_foo) {
 +    _foo.num = 0;
 +})(foo$2 || (foo$2 = {}));
 +var value_namespace_default = foo$2;
-+var bar$5 = 123;
++var bar$7 = 123;
 +var foo$1;
 +(function (_foo) {
 +    _foo.num = 0;
 +})(foo$1 || (foo$1 = {}));
 +var value_namespace_merged_default = foo$1;
 +var bar$6 = 123;
-+var bar$7 = 123;
-+var bar$8 = 123;
-+var bar$9 = 123;
-+var bar$10 = 123;
-+var bar$11 = 123;
-+var bar$12 = 123;
-+var entry_default = [dc_def, bar, dl_def, bar$1, interface_merged_default, bar$2, interface_nested_default, bar$3, type_nested_default, bar$4, value_namespace_default, bar$5, value_namespace_merged_default, bar$6, bar$7, bar$8, bar$9, bar$10, bar$11, bar$12];
++var bar$5 = 123;
++var bar$4 = 123;
++var bar$3 = 123;
++var bar$2 = 123;
++var bar$1 = 123;
++var bar = 123;
++var entry_default = [dc_def, bar$12, dl_def, bar$11, interface_merged_default, bar$10, interface_nested_default, bar$9, type_nested_default, bar$8, value_namespace_default, bar$7, value_namespace_merged_default, bar$6, bar$5, bar$4, bar$3, bar$2, bar$1, bar];
  export {entry_default as default};
 
 ```

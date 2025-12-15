@@ -12,19 +12,19 @@ console.log(spread$2);
 
 //#endregion
 //#region dep2.js
-const spread = ["spread 2"];
-console.log(spread);
+const spread$1 = ["spread 2"];
+console.log(spread$1);
 
 //#endregion
 //#region dep3.js
-const spread$1 = ["spread 3"];
-console.log(spread$1);
+const spread = ["spread 3"];
+console.log(spread);
 
 //#endregion
 //#region main.js
 const Foo = () => {};
-const element = /* @__PURE__ */ React.createElement(Foo, null, ...spread);
-const fragment = /* @__PURE__ */ React.createElement(React.Fragment, null, ...spread);
+const element = /* @__PURE__ */ React.createElement(Foo, null, ...spread$1);
+const fragment = /* @__PURE__ */ React.createElement(React.Fragment, null, ...spread$1);
 
 //#endregion
 export { element, fragment };

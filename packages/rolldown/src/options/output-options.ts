@@ -150,7 +150,13 @@ export interface OutputOptions {
   sourcemapPathTransform?: SourcemapPathTransformOption;
   banner?: string | AddonFunction;
   footer?: string | AddonFunction;
+  /**
+   * Similar to `banner` option, but will run after the `renderChunk` hook and builtin minification.
+   */
   postBanner?: string | AddonFunction;
+  /**
+   * Similar to `footer` option, but will run after the `renderChunk` hook and builtin minification.
+   */
   postFooter?: string | AddonFunction;
   intro?: string | AddonFunction;
   outro?: string | AddonFunction;

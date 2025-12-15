@@ -1,13 +1,13 @@
 use bitflags::bitflags;
 use oxc::ast::ast::ObjectPropertyKind;
-use oxc::semantic::{ScopeFlags, SymbolId};
+use oxc::semantic::{ReferenceId, ScopeFlags, SymbolId};
 use oxc::{
   allocator::{self, Allocator, Box as ArenaBox, CloneIn, Dummy, IntoIn, TakeIn},
   ast::{
     AstBuilder, NONE,
     ast::{
-      self, BindingIdentifier, ClassElement, Expression, IdentifierReference, ImportExpression,
-      MemberExpression, NumberBase, Statement, VariableDeclarationKind,
+      self, ClassElement, Expression, IdentifierReference, ImportExpression, MemberExpression,
+      NumberBase, Statement, VariableDeclarationKind,
     },
   },
   span::{Atom, GetSpan, GetSpanMut, SPAN},
@@ -57,6 +57,17 @@ bitflags! {
   pub struct FinalizedExprProcessHint: u8 {
       const FromCjsWrapKindEntry = 1;
   }
+}
+
+/// Represents different ways to identify a name for `keep_names` functionality.
+#[derive(Clone, Debug, Copy)]
+pub enum KeepNameId<'a> {
+  /// A symbol ID from the AST's symbol table.
+  SymbolId(SymbolId),
+  /// A reference ID from the AST's reference table.
+  ReferenceId(ReferenceId),
+  /// A string name used directly (e.g., for "default" exports).
+  CompactStr(&'a CompactStr),
 }
 
 /// Finalizer for emitting output code with scope hoisting.
@@ -788,9 +799,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  fn get_conflicted_info(&self, id: &BindingIdentifier<'ast>) -> Option<(&str, &CompactStr)> {
-    let symbol_id = id.symbol_id.get()?;
-    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
+  fn get_conflicted_info(&self, id: KeepNameId) -> Option<(&str, &CompactStr)> {
+    let symbol_ref: SymbolRef = match id {
+      KeepNameId::SymbolId(symbol_id) => (self.ctx.id, symbol_id).into(),
+      KeepNameId::ReferenceId(reference_id) => {
+        let symbol_id = self.scope.symbol_id_for(reference_id)?;
+        (self.ctx.id, symbol_id).into()
+      }
+      KeepNameId::CompactStr(_) => {
+        // CompactStr variant doesn't need conflict resolution - it's already a direct name
+        return None;
+      }
+    };
+
     let original_name = symbol_ref.name(self.ctx.symbol_db);
     let canonical_name = self.canonical_name_for(symbol_ref);
     (original_name != canonical_name.as_str()).then_some((original_name, canonical_name))
@@ -1307,9 +1328,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   ast::Expression::ClassExpression(class_expression)
                     if class_expression.id.is_none() =>
                   {
-                    if let Some(element) =
-                      self.keep_name_helper_for_class(None, &class_expression.body, true)
-                    {
+                    if let Some(element) = self.keep_name_helper_for_class(
+                      Some(KeepNameId::CompactStr(&CompactStr::from("default"))),
+                      &class_expression.body,
+                    ) {
                       class_expression.body.body.insert(0, element);
                     }
                     None
@@ -1364,7 +1386,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 // When keep_names is enabled, preserve "default" as the class name
                 // Skip if class has static name property
                 if self.ctx.options.keep_names {
-                  if let Some(element) = self.keep_name_helper_for_class(None, &class.body, true) {
+                  let default_name = CompactStr::from("default");
+                  if let Some(element) = self.keep_name_helper_for_class(
+                    Some(KeepNameId::CompactStr(&default_name)),
+                    &class.body,
+                  ) {
                     class.body.body.insert(0, element);
                   }
                 }
@@ -1428,39 +1454,95 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   fn process_fn(
     &self,
-    symbol_binding_id: Option<&BindingIdentifier<'ast>>,
-    name_binding_id: Option<&BindingIdentifier<'ast>>,
+    symbol_binding_id: Option<KeepNameId>,
+    name_binding_id: Option<KeepNameId>,
   ) -> Option<(usize, CompactStr, CompactStr)> {
     if !self.ctx.options.keep_names {
       return None;
     }
-    let (original_name, _) = self.get_conflicted_info(name_binding_id.as_ref()?)?;
-    let (_, canonical_name) = self.get_conflicted_info(symbol_binding_id.as_ref()?)?;
+    let (original_name, _) = self.get_conflicted_info(name_binding_id?)?;
+    let (_, canonical_name) = self.get_conflicted_info(symbol_binding_id?)?;
     let original_name: CompactStr = CompactStr::new(original_name);
     let new_name = canonical_name.clone();
     let insert_position = self.cur_stmt_index + 1;
     Some((insert_position, original_name, new_name))
   }
 
+  fn process_keep_name_for_expression(
+    &self,
+    keep_name_id: Option<KeepNameId>,
+    expr: &mut ast::Expression<'ast>,
+  ) {
+    // Don't rewrite `__name` runtime helper itself.
+    if !self.ctx.options.keep_names || self.ctx.runtime.id() == self.ctx.id {
+      return;
+    }
+
+    match expr {
+      ast::Expression::ClassExpression(class_expression) => {
+        if let Some(element) = self.keep_name_helper_for_class(
+          class_expression
+            .id
+            .as_ref()
+            .and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId))
+            .or(keep_name_id),
+          &class_expression.body,
+        ) {
+          class_expression.body.body.insert(0, element);
+        }
+      }
+      ast::Expression::FunctionExpression(fn_expression) => {
+        if let Some((_insert_position, original_name, _)) = self.process_fn(
+          keep_name_id,
+          fn_expression
+            .id
+            .as_ref()
+            .and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId))
+            .or(keep_name_id),
+        ) {
+          let fn_expr = expr.take_in(self.alloc);
+          let name_ref = self.canonical_ref_for_runtime("__name");
+          let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
+          *expr = self.snippet.keep_name_call_expr(&original_name, fn_expr, finalized_callee, true);
+        }
+      }
+      ast::Expression::ArrowFunctionExpression(_fn_expr) => {
+        if let Some((_insert_position, original_name, _)) =
+          self.process_fn(keep_name_id, keep_name_id)
+        {
+          let fn_expr = expr.take_in(self.alloc);
+          let name_ref = self.canonical_ref_for_runtime("__name");
+          let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
+          *expr = self.snippet.keep_name_call_expr(&original_name, fn_expr, finalized_callee, true);
+        }
+      }
+      _ => {}
+    }
+  }
+
   fn keep_name_helper_for_class(
     &self,
-    id: Option<&BindingIdentifier<'ast>>,
+    id: Option<KeepNameId>,
     class_body: &ast::ClassBody<'ast>,
-    is_default: bool,
   ) -> Option<ClassElement<'ast>> {
     if !self.ctx.options.keep_names {
       return None;
     }
+    let keep_name_id = id?;
     // Skip if the class already has a static `name` property/method
     if Self::class_body_has_static_name(class_body) {
       return None;
     }
-    let original_name = if is_default {
-      CompactStr::from("default")
-    } else {
-      let (original_name, _) = self.get_conflicted_info(id.as_ref()?)?;
-      let original_name: CompactStr = CompactStr::new(original_name);
-      original_name
+    let original_name = match keep_name_id {
+      KeepNameId::CompactStr(name) => {
+        // CompactStr variant doesn't need conflict resolution - it's already a direct name
+        name.clone()
+      }
+      KeepNameId::SymbolId(_) | KeepNameId::ReferenceId(_) => {
+        let (original_name, _) = self.get_conflicted_info(keep_name_id)?;
+        let original_name: CompactStr = CompactStr::new(original_name);
+        original_name
+      }
     };
 
     let name_ref = self.canonical_ref_for_runtime("__name");

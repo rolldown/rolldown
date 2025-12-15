@@ -5973,6 +5973,14 @@ expression: output
 - entry2-!~{001}~.js => entry2-Eow-pZuM.js
 - foo-!~{002}~.js => foo-V6MEsHyi.js
 
+# tests/rolldown/topics/keep_names/issue_7481
+
+- main-!~{000}~.js => main-DQS9kmkX.js
+
+# tests/rolldown/topics/keep_names/issue_7481_2
+
+- main-!~{000}~.js => main-0tvpeDlq.js
+
 # tests/rolldown/topics/keep_names/parenthesized_default_export
 
 - main-!~{000}~.js => main-DgH0nPHk.js

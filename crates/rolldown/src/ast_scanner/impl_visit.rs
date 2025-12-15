@@ -429,6 +429,13 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     walk::walk_call_expression(self, it);
   }
 
+  fn visit_class(&mut self, it: &ast::Class<'ast>) {
+    if self.is_root_scope() {
+      self.current_stmt_info.meta.insert(StmtInfoMeta::ClassExpr);
+    }
+    walk::walk_class(self, it);
+  }
+
   fn visit_export_default_declaration(&mut self, it: &ast::ExportDefaultDeclaration<'ast>) {
     // Mark export default declarations with anonymous function/class expressions
     // so that __name helper will be included in the runtime

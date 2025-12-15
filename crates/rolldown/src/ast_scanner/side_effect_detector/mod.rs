@@ -124,6 +124,9 @@ impl<'a> SideEffectDetector<'a> {
               .is_some_and(|init| self.detect_side_effect_of_expr(init).has_side_effect())
         }
         ClassElement::AccessorProperty(def) => {
+          if !def.decorators.is_empty() {
+            return true;
+          }
           (match &def.key {
             PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false,
             key @ oxc::ast::match_expression!(PropertyKey) => {

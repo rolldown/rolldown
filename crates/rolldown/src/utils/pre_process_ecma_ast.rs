@@ -27,6 +27,17 @@ pub struct PreProcessEcmaAst {
 }
 
 impl PreProcessEcmaAst {
+  fn check_class_for_decorators(class: &oxc::ast::ast::Class) -> bool {
+    use oxc::ast::ast::ClassElement;
+    !class.decorators.is_empty()
+      || class.body.body.iter().any(|element| match element {
+        ClassElement::PropertyDefinition(def) => !def.decorators.is_empty(),
+        ClassElement::MethodDefinition(def) => !def.decorators.is_empty(),
+        ClassElement::AccessorProperty(def) => !def.decorators.is_empty(),
+        _ => false,
+      })
+  }
+
   #[expect(clippy::too_many_arguments)]
   pub fn build(
     &mut self,
@@ -138,33 +149,21 @@ impl PreProcessEcmaAst {
     // We also skip for member decorators to be safe, though Rolldown's tree shaking
     // should handle those correctly.
     // TODO: Remove this workaround once OXC properly handles modern decorators.
+    use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, Statement};
+    
     let has_modern_decorators = ast.program().body.iter().any(|stmt| {
-      use oxc::ast::ast::{ClassElement, Declaration, ExportDefaultDeclarationKind, Statement};
-      
-      // Check for class declarations with class-level or member decorators
-      let check_class_for_decorators = |class: &oxc::ast::ast::Class| {
-        !class.decorators.is_empty()
-          || class.body.body.iter().any(|element| match element {
-            ClassElement::PropertyDefinition(def) => !def.decorators.is_empty(),
-            ClassElement::MethodDefinition(def) => !def.decorators.is_empty(),
-            ClassElement::AccessorProperty(def) => !def.decorators.is_empty(),
-            _ => false,
-          })
-      };
-      
-      // Check export default class declarations
-      if let Statement::ExportDefaultDeclaration(export_decl) = stmt {
-        if let ExportDefaultDeclarationKind::ClassDeclaration(class_decl) = &export_decl.declaration {
-          return check_class_for_decorators(class_decl);
+      match stmt {
+        Statement::ExportDefaultDeclaration(export_decl) => {
+          matches!(&export_decl.declaration,
+            ExportDefaultDeclarationKind::ClassDeclaration(class_decl)
+            if PreProcessEcmaAst::check_class_for_decorators(class_decl)
+          )
         }
+        _ => matches!(stmt.as_declaration(),
+          Some(Declaration::ClassDeclaration(class_decl))
+          if PreProcessEcmaAst::check_class_for_decorators(class_decl)
+        ),
       }
-      
-      // Check regular class declarations
-      if let Some(Declaration::ClassDeclaration(class_decl)) = stmt.as_declaration() {
-        return check_class_for_decorators(class_decl);
-      }
-      
-      false
     });
     
     if bundle_options.treeshake.is_some() && !has_lazy_export && !has_modern_decorators {

@@ -286,6 +286,8 @@ pub fn normalize_binding_options(
     }),
     banner: normalize_addon_option(output_options.banner),
     footer: normalize_addon_option(output_options.footer),
+    post_banner: normalize_addon_option(output_options.post_banner),
+    post_footer: normalize_addon_option(output_options.post_footer),
     intro: normalize_addon_option(output_options.intro),
     outro: normalize_addon_option(output_options.outro),
     sourcemap_base_url: output_options

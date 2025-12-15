@@ -212,6 +212,24 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
+  pub fn post_banner(&self) -> Either<Option<&str>, Undefined> {
+    match &self.inner.post_banner {
+      Some(rolldown::AddonOutputOption::String(inner)) => Either::A(inner.as_deref()),
+      Some(rolldown::AddonOutputOption::Fn(_)) => Either::B(()),
+      None => Either::A(None),
+    }
+  }
+
+  #[napi(getter)]
+  pub fn post_footer(&self) -> Either<Option<&str>, Undefined> {
+    match &self.inner.post_footer {
+      Some(rolldown::AddonOutputOption::String(inner)) => Either::A(inner.as_deref()),
+      Some(rolldown::AddonOutputOption::Fn(_)) => Either::B(()),
+      None => Either::A(None),
+    }
+  }
+
+  #[napi(getter)]
   pub fn external_live_bindings(&self) -> bool {
     self.inner.external_live_bindings
   }

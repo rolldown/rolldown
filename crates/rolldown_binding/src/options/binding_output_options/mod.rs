@@ -62,6 +62,15 @@ pub struct BindingOutputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "(chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>")]
   pub banner: Option<AddonOutputOption>,
+  #[debug(skip)]
+  #[napi(ts_type = "(chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>")]
+  pub post_banner: Option<AddonOutputOption>,
+  #[debug(skip)]
+  #[napi(ts_type = "(chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>")]
+  pub footer: Option<AddonOutputOption>,
+  #[debug(skip)]
+  #[napi(ts_type = "(chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>")]
+  pub post_footer: Option<AddonOutputOption>,
   // compact: boolean;
   pub dir: Option<String>,
   pub file: Option<String>,
@@ -71,9 +80,6 @@ pub struct BindingOutputOptions<'env> {
   pub exports: Option<String>,
   pub extend: Option<bool>,
   pub external_live_bindings: Option<bool>,
-  #[debug(skip)]
-  #[napi(ts_type = "(chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>")]
-  pub footer: Option<AddonOutputOption>,
   #[napi(ts_type = "'es' | 'cjs' | 'iife' | 'umd'")]
   pub format: Option<String>,
   // freeze: boolean;

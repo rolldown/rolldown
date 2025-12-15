@@ -846,6 +846,8 @@ const OutputOptionsSchema = v.strictObject({
   ),
   banner: v.optional(v.union([v.string(), AddonFunctionSchema])),
   footer: v.optional(v.union([v.string(), AddonFunctionSchema])),
+  postBanner: v.optional(v.union([v.string(), AddonFunctionSchema])),
+  postFooter: v.optional(v.union([v.string(), AddonFunctionSchema])),
   intro: v.optional(v.union([v.string(), AddonFunctionSchema])),
   outro: v.optional(v.union([v.string(), AddonFunctionSchema])),
   extend: v.pipe(
@@ -982,6 +984,18 @@ const OutputCliOverrideSchema = v.strictObject({
   footer: v.pipe(
     v.optional(v.string()),
     v.description(getAddonDescription('bottom', 'outside')),
+  ),
+  postBanner: v.pipe(
+    v.optional(v.string()),
+    v.description(
+      'A string to prepend to the top of each chunk. Applied after the `renderChunk` hook and minification',
+    ),
+  ),
+  postFooter: v.pipe(
+    v.optional(v.string()),
+    v.description(
+      'A string to append to the bottom of each chunk. Applied after the `renderChunk` hook and minification',
+    ),
   ),
   intro: v.pipe(
     v.optional(v.string()),

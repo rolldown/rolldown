@@ -281,6 +281,18 @@
             "null"
           ]
         },
+        "postBanner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "postFooter": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "intro": {
           "type": [
             "string",

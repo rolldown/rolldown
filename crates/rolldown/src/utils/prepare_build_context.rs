@@ -358,6 +358,8 @@ pub fn prepare_build_context(
     sanitize_filename: raw_options.sanitize_filename.unwrap_or_default(),
     banner: raw_options.banner,
     footer: raw_options.footer,
+    post_banner: raw_options.post_banner,
+    post_footer: raw_options.post_footer,
     intro: raw_options.intro,
     outro: raw_options.outro,
     es_module: raw_options.es_module.unwrap_or_default(),

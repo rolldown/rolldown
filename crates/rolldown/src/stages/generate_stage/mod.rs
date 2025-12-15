@@ -64,6 +64,7 @@ mod code_splitting;
 mod compute_cross_chunk_links;
 mod minify_chunks;
 mod on_demand_wrapping;
+mod post_banner_footer;
 mod render_chunk_to_assets;
 
 pub struct GenerateStage<'a> {

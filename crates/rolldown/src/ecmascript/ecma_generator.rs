@@ -160,6 +160,20 @@ impl Generator for EcmaGenerator {
         .await?
     };
 
+    let post_banner = match ctx.options.post_banner.as_ref() {
+      Some(hook) => hook.call(Arc::clone(&rendered_chunk)).await?,
+      None => None,
+    }
+    // FIXME: this `is_empty` shouldn't be necessary
+    .filter(|s| !s.is_empty());
+
+    let post_footer = match ctx.options.post_footer.as_ref() {
+      Some(hook) => hook.call(Arc::clone(&rendered_chunk)).await?,
+      None => None,
+    }
+    // FIXME: this `is_empty` shouldn't be necessary
+    .filter(|s| !s.is_empty());
+
     let mut warnings = vec![];
 
     let addon_render_context = AddonRenderContext {
@@ -235,6 +249,9 @@ impl Generator for EcmaGenerator {
           .clone()
           .expect("should have preliminary filename"),
         augment_chunk_hash: None,
+
+        post_banner,
+        post_footer,
       }],
       warnings: std::mem::take(&mut ctx.warnings),
     }))

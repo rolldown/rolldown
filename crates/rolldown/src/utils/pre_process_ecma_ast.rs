@@ -133,7 +133,24 @@ impl PreProcessEcmaAst {
 
     // Step 5: Run DCE.
     // Avoid DCE for lazy export.
-    if bundle_options.treeshake.is_some() && !has_lazy_export {
+    // Skip OXC DCE if the module has modern JavaScript decorators, as OXC's DCE
+    // incorrectly removes class declarations with class-level decorators.
+    // TODO: Remove this workaround once OXC properly handles modern decorators.
+    let has_modern_decorators = ast.program().body.iter().any(|stmt| {
+      use oxc::ast::ast::{Declaration, Statement};
+      if let Statement::ExportDefaultDeclaration(export_decl) = stmt {
+        use oxc::ast::ast::ExportDefaultDeclarationKind;
+        if let ExportDefaultDeclarationKind::ClassDeclaration(class_decl) = &export_decl.declaration {
+          return !class_decl.decorators.is_empty();
+        }
+      }
+      let decl = stmt.as_declaration();
+      decl.is_some_and(|decl| {
+        matches!(decl, Declaration::ClassDeclaration(class_decl) if !class_decl.decorators.is_empty())
+      })
+    });
+    
+    if bundle_options.treeshake.is_some() && !has_lazy_export && !has_modern_decorators {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
         let scoping = self.recreate_scoping(&mut scoping, program, false);
         // NOTE: `CompressOptions::dead_code_elimination` will remove `ParenthesizedExpression`s from the AST.

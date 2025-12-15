@@ -97,16 +97,26 @@ export function bindingifyOutputOptions(
   };
 }
 
-type AddonKeys = 'banner' | 'footer' | 'intro' | 'outro';
+type AddonKeys =
+  | 'banner'
+  | 'footer'
+  | 'intro'
+  | 'outro'
+  | 'postBanner'
+  | 'postFooter';
 
 function bindingifyAddon(
   configAddon: OutputOptions[AddonKeys],
 ): BindingOutputOptions[AddonKeys] {
+  if (configAddon == null) {
+    return undefined;
+  }
+  if (typeof configAddon === 'string') {
+    return configAddon;
+  }
+  // configAddon is a function
   return async (chunk) => {
-    if (typeof configAddon === 'function') {
-      return configAddon(transformRenderedChunk(chunk));
-    }
-    return configAddon || '';
+    return configAddon(transformRenderedChunk(chunk));
   };
 }
 

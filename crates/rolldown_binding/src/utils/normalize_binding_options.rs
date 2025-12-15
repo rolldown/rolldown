@@ -58,16 +58,17 @@ fn normalize_generated_code_option(
 fn normalize_addon_option(
   addon_option: Option<crate::options::AddonOutputOption>,
 ) -> Option<AddonOutputOption> {
-  addon_option.map(move |value| {
-    AddonOutputOption::Fn(Arc::new(move |chunk| {
-      let fn_js = Arc::clone(&value);
+  addon_option.map(move |value| match value {
+    Either::A(str) => AddonOutputOption::String(Some(str)),
+    Either::B(func) => AddonOutputOption::Fn(Arc::new(move |chunk| {
+      let fn_js = Arc::clone(&func);
       Box::pin(async move {
         fn_js
           .await_call(FnArgs { data: (BindingRenderedChunk::new(chunk),) })
           .await
           .map_err(anyhow::Error::from)
       })
-    }))
+    })),
   })
 }
 

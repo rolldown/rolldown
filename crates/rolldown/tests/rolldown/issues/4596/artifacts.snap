@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+//#region a.js
+const Foo = class {};
+
+//#endregion
+//#region main.js
+var Foo$1 = class {
+	static {
+		__name(this, "Foo");
+	}
+};
+assert.strictEqual(Foo$1.name, "Foo");
+assert.strictEqual(Foo.name, "Foo");
+
+//#endregion
+```

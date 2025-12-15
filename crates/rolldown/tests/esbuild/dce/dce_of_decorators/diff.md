@@ -45,11 +45,17 @@ var Field = class {
 var Method = class {
 	@fn method() {}
 };
+var Accessor = class {
+	@fn accessor accessor;
+};
 var StaticField = class {
 	@fn static field;
 };
 var StaticMethod = class {
 	@fn static method() {}
+};
+var StaticAccessor = class {
+	@fn static accessor accessor;
 };
 
 //#endregion
@@ -59,7 +65,7 @@ var StaticMethod = class {
 ===================================================================
 --- esbuild	/out/keep-these.js
 +++ rolldown	keep-these.js
-@@ -1,28 +1,21 @@
+@@ -1,28 +1,27 @@
 -// decorator.js
 -var fn = () => {
 -  console.log("side effect");
@@ -82,9 +88,10 @@ var StaticMethod = class {
 -  }
 +	@fn method() {}
  };
--var Accessor = class {
+ var Accessor = class {
 -  @fn accessor accessor;
--};
++	@fn accessor accessor;
+ };
  var StaticField = class {
 -  @fn static field;
 +	@fn static field;
@@ -94,10 +101,12 @@ var StaticMethod = class {
 -  }
 +	@fn static method() {}
  };
--var StaticAccessor = class {
+ var StaticAccessor = class {
 -  @fn static accessor accessor;
 -};
 \ No newline at end of file
++	@fn static accessor accessor;
++};
 +
 +//#endregion
 \ No newline at end of file

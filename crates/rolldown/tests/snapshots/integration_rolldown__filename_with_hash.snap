@@ -77,7 +77,7 @@ expression: output
 
 # tests/esbuild/dce/dce_of_decorators
 
-- keep-these-!~{000}~.js => keep-these-BwHnIShJ.js
+- keep-these-!~{000}~.js => keep-these-T63jyV5B.js
 
 # tests/esbuild/dce/dce_of_destructuring
 
@@ -2560,16 +2560,16 @@ expression: output
 
 # tests/esbuild/lower/java_script_decorators_bundle_issue3768
 
-- base-instance-accessor-!~{002}~.js => base-instance-accessor-DN90mKDz.js
+- base-instance-accessor-!~{002}~.js => base-instance-accessor-CWMQIr80.js
 - base-instance-field-!~{001}~.js => base-instance-field-Dr5yT6-7.js
 - base-instance-method-!~{000}~.js => base-instance-method-B9Wgyeq0.js
-- base-static-accessor-!~{005}~.js => base-static-accessor-BYHu2Icy.js
+- base-static-accessor-!~{005}~.js => base-static-accessor-BWALuygJ.js
 - base-static-field-!~{004}~.js => base-static-field-By1Wj7vO.js
 - base-static-method-!~{003}~.js => base-static-method-DC34sDDA.js
-- derived-instance-accessor-!~{008}~.js => derived-instance-accessor-BeVLTBUC.js
+- derived-instance-accessor-!~{008}~.js => derived-instance-accessor-BYGxj-ai.js
 - derived-instance-field-!~{007}~.js => derived-instance-field-E90h_Xb3.js
 - derived-instance-method-!~{006}~.js => derived-instance-method-BXUKIDg1.js
-- derived-static-accessor-!~{00b}~.js => derived-static-accessor-lei8tURE.js
+- derived-static-accessor-!~{00b}~.js => derived-static-accessor-BSr7K29Z.js
 - derived-static-field-!~{00a}~.js => derived-static-field-BiZbOw74.js
 - derived-static-method-!~{009}~.js => derived-static-method-BBW2-grz.js
 

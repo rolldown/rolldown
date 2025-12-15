@@ -2705,6 +2705,7 @@ dependencies = [
  "rolldown_plugin_chunk_import_map",
  "rolldown_plugin_data_uri",
  "rolldown_plugin_hmr",
+ "rolldown_plugin_lazy_compilation",
  "rolldown_plugin_oxc_runtime",
  "rolldown_resolver",
  "rolldown_sourcemap",
@@ -3081,6 +3082,16 @@ dependencies = [
  "rolldown_utils",
  "sugar_path",
  "testing_macros",
+]
+
+[[package]]
+name = "rolldown_plugin_lazy_compilation"
+version = "0.1.0"
+dependencies = [
+ "arcstr",
+ "rolldown_common",
+ "rolldown_plugin",
+ "rolldown_utils",
 ]
 
 [[package]]

@@ -1038,6 +1038,13 @@
             "string",
             "null"
           ]
+        },
+        "lazy": {
+          "description": "Enable lazy compilation for dynamic imports.",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

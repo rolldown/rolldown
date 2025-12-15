@@ -16,4 +16,6 @@ pub struct HmrOptions {
   pub port: Option<u16>,
   /// Custom hmr runtime implementation.
   pub implement: Option<String>,
+  /// Enable lazy compilation for dynamic imports.
+  pub lazy: Option<bool>,
 }

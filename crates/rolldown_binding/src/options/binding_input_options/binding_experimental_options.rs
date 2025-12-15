@@ -51,7 +51,7 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
           }
         }
       } else {
-        None
+        Some(rolldown_common::SourcemapHires::Boundary)
       },
       native_magic_string: value.native_magic_string,
     })

@@ -1206,12 +1206,12 @@ expression: output
 # tests/esbuild/default/mangle_props_import_export_bundled
 
 - entry-cjs-!~{001}~.js => entry-cjs-CLZOvq8N.js
-- entry-esm-!~{000}~.js => entry-esm-dFsJgkyA.js
+- entry-esm-!~{000}~.js => entry-esm-B_I49_P5.js
 - cjs-!~{002}~.js => cjs-CNypN8ou.js
 
 # tests/esbuild/default/mangle_props_jsx_preserve
 
-- entry-!~{000}~.js => entry-o3LrzTH2.js
+- entry-!~{000}~.js => entry-C8ICte2C.js
 
 # tests/esbuild/default/mangle_props_jsx_transform
 
@@ -1690,7 +1690,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_allowed_import_without_splitting
 
-- entry-!~{000}~.js => entry-NfCW136z.js
+- entry-!~{000}~.js => entry-2MDmpQWu.js
 
 # tests/esbuild/default/top_level_await_cjs_dead_branch
 
@@ -1706,7 +1706,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_forbidden_require
 
-- entry-!~{000}~.js => entry-C5QGGgBW.js
+- entry-!~{000}~.js => entry--S-SU56k.js
 
 # tests/esbuild/default/top_level_await_forbidden_require_dead_branch
 
@@ -1758,7 +1758,7 @@ expression: output
 
 # tests/esbuild/default/top_level_return_forbidden_tla
 
-- entry-!~{000}~.js => entry-DOtv3uY1.js
+- entry-!~{000}~.js => entry-CoFhqjfB.js
 
 # tests/esbuild/default/use_strict_directive_bundle_cjs_issue2264
 
@@ -2282,11 +2282,11 @@ expression: output
 
 # tests/esbuild/loader/jsx_preserve_capital_letter_minify
 
-- entry-!~{000}~.js => entry-xn-DGzyY.js
+- entry-!~{000}~.js => entry-U_pAgu2L.js
 
 # tests/esbuild/loader/jsx_preserve_capital_letter_minify_nested
 
-- entry-!~{000}~.js => entry-BhqW4uV8.js
+- entry-!~{000}~.js => entry-P4z5EOZO.js
 
 # tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader
 
@@ -3680,7 +3680,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/import_the_same_cjs_twice
 
-- main-!~{000}~.js => main-toEo0J4z.js
+- main-!~{000}~.js => main-BV6IQ-BK.js
 
 # tests/rolldown/cjs_compat/issue_3364
 
@@ -3705,7 +3705,11 @@ expression: output
 
 # tests/rolldown/cjs_compat/module.exports_export/safely_merge_cjs_ns_only_named
 
-- entry-!~{000}~.js => entry-CErn9CRR.js
+- entry-!~{000}~.js => entry-DP1xH2tC.js
+
+# tests/rolldown/cjs_compat/module.exports_export/safely_merge_cjs_ns_reexport
+
+- entry-!~{000}~.js => entry-V3jYNOBp.js
 
 # tests/rolldown/cjs_compat/module.exports_export/safely_merge_cjs_ns_with_default_import
 
@@ -3744,7 +3748,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/partial_cjs_ns_merge
 
-- main-!~{000}~.js => main-kObgpF07.js
+- main-!~{000}~.js => main-BCfSHTVS.js
 
 # tests/rolldown/cjs_compat/partial_cjs_ns_merge_2
 
@@ -3766,7 +3770,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/reexport_commonjs
 
-- main-!~{000}~.js => main-B0Sd9sRr.js
+- main-!~{000}~.js => main-fv2d4N30.js
 
 # tests/rolldown/cjs_compat/reexports_from_cjs
 
@@ -6392,6 +6396,142 @@ expression: output
 # tests/rollup/catch-scope-shadowing
 
 - main-!~{000}~.js => main-B1ZAHt4N.js
+
+# tests/rollup/jsx/preserves-jsx-attributes
+
+- main-!~{000}~.js => main-BlPbWKJJ.js
+
+# tests/rollup/jsx/preserves-jsx-child
+
+- main-!~{000}~.js => main-DcpfHRdP.js
+
+# tests/rollup/jsx/preserves-jsx-closing
+
+- main-!~{000}~.js => main-DKxivQ6K.js
+
+# tests/rollup/jsx/preserves-jsx-empty-expression
+
+- main-!~{000}~.js => main-mRlMHe1z.js
+
+# tests/rollup/jsx/preserves-jsx-expression
+
+- main-!~{000}~.js => main-DKwBg2k7.js
+
+# tests/rollup/jsx/preserves-jsx-fragment
+
+- main-!~{000}~.js => main-hLH7oImH.js
+
+# tests/rollup/jsx/preserves-jsx-member-expression
+
+- main-!~{000}~.js => main-BkutsFDO.js
+
+# tests/rollup/jsx/preserves-jsx-self-closing
+
+- main-!~{000}~.js => main-CK7OawLZ.js
+
+# tests/rollup/jsx/preserves-jsx-spread-attribute
+
+- main-!~{000}~.js => main-64oJFEcx.js
+
+# tests/rollup/jsx/preserves-jsx-spread-child
+
+- main-!~{000}~.js => main-Cc7oiETa.js
+
+# tests/rollup/jsx/preserves-jsx-text
+
+- main-!~{000}~.js => main-BqE_9c3E.js
+
+# tests/rollup/jsx/preserves-native-elements
+
+- main-!~{000}~.js => main-DR0N-PGO.js
+
+# tests/rollup/jsx/preserves-react
+
+- main-!~{000}~.js => main-CbCf89wi.js
+
+# tests/rollup/jsx/preserves-react-global
+
+- main-!~{000}~.js => main-PV-ILZCG.js
+
+# tests/rollup/jsx/preserves-react-internal
+
+- main-!~{000}~.js => main-PV-ILZCG.js
+
+# tests/rollup/jsx/transpiles-automatic-with-defaults
+
+- main-!~{000}~.js => main-ByzzWcd8.js
+
+# tests/rollup/jsx/transpiles-classic-with-defaults
+
+- main-!~{000}~.js => main-CvLduDdG.js
+
+# tests/rollup/jsx/transpiles-empty-fragment
+
+- main-!~{000}~.js => main-Bl0H1hNK.js
+
+# tests/rollup/jsx/transpiles-jsx-attributes
+
+- main-!~{000}~.js => main-D_cC-c0B.js
+
+# tests/rollup/jsx/transpiles-jsx-child
+
+- main-!~{000}~.js => main-ChzbzDI1.js
+
+# tests/rollup/jsx/transpiles-jsx-closing
+
+- main-!~{000}~.js => main-DftSa8HD.js
+
+# tests/rollup/jsx/transpiles-jsx-empty-expression
+
+- main-!~{000}~.js => main-DftSa8HD.js
+
+# tests/rollup/jsx/transpiles-jsx-expression
+
+- main-!~{000}~.js => main-D30YH_VA.js
+
+# tests/rollup/jsx/transpiles-jsx-fragment
+
+- main-!~{000}~.js => main-BQVZzgoQ.js
+
+# tests/rollup/jsx/transpiles-jsx-member-expression
+
+- main-!~{000}~.js => main-BzIABm8p.js
+
+# tests/rollup/jsx/transpiles-jsx-self-closing
+
+- main-!~{000}~.js => main-DftSa8HD.js
+
+# tests/rollup/jsx/transpiles-jsx-spread-attribute
+
+- main-!~{000}~.js => main-CvNxwQZ_.js
+
+# tests/rollup/jsx/transpiles-jsx-spread-child
+
+- main-!~{000}~.js => main-9NTv0iuK.js
+
+# tests/rollup/jsx/transpiles-jsx-text
+
+- main-!~{000}~.js => main-DqKnUO8g.js
+
+# tests/rollup/jsx/transpiles-native-elements
+
+- main-!~{000}~.js => main-n0zKnu5d.js
+
+# tests/rollup/jsx/transpiles-react
+
+- main-!~{000}~.js => main-BzAuIluk.js
+
+# tests/rollup/jsx/transpiles-react-global
+
+- main-!~{000}~.js => main-BzAuIluk.js
+
+# tests/rollup/jsx/transpiles-react-internal
+
+- main-!~{000}~.js => main-Cf-TRIbq.js
+
+# tests/rollup/jsx/transpiles-react-jsx
+
+- main-!~{000}~.js => main-roUVQOvH.js
 
 # tests/rollup/mutations-in-imports
 

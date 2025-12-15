@@ -1,0 +1,12 @@
+{
+  "config": {
+    "moduleTypes": {
+      ".js": "jsx"
+    },
+    "external": [
+      "react",
+      "react/jsx-runtime"
+    ]
+  },
+  "expectExecuted": false
+}

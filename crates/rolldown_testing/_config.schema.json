@@ -52,6 +52,11 @@
       "type": "boolean",
       "default": false
     },
+    "skipSyntaxValidation": {
+      "description": "If `true`, skip syntax validation of output chunks. Useful for tests that\nintentionally produce invalid output (e.g., testing invalid configuration warnings).",
+      "type": "boolean",
+      "default": false
+    },
     "writeToDisk": {
       "description": "If `true`, the bundle will be called with `write()` instead of `generate()`.",
       "type": "boolean",

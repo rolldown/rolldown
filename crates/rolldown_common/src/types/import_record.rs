@@ -63,12 +63,10 @@ bitflags::bitflags! {
     const DeadDynamicImport = 1 << 7;
     /// Whether the import is a top level import
     const IsTopLevel = 1 << 8;
-    /// Mark namespace of a record could be merged safely
-    const SafelyMergeCjsNs = 1 << 9;
-    const JsonModule = 1 << 10;
+    const JsonModule = 1 << 9;
     /// If a record is a re-export-all from an external module, and that re-export-all chain continues uninterrupted to the entry point,
     /// we can reuse the original re-export-all declaration instead of generating complex interoperability code.
-    const EntryLevelExternal = 1 << 11;
+    const EntryLevelExternal = 1 << 10;
 
     const TopLevelPureDynamicImport = Self::IsTopLevel.bits() | Self::PureDynamicImport.bits();
   }

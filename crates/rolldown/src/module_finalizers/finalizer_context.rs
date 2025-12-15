@@ -28,6 +28,7 @@ use crate::{
   SharedOptions,
   chunk_graph::ChunkGraph,
   module_finalizers::{ScopeHoistingFinalizer, TraverseState},
+  stages::link_stage::SafelyMergeCjsNsInfo,
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
@@ -46,6 +47,7 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub file_emitter: &'me SharedFileEmitter,
   pub constant_value_map: &'me FxHashMap<SymbolRef, ConstExportMeta>,
   pub side_effect_free_function_symbols: &'me FxHashSet<SymbolRef>,
+  pub safely_merge_cjs_ns_map: &'me FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
 }
 
 impl<'me> ScopeHoistingFinalizerContext<'me> {

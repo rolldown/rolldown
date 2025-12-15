@@ -401,8 +401,9 @@ impl GenerateStage<'_> {
   pub fn merge_cjs_namespace(&mut self, chunk_graph: &mut ChunkGraph) {
     let mut chunk_list: IndexVec<ChunkIdx, FxHashMap<(ModuleIdx, usize), Vec<SymbolRef>>> =
       index_vec![FxHashMap::default(); chunk_graph.chunk_table.len()];
-    for (k, v) in &self.link_output.safely_merge_cjs_ns_map {
-      for symbol_ref in v
+    for (k, info) in &self.link_output.safely_merge_cjs_ns_map {
+      for symbol_ref in info
+        .namespace_refs
         .iter()
         .filter(|item| {
           self.link_output.module_table[item.owner].as_normal().unwrap().is_included()

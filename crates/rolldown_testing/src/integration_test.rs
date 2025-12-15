@@ -8,11 +8,14 @@ use std::{
 };
 
 use anyhow::Context;
-use rolldown::NormalizedBundlerOptions;
+use oxc::parser::{ParseOptions, Parser};
+use oxc::span::SourceType;
 use rolldown::{
   BundleOutput, Bundler, BundlerOptions, IsExternal, OutputFormat, Platform, SourceMapType,
   plugin::__inner::SharedPluginable,
 };
+use rolldown::{ChecksOptions, NormalizedBundlerOptions};
+use rolldown_common::Output;
 use rolldown_dev::{DevEngine, DevOptions, DevWatchOptions};
 use rolldown_error::BuildResult;
 use rolldown_testing_config::TestMeta;
@@ -87,6 +90,47 @@ impl IntegrationTest {
   /// Determine if output should be executed based on test meta
   fn should_execute_output(&self) -> bool {
     self.test_meta.expect_executed && !self.test_meta.expect_error && self.test_meta.write_to_disk
+  }
+
+  /// Validate that all output JS chunks have no syntax errors using oxc parser.
+  /// This is especially useful for tests with `expectExecuted: false` where we can't
+  /// run the output but still want to ensure it's syntactically valid.
+  ///
+  /// Skips validation when:
+  /// - JSX is preserved (output contains JSX syntax, not valid JS)
+  fn validate_output_chunks_syntax(
+    bundle_output: &BundleOutput,
+    options: &NormalizedBundlerOptions,
+  ) {
+    // Skip validation if JSX is preserved (output contains JSX syntax)
+    if options.transform_options.is_jsx_preserve() {
+      return;
+    }
+
+    let source_type = match options.format {
+      OutputFormat::Cjs => SourceType::cjs(),
+      OutputFormat::Esm | OutputFormat::Iife | OutputFormat::Umd => SourceType::mjs(),
+    };
+
+    for output in &bundle_output.assets {
+      if let Output::Chunk(chunk) = output {
+        let allocator = oxc::allocator::Allocator::default();
+        let ret = Parser::new(&allocator, &chunk.code, source_type)
+          .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
+          .parse();
+
+        if ret.panicked || !ret.errors.is_empty() {
+          let errors_str = ret
+            .errors
+            .iter()
+            .map(|e| e.clone().with_source_code(chunk.code.clone()).to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+
+          panic!("Syntax error in output chunk '{}':\n{errors_str}", chunk.filename);
+        }
+      }
+    }
   }
 
   /// Run multiple bundler configurations in HMR mode
@@ -255,7 +299,7 @@ impl IntegrationTest {
 
       // Verify result and process HMR if successful
       match &initial_build_output {
-        Ok(_) => {
+        Ok(output) => {
           assert!(
             !self.test_meta.expect_error,
             "Expected the bundling to be failed with diagnosable errors, but got success"
@@ -296,6 +340,9 @@ impl IntegrationTest {
                 .map(Some)
                 .unwrap_or(self.test_meta.config_name.as_deref()),
             );
+          } else if !self.test_meta.skip_syntax_validation {
+            // When not executing output, validate that all JS chunks are syntactically valid
+            Self::validate_output_chunks_syntax(output, bundler.lock().await.options());
           }
         }
         Err(errs) => {
@@ -366,7 +413,7 @@ impl IntegrationTest {
 
       // Verify result and execute output if needed
       match &bundle_output {
-        Ok(_) => {
+        Ok(output) => {
           assert!(
             !self.test_meta.expect_error,
             "Expected the bundling to be failed with diagnosable errors, but got success"
@@ -382,6 +429,9 @@ impl IntegrationTest {
                 .map(Some)
                 .unwrap_or(self.test_meta.config_name.as_deref()),
             );
+          } else if !self.test_meta.skip_syntax_validation {
+            // When not executing output, validate that all JS chunks are syntactically valid
+            Self::validate_output_chunks_syntax(output, bundler.options());
           }
         }
         Err(errs) => {
@@ -479,6 +529,13 @@ impl IntegrationTest {
           hmr.implement = Some(include_str!("./hmr-runtime.js").to_owned());
         }
       }
+    }
+
+    // Disable plugin timings in tests to reduce snapshot noise
+    if let Some(checks) = &mut options.checks {
+      checks.plugin_timings = Some(false);
+    } else {
+      options.checks = Some(ChecksOptions { plugin_timings: Some(false), ..Default::default() });
     }
   }
 

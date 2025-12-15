@@ -112,7 +112,7 @@ runTestSuiteWithSamples(
 						input: path.join(directory, 'main.js'),
 						onLog: (level, log) => {
 							logs.push({ level, ...log });
-							if (level === 'warn') {
+							if (level === 'warn' && !config.expectedWarnings?.includes(log.code)) {
 								warnings.push(log);
 							}
 						},

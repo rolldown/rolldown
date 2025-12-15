@@ -50,12 +50,6 @@ use sugar_path::SugarPath;
 use crate::SharedOptions;
 use crate::ast_scanner::cjs_export_analyzer::CommonjsExportSymbolUsage;
 
-// TODO: Not sure if this necessary to match the module request.
-// If we found it cause high false positive, we could add a extra step to match it package name as
-// well.
-static ENABLED_CJS_NAMESPACE_MERGING_MODULE_REQUEST: [&str; 3] =
-  ["this-is-only-used-for-testing", "react", "react/jsx-runtime"];
-
 #[derive(Debug)]
 pub struct ScanResult {
   /// Using `IndexMap` to make sure the order of the named imports always sorted by the span of the
@@ -455,7 +449,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         itoa::Buffer::new().format(self.current_stmt_idx.raw()),
         "#"
       ));
-    let mut rec = RawImportRecord::new(
+    let rec = RawImportRecord::new(
       CompactStr::from(module_request),
       kind,
       namespace_ref,
@@ -468,13 +462,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }),
     )
     .with_meta(init_meta);
-
-    // TODO: maybe we could make it configurable?
-    if matches!(rec.kind, ImportKind::Import)
-      && ENABLED_CJS_NAMESPACE_MERGING_MODULE_REQUEST.contains(&module_request)
-    {
-      rec.meta.insert(ImportRecordMeta::SafelyMergeCjsNs);
-    }
 
     let id = self.result.import_records.push(rec);
     self.current_stmt_info.import_records.push(id);

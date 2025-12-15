@@ -180,6 +180,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           self.ctx.module.ast_usage,
           self.ctx.options.profiler_names,
           &self.ctx.module.stable_id,
+          self.ctx.linking_info.is_tla_or_contains_tla_dependency,
         ));
       }
       Some(WrapKind::Esm) => {

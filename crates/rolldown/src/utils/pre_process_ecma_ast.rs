@@ -135,19 +135,36 @@ impl PreProcessEcmaAst {
     // Avoid DCE for lazy export.
     // Skip OXC DCE if the module has modern JavaScript decorators, as OXC's DCE
     // incorrectly removes class declarations with class-level decorators.
+    // We also skip for member decorators to be safe, though Rolldown's tree shaking
+    // should handle those correctly.
     // TODO: Remove this workaround once OXC properly handles modern decorators.
     let has_modern_decorators = ast.program().body.iter().any(|stmt| {
-      use oxc::ast::ast::{Declaration, Statement};
+      use oxc::ast::ast::{ClassElement, Declaration, ExportDefaultDeclarationKind, Statement};
+      
+      // Check for class declarations with class-level or member decorators
+      let check_class_for_decorators = |class: &oxc::ast::ast::Class| {
+        !class.decorators.is_empty()
+          || class.body.body.iter().any(|element| match element {
+            ClassElement::PropertyDefinition(def) => !def.decorators.is_empty(),
+            ClassElement::MethodDefinition(def) => !def.decorators.is_empty(),
+            ClassElement::AccessorProperty(def) => !def.decorators.is_empty(),
+            _ => false,
+          })
+      };
+      
+      // Check export default class declarations
       if let Statement::ExportDefaultDeclaration(export_decl) = stmt {
-        use oxc::ast::ast::ExportDefaultDeclarationKind;
         if let ExportDefaultDeclarationKind::ClassDeclaration(class_decl) = &export_decl.declaration {
-          return !class_decl.decorators.is_empty();
+          return check_class_for_decorators(class_decl);
         }
       }
-      let decl = stmt.as_declaration();
-      decl.is_some_and(|decl| {
-        matches!(decl, Declaration::ClassDeclaration(class_decl) if !class_decl.decorators.is_empty())
-      })
+      
+      // Check regular class declarations
+      if let Some(Declaration::ClassDeclaration(class_decl)) = stmt.as_declaration() {
+        return check_class_for_decorators(class_decl);
+      }
+      
+      false
     });
     
     if bundle_options.treeshake.is_some() && !has_lazy_export && !has_modern_decorators {

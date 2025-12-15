@@ -108,7 +108,8 @@ type AddonKeys =
 function bindingifyAddon(
   configAddon: OutputOptions[AddonKeys],
 ): BindingOutputOptions[AddonKeys] {
-  if (configAddon == null) {
+  if (!configAddon) {
+    // undefined, null, or empty string should all pass None to Rust
     return undefined;
   }
   if (typeof configAddon === 'string') {

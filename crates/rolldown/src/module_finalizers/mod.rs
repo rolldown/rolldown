@@ -1458,9 +1458,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let original_name = if is_default {
       CompactStr::from("default")
     } else {
-      let (original_name, _) = self.get_conflicted_info(id.as_ref()?)?;
-      let original_name: CompactStr = CompactStr::new(original_name);
-      original_name
+      let id = id.as_ref()?;
+      let symbol_id = id.symbol_id.get()?;
+      let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
+      let original_name = symbol_ref.name(self.ctx.symbol_db);
+      CompactStr::new(original_name)
     };
 
     let name_ref = self.canonical_ref_for_runtime("__name");

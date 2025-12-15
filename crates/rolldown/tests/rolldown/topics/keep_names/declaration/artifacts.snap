@@ -11,7 +11,11 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 //#region a.js
 function test() {}
-var Foo = class {};
+var Foo = class {
+	static {
+		__name(this, "Foo");
+	}
+};
 
 //#endregion
 //#region main.js

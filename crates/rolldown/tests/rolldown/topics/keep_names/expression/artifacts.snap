@@ -34,7 +34,11 @@ var Foo$1 = class Foo$3 {
 		__name(this, "Foo");
 	}
 };
-var Bar = class {};
+var Bar = class {
+	static {
+		__name(this, "Bar");
+	}
+};
 assert.strictEqual(Foo$1.name, "Foo");
 assert.strictEqual(Bar.name, "Bar");
 var fn$1 = /* @__PURE__ */ __name(function fn$3() {}, "fn");
@@ -44,7 +48,11 @@ assert.strictEqual(fn2.name, "fn2");
 
 //#endregion
 //#region main.js
-var Foo = class {};
+var Foo = class {
+	static {
+		__name(this, "Foo");
+	}
+};
 assert.strictEqual(Foo.name, "Foo");
 var fn = function() {};
 assert.strictEqual(fn.name, "fn");

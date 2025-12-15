@@ -4850,7 +4850,7 @@ expression: output
 
 # tests/rolldown/issues/5139
 
-- main-!~{000}~.js => main-EYneYeAf.js
+- main-!~{000}~.js => main-DNIyqt0k.js
 
 # tests/rolldown/issues/5209
 
@@ -5949,7 +5949,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/declaration
 
-- main-!~{000}~.js => main-ficVjDHh.js
+- main-!~{000}~.js => main-bNquEmGk.js
 
 # tests/rolldown/topics/keep_names/declaration2
 
@@ -5957,7 +5957,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/expression
 
-- main-!~{000}~.js => main-DouU07fz.js
+- main-!~{000}~.js => main-Ba8Ai9LQ.js
 
 # tests/rolldown/topics/keep_names/if_stmt
 
@@ -5969,9 +5969,13 @@ expression: output
 
 # tests/rolldown/topics/keep_names/issue_5525
 
-- entry-!~{000}~.js => entry-cBJVrGdT.js
-- entry2-!~{001}~.js => entry2-Eow-pZuM.js
-- foo-!~{002}~.js => foo-V6MEsHyi.js
+- entry-!~{000}~.js => entry-CQWtZ28u.js
+- entry2-!~{001}~.js => entry2-DC9hyphA.js
+- foo-!~{002}~.js => foo-BQ7NTjNd.js
+
+# tests/rolldown/topics/keep_names/non_deconflicted_class
+
+- main-!~{000}~.js => main-DP23cJd6.js
 
 # tests/rolldown/topics/keep_names/parenthesized_default_export
 

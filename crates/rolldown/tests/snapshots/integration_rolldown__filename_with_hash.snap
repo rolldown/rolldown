@@ -77,7 +77,7 @@ expression: output
 
 # tests/esbuild/dce/dce_of_decorators
 
-- keep-these-!~{000}~.js => keep-these-T63jyV5B.js
+- keep-these-!~{000}~.js => keep-these-B31opRnz.js
 
 # tests/esbuild/dce/dce_of_destructuring
 
@@ -683,7 +683,7 @@ expression: output
 
 # tests/esbuild/default/define_import_meta
 
-- entry-!~{000}~.js => entry-Pr6gMpJE.js
+- entry-!~{000}~.js => entry-BGaLE-48.js
 
 # tests/esbuild/default/define_infinite_loop_issue2407
 

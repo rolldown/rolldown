@@ -988,17 +988,13 @@ const OutputCliOverrideSchema = v.strictObject({
   postBanner: v.pipe(
     v.optional(v.string()),
     v.description(
-      `Code to insert the ${
-        styleText('bold', 'top')
-      } of the bundled file after minification`,
+      'A string to prepend to the top of each chunk. Applied after the `renderChunk` hook and minification',
     ),
   ),
   postFooter: v.pipe(
     v.optional(v.string()),
     v.description(
-      `Code to insert the ${
-        styleText('bold', 'bottom')
-      } of the bundled file after minification`,
+      'A string to append to the bottom of each chunk. Applied after the `renderChunk` hook and minification',
     ),
   ),
   intro: v.pipe(

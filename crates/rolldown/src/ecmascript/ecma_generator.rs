@@ -163,12 +163,16 @@ impl Generator for EcmaGenerator {
     let post_banner = match ctx.options.post_banner.as_ref() {
       Some(hook) => hook.call(Arc::clone(&rendered_chunk)).await?,
       None => None,
-    };
+    }
+    // FIXME: this `is_empty` shouldn't be necessary
+    .filter(|s| !s.is_empty());
 
     let post_footer = match ctx.options.post_footer.as_ref() {
       Some(hook) => hook.call(Arc::clone(&rendered_chunk)).await?,
       None => None,
-    };
+    }
+    // FIXME: this `is_empty` shouldn't be necessary
+    .filter(|s| !s.is_empty());
 
     let mut warnings = vec![];
 

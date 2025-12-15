@@ -9,6 +9,7 @@ applyTo: '**'
 When users share REPL URLs (e.g., `https://repl.rolldown.rs/#<hash>`), you can decode them to see the configuration and code.
 
 To decode a REPL URL:
+
 1. Extract the hash from the URL (everything after the `#` symbol)
 2. Use the following command to decode it:
 

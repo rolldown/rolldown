@@ -1,6 +1,6 @@
 # Failed Cases
 ## [dce_of_decorators](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_decorators/diff.md)
-  decorators should not be removed
+  class-level decorators on unused class declarations are being removed (e.g. `@fn class Class {}`)
 ## [dce_of_iife](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_iife/diff.md)
   sub optimal: IIFEs are not unwrapped
 ## [dce_of_symbol_ctor_call](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_ctor_call/diff.md)

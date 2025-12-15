@@ -25,6 +25,7 @@ export {
   type TransformResult,
   transformSync,
 } from './binding.cjs';
+
 export { defineParallelPlugin } from './plugin/parallel-plugin';
 export { parse, parseSync } from './utils/parse';
 // Builtin plugin factory
@@ -67,3 +68,11 @@ export {
   type ViteHtmlPluginOptions,
 } from './builtin-plugin/vite-html-plugin';
 export { viteManifestPlugin } from './builtin-plugin/vite-manifest-plugin';
+
+// `__volume` and `__fs` only exist in `rolldown-binding.wasi-browser.js`, so we need to use namespace import to prevent static import error.
+import * as binding from './binding.cjs';
+export const memfs: { fs: any; volume: any } | undefined =
+  import.meta.browserBuild
+    // @ts-expect-error - __fs and __volume are only available in browser builds
+    ? { fs: binding.__fs, volume: binding.__volume }
+    : undefined;

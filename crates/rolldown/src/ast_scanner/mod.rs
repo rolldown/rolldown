@@ -660,14 +660,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   fn visit_function_decl(&mut self, it: &ast::Function<'ast>, flags: oxc::semantic::ScopeFlags) {
-    self.current_stmt_info.meta.insert(StmtInfoMeta::FnDecl);
+    self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
     walk::walk_function(self, it, flags);
   }
 
   fn visit_class_decl(&mut self, it: &ast::Class<'ast>) {
     let previous_class_decl_id = self.cur_class_decl.take();
     self.cur_class_decl = self.get_class_id(it);
-    self.current_stmt_info.meta.insert(StmtInfoMeta::ClassDecl);
+    self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
     walk::walk_class(self, it);
     self.cur_class_decl = previous_class_decl_id;
   }

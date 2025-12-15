@@ -368,11 +368,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
           (&decl.id.kind, &decl.init)
         {
           match init {
-            ast::Expression::ClassExpression(_) => {
-              self.current_stmt_info.meta.insert(StmtInfoMeta::ClassExpr);
-            }
-            ast::Expression::FunctionExpression(_func) => {
-              self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
+            ast::Expression::ClassExpression(_) | ast::Expression::FunctionExpression(_) => {
+              self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
             }
             _ => {}
           }
@@ -431,7 +428,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_class(&mut self, it: &ast::Class<'ast>) {
     if self.is_root_scope() {
-      self.current_stmt_info.meta.insert(StmtInfoMeta::ClassExpr);
+      self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
     }
     walk::walk_class(self, it);
   }
@@ -441,27 +438,23 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     // so that __name helper will be included in the runtime
     use ast::ExportDefaultDeclarationKind;
     match &it.declaration {
-      ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
-        if func.id.is_none() {
-          self.current_stmt_info.meta.insert(StmtInfoMeta::FnDecl);
-        }
+      ExportDefaultDeclarationKind::FunctionDeclaration(func) if func.id.is_none() => {
+        self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
       }
-      ExportDefaultDeclarationKind::ClassDeclaration(class) => {
-        if class.id.is_none() {
-          self.current_stmt_info.meta.insert(StmtInfoMeta::ClassDecl);
-        }
+      ExportDefaultDeclarationKind::ClassDeclaration(class) if class.id.is_none() => {
+        self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
       }
       decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
         let inner_expr = decl.to_expression().without_parentheses();
         match inner_expr {
           Expression::FunctionExpression(func) if func.id.is_none() => {
-            self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
+            self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
           }
           Expression::ClassExpression(class) if class.id.is_none() => {
-            self.current_stmt_info.meta.insert(StmtInfoMeta::ClassExpr);
+            self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
           }
           Expression::ArrowFunctionExpression(_) => {
-            self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
+            self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
           }
           _ => {}
         }

@@ -1511,6 +1511,21 @@ let remove15 = class {
   }
 
   #[test]
+  fn test_class_decorators() {
+    // Class declaration with decorator should have side effects
+    assert!(get_statements_side_effect("function fn() {} @fn class Class {}"));
+    
+    // Variable with class expression with decorator should have side effects
+    assert!(get_statements_side_effect("function fn() {} var MyClass = @fn class {}"));
+    
+    // Class with accessor decorator should have side effects
+    assert!(get_statements_side_effect("function fn() {} class MyClass { @fn accessor x }"));
+    
+    // Class with static accessor decorator should have side effects
+    assert!(get_statements_side_effect("function fn() {} class MyClass { @fn static accessor x }"));
+  }
+
+  #[test]
   fn test_extract_first_part_of_member_expr_like() {
     assert!(extract_first_part_of_member_expr_like_helper("a.b") == "a");
     assert!(extract_first_part_of_member_expr_like_helper("styled?.div()") == "styled");

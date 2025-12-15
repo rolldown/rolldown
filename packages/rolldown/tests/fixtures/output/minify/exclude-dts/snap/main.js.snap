@@ -1,1 +1,1 @@
-import{t as e}from"./main-H3pRqDGL.js";export{e as hello};
+function e(){return 1}export{e as hello};

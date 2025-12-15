@@ -21,6 +21,7 @@ export interface TestConfig<
     | OutputOptions[] = undefined | OutputOptions | OutputOptions[],
 > {
   skip?: boolean;
+  retry?: number;
   config?: RolldownOptions & { output?: OutputOpts };
   beforeTest?: () => Promise<void> | void;
   afterTest?: (output: OutputOptsToOutput<OutputOpts>) => Promise<void> | void;

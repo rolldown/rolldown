@@ -198,7 +198,7 @@ const TransformOptionsSchema = v.object({
   ),
   define: v.pipe(
     v.optional(v.record(v.string(), v.string())),
-    v.description('Define global variables'),
+    v.description('Define global variables (syntax: key=value,key2=value2)'),
   ),
   inject: v.pipe(
     v.optional(
@@ -344,6 +344,12 @@ const ChecksOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description(
       'Whether to emit warning when detecting could not clean directory',
+    ),
+  ),
+  pluginTimings: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warning when detecting plugin timings',
     ),
   ),
 });
@@ -587,7 +593,7 @@ const InputOptionsSchema = v.strictObject({
     ])),
   ),
   tsconfig: v.pipe(
-    v.optional(v.string()),
+    v.optional(v.union([v.literal(true), v.string()])),
     v.description('Path to the tsconfig.json file.'),
   ),
 }) satisfies v.GenericSchema<InputOptions>;

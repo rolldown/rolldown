@@ -184,7 +184,14 @@ impl LinkStage<'_> {
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           // Only reference __toESM if this import needs interop (namespace or default import)
-                          if import_record_needs_interop(importer, *rec_id) {
+                          let needs_toesm = if let Some(info) =
+                            self.safely_merge_cjs_ns_map.get(&rec.resolved_module)
+                          {
+                            info.needs_interop
+                          } else {
+                            import_record_needs_interop(importer, *rec_id)
+                          };
+                          if needs_toesm {
                             depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
                               .push(stmt_info_idx);
                           }

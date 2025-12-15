@@ -3,3 +3,7 @@ export interface HmrUpdateMessage {
   url: string;
   path: string;
 }
+
+export interface HmrReloadMessage {
+  type: 'hmr:reload';
+}

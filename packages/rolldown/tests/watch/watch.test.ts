@@ -3,11 +3,18 @@ import path from 'node:path';
 import type { RolldownWatcher } from 'rolldown';
 import { watch } from 'rolldown';
 import { sleep, waitUtil } from 'rolldown-tests/utils';
-import { expect, test, vi } from 'vitest';
+import { expect, onTestFinished, test, vi } from 'vitest';
 
 test.sequential('watch', async () => {
-  const { input, output } = await createTestInputAndOutput('watch');
-  const watchChangeFn = vi.fn();
+  const { input, output, dir } = await createTestInputAndOutput('watch');
+  const foo = path.join(dir, 'foo.js');
+  fs.writeFileSync(foo, 'export const foo = 1');
+  fs.writeFileSync(input, `import './foo.js'; console.log(1)`);
+  await sleep(60);
+
+  const watchChangeUpdateFn = vi.fn();
+  const watchChangeCreateFn = vi.fn();
+  const watchChangeDeleteFn = vi.fn();
   const closeWatcherFn = vi.fn();
   const watcher = watch({
     input,
@@ -19,8 +26,16 @@ test.sequential('watch', async () => {
           // The macos emit create event when the file is changed, not sure the reason,
           // so here only check the update event
           if (event.event === 'update') {
-            watchChangeFn();
+            watchChangeUpdateFn();
             expect(id).toBe(input);
+          }
+          if (event.event === 'create') {
+            watchChangeCreateFn();
+            expect(id).toBe(foo);
+          }
+          if (event.event === 'delete') {
+            watchChangeDeleteFn();
+            expect(id).toBe(foo);
           }
         },
       },
@@ -32,21 +47,45 @@ test.sequential('watch', async () => {
       },
     ],
   });
-  // should run build once
-  await waitBuildFinished(watcher);
 
-  // edit file
-  fs.writeFileSync(input, 'console.log(2)');
-  await waitUtil(() => {
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
-      true,
-    );
-    // The different platform maybe emit multiple events
-    expect(watchChangeFn).toBeCalled();
-  });
+  let errored = false;
+  try {
+    // should run build once
+    await waitBuildFinished(watcher);
 
-  await watcher.close();
-  expect(closeWatcherFn).toBeCalledTimes(1);
+    // Test update event
+    fs.writeFileSync(input, `import './foo.js'; console.log(2)`);
+    await waitUtil(() => {
+      expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
+        true,
+      );
+      // The different platform maybe emit multiple events
+      expect(watchChangeUpdateFn).toBeCalled();
+    });
+
+    // Test delete event
+    fs.unlinkSync(foo);
+    await waitUtil(() => {
+      expect(watchChangeDeleteFn).toBeCalled();
+    });
+
+    // Test create event
+    fs.writeFileSync(foo, 'export const foo = 2');
+    await waitUtil(() => {
+      // FIXME: create event is not emitted properly on macOS
+      if (process.platform !== 'darwin') {
+        expect(watchChangeCreateFn).toBeCalled();
+      }
+    });
+  } catch (e) {
+    errored = true;
+    throw e;
+  } finally {
+    await watcher.close();
+    if (!errored) {
+      expect(closeWatcherFn).toBeCalledTimes(1);
+    }
+  }
 });
 
 test.sequential('watch files after scan stage', async () => {
@@ -65,6 +104,7 @@ test.sequential('watch files after scan stage', async () => {
       },
     ],
   });
+  onTestFinished(() => watcher.close());
   // should run build once
   await waitBuildFinished(watcher);
 
@@ -73,8 +113,6 @@ test.sequential('watch files after scan stage', async () => {
       true,
     );
   });
-
-  await watcher.close();
 });
 
 test.sequential('watch close', async () => {
@@ -106,60 +144,68 @@ test.sequential('watch event', async () => {
     },
   });
 
-  const events: any[] = [];
-  watcher.on('event', (event) => {
-    if (event.code === 'BUNDLE_END') {
-      expect(event.output).toEqual([outputDir]);
-      expect(event.duration).toBeTypeOf('number');
-      events.push({ code: 'BUNDLE_END' });
-    } else {
-      events.push(event);
-    }
-  });
-  const restartFn = vi.fn();
-  watcher.on('restart', restartFn);
   const closeFn = vi.fn();
-  watcher.on('close', closeFn);
-  const changeFn = vi.fn();
-  watcher.on('change', (id, event) => {
-    // The macos emit create event when the file is changed, not sure the reason,
-    // so here only check the update event
-    if (event.event === 'update') {
-      changeFn();
-      expect(id).toBe(input);
+  let errored = false;
+  try {
+    const events: any[] = [];
+    watcher.on('event', (event) => {
+      if (event.code === 'BUNDLE_END') {
+        expect(event.output).toEqual([outputDir]);
+        expect(event.duration).toBeTypeOf('number');
+        events.push({ code: 'BUNDLE_END' });
+      } else {
+        events.push(event);
+      }
+    });
+    const restartFn = vi.fn();
+    watcher.on('restart', restartFn);
+    watcher.on('close', closeFn);
+    const changeFn = vi.fn();
+    watcher.on('change', (id, event) => {
+      // The macos emit create event when the file is changed, not sure the reason,
+      // so here only check the update event
+      if (event.event === 'update') {
+        changeFn();
+        expect(id).toBe(input);
+      }
+    });
+
+    await waitUtil(() => {
+      // test first build event
+      expect(events).toEqual([
+        { code: 'START' },
+        { code: 'BUNDLE_START' },
+        { code: 'BUNDLE_END' },
+        { code: 'END' },
+      ]);
+    });
+
+    // edit file
+    events.length = 0;
+    fs.writeFileSync(input, 'console.log(3)');
+    await waitUtil(() => {
+      // Note: The different platform maybe emit multiple events
+      expect(events).toEqual([
+        { code: 'START' },
+        { code: 'BUNDLE_START' },
+        { code: 'BUNDLE_END' },
+        { code: 'END' },
+      ]);
+      expect(restartFn).toBeCalled();
+      expect(changeFn).toBeCalled();
+    });
+  } catch (e) {
+    errored = true;
+    throw e;
+  } finally {
+    await watcher.close();
+    if (!errored) {
+      // the listener is called with async
+      await waitUtil(() => {
+        expect(closeFn).toBeCalled();
+      });
     }
-  });
-
-  await waitUtil(() => {
-    // test first build event
-    expect(events).toEqual([
-      { code: 'START' },
-      { code: 'BUNDLE_START' },
-      { code: 'BUNDLE_END' },
-      { code: 'END' },
-    ]);
-  });
-
-  // edit file
-  events.length = 0;
-  fs.writeFileSync(input, 'console.log(3)');
-  await waitUtil(() => {
-    // Note: The different platform maybe emit multiple events
-    expect(events).toEqual([
-      { code: 'START' },
-      { code: 'BUNDLE_START' },
-      { code: 'BUNDLE_END' },
-      { code: 'END' },
-    ]);
-    expect(restartFn).toBeCalled();
-    expect(changeFn).toBeCalled();
-  });
-
-  await watcher.close();
-  // the listener is called with async
-  await waitUtil(() => {
-    expect(closeFn).toBeCalled();
-  });
+  }
 });
 
 test.sequential('watch event off', async () => {
@@ -175,6 +221,7 @@ test.sequential('watch event off', async () => {
   });
   const eventFn = vi.fn();
   watcher.on('event', eventFn);
+  onTestFinished(() => watcher.close());
   await waitBuildFinished(watcher);
   expect(eventFn).toHaveBeenCalled();
 
@@ -184,8 +231,6 @@ test.sequential('watch event off', async () => {
   fs.writeFileSync(input, 'console.log(12)');
   await waitBuildFinished(watcher);
   expect(eventFn).not.toHaveBeenCalled();
-
-  await watcher.close();
 });
 
 test.sequential('watch BUNDLE_END event result.close() + closeBundle', async () => {
@@ -208,6 +253,7 @@ test.sequential('watch BUNDLE_END event result.close() + closeBundle', async () 
       await event.result.close();
     }
   });
+  onTestFinished(() => watcher.close());
   await waitBuildFinished(watcher);
 
   expect(closeBundleFn).toBeCalledTimes(1);
@@ -216,8 +262,6 @@ test.sequential('watch BUNDLE_END event result.close() + closeBundle', async () 
   fs.writeFileSync(input, 'console.log(3)');
   await waitBuildFinished(watcher);
   expect(closeBundleFn).toBeCalledTimes(2);
-
-  await watcher.close();
 });
 
 test.sequential('watch ERROR event result.close() + closeBundle', async () => {
@@ -243,12 +287,11 @@ test.sequential('watch ERROR event result.close() + closeBundle', async () => {
       await event.result.close();
     }
   });
+  onTestFinished(() => watcher.close());
 
   await waitUtil(() => {
     expect(closeBundleFn).toBeCalledTimes(2); // build error call once + result.close() call once
   });
-
-  await watcher.close();
 });
 
 test.sequential('watch BUNDLE_END event output + "file" option', async () => {
@@ -257,6 +300,7 @@ test.sequential('watch BUNDLE_END event output + "file" option', async () => {
     input,
     output: { file: output },
   });
+  onTestFinished(() => watcher.close());
 
   const eventFn = vi.fn();
   watcher.on('event', (event) => {
@@ -270,8 +314,6 @@ test.sequential('watch BUNDLE_END event output + "file" option', async () => {
     // test first build event
     expect(eventFn).toBeCalled();
   });
-
-  await watcher.close();
 });
 
 test.sequential('watch event avoid deadlock #2806', async () => {
@@ -282,6 +324,7 @@ test.sequential('watch event avoid deadlock #2806', async () => {
     input,
     output: { file: output },
   });
+  onTestFinished(() => watcher.close());
 
   const testFn = vi.fn();
   let listening = false;
@@ -303,8 +346,6 @@ test.sequential('watch event avoid deadlock #2806', async () => {
   await waitUtil(() => {
     expect(testFn).toBeCalled();
   });
-
-  await watcher.close();
 });
 
 test.sequential('watch skipWrite', async () => {
@@ -316,10 +357,10 @@ test.sequential('watch skipWrite', async () => {
       skipWrite: true,
     },
   });
+  onTestFinished(() => watcher.close());
   await waitBuildFinished(watcher);
 
   expect(fs.existsSync(output)).toBe(false);
-  await watcher.close();
 });
 
 test.sequential('#5260', async () => {
@@ -338,6 +379,7 @@ test.sequential('#5260', async () => {
       incrementalBuild: true,
     },
   });
+  onTestFinished(() => watcher.close());
   await waitBuildFinished(watcher);
 
   watcher.clear('event');
@@ -345,12 +387,11 @@ test.sequential('#5260', async () => {
   fs.writeFileSync(path.join(cwd, 'main.js'), `import('./foo.js')`);
 
   await waitBuildFinished(watcher);
-  await watcher.close();
 });
 
 test.sequential('incremental-watch-modify-entry-module', async () => {
   createTestWithMultiFiles('incremental-watch-modify-entry-module', {
-    'main.js': ` 
+    'main.js': `
 import {a} from './foo.js'
 console.log(a)
 `,
@@ -371,6 +412,7 @@ console.log(a)
       incrementalBuild: true,
     },
   });
+  onTestFinished(() => watcher.close());
   await waitBuildFinished(watcher);
 
   watcher.clear('event');
@@ -378,7 +420,7 @@ console.log(a)
 
   fs.writeFileSync(
     path.join(cwd, 'main.js'),
-    ` 
+    `
 import {a} from './foo.js'
 console.log(a + 1000)
 `,
@@ -386,7 +428,6 @@ console.log(a + 1000)
 
   await waitBuildFinished(watcher);
   expect(fs.readdirSync(path.join(cwd, 'dist'))).toHaveLength(1);
-  await watcher.close();
 });
 
 test.sequential('watch sync ast of newly added ast', async () => {
@@ -410,6 +451,7 @@ test.sequential('watch sync ast of newly added ast', async () => {
       incrementalBuild: true,
     },
   });
+  onTestFinished(() => watcher.close());
   await waitBuildFinished(watcher);
 
   watcher.clear('event');
@@ -420,7 +462,6 @@ test.sequential('watch sync ast of newly added ast', async () => {
   );
 
   await waitBuildFinished(watcher);
-  await watcher.close();
 });
 
 test.sequential('watch buildDelay', async () => {
@@ -432,6 +473,7 @@ test.sequential('watch buildDelay', async () => {
       buildDelay: 50,
     },
   });
+  onTestFinished(() => watcher.close());
   await waitBuildFinished(watcher);
 
   const restartFn = vi.fn();
@@ -449,8 +491,6 @@ test.sequential('watch buildDelay', async () => {
     );
     expect(restartFn).toBeCalledTimes(1);
   });
-
-  await watcher.close();
 });
 
 test.sequential('PluginContext addWatchFile', async () => {
@@ -468,6 +508,7 @@ test.sequential('PluginContext addWatchFile', async () => {
       },
     ],
   });
+  onTestFinished(() => watcher.close());
 
   await waitBuildFinished(watcher);
 
@@ -486,8 +527,6 @@ test.sequential('PluginContext addWatchFile', async () => {
   await waitUtil(() => {
     expect(changeFn).toBeCalled();
   });
-
-  await watcher.close();
 });
 
 test.sequential('watch include/exclude', async () => {
@@ -499,6 +538,7 @@ test.sequential('watch include/exclude', async () => {
       exclude: 'main.js',
     },
   });
+  onTestFinished(() => watcher.close());
 
   await waitBuildFinished(watcher);
 
@@ -510,8 +550,6 @@ test.sequential('watch include/exclude', async () => {
       true,
     );
   });
-
-  await watcher.close();
 });
 
 test.sequential('watch onInvalidate', async () => {
@@ -528,6 +566,7 @@ test.sequential('watch onInvalidate', async () => {
       },
     },
   });
+  onTestFinished(() => watcher.close());
 
   await waitBuildFinished(watcher);
 
@@ -540,8 +579,6 @@ test.sequential('watch onInvalidate', async () => {
       true,
     );
   });
-
-  await watcher.close();
 });
 
 test.sequential('error handling', async () => {
@@ -555,6 +592,7 @@ test.sequential('error handling', async () => {
     input,
     output: { file: output },
   });
+  onTestFinished(() => watcher.close());
   const errors: string[] = [];
   watcher.on('event', (event) => {
     if (event.code === 'ERROR') {
@@ -585,8 +623,6 @@ test.sequential('error handling', async () => {
       true,
     );
   });
-
-  await watcher.close();
 });
 
 test.sequential('error handling + plugin error', async () => {
@@ -605,6 +641,7 @@ test.sequential('error handling + plugin error', async () => {
       },
     ],
   });
+  onTestFinished(() => watcher.close());
   const errors: string[] = [];
   watcher.on('event', (event) => {
     if (event.code === 'ERROR') {
@@ -624,8 +661,6 @@ test.sequential('error handling + plugin error', async () => {
     expect(errors.length > 0).toBe(true);
     expect(errors[0].includes('plugin error')).toBe(true);
   });
-
-  await watcher.close();
 });
 
 test.sequential('watch multiply options', async () => {
@@ -644,6 +679,7 @@ test.sequential('watch multiply options', async () => {
       output: { dir: fooOutputDir },
     },
   ]);
+  onTestFinished(() => watcher.close());
 
   const events: string[] = [];
   watcher.on('event', (event) => {
@@ -668,8 +704,6 @@ test.sequential('watch multiply options', async () => {
     // Only the input corresponding bundler is rebuild
     expect(events[0]).toEqual(outputDir);
   });
-
-  await watcher.close();
 });
 
 test.sequential('warning for multiply notify options', async () => {
@@ -710,12 +744,11 @@ test.sequential('warning for multiply notify options', async () => {
       ],
     },
   ]);
+  onTestFinished(() => watcher.close());
 
   await waitUtil(() => {
     expect(onLogFn).toBeCalled();
   });
-
-  await watcher.close();
 });
 
 if (process.platform === 'win32') {
@@ -735,6 +768,7 @@ if (process.platform === 'win32') {
         },
       ],
     });
+    onTestFinished(() => watcher.close());
     // should run build once
     await waitBuildFinished(watcher);
 
@@ -745,8 +779,6 @@ if (process.platform === 'win32') {
         true,
       );
     });
-
-    await watcher.close();
   });
 }
 
@@ -789,12 +821,17 @@ async function waitBuildFinished(
   watcher: RolldownWatcher,
   updateFn?: () => void,
 ) {
-  return new Promise<void>((resolve) => {
-    let listening = false;
+  return new Promise<void>((resolve, reject) => {
+    let listened = false;
     watcher.on('event', (event) => {
-      if (event.code === 'BUNDLE_END' && !listening) {
-        listening = true;
+      if (listened) return;
+
+      if (event.code === 'BUNDLE_END') {
+        listened = true;
         resolve();
+      } else if (event.code === 'ERROR') {
+        listened = true;
+        reject(event.error);
       }
     });
     updateFn && updateFn();

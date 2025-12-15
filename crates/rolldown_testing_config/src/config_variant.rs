@@ -27,6 +27,7 @@ pub struct ConfigVariant {
   pub inline_const: Option<InlineConstOption>,
   pub top_level_var: Option<bool>,
   pub preserve_modules: Option<bool>,
+  pub minify: Option<bool>,
   // --- non-bundler options are start with `_`
   /// Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]
@@ -98,6 +99,9 @@ impl ConfigVariant {
         ..config.optimization.unwrap_or_default()
       });
     }
+    if let Some(minify) = &self.minify {
+      config.minify = Some((*minify).into());
+    }
     config
   }
 
@@ -147,6 +151,9 @@ impl ConfigVariant {
     }
     if let Some(inline_const) = &self.inline_const {
       fields.push(format!("inline_const: {inline_const:?}"));
+    }
+    if let Some(minify) = &self.minify {
+      fields.push(format!("minify: {minify:?}"));
     }
     let mut result = String::new();
     self.config_name.as_ref().inspect(|config_name| {

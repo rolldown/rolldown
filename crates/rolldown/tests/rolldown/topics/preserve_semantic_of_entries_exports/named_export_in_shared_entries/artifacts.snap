@@ -6,26 +6,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { n as main_default, t as foo } from "./main.js";
+//#region main.js
+const foo = "foo";
+var main_default = "main";
 
+//#endregion
 export { main_default as default, foo };
 ```
 
 ## entry2.js
 
 ```js
-import { n as main_default, t as foo } from "./main.js";
+import main_default, { foo } from "./entry.js";
 
 export { main_default as default, foo };
-```
-
-## main.js
-
-```js
-//#region main.js
-const foo = "foo";
-var main_default = "main";
-
-//#endregion
-export { main_default as n, foo as t };
 ```

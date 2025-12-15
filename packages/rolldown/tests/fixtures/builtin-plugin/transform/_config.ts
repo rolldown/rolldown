@@ -1,13 +1,14 @@
 import { stripAnsi } from 'consola/utils';
 import path from 'node:path';
 import { defineTest } from 'rolldown-tests';
-import { transformPlugin } from 'rolldown/experimental';
+import { viteTransformPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
   config: {
     plugins: [
-      transformPlugin({
+      viteTransformPlugin({
+        root: __dirname,
         jsxRefreshInclude: [/.abc$/],
         transformOptions: {
           jsx: {

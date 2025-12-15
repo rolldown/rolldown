@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+let process$1 = require("process");
+process$1 = __toESM(process$1);
+
+//#region mod.js
+process.on("error", () => console.log("error"));
+
+//#endregion
+//#region main.js
+console.log(process$1.default);
+
+//#endregion
+```

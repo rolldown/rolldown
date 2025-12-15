@@ -8,19 +8,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region leaflet.js
-var require_leaflet = /* @__PURE__ */ __commonJS({ "leaflet.js": ((exports, module) => {
+var require_leaflet = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	(function(global$1, factory) {
 		typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global$1 = typeof globalThis !== "undefined" ? globalThis : global$1 || self, factory(global$1.leaflet = {}));
 	})(exports, function(exports$1) {
+		"use strict";
 		exports$1.foo = "foo";
 		global.L = exports$1;
 	});
-}) });
+}));
 
 //#endregion
 //#region leaflet-toolbar.js
 var import_leaflet = require_leaflet();
 (function(t) {
+	"use strict";
 	t.L.Toolbar = L.foo;
 })(global);
 

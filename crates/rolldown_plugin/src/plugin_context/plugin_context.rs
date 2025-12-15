@@ -95,7 +95,7 @@ impl PluginContext {
     file: rolldown_common::EmittedAsset,
     fn_asset_filename: Option<String>,
     fn_sanitized_file_name: Option<String>,
-  ) -> ArcStr {
+  ) -> anyhow::Result<ArcStr> {
     call_native_only!(self, "emit_file", ctx => ctx.emit_file(file, fn_asset_filename, fn_sanitized_file_name))
   }
 

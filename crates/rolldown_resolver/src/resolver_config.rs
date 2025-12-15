@@ -1,8 +1,8 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use itertools::Itertools;
 use oxc_resolver::{EnforceExtension, ResolveOptions as OxcResolverOptions};
-use rolldown_common::{Platform, ResolveOptions};
+use rolldown_common::{Platform, ResolveOptions, TsConfig};
 use rolldown_utils::indexmap::FxIndexMap;
 
 /// Configuration for different resolver variants based on import types.
@@ -20,7 +20,7 @@ impl ResolverConfig {
   pub fn build(
     cwd: &Path,
     platform: Platform,
-    tsconfig: Option<PathBuf>,
+    tsconfig: Option<&TsConfig>,
     resolve_options: ResolveOptions,
   ) -> Self {
     // Build condition names
@@ -97,11 +97,14 @@ impl ResolverConfig {
     // Build base options
     let default_options = OxcResolverOptions {
       cwd: Some(cwd.to_path_buf()),
-      tsconfig: tsconfig.map(|tsconfig_path| {
-        oxc_resolver::TsconfigDiscovery::Manual(oxc_resolver::TsconfigOptions {
-          config_file: tsconfig_path,
-          references: oxc_resolver::TsconfigReferences::Disabled,
-        })
+      tsconfig: tsconfig.map(|tsconfig| match tsconfig {
+        TsConfig::Auto => oxc_resolver::TsconfigDiscovery::Auto,
+        TsConfig::Manual(config_file) => {
+          oxc_resolver::TsconfigDiscovery::Manual(oxc_resolver::TsconfigOptions {
+            config_file: config_file.clone(),
+            references: oxc_resolver::TsconfigReferences::Disabled,
+          })
+        }
       }),
       alias: alias.unwrap_or_default(),
       imports_fields: vec![vec!["imports".to_string()]],

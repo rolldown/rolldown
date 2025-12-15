@@ -2,44 +2,47 @@ use std::sync::Arc;
 
 use napi::{Unknown, bindgen_prelude::FromNapiValue};
 use rolldown_plugin::__inner::Pluginable;
-use rolldown_plugin_alias::AliasPlugin;
-use rolldown_plugin_asset::AssetPlugin;
-use rolldown_plugin_asset_import_meta_url::AssetImportMetaUrlPlugin;
-use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
-use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
-use rolldown_plugin_html_inline_proxy::HtmlInlineProxyPlugin;
-use rolldown_plugin_import_glob::ImportGlobPlugin;
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
-use rolldown_plugin_json::JsonPlugin;
-use rolldown_plugin_load_fallback::LoadFallbackPlugin;
-use rolldown_plugin_manifest::ManifestPlugin;
-use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
-use rolldown_plugin_react_refresh_wrapper::ReactRefreshWrapperPlugin;
 use rolldown_plugin_replace::ReplacePlugin;
-use rolldown_plugin_reporter::ReporterPlugin;
-use rolldown_plugin_transform::TransformPlugin;
+use rolldown_plugin_vite_alias::ViteAliasPlugin;
+use rolldown_plugin_vite_asset::ViteAssetPlugin;
+use rolldown_plugin_vite_asset_import_meta_url::ViteAssetImportMetaUrlPlugin;
+use rolldown_plugin_vite_build_import_analysis::ViteBuildImportAnalysisPlugin;
 use rolldown_plugin_vite_css::ViteCSSPlugin;
 use rolldown_plugin_vite_css_post::ViteCSSPostPlugin;
+use rolldown_plugin_vite_dynamic_import_vars::ViteDynamicImportVarsPlugin;
 use rolldown_plugin_vite_html::ViteHtmlPlugin;
+use rolldown_plugin_vite_html_inline_proxy::ViteHtmlInlineProxyPlugin;
+use rolldown_plugin_vite_import_glob::ViteImportGlobPlugin;
+use rolldown_plugin_vite_json::ViteJsonPlugin;
+use rolldown_plugin_vite_load_fallback::ViteLoadFallbackPlugin;
+use rolldown_plugin_vite_manifest::ViteManifestPlugin;
+use rolldown_plugin_vite_module_preload_polyfill::ViteModulePreloadPolyfillPlugin;
+use rolldown_plugin_vite_react_refresh_wrapper::ViteReactRefreshWrapperPlugin;
+use rolldown_plugin_vite_reporter::ViteReporterPlugin;
 use rolldown_plugin_vite_resolve::ViteResolvePlugin;
-use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
-use rolldown_plugin_wasm_helper::WasmHelperPlugin;
-use rolldown_plugin_web_worker_post::WebWorkerPostPlugin;
+use rolldown_plugin_vite_transform::ViteTransformPlugin;
+use rolldown_plugin_vite_wasm_fallback::ViteWasmFallbackPlugin;
+use rolldown_plugin_vite_wasm_helper::ViteWasmHelperPlugin;
+use rolldown_plugin_vite_web_worker_post::ViteWebWorkerPostPlugin;
 
 use crate::options::plugin::config::{
-  BindingEsmExternalRequirePluginConfig, BindingModulePreloadPolyfillPluginConfig,
-  BindingReactRefreshWrapperPluginConfig, BindingViteCSSPluginConfig,
-  BindingViteCSSPostPluginConfig, BindingViteHtmlPluginConfig, BindingWasmHelperPluginConfig,
+  BindingEsmExternalRequirePluginConfig, BindingViteAssetImportMetaUrlPluginConfig,
+  BindingViteCSSPluginConfig, BindingViteCSSPostPluginConfig,
+  BindingViteHtmlInlineProxyPluginConfig, BindingViteHtmlPluginConfig,
+  BindingViteModulePreloadPolyfillPluginConfig, BindingViteReactRefreshWrapperPluginConfig,
+  BindingViteWasmHelperPluginConfig,
 };
 
 use super::{
   config::{
-    BindingAliasPluginConfig, BindingAssetPluginConfig, BindingBuildImportAnalysisPluginConfig,
-    BindingDynamicImportVarsPluginConfig, BindingImportGlobPluginConfig,
-    BindingIsolatedDeclarationPluginConfig, BindingJsonPluginConfig, BindingManifestPluginConfig,
-    BindingReplacePluginConfig, BindingReporterPluginConfig, BindingTransformPluginConfig,
-    BindingViteResolvePluginConfig,
+    BindingIsolatedDeclarationPluginConfig, BindingReplacePluginConfig,
+    BindingViteAliasPluginConfig, BindingViteAssetPluginConfig,
+    BindingViteBuildImportAnalysisPluginConfig, BindingViteDynamicImportVarsPluginConfig,
+    BindingViteImportGlobPluginConfig, BindingViteJsonPluginConfig,
+    BindingViteManifestPluginConfig, BindingViteReporterPluginConfig,
+    BindingViteResolvePluginConfig, BindingViteTransformPluginConfig,
   },
   types::binding_builtin_plugin_name::BindingBuiltinPluginName,
 };
@@ -64,58 +67,14 @@ impl std::fmt::Debug for BindingBuiltinPlugin<'_> {
 impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
   type Error = napi::Error;
 
+  #[expect(clippy::too_many_lines)]
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
-      BindingBuiltinPluginName::Alias => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingAliasPluginConfig::from_unknown(options)?.try_into()?
-        } else {
-          AliasPlugin::default()
-        };
-        Arc::new(plugin)
-      }
-      BindingBuiltinPluginName::Asset => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingAssetPluginConfig::from_unknown(options)?.into()
-        } else {
-          AssetPlugin::default()
-        };
-        Arc::new(plugin)
-      }
-      BindingBuiltinPluginName::AssetImportMetaUrl => Arc::new(AssetImportMetaUrlPlugin),
-      BindingBuiltinPluginName::BuildImportAnalysis => {
-        let config = if let Some(options) = plugin.options {
-          BindingBuildImportAnalysisPluginConfig::from_unknown(options)?
-        } else {
-          return Err(napi::Error::new(
-            napi::Status::InvalidArg,
-            "Missing options for BuildImportAnalysisPlugin",
-          ));
-        };
-        Arc::new(BuildImportAnalysisPlugin::try_from(config)?)
-      }
-      BindingBuiltinPluginName::DynamicImportVars => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingDynamicImportVarsPluginConfig::from_unknown(options)?.into()
-        } else {
-          DynamicImportVarsPlugin::default()
-        };
-        Arc::new(plugin)
-      }
       BindingBuiltinPluginName::EsmExternalRequire => {
         let plugin = if let Some(options) = plugin.options {
           BindingEsmExternalRequirePluginConfig::from_unknown(options)?.into()
         } else {
           EsmExternalRequirePlugin::default()
-        };
-        Arc::new(plugin)
-      }
-      BindingBuiltinPluginName::HtmlInlineProxy => Arc::new(HtmlInlineProxyPlugin),
-      BindingBuiltinPluginName::ImportGlob => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingImportGlobPluginConfig::from_unknown(options)?.into()
-        } else {
-          ImportGlobPlugin::default()
         };
         Arc::new(plugin)
       }
@@ -127,56 +86,6 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         };
         Arc::new(plugin)
       }
-      BindingBuiltinPluginName::Json => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingJsonPluginConfig::from_unknown(options)?.try_into()?
-        } else {
-          JsonPlugin::default()
-        };
-        Arc::new(plugin)
-      }
-      BindingBuiltinPluginName::LoadFallback => Arc::new(LoadFallbackPlugin),
-      BindingBuiltinPluginName::Manifest => {
-        let plugin: ManifestPlugin = if let Some(options) = plugin.options {
-          BindingManifestPluginConfig::from_unknown(options)?.into()
-        } else {
-          return Err(napi::Error::new(
-            napi::Status::InvalidArg,
-            "Missing options for ManifestPlugin",
-          ));
-        };
-        Arc::new(plugin)
-      }
-      BindingBuiltinPluginName::ModulePreloadPolyfill => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingModulePreloadPolyfillPluginConfig::from_unknown(options)?.into()
-        } else {
-          ModulePreloadPolyfillPlugin::default()
-        };
-        Arc::new(plugin)
-      }
-      BindingBuiltinPluginName::ReactRefreshWrapper => {
-        let config = if let Some(options) = plugin.options {
-          BindingReactRefreshWrapperPluginConfig::from_unknown(options)?
-        } else {
-          return Err(napi::Error::new(
-            napi::Status::InvalidArg,
-            "Missing options for ReactRefreshWrapperPlugin",
-          ));
-        };
-        Arc::new(ReactRefreshWrapperPlugin::new(config.into()))
-      }
-      BindingBuiltinPluginName::Report => {
-        let plugin: ReporterPlugin = if let Some(options) = plugin.options {
-          BindingReporterPluginConfig::from_unknown(options)?.into()
-        } else {
-          return Err(napi::Error::new(
-            napi::Status::InvalidArg,
-            "Missing options for ReportPlugin",
-          ));
-        };
-        Arc::new(plugin)
-      }
       BindingBuiltinPluginName::Replace => {
         let config = if let Some(options) = plugin.options {
           BindingReplacePluginConfig::from_unknown(options)?
@@ -185,13 +94,43 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         };
         Arc::new(ReplacePlugin::with_options(config.into()))
       }
-      BindingBuiltinPluginName::Transform => {
+      BindingBuiltinPluginName::ViteAlias => {
         let plugin = if let Some(options) = plugin.options {
-          BindingTransformPluginConfig::from_unknown(options)?.into()
+          BindingViteAliasPluginConfig::from_unknown(options)?.try_into()?
         } else {
-          TransformPlugin::default()
+          ViteAliasPlugin::default()
         };
         Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteAsset => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingViteAssetPluginConfig::from_unknown(options)?.into()
+        } else {
+          ViteAssetPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteAssetImportMetaUrl => {
+        let plugin: ViteAssetImportMetaUrlPlugin = if let Some(options) = plugin.options {
+          BindingViteAssetImportMetaUrlPluginConfig::from_unknown(options)?.into()
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteAssetImportMetaUrlPlugin",
+          ));
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteBuildImportAnalysis => {
+        let config = if let Some(options) = plugin.options {
+          BindingViteBuildImportAnalysisPluginConfig::from_unknown(options)?
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteBuildImportAnalysisPlugin",
+          ));
+        };
+        Arc::new(ViteBuildImportAnalysisPlugin::try_from(config)?)
       }
       BindingBuiltinPluginName::ViteCSS => {
         let plugin: ViteCSSPlugin = if let Some(options) = plugin.options {
@@ -205,10 +144,21 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         Arc::new(plugin)
       }
       BindingBuiltinPluginName::ViteCSSPost => {
-        let plugin = if let Some(options) = plugin.options {
+        let plugin: ViteCSSPostPlugin = if let Some(options) = plugin.options {
           BindingViteCSSPostPluginConfig::from_unknown(options)?.into()
         } else {
-          ViteCSSPostPlugin::default()
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteCSSPostPlugin",
+          ));
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteDynamicImportVars => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingViteDynamicImportVarsPluginConfig::from_unknown(options)?.into()
+        } else {
+          ViteDynamicImportVarsPlugin::default()
         };
         Arc::new(plugin)
       }
@@ -219,6 +169,75 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           return Err(napi::Error::new(
             napi::Status::InvalidArg,
             "Missing options for ViteHtmlPlugin",
+          ));
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteHtmlInlineProxy => {
+        let plugin: ViteHtmlInlineProxyPlugin = if let Some(options) = plugin.options {
+          BindingViteHtmlInlineProxyPluginConfig::from_unknown(options)?.into()
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteHtmlInlineProxyPlugin",
+          ));
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteImportGlob => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingViteImportGlobPluginConfig::from_unknown(options)?.into()
+        } else {
+          ViteImportGlobPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteJson => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingViteJsonPluginConfig::from_unknown(options)?.try_into()?
+        } else {
+          ViteJsonPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteLoadFallback => Arc::new(ViteLoadFallbackPlugin),
+      BindingBuiltinPluginName::ViteManifest => {
+        let plugin: ViteManifestPlugin = if let Some(options) = plugin.options {
+          BindingViteManifestPluginConfig::from_unknown(options)?.into()
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteManifestPlugin",
+          ));
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteModulePreloadPolyfill => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingViteModulePreloadPolyfillPluginConfig::from_unknown(options)?.into()
+        } else {
+          ViteModulePreloadPolyfillPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteReactRefreshWrapper => {
+        let config = if let Some(options) = plugin.options {
+          BindingViteReactRefreshWrapperPluginConfig::from_unknown(options)?
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteReactRefreshWrapperPlugin",
+          ));
+        };
+        Arc::new(ViteReactRefreshWrapperPlugin::new(config.into()))
+      }
+      BindingBuiltinPluginName::ViteReporter => {
+        let plugin: ViteReporterPlugin = if let Some(options) = plugin.options {
+          BindingViteReporterPluginConfig::from_unknown(options)?.into()
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteReporterPlugin",
           ));
         };
         Arc::new(plugin)
@@ -234,16 +253,24 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         };
         Arc::new(ViteResolvePlugin::new(config.into()))
       }
-      BindingBuiltinPluginName::WasmFallback => Arc::new(WasmFallbackPlugin),
-      BindingBuiltinPluginName::WasmHelper => {
+      BindingBuiltinPluginName::ViteTransform => {
         let plugin = if let Some(options) = plugin.options {
-          BindingWasmHelperPluginConfig::from_unknown(options)?.into()
+          BindingViteTransformPluginConfig::from_unknown(options)?.into()
         } else {
-          WasmHelperPlugin::default()
+          ViteTransformPlugin::default()
         };
         Arc::new(plugin)
       }
-      BindingBuiltinPluginName::WebWorkerPost => Arc::new(WebWorkerPostPlugin),
+      BindingBuiltinPluginName::ViteWasmFallback => Arc::new(ViteWasmFallbackPlugin),
+      BindingBuiltinPluginName::ViteWasmHelper => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingViteWasmHelperPluginConfig::from_unknown(options)?.into()
+        } else {
+          ViteWasmHelperPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteWebWorkerPost => Arc::new(ViteWebWorkerPostPlugin),
     })
   }
 }

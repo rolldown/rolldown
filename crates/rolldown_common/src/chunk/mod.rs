@@ -30,7 +30,7 @@ use self::types::{
 };
 
 bitflags::bitflags! {
-  #[derive(Debug, Clone, Copy, Default)]
+  #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
     pub struct ChunkMeta: u8 {
         /// `true` if the chunk is dynamic imported by other modules, it would be treated as a dynamic entry if it
         /// is not a user defined entry point.
@@ -61,7 +61,7 @@ pub struct Chunk {
   pub cross_chunk_imports: Vec<ChunkIdx>,
   pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,
   pub bits: BitSet,
-  pub imports_from_other_chunks: Vec<(ChunkIdx, Vec<CrossChunkImportItem>)>,
+  pub imports_from_other_chunks: FxIndexMap<ChunkIdx, Vec<CrossChunkImportItem>>,
   // Only meaningful for cjs format
   pub require_binding_names_for_other_chunks: FxHashMap<ChunkIdx, String>,
   /// The first element of tuple is module idx of external module
@@ -114,14 +114,8 @@ impl Chunk {
     }
   }
 
-  pub fn has_side_effect(&self, runtime_id: ModuleIdx) -> bool {
-    // TODO: remove this special case, once `NormalModule#side_effect` is implemented. Runtime module should always not have side effect
-    if self.modules.len() == 1 && self.modules[0] == runtime_id {
-      return false;
-    }
-    // TODO: Whether a chunk has side effect is determined by whether it's module has side effect
-    // Now we just return `true`
-    true
+  pub fn has_side_effect(&self, module_table: &ModuleTable) -> bool {
+    self.modules.iter().any(|&module_id| module_table[module_id].side_effects().has_side_effects())
   }
 
   pub fn import_path_for(&self, importee: &Chunk) -> String {
@@ -151,15 +145,18 @@ impl Chunk {
   ) -> anyhow::Result<FilenameTemplate> {
     // https://github.com/rollup/rollup/blob/061a0387c8654222620f602471d66afd3c582048/src/Chunk.ts?plain=1#L526-L529
     // Emitted chunks should always use chunk_filenames, not entry_filenames
-    let ret = if matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) && !meta.contains(ChunkMeta::EmittedChunk))
-      || options.preserve_modules
-    {
+    let is_entry = matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) && !meta.contains(ChunkMeta::EmittedChunk))
+      || options.preserve_modules;
+
+    let ret = if is_entry {
       options.entry_filenames.call(rollup_pre_rendered_chunk).await?
     } else {
       options.chunk_filenames.call(rollup_pre_rendered_chunk).await?
     };
 
-    Ok(FilenameTemplate::new(ret))
+    let pattern_name = if is_entry { "entryFileNames" } else { "chunkFileNames" };
+
+    Ok(FilenameTemplate::new(ret, pattern_name))
   }
 
   pub async fn css_filename_template(
@@ -168,14 +165,17 @@ impl Chunk {
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
   ) -> anyhow::Result<FilenameTemplate> {
     // Emitted chunks should always use chunk_filenames, not entry_filenames
-    let ret = if matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) && !meta.contains(ChunkMeta::EmittedChunk))
-    {
+    let is_entry = matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) && !meta.contains(ChunkMeta::EmittedChunk));
+
+    let ret = if is_entry {
       options.css_entry_filenames.call(rollup_pre_rendered_chunk).await?
     } else {
       options.css_chunk_filenames.call(rollup_pre_rendered_chunk).await?
     };
 
-    Ok(FilenameTemplate::new(ret))
+    let pattern_name = if is_entry { "cssEntryFileNames" } else { "cssChunkFileNames" };
+
+    Ok(FilenameTemplate::new(ret, pattern_name))
   }
 
   pub async fn generate_preliminary_filename(
@@ -214,7 +214,7 @@ impl Chunk {
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
 
     let filename = filename_template
-      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)
+      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
       .into();
 
     let name = make_unique_name(&filename, used_name_counts);
@@ -248,7 +248,7 @@ impl Chunk {
       }
       p.relative(self.input_base.as_str())
     } else {
-      PathBuf::from(&options.virtual_dirname).join(p)
+      PathBuf::from(options.virtual_dirname.as_str()).join(p)
     };
     Cow::Owned(p.to_slash_lossy().into_owned())
   }
@@ -286,7 +286,7 @@ impl Chunk {
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
 
     let filename = filename_template
-      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)
+      .render(Some(&chunk_name), Some(options.format.as_str()), None, hash_replacer)?
       .into();
 
     let name = make_unique_name(&filename, used_name_counts);

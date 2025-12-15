@@ -64,7 +64,7 @@ impl TransformPluginContext {
       .options()
       .experimental
       .transform_hires_sourcemap
-      .unwrap_or(SourcemapHires::Boolean(true));
+      .unwrap_or(SourcemapHires::Boundary);
     magic_string.source_map(SourceMapOptions {
       hires: hires.into(),
       include_content: true,

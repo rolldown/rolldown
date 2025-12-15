@@ -1,5 +1,5 @@
 import { defineTest } from 'rolldown-tests';
-import { aliasPlugin } from 'rolldown/experimental';
+import { viteAliasPlugin } from 'rolldown/experimental';
 import { expect, vi } from 'vitest';
 
 const onLogFn = vi.fn();
@@ -8,7 +8,7 @@ export default defineTest({
   config: {
     input: './main.js',
     plugins: [
-      aliasPlugin({
+      viteAliasPlugin({
         entries: [{ find: 'rolldown', replacement: '.' }],
       }),
     ],

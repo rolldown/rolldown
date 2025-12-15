@@ -1,12 +1,12 @@
 import * as path from 'node:path';
 import { defineTest } from 'rolldown-tests';
-import { importGlobPlugin } from 'rolldown/experimental';
+import { viteImportGlobPlugin } from 'rolldown/experimental';
 
 export default defineTest({
   config: {
     input: './src/main.js',
     plugins: [
-      importGlobPlugin({
+      viteImportGlobPlugin({
         root: path.resolve(import.meta.dirname),
       }),
     ],

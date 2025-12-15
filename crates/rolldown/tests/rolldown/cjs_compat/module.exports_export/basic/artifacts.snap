@@ -18,20 +18,20 @@ var esm_exports = /* @__PURE__ */ __export({
 	"module.exports": () => moduleExports
 });
 var foo, bar, esm_default, __esModule, moduleExports;
-var init_esm = __esm({ "esm.js": (() => {
+var init_esm = __esmMin((() => {
 	foo = "foo";
 	bar = "bar";
 	esm_default = { default: "default-value" };
 	__esModule = true;
 	moduleExports = { foo: "foo" };
-}) });
+}));
 
 //#endregion
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
-	const esm$1 = (init_esm(), __toCommonJS(esm_exports));
-	module.exports = esm$1;
-}) });
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	const esm = (init_esm(), __toCommonJS(esm_exports));
+	module.exports = esm;
+}));
 
 //#endregion
 //#region main.js

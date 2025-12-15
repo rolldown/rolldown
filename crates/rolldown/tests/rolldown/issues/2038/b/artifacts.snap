@@ -20,26 +20,18 @@ export { a };
 ```js
 // HIDDEN [rolldown:runtime]
 //#region c.js
-var require_c = /* @__PURE__ */ __commonJS({ "c.js": ((exports) => {
-	const test$1 = 1e3;
-	exports.test = test$1;
-}) });
+var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
+	const test = 1e3;
+	exports.test = test;
+}));
 
 //#endregion
 //#region b.js
 var import_c = require_c();
 
 //#endregion
-export { import_c as t };
-```
-
-## b2.js
-
-```js
-import { t as import_c } from "./b.js";
-
 var test = import_c.test;
-export { test };
+export { import_c as t, test };
 ```
 
 ## main.js
@@ -51,7 +43,7 @@ import assert from "node:assert";
 import("./a.js").then((mod) => {
 	assert.strictEqual(mod.a, 1e3);
 });
-import("./b2.js").then((mod) => {
+import("./b.js").then((mod) => {
 	assert.strictEqual(mod.test, 1e3);
 });
 

@@ -1,12 +1,12 @@
 import { defineTest } from 'rolldown-tests';
-import { transformPlugin } from 'rolldown/experimental';
+import { viteTransformPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
   config: {
     input: './main.ts',
     plugins: [
-      transformPlugin(),
+      viteTransformPlugin({ root: __dirname }),
       {
         name: 'test',
         transform(code) {

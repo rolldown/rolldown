@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { defineTest } from 'rolldown-tests';
-import { manifestPlugin } from 'rolldown/experimental';
+import { viteManifestPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
@@ -10,7 +10,7 @@ export default defineTest({
       assetFileNames: '[name][extname]',
     },
     plugins: [
-      manifestPlugin({
+      viteManifestPlugin({
         root: path.resolve(import.meta.dirname),
         outPath: path.resolve(import.meta.dirname, 'dist/manifest.json'),
         cssEntries: () => (Object.fromEntries(new Map().entries())),

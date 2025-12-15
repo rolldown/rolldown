@@ -129,8 +129,12 @@ export interface MangleOptionsKeepNames {
   class: boolean
 }
 
-/** Minify synchronously. */
-export declare function minify(filename: string, sourceText: string, options?: MinifyOptions | undefined | null): MinifyResult
+/**
+ * Minify asynchronously.
+ *
+ * Note: This function can be slower than `minifySync` due to the overhead of spawning a thread.
+ */
+export declare function minify(filename: string, sourceText: string, options?: MinifyOptions | undefined | null): Promise<MinifyResult>
 
 export interface MinifyOptions {
   /** Use when minifying an ES module. */
@@ -146,6 +150,9 @@ export interface MinifyResult {
   map?: SourceMap
   errors: Array<OxcError>
 }
+
+/** Minify synchronously. */
+export declare function minifySync(filename: string, sourceText: string, options?: MinifyOptions | undefined | null): MinifyResult
 
 export interface TreeShakeOptions {
   /**
@@ -188,7 +195,7 @@ export interface Comment {
 }
 
 export interface ErrorLabel {
-  message?: string
+  message: string | null
   start: number
   end: number
 }
@@ -197,8 +204,8 @@ export interface OxcError {
   severity: Severity
   message: string
   labels: Array<ErrorLabel>
-  helpMessage?: string
-  codeframe?: string
+  helpMessage: string | null
+  codeframe: string | null
 }
 
 export type Severity =  'Error'|
@@ -238,9 +245,9 @@ export interface EcmaScriptModule {
 
 export interface ExportExportName {
   kind: ExportExportNameKind
-  name?: string
-  start?: number
-  end?: number
+  name: string | null
+  start: number | null
+  end: number | null
 }
 
 export type ExportExportNameKind = /** `export { name } */
@@ -252,9 +259,9 @@ export type ExportExportNameKind = /** `export { name } */
 
 export interface ExportImportName {
   kind: ExportImportNameKind
-  name?: string
-  start?: number
-  end?: number
+  name: string | null
+  start: number | null
+  end: number | null
 }
 
 export type ExportImportNameKind = /** `export { name } */
@@ -268,9 +275,9 @@ export type ExportImportNameKind = /** `export { name } */
 
 export interface ExportLocalName {
   kind: ExportLocalNameKind
-  name?: string
-  start?: number
-  end?: number
+  name: string | null
+  start: number | null
+  end: number | null
 }
 
 export type ExportLocalNameKind = /** `export { name } */
@@ -285,9 +292,9 @@ export type ExportLocalNameKind = /** `export { name } */
 
 export interface ImportName {
   kind: ImportNameKind
-  name?: string
-  start?: number
-  end?: number
+  name: string | null
+  start: number | null
+  end: number | null
 }
 
 export type ImportNameKind = /** `import { x } from "mod"` */
@@ -302,7 +309,7 @@ export type ImportNameKind = /** `import { x } from "mod"` */
  *
  * Note: This function can be slower than `parseSync` due to the overhead of spawning a thread.
  */
-export declare function parseAsync(filename: string, sourceText: string, options?: ParserOptions | undefined | null): Promise<ParseResult>
+export declare function parse(filename: string, sourceText: string, options?: ParserOptions | undefined | null): Promise<ParseResult>
 
 export interface ParserOptions {
   /** Treat the source text as `js`, `jsx`, `ts`, `tsx` or `dts`. */
@@ -365,7 +372,7 @@ export interface StaticExport {
 export interface StaticExportEntry {
   start: number
   end: number
-  moduleRequest?: ValueSpan
+  moduleRequest: ValueSpan | null
   /** The name under which the desired binding is exported by the module`. */
   importName: ExportImportName
   /** The name used to export this binding by this module. */
@@ -460,6 +467,18 @@ export declare class ResolverFactory {
   sync(directory: string, request: string): ResolveResult
   /** Asynchronously resolve `specifier` at an absolute path to a `directory`. */
   async(directory: string, request: string): Promise<ResolveResult>
+  /**
+   * Synchronously resolve `specifier` at an absolute path to a `file`.
+   *
+   * This method automatically discovers tsconfig.json by traversing parent directories.
+   */
+  resolveFileSync(file: string, request: string): ResolveResult
+  /**
+   * Asynchronously resolve `specifier` at an absolute path to a `file`.
+   *
+   * This method automatically discovers tsconfig.json by traversing parent directories.
+   */
+  resolveFileAsync(file: string, request: string): Promise<ResolveResult>
 }
 
 /** Node.js builtin module when `Options::builtin_modules` is enabled. */
@@ -714,9 +733,8 @@ export interface TsconfigOptions {
    * Support for Typescript Project References.
    *
    * * `'auto'`: use the `references` field from tsconfig of `config_file`.
-   * * `string[]`: manually provided relative or absolute path.
    */
-  references?: 'auto' | string[]
+  references?: 'auto'
 }
 export interface SourceMap {
   file?: string
@@ -843,8 +861,12 @@ export interface Helpers {
   mode?: HelperMode
 }
 
-/** TypeScript Isolated Declarations for Standalone DTS Emit */
-export declare function isolatedDeclaration(filename: string, sourceText: string, options?: IsolatedDeclarationsOptions | undefined | null): IsolatedDeclarationsResult
+/**
+ * TypeScript Isolated Declarations for Standalone DTS Emit (async)
+ *
+ * Note: This function can be slower than `isolatedDeclarationSync` due to the overhead of spawning a thread.
+ */
+export declare function isolatedDeclaration(filename: string, sourceText: string, options?: IsolatedDeclarationsOptions | undefined | null): Promise<IsolatedDeclarationsResult>
 
 export interface IsolatedDeclarationsOptions {
   /**
@@ -864,6 +886,9 @@ export interface IsolatedDeclarationsResult {
   map?: SourceMap
   errors: Array<OxcError>
 }
+
+/** TypeScript Isolated Declarations for Standalone DTS Emit */
+export declare function isolatedDeclarationSync(filename: string, sourceText: string, options?: IsolatedDeclarationsOptions | undefined | null): IsolatedDeclarationsResult
 
 /**
  * Configure how TSX and JSX are transformed.
@@ -971,9 +996,11 @@ export interface JsxOptions {
  * @returns an object containing the transformed code, source maps, and any
  * errors that occurred during parsing or transformation.
  *
+ * Note: This function can be slower than `moduleRunnerTransformSync` due to the overhead of spawning a thread.
+ *
  * @deprecated Only works for Vite.
  */
-export declare function moduleRunnerTransform(filename: string, sourceText: string, options?: ModuleRunnerTransformOptions | undefined | null): ModuleRunnerTransformResult
+export declare function moduleRunnerTransform(filename: string, sourceText: string, options?: ModuleRunnerTransformOptions | undefined | null): Promise<ModuleRunnerTransformResult>
 
 export interface ModuleRunnerTransformOptions {
   /**
@@ -1013,8 +1040,12 @@ export interface ModuleRunnerTransformResult {
   errors: Array<OxcError>
 }
 
+/** @deprecated Only works for Vite. */
+export declare function moduleRunnerTransformSync(filename: string, sourceText: string, options?: ModuleRunnerTransformOptions | undefined | null): ModuleRunnerTransformResult
+
 export interface PluginsOptions {
   styledComponents?: StyledComponentsOptions
+  taggedTemplateEscape?: boolean
 }
 
 export interface ReactRefreshOptions {
@@ -1113,20 +1144,6 @@ export interface StyledComponentsOptions {
 }
 
 /**
- * Transpile a JavaScript or TypeScript into a target ECMAScript version.
- *
- * @param filename The name of the file being transformed. If this is a
- * relative path, consider setting the {@link TransformOptions#cwd} option..
- * @param sourceText the source code itself
- * @param options The options for the transformation. See {@link
- * TransformOptions} for more information.
- *
- * @returns an object containing the transformed code, source maps, and any
- * errors that occurred during parsing or transformation.
- */
-export declare function transform(filename: string, sourceText: string, options?: TransformOptions | undefined | null): TransformResult
-
-/**
  * Transpile a JavaScript or TypeScript into a target ECMAScript version, asynchronously.
  *
  * Note: This function can be slower than `transform` due to the overhead of spawning a thread.
@@ -1140,7 +1157,7 @@ export declare function transform(filename: string, sourceText: string, options?
  * @returns a promise that resolves to an object containing the transformed code,
  * source maps, and any errors that occurred during parsing or transformation.
  */
-export declare function transformAsync(filename: string, sourceText: string, options?: TransformOptions | undefined | null): Promise<TransformResult>
+export declare function transform(filename: string, sourceText: string, options?: TransformOptions | undefined | null): Promise<TransformResult>
 
 /**
  * Options for transforming a JavaScript or TypeScript file.
@@ -1252,6 +1269,20 @@ export interface TransformResult {
   errors: Array<OxcError>
 }
 
+/**
+ * Transpile a JavaScript or TypeScript into a target ECMAScript version.
+ *
+ * @param filename The name of the file being transformed. If this is a
+ * relative path, consider setting the {@link TransformOptions#cwd} option..
+ * @param sourceText the source code itself
+ * @param options The options for the transformation. See {@link
+ * TransformOptions} for more information.
+ *
+ * @returns an object containing the transformed code, source maps, and any
+ * errors that occurred during parsing or transformation.
+ */
+export declare function transformSync(filename: string, sourceText: string, options?: TransformOptions | undefined | null): TransformResult
+
 export interface TypeScriptOptions {
   jsxPragma?: string
   jsxPragmaFrag?: string
@@ -1360,11 +1391,11 @@ export declare class BindingDevEngine {
   constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
   run(): Promise<void>
   ensureCurrentBuildFinish(): Promise<void>
-  hasLatestBuildOutput(): Promise<boolean>
+  getBundleState(): Promise<BindingBundleState>
   ensureLatestBuildOutput(): Promise<void>
   invalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<Array<BindingClientHmrUpdate>>
-  registerModules(clientId: string, modules: Array<string>): void
-  removeClient(clientId: string): void
+  registerModules(clientId: string, modules: Array<string>): Promise<void>
+  removeClient(clientId: string): Promise<void>
   close(): Promise<void>
 }
 
@@ -1402,7 +1433,7 @@ export declare class BindingModuleInfo {
 
 export declare class BindingNormalizedOptions {
   get input(): Array<string> | Record<string, string>
-  get cwd(): string | null
+  get cwd(): string
   get platform(): 'node' | 'browser' | 'neutral'
   get shimMissingExports(): boolean
   get name(): string | null
@@ -1472,6 +1503,7 @@ export declare class BindingPluginContext {
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
+  emitPrebuiltChunk(file: BindingEmittedPrebuiltChunk): string
   getFileName(referenceId: string): string
   getModuleInfo(moduleId: string): BindingModuleInfo | null
   getModuleIds(): Array<string>
@@ -1568,28 +1600,6 @@ export interface BindingAdvancedChunksOptions {
   maxModuleSize?: number
 }
 
-export interface BindingAliasPluginAlias {
-  find: BindingStringOrRegex
-  replacement: string
-}
-
-export interface BindingAliasPluginConfig {
-  entries: Array<BindingAliasPluginAlias>
-}
-
-export interface BindingAssetPluginConfig {
-  isLib: boolean
-  isSsr: boolean
-  isWorker: boolean
-  urlBase: string
-  publicDir: string
-  decodedBase: string
-  isSkipAssets: boolean
-  assetsInclude: Array<BindingStringOrRegex>
-  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
-  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
-}
-
 export interface BindingAssetSource {
   inner: string | Uint8Array
 }
@@ -1600,57 +1610,45 @@ export declare enum BindingAttachDebugInfo {
   Full = 2
 }
 
-export interface BindingBuildImportAnalysisPluginConfig {
-  preloadCode: string
-  insertPreload: boolean
-  optimizeModulePreloadRelativePaths: boolean
-  renderBuiltUrl: boolean
-  isRelativeBase: boolean
-  v2?: BindingBuildImportAnalysisPluginV2Config
-}
-
-export interface BindingBuildImportAnalysisPluginV2Config {
-  isSsr: boolean
-  urlBase: string
-  decodedBase: string
-  modulePreload: false | BindingModulePreloadOptions
-  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
-}
-
 export interface BindingBuiltinPlugin {
   __name: BindingBuiltinPluginName
   options?: unknown
 }
 
-export type BindingBuiltinPluginName =  'builtin:alias'|
-'builtin:asset'|
-'builtin:asset-import-meta-url'|
-'builtin:build-import-analysis'|
-'builtin:dynamic-import-vars'|
-'builtin:esm-external-require'|
-'builtin:html-inline-proxy'|
-'builtin:import-glob'|
+export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:isolated-declaration'|
-'builtin:json'|
-'builtin:load-fallback'|
-'builtin:manifest'|
-'builtin:module-preload-polyfill'|
-'builtin:react-refresh-wrapper'|
-'builtin:reporter'|
 'builtin:replace'|
-'builtin:transform'|
+'builtin:vite-alias'|
+'builtin:vite-asset'|
+'builtin:vite-asset-import-meta-url'|
+'builtin:vite-build-import-analysis'|
 'builtin:vite-css'|
 'builtin:vite-css-post'|
+'builtin:vite-dynamic-import-vars'|
 'builtin:vite-html'|
+'builtin:vite-html-inline-proxy'|
+'builtin:vite-import-glob'|
+'builtin:vite-json'|
+'builtin:vite-load-fallback'|
+'builtin:vite-manifest'|
+'builtin:vite-module-preload-polyfill'|
+'builtin:vite-react-refresh-wrapper'|
+'builtin:vite-reporter'|
 'builtin:vite-resolve'|
-'builtin:wasm-fallback'|
-'builtin:wasm-helper'|
-'builtin:web-worker-post';
+'builtin:vite-transform'|
+'builtin:vite-wasm-fallback'|
+'builtin:vite-wasm-helper'|
+'builtin:vite-web-worker-post';
 
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions
   outputOptions: BindingOutputOptions
   parallelPluginsRegistry?: ParallelJsPluginRegistry
+}
+
+export interface BindingBundleState {
+  lastFullBuildFailed: boolean
+  hasStaleOutput: boolean
 }
 
 export interface BindingChecksOptions {
@@ -1668,6 +1666,7 @@ export interface BindingChecksOptions {
   configurationFieldConflict?: boolean
   preferBuiltinFeature?: boolean
   couldNotCleanDirectory?: boolean
+  pluginTimings?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -1719,12 +1718,6 @@ export interface BindingDevWatchOptions {
   debounceTickRate?: number
 }
 
-export interface BindingDynamicImportVarsPluginConfig {
-  include?: Array<BindingStringOrRegex>
-  exclude?: Array<BindingStringOrRegex>
-  resolver?: (id: string, importer: string) => MaybePromise<string | undefined>
-}
-
 export interface BindingEmittedAsset {
   name?: string
   fileName?: string
@@ -1738,6 +1731,14 @@ export interface BindingEmittedChunk {
   id: string
   importer?: string
   preserveEntrySignatures?: BindingPreserveEntrySignatures
+}
+
+export interface BindingEmittedPrebuiltChunk {
+  fileName: string
+  code: string
+  exports?: Array<string>
+  map?: BindingSourcemap
+  sourcemapFileName?: string
 }
 
 export type BindingError =
@@ -1870,11 +1871,6 @@ export interface BindingHookTransformOutput {
   moduleType?: string
 }
 
-export interface BindingImportGlobPluginConfig {
-  root?: string
-  restoreQueryExtension?: boolean
-}
-
 export interface BindingInjectImportNamed {
   tagNamed: true
   imported: string
@@ -1926,21 +1922,12 @@ export interface BindingInputOptions {
   preserveEntrySignatures?: BindingPreserveEntrySignatures
   optimization?: BindingOptimization
   context?: string
-  tsconfig?: string
+  tsconfig?: true | string
 }
 
 export interface BindingIsolatedDeclarationPluginConfig {
   stripInternal?: boolean
 }
-
-export interface BindingJsonPluginConfig {
-  minify?: boolean
-  namedExports?: boolean
-  stringify?: BindingJsonPluginStringify
-}
-
-export type BindingJsonPluginStringify =
-  boolean | string
 
 export interface BindingJsonSourcemap {
   file?: string
@@ -1976,14 +1963,6 @@ export type BindingMakeAbsoluteExternalsRelative =
   | { type: 'Bool', field0: boolean }
   | { type: 'IfRelativeSource' }
 
-export interface BindingManifestPluginConfig {
-  root: string
-  outPath: string
-  isEnableV2?: boolean
-  isLegacy?: () => boolean
-  cssEntries: () => Record<string, string>
-}
-
 export interface BindingMatchGroup {
   name: string | ((id: string, ctx: BindingChunkingContext) => VoidNullable<string>)
   test?: string | RegExp | ((id: string) => VoidNullable<boolean>)
@@ -1998,10 +1977,6 @@ export interface BindingMatchGroup {
 export interface BindingModulePreloadOptions {
   polyfill: boolean
   resolveDependencies?: (filename: string, deps: string[], context: { hostId: string, hostType: 'html' | 'js' }) => string[]
-}
-
-export interface BindingModulePreloadPolyfillPluginConfig {
-  isServer?: boolean
 }
 
 export interface BindingModules {
@@ -2181,14 +2156,6 @@ export declare enum BindingPropertyWriteSideEffects {
   False = 1
 }
 
-export interface BindingReactRefreshWrapperPluginConfig {
-  cwd: string
-  include?: Array<BindingStringOrRegex>
-  exclude?: Array<BindingStringOrRegex>
-  jsxImportSource: string
-  reactRefreshHost: string
-}
-
 export declare enum BindingRebuildStrategy {
   Always = 0,
   Auto = 1,
@@ -2213,16 +2180,6 @@ export interface BindingReplacePluginConfig {
   preventAssignment?: boolean
   objectGuards?: boolean
   sourcemap?: boolean
-}
-
-export interface BindingReporterPluginConfig {
-  isTty: boolean
-  isLib: boolean
-  assetsDir: string
-  chunkLimit: number
-  shouldLogInfo: boolean
-  warnLargeChunks: boolean
-  reportCompressedSize: boolean
 }
 
 export interface BindingResolveDependenciesContext {
@@ -2255,16 +2212,6 @@ export interface BindingTransformHookExtraArgs {
   moduleType: string
 }
 
-export interface BindingTransformPluginConfig {
-  include?: Array<BindingStringOrRegex>
-  exclude?: Array<BindingStringOrRegex>
-  jsxRefreshInclude?: Array<BindingStringOrRegex>
-  jsxRefreshExclude?: Array<BindingStringOrRegex>
-  isServerConsumer?: boolean
-  jsxInject?: string
-  transformOptions?: TransformOptions
-}
-
 export interface BindingTreeshake {
   moduleSideEffects: boolean | ReadonlyArray<string> | BindingModuleSideEffectsRule[] | ((id: string, external: boolean) => boolean | undefined)
   annotations?: boolean
@@ -2275,7 +2222,58 @@ export interface BindingTreeshake {
   propertyWriteSideEffects?: BindingPropertyWriteSideEffects
 }
 
+export interface BindingViteAliasPluginAlias {
+  find: BindingStringOrRegex
+  replacement: string
+}
+
+export interface BindingViteAliasPluginConfig {
+  entries: Array<BindingViteAliasPluginAlias>
+}
+
+export interface BindingViteAssetImportMetaUrlPluginConfig {
+  root: string
+  isLib: boolean
+  publicDir: string
+  clientEntry: string
+  tryFsResolve: (id: string) => string | undefined
+  assetResolver: (id: string, importer: string) => Promise<string | undefined>
+  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
+}
+
+export interface BindingViteAssetPluginConfig {
+  root: string
+  isLib: boolean
+  isSsr: boolean
+  isWorker: boolean
+  urlBase: string
+  publicDir: string
+  decodedBase: string
+  isSkipAssets: boolean
+  assetsInclude: Array<BindingStringOrRegex>
+  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
+  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
+}
+
+export interface BindingViteBuildImportAnalysisPluginConfig {
+  preloadCode: string
+  insertPreload: boolean
+  optimizeModulePreloadRelativePaths: boolean
+  renderBuiltUrl: boolean
+  isRelativeBase: boolean
+  v2?: BindingViteBuildImportAnalysisPluginV2Config
+}
+
+export interface BindingViteBuildImportAnalysisPluginV2Config {
+  isSsr: boolean
+  urlBase: string
+  decodedBase: string
+  modulePreload: false | BindingModulePreloadOptions
+  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
+}
+
 export interface BindingViteCssPluginConfig {
+  root: string
   isLib: boolean
   publicDir: string
   compileCSS: (url: string, importer: string, resolver: BindingUrlResolver) => Promise<{
@@ -2289,6 +2287,7 @@ export interface BindingViteCssPluginConfig {
   }
 
 export interface BindingViteCssPostPluginConfig {
+  root: string
   isLib: boolean
   isSsr: boolean
   isWorker: boolean
@@ -2299,12 +2298,29 @@ export interface BindingViteCssPostPluginConfig {
   urlBase: string
   decodedBase: string
   libCssFilename?: string
-  isLegacy?: () => boolean
-  cssMinify?: (css: string) => Promise<string>
+  isLegacy?: (args: BindingNormalizedOptions) => boolean
+  cssMinify?: (css: string, inline: boolean) => Promise<string>
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
+  cssScopeTo: () => Record<string, readonly [string, string | undefined]>
+}
+
+export interface BindingViteDynamicImportVarsPluginConfig {
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  resolver?: (id: string, importer: string) => MaybePromise<string | undefined>
+  isV2?: BindingViteDynamicImportVarsPluginV2Config
+}
+
+export interface BindingViteDynamicImportVarsPluginV2Config {
+  sourcemap: boolean
+}
+
+export interface BindingViteHtmlInlineProxyPluginConfig {
+  root: string
 }
 
 export interface BindingViteHtmlPluginConfig {
+  root: string
   isLib: boolean
   isSsr: boolean
   urlBase: string
@@ -2315,10 +2331,61 @@ export interface BindingViteHtmlPluginConfig {
   assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
   transformIndexHtml: (html: string, path: string, filename: string, hook: 'transform' | 'generateBundle', output?: BindingOutputs, chunk?: BindingOutputChunk) => Promise<string>
+  setModuleSideEffects: (id: string) => void
+}
+
+export interface BindingViteImportGlobPluginConfig {
+  root?: string
+  restoreQueryExtension?: boolean
+  isV2?: BindingViteImportGlobPluginV2Config
+}
+
+export interface BindingViteImportGlobPluginV2Config {
+  sourcemap?: boolean
+}
+
+export interface BindingViteJsonPluginConfig {
+  minify?: boolean
+  namedExports?: boolean
+  stringify?: BindingViteJsonPluginStringify
+}
+
+export type BindingViteJsonPluginStringify =
+  boolean | string
+
+export interface BindingViteManifestPluginConfig {
+  root: string
+  outPath: string
+  isEnableV2?: boolean
+  isLegacy?: (args: BindingNormalizedOptions) => boolean
+  cssEntries: () => Record<string, string>
+}
+
+export interface BindingViteModulePreloadPolyfillPluginConfig {
+  isServer?: boolean
 }
 
 export interface BindingVitePluginCustom {
   'vite:import-glob'?: ViteImportGlobMeta
+}
+
+export interface BindingViteReactRefreshWrapperPluginConfig {
+  cwd: string
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  jsxImportSource: string
+  reactRefreshHost: string
+}
+
+export interface BindingViteReporterPluginConfig {
+  root: string
+  isTty: boolean
+  isLib: boolean
+  assetsDir: string
+  chunkLimit: number
+  shouldLogInfo: boolean
+  warnLargeChunks: boolean
+  reportCompressedSize: boolean
 }
 
 export interface BindingViteResolvePluginConfig {
@@ -2329,12 +2396,14 @@ export interface BindingViteResolvePluginConfig {
   external: true | string[]
   noExternal: true | Array<string | RegExp>
   dedupe: Array<string>
+  disableCache?: boolean
   legacyInconsistentCjsInterop?: boolean
   finalizeBareSpecifier?: (resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>
   finalizeOtherSpecifiers?: (resolvedId: string, rawId: string) => VoidNullable<string>
   resolveSubpathImports: (id: string, importer: string, isRequire: boolean, scan: boolean) => VoidNullable<string>
   onWarn?: (message: string) => void
   onDebug?: (message: string) => void
+  yarnPnp: boolean
 }
 
 export interface BindingViteResolvePluginResolveOptions {
@@ -2355,8 +2424,28 @@ export interface BindingViteResolvePluginResolveOptions {
   tsconfigPaths: boolean
 }
 
-export interface BindingWasmHelperPluginConfig {
+export interface BindingViteTransformPluginConfig {
+  root: string
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+  jsxRefreshInclude?: Array<BindingStringOrRegex>
+  jsxRefreshExclude?: Array<BindingStringOrRegex>
+  isServerConsumer?: boolean
+  jsxInject?: string
+  transformOptions?: TransformOptions
+  yarnPnp?: boolean
+}
+
+export interface BindingViteWasmHelperPluginConfig {
   decodedBase: string
+  v2?: BindingViteWasmHelperPluginV2Config
+}
+
+export interface BindingViteWasmHelperPluginV2Config {
+  root: string
+  isLib: boolean
+  publicDir: string
+  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
 }
 
 export interface BindingWatchOption {
@@ -2426,6 +2515,23 @@ export interface JsOutputChunk {
 export interface NativeError {
   kind: string
   message: string
+  /** The id of the file associated with the error */
+  id?: string
+  /** The exporter associated with the error (for import/export errors) */
+  exporter?: string
+  /** Location information (line, column, file) */
+  loc?: NativeErrorLocation
+  /** Position in the source file in UTF-16 code units */
+  pos?: number
+}
+
+/** Location information for errors */
+export interface NativeErrorLocation {
+  /** 1-based */
+  line: number
+  /** 0-based position in the line in UTF-16 code units */
+  column: number
+  file?: string
 }
 
 export interface PreRenderedChunk {

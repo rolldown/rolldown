@@ -1,0 +1,15 @@
+{
+  "_comment": "Test for issue #7233: CJS bundles should not redeclare duplicate variable names when combining named exports and star exports from the same external module",
+  "expectExecuted": false,
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "index.ts"
+      }
+    ],
+    "external": ["zod"],
+    "format": "cjs",
+    "preserveModules": true
+  }
+}

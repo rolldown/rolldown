@@ -12,7 +12,7 @@ use crate::SharedOptions;
 use super::{emitter::SharedWatcherEmitter, event::BundleErrorEventData};
 use crate::watch::event::{BundleEndEventData, BundleEvent, WatcherEvent};
 use arcstr::ArcStr;
-use notify::{RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{RecommendedWatcher, WatchMode, Watcher};
 use rolldown_common::{OutputsDiagnostics, WatcherChangeKind};
 use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
@@ -25,7 +25,6 @@ pub struct WatcherTask {
   bundler: Arc<Mutex<Bundler>>,
   pub invalidate_flag: AtomicBool,
   notify_watcher: Arc<Mutex<RecommendedWatcher>>,
-  notify_watch_files: Arc<FxDashSet<ArcStr>>,
   pub watch_files: FxDashSet<ArcStr>,
 }
 
@@ -34,7 +33,6 @@ impl WatcherTask {
     bundler: Arc<Mutex<Bundler>>,
     emitter: SharedWatcherEmitter,
     notify_watcher: Arc<Mutex<RecommendedWatcher>>,
-    notify_watched_files: Arc<FxDashSet<ArcStr>>,
   ) -> Self {
     Self {
       emitter,
@@ -42,7 +40,6 @@ impl WatcherTask {
       invalidate_flag: AtomicBool::new(true),
       watch_files: FxDashSet::default(),
       notify_watcher,
-      notify_watch_files: notify_watched_files,
     }
   }
 
@@ -150,18 +147,10 @@ impl WatcherTask {
         .inner()
       {
         self.watch_files.insert(file.clone());
-        // we should skip the file that is already watched, here here some reasons:
-        // - The watching files has a ms level overhead.
-        // - Watching the same files multiple times will cost more overhead.
-        // TODO: tracking https://github.com/notify-rs/notify/issues/653
-        if self.notify_watch_files.contains(file.as_str()) {
-          continue;
-        }
         let path = Path::new(file.as_str());
         if path.exists() {
           tracing::debug!(name= "notify watch ", path = ?path);
-          watcher_paths.add(path, RecursiveMode::Recursive).map_err_to_unhandleable()?;
-          self.notify_watch_files.insert(file.clone());
+          watcher_paths.add(path, WatchMode::non_recursive()).map_err_to_unhandleable()?;
         }
       }
     }

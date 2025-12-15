@@ -1,7 +1,7 @@
 use rolldown_fs_watcher::FsEventResult;
 
 use crate::type_aliases::{
-  EnsureLatestBundleOutputSender, GetStateSender, ScheduleBuildIfStaleSender,
+  EnsureLatestBundleOutputSender, GetStateSender, GetWatchedFilesSender, ScheduleBuildIfStaleSender,
 };
 
 /// Messages sent to the BundleCoordinator
@@ -12,5 +12,6 @@ pub enum CoordinatorMsg {
   ScheduleBuildIfStale { reply: ScheduleBuildIfStaleSender },
   GetState { reply: GetStateSender },
   EnsureLatestBundleOutput { reply: EnsureLatestBundleOutputSender },
+  GetWatchedFiles { reply: GetWatchedFilesSender },
   Close,
 }

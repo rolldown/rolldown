@@ -17,7 +17,7 @@ use rolldown_plugin_utils::{
   AssetUrlItem, AssetUrlIter, AssetUrlResult, PublicAssetUrlCache, RenderAssetUrlInJsEnv,
   ToOutputFilePathEnv,
   constants::{
-    CSSBundleName, CSSChunkCache, CSSEntriesCache, CSSStyles, PureCSSChunks,
+    CSSBundleName, CSSChunkCache, CSSEntriesCache, CSSStyles, CSSUrlCache, PureCSSChunks,
     RemovedPureCSSFilesCache, ViteMetadata,
   },
   create_to_import_meta_url_based_relative_runtime,
@@ -25,7 +25,7 @@ use rolldown_plugin_utils::{
   get_chunk_original_name,
   uri::encode_uri_path,
 };
-use rolldown_utils::{futures::block_on_spawn_all, indexmap::FxIndexSet, url::clean_url};
+use rolldown_utils::{indexmap::FxIndexSet, url::clean_url};
 use rustc_hash::{FxHashMap, FxHashSet};
 use string_wizard::MagicString;
 use sugar_path::SugarPath;
@@ -65,12 +65,6 @@ pub fn extract_index(id: &str) -> Option<&str> {
   (end > 0).then_some(&s[..end])
 }
 
-#[derive(Debug, Default)]
-pub struct UrlEmitTasks {
-  pub range: (usize, usize),
-  pub replacement: String,
-}
-
 pub struct FinalizedContext<'a, 'b, 'c> {
   pub plugin_ctx: &'a PluginContext,
   pub env: &'a ToOutputFilePathEnv<'b>,
@@ -95,7 +89,11 @@ impl ViteCSSPostPlugin {
     let mut css_url_iter = ctx.args.code.match_indices("__VITE_CSS_URL__").peekable();
     if css_url_iter.peek().is_some() {
       let indices = css_url_iter.map(|(index, _)| index).collect::<Vec<_>>();
-      let tasks = indices.into_iter().map(|index| async move {
+      let magic_string =
+        magic_string.get_or_insert_with(|| string_wizard::MagicString::new(&ctx.args.code));
+
+      let url_cache = ctx.meta().get_or_insert_default::<CSSUrlCache>();
+      for index in indices {
         let start = index + "__VITE_CSS_URL__".len();
         let Some(pos) = ctx.args.code[start..].find("__") else {
           return Err(anyhow::anyhow!(
@@ -112,6 +110,11 @@ impl ViteCSSPostPlugin {
           )
         };
 
+        if let Some(url) = url_cache.inner.get(&id) {
+          magic_string.update(index, start + pos + 2, url.clone());
+          continue;
+        }
+
         let Some(style) = css_styles.inner.get(&id) else {
           return Err(anyhow::anyhow!("CSS content for  '{id}' was not found"));
         };
@@ -124,7 +127,7 @@ impl ViteCSSPostPlugin {
         let content = self
           .resolve_asset_urls_in_css(
             ctx,
-            style.to_owned(),
+            style.as_str(),
             &css_asset_name,
             &ctx.args.options.asset_filenames,
           )
@@ -142,9 +145,9 @@ impl ViteCSSPostPlugin {
 
         let filename = ctx.get_file_name(&reference_id)?;
         let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
-        let chunk_metadata = vite_metadata.get_or_insert_default(ctx.env.host_id.into());
+        let chunk_metadata = vite_metadata.get(ctx.env.host_id.into());
 
-        chunk_metadata.imported_assets.insert(clean_url(&reference_id).into());
+        chunk_metadata.imported_assets.insert(clean_url(&filename).into());
 
         let url = ctx
           .env
@@ -154,16 +157,11 @@ impl ViteCSSPostPlugin {
             false,
             create_to_import_meta_url_based_relative_runtime(ctx.options().format, self.is_worker),
           )
-          .await?;
+          .await?
+          .to_asset_url_in_js()?;
 
-        Ok(UrlEmitTasks { range: (index, index + pos + 2), replacement: url.to_asset_url_in_js()? })
-      });
-
-      let magic_string =
-        magic_string.get_or_insert_with(|| string_wizard::MagicString::new(&ctx.args.code));
-      for task in block_on_spawn_all(tasks).await {
-        let UrlEmitTasks { range: (start, end), replacement } = task?;
-        magic_string.update(start, end, replacement);
+        url_cache.inner.insert(id, url.clone());
+        magic_string.update(index, start + pos + 2, url);
       }
     }
     Ok(())
@@ -172,13 +170,13 @@ impl ViteCSSPostPlugin {
   pub async fn finalize_css_chunk<'a>(
     &self,
     ctx: &FinalizedContext<'a, '_, '_>,
-    css_chunk: String,
+    css_chunk: Option<String>,
     is_pure_css_chunk: bool,
     magic_string: &mut Option<MagicString<'a>>,
   ) -> anyhow::Result<()> {
-    if css_chunk.is_empty() {
+    let Some(css_chunk) = css_chunk else {
       return Ok(());
-    }
+    };
 
     if is_pure_css_chunk && ctx.args.options.format.is_esm_or_cjs() {
       ctx
@@ -208,13 +206,14 @@ impl ViteCSSPostPlugin {
           css_asset_path.to_string_lossy().into_owned()
         };
 
+        // TODO: Cache legacy check result per chunk
         let is_legacy = match &self.is_legacy {
-          Some(is_legacy_fn) => is_legacy_fn().await?,
+          Some(is_legacy_fn) => is_legacy_fn(ctx.args.options).await?,
           None => false,
         };
 
         let original_file_name = get_chunk_original_name(
-          ctx.cwd(),
+          &self.root,
           is_legacy,
           &ctx.args.chunk.name,
           ctx.args.chunk.facade_module_id.as_ref(),
@@ -223,7 +222,7 @@ impl ViteCSSPostPlugin {
         let content = self
           .resolve_asset_urls_in_css(
             ctx,
-            css_chunk,
+            &css_chunk,
             &css_asset_name,
             &ctx.args.options.asset_filenames,
           )
@@ -240,8 +239,7 @@ impl ViteCSSPostPlugin {
           .await?;
 
         let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
-        let chunk_metadata = vite_metadata.get_or_insert_default(ctx.env.host_id.into());
-
+        let chunk_metadata = vite_metadata.get(ctx.env.host_id.into());
         chunk_metadata.imported_css.insert(ctx.get_file_name(&reference_id)?);
 
         if ctx.args.chunk.is_entry && is_pure_css_chunk {
@@ -298,7 +296,7 @@ impl ViteCSSPostPlugin {
         self
           .resolve_asset_urls_in_css(
             ctx,
-            css_chunk,
+            &css_chunk,
             &self.get_css_bundle_name(ctx)?,
             &ctx.args.options.asset_filenames,
           )
@@ -312,18 +310,14 @@ impl ViteCSSPostPlugin {
   pub async fn resolve_asset_urls_in_css(
     &self,
     ctx: &FinalizedContext<'_, '_, '_>,
-    css_chunk: String,
+    css_chunk: &str,
     css_asset_name: &str,
     css_file_names: &AssetFilenamesOutputOption,
   ) -> anyhow::Result<String> {
-    let css_asset_dirname = if self.url_base.is_empty() || self.url_base == "./" {
-      Some(self.get_css_asset_dir_name(css_asset_name, css_file_names).await?)
-    } else {
-      None
-    };
+    let css_asset_dirname = self.get_css_asset_dir_name(css_asset_name, css_file_names).await?;
 
     let to_relative = |filename: &Path, _host_id: &Path| {
-      let relative_path = filename.relative(css_asset_dirname.as_ref().unwrap());
+      let relative_path = filename.relative(css_asset_dirname.as_str());
       let relative_path = relative_path.to_slash_lossy();
       if relative_path.starts_with('.') {
         AssetUrlResult::WithoutRuntime(relative_path.into_owned())
@@ -333,8 +327,8 @@ impl ViteCSSPostPlugin {
     };
 
     let mut magic_string = None;
-    for item in AssetUrlIter::from(css_chunk.as_str()).into_asset_url_iter() {
-      let s = magic_string.get_or_insert_with(|| string_wizard::MagicString::new(&css_chunk));
+    for item in AssetUrlIter::from(css_chunk).into_asset_url_iter() {
+      let s = magic_string.get_or_insert_with(|| string_wizard::MagicString::new(css_chunk));
       match item {
         AssetUrlItem::Asset((range, reference_id, postfix)) => {
           let filename = ctx.get_file_name(reference_id)?;
@@ -345,7 +339,7 @@ impl ViteCSSPostPlugin {
           };
 
           let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
-          let chunk_metadata = vite_metadata.get_or_insert_default(ctx.env.host_id.into());
+          let chunk_metadata = vite_metadata.get(ctx.env.host_id.into());
 
           chunk_metadata.imported_assets.insert(clean_url(&filename).into());
 
@@ -390,7 +384,7 @@ impl ViteCSSPostPlugin {
             render_built_url: self.render_built_url.as_deref(),
           };
 
-          let relative_path = ctx.cwd().relative(css_asset_dirname.as_ref().unwrap());
+          let relative_path = self.root.relative(css_asset_dirname.as_str());
           let relative_path = relative_path.to_slash_lossy();
 
           s.update(
@@ -412,7 +406,11 @@ impl ViteCSSPostPlugin {
       }
     }
 
-    Ok(if let Some(magic_string) = magic_string { magic_string.to_string() } else { css_chunk })
+    Ok(if let Some(magic_string) = magic_string {
+      magic_string.to_string()
+    } else {
+      css_chunk.to_owned()
+    })
   }
 
   pub async fn finalize_css(&self, mut content: String) -> anyhow::Result<String> {
@@ -422,7 +420,7 @@ impl ViteCSSPostPlugin {
     }
     // TODO: Maybe we should use internal lightningcss minify
     if let Some(css_minify) = &self.css_minify {
-      content = (css_minify)(content).await?;
+      content = (css_minify)(content, false).await?;
     }
     // inject an additional string to generate a different hash for https://github.com/vitejs/vite/issues/18038
     //
@@ -499,7 +497,8 @@ impl ViteCSSPostPlugin {
         if let Some(lib_css_filename) = &self.lib_css_filename {
           lib_css_filename.to_owned()
         } else {
-          let mut base_dir = ctx.cwd().to_owned();
+          // TODO: Maybe we should use try_get_package_json_or_create for cache
+          let mut base_dir = self.root.clone();
           loop {
             let pkg_path = base_dir.join("package.json");
             if pkg_path.is_file() {
@@ -507,11 +506,16 @@ impl ViteCSSPostPlugin {
               let json = json.trim_start_matches("\u{feff}");
               let raw_json = serde_json::from_str::<serde_json::Value>(json)?;
               if let Some(json_object) = raw_json.as_object() {
-                break json_object
+                let name = json_object
                   .get("name")
                   .and_then(|field| field.as_str())
-                  .map(ToString::to_string)
                   .ok_or_else(|| anyhow::anyhow!("Name in package.json is required if option 'build.lib.cssFileName' is not provided."))?;
+                let name = if name.starts_with('@') {
+                  name.split_once('/').map(|(_, second)| second).unwrap_or(name)
+                } else {
+                  name
+                };
+                break format!("{name}.css");
               }
             }
             base_dir = match base_dir.parent() {
@@ -585,11 +589,12 @@ impl ViteCSSPostPlugin {
       let mut dynamic_imports = FxIndexSet::default();
       // The bundle is guaranteed to be deterministic, if not then we have a bug in rollup.
       // So we use it to ensure a deterministic order of styles
-      let mut bundle_iter = bundle.iter();
-      while let Some(Output::Chunk(chunk)) = bundle_iter.next()
-        && chunk.is_entry
-      {
-        collect(ctx, chunk, &chunks, &mut collected, &mut dynamic_imports, &mut extracted_css);
+      for output in bundle.iter() {
+        if let Output::Chunk(chunk) = output
+          && chunk.is_entry
+        {
+          collect(ctx, chunk, &chunks, &mut collected, &mut dynamic_imports, &mut extracted_css);
+        }
       }
       // Now collect the dynamic chunks, this is done last to have the styles overwrite the previous ones
       while let imports = std::mem::take(&mut dynamic_imports)
@@ -628,10 +633,10 @@ impl ViteCSSPostPlugin {
       && !pure_css_chunks.inner.is_empty()
     {
       let mut pure_css_chunk_names = Vec::with_capacity(pure_css_chunks.inner.len());
-
-      let mut bundle_iter = args.bundle.iter();
-      while let Some(Output::Chunk(chunk)) = bundle_iter.next() {
-        if pure_css_chunks.inner.contains(chunk.preliminary_filename.as_str()) {
+      for output in args.bundle.iter() {
+        if let Output::Chunk(chunk) = output
+          && pure_css_chunks.inner.contains(chunk.preliminary_filename.as_str())
+        {
           pure_css_chunk_names.push(chunk.filename.clone());
         }
       }
@@ -648,15 +653,15 @@ impl ViteCSSPostPlugin {
 
         Regex::new(&if args.options.format.is_esm() {
           rolldown_utils::concat_string!(
-            r#"\\bimport\\s*["'][^"']*(?:"#,
+            r#"\bimport\s*["'][^"']*(?:"#,
             empty_chunk_files,
             r#")["'];"#
           )
         } else {
           rolldown_utils::concat_string!(
-            r#"(\\b|,\\s*)require\\(\\s*["'\`][^"'\`]*(?:"#,
+            r#"(\b|,\s*)require\(\s*["'\`][^"'\`]*(?:"#,
             empty_chunk_files,
-            r#")["'\`]\\)(;|,)"#
+            r#")["'\`]\)(;|,)"#
           )
         })
         .unwrap()
@@ -669,57 +674,56 @@ impl ViteCSSPostPlugin {
           Output::Asset(_) => None,
         })
         .collect::<FxHashMap<_, _>>();
-      let mut bundle_iter = args.bundle.iter_mut();
-      while let Some(Output::Chunk(chunk)) = bundle_iter.next() {
-        let mut chunk_imports_pure_css_chunk = false;
-        let mut new_chunk = (**chunk).clone();
-        // remove pure css chunk from other chunk's imports, and also
-        // register the emitted CSS files under the importer chunks instead.
-        let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
-        let chunk_metadata =
-          vite_metadata.get_or_insert_default(chunk.preliminary_filename.as_str().into());
-        new_chunk.imports = new_chunk
-          .imports
-          .into_iter()
-          .filter(|file| {
-            if pure_css_chunk_names.contains(file) {
-              let chunk = &chunks[file];
-              let file_metadata =
-                vite_metadata.get(&chunk.preliminary_filename.as_str().into()).unwrap();
-              file_metadata.imported_css.iter().for_each(|file| {
-                chunk_metadata.imported_css.insert(file.clone());
-              });
-              file_metadata.imported_assets.iter().for_each(|file| {
-                chunk_metadata.imported_assets.insert(file.clone());
-              });
-              chunk_imports_pure_css_chunk = true;
-              return false;
-            }
-            true
-          })
-          .collect::<Vec<_>>();
-        if chunk_imports_pure_css_chunk {
-          new_chunk.code = empty_chunk_re
-            .replace_all(&chunk.code, |captures: &regex::Captures<'_>| {
-              let len = captures.get(0).unwrap().len();
-              if args.options.format.is_esm() {
-                return format!("/* empty css {:<width$}*/", "", width = len.saturating_sub(15));
+      for output in args.bundle.iter_mut() {
+        if let Output::Chunk(chunk) = output {
+          let mut chunk_imports_pure_css_chunk = false;
+          let mut new_chunk = (**chunk).clone();
+          // remove pure css chunk from other chunk's imports, and also
+          // register the emitted CSS files under the importer chunks instead.
+          let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
+          let chunk_metadata = vite_metadata.get(chunk.preliminary_filename.as_str().into());
+          new_chunk.imports = new_chunk
+            .imports
+            .into_iter()
+            .filter(|file| {
+              if pure_css_chunk_names.contains(file) {
+                let chunk = &chunks[file];
+                let file_metadata = vite_metadata.get(chunk.preliminary_filename.as_str().into());
+                file_metadata.imported_css.iter().for_each(|file| {
+                  chunk_metadata.imported_css.insert(file.clone());
+                });
+                file_metadata.imported_assets.iter().for_each(|file| {
+                  chunk_metadata.imported_assets.insert(file.clone());
+                });
+                chunk_imports_pure_css_chunk = true;
+                return false;
               }
-              if let Some(p2) = captures.get(2)
-                && p2.as_str() == ";"
-              {
-                return format!(";/* empty css {:<width$}*/", "", width = len.saturating_sub(16));
-              }
-              let p1 = captures.get(1).map_or("", |m| m.as_str());
-              format!(
-                "{p1}/* empty css {:<width$}*/",
-                "",
-                width = len.saturating_sub(15 + p1.len())
-              )
+              true
             })
-            .into_owned();
+            .collect::<Vec<_>>();
+          if chunk_imports_pure_css_chunk {
+            new_chunk.code = empty_chunk_re
+              .replace_all(&chunk.code, |captures: &regex::Captures<'_>| {
+                let len = captures.get(0).unwrap().len();
+                if args.options.format.is_esm() {
+                  return format!("/* empty css {:<width$}*/", "", width = len.saturating_sub(15));
+                }
+                if let Some(p2) = captures.get(2)
+                  && p2.as_str() == ";"
+                {
+                  return format!(";/* empty css {:<width$}*/", "", width = len.saturating_sub(16));
+                }
+                let p1 = captures.get(1).map_or("", |m| m.as_str());
+                format!(
+                  "{p1}/* empty css {:<width$}*/",
+                  "",
+                  width = len.saturating_sub(15 + p1.len())
+                )
+              })
+              .into_owned();
+          }
+          *chunk = Arc::new(new_chunk);
         }
-        *chunk = Arc::new(new_chunk);
       }
 
       args.bundle.retain(|output| !match output {

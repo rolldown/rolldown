@@ -11,11 +11,11 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region modules/dep-cjs.js
-var require_dep_cjs = /* @__PURE__ */ __commonJS({ "modules/dep-cjs.js": ((exports, module) => {
+var require_dep_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const dep_cjs_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-cjs.js");
 	__rolldown_runtime__.registerModule("modules/dep-cjs.js", module);
 	exports.value = "cjs";
-}) });
+}));
 
 //#endregion
 //#region modules/dep-esm.js
@@ -27,11 +27,11 @@ const value$1 = "esm";
 
 //#endregion
 //#region modules/dep-cjs-default.js
-var require_dep_cjs_default = /* @__PURE__ */ __commonJS({ "modules/dep-cjs-default.js": ((exports, module) => {
+var require_dep_cjs_default = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const dep_cjs_default_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-cjs-default.js");
 	__rolldown_runtime__.registerModule("modules/dep-cjs-default.js", module);
 	module.exports = "cjs-default";
-}) });
+}));
 
 //#endregion
 //#region modules/dep-esm-default.js
@@ -43,11 +43,11 @@ var dep_esm_default_default = "esm-default";
 
 //#endregion
 //#region modules/dep-cjs-named.js
-var require_dep_cjs_named = /* @__PURE__ */ __commonJS({ "modules/dep-cjs-named.js": ((exports, module) => {
+var require_dep_cjs_named = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const dep_cjs_named_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-cjs-named.js");
 	__rolldown_runtime__.registerModule("modules/dep-cjs-named.js", module);
 	exports.named = "cjs-named";
-}) });
+}));
 
 //#endregion
 //#region modules/dep-esm-named.js
@@ -59,11 +59,11 @@ const named = "esm-named";
 
 //#endregion
 //#region modules/dep-cjs-namespace.js
-var require_dep_cjs_namespace = /* @__PURE__ */ __commonJS({ "modules/dep-cjs-namespace.js": ((exports, module) => {
+var require_dep_cjs_namespace = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const dep_cjs_namespace_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-cjs-namespace.js");
 	__rolldown_runtime__.registerModule("modules/dep-cjs-namespace.js", module);
 	module.exports = { value: "cjs-namespace" };
-}) });
+}));
 
 //#endregion
 //#region modules/dep-esm-namespace.js

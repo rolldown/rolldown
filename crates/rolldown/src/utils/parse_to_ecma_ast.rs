@@ -2,7 +2,9 @@ use std::{borrow::Cow, path::Path};
 
 use json_escape_simd::escape;
 use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
-use rolldown_common::{ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes};
+use rolldown_common::{
+  ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes, json_value_to_ecma_ast,
+};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookTransformAstArgs;
@@ -64,7 +66,23 @@ pub async fn parse_to_ecma_ast(
   };
 
   let mut ecma_ast = match module_type {
-    ModuleType::Json | ModuleType::Dataurl | ModuleType::Base64 | ModuleType::Text => {
+    ModuleType::Json => {
+      let json_value: serde_json::Value = serde_json::from_str(&source).map_err(|e| {
+        let line = e.line() - 1;
+        // Convert to 0-indexed column. serde_json returns 1-indexed columns (though possibly 0 in some edge cases).
+        // See: https://docs.rs/serde_json/1.0.132/serde_json/struct.Error.html#method.column
+        let column = e.column().saturating_sub(1);
+        BuildDiagnostic::json_parse(
+          resolved_id.id.as_str().into(),
+          source.as_ref().into(),
+          line,
+          column,
+          e.to_string().into(),
+        )
+      })?;
+      json_value_to_ecma_ast(&json_value)
+    }
+    ModuleType::Dataurl | ModuleType::Base64 | ModuleType::Text => {
       EcmaCompiler::parse_expr_as_program(stable_id, source, oxc_source_type)?
     }
     _ => EcmaCompiler::parse(stable_id, source, oxc_source_type)?,
@@ -84,6 +102,7 @@ pub async fn parse_to_ecma_ast(
   PreProcessEcmaAst::default().build(
     ecma_ast,
     stable_id,
+    resolved_id.id.as_str(),
     &parsed_type,
     replace_global_define_config.as_ref(),
     options,

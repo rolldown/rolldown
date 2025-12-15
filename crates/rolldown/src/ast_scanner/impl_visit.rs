@@ -1,3 +1,4 @@
+use oxc::allocator::{GetAddress, UnstableAddress};
 use oxc::{
   ast::{
     AstKind,
@@ -7,6 +8,7 @@ use oxc::{
   semantic::{ScopeFlags, SymbolId},
   span::{GetSpan, Span},
 };
+use rolldown_common::StmtInfoIdx;
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
   MemberExprObjectReferencedType, OutputFormat, RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoMeta,
@@ -44,7 +46,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     self.visit_path.push(kind);
   }
 
-  fn leave_node(&mut self, _: oxc::ast::AstKind<'ast>) {
+  fn leave_node(&mut self, _it: oxc::ast::AstKind<'ast>) {
     self.visit_path.pop();
   }
 
@@ -79,8 +81,14 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       &program.scope_id,
     );
     // Custom visit
+
+    #[expect(
+      clippy::cast_possible_truncation,
+      reason = "We don't have a plan to support more than u32 statements in a single module"
+    )]
     for (idx, stmt) in program.body.iter().enumerate() {
-      self.current_stmt_idx = Some(idx.into());
+      // `0` is reserved for Module Namespace Object stmt info
+      self.current_stmt_idx = StmtInfoIdx::from_raw_unchecked(idx as u32 + 1);
       self.current_stmt_info.side_effect = SideEffectDetector::new(
         &self.result.symbol_ref_db.ast_scopes,
         self.immutable_ctx.flat_options,
@@ -205,14 +213,19 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     // If a `ImportExpression` is ignored by `/* @vite-ignore */` comment, we should not treat it as a dynamic import
     let should_ignore = self.is_import_expr_ignored_by_comment(expr);
     if !should_ignore && let Some(request) = expr.source.as_static_module_request() {
-      let import_rec_idx =
-        self.add_import_record(request.as_str(), ImportKind::DynamicImport, expr.source.span(), {
+      let import_rec_idx = self.add_import_record(
+        request.as_str(),
+        ImportKind::DynamicImport,
+        expr.source.span(),
+        {
           let mut meta = ImportRecordMeta::empty();
           meta.set(ImportRecordMeta::IsTopLevel, self.is_root_scope());
           meta.set(ImportRecordMeta::IsUnspannedImport, expr.source.span().is_empty());
           meta.set(ImportRecordMeta::InTryCatchBlock, self.in_side_try_catch_block());
           meta
-        });
+        },
+        Some(expr.unstable_address()),
+      );
       self.init_dynamic_import_binding_usage_info(import_rec_idx);
       self.result.imports.insert(expr.span, import_rec_idx);
     }
@@ -406,13 +419,56 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       | Declaration::TSInterfaceDeclaration(_)
       | Declaration::TSEnumDeclaration(_)
       | Declaration::TSModuleDeclaration(_)
-      | Declaration::TSImportEqualsDeclaration(_) => unreachable!(),
+      | Declaration::TSImportEqualsDeclaration(_)
+      | Declaration::TSGlobalDeclaration(_) => unreachable!(),
     }
   }
 
   fn visit_call_expression(&mut self, it: &ast::CallExpression<'ast>) {
     self.try_extract_hmr_info_from_hot_accept_call(it);
     walk::walk_call_expression(self, it);
+  }
+
+  fn visit_class(&mut self, it: &ast::Class<'ast>) {
+    if self.is_root_scope() {
+      self.current_stmt_info.meta.insert(StmtInfoMeta::ClassExpr);
+    }
+    walk::walk_class(self, it);
+  }
+
+  fn visit_export_default_declaration(&mut self, it: &ast::ExportDefaultDeclaration<'ast>) {
+    // Mark export default declarations with anonymous function/class expressions
+    // so that __name helper will be included in the runtime
+    use ast::ExportDefaultDeclarationKind;
+    match &it.declaration {
+      ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
+        if func.id.is_none() {
+          self.current_stmt_info.meta.insert(StmtInfoMeta::FnDecl);
+        }
+      }
+      ExportDefaultDeclarationKind::ClassDeclaration(class) => {
+        if class.id.is_none() {
+          self.current_stmt_info.meta.insert(StmtInfoMeta::ClassDecl);
+        }
+      }
+      decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
+        let inner_expr = decl.to_expression().without_parentheses();
+        match inner_expr {
+          Expression::FunctionExpression(func) if func.id.is_none() => {
+            self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
+          }
+          Expression::ClassExpression(class) if class.id.is_none() => {
+            self.current_stmt_info.meta.insert(StmtInfoMeta::ClassExpr);
+          }
+          Expression::ArrowFunctionExpression(_) => {
+            self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
+          }
+          _ => {}
+        }
+      }
+      _ => {}
+    }
+    walk::walk_export_default_declaration(self, it);
   }
 }
 
@@ -431,13 +487,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         match ident_ref.name.as_str() {
           "module" => {
             self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
-            let v = self.commonjs_export_analyzer(CjsGlobalAssignmentType::ModuleExportsAssignment);
+            let v = self.commonjs_export_analyzer(
+              ident_ref,
+              CjsGlobalAssignmentType::ModuleExportsAssignment,
+            );
             self.update_ast_usage_for_commonjs_export(v.as_ref());
           }
           "exports" => {
             self.result.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
             // exports = {} will not change the module.exports object, so we just ignore it;
-            let v = self.commonjs_export_analyzer(CjsGlobalAssignmentType::ExportsAssignment);
+            let v =
+              self.commonjs_export_analyzer(ident_ref, CjsGlobalAssignmentType::ExportsAssignment);
             self.update_ast_usage_for_commonjs_export(v.as_ref());
             match v {
               // Do nothing since we need to tree shake `exports.<prop>` access
@@ -524,7 +584,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           self
             .result
             .stmt_infos
-            .reference_stmt_for_symbol_id(self.current_stmt_idx.unwrap() + 1, root_symbol_id);
+            .reference_stmt_for_symbol_id(self.current_stmt_idx, root_symbol_id);
         }
 
         self.check_import_assign(ident_ref, root_symbol_id.symbol);
@@ -554,8 +614,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     ident_ref: &IdentifierReference,
   ) -> Option<()> {
     let parent = self.visit_path.last()?;
-    if let AstKind::CallExpression(_) = parent {
-      if ident_ref.name == "eval" {
+    if let AstKind::CallExpression(call_expr) = parent {
+      if ident_ref.name == "eval" && call_expr.callee.address() == ident_ref.unstable_address() {
         // TODO: esbuild track has_eval for each scope, this could reduce bailout range, and may
         // improve treeshaking performance. https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast.go#L1288-L1291
         self.result.ecma_view_meta.insert(EcmaViewMeta::Eval);
@@ -622,7 +682,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
     let in_side_try_catch_block = self.in_side_try_catch_block();
     init_meta.set(ImportRecordMeta::InTryCatchBlock, in_side_try_catch_block);
-    let id = self.add_import_record(value.as_ref(), ImportKind::Require, span, init_meta);
+    let id = self.add_import_record(value.as_ref(), ImportKind::Require, span, init_meta, None);
     self.result.imports.insert(expr.span, id);
     true
   }

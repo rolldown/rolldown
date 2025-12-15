@@ -81,11 +81,14 @@ pub fn legitimize_identifier_name(name: &str) -> Cow<'_, str> {
   if first_invalid_char_index == 0 {
     legitimized.push('_');
   }
-  for char in rest_part.chars() {
+  for (i, char) in rest_part.chars().enumerate() {
     if identifier::is_identifier_part(char) {
       legitimized.push(char);
     } else {
-      legitimized.push('_');
+      // Avoid generating duplicate `_` for the first char
+      if i != 0 || first_invalid_char_index != 0 {
+        legitimized.push('_');
+      }
     }
   }
 
@@ -114,6 +117,7 @@ fn test_is_validate_identifier_name() {
 #[test]
 fn test_legitimize_identifier_name() {
   assert_eq!(legitimize_identifier_name("foo"), "foo");
+  assert_eq!(legitimize_identifier_name("@babel/types"), "_babel_types");
   assert_eq!(legitimize_identifier_name("$foo$"), "$foo$");
   assert_eq!(legitimize_identifier_name("react-dom"), "react_dom");
   assert_eq!(legitimize_identifier_name("111a"), "_111a");

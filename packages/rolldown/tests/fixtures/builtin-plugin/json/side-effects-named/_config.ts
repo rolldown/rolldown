@@ -1,11 +1,11 @@
 import { defineTest } from 'rolldown-tests';
-import { jsonPlugin } from 'rolldown/experimental';
+import { viteJsonPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
   config: {
     plugins: [
-      jsonPlugin({
+      viteJsonPlugin({
         minify: false,
         stringify: true,
         namedExports: true,

@@ -1,0 +1,225 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-continue-0' in entry.js
+    ╭─[ entry.js:41:23 ]
+    │
+ 41 │        case 0: _ = require('./FAIL-continue-0'); continue
+    │                            ─────────┬─────────  
+    │                                     ╰─────────── Module not found.
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-continue-2' in entry.js
+    ╭─[ entry.js:43:23 ]
+    │
+ 43 │        case 2: _ = require('./FAIL-continue-2'); continue
+    │                            ─────────┬─────────  
+    │                                     ╰─────────── Module not found.
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-default' in entry.js
+    ╭─[ entry.js:22:23 ]
+    │
+ 22 │     default: _ = require('./FAIL-default'); break
+    │                          ────────┬───────  
+    │                                  ╰───────── Module not found.
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-default' in entry.js
+    ╭─[ entry.js:26:23 ]
+    │
+ 26 │     default: _ = require('./FAIL-default'); break
+    │                          ────────┬───────  
+    │                                  ╰───────── Module not found.
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-default-1' in entry.js
+    ╭─[ entry.js:17:22 ]
+    │
+ 17 │     case 1: _ = require('./FAIL-default-1'); break
+    │                         ─────────┬────────  
+    │                                  ╰────────── Module not found.
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-default-1' in entry.js
+    ╭─[ entry.js:25:22 ]
+    │
+ 25 │     case 1: _ = require('./FAIL-default-1'); break
+    │                         ─────────┬────────  
+    │                                  ╰────────── Module not found.
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-fallthrough-a' in entry.js
+    ╭─[ entry.js:55:24 ]
+    │
+ 55 │     case 'a': _ = require('./FAIL-fallthrough-a')
+    │                           ───────────┬──────────  
+    │                                      ╰──────────── Module not found.
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-fallthrough-a' in entry.js
+    ╭─[ entry.js:61:24 ]
+    │
+ 61 │     case 'a': _ = require('./FAIL-fallthrough-a')
+    │                           ───────────┬──────────  
+    │                                      ╰──────────── Module not found.
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-fallthrough-d' in entry.js
+    ╭─[ entry.js:58:24 ]
+    │
+ 58 │     case 'd': _ = require('./FAIL-fallthrough-d')
+    │                           ───────────┬──────────  
+    │                                      ╰──────────── Module not found.
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-fallthrough-e' in entry.js
+    ╭─[ entry.js:65:24 ]
+    │
+ 65 │     case 'e': _ = require('./FAIL-fallthrough-e')
+    │                           ───────────┬──────────  
+    │                                      ╰──────────── Module not found.
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-known-0' in entry.js
+   ╭─[ entry.js:9:22 ]
+   │
+ 9 │     case 0: _ = require('./FAIL-known-0'); break
+   │                         ────────┬───────  
+   │                                 ╰───────── Module not found.
+───╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-known-1' in entry.js
+    ╭─[ entry.js:11:22 ]
+    │
+ 11 │     case 1: _ = require('./FAIL-known-1'); break
+    │                         ────────┬───────  
+    │                                 ╰───────── Module not found.
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-known-2' in entry.js
+    ╭─[ entry.js:12:22 ]
+    │
+ 12 │     case 2: _ = require('./FAIL-known-2'); break
+    │                         ────────┬───────  
+    │                                 ╰───────── Module not found.
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-return-0' in entry.js
+    ╭─[ entry.js:47:23 ]
+    │
+ 47 │        case 0: _ = require('./FAIL-return-0'); return
+    │                            ────────┬────────  
+    │                                    ╰────────── Module not found.
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-return-2' in entry.js
+    ╭─[ entry.js:49:23 ]
+    │
+ 49 │        case 2: _ = require('./FAIL-return-2'); return
+    │                            ────────┬────────  
+    │                                    ╰────────── Module not found.
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-x' in entry.js
+    ╭─[ entry.js:34:22 ]
+    │
+ 34 │     case x: _ = require('./FAIL-x'); break
+    │                         ─────┬────  
+    │                              ╰────── Module not found.
+────╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './FAIL-x-default' in entry.js
+    ╭─[ entry.js:35:23 ]
+    │
+ 35 │     default: _ = require('./FAIL-x-default'); break
+    │                          ─────────┬────────  
+    │                                   ╰────────── Module not found.
+────╯
+
+```

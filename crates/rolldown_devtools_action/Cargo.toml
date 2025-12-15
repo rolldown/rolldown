@@ -1,0 +1,19 @@
+[package]
+name = "rolldown_devtools_action"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+publish = true
+repository.workspace = true
+description = "DevTools action handlers for Rolldown"
+
+[lints]
+workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+ts-rs = { workspace = true }

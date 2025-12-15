@@ -4,11 +4,8 @@ permissions: {}
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        type: string
-        required: true
-        description: version without leading `v`
+  schedule:
+    - cron: '0 0 * * 3' # Every Wednesday at 8am Shanghai time (UTC+8 = 00:00 UTC)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
@@ -21,19 +18,26 @@ jobs:
     permissions:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request
-    env:
-      VERSION: ${{ inputs.version }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 0 # for changelog
           persist-credentials: true # for create-pull-request
 
-      - uses: taiki-e/install-action@44c6d64aa62cd779e873306675c7a58e86d6d532 # v2.62.49
+      - uses: taiki-e/install-action@61e5998d108b2b55a81b9b386c18bd46e4237e4f # v2.63.1
         with:
           tool: just
 
-      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
+      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+
+      - name: Get and bump version
+        run: |
+          VERSION=$(node -e "
+            const pkg = require('./packages/rolldown/package.json');
+            const [, base, beta] = pkg.version.match(/^(\d+\.\d+\.\d+)-beta\.(\d+)$/);
+            console.log(\`\${base}-beta.\${parseInt(beta) + 1}\`);
+          ")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - run: just bump-packages ${VERSION}
 
@@ -42,7 +46,7 @@ jobs:
 
       - name: Generate changelog via git cliff
         id: changelog
-        uses: orhun/git-cliff-action@d77b37db2e3f7398432d34b72a12aa3e2ba87e51 # v4.6.0
+        uses: orhun/git-cliff-action@e16f179f0be49ecdfe63753837f20b9531642772 # v4.7.0
         env:
           # Used to make request to GitHub without ratelimits.
           # `secrets.GIT_CLIFF_TOKEN` only has read permission.
@@ -52,7 +56,7 @@ jobs:
           config: cliff.toml
           args: --unreleased --prepend CHANGELOG.md --tag ${{ env.VERSION }}
 
-      - uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+      - uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
         if: ${{ steps.changelog.outputs.content }}
         with:
           add-paths: |

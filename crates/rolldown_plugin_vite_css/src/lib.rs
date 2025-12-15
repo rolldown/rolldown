@@ -1,4 +1,4 @@
-use std::{future::Future, pin::Pin, sync::Arc};
+use std::{future::Future, path::PathBuf, pin::Pin, sync::Arc};
 
 use rolldown_plugin::{HookLoadOutput, HookTransformOutput, HookUsage, LogWithoutPlugin, Plugin};
 use rolldown_plugin_utils::{
@@ -40,6 +40,7 @@ pub struct CompileCSSResult {
 
 #[derive(derive_more::Debug)]
 pub struct ViteCSSPlugin {
+  pub root: PathBuf,
   pub is_lib: bool,
   pub public_dir: String,
   #[debug(skip)]
@@ -81,10 +82,10 @@ impl Plugin for ViteCSSPlugin {
         ));
       }
 
-      let url = remove_special_query(args.id, b"url");
+      let url = inject_query(&remove_special_query(args.id, b"url"), "transform-only");
       let code = rolldown_utils::concat_string!(
         "import ",
-        serde_json::to_string(&inject_query(&url, "transform-only"))?,
+        serde_json::to_string(&url)?,
         "; export default '__VITE_CSS_URL__",
         base64_simd::STANDARD.encode_to_string(url.as_bytes()),
         "__'"
@@ -99,7 +100,10 @@ impl Plugin for ViteCSSPlugin {
     ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
-    if !is_css_request(args.id) || is_special_query(args.id) {
+    if !is_css_request(args.id)
+      || find_special_query(args.id, b"commonjs-proxy").is_some()
+      || is_special_query(args.id)
+    {
       return Ok(None);
     }
 
@@ -131,11 +135,13 @@ impl ViteCSSPlugin {
     &self,
     ctx: rolldown_plugin::SharedTransformPluginContext,
   ) -> Arc<UrlResolver> {
+    let root = self.root.clone();
     let is_lib = self.is_lib;
     let public_dir = self.public_dir.clone();
     let resolve_url = Arc::clone(&self.resolve_url);
     let asset_inline_limit = self.asset_inline_limit.clone();
     Arc::new(move |url: String, importer: Option<String>| {
+      let root = root.clone();
       let ctx = Arc::clone(&ctx);
       let public_dir = public_dir.clone();
       let asset_inline_limit = asset_inline_limit.clone();
@@ -166,7 +172,7 @@ impl ViteCSSPlugin {
 
           let env = FileToUrlEnv {
             ctx: &ctx,
-            root: ctx.cwd(),
+            root: &root,
             is_lib,
             public_dir: &public_dir,
             asset_inline_limit: &asset_inline_limit,

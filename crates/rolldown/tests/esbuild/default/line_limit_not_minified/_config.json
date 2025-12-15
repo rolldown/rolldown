@@ -1,0 +1,22 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "script",
+        "import": "script.jsx"
+      },
+      {
+        "name": "style",
+        "import": "style.css"
+      }
+    ],
+    "moduleTypes": {
+      ".jsx": "jsx",
+      ".css": "css",
+      ".file": "asset",
+      ".copy": "asset",
+      ".data": "dataurl"
+    }
+  },
+  "expectExecuted": false
+}

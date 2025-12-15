@@ -8,10 +8,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 
-Object.defineProperty(exports, '__esm', {
+Object.defineProperty(exports, '__esmMin', {
   enumerable: true,
   get: function () {
-    return __esm;
+    return __esmMin;
   }
 });
 Object.defineProperty(exports, '__export', {
@@ -46,7 +46,7 @@ var esm_exports = /* @__PURE__ */ require_chunk.__export({ share: () => share })
 function share() {
 	return 1;
 }
-var init_esm = require_chunk.__esm({ "esm.js": (() => {}) });
+var init_esm = require_chunk.__esmMin((() => {}));
 
 //#endregion
 //#region main2.js

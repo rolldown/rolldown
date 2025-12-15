@@ -15,12 +15,14 @@ extend-exclude = [
   "/packages/rollup-tests/src/ignored-tests.js",
   "/packages/vite-tests/repo",
   "/rollup",
+  "/test262",
   "crates/rolldown/tests/esbuild/**/*",
   "packages/rolldown/src/binding.cjs",
   "packages/rolldown/src/binding.js",
   "packages/rolldown/tests/fixtures/",
   "packages/rolldown/tests/stability/",
-  "scripts/snap-diff/**/*.{txt,md}",
+  "scripts/src/esbuild-tests/snap-diff/**/*.{txt,md}",
+  "**/NUL",
 ]
 
 [default.extend-words]
@@ -28,3 +30,4 @@ splitted = "splitted"
 styl = "styl"
 
 [default.extend-identifiers]
+IIFEs = "IIFEs"

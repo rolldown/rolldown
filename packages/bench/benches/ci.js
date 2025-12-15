@@ -27,13 +27,13 @@ for (const suite of expandSuitesWithDerived(suitesForCI)) {
 await bench.run();
 
 const dataForGitHubBenchmarkAction = bench.tasks.map((task) => {
-  if (!task.result) {
+  if (!task.result || !('latency' in task.result)) {
     throw new Error('Task result is empty for ' + task.name);
   }
 
   return {
     name: task.name,
-    value: task.result.mean.toFixed(2),
+    value: task.result.latency.mean.toFixed(2),
     unit: 'ms / ops',
   };
 });

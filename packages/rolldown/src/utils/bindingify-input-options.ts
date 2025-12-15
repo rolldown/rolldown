@@ -13,6 +13,8 @@ import type {
   BindingInputOptions,
 } from '../binding.cjs';
 import {
+  bindingifyCSSPostPlugin,
+  bindingifyManifestPlugin,
   bindingifyViteHtmlPlugin,
   BuiltinPlugin,
 } from '../builtin-plugin/utils';
@@ -55,10 +57,22 @@ export function bindingifyInputOptions(
       return undefined;
     }
     if (plugin instanceof BuiltinPlugin) {
-      if (plugin.name === 'builtin:vite-html') {
-        return bindingifyViteHtmlPlugin(plugin, onLog, logLevel, watchMode);
+      switch (plugin.name) {
+        case 'builtin:vite-css-post':
+          return bindingifyCSSPostPlugin(plugin, pluginContextData);
+        case 'builtin:vite-html':
+          return bindingifyViteHtmlPlugin(
+            plugin,
+            onLog,
+            logLevel,
+            watchMode,
+            pluginContextData,
+          );
+        case 'builtin:vite-manifest':
+          return bindingifyManifestPlugin(plugin, pluginContextData);
+        default:
+          return bindingifyBuiltInPlugin(plugin);
       }
-      return bindingifyBuiltInPlugin(plugin);
     }
     return bindingifyPlugin(
       plugin,

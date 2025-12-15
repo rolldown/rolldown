@@ -8,7 +8,7 @@ use rolldown_common::{
   ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk, SharedFileEmitter,
   SymbolRef,
 };
-use rolldown_debug::{action, trace_action, trace_action_enabled};
+use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult};
 use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
@@ -53,6 +53,8 @@ impl GenerateStage<'_> {
     render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await?;
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
+
+    Self::minify_chunks(self.options, &mut instantiated_chunks)?;
 
     let assets = finalize_assets(
       chunk_graph,
@@ -261,7 +263,10 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &ChunkGraph,
   ) -> Vec<Vec<Option<ModuleRenderOutput>>> {
-    let is_iife = matches!(self.options.format, rolldown_common::OutputFormat::Iife);
+    let needs_extra_indent = matches!(
+      self.options.format,
+      rolldown_common::OutputFormat::Iife | rolldown_common::OutputFormat::Umd
+    );
     chunk_graph
       .chunk_table
       .par_iter()
@@ -273,7 +278,7 @@ impl GenerateStage<'_> {
             Some(module) => {
               let ast = self.link_output.ast_table[module.idx].as_ref().expect("should have ast");
               #[expect(clippy::bool_to_int_with_if)]
-              let initial_indent = if is_iife
+              let initial_indent = if needs_extra_indent
                 || !matches!(
                   self.link_output.metas[module_idx].concatenated_wrapped_module_kind,
                   ConcatenateWrappedModuleKind::None

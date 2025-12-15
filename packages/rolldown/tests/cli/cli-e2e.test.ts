@@ -125,6 +125,20 @@ describe('cli options for bundling', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot();
   });
 
+  it('should handle multiple define arguments with comma-separated syntax', async () => {
+    const cwd = cliFixturesDir('cli-option-multiple-define');
+    const status = await $({
+      cwd,
+    })`rolldown index.js --transform.define __A__=A,__B__=B,__C__=C -d dist`;
+    expect(status.exitCode).toBe(0);
+    expect(cleanStdout(status.stdout)).toMatchSnapshot();
+    const file = path.resolve(cwd, 'dist/index.js');
+    const content = fs.readFileSync(file, 'utf-8');
+    expect(content).toContain('console.log("A:", A)');
+    expect(content).toContain('console.log("B:", B)');
+    expect(content).toContain('console.log("C:", C)');
+  });
+
   it('cli default options', async () => {
     const cwd = cliFixturesDir('cli-default-option');
     const status = await $({ cwd })`rolldown -c`;

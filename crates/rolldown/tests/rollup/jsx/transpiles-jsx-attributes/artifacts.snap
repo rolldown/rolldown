@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region dep1.js
+const Foo$2 = () => {};
+const value$2 = "value 1";
+console.log(Foo$2, value$2);
+
+//#endregion
+//#region dep2.js
+const Foo = () => {};
+const value = "value 2";
+console.log(Foo, value);
+
+//#endregion
+//#region dep3.js
+const Foo$1 = () => {};
+const value$1 = "value 3";
+console.log(Foo$1, value$1);
+
+//#endregion
+//#region main.js
+const result = /* @__PURE__ */ React.createElement(Foo, {
+	bar: true,
+	"baz:foo": "string",
+	"quux-nix": value,
+	element: /* @__PURE__ */ React.createElement(Foo, null),
+	fragment: /* @__PURE__ */ React.createElement(React.Fragment, null)
+});
+
+//#endregion
+export { result };
+```

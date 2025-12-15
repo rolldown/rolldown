@@ -46,7 +46,12 @@ fs.rmSync(REPO_PATH, { recursive: true, force: true });
 
 await runCmdAndPipeOrExit(
   '# Cloning rolldown-vite repo...',
-  ['git', ['clone', 'https://github.com/vitejs/rolldown-vite.git', REPO_PATH]],
+  ['git', ['clone', '--branch', 'integration', 'https://github.com/vitejs/rolldown-vite.git', REPO_PATH]],
+);
+
+await runCmdAndPipeOrExit(
+  '# Rebasing integration onto rolldown-vite...',
+  ['git', ['rebase', 'origin/rolldown-vite'], { nodeOptions: { cwd: REPO_PATH } }],
 );
 
 printTitle('# Updating pnpm-workspace.yaml to link to local rolldown...');
@@ -61,6 +66,10 @@ fs.writeFileSync(pnpmWorkspace, newPnpmWorkspaceYaml, 'utf-8');
 await runCmdAndPipeOrExit(
   '# Running `pnpm install`...',
   ['pnpm', ['install', '--no-frozen-lockfile'], { nodeOptions: { cwd: REPO_PATH } }],
+);
+await runCmdAndPipeOrExit(
+  '# Running `pnpm exec playwright install chromium`...',
+  ['pnpm', ['exec', 'playwright', 'install', 'chromium'], { nodeOptions: { cwd: REPO_PATH } }],
 );
 await runCmdAndPipeOrExit(
   '# Running `pnpm run build`...',

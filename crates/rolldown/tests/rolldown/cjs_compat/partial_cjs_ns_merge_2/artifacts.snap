@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region react.js
-var require_react = /* @__PURE__ */ __commonJS({ "react.js": ((exports, module) => {
+var require_react = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1e4;
-}) });
+}));
 
 //#endregion
 //#region lib.js
@@ -20,16 +20,16 @@ function toArray$1(children) {
 	return ret;
 }
 var import_react$1;
-var init_lib = __esm({ "lib.js": (() => {
+var init_lib = __esmMin((() => {
 	import_react$1 = /* @__PURE__ */ __toESM(require_react());
-}) });
+}));
 
 //#endregion
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	const a = (init_lib(), __toCommonJS(lib_exports));
 	module.exports = a;
-}) });
+}));
 
 //#endregion
 //#region main.js

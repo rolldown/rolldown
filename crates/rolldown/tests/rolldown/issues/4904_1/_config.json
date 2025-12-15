@@ -1,0 +1,20 @@
+{
+  "config": {
+    "input": [
+      {
+        "import": "./lib.js",
+        "name": "lib"
+      },
+      {
+        "import": "./main.js",
+        "name": "main"
+      }
+    ],
+    "preserveEntrySignatures": "allow-extension"
+  },
+  "configVariants": [
+    {
+      "preserveEntrySignatures": "strict"
+    }
+  ]
+}

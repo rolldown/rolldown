@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region node_modules/this-is-only-used-for-testing/index.js
+var require_this_is_only_used_for_testing = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	function CJS() {}
+	CJS.foo = function() {
+		return "foo";
+	};
+	module.exports = CJS;
+	module.exports.default = CJS;
+	module.exports.foo = CJS.foo;
+}));
+
+//#endregion
+//#region helper.js
+var import_this_is_only_used_for_testing = /* @__PURE__ */ __toESM(require_this_is_only_used_for_testing());
+function useFoo() {
+	return (0, import_this_is_only_used_for_testing.foo)();
+}
+
+//#endregion
+var CJS = import_this_is_only_used_for_testing.default;
+export { CJS, useFoo };
+```

@@ -5,7 +5,11 @@ use super::sink::{Attribute, RcDom, RcDomEmitter};
 
 pub fn parse_html(html: &str) -> RcDom {
   let mut dom_builder = RcDomEmitter::new();
-  let tokenizer = Tokenizer::new_with_emitter(html, DefaultEmitter::<usize>::new_with_span());
+  let mut emitter = DefaultEmitter::<usize>::new_with_span();
+
+  emitter.naively_switch_states(true);
+
+  let tokenizer = Tokenizer::new_with_emitter(html, emitter);
 
   for token in tokenizer {
     match token {
@@ -27,7 +31,7 @@ pub fn parse_html(html: &str) -> RcDom {
       }
       Ok(Token::EndTag(tag)) => {
         let name = unsafe { String::from_utf8_unchecked(tag.name.0) };
-        dom_builder.close_element(&name);
+        dom_builder.close_element(&name, tag.span);
       }
       Ok(Token::String(s)) => {
         let contents = unsafe { String::from_utf8_unchecked(s.0.clone()) };

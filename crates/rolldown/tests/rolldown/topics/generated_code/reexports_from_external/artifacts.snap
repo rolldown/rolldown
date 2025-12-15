@@ -11,8 +11,8 @@ let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 
 //#region reexports.mjs
-var reexports_exports = {};
-__reExport(reexports_exports, require("foo"), void 0, 1);
+var reexports_exports = /* @__PURE__ */ __export({}, 1);
+__reExport(reexports_exports, require("foo"));
 
 //#endregion
 //#region main.mjs
@@ -32,9 +32,9 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region reexports.mjs
-var reexports_exports = {};
+var reexports_exports = /* @__PURE__ */ __export({}, 1);
 import * as import_foo from "foo";
-__reExport(reexports_exports, import_foo, void 0, 1);
+__reExport(reexports_exports, import_foo);
 
 //#endregion
 //#region main.mjs

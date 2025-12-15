@@ -11,9 +11,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 
 //#region foo.txt
-var require_foo = /* @__PURE__ */ __commonJS({ "foo.txt": ((exports, module) => {
+var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "assets/foo-C-m4uiP6.txt";
-}) });
+}));
 
 //#endregion
 //#region main.cjs

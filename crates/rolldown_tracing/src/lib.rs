@@ -56,7 +56,7 @@ pub fn try_init_tracing() -> Option<Box<dyn Any + Send>> {
     }
     "json" => {
       // We gonna use this feature to implement something like https://github.com/antfu-collective/vite-plugin-inspect
-      // See `crates/rolldown_debug`
+      // See `crates/rolldown_devtools`
       unimplemented!()
     }
     "readable" => {

@@ -24,7 +24,7 @@ use super::super::{SharedOptions, SharedResolver};
 pub struct BundleFactoryOptions {
   pub bundler_options: BundlerOptions,
   pub plugins: Vec<SharedPluginable>,
-  pub session: Option<rolldown_debug::Session>,
+  pub session: Option<rolldown_devtools::Session>,
   pub disable_tracing_setup: bool,
 }
 
@@ -37,7 +37,7 @@ pub struct BundleFactory {
   /// Warnings collected during bundle factory creation.
   /// These warnings are transferred to the first created `Bundle` via `create_bundle()` or `create_incremental_bundle()`.
   pub warnings: Vec<BuildDiagnostic>,
-  pub session: rolldown_debug::Session,
+  pub session: rolldown_devtools::Session,
   pub(crate) _log_guard: Option<Box<dyn Any + Send>>,
   pub last_bundle_handle: Option<BundleHandle>,
 
@@ -50,7 +50,7 @@ pub struct BundleFactory {
 
 impl BundleFactory {
   pub fn new(mut opts: BundleFactoryOptions) -> BuildResult<Self> {
-    let session = opts.session.unwrap_or_else(rolldown_debug::Session::dummy);
+    let session = opts.session.unwrap_or_else(rolldown_devtools::Session::dummy);
 
     let maybe_guard =
       if opts.disable_tracing_setup { None } else { rolldown_tracing::try_init_tracing() };
@@ -82,7 +82,7 @@ impl BundleFactory {
   }
 
   fn generate_unique_bundle_span(&mut self) -> Arc<tracing::Span> {
-    let bundle_id = rolldown_debug::generate_build_id(self.bundle_id_seed);
+    let bundle_id = rolldown_devtools::generate_build_id(self.bundle_id_seed);
     self.bundle_id_seed += 1;
     Arc::new(tracing::info_span!(
       parent: &self.session.span,

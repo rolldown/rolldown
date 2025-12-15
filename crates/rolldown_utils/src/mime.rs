@@ -40,6 +40,15 @@ impl TryFrom<RawMimeExt> for MimeExt {
 
 // second param is whether the data is utf8 encoded
 pub fn guess_mime(path: &Path, data: &[u8]) -> anyhow::Result<MimeExt> {
+  guess_mime_impl(path, data, true)
+}
+
+/// Same as `guess_mime` but skips the UTF-8 validation fallback check
+pub fn guess_mime_skip_utf8_check(path: &Path, data: &[u8]) -> anyhow::Result<Mime> {
+  guess_mime_impl(path, data, false).map(|v| v.mime)
+}
+
+fn guess_mime_impl(path: &Path, data: &[u8], check_utf8_fallback: bool) -> anyhow::Result<MimeExt> {
   if let Ok(guessed) = light_guess::try_from_path(path) {
     return Ok(guessed);
   }
@@ -48,7 +57,7 @@ pub fn guess_mime(path: &Path, data: &[u8]) -> anyhow::Result<MimeExt> {
     return Ok((Mime::from_str(inferred.mime_type())?, false).into());
   }
 
-  if is_valid_utf8(data) || data.is_empty() {
+  if check_utf8_fallback && (is_valid_utf8(data) || data.is_empty()) {
     return Ok((mime::TEXT_PLAIN, true).into());
   }
 

@@ -3,8 +3,9 @@ use std::{
   sync::{Arc, atomic::AtomicU32},
 };
 
-use rolldown_common::{ClientHmrInput, ScanMode, WatcherChangeKind};
+use rolldown_common::{ClientHmrInput, ScanMode};
 use rolldown_error::BuildResult;
+use rolldown_utils::indexmap::FxIndexMap;
 use tokio::sync::Mutex;
 
 use rolldown::Bundler;
@@ -82,14 +83,11 @@ impl BundlingTask {
   async fn run_inner(&mut self) -> BuildResult<()> {
     {
       let bundler = self.bundler.lock().await;
-      for changed_file in self.input.changed_files() {
+      for (changed_file, event) in self.input.changed_files() {
         if let Some(plugin_driver) =
           bundler.last_bundle_handle.as_ref().map(rolldown::BundleHandle::plugin_driver)
         {
-          plugin_driver
-            // FIXME: use proper WatcherChangeKind for created/removed files.
-            .watch_change(changed_file.to_str().unwrap(), WatcherChangeKind::Update)
-            .await?;
+          plugin_driver.watch_change(changed_file.to_str().unwrap(), *event).await?;
         }
       }
     }
@@ -98,6 +96,9 @@ impl BundlingTask {
     if self.input.require_generate_hmr_update() {
       tracing::trace!("[BundlingTask] starts to generate HMR updates");
       self.generate_hmr_updates(&mut has_full_reload_update).await?;
+      tracing::trace!(
+        "[BundlingTask] completed generating HMR updates\n - has_full_reload_update: {has_full_reload_update}"
+      );
     }
 
     // If the rebuild strategy is auto and there's a full reload update, we need to rebuild.
@@ -129,8 +130,8 @@ impl BundlingTask {
       .input
       .changed_files()
       .iter()
-      .map(|p| p.to_string_lossy().to_string())
-      .collect::<Vec<_>>();
+      .map(|(p, event)| (p.to_string_lossy().to_string(), *event))
+      .collect::<FxIndexMap<_, _>>();
 
     // Build ClientHmrInput for each client
     // Store client sessions to keep data alive during HMR computation
@@ -171,7 +172,10 @@ impl BundlingTask {
     if let Some(on_hmr_updates) = self.dev_context.options.on_hmr_updates.as_ref() {
       match hmr_result {
         Ok(client_updates) => {
-          on_hmr_updates(Ok((client_updates, changed_files)));
+          on_hmr_updates(Ok((
+            client_updates,
+            changed_files.iter().map(|(p, _)| p.clone()).collect(),
+          )));
         }
         Err(e) => {
           on_hmr_updates(Err(e));
@@ -193,7 +197,7 @@ impl BundlingTask {
       ScanMode::Full
     } else {
       ScanMode::Partial(
-        self.input.changed_files().iter().map(|p| p.to_string_lossy().into()).collect(),
+        self.input.changed_files().iter().map(|(p, _)| p.to_string_lossy().into()).collect(),
       )
     };
 

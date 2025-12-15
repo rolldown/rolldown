@@ -1,5 +1,5 @@
 import { defineTest } from 'rolldown-tests';
-import { transformPlugin } from 'rolldown/experimental';
+import { viteTransformPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 let transformed: string[] = [];
@@ -7,7 +7,8 @@ export default defineTest({
   config: {
     input: './main.ts',
     plugins: [
-      transformPlugin({
+      viteTransformPlugin({
+        root: __dirname,
         exclude: ['**/node_modules/**'],
       }),
       {

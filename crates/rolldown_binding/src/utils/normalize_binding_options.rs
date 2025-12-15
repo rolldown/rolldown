@@ -17,7 +17,7 @@ use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
   ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal, MatchGroup,
   MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat, Platform,
-  RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename,
+  RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -52,7 +52,7 @@ fn normalize_generated_code_option(
     }
     None => GeneratedCodeOptions::default(),
   };
-  Ok(GeneratedCodeOptions { symbols: value.symbols.unwrap_or(false), ..v })
+  Ok(GeneratedCodeOptions { symbols: value.symbols.unwrap_or(v.symbols), ..v })
 }
 
 fn normalize_addon_option(
@@ -468,7 +468,13 @@ pub fn normalize_binding_options(
     minify_internal_exports: output_options.minify_internal_exports,
     clean_dir: output_options.clean_dir,
     context: input_options.context,
-    tsconfig: input_options.tsconfig,
+    tsconfig: input_options.tsconfig.and_then(|v| {
+      Some(match v {
+        Either::A(false) => return None,
+        Either::A(true) => TsConfig::Auto,
+        Either::B(s) => TsConfig::Manual(s.into()),
+      })
+    }),
   };
 
   #[cfg(not(target_family = "wasm"))]

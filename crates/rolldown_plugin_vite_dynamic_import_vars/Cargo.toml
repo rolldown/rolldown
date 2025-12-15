@@ -1,0 +1,30 @@
+[package]
+name = "rolldown_plugin_vite_dynamic_import_vars"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+publish = false
+repository.workspace = true
+description = "Rolldown plugin for dynamic import with template literals"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+arcstr = { workspace = true }
+cow-utils = { workspace = true }
+derive_more = { workspace = true }
+memchr = { workspace = true }
+oxc = { workspace = true }
+rolldown_common = { workspace = true }
+rolldown_plugin = { workspace = true }
+rolldown_utils = { workspace = true }
+string_wizard = { workspace = true }
+sugar_path = { workspace = true }

@@ -1,26 +1,20 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'react/jsx-runtime' in entry.jsx
-
-```
-
 # Assets
 
 ## entry.js
 
 ```js
-import "react/jsx-runtime";
-
 //#region entry.jsx
 before, key, value, value, after;
-Foo, key, value, value;
-Bar, a, b, c, { ...d }, e;
+<Foo before {...{ [key]: value }} {...{ key: value }} after />;
+<Bar {...{
+	a,
+	[b]: c,
+	...d,
+	e
+}} />;
 
 //#endregion
 ```

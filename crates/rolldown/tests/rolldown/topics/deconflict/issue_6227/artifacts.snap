@@ -8,38 +8,38 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region init.js
-var init_init = __esm({ "init.js": (() => {
+var init_init = __esmMin((() => {
 	globalThis.array = [];
-}) });
+}));
 
 //#endregion
 //#region foo.js
-var init_foo = __esm({ "foo.js": (() => {
+var init_foo = __esmMin((() => {
 	{
 		const foo = "foo" + globalThis.foo;
 		setTimeout(() => {
 			globalThis.array.push(foo);
 		}, 100);
 	}
-}) });
+}));
 
 //#endregion
 //#region bar.js
-var init_bar = __esm({ "bar.js": (() => {
+var init_bar = __esmMin((() => {
 	{
 		const foo = "bar" + globalThis.bar;
 		globalThis.array.push(foo);
 	}
-}) });
+}));
 
 //#endregion
 //#region main.js
-var init_main = __esm({ "main.js": (() => {
+var init_main = __esmMin((() => {
 	init_init();
 	init_foo();
 	init_bar();
 	console.log(globalThis.array);
-}) });
+}));
 
 //#endregion
 init_main();

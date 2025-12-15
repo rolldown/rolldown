@@ -25,7 +25,7 @@ type ViteCssPluginConfig =
   };
 
 export function viteCSSPlugin(
-  config?: ViteCssPluginConfig,
+  config: ViteCssPluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin(
     'builtin:vite-css',

@@ -8,6 +8,7 @@ use rolldown_plugin::{PluginContext, SharedNativePluginContext};
 
 use super::types::{
   binding_emitted_asset::BindingEmittedAsset, binding_emitted_chunk::BindingEmittedChunk,
+  binding_emitted_prebuilt_chunk::BindingEmittedPrebuiltChunk,
   binding_hook_side_effects::BindingHookSideEffects,
   binding_plugin_context_resolve_options::BindingPluginContextResolveOptions,
   binding_resolved_external::BindingResolvedExternal,
@@ -80,7 +81,11 @@ impl BindingPluginContext {
     asset_filename: Option<String>,
     fn_sanitized_file_name: Option<String>,
   ) -> napi::Result<napi::JsString<'env>> {
-    env.create_string(self.inner.emit_file(file.into(), asset_filename, fn_sanitized_file_name))
+    let reference_id = self
+      .inner
+      .emit_file(file.into(), asset_filename, fn_sanitized_file_name)
+      .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+    env.create_string(&reference_id)
   }
 
   #[napi]
@@ -90,6 +95,16 @@ impl BindingPluginContext {
     file: BindingEmittedChunk,
   ) -> napi::Result<napi::JsString<'env>> {
     let arc_str = napi::bindgen_prelude::block_on(self.inner.emit_chunk(file.try_into()?))?;
+    env.create_string(arc_str)
+  }
+
+  #[napi]
+  pub fn emit_prebuilt_chunk<'env>(
+    &self,
+    env: &'env Env,
+    file: BindingEmittedPrebuiltChunk,
+  ) -> napi::Result<napi::JsString<'env>> {
+    let arc_str = self.inner.emit_prebuilt_chunk(file.try_into()?);
     env.create_string(arc_str)
   }
 

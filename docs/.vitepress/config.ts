@@ -13,7 +13,6 @@ const CONFIG_LINK = '/options/input.md';
 const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
   {
     text: 'Guide',
-    link: '/guide/getting-started.md',
     items: [
       { text: 'Introduction', link: '/guide/introduction.md' },
       { text: 'Getting Started', link: '/guide/getting-started.md' },
@@ -35,27 +34,45 @@ const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
     ],
   },
   {
-    text: 'In Depth',
+    text: 'Builtin Plugins',
     items: [
-      { text: 'Why Bundlers', link: '/in-depth/why-bundlers.md' },
-      { text: 'Module Types', link: '/in-depth/module-types.md' },
-      { text: 'Top Level Await', link: '/in-depth/tla-in-rolldown.md' },
-      { text: 'Advanced Chunks', link: '/in-depth/advanced-chunks.md' },
-      { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
       {
-        text: 'Non ESM Output Formats',
-        link: '/in-depth/non-esm-output-formats.md',
+        text: 'Introduction',
+        link: '/builtin-plugins/',
       },
-      { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
       {
-        text: 'Why Plugin Hook Filter',
-        link: '/in-depth/why-plugin-hook-filter.md',
+        text: 'builtin:esm-external-require',
+        link: '/builtin-plugins/esm-external-require.md',
       },
-      // { text: 'Code Splitting', link: '/in-depth/code-splitting.md' },
-      { text: 'Directives', link: '/in-depth/directives.md' },
+      {
+        text: 'builtin:replace',
+        link: '/builtin-plugins/replace.md',
+      },
     ],
   },
 ];
+
+const sidebarForInDepth: UserConfig['themeConfig']['sidebar'] = [{
+  text: 'In-Depth',
+  items: [
+    { text: 'Why Bundlers', link: '/in-depth/why-bundlers.md' },
+    { text: 'Module Types', link: '/in-depth/module-types.md' },
+    { text: 'Top Level Await', link: '/in-depth/tla-in-rolldown.md' },
+    { text: 'Advanced Chunks', link: '/in-depth/advanced-chunks.md' },
+    { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
+    {
+      text: 'Non ESM Output Formats',
+      link: '/in-depth/non-esm-output-formats.md',
+    },
+    { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
+    {
+      text: 'Why Plugin Hook Filter',
+      link: '/in-depth/why-plugin-hook-filter.md',
+    },
+    // { text: 'Code Splitting', link: '/in-depth/code-splitting.md' },
+    { text: 'Directives', link: '/in-depth/directives.md' },
+  ],
+}];
 
 const sidebarForOptions: UserConfig['themeConfig']['sidebar'] = [
   {
@@ -79,6 +96,7 @@ const sidebarForOptions: UserConfig['themeConfig']['sidebar'] = [
       { text: 'optimization', link: '/options/optimization.md' },
       { text: 'context', link: '/options/context.md' },
       { text: 'tsconfig', link: '/options/tsconfig.md' },
+      { text: 'checks', link: '/options/checks.md' },
       { text: 'experimental', link: '/options/experimental.md' },
       { text: 'output', link: '/options/output.md' },
       {
@@ -149,30 +167,9 @@ const sidebarForDevGuide: UserConfig['themeConfig']['sidebar'] = [
   },
 ];
 
-const sidebarForPluginGuide: UserConfig['themeConfig']['sidebar'] = [
-  {
-    text: 'Builtin Plugins',
-    items: [
-      {
-        text: 'Introduction',
-        link: '/builtin-plugins/',
-      },
-      {
-        text: 'builtin:esm-external-require',
-        link: '/builtin-plugins/esm-external-require.md',
-      },
-      {
-        text: 'builtin:replace',
-        link: '/builtin-plugins/replace.md',
-      },
-    ],
-  },
-];
-
 const sidebarForGlossary: UserConfig['themeConfig']['sidebar'] = [
   {
     text: 'Glossary',
-    link: '/glossary/',
     items: [
       { text: 'Entry', link: '/glossary/entry.md' },
       { text: 'Entry Chunk', link: '/glossary/entry-chunk.md' },
@@ -248,55 +245,63 @@ export default defineConfig({
 
     // https://vitepress.dev/reference/default-theme-config
     nav: [
-      { text: 'Guide', link: '/guide/getting-started.md' },
-      { text: 'Config', link: CONFIG_LINK },
-      { text: 'Plugins', link: '/builtin-plugins/' },
-      { text: 'Contribute', link: '/contribution-guide/' },
       {
-        text: 'Resources',
+        text: 'Docs',
+        activeMatch: '/(guide|in-depth|glossary|apis|builtin-plugins)',
         items: [
           {
-            text: 'Team',
-            link: '/team.md',
+            text: 'Guide',
+            activeMatch: '/(guide|apis|builtin-plugins)',
+            link: '/guide/getting-started.md',
+          },
+          {
+            text: 'In-Depth',
+            activeMatch: '/in-depth',
+            link: '/in-depth/why-bundlers.md',
           },
           {
             text: 'Glossary',
+            activeMatch: '/glossary',
             link: '/glossary/',
           },
+        ],
+      },
+      { text: 'Options & APIs', activeMatch: '/options', link: CONFIG_LINK },
+      { text: 'REPL', link: 'https://repl.rolldown.rs/' },
+      {
+        text: 'Resources',
+        activeMatch:
+          '/(team|acknowledgements|contribution-guide|development-guide)',
+        items: [
+          {
+            text: 'Team',
+            activeMatch: '/(team|acknowledgements)',
+            link: '/team.md',
+          },
+          {
+            text: 'Contribute',
+            activeMatch: '/(contribution-guide|development-guide)',
+
+            link: '/contribution-guide/',
+          },
+
           {
             text: 'Roadmap',
             link: 'https://github.com/rolldown/rolldown/discussions/153',
           },
-          {
-            items: [
-              {
-                text: 'Twitter',
-                link: 'https://twitter.com/rolldown_rs',
-              },
-              {
-                text: 'Bluesky',
-                link: 'https://bsky.app/profile/rolldown.rs',
-              },
-              {
-                text: 'Discord Chat',
-                link: 'https://chat.rolldown.rs',
-              },
-            ],
-          },
         ],
       },
-      { text: 'REPL', link: 'https://repl.rolldown.rs/' },
     ],
 
     sidebar: {
       // --- Guide ---
       '/guide/': sidebarForUserGuide,
       '/apis/': sidebarForUserGuide,
-      '/in-depth/': sidebarForUserGuide,
+      '/builtin-plugins/': sidebarForUserGuide,
+      // --- In-Depth ---
+      '/in-depth/': sidebarForInDepth,
       // --- Options ---
       '/options/': sidebarForOptions,
-      // --- Plugin ---
-      '/builtin-plugins/': sidebarForPluginGuide,
       // --- Glossary ---
       '/glossary/': sidebarForGlossary,
       // --- Contribute ---

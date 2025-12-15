@@ -1,6 +1,6 @@
 Error: Build failed with 1 error:
 
-[builtin:transform] Error: Namespace tags are not supported by default. React's JSX doesn't support namespace tags. You can set `throwIfNamespace: false` to bypass this warning.
+[builtin:vite-transform] Error: Namespace tags are not supported by default. React's JSX doesn't support namespace tags. You can set `throwIfNamespace: false` to bypass this warning.
    ╭─[ abc.jsx:1:19 ]
    │
  1 │ export const a = <foo:bar />;

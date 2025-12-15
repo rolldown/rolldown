@@ -75,11 +75,15 @@ pub mod bundler_options {
         PluginsOptions, ReactRefreshOptions, StyledComponentsOptions,
         TransformOptions as BundlerTransformOptions, TypeScriptOptions,
       },
-      transform_options::{JsxPreset, TransformOptions},
+      transform_options::{
+        JsxPreset, RawTransformOptions, TransformOptions, TransformOptionsInner,
+        merge_transform_options_with_tsconfig,
+      },
       treeshake::{
         InnerOptions, ModuleSideEffects, ModuleSideEffectsRule, PropertyReadSideEffects,
         PropertyWriteSideEffects, TreeshakeOptions,
       },
+      tsconfig::TsConfig,
       watch_option::{NotifyOption, OnInvalidate, WatchOption},
     },
   };
@@ -109,11 +113,15 @@ pub use crate::{
       EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ImportMetaRolldownAssetReplacer,
       PrependRenderedImport, ThisExprReplaceKind, generate_replace_this_expr_map,
     },
+    json_to_program::{json_value_to_ecma_ast, json_value_to_expression},
     module_idx::ModuleIdx,
     node_builtin_modules::is_existing_node_builtin_modules,
     symbol_id_ext::SymbolIdExt,
   },
-  file_emitter::{EmittedAsset, EmittedChunk, EmittedChunkInfo, FileEmitter, SharedFileEmitter},
+  file_emitter::{
+    EmittedAsset, EmittedChunk, EmittedChunkInfo, EmittedPrebuiltChunk, FileEmitter,
+    SharedFileEmitter,
+  },
   hmr::{
     client_hmr_input::ClientHmrInput, client_hmr_update::ClientHmrUpdate,
     hmr_boundary::HmrBoundary, hmr_boundary_output::HmrBoundaryOutput, hmr_patch::HmrPatch,
@@ -154,7 +162,7 @@ pub use crate::{
   types::import_attribute::ImportAttribute,
   types::import_kind::ImportKind,
   types::import_record::{
-    ImportRecordIdx, ImportRecordMeta, RawImportRecord, ResolvedImportRecord,
+    DynamicImportExprInfo, ImportRecordIdx, ImportRecordMeta, RawImportRecord, ResolvedImportRecord,
   },
   types::importer_record::ImporterRecord,
   types::ins_chunk_idx::InsChunkIdx,

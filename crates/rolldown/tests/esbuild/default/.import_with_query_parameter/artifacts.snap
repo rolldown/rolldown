@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## UNLOADABLE_DEPENDENCY
+
+```text
+[UNLOADABLE_DEPENDENCY] Error: Could not load file.txt?bar
+   ╭─[ entry.js:3:17 ]
+   │
+ 3 │ import bar from './file.txt?bar'
+   │                 ────────┬───────  
+   │                         ╰───────── No such file or directory (os error 2)
+───╯
+
+```
+
+## UNLOADABLE_DEPENDENCY
+
+```text
+[UNLOADABLE_DEPENDENCY] Error: Could not load file.txt?foo
+   ╭─[ entry.js:2:17 ]
+   │
+ 2 │ import foo from './file.txt?foo'
+   │                 ────────┬───────  
+   │                         ╰───────── No such file or directory (os error 2)
+───╯
+
+```

@@ -4,6 +4,9 @@ import {
   BindingCallableBuiltinPlugin,
   type BindingOutputChunk,
   type BindingOutputs,
+  type BindingViteCssPostPluginConfig,
+  type BindingViteHtmlPluginConfig,
+  type BindingViteManifestPluginConfig,
 } from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
@@ -12,14 +15,17 @@ import {
   type MinimalPluginContext,
   MinimalPluginContextImpl,
 } from '../plugin/minimal-plugin-context';
+import type { PluginContextData } from '../plugin/plugin-context-data';
 import {
   transformToOutputBundle,
   transformToRollupOutputChunk,
 } from '../utils/transform-to-rollup-output';
+import type { ViteCssPostPluginConfig } from './vite-css-post-plugin';
 import type {
   IndexHtmlTransformContext,
   ViteHtmlPluginOptions,
 } from './vite-html-plugin';
+import type { ViteManifestPluginConfig } from './vite-manifest-plugin';
 
 type BindingCallableBuiltinPluginLike = {
   [K in keyof BindingCallableBuiltinPlugin]: BindingCallableBuiltinPlugin[K];
@@ -27,6 +33,9 @@ type BindingCallableBuiltinPluginLike = {
 
 // eslint-disable @typescript-eslint/no-unsafe-declaration-merging
 export class BuiltinPlugin {
+  /** Vite-specific option to control plugin ordering */
+  enforce?: 'pre' | 'post';
+
   constructor(
     public name: BindingBuiltinPluginName,
     // NOTE: has `_` to avoid conflict with `options` hook
@@ -80,11 +89,66 @@ export function bindingifyBuiltInPlugin(
   };
 }
 
+export function bindingifyManifestPlugin(
+  plugin: BuiltinPlugin,
+  pluginContextData: PluginContextData,
+): BindingBuiltinPlugin {
+  const { isOutputOptionsForLegacyChunks, ...options } = plugin
+    ._options as ViteManifestPluginConfig;
+  return {
+    __name: plugin.name,
+    options: {
+      ...options,
+      isLegacy: isOutputOptionsForLegacyChunks
+        ? (opts) => {
+          return isOutputOptionsForLegacyChunks(
+            pluginContextData.getOutputOptions(opts),
+          );
+        }
+        : undefined,
+    } as BindingViteManifestPluginConfig,
+  };
+}
+
+export function bindingifyCSSPostPlugin(
+  plugin: BuiltinPlugin,
+  pluginContextData: PluginContextData,
+): BindingBuiltinPlugin {
+  const { isOutputOptionsForLegacyChunks, ...options } = plugin
+    ._options as ViteCssPostPluginConfig;
+  return {
+    __name: plugin.name,
+    options: {
+      ...options,
+      isLegacy: isOutputOptionsForLegacyChunks
+        ? (opts) => {
+          return isOutputOptionsForLegacyChunks(
+            pluginContextData.getOutputOptions(opts),
+          );
+        }
+        : undefined,
+      cssScopeTo() {
+        const cssScopeTo: Record<
+          string,
+          readonly [string, string | undefined]
+        > = {};
+        for (const [id, opts] of pluginContextData.moduleOptionMap.entries()) {
+          if (opts?.meta.vite?.cssScopeTo) {
+            cssScopeTo[id] = opts.meta.vite.cssScopeTo;
+          }
+        }
+        return cssScopeTo;
+      },
+    } as BindingViteCssPostPluginConfig,
+  };
+}
+
 export function bindingifyViteHtmlPlugin(
   plugin: BuiltinPlugin,
   onLog: LogHandler,
   logLevel: LogLevelOption,
   watchMode: boolean,
+  pluginContextData: PluginContextData,
 ): BindingBuiltinPlugin {
   const { preHooks, normalHooks, postHooks, applyHtmlTransforms, ...options } =
     plugin
@@ -139,7 +203,15 @@ export function bindingifyViteHtmlPlugin(
               );
           }
         },
-      },
+        setModuleSideEffects(id: string) {
+          let opts = pluginContextData.getModuleOption(id);
+          pluginContextData.updateModuleOption(id, {
+            moduleSideEffects: true,
+            meta: opts.meta,
+            invalidate: true,
+          });
+        },
+      } as BindingViteHtmlPluginConfig,
     };
   }
   return {

@@ -1,5 +1,6 @@
 use std::sync::{Arc, Weak};
 
+use arcstr::ArcStr;
 use dashmap::DashMap;
 use oxc_index::IndexVec;
 use rolldown_common::{SharedFileEmitter, SharedModuleInfoDashMap, SharedNormalizedBundlerOptions};
@@ -12,7 +13,9 @@ use crate::{
   plugin_context::{NativePluginContextImpl, PluginContextMeta},
   plugin_driver::{ContextLoadCompletionManager, hook_orders::PluginHookOrders},
   type_aliases::{IndexPluginContext, IndexPluginable},
+  types::hook_timing::HookTimingCollector,
 };
+use rolldown_error::EventKindSwitcher;
 
 pub struct PluginDriverFactory {
   plugins: Vec<SharedPluginable>,
@@ -28,7 +31,7 @@ impl PluginDriverFactory {
     &self,
     file_emitter: &SharedFileEmitter,
     options: &SharedNormalizedBundlerOptions,
-    session: &rolldown_debug::Session,
+    session: &rolldown_devtools::Session,
     initial_bundle_span: &Arc<tracing::Span>,
     module_infos: SharedModuleInfoDashMap,
   ) -> Arc<crate::plugin_driver::PluginDriver> {
@@ -47,6 +50,13 @@ impl PluginDriverFactory {
       CONTEXT_hook_resolve_id_trigger = "manual"
     ));
 
+    // Create timing collector only if checks.pluginTimings is enabled
+    let hook_timing_collector = if options.checks.contains(EventKindSwitcher::PluginTimings) {
+      Some(Arc::new(HookTimingCollector::default()))
+    } else {
+      None
+    };
+
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(self.plugins.len());
       let mut index_contexts = IndexPluginContext::with_capacity(self.plugins.len());
@@ -54,8 +64,17 @@ impl PluginDriverFactory {
       self.plugins.iter().for_each(|plugin| {
         let plugin_idx = index_plugins.push(Arc::clone(plugin));
         plugin_usage_vec.push(plugin.call_hook_usage());
+
+        // Register plugin in timing collector if enabled (skip internal builtin plugins)
+        let plugin_name = plugin.call_name();
+        if let Some(ref collector) = hook_timing_collector {
+          if !plugin_name.starts_with("builtin:") {
+            collector.register_plugin(plugin_idx, ArcStr::from(plugin_name.as_ref()));
+          }
+        }
+
         index_contexts.push(PluginContext::Native(Arc::new(NativePluginContextImpl {
-          plugin_name: plugin.call_name(),
+          plugin_name,
           skipped_resolve_calls: vec![],
           plugin_idx,
           plugin_driver: Weak::clone(plugin_driver),
@@ -83,6 +102,7 @@ impl PluginDriverFactory {
         context_load_completion_manager: ContextLoadCompletionManager::default(),
         tx,
         options: Arc::clone(options),
+        hook_timing_collector: hook_timing_collector.clone(),
       }
     })
   }

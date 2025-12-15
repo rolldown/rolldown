@@ -13,8 +13,8 @@ use rolldown_common::{
   RUNTIME_HELPER_NAMES, SymbolRef, WrapKind,
 };
 use rolldown_utils::concat_string;
-use rolldown_utils::indexmap::FxIndexSet;
-use rolldown_utils::rayon::IntoParallelIterator;
+use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
+use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -65,9 +65,16 @@ impl GenerateStage<'_> {
     self.deconflict_exported_names(chunk_graph, &index_chunk_exported_symbols);
 
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
-      .into_par_iter()
-      .map(|cross_chunk_imports| {
-        let mut cross_chunk_imports = cross_chunk_imports.into_iter().collect::<Vec<_>>();
+      .par_iter_enumerated()
+      .map(|(chunk_idx, cross_chunk_imports)| {
+        // Include imports from `imports_from_other_chunks` which may have been
+        // added during chunk merging optimization (PR #7194).
+        // See: https://github.com/rolldown/rolldown/issues/7297
+        let mut cross_chunk_imports = cross_chunk_imports
+          .iter()
+          .copied()
+          .chain(chunk_graph.chunk_table[chunk_idx].imports_from_other_chunks.keys().copied())
+          .collect::<Vec<_>>();
         cross_chunk_imports.sort_by_cached_key(|chunk_id| {
           let mut module_ids = chunk_graph.chunk_table[*chunk_id]
             .modules
@@ -82,16 +89,17 @@ impl GenerateStage<'_> {
       .collect::<Vec<_>>();
 
     let index_sorted_imports_from_other_chunks = index_imports_from_other_chunks
-      .into_iter()
-      .collect_vec()
-      .into_par_iter()
-      .map(|importee_map| {
+      .into_iter_enumerated()
+      .map(|(chunk_idx, mut importee_map)| {
+        for (idx, items) in &chunk_graph.chunk_table[chunk_idx].imports_from_other_chunks {
+          importee_map.entry(*idx).or_default().extend_from_slice(items);
+        }
         importee_map
           .into_iter()
           .sorted_by_key(|(importee_chunk_id, _)| {
             chunk_graph.chunk_table[*importee_chunk_id].exec_order
           })
-          .collect_vec()
+          .collect::<FxIndexMap<_, _>>()
       })
       .collect::<Vec<_>>();
 
@@ -457,7 +465,7 @@ impl GenerateStage<'_> {
                 false
               } else {
                 importee_chunk.bits.has_bit(*importer_chunk_bit)
-                  && importee_chunk.has_side_effect(self.link_output.runtime.id())
+                  && importee_chunk.has_side_effect(&self.link_output.module_table)
               }
             })
             .for_each(|(importee_chunk_id, _)| {

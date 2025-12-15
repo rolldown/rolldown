@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region dep1.js
+const element$2 = "element 1";
+console.log(element$2);
+
+//#endregion
+//#region dep2.js
+const element = "element 2";
+console.log(element);
+
+//#endregion
+//#region dep3.js
+const element$1 = "element 3";
+console.log(element$1);
+
+//#endregion
+//#region main.js
+const Foo = () => {};
+const result = <Foo>{"test" + element}</Foo>;
+
+//#endregion
+export { result };
+```

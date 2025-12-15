@@ -1,13 +1,13 @@
 import path from 'node:path';
 import { defineTest } from 'rolldown-tests';
-import { jsonPlugin } from 'rolldown/experimental';
+import { viteJsonPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
   config: {
     input: 'main.js',
     plugins: [
-      jsonPlugin({ namedExports: true, stringify: false }),
+      viteJsonPlugin({ namedExports: true, stringify: false }),
       {
         name: 'test-plugin',
         async transform(code, id) {

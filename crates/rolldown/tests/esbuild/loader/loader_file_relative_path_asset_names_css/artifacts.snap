@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 x
 ```
 
-## entries_entry.css
+## entries/entry.css
 
 ```css
 div {
@@ -18,7 +18,7 @@ div {
 
 ```
 
-## entries_entry.js
+## entries/entry.js
 
 ```js
 //#region images/image.png

@@ -39,6 +39,7 @@
   ],
   "search.exclude": {
     "rollup": true,
+    "test262": true,
     "temp": true,
     "tmp": true
   },

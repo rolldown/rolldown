@@ -1,0 +1,15 @@
+{
+  "_comment": "Test for issue #7233 (chained): CJS bundles should not redeclare duplicate variable names when re-exporting through a chain of modules",
+  "expectExecuted": false,
+  "config": {
+    "input": [
+      {
+        "name": "index",
+        "import": "index.ts"
+      }
+    ],
+    "external": ["zod"],
+    "format": "cjs",
+    "preserveModules": true
+  }
+}

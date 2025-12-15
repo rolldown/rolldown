@@ -45,7 +45,6 @@ function loadUnsupportedFeaturesIgnoredTests() {
 }
 
 const ignoredTests = new Set(require('../ignored-tests').ignoreTests)
-const onlyTests = new Set(require('../only-tests').onlyTests)
 const unsupportedFeaturesIgnoredTests = loadUnsupportedFeaturesIgnoredTests()
 const ignoredTreeshakingTests = new Set(require('../ignored-treeshaking-tests'))
 const ignoredSnapshotDifferentTests = new Set(require('../ignored-passed-snapshot-different-tests'))
@@ -72,8 +71,6 @@ function shouldIgnoredTest(id) {
 module.exports = {
   calcTestId,
   loadFailedTests,
-  loadIgnoredTests: () => ignoredTests,
-  loadOnlyTests: () => onlyTests,
   updateFailedTestsJson,
   shouldIgnoredTest,
   status

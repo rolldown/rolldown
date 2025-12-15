@@ -14,7 +14,7 @@ impl Deref for Bundler {
 }
 
 pub struct Bundler {
-  pub(super) session: rolldown_debug::Session,
+  pub(super) session: rolldown_devtools::Session,
   pub(super) bundle_factory: BundleFactory,
   pub(super) cache: ScanStageCache,
   pub(super) closed: bool,
@@ -39,7 +39,7 @@ impl Bundler {
     Ok(Self {
       bundle_factory,
       closed: false,
-      session: rolldown_debug::Session::dummy(),
+      session: rolldown_devtools::Session::dummy(),
       cache: ScanStageCache::default(),
     })
   }
@@ -79,24 +79,6 @@ impl Bundler {
     self.cache = ScanStageCache::default();
     self.bundle_factory.resolver.clear_cache();
     Ok(())
-  }
-}
-
-pub struct CacheGuard<'a> {
-  pub is_incremental_build_enabled: bool,
-  pub cache: &'a mut ScanStageCache,
-}
-impl CacheGuard<'_> {
-  pub fn inner(&mut self) -> &mut ScanStageCache {
-    self.cache
-  }
-}
-
-impl Drop for CacheGuard<'_> {
-  fn drop(&mut self) {
-    if !self.is_incremental_build_enabled {
-      std::mem::take(self.cache);
-    }
   }
 }
 

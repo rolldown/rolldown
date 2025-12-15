@@ -15,28 +15,37 @@ function main() {
     const dirPath = path.dirname(testConfigPath);
     const testName = dirPath.replace('./fixtures/', '');
 
-    test.skipIf(testConfig.skip)(testName, async () => {
-      try {
-        if (testConfig.beforeTest) {
-          await testConfig.beforeTest();
-        }
-        const output = await compileFixture(
-          path.join(import.meta.dirname, dirPath),
-          testConfig,
-        ).catch(async (err) => {
-          if (testConfig.catchError) {
-            await testConfig.catchError(err);
-            return;
+    test(
+      testName,
+      {
+        skip: testConfig.skip,
+        retry: testConfig.retry,
+        // Specify a longer timeout than default 20_000ms.
+        timeout: 60_000,
+      },
+      async () => {
+        try {
+          if (testConfig.beforeTest) {
+            await testConfig.beforeTest();
           }
-          throw err;
-        });
-        if (testConfig.afterTest && output) {
-          await testConfig.afterTest(output);
+          const output = await compileFixture(
+            path.join(import.meta.dirname, dirPath),
+            testConfig,
+          ).catch(async (err) => {
+            if (testConfig.catchError) {
+              await testConfig.catchError(err);
+              return;
+            }
+            throw err;
+          });
+          if (testConfig.afterTest && output) {
+            await testConfig.afterTest(output);
+          }
+        } catch (err) {
+          throw new Error(`Failed in ${testConfigPath}`, { cause: err });
         }
-      } catch (err) {
-        throw new Error(`Failed in ${testConfigPath}`, { cause: err });
-      }
-    }, 60_000); // Specify a longer timeout than default 20_000ms.
+      },
+    );
   }
 }
 
@@ -46,6 +55,9 @@ async function compileFixture(fixturePath: string, config: TestConfig) {
     cwd: fixturePath,
     ...config.config,
   };
+  // Ensure pluginTimings is false to avoid snapshot noise
+  inputOptions.checks ??= {};
+  inputOptions.checks.pluginTimings ??= false;
   const build = await rolldown(inputOptions);
   if (Array.isArray(config.config?.output)) {
     const outputs = [];

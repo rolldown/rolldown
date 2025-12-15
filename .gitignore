@@ -149,13 +149,10 @@ dist
 # os
 .DS_Store
 
-# esbuild test
-*.go
+# esbuild test downloaded files
+scripts/tmp/
 
 pkg/
-
-# justfile
-justfile*
 
 # vitepress
 docs/.vitepress/cache
@@ -175,8 +172,11 @@ crates/rolldown/tests/rolldown/warnings/eval2/node_modules
 .spr.yml
 
 # generated bindings type
-crates/rolldown_debug_action/bindings/**
+crates/rolldown_devtools_action/bindings/**
 
 # AI config
 .claude
 CLAUDE.local.md
+
+# workaround for https://github.com/anthropics/claude-code/issues/4928
+nul

@@ -1,0 +1,13 @@
+{
+  "config": {
+    "moduleTypes": {
+      ".js": "jsx"
+    },
+    "transform": {
+      "jsx": {
+        "runtime": "classic"
+      }
+    }
+  },
+  "expectExecuted": false
+}

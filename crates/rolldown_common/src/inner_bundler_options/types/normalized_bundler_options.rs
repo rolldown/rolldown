@@ -99,7 +99,7 @@ pub struct NormalizedBundlerOptions {
   pub log_level: Option<LogLevel>,
   pub on_log: Option<OnLog>,
   pub preserve_modules: bool,
-  pub virtual_dirname: String,
+  pub virtual_dirname: ArcStr,
   pub preserve_modules_root: Option<String>,
   pub preserve_entry_signatures: PreserveEntrySignatures,
   pub debug: bool,
@@ -108,7 +108,6 @@ pub struct NormalizedBundlerOptions {
   pub minify_internal_exports: bool,
   pub clean_dir: bool,
   pub context: String,
-  pub tsconfig: Option<PathBuf>,
 }
 
 // This is only used for testing
@@ -181,7 +180,6 @@ impl Default for NormalizedBundlerOptions {
       minify_internal_exports: Default::default(),
       clean_dir: false,
       context: Default::default(),
-      tsconfig: Default::default(),
     }
   }
 }
@@ -214,13 +212,16 @@ impl NormalizedBundlerOptions {
     &self,
     rollup_pre_rendered_asset: &RollupPreRenderedAsset,
   ) -> anyhow::Result<FilenameTemplate> {
-    Ok(FilenameTemplate::new(self.asset_filenames.call(rollup_pre_rendered_asset).await?))
+    Ok(FilenameTemplate::new(
+      self.asset_filenames.call(rollup_pre_rendered_asset).await?,
+      "assetFileNames",
+    ))
   }
 
   pub async fn asset_filename_with_file(
     &self,
     file: &EmittedAsset,
-  ) -> anyhow::Result<Option<String>> {
+  ) -> anyhow::Result<Option<FilenameTemplate>> {
     if file.file_name.is_some() {
       return Ok(None);
     }
@@ -234,7 +235,7 @@ impl NormalizedBundlerOptions {
         .map_or(vec![], |original_file_name| vec![original_file_name.into()]),
     };
     let asset_filename = self.asset_filenames.call(&rollup_pre_rendered_asset).await?;
-    Ok(Some(asset_filename))
+    Ok(Some(FilenameTemplate::new(asset_filename, "assetFileNames")))
   }
 
   pub async fn sanitize_file_name_with_file(

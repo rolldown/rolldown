@@ -81,45 +81,46 @@ collapsible_if = "allow"
 # publish = true
 rolldown = { version = "0.1.0", path = "crates/rolldown" }
 rolldown_common = { version = "0.1.0", path = "crates/rolldown_common" }
-rolldown_debug = { version = "0.1.0", path = "crates/rolldown_debug" }
-rolldown_debug_action = { version = "0.1.0", path = "crates/rolldown_debug_action" }
 rolldown_dev = { version = "0.1.0", path = "crates/rolldown_dev" }
 rolldown_dev_common = { version = "0.1.0", path = "crates/rolldown_dev_common" }
+rolldown_devtools = { version = "0.1.0", path = "crates/rolldown_devtools" }
+rolldown_devtools_action = { version = "0.1.0", path = "crates/rolldown_devtools_action" }
 rolldown_ecmascript = { version = "0.1.0", path = "crates/rolldown_ecmascript" }
 rolldown_ecmascript_utils = { version = "0.1.0", path = "crates/rolldown_ecmascript_utils" }
 rolldown_error = { version = "0.1.0", path = "crates/rolldown_error" }
 rolldown_fs = { version = "0.1.0", path = "crates/rolldown_fs" }
 rolldown_fs_watcher = { version = "0.1.0", path = "crates/rolldown_fs_watcher" }
 rolldown_plugin = { version = "0.1.0", path = "crates/rolldown_plugin" }
-rolldown_plugin_alias = { version = "0.1.0", path = "crates/rolldown_plugin_alias" }
-rolldown_plugin_asset = { version = "0.1.0", path = "crates/rolldown_plugin_asset" }
-rolldown_plugin_asset_import_meta_url = { version = "0.1.0", path = "crates/rolldown_plugin_asset_import_meta_url" }
-rolldown_plugin_build_import_analysis = { version = "0.1.0", path = "crates/rolldown_plugin_build_import_analysis" }
 rolldown_plugin_chunk_import_map = { version = "0.1.0", path = "crates/rolldown_plugin_chunk_import_map" }
 rolldown_plugin_data_uri = { version = "0.1.0", path = "crates/rolldown_plugin_data_uri" }
-rolldown_plugin_dynamic_import_vars = { version = "0.1.0", path = "crates/rolldown_plugin_dynamic_import_vars" }
 rolldown_plugin_esm_external_require = { version = "0.1.0", path = "crates/rolldown_plugin_esm_external_require" }
 rolldown_plugin_hmr = { version = "0.1.0", path = "crates/rolldown_plugin_hmr" }
-rolldown_plugin_html_inline_proxy = { version = "0.1.0", path = "crates/rolldown_plugin_html_inline_proxy" }
-rolldown_plugin_import_glob = { version = "0.1.0", path = "crates/rolldown_plugin_import_glob" }
 rolldown_plugin_isolated_declaration = { version = "0.1.0", path = "crates/rolldown_plugin_isolated_declaration" }
-rolldown_plugin_json = { version = "0.1.0", path = "crates/rolldown_plugin_json" }
-rolldown_plugin_load_fallback = { version = "0.1.0", path = "crates/rolldown_plugin_load_fallback" }
-rolldown_plugin_manifest = { version = "0.1.0", path = "crates/rolldown_plugin_manifest" }
-rolldown_plugin_module_preload_polyfill = { version = "0.1.0", path = "crates/rolldown_plugin_module_preload_polyfill" }
+rolldown_plugin_lazy_compilation = { version = "0.1.0", path = "crates/rolldown_plugin_lazy_compilation" }
 rolldown_plugin_oxc_runtime = { version = "0.1.0", path = "crates/rolldown_plugin_oxc_runtime" }
-rolldown_plugin_react_refresh_wrapper = { version = "0.1.0", path = "crates/rolldown_plugin_react_refresh_wrapper" }
 rolldown_plugin_replace = { version = "0.1.0", path = "crates/rolldown_plugin_replace" }
-rolldown_plugin_reporter = { version = "0.1.0", path = "crates/rolldown_plugin_reporter" }
-rolldown_plugin_transform = { version = "0.1.0", path = "crates/rolldown_plugin_transform" }
 rolldown_plugin_utils = { version = "0.1.0", path = "crates/rolldown_plugin_utils" }
+rolldown_plugin_vite_alias = { version = "0.1.0", path = "crates/rolldown_plugin_vite_alias" }
+rolldown_plugin_vite_asset = { version = "0.1.0", path = "crates/rolldown_plugin_vite_asset" }
+rolldown_plugin_vite_asset_import_meta_url = { version = "0.1.0", path = "crates/rolldown_plugin_vite_asset_import_meta_url" }
+rolldown_plugin_vite_build_import_analysis = { version = "0.1.0", path = "crates/rolldown_plugin_vite_build_import_analysis" }
 rolldown_plugin_vite_css = { version = "0.1.0", path = "crates/rolldown_plugin_vite_css" }
 rolldown_plugin_vite_css_post = { version = "0.1.0", path = "crates/rolldown_plugin_vite_css_post" }
+rolldown_plugin_vite_dynamic_import_vars = { version = "0.1.0", path = "crates/rolldown_plugin_vite_dynamic_import_vars" }
 rolldown_plugin_vite_html = { version = "0.1.0", path = "crates/rolldown_plugin_vite_html" }
+rolldown_plugin_vite_html_inline_proxy = { version = "0.1.0", path = "crates/rolldown_plugin_vite_html_inline_proxy" }
+rolldown_plugin_vite_import_glob = { version = "0.1.0", path = "crates/rolldown_plugin_vite_import_glob" }
+rolldown_plugin_vite_json = { version = "0.1.0", path = "crates/rolldown_plugin_vite_json" }
+rolldown_plugin_vite_load_fallback = { version = "0.1.0", path = "crates/rolldown_plugin_vite_load_fallback" }
+rolldown_plugin_vite_manifest = { version = "0.1.0", path = "crates/rolldown_plugin_vite_manifest" }
+rolldown_plugin_vite_module_preload_polyfill = { version = "0.1.0", path = "crates/rolldown_plugin_vite_module_preload_polyfill" }
+rolldown_plugin_vite_react_refresh_wrapper = { version = "0.1.0", path = "crates/rolldown_plugin_vite_react_refresh_wrapper" }
+rolldown_plugin_vite_reporter = { version = "0.1.0", path = "crates/rolldown_plugin_vite_reporter" }
 rolldown_plugin_vite_resolve = { version = "0.1.0", path = "crates/rolldown_plugin_vite_resolve" }
-rolldown_plugin_wasm_fallback = { version = "0.1.0", path = "crates/rolldown_plugin_wasm_fallback" }
-rolldown_plugin_wasm_helper = { version = "0.1.0", path = "crates/rolldown_plugin_wasm_helper" }
-rolldown_plugin_web_worker_post = { version = "0.1.0", path = "crates/rolldown_plugin_web_worker_post" }
+rolldown_plugin_vite_transform = { version = "0.1.0", path = "crates/rolldown_plugin_vite_transform" }
+rolldown_plugin_vite_wasm_fallback = { version = "0.1.0", path = "crates/rolldown_plugin_vite_wasm_fallback" }
+rolldown_plugin_vite_wasm_helper = { version = "0.1.0", path = "crates/rolldown_plugin_vite_wasm_helper" }
+rolldown_plugin_vite_web_worker_post = { version = "0.1.0", path = "crates/rolldown_plugin_vite_web_worker_post" }
 rolldown_resolver = { version = "0.1.0", path = "crates/rolldown_resolver" }
 rolldown_sourcemap = { version = "0.1.0", path = "crates/rolldown_sourcemap" }
 rolldown_std_utils = { version = "0.1.0", path = "crates/rolldown_std_utils" }
@@ -155,7 +156,7 @@ form_urlencoded = "1.2.1"
 futures = "0.3.31"
 glob = "0.3.2"
 heck = "0.5.0"
-html5gum = "0.8.0"
+html5gum = "0.8.1"
 indexmap = "2.9.0"
 infer = "0.19.0"
 insta = "1.43.1"
@@ -163,7 +164,7 @@ itertools = "0.14.0"
 itoa = "1.0.15"
 json-escape-simd = "3"
 json-strip-comments = "3"
-jsonschema = { version = "0.33.0", default-features = false }
+jsonschema = { version = "0.37.0", default-features = false }
 memchr = "2.7.4"
 mimalloc-safe = "0.1.52"
 mime = "0.3.17"
@@ -172,20 +173,22 @@ num-bigint = "0.4.6"
 num-format = "0.4"
 num_cpus = "1.17"
 owo-colors = "4.2.2"
+parking_lot = "0.12.5"
 percent-encoding = "2.3.1"
 petgraph = "0.8.1"
 phf = "0.13.0"
 rayon = "1.10.0"
 regex = "1.11.1"
 regress = "0.10.3"
-rolldown-notify = { version = "8.1.0", default-features = false, features = ["macos_kqueue"] }
-rolldown-notify-debouncer-full = { version = "0.6.0", default-features = false, features = ["macos_kqueue"] }
+rolldown-notify = { version = "9.1.0", default-features = false, features = ["macos_kqueue"] }
+rolldown-notify-debouncer-full = { version = "0.7.1", default-features = false, features = ["macos_kqueue"] }
 ropey = "1.6.1"
 rustc-hash = { version = "2.1.1" }
 schemars = "1.0.0"
 self_cell = "1.2.0"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
+serde_yaml = "0.9.34"
 simdutf8 = "0.1.5"
 smallvec = "1.15.0"
 string_cache = "0.9.0"
@@ -211,25 +214,25 @@ quote = "1"
 syn = { version = "2", default-features = false }
 
 # napi
-napi = { version = "3.0.0", features = ["async", "anyhow"] }
+napi = { version = "3.0.0", features = ["async", "anyhow", "tracing"] }
 napi-build = { version = "2.2.2" }
-napi-derive = { version = "3.0.0", default-features = false, features = ["type-def"] }
+napi-derive = { version = "3.0.0", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-oxc = { version = "0.97.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
-oxc_allocator = { version = "0.97.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.97.0" }
-oxc_minify_napi = { version = "0.97.0" }
-oxc_parser_napi = { version = "0.97.0" }
-oxc_transform_napi = { version = "0.97.0" }
-oxc_traverse = { version = "0.97.0" }
+oxc = { version = "0.102.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
+oxc_allocator = { version = "0.102.0", features = ["pool"] }
+oxc_ecmascript = { version = "0.102.0" }
+oxc_minify_napi = { version = "0.102.0" }
+oxc_parser_napi = { version = "0.102.0" }
+oxc_transform_napi = { version = "0.102.0" }
+oxc_traverse = { version = "0.102.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
 # Please update with `cargo update oxc_resolver oxc_resolver_napi oxc_sourcemap oxc_index oxc-browserslist`
 oxc_index = { version = "4", features = ["rayon", "serde"] } # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver = { version = "11.13.1", features = ["yarn_pnp"] } # https://github.com/oxc-project/oxc-resolver
-oxc_resolver_napi = { version = "11.13.1", default-features = false, features = ["yarn_pnp"] }
+oxc_resolver = { version = "11.15.0", features = ["yarn_pnp"] } # https://github.com/oxc-project/oxc-resolver
+oxc_resolver_napi = { version = "11.15.0", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "6" } # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.dev]

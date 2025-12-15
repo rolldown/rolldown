@@ -29,7 +29,6 @@ arcstr = { workspace = true }
 bitflags = { workspace = true }
 commondir = { workspace = true }
 css-module-lexer = { workspace = true }
-dunce = { workspace = true }
 futures = { workspace = true }
 indexmap = { workspace = true }
 itertools = { workspace = true }
@@ -45,8 +44,8 @@ petgraph = { workspace = true }
 rayon = { workspace = true }
 rolldown-notify = { workspace = true }
 rolldown_common = { workspace = true }
-rolldown_debug = { workspace = true }
 rolldown_dev_common = { workspace = true }
+rolldown_devtools = { workspace = true }
 rolldown_ecmascript = { workspace = true }
 rolldown_ecmascript_utils = { workspace = true }
 rolldown_error = { workspace = true }
@@ -55,6 +54,7 @@ rolldown_plugin = { workspace = true }
 rolldown_plugin_chunk_import_map = { workspace = true }
 rolldown_plugin_data_uri = { workspace = true }
 rolldown_plugin_hmr = { workspace = true }
+rolldown_plugin_lazy_compilation = { workspace = true }
 rolldown_plugin_oxc_runtime = { workspace = true }
 rolldown_resolver = { workspace = true }
 rolldown_sourcemap = { workspace = true }
@@ -63,7 +63,7 @@ rolldown_tracing = { workspace = true }
 rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, optional = true }
-serde_json = { workspace = true }
+serde_json = { workspace = true, features = ["preserve_order"] }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
@@ -72,15 +72,22 @@ url = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [dev-dependencies]
+cow-utils = { workspace = true }
+dunce = { workspace = true }
 glob = { workspace = true }
 insta = { workspace = true }
+regex = { workspace = true }
 rolldown_dev = { path = "../rolldown_dev" }
 rolldown_testing = { path = "../rolldown_testing" }
 rolldown_workspace = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
 sugar_path = { workspace = true }
 testing_macros = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
+walkdir = { workspace = true }
 
 [package.metadata.cargo-shear]
-# `serde_json` is used in `trace_action` macro.
-ignored = ["serde", "serde_json"]
+# `serde` is used via feature flag.
+ignored = ["serde"]

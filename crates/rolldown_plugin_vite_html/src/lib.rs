@@ -1,7 +1,12 @@
 mod html;
 mod utils;
 
-use std::{borrow::Cow, path::Path, rc::Rc, sync::Arc};
+use std::{
+  borrow::Cow,
+  path::{Path, PathBuf},
+  rc::Rc,
+  sync::Arc,
+};
 
 use cow_utils::CowUtils as _;
 use html5gum::Span;
@@ -23,10 +28,11 @@ use crate::utils::{
   inject_to_head,
 };
 
-pub use utils::constant::TransformIndexHtml;
+pub use utils::constant::{SetModuleSideEffects, TransformIndexHtml};
 
 #[derive(derive_more::Debug)]
 pub struct ViteHtmlPlugin {
+  pub root: PathBuf,
   pub is_lib: bool,
   pub is_ssr: bool,
   pub url_base: String,
@@ -40,6 +46,8 @@ pub struct ViteHtmlPlugin {
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
   #[debug(skip)]
   pub transform_index_html: Arc<TransformIndexHtml>,
+  #[debug(skip)]
+  pub set_module_side_effects: Arc<SetModuleSideEffects>,
   // internal state
   pub html_result_map: FxDashMap<(String, String), (String, bool)>,
 }
@@ -73,7 +81,7 @@ impl Plugin for ViteHtmlPlugin {
     }
 
     let id = normalize_path(args.id);
-    let path = args.id.relative(ctx.cwd());
+    let path = args.id.relative(&self.root);
     let path_lossy = path.to_string_lossy();
     let relative_url_path = normalize_path(&path_lossy);
 
@@ -106,8 +114,7 @@ impl Plugin for ViteHtmlPlugin {
     let mut style_urls = Vec::new();
     let mut script_urls = Vec::new();
 
-    // TODO: Support module_side_effects for module info
-    // let mut set_modules = Vec::new();
+    let mut set_modules = Vec::new();
     let mut src_tasks = Vec::new();
     let mut srcset_tasks = Vec::new();
     let mut overwrite_attrs = Vec::new();
@@ -120,6 +127,7 @@ impl Plugin for ViteHtmlPlugin {
       while let Some(node) = stack.pop() {
         match &node.data {
           html::sink::NodeData::Element { name, attrs, span } => {
+            let elem_span = span.get();
             let mut should_remove = false;
             if &**name == "script" {
               let mut src = None;
@@ -151,7 +159,7 @@ impl Plugin for ViteHtmlPlugin {
                   rolldown_plugin_utils::check_public_file(s, &self.public_dir).is_some()
                 });
                 if is_public_file && let Some((ref url, span)) = src {
-                  overwrite_attrs.push((url[1..].to_owned(), span));
+                  overwrite_attrs.push((url.to_owned(), span, true));
                 }
                 if is_module {
                   inline_module_count += 1;
@@ -159,8 +167,7 @@ impl Plugin for ViteHtmlPlugin {
                     && !is_public_file
                     && !utils::is_excluded_url(url)
                   {
-                    // TODO: Support module_side_effects for module info
-                    // set_modules.push(url);
+                    set_modules.push(url.clone());
                     // add `<script type="module" src="..."/>` as an import
                     js.push_str(&rolldown_utils::concat_string!(
                       "import ",
@@ -289,7 +296,7 @@ impl Plugin for ViteHtmlPlugin {
                     if rolldown_plugin_utils::check_public_file(&decode_url, &self.public_dir)
                       .is_some()
                     {
-                      overwrite_attrs.push((decode_url, attr.span));
+                      overwrite_attrs.push((decode_url, attr.span, true));
                     } else if !utils::is_excluded_url(&decode_url) {
                       if &**name == "link"
                         && rolldown_plugin_utils::css::is_css_request(&decode_url)
@@ -298,18 +305,18 @@ impl Plugin for ViteHtmlPlugin {
                         js.push_str("import ");
                         js.push_str(&rolldown_plugin_utils::to_string_literal(&decode_url));
                         js.push_str(";\n");
-                        style_urls.push((decode_url, attr.span));
+                        style_urls.push((decode_url, elem_span));
+                      } else {
+                        let should_inline = (&**name == "link"
+                          && attr_map.get("rel").is_some_and(|attr| {
+                            utils::parse_rel_attr(&attr.value).into_iter().any(|v| {
+                              ["icon", "apple-touch-icon", "apple-touch-startup-image", "manifest"]
+                                .contains(&v.as_str())
+                            })
+                          }))
+                        .then_some(false);
+                        src_tasks.push((decode_url, attr.span, should_inline));
                       }
-                    } else {
-                      let should_inline = (&**name == "link"
-                        && attr_map.get("rel").is_some_and(|attr| {
-                          utils::parse_rel_attr(&attr.value).into_iter().any(|v| {
-                            ["icon", "apple-touch-icon", "apple-touch-startup-image", "manifest"]
-                              .contains(&v.as_str())
-                          })
-                        }))
-                      .then_some(false);
-                      src_tasks.push((decode_url, attr.span, should_inline));
                     }
                   }
                 }
@@ -352,7 +359,7 @@ impl Plugin for ViteHtmlPlugin {
             }
 
             if should_remove {
-              s.remove(span.start, span.end);
+              s.remove(elem_span.start, elem_span.end);
             }
           }
           _ => {}
@@ -366,23 +373,30 @@ impl Plugin for ViteHtmlPlugin {
     for (url, span, should_inline) in src_tasks {
       let processed_encoded_url = self.process_asset_url(&ctx, &url, &id, should_inline).await?;
       if processed_encoded_url != url {
-        overwrite_attrs.push((processed_encoded_url.into_owned(), span));
+        overwrite_attrs.push((processed_encoded_url.into_owned(), span, false));
       }
     }
 
     for (task, span) in srcset_tasks {
       let processed_encoded_url = self.process_src_set(&ctx, &task, &id).await?;
       if processed_encoded_url != task {
-        overwrite_attrs.push((processed_encoded_url, span));
+        overwrite_attrs.push((processed_encoded_url, span, false));
       }
     }
 
-    for (url, span) in overwrite_attrs {
-      let asset_url = env.to_output_file_path(&url, "html", true, public_to_relative).await?;
+    for (url, span, needs_resolution) in overwrite_attrs {
+      let asset_url = if needs_resolution {
+        env
+          .to_output_file_path(&url[1..], "html", true, public_to_relative)
+          .await?
+          .to_asset_url_in_css_or_html()
+      } else {
+        url
+      };
       utils::overwrite_check_public_file(
         &mut s,
         span.start..span.end,
-        partial_encode_url_path(&asset_url.to_asset_url_in_css_or_html()).into_owned(),
+        partial_encode_url_path(&asset_url).into_owned(),
       )?;
     }
 
@@ -406,11 +420,7 @@ impl Plugin for ViteHtmlPlugin {
       } else {
         continue;
       };
-      utils::overwrite_check_public_file(
-        &mut s,
-        range,
-        partial_encode_url_path(&url).into_owned(),
-      )?;
+      s.update(range.start, range.end, partial_encode_url_path(&url).into_owned());
     }
 
     let resolved_style_urls = rolldown_utils::futures::block_on_spawn_all(
@@ -436,7 +446,7 @@ impl Plugin for ViteHtmlPlugin {
               &rolldown_utils::concat_string!(
                 "import ",
                 rolldown_plugin_utils::to_string_literal(&url),
-                "\n"
+                ";\n"
               ),
               "",
             )
@@ -445,9 +455,10 @@ impl Plugin for ViteHtmlPlugin {
       }
     }
 
-    self
-      .html_result_map
-      .insert((args.id.to_string(), public_path), (s.to_string(), every_script_is_async));
+    self.html_result_map.insert(
+      (args.id.to_string(), public_base.to_string()),
+      (s.to_string(), every_script_is_async),
+    );
 
     if self.module_preload.options().is_some_and(|v| v.polyfill)
       && (some_scripts_are_async || some_scripts_are_defer)
@@ -460,20 +471,20 @@ impl Plugin for ViteHtmlPlugin {
       );
     }
 
-    // TODO: Support module_side_effects for module info
-    // for url in set_modules {
-    //   match ctx.resolve(&url, Some(args.id), None).await? {
-    //     Ok(resolved_id) => match ctx.get_module_info(&resolved_id.id) {
-    //       Some(module_info) => module_info.module_side_effects = true,
-    //       None => {
-    //         if !resolved_id.external.is_external() {
-    //           ctx.resolve(specifier, importer, extra_options)
-    //         }
-    //       },
-    //     },
-    //     Err(_) => return Err(anyhow::anyhow!("Failed to resolve {url} from {}", args.id)),
-    //   }
-    // }
+    for url in set_modules {
+      match ctx.resolve(&url, Some(args.id), None).await? {
+        Ok(resolved_id) => {
+          if ctx.get_module_info(&resolved_id.id).is_some() {
+            (self.set_module_side_effects)(&resolved_id.id).await?;
+          } else if !resolved_id.external.is_external() {
+            ctx
+              .load(&resolved_id.id, Some(HookSideEffects::True), resolved_id.module_def_format)
+              .await?;
+          }
+        }
+        Err(_) => return Err(anyhow::anyhow!("Failed to resolve {url} from {}", args.id)),
+      }
+    }
 
     // Force this module to keep from being shared between other entry points.
     // If the resulting chunk is empty, it will be removed in generateBundle.
@@ -497,7 +508,7 @@ impl Plugin for ViteHtmlPlugin {
 
       let mut result = html.clone();
 
-      let path = id.relative(ctx.cwd());
+      let path = id.relative(&self.root);
       let path_lossy = path.to_string_lossy();
       let relative_url_path = normalize_path(&path_lossy);
 
@@ -538,11 +549,15 @@ impl Plugin for ViteHtmlPlugin {
                   .await?
               }
             };
-            tag.attrs = Some(FxHashMap::from_iter([
+            let mut attrs = FxHashMap::from_iter([
               ("type", AttrValue::String("module".to_owned())),
               ("crossorigin", AttrValue::Boolean(true)),
               ("src", AttrValue::String(url)),
-            ]));
+            ]);
+            if *is_async {
+              attrs.insert("async", AttrValue::Boolean(true));
+            }
+            tag.attrs = Some(attrs);
             tags.push(tag);
           }
           tags
@@ -552,14 +567,15 @@ impl Plugin for ViteHtmlPlugin {
             let url = self
               .to_output_file_path(&chunk.filename, assets_base, false, &relative_url_path)
               .await?;
-            tag.attrs = Some(FxHashMap::from_iter([
+            let mut attrs = FxHashMap::from_iter([
               ("type", AttrValue::String("module".to_owned())),
               ("crossorigin", AttrValue::Boolean(true)),
               ("src", AttrValue::String(url)),
-            ]));
+            ]);
             if *is_async {
-              tag.attrs.as_mut().unwrap().insert("async", AttrValue::Boolean(true));
+              attrs.insert("async", AttrValue::Boolean(true));
             }
+            tag.attrs = Some(attrs);
             tag
           }];
           if let Some(module_preload) = self.module_preload.options() {
@@ -576,9 +592,8 @@ impl Plugin for ViteHtmlPlugin {
             };
             for dep in resolved_deps {
               let mut tag = HtmlTagDescriptor::new("link");
-              let url = self
-                .to_output_file_path(&chunk.filename, assets_base, false, &relative_url_path)
-                .await?;
+              let url =
+                self.to_output_file_path(&dep, assets_base, false, &relative_url_path).await?;
               tag.attrs = Some(FxHashMap::from_iter([
                 ("rel", AttrValue::String("modulepreload".to_owned())),
                 ("crossorigin", AttrValue::Boolean(true)),
@@ -609,27 +624,31 @@ impl Plugin for ViteHtmlPlugin {
       }
 
       if !self.css_code_split {
-        let css_bundle_name = ctx.meta().get::<CSSBundleName>();
-        if let Some(css_bundle_name) = css_bundle_name
-          && args.bundle.iter().any(
-            |o| matches!(o, rolldown_common::Output::Asset(asset) if asset.names.contains(&css_bundle_name.0)),
-          )
-        {
-          let url = self.to_output_file_path(&css_bundle_name.0, assets_base, false, &relative_url_path).await?;
-          result = utils::inject_to_head(&result, &[
-            HtmlTagDescriptor {
+        let filename = ctx.meta().get::<CSSBundleName>().and_then(|css_bundle_name| {
+          args.bundle.iter().find_map(|o| match o {
+            rolldown_common::Output::Asset(asset) if asset.names.contains(&css_bundle_name.0) => {
+              Some(asset.filename.as_str())
+            }
+            _ => None,
+          })
+        });
+        if let Some(filename) = filename {
+          let url =
+            self.to_output_file_path(filename, assets_base, false, &relative_url_path).await?;
+          result = utils::inject_to_head(
+            &result,
+            &[HtmlTagDescriptor {
               tag: "link",
               attrs: Some(FxHashMap::from_iter([
                 ("rel", AttrValue::String("stylesheet".to_owned())),
                 ("crossorigin", AttrValue::Boolean(true)),
-                (
-                  "href",
-                  AttrValue::String(url),
-                ),
+                ("href", AttrValue::String(url)),
               ])),
-                ..Default::default()
-            }
-          ], false).into_owned();
+              ..Default::default()
+            }],
+            false,
+          )
+          .into_owned();
         }
       }
 
@@ -648,7 +667,7 @@ impl Plugin for ViteHtmlPlugin {
       .await?;
 
       if let Some(s) =
-        self.handle_html_asset_url(ctx, html, chunk, assets_base, &relative_url_path).await?
+        self.handle_html_asset_url(ctx, &result, chunk, assets_base, &relative_url_path).await?
       {
         result = s;
       }
@@ -662,7 +681,7 @@ impl Plugin for ViteHtmlPlugin {
       ctx
         .emit_file_async(rolldown_common::EmittedAsset {
           name: None,
-          original_file_name: Some(id.clone()),
+          original_file_name: Some(normalize_path(id).into_owned()),
           file_name: Some(relative_url_path.into()),
           source: rolldown_common::StrOrBytes::Str(result),
         })

@@ -52,7 +52,7 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
                 }
                 .into_in(alloc),
               ),
-              ..AssignmentTargetPropertyProperty::dummy(alloc)
+              computed: self.computed,
             }
             .into_in(alloc),
           )
@@ -79,7 +79,7 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
               name: self.key,
               span: self.span,
               binding: AssignmentTargetMaybeDefault::from(self.value.into_assignment_target(alloc)),
-              ..AssignmentTargetPropertyProperty::dummy(alloc)
+              computed: self.computed,
             }
             .into_in(alloc),
           )
@@ -114,7 +114,7 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
               }
               .into_in(alloc),
             ),
-            ..AssignmentTargetPropertyProperty::dummy(alloc)
+            computed: self.computed,
           }
           .into_in(alloc),
         )
@@ -146,7 +146,7 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
               }
               .into_in(alloc),
             ),
-            ..AssignmentTargetPropertyProperty::dummy(alloc)
+            computed: self.computed,
           }
           .into_in(alloc),
         )

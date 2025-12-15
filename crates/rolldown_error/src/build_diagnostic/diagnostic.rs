@@ -172,6 +172,37 @@ impl Diagnostic {
     self.kind = kind;
     self
   }
+
+  /// Get the primary location information from the first label if available
+  /// Returns (file_path, line, column, utf16_position)
+  pub fn get_primary_location(&self) -> Option<(String, usize, usize, usize)> {
+    let first_label = self.labels.first()?;
+    let span = first_label.span();
+    let start = span.start();
+    let source = self.files.get(span.source())?;
+
+    let mut line = 1; // 1-based
+    let mut column = 0; // 0-based
+    let mut utf16_pos = 0;
+    let mut byte_count = 0;
+
+    for ch in source.chars() {
+      if byte_count >= start {
+        break;
+      }
+      if ch == '\n' {
+        line += 1;
+        column = 0;
+      } else {
+        column += ch.len_utf16();
+      }
+      utf16_pos += ch.len_utf16();
+      byte_count += ch.len_utf8();
+    }
+
+    let file = span.source().to_string();
+    Some((file, line, column, utf16_pos))
+  }
 }
 
 impl Display for Diagnostic {

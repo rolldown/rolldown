@@ -1,6 +1,6 @@
 use napi::tokio;
 use napi_derive::napi;
-use rolldown_dev::{BundlingFuture, OnHmrUpdatesCallback, OnOutputCallback};
+use rolldown_dev::{BundleState, BundlingFuture, OnHmrUpdatesCallback, OnOutputCallback};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -17,7 +17,7 @@ use napi::{Either, Env, threadsafe_function::ThreadsafeFunctionCallMode};
 pub struct BindingDevEngine {
   inner: rolldown_dev::DevEngine,
   _session_id: Arc<str>,
-  _session: rolldown_debug::Session,
+  _session: rolldown_devtools::Session,
 }
 
 #[napi]
@@ -28,8 +28,8 @@ impl BindingDevEngine {
     options: BindingBundlerOptions,
     dev_options: Option<BindingDevOptions>,
   ) -> napi::Result<Self> {
-    let session_id = rolldown_debug::generate_session_id();
-    let session = rolldown_debug::Session::dummy();
+    let session_id = rolldown_devtools::generate_session_id();
+    let session = rolldown_devtools::Session::dummy();
 
     let on_hmr_updates_callback = dev_options.as_ref().and_then(|opts| opts.on_hmr_updates.clone());
     let on_output_callback = dev_options.as_ref().and_then(|opts| opts.on_output.clone());
@@ -151,12 +151,13 @@ impl BindingDevEngine {
   }
 
   #[napi]
-  pub async fn has_latest_build_output(&self) -> napi::Result<bool> {
+  pub async fn get_bundle_state(&self) -> napi::Result<BindingBundleState> {
     self
       .inner
-      .has_latest_bundle_output()
+      .get_bundle_state()
       .await
-      .map_err(|_e| napi::Error::from_reason("Failed to check latest build output"))
+      .map(Into::into)
+      .map_err(|_e| napi::Error::from_reason("Failed to get bundle state"))
   }
 
   #[napi]
@@ -178,12 +179,22 @@ impl BindingDevEngine {
   }
 
   #[napi]
-  pub fn register_modules(&self, client_id: String, modules: Vec<String>) {
+  #[allow(
+    clippy::unused_async,
+    clippy::allow_attributes,
+    reason = "Avoid blocking nodejs thread and potential deadlock. See https://github.com/rolldown/rolldown/issues/7311"
+  )]
+  pub async fn register_modules(&self, client_id: String, modules: Vec<String>) {
     self.inner.clients.entry(client_id).or_default().executed_modules.extend(modules);
   }
 
   #[napi]
-  pub fn remove_client(&self, client_id: String) {
+  #[allow(
+    clippy::unused_async,
+    clippy::allow_attributes,
+    reason = "Avoid blocking nodejs thread and potential deadlock. See https://github.com/rolldown/rolldown/issues/7311"
+  )]
+  pub async fn remove_client(&self, client_id: String) {
     self.inner.clients.remove(&client_id);
   }
 
@@ -215,5 +226,20 @@ impl ScheduledBuild {
   #[napi]
   pub fn already_scheduled(&self) -> bool {
     self.already_scheduled
+  }
+}
+
+#[napi(object)]
+pub struct BindingBundleState {
+  pub last_full_build_failed: bool,
+  pub has_stale_output: bool,
+}
+
+impl From<BundleState> for BindingBundleState {
+  fn from(state: BundleState) -> Self {
+    Self {
+      last_full_build_failed: state.last_full_build_failed,
+      has_stale_output: state.has_stale_output,
+    }
   }
 }

@@ -2,14 +2,15 @@
   "config": {
     "input": [
       {
-        "name": "entries_entry",
+        "name": "entries/entry",
         "import": "entries/entry.css"
       }
     ],
     "moduleTypes": {
       ".css": "css",
       ".png": "asset"
-    }
+    },
+    "assetFilenames": "[name]-[hash].[ext]"
   },
   "snapshotBytes": true
 }

@@ -6,13 +6,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-import { n as read, r as __esm, t as init_read } from "./main.js";
+import { n as read, r as __esmMin, t as init_read } from "./main.js";
 
 //#region dynamic.js
-var init_dynamic = __esm({ "dynamic.js": (() => {
+var init_dynamic = __esmMin((() => {
 	init_read();
 	read();
-}) });
+}));
 
 //#endregion
 init_dynamic();
@@ -26,35 +26,35 @@ import nodeAssert from "node:assert";
 // HIDDEN [rolldown:runtime]
 //#region setup.js
 var setup;
-var init_setup = __esm({ "setup.js": (() => {
+var init_setup = __esmMin((() => {
 	setup = () => {
 		globalThis.foo = "foo";
 	};
 	setup();
-}) });
+}));
 
 //#endregion
 //#region read.js
 var foo, read;
-var init_read = __esm({ "read.js": (() => {
+var init_read = __esmMin((() => {
 	foo = globalThis.foo;
 	read = () => {
 		console.log("read", foo);
 	};
-}) });
+}));
 
 //#endregion
 //#region main.js
-var init_main = __esm({ "main.js": (() => {
+var init_main = __esmMin((() => {
 	init_setup();
 	init_read();
 	setup();
 	read();
 	import("./dynamic.js");
 	nodeAssert.strictEqual(globalThis.foo, "foo");
-}) });
+}));
 
 //#endregion
 init_main();
-export { read as n, __esm as r, init_read as t };
+export { read as n, __esmMin as r, init_read as t };
 ```

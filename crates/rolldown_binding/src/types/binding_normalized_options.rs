@@ -51,8 +51,8 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
-  pub fn cwd(&self) -> Option<String> {
-    Some(self.inner.cwd.to_string_lossy().to_string())
+  pub fn cwd(&self) -> String {
+    self.inner.cwd.to_string_lossy().to_string()
   }
 
   #[napi(getter, ts_return_type = "'node' | 'browser' | 'neutral'")]

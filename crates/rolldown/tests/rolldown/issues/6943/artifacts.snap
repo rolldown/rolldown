@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region lib.js
+var lib_exports = /* @__PURE__ */ __export({ tryPatchHandler: () => tryPatchHandler });
+function tryPatchHandler(taskRoot, handlerPath) {
+	__require(taskRoot);
+}
+
+//#endregion
+//#region main.js
+console.log(lib_exports);
+
+//#endregion
+```

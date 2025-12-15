@@ -1,11 +1,13 @@
 use std::{borrow::Cow, path::Path, sync::Arc};
 
-use anyhow::Context;
-use oxc::transformer_plugins::InjectGlobalVariablesConfig;
+use arcstr::ArcStr;
+use itertools::Either;
+use oxc::{transformer::EngineTargets, transformer_plugins::InjectGlobalVariablesConfig};
 use rolldown_common::{
-  AttachDebugInfo, GlobalsOutputOption, InjectImport, LegalComments, MinifyOptions, ModuleType,
-  NormalizedBundlerOptions, OutputFormat, Platform, PreserveEntrySignatures, TreeshakeOptions,
-  normalize_optimization_option,
+  AttachDebugInfo, GlobalsOutputOption, InjectImport, JsxOptions, JsxPreset, LegalComments,
+  MinifyOptions, ModuleType, NormalizedBundlerOptions, OutputFormat, Platform,
+  PreserveEntrySignatures, RawTransformOptions, TransformOptions, TreeshakeOptions, TsConfig,
+  merge_transform_options_with_tsconfig, normalize_optimization_option,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_fs::{OsFileSystem, OxcResolverFileSystem as _};
@@ -13,9 +15,7 @@ use rolldown_resolver::Resolver;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{
-  SharedResolver, utils::normalize_transform_options::normalize_transform_options_with_tsconfig,
-};
+use crate::{SharedResolver, utils::determine_minify_internal_exports_default};
 
 pub struct PrepareBuildContext {
   pub fs: OsFileSystem,
@@ -242,7 +242,6 @@ pub fn prepare_build_context(
   );
   let cwd =
     raw_options.cwd.unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
-  let tsconfig = raw_options.tsconfig.map(|tsconfig| cwd.join(tsconfig));
 
   let mut raw_treeshake = raw_options.treeshake;
   if experimental.hmr.is_some() {
@@ -250,17 +249,92 @@ pub fn prepare_build_context(
     raw_treeshake = TreeshakeOptions::Boolean(false);
   }
 
+  let tsconfig = raw_options.tsconfig.clone().map(|tsconfig| tsconfig.with_base(&cwd));
   let fs = OsFileSystem::new(raw_resolve.yarn_pnp.is_some_and(|b| b));
   let resolver =
-    Arc::new(Resolver::new(fs.clone(), cwd.clone(), platform, tsconfig.clone(), raw_resolve));
+    Arc::new(Resolver::new(fs.clone(), cwd.clone(), platform, tsconfig.as_ref(), raw_resolve));
 
-  let transform_options = Box::new(normalize_transform_options_with_tsconfig(
-    raw_options.transform.unwrap_or_default(),
-    tsconfig.as_ref().map(|path| resolver.resolve_tsconfig(&path)).transpose().with_context(
-      || format!("Failed to resolve `tsconfig` option: {}", tsconfig.as_ref().unwrap().display()),
-    )?,
-    &mut warnings,
-  )?);
+  let transform_options = {
+    let mut raw_transform_options = raw_options.transform.unwrap_or_default();
+
+    let target = match &raw_transform_options.target {
+      Some(Either::Left(target)) => EngineTargets::from_target(target),
+      Some(Either::Right(targets)) => EngineTargets::from_target_list(targets),
+      None => Ok(EngineTargets::default()),
+    }
+    .map_err(|message| {
+      let hint = message
+        .contains("Invalid target")
+        .then(|| "Rolldown only supports ES2015 (ES6) and later.".to_owned());
+      BuildDiagnostic::bundler_initialize_error(message, hint)
+    })?;
+
+    let mut jsx_preset = JsxPreset::Enable;
+    if let Some(Either::Left(jsx_str)) = &mut raw_transform_options.jsx {
+      match jsx_str.as_str() {
+        "react" => {
+          raw_transform_options.jsx = Some(Either::Right(JsxOptions {
+            runtime: Some(String::from("classic")),
+            ..Default::default()
+          }));
+        }
+        "react-jsx" => {
+          raw_transform_options.jsx = Some(Either::Right(JsxOptions::default()));
+        }
+        // Keep JSX syntax as-is in the output (parser enabled, transformer disabled)
+        "preserve" => jsx_preset = JsxPreset::Preserve,
+        // Disable JSX parser and transformer entirely - will error if JSX syntax is encountered
+        "disable" => {
+          jsx_preset = JsxPreset::Disable;
+          "preserve".clone_into(jsx_str);
+        }
+        _ => {
+          Err(BuildDiagnostic::bundler_initialize_error(
+            format!("Invalid jsx option: `{jsx_str}`."),
+            Some(
+              "Valid options are `false | 'react' | 'react-jsx' | 'preserve'`, or jsx options."
+                .to_owned(),
+            ),
+          ))?;
+        }
+      }
+    }
+
+    // Create TransformOptions based on tsconfig mode:
+    // - Auto: Create Raw mode (will resolve tsconfig per file)
+    // - None/Manual: Create Normal mode (resolve tsconfig once now)
+    match tsconfig {
+      Some(TsConfig::Manual(path)) => {
+        // Manual mode: Resolve tsconfig now and create Normal mode
+        let resolved_tsconfig = resolver.resolve_tsconfig(&path).map_err(|err| {
+          anyhow::anyhow!("Failed to resolve `tsconfig` option: {}", path.display()).context(err)
+        })?;
+        Box::new(TransformOptions::new(
+          merge_transform_options_with_tsconfig(
+            raw_transform_options,
+            Some(&resolved_tsconfig),
+            &mut warnings,
+          )?,
+          target,
+          jsx_preset,
+        ))
+      }
+      Some(TsConfig::Auto) => {
+        // Auto mode: Create Raw mode TransformOptions
+        // Each file will find its nearest tsconfig during compilation
+        Box::new(TransformOptions::new_raw(
+          RawTransformOptions::new(raw_transform_options),
+          target,
+          jsx_preset,
+        ))
+      }
+      None => Box::new(TransformOptions::new(
+        merge_transform_options_with_tsconfig(raw_transform_options, None, &mut warnings)?,
+        target,
+        jsx_preset,
+      )),
+    }
+  };
 
   let mut normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
@@ -304,8 +378,7 @@ pub fn prepare_build_context(
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
     module_types,
     experimental,
-    // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L2767
-    profiler_names: raw_options.profiler_names.unwrap_or(!raw_minify.is_enabled()),
+    profiler_names: raw_options.profiler_names.unwrap_or(false),
     // Use placeholder for minify options at first
     minify: MinifyOptions::Disabled,
     define,
@@ -330,7 +403,10 @@ pub fn prepare_build_context(
     log_level: raw_options.log_level,
     on_log: raw_options.on_log,
     preserve_modules: raw_options.preserve_modules.unwrap_or_default(),
-    virtual_dirname: raw_options.virtual_dirname.unwrap_or_else(|| "_virtual".to_string()),
+    virtual_dirname: raw_options
+      .virtual_dirname
+      .map(ArcStr::from)
+      .unwrap_or_else(|| arcstr::literal!("_virtual")),
     preserve_modules_root: raw_options.preserve_modules_root.map(|preserve_modules_root| {
       let p = Path::new(&preserve_modules_root);
       if p.is_absolute() {
@@ -344,15 +420,11 @@ pub fn prepare_build_context(
     debug: raw_options.debug.is_some(),
     optimization: normalize_optimization_option(raw_options.optimization, platform),
     top_level_var: raw_options.top_level_var.unwrap_or(false),
-    minify_internal_exports: raw_options.minify_internal_exports.unwrap_or_else(|| {
-      crate::utils::determine_minify_internal_exports_default::determine_minify_internal_exports_default(
-        Some(format),
-        &raw_minify,
-      )
-    }),
+    minify_internal_exports: raw_options
+      .minify_internal_exports
+      .unwrap_or_else(|| determine_minify_internal_exports_default(Some(format), &raw_minify)),
     clean_dir: raw_options.clean_dir.unwrap_or(false),
     context: raw_options.context.unwrap_or_default(),
-    tsconfig,
   };
 
   normalized.minify = raw_minify.normalize(&normalized);

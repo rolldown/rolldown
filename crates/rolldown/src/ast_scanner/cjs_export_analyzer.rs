@@ -1,7 +1,7 @@
-use oxc::allocator::GetAddress;
+use oxc::allocator::{GetAddress, UnstableAddress};
 use oxc::ast::{
   AstKind, MemberExpressionKind,
-  ast::{self, AssignmentExpression, Expression, PropertyKey},
+  ast::{self, AssignmentExpression, Expression, IdentifierReference, PropertyKey},
 };
 use oxc::span::CompactStr;
 use rolldown_common::{AstScopes, EcmaModuleAstUsage};
@@ -45,7 +45,11 @@ pub enum CommonJsAstType {
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
-  pub fn commonjs_export_analyzer(&self, ty: CjsGlobalAssignmentType) -> Option<CommonJsAstType> {
+  pub fn commonjs_export_analyzer(
+    &self,
+    ident_ref: &IdentifierReference,
+    ty: CjsGlobalAssignmentType,
+  ) -> Option<CommonJsAstType> {
     let cursor = self.visit_path.len() - 1;
     let parent = self.visit_path.get(cursor)?;
     match parent {
@@ -68,7 +72,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                 self.visit_path.get(cursor - 2)?,
               )
             }
-            AstKind::Argument(arg) => self.check_object_define_property(arg, cursor - 1),
+            AstKind::CallExpression(call_expr)
+              if call_expr
+                .arguments
+                .first()
+                .is_some_and(|arg| arg.address() == parent.address()) =>
+            {
+              self.check_object_define_property(call_expr)
+            }
             AstKind::AssignmentExpression(assignment_expr) => {
               self.check_assignment_is_cjs_reexport(assignment_expr)
             }
@@ -82,10 +93,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           Self::check_assignment_target_property(&member_expr, self.visit_path.get(cursor - 1)?)
         }
       },
-      AstKind::Argument(arg) => {
+      AstKind::CallExpression(call_expr)
+        if call_expr
+          .arguments
+          .first()
+          .is_some_and(|arg| arg.address() == ident_ref.unstable_address()) =>
+      {
         // one scenario:
         // 1. Object.defineProperty(exports, "__esModule", { value: true });
-        self.check_object_define_property(arg, cursor)
+        self.check_object_define_property(call_expr)
       }
       _ => None,
     }
@@ -112,16 +128,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// Check if the argument is a valid `Object.defineProperty` call expression for `__esModule` flag.
   fn check_object_define_property(
     &self,
-    arg: &ast::Argument<'_>,
-    base_cursor: usize,
+    call_expr: &ast::CallExpression<'_>,
   ) -> Option<CommonJsAstType> {
-    let call_expr = self.visit_path.get(base_cursor - 1)?.as_call_expression()?;
-
-    let first = call_expr.arguments.first()?;
-    let is_same_member_expr = arg.address() == first.address();
-    if !is_same_member_expr {
-      return None;
-    }
     is_object_define_property_es_module(&self.result.symbol_ref_db.ast_scopes, call_expr)
   }
 

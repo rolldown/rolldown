@@ -8,9 +8,9 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleLoaderMsg, PackageJson, PluginIdx, ResolvedId,
-  SharedFileEmitter, SharedModuleInfoDashMap, SharedNormalizedBundlerOptions,
-  side_effects::HookSideEffects,
+  FilenameTemplate, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleLoaderMsg, PackageJson,
+  PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
+  SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::FxDashSet;
@@ -42,7 +42,7 @@ pub struct NativePluginContextImpl {
   pub(crate) watch_files: Arc<FxDashSet<ArcStr>>,
   pub(crate) module_infos: SharedModuleInfoDashMap,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
-  pub(crate) session: rolldown_debug::Session,
+  pub(crate) session: rolldown_devtools::Session,
   pub(crate) bundle_span: Arc<tracing::Span>,
   // `resolve_id` hook not only will be triggered by the rolldown's resolve process, but also could be triggered
   // by manual calls of `PluginContext.resolve()`. We use a dedicated span here to distinguish whether the call is
@@ -139,15 +139,20 @@ impl NativePluginContextImpl {
     self.file_emitter.emit_chunk(Arc::new(chunk)).await
   }
 
+  pub fn emit_prebuilt_chunk(&self, chunk: rolldown_common::EmittedPrebuiltChunk) -> ArcStr {
+    self.file_emitter.emit_prebuilt_chunk(chunk)
+  }
+
   pub fn emit_file(
     &self,
     file: rolldown_common::EmittedAsset,
     fn_asset_filename: Option<String>,
     fn_sanitized_file_name: Option<String>,
-  ) -> ArcStr {
+  ) -> anyhow::Result<ArcStr> {
     let file_name_is_none = file.file_name.is_none();
-    let asset_filename_template =
-      file_name_is_none.then(|| self.options.asset_filenames.value(fn_asset_filename).into());
+    let asset_filename_template = file_name_is_none.then(|| {
+      FilenameTemplate::new(self.options.asset_filenames.value(fn_asset_filename), "assetFileNames")
+    });
     let sanitized_file_name = file_name_is_none.then(|| {
       self.options.sanitize_filename.value(file.name_for_sanitize(), fn_sanitized_file_name)
     });
@@ -161,7 +166,7 @@ impl NativePluginContextImpl {
   ) -> anyhow::Result<ArcStr> {
     let asset_filename = self.options.asset_filename_with_file(&file).await?;
     let sanitized_file_name = self.options.sanitize_file_name_with_file(&file).await?;
-    Ok(self.file_emitter.emit_file(file, asset_filename.map(Into::into), sanitized_file_name))
+    self.file_emitter.emit_file(file, asset_filename, sanitized_file_name)
   }
 
   pub fn get_file_name(&self, reference_id: &str) -> anyhow::Result<ArcStr> {

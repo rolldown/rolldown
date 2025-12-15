@@ -8,7 +8,7 @@ use rolldown_plugin_utils::{
   constants::{HTMLProxyMap, HTMLProxyMapItem, HTMLProxyResult, ViteMetadata},
   uri::encode_uri_path,
 };
-use rolldown_utils::{pattern_filter::normalize_path, url::clean_url, xxhash::xxhash_with_base};
+use rolldown_utils::{pattern_filter::normalize_path, url::clean_url};
 use string_wizard::MagicString;
 use sugar_path::SugarPath as _;
 
@@ -53,7 +53,7 @@ impl ViteHtmlPlugin {
     is_style_attribute: bool,
     (value, span): (&str, Span),
   ) -> anyhow::Result<()> {
-    *inline_module_count += 1;
+    let index = *inline_module_count;
 
     js.push_str("import \"");
     js.push_str(id);
@@ -62,27 +62,33 @@ impl ViteHtmlPlugin {
       js.push_str("&style-attr");
     }
     js.push_str("&index=");
-    js.push_str(itoa::Buffer::new().format(*inline_module_count - 1));
+    js.push_str(itoa::Buffer::new().format(index));
     js.push_str(".css\"\n");
 
     self.add_to_html_proxy_cache(
       ctx,
       file_path,
-      *inline_module_count,
+      index,
       HTMLProxyMapItem { code: value.into(), map: None },
     );
 
-    super::overwrite_check_public_file(
-      s,
-      span.start..span.end,
-      rolldown_utils::concat_string!(
-        "__VITE_INLINE_CSS__",
-        xxhash_with_base(clean_url(id).as_bytes(), 16),
-        "_",
-        itoa::Buffer::new().format(*inline_module_count - 1),
-        "__"
-      ),
-    )
+    let value = rolldown_utils::concat_string!(
+      "__VITE_INLINE_CSS__",
+      rolldown_plugin_utils::get_hash(clean_url(id)),
+      "_",
+      itoa::Buffer::new().format(index),
+      "__"
+    );
+
+    *inline_module_count += 1;
+
+    if is_style_attribute {
+      super::overwrite_check_public_file(s, span.start..span.end, value)?;
+    } else {
+      s.update(span.start, span.end, value);
+    }
+
+    Ok(())
   }
 
   pub async fn url_to_built_url(
@@ -97,14 +103,14 @@ impl ViteHtmlPlugin {
       return Ok(env.public_file_to_built_url(url));
     }
     let path = if url.starts_with('/') {
-      ctx.cwd().join(url)
+      self.root.join(url)
     } else {
       Path::new(importer).parent().unwrap().join(url)
     };
     let path = path.normalize();
     let env = rolldown_plugin_utils::FileToUrlEnv {
       ctx,
-      root: ctx.cwd(),
+      root: &self.root,
       is_lib: self.is_lib,
       public_dir: &self.public_dir,
       asset_inline_limit: &self.asset_inline_limit,
@@ -175,16 +181,23 @@ impl ViteHtmlPlugin {
     let is_named_output = ctx.options().input.iter().any(|input_item| {
       input_item.import == url || url.strip_prefix('/').is_some_and(|url| url == input_item.import)
     });
-    if is_named_output {
-      Ok(Cow::Borrowed(url))
-    } else {
-      self.url_to_built_url(ctx, url, importer, should_inline).await.map(Cow::Owned)
+    if !is_named_output {
+      let result = self.url_to_built_url(ctx, url, importer, should_inline).await.map(Cow::Owned);
+      let is_not_found_error = result.as_ref().is_err_and(|err| {
+        err
+          .downcast_ref::<std::io::Error>()
+          .is_some_and(|e| e.kind() == std::io::ErrorKind::NotFound)
+      });
+      if !is_not_found_error {
+        return result;
+      }
     }
+    Ok(Cow::Borrowed(url))
   }
 
   pub fn handle_inline_css<'a>(ctx: &PluginContext, html: &'a str) -> Option<MagicString<'a>> {
     let mut s = None;
-    for (start, _) in "__VITE_INLINE_CSS__".match_indices(html) {
+    for (start, _) in html.match_indices("__VITE_INLINE_CSS__") {
       let prefix_end = start + 19; // "__VITE_INLINE_CSS__".len()
       let bytes = html.as_bytes();
 
@@ -286,7 +299,7 @@ impl ViteHtmlPlugin {
             ctx
               .meta()
               .get_or_insert_default::<ViteMetadata>()
-              .get_or_insert_default(chunk.preliminary_filename.as_str().into())
+              .get(chunk.preliminary_filename.as_str().into())
               .imported_assets
               .insert(clean_url(&filename).into());
           }

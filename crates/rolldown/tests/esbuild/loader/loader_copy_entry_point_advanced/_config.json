@@ -1,0 +1,18 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "js/input/path",
+        "import": "entry.js"
+      },
+      {
+        "name": "copy/input/path",
+        "import": "TEST FAILED.copy"
+      }
+    ],
+    "moduleTypes": {
+    }
+  },
+  "expectExecuted": false,
+  "expectError": true // TODO: Remove this line after supporting copy loader/module type.
+}

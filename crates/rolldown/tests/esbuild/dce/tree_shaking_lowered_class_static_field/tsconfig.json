@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+    "useDefineForClassFields": true,
+    "allowJs": true,
+    "noEmit": true
+  }
+}

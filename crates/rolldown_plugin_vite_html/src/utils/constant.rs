@@ -27,3 +27,6 @@ pub type TransformIndexHtml = dyn Fn(
   ) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send>>
   + Send
   + Sync;
+
+pub type SetModuleSideEffects =
+  dyn Fn(&str) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send>> + Send + Sync;

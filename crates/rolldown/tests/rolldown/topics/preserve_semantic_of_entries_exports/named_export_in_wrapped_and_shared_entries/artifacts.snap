@@ -31,11 +31,11 @@ var main_exports = /* @__PURE__ */ __export({
 	foo: () => foo
 });
 var foo, main_default;
-var init_main = __esm({ "main.js": (() => {
+var init_main = __esmMin((() => {
 	foo = "foo";
 	main_default = "main";
 	console.log((init_main(), __toCommonJS(main_exports)));
-}) });
+}));
 
 //#endregion
 export { init_main as n, main_default as r, foo as t };

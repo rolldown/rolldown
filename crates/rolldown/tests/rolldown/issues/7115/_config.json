@@ -1,0 +1,8 @@
+{
+  "config": {
+    "format": "cjs",
+    "external": ["external-lib"],
+    "preserveModules": true
+  },
+  "expectExecuted": false
+}

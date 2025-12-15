@@ -51,7 +51,7 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
           }
         }
       } else {
-        None
+        Some(rolldown_common::SourcemapHires::Boundary)
       },
       native_magic_string: value.native_magic_string,
     })
@@ -68,7 +68,7 @@ pub struct BindingExperimentalHmrOptions {
 
 impl From<BindingExperimentalHmrOptions> for rolldown_common::HmrOptions {
   fn from(value: BindingExperimentalHmrOptions) -> Self {
-    Self { host: value.host, port: value.port, implement: value.implement }
+    Self { host: value.host, port: value.port, implement: value.implement, lazy: None }
   }
 }
 

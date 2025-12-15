@@ -12,9 +12,9 @@ import assert, { deepEqual } from "node:assert";
 //#region node_modules/demo-pkg/module.js
 var module_exports = /* @__PURE__ */ __export({ default: () => module_default });
 var module_default;
-var init_module = __esm({ "node_modules/demo-pkg/module.js": (() => {
+var init_module = __esmMin((() => {
 	module_default = "module";
-}) });
+}));
 
 //#endregion
 //#region src/test-index.js

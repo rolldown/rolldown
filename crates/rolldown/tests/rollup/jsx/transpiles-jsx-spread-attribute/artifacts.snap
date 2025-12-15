@@ -1,0 +1,40 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region dep1.js
+const obj$2 = { value1: true };
+console.log(obj$2);
+
+//#endregion
+//#region dep2.js
+const obj = { value2: true };
+console.log(obj);
+
+//#endregion
+//#region dep3.js
+const obj$1 = { value3: true };
+console.log(obj$1);
+
+//#endregion
+//#region main.js
+const Foo = () => {};
+const result1 = /* @__PURE__ */ React.createElement(Foo, obj);
+const result2 = /* @__PURE__ */ React.createElement(Foo, {
+	...obj,
+	prop: true
+});
+const result3 = /* @__PURE__ */ React.createElement(Foo, {
+	prop1: true,
+	prop2: true,
+	...obj,
+	...obj
+});
+
+//#endregion
+export { result1, result2, result3 };
+```

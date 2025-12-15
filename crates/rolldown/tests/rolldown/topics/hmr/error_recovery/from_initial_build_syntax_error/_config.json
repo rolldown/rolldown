@@ -4,8 +4,5 @@
       "hmr": {}
     }
   },
-  "dev": {
-    "ensureLatestBuildOutputForEachStep": true
-  },
   "expectError": true
 }

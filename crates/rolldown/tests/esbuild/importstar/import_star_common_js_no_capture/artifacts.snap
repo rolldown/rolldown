@@ -11,9 +11,9 @@ let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 
 //#region foo.js
-var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": ((exports) => {
+var require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = 123;
-}) });
+}));
 
 //#endregion
 //#region entry.js

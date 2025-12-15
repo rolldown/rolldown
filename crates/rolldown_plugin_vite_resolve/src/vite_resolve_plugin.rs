@@ -41,6 +41,7 @@ pub struct ViteResolveOptions {
   pub external: external::ResolveOptionsExternal,
   pub no_external: external::ResolveOptionsNoExternal,
   pub dedupe: Vec<String>,
+  pub disable_cache: bool,
   pub legacy_inconsistent_cjs_interop: bool,
   #[debug(skip)]
   pub finalize_bare_specifier: Option<Arc<FinalizeBareSpecifierCallback>>,
@@ -53,6 +54,8 @@ pub struct ViteResolveOptions {
   pub on_warn: Option<Arc<OnLogCallback>>,
   #[debug(skip)]
   pub on_debug: Option<Arc<OnLogCallback>>,
+
+  pub yarn_pnp: bool,
 }
 
 pub type FinalizeBareSpecifierCallback = dyn (Fn(
@@ -112,6 +115,7 @@ pub struct ViteResolvePlugin {
   external: external::ResolveOptionsExternal,
   no_external: Arc<external::ResolveOptionsNoExternal>,
   dedupe: Arc<FxHashSet<String>>,
+  disable_cache: bool,
   legacy_inconsistent_cjs_interop: bool,
   environment_consumer: String,
   environment_name: String,
@@ -142,9 +146,10 @@ impl ViteResolvePlugin {
       try_index: options.resolve_options.try_index,
       try_prefix: &options.resolve_options.try_prefix,
       as_src: options.resolve_options.as_src,
-      root: &options.resolve_options.root,
+      root: PathBuf::from(&options.resolve_options.root),
       preserve_symlinks: options.resolve_options.preserve_symlinks,
       tsconfig_paths: options.resolve_options.tsconfig_paths,
+      yarn_pnp: options.yarn_pnp,
     };
     let builtin_checker = Arc::new(BuiltinChecker::new(options.builtins));
     let resolvers = Resolvers::new(
@@ -159,6 +164,7 @@ impl ViteResolvePlugin {
       external: options.external.clone(),
       no_external: Arc::clone(&no_external),
       dedupe: Arc::clone(&dedupe),
+      disable_cache: options.disable_cache,
       legacy_inconsistent_cjs_interop: options.legacy_inconsistent_cjs_interop,
       environment_consumer: options.environment_consumer,
       environment_name: options.environment_name,
@@ -225,6 +231,10 @@ impl Plugin for ViteResolvePlugin {
 
     if args.specifier.starts_with(BROWSER_EXTERNAL_ID) {
       return Ok(Some(HookResolveIdOutput { id: args.specifier.into(), ..Default::default() }));
+    }
+
+    if self.disable_cache {
+      self.resolvers.clear_cache();
     }
 
     let mut id = {
@@ -440,16 +450,12 @@ impl Plugin for ViteResolvePlugin {
       }
     }
 
-    let base_dir = args
-      .importer
-      .map(|i| Path::new(i).parent().and_then(|p| p.to_str()).unwrap_or(i))
-      .unwrap_or(&self.resolve_options.root);
     let specifier = normalize_leading_slashes(&id);
     let resolved = resolver.normalize_oxc_resolver_result(
       args.importer,
       &self.dedupe,
       self.legacy_inconsistent_cjs_interop,
-      &resolver.resolve_raw(base_dir, specifier, false),
+      &resolver.resolve_raw(specifier, args.importer, false),
     )?;
     if let Some(mut resolved) = resolved {
       if !scan {
@@ -540,8 +546,6 @@ impl Plugin for ViteResolvePlugin {
     _path: &str,
     event: WatcherChangeKind,
   ) -> rolldown_plugin::HookNoopReturn {
-    // TODO(sapphi-red): we need to avoid using cache for files not watched by vite or rollup
-    // https://github.com/vitejs/vite/issues/17760
     match event {
       WatcherChangeKind::Create | WatcherChangeKind::Delete => {
         self.resolvers.clear_cache();

@@ -6,11 +6,11 @@ import { REPO_ROOT } from '../meta/constants';
 // https://github.com/Aleph-Alpha/ts-rs/blob/40b82771c8b63c986d6fcf8a71540d45816418c2/README.md?plain=1#L60-L61
 // ts-rs uses `cargo test export_bindings` to trigger the generation of the type definition files.
 
-await $`cargo test -p rolldown_debug_action export_bindings`;
+await $`cargo test -p rolldown_devtools_action export_bindings`;
 
 const generatedTypesDir = nodePath.resolve(
   REPO_ROOT,
-  'crates/rolldown_debug_action/bindings',
+  'crates/rolldown_devtools_action/bindings',
 );
 
 const generatedTypesFiles = nodeFs.readdirSync(generatedTypesDir);

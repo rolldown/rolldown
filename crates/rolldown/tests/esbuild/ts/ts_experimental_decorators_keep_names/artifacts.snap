@@ -6,8 +6,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+// HIDDEN [rolldown:runtime]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 //#region entry.ts
-var Foo = @decoratorMustComeAfterName class {};
+let Foo = class Foo$1 {
+	static {
+		__name(this, "Foo");
+	}
+};
+Foo = __decorate([decoratorMustComeAfterName], Foo);
 
 //#endregion
 export { Foo };

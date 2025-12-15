@@ -1,0 +1,6 @@
+
+//#region dir/b.js?a=1000&b=test&lang.js
+const a = 1e3;
+
+//#endregion
+export { a };

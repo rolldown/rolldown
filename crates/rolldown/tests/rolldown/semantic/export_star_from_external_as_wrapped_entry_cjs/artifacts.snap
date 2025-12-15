@@ -12,10 +12,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 var main_exports = /* @__PURE__ */ __export({ main: () => main });
 __reExport(main_exports, require("node:fs"));
 var main;
-var init_main = __esm({ "main.js": (() => {
+var init_main = __esmMin((() => {
 	main = "main";
 	console.log((init_main(), __toCommonJS(main_exports)));
-}) });
+}));
 
 //#endregion
 init_main();

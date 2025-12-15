@@ -50,7 +50,7 @@ impl ScanStageCache {
   ) -> BuildResult<()> {
     let snapshot = self.take_snapshot();
     if let Some(mut snapshot) = snapshot {
-      defer_sync_scan_data(options, &self.module_id_to_idx, resolver, &mut snapshot).await?;
+      defer_sync_scan_data(options, resolver, &self.module_id_to_idx, &mut snapshot).await?;
       self.set_snapshot(snapshot);
     }
     Ok(())
@@ -79,19 +79,6 @@ impl ScanStageCache {
         modules
       }
     };
-    for (idx, symbols) in scan_stage_output.safely_merge_cjs_ns_map {
-      match cache.safely_merge_cjs_ns_map.entry(idx) {
-        std::collections::hash_map::Entry::Occupied(mut occupied_entry) => {
-          let owners = symbols.iter().map(|item| item.owner).collect::<FxHashSet<ModuleIdx>>();
-          let cache_symbols = occupied_entry.get_mut();
-          cache_symbols.retain(|symbol| !owners.contains(&symbol.owner));
-          cache_symbols.extend(symbols);
-        }
-        std::collections::hash_map::Entry::Vacant(vacant_entry) => {
-          vacant_entry.insert(symbols);
-        }
-      }
-    }
     // merge module_table, index_ast_scope, index_ecma_ast
     for (new_idx, new_module) in modules {
       let idx = self.module_id_to_idx[new_module.id_clone()].idx();
@@ -134,11 +121,13 @@ impl ScanStageCache {
         let removed_module_idxs = entry_point
           .related_stmt_infos
           .iter()
-          .map(|(module_idx, _, _)| *module_idx)
+          .map(|(module_idx, _, _, _)| *module_idx)
           .collect::<FxHashSet<_>>();
-        _ = old_entry_point.related_stmt_infos.extract_if(.., |(module_idx, _stmt_info_idx, _)| {
-          removed_module_idxs.contains(module_idx)
-        });
+        _ = old_entry_point
+          .related_stmt_infos
+          .extract_if(.., |(module_idx, _stmt_info_idx, _address, _)| {
+            removed_module_idxs.contains(module_idx)
+          });
         old_entry_point.related_stmt_infos.extend(entry_point.related_stmt_infos);
       } else {
         cache.entry_points.push(entry_point);
@@ -181,7 +170,6 @@ impl ScanStageCache {
           .collect::<Vec<_>>();
         IndexVec::from_vec(item)
       },
-      safely_merge_cjs_ns_map: cache.safely_merge_cjs_ns_map.clone(),
 
       // Since `AstScope` is immutable in following phase, move it to avoid clone
       entry_points: cache.entry_points.clone(),

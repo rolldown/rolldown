@@ -10,7 +10,6 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region a.js
-function test() {}
 var Foo = class {
 	static {
 		__name(this, "Foo");
@@ -19,16 +18,13 @@ var Foo = class {
 
 //#endregion
 //#region main.js
-const test$1 = 10;
-var Foo$1 = class extends Foo {
+var Bar = class {
 	static {
-		__name(this, "Foo");
+		__name(this, "Bar");
 	}
 };
-console.log(`test: `, test$1);
-assert.strictEqual(Foo$1.name, "Foo");
 assert.strictEqual(Foo.name, "Foo");
-assert.strictEqual(test.name, "test");
+assert.strictEqual(Bar.name, "Bar");
 
 //#endregion
 ```

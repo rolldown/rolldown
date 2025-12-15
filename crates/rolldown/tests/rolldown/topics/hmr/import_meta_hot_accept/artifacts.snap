@@ -21,10 +21,10 @@ self_accept_hot.accept((mod) => {
 
 //#endregion
 //#region single_accept/child.js
-var child_exports$1 = /* @__PURE__ */ __export({ count: () => count$2 });
+var child_exports$1 = /* @__PURE__ */ __export({ count: () => count$3 });
 const child_hot$1 = __rolldown_runtime__.createModuleHotContext("single_accept/child.js");
 __rolldown_runtime__.registerModule("single_accept/child.js", { exports: child_exports$1 });
-const count$2 = 0;
+const count$3 = 0;
 
 //#endregion
 //#region single_accept/parent.js
@@ -35,11 +35,11 @@ globalThis.singleAcceptAcceptCount ??= 0;
 globalThis.singleAcceptParentExecuteCount ??= 0;
 globalThis.singleAcceptParentExecuteCount++;
 assert.strictEqual(globalThis.singleAcceptParentExecuteCount, 1);
-let count$3 = count$2;
+let count$2 = count$3;
 parent_hot$1.accept("single_accept/child.js", (mod) => {
-	count$3 = mod.count;
+	count$2 = mod.count;
 	globalThis.singleAcceptAcceptCount++;
-	assert.strictEqual(globalThis.singleAcceptAcceptCount, count$3);
+	assert.strictEqual(globalThis.singleAcceptAcceptCount, count$2);
 });
 process.on("beforeExit", (code) => {
 	if (code !== 0) return;
@@ -48,10 +48,10 @@ process.on("beforeExit", (code) => {
 
 //#endregion
 //#region array_accept/child.js
-var child_exports = /* @__PURE__ */ __export({ count: () => count });
+var child_exports = /* @__PURE__ */ __export({ count: () => count$1 });
 const child_hot = __rolldown_runtime__.createModuleHotContext("array_accept/child.js");
 __rolldown_runtime__.registerModule("array_accept/child.js", { exports: child_exports });
-const count = 0;
+const count$1 = 0;
 
 //#endregion
 //#region array_accept/parent.js
@@ -62,11 +62,11 @@ globalThis.arrayAcceptAcceptCount ??= 0;
 globalThis.arrayAcceptParentExecuteCount ??= 0;
 globalThis.arrayAcceptParentExecuteCount++;
 assert.strictEqual(globalThis.arrayAcceptParentExecuteCount, 1);
-let count$1 = count;
+let count = count$1;
 parent_hot.accept(["array_accept/child.js"], ([mod]) => {
-	count$1 = mod.count;
+	count = mod.count;
 	globalThis.arrayAcceptAcceptCount++;
-	assert.strictEqual(globalThis.arrayAcceptAcceptCount, count$1);
+	assert.strictEqual(globalThis.arrayAcceptAcceptCount, count);
 });
 process.on("beforeExit", (code) => {
 	if (code !== 0) return;

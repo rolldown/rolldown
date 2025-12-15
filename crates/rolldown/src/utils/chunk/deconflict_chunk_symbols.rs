@@ -122,6 +122,7 @@ pub fn deconflict_chunk_symbols(
       // and their symbols don't pollute the chunk's root scope.
       let meta = &link_output.metas[module.idx];
       let is_cjs_wrapped_module = matches!(meta.wrap_kind(), WrapKind::Cjs);
+
       module.stmt_infos.iter().filter(|stmt_info| stmt_info.is_included).for_each(|stmt_info| {
         for declared_symbol in stmt_info
           .declared_symbols
@@ -129,13 +130,17 @@ pub fn deconflict_chunk_symbols(
           .filter(|item| matches!(item, TaggedSymbolRef::Normal(_)))
         {
           let symbol_ref = declared_symbol.inner();
+          let canonical_ref = link_output.symbol_db.canonical_ref_for(symbol_ref);
+          // Import statement declared some symbols that come from other module, those symbol should be skipped
+          if canonical_ref.owner != module.idx {
+            continue;
+          }
           // For CJS wrapped modules, only facade symbols need deconflicting.
           // Facade symbols are synthetic symbols created during linking (e.g., `require_foo` wrapper,
           // namespace objects) that don't exist in the original AST. These are rendered at the chunk's
           // root scope and must be deconflicted. Non-facade (real AST) symbols in CJS modules are
           // wrapped inside the `__commonJS` closure and don't pollute the chunk's root scope.
           let needs_deconflict = if is_cjs_wrapped_module {
-            let canonical_ref = link_output.symbol_db.canonical_ref_for(symbol_ref);
             // Note:
             // 1. Some facade symbols may originate from external modules (e.g., namespace objects for external imports).
             // 2. Since we merge external module symbols, external symbol declared in a cjs module also needs to be deconflicted

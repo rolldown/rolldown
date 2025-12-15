@@ -5947,6 +5947,10 @@ expression: output
 
 - main-!~{000}~.js => main-DtytjKtK.js
 
+# tests/rolldown/topics/keep_names/arrow_function_expression
+
+- main-!~{000}~.js => main-CwTkA1ow.js
+
 # tests/rolldown/topics/keep_names/declaration
 
 - main-!~{000}~.js => main-D3u2GAL2.js

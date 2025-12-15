@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+//#region a.js
+var fn$1 = /* @__PURE__ */ __name(() => {}, "fn");
+assert.strictEqual(fn$1.name, "fn");
+
+//#endregion
+//#region b.js
+var fn = () => {};
+assert.strictEqual(fn.name, "fn");
+
+//#endregion
+```

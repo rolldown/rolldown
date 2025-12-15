@@ -367,13 +367,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         if let (BindingPatternKind::BindingIdentifier(binding), Some(init)) =
           (&decl.id.kind, &decl.init)
         {
-          match init {
-            ast::Expression::ClassExpression(_) | ast::Expression::FunctionExpression(_) => {
-              self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
-            }
-            _ => {}
-          }
-
           // Extract constant value for top-level variable declarations
           if self.is_root_symbol(binding.symbol_id()) {
             if let Some(value) = self.extract_constant_value_from_expr(Some(init)) {
@@ -421,16 +414,23 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     }
   }
 
+  fn visit_expression(&mut self, it: &Expression<'ast>) {
+    if self.is_root_scope()
+      && matches!(
+        it,
+        Expression::ArrowFunctionExpression(_)
+          | Expression::FunctionExpression(_)
+          | Expression::ClassExpression(_)
+      )
+    {
+      self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
+    }
+    walk::walk_expression(self, it);
+  }
+
   fn visit_call_expression(&mut self, it: &ast::CallExpression<'ast>) {
     self.try_extract_hmr_info_from_hot_accept_call(it);
     walk::walk_call_expression(self, it);
-  }
-
-  fn visit_class(&mut self, it: &ast::Class<'ast>) {
-    if self.is_root_scope() {
-      self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
-    }
-    walk::walk_class(self, it);
   }
 
   fn visit_export_default_declaration(&mut self, it: &ast::ExportDefaultDeclaration<'ast>) {
@@ -443,21 +443,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       }
       ExportDefaultDeclarationKind::ClassDeclaration(class) if class.id.is_none() => {
         self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
-      }
-      decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
-        let inner_expr = decl.to_expression().without_parentheses();
-        match inner_expr {
-          Expression::FunctionExpression(func) if func.id.is_none() => {
-            self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
-          }
-          Expression::ClassExpression(class) if class.id.is_none() => {
-            self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
-          }
-          Expression::ArrowFunctionExpression(_) => {
-            self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
-          }
-          _ => {}
-        }
       }
       _ => {}
     }

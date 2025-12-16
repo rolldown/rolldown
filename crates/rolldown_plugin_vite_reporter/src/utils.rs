@@ -81,6 +81,7 @@ pub fn log_info(message: &str) {
 /// Joins a vector of items with a separator, showing only the first `limit` items
 /// and adding "..." if there are more.
 pub fn join_with_limit<T: AsRef<str>>(items: &[T], separator: &str, limit: usize) -> String {
+  debug_assert!(limit > 0, "limit must be greater than 0");
   if items.len() <= limit {
     items.iter().map(AsRef::as_ref).collect::<Vec<_>>().join(separator)
   } else {
@@ -117,5 +118,11 @@ mod tests {
   fn test_join_with_limit_custom_separator() {
     let items = vec!["a", "b", "c", "d", "e", "f"];
     assert_eq!(join_with_limit(&items, " | ", 3), "a | b | c | ...");
+  }
+
+  #[test]
+  fn test_join_with_limit_empty_vector() {
+    let items: Vec<&str> = vec![];
+    assert_eq!(join_with_limit(&items, ", ", 5), "");
   }
 }

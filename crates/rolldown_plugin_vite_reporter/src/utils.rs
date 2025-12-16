@@ -78,7 +78,7 @@ pub fn log_info(message: &str) {
   let _ = lock.flush();
 }
 
-/// Joins a vector of items with a separator, showing only the first 5 items
+/// Joins a vector of items with a separator, showing only the first `limit` items
 /// and adding "..." if there are more.
 pub fn join_with_limit<T: AsRef<str>>(items: &[T], separator: &str, limit: usize) -> String {
   if items.len() <= limit {

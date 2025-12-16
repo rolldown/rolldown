@@ -115,7 +115,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'
-        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
+        uses: peter-evans/create-pull-request@98357b18bf14b5342f975ff684046ec3b2a07725 # v8.0.0
         with:
           token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
           commit-message: 'chore(deps): update rollup submodule for tests to ${{ steps.get-latest-tag.outputs.LATEST_TAG }}'
@@ -222,7 +222,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'
-        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
+        uses: peter-evans/create-pull-request@98357b18bf14b5342f975ff684046ec3b2a07725 # v8.0.0
         with:
           token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
           commit-message: 'chore(deps): update test262 submodule for tests'
@@ -330,7 +330,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'
-        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
+        uses: peter-evans/create-pull-request@98357b18bf14b5342f975ff684046ec3b2a07725 # v8.0.0
         with:
           token: ${{ secrets.ROLLDOWN_UPDATE_TEST_DEP_PAT }}
           commit-message: 'chore(deps): update esbuild for tests to ${{ steps.get-latest-version.outputs.LATEST_VERSION }}'

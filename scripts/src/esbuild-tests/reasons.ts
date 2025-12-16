@@ -2,8 +2,6 @@
  * When a test case is listed here, it will be marked as "failed" in the test summary.
  */
 export const failedReasons: Record<string, string> = {
-  'dce/dce_of_decorators':
-    'class-level decorators on unused class declarations are being removed (e.g. `@fn class Class {}`)',
   'dce/dce_of_iife': 'sub optimal: IIFEs are not unwrapped',
   'dce/dce_of_symbol_ctor_call':
     '`new Symbol("abc")` should not be removed as it has side effects',

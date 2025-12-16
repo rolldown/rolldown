@@ -489,7 +489,7 @@ const OnwarnSchema = v.pipe(
   ),
 ) satisfies v.GenericSchema<OnwarnFunction>;
 
-const HmrSchema = v.union([
+const DevModeSchema = v.union([
   v.boolean(),
   v.strictObject({
     new: v.optional(v.boolean()),
@@ -550,7 +550,7 @@ const InputOptionsSchema = v.strictObject({
       strictExecutionOrder: v.optional(v.boolean()),
       onDemandWrapping: v.optional(v.boolean()),
       incrementalBuild: v.optional(v.boolean()),
-      hmr: v.optional(HmrSchema),
+      devMode: v.optional(DevModeSchema),
       attachDebugInfo: v.optional(v.union([
         v.literal('none'),
         v.literal('simple'),

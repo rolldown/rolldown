@@ -234,15 +234,16 @@ impl BindingBundler {
     Ok(ret)
   }
 
-  /// Validates that HMR is not enabled for the given API.
-  /// Returns an error result if HMR is enabled.
+  /// Validates that dev mode is not enabled for the given API.
+  /// Returns an error result if dev mode is enabled.
   fn validate_hmr_not_allowed<T>(
     normalized: &NormalizeBindingOptionsReturn,
     api_name: &str,
   ) -> Option<BindingResult<T>> {
-    if normalized.bundler_options.experimental.as_ref().and_then(|e| e.hmr.as_ref()).is_some() {
+    if normalized.bundler_options.experimental.as_ref().and_then(|e| e.dev_mode.as_ref()).is_some()
+    {
       let message = format!(
-        "The \"experimental.hmr\" option is only supported with the \"dev\" API. It cannot be used with \"{api_name}\". Please use the \"dev\" API for HMR functionality."
+        "The \"experimental.devMode\" option is only supported with the \"dev\" API. It cannot be used with \"{api_name}\". Please use the \"dev\" API for dev mode functionality."
       );
       let error = rolldown_error::BuildDiagnostic::bundler_initialize_error(message, None);
       let cwd = normalized.bundler_options.cwd.clone().unwrap_or_default();

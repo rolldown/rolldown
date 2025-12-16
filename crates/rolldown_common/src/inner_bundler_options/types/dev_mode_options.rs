@@ -9,12 +9,12 @@ use serde::Deserialize;
   derive(Deserialize, JsonSchema),
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
-pub struct HmrOptions {
+pub struct DevModeOptions {
   /// IP addresses that `DevRuntime` will connect to using WebSocket.
   pub host: Option<String>,
   /// Port that `DevRuntime` will connect to using WebSocket.
   pub port: Option<u16>,
-  /// Custom hmr runtime implementation.
+  /// Custom dev mode runtime implementation.
   pub implement: Option<String>,
   /// Enable lazy compilation for dynamic imports.
   pub lazy: Option<bool>,

@@ -1,4 +1,4 @@
-use rolldown::{Bundler, BundlerOptions, ExperimentalOptions, HmrOptions};
+use rolldown::{Bundler, BundlerOptions, DevModeOptions, ExperimentalOptions};
 use rolldown_workspace as workspace;
 use sugar_path::SugarPath;
 
@@ -11,7 +11,7 @@ async fn main() {
     cwd: Some(workspace::crate_dir("rolldown").join("./examples/lazy").normalize()),
     sourcemap: None,
     experimental: Some(ExperimentalOptions {
-      hmr: Some(HmrOptions { lazy: Some(true), ..Default::default() }),
+      dev_mode: Some(DevModeOptions { lazy: Some(true), ..Default::default() }),
       ..Default::default()
     }),
     ..Default::default()

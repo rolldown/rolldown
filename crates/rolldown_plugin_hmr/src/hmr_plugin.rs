@@ -53,7 +53,7 @@ impl Plugin for HmrPlugin {
       let mut runtime_source = String::new();
       let bundler_options = ctx.options();
 
-      if let Some(hmr_options) = &bundler_options.experimental.hmr {
+      if let Some(dev_mode_options) = &bundler_options.experimental.dev_mode {
         match bundler_options.platform {
           Platform::Node => {
             runtime_source.push_str("import { WebSocket } from 'ws';\n");
@@ -65,12 +65,12 @@ impl Plugin for HmrPlugin {
 
         runtime_source.push_str(include_str!("./runtime/runtime-extra-dev-common.js"));
 
-        if let Some(implement) = hmr_options.implement.as_deref() {
+        if let Some(implement) = dev_mode_options.implement.as_deref() {
           runtime_source.push_str(implement);
         } else {
           let content = include_str!("./runtime/runtime-extra-dev-default.js");
-          let host = hmr_options.host.as_deref().unwrap_or("localhost");
-          let port = hmr_options.port.unwrap_or(3000);
+          let host = dev_mode_options.host.as_deref().unwrap_or("localhost");
+          let port = dev_mode_options.port.unwrap_or(3000);
           let addr = format!("{host}:{port}");
           runtime_source.push_str(&content.replace("$ADDR", &addr));
         }

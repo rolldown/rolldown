@@ -216,7 +216,7 @@ pub fn prepare_build_context(
   );
 
   let mut experimental = raw_options.experimental.unwrap_or_default();
-  if experimental.hmr.is_some() {
+  if experimental.dev_mode.is_some() {
     experimental.incremental_build = Some(true);
   }
 
@@ -244,8 +244,8 @@ pub fn prepare_build_context(
     raw_options.cwd.unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
 
   let mut raw_treeshake = raw_options.treeshake;
-  if experimental.hmr.is_some() {
-    // HMR requires treeshaking to be disabled
+  if experimental.dev_mode.is_some() {
+    // Dev mode requires treeshaking to be disabled
     raw_treeshake = TreeshakeOptions::Boolean(false);
   }
 

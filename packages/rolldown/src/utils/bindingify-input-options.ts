@@ -23,7 +23,7 @@ import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
 import type {
   AttachDebugOptions,
-  HmrOptions,
+  DevModeOptions,
   InputOptions,
 } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
@@ -140,14 +140,14 @@ export function bindingifyInputOptions(
   };
 }
 
-function bindingifyHmr(
-  hmr?: HmrOptions,
-): BindingExperimentalOptions['hmr'] {
-  if (hmr) {
-    if (typeof hmr === 'boolean') {
-      return hmr ? {} : undefined;
+function bindingifyDevMode(
+  devMode?: DevModeOptions,
+): BindingExperimentalOptions['devMode'] {
+  if (devMode) {
+    if (typeof devMode === 'boolean') {
+      return devMode ? {} : undefined;
     }
-    return hmr;
+    return devMode;
   }
 }
 
@@ -203,7 +203,7 @@ function bindingifyExperimental(
     disableLiveBindings: experimental?.disableLiveBindings,
     viteMode: experimental?.viteMode,
     resolveNewUrlToAsset: experimental?.resolveNewUrlToAsset,
-    hmr: bindingifyHmr(experimental?.hmr),
+    devMode: bindingifyDevMode(experimental?.devMode),
     attachDebugInfo: bindingifyAttachDebugInfo(
       experimental?.attachDebugInfo,
     ),

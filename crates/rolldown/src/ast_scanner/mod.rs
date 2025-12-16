@@ -178,7 +178,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let name = concat_string!(legitimized_repr_name, "_exports");
     let namespace_object_ref = symbol_ref_db.create_facade_root_symbol_ref(&name);
 
-    let hmr_hot_ref = options.experimental.hmr.as_ref().map(|_| {
+    let hmr_hot_ref = options.experimental.dev_mode.as_ref().map(|_| {
       symbol_ref_db.create_facade_root_symbol_ref(&concat_string!(legitimized_repr_name, "_hot"))
     });
 
@@ -361,7 +361,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     }
 
-    if self.immutable_ctx.options.is_hmr_enabled() && exports_kind.is_commonjs() {
+    if self.immutable_ctx.options.is_dev_mode_enabled() && exports_kind.is_commonjs() {
       // https://github.com/rolldown/rolldown/issues/4129
       // For cjs module with hmr enabled, bundler will generates code that references `module`.
       self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);

@@ -199,8 +199,8 @@ impl NormalizedBundlerOptions {
     matches!(self.format, OutputFormat::Esm) && matches!(self.platform, Platform::Node)
   }
 
-  pub fn is_hmr_enabled(&self) -> bool {
-    self.experimental.hmr.is_some()
+  pub fn is_dev_mode_enabled(&self) -> bool {
+    self.experimental.dev_mode.is_some()
   }
 
   /// make sure the `polyfill_require` is only valid for `esm` format with `node` platform

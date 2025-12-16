@@ -598,7 +598,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   });
 
   // With enabling HMR, rolldown will register included esm module's namespace object to the runtime.
-  if ctx.options.is_hmr_enabled()
+  if ctx.options.is_dev_mode_enabled()
     && module.idx != ctx.runtime_id
     && matches!(module.exports_kind, ExportsKind::Esm)
   {

@@ -1757,7 +1757,7 @@ export interface BindingEsmExternalRequirePluginConfig {
   skipDuplicateCheck?: boolean
 }
 
-export interface BindingExperimentalHmrOptions {
+export interface BindingExperimentalDevModeOptions {
   host?: string
   port?: number
   implement?: string
@@ -1768,7 +1768,7 @@ export interface BindingExperimentalOptions {
   disableLiveBindings?: boolean
   viteMode?: boolean
   resolveNewUrlToAsset?: boolean
-  hmr?: BindingExperimentalHmrOptions
+  devMode?: BindingExperimentalDevModeOptions
   attachDebugInfo?: BindingAttachDebugInfo
   chunkModulesOrder?: BindingChunkModuleOrderBy
   chunkImportMap?: boolean | BindingChunkImportMap

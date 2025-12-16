@@ -18,7 +18,7 @@ test('validate input option', async () => {
       chokidar: {},
     },
     experimental: {
-      hmr: {},
+      devMode: {},
     },
   });
   expect(consoleSpy).toHaveBeenCalledWith(

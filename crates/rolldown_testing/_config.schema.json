@@ -959,10 +959,10 @@
             "null"
           ]
         },
-        "hmr": {
+        "devMode": {
           "anyOf": [
             {
-              "$ref": "#/$defs/HmrOptions"
+              "$ref": "#/$defs/DevModeOptions"
             },
             {
               "type": "null"
@@ -1024,7 +1024,7 @@
       },
       "additionalProperties": false
     },
-    "HmrOptions": {
+    "DevModeOptions": {
       "type": "object",
       "properties": {
         "host": {
@@ -1045,7 +1045,7 @@
           "maximum": 65535
         },
         "implement": {
-          "description": "Custom hmr runtime implementation.",
+          "description": "Custom dev mode runtime implementation.",
           "type": [
             "string",
             "null"

@@ -2,12 +2,12 @@ import { build, rolldown } from 'rolldown';
 import { scan } from 'rolldown/experimental';
 import { describe, expect, test } from 'vitest';
 
-describe('HMR validation', () => {
-  test('should throw error when using HMR with build API', async () => {
+describe('Dev mode validation', () => {
+  test('should throw error when using dev mode with build API', async () => {
     await expect(
       build({
         input: 'virtual',
-        experimental: { hmr: true },
+        experimental: { devMode: true },
         plugins: [
           {
             name: 'test',
@@ -20,13 +20,13 @@ describe('HMR validation', () => {
           },
         ],
       }),
-    ).rejects.toThrow(/experimental\.hmr.*only supported with.*dev.*API/i);
+    ).rejects.toThrow(/experimental\.devMode.*only supported with.*dev.*API/i);
   });
 
-  test('should throw error when using HMR with rolldown API and generate', async () => {
+  test('should throw error when using dev mode with rolldown API and generate', async () => {
     const bundle = await rolldown({
       input: 'virtual',
-      experimental: { hmr: true },
+      experimental: { devMode: true },
       plugins: [
         {
           name: 'test',
@@ -41,16 +41,16 @@ describe('HMR validation', () => {
     });
 
     await expect(bundle.generate()).rejects.toThrow(
-      /experimental\.hmr.*only supported with.*dev.*API/i,
+      /experimental\.devMode.*only supported with.*dev.*API/i,
     );
 
     await bundle.close();
   });
 
-  test('should throw error when using HMR with rolldown API and write', async () => {
+  test('should throw error when using dev mode with rolldown API and write', async () => {
     const bundle = await rolldown({
       input: 'virtual',
-      experimental: { hmr: true },
+      experimental: { devMode: true },
       plugins: [
         {
           name: 'test',
@@ -65,17 +65,17 @@ describe('HMR validation', () => {
     });
 
     await expect(bundle.write()).rejects.toThrow(
-      /experimental\.hmr.*only supported with.*dev.*API/i,
+      /experimental\.devMode.*only supported with.*dev.*API/i,
     );
 
     await bundle.close();
   });
 
-  test('should throw error when using HMR with scan API', async () => {
+  test('should throw error when using dev mode with scan API', async () => {
     await expect(
       scan({
         input: 'virtual',
-        experimental: { hmr: true },
+        experimental: { devMode: true },
         plugins: [
           {
             name: 'test',
@@ -88,25 +88,25 @@ describe('HMR validation', () => {
           },
         ],
       }),
-    ).rejects.toThrow(/experimental\.hmr.*only supported with.*dev.*API/i);
+    ).rejects.toThrow(/experimental\.devMode.*only supported with.*dev.*API/i);
   });
 
   // FIXME: watch API validation is tested manually because watch() does not handle errors properly
   //        see https://github.com/rolldown/rolldown/issues/6482#:~:text=Watch%20mode%20does%20not%20handle%20errors%20in%20options%20hook%20and%20causes%20promise%20rejections
 
-  test('should validate HMR after options hook in build API', async () => {
+  test('should validate dev mode after options hook in build API', async () => {
     // This test verifies that validation happens after the options hook runs
     await expect(
       build({
         input: 'virtual',
         plugins: [
           {
-            name: 'test-add-hmr',
+            name: 'test-add-dev-mode',
             options(opts) {
-              // Plugin adds HMR in options hook
+              // Plugin adds dev mode in options hook
               return {
                 ...opts,
-                experimental: { hmr: true },
+                experimental: { devMode: true },
               };
             },
             resolveId(id) {
@@ -118,21 +118,21 @@ describe('HMR validation', () => {
           },
         ],
       }),
-    ).rejects.toThrow(/experimental\.hmr.*only supported with.*dev.*API/i);
+    ).rejects.toThrow(/experimental\.devMode.*only supported with.*dev.*API/i);
   });
 
-  test('should validate HMR after options hook in rolldown API', async () => {
+  test('should validate dev mode after options hook in rolldown API', async () => {
     // This test verifies that validation happens after the options hook runs
     const bundle = await rolldown({
       input: 'virtual',
       plugins: [
         {
-          name: 'test-add-hmr',
+          name: 'test-add-dev-mode',
           options(opts) {
-            // Plugin adds HMR in options hook
+            // Plugin adds dev mode in options hook
             return {
               ...opts,
-              experimental: { hmr: true },
+              experimental: { devMode: true },
             };
           },
           resolveId(id) {
@@ -146,7 +146,7 @@ describe('HMR validation', () => {
     });
 
     await expect(bundle.generate()).rejects.toThrow(
-      /experimental\.hmr.*only supported with.*dev.*API/i,
+      /experimental\.devMode.*only supported with.*dev.*API/i,
     );
 
     await bundle.close();

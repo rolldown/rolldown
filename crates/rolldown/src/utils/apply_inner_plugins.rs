@@ -17,9 +17,9 @@ pub fn apply_inner_plugins(
   let mut before_user_plugins: Vec<SharedPluginable> =
     vec![Arc::new(rolldown_plugin_oxc_runtime::OxcRuntimePlugin)];
 
-  if let Some(hmr) = &options.experimental.hmr {
+  if let Some(dev_mode) = &options.experimental.dev_mode {
     before_user_plugins.push(Arc::new(rolldown_plugin_hmr::HmrPlugin));
-    if hmr.lazy == Some(true) {
+    if dev_mode.lazy == Some(true) {
       before_user_plugins
         .push(Arc::new(rolldown_plugin_lazy_compilation::LazyCompilationPlugin::new()));
     }

@@ -95,7 +95,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
     let last_import_stmt_idx = self.remove_unused_top_level_stmt(program);
 
-    if self.ctx.options.is_hmr_enabled() {
+    if self.ctx.options.is_dev_mode_enabled() {
       let hmr_header = if self.ctx.runtime.id() == self.ctx.module.idx {
         vec![]
       } else {

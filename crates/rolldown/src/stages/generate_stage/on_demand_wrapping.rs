@@ -17,7 +17,7 @@ impl GenerateStage<'_> {
     // Currently, hmr is strongly rely on wrapping function to update module exports
     if !self.options.experimental.strict_execution_order.unwrap_or_default()
       || !self.options.experimental.is_on_demand_wrapping_enabled()
-      || self.options.is_hmr_enabled()
+      || self.options.is_dev_mode_enabled()
     {
       // If strict execution order is not enabled, we don't need to do on-demand wrapping.
       return;

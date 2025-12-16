@@ -524,9 +524,9 @@ impl IntegrationTest {
     }
 
     if let Some(experimental) = &mut options.experimental {
-      if let Some(hmr) = &mut experimental.hmr {
-        if hmr.implement.is_none() {
-          hmr.implement = Some(include_str!("./hmr-runtime.js").to_owned());
+      if let Some(dev_mode) = &mut experimental.dev_mode {
+        if dev_mode.implement.is_none() {
+          dev_mode.implement = Some(include_str!("./hmr-runtime.js").to_owned());
         }
       }
     }

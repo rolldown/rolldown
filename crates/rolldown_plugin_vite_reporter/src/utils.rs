@@ -77,3 +77,45 @@ pub fn log_info(message: &str) {
   let _ = writeln!(&mut lock, "{message}");
   let _ = lock.flush();
 }
+
+/// Joins a vector of items with a separator, showing only the first 5 items
+/// and adding "..." if there are more.
+pub fn join_with_limit<T: AsRef<str>>(items: &[T], separator: &str, limit: usize) -> String {
+  if items.len() <= limit {
+    items.iter().map(AsRef::as_ref).collect::<Vec<_>>().join(separator)
+  } else {
+    let mut result = items[..limit].iter().map(AsRef::as_ref).collect::<Vec<_>>().join(separator);
+    result.push_str(separator);
+    result.push_str("...");
+    result
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_join_with_limit_less_than_limit() {
+    let items = vec!["a", "b", "c"];
+    assert_eq!(join_with_limit(&items, ", ", 5), "a, b, c");
+  }
+
+  #[test]
+  fn test_join_with_limit_equal_to_limit() {
+    let items = vec!["a", "b", "c", "d", "e"];
+    assert_eq!(join_with_limit(&items, ", ", 5), "a, b, c, d, e");
+  }
+
+  #[test]
+  fn test_join_with_limit_more_than_limit() {
+    let items = vec!["a", "b", "c", "d", "e", "f", "g"];
+    assert_eq!(join_with_limit(&items, ", ", 5), "a, b, c, d, e, ...");
+  }
+
+  #[test]
+  fn test_join_with_limit_custom_separator() {
+    let items = vec!["a", "b", "c", "d", "e", "f"];
+    assert_eq!(join_with_limit(&items, " | ", 3), "a | b | c | ...");
+  }
+}

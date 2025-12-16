@@ -103,6 +103,11 @@ impl<'a> GenerateStage<'a> {
 
     self.trace_action_chunks_infos(&chunk_graph);
 
+    // Check for ineffective dynamic imports
+    if !self.options.inline_dynamic_imports {
+      self.check_ineffective_dynamic_imports(&chunk_graph);
+    }
+
     let mut warnings = vec![];
     self.compute_chunk_output_exports(&mut chunk_graph, &mut warnings)?;
     if !self.options.format.is_esm() {
@@ -629,6 +634,59 @@ impl<'a> GenerateStage<'a> {
         });
       }
       trace_action!(action::ChunkGraphReady { action: "ChunkGraphReady", chunks: chunk_infos });
+    }
+  }
+
+  fn check_ineffective_dynamic_imports(&mut self, chunk_graph: &ChunkGraph) {
+    use rolldown_error::BuildDiagnostic;
+    use rolldown_plugin_utils::is_in_node_modules;
+
+    for chunk in chunk_graph.chunk_table.iter() {
+      for module_idx in &chunk.modules {
+        let Some(module) = self.link_output.module_table[*module_idx].as_normal() else {
+          continue;
+        };
+
+        // When a dynamic importer shares a chunk with the imported module,
+        // warn that the dynamic imported module will not be moved to another chunk (#12850).
+        if !module.importers.is_empty() && !module.dynamic_importers.is_empty() {
+          // Filter out the intersection of dynamic importers and sibling modules in
+          // the same chunk. The intersecting dynamic importers' dynamic import is not
+          // expected to work. Note we're only detecting the direct ineffective dynamic import here.
+          let has_ineffective_dynamic_import = module.dynamic_importers.iter().any(|importer_id| {
+            // Skip node_modules
+            if is_in_node_modules(importer_id.as_path()) {
+              return false;
+            }
+            // Check if the dynamic importer is in the same chunk
+            chunk.modules.iter().any(|&idx| {
+              let Some(mod_in_chunk) = self.link_output.module_table[idx].as_normal() else {
+                return false;
+              };
+              mod_in_chunk.id == *importer_id
+            })
+          });
+
+          if has_ineffective_dynamic_import {
+            let dynamic_importers_list: Vec<ArcStr> = module
+              .dynamic_importers
+              .iter()
+              .map(|id| id.resource_id().clone())
+              .collect();
+            let importers_list: Vec<ArcStr> =
+              module.importers.iter().map(|id| id.resource_id().clone()).collect();
+
+            self.link_output.warnings.push(
+              BuildDiagnostic::ineffective_dynamic_import(
+                module.id.resource_id().clone(),
+                dynamic_importers_list,
+                importers_list,
+              )
+              .with_severity_warning(),
+            );
+          }
+        }
+      }
     }
   }
 }

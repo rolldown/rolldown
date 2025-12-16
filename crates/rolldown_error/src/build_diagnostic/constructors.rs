@@ -43,6 +43,7 @@ use super::events::{
   eval::Eval,
   external_entry::ExternalEntry,
   forbid_const_assign::ForbidConstAssign,
+  ineffective_dynamic_import::IneffectiveDynamicImport,
   invalid_export_option::InvalidExportOption,
   missing_export::MissingExport,
   mixed_export::MixedExport,
@@ -108,6 +109,14 @@ impl BuildDiagnostic {
 
   pub fn circular_dependency(paths: Vec<String>) -> Self {
     Self::new_inner(CircularDependency { paths })
+  }
+
+  pub fn ineffective_dynamic_import(
+    module_id: ArcStr,
+    dynamic_importers: Vec<ArcStr>,
+    static_importers: Vec<ArcStr>,
+  ) -> Self {
+    Self::new_inner(IneffectiveDynamicImport { module_id, dynamic_importers, static_importers })
   }
 
   pub fn circular_reexport(importer_id: String, imported_specifier: String) -> Self {

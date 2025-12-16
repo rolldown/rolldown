@@ -48,6 +48,7 @@ pub enum EventKind {
   AlreadyClosedError = 33,
   CouldNotCleanDirectory = 34,
   PluginTimings = 35,
+  IneffectiveDynamicImport = 36,
 }
 
 impl Display for EventKind {
@@ -97,6 +98,7 @@ impl Display for EventKind {
       EventKind::AlreadyClosedError => write!(f, "ALREADY_CLOSED"),
       EventKind::CouldNotCleanDirectory => write!(f, "COULD_NOT_CLEAN_DIRECTORY"),
       EventKind::PluginTimings => write!(f, "PLUGIN_TIMINGS"),
+      EventKind::IneffectiveDynamicImport => write!(f, "INEFFECTIVE_DYNAMIC_IMPORT"),
     }
   }
 }

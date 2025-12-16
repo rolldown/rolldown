@@ -115,8 +115,8 @@ impl Plugin for ViteReporterPlugin {
 
   async fn render_chunk(
     &self,
-    ctx: &PluginContext,
-    args: &rolldown_plugin::HookRenderChunkArgs<'_>,
+    _ctx: &PluginContext,
+    _args: &rolldown_plugin::HookRenderChunkArgs<'_>,
   ) -> rolldown_plugin::HookRenderChunkReturn {
     let chunk_count = self.chunk_count.fetch_add(1, Ordering::SeqCst);
     if self.should_log_info {

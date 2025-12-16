@@ -668,11 +668,8 @@ impl<'a> GenerateStage<'a> {
           });
 
           if has_ineffective_dynamic_import {
-            let dynamic_importers_list: Vec<ArcStr> = module
-              .dynamic_importers
-              .iter()
-              .map(|id| id.resource_id().clone())
-              .collect();
+            let dynamic_importers_list: Vec<ArcStr> =
+              module.dynamic_importers.iter().map(|id| id.resource_id().clone()).collect();
             let importers_list: Vec<ArcStr> =
               module.importers.iter().map(|id| id.resource_id().clone()).collect();
 

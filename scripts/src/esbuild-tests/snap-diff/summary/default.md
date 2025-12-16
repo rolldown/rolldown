@@ -9,8 +9,6 @@
   rejected due to https://github.com/rolldown/rolldown/issues/7009, also sub optimal: eval in `test4` param position don't need to be renamed
 ## [export_forms_with_minify_identifiers_and_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle/diff.md)
   sub optimal: should not generate duplicate export binding
-## [export_special_name_bundle](../../../../../crates/rolldown/tests/esbuild/default/export_special_name_bundle/diff.md)
-  { __proto__: ... } should be { ["__proto__"]: ... }
 ## [external_es6_converted_to_common_js](../../../../../crates/rolldown/tests/esbuild/default/external_es6_converted_to_common_js/diff.md)
   sub optimal: redundant `import` statements
 ## [false_require](../../../../../crates/rolldown/tests/esbuild/default/false_require/diff.md)
@@ -68,6 +66,7 @@
 ## [export_fs_node](../../../../../crates/rolldown/tests/esbuild/default/export_fs_node)
 ## [export_fs_node_in_common_js_module](../../../../../crates/rolldown/tests/esbuild/default/export_fs_node_in_common_js_module)
 ## [export_special_name](../../../../../crates/rolldown/tests/esbuild/default/export_special_name)
+## [export_special_name_bundle](../../../../../crates/rolldown/tests/esbuild/default/export_special_name_bundle)
 ## [export_wildcard_fs_node_common_js](../../../../../crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js)
 ## [export_wildcard_fs_node_es6](../../../../../crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_es6)
 ## [exports_and_module_format_common_js](../../../../../crates/rolldown/tests/esbuild/default/exports_and_module_format_common_js)

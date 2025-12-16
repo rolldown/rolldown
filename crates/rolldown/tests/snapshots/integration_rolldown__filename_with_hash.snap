@@ -786,7 +786,7 @@ expression: output
 
 # tests/esbuild/default/export_special_name_bundle
 
-- entry-!~{000}~.js => entry-DtZbz_QR.js
+- entry-!~{000}~.js => entry-CxRjKLwV.js
 
 # tests/esbuild/default/export_wildcard_fs_node_common_js
 
@@ -4323,6 +4323,14 @@ expression: output
 # tests/rolldown/function/format/export_proto
 
 - main-!~{000}~.js => main-t5ASSHa2.js
+
+# tests/rolldown/function/format/export_proto_from
+
+- main-!~{000}~.js => main-DF0f1g0w.js
+
+# tests/rolldown/function/format/export_proto_namespace
+
+- main-!~{000}~.js => main-Bw-9b_dO.js
 
 # tests/rolldown/function/format/iife/conflict_exports_key
 

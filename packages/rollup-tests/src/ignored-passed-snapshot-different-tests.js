@@ -109,6 +109,7 @@ module.exports = [
     "rollup@form@arbitrary-module-namespace-identifiers2: renders exports that are not identifiers@generates es",
     "rollup@form@export-string-name: export string name@generates es",
     "rollup@form@index-key: index key@generates es",
+    "rollup@form@export-__proto__-from: export __proto__ from@generates es",
     // Passed. different code due to inlining
     "rollup@form@assignment-to-exports: declares updated variable in ES output (#755)@generates es",
     "rollup@form@deep-properties-access: handles deeply nested property accesses",
@@ -160,5 +161,6 @@ module.exports = [
     "rollup@form@simplify-expression-annotations: keeps correct annotations when simplifying expressinos",
     // hyf0: We can align the deconflict logic with rollup, but it requires unnecessary logic and doesn't have payoff.
     "rollup@form@deconflict-module-priority: prioritizes entry modules over dependencies when deconflicting",
-    "rollup@form@hoisted-vars-in-dead-branches: renders hoisted variables in dead branches" // Var hoisting happens in Rollup, but not in Rolldown
+    "rollup@form@hoisted-vars-in-dead-branches: renders hoisted variables in dead branches", // Var hoisting happens in Rollup, but not in Rolldown
+    "rollup@form@export-__proto__: export __proto__@generates es", // Rolldown uses `__export` helper, but Rollup does not
 ]

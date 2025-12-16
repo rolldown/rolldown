@@ -455,7 +455,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
         ast::ObjectPropertyKind::ObjectProperty(
           ast::ObjectProperty {
-            key: if is_validate_identifier_name(prop_name) {
+            // `__proto__` has special semantics in object literals - it sets the prototype
+            // instead of creating a property. Use computed property syntax for it.
+            key: if is_validate_identifier_name(prop_name) && prop_name != "__proto__" {
               ast::PropertyKey::StaticIdentifier(
                 self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
               )
@@ -463,6 +465,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
             },
             value: self.snippet.only_return_arrow_expr(returned),
+            computed: prop_name == "__proto__",
             ..ast::ObjectProperty::dummy(self.alloc)
           }
           .into_in(self.alloc),

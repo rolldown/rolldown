@@ -363,8 +363,6 @@
 ### `__proto__` export is not properly handled
  - rollup@form@cjs-transpiler-re-exports-1: Disable reexporting the __proto__ from the external module if both output.externalLiveBindings and output.reExportProtoFromExternal are false@generates cjs
  - rollup@form@cjs-transpiler-re-exports: Compatibility with CJS Transpiler Re-exports if output.externalLiveBindings is false@generates cjs
- - rollup@form@export-__proto__-from: export __proto__ from@generates es
- - rollup@form@export-__proto__: export __proto__@generates es
 
 ### source map combine logic does not support coarse sourcemap well enough
 - rollup@sourcemaps@combined-sourcemap-3: get correct combined sourcemap of bundled code@generates es

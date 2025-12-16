@@ -1,0 +1,72 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { __proto__ } from "x";
+
+export { __proto__ };
+```
+
+# Variant: cjs: [entry_filenames: "main.cjs"] [format: Cjs]
+
+## Assets
+
+### main.cjs
+
+```js
+let x = require("x");
+
+Object.defineProperty(exports, '__proto__', {
+  enumerable: true,
+  get: function () {
+    return x.__proto__;
+  }
+});
+```
+
+# Variant: iife: [entry_filenames: "main.cjs"] [format: Iife]
+
+## Assets
+
+### main.cjs
+
+```js
+var bundle = (function(exports, x) {
+
+
+Object.defineProperty(exports, '__proto__', {
+  enumerable: true,
+  get: function () {
+    return x.__proto__;
+  }
+});
+return exports;
+})({}, x);
+globalThis.bundle = bundle;
+```
+
+# Variant: umd: [entry_filenames: "main.cjs"] [format: Umd]
+
+## Assets
+
+### main.cjs
+
+```js
+(function(global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports, require('x')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'x'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.bundle = {}), global.x));
+})(this, function(exports, x) {
+
+Object.defineProperty(exports, '__proto__', {
+  enumerable: true,
+  get: function () {
+    return x.__proto__;
+  }
+});
+});
+```

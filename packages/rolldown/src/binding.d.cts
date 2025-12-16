@@ -2010,10 +2010,10 @@ export interface BindingOutputOptions {
   cssEntryFileNames?: string | ((chunk: PreRenderedChunk) => string)
   cssChunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sanitizeFileName?: boolean | ((name: string) => string)
-  banner?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
-  postBanner?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
-  footer?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
-  postFooter?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
+  banner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  postBanner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  footer?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  postFooter?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   dir?: string
   file?: string
   esModule?: boolean | 'if-default-prop'
@@ -2025,8 +2025,8 @@ export interface BindingOutputOptions {
   globals?: Record<string, string> | ((name: string) => string)
   hashCharacters?: 'base64' | 'base36' | 'hex'
   inlineDynamicImports?: boolean
-  intro?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
-  outro?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
+  intro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  outro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   paths?: Record<string, string> | ((id: string) => string)
   plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'

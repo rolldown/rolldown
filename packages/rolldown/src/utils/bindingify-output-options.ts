@@ -102,12 +102,13 @@ type AddonKeys = 'banner' | 'footer' | 'intro' | 'outro';
 function bindingifyAddon(
   configAddon: OutputOptions[AddonKeys],
 ): BindingOutputOptions[AddonKeys] {
-  return async (chunk) => {
-    if (typeof configAddon === 'function') {
-      return configAddon(transformRenderedChunk(chunk));
-    }
-    return configAddon || '';
-  };
+  if (configAddon == null || configAddon === '') {
+    return undefined;
+  }
+  if (typeof configAddon === 'function') {
+    return async (chunk) => configAddon(transformRenderedChunk(chunk));
+  }
+  return configAddon;
 }
 
 function bindingifyFormat(

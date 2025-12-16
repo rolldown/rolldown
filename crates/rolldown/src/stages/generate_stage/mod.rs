@@ -641,6 +641,17 @@ impl<'a> GenerateStage<'a> {
     use rolldown_error::BuildDiagnostic;
     use rolldown_plugin_utils::is_in_node_modules;
 
+    // Build a lookup map of module_id -> chunk_index for O(1) lookups
+    let mut module_id_to_chunk: FxHashMap<&arcstr::ArcStr, &Vec<ModuleIdx>> = FxHashMap::default();
+    for chunk in chunk_graph.chunk_table.iter() {
+      for module_idx in &chunk.modules {
+        let Some(module) = self.link_output.module_table[*module_idx].as_normal() else {
+          continue;
+        };
+        module_id_to_chunk.insert(module.id.resource_id(), &chunk.modules);
+      }
+    }
+
     for chunk in chunk_graph.chunk_table.iter() {
       for module_idx in &chunk.modules {
         let Some(module) = self.link_output.module_table[*module_idx].as_normal() else {
@@ -658,13 +669,10 @@ impl<'a> GenerateStage<'a> {
             if is_in_node_modules(importer_id.as_path()) {
               return false;
             }
-            // Check if the dynamic importer is in the same chunk
-            chunk.modules.iter().any(|&idx| {
-              let Some(mod_in_chunk) = self.link_output.module_table[idx].as_normal() else {
-                return false;
-              };
-              mod_in_chunk.id == *importer_id
-            })
+            // Check if the dynamic importer is in the same chunk using the lookup map
+            module_id_to_chunk
+              .get(importer_id.resource_id())
+              .is_some_and(|chunk_modules| std::ptr::eq(*chunk_modules, &chunk.modules))
           });
 
           if has_ineffective_dynamic_import {

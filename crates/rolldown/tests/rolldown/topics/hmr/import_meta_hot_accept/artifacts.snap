@@ -1,6 +1,26 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) /home/runner/work/rolldown/rolldown/crates/rolldown/tests/rolldown/topics/hmr/import_meta_hot_accept/hmr-temp/array_accept/child.js is dynamically imported by /home/runner/work/rolldown/rolldown/crates/rolldown/tests/rolldown/topics/hmr/import_meta_hot_accept/hmr-temp/array_accept/parent.js but also statically imported by /home/runner/work/rolldown/rolldown/crates/rolldown/tests/rolldown/topics/hmr/import_meta_hot_accept/hmr-temp/array_accept/parent.js, dynamic import will not move module into another chunk.
+
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) /home/runner/work/rolldown/rolldown/crates/rolldown/tests/rolldown/topics/hmr/import_meta_hot_accept/hmr-temp/single_accept/child.js is dynamically imported by /home/runner/work/rolldown/rolldown/crates/rolldown/tests/rolldown/topics/hmr/import_meta_hot_accept/hmr-temp/single_accept/parent.js but also statically imported by /home/runner/work/rolldown/rolldown/crates/rolldown/tests/rolldown/topics/hmr/import_meta_hot_accept/hmr-temp/single_accept/parent.js, dynamic import will not move module into another chunk.
+
+
+```
+
 # Assets
 
 ## main.js

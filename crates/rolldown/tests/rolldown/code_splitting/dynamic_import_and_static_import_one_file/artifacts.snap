@@ -1,6 +1,17 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) /home/runner/work/rolldown/rolldown/crates/rolldown/tests/rolldown/code_splitting/dynamic_import_and_static_import_one_file/foo.js is dynamically imported by /home/runner/work/rolldown/rolldown/crates/rolldown/tests/rolldown/code_splitting/dynamic_import_and_static_import_one_file/main.js but also statically imported by /home/runner/work/rolldown/rolldown/crates/rolldown/tests/rolldown/code_splitting/dynamic_import_and_static_import_one_file/main.js, dynamic import will not move module into another chunk.
+
+
+```
+
 # Assets
 
 ## foo.js

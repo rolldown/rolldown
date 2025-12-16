@@ -1700,6 +1700,30 @@
             "null"
           ]
         },
+        "banner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "footer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "intro": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "outro": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "_snapshot": {
           "description": "Whether to include the output in the snapshot for this config variant.",
           "type": [

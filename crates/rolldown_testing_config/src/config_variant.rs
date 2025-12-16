@@ -1,6 +1,6 @@
 use rolldown_common::{
-  BundlerOptions, ExperimentalOptions, InlineConstOption, OptimizationOption, OutputExports,
-  OutputFormat, PreserveEntrySignatures, TreeshakeOptions, deserialize_inline_const,
+  AddonOutputOption, BundlerOptions, ExperimentalOptions, InlineConstOption, OptimizationOption,
+  OutputExports, OutputFormat, PreserveEntrySignatures, TreeshakeOptions, deserialize_inline_const,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -28,6 +28,10 @@ pub struct ConfigVariant {
   pub top_level_var: Option<bool>,
   pub preserve_modules: Option<bool>,
   pub minify: Option<bool>,
+  pub banner: Option<String>,
+  pub footer: Option<String>,
+  pub intro: Option<String>,
+  pub outro: Option<String>,
   // --- non-bundler options are start with `_`
   /// Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]
@@ -101,6 +105,18 @@ impl ConfigVariant {
     }
     if let Some(minify) = &self.minify {
       config.minify = Some((*minify).into());
+    }
+    if let Some(banner) = &self.banner {
+      config.banner = Some(AddonOutputOption::String(Some(banner.clone())));
+    }
+    if let Some(footer) = &self.footer {
+      config.footer = Some(AddonOutputOption::String(Some(footer.clone())));
+    }
+    if let Some(intro) = &self.intro {
+      config.intro = Some(AddonOutputOption::String(Some(intro.clone())));
+    }
+    if let Some(outro) = &self.outro {
+      config.outro = Some(AddonOutputOption::String(Some(outro.clone())));
     }
     config
   }

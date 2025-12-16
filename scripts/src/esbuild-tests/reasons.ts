@@ -18,8 +18,6 @@ export const failedReasons: Record<string, string> = {
     'comments are not kept properly',
   'default/comment_preservation':
     'with statement is rejected due to https://github.com/rolldown/rolldown/issues/7009',
-  'default/define_import_meta':
-    'Bug in Oxc transformer define plugin (https://github.com/oxc-project/oxc/issues/16623)',
   'default/direct_eval_tainting_no_bundle':
     "rejected due to https://github.com/rolldown/rolldown/issues/7009, also sub optimal: eval in `test4` param position don't need to be renamed",
   'default/export_forms_with_minify_identifiers_and_no_bundle':

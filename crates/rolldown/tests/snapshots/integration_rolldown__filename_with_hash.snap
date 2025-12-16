@@ -782,7 +782,7 @@ expression: output
 
 # tests/esbuild/default/export_special_name
 
-- entry-!~{000}~.js => entry-dXucDYy1.js
+- entry-!~{000}~.js => entry-BlamnmIK.js
 
 # tests/esbuild/default/export_special_name_bundle
 
@@ -4319,6 +4319,10 @@ expression: output
 # tests/rolldown/function/format/esm/import_export_unicode
 
 - main-!~{000}~.js => main-BDxu1ur0.js
+
+# tests/rolldown/function/format/export_proto
+
+- main-!~{000}~.js => main-t5ASSHa2.js
 
 # tests/rolldown/function/format/iife/conflict_exports_key
 

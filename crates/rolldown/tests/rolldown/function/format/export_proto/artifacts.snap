@@ -1,0 +1,79 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+const __proto__ = 123;
+
+//#endregion
+export { __proto__ };
+```
+
+# Variant: cjs: [entry_filenames: "main.cjs"] [format: Cjs]
+
+## Assets
+
+### main.cjs
+
+```js
+
+//#region main.js
+const __proto__ = 123;
+
+//#endregion
+Object.defineProperty(exports, '__proto__', {
+  enumerable: true,
+  value: __proto__
+});
+```
+
+# Variant: iife: [entry_filenames: "main.cjs"] [format: Iife]
+
+## Assets
+
+### main.cjs
+
+```js
+var bundle = (function(exports) {
+
+
+//#region main.js
+	const __proto__ = 123;
+
+//#endregion
+Object.defineProperty(exports, '__proto__', {
+  enumerable: true,
+  value: __proto__
+});
+return exports;
+})({});
+globalThis.bundle = bundle;
+```
+
+# Variant: umd: [entry_filenames: "main.cjs"] [format: Umd]
+
+## Assets
+
+### main.cjs
+
+```js
+(function(global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.bundle = {})));
+})(this, function(exports) {
+
+//#region main.js
+	const __proto__ = 123;
+
+//#endregion
+Object.defineProperty(exports, '__proto__', {
+  enumerable: true,
+  value: __proto__
+});
+});
+```

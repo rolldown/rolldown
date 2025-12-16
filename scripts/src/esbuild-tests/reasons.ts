@@ -20,7 +20,6 @@ export const failedReasons: Record<string, string> = {
     "rejected due to https://github.com/rolldown/rolldown/issues/7009, also sub optimal: eval in `test4` param position don't need to be renamed",
   'default/export_forms_with_minify_identifiers_and_no_bundle':
     'sub optimal: should not generate duplicate export binding',
-  'default/export_special_name': 'assigning __proto__ should not be done',
   'default/export_special_name_bundle':
     '{ __proto__: ... } should be { ["__proto__"]: ... }',
   'default/external_es6_converted_to_common_js':

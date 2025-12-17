@@ -42,7 +42,6 @@ export default defineTest({
       plugins: [outputPlugin],
       sourcemapIgnoreList,
       legalComments: 'inline',
-      // Removed preserveModules as it conflicts with inlineDynamicImports
       preserveModulesRoot: 'src',
       virtualDirname: 'virtual',
       minifyInternalExports: true,

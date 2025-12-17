@@ -58,25 +58,17 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     _ => {}
   }
 
-  // Check for invalid combinations with `inline_dynamic_imports: true`
   if matches!(raw_options.inline_dynamic_imports, Some(true)) {
-    // Check for multiple inputs
-    if let Some(input) = &raw_options.input {
-      if input.len() > 1 {
-        errors.push(BuildDiagnostic::invalid_option(
-          InvalidOptionType::InlineDynamicImportsWithMultipleInputs,
-        ));
-      }
+    if let Some(input) = &raw_options.input && input.len() > 1 {
+      errors.push(BuildDiagnostic::invalid_option(
+        InvalidOptionType::InlineDynamicImportsWithMultipleInputs,
+      ));
     }
-
-    // Check for preserveModules
     if matches!(raw_options.preserve_modules, Some(true)) {
       errors.push(BuildDiagnostic::invalid_option(
         InvalidOptionType::InlineDynamicImportsWithPreserveModules,
       ));
     }
-
-    // Check for advancedChunks
     if raw_options.advanced_chunks.is_some() {
       errors.push(BuildDiagnostic::invalid_option(
         InvalidOptionType::InlineDynamicImportsWithAdvancedChunks,

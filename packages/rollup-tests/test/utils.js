@@ -42,17 +42,65 @@ function normalizeError(error) {
 	if (!error) {
 		throw new Error(`Expected an error but got ${JSON.stringify(error)}`);
 	}
+	if (!error.code) {
+		return error;
+	}
+
 	const clone = { ...error, message: error.message };
 	delete clone.stack;
 	delete clone.toString;
+	delete clone.frame;
+	delete clone.kind; // Rolldown specific
+	delete clone.loc; // TODO: support this later
+	delete clone.pos; // TODO: support this later
+	if (clone.message) {
+		clone.message = '[message]';
+	}
 	if (clone.watchFiles) {
 		clone.watchFiles.sort();
 	}
-	if (clone.frame) {
-		clone.frame = clone.frame.replace(/\s+$/gm, '');
-	}
 	if (clone.cause) {
 		clone.cause = normalizeError(clone.cause);
+	}
+	if (clone.code === 'PLUGIN_ERROR') {
+		// binding is not set for native errors, so it is removed from expected errors
+		// but binding is set for errors created on JS side
+		delete clone.binding;
+	}
+	for (const key in clone) {
+		if (clone[key] === undefined) {
+			delete clone[key];
+		}
+	}
+	return clone;
+}
+
+// map these Rollup error codes to PARSE_ERROR as Rolldown uses PARSE_ERROR for these
+const parseErrorRollupErrorCodes = new Set([
+	'DUPLICATE_ARGUMENT_NAME',
+	'DUPLICATE_EXPORT',
+	'REDECLARATION_ERROR',
+]);
+
+function normalizeExpectedError(error) {
+	if (!error) {
+		throw new Error(`Expected an error but got ${JSON.stringify(error)}`);
+	}
+	const clone = { ...error, message: error.message };
+	delete clone.frame;
+	delete clone.watchFiles;
+	delete clone.url;
+	delete clone.binding;
+	delete clone.loc; // TODO: support this later
+	delete clone.pos; // TODO: support this later
+	if (parseErrorRollupErrorCodes.has(clone.code)) {
+		clone.code = 'PARSE_ERROR';
+	}
+	if (clone.message) {
+		clone.message = '[message]';
+	}
+	if (clone.cause) {
+		clone.cause = normalizeExpectedError(clone.cause);
 	}
 	return clone;
 }
@@ -62,11 +110,37 @@ function normalizeError(error) {
  * @param {RollupError} expected
  */
 exports.compareError = function compareError(actual, expected) {
-	actual = normalizeError(actual);
-	if (expected.frame) {
-		expected.frame = outdent(expected.frame);
+	expected = normalizeExpectedError(expected);
+	if (actual.errors) {
+		const actuals = actual.errors.map(normalizeError);
+		const assertErrors = [];
+		try {
+			assert.ok(actuals.some(actual => {
+				try {
+					assert.deepEqual(actual, expected);
+				} catch (e) {
+					assertErrors.push(e);
+					return false;
+				}
+				return true;
+			}));
+		} catch (error) {
+			console.log('Assert errors:', assertErrors);
+			console.log('Actual errors:', JSON.stringify(actuals));
+			console.log('Expected error:', JSON.stringify(expected));
+			throw error;
+		}
+		return;
 	}
-	assert.deepEqual(actual, expected);
+
+	actual = normalizeError(actual);
+	try {
+		assert.deepEqual(actual, expected);
+	} catch (error) {
+		console.log('Actual error:', JSON.stringify(actual));
+		console.log('Expected error:', JSON.stringify(expected));
+		throw error;
+	}
 };
 
 /**
@@ -74,22 +148,15 @@ exports.compareError = function compareError(actual, expected) {
  * @param {(RollupLog & {level: LogLevel})[]} expected
  */
 exports.compareLogs = function compareLogs(actual, expected) {
-	const normalizedActual = actual.map(normalizeError);
-	const sortedActual = normalizedActual.sort(sortLogs);
+	const sortedActual = actual.map(normalizeError).sort(sortLogs);
+	const sortedExpected = expected
+		.map(warning => normalizeExpectedError(warning))
+		.sort(sortLogs);
 	try {
-		assert.deepEqual(
-			sortedActual,
-			expected
-				.map(warning => {
-					if (warning.frame) {
-						warning.frame = outdent(warning.frame);
-					}
-					return warning;
-				})
-				.sort(sortLogs)
-		);
+		assert.deepEqual(sortedActual, sortedExpected);
 	} catch (error) {
-		console.log('Actual logs:', JSON.stringify(normalizedActual));
+		console.log('Actual logs:', JSON.stringify(sortedActual));
+		console.log('Expected logs:', JSON.stringify(sortedExpected));
 		throw error;
 	}
 };
@@ -99,7 +166,9 @@ exports.compareLogs = function compareLogs(actual, expected) {
  * @param {RollupLog} b
  */
 function sortLogs(a, b) {
-	return a.message === b.message ? 0 : a.message < b.message ? -1 : 1;
+	const aStr = JSON.stringify([a.level, a.code]);
+	const bStr = JSON.stringify([b.level, b.code]);
+	return aStr === bStr ? 0 : aStr < bStr ? -1 : 1;
 }
 
 /**

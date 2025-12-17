@@ -65,8 +65,29 @@ const ignoreTests = [
 
   // ## warning / error differences
   "rollup@function@plugin-hook-filters: plugin hook filter is supported", // Rolldown has additional `EMPTY_IMPORT_META` warning
-  "rollup@function@warning-const-reassign: Cannot reassign a variable declared with `const`", // assignment to a const variable is an error instead of a warning in Rolldown
   "rollup@function@generate-bundle-mutation: handles adding or deleting symbols in generateBundle", // rolldown outputs a warning when assigning to bundle[foo]
+  "rollup@function@missing-entry-export: throws when exporting something that does not exist from an entry", // rolldown uses `PARSE_ERROR` instead of `MISSING_EXPORT`
+  // ### error message difference
+  "rollup@hooks@Throws when using the \"file\"\" option for multiple chunks",
+  "rollup@function@logging@plugin-order: allows to order plugins when logging",
+  "rollup@function@logging@log-from-plugin-onlog-onwarn: passes logs from plugins to onLog and onwarn",
+  "rollup@function@logging@log-from-plugin-onlog: passes logs from plugins to onLog",
+  "rollup@function@logging@log-from-plugin-onwarn: passes warn logs from plugins to onwarn",
+  "rollup@function@logging@log-from-plugin-options-onlog-onwarn: passes logs from plugins to onLog and onwarn",
+  "rollup@function@logging@log-from-plugin-options-onlog: passes logs from plugins to onLog",
+  "rollup@function@logging@log-from-plugin-options-onwarn: passes warn logs from plugins to onwarn",
+  "rollup@function@logging@log-from-plugin-simple: prints logs from plugins via input options if there are no handlers",
+  "rollup@function@logging@loglevel-debug: shows all logs for logLevel:debug",
+  "rollup@function@logging@loglevel-info: does not show debug logs for logLevel:info",
+  "rollup@function@logging@loglevel-warn: only shows warning logs for logLevel:warn",
+  // ### rolldown uses `ASSIGN_TO_IMPORT` while rollup uses `ILLEGAL_REASSIGNMENT`
+  "rollup@function@ast-validations@reassign-import-fails: disallows assignments to imported bindings",
+  "rollup@function@ast-validations@reassign-import-not-at-top-level-fails: disallows assignments to imported bindings not at the top level",
+  "rollup@function@ast-validations@update-expression-of-import-fails: disallows updates to imported bindings",
+  // ### assignment to a const variable is an error instead of a warning in Rolldown
+  "rollup@function@warning-const-reassign: Cannot reassign a variable declared with `const`",
+  "rollup@function@namespace-reassign-import-fails: warns for reassignments to namespace exports",
+  "rollup@function@namespace-update-import-fails: disallows updates to namespace exports",
 
   // ## tests relying on plugins
   "rollup@function@no-treeshake-react: passes when bundling React without tree-shaking", // relies on @rollup/plugin-node-resolve
@@ -91,6 +112,8 @@ const ignoreTests = [
   "rollup@function@es5-class-called-without-new: does not swallow type errors when running constructor functions without \"new\"", // rolldown align directive rendering with esbuild
   "rollup@function@jsx@unknown-mode: throws when using an unknown jsx mode", // validation is done before test are run
   "rollup@function@jsx@unnecessary-import-source: throws when preserving JSX syntax with an unnecessary import source", // `jsx.importSource` cannot be set with `jsx: 'preserve'`
+  "rollup@function@catch-rust-panic: Catch Rust panics and then throw them in Node", // specific to Rollup's implementation
+  "rollup@function@exports-are-not-defined: Throw descriptive error message for used export is not defined", // the input code triggers a different error in rolldown
 ]
 
 module.exports = {

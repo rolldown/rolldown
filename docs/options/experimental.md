@@ -44,6 +44,12 @@ Enable Vite compatibility mode.
 When enabled, `new URL()` calls will be transformed to a stable asset URL which includes the updated name and content hash.
 It is necessary to pass `import.meta.url` as the second argument to the `new URL` constructor, otherwise no transform will be applied.
 
+:::warning
+JavaScript and TypeScript files referenced via `new URL('./file.js', import.meta.url)` or `new URL('./file.ts', import.meta.url)` will **not** be transformed or bundled. The file will be copied as-is, meaning TypeScript files remain untransformed and dependencies are not resolved.
+
+The expected behavior for JS/TS files is still being discussed and may change in future releases. See [#7258](https://github.com/rolldown/rolldown/issues/7258) for more context.
+:::
+
 ### Examples
 
 ```js
@@ -58,27 +64,6 @@ console.log(url);
 // Example output after bundling WITH `experimental.resolveNewUrlToAsset` set to `true`
 const url = new URL('assets/styles-CjdrdY7X.css', import.meta.url);
 console.log(url);
-```
-
-## hmr
-
-- **Type:** `boolean | { host?: string; port?: number; implement?: string }`
-- **Default:** `false`
-- **Path:** `experimental.hmr`
-
-Hot Module Replacement configuration.
-
-### Examples
-
-```js
-export default {
-  experimental: {
-    hmr: {
-      host: 'localhost',
-      port: 3000,
-    },
-  },
-};
 ```
 
 ## chunkModulesOrder

@@ -1,0 +1,16 @@
+{
+  "config": {
+    "input": [{ "import": "main.js" }],
+    "inlineDynamicImports": true,
+    "advancedChunks": {
+      "minSize": 0,
+      "groups": [
+        {
+          "name": "vendor",
+          "test": "lib"
+        }
+      ]
+    }
+  },
+  "expectError": true
+}

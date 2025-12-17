@@ -22,18 +22,18 @@ To fix:
 
 ```js
 import { n as __export, t as __esmMin } from "./rolldown-runtime.js";
-import { r as value, t as init_second } from "./second.js";
+import { r as value$1, t as init_second } from "./second.js";
 
 //#region first.js
-var first_exports = /* @__PURE__ */ __export({ value: () => value$1 });
-var value$1;
+var first_exports = /* @__PURE__ */ __export({ value: () => value });
+var value;
 var init_first = __esmMin((() => {
 	init_second();
-	value$1 = "first" + value;
+	value = "first" + value$1;
 }));
 
 //#endregion
-export { init_first as n, value$1 as r, first_exports as t };
+export { init_first as n, value as r, first_exports as t };
 ```
 
 ## main.js
@@ -65,16 +65,16 @@ export { __export as n, __esmMin as t };
 
 ```js
 import { n as __export, t as __esmMin } from "./rolldown-runtime.js";
-import { n as init_first, r as value } from "./first.js";
+import { n as init_first, r as value$1 } from "./first.js";
 
 //#region second.js
-var second_exports = /* @__PURE__ */ __export({ value: () => value$1 });
-var value$1;
+var second_exports = /* @__PURE__ */ __export({ value: () => value });
+var value;
 var init_second = __esmMin((() => {
 	init_first();
-	value$1 = "second" + value;
+	value = "second" + value$1;
 }));
 
 //#endregion
-export { second_exports as n, value$1 as r, init_second as t };
+export { second_exports as n, value as r, init_second as t };
 ```

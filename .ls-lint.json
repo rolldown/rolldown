@@ -26,6 +26,7 @@
     "temp/**",
     "tmp/**",
     "rollup/**",
+    "test262/**",
     "target/**",
     "packages/rollup-tests/test/**",
     "packages/rolldown/npm/**",

@@ -60,10 +60,6 @@ impl SymbolRef {
     db.canonical_ref_for(*self)
   }
 
-  pub fn set_canonical_ref(&self, db: &mut SymbolRefDb, canonical_ref: SymbolRef) {
-    db.link(*self, canonical_ref);
-  }
-
   pub fn is_created_by_import_stmt_that_target_external(
     &self,
     db: &SymbolRefDb,

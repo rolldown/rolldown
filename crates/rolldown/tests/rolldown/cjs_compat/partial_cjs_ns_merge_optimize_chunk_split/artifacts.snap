@@ -38,18 +38,18 @@ export { entry };
 ## main.js
 
 ```js
-import { n as require_cjs, r as __toESM, t as test } from "./a.js";
+import { n as require_cjs, r as __toESM, t as test$1 } from "./a.js";
 
 //#region b.js
 var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
-function test$1() {
+function test() {
 	return import_cjs.default;
 }
-var b_default = test$1;
+var b_default = test;
 
 //#endregion
 //#region main.js
-const aa = test();
+const aa = test$1();
 const bb = b_default();
 
 //#endregion

@@ -1,0 +1,11 @@
+{
+  "config": {
+    "format": "cjs",
+    "external": ["@babel/types", "node:assert"]
+  },
+  "configVariants": [
+    {
+      "format": "esm"
+    }
+  ]
+}

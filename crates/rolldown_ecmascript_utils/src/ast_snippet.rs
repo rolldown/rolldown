@@ -63,15 +63,8 @@ impl<'ast> AstSnippet<'ast> {
     re_export_fn_ref: Expression<'ast>,
     first_arg: Expression<'ast>,
     second_arg: Expression<'ast>,
-    enable_generated_code_symbols: bool,
   ) -> ast::CallExpression<'ast> {
-    let mut args = self.builder.vec_from_iter([first_arg.into(), second_arg.into()]);
-    if enable_generated_code_symbols {
-      args.extend([
-        self.void_zero().into(),
-        self.builder.expression_numeric_literal(SPAN, 1.0, None, NumberBase::Decimal).into(),
-      ]);
-    }
+    let args = self.builder.vec_from_iter([first_arg.into(), second_arg.into()]);
     self.builder.call_expression(SPAN, re_export_fn_ref, NONE, args, false)
   }
 
@@ -269,6 +262,7 @@ impl<'ast> AstSnippet<'ast> {
   ///  or
   ///  __commonJSMin when `options.profiler_names` is false
   /// ```
+  #[expect(clippy::too_many_arguments)]
   pub fn commonjs_wrapper_stmt(
     &self,
     binding_name: PassedStr,
@@ -277,6 +271,7 @@ impl<'ast> AstSnippet<'ast> {
     ast_usage: EcmaModuleAstUsage,
     profiler_names: bool,
     stable_id: &str,
+    is_async: bool,
   ) -> ast::Statement<'ast> {
     // (exports, module) => {}
 
@@ -329,7 +324,7 @@ impl<'ast> AstSnippet<'ast> {
 
     // the callback is marked as PIFE because most require calls are evaluated in the initial load
     let mut arrow_expr =
-      self.builder.alloc_arrow_function_expression(SPAN, false, false, NONE, params, NONE, body);
+      self.builder.alloc_arrow_function_expression(SPAN, false, is_async, NONE, params, NONE, body);
     arrow_expr.pife = true;
 
     if profiler_names {

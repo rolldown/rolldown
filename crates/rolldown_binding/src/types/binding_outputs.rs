@@ -95,9 +95,37 @@ pub fn to_binding_error(diagnostic: &BuildDiagnostic, cwd: std::path::PathBuf) -
         BindingError::JsError(napi::JsError::from(error))
       }
     }
-    Err(error) => BindingError::NativeError(super::error::native_error::NativeError {
-      kind: error.kind().to_string(),
-      message: error.to_diagnostic_with(&DiagnosticOptions { cwd }).to_color_string(),
-    }),
+    Err(error) => {
+      let diag = error.to_diagnostic_with(&DiagnosticOptions { cwd });
+
+      // Extract location information from the diagnostic if available
+      // Note: Line numbers, columns, and byte positions are cast to u32.
+      // This is safe for practical use cases as files with >4 billion lines or bytes are extremely rare.
+      #[expect(
+        clippy::cast_possible_truncation,
+        reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
+      )]
+      let (loc, pos) = if let Some((file, line, column, position)) = diag.get_primary_location() {
+        (
+          Some(super::error::native_error::NativeErrorLocation {
+            line: line as u32,
+            column: column as u32,
+            file: Some(file),
+          }),
+          Some(position as u32),
+        )
+      } else {
+        (None, None)
+      };
+
+      BindingError::NativeError(super::error::native_error::NativeError {
+        kind: error.kind().to_string(),
+        message: diag.to_color_string(),
+        id: error.id(),
+        exporter: error.exporter(),
+        loc,
+        pos,
+      })
+    }
   }
 }

@@ -13,6 +13,6 @@
     "external": [
       "node:assert"
     ],
-    "keepNames": true,
+    "keepNames": true
   }
 }

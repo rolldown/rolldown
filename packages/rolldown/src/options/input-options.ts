@@ -55,7 +55,7 @@ export interface WatcherOptions {
 
 type MakeAbsoluteExternalsRelative = boolean | 'ifRelativeSource';
 
-export type HmrOptions = boolean | {
+export type DevModeOptions = boolean | {
   host?: string;
   port?: number;
   implement?: string;
@@ -194,7 +194,7 @@ export interface InputOptions {
     disableLiveBindings?: boolean;
     viteMode?: boolean;
     resolveNewUrlToAsset?: boolean;
-    hmr?: HmrOptions;
+    devMode?: DevModeOptions;
     /**
      * Control which order should use when rendering modules in chunk
      *

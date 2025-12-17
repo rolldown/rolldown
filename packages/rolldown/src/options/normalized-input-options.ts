@@ -6,7 +6,7 @@ import { PlainObjectLike } from '../types/plain-object-like';
 
 export interface NormalizedInputOptions {
   input: string[] | Record<string, string>;
-  cwd: string | undefined;
+  cwd: string;
   platform: InputOptions['platform'];
   shimMissingExports: boolean;
   context: string;
@@ -35,8 +35,8 @@ export class NormalizedInputOptionsImpl extends PlainObjectLike
   }
 
   @lazyProp
-  get cwd(): string | undefined {
-    return this.inner.cwd ?? undefined;
+  get cwd(): string {
+    return this.inner.cwd;
   }
 
   @lazyProp

@@ -42,7 +42,6 @@ export default defineTest({
       plugins: [outputPlugin],
       sourcemapIgnoreList,
       legalComments: 'inline',
-      preserveModules: true,
       preserveModulesRoot: 'src',
       virtualDirname: 'virtual',
       minifyInternalExports: true,
@@ -107,7 +106,7 @@ export default defineTest({
       expect(option.plugins[0]).toStrictEqual(outputPlugin);
       expect(option.sourcemapIgnoreList).toStrictEqual(sourcemapIgnoreList);
       expect(option.legalComments).toBe('inline');
-      expect(option.preserveModules).toBe(true);
+      expect(option.preserveModules).toBe(false);
       expect(option.preserveModulesRoot).toStrictEqual(
         path.join(__dirname, 'src'),
       );

@@ -1,0 +1,20 @@
+{
+  "config": {
+    "name": "bundle",
+    "external": ["x"],
+    "globals": {
+      "x": "x"
+    }
+  },
+  "configVariants": [
+    { "_configName": "cjs", "format": "cjs", "entryFilenames": "main.cjs" },
+    {
+      "_configName": "iife",
+      "format": "iife",
+      "entryFilenames": "main.cjs",
+      "footer": "globalThis.bundle = bundle;"
+    },
+    { "_configName": "umd", "format": "umd", "entryFilenames": "main.cjs" }
+  ],
+  "expectExecuted": false
+}

@@ -9,7 +9,7 @@ use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, ExportsKind, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleTable,
+  ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason,
   PreserveEntrySignatures, SymbolRef, WrapKind,
 };
 use rolldown_error::BuildResult;
@@ -22,9 +22,7 @@ use rolldown_utils::{
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use super::{
-  GenerateStage, chunk_ext::ChunkCreationReason, chunk_optimizer::try_insert_into_existing_chunk,
-};
+use super::{GenerateStage, chunk_ext::ChunkCreationReason};
 
 #[derive(Clone, Debug)]
 pub struct SplittingInfo {
@@ -403,8 +401,9 @@ impl GenerateStage<'_> {
   pub fn merge_cjs_namespace(&mut self, chunk_graph: &mut ChunkGraph) {
     let mut chunk_list: IndexVec<ChunkIdx, FxHashMap<(ModuleIdx, usize), Vec<SymbolRef>>> =
       index_vec![FxHashMap::default(); chunk_graph.chunk_table.len()];
-    for (k, v) in &self.link_output.safely_merge_cjs_ns_map {
-      for symbol_ref in v
+    for (k, info) in &self.link_output.safely_merge_cjs_ns_map {
+      for symbol_ref in info
+        .namespace_refs
         .iter()
         .filter(|item| {
           self.link_output.module_table[item.owner].as_normal().unwrap().is_included()
@@ -742,11 +741,9 @@ impl GenerateStage<'_> {
     let mut pending_common_chunks: FxIndexMap<BitSet, Vec<ModuleIdx>> = FxIndexMap::default();
     // If it is allow to allow that entry chunks have the different exports as the underlying entry module.
     // This is used to generate less chunks when possible.
-    let allow_optimize_chunk = (!matches!(self.options.preserve_entry_signatures, PreserveEntrySignatures::Strict)
-        || !self.link_output.overrode_preserve_entry_signature_map.is_empty())
-          // partial workaround of https://github.com/rolldown/rolldown/issues/5026#issuecomment-2990146735
-          // TODO: maybe we could bailout peer chunk?
-        && !self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
+    // TODO: maybe we could bailout peer chunk?
+    let allow_optimize_chunk =
+      !self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for idx in &self.link_output.sorted_modules {
@@ -800,140 +797,9 @@ impl GenerateStage<'_> {
         bits_to_chunk,
         input_base,
         pending_common_chunks,
-        &self.link_output.module_table,
       );
     }
     Ok(())
-  }
-
-  fn try_insert_common_module_to_exist_chunk(
-    &self,
-    chunk_graph: &mut ChunkGraph,
-    bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
-    input_base: &ArcStr,
-    pending_common_chunks: FxIndexMap<BitSet, Vec<ModuleIdx>>,
-    module_table: &ModuleTable,
-  ) {
-    let static_entry_chunk_reference: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> =
-      self.construct_static_entry_to_reached_dynamic_entries_map(chunk_graph);
-
-    let entry_chunk_idx =
-      chunk_graph.chunk_table.iter_enumerated().map(|(idx, _)| idx).collect::<FxHashSet<_>>();
-    // extract entry chunk module relation
-    // this means `key_chunk` also referenced all entry module in value `vec`
-    for (bits, modules) in pending_common_chunks {
-      let chunk_idxs = bits
-        .index_of_one()
-        .into_iter()
-        .map(ChunkIdx::from_raw)
-        // Some of the bits maybe not created yet, so filter it out.
-        // refer https://github.com/rolldown/rolldown/blob/d373794f5ce5b793ac751bbfaf101cc9cdd261d9/crates/rolldown/src/stages/generate_stage/code_splitting.rs?plain=1#L311-L313
-        .filter(|idx| entry_chunk_idx.contains(idx))
-        .collect_vec();
-
-      let item = try_insert_into_existing_chunk(
-        &chunk_idxs,
-        &static_entry_chunk_reference,
-        chunk_graph,
-        module_table,
-      );
-      match item {
-        Some(chunk_idx)
-          if !matches!(
-            chunk_graph.chunk_table[chunk_idx].preserve_entry_signature,
-            Some(PreserveEntrySignatures::Strict)
-          ) =>
-        {
-          // Initialize imports_from_other_chunks entries for user-defined entry chunks
-          // that will reference the merged chunk, even if they don't directly import symbols.
-          // This ensures proper chunk ordering and execution.
-          for idx in chunk_idxs.iter().copied().filter(|idx| *idx != chunk_idx) {
-            let Some(chunk) = chunk_graph.chunk_table.get_mut(idx) else {
-              continue;
-            };
-            if !matches!(chunk.kind, ChunkKind::EntryPoint { meta, ..} if meta.contains(ChunkMeta::UserDefinedEntry))
-            {
-              continue;
-            }
-            chunk.imports_from_other_chunks.entry(chunk_idx).or_default();
-          }
-
-          for module_idx in modules {
-            chunk_graph.add_module_to_chunk(
-              module_idx,
-              chunk_idx,
-              self.link_output.metas[module_idx].depended_runtime_helper,
-            );
-          }
-        }
-        _ => {
-          let mut chunk = Chunk::new(
-            None,
-            None,
-            bits.clone(),
-            vec![],
-            ChunkKind::Common,
-            input_base.clone(),
-            None,
-          );
-          chunk.add_creation_reason(
-            ChunkCreationReason::CommonChunk { bits: &bits, link_output: self.link_output },
-            self.options,
-          );
-          let chunk_id = chunk_graph.add_chunk(chunk);
-          for module_idx in modules {
-            chunk_graph.add_module_to_chunk(
-              module_idx,
-              chunk_id,
-              self.link_output.metas[module_idx].depended_runtime_helper,
-            );
-          }
-          bits_to_chunk.insert(bits, chunk_id);
-        }
-      }
-    }
-  }
-
-  fn construct_static_entry_to_reached_dynamic_entries_map(
-    &self,
-    chunk_graph: &ChunkGraph,
-  ) -> FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> {
-    let mut ret: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> = FxHashMap::default();
-    let dynamic_entry_modules = chunk_graph
-      .chunk_table
-      .iter_enumerated()
-      .filter_map(|(idx, chunk)| match chunk.kind {
-        ChunkKind::EntryPoint { meta, module, .. } => {
-          (!meta.contains(ChunkMeta::UserDefinedEntry)).then_some((module, idx))
-        }
-        ChunkKind::Common => None,
-      })
-      .collect::<FxHashMap<ModuleIdx, ChunkIdx>>();
-    for entry in self.link_output.entries.iter().filter(|item| item.kind.is_user_defined()) {
-      let Some(entry_chunk_idx) = chunk_graph.module_to_chunk[entry.idx] else {
-        continue;
-      };
-      let mut q = VecDeque::from_iter([entry.idx]);
-      let mut visited = FxHashSet::default();
-      while let Some(cur) = q.pop_front() {
-        if visited.contains(&cur) {
-          continue;
-        }
-        visited.insert(cur);
-        let Module::Normal(module) = &self.link_output.module_table[cur] else {
-          continue;
-        };
-
-        for rec in &module.import_records {
-          // Can't put it at the beginning of the loop,
-          if let Some(chunk_idx) = dynamic_entry_modules.get(&rec.resolved_module) {
-            ret.entry(entry_chunk_idx).or_default().insert(*chunk_idx);
-          }
-          q.push_back(rec.resolved_module);
-        }
-      }
-    }
-    ret
   }
 
   fn determine_reachable_modules_for_entry(

@@ -195,7 +195,7 @@ export interface Comment {
 }
 
 export interface ErrorLabel {
-  message?: string
+  message: string | null
   start: number
   end: number
 }
@@ -204,8 +204,8 @@ export interface OxcError {
   severity: Severity
   message: string
   labels: Array<ErrorLabel>
-  helpMessage?: string
-  codeframe?: string
+  helpMessage: string | null
+  codeframe: string | null
 }
 
 export type Severity =  'Error'|
@@ -245,9 +245,9 @@ export interface EcmaScriptModule {
 
 export interface ExportExportName {
   kind: ExportExportNameKind
-  name?: string
-  start?: number
-  end?: number
+  name: string | null
+  start: number | null
+  end: number | null
 }
 
 export type ExportExportNameKind = /** `export { name } */
@@ -259,9 +259,9 @@ export type ExportExportNameKind = /** `export { name } */
 
 export interface ExportImportName {
   kind: ExportImportNameKind
-  name?: string
-  start?: number
-  end?: number
+  name: string | null
+  start: number | null
+  end: number | null
 }
 
 export type ExportImportNameKind = /** `export { name } */
@@ -275,9 +275,9 @@ export type ExportImportNameKind = /** `export { name } */
 
 export interface ExportLocalName {
   kind: ExportLocalNameKind
-  name?: string
-  start?: number
-  end?: number
+  name: string | null
+  start: number | null
+  end: number | null
 }
 
 export type ExportLocalNameKind = /** `export { name } */
@@ -292,9 +292,9 @@ export type ExportLocalNameKind = /** `export { name } */
 
 export interface ImportName {
   kind: ImportNameKind
-  name?: string
-  start?: number
-  end?: number
+  name: string | null
+  start: number | null
+  end: number | null
 }
 
 export type ImportNameKind = /** `import { x } from "mod"` */
@@ -372,7 +372,7 @@ export interface StaticExport {
 export interface StaticExportEntry {
   start: number
   end: number
-  moduleRequest?: ValueSpan
+  moduleRequest: ValueSpan | null
   /** The name under which the desired binding is exported by the module`. */
   importName: ExportImportName
   /** The name used to export this binding by this module. */
@@ -467,6 +467,18 @@ export declare class ResolverFactory {
   sync(directory: string, request: string): ResolveResult
   /** Asynchronously resolve `specifier` at an absolute path to a `directory`. */
   async(directory: string, request: string): Promise<ResolveResult>
+  /**
+   * Synchronously resolve `specifier` at an absolute path to a `file`.
+   *
+   * This method automatically discovers tsconfig.json by traversing parent directories.
+   */
+  resolveFileSync(file: string, request: string): ResolveResult
+  /**
+   * Asynchronously resolve `specifier` at an absolute path to a `file`.
+   *
+   * This method automatically discovers tsconfig.json by traversing parent directories.
+   */
+  resolveFileAsync(file: string, request: string): Promise<ResolveResult>
 }
 
 /** Node.js builtin module when `Options::builtin_modules` is enabled. */
@@ -721,9 +733,8 @@ export interface TsconfigOptions {
    * Support for Typescript Project References.
    *
    * * `'auto'`: use the `references` field from tsconfig of `config_file`.
-   * * `string[]`: manually provided relative or absolute path.
    */
-  references?: 'auto' | string[]
+  references?: 'auto'
 }
 export interface SourceMap {
   file?: string
@@ -1422,7 +1433,7 @@ export declare class BindingModuleInfo {
 
 export declare class BindingNormalizedOptions {
   get input(): Array<string> | Record<string, string>
-  get cwd(): string | null
+  get cwd(): string
   get platform(): 'node' | 'browser' | 'neutral'
   get shimMissingExports(): boolean
   get name(): string | null
@@ -1443,6 +1454,8 @@ export declare class BindingNormalizedOptions {
   get footer(): string | undefined | null | undefined
   get intro(): string | undefined | null | undefined
   get outro(): string | undefined | null | undefined
+  get postBanner(): string | undefined | null | undefined
+  get postFooter(): string | undefined | null | undefined
   get externalLiveBindings(): boolean
   get extend(): boolean
   get globals(): Record<string, string> | undefined
@@ -1492,6 +1505,7 @@ export declare class BindingPluginContext {
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
+  emitPrebuiltChunk(file: BindingEmittedPrebuiltChunk): string
   getFileName(referenceId: string): string
   getModuleInfo(moduleId: string): BindingModuleInfo | null
   getModuleIds(): Array<string>
@@ -1654,6 +1668,7 @@ export interface BindingChecksOptions {
   configurationFieldConflict?: boolean
   preferBuiltinFeature?: boolean
   couldNotCleanDirectory?: boolean
+  pluginTimings?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -1720,6 +1735,14 @@ export interface BindingEmittedChunk {
   preserveEntrySignatures?: BindingPreserveEntrySignatures
 }
 
+export interface BindingEmittedPrebuiltChunk {
+  fileName: string
+  code: string
+  exports?: Array<string>
+  map?: BindingSourcemap
+  sourcemapFileName?: string
+}
+
 export type BindingError =
   | { type: 'JsError', field0: Error }
   | { type: 'NativeError', field0: NativeError }
@@ -1734,7 +1757,7 @@ export interface BindingEsmExternalRequirePluginConfig {
   skipDuplicateCheck?: boolean
 }
 
-export interface BindingExperimentalHmrOptions {
+export interface BindingExperimentalDevModeOptions {
   host?: string
   port?: number
   implement?: string
@@ -1745,7 +1768,7 @@ export interface BindingExperimentalOptions {
   disableLiveBindings?: boolean
   viteMode?: boolean
   resolveNewUrlToAsset?: boolean
-  hmr?: BindingExperimentalHmrOptions
+  devMode?: BindingExperimentalDevModeOptions
   attachDebugInfo?: BindingAttachDebugInfo
   chunkModulesOrder?: BindingChunkModuleOrderBy
   chunkImportMap?: boolean | BindingChunkImportMap
@@ -1987,21 +2010,23 @@ export interface BindingOutputOptions {
   cssEntryFileNames?: string | ((chunk: PreRenderedChunk) => string)
   cssChunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sanitizeFileName?: boolean | ((name: string) => string)
-  banner?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
+  banner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  postBanner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  footer?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  postFooter?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   dir?: string
   file?: string
   esModule?: boolean | 'if-default-prop'
   exports?: 'default' | 'named' | 'none' | 'auto'
   extend?: boolean
   externalLiveBindings?: boolean
-  footer?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
   format?: 'es' | 'cjs' | 'iife' | 'umd'
   generatedCode?: BindingGeneratedCodeOptions
   globals?: Record<string, string> | ((name: string) => string)
   hashCharacters?: 'base64' | 'base36' | 'hex'
   inlineDynamicImports?: boolean
-  intro?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
-  outro?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
+  intro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  outro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   paths?: Record<string, string> | ((id: string) => string)
   plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
@@ -2287,6 +2312,11 @@ export interface BindingViteDynamicImportVarsPluginConfig {
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   resolver?: (id: string, importer: string) => MaybePromise<string | undefined>
+  isV2?: BindingViteDynamicImportVarsPluginV2Config
+}
+
+export interface BindingViteDynamicImportVarsPluginV2Config {
+  sourcemap: boolean
 }
 
 export interface BindingViteHtmlInlineProxyPluginConfig {
@@ -2311,6 +2341,11 @@ export interface BindingViteHtmlPluginConfig {
 export interface BindingViteImportGlobPluginConfig {
   root?: string
   restoreQueryExtension?: boolean
+  isV2?: BindingViteImportGlobPluginV2Config
+}
+
+export interface BindingViteImportGlobPluginV2Config {
+  sourcemap?: boolean
 }
 
 export interface BindingViteJsonPluginConfig {
@@ -2326,7 +2361,7 @@ export interface BindingViteManifestPluginConfig {
   root: string
   outPath: string
   isEnableV2?: boolean
-  isLegacy?: () => boolean
+  isLegacy?: (args: BindingNormalizedOptions) => boolean
   cssEntries: () => Record<string, string>
 }
 
@@ -2365,12 +2400,14 @@ export interface BindingViteResolvePluginConfig {
   external: true | string[]
   noExternal: true | Array<string | RegExp>
   dedupe: Array<string>
+  disableCache?: boolean
   legacyInconsistentCjsInterop?: boolean
   finalizeBareSpecifier?: (resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>
   finalizeOtherSpecifiers?: (resolvedId: string, rawId: string) => VoidNullable<string>
   resolveSubpathImports: (id: string, importer: string, isRequire: boolean, scan: boolean) => VoidNullable<string>
   onWarn?: (message: string) => void
   onDebug?: (message: string) => void
+  yarnPnp: boolean
 }
 
 export interface BindingViteResolvePluginResolveOptions {
@@ -2400,10 +2437,19 @@ export interface BindingViteTransformPluginConfig {
   isServerConsumer?: boolean
   jsxInject?: string
   transformOptions?: TransformOptions
+  yarnPnp?: boolean
 }
 
 export interface BindingViteWasmHelperPluginConfig {
   decodedBase: string
+  v2?: BindingViteWasmHelperPluginV2Config
+}
+
+export interface BindingViteWasmHelperPluginV2Config {
+  root: string
+  isLib: boolean
+  publicDir: string
+  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
 }
 
 export interface BindingWatchOption {
@@ -2473,6 +2519,23 @@ export interface JsOutputChunk {
 export interface NativeError {
   kind: string
   message: string
+  /** The id of the file associated with the error */
+  id?: string
+  /** The exporter associated with the error (for import/export errors) */
+  exporter?: string
+  /** Location information (line, column, file) */
+  loc?: NativeErrorLocation
+  /** Position in the source file in UTF-16 code units */
+  pos?: number
+}
+
+/** Location information for errors */
+export interface NativeErrorLocation {
+  /** 1-based */
+  line: number
+  /** 0-based position in the line in UTF-16 code units */
+  column: number
+  file?: string
 }
 
 export interface PreRenderedChunk {

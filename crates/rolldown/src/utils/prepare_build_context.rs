@@ -58,6 +58,26 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     _ => {}
   }
 
+  if matches!(raw_options.inline_dynamic_imports, Some(true)) {
+    if let Some(input) = &raw_options.input
+      && input.len() > 1
+    {
+      errors.push(BuildDiagnostic::invalid_option(
+        InvalidOptionType::InlineDynamicImportsWithMultipleInputs,
+      ));
+    }
+    if matches!(raw_options.preserve_modules, Some(true)) {
+      errors.push(BuildDiagnostic::invalid_option(
+        InvalidOptionType::InlineDynamicImportsWithPreserveModules,
+      ));
+    }
+    if raw_options.advanced_chunks.is_some() {
+      errors.push(BuildDiagnostic::invalid_option(
+        InvalidOptionType::InlineDynamicImportsWithAdvancedChunks,
+      ));
+    }
+  }
+
   if let Some(advanced_chunks) = &raw_options.advanced_chunks {
     let has_groups = advanced_chunks.groups.as_ref().is_some_and(|groups| !groups.is_empty());
 
@@ -216,7 +236,7 @@ pub fn prepare_build_context(
   );
 
   let mut experimental = raw_options.experimental.unwrap_or_default();
-  if experimental.hmr.is_some() {
+  if experimental.dev_mode.is_some() {
     experimental.incremental_build = Some(true);
   }
 
@@ -244,8 +264,8 @@ pub fn prepare_build_context(
     raw_options.cwd.unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
 
   let mut raw_treeshake = raw_options.treeshake;
-  if experimental.hmr.is_some() {
-    // HMR requires treeshaking to be disabled
+  if experimental.dev_mode.is_some() {
+    // Dev mode requires treeshaking to be disabled
     raw_treeshake = TreeshakeOptions::Boolean(false);
   }
 
@@ -358,6 +378,8 @@ pub fn prepare_build_context(
     sanitize_filename: raw_options.sanitize_filename.unwrap_or_default(),
     banner: raw_options.banner,
     footer: raw_options.footer,
+    post_banner: raw_options.post_banner,
+    post_footer: raw_options.post_footer,
     intro: raw_options.intro,
     outro: raw_options.outro,
     es_module: raw_options.es_module.unwrap_or_default(),

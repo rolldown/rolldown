@@ -6,6 +6,7 @@
         "import": "entry.ts"
       }
     ],
-    "treeshake": false
+    "treeshake": false,
+    "tsconfig": "./tsconfig.json"
   }
 }

@@ -30,11 +30,11 @@ impl ChunkDebugExt for Chunk {
 
     let reason = match reason {
       ChunkCreationReason::AdvancedChunkGroup(name, group_index) => {
-        self.chunk_reason_type = Box::new(ChunkReasonType::AdvancedChunks { group_index });
+        *self.chunk_reason_type = ChunkReasonType::AdvancedChunks { group_index };
         format!("AdvancedChunks: [Group-Name: {name}]")
       }
       ChunkCreationReason::PreserveModules { is_user_defined_entry, module_stable_id } => {
-        self.chunk_reason_type = Box::new(ChunkReasonType::PreserveModules);
+        *self.chunk_reason_type = ChunkReasonType::PreserveModules;
         format!(
           "Enabling Preserve Module: [User-defined: {is_user_defined_entry}] [Module-Id: {module_stable_id}]",
         )
@@ -44,7 +44,7 @@ impl ChunkDebugExt for Chunk {
         entry_module_id: debug_id,
         name: entry_point_name,
       } => {
-        self.chunk_reason_type = Box::new(ChunkReasonType::Entry);
+        *self.chunk_reason_type = ChunkReasonType::Entry;
         if is_user_defined_entry {
           format!("User-defined Entry: [Entry-Module-Id: {debug_id}] [Name: {entry_point_name:?}]",)
         } else {
@@ -52,7 +52,7 @@ impl ChunkDebugExt for Chunk {
         }
       }
       ChunkCreationReason::CommonChunk { bits, link_output } => {
-        self.chunk_reason_type = Box::new(ChunkReasonType::Common);
+        *self.chunk_reason_type = ChunkReasonType::Common;
         let entries = link_output
           .entries
           .iter()

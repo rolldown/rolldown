@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           submodules: true # Pull submodules for additional files
           persist-credentials: false
@@ -50,8 +50,11 @@ jobs:
         run: |
           pnpm run --filter rolldown-tests test:types
 
+      - name: Install Playwright
+        run: pnpm playwright install chromium
+
       - name: Setup Node20 For Testing
-        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
         with:
           node-version: 20
           package-manager-cache: false
@@ -70,7 +73,7 @@ jobs:
         run: pnpm run --filter '@rolldown/test-dev-server-tests' test
 
       - name: Setup Node22 For Testing
-        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
         with:
           node-version: 22
           package-manager-cache: false
@@ -89,7 +92,7 @@ jobs:
         run: pnpm run --filter '@rolldown/test-dev-server-tests' test
 
       - name: Setup Node24 For Testing
-        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
         with:
           node-version: 24
           package-manager-cache: false

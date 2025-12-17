@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region other1.js
+const Foo$2 = () => {};
+const React$1 = () => {};
+console.log(Foo$2, React$1);
+
+//#endregion
+//#region jsx.js
+const Foo$1 = () => {};
+console.log(<Foo$1 />);
+
+//#endregion
+//#region other2.js
+const Foo = () => {};
+const React = () => {};
+console.log(Foo, React);
+
+//#endregion
+```

@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_js.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region a.js
+var require_a = /* @__PURE__ */ __commonJSMin((() => {}));
+
+//#endregion
+//#region b.js
+var require_b = /* @__PURE__ */ __commonJSMin((() => {}));
+
+//#endregion
+//#region d.js
+var require_d = /* @__PURE__ */ __commonJSMin((() => {}));
+
+//#endregion
+//#region entry.js
+try {
+	foo();
+} catch {
+	require_a();
+} finally {
+	require_b();
+}
+require_d();
+
+//#endregion
+```

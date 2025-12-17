@@ -47,10 +47,10 @@ impl BindingWatcher {
         // TODO(hyf0): support emit debug data for builtin watch
         create_bundler_from_binding_options(options)
           .and_then(|inner| {
-            if inner.options.experimental.hmr.is_some() {
+            if inner.options.experimental.dev_mode.is_some() {
               return Err(napi::Error::new(
                 napi::Status::GenericFailure,
-                "The \"experimental.hmr\" option is only supported with the \"dev\" API. It cannot be used with \"watch\". Please use the \"dev\" API for HMR functionality.",
+                "The \"experimental.devMode\" option is only supported with the \"dev\" API. It cannot be used with \"watch\". Please use the \"dev\" API for dev mode functionality.",
               ));
             }
             Ok(Arc::new(napi::tokio::sync::Mutex::new(inner)))})

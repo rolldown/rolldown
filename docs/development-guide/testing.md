@@ -70,6 +70,19 @@ For all available options, you could refer to
 
 It basically just replaces the `_config.json` with Rust code that configures the bundler directly. Everything else works the same way as data-driven testing.
 
+#### esbuild
+
+Rolldown also runs tests derived from esbuild's bundler test suite to verify compatibility. These tests are located in `crates/rolldown/tests/esbuild`.
+
+The `scripts` directory contains utilities for managing esbuild tests:
+
+- **`gen-esbuild-tests`** - Generates test cases from esbuild's Go test files.
+- **`esbuild-snap-diff`** - Compares Rolldown's output snapshots against esbuild's expected output. It generates diff reports and compatibility statistics, helping track how closely Rolldown's behavior matches esbuild.
+
+  The script generates summary markdown files in `scripts/src/esbuild-tests/snap-diff/summary/` and overall statistics in `scripts/src/esbuild-tests/snap-diff/stats/stats.md`.
+
+Test cases can be skipped by prefixing the folder name with `.` (e.g., `.test_case_name`). Skipped tests must have documented reasons in `scripts/src/esbuild-tests/reasons.ts`.
+
 #### HMR tests
 
 If a test case folder contains any files named `*.hmr-*.js`, the test will run in HMR enabled mode.
@@ -114,6 +127,23 @@ The test will go through these steps:
 For more complex scenarios that cannot be easily expressed with data-driven approaches, we write manual test code that sets up the test environment, runs the bundler with specific options, and verifies the output programmatically.
 
 Not much to tell here, basically just write normal Rust test code that uses Rolldown to perform bundling and verification.
+
+### test262 Integration Tests
+
+Rolldown integrates the [test262](https://github.com/tc39/test262) test suite to verify ECMAScript specification compliance. Only the test cases under `test/language/module-code` are run because other test cases should be covered on Oxc side.
+
+The git submodule should have been initialized after running `just setup` when setting up the project, but you should also run `just update-submodule` to update the submodule before running the integration tests.
+
+You can run the test262 integration tests with the following command:
+
+```shell
+TEST262_FILTER="attribute" cargo test --test integration_test262 -- --no-capture
+```
+
+- `TEST262_FILTER` allows you to filter tests by name (e.g., `"attribute"`). If you omit this environment variable, all test cases will be run. Note that the result snapshot will not be updated if the environment variable is set.
+- The `--no-capture` option displays all test output.
+
+The test cases that are expected to fail are listed in [`crates/rolldown/tests/test262_failures.json`](https://github.com/rolldown/rolldown/blob/main/crates/rolldown/tests/test262_failures.json).
 
 ## Node.js
 
@@ -178,6 +208,14 @@ In `/packages/rollup-tests`:
 
 - `just test-node-rollup` will run rollup tests.
 - `just test-node-rollup --update` will run and update the tests' status.
+
+To run a specific test, use the `--grep` option with `just test-node-rollup`:
+
+```shell
+just test-node-rollup --grep "function"
+```
+
+This will run only tests whose names match "function". For more filtering options, see [Mocha's grep documentation](https://mochajs.org/#grep).
 
 ## How to choose test technique
 

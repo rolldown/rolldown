@@ -1,0 +1,211 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { Fragment, jsx, jsxs } from "react/jsx-runtime";
+import { createElement } from "react";
+
+//#region other1.js
+console.log("wrong Foo 1", "wrong obj 1", "wrong jsx 1", "wrong jsxs 1");
+
+//#endregion
+//#region jsx.js
+const Foo = () => {};
+const obj = { key: "2" };
+console.log(/* @__PURE__ */ jsx(Foo, {}));
+console.log(/* @__PURE__ */ jsx(Foo, { x: true }));
+console.log(/* @__PURE__ */ jsx(Foo, { x: "1" }));
+console.log(/* @__PURE__ */ jsx(Foo, { x: "1" }));
+console.log(/* @__PURE__ */ jsx(Foo, { key: true }));
+console.log(/* @__PURE__ */ jsx(Foo, {}, "1"));
+console.log(/* @__PURE__ */ jsx(Foo, {}, "1"));
+console.log(/* @__PURE__ */ jsx(Foo, { ...obj }));
+console.log(/* @__PURE__ */ jsx(Foo, {
+	...obj,
+	x: "1"
+}));
+console.log(/* @__PURE__ */ jsx(Foo, { ...obj }, "1"));
+console.log(/* @__PURE__ */ jsx(Foo, {
+	key: true,
+	...obj
+}));
+console.log(/* @__PURE__ */ jsx(Foo, {
+	x: "1",
+	y: "1",
+	...obj,
+	...obj
+}));
+console.log(/* @__PURE__ */ jsx(Foo, {
+	x: "1",
+	y: "1",
+	...obj,
+	...obj
+}, "1"));
+console.log(/* @__PURE__ */ jsx(Foo, {
+	x: "1",
+	key: true,
+	y: "1",
+	...obj,
+	...obj
+}));
+console.log(/* @__PURE__ */ jsx(Foo, {}));
+console.log(/* @__PURE__ */ jsx(Foo, { x: "1" }));
+console.log(/* @__PURE__ */ jsx(Foo, {}, "1"));
+console.log(/* @__PURE__ */ jsx(Foo, { key: true }));
+console.log(/* @__PURE__ */ jsx(Foo, { children: /* @__PURE__ */ jsx(Foo, {}) }));
+console.log(/* @__PURE__ */ jsx(Foo, {
+	x: "1",
+	children: /* @__PURE__ */ jsx(Foo, {})
+}));
+console.log(/* @__PURE__ */ jsx(Foo, { children: /* @__PURE__ */ jsx(Foo, {}) }, "1"));
+console.log(/* @__PURE__ */ jsx(Foo, {
+	key: true,
+	children: /* @__PURE__ */ jsx(Foo, {})
+}));
+console.log(/* @__PURE__ */ jsx(Foo, {
+	...obj,
+	children: /* @__PURE__ */ jsx(Foo, {})
+}));
+console.log(/* @__PURE__ */ jsx(Foo, {
+	...obj,
+	x: "1",
+	children: /* @__PURE__ */ jsx(Foo, {})
+}));
+console.log(/* @__PURE__ */ jsx(Foo, {
+	...obj,
+	children: /* @__PURE__ */ jsx(Foo, {})
+}, "1"));
+console.log(/* @__PURE__ */ jsx(Foo, {
+	key: true,
+	...obj,
+	children: /* @__PURE__ */ jsx(Foo, {})
+}));
+console.log(/* @__PURE__ */ jsx(Foo, {
+	x: "1",
+	y: "1",
+	...obj,
+	...obj,
+	children: /* @__PURE__ */ jsx(Foo, {})
+}));
+console.log(/* @__PURE__ */ jsx(Foo, {
+	x: "1",
+	y: "1",
+	...obj,
+	...obj,
+	children: /* @__PURE__ */ jsx(Foo, {})
+}, "1"));
+console.log(/* @__PURE__ */ jsx(Foo, {
+	x: "1",
+	key: true,
+	y: "1",
+	...obj,
+	...obj,
+	children: /* @__PURE__ */ jsx(Foo, {})
+}));
+console.log(/* @__PURE__ */ jsx(Foo, { children: /* @__PURE__ */ jsx(Foo, {}) }));
+console.log(/* @__PURE__ */ jsx(Fragment, {}));
+console.log(/* @__PURE__ */ jsx(Fragment, { children: /* @__PURE__ */ jsx(Foo, {}) }));
+console.log(/* @__PURE__ */ jsxs(Foo, { children: [/* @__PURE__ */ jsx(Foo, {}), /* @__PURE__ */ jsx(Foo, {})] }));
+console.log(/* @__PURE__ */ jsxs(Foo, {
+	x: "1",
+	children: [/* @__PURE__ */ jsx(Foo, {}), /* @__PURE__ */ jsx(Foo, {})]
+}));
+console.log(/* @__PURE__ */ jsxs(Foo, { children: [/* @__PURE__ */ jsx(Foo, {}), /* @__PURE__ */ jsx(Foo, {})] }, "1"));
+console.log(/* @__PURE__ */ jsxs(Foo, {
+	key: true,
+	children: [/* @__PURE__ */ jsx(Foo, {}), /* @__PURE__ */ jsx(Foo, {})]
+}));
+console.log(/* @__PURE__ */ jsxs(Foo, {
+	...obj,
+	children: [/* @__PURE__ */ jsx(Foo, {}), /* @__PURE__ */ jsx(Foo, {})]
+}));
+console.log(/* @__PURE__ */ jsxs(Foo, {
+	...obj,
+	x: "1",
+	children: [/* @__PURE__ */ jsx(Foo, {}), /* @__PURE__ */ jsx(Foo, {})]
+}));
+console.log(/* @__PURE__ */ jsxs(Foo, {
+	...obj,
+	children: [/* @__PURE__ */ jsx(Foo, {}), /* @__PURE__ */ jsx(Foo, {})]
+}, "1"));
+console.log(/* @__PURE__ */ jsxs(Foo, {
+	key: true,
+	...obj,
+	children: [/* @__PURE__ */ jsx(Foo, {}), /* @__PURE__ */ jsx(Foo, {})]
+}));
+console.log(/* @__PURE__ */ jsxs(Foo, {
+	x: "1",
+	y: "1",
+	...obj,
+	...obj,
+	children: [/* @__PURE__ */ jsx(Foo, {}), /* @__PURE__ */ jsx(Foo, {})]
+}));
+console.log(/* @__PURE__ */ jsxs(Foo, {
+	x: "1",
+	y: "1",
+	...obj,
+	...obj,
+	children: [/* @__PURE__ */ jsx(Foo, {}), /* @__PURE__ */ jsx(Foo, {})]
+}, "1"));
+console.log(/* @__PURE__ */ jsxs(Foo, {
+	x: "1",
+	key: true,
+	y: "1",
+	...obj,
+	...obj,
+	children: [/* @__PURE__ */ jsx(Foo, {}), /* @__PURE__ */ jsx(Foo, {})]
+}));
+console.log(/* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx(Foo, {}), /* @__PURE__ */ jsx(Foo, {})] }));
+console.log(/* @__PURE__ */ createElement(Foo, {
+	...obj,
+	key: "1"
+}));
+console.log(/* @__PURE__ */ createElement(Foo, {
+	...obj,
+	key: true
+}));
+console.log(/* @__PURE__ */ createElement(Foo, {
+	...obj,
+	...obj,
+	x: "1",
+	key: "1",
+	y: "1"
+}));
+console.log(/* @__PURE__ */ createElement(Foo, {
+	...obj,
+	...obj,
+	x: "1",
+	key: true,
+	y: "1"
+}));
+console.log(/* @__PURE__ */ createElement(Foo, {
+	...obj,
+	key: "1"
+}));
+console.log(/* @__PURE__ */ createElement(Foo, {
+	...obj,
+	key: "1"
+}, /* @__PURE__ */ jsx(Foo, {})));
+console.log(/* @__PURE__ */ jsxs("div", { children: [
+	"Hello World",
+	/* @__PURE__ */ jsxs("p", { children: [
+		" JSX ",
+		/* @__PURE__ */ jsx("b", { children: "whitespaces" }),
+		" are so  A N N O Y I N G  to deal with!! "
+	] }),
+	/* @__PURE__ */ jsx("span", { foo: "bar\n      baz" }),
+	/* @__PURE__ */ jsx("p", { children: "x y" }),
+	/* @__PURE__ */ jsx(Fragment, { children: /* @__PURE__ */ jsx("div", {}) }),
+	/* @__PURE__ */ jsx(Fragment, { children: /* @__PURE__ */ jsx("div", {}) })
+] }));
+
+//#endregion
+//#region other2.js
+console.log("wrong Foo 2", "wrong obj 2", "wrong jsx 2", "wrong jsxs 2");
+
+//#endregion
+```

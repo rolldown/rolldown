@@ -1,0 +1,7 @@
+
+//#region dir/index.js?raw
+var dir_index_default = "dir";
+const value = 1;
+
+//#endregion
+export { dir_index_default as default, value };

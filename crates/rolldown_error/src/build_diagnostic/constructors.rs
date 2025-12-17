@@ -29,6 +29,7 @@ use super::events::missing_global_name::MissingGlobalName;
 use super::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
 use super::events::missing_name_option_for_umd_export::MissingNameOptionForUmdExport;
 use super::events::plugin_error::{CausedPlugin, PluginError};
+use super::events::plugin_timings::{PluginTimingInfo, PluginTimings};
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
 use super::events::resolve_error::DiagnosableResolveError;
 use super::events::unhandleable_error::UnhandleableError;
@@ -37,6 +38,7 @@ use super::events::unsupported_feature::UnsupportedFeature;
 use super::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
+  circular_reexport::CircularReexport,
   commonjs_variable_in_esm::{CjsExportSpan, CommonJsVariableInEsm},
   eval::Eval,
   external_entry::ExternalEntry,
@@ -106,6 +108,10 @@ impl BuildDiagnostic {
 
   pub fn circular_dependency(paths: Vec<String>) -> Self {
     Self::new_inner(CircularDependency { paths })
+  }
+
+  pub fn circular_reexport(importer_id: String, imported_specifier: String) -> Self {
+    Self::new_inner(CircularReexport { importer_id, imported_specifier })
   }
 
   pub fn missing_export(
@@ -320,8 +326,9 @@ impl BuildDiagnostic {
     column: usize,
     message: ArcStr,
   ) -> Self {
-    // `serde_json` Error is one-based https://docs.rs/serde_json/1.0.132/serde_json/struct.Error.html#method.column
-    let offset = ByteLocator::new(source.as_str()).byte_offset(line - 1, column - 1);
+    // This function expects 0-based `line` and `column` values, matching `ByteLocator::byte_offset`.
+    // Note: `serde_json::Error` reports 1-based line/column; conversion to 0-based is handled at the call site.
+    let offset = ByteLocator::new(source.as_str()).byte_offset(line, column);
     let span = Span::new(offset as u32, offset as u32);
     Self::new_inner(JsonParse { filename, source, span, message })
   }
@@ -348,5 +355,9 @@ impl BuildDiagnostic {
 
   pub fn could_not_clean_directory(dir: String, reason: String) -> Self {
     Self::new_inner(CouldNotCleanDirectory { dir, reason })
+  }
+
+  pub fn plugin_timings(plugins: Vec<PluginTimingInfo>) -> Self {
+    Self::new_inner(PluginTimings { plugins })
   }
 }

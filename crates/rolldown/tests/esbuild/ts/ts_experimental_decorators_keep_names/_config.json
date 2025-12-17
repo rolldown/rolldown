@@ -5,7 +5,9 @@
         "name": "entry",
         "import": "entry.ts"
       }
-    ]
+    ],
+    "keepNames": true,
+    "tsconfig": "./tsconfig.json"
   },
   "expectExecuted": false
 }

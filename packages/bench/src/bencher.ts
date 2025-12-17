@@ -25,7 +25,7 @@ export function group(
         display() {
           console.log(`${chalk.yellow(name)}:`);
           let resultsForDisplay = bench.tasks.map((task) => {
-            if (!task.result) {
+            if (!task.result || !('latency' in task.result)) {
               throw new Error(
                 `No benchmark result found for ${name} ${task.name}`,
               );
@@ -33,7 +33,7 @@ export function group(
 
             return {
               name: task.name,
-              mean: task.result.mean,
+              mean: task.result.latency.mean,
             };
           });
           resultsForDisplay = sortBy(resultsForDisplay, 'mean');

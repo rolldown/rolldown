@@ -7,7 +7,6 @@ import type {
   BindingViteHtmlInlineProxyPluginConfig,
   BindingViteImportGlobPluginConfig,
   BindingViteJsonPluginConfig,
-  BindingViteManifestPluginConfig,
   BindingViteModulePreloadPolyfillPluginConfig,
   BindingViteReactRefreshWrapperPluginConfig,
   BindingViteReporterPluginConfig,
@@ -51,19 +50,13 @@ export function viteImportGlobPlugin(
 }
 
 export function viteReporterPlugin(
-  config?: BindingViteReporterPluginConfig,
+  config: BindingViteReporterPluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-reporter', config);
 }
 
-export function viteManifestPlugin(
-  config?: BindingViteManifestPluginConfig,
-): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:vite-manifest', config);
-}
-
 export function viteWasmHelperPlugin(
-  config?: BindingViteWasmHelperPluginConfig,
+  config: BindingViteWasmHelperPluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-wasm-helper', config);
 }
@@ -78,7 +71,7 @@ export function viteLoadFallbackPlugin(): BuiltinPlugin {
 }
 
 export function viteJsonPlugin(
-  config?: BindingViteJsonPluginConfig,
+  config: BindingViteJsonPluginConfig,
 ): BuiltinPlugin {
   const builtinPlugin = new BuiltinPlugin('builtin:vite-json', config);
   return makeBuiltinPluginCallable(builtinPlugin);
@@ -91,9 +84,13 @@ export function viteBuildImportAnalysisPlugin(
 }
 
 export function viteResolvePlugin(
-  config: BindingViteResolvePluginConfig,
+  config: Omit<BindingViteResolvePluginConfig, 'yarnPnp'>,
 ): BuiltinPlugin {
-  const builtinPlugin = new BuiltinPlugin('builtin:vite-resolve', config);
+  const builtinPlugin = new BuiltinPlugin('builtin:vite-resolve', {
+    ...config,
+    // process is undefined for browser build
+    yarnPnp: typeof process === 'object' && !!process.versions?.pnp,
+  });
   return makeBuiltinPluginCallable(builtinPlugin);
 }
 
@@ -110,7 +107,10 @@ export function viteWebWorkerPostPlugin(): BuiltinPlugin {
 export function esmExternalRequirePlugin(
   config?: BindingEsmExternalRequirePluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:esm-external-require', config);
+  const plugin = new BuiltinPlugin('builtin:esm-external-require', config);
+  // For Vite: ensure this plugin runs before other `resolveId.meta.order: 'pre'` plugins
+  plugin.enforce = 'pre';
+  return plugin;
 }
 
 type ViteReactRefreshWrapperPluginConfig =

@@ -2,7 +2,7 @@
   "expectExecuted": false,
   "config": {
     "experimental": {
-      "hmr": {}
+      "devMode": {}
     }
   }
 }

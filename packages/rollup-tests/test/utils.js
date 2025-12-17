@@ -278,6 +278,10 @@ function loadConfigAndRunTest(directory, runTest) {
 		(!config.onlyWindows || platform === 'win32') &&
 		(!config.minNodeVersion || config.minNodeVersion <= Number(/^v(\d+)/.exec(version)[1]))
 	) {
+    if (!config.options?.checks?.pluginTimings) {
+      config.expectedWarnings ??= [];
+      config.expectedWarnings.push("PLUGIN_TIMINGS");
+    }
 		runTest(directory, config);
 	}
 }

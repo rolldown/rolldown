@@ -16,7 +16,11 @@ While Rolldown's plugin interface is largely compatible with Rollup's, there are
 
 In Rollup, all outputs are generated together in a single process. However, Rolldown handles each output generation separately. This means that if you have multiple output configurations, Rolldown will process each output independently, which can affect how certain plugins behave, especially those that maintain state across the entire build process.
 
-Related to that, the `outputOptions` hook is called **before** the build hooks in Rolldown, whereas Rollup calls them **after** the build hooks.
+These are the concrete differences:
+
+- `outputOptions` hook is called **before** the build hooks in Rolldown, whereas Rollup calls them **after** the build hooks
+- Build hooks are called for each output separately, whereas Rollup calls them once for all outputs
+- `closeBundle` hook is called **only** when you called `generate()` or `write()` at least once, whereas Rollup calls it regardless of whether you called `generate()` or `write()`
 
 ### Sequential Hook Execution
 

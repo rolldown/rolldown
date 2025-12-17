@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region other1.js
+console.log("wrong div 1", "wrong span 1");
+
+//#endregion
+//#region jsx.js
+console.log(/* @__PURE__ */ React.createElement("div", null));
+console.log(/* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", null)));
+
+//#endregion
+//#region other2.js
+console.log("wrong div 2", "wrong span 2");
+
+//#endregion
+```

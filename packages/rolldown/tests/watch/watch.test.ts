@@ -6,8 +6,15 @@ import { sleep, waitUtil } from 'rolldown-tests/utils';
 import { expect, onTestFinished, test, vi } from 'vitest';
 
 test.sequential('watch', async () => {
-  const { input, output } = await createTestInputAndOutput('watch');
-  const watchChangeFn = vi.fn();
+  const { input, output, dir } = await createTestInputAndOutput('watch');
+  const foo = path.join(dir, 'foo.js');
+  fs.writeFileSync(foo, 'export const foo = 1');
+  fs.writeFileSync(input, `import './foo.js'; console.log(1)`);
+  await sleep(60);
+
+  const watchChangeUpdateFn = vi.fn();
+  const watchChangeCreateFn = vi.fn();
+  const watchChangeDeleteFn = vi.fn();
   const closeWatcherFn = vi.fn();
   const watcher = watch({
     input,
@@ -19,8 +26,16 @@ test.sequential('watch', async () => {
           // The macos emit create event when the file is changed, not sure the reason,
           // so here only check the update event
           if (event.event === 'update') {
-            watchChangeFn();
+            watchChangeUpdateFn();
             expect(id).toBe(input);
+          }
+          if (event.event === 'create') {
+            watchChangeCreateFn();
+            expect(id).toBe(foo);
+          }
+          if (event.event === 'delete') {
+            watchChangeDeleteFn();
+            expect(id).toBe(foo);
           }
         },
       },
@@ -38,14 +53,29 @@ test.sequential('watch', async () => {
     // should run build once
     await waitBuildFinished(watcher);
 
-    // edit file
-    fs.writeFileSync(input, 'console.log(2)');
+    // Test update event
+    fs.writeFileSync(input, `import './foo.js'; console.log(2)`);
     await waitUtil(() => {
       expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
         true,
       );
       // The different platform maybe emit multiple events
-      expect(watchChangeFn).toBeCalled();
+      expect(watchChangeUpdateFn).toBeCalled();
+    });
+
+    // Test delete event
+    fs.unlinkSync(foo);
+    await waitUtil(() => {
+      expect(watchChangeDeleteFn).toBeCalled();
+    });
+
+    // Test create event
+    fs.writeFileSync(foo, 'export const foo = 2');
+    await waitUtil(() => {
+      // FIXME: create event is not emitted properly on macOS
+      if (process.platform !== 'darwin') {
+        expect(watchChangeCreateFn).toBeCalled();
+      }
     });
   } catch (e) {
     errored = true;

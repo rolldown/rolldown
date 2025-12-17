@@ -150,6 +150,14 @@ export interface OutputOptions {
   sourcemapPathTransform?: SourcemapPathTransformOption;
   banner?: string | AddonFunction;
   footer?: string | AddonFunction;
+  /**
+   * Similar to `banner` option, but will run after the `renderChunk` hook and builtin minification.
+   */
+  postBanner?: string | AddonFunction;
+  /**
+   * Similar to `footer` option, but will run after the `renderChunk` hook and builtin minification.
+   */
+  postFooter?: string | AddonFunction;
   intro?: string | AddonFunction;
   outro?: string | AddonFunction;
   extend?: boolean;
@@ -486,6 +494,8 @@ export interface OutputOptions {
 interface OverwriteOutputOptionsForCli {
   banner?: string;
   footer?: string;
+  postBanner?: string;
+  postFooter?: string;
   intro?: string;
   outro?: string;
   esModule?: boolean;

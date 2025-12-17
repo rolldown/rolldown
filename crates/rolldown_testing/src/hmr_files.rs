@@ -5,9 +5,15 @@ use std::{
 };
 
 use regex::Regex;
+use rolldown_common::WatcherChangeKind;
+use rustc_hash::FxHashMap;
 
 static HMR_EDIT_FILENAME_RE: LazyLock<Regex> =
   LazyLock::new(|| Regex::new(r"\.hmr-(\d+)(\..+)$").expect("invalid hmr edit filename regex"));
+
+static DELETE_ANNOTATION_RE: LazyLock<Regex> = LazyLock::new(|| {
+  Regex::new(r"\s*/\*\s*#__DELETE__\s*\*/\s*").expect("invalid delete annotation regex")
+});
 
 fn extract_hmr_step_from_hmr_edit_filename(hmr_filename: &Path) -> usize {
   HMR_EDIT_FILENAME_RE
@@ -95,14 +101,17 @@ pub fn get_changed_files_from_hmr_edit_files(
   test_folder_path: &Path,
   hmr_temp_dir_path: &Path,
   patch: &[PathBuf],
-) -> Vec<String> {
+) -> FxHashMap<String, WatcherChangeKind> {
   patch
     .iter()
     .map(|src_path| {
-      get_hmr_edit_file_dest_path(test_folder_path, hmr_temp_dir_path, src_path)
+      let dest_path = get_hmr_edit_file_dest_path(test_folder_path, hmr_temp_dir_path, src_path)
         .to_str()
         .unwrap()
-        .to_owned()
+        .to_owned();
+      let content = fs::read_to_string(src_path).unwrap();
+      let is_delete = DELETE_ANNOTATION_RE.is_match(&content);
+      (dest_path, if is_delete { WatcherChangeKind::Delete } else { WatcherChangeKind::Update })
     })
     .collect()
 }
@@ -119,7 +128,12 @@ pub fn apply_hmr_edit_files_to_hmr_temp_dir(
       fs::create_dir_all(parent).unwrap();
     }
 
-    fs::copy(src_path, &dest_path).unwrap();
+    let content = fs::read_to_string(src_path).unwrap();
+    if DELETE_ANNOTATION_RE.is_match(&content) {
+      fs::remove_file(&dest_path).unwrap();
+    } else {
+      fs::copy(src_path, &dest_path).unwrap();
+    }
   }
 }
 

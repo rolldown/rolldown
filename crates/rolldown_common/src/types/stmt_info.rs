@@ -116,17 +116,12 @@ oxc_index::define_index_type! {
 bitflags! {
     #[derive(Debug, Default, Clone, Copy)]
     pub struct StmtInfoMeta: u8 {
-        const FnDecl = 1;
-        const ClassDecl = 1 << 1;
-        /// Flag for `var fn = function (){}`
-        const FnExpr = 1 << 2;
-        /// Flag for `var foo = class {}`
-        const ClassExpr = 1 << 3;
+        /// Flag for function/class declarations and expressions that need `__name` helper
+        const KeepNamesType = 1;
         /// If this statement needs to reference `__require` runtime
-        const HasDummyRecord = 1 << 4;
+        const HasDummyRecord = 1 << 1;
         /// see `has_dynamic_exports` in https://github.com/rolldown/rolldown/blob/8bc7dca5a09047b6b494e3fa7b6b7564aa465372/crates/rolldown/src/types/linking_metadata.rs?plain=1#L49
-        const ReExportDynamicExports = 1 << 5;
-        const KeepNamesType = StmtInfoMeta::FnDecl.bits() | StmtInfoMeta::ClassDecl.bits() | StmtInfoMeta::FnExpr.bits() | StmtInfoMeta::ClassExpr.bits();
+        const ReExportDynamicExports = 1 << 2;
     }
 }
 

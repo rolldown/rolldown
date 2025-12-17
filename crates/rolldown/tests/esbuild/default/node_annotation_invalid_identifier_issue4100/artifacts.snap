@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_mjs.js
+
+```js
+
+//#region entry.mjs
+let foo, bar, baz;
+
+//#endregion
+exports["..."] = baz;
+exports.foo = foo;
+exports.if = bar;
+```

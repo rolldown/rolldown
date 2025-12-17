@@ -14,8 +14,12 @@ const objFoo = { foo(x = this) {
 	console.log(this);
 } };
 var Foo = class {
-	x = this;
-	static y = this.z;
+	constructor() {
+		this.x = this;
+	}
+	static {
+		this.y = this.z;
+	}
 	foo(x = this) {
 		console.log(this);
 	}
@@ -32,8 +36,12 @@ if (nested) {
 		console.log(this);
 	} };
 	class Bar {
-		x = this;
-		static y = this.z;
+		constructor() {
+			this.x = this;
+		}
+		static {
+			this.y = this.z;
+		}
 		foo(x = this) {
 			console.log(this);
 		}

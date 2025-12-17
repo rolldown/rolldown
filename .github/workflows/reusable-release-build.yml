@@ -87,7 +87,7 @@ jobs:
         if: ${{ contains(matrix.target, 'ohos') }}
         uses: Boshen/setup-ohos-sdk@edb865a89a712f1f15dbad932dfa9cfce849d95c # v1.0.0
 
-      - uses: taiki-e/install-action@3575e532701a5fc614b0c842e4119af4cc5fd16d # v2.62.60
+      - uses: taiki-e/install-action@5818d9684d2a52207bb7475983a18ba56127e337 # v2.63.2
         if: ${{ contains(matrix.target, 'musl') }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -108,7 +108,7 @@ jobs:
           TARGET_CC: clang # for mimalloc
 
       - name: Upload Binding Artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           if-no-files-found: error
           name: bindings-${{ matrix.target }}
@@ -155,7 +155,7 @@ jobs:
             rm -rf node_modules
             rm -rf target
       - name: Upload artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: bindings-x86_64-unknown-freebsd
           path: ./packages/rolldown/src/rolldown-binding.*.node
@@ -175,7 +175,7 @@ jobs:
         run: pnpm --filter '@rolldown/pluginutils' build
 
       - name: Upload `@rolldown/pluginutils` Artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           if-no-files-found: error
           name: pluginutils-artifact
@@ -206,7 +206,7 @@ jobs:
           ROLLDOWN_VERSION: ${{ inputs.version }}
 
       - name: Download Pluginutils Artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           path: packages/pluginutils/dist
           name: pluginutils-artifact
@@ -216,7 +216,7 @@ jobs:
         run: pnpm --filter rolldown build-node
 
       - name: Upload Node Artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           if-no-files-found: error
           name: node-artifact
@@ -224,7 +224,7 @@ jobs:
             packages/rolldown/dist/**
 
       - name: Upload `rolldown-version.txt`
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           if-no-files-found: warn
           name: rolldown-version
@@ -262,7 +262,7 @@ jobs:
           ROLLDOWN_VERSION: ${{ inputs.version }}
 
       - name: Download Pluginutils Artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           path: packages/pluginutils/dist
           name: pluginutils-artifact
@@ -272,7 +272,7 @@ jobs:
         run: pnpm --filter "@rolldown/browser" build:release
 
       - name: Upload `@rolldown/browser` Artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           if-no-files-found: error
           name: browser-artifact
@@ -300,7 +300,7 @@ jobs:
         run: pnpm --filter "@rolldown/debug" build
 
       - name: Upload `@rolldown/debug` Artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           if-no-files-found: error
           name: debug-artifact

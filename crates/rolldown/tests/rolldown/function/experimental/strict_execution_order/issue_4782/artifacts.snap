@@ -9,9 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 //#region dep-a.js
 var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const sideEffect$1 = {};
+	const sideEffect = {};
 	globalThis.sideEffect = {};
-	module.exports = sideEffect$1;
+	module.exports = sideEffect;
 }));
 
 //#endregion
@@ -42,9 +42,9 @@ init_main();
 // HIDDEN [rolldown:runtime]
 //#region dep-a.js
 var require_dep_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const sideEffect$1 = {};
+	const sideEffect = {};
 	globalThis.sideEffect = {};
-	module.exports = sideEffect$1;
+	module.exports = sideEffect;
 }));
 
 //#endregion

@@ -64,6 +64,7 @@ mod code_splitting;
 mod compute_cross_chunk_links;
 mod minify_chunks;
 mod on_demand_wrapping;
+mod post_banner_footer;
 mod render_chunk_to_assets;
 
 pub struct GenerateStage<'a> {
@@ -201,6 +202,7 @@ impl<'a> GenerateStage<'a> {
             file_emitter: &self.plugin_driver.file_emitter,
             constant_value_map: &self.link_output.global_constant_symbol_map,
             side_effect_free_function_symbols: &side_effect_free_function_symbols,
+            safely_merge_cjs_ns_map: &self.link_output.safely_merge_cjs_ns_map,
           };
           let mutable_state = FinalizerMutableState {
             cur_stmt_index: 0,

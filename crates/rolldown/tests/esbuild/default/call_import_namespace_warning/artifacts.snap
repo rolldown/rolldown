@@ -1,0 +1,228 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'a' in js.js
+   ╭─[ js.js:1:20 ]
+   │
+ 1 │ import * as a from "a"
+   │                    ─┬─  
+   │                     ╰─── Module not found, treating it as an external dependency
+───╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'a' in jsx-a.jsx
+   ╭─[ jsx-a.jsx:2:20 ]
+   │
+ 2 │ import * as a from "a"
+   │                    ─┬─  
+   │                     ╰─── Module not found, treating it as an external dependency
+───╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'a' in jsx-components.jsx
+   ╭─[ jsx-components.jsx:1:20 ]
+   │
+ 1 │ import * as A from "a"
+   │                    ─┬─  
+   │                     ╰─── Module not found, treating it as an external dependency
+───╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'a' in ts.ts
+   ╭─[ ts.ts:1:20 ]
+   │
+ 1 │ import * as a from "a"
+   │                    ─┬─  
+   │                     ╰─── Module not found, treating it as an external dependency
+───╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'b' in js.js
+   ╭─[ js.js:2:17 ]
+   │
+ 2 │ import {b} from "b"
+   │                 ─┬─  
+   │                  ╰─── Module not found, treating it as an external dependency
+───╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'b' in jsx-b.jsx
+   ╭─[ jsx-b.jsx:2:17 ]
+   │
+ 2 │ import {b} from "b"
+   │                 ─┬─  
+   │                  ╰─── Module not found, treating it as an external dependency
+───╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'b' in jsx-components.jsx
+   ╭─[ jsx-components.jsx:2:17 ]
+   │
+ 2 │ import {B} from "b"
+   │                 ─┬─  
+   │                  ╰─── Module not found, treating it as an external dependency
+───╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'b' in ts.ts
+   ╭─[ ts.ts:2:17 ]
+   │
+ 2 │ import {b} from "b"
+   │                 ─┬─  
+   │                  ╰─── Module not found, treating it as an external dependency
+───╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'c' in js.js
+   ╭─[ js.js:3:15 ]
+   │
+ 3 │ import c from "c"
+   │               ─┬─  
+   │                ╰─── Module not found, treating it as an external dependency
+───╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'c' in jsx-c.jsx
+   ╭─[ jsx-c.jsx:2:15 ]
+   │
+ 2 │ import c from "c"
+   │               ─┬─  
+   │                ╰─── Module not found, treating it as an external dependency
+───╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'c' in jsx-components.jsx
+   ╭─[ jsx-components.jsx:3:15 ]
+   │
+ 3 │ import C from "c"
+   │               ─┬─  
+   │                ╰─── Module not found, treating it as an external dependency
+───╯
+
+```
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'c' in ts.ts
+   ╭─[ ts.ts:3:15 ]
+   │
+ 3 │ import c from "c"
+   │               ─┬─  
+   │                ╰─── Module not found, treating it as an external dependency
+───╯
+
+```
+
+# Assets
+
+## js.js
+
+```js
+import * as a from "a";
+import { b } from "b";
+import c from "c";
+
+//#region js.js
+a();
+b();
+c();
+new a();
+new b();
+new c();
+
+//#endregion
+```
+
+## jsx-a.js
+
+```js
+import "a";
+
+```
+
+## jsx-b.js
+
+```js
+import { b } from "b";
+
+```
+
+## jsx-c.js
+
+```js
+import c from "c";
+
+```
+
+## jsx-components.js
+
+```js
+import "a";
+import "b";
+import c from "c";
+
+```
+
+## ts.js
+
+```js
+import * as a from "a";
+import { b } from "b";
+import c from "c";
+
+//#region ts.ts
+a();
+b();
+c();
+new a();
+new b();
+new c();
+
+//#endregion
+```

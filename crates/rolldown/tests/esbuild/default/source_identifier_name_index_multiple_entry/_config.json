@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "home_index_js",
+        "import": "home/index.js"
+      },
+      {
+        "name": "about_index_js",
+        "import": "about/index.js"
+      }
+    ]
+  }
+}

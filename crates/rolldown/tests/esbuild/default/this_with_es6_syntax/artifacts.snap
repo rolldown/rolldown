@@ -1,0 +1,190 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region cjs.js
+console.log(void 0);
+
+//#endregion
+//#region dummy.js
+var dummy_exports = /* @__PURE__ */ __export({ dummy: () => dummy });
+var dummy;
+var init_dummy = __esmMin((() => {
+	dummy = 123;
+}));
+
+//#endregion
+//#region es6-import-stmt.js
+console.log(void 0);
+
+//#endregion
+//#region es6-import-assign.ts
+console.log(void 0);
+
+//#endregion
+//#region es6-import-dynamic.js
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+console.log(void 0);
+
+//#endregion
+//#region es6-import-meta.js
+console.log(void 0);
+
+//#endregion
+//#region es6-expr-import-dynamic.js
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+console.log(void 0);
+
+//#endregion
+//#region es6-expr-import-meta.js
+console.log(void 0);
+
+//#endregion
+//#region es6-export-variable.js
+console.log(void 0);
+
+//#endregion
+//#region es6-export-function.js
+console.log(void 0);
+
+//#endregion
+//#region es6-export-async-function.js
+console.log(void 0);
+
+//#endregion
+//#region es6-export-enum.ts
+console.log(void 0);
+
+//#endregion
+//#region es6-export-const-enum.ts
+console.log(void 0);
+
+//#endregion
+//#region es6-export-module.ts
+console.log(void 0);
+
+//#endregion
+//#region es6-export-namespace.ts
+console.log(void 0);
+
+//#endregion
+//#region es6-export-class.js
+console.log(void 0);
+
+//#endregion
+//#region es6-export-abstract-class.ts
+console.log(void 0);
+
+//#endregion
+//#region es6-export-default.js
+console.log(void 0);
+
+//#endregion
+//#region es6-export-clause.js
+console.log(void 0);
+
+//#endregion
+//#region es6-export-clause-from.js
+console.log(void 0);
+
+//#endregion
+//#region es6-export-star.js
+init_dummy();
+console.log(void 0);
+
+//#endregion
+//#region es6-export-star-as.js
+console.log(void 0);
+
+//#endregion
+//#region es6-export-assign.ts
+var require_es6_export_assign = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	module.exports = 123;
+	console.log(exports);
+}));
+
+//#endregion
+//#region es6-export-import-assign.ts
+var import_es6_export_assign = require_es6_export_assign();
+const x = (init_dummy(), __toCommonJS(dummy_exports));
+console.log(void 0);
+
+//#endregion
+//#region es6-ns-export-variable.ts
+let ns$6;
+(function(_ns) {
+	_ns.foo = 123;
+})(ns$6 || (ns$6 = {}));
+console.log(void 0);
+
+//#endregion
+//#region es6-ns-export-function.ts
+let ns$5;
+(function(_ns) {
+	function foo() {}
+	_ns.foo = foo;
+})(ns$5 || (ns$5 = {}));
+console.log(void 0);
+
+//#endregion
+//#region es6-ns-export-async-function.ts
+let ns$4;
+(function(_ns) {
+	async function foo() {}
+	_ns.foo = foo;
+})(ns$4 || (ns$4 = {}));
+console.log(void 0);
+
+//#endregion
+//#region es6-ns-export-enum.ts
+let ns$3;
+(function(_ns) {
+	_ns.Foo = /* @__PURE__ */ function(Foo) {
+		return Foo;
+	}({});
+})(ns$3 || (ns$3 = {}));
+console.log(void 0);
+
+//#endregion
+//#region es6-ns-export-const-enum.ts
+let ns$2;
+(function(_ns) {
+	_ns.Foo = /* @__PURE__ */ function(Foo) {
+		return Foo;
+	}({});
+})(ns$2 || (ns$2 = {}));
+console.log(void 0);
+
+//#endregion
+//#region es6-ns-export-module.ts
+console.log(void 0);
+
+//#endregion
+//#region es6-ns-export-namespace.ts
+console.log(void 0);
+
+//#endregion
+//#region es6-ns-export-class.ts
+let ns$1;
+(function(_ns) {
+	class Foo {}
+	_ns.Foo = Foo;
+})(ns$1 || (ns$1 = {}));
+console.log(void 0);
+
+//#endregion
+//#region es6-ns-export-abstract-class.ts
+let ns;
+(function(_ns) {
+	class Foo {}
+	_ns.Foo = Foo;
+})(ns || (ns = {}));
+console.log(void 0);
+
+//#endregion
+```

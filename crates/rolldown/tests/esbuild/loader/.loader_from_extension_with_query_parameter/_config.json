@@ -5,7 +5,11 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "moduleTypes": {
+      ".abc": "text",
+      ".xyz": "base64"
+    }
   },
   "expectExecuted": false
 }

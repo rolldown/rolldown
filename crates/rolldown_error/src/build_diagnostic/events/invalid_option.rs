@@ -12,6 +12,11 @@ pub enum InvalidOptionType {
   InvalidContext(String),
   IncludeDependenciesRecursivelyWithConflictPreserveEntrySignatures(String),
   IncludeDependenciesRecursivelyWithImplicitPreserveEntrySignatures,
+  InvalidFilenamePattern { pattern: String, pattern_name: String },
+  InvalidFilenameSubstitution { name: String, pattern_name: String },
+  InlineDynamicImportsWithMultipleInputs,
+  InlineDynamicImportsWithPreserveModules,
+  InlineDynamicImportsWithAdvancedChunks,
 }
 
 #[derive(Debug)]
@@ -64,6 +69,28 @@ impl BuildEvent for InvalidOption {
             "",
             "- Set `preserveEntrySignatures` either to `false` or 'allow-extension' in your config",
           ].join("\n")
+        }
+        InvalidOptionType::InvalidFilenamePattern { pattern, pattern_name } => {
+          format!(
+            "Invalid pattern \"{pattern}\" for \"{pattern_name}\", patterns can be neither absolute nor relative paths. \
+             If you want your files to be stored in a subdirectory, write its name without a leading \
+             slash like this: subdirectory/pattern."
+          )
+        }
+        InvalidOptionType::InvalidFilenameSubstitution { name, pattern_name } => {
+          format!(
+            "Invalid substitution \"{name}\" for placeholder \"[name]\" in \"{pattern_name}\" pattern, \
+             can be neither absolute nor relative paths."
+          )
+        }
+        InvalidOptionType::InlineDynamicImportsWithMultipleInputs => {
+          "Invalid value \"true\" for option \"output.inlineDynamicImports\" - multiple inputs are not supported when \"output.inlineDynamicImports\" is true.".to_string()
+        }
+        InvalidOptionType::InlineDynamicImportsWithPreserveModules => {
+          "Invalid value \"true\" for option \"output.inlineDynamicImports\" - this option is not supported for \"output.preserveModules\".".to_string()
+        }
+        InvalidOptionType::InlineDynamicImportsWithAdvancedChunks => {
+          "Invalid value \"true\" for option \"output.inlineDynamicImports\" - this option is not supported for \"output.advancedChunks\".".to_string()
         }
     }
   }

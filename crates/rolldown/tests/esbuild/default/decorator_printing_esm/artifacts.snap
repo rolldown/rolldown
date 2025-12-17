@@ -1,0 +1,66 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'somewhere' in entry.js
+   ╭─[ entry.js:2:26 ]
+   │
+ 2 │ import { imported } from 'somewhere'
+   │                          ─────┬─────  
+   │                               ╰─────── Module not found, treating it as an external dependency
+───╯
+
+```
+
+# Assets
+
+## entry.js
+
+```js
+import { imported } from "somewhere";
+
+//#region constants.js
+const constant = 123;
+
+//#endregion
+//#region empty.js
+var undef = void 0;
+
+//#endregion
+//#region entry.js
+_ = class Outer {
+	#bar;
+	classes = [
+		class {
+			@imported @imported() imported;
+		},
+		class {
+			@unbound @unbound() unbound;
+		},
+		class {
+			@constant @constant() constant;
+		},
+		class {
+			@undef @undef() undef;
+		},
+		class {
+			@(element[access]) indexed;
+		},
+		class {
+			@foo.#bar private;
+		},
+		class {
+			@foo.ヿ unicode;
+		},
+		class {
+			@((() => {})) arrow;
+		}
+	];
+};
+
+//#endregion
+```

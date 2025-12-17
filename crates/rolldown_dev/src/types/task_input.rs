@@ -1,26 +1,27 @@
 use std::path::PathBuf;
 
-use rolldown_utils::indexmap::FxIndexSet;
+use rolldown_common::WatcherChangeKind;
+use rolldown_utils::indexmap::FxIndexMap;
 
 #[derive(Debug)]
 pub enum TaskInput {
   /// A full build
   FullBuild,
   /// Incremental rebuild only (no HMR updates)
-  Rebuild { changed_files: FxIndexSet<PathBuf> },
+  Rebuild { changed_files: FxIndexMap<PathBuf, WatcherChangeKind> },
   /// Generate HMR updates only (no rebuild)
-  Hmr { changed_files: FxIndexSet<PathBuf> },
+  Hmr { changed_files: FxIndexMap<PathBuf, WatcherChangeKind> },
   /// Generate HMR updates AND rebuild
-  HmrRebuild { changed_files: FxIndexSet<PathBuf> },
+  HmrRebuild { changed_files: FxIndexMap<PathBuf, WatcherChangeKind> },
 }
 
 impl TaskInput {
-  pub fn changed_files(&self) -> &FxIndexSet<PathBuf> {
+  pub fn changed_files(&self) -> &FxIndexMap<PathBuf, WatcherChangeKind> {
     match self {
       Self::FullBuild => {
         use std::sync::OnceLock;
-        static EMPTY: OnceLock<FxIndexSet<PathBuf>> = OnceLock::new();
-        EMPTY.get_or_init(FxIndexSet::default)
+        static EMPTY: OnceLock<FxIndexMap<PathBuf, WatcherChangeKind>> = OnceLock::new();
+        EMPTY.get_or_init(FxIndexMap::default)
       }
       Self::Rebuild { changed_files }
       | Self::Hmr { changed_files }
@@ -28,7 +29,7 @@ impl TaskInput {
     }
   }
 
-  pub fn changed_files_mut(&mut self) -> Option<&mut FxIndexSet<PathBuf>> {
+  pub fn changed_files_mut(&mut self) -> Option<&mut FxIndexMap<PathBuf, WatcherChangeKind>> {
     match self {
       Self::FullBuild => None,
       Self::Rebuild { changed_files }

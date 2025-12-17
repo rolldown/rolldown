@@ -27,6 +27,7 @@ pub struct BindingViteResolvePluginConfig {
   #[napi(ts_type = "true | Array<string | RegExp>")]
   pub no_external: napi::Either<BindingTrueValue, Vec<BindingStringOrRegex>>,
   pub dedupe: Vec<String>,
+  pub disable_cache: Option<bool>,
   pub legacy_inconsistent_cjs_interop: Option<bool>,
   #[debug("{}", if finalize_bare_specifier.is_some() { "Some(<finalize_bare_specifier>)" } else { "None" })]
   #[napi(
@@ -49,6 +50,7 @@ pub struct BindingViteResolvePluginConfig {
   #[debug("{}", if on_debug.is_some() { "Some(<on_debug>)" } else { "None" })]
   #[napi(ts_type = "(message: string) => void")]
   pub on_debug: Option<JsCallback<FnArgs<(String,)>, Promise<()>>>,
+  pub yarn_pnp: bool,
 }
 
 impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
@@ -72,6 +74,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
       external,
       no_external,
       dedupe: value.dedupe,
+      disable_cache: value.disable_cache.unwrap_or_default(),
       legacy_inconsistent_cjs_interop: value.legacy_inconsistent_cjs_interop.unwrap_or_default(),
       finalize_bare_specifier: value.finalize_bare_specifier.map(
         |finalizer_fn| -> Arc<FinalizeBareSpecifierCallback> {
@@ -133,6 +136,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
           })
         })
       }),
+      yarn_pnp: value.yarn_pnp,
     }
   }
 }

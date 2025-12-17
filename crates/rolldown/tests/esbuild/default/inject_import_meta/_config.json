@@ -6,11 +6,23 @@
         "import": "entry.js"
       }
     ],
-    "inject": [{
-      "from": "./inject.js",
-      "imported": "test",
-      "type": "named"
-    }]
+    "inject": [
+      {
+        "from": "./inject.js",
+        "imported": "import.meta",
+        "type": "named"
+      },
+      {
+        "from": "./inject.js",
+        "imported": "import.meta.foo",
+        "type": "named"
+      },
+      {
+        "from": "./inject.js",
+        "imported": "import.meta.foo.bar",
+        "type": "named"
+      }
+    ]
   },
   "expectExecuted": false
 }

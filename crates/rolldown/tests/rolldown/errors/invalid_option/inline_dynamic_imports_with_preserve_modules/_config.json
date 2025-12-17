@@ -1,0 +1,8 @@
+{
+  "config": {
+    "input": [{ "import": "main.js" }],
+    "inlineDynamicImports": true,
+    "preserveModules": true
+  },
+  "expectError": true
+}

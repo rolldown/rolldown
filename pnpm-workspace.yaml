@@ -2,6 +2,7 @@ packages:
   - packages/*
   - packages/rolldown/tests
   - packages/test-dev-server/tests
+  - packages/test-dev-server/tests/playground/hmr-full-bundle-mode
   - packages/test-dev-server/tests/fixtures/*
   - packages/test-dev-server/tests/tmp/fixtures/*
   - packages/rolldown/tests/fixtures/resolve/issue-5846
@@ -19,15 +20,16 @@ trustPolicy: no-downgrade
 trustPolicyExclude:
   - chokidar@4.0.3 # https://github.com/paulmillr/chokidar/issues/1440
   - semver@6.3.1
+  - rxjs@7.8.2 # Trust downgrade when installing @vitest/browser-playwright
 
 # Define a catalog of version ranges.
 catalog:
   # --- OXC related ---
-  '@oxc-project/runtime': '=0.101.0'
-  '@oxc-project/types': '=0.101.0'
-  'oxc-parser': '=0.101.0'
-  'oxc-transform': '=0.101.0'
-  'oxc-minify': '=0.101.0'
+  '@oxc-project/runtime': '=0.103.0'
+  '@oxc-project/types': '=0.103.0'
+  'oxc-parser': '=0.103.0'
+  'oxc-transform': '=0.103.0'
+  'oxc-minify': '=0.103.0'
 
   # --- NAPI-RS related ---
   '@napi-rs/cli': '^3.4.1'
@@ -48,14 +50,14 @@ catalog:
   '@types/babel__core': '7.20.5'
 
   # --- Misc
-  '@oxc-node/cli': '^0.0.34'
-  '@oxc-node/core': '^0.0.34'
+  '@oxc-node/cli': '^0.0.35'
+  '@oxc-node/core': '^0.0.35'
   'fast-glob': '^3.3.3'
   'rolldown-plugin-dts': '^0.18.0'
   'typescript': '^5.8.3'
-  'vitest': '^4.0.1'
+  'vitest': '^4.0.15'
   'vite': '^7.0.0'
-  '@types/node': '24.10.1'
+  '@types/node': '24.10.3'
   'esbuild': '^0.27.0'
   'rollup': '^4.18.0'
   'terser': '^5.31.1'
@@ -66,7 +68,7 @@ catalog:
   'source-map-support': '^0.5.21'
   'strip-comments': '^2.0.1'
   '@types/strip-comments': '^2.0.4'
-  'tinybench': '^5.0.0'
+  'tinybench': '^6.0.0'
   'source-map': '^0.7.4'
   'fs-extra': '^11.2.0'
   '@types/fs-extra': '^11.0.4'
@@ -111,3 +113,4 @@ catalog:
   'web-tree-sitter': '^0.25.0'
   'valibot': '1.2.0'
   'tsx': '^4.20.6'
+  'acorn-import-assertions': '^1.9.0'

@@ -10,7 +10,7 @@ use arcstr::ArcStr;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
   ClientHmrInput, ClientHmrUpdate, HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, Module,
-  ModuleIdx, ModuleTable, ScanMode,
+  ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_ecmascript_utils::AstSnippet;
@@ -152,7 +152,7 @@ impl<'a> HmrStage<'a> {
 
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
-    changed_file_paths: &[String],
+    changed_file_paths: &FxIndexMap<String, WatcherChangeKind>,
     clients: &[ClientHmrInput<'_>],
   ) -> BuildResult<Vec<ClientHmrUpdate>> {
     tracing::trace!(
@@ -163,11 +163,17 @@ impl<'a> HmrStage<'a> {
 
     // 1. Identify changed modules
     let mut changed_modules = FxIndexSet::default();
-    for changed_file_path in changed_file_paths {
+    for (changed_file_path, event) in changed_file_paths {
       let changed_file_path = ArcStr::from(changed_file_path.to_slash().unwrap());
       // Check if the file itself is a module
       if let Some(module_idx) = self.cache.module_idx_by_abs_path.get(&changed_file_path) {
-        changed_modules.insert(*module_idx);
+        if *event == WatcherChangeKind::Delete {
+          if let Some(importers) = self.cache.importers.get(*module_idx) {
+            changed_modules.extend(importers.iter().map(|imp| imp.importer_idx));
+          }
+        } else {
+          changed_modules.insert(*module_idx);
+        }
       }
 
       // Check if any modules have this file as a transform dependency

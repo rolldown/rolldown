@@ -6,7 +6,10 @@
         "import": "entry.ts"
       }
     ],
-    "treeshake": false
+    "treeshake": false,
+    "transform": {
+      "target": "es2021"
+    }
   },
   "expectExecuted": false
 }

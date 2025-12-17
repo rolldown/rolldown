@@ -38,6 +38,15 @@ mod sort_modules;
 mod tree_shaking;
 mod wrapping;
 
+/// Information about safely merged CJS namespaces for a module
+#[derive(Debug, Default, Clone)]
+pub struct SafelyMergeCjsNsInfo {
+  /// Namespace symbol refs that can be merged into a single binding
+  pub namespace_refs: Vec<SymbolRef>,
+  /// Whether this CJS module needs `__toESM` interop (has namespace or default imports)
+  pub needs_interop: bool,
+}
+
 #[derive(Debug)]
 pub struct LinkStageOutput {
   pub module_table: ModuleTable,
@@ -51,7 +60,7 @@ pub struct LinkStageOutput {
   pub errors: Vec<BuildDiagnostic>,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
-  pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
+  pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
   /// https://rollupjs.org/plugin-development/#this-emitfile
   /// Used to store `preserveSignature` specified with `this.emitFile` in plugins.
@@ -73,7 +82,7 @@ pub struct LinkStage<'a> {
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
-  pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
+  pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, SafelyMergeCjsNsInfo>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
@@ -154,7 +163,7 @@ impl<'a> LinkStage<'a> {
       dynamic_import_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
       options,
       used_symbol_refs: FxHashSet::default(),
-      safely_merge_cjs_ns_map: scan_stage_output.safely_merge_cjs_ns_map,
+      safely_merge_cjs_ns_map: FxHashMap::default(),
       normal_symbol_exports_chain_map: FxHashMap::default(),
       external_import_namespace_merger: FxHashMap::default(),
       overrode_preserve_entry_signature_map: scan_stage_output
@@ -170,14 +179,15 @@ impl<'a> LinkStage<'a> {
     self.sort_modules();
     self.compute_tla();
     self.determine_module_exports_kind();
+    self.determine_safely_merge_cjs_ns();
     self.wrap_modules();
     self.generate_lazy_export();
     self.determine_side_effects();
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();
     self.reference_needed_symbols();
-    self.cross_module_optimization();
-    self.include_statements();
+    let unreachable_import_expression_addrs = self.cross_module_optimization();
+    self.include_statements(&unreachable_import_expression_addrs);
     self.patch_module_dependencies();
 
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());

@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Unexpected token
+   ╭─[ bar.js:1:1 ]
+   │
+ 1 │ ,,,
+   │ ┬  
+   │ ╰── 
+───╯
+
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Unexpected token
+   ╭─[ foo.js:1:1 ]
+   │
+ 1 │ ...
+   │ ─┬─  
+   │  ╰─── 
+───╯
+
+```

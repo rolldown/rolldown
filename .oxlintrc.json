@@ -15,7 +15,8 @@
     "packages/rolldown/src/binding.*",
     "packages/test-dev-server/tests/fixtures/**",
     "packages/vite-tests/repo/**",
-    "rollup/**"
+    "rollup/**",
+    "test262/**"
   ],
   "rules": {
     "import/named": "error",

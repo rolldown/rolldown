@@ -1,0 +1,12 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      }
+    ],
+    "entryFilenames": "/absolute/[name].js"
+  },
+  "expectError": true
+}

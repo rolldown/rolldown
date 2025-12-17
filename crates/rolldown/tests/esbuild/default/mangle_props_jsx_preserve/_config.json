@@ -5,7 +5,10 @@
         "name": "entry",
         "import": "entry.jsx"
       }
-    ]
+    ],
+    "transform": {
+      "jsx": "preserve"
+    }
   },
   "expectExecuted": false
 }

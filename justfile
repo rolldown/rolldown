@@ -2,6 +2,7 @@ set windows-shell := ["powershell"]
 set shell := ["bash", "-cu"]
 
 alias dt := t-run
+alias ued := update-esbuild-diff
 
 _default:
   just --list -u
@@ -31,7 +32,7 @@ update-submodule:
 # --- `roll` series commands will run all relevant commands in one go.
 
 # Run all relevant commands.
-roll: pnpm-install roll-rust roll-node roll-repo
+roll: pnpm-install roll-rust roll-node roll-repo update-esbuild-diff
 
 # Run all relevant commands for Rust.
 roll-rust: pnpm-install test-rust lint-rust
@@ -41,6 +42,9 @@ roll-node: test-node lint-node
 
 # Run all relevant commands for the repository.
 roll-repo: lint-repo
+
+update-esbuild-diff *args="":
+    pnpm --filter=scripts esbuild-snap-diff {{ args }}
 
 # --- `test` series commands aim to run tests and update snapshots automatically.
 test: test-rust test-node update-generated-code
@@ -97,8 +101,8 @@ t-node-rolldown *args="":
   pnpm run --filter rolldown-tests test:watcher {{ args }}
 
 # Run Rollup's test suite without building Rolldown.
-t-node-rollup command="":
-  pnpm run --filter rollup-tests test{{ command }}
+t-node-rollup *args="":
+  pnpm run --filter rollup-tests test {{ args }}
 
 # Run specific rust test without enabling extended tests.
 [unix]

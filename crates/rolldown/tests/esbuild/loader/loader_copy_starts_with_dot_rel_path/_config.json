@@ -1,0 +1,22 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "htaccess",
+        "import": "./.htaccess"
+      },
+      {
+        "name": "entry",
+        "import": "./entry.js"
+      },
+      {
+        "name": "ts",
+        "import": "./.ts"
+      }
+    ],
+    "moduleTypes": {
+    }
+  },
+  "expectExecuted": false,
+  "expectError": true // TODO: Remove this line after supporting copy loader/module type.
+}

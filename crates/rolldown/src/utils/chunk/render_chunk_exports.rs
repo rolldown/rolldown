@@ -120,7 +120,8 @@ pub fn render_chunk_exports(
             )
           });
           if let Some(ns_alias) = &symbol.namespace_alias {
-            let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
+            let canonical_ns_ref = link_output.symbol_db.canonical_ref_for(ns_alias.namespace_ref);
+            let canonical_ns_name = &chunk.canonical_names[&canonical_ns_ref];
             let property_name = &ns_alias.property_name;
             s.push_str(&concat_string!(
               "var ",
@@ -173,6 +174,11 @@ pub fn render_chunk_exports(
                       &link_output.module_table.modules,
                     ) {
                       render_object_define_property(&exported_name, &exported_value)
+                    } else if exported_name.as_str() == "__proto__" {
+                      // `__proto__` has special semantics - assigning to it sets the prototype
+                      // instead of creating a property. We must use Object.defineProperty to
+                      // set an actual property named "__proto__".
+                      render_object_define_property_value(&exported_name, &exported_value)
                     } else {
                       concat_string!(
                         property_access_str("exports", exported_name.as_str()),
@@ -290,6 +296,20 @@ pub fn render_object_define_property(key: &str, value: &str) -> String {
     value,
     ";
   }
+});"
+  )
+}
+
+#[inline]
+pub fn render_object_define_property_value(key: &str, value: &str) -> String {
+  concat_string!(
+    "Object.defineProperty(exports, '",
+    key,
+    "', {
+  enumerable: true,
+  value: ",
+    value,
+    "
 });"
   )
 }

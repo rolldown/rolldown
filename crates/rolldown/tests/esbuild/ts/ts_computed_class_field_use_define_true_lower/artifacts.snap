@@ -6,13 +6,28 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 //#region entry.ts
+var _x2, _y2;
+let _q, _r, _x, _y;
+_q = q;
+_r = r;
+_x2 = _x = x;
+_y2 = _y = y;
 var Foo = class {
-	[q];
-	[r] = s;
-	@dec [x];
-	@dec [y] = z;
+	constructor() {
+		_defineProperty(this, _q, void 0);
+		_defineProperty(this, _r, s);
+		_defineProperty(this, _x, void 0);
+		_defineProperty(this, _y, z);
+	}
 };
+__decorate([dec], Foo.prototype, _x2, void 0);
+__decorate([dec], Foo.prototype, _y2, void 0);
 new Foo();
 
 //#endregion

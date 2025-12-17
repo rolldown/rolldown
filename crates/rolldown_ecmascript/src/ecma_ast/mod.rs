@@ -23,6 +23,24 @@ pub struct EcmaAst {
 }
 
 impl EcmaAst {
+  /// Creates a new `EcmaAst` from a source string and allocator, using a builder function
+  /// to construct the program.
+  ///
+  /// # Arguments
+  /// * `source` - The source code string
+  /// * `allocator` - The allocator to use for AST nodes
+  /// * `builder` - A closure that takes the allocator and returns a `Program`
+  pub fn from_allocator_and_source<F>(source: ArcStr, allocator: Allocator, builder: F) -> Self
+  where
+    F: for<'a> FnOnce(&'a Allocator) -> Program<'a>,
+  {
+    let program = ProgramCell::new(ProgramCellOwner { source, allocator }, |owner| {
+      let program = builder(&owner.allocator);
+      ProgramCellDependent { program }
+    });
+    EcmaAst { program, source_type: SourceType::default().with_module(true) }
+  }
+
   pub fn source(&self) -> &ArcStr {
     &self.program.borrow_owner().source
   }

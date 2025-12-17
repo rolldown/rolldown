@@ -23,12 +23,13 @@ use tracing::{Instrument, debug_span};
 impl PluginDriver {
   #[tracing::instrument(level = "trace", skip_all)]
   pub async fn build_start(&self, opts: &SharedNormalizedBundlerOptions) -> HookNoopReturn {
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_build_start_meta)
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_build_start_meta)
     {
-      plugin
-        .call_build_start(ctx, &crate::HookBuildStartArgs { options: opts })
-        .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+      let start = self.start_timing();
+      let result = plugin.call_build_start(ctx, &crate::HookBuildStartArgs { options: opts }).await;
+      self.record_timing(plugin_idx, start);
+      result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
 
     Ok(())
@@ -78,7 +79,8 @@ impl PluginDriver {
           trigger: "${hook_resolve_id_trigger}",
           call_id: "${call_id}",
         });
-        if let Some(r) = plugin
+        let start = self.start_timing();
+        let result = plugin
           .call_resolve_id(
             &skipped_resolve_calls.map_or_else(
               || ctx.clone(),
@@ -88,8 +90,9 @@ impl PluginDriver {
             ),
             args,
           )
-          .await?
-        {
+          .await;
+        self.record_timing(plugin_idx, start);
+        if let Some(r) = result? {
           trace_action!(action::HookResolveIdCallEnd {
             action: "HookResolveIdCallEnd",
             resolved_id: Some(r.id.to_string()),
@@ -141,7 +144,8 @@ impl PluginDriver {
       if skipped_plugins.contains(&plugin_idx) {
         continue;
       }
-      if let Some(r) = plugin
+      let start = self.start_timing();
+      let result = plugin
         .call_resolve_dynamic_import(
           &skipped_resolve_calls.map_or_else(
             || ctx.clone(),
@@ -151,9 +155,9 @@ impl PluginDriver {
           ),
           args,
         )
-        .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?
-      {
+        .await;
+      self.record_timing(plugin_idx, start);
+      if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
         return Ok(Some(r));
       }
     }
@@ -172,7 +176,10 @@ impl PluginDriver {
           plugin_id: plugin_idx.raw(),
           call_id: "${call_id}",
         });
-        if let Some(r) = plugin.call_load(ctx, args).await? {
+        let start = self.start_timing();
+        let result = plugin.call_load(ctx, args).await;
+        self.record_timing(plugin_idx, start);
+        if let Some(r) = result? {
           trace_action!(action::HookLoadCallEnd {
             action: "HookLoadCallEnd",
             module_id: args.id.to_string(),
@@ -235,7 +242,8 @@ impl PluginDriver {
         plugin_id: plugin_idx.raw(),
         call_id: call_id.clone().unwrap_or_default(),
       });
-      if let Some(r) = plugin
+      let start = self.start_timing();
+      let result = plugin
         .call_transform(
           Arc::new(TransformPluginContext::new(
             ctx.clone(),
@@ -248,9 +256,9 @@ impl PluginDriver {
           )),
           &HookTransformArgs { id, code: &code, module_type: &*module_type },
         )
-        .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?
-      {
+        .await;
+      self.record_timing(plugin_idx, start);
+      if let Some(r) = result.with_context(|| CausedPlugin::new(plugin.call_name()))? {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
         if let Some(map) = self.normalize_transform_sourcemap(r.map, id, &code, r.code.as_ref()) {
           original_sourcemap_chain.push(SourcemapChainElement::Transform((plugin_idx, map)));
@@ -315,11 +323,8 @@ impl PluginDriver {
       } else {
         // If sourcemap is empty and code has changed, need to create one remapping original code.
         let magic_string = MagicString::new(original_code);
-        let hires = self
-          .options
-          .experimental
-          .transform_hires_sourcemap
-          .unwrap_or(SourcemapHires::Boolean(true));
+        let hires =
+          self.options.experimental.transform_hires_sourcemap.unwrap_or(SourcemapHires::Boundary);
         Some(magic_string.source_map(SourceMapOptions {
           hires: hires.into(),
           include_content: true,
@@ -359,23 +364,25 @@ impl PluginDriver {
     module_info: Arc<ModuleInfo>,
     normal_module: &NormalModule,
   ) -> HookNoopReturn {
-    for (_, plugin, ctx) in
+    for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_module_parsed_meta)
     {
-      plugin
-        .call_module_parsed(ctx, Arc::clone(&module_info), normal_module)
-        .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+      let start = self.start_timing();
+      let result = plugin.call_module_parsed(ctx, Arc::clone(&module_info), normal_module).await;
+      self.record_timing(plugin_idx, start);
+      result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
   }
 
   pub async fn build_end(&self, args: Option<&HookBuildEndArgs<'_>>) -> HookNoopReturn {
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_build_end_meta) {
-      plugin
-        .call_build_end(ctx, args)
-        .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_build_end_meta)
+    {
+      let start = self.start_timing();
+      let result = plugin.call_build_end(ctx, args).await;
+      self.record_timing(plugin_idx, start);
+      result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
   }

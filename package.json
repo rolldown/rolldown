@@ -33,10 +33,11 @@
     "husky": "^9.1.7",
     "knip": "^5.61.3",
     "lint-staged": "^16.1.2",
-    "oxlint": "^1.29.0",
-    "oxlint-tsgolint": "0.8.3",
-    "remove-unused-vars": "^0.0.10",
+    "oxlint": "^1.31.0",
+    "oxlint-tsgolint": "0.9.1",
+    "remove-unused-vars": "^0.0.11",
     "rolldown": "workspace:*",
+    "playwright-chromium": "^1.56.1",
     "typescript": "catalog:"
   },
   "pnpm": {

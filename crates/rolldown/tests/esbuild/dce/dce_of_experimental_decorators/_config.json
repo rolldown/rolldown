@@ -5,7 +5,8 @@
         "name": "keep-these",
         "import": "keep-these.ts"
       }
-    ]
+    ],
+    "tsconfig": "./tsconfig.json"
   },
   "expectExecuted": false
 }

@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index_js.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region node_modules/pkg/index.js
+var require_pkg = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.pkg = true;
+}));
+
+//#endregion
+//#region nested/index.js
+var require_nested = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.nested = true;
+}));
+
+//#endregion
+//#region index.js
+var require_source_identifier_name_index_single_entry = /* @__PURE__ */ __commonJSMin((() => {
+	require_source_identifier_name_index_single_entry();
+	require_pkg();
+	require_nested();
+}));
+
+//#endregion
+export default require_source_identifier_name_index_single_entry();
+
+```

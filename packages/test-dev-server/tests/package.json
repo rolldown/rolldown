@@ -3,15 +3,21 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "test": "vitest run"
+    "test": "pnpm run test:fixtures && pnpm run test:browser",
+    "test:fixtures": "vitest run --config=vitest.config.fixtures.mts",
+    "test:browser": "vitest run --config=vitest.config.browser.mts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@rolldown/test-dev-server": "workspace:*",
     "@types/kill-port": "^2.0.3",
     "execa": "^9.2.0",
+    "fast-glob": "catalog:",
     "kill-port": "^2.0.1",
     "rimraf": "^6.0.1",
-    "vitest": "catalog:",
-    "fast-glob": "catalog:"
+    "vitest": "catalog:"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
   }
 }

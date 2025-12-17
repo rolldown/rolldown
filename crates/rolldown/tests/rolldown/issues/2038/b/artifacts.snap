@@ -21,8 +21,8 @@ export { a };
 // HIDDEN [rolldown:runtime]
 //#region c.js
 var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
-	const test$1 = 1e3;
-	exports.test = test$1;
+	const test = 1e3;
+	exports.test = test;
 }));
 
 //#endregion

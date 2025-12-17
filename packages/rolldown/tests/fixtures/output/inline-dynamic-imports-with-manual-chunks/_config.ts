@@ -13,7 +13,7 @@ export default defineTest({
       },
     },
   },
-  catchError(error) {
+  catchError(error: any) {
     expect(error.message).toContain(
       'Invalid value "true" for option "output.inlineDynamicImports" - this option is not supported for "output.manualChunks".',
     );

@@ -716,7 +716,7 @@ impl GenerateStage<'_> {
   }
 
   async fn split_chunks(
-    &self,
+    &mut self,
     index_splitting_info: &mut IndexSplittingInfo,
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
@@ -744,6 +744,10 @@ impl GenerateStage<'_> {
     // TODO: maybe we could bailout peer chunk?
     let allow_optimize_chunk =
       !self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
+
+    // Collect ineffective dynamic import warnings
+    let mut ineffective_warnings = Vec::new();
+
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for idx in &self.link_output.sorted_modules {
@@ -772,6 +776,21 @@ impl GenerateStage<'_> {
           chunk_id,
           self.link_output.metas[normal_module.idx].depended_runtime_helper,
         );
+
+        // Check for ineffective dynamic imports when assigning module to chunk
+        if !self.options.inline_dynamic_imports
+          && !normal_module.importers.is_empty()
+          && !normal_module.dynamic_importers.is_empty()
+        {
+          if let Some(warning) = Self::check_ineffective_dynamic_import_for_module(
+            normal_module,
+            chunk_id,
+            &chunk_graph,
+            &self.link_output.module_table,
+          ) {
+            ineffective_warnings.push(warning);
+          }
+        }
       } else if allow_optimize_chunk {
         pending_common_chunks.entry(bits.clone()).or_default().push(normal_module.idx);
       } else {
@@ -799,6 +818,10 @@ impl GenerateStage<'_> {
         pending_common_chunks,
       );
     }
+
+    // Add collected warnings to link_output
+    self.link_output.warnings.extend(ineffective_warnings);
+
     Ok(())
   }
 
@@ -829,6 +852,55 @@ impl GenerateStage<'_> {
       meta.dependencies.iter().copied().for_each(|dep_idx| {
         q.push_back(dep_idx);
       });
+    }
+  }
+
+  fn check_ineffective_dynamic_import_for_module(
+    module: &rolldown_common::NormalModule,
+    chunk_idx: ChunkIdx,
+    chunk_graph: &ChunkGraph,
+    module_table: &rolldown_common::ModuleTable,
+  ) -> Option<rolldown_error::BuildDiagnostic> {
+    use rolldown_error::BuildDiagnostic;
+    use rolldown_plugin_utils::is_in_node_modules;
+
+    let chunk = &chunk_graph.chunk_table[chunk_idx];
+
+    // When a dynamic importer shares a chunk with the imported module,
+    // warn that the dynamic imported module will not be moved to another chunk (#12850).
+    // Filter out the intersection of dynamic importers and sibling modules in
+    // the same chunk. The intersecting dynamic importers' dynamic import is not
+    // expected to work. Note we're only detecting the direct ineffective dynamic import here.
+    let has_ineffective_dynamic_import = module.dynamic_importers.iter().any(|importer_id| {
+      // Skip node_modules
+      if is_in_node_modules(std::path::Path::new(importer_id.as_ref())) {
+        return false;
+      }
+      // Check if the dynamic importer is in the same chunk
+      chunk.modules.iter().any(|&idx| {
+        let Some(mod_in_chunk) = module_table[idx].as_normal() else {
+          return false;
+        };
+        mod_in_chunk.id == *importer_id
+      })
+    });
+
+    if has_ineffective_dynamic_import {
+      let dynamic_importers_list: Vec<arcstr::ArcStr> =
+        module.dynamic_importers.iter().map(|id| id.resource_id().clone()).collect();
+      let importers_list: Vec<arcstr::ArcStr> =
+        module.importers.iter().map(|id| id.resource_id().clone()).collect();
+
+      Some(
+        BuildDiagnostic::ineffective_dynamic_import(
+          module.id.resource_id().clone(),
+          dynamic_importers_list,
+          importers_list,
+        )
+        .with_severity_warning(),
+      )
+    } else {
+      None
     }
   }
 }

@@ -4,9 +4,9 @@ use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  ConstExportMeta, EntryPoint, EntryPointKind, FlatOptions, ImportKind, ModuleIdx, ModuleTable,
-  PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  ConstExportMeta, EntryPoint, EntryPointKind, FlatOptions, ImportKind, ModuleIdx,
+  ModuleNamespaceIncludedReason, ModuleTable, PreserveEntrySignatures, RuntimeModuleBrief,
+  StmtInfoIdx, SymbolRef, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
 #[cfg(target_family = "wasm")]
@@ -37,6 +37,17 @@ mod reference_needed_symbols;
 mod sort_modules;
 mod tree_shaking;
 mod wrapping;
+
+pub type StmtInclusionVec = IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>;
+pub type ModuleInclusionVec = IndexVec<ModuleIdx, bool>;
+pub type ModuleNamespaceReasonVec = IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>;
+
+#[derive(Debug, Default)]
+pub struct TreeshakeContext {
+  pub is_included_vec: StmtInclusionVec,
+  pub is_module_included_vec: ModuleInclusionVec,
+  pub module_namespace_included_reason: ModuleNamespaceReasonVec,
+}
 
 /// Information about safely merged CJS namespaces for a module
 #[derive(Debug, Default, Clone)]
@@ -91,6 +102,7 @@ pub struct LinkStage<'a> {
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
   pub flat_options: FlatOptions,
   pub side_effects_free_function_symbol_ref: FxHashSet<SymbolRef>,
+  pub treeshake_context: TreeshakeContext,
 }
 
 impl<'a> LinkStage<'a> {
@@ -171,6 +183,7 @@ impl<'a> LinkStage<'a> {
       entry_point_to_reference_ids: scan_stage_output.entry_point_to_reference_ids,
       flat_options: scan_stage_output.flat_options,
       side_effects_free_function_symbol_ref: FxHashSet::default(),
+      treeshake_context: TreeshakeContext::default(),
     }
   }
 

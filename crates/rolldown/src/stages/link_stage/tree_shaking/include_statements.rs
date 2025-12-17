@@ -20,11 +20,10 @@ use rolldown_utils::rayon::{
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec};
-
-type StmtInclusionVec = IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>;
-type ModuleInclusionVec = IndexVec<ModuleIdx, bool>;
-type ModuleNamespaceReasonVec = IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>;
+use crate::{
+  stages::link_stage::{LinkStage, ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec},
+  types::linking_metadata::LinkingMetadataVec,
+};
 
 bitflags::bitflags! {
     #[derive(Debug, Clone, Copy)]
@@ -107,7 +106,7 @@ fn collect_depended_runtime_helper(
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(&mut self, unreachable_import_expression_addrs: &FxHashSet<Address>) {
-    let mut is_included_vec: StmtInclusionVec = self
+    let mut is_included_vec = self
       .module_table
       .modules
       .iter()
@@ -278,6 +277,11 @@ impl LinkStage<'_> {
       depended_runtime_helper,
     );
     self.used_symbol_refs = used_symbol_refs;
+    
+    self.treeshake_context.is_module_included_vec = is_module_included_vec;
+    self.treeshake_context.is_included_vec = is_included_vec;
+    self.treeshake_context.module_namespace_included_reason = module_namespace_included_reason;
+    
 
     tracing::trace!(
       "included statements {:#?}",

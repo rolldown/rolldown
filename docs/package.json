@@ -12,7 +12,7 @@
     "vitepress": "catalog:",
     "vitepress-plugin-group-icons": "catalog:",
     "vitepress-plugin-llms": "catalog:",
-    "@voidzero-dev/vitepress-theme": "link:../../vitepress-theme"
+    "@voidzero-dev/vitepress-theme": "1.1.52"
   },
   "dependencies": {
     "@vueuse/core": "catalog:",

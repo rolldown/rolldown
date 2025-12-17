@@ -2,11 +2,6 @@
 
 ## Plugin related
 
-### The `rollup.rollup` api is not compatible with rollup, the build is start at `bundle.generate` or `bundle.write`, so the input plugin hooks is not called
- - rollup@hooks@supports buildStart and buildEnd hooks
- - rollup@hooks@supports warnings in buildStart and buildEnd hooks
- - rollup@hooks@passes errors to the buildEnd hook
-
 ### The `NormalziedOptions` at hooks is not compatible with rollup
  - rollup@function@options-hook: allows to read and modify options in the options hook
  - rollup@function@output-options-hook: allows to read and modify options in the options hook
@@ -50,9 +45,6 @@
  - rollup@hooks@opts-out transform hook cache for custom cache
 
 ### The `PluginContext.load` is not fully supported
- - rollup@form@supports-core-js: supports core-js (`@rollup/plugin-commonjs` is not supported)
- - rollup@form@supports-es5-shim: supports es5-shim (`@rollup/plugin-commonjs` is not supported)
- - rollup@form@supports-es6-shim: supports es6-shim (`@rollup/plugin-commonjs` is not supported)
  - rollup@function@preload-cyclic-module: handles pre-loading a cyclic module in the resolveId hook (load entry module at resolveId hook)
  - rollup@function@preload-module: allows pre-loading modules via this.load (load entry module at resolveId hook)
  - rollup@function@module-side-effects@writable: ModuleInfo.moduleSideEffects should be writable during build time(load entry module at resolveId hook)
@@ -259,9 +251,6 @@
  - rollup@form@addon-functions: provides module information when adding addons@generates es
  - rollup@hooks@supports generateBundle hook including reporting rendered exports and source length(`modules.dep.renderedExports/removedExports`)
 
-### The rolldown `output.dir` default to be `dist`, the rollup not specific `dir` or `file` by default
- - rollup@hooks@Throws when not specifying "file" or "dir"
-
 ## Features
 
 ### The `import.meta.ROLLUP_FILE_URL_<referenceId>` is not supported
@@ -295,13 +284,6 @@
  - rollup@form@merge-namespaces-non-live: merges namespaces without live-bindings
  - rollup@form@merge-namespaces: merges namespaces with live-bindings
  - rollup@form@namespace-optimization-in-operator-synthetic: disables optimization for synthetic named exports when using the in operator
-
-### The `import.meta.url` is not compatible
- - rollup@function@import-meta-url-b: Access document.currentScript at the top level
- - rollup@form@import-meta-url: supports import.meta.url@generates es
- - rollup@form@resolve-import-meta-url-export: correctly exports resolved import.meta.url@generates es
- - rollup@form@resolve-import-meta-url: allows to configure import.meta.url@generates es
- - rollup@function@import-meta-url-with-compact: Get the right URL with compact output
 
 ### Does not avoid module-related identifiers
  - rollup@form@system-module-reserved: does not output reserved system format identifiers@generates es

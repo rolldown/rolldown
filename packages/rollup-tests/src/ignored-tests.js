@@ -1,4 +1,5 @@
 const ignoreTests = [
+  // # Tests ported to other locations
   // ## These tests are moved to package/rolldown/tests
   // https://github.com/rolldown/rolldown/pull/5715
   "rollup@hooks@passes errors from closeBundle hook",
@@ -41,10 +42,26 @@ const ignoreTests = [
   "rollup@form@jsx@transpiles-react-jsx: transpiles JSX for react",
   "rollup@function@jsx@missing-jsx-export: throws when the JSX factory is not exported",
 
+  // --------------------------------------------------------------------------------------
+  // # Test infraructure related ignores
   // ## Ignore skipIfWindows test avoid test status error
   'rollup@function@preserve-symlink: follows symlinks',
   'rollup@function@symlink: follows symlinks',
   "rollup@form@sourcemaps-inline: correct sourcemaps are written (inline)@generates es",
+
+  // --------------------------------------------------------------------------------------
+  // # Expected behavior differences
+  // ## build starts when `bundle.generate` / `bundle.write` is called instead of `rollup.rollup`
+  "rollup@hooks@supports buildStart and buildEnd hooks",
+  "rollup@hooks@supports warnings in buildStart and buildEnd hooks",
+  "rollup@hooks@passes errors to the buildEnd hook",
+
+  // ## import.meta.url polyfill behaves differently
+  "rollup@function@import-meta-url-b: Access document.currentScript at the top level",
+  "rollup@form@import-meta-url: supports import.meta.url@generates es",
+  "rollup@form@resolve-import-meta-url-export: correctly exports resolved import.meta.url@generates es",
+  "rollup@form@resolve-import-meta-url: allows to configure import.meta.url@generates es",
+  "rollup@function@import-meta-url-with-compact: Get the right URL with compact output",
 
   // ## warning / error differences
   "rollup@function@plugin-hook-filters: plugin hook filter is supported", // Rolldown has additional `EMPTY_IMPORT_META` warning
@@ -54,6 +71,9 @@ const ignoreTests = [
   // ## tests relying on plugins
   "rollup@function@no-treeshake-react: passes when bundling React without tree-shaking", // relies on @rollup/plugin-node-resolve
   "rollup@function@strip-bom-1: Works correctly with BOM files and the @rollup/plugin-commonjs plugin.", // relies on @rollup/plugin-commonjs
+  "rollup@form@supports-core-js: supports core-js", // relies on @rollup/plugin-commonjs
+  "rollup@form@supports-es5-shim: supports es5-shim", // relies on @rollup/plugin-commonjs
+  "rollup@form@supports-es6-shim: supports es6-shim", // relies on @rollup/plugin-commonjs
 
   // ## Order not guaranteed due to parallelism
   "rollup@hooks@assigns chunk IDs before creating outputBundle chunks", // The `renderChunk` is called at parallel, collect chunk info to array is unstable.  https://github.com/rolldown/rolldown/issues/2364
@@ -65,6 +85,7 @@ const ignoreTests = [
   "rollup@function@external-namespace-and-default-reexport-compat: reexports both a namespace and the default export when using compat interop",
 
   // ## Others
+  'rollup@hooks@Throws when not specifying "file" or "dir"', // Rolldown defaults `output.dir` to `dist`
   'rollup@function@bundle-facade-order: respects the order of entry points when there are additional facades for chunks', // https://github.com/rolldown/rolldown/issues/1842#issuecomment-2296345255
   "rollup@function@argument-deoptimization@global-calls: tracks argument mutations of calls to globals", // need as esm if module is unknown-format and add `use strcit` to the output, https://github.com/rolldown/rolldown/issues/2394
   "rollup@function@es5-class-called-without-new: does not swallow type errors when running constructor functions without \"new\"", // rolldown align directive rendering with esbuild

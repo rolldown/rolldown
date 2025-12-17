@@ -1,4 +1,79 @@
 
+## [1.0.0-beta.55] - 2025-12-17
+
+### 🚀 Features
+
+- add validation errors for incompatible `inlineDynamicImports` options (#7539) by @Copilot
+- rolldown_plugin_vite_reporter: truncate long importer lists in ineffective dynamic import warnings (#7528) by @Copilot
+- export `memfs` from `rolldown/experimental` for browser builds (#7490) by @Copilot
+- implement `postBanner` and `postFooter` (#7487) by @sevenc-nanashi
+- port getLogFilter helper from Rollup for advanced log filtering (#6890) by @taearls
+- dev: initialize `rolldown_plugin_lazy_compilation` (#7488) by @hyf0
+- enable `experimental.transform_hires_sourcemap: 'boundary'` by default (#7478) by @sapphi-red
+- apply merge CJS namespace optimizations more generally (#7475) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- avoid panic on invalid values for `output.exports`, `output.format`, `output.hash_characters` (#7542) by @sapphi-red
+- handle `__proto__` export for module namespace correctly (#7534) by @sapphi-red
+- handle `__proto__` export correctly (#7533) by @sapphi-red
+- rolldown_plugin_vite_resolve: acquire resolver lock before package json resolution (#7524) by @sapphi-red
+- disable syntax transform optimization for `minify: 'dce-only'` (#7520) by @sapphi-red
+- arrow function expression keep names (#7519) by @IWANABETHATGUY
+- skip symbols that are imported from other module when deconflicting module symbols (#7510) by @IWANABETHATGUY
+- preserve class names in assignment expressions with keepNames option (#7491) by @IWANABETHATGUY
+- accessor with decorators should be kept (#7499) by @Copilot
+- rolldown_plugin_vite_reporter: support `Infinity` for chunk_limit (#7497) by @shulaoda
+- change filename template validation errors from UNHANDLEABLE_ERROR to INVALID_OPTION (#7472) by @Copilot
+- `no entry found for key` error when merging CJS namespace exports (#7474) by @sapphi-red
+- generate output with syntax error when wrapped esm module using tla syntax (#7468) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- dev: rename `experimental.hmr` to `experimental.devMode` (#7527) by @hyf0
+- pass addon option to rust as it is (#7526) by @hyf0
+- remove unused stmtinfo meta flag (#7518) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- clarify `closeBundle` behavior (#7525) by @sapphi-red
+
+### 🧪 Testing
+
+- add tests for static string postBanner and postFooter (#7516) by @Copilot
+- disable pluginTimings in Rust integration tests to avoid snapshot noise (#7485) by @shulaoda
+- port Rollup JSX tests to `crates/rolldown/tests/rollup` (#7480) by @sapphi-red
+- re-triage some esbuild JSX preserve tests (#7479) by @sapphi-red
+- disable pluginTimings by default to avoid snapshot noise (#7471) by @shulaoda
+
+### ⚙️ Miscellaneous Tasks
+
+- mark feature that will not be supported as ignored in rollup test status (#7535) by @sapphi-red
+- support `banner`/`footer`/`intro`/`outro` for config variants (#7532) by @sapphi-red
+- `dce/dce_of_decorators` esbuild test is now passing (#7531) by @sapphi-red
+- deps: update github-actions (major) (#7495) by @renovate[bot]
+- deps: update npm packages (#7493) by @renovate[bot]
+- add a check to verify failedReasons are updated (#7521) by @sapphi-red
+- deps: update test262 submodule for tests (#7523) by @sapphi-red
+- deps: update taiki-e/install-action action to v2.63.2 (#7496) by @renovate[bot]
+- deps: update oxc apps (#7511) by @renovate[bot]
+- deps: update oxc to v0.103.0 (#7513) by @camc314
+- fix format in `.github/instructions/bug-investigation.instructions.md` (#7506) by @sapphi-red
+- add instructions for REPL decoding (#7502) by @sapphi-red
+- deps: update github-actions (#7492) by @renovate[bot]
+- deps: cargo-shear v1.9.0 (#7483) by @Boshen
+- deps: update dependency oxlint-tsgolint to v0.9.0 (#7484) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.8.6 (#7470) by @renovate[bot]
+- add syntax validation for test output chunks that are not executed (#7466) by @IWANABETHATGUY
+- deps: update dependency rust to v1.92.0 (#7467) by @renovate[bot]
+- deps: update test262 submodule for tests (#7457) by @sapphi-red
+
+### ❤️ New Contributors
+
+* @sevenc-nanashi made their first contribution in [#7487](https://github.com/rolldown/rolldown/pull/7487)
+* @taearls made their first contribution in [#6890](https://github.com/rolldown/rolldown/pull/6890)
+
+
 ## [1.0.0-beta.54] - 2025-12-11
 
 ### 🚀 Features

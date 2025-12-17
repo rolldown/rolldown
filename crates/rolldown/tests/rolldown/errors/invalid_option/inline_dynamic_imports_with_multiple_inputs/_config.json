@@ -1,0 +1,10 @@
+{
+  "config": {
+    "input": [
+      { "import": "main.js" },
+      { "import": "entry.js" }
+    ],
+    "inlineDynamicImports": true
+  },
+  "expectError": true
+}

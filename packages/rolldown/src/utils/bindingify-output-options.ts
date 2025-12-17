@@ -47,7 +47,7 @@ export function bindingifyOutputOptions(
 
   // Validate inlineDynamicImports conflicts
   if (outputOptions.inlineDynamicImports === true) {
-    if (manualChunks !== undefined) {
+    if (manualChunks != null) {
       throw new Error(
         'Invalid value "true" for option "output.inlineDynamicImports" - this option is not supported for "output.manualChunks".',
       );

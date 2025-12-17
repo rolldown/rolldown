@@ -16,7 +16,6 @@ pub enum InvalidOptionType {
   InvalidFilenameSubstitution { name: String, pattern_name: String },
   InlineDynamicImportsWithMultipleInputs,
   InlineDynamicImportsWithPreserveModules,
-  InlineDynamicImportsWithManualChunks,
   InlineDynamicImportsWithAdvancedChunks,
 }
 
@@ -89,9 +88,6 @@ impl BuildEvent for InvalidOption {
         }
         InvalidOptionType::InlineDynamicImportsWithPreserveModules => {
           "Invalid value \"true\" for option \"output.inlineDynamicImports\" - this option is not supported for \"output.preserveModules\".".to_string()
-        }
-        InvalidOptionType::InlineDynamicImportsWithManualChunks => {
-          "Invalid value \"true\" for option \"output.inlineDynamicImports\" - this option is not supported for \"output.manualChunks\".".to_string()
         }
         InvalidOptionType::InlineDynamicImportsWithAdvancedChunks => {
           "Invalid value \"true\" for option \"output.inlineDynamicImports\" - this option is not supported for \"output.advancedChunks\".".to_string()

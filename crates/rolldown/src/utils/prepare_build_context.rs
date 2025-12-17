@@ -76,9 +76,6 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
       ));
     }
 
-    // Check for manualChunks (Note: manualChunks is a function in TypeScript, not a field in Rust options)
-    // This would be validated on the TypeScript side
-
     // Check for advancedChunks
     if raw_options.advanced_chunks.is_some() {
       errors.push(BuildDiagnostic::invalid_option(

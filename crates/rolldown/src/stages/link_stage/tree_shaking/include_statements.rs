@@ -279,7 +279,7 @@ impl LinkStage<'_> {
     self.used_symbol_refs = used_symbol_refs;
 
     self.treeshake_context.is_module_included_vec = is_module_included_vec;
-    self.treeshake_context.is_included_vec = is_included_vec;
+    self.treeshake_context.is_stmt_info_included_vec = is_included_vec;
     self.treeshake_context.module_namespace_included_reason = module_namespace_included_reason;
 
     tracing::trace!(

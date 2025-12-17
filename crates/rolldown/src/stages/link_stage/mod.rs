@@ -44,7 +44,7 @@ pub type ModuleNamespaceReasonVec = IndexVec<ModuleIdx, ModuleNamespaceIncludedR
 
 #[derive(Debug, Default)]
 pub struct TreeshakeContext {
-  pub is_included_vec: StmtInclusionVec,
+  pub is_stmt_info_included_vec: StmtInclusionVec,
   pub is_module_included_vec: ModuleInclusionVec,
   pub module_namespace_included_reason: ModuleNamespaceReasonVec,
 }
@@ -78,6 +78,7 @@ pub struct LinkStageOutput {
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
+  pub treeshake_context: TreeshakeContext,
 }
 
 #[derive(Debug)]
@@ -222,6 +223,7 @@ impl<'a> LinkStage<'a> {
       overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: self.entry_point_to_reference_ids,
       global_constant_symbol_map: self.global_constant_symbol_map,
+      treeshake_context: self.treeshake_context,
     }
   }
 

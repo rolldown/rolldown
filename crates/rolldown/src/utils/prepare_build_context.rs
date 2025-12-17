@@ -59,7 +59,9 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
   }
 
   if matches!(raw_options.inline_dynamic_imports, Some(true)) {
-    if let Some(input) = &raw_options.input && input.len() > 1 {
+    if let Some(input) = &raw_options.input
+      && input.len() > 1
+    {
       errors.push(BuildDiagnostic::invalid_option(
         InvalidOptionType::InlineDynamicImportsWithMultipleInputs,
       ));

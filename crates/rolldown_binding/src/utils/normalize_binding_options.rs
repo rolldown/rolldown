@@ -316,26 +316,56 @@ pub fn normalize_binding_options(
     sourcemap_ignore_list,
     sourcemap_path_transform,
     sourcemap_debug_ids: output_options.sourcemap_debug_ids,
-    exports: output_options.exports.map(|format_str| match format_str.as_str() {
-      "auto" => OutputExports::Auto,
-      "default" => OutputExports::Default,
-      "named" => OutputExports::Named,
-      "none" => OutputExports::None,
-      _ => panic!("Invalid exports: {format_str}"),
-    }),
-    format: output_options.format.map(|format_str| match format_str.as_str() {
-      "es" => OutputFormat::Esm,
-      "cjs" => OutputFormat::Cjs,
-      "iife" => OutputFormat::Iife,
-      "umd" => OutputFormat::Umd,
-      _ => panic!("Invalid format: {format_str}"),
-    }),
-    hash_characters: output_options.hash_characters.map(|format_str| match format_str.as_str() {
-      "base64" => HashCharacters::Base64,
-      "base36" => HashCharacters::Base36,
-      "hex" => HashCharacters::Hex,
-      _ => panic!("Invalid hash characters: {format_str}"),
-    }),
+    exports: output_options
+      .exports
+      .map(|format_str| {
+        Ok(match format_str.as_str() {
+          "auto" => OutputExports::Auto,
+          "default" => OutputExports::Default,
+          "named" => OutputExports::Named,
+          "none" => OutputExports::None,
+          _ => {
+            return Err(napi::Error::new(
+              napi::Status::InvalidArg,
+              format!("Invalid value \"{format_str}\" for option \"output.exports\" - valid values are \"auto\", \"default\", \"named\", and \"none\"."),
+            ));
+          }
+        })
+      })
+      .transpose()?,
+    format: output_options
+      .format
+      .map(|format_str| {
+        Ok(match format_str.as_str() {
+          "es" => OutputFormat::Esm,
+          "cjs" => OutputFormat::Cjs,
+          "iife" => OutputFormat::Iife,
+          "umd" => OutputFormat::Umd,
+          _ => {
+            return Err(napi::Error::new(
+              napi::Status::InvalidArg,
+              format!("Invalid value \"{format_str}\" for option \"output.format\" - valid values are \"es\", \"cjs\", \"iife\", and \"umd\"."),
+            ));
+          }
+        })
+      })
+      .transpose()?,
+    hash_characters: output_options
+      .hash_characters
+      .map(|format_str| {
+        Ok(match format_str.as_str() {
+          "base64" => HashCharacters::Base64,
+          "base36" => HashCharacters::Base36,
+          "hex" => HashCharacters::Hex,
+          _ => {
+            return Err(napi::Error::new(
+              napi::Status::InvalidArg,
+              format!("Invalid value \"{format_str}\" for option \"output.hashCharacters\" - valid values are \"base64\", \"base36\", and \"hex\"."),
+            ));
+          }
+        })
+      })
+      .transpose()?,
     globals: normalize_globals_option(output_options.globals),
     paths: normalize_paths_option(output_options.paths),
     generated_code: output_options

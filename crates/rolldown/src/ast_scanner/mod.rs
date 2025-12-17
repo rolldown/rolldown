@@ -370,7 +370,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // Following cases need to be registered:
     // - `ExportsKind::None` (no exports)
     // - `ExportsKind::CommonJs` (commonjs module)
-    if self.immutable_ctx.options.is_dev_mode_enabled() && !exports_kind.is_esm() {
+    if self.immutable_ctx.options.is_dev_mode_enabled()
+      && matches!(exports_kind, ExportsKind::None | ExportsKind::CommonJs)
+    {
       self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
     }
 

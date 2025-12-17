@@ -58,6 +58,26 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     _ => {}
   }
 
+  if matches!(raw_options.inline_dynamic_imports, Some(true)) {
+    if let Some(input) = &raw_options.input
+      && input.len() > 1
+    {
+      errors.push(BuildDiagnostic::invalid_option(
+        InvalidOptionType::InlineDynamicImportsWithMultipleInputs,
+      ));
+    }
+    if matches!(raw_options.preserve_modules, Some(true)) {
+      errors.push(BuildDiagnostic::invalid_option(
+        InvalidOptionType::InlineDynamicImportsWithPreserveModules,
+      ));
+    }
+    if raw_options.advanced_chunks.is_some() {
+      errors.push(BuildDiagnostic::invalid_option(
+        InvalidOptionType::InlineDynamicImportsWithAdvancedChunks,
+      ));
+    }
+  }
+
   if let Some(advanced_chunks) = &raw_options.advanced_chunks {
     let has_groups = advanced_chunks.groups.as_ref().is_some_and(|groups| !groups.is_empty());
 

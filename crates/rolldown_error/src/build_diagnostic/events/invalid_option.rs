@@ -14,6 +14,9 @@ pub enum InvalidOptionType {
   IncludeDependenciesRecursivelyWithImplicitPreserveEntrySignatures,
   InvalidFilenamePattern { pattern: String, pattern_name: String },
   InvalidFilenameSubstitution { name: String, pattern_name: String },
+  InlineDynamicImportsWithMultipleInputs,
+  InlineDynamicImportsWithPreserveModules,
+  InlineDynamicImportsWithAdvancedChunks,
 }
 
 #[derive(Debug)]
@@ -79,6 +82,15 @@ impl BuildEvent for InvalidOption {
             "Invalid substitution \"{name}\" for placeholder \"[name]\" in \"{pattern_name}\" pattern, \
              can be neither absolute nor relative paths."
           )
+        }
+        InvalidOptionType::InlineDynamicImportsWithMultipleInputs => {
+          "Invalid value \"true\" for option \"output.inlineDynamicImports\" - multiple inputs are not supported when \"output.inlineDynamicImports\" is true.".to_string()
+        }
+        InvalidOptionType::InlineDynamicImportsWithPreserveModules => {
+          "Invalid value \"true\" for option \"output.inlineDynamicImports\" - this option is not supported for \"output.preserveModules\".".to_string()
+        }
+        InvalidOptionType::InlineDynamicImportsWithAdvancedChunks => {
+          "Invalid value \"true\" for option \"output.inlineDynamicImports\" - this option is not supported for \"output.advancedChunks\".".to_string()
         }
     }
   }

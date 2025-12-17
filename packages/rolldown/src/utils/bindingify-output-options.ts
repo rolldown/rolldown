@@ -45,6 +45,15 @@ export function bindingifyOutputOptions(
     cleanDir,
   } = outputOptions;
 
+  // Validate inlineDynamicImports conflicts
+  if (outputOptions.inlineDynamicImports === true) {
+    if (manualChunks != null) {
+      throw new Error(
+        'Invalid value "true" for option "output.inlineDynamicImports" - this option is not supported for "output.manualChunks".',
+      );
+    }
+  }
+
   const advancedChunks = bindingifyAdvancedChunks(
     outputOptions.advancedChunks,
     manualChunks,

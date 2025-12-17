@@ -81,6 +81,29 @@ fn include_cjs_bailout_exports(
   }
 }
 
+/// Collects all depended runtime helpers from included modules only.
+/// Eliminated modules may have runtime helpers set (for propagation to importers),
+/// but we should only include the runtime if an included module actually needs it.
+fn collect_depended_runtime_helper(
+  modules: &IndexModules,
+  metas: &LinkingMetadataVec,
+  is_module_included_vec: &IndexVec<ModuleIdx, bool>,
+) -> RuntimeHelper {
+  let iter = modules.par_iter().zip_eq(metas.par_iter()).filter_map(|(module, meta)| {
+    module
+      .as_normal()
+      .filter(|m| is_module_included_vec[m.idx])
+      .map(|_| meta.depended_runtime_helper)
+  });
+
+  #[cfg(not(target_family = "wasm"))]
+  let depended_runtime_helper = iter.reduce(RuntimeHelper::default, |a, b| a | b);
+  #[cfg(target_family = "wasm")]
+  let depended_runtime_helper = iter.reduce(|a, b| a | b).unwrap_or_default();
+
+  depended_runtime_helper
+}
+
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(&mut self, unreachable_import_expression_addrs: &FxHashSet<Address>) {
@@ -242,11 +265,17 @@ impl LinkStage<'_> {
         meta.module_namespace_included_reason = module_namespace_included_reason[module.idx];
       });
 
+    let depended_runtime_helper = collect_depended_runtime_helper(
+      &self.module_table.modules,
+      &self.metas,
+      &is_module_included_vec,
+    );
     self.include_runtime_symbol(
       &mut is_included_vec,
       &mut is_module_included_vec,
       &mut module_namespace_included_reason,
       &mut used_symbol_refs,
+      depended_runtime_helper,
     );
     self.used_symbol_refs = used_symbol_refs;
 
@@ -460,24 +489,8 @@ impl LinkStage<'_> {
     is_module_included_vec: &mut IndexVec<ModuleIdx, bool>,
     module_namespace_included_reason: &mut IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>,
     used_symbol_refs: &mut FxHashSet<SymbolRef>,
+    depended_runtime_helper: RuntimeHelper,
   ) {
-    // Including all depended runtime symbol from included modules only.
-    // Eliminated modules may have runtime helpers set (for propagation to importers),
-    // but we should only include the runtime if an included module actually needs it.
-    let iter = self.module_table.modules.par_iter().zip_eq(self.metas.par_iter()).filter_map(
-      |(module, meta)| {
-        module
-          .as_normal()
-          .filter(|m| is_module_included_vec[m.idx])
-          .map(|_| meta.depended_runtime_helper)
-      },
-    );
-
-    #[cfg(not(target_family = "wasm"))]
-    let depended_runtime_helper = iter.reduce(RuntimeHelper::default, |a, b| a | b);
-    #[cfg(target_family = "wasm")]
-    let depended_runtime_helper = iter.reduce(|a, b| a | b).unwrap_or_default();
-
     if depended_runtime_helper.is_empty() {
       return;
     }

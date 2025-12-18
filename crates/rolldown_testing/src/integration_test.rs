@@ -16,12 +16,11 @@ use rolldown::{
 };
 use rolldown::{ChecksOptions, NormalizedBundlerOptions};
 use rolldown_common::Output;
-use rolldown_dev::{DevEngine, DevOptions, DevWatchOptions};
+use rolldown_dev::{BundlerConfig, DevEngine, DevOptions, DevWatchOptions};
 use rolldown_error::BuildResult;
 use rolldown_testing_config::TestMeta;
 use serde_json::{Map, Value};
 use sugar_path::SugarPath;
-use tokio::sync::Mutex;
 
 use crate::hmr_files::{
   apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
@@ -177,32 +176,17 @@ impl IntegrationTest {
         build_snapshot.debug_title = Some(debug_title.clone());
       }
 
-      // Create bundler and DevEngine
+      // Create BundlerConfig and DevEngine
       let cwd = named_options.options.cwd.clone().unwrap_or_else(|| self.test_folder_path.clone());
 
-      let bundler_result = Bundler::with_plugins(named_options.options.clone(), plugins.clone());
-
-      let bundler = match bundler_result {
-        Ok(bundler) => {
-          build_snapshot.cwd = Some(bundler.options().cwd.clone());
-          bundler
-        }
-        Err(errs) => {
-          // Set cwd and error, then skip this build round
-          build_snapshot.cwd = Some(cwd);
-          build_snapshot.initial_output = Some(Err(errs));
-          artifacts_snapshot.builds.push(build_snapshot);
-          continue;
-        }
-      };
-      let bundler = Arc::new(Mutex::new(bundler));
+      let bundler_config = BundlerConfig::new(named_options.options.clone(), plugins.clone());
 
       // Use nested vecs to track which step each callback belongs to
       let hmr_updates_by_steps: HmrUpdatesBySteps = Arc::new(std::sync::Mutex::new(vec![]));
       let build_results_by_steps: BuildResultsBySteps = Arc::new(std::sync::Mutex::new(vec![]));
 
-      let dev_engine = DevEngine::with_bundler(
-        Arc::clone(&bundler),
+      let dev_engine = match DevEngine::new(
+        bundler_config,
         DevOptions {
           on_hmr_updates: {
             let hmr_updates_by_steps = Arc::clone(&hmr_updates_by_steps);
@@ -233,8 +217,19 @@ impl IntegrationTest {
           }),
           ..Default::default()
         },
-      )
-      .unwrap();
+      ) {
+        Ok(engine) => {
+          build_snapshot.cwd = Some(engine.bundler_options().await.cwd.clone());
+          engine
+        }
+        Err(errs) => {
+          // Set cwd and error, then skip this build round
+          build_snapshot.cwd = Some(cwd);
+          build_snapshot.initial_output = Some(Err(errs));
+          artifacts_snapshot.builds.push(build_snapshot);
+          continue;
+        }
+      };
 
       // Run initial build (step 0)
       build_results_by_steps.lock().unwrap().push(vec![]);
@@ -269,7 +264,6 @@ impl IntegrationTest {
           dev_engine.ensure_latest_bundle_output().await.unwrap();
         }
       }
-      drop(dev_engine);
 
       // Collect results
       let mut build_results_by_steps = std::mem::take(&mut *build_results_by_steps.lock().unwrap());
@@ -329,9 +323,10 @@ impl IntegrationTest {
           }
 
           // Execute output if needed
+          let bundler_options = dev_engine.bundler_options().await;
           if self.should_execute_output() {
             Self::execute_output_assets(
-              &*bundler.lock().await,
+              &bundler_options,
               &debug_title,
               &patch_chunks,
               named_options
@@ -342,7 +337,7 @@ impl IntegrationTest {
             );
           } else if !self.test_meta.skip_syntax_validation {
             // When not executing output, validate that all JS chunks are syntactically valid
-            Self::validate_output_chunks_syntax(output, bundler.lock().await.options());
+            Self::validate_output_chunks_syntax(output, &bundler_options);
           }
         }
         Err(errs) => {
@@ -355,6 +350,7 @@ impl IntegrationTest {
 
       build_snapshot.initial_output = Some(initial_build_output);
       artifacts_snapshot.builds.push(build_snapshot);
+      drop(dev_engine);
     }
 
     artifacts_snapshot
@@ -420,7 +416,7 @@ impl IntegrationTest {
           );
           if self.should_execute_output() {
             Self::execute_output_assets(
-              &bundler,
+              bundler.options(),
               &debug_title,
               &[],
               named_options
@@ -554,17 +550,17 @@ impl IntegrationTest {
   }
 
   fn execute_output_assets(
-    bundler: &Bundler,
+    options: &NormalizedBundlerOptions,
     test_title: &str,
     patch_chunks: &[String],
     config_name: Option<&str>,
   ) {
-    let cwd = bundler.options().cwd.clone();
-    let dist_folder = cwd.join(&bundler.options().out_dir);
+    let cwd = options.cwd.clone();
+    let dist_folder = cwd.join(&options.out_dir);
 
-    let is_expect_executed_under_esm = matches!(bundler.options().format, OutputFormat::Esm)
-      || (!matches!(bundler.options().format, OutputFormat::Cjs)
-        && matches!(bundler.options().platform, Platform::Browser));
+    let is_expect_executed_under_esm = matches!(options.format, OutputFormat::Esm)
+      || (!matches!(options.format, OutputFormat::Cjs)
+        && matches!(options.platform, Platform::Browser));
 
     // add a dummy `package.json` to allow `import and export` when output module format is `esm`
     if is_expect_executed_under_esm {
@@ -589,11 +585,8 @@ impl IntegrationTest {
 
     let mut node_command = Command::new("node");
 
-    let globals_injection = Self::generate_globals_injection_for_execute_output(
-      config_name,
-      patch_chunks,
-      bundler.options(),
-    );
+    let globals_injection =
+      Self::generate_globals_injection_for_execute_output(config_name, patch_chunks, options);
 
     if !globals_injection.is_empty() {
       let inject_script_url =
@@ -608,8 +601,7 @@ impl IntegrationTest {
       // make sure to set this: https://github.com/nodejs/node/issues/59374
       node_command.arg("--input-type=module");
 
-      let mut compiled_entries = bundler
-        .options()
+      let mut compiled_entries = options
         .input
         .iter()
         .map(|item| {

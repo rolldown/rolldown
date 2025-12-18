@@ -1,4 +1,3 @@
-use napi::tokio;
 use napi_derive::napi;
 use rolldown_dev::{BundleState, BundlingFuture, OnHmrUpdatesCallback, OnOutputCallback};
 use std::path::PathBuf;
@@ -9,7 +8,7 @@ use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_client_hmr_update::BindingClientHmrUpdate;
 use crate::types::binding_outputs::{BindingOutputs, to_binding_error};
 use crate::types::error::{BindingErrors, BindingResult};
-use crate::utils::create_bundler_from_binding_options::create_bundler_from_binding_options;
+use crate::utils::create_bundler_config_from_binding_options::create_bundler_config_from_binding_options;
 use napi::bindgen_prelude::FnArgs;
 use napi::{Either, Env, threadsafe_function::ThreadsafeFunctionCallMode};
 
@@ -48,9 +47,8 @@ impl BindingDevEngine {
       watch_options.and_then(|watch| watch.compare_contents_for_polling);
     let debounce_tick_rate = watch_options.and_then(|watch| watch.debounce_tick_rate);
 
-    // Create bundler
-    let bundler: Arc<napi::tokio::sync::Mutex<rolldown::Bundler>> =
-      Arc::new(tokio::sync::Mutex::new(create_bundler_from_binding_options(options)?));
+    // Create bundler config
+    let bundler_config = create_bundler_config_from_binding_options(options)?;
 
     // If callback is provided, wrap it to convert BuildResult<(Vec<ClientHmrUpdate>, Vec<String>)> to BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)>
     let on_hmr_updates = on_hmr_updates_callback.map(|js_callback| {
@@ -128,7 +126,7 @@ impl BindingDevEngine {
       watch: dev_watch_options,
     };
 
-    let inner = rolldown_dev::DevEngine::with_bundler(bundler, rolldown_dev_options)
+    let inner = rolldown_dev::DevEngine::new(bundler_config, rolldown_dev_options)
       .map_err(|e| napi::Error::from_reason(format!("Fail to create dev engine: {e:#?}")))?;
 
     Ok(Self { inner, _session_id: session_id, _session: session })

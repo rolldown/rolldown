@@ -1,7 +1,6 @@
 mod normalize_binding_transform_options;
 
-pub mod create_bundler_from_binding_options;
-pub mod create_bundler_options_from_binding_options;
+pub mod create_bundler_config_from_binding_options;
 pub mod minify_options_conversion;
 pub mod napi_error;
 pub mod normalize_binding_options;

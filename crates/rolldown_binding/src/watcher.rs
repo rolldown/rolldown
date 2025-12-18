@@ -7,7 +7,7 @@ use napi_derive::napi;
 use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_watcher_event::BindingWatcherEvent;
 
-use crate::utils::create_bundler_options_from_binding_options::create_bundler_options_from_binding_options;
+use crate::utils::create_bundler_config_from_binding_options::create_bundler_config_from_binding_options;
 use crate::utils::handle_result;
 
 use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt};
@@ -44,7 +44,7 @@ impl BindingWatcher {
     // TODO(hyf0): support emit debug data for builtin watch
     let bundler_configs = options
       .into_iter()
-      .map(create_bundler_options_from_binding_options)
+      .map(create_bundler_config_from_binding_options)
       .collect::<Result<Vec<_>, _>>()?;
 
     let inner = rolldown::Watcher::with_configs(bundler_configs, notify_option.map(Into::into))

@@ -10,15 +10,7 @@ import { removeDirSync, sensibleTimeoutInMs } from './src/utils';
 
 function main() {
   const fixturesPath = nodePath.resolve(__dirname, 'fixtures');
-  const tmpFixturesPath = nodePath.resolve(__dirname, 'tmp/fixtures');
-
-  async function updateNodeModules(showOutput = true) {
-    await execa('pnpm install --no-frozen-lockfile', {
-      cwd: fixturesPath,
-      shell: true,
-      stdio: showOutput ? 'inherit' : ['pipe', 'pipe', 'inherit'],
-    });
-  }
+  const tmpFixturesPath = nodePath.resolve(__dirname, 'tmp-fixtures');
 
   console.log(`🔄 - Cleaning up ${tmpFixturesPath} directory...`);
   removeDirSync(tmpFixturesPath);
@@ -28,7 +20,6 @@ function main() {
       console.log(`🔄 - Cleaning up ${tmpFixturesPath} directory...`);
       removeDirSync(tmpFixturesPath);
       console.log(`🔄 - Resetting node_modules...`);
-      await updateNodeModules(false);
       console.log(`✅ - Cleanup completed`);
     }
   }, 30 * 1000);
@@ -62,22 +53,22 @@ function main() {
             nodePath.join(fixturesPath, fixtureName)
           } to ${tmpProjectPath}...`,
         );
-        nodeFs.mkdirSync(tmpProjectPath, { recursive: true });
-        nodeFs.cpSync(
+        // Remove fixture's dist directory before copying to prevent stale artifacts
+        const fixtureDistPath = nodePath.join(
+          fixturesPath,
+          fixtureName,
+          'dist',
+        );
+        removeDirSync(fixtureDistPath);
+        await nodeFs.promises.mkdir(tmpProjectPath, { recursive: true });
+        await nodeFs.promises.cp(
           nodePath.join(fixturesPath, fixtureName),
           tmpProjectPath,
-          {
-            recursive: true,
-            filter: (src) => {
-              return !src.includes('node_modules') && !src.includes('dist');
-            },
-          },
+          { recursive: true },
         );
 
-        console.log(`🔄 - Updating node_modules...`);
-        await updateNodeModules(true);
-
         console.log(`🔄 - Killing any process running on port 3000...`);
+
         try {
           await killPort(3000);
         } catch (err) {

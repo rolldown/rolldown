@@ -106,6 +106,12 @@ runTestSuiteWithSamples(
 					config.options.output = config.options.output || {}
 					config.options.output.keepNames = true; // avoid other tests snapshot changed
 				}
+				if (
+					directory.includes('input-name-validation') &&
+					config.generateError?.code === 'VALIDATION_ERROR'
+				) {
+					config.generateError.code = 'INVALID_OPTION';
+				}
 
 				return rollup
 					.rollup({

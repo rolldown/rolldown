@@ -1,5 +1,5 @@
 import { execaSync } from 'execa';
-
+import nodeFs from 'node:fs';
 import nodeOs from 'node:os';
 import { rimrafSync } from 'rimraf';
 
@@ -25,4 +25,12 @@ export function sensibleTimeoutInMs(ms: number) {
   return new Promise<void>((resolve) => {
     setTimeout(resolve, actualMs);
   });
+}
+
+export async function isDirectoryExists(path: string): Promise<boolean> {
+  try {
+    return await nodeFs.promises.access(path).then(() => true);
+  } catch {
+    return false;
+  }
 }

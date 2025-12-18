@@ -2473,6 +2473,7 @@ export interface ExternalMemoryStatus {
 }
 
 export type FilterTokenKind =  'Id'|
+'ImporterId'|
 'Code'|
 'ModuleType'|
 'And'|

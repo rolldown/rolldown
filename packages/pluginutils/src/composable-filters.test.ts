@@ -3,6 +3,8 @@ import type { QueryFilterObject } from './composable-filters';
 import {
   and,
   exclude,
+  id,
+  importerId,
   include,
   interpreter,
   or,
@@ -149,5 +151,139 @@ describe('queryFilter', () => {
       '/foo/bar?url=1111&svelte=true',
       undefined,
     )).toBe(false);
+  });
+});
+
+describe('importerIdFilter', () => {
+  test('string pattern', () => {
+    // exact match
+    expect(
+      interpreter(
+        [include(importerId('/src/main.ts'))],
+        undefined,
+        '/src/foo.ts',
+        undefined,
+        '/src/main.ts',
+      ),
+    ).toBe(true);
+
+    // no match
+    expect(
+      interpreter(
+        [include(importerId('/src/main.ts'))],
+        undefined,
+        '/src/foo.ts',
+        undefined,
+        '/src/other.ts',
+      ),
+    ).toBe(false);
+  });
+
+  test('regex pattern', () => {
+    // regex match
+    expect(
+      interpreter(
+        [include(importerId(/\.vue$/))],
+        undefined,
+        '/src/component.ts',
+        undefined,
+        '/src/App.vue',
+      ),
+    ).toBe(true);
+
+    // regex no match
+    expect(
+      interpreter(
+        [include(importerId(/\.vue$/))],
+        undefined,
+        '/src/component.ts',
+        undefined,
+        '/src/main.ts',
+      ),
+    ).toBe(false);
+  });
+
+  test('cleanUrl option', () => {
+    // with cleanUrl, should strip query params
+    expect(
+      interpreter(
+        [include(importerId('/src/main.ts', { cleanUrl: true }))],
+        undefined,
+        '/src/foo.ts',
+        undefined,
+        '/src/main.ts?query=1',
+      ),
+    ).toBe(true);
+
+    // without cleanUrl, query params are included
+    expect(
+      interpreter(
+        [include(importerId('/src/main.ts'))],
+        undefined,
+        '/src/foo.ts',
+        undefined,
+        '/src/main.ts?query=1',
+      ),
+    ).toBe(false);
+  });
+
+  test('combined with id filter', () => {
+    // both id and importerId must match
+    expect(
+      interpreter(
+        [include(and(id(/\.ts$/), importerId(/\.vue$/)))],
+        undefined,
+        '/src/component.ts',
+        undefined,
+        '/src/App.vue',
+      ),
+    ).toBe(true);
+
+    // id matches but importerId doesn't
+    expect(
+      interpreter(
+        [include(and(id(/\.ts$/), importerId(/\.vue$/)))],
+        undefined,
+        '/src/component.ts',
+        undefined,
+        '/src/main.ts',
+      ),
+    ).toBe(false);
+  });
+
+  test('exclude with importerId', () => {
+    // exclude files imported from node_modules
+    expect(
+      interpreter(
+        [exclude(importerId(/node_modules/))],
+        undefined,
+        '/src/foo.ts',
+        undefined,
+        '/node_modules/some-package/index.js',
+      ),
+    ).toBe(false);
+
+    // include files imported from src
+    expect(
+      interpreter(
+        [exclude(importerId(/node_modules/))],
+        undefined,
+        '/src/foo.ts',
+        undefined,
+        '/src/utils.ts',
+      ),
+    ).toBe(true);
+  });
+
+  test('returns false when importerId is undefined', () => {
+    expect(
+      interpreter(
+        [include(importerId('/src/main.ts'))],
+        undefined,
+        '/src/foo.ts',
+        undefined,
+        undefined,
+      ),
+    ).toBe(false);
   });
 });

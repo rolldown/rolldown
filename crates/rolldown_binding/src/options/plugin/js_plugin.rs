@@ -99,6 +99,7 @@ impl Plugin for JsPlugin {
         Some(args.specifier),
         None,
         None,
+        args.importer,
         ctx.cwd().to_string_lossy().as_ref(),
       ) {
         return Ok(None);
@@ -183,6 +184,7 @@ impl Plugin for JsPlugin {
         Some(args.id),
         None,
         None,
+        None,
         ctx.cwd().to_string_lossy().as_ref(),
       ) {
         return Ok(None);
@@ -215,6 +217,7 @@ impl Plugin for JsPlugin {
         Some(args.id),
         Some(args.code),
         Some(args.module_type.to_string().as_ref()),
+        None,
         ctx.cwd().to_string_lossy().as_ref(),
       ) {
         return Ok(None);
@@ -424,6 +427,7 @@ impl Plugin for JsPlugin {
         v,
         None,
         Some(&args.code),
+        None,
         None,
         ctx.cwd().to_string_lossy().as_ref(),
       ) {

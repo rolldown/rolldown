@@ -124,6 +124,35 @@ function bindingifyFilterExpr(
   bindingifyFilterExprImpl(expr, list);
   return list;
 }
+function containsImporterId(
+  expr: FilterExpression | TopLevelFilterExpression,
+): boolean {
+  switch (expr.kind) {
+    case 'and':
+    case 'or':
+      return expr.args.some(containsImporterId);
+    case 'not':
+    case 'include':
+    case 'exclude':
+      return containsImporterId(expr.expr);
+    case 'importerId':
+      return true;
+    default:
+      return false;
+  }
+}
+
+function assertNoImporterId(
+  filterExprs: filter.TopLevelFilterExpression[] | undefined,
+  hookName: string,
+): void {
+  if (filterExprs?.some(containsImporterId)) {
+    throw new Error(
+      `The \`importerId\` filter can only be used with the \`resolveId\` hook, but it was used with the \`${hookName}\` hook.`,
+    );
+  }
+}
+
 function bindingifyFilterExprImpl(
   expr: FilterExpression | TopLevelFilterExpression,
   list: BindingFilterToken[],
@@ -160,6 +189,13 @@ function bindingifyFilterExprImpl(
     }
     case 'id': {
       list.push({ kind: 'Id', payload: expr.pattern });
+      if (expr.params.cleanUrl) {
+        list.push({ kind: 'CleanUrl' });
+      }
+      break;
+    }
+    case 'importerId': {
+      list.push({ kind: 'ImporterId', payload: expr.pattern });
       if (expr.params.cleanUrl) {
         list.push({ kind: 'CleanUrl' });
       }
@@ -216,6 +252,7 @@ export function bindingifyLoadFilter(
     return undefined;
   }
   if (Array.isArray(filterOption)) {
+    assertNoImporterId(filterOption, 'load');
     return {
       value: filterOption.map(bindingifyFilterExpr),
     };
@@ -233,6 +270,7 @@ export function bindingifyTransformFilter(
   }
 
   let filterExprs = transformFilterMatcherToFilterExprs(filterOption);
+  assertNoImporterId(filterExprs, 'transform');
 
   let ret: BindingFilterToken[][] = [];
   if (filterExprs) {
@@ -250,6 +288,7 @@ export function bindingifyRenderChunkFilter(
     return undefined;
   }
   if (Array.isArray(filterOption)) {
+    assertNoImporterId(filterOption, 'renderChunk');
     return {
       value: filterOption.map(bindingifyFilterExpr),
     };

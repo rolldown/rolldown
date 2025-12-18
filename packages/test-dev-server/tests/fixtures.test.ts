@@ -1,5 +1,6 @@
 import { execa, ExecaError } from 'execa';
 import glob from 'fast-glob';
+// @ts-expect-error Missing types for kill-port package
 import killPort from 'kill-port';
 import nodeFs from 'node:fs';
 import nodePath from 'node:path';

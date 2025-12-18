@@ -107,7 +107,7 @@ fn collect_depended_runtime_helpers(
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(&mut self, unreachable_import_expression_addrs: &FxHashSet<Address>) {
-    let mut is_included_vec: StmtInclusionVec = self
+    let mut is_stmt_info_included_vec: StmtInclusionVec = self
       .module_table
       .modules
       .iter()
@@ -125,7 +125,7 @@ impl LinkStage<'_> {
     let context = &mut IncludeContext {
       modules: &self.module_table.modules,
       symbols: &self.symbols,
-      is_included_vec: &mut is_included_vec,
+      is_included_vec: &mut is_stmt_info_included_vec,
       is_module_included_vec: &mut is_module_included_vec,
       tree_shaking: self.options.treeshake.is_some(),
       runtime_id: self.runtime.id(),
@@ -242,16 +242,19 @@ impl LinkStage<'_> {
       .for_each(|(module, meta)| {
         let idx = module.idx;
         module.meta.set(EcmaViewMeta::Included, is_module_included_vec[idx]);
-        is_included_vec[module.idx].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
-          module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
-        });
+        is_stmt_info_included_vec[module.idx].iter_enumerated().for_each(
+          |(stmt_info_id, is_included)| {
+            module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
+          },
+        );
         let mut normalized_runtime_helper = RuntimeHelper::default();
         for (index, stmt_info_idxs) in module.depended_runtime_helper.iter().enumerate() {
           if stmt_info_idxs.is_empty() {
             continue;
           }
-          let any_included =
-            stmt_info_idxs.iter().any(|stmt_info_idx| is_included_vec[module.idx][*stmt_info_idx]);
+          let any_included = stmt_info_idxs
+            .iter()
+            .any(|stmt_info_idx| is_stmt_info_included_vec[module.idx][*stmt_info_idx]);
           #[expect(clippy::cast_possible_truncation)]
           // It is alright, since the `RuntimeHelper` is a bitmask and the index is guaranteed to be less than 32.
           normalized_runtime_helper.set(
@@ -271,13 +274,22 @@ impl LinkStage<'_> {
       &is_module_included_vec,
     );
     self.include_runtime_symbol(
-      &mut is_included_vec,
+      &mut is_stmt_info_included_vec,
       &mut is_module_included_vec,
       &mut module_namespace_included_reason,
       &mut used_symbol_refs,
       depended_runtime_helper,
     );
+
     self.used_symbol_refs = used_symbol_refs;
+    // Store the final statement inclusion results back to metas.
+    is_stmt_info_included_vec.into_iter_enumerated().for_each(|(module_idx, stmt_included_vec)| {
+      self.metas[module_idx].stmt_info_included = stmt_included_vec;
+    });
+    // Store the final module inclusion results back to metas.
+    is_module_included_vec.into_iter_enumerated().for_each(|(module_idx, is_included)| {
+      self.metas[module_idx].is_included = is_included;
+    });
 
     tracing::trace!(
       "included statements {:#?}",

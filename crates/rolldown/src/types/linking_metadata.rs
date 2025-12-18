@@ -10,6 +10,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Module metadata about linking
 #[derive(Debug, Default)]
+#[expect(clippy::struct_excessive_bools)]
 pub struct LinkingMetadata {
   /// A module could be wrapped for some reasons, eg. cjs module need to be wrapped with commonjs runtime function.
   /// The `wrap_ref` is the binding identifier that store return value of executed the wrapper function.
@@ -80,6 +81,11 @@ pub struct LinkingMetadata {
   pub included_commonjs_export_symbol: FxHashSet<SymbolRef>,
   pub depended_runtime_helper: RuntimeHelper,
   pub module_namespace_included_reason: ModuleNamespaceIncludedReason,
+  /// Tracks which statements in this module are included after tree-shaking.
+  /// Each entry corresponds to a statement in the module's `stmt_infos`.
+  pub stmt_info_included: IndexVec<StmtInfoIdx, bool>,
+  /// Tracks whether the module is included after tree-shaking.
+  pub is_included: bool,
 }
 
 impl LinkingMetadata {

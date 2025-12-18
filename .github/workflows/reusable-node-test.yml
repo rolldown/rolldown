@@ -30,15 +30,14 @@ jobs:
         uses: oxc-project/setup-rust@ecabb7322a2ba5aeedb3612d2a40b86a85cee235 # v1.0.11
         with:
           tools: just
-          cache-key: debug-build
 
       - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
 
-      - name: Build Native Rolldown
-        run: just build-rolldown
-
-      - name: Check no diff
-        run: git diff --exit-code
+      - name: Download Native Rolldown Build
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: rolldown-native-${{ inputs.os }}
+          path: ./packages
 
       - name: Build `@rolldown/test-dev-server`
         run: pnpm --filter '@rolldown/test-dev-server' build

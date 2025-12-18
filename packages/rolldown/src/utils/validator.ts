@@ -286,10 +286,10 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warning when detecting missing name option for iife export',
     ),
   ),
-  mixedExport: v.pipe(
+  mixedExports: v.pipe(
     v.optional(v.boolean()),
     v.description(
-      'Whether to emit warning when detecting mixed export',
+      'Whether to emit warning when detecting mixed exports',
     ),
   ),
   unresolvedEntry: v.pipe(

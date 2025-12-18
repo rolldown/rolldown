@@ -1658,7 +1658,7 @@ export interface BindingChecksOptions {
   eval?: boolean
   missingGlobalName?: boolean
   missingNameOptionForIifeExport?: boolean
-  mixedExport?: boolean
+  mixedExports?: boolean
   unresolvedEntry?: boolean
   unresolvedImport?: boolean
   filenameConflict?: boolean

@@ -16,7 +16,7 @@ pub struct ChecksOptions {
   pub eval: Option<bool>,
   pub missing_global_name: Option<bool>,
   pub missing_name_option_for_iife_export: Option<bool>,
-  pub mixed_export: Option<bool>,
+  pub mixed_exports: Option<bool>,
   pub unresolved_entry: Option<bool>,
   pub unresolved_import: Option<bool>,
   pub filename_conflict: Option<bool>,
@@ -44,7 +44,7 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
       rolldown_error::EventKindSwitcher::MissingNameOptionForIifeExport,
       value.missing_name_option_for_iife_export.unwrap_or(true),
     );
-    flag.set(rolldown_error::EventKindSwitcher::MixedExport, value.mixed_export.unwrap_or(true));
+    flag.set(rolldown_error::EventKindSwitcher::MixedExports, value.mixed_exports.unwrap_or(true));
     flag.set(
       rolldown_error::EventKindSwitcher::UnresolvedEntry,
       value.unresolved_entry.unwrap_or(true),

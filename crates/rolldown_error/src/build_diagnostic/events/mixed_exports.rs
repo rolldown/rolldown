@@ -3,16 +3,16 @@ use crate::{types::diagnostic_options::DiagnosticOptions, types::event_kind::Eve
 use arcstr::ArcStr;
 
 #[derive(Debug)]
-pub struct MixedExport {
+pub struct MixedExports {
   pub module_id: String,
   pub module_name: ArcStr,
   pub entry_module: String,
   pub export_keys: Vec<ArcStr>,
 }
 
-impl BuildEvent for MixedExport {
+impl BuildEvent for MixedExports {
   fn kind(&self) -> EventKind {
-    EventKind::MixedExport
+    EventKind::MixedExports
   }
 
   fn id(&self) -> Option<String> {

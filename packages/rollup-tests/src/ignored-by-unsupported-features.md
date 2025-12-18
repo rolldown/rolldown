@@ -348,7 +348,6 @@
 - rollup@sourcemaps@combined-sourcemap-3: get correct combined sourcemap of bundled code@generates es
 
 ### The error/warning information is not compatible with rollup
- - rollup@function@warn-on-auto-named-default-exports: warns if default and named exports are used in auto mode (should be `MIXED_EXPORTS` but is `MIXED_EXPORT`)
  - rollup@function@error-missing-umd-name: throws an error if no name is provided for a UMD bundle (should be `MISSING_NAME_OPTION_FOR_IIFE_EXPORT` but is `MISSING_NAME_OPTION_FOR_UMD_EXPORT`)
  - rollup@function@banner-and-footer: adds a banner/footer (expects `ADDON_ERROR` but got `PLUGIN_ERROR`)
  - rollup@function@conflicting-reexports@named-import: throws when a conflicting binding is imported via a named import (expects `AMBIGUOUS_EXTERNAL_NAMESPACES` but got `MISSING_EXPORT`)

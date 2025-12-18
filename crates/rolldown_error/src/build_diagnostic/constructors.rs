@@ -45,7 +45,7 @@ use super::events::{
   forbid_const_assign::ForbidConstAssign,
   invalid_export_option::InvalidExportOption,
   missing_export::MissingExport,
-  mixed_export::MixedExport,
+  mixed_exports::MixedExports,
   parse_error::ParseError,
   unresolved_entry::UnresolvedEntry,
 };
@@ -143,7 +143,7 @@ impl BuildDiagnostic {
     entry_module: String,
     export_keys: Vec<ArcStr>,
   ) -> Self {
-    Self::new_inner(MixedExport { module_id, module_name, entry_module, export_keys })
+    Self::new_inner(MixedExports { module_id, module_name, entry_module, export_keys })
   }
 
   pub fn missing_global_name(module_id: String, module_name: ArcStr, guessed_name: ArcStr) -> Self {

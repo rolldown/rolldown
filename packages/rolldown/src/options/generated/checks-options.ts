@@ -27,10 +27,10 @@ export interface ChecksOptions {
   missingNameOptionForIifeExport?: boolean;
 
   /**
-   * Whether to emit warning when detecting mixed export
+   * Whether to emit warning when detecting mixed exports
    * @default true
    */
-  mixedExport?: boolean;
+  mixedExports?: boolean;
 
   /**
    * Whether to emit warning when detecting unresolved entry

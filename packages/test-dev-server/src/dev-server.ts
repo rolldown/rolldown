@@ -11,6 +11,7 @@ import type { HmrInvalidateMessage } from './types/client-message.js';
 import { ClientSession } from './types/client-session.js';
 import type { NormalizedDevOptions } from './types/normalized-dev-options.js';
 import type {
+  ConnectedMessage,
   HmrReloadMessage,
   HmrUpdateMessage,
 } from './types/server-message.js';
@@ -50,7 +51,7 @@ class DevServer {
 
   #sendMessage(
     socket: WebSocket,
-    message: HmrUpdateMessage | HmrReloadMessage,
+    message: HmrUpdateMessage | HmrReloadMessage | ConnectedMessage,
   ): void {
     if (socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify(message));
@@ -102,14 +103,16 @@ class DevServer {
       watch: getDevWatchOptionsForCi(),
     });
     this.#devEngine = devEngine;
-    process.stdin.on('data', async data => {
-      if (data.toString() === 'r') {
-        const { hasStaleOutput } = await devEngine.getBundleState();
-        if (hasStaleOutput) {
-          await devEngine.ensureLatestBuildOutput();
+    if (process.stdin.isTTY) {
+      process.stdin.on('data', async data => {
+        if (data.toString() === 'r') {
+          const { hasStaleOutput } = await devEngine.getBundleState();
+          if (hasStaleOutput) {
+            await devEngine.ensureLatestBuildOutput();
+          }
         }
-      }
-    }).unref();
+      });
+    }
     this.#prepareHttpServerAfterCreateDevEngine(devEngine);
     await devEngine.run();
     this.#readyHttpServer();
@@ -128,6 +131,10 @@ class DevServer {
     this.wsServer.on('connection', (ws, _req) => {
       const clientSession = new ClientSession(ws);
       this.#clients.set(clientSession.id, clientSession);
+
+      // Send the client its assigned ID so it can use it for lazy compilation requests
+      this.#sendMessage(ws, { type: 'connected', clientId: clientSession.id });
+
       ws.on('error', console.error);
       ws.on('close', () => {
         this.#clients.delete(clientSession.id);
@@ -168,6 +175,29 @@ class DevServer {
       } else {
         next();
       }
+    });
+    this.connectServer.use(async (req, _res, next) => {
+      if (req.url?.startsWith('/lazy?')) {
+        const url = new URL(req.url, `http://localhost:${this.#port}`);
+        const moduleId = url.searchParams.get('id');
+        const clientId = url.searchParams.get('clientId');
+        console.log(
+          `Lazy compile request for module ${moduleId} from client ${clientId}`,
+        );
+
+        if (moduleId && clientId) {
+          const moduleCode = await devEngine.compileEntry(
+            moduleId,
+            clientId,
+          );
+          if (moduleCode != null) {
+            _res!.setHeader('Content-Type', 'application/javascript');
+            _res!.end(moduleCode);
+            return;
+          }
+        }
+      }
+      next();
     });
     this.connectServer.use(
       serveStatic(nodePath.join(process.cwd(), 'dist'), {

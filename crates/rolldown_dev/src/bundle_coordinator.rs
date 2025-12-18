@@ -119,6 +119,17 @@ impl BundleCoordinator {
           let result = self.watched_files.iter().map(|s| s.to_string()).collect();
           let _ = reply.send(result);
         }
+        CoordinatorMsg::ModuleChanged { module_id } => {
+          // Handle programmatic module change (e.g., lazy compilation executed)
+          let mut changed_files = FxIndexMap::default();
+          changed_files.insert(PathBuf::from(&module_id), WatcherChangeKind::Update);
+
+          // Queue a rebuild task and mark output as stale
+          self.queued_tasks.push_back(TaskInput::Rebuild { changed_files });
+          self.has_stale_bundle_output = true;
+
+          let _ = self.schedule_build_if_stale().await;
+        }
         CoordinatorMsg::Close => {
           break;
         }

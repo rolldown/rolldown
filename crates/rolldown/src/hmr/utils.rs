@@ -63,6 +63,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
     };
 
     // ...(moduleId, module)
+    // Use absolute module ID for consistent lookup in runtime
     let arguments = self.builder().vec_from_array([
       ast::Argument::StringLiteral(self.builder().alloc_string_literal(
         SPAN,
@@ -93,6 +94,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
   /// `var $hot_name = __rolldown_runtime__.createModuleHotContext($module_id);`
   fn create_module_hot_context_initializer_stmt(&self) -> ast::Statement<'ast> {
     // var $hot_name = __rolldown_runtime__.createModuleHotContext($module_id);
+    // Use absolute module ID for consistent lookup
     ast::Statement::VariableDeclaration(
       self.builder().alloc_variable_declaration(
         SPAN,

@@ -13,11 +13,13 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
 export function logParseError(
   message: string,
   id: string | undefined,
+  pos?: number,
 ): RollupLog {
   return {
     code: PARSE_ERROR,
     id,
     message,
+    pos,
   };
 }
 

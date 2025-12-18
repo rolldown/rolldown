@@ -355,7 +355,6 @@
  - rollup@function@ast-validations@redeclare-catch-scope-parameter-var-outside-conflict: throws when redeclaring a parameter of a catch scope as a var that conflicts with an outside binding (unknown)
  - rollup@function@import-not-at-top-level-fails: disallows non-top-level imports (`cause` property is missing)
  - rollup@function@export-not-at-top-level-fails: disallows non-top-level exports (`cause` property is missing)
- - rollup@function@catch-rust-panic-parse: Catch Rust panics and then throw them in Node when using this.parse (`loc` / `pos` properties are missing)
 
 ### The error/warning not implement
  - rollup@hooks@Throws when using the "sourcemapFile" option for multiple chunks

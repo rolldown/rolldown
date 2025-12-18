@@ -115,7 +115,9 @@ function normalizeExpectedError(error) {
 	}
 
 	// Normalize position values since SWC and Oxc may report different locations
-	if (clone.pos !== undefined) {
+	if (clone.pos === undefined) {
+		delete clone.pos;
+	} else {
 		clone.pos = '[pos]';
 	}
 	if (clone.loc?.line !== undefined) {

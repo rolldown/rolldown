@@ -20,7 +20,15 @@ type PluginModuleType =
 
 export type FilterExpressionKind = FilterExpression['kind'];
 
-export type FilterExpression = And | Or | Not | Id | ModuleType | Code | Query;
+export type FilterExpression =
+  | And
+  | Or
+  | Not
+  | Id
+  | ImporterId
+  | ModuleType
+  | Code
+  | Query;
 
 export type TopLevelFilterExpression = Include | Exclude;
 
@@ -71,6 +79,19 @@ class Id {
   constructor(pattern: StringOrRegExp, params?: IdParams) {
     this.pattern = pattern;
     this.kind = 'id';
+    this.params = params ?? {
+      cleanUrl: false,
+    };
+  }
+}
+
+class ImporterId {
+  kind: 'importerId';
+  pattern: StringOrRegExp;
+  params: IdParams;
+  constructor(pattern: StringOrRegExp, params?: IdParams) {
+    this.pattern = pattern;
+    this.kind = 'importerId';
     this.params = params ?? {
       cleanUrl: false,
     };
@@ -140,6 +161,13 @@ export function id(pattern: StringOrRegExp, params?: IdParams): Id {
   return new Id(pattern, params);
 }
 
+export function importerId(
+  pattern: StringOrRegExp,
+  params?: IdParams,
+): ImporterId {
+  return new ImporterId(pattern, params);
+}
+
 export function moduleType(pattern: PluginModuleType): ModuleType {
   return new ModuleType(pattern);
 }
@@ -186,6 +214,7 @@ export function interpreter(
   code?: string,
   id?: string,
   moduleType?: PluginModuleType,
+  importerId?: string,
 ): boolean {
   let arr: TopLevelFilterExpression[] = [];
   if (Array.isArray(exprs)) {
@@ -193,7 +222,7 @@ export function interpreter(
   } else {
     arr = [exprs];
   }
-  return interpreterImpl(arr, code, id, moduleType);
+  return interpreterImpl(arr, code, id, moduleType, importerId);
 }
 
 interface InterpreterCtx {
@@ -205,6 +234,7 @@ export function interpreterImpl(
   code?: string,
   id?: string,
   moduleType?: PluginModuleType,
+  importerId?: string,
   ctx: InterpreterCtx = {},
 ): boolean {
   let hasInclude = false;
@@ -212,13 +242,13 @@ export function interpreterImpl(
     switch (e.kind) {
       case 'include': {
         hasInclude = true;
-        if (exprInterpreter(e.expr, code, id, moduleType, ctx)) {
+        if (exprInterpreter(e.expr, code, id, moduleType, importerId, ctx)) {
           return true;
         }
         break;
       }
       case 'exclude': {
-        if (exprInterpreter(e.expr, code, id, moduleType)) {
+        if (exprInterpreter(e.expr, code, id, moduleType, importerId, ctx)) {
           return false;
         }
         break;
@@ -233,32 +263,46 @@ export function exprInterpreter(
   code?: string,
   id?: string,
   moduleType?: PluginModuleType,
+  importerId?: string,
   ctx: InterpreterCtx = {},
 ): boolean {
   switch (expr.kind) {
     case 'and': {
       return expr.args.every((e) =>
-        exprInterpreter(e, code, id, moduleType, ctx)
+        exprInterpreter(e, code, id, moduleType, importerId, ctx)
       );
     }
     case 'or': {
       return expr.args.some((e) =>
-        exprInterpreter(e, code, id, moduleType, ctx)
+        exprInterpreter(e, code, id, moduleType, importerId, ctx)
       );
     }
     case 'not': {
-      return !exprInterpreter(expr.expr, code, id, moduleType, ctx);
+      return !exprInterpreter(expr.expr, code, id, moduleType, importerId, ctx);
     }
     case 'id': {
       if (id === undefined) {
         throw new Error('`id` is required for `id` expression');
       }
+      let idToMatch = id;
       if (expr.params.cleanUrl) {
-        id = cleanUrl(id);
+        idToMatch = cleanUrl(idToMatch);
       }
       return typeof expr.pattern === 'string'
-        ? id === expr.pattern
-        : expr.pattern.test(id);
+        ? idToMatch === expr.pattern
+        : expr.pattern.test(idToMatch);
+    }
+    case 'importerId': {
+      if (importerId === undefined) {
+        return false; // Entry files have no importer, so no match
+      }
+      let importerIdToMatch = importerId;
+      if (expr.params.cleanUrl) {
+        importerIdToMatch = cleanUrl(importerIdToMatch);
+      }
+      return typeof expr.pattern === 'string'
+        ? importerIdToMatch === expr.pattern
+        : expr.pattern.test(importerIdToMatch);
     }
     case 'moduleType': {
       if (moduleType === undefined) {

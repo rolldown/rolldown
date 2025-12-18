@@ -10,7 +10,8 @@ use super::BuildEvent;
 #[derive(Debug)]
 pub struct ParseError {
   pub(crate) source: ArcStr,
-  pub(crate) filename: String,
+  pub(crate) id: String,
+  pub(crate) stable_id: String,
   pub(crate) error_help: String,
   pub(crate) error_message: String,
   pub(crate) error_labels: Vec<LabeledSpan>,
@@ -21,6 +22,10 @@ impl BuildEvent for ParseError {
     crate::types::event_kind::EventKind::ParseError
   }
 
+  fn id(&self) -> Option<String> {
+    Some(self.id.clone())
+  }
+
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!("Parse failed, got: {:?}", self.error_message)
   }
@@ -28,7 +33,7 @@ impl BuildEvent for ParseError {
   fn on_diagnostic(&self, diagnostic: &mut Diagnostic, _opts: &DiagnosticOptions) {
     diagnostic.title.clone_from(&self.error_message);
 
-    let file_id = diagnostic.add_file(self.filename.clone(), self.source.clone());
+    let file_id = diagnostic.add_file(self.stable_id.clone(), self.source.clone());
 
     self.error_labels.iter().for_each(|label| {
       let offset = u32::try_from(label.offset()).unwrap();

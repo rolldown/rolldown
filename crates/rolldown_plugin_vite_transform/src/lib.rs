@@ -63,11 +63,13 @@ impl Plugin for ViteTransformPlugin {
 
     let allocator = oxc::allocator::Allocator::default();
     let ret = Parser::new(&allocator, args.code, source_type).parse();
+    let stable_id = stabilize_id(args.id, &self.root);
     if ret.panicked || !ret.errors.is_empty() {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         ret.errors,
         &ArcStr::from(args.code.as_str()),
-        &stabilize_id(args.id, &self.root),
+        args.id,
+        &stable_id,
         &Severity::Error,
       )))?;
     }
@@ -80,7 +82,8 @@ impl Plugin for ViteTransformPlugin {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         transformer_return.errors,
         &ArcStr::from(args.code.as_str()),
-        &stabilize_id(args.id, &self.root),
+        args.id,
+        &stable_id,
         &Severity::Error,
       )))?;
     }

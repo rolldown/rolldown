@@ -356,35 +356,11 @@
  - rollup@function@reexport-missing-error: reexporting a missing identifier should print an error (`exporter` propery is missing in `MISSING_EXPORT` error)
  - rollup@function@logging@handle-logs-in-plugins: allows plugins to read and filter logs
  - rollup@hooks@supports renderError hook
- - rollup@function@ast-validations@double-named-export: throws on duplicate named exports (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@double-named-reexport: throws on duplicate named exports (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@double-default-export: throws on double default exports (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@duplicate-function-export: throws on duplicate namespace exports (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@duplicate-import-fails: disallows duplicate imports (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@duplicate-import-specifier-fails: disallows duplicate import specifiers (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@duplicate-namespace-export: throws on duplicate namespace exports (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@duplicate-parameter-name: throws on duplicate parameter names as it would when running in strict mode (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@duplicate-var-export: throws on duplicate exports declared with "var" (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@redeclare-block-function-function: throws when redeclaring a function binding as a function in a block scope (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@redeclare-catch-scope-local-variable-function: throws when redeclaring the parameter of a catch scope as a function (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@redeclare-catch-scope-parameter-function: throws when redeclaring local variable in a catch scope as a function (`id` property is missing in `PARSE_ERROR` error)
  - rollup@function@ast-validations@redeclare-catch-scope-parameter-var-outside-conflict: throws when redeclaring a parameter of a catch scope as a var that conflicts with an outside binding (unknown)
- - rollup@function@ast-validations@redeclare-catch-scope-pattern-parameter-var: throws when redeclaring a pattern parameter of a catch scope as a var (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@redeclare-class-function: throws when redeclaring a class binding as a function (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@redeclare-const-function: throws when redeclaring a const binding as a function (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@redeclare-default-import-function: throws when redeclaring a default import with a function (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@redeclare-import-var: throws when redeclaring an import with a var (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@redeclare-let-function: throws when redeclaring a let binding as a function (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@redeclare-let-nested-var: throws when redeclaring a let binding with a nested var (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@redeclare-nested-var-let: throws when redeclaring a nested var binding with let (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@redeclare-parameter-let: throws when redeclaring the parameter of a function as a let (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@redeclare-top-level-function-function: throws when redeclaring a top-level function binding as a function (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@redeclare-top-level-var-function: throws when redeclaring a top-level var binding as a function (`id` property is missing in `PARSE_ERROR` error)
- - rollup@function@ast-validations@redeclare-var-class: throws when redeclaring a var binding as a class (`id` property is missing in `PARSE_ERROR` error)
  - rollup@function@error-after-transform-should-throw-correct-location: error after transform should throw with correct location of file (`exporter` property is missing in `MISSING_EXPORT` error)
  - rollup@function@import-of-unexported-fails: marking an imported, but unexported, identifier should throw (`exporter` property is missing in `MISSING_EXPORT` error)
- - rollup@function@import-not-at-top-level-fails: disallows non-top-level imports (`id` property is missing in `PARSE_ERROR` error, also `cause` property is missing)
- - rollup@function@export-not-at-top-level-fails: disallows non-top-level exports (`id` property is missing in `PARSE_ERROR` error, also `cause` property is missing)
+ - rollup@function@import-not-at-top-level-fails: disallows non-top-level imports (`cause` property is missing)
+ - rollup@function@export-not-at-top-level-fails: disallows non-top-level exports (`cause` property is missing)
 
 ### The error/warning not implement
  - rollup@hooks@Throws when using the "sourcemapFile" option for multiple chunks
@@ -475,3 +451,4 @@
  - rollup@function@deprecations@asset-render-chunk-originalfilename-in-bundle: marks the "originalFileName" property of emitted assets as deprecated in generateBundle when emitted during generate phase
  - rollup@function@optional-chaining-namespace: handles optional chaining with namespace
  - rollup@function@unused-import-2: warns on unused imports ([#595])
+ - rollup@function@ast-validations@redeclare-import-var: throws when redeclaring an import with a var

@@ -83,9 +83,14 @@ pub async fn parse_to_ecma_ast(
       json_value_to_ecma_ast(&json_value)
     }
     ModuleType::Dataurl | ModuleType::Base64 | ModuleType::Text => {
-      EcmaCompiler::parse_expr_as_program(stable_id, source, oxc_source_type)?
+      EcmaCompiler::parse_expr_as_program(
+        resolved_id.id.as_str(),
+        stable_id,
+        source,
+        oxc_source_type,
+      )?
     }
-    _ => EcmaCompiler::parse(stable_id, source, oxc_source_type)?,
+    _ => EcmaCompiler::parse(resolved_id.id.as_str(), stable_id, source, oxc_source_type)?,
   };
 
   ecma_ast = plugin_driver

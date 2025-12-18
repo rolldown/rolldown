@@ -19,7 +19,12 @@ use crate::ecma_ast::{
 pub struct EcmaCompiler;
 
 impl EcmaCompiler {
-  pub fn parse(filename: &str, source: impl Into<ArcStr>, ty: SourceType) -> BuildResult<EcmaAst> {
+  pub fn parse(
+    id: &str,
+    stable_id: &str,
+    source: impl Into<ArcStr>,
+    ty: SourceType,
+  ) -> BuildResult<EcmaAst> {
     let source: ArcStr = source.into();
     let allocator = oxc::allocator::Allocator::default();
     let inner =
@@ -33,7 +38,8 @@ impl EcmaCompiler {
           Err(BuildDiagnostic::from_oxc_diagnostics(
             ret.errors,
             &source.clone(),
-            filename,
+            id,
+            stable_id,
             &Severity::Error,
           ))
         } else {
@@ -44,7 +50,8 @@ impl EcmaCompiler {
   }
 
   pub fn parse_expr_as_program(
-    filename: &str,
+    id: &str,
+    stable_id: &str,
     source: impl Into<ArcStr>,
     ty: SourceType,
   ) -> BuildResult<EcmaAst> {
@@ -71,7 +78,8 @@ impl EcmaCompiler {
           Err(errors) => Err(BuildDiagnostic::from_oxc_diagnostics(
             errors,
             &source.clone(),
-            filename,
+            id,
+            stable_id,
             &Severity::Error,
           )),
         }
@@ -131,7 +139,7 @@ impl EcmaCompiler {
 
 #[test]
 fn basic_test() {
-  let ast = EcmaCompiler::parse("", "const a = 1;".to_string(), SourceType::default()).unwrap();
+  let ast = EcmaCompiler::parse("", "", "const a = 1;".to_string(), SourceType::default()).unwrap();
   let code = EcmaCompiler::print_with(&ast, PrintOptions::default()).code;
   assert_eq!(code, "const a = 1;\n");
 }

@@ -38,7 +38,7 @@ exports.wait = function wait(ms) {
 	});
 };
 
-function normalizeError(error) {
+function normalizeError(error, locExpected) {
 	if (!error) {
 		throw new Error(`Expected an error but got ${JSON.stringify(error)}`);
 	}
@@ -51,16 +51,32 @@ function normalizeError(error) {
 	delete clone.toString;
 	delete clone.frame;
 	delete clone.kind; // Rolldown specific
-	delete clone.loc; // TODO: support this later
-	delete clone.pos; // TODO: support this later
 	if (clone.message) {
 		clone.message = '[message]';
 	}
+
+	if (locExpected) {
+		// Normalize position values since SWC and Oxc may report different locations
+		if (clone.pos !== undefined) {
+			clone.pos = '[pos]'
+		}
+		if (clone.loc?.line !== undefined) {
+			clone.loc.line = '[line]';
+		}
+		if (clone.loc?.column !== undefined) {
+			clone.loc.column = '[column]';
+		}
+	} else {
+		// It is fine to have location info even if Rollup doesn't expect it
+		delete clone.pos;
+		delete clone.loc;
+	}
+
 	if (clone.watchFiles) {
 		clone.watchFiles.sort();
 	}
 	if (clone.cause) {
-		clone.cause = normalizeError(clone.cause);
+		clone.cause = normalizeError(clone.cause, false);
 	}
 	if (clone.code === 'PLUGIN_ERROR') {
 		// binding is not set for native errors, so it is removed from expected errors
@@ -91,14 +107,24 @@ function normalizeExpectedError(error) {
 	delete clone.watchFiles;
 	delete clone.url;
 	delete clone.binding;
-	delete clone.loc; // TODO: support this later
-	delete clone.pos; // TODO: support this later
 	if (parseErrorRollupErrorCodes.has(clone.code)) {
 		clone.code = 'PARSE_ERROR';
 	}
 	if (clone.message) {
 		clone.message = '[message]';
 	}
+
+	// Normalize position values since SWC and Oxc may report different locations
+	if (clone.pos !== undefined) {
+		clone.pos = '[pos]';
+	}
+	if (clone.loc?.line !== undefined) {
+		clone.loc.line = '[line]';
+	}
+	if (clone.loc?.column !== undefined) {
+		clone.loc.column = '[column]';
+	}
+
 	if (clone.cause) {
 		clone.cause = normalizeExpectedError(clone.cause);
 	}
@@ -111,8 +137,9 @@ function normalizeExpectedError(error) {
  */
 exports.compareError = function compareError(actual, expected) {
 	expected = normalizeExpectedError(expected);
+	const locExpected = !!expected.loc;
 	if (actual.errors) {
-		const actuals = actual.errors.map(normalizeError);
+		const actuals = actual.errors.map(e => normalizeError(e, locExpected));
 		const assertErrors = [];
 		try {
 			assert.ok(actuals.some(actual => {
@@ -133,7 +160,7 @@ exports.compareError = function compareError(actual, expected) {
 		return;
 	}
 
-	actual = normalizeError(actual);
+	actual = normalizeError(actual, locExpected);
 	try {
 		assert.deepEqual(actual, expected);
 	} catch (error) {
@@ -148,10 +175,10 @@ exports.compareError = function compareError(actual, expected) {
  * @param {(RollupLog & {level: LogLevel})[]} expected
  */
 exports.compareLogs = function compareLogs(actual, expected) {
-	const sortedActual = actual.map(normalizeError).sort(sortLogs);
-	const sortedExpected = expected
-		.map(warning => normalizeExpectedError(warning))
-		.sort(sortLogs);
+	const sortedExpected = expected.sort(sortLogs)
+		.map(warning => normalizeExpectedError(warning));
+	const sortedActual = actual.sort(sortLogs)
+		.map((e, idx) => normalizeError(e, !!sortedExpected[idx].loc));
 	try {
 		assert.deepEqual(sortedActual, sortedExpected);
 	} catch (error) {

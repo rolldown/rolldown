@@ -1952,6 +1952,10 @@ export interface BindingLog {
   code?: string
   exporter?: string
   plugin?: string
+  /** Location information (line, column, file) */
+  loc?: BindingLogLocation
+  /** Position in the source file in UTF-16 code units */
+  pos?: number
 }
 
 export declare enum BindingLogLevel {
@@ -1959,6 +1963,14 @@ export declare enum BindingLogLevel {
   Warn = 1,
   Info = 2,
   Debug = 3
+}
+
+export interface BindingLogLocation {
+  /** 1-based */
+  line: number
+  /** 0-based position in the line in UTF-16 code units */
+  column: number
+  file?: string
 }
 
 export type BindingMakeAbsoluteExternalsRelative =
@@ -2525,18 +2537,9 @@ export interface NativeError {
   /** The exporter associated with the error (for import/export errors) */
   exporter?: string
   /** Location information (line, column, file) */
-  loc?: NativeErrorLocation
+  loc?: BindingLogLocation
   /** Position in the source file in UTF-16 code units */
   pos?: number
-}
-
-/** Location information for errors */
-export interface NativeErrorLocation {
-  /** 1-based */
-  line: number
-  /** 0-based position in the line in UTF-16 code units */
-  column: number
-  file?: string
 }
 
 export interface PreRenderedChunk {

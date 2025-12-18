@@ -51,17 +51,42 @@ pub async fn handle_warnings(
   }
   if let Some(on_log) = options.on_log.as_ref() {
     for warning in filter_out_disabled_diagnostics(warnings, &options.checks) {
+      let diag = warning.to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() });
+      let code = warning.kind().to_string();
+
+      // Extract location information from the diagnostic if available
+      // Only include loc/pos for warning types that report specific source locations.
+      // Note: Line numbers, columns, and byte positions are cast to u32.
+      // This is safe for practical use cases as files with >4 billion lines or bytes are extremely rare.
+      // Use warning.id() for the file path since the diagnostic may only store the filename.
+      #[expect(
+        clippy::cast_possible_truncation,
+        reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
+      )]
+      let (loc, pos) = if let Some((_file, line, column, position)) = diag.get_primary_location() {
+        (
+          Some(rolldown::LogLocation {
+            line: line as u32,
+            column: column as u32,
+            file: warning.id(),
+          }),
+          Some(position as u32),
+        )
+      } else {
+        (None, None)
+      };
+
       on_log
         .call(
           LogLevel::Warn,
           rolldown::Log {
             id: warning.id(),
             exporter: warning.exporter(),
-            code: Some(warning.kind().to_string()),
-            message: warning
-              .to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() })
-              .to_color_string(),
+            code: Some(code),
+            message: diag.to_color_string(),
             plugin: None,
+            loc,
+            pos,
           },
         )
         .await?;

@@ -28,7 +28,7 @@ type ModuleNamespaceReasonVec = IndexVec<ModuleIdx, ModuleNamespaceIncludedReaso
 
 bitflags::bitflags! {
     #[derive(Debug, Clone, Copy)]
-    struct SymbolIncludeReason: u8 {
+    pub struct SymbolIncludeReason: u8 {
         const Normal = 1;
         const EntryExport = 1 << 1;
         /// See `has_dynamic_exports` in [`crate::types::linking_metadata::LinkingMetadata`]
@@ -44,29 +44,29 @@ bitflags::bitflags! {
     }
 }
 
-struct Context<'a> {
-  modules: &'a IndexModules,
-  symbols: &'a SymbolRefDb,
-  is_included_vec: &'a mut StmtInclusionVec,
-  is_module_included_vec: &'a mut ModuleInclusionVec,
-  tree_shaking: bool,
-  inline_const_smart: bool,
-  runtime_id: ModuleIdx,
-  metas: &'a LinkingMetadataVec,
-  used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
-  constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
-  options: &'a NormalizedBundlerOptions,
-  normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
+pub struct IncludeContext<'a> {
+  pub modules: &'a IndexModules,
+  pub symbols: &'a SymbolRefDb,
+  pub is_included_vec: &'a mut StmtInclusionVec,
+  pub is_module_included_vec: &'a mut ModuleInclusionVec,
+  pub tree_shaking: bool,
+  pub inline_const_smart: bool,
+  pub runtime_id: ModuleIdx,
+  pub metas: &'a LinkingMetadataVec,
+  pub used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
+  pub constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
+  pub options: &'a NormalizedBundlerOptions,
+  pub normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
   /// It is necessary since we can't mutate `module.meta` during the tree shaking process.
   /// see [rolldown_common::ecmascript::ecma_view::EcmaViewMeta]
-  bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
-  may_partial_namespace: bool,
-  module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
-  json_module_none_self_reference_included_symbol: FxHashMap<ModuleIdx, FxHashSet<SymbolRef>>,
+  pub bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
+  pub may_partial_namespace: bool,
+  pub module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
+  pub json_module_none_self_reference_included_symbol: FxHashMap<ModuleIdx, FxHashSet<SymbolRef>>,
 }
 
 fn include_cjs_bailout_exports(
-  context: &mut Context,
+  context: &mut IncludeContext,
   metas: &LinkingMetadataVec,
   bailout_modules: impl IntoIterator<Item = ModuleIdx>,
 ) {
@@ -84,7 +84,7 @@ fn include_cjs_bailout_exports(
 /// Collects all depended runtime helpers from included modules only.
 /// Eliminated modules may have runtime helpers set (for propagation to importers),
 /// but we should only include the runtime if an included module actually needs it.
-fn collect_depended_runtime_helper(
+fn collect_depended_runtime_helpers(
   modules: &IndexModules,
   metas: &LinkingMetadataVec,
   is_module_included_vec: &IndexVec<ModuleIdx, bool>,
@@ -122,7 +122,7 @@ impl LinkStage<'_> {
       oxc_index::index_vec![false; self.module_table.modules.len()];
     let mut module_namespace_included_reason: ModuleNamespaceReasonVec =
       oxc_index::index_vec![ModuleNamespaceIncludedReason::empty(); self.module_table.len()];
-    let context = &mut Context {
+    let context = &mut IncludeContext {
       modules: &self.module_table.modules,
       symbols: &self.symbols,
       is_included_vec: &mut is_included_vec,
@@ -265,7 +265,7 @@ impl LinkStage<'_> {
         meta.module_namespace_included_reason = module_namespace_included_reason[module.idx];
       });
 
-    let depended_runtime_helper = collect_depended_runtime_helper(
+    let depended_runtime_helper = collect_depended_runtime_helpers(
       &self.module_table.modules,
       &self.metas,
       &is_module_included_vec,
@@ -297,7 +297,7 @@ impl LinkStage<'_> {
     &self,
     entry: &EntryPoint,
     cycled_idx: &FxHashSet<ModuleIdx>,
-    context: &mut Context,
+    context: &mut IncludeContext,
     unused_record_idxs: &mut Vec<(ModuleIdx, ImportRecordIdx)>,
     unreachable_import_expression_addr: &FxHashSet<Address>,
   ) -> bool {
@@ -495,7 +495,7 @@ impl LinkStage<'_> {
       return;
     }
 
-    let context = &mut Context {
+    let context = &mut IncludeContext {
       modules: &self.module_table.modules,
       symbols: &self.symbols,
       is_included_vec: is_stmt_included_vec,
@@ -532,7 +532,7 @@ impl LinkStage<'_> {
 }
 
 /// if no export is used, and the module has no side effects, the module should not be included
-fn include_module(ctx: &mut Context, module: &NormalModule) {
+pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
   if ctx.is_module_included_vec[module.idx] {
     return;
   }
@@ -620,7 +620,11 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   }
 }
 
-fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_reason: SymbolIncludeReason) {
+pub fn include_symbol(
+  ctx: &mut IncludeContext,
+  symbol_ref: SymbolRef,
+  include_reason: SymbolIncludeReason,
+) {
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
 
   if let Some(v) = ctx.constant_symbol_map.get(&canonical_ref)
@@ -728,7 +732,11 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_reason: Symb
   }
 }
 
-fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoIdx) {
+pub fn include_statement(
+  ctx: &mut IncludeContext,
+  module: &NormalModule,
+  stmt_info_id: StmtInfoIdx,
+) {
   let is_included = &mut ctx.is_included_vec[module.idx][stmt_info_id];
 
   if *is_included {

@@ -60,10 +60,10 @@ impl LinkStage<'_> {
           });
         });
         let needs_inherit_to_esm_runtime = meta.dependencies.iter().any(|dep_module_idx| {
-          let Some(dep_module) = self.module_table[*dep_module_idx].as_normal() else {
+          let Some(_) = self.module_table[*dep_module_idx].as_normal() else {
             return false;
           };
-          if dep_module.is_included() {
+          if self.metas[*dep_module_idx].is_included {
             return false;
           }
 

@@ -176,7 +176,9 @@ impl<'a> GenerateStage<'a> {
       let ast_table_iter = self.link_output.ast_table.par_iter_mut_enumerated();
       ast_table_iter
         .filter(|(idx, _ast)| {
-          self.link_output.module_table[*idx].as_normal().is_some_and(|m| m.meta.is_included())
+          self.link_output.module_table[*idx]
+            .as_normal()
+            .is_some_and(|m| self.link_output.metas[m.idx].is_included)
         })
         .filter_map(|(idx, ast)| {
           let Some(ast) = ast else {

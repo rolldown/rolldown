@@ -77,10 +77,10 @@ impl GenerateStage<'_> {
 
     let mut index_module_groups: IndexVec<ModuleGroupIdx, ModuleGroup> = IndexVec::new();
     let mut name_to_module_group: FxHashMap<(usize, ArcStr), ModuleGroupIdx> = FxHashMap::default();
-
+    let metas = &self.link_output.metas;
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
     {
-      if !normal_module.meta.is_included() {
+      if !metas[normal_module.idx].is_included {
         continue;
       }
 
@@ -176,11 +176,12 @@ impl GenerateStage<'_> {
 
     // Manually pull out the module `rolldown:runtime` into a standalone chunk.
     let runtime_module_idx = self.link_output.runtime.id();
-    let Module::Normal(runtime_module) = &self.link_output.module_table[runtime_module_idx] else {
-      unreachable!("`rolldown:runtime` is always a normal module");
-    };
+    assert!(
+      matches!(&self.link_output.module_table[runtime_module_idx], Module::Normal(_)),
+      "`rolldown:runtime` is always a normal module"
+    );
 
-    if runtime_module.meta.is_included() {
+    if metas[runtime_module_idx].is_included {
       let runtime_chunk = Chunk::new(
         Some("rolldown-runtime".into()),
         None,
@@ -357,11 +358,11 @@ fn add_module_and_dependencies_to_group_recursively(
     return;
   }
 
-  let Module::Normal(module) = &module_table[module_idx] else {
+  if !module_table[module_idx].is_normal() {
     return;
-  };
+  }
 
-  if !module.ecma_view.meta.is_included() {
+  if !module_metas[module_idx].is_included {
     return;
   }
 

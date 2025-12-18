@@ -70,7 +70,7 @@ impl GenerateStage<'_> {
         };
         let matched_entry =
           self.link_output.entries.iter().find(|entry_point| entry_point.idx == module.idx);
-        if !module.is_included() {
+        if !self.link_output.metas[module.idx].is_included {
           continue;
         }
 
@@ -135,7 +135,7 @@ impl GenerateStage<'_> {
         .iter()
         .filter_map(|item| {
           let module = self.link_output.module_table[item.owner].as_normal()?;
-          module.meta.is_included().then_some(item)
+          self.link_output.metas[module.idx].is_included.then_some(item)
         })
         .into_group_map_by(|item| {
           chunk_graph.module_to_chunk[item.owner].expect("should have chunk idx")
@@ -406,7 +406,7 @@ impl GenerateStage<'_> {
         .namespace_refs
         .iter()
         .filter(|item| {
-          self.link_output.module_table[item.owner].as_normal().unwrap().is_included()
+          self.link_output.metas[item.owner].is_included
           // && self.link_output.metas[item.owner].wrap_kind().is_none()
         })
         // Determine safely merged cjs ns binding should put in where
@@ -601,7 +601,7 @@ impl GenerateStage<'_> {
     let mut ret: Option<String> = None;
     let iter = modules.iter().filter_map(|m| match m {
       Module::Normal(item) => {
-        if !item.is_included() {
+        if !self.link_output.metas[item.idx].is_included {
           return None;
         }
         if self.options.preserve_modules || item.is_user_defined_entry {
@@ -750,7 +750,7 @@ impl GenerateStage<'_> {
       let Some(normal_module) = self.link_output.module_table[*idx].as_normal() else {
         continue;
       };
-      if !normal_module.meta.is_included() {
+      if !self.link_output.metas[normal_module.idx].is_included {
         continue;
       }
 
@@ -810,13 +810,13 @@ impl GenerateStage<'_> {
   ) {
     let mut q = VecDeque::from([entry_module_idx]);
     while let Some(module_idx) = q.pop_front() {
-      let Module::Normal(module) = &self.link_output.module_table[module_idx] else {
+      if !self.link_output.module_table[module_idx].is_normal() {
         continue;
-      };
+      }
 
       let meta = &self.link_output.metas[module_idx];
 
-      if !module.meta.is_included() {
+      if !self.link_output.metas[module_idx].is_included {
         continue;
       }
 

@@ -241,7 +241,6 @@ impl LinkStage<'_> {
       .filter_map(|(m, meta)| m.as_normal_mut().map(|m| (m, meta)))
       .for_each(|(module, meta)| {
         let idx = module.idx;
-        module.meta.set(EcmaViewMeta::Included, is_module_included_vec[idx]);
         is_stmt_info_included_vec[module.idx].iter_enumerated().for_each(
           |(stmt_info_id, is_included)| {
             module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
@@ -256,7 +255,7 @@ impl LinkStage<'_> {
             .iter()
             .any(|stmt_info_idx| is_stmt_info_included_vec[module.idx][*stmt_info_idx]);
           #[expect(clippy::cast_possible_truncation)]
-          // It is alright, since the `RuntimeHelper` is a bitmask and the index is guaranteed to be less than 32.
+          // Note: `RuntimeHelper` is a bitmask with at most 32 bits, so the index is guaranteed to fit in u32.
           normalized_runtime_helper.set(
             RuntimeHelper::from_bits(1 << index as u32).unwrap(),
             any_included || (module.id != RUNTIME_MODULE_ID && !is_module_included_vec[idx]),
@@ -298,7 +297,7 @@ impl LinkStage<'_> {
         .modules
         .iter()
         .filter_map(Module::as_normal)
-        .map(NormalModule::to_debug_normal_module_for_tree_shaking)
+        .map(|m| m.to_debug_normal_module_for_tree_shaking(self.metas[m.idx].is_included))
         .collect::<Vec<_>>()
     );
   }
@@ -535,7 +534,6 @@ impl LinkStage<'_> {
 
     let module =
       self.module_table[self.runtime.id()].as_normal_mut().expect("should be a normal module");
-    module.meta.set(EcmaViewMeta::Included, true);
 
     for (stmt_idx, included) in is_stmt_included_vec[self.runtime.id()].iter_enumerated() {
       module.stmt_infos.get_mut(stmt_idx).is_included = *included;

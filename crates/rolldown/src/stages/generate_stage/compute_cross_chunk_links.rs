@@ -188,7 +188,7 @@ impl GenerateStage<'_> {
               {
                 // the the resolved module is not included in module graph, skip
                 // TODO: Is that possible that the module of the record is a external module?
-                if !importee_module.meta.is_included() {
+                if !self.link_output.metas[importee_module.idx].is_included {
                   return;
                 }
                 if matches!(rec.kind, ImportKind::DynamicImport) {

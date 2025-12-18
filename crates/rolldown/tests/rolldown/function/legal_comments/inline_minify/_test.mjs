@@ -6,10 +6,9 @@ import nodePath from 'node:path';
 const comments = [
   '//! Credit to Astro | MIT License',
   '/*! Bundle license information: */',
-  // FIXME(hyf0): Following comments are not preserved https://github.com/oxc-project/oxc/issues/11093
-  // '* @license Foo v1.0.0',
-  // '* @license Bar v11.0.0',
-  // '* MIT License',
+  '* @license Foo v1.0.0',
+  '* @license Bar v11.0.0',
+  '* MIT License',
 ]
 
 const content = nodeFs.readFileSync(nodePath.join(import.meta.dirname, 'dist/main.js'), 'utf-8');

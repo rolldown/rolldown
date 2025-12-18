@@ -461,7 +461,11 @@ export declare class ResolverFactory {
   static default(): ResolverFactory
   /** Clone the resolver using the same underlying cache. */
   cloneWithOptions(options: NapiResolveOptions): ResolverFactory
-  /** Clear the underlying cache. */
+  /**
+   * Clear the underlying cache.
+   *
+   * Warning: The caller must ensure that there're no ongoing resolution operations when calling this method. Otherwise, it may cause those operations to return an incorrect result.
+   */
   clearCache(): void
   /** Synchronously resolve `specifier` at an absolute path to a `directory`. */
   sync(directory: string, request: string): ResolveResult

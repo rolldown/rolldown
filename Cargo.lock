@@ -726,7 +726,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -755,6 +755,17 @@ name = "fancy-regex"
 version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "998b056554fbe42e03ae0e152895cd1a7e1002aec800fdc6635d20270260c46f"
+dependencies = [
+ "bit-set",
+ "regex-automata",
+ "regex-syntax",
+]
+
+[[package]]
+name = "fancy-regex"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72cf461f865c862bb7dc573f643dd6a2b6842f7c30b07882b56bd148cc2761b8"
 dependencies = [
  "bit-set",
  "regex-automata",
@@ -1271,7 +1282,7 @@ checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
 dependencies = [
  "hermit-abi",
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1336,7 +1347,7 @@ dependencies = [
  "bytecount",
  "data-encoding",
  "email_address",
- "fancy-regex",
+ "fancy-regex 0.16.2",
  "fraction",
  "getrandom",
  "idna",
@@ -1624,7 +1635,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -2139,9 +2150,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "11.15.0"
+version = "11.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "630a9355dd8fab35d4731f99e1d303499d70b55f7c5a996466050a0a29f4bc76"
+checksum = "82835b74b32841714c1342b1636992d19622d4ec19666b55edb4c654fb6eb719"
 dependencies = [
  "cfg-if",
  "fast-glob",
@@ -2166,11 +2177,11 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver_napi"
-version = "11.15.0"
+version = "11.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95cc51d217595c142c7819adaee037de7c6180606e1e65149a24393726ca0df0"
+checksum = "e0241660afc176ebf4dae4547f40f915b662a185ecb1200530f2ae4397e13d3c"
 dependencies = [
- "fancy-regex",
+ "fancy-regex 0.17.0",
  "napi",
  "napi-build",
  "napi-derive",
@@ -2480,7 +2491,7 @@ checksum = "2acd0b1e3a154e7c4610b9ab31491c32e9f47db2adc0c12047301f3bacc71597"
 dependencies = [
  "byteorder",
  "concurrent_lru",
- "fancy-regex",
+ "fancy-regex 0.16.2",
  "flate2",
  "pathdiff",
  "radix_trie",
@@ -3604,7 +3615,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -3666,7 +3677,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b55fb86dfd3a2f5f76ea78310a88f96c4ea21a3031f8d212443d56123fd0521"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4415,7 +4426,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]

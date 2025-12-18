@@ -76,7 +76,7 @@ pub mod bundler_options {
         TransformOptions as BundlerTransformOptions, TypeScriptOptions,
       },
       transform_options::{
-        JsxPreset, RawTransformOptions, TransformOptions, TransformOptionsInner,
+        JsxPreset, RawTransformOptions, TransformOptions, TransformOptionsInner, TsconfigResolver,
         merge_transform_options_with_tsconfig,
       },
       treeshake::{

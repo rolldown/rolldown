@@ -16,7 +16,6 @@ pub enum EventKind {
   MissingExportError = 7,
   MissingGlobalName = 8,
   MissingNameOptionForIifeExport = 9,
-  MissingNameOptionForUmdExportError = 10,
   MixedExports = 11,
   ParseError = 12,
   UnresolvedEntry = 13,
@@ -64,9 +63,6 @@ impl Display for EventKind {
       EventKind::MixedExports => write!(f, "MIXED_EXPORTS"),
       EventKind::MissingGlobalName => write!(f, "MISSING_GLOBAL_NAME"),
       EventKind::MissingNameOptionForIifeExport => write!(f, "MISSING_NAME_OPTION_FOR_IIFE_EXPORT"),
-      EventKind::MissingNameOptionForUmdExportError => {
-        write!(f, "MISSING_NAME_OPTION_FOR_UMD_EXPORT")
-      }
       EventKind::MissingExportError => write!(f, "MISSING_EXPORT"),
       EventKind::ParseError => write!(f, "PARSE_ERROR"),
       EventKind::UnresolvedEntry => write!(f, "UNRESOLVED_ENTRY"),

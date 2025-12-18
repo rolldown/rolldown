@@ -15,7 +15,6 @@ bitflags! {
     const MissingExportError = 1 << 7;
     const MissingGlobalName = 1 << 8;
     const MissingNameOptionForIifeExport = 1 << 9;
-    const MissingNameOptionForUmdExportError = 1 << 10;
     const MixedExports = 1 << 11;
     const ParseError = 1 << 12;
     const UnresolvedEntry = 1 << 13;

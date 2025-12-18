@@ -27,7 +27,6 @@ use super::events::invalid_option::{InvalidOption, InvalidOptionType};
 use super::events::json_parse::JsonParse;
 use super::events::missing_global_name::MissingGlobalName;
 use super::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
-use super::events::missing_name_option_for_umd_export::MissingNameOptionForUmdExport;
 use super::events::plugin_error::{CausedPlugin, PluginError};
 use super::events::plugin_timings::{PluginTimingInfo, PluginTimings};
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
@@ -150,12 +149,8 @@ impl BuildDiagnostic {
     Self::new_inner(MissingGlobalName { module_id, module_name, guessed_name })
   }
 
-  pub fn missing_name_option_for_iife_export() -> Self {
-    Self::new_inner(MissingNameOptionForIifeExport {})
-  }
-
-  pub fn missing_name_option_for_umd_export() -> Self {
-    Self::new_inner(MissingNameOptionForUmdExport {})
+  pub fn missing_name_option_for_iife_export(is_umd: bool) -> Self {
+    Self::new_inner(MissingNameOptionForIifeExport { is_umd })
   }
 
   pub fn illegal_identifier_as_name(identifier_name: ArcStr) -> Self {

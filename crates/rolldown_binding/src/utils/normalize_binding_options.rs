@@ -14,10 +14,10 @@ use crate::{
 };
 use napi::bindgen_prelude::{Either, Either3, FnArgs};
 use rolldown::{
-  AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
-  ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal, MatchGroup,
-  MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat, Platform,
-  RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename, TsConfig,
+  AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerConfig,
+  BundlerOptions, ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal,
+  MatchGroup, MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat,
+  Platform, RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -31,12 +31,6 @@ use url::Url;
 #[cfg(not(target_family = "wasm"))]
 use crate::{options::plugin::ParallelJsPlugin, worker_manager::WorkerManager};
 use std::sync::Arc;
-
-#[cfg_attr(target_family = "wasm", allow(unused))]
-pub struct NormalizeBindingOptionsReturn {
-  pub bundler_options: BundlerOptions,
-  pub plugins: Vec<SharedPluginable>,
-}
 
 fn normalize_generated_code_option(
   value: BindingGeneratedCodeOptions,
@@ -159,7 +153,7 @@ pub fn normalize_binding_options(
     crate::parallel_js_plugin_registry::PluginValues,
   >,
   #[cfg(not(target_family = "wasm"))] worker_manager: Option<WorkerManager>,
-) -> napi::Result<NormalizeBindingOptionsReturn> {
+) -> napi::Result<BundlerConfig> {
   let cwd = PathBuf::from(input_options.cwd);
 
   let external = input_options.external.map(|external| match external {
@@ -565,5 +559,5 @@ pub fn normalize_binding_options(
     })
     .collect::<Vec<_>>();
 
-  Ok(NormalizeBindingOptionsReturn { bundler_options, plugins })
+  Ok(BundlerConfig::new(bundler_options, plugins))
 }

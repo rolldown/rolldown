@@ -1,11 +1,13 @@
-use rolldown::{Bundler, BundlerBuilder};
+use rolldown::BundlerConfig;
 
 use crate::{
   types::binding_bundler_options::BindingBundlerOptions,
   utils::normalize_binding_options::normalize_binding_options,
 };
 
-pub fn create_bundler_from_binding_options(option: BindingBundlerOptions) -> napi::Result<Bundler> {
+pub fn create_bundler_options_from_binding_options(
+  option: BindingBundlerOptions,
+) -> napi::Result<BundlerConfig> {
   let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;
 
   #[cfg(not(target_family = "wasm"))]
@@ -23,25 +25,12 @@ pub fn create_bundler_from_binding_options(option: BindingBundlerOptions) -> nap
     None
   };
 
-  let ret = normalize_binding_options(
+  normalize_binding_options(
     input_options,
     output_options,
     #[cfg(not(target_family = "wasm"))]
     parallel_plugins_map,
     #[cfg(not(target_family = "wasm"))]
     worker_manager,
-  )?;
-
-  let bundler_builder =
-    BundlerBuilder::default().with_options(ret.options).with_plugins(ret.plugins);
-
-  // TODO: improve the following error message
-  let bundler = bundler_builder.build().map_err(|err| {
-    napi::Error::new(
-      napi::Status::GenericFailure,
-      err.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
-    )
-  })?;
-
-  Ok(bundler)
+  )
 }

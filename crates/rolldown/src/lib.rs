@@ -31,7 +31,7 @@ pub use crate::{
   },
   bundler::Bundler,
   bundler_builder::BundlerBuilder,
-  types::bundle_output::BundleOutput,
+  types::{bundle_output::BundleOutput, bundler_config::BundlerConfig},
   watch::event::{BundleEvent, WatcherEvent},
   watcher::Watcher,
 };

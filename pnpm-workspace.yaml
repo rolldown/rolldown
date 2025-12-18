@@ -4,7 +4,6 @@ packages:
   - packages/test-dev-server/tests
   - packages/test-dev-server/tests/playground/hmr-full-bundle-mode
   - packages/test-dev-server/tests/fixtures/*
-  - packages/test-dev-server/tests/tmp/fixtures/*
   - packages/rolldown/tests/fixtures/resolve/issue-5846
   - packages/rolldown/tests/fixtures/resolve/issue-5846-2
   - docs

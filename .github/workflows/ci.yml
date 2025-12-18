@@ -125,6 +125,36 @@ jobs:
       os: ubuntu-latest
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
+  node-dev-server-test-windows:
+    needs: [changes, build-rolldown-windows]
+    uses: ./.github/workflows/reusable-node-dev-server-test.yml
+    if: |
+      always() &&
+      (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
+    with:
+      os: windows-latest
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
+  node-dev-server-test-macos:
+    needs: [changes, build-rolldown-macos]
+    uses: ./.github/workflows/reusable-node-dev-server-test.yml
+    if: |
+      always() &&
+      (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
+    with:
+      os: macos-latest
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
+  node-dev-server-test-ubuntu:
+    needs: [changes, build-rolldown-ubuntu]
+    uses: ./.github/workflows/reusable-node-dev-server-test.yml
+    if: |
+      always() &&
+      (needs.build-rolldown-ubuntu.result == 'success' || needs.build-rolldown-ubuntu.result == 'skipped')
+    with:
+      os: ubuntu-latest
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
   build-rolldown-wasi:
     needs: changes
     uses: ./.github/workflows/reusable-wasi-build.yml

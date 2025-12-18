@@ -114,9 +114,11 @@ impl BuildDiagnostic {
     Self::new_inner(CircularReexport { importer_id, imported_specifier })
   }
 
+  #[expect(clippy::too_many_arguments)]
   pub fn missing_export(
     importer: String,
     stable_importer: String,
+    importee: String,
     stable_importee: String,
     importer_source: ArcStr,
     imported_specifier: String,
@@ -126,6 +128,7 @@ impl BuildDiagnostic {
     Self::new_inner(MissingExport {
       importer,
       stable_importer,
+      importee,
       stable_importee,
       importer_source,
       imported_specifier,

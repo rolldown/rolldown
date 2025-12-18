@@ -350,15 +350,11 @@
 ### The error/warning information is not compatible with rollup
  - rollup@function@warn-on-auto-named-default-exports: warns if default and named exports are used in auto mode (should be `MIXED_EXPORTS` but is `MIXED_EXPORT`)
  - rollup@function@error-missing-umd-name: throws an error if no name is provided for a UMD bundle (should be `MISSING_NAME_OPTION_FOR_IIFE_EXPORT` but is `MISSING_NAME_OPTION_FOR_UMD_EXPORT`)
- - rollup@function@default-not-reexported: default export is not re-exported with export * (`exporter` propery is missing in `MISSING_EXPORT` error)
  - rollup@function@banner-and-footer: adds a banner/footer (expects `ADDON_ERROR` but got `PLUGIN_ERROR`)
  - rollup@function@conflicting-reexports@named-import: throws when a conflicting binding is imported via a named import (expects `AMBIGUOUS_EXTERNAL_NAMESPACES` but got `MISSING_EXPORT`)
- - rollup@function@reexport-missing-error: reexporting a missing identifier should print an error (`exporter` propery is missing in `MISSING_EXPORT` error)
  - rollup@function@logging@handle-logs-in-plugins: allows plugins to read and filter logs
  - rollup@hooks@supports renderError hook
  - rollup@function@ast-validations@redeclare-catch-scope-parameter-var-outside-conflict: throws when redeclaring a parameter of a catch scope as a var that conflicts with an outside binding (unknown)
- - rollup@function@error-after-transform-should-throw-correct-location: error after transform should throw with correct location of file (`exporter` property is missing in `MISSING_EXPORT` error)
- - rollup@function@import-of-unexported-fails: marking an imported, but unexported, identifier should throw (`exporter` property is missing in `MISSING_EXPORT` error)
  - rollup@function@import-not-at-top-level-fails: disallows non-top-level imports (`cause` property is missing)
  - rollup@function@export-not-at-top-level-fails: disallows non-top-level exports (`cause` property is missing)
 

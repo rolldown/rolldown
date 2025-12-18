@@ -723,6 +723,7 @@ impl BindImportsAndExportsContext<'_> {
           let mut diagnostic = BuildDiagnostic::missing_export(
             module.id.to_string(),
             module.stable_id.clone(),
+            importee.id().to_string(),
             importee.stable_id().to_string(),
             module.source.clone(),
             named_import.imported.to_string(),

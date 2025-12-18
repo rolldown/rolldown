@@ -1,4 +1,4 @@
-name: Node Test
+name: Node Dev Server Test
 
 permissions: {}
 
@@ -14,10 +14,10 @@ on:
 
 jobs:
   run:
-    name: Node Test
+    name: Node Dev Server Test
     if: ${{ inputs.changed }}
     runs-on: ${{ inputs.os }}
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
     steps:
@@ -45,9 +45,8 @@ jobs:
       - name: Type Check
         run: pnpm type-check
 
-      - name: Node Type Test
-        run: |
-          pnpm run --filter rolldown-tests test:types
+      - name: Install Playwright
+        run: pnpm playwright install chromium
 
       - name: Setup Node20 For Testing
         uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
@@ -55,15 +54,8 @@ jobs:
           node-version: 20
           package-manager-cache: false
 
-      - name: Node Test For Node20
-        run: |
-          pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
-
-      - name: Rollup Test For Node20
-        run: pnpm run --filter rollup-tests test
-
-      - name: Build Examples For Node20
-        run: pnpm --filter '@example/**' build
+      - name: Dev Server Test For Node20
+        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
 
       - name: Setup Node22 For Testing
         uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
@@ -71,15 +63,8 @@ jobs:
           node-version: 22
           package-manager-cache: false
 
-      - name: Node Test For Node22
-        run: |
-          pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
-
-      - name: Rollup Test For Node22
-        run: pnpm run --filter rollup-tests test
-
-      - name: Build Examples For Node22
-        run: pnpm --filter '@example/**' build
+      - name: Dev Server Test For Node22
+        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
 
       - name: Setup Node24 For Testing
         uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
@@ -87,12 +72,5 @@ jobs:
           node-version: 24
           package-manager-cache: false
 
-      - name: Node Test For Node24
-        run: |
-          pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
-
-      - name: Rollup Test For Node24
-        run: pnpm run --filter rollup-tests test
-
-      - name: Build Examples For Node24
-        run: pnpm --filter '@example/**' build
+      - name: Dev Server Test For Node24
+        run: pnpm run --filter '@rolldown/test-dev-server-tests' test

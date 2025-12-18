@@ -241,11 +241,6 @@ impl LinkStage<'_> {
       .filter_map(|(m, meta)| m.as_normal_mut().map(|m| (m, meta)))
       .for_each(|(module, meta)| {
         let idx = module.idx;
-        is_stmt_info_included_vec[module.idx].iter_enumerated().for_each(
-          |(stmt_info_id, is_included)| {
-            module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
-          },
-        );
         let mut normalized_runtime_helper = RuntimeHelper::default();
         for (index, stmt_info_idxs) in module.depended_runtime_helper.iter().enumerate() {
           if stmt_info_idxs.is_empty() {
@@ -297,7 +292,10 @@ impl LinkStage<'_> {
         .modules
         .iter()
         .filter_map(Module::as_normal)
-        .map(|m| m.to_debug_normal_module_for_tree_shaking(self.metas[m.idx].is_included))
+        .map(|m| m.to_debug_normal_module_for_tree_shaking(
+          self.metas[m.idx].is_included,
+          &self.metas[m.idx].stmt_info_included
+        ))
         .collect::<Vec<_>>()
     );
   }
@@ -495,7 +493,7 @@ impl LinkStage<'_> {
   }
 
   pub fn include_runtime_symbol(
-    &mut self,
+    &self,
     is_stmt_included_vec: &mut IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
     is_module_included_vec: &mut IndexVec<ModuleIdx, bool>,
     module_namespace_included_reason: &mut IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>,
@@ -530,13 +528,6 @@ impl LinkStage<'_> {
       let index = helper.bits().trailing_zeros() as usize;
       let name = RUNTIME_HELPER_NAMES[index];
       include_symbol(context, self.runtime.resolve_symbol(name), SymbolIncludeReason::Normal);
-    }
-
-    let module =
-      self.module_table[self.runtime.id()].as_normal_mut().expect("should be a normal module");
-
-    for (stmt_idx, included) in is_stmt_included_vec[self.runtime.id()].iter_enumerated() {
-      module.stmt_infos.get_mut(stmt_idx).is_included = *included;
     }
   }
 }

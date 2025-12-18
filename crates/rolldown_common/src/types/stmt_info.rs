@@ -134,7 +134,6 @@ pub struct StmtInfo {
   /// Top level symbols referenced by this statement.
   pub referenced_symbols: Vec<SymbolOrMemberExprRef>,
   pub side_effect: SideEffectDetail,
-  pub is_included: bool,
   pub import_records: Vec<ImportRecordIdx>,
   #[cfg(debug_assertions)]
   pub debug_label: Option<String>,
@@ -150,9 +149,12 @@ const _: () = {
 };
 
 impl StmtInfo {
-  pub fn to_debug_stmt_info_for_tree_shaking(&self) -> DebugStmtInfoForTreeShaking {
+  pub fn to_debug_stmt_info_for_tree_shaking(
+    &self,
+    is_included: bool,
+  ) -> DebugStmtInfoForTreeShaking {
     DebugStmtInfoForTreeShaking {
-      is_included: self.is_included,
+      is_included,
       side_effect: self.side_effect,
       #[cfg(debug_assertions)]
       source: self.debug_label.clone().unwrap_or_else(|| "<Noop>".into()),

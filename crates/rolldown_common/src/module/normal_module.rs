@@ -5,7 +5,7 @@ use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
   AssetView, DebugStmtInfoForTreeShaking, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx,
   ImportRecordMeta, LegalComments, ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions,
-  RawImportRecord, ResolvedId, StmtInfo,
+  RawImportRecord, ResolvedId, StmtInfoIdx,
 };
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -59,6 +59,7 @@ impl NormalModule {
   pub fn to_debug_normal_module_for_tree_shaking(
     &self,
     is_included: bool,
+    stmt_info_included: &IndexVec<StmtInfoIdx, bool>,
   ) -> DebugNormalModuleForTreeShaking {
     DebugNormalModuleForTreeShaking {
       id: self.repr_name.clone(),
@@ -66,8 +67,8 @@ impl NormalModule {
       stmt_infos: self
         .ecma_view
         .stmt_infos
-        .iter()
-        .map(StmtInfo::to_debug_stmt_info_for_tree_shaking)
+        .iter_enumerated()
+        .map(|(idx, stmt)| stmt.to_debug_stmt_info_for_tree_shaking(stmt_info_included[idx]))
         .collect(),
     }
   }

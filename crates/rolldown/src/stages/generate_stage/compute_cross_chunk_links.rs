@@ -218,8 +218,9 @@ impl GenerateStage<'_> {
                 .push((module.idx, import.clone()));
             }
           });
-          module.stmt_infos.iter().for_each(|stmt_info| {
-            if !stmt_info.is_included {
+          let linking_info = &self.link_output.metas[module.idx];
+          module.stmt_infos.iter_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
+            if !linking_info.stmt_info_included[stmt_info_idx] {
               return;
             }
             stmt_info.declared_symbols.iter().for_each(|declared| {

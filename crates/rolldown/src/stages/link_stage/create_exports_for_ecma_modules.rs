@@ -73,7 +73,6 @@ impl LinkStage<'_> {
             declared_symbols: vec![TaggedSymbolRef::Normal(*symbol_ref)],
             referenced_symbols: vec![],
             side_effect: false.into(),
-            is_included: false,
             import_records: Vec::new(),
             #[cfg(debug_assertions)]
             debug_label: None,
@@ -123,7 +122,6 @@ impl LinkStage<'_> {
             declared_symbols,
             referenced_symbols,
             side_effect: false.into(),
-            is_included: false,
             import_records: Vec::new(),
             #[cfg(debug_assertions)]
             debug_label: None,

@@ -5867,6 +5867,10 @@ expression: output
 
 - main-!~{000}~.js => main-Cy0J5LeM.js
 
+# tests/rolldown/topics/hmr/cjs_no_export
+
+- main-!~{000}~.js => main-Ccc7i4mM.js
+
 # tests/rolldown/topics/hmr/delete_file_not_used_anymore
 
 - main-!~{000}~.js => main-BFT5vJXs.js
@@ -5884,6 +5888,10 @@ expression: output
 # tests/rolldown/topics/hmr/error_recovery/from_rebuild_syntax_error
 
 - main-!~{000}~.js => main-B-6OWCri.js
+
+# tests/rolldown/topics/hmr/esm_no_export
+
+- main-!~{000}~.js => main-CFbz8g8Q.js
 
 # tests/rolldown/topics/hmr/export_star
 

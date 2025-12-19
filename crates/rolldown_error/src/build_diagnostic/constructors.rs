@@ -224,19 +224,17 @@ impl BuildDiagnostic {
   pub fn oxc_parse_error(
     source: ArcStr,
     id: String,
-    stable_id: String,
     error_help: String,
     error_message: String,
     error_labels: Vec<LabeledSpan>,
   ) -> Self {
-    Self::new_inner(ParseError { source, id, stable_id, error_help, error_message, error_labels })
+    Self::new_inner(ParseError { source, id, error_help, error_message, error_labels })
   }
 
   pub fn from_oxc_diagnostics<T>(
     diagnostics: T,
     source: &ArcStr,
     id: &str,
-    stable_id: &str,
     severity: &Severity,
   ) -> Vec<Self>
   where
@@ -248,7 +246,6 @@ impl BuildDiagnostic {
         let diagnostic = BuildDiagnostic::oxc_parse_error(
           source.clone(),
           id.to_string(),
-          stable_id.to_string(),
           error.help.take().unwrap_or_default().into(),
           error.message.to_string(),
           error.labels.take().unwrap_or_default(),

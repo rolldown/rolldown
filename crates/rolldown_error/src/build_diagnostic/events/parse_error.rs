@@ -11,7 +11,6 @@ use super::BuildEvent;
 pub struct ParseError {
   pub(crate) source: ArcStr,
   pub(crate) id: String,
-  pub(crate) stable_id: String,
   pub(crate) error_help: String,
   pub(crate) error_message: String,
   pub(crate) error_labels: Vec<LabeledSpan>,
@@ -30,10 +29,10 @@ impl BuildEvent for ParseError {
     format!("Parse failed, got: {:?}", self.error_message)
   }
 
-  fn on_diagnostic(&self, diagnostic: &mut Diagnostic, _opts: &DiagnosticOptions) {
+  fn on_diagnostic(&self, diagnostic: &mut Diagnostic, opts: &DiagnosticOptions) {
     diagnostic.title.clone_from(&self.error_message);
 
-    let file_id = diagnostic.add_file(self.stable_id.clone(), self.source.clone());
+    let file_id = diagnostic.add_file(opts.stabilize_path(&self.id), self.source.clone());
 
     self.error_labels.iter().for_each(|label| {
       let offset = u32::try_from(label.offset()).unwrap();

@@ -11,9 +11,7 @@ use oxc::transformer::Transformer;
 use rolldown_common::{BundlerTransformOptions, ModuleType};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, Severity};
 use rolldown_plugin::{HookUsage, Plugin, SharedTransformPluginContext};
-use rolldown_utils::{
-  concat_string, pattern_filter::StringOrRegex, stabilize_id::stabilize_id, url::clean_url,
-};
+use rolldown_utils::{concat_string, pattern_filter::StringOrRegex, url::clean_url};
 
 #[derive(Debug, Default)]
 pub struct ViteTransformPlugin {
@@ -63,13 +61,11 @@ impl Plugin for ViteTransformPlugin {
 
     let allocator = oxc::allocator::Allocator::default();
     let ret = Parser::new(&allocator, args.code, source_type).parse();
-    let stable_id = stabilize_id(args.id, &self.root);
     if ret.panicked || !ret.errors.is_empty() {
       return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
         ret.errors,
         &ArcStr::from(args.code.as_str()),
         args.id,
-        &stable_id,
         &Severity::Error,
       )))?;
     }
@@ -83,7 +79,6 @@ impl Plugin for ViteTransformPlugin {
         transformer_return.errors,
         &ArcStr::from(args.code.as_str()),
         args.id,
-        &stable_id,
         &Severity::Error,
       )))?;
     }

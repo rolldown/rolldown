@@ -67,19 +67,12 @@ impl PreProcessEcmaAst {
       semantic_ret.errors.into_iter().partition(|w| w.severity == OxcSeverity::Error);
 
     let mut warnings = if errors.is_empty() {
-      BuildDiagnostic::from_oxc_diagnostics(
-        warnings,
-        &source,
-        resolved_id,
-        stable_id,
-        &Severity::Warning,
-      )
+      BuildDiagnostic::from_oxc_diagnostics(warnings, &source, resolved_id, &Severity::Warning)
     } else {
       return Err(BuildDiagnostic::from_oxc_diagnostics(
         errors,
         &source,
         resolved_id,
-        stable_id,
         &Severity::Error,
       ))?;
     };
@@ -124,7 +117,6 @@ impl PreProcessEcmaAst {
             errors,
             &source,
             resolved_id,
-            stable_id,
             &Severity::Error,
           )));
         }

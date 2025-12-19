@@ -12,7 +12,7 @@ use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 #[cfg(test)]
 mod test;
 pub fn filterable(source: &str) -> bool {
-  let ast = EcmaCompiler::parse("<Noop>", "<Noop>", source, SourceType::mjs()).unwrap();
+  let ast = EcmaCompiler::parse("<Noop>", source, SourceType::mjs()).unwrap();
   let semantic = EcmaAst::make_semantic(ast.program(), true);
   let mut analyzer = FilterableAnalyzer::new(&semantic);
   analyzer.visit_program(ast.program());

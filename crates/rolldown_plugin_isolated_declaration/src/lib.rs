@@ -57,7 +57,6 @@ impl Plugin for IsolatedDeclarationPlugin {
           ret.errors,
           &ArcStr::from(ret.program.source_text),
           args.id,
-          args.stable_id,
           &Severity::Error,
         )))?;
       }

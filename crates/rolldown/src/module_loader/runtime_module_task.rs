@@ -178,7 +178,7 @@ impl RuntimeModuleTask {
   fn make_ecma_ast(&self, filename: &str, source: &ArcStr) -> BuildResult<(EcmaAst, ScanResult)> {
     let source_type = SourceType::default();
 
-    let mut ast = EcmaCompiler::parse(filename, filename, source, source_type)?;
+    let mut ast = EcmaCompiler::parse(filename, source.clone(), source_type)?;
 
     ast.program.with_mut(|fields| {
       let mut pre_processor = PreProcessor::new(fields.allocator, false);

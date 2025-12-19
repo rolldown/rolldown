@@ -7,6 +7,7 @@ export default defineConfig({
     include: ['hmr-full-bundle-mode.spec.ts'],
     environment: 'node',
     setupFiles: ['./vitest-setup-playwright.ts'],
+    retry: process.env.CI ? 3 : 0,
 
     // Increase timeout for HMR tests (server startup + file watching)
     testTimeout: 90000,

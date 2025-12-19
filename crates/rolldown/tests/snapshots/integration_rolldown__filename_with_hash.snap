@@ -6376,6 +6376,34 @@ expression: output
 
 - main-!~{000}~.js => main-Fv4vYntb.js
 
+# tests/rolldown/warnings/ineffective_dynamic_import/basic
+
+- main-!~{000}~.js => main-BfsH6vuz.js
+- foo-!~{001}~.js => foo-Cx4t-rYt.js
+
+# tests/rolldown/warnings/ineffective_dynamic_import/common_chunk
+
+- entry1-!~{000}~.js => entry1-BiG1aOID.js
+- entry2-!~{001}~.js => entry2-DBIOlrG3.js
+- lib-!~{004}~.js => lib-CBwtCyeH.js
+- lib-!~{002}~.js => lib-yuD_hjhb.js
+
+# tests/rolldown/warnings/ineffective_dynamic_import/multi_entry
+
+- entry1-!~{000}~.js => entry1-CrLlxEeX.js
+- entry2-!~{001}~.js => entry2-C22KpFEO.js
+- shared-!~{002}~.js => shared-DdEalJcg.js
+
+# tests/rolldown/warnings/ineffective_dynamic_import/nested
+
+- main-!~{000}~.js => main-NU3xivop.js
+- shared-!~{001}~.js => shared-ByUMM51k.js
+
+# tests/rolldown/warnings/ineffective_dynamic_import/no_warning
+
+- main-!~{000}~.js => main-DQiH8qw0.js
+- lazy-!~{001}~.js => lazy-ClNkGY4G.js
+
 # tests/rolldown/warnings/invalid_option/advanced_chunks_without_groups
 
 - main-!~{000}~.js => main-B7ZfmDK1.js

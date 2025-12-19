@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) shared.js is dynamically imported by moduleA.js but also statically imported by moduleA.js, dynamic import will not move module into another chunk.
+
+
+```
+
+# Assets
+
+## main.js
+
+```js
+//#region shared.js
+const shared = "shared value";
+
+//#endregion
+//#region moduleA.js
+import("./shared.js").then((mod) => {
+	console.log("Module A dynamic import:", mod.shared);
+});
+const foo = shared + " from A";
+
+//#endregion
+//#region main.js
+console.log("Main:", foo);
+
+//#endregion
+export { shared as t };
+```
+
+## shared.js
+
+```js
+import { t as shared } from "./main.js";
+
+export { shared };
+```

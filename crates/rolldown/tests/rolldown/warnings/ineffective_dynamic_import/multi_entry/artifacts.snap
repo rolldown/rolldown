@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry1.js
+
+```js
+//#region shared.js
+const data = "shared data";
+
+//#endregion
+//#region entry1.js
+console.log("Entry 1:", data);
+
+//#endregion
+export { data as t };
+```
+
+## entry2.js
+
+```js
+//#region entry2.js
+import("./shared.js").then((mod) => {
+	console.log("Entry 2 dynamic:", mod.data);
+});
+
+//#endregion
+```
+
+## shared.js
+
+```js
+import { t as data } from "./entry1.js";
+
+export { data };
+```

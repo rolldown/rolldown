@@ -71,6 +71,33 @@ export { viteManifestPlugin } from './builtin-plugin/vite-manifest-plugin';
 
 // `__volume` and `__fs` only exist in `rolldown-binding.wasi-browser.js`, so we need to use namespace import to prevent static import error.
 import * as binding from './binding.cjs';
+/**
+ * In-memory file system for browser builds.
+ *
+ * This is a re-export of the {@link https://github.com/streamich/memfs | memfs} package used by the WASI runtime.
+ * It allows you to read and write files to a virtual filesystem when using rolldown in browser environments.
+ *
+ * - `fs`: A Node.js-compatible filesystem API (`IFs` from memfs)
+ * - `volume`: The underlying `Volume` instance that stores the filesystem state
+ *
+ * Returns `undefined` in Node.js builds (only available in browser builds via `@rolldown/browser`).
+ *
+ * @example
+ * ```typescript
+ * import { memfs } from 'rolldown/experimental';
+ *
+ * // Write files to virtual filesystem before bundling
+ * memfs?.volume.fromJSON({
+ *   '/src/index.js': 'export const foo = 42;',
+ *   '/package.json': '{"name": "my-app"}'
+ * });
+ *
+ * // Read files from the virtual filesystem
+ * const content = memfs?.fs.readFileSync('/src/index.js', 'utf8');
+ * ```
+ *
+ * @see {@link https://github.com/streamich/memfs} for more information on the memfs API.
+ */
 export const memfs: { fs: any; volume: any } | undefined =
   import.meta.browserBuild
     // @ts-expect-error - __fs and __volume are only available in browser builds

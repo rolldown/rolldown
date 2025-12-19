@@ -76,6 +76,10 @@ impl BuildDiagnostic {
     diagnostic
   }
 
+  pub fn to_message_with(&self, opts: &DiagnosticOptions) -> String {
+    self.inner.message(opts)
+  }
+
   #[cfg(feature = "napi")]
   pub fn downcast_napi_error(&self) -> Result<&napi::Error, &Self> {
     self.inner.as_napi_error().ok_or(self)

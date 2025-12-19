@@ -362,7 +362,6 @@
  - rollup@function@conflicting-reexports@named-import-external: warns when a conflicting binding is imported via a named import from external namespaces (`AMBIGUOUS_EXTERNAL_NAMESPACES`, `UNUSED_EXTERNAL_IMPORT` warning)
  - rollup@function@cycles-pathological-2: resolves even more pathological cyclical dependencies gracefully
  - rollup@function@circular-missed-reexports: handles circular reexports (`MISSING_EXPORT` should be warning instead of error)
- - rollup@function@circular-missed-reexports-2: handles circular reexports (`exporter` property is missing for `CIRCULAR_REEXPORT` error)
  - rollup@function@iife-code-splitting: throws when generating multiple chunks for an IIFE build (`INVALID_OPTION` error)
  - rollup@function@inline-imports-with-multiple-array: Having multiple inputs in an array is not supported when inlining dynamic imports (expected `INVALID_OPTION`, but got `GenericFailure`)
  - rollup@function@inline-imports-with-multiple-object: Having multiple inputs in an object is not supported when inlining dynamic imports (expected `INVALID_OPTION`, but got `GenericFailure`)
@@ -403,7 +402,6 @@
  - rollup@function@emit-file@emit-from-output-options: throws when trying to emit files from the outputOptions hook (`CANNOT_EMIT_FROM_OPTIONS_HOOK` error)
  - rollup@function@cannot-call-external-namespace: warns if code calls an external namespace (`CANNOT_CALL_NAMESPACE` warning)
  - rollup@function@cannot-call-internal-namespace: warns if code calls an internal namespace (`CANNOT_CALL_NAMESPACE` warning)
- - rollup@function@circular-reexport: throws proper error for circular reexports (`exporter` property is missing for `CIRCULAR_REEXPORT` error)
  - rollup@function@conflicting-reexports@namespace-import: warns when a conflicting binding is imported via a namespace import (`MISSING_EXPORT` warning)
  - rollup@function@cannot-resolve-sourcemap-warning: handles when a sourcemap cannot be resolved in a warning (`SOURCEMAP_ERROR` warning)
  - rollup@function@adds-json-hint-for-missing-export-if-is-json-file: should provide json hint when importing a no export json file (`pluginCode":"VALIDATION_ERROR"` expected, but got `pluginCode:"InvalidArg"`)

@@ -8,7 +8,7 @@ use anyhow::anyhow;
 use cow_utils::CowUtils;
 use regex::Regex;
 use rolldown::BundlerOptions;
-use rolldown_error::{BuildDiagnostic, EventKind};
+use rolldown_error::{BuildDiagnostic, DiagnosticOptions, EventKind};
 use rolldown_testing::integration_test::IntegrationTest;
 use rolldown_testing::test_config::TestMeta;
 use rustc_hash::FxHashSet;
@@ -495,8 +495,14 @@ fn generate_snapshot(results: &[TestResult]) -> String {
       TestOutcome::BundleError(diagnostics) => {
         _ = writeln!(snapshot, "Actual:");
         // Sort diagnostics for deterministic output
-        let mut normalized_diagnostics: Vec<_> =
-          diagnostics.iter().map(|d| normalize_diagnostic_output(&d.to_string())).collect();
+        let mut normalized_diagnostics: Vec<_> = diagnostics
+          .iter()
+          .map(|d| {
+            normalize_diagnostic_output(&d.to_message_with(&DiagnosticOptions {
+              cwd: result.path.parent().unwrap_or(&result.path).to_path_buf(),
+            }))
+          })
+          .collect();
         normalized_diagnostics.sort();
         for normalized in normalized_diagnostics {
           _ = writeln!(snapshot, "{normalized}");

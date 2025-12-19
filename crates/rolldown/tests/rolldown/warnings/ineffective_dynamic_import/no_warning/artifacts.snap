@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy.js
+
+```js
+//#region lazy.js
+const data = "lazy data";
+
+//#endregion
+export { data };
+```
+
+## main.js
+
+```js
+//#region main.js
+import("./lazy.js").then((mod) => {
+	console.log("Lazy loaded:", mod.data);
+});
+console.log("Main loaded");
+
+//#endregion
+```

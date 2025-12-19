@@ -1,6 +1,17 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) /Users/zxc/Code/rolldown/crates/rolldown/tests/esbuild/default/this_with_es6_syntax/dummy.js is dynamically imported by /Users/zxc/Code/rolldown/crates/rolldown/tests/esbuild/default/this_with_es6_syntax/es6-expr-import-dynamic.js, /Users/zxc/Code/rolldown/crates/rolldown/tests/esbuild/default/this_with_es6_syntax/es6-import-dynamic.js but also statically imported by /Users/zxc/Code/rolldown/crates/rolldown/tests/esbuild/default/this_with_es6_syntax/es6-import-stmt.js, /Users/zxc/Code/rolldown/crates/rolldown/tests/esbuild/default/this_with_es6_syntax/es6-export-clause-from.js, /Users/zxc/Code/rolldown/crates/rolldown/tests/esbuild/default/this_with_es6_syntax/es6-export-star-as.js, /Users/zxc/Code/rolldown/crates/rolldown/tests/esbuild/default/this_with_es6_syntax/es6-export-import-assign.ts, /Users/zxc/Code/rolldown/crates/rolldown/tests/esbuild/default/this_with_es6_syntax/es6-export-star.js, dynamic import will not move module into another chunk.
+
+
+```
+
 # Assets
 
 ## entry.js

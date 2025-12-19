@@ -1,6 +1,26 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) /Users/zxc/Code/rolldown/crates/rolldown/tests/rolldown/code_splitting/issue_2786/share.js is dynamically imported by /Users/zxc/Code/rolldown/crates/rolldown/tests/rolldown/code_splitting/issue_2786/main.js but also statically imported by /Users/zxc/Code/rolldown/crates/rolldown/tests/rolldown/code_splitting/issue_2786/main.js, dynamic import will not move module into another chunk.
+
+
+```
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) /Users/zxc/Code/rolldown/crates/rolldown/tests/rolldown/code_splitting/issue_2786/share.json is dynamically imported by /Users/zxc/Code/rolldown/crates/rolldown/tests/rolldown/code_splitting/issue_2786/main.js but also statically imported by /Users/zxc/Code/rolldown/crates/rolldown/tests/rolldown/code_splitting/issue_2786/main.js, dynamic import will not move module into another chunk.
+
+
+```
+
 # Assets
 
 ## main.js

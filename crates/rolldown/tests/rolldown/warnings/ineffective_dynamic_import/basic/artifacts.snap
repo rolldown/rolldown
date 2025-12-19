@@ -1,0 +1,40 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) /Users/zxc/Code/rolldown/crates/rolldown/tests/rolldown/warnings/ineffective_dynamic_import/basic/foo.js is dynamically imported by /Users/zxc/Code/rolldown/crates/rolldown/tests/rolldown/warnings/ineffective_dynamic_import/basic/main.js but also statically imported by /Users/zxc/Code/rolldown/crates/rolldown/tests/rolldown/warnings/ineffective_dynamic_import/basic/main.js, dynamic import will not move module into another chunk.
+
+
+```
+
+# Assets
+
+## foo.js
+
+```js
+import { t as foo } from "./main.js";
+
+export { foo };
+```
+
+## main.js
+
+```js
+//#region foo.js
+const foo = "Hello from foo";
+
+//#endregion
+//#region main.js
+import("./foo.js").then((mod) => {
+	console.log("Dynamic import:", mod.foo);
+});
+console.log("Static import:", foo);
+
+//#endregion
+export { foo as t };
+```

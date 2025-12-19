@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) /Users/zxc/Code/rolldown/crates/rolldown/tests/rolldown/warnings/ineffective_dynamic_import/nested/shared.js is dynamically imported by /Users/zxc/Code/rolldown/crates/rolldown/tests/rolldown/warnings/ineffective_dynamic_import/nested/moduleA.js but also statically imported by /Users/zxc/Code/rolldown/crates/rolldown/tests/rolldown/warnings/ineffective_dynamic_import/nested/moduleA.js, dynamic import will not move module into another chunk.
+
+
+```
+
+# Assets
+
+## main.js
+
+```js
+//#region shared.js
+const shared = "shared value";
+
+//#endregion
+//#region moduleA.js
+import("./shared.js").then((mod) => {
+	console.log("Module A dynamic import:", mod.shared);
+});
+const foo = shared + " from A";
+
+//#endregion
+//#region main.js
+console.log("Main:", foo);
+
+//#endregion
+export { shared as t };
+```
+
+## shared.js
+
+```js
+import { t as shared } from "./main.js";
+
+export { shared };
+```

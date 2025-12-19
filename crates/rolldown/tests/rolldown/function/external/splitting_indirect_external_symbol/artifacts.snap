@@ -1,6 +1,17 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) /Users/zxc/Code/rolldown/crates/rolldown/tests/rolldown/function/external/splitting_indirect_external_symbol/indirect.js is dynamically imported by /Users/zxc/Code/rolldown/crates/rolldown/tests/rolldown/function/external/splitting_indirect_external_symbol/main.js but also statically imported by /Users/zxc/Code/rolldown/crates/rolldown/tests/rolldown/function/external/splitting_indirect_external_symbol/main.js, dynamic import will not move module into another chunk.
+
+
+```
+
 # Assets
 
 ## indirect.js

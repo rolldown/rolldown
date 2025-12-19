@@ -492,10 +492,10 @@ const OnwarnSchema = v.pipe(
 const DevModeSchema = v.union([
   v.boolean(),
   v.strictObject({
-    new: v.optional(v.boolean()),
     port: v.optional(v.number()),
     host: v.optional(v.string()),
     implement: v.optional(v.string()),
+    lazy: v.optional(v.boolean()),
   }),
 ]);
 

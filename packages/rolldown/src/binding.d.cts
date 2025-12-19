@@ -1765,6 +1765,7 @@ export interface BindingExperimentalDevModeOptions {
   host?: string
   port?: number
   implement?: string
+  lazy?: boolean
 }
 
 export interface BindingExperimentalOptions {

@@ -64,11 +64,12 @@ pub struct BindingExperimentalDevModeOptions {
   pub host: Option<String>,
   pub port: Option<u16>,
   pub implement: Option<String>,
+  pub lazy: Option<bool>,
 }
 
 impl From<BindingExperimentalDevModeOptions> for rolldown_common::DevModeOptions {
   fn from(value: BindingExperimentalDevModeOptions) -> Self {
-    Self { host: value.host, port: value.port, implement: value.implement, lazy: None }
+    Self { host: value.host, port: value.port, implement: value.implement, lazy: value.lazy }
   }
 }
 

@@ -12,7 +12,7 @@ use rolldown_common::{
   ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason,
   PreserveEntrySignatures, SymbolRef, WrapKind,
 };
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_utils::{
   BitSet, commondir,
   index_vec_ext::IndexVecRefExt,
@@ -878,7 +878,6 @@ impl GenerateStage<'_> {
               // Verify it's a real dynamic import (not HMR hot.accept)
               // by checking if the import record kind is DynamicImport
               mod_in_chunk.import_records.iter().any(|rec| {
-                use rolldown_common::ImportKind;
                 rec.kind == ImportKind::DynamicImport
                   && self.link_output.module_table[rec.resolved_module]
                     .as_normal()
@@ -888,7 +887,6 @@ impl GenerateStage<'_> {
           });
 
         if has_ineffective_dynamic_import {
-          use rolldown_error::BuildDiagnostic;
           let dynamic_importers_list: Vec<arcstr::ArcStr> =
             normal_module.dynamic_importers.iter().map(|id| id.resource_id().clone()).collect();
           let importers_list: Vec<arcstr::ArcStr> =

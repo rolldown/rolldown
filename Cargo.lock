@@ -880,15 +880,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fsevent-sys"
-version = "4.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76ee7a02da4d231650c7cea31349b889be2f45ddb3ef3032d2ec8185f6313fd2"
-dependencies = [
- "libc",
-]
-
-[[package]]
 name = "futures"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1741,6 +1732,25 @@ checksum = "91df4bbde75afed763b708b7eee1e8e7651e02d97f6d5dd763e89367e957b23b"
 dependencies = [
  "hermit-abi",
  "libc",
+]
+
+[[package]]
+name = "objc2-core-foundation"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a180dd8642fa45cdb7dd721cd4c11b1cadd4929ce112ebd8b9f5803cc79d536"
+dependencies = [
+ "bitflags 2.10.0",
+]
+
+[[package]]
+name = "objc2-core-services"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "583300ad934cba24ff5292aee751ecc070f7ca6b39a574cc21b7b5e588e06a0b"
+dependencies = [
+ "libc",
+ "objc2-core-foundation",
 ]
 
 [[package]]
@@ -2751,25 +2761,26 @@ dependencies = [
 
 [[package]]
 name = "rolldown-file-id"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "987e6977d7746be897071f69d1f8ec72b25a246c8130cf7985c1a536f6eaf1be"
+checksum = "77087e8de5a5a65ea239ed3a5b182dfc27807a8fca4d0c2c0e693eb528b322b7"
 dependencies = [
  "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "rolldown-notify"
-version = "9.1.0"
+version = "10.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58d681610d5f1818f4bd2a3c5ccaf92d494abf5ba5cabab1f707a652d9f7c5d8"
+checksum = "a7c822c471cba11a81f6ab137c8cb19dd7319345e40a44df0783c6a13aeeba87"
 dependencies = [
  "bitflags 2.10.0",
- "fsevent-sys",
  "inotify",
  "kqueue",
  "libc",
  "mio",
+ "objc2-core-foundation",
+ "objc2-core-services",
  "rolldown-notify-types",
  "tracing",
  "walkdir",
@@ -2778,9 +2789,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify-debouncer-full"
-version = "0.7.1"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b121fd204ec8103827384d823041c3a97804ae71cef019e58cdde4298b639dc"
+checksum = "34f26603522562abd63de6561b0cf7f9c5b8737a6ee70cbcdd7970e6817ead0f"
 dependencies = [
  "rolldown-file-id",
  "rolldown-notify",
@@ -2791,9 +2802,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify-types"
-version = "2.0.1"
+version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "598d3e49d0f0fb6f5be6664efc3138634d7aa0c9fc5d1186a0a435dd76e6660f"
+checksum = "1931923a28e14c01a27ca56669669eb3e3de4068859c34e17b96c93ba3a61afe"
 
 [[package]]
 name = "rolldown_binding"

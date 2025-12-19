@@ -68,8 +68,12 @@ impl WatcherImpl {
       let config = Config::default();
       if let Some(notify) = &notify_option {
         if let Some(poll_interval) = notify.poll_interval {
+          // FIXME
+          #[expect(unused_must_use)]
           config.with_poll_interval(poll_interval);
         }
+        // FIXME
+        #[expect(unused_must_use)]
         config.with_compare_contents(notify.compare_contents);
       }
       config

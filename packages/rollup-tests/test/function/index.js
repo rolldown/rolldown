@@ -112,6 +112,11 @@ runTestSuiteWithSamples(
 				) {
 					config.generateError.code = 'INVALID_OPTION';
 				}
+				if (!directory.includes('options-async-hook')) {
+					config.options ??= {};
+					config.options.checks ??= {};
+					config.options.checks.circularDependency ??= true;
+				}
 
 				return rollup
 					.rollup({

@@ -86,6 +86,7 @@ pub async fn handle_warnings(
             plugin: None,
             loc,
             pos,
+            ids: warning.ids(),
           },
         )
         .await?;

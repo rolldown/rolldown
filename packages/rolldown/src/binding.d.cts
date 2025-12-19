@@ -1961,6 +1961,8 @@ export interface BindingLog {
   loc?: BindingLogLocation
   /** Position in the source file in UTF-16 code units */
   pos?: number
+  /** List of module IDs (used for CIRCULAR_DEPENDENCY warnings) */
+  ids?: Array<string>
 }
 
 export declare enum BindingLogLevel {

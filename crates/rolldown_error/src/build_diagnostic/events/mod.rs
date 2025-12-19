@@ -63,6 +63,10 @@ pub trait BuildEvent: Debug + Sync + Send {
     None
   }
 
+  fn ids(&self) -> Option<Vec<String>> {
+    None
+  }
+
   #[cfg(feature = "napi")]
   fn as_napi_error(&self) -> Option<&napi::Error> {
     None

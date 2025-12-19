@@ -41,6 +41,7 @@ pub struct Log {
   pub plugin: Option<String>,
   pub loc: Option<LogLocation>,
   pub pos: Option<u32>,
+  pub ids: Option<Vec<String>>,
 }
 
 #[derive(Debug, Default)]
@@ -51,6 +52,7 @@ pub struct LogWithoutPlugin {
   pub exporter: Option<String>,
   pub loc: Option<LogLocation>,
   pub pos: Option<u32>,
+  pub ids: Option<Vec<String>>,
 }
 
 impl LogWithoutPlugin {
@@ -63,6 +65,7 @@ impl LogWithoutPlugin {
       plugin: plugin_name,
       loc: self.loc,
       pos: self.pos,
+      ids: self.ids,
     }
   }
 }

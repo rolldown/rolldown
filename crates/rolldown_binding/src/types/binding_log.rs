@@ -24,6 +24,8 @@ pub struct BindingLog {
   pub loc: Option<BindingLogLocation>,
   /// Position in the source file in UTF-16 code units
   pub pos: Option<u32>,
+  /// List of module IDs (used for CIRCULAR_DEPENDENCY warnings)
+  pub ids: Option<Vec<String>>,
 }
 
 impl From<rolldown_common::Log> for BindingLog {
@@ -36,6 +38,7 @@ impl From<rolldown_common::Log> for BindingLog {
       plugin: value.plugin,
       loc: value.loc.map(Into::into),
       pos: value.pos,
+      ids: value.ids,
     }
   }
 }

@@ -51,6 +51,10 @@ impl BuildDiagnostic {
     self.inner.exporter()
   }
 
+  pub fn ids(&self) -> Option<Vec<String>> {
+    self.inner.ids()
+  }
+
   pub fn severity(&self) -> Severity {
     self.severity
   }

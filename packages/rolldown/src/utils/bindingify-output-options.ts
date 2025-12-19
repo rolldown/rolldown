@@ -45,8 +45,27 @@ export function bindingifyOutputOptions(
     cleanDir,
   } = outputOptions;
 
+  // Handle codeSplitting and inlineDynamicImports with deprecation warning
+  // codeSplitting takes precedence over inlineDynamicImports when both are specified
+  let inlineDynamicImports: boolean | undefined;
+  if (outputOptions.codeSplitting !== undefined) {
+    inlineDynamicImports = outputOptions.codeSplitting === 'none';
+    if (outputOptions.inlineDynamicImports !== undefined) {
+      console.warn(
+        'Both "output.codeSplitting" and "output.inlineDynamicImports" are specified. "output.codeSplitting" takes precedence.',
+      );
+    }
+  } else if (outputOptions.inlineDynamicImports !== undefined) {
+    console.warn(
+      '"output.inlineDynamicImports" is deprecated. Please use "output.codeSplitting" instead. ' +
+        "`inlineDynamicImports: true` is equivalent to `codeSplitting: 'none'`, " +
+        "and `inlineDynamicImports: false` is equivalent to `codeSplitting: 'auto'`.",
+    );
+    inlineDynamicImports = outputOptions.inlineDynamicImports;
+  }
+
   // Validate inlineDynamicImports conflicts
-  if (outputOptions.inlineDynamicImports === true) {
+  if (inlineDynamicImports === true) {
     if (manualChunks != null) {
       throw new Error(
         'Invalid value "true" for option "output.inlineDynamicImports" - this option is not supported for "output.manualChunks".',
@@ -92,7 +111,7 @@ export function bindingifyOutputOptions(
     plugins: [],
     minify: outputOptions.minify,
     externalLiveBindings: outputOptions.externalLiveBindings,
-    inlineDynamicImports: outputOptions.inlineDynamicImports,
+    inlineDynamicImports,
     advancedChunks,
     polyfillRequire: outputOptions.polyfillRequire,
     sanitizeFileName,

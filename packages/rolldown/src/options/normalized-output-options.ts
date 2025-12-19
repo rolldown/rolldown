@@ -33,6 +33,8 @@ export interface NormalizedOutputOptions {
   sourcemapBaseUrl: string | undefined;
   cssEntryFileNames: string | ChunkFileNamesFunction;
   cssChunkFileNames: string | ChunkFileNamesFunction;
+  codeSplitting: 'auto' | 'none';
+  /** @deprecated Please use `codeSplitting` instead. */
   inlineDynamicImports: boolean;
   externalLiveBindings: boolean;
   banner: AddonFunction;
@@ -140,6 +142,11 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
   @lazyProp
   get file(): string | undefined {
     return this.inner.file ?? undefined;
+  }
+
+  @lazyProp
+  get codeSplitting(): 'auto' | 'none' {
+    return this.inner.inlineDynamicImports ? 'none' : 'auto';
   }
 
   @lazyProp

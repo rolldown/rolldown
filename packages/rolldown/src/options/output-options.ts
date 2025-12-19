@@ -214,6 +214,27 @@ export interface OutputOptions {
   paths?: Record<string, string> | PathsFunction;
   generatedCode?: Partial<GeneratedCodeOptions>;
   externalLiveBindings?: boolean;
+  /**
+   * Controls whether code splitting is enabled.
+   *
+   * - `'auto'`: Enable code splitting (default)
+   * - `'none'`: Disable code splitting, all dynamic imports will be inlined
+   *
+   * @default 'auto'
+   */
+  codeSplitting?: 'auto' | 'none';
+  /**
+   * Whether to inline dynamic imports into the entry chunk.
+   *
+   * :::warning
+   * - This option is deprecated. Please use `codeSplitting` instead.
+   * - `inlineDynamicImports: true` is equivalent to `codeSplitting: 'none'`
+   * - `inlineDynamicImports: false` is equivalent to `codeSplitting: 'auto'`
+   * - If both `codeSplitting` and `inlineDynamicImports` are specified, `codeSplitting` takes precedence.
+   * :::
+   *
+   * @deprecated Please use `codeSplitting` instead.
+   */
   inlineDynamicImports?: boolean;
   /**
    * - Type: `((moduleId: string, meta: { getModuleInfo: (moduleId: string) => ModuleInfo | null }) => string | NullValue)`

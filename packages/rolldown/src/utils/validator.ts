@@ -899,9 +899,15 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('external live bindings'),
   ),
+  codeSplitting: v.pipe(
+    v.optional(v.union([v.literal('auto'), v.literal('none')])),
+    v.description('Controls whether code splitting is enabled'),
+  ),
   inlineDynamicImports: v.pipe(
     v.optional(v.boolean()),
-    v.description('Inline dynamic imports'),
+    v.description(
+      'Inline dynamic imports (deprecated, use codeSplitting instead)',
+    ),
   ),
   manualChunks: v.optional(ManualChunksFunctionSchema),
   advancedChunks: v.optional(AdvancedChunksSchema),

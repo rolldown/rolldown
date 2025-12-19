@@ -8,8 +8,8 @@ use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind,
   ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
-  RUNTIME_HELPER_NAMES, RUNTIME_MODULE_ID, RuntimeHelper, SideEffectDetail, StmtInfoIdx,
-  StmtInfoMeta, StmtInfos, SymbolIdExt, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  RUNTIME_HELPER_NAMES, RUNTIME_MODULE_ID, RuntimeHelper, RuntimeModuleBrief, SideEffectDetail,
+  StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolIdExt, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
@@ -63,6 +63,42 @@ pub struct IncludeContext<'a> {
   pub may_partial_namespace: bool,
   pub module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
   pub json_module_none_self_reference_included_symbol: FxHashMap<ModuleIdx, FxHashSet<SymbolRef>>,
+}
+
+impl<'a> IncludeContext<'a> {
+  #[expect(clippy::too_many_arguments)]
+  pub fn new(
+    modules: &'a IndexModules,
+    symbols: &'a SymbolRefDb,
+    is_included_vec: &'a mut StmtInclusionVec,
+    is_module_included_vec: &'a mut ModuleInclusionVec,
+    runtime_id: ModuleIdx,
+    metas: &'a LinkingMetadataVec,
+    used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
+    constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
+    options: &'a NormalizedBundlerOptions,
+    normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
+    module_namespace_included_reason: &'a mut ModuleNamespaceReasonVec,
+  ) -> Self {
+    Self {
+      modules,
+      symbols,
+      is_included_vec,
+      is_module_included_vec,
+      tree_shaking: options.treeshake.is_some(),
+      inline_const_smart: options.optimization.is_inline_const_smart_mode(),
+      runtime_id,
+      metas,
+      used_symbol_refs,
+      constant_symbol_map,
+      options,
+      normal_symbol_exports_chain_map,
+      bailout_cjs_tree_shaking_modules: FxHashSet::default(),
+      may_partial_namespace: false,
+      module_namespace_included_reason,
+      json_module_none_self_reference_included_symbol: FxHashMap::default(),
+    }
+  }
 }
 
 fn include_cjs_bailout_exports(
@@ -122,24 +158,19 @@ impl LinkStage<'_> {
       oxc_index::index_vec![false; self.module_table.modules.len()];
     let mut module_namespace_included_reason: ModuleNamespaceReasonVec =
       oxc_index::index_vec![ModuleNamespaceIncludedReason::empty(); self.module_table.len()];
-    let context = &mut IncludeContext {
-      modules: &self.module_table.modules,
-      symbols: &self.symbols,
-      is_included_vec: &mut is_stmt_info_included_vec,
-      is_module_included_vec: &mut is_module_included_vec,
-      tree_shaking: self.options.treeshake.is_some(),
-      runtime_id: self.runtime.id(),
-      metas: &self.metas,
-      used_symbol_refs: &mut used_symbol_refs,
-      constant_symbol_map: &self.global_constant_symbol_map,
-      options: self.options,
-      normal_symbol_exports_chain_map: &self.normal_symbol_exports_chain_map,
-      bailout_cjs_tree_shaking_modules: FxHashSet::default(),
-      may_partial_namespace: false,
-      module_namespace_included_reason: &mut module_namespace_included_reason,
-      inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
-      json_module_none_self_reference_included_symbol: FxHashMap::default(),
-    };
+    let context = &mut IncludeContext::new(
+      &self.module_table.modules,
+      &self.symbols,
+      &mut is_stmt_info_included_vec,
+      &mut is_module_included_vec,
+      self.runtime.id(),
+      &self.metas,
+      &mut used_symbol_refs,
+      &self.global_constant_symbol_map,
+      self.options,
+      &self.normal_symbol_exports_chain_map,
+      &mut module_namespace_included_reason,
+    );
 
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
       std::mem::take(&mut self.entries).into_iter().partition(|item| item.kind.is_user_defined());
@@ -267,13 +298,20 @@ impl LinkStage<'_> {
       &self.metas,
       &is_module_included_vec,
     );
-    self.include_runtime_symbol(
+    let context = &mut IncludeContext::new(
+      &self.module_table.modules,
+      &self.symbols,
       &mut is_stmt_info_included_vec,
       &mut is_module_included_vec,
-      &mut module_namespace_included_reason,
+      self.runtime.id(),
+      &self.metas,
       &mut used_symbol_refs,
-      depended_runtime_helper,
+      &self.global_constant_symbol_map,
+      self.options,
+      &self.normal_symbol_exports_chain_map,
+      &mut module_namespace_included_reason,
     );
+    include_runtime_symbol(context, &self.runtime, depended_runtime_helper);
 
     self.used_symbol_refs = used_symbol_refs;
     // Store the final statement inclusion results back to metas.
@@ -491,44 +529,21 @@ impl LinkStage<'_> {
     };
     (!is_lived).then_some(ret)
   }
+}
 
-  pub fn include_runtime_symbol(
-    &self,
-    is_stmt_included_vec: &mut IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
-    is_module_included_vec: &mut IndexVec<ModuleIdx, bool>,
-    module_namespace_included_reason: &mut IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>,
-    used_symbol_refs: &mut FxHashSet<SymbolRef>,
-    depended_runtime_helper: RuntimeHelper,
-  ) {
-    if depended_runtime_helper.is_empty() {
-      return;
-    }
+pub fn include_runtime_symbol(
+  ctx: &mut IncludeContext,
+  runtime: &RuntimeModuleBrief,
+  depended_runtime_helper: RuntimeHelper,
+) {
+  if depended_runtime_helper.is_empty() {
+    return;
+  }
 
-    let context = &mut IncludeContext {
-      modules: &self.module_table.modules,
-      symbols: &self.symbols,
-      is_included_vec: is_stmt_included_vec,
-      is_module_included_vec,
-      tree_shaking: self.options.treeshake.is_some(),
-      runtime_id: self.runtime.id(),
-      // used_exports_info_vec: &mut used_exports_info_vec,
-      metas: &self.metas,
-      used_symbol_refs,
-      constant_symbol_map: &self.global_constant_symbol_map,
-      options: self.options,
-      normal_symbol_exports_chain_map: &self.normal_symbol_exports_chain_map,
-      bailout_cjs_tree_shaking_modules: FxHashSet::default(),
-      may_partial_namespace: false,
-      module_namespace_included_reason,
-      inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
-      json_module_none_self_reference_included_symbol: FxHashMap::default(),
-    };
-
-    for helper in depended_runtime_helper {
-      let index = helper.bits().trailing_zeros() as usize;
-      let name = RUNTIME_HELPER_NAMES[index];
-      include_symbol(context, self.runtime.resolve_symbol(name), SymbolIncludeReason::Normal);
-    }
+  for helper in depended_runtime_helper {
+    let index = helper.bits().trailing_zeros() as usize;
+    let name = RUNTIME_HELPER_NAMES[index];
+    include_symbol(ctx, runtime.resolve_symbol(name), SymbolIncludeReason::Normal);
   }
 }
 

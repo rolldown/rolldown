@@ -19,25 +19,16 @@ impl GenerateStage<'_> {
         return Ok(());
       }
 
-      let content = chunk.content.try_as_inner_str()?.to_string();
+      let content = chunk.content.try_as_inner_str()?;
 
-      // Check if content starts with a shebang
-      let (shebang, rest_content) = if content.starts_with("#!") {
-        if let Some(newline_pos) = content.find('\n') {
-          (&content[..=newline_pos], &content[newline_pos + 1..])
-        } else {
-          // If no newline found, treat the whole content as shebang
-          (content.as_str(), "")
-        }
-      } else {
-        ("", content.as_str())
-      };
+      // Extract shebang if exists
+      let (shebang_end, has_shebang) = find_shebang_end(content);
 
       let mut source_joiner = SourceJoiner::default();
 
       // Add shebang first if it exists
-      if !shebang.is_empty() {
-        source_joiner.append_source(shebang.to_string());
+      if has_shebang {
+        source_joiner.append_source(content[..shebang_end].to_string());
       }
 
       // Then add post_banner
@@ -45,6 +36,7 @@ impl GenerateStage<'_> {
         source_joiner.append_source(post_banner.clone());
       }
 
+      let rest_content = &content[shebang_end..];
       // Add the rest of the content
       if let Some(source_map) = chunk.map.take() {
         source_joiner.append_source(SourceMapSource::new(rest_content.to_string(), source_map));
@@ -62,5 +54,18 @@ impl GenerateStage<'_> {
 
       Ok(())
     })
+  }
+}
+
+fn find_shebang_end(content: &str) -> (usize, bool) {
+  if !content.starts_with("#!") {
+    return (0, false);
+  }
+  if let Some(crlf_pos) = content.find("\r\n") {
+    (crlf_pos + 2, true)
+  } else if let Some(newline_pos) = content.find('\n') {
+    (newline_pos + 1, true)
+  } else {
+    (content.len(), true)
   }
 }

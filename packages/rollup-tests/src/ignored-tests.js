@@ -63,6 +63,11 @@ const ignoreTests = [
   "rollup@form@resolve-import-meta-url: allows to configure import.meta.url@generates es",
   "rollup@function@import-meta-url-with-compact: Get the right URL with compact output",
 
+  // ## Rollup treats non-js-extensions module as js module, but Rolldown will guess the module type from the externsion
+  "rollup@function@non-js-extensions: non .js extensions are preserved",
+  "rollup@function@error-parse-unknown-extension: throws with an extended error message when failing to parse a file without .(m)js extension",
+  "rollup@function@error-parse-json: throws with an extended error message when failing to parse a file with \".json\" extension",
+
   // ## warning / error differences
   "rollup@function@plugin-hook-filters: plugin hook filter is supported", // Rolldown has additional `EMPTY_IMPORT_META` warning
   "rollup@function@generate-bundle-mutation: handles adding or deleting symbols in generateBundle", // rolldown outputs a warning when assigning to bundle[foo]

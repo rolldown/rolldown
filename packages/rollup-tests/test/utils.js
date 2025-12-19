@@ -180,7 +180,7 @@ exports.compareLogs = function compareLogs(actual, expected) {
 	const sortedExpected = expected.sort(sortLogs)
 		.map(warning => normalizeExpectedError(warning));
 	const sortedActual = actual.sort(sortLogs)
-		.map((e, idx) => normalizeError(e, !!sortedExpected[idx].loc));
+		.map((e, idx) => normalizeError(e, !!sortedExpected[idx]?.loc));
 	try {
 		assert.deepEqual(sortedActual, sortedExpected);
 	} catch (error) {

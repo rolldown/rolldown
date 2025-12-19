@@ -13,13 +13,17 @@ use crate::{
 pub struct Watcher(Arc<WatcherImpl>);
 
 impl Watcher {
-  pub fn new(
-    bundler_configs: Vec<BundlerConfig>,
+  pub fn new(config: BundlerConfig, notify_option: Option<NotifyOption>) -> BuildResult<Self> {
+    Self::with_configs(vec![config], notify_option)
+  }
+
+  pub fn with_configs(
+    configs: Vec<BundlerConfig>,
     notify_option: Option<NotifyOption>,
   ) -> BuildResult<Self> {
-    let mut bundlers = Vec::with_capacity(bundler_configs.len());
+    let mut bundlers = Vec::with_capacity(configs.len());
 
-    for config in bundler_configs {
+    for config in configs {
       // Validation: dev_mode not allowed with watch
       if config.options.experimental.as_ref().and_then(|e| e.dev_mode.as_ref()).is_some() {
         return Err(

@@ -47,8 +47,8 @@ impl BindingWatcher {
       .map(create_bundler_options_from_binding_options)
       .collect::<Result<Vec<_>, _>>()?;
 
-    let inner =
-      rolldown::Watcher::new(bundler_configs, notify_option.map(Into::into)).map_err(|errs| {
+    let inner = rolldown::Watcher::with_configs(bundler_configs, notify_option.map(Into::into))
+      .map_err(|errs| {
         napi::Error::new(
           napi::Status::GenericFailure,
           errs.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),

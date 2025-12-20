@@ -324,7 +324,7 @@ impl<'a> GenerateStage<'a> {
 
               // Apply the same logic as get_preserve_modules_chunk_name to include directory structure
               let chunk_name = {
-                let p = PathBuf::from(&absolute_chunk_file_name);
+                let p = PathBuf::from(sanitized_absolute_filename.as_str());
                 let relative_path = if p.is_absolute() {
                   if let Some(ref preserve_modules_root) = preserve_modules_root {
                     if absolute_chunk_file_name.starts_with(preserve_modules_root.as_str()) {

@@ -405,9 +405,7 @@ impl GenerateStage<'_> {
       for symbol_ref in info
         .namespace_refs
         .iter()
-        .filter(|item| {
-          self.link_output.used_symbol_refs.contains(item)
-        })
+        .filter(|item| self.link_output.used_symbol_refs.contains(item))
         // Determine safely merged cjs ns binding should put in where
         // We should put it in the importRecord which first reference the cjs ns binding.
         .sorted_by_key(|item| self.link_output.module_table[item.owner].exec_order())

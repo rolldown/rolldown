@@ -174,11 +174,19 @@ impl GenerateStage<'_> {
       .collect();
 
     try_join_all(
-      chunk_graph
-        .chunk_table
-        .iter_enumerated()
-        .zip(chunk_index_to_codegen_rets.into_iter())
-        .flat_map(|((chunk_idx, chunk), module_id_to_codegen_ret)| {
+      chunk_index_to_codegen_rets
+        .into_iter()
+        .enumerate()
+        .filter_map(|(idx, module_id_to_codegen_ret)| {
+          let chunk_idx =
+            ChunkIdx::from_raw(u32::try_from(idx).expect("chunk index should fit in u32"));
+          if chunk_graph.removed_chunk_idx.contains(&chunk_idx) {
+            return None;
+          }
+          let chunk = chunk_graph.chunk_table.get(chunk_idx)?;
+          Some((chunk_idx, chunk, module_id_to_codegen_ret))
+        })
+        .flat_map(|(chunk_idx, chunk, module_id_to_codegen_ret)| {
           let ecma_chunks_future: ChunkGeneratorFuture = Box::pin(async move {
             let mut ecma_ctx = GenerateContext {
               chunk_idx,

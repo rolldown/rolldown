@@ -16,7 +16,7 @@ use rolldown_common::{
   AstScopes, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx, ImportRecordMeta,
   InlineConstMode, MemberExprRefResolution, Module, ModuleIdx, ModuleNamespaceIncludedReason,
   ModuleType, NamespaceAlias, OutputExports, OutputFormat, Platform,
-  RenderedConcatenatedModuleParts, Specifier, SymbolRef, WrapKind,
+  RenderedConcatenatedModuleParts, Specifier, SymbolIdExt, SymbolRef, WrapKind,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
@@ -447,13 +447,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // construct `{ prop_name: () => returned, ... }`
     let mut arg_obj_expr = ast::ObjectExpression::dummy(self.alloc);
 
-    arg_obj_expr.properties.extend(self.ctx.linking_info.canonical_exports(false).map(
+    // After we have https://github.com/rolldown/rolldown/blob/d6d65f9080e427cd9feef56eb7a110fbcf6c1414/crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs#L347-L354
+    // module namespace is included does not always means all exports are used.
+    arg_obj_expr.properties.extend(self.ctx.linking_info.canonical_exports(false).filter_map(
       |(export, resolved_export)| {
+        if !self.ctx.used_symbol_refs.contains(&resolved_export.symbol_ref) {
+          return None;
+        }
         // prop_name: () => returned
         let prop_name = export;
         let (returned, _) =
           self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
-        ast::ObjectPropertyKind::ObjectProperty(
+        Some(ast::ObjectPropertyKind::ObjectProperty(
           ast::ObjectProperty {
             // `__proto__` has special semantics in object literals - it sets the prototype
             // instead of creating a property. Use computed property syntax for it.
@@ -469,7 +474,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             ..ast::ObjectProperty::dummy(self.alloc)
           }
           .into_in(self.alloc),
-        )
+        ))
       },
     ));
 
@@ -1614,6 +1619,27 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   expr.source = Expression::StringLiteral(
                     self.snippet.alloc_string_literal(&import_path, expr.source.span()),
                   );
+
+                  // If the dynamic entry point is merged into another common chunk, we should
+                  // convert `import('./some-module.js')` to `import('./some-module.js').then(n => n.ns)`
+                  //                                                                                 ^^ points to the dynamic entry module namespace
+                  // to make sure the semantic is correct after chunk merging optimization.
+                  let is_merged_dynamic_entry = self
+                    .ctx
+                    .chunk_graph
+                    .common_chunk_exported_facade_chunk_namespace
+                    .get(&importee_chunk_id)
+                    .is_some_and(|set| set.contains(&importee_id));
+                  if is_merged_dynamic_entry
+                    && let Some(name) = importee_chunk
+                      .exports_to_other_chunks
+                      .get(&SymbolId::module_namespace_symbol_ref(importee_id))
+                      .and_then(|names| names.first())
+                  {
+                    let import_expr = expr.take_in_box(self.builder().allocator);
+                    let call_expr = self.snippet.import_then_extract_property(import_expr, name);
+                    *node = Expression::CallExpression(call_expr);
+                  }
                   needs_to_esm_helper = importee.exports_kind.is_commonjs();
                 }
               } else {

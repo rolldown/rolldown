@@ -1,8 +1,12 @@
 use oxc::semantic::SymbolId;
 
+use crate::{ModuleIdx, SymbolRef};
+
 pub trait SymbolIdExt {
   /// Returns the symbol id as a string.
   fn is_module_namespace(&self) -> bool;
+
+  fn module_namespace_symbol_ref(module_idx: ModuleIdx) -> SymbolRef;
 }
 
 impl SymbolIdExt for SymbolId {
@@ -12,5 +16,9 @@ impl SymbolIdExt for SymbolId {
   #[inline]
   fn is_module_namespace(&self) -> bool {
     *self == SymbolId::from_raw_unchecked(u32::MAX - 2)
+  }
+
+  fn module_namespace_symbol_ref(module_idx: ModuleIdx) -> SymbolRef {
+    (module_idx, SymbolId::from_raw_unchecked(u32::MAX - 2)).into()
   }
 }

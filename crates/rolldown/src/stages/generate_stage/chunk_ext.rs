@@ -24,6 +24,21 @@ impl ChunkDebugExt for Chunk {
     reason: ChunkCreationReason,
     options: &NormalizedBundlerOptions,
   ) {
+    match reason {
+      ChunkCreationReason::AdvancedChunkGroup(_name, group_index) => {
+        *self.chunk_reason_type = ChunkReasonType::AdvancedChunks { group_index };
+      }
+      ChunkCreationReason::PreserveModules { .. } => {
+        *self.chunk_reason_type = ChunkReasonType::PreserveModules;
+      }
+      ChunkCreationReason::Entry { .. } => {
+        *self.chunk_reason_type = ChunkReasonType::Entry;
+      }
+      ChunkCreationReason::CommonChunk { .. } => {
+        *self.chunk_reason_type = ChunkReasonType::Common;
+      }
+    }
+
     if !options.experimental.is_attach_debug_info_full() && !options.debug {
       return;
     }
@@ -52,7 +67,6 @@ impl ChunkDebugExt for Chunk {
         }
       }
       ChunkCreationReason::CommonChunk { bits, link_output } => {
-        *self.chunk_reason_type = ChunkReasonType::Common;
         let entries = link_output
           .entries
           .iter()
@@ -69,6 +83,7 @@ impl ChunkDebugExt for Chunk {
         format!("Common Chunk: [Shared-By: {entries}]")
       }
     };
+
     self.create_reasons.push(reason);
   }
 }

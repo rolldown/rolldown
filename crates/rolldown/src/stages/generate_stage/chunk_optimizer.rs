@@ -2,15 +2,28 @@ use std::collections::VecDeque;
 
 use arcstr::ArcStr;
 use itertools::Itertools;
+use oxc_index::IndexVec;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType, Module, ModuleIdx,
+  ModuleNamespaceIncludedReason, ModuleTable, PreserveEntrySignatures, RuntimeHelper, StmtInfos,
 };
 use rolldown_utils::{BitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::chunk_graph::ChunkGraph;
+use crate::{
+  chunk_graph::ChunkGraph,
+  stages::link_stage::{
+    IncludeContext, SymbolIncludeReason, include_runtime_symbol, include_symbol,
+  },
+  types::linking_metadata::{
+    included_info_to_linking_metadata_vec, linking_metadata_vec_to_included_info,
+  },
+};
 
-use super::{GenerateStage, chunk_ext::ChunkCreationReason, chunk_ext::ChunkDebugExt};
+use super::{
+  GenerateStage, chunk_ext::ChunkCreationReason, chunk_ext::ChunkDebugExt,
+  code_splitting::IndexSplittingInfo,
+};
 
 impl GenerateStage<'_> {
   /// Constructs a mapping from static entry chunks to the dynamic entry chunks they can reach.
@@ -322,5 +335,162 @@ impl GenerateStage<'_> {
       });
       can_merge.then_some(*chunk_idx)
     })
+  }
+
+  /// Optimizes empty dynamic entry chunks by merging them with their target common chunks.
+  ///
+  /// This optimization handles the case where a dynamic entry chunk has no modules of its own
+  /// because all its modules were moved to a common chunk. Instead of keeping an empty entry chunk,
+  /// we rewrite references to point directly to the common chunk and ensure proper symbol inclusion.
+  ///
+  /// The function also ensures the runtime module is properly assigned to a chunk when needed.
+  pub(super) fn optimize_facade_dynamic_entry_chunks(
+    &mut self,
+    chunk_graph: &mut ChunkGraph,
+    index_splitting_info: &IndexSplittingInfo,
+    input_base: &ArcStr,
+    module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
+  ) {
+    // Find empty dynamic entry chunks that should be merged with their target common chunks
+    let mut rewrite_entry_to_chunk = FxHashMap::default();
+    let runtime_module_idx = self.link_output.runtime.id();
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      let ChunkKind::EntryPoint { meta, bit: _, module } = chunk.kind else {
+        continue;
+      };
+      if meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk) {
+        continue;
+      }
+      if !chunk.modules.is_empty() {
+        continue;
+      }
+      // Check if the entry module is included in a common chunk
+      let Some(target_chunk_idx) = chunk_graph.module_to_chunk[module] else {
+        continue;
+      };
+      let target_chunk = &chunk_graph.chunk_table[target_chunk_idx];
+      if !matches!(target_chunk.kind, ChunkKind::Common) {
+        continue;
+      }
+      if !matches!(target_chunk.chunk_reason_type.as_ref(), ChunkReasonType::AdvancedChunks { .. })
+      {
+        continue;
+      }
+      rewrite_entry_to_chunk.insert(module, (chunk_idx, target_chunk_idx));
+    }
+
+    // Namespace symbols by default reference all exported symbols from the module.
+    // To preserve dynamic import tree shaking, we should only include symbols that were actually used during the linking stage.
+    // This ensures that including a namespace symbol doesn't inadvertently add new exported symbols.
+    for (&entry_module, &(_, _)) in &rewrite_entry_to_chunk {
+      let Some(module) = self.link_output.module_table[entry_module].as_normal_mut() else {
+        continue;
+      };
+      // prefer drain and avoid clone
+      module.stmt_infos[StmtInfos::NAMESPACE_STMT_IDX].referenced_symbols.retain(
+        |item| match item {
+          rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
+            // module namespace symbol requires `__export` runtime helper
+            self.link_output.used_symbol_refs.contains(symbol_ref)
+              || symbol_ref.owner == runtime_module_idx
+          }
+          rolldown_common::SymbolOrMemberExprRef::MemberExpr(_member_expr_ref) => true,
+        },
+      );
+    }
+
+    let (mut stmt_info_included_vec, mut module_included_vec, mut module_namespace_reason_vec) =
+      linking_metadata_vec_to_included_info(&mut self.link_output.metas);
+
+    let runtime = &self.link_output.runtime;
+    let context = &mut IncludeContext {
+      modules: &self.link_output.module_table.modules,
+      symbols: &self.link_output.symbol_db,
+      is_included_vec: &mut stmt_info_included_vec,
+      is_module_included_vec: &mut module_included_vec,
+      tree_shaking: self.options.treeshake.is_some(),
+      runtime_id: self.link_output.runtime.id(),
+      metas: &self.link_output.metas,
+      used_symbol_refs: &mut self.link_output.used_symbol_refs,
+      constant_symbol_map: &self.link_output.global_constant_symbol_map,
+      options: self.options,
+      normal_symbol_exports_chain_map: &self.link_output.normal_symbol_exports_chain_map,
+      bailout_cjs_tree_shaking_modules: FxHashSet::default(),
+      may_partial_namespace: false,
+      module_namespace_included_reason: &mut module_namespace_reason_vec,
+      inline_const_smart: self.options.optimization.is_inline_const_smart_mode(),
+      json_module_none_self_reference_included_symbol: FxHashMap::default(),
+    };
+
+    let mut optimized_common_chunk = FxHashSet::default();
+
+    if !rewrite_entry_to_chunk.is_empty() {
+      include_runtime_symbol(context, runtime, RuntimeHelper::Export);
+    }
+
+    for (&entry_module, &(from_chunk_idx, target_chunk_idx)) in &rewrite_entry_to_chunk {
+      // Point the entry module to related common chunk
+      let _entry_chunk = chunk_graph.entry_module_to_entry_chunk.remove(&entry_module);
+
+      let Some(module) = context.modules[entry_module].as_normal() else {
+        continue;
+      };
+
+      chunk_graph.entry_module_to_entry_chunk.insert(entry_module, target_chunk_idx);
+      chunk_graph.removed_chunk_idx.insert(from_chunk_idx);
+      chunk_graph
+        .common_chunk_exported_facade_chunk_namespace
+        .entry(target_chunk_idx)
+        .or_default()
+        .insert(entry_module);
+
+      include_symbol(
+        context,
+        module.namespace_object_ref,
+        SymbolIncludeReason::SimulatedFacadeChunk,
+      );
+      context.module_namespace_included_reason[entry_module]
+        .insert(ModuleNamespaceIncludedReason::SimulateFacadeChunk);
+      let target_chunk = &mut chunk_graph.chunk_table[target_chunk_idx];
+      target_chunk.depended_runtime_helper.insert(RuntimeHelper::Export);
+      optimized_common_chunk.insert(target_chunk_idx);
+    }
+
+    // Ensure runtime module are properly assigned to chunk graph
+    if chunk_graph.module_to_chunk[runtime_module_idx].is_none()
+      && !optimized_common_chunk.is_empty()
+    {
+      // If there is only common chunk are appended with dynamic entry module, we just put runtime module into that chunk.
+      // Else create a new common chunk to store runtime module.
+      let chunk_idx = match optimized_common_chunk.len() {
+        1 => optimized_common_chunk.into_iter().next().unwrap(),
+        _ => {
+          let runtime_chunk = Chunk::new(
+            Some("rolldown-runtime".into()),
+            None,
+            index_splitting_info[runtime_module_idx].bits.clone(),
+            vec![],
+            ChunkKind::Common,
+            input_base.clone(),
+            None,
+          );
+          chunk_graph.add_chunk(runtime_chunk)
+        }
+      };
+      chunk_graph.add_module_to_chunk(
+        runtime_module_idx,
+        chunk_idx,
+        self.link_output.metas[runtime_module_idx].depended_runtime_helper,
+      );
+      module_to_assigned[runtime_module_idx] = true;
+    }
+
+    // Restore the included info back to metas
+    included_info_to_linking_metadata_vec(
+      &mut self.link_output.metas,
+      stmt_info_included_vec,
+      &module_included_vec,
+      &module_namespace_reason_vec,
+    );
   }
 }

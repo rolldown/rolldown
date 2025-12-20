@@ -716,7 +716,7 @@ impl GenerateStage<'_> {
   }
 
   async fn split_chunks(
-    &mut self,
+    &self,
     index_splitting_info: &mut IndexSplittingInfo,
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
@@ -799,7 +799,6 @@ impl GenerateStage<'_> {
         pending_common_chunks,
       );
     }
-
     Ok(())
   }
 

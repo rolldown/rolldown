@@ -3,6 +3,7 @@ use rolldown_sourcemap::{SourceJoiner, SourceMapSource};
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::type_alias::IndexInstantiatedChunks;
+use crate::utils::shebang::find_shebang_end;
 
 use super::GenerateStage;
 
@@ -19,53 +20,42 @@ impl GenerateStage<'_> {
         return Ok(());
       }
 
-      let content = chunk.content.try_as_inner_str()?;
+      let (content, map) = {
+        let content = chunk.content.try_as_inner_str()?;
 
-      // Extract shebang if exists
-      let (shebang_end, has_shebang) = find_shebang_end(content);
+        // Extract shebang if exists
+        let (shebang_end, has_shebang) = find_shebang_end(content);
 
-      let mut source_joiner = SourceJoiner::default();
+        let mut source_joiner = SourceJoiner::default();
 
-      // Add shebang first if it exists
-      if has_shebang {
-        source_joiner.append_source(content[..shebang_end].to_string());
-      }
+        // Add shebang first if it exists
+        if has_shebang {
+          source_joiner.append_source(&content[..shebang_end]);
+        }
 
-      // Then add post_banner
-      if let Some(post_banner) = &chunk.post_banner {
-        source_joiner.append_source(post_banner.clone());
-      }
+        // Then add post_banner
+        if let Some(post_banner) = &chunk.post_banner {
+          source_joiner.append_source(post_banner.as_str());
+        }
 
-      let rest_content = &content[shebang_end..];
-      // Add the rest of the content
-      if let Some(source_map) = chunk.map.take() {
-        source_joiner.append_source(SourceMapSource::new(rest_content.to_string(), source_map));
-      } else {
-        source_joiner.append_source(rest_content.to_string());
-      }
+        let rest_content = &content[shebang_end..];
+        // Add the rest of the content
+        if let Some(source_map) = chunk.map.take() {
+          source_joiner.append_source(SourceMapSource::new(rest_content.to_string(), source_map));
+        } else {
+          source_joiner.append_source(rest_content);
+        }
 
-      if let Some(post_footer) = &chunk.post_footer {
-        source_joiner.append_source(post_footer.clone());
-      }
+        if let Some(post_footer) = &chunk.post_footer {
+          source_joiner.append_source(post_footer.as_str());
+        }
 
-      let (content, map) = source_joiner.join();
+        source_joiner.join()
+      };
       chunk.content = content.into();
       chunk.map = map;
 
       Ok(())
     })
-  }
-}
-
-fn find_shebang_end(content: &str) -> (usize, bool) {
-  if !content.starts_with("#!") {
-    return (0, false);
-  }
-  if let Some(crlf_pos) = content.find("\r\n") {
-    (crlf_pos + 2, true)
-  } else if let Some(newline_pos) = content.find('\n') {
-    (newline_pos + 1, true)
-  } else {
-    (content.len(), true)
   }
 }

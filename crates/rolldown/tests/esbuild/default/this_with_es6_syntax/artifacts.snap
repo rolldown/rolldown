@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
-(!) dummy.js is dynamically imported by es6-expr-import-dynamic.js, es6-import-dynamic.js but also statically imported by es6-import-stmt.js, es6-export-star.js, es6-export-star-as.js, es6-export-import-assign.ts, es6-export-clause-from.js, dynamic import will not move module into another chunk.
+(!) dummy.js is dynamically imported by es6-expr-import-dynamic.js, es6-import-dynamic.js but also statically imported by es6-import-stmt.js, es6-export-clause-from.js, es6-export-star-as.js, es6-export-import-assign.ts, es6-export-star.js, dynamic import will not move module into another chunk.
 
 
 ```

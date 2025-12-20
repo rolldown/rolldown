@@ -12,7 +12,7 @@ use rolldown_common::{
   ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason,
   PreserveEntrySignatures, SymbolRef, WrapKind,
 };
-use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_error::BuildResult;
 use rolldown_utils::{
   BitSet, commondir,
   index_vec_ext::IndexVecRefExt,
@@ -800,9 +800,6 @@ impl GenerateStage<'_> {
       );
     }
 
-    // Check for ineffective dynamic imports after all modules have been assigned to chunks
-    self.collect_ineffective_dynamic_import_warnings(chunk_graph);
-
     Ok(())
   }
 
@@ -833,75 +830,6 @@ impl GenerateStage<'_> {
       meta.dependencies.iter().copied().for_each(|dep_idx| {
         q.push_back(dep_idx);
       });
-    }
-  }
-
-  /// Collects warnings for ineffective dynamic imports after all modules have been assigned to chunks.
-  ///
-  /// This method iterates through all chunks and their modules to detect cases where:
-  /// - A module has both static importers and dynamic importers
-  /// - A dynamic importer is in the same chunk as the imported module
-  /// - This makes the dynamic import ineffective (it won't create a separate chunk)
-  fn collect_ineffective_dynamic_import_warnings(&mut self, chunk_graph: &ChunkGraph) {
-    if self.options.inline_dynamic_imports {
-      return;
-    }
-
-    for chunk in chunk_graph.chunk_table.iter() {
-      for &module_idx in &chunk.modules {
-        let Some(normal_module) = self.link_output.module_table[module_idx].as_normal() else {
-          continue;
-        };
-
-        // Skip modules without both static and dynamic importers
-        if normal_module.importers.is_empty() || normal_module.dynamic_importers.is_empty() {
-          continue;
-        }
-
-        // Check if any dynamic importer is in the same chunk
-        // We need to verify it's a real dynamic import, not HMR hot.accept
-        let has_ineffective_dynamic_import =
-          normal_module.dynamic_importers.iter().any(|importer_id| {
-            use rolldown_plugin_utils::is_in_node_modules;
-            // Skip node_modules
-            if is_in_node_modules(std::path::Path::new(importer_id.as_ref())) {
-              return false;
-            }
-            // Check if the dynamic importer is in the same chunk
-            chunk.modules.iter().any(|&idx| {
-              let Some(mod_in_chunk) = self.link_output.module_table[idx].as_normal() else {
-                return false;
-              };
-              if mod_in_chunk.id != *importer_id {
-                return false;
-              }
-              // Verify it's a real dynamic import (not HMR hot.accept)
-              // by checking if the import record kind is DynamicImport
-              mod_in_chunk.import_records.iter().any(|rec| {
-                rec.kind == ImportKind::DynamicImport
-                  && self.link_output.module_table[rec.resolved_module]
-                    .as_normal()
-                    .is_some_and(|m| m.id == normal_module.id)
-              })
-            })
-          });
-
-        if has_ineffective_dynamic_import {
-          let dynamic_importers_list: Vec<arcstr::ArcStr> =
-            normal_module.dynamic_importers.iter().map(|id| id.resource_id().clone()).collect();
-          let importers_list: Vec<arcstr::ArcStr> =
-            normal_module.importers.iter().map(|id| id.resource_id().clone()).collect();
-
-          self.link_output.warnings.push(
-            BuildDiagnostic::ineffective_dynamic_import(
-              normal_module.id.resource_id().clone(),
-              dynamic_importers_list,
-              importers_list,
-            )
-            .with_severity_warning(),
-          );
-        }
-      }
     }
   }
 }

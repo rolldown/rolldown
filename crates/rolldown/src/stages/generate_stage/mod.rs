@@ -12,8 +12,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use rolldown_common::{
   ChunkIdx, ChunkKind, ConcatenateWrappedModuleKind, CssAssetNameReplacer, EcmaViewMeta,
-  ImportMetaRolldownAssetReplacer, ImportRecordIdx, Module, ModuleIdx, OutputExports,
-  PreliminaryFilename, PrependRenderedImport, RenderedConcatenatedModuleParts,
+  ImportKind, ImportMetaRolldownAssetReplacer, ImportRecordIdx, Module, ModuleId, ModuleIdx,
+  OutputExports, PreliminaryFilename, PrependRenderedImport, RenderedConcatenatedModuleParts,
   RollupPreRenderedAsset, SymbolRef, SymbolRefFlags,
 };
 use rolldown_plugin::SharedPluginDriver;
@@ -101,13 +101,7 @@ impl<'a> GenerateStage<'a> {
 
     self.merge_cjs_namespace(&mut chunk_graph);
 
-    self.trace_action_chunks_infos(&chunk_graph);
-
-    let mut warnings = vec![];
-    self.compute_chunk_output_exports(&mut chunk_graph, &mut warnings)?;
-    if !self.options.format.is_esm() {
-      self.link_output.warnings.extend(warnings);
-    }
+    self.process_chunks_and_compute_exports(&mut chunk_graph)?;
 
     let index_chunk_id_to_name =
       self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
@@ -555,21 +549,91 @@ impl<'a> GenerateStage<'a> {
     });
   }
 
+  /// Collects trace action chunk info
+  fn collect_trace_action_chunk_info(
+    &self,
+    chunk_idx: ChunkIdx,
+    chunk: &rolldown_common::Chunk,
+  ) -> action::Chunk {
+    action::Chunk {
+      is_user_defined_entry: chunk.is_user_defined_entry(),
+      is_async_entry: chunk.is_async_entry(),
+      entry_module: chunk
+        .entry_module_idx()
+        .map(|idx| self.link_output.module_table[idx].id().to_string()),
+      modules: chunk
+        .modules
+        .iter()
+        .map(|idx| self.link_output.module_table[*idx].id().to_string())
+        .collect(),
+      reason: chunk.chunk_reason_type.as_static_str(),
+      advanced_chunk_group_id: chunk.chunk_reason_type.group_index(),
+      chunk_id: chunk_idx.raw(),
+      name: chunk.name.as_ref().map(ArcStr::to_string),
+      imports: chunk
+        .imports_from_other_chunks
+        .iter()
+        .map(|(importee_idx, _imports)| action::ChunkImport {
+          chunk_id: importee_idx.raw(),
+          kind: "import-statement",
+        })
+        .collect(),
+    }
+  }
+
+  /// Checks for ineffective dynamic imports in specified chunks
+  fn check_ineffective_dynamic_imports(
+    &mut self,
+    chunk_graph: &ChunkGraph,
+    chunks_to_check: Vec<ChunkIdx>,
+  ) {
+    if self.options.inline_dynamic_imports {
+      return;
+    }
+
+    // Build module_id_to_idx map
+    let module_id_to_idx: FxHashMap<&rolldown_common::ModuleId, rolldown_common::ModuleIdx> = self
+      .link_output
+      .module_table
+      .modules
+      .iter_enumerated()
+      .filter_map(|(idx, m)| m.as_normal().map(|nm| (&nm.id, idx)))
+      .collect();
+
+    for chunk_idx in chunks_to_check {
+      let chunk = &chunk_graph.chunk_table[chunk_idx];
+      for &module_idx in &chunk.modules {
+        if let Some((dynamic_importers_list, importers_list)) = self
+          .check_module_for_ineffective_dynamic_import(
+            module_idx,
+            chunk_idx,
+            chunk_graph,
+            &module_id_to_idx,
+          )
+        {
+          if let Some(normal_module) = self.link_output.module_table[module_idx].as_normal() {
+            self.link_output.warnings.push(
+              BuildDiagnostic::ineffective_dynamic_import(
+                normal_module.id.resource_id().clone(),
+                dynamic_importers_list,
+                importers_list,
+              )
+              .with_severity_warning(),
+            );
+          }
+        }
+      }
+    }
+  }
+
+  /// Computes output exports for entry chunks
   fn compute_chunk_output_exports(
     &self,
     chunk_graph: &mut ChunkGraph,
     warnings: &mut Vec<BuildDiagnostic>,
+    chunk_export_data: Vec<(ChunkIdx, &rolldown_common::NormalModule, Vec<oxc::span::CompactStr>)>,
   ) -> BuildResult<()> {
-    // Collect all the chunk data we need first
-    let mut chunk_export_data = Vec::new();
-    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
-      if let Some(entry_module) = chunk.user_defined_entry_module(&self.link_output.module_table) {
-        let export_names = get_chunk_export_names(chunk, self.link_output);
-        chunk_export_data.push((chunk_idx, entry_module, export_names));
-      }
-    }
-
-    // Now compute the export modes for each chunk
+    // Compute the export modes for each chunk
     for (chunk_idx, entry_module, export_names) in chunk_export_data {
       let export_mode = determine_export_mode(
         warnings,
@@ -600,37 +664,118 @@ impl<'a> GenerateStage<'a> {
     Ok(())
   }
 
-  fn trace_action_chunks_infos(&self, chunk_graph: &ChunkGraph) {
-    if trace_action_enabled!() {
-      let mut chunk_infos = Vec::new();
-      for (idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
-        chunk_infos.push(action::Chunk {
-          is_user_defined_entry: chunk.is_user_defined_entry(),
-          is_async_entry: chunk.is_async_entry(),
-          entry_module: chunk
-            .entry_module_idx()
-            .map(|idx| self.link_output.module_table[idx].id().to_string()),
-          modules: chunk
-            .modules
-            .iter()
-            .map(|idx| self.link_output.module_table[*idx].id().to_string())
-            .collect(),
-          reason: chunk.chunk_reason_type.as_static_str(),
-          advanced_chunk_group_id: chunk.chunk_reason_type.group_index(),
-          chunk_id: idx.raw(),
-          name: chunk.name.as_ref().map(ArcStr::to_string),
-          // TODO(hyf0): add dynamic importees
-          imports: chunk
-            .imports_from_other_chunks
-            .iter()
-            .map(|(importee_idx, _imports)| action::ChunkImport {
-              chunk_id: importee_idx.raw(),
-              kind: "import-statement",
-            })
-            .collect(),
-        });
-      }
-      trace_action!(action::ChunkGraphReady { action: "ChunkGraphReady", chunks: chunk_infos });
+  /// Checks if a single module has ineffective dynamic imports.
+  ///
+  /// Returns Some((dynamic_importers, static_importers)) if ineffective, None otherwise.
+  pub fn check_module_for_ineffective_dynamic_import(
+    &self,
+    module_idx: ModuleIdx,
+    chunk_idx: ChunkIdx,
+    chunk_graph: &ChunkGraph,
+    module_id_to_idx: &FxHashMap<&ModuleId, ModuleIdx>,
+  ) -> Option<(Vec<ArcStr>, Vec<ArcStr>)> {
+    let normal_module = self.link_output.module_table[module_idx].as_normal()?;
+
+    // Skip modules without both static and dynamic importers
+    if normal_module.importers.is_empty() || normal_module.dynamic_importers.is_empty() {
+      return None;
     }
+
+    // Check if any dynamic importer is in the same chunk
+    let has_ineffective_dynamic_import =
+      normal_module.dynamic_importers.iter().any(|importer_id| {
+        use rolldown_plugin_utils::is_in_node_modules;
+        // Skip node_modules
+        if is_in_node_modules(std::path::Path::new(importer_id.as_ref())) {
+          return false;
+        }
+
+        // Fast lookup: find the module idx, then check its chunk using chunk_graph.module_to_chunk
+        let Some(&importer_module_idx) = module_id_to_idx.get(importer_id) else {
+          return false;
+        };
+
+        let Some(importer_chunk_idx) = chunk_graph.module_to_chunk[importer_module_idx] else {
+          return false;
+        };
+
+        if importer_chunk_idx != chunk_idx {
+          return false;
+        }
+
+        // Verify it's a real dynamic import (not HMR hot.accept)
+        let Some(importer_module) = self.link_output.module_table[importer_module_idx].as_normal()
+        else {
+          return false;
+        };
+
+        importer_module.import_records.iter().any(|rec| {
+          rec.kind == ImportKind::DynamicImport
+            && self.link_output.module_table[rec.resolved_module]
+              .as_normal()
+              .is_some_and(|m| m.id == normal_module.id)
+        })
+      });
+
+    if has_ineffective_dynamic_import {
+      let dynamic_importers_list =
+        normal_module.dynamic_importers.iter().map(|id| id.resource_id().clone()).collect();
+      let importers_list =
+        normal_module.importers.iter().map(|id| id.resource_id().clone()).collect();
+      Some((dynamic_importers_list, importers_list))
+    } else {
+      None
+    }
+  }
+
+  /// Processes chunks: collects trace actions, checks ineffective imports, and computes exports
+  fn process_chunks_and_compute_exports(
+    &mut self,
+    chunk_graph: &mut ChunkGraph,
+  ) -> BuildResult<()> {
+    let mut warnings = vec![];
+
+    // Collect trace action data if enabled
+    let mut chunk_infos = if trace_action_enabled!() { Some(Vec::new()) } else { None };
+
+    // First pass: collect data
+    let mut chunk_export_data = Vec::new();
+    let mut chunks_to_check_dynamic_imports = Vec::new();
+
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      // Record chunks that need dynamic import checking
+      if !self.options.inline_dynamic_imports {
+        chunks_to_check_dynamic_imports.push(chunk_idx);
+      }
+
+      // Collect trace action info
+      if let Some(ref mut infos) = chunk_infos {
+        infos.push(self.collect_trace_action_chunk_info(chunk_idx, chunk));
+      }
+
+      // Collect export data
+      if let Some(entry_module) = chunk.user_defined_entry_module(&self.link_output.module_table) {
+        let export_names = get_chunk_export_names(chunk, self.link_output);
+        chunk_export_data.push((chunk_idx, entry_module, export_names));
+      }
+    }
+
+    // Emit trace action if enabled
+    if let Some(infos) = chunk_infos {
+      trace_action!(action::ChunkGraphReady { action: "ChunkGraphReady", chunks: infos });
+    }
+
+    // Compute export modes for each chunk
+    self.compute_chunk_output_exports(chunk_graph, &mut warnings, chunk_export_data)?;
+
+    // Check for ineffective dynamic imports
+    self.check_ineffective_dynamic_imports(chunk_graph, chunks_to_check_dynamic_imports);
+
+    // Add warnings to link_output if not ESM format
+    if !self.options.format.is_esm() {
+      self.link_output.warnings.extend(warnings);
+    }
+
+    Ok(())
   }
 }

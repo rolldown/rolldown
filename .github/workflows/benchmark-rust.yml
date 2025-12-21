@@ -14,7 +14,7 @@ on:
       - 'scripts/misc/setup-benchmark-input/**'
       - '.github/workflows/benchmark-rust.yml'
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, ready_for_review]
     paths:
       - '**/*.rs'
       - 'Cargo.lock'
@@ -29,6 +29,7 @@ concurrency:
 jobs:
   codspeed-benchmark:
     name: Codspeed Benchmark
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
@@ -63,7 +64,7 @@ jobs:
     permissions:
       pull-requests: write
     name: Benchmark Rust
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1

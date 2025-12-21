@@ -3,7 +3,7 @@ use oxc::semantic::SymbolId;
 use crate::{ModuleIdx, SymbolRef};
 
 pub trait SymbolIdExt {
-  /// Returns the symbol id as a string.
+  /// Returns true if the symbol id is the special module namespace symbol.
   fn is_module_namespace(&self) -> bool;
 
   fn module_namespace_symbol_ref(module_idx: ModuleIdx) -> SymbolRef;

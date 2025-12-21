@@ -109,7 +109,7 @@ catalog:
   'astring': '^1.9.0'
   'diff': '^8.0.0'
   'estree-toolkit': '^1.7.8'
-  'web-tree-sitter': '^0.25.0'
+  'web-tree-sitter': '^0.26.0'
   'valibot': '1.2.0'
   'tsx': '^4.20.6'
   'acorn-import-assertions': '^1.9.0'

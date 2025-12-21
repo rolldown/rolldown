@@ -1,0 +1,72 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## group-a.js
+
+```js
+import { t as __export } from "./rolldown-runtime.js";
+
+//#region module-a.js
+var module_a_exports = /* @__PURE__ */ __export({ valueA: () => valueA });
+const valueA = "a";
+
+//#endregion
+export { valueA as n, module_a_exports as t };
+```
+
+## group-b.js
+
+```js
+import { t as __export } from "./rolldown-runtime.js";
+
+//#region module-b.js
+var module_b_exports = /* @__PURE__ */ __export({ valueB: () => valueB });
+const valueB = "b";
+
+//#endregion
+export { valueB as n, module_b_exports as t };
+```
+
+## group-c.js
+
+```js
+import { t as __export } from "./rolldown-runtime.js";
+
+//#region module-c.js
+var module_c_exports = /* @__PURE__ */ __export({ valueC: () => valueC });
+const valueC = "c";
+
+//#endregion
+export { valueC as n, module_c_exports as t };
+```
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region main.js
+const load = async () => {
+	import("./group-a.js").then((n) => n.t).then((m) => {
+		assert.strictEqual(m.valueA, "a");
+	});
+	import("./group-b.js").then((n) => n.t).then((m) => {
+		assert.strictEqual(m.valueB, "b");
+	});
+	import("./group-c.js").then((n) => n.t).then((m) => {
+		assert.strictEqual(m.valueC, "c");
+	});
+};
+load();
+
+//#endregion
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [rolldown:runtime]
+export { __export as t };
+```

@@ -1,0 +1,13 @@
+{
+  "config": {
+    "advancedChunks": {
+      "minSize": 100,
+      "groups": [
+        {
+          "name": "shared",
+          "test": "dep"
+        }
+      ]
+    }
+  }
+}

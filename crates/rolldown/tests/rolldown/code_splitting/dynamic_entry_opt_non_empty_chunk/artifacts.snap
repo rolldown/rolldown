@@ -1,0 +1,43 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry-with-code.js
+
+```js
+import { t as libValue } from "./vendor.js";
+
+//#region entry-with-code.js
+const localValue = 10;
+const value = libValue + localValue;
+
+//#endregion
+export { value };
+```
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region main.js
+const load = async () => {
+	import("./entry-with-code.js").then((m) => {
+		assert.strictEqual(m.value, 42);
+	});
+};
+load();
+
+//#endregion
+```
+
+## vendor.js
+
+```js
+//#region lib.js
+const libValue = 32;
+
+//#endregion
+export { libValue as t };
+```

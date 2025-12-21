@@ -1,0 +1,43 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region main.js
+const load = async () => {
+	import("./module1.js").then((m) => {
+		assert.strictEqual(m.value1, 1);
+	});
+	import("./module2.js").then((m) => {
+		assert.strictEqual(m.value2, 2);
+	});
+};
+load();
+
+//#endregion
+```
+
+## module1.js
+
+```js
+//#region module1.js
+const value1 = 1;
+
+//#endregion
+export { value1 };
+```
+
+## module2.js
+
+```js
+//#region module2.js
+const value2 = 2;
+
+//#endregion
+export { value2 };
+```

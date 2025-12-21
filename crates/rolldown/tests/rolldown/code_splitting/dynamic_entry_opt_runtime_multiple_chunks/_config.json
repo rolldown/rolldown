@@ -1,0 +1,20 @@
+{
+  "config": {
+    "advancedChunks": {
+      "groups": [
+        {
+          "name": "group-a",
+          "test": "module-a"
+        },
+        {
+          "name": "group-b", 
+          "test": "module-b"
+        },
+        {
+          "name": "group-c",
+          "test": "module-c"
+        }
+      ]
+    }
+  }
+}

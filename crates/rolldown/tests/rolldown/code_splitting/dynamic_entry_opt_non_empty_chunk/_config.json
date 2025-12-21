@@ -1,0 +1,12 @@
+{
+  "config": {
+    "advancedChunks": {
+      "groups": [
+        {
+          "name": "vendor",
+          "test": "lib"
+        }
+      ]
+    }
+  }
+}

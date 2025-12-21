@@ -1,0 +1,12 @@
+{
+  "config": {
+    "advancedChunks": {
+      "groups": [
+        {
+          "name": "shared",
+          "test": "shared"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region main.js
+const load = async () => {
+	import("./shared.js").then((n) => n.i).then((m) => {
+		assert.strictEqual(m.a, 1);
+	});
+	import("./shared.js").then((n) => n.i).then((m) => {
+		assert.strictEqual(m.b, 2);
+	});
+	import("./shared.js").then((n) => n.i).then((m) => {
+		assert.deepEqual({
+			a: m.a,
+			b: m.b
+		}, {
+			a: 1,
+			b: 2
+		});
+	});
+	import("./shared.js").then((n) => n.i).then((m) => {
+		assert.deepEqual(m, {
+			a: 1,
+			b: 2,
+			c: 3
+		});
+	});
+};
+load();
+
+//#endregion
+```
+
+## shared.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region shared.js
+var shared_exports = /* @__PURE__ */ __export({
+	a: () => a,
+	b: () => b,
+	c: () => c
+});
+const a = 1;
+const b = 2;
+const c = 3;
+
+//#endregion
+export { shared_exports as i, b as n, c as r, a as t };
+```

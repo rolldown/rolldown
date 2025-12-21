@@ -319,10 +319,14 @@ type AddonHookFunction = (
 
 type AddonHook = string | AddonHookFunction;
 
-interface OutputPlugin
-  extends
-    Partial<{ [K in OutputPluginHooks]: PluginHooks[K] }>,
-    Partial<{ [K in AddonHooks]: ObjectHook<AddonHook> }>
+interface OutputPlugin extends
+  Partial<
+    {
+      [K in keyof PluginHooks as K extends OutputPluginHooks ? K : never]:
+        PluginHooks[K];
+    }
+  >,
+  Partial<{ [K in AddonHooks]: ObjectHook<AddonHook> }>
 {
   // cacheKey?: string
   name: string;

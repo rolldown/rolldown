@@ -4,7 +4,6 @@ packages:
   - packages/test-dev-server/tests
   - packages/test-dev-server/tests/playground/hmr-full-bundle-mode
   - packages/test-dev-server/tests/fixtures/*
-  - packages/test-dev-server/tests/tmp/fixtures/*
   - packages/rolldown/tests/fixtures/resolve/issue-5846
   - packages/rolldown/tests/fixtures/resolve/issue-5846-2
   - docs
@@ -53,7 +52,7 @@ catalog:
   '@oxc-node/cli': '^0.0.35'
   '@oxc-node/core': '^0.0.35'
   'fast-glob': '^3.3.3'
-  'rolldown-plugin-dts': '^0.18.0'
+  'rolldown-plugin-dts': '^0.19.0'
   'typescript': '^5.8.3'
   'vitest': '^4.0.15'
   'vite': '^7.0.0'

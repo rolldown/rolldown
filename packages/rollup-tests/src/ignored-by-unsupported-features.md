@@ -58,7 +58,6 @@
  - rollup@function@max-parallel-file-operations@with-plugin: maxParallelFileOps with plugin
 
 ### The `PluginContext.emitFile` emit chunk is only supported partially
- - rollup@function@emit-chunk-hash: gives access to the hashed filed name via this.getFileName in generateBundle
  - rollup@function@implicit-dependencies@dependant-dynamic-import-no-effects: throws when a module that is loaded before an emitted chunk is fully tree-shaken
  - rollup@function@implicit-dependencies@dependant-dynamic-import-not-included: throws when a module that is loaded before an emitted chunk is only linked to the module graph via a tree-shaken dynamic import
  - rollup@function@implicit-dependencies@dependant-not-part-of-graph: throws when a module that is loaded before an emitted chunk is not part of the module graph
@@ -67,7 +66,6 @@
  - rollup@function@emit-file@set-asset-source-chunk: throws when trying to set the asset source of a chunk
  - rollup@function@emit-file@modules-loaded: Throws when adding a chunk after the modules have finished loading
  - rollup@function@emit-file@invalid-chunk-id: throws for invalid chunk ids
- - rollup@function@emit-file@chunk-not-found: Throws if an emitted entry chunk cannot be resolved
  - rollup@function@emit-file@chunk-filename-not-available-buildEnd: Throws when accessing the filename before it has been generated in buildEnd
  - rollup@function@emit-file@chunk-filename-not-available-renderStart: Throws when accessing the filename before it has been generated in renderStart
  - rollup@function@emit-file@chunk-filename-not-available: Throws when accessing the filename before it has been generated
@@ -112,6 +110,7 @@
  - rollup@form@system-uninitialized: supports uninitialized binding exports
  - rollup@form@import-namespace-systemjs: imports namespace (systemjs only)
  - rollup@form@modify-export-semi: inserts semicolons correctly when modifying SystemJS exports@generates system
+ - rollup@form@system-module-reserved: does not output reserved system format identifiers@generates es
 
 ### The `input.perf` and `bundle.getTimings()` is not supported
  - rollup@function@adds-timings-to-bundle-when-codesplitting: Adds timing information to bundle when bundling with perf=true
@@ -198,7 +197,6 @@
  - rollup@function@circular-preserve-modules: correctly handles circular dependencies when preserving modules
  - rollup@function@missing-export-preserve-modules: supports shimming missing exports when preserving modules
  - rollup@function@preserve-modules-circular-order: preserves execution order for circular dependencies when preserving modules
- - rollup@function@preserve-modules@inline-dynamic-imports: Inlining dynamic imports is not supported when preserving modules
  - rollup@function@preserve-modules@invalid-default-export-mode: throws when using default export mode with named exports
  - rollup@function@preserve-modules@invalid-no-preserve-entry-signatures: throws when setting preserveEntrySignatures to false
  - rollup@function@preserve-modules@invalid-none-export-mode: throws when using none export mode with named exports
@@ -215,7 +213,6 @@
  - rollup@function@circular-namespace-reexport-manual-chunks: correctly handles namespace reexports with circular dependencies when using manual chunks
  - rollup@function@emit-chunk-manual-asset-source: supports setting asset sources as side effect of the manual chunks option
  - rollup@function@emit-chunk-manual: supports emitting chunks as side effect of the manual chunks option
- - rollup@function@inline-imports-with-manual: Manual chunks are not supported when inlining dynamic imports
 
 ### The `format: amd` not supported
  - rollup@function@amd-auto-id-id: throws when using both the amd.autoId and the amd.id option
@@ -253,12 +250,6 @@
 
 ## Features
 
-### The `import.meta.ROLLUP_FILE_URL_<referenceId>` is not supported
- - rollup@form@emit-asset-file: supports emitting assets from plugin hooks@generates es
-
-### The rollup treat non-js-extensions module as js module, but the rolldown will guess the module type by externsion
- - rollup@function@non-js-extensions: non .js extensions are preserved
-
 ### The `syntheticNamedExports` is not supported
  - rollup@form@synthetic-named-exports: synthetic named exports
  - rollup@function@synthetic-named-exports-fallback-es2015: adds a fallback in case synthetic named exports are falsy
@@ -284,9 +275,6 @@
  - rollup@form@merge-namespaces-non-live: merges namespaces without live-bindings
  - rollup@form@merge-namespaces: merges namespaces with live-bindings
  - rollup@form@namespace-optimization-in-operator-synthetic: disables optimization for synthetic named exports when using the in operator
-
-### Does not avoid module-related identifiers
- - rollup@form@system-module-reserved: does not output reserved system format identifiers@generates es
 
 ### Import Assertions is not supported
  - rollup@function@import-assertions@plugin-assertions-this-resolve: allows plugins to provide assertions for this.resolve'
@@ -333,12 +321,6 @@
  - rollup@function@chunking-duplicate-reexport: handles duplicate reexports when using dynamic imports
  - rollup@function@namespace-tostring@interop-property-descriptor: generated interop namespaces should have correct Symbol.toStringTag
 
-### Rewrite top-level `this` to `undefined`
- - rollup@form@proper-this-context: make sure "this" respects the context for arrow functions
- - rollup@form@this-is-undefined: top-level `this` expression is rewritten as `undefined`@generates es
- - rollup@function@warn-on-top-level-this: warns on top-level this (#770)
- - rollup@sourcemaps@warning-with-coarse-sourcemap: get correct mapping location with coarse sourcemap@generates es
-
 ### `hasOwnProperty` export is not handled properly
  - rollup@function@re-export-own: avoid using export.hasOwnProperty (hasOwnProperty behavior differs)
 
@@ -349,211 +331,89 @@
 ### source map combine logic does not support coarse sourcemap well enough
 - rollup@sourcemaps@combined-sourcemap-3: get correct combined sourcemap of bundled code@generates es
 
-### The error/warning information is not compatible with rollup
- - rollup@function@warn-on-eval: warns about use of eval
- - rollup@function@warn-missing-iife-name: warns if no name is provided for an IIFE bundle
- - rollup@function@plugin-error-with-numeric-code: rollup do not break if get a plugin error that contains numeric code
- - rollup@function@warn-on-auto-named-default-exports: warns if default and named exports are used in auto mode
- - rollup@function@namespace-reassign-import-fails: warns for reassignments to namespace exports
- - rollup@function@namespace-update-import-fails: disallows updates to namespace exports
- - rollup@function@load-module-error@load: throws when a module cannot be loaded
- - rollup@function@external-entry-point: throws for entry points that are resolved as false by plugins
- - rollup@function@external-entry-point-object: throws for entry points that are resolved as an external object by plugins
- - rollup@function@export-type-mismatch-c: cannot have named exports if explicit export type is default
- - rollup@function@export-type-mismatch: cannot have named exports if explicit export type is default
- - rollup@function@error-missing-umd-name: throws an error if no name is provided for a UMD bundle
- - rollup@function@dynamic-import-not-found: warns if a dynamic import is not found
- - rollup@function@does-not-hang-on-missing-module: does not hang on missing module (#53)
- - rollup@function@default-not-reexported: default export is not re-exported with export *
- - rollup@function@banner-and-footer: adds a banner/footer
- - rollup@function@check-resolve-for-entry: checks that entry is resolved
- - rollup@function@custom-path-resolver-plural-b: resolver error is not caught
- - rollup@function@conflicting-reexports@named-import: throws when a conflicting binding is imported via a named import
- - rollup@function@file-and-dir: throws when using both the file and the dir option
- - rollup@function@reexport-missing-error: reexporting a missing identifier should print an error
- - rollup@function@load-module-error@transform: plugin transform hooks can use `this.error({...}, char)` (#1140)
- - rollup@function@plugin-error@transform: plugin transform hooks can use `this.error({...}, char)` (#1140)
-  - rollup@function@plugin-error@buildEnd: buildStart hooks can use this.error
- - rollup@function@plugin-error@buildStart: buildStart hooks can use this.error
- - rollup@function@plugin-error@generateBundle: buildStart hooks can use this.error
- - rollup@function@plugin-error@load: buildStart hooks can use this.error
- - rollup@function@plugin-error@renderChunk: buildStart hooks can use this.error
- - rollup@function@plugin-error@renderStart: buildStart hooks can use this.error
- - rollup@function@plugin-error@resolveId: buildStart hooks can use this.error
- - rollup@function@load-module-error@buildEnd: buildStart hooks can use this.error
- - rollup@function@load-module-error@buildStart: buildStart hooks can use this.error
- - rollup@function@load-module-error@generateBundle: buildStart hooks can use this.error
- - rollup@function@load-module-error@renderChunk: buildStart hooks can use this.error
- - rollup@function@load-module-error@renderStart: buildStart hooks can use this.error
- - rollup@function@load-module-error@resolveId: buildStart hooks can use this.error
- - rollup@function@logging@this-error-onlog: can turn logs into errors via this.error in the onLog hook
- - rollup@function@plugin-error-only-first-render-chunk: throws error only with first plugin renderChunk
- - rollup@function@plugin-error-only-first-transform: throws error only with first plugin transform
- - rollup@function@plugin-error-module-parsed: errors in moduleParsed abort the build
- - rollup@function@module-side-effects@external-false: supports setting module side effects to false for external modules
- - rollup@function@logging@handle-logs-in-plugins: allows plugins to read and filter logs
- - rollup@function@logging@promote-log-to-error: allows turning logs into errors
- - rollup@hooks@Throws when using the "file"" option for multiple chunks
- - rollup@hooks@supports renderError hook
- - rollup@function@ast-validations@double-named-export: throws on duplicate named exports
- - rollup@function@ast-validations@double-named-export: throws on duplicate named exports
- - rollup@function@ast-validations@double-named-reexport: throws on duplicate named exports
- - rollup@function@ast-validations@double-default-export: throws on double default exports
- - rollup@function@ast-validations@duplicate-function-export: throws on duplicate namespace exports
- - rollup@function@ast-validations@duplicate-import-fails: disallows duplicate imports
- - rollup@function@ast-validations@duplicate-import-specifier-fails: disallows duplicate import specifiers
- - rollup@function@ast-validations@duplicate-namespace-export: throws on duplicate namespace exports
- - rollup@function@ast-validations@duplicate-parameter-name: throws on duplicate parameter names as it would when running in strict mode
- - rollup@function@ast-validations@duplicate-var-export: throws on duplicate exports declared with "var"
- - rollup@function@ast-validations@reassign-import-fails: disallows assignments to imported bindings
- - rollup@function@ast-validations@reassign-import-not-at-top-level-fails: disallows assignments to imported bindings not at the top level
- - rollup@function@ast-validations@redeclare-block-function-function: throws when redeclaring a function binding as a function in a block scope
- - rollup@function@ast-validations@redeclare-catch-scope-local-variable-function: throws when redeclaring the parameter of a catch scope as a function
- - rollup@function@ast-validations@redeclare-catch-scope-parameter-function: throws when redeclaring local variable in a catch scope as a function
- - rollup@function@ast-validations@redeclare-catch-scope-parameter-var-outside-conflict: throws when redeclaring a parameter of a catch scope as a var that conflicts with an outside binding
- - rollup@function@ast-validations@redeclare-catch-scope-pattern-parameter-var: throws when redeclaring a pattern parameter of a catch scope as a var
- - rollup@function@ast-validations@redeclare-class-function: throws when redeclaring a class binding as a function
- - rollup@function@ast-validations@redeclare-const-function: throws when redeclaring a const binding as a function
- - rollup@function@ast-validations@redeclare-default-import-function: throws when redeclaring a default import with a function
- - rollup@function@ast-validations@redeclare-import-var: throws when redeclaring an import with a var
- - rollup@function@ast-validations@redeclare-let-function: throws when redeclaring a let binding as a function
- - rollup@function@ast-validations@redeclare-let-nested-var: throws when redeclaring a let binding with a nested var
- - rollup@function@ast-validations@redeclare-nested-var-let: throws when redeclaring a nested var binding with let
- - rollup@function@ast-validations@redeclare-parameter-let: throws when redeclaring the parameter of a function as a let
- - rollup@function@ast-validations@redeclare-top-level-function-function: throws when redeclaring a top-level function binding as a function
- - rollup@function@ast-validations@redeclare-top-level-var-function: throws when redeclaring a top-level var binding as a function
- - rollup@function@ast-validations@redeclare-var-class: throws when redeclaring a var binding as a class
- - rollup@function@ast-validations@update-expression-of-import-fails: disallows updates to imported bindings
- - rollup@function@catch-rust-panic-parse: Catch Rust panics and then throw them in Node when using this.parse
- - rollup@function@catch-rust-panic: Catch Rust panics and then throw them in Node
- - rollup@function@exports-are-not-defined: Throw descriptive error message for used export is not defined
- - rollup@function@load-module-error@buildEnd: buildEnd hooks can use this.error
- - rollup@function@load-module-error@generateBundle: generateBundle hooks can use this.error
- - rollup@function@load-module-error@renderChunk: renderChunk hooks can use this.error
- - rollup@function@load-module-error@renderStart: renderStart hooks can use this.error
- - rollup@function@load-module-error@resolveId: resolveId hooks can use this.error
- - rollup@function@logging@log-from-options: can log from the options hook
- - rollup@function@logging@log-from-plugin-onlog-onwarn: passes logs from plugins to onLog and onwarn
- - rollup@function@logging@log-from-plugin-onlog: passes logs from plugins to onLog
- - rollup@function@logging@log-from-plugin-onwarn: passes warn logs from plugins to onwarn
- - rollup@function@logging@log-from-plugin-options-onlog-onwarn: passes logs from plugins to onLog and onwarn
- - rollup@function@logging@log-from-plugin-options-onlog: passes logs from plugins to onLog
- - rollup@function@logging@log-from-plugin-options-onwarn: passes warn logs from plugins to onwarn
- - rollup@function@logging@log-from-plugin-simple: prints logs from plugins via input options if there are no handlers
- - rollup@function@logging@loglevel-debug: shows all logs for logLevel:debug
- - rollup@function@logging@loglevel-info: does not show debug logs for logLevel:info
- - rollup@function@logging@loglevel-warn: only shows warning logs for logLevel:warn
- - rollup@function@logging@no-log-with-position: does not support passing a position to this.warn/info/debug outside the transform hook
- - rollup@function@logging@plugin-order: allows to order plugins when logging
- - rollup@function@logging@transform-log-with-position: allows passing a position to this.warn/info/debug in the transform hook
- - rollup@function@missing-entry-export: throws when exporting something that does not exist from an entry
- - rollup@function@plugin-warn-loc-instead-pos: `this.warn(...)` accepts { line, column } object as second parameter (#1265)
- - rollup@function@plugin-warn: plugin transform hooks can use `this.warn({...}, char)` (#1140)
- - rollup@function@plugin-error-transform-pos: `this.error(...)` accepts number as second parameter (#5044)
- - rollup@function@plugin-error-loc-instead-pos: `this.error(...)` accepts { line, column } object as second parameter (#1265)
-
-### The error/warning not implement
- - rollup@hooks@Throws when using the "sourcemapFile" option for multiple chunks
- - rollup@function@transform-without-sourcemap-render-chunk: preserves sourcemap chains when transforming
- - rollup@function@non-function-hook-async: throws when providing a value for an async function hook
- - rollup@function@non-function-hook-sync: throws when providing a value for a sync function hook
- - rollup@function@export-type-mismatch-b: export type must be auto, default, named or none
- - rollup@function@circular-default-exports: handles circular default exports
- - rollup@function@assign-namespace-to-var: allows a namespace to be assigned to a variable (chunk empty warning)
- - rollup@function@can-import-self-treeshake: direct self import (chunk empty warning)
- - rollup@function@external-conflict: external paths from custom resolver remain external (#633)
- - rollup@function@shims-missing-exports: shims missing exports
- - rollup@function@nested-inlined-dynamic-import-2: deconflicts variables when nested dynamic imports are inlined
- - rollup@function@already-deshadowed-import: handle already module import names correctly if they are have already been deshadowed
- - rollup@function@can-import-self: a module importing its own bindings
- - rollup@function@conflicting-reexports@named-import-external: warns when a conflicting binding is imported via a named import from external namespaces
- - rollup@function@cycles-stack-overflow: does not stack overflow on crazy cyclical dependencies
- - rollup@function@cycles-default-anonymous-function-hoisted: Anonymous function declarations are hoisted
- - rollup@function@cycles-immediate: handles cycles where imports are immediately used
- - rollup@function@cycles-pathological-2: resolves even more pathological cyclical dependencies gracefully
- - rollup@function@cycles-defaults: cycles work with default exports
- - rollup@function@cycles-export-star: does not stack overflow on `export * from X` cycles
- - rollup@function@circular-missed-reexports: handles circular reexports
- - rollup@function@circular-missed-reexports-2: handles circular reexports
- - rollup@function@dynamic-import-relative-not-found: throws if a dynamic relative import is not found
- - rollup@function@error-after-transform-should-throw-correct-location: error after transform should throw with correct location of file
- - rollup@function@error-parse-unknown-extension: throws with an extended error message when failing to parse a file without .(m)js extension
- - rollup@function@error-parse-json: throws with an extended error message when failing to parse a file with ".json" extension
- - rollup@function@iife-code-splitting: throws when generating multiple chunks for an IIFE build
- - rollup@function@import-of-unexported-fails: marking an imported, but unexported, identifier should throw
- - rollup@function@inline-imports-with-multiple-array: Having multiple inputs in an array is not supported when inlining dynamic imports
- - rollup@function@inline-imports-with-multiple-object: Having multiple inputs in an object is not supported when inlining dynamic imports
- - rollup@function@warning-low-resolution-location: handles when a low resolution sourcemap is used to report an error
- - rollup@function@warning-incorrect-sourcemap-location: does not fail if a warning has an incorrect location due to missing sourcemaps
- - rollup@function@paths-are-case-sensitive: insists on correct casing for imports
- - rollup@function@recursive-reexports: handles recursive namespace reexports
- - rollup@function@self-referencing-namespace: supports dynamic namespaces that reference themselves
- - rollup@function@no-relative-external: missing relative imports are an error, not a warning
- - rollup@function@warnings-to-string: provides a string conversion for warnings
- - rollup@function@warn-on-empty-bundle: warns if empty bundle is generated  (#444)
- - rollup@function@warn-on-namespace-conflict: warns on duplicate export * from
- - rollup@function@warn-on-unused-missing-imports: warns on missing (but unused) imports
- - rollup@function@warn-misplaced-annotations: warns for misplaced annotations
- - rollup@function@namespace-missing-export: replaces missing namespace members with undefined and warns about them
- - rollup@function@throws-not-found-module: throws error if module is not found
- - rollup@function@transform-without-code-warn-ast: warns when returning a map but no code from a transform hook
- - rollup@function@transform-without-code-warn-map: warns when returning a map but no code from a transform hook
- - rollup@function@unknown-treeshake-value: throws for unknown string values for the treeshake option
- - rollup@function@warns-for-invalid-options: warns for invalid options
- - rollup@function@module-side-effects@invalid-option: warns for invalid options
- - rollup@function@invalid-addon-hook: throws when providing a non-string value for an addon hook
- - rollup@function@invalid-default-export-mode: throw for invalid default export mode
- - rollup@function@invalid-ignore-list-function: throw descriptive error if sourcemapIgnoreList-function does not return a boolean
- - rollup@function@invalid-transform-source-function: throw descriptive error if sourcemapPathTransform-function does not return a string (#3484)
- - rollup@function@invalid-pattern-replacement: throws for invalid placeholders in patterns
- - rollup@function@invalid-pattern: throws for invalid patterns
- - rollup@function@invalid-top-level-await: throws for invalid top-level-await format
- - rollup@function@load-returns-string-or-null: throws error if load returns something wacky    
- - rollup@function@vars-with-init-in-dead-branch: handles vars with init in dead branch (#1198)
- - rollup@function@update-expression-of-import-fails: disallows updates to imported bindings
- - rollup@function@reassign-import-not-at-top-level-fails: disallows assignments to imported bindings not at the top level
- - rollup@function@reassign-import-fails: disallows assignments to imported bindings
- - rollup@function@unused-import: warns on unused imports ([#595])
- - rollup@function@module-level-directive: module level directives should produce warnings    
- - rollup@function@import-not-at-top-level-fails: disallows non-top-level imports
- - rollup@function@export-not-at-top-level-fails: disallows non-top-level exports
- - rollup@function@hashing@maximum-hash-size: throws when the maximum hash size is exceeded
- - rollup@function@hashing@minimum-hash-size: throws when the maximum hash size is exceeded
- - rollup@function@hashing@length-at-non-hash: throws when configuring a length for placeholder other than "hash"
- - rollup@function@emit-file@invalid-file-type: throws for invalid file types
- - rollup@function@emit-file@invalid-asset-name3: throws for invalid asset names with absolute path on Windows OS
- - rollup@function@emit-file@invalid-asset-name: throws for invalid asset names
- - rollup@function@emit-file@emit-same-file: warns if multiple files with the same name are emitted
- - rollup@function@emit-file@emit-from-output-options: throws when trying to emit files from the outputOptions hook
- - rollup@function@duplicate-import-specifier-fails: disallows duplicate import specifiers
- - rollup@function@duplicate-import-fails: disallows duplicate imports
- - rollup@function@double-named-export: throws on duplicate named exports
- - rollup@function@double-named-reexport: throws on duplicate named exports
- - rollup@function@double-default-export: throws on double default exports
+### `strictDeprecations` option is not supported
  - rollup@function@deprecations@externalImportAssertions: marks the "output.externalImportAssertions" option as deprecated
- - rollup@function@cannot-call-external-namespace: warns if code calls an external namespace
- - rollup@function@cannot-call-internal-namespace: warns if code calls an internal namespace
- - rollup@function@circular-reexport: throws proper error for circular reexports
- - rollup@function@conflicting-reexports@namespace-import: warns when a conflicting binding is imported via a namespace import 
- - rollup@function@cannot-resolve-sourcemap-warning: handles when a sourcemap cannot be resolved in a warning
- - rollup@function@adds-json-hint-for-missing-export-if-is-json-file: should provide json hint when importing a no export json file
- - rollup@function@add-watch-file-generate: throws when adding watch files during generate
- - rollup@function@input-name-validation2: throws for relative paths as input names
- - rollup@function@input-name-validation3: throws for relative paths as input names
- - rollup@function@input-name-validation: throws for absolute paths as input names
- - rollup@function@emit-file@asset-source-invalid: throws when setting an empty asset source
- - rollup@function@emit-file@asset-source-missing3: throws when accessing the file name before the asset source is set
- - rollup@function@emit-file@asset-source-missing4: throws when accessing the file name before the asset source is set
- - rollup@function@emit-file@asset-source-missing2: throws when not setting the asset source
- - rollup@function@emit-file@asset-source-missing5: throws when not setting the asset source and accessing the asset URL
- - rollup@function@emit-file@asset-source-missing: throws when not setting the asset source
- - rollup@function@emit-file@invalid-reference-id: throws for invalid reference ids
- - rollup@form@cycles-dependency-with-TLA-await-import: throw a warn when a cycle is detected which includes a top-level await import
  - rollup@function@deprecations@asset-filename-name: marks the "name" property of emitted assets as deprecated in assetFileNames
  - rollup@function@deprecations@asset-filename-originalfilename: marks the "name" property of emitted assets as deprecated in assetFileNames
  - rollup@function@deprecations@asset-name-in-bundle: marks the "name" property of emitted assets as deprecated in generateBundle
- - rollup@function@deprecations@asset-originalfilename-in-bundle: marks the "originalFileName" property of emitted assets as deprecated in generateBundle
- - rollup@function@deprecations@asset-render-chunk-name-in-bundle: marks the "name" property of emitted assets as deprecated in generateBundle when emitted during generate phase
+ - rollup@function@deprecations@asset-originalfilename-in-bundle: marks the "originalFileName" property of emitted assets as deprecated in generateBundle when emitted during generate phase
  - rollup@function@deprecations@asset-render-chunk-originalfilename-in-bundle: marks the "originalFileName" property of emitted assets as deprecated in generateBundle when emitted during generate phase
- - rollup@function@optional-chaining-namespace: handles optional chaining with namespace
- - rollup@function@unused-import-2: warns on unused imports ([#595])
+ - rollup@function@deprecations@asset-render-chunk-name-in-bundle: marks the "name" property of emitted assets as deprecated in generateBundle when emitted during generate phase
+
+### The error/warning information is not compatible with rollup
+ - rollup@function@banner-and-footer: adds a banner/footer (expects `ADDON_ERROR` but got `PLUGIN_ERROR`)
+ - rollup@function@conflicting-reexports@named-import: throws when a conflicting binding is imported via a named import (expects `AMBIGUOUS_EXTERNAL_NAMESPACES` but got `MISSING_EXPORT`)
+ - rollup@function@logging@handle-logs-in-plugins: allows plugins to read and filter logs
+ - rollup@hooks@supports renderError hook
+ - rollup@function@ast-validations@redeclare-catch-scope-parameter-var-outside-conflict: throws when redeclaring a parameter of a catch scope as a var that conflicts with an outside binding (unknown)
+ - rollup@function@import-not-at-top-level-fails: disallows non-top-level imports (`cause` property is missing)
+ - rollup@function@export-not-at-top-level-fails: disallows non-top-level exports (`cause` property is missing)
+
+### The error/warning not implement
+ - rollup@hooks@Throws when using the "sourcemapFile" option for multiple chunks (`INVALID_OPTION` error)
+ - rollup@function@transform-without-sourcemap-render-chunk: preserves sourcemap chains when transforming (`SOURCEMAP_BROKEN` warning)
+ - rollup@function@non-function-hook-async: throws when providing a value for an async function hook (expected `INVALID_PLUGIN_HOOK` error, but got `PLUGIN_ERROR`)
+ - rollup@function@non-function-hook-sync: throws when providing a value for a sync function hook (`INVALID_PLUGIN_HOOK` error)
+ - rollup@function@export-type-mismatch-b: export type must be auto, default, named or none (expected `INVALID_EXPORT_OPTION` error, but got `InvalidArg`)
+ - rollup@function@assign-namespace-to-var: allows a namespace to be assigned to a variable (`EMPTY_BUNDLE` warning)
+ - rollup@function@can-import-self-treeshake: direct self import (`EMPTY_BUNDLE` warning)
+ - rollup@function@external-conflict: external paths from custom resolver remain external (#633) (`INVALID_EXTERNAL_ID` error)
+ - rollup@function@shims-missing-exports: shims missing exports (`SHIMMED_EXPORT` warning)
+ - rollup@function@conflicting-reexports@named-import-external: warns when a conflicting binding is imported via a named import from external namespaces (`AMBIGUOUS_EXTERNAL_NAMESPACES`, `UNUSED_EXTERNAL_IMPORT` warning)
+ - rollup@function@cycles-pathological-2: resolves even more pathological cyclical dependencies gracefully
+ - rollup@function@circular-missed-reexports: handles circular reexports (`MISSING_EXPORT` should be warning instead of error)
+ - rollup@function@iife-code-splitting: throws when generating multiple chunks for an IIFE build (`INVALID_OPTION` error)
+ - rollup@function@inline-imports-with-multiple-array: Having multiple inputs in an array is not supported when inlining dynamic imports (expected `INVALID_OPTION`, but got `GenericFailure`)
+ - rollup@function@inline-imports-with-multiple-object: Having multiple inputs in an object is not supported when inlining dynamic imports (expected `INVALID_OPTION`, but got `GenericFailure`)
+ - rollup@function@preserve-modules@inline-dynamic-imports: Inlining dynamic imports is not supported when preserving modules (expected `INVALID_OPTION`, but got `GenericFailure`)
+ - rollup@function@inline-imports-with-manual: Manual chunks are not supported when inlining dynamic imports (`INVALID_OPTION` error)
+ - rollup@function@warning-low-resolution-location: handles when a low resolution sourcemap is used to report an error (`THIS_IS_UNDEFINED` warning)
+ - rollup@function@warning-incorrect-sourcemap-location: does not fail if a warning has an incorrect location due to missing sourcemaps (expected `MISSING_EXPORT` warning, but got `IMPORT_IS_UNDEFINED`)
+ - rollup@function@paths-are-case-sensitive: insists on correct casing for imports
+ - rollup@function@warnings-to-string: provides a string conversion for warnings (`EMPTY_BUNDLE` warning)
+ - rollup@function@warn-on-empty-bundle: warns if empty bundle is generated  (#444) (`EMPTY_BUNDLE` warning)
+ - rollup@function@warn-on-namespace-conflict: warns on duplicate export * from (`NAMESPACE_CONFLICT` warning)
+ - rollup@function@warn-on-unused-missing-imports: warns on missing (but unused) imports (`MISSING_EXPORT` should be warning instead of an error)
+ - rollup@function@warn-misplaced-annotations: warns for misplaced annotations (`INVALID_ANNOTATION` warning)
+ - rollup@function@namespace-missing-export: replaces missing namespace members with undefined and warns about them (expected `MISSING_EXPORT` warning, but got `IMPORT_IS_UNDEFINED`)
+ - rollup@function@transform-without-code-warn-ast: warns when returning a map but no code from a transform hook (`NO_TRANSFORM_MAP_OR_AST_WITHOUT_CODE` warning)
+ - rollup@function@transform-without-code-warn-map: warns when returning a map but no code from a transform hook (`NO_TRANSFORM_MAP_OR_AST_WITHOUT_CODE` warning)
+ - rollup@function@unknown-treeshake-value: throws for unknown string values for the treeshake option (`INVALID_OPTION` error)
+ - rollup@function@warns-for-invalid-options: warns for invalid options (`UNKNOWN_OPTION` warning)
+ - rollup@function@module-side-effects@invalid-option: warns for invalid options (`INVALID_OPTION` error expected, but got `InvalidArg`)
+ - rollup@function@invalid-addon-hook: throws when providing a non-string value for an addon hook (`ADDON_ERROR` error expected, but got `unreachable: Invalid hook type`)
+ - rollup@function@invalid-ignore-list-function: throw descriptive error if sourcemapIgnoreList-function does not return a boolean (`VALIDATION_ERROR` error expected, but got `InvalidArg`)
+ - rollup@function@invalid-transform-source-function: throw descriptive error if sourcemapPathTransform-function does not return a string (#3484) (`VALIDATION_ERROR` error expected, but got `GenericFailure`)
+ - rollup@function@invalid-pattern-replacement: throws for invalid placeholders in patterns (`VALIDATION_ERROR` error)
+ - rollup@function@invalid-pattern: throws for invalid patterns (`VALIDATION_ERROR` error expected, but got `INVALID_OPTION`)
+ - rollup@function@invalid-top-level-await: throws for invalid top-level-await format (`INVALID_TLA_FORMAT` error expected, but got `UNSUPPORTED_FEATURE`)
+ - rollup@function@load-returns-string-or-null: throws error if load returns something wacky (`BAD_LOADER` error expected, but got `InvalidArg`)
+ - rollup@function@vars-with-init-in-dead-branch: handles vars with init in dead branch (#1198) (`EMPTY_BUNDLE` warning)
+ - rollup@function@unused-import: warns on unused imports ([#595]) (`UNUSED_EXTERNAL_IMPORT` warning)
+ - rollup@function@unused-import-2: warns on unused imports ([#595]) (`UNUSED_EXTERNAL_IMPORT` warning)
+ - rollup@function@module-level-directive: module level directives should produce warnings (`MODULE_LEVEL_DIRECTIVE` warning)
+ - rollup@function@hashing@maximum-hash-size: throws when the maximum hash size is exceeded (`VALIDATION_ERROR` error)
+ - rollup@function@hashing@minimum-hash-size: throws when the maximum hash size is exceeded (`VALIDATION_ERROR` error)
+ - rollup@function@hashing@length-at-non-hash: throws when configuring a length for placeholder other than "hash" (`VALIDATION_ERROR` error)
+ - rollup@function@emit-file@invalid-file-type: throws for invalid file types (`pluginCode":"VALIDATION_ERROR"` expected, but got `pluginCode:"InvalidArg"`)
+ - rollup@function@emit-file@invalid-asset-name3: throws for invalid asset names with absolute path on Windows OS (`PLUGIN_ERROR`>`VALIDATION_ERROR` error)
+ - rollup@function@emit-file@invalid-asset-name: throws for invalid asset names (`PLUGIN_ERROR`>`VALIDATION_ERROR` error)
+ - rollup@function@emit-file@emit-same-file: warns if multiple files with the same name are emitted (`FILE_NAME_CONFLICT` error)
+ - rollup@function@emit-file@emit-from-output-options: throws when trying to emit files from the outputOptions hook (`CANNOT_EMIT_FROM_OPTIONS_HOOK` error)
+ - rollup@function@cannot-call-external-namespace: warns if code calls an external namespace (`CANNOT_CALL_NAMESPACE` warning)
+ - rollup@function@cannot-call-internal-namespace: warns if code calls an internal namespace (`CANNOT_CALL_NAMESPACE` warning)
+ - rollup@function@conflicting-reexports@namespace-import: warns when a conflicting binding is imported via a namespace import (`MISSING_EXPORT` warning)
+ - rollup@function@cannot-resolve-sourcemap-warning: handles when a sourcemap cannot be resolved in a warning (`SOURCEMAP_ERROR` warning)
+ - rollup@function@adds-json-hint-for-missing-export-if-is-json-file: should provide json hint when importing a no export json file (`pluginCode":"VALIDATION_ERROR"` expected, but got `pluginCode:"InvalidArg"`)
+ - rollup@function@emit-file@asset-source-invalid: throws when setting an empty asset source (`pluginCode":"VALIDATION_ERROR"` expected, but got `pluginCode:"InvalidArg"`)
+ - rollup@function@emit-file@asset-source-missing3: throws when accessing the file name before the asset source is set (`ASSET_SOURCE_MISSING` error is expected, but `PLUGIN_ERROR` is thrown)
+ - rollup@function@emit-file@asset-source-missing4: throws when accessing the file name before the asset source is set (`ASSET_SOURCE_MISSING` error is expected, but `PLUGIN_ERROR` is thrown)
+ - rollup@function@emit-file@asset-source-missing2: throws when not setting the asset source (`ASSET_SOURCE_MISSING` error is expected, but `PLUGIN_ERROR` is thrown)
+ - rollup@function@emit-file@asset-source-missing5: throws when not setting the asset source and accessing the asset URL (`ASSET_SOURCE_MISSING` error is expected, but `PLUGIN_ERROR` is thrown)
+ - rollup@function@emit-file@asset-source-missing: throws when not setting the asset source (`ASSET_SOURCE_MISSING` error is expected, but `PLUGIN_ERROR` is thrown)
+ - rollup@function@emit-file@invalid-reference-id: throws for invalid reference ids (missing error)
+ - rollup@form@cycles-dependency-with-TLA-await-import: throw a warn when a cycle is detected which includes a top-level await import (`CIRCULAR_DEPENDENCY` warning)
+ - rollup@function@optional-chaining-namespace: handles optional chaining with namespace (`UNUSED_EXTERNAL_IMPORT` warning)
+ - rollup@function@ast-validations@redeclare-import-var: throws when redeclaring an import with a var (https://github.com/oxc-project/oxc/issues/15961)
+ - rollup@function@warn-on-top-level-this: warns on top-level this (#770) (`THIS_IS_UNDEFINED` warning)
+ - rollup@sourcemaps@warning-with-coarse-sourcemap: get correct mapping location with coarse sourcemap@generates es (`THIS_IS_UNDEFINED` warning)

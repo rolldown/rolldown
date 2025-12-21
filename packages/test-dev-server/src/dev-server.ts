@@ -44,6 +44,7 @@ class DevServer {
   #clients = new Map<string, ClientSession>();
   #devOptions?: NormalizedDevOptions;
   #devEngine?: DevEngine;
+  #port = 3000;
 
   constructor() {}
 
@@ -57,12 +58,24 @@ class DevServer {
   }
 
   async serve(): Promise<void> {
-    this.#prepareServer();
-
     const devConfig = await loadDevConfig();
     const devOptions = normalizeDevOptions(devConfig.dev ?? {});
     this.#devOptions = devOptions;
+    this.#port = process.env.DEV_SERVER_PORT
+      ? parseInt(process.env.DEV_SERVER_PORT, 10)
+      : devOptions.port;
+
+    this.#prepareServer();
+
     const buildOptions = devConfig.build ?? {};
+
+    // Inject port into devMode options for HMR runtime
+    buildOptions.experimental = buildOptions.experimental ?? {};
+    buildOptions.experimental.devMode = buildOptions.experimental.devMode ?? {};
+    if (typeof buildOptions.experimental.devMode === 'object') {
+      buildOptions.experimental.devMode.port = this.#port;
+    }
+
     if (buildOptions.plugins == null || Array.isArray(buildOptions.plugins)) {
       buildOptions.plugins = [
         ...(buildOptions.plugins || []),
@@ -142,8 +155,8 @@ class DevServer {
       });
     });
 
-    this.server.listen(3000, () => {
-      console.log('Server listening on http://localhost:3000');
+    this.server.listen(this.#port, () => {
+      console.log(`Server listening on http://localhost:${this.#port}`);
     });
   }
 

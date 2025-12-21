@@ -72,10 +72,7 @@ test.sequential('watch', async () => {
     // Test create event
     fs.writeFileSync(foo, 'export const foo = 2');
     await waitUtil(() => {
-      // FIXME: create event is not emitted properly on macOS
-      if (process.platform !== 'darwin') {
-        expect(watchChangeCreateFn).toBeCalled();
-      }
+      expect(watchChangeCreateFn).toBeCalled();
     });
   } catch (e) {
     errored = true;

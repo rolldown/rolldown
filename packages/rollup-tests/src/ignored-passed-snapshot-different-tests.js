@@ -143,6 +143,10 @@ module.exports = [
     "rollup@form@support-decorators-after-export: support decorators after export",
     "rollup@form@support-decorators-before-export: support decorators before export",
 
+    // Passed. `undefined` -> `void 0`
+    "rollup@form@proper-this-context: make sure \"this\" respects the context for arrow functions",
+    "rollup@form@this-is-undefined: top-level `this` expression is rewritten as `undefined`@generates es",
+
     // Passed, but sourcemap/code is different from rollup
     "rollup@function@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook",
     "rollup@function@sourcemap-inline-generatebundle: includes inline sourcemap comments in generateBundle hook",
@@ -163,4 +167,7 @@ module.exports = [
     "rollup@form@deconflict-module-priority: prioritizes entry modules over dependencies when deconflicting",
     "rollup@form@hoisted-vars-in-dead-branches: renders hoisted variables in dead branches", // Var hoisting happens in Rollup, but not in Rolldown
     "rollup@form@export-__proto__: export __proto__@generates es", // Rolldown uses `__export` helper, but Rollup does not
+    "rollup@function@emit-chunk-hash: gives access to the hashed filed name via this.getFileName in generateBundle", // hash value difference
+    "rollup@form@emit-asset-file: supports emitting assets from plugin hooks@generates es", // hash value difference
+    "rollup@function@cycles-export-star: does not stack overflow on `export * from X` cycles",
 ]

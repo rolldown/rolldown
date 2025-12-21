@@ -59,6 +59,7 @@ export type DevModeOptions = boolean | {
   host?: string;
   port?: number;
   implement?: string;
+  lazy?: boolean;
 };
 
 export type OptimizationOptions = {

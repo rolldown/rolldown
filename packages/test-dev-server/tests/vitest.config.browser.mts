@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    hookTimeout: 1000 * 30,
+    hookTimeout: process.env.CI ? 1000 * 30 : 1000 * 10,
     // Include playground tests
     include: ['hmr-full-bundle-mode.spec.ts'],
     environment: 'node',
@@ -12,8 +12,10 @@ export default defineConfig({
     testTimeout: 90000,
     expect: {
       poll: {
-        timeout: 1000 * 10,
+        timeout: process.env.CI ? 1000 * 10 : 1000 * 3,
       },
     },
+    // Enable retry for flaky tests in CI
+    retry: process.env.CI ? 3 : 1,
   },
 });

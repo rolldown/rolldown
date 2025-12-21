@@ -105,12 +105,13 @@ pub fn to_binding_error(diagnostic: &BuildDiagnostic, cwd: std::path::PathBuf) -
         clippy::cast_possible_truncation,
         reason = "line/column/position values are unlikely to exceed u32::MAX in practical use"
       )]
-      let (loc, pos) = if let Some((file, line, column, position)) = diag.get_primary_location() {
+      let (loc, pos) = if let Some((_file, line, column, position)) = diag.get_primary_location() {
         (
-          Some(super::error::native_error::NativeErrorLocation {
+          Some(super::binding_log::BindingLogLocation {
             line: line as u32,
             column: column as u32,
-            file: Some(file),
+            // Use error.id() for the file path since the diagnostic may only store the filename.
+            file: error.id(),
           }),
           Some(position as u32),
         )

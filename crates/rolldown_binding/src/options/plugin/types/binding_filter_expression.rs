@@ -94,6 +94,7 @@ pub struct BindingFilterToken {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FilterTokenKind {
   Id,
+  ImporterId,
   Code,
   ModuleType,
   And,
@@ -121,6 +122,17 @@ pub fn normalized_tokens(tokens: Vec<BindingFilterToken>) -> Vec<Token> {
             .expect_string_or_regex(),
         ));
         ret.push(Token::Id);
+      }
+      FilterTokenKind::ImporterId => {
+        ret.push(Token::from(
+          value
+            .payload
+            .take()
+            .expect("`ImporterId` should have payload")
+            .into_inner()
+            .expect_string_or_regex(),
+        ));
+        ret.push(Token::ImporterId);
       }
       FilterTokenKind::Code => {
         ret.push(Token::from(

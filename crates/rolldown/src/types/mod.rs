@@ -3,6 +3,7 @@
 // operations on the data they store or only have simple getters and setters.
 
 pub mod bundle_output;
+pub mod bundler_config;
 pub mod generator;
 pub mod linking_metadata;
 pub mod module_factory;

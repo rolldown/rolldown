@@ -111,7 +111,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       .ctx
       .linking_info
       .wrapper_stmt_info
-      .is_some_and(|idx| self.ctx.module.stmt_infos[idx].is_included)
+      .is_some_and(|idx| self.ctx.linking_info.stmt_info_included[idx])
       .then_some(self.ctx.linking_info.wrap_kind());
 
     self.needs_hosted_top_level_binding = matches!(included_wrap_kind, Some(WrapKind::Esm));
@@ -135,7 +135,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         .stmt_infos
         .declared_stmts_by_symbol(symbol_ref)
         .iter()
-        .any(|id| self.ctx.module.stmt_infos[*id].is_included);
+        .any(|id| self.ctx.linking_info.stmt_info_included[*id]);
       if is_included {
         let canonical_name = self.canonical_name_for(*symbol_ref);
         program.body.push(self.snippet.var_decl_stmt(canonical_name, self.snippet.void_zero()));

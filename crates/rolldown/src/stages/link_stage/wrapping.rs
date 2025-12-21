@@ -227,7 +227,6 @@ pub fn create_wrapper(
           runtime.resolve_symbol("__commonJSMin").into()
         }],
         side_effect: false.into(),
-        is_included: false,
         import_records: Vec::new(),
         #[cfg(debug_assertions)]
         debug_label: None,
@@ -259,7 +258,6 @@ pub fn create_wrapper(
           runtime.resolve_symbol("__esmMin").into()
         }],
         side_effect: true.into(),
-        is_included: false,
         import_records: Vec::new(),
         #[cfg(debug_assertions)]
         debug_label: None,

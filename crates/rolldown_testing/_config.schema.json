@@ -1327,7 +1327,7 @@
             "null"
           ]
         },
-        "mixedExport": {
+        "mixedExports": {
           "type": [
             "boolean",
             "null"

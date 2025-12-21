@@ -12,14 +12,15 @@ impl BuildEvent for CircularReexport {
     EventKind::CircularReexportError
   }
 
-  fn message(&self, _opts: &DiagnosticOptions) -> String {
+  fn message(&self, opts: &DiagnosticOptions) -> String {
     format!(
       "'{}' cannot be exported from '{}' as it is a reexport that references itself.",
-      self.imported_specifier, self.importer_id
+      self.imported_specifier,
+      opts.stabilize_path(&self.importer_id)
     )
   }
 
-  fn id(&self) -> Option<String> {
+  fn exporter(&self) -> Option<String> {
     Some(self.importer_id.clone())
   }
 }

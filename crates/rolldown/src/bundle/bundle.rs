@@ -151,7 +151,7 @@ impl Bundle {
   ) -> BuildResult<BundleOutput> {
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
 
-    if self.options.clean_dir && self.options.dir.is_some() {
+    if self.options.clean_dir && self.options.file.is_none() {
       if let Err(err) = clean_dir(&self.fs, &dist_dir) {
         self.warnings.push(
           BuildDiagnostic::could_not_clean_directory(

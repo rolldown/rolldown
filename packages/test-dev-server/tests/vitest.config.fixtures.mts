@@ -11,10 +11,8 @@ export default defineConfig({
     // https://vitest.dev/api/mock.html#mockreset, since we run each test twice, so we need to reset the mockReset for each run
     mockReset: true,
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
+    sequence: {
+      concurrent: true,
     },
   },
   resolve: {

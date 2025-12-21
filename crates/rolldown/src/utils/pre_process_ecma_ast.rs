@@ -31,7 +31,7 @@ impl PreProcessEcmaAst {
   pub fn build(
     &mut self,
     mut ast: EcmaAst,
-    path: &str,
+    stable_id: &str,
     resolved_id: &str,
     parsed_type: &OxcParseType,
     replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
@@ -67,9 +67,14 @@ impl PreProcessEcmaAst {
       semantic_ret.errors.into_iter().partition(|w| w.severity == OxcSeverity::Error);
 
     let mut warnings = if errors.is_empty() {
-      BuildDiagnostic::from_oxc_diagnostics(warnings, &source, path, &Severity::Warning)
+      BuildDiagnostic::from_oxc_diagnostics(warnings, &source, resolved_id, &Severity::Warning)
     } else {
-      return Err(BuildDiagnostic::from_oxc_diagnostics(errors, &source, path, &Severity::Error))?;
+      return Err(BuildDiagnostic::from_oxc_diagnostics(
+        errors,
+        &source,
+        resolved_id,
+        &Severity::Error,
+      ))?;
     };
 
     self.stats = semantic_ret.semantic.stats();
@@ -98,7 +103,7 @@ impl PreProcessEcmaAst {
           .options_for_file(is_not_js.then_some(Path::new(resolved_id)), &mut warnings)?;
 
         let scoping = self.recreate_scoping(&mut scoping, program, false);
-        let ret = Transformer::new(allocator, Path::new(path), &transform_options)
+        let ret = Transformer::new(allocator, Path::new(stable_id), &transform_options)
           .build_with_scoping(scoping, program);
         // TODO: emit diagnostic, aiming to pass more tests,
         // we ignore warning for now
@@ -111,7 +116,7 @@ impl PreProcessEcmaAst {
           return Err(BatchedBuildDiagnostic::from(BuildDiagnostic::from_oxc_diagnostics(
             errors,
             &source,
-            path,
+            resolved_id,
             &Severity::Error,
           )));
         }

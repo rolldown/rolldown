@@ -65,12 +65,12 @@ impl WatcherImpl {
     let tx = Arc::new(tx);
     let cloned_tx = Arc::clone(&tx);
     let watch_option = {
-      let config = Config::default();
+      let mut config = Config::default();
       if let Some(notify) = &notify_option {
         if let Some(poll_interval) = notify.poll_interval {
-          config.with_poll_interval(poll_interval);
+          config = config.with_poll_interval(poll_interval);
         }
-        config.with_compare_contents(notify.compare_contents);
+        config = config.with_compare_contents(notify.compare_contents);
       }
       config
     };

@@ -51,6 +51,10 @@ impl BuildDiagnostic {
     self.inner.exporter()
   }
 
+  pub fn ids(&self) -> Option<Vec<String>> {
+    self.inner.ids()
+  }
+
   pub fn severity(&self) -> Severity {
     self.severity
   }
@@ -70,6 +74,10 @@ impl BuildDiagnostic {
       Diagnostic::new(self.kind().to_string(), self.inner.message(opts), self.severity);
     self.inner.on_diagnostic(&mut diagnostic, opts);
     diagnostic
+  }
+
+  pub fn to_message_with(&self, opts: &DiagnosticOptions) -> String {
+    self.inner.message(opts)
   }
 
   #[cfg(feature = "napi")]

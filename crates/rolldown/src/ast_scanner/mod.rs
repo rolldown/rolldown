@@ -361,9 +361,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     }
 
-    if self.immutable_ctx.options.is_dev_mode_enabled() && exports_kind.is_commonjs() {
-      // https://github.com/rolldown/rolldown/issues/4129
-      // For cjs module with hmr enabled, bundler will generates code that references `module`.
+    // For cjs module with hmr enabled, bundler will generates code that references `module`.
+    // https://github.com/rolldown/rolldown/issues/4129
+    //
+    // Even if a cjs module doesn't export anything, the correct `module` reference in module scope
+    // still needs to be registered with the HMR runtime.
+    //
+    // Following cases need to be registered:
+    // - `ExportsKind::None` (no exports)
+    // - `ExportsKind::CommonJs` (commonjs module)
+    if self.immutable_ctx.options.is_dev_mode_enabled()
+      && matches!(exports_kind, ExportsKind::None | ExportsKind::CommonJs)
+    {
       self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
     }
 

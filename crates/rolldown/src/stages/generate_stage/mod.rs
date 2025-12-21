@@ -176,7 +176,9 @@ impl<'a> GenerateStage<'a> {
       let ast_table_iter = self.link_output.ast_table.par_iter_mut_enumerated();
       ast_table_iter
         .filter(|(idx, _ast)| {
-          self.link_output.module_table[*idx].as_normal().is_some_and(|m| m.meta.is_included())
+          self.link_output.module_table[*idx]
+            .as_normal()
+            .is_some_and(|m| self.link_output.metas[m.idx].is_included)
         })
         .filter_map(|(idx, ast)| {
           let Some(ast) = ast else {
@@ -322,7 +324,7 @@ impl<'a> GenerateStage<'a> {
 
               // Apply the same logic as get_preserve_modules_chunk_name to include directory structure
               let chunk_name = {
-                let p = PathBuf::from(&absolute_chunk_file_name);
+                let p = PathBuf::from(sanitized_absolute_filename.as_str());
                 let relative_path = if p.is_absolute() {
                   if let Some(ref preserve_modules_root) = preserve_modules_root {
                     if absolute_chunk_file_name.starts_with(preserve_modules_root.as_str()) {

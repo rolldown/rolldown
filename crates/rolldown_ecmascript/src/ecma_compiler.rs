@@ -19,7 +19,7 @@ use crate::ecma_ast::{
 pub struct EcmaCompiler;
 
 impl EcmaCompiler {
-  pub fn parse(filename: &str, source: impl Into<ArcStr>, ty: SourceType) -> BuildResult<EcmaAst> {
+  pub fn parse(id: &str, source: impl Into<ArcStr>, ty: SourceType) -> BuildResult<EcmaAst> {
     let source: ArcStr = source.into();
     let allocator = oxc::allocator::Allocator::default();
     let inner =
@@ -33,7 +33,7 @@ impl EcmaCompiler {
           Err(BuildDiagnostic::from_oxc_diagnostics(
             ret.errors,
             &source.clone(),
-            filename,
+            id,
             &Severity::Error,
           ))
         } else {
@@ -44,7 +44,7 @@ impl EcmaCompiler {
   }
 
   pub fn parse_expr_as_program(
-    filename: &str,
+    id: &str,
     source: impl Into<ArcStr>,
     ty: SourceType,
   ) -> BuildResult<EcmaAst> {
@@ -71,7 +71,7 @@ impl EcmaCompiler {
           Err(errors) => Err(BuildDiagnostic::from_oxc_diagnostics(
             errors,
             &source.clone(),
-            filename,
+            id,
             &Severity::Error,
           )),
         }

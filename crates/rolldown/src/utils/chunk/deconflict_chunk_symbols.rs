@@ -123,38 +123,42 @@ pub fn deconflict_chunk_symbols(
       let meta = &link_output.metas[module.idx];
       let is_cjs_wrapped_module = matches!(meta.wrap_kind(), WrapKind::Cjs);
 
-      module.stmt_infos.iter().filter(|stmt_info| stmt_info.is_included).for_each(|stmt_info| {
-        for declared_symbol in stmt_info
-          .declared_symbols
-          .iter()
-          .filter(|item| matches!(item, TaggedSymbolRef::Normal(_)))
-        {
-          let symbol_ref = declared_symbol.inner();
-          let canonical_ref = link_output.symbol_db.canonical_ref_for(symbol_ref);
-          // Import statement declared some symbols that come from other module, those symbol should be skipped
-          if canonical_ref.owner != module.idx {
-            continue;
+      module
+        .stmt_infos
+        .iter_enumerated()
+        .filter(|(idx, _)| meta.stmt_info_included[*idx])
+        .for_each(|(_, stmt_info)| {
+          for declared_symbol in stmt_info
+            .declared_symbols
+            .iter()
+            .filter(|item| matches!(item, TaggedSymbolRef::Normal(_)))
+          {
+            let symbol_ref = declared_symbol.inner();
+            let canonical_ref = link_output.symbol_db.canonical_ref_for(symbol_ref);
+            // Import statement declared some symbols that come from other module, those symbol should be skipped
+            if canonical_ref.owner != module.idx {
+              continue;
+            }
+            // For CJS wrapped modules, only facade symbols need deconflicting.
+            // Facade symbols are synthetic symbols created during linking (e.g., `require_foo` wrapper,
+            // namespace objects) that don't exist in the original AST. These are rendered at the chunk's
+            // root scope and must be deconflicted. Non-facade (real AST) symbols in CJS modules are
+            // wrapped inside the `__commonJS` closure and don't pollute the chunk's root scope.
+            let needs_deconflict = if is_cjs_wrapped_module {
+              // Note:
+              // 1. Some facade symbols may originate from external modules (e.g., namespace objects for external imports).
+              // 2. Since we merge external module symbols, external symbol declared in a cjs module also needs to be deconflicted
+              link_output.symbol_db.is_facade_symbol(canonical_ref)
+                || stmt_info.import_records.iter().any(|import_rec_idx| {
+                  link_output.module_table[module.import_records[*import_rec_idx].resolved_module]
+                    .is_external()
+                })
+            } else {
+              true
+            };
+            renamer.add_symbol_in_root_scope(symbol_ref, needs_deconflict);
           }
-          // For CJS wrapped modules, only facade symbols need deconflicting.
-          // Facade symbols are synthetic symbols created during linking (e.g., `require_foo` wrapper,
-          // namespace objects) that don't exist in the original AST. These are rendered at the chunk's
-          // root scope and must be deconflicted. Non-facade (real AST) symbols in CJS modules are
-          // wrapped inside the `__commonJS` closure and don't pollute the chunk's root scope.
-          let needs_deconflict = if is_cjs_wrapped_module {
-            // Note:
-            // 1. Some facade symbols may originate from external modules (e.g., namespace objects for external imports).
-            // 2. Since we merge external module symbols, external symbol declared in a cjs module also needs to be deconflicted
-            link_output.symbol_db.is_facade_symbol(canonical_ref)
-              || stmt_info.import_records.iter().any(|import_rec_idx| {
-                link_output.module_table[module.import_records[*import_rec_idx].resolved_module]
-                  .is_external()
-              })
-          } else {
-            true
-          };
-          renamer.add_symbol_in_root_scope(symbol_ref, needs_deconflict);
-        }
-      });
+        });
     });
 
   // Though, those symbols in `imports_from_other_chunks` doesn't belong to this chunk, but in the final output, they still behave

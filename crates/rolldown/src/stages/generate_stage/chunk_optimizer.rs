@@ -386,7 +386,7 @@ impl GenerateStage<'_> {
       let Some(module) = self.link_output.module_table[entry_module].as_normal_mut() else {
         continue;
       };
-      // prefer drain and avoid clone
+      // Filter in place to avoid cloning
       module.stmt_infos[StmtInfos::NAMESPACE_STMT_IDX].referenced_symbols.retain(
         |item| match item {
           rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
@@ -460,7 +460,7 @@ impl GenerateStage<'_> {
     if chunk_graph.module_to_chunk[runtime_module_idx].is_none()
       && !optimized_common_chunk.is_empty()
     {
-      // If there is only common chunk are appended with dynamic entry module, we just put runtime module into that chunk.
+      // If only one common chunk was appended with dynamic entry module, we just put runtime module into that chunk.
       // Else create a new common chunk to store runtime module.
       let chunk_idx = match optimized_common_chunk.len() {
         1 => optimized_common_chunk.into_iter().next().unwrap(),

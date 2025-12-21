@@ -323,8 +323,7 @@ interface OutputPlugin extends
   Partial<
     {
       // use remapping keys to support IDE features
-      [K in keyof PluginHooks as K extends OutputPluginHooks ? K : never]:
-        PluginHooks[K];
+      [K in keyof PluginHooks as K & OutputPluginHooks]: PluginHooks[K];
     }
   >,
   Partial<{ [K in AddonHooks]: ObjectHook<AddonHook> }>

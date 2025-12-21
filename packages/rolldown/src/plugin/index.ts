@@ -322,7 +322,8 @@ type AddonHook = string | AddonHookFunction;
 interface OutputPlugin extends
   Partial<
     {
-      // use remapping keys to support IDE features
+      // Use key remapping pattern to provide better  "go to definition" experience.
+      // https://github.com/rolldown/rolldown/pull/7610
       [K in keyof PluginHooks as K & OutputPluginHooks]: PluginHooks[K];
     }
   >,

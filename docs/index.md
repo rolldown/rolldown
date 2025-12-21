@@ -5,7 +5,7 @@ theme: dark
 ---
 
 <Hero/>
-<TrustedBy />
+<TrustedBy :logos="['linear', 'framer', 'mercedes', 'beehiiv', 'excalidraw']" />
 <HeadingSection
 heading="Performance without sacrificing familiarity"
 />

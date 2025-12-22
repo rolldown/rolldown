@@ -208,7 +208,6 @@ export default defineConfig({
         rel: 'icon',
         type: 'image/svg+xml',
         href: '/logo-without-border.svg',
-        // href: '/favicon.svg',
       },
     ],
     ['meta', { name: 'theme-color', content: '#ff7e17' }],

@@ -55,7 +55,9 @@ impl BuildEvent for DiagnosableResolveError {
       _ => {}
     }
     diagnostic.title = self.message(opts);
-    diagnostic.help.clone_from(&self.help);
+    if let Some(help) = &self.help {
+      diagnostic.helps.push(help.clone());
+    }
   }
 
   fn id(&self) -> Option<String> {

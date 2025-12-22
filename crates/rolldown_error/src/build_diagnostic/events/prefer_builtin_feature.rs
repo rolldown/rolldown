@@ -32,10 +32,10 @@ impl BuildEvent for PreferBuiltinFeature {
 
   fn on_diagnostic(
     &self,
-    _diagnostic: &mut crate::build_diagnostic::diagnostic::Diagnostic,
+    diagnostic: &mut crate::build_diagnostic::diagnostic::Diagnostic,
     _opts: &DiagnosticOptions,
   ) {
-    _diagnostic.help = Some(
+    diagnostic.helps.push(
       "This diagnostic may be false positive, you could turn it off via `checks.preferBuiltinFeature`".to_string(),
     );
   }

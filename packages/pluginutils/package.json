@@ -12,6 +12,7 @@
     "access": "public",
     "exports": {
       ".": "./dist/index.js",
+      "./filter": "./dist/filter/index.js",
       "./package.json": "./package.json"
     }
   },
@@ -22,6 +23,10 @@
     ".": {
       "dev": "./src/index.ts",
       "default": "./dist/index.js"
+    },
+    "./filter": {
+      "dev": "./src/filter/index.ts",
+      "default": "./dist/filter/index.js"
     },
     "./package.json": "./package.json"
   },

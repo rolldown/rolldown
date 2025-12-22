@@ -9,6 +9,9 @@
     "**/examples/**",
     "**/crates/rolldown/tests/**"
   ],
+  "ignoreDeps": [
+    "kill-port", // `kill-port:^2.0.0 has perf issues (https://github.com/rolldown/rolldown/pull/7575)
+  ],
   "packageRules": [
     {
       "matchPackageNames": ["pnpm"],

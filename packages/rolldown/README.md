@@ -6,6 +6,7 @@
 - 🔌 Rollup-Compatible APIs
 - ⏩ esbuild Feature Parity
 
-Rolldown is a general-purpose JavaScript/TypeScript bundler written in Rust, intended to serve as the future bundler used in [Vite](https://vitejs.dev/). It provides Rollup-compatible APIs and plugin interfaces, while offering a broader feature set similar to esbuild.
+Rolldown is primarily designed to serve as the underlying bundler in [Vite](https://vite.dev/), with the goal to replace esbuild and Rollup with one unified build tool. Although designed for Vite, Rolldown is also fully capable of being used as a standalone, general-purpose bundler. It can serve as a drop-in replacement for Rollup in most cases, and can also be used as an esbuild alternative when better chunking control is needed.
+
 
 [Read the Docs to Learn More](https://rolldown.rs).

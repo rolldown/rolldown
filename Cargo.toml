@@ -180,8 +180,8 @@ phf = "0.13.0"
 rayon = "1.10.0"
 regex = "1.11.1"
 regress = "0.10.3"
-rolldown-notify = { version = "10.0.0", default-features = false, features = ["macos_kqueue"] }
-rolldown-notify-debouncer-full = { version = "0.7.3", default-features = false, features = ["macos_kqueue"] }
+rolldown-notify = "10.0.0"
+rolldown-notify-debouncer-full = "0.7.3"
 ropey = "1.6.1"
 rustc-hash = { version = "2.1.1" }
 schemars = "1.0.0"

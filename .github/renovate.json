@@ -10,7 +10,7 @@
     "**/crates/rolldown/tests/**"
   ],
   "ignoreDeps": [
-    "kill-port",
+    "kill-port"
   ],
   "packageRules": [
     {

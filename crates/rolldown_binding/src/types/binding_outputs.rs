@@ -96,7 +96,7 @@ pub fn to_binding_error(diagnostic: &BuildDiagnostic, cwd: std::path::PathBuf) -
       }
     }
     Err(error) => {
-      let diag = error.to_diagnostic_with(&DiagnosticOptions { cwd });
+      let diag = error.to_diagnostic_with(&DiagnosticOptions { cwd, import_chain_lookup: None });
 
       // Extract location information from the diagnostic if available
       // Note: Line numbers, columns, and byte positions are cast to u32.

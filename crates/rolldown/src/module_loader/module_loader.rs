@@ -272,12 +272,18 @@ impl<'a> ModuleLoader<'a> {
     use crate::module_loader::resolve_utils::build_import_chain;
     
     // Create a slice of module IDs for the build_import_chain function
-    let module_ids: Vec<Option<&ArcStr>> = self
-      .intermediate_normal_modules
-      .modules
-      .iter_enumerated()
-      .map(|(_, module)| module.as_ref().map(|m| &m.id()))
-      .collect();
+    let module_ids: Vec<Option<String>> = match &self.intermediate_normal_modules.modules {
+      HybridIndexVec::IndexVec(vec) => {
+        vec.iter_enumerated().map(|(_, module)| module.as_ref().map(|m| m.id().to_string())).collect()
+      }
+      HybridIndexVec::Map(map) => {
+        let mut ids = vec![];
+        for idx in 0..=module_idx.index() {
+          ids.push(map.get(&ModuleIdx::from_usize(idx)).and_then(|module| module.as_ref()).map(|m| m.id().to_string()));
+        }
+        ids
+      }
+    };
     
     build_import_chain(
       module_idx,

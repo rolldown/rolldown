@@ -63,7 +63,7 @@ pub fn create_error_section(errs: Vec<BuildDiagnostic>, cwd: &Path) -> SnapshotS
 
   let diagnostics = errors
     .into_iter()
-    .map(|e| (e.kind(), e.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
+    .map(|e| (e.kind(), e.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf(), import_chain_lookup: None })));
 
   let rendered_diagnostics = render_diagnostics(diagnostics);
 

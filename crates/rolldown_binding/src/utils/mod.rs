@@ -50,7 +50,7 @@ pub async fn handle_warnings(
   }
   if let Some(on_log) = options.on_log.as_ref() {
     for warning in filter_out_disabled_diagnostics(warnings, &options.checks) {
-      let diag = warning.to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() });
+      let diag = warning.to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone(), import_chain_lookup: None });
       let code = warning.kind().to_string();
 
       // Extract location information from the diagnostic if available

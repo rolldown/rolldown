@@ -96,6 +96,7 @@ impl BuildDiagnostic {
       help,
       diagnostic_kind,
       import_chain,
+      importer_module_idx: None,
     })
   }
 

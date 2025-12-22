@@ -20,7 +20,7 @@ use crate::{SharedOptions, SharedResolver};
 pub fn build_import_chain(
   module_idx: ModuleIdx,
   importers: &IndexVec<ModuleIdx, Vec<ImporterRecord>>,
-  modules: &[Option<&ArcStr>],
+  modules: &[Option<String>],
 ) -> Option<Vec<String>> {
   let mut chain = Vec::new();
   let mut visited = FxHashSet::default();
@@ -31,7 +31,7 @@ pub fn build_import_chain(
   fn trace_to_entry(
     current: ModuleIdx,
     importers: &IndexVec<ModuleIdx, Vec<ImporterRecord>>,
-    modules: &[Option<&ArcStr>],
+    modules: &[Option<String>],
     visited: &mut FxHashSet<ModuleIdx>,
     chain: &mut Vec<String>,
   ) -> bool {
@@ -42,7 +42,7 @@ pub fn build_import_chain(
     
     // Add current module to chain
     if let Some(Some(module_id)) = modules.get(current.index()) {
-      chain.push(module_id.to_string());
+      chain.push(module_id.clone());
     } else {
       return false;
     }

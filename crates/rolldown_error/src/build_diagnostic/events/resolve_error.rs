@@ -61,7 +61,17 @@ impl BuildEvent for DiagnosableResolveError {
     
     // Build the help message with import chain if available
     let mut help_message = self.help.clone();
-    if let Some(chain) = &self.import_chain {
+    
+    // Try to get import chain from the stored value or lookup function
+    let import_chain = if let Some(chain) = &self.import_chain {
+      Some(chain.clone())
+    } else if let Some(lookup) = &opts.import_chain_lookup {
+      lookup(self.importer_id.as_str())
+    } else {
+      None
+    };
+    
+    if let Some(chain) = import_chain {
       if !chain.is_empty() {
         let chain_text = format!(
           "'{}' is imported by the following path:\n{}",

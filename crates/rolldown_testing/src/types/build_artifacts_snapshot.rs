@@ -85,7 +85,7 @@ impl BuildArtifactsSnapshot {
     let mut warnings_section = SnapshotSection::with_title("warnings");
     let diagnostics = warnings
       .into_iter()
-      .map(|e| (e.kind(), e.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
+      .map(|e| (e.kind(), e.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf(), import_chain_lookup: None })));
 
     let rendered_diagnostics = snapshot_utils::render_diagnostics(diagnostics);
 

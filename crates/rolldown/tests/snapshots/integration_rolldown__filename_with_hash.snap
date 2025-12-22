@@ -3851,6 +3851,11 @@ expression: output
 - share-!~{001}~.js => share-DjQjC9mY.js
 - share-!~{003}~.js => share-wzwYn-nJ.js
 
+# tests/rolldown/code_splitting/issue_5276
+
+- main-!~{000}~.js => main-D2wFultM.js
+- imp-!~{001}~.js => imp-SoLGn0du.js
+
 # tests/rolldown/dce/conditional_exports
 
 - main-!~{000}~.js => main-CneGfRWV.js

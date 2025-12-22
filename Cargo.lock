@@ -2972,6 +2972,7 @@ version = "0.1.0"
 dependencies = [
  "oxc",
  "rolldown_common",
+ "rolldown_utils",
  "smallvec",
 ]
 

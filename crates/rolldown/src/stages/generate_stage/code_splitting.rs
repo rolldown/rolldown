@@ -49,8 +49,6 @@ impl GenerateStage<'_> {
       }; self.link_output.module_table.modules.len()];
     let mut bits_to_chunk = FxHashMap::with_capacity(self.link_output.entries.len());
 
-    let mut entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx> =
-      FxHashMap::with_capacity(self.link_output.entries.len());
     let input_base = ArcStr::from(
       self
         .get_common_dir_of_all_modules(self.link_output.module_table.modules.as_vec())
@@ -115,16 +113,11 @@ impl GenerateStage<'_> {
           self.link_output.metas[module.idx].depended_runtime_helper,
         );
         // bits_to_chunk.insert(bits, chunk); // This line is intentionally commented out because `bits_to_chunk` is not used in this loop. It is updated elsewhere in the `init_entry_point` and `split_chunks` methods.
-        entry_module_to_entry_chunk.insert(module.idx, chunk_idx);
+        chunk_graph.entry_module_to_entry_chunk.insert(module.idx, chunk_idx);
       }
     } else {
-      self.init_entry_point(
-        &mut chunk_graph,
-        &mut bits_to_chunk,
-        &mut entry_module_to_entry_chunk,
-        entries_len,
-        &input_base,
-      );
+      self.init_entry_point(&mut chunk_graph, &mut bits_to_chunk, entries_len, &input_base);
+
       self
         .split_chunks(&mut index_splitting_info, &mut chunk_graph, &mut bits_to_chunk, &input_base)
         .await?;
@@ -159,7 +152,6 @@ impl GenerateStage<'_> {
       }
     }
 
-    chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
 
     chunk_graph
@@ -466,7 +458,10 @@ impl GenerateStage<'_> {
 
         let module_namespace_included_reason = &meta.module_namespace_included_reason;
         let is_namespace_referenced = matches!(m.exports_kind, ExportsKind::Esm)
-          && if module_namespace_included_reason.contains(ModuleNamespaceIncludedReason::Unknown) {
+          && if module_namespace_included_reason.intersects(
+            ModuleNamespaceIncludedReason::Unknown
+              | ModuleNamespaceIncludedReason::SimulateFacadeChunk,
+          ) {
             true
           } else if module_namespace_included_reason
             .contains(ModuleNamespaceIncludedReason::ReExportExternalModule)
@@ -637,7 +632,6 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
-    entry_module_to_entry_chunk: &mut FxHashMap<ModuleIdx, ChunkIdx>,
     entries_len: u32,
     input_base: &ArcStr,
   ) {
@@ -708,12 +702,12 @@ impl GenerateStage<'_> {
       }
 
       bits_to_chunk.insert(bits, chunk_idx);
-      entry_module_to_entry_chunk.insert(entry_point.idx, chunk_idx);
+      chunk_graph.entry_module_to_entry_chunk.insert(entry_point.idx, chunk_idx);
     }
   }
 
   async fn split_chunks(
-    &self,
+    &mut self,
     index_splitting_info: &mut IndexSplittingInfo,
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
@@ -796,6 +790,14 @@ impl GenerateStage<'_> {
         pending_common_chunks,
       );
     }
+
+    self.optimize_facade_dynamic_entry_chunks(
+      chunk_graph,
+      index_splitting_info,
+      input_base,
+      &mut module_to_assigned,
+    );
+
     Ok(())
   }
 

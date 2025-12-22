@@ -5,12 +5,13 @@ use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
 use crate::utils::chunk::normalize_preserve_entry_signature;
 use itertools::{Itertools, multizip};
+use oxc::semantic::SymbolId;
 use oxc::span::CompactStr;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PreserveEntrySignatures,
-  RUNTIME_HELPER_NAMES, SymbolRef, WrapKind,
+  RUNTIME_HELPER_NAMES, SymbolIdExt, SymbolRef, WrapKind,
 };
 use rolldown_utils::concat_string;
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
@@ -378,7 +379,16 @@ impl GenerateStage<'_> {
             }
           }
         }
-        ChunkKind::Common => {}
+        ChunkKind::Common => {
+          if let Some(set) = chunk_graph.common_chunk_exported_facade_chunk_namespace.get(&chunk_id)
+          {
+            for dynamic_entry_module in set {
+              index_chunk_exported_symbols[chunk_id]
+                .entry(SymbolId::module_namespace_symbol_ref(*dynamic_entry_module))
+                .or_default();
+            }
+          }
+        }
       }
 
       let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];

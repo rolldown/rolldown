@@ -36,6 +36,13 @@ mod patch_module_dependencies;
 mod reference_needed_symbols;
 mod sort_modules;
 mod tree_shaking;
+
+pub use tree_shaking::{
+  ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec,
+  include_statements::{
+    IncludeContext, SymbolIncludeReason, include_runtime_symbol, include_symbol,
+  },
+};
 mod wrapping;
 
 /// Information about safely merged CJS namespaces for a module
@@ -67,6 +74,7 @@ pub struct LinkStageOutput {
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
   pub global_constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
+  pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
 }
 
 #[derive(Debug)]
@@ -209,6 +217,7 @@ impl<'a> LinkStage<'a> {
       overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: self.entry_point_to_reference_ids,
       global_constant_symbol_map: self.global_constant_symbol_map,
+      normal_symbol_exports_chain_map: self.normal_symbol_exports_chain_map,
     }
   }
 

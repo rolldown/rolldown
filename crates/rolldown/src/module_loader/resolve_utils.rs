@@ -17,14 +17,14 @@ use crate::{SharedOptions, SharedResolver};
 
 /// Build import chain from the given module back to entry points
 /// Returns a list of module paths from entry to the given module
-fn build_import_chain(
+pub fn build_import_chain(
   module_idx: ModuleIdx,
   importers: &IndexVec<ModuleIdx, Vec<ImporterRecord>>,
   modules: &[Option<&ArcStr>],
 ) -> Option<Vec<String>> {
   let mut chain = Vec::new();
   let mut visited = FxHashSet::default();
-  let mut current = module_idx;
+  let current = module_idx;
   
   // Trace back through importers to find a path to an entry point
   // We'll do a simple depth-first search to find one path

@@ -267,6 +267,25 @@ impl<'a> ModuleLoader<'a> {
     idx
   }
 
+  /// Build import chain for a given module by tracing back through importers to an entry point
+  fn build_import_chain(&self, module_idx: ModuleIdx) -> Option<Vec<String>> {
+    use crate::module_loader::resolve_utils::build_import_chain;
+    
+    // Create a slice of module IDs for the build_import_chain function
+    let module_ids: Vec<Option<&ArcStr>> = self
+      .intermediate_normal_modules
+      .modules
+      .iter_enumerated()
+      .map(|(_, module)| module.as_ref().map(|m| &m.id()))
+      .collect();
+    
+    build_import_chain(
+      module_idx,
+      &self.intermediate_normal_modules.importers,
+      &module_ids,
+    )
+  }
+
   /// For `fetch_modules` we need to support three scenarios:
   /// - Full scan mode in none watch mode, scan all modules from user defined entries.
   /// - Partial scan mode, scan the changed modules, it maybe none initial

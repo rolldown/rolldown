@@ -14,6 +14,8 @@ pub struct DiagnosableResolveError {
   #[debug(skip)]
   pub diagnostic_kind: EventKind,
   pub import_chain: Option<Vec<String>>,
+  // Store this so we can look up the chain if it wasn't provided
+  pub importer_module_idx: Option<usize>,
 }
 
 impl DiagnosableResolveError {

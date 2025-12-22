@@ -215,14 +215,14 @@ import "a";
 ## jsx-b.js
 
 ```js
-import { b } from "b";
+import "b";
 
 ```
 
 ## jsx-c.js
 
 ```js
-import c from "c";
+import "c";
 
 ```
 
@@ -231,7 +231,7 @@ import c from "c";
 ```js
 import "a";
 import "b";
-import c from "c";
+import "c";
 
 ```
 

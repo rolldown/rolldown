@@ -11,12 +11,15 @@ async fn replace_strings() {
     .build(TestMeta { expect_executed: false, visualize_sourcemap: true, ..Default::default() })
     .run_with_plugins(
       BundlerOptions { input: Some(vec!["./input.js".to_string().into()]), ..Default::default() },
-      vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-        values: std::iter::once(("original".to_string(), "replaced".to_string())).collect(),
-        delimiters: Some(("<%".to_string(), "%>".to_string())),
-        sourcemap: true,
-        ..Default::default()
-      }))],
+      vec![Arc::new(
+        ReplacePlugin::with_options(ReplaceOptions {
+          values: std::iter::once(("original".to_string(), "replaced".to_string())).collect(),
+          delimiters: Some(("<%".to_string(), "%>".to_string())),
+          sourcemap: true,
+          ..Default::default()
+        })
+        .unwrap(),
+      )],
     )
     .await;
 }

@@ -15,6 +15,7 @@ workspace = true
 doctest = false
 
 [dependencies]
+anyhow = { workspace = true }
 oxc = { workspace = true }
 regex = { workspace = true }
 regress = { workspace = true }

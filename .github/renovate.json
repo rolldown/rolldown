@@ -9,6 +9,9 @@
     "**/examples/**",
     "**/crates/rolldown/tests/**"
   ],
+  "ignoreDeps": [
+    "kill-port"
+  ],
   "packageRules": [
     {
       "matchPackageNames": ["pnpm"],

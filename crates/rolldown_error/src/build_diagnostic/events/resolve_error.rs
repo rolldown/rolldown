@@ -13,6 +13,7 @@ pub struct DiagnosableResolveError {
   pub help: Option<String>,
   #[debug(skip)]
   pub diagnostic_kind: EventKind,
+  pub import_chain: Option<Vec<String>>,
 }
 
 impl DiagnosableResolveError {
@@ -55,7 +56,23 @@ impl BuildEvent for DiagnosableResolveError {
       _ => {}
     }
     diagnostic.title = self.message(opts);
-    diagnostic.help.clone_from(&self.help);
+    
+    // Build the help message with import chain if available
+    let mut help_message = self.help.clone();
+    if let Some(chain) = &self.import_chain {
+      if !chain.is_empty() {
+        let chain_text = format!(
+          "'{}' is imported by the following path:\n{}",
+          opts.stabilize_path(self.importer_id.as_str()),
+          chain.iter().map(|p| format!("  - {}", opts.stabilize_path(p))).collect::<Vec<_>>().join("\n")
+        );
+        help_message = Some(match help_message {
+          Some(existing) => format!("{}\n\n{}", existing, chain_text),
+          None => chain_text,
+        });
+      }
+    }
+    diagnostic.help = help_message;
   }
 
   fn id(&self) -> Option<String> {

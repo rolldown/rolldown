@@ -86,6 +86,7 @@ impl BuildDiagnostic {
     reason: String,
     diagnostic_kind: crate::types::event_kind::EventKind,
     help: Option<String>,
+    import_chain: Option<Vec<String>>,
   ) -> Self {
     Self::new_inner(DiagnosableResolveError {
       source,
@@ -94,6 +95,7 @@ impl BuildDiagnostic {
       reason,
       help,
       diagnostic_kind,
+      import_chain,
     })
   }
 

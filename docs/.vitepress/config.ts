@@ -207,7 +207,8 @@ export default defineConfig({
       {
         rel: 'icon',
         type: 'image/svg+xml',
-        href: '/lightning-down.svg',
+        href: '/logo-without-border.svg',
+        // href: '/favicon.svg',
       },
     ],
     ['meta', { name: 'theme-color', content: '#ff7e17' }],
@@ -395,7 +396,7 @@ export default defineConfig({
           cargo: 'vscode-icons:file-type-cargo',
           rolldown: localIconLoader(
             import.meta.url,
-            '../public/lightning-down.svg',
+            '../public/logo-without-border.svg',
           ),
         },
       }) as any,

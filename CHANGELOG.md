@@ -1,4 +1,77 @@
 
+## [1.0.0-beta.56] - 2025-12-22
+
+### 💥 BREAKING CHANGES
+
+- rename `MIXED_EXPORT` error to `MIXED_EXPORTS` (#7565) by @sapphi-red
+
+### 🚀 Features
+
+- rename `id` property to `exporter` in CIRCULAR_REEXPORT error (#7592) by @sapphi-red
+- add `ids` property to `CIRCULAR_DEPENDENCY` error (#7591) by @sapphi-red
+- node/dev: expose `devMode.lazy` (#7549) by @hyf0
+- set log and pos properties for `parseAst` function errors (#7568) by @sapphi-red
+- set log and pos properties for logs (#7567) by @sapphi-red
+- test-dev-sever: support to manually configure port, run tests in concurrent (#7576) by @hyf0
+- add `exporter` property to `MISSING_EXPORT` error (#7564) by @sapphi-red
+- add `id` property to `PARSE_ERROR` error (#7563) by @sapphi-red
+- support ImporterId hook filter (#7540) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- types: better "go to definition" experience for interface `OutputPlugin` (#7610) by @KazariEX
+- `postBanner` content should be placed after shebang (#7583) by @btea
+- use sanitized filename for preserve modules chunk name (#7603) by @IWANABETHATGUY
+- correct filter out unused cjs namespace  (#7602) by @IWANABETHATGUY
+- watch: property respect `notify.pollInternal` and `notify.compareContents` (#7595) by @sapphi-red
+- make `cleanDir` work with default output directory (#7579) by @shulaoda
+- merge `MISSING_NAME_OPTION_FOR_UMD_EXPORT` error to `MISSING_NAME_OPTION_FOR_IIFE_EXPORT` error (#7566) by @sapphi-red
+- dev/hmr: ensure cjs modules with no exports reference correct `module` identifier (#7544) by @leegeunhyeok
+
+### 🚜 Refactor
+
+- remove `stable_id` field from `PARSE_ERROR` error (#7593) by @sapphi-red
+- make include_runtime_symbol reuseable after linking stage (#7580) by @IWANABETHATGUY
+- rust/dev: construct the bundler within itself (#7553) by @hyf0
+- rust/watcher: polish API of `Watcher` struct (#7551) by @hyf0
+- use `LinkingMetadata::stmt_info_included` to check if a stmt_info is included (#7572) by @IWANABETHATGUY
+- use `LinkingMetadata::is_included` to check if a module is included (#7571) by @IWANABETHATGUY
+- store module and stmt_info is included info to module meta (#7570) by @IWANABETHATGUY
+- make include_* method reunsable after linking stage (#7552) by @IWANABETHATGUY
+- rust/watcher: construct the bundler within watcher itself (#7550) by @hyf0
+- extract make include_runtime_symbol reusable (#7546) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- renovate: add `kill-port` in `ignoreDeps` in renovate.json (#7619) by @sapphi-red
+- deps: update rust crates (#7617) by @renovate[bot]
+- deps: update npm packages (#7616) by @renovate[bot]
+- deps: update github-actions (#7615) by @renovate[bot]
+- ci: skip benchmark workflows on draft PRs (#7611) by @Copilot
+- deps: update dependency rolldown-plugin-dts to ^0.19.0 (#7607) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.10.0 (#7601) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.18.4 (#7599) by @renovate[bot]
+- deps: update notify (#7594) by @sapphi-red
+- test-dev-server: add retry mechanism to hmr-full-bundle-mode tests (#7588) by @Copilot
+- deps: update napi to v3.7.1 (#7590) by @renovate[bot]
+- add JSDoc documentation for memfs type (#7587) by @Copilot
+- deps: update dependency oxlint to v1.34.0 (#7589) by @renovate[bot]
+- move some tests in ignored-by-unsupported-features that are passing (#7569) by @sapphi-red
+- deps: update dependency oxlint-tsgolint to v0.9.2 (#7582) by @renovate[bot]
+- deps: update oxc resolver to v11.16.0 (#7574) by @renovate[bot]
+- test/dev-server: don't run `pnpm install` during tests (#7560) by @hyf0
+- test/dev-server: use `kill-port@1` to improve performance (#7575) by @hyf0
+- normalize error object to make some Rollup tests pass (#7562) by @sapphi-red
+- ci: separate dev-server(hmr) tests and normal tests (#7558) by @hyf0
+- ci: make native rolldown build reusable (#7557) by @hyf0
+- resolve some TODOs (#7561) by @sapphi-red
+
+### ❤️ New Contributors
+
+* @KazariEX made their first contribution in [#7610](https://github.com/rolldown/rolldown/pull/7610)
+* @leegeunhyeok made their first contribution in [#7544](https://github.com/rolldown/rolldown/pull/7544)
+
+
 ## [1.0.0-beta.55] - 2025-12-17
 
 ### 🚀 Features

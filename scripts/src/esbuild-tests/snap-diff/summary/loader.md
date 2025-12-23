@@ -39,7 +39,6 @@
 ## [loader_json_no_bundle_es6_arbitrary_module_namespace_names](../../../../../crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_es6_arbitrary_module_namespace_names)
 ## [loader_json_no_bundle_iife](../../../../../crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_iife)
 ## [loader_json_prototype](../../../../../crates/rolldown/tests/esbuild/loader/loader_json_prototype)
-## [loader_json_prototype_es5](../../../../../crates/rolldown/tests/esbuild/loader/loader_json_prototype_es5)
 ## [loader_json_shared_with_multiple_entries_issue413](../../../../../crates/rolldown/tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413)
 ## [loader_text_common_js_and_es6](../../../../../crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6)
 ## [require_custom_extension_base64](../../../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_base64)
@@ -52,6 +51,8 @@
   limitation of test infra, the test may hard to pass in CI
 ## [loader_inline_source_map_absolute_path_issue4075_windows](../../../../../crates/rolldown/tests/esbuild/loader/loader_inline_source_map_absolute_path_issue4075_windows)
   limitation of test infra, the test may hard to pass in CI
+## [loader_json_prototype_es5](../../../../../crates/rolldown/tests/esbuild/loader/loader_json_prototype_es5)
+  target: 'es5' is not supported
 # Ignored Cases (not supported)
 ## [empty_loader_css](../../../../../crates/rolldown/tests/esbuild/loader/empty_loader_css)
   empty loader is not supported in CSS files

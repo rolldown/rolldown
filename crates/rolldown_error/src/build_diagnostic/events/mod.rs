@@ -15,6 +15,7 @@ pub mod already_closed;
 pub mod ambiguous_external_namespace;
 pub mod assign_to_import;
 pub mod bundler_initialize_error;
+pub mod cannot_call_namespace;
 pub mod circular_dependency;
 pub mod circular_reexport;
 pub mod commonjs_variable_in_esm;

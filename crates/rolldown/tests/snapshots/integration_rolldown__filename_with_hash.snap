@@ -6369,6 +6369,10 @@ expression: output
 
 - main-!~{000}~.js => main-Fv4vYntb.js
 
+# tests/rolldown/warnings/cannot_call_namespace
+
+- main-!~{000}~.js => main-Bga7cFqc.js
+
 # tests/rolldown/warnings/commonjs_variable_in_esm/1
 
 - main-!~{000}~.js => main-DxJ39Kl7.js

@@ -1669,6 +1669,7 @@ export interface BindingChecksOptions {
   commonJsVariableInEsm?: boolean
   importIsUndefined?: boolean
   emptyImportMeta?: boolean
+  cannotCallNamespace?: boolean
   configurationFieldConflict?: boolean
   preferBuiltinFeature?: boolean
   couldNotCleanDirectory?: boolean

@@ -16,6 +16,7 @@ use super::events::DiagnosableArcstr;
 use super::events::already_closed::AlreadyClosed;
 use super::events::assign_to_import::AssignToImport;
 use super::events::bundler_initialize_error::BundlerInitializeError;
+use super::events::cannot_call_namespace::CannotCallNamespace;
 use super::events::configuration_field_conflict::ConfigurationFieldConflict;
 use super::events::could_not_clean_directory::CouldNotCleanDirectory;
 use super::events::export_undefined_variable::ExportUndefinedVariable;
@@ -307,6 +308,10 @@ impl BuildDiagnostic {
 
   pub fn assign_to_import(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
     Self::new_inner(AssignToImport { filename, source, span, name })
+  }
+
+  pub fn cannot_call_namespace(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
+    Self::new_inner(CannotCallNamespace { filename, source, span, name })
   }
 
   pub fn prefer_builtin_feature(

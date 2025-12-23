@@ -1,0 +1,48 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## CANNOT_CALL_NAMESPACE
+
+```text
+[CANNOT_CALL_NAMESPACE] Warning: Cannot call a namespace ("ns").
+   ╭─[ main.js:3:1 ]
+   │
+ 3 │ ns()
+   │ ──┬─  
+   │   ╰─── This will cause an error at runtime because "ns" is a module namespace object and not a function. Consider changing "ns" to a default import instead.
+───╯
+
+```
+
+## CANNOT_CALL_NAMESPACE
+
+```text
+[CANNOT_CALL_NAMESPACE] Warning: Cannot call a namespace ("ns").
+   ╭─[ main.js:4:1 ]
+   │
+ 4 │ ns``
+   │ ──┬─  
+   │   ╰─── This will cause an error at runtime because "ns" is a module namespace object and not a function. Consider changing "ns" to a default import instead.
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region foo.js
+var foo_exports = /* @__PURE__ */ __export({ test: () => test });
+const test = 1;
+
+//#endregion
+//#region main.js
+foo_exports();
+foo_exports``;
+
+//#endregion
+```

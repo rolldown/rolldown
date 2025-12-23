@@ -24,6 +24,8 @@ export default {
 
 Specifies the path to a specific TypeScript configuration file. You may provide a relative path (resolved relative to [`cwd`](./cwd.md)) or an absolute path.
 
+If the tsconfig has `references`, this mode behaves like auto-discovery mode for reference resolution.
+
 ```js
 export default {
   tsconfig: './tsconfig.json',
@@ -32,15 +34,13 @@ export default {
 
 ```js
 export default {
-  tsconfig: './tsconfig.build.json',
-};
-```
-
-```js
-export default {
   tsconfig: '/absolute/path/to/tsconfig.json',
 };
 ```
+
+:::tip Note
+Rolldown respects `references` and `include`/`exclude` patterns in tsconfig, while esbuild does not. If you need esbuild-compatible behavior, specify a tsconfig without `references`. You can use [`extends`](https://www.typescriptlang.org/tsconfig/#extends) to share the options between the two.
+:::
 
 ## What's used from tsconfig
 

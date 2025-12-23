@@ -7,8 +7,6 @@
   mime type should be `data:text/plain`
 ## [loader_file_one_source_two_different_output_paths_css](../../../../../crates/rolldown/tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css/diff.md)
   generate wrong output when css as entry and has shared css
-## [loader_text_utf8_bom](../../../../../crates/rolldown/tests/esbuild/loader/loader_text_utf8_bom/diff.md)
-  UTF8 BOM should be stripped
 # Passed Cases
 ## [auto_detect_mime_type_from_extension](../../../../../crates/rolldown/tests/esbuild/loader/auto_detect_mime_type_from_extension)
 ## [empty_loader_js](../../../../../crates/rolldown/tests/esbuild/loader/empty_loader_js)
@@ -41,6 +39,7 @@
 ## [loader_json_prototype](../../../../../crates/rolldown/tests/esbuild/loader/loader_json_prototype)
 ## [loader_json_shared_with_multiple_entries_issue413](../../../../../crates/rolldown/tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413)
 ## [loader_text_common_js_and_es6](../../../../../crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6)
+## [loader_text_utf8_bom](../../../../../crates/rolldown/tests/esbuild/loader/loader_text_utf8_bom)
 ## [require_custom_extension_base64](../../../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_base64)
 ## [require_custom_extension_data_url](../../../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_data_url)
 ## [require_custom_extension_prefer_longest](../../../../../crates/rolldown/tests/esbuild/loader/require_custom_extension_prefer_longest)

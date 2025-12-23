@@ -35,6 +35,7 @@
 ## [await_import_inside_try](../../../../../crates/rolldown/tests/esbuild/default/await_import_inside_try)
 ## [built_in_node_module_precedence](../../../../../crates/rolldown/tests/esbuild/default/built_in_node_module_precedence)
 ## [bundling_files_outside_of_outbase](../../../../../crates/rolldown/tests/esbuild/default/bundling_files_outside_of_outbase)
+## [call_import_namespace_warning](../../../../../crates/rolldown/tests/esbuild/default/call_import_namespace_warning)
 ## [char_freq_ignore_comments](../../../../../crates/rolldown/tests/esbuild/default/char_freq_ignore_comments)
 ## [common_js_from_es6](../../../../../crates/rolldown/tests/esbuild/default/common_js_from_es6)
 ## [conditional_import](../../../../../crates/rolldown/tests/esbuild/default/conditional_import)
@@ -266,8 +267,6 @@
 ## [warnings_inside_node_modules](../../../../../crates/rolldown/tests/esbuild/default/warnings_inside_node_modules)
   resolve alias behavior difference
 # Ignored Cases (not supported)
-## [call_import_namespace_warning](../../../../../crates/rolldown/tests/esbuild/default/call_import_namespace_warning)
-  warning not implemented
 ## [comment_preservation_import_assertions](../../../../../crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions)
   import attributes is not supported
 ## [conditional_require_resolve](../../../../../crates/rolldown/tests/esbuild/default/conditional_require_resolve)

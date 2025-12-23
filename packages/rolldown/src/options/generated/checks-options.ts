@@ -69,6 +69,12 @@ export interface ChecksOptions {
   emptyImportMeta?: boolean;
 
   /**
+   * Whether to emit warning when detecting cannot call namespace
+   * @default true
+   */
+  cannotCallNamespace?: boolean;
+
+  /**
    * Whether to emit warning when detecting configuration field conflict
    * @default true
    */

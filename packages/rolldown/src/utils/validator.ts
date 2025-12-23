@@ -328,6 +328,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warning when detecting empty import meta',
     ),
   ),
+  cannotCallNamespace: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warning when detecting cannot call namespace',
+    ),
+  ),
   configurationFieldConflict: v.pipe(
     v.optional(v.boolean()),
     v.description(

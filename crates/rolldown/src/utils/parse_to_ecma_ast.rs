@@ -138,7 +138,12 @@ fn pre_process_source(
         Cow::Borrowed("({})")
       }
     }
-    ModuleType::Text => Cow::Owned(escape(&source.try_into_string()?)),
+    ModuleType::Text => {
+      let text = source.try_into_string()?;
+      // Strip UTF-8 BOM if present
+      let text = text.strip_prefix('\u{FEFF}').unwrap_or(&text);
+      Cow::Owned(escape(text))
+    }
     ModuleType::Asset => Cow::Borrowed("__ROLLDOWN_ASSET_FILENAME__"),
     ModuleType::Base64 => {
       let encoded = rolldown_utils::base64::to_standard_base64(source.as_bytes());

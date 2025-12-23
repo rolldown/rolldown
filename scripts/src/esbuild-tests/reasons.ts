@@ -51,7 +51,6 @@ export const failedReasons: Record<string, string> = {
     'related to https://github.com/rolldown/rolldown/issues/3048, export pointing to a value declared by `declare var` should be kept',
   'ts/ts_import_equals_elimination_test':
     'See https://github.com/oxc-project/oxc/issues/16628',
-  'loader/loader_text_utf8_bom': 'UTF8 BOM should be stripped',
 };
 
 export const notSupportedReasons: Record<string, string> = {

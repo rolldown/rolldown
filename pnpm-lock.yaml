@@ -130,7 +130,7 @@ catalogs:
       specifier: ^1.15.6
       version: 1.15.11
     fs-extra:
-      specifier: ^11.2.0
+      specifier: ^11.3.2
       version: 11.3.2
     glob:
       specifier: ^13.0.0
@@ -142,7 +142,7 @@ catalogs:
       specifier: ^4.0.8
       version: 4.0.8
     mocha:
-      specifier: ^11.0.0
+      specifier: ^11.7.5
       version: 11.7.5
     oxc-minify:
       specifier: '=0.103.0'
@@ -187,7 +187,7 @@ catalogs:
       specifier: 4.1.0
       version: 4.1.0
     source-map:
-      specifier: ^0.7.4
+      specifier: ^0.7.6
       version: 0.7.6
     source-map-support:
       specifier: ^0.5.21
@@ -196,7 +196,7 @@ catalogs:
       specifier: ^2.0.1
       version: 2.0.1
     terser:
-      specifier: ^5.31.1
+      specifier: ^5.44.1
       version: 5.44.1
     tinybench:
       specifier: ^6.0.0

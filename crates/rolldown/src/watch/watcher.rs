@@ -1,6 +1,7 @@
 use crate::watch::event::{BundleEvent, WatcherChangeData, WatcherEvent};
 use anyhow::Context;
 use arcstr::ArcStr;
+use itertools::Itertools;
 #[cfg(not(target_family = "wasm"))]
 use notify::Watcher as _;
 use notify::{
@@ -204,7 +205,7 @@ impl WatcherImpl {
               self.watch_changes.remove(change);
             }
             let changed_files =
-              watch_changes.iter().map(|item| item.path.clone()).collect::<Vec<_>>();
+              watch_changes.iter().map(|item| item.path.clone()).unique().collect::<Vec<_>>();
             let _ = self.run(&changed_files).await;
           }
           ExecChannelMsg::Close => break,

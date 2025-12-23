@@ -3851,6 +3851,11 @@ expression: output
 - share-!~{001}~.js => share-DjQjC9mY.js
 - share-!~{003}~.js => share-wzwYn-nJ.js
 
+# tests/rolldown/code_splitting/issue_5276
+
+- main-!~{000}~.js => main-D2wFultM.js
+- imp-!~{001}~.js => imp-SoLGn0du.js
+
 # tests/rolldown/dce/conditional_exports
 
 - main-!~{000}~.js => main-CneGfRWV.js
@@ -4569,6 +4574,10 @@ expression: output
 # tests/rolldown/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
 - main-!~{000}~.js => main-DgkEm6gV.js
+
+# tests/rolldown/function/post_banner_shebang
+
+- main-!~{000}~.js => main-Df6gnIcd.js
 
 # tests/rolldown/function/resolve/alias_to_node_builtin_module
 

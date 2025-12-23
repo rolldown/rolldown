@@ -22,9 +22,9 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec};
 
-type StmtInclusionVec = IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>;
-type ModuleInclusionVec = IndexVec<ModuleIdx, bool>;
-type ModuleNamespaceReasonVec = IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>;
+pub type StmtInclusionVec = IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>;
+pub type ModuleInclusionVec = IndexVec<ModuleIdx, bool>;
+pub type ModuleNamespaceReasonVec = IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>;
 
 bitflags::bitflags! {
     #[derive(Debug, Clone, Copy)]
@@ -41,6 +41,10 @@ bitflags::bitflags! {
         /// If a top-level property is only referenced by the export default object and not by
         /// any outer modules, it can be safely inlined in the final output.
         const JsonDefaultExportSelfReference = 1 << 3;
+        /// Indicates that a symbol is included because it is used by a simulated facade chunk.
+        /// Currently only used to track namespace symbol inclusion.
+        /// https://github.com/rolldown/rolldown/blob/d6d65f9080e427cd9feef56eb7a110fbcf6c1414/crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs#L422
+        const SimulatedFacadeChunk = 1 << 4;
     }
 }
 
@@ -698,7 +702,7 @@ pub fn include_symbol(
     }
   }
 
-  if canonical_ref.symbol.is_module_namespace() {
+  let is_simulated_facade_chunk = if canonical_ref.symbol.is_module_namespace() {
     if include_reason.intersects(SymbolIncludeReason::Normal | SymbolIncludeReason::EntryExport) {
       ctx.module_namespace_included_reason[canonical_ref.owner]
         .insert(ModuleNamespaceIncludedReason::Unknown);
@@ -706,10 +710,12 @@ pub fn include_symbol(
       ctx.module_namespace_included_reason[canonical_ref.owner]
         .insert(ModuleNamespaceIncludedReason::ReExportExternalModule);
     }
-  }
+    include_reason.intersects(SymbolIncludeReason::SimulatedFacadeChunk)
+  } else {
+    false
+  };
 
   ctx.used_symbol_refs.insert(canonical_ref);
-
   if let Module::Normal(module) = &ctx.modules[canonical_ref.owner] {
     if !include_reason.contains(SymbolIncludeReason::JsonDefaultExportSelfReference)
       && module.module_type == ModuleType::Json
@@ -720,12 +726,14 @@ pub fn include_symbol(
         .or_default()
         .insert(canonical_ref);
     }
-    include_module(ctx, module);
     module.stmt_infos.declared_stmts_by_symbol(&canonical_ref).iter().copied().for_each(
       |stmt_info_id| {
         include_statement(ctx, module, stmt_info_id);
       },
     );
+    if !is_simulated_facade_chunk {
+      include_module(ctx, module);
+    }
   }
   if matches!(
     ctx.options.treeshake.property_write_side_effects(),

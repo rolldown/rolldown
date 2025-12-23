@@ -3,6 +3,7 @@ use rolldown_sourcemap::{SourceJoiner, SourceMapSource};
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::type_alias::IndexInstantiatedChunks;
+use crate::utils::shebang::find_shebang_end;
 
 use super::GenerateStage;
 
@@ -18,25 +19,39 @@ impl GenerateStage<'_> {
         // Nothing to do
         return Ok(());
       }
-      let mut source_joiner = SourceJoiner::default();
 
-      if let Some(post_banner) = &chunk.post_banner {
-        source_joiner.append_source(post_banner.clone());
-      }
+      let (content, map) = {
+        let content = chunk.content.try_as_inner_str()?;
 
-      let content = chunk.content.try_as_inner_str()?.to_string();
+        // Extract shebang if exists
+        let (shebang_end, has_shebang) = find_shebang_end(content);
 
-      if let Some(source_map) = chunk.map.take() {
-        source_joiner.append_source(SourceMapSource::new(content, source_map));
-      } else {
-        source_joiner.append_source(content);
-      }
+        let mut source_joiner = SourceJoiner::default();
 
-      if let Some(post_footer) = &chunk.post_footer {
-        source_joiner.append_source(post_footer.clone());
-      }
+        // Add shebang first if it exists
+        if has_shebang {
+          source_joiner.append_source(&content[..shebang_end]);
+        }
 
-      let (content, map) = source_joiner.join();
+        // Then add post_banner
+        if let Some(post_banner) = &chunk.post_banner {
+          source_joiner.append_source(post_banner.as_str());
+        }
+
+        let rest_content = &content[shebang_end..];
+        // Add the rest of the content
+        if let Some(source_map) = chunk.map.take() {
+          source_joiner.append_source(SourceMapSource::new(rest_content.to_string(), source_map));
+        } else {
+          source_joiner.append_source(rest_content);
+        }
+
+        if let Some(post_footer) = &chunk.post_footer {
+          source_joiner.append_source(post_footer.as_str());
+        }
+
+        source_joiner.join()
+      };
       chunk.content = content.into();
       chunk.map = map;
 

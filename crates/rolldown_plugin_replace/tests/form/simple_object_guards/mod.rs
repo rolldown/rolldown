@@ -12,11 +12,14 @@ async fn simple_object_guards() {
     .build(TestMeta { expect_executed: false, ..Default::default() })
     .run_with_plugins(
       BundlerOptions { input: Some(vec!["./input.js".to_string().into()]), ..Default::default() },
-      vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-        values: std::iter::once(("foo".to_string(), "bar".to_string())).collect(),
-        object_guards: true,
-        ..Default::default()
-      }))],
+      vec![Arc::new(
+        ReplacePlugin::with_options(ReplaceOptions {
+          values: std::iter::once(("foo".to_string(), "bar".to_string())).collect(),
+          object_guards: true,
+          ..Default::default()
+        })
+        .unwrap(),
+      )],
     )
     .await;
 }

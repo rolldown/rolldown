@@ -205,6 +205,7 @@ impl<'a> GenerateStage<'a> {
             constant_value_map: &self.link_output.global_constant_symbol_map,
             side_effect_free_function_symbols: &side_effect_free_function_symbols,
             safely_merge_cjs_ns_map: &self.link_output.safely_merge_cjs_ns_map,
+            used_symbol_refs: &self.link_output.used_symbol_refs,
           };
           let mutable_state = FinalizerMutableState {
             cur_stmt_index: 0,

@@ -42,12 +42,15 @@ async fn typescript_declare() {
     .run_with_plugins(
       BundlerOptions { input: Some(vec!["./input.ts".to_string().into()]), ..Default::default() },
       vec![
-        Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-          values: std::iter::once(("NAME".to_string(), "replaced".to_string())).collect(),
-          prevent_assignment: true,
-          sourcemap: true,
-          ..Default::default()
-        })),
+        Arc::new(
+          ReplacePlugin::with_options(ReplaceOptions {
+            values: std::iter::once(("NAME".to_string(), "replaced".to_string())).collect(),
+            prevent_assignment: true,
+            sourcemap: true,
+            ..Default::default()
+          })
+          .unwrap(),
+        ),
         Arc::new(TestPlugin(Arc::clone(&code))),
       ],
     )

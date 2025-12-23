@@ -15,7 +15,6 @@ use cow_utils::CowUtils;
 use owo_colors::{OwoColorize, Stream};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
-use rolldown_plugin_utils::is_in_node_modules;
 use sugar_path::SugarPath as _;
 
 #[derive(Debug)]
@@ -116,42 +115,9 @@ impl Plugin for ViteReporterPlugin {
 
   async fn render_chunk(
     &self,
-    ctx: &PluginContext,
-    args: &rolldown_plugin::HookRenderChunkArgs<'_>,
+    _ctx: &PluginContext,
+    _args: &rolldown_plugin::HookRenderChunkArgs<'_>,
   ) -> rolldown_plugin::HookRenderChunkReturn {
-    // TODO(shulaoda): Consider moving the following logic into core
-    if !args.options.inline_dynamic_imports {
-      for id in &args.chunk.module_ids {
-        let Some(module) = ctx.get_module_info(id) else {
-          continue;
-        };
-        // When a dynamic importer shares a chunk with the imported module,
-        // warn that the dynamic imported module will not be moved to another chunk (#12850).
-        if !module.importers.is_empty() && !module.dynamic_importers.is_empty() {
-          // Filter out the intersection of dynamic importers and sibling modules in
-          // the same chunk. The intersecting dynamic importers' dynamic import is not
-          // expected to work. Note we're only detecting the direct ineffective dynamic import here.
-          let detected_ineffective_dynamic_import = module
-            .dynamic_importers
-            .iter()
-            .any(|id| !is_in_node_modules(id.as_path()) && args.chunk.module_ids.contains(id));
-          if detected_ineffective_dynamic_import {
-            let dynamic_importers_list: Vec<_> =
-              module.dynamic_importers.iter().map(std::convert::AsRef::as_ref).collect();
-            let importers_list: Vec<_> =
-              module.importers.iter().map(std::convert::AsRef::as_ref).collect();
-            let message = format!(
-              "\n(!) {} is dynamically imported by {} but also statically imported by {}, dynamic import will not move module into another chunk.\n",
-              module.id.as_ref(),
-              utils::join_with_limit(&dynamic_importers_list, ", ", 5),
-              utils::join_with_limit(&importers_list, ", ", 5),
-            );
-            ctx.warn(rolldown_common::LogWithoutPlugin { message, ..Default::default() });
-          }
-        }
-      }
-    }
-
     let chunk_count = self.chunk_count.fetch_add(1, Ordering::SeqCst);
     if self.should_log_info {
       if self.is_tty {

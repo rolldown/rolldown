@@ -56,6 +56,7 @@ rolldown_plugin_data_uri = { workspace = true }
 rolldown_plugin_hmr = { workspace = true }
 rolldown_plugin_lazy_compilation = { workspace = true }
 rolldown_plugin_oxc_runtime = { workspace = true }
+rolldown_plugin_utils = { workspace = true }
 rolldown_resolver = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_std_utils = { workspace = true }

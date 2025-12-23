@@ -7,11 +7,11 @@ use std::{
 use dashmap::Entry;
 use itertools::Either;
 use oxc::transformer::{EngineTargets, TransformOptions as OxcTransformOptions};
-use oxc_resolver::{ResolveOptions, Resolver, TsconfigDiscovery};
+use oxc_resolver::{ResolveOptions, Resolver, TsconfigDiscovery, TsconfigOptions};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_utils::dashmap::FxDashMap;
 
-use crate::{BundlerTransformOptions, JsxOptions};
+use crate::{BundlerTransformOptions, JsxOptions, TsConfig};
 
 #[derive(Debug, Default, Clone)]
 pub enum JsxPreset {
@@ -34,12 +34,18 @@ pub struct RawTransformOptions {
 }
 
 impl RawTransformOptions {
-  pub fn new(base_options: BundlerTransformOptions) -> Self {
+  pub fn new(base_options: BundlerTransformOptions, tsconfig: TsConfig) -> Self {
     Self {
       base_options: Arc::new(base_options),
       cache: FxDashMap::default(),
       resolver: Arc::new(Resolver::new(ResolveOptions {
-        tsconfig: Some(TsconfigDiscovery::Auto),
+        tsconfig: Some(match tsconfig {
+          TsConfig::Auto => TsconfigDiscovery::Auto,
+          TsConfig::Manual(config_file) => TsconfigDiscovery::Manual(TsconfigOptions {
+            config_file,
+            references: oxc_resolver::TsconfigReferences::Auto,
+          }),
+        }),
         ..Default::default()
       })),
     }

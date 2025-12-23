@@ -325,6 +325,7 @@ export default defineConfig({
     ],
 
     footer: {
+      copyright: `© 2025 VoidZero Inc. and Rolldown contributors.`,
       nav: [
         {
           title: 'Rolldown',

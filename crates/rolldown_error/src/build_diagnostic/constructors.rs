@@ -93,6 +93,7 @@ impl BuildDiagnostic {
       importee,
       reason,
       help,
+      import_chain: None,
       diagnostic_kind,
     })
   }

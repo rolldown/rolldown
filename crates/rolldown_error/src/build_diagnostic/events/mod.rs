@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{any::Any, fmt::Debug};
 
 use arcstr::ArcStr;
 use oxc::span::Span;
@@ -46,7 +46,7 @@ pub mod unloadable_dependency;
 pub mod unresolved_entry;
 pub mod unsupported_feature;
 
-pub trait BuildEvent: Debug + Sync + Send {
+pub trait BuildEvent: Debug + Sync + Send + AsAnyMut {
   fn kind(&self) -> EventKind;
 
   fn message(&self, opts: &DiagnosticOptions) -> String;
@@ -79,6 +79,16 @@ where
 {
   fn from(e: T) -> Self {
     Box::new(e)
+  }
+}
+
+pub trait AsAnyMut {
+  fn as_any_mut(&mut self) -> &mut dyn Any;
+}
+
+impl<T: 'static + BuildEvent> AsAnyMut for T {
+  fn as_any_mut(&mut self) -> &mut dyn Any {
+    self
   }
 }
 

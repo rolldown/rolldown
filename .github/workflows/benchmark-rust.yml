@@ -29,7 +29,10 @@ concurrency:
 jobs:
   codspeed-benchmark:
     name: Codspeed Benchmark
-    if: github.event.pull_request.draft != true
+    if: >
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.draft != true &&
+      !contains(github.event.pull_request.labels.*.name, 'graphite: merge-when-ready'))
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
@@ -64,7 +67,10 @@ jobs:
     permissions:
       pull-requests: write
     name: Benchmark Rust
-    if: github.event_name == 'pull_request' && github.event.pull_request.draft != true
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.draft != true &&
+      !contains(github.event.pull_request.labels.*.name, 'graphite: merge-when-ready')
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1

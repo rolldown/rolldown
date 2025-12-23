@@ -4,6 +4,7 @@ use oxc::{
 };
 use rolldown_common::NormalModule;
 use rolldown_ecmascript::{CJS_MODULE_REF, CJS_ROLLDOWN_MODULE_REF};
+use sugar_path::SugarPath;
 
 use crate::{hmr::hmr_ast_finalizer::HmrAstFinalizer, module_finalizers::ScopeHoistingFinalizer};
 
@@ -66,7 +67,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
     let arguments = self.builder().vec_from_array([
       ast::Argument::StringLiteral(self.builder().alloc_string_literal(
         SPAN,
-        self.builder().atom(&self.module().stable_id),
+        self.builder().atom(&self.module().id.as_arc_str().to_slash().unwrap()),
         None,
       )),
       module_exports,
@@ -90,9 +91,9 @@ pub trait HmrAstBuilder<'any, 'ast> {
     )
   }
 
-  /// `var $hot_name = __rolldown_runtime__.createModuleHotContext($stable_id);`
+  /// `var $hot_name = __rolldown_runtime__.createModuleHotContext($module_id);`
   fn create_module_hot_context_initializer_stmt(&self) -> ast::Statement<'ast> {
-    // var $hot_name = __rolldown_runtime__.createModuleHotContext($stable_id);
+    // var $hot_name = __rolldown_runtime__.createModuleHotContext($module_id);
     ast::Statement::VariableDeclaration(
       self.builder().alloc_variable_declaration(
         SPAN,
@@ -106,7 +107,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
               .builder()
               .binding_pattern_binding_identifier(SPAN, self.alias_name_for_import_meta_hot()),
             NONE,
-            // __rolldown_runtime__.createModuleHotContext($stable_id)
+            // __rolldown_runtime__.createModuleHotContext($module_id)
             Some(ast::Expression::CallExpression(
               self.builder().alloc_call_expression(
                 SPAN,
@@ -120,7 +121,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
                 self.builder().vec1(ast::Argument::StringLiteral(
                   self.builder().alloc_string_literal(
                     SPAN,
-                    self.builder().atom(&self.module().stable_id),
+                    self.builder().atom(&self.module().id.as_arc_str().to_slash().unwrap()),
                     None,
                   ),
                 )),

@@ -10,22 +10,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:hmr]
 //#region common.js
 var common_exports = /* @__PURE__ */ __exportAll({ prefix: () => prefix });
-const common_hot = __rolldown_runtime__.createModuleHotContext("common.js");
-__rolldown_runtime__.registerModule("common.js", { exports: common_exports });
+const common_hot = __rolldown_runtime__.createModuleHotContext("$CWD/common.js");
+__rolldown_runtime__.registerModule("$CWD/common.js", { exports: common_exports });
 const prefix = "prefix:";
 
 //#endregion
 //#region foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
-const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.js");
-__rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
+const foo_hot = __rolldown_runtime__.createModuleHotContext("$CWD/foo.js");
+__rolldown_runtime__.registerModule("$CWD/foo.js", { exports: foo_exports });
 const foo = prefix + "foo";
 
 //#endregion
 //#region bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ bar: () => bar });
-const bar_hot = __rolldown_runtime__.createModuleHotContext("bar.js");
-__rolldown_runtime__.registerModule("bar.js", { exports: bar_exports });
+const bar_hot = __rolldown_runtime__.createModuleHotContext("$CWD/bar.js");
+__rolldown_runtime__.registerModule("$CWD/bar.js", { exports: bar_exports });
 const bar = prefix + "bar";
 
 //#endregion
@@ -34,8 +34,8 @@ var messenger_exports = /* @__PURE__ */ __exportAll({
 	msg: () => msg,
 	sayMessage: () => sayMessage
 });
-const messenger_hot = __rolldown_runtime__.createModuleHotContext("messenger.js");
-__rolldown_runtime__.registerModule("messenger.js", { exports: messenger_exports });
+const messenger_hot = __rolldown_runtime__.createModuleHotContext("$CWD/messenger.js");
+__rolldown_runtime__.registerModule("$CWD/messenger.js", { exports: messenger_exports });
 let msg = [
 	prefix,
 	foo,
@@ -56,8 +56,8 @@ if (messenger_hot) {
 //#endregion
 //#region main.js
 var main_exports = {};
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+const main_hot = __rolldown_runtime__.createModuleHotContext("$CWD/main.js");
+__rolldown_runtime__.registerModule("$CWD/main.js", { exports: main_exports });
 sayMessage();
 
 //#endregion
@@ -72,9 +72,9 @@ sayMessage();
 var init_foo_0 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
-		__rolldown_runtime__.registerModule("foo.js", { exports: __rolldown_exports__ });
-		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo.js");
-		var import_common_00 = __rolldown_runtime__.loadExports("common.js");
+		__rolldown_runtime__.registerModule("$CWD/foo.js", { exports: __rolldown_exports__ });
+		const hot_foo = __rolldown_runtime__.createModuleHotContext("$CWD/foo.js");
+		var import_common_00 = __rolldown_runtime__.loadExports("$CWD/common.js");
 		const foo = import_common_00.prefix + "foo-new";
 	} finally {}
 }));
@@ -87,12 +87,12 @@ var init_messenger_1 = __rolldown_runtime__.createEsmInitializer((function() {
 			msg: () => msg,
 			sayMessage: () => sayMessage
 		});
-		__rolldown_runtime__.registerModule("messenger.js", { exports: __rolldown_exports__ });
+		__rolldown_runtime__.registerModule("$CWD/messenger.js", { exports: __rolldown_exports__ });
 		init_foo_0();
-		const hot_messenger = __rolldown_runtime__.createModuleHotContext("messenger.js");
-		var import_foo_10 = __rolldown_runtime__.loadExports("foo.js");
-		var import_bar_11 = __rolldown_runtime__.loadExports("bar.js");
-		var import_common_12 = __rolldown_runtime__.loadExports("common.js");
+		const hot_messenger = __rolldown_runtime__.createModuleHotContext("$CWD/messenger.js");
+		var import_foo_10 = __rolldown_runtime__.loadExports("$CWD/foo.js");
+		var import_bar_11 = __rolldown_runtime__.loadExports("$CWD/bar.js");
+		var import_common_12 = __rolldown_runtime__.loadExports("$CWD/common.js");
 		let msg = [
 			import_common_12.prefix,
 			import_foo_10.foo,
@@ -114,7 +114,7 @@ var init_messenger_1 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 init_messenger_1()
-__rolldown_runtime__.applyUpdates([['messenger.js', 'messenger.js']]);
+__rolldown_runtime__.applyUpdates([['$CWD/messenger.js', '$CWD/messenger.js']]);
 ```
 
 ## Meta
@@ -123,4 +123,4 @@ __rolldown_runtime__.applyUpdates([['messenger.js', 'messenger.js']]);
 
 ### Hmr Boundaries
 
-- boundary: messenger.js, accepted_via: messenger.js
+- boundary: $CWD/messenger.js, accepted_via: $CWD/messenger.js

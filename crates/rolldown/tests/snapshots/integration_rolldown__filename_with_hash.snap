@@ -4103,10 +4103,6 @@ expression: output
 
 - main-!~{000}~.js => main-DLGWTVDF.js
 
-# tests/rolldown/function/experimental/strict_execution_order/issue_4636
-
-- main-!~{000}~.js => main-BFvPO6M3.js
-
 # tests/rolldown/function/experimental/strict_execution_order/issue_4684
 
 - main-!~{000}~.js => main-DsT4wfr7.js
@@ -4807,10 +4803,6 @@ expression: output
 # tests/rolldown/issues/4006
 
 - main-!~{000}~.js => main-C2pFBQES.js
-
-# tests/rolldown/issues/4129
-
-- main-!~{000}~.js => main-DnsOb4pD.js
 
 # tests/rolldown/issues/4196
 
@@ -5894,105 +5886,6 @@ expression: output
 # tests/rolldown/topics/generated_code/symbols_ns2
 
 - main-!~{000}~.js => main-C-XWdoTA.js
-
-# tests/rolldown/topics/hmr/accept-outside-circular
-
-- main-!~{000}~.js => main-CLZR5ada.js
-
-# tests/rolldown/topics/hmr/change_accept
-
-- main-!~{000}~.js => main-DbRDwnvC.js
-
-# tests/rolldown/topics/hmr/cjs_no_export
-
-- main-!~{000}~.js => main-BJYG_vCU.js
-
-# tests/rolldown/topics/hmr/delete_file_not_used_anymore
-
-- main-!~{000}~.js => main-Y20Q6Ujd.js
-
-# tests/rolldown/topics/hmr/delete_file_used
-
-- main-!~{000}~.js => main-RQMXlOJG.js
-
-# tests/rolldown/topics/hmr/dynamic_import
-
-- main-!~{000}~.js => main-Cm286Gqg.js
-- exist-dep-cjs-!~{001}~.js => exist-dep-cjs-CmGQaNMg.js
-- exist-dep-esm-!~{003}~.js => exist-dep-esm-BVcWepyC.js
-
-# tests/rolldown/topics/hmr/error_recovery/from_rebuild_syntax_error
-
-- main-!~{000}~.js => main-BMNGsedU.js
-
-# tests/rolldown/topics/hmr/esm_no_export
-
-- main-!~{000}~.js => main-BSKantpI.js
-
-# tests/rolldown/topics/hmr/export_star
-
-- main-!~{000}~.js => main-DHIj4NZQ.js
-
-# tests/rolldown/topics/hmr/generate_patch_error
-
-- main-!~{000}~.js => main-DS2Jetji.js
-
-# tests/rolldown/topics/hmr/import_meta_hot_accept
-
-- main-!~{000}~.js => main-BgGYx0gh.js
-
-# tests/rolldown/topics/hmr/issue_4818
-
-- main-!~{000}~.js => main-CQmX7cpy.js
-
-# tests/rolldown/topics/hmr/issue_5149
-
-- main-!~{000}~.js => main-D0T9y176.js
-
-# tests/rolldown/topics/hmr/issue_5150
-
-- main-!~{000}~.js => main-RtaPUL5_.js
-
-# tests/rolldown/topics/hmr/issue_5159
-
-- main-!~{000}~.js => main-bxsTec3s.js
-- bar-!~{003}~.js => bar-DifdmgtM.js
-- foo-!~{005}~.js => foo-Bu7QarXC.js
-- string-!~{001}~.js => string-5tFSLDm2.js
-
-# tests/rolldown/topics/hmr/mutiply_entires
-
-- entry-!~{000}~.js => entry-DECLc6mQ.js
-- index-!~{001}~.js => index-BtgIhZIO.js
-- rolldown_hmr-!~{002}~.js => rolldown_hmr-DbzQbNCw.js
-
-# tests/rolldown/topics/hmr/no-accept-outside-circular
-
-- main-!~{000}~.js => main-QoAxDP9g.js
-
-# tests/rolldown/topics/hmr/no_boundary_reload
-
-- main-!~{000}~.js => main-n6vqrY8X.js
-
-# tests/rolldown/topics/hmr/non_used_export
-
-- main-!~{000}~.js => main-DJQp7YTF.js
-
-# tests/rolldown/topics/hmr/register_exports
-
-- main-!~{000}~.js => main-DwrAIUsJ.js
-
-# tests/rolldown/topics/hmr/runtime_correctness
-
-- main-!~{000}~.js => main-FXvwXhpE.js
-
-# tests/rolldown/topics/hmr/self-accept-within-circular
-
-- main-!~{000}~.js => main-DBp1UEa_.js
-
-# tests/rolldown/topics/hmr/static_import
-
-- main-!~{000}~.js => main-CEfixAjf.js
 
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 

@@ -13,16 +13,16 @@ var foo_exports = /* @__PURE__ */ __exportAll({
 	default: () => foo_default,
 	foo: () => foo
 });
-const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.json");
-__rolldown_runtime__.registerModule("foo.json", { exports: foo_exports });
+const foo_hot = __rolldown_runtime__.createModuleHotContext("$CWD/foo.json");
+__rolldown_runtime__.registerModule("$CWD/foo.json", { exports: foo_exports });
 var foo = "__EXP__";
 var foo_default = { foo };
 
 //#endregion
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({ default: () => main_default });
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+const main_hot = __rolldown_runtime__.createModuleHotContext("$CWD/main.js");
+__rolldown_runtime__.registerModule("$CWD/main.js", { exports: main_exports });
 var main_default = foo_default;
 
 //#endregion

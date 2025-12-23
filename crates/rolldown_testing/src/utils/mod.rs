@@ -1,8 +1,9 @@
 pub mod snapshot;
 
-use std::{borrow::Cow, sync::LazyLock};
+use std::{borrow::Cow, path::Path, sync::LazyLock};
 
 use regex::Regex;
+use sugar_path::SugarPath;
 
 #[macro_export]
 /// `std::file!` alternative that returns an absolute path.
@@ -36,16 +37,32 @@ pub(crate) static OXC_RUNTIME_MODULE_OUTPUT_RE: LazyLock<Regex> = LazyLock::new(
 });
 
 // Some content of snapshot are meaningless, we'd like to remove them to reduce the noise when reviewing snapshots.
-pub fn tweak_snapshot(
-  content: &str,
+pub fn tweak_snapshot<'a>(
+  content: &'a str,
   hide_runtime_module: bool,
   hide_hmr_runtime: bool,
-) -> Cow<'_, str> {
-  if !hide_runtime_module && !hide_hmr_runtime && !content.contains("\\0@oxc-project+runtime@") {
+  cwd: &Path,
+) -> Cow<'a, str> {
+  let cwd_str = cwd.to_str().unwrap_or("");
+  let cwd_slash_str = cwd.to_slash().unwrap();
+  let needs_cwd_replacement =
+    !cwd_str.is_empty() && (content.contains(cwd_str) || content.contains(cwd_slash_str.as_ref()));
+
+  if !hide_runtime_module
+    && !hide_hmr_runtime
+    && !content.contains("\\0@oxc-project+runtime@")
+    && !needs_cwd_replacement
+  {
     return Cow::Borrowed(content);
   }
 
   let mut result = content.to_string();
+
+  // Replace cwd paths with $CWD to make snapshots portable
+  if !cwd_str.is_empty() {
+    result = result.replace(cwd_str, "$CWD");
+    result = result.replace(&*cwd_slash_str, "$CWD");
+  }
 
   if hide_runtime_module {
     result =

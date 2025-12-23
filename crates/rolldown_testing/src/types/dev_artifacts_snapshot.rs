@@ -38,7 +38,7 @@ impl DevArtifactsSnapshot {
 
             // Render `# Assets`
             if let Some(assets_section) =
-              BuildArtifactsSnapshot::create_assets_section(test_meta, &assets)
+              BuildArtifactsSnapshot::create_assets_section(test_meta, &assets, cwd)
             {
               build_round_sections.push(assets_section);
             }
@@ -90,10 +90,12 @@ impl DevArtifactsSnapshot {
       Ok((hmr_updates, _changed_files)) => {
         for hmr_update in hmr_updates {
           // Add HMR update details as children (Code, Meta)
-          if let Some(code_section) = Self::create_hmr_code_section(test_meta, &hmr_update.update) {
+          if let Some(code_section) =
+            Self::create_hmr_code_section(test_meta, &hmr_update.update, cwd)
+          {
             step_section.add_child(code_section);
           }
-          let meta_section = Self::create_hmr_meta_section(&hmr_update.update);
+          let meta_section = Self::create_hmr_meta_section(&hmr_update.update, cwd);
           step_section.add_child(meta_section);
         }
       }
@@ -116,6 +118,7 @@ impl DevArtifactsSnapshot {
   fn create_hmr_code_section(
     test_meta: &TestMeta,
     hmr_update: &HmrUpdate,
+    cwd: &Path,
   ) -> Option<SnapshotSection> {
     match hmr_update {
       HmrUpdate::Patch(hmr_patch) if !hmr_patch.code.is_empty() => {
@@ -126,6 +129,7 @@ impl DevArtifactsSnapshot {
           &hmr_patch.code,
           test_meta.hidden_runtime_module,
           true,
+          cwd,
         ));
         code_section.add_content("\n```");
         Some(code_section)
@@ -134,7 +138,7 @@ impl DevArtifactsSnapshot {
     }
   }
 
-  fn create_hmr_meta_section(hmr_update: &HmrUpdate) -> SnapshotSection {
+  fn create_hmr_meta_section(hmr_update: &HmrUpdate, cwd: &Path) -> SnapshotSection {
     let mut meta_section = SnapshotSection::with_title("Meta");
 
     // Update type
@@ -147,6 +151,8 @@ impl DevArtifactsSnapshot {
       }
     ));
 
+    let cwd_str = cwd.to_str().unwrap_or("");
+
     // Type-specific metadata
     match hmr_update {
       HmrUpdate::Patch(hmr_patch) => {
@@ -155,17 +161,16 @@ impl DevArtifactsSnapshot {
           .hmr_boundaries
           .iter()
           .map(|boundary| {
-            format!(
-              "- boundary: {}, accepted_via: {}",
-              boundary.boundary.as_str(),
-              boundary.accepted_via.as_str()
-            )
+            let boundary_str = boundary.boundary.as_str().replace(cwd_str, "$CWD");
+            let accepted_via_str = boundary.accepted_via.as_str().replace(cwd_str, "$CWD");
+            format!("- boundary: {boundary_str}, accepted_via: {accepted_via_str}")
           })
           .collect::<Vec<_>>();
         boundaries.add_content(&meta.join("\n"));
         meta_section.add_child(boundaries);
       }
       HmrUpdate::FullReload { reason } => {
+        let reason = reason.replace(cwd_str, "$CWD");
         meta_section.add_content(&format!("\n- reason: {reason}"));
       }
       HmrUpdate::Noop => {}

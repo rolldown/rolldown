@@ -44,6 +44,11 @@ async fn filename_with_hash() {
       options.cwd = Some(fixture_path.to_path_buf());
     }
 
+    if options.experimental.as_ref().is_some_and(|inner| inner.dev_mode.is_some()) {
+      // Dev test will inject machine-related data, which produces non-deterministic hash.
+      continue;
+    }
+
     let integration_test = IntegrationTest::new(
       TestMeta { write_to_disk: false, hash_in_filename: true, ..meta },
       fixture_path.to_path_buf(),

@@ -12,8 +12,8 @@ import assert from "node:assert";
 // HIDDEN [rolldown:hmr]
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const lib_hot = __rolldown_runtime__.createModuleHotContext("lib.js");
-	__rolldown_runtime__.registerModule("lib.js", module);
+	const lib_hot = __rolldown_runtime__.createModuleHotContext("$CWD/lib.js");
+	__rolldown_runtime__.registerModule("$CWD/lib.js", module);
 	exports.a = 1;
 }));
 
@@ -21,8 +21,8 @@ var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 //#region main.js
 var main_exports = {};
 var import_lib = require_lib();
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+const main_hot = __rolldown_runtime__.createModuleHotContext("$CWD/main.js");
+__rolldown_runtime__.registerModule("$CWD/main.js", { exports: main_exports });
 assert.strictEqual(import_lib.a, 1);
 
 //#endregion

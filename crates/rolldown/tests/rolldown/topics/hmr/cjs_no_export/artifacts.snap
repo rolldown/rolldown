@@ -10,24 +10,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:hmr]
 //#region a.js
 var require_a = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
-	__rolldown_runtime__.registerModule("a.js", module);
+	const a_hot = __rolldown_runtime__.createModuleHotContext("$CWD/a.js");
+	__rolldown_runtime__.registerModule("$CWD/a.js", module);
 	console.log("a");
 }));
 
 //#endregion
 //#region b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
-	__rolldown_runtime__.registerModule("b.js", module);
+	const b_hot = __rolldown_runtime__.createModuleHotContext("$CWD/b.js");
+	__rolldown_runtime__.registerModule("$CWD/b.js", module);
 	console.log("b");
 }));
 
 //#endregion
 //#region main.js
 var main_exports = {};
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+const main_hot = __rolldown_runtime__.createModuleHotContext("$CWD/main.js");
+__rolldown_runtime__.registerModule("$CWD/main.js", { exports: main_exports });
 require_a();
 require_b();
 

@@ -430,7 +430,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         let import_record = &self.module.import_records
           [self.module.hmr_info.module_request_to_import_record_idx[string_literal.value.as_str()]];
         string_literal.value =
-          self.snippet.builder.atom(self.modules[import_record.resolved_module].stable_id());
+          self.snippet.builder.atom(self.modules[import_record.resolved_module].id());
       }
       ast::Argument::ArrayExpression(array_expression) => {
         // `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
@@ -440,7 +440,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
               &self.module.import_records[self.module.hmr_info.module_request_to_import_record_idx
                 [string_literal.value.as_str()]];
             string_literal.value =
-              self.snippet.builder.atom(self.modules[import_record.resolved_module].stable_id());
+              self.snippet.builder.atom(self.modules[import_record.resolved_module].id());
           }
         });
       }
@@ -466,7 +466,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     }
     self.imports.insert(importee.idx());
 
-    let id = &importee.stable_id();
+    let id = importee.id();
     let interop = match importee {
       Module::Normal(importee) => self.module.interop(importee),
       Module::External(_) => None,
@@ -597,7 +597,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         self.snippet.builder.vec1(ast::Argument::StringLiteral(
           self.snippet.builder.alloc_string_literal(
             SPAN,
-            self.snippet.builder.atom(&importee.stable_id),
+            self.snippet.builder.atom(&importee.id),
             None,
           ),
         )),
@@ -712,7 +712,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         self.snippet.call_expr_expr(init_fn_name),
         self.snippet.call_expr_with_arg_expr(
           self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports"),
-          self.snippet.string_literal_expr(&importee.stable_id, SPAN),
+          self.snippet.string_literal_expr(&importee.id, SPAN),
           false,
         ),
       );
@@ -722,7 +722,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         self.snippet.call_expr_expr(init_fn_name),
         self.snippet.call_expr_with_arg_expr(
           self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports"),
-          self.snippet.string_literal_expr(&importee.stable_id, SPAN),
+          self.snippet.string_literal_expr(&importee.id, SPAN),
           false,
         ),
       );

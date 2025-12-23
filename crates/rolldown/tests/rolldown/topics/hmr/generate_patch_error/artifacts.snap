@@ -10,8 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:hmr]
 //#region hmr.js
 var hmr_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
-const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
-__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("$CWD/hmr.js");
+__rolldown_runtime__.registerModule("$CWD/hmr.js", { exports: hmr_exports });
 const foo = "hello";
 text$1(".hmr", foo);
 function text$1(el, text$2) {
@@ -26,8 +26,8 @@ hmr_hot.accept((mod) => {
 //#endregion
 //#region sub.js
 var sub_exports = {};
-const sub_hot = __rolldown_runtime__.createModuleHotContext("sub.js");
-__rolldown_runtime__.registerModule("sub.js", { exports: sub_exports });
+const sub_hot = __rolldown_runtime__.createModuleHotContext("$CWD/sub.js");
+__rolldown_runtime__.registerModule("$CWD/sub.js", { exports: sub_exports });
 text(".app", "hello");
 function text(el, text$2) {
 	console.log(el, text$2);
@@ -36,8 +36,8 @@ function text(el, text$2) {
 //#endregion
 //#region main.js
 var main_exports = {};
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+const main_hot = __rolldown_runtime__.createModuleHotContext("$CWD/main.js");
+__rolldown_runtime__.registerModule("$CWD/main.js", { exports: main_exports });
 
 //#endregion
 ```
@@ -68,8 +68,8 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ foo: () => foo });
-		__rolldown_runtime__.registerModule("hmr.js", { exports: __rolldown_exports__ });
-		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
+		__rolldown_runtime__.registerModule("$CWD/hmr.js", { exports: __rolldown_exports__ });
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext("$CWD/hmr.js");
 		const foo = "hello";
 		text(".hmr", foo);
 		function text(el, text) {
@@ -85,7 +85,7 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 init_hmr_0()
-__rolldown_runtime__.applyUpdates([['hmr.js', 'hmr.js']]);
+__rolldown_runtime__.applyUpdates([['$CWD/hmr.js', '$CWD/hmr.js']]);
 ```
 
 ## Meta
@@ -94,4 +94,4 @@ __rolldown_runtime__.applyUpdates([['hmr.js', 'hmr.js']]);
 
 ### Hmr Boundaries
 
-- boundary: hmr.js, accepted_via: hmr.js
+- boundary: $CWD/hmr.js, accepted_via: $CWD/hmr.js

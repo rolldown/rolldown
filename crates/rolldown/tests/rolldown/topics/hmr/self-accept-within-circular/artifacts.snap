@@ -12,8 +12,8 @@ import assert from "node:assert";
 // HIDDEN [rolldown:hmr]
 //#region c.js
 var c_exports = /* @__PURE__ */ __exportAll({ c: () => c });
-const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
-__rolldown_runtime__.registerModule("c.js", { exports: c_exports });
+const c_hot = __rolldown_runtime__.createModuleHotContext("$CWD/c.js");
+__rolldown_runtime__.registerModule("$CWD/c.js", { exports: c_exports });
 const c = "c";
 assert.strictEqual(c, "c");
 c_hot.accept((nextExports) => {
@@ -23,22 +23,22 @@ c_hot.accept((nextExports) => {
 //#endregion
 //#region b.js
 var b_exports = /* @__PURE__ */ __exportAll({ b: () => b });
-const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
-__rolldown_runtime__.registerModule("b.js", { exports: b_exports });
+const b_hot = __rolldown_runtime__.createModuleHotContext("$CWD/b.js");
+__rolldown_runtime__.registerModule("$CWD/b.js", { exports: b_exports });
 const b = { c };
 
 //#endregion
 //#region a.js
 var a_exports = /* @__PURE__ */ __exportAll({ a: () => a });
-const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
-__rolldown_runtime__.registerModule("a.js", { exports: a_exports });
+const a_hot = __rolldown_runtime__.createModuleHotContext("$CWD/a.js");
+__rolldown_runtime__.registerModule("$CWD/a.js", { exports: a_exports });
 const a = { b };
 
 //#endregion
 //#region main.js
 var main_exports = {};
-const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+const main_hot = __rolldown_runtime__.createModuleHotContext("$CWD/main.js");
+__rolldown_runtime__.registerModule("$CWD/main.js", { exports: main_exports });
 assert.strictEqual(a.b.c, "c");
 
 //#endregion
@@ -54,9 +54,9 @@ import * as import_node_assert_00 from "node:assert";
 var init_c_0 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var __rolldown_exports__ = __rolldown_runtime__.__exportAll({ c: () => c });
-		__rolldown_runtime__.registerModule("c.js", { exports: __rolldown_exports__ });
-		const hot_c = __rolldown_runtime__.createModuleHotContext("c.js");
-		var import_b_01 = __rolldown_runtime__.loadExports("b.js");
+		__rolldown_runtime__.registerModule("$CWD/c.js", { exports: __rolldown_exports__ });
+		const hot_c = __rolldown_runtime__.createModuleHotContext("$CWD/c.js");
+		var import_b_01 = __rolldown_runtime__.loadExports("$CWD/b.js");
 		const c = "cc";
 		import_node_assert_00.default.strictEqual(c, "cc");
 		hot_c.accept((nextExports) => {
@@ -67,7 +67,7 @@ var init_c_0 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 init_c_0()
-__rolldown_runtime__.applyUpdates([['c.js', 'c.js']]);
+__rolldown_runtime__.applyUpdates([['$CWD/c.js', '$CWD/c.js']]);
 ```
 
 ## Meta
@@ -76,4 +76,4 @@ __rolldown_runtime__.applyUpdates([['c.js', 'c.js']]);
 
 ### Hmr Boundaries
 
-- boundary: c.js, accepted_via: c.js
+- boundary: $CWD/c.js, accepted_via: $CWD/c.js

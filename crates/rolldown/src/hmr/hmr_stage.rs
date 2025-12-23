@@ -79,7 +79,7 @@ impl<'a> HmrStage<'a> {
   /// Compute hmr update caused by `import.meta.hot.invalidate()`.
   pub async fn compute_update_for_calling_invalidate(
     &mut self,
-    // The parameter is the stable id of the module that called `import.meta.hot.invalidate()`.
+    // The parameter is the absolute path (module ID) of the module that called `import.meta.hot.invalidate()`.
     invalidate_caller: String,
     first_invalidated_by: Option<String>,
     client_id: &str,
@@ -91,10 +91,12 @@ impl<'a> HmrStage<'a> {
       invalidate_caller,
       first_invalidated_by,
     );
+    // Convert to slashed path for lookup (matches how module_idx_by_abs_path is keyed)
+    let invalidate_caller_slashed: ArcStr = invalidate_caller.as_path().to_slash().unwrap().into();
     let module_idx = self
       .cache
-      .module_idx_by_stable_id
-      .get(&invalidate_caller)
+      .module_idx_by_abs_path
+      .get(&invalidate_caller_slashed)
       .copied()
       .unwrap_or_else(|| panic!("Not found modules for file: {invalidate_caller}"));
 
@@ -102,7 +104,7 @@ impl<'a> HmrStage<'a> {
 
     // Use helper to check if module is executed (supports special testing client ID)
     let temp_client = ClientHmrInput { client_id, executed_modules };
-    if !temp_client.is_module_executed(&caller.stable_id) {
+    if !temp_client.is_module_executed(&caller.id) {
       // If this module is not registered, we simply ignore it.
       return Ok(HmrUpdate::Noop);
     }
@@ -526,7 +528,7 @@ impl<'a> HmrStage<'a> {
         .map(|boundary| {
           let boundary_mod = &self.module_table().modules[boundary.boundary];
           let accepted_via = &self.module_table().modules[boundary.accepted_via];
-          format!("['{}', '{}']", boundary_mod.stable_id(), accepted_via.stable_id())
+          format!("['{}', '{}']", boundary_mod.id(), accepted_via.id())
         })
         .collect::<Vec<_>>()
         .join(",")
@@ -563,8 +565,8 @@ impl<'a> HmrStage<'a> {
         .boundaries
         .into_iter()
         .map(|boundary| HmrBoundaryOutput {
-          boundary: self.module_table().modules[boundary.boundary].stable_id().into(),
-          accepted_via: self.module_table().modules[boundary.accepted_via].stable_id().into(),
+          boundary: self.module_table().modules[boundary.boundary].id().into(),
+          accepted_via: self.module_table().modules[boundary.accepted_via].id().into(),
         })
         .collect(),
     }))
@@ -708,7 +710,7 @@ impl<'a> HmrStage<'a> {
         .map(|boundary| {
           let boundary_mod = &self.module_table().modules[boundary.boundary];
           let accepted_via = &self.module_table().modules[boundary.accepted_via];
-          format!("['{}', '{}']", boundary_mod.stable_id(), accepted_via.stable_id())
+          format!("['{}', '{}']", boundary_mod.id(), accepted_via.id())
         })
         .collect::<Vec<_>>()
         .join(",")
@@ -745,8 +747,8 @@ impl<'a> HmrStage<'a> {
         .boundaries
         .into_iter()
         .map(|boundary| HmrBoundaryOutput {
-          boundary: self.module_table().modules[boundary.boundary].stable_id().into(),
-          accepted_via: self.module_table().modules[boundary.accepted_via].stable_id().into(),
+          boundary: self.module_table().modules[boundary.boundary].id().into(),
+          accepted_via: self.module_table().modules[boundary.accepted_via].id().into(),
         })
         .collect(),
     }))
@@ -811,11 +813,11 @@ impl<'a> HmrStage<'a> {
         continue;
       };
 
-      if !client.is_module_executed(&importer.stable_id) {
+      if !client.is_module_executed(&importer.id) {
         tracing::trace!(
           "[HmrStage] skip importer module since it's not executed\n - importer: {}, importee: {}, client: {}",
-          self.module_table().modules[importer_idx].stable_id(),
-          module.stable_id,
+          self.module_table().modules[importer_idx].id(),
+          module.id.as_ref(),
           client.client_id,
         );
         // If this module is not registered, we simply ignore it.
@@ -877,10 +879,10 @@ impl<'a> HmrStage<'a> {
       }
       let mut boundaries = FxIndexSet::default();
 
-      if !client.is_module_executed(self.module_table().modules[stale_module].stable_id()) {
+      if !client.is_module_executed(self.module_table().modules[stale_module].id()) {
         tracing::trace!(
           "[HmrStage] skip stale module {:?} for client {} since it's not executed",
-          self.module_table().modules[stale_module].stable_id(),
+          self.module_table().modules[stale_module].id(),
           client.client_id,
         );
         // If this module is not registered, we simply ignore it.

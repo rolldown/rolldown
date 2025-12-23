@@ -36,7 +36,7 @@ impl BuildArtifactsSnapshot {
             build_round_sections.extend(Self::create_warning_section(bundle_output.warnings, cwd));
 
             // Render `# Assets`
-            if let Some(assets_section) = Self::create_assets_section(test_meta, &assets) {
+            if let Some(assets_section) = Self::create_assets_section(test_meta, &assets, cwd) {
               build_round_sections.push(assets_section);
             }
 
@@ -95,7 +95,11 @@ impl BuildArtifactsSnapshot {
     Some(warnings_section)
   }
 
-  pub fn create_assets_section(test_meta: &TestMeta, assets: &[Output]) -> Option<SnapshotSection> {
+  pub fn create_assets_section(
+    test_meta: &TestMeta,
+    assets: &[Output],
+    cwd: &Path,
+  ) -> Option<SnapshotSection> {
     if assets.is_empty() {
       None
     } else {
@@ -108,7 +112,7 @@ impl BuildArtifactsSnapshot {
         match asset {
           Output::Chunk(output_chunk) => {
             let content = &output_chunk.code;
-            let content = tweak_snapshot(content, test_meta.hidden_runtime_module, true);
+            let content = tweak_snapshot(content, test_meta.hidden_runtime_module, true, cwd);
 
             let mut asset_child = SnapshotSection::with_title(asset.filename().to_string());
             asset_child.add_content(&format!("```{file_ext}\n"));
@@ -215,7 +219,7 @@ impl BuildArtifactsSnapshot {
     sections.extend(Self::create_warning_section(bundle_output.warnings, cwd));
 
     // Render `# Assets`
-    if let Some(assets_section) = Self::create_assets_section(test_meta, &assets) {
+    if let Some(assets_section) = Self::create_assets_section(test_meta, &assets, cwd) {
       sections.push(assets_section);
     }
 

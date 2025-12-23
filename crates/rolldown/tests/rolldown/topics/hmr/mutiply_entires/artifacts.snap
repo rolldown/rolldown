@@ -10,8 +10,8 @@ import "./rolldown_hmr.js";
 
 //#region entry.js
 var entry_exports = {};
-const entry_hot = __rolldown_runtime__.createModuleHotContext("entry.js");
-__rolldown_runtime__.registerModule("entry.js", { exports: entry_exports });
+const entry_hot = __rolldown_runtime__.createModuleHotContext("$CWD/entry.js");
+__rolldown_runtime__.registerModule("$CWD/entry.js", { exports: entry_exports });
 console.log("entry");
 
 //#endregion
@@ -24,8 +24,8 @@ import "./rolldown_hmr.js";
 
 //#region index.js
 var mutiply_entires_exports = {};
-const mutiply_entires_hot = __rolldown_runtime__.createModuleHotContext("index.js");
-__rolldown_runtime__.registerModule("index.js", { exports: mutiply_entires_exports });
+const mutiply_entires_hot = __rolldown_runtime__.createModuleHotContext("$CWD/index.js");
+__rolldown_runtime__.registerModule("$CWD/index.js", { exports: mutiply_entires_exports });
 console.log("index");
 
 //#endregion

@@ -12,8 +12,8 @@ import nodeAssert from "node:assert";
 // HIDDEN [rolldown:hmr]
 //#region foo.cjs
 var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-	const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.cjs");
-	__rolldown_runtime__.registerModule("foo.cjs", module);
+	const foo_hot = __rolldown_runtime__.createModuleHotContext("$CWD/foo.cjs");
+	__rolldown_runtime__.registerModule("$CWD/foo.cjs", module);
 	module.exports.value = "foo";
 }));
 
@@ -24,8 +24,8 @@ var import_foo, main_hot;
 var init_main = __esmMin((() => {
 	init_rolldown_hmr();
 	import_foo = require_foo();
-	main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-	__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+	main_hot = __rolldown_runtime__.createModuleHotContext("$CWD/main.js");
+	__rolldown_runtime__.registerModule("$CWD/main.js", { exports: main_exports });
 	nodeAssert.strictEqual(import_foo.value, "foo");
 }));
 

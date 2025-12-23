@@ -39,7 +39,7 @@ export default {
 ```
 
 :::tip Note
-Rolldown respects `references` and `include`/`exclude` patterns in tsconfig, while esbuild does not. If you need esbuild-compatible behavior, use a tsconfig without `references`.
+Rolldown respects `references` and `include`/`exclude` patterns in tsconfig, while esbuild does not. If you need esbuild-compatible behavior, specify a tsconfig without `references`. You can use [`extends`](https://www.typescriptlang.org/tsconfig/#extends) to share the options between the two.
 :::
 
 ## What's used from tsconfig

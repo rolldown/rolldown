@@ -6586,6 +6586,10 @@ expression: output
 
 - main-!~{000}~.js => main-roUVQOvH.js
 
+# tests/rollup/jsx/transpiles-react-jsx-expression-semicolon
+
+- main-!~{000}~.js => main-vaChaBom.js
+
 # tests/rollup/mutations-in-imports
 
 - main-!~{000}~.js => main-Cmj6vOFb.js

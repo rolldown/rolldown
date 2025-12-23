@@ -2,6 +2,7 @@ const { loadFailedTests, calcTestId, shouldIgnoredTest, status } = require('./ut
 const expectedStatus = require('../status.json');
 const alreadyFailedTests = new Set(loadFailedTests())
 
+const skipPassDiff = !!process.env.SKIP_PASS_DIFF
 const hasGrep = process.argv.some(arg => arg === '--grep' || arg === '-g')
 
 /**
@@ -63,16 +64,21 @@ after(function printStatus() {
     // enforce exit process to avoid Rust process is not exit.
     process.exit(1)
   } else {
+    const hasPassDiff = expectedStatus.passed !== status.passed
     if (hasGrep) {
       console.log('Skip status verification as `--grep` is used.')
       console.log('status', status)
     } else if (
       expectedStatus.skipFailed !== status.skipFailed ||
-        expectedStatus.passed !== status.passed
+        (!skipPassDiff && hasPassDiff)
     ) {
       console.log('expected', expectedStatus)
       console.log('actual', status)
       throw new Error('The rollup test status file is not updated. Please run `just test-node-rollup --update` to update it.')
+    }
+    if (skipPassDiff && hasPassDiff) {
+      // used for pass count difference caused by config.minNodeVersion
+      console.log('Skipping passed test count verification as SKIP_PASS_DIFF is set')
     }
     process.exit(0)
   }

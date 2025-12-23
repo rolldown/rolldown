@@ -61,6 +61,8 @@ jobs:
 
       - name: Rollup Test For Node20
         run: pnpm run --filter rollup-tests test
+        env:
+          SKIP_PASS_DIFF: 1
 
       - name: Build Examples For Node20
         run: pnpm --filter '@example/**' build
@@ -77,6 +79,8 @@ jobs:
 
       - name: Rollup Test For Node22
         run: pnpm run --filter rollup-tests test
+        env:
+          SKIP_PASS_DIFF: 1
 
       - name: Build Examples For Node22
         run: pnpm --filter '@example/**' build

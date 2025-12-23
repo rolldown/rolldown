@@ -107,6 +107,10 @@ jobs:
       - if: steps.check-update.outputs.update_needed == 'true'
         uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
 
+      - if: steps.check-update.outputs.update_needed == 'true'
+        name: Build Native Rolldown
+        run: just build-rolldown
+
       - name: Update rollup snapshots
         if: steps.check-update.outputs.update_needed == 'true'
         run: |
@@ -326,7 +330,7 @@ jobs:
         if: steps.check-update.outputs.update_needed == 'true'
         run: |
           pnpm install
-          pnpm run --filter scripts gen-esbuild-tests
+          pnpm run --filter scripts gen-esbuild-tests all
 
       - name: Create Pull Request
         if: steps.check-update.outputs.update_needed == 'true'

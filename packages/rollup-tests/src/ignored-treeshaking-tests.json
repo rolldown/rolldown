@@ -113,6 +113,7 @@
   "rollup@form@object-expression-treeshaking@remove-unused-parameter-props: removes props that are not used in a function",
   "rollup@form@object-expression-treeshaking@remove-unused-parameter-props-external-call: removes props that are not used in a function when part of the parameter is passed to an external function",
   "rollup@form@object-expression-treeshaking@remove-unused-props: removes unused object properties",
+  "rollup@form@object-expression-treeshaking@remove-unused-wellknown-hasInstance: removes unused Symbol.hasInstance from objects",
   "rollup@form@object-expression-treeshaking@tree-shake-jsx-namespace: tree-shakes unused properties of JSX namespaces",
   "rollup@form@object-freeze-effects: Only treats Object.freeze as a side effect if the argument is used",
   "rollup@form@object-literal-property-overwrites: detect side-effects in overwritten properties of object literals",

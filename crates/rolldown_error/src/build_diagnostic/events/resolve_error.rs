@@ -1,6 +1,7 @@
 use crate::{types::diagnostic_options::DiagnosticOptions, types::event_kind::EventKind};
 use arcstr::ArcStr;
 use derive_more::Debug;
+use std::fmt::Write;
 
 use super::{BuildEvent, DiagnosableArcstr};
 
@@ -11,6 +12,8 @@ pub struct DiagnosableResolveError {
   pub importee: DiagnosableArcstr,
   pub reason: String,
   pub help: Option<String>,
+  /// The import chain from the file with the unresolved import back to an entry point.
+  pub import_chain: Option<Vec<String>>,
   #[debug(skip)]
   pub diagnostic_kind: EventKind,
 }
@@ -46,7 +49,7 @@ impl BuildEvent for DiagnosableResolveError {
     opts: &DiagnosticOptions,
   ) {
     let stable_id = opts.stabilize_path(self.importer_id.as_str());
-    let importer_file = diagnostic.add_file(stable_id, self.source.clone());
+    let importer_file = diagnostic.add_file(&stable_id, self.source.clone());
 
     match self.importee {
       DiagnosableArcstr::Span(span) if !span.is_unspanned() => {
@@ -56,7 +59,15 @@ impl BuildEvent for DiagnosableResolveError {
     }
     diagnostic.title = self.message(opts);
     if let Some(help) = &self.help {
-      diagnostic.helps.push(help.clone());
+      diagnostic.add_help(help.clone());
+    }
+    if let Some(chain) = &self.import_chain {
+      let mut help = format!("'{stable_id}' is imported by the following path:",);
+      let _ = write!(help, "\n  - {stable_id}");
+      for path in chain {
+        let _ = write!(help, "\n  - {}", opts.stabilize_path(path));
+      }
+      diagnostic.add_help(help);
     }
   }
 

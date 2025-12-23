@@ -40,6 +40,7 @@ const ignoreTests = [
   "rollup@form@jsx@transpiles-react-global: transpiles JSX for react",
   "rollup@form@jsx@transpiles-react-internal: transpiles JSX for react",
   "rollup@form@jsx@transpiles-react-jsx: transpiles JSX for react",
+  "rollup@form@jsx@transpiles-react-jsx-expression-semicolon: Adds semicolons at the correct positions in transpiled JSX",
   "rollup@function@jsx@missing-jsx-export: throws when the JSX factory is not exported",
 
   // --------------------------------------------------------------------------------------

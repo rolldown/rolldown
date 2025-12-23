@@ -1,0 +1,10 @@
+{
+  "config": {
+    "resolve": {
+      "alias": [
+        ["@missing", [""]]
+      ]
+    }
+  },
+  "expectError": true
+}

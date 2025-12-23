@@ -77,6 +77,7 @@ const suites = {
 }>;
 
 type TestSuiteName = keyof typeof suites;
+type SuiteArg = TestSuiteName | 'all';
 
 interface FileEntry {
   name: string;
@@ -108,16 +109,22 @@ if (process.argv.length < 3) {
   );
 }
 
-const SUITE_NAME = process.argv[2] as TestSuiteName;
-console.log(`Processing test suite: ${SUITE_NAME}`);
+const SUITE_ARG = process.argv[2] as SuiteArg;
+if (SUITE_ARG !== 'all' && !(SUITE_ARG in suites)) {
+  throw new Error(
+    `Unknown test suite name: ${SUITE_ARG}. Available suites: ${
+      Object.keys(suites).join(', ')
+    }`,
+  );
+}
+
+const SUITE_NAMES: TestSuiteName[] = SUITE_ARG === 'all'
+  ? (Object.keys(suites) as TestSuiteName[])
+  : [SUITE_ARG];
+
+console.log(`Processing test suite: ${SUITE_NAMES.join(', ')}`);
 
 const __dirname = import.meta.dirname;
-
-const TESTS_ROOT_DIR = path.resolve(
-  __dirname,
-  '../../../crates/rolldown/tests/esbuild',
-  SUITE_NAME,
-);
 
 const queryString = `
 (call_expression
@@ -370,102 +377,111 @@ function ensureTreeSitterWasmGo(): Promise<void> | undefined {
 }
 
 // Main execution
-const source = await readTestSuiteSource(SUITE_NAME);
-
 await Parser.init();
 await ensureTreeSitterWasmGo();
 const Lang = await Language.load(TREE_SITTER_WASM_GO_FILENAME);
 const parser = new Parser();
 parser.setLanguage(Lang);
-const tree = parser.parse(source)!;
-const topLevelBindingMap = getTopLevelBinding(tree.rootNode);
 const query = new Query(Lang, queryString);
 
-for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
-  const child = tree.rootNode.namedChild(i);
-  if (child?.type === 'function_declaration') {
-    let testCaseName = child.namedChild(0)?.text;
-    if (!testCaseName) {
-      console.error(`No test case name, root's child index: ${i}`);
-      continue;
-    }
-    testCaseName = testCaseName.slice(4); // every function starts with "Test"
-    testCaseName = changeCase.snakeCase(testCaseName);
+for (const suiteName of SUITE_NAMES) {
+  console.log(`Processing test suite: ${suiteName}`);
+  const testsRootDir = path.resolve(
+    __dirname,
+    '../../../crates/rolldown/tests/esbuild',
+    suiteName,
+  );
 
-    console.log('testCaseName: ', testCaseName);
+  const source = await readTestSuiteSource(suiteName);
+  const tree = parser.parse(source)!;
+  const topLevelBindingMap = getTopLevelBinding(tree.rootNode);
 
-    const bundle_field_list = query.captures(child).filter((item) => {
-      return item.name === 'element_list';
-    });
-    const jsConfig: JsConfig = Object.create(null);
-    bundle_field_list.forEach((cap) => {
-      processKeyElement(cap.node, jsConfig, topLevelBindingMap);
-    });
-
-    const fileList = jsConfig.files;
-
-    const testDir = path.resolve(TESTS_ROOT_DIR, testCaseName);
-    const ignoredTestDir = path.resolve(TESTS_ROOT_DIR, `.${testCaseName}`);
-
-    if (
-      (fs.existsSync(testDir) && !isDirEmptySync(testDir)) ||
-      (fs.existsSync(ignoredTestDir) && !isDirEmptySync(ignoredTestDir))
-    ) {
-      continue;
-    } else {
-      fs.ensureDirSync(testDir);
-    }
-    const prefix = calculatePrefixDir(fileList.map((item) => item.name));
-    fileList.forEach((file) => {
-      let normalizedName = file.name.slice(prefix.length);
-
-      if (path.isAbsolute(normalizedName)) {
-        normalizedName = normalizedName.slice(1);
+  for (let i = 0, len = tree.rootNode.namedChildren.length; i < len; i++) {
+    const child = tree.rootNode.namedChild(i);
+    if (child?.type === 'function_declaration') {
+      let testCaseName = child.namedChild(0)?.text;
+      if (!testCaseName) {
+        console.error(`No test case name, root's child index: ${i}`);
+        continue;
       }
-      const absFile = path.resolve(testDir, normalizedName);
-      const dirName = path.dirname(absFile);
-      fs.ensureDirSync(dirName);
-      fs.writeFileSync(absFile, file.content);
-    });
+      testCaseName = testCaseName.slice(4); // every function starts with "Test"
+      testCaseName = changeCase.snakeCase(testCaseName);
 
-    // entry
-    const config: Config = { config: Object.create({}) };
-    let entryPaths = jsConfig.entryPaths ?? [];
-    if (!entryPaths.length) {
-      console.error(chalk.red(`No entryPaths found`));
-    }
-    if (entryPaths.length === 1 && entryPaths[0] === '/*') {
-      entryPaths = fileList.map((item) => item.name);
-    }
-    const input = entryPaths.map((p) => {
-      let normalizedName = p.slice(prefix.length);
-      if (path.isAbsolute(normalizedName)) {
-        normalizedName = normalizedName.slice(1);
+      console.log('testCaseName: ', testCaseName);
+
+      const bundle_field_list = query.captures(child).filter((item) => {
+        return item.name === 'element_list';
+      });
+      const jsConfig: JsConfig = Object.create(null);
+      bundle_field_list.forEach((cap) => {
+        processKeyElement(cap.node, jsConfig, topLevelBindingMap);
+      });
+
+      const fileList = jsConfig.files;
+
+      const testDir = path.resolve(testsRootDir, testCaseName);
+      const ignoredTestDir = path.resolve(testsRootDir, `.${testCaseName}`);
+
+      if (
+        (fs.existsSync(testDir) && !isDirEmptySync(testDir)) ||
+        (fs.existsSync(ignoredTestDir) && !isDirEmptySync(ignoredTestDir))
+      ) {
+        continue;
+      } else {
+        fs.ensureDirSync(testDir);
       }
-      return {
-        name: normalizedName
-          .split('/')
-          .filter(Boolean)
-          .join('_')
-          .split('.')
-          .join('_'),
-        import: normalizedName,
-      };
-    });
-    config.config.input = input;
-    const configFilePath = path.resolve(testDir, '_config.json');
-    fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2));
-    // TODO: options
+      const prefix = calculatePrefixDir(fileList.map((item) => item.name));
+      fileList.forEach((file) => {
+        let normalizedName = file.name.slice(prefix.length);
 
-    const compileLog = jsConfig.expectedCompileLog;
-    if (compileLog) {
-      const compileLogPath = path.resolve(testDir, 'compile-log.txt');
-      fs.writeFileSync(compileLogPath, compileLog);
-    }
-    const scanLog = jsConfig.expectedScanLog;
-    if (scanLog) {
-      const scanLogPath = path.resolve(testDir, 'scan-log.txt');
-      fs.writeFileSync(scanLogPath, scanLog);
+        if (path.isAbsolute(normalizedName)) {
+          normalizedName = normalizedName.slice(1);
+        }
+        const absFile = path.resolve(testDir, normalizedName);
+        const dirName = path.dirname(absFile);
+        fs.ensureDirSync(dirName);
+        fs.writeFileSync(absFile, file.content);
+      });
+
+      // entry
+      const config: Config = { config: Object.create({}) };
+      let entryPaths = jsConfig.entryPaths ?? [];
+      if (!entryPaths.length) {
+        console.error(chalk.red(`No entryPaths found`));
+      }
+      if (entryPaths.length === 1 && entryPaths[0] === '/*') {
+        entryPaths = fileList.map((item) => item.name);
+      }
+      const input = entryPaths.map((p) => {
+        let normalizedName = p.slice(prefix.length);
+        if (path.isAbsolute(normalizedName)) {
+          normalizedName = normalizedName.slice(1);
+        }
+        return {
+          name: normalizedName
+            .split('/')
+            .filter(Boolean)
+            .join('_')
+            .split('.')
+            .join('_'),
+          import: normalizedName,
+        };
+      });
+      config.config.input = input;
+      const configFilePath = path.resolve(testDir, '_config.json');
+      fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2));
+      // TODO: options
+
+      const compileLog = jsConfig.expectedCompileLog;
+      if (compileLog) {
+        const compileLogPath = path.resolve(testDir, 'compile-log.txt');
+        fs.writeFileSync(compileLogPath, compileLog);
+      }
+      const scanLog = jsConfig.expectedScanLog;
+      if (scanLog) {
+        const scanLogPath = path.resolve(testDir, 'scan-log.txt');
+        fs.writeFileSync(scanLogPath, scanLog);
+      }
     }
   }
 }

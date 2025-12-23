@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## RESOLVE_ERROR
+
+```text
+[RESOLVE_ERROR] Error: Could not resolve '@missing/something' in lib.js
+   ╭─[ lib.js:1:19 ]
+   │
+ 1 │ import { a } from "@missing/something";
+   │                   ──────────┬─────────  
+   │                             ╰─────────── Matched alias not found for '@missing/something'
+   │ 
+   │ Help 1: May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/apis/config-options#resolve-alias for more details
+   │ 
+   │ Help 2: 'lib.js' is imported by the following path:
+   │           - lib.js
+   │           - main.js
+───╯
+
+```

@@ -17,7 +17,7 @@ use rolldown_common::{
   StmtInfoIdx, SymbolRefDb, SymbolRefDbForModule,
 };
 use rolldown_ecmascript::EcmaAst;
-use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosableResolveError};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::indexmap::FxIndexSet;
@@ -616,6 +616,17 @@ impl<'a> ModuleLoader<'a> {
     }
 
     if !errors.is_empty() {
+      // Enrich UNRESOLVED_IMPORT errors with import chain
+      for error in &mut errors {
+        if let Some(resolve_error) = error.downcast_mut::<DiagnosableResolveError>() {
+          let chain = self
+            .trace_import_chain_from_modules(&resolve_error.importer_id, &user_defined_entry_ids);
+          if !chain.is_empty() {
+            resolve_error.import_chain = Some(chain);
+          }
+        }
+      }
+
       return Err(errors.into());
     }
     if let Some(tx) = self.magic_string_tx.as_ref() {
@@ -732,6 +743,49 @@ impl<'a> ModuleLoader<'a> {
       ),
       flat_options: self.flat_options,
     })
+  }
+
+  /// Traces the import chain from a module back to an entry point.
+  /// Returns a list of module paths from the given module to an entry point.
+  /// This version works directly with intermediate modules before the module table is built.
+  fn trace_import_chain_from_modules(
+    &self,
+    importer_id: &str,
+    user_defined_entry_ids: &FxHashSet<ModuleIdx>,
+  ) -> Vec<String> {
+    let Some(visit_state) = self.cache.module_id_to_idx.get(importer_id) else {
+      return vec![];
+    };
+    let start_idx = visit_state.idx();
+
+    let mut chain = Vec::new();
+    let mut visited = FxHashSet::default();
+    let mut current = Some(start_idx);
+
+    while let Some(idx) = current {
+      if visited.contains(&idx) {
+        break;
+      }
+      visited.insert(idx);
+
+      let module_opt = self.intermediate_normal_modules.modules.get(idx);
+      if let Some(module) = module_opt {
+        if let Some(normal) = module.as_normal() {
+          chain.push(normal.id.to_string());
+        }
+      }
+
+      if user_defined_entry_ids.contains(&idx) {
+        break;
+      }
+
+      current = self
+        .intermediate_normal_modules
+        .importers
+        .get(idx)
+        .and_then(|importers| importers.first().map(|rec| rec.importer_idx));
+    }
+    chain
   }
 
   /// If the module is already exists in module graph in partial scan mode, we could

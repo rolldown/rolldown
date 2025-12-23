@@ -233,6 +233,7 @@ export const ignoreReasons: Record<string, string> = {
     'https://github.com/javascript-compiler-hints/compiler-notations-spec/issues/8',
 
   'default/define_import_meta_es5': "target: 'es5' is not supported",
+  'loader/loader_json_prototype_es5': "target: 'es5' is not supported",
 
   'default/package_alias_match_longest': 'resolve alias behavior difference',
   'default/package_alias': 'resolve alias behavior difference',

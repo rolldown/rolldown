@@ -2494,6 +2494,10 @@ expression: output
 
 - entry-!~{000}~.js => entry-B3SO6C8p.js
 
+# tests/esbuild/loader/loader_json_prototype_es5
+
+- entry-!~{000}~.js => entry-GtaMvqJH.js
+
 # tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413
 
 - a-!~{000}~.js => a-8WJPwNdw.js

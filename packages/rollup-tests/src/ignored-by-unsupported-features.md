@@ -400,8 +400,6 @@
  - rollup@function@emit-file@invalid-asset-name: throws for invalid asset names (`PLUGIN_ERROR`>`VALIDATION_ERROR` error)
  - rollup@function@emit-file@emit-same-file: warns if multiple files with the same name are emitted (`FILE_NAME_CONFLICT` error)
  - rollup@function@emit-file@emit-from-output-options: throws when trying to emit files from the outputOptions hook (`CANNOT_EMIT_FROM_OPTIONS_HOOK` error)
- - rollup@function@cannot-call-external-namespace: warns if code calls an external namespace (`CANNOT_CALL_NAMESPACE` warning)
- - rollup@function@cannot-call-internal-namespace: warns if code calls an internal namespace (`CANNOT_CALL_NAMESPACE` warning)
  - rollup@function@conflicting-reexports@namespace-import: warns when a conflicting binding is imported via a namespace import (`MISSING_EXPORT` warning)
  - rollup@function@cannot-resolve-sourcemap-warning: handles when a sourcemap cannot be resolved in a warning (`SOURCEMAP_ERROR` warning)
  - rollup@function@adds-json-hint-for-missing-export-if-is-json-file: should provide json hint when importing a no export json file (`pluginCode":"VALIDATION_ERROR"` expected, but got `pluginCode:"InvalidArg"`)

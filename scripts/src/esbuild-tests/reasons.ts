@@ -197,8 +197,6 @@ export const notSupportedReasons: Record<string, string> = {
   'dce/dead_code_inside_unused_cases':
     'dce inside unused switch cases is not supported',
 
-  'default/call_import_namespace_warning': 'warning not implemented',
-
   'default/import_with_hash_parameter':
     'stripping hash parameter is not supported',
   'default/import_with_query_parameter':

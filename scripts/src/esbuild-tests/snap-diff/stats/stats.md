@@ -1,11 +1,11 @@
 # Compatibility metric
 - total: 808
-- ignored: 115
-- passed: 667
-- passed ratio: 85.19%
+- ignored: 114
+- passed: 668
+- passed ratio: 85.31%
 # Compatibility metric without not supported case
-- total: 693
-- passed: 667
+- total: 694
+- passed: 668
 - passed ratio: 96.25%
 # Compatibility metric details
 ## dce
@@ -15,9 +15,9 @@
 - passed ratio: 95.65%
 ## default
 - total: 260
-- ignored: 46
-- passed: 202
-- passed ratio: 94.39%
+- ignored: 45
+- passed: 203
+- passed ratio: 94.42%
 ## glob
 - total: 9
 - ignored: 8

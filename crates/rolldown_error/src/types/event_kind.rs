@@ -40,13 +40,14 @@ pub enum EventKind {
   UnloadableDependencyError = 27,
 
   NapiError = 28,
-  ConfigurationFieldConflict = 29,
-  PreferBuiltinFeature = 30,
-  BundlerInitializeError = 31,
-  PluginError = 32,
-  AlreadyClosedError = 33,
-  CouldNotCleanDirectory = 34,
-  PluginTimings = 35,
+  CannotCallNamespace = 29,
+  ConfigurationFieldConflict = 30,
+  PreferBuiltinFeature = 31,
+  BundlerInitializeError = 32,
+  PluginError = 33,
+  AlreadyClosedError = 34,
+  CouldNotCleanDirectory = 35,
+  PluginTimings = 36,
 }
 
 impl Display for EventKind {
@@ -86,6 +87,7 @@ impl Display for EventKind {
       EventKind::UnloadableDependencyError => write!(f, "UNLOADABLE_DEPENDENCY"),
 
       EventKind::NapiError => write!(f, "NAPI_ERROR"),
+      EventKind::CannotCallNamespace => write!(f, "CANNOT_CALL_NAMESPACE"),
       EventKind::ConfigurationFieldConflict => write!(f, "CONFIGURATION_FIELD_CONFLICT"),
       EventKind::PreferBuiltinFeature => write!(f, "PREFER_BUILTIN_FEATURE"),
       EventKind::BundlerInitializeError => write!(f, "BUNDLER_INITIALIZE_ERROR"),

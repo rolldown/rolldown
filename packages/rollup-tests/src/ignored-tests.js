@@ -86,6 +86,8 @@ const ignoreTests = [
   "rollup@function@logging@loglevel-debug: shows all logs for logLevel:debug",
   "rollup@function@logging@loglevel-info: does not show debug logs for logLevel:info",
   "rollup@function@logging@loglevel-warn: only shows warning logs for logLevel:warn",
+  "rollup@function@cannot-call-external-namespace: warns if code calls an external namespace",
+  "rollup@function@cannot-call-internal-namespace: warns if code calls an internal namespace",
   // ### rolldown uses `ASSIGN_TO_IMPORT` while rollup uses `ILLEGAL_REASSIGNMENT`
   "rollup@function@ast-validations@reassign-import-fails: disallows assignments to imported bindings",
   "rollup@function@ast-validations@reassign-import-not-at-top-level-fails: disallows assignments to imported bindings not at the top level",

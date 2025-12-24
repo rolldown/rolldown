@@ -17,4 +17,5 @@ doctest = false
 [dependencies]
 oxc = { workspace = true }
 rolldown_common = { workspace = true }
+rolldown_utils = { workspace = true }
 smallvec = { workspace = true }

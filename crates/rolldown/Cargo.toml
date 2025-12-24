@@ -54,6 +54,7 @@ rolldown_plugin = { workspace = true }
 rolldown_plugin_chunk_import_map = { workspace = true }
 rolldown_plugin_data_uri = { workspace = true }
 rolldown_plugin_hmr = { workspace = true }
+rolldown_plugin_lazy_compilation = { workspace = true }
 rolldown_plugin_oxc_runtime = { workspace = true }
 rolldown_resolver = { workspace = true }
 rolldown_sourcemap = { workspace = true }
@@ -62,7 +63,7 @@ rolldown_tracing = { workspace = true }
 rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, optional = true }
-serde_json = { workspace = true }
+serde_json = { workspace = true, features = ["preserve_order"] }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
@@ -88,5 +89,5 @@ tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread
 walkdir = { workspace = true }
 
 [package.metadata.cargo-shear]
-# `serde` is used via feature flag, `serde_json` is used in `trace_action` macro.
-ignored = ["serde", "serde_json"]
+# `serde` is used via feature flag.
+ignored = ["serde"]

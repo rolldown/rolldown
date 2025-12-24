@@ -1,13 +1,2 @@
-export {
-  and,
-  code,
-  exclude,
-  id,
-  include,
-  moduleType,
-  not,
-  or,
-  queries,
-  query,
-} from '@rolldown/pluginutils';
+export * from '@rolldown/pluginutils/filter';
 export { withFilter } from './plugin';

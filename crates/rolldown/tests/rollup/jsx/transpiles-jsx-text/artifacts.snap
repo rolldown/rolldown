@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+const Foo = () => {};
+const element = /* @__PURE__ */ React.createElement(Foo, null, "some&\\text");
+const fragment = /* @__PURE__ */ React.createElement(React.Fragment, null, "other&\\text");
+
+//#endregion
+export { element, fragment };
+```

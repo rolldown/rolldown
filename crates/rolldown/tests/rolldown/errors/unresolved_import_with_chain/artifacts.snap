@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './nonexistent.js' in lib.js
+   ╭─[ lib.js:1:8 ]
+   │
+ 1 │ import './nonexistent.js';
+   │        ─────────┬────────  
+   │                 ╰────────── Module not found.
+   │ 
+   │ Help: 'lib.js' is imported by the following path:
+   │         - lib.js
+   │         - main.js
+───╯
+
+```

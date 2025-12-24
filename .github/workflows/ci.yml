@@ -48,6 +48,7 @@ jobs:
               - 'pnpm-workspace.yaml'
               - '.gitattributes'
               - 'justfile'
+              - 'test262'
             node-changes:
               - *rust-changes
               - 'packages/**'
@@ -55,6 +56,7 @@ jobs:
               - 'scripts/**'
               - 'package.json'
               - 'justfile'
+              - 'rollup'
             pluginutils-changes:
               - 'packages/pluginutils/**'
               - 'package.json'
@@ -75,7 +77,7 @@ jobs:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@ecabb7322a2ba5aeedb3612d2a40b86a85cee235 # v1.0.11
+        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
           tools: just
           cache-key: debug-build
@@ -93,14 +95,64 @@ jobs:
       os: ${{ matrix.target }}
       changed: ${{ needs.changes.outputs.rust-changes == 'true' }}
 
-  node-test:
-    needs: changes
-    strategy:
-      matrix:
-        target: [ubuntu-latest, macos-latest, windows-latest]
+  node-test-windows:
+    needs: [changes, build-rolldown-windows]
     uses: ./.github/workflows/reusable-node-test.yml
+    if: |
+      always() &&
+      (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
     with:
-      os: ${{ matrix.target }}
+      os: windows-latest
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
+  node-test-macos:
+    needs: [changes, build-rolldown-macos]
+    uses: ./.github/workflows/reusable-node-test.yml
+    if: |
+      always() &&
+      (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
+    with:
+      os: macos-latest
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
+  node-test-ubuntu:
+    needs: [changes, build-rolldown-ubuntu]
+    uses: ./.github/workflows/reusable-node-test.yml
+    if: |
+      always() &&
+      (needs.build-rolldown-ubuntu.result == 'success' || needs.build-rolldown-ubuntu.result == 'skipped')
+    with:
+      os: ubuntu-latest
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
+  node-dev-server-test-windows:
+    needs: [changes, build-rolldown-windows]
+    uses: ./.github/workflows/reusable-node-dev-server-test.yml
+    if: |
+      always() &&
+      (needs.build-rolldown-windows.result == 'success' || needs.build-rolldown-windows.result == 'skipped')
+    with:
+      os: windows-latest
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
+  node-dev-server-test-macos:
+    needs: [changes, build-rolldown-macos]
+    uses: ./.github/workflows/reusable-node-dev-server-test.yml
+    if: |
+      always() &&
+      (needs.build-rolldown-macos.result == 'success' || needs.build-rolldown-macos.result == 'skipped')
+    with:
+      os: macos-latest
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
+  node-dev-server-test-ubuntu:
+    needs: [changes, build-rolldown-ubuntu]
+    uses: ./.github/workflows/reusable-node-dev-server-test.yml
+    if: |
+      always() &&
+      (needs.build-rolldown-ubuntu.result == 'success' || needs.build-rolldown-ubuntu.result == 'skipped')
+    with:
+      os: ubuntu-latest
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
   build-rolldown-wasi:
@@ -108,6 +160,27 @@ jobs:
     uses: ./.github/workflows/reusable-wasi-build.yml
     with:
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
+  build-rolldown-windows:
+    needs: changes
+    uses: ./.github/workflows/reusable-native-build.yml
+    with:
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+      os: windows-latest
+
+  build-rolldown-macos:
+    needs: changes
+    uses: ./.github/workflows/reusable-native-build.yml
+    with:
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+      os: macos-latest
+
+  build-rolldown-ubuntu:
+    needs: changes
+    uses: ./.github/workflows/reusable-native-build.yml
+    with:
+      changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+      os: ubuntu-latest
 
   build-browser:
     name: Build `@rolldown/browser`
@@ -121,7 +194,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@ecabb7322a2ba5aeedb3612d2a40b86a85cee235 # v1.0.11
+        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
           tools: just
           cache-key: debug-build-wasi
@@ -173,7 +246,7 @@ jobs:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@ecabb7322a2ba5aeedb3612d2a40b86a85cee235 # v1.0.11
+        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
           tools: just
           cache-key: debug-build

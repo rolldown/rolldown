@@ -212,6 +212,24 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
+  pub fn post_banner(&self) -> Either<Option<&str>, Undefined> {
+    match &self.inner.post_banner {
+      Some(rolldown::AddonOutputOption::String(inner)) => Either::A(inner.as_deref()),
+      Some(rolldown::AddonOutputOption::Fn(_)) => Either::B(()),
+      None => Either::A(None),
+    }
+  }
+
+  #[napi(getter)]
+  pub fn post_footer(&self) -> Either<Option<&str>, Undefined> {
+    match &self.inner.post_footer {
+      Some(rolldown::AddonOutputOption::String(inner)) => Either::A(inner.as_deref()),
+      Some(rolldown::AddonOutputOption::Fn(_)) => Either::B(()),
+      None => Either::A(None),
+    }
+  }
+
+  #[napi(getter)]
   pub fn external_live_bindings(&self) -> bool {
     self.inner.external_live_bindings
   }
@@ -252,7 +270,7 @@ impl BindingNormalizedOptions {
   pub fn minify(&self) -> Either3<bool, &'static str, oxc_minify_napi::MinifyOptions> {
     match &self.inner.minify {
       MinifyOptions::Disabled => Either3::A(false),
-      MinifyOptions::DeadCodeEliminationOnly => Either3::B("dce-only"),
+      MinifyOptions::DeadCodeEliminationOnly(_) => Either3::B("dce-only"),
       MinifyOptions::Enabled((minify_options, remove_whitespace)) => {
         Either3::C(oxc_minify_napi::MinifyOptions {
           compress: minify_options

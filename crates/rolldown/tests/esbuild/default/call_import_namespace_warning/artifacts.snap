@@ -3,6 +3,32 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 
+## CANNOT_CALL_NAMESPACE
+
+```text
+[CANNOT_CALL_NAMESPACE] Warning: Cannot call a namespace ("a").
+   ╭─[ js.js:4:1 ]
+   │
+ 4 │ a()
+   │ ─┬─  
+   │  ╰─── This will cause an error at runtime because "a" is a module namespace object and not a function. Consider changing "a" to a default import instead.
+───╯
+
+```
+
+## CANNOT_CALL_NAMESPACE
+
+```text
+[CANNOT_CALL_NAMESPACE] Warning: Cannot call a namespace ("a").
+   ╭─[ ts.ts:4:1 ]
+   │
+ 4 │ a()
+   │ ─┬─  
+   │  ╰─── This will cause an error at runtime because "a" is a module namespace object and not a function. Consider changing "a" to a default import instead.
+───╯
+
+```
+
 ## UNRESOLVED_IMPORT
 
 ```text

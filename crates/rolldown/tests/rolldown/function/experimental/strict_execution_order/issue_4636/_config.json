@@ -2,7 +2,7 @@
   "config": {
     "external": ["node:assert"],
     "experimental": {
-      "hmr": {},
+      "devMode": {},
       "strictExecutionOrder": true
     }
   }

@@ -1,0 +1,15 @@
+{
+  "config": {
+    "moduleTypes": {
+      ".js": "jsx"
+    },
+    "transform": {
+      "jsx": {
+        "runtime": "classic",
+        "pragma": "React.createElement",
+        "pragmaFrag": "React.Fragment"
+      }
+    }
+  },
+  "expectExecuted": false
+}

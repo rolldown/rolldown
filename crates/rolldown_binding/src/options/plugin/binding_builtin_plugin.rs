@@ -92,7 +92,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         } else {
           BindingReplacePluginConfig::default()
         };
-        Arc::new(ReplacePlugin::with_options(config.into()))
+        Arc::new(ReplacePlugin::with_options(config.into())?)
       }
       BindingBuiltinPluginName::ViteAlias => {
         let plugin = if let Some(options) = plugin.options {

@@ -1,0 +1,12 @@
+{
+  "config": {
+    "moduleTypes": {
+      ".js": "jsx"
+    },
+    "transform": {
+      "jsx": "preserve"
+    }
+  },
+  "expectExecuted": false,
+  "_comment": "Rollup supports preserving JSX for classic transform and keeps React variable, but Rolldown & esbuild does not"
+}

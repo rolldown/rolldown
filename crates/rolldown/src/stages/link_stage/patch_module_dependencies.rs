@@ -27,43 +27,47 @@ impl LinkStage<'_> {
           return (module_idx, extended_dependencies, RuntimeHelper::default());
         };
 
-        module.stmt_infos.iter().filter(|stmt_info| stmt_info.is_included).for_each(|stmt_info| {
-          // We need this step to include the runtime module, if there are symbols of it.
-          // TODO: Maybe we should push runtime module to `LinkingMetadata::dependencies` while pushing the runtime symbols.
-          stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
-            match reference_ref {
-              rolldown_common::SymbolOrMemberExprRef::Symbol(sym_ref) => {
-                let canonical_ref = self.symbols.canonical_ref_for(*sym_ref);
-                extended_dependencies.insert(canonical_ref.owner);
-                let symbol = self.symbols.get(canonical_ref);
-                if let Some(ns) = &symbol.namespace_alias {
-                  extended_dependencies.insert(ns.namespace_ref.owner);
+        module
+          .stmt_infos
+          .iter_enumerated()
+          .filter(|(idx, _)| meta.stmt_info_included[*idx])
+          .for_each(|(_, stmt_info)| {
+            // We need this step to include the runtime module, if there are symbols of it.
+            // TODO: Maybe we should push runtime module to `LinkingMetadata::dependencies` while pushing the runtime symbols.
+            stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
+              match reference_ref {
+                rolldown_common::SymbolOrMemberExprRef::Symbol(sym_ref) => {
+                  let canonical_ref = self.symbols.canonical_ref_for(*sym_ref);
+                  extended_dependencies.insert(canonical_ref.owner);
+                  let symbol = self.symbols.get(canonical_ref);
+                  if let Some(ns) = &symbol.namespace_alias {
+                    extended_dependencies.insert(ns.namespace_ref.owner);
+                  }
                 }
-              }
-              rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
-                match member_expr.represent_symbol_ref(&meta.resolved_member_expr_refs) {
-                  Some(sym_ref) => {
-                    let canonical_ref = self.symbols.canonical_ref_for(sym_ref);
-                    extended_dependencies.insert(canonical_ref.owner);
-                    let symbol = self.symbols.get(canonical_ref);
-                    if let Some(ns) = &symbol.namespace_alias {
-                      extended_dependencies.insert(ns.namespace_ref.owner);
+                rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+                  match member_expr.represent_symbol_ref(&meta.resolved_member_expr_refs) {
+                    Some(sym_ref) => {
+                      let canonical_ref = self.symbols.canonical_ref_for(sym_ref);
+                      extended_dependencies.insert(canonical_ref.owner);
+                      let symbol = self.symbols.get(canonical_ref);
+                      if let Some(ns) = &symbol.namespace_alias {
+                        extended_dependencies.insert(ns.namespace_ref.owner);
+                      }
+                    }
+                    _ => {
+                      // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
+                      // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
                     }
                   }
-                  _ => {
-                    // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
-                    // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
-                  }
                 }
               }
-            }
+            });
           });
-        });
         let needs_inherit_to_esm_runtime = meta.dependencies.iter().any(|dep_module_idx| {
-          let Some(dep_module) = self.module_table[*dep_module_idx].as_normal() else {
+          let Some(_) = self.module_table[*dep_module_idx].as_normal() else {
             return false;
           };
-          if dep_module.is_included() {
+          if self.metas[*dep_module_idx].is_included {
             return false;
           }
 

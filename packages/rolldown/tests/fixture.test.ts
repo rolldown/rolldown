@@ -55,6 +55,9 @@ async function compileFixture(fixturePath: string, config: TestConfig) {
     cwd: fixturePath,
     ...config.config,
   };
+  // Ensure pluginTimings is false to avoid snapshot noise
+  inputOptions.checks ??= {};
+  inputOptions.checks.pluginTimings ??= false;
   const build = await rolldown(inputOptions);
   if (Array.isArray(config.config?.output)) {
     const outputs = [];

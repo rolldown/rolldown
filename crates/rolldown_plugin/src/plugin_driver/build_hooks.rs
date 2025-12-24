@@ -323,11 +323,8 @@ impl PluginDriver {
       } else {
         // If sourcemap is empty and code has changed, need to create one remapping original code.
         let magic_string = MagicString::new(original_code);
-        let hires = self
-          .options
-          .experimental
-          .transform_hires_sourcemap
-          .unwrap_or(SourcemapHires::Boolean(true));
+        let hires =
+          self.options.experimental.transform_hires_sourcemap.unwrap_or(SourcemapHires::Boundary);
         Some(magic_string.source_map(SourceMapOptions {
           hires: hires.into(),
           include_content: true,

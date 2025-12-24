@@ -12,12 +12,15 @@ async fn special_characters() {
     .build(TestMeta { expect_executed: false, visualize_sourcemap: true, ..Default::default() })
     .run_with_plugins(
       BundlerOptions { input: Some(vec!["./input.js".to_string().into()]), ..Default::default() },
-      vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-        values: std::iter::once(("require('one')".to_string(), "1".to_string())).collect(),
-        delimiters: Some((String::new(), String::new())),
-        sourcemap: true,
-        ..Default::default()
-      }))],
+      vec![Arc::new(
+        ReplacePlugin::with_options(ReplaceOptions {
+          values: std::iter::once(("require('one')".to_string(), "1".to_string())).collect(),
+          delimiters: Some((String::new(), String::new())),
+          sourcemap: true,
+          ..Default::default()
+        })
+        .unwrap(),
+      )],
     )
     .await;
 }

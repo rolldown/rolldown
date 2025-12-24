@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+//#region baz.js
+var baz_exports = /* @__PURE__ */ __exportAll({ baz: () => baz });
+const baz = "baz";
+
+//#endregion
+//#region main.js
+function foo() {
+	return { bar: baz_exports };
+}
+
+//#endregion
+exports.foo = foo;
+var bar = require("bar");
+Object.keys(bar).forEach(function (k) {
+  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
+    enumerable: true,
+    get: function () { return bar[k]; }
+  });
+});
+
+```

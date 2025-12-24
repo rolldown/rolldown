@@ -5,7 +5,7 @@ export default defineDevConfig({
   build: {
     input: 'src/main.js',
     experimental: {
-      hmr: {},
+      devMode: {},
     },
     platform: 'node',
     treeshake: false,

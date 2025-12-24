@@ -136,21 +136,15 @@ impl Plugin for ViteReporterPlugin {
             .iter()
             .any(|id| !is_in_node_modules(id.as_path()) && args.chunk.module_ids.contains(id));
           if detected_ineffective_dynamic_import {
+            let dynamic_importers_list: Vec<_> =
+              module.dynamic_importers.iter().map(std::convert::AsRef::as_ref).collect();
+            let importers_list: Vec<_> =
+              module.importers.iter().map(std::convert::AsRef::as_ref).collect();
             let message = format!(
               "\n(!) {} is dynamically imported by {} but also statically imported by {}, dynamic import will not move module into another chunk.\n",
               module.id.as_ref(),
-              module
-                .dynamic_importers
-                .iter()
-                .map(std::convert::AsRef::as_ref)
-                .collect::<Vec<_>>()
-                .join(", "),
-              module
-                .importers
-                .iter()
-                .map(std::convert::AsRef::as_ref)
-                .collect::<Vec<_>>()
-                .join(", "),
+              utils::join_with_limit(&dynamic_importers_list, ", ", 5),
+              utils::join_with_limit(&importers_list, ", ", 5),
             );
             ctx.warn(rolldown_common::LogWithoutPlugin { message, ..Default::default() });
           }
@@ -383,6 +377,10 @@ impl Plugin for ViteReporterPlugin {
         itoa::Buffer::new().format(self.chunk_limit)
       ).if_supports_color(Stream::Stdout, |text| { text.bold().yellow().to_string() }).to_string();
       ctx.warn(rolldown_common::LogWithoutPlugin { message, ..Default::default() });
+    }
+    // Print a newline to separate from next log
+    if self.should_log_info {
+      utils::log_info("");
     }
     Ok(())
   }

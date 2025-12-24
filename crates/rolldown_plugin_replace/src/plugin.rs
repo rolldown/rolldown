@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::ops::Range;
 use std::{cmp::Reverse, sync::Arc};
 
+use anyhow::Result;
 use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plugin};
 use rustc_hash::FxHashMap;
 use string_wizard::{MagicString, SourceMapOptions};
@@ -55,11 +56,11 @@ fn is_variable_declaration_prefix(s: &str) -> bool {
 }
 
 impl ReplacePlugin {
-  pub fn new(values: FxHashMap<String, String>) -> Self {
+  pub fn new(values: FxHashMap<String, String>) -> Result<Self> {
     Self::with_options(ReplaceOptions { values, ..Default::default() })
   }
 
-  pub fn with_options(options: ReplaceOptions) -> Self {
+  pub fn with_options(options: ReplaceOptions) -> Result<Self> {
     let values = if options.object_guards {
       expand_typeof_replacements(&options.values).into_iter().chain(options.values).collect()
     } else {
@@ -75,16 +76,19 @@ impl ReplacePlugin {
     // https://rustexp.lpil.uk/
     let matcher = if let Some((delimiter_left, delimiter_right)) = options.delimiters {
       let pattern = format!("{delimiter_left}({joined_keys}){delimiter_right}{lookahead}");
-      HybridRegex::Ecma(regress::Regex::new(&pattern).unwrap())
+      HybridRegex::Ecma(regress::Regex::new(&pattern)?)
     } else {
-      HybridRegex::Optimize(regex::Regex::new(&format!("\\b({joined_keys})\\b")).unwrap())
+      HybridRegex::Optimize(
+        regex::Regex::new(&format!("\\b({joined_keys})\\b"))
+          .expect("to be a valid regex because we escape the keys"),
+      )
     };
-    Self {
+    Ok(Self {
       matcher,
       prevent_assignment: options.prevent_assignment,
       values: values.into_iter().collect(),
       sourcemap: options.sourcemap,
-    }
+    })
   }
 
   fn try_replace<'text>(

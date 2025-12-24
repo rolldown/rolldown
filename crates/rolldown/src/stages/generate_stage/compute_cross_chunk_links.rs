@@ -5,12 +5,13 @@ use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
 use crate::utils::chunk::normalize_preserve_entry_signature;
 use itertools::{Itertools, multizip};
+use oxc::semantic::SymbolId;
 use oxc::span::CompactStr;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PreserveEntrySignatures,
-  RUNTIME_HELPER_NAMES, SymbolRef, WrapKind,
+  RUNTIME_HELPER_NAMES, SymbolIdExt, SymbolRef, WrapKind,
 };
 use rolldown_utils::concat_string;
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
@@ -188,7 +189,7 @@ impl GenerateStage<'_> {
               {
                 // the the resolved module is not included in module graph, skip
                 // TODO: Is that possible that the module of the record is a external module?
-                if !importee_module.meta.is_included() {
+                if !self.link_output.metas[importee_module.idx].is_included {
                   return;
                 }
                 if matches!(rec.kind, ImportKind::DynamicImport) {
@@ -218,8 +219,9 @@ impl GenerateStage<'_> {
                 .push((module.idx, import.clone()));
             }
           });
-          module.stmt_infos.iter().for_each(|stmt_info| {
-            if !stmt_info.is_included {
+          let linking_info = &self.link_output.metas[module.idx];
+          module.stmt_infos.iter_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
+            if !linking_info.stmt_info_included[stmt_info_idx] {
               return;
             }
             stmt_info.declared_symbols.iter().for_each(|declared| {
@@ -377,7 +379,16 @@ impl GenerateStage<'_> {
             }
           }
         }
-        ChunkKind::Common => {}
+        ChunkKind::Common => {
+          if let Some(set) = chunk_graph.common_chunk_exported_facade_chunk_namespace.get(&chunk_id)
+          {
+            for dynamic_entry_module in set {
+              index_chunk_exported_symbols[chunk_id]
+                .entry(SymbolId::module_namespace_symbol_ref(*dynamic_entry_module))
+                .or_default();
+            }
+          }
+        }
       }
 
       let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];

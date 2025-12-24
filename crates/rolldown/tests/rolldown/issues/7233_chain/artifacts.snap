@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 
-exports.__export = __export;
+exports.__exportAll = __exportAll;
 exports.__reExport = __reExport;
 ```
 
@@ -20,7 +20,7 @@ require('./middle.js');
 let zod = require("zod");
 
 //#region index.ts
-var _7233_chain_exports = /* @__PURE__ */ require_rolldown_runtime.__export({
+var _7233_chain_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
 	object: () => zod.object,
 	string: () => zod.string
 });

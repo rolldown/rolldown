@@ -73,7 +73,6 @@ impl LinkStage<'_> {
             declared_symbols: vec![TaggedSymbolRef::Normal(*symbol_ref)],
             referenced_symbols: vec![],
             side_effect: false.into(),
-            is_included: false,
             import_records: Vec::new(),
             #[cfg(debug_assertions)]
             debug_label: None,
@@ -94,7 +93,7 @@ impl LinkStage<'_> {
           let mut referenced_symbols = vec![];
           let mut declared_symbols = vec![];
           if !meta.is_canonical_exports_empty() || self.options.generated_code.symbols {
-            referenced_symbols.push(self.runtime.resolve_symbol("__export").into());
+            referenced_symbols.push(self.runtime.resolve_symbol("__exportAll").into());
             referenced_symbols
               .extend(meta.canonical_exports(false).map(|(_, export)| export.symbol_ref.into()));
           }
@@ -123,7 +122,6 @@ impl LinkStage<'_> {
             declared_symbols,
             referenced_symbols,
             side_effect: false.into(),
-            is_included: false,
             import_records: Vec::new(),
             #[cfg(debug_assertions)]
             debug_label: None,

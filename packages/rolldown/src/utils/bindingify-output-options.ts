@@ -26,6 +26,8 @@ export function bindingifyOutputOptions(
     cssChunkFileNames,
     banner,
     footer,
+    postBanner,
+    postFooter,
     intro,
     outro,
     esModule,
@@ -42,6 +44,15 @@ export function bindingifyOutputOptions(
     topLevelVar,
     cleanDir,
   } = outputOptions;
+
+  // Validate inlineDynamicImports conflicts
+  if (outputOptions.inlineDynamicImports === true) {
+    if (manualChunks != null) {
+      throw new Error(
+        'Invalid value "true" for option "output.inlineDynamicImports" - this option is not supported for "output.manualChunks".',
+      );
+    }
+  }
 
   const advancedChunks = bindingifyAdvancedChunks(
     outputOptions.advancedChunks,
@@ -62,6 +73,8 @@ export function bindingifyOutputOptions(
     sourcemapPathTransform,
     banner: bindingifyAddon(banner),
     footer: bindingifyAddon(footer),
+    postBanner: bindingifyAddon(postBanner),
+    postFooter: bindingifyAddon(postFooter),
     intro: bindingifyAddon(intro),
     outro: bindingifyAddon(outro),
     extend: outputOptions.extend,
@@ -98,12 +111,13 @@ type AddonKeys = 'banner' | 'footer' | 'intro' | 'outro';
 function bindingifyAddon(
   configAddon: OutputOptions[AddonKeys],
 ): BindingOutputOptions[AddonKeys] {
-  return async (chunk) => {
-    if (typeof configAddon === 'function') {
-      return configAddon(transformRenderedChunk(chunk));
-    }
-    return configAddon || '';
-  };
+  if (configAddon == null || configAddon === '') {
+    return undefined;
+  }
+  if (typeof configAddon === 'function') {
+    return async (chunk) => configAddon(transformRenderedChunk(chunk));
+  }
+  return configAddon;
 }
 
 function bindingifyFormat(

@@ -14,7 +14,7 @@ use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, FsWatcherExt, NoopFsWatche
 use rustc_hash::FxHashSet;
 use tokio::sync::{Mutex, mpsc::unbounded_channel};
 
-use rolldown::{Bundler, BundlerBuilder};
+use rolldown::{Bundler, BundlerBuilder, BundlerConfig, NormalizedBundlerOptions};
 
 use crate::{
   DevOptions, SharedClients,
@@ -48,11 +48,14 @@ pub struct DevEngine {
 }
 
 impl DevEngine {
-  pub fn new(bundler_builder: BundlerBuilder, options: DevOptions) -> BuildResult<Self> {
-    Self::with_bundler(Arc::new(Mutex::new(bundler_builder.build()?)), options)
-  }
+  pub fn new(config: BundlerConfig, options: DevOptions) -> BuildResult<Self> {
+    // Build the bundler from config
+    let bundler = BundlerBuilder::default()
+      .with_options(config.options)
+      .with_plugins(config.plugins)
+      .build()?;
+    let bundler = Arc::new(Mutex::new(bundler));
 
-  pub fn with_bundler(bundler: Arc<Mutex<Bundler>>, options: DevOptions) -> BuildResult<Self> {
     let normalized_options = normalize_dev_options(options);
 
     let (coordinator_tx, coordinator_rx) = unbounded_channel::<CoordinatorMsg>();
@@ -303,6 +306,11 @@ impl DevEngine {
 
   pub fn is_closed(&self) -> bool {
     self.is_closed.load(std::sync::atomic::Ordering::SeqCst)
+  }
+
+  /// Returns a clone of the shared normalized bundler options
+  pub async fn bundler_options(&self) -> Arc<NormalizedBundlerOptions> {
+    Arc::clone(self.bundler.lock().await.options())
   }
 
   #[cfg(feature = "testing")]

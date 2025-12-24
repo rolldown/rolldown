@@ -66,27 +66,6 @@ const url = new URL('assets/styles-CjdrdY7X.css', import.meta.url);
 console.log(url);
 ```
 
-## hmr
-
-- **Type:** `boolean | { host?: string; port?: number; implement?: string }`
-- **Default:** `false`
-- **Path:** `experimental.hmr`
-
-Hot Module Replacement configuration.
-
-### Examples
-
-```js
-export default {
-  experimental: {
-    hmr: {
-      host: 'localhost',
-      port: 3000,
-    },
-  },
-};
-```
-
 ## chunkModulesOrder
 
 - **Type:** `'exec-order' | 'module-id'`

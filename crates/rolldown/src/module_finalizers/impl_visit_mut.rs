@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use oxc::allocator::FromIn;
 use oxc::ast::AstType;
-use oxc::ast::ast::JSXMemberExpression;
+use oxc::ast::ast::{AssignmentTarget, JSXMemberExpression};
 use oxc::span::{Atom, CompactStr};
 use oxc::{
   allocator::{self, IntoIn, TakeIn},
@@ -19,7 +19,7 @@ use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
 
 use crate::hmr::utils::HmrAstBuilder;
-use crate::module_finalizers::TraverseState;
+use crate::module_finalizers::{KeepNameId, TraverseState};
 
 use super::ScopeHoistingFinalizer;
 
@@ -95,7 +95,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
     let last_import_stmt_idx = self.remove_unused_top_level_stmt(program);
 
-    if self.ctx.options.is_hmr_enabled() {
+    if self.ctx.options.is_dev_mode_enabled() {
       let hmr_header = if self.ctx.runtime.id() == self.ctx.module.idx {
         vec![]
       } else {
@@ -111,7 +111,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       .ctx
       .linking_info
       .wrapper_stmt_info
-      .is_some_and(|idx| self.ctx.module.stmt_infos[idx].is_included)
+      .is_some_and(|idx| self.ctx.linking_info.stmt_info_included[idx])
       .then_some(self.ctx.linking_info.wrap_kind());
 
     self.needs_hosted_top_level_binding = matches!(included_wrap_kind, Some(WrapKind::Esm));
@@ -135,7 +135,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         .stmt_infos
         .declared_stmts_by_symbol(symbol_ref)
         .iter()
-        .any(|id| self.ctx.module.stmt_infos[*id].is_included);
+        .any(|id| self.ctx.linking_info.stmt_info_included[*id]);
       if is_included {
         let canonical_name = self.canonical_name_for(*symbol_ref);
         program.body.push(self.snippet.var_decl_stmt(canonical_name, self.snippet.void_zero()));
@@ -180,6 +180,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           self.ctx.module.ast_usage,
           self.ctx.options.profiler_names,
           &self.ctx.module.stable_id,
+          self.ctx.linking_info.is_tla_or_contains_tla_dependency,
         ));
       }
       Some(WrapKind::Esm) => {
@@ -611,6 +612,16 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     walk_mut::walk_simple_assignment_target(self, target);
   }
 
+  fn visit_assignment_expression(&mut self, it: &mut ast::AssignmentExpression<'ast>) {
+    if let AssignmentTarget::AssignmentTargetIdentifier(id) = &mut it.left {
+      self.process_keep_name_for_expression(
+        id.reference_id.get().map(KeepNameId::ReferenceId),
+        &mut it.right,
+      );
+    }
+    walk_mut::walk_assignment_expression(self, it);
+  }
+
   fn visit_for_statement_init(&mut self, it: &mut ast::ForStatementInit<'ast>) {
     walk_mut::walk_for_statement_init(self, it);
     if self.state.contains(TraverseState::TopLevel)
@@ -636,37 +647,14 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           else {
             continue;
           };
-          match init {
-            ast::Expression::ClassExpression(class_expression) => {
-              if let Some(element) = self.keep_name_helper_for_class(
-                Some(class_expression.id.as_ref().unwrap_or_else(|| id)),
-                &class_expression.body,
-                false,
-              ) {
-                class_expression.body.body.insert(0, element);
-              }
-            }
-            ast::Expression::FunctionExpression(fn_expression) => {
-              // The `var fn = function foo() {}` should generate `__name(fn, 'foo')` to keep the name
-              if let Some((_insert_position, original_name, _)) =
-                self.process_fn(Some(id), Some(fn_expression.id.as_ref().unwrap_or_else(|| id)))
-              {
-                let fn_expr = init.take_in(self.alloc);
-
-                let name_ref = self.canonical_ref_for_runtime("__name");
-                let (finalized_callee, _) =
-                  self.finalized_expr_for_symbol_ref(name_ref, false, false);
-                *init =
-                  self.snippet.keep_name_call_expr(&original_name, fn_expr, finalized_callee, true);
-              }
-            }
-            _ => {}
-          }
+          self.process_keep_name_for_expression(id.symbol_id.get().map(KeepNameId::SymbolId), init);
         }
       }
       ast::Declaration::FunctionDeclaration(decl) => {
+        let keep_name_id =
+          decl.id.as_ref().and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId));
         if let Some((insert_position, original_name, new_name)) =
-          self.process_fn(decl.id.as_ref(), decl.id.as_ref())
+          self.process_fn(keep_name_id, keep_name_id)
         {
           self.keep_name_statement_to_insert.push((insert_position, original_name, new_name));
         }
@@ -674,8 +662,10 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       ast::Declaration::ClassDeclaration(decl) => {
         // need to insert `keep_names` helper, because `get_transformed_class_decl`
         // will remove id in `class.id`
-        if let Some(element) = self.keep_name_helper_for_class(decl.id.as_ref(), &decl.body, false)
-        {
+        if let Some(element) = self.keep_name_helper_for_class(
+          decl.id.as_ref().and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId)),
+          &decl.body,
+        ) {
           decl.body.body.insert(0, element);
         }
         if let Some(decl) = self.get_transformed_class_decl(decl) {

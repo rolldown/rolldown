@@ -15,8 +15,7 @@ bitflags! {
     const MissingExportError = 1 << 7;
     const MissingGlobalName = 1 << 8;
     const MissingNameOptionForIifeExport = 1 << 9;
-    const MissingNameOptionForUmdExportError = 1 << 10;
-    const MixedExport = 1 << 11;
+    const MixedExports = 1 << 11;
     const ParseError = 1 << 12;
     const UnresolvedEntry = 1 << 13;
     const UnresolvedImport = 1 << 14;
@@ -34,12 +33,13 @@ bitflags! {
     const UnhandleableError = 1 << 26;
     const UnloadableDependencyError = 1 << 27;
     const NapiError = 1 << 28;
-    const ConfigurationFieldConflict = 1 << 29;
-    const PreferBuiltinFeature = 1 << 30;
-    const BundlerInitializeError = 1 << 31;
-    const PluginError = 1 << 32;
-    const AlreadyClosedError = 1 << 33;
-    const CouldNotCleanDirectory = 1 << 34;
-    const PluginTimings = 1 << 35;
+    const CannotCallNamespace = 1 << 29;
+    const ConfigurationFieldConflict = 1 << 30;
+    const PreferBuiltinFeature = 1 << 31;
+    const BundlerInitializeError = 1 << 32;
+    const PluginError = 1 << 33;
+    const AlreadyClosedError = 1 << 34;
+    const CouldNotCleanDirectory = 1 << 35;
+    const PluginTimings = 1 << 36;
   }
 }

@@ -7,20 +7,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region share.js
-var share_default = "shared";
+var share_default$1 = "shared";
 
 //#endregion
 //#region share.json
-var share_default$1 = {};
+var share_default = {};
 
 //#endregion
 //#region main.js
-console.log(share_default, share_default$1);
+console.log(share_default$1, share_default);
 import("./share.js").then(console.log);
 import("./share2.js").then(console.log);
 
 //#endregion
-export { share_default as n, share_default$1 as t };
+export { share_default$1 as n, share_default as t };
 ```
 
 ## share.js

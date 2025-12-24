@@ -5,16 +5,10 @@
   comments are not kept properly
 ## [comment_preservation_transform_jsx](../../../../../crates/rolldown/tests/esbuild/default/comment_preservation_transform_jsx/diff.md)
   comments are not kept properly
-## [define_import_meta](../../../../../crates/rolldown/tests/esbuild/default/define_import_meta/diff.md)
-  Bug in Oxc transformer define plugin (https://github.com/oxc-project/oxc/issues/16623)
 ## [direct_eval_tainting_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/direct_eval_tainting_no_bundle/diff.md)
   rejected due to https://github.com/rolldown/rolldown/issues/7009, also sub optimal: eval in `test4` param position don't need to be renamed
 ## [export_forms_with_minify_identifiers_and_no_bundle](../../../../../crates/rolldown/tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle/diff.md)
   sub optimal: should not generate duplicate export binding
-## [export_special_name](../../../../../crates/rolldown/tests/esbuild/default/export_special_name/diff.md)
-  assigning __proto__ should not be done
-## [export_special_name_bundle](../../../../../crates/rolldown/tests/esbuild/default/export_special_name_bundle/diff.md)
-  { __proto__: ... } should be { ["__proto__"]: ... }
 ## [external_es6_converted_to_common_js](../../../../../crates/rolldown/tests/esbuild/default/external_es6_converted_to_common_js/diff.md)
   sub optimal: redundant `import` statements
 ## [false_require](../../../../../crates/rolldown/tests/esbuild/default/false_require/diff.md)
@@ -41,6 +35,7 @@
 ## [await_import_inside_try](../../../../../crates/rolldown/tests/esbuild/default/await_import_inside_try)
 ## [built_in_node_module_precedence](../../../../../crates/rolldown/tests/esbuild/default/built_in_node_module_precedence)
 ## [bundling_files_outside_of_outbase](../../../../../crates/rolldown/tests/esbuild/default/bundling_files_outside_of_outbase)
+## [call_import_namespace_warning](../../../../../crates/rolldown/tests/esbuild/default/call_import_namespace_warning)
 ## [char_freq_ignore_comments](../../../../../crates/rolldown/tests/esbuild/default/char_freq_ignore_comments)
 ## [common_js_from_es6](../../../../../crates/rolldown/tests/esbuild/default/common_js_from_es6)
 ## [conditional_import](../../../../../crates/rolldown/tests/esbuild/default/conditional_import)
@@ -51,6 +46,7 @@
 ## [decorator_printing_cjs](../../../../../crates/rolldown/tests/esbuild/default/decorator_printing_cjs)
 ## [decorator_printing_esm](../../../../../crates/rolldown/tests/esbuild/default/decorator_printing_esm)
 ## [define_assign_warning](../../../../../crates/rolldown/tests/esbuild/default/define_assign_warning)
+## [define_import_meta](../../../../../crates/rolldown/tests/esbuild/default/define_import_meta)
 ## [define_infinite_loop_issue2407](../../../../../crates/rolldown/tests/esbuild/default/define_infinite_loop_issue2407)
 ## [define_optional_chain](../../../../../crates/rolldown/tests/esbuild/default/define_optional_chain)
 ## [define_optional_chain_lowered](../../../../../crates/rolldown/tests/esbuild/default/define_optional_chain_lowered)
@@ -70,6 +66,8 @@
 ## [export_forms_iife](../../../../../crates/rolldown/tests/esbuild/default/export_forms_iife)
 ## [export_fs_node](../../../../../crates/rolldown/tests/esbuild/default/export_fs_node)
 ## [export_fs_node_in_common_js_module](../../../../../crates/rolldown/tests/esbuild/default/export_fs_node_in_common_js_module)
+## [export_special_name](../../../../../crates/rolldown/tests/esbuild/default/export_special_name)
+## [export_special_name_bundle](../../../../../crates/rolldown/tests/esbuild/default/export_special_name_bundle)
 ## [export_wildcard_fs_node_common_js](../../../../../crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_common_js)
 ## [export_wildcard_fs_node_es6](../../../../../crates/rolldown/tests/esbuild/default/export_wildcard_fs_node_es6)
 ## [exports_and_module_format_common_js](../../../../../crates/rolldown/tests/esbuild/default/exports_and_module_format_common_js)
@@ -269,8 +267,6 @@
 ## [warnings_inside_node_modules](../../../../../crates/rolldown/tests/esbuild/default/warnings_inside_node_modules)
   resolve alias behavior difference
 # Ignored Cases (not supported)
-## [call_import_namespace_warning](../../../../../crates/rolldown/tests/esbuild/default/call_import_namespace_warning)
-  warning not implemented
 ## [comment_preservation_import_assertions](../../../../../crates/rolldown/tests/esbuild/default/comment_preservation_import_assertions)
   import attributes is not supported
 ## [conditional_require_resolve](../../../../../crates/rolldown/tests/esbuild/default/conditional_require_resolve)

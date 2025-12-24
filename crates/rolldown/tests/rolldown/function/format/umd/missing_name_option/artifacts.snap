@@ -1,12 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Errors
 
-## MISSING_NAME_OPTION_FOR_UMD_EXPORT
+## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
 
 ```text
-[MISSING_NAME_OPTION_FOR_UMD_EXPORT] Error: You must supply `output.name` for UMD bundles that have exports so that the exports are accessible in environments without a module loader.
+[MISSING_NAME_OPTION_FOR_IIFE_EXPORT] Error: You must supply `output.name` for UMD bundles that have exports so that the exports are accessible in environments without a module loader.
 
 ```

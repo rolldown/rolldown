@@ -58,6 +58,26 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     _ => {}
   }
 
+  if matches!(raw_options.inline_dynamic_imports, Some(true)) {
+    if let Some(input) = &raw_options.input
+      && input.len() > 1
+    {
+      errors.push(BuildDiagnostic::invalid_option(
+        InvalidOptionType::InlineDynamicImportsWithMultipleInputs,
+      ));
+    }
+    if matches!(raw_options.preserve_modules, Some(true)) {
+      errors.push(BuildDiagnostic::invalid_option(
+        InvalidOptionType::InlineDynamicImportsWithPreserveModules,
+      ));
+    }
+    if raw_options.advanced_chunks.is_some() {
+      errors.push(BuildDiagnostic::invalid_option(
+        InvalidOptionType::InlineDynamicImportsWithAdvancedChunks,
+      ));
+    }
+  }
+
   if let Some(advanced_chunks) = &raw_options.advanced_chunks {
     let has_groups = advanced_chunks.groups.as_ref().is_some_and(|groups| !groups.is_empty());
 
@@ -216,7 +236,7 @@ pub fn prepare_build_context(
   );
 
   let mut experimental = raw_options.experimental.unwrap_or_default();
-  if experimental.hmr.is_some() {
+  if experimental.dev_mode.is_some() {
     experimental.incremental_build = Some(true);
   }
 
@@ -244,8 +264,8 @@ pub fn prepare_build_context(
     raw_options.cwd.unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
 
   let mut raw_treeshake = raw_options.treeshake;
-  if experimental.hmr.is_some() {
-    // HMR requires treeshaking to be disabled
+  if experimental.dev_mode.is_some() {
+    // Dev mode requires treeshaking to be disabled
     raw_treeshake = TreeshakeOptions::Boolean(false);
   }
 
@@ -304,26 +324,34 @@ pub fn prepare_build_context(
     // - Auto: Create Raw mode (will resolve tsconfig per file)
     // - None/Manual: Create Normal mode (resolve tsconfig once now)
     match tsconfig {
-      Some(TsConfig::Manual(path)) => {
+      Some(ref v @ TsConfig::Manual(ref path)) => {
         // Manual mode: Resolve tsconfig now and create Normal mode
         let resolved_tsconfig = resolver.resolve_tsconfig(&path).map_err(|err| {
           anyhow::anyhow!("Failed to resolve `tsconfig` option: {}", path.display()).context(err)
         })?;
-        Box::new(TransformOptions::new(
-          merge_transform_options_with_tsconfig(
-            raw_transform_options,
-            Some(&resolved_tsconfig),
-            &mut warnings,
-          )?,
-          target,
-          jsx_preset,
-        ))
+        Box::new(if resolved_tsconfig.references_resolved.is_empty() {
+          TransformOptions::new(
+            merge_transform_options_with_tsconfig(
+              raw_transform_options,
+              Some(&resolved_tsconfig),
+              &mut warnings,
+            )?,
+            target,
+            jsx_preset,
+          )
+        } else {
+          TransformOptions::new_raw(
+            RawTransformOptions::new(raw_transform_options, v.clone()),
+            target,
+            jsx_preset,
+          )
+        })
       }
-      Some(TsConfig::Auto) => {
+      Some(v @ TsConfig::Auto) => {
         // Auto mode: Create Raw mode TransformOptions
         // Each file will find its nearest tsconfig during compilation
         Box::new(TransformOptions::new_raw(
-          RawTransformOptions::new(raw_transform_options),
+          RawTransformOptions::new(raw_transform_options, v),
           target,
           jsx_preset,
         ))
@@ -358,6 +386,8 @@ pub fn prepare_build_context(
     sanitize_filename: raw_options.sanitize_filename.unwrap_or_default(),
     banner: raw_options.banner,
     footer: raw_options.footer,
+    post_banner: raw_options.post_banner,
+    post_footer: raw_options.post_footer,
     intro: raw_options.intro,
     outro: raw_options.outro,
     es_module: raw_options.es_module.unwrap_or_default(),

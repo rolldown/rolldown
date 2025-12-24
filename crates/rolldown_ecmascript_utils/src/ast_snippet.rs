@@ -11,6 +11,7 @@ use oxc::{
   syntax::identifier,
 };
 use rolldown_common::{EcmaModuleAstUsage, Interop};
+use rolldown_utils::ecmascript::is_validate_identifier_name;
 
 type PassedStr<'a> = &'a str;
 
@@ -262,6 +263,7 @@ impl<'ast> AstSnippet<'ast> {
   ///  or
   ///  __commonJSMin when `options.profiler_names` is false
   /// ```
+  #[expect(clippy::too_many_arguments)]
   pub fn commonjs_wrapper_stmt(
     &self,
     binding_name: PassedStr,
@@ -270,6 +272,7 @@ impl<'ast> AstSnippet<'ast> {
     ast_usage: EcmaModuleAstUsage,
     profiler_names: bool,
     stable_id: &str,
+    is_async: bool,
   ) -> ast::Statement<'ast> {
     // (exports, module) => {}
 
@@ -322,7 +325,7 @@ impl<'ast> AstSnippet<'ast> {
 
     // the callback is marked as PIFE because most require calls are evaluated in the initial load
     let mut arrow_expr =
-      self.builder.alloc_arrow_function_expression(SPAN, false, false, NONE, params, NONE, body);
+      self.builder.alloc_arrow_function_expression(SPAN, false, is_async, NONE, params, NONE, body);
     arrow_expr.pife = true;
 
     if profiler_names {
@@ -819,6 +822,84 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.alloc_object_expression(SPAN, self.builder.vec_from_iter([proto])),
       ),
       true,
+    )
+  }
+
+  /// Creates an arrow function that extracts a property from a namespace object.
+  /// Generates: `n => n.property_name`
+  /// Used for transforming dynamic imports like `import('./module').then(n => n.exportedName)`
+  pub fn arrow_function_extract_property(
+    &self,
+    property_name: &str,
+  ) -> allocator::Box<'ast, ast::ArrowFunctionExpression<'ast>> {
+    debug_assert!(is_validate_identifier_name(property_name));
+    self.builder.alloc_arrow_function_expression(
+      SPAN,
+      true,  // expression
+      false, // async
+      NONE,
+      self.builder.formal_parameters(
+        SPAN,
+        ast::FormalParameterKind::ArrowFormalParameters,
+        self.builder.vec1(self.builder.formal_parameter(
+          SPAN,
+          self.builder.vec(),
+          self.builder.binding_pattern(
+            self.builder.binding_pattern_kind_binding_identifier(SPAN, self.builder.atom("n")),
+            NONE,
+            false,
+          ),
+          None,
+          false,
+          false,
+        )),
+        NONE,
+      ),
+      NONE,
+      self.builder.function_body(
+        SPAN,
+        self.builder.vec(),
+        self.builder.vec1(ast::Statement::ExpressionStatement(
+          self.builder.alloc_expression_statement(
+            SPAN,
+            Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
+              SPAN,
+              self.builder.expression_identifier(SPAN, "n"),
+              self.builder.identifier_name(SPAN, self.builder.atom(property_name)),
+              false,
+            )),
+          ),
+        )),
+      ),
+    )
+  }
+
+  /// Creates a call expression that transforms a dynamic import to extract a specific property.
+  /// Generates: `import_expr.then(n => n.property_name)`
+  /// This is used to transform dynamic imports to extract a specific export from the module namespace.
+  pub fn import_then_extract_property(
+    &self,
+    import_expr: allocator::Box<'ast, ast::ImportExpression<'ast>>,
+    property_name: &str,
+  ) -> allocator::Box<'ast, ast::CallExpression<'ast>> {
+    let callee = self.builder.alloc_static_member_expression(
+      SPAN,
+      Expression::ImportExpression(import_expr),
+      self.builder.identifier_name(SPAN, "then"),
+      false,
+    );
+
+    self.builder.alloc_call_expression(
+      SPAN,
+      Expression::StaticMemberExpression(callee),
+      NONE,
+      self.builder.vec1(
+        ast::Expression::ArrowFunctionExpression(
+          self.arrow_function_extract_property(property_name),
+        )
+        .into(),
+      ),
+      false,
     )
   }
 }

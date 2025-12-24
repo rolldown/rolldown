@@ -1,0 +1,93 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region lib.js
+var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => __proto__ });
+const __proto__ = 123;
+
+//#endregion
+export { lib_exports as lib };
+```
+
+# Variant: cjs: [entry_filenames: "main.cjs"] [format: Cjs]
+
+## Assets
+
+### main.cjs
+
+```js
+// HIDDEN [rolldown:runtime]
+
+//#region lib.js
+var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => __proto__ });
+const __proto__ = 123;
+
+//#endregion
+Object.defineProperty(exports, 'lib', {
+  enumerable: true,
+  get: function () {
+    return lib_exports;
+  }
+});
+```
+
+# Variant: iife: [entry_filenames: "main.cjs"] [format: Iife]
+
+## Assets
+
+### main.cjs
+
+```js
+var bundle = (function(exports) {
+
+// HIDDEN [rolldown:runtime]
+
+//#region lib.js
+	var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => __proto__ });
+	const __proto__ = 123;
+
+//#endregion
+Object.defineProperty(exports, 'lib', {
+  enumerable: true,
+  get: function () {
+    return lib_exports;
+  }
+});
+return exports;
+})({});
+globalThis.bundle = bundle;
+```
+
+# Variant: umd: [entry_filenames: "main.cjs"] [format: Umd]
+
+## Assets
+
+### main.cjs
+
+```js
+(function(global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.bundle = {})));
+})(this, function(exports) {
+// HIDDEN [rolldown:runtime]
+
+//#region lib.js
+	var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => __proto__ });
+	const __proto__ = 123;
+
+//#endregion
+Object.defineProperty(exports, 'lib', {
+  enumerable: true,
+  get: function () {
+    return lib_exports;
+  }
+});
+});
+```

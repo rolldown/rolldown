@@ -17,8 +17,7 @@ pub enum EventKind {
   MissingExportError = 7,
   MissingGlobalName = 8,
   MissingNameOptionForIifeExport = 9,
-  MissingNameOptionForUmdExportError = 10,
-  MixedExport = 11,
+  MixedExports = 11,
   ParseError = 12,
   UnresolvedEntry = 13,
   UnresolvedImport = 14,
@@ -42,13 +41,14 @@ pub enum EventKind {
   UnloadableDependencyError = 27,
 
   NapiError = 28,
-  ConfigurationFieldConflict = 29,
-  PreferBuiltinFeature = 30,
-  BundlerInitializeError = 31,
-  PluginError = 32,
-  AlreadyClosedError = 33,
-  CouldNotCleanDirectory = 34,
-  PluginTimings = 35,
+  CannotCallNamespace = 29,
+  ConfigurationFieldConflict = 30,
+  PreferBuiltinFeature = 31,
+  BundlerInitializeError = 32,
+  PluginError = 33,
+  AlreadyClosedError = 34,
+  CouldNotCleanDirectory = 35,
+  PluginTimings = 36,
 }
 
 impl Display for EventKind {
@@ -63,12 +63,9 @@ impl Display for EventKind {
       EventKind::IllegalIdentifierAsNameError => write!(f, "ILLEGAL_IDENTIFIER_AS_NAME"),
       EventKind::InvalidExportOptionError => write!(f, "INVALID_EXPORT_OPTION"),
       EventKind::InvalidOptionError => write!(f, "INVALID_OPTION"),
-      EventKind::MixedExport => write!(f, "MIXED_EXPORT"),
+      EventKind::MixedExports => write!(f, "MIXED_EXPORTS"),
       EventKind::MissingGlobalName => write!(f, "MISSING_GLOBAL_NAME"),
       EventKind::MissingNameOptionForIifeExport => write!(f, "MISSING_NAME_OPTION_FOR_IIFE_EXPORT"),
-      EventKind::MissingNameOptionForUmdExportError => {
-        write!(f, "MISSING_NAME_OPTION_FOR_UMD_EXPORT")
-      }
       EventKind::MissingExportError => write!(f, "MISSING_EXPORT"),
       EventKind::ParseError => write!(f, "PARSE_ERROR"),
       EventKind::UnresolvedEntry => write!(f, "UNRESOLVED_ENTRY"),
@@ -92,6 +89,7 @@ impl Display for EventKind {
       EventKind::UnloadableDependencyError => write!(f, "UNLOADABLE_DEPENDENCY"),
 
       EventKind::NapiError => write!(f, "NAPI_ERROR"),
+      EventKind::CannotCallNamespace => write!(f, "CANNOT_CALL_NAMESPACE"),
       EventKind::ConfigurationFieldConflict => write!(f, "CONFIGURATION_FIELD_CONFLICT"),
       EventKind::PreferBuiltinFeature => write!(f, "PREFER_BUILTIN_FEATURE"),
       EventKind::BundlerInitializeError => write!(f, "BUNDLER_INITIALIZE_ERROR"),

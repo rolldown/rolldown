@@ -11,5 +11,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 const __proto__ = 123;
 
 //#endregion
-exports.__proto__ = __proto__;
+Object.defineProperty(exports, '__proto__', {
+  enumerable: true,
+  value: __proto__
+});
 ```

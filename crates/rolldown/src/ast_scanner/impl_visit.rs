@@ -367,16 +367,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         if let (BindingPatternKind::BindingIdentifier(binding), Some(init)) =
           (&decl.id.kind, &decl.init)
         {
-          match init {
-            ast::Expression::ClassExpression(_) => {
-              self.current_stmt_info.meta.insert(StmtInfoMeta::ClassExpr);
-            }
-            ast::Expression::FunctionExpression(_func) => {
-              self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
-            }
-            _ => {}
-          }
-
           // Extract constant value for top-level variable declarations
           if self.is_root_symbol(binding.symbol_id()) {
             if let Some(value) = self.extract_constant_value_from_expr(Some(init)) {
@@ -424,9 +414,29 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     }
   }
 
+  fn visit_expression(&mut self, it: &Expression<'ast>) {
+    if self.is_root_scope()
+      && matches!(
+        it,
+        Expression::ArrowFunctionExpression(_)
+          | Expression::FunctionExpression(_)
+          | Expression::ClassExpression(_)
+      )
+    {
+      self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
+    }
+    walk::walk_expression(self, it);
+  }
+
   fn visit_call_expression(&mut self, it: &ast::CallExpression<'ast>) {
     self.try_extract_hmr_info_from_hot_accept_call(it);
+    self.check_namespace_call(&it.callee, it.span());
     walk::walk_call_expression(self, it);
+  }
+
+  fn visit_tagged_template_expression(&mut self, it: &ast::TaggedTemplateExpression<'ast>) {
+    self.check_namespace_call(&it.tag, it.span());
+    walk::walk_tagged_template_expression(self, it);
   }
 
   fn visit_export_default_declaration(&mut self, it: &ast::ExportDefaultDeclaration<'ast>) {
@@ -434,30 +444,11 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     // so that __name helper will be included in the runtime
     use ast::ExportDefaultDeclarationKind;
     match &it.declaration {
-      ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
-        if func.id.is_none() {
-          self.current_stmt_info.meta.insert(StmtInfoMeta::FnDecl);
-        }
+      ExportDefaultDeclarationKind::FunctionDeclaration(func) if func.id.is_none() => {
+        self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
       }
-      ExportDefaultDeclarationKind::ClassDeclaration(class) => {
-        if class.id.is_none() {
-          self.current_stmt_info.meta.insert(StmtInfoMeta::ClassDecl);
-        }
-      }
-      decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
-        let inner_expr = decl.to_expression().without_parentheses();
-        match inner_expr {
-          Expression::FunctionExpression(func) if func.id.is_none() => {
-            self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
-          }
-          Expression::ClassExpression(class) if class.id.is_none() => {
-            self.current_stmt_info.meta.insert(StmtInfoMeta::ClassExpr);
-          }
-          Expression::ArrowFunctionExpression(_) => {
-            self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
-          }
-          _ => {}
-        }
+      ExportDefaultDeclarationKind::ClassDeclaration(class) if class.id.is_none() => {
+        self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
       }
       _ => {}
     }

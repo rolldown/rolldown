@@ -461,7 +461,11 @@ export declare class ResolverFactory {
   static default(): ResolverFactory
   /** Clone the resolver using the same underlying cache. */
   cloneWithOptions(options: NapiResolveOptions): ResolverFactory
-  /** Clear the underlying cache. */
+  /**
+   * Clear the underlying cache.
+   *
+   * Warning: The caller must ensure that there're no ongoing resolution operations when calling this method. Otherwise, it may cause those operations to return an incorrect result.
+   */
   clearCache(): void
   /** Synchronously resolve `specifier` at an absolute path to a `directory`. */
   sync(directory: string, request: string): ResolveResult
@@ -1454,6 +1458,8 @@ export declare class BindingNormalizedOptions {
   get footer(): string | undefined | null | undefined
   get intro(): string | undefined | null | undefined
   get outro(): string | undefined | null | undefined
+  get postBanner(): string | undefined | null | undefined
+  get postFooter(): string | undefined | null | undefined
   get externalLiveBindings(): boolean
   get extend(): boolean
   get globals(): Record<string, string> | undefined
@@ -1656,13 +1662,14 @@ export interface BindingChecksOptions {
   eval?: boolean
   missingGlobalName?: boolean
   missingNameOptionForIifeExport?: boolean
-  mixedExport?: boolean
+  mixedExports?: boolean
   unresolvedEntry?: boolean
   unresolvedImport?: boolean
   filenameConflict?: boolean
   commonJsVariableInEsm?: boolean
   importIsUndefined?: boolean
   emptyImportMeta?: boolean
+  cannotCallNamespace?: boolean
   configurationFieldConflict?: boolean
   preferBuiltinFeature?: boolean
   couldNotCleanDirectory?: boolean
@@ -1755,10 +1762,11 @@ export interface BindingEsmExternalRequirePluginConfig {
   skipDuplicateCheck?: boolean
 }
 
-export interface BindingExperimentalHmrOptions {
+export interface BindingExperimentalDevModeOptions {
   host?: string
   port?: number
   implement?: string
+  lazy?: boolean
 }
 
 export interface BindingExperimentalOptions {
@@ -1766,7 +1774,7 @@ export interface BindingExperimentalOptions {
   disableLiveBindings?: boolean
   viteMode?: boolean
   resolveNewUrlToAsset?: boolean
-  hmr?: BindingExperimentalHmrOptions
+  devMode?: BindingExperimentalDevModeOptions
   attachDebugInfo?: BindingAttachDebugInfo
   chunkModulesOrder?: BindingChunkModuleOrderBy
   chunkImportMap?: boolean | BindingChunkImportMap
@@ -1950,6 +1958,12 @@ export interface BindingLog {
   code?: string
   exporter?: string
   plugin?: string
+  /** Location information (line, column, file) */
+  loc?: BindingLogLocation
+  /** Position in the source file in UTF-16 code units */
+  pos?: number
+  /** List of module IDs (used for CIRCULAR_DEPENDENCY warnings) */
+  ids?: Array<string>
 }
 
 export declare enum BindingLogLevel {
@@ -1957,6 +1971,14 @@ export declare enum BindingLogLevel {
   Warn = 1,
   Info = 2,
   Debug = 3
+}
+
+export interface BindingLogLocation {
+  /** 1-based */
+  line: number
+  /** 0-based position in the line in UTF-16 code units */
+  column: number
+  file?: string
 }
 
 export type BindingMakeAbsoluteExternalsRelative =
@@ -2008,21 +2030,23 @@ export interface BindingOutputOptions {
   cssEntryFileNames?: string | ((chunk: PreRenderedChunk) => string)
   cssChunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sanitizeFileName?: boolean | ((name: string) => string)
-  banner?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
+  banner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  postBanner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  footer?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  postFooter?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   dir?: string
   file?: string
   esModule?: boolean | 'if-default-prop'
   exports?: 'default' | 'named' | 'none' | 'auto'
   extend?: boolean
   externalLiveBindings?: boolean
-  footer?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
   format?: 'es' | 'cjs' | 'iife' | 'umd'
   generatedCode?: BindingGeneratedCodeOptions
   globals?: Record<string, string> | ((name: string) => string)
   hashCharacters?: 'base64' | 'base36' | 'hex'
   inlineDynamicImports?: boolean
-  intro?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
-  outro?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
+  intro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  outro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   paths?: Record<string, string> | ((id: string) => string)
   plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
@@ -2469,6 +2493,7 @@ export interface ExternalMemoryStatus {
 }
 
 export type FilterTokenKind =  'Id'|
+'ImporterId'|
 'Code'|
 'ModuleType'|
 'And'|
@@ -2520,18 +2545,9 @@ export interface NativeError {
   /** The exporter associated with the error (for import/export errors) */
   exporter?: string
   /** Location information (line, column, file) */
-  loc?: NativeErrorLocation
+  loc?: BindingLogLocation
   /** Position in the source file in UTF-16 code units */
   pos?: number
-}
-
-/** Location information for errors */
-export interface NativeErrorLocation {
-  /** 1-based */
-  line: number
-  /** 0-based position in the line in UTF-16 code units */
-  column: number
-  file?: string
 }
 
 export interface PreRenderedChunk {

@@ -15,6 +15,7 @@ pub enum FilterExpr {
   Not(Box<FilterExpr>),
   Code(StringOrRegex),
   Id(StringOrRegex),
+  ImporterId(StringOrRegex),
   CleanUrl(Box<FilterExpr>),
   ModuleType(String),
   Query(String, QueryValue),
@@ -38,29 +39,45 @@ pub fn filter_expr_interpreter<'a>(
   id: Option<&'a str>,
   code: Option<&str>,
   module_type: Option<&str>,
+  importer_id: Option<&'a str>,
   cwd: &str,
   ctx: &mut InterpreterCtx<'a>,
 ) -> bool {
   match expr {
-    FilterExpr::Or(args) => {
-      args.iter().any(|arg| filter_expr_interpreter(arg, id, code, module_type, cwd, ctx))
+    FilterExpr::Or(args) => args
+      .iter()
+      .any(|arg| filter_expr_interpreter(arg, id, code, module_type, importer_id, cwd, ctx)),
+    FilterExpr::And(args) => args
+      .iter()
+      .all(|arg| filter_expr_interpreter(arg, id, code, module_type, importer_id, cwd, ctx)),
+    FilterExpr::Not(inner) => {
+      !filter_expr_interpreter(inner, id, code, module_type, importer_id, cwd, ctx)
     }
-    FilterExpr::And(args) => {
-      args.iter().all(|arg| filter_expr_interpreter(arg, id, code, module_type, cwd, ctx))
-    }
-    FilterExpr::Not(inner) => !filter_expr_interpreter(inner, id, code, module_type, cwd, ctx),
     FilterExpr::Code(pattern) => {
       pattern.test(code.expect("`code` should not be none"), &StringOrRegexMatchKind::Code)
     }
     FilterExpr::Id(id_pattern) => {
       id_pattern.test(id.expect("`id` should not be none"), &StringOrRegexMatchKind::Id(cwd))
     }
+    FilterExpr::ImporterId(id_pattern) => {
+      // When importer_id is None (e.g., entry files), return false (no match)
+      match importer_id {
+        Some(importer) => id_pattern.test(importer, &StringOrRegexMatchKind::Id(cwd)),
+        None => false,
+      }
+    }
     FilterExpr::ModuleType(module_type_filter) => {
       module_type.as_ref().is_some_and(|module_type| module_type == module_type_filter)
     }
-    FilterExpr::CleanUrl(expr) => {
-      filter_expr_interpreter(expr, id.map(clean_url), code, module_type, cwd, ctx)
-    }
+    FilterExpr::CleanUrl(expr) => filter_expr_interpreter(
+      expr,
+      id.map(clean_url),
+      code,
+      module_type,
+      importer_id.map(clean_url),
+      cwd,
+      ctx,
+    ),
     FilterExpr::Query(key, value) => {
       if ctx.parsed_url_cache.is_none() {
         let query_string = get_query(id.expect("`id` should not be none"));
@@ -101,22 +118,25 @@ pub fn filter_exprs_interpreter(
   code: Option<&str>,
   // TODO: Use ModuleType instead
   module_type: Option<&str>,
+  importer_id: Option<&str>,
   cwd: &str,
 ) -> bool {
   let mut include_count = 0;
   let mut ctx = InterpreterCtx::default();
   let id = id.map(|id| normalize_path(id));
   let id = id.as_deref();
+  let importer_id = importer_id.map(|id| normalize_path(id));
+  let importer_id = importer_id.as_deref();
   for kind in exprs {
     match kind {
       FilterExprKind::Include(filter_expr) => {
         include_count += 1;
-        if filter_expr_interpreter(filter_expr, id, code, module_type, cwd, &mut ctx) {
+        if filter_expr_interpreter(filter_expr, id, code, module_type, importer_id, cwd, &mut ctx) {
           return true;
         }
       }
       FilterExprKind::Exclude(filter_expr) => {
-        if filter_expr_interpreter(filter_expr, id, code, module_type, cwd, &mut ctx) {
+        if filter_expr_interpreter(filter_expr, id, code, module_type, importer_id, cwd, &mut ctx) {
           return false;
         }
       }
@@ -128,6 +148,7 @@ pub fn filter_exprs_interpreter(
 #[derive(Debug)]
 pub enum Token {
   Id,
+  ImporterId,
   Code,
   ModuleType,
   /// Arg count
@@ -167,6 +188,16 @@ pub fn parse(mut tokens: Vec<Token>) -> FilterExprKind {
           }
         };
         Some(FilterExpr::Id(string_or_regex))
+      }
+      Token::ImporterId => {
+        let string_or_regex = match tokens.pop()? {
+          Token::String(str) => StringOrRegex::String(str),
+          Token::Regex(regexp) => StringOrRegex::Regex(regexp),
+          _ => {
+            unreachable!("ImporterId token should be followed by a string or regex")
+          }
+        };
+        Some(FilterExpr::ImporterId(string_or_regex))
       }
       Token::Query => {
         let Token::String(key) = tokens.pop()? else {
@@ -274,6 +305,7 @@ mod test {
       Some("/foo/bar.js"),
       Some("console.log('test')"),
       None,
+      None,
       ".",
       &mut InterpreterCtx::default()
     ));
@@ -283,6 +315,7 @@ mod test {
       Some("/node_modules/bar.js"),
       Some("console.log('test')"),
       None,
+      None,
       ".",
       &mut InterpreterCtx::default()
     ));
@@ -291,6 +324,7 @@ mod test {
       &expr,
       Some("/node_modules/bar.js"),
       Some("import('foo')"),
+      None,
       None,
       ".",
       &mut InterpreterCtx::default()
@@ -304,6 +338,7 @@ mod test {
       assert!(filter_exprs_interpreter(
         &[FilterExprKind::Include(expr)],
         Some("C:\\path\\to\\src\\entry.js"),
+        None,
         None,
         None,
         ".",
@@ -331,6 +366,7 @@ mod test {
       &[expr],
       Some("/node_modules/bar.js"),
       Some("console.log('test')"),
+      None,
       None,
       ".",
     ));

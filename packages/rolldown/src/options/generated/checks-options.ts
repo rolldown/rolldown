@@ -27,10 +27,10 @@ export interface ChecksOptions {
   missingNameOptionForIifeExport?: boolean;
 
   /**
-   * Whether to emit warning when detecting mixed export
+   * Whether to emit warning when detecting mixed exports
    * @default true
    */
-  mixedExport?: boolean;
+  mixedExports?: boolean;
 
   /**
    * Whether to emit warning when detecting unresolved entry
@@ -67,6 +67,12 @@ export interface ChecksOptions {
    * @default true
    */
   emptyImportMeta?: boolean;
+
+  /**
+   * Whether to emit warning when detecting cannot call namespace
+   * @default true
+   */
+  cannotCallNamespace?: boolean;
 
   /**
    * Whether to emit warning when detecting configuration field conflict

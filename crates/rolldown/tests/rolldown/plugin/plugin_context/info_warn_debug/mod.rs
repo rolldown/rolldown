@@ -20,14 +20,9 @@ impl Plugin for TestPlugin {
     ctx: &PluginContext,
     _args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
-    ctx.info(LogWithoutPlugin { message: "info".to_owned(), code: None, id: None, exporter: None });
-    ctx.warn(LogWithoutPlugin { message: "warn".to_owned(), code: None, id: None, exporter: None });
-    ctx.debug(LogWithoutPlugin {
-      message: "debug".to_owned(),
-      code: None,
-      id: None,
-      exporter: None,
-    });
+    ctx.info(LogWithoutPlugin { message: "info".to_owned(), ..Default::default() });
+    ctx.warn(LogWithoutPlugin { message: "warn".to_owned(), ..Default::default() });
+    ctx.debug(LogWithoutPlugin { message: "debug".to_owned(), ..Default::default() });
     Ok(())
   }
 

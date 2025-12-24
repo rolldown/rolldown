@@ -11,7 +11,7 @@
       }
     ],
     "experimental": {
-      "hmr": {}
+      "devMode": {}
     }
   }
 }

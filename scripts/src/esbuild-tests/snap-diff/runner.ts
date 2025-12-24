@@ -29,7 +29,7 @@ function getActualTestPath(
 ): { path: string; isSkipped: boolean } {
   const normalPath = path.join(baseDir, category, snapName);
   const skippedPath = path.join(baseDir, category, '.' + snapName);
-  if (fs.existsSync(skippedPath)) {
+  if (fs.existsSync(path.join(skippedPath, '_config.json'))) {
     return { path: skippedPath, isSkipped: true };
   }
   return { path: normalPath, isSkipped: false };
@@ -71,7 +71,9 @@ export async function run(debugConfig: DebugConfig) {
     },
     details: {},
   };
+
   const undocumentedSkippedTests: string[] = [];
+  const processedFailedTests = new Set<string>();
   let snapfileList = await getEsbuildSnapFile();
   // esbuild snapshot_x.txt
   for (let snapFile of snapfileList) {
@@ -131,6 +133,7 @@ export async function run(debugConfig: DebugConfig) {
       // Only generate diff.md if test is in failedReasons
       let diffMarkdownPath = path.join(rolldownTestPath, 'diff.md');
       if (isInFailedReasons && typeof diffResult === 'object') {
+        processedFailedTests.add(testKey);
         updateDiffMarkdown(diffMarkdownPath, diffResult);
       } else if (fs.existsSync(diffMarkdownPath)) {
         fs.rmSync(diffMarkdownPath, {});
@@ -172,6 +175,19 @@ export async function run(debugConfig: DebugConfig) {
         undocumentedSkippedTests.map((t) => `  - ${t}`).join('\n') +
         `\n\nPlease add them to ignoreReasons, notSupportedReasons, or failedReasons in scripts/src/esbuild-tests/reasons.ts`,
     );
+  }
+
+  if (!debugConfig.caseNames || debugConfig.caseNames.length === 0) {
+    const missingFailedTests = Object.keys(failedReasons).filter(
+      (testKey) => !processedFailedTests.has(testKey),
+    );
+    if (missingFailedTests.length > 0) {
+      throw new Error(
+        `The following tests are in failedReasons but were not processed or did not have a diff.md generated:\n` +
+          missingFailedTests.map((t) => `  - ${t}`).join('\n') +
+          `\n\nThis usually means the test case does not exist or now passes. Please verify the test cases exist and update the failedReasons in scripts/src/esbuild-tests/reasons.ts if needed.`,
+      );
+    }
   }
 
   generateStatsMarkdown(aggregatedStats);

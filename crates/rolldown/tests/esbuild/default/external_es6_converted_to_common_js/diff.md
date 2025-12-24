@@ -68,22 +68,22 @@ import { ns } from "x";
 
 // HIDDEN [rolldown:runtime]
 //#region a.js
-var a_exports = /* @__PURE__ */ __export({ ns: () => ns$1 });
+var a_exports = /* @__PURE__ */ __exportAll({ ns: () => ns$1 });
 var init_a = __esmMin((() => {}));
 
 //#endregion
 //#region b.js
-var b_exports = /* @__PURE__ */ __export({ ns: () => ns$1 });
+var b_exports = /* @__PURE__ */ __exportAll({ ns: () => ns$1 });
 var init_b = __esmMin((() => {}));
 
 //#endregion
 //#region c.js
-var c_exports = /* @__PURE__ */ __export({ ns: () => ns$1 });
+var c_exports = /* @__PURE__ */ __exportAll({ ns: () => ns$1 });
 var init_c = __esmMin((() => {}));
 
 //#endregion
 //#region d.js
-var d_exports = /* @__PURE__ */ __export({ ns: () => ns });
+var d_exports = /* @__PURE__ */ __exportAll({ ns: () => ns });
 var init_d = __esmMin((() => {}));
 
 //#endregion
@@ -114,28 +114,28 @@ init_e();
 -    ns: () => ns
 +import * as ns$1 from "x";
 +import {ns} from "x";
-+var a_exports = __export({
++var a_exports = __exportAll({
 +    ns: () => ns$1
  });
 -import * as ns from "x";
 -var init_a = __esm({
 -    "a.js"() {}
 +var init_a = __esmMin(() => {});
-+var b_exports = __export({
++var b_exports = __exportAll({
 +    ns: () => ns$1
  });
 -var b_exports = {};
 -__export(b_exports, {
 -    ns: () => ns2
 +var init_b = __esmMin(() => {});
-+var c_exports = __export({
++var c_exports = __exportAll({
 +    ns: () => ns$1
  });
 -import * as ns2 from "x";
 -var init_b = __esm({
 -    "b.js"() {}
 +var init_c = __esmMin(() => {});
-+var d_exports = __export({
++var d_exports = __exportAll({
 +    ns: () => ns
  });
 -var c_exports = {};

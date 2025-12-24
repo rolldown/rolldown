@@ -78,7 +78,8 @@ pub fn generate_identifier(
   if ctx.options.name.as_ref().is_none_or(String::is_empty)
     && !matches!(export_mode, OutputExports::None)
   {
-    warnings.push(BuildDiagnostic::missing_name_option_for_iife_export().with_severity_warning());
+    warnings
+      .push(BuildDiagnostic::missing_name_option_for_iife_export(false).with_severity_warning());
   }
 
   // Early return if `name` is None

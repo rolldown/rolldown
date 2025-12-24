@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@ecabb7322a2ba5aeedb3612d2a40b86a85cee235 # v1.0.11
+        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
           tools: just
           cache-key: debug-build-wasi
@@ -35,7 +35,7 @@ jobs:
         run: just build-rolldown-wasi
 
       - name: Upload Rolldown with WASI Binding
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: rolldown-wasi
           path: |

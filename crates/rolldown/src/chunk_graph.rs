@@ -5,7 +5,7 @@ use rolldown_common::{
   Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx, RuntimeHelper,
   SymbolRef,
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{SharedOptions, stages::link_stage::LinkStageOutput};
 
@@ -20,6 +20,15 @@ pub struct ChunkGraph {
   /// If the namespace is merged, `Key` is the original namespace symbol, and `Value` is the linked namespace symbol.
   pub finalized_cjs_ns_map_idx_vec: IndexVec<ChunkIdx, FxHashMap<SymbolRef, SymbolRef>>,
   pub chunk_idx_to_reference_ids: FxHashMap<ChunkIdx, Vec<ArcStr>>,
+  pub common_chunk_exported_facade_chunk_namespace: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>>,
+  /// Tracks chunks that have been removed during post-optimization of code splitting.
+  ///
+  /// Since chunks are stored in an `IndexVec`, we have two options when removing chunks:
+  /// 1. Remove them and re-index the entire chunk table
+  /// 2. Keep them in place and mark them as dead
+  ///
+  /// We use the second approach to avoid the overhead of re-indexing at the cost of some extra memory.
+  pub removed_chunk_idx: FxHashSet<ChunkIdx>,
 }
 
 impl ChunkGraph {
@@ -31,6 +40,8 @@ impl ChunkGraph {
       entry_module_to_entry_chunk: FxHashMap::default(),
       finalized_cjs_ns_map_idx_vec: index_vec![],
       chunk_idx_to_reference_ids: FxHashMap::default(),
+      common_chunk_exported_facade_chunk_namespace: FxHashMap::default(),
+      removed_chunk_idx: FxHashSet::default(),
     }
   }
 

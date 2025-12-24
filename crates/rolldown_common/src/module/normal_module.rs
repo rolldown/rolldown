@@ -5,7 +5,7 @@ use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
   AssetView, DebugStmtInfoForTreeShaking, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx,
   ImportRecordMeta, LegalComments, ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions,
-  RawImportRecord, ResolvedId, StmtInfo,
+  RawImportRecord, ResolvedId, StmtInfoIdx,
 };
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -56,15 +56,19 @@ impl NormalModule {
     self.ecma_view.meta.has_star_export()
   }
 
-  pub fn to_debug_normal_module_for_tree_shaking(&self) -> DebugNormalModuleForTreeShaking {
+  pub fn to_debug_normal_module_for_tree_shaking(
+    &self,
+    is_included: bool,
+    stmt_info_included: &IndexVec<StmtInfoIdx, bool>,
+  ) -> DebugNormalModuleForTreeShaking {
     DebugNormalModuleForTreeShaking {
       id: self.repr_name.clone(),
-      is_included: self.ecma_view.meta.is_included(),
+      is_included,
       stmt_infos: self
         .ecma_view
         .stmt_infos
-        .iter()
-        .map(StmtInfo::to_debug_stmt_info_for_tree_shaking)
+        .iter_enumerated()
+        .map(|(idx, stmt)| stmt.to_debug_stmt_info_for_tree_shaking(stmt_info_included[idx]))
         .collect(),
     }
   }
@@ -228,10 +232,6 @@ impl NormalModule {
         Some(ModuleRenderOutput { code: render_output.code, map: render_output.map })
       }
     }
-  }
-
-  pub fn is_included(&self) -> bool {
-    self.ecma_view.meta.is_included()
   }
 
   #[expect(clippy::cast_precision_loss)]

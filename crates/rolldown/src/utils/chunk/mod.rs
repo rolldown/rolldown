@@ -10,7 +10,6 @@ use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateConte
 
 pub mod deconflict_chunk_symbols;
 pub mod determine_export_mode;
-pub mod determine_use_strict;
 pub mod finalize_chunks;
 pub mod namespace_marker;
 pub mod render_chunk_exports;

@@ -1,23 +1,20 @@
 import { execa, ExecaError } from 'execa';
 import glob from 'fast-glob';
+// @ts-expect-error Missing types for kill-port package
 import killPort from 'kill-port';
 import nodeFs from 'node:fs';
 import nodePath from 'node:path';
 import { afterAll, describe, test } from 'vitest';
 import { CONFIG } from './src/config';
-import { removeDirSync, sensibleTimeoutInMs } from './src/utils';
+import {
+  isDirectoryExists,
+  removeDirSync,
+  sensibleTimeoutInMs,
+} from './src/utils';
 
 function main() {
   const fixturesPath = nodePath.resolve(__dirname, 'fixtures');
-  const tmpFixturesPath = nodePath.resolve(__dirname, 'tmp/fixtures');
-
-  async function updateNodeModules(showOutput = true) {
-    await execa('pnpm install --no-frozen-lockfile', {
-      cwd: fixturesPath,
-      shell: true,
-      stdio: showOutput ? 'inherit' : ['pipe', 'pipe', 'inherit'],
-    });
-  }
+  const tmpFixturesPath = nodePath.resolve(__dirname, 'tmp-fixtures');
 
   console.log(`🔄 - Cleaning up ${tmpFixturesPath} directory...`);
   removeDirSync(tmpFixturesPath);
@@ -27,13 +24,13 @@ function main() {
       console.log(`🔄 - Cleaning up ${tmpFixturesPath} directory...`);
       removeDirSync(tmpFixturesPath);
       console.log(`🔄 - Resetting node_modules...`);
-      await updateNodeModules(false);
       console.log(`✅ - Cleanup completed`);
     }
   }, 30 * 1000);
 
   const fixtureNames = nodeFs.readdirSync(fixturesPath);
   describe('fixtures', () => {
+    let testIndex = 0;
     for (const fixtureName of fixtureNames) {
       // Skip if it's not a valid fixture
       if (
@@ -43,13 +40,19 @@ function main() {
       ) {
         continue;
       }
+      test(`fixture: ${fixtureName}`, async () => {
+        const port = 3000 + testIndex;
+        testIndex++;
 
-      test.sequential(`fixture: ${fixtureName}`, async () => {
         let tmpProjectPath = nodePath.join(
           tmpFixturesPath,
           fixtureName,
         );
-        while (nodeFs.existsSync(tmpProjectPath)) {
+        while (
+          await isDirectoryExists(
+            tmpProjectPath,
+          )
+        ) {
           tmpProjectPath = nodePath.join(
             tmpFixturesPath,
             fixtureName + '-retry',
@@ -61,35 +64,35 @@ function main() {
             nodePath.join(fixturesPath, fixtureName)
           } to ${tmpProjectPath}...`,
         );
-        nodeFs.mkdirSync(tmpProjectPath, { recursive: true });
-        nodeFs.cpSync(
+        // Remove fixture's dist directory before copying to prevent stale artifacts
+        const fixtureDistPath = nodePath.join(
+          fixturesPath,
+          fixtureName,
+          'dist',
+        );
+        removeDirSync(fixtureDistPath);
+        await nodeFs.promises.mkdir(tmpProjectPath, { recursive: true });
+        await nodeFs.promises.cp(
           nodePath.join(fixturesPath, fixtureName),
           tmpProjectPath,
-          {
-            recursive: true,
-            filter: (src) => {
-              return !src.includes('node_modules') && !src.includes('dist');
-            },
-          },
+          { recursive: true },
         );
 
-        console.log(`🔄 - Updating node_modules...`);
-        await updateNodeModules(true);
-
         console.log(`🔄 - Killing any process running on port 3000...`);
+
         try {
-          await killPort(3000);
+          await killPort(port);
         } catch (err) {
           if (
             err instanceof Error && err.message.includes('No process running')
           ) {
-            console.log(`🔄 - No process running on port 3000`);
+            console.log(`🔄 - No process running on port ${port}`);
           } else {
             throw err;
           }
         }
 
-        console.log(`🔄 - Starting dev server...`);
+        console.log(`🔄 - Starting dev server on port ${port}...`);
         const devServeProcess = execa('pnpm serve', {
           cwd: tmpProjectPath,
           shell: true,
@@ -97,6 +100,7 @@ function main() {
           env: {
             RUST_BACKTRACE: 'FULL',
             RD_LOG: process.env.RD_LOG || 'hmr=debug',
+            DEV_SERVER_PORT: String(port),
           },
         });
 

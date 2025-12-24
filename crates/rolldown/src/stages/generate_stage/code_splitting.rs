@@ -49,8 +49,6 @@ impl GenerateStage<'_> {
       }; self.link_output.module_table.modules.len()];
     let mut bits_to_chunk = FxHashMap::with_capacity(self.link_output.entries.len());
 
-    let mut entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx> =
-      FxHashMap::with_capacity(self.link_output.entries.len());
     let input_base = ArcStr::from(
       self
         .get_common_dir_of_all_modules(self.link_output.module_table.modules.as_vec())
@@ -70,7 +68,7 @@ impl GenerateStage<'_> {
         };
         let matched_entry =
           self.link_output.entries.iter().find(|entry_point| entry_point.idx == module.idx);
-        if !module.is_included() {
+        if !self.link_output.metas[module.idx].is_included {
           continue;
         }
 
@@ -115,16 +113,11 @@ impl GenerateStage<'_> {
           self.link_output.metas[module.idx].depended_runtime_helper,
         );
         // bits_to_chunk.insert(bits, chunk); // This line is intentionally commented out because `bits_to_chunk` is not used in this loop. It is updated elsewhere in the `init_entry_point` and `split_chunks` methods.
-        entry_module_to_entry_chunk.insert(module.idx, chunk_idx);
+        chunk_graph.entry_module_to_entry_chunk.insert(module.idx, chunk_idx);
       }
     } else {
-      self.init_entry_point(
-        &mut chunk_graph,
-        &mut bits_to_chunk,
-        &mut entry_module_to_entry_chunk,
-        entries_len,
-        &input_base,
-      );
+      self.init_entry_point(&mut chunk_graph, &mut bits_to_chunk, entries_len, &input_base);
+
       self
         .split_chunks(&mut index_splitting_info, &mut chunk_graph, &mut bits_to_chunk, &input_base)
         .await?;
@@ -135,7 +128,7 @@ impl GenerateStage<'_> {
         .iter()
         .filter_map(|item| {
           let module = self.link_output.module_table[item.owner].as_normal()?;
-          module.meta.is_included().then_some(item)
+          self.link_output.metas[module.idx].is_included.then_some(item)
         })
         .into_group_map_by(|item| {
           chunk_graph.module_to_chunk[item.owner].expect("should have chunk idx")
@@ -159,7 +152,6 @@ impl GenerateStage<'_> {
       }
     }
 
-    chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
     chunk_graph.sort_chunk_modules(self.link_output, self.options);
 
     chunk_graph
@@ -401,13 +393,11 @@ impl GenerateStage<'_> {
   pub fn merge_cjs_namespace(&mut self, chunk_graph: &mut ChunkGraph) {
     let mut chunk_list: IndexVec<ChunkIdx, FxHashMap<(ModuleIdx, usize), Vec<SymbolRef>>> =
       index_vec![FxHashMap::default(); chunk_graph.chunk_table.len()];
-    for (k, v) in &self.link_output.safely_merge_cjs_ns_map {
-      for symbol_ref in v
+    for (k, info) in &self.link_output.safely_merge_cjs_ns_map {
+      for symbol_ref in info
+        .namespace_refs
         .iter()
-        .filter(|item| {
-          self.link_output.module_table[item.owner].as_normal().unwrap().is_included()
-          // && self.link_output.metas[item.owner].wrap_kind().is_none()
-        })
+        .filter(|item| self.link_output.used_symbol_refs.contains(item))
         // Determine safely merged cjs ns binding should put in where
         // We should put it in the importRecord which first reference the cjs ns binding.
         .sorted_by_key(|item| self.link_output.module_table[item.owner].exec_order())
@@ -468,7 +458,10 @@ impl GenerateStage<'_> {
 
         let module_namespace_included_reason = &meta.module_namespace_included_reason;
         let is_namespace_referenced = matches!(m.exports_kind, ExportsKind::Esm)
-          && if module_namespace_included_reason.contains(ModuleNamespaceIncludedReason::Unknown) {
+          && if module_namespace_included_reason.intersects(
+            ModuleNamespaceIncludedReason::Unknown
+              | ModuleNamespaceIncludedReason::SimulateFacadeChunk,
+          ) {
             true
           } else if module_namespace_included_reason
             .contains(ModuleNamespaceIncludedReason::ReExportExternalModule)
@@ -600,7 +593,7 @@ impl GenerateStage<'_> {
     let mut ret: Option<String> = None;
     let iter = modules.iter().filter_map(|m| match m {
       Module::Normal(item) => {
-        if !item.is_included() {
+        if !self.link_output.metas[item.idx].is_included {
           return None;
         }
         if self.options.preserve_modules || item.is_user_defined_entry {
@@ -639,7 +632,6 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
-    entry_module_to_entry_chunk: &mut FxHashMap<ModuleIdx, ChunkIdx>,
     entries_len: u32,
     input_base: &ArcStr,
   ) {
@@ -710,12 +702,12 @@ impl GenerateStage<'_> {
       }
 
       bits_to_chunk.insert(bits, chunk_idx);
-      entry_module_to_entry_chunk.insert(entry_point.idx, chunk_idx);
+      chunk_graph.entry_module_to_entry_chunk.insert(entry_point.idx, chunk_idx);
     }
   }
 
   async fn split_chunks(
-    &self,
+    &mut self,
     index_splitting_info: &mut IndexSplittingInfo,
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
@@ -749,7 +741,7 @@ impl GenerateStage<'_> {
       let Some(normal_module) = self.link_output.module_table[*idx].as_normal() else {
         continue;
       };
-      if !normal_module.meta.is_included() {
+      if !self.link_output.metas[normal_module.idx].is_included {
         continue;
       }
 
@@ -798,6 +790,14 @@ impl GenerateStage<'_> {
         pending_common_chunks,
       );
     }
+
+    self.optimize_facade_dynamic_entry_chunks(
+      chunk_graph,
+      index_splitting_info,
+      input_base,
+      &mut module_to_assigned,
+    );
+
     Ok(())
   }
 
@@ -809,13 +809,13 @@ impl GenerateStage<'_> {
   ) {
     let mut q = VecDeque::from([entry_module_idx]);
     while let Some(module_idx) = q.pop_front() {
-      let Module::Normal(module) = &self.link_output.module_table[module_idx] else {
+      if !self.link_output.module_table[module_idx].is_normal() {
         continue;
-      };
+      }
 
       let meta = &self.link_output.metas[module_idx];
 
-      if !module.meta.is_included() {
+      if !self.link_output.metas[module_idx].is_included {
         continue;
       }
 

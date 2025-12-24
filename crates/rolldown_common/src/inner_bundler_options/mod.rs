@@ -138,6 +138,18 @@ pub struct BundlerOptions {
     serde(default, deserialize_with = "deserialize_addon"),
     schemars(with = "Option<String>")
   )]
+  pub post_banner: Option<AddonOutputOption>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_addon"),
+    schemars(with = "Option<String>")
+  )]
+  pub post_footer: Option<AddonOutputOption>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_addon"),
+    schemars(with = "Option<String>")
+  )]
   pub intro: Option<AddonOutputOption>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",

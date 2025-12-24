@@ -402,6 +402,8 @@ impl Resolver {
   }
 
   pub fn get_nearest_package_json(&self, p: &str) -> Option<Arc<PackageJson>> {
+    let _guard = self.lock.lock_for_update();
+
     let specifier = Path::new(p).absolutize();
     let Ok(result) = self.inner.resolve(
       /* actually this can be anything, as the specifier is absolute path */ &self.root,

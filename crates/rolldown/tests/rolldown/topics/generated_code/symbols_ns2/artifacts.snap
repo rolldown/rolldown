@@ -25,12 +25,12 @@ import assert from "assert";
 
 // HIDDEN [rolldown:runtime]
 //#region lib.js
-var lib_exports = /* @__PURE__ */ __export({ a: () => a }, 1);
+var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a }, 1);
 const a = 1e3;
 
 //#endregion
 //#region a.js
-var a_exports = /* @__PURE__ */ __export({ ns: () => lib_exports }, 1);
+var a_exports = /* @__PURE__ */ __exportAll({ ns: () => lib_exports }, 1);
 
 //#endregion
 //#region main.js
@@ -54,12 +54,12 @@ let assert = require("assert");
 assert = __toESM(assert);
 
 //#region lib.js
-var lib_exports = /* @__PURE__ */ __export({ a: () => a }, 1);
+var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a }, 1);
 const a = 1e3;
 
 //#endregion
 //#region a.js
-var a_exports = /* @__PURE__ */ __export({ ns: () => lib_exports }, 1);
+var a_exports = /* @__PURE__ */ __exportAll({ ns: () => lib_exports }, 1);
 
 //#endregion
 //#region main.js
@@ -106,12 +106,12 @@ assert.default.equal(String(lib_exports), "[object Module]");
 assert = __toESM(assert);
 
 //#region lib.js
-	var lib_exports = /* @__PURE__ */ __export({ a: () => a }, 1);
+	var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a }, 1);
 	const a = 1e3;
 
 //#endregion
 //#region a.js
-	var a_exports = /* @__PURE__ */ __export({ ns: () => lib_exports }, 1);
+	var a_exports = /* @__PURE__ */ __exportAll({ ns: () => lib_exports }, 1);
 
 //#endregion
 //#region main.js

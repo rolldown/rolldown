@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region other1.js
+console.log("wrong Foo 1", "wrong React 1");
+
+//#endregion
+//#region jsx.js
+const Foo = () => {};
+console.log(/* @__PURE__ */ React.createElement(Foo, null));
+
+//#endregion
+//#region other2.js
+console.log("wrong Foo 2", "wrong React 2");
+
+//#endregion
+```

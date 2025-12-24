@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region foo.json
-var foo_exports = /* @__PURE__ */ __export({
+var foo_exports = /* @__PURE__ */ __exportAll({
 	default: () => foo_default,
 	foo: () => foo
 });
@@ -20,7 +20,7 @@ var foo_default = { foo };
 
 //#endregion
 //#region main.js
-var main_exports = /* @__PURE__ */ __export({ default: () => main_default });
+var main_exports = /* @__PURE__ */ __exportAll({ default: () => main_default });
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 var main_default = foo_default;

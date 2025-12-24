@@ -169,14 +169,16 @@ export default {
 
 :::warning
 
-When using `output.banner` or `output.footer` with minification enabled, the banner or footer content may be stripped out unless it is formatted as a legal comment. To ensure your banner or footer persists through minification, use one of these comment formats:
+When using `output.banner` with minification enabled, the banner content may be stripped out unless it is formatted as a legal comment. To ensure your banner persists through minification, do either:
 
-- Comments starting with `/*!` (e.g., `/*! My banner */`)
-- Comments containing `@license` (e.g., `/* @license My banner */`)
-- Comments containing `@preserve` (e.g., `/* @preserve My banner */`)
-- Comments starting with `//!` (for single-line comments)
+- Use `output.postBanner` or `output.postFooter` instead, which are added after minification, or
+- Use one of these comment formats:
+  - Comments starting with `/*!` (e.g., `/*! My banner */`)
+  - Comments containing `@license` (e.g., `/* @license My banner */`)
+  - Comments containing `@preserve` (e.g., `/* @preserve My banner */`)
+  - Comments starting with `//!` (for single-line comments)
 
-This behavior is controlled by the [`output.legalComments`](#legalcomments) option, which defaults to `'inline'` and preserves these special comment formats.
+The latter way's behavior is controlled by the [`output.legalComments`](#legalcomments) option, which defaults to `'inline'` and preserves these special comment formats.
 
 :::
 
@@ -200,15 +202,41 @@ export default {
 
 :::warning
 
-When using `output.banner` or `output.footer` with minification enabled, the footer content may be stripped out unless it is formatted as a legal comment. To ensure your footer persists through minification, use one of these comment formats:
+When using `output.footer` with minification enabled, the footer content may be stripped out unless it is formatted as a legal comment. To ensure your footer persists through minification, do either:
 
-- Comments starting with `/*!` (e.g., `/*! My banner */`)
-- Comments containing `@license` (e.g., `/* @license My banner */`)
-- Comments containing `@preserve` (e.g., `/* @preserve My banner */`)
-- Comments starting with `//!` (for single-line comments)
+- Use `output.postFooter` instead, which is added after minification, or
+- Use one of these comment formats:
+  - Comments starting with `/*!` (e.g., `/*! My banner */`)
+  - Comments containing `@license` (e.g., `/* @license My banner */`)
+  - Comments containing `@preserve` (e.g., `/* @preserve My banner */`)
+  - Comments starting with `//!` (for single-line comments)
 
-This behavior is controlled by the [`output.legalComments`](#legalcomments) option, which defaults to `'inline'` and preserves these special comment formats.
+The latter way's behavior is controlled by the [`output.legalComments`](#legalcomments) option, which defaults to `'inline'` and preserves these special comment formats.
 
+:::
+
+## postBanner
+
+- **Type:** `string | ((chunk: RenderedChunk) => string | Promise<string>)`
+- **Optional:** Yes ✅
+- **Path:** `output.postBanner`
+
+Code to prepend to the beginning of each output chunk, after minification.
+
+:::warning
+`postBanner` is prepended **before** `banner`. (since `postBanner` comes after minification, it becomes the outermost code)
+:::
+
+## postFooter
+
+- **Type:** `string | ((chunk: RenderedChunk) => string | Promise<string>)`
+- **Optional:** Yes ✅
+- **Path:** `output.postFooter`
+
+Code to append to the end of each output chunk, after minification.
+
+:::info
+`postFooter` is appended **after** `footer`. (since `postFooter` comes after minification, it becomes the outermost code)
 :::
 
 ## intro

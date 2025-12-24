@@ -5,7 +5,11 @@
         "name": "entry",
         "import": "entry.jsx"
       }
-    ]
+    ],
+    "transform": {
+      "jsx": "preserve"
+    },
+    "minify": true
   },
   "expectExecuted": false
 }

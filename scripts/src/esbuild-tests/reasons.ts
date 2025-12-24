@@ -2,7 +2,6 @@
  * When a test case is listed here, it will be marked as "failed" in the test summary.
  */
 export const failedReasons: Record<string, string> = {
-  'dce/dce_of_decorators': 'decorators should not be removed',
   'dce/dce_of_iife': 'sub optimal: IIFEs are not unwrapped',
   'dce/dce_of_symbol_ctor_call':
     '`new Symbol("abc")` should not be removed as it has side effects',
@@ -17,15 +16,10 @@ export const failedReasons: Record<string, string> = {
     'comments are not kept properly',
   'default/comment_preservation':
     'with statement is rejected due to https://github.com/rolldown/rolldown/issues/7009',
-  'default/define_import_meta':
-    'Bug in Oxc transformer define plugin (https://github.com/oxc-project/oxc/issues/16623)',
   'default/direct_eval_tainting_no_bundle':
     "rejected due to https://github.com/rolldown/rolldown/issues/7009, also sub optimal: eval in `test4` param position don't need to be renamed",
   'default/export_forms_with_minify_identifiers_and_no_bundle':
     'sub optimal: should not generate duplicate export binding',
-  'default/export_special_name': 'assigning __proto__ should not be done',
-  'default/export_special_name_bundle':
-    '{ __proto__: ... } should be { ["__proto__"]: ... }',
   'default/external_es6_converted_to_common_js':
     'sub optimal: redundant `import` statements',
   'default/false_require':
@@ -40,6 +34,10 @@ export const failedReasons: Record<string, string> = {
     "sub optimal: we don't have pass through mode, we just have same output as esbuild if",
   'default/top_level_await_allowed_import_with_splitting':
     'sub optimal: empty chunks should be removed',
+  'loader/jsx_preserve_capital_letter_minify':
+    'oxc minifier does not support JSX (https://github.com/oxc-project/oxc/issues/13248)',
+  'loader/jsx_preserve_capital_letter_minify_nested':
+    'oxc minifier does not support JSX (https://github.com/oxc-project/oxc/issues/13248)',
   'loader/loader_data_url_base64_invalid_utf8':
     'mime type should be `data:text/plain`',
   'loader/loader_file_one_source_two_different_output_paths_css':
@@ -53,7 +51,6 @@ export const failedReasons: Record<string, string> = {
     'related to https://github.com/rolldown/rolldown/issues/3048, export pointing to a value declared by `declare var` should be kept',
   'ts/ts_import_equals_elimination_test':
     'See https://github.com/oxc-project/oxc/issues/16628',
-  'loader/loader_text_utf8_bom': 'UTF8 BOM should be stripped',
 };
 
 export const notSupportedReasons: Record<string, string> = {
@@ -200,8 +197,6 @@ export const notSupportedReasons: Record<string, string> = {
   'dce/dead_code_inside_unused_cases':
     'dce inside unused switch cases is not supported',
 
-  'default/call_import_namespace_warning': 'warning not implemented',
-
   'default/import_with_hash_parameter':
     'stripping hash parameter is not supported',
   'default/import_with_query_parameter':
@@ -235,6 +230,7 @@ export const ignoreReasons: Record<string, string> = {
     'https://github.com/javascript-compiler-hints/compiler-notations-spec/issues/8',
 
   'default/define_import_meta_es5': "target: 'es5' is not supported",
+  'loader/loader_json_prototype_es5': "target: 'es5' is not supported",
 
   'default/package_alias_match_longest': 'resolve alias behavior difference',
   'default/package_alias': 'resolve alias behavior difference',

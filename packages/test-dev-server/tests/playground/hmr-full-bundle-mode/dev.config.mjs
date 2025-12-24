@@ -12,7 +12,7 @@ export default defineDevConfig({
     platform: 'browser',
     treeshake: false,
     experimental: {
-      hmr: {},
+      devMode: {},
     },
     plugins: [
       waitBundleCompleteUntilAccess(),

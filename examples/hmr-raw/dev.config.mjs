@@ -4,7 +4,7 @@ export default defineDevConfig({
   build: {
     input: 'src/main.js',
     experimental: {
-      hmr: {
+      devMode: {
         new: true,
       },
       incrementalBuild: true,

@@ -7,14 +7,11 @@ use crate::{
     binding_outputs::{BindingOutputs, to_binding_error},
     error::{BindingError, BindingErrors, BindingResult},
   },
-  utils::{
-    handle_result, handle_warnings,
-    normalize_binding_options::{NormalizeBindingOptionsReturn, normalize_binding_options},
-  },
+  utils::{handle_result, handle_warnings, normalize_binding_options::normalize_binding_options},
 };
 use napi::{Env, bindgen_prelude::PromiseRaw};
 use napi_derive::napi;
-use rolldown::BundleHandle;
+use rolldown::{BundleHandle, BundlerConfig};
 use std::sync::Arc;
 
 #[napi]
@@ -42,7 +39,7 @@ impl BindingBundler {
       return env.spawn_future(async move { Ok(result) });
     }
 
-    let maybe_bundle = self.inner.create_bundle(normalized.bundler_options, normalized.plugins);
+    let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
       self.last_bundle_handle = Some(bundle.context());
@@ -91,7 +88,7 @@ impl BindingBundler {
       return env.spawn_future(async move { Ok(result) });
     }
 
-    let maybe_bundle = self.inner.create_bundle(normalized.bundler_options, normalized.plugins);
+    let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
       self.last_bundle_handle = Some(bundle.context());
@@ -139,7 +136,7 @@ impl BindingBundler {
       return env.spawn_future(async move { Ok(result) });
     }
 
-    let maybe_bundle = self.inner.create_bundle(normalized.bundler_options, normalized.plugins);
+    let maybe_bundle = self.inner.create_bundle(normalized.options, normalized.plugins);
     if let Ok(bundle) = &maybe_bundle {
       // Extract bundle handle before consuming the bundle
       self.last_bundle_handle = Some(bundle.context());
@@ -202,9 +199,7 @@ impl BindingBundler {
 }
 
 impl BindingBundler {
-  fn normalize_binding_options(
-    option: BindingBundlerOptions,
-  ) -> napi::Result<NormalizeBindingOptionsReturn> {
+  fn normalize_binding_options(option: BindingBundlerOptions) -> napi::Result<BundlerConfig> {
     let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;
 
     #[cfg(not(target_family = "wasm"))]
@@ -234,18 +229,18 @@ impl BindingBundler {
     Ok(ret)
   }
 
-  /// Validates that HMR is not enabled for the given API.
-  /// Returns an error result if HMR is enabled.
+  /// Validates that dev mode is not enabled for the given API.
+  /// Returns an error result if dev mode is enabled.
   fn validate_hmr_not_allowed<T>(
-    normalized: &NormalizeBindingOptionsReturn,
+    normalized: &BundlerConfig,
     api_name: &str,
   ) -> Option<BindingResult<T>> {
-    if normalized.bundler_options.experimental.as_ref().and_then(|e| e.hmr.as_ref()).is_some() {
+    if normalized.options.experimental.as_ref().and_then(|e| e.dev_mode.as_ref()).is_some() {
       let message = format!(
-        "The \"experimental.hmr\" option is only supported with the \"dev\" API. It cannot be used with \"{api_name}\". Please use the \"dev\" API for HMR functionality."
+        "The \"experimental.devMode\" option is only supported with the \"dev\" API. It cannot be used with \"{api_name}\". Please use the \"dev\" API for dev mode functionality."
       );
       let error = rolldown_error::BuildDiagnostic::bundler_initialize_error(message, None);
-      let cwd = normalized.bundler_options.cwd.clone().unwrap_or_default();
+      let cwd = normalized.options.cwd.clone().unwrap_or_default();
       let binding_error = to_binding_error(&error, cwd);
       Some(napi::Either::A(BindingErrors::new(vec![binding_error])))
     } else {

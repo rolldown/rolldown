@@ -16,6 +16,7 @@ use super::events::DiagnosableArcstr;
 use super::events::already_closed::AlreadyClosed;
 use super::events::assign_to_import::AssignToImport;
 use super::events::bundler_initialize_error::BundlerInitializeError;
+use super::events::cannot_call_namespace::CannotCallNamespace;
 use super::events::configuration_field_conflict::ConfigurationFieldConflict;
 use super::events::could_not_clean_directory::CouldNotCleanDirectory;
 use super::events::export_undefined_variable::ExportUndefinedVariable;
@@ -27,7 +28,6 @@ use super::events::invalid_option::{InvalidOption, InvalidOptionType};
 use super::events::json_parse::JsonParse;
 use super::events::missing_global_name::MissingGlobalName;
 use super::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
-use super::events::missing_name_option_for_umd_export::MissingNameOptionForUmdExport;
 use super::events::plugin_error::{CausedPlugin, PluginError};
 use super::events::plugin_timings::{PluginTimingInfo, PluginTimings};
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
@@ -46,7 +46,7 @@ use super::events::{
   forbid_const_assign::ForbidConstAssign,
   invalid_export_option::InvalidExportOption,
   missing_export::MissingExport,
-  mixed_export::MixedExport,
+  mixed_exports::MixedExports,
   parse_error::ParseError,
   unresolved_entry::UnresolvedEntry,
 };
@@ -104,6 +104,7 @@ impl BuildDiagnostic {
       importee,
       reason,
       help,
+      import_chain: None,
       diagnostic_kind,
     })
   }
@@ -124,9 +125,11 @@ impl BuildDiagnostic {
     Self::new_inner(CircularReexport { importer_id, imported_specifier })
   }
 
+  #[expect(clippy::too_many_arguments)]
   pub fn missing_export(
     importer: String,
     stable_importer: String,
+    importee: String,
     stable_importee: String,
     importer_source: ArcStr,
     imported_specifier: String,
@@ -136,6 +139,7 @@ impl BuildDiagnostic {
     Self::new_inner(MissingExport {
       importer,
       stable_importer,
+      importee,
       stable_importee,
       importer_source,
       imported_specifier,
@@ -150,19 +154,15 @@ impl BuildDiagnostic {
     entry_module: String,
     export_keys: Vec<ArcStr>,
   ) -> Self {
-    Self::new_inner(MixedExport { module_id, module_name, entry_module, export_keys })
+    Self::new_inner(MixedExports { module_id, module_name, entry_module, export_keys })
   }
 
   pub fn missing_global_name(module_id: String, module_name: ArcStr, guessed_name: ArcStr) -> Self {
     Self::new_inner(MissingGlobalName { module_id, module_name, guessed_name })
   }
 
-  pub fn missing_name_option_for_iife_export() -> Self {
-    Self::new_inner(MissingNameOptionForIifeExport {})
-  }
-
-  pub fn missing_name_option_for_umd_export() -> Self {
-    Self::new_inner(MissingNameOptionForUmdExport {})
+  pub fn missing_name_option_for_iife_export(is_umd: bool) -> Self {
+    Self::new_inner(MissingNameOptionForIifeExport { is_umd })
   }
 
   pub fn illegal_identifier_as_name(identifier_name: ArcStr) -> Self {
@@ -235,18 +235,18 @@ impl BuildDiagnostic {
 
   pub fn oxc_parse_error(
     source: ArcStr,
-    filename: String,
+    id: String,
     error_help: String,
     error_message: String,
     error_labels: Vec<LabeledSpan>,
   ) -> Self {
-    Self::new_inner(ParseError { source, filename, error_help, error_message, error_labels })
+    Self::new_inner(ParseError { source, id, error_help, error_message, error_labels })
   }
 
   pub fn from_oxc_diagnostics<T>(
     diagnostics: T,
     source: &ArcStr,
-    path: &str,
+    id: &str,
     severity: &Severity,
   ) -> Vec<Self>
   where
@@ -257,7 +257,7 @@ impl BuildDiagnostic {
       .map(|mut error| {
         let diagnostic = BuildDiagnostic::oxc_parse_error(
           source.clone(),
-          path.to_string(),
+          id.to_string(),
           error.help.take().unwrap_or_default().into(),
           error.message.to_string(),
           error.labels.take().unwrap_or_default(),
@@ -318,6 +318,10 @@ impl BuildDiagnostic {
 
   pub fn assign_to_import(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
     Self::new_inner(AssignToImport { filename, source, span, name })
+  }
+
+  pub fn cannot_call_namespace(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
+    Self::new_inner(CannotCallNamespace { filename, source, span, name })
   }
 
   pub fn prefer_builtin_feature(

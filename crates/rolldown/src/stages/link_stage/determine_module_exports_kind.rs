@@ -1,7 +1,9 @@
 use std::ptr::addr_of;
 
-use rolldown_common::{ExportsKind, ImportKind, Module, OutputFormat, WrapKind};
+use rolldown_common::{ExportsKind, ImportKind, ImportRecordMeta, Module, OutputFormat, WrapKind};
 use rustc_hash::FxHashSet;
+
+use crate::utils::external_import_interop::import_record_needs_interop;
 
 use super::LinkStage;
 
@@ -87,5 +89,36 @@ impl LinkStage<'_> {
         self.metas[importer.idx].sync_wrap_kind(WrapKind::Cjs);
       }
     });
+  }
+
+  /// Builds the `safely_merge_cjs_ns_map` which groups ESM imports of the same CommonJS module.
+  ///
+  /// This optimization allows multiple ESM imports of the same CommonJS module to share
+  /// a single namespace binding, reducing code size.
+  #[tracing::instrument(level = "debug", skip_all)]
+  pub(super) fn determine_safely_merge_cjs_ns(&mut self) {
+    self.safely_merge_cjs_ns_map.clear();
+
+    for importer in self.module_table.modules.iter().filter_map(Module::as_normal) {
+      for (rec_idx, rec) in importer.import_records.iter_enumerated() {
+        if !matches!(rec.kind, ImportKind::Import)
+          || rec.meta.contains(ImportRecordMeta::IsExportStar)
+        {
+          continue;
+        }
+
+        let Module::Normal(importee) = &self.module_table[rec.resolved_module] else {
+          continue;
+        };
+
+        if !matches!(importee.exports_kind, ExportsKind::CommonJs) {
+          continue;
+        }
+
+        let info = self.safely_merge_cjs_ns_map.entry(rec.resolved_module).or_default();
+        info.namespace_refs.push(rec.namespace_ref);
+        info.needs_interop |= import_record_needs_interop(importer, rec_idx);
+      }
+    }
   }
 }

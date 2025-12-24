@@ -1,6 +1,6 @@
 use std::{borrow::Cow, fs, sync::Arc};
 
-use rolldown::{BundlerOptions, ExperimentalOptions, HmrOptions, InputItem};
+use rolldown::{BundlerOptions, DevModeOptions, ExperimentalOptions, InputItem};
 use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 use sugar_path::SugarPath;
@@ -43,7 +43,7 @@ async fn add_watch_file() {
           import: "./entry.js".to_string(),
         }]),
         experimental: Some(ExperimentalOptions {
-          hmr: Some(HmrOptions::default()),
+          dev_mode: Some(DevModeOptions::default()),
           ..Default::default()
         }),
         ..Default::default()

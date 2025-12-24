@@ -12,12 +12,15 @@ async fn special_delimiters() {
     .build(TestMeta { expect_executed: false, visualize_sourcemap: true, ..Default::default() })
     .run_with_plugins(
       BundlerOptions { input: Some(vec!["./input.js".to_string().into()]), ..Default::default() },
-      vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-        values: std::iter::once(("special".to_string(), "replaced".to_string())).collect(),
-        delimiters: Some(("\\b".to_string(), "\\b".to_string())),
-        sourcemap: true,
-        ..Default::default()
-      }))],
+      vec![Arc::new(
+        ReplacePlugin::with_options(ReplaceOptions {
+          values: std::iter::once(("special".to_string(), "replaced".to_string())).collect(),
+          delimiters: Some(("\\b".to_string(), "\\b".to_string())),
+          sourcemap: true,
+          ..Default::default()
+        })
+        .unwrap(),
+      )],
     )
     .await;
 }

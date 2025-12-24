@@ -106,13 +106,24 @@ runTestSuiteWithSamples(
 					config.options.output = config.options.output || {}
 					config.options.output.keepNames = true; // avoid other tests snapshot changed
 				}
+				if (
+					directory.includes('input-name-validation') &&
+					config.generateError?.code === 'VALIDATION_ERROR'
+				) {
+					config.generateError.code = 'INVALID_OPTION';
+				}
+				if (!directory.includes('options-async-hook')) {
+					config.options ??= {};
+					config.options.checks ??= {};
+					config.options.checks.circularDependency ??= true;
+				}
 
 				return rollup
 					.rollup({
 						input: path.join(directory, 'main.js'),
 						onLog: (level, log) => {
 							logs.push({ level, ...log });
-							if (level === 'warn') {
+							if (level === 'warn' && !config.expectedWarnings?.includes(log.code)) {
 								warnings.push(log);
 							}
 						},

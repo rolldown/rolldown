@@ -4,6 +4,7 @@ pub mod dynamic_import;
 mod hmr;
 pub mod impl_visit;
 mod import_assign_analyzer;
+mod namespace_call_analyzer;
 mod new_url;
 pub mod side_effect_detector;
 
@@ -49,12 +50,6 @@ use sugar_path::SugarPath;
 
 use crate::SharedOptions;
 use crate::ast_scanner::cjs_export_analyzer::CommonjsExportSymbolUsage;
-
-// TODO: Not sure if this necessary to match the module request.
-// If we found it cause high false positive, we could add a extra step to match it package name as
-// well.
-static ENABLED_CJS_NAMESPACE_MERGING_MODULE_REQUEST: [&str; 3] =
-  ["this-is-only-used-for-testing", "react", "react/jsx-runtime"];
 
 #[derive(Debug)]
 pub struct ScanResult {
@@ -184,7 +179,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let name = concat_string!(legitimized_repr_name, "_exports");
     let namespace_object_ref = symbol_ref_db.create_facade_root_symbol_ref(&name);
 
-    let hmr_hot_ref = options.experimental.hmr.as_ref().map(|_| {
+    let hmr_hot_ref = options.experimental.dev_mode.as_ref().map(|_| {
       symbol_ref_db.create_facade_root_symbol_ref(&concat_string!(legitimized_repr_name, "_hot"))
     });
 
@@ -367,9 +362,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     }
 
-    if self.immutable_ctx.options.is_hmr_enabled() && exports_kind.is_commonjs() {
-      // https://github.com/rolldown/rolldown/issues/4129
-      // For cjs module with hmr enabled, bundler will generates code that references `module`.
+    // For cjs module with hmr enabled, bundler will generates code that references `module`.
+    // https://github.com/rolldown/rolldown/issues/4129
+    //
+    // Even if a cjs module doesn't export anything, the correct `module` reference in module scope
+    // still needs to be registered with the HMR runtime.
+    //
+    // Following cases need to be registered:
+    // - `ExportsKind::None` (no exports)
+    // - `ExportsKind::CommonJs` (commonjs module)
+    if self.immutable_ctx.options.is_dev_mode_enabled()
+      && matches!(exports_kind, ExportsKind::None | ExportsKind::CommonJs)
+    {
       self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
     }
 
@@ -455,7 +459,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         itoa::Buffer::new().format(self.current_stmt_idx.raw()),
         "#"
       ));
-    let mut rec = RawImportRecord::new(
+    let rec = RawImportRecord::new(
       CompactStr::from(module_request),
       kind,
       namespace_ref,
@@ -468,13 +472,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }),
     )
     .with_meta(init_meta);
-
-    // TODO: maybe we could make it configurable?
-    if matches!(rec.kind, ImportKind::Import)
-      && ENABLED_CJS_NAMESPACE_MERGING_MODULE_REQUEST.contains(&module_request)
-    {
-      rec.meta.insert(ImportRecordMeta::SafelyMergeCjsNs);
-    }
 
     let id = self.result.import_records.push(rec);
     self.current_stmt_info.import_records.push(id);
@@ -673,14 +670,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   fn visit_function_decl(&mut self, it: &ast::Function<'ast>, flags: oxc::semantic::ScopeFlags) {
-    self.current_stmt_info.meta.insert(StmtInfoMeta::FnDecl);
+    self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
     walk::walk_function(self, it, flags);
   }
 
   fn visit_class_decl(&mut self, it: &ast::Class<'ast>) {
     let previous_class_decl_id = self.cur_class_decl.take();
     self.cur_class_decl = self.get_class_id(it);
-    self.current_stmt_info.meta.insert(StmtInfoMeta::ClassDecl);
+    self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
     walk::walk_class(self, it);
     self.cur_class_decl = previous_class_decl_id;
   }

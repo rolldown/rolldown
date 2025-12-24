@@ -16,14 +16,20 @@ async fn process_check() {
         treeshake: TreeshakeOptions::Boolean(false),
         ..Default::default()
       },
-      vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-        values: std::iter::once(("process.env.NODE_ENV".to_string(), "\"production\"".to_string()))
+      vec![Arc::new(
+        ReplacePlugin::with_options(ReplaceOptions {
+          values: std::iter::once((
+            "process.env.NODE_ENV".to_string(),
+            "\"production\"".to_string(),
+          ))
           .collect(),
-        prevent_assignment: true,
-        sourcemap: true,
-        object_guards: true,
-        ..Default::default()
-      }))],
+          prevent_assignment: true,
+          sourcemap: true,
+          object_guards: true,
+          ..Default::default()
+        })
+        .unwrap(),
+      )],
     )
     .await;
 }

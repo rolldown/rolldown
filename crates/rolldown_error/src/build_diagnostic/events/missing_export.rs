@@ -9,6 +9,7 @@ use super::BuildEvent;
 pub struct MissingExport {
   pub importer: String,
   pub stable_importer: String,
+  pub importee: String,
   pub stable_importee: String,
   pub importer_source: ArcStr,
   pub imported_specifier: String,
@@ -23,6 +24,10 @@ impl BuildEvent for MissingExport {
 
   fn id(&self) -> Option<String> {
     Some(self.importer.clone())
+  }
+
+  fn exporter(&self) -> Option<String> {
+    Some(self.importee.clone())
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {

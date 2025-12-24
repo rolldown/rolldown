@@ -7,7 +7,7 @@ use napi_derive::napi;
 use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_watcher_event::BindingWatcherEvent;
 
-use crate::utils::create_bundler_from_binding_options::create_bundler_from_binding_options;
+use crate::utils::create_bundler_config_from_binding_options::create_bundler_config_from_binding_options;
 use crate::utils::handle_result;
 
 use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt};
@@ -41,23 +41,21 @@ impl BindingWatcher {
     options: Vec<BindingBundlerOptions>,
     notify_option: Option<BindingNotifyOption>,
   ) -> napi::Result<Self> {
-    let bundlers = options
+    // TODO(hyf0): support emit debug data for builtin watch
+    let bundler_configs = options
       .into_iter()
-      .map(|options| {
-        // TODO(hyf0): support emit debug data for builtin watch
-        create_bundler_from_binding_options(options)
-          .and_then(|inner| {
-            if inner.options.experimental.hmr.is_some() {
-              return Err(napi::Error::new(
-                napi::Status::GenericFailure,
-                "The \"experimental.hmr\" option is only supported with the \"dev\" API. It cannot be used with \"watch\". Please use the \"dev\" API for HMR functionality.",
-              ));
-            }
-            Ok(Arc::new(napi::tokio::sync::Mutex::new(inner)))})
-      })
+      .map(create_bundler_config_from_binding_options)
       .collect::<Result<Vec<_>, _>>()?;
 
-    Ok(Self { inner: rolldown::Watcher::new(bundlers, notify_option.map(Into::into))? })
+    let inner = rolldown::Watcher::with_configs(bundler_configs, notify_option.map(Into::into))
+      .map_err(|errs| {
+        napi::Error::new(
+          napi::Status::GenericFailure,
+          errs.iter().map(|e| e.to_diagnostic().to_string()).collect::<Vec<_>>().join("\n"),
+        )
+      })?;
+
+    Ok(Self { inner })
   }
 
   #[tracing::instrument(level = "debug", skip_all)]

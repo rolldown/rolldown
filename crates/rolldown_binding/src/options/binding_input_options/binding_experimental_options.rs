@@ -7,7 +7,7 @@ pub struct BindingExperimentalOptions {
   pub disable_live_bindings: Option<bool>,
   pub vite_mode: Option<bool>,
   pub resolve_new_url_to_asset: Option<bool>,
-  pub hmr: Option<BindingExperimentalHmrOptions>,
+  pub dev_mode: Option<BindingExperimentalDevModeOptions>,
   pub attach_debug_info: Option<BindingAttachDebugInfo>,
   pub chunk_modules_order: Option<BindingChunkModuleOrderBy>,
   pub chunk_import_map: Option<Either<bool, BindingChunkImportMap>>,
@@ -28,7 +28,7 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
       vite_mode: value.vite_mode,
       resolve_new_url_to_asset: value.resolve_new_url_to_asset,
       incremental_build: value.incremental_build,
-      hmr: value.hmr.map(Into::into),
+      dev_mode: value.dev_mode.map(Into::into),
       attach_debug_info: value.attach_debug_info.map(Into::into),
       chunk_modules_order: value.chunk_modules_order.map(Into::into),
       chunk_import_map: value.chunk_import_map.and_then(|v| match v {
@@ -51,7 +51,7 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
           }
         }
       } else {
-        None
+        Some(rolldown_common::SourcemapHires::Boundary)
       },
       native_magic_string: value.native_magic_string,
     })
@@ -60,15 +60,16 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
-pub struct BindingExperimentalHmrOptions {
+pub struct BindingExperimentalDevModeOptions {
   pub host: Option<String>,
   pub port: Option<u16>,
   pub implement: Option<String>,
+  pub lazy: Option<bool>,
 }
 
-impl From<BindingExperimentalHmrOptions> for rolldown_common::HmrOptions {
-  fn from(value: BindingExperimentalHmrOptions) -> Self {
-    Self { host: value.host, port: value.port, implement: value.implement }
+impl From<BindingExperimentalDevModeOptions> for rolldown_common::DevModeOptions {
+  fn from(value: BindingExperimentalDevModeOptions) -> Self {
+    Self { host: value.host, port: value.port, implement: value.implement, lazy: value.lazy }
   }
 }
 

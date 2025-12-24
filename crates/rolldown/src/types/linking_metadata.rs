@@ -1,3 +1,4 @@
+use crate::stages::link_stage::{ModuleInclusionVec, ModuleNamespaceReasonVec, StmtInclusionVec};
 use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_common::{
@@ -10,6 +11,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Module metadata about linking
 #[derive(Debug, Default)]
+#[expect(clippy::struct_excessive_bools)]
 pub struct LinkingMetadata {
   /// A module could be wrapped for some reasons, eg. cjs module need to be wrapped with commonjs runtime function.
   /// The `wrap_ref` is the binding identifier that store return value of executed the wrapper function.
@@ -80,6 +82,11 @@ pub struct LinkingMetadata {
   pub included_commonjs_export_symbol: FxHashSet<SymbolRef>,
   pub depended_runtime_helper: RuntimeHelper,
   pub module_namespace_included_reason: ModuleNamespaceIncludedReason,
+  /// Tracks which statements in this module are included after tree-shaking.
+  /// Each entry corresponds to a statement in the module's `stmt_infos`.
+  pub stmt_info_included: IndexVec<StmtInfoIdx, bool>,
+  /// Tracks whether the module is included after tree-shaking.
+  pub is_included: bool,
 }
 
 impl LinkingMetadata {
@@ -150,3 +157,41 @@ impl LinkingMetadata {
 }
 
 pub type LinkingMetadataVec = IndexVec<ModuleIdx, LinkingMetadata>;
+
+/// Extracts and takes ownership of inclusion information from all module metas.
+///
+/// # Warning
+/// This function uses `mem::take` to move the inclusion info out of each meta,
+/// leaving the original fields with their default values. After calling this function,
+/// `stmt_info_included`, `is_included`, and `module_namespace_included_reason` in each
+/// meta will be reset to their defaults.
+pub fn linking_metadata_vec_to_included_info(
+  metas: &mut LinkingMetadataVec,
+) -> (StmtInclusionVec, ModuleInclusionVec, ModuleNamespaceReasonVec) {
+  let stmt_info_included_vec: StmtInclusionVec =
+    metas.iter_mut().map(|meta| std::mem::take(&mut meta.stmt_info_included)).collect();
+
+  let module_included_vec: ModuleInclusionVec = metas.iter().map(|meta| meta.is_included).collect();
+
+  let module_namespace_reason_vec: ModuleNamespaceReasonVec =
+    metas.iter().map(|meta| meta.module_namespace_included_reason).collect();
+
+  (stmt_info_included_vec, module_included_vec, module_namespace_reason_vec)
+}
+
+/// Restores inclusion information back to the module metas.
+///
+/// This is the reverse operation of `linking_metadata_vec_to_included_info`.
+/// It should be called after modifications are done to restore the taken data.
+pub fn included_info_to_linking_metadata_vec(
+  metas: &mut LinkingMetadataVec,
+  mut stmt_info_included_vec: StmtInclusionVec,
+  module_included_vec: &ModuleInclusionVec,
+  module_namespace_reason_vec: &ModuleNamespaceReasonVec,
+) {
+  for (idx, meta) in metas.iter_mut_enumerated() {
+    meta.stmt_info_included = std::mem::take(&mut stmt_info_included_vec[idx]);
+    meta.is_included = module_included_vec[idx];
+    meta.module_namespace_included_reason = module_namespace_reason_vec[idx];
+  }
+}

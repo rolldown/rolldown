@@ -52,6 +52,11 @@
       "type": "boolean",
       "default": false
     },
+    "skipSyntaxValidation": {
+      "description": "If `true`, skip syntax validation of output chunks. Useful for tests that\nintentionally produce invalid output (e.g., testing invalid configuration warnings).",
+      "type": "boolean",
+      "default": false
+    },
     "writeToDisk": {
       "description": "If `true`, the bundle will be called with `write()` instead of `generate()`.",
       "type": "boolean",
@@ -271,6 +276,18 @@
           ]
         },
         "footer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "postBanner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "postFooter": {
           "type": [
             "string",
             "null"
@@ -942,10 +959,10 @@
             "null"
           ]
         },
-        "hmr": {
+        "devMode": {
           "anyOf": [
             {
-              "$ref": "#/$defs/HmrOptions"
+              "$ref": "#/$defs/DevModeOptions"
             },
             {
               "type": "null"
@@ -1007,7 +1024,7 @@
       },
       "additionalProperties": false
     },
-    "HmrOptions": {
+    "DevModeOptions": {
       "type": "object",
       "properties": {
         "host": {
@@ -1028,9 +1045,16 @@
           "maximum": 65535
         },
         "implement": {
-          "description": "Custom hmr runtime implementation.",
+          "description": "Custom dev mode runtime implementation.",
           "type": [
             "string",
+            "null"
+          ]
+        },
+        "lazy": {
+          "description": "Enable lazy compilation for dynamic imports.",
+          "type": [
+            "boolean",
             "null"
           ]
         }
@@ -1303,7 +1327,7 @@
             "null"
           ]
         },
-        "mixedExport": {
+        "mixedExports": {
           "type": [
             "boolean",
             "null"
@@ -1340,6 +1364,12 @@
           ]
         },
         "emptyImportMeta": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "cannotCallNamespace": {
           "type": [
             "boolean",
             "null"
@@ -1673,6 +1703,30 @@
         "minify": {
           "type": [
             "boolean",
+            "null"
+          ]
+        },
+        "banner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "footer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "intro": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "outro": {
+          "type": [
+            "string",
             "null"
           ]
         },

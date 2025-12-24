@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{any::Any, fmt::Debug};
 
 use arcstr::ArcStr;
 use oxc::span::Span;
@@ -16,6 +16,7 @@ pub mod ambiguous_external_namespace;
 pub mod ambiguous_reexport;
 pub mod assign_to_import;
 pub mod bundler_initialize_error;
+pub mod cannot_call_namespace;
 pub mod circular_dependency;
 pub mod circular_reexport;
 pub mod commonjs_variable_in_esm;
@@ -36,8 +37,7 @@ pub mod json_parse;
 pub mod missing_export;
 pub mod missing_global_name;
 pub mod missing_name_option_for_iife_export;
-pub mod missing_name_option_for_umd_export;
-pub mod mixed_export;
+pub mod mixed_exports;
 pub mod parse_error;
 pub mod plugin_error;
 pub mod plugin_timings;
@@ -48,7 +48,7 @@ pub mod unloadable_dependency;
 pub mod unresolved_entry;
 pub mod unsupported_feature;
 
-pub trait BuildEvent: Debug + Sync + Send {
+pub trait BuildEvent: Debug + Sync + Send + AsAnyMut {
   fn kind(&self) -> EventKind;
 
   fn message(&self, opts: &DiagnosticOptions) -> String;
@@ -65,6 +65,10 @@ pub trait BuildEvent: Debug + Sync + Send {
     None
   }
 
+  fn ids(&self) -> Option<Vec<String>> {
+    None
+  }
+
   #[cfg(feature = "napi")]
   fn as_napi_error(&self) -> Option<&napi::Error> {
     None
@@ -77,6 +81,16 @@ where
 {
   fn from(e: T) -> Self {
     Box::new(e)
+  }
+}
+
+pub trait AsAnyMut {
+  fn as_any_mut(&mut self) -> &mut dyn Any;
+}
+
+impl<T: 'static + BuildEvent> AsAnyMut for T {
+  fn as_any_mut(&mut self) -> &mut dyn Any {
+    self
   }
 }
 

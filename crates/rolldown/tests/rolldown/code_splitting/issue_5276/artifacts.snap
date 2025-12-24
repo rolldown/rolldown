@@ -1,0 +1,55 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## imp.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region imp1.js
+var imp1_exports = /* @__PURE__ */ __exportAll({ imp1: () => imp1 });
+const imp1 = 1;
+
+//#endregion
+//#region imp2.js
+var imp2_exports = /* @__PURE__ */ __exportAll({ imp2: () => imp2 });
+const imp2 = 2;
+
+//#endregion
+//#region imp3.js
+var imp3_exports = /* @__PURE__ */ __exportAll({
+	imp3: () => imp3,
+	imp33: () => imp33
+});
+const imp3 = 3;
+const imp33 = 33;
+
+//#endregion
+export { imp2_exports as a, imp2 as i, imp33 as n, imp1 as o, imp3_exports as r, imp1_exports as s, imp3 as t };
+```
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region main.js
+const load = async () => {
+	import("./imp.js").then((n) => n.s).then((m) => {
+		assert.strictEqual(m.imp1, 1);
+	});
+	import("./imp.js").then((n) => n.a).then((m) => {
+		assert.strictEqual(m.imp2, 2);
+	});
+	import("./imp.js").then((n) => n.r).then((m) => {
+		assert.deepEqual(m, {
+			imp3: 3,
+			imp33: 33
+		});
+	});
+};
+load();
+
+//#endregion
+```

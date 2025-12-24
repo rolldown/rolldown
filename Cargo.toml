@@ -96,6 +96,7 @@ rolldown_plugin_data_uri = { version = "0.1.0", path = "crates/rolldown_plugin_d
 rolldown_plugin_esm_external_require = { version = "0.1.0", path = "crates/rolldown_plugin_esm_external_require" }
 rolldown_plugin_hmr = { version = "0.1.0", path = "crates/rolldown_plugin_hmr" }
 rolldown_plugin_isolated_declaration = { version = "0.1.0", path = "crates/rolldown_plugin_isolated_declaration" }
+rolldown_plugin_lazy_compilation = { version = "0.1.0", path = "crates/rolldown_plugin_lazy_compilation" }
 rolldown_plugin_oxc_runtime = { version = "0.1.0", path = "crates/rolldown_plugin_oxc_runtime" }
 rolldown_plugin_replace = { version = "0.1.0", path = "crates/rolldown_plugin_replace" }
 rolldown_plugin_utils = { version = "0.1.0", path = "crates/rolldown_plugin_utils" }
@@ -150,7 +151,7 @@ dashmap = "6.1.0"
 derive_more = { version = "2.0.1", features = ["debug"] }
 dunce = "1.0.5" # Normalize Windows paths to the most compatible format, avoiding UNC where possible
 fast-glob = "1.0.0"
-flate2 = { version = "=1.1.2", features = ["zlib-rs"] }
+flate2 = { version = "=1.1.5", features = ["zlib-rs"] }
 form_urlencoded = "1.2.1"
 futures = "0.3.31"
 glob = "0.3.2"
@@ -179,8 +180,8 @@ phf = "0.13.0"
 rayon = "1.10.0"
 regex = "1.11.1"
 regress = "0.10.3"
-rolldown-notify = { version = "9.1.0", default-features = false, features = ["macos_kqueue"] }
-rolldown-notify-debouncer-full = { version = "0.7.1", default-features = false, features = ["macos_kqueue"] }
+rolldown-notify = "10.0.0"
+rolldown-notify-debouncer-full = "0.7.3"
 ropey = "1.6.1"
 rustc-hash = { version = "2.1.1" }
 schemars = "1.0.0"
@@ -218,13 +219,13 @@ napi-build = { version = "2.2.2" }
 napi-derive = { version = "3.0.0", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-oxc = { version = "0.102.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
-oxc_allocator = { version = "0.102.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.102.0" }
-oxc_minify_napi = { version = "0.102.0" }
-oxc_parser_napi = { version = "0.102.0" }
-oxc_transform_napi = { version = "0.102.0" }
-oxc_traverse = { version = "0.102.0" }
+oxc = { version = "0.103.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
+oxc_allocator = { version = "0.103.0", features = ["pool"] }
+oxc_ecmascript = { version = "0.103.0" }
+oxc_minify_napi = { version = "0.103.0" }
+oxc_parser_napi = { version = "0.103.0" }
+oxc_transform_napi = { version = "0.103.0" }
+oxc_traverse = { version = "0.103.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

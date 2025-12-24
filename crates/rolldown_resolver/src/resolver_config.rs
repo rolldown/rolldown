@@ -102,7 +102,7 @@ impl ResolverConfig {
         TsConfig::Manual(config_file) => {
           oxc_resolver::TsconfigDiscovery::Manual(oxc_resolver::TsconfigOptions {
             config_file: config_file.clone(),
-            references: oxc_resolver::TsconfigReferences::Disabled,
+            references: oxc_resolver::TsconfigReferences::Auto,
           })
         }
       }),

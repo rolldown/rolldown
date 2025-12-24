@@ -1,6 +1,6 @@
 // @ts-check
 import {
-  __export,
+  __exportAll,
   __reExport,
   __toCommonJS,
   __toDynamicImportESM,
@@ -103,7 +103,7 @@ export class DevRuntime {
   /** @internal */
   __toCommonJS = __toCommonJS;
   /** @internal */
-  __export = __export;
+  __exportAll = __exportAll;
   /** @internal */
   __toDynamicImportESM = __toDynamicImportESM;
   /** @internal */

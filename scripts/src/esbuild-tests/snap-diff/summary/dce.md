@@ -1,6 +1,4 @@
 # Failed Cases
-## [dce_of_decorators](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_decorators/diff.md)
-  decorators should not be removed
 ## [dce_of_iife](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_iife/diff.md)
   sub optimal: IIFEs are not unwrapped
 ## [dce_of_symbol_ctor_call](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_ctor_call/diff.md)
@@ -22,6 +20,7 @@
 ## [data_url_loader_remove_unused](../../../../../crates/rolldown/tests/esbuild/dce/data_url_loader_remove_unused)
 ## [dce_class_static_blocks](../../../../../crates/rolldown/tests/esbuild/dce/dce_class_static_blocks)
 ## [dce_class_static_blocks_minify_syntax](../../../../../crates/rolldown/tests/esbuild/dce/dce_class_static_blocks_minify_syntax)
+## [dce_of_decorators](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_decorators)
 ## [dce_of_destructuring](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_destructuring)
 ## [dce_of_experimental_decorators](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_experimental_decorators)
 ## [dce_of_expr_after_keep_names_issue3195](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195)

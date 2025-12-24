@@ -3690,6 +3690,10 @@ expression: output
 
 - main-!~{000}~.js => main-Bd3hPt1T.js
 
+# tests/rolldown/cjs_compat/issue_7634
+
+- main-!~{000}~.js => main-lczLaht1.js
+
 # tests/rolldown/cjs_compat/mix-cjs-esm
 
 - main-!~{000}~.js => main-BHieYZNg.js

@@ -743,7 +743,7 @@ impl BindImportsAndExportsContext<'_> {
 
     let resolved_exports = self.metas[module_id].resolved_exports.clone();
     if module.named_imports.is_empty() && !resolved_exports.is_empty() {
-      self.detect_ambiguous_reexport(module, &resolved_exports);
+      self.detect_ambiguous_reexport(module.as_ref(), &resolved_exports);
     }
   }
 
@@ -1002,10 +1002,10 @@ impl BindImportsAndExportsContext<'_> {
 
   fn detect_ambiguous_reexport(
     &mut self,
-    module: &Box<NormalModule>,
+    module: &NormalModule,
     resolved_export: &FxHashMap<CompactStr, ResolvedExport>,
   ) {
-    for (export_name, resolved) in resolved_export.iter() {
+    for (export_name, resolved) in resolved_export {
       if let Some(potentially_ambiguous_symbol_refs) = &resolved.potentially_ambiguous_symbol_refs {
         if !potentially_ambiguous_symbol_refs.is_empty() {
           let defined_symbols: FxHashSet<ModuleIdx> = std::iter::once(resolved.symbol_ref)
@@ -1016,7 +1016,7 @@ impl BindImportsAndExportsContext<'_> {
           if defined_symbols.len() > 1 {
             let mut exporter = Vec::with_capacity(potentially_ambiguous_symbol_refs.len() + 1);
             if let Some(module) = self.index_modules[resolved.symbol_ref.owner].as_normal() {
-              let named_export = &module.named_exports[export_name];
+              let named_export = module.named_exports[export_name];
               exporter.push(AmbiguousReexportModule {
                 source: module.source.clone(),
                 module_id: module.id.to_string(),
@@ -1027,13 +1027,13 @@ impl BindImportsAndExportsContext<'_> {
 
             for symbol in potentially_ambiguous_symbol_refs {
               if let Some(module) = self.index_modules[symbol.owner].as_normal() {
-                let named_export = &module.named_exports[export_name];
+                let named_export = module.named_exports[export_name];
                 exporter.push(AmbiguousReexportModule {
                   source: module.source.clone(),
                   module_id: module.id.to_string(),
                   stable_id: module.stable_id.clone(),
                   span_of_identifier: named_export.span,
-                })
+                });
               }
             }
 
@@ -1050,7 +1050,7 @@ impl BindImportsAndExportsContext<'_> {
                 exporter,
               )
               .with_severity_warning(),
-            )
+            );
           }
         }
       }

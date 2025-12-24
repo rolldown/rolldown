@@ -1,4 +1,49 @@
 
+## [1.0.0-beta.57] - 2025-12-24
+
+### 💥 BREAKING CHANGES
+
+- tsconfig: enable project references support in manual mode (#7545) by @shulaoda
+
+### 🚀 Features
+
+- add `CANNOT_CALL_NAMESPACE` warning (#7636) by @sapphi-red
+- add import path for unresolved import diagnostics (#7625) by @sapphi-red
+- optimize dynamic entry facade chunks by merging with common chunks when they are captured by common chunks (#7486) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- strip UTF-8 BOM when using text loader (#7635) by @sapphi-red
+- rolldown_plugin_replace: avoid crashing with invalid delimiters (#7621) by @sapphi-red
+
+### 🚜 Refactor
+
+- export all filter functions (#7622) by @sxzz
+- allow multiple help messages in diagnostics (#7624) by @sapphi-red
+
+### 📚 Documentation
+
+- add README.md to packages/rolldown (#7556) by @Copilot
+
+### ⚡ Performance
+
+- use fsevents on macOS for file watching (#7596) by @sapphi-red
+
+### 🧪 Testing
+
+- update integration to use vite's rolldown-canary branch (#7633) by @shulaoda
+
+### ⚙️ Miscellaneous Tasks
+
+- docs: fix Netlify ignore condition to detect docs changes across all PR commits (#7637) by @Copilot
+- deps: update rollup submodule for tests to v4.54.0 (#7630) by @sapphi-red
+- skip benchmarks for PRs with 'graphite: merge-when-ready' label (#7631) by @Boshen
+- deps: update esbuild for tests to 0.27.2 (#7629) by @sapphi-red
+- fix "update-test-dependencies" workflow (#7628) by @sapphi-red
+- deps: update test262 submodule for tests (#7626) by @sapphi-red
+- deps: update dependency oxlint to v1.35.0 (#7623) by @renovate[bot]
+
+
 ## [1.0.0-beta.56] - 2025-12-22
 
 ### 💥 BREAKING CHANGES

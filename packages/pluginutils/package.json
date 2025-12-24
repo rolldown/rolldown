@@ -3,6 +3,7 @@
   "version": "1.0.0-beta.57",
   "license": "MIT",
   "type": "module",
+  "homepage": "https://rolldown.rs/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rolldown/rolldown.git",

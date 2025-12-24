@@ -30,7 +30,7 @@ impl GenerateStage<'_> {
 
         // Add shebang first if it exists
         if has_shebang {
-          source_joiner.append_source(&content[..shebang_end]);
+          source_joiner.append_source(content[..shebang_end].trim_end()); // Trim to avoid extra newlines
         }
 
         // Then add post_banner

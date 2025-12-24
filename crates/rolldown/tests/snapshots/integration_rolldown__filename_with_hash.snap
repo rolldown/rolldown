@@ -4587,6 +4587,10 @@ expression: output
 
 - main-!~{000}~.js => main-Df6gnIcd.js
 
+# tests/rolldown/function/post_banner_shebang_no-extra-line
+
+- main-!~{000}~.js => main-BxSNAzuf.js
+
 # tests/rolldown/function/resolve/alias_to_node_builtin_module
 
 - main-!~{000}~.js => main-Df0_WxE-.js

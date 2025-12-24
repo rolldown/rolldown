@@ -37,12 +37,8 @@ pub struct ViteMetadata {
 }
 
 impl ViteMetadata {
-  pub fn get(&self, key: &ArcStr) -> Option<Arc<ChunkMetadata>> {
-    self.inner.get(key).map(|v| v.clone())
-  }
-
-  pub fn get_or_insert_default(&self, key: ArcStr) -> Arc<ChunkMetadata> {
-    self.inner.entry(key).or_insert_with(|| Arc::new(ChunkMetadata::default())).clone()
+  pub fn get(&self, key: ArcStr) -> Arc<ChunkMetadata> {
+    self.inner.entry(key).or_default().clone()
   }
 }
 
@@ -98,4 +94,8 @@ pub struct RemovedPureCSSFilesCache {
 #[derive(Debug, Default)]
 pub struct CSSUrlCache {
   pub inner: FxDashMap<String, String>,
+}
+
+pub struct CSSScopeToMap {
+  pub inner: FxHashMap<String, (String, Option<String>)>,
 }

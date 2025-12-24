@@ -5,6 +5,7 @@ export { freeExternalMemory, scan } from './api/experimental';
 export {
   type BindingClientHmrUpdate,
   BindingRebuildStrategy,
+  createTokioRuntime,
   isolatedDeclaration,
   type IsolatedDeclarationsOptions,
   type IsolatedDeclarationsResult,
@@ -24,6 +25,7 @@ export {
   type TransformResult,
   transformSync,
 } from './binding.cjs';
+
 export { defineParallelPlugin } from './plugin/parallel-plugin';
 export { parse, parseSync } from './utils/parse';
 // Builtin plugin factory
@@ -31,13 +33,11 @@ export {
   isolatedDeclarationPlugin,
   viteAssetImportMetaUrlPlugin,
   viteBuildImportAnalysisPlugin,
-  viteCSSPostPlugin,
   viteDynamicImportVarsPlugin,
   viteHtmlInlineProxyPlugin,
   viteImportGlobPlugin,
   viteJsonPlugin,
   viteLoadFallbackPlugin,
-  viteManifestPlugin,
   viteModulePreloadPolyfillPlugin,
   viteReactRefreshWrapperPlugin,
   viteReporterPlugin,
@@ -62,7 +62,44 @@ export { viteAliasPlugin } from './builtin-plugin/alias-plugin';
 export { viteAssetPlugin } from './builtin-plugin/asset-plugin';
 export { viteTransformPlugin } from './builtin-plugin/transform-plugin';
 export { viteCSSPlugin } from './builtin-plugin/vite-css-plugin';
+export { viteCSSPostPlugin } from './builtin-plugin/vite-css-post-plugin';
 export {
   viteHtmlPlugin,
   type ViteHtmlPluginOptions,
 } from './builtin-plugin/vite-html-plugin';
+export { viteManifestPlugin } from './builtin-plugin/vite-manifest-plugin';
+
+// `__volume` and `__fs` only exist in `rolldown-binding.wasi-browser.js`, so we need to use namespace import to prevent static import error.
+import * as binding from './binding.cjs';
+/**
+ * In-memory file system for browser builds.
+ *
+ * This is a re-export of the {@link https://github.com/streamich/memfs | memfs} package used by the WASI runtime.
+ * It allows you to read and write files to a virtual filesystem when using rolldown in browser environments.
+ *
+ * - `fs`: A Node.js-compatible filesystem API (`IFs` from memfs)
+ * - `volume`: The underlying `Volume` instance that stores the filesystem state
+ *
+ * Returns `undefined` in Node.js builds (only available in browser builds via `@rolldown/browser`).
+ *
+ * @example
+ * ```typescript
+ * import { memfs } from 'rolldown/experimental';
+ *
+ * // Write files to virtual filesystem before bundling
+ * memfs?.volume.fromJSON({
+ *   '/src/index.js': 'export const foo = 42;',
+ *   '/package.json': '{"name": "my-app"}'
+ * });
+ *
+ * // Read files from the virtual filesystem
+ * const content = memfs?.fs.readFileSync('/src/index.js', 'utf8');
+ * ```
+ *
+ * @see {@link https://github.com/streamich/memfs} for more information on the memfs API.
+ */
+export const memfs: { fs: any; volume: any } | undefined =
+  import.meta.browserBuild
+    // @ts-expect-error - __fs and __volume are only available in browser builds
+    ? { fs: binding.__fs, volume: binding.__volume }
+    : undefined;

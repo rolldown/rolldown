@@ -67,6 +67,7 @@ impl std::fmt::Debug for BindingBuiltinPlugin<'_> {
 impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
   type Error = napi::Error;
 
+  #[expect(clippy::too_many_lines)]
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
       BindingBuiltinPluginName::EsmExternalRequire => {
@@ -91,7 +92,7 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         } else {
           BindingReplacePluginConfig::default()
         };
-        Arc::new(ReplacePlugin::with_options(config.into()))
+        Arc::new(ReplacePlugin::with_options(config.into())?)
       }
       BindingBuiltinPluginName::ViteAlias => {
         let plugin = if let Some(options) = plugin.options {
@@ -143,10 +144,13 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         Arc::new(plugin)
       }
       BindingBuiltinPluginName::ViteCSSPost => {
-        let plugin = if let Some(options) = plugin.options {
+        let plugin: ViteCSSPostPlugin = if let Some(options) = plugin.options {
           BindingViteCSSPostPluginConfig::from_unknown(options)?.into()
         } else {
-          ViteCSSPostPlugin::default()
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteCSSPostPlugin",
+          ));
         };
         Arc::new(plugin)
       }

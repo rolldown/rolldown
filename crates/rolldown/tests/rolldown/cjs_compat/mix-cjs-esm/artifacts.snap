@@ -32,7 +32,7 @@ module.exports = 1;
 
 //#endregion
 //#region foo.js
-var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": (() => {}) });
+var require_foo = /* @__PURE__ */ __commonJSMin((() => {}));
 
 //#endregion
 //#region esm-export-cjs-require.js
@@ -40,15 +40,15 @@ require_foo();
 
 //#endregion
 //#region esm-import-cjs-export.js
-var require_esm_import_cjs_export = /* @__PURE__ */ __commonJS({ "esm-import-cjs-export.js": ((exports, module) => {
+var require_esm_import_cjs_export = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1;
-}) });
+}));
 
 //#endregion
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1;
-}) });
+}));
 
 //#endregion
 //#region esm-import-cjs-require.js
@@ -65,17 +65,17 @@ assert.equal(import_cjs.a, void 0);
 
 ```
 - ../esm-export-cjs-export.js
-(0:0) "module." --> (10:0) "module."
-(0:7) "exports = " --> (10:7) "exports = "
-(0:17) "1;\n" --> (10:17) "1;\n"
+(0:0) "module." --> (7:0) "module."
+(0:7) "exports = " --> (7:7) "exports = "
+(0:17) "1;\n" --> (7:17) "1;\n"
 - ../esm-import-cjs-export.js
-(1:0) "module." --> (23:0) "\tmodule."
-(1:7) "exports = " --> (23:8) "exports = "
-(1:17) "1" --> (23:18) "1;\n"
+(1:0) "module." --> (20:0) "\tmodule."
+(1:7) "exports = " --> (20:8) "exports = "
+(1:17) "1" --> (20:18) "1;\n"
 - ../cjs.js
-(0:0) "module." --> (29:0) "\tmodule."
-(0:7) "exports = " --> (29:8) "exports = "
-(0:17) "1;" --> (29:18) "1;\n"
+(0:0) "module." --> (26:0) "\tmodule."
+(0:7) "exports = " --> (26:8) "exports = "
+(0:17) "1;" --> (26:18) "1;\n"
 - ../esm-import-cjs-require.js
-(3:0) "assert.equal(a, undefined)\n" --> (37:0) "assert.equal(import_cjs.a, void 0);\n"
+(3:0) "assert.equal(a, undefined)\n" --> (34:0) "assert.equal(import_cjs.a, void 0);\n"
 ```

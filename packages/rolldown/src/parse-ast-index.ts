@@ -1,24 +1,31 @@
 import type { Program } from '@oxc-project/types';
 import type { ParseResult, ParserOptions } from './binding.cjs';
 import { locate } from './log/locate-character';
-import { error, logParseError } from './log/logs';
+import { augmentCodeLocation, error, logParseError } from './log/logs';
 import { getCodeFrame } from './utils/code-frame';
 import { parse, parseSync } from './utils/parse';
 
-function wrap(result: ParseResult, sourceText: string) {
+function wrap(
+  result: ParseResult,
+  filename: string | undefined,
+  sourceText: string,
+) {
   if (result.errors.length > 0) {
-    return normalizeParseError(sourceText, result.errors);
+    return normalizeParseError(filename, sourceText, result.errors);
   }
   return result.program;
 }
 
 function normalizeParseError(
+  filename: string | undefined,
   sourceText: string,
   errors: ParseResult['errors'],
 ) {
   let message = `Parse failed with ${errors.length} error${
     errors.length < 2 ? '' : 's'
   }:\n`;
+  // Get pos from the first error's first label if available
+  const pos = errors[0]?.labels?.[0]?.start;
   for (let i = 0; i < errors.length; i++) {
     if (i >= 5) {
       message += '\n...';
@@ -38,7 +45,11 @@ function normalizeParseError(
         .filter(Boolean)
         .join('\n');
   }
-  return error(logParseError(message));
+  const log = logParseError(message, filename, pos);
+  if (pos !== undefined && filename) {
+    augmentCodeLocation(log, pos, sourceText, filename);
+  }
+  return error(log);
 }
 
 const defaultParserOptions: ParserOptions = {
@@ -59,6 +70,7 @@ export function parseAst(
   });
   return wrap(
     ast,
+    filename,
     sourceText,
   );
 }
@@ -73,6 +85,7 @@ export async function parseAstAsync(
       ...defaultParserOptions,
       ...options,
     }),
+    filename,
     sourceText,
   );
 }

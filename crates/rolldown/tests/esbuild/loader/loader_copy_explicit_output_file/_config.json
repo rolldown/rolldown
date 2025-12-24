@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "project_TEST FAILED",
+        "import": "project/TEST FAILED.copy"
+      }
+    ],
+    "moduleTypes": {
+    }
+  },
+  "expectExecuted": false,
+  "expectError": true // TODO: Remove this line after supporting copy loader/module type.
+}

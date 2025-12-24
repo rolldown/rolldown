@@ -1,5 +1,5 @@
 use crate::{FsEventHandler, fs_event::FsEvent};
-use notify::RecursiveMode;
+use notify::{RecursiveMode, TargetMode, WatchMode};
 use rolldown_error::{BuildResult, ResultExt};
 use std::{path::Path, time::Instant};
 
@@ -20,7 +20,11 @@ impl<'me> NotifyPathsMutAdapter<'me> {
 
 impl crate::PathsMut for NotifyPathsMutAdapter<'_> {
   fn add(&mut self, path: &Path, recursive_mode: RecursiveMode) -> BuildResult<()> {
-    self.0.add(path, recursive_mode).map_err_to_unhandleable().map_err(Into::into)
+    self
+      .0
+      .add(path, WatchMode { recursive_mode, target_mode: TargetMode::TrackPath })
+      .map_err_to_unhandleable()
+      .map_err(Into::into)
   }
 
   fn remove(&mut self, path: &Path) -> BuildResult<()> {

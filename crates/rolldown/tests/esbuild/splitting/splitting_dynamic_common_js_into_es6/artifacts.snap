@@ -11,18 +11,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 import("./foo.js").then(__toDynamicImportESM()).then(({ default: { bar } }) => console.log(bar));
 
 //#endregion
-export { __commonJS as t };
+export { __commonJSMin as t };
 ```
 
 ## foo.js
 
 ```js
-import { t as __commonJS } from "./entry.js";
+import { t as __commonJSMin } from "./entry.js";
 
 //#region foo.js
-var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": ((exports) => {
+var require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.bar = 123;
-}) });
+}));
 
 //#endregion
 export default require_foo();

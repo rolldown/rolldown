@@ -18,6 +18,7 @@ workspace = true
 
 [dependencies]
 arcstr = { workspace = true }
+derive_more = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_plugin_utils = { workspace = true }

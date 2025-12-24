@@ -3,5 +3,7 @@
     "context": "1",
     "format": "cjs"
   },
-  "expectExecuted": false
+  "expectExecuted": false,
+  "skipSyntaxValidation": true,
+  "_comment": "Using invalid member expression object as context"
 }

@@ -8,6 +8,7 @@ use oxc::{
   semantic::{ScopeFlags, SymbolId},
   span::{GetSpan, Span},
 };
+use rolldown_common::StmtInfoIdx;
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
   MemberExprObjectReferencedType, OutputFormat, RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoMeta,
@@ -45,7 +46,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     self.visit_path.push(kind);
   }
 
-  fn leave_node(&mut self, _: oxc::ast::AstKind<'ast>) {
+  fn leave_node(&mut self, _it: oxc::ast::AstKind<'ast>) {
     self.visit_path.pop();
   }
 
@@ -80,8 +81,14 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       &program.scope_id,
     );
     // Custom visit
+
+    #[expect(
+      clippy::cast_possible_truncation,
+      reason = "We don't have a plan to support more than u32 statements in a single module"
+    )]
     for (idx, stmt) in program.body.iter().enumerate() {
-      self.current_stmt_idx = Some(idx.into());
+      // `0` is reserved for Module Namespace Object stmt info
+      self.current_stmt_idx = StmtInfoIdx::from_raw_unchecked(idx as u32 + 1);
       self.current_stmt_info.side_effect = SideEffectDetector::new(
         &self.result.symbol_ref_db.ast_scopes,
         self.immutable_ctx.flat_options,
@@ -206,14 +213,19 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     // If a `ImportExpression` is ignored by `/* @vite-ignore */` comment, we should not treat it as a dynamic import
     let should_ignore = self.is_import_expr_ignored_by_comment(expr);
     if !should_ignore && let Some(request) = expr.source.as_static_module_request() {
-      let import_rec_idx =
-        self.add_import_record(request.as_str(), ImportKind::DynamicImport, expr.source.span(), {
+      let import_rec_idx = self.add_import_record(
+        request.as_str(),
+        ImportKind::DynamicImport,
+        expr.source.span(),
+        {
           let mut meta = ImportRecordMeta::empty();
           meta.set(ImportRecordMeta::IsTopLevel, self.is_root_scope());
           meta.set(ImportRecordMeta::IsUnspannedImport, expr.source.span().is_empty());
           meta.set(ImportRecordMeta::InTryCatchBlock, self.in_side_try_catch_block());
           meta
-        });
+        },
+        Some(expr.unstable_address()),
+      );
       self.init_dynamic_import_binding_usage_info(import_rec_idx);
       self.result.imports.insert(expr.span, import_rec_idx);
     }
@@ -355,16 +367,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         if let (BindingPatternKind::BindingIdentifier(binding), Some(init)) =
           (&decl.id.kind, &decl.init)
         {
-          match init {
-            ast::Expression::ClassExpression(_) => {
-              self.current_stmt_info.meta.insert(StmtInfoMeta::ClassExpr);
-            }
-            ast::Expression::FunctionExpression(_func) => {
-              self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
-            }
-            _ => {}
-          }
-
           // Extract constant value for top-level variable declarations
           if self.is_root_symbol(binding.symbol_id()) {
             if let Some(value) = self.extract_constant_value_from_expr(Some(init)) {
@@ -407,13 +409,50 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       | Declaration::TSInterfaceDeclaration(_)
       | Declaration::TSEnumDeclaration(_)
       | Declaration::TSModuleDeclaration(_)
-      | Declaration::TSImportEqualsDeclaration(_) => unreachable!(),
+      | Declaration::TSImportEqualsDeclaration(_)
+      | Declaration::TSGlobalDeclaration(_) => unreachable!(),
     }
+  }
+
+  fn visit_expression(&mut self, it: &Expression<'ast>) {
+    if self.is_root_scope()
+      && matches!(
+        it,
+        Expression::ArrowFunctionExpression(_)
+          | Expression::FunctionExpression(_)
+          | Expression::ClassExpression(_)
+      )
+    {
+      self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
+    }
+    walk::walk_expression(self, it);
   }
 
   fn visit_call_expression(&mut self, it: &ast::CallExpression<'ast>) {
     self.try_extract_hmr_info_from_hot_accept_call(it);
+    self.check_namespace_call(&it.callee, it.span());
     walk::walk_call_expression(self, it);
+  }
+
+  fn visit_tagged_template_expression(&mut self, it: &ast::TaggedTemplateExpression<'ast>) {
+    self.check_namespace_call(&it.tag, it.span());
+    walk::walk_tagged_template_expression(self, it);
+  }
+
+  fn visit_export_default_declaration(&mut self, it: &ast::ExportDefaultDeclaration<'ast>) {
+    // Mark export default declarations with anonymous function/class expressions
+    // so that __name helper will be included in the runtime
+    use ast::ExportDefaultDeclarationKind;
+    match &it.declaration {
+      ExportDefaultDeclarationKind::FunctionDeclaration(func) if func.id.is_none() => {
+        self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
+      }
+      ExportDefaultDeclarationKind::ClassDeclaration(class) if class.id.is_none() => {
+        self.current_stmt_info.meta.insert(StmtInfoMeta::KeepNamesType);
+      }
+      _ => {}
+    }
+    walk::walk_export_default_declaration(self, it);
   }
 }
 
@@ -529,7 +568,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           self
             .result
             .stmt_infos
-            .reference_stmt_for_symbol_id(self.current_stmt_idx.unwrap() + 1, root_symbol_id);
+            .reference_stmt_for_symbol_id(self.current_stmt_idx, root_symbol_id);
         }
 
         self.check_import_assign(ident_ref, root_symbol_id.symbol);
@@ -627,7 +666,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
     let in_side_try_catch_block = self.in_side_try_catch_block();
     init_meta.set(ImportRecordMeta::InTryCatchBlock, in_side_try_catch_block);
-    let id = self.add_import_record(value.as_ref(), ImportKind::Require, span, init_meta);
+    let id = self.add_import_record(value.as_ref(), ImportKind::Require, span, init_meta, None);
     self.result.imports.insert(expr.span, id);
     true
   }

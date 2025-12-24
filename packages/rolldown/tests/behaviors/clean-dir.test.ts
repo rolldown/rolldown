@@ -45,6 +45,30 @@ test('clean outdir', async () => {
   rmSync(outdir, { recursive: true });
 });
 
+test('clean default outdir', async () => {
+  const defaultOutdir = join(root, 'dist');
+  if (existsSync(defaultOutdir)) rmSync(defaultOutdir, { recursive: true });
+
+  const bundler = await rolldown({ input, cwd: root });
+
+  // Without setting dir, use default 'dist'
+  await bundler.write({
+    entryFileNames: 'index1.js',
+    cleanDir: true,
+  });
+  expect(existsSync(join(defaultOutdir, 'index1.js'))).toBe(true);
+
+  await bundler.write({
+    entryFileNames: 'index2.js',
+    cleanDir: true,
+  });
+  // index1.js should be cleaned
+  expect(existsSync(join(defaultOutdir, 'index1.js'))).toBe(false);
+  expect(existsSync(join(defaultOutdir, 'index2.js'))).toBe(true);
+
+  rmSync(defaultOutdir, { recursive: true });
+});
+
 // When cleanDir is true, and there are file output in
 // the `generateBundle` hook, the file should not be cleaned.
 test('clean outdir hooks', async () => {

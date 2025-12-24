@@ -2,7 +2,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use napi::bindgen_prelude::FnArgs;
 use rolldown_common::{Output, OutputChunk};
-use rolldown_plugin_vite_html::{TransformIndexHtml, ViteHtmlPlugin};
+use rolldown_plugin_vite_html::{SetModuleSideEffects, TransformIndexHtml, ViteHtmlPlugin};
 use rolldown_utils::dashmap::FxDashMap;
 use sugar_path::SugarPath as _;
 
@@ -14,7 +14,7 @@ use crate::{
   types::{
     binding_output_chunk::BindingOutputChunk,
     binding_outputs::BindingOutputs,
-    js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _},
+    js_callback::{JsCallback, JsCallbackExt, MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _},
   },
 };
 
@@ -42,6 +42,8 @@ pub struct BindingViteHtmlPluginConfig {
     FnArgs<(String, String, String, String, Option<BindingOutputs>, Option<BindingOutputChunk>)>,
     String,
   >,
+  #[napi(ts_type = "(id: string) => void")]
+  pub set_module_side_effects: JsCallback<String, ()>,
 }
 
 impl From<BindingViteHtmlPluginConfig> for ViteHtmlPlugin {
@@ -76,6 +78,12 @@ impl From<BindingViteHtmlPluginConfig> for ViteHtmlPlugin {
       },
     );
 
+    let set_module_side_effects: Arc<SetModuleSideEffects> = Arc::new(move |id: &str| {
+      let id = id.to_string();
+      let cb = Arc::clone(&value.set_module_side_effects);
+      Box::pin(async move { cb.invoke_async(id).await.map_err(anyhow::Error::from) })
+    });
+
     Self {
       root: PathBuf::from(value.root).normalize(),
       is_lib: value.is_lib,
@@ -88,6 +96,7 @@ impl From<BindingViteHtmlPluginConfig> for ViteHtmlPlugin {
       asset_inline_limit: value.asset_inline_limit.into(),
       render_built_url: value.render_built_url.map(Into::into),
       transform_index_html,
+      set_module_side_effects,
       html_result_map: FxDashMap::default(),
     }
   }

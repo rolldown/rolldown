@@ -1,6 +1,19 @@
 {
   "config": {
-    "input": []
+    "input": [
+      {
+        "name": "app1/main",
+        "import": "app1/main.ts"
+      },
+      {
+        "name": "app2/main",
+        "import": "app2/main.ts"
+      },
+      {
+        "name": "customPath",
+        "import": "app3/main.ts"
+      }
+    ]
   },
   "expectExecuted": false
 }

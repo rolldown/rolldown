@@ -1,4 +1,461 @@
 
+## [1.0.0-beta.56] - 2025-12-22
+
+### 💥 BREAKING CHANGES
+
+- rename `MIXED_EXPORT` error to `MIXED_EXPORTS` (#7565) by @sapphi-red
+
+### 🚀 Features
+
+- rename `id` property to `exporter` in CIRCULAR_REEXPORT error (#7592) by @sapphi-red
+- add `ids` property to `CIRCULAR_DEPENDENCY` error (#7591) by @sapphi-red
+- node/dev: expose `devMode.lazy` (#7549) by @hyf0
+- set log and pos properties for `parseAst` function errors (#7568) by @sapphi-red
+- set log and pos properties for logs (#7567) by @sapphi-red
+- test-dev-sever: support to manually configure port, run tests in concurrent (#7576) by @hyf0
+- add `exporter` property to `MISSING_EXPORT` error (#7564) by @sapphi-red
+- add `id` property to `PARSE_ERROR` error (#7563) by @sapphi-red
+- support ImporterId hook filter (#7540) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- types: better "go to definition" experience for interface `OutputPlugin` (#7610) by @KazariEX
+- `postBanner` content should be placed after shebang (#7583) by @btea
+- use sanitized filename for preserve modules chunk name (#7603) by @IWANABETHATGUY
+- correct filter out unused cjs namespace  (#7602) by @IWANABETHATGUY
+- watch: property respect `notify.pollInternal` and `notify.compareContents` (#7595) by @sapphi-red
+- make `cleanDir` work with default output directory (#7579) by @shulaoda
+- merge `MISSING_NAME_OPTION_FOR_UMD_EXPORT` error to `MISSING_NAME_OPTION_FOR_IIFE_EXPORT` error (#7566) by @sapphi-red
+- dev/hmr: ensure cjs modules with no exports reference correct `module` identifier (#7544) by @leegeunhyeok
+
+### 🚜 Refactor
+
+- remove `stable_id` field from `PARSE_ERROR` error (#7593) by @sapphi-red
+- make include_runtime_symbol reuseable after linking stage (#7580) by @IWANABETHATGUY
+- rust/dev: construct the bundler within itself (#7553) by @hyf0
+- rust/watcher: polish API of `Watcher` struct (#7551) by @hyf0
+- use `LinkingMetadata::stmt_info_included` to check if a stmt_info is included (#7572) by @IWANABETHATGUY
+- use `LinkingMetadata::is_included` to check if a module is included (#7571) by @IWANABETHATGUY
+- store module and stmt_info is included info to module meta (#7570) by @IWANABETHATGUY
+- make include_* method reunsable after linking stage (#7552) by @IWANABETHATGUY
+- rust/watcher: construct the bundler within watcher itself (#7550) by @hyf0
+- extract make include_runtime_symbol reusable (#7546) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- renovate: add `kill-port` in `ignoreDeps` in renovate.json (#7619) by @sapphi-red
+- deps: update rust crates (#7617) by @renovate[bot]
+- deps: update npm packages (#7616) by @renovate[bot]
+- deps: update github-actions (#7615) by @renovate[bot]
+- ci: skip benchmark workflows on draft PRs (#7611) by @Copilot
+- deps: update dependency rolldown-plugin-dts to ^0.19.0 (#7607) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.10.0 (#7601) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.18.4 (#7599) by @renovate[bot]
+- deps: update notify (#7594) by @sapphi-red
+- test-dev-server: add retry mechanism to hmr-full-bundle-mode tests (#7588) by @Copilot
+- deps: update napi to v3.7.1 (#7590) by @renovate[bot]
+- add JSDoc documentation for memfs type (#7587) by @Copilot
+- deps: update dependency oxlint to v1.34.0 (#7589) by @renovate[bot]
+- move some tests in ignored-by-unsupported-features that are passing (#7569) by @sapphi-red
+- deps: update dependency oxlint-tsgolint to v0.9.2 (#7582) by @renovate[bot]
+- deps: update oxc resolver to v11.16.0 (#7574) by @renovate[bot]
+- test/dev-server: don't run `pnpm install` during tests (#7560) by @hyf0
+- test/dev-server: use `kill-port@1` to improve performance (#7575) by @hyf0
+- normalize error object to make some Rollup tests pass (#7562) by @sapphi-red
+- ci: separate dev-server(hmr) tests and normal tests (#7558) by @hyf0
+- ci: make native rolldown build reusable (#7557) by @hyf0
+- resolve some TODOs (#7561) by @sapphi-red
+
+### ❤️ New Contributors
+
+* @KazariEX made their first contribution in [#7610](https://github.com/rolldown/rolldown/pull/7610)
+* @leegeunhyeok made their first contribution in [#7544](https://github.com/rolldown/rolldown/pull/7544)
+
+
+## [1.0.0-beta.55] - 2025-12-17
+
+### 🚀 Features
+
+- add validation errors for incompatible `inlineDynamicImports` options (#7539) by @Copilot
+- rolldown_plugin_vite_reporter: truncate long importer lists in ineffective dynamic import warnings (#7528) by @Copilot
+- export `memfs` from `rolldown/experimental` for browser builds (#7490) by @Copilot
+- implement `postBanner` and `postFooter` (#7487) by @sevenc-nanashi
+- port getLogFilter helper from Rollup for advanced log filtering (#6890) by @taearls
+- dev: initialize `rolldown_plugin_lazy_compilation` (#7488) by @hyf0
+- enable `experimental.transform_hires_sourcemap: 'boundary'` by default (#7478) by @sapphi-red
+- apply merge CJS namespace optimizations more generally (#7475) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- avoid panic on invalid values for `output.exports`, `output.format`, `output.hash_characters` (#7542) by @sapphi-red
+- handle `__proto__` export for module namespace correctly (#7534) by @sapphi-red
+- handle `__proto__` export correctly (#7533) by @sapphi-red
+- rolldown_plugin_vite_resolve: acquire resolver lock before package json resolution (#7524) by @sapphi-red
+- disable syntax transform optimization for `minify: 'dce-only'` (#7520) by @sapphi-red
+- arrow function expression keep names (#7519) by @IWANABETHATGUY
+- skip symbols that are imported from other module when deconflicting module symbols (#7510) by @IWANABETHATGUY
+- preserve class names in assignment expressions with keepNames option (#7491) by @IWANABETHATGUY
+- accessor with decorators should be kept (#7499) by @Copilot
+- rolldown_plugin_vite_reporter: support `Infinity` for chunk_limit (#7497) by @shulaoda
+- change filename template validation errors from UNHANDLEABLE_ERROR to INVALID_OPTION (#7472) by @Copilot
+- `no entry found for key` error when merging CJS namespace exports (#7474) by @sapphi-red
+- generate output with syntax error when wrapped esm module using tla syntax (#7468) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- dev: rename `experimental.hmr` to `experimental.devMode` (#7527) by @hyf0
+- pass addon option to rust as it is (#7526) by @hyf0
+- remove unused stmtinfo meta flag (#7518) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- clarify `closeBundle` behavior (#7525) by @sapphi-red
+
+### 🧪 Testing
+
+- add tests for static string postBanner and postFooter (#7516) by @Copilot
+- disable pluginTimings in Rust integration tests to avoid snapshot noise (#7485) by @shulaoda
+- port Rollup JSX tests to `crates/rolldown/tests/rollup` (#7480) by @sapphi-red
+- re-triage some esbuild JSX preserve tests (#7479) by @sapphi-red
+- disable pluginTimings by default to avoid snapshot noise (#7471) by @shulaoda
+
+### ⚙️ Miscellaneous Tasks
+
+- mark feature that will not be supported as ignored in rollup test status (#7535) by @sapphi-red
+- support `banner`/`footer`/`intro`/`outro` for config variants (#7532) by @sapphi-red
+- `dce/dce_of_decorators` esbuild test is now passing (#7531) by @sapphi-red
+- deps: update github-actions (major) (#7495) by @renovate[bot]
+- deps: update npm packages (#7493) by @renovate[bot]
+- add a check to verify failedReasons are updated (#7521) by @sapphi-red
+- deps: update test262 submodule for tests (#7523) by @sapphi-red
+- deps: update taiki-e/install-action action to v2.63.2 (#7496) by @renovate[bot]
+- deps: update oxc apps (#7511) by @renovate[bot]
+- deps: update oxc to v0.103.0 (#7513) by @camc314
+- fix format in `.github/instructions/bug-investigation.instructions.md` (#7506) by @sapphi-red
+- add instructions for REPL decoding (#7502) by @sapphi-red
+- deps: update github-actions (#7492) by @renovate[bot]
+- deps: cargo-shear v1.9.0 (#7483) by @Boshen
+- deps: update dependency oxlint-tsgolint to v0.9.0 (#7484) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.8.6 (#7470) by @renovate[bot]
+- add syntax validation for test output chunks that are not executed (#7466) by @IWANABETHATGUY
+- deps: update dependency rust to v1.92.0 (#7467) by @renovate[bot]
+- deps: update test262 submodule for tests (#7457) by @sapphi-red
+
+### ❤️ New Contributors
+
+* @sevenc-nanashi made their first contribution in [#7487](https://github.com/rolldown/rolldown/pull/7487)
+* @taearls made their first contribution in [#6890](https://github.com/rolldown/rolldown/pull/6890)
+
+
+## [1.0.0-beta.54] - 2025-12-11
+
+### 🚀 Features
+
+- rolldown_plugin_vite_reporter: add newline after build summary for better log separation (#7458) by @shulaoda
+- plugin: collect plugin hook execution timings (#7364) by @shulaoda
+- test-dev-server: reload page when detecting hmr reload message (#7422) by @hyf0
+- rolldown_plugin_vite_dynamic_import_vars: add transform-based v2 implementation (#7400) by @shulaoda
+- rolldown_plugin_vite_import_glob: add transform-based v2 implementation (#7394) by @shulaoda
+- rolldown_plugin_vite_wasm_helper: add v2 implementation (#7402) by @shulaoda
+- expose error location and context fields on JS API error objects (#7341) by @Copilot
+- add `CIRCULAR_REEXPORT` error (#7337) by @Copilot
+- support emit prebuilt chunk (#7277) by @Copilot
+
+### 🐛 Bug Fixes
+
+- preserve object key order when parse json with serde_json (#7443) by @IWANABETHATGUY
+- improve JSON parsing with serde_json to emit proper diagnostic (#7442) by @IWANABETHATGUY
+- deconflict external symbols in CJS modules (#7447) by @IWANABETHATGUY
+- rolldown_plugin_vite_transform,rolldown_plugin_vite_resolve: enable `yarnPnp` option when pnp is detected (#5791) by @sapphi-red
+- skip deconflicting top-level symbols for CJS modules (#7425) by @IWANABETHATGUY
+- rolldown_plugin_esm_external_require: run resolveId hook before other plugins (#7426) by @shulaoda
+- avoid duplicate underscores in legitimized identifiers (#7418) by @IWANABETHATGUY
+- use `process.on('exit')` instead of `signal-exit` on webcontainers (#7421) by @sapphi-red
+- dev: remove `imports` when an import is removed (#7348) by @sapphi-red
+- bench: access latency.mean instead of mean in tinybench result (#7417) by @shulaoda
+- path compression in symbol linking (#7392) by @IWANABETHATGUY
+- rolldown_plugin_vite_resolve: add RwLock to avoid clearing cache while resolving (#7386) by @sapphi-red
+- handle JSON prototype properties correctly (#7383) by @IWANABETHATGUY
+- preserve entry signature strict chunk merging (#7343) by @IWANABETHATGUY
+- support eliminating multiple unused dynamic imports in a single statement (#7361) by @IWANABETHATGUY
+- eliminate unreachable dynamic entry (#7356) by @IWANABETHATGUY
+- `NormalizedInputOptions#cwd` should always exists (#7360) by @hyf0
+- cli: support multiple comma-separated define arguments (#7340) by @Copilot
+- remove redundant symbol param in __reExport runtime helper (#7346) by @IWANABETHATGUY
+- always use __export for empty namespace objects when symbols enabled (#7345) by @IWANABETHATGUY
+- relax the restriction of preserveEntrySignatures when merging chunks (#7339) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- builtin-plugin: make config parameter required for vite plugins (#7451) by @shulaoda
+- move esbuild test related scripts to `scripts/src/esbuild-tests` (#7377) by @sapphi-red
+- rewrite gen-esbuild-test in TypeScript (#7376) by @sapphi-red
+- remove unnecessary Option in current_stmt_idx (#7359) by @IWANABETHATGUY
+- move more code into chunk optimizer (#7335) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- checks: clarify pluginTimings measures CPU time due to concurrent execution (#7448) by @shulaoda
+- checks: add accuracy note to pluginTimings documentation (#7441) by @shulaoda
+- development-guide: add esbuild test description (#7439) by @sapphi-red
+- checks: expand `pluginTimings` documentation with detection mechanism (#7428) by @shulaoda
+- add checks options documentation (#7427) by @shulaoda
+- development-guide: add test262 integration test description (#7430) by @sapphi-red
+- guide: fix grammer in getting-started (#7331) by @jakeparis
+
+### 🧪 Testing
+
+- rollup-tests: make `--grep` work and document it (#7431) by @sapphi-red
+- add a way to run some test262 test cases by name (#7429) by @sapphi-red
+- rolldown_plugin_vite_dynamic_import_vars: add test cases for v2 implementation (#7401) by @shulaoda
+- rolldown_plugin_vite_import_glob: add test cases for v2 implementation (#7395) by @shulaoda
+- triage new esbuild tests (#7405) by @sapphi-red
+- hmr: delete file used (#5933) by @sapphi-red
+- watch: add `watchChange` hook `create` / `delete` tests (#7349) by @sapphi-red
+- hmr: delete file not used anymore (#5932) by @sapphi-red
+- triage esbuild failed reasons (#7391) by @sapphi-red
+- change esbuild tests stats and diff generation (#7379) by @sapphi-red
+- dev: add `continuous generate hmr patch` and `debounce bundle` tests (#7368) by @hyf0
+- add new esbuild tests (#7353) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- setup Node before updating snapshots for test262 update (#7435) by @sapphi-red
+- run tests when submodules are updated (#7455) by @sapphi-red
+- exclude NUL path pattern to prevent crash on Windows (#7450) by @IWANABETHATGUY
+- run cargo-test for esbuild script changes and update esbuild snapshot (#7440) by @sapphi-red
+- jsx_import_meta tests to `ignoreReasons` due to architectural limitation (#7434) by @Copilot
+- deps: update dependency oxlint-tsgolint to v0.8.5 (#7433) by @renovate[bot]
+- update test dependencies automatically (#7432) by @sapphi-red
+- remove unused code (#7420) by @IWANABETHATGUY
+- add back `just update-esbuild-diff` and add it to CI (#7404) by @sapphi-red
+- deps: update oxc-resolver to 11.15.0 (#7415) by @shulaoda
+- deps: update rust crate napi to v3.7.0 (#7393) by @renovate[bot]
+- fix esbuild compatibility metrics calculation (#7390) by @sapphi-red
+- support `tsconfig: true` in rust tests (#7389) by @sapphi-red
+- hide oxc runtime in snapshots (#7388) by @sapphi-red
+- deps: update oxc to v0.102.0 (#7385) by @camc314
+- improve esbuild tests to download snapshots automatically (#7378) by @sapphi-red
+- deps: update dependency tinybench to v6 (#7371) by @renovate[bot]
+- deps: update actions/checkout action to v6 (#7370) by @renovate[bot]
+- deps: update rust crates (#7367) by @renovate[bot]
+- deps: update dependency oxlint to v1.32.0 (#7374) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.8.4 (#7373) by @renovate[bot]
+- node/test-dev-server: support using custom html file (#7357) by @hyf0
+- test: setup browser-based e2e test for `test-dev-server` (#7351) by @hyf0
+- pin pnpm to version 10.23.0 (#7369) by @IWANABETHATGUY
+- deps: update dependency rolldown-plugin-dts to v0.18.3 (#7372) by @renovate[bot]
+- deps: update github-actions (#7365) by @renovate[bot]
+- deps: update npm packages (#7366) by @renovate[bot]
+- polish the comments about `SymbolRefFlags` (#7358) by @IWANABETHATGUY
+- deps: update dependency rolldown-plugin-dts to v0.18.2 (#7355) by @renovate[bot]
+- fix esbuild test generation script (#7352) by @sapphi-red
+- apply cargo shear suggestion (#7347) by @IWANABETHATGUY
+- deps: update oxc to v11.15.0 (#7344) by @renovate[bot]
+- deps: update dependency @napi-rs/cli to v3.5.0 (#7338) by @renovate[bot]
+- deps: update dependency oxlint to v1.31.0 (#7305) by @renovate[bot]
+- update rollup-tests results (#7333) by @sapphi-red
+- update rollup-tests Rollup version (#7332) by @sapphi-red
+- add ignore config for test262 submodule (#7326) by @Copilot
+
+### ❤️ New Contributors
+
+* @jakeparis made their first contribution in [#7331](https://github.com/rolldown/rolldown/pull/7331)
+
+
+## [1.0.0-beta.53] - 2025-12-03
+
+### 💥 BREAKING CHANGES
+
+- drop `i686-pc-windows-msvc` target support (#7230) by @sapphi-red
+
+### 🚀 Features
+
+- rolldown_plugin_vite_manifest: pass normalized options to `isLegacy` callback (#7321) by @shulaoda
+- plugin/vite-resolve: add `disableCache` option (#6763) by @sapphi-red
+- rolldown: export `createTokioRuntime` for tsdown (#7264) by @shulaoda
+- rolldown_plugin_vite_html: sync `moduleSideEffects` for already loaded modules (#7254) by @shulaoda
+- rolldown_plugin_vite_html: load module scripts with side effects to prevent tree-shaking (#7244) by @shulaoda
+- rolldown_plugin_vite_css_post: implement `cssScopeTo` for scoped CSS tree-shaking (#7240) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- export default class decl __name runtime insertion (#7316) by @IWANABETHATGUY
+- chunk side effects calculation (#7273) by @IWANABETHATGUY
+- node: `output.generateCode.preset: 'es2015'` should set `output.generateCode.symbols: true` by default (#7314) by @sapphi-red
+- skip name helper for classes with static name property (#7312) by @IWANABETHATGUY
+- preserve chunk imports relationship after chunk merging (#7303) by @shulaoda
+- dev: make `register_modules` async (#7289) by @hyf0
+- preserve computed property in object destructuring (#7288) by @IWANABETHATGUY
+- support dynamic imports with shared dependencies (#7261) by @IWANABETHATGUY
+- call `defer_sync_scan_data` in non-incremental build mode (#7255) by @shulaoda
+- optimize chunk merging for shared entry points (#7194) by @IWANABETHATGUY
+- add indentation for UMD format output (#7263) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: pass options to `isLegacy` callback for proper legacy detection (#7260) by @shulaoda
+- rolldown_plugin_vite_css_post: also detect `?inline=true` query for inlined CSS (#7245) by @shulaoda
+- rolldown_plugin_vite_css_post: distinguish empty CSS from no CSS (#7241) by @shulaoda
+- add Windows support for t-run command (#7242) by @IWANABETHATGUY
+- cjs: prevent duplicate require declarations for external modules with preserveModules (#7234) by @logaretm
+- rolldown_plugin_vite_resolve: resolve from root for virtual modules (#7236) by @sapphi-red
+- include entry level external modules in chunk exports (#7218) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- dev: make `removeClient` async (#7313) by @hyf0
+- move chunk merging code out of code_splitting.rs (#7285) by @IWANABETHATGUY
+- extract common function util for chunk merging (#7271) by @IWANABETHATGUY
+- use iterative method to merge chunks (#7256) by @IWANABETHATGUY
+- use concat_string! instead of string replace for generating chunk level exports (#7247) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- add warning to experimental.resolveNewUrlToAsset about JS/TS files (#7300) by @Copilot
+- add sequential hook execution difference in plugin-api.md (#7308) by @Copilot
+- add migration example from onwarn to onLog (#7299) by @Copilot
+- add migration example for manualChunks to advancedChunks (#7298) by @Copilot
+- deps: bump vitepress to fix build (#7307) by @sapphi-red
+- examples & text for experimental.resolveNewUrlToAsset (#7259) by @TheAlexLichter
+
+### ⚡ Performance
+
+- rolldown_plugin_vite_css_post: lazily load `cssScopeTo` from JS module options (#7253) by @shulaoda
+- rolldown_plugin_vite_css_post: avoid unnecessary string clones in `resolve_asset_urls_in_css` (#7250) by @shulaoda
+
+### 🧪 Testing
+
+- generate relative path like name in advanced chunks (#7267) by @IWANABETHATGUY
+- add test case for preserveEntrySignatures with re-exports (#7279) by @IWANABETHATGUY
+- add test262 integration tests (#7196) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update dependency rolldown-plugin-dts to v0.18.1 (#7304) by @renovate[bot]
+- enable tracing feature for napi (#7322) by @sapphi-red
+- deps: update napi (#7320) by @renovate[bot]
+- deps: update oxc (#7318) by @renovate[bot]
+- deps: update napi (#7317) by @renovate[bot]
+- deps: update oxc to v0.100.0 (#7301) by @renovate[bot]
+- deps: downgrade pnpm to 10.23.0 to fix Netlify build (#7306) by @shulaoda
+- add `trustPolicyExclude` for chokidar and semver (#7302) by @sapphi-red
+- update pnpm lockfile (#7291) by @IWANABETHATGUY
+- deps: update npm packages (#7272) by @renovate[bot]
+- deps: update rust crates (#7270) by @renovate[bot]
+- deps: update oxc (#7262) by @renovate[bot]
+- deps: update github-actions (#7269) by @renovate[bot]
+- deps: update dependency dprint-typescript to v0.95.13 (#7268) by @renovate[bot]
+- deps: update `html5gum` to 0.8.1 (#7265) by @shulaoda
+- rolldown: remove unused `getModuleOptions` from `PluginContext` (#7266) by @shulaoda
+- remove unnecessary justfile ignore (#7243) by @IWANABETHATGUY
+- deps: update oxc apps (#7238) by @renovate[bot]
+- add `nul` to workaround https://github.com/anthropics/claude-c… (#7237) by @IWANABETHATGUY
+- deps: update dependency valibot to v1.2.0 [security] (#7231) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.40.0 (#7232) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @logaretm made their first contribution in [#7234](https://github.com/rolldown/rolldown/pull/7234)
+
+
+## [1.0.0-beta.52] - 2025-11-26
+
+### 💥 BREAKING CHANGES
+
+- change `output.generatedCode.profilerNames` default to false (#7139) by @Copilot
+
+### 🚀 Features
+
+- support vite-style tsconfig resolution (#6873) by @shulaoda
+- rolldown: oxc v0.99.0  (#7165) by @camc314
+- browser: export `plugins` (#7210) by @sxzz
+- rolldown_plugin_vite_css_post: add `inline` parameter to `cssMinify` callback (#7191) by @shulaoda
+- rolldown_plugin_vite_build_import_analysis: implement `render_chunk` to replace `__VITE_IS_MODERN__` flag (#7178) by @shulaoda
+- rolldown_plugin_utils: optimize SVG data URL encoding (#7156) by @shulaoda
+- dev: replace `DevEngine::hasLatestBuildOutput` with `DevEngine::getBundleState` (#7145) by @sapphi-red
+- rolldown_plugin_vite_asset_import_meta_url: support `@vite-ignore` comment (#7141) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: implement static URL processing (#7140) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: align `asset_resolver` logic (#7137) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: align `try_fs_resolve` logic (#7136) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: validate relative paths (#7120) by @shulaoda
+- export `viteAssetImportMetaUrlPlugin` and add dynamic URL tests (#7119) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- watch overwrite rename event on linux (#7201) by @sapphi-red
+- preserve name for parenthesized anonymous default exports and arrow functions with keepNames (#7159) by @Copilot
+- rolldown_plugin_vite_html: add missing async attribute for inlined entry scripts (#7202) by @shulaoda
+- respect target setting in DCE to prevent modern syntax generation (#7128) by @Copilot
+- rolldown_plugin_vite_html: add semicolon to import statement in CSS removal (#7200) by @shulaoda
+- rolldown_plugin_vite_html: use correct CSS asset filename in HTML injection (#7199) by @shulaoda
+- rolldown_plugin_vite_css_post: handle scoped package names in lib CSS filename (#7198) by @shulaoda
+- rolldown_plugin_vite_html: use patched `html5gum` with correct span tracking (#7193) by @shulaoda
+- rolldown_plugin_vite_html: handle HTML strings in script tags correctly (#7192) by @shulaoda
+- handle JSON import namespace property access correctly (#7190) by @IWANABETHATGUY
+- only include runtime helpers from included modules (#7183) by @IWANABETHATGUY
+- rolldown_plugin_vite_html: normalize paths to use forward slashes in `original_file_name` (#7175) by @shulaoda
+- rolldown_plugin_vite_css_post: use `filename` instead of `reference_id` for imported assets (#7174) by @shulaoda
+- rolldown_plugin_vite_css_post: correct regex escaping in pure CSS chunk pruning (#7173) by @shulaoda
+- rolldown_plugin_vite_html: use correct dependency path for modulepreload links (#7172) by @shulaoda
+- update cur_stmt_index when processing top level statements (#7157) by @IWANABETHATGUY
+- rolldown_plugin_utils: strip leading character from public asset URL (#7170) by @shulaoda
+- rolldown_plugin_vite_html: use correct `public_base` for `html_result_map` key (#7169) by @shulaoda
+- rolldown_plugin_utils: correct runtime handling and escape single quotes in asset paths (#7168) by @shulaoda
+- rolldown_plugin_utils: prevent data race in `file_to_url` cache (#7166) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: correct glob pattern and query string handling in dynamic URLs (#7162) by @shulaoda
+- rolldown_plugin_vite_css_post: use correct start position in magic string updates (#7158) by @shulaoda
+- data race in `FileEmitter::emit_file` causing duplicate asset emissions (#7164) by @shulaoda
+- dev: watch files even if the build failed (#7149) by @sapphi-red
+- rolldown_plugin_utils: always use base64 encoding for data URLs (#7148) by @shulaoda
+- preserve "default" name for anonymous default exports with keepNames (#7151) by @Copilot
+- correctly handle cjs json module as entry point (#7147) by @IWANABETHATGUY
+- rolldown_plugin_utils: correct `reference_id` parsing in `render_asset_url_in_js` (#7143) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: exclude quotes from URL span (#7142) by @shulaoda
+- rolldown_plugin_vite_asset_import_meta_url: use template literal for glob result indexing (#7134) by @shulaoda
+- tree shake unused dynamic entry when `inlineDynamicImports` is enabled (#7129) by @IWANABETHATGUY
+- correct return value of `parse` / `parseSync` functions (#7127) by @sapphi-red
+
+### 🚜 Refactor
+
+- rolldown_plugin_vite_transform: use `oxc_resolver` for tsconfig discovery (#7220) by @shulaoda
+- rolldown_plugin_vite_resolve: use `resolve_file` for tsconfig discovery (#7216) by @shulaoda
+- rolldown_plugin_utils: remove redundant `ViteMetadata::get_or_insert_default()` (#7189) by @shulaoda
+- rolldown_plugin_utils: simplify `ViteMetadata::get()` to always return a value (#7188) by @shulaoda
+- rolldown_utils: add `guess_mime_skip_utf8_check` for binary assets (#7161) by @shulaoda
+- rolldown_plugin_utils: extract asset URL parsing into `AssetUrlIter` (#7144) by @shulaoda
+- store pattern name in FilenameTemplate (#7132) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- tsconfig: document auto-discovery mode and improve structure (#7228) by @shulaoda
+- add plugin hook filter compatibility and fallback guide (#7138) by @Copilot
+- update top level navigation (#7092) by @mdong1909
+
+### 🧪 Testing
+
+- add tsconfig include/exclude/files matching test cases (#6899) by @shulaoda
+- vite-tests: run `playwright install` in case playwright binary is missing (#7226) by @sapphi-red
+- watch: close watcher when an error occured in the test cases (#7225) by @sapphi-red
+- watch: reject `waitBuildFinished` if `ERROR` event occurs (#7224) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- example: revert accidental changes to basic-typescript (#7227) by @shulaoda
+- deps: update oxc apps (#7212) by @renovate[bot]
+- deps: update rust crates (#7204) by @renovate[bot]
+- deps: update `oxc_resolver_napi` to 11.14.0 (#7217) by @shulaoda
+- deps: update oxc_resolver (#6909) by @shulaoda
+- deps: update dependency glob to v13 (#7208) by @renovate[bot]
+- deps: update actions/checkout action to v6 (#7207) by @renovate[bot]
+- deps: update npm packages (#7206) by @renovate[bot]
+- deps: update github-actions (#7205) by @renovate[bot]
+- add missing status code comment (#7185) by @iiio2
+- deps: update dependency oxlint-tsgolint to v0.8.1 (#7197) by @renovate[bot]
+- rust: add more tracing log for hmr + dev logic (#7179) by @hyf0
+- deps: update dependency oxlint-tsgolint to v0.8.0 (#7167) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.7.3 (#7133) by @renovate[bot]
+- merge similar inlineDynamicImports test case (#7131) by @IWANABETHATGUY
+- deps: update `rolldown-plugin-dts` to 0.18.0 (#7125) by @shulaoda
+
+
 ## [1.0.0-beta.51] - 2025-11-19
 
 ### 💥 BREAKING CHANGES

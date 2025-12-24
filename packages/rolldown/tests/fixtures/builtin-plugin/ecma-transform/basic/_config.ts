@@ -6,7 +6,7 @@ export default defineTest({
   config: {
     input: './main.ts',
     plugins: [
-      viteTransformPlugin(),
+      viteTransformPlugin({ root: __dirname }),
       {
         name: 'test',
         transform(code) {

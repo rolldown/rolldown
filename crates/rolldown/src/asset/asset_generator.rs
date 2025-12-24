@@ -31,6 +31,9 @@ impl Generator for AssetGenerator {
         kind: InstantiationKind::None,
         augment_chunk_hash: None,
         preliminary_filename: preliminary_filename.clone(),
+
+        post_banner: None,
+        post_footer: None,
       });
     }
 

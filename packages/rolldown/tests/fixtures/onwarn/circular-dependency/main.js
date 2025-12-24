@@ -1,3 +1,3 @@
-import { value } from './main';
+import './dep.js';
 
 export const value = 1;

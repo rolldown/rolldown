@@ -1,0 +1,4 @@
+entry.js: ERROR: Importing with a type attribute of "js" is not supported
+entry.js: ERROR: Importing with the "js" attribute is not supported
+entry.js: ERROR: Importing with a type attribute of "js" is not supported
+entry.js: ERROR: Importing with the "js" attribute is not supported

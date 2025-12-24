@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## JSON_PARSE
+
+```text
+[JSON_PARSE] Error: expected `,` or `]` at line 2 column 17
+   ╭─[ data.json:2:17 ]
+   │
+ 2 │     "invalid": [123n]
+   │                    │ 
+   │                    ╰─ expected `,` or `]` at line 2 column 17
+───╯
+
+```

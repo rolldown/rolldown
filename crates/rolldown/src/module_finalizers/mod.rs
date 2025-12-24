@@ -1,13 +1,13 @@
 use bitflags::bitflags;
 use oxc::ast::ast::ObjectPropertyKind;
-use oxc::semantic::{ScopeFlags, SymbolId};
+use oxc::semantic::{ReferenceId, ScopeFlags, SymbolId};
 use oxc::{
   allocator::{self, Allocator, Box as ArenaBox, CloneIn, Dummy, IntoIn, TakeIn},
   ast::{
     AstBuilder, NONE,
     ast::{
-      self, BindingIdentifier, ClassElement, Expression, IdentifierReference, ImportExpression,
-      MemberExpression, NumberBase, Statement, VariableDeclarationKind,
+      self, ClassElement, Expression, IdentifierReference, ImportExpression, MemberExpression,
+      NumberBase, Statement, VariableDeclarationKind,
     },
   },
   span::{Atom, GetSpan, GetSpanMut, SPAN},
@@ -16,7 +16,7 @@ use rolldown_common::{
   AstScopes, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx, ImportRecordMeta,
   InlineConstMode, MemberExprRefResolution, Module, ModuleIdx, ModuleNamespaceIncludedReason,
   ModuleType, NamespaceAlias, OutputExports, OutputFormat, Platform,
-  RenderedConcatenatedModuleParts, Specifier, SymbolRef, WrapKind,
+  RenderedConcatenatedModuleParts, Specifier, SymbolIdExt, SymbolRef, WrapKind,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
@@ -57,6 +57,17 @@ bitflags! {
   pub struct FinalizedExprProcessHint: u8 {
       const FromCjsWrapKindEntry = 1;
   }
+}
+
+/// Represents different ways to identify a name for `keep_names` functionality.
+#[derive(Clone, Debug, Copy)]
+pub enum KeepNameId<'a> {
+  /// A symbol ID from the AST's symbol table.
+  SymbolId(SymbolId),
+  /// A reference ID from the AST's reference table.
+  ReferenceId(ReferenceId),
+  /// A string name used directly (e.g., for "default" exports).
+  CompactStr(&'a CompactStr),
 }
 
 /// Finalizer for emitting output code with scope hoisting.
@@ -132,11 +143,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // Remove this statement by ignoring it
       }
       WrapKind::Cjs => {
+        // Check if this CJS module's namespace can be merged with other imports
+        let merge_info = self.ctx.safely_merge_cjs_ns_map.get(&rec.resolved_module);
+
         // Consider user reference a module use relative path e.g.
         // ```js
         // import React from './node_modules/react/index.js';
         // ```
-        if rec.meta.contains(ImportRecordMeta::SafelyMergeCjsNs) {
+        if merge_info.is_some() {
           let chunk_idx = self.ctx.chunk_id;
           if let Some(symbol_ref_to_be_merged) =
             self.ctx.chunk_graph.finalized_cjs_ns_map_idx_vec[chunk_idx].get(&rec.namespace_ref)
@@ -170,11 +184,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         };
 
         // Check if we need __toESM or can use require_foo() directly
-        // Always use __toESM when SafelyMergeCjsNs optimization is enabled to ensure
-        // proper handling of default exports when namespaces are merged
-        let init_expr = if rec.meta.contains(ImportRecordMeta::SafelyMergeCjsNs)
-          || import_record_needs_interop(self.ctx.module, rec_id)
-        {
+        let needs_toesm = if let Some(info) = merge_info {
+          info.needs_interop
+        } else {
+          import_record_needs_interop(self.ctx.module, rec_id)
+        };
+        let init_expr = if needs_toesm {
           // `__toESM`
           let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
           self.snippet.wrap_with_to_esm(
@@ -432,15 +447,22 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // construct `{ prop_name: () => returned, ... }`
     let mut arg_obj_expr = ast::ObjectExpression::dummy(self.alloc);
 
-    arg_obj_expr.properties.extend(self.ctx.linking_info.canonical_exports(false).map(
+    // Even if the module namespace is included, some exports may not be used due to `optimize_facade_dynamic_entry_chunks`
+    // https://github.com/rolldown/rolldown/blob/d6d65f9080e427cd9feef56eb7a110fbcf6c1414/crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs#L347-L354
+    arg_obj_expr.properties.extend(self.ctx.linking_info.canonical_exports(false).filter_map(
       |(export, resolved_export)| {
+        if !self.ctx.used_symbol_refs.contains(&resolved_export.symbol_ref) {
+          return None;
+        }
         // prop_name: () => returned
         let prop_name = export;
         let (returned, _) =
           self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
-        ast::ObjectPropertyKind::ObjectProperty(
+        Some(ast::ObjectPropertyKind::ObjectProperty(
           ast::ObjectProperty {
-            key: if is_validate_identifier_name(prop_name) {
+            // `__proto__` has special semantics in object literals - it sets the prototype
+            // instead of creating a property. Use computed property syntax for it.
+            key: if is_validate_identifier_name(prop_name) && prop_name != "__proto__" {
               ast::PropertyKey::StaticIdentifier(
                 self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
               )
@@ -448,41 +470,43 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
             },
             value: self.snippet.only_return_arrow_expr(returned),
+            computed: prop_name == "__proto__",
             ..ast::ObjectProperty::dummy(self.alloc)
           }
           .into_in(self.alloc),
-        )
+        ))
       },
     ));
 
     // if there is no export, we should generate `var ns = {}` instead of `var ns = __export({}, {})`
     // else construct `__export(ns_name, { prop_name: () => returned, ... })`
-    let module_namespace_rhs = if arg_obj_expr.properties.is_empty() {
-      Expression::ObjectExpression(self.builder().alloc(arg_obj_expr))
-    } else {
-      let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc));
-      let args = if self.ctx.options.generated_code.symbols {
-        self.snippet.builder.vec_from_iter([
-          obj_expr,
-          ast::Argument::NumericLiteral(self.snippet.builder.alloc_numeric_literal(
-            SPAN,
-            1.0,
-            None,
-            NumberBase::Decimal,
-          )),
-        ])
+    let module_namespace_rhs =
+      if arg_obj_expr.properties.is_empty() && !self.ctx.options.generated_code.symbols {
+        Expression::ObjectExpression(self.builder().alloc(arg_obj_expr))
       } else {
-        self.snippet.builder.vec_from_iter([obj_expr])
+        let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc));
+        let args = if self.ctx.options.generated_code.symbols {
+          self.snippet.builder.vec_from_iter([
+            obj_expr,
+            ast::Argument::NumericLiteral(self.snippet.builder.alloc_numeric_literal(
+              SPAN,
+              1.0,
+              None,
+              NumberBase::Decimal,
+            )),
+          ])
+        } else {
+          self.snippet.builder.vec_from_iter([obj_expr])
+        };
+        self.snippet.builder.expression_call_with_pure(
+          SPAN,
+          self.finalized_expr_for_runtime_symbol("__export"),
+          NONE,
+          args,
+          false,
+          true,
+        )
       };
-      self.snippet.builder.expression_call_with_pure(
-        SPAN,
-        self.finalized_expr_for_runtime_symbol("__export"),
-        NONE,
-        args,
-        false,
-        true,
-      )
-    };
 
     // construct `var [binding_name_for_namespace_object_ref] = __export(...)`
     let decl_stmt =
@@ -494,7 +518,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if !export_all_externals_rec_ids.is_empty() {
       // construct `__reExport(importer_exports, importee_exports)`
       let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
-      let enable_generated_code_symbols = self.ctx.options.generated_code.symbols;
       match self.ctx.options.format {
         OutputFormat::Esm => {
           let stmts = export_all_externals_rec_ids.iter().copied().flat_map(|idx| {
@@ -520,7 +543,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               re_export_fn_ref.clone_in(self.alloc),
               self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN),
               self.snippet.id_ref_expr(importee_namespace_name, SPAN),
-              enable_generated_code_symbols,
             );
             vec![
               // Insert `import * as ns from 'ext'`external module in esm format
@@ -538,7 +560,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let stmts = export_all_externals_rec_ids.iter().copied().map(|idx| {
             // Insert `__reExport(importer_exports, require('ext'))`
             let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
-            let enable_generated_code_symbols = self.ctx.options.generated_code.symbols;
             // importer_exports
             let (importer_namespace_ref_expr, _) = self.finalized_expr_for_symbol_ref(
               self.ctx.module.namespace_object_ref,
@@ -555,7 +576,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 "require",
                 self.snippet.string_literal_expr(importee.id(), SPAN),
               ),
-              enable_generated_code_symbols,
             );
 
             self.snippet.builder.statement_expression(
@@ -787,9 +807,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  fn get_conflicted_info(&self, id: &BindingIdentifier<'ast>) -> Option<(&str, &CompactStr)> {
-    let symbol_id = id.symbol_id.get()?;
-    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
+  fn get_conflicted_info(&self, id: KeepNameId) -> Option<(&str, &CompactStr)> {
+    let symbol_ref: SymbolRef = match id {
+      KeepNameId::SymbolId(symbol_id) => (self.ctx.id, symbol_id).into(),
+      KeepNameId::ReferenceId(reference_id) => {
+        let symbol_id = self.scope.symbol_id_for(reference_id)?;
+        (self.ctx.id, symbol_id).into()
+      }
+      KeepNameId::CompactStr(_) => {
+        // CompactStr variant doesn't need conflict resolution - it's already a direct name
+        return None;
+      }
+    };
+
     let original_name = symbol_ref.name(self.ctx.symbol_db);
     let canonical_name = self.canonical_name_for(symbol_ref);
     (original_name != canonical_name.as_str()).then_some((original_name, canonical_name))
@@ -863,15 +893,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
                 // Rewrite `require(...)` to `require_xxx(...)` or `(init_xxx(), __toCommonJS(xxx_exports).default)`
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                let (wrap_ref_expr, _) = self.finalized_expr_for_symbol_ref(
+                let (wrap_ref_expr, hint) = self.finalized_expr_for_symbol_ref(
                   importee_linking_info.wrapper_ref.unwrap(),
                   false,
                   false,
                 );
                 if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-                  Some(ast::Expression::CallExpression(
-                    self.snippet.alloc_simple_call_expr(wrap_ref_expr),
-                  ))
+                  if hint.contains(FinalizedExprProcessHint::FromCjsWrapKindEntry) {
+                    Some(wrap_ref_expr)
+                  } else {
+                    Some(ast::Expression::CallExpression(
+                      self.snippet.alloc_simple_call_expr(wrap_ref_expr),
+                    ))
+                  }
                 } else {
                   let (ns_name, _) =
                     self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
@@ -1131,9 +1165,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let old_body = program.body.take_in(self.alloc);
     // the first statement info is the namespace variable declaration
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
-    old_body.into_iter().enumerate().zip(self.ctx.module.stmt_infos.iter().skip(1)).for_each(
-      |((_top_stmt_idx, mut top_stmt), stmt_info)| {
-        if !stmt_info.is_included {
+    old_body
+      .into_iter()
+      .enumerate()
+      .zip(self.ctx.module.stmt_infos.iter_enumerated().skip(1))
+      .for_each(|((_top_stmt_idx, mut top_stmt), (stmt_info_idx, _stmt_info))| {
+        if !self.ctx.linking_info.stmt_info_included[stmt_info_idx] {
           return;
         }
 
@@ -1195,12 +1232,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                         false,
                       );
 
-                      let enable_generated_code_symbols = self.ctx.options.generated_code.symbols;
                       let call_expr = self.snippet.re_export_call_expr(
                         re_export_fn_ref,
                         importer_namespace_ref,
                         importee_namespace_ref,
-                        enable_generated_code_symbols,
                       );
                       // __reExport(exports, otherExports)
                       let stmt = ast::Statement::ExpressionStatement(
@@ -1239,7 +1274,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       false,
                     );
 
-                    let enable_generated_code_symbols = self.ctx.options.generated_code.symbols;
                     let call_expr = self.snippet.re_export_call_expr(
                       re_export_fn_name,
                       importer_namespace_ref,
@@ -1256,7 +1290,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                         ),
                         self.ctx.module.should_consider_node_esm_spec_for_static_import(),
                       ),
-                      enable_generated_code_symbols,
                     );
 
                     // __reExport(importer_exports, __toESM(require_foo()))
@@ -1292,12 +1325,44 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           match &mut default_decl.declaration {
             decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
               let expr = decl.to_expression_mut();
-              // "export default foo;" => "var default = foo;"
               let canonical_name_for_default_export_ref =
                 self.canonical_name_for(self.ctx.module.default_export_ref);
-              top_stmt = self
-                .snippet
-                .var_decl_stmt(canonical_name_for_default_export_ref, expr.take_in(self.alloc));
+
+              // Check if we need to add __name() helper for anonymous function/class expressions or arrow functions
+              let mut init_expr = expr.take_in(self.alloc);
+              if self.ctx.options.keep_names {
+                let inner_expr = init_expr.without_parentheses_mut();
+                let binding = match inner_expr {
+                  ast::Expression::FunctionExpression(func) if func.id.is_none() => {
+                    Some(CompactStr::from("default"))
+                  }
+                  ast::Expression::ClassExpression(class_expression)
+                    if class_expression.id.is_none() =>
+                  {
+                    if let Some(element) = self.keep_name_helper_for_class(
+                      Some(KeepNameId::CompactStr(&CompactStr::from("default"))),
+                      &class_expression.body,
+                    ) {
+                      class_expression.body.body.insert(0, element);
+                    }
+                    None
+                  }
+                  ast::Expression::ArrowFunctionExpression(_) => Some(CompactStr::from("default")),
+                  _ => None,
+                };
+
+                if let Some(binding) = binding {
+                  let insert_position = self.cur_stmt_index + 1;
+                  self.keep_name_statement_to_insert.push((
+                    insert_position,
+                    binding,
+                    canonical_name_for_default_export_ref.clone(),
+                  ));
+                }
+              }
+
+              top_stmt =
+                self.snippet.var_decl_stmt(canonical_name_for_default_export_ref, init_expr);
             }
             ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
               // "export default function() {}" => "function default() {}"
@@ -1306,6 +1371,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 let canonical_name_for_default_export_ref =
                   self.canonical_name_for(self.ctx.module.default_export_ref);
                 func.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
+
+                // When keep_names is enabled, preserve "default" as the function name
+                if self.ctx.options.keep_names {
+                  // current statement will be pushed to program.body, so the insert position is program.body.len() + 1
+                  let insert_position = program.body.len() + 1;
+                  self.keep_name_statement_to_insert.push((
+                    insert_position,
+                    CompactStr::new("default"),
+                    canonical_name_for_default_export_ref.clone(),
+                  ));
+                }
               }
               let func = func.as_mut().take_in(self.alloc);
               top_stmt = ast::Statement::FunctionDeclaration(ArenaBox::new_in(func, self.alloc));
@@ -1317,6 +1393,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 let canonical_name_for_default_export_ref =
                   self.canonical_name_for(self.ctx.module.default_export_ref);
                 class.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
+
+                // When keep_names is enabled, preserve "default" as the class name
+                // Skip if class has static name property
+                if self.ctx.options.keep_names {
+                  let default_name = CompactStr::from("default");
+                  if let Some(element) = self.keep_name_helper_for_class(
+                    Some(KeepNameId::CompactStr(&default_name)),
+                    &class.body,
+                  ) {
+                    class.body.body.insert(0, element);
+                  }
+                }
               }
 
               // Class should be handled specially, because the `ClassDecl` will be transformed again.
@@ -1370,40 +1458,143 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         if is_module_decl {
           last_import_stmt_idx = Some(program.body.len());
         }
-      },
-    );
+      });
     last_import_stmt_idx.unwrap_or(0)
   }
 
   fn process_fn(
     &self,
-    symbol_binding_id: Option<&BindingIdentifier<'ast>>,
-    name_binding_id: Option<&BindingIdentifier<'ast>>,
+    symbol_binding_id: Option<KeepNameId>,
+    name_binding_id: Option<KeepNameId>,
   ) -> Option<(usize, CompactStr, CompactStr)> {
     if !self.ctx.options.keep_names {
       return None;
     }
-    let (original_name, _) = self.get_conflicted_info(name_binding_id.as_ref()?)?;
-    let (_, canonical_name) = self.get_conflicted_info(symbol_binding_id.as_ref()?)?;
+    let (original_name, _) = self.get_conflicted_info(name_binding_id?)?;
+    let (_, canonical_name) = self.get_conflicted_info(symbol_binding_id?)?;
     let original_name: CompactStr = CompactStr::new(original_name);
     let new_name = canonical_name.clone();
     let insert_position = self.cur_stmt_index + 1;
     Some((insert_position, original_name, new_name))
   }
 
+  fn process_keep_name_for_expression(
+    &self,
+    keep_name_id: Option<KeepNameId>,
+    expr: &mut ast::Expression<'ast>,
+  ) {
+    // Don't rewrite `__name` runtime helper itself.
+    if !self.ctx.options.keep_names || self.ctx.runtime.id() == self.ctx.id {
+      return;
+    }
+
+    match expr {
+      ast::Expression::ClassExpression(class_expression) => {
+        if let Some(element) = self.keep_name_helper_for_class(
+          class_expression
+            .id
+            .as_ref()
+            .and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId))
+            .or(keep_name_id),
+          &class_expression.body,
+        ) {
+          class_expression.body.body.insert(0, element);
+        }
+      }
+      ast::Expression::FunctionExpression(fn_expression) => {
+        if let Some((_insert_position, original_name, _)) = self.process_fn(
+          keep_name_id,
+          fn_expression
+            .id
+            .as_ref()
+            .and_then(|id| id.symbol_id.get().map(KeepNameId::SymbolId))
+            .or(keep_name_id),
+        ) {
+          let fn_expr = expr.take_in(self.alloc);
+          let name_ref = self.canonical_ref_for_runtime("__name");
+          let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
+          *expr = self.snippet.keep_name_call_expr(&original_name, fn_expr, finalized_callee, true);
+        }
+      }
+      ast::Expression::ArrowFunctionExpression(_fn_expr) => {
+        if let Some((_insert_position, original_name, _)) =
+          self.process_fn(keep_name_id, keep_name_id)
+        {
+          let fn_expr = expr.take_in(self.alloc);
+          let name_ref = self.canonical_ref_for_runtime("__name");
+          let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
+          *expr = self.snippet.keep_name_call_expr(&original_name, fn_expr, finalized_callee, true);
+        }
+      }
+      _ => {}
+    }
+  }
+
   fn keep_name_helper_for_class(
     &self,
-    id: Option<&BindingIdentifier<'ast>>,
+    id: Option<KeepNameId>,
+    class_body: &ast::ClassBody<'ast>,
   ) -> Option<ClassElement<'ast>> {
     if !self.ctx.options.keep_names {
       return None;
     }
-    let (original_name, _) = self.get_conflicted_info(id.as_ref()?)?;
-    let original_name: CompactStr = CompactStr::new(original_name);
+    let keep_name_id = id?;
+    // Skip if the class already has a static `name` property/method
+    if Self::class_body_has_static_name(class_body) {
+      return None;
+    }
+    let original_name = match keep_name_id {
+      KeepNameId::CompactStr(name) => {
+        // CompactStr variant doesn't need conflict resolution - it's already a direct name
+        name.clone()
+      }
+      KeepNameId::SymbolId(_) | KeepNameId::ReferenceId(_) => {
+        let (original_name, _) = self.get_conflicted_info(keep_name_id)?;
+        let original_name: CompactStr = CompactStr::new(original_name);
+        original_name
+      }
+    };
 
     let name_ref = self.canonical_ref_for_runtime("__name");
     let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
     Some(self.snippet.static_block_keep_name_helper(&original_name, finalized_callee))
+  }
+
+  /// Check if a class body has a static `name` property, method, or accessor.
+  fn class_body_has_static_name(body: &ast::ClassBody<'ast>) -> bool {
+    body.body.iter().any(|element| match element {
+      ClassElement::MethodDefinition(method) => {
+        method.r#static && method.key.static_name().is_some_and(|name| name == "name")
+      }
+      ClassElement::PropertyDefinition(prop) => {
+        prop.r#static && prop.key.static_name().is_some_and(|name| name == "name")
+      }
+      ClassElement::AccessorProperty(accessor) => {
+        accessor.r#static && accessor.key.static_name().is_some_and(|name| name == "name")
+      }
+      _ => false,
+    })
+  }
+
+  /// Inserts `__name()` call statements for keeping function/class names.
+  /// This method processes the pending keep_name insertions in reverse order.
+  fn insert_keep_name_statements(
+    &self,
+    statements: &mut allocator::Vec<'ast, ast::Statement<'ast>>,
+  ) {
+    for (stmt_index, original_name, new_name) in self.keep_name_statement_to_insert.iter().rev() {
+      let name_ref = self.canonical_ref_for_runtime("__name");
+      let (finalized_callee, _) = self.finalized_expr_for_symbol_ref(name_ref, false, false);
+      let target =
+        self.snippet.builder.expression_identifier(SPAN, self.snippet.builder.atom(new_name));
+      statements.insert(
+        *stmt_index,
+        self.snippet.builder.statement_expression(
+          SPAN,
+          self.snippet.keep_name_call_expr(original_name, target, finalized_callee, false),
+        ),
+      );
+    }
   }
 
   fn try_rewrite_import_expression(&self, node: &mut ast::Expression<'ast>) -> bool {
@@ -1418,15 +1609,57 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let importee_id = rec.resolved_module;
           match &self.ctx.modules[importee_id] {
             Module::Normal(importee) => {
-              let importee_chunk_id =
-                self.ctx.chunk_graph.entry_module_to_entry_chunk[&rec.resolved_module];
-              let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
+              if let Some(&importee_chunk_id) =
+                self.ctx.chunk_graph.entry_module_to_entry_chunk.get(&rec.resolved_module)
+              {
+                if let Some(importee_chunk) =
+                  self.ctx.chunk_graph.chunk_table.get(importee_chunk_id)
+                {
+                  let import_path = self.ctx.chunk.import_path_for(importee_chunk);
+                  expr.source = Expression::StringLiteral(
+                    self.snippet.alloc_string_literal(&import_path, expr.source.span()),
+                  );
 
-              let import_path = self.ctx.chunk.import_path_for(importee_chunk);
-              expr.source = Expression::StringLiteral(
-                self.snippet.alloc_string_literal(&import_path, expr.source.span()),
-              );
-              needs_to_esm_helper = importee.exports_kind.is_commonjs();
+                  // If the dynamic entry point is merged into another common chunk, we should
+                  // convert `import('./some-module.js')` to `import('./some-module.js').then(n => n.ns)`
+                  //                                                                                 ^^ points to the dynamic entry module namespace
+                  // to make sure the semantic is correct after chunk merging optimization.
+                  let is_merged_dynamic_entry = self
+                    .ctx
+                    .chunk_graph
+                    .common_chunk_exported_facade_chunk_namespace
+                    .get(&importee_chunk_id)
+                    .is_some_and(|set| set.contains(&importee_id));
+                  if is_merged_dynamic_entry {
+                    match importee_chunk
+                      .exports_to_other_chunks
+                      .get(&SymbolId::module_namespace_symbol_ref(importee_id))
+                      .and_then(|names| names.first())
+                    {
+                      Some(name) => {
+                        let import_expr = expr.take_in_box(self.builder().allocator);
+                        let call_expr =
+                          self.snippet.import_then_extract_property(import_expr, name);
+                        *node = Expression::CallExpression(call_expr);
+                      }
+                      None => {
+                        tracing::warn!(
+                          "Merged dynamic entry module {:?} in chunk {:?} has no export name in exports_to_other_chunks. \
+                          This indicates an inconsistent state in the chunk graph where the module is marked as merged \
+                          but its namespace export is not properly tracked.",
+                          importee_id,
+                          importee_chunk_id
+                        );
+                      }
+                    }
+                  }
+                  needs_to_esm_helper = importee.exports_kind.is_commonjs();
+                }
+              } else {
+                // TODO: probably we should add the reason why it is replaced with `void 0` when upstream support codegen with specific operation
+                *node = self.snippet.builder.void_0(SPAN);
+                return true;
+              }
             }
             Module::External(importee) => {
               let import_path =
@@ -1535,11 +1768,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
         for ele in &mut obj_expr.properties {
           let ObjectPropertyKind::ObjectProperty(prop) = ele else {
-            return None;
+            continue;
           };
-          let identifier = prop.value.as_identifier()?;
+          let Some(identifier) = prop.value.as_identifier() else {
+            continue;
+          };
           let reference_id = identifier.reference_id();
-          let symbol_id = self.scope.symbol_id_for(reference_id)?;
+          let Some(symbol_id) = self.scope.symbol_id_for(reference_id) else {
+            continue;
+          };
           let Some(replaced_expr) = json_module_inlined_prop.remove(&symbol_id) else {
             continue;
           };

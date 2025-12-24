@@ -9,15 +9,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 import nodeAssert from "node:assert";
 
 //#region dep.js
-const value = "";
+const value$1 = "";
 
 //#endregion
 //#region lib-foo.js
-const value$1 = "foo" + value;
+const value = "foo" + value$1;
 
 //#endregion
 //#region main.js
-nodeAssert.equal(value$1, "foo");
+nodeAssert.equal(value, "foo");
 
 //#endregion
 ```
@@ -34,48 +34,48 @@ import nodeAssert from "node:assert";
 // HIDDEN [rolldown:runtime]
 //#region dep.js
 var value$1;
-var init_dep = __esm({ "dep.js": (() => {
+var init_dep = __esmMin((() => {
 	value$1 = "";
-}) });
+}));
 
 //#endregion
 //#region lib-foo.js
 var value;
-var init_lib_foo = __esm({ "lib-foo.js": (() => {
+var init_lib_foo = __esmMin((() => {
 	init_dep();
 	value = "foo" + value$1;
-}) });
+}));
 
 //#endregion
 //#region proxy-foo.js
-var init_proxy_foo = __esm({ "proxy-foo.js": (() => {
+var init_proxy_foo = __esmMin((() => {
 	init_lib_foo();
-}) });
+}));
 
 //#endregion
 //#region proxy.js
-var init_proxy = __esm({ "proxy.js": (() => {
+var init_proxy = __esmMin((() => {
 	init_proxy_foo();
-}) });
+}));
 
 //#endregion
 //#region ns-proxy.js
-var init_ns_proxy = __esm({ "ns-proxy.js": (() => {
+var init_ns_proxy = __esmMin((() => {
 	init_proxy();
-}) });
+}));
 
 //#endregion
 //#region ns-proxy-2.js
-var init_ns_proxy_2 = __esm({ "ns-proxy-2.js": (() => {
+var init_ns_proxy_2 = __esmMin((() => {
 	init_ns_proxy();
-}) });
+}));
 
 //#endregion
 //#region main.js
-var init_main = __esm({ "main.js": (() => {
+var init_main = __esmMin((() => {
 	init_ns_proxy_2();
 	nodeAssert.equal(value, "foo");
-}) });
+}));
 
 //#endregion
 init_main();
@@ -97,7 +97,7 @@ const value$1 = "";
 //#endregion
 
 var value;
-var init_main = __esm({"main.js": (() => {
+var init_main = __esmMin((() => {
 //#region lib-foo.js
 	value = "foo" + value$1;
 
@@ -106,7 +106,7 @@ var init_main = __esm({"main.js": (() => {
 	nodeAssert.equal(value, "foo");
 
 //#endregion
-})});
+}));
 
 init_main();
 ```

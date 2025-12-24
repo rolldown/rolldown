@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## src_entry.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region node_modules/demo-pkg/index-module.js
+var index_module_exports = /* @__PURE__ */ __export({ foo: () => foo });
+var foo;
+var init_index_module = __esmMin((() => {
+	foo = 123;
+	console.log("TEST FAILED");
+}));
+
+//#endregion
+//#region src/require-demo-pkg.js
+init_index_module();
+init_index_module();
+
+//#endregion
+//#region src/entry.js
+console.log("unused import");
+
+//#endregion
+```

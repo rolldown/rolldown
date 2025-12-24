@@ -10,7 +10,11 @@ use std::sync::Arc;
 
 use rolldown_utils::dashmap::FxDashMap;
 pub use {
-  crate::{dev_context::BundlingFuture, dev_engine::DevEngine},
+  crate::{
+    dev_context::BundlingFuture,
+    dev_engine::{BundleState, DevEngine},
+  },
+  rolldown::BundlerConfig,
   rolldown_dev_common::types::{
     BundleOutput, DevOptions, DevWatchOptions, NormalizedDevOptions, OnHmrUpdatesCallback,
     OnOutputCallback, RebuildStrategy, SharedNormalizedDevOptions, normalize_dev_options,

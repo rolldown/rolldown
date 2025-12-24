@@ -21,34 +21,34 @@ To fix:
 ## first.js
 
 ```js
-import { n as __export, t as __esm } from "./rolldown-runtime.js";
-import { r as value, t as init_second } from "./second.js";
+import { n as __export, t as __esmMin } from "./rolldown-runtime.js";
+import { r as value$1, t as init_second } from "./second.js";
 
 //#region first.js
-var first_exports = /* @__PURE__ */ __export({ value: () => value$1 });
-var value$1;
-var init_first = __esm({ "first.js": (() => {
+var first_exports = /* @__PURE__ */ __export({ value: () => value });
+var value;
+var init_first = __esmMin((() => {
 	init_second();
-	value$1 = "first" + value;
-}) });
+	value = "first" + value$1;
+}));
 
 //#endregion
-export { init_first as n, value$1 as r, first_exports as t };
+export { init_first as n, value as r, first_exports as t };
 ```
 
 ## main.js
 
 ```js
-import { t as __esm } from "./rolldown-runtime.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
 import { n as second_exports, t as init_second } from "./second.js";
 import { n as init_first, t as first_exports } from "./first.js";
 
 //#region main.js
-var init_main = __esm({ "main.js": (() => {
+var init_main = __esmMin((() => {
 	init_first();
 	init_second();
 	console.log(first_exports, second_exports);
-}) });
+}));
 
 //#endregion
 init_main();
@@ -58,23 +58,23 @@ init_main();
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __export as n, __esm as t };
+export { __export as n, __esmMin as t };
 ```
 
 ## second.js
 
 ```js
-import { n as __export, t as __esm } from "./rolldown-runtime.js";
-import { n as init_first, r as value } from "./first.js";
+import { n as __export, t as __esmMin } from "./rolldown-runtime.js";
+import { n as init_first, r as value$1 } from "./first.js";
 
 //#region second.js
-var second_exports = /* @__PURE__ */ __export({ value: () => value$1 });
-var value$1;
-var init_second = __esm({ "second.js": (() => {
+var second_exports = /* @__PURE__ */ __export({ value: () => value });
+var value;
+var init_second = __esmMin((() => {
 	init_first();
-	value$1 = "second" + value;
-}) });
+	value = "second" + value$1;
+}));
 
 //#endregion
-export { second_exports as n, value$1 as r, init_second as t };
+export { second_exports as n, value as r, init_second as t };
 ```

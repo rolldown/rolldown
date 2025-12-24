@@ -56,6 +56,8 @@ impl GenerateStage<'_> {
 
     Self::minify_chunks(self.options, &mut instantiated_chunks)?;
 
+    Self::post_banner_footer(&mut instantiated_chunks)?;
+
     let assets = finalize_assets(
       chunk_graph,
       self.link_output,
@@ -172,11 +174,19 @@ impl GenerateStage<'_> {
       .collect();
 
     try_join_all(
-      chunk_graph
-        .chunk_table
-        .iter_enumerated()
-        .zip(chunk_index_to_codegen_rets.into_iter())
-        .flat_map(|((chunk_idx, chunk), module_id_to_codegen_ret)| {
+      chunk_index_to_codegen_rets
+        .into_iter()
+        .enumerate()
+        .filter_map(|(idx, module_id_to_codegen_ret)| {
+          let chunk_idx =
+            ChunkIdx::from_raw(u32::try_from(idx).expect("chunk index should fit in u32"));
+          if chunk_graph.removed_chunk_idx.contains(&chunk_idx) {
+            return None;
+          }
+          let chunk = chunk_graph.chunk_table.get(chunk_idx)?;
+          Some((chunk_idx, chunk, module_id_to_codegen_ret))
+        })
+        .flat_map(|(chunk_idx, chunk, module_id_to_codegen_ret)| {
           let ecma_chunks_future: ChunkGeneratorFuture = Box::pin(async move {
             let mut ecma_ctx = GenerateContext {
               chunk_idx,
@@ -263,7 +273,10 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &ChunkGraph,
   ) -> Vec<Vec<Option<ModuleRenderOutput>>> {
-    let is_iife = matches!(self.options.format, rolldown_common::OutputFormat::Iife);
+    let needs_extra_indent = matches!(
+      self.options.format,
+      rolldown_common::OutputFormat::Iife | rolldown_common::OutputFormat::Umd
+    );
     chunk_graph
       .chunk_table
       .par_iter()
@@ -275,7 +288,7 @@ impl GenerateStage<'_> {
             Some(module) => {
               let ast = self.link_output.ast_table[module.idx].as_ref().expect("should have ast");
               #[expect(clippy::bool_to_int_with_if)]
-              let initial_indent = if is_iife
+              let initial_indent = if needs_extra_indent
                 || !matches!(
                   self.link_output.metas[module_idx].concatenated_wrapped_module_kind,
                   ConcatenateWrappedModuleKind::None

@@ -5,7 +5,11 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "moduleTypes": {
+      ".txt": "asset"
+    }
   },
-  "expectExecuted": false
+  "expectExecuted": false,
+  "expectError": true
 }

@@ -19,9 +19,9 @@ export { foo };
 //#region a.js
 var a_exports = /* @__PURE__ */ __export({ foo: () => foo });
 var foo;
-var init_a = __esm({ "a.js": (() => {
+var init_a = __esmMin((() => {
 	;
-}) });
+}));
 
 //#endregion
 export { __toCommonJS as i, foo as n, init_a as r, a_exports as t };

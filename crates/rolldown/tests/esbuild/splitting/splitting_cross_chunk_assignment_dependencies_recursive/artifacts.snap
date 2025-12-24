@@ -6,22 +6,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import "./x.js";
 
 ```
 
 ## b.js
 
 ```js
-import "./x.js";
-import "./z.js";
 
 ```
 
 ## c.js
 
 ```js
-import "./x.js";
 import { n as setY2, t as setZ2 } from "./z.js";
 
 //#region c.js

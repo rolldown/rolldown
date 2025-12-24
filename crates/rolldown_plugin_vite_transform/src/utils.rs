@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use itertools::Either;
 use memchr::memmem;
@@ -118,8 +118,8 @@ impl ViteTransformPlugin {
     }
 
     if source_type.is_typescript() {
-      let path = Path::new(cwd).join(id).parent().and_then(find_tsconfig_json_for_file);
-      let tsconfig = path.map(|path| ctx.resolver().resolve_tsconfig(&path)).transpose()?;
+      let path = Path::new(cwd).join(id);
+      let tsconfig = self.resolver.find_tsconfig(path)?;
 
       if let Some(tsconfig) = tsconfig {
         // Tsconfig could be out of root, make sure it is watched
@@ -241,27 +241,6 @@ impl ViteTransformPlugin {
 
     Ok((source_type, transform_options.try_into().map_err(|err: String| anyhow::anyhow!(err))?))
   }
-}
-
-fn find_tsconfig_json_for_file(path: &Path) -> Option<PathBuf> {
-  // don't load tsconfig for paths in node_modules like esbuild
-  if rolldown_plugin_utils::is_in_node_modules(path) {
-    return None;
-  }
-
-  let mut dir = path.to_path_buf();
-
-  loop {
-    let tsconfig_json = dir.join("tsconfig.json");
-    if tsconfig_json.exists() {
-      return Some(tsconfig_json);
-    }
-
-    let Some(parent) = dir.parent() else { break };
-    dir = parent.to_path_buf();
-  }
-
-  None
 }
 
 fn is_use_define_for_class_fields(target: Option<&str>) -> bool {

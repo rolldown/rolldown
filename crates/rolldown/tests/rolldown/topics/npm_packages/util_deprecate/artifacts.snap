@@ -12,12 +12,12 @@ node_assert = __toESM(node_assert);
 let node_util = require("node:util");
 
 //#region ../../../../../../../node_modules/.pnpm/util-deprecate@1.0.2/node_modules/util-deprecate/node.js
-var require_node = /* @__PURE__ */ __commonJS({ "../../../../../../../node_modules/.pnpm/util-deprecate@1.0.2/node_modules/util-deprecate/node.js": ((exports, module) => {
+var require_node = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	/**
 	* For Node.js, simply re-export the core `util.deprecate` function.
 	*/
 	module.exports = require("util").deprecate;
-}) });
+}));
 
 //#endregion
 //#region main.js

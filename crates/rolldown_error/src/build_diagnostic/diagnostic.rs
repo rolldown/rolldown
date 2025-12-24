@@ -54,7 +54,7 @@ pub struct Diagnostic {
   pub(crate) title: String,
   pub(crate) files: FxHashMap</* filename */ DiagnosticFileId, /* file content */ ArcStr>,
   pub(crate) labels: Vec<Label<RolldownLabelSpan>>,
-  pub(crate) help: Option<String>,
+  pub(crate) helps: Vec<String>,
   pub(crate) note: Option<String>,
   pub(crate) severity: Severity,
 }
@@ -69,7 +69,7 @@ impl Diagnostic {
       title: summary,
       files: FxHashMap::default(),
       labels: Vec::default(),
-      help: None,
+      helps: Vec::default(),
       note: None,
       severity,
     }
@@ -89,7 +89,7 @@ impl Diagnostic {
 
   #[inline]
   pub(crate) fn add_help(&mut self, message: String) -> &mut Self {
-    self.help = Some(message);
+    self.helps.push(message);
     self
   }
 
@@ -140,9 +140,7 @@ impl Diagnostic {
       }
     }
 
-    if let Some(help) = &self.help {
-      builder = builder.with_help(help);
-    }
+    builder.with_helps(self.helps.clone());
 
     if let Some(note) = &self.note {
       builder = builder.with_note(note);
@@ -171,6 +169,37 @@ impl Diagnostic {
   pub fn with_kind(mut self, kind: String) -> Self {
     self.kind = kind;
     self
+  }
+
+  /// Get the primary location information from the first label if available
+  /// Returns (file_path, line, column, utf16_position)
+  pub fn get_primary_location(&self) -> Option<(String, usize, usize, usize)> {
+    let first_label = self.labels.first()?;
+    let span = first_label.span();
+    let start = span.start();
+    let source = self.files.get(span.source())?;
+
+    let mut line = 1; // 1-based
+    let mut column = 0; // 0-based
+    let mut utf16_pos = 0;
+    let mut byte_count = 0;
+
+    for ch in source.chars() {
+      if byte_count >= start {
+        break;
+      }
+      if ch == '\n' {
+        line += 1;
+        column = 0;
+      } else {
+        column += ch.len_utf16();
+      }
+      utf16_pos += ch.len_utf16();
+      byte_count += ch.len_utf8();
+    }
+
+    let file = span.source().to_string();
+    Some((file, line, column, utf16_pos))
   }
 }
 

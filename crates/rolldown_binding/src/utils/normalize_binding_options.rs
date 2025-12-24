@@ -14,10 +14,10 @@ use crate::{
 };
 use napi::bindgen_prelude::{Either, Either3, FnArgs};
 use rolldown::{
-  AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
-  ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal, MatchGroup,
-  MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat, Platform,
-  RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename,
+  AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerConfig,
+  BundlerOptions, ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal,
+  MatchGroup, MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat,
+  Platform, RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -31,12 +31,6 @@ use url::Url;
 #[cfg(not(target_family = "wasm"))]
 use crate::{options::plugin::ParallelJsPlugin, worker_manager::WorkerManager};
 use std::sync::Arc;
-
-#[cfg_attr(target_family = "wasm", allow(unused))]
-pub struct NormalizeBindingOptionsReturn {
-  pub bundler_options: BundlerOptions,
-  pub plugins: Vec<SharedPluginable>,
-}
 
 fn normalize_generated_code_option(
   value: BindingGeneratedCodeOptions,
@@ -52,22 +46,25 @@ fn normalize_generated_code_option(
     }
     None => GeneratedCodeOptions::default(),
   };
-  Ok(GeneratedCodeOptions { symbols: value.symbols.unwrap_or(false), ..v })
+  Ok(GeneratedCodeOptions { symbols: value.symbols.unwrap_or(v.symbols), ..v })
 }
 
 fn normalize_addon_option(
   addon_option: Option<crate::options::AddonOutputOption>,
 ) -> Option<AddonOutputOption> {
-  addon_option.map(move |value| {
-    AddonOutputOption::Fn(Arc::new(move |chunk| {
-      let fn_js = Arc::clone(&value);
+  addon_option.map(move |value| match value {
+    // Static string - no JS function call needed
+    Either::A(string) => AddonOutputOption::String(Some(string)),
+    // Dynamic function
+    Either::B(fn_js) => AddonOutputOption::Fn(Arc::new(move |chunk| {
+      let fn_js = Arc::clone(&fn_js);
       Box::pin(async move {
         fn_js
           .await_call(FnArgs { data: (BindingRenderedChunk::new(chunk),) })
           .await
           .map_err(anyhow::Error::from)
       })
-    }))
+    })),
   })
 }
 
@@ -156,7 +153,7 @@ pub fn normalize_binding_options(
     crate::parallel_js_plugin_registry::PluginValues,
   >,
   #[cfg(not(target_family = "wasm"))] worker_manager: Option<WorkerManager>,
-) -> napi::Result<NormalizeBindingOptionsReturn> {
+) -> napi::Result<BundlerConfig> {
   let cwd = PathBuf::from(input_options.cwd);
 
   let external = input_options.external.map(|external| match external {
@@ -286,6 +283,8 @@ pub fn normalize_binding_options(
     }),
     banner: normalize_addon_option(output_options.banner),
     footer: normalize_addon_option(output_options.footer),
+    post_banner: normalize_addon_option(output_options.post_banner),
+    post_footer: normalize_addon_option(output_options.post_footer),
     intro: normalize_addon_option(output_options.intro),
     outro: normalize_addon_option(output_options.outro),
     sourcemap_base_url: output_options
@@ -311,26 +310,56 @@ pub fn normalize_binding_options(
     sourcemap_ignore_list,
     sourcemap_path_transform,
     sourcemap_debug_ids: output_options.sourcemap_debug_ids,
-    exports: output_options.exports.map(|format_str| match format_str.as_str() {
-      "auto" => OutputExports::Auto,
-      "default" => OutputExports::Default,
-      "named" => OutputExports::Named,
-      "none" => OutputExports::None,
-      _ => panic!("Invalid exports: {format_str}"),
-    }),
-    format: output_options.format.map(|format_str| match format_str.as_str() {
-      "es" => OutputFormat::Esm,
-      "cjs" => OutputFormat::Cjs,
-      "iife" => OutputFormat::Iife,
-      "umd" => OutputFormat::Umd,
-      _ => panic!("Invalid format: {format_str}"),
-    }),
-    hash_characters: output_options.hash_characters.map(|format_str| match format_str.as_str() {
-      "base64" => HashCharacters::Base64,
-      "base36" => HashCharacters::Base36,
-      "hex" => HashCharacters::Hex,
-      _ => panic!("Invalid hash characters: {format_str}"),
-    }),
+    exports: output_options
+      .exports
+      .map(|format_str| {
+        Ok(match format_str.as_str() {
+          "auto" => OutputExports::Auto,
+          "default" => OutputExports::Default,
+          "named" => OutputExports::Named,
+          "none" => OutputExports::None,
+          _ => {
+            return Err(napi::Error::new(
+              napi::Status::InvalidArg,
+              format!("Invalid value \"{format_str}\" for option \"output.exports\" - valid values are \"auto\", \"default\", \"named\", and \"none\"."),
+            ));
+          }
+        })
+      })
+      .transpose()?,
+    format: output_options
+      .format
+      .map(|format_str| {
+        Ok(match format_str.as_str() {
+          "es" => OutputFormat::Esm,
+          "cjs" => OutputFormat::Cjs,
+          "iife" => OutputFormat::Iife,
+          "umd" => OutputFormat::Umd,
+          _ => {
+            return Err(napi::Error::new(
+              napi::Status::InvalidArg,
+              format!("Invalid value \"{format_str}\" for option \"output.format\" - valid values are \"es\", \"cjs\", \"iife\", and \"umd\"."),
+            ));
+          }
+        })
+      })
+      .transpose()?,
+    hash_characters: output_options
+      .hash_characters
+      .map(|format_str| {
+        Ok(match format_str.as_str() {
+          "base64" => HashCharacters::Base64,
+          "base36" => HashCharacters::Base36,
+          "hex" => HashCharacters::Hex,
+          _ => {
+            return Err(napi::Error::new(
+              napi::Status::InvalidArg,
+              format!("Invalid value \"{format_str}\" for option \"output.hashCharacters\" - valid values are \"base64\", \"base36\", and \"hex\"."),
+            ));
+          }
+        })
+      })
+      .transpose()?,
     globals: normalize_globals_option(output_options.globals),
     paths: normalize_paths_option(output_options.paths),
     generated_code: output_options
@@ -468,7 +497,13 @@ pub fn normalize_binding_options(
     minify_internal_exports: output_options.minify_internal_exports,
     clean_dir: output_options.clean_dir,
     context: input_options.context,
-    tsconfig: input_options.tsconfig,
+    tsconfig: input_options.tsconfig.and_then(|v| {
+      Some(match v {
+        Either::A(false) => return None,
+        Either::A(true) => TsConfig::Auto,
+        Either::B(s) => TsConfig::Manual(s.into()),
+      })
+    }),
   };
 
   #[cfg(not(target_family = "wasm"))]
@@ -524,5 +559,5 @@ pub fn normalize_binding_options(
     })
     .collect::<Vec<_>>();
 
-  Ok(NormalizeBindingOptionsReturn { bundler_options, plugins })
+  Ok(BundlerConfig::new(bundler_options, plugins))
 }

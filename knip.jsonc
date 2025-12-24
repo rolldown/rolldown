@@ -70,6 +70,7 @@
       "entry": ["src/**/*.js", "test/**/*.{js,ts}"],
       "ignoreDependencies": [
         "acorn",
+        "acorn-import-assertions",
         "locate-character",
         "requirejs",
         "terser",
@@ -80,11 +81,17 @@
     "packages/test-dev-server": {
       "entry": [],
     },
+    "packages/test-dev-server/tests": {
+      "entry": ["**/*.{test,spec}.{js,ts}"],
+    },
     "scripts": {
       "entry": ["misc/**"],
     },
     "packages/test-dev-server/tests/fixtures/*": {
       "entry": ["dev.config.mjs", "src/*.js"], // no @rolldown/test-dev-server plugin
+    },
+    "packages/test-dev-server/tests/playground/hmr-full-bundle-mode": {
+      "entry": ["dev.config.mjs", "main.js", "hmr.js"], // Playwright test with dev config and source files
     },
   },
 }

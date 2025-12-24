@@ -19,7 +19,8 @@ pub async fn process_code_and_sourcemap(
   debug_id: u128,
   is_css: bool,
 ) -> BuildResult<Option<OutputAsset>> {
-  let source_map_link_comment_kind = if is_css { CommentKind::Block } else { CommentKind::Line };
+  let source_map_link_comment_kind =
+    if is_css { CommentKind::SingleLineBlock } else { CommentKind::Line };
   let file_base_name = Path::new(filename).file_name().expect("should have file name");
   map.set_file(file_base_name.to_string_lossy().as_ref());
 
@@ -171,7 +172,7 @@ fn process_sourcemap_related_reference(
       source.push_str("//");
       reference_body_processor(source)?;
     }
-    CommentKind::Block => {
+    CommentKind::SingleLineBlock | CommentKind::MultiLineBlock => {
       source.push_str("/*");
       reference_body_processor(source)?;
       source.push_str("*/");

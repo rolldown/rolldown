@@ -8,37 +8,37 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 1e4;
-}) });
+}));
 
 //#endregion
 //#region util.js
-var require_util = /* @__PURE__ */ __commonJS({ "util.js": ((exports, module) => {
+var require_util = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = function() {
 		console.log("util");
 	};
-}) });
+}));
 
 //#endregion
 //#region a.js
 var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
 var import_util = /* @__PURE__ */ __toESM(require_util());
-function test() {
+function test$1() {
 	(0, import_util.default)();
 	return import_cjs.default;
 }
 
 //#endregion
 //#region b.js
-function test$1() {
+function test() {
 	return import_cjs.default;
 }
-var b_default = test$1;
+var b_default = test;
 
 //#endregion
 //#region main.js
-const aa = test();
+const aa = test$1();
 const bb = b_default();
 
 //#endregion

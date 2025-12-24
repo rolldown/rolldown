@@ -1,0 +1,16 @@
+{
+  "config": {
+    "moduleTypes": {
+      ".js": "jsx"
+    },
+    "external": [
+      "react"
+    ],
+    "transform": {
+      "jsx": {
+        "runtime": "classic"
+      }
+    }
+  },
+  "expectExecuted": false
+}

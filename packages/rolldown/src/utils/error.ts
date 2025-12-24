@@ -31,8 +31,14 @@ function normalizeBindingError(e: BindingError): Error {
   return e.type === 'JsError'
     ? e.field0
     : Object.assign(new Error(), {
+      code: e.field0.kind,
+      // kept for backward compat for old Rolldown versions
       kind: e.field0.kind,
       message: e.field0.message,
+      id: e.field0.id,
+      exporter: e.field0.exporter,
+      loc: e.field0.loc,
+      pos: e.field0.pos,
       stack: undefined,
     });
 }

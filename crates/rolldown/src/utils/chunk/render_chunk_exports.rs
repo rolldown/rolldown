@@ -120,7 +120,8 @@ pub fn render_chunk_exports(
             )
           });
           if let Some(ns_alias) = &symbol.namespace_alias {
-            let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
+            let canonical_ns_ref = link_output.symbol_db.canonical_ref_for(ns_alias.namespace_ref);
+            let canonical_ns_name = &chunk.canonical_names[&canonical_ns_ref];
             let property_name = &ns_alias.property_name;
             s.push_str(&concat_string!(
               "var ",
@@ -173,6 +174,11 @@ pub fn render_chunk_exports(
                       &link_output.module_table.modules,
                     ) {
                       render_object_define_property(&exported_name, &exported_value)
+                    } else if exported_name.as_str() == "__proto__" {
+                      // `__proto__` has special semantics - assigning to it sets the prototype
+                      // instead of creating a property. We must use Object.defineProperty to
+                      // set an actual property named "__proto__".
+                      render_object_define_property_value(&exported_name, &exported_value)
                     } else {
                       concat_string!(
                         property_access_str("exports", exported_name.as_str()),
@@ -202,6 +208,7 @@ pub fn render_chunk_exports(
             .star_exports_from_external_modules
             .iter()
             .map(|rec_idx| module.ecma_view.import_records[*rec_idx].resolved_module)
+            .chain(ctx.chunk.entry_level_external_module_idx.iter().copied())
             .collect::<FxIndexSet<ModuleIdx>>();
 
           // Track already imported external modules to avoid duplicates
@@ -216,19 +223,25 @@ pub fn render_chunk_exports(
                 .expect("Should be external module here");
               external.namespace_ref
             })
+            .chain(ctx.chunk.import_symbol_from_external_modules.iter().map(|idx| {
+              let external = &ctx.link_output.module_table[*idx]
+                .as_external()
+                .expect("Should be external module here");
+              external.namespace_ref
+            }))
             .collect();
-
           external_modules.iter().for_each(|idx| {
           let external = &ctx.link_output.module_table[*idx].as_external().expect("Should be external module here");
           let binding_ref_name =
           &ctx.chunk.canonical_names[&external.namespace_ref];
-            let import_stmt =
-"Object.keys($NAME).forEach(function (k) {
-  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
-    enumerable: true,
-    get: function () { return $NAME[k]; }
-  });
-});\n".replace("$NAME", binding_ref_name);
+          let import_stmt = concat_string!(
+            "Object.keys(",binding_ref_name, ").forEach(function (k) {\n",
+            "  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {\n",
+            "    enumerable: true,\n",
+            "    get: function () { return ",binding_ref_name,"[k]; }\n",
+            "  });\n",
+            "});\n"
+          );
 
           s.push('\n');
           // Only generate require statement if this external module hasn't been imported yet
@@ -283,6 +296,20 @@ pub fn render_object_define_property(key: &str, value: &str) -> String {
     value,
     ";
   }
+});"
+  )
+}
+
+#[inline]
+pub fn render_object_define_property_value(key: &str, value: &str) -> String {
+  concat_string!(
+    "Object.defineProperty(exports, '",
+    key,
+    "', {
+  enumerable: true,
+  value: ",
+    value,
+    "
 });"
   )
 }

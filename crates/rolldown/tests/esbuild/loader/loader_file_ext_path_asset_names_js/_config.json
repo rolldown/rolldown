@@ -2,16 +2,16 @@
   "config": {
     "input": [
       {
-        "name": "entries_entry",
+        "name": "entries/entry",
         "import": "entries/entry.js"
       }
     ],
     "moduleTypes": {
       ".txt": "asset",
       ".png": "asset"
-    }
+    },
+    "assetFilenames": "[ext]/[name]-[hash].[ext]"
   },
   "expectExecuted": false,
   "snapshotBytes": true
 }
-

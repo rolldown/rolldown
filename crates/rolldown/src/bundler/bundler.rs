@@ -69,7 +69,7 @@ impl Bundler {
     }
 
     self.closed = true;
-    // TODO: This infers that `close_bundle` will not be called if there is no bundle happened. Is this expected?
+    // NOTE: `close_bundle` is not called if no bundle happened: https://github.com/rolldown/rolldown/issues/6910
     if let Some(last_bundle_handle) = &self.last_bundle_handle {
       last_bundle_handle.plugin_driver.close_bundle().await?;
       last_bundle_handle.plugin_driver.clear();
@@ -79,24 +79,6 @@ impl Bundler {
     self.cache = ScanStageCache::default();
     self.bundle_factory.resolver.clear_cache();
     Ok(())
-  }
-}
-
-pub struct CacheGuard<'a> {
-  pub is_incremental_build_enabled: bool,
-  pub cache: &'a mut ScanStageCache,
-}
-impl CacheGuard<'_> {
-  pub fn inner(&mut self) -> &mut ScanStageCache {
-    self.cache
-  }
-}
-
-impl Drop for CacheGuard<'_> {
-  fn drop(&mut self) {
-    if !self.is_incremental_build_enabled {
-      std::mem::take(self.cache);
-    }
   }
 }
 

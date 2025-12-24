@@ -1,6 +1,5 @@
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { onExit } from 'signal-exit';
 import { version } from '../../../package.json';
 import type { RolldownOptions, RolldownOutput } from '../..';
 import { rolldown } from '../../api/rolldown';
@@ -8,6 +7,7 @@ import { watch as rolldownWatch } from '../../api/watch';
 import { getClearScreenFunction } from '../../utils/clear-screen';
 import { loadConfig } from '../../utils/load-config';
 import { arraify } from '../../utils/misc';
+import { onExit } from '../../utils/signal-exit';
 import { styleText } from '../../utils/style-text';
 import type { NormalizedCliOptions } from '../arguments/normalize';
 import { logger } from '../logger';

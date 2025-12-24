@@ -9,7 +9,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &mut self,
     call_expr: &ast::CallExpression<'ast>,
   ) {
-    if !self.immutable_ctx.options.is_hmr_enabled() {
+    if !self.immutable_ctx.options.is_dev_mode_enabled() {
       return;
     }
     // Possible call patterns for `import.meta.hot.accept`:
@@ -40,6 +40,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             ImportKind::HotAccept,
             call_expr.span,
             ImportRecordMeta::empty(),
+            None,
           ),
         );
       }
@@ -64,6 +65,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                   ImportKind::HotAccept,
                   call_expr.span,
                   ImportRecordMeta::empty(),
+                  None,
                 ),
               )
             }),

@@ -7,7 +7,7 @@ use crate::inner_bundler_options::types::chunk_import_map::ChunkImportMap;
 
 use super::attach_debug_info::AttachDebugInfo;
 use super::chunk_modules_order::ChunkModulesOrderBy;
-use super::hmr_options::HmrOptions;
+use super::dev_mode_options::DevModeOptions;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "deserialize_bundler_options", derive(Deserialize, JsonSchema))]
@@ -45,7 +45,7 @@ pub struct ExperimentalOptions {
   pub vite_mode: Option<bool>,
   pub resolve_new_url_to_asset: Option<bool>,
   pub incremental_build: Option<bool>,
-  pub hmr: Option<HmrOptions>,
+  pub dev_mode: Option<DevModeOptions>,
   pub attach_debug_info: Option<AttachDebugInfo>,
   pub chunk_import_map: Option<ChunkImportMap>,
   pub chunk_modules_order: Option<ChunkModulesOrderBy>,

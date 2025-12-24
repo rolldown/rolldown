@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry_js.js
+
+```js
+//#region Test.web.tsx
+var Test_web_default = "Test.web.tsx";
+
+//#endregion
+//#region node_modules/expo-image/Image.web.tsx
+var Image_web_default = "Image.web.tsx";
+
+//#endregion
+//#region entry.js
+console.log(Test_web_default === "Test.web.tsx");
+console.log(Image_web_default === "Image.web.tsx");
+
+//#endregion
+```

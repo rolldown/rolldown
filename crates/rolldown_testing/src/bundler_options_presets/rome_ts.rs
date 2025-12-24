@@ -1,4 +1,4 @@
-use rolldown_common::{BundlerOptions, InputItem};
+use rolldown_common::{BundlerOptions, InputItem, TsConfig};
 use rolldown_workspace::root_dir;
 
 pub fn rome_ts() -> BundlerOptions {
@@ -11,9 +11,7 @@ pub fn rome_ts() -> BundlerOptions {
 
     // --- Required specific options for Rome
     shim_missing_exports: Some(true), // Need this due rome is not written with `isolatedModules: true`
-    tsconfig: Some(
-      root_dir().join("tmp/bench/rome/src/tsconfig.json").to_str().unwrap().to_string(),
-    ),
+    tsconfig: Some(TsConfig::Manual(root_dir().join("tmp/bench/rome/src/tsconfig.json"))),
     ..Default::default()
   }
 }

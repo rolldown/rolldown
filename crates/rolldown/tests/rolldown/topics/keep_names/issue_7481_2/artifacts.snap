@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+//#region main.ts
+var _MyClass;
+function MyDecorator() {
+	return (target) => {};
+}
+let MyClass = _MyClass = class MyClass$1 {
+	static {
+		__name(this, "MyClass");
+	}
+	constructor() {
+		this.myName = _MyClass.name;
+	}
+};
+MyClass = _MyClass = __decorate([MyDecorator()], MyClass);
+const myName = new MyClass().myName;
+assert.strictEqual(myName, "MyClass");
+
+//#endregion
+export { myName };
+```

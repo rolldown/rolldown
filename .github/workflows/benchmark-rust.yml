@@ -14,7 +14,7 @@ on:
       - 'scripts/misc/setup-benchmark-input/**'
       - '.github/workflows/benchmark-rust.yml'
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, ready_for_review]
     paths:
       - '**/*.rs'
       - 'Cargo.lock'
@@ -29,14 +29,18 @@ concurrency:
 jobs:
   codspeed-benchmark:
     name: Codspeed Benchmark
+    if: >
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.draft != true &&
+      !contains(github.event.pull_request.labels.*.name, 'graphite: merge-when-ready'))
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
-      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
+      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@83350c0ef69ec34f00be596f1cb9302179b9f43d # v1.0.9
+        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
           tools: just, cargo-codspeed
           cache-key: codspeed
@@ -49,7 +53,7 @@ jobs:
         run: cargo codspeed build -p bench --features codspeed
 
       - name: Run the benchmarks
-        uses: CodSpeedHQ/action@6a8e2b874c338bf81cc5e8be715ada75908d3871 # v4.3.4
+        uses: CodSpeedHQ/action@346a2d8a8d9d38909abd0bc3d23f773110f076ad # v4.4.1
         with:
           run: cargo codspeed run -p bench
           token: ${{ secrets.CODSPEED_TOKEN }}
@@ -63,15 +67,18 @@ jobs:
     permissions:
       pull-requests: write
     name: Benchmark Rust
-    if: github.event_name == 'pull_request'
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.draft != true &&
+      !contains(github.event.pull_request.labels.*.name, 'graphite: merge-when-ready')
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
-      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
+      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@83350c0ef69ec34f00be596f1cb9302179b9f43d # v1.0.9
+        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
           tools: just, critcmp
           cache-key: rust-benchmark
@@ -83,7 +90,7 @@ jobs:
         run: cargo bench -p bench -- --save-baseline pr
 
       - name: Checkout Target Branch
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           clean: false
           ref: ${{ github.event.pull_request.base.ref }}

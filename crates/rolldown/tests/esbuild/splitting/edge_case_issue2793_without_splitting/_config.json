@@ -5,6 +5,7 @@
         "name": "index",
         "import": "index.js"
       }
-    ]
+    ],
+    "inlineDynamicImports": true
   }
 }

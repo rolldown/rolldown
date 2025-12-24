@@ -23,6 +23,8 @@ pub struct BindingViteTransformPluginConfig {
 
   pub jsx_inject: Option<String>,
   pub transform_options: Option<TransformOptions>,
+
+  pub yarn_pnp: Option<bool>,
 }
 
 impl From<BindingViteTransformPluginConfig> for ViteTransformPlugin {
@@ -46,6 +48,7 @@ impl From<BindingViteTransformPluginConfig> for ViteTransformPlugin {
         .transform_options
         .map(normalize_binding_transform_options)
         .unwrap_or_default(),
+      resolver: ViteTransformPlugin::new_resolver(value.yarn_pnp.unwrap_or_default()),
     }
   }
 }

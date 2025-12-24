@@ -67,12 +67,7 @@ impl Plugin for ViteAliasPlugin {
           let message = format!(
             "rewrote {importee} to {specifier} but was not an absolute path and was not handled by other plugins. This will lead to duplicated modules for the same path. To avoid duplicating modules, you should resolve to an absolute path."
           );
-          ctx.warn(rolldown_plugin::LogWithoutPlugin {
-            message,
-            code: None,
-            id: None,
-            exporter: None,
-          });
+          ctx.warn(rolldown_plugin::LogWithoutPlugin { message, ..Default::default() });
         }
         HookResolveIdOutput::from_id(specifier)
       }

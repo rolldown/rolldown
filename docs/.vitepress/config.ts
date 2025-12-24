@@ -141,6 +141,7 @@ const sidebarForOptions: DefaultTheme.SidebarItem[] = [
       { text: 'optimization', link: '/options/optimization.md' },
       { text: 'context', link: '/options/context.md' },
       { text: 'tsconfig', link: '/options/tsconfig.md' },
+      { text: 'checks', link: '/options/checks.md' },
       { text: 'experimental', link: '/options/experimental.md' },
       { text: 'output', link: '/options/output.md' },
       {

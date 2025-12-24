@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "1.0.0-beta.51",
+  "version": "1.0.0-beta.56",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "type": "module",
   "homepage": "https://rolldown.rs/",
@@ -50,6 +50,10 @@
       "dev": "./src/filter-index.ts",
       "default": "./dist/filter-index.mjs"
     },
+    "./getLogFilter": {
+      "dev": "./src/get-log-filter.ts",
+      "default": "./dist/get-log-filter.mjs"
+    },
     "./parallelPlugin": {
       "dev": "./src/parallel-plugin.ts",
       "default": "./dist/parallel-plugin.mjs"
@@ -78,6 +82,7 @@
         "types": "./dist/experimental-runtime-types.d.ts"
       },
       "./filter": "./dist/filter-index.mjs",
+      "./getLogFilter": "./dist/get-log-filter.mjs",
       "./parallelPlugin": "./dist/parallel-plugin.mjs",
       "./parseAst": "./dist/parse-ast-index.mjs",
       "./package.json": "./package.json",
@@ -116,7 +121,6 @@
       "x86_64-unknown-linux-gnu",
       "x86_64-unknown-linux-musl",
       "x86_64-unknown-freebsd",
-      "i686-pc-windows-msvc",
       "armv7-unknown-linux-gnueabihf",
       "aarch64-unknown-linux-gnu",
       "aarch64-apple-darwin",

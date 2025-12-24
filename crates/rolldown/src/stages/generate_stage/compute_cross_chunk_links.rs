@@ -5,16 +5,17 @@ use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
 use crate::utils::chunk::normalize_preserve_entry_signature;
 use itertools::{Itertools, multizip};
+use oxc::semantic::SymbolId;
 use oxc::span::CompactStr;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PreserveEntrySignatures,
-  RUNTIME_HELPER_NAMES, SymbolRef, WrapKind,
+  RUNTIME_HELPER_NAMES, SymbolIdExt, SymbolRef, WrapKind,
 };
 use rolldown_utils::concat_string;
-use rolldown_utils::indexmap::FxIndexSet;
-use rolldown_utils::rayon::IntoParallelIterator;
+use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
+use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -65,9 +66,16 @@ impl GenerateStage<'_> {
     self.deconflict_exported_names(chunk_graph, &index_chunk_exported_symbols);
 
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
-      .into_par_iter()
-      .map(|cross_chunk_imports| {
-        let mut cross_chunk_imports = cross_chunk_imports.into_iter().collect::<Vec<_>>();
+      .par_iter_enumerated()
+      .map(|(chunk_idx, cross_chunk_imports)| {
+        // Include imports from `imports_from_other_chunks` which may have been
+        // added during chunk merging optimization (PR #7194).
+        // See: https://github.com/rolldown/rolldown/issues/7297
+        let mut cross_chunk_imports = cross_chunk_imports
+          .iter()
+          .copied()
+          .chain(chunk_graph.chunk_table[chunk_idx].imports_from_other_chunks.keys().copied())
+          .collect::<Vec<_>>();
         cross_chunk_imports.sort_by_cached_key(|chunk_id| {
           let mut module_ids = chunk_graph.chunk_table[*chunk_id]
             .modules
@@ -82,16 +90,17 @@ impl GenerateStage<'_> {
       .collect::<Vec<_>>();
 
     let index_sorted_imports_from_other_chunks = index_imports_from_other_chunks
-      .into_iter()
-      .collect_vec()
-      .into_par_iter()
-      .map(|importee_map| {
+      .into_iter_enumerated()
+      .map(|(chunk_idx, mut importee_map)| {
+        for (idx, items) in &chunk_graph.chunk_table[chunk_idx].imports_from_other_chunks {
+          importee_map.entry(*idx).or_default().extend_from_slice(items);
+        }
         importee_map
           .into_iter()
           .sorted_by_key(|(importee_chunk_id, _)| {
             chunk_graph.chunk_table[*importee_chunk_id].exec_order
           })
-          .collect_vec()
+          .collect::<FxIndexMap<_, _>>()
       })
       .collect::<Vec<_>>();
 
@@ -180,7 +189,7 @@ impl GenerateStage<'_> {
               {
                 // the the resolved module is not included in module graph, skip
                 // TODO: Is that possible that the module of the record is a external module?
-                if !importee_module.meta.is_included() {
+                if !self.link_output.metas[importee_module.idx].is_included {
                   return;
                 }
                 if matches!(rec.kind, ImportKind::DynamicImport) {
@@ -210,8 +219,9 @@ impl GenerateStage<'_> {
                 .push((module.idx, import.clone()));
             }
           });
-          module.stmt_infos.iter().for_each(|stmt_info| {
-            if !stmt_info.is_included {
+          let linking_info = &self.link_output.metas[module.idx];
+          module.stmt_infos.iter_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
+            if !linking_info.stmt_info_included[stmt_info_idx] {
               return;
             }
             stmt_info.declared_symbols.iter().for_each(|declared| {
@@ -369,7 +379,16 @@ impl GenerateStage<'_> {
             }
           }
         }
-        ChunkKind::Common => {}
+        ChunkKind::Common => {
+          if let Some(set) = chunk_graph.common_chunk_exported_facade_chunk_namespace.get(&chunk_id)
+          {
+            for dynamic_entry_module in set {
+              index_chunk_exported_symbols[chunk_id]
+                .entry(SymbolId::module_namespace_symbol_ref(*dynamic_entry_module))
+                .or_default();
+            }
+          }
+        }
       }
 
       let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
@@ -457,7 +476,7 @@ impl GenerateStage<'_> {
                 false
               } else {
                 importee_chunk.bits.has_bit(*importer_chunk_bit)
-                  && importee_chunk.has_side_effect(self.link_output.runtime.id())
+                  && importee_chunk.has_side_effect(&self.link_output.module_table)
               }
             })
             .for_each(|(importee_chunk_id, _)| {

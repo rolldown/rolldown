@@ -1,0 +1,13 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+//#region entry.js
+import("./foo" + bar, { with: { type: "bytes" } }).then(console.log);
+
+//#endregion
+```

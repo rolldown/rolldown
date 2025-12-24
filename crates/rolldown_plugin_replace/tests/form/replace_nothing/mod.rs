@@ -11,9 +11,12 @@ async fn replace_strings() {
     .build(TestMeta { expect_executed: false, ..Default::default() })
     .run_with_plugins(
       BundlerOptions { input: Some(vec!["./input.js".to_string().into()]), ..Default::default() },
-      vec![Arc::new(ReplacePlugin::new(
-        std::iter::once(("typeof window".to_string(), "\"object\"".to_string())).collect(),
-      ))],
+      vec![Arc::new(
+        ReplacePlugin::new(
+          std::iter::once(("typeof window".to_string(), "\"object\"".to_string())).collect(),
+        )
+        .unwrap(),
+      )],
     )
     .await;
 }

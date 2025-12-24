@@ -24,7 +24,7 @@ jobs:
       binary_size: ${{ steps.run.outputs.BINARY_SIZE }}
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
-      - uses: oxc-project/setup-rust@83350c0ef69ec34f00be596f1cb9302179b9f43d # v1.0.9
+      - uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
           cache-key: release-build
       - run: cargo clean # build from scratch using local system cache to avoid download from crates.io
@@ -48,14 +48,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout rolldown metric repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           repository: 'rolldown/metric'
           ref: 'main'
           token: ${{ secrets.METRIC_SECRET_KEY }}
           persist-credentials: true # required by `git push` below
 
-      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
+      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
 
       - name: Install dependencies and push metric
         run: |

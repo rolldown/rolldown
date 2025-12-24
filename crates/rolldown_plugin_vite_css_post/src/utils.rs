@@ -111,7 +111,7 @@ impl ViteCSSPostPlugin {
         };
 
         if let Some(url) = url_cache.inner.get(&id) {
-          magic_string.update(index, index + pos + 2, url.clone());
+          magic_string.update(index, start + pos + 2, url.clone());
           continue;
         }
 
@@ -127,7 +127,7 @@ impl ViteCSSPostPlugin {
         let content = self
           .resolve_asset_urls_in_css(
             ctx,
-            style.to_owned(),
+            style.as_str(),
             &css_asset_name,
             &ctx.args.options.asset_filenames,
           )
@@ -145,9 +145,9 @@ impl ViteCSSPostPlugin {
 
         let filename = ctx.get_file_name(&reference_id)?;
         let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
-        let chunk_metadata = vite_metadata.get_or_insert_default(ctx.env.host_id.into());
+        let chunk_metadata = vite_metadata.get(ctx.env.host_id.into());
 
-        chunk_metadata.imported_assets.insert(clean_url(&reference_id).into());
+        chunk_metadata.imported_assets.insert(clean_url(&filename).into());
 
         let url = ctx
           .env
@@ -161,7 +161,7 @@ impl ViteCSSPostPlugin {
           .to_asset_url_in_js()?;
 
         url_cache.inner.insert(id, url.clone());
-        magic_string.update(index, index + pos + 2, url);
+        magic_string.update(index, start + pos + 2, url);
       }
     }
     Ok(())
@@ -170,13 +170,13 @@ impl ViteCSSPostPlugin {
   pub async fn finalize_css_chunk<'a>(
     &self,
     ctx: &FinalizedContext<'a, '_, '_>,
-    css_chunk: String,
+    css_chunk: Option<String>,
     is_pure_css_chunk: bool,
     magic_string: &mut Option<MagicString<'a>>,
   ) -> anyhow::Result<()> {
-    if css_chunk.is_empty() {
+    let Some(css_chunk) = css_chunk else {
       return Ok(());
-    }
+    };
 
     if is_pure_css_chunk && ctx.args.options.format.is_esm_or_cjs() {
       ctx
@@ -206,8 +206,9 @@ impl ViteCSSPostPlugin {
           css_asset_path.to_string_lossy().into_owned()
         };
 
+        // TODO: Cache legacy check result per chunk
         let is_legacy = match &self.is_legacy {
-          Some(is_legacy_fn) => is_legacy_fn().await?,
+          Some(is_legacy_fn) => is_legacy_fn(ctx.args.options).await?,
           None => false,
         };
 
@@ -221,7 +222,7 @@ impl ViteCSSPostPlugin {
         let content = self
           .resolve_asset_urls_in_css(
             ctx,
-            css_chunk,
+            &css_chunk,
             &css_asset_name,
             &ctx.args.options.asset_filenames,
           )
@@ -238,7 +239,7 @@ impl ViteCSSPostPlugin {
           .await?;
 
         let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
-        let chunk_metadata = vite_metadata.get_or_insert_default(ctx.env.host_id.into());
+        let chunk_metadata = vite_metadata.get(ctx.env.host_id.into());
         chunk_metadata.imported_css.insert(ctx.get_file_name(&reference_id)?);
 
         if ctx.args.chunk.is_entry && is_pure_css_chunk {
@@ -295,7 +296,7 @@ impl ViteCSSPostPlugin {
         self
           .resolve_asset_urls_in_css(
             ctx,
-            css_chunk,
+            &css_chunk,
             &self.get_css_bundle_name(ctx)?,
             &ctx.args.options.asset_filenames,
           )
@@ -309,7 +310,7 @@ impl ViteCSSPostPlugin {
   pub async fn resolve_asset_urls_in_css(
     &self,
     ctx: &FinalizedContext<'_, '_, '_>,
-    css_chunk: String,
+    css_chunk: &str,
     css_asset_name: &str,
     css_file_names: &AssetFilenamesOutputOption,
   ) -> anyhow::Result<String> {
@@ -326,8 +327,8 @@ impl ViteCSSPostPlugin {
     };
 
     let mut magic_string = None;
-    for item in AssetUrlIter::from(css_chunk.as_str()).into_asset_url_iter() {
-      let s = magic_string.get_or_insert_with(|| string_wizard::MagicString::new(&css_chunk));
+    for item in AssetUrlIter::from(css_chunk).into_asset_url_iter() {
+      let s = magic_string.get_or_insert_with(|| string_wizard::MagicString::new(css_chunk));
       match item {
         AssetUrlItem::Asset((range, reference_id, postfix)) => {
           let filename = ctx.get_file_name(reference_id)?;
@@ -338,7 +339,7 @@ impl ViteCSSPostPlugin {
           };
 
           let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
-          let chunk_metadata = vite_metadata.get_or_insert_default(ctx.env.host_id.into());
+          let chunk_metadata = vite_metadata.get(ctx.env.host_id.into());
 
           chunk_metadata.imported_assets.insert(clean_url(&filename).into());
 
@@ -405,7 +406,11 @@ impl ViteCSSPostPlugin {
       }
     }
 
-    Ok(if let Some(magic_string) = magic_string { magic_string.to_string() } else { css_chunk })
+    Ok(if let Some(magic_string) = magic_string {
+      magic_string.to_string()
+    } else {
+      css_chunk.to_owned()
+    })
   }
 
   pub async fn finalize_css(&self, mut content: String) -> anyhow::Result<String> {
@@ -415,7 +420,7 @@ impl ViteCSSPostPlugin {
     }
     // TODO: Maybe we should use internal lightningcss minify
     if let Some(css_minify) = &self.css_minify {
-      content = (css_minify)(content).await?;
+      content = (css_minify)(content, false).await?;
     }
     // inject an additional string to generate a different hash for https://github.com/vitejs/vite/issues/18038
     //
@@ -492,6 +497,7 @@ impl ViteCSSPostPlugin {
         if let Some(lib_css_filename) = &self.lib_css_filename {
           lib_css_filename.to_owned()
         } else {
+          // TODO: Maybe we should use try_get_package_json_or_create for cache
           let mut base_dir = self.root.clone();
           loop {
             let pkg_path = base_dir.join("package.json");
@@ -500,11 +506,16 @@ impl ViteCSSPostPlugin {
               let json = json.trim_start_matches("\u{feff}");
               let raw_json = serde_json::from_str::<serde_json::Value>(json)?;
               if let Some(json_object) = raw_json.as_object() {
-                break json_object
+                let name = json_object
                   .get("name")
                   .and_then(|field| field.as_str())
-                  .map(ToString::to_string)
                   .ok_or_else(|| anyhow::anyhow!("Name in package.json is required if option 'build.lib.cssFileName' is not provided."))?;
+                let name = if name.starts_with('@') {
+                  name.split_once('/').map(|(_, second)| second).unwrap_or(name)
+                } else {
+                  name
+                };
+                break format!("{name}.css");
               }
             }
             base_dir = match base_dir.parent() {
@@ -642,15 +653,15 @@ impl ViteCSSPostPlugin {
 
         Regex::new(&if args.options.format.is_esm() {
           rolldown_utils::concat_string!(
-            r#"\\bimport\\s*["'][^"']*(?:"#,
+            r#"\bimport\s*["'][^"']*(?:"#,
             empty_chunk_files,
             r#")["'];"#
           )
         } else {
           rolldown_utils::concat_string!(
-            r#"(\\b|,\\s*)require\\(\\s*["'\`][^"'\`]*(?:"#,
+            r#"(\b|,\s*)require\(\s*["'\`][^"'\`]*(?:"#,
             empty_chunk_files,
-            r#")["'\`]\\)(;|,)"#
+            r#")["'\`]\)(;|,)"#
           )
         })
         .unwrap()
@@ -670,16 +681,14 @@ impl ViteCSSPostPlugin {
           // remove pure css chunk from other chunk's imports, and also
           // register the emitted CSS files under the importer chunks instead.
           let vite_metadata = ctx.meta().get_or_insert_default::<ViteMetadata>();
-          let chunk_metadata =
-            vite_metadata.get_or_insert_default(chunk.preliminary_filename.as_str().into());
+          let chunk_metadata = vite_metadata.get(chunk.preliminary_filename.as_str().into());
           new_chunk.imports = new_chunk
             .imports
             .into_iter()
             .filter(|file| {
               if pure_css_chunk_names.contains(file) {
                 let chunk = &chunks[file];
-                let file_metadata =
-                  vite_metadata.get(&chunk.preliminary_filename.as_str().into()).unwrap();
+                let file_metadata = vite_metadata.get(chunk.preliminary_filename.as_str().into());
                 file_metadata.imported_css.iter().for_each(|file| {
                   chunk_metadata.imported_css.insert(file.clone());
                 });

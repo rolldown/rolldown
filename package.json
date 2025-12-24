@@ -3,7 +3,7 @@
   "description": "Rollup in Rust",
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@10.22.0",
+  "packageManager": "pnpm@10.23.0",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },
@@ -11,6 +11,7 @@
     "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings --type-aware",
     "lint-knip": "knip",
     "fmt": "dprint fmt",
+    "fmt-check": "dprint check",
     "build": "echo \"Use just build\"",
     "build:release": "echo \"Use just build native release\"",
     "test": "echo \"Use just test-node\"",
@@ -32,10 +33,11 @@
     "husky": "^9.1.7",
     "knip": "^5.61.3",
     "lint-staged": "^16.1.2",
-    "oxlint": "^1.29.0",
-    "oxlint-tsgolint": "0.7.3",
-    "remove-unused-vars": "^0.0.9",
+    "oxlint": "^1.31.0",
+    "oxlint-tsgolint": "0.10.0",
+    "remove-unused-vars": "^0.0.11",
     "rolldown": "workspace:*",
+    "playwright-chromium": "^1.56.1",
     "typescript": "catalog:"
   },
   "pnpm": {

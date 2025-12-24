@@ -29,14 +29,15 @@
     "packages/vite-tests",
     "pnpm-lock.yaml",
     "rollup",
-    "scripts/snap-diff/stats",
-    "scripts/snap-diff/summary",
+    "test262",
+    "scripts/src/esbuild-tests/snap-diff/stats",
+    "scripts/src/esbuild-tests/snap-diff/summary",
     "**/.pnp.cjs",
     "**/diff.md",
     "**/bypass.md"
   ],
   "plugins": [
-    "https://plugins.dprint.dev/typescript-0.95.12.wasm",
+    "https://plugins.dprint.dev/typescript-0.95.13.wasm",
     "https://plugins.dprint.dev/json-0.21.0.wasm",
     "https://plugins.dprint.dev/markdown-0.20.0.wasm",
     "https://plugins.dprint.dev/g-plane/pretty_yaml-v0.5.1.wasm",

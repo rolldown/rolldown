@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dep.js
+
+```js
+
+//#region dep.js
+var dep_default = 42;
+
+//#endregion
+module.exports = dep_default;
+```
+
+## main.js
+
+```js
+const require_dep = require('./dep.js');
+
+exports.value = require_dep;
+```
+
+# Variant: named: [exports: Named]
+
+## Assets
+
+### dep.js
+
+```js
+Object.defineProperty(exports, '__esModule', { value: true });
+
+//#region dep.js
+var dep_default = 42;
+
+//#endregion
+exports.default = dep_default;
+```
+
+### main.js
+
+```js
+const require_dep = require('./dep.js');
+
+exports.value = require_dep.default;
+```

@@ -13,15 +13,15 @@ import assert from "node:assert";
 //#region trigger-dep.js
 var trigger_dep_exports = {};
 var trigger_dep_hot;
-var init_trigger_dep = __esm({ "trigger-dep.js": (() => {
+var init_trigger_dep = __esmMin((() => {
 	trigger_dep_hot = __rolldown_runtime__.createModuleHotContext("trigger-dep.js");
 	__rolldown_runtime__.registerModule("trigger-dep.js", { exports: trigger_dep_exports });
 	console.log();
-}) });
+}));
 
 //#endregion
 //#region cases/require/cjs-lib-reassign-module-exports.js
-var require_cjs_lib_reassign_module_exports = /* @__PURE__ */ __commonJS({ "cases/require/cjs-lib-reassign-module-exports.js": ((exports, module) => {
+var require_cjs_lib_reassign_module_exports = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	init_trigger_dep();
 	const cjs_lib_reassign_module_exports_hot = __rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib-reassign-module-exports.js");
 	__rolldown_runtime__.registerModule("cases/require/cjs-lib-reassign-module-exports.js", module);
@@ -29,11 +29,11 @@ var require_cjs_lib_reassign_module_exports = /* @__PURE__ */ __commonJS({ "case
 		return "exports";
 	};
 	module.exports.foo = "foo";
-}) });
+}));
 
 //#endregion
 //#region cases/require/cjs-lib.js
-var require_cjs_lib = /* @__PURE__ */ __commonJS({ "cases/require/cjs-lib.js": ((exports, module) => {
+var require_cjs_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	init_trigger_dep();
 	const cjs_lib_hot = __rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib.js");
 	__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", module);
@@ -49,11 +49,11 @@ var require_cjs_lib = /* @__PURE__ */ __commonJS({ "cases/require/cjs-lib.js": (
 		const exports$1 = {};
 		exports.qux = "qux";
 	}
-}) });
+}));
 
 //#endregion
 //#region cases/require/umd-lib.js
-var require_umd_lib = /* @__PURE__ */ __commonJS({ "cases/require/umd-lib.js": ((exports, module) => {
+var require_umd_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	init_trigger_dep();
 	const umd_lib_hot = __rolldown_runtime__.createModuleHotContext("cases/require/umd-lib.js");
 	__rolldown_runtime__.registerModule("cases/require/umd-lib.js", module);
@@ -74,7 +74,7 @@ var require_umd_lib = /* @__PURE__ */ __commonJS({ "cases/require/umd-lib.js": (
 		exports$1.foo = "foo";
 		return exports$1;
 	});
-}) });
+}));
 
 //#endregion
 //#region cases/require/index.js
@@ -131,18 +131,18 @@ assert.strictEqual(Globals, Object);
 
 //#endregion
 //#region cases/deconflict_import_bindings/foo.mjs
-var foo_exports = /* @__PURE__ */ __export({ foo: () => foo$1 });
+var foo_exports$1 = /* @__PURE__ */ __export({ foo: () => foo$1 });
 init_trigger_dep();
 const foo_hot$1 = __rolldown_runtime__.createModuleHotContext("cases/deconflict_import_bindings/foo.mjs");
-__rolldown_runtime__.registerModule("cases/deconflict_import_bindings/foo.mjs", { exports: foo_exports });
+__rolldown_runtime__.registerModule("cases/deconflict_import_bindings/foo.mjs", { exports: foo_exports$1 });
 const foo$1 = "foo";
 
 //#endregion
 //#region cases/deconflict_import_bindings/foo/index.mjs
-var foo_exports$1 = /* @__PURE__ */ __export({ foo: () => foo });
+var foo_exports = /* @__PURE__ */ __export({ foo: () => foo });
 init_trigger_dep();
 const foo_hot = __rolldown_runtime__.createModuleHotContext("cases/deconflict_import_bindings/foo/index.mjs");
-__rolldown_runtime__.registerModule("cases/deconflict_import_bindings/foo/index.mjs", { exports: foo_exports$1 });
+__rolldown_runtime__.registerModule("cases/deconflict_import_bindings/foo/index.mjs", { exports: foo_exports });
 const foo = "foo-index";
 
 //#endregion

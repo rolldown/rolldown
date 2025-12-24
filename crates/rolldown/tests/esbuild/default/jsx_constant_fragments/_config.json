@@ -1,0 +1,17 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "entry.js"
+      }
+    ],
+    "transform": {
+      "jsx": {
+        "runtime": "classic",
+        "pragmaFrag": "\"]\""
+      }
+    }
+  },
+  "expectExecuted": false
+}

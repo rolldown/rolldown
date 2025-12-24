@@ -24,6 +24,7 @@ OPTIONS
   --advanced-chunks.min-size <advanced-chunks.min-size>Minimum size of the chunk.
   --asset-file-names <name>   Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
+  --checks.cannot-call-namespace Whether to emit warning when detecting cannot call namespace.
   --checks.circular-dependency Whether to emit warning when detecting circular dependency.
   --checks.common-js-variable-in-esm Whether to emit warning when detecting common js variable in esm.
   --checks.configuration-field-conflict Whether to emit warning when detecting configuration field conflict.
@@ -34,7 +35,8 @@ OPTIONS
   --checks.import-is-undefined Whether to emit warning when detecting import is undefined.
   --checks.missing-global-name Whether to emit warning when detecting missing global name.
   --checks.missing-name-option-for-iife-export Whether to emit warning when detecting missing name option for iife export.
-  --checks.mixed-export       Whether to emit warning when detecting mixed export.
+  --checks.mixed-exports      Whether to emit warning when detecting mixed exports.
+  --checks.plugin-timings     Whether to emit warning when detecting plugin timings.
   --checks.prefer-builtin-feature Whether to emit warning when detecting prefer builtin feature.
   --checks.unresolved-entry   Whether to emit warning when detecting unresolved entry.
   --checks.unresolved-import  Whether to emit warning when detecting unresolved import.
@@ -72,6 +74,8 @@ OPTIONS
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --paths <paths>             Maps external module IDs to paths.
   --polyfill-require          Disable require polyfill injection.
+  --post-banner <post-banner> A string to prepend to the top of each chunk. Applied after the \`renderChunk\` hook and minification.
+  --post-footer <post-footer> A string to append to the bottom of each chunk. Applied after the \`renderChunk\` hook and minification.
   --preserve-modules          Preserve module structure.
   --preserve-modules-root <preserve-modules-root>Put preserved modules under this path at root level.
   --sanitize-file-name        Sanitize file name.
@@ -86,7 +90,7 @@ OPTIONS
   --transform.assumptions.set-public-class-fields .
   --transform.decorators.emit-decorator-metadata .
   --transform.decorators.legacy .
-  --transform.define <transform.define>Define global variables.
+  --transform.define <transform.define>Define global variables (syntax: key=value,key2=value2).
   --transform.drop-labels <transform.drop-labels>Remove labeled statements with these label names.
   --transform.helpers.mode <transform.helpers.mode>.
   --transform.inject <transform.inject>Inject import statements on demand.
@@ -160,6 +164,12 @@ console.log("1");
 console.log("2");
 
 //#endregion"
+`;
+
+exports[`cli options for bundling > should handle multiple define arguments with comma-separated syntax 1`] = `
+"<DIR>/index.js  chunk │ size: 0.10 kB
+
+"
 `;
 
 exports[`cli options for bundling > should handle negative boolean options 1`] = `

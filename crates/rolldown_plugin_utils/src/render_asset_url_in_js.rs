@@ -21,7 +21,7 @@ impl RenderAssetUrlInJsEnv<'_> {
         AssetUrlItem::Asset((range, reference_id, postfix)) => {
           let file = self.ctx.get_file_name(reference_id)?;
           let vite_metadata = self.ctx.meta().get_or_insert_default::<ViteMetadata>();
-          let chunk_metadata = vite_metadata.get_or_insert_default(self.env.host_id.into());
+          let chunk_metadata = vite_metadata.get(self.env.host_id.into());
 
           chunk_metadata.imported_assets.insert(clean_url(&file).into());
 
@@ -34,21 +34,14 @@ impl RenderAssetUrlInJsEnv<'_> {
           (range, filename, false)
         }
         AssetUrlItem::PublicAsset((range, hash)) => {
-          let cache = self
-            .ctx
-            .meta()
-            .get::<PublicAssetUrlCache>()
-            .ok_or_else(|| anyhow::anyhow!("PublicAssetUrlCache missing"))?;
+          let cache =
+            self.ctx.meta().get::<PublicAssetUrlCache>().expect("PublicAssetUrlCache missing");
 
-          let filename = cache
-            .0
-            .get(hash)
-            .ok_or_else(|| {
-              anyhow::anyhow!("Can't find the cache of {}", &self.code[range.start..range.end])
-            })?
-            .to_string();
+          let url = cache.0.get(hash).ok_or_else(|| {
+            anyhow::anyhow!("Can't find the cache of {}", &self.code[range.start..range.end])
+          })?;
 
-          (range, filename, true)
+          (range, url[1..].to_owned(), true)
         }
       };
 

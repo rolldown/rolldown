@@ -28,10 +28,6 @@ jobs:
             build: pnpm ci:build-release-binding --target x86_64-pc-windows-msvc
 
           - os: windows-latest
-            target: i686-pc-windows-msvc
-            build: pnpm ci:build-release-binding --target i686-pc-windows-msvc
-
-          - os: windows-latest
             target: aarch64-pc-windows-msvc
             build: pnpm ci:build-release-binding --target aarch64-pc-windows-msvc
 
@@ -74,7 +70,7 @@ jobs:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@83350c0ef69ec34f00be596f1cb9302179b9f43d # v1.0.9
+        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
           cache-key: release-${{ matrix.target }}
           save-cache: ${{ github.ref_name == 'main' }}
@@ -82,7 +78,7 @@ jobs:
       - name: Rustup Adds Target
         run: rustup target add ${{ matrix.target }}
 
-      - uses: mlugg/setup-zig@8d6198c65fb0feaa111df26e6b467fea8345e46f # v2.0.5
+      - uses: mlugg/setup-zig@fa65c4058643678a4e4a9a60513944a7d8d35440 # v2.1.0
         if: ${{ contains(matrix.target, 'musl') }}
         with:
           version: 0.14.1
@@ -91,7 +87,7 @@ jobs:
         if: ${{ contains(matrix.target, 'ohos') }}
         uses: Boshen/setup-ohos-sdk@edb865a89a712f1f15dbad932dfa9cfce849d95c # v1.0.0
 
-      - uses: taiki-e/install-action@0be4756f42223b67aa4b7df5effad59010cbf4b9 # v2.62.51
+      - uses: taiki-e/install-action@b9c5db3aef04caffaf95a1d03931de10fb2a140f # v2.65.1
         if: ${{ contains(matrix.target, 'musl') }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -103,7 +99,7 @@ jobs:
         run: pip install setuptools
         if: ${{ matrix.os == 'macos-latest' }}
 
-      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
+      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
 
       - name: Build Binding
         run: ${{ matrix.build }}
@@ -112,7 +108,7 @@ jobs:
           TARGET_CC: clang # for mimalloc
 
       - name: Upload Binding Artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           if-no-files-found: error
           name: bindings-${{ matrix.target }}
@@ -127,7 +123,7 @@ jobs:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
       - name: Build
         id: build
-        uses: cross-platform-actions/action@46e8d7fb25520a8d6c64fd2b7a1192611da98eda # v0.30.0
+        uses: cross-platform-actions/action@492b0c80085400348c599edace11141a4ee73524 # v0.32.0
         env:
           DEBUG: napi:*
           RUSTUP_IO_THREADS: 1
@@ -159,7 +155,7 @@ jobs:
             rm -rf node_modules
             rm -rf target
       - name: Upload artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: bindings-x86_64-unknown-freebsd
           path: ./packages/rolldown/src/rolldown-binding.*.node
@@ -173,13 +169,13 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
-      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
+      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
 
       - name: Build `@rolldown/pluginutils`
         run: pnpm --filter '@rolldown/pluginutils' build
 
       - name: Upload `@rolldown/pluginutils` Artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           if-no-files-found: error
           name: pluginutils-artifact
@@ -197,7 +193,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
-      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
+      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
 
       - name: Build Node binding
         # This binary is only used to build the node package itself. It's won't be published.
@@ -210,7 +206,7 @@ jobs:
           ROLLDOWN_VERSION: ${{ inputs.version }}
 
       - name: Download Pluginutils Artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           path: packages/pluginutils/dist
           name: pluginutils-artifact
@@ -220,7 +216,7 @@ jobs:
         run: pnpm --filter rolldown build-node
 
       - name: Upload Node Artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           if-no-files-found: error
           name: node-artifact
@@ -228,7 +224,7 @@ jobs:
             packages/rolldown/dist/**
 
       - name: Upload `rolldown-version.txt`
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           if-no-files-found: warn
           name: rolldown-version
@@ -245,7 +241,7 @@ jobs:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@83350c0ef69ec34f00be596f1cb9302179b9f43d # v1.0.9
+        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
           cache-key: release-wasm32-wasip1-threads
           save-cache: ${{ github.ref_name == 'main' }}
@@ -253,7 +249,7 @@ jobs:
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
 
-      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
+      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
 
       - name: Build Node binding
         # This binary is only used to build the node package itself. It's won't be published.
@@ -266,7 +262,7 @@ jobs:
           ROLLDOWN_VERSION: ${{ inputs.version }}
 
       - name: Download Pluginutils Artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           path: packages/pluginutils/dist
           name: pluginutils-artifact
@@ -276,7 +272,7 @@ jobs:
         run: pnpm --filter "@rolldown/browser" build:release
 
       - name: Upload `@rolldown/browser` Artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           if-no-files-found: error
           name: browser-artifact
@@ -292,19 +288,19 @@ jobs:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
       - name: Setup Rust
-        uses: oxc-project/setup-rust@83350c0ef69ec34f00be596f1cb9302179b9f43d # v1.0.9
+        uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
           # `@rolldown/debug` only rely on debug build to produce code in `src/generated`.
           cache-key: debug-build
 
-      - uses: oxc-project/setup-node@fdbf0dfd334c4e6d56ceeb77d91c76339c2a0885 # v1.0.4
+      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
 
       - name: Build `@rolldown/debug`
         # This binary is only used to build the node package itself. It's won't be published.
         run: pnpm --filter "@rolldown/debug" build
 
       - name: Upload `@rolldown/debug` Artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           if-no-files-found: error
           name: debug-artifact

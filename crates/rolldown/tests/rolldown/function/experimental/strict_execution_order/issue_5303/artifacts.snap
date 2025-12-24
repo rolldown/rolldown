@@ -6,11 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { t as __esm } from "./rolldown-runtime.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
 import { t as init_foo } from "./test.js";
 
 
-var init_main = __esm({"main.js": (() => {
+var init_main = __esmMin((() => {
 //#region setup.js
 	globalThis.globalValue = "foo";
 
@@ -19,7 +19,7 @@ var init_main = __esm({"main.js": (() => {
 	init_foo();
 
 //#endregion
-})});
+}));
 
 init_main();
 ```
@@ -28,27 +28,27 @@ init_main();
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __esm as t };
+export { __esmMin as t };
 ```
 
 ## test.js
 
 ```js
-import { t as __esm } from "./rolldown-runtime.js";
+import { t as __esmMin } from "./rolldown-runtime.js";
 import assert from "node:assert";
 
 //#region foo_inner.js
 var foo_inner_default;
-var init_foo_inner = __esm({ "foo_inner.js": (() => {
+var init_foo_inner = __esmMin((() => {
 	foo_inner_default = { foo: /* @__PURE__ */ (() => globalValue)() };
-}) });
+}));
 
 //#endregion
 //#region foo.js
-var init_foo = __esm({ "foo.js": (() => {
+var init_foo = __esmMin((() => {
 	init_foo_inner();
 	assert.strictEqual(foo_inner_default.foo, "foo");
-}) });
+}));
 
 //#endregion
 export { init_foo as t };

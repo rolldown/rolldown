@@ -13,6 +13,8 @@ import type {
   BindingInputOptions,
 } from '../binding.cjs';
 import {
+  bindingifyCSSPostPlugin,
+  bindingifyManifestPlugin,
   bindingifyViteHtmlPlugin,
   BuiltinPlugin,
 } from '../builtin-plugin/utils';
@@ -21,7 +23,7 @@ import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
 import type {
   AttachDebugOptions,
-  HmrOptions,
+  DevModeOptions,
   InputOptions,
 } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
@@ -55,10 +57,22 @@ export function bindingifyInputOptions(
       return undefined;
     }
     if (plugin instanceof BuiltinPlugin) {
-      if (plugin.name === 'builtin:vite-html') {
-        return bindingifyViteHtmlPlugin(plugin, onLog, logLevel, watchMode);
+      switch (plugin.name) {
+        case 'builtin:vite-css-post':
+          return bindingifyCSSPostPlugin(plugin, pluginContextData);
+        case 'builtin:vite-html':
+          return bindingifyViteHtmlPlugin(
+            plugin,
+            onLog,
+            logLevel,
+            watchMode,
+            pluginContextData,
+          );
+        case 'builtin:vite-manifest':
+          return bindingifyManifestPlugin(plugin, pluginContextData);
+        default:
+          return bindingifyBuiltInPlugin(plugin);
       }
-      return bindingifyBuiltInPlugin(plugin);
     }
     return bindingifyPlugin(
       plugin,
@@ -126,14 +140,14 @@ export function bindingifyInputOptions(
   };
 }
 
-function bindingifyHmr(
-  hmr?: HmrOptions,
-): BindingExperimentalOptions['hmr'] {
-  if (hmr) {
-    if (typeof hmr === 'boolean') {
-      return hmr ? {} : undefined;
+function bindingifyDevMode(
+  devMode?: DevModeOptions,
+): BindingExperimentalOptions['devMode'] {
+  if (devMode) {
+    if (typeof devMode === 'boolean') {
+      return devMode ? {} : undefined;
     }
-    return hmr;
+    return devMode;
   }
 }
 
@@ -189,7 +203,7 @@ function bindingifyExperimental(
     disableLiveBindings: experimental?.disableLiveBindings,
     viteMode: experimental?.viteMode,
     resolveNewUrlToAsset: experimental?.resolveNewUrlToAsset,
-    hmr: bindingifyHmr(experimental?.hmr),
+    devMode: bindingifyDevMode(experimental?.devMode),
     attachDebugInfo: bindingifyAttachDebugInfo(
       experimental?.attachDebugInfo,
     ),

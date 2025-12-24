@@ -1,4 +1,5 @@
 import {
+  type BindingBundleState,
   type BindingClientHmrUpdate,
   BindingDevEngine,
   type BindingDevOptions,
@@ -109,8 +110,8 @@ export class DevEngine {
     return promise;
   }
 
-  async hasLatestBuildOutput(): Promise<boolean> {
-    return this.#inner.hasLatestBuildOutput();
+  async getBundleState(): Promise<BindingBundleState> {
+    return this.#inner.getBundleState();
   }
 
   async ensureLatestBuildOutput(): Promise<void> {
@@ -124,12 +125,12 @@ export class DevEngine {
     return this.#inner.invalidate(file, firstInvalidatedBy);
   }
 
-  registerModules(clientId: string, modules: string[]): void {
-    this.#inner.registerModules(clientId, modules);
+  async registerModules(clientId: string, modules: string[]): Promise<void> {
+    await this.#inner.registerModules(clientId, modules);
   }
 
-  removeClient(clientId: string): void {
-    this.#inner.removeClient(clientId);
+  async removeClient(clientId: string): Promise<void> {
+    await this.#inner.removeClient(clientId);
   }
 
   async close(): Promise<void> {

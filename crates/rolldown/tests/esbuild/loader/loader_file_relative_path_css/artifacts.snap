@@ -3,26 +3,26 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/image-Dq1zDy-k.png
-
-```png
-x
-```
-
-## entries_entry.css
+## entries/entry.css
 
 ```css
 div {
-	background: url(assets/image-Dq1zDy-k.png);
+	background: url(image-BN35D2wm.png);
 }
 
 ```
 
-## entries_entry.js
+## entries/entry.js
 
 ```js
 //#region images/image.png
-var image_default = "assets/image-Dq1zDy-k.png";
+var image_default = "image-BN35D2wm.png";
 
 //#endregion
+```
+
+## image-BN35D2wm.png
+
+```png
+x
 ```

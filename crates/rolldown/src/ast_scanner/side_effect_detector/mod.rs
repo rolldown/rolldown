@@ -124,6 +124,9 @@ impl<'a> SideEffectDetector<'a> {
               .is_some_and(|init| self.detect_side_effect_of_expr(init).has_side_effect())
         }
         ClassElement::AccessorProperty(def) => {
+          if !def.decorators.is_empty() {
+            return true;
+          }
           (match &def.key {
             PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false,
             key @ oxc::ast::match_expression!(PropertyKey) => {
@@ -777,7 +780,8 @@ impl<'a> SideEffectDetector<'a> {
       | Declaration::TSInterfaceDeclaration(_)
       | Declaration::TSEnumDeclaration(_)
       | Declaration::TSModuleDeclaration(_)
-      | Declaration::TSImportEqualsDeclaration(_) => unreachable!("ts should be transpiled"),
+      | Declaration::TSImportEqualsDeclaration(_)
+      | Declaration::TSGlobalDeclaration(_) => unreachable!("ts should be transpiled"),
     }
   }
 
@@ -1504,6 +1508,16 @@ let remove15 = class {
 }
     "
     ));
+  }
+
+  #[test]
+  fn test_class_decorators() {
+    assert!(get_statements_side_effect("function fn() {} @fn class Class {}"));
+    assert!(get_statements_side_effect("function fn() {} var MyClass = @fn class {}"));
+    assert!(get_statements_side_effect("function fn() {} class MyClass { @fn accessor x }"));
+    assert!(get_statements_side_effect("function fn() {} class MyClass { @fn static accessor x }"));
+    assert!(get_statements_side_effect("function fn() {} class MyClass { @fn method() {} }"));
+    assert!(get_statements_side_effect("function fn() {} class MyClass { @fn field }"));
   }
 
   #[test]

@@ -1,4 +1,4 @@
-use rolldown::{Bundler, BundlerOptions, InputItem, SourceMapType};
+use rolldown::{Bundler, BundlerOptions, InputItem, SourceMapType, TsConfig};
 
 // cargo run --example build_bench_rome_ts
 
@@ -16,7 +16,7 @@ async fn main() {
     sourcemap: Some(SourceMapType::File),
     // --- Required specific options for Rome
     shim_missing_exports: Some(true), // Need this due rome is not written with `isolatedModules: true`
-    tsconfig: Some(root.join("tmp/bench/rome/src/tsconfig.json").to_str().unwrap().to_string()),
+    tsconfig: Some(TsConfig::Manual(root.join("tmp/bench/rome/src/tsconfig.json"))),
     ..Default::default()
   })
   .expect("Failed to create bundler");

@@ -1,0 +1,12 @@
+{
+  "config": {
+    "format": "cjs",
+    "platform": "node",
+    "preserveModules": true
+  },
+  "configVariants": [
+    {
+      "format": "esm"
+    }
+  ]
+}

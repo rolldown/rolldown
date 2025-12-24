@@ -2,7 +2,6 @@ use crate::bundle::bundle_handle::BundleHandle;
 
 use super::super::{
   SharedOptions, SharedResolver,
-  bundler::CacheGuard,
   module_loader::deferred_scan_data::defer_sync_scan_data,
   stages::{
     generate_stage::GenerateStage,
@@ -41,7 +40,8 @@ impl Bundle {
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn write(mut self) -> BuildResult<BundleOutput> {
-    async {
+    let start = self.plugin_driver.start_timing();
+    let result = async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
       let scan_stage_output = self.scan_modules(ScanMode::Full).await?;
@@ -50,13 +50,16 @@ impl Bundle {
       trace_action!(action::BuildEnd { action: "BuildEnd" });
       ret
     }
-    .await
+    .await;
+    self.plugin_driver.set_total_build_time(start);
+    self.append_plugin_timings_warning(result)
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
   /// This method intentionally get the ownership of `self` to show that the method cannot be called multiple times.
   pub async fn generate(mut self) -> BuildResult<BundleOutput> {
-    async {
+    let start = self.plugin_driver.start_timing();
+    let result = async {
       self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
       let scan_stage_output = self.scan_modules(ScanMode::Full).await?;
@@ -68,7 +71,9 @@ impl Bundle {
       trace_action!(action::BuildEnd { action: "BuildEnd" });
       ret
     }
-    .await
+    .await;
+    self.plugin_driver.set_total_build_time(start);
+    self.append_plugin_timings_warning(result)
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &*self.bundle_span)]
@@ -87,19 +92,13 @@ impl Bundle {
     trace_action!(action::BuildStart { action: "BuildStart" });
     let is_full_scan_mode = scan_mode.is_full();
 
-    // Make sure the cache is reset if incremental build is not enabled.
-    let mut scan_stage_cache_guard = CacheGuard {
-      is_incremental_build_enabled: self.options.experimental.is_incremental_build_enabled(),
-      cache: &mut self.cache,
-    };
-
     let scan_stage_output = match ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
       self.fs.clone(),
       Arc::clone(&self.resolver),
     )
-    .scan(scan_mode, scan_stage_cache_guard.inner())
+    .scan(scan_mode, &mut self.cache)
     .await
     {
       Ok(v) => v,
@@ -114,12 +113,14 @@ impl Bundle {
       }
     };
 
-    // Manually drop it to avoid holding the mut reference.
-    drop(scan_stage_cache_guard);
-
     let scan_stage_output = self
       .normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode)
       .await?;
+
+    // Make sure the cache is reset if incremental build is not enabled.
+    if !self.options.experimental.is_incremental_build_enabled() {
+      std::mem::take(&mut self.cache);
+    }
 
     Self::trace_action_module_graph_ready(&scan_stage_output);
     self.plugin_driver.build_end(None).await?;
@@ -150,7 +151,7 @@ impl Bundle {
   ) -> BuildResult<BundleOutput> {
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
 
-    if self.options.clean_dir && self.options.dir.is_some() {
+    if self.options.clean_dir && self.options.file.is_none() {
       if let Err(err) = clean_dir(&self.fs, &dist_dir) {
         self.warnings.push(
           BuildDiagnostic::could_not_clean_directory(
@@ -207,37 +208,27 @@ impl Bundle {
     output: ScanStageOutput,
     is_full_scan_mode: bool,
   ) -> BuildResult<NormalizedScanStageOutput> {
-    if !self.options.experimental.is_incremental_build_enabled() {
-      return Ok(
-        output.try_into().expect("Should be able to convert to NormalizedScanStageOutput"),
-      );
-    }
+    let is_incremental = self.options.experimental.is_incremental_build_enabled();
 
     if is_full_scan_mode {
       let mut output: NormalizedScanStageOutput =
         output.try_into().expect("Should be able to convert to NormalizedScanStageOutput");
-      self.defer_sync_scan_data(&mut output).await?;
-      self.cache.set_snapshot(output.make_copy());
-      Ok(output)
-    } else {
-      self.cache.merge(output)?;
-      self.cache.update_defer_sync_data(&self.options, &self.resolver).await?;
-      Ok(self.cache.create_output())
+      defer_sync_scan_data(
+        &self.options,
+        &self.resolver,
+        &self.cache.module_id_to_idx,
+        &mut output,
+      )
+      .await?;
+      if is_incremental {
+        self.cache.set_snapshot(output.make_copy());
+      }
+      return Ok(output);
     }
-  }
 
-  #[expect(clippy::needless_pass_by_ref_mut, reason = "Required for Send bound across await")]
-  async fn defer_sync_scan_data(
-    &mut self,
-    scan_stage_output: &mut NormalizedScanStageOutput,
-  ) -> BuildResult<()> {
-    defer_sync_scan_data(
-      &self.options,
-      &self.cache.module_id_to_idx,
-      &self.resolver,
-      scan_stage_output,
-    )
-    .await
+    self.cache.merge(output)?;
+    self.cache.update_defer_sync_data(&self.options, &self.resolver).await?;
+    Ok(self.cache.create_output())
   }
 
   async fn bundle_up(
@@ -245,7 +236,9 @@ impl Bundle {
     scan_stage_output: NormalizedScanStageOutput,
     is_write: bool,
   ) -> BuildResult<BundleOutput> {
+    let start = self.plugin_driver.start_timing();
     let mut link_stage_output = LinkStage::new(scan_stage_output, &self.options).link();
+    self.plugin_driver.set_link_stage_time(start);
 
     let bundle_output =
       GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver)
@@ -356,5 +349,18 @@ impl Bundle {
         file: self.options.file.clone(),
       });
     }
+  }
+
+  /// Append plugin timings warning to result if applicable.
+  fn append_plugin_timings_warning(
+    &self,
+    result: BuildResult<BundleOutput>,
+  ) -> BuildResult<BundleOutput> {
+    result.map(|mut output| {
+      if let Some(plugins) = self.plugin_driver.get_plugin_timings_info() {
+        output.warnings.push(BuildDiagnostic::plugin_timings(plugins).with_severity_warning());
+      }
+      output
+    })
   }
 }

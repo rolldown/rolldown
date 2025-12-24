@@ -16,6 +16,9 @@
         "pragmaFrag": "import.meta.fragment",
         "runtime": "classic"
       }
+    },
+    "define": {
+      "import.meta": "{}"
     }
   },
   "expectExecuted": false

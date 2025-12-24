@@ -6,12 +6,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
+// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 //#region entry.ts
 var Foo = class extends Bar {
-	foo = 1;
-	bar = 2;
 	constructor() {
 		super();
+		_defineProperty(this, "foo", 1);
+		_defineProperty(this, "bar", 2);
 		foo();
 		bar();
 	}

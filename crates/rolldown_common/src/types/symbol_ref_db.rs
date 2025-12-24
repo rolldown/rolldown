@@ -29,7 +29,7 @@ bitflags::bitflags! {
     /// If this symbol is declared by `const`. Eg. `const a = 1;`
     const IsConst = 1 << 1;
     const MustStartWithCapitalLetterForJSX = 1 << 2;
-    /// If the SymbolRef is pointed to an empty function.
+    /// If the SymbolRef points to a side-effects-free function
     const SideEffectsFreeFunction = 1 << 3;
   }
 }
@@ -150,6 +150,16 @@ impl SymbolRefDb {
     self
   }
 
+  /// The `facade` means the symbol does not actually exist in the original AST.
+  ///
+  /// # Panics
+  /// - If the module does not exist in the symbol database.
+  #[inline]
+  pub fn is_facade_symbol(&self, refer: SymbolRef) -> bool {
+    let local_db = self.inner[refer.owner].unpack_ref();
+    local_db.ast_scopes.is_facade_symbol(refer.symbol)
+  }
+
   #[must_use]
   pub fn clone_without_scoping(&self) -> SymbolRefDb {
     let mut vec = IndexVec::with_capacity(self.inner.len());
@@ -249,7 +259,10 @@ impl SymbolRefDb {
   pub fn find_mut(&mut self, target: SymbolRef) -> SymbolRef {
     let mut canonical = target;
     while let Some(parent) = self.get_mut(canonical).link {
-      self.get_mut(canonical).link = self.get_mut(parent).link;
+      let parent_link = self.get_mut(parent).link;
+      if let Some(grand_parent) = parent_link {
+        self.get_mut(canonical).link = Some(grand_parent);
+      }
       canonical = parent;
     }
 

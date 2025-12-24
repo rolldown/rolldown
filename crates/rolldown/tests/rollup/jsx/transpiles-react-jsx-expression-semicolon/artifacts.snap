@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { jsx } from "react/jsx-runtime";
+
+//#region main.js
+var main_default = /* @__PURE__ */ jsx(Foo, {}, 123);
+
+//#endregion
+export { main_default as default };
+```

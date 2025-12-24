@@ -12,9 +12,9 @@ import assert from "node:assert";
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __export({ constant: () => constant });
 var constant;
-var init_lib = __esm({ "lib.js": (() => {
+var init_lib = __esmMin((() => {
 	constant = 1;
-}) });
+}));
 
 //#endregion
 //#region reexport.js
@@ -26,9 +26,9 @@ assert.strictEqual(constant, 1);
 
 //#endregion
 //#region commonjs.cjs
-var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.cjs": ((exports, module) => {
+var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = (init_lib(), __toCommonJS(lib_exports));
-}) });
+}));
 
 //#endregion
 //#region main.js
@@ -50,20 +50,20 @@ import assert from "node:assert";
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __export({ constant: () => constant });
 var constant;
-var init_lib = __esm({ "lib.js": (() => {
+var init_lib = __esmMin((() => {
 	constant = 1;
-}) });
+}));
 
 //#endregion
 //#region commonjs.cjs
-var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.cjs": ((exports, module) => {
+var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = (init_lib(), __toCommonJS(lib_exports));
-}) });
+}));
 
 //#endregion
 
 var import_commonjs;
-var init_main = __esm({"main.js": (() => {
+var init_main = __esmMin((() => {
 //#region reexport.js
 	init_lib();
 
@@ -76,7 +76,7 @@ var init_main = __esm({"main.js": (() => {
 	import_commonjs = require_commonjs();
 
 //#endregion
-})});
+}));
 
 init_main();
 ```

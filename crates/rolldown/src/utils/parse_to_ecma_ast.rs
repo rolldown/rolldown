@@ -2,7 +2,9 @@ use std::{borrow::Cow, path::Path};
 
 use json_escape_simd::escape;
 use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
-use rolldown_common::{ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes};
+use rolldown_common::{
+  ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes, json_value_to_ecma_ast,
+};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookTransformAstArgs;
@@ -64,10 +66,26 @@ pub async fn parse_to_ecma_ast(
   };
 
   let mut ecma_ast = match module_type {
-    ModuleType::Json | ModuleType::Dataurl | ModuleType::Base64 | ModuleType::Text => {
-      EcmaCompiler::parse_expr_as_program(stable_id, source, oxc_source_type)?
+    ModuleType::Json => {
+      let json_value: serde_json::Value = serde_json::from_str(&source).map_err(|e| {
+        let line = e.line() - 1;
+        // Convert to 0-indexed column. serde_json returns 1-indexed columns (though possibly 0 in some edge cases).
+        // See: https://docs.rs/serde_json/1.0.132/serde_json/struct.Error.html#method.column
+        let column = e.column().saturating_sub(1);
+        BuildDiagnostic::json_parse(
+          resolved_id.id.as_str().into(),
+          source.as_ref().into(),
+          line,
+          column,
+          e.to_string().into(),
+        )
+      })?;
+      json_value_to_ecma_ast(&json_value)
     }
-    _ => EcmaCompiler::parse(stable_id, source, oxc_source_type)?,
+    ModuleType::Dataurl | ModuleType::Base64 | ModuleType::Text => {
+      EcmaCompiler::parse_expr_as_program(resolved_id.id.as_str(), source, oxc_source_type)?
+    }
+    _ => EcmaCompiler::parse(resolved_id.id.as_str(), source, oxc_source_type)?,
   };
 
   ecma_ast = plugin_driver
@@ -84,6 +102,7 @@ pub async fn parse_to_ecma_ast(
   PreProcessEcmaAst::default().build(
     ecma_ast,
     stable_id,
+    resolved_id.id.as_str(),
     &parsed_type,
     replace_global_define_config.as_ref(),
     options,
@@ -119,7 +138,12 @@ fn pre_process_source(
         Cow::Borrowed("({})")
       }
     }
-    ModuleType::Text => Cow::Owned(escape(&source.try_into_string()?)),
+    ModuleType::Text => {
+      let text = source.try_into_string()?;
+      // Strip UTF-8 BOM if present
+      let text = text.strip_prefix('\u{FEFF}').unwrap_or(&text);
+      Cow::Owned(escape(text))
+    }
     ModuleType::Asset => Cow::Borrowed("__ROLLDOWN_ASSET_FILENAME__"),
     ModuleType::Base64 => {
       let encoded = rolldown_utils::base64::to_standard_base64(source.as_bytes());

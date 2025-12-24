@@ -30,7 +30,7 @@ use self::types::{
 };
 
 bitflags::bitflags! {
-  #[derive(Debug, Clone, Copy, Default)]
+  #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
     pub struct ChunkMeta: u8 {
         /// `true` if the chunk is dynamic imported by other modules, it would be treated as a dynamic entry if it
         /// is not a user defined entry point.
@@ -61,7 +61,7 @@ pub struct Chunk {
   pub cross_chunk_imports: Vec<ChunkIdx>,
   pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,
   pub bits: BitSet,
-  pub imports_from_other_chunks: Vec<(ChunkIdx, Vec<CrossChunkImportItem>)>,
+  pub imports_from_other_chunks: FxIndexMap<ChunkIdx, Vec<CrossChunkImportItem>>,
   // Only meaningful for cjs format
   pub require_binding_names_for_other_chunks: FxHashMap<ChunkIdx, String>,
   /// The first element of tuple is module idx of external module
@@ -114,14 +114,8 @@ impl Chunk {
     }
   }
 
-  pub fn has_side_effect(&self, runtime_id: ModuleIdx) -> bool {
-    // TODO: remove this special case, once `NormalModule#side_effect` is implemented. Runtime module should always not have side effect
-    if self.modules.len() == 1 && self.modules[0] == runtime_id {
-      return false;
-    }
-    // TODO: Whether a chunk has side effect is determined by whether it's module has side effect
-    // Now we just return `true`
-    true
+  pub fn has_side_effect(&self, module_table: &ModuleTable) -> bool {
+    self.modules.iter().any(|&module_id| module_table[module_id].side_effects().has_side_effects())
   }
 
   pub fn import_path_for(&self, importee: &Chunk) -> String {

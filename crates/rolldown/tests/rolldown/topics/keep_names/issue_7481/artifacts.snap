@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+//#region lib2.js
+var _Test$1;
+let Test = _Test$1 = class {
+	static {
+		__name(this, "_Test");
+	}
+};
+var _Fn$1;
+let Fn = _Fn$1 = /* @__PURE__ */ __name(function() {
+	return 1;
+}, "_Fn");
+var _ArrowFn$1;
+let ArrowFn = _ArrowFn$1 = /* @__PURE__ */ __name(() => {
+	return 2;
+}, "_ArrowFn");
+console.log(_Test$1, Test, _Fn$1, Fn, _ArrowFn$1, ArrowFn);
+assert.strictEqual(_Test$1.name, "_Test");
+assert.strictEqual(_Fn$1.name, "_Fn");
+assert.strictEqual(_ArrowFn$1.name, "_ArrowFn");
+assert.strictEqual(new _Test$1() instanceof Test, true);
+assert.strictEqual(Fn(), 1);
+assert.strictEqual(ArrowFn(), 2);
+assert.strictEqual(_Fn$1(), 1);
+assert.strictEqual(_ArrowFn$1(), 2);
+
+//#endregion
+//#region lib.js
+var _Test = class {};
+let _Fn = function() {};
+let _ArrowFn = () => {};
+assert.strictEqual(_Test.name, "_Test");
+assert.strictEqual(_Fn.name, "_Fn");
+assert.strictEqual(_ArrowFn.name, "_ArrowFn");
+
+//#endregion
+```

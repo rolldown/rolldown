@@ -6,6 +6,13 @@
         "import": "entry.js"
       }
     ],
+    "inject": [
+      {
+        "from": "./shims.js",
+        "imported": "process",
+        "type": "named"
+      }
+    ],
     "format": "iife",
     "platform": "node"
   },

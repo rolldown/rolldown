@@ -156,5 +156,12 @@ socket.onmessage = function(event) {
       console.debug(`[hmr]: Loading HMR patch: ${data.path}`);
       loadScript(data.url);
     }
+  } else if (data.type === 'hmr:reload') {
+    console.log('[hmr]: Full reload required, reloading page');
+    if (typeof location !== 'undefined') {
+      location.reload();
+    } else {
+      console.log('[hmr]: location is undefined, cannot reload page');
+    }
   }
 };

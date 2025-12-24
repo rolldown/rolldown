@@ -95,6 +95,9 @@ impl Generator for CssGenerator {
           .css_preliminary_filename
           .clone()
           .expect("should have preliminary filename"),
+
+        post_banner: None,
+        post_footer: None,
       }],
       warnings: std::mem::take(&mut ctx.warnings),
     }))

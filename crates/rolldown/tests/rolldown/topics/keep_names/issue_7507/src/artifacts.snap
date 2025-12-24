@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+//#region bar.cjs
+var test$1;
+var init_bar = __esmMin((() => {
+	test$1 = /* @__PURE__ */ __name(() => {
+		return { test: "bar" };
+	}, "test");
+}));
+
+//#endregion
+//#region foo.cjs
+function test() {
+	return { test: "foo" };
+}
+var init_foo = __esmMin((() => {}));
+
+//#endregion
+//#region index.cjs
+var require_src = /* @__PURE__ */ __commonJSMin((() => {
+	init_bar();
+	init_foo();
+	assert.strictEqual(test$1.name, "test");
+	assert.strictEqual(test.name, "test");
+}));
+
+//#endregion
+export default require_src();
+
+```

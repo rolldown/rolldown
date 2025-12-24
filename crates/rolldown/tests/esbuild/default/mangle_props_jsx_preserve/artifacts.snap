@@ -1,30 +1,19 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'react/jsx-runtime' in entry.jsx
-
-```
-
 # Assets
 
 ## entry.js
 
 ```js
-import { Fragment, jsx } from "react/jsx-runtime";
-
 //#region entry.jsx
 let Foo = {
 	Bar_(props) {
-		return /* @__PURE__ */ jsx(Fragment, { children: props.text_ });
+		return <>{props.text_}</>;
 	},
 	hello_: "hello, world"
 };
-var entry_default = /* @__PURE__ */ jsx(Foo.Bar_, { text_: Foo.hello_ });
+var entry_default = <Foo.Bar_ text_={Foo.hello_}></Foo.Bar_>;
 
 //#endregion
 export { entry_default as default };

@@ -1,9 +1,13 @@
 use crate::watch::event::{BundleEvent, WatcherChangeData, WatcherEvent};
 use anyhow::Context;
 use arcstr::ArcStr;
+use itertools::Itertools;
 #[cfg(not(target_family = "wasm"))]
 use notify::Watcher as _;
-use notify::{Config, RecommendedWatcher, event::ModifyKind};
+use notify::{
+  Config, RecommendedWatcher,
+  event::{ModifyKind, RenameMode},
+};
 
 use rolldown_common::{NotifyOption, WatcherChangeKind};
 use rolldown_error::BuildResult;
@@ -62,12 +66,12 @@ impl WatcherImpl {
     let tx = Arc::new(tx);
     let cloned_tx = Arc::clone(&tx);
     let watch_option = {
-      let config = Config::default();
+      let mut config = Config::default();
       if let Some(notify) = &notify_option {
         if let Some(poll_interval) = notify.poll_interval {
-          config.with_poll_interval(poll_interval);
+          config = config.with_poll_interval(poll_interval);
         }
-        config.with_compare_contents(notify.compare_contents);
+        config = config.with_compare_contents(notify.compare_contents);
       }
       config
     };
@@ -81,18 +85,12 @@ impl WatcherImpl {
       },
       watch_option,
     )?));
-    let notify_watch_files = Arc::new(FxDashSet::default());
     let emitter = Arc::new(WatcherEmitter::new());
 
     let tasks = bundlers
       .iter()
       .map(|bundler| {
-        WatcherTask::new(
-          Arc::clone(bundler),
-          Arc::clone(&emitter),
-          Arc::clone(&notify_watcher),
-          Arc::clone(&notify_watch_files),
-        )
+        WatcherTask::new(Arc::clone(bundler), Arc::clone(&emitter), Arc::clone(&notify_watcher))
       })
       .collect();
 
@@ -207,7 +205,7 @@ impl WatcherImpl {
               self.watch_changes.remove(change);
             }
             let changed_files =
-              watch_changes.iter().map(|item| item.path.clone()).collect::<Vec<_>>();
+              watch_changes.iter().map(|item| item.path.clone()).unique().collect::<Vec<_>>();
             let _ = self.run(&changed_files).await;
           }
           ExecChannelMsg::Close => break,
@@ -246,6 +244,10 @@ pub fn wait_for_change(watcher: Arc<WatcherImpl>) {
                     ModifyKind::Data(_) | ModifyKind::Any, /* windows*/
                   ) => {
                     tracing::debug!(name= "notify updated content", path = ?id.as_ref(), content= ?std::fs::read_to_string(id.as_ref()).unwrap());
+                    Some(WatcherChangeKind::Update)
+                  }
+                  notify::EventKind::Modify(ModifyKind::Name(RenameMode::To)) => {
+                    tracing::debug!(name= "notify renamed file", path = ?id.as_ref(), content= ?std::fs::read_to_string(id.as_ref()).unwrap());
                     Some(WatcherChangeKind::Update)
                   }
                   notify::EventKind::Remove(_) => Some(WatcherChangeKind::Delete),

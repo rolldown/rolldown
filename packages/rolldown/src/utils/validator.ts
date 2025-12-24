@@ -198,7 +198,7 @@ const TransformOptionsSchema = v.object({
   ),
   define: v.pipe(
     v.optional(v.record(v.string(), v.string())),
-    v.description('Define global variables'),
+    v.description('Define global variables (syntax: key=value,key2=value2)'),
   ),
   inject: v.pipe(
     v.optional(
@@ -286,10 +286,10 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warning when detecting missing name option for iife export',
     ),
   ),
-  mixedExport: v.pipe(
+  mixedExports: v.pipe(
     v.optional(v.boolean()),
     v.description(
-      'Whether to emit warning when detecting mixed export',
+      'Whether to emit warning when detecting mixed exports',
     ),
   ),
   unresolvedEntry: v.pipe(
@@ -328,6 +328,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warning when detecting empty import meta',
     ),
   ),
+  cannotCallNamespace: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warning when detecting cannot call namespace',
+    ),
+  ),
   configurationFieldConflict: v.pipe(
     v.optional(v.boolean()),
     v.description(
@@ -344,6 +350,12 @@ const ChecksOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description(
       'Whether to emit warning when detecting could not clean directory',
+    ),
+  ),
+  pluginTimings: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warning when detecting plugin timings',
     ),
   ),
 });
@@ -483,13 +495,13 @@ const OnwarnSchema = v.pipe(
   ),
 ) satisfies v.GenericSchema<OnwarnFunction>;
 
-const HmrSchema = v.union([
+const DevModeSchema = v.union([
   v.boolean(),
   v.strictObject({
-    new: v.optional(v.boolean()),
     port: v.optional(v.number()),
     host: v.optional(v.string()),
     implement: v.optional(v.string()),
+    lazy: v.optional(v.boolean()),
   }),
 ]);
 
@@ -544,7 +556,7 @@ const InputOptionsSchema = v.strictObject({
       strictExecutionOrder: v.optional(v.boolean()),
       onDemandWrapping: v.optional(v.boolean()),
       incrementalBuild: v.optional(v.boolean()),
-      hmr: v.optional(HmrSchema),
+      devMode: v.optional(DevModeSchema),
       attachDebugInfo: v.optional(v.union([
         v.literal('none'),
         v.literal('simple'),
@@ -587,7 +599,7 @@ const InputOptionsSchema = v.strictObject({
     ])),
   ),
   tsconfig: v.pipe(
-    v.optional(v.string()),
+    v.optional(v.union([v.literal(true), v.string()])),
     v.description('Path to the tsconfig.json file.'),
   ),
 }) satisfies v.GenericSchema<InputOptions>;
@@ -840,6 +852,8 @@ const OutputOptionsSchema = v.strictObject({
   ),
   banner: v.optional(v.union([v.string(), AddonFunctionSchema])),
   footer: v.optional(v.union([v.string(), AddonFunctionSchema])),
+  postBanner: v.optional(v.union([v.string(), AddonFunctionSchema])),
+  postFooter: v.optional(v.union([v.string(), AddonFunctionSchema])),
   intro: v.optional(v.union([v.string(), AddonFunctionSchema])),
   outro: v.optional(v.union([v.string(), AddonFunctionSchema])),
   extend: v.pipe(
@@ -976,6 +990,18 @@ const OutputCliOverrideSchema = v.strictObject({
   footer: v.pipe(
     v.optional(v.string()),
     v.description(getAddonDescription('bottom', 'outside')),
+  ),
+  postBanner: v.pipe(
+    v.optional(v.string()),
+    v.description(
+      'A string to prepend to the top of each chunk. Applied after the `renderChunk` hook and minification',
+    ),
+  ),
+  postFooter: v.pipe(
+    v.optional(v.string()),
+    v.description(
+      'A string to append to the bottom of each chunk. Applied after the `renderChunk` hook and minification',
+    ),
   ),
   intro: v.pipe(
     v.optional(v.string()),

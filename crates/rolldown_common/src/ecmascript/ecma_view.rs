@@ -19,15 +19,14 @@ bitflags! {
     #[derive(Debug, Default, Clone, Copy)]
     pub struct EcmaViewMeta: u8 {
         const Eval = 1;
-        const Included = 1 << 1;
-        const HasLazyExport = 1 << 2;
-        const HasStarExport = 1 << 3;
-        const SafelyTreeshakeCommonjs = 1 << 4;
+        const HasLazyExport = 1 << 1;
+        const HasStarExport = 1 << 2;
+        const SafelyTreeshakeCommonjs = 1 << 3;
         /// If a module has side effects or has top-level global variable access
-        const ExecutionOrderSensitive = 1 << 5;
+        const ExecutionOrderSensitive = 1 << 4;
         /// If the module has top-level empty function, if any module has top level empty function, we need
         /// to apply cross module optimization.
-        const TopExportedSideEffectsFreeFunction = 1 << 6;
+        const TopExportedSideEffectsFreeFunction = 1 << 5;
     }
 }
 
@@ -51,10 +50,6 @@ impl EcmaViewMeta {
   #[inline]
   pub fn has_eval(&self) -> bool {
     self.contains(Self::Eval)
-  }
-  #[inline]
-  pub fn is_included(&self) -> bool {
-    self.contains(Self::Included)
   }
   #[inline]
   pub fn has_lazy_export(&self) -> bool {

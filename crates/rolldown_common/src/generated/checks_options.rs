@@ -16,16 +16,18 @@ pub struct ChecksOptions {
   pub eval: Option<bool>,
   pub missing_global_name: Option<bool>,
   pub missing_name_option_for_iife_export: Option<bool>,
-  pub mixed_export: Option<bool>,
+  pub mixed_exports: Option<bool>,
   pub unresolved_entry: Option<bool>,
   pub unresolved_import: Option<bool>,
   pub filename_conflict: Option<bool>,
   pub common_js_variable_in_esm: Option<bool>,
   pub import_is_undefined: Option<bool>,
   pub empty_import_meta: Option<bool>,
+  pub cannot_call_namespace: Option<bool>,
   pub configuration_field_conflict: Option<bool>,
   pub prefer_builtin_feature: Option<bool>,
   pub could_not_clean_directory: Option<bool>,
+  pub plugin_timings: Option<bool>,
 }
 impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
   fn from(value: ChecksOptions) -> Self {
@@ -43,7 +45,7 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
       rolldown_error::EventKindSwitcher::MissingNameOptionForIifeExport,
       value.missing_name_option_for_iife_export.unwrap_or(true),
     );
-    flag.set(rolldown_error::EventKindSwitcher::MixedExport, value.mixed_export.unwrap_or(true));
+    flag.set(rolldown_error::EventKindSwitcher::MixedExports, value.mixed_exports.unwrap_or(true));
     flag.set(
       rolldown_error::EventKindSwitcher::UnresolvedEntry,
       value.unresolved_entry.unwrap_or(true),
@@ -69,6 +71,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
       value.empty_import_meta.unwrap_or(true),
     );
     flag.set(
+      rolldown_error::EventKindSwitcher::CannotCallNamespace,
+      value.cannot_call_namespace.unwrap_or(true),
+    );
+    flag.set(
       rolldown_error::EventKindSwitcher::ConfigurationFieldConflict,
       value.configuration_field_conflict.unwrap_or(true),
     );
@@ -80,6 +86,8 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
       rolldown_error::EventKindSwitcher::CouldNotCleanDirectory,
       value.could_not_clean_directory.unwrap_or(true),
     );
+    flag
+      .set(rolldown_error::EventKindSwitcher::PluginTimings, value.plugin_timings.unwrap_or(true));
     flag
   }
 }

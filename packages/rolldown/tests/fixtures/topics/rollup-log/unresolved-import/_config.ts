@@ -20,6 +20,12 @@ export default defineTest({
       exporter: '@rolldown/test-unresolved-import',
       id: expect.stringContaining('main.js'),
       message: expect.any(String),
+      loc: {
+        column: expect.any(Number),
+        line: expect.any(Number),
+        file: expect.stringContaining('main.js'),
+      },
+      pos: expect.any(Number),
     });
   },
 });

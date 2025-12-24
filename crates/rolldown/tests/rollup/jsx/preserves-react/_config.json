@@ -1,0 +1,15 @@
+{
+  "config": {
+    "moduleTypes": {
+      ".js": "jsx"
+    },
+    "external": [
+      "react"
+    ],
+    "transform": {
+      "jsx": "preserve"
+    }
+  },
+  "expectExecuted": false,
+  "_comment": "Rollup supports preserving JSX for classic transform and preserves react import, but Rolldown & esbuild does not"
+}

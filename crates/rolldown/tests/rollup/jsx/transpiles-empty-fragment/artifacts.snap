@@ -1,0 +1,15 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { Fragment, jsx } from "react/jsx-runtime";
+
+//#region main.js
+console.log(/* @__PURE__ */ jsx(Fragment, {}));
+
+//#endregion
+```

@@ -10,7 +10,6 @@ use oxc::{
 use rolldown_common::{ModuleType, ResolvedExternal};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, Severity};
 use rolldown_plugin::{HookUsage, Plugin, PluginHookMeta, PluginOrder};
-use rolldown_utils::stabilize_id::stabilize_id;
 use sugar_path::SugarPath;
 use type_import_visitor::TypeImportVisitor;
 
@@ -57,7 +56,7 @@ impl Plugin for IsolatedDeclarationPlugin {
         return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
           ret.errors,
           &ArcStr::from(ret.program.source_text),
-          &stabilize_id(args.id, ctx.cwd()),
+          args.id,
           &Severity::Error,
         )))?;
       }

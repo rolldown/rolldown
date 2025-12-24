@@ -7,44 +7,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-const require_shared = require('./shared.js');
+const require_main = require('./main.js');
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 
 //#region async-entry.js
-require_shared.reset();
-node_assert.default.strictEqual(require_shared.count, 0);
-node_assert.default.strictEqual(require_shared.count, require_shared.count);
-require_shared.inc();
-node_assert.default.strictEqual(require_shared.count, 1);
-node_assert.default.strictEqual(require_shared.count, require_shared.count);
-require_shared.inc();
-node_assert.default.strictEqual(require_shared.count, 2);
-node_assert.default.strictEqual(require_shared.count, require_shared.count);
+require_main.reset();
+node_assert.default.strictEqual(require_main.count, 0);
+node_assert.default.strictEqual(require_main.count, require_main.count);
+require_main.inc();
+node_assert.default.strictEqual(require_main.count, 1);
+node_assert.default.strictEqual(require_main.count, require_main.count);
+require_main.inc();
+node_assert.default.strictEqual(require_main.count, 2);
+node_assert.default.strictEqual(require_main.count, require_main.count);
 
 //#endregion
 ```
 
 ## main.js
-
-```js
-const require_shared = require('./shared.js');
-
-//#region main.js
-Promise.resolve().then(() => require("./async-entry.js"));
-
-//#endregion
-Object.defineProperty(exports, 'count', {
-  enumerable: true,
-  get: function () {
-    return require_shared.count;
-  }
-});
-exports.inc = require_shared.inc;
-exports.reset = require_shared.reset;
-```
-
-## shared.js
 
 ```js
 
@@ -58,22 +39,16 @@ function inc() {
 }
 
 //#endregion
+//#region main.js
+Promise.resolve().then(() => require("./async-entry.js"));
+
+//#endregion
 Object.defineProperty(exports, 'count', {
   enumerable: true,
   get: function () {
     return count;
   }
 });
-Object.defineProperty(exports, 'inc', {
-  enumerable: true,
-  get: function () {
-    return inc;
-  }
-});
-Object.defineProperty(exports, 'reset', {
-  enumerable: true,
-  get: function () {
-    return reset;
-  }
-});
+exports.inc = inc;
+exports.reset = reset;
 ```

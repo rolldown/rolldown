@@ -70,6 +70,8 @@ pub struct NormalizedBundlerOptions {
   pub sourcemap: Option<SourceMapType>,
   pub banner: Option<AddonOutputOption>,
   pub footer: Option<AddonOutputOption>,
+  pub post_banner: Option<AddonOutputOption>,
+  pub post_footer: Option<AddonOutputOption>,
   pub intro: Option<AddonOutputOption>,
   pub outro: Option<AddonOutputOption>,
   pub sourcemap_ignore_list: Option<SourceMapIgnoreList>,
@@ -108,7 +110,6 @@ pub struct NormalizedBundlerOptions {
   pub minify_internal_exports: bool,
   pub clean_dir: bool,
   pub context: String,
-  pub tsconfig: Option<PathBuf>,
 }
 
 // This is only used for testing
@@ -143,6 +144,8 @@ impl Default for NormalizedBundlerOptions {
       sourcemap: Default::default(),
       banner: Default::default(),
       footer: Default::default(),
+      post_banner: Default::default(),
+      post_footer: Default::default(),
       intro: Default::default(),
       outro: Default::default(),
       sourcemap_ignore_list: Default::default(),
@@ -181,7 +184,6 @@ impl Default for NormalizedBundlerOptions {
       minify_internal_exports: Default::default(),
       clean_dir: false,
       context: Default::default(),
-      tsconfig: Default::default(),
     }
   }
 }
@@ -197,8 +199,8 @@ impl NormalizedBundlerOptions {
     matches!(self.format, OutputFormat::Esm) && matches!(self.platform, Platform::Node)
   }
 
-  pub fn is_hmr_enabled(&self) -> bool {
-    self.experimental.hmr.is_some()
+  pub fn is_dev_mode_enabled(&self) -> bool {
+    self.experimental.dev_mode.is_some()
   }
 
   /// make sure the `polyfill_require` is only valid for `esm` format with `node` platform

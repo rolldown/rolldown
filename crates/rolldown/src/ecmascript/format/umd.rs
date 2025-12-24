@@ -184,7 +184,7 @@ async fn render_iife_export(
   named_exports: bool,
 ) -> BuildResult<String> {
   if has_exports && ctx.options.name.as_ref().is_none_or(String::is_empty) {
-    return Err(vec![BuildDiagnostic::missing_name_option_for_umd_export()].into());
+    return Err(vec![BuildDiagnostic::missing_name_option_for_iife_export(true)].into());
   }
   let mut dependencies = Vec::with_capacity(externals.len());
 

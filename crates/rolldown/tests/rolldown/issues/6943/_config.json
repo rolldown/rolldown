@@ -1,0 +1,6 @@
+{
+  "config": {
+    "inlineDynamicImports": true,
+    "file": "dist/main.js"
+  }
+}

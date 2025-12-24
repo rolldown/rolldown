@@ -6,11 +6,15 @@ use std::sync::{
 use anyhow::Context;
 use futures::{FutureExt, future::Shared};
 use rolldown_common::ClientHmrUpdate;
+#[cfg(feature = "testing")]
+use rolldown_common::WatcherChangeKind;
 use rolldown_error::{BuildResult, ResultExt};
 use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, FsWatcherExt, NoopFsWatcher};
+#[cfg(feature = "testing")]
+use rustc_hash::FxHashSet;
 use tokio::sync::{Mutex, mpsc::unbounded_channel};
 
-use rolldown::{Bundler, BundlerBuilder};
+use rolldown::{Bundler, BundlerBuilder, BundlerConfig, NormalizedBundlerOptions};
 
 use crate::{
   DevOptions, SharedClients,
@@ -18,13 +22,13 @@ use crate::{
   dev_context::{DevContext, PinBoxSendStaticFuture},
   normalize_dev_options,
   type_aliases::CoordinatorSender,
-  types::coordinator_msg::CoordinatorMsg,
+  types::{coordinator_msg::CoordinatorMsg, coordinator_state_snapshot::CoordinatorStateSnapshot},
 };
 
 #[cfg(feature = "testing")]
 use crate::ClientSession;
 #[cfg(feature = "testing")]
-use rolldown_utils::indexmap::FxIndexSet;
+use rolldown_utils::indexmap::FxIndexMap;
 #[cfg(feature = "testing")]
 use std::path::PathBuf;
 
@@ -44,11 +48,14 @@ pub struct DevEngine {
 }
 
 impl DevEngine {
-  pub fn new(bundler_builder: BundlerBuilder, options: DevOptions) -> BuildResult<Self> {
-    Self::with_bundler(Arc::new(Mutex::new(bundler_builder.build()?)), options)
-  }
+  pub fn new(config: BundlerConfig, options: DevOptions) -> BuildResult<Self> {
+    // Build the bundler from config
+    let bundler = BundlerBuilder::default()
+      .with_options(config.options)
+      .with_plugins(config.plugins)
+      .build()?;
+    let bundler = Arc::new(Mutex::new(bundler));
 
-  pub fn with_bundler(bundler: Arc<Mutex<Bundler>>, options: DevOptions) -> BuildResult<Self> {
     let normalized_options = normalize_dev_options(options);
 
     let (coordinator_tx, coordinator_rx) = unbounded_channel::<CoordinatorMsg>();
@@ -184,7 +191,7 @@ impl DevEngine {
     Ok(())
   }
 
-  pub async fn has_latest_bundle_output(&self) -> BuildResult<bool> {
+  pub async fn get_bundle_state(&self) -> BuildResult<BundleState> {
     self.create_error_if_closed()?;
 
     let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
@@ -196,12 +203,11 @@ impl DevEngine {
         "DevEngine: failed to send GetState to coordinator within has_latest_bundle_output",
       )?;
 
-    let status = reply_receiver
-      .await
-      .map_err_to_unhandleable()
-      .context("DevEngine: coordinator closed before responding to GetStatus within has_latest_bundle_output")?;
+    let status = reply_receiver.await.map_err_to_unhandleable().context(
+      "DevEngine: coordinator closed before responding to GetStatus within get_bundle_state",
+    )?;
 
-    Ok(!status.has_stale_output)
+    Ok(status.into())
   }
 
   // Ensure there's latest bundle output available for browser loading/reloading scenarios
@@ -302,23 +308,35 @@ impl DevEngine {
     self.is_closed.load(std::sync::atomic::Ordering::SeqCst)
   }
 
+  /// Returns a clone of the shared normalized bundler options
+  pub async fn bundler_options(&self) -> Arc<NormalizedBundlerOptions> {
+    Arc::clone(self.bundler.lock().await.options())
+  }
+
   #[cfg(feature = "testing")]
-  pub async fn ensure_task_with_changed_files(&self, changed_files: FxIndexSet<PathBuf>) {
-    // Create a synthetic file change event to simulate real file system changes
-    let notify_event = notify::Event {
-      kind: notify::EventKind::Modify(notify::event::ModifyKind::Data(
-        notify::event::DataChange::Any,
-      )),
-      paths: changed_files.into_iter().collect(),
-      attrs: notify::event::EventAttributes::default(),
-    };
+  pub async fn ensure_task_with_changed_files(
+    &self,
+    changed_files: FxIndexMap<PathBuf, WatcherChangeKind>,
+  ) {
+    for (path, event) in changed_files {
+      // Create a synthetic file change event to simulate real file system changes
+      let notify_event = notify::Event {
+        kind: if event == WatcherChangeKind::Delete {
+          notify::EventKind::Remove(notify::event::RemoveKind::Any)
+        } else {
+          notify::EventKind::Modify(notify::event::ModifyKind::Data(notify::event::DataChange::Any))
+        },
+        paths: vec![path],
+        attrs: notify::event::EventAttributes::default(),
+      };
 
-    let event =
-      rolldown_fs_watcher::FsEvent { detail: notify_event, time: std::time::Instant::now() };
+      let event =
+        rolldown_fs_watcher::FsEvent { detail: notify_event, time: std::time::Instant::now() };
 
-    // Send WatchEvent message to coordinator (simulates real file change)
-    // The coordinator will automatically schedule a build via handle_file_changes
-    let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(Ok(vec![event])));
+      // Send WatchEvent message to coordinator (simulates real file change)
+      // The coordinator will automatically schedule a build via handle_file_changes
+      let _ = self.coordinator_sender.send(CoordinatorMsg::WatchEvent(Ok(vec![event])));
+    }
 
     // Send ScheduleBuild to ensure WatchEvent is processed (FIFO),
     // and get the build future to wait on
@@ -329,6 +347,26 @@ impl DevEngine {
     if let Ok(Some(ret)) = reply_rx.await {
       ret.future.await;
     }
+  }
+
+  #[cfg(feature = "testing")]
+  pub async fn get_watched_files(&self) -> BuildResult<FxHashSet<String>> {
+    self.create_error_if_closed()?;
+
+    let (reply_sender, reply_receiver) = tokio::sync::oneshot::channel();
+    self
+      .coordinator_sender
+      .send(CoordinatorMsg::GetWatchedFiles { reply: reply_sender })
+      .map_err_to_unhandleable()
+      .context(
+        "DevEngine: failed to send GetWatchedFiles to coordinator within get_watched_files",
+      )?;
+
+    let watched_files = reply_receiver.await.map_err_to_unhandleable().context(
+      "DevEngine: coordinator closed before responding to GetWatchedFiles within get_watched_files",
+    )?;
+
+    Ok(watched_files)
   }
 
   #[cfg(feature = "testing")]
@@ -344,5 +382,20 @@ impl DevEngine {
       Err(anyhow::anyhow!("Dev engine is closed"))?;
     }
     Ok(())
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct BundleState {
+  pub last_full_build_failed: bool,
+  pub has_stale_output: bool,
+}
+
+impl From<CoordinatorStateSnapshot> for BundleState {
+  fn from(snapshot: CoordinatorStateSnapshot) -> Self {
+    Self {
+      last_full_build_failed: snapshot.last_full_build_failed,
+      has_stale_output: snapshot.has_stale_output,
+    }
   }
 }

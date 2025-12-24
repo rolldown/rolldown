@@ -40,7 +40,9 @@ export interface GeneratedCodeOptions {
    * When enabled, generated code will use descriptive variable names that correspond
    * to the original module names, making it easier to profile and debug the bundled code.
    *
-   * @default true when minification is disabled, false when minification is enabled
+   * Note: Enabling this option makes the output more difficult to minify effectively.
+   *
+   * @default false
    */
   profilerNames?: boolean;
 }
@@ -149,6 +151,14 @@ export interface OutputOptions {
   sourcemapPathTransform?: SourcemapPathTransformOption;
   banner?: string | AddonFunction;
   footer?: string | AddonFunction;
+  /**
+   * Similar to `banner` option, but will run after the `renderChunk` hook and builtin minification.
+   */
+  postBanner?: string | AddonFunction;
+  /**
+   * Similar to `footer` option, but will run after the `renderChunk` hook and builtin minification.
+   */
+  postFooter?: string | AddonFunction;
   intro?: string | AddonFunction;
   outro?: string | AddonFunction;
   extend?: boolean;
@@ -485,6 +495,8 @@ export interface OutputOptions {
 interface OverwriteOutputOptionsForCli {
   banner?: string;
   footer?: string;
+  postBanner?: string;
+  postFooter?: string;
   intro?: string;
   outro?: string;
   esModule?: boolean;

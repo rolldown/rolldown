@@ -1,8 +1,12 @@
 use oxc::semantic::SymbolId;
 
+use crate::{ModuleIdx, SymbolRef};
+
 pub trait SymbolIdExt {
-  /// Returns the symbol id as a string.
+  /// Returns true if the symbol id is the special module namespace symbol.
   fn is_module_namespace(&self) -> bool;
+
+  fn module_namespace_symbol_ref(module_idx: ModuleIdx) -> SymbolRef;
 }
 
 impl SymbolIdExt for SymbolId {
@@ -12,5 +16,13 @@ impl SymbolIdExt for SymbolId {
   #[inline]
   fn is_module_namespace(&self) -> bool {
     *self == SymbolId::from_raw_unchecked(u32::MAX - 2)
+  }
+
+  /// Creates a symbol reference to the module namespace symbol for the given module.
+  ///
+  /// The module namespace symbol is a special symbol that represents the entire namespace
+  /// of a module (e.g., when importing with `import * as ns from 'module'`).
+  fn module_namespace_symbol_ref(module_idx: ModuleIdx) -> SymbolRef {
+    (module_idx, SymbolId::from_raw_unchecked(u32::MAX - 2)).into()
   }
 }

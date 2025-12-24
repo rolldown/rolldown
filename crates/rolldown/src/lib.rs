@@ -31,7 +31,7 @@ pub use crate::{
   },
   bundler::Bundler,
   bundler_builder::BundlerBuilder,
-  types::bundle_output::BundleOutput,
+  types::{bundle_output::BundleOutput, bundler_config::BundlerConfig},
   watch::event::{BundleEvent, WatcherEvent},
   watcher::Watcher,
 };
@@ -43,4 +43,4 @@ pub use rolldown_resolver::ResolveOptions;
 pub use rolldown_plugin as plugin;
 
 #[cfg(feature = "testing")]
-pub use crate::utils::determine_minify_internal_exports_default::determine_minify_internal_exports_default;
+pub use crate::utils::determine_minify_internal_exports_default;

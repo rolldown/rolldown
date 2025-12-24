@@ -1,12 +1,10 @@
 pub mod apply_inner_plugins;
 pub mod augment_chunk_hash;
 pub mod chunk;
-pub mod determine_minify_internal_exports_default;
 pub mod external_import_interop;
 pub mod fs_utils;
 pub mod load_entry_module;
 pub mod load_source;
-pub mod normalize_transform_options;
 pub mod parse_to_ecma_ast;
 pub mod pre_process_ecma_ast;
 pub mod prepare_build_context;
@@ -15,6 +13,11 @@ pub mod renamer;
 pub mod render_chunks;
 pub mod render_ecma_module;
 pub mod resolve_id;
+pub mod shebang;
 pub mod transform_source;
 pub mod tweak_ast_for_scanning;
 pub mod uuid;
+
+mod determine_minify_internal_exports_default;
+
+pub use determine_minify_internal_exports_default::determine_minify_internal_exports_default;

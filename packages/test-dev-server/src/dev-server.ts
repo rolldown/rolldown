@@ -10,7 +10,10 @@ import { WebSocket, WebSocketServer } from 'ws';
 import type { HmrInvalidateMessage } from './types/client-message.js';
 import { ClientSession } from './types/client-session.js';
 import type { NormalizedDevOptions } from './types/normalized-dev-options.js';
-import type { HmrUpdateMessage } from './types/server-message.js';
+import type {
+  HmrReloadMessage,
+  HmrUpdateMessage,
+} from './types/server-message.js';
 import { createDevServerPlugin } from './utils/create-dev-server-plugin.js';
 import { decodeClientMessage } from './utils/decode-client-message.js';
 import { getDevWatchOptionsForCi } from './utils/get-dev-watch-options-for-ci.js';
@@ -41,22 +44,38 @@ class DevServer {
   #clients = new Map<string, ClientSession>();
   #devOptions?: NormalizedDevOptions;
   #devEngine?: DevEngine;
+  #port = 3000;
 
   constructor() {}
 
-  #sendMessage(socket: WebSocket, message: HmrUpdateMessage): void {
+  #sendMessage(
+    socket: WebSocket,
+    message: HmrUpdateMessage | HmrReloadMessage,
+  ): void {
     if (socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify(message));
     }
   }
 
   async serve(): Promise<void> {
-    this.#prepareServer();
-
     const devConfig = await loadDevConfig();
     const devOptions = normalizeDevOptions(devConfig.dev ?? {});
     this.#devOptions = devOptions;
+    this.#port = process.env.DEV_SERVER_PORT
+      ? parseInt(process.env.DEV_SERVER_PORT, 10)
+      : devOptions.port;
+
+    this.#prepareServer();
+
     const buildOptions = devConfig.build ?? {};
+
+    // Inject port into devMode options for HMR runtime
+    buildOptions.experimental = buildOptions.experimental ?? {};
+    buildOptions.experimental.devMode = buildOptions.experimental.devMode ?? {};
+    if (typeof buildOptions.experimental.devMode === 'object') {
+      buildOptions.experimental.devMode.port = this.#port;
+    }
+
     if (buildOptions.plugins == null || Array.isArray(buildOptions.plugins)) {
       buildOptions.plugins = [
         ...(buildOptions.plugins || []),
@@ -85,8 +104,8 @@ class DevServer {
     this.#devEngine = devEngine;
     process.stdin.on('data', async data => {
       if (data.toString() === 'r') {
-        const hasLatestOutput = await devEngine.hasLatestBuildOutput();
-        if (!hasLatestOutput) {
+        const { hasStaleOutput } = await devEngine.getBundleState();
+        if (hasStaleOutput) {
           await devEngine.ensureLatestBuildOutput();
         }
       }
@@ -136,8 +155,8 @@ class DevServer {
       });
     });
 
-    this.server.listen(3000, () => {
-      console.log('Server listening on http://localhost:3000');
+    this.server.listen(this.#port, () => {
+      console.log(`Server listening on http://localhost:${this.#port}`);
     });
   }
 
@@ -178,9 +197,16 @@ class DevServer {
         }
         case 'FullReload':
           if (this.#devOptions?.platform === 'browser') {
-            // TODO: send reload message to client
+            const client = this.#clients.get(clientUpdate.clientId);
+            if (!client) {
+              console.warn(`Client ${clientUpdate.clientId} not found`);
+              break;
+            }
+            console.log(
+              `[hmr]: Sending reload message to client ${clientUpdate.clientId}`,
+            );
+            this.#sendMessage(client.ws, { type: 'hmr:reload' });
           }
-          console.warn(`Client ${clientUpdate.clientId} is reloading`);
           this.#devEngine?.ensureLatestBuildOutput();
           break;
         case 'Noop':

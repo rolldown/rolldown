@@ -158,7 +158,7 @@ pub fn get_css_files_for_chunk(
     if let Some(chunk_metadata) = ctx
       .meta()
       .get::<ViteMetadata>()
-      .and_then(|vite_metadata| vite_metadata.get(&chunk.preliminary_filename.as_str().into()))
+      .map(|vite_metadata| vite_metadata.get(chunk.preliminary_filename.as_str().into()))
     {
       for file in chunk_metadata.imported_css.iter() {
         if !seen_css.contains(file.as_str()) {

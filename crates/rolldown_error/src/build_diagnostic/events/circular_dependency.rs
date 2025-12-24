@@ -20,4 +20,8 @@ impl BuildEvent for CircularDependency {
   fn message(&self, opts: &DiagnosticOptions) -> String {
     format!("Circular dependency: {}.", self.stable_paths(opts).join(" -> "))
   }
+
+  fn ids(&self) -> Option<Vec<String>> {
+    Some(self.paths.clone())
+  }
 }

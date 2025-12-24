@@ -19,7 +19,7 @@ runTestSuiteWithSamples(
 	(directory, config) => {
         const content = fs.readFileSync(directory + '/main.js', 'utf-8');
         if (content.includes('// removed') || content.includes(`console.log('removed')`) || content.includes('const removed') || included(directory) || included(config.description) || included(content)) {
-            const testPath = directory.replace(testDirectory, '').replaceAll('/', '@')
+            const testPath = directory.replace(testDirectory, '').replaceAll('/', '@').replaceAll('\\', '@')
             const isSingleFormatTest = fs.existsSync(directory + '/_expected.js');
             if (isSingleFormatTest) {
                 ignoredTreeshakingTests.push('rollup@form' + testPath + ': ' + config.description)
@@ -31,7 +31,7 @@ runTestSuiteWithSamples(
 );
 
 function included(str) {
-    return str.includes('Tree-shake') || str.includes('tree-shake') || str.includes('tree-shaking')  || str.includes('treeshake') || str.includes('side-effect') || str.includes('/*#__NO_SIDE_EFFECTS__*/') || str.includes('skips-dead-branches') 
+    return str.includes('Tree-shake') || str.includes('tree-shake') || str.includes('tree-shaking')  || str.includes('treeshake') || str.includes('side-effect') || str.includes('/*#__NO_SIDE_EFFECTS__*/') || str.includes('skips-dead-branches')
      || str.includes('deoptimizations') || str.includes('deoptimize') || str.includes('removes an empty') || str.includes('unused')
 }
 

@@ -27,10 +27,10 @@ export interface ChecksOptions {
   missingNameOptionForIifeExport?: boolean;
 
   /**
-   * Whether to emit warning when detecting mixed export
+   * Whether to emit warning when detecting mixed exports
    * @default true
    */
-  mixedExport?: boolean;
+  mixedExports?: boolean;
 
   /**
    * Whether to emit warning when detecting unresolved entry
@@ -69,6 +69,12 @@ export interface ChecksOptions {
   emptyImportMeta?: boolean;
 
   /**
+   * Whether to emit warning when detecting cannot call namespace
+   * @default true
+   */
+  cannotCallNamespace?: boolean;
+
+  /**
    * Whether to emit warning when detecting configuration field conflict
    * @default true
    */
@@ -85,4 +91,10 @@ export interface ChecksOptions {
    * @default true
    */
   couldNotCleanDirectory?: boolean;
+
+  /**
+   * Whether to emit warning when detecting plugin timings
+   * @default true
+   */
+  pluginTimings?: boolean;
 }

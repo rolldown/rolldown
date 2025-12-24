@@ -66,7 +66,11 @@ impl<'name> Renamer<'name> {
     self.used_canonical_names.insert(name, 0);
   }
 
-  pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef) {
+  /// Assigns a canonical name to a symbol without checking for conflicts.
+  ///
+  /// This is used when a top-level symbol becomes non-top-level after transformations,
+  /// such as a Commonjs module may be wrapped with a runtime helper function
+  pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef, needs_deconflict: bool) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     let canonical_name = canonical_ref.name(self.symbol_db);
 
@@ -83,6 +87,11 @@ impl<'name> Renamer<'name> {
     } else {
       CompactStr::new(canonical_name)
     };
+
+    if !needs_deconflict {
+      self.canonical_names.insert(canonical_ref, original_name);
+      return;
+    }
 
     match self.canonical_names.entry(canonical_ref) {
       Entry::Vacant(vacant) => {

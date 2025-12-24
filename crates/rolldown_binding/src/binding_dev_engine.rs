@@ -1,6 +1,5 @@
-use napi::tokio;
 use napi_derive::napi;
-use rolldown_dev::{BundlingFuture, OnHmrUpdatesCallback, OnOutputCallback};
+use rolldown_dev::{BundleState, BundlingFuture, OnHmrUpdatesCallback, OnOutputCallback};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -9,7 +8,7 @@ use crate::types::binding_bundler_options::BindingBundlerOptions;
 use crate::types::binding_client_hmr_update::BindingClientHmrUpdate;
 use crate::types::binding_outputs::{BindingOutputs, to_binding_error};
 use crate::types::error::{BindingErrors, BindingResult};
-use crate::utils::create_bundler_from_binding_options::create_bundler_from_binding_options;
+use crate::utils::create_bundler_config_from_binding_options::create_bundler_config_from_binding_options;
 use napi::bindgen_prelude::FnArgs;
 use napi::{Either, Env, threadsafe_function::ThreadsafeFunctionCallMode};
 
@@ -48,9 +47,8 @@ impl BindingDevEngine {
       watch_options.and_then(|watch| watch.compare_contents_for_polling);
     let debounce_tick_rate = watch_options.and_then(|watch| watch.debounce_tick_rate);
 
-    // Create bundler
-    let bundler: Arc<napi::tokio::sync::Mutex<rolldown::Bundler>> =
-      Arc::new(tokio::sync::Mutex::new(create_bundler_from_binding_options(options)?));
+    // Create bundler config
+    let bundler_config = create_bundler_config_from_binding_options(options)?;
 
     // If callback is provided, wrap it to convert BuildResult<(Vec<ClientHmrUpdate>, Vec<String>)> to BindingResult<(Vec<BindingClientHmrUpdate>, Vec<String>)>
     let on_hmr_updates = on_hmr_updates_callback.map(|js_callback| {
@@ -128,7 +126,7 @@ impl BindingDevEngine {
       watch: dev_watch_options,
     };
 
-    let inner = rolldown_dev::DevEngine::with_bundler(bundler, rolldown_dev_options)
+    let inner = rolldown_dev::DevEngine::new(bundler_config, rolldown_dev_options)
       .map_err(|e| napi::Error::from_reason(format!("Fail to create dev engine: {e:#?}")))?;
 
     Ok(Self { inner, _session_id: session_id, _session: session })
@@ -151,12 +149,13 @@ impl BindingDevEngine {
   }
 
   #[napi]
-  pub async fn has_latest_build_output(&self) -> napi::Result<bool> {
+  pub async fn get_bundle_state(&self) -> napi::Result<BindingBundleState> {
     self
       .inner
-      .has_latest_bundle_output()
+      .get_bundle_state()
       .await
-      .map_err(|_e| napi::Error::from_reason("Failed to check latest build output"))
+      .map(Into::into)
+      .map_err(|_e| napi::Error::from_reason("Failed to get bundle state"))
   }
 
   #[napi]
@@ -178,12 +177,22 @@ impl BindingDevEngine {
   }
 
   #[napi]
-  pub fn register_modules(&self, client_id: String, modules: Vec<String>) {
+  #[allow(
+    clippy::unused_async,
+    clippy::allow_attributes,
+    reason = "Avoid blocking nodejs thread and potential deadlock. See https://github.com/rolldown/rolldown/issues/7311"
+  )]
+  pub async fn register_modules(&self, client_id: String, modules: Vec<String>) {
     self.inner.clients.entry(client_id).or_default().executed_modules.extend(modules);
   }
 
   #[napi]
-  pub fn remove_client(&self, client_id: String) {
+  #[allow(
+    clippy::unused_async,
+    clippy::allow_attributes,
+    reason = "Avoid blocking nodejs thread and potential deadlock. See https://github.com/rolldown/rolldown/issues/7311"
+  )]
+  pub async fn remove_client(&self, client_id: String) {
     self.inner.clients.remove(&client_id);
   }
 
@@ -215,5 +224,20 @@ impl ScheduledBuild {
   #[napi]
   pub fn already_scheduled(&self) -> bool {
     self.already_scheduled
+  }
+}
+
+#[napi(object)]
+pub struct BindingBundleState {
+  pub last_full_build_failed: bool,
+  pub has_stale_output: bool,
+}
+
+impl From<BundleState> for BindingBundleState {
+  fn from(state: BundleState) -> Self {
+    Self {
+      last_full_build_failed: state.last_full_build_failed,
+      has_stale_output: state.has_stale_output,
+    }
   }
 }

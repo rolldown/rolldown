@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+
+//#region entry.mjs
+const __proto__ = 123;
+
+//#endregion
+Object.defineProperty(exports, '__proto__', {
+  enumerable: true,
+  value: __proto__
+});
+```

@@ -10,10 +10,16 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   PARSE_ERROR = 'PARSE_ERROR',
   NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER';
 
-export function logParseError(message: string): RollupLog {
+export function logParseError(
+  message: string,
+  id: string | undefined,
+  pos?: number,
+): RollupLog {
   return {
     code: PARSE_ERROR,
+    id,
     message,
+    pos,
   };
 }
 

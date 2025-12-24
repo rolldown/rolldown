@@ -31,6 +31,10 @@ pub struct TestMeta {
   /// If `true`, the `[hash]` pattern will be inserted in the `xxxxFilenames`.
   #[serde(default)]
   pub hash_in_filename: bool,
+  /// If `true`, skip syntax validation of output chunks. Useful for tests that
+  /// intentionally produce invalid output (e.g., testing invalid configuration warnings).
+  #[serde(default)]
+  pub skip_syntax_validation: bool,
   /// If `true`, the bundle will be called with `write()` instead of `generate()`.
   #[serde(default = "true_by_default")]
   pub write_to_disk: bool,

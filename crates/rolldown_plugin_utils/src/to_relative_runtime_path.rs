@@ -26,7 +26,7 @@ pub fn create_to_import_meta_url_based_relative_runtime(
   };
   move |filename: &Path, importer: &Path| -> AssetUrlResult {
     let path = filename.relative(importer.parent().unwrap_or(importer));
-    AssetUrlResult::WithoutRuntime(to_relative_path(&path.to_slash_lossy()))
+    AssetUrlResult::WithRuntime(to_relative_path(&path.to_slash_lossy()))
   }
 }
 
@@ -79,10 +79,11 @@ fn get_relative_url_from_document(path: &str, is_umd: bool) -> String {
 }
 
 fn escape_id(id: &str) -> Cow<'_, str> {
-  if id.contains(['\n', '\r', '\\', '\u{2028}', '\u{2029}']) {
+  if id.contains(['\'', '\n', '\r', '\\', '\u{2028}', '\u{2029}']) {
     let mut result = String::with_capacity(id.len() + 2);
     for c in id.chars() {
       match c {
+        '\'' => result.push_str("\\'"),
         '\\' => result.push_str("\\\\"),
         '\n' => result.push_str("\\\n"),
         '\r' => result.push_str("\\\r"),

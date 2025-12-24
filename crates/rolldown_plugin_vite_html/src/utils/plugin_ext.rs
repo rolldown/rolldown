@@ -299,7 +299,7 @@ impl ViteHtmlPlugin {
             ctx
               .meta()
               .get_or_insert_default::<ViteMetadata>()
-              .get_or_insert_default(chunk.preliminary_filename.as_str().into())
+              .get(chunk.preliminary_filename.as_str().into())
               .imported_assets
               .insert(clean_url(&filename).into());
           }

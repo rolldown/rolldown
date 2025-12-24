@@ -18,12 +18,13 @@ pub struct BindingViteReporterPluginConfig {
   pub is_tty: bool,
   pub is_lib: bool,
   pub assets_dir: String,
-  pub chunk_limit: u32,
+  pub chunk_limit: f64,
   pub should_log_info: bool,
   pub warn_large_chunks: bool,
   pub report_compressed_size: bool,
 }
 
+#[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 impl From<BindingViteReporterPluginConfig> for ViteReporterPlugin {
   fn from(config: BindingViteReporterPluginConfig) -> Self {
     Self {

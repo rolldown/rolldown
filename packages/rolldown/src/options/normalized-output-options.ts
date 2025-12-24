@@ -39,6 +39,8 @@ export interface NormalizedOutputOptions {
   externalLiveBindings: boolean;
   banner: AddonFunction;
   footer: AddonFunction;
+  postBanner: AddonFunction;
+  postFooter: AddonFunction;
   intro: AddonFunction;
   outro: AddonFunction;
   esModule: boolean | 'if-default-prop';
@@ -160,6 +162,16 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
   @lazyProp
   get footer(): AddonFunction {
     return normalizeAddon(this.outputOptions.footer);
+  }
+
+  @lazyProp
+  get postBanner(): AddonFunction {
+    return normalizeAddon(this.outputOptions.postBanner);
+  }
+
+  @lazyProp
+  get postFooter(): AddonFunction {
+    return normalizeAddon(this.outputOptions.postFooter);
   }
 
   @lazyProp

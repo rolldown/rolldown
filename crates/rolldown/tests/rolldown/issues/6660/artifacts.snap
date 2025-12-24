@@ -6,10 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## c.js
 
 ```js
-import { i as __toCommonJS, n as __esmMin, r as __export, t as __commonJSMin } from "./index.js";
+import { i as __toCommonJS, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./index.js";
 
 //#region d.js
-var d_exports = /* @__PURE__ */ __export({ loadEventStreamCapability: () => loadEventStreamCapability });
+var d_exports = /* @__PURE__ */ __exportAll({ loadEventStreamCapability: () => loadEventStreamCapability });
 async function loadEventStreamCapability() {
 	const { EventStreamSerde } = await import("./e.js");
 	console.log(`EventStreamSerde: `, EventStreamSerde);
@@ -62,5 +62,5 @@ var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 require_b();
 
 //#endregion
-export { __toCommonJS as i, __esmMin as n, __export as r, __commonJSMin as t };
+export { __toCommonJS as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
 ```

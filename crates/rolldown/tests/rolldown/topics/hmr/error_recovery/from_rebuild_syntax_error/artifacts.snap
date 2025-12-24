@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region dep.js
-var dep_exports = /* @__PURE__ */ __export({ value: () => value });
+var dep_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
 __rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
 const value = "dep";
@@ -77,7 +77,7 @@ console.log(value);
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region dep.js
-var dep_exports = /* @__PURE__ */ __export({ value: () => value });
+var dep_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 const dep_hot = __rolldown_runtime__.createModuleHotContext("dep.js");
 __rolldown_runtime__.registerModule("dep.js", { exports: dep_exports });
 const value = "dep";

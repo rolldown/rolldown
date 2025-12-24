@@ -21,11 +21,11 @@ To fix:
 ## first.js
 
 ```js
-import { n as __export, t as __esmMin } from "./rolldown-runtime.js";
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import { r as value$1, t as init_second } from "./second.js";
 
 //#region first.js
-var first_exports = /* @__PURE__ */ __export({ value: () => value });
+var first_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 var value;
 var init_first = __esmMin((() => {
 	init_second();
@@ -58,17 +58,17 @@ init_main();
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __export as n, __esmMin as t };
+export { __exportAll as n, __esmMin as t };
 ```
 
 ## second.js
 
 ```js
-import { n as __export, t as __esmMin } from "./rolldown-runtime.js";
+import { n as __exportAll, t as __esmMin } from "./rolldown-runtime.js";
 import { n as init_first, r as value$1 } from "./first.js";
 
 //#region second.js
-var second_exports = /* @__PURE__ */ __export({ value: () => value });
+var second_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 var value;
 var init_second = __esmMin((() => {
 	init_first();

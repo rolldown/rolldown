@@ -22,7 +22,7 @@ var init_b = __esmMin((() => {
 
 //#endregion
 //#region index.js
-var edge_case_issue2793_without_splitting_exports = /* @__PURE__ */ __export({
+var edge_case_issue2793_without_splitting_exports = /* @__PURE__ */ __exportAll({
 	A: () => A,
 	B: () => B
 });

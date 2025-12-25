@@ -28,7 +28,9 @@ async function runTypedoc(): Promise<void> {
         'typedoc-plugin-markdown',
         'typedoc-vitepress-theme',
         path.join(import.meta.dirname, 'extract-options-plugin.ts'),
+        path.join(import.meta.dirname, 'custom-theme-plugin.ts'),
       ],
+      theme: 'customTheme',
       out: './reference',
       entryPoints: [
         path.join(root, 'packages/rolldown/src/index.ts').replaceAll('\\', '/'),
@@ -37,7 +39,6 @@ async function runTypedoc(): Promise<void> {
       excludeInternal: true,
 
       hideBreadcrumbs: true,
-      useCodeBlocks: true,
       flattenOutputFiles: true,
 
       categoryOrder: ['Programmatic APIs', 'Plugin APIs', '*'],

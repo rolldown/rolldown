@@ -154,8 +154,29 @@ pub fn render_chunk_exports(
         ChunkKind::EntryPoint { module, .. } => {
           let module =
             &link_output.module_table[module].as_normal().expect("should be normal module");
-          if matches!(module.exports_kind, ExportsKind::Esm) {
-            let rendered_items = export_items
+          
+          // Collect entry module's own exports (for ESM modules)
+          let entry_module_exports: FxHashSet<SymbolRef> = if matches!(module.exports_kind, ExportsKind::Esm) {
+            link_output.metas[module.idx]
+              .resolved_exports
+              .values()
+              .map(|export| link_output.symbol_db.canonical_ref_for(export.symbol_ref))
+              .collect()
+          } else {
+            FxHashSet::default()
+          };
+          
+          // Separate export_items into entry module exports and cross-chunk exports (like runtime helpers)
+          let (entry_exports, cross_chunk_exports): (Vec<_>, Vec<_>) = export_items
+            .into_iter()
+            .partition(|(_, export_ref)| {
+              let canonical_ref = link_output.symbol_db.canonical_ref_for(*export_ref);
+              entry_module_exports.contains(&canonical_ref)
+            });
+          
+          // Render entry module's own exports (for ESM modules)
+          if matches!(module.exports_kind, ExportsKind::Esm) && !entry_exports.is_empty() {
+            let rendered_items = entry_exports
               .into_iter()
               .map(|(exported_name, export_ref)| {
                 let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
@@ -201,6 +222,35 @@ pub fn render_chunk_exports(
               })
               .collect::<Vec<_>>();
             s.push_str(&rendered_items.join("\n"));
+          }
+          
+          // Render cross-chunk exports (e.g., runtime helpers needed by other chunks)
+          // These should always be exported using Object.defineProperty for proper interop
+          if !cross_chunk_exports.is_empty() {
+            if !s.is_empty() {
+              s.push('\n');
+            }
+            let rendered_cross_chunk_items = cross_chunk_exports
+              .into_iter()
+              .map(|(exported_name, export_ref)| {
+                let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
+                let symbol = link_output.symbol_db.get(canonical_ref);
+                let canonical_name = &chunk.canonical_names[&canonical_ref];
+                
+                match &symbol.namespace_alias {
+                  Some(ns_alias) => {
+                    let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
+                    let property_name = &ns_alias.property_name;
+                    render_object_define_property(
+                      &exported_name,
+                      &concat_string!(canonical_ns_name, ".", property_name),
+                    )
+                  }
+                  _ => render_object_define_property(&exported_name, canonical_name),
+                }
+              })
+              .collect::<Vec<_>>();
+            s.push_str(&rendered_cross_chunk_items.join("\n"));
           }
 
           let meta = &ctx.link_output.metas[module.idx];

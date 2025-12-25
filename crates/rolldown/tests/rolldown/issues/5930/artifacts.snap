@@ -68,6 +68,12 @@ Object.defineProperty(exports, 'default', {
     return require_lib();
   }
 });
+Object.defineProperty(exports, 'require_lib', {
+  enumerable: true,
+  get: function () {
+    return require_lib;
+  }
+});
 ```
 
 ### main.js
@@ -110,6 +116,12 @@ Object.defineProperty(exports, 'default', {
   enumerable: true,
   get: function () {
     return require_rule();
+  }
+});
+Object.defineProperty(exports, 'require_rule', {
+  enumerable: true,
+  get: function () {
+    return require_rule;
   }
 });
 ```

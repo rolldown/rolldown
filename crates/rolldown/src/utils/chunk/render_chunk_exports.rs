@@ -225,7 +225,7 @@ pub fn render_chunk_exports(
           }
 
           // Render cross-chunk exports (e.g., runtime helpers needed by other chunks)
-          // These should always be exported using Object.defineProperty for proper interop
+          // Use the same logic as entry exports to respect live binding requirements
           if !cross_chunk_exports.is_empty() {
             if !s.is_empty() {
               s.push('\n');
@@ -237,16 +237,32 @@ pub fn render_chunk_exports(
                 let symbol = link_output.symbol_db.get(canonical_ref);
                 let canonical_name = &chunk.canonical_names[&canonical_ref];
 
-                match &symbol.namespace_alias {
+                let exported_value = match &symbol.namespace_alias {
                   Some(ns_alias) => {
                     let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
                     let property_name = &ns_alias.property_name;
-                    render_object_define_property(
-                      &exported_name,
-                      &concat_string!(canonical_ns_name, ".", property_name),
-                    )
+                    concat_string!(canonical_ns_name, ".", property_name)
                   }
-                  _ => render_object_define_property(&exported_name, canonical_name),
+                  _ => canonical_name.to_string(),
+                };
+
+                // Use Object.defineProperty only when needed for live bindings
+                if must_keep_live_binding(
+                  export_ref,
+                  &link_output.symbol_db,
+                  options,
+                  &link_output.module_table.modules,
+                ) {
+                  render_object_define_property(&exported_name, &exported_value)
+                } else if exported_name.as_str() == "__proto__" {
+                  render_object_define_property_value(&exported_name, &exported_value)
+                } else {
+                  concat_string!(
+                    property_access_str("exports", exported_name.as_str()),
+                    " = ",
+                    exported_value.as_str(),
+                    ";"
+                  )
                 }
               })
               .collect::<Vec<_>>();

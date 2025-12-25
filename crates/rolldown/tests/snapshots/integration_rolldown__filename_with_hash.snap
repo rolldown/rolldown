@@ -3818,6 +3818,11 @@ expression: output
 - main-!~{000}~.js => main-NIEFUZip.js
 - foo-!~{001}~.js => foo-Uv9gr96M.js
 
+# tests/rolldown/code_splitting/dynamic_import_cjs_runtime_helper
+
+- main-!~{000}~.js => main-QsKk41YI.js
+- a-!~{001}~.js => a-BKgXR6kK.js
+
 # tests/rolldown/code_splitting/ensure_safe_identifier
 
 - main1-!~{000}~.js => main1-Dp-jad7Y.js
@@ -4939,10 +4944,10 @@ expression: output
 
 # tests/rolldown/issues/5930_1
 
-- entry-!~{000}~.js => entry-Bt_GRYD6.js
-- rule-!~{001}~.js => rule-CZTa5FFE.js
+- entry-!~{000}~.js => entry-DY9XT7zu.js
+- rule-!~{001}~.js => rule-hEenWj-7.js
 - _virtual/rolldown_runtime-!~{002}~.js => _virtual/rolldown_runtime-CfzBl-E4.js
-- lib-!~{004}~.js => lib-K5wOtDlO.js
+- lib-!~{004}~.js => lib-BiYBPJ_5.js
 
 # tests/rolldown/issues/6036
 
@@ -5036,9 +5041,9 @@ expression: output
 
 # tests/rolldown/issues/7146
 
-- main-!~{000}~.js => main-DbMB5WIV.js
+- main-!~{000}~.js => main-ZRtx7zab.js
 - _virtual/rolldown_runtime-!~{001}~.js => _virtual/rolldown_runtime-C32Qc0pU.js
-- config-!~{003}~.js => config-CEwavChU.js
+- config-!~{003}~.js => config-3zHchijB.js
 
 # tests/rolldown/issues/7150
 

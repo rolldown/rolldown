@@ -28,6 +28,12 @@ Object.defineProperty(exports, 'default', {
     return require_config();
   }
 });
+Object.defineProperty(exports, 'require_config', {
+  enumerable: true,
+  get: function () {
+    return require_config;
+  }
+});
 ```
 
 ## main.js

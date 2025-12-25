@@ -34,10 +34,5 @@ Object.defineProperty(exports, 'default', {
 Promise.resolve().then(() => __toDynamicImportESM()(require("./a.js"))).then((m) => console.log(m.default));
 
 //#endregion
-Object.defineProperty(exports, '__commonJSMin', {
-  enumerable: true,
-  get: function () {
-    return __commonJSMin;
-  }
-});
+exports.__commonJSMin = __commonJSMin;
 ```

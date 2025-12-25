@@ -47,6 +47,12 @@ Object.defineProperty(exports, 'default', {
     return require_lib();
   }
 });
+Object.defineProperty(exports, 'require_lib', {
+  enumerable: true,
+  get: function () {
+    return require_lib;
+  }
+});
 ```
 
 ## rule.js
@@ -69,4 +75,10 @@ var require_rule = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((expo
 //#endregion
 module.exports = require_rule();
 
+Object.defineProperty(exports, 'require_rule', {
+  enumerable: true,
+  get: function () {
+    return require_rule;
+  }
+});
 ```

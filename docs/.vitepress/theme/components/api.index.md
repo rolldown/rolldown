@@ -1,5 +1,5 @@
 ---
-title: Options & API Reference
+title: Options & APIs Reference
 sidebar: true
 aside: false
 ---

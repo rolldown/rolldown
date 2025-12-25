@@ -20,6 +20,7 @@ import type {
   RollupLog,
   RollupLogWithString,
 } from './log/logging';
+import type { ChecksOptions } from './options/generated/checks-options';
 import type {
   ExternalOption,
   InputOption,
@@ -118,6 +119,7 @@ export type {
   AsyncPluginHooks,
   BufferEncoding,
   BuildOptions,
+  ChecksOptions,
   ChunkFileNamesFunction,
   ChunkingContext,
   ConfigExport,

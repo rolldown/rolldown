@@ -48,7 +48,7 @@ export default {
   // Load API data and process sidebar items
   load(): APIReference[] {
     const inputOptions: TypedocSidebarItem[] = [];
-    let outputOptions: TypedocSidebarItem[] = [];
+    const outputOptions: TypedocSidebarItem[] = [];
 
     const optionSidebarPath = fileURLToPath(
       new URL('../../../reference/options-sidebar.json', import.meta.url),
@@ -60,7 +60,7 @@ export default {
 
     optionSidebar.forEach((item) => {
       if (item.text === 'output' && 'items' in item) {
-        outputOptions = item.items;
+        outputOptions.push(...item.items);
       } else if ('link' in item) {
         inputOptions.push(item as TypedocSidebarItem);
       }

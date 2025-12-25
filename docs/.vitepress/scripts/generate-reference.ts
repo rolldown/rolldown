@@ -8,7 +8,12 @@ console.log('📚 Generating reference...');
 await runTypedoc();
 console.log('✅ Reference generated successfully!');
 
-const referenceIndexPath = path.join(import.meta.dirname, '..', 'reference', 'index.md');
+const referenceIndexPath = path.join(
+  import.meta.dirname,
+  '..',
+  'reference',
+  'index.md',
+);
 const apiIndexSourcePath = path.join(
   import.meta.dirname,
   '..',

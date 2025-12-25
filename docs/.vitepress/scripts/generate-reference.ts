@@ -27,7 +27,9 @@ async function runTypedoc(): Promise<void> {
     plugin: [
       'typedoc-plugin-markdown',
       'typedoc-vitepress-theme',
-      path.join(import.meta.dirname, 'custom-plugin.ts').split(path.sep).join(
+      path.join(import.meta.dirname, 'extract-options-plugin.ts').split(
+        path.sep,
+      ).join(
         path.posix.sep,
       ),
     ],

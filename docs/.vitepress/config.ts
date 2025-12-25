@@ -1,5 +1,4 @@
-import { existsSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { type DefaultTheme, defineConfig } from 'vitepress';
@@ -10,7 +9,6 @@ import {
 } from 'vitepress-plugin-group-icons';
 import llmstxt from 'vitepress-plugin-llms';
 
-const require = createRequire(import.meta.url);
 const CONFIG_LINK = '/options/input.md';
 
 const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
@@ -85,7 +83,9 @@ function getTypedocSidebar() {
   if (!existsSync(filepath)) return [];
 
   try {
-    return require(filepath) as DefaultTheme.SidebarItem[];
+    return JSON.parse(
+      readFileSync(filepath, 'utf-8'),
+    ) as DefaultTheme.SidebarItem[];
   } catch (error) {
     console.error('Failed to load typedoc sidebar:', error);
     return [];
@@ -107,7 +107,9 @@ function getOptionsSidebar() {
   if (!existsSync(filepath)) return [];
 
   try {
-    return require(filepath) as DefaultTheme.SidebarItem[];
+    return JSON.parse(
+      readFileSync(filepath, 'utf-8'),
+    ) as DefaultTheme.SidebarItem[];
   } catch (error) {
     console.error('Failed to load options sidebar:', error);
     return [];

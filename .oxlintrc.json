@@ -27,7 +27,7 @@
       }
     ],
     "jsdoc/check-tag-names": [
-      "allow",
+      "error",
       {
         "definedTags": ["category", "include"]
       }

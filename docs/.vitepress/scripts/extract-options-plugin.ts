@@ -39,7 +39,7 @@ function extractPropertySection(
   const section = contents.slice(startIndex, endIndex).trim();
 
   // Reduce each heading level by two (e.g., ### -> #)
-  return section.replace(/^(#{2,6})/gm, (match) => match.slice(2));
+  return section.replace(/^(#{3,6})/gm, (match) => match.slice(2));
 }
 
 export function load(app: td.Application) {
@@ -56,7 +56,7 @@ export function load(app: td.Application) {
         const parentReflection = page.model as td.ContainerReflection;
         if (!parentReflection.children) return;
 
-        const parentContents = String(page.contents ?? '');
+        const parentContents = page.contents ?? '';
 
         for (const property of parentReflection.children) {
           const newPage = new td.PageEvent(property);
@@ -71,7 +71,7 @@ export function load(app: td.Application) {
           );
           newPage.contents = extracted;
 
-          const outDir = app.options?.getValue?.('out');
+          const outDir = app.options.getValue('out');
           const abs = path.resolve(outDir, newPage.url);
           fs.mkdirSync(path.dirname(abs), { recursive: true });
           fs.writeFileSync(abs, newPage.contents ?? '', 'utf8');
@@ -80,7 +80,7 @@ export function load(app: td.Application) {
           generatedPage[parentReflection.name] ??= [];
           generatedPage[parentReflection.name].push({
             text: property.name,
-            link: `/${newPage.url.replace(/\\/g, '/')}`,
+            link: `/${newPage.url.replaceAll('\\', '/')}`,
           });
         }
       }
@@ -88,7 +88,7 @@ export function load(app: td.Application) {
   );
 
   app.renderer.on(td.Renderer.EVENT_END, () => {
-    const outDir = app.options?.getValue?.('out');
+    const outDir = app.options.getValue('out');
     const optionsPath = path.resolve(outDir, 'options-sidebar.json');
 
     const sidebarArray = [];

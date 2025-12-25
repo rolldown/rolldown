@@ -2410,6 +2410,7 @@ export interface BindingViteReporterPluginConfig {
   shouldLogInfo: boolean
   warnLargeChunks: boolean
   reportCompressedSize: boolean
+  logInfo: (msg: string) => void
 }
 
 export interface BindingViteResolvePluginConfig {

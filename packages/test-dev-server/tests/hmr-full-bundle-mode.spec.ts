@@ -19,7 +19,7 @@ describe('hmr-full-bundle-mode', () => {
   test.sequential('basic HMR', async () => {
     const page = getPage();
 
-    await editFile('hmr.js', (code) =>
+    editFile('hmr.js', (code) =>
       code.replace(
         "const foo = 'hello'",
         "const foo = 'hello1'",
@@ -27,14 +27,16 @@ describe('hmr-full-bundle-mode', () => {
 
     await expect.poll(() => page.textContent('.hmr')).toBe('hello1');
 
-    await editFile(
+    editFile(
       'hmr.js',
       (code) => code.replace("const foo = 'hello1'", "const foo = 'hello2'"),
     );
 
     await expect.poll(() => page.textContent('.hmr')).toBe('hello2');
 
-    await editFile('hmr.js', (code) =>
+    await setTimeout(1000);
+
+    editFile('hmr.js', (code) =>
       code.replace(
         "const foo = 'hello2'",
         "const foo = 'hello'",
@@ -51,14 +53,14 @@ describe('hmr-full-bundle-mode', () => {
         "text('.app', 'hello1')\n" + '// @delay-transform',
       ));
     await setTimeout(100);
-    await editFile(
+    editFile(
       'main.js',
       (code) =>
         code.replace("text('.app', 'hello1')", "text('.app', 'hello2')"),
     );
     await expect.poll(() => page.textContent('.app')).toBe('hello2');
 
-    await editFile('main.js', (code) =>
+    editFile('main.js', (code) =>
       code.replace(
         "text('.app', 'hello2')\n" + '// @delay-transform',
         "text('.app', 'hello')",
@@ -70,7 +72,7 @@ describe('hmr-full-bundle-mode', () => {
   test.sequential('continuous generate hmr patch', async () => {
     const page = getPage();
 
-    await editFile('hmr.js', (code) =>
+    editFile('hmr.js', (code) =>
       code.replace(
         "const foo = 'hello'",
         "const foo = 'hello1'\n" + '// @delay-transform',
@@ -82,7 +84,7 @@ describe('hmr-full-bundle-mode', () => {
     );
     await expect.poll(() => page.textContent('.hmr')).toBe('hello2');
 
-    await editFile('hmr.js', (code) =>
+    editFile('hmr.js', (code) =>
       code.replace(
         "const foo = 'hello2'\n" + '// @delay-transform',
         "const foo = 'hello'",

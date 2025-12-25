@@ -3,8 +3,8 @@
 // in .vue components or .md pages:
 // named import "data" is the resolved static data
 // can also import types for type consistency
-import { data as apiIndex } from './reference.data'
-import type {  APIReference } from './reference.data'
+import { data as apiIndex } from './api.data'
+import type {  APIReference } from './api.data'
 import { ref, computed, onMounted } from 'vue'
 
 const search = ref()

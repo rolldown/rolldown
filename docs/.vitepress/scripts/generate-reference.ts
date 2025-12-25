@@ -10,7 +10,7 @@ console.log('✅ Reference generated successfully!');
 
 await rm('reference/index.md', { force: true });
 await copyFile(
-  '.vitepress/theme/components/reference.index.md',
+  '.vitepress/theme/components/api.index.md',
   'reference/index.md',
 );
 console.log('📚 New index added successfully');

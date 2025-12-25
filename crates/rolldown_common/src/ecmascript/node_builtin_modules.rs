@@ -1,4 +1,4 @@
-use oxc_resolver::NODEJS_BUILTINS;
+use nodejs_built_in_modules::BUILTINS as NODEJS_BUILTINS;
 
 /// A list of prefix-only modules
 const NODEJS_PREFIXED_BUILTINS: &[&str] = &[

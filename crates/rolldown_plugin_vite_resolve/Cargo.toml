@@ -17,6 +17,7 @@ cow-utils = { workspace = true }
 dashmap = { workspace = true }
 derive_more = { workspace = true }
 fast-glob = { workspace = true }
+nodejs-built-in-modules = { workspace = true }
 owo-colors = { workspace = true }
 oxc_resolver = { workspace = true }
 parking_lot = { workspace = true }

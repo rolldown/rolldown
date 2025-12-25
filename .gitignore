@@ -178,9 +178,7 @@ crates/rolldown_devtools_action/bindings/**
 # AI config
 .claude
 CLAUDE.local.md
-<<<<<<< HEAD
-=======
 
 # workaround for https://github.com/anthropics/claude-code/issues/4928
 nul
->>>>>>> beeb5eca467b220de34ff145fcf0758f1f931e5a
+

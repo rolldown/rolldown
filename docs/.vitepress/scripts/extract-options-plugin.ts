@@ -38,7 +38,7 @@ function extractPropertySection(
 
   const section = contents.slice(startIndex, endIndex).trim();
 
-  // Upgrade each heading level by two (e.g., ### -> #)
+  // Reduce each heading level by two (e.g., ### -> #)
   return section.replace(/^(#{2,6})/gm, (match) => match.slice(2));
 }
 

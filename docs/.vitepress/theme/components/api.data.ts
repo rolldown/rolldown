@@ -45,9 +45,6 @@ function slugify(text: string): string {
 
 // Main export function for loading the API data
 export default {
-  // Declare files that should trigger Hot Module Replacement (HMR)
-  watch: './*.md',
-
   // Load API data and process sidebar items
   load(): APIReference[] {
     const inputOptions: TypedocSidebarItem[] = [];

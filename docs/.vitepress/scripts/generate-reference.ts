@@ -8,24 +8,10 @@ console.log('📚 Generating reference...');
 await runTypedoc();
 console.log('✅ Reference generated successfully!');
 
-const referenceIndexPath = path.join(
-  import.meta.dirname,
-  '..',
-  'reference',
-  'index.md',
-);
-const apiIndexSourcePath = path.join(
-  import.meta.dirname,
-  '..',
-  'theme',
-  'components',
-  'api.index.md',
-);
-
-await rm(referenceIndexPath, { force: true });
+await rm('reference/index.md', { force: true });
 await copyFile(
-  apiIndexSourcePath,
-  referenceIndexPath,
+  '.vitepress/theme/components/api.index.md',
+  'reference/index.md',
 );
 console.log('📚 New index added successfully');
 

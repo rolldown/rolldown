@@ -18,7 +18,7 @@
     "ci:build-release-binding": "pnpm --filter rolldown run build-binding:release",
     "type-check": "tsc -b tsconfig.json",
     "docs": "pnpm --filter rolldown-docs run dev",
-    "docs:build": "pnpm --filter rolldown-docs run build",
+    "docs:build": "pnpm --filter rolldown-docs run generate && pnpm --filter rolldown-docs run build",
     "docs:preview": "pnpm --filter rolldown-docs run preview",
     "prepare": "husky",
     "preinstall": "npx only-allow pnpm"

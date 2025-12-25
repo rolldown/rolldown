@@ -15,6 +15,7 @@ import { validateOption } from '../../utils/validator';
 // @ts-expect-error TS2540: the polyfill of `asyncDispose`.
 Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose');
 
+/** @category Programmatic APIs */
 export class RolldownBuild {
   #inputOptions: InputOptions;
   #bundler: BindingBundler;

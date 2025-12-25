@@ -26,6 +26,12 @@
         "allowComputed": true
       }
     ],
+    "jsdoc/check-tag-names": [
+      "error",
+      {
+        "definedTags": ["category", "include"]
+      }
+    ],
     "no-unused-expressions": [
       "warn",
       {

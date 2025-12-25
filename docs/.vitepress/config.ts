@@ -1,6 +1,7 @@
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { UserConfig } from 'vitepress';
-import { defineConfig } from 'vitepress';
+import { type DefaultTheme, defineConfig } from 'vitepress';
 import {
   groupIconMdPlugin,
   groupIconVitePlugin,
@@ -10,7 +11,7 @@ import llmstxt from 'vitepress-plugin-llms';
 
 const CONFIG_LINK = '/options/input.md';
 
-const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
+const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
   {
     text: 'Guide',
     items: [
@@ -52,7 +53,7 @@ const sidebarForUserGuide: UserConfig['themeConfig']['sidebar'] = [
   },
 ];
 
-const sidebarForInDepth: UserConfig['themeConfig']['sidebar'] = [{
+const sidebarForInDepth: DefaultTheme.SidebarItem[] = [{
   text: 'In-Depth',
   items: [
     { text: 'Why Bundlers', link: '/in-depth/why-bundlers.md' },
@@ -74,7 +75,53 @@ const sidebarForInDepth: UserConfig['themeConfig']['sidebar'] = [{
   ],
 }];
 
-const sidebarForOptions: UserConfig['themeConfig']['sidebar'] = [
+function getTypedocSidebar() {
+  const filepath = path.resolve(
+    import.meta.dirname,
+    '../reference/typedoc-sidebar.json',
+  );
+  if (!existsSync(filepath)) return [];
+
+  try {
+    return JSON.parse(
+      readFileSync(filepath, 'utf-8'),
+    ) as DefaultTheme.SidebarItem[];
+  } catch (error) {
+    console.error('Failed to load typedoc sidebar:', error);
+    return [];
+  }
+}
+
+const typedocSidebar = getTypedocSidebar().map((item) => ({
+  ...item,
+  items: item.items?.slice().sort((a, b) =>
+    (a.text ?? '').localeCompare(b.text ?? '')
+  ),
+}));
+
+function getOptionsSidebar() {
+  const filepath = path.resolve(
+    import.meta.dirname,
+    '../reference/options-sidebar.json',
+  );
+  if (!existsSync(filepath)) return [];
+
+  try {
+    return JSON.parse(
+      readFileSync(filepath, 'utf-8'),
+    ) as DefaultTheme.SidebarItem[];
+  } catch (error) {
+    console.error('Failed to load options sidebar:', error);
+    return [];
+  }
+}
+
+const sidebarForReference: DefaultTheme.SidebarItem[] = [
+  { text: 'Option Reference', base: '/reference', items: getOptionsSidebar() },
+  { text: 'API Reference', base: '/reference', items: typedocSidebar },
+];
+
+const sidebarForOptions: DefaultTheme.SidebarItem[] = [
   {
     text: 'Rolldown Options',
     items: [
@@ -119,7 +166,7 @@ const sidebarForOptions: UserConfig['themeConfig']['sidebar'] = [
   },
 ];
 
-const sidebarForDevGuide: UserConfig['themeConfig']['sidebar'] = [
+const sidebarForDevGuide: DefaultTheme.SidebarItem[] = [
   {
     text: 'Contribution Guide',
     items: [
@@ -167,7 +214,7 @@ const sidebarForDevGuide: UserConfig['themeConfig']['sidebar'] = [
   },
 ];
 
-const sidebarForGlossary: UserConfig['themeConfig']['sidebar'] = [
+const sidebarForGlossary: DefaultTheme.SidebarItem[] = [
   {
     text: 'Glossary',
     items: [
@@ -179,7 +226,7 @@ const sidebarForGlossary: UserConfig['themeConfig']['sidebar'] = [
   },
 ];
 
-const sidebarForResources: UserConfig['themeConfig']['sidebar'] = [
+const sidebarForResources: DefaultTheme.SidebarItem[] = [
   {
     text: 'Team',
     link: '/team.md',
@@ -302,6 +349,8 @@ export default defineConfig({
       '/in-depth/': sidebarForInDepth,
       // --- Options ---
       '/options/': sidebarForOptions,
+      // --- Reference ---
+      '/reference/': sidebarForReference,
       // --- Glossary ---
       '/glossary/': sidebarForGlossary,
       // --- Contribute ---
@@ -372,5 +421,11 @@ export default defineConfig({
     config(md) {
       md.use(groupIconMdPlugin);
     },
+  },
+  transformPageData(pageData) {
+    // Disable "Edit this page on GitHub" for auto-generated reference docs
+    if (pageData.relativePath.startsWith('reference/')) {
+      pageData.frontmatter.editLink = false;
+    }
   },
 });

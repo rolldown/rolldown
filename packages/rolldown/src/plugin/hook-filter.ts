@@ -3,6 +3,7 @@ import type { ModuleType } from '../index';
 import type { MaybeArray } from '../types/utils';
 import type { StringOrRegExp } from '../types/utils';
 
+/** @category Plugin APIs */
 export type GeneralHookFilter<Value = StringOrRegExp> =
   | MaybeArray<Value>
   | {
@@ -14,8 +15,10 @@ interface FormalModuleTypeFilter {
   include?: ModuleType[];
 }
 
+/** @category Plugin APIs */
 export type ModuleTypeFilter = ModuleType[] | FormalModuleTypeFilter;
 
+/** @category Plugin APIs */
 export interface HookFilter {
   /**
    * This filter is used to do a pre-test to determine whether the hook should be called.

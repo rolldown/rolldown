@@ -54,7 +54,7 @@ const filtered = computed(() => {
             </div>
         </div>
 
-        <p>This is the automatically generated references for Rolldown's options and APIs. Use the sidebar navigation to browse specific options and APIs. </p>
+        <p>These are the automatically generated references for Rolldown's options and APIs. Use the sidebar navigation to browse specific options and APIs. </p>
 
         <div v-for="section of filtered" :key="section.text" class="api-section">
             <h2 :id="section.anchor">{{ section.text }}</h2>

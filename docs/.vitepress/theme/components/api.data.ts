@@ -43,6 +43,11 @@ function slugify(text: string): string {
   );
 }
 
+// Utility function to transform a link by removing .md extension and adding /reference prefix
+function transformLink(link: string): string {
+  return '/reference' + link.replace('.md', '');
+}
+
 // Main export function for loading the API data
 export default {
   // Load API data and process sidebar items
@@ -72,7 +77,7 @@ export default {
         anchor: slugify('Input Options'),
         items: inputOptions.map((item) => ({
           ...item,
-          link: '/reference' + item.link.replace('.md', ''),
+          link: transformLink(item.link),
         })),
       },
       {
@@ -80,7 +85,7 @@ export default {
         anchor: slugify('Output Options'),
         items: outputOptions.map((item) => ({
           ...item,
-          link: '/reference' + item.link.replace('.md', ''),
+          link: transformLink(item.link),
         })),
       },
     ];
@@ -98,7 +103,7 @@ export default {
       anchor: slugify(group.text),
       items: group.items.map((item) => ({
         ...item,
-        link: '/reference' + item.link.replace('.md', ''),
+        link: transformLink(item.link),
       })),
     }));
 

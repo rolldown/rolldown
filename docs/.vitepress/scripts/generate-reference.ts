@@ -1,4 +1,3 @@
-import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import { Application, type TypeDocOptions } from 'typedoc';
 import type { PluginOptions } from 'typedoc-plugin-markdown';
@@ -8,8 +7,6 @@ console.log('📚 Generating reference...');
 await runTypedoc();
 console.log('✅ Reference generated successfully!');
 console.log('📚 Beautifying reference structure...');
-
-await rm('reference/api/index.md', { force: true });
 
 /**
  * Run TypeDoc with the specified tsconfig
@@ -39,6 +36,7 @@ async function runTypedoc(): Promise<void> {
         path.posix.sep,
       ),
     ],
+    readme: 'none',
     excludeInternal: true,
 
     hideBreadcrumbs: true,

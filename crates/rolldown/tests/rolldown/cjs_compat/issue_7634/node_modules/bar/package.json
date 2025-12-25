@@ -1,0 +1,10 @@
+{
+  "name": "bar",
+  "description": "bar",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "dist"
+  ],
+  "license": "MIT"
+}

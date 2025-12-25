@@ -8,17 +8,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region imp1.js
-var imp1_exports = /* @__PURE__ */ __export({ imp1: () => imp1 });
+var imp1_exports = /* @__PURE__ */ __exportAll({ imp1: () => imp1 });
 const imp1 = 1;
 
 //#endregion
 //#region imp2.js
-var imp2_exports = /* @__PURE__ */ __export({ imp2: () => imp2 });
+var imp2_exports = /* @__PURE__ */ __exportAll({ imp2: () => imp2 });
 const imp2 = 2;
 
 //#endregion
 //#region imp3.js
-var imp3_exports = /* @__PURE__ */ __export({
+var imp3_exports = /* @__PURE__ */ __exportAll({
 	imp3: () => imp3,
 	imp33: () => imp33
 });

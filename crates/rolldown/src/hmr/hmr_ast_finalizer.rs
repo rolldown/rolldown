@@ -554,7 +554,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     // construct `__export(ns_name, { prop_name: () => returned, ... })`
     let export_call_expr = self.snippet.builder.expression_call(
       SPAN,
-      self.snippet.id_ref_expr("__rolldown_runtime__.__export", SPAN),
+      self.snippet.id_ref_expr("__rolldown_runtime__.__exportAll", SPAN),
       NONE,
       self
         .snippet
@@ -563,7 +563,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       false,
     );
 
-    // construct `var [binding_name_for_namespace_object_ref] = __export({ prop_name: () => returned, ... })`
+    // construct `var [binding_name_for_namespace_object_ref] = __exportAll({ prop_name: () => returned, ... })`
     let decl_stmt =
       self.snippet.var_decl_stmt(binding_name_for_namespace_object_ref, export_call_expr);
     vec![decl_stmt]

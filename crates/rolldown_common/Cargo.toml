@@ -25,6 +25,7 @@ dashmap = { workspace = true }
 derive_more = { workspace = true }
 fast-glob = { workspace = true }
 itertools = { workspace = true }
+nodejs-built-in-modules = { workspace = true }
 oxc = { workspace = true }
 oxc_ecmascript = { workspace = true }
 oxc_index = { workspace = true }

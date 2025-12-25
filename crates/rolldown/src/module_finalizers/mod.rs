@@ -478,8 +478,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       },
     ));
 
-    // if there is no export, we should generate `var ns = {}` instead of `var ns = __export({}, {})`
-    // else construct `__export(ns_name, { prop_name: () => returned, ... })`
+    // if there is no export, we should generate `var ns = {}` instead of `var ns = __exportAll({})`
+    // else construct `__exportAll({ prop_name: () => returned, ... })`
     let module_namespace_rhs =
       if arg_obj_expr.properties.is_empty() && !self.ctx.options.generated_code.symbols {
         Expression::ObjectExpression(self.builder().alloc(arg_obj_expr))
@@ -500,7 +500,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         };
         self.snippet.builder.expression_call_with_pure(
           SPAN,
-          self.finalized_expr_for_runtime_symbol("__export"),
+          self.finalized_expr_for_runtime_symbol("__exportAll"),
           NONE,
           args,
           false,
@@ -508,7 +508,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         )
       };
 
-    // construct `var [binding_name_for_namespace_object_ref] = __export(...)`
+    // construct `var [binding_name_for_namespace_object_ref] = __exportAll(...)`
     let decl_stmt =
       self.snippet.var_decl_stmt(binding_name_for_namespace_object_ref, module_namespace_rhs);
 

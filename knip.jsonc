@@ -22,6 +22,9 @@
         ".vitepress/theme/components/overrides/VPHero.vue",
         "data-loading/*.data.{js,ts}",
       ],
+      "ignore": [
+        ".vitepress/scripts/extract-options-plugin.ts", // used as a string path in TypeDoc plugin config
+      ],
       "ignoreDependencies": ["typedoc-vitepress-theme"],
     },
     "packages/bench": {

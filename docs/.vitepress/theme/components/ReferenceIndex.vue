@@ -1,9 +1,10 @@
+<!-- Reference: https://github.com/vuejs/docs/blob/main/src/api/ApiIndex.vue -->
 <script setup lang="ts">
 // in .vue components or .md pages:
 // named import "data" is the resolved static data
 // can also import types for type consistency
 import { data as apiIndex } from './reference.data'
-import type {  APIGroup } from './reference.data'
+import type {  APIReference } from './reference.data'
 import { ref, computed, onMounted } from 'vue'
 
 const search = ref()
@@ -25,21 +26,21 @@ const filtered = computed(() => {
                 return section
             }
 
-            // filter groups
-            const matchedGroups = section.items
+            // filter references
+            const matchedReferences = section.items
                 .map((item) => {
-                    // group title match
+                    // reference title match
                     if (matches(item.text)) {
                         return item
                     }
                 })
                 .filter((i) => i)
 
-            return matchedGroups.length
-                ? { text: section.text, items: matchedGroups }
+            return matchedReferences.length
+                ? { text: section.text, items: matchedReferences }
                 : null
         })
-        .filter((i) => i) as APIGroup[]
+        .filter((i) => i) as APIReference[]
 })
 </script>
 
@@ -57,8 +58,8 @@ const filtered = computed(() => {
 
         <div v-for="section of filtered" :key="section.text" class="api-section">
             <h2 :id="section.anchor">{{ section.text }}</h2>
-            <div class="api-groups">
-                <a v-for="item of section.items" :key="item.text" :href="item.link" class="api-group">
+            <div class="api-references">
+                <a v-for="item of section.items" :key="item.text" :href="item.link" class="api-reference">
                     <div>{{ item.text }}</div>
                 </a>
             </div>
@@ -103,12 +104,12 @@ h2 {
     margin-bottom: 64px;
 }
 
-.api-groups {
+.api-references {
     display: grid;
     gap: 14px;
 }
 
-.api-group {
+.api-reference {
     break-inside: avoid;
     display: flex;
     flex-direction: column;
@@ -124,7 +125,7 @@ h2 {
     color: var(--vt-c-text-1);
 }
 
-.api-group:hover {
+.api-reference:hover {
     border-color: var(--vt-c-brand);
 }
 
@@ -181,7 +182,7 @@ h2 {
         padding-top: 32px;
     }
 
-    .api-groups a {
+    .api-references a {
         font-size: 14px;
     }
 
@@ -191,13 +192,13 @@ h2 {
 }
 
 @media (min-width: 768px) {
-    .api-groups {
+    .api-references {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
 @media (min-width: 1024px) {
-    .api-groups {
+    .api-references {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }

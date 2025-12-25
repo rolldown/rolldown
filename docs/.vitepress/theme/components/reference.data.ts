@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-export interface APIGroup {
+export interface APIReference {
   text: string;
   anchor: string;
   items: {
@@ -24,7 +24,7 @@ export interface TypedocSidebarGroup {
 export type TypedocSidebar = TypedocSidebarGroup[];
 
 // Declare the resolved data type for API groups
-export declare const data: APIGroup[];
+export declare const data: APIReference[];
 
 // Utility function to generate a slug from a string (used for anchor links)
 function slugify(text: string): string {
@@ -49,7 +49,7 @@ export default {
   watch: './*.md',
 
   // Load API data and process sidebar items
-  load(): APIGroup[] {
+  load(): APIReference[] {
     const inputOptions: TypedocSidebarItem[] = [];
     let outputOptions: TypedocSidebarItem[] = [];
 
@@ -69,7 +69,7 @@ export default {
       }
     });
 
-    const transformedOptionSidebar: APIGroup[] = [
+    const transformedOptionSidebar: APIReference[] = [
       {
         text: 'Input Options',
         anchor: slugify('Input Options'),
@@ -96,7 +96,7 @@ export default {
       fs.readFileSync(apiSidebarPath, 'utf-8'),
     );
 
-    const transformedApiSidebar: APIGroup[] = apiSidebar.map((group) => ({
+    const transformedApiSidebar: APIReference[] = apiSidebar.map((group) => ({
       text: group.text,
       anchor: slugify(group.text),
       items: group.items.map((item) => ({

@@ -1,0 +1,17 @@
+@import "@voidzero-dev/vitepress-theme/src/styles/index.css";
+
+@source "./**/*.vue";
+
+/* Rolldown */
+:root[data-variant="rolldown"] {
+  --color-brand: #D44803;
+}
+
+:root.dark:not([data-theme])[data-variant="rolldown"],
+:root[data-theme="dark"][data-variant="rolldown"] {
+  --color-brand: #ff712a;
+}
+
+:root[data-theme="light"][data-variant="rolldown"] {
+  --color-brand: #D44803;
+}

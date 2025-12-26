@@ -16,7 +16,7 @@
     "vitepress": "catalog:",
     "vitepress-plugin-group-icons": "catalog:",
     "vitepress-plugin-llms": "catalog:",
-    "@voidzero-dev/vitepress-theme": "^3.3.1"
+    "@voidzero-dev/vitepress-theme": "^4.0.0"
   },
   "dependencies": {
     "vue": "catalog:"

@@ -53,5 +53,3 @@
   background-position: center;
 }
 </style>
-<script setup lang="ts">
-</script>

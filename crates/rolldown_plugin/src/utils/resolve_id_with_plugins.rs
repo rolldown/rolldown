@@ -3,9 +3,7 @@ use crate::{
   types::{custom_field::CustomField, hook_resolve_id_skipped::HookResolveIdSkipped},
 };
 use nodejs_built_in_modules::is_nodejs_builtin_module;
-use rolldown_common::{
-  ImportKind, ModuleDefFormat, PackageJson, ResolvedId,
-};
+use rolldown_common::{ImportKind, ModuleDefFormat, PackageJson, ResolvedId};
 use rolldown_resolver::{ResolveError, Resolver};
 use std::{path::Path, sync::Arc};
 use sugar_path::SugarPath;

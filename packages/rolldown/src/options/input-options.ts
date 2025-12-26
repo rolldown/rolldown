@@ -68,7 +68,8 @@ export type OptimizationOptions = {
    *
    * When enabled, constant values from imported modules will be inlined at their usage sites,
    * potentially reducing bundle size and improving runtime performance by eliminating variable lookups.
-   * **options**:
+   *
+   * **Options:**
    * - `true`: equivalent to `{ mode: 'all', pass: 1 }`, enabling constant inlining for all eligible constants with a single pass.
    * - `false`: Disable constant inlining
    * - `{ mode: 'smart' | 'all', pass?: number }`:
@@ -82,7 +83,7 @@ export type OptimizationOptions = {
    *  - `mode: 'all'`: Inline all imported constants wherever they are used.
    *  - `pass`: Number of passes to perform for inlining constants.
    *
-   * **example**
+   * @example
    * ```js
    * // Input files:
    * // constants.js
@@ -141,7 +142,7 @@ export interface InputOptions {
   external?: ExternalOption;
   resolve?: {
     /**
-     * **Example:**
+     * @example
      * ```js
      * resolve: {
      *   alias: {
@@ -232,13 +233,66 @@ export interface InputOptions {
   /**
    * When `true`, creates shim variables for missing exports instead of throwing an error.
    * @default false
-   * {@include ./docs/shimMissingExports.md}
+   * {@include ./docs/shim-missing-exports.md}
    */
   shimMissingExports?: boolean;
+  /**
+   * Controls tree-shaking (dead code elimination). When `true`, unused code will be removed from the bundle to reduce bundle size.
+   * @default true
+   */
   treeshake?: boolean | TreeshakingOptions;
+  /**
+   * Controls the verbosity of console logging during the build.
+   * @default 'info'
+   */
   logLevel?: LogLevelOption;
+  /**
+   * Custom handler for logs. Called for each log message before it's written to the console.
+   */
   onLog?: OnLogFunction;
+  /**
+   * Custom handler for warnings during the build process.
+   * @deprecated
+   * :::: warning Deprecated
+   * This is a legacy API. Consider using `onLog` instead for better control over all log types.
+   * ::: details Migration to `onLog`
+   * To migrate from `onwarn` to `onLog`, check the `level` parameter to filter for
+   * warnings:
+   * ```js
+   * // Before: Using `onwarn`
+   * export default {
+   *   onwarn(warning, defaultHandler) {
+   *     // Suppress certain warnings
+   *     if (warning.code === 'CIRCULAR_DEPENDENCY') return;
+   *     // Handle other warnings with default behavior
+   *     defaultHandler(warning);
+   *   },
+   * };
+   * ```
+   * ```js
+   * // After: Using `onLog`
+   * export default {
+   *   onLog(level, log, defaultHandler) {
+   *     // Handle only warnings (same behavior as `onwarn`)
+   *     if (level === 'warn') {
+   *       // Suppress certain warnings
+   *       if (log.code === 'CIRCULAR_DEPENDENCY') return;
+   *       // Handle other warnings with default behavior
+   *       defaultHandler(level, log);
+   *     } else {
+   *       // Let other log levels pass through
+   *       defaultHandler(level, log);
+   *     }
+   *   },
+   * };
+   * ```
+   * :::
+   * ::::
+   */
   onwarn?: OnwarnFunction;
+  /**
+   * Maps file patterns to module types, controlling how files are processed. This is conceptually similar to esbuild's loader option, allowing you to specify how different file extensions should be handled.
+   */
   moduleTypes?: ModuleTypes;
   experimental?: {
     /**
@@ -294,8 +348,7 @@ export interface InputOptions {
      * (default `"/"`) can be applied to all paths. The resulting JSON is a valid import map and can be
      * directly injected into HTML via `<script type="importmap">`.
      *
-     * Example configuration snippet:
-     *
+     * @example
      * ```js
      * {
      *   experimental: {
@@ -357,7 +410,7 @@ export interface InputOptions {
      *   reduce overall build times when working with JavaScript transform hooks.
      * - **Better Integration**: Seamless integration with rolldown's native Rust architecture.
      *
-     * ## Example
+     * @example
      *
      * ```js
      * export default {
@@ -404,11 +457,19 @@ export interface InputOptions {
   debug?: {
     sessionId?: string;
   };
+  /**
+   * Controls how entry chunk exports are preserved. This determines whether Rolldown needs to create facade chunks (additional wrapper chunks) to maintain the exact export signatures of entry modules, or whether it can combine entry modules with other chunks for optimization.
+   * @default 'strict'
+   * {@include ./docs/preserve-entry-signatures.md}
+   */
   preserveEntrySignatures?:
     | false
     | 'strict'
     | 'allow-extension'
     | 'exports-only';
+  /**
+   * Configure optimization features for the bundler.
+   */
   optimization?: OptimizationOptions;
   context?: string;
   /**

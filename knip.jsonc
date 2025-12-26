@@ -20,9 +20,10 @@
         ".vitepress/config.ts", // no Vitepress plugin yet
         ".vitepress/theme/index.ts",
         ".vitepress/theme/components/overrides/VPHero.vue",
-        ".vitepress/theme/components/api.data.ts",
-        ".vitepress/theme/components/ApiIndex.vue", // used in auto-generated index.md
+        ".vitepress/theme/components/api.index.md", // API reference index page
+        ".vitepress/theme/components/ApiIndex.vue", // Used by api.index.md (with path relative to reference/index.md)
         "data-loading/*.data.{js,ts}",
+        ".vitepress/theme/components/*.data.{js,ts}", // VitePress data loaders in components
       ],
       "ignore": [
         ".vitepress/scripts/extract-options-plugin.ts", // used as a string path in TypeDoc plugin config

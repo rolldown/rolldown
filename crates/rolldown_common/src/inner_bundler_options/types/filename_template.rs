@@ -44,7 +44,7 @@ impl FilenameTemplate {
     &self.template
   }
 
-  pub fn pattern_name(&self) -> &str {
+  pub fn pattern_name(&self) -> &'static str {
     self.pattern_name
   }
 }
@@ -87,7 +87,7 @@ impl FilenameTemplate {
     }
 
     if let Some(hash_replacer) = hash_replacer {
-      tmp = tmp.replace_all_with_len("[hash]", hash_replacer);
+      tmp = tmp.replace_all_with_len("[hash]", hash_replacer)?;
     }
 
     if let Some(ext) = extension {
@@ -124,7 +124,7 @@ mod tests {
 
     let mut hash_iter = ["abc", "def"].iter();
     let hash_replacer =
-      filename_template.has_hash_pattern().then_some(|_| hash_iter.next().unwrap());
+      filename_template.has_hash_pattern().then_some(|_| Ok(hash_iter.next().unwrap()));
 
     let filename =
       filename_template.render(Some("hello"), None, None, hash_replacer).expect("should render");

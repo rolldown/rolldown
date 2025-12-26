@@ -202,13 +202,14 @@ impl Chunk {
     let has_hash_pattern = filename_template.has_hash_pattern();
 
     let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
-    let hash_replacer = has_hash_pattern.then_some({
+    let hash_replacer = has_hash_pattern.then(|| {
+      let pattern_name = filename_template.pattern_name();
       |len: Option<usize>| {
-        let hash = hash_placeholder_generator.generate(len);
+        let hash = hash_placeholder_generator.generate(len, pattern_name)?;
         if let Some(hash_placeholder) = hash_placeholder.as_mut() {
           hash_placeholder.push(hash.clone());
         }
-        hash
+        Ok(hash)
       }
     });
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
@@ -274,13 +275,14 @@ impl Chunk {
     let has_hash_pattern = filename_template.has_hash_pattern();
 
     let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
-    let hash_replacer = has_hash_pattern.then_some({
+    let hash_replacer = has_hash_pattern.then(|| {
+      let pattern_name = filename_template.pattern_name();
       |len: Option<usize>| {
-        let hash = hash_placeholder_generator.generate(len);
+        let hash = hash_placeholder_generator.generate(len, pattern_name)?;
         if let Some(hash_placeholder) = hash_placeholder.as_mut() {
           hash_placeholder.push(hash.clone());
         }
-        hash
+        Ok(hash)
       }
     });
     let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());

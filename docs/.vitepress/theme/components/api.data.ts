@@ -21,7 +21,8 @@ export interface TypedocSidebarGroup {
   items: TypedocSidebarItem[];
 }
 
-export type TypedocSidebar = TypedocSidebarGroup[];
+type OptionSidebar = (TypedocSidebarGroup | TypedocSidebarItem)[];
+type TypedocSidebar = TypedocSidebarGroup[];
 
 // Declare the resolved data type for API groups
 export declare const data: APIReference[];
@@ -59,7 +60,7 @@ export default {
       new URL('../../../reference/options-sidebar.json', import.meta.url),
     );
 
-    const optionSidebar: TypedocSidebar = JSON.parse(
+    const optionSidebar: OptionSidebar = JSON.parse(
       fs.readFileSync(optionSidebarPath, 'utf-8'),
     );
 
@@ -67,7 +68,7 @@ export default {
       if (item.text === 'output' && 'items' in item) {
         outputOptions.push(...item.items);
       } else if ('link' in item) {
-        inputOptions.push(item as TypedocSidebarItem);
+        inputOptions.push(item);
       }
     });
 

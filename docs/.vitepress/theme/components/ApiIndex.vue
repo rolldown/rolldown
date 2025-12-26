@@ -7,7 +7,7 @@ import { data as apiIndex } from './api.data'
 import type { APIReference } from './api.data'
 import { ref, computed, onMounted } from 'vue'
 
-const search = ref()
+const search = ref<HTMLInputElement>()
 const query = ref('')
 const normalize = (s: string) => s.toLowerCase().replace(/-/g, ' ')
 
@@ -34,13 +34,13 @@ const filtered = computed(() => {
                         return item
                     }
                 })
-                .filter((i) => i)
+                .filter((i) => !!i)
 
             return matchedReferences.length
-                ? { text: section.text, items: matchedReferences }
+                ? { text: section.text, items: matchedReferences } satisfies Partial<APIReference>
                 : null
         })
-        .filter((i) => i) as APIReference[]
+        .filter((i) => !!i)
 })
 </script>
 
@@ -54,10 +54,10 @@ const filtered = computed(() => {
             </div>
         </div>
 
-        <p>These are the automatically generated references for Rolldown's options and APIs. Use the sidebar navigation to browse specific options and APIs. </p>
+        <p>These are the automatically generated references for Rolldown's options and APIs. Use the sidebar navigation to browse specific options and APIs.</p>
 
         <div v-for="section of filtered" :key="section.text" class="api-section">
-            <h2 :id="section.anchor">{{ section.text }}</h2>
+            <h2>{{ section.text }}</h2>
             <div class="api-references">
                 <a v-for="item of section.items" :key="item.text" :href="item.link" class="api-reference">
                     <div>{{ item.text }}</div>

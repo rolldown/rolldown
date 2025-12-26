@@ -327,7 +327,7 @@ export interface InputOptions {
      *
      * The expected behavior for JS/TS files is still being discussed and may
      * change in future releases. See [#7258](https://github.com/rolldown
-     * rolldown/issues/7258) for more context.
+     * /rolldown/issues/7258) for more context.
      * :::
      * @example
      * ```js

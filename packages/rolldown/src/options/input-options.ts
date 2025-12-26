@@ -471,26 +471,34 @@ export interface InputOptions {
    * Configure optimization features for the bundler.
    */
   optimization?: OptimizationOptions;
+  /**
+   * The value of `this` at the top level of each output chunk. For IIFE and UMD formats, this defaults to `'window'` or `'global'` depending on the platform.
+   * @example
+   * **Set custom context**
+   * ```js
+   * export default {
+   *   context: 'globalThis',
+   *   output: {
+   *     format: 'iife',
+   *   },
+   * };
+   * ```
+   * **Use window for browser builds**
+   * ```js
+   * export default {
+   *   context: 'window',
+   *   platform: 'browser',
+   *   output: {
+   *     format: 'iife',
+   *   },
+   * };
+   * ```
+   * {@include ./docs/context.md}
+   */
   context?: string;
   /**
    * Configures TypeScript configuration file resolution and usage.
-   *
-   * ## Options
-   *
-   * - `true`: Auto-discovery mode (similar to Vite). For each module, both resolver and transformer
-   *   will find the nearest tsconfig.json. If the tsconfig has `references`, the file extension is
-   *   allowed, and the tsconfig's `include`/`exclude` patterns don't match the file, the referenced
-   *   tsconfigs will be searched for a match. Falls back to the original tsconfig if no match is found.
-   * - `string`: Path to a specific tsconfig.json file (relative to cwd or absolute path).
-   *
-   * ## What's used from tsconfig
-   *
-   * - **Resolver**: Uses `compilerOptions.paths` and `compilerOptions.baseUrl` for path mapping
-   * - **Transformer**: Uses select compiler options (jsx, decorators, typescript, etc.)
-   *
-   * > [!NOTE]
-   * > Priority: Top-level `transform` options always take precedence over tsconfig settings.
-   *
+   * {@include ./docs/tsconfig.md}
    * @default undefined (no tsconfig resolution)
    */
   tsconfig?: true | string;

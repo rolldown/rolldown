@@ -726,7 +726,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1274,7 +1274,7 @@ checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
 dependencies = [
  "hermit-abi",
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1608,6 +1608,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef70c89437ecec6d0052d1e39efee1830f37fe7d466d9aa44f08b04297f31d49"
 
 [[package]]
+name = "nodejs-built-in-modules"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a5eb86a92577833b75522336f210c49d9ebd7dd55a44d80a92e68c668a75f27c"
+
+[[package]]
 name = "nohash-hasher"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1634,7 +1640,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -2168,15 +2174,15 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "11.16.1"
+version = "11.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5467a6fd6e1b2a0cc25f4f89a5ece8594213427e430ba8f0a8f900808553cb1e"
+checksum = "0fbba32382c25ae7d741aaf3c32475b7a1697540aa8e10b0b5e1cd3bfa1ef257"
 dependencies = [
  "cfg-if",
  "fast-glob",
  "indexmap",
  "json-strip-comments",
- "nodejs-built-in-modules",
+ "nodejs-built-in-modules 1.0.0",
  "once_cell",
  "papaya",
  "parking_lot",
@@ -2196,9 +2202,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver_napi"
-version = "11.16.1"
+version = "11.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b58b0ddba031d0c64737bed25d598a564926bfb48ad4f4e9426ab00f4a4e9bc4"
+checksum = "086e7126bf4972ea6aa06a00fcd5a98e2492008f29aa670693eab4d9498325a5"
 dependencies = [
  "fancy-regex 0.17.0",
  "napi",
@@ -2504,14 +2510,15 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "pnp"
-version = "0.12.5"
+version = "0.12.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2acd0b1e3a154e7c4610b9ab31491c32e9f47db2adc0c12047301f3bacc71597"
+checksum = "a6e38320d5a8e386647f622067588bdb338c9e6e43eb32cf6f8991dd0e8f0046"
 dependencies = [
  "byteorder",
  "concurrent_lru",
- "fancy-regex 0.16.2",
+ "fancy-regex 0.17.0",
  "flate2",
+ "nodejs-built-in-modules 1.0.0",
  "pathdiff",
  "radix_trie",
  "rustc-hash",
@@ -2889,7 +2896,7 @@ dependencies = [
  "fast-glob",
  "insta",
  "itertools",
- "nodejs-built-in-modules",
+ "nodejs-built-in-modules 0.0.1",
  "num-bigint",
  "oxc",
  "oxc_ecmascript",
@@ -3422,7 +3429,7 @@ dependencies = [
  "dashmap",
  "derive_more",
  "fast-glob",
- "nodejs-built-in-modules",
+ "nodejs-built-in-modules 0.0.1",
  "owo-colors",
  "oxc_resolver",
  "parking_lot",
@@ -3631,15 +3638,15 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "1.1.2"
+version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd15f8a2c5551a84d56efdc1cd049089e409ac19a3072d5037a17fd70719ff3e"
+checksum = "146c9e247ccc180c1f61615433868c99f3de3ae256a30a43b49f67c2d9171f34"
 dependencies = [
  "bitflags 2.10.0",
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -3701,7 +3708,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b55fb86dfd3a2f5f76ea78310a88f96c4ea21a3031f8d212443d56123fd0521"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -3983,7 +3990,7 @@ dependencies = [
  "getrandom",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4469,7 +4476,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]

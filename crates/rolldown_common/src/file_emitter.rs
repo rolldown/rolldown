@@ -222,7 +222,7 @@ impl FileEmitter {
           name,
           None,
           Some(extension.unwrap_or_default()),
-          Some(|len: Option<usize>| &hash[..len.map_or(8, |len| len.min(21))]),
+          Some(|len: Option<usize>| Ok(&hash[..len.map_or(8, |len| len.clamp(1, 21))])),
         )?
         .into();
 

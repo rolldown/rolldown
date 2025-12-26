@@ -6,8 +6,10 @@
         "import": "./entry.js"
       }
     ],
-    "entryFilenames": "entries/[hash]-[hash:11]-[hash:6]-[hash:21].js",
-    "chunkFilenames": "chunks/[hash]-[hash:11]-[hash:6]-[hash:21].js"
+    "chunkFilenames": "chunks/[hash:22].js",
+    "entryFilenames": "entries/[hash:22].js"
   },
+  "expectError": true,
   "expectExecuted": false
 }
+

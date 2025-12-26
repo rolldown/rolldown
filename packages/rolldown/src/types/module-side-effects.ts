@@ -48,7 +48,7 @@ export type TreeshakingOptions = {
    *   moduleSideEffects: [
    *     'lodash',
    *     'react-dom',
-   *   ];
+   *   ],
    * }
    *
    * // Use rules for pattern matching and granular control

@@ -1,5 +1,4 @@
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { extendConfig } from '@voidzero-dev/vitepress-theme/config';
 import type { UserConfig } from 'vitepress';
 import { defineConfig } from 'vitepress';
 import {
@@ -192,7 +191,7 @@ const sidebarForResources: UserConfig['themeConfig']['sidebar'] = [
 ];
 
 // https://vitepress.dev/reference/site-config
-export default defineConfig({
+const config = defineConfig({
   title: 'Rolldown',
   description:
     'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
@@ -243,7 +242,6 @@ export default defineConfig({
         indexName: 'rolldown',
       },
     },
-    logo: { src: '/lightning-down.svg', width: 24, height: 24 },
 
     // https://vitepress.dev/reference/default-theme-config
     nav: [
@@ -377,18 +375,6 @@ export default defineConfig({
     optimizeDeps: {
       exclude: ['@docsearch/css'],
     },
-    server: {
-      fs: {
-        // Allow serving files from the linked theme package
-        allow: [resolve(__dirname, '..', '..', '..')],
-      },
-      watch: {
-        ignored: ['!**/node_modules/@voidzero-dev/**'],
-      },
-    },
-    ssr: {
-      noExternal: ['@voidzero-dev/vitepress-theme'],
-    },
     plugins: [
       groupIconVitePlugin({
         customIcon: {
@@ -412,16 +398,6 @@ export default defineConfig({
         details: '',
       }),
     ],
-    resolve: {
-      alias: [
-        {
-          find: /^.*\/VPHero\.vue$/,
-          replacement: fileURLToPath(
-            new URL('./theme/components/overrides/VPHero.vue', import.meta.url),
-          ),
-        },
-      ],
-    },
   },
   markdown: {
     config(md) {
@@ -429,3 +405,5 @@ export default defineConfig({
     },
   },
 });
+
+export default extendConfig(config);

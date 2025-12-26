@@ -12,5 +12,5 @@
     "skipLibCheck": true,
     "jsx": "preserve"
   },
-  "include": ["env.d.ts", "src/**/*", ".vitepress/**/*"]
+  "include": ["src/**/*", ".vitepress/**/*"]
 }

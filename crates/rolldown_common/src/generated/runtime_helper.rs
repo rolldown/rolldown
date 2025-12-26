@@ -16,7 +16,7 @@ bitflags! {
     const EsmMin = 1 << 8;
     const CommonJs = 1 << 9;
     const CommonJsMin = 1 << 10;
-    const Export = 1 << 11;
+    const ExportAll = 1 << 11;
     const CopyProps = 1 << 12;
     const ReExport = 1 << 13;
     const ToEsm = 1 << 14;
@@ -68,7 +68,7 @@ pub const RUNTIME_HELPER_NAMES: [&str; 20] = [
   "__esmMin",
   "__commonJS",
   "__commonJSMin",
-  "__export",
+  "__exportAll",
   "__copyProps",
   "__reExport",
   "__toESM",

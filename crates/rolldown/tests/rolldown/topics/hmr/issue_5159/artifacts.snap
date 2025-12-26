@@ -6,11 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bar.js
 
 ```js
-import { t as __export } from "./main.js";
+import { t as __exportAll } from "./main.js";
 import { t as trim } from "./string.js";
 
 //#region bar.js
-var bar_exports = /* @__PURE__ */ __export({ default: () => bar_default });
+var bar_exports = /* @__PURE__ */ __exportAll({ default: () => bar_default });
 const bar_hot = __rolldown_runtime__.createModuleHotContext("bar.js");
 __rolldown_runtime__.registerModule("bar.js", { exports: bar_exports });
 function bar_default() {
@@ -24,11 +24,11 @@ export { bar_default as default };
 ## foo.js
 
 ```js
-import { t as __export } from "./main.js";
+import { t as __exportAll } from "./main.js";
 import { n as unused, t as trim } from "./string.js";
 
 //#region utils/index.js
-var utils_exports = /* @__PURE__ */ __export({
+var utils_exports = /* @__PURE__ */ __exportAll({
 	trim: () => trim,
 	unused: () => unused
 });
@@ -37,7 +37,7 @@ __rolldown_runtime__.registerModule("utils/index.js", { exports: utils_exports }
 
 //#endregion
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __export({ default: () => foo_default });
+var foo_exports = /* @__PURE__ */ __exportAll({ default: () => foo_default });
 const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.js");
 __rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
 function foo_default() {
@@ -63,16 +63,16 @@ const routes = {
 };
 
 //#endregion
-export { __export as t };
+export { __exportAll as t };
 ```
 
 ## string.js
 
 ```js
-import { t as __export } from "./main.js";
+import { t as __exportAll } from "./main.js";
 
 //#region utils/string.js
-var string_exports = /* @__PURE__ */ __export({
+var string_exports = /* @__PURE__ */ __exportAll({
 	trim: () => trim,
 	unused: () => unused
 });

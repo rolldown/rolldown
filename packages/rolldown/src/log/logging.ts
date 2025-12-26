@@ -29,6 +29,7 @@ export interface RollupLog {
 
 export type RollupLogWithString = RollupLog | string;
 
+/** @category Plugin APIs */
 export interface RollupError extends RollupLog {
   name?: string;
   stack?: string;

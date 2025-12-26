@@ -15,12 +15,14 @@ import { error, logPluginError } from '../log/logs';
 import type { Extends, TypeAssert } from '../types/assert';
 import { VERSION } from '../version';
 
+/** @category Plugin APIs */
 export interface PluginContextMeta {
   rollupVersion: string;
   rolldownVersion: string;
   watchMode: boolean;
 }
 
+/** @category Plugin APIs */
 export interface MinimalPluginContext {
   readonly pluginName: string;
   error: (e: RollupError | string) => never;

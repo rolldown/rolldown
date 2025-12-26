@@ -62,6 +62,7 @@ export type ChunkFileNamesFunction = (chunkInfo: PreRenderedChunk) => string;
 
 export type SanitizeFileNameFunction = (name: string) => string;
 
+/** @category Plugin APIs */
 export interface PreRenderedAsset {
   type: 'asset';
   name?: string;

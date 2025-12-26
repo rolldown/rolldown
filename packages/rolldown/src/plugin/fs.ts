@@ -1,6 +1,7 @@
 import fsp from 'node:fs/promises';
 import { error, logNoFileSystemInBrowser } from '../log/logs';
 
+/** @category Plugin APIs */
 export interface RolldownFsModule {
   appendFile(
     path: string,
@@ -67,6 +68,7 @@ export interface RolldownFsModule {
   ): Promise<void>;
 }
 
+/** @category Plugin APIs */
 export type BufferEncoding =
   | 'ascii'
   | 'utf8'
@@ -78,6 +80,7 @@ export type BufferEncoding =
   | 'binary'
   | 'hex';
 
+/** @category Plugin APIs */
 export interface RolldownDirectoryEntry {
   isFile(): boolean;
   isDirectory(): boolean;
@@ -85,6 +88,7 @@ export interface RolldownDirectoryEntry {
   name: string;
 }
 
+/** @category Plugin APIs */
 export interface RolldownFileStats {
   isFile(): boolean;
   isDirectory(): boolean;

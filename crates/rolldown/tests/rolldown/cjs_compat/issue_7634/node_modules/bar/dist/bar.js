@@ -1,0 +1,7 @@
+Object.defineProperty(exports, '__esModule', { value: true });
+
+//#region packages/bar/src/bar.js
+function bar() {}
+
+//#endregion
+exports.bar = bar;

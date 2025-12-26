@@ -1,13 +1,13 @@
 import { pathToFileURL } from 'node:url';
 
 export type ParallelPlugin = {
-  /** @internal */
   _parallel: {
     fileUrl: string;
     options: unknown;
   };
 };
 
+/** @internal */
 export type DefineParallelPluginResult<Options> = (
   options: Options,
 ) => ParallelPlugin;

@@ -323,19 +323,19 @@ impl Plugin for ViteReporterPlugin {
             }
           };
 
-          let size = utils::display_size(log_entry.size);
+          let size = format!("{:>size_pad$}", utils::display_size(log_entry.size));
           if group == utils::AssetGroup::JS && log_entry.size.div_ceil(1000) > self.chunk_limit {
             has_large_chunks = true;
             let _ = write!(
               &mut info,
-              "{:>size_pad$}",
-              size.if_supports_color(Stream::Stdout, |text| { text.bold().yellow().to_string() })
+              "{}",
+              size.if_supports_color(Stream::Stdout, |text| text.bold().yellow().to_string())
             );
           } else {
             let _ = write!(
               &mut info,
-              "{:>size_pad$}",
-              size.if_supports_color(Stream::Stdout, |text| { text.bold().dimmed().to_string() })
+              "{}",
+              size.if_supports_color(Stream::Stdout, |text| text.bold().dimmed().to_string())
             );
           }
 

@@ -1,6 +1,7 @@
 import type { BindingSourcemap } from '../binding.cjs';
 import type { SourceMap } from './rolldown-output';
 
+/** @category Plugin APIs */
 export interface ExistingRawSourceMap {
   file?: string | null;
   mappings: string;

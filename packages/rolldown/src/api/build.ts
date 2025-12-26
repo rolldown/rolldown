@@ -13,6 +13,7 @@ export interface BuildOptions extends InputOptions {
   output?: OutputOptions;
 }
 
+/** @category Programmatic APIs */
 async function build(options: BuildOptions): Promise<RolldownOutput>;
 /**
  * Build multiple outputs __sequentially__.

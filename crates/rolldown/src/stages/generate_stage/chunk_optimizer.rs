@@ -391,7 +391,7 @@ impl GenerateStage<'_> {
       module.stmt_infos[StmtInfos::NAMESPACE_STMT_IDX].referenced_symbols.retain(
         |item| match item {
           rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
-            // module namespace symbol requires `__export` runtime helper
+            // module namespace symbol requires `__exportAll` runtime helper
             self.link_output.used_symbol_refs.contains(symbol_ref)
               || symbol_ref.owner == runtime_module_idx
           }
@@ -425,7 +425,7 @@ impl GenerateStage<'_> {
 
     let mut optimized_common_chunks = FxHashSet::default();
 
-    include_runtime_symbol(context, runtime, RuntimeHelper::Export);
+    include_runtime_symbol(context, runtime, RuntimeHelper::ExportAll);
 
     for (&entry_module, &(from_chunk_idx, target_chunk_idx)) in &rewrite_entry_to_chunk {
       // Point the entry module to related common chunk
@@ -451,7 +451,7 @@ impl GenerateStage<'_> {
       context.module_namespace_included_reason[entry_module]
         .insert(ModuleNamespaceIncludedReason::SimulateFacadeChunk);
       let target_chunk = &mut chunk_graph.chunk_table[target_chunk_idx];
-      target_chunk.depended_runtime_helper.insert(RuntimeHelper::Export);
+      target_chunk.depended_runtime_helper.insert(RuntimeHelper::ExportAll);
       optimized_common_chunks.insert(target_chunk_idx);
     }
 

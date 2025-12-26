@@ -1602,6 +1602,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "nodejs-built-in-modules"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef70c89437ecec6d0052d1e39efee1830f37fe7d466d9aa44f08b04297f31d49"
+
+[[package]]
 name = "nohash-hasher"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2162,14 +2168,15 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "11.16.0"
+version = "11.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82835b74b32841714c1342b1636992d19622d4ec19666b55edb4c654fb6eb719"
+checksum = "5467a6fd6e1b2a0cc25f4f89a5ece8594213427e430ba8f0a8f900808553cb1e"
 dependencies = [
  "cfg-if",
  "fast-glob",
  "indexmap",
  "json-strip-comments",
+ "nodejs-built-in-modules",
  "once_cell",
  "papaya",
  "parking_lot",
@@ -2189,9 +2196,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver_napi"
-version = "11.16.0"
+version = "11.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0241660afc176ebf4dae4547f40f915b662a185ecb1200530f2ae4397e13d3c"
+checksum = "b58b0ddba031d0c64737bed25d598a564926bfb48ad4f4e9426ab00f4a4e9bc4"
 dependencies = [
  "fancy-regex 0.17.0",
  "napi",
@@ -2772,9 +2779,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify"
-version = "10.0.0"
+version = "10.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7c822c471cba11a81f6ab137c8cb19dd7319345e40a44df0783c6a13aeeba87"
+checksum = "e8bf250d410b79487a6d054e6bd16ec08dddd2998f5f5e6291867a35066cfc37"
 dependencies = [
  "bitflags 2.10.0",
  "inotify",
@@ -2791,9 +2798,9 @@ dependencies = [
 
 [[package]]
 name = "rolldown-notify-debouncer-full"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34f26603522562abd63de6561b0cf7f9c5b8737a6ee70cbcdd7970e6817ead0f"
+checksum = "7141151f3eb9d0869f9fff744ce728f45a0db9c54fe3178e4f60c3c682035083"
 dependencies = [
  "rolldown-file-id",
  "rolldown-notify",
@@ -2882,6 +2889,7 @@ dependencies = [
  "fast-glob",
  "insta",
  "itertools",
+ "nodejs-built-in-modules",
  "num-bigint",
  "oxc",
  "oxc_ecmascript",
@@ -3414,6 +3422,7 @@ dependencies = [
  "dashmap",
  "derive_more",
  "fast-glob",
+ "nodejs-built-in-modules",
  "owo-colors",
  "oxc_resolver",
  "parking_lot",
@@ -3974,7 +3983,7 @@ dependencies = [
  "getrandom",
  "once_cell",
  "rustix",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

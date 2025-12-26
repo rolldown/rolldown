@@ -1,5 +1,6 @@
 import type { ModuleOptions } from '..';
 
+/** @category Plugin APIs */
 export interface ModuleInfo extends ModuleOptions {
   /**
    *  Unsupported at rolldown

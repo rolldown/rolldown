@@ -335,6 +335,9 @@ export interface InputOptions {
    */
   transform?: TransformOptions;
   watch?: WatcherOptions | false;
+  /**
+   * Controls which warnings are emitted during the build process. Each option can be set to `true` (emit warning) or `false` (suppress warning).
+   */
   checks?: ChecksOptions;
   makeAbsoluteExternalsRelative?: MakeAbsoluteExternalsRelative;
   debug?: {

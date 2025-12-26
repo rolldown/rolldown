@@ -8,3 +8,31 @@
 .dark {
   --vp-code-color: #fff;
 }
+
+/**
+ * Dark to light theme transition
+ * Smooths the transition when navigating from dark-themed home page to light-themed pages
+ */
+html,
+html.dark {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+body {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+.VPNav,
+.VPSidebar,
+.VPContent,
+.VPFooter,
+.VPDoc {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
+}

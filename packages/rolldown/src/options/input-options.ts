@@ -326,8 +326,7 @@ export interface InputOptions {
      * JavaScript and TypeScript files referenced via `new URL('./file.js', import.meta.url)` or `new URL('./file.ts', import.meta.url)` will **not** be transformed or bundled. The file will be copied as-is, meaning TypeScript files remain untransformed and dependencies are not resolved.
      *
      * The expected behavior for JS/TS files is still being discussed and may
-     * change in future releases. See [#7258](https://github.com/rolldown
-     * /rolldown/issues/7258) for more context.
+     * change in future releases. See [#7258](https://github.com/rolldown/rolldown/issues/7258) for more context.
      * :::
      * @example
      * ```js

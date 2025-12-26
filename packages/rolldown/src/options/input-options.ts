@@ -134,16 +134,38 @@ export interface InputOptions {
    */
   input?: InputOption;
   plugins?: RolldownPluginOption;
+  /**
+   * Specifies which modules should be treated as external and not bundled. External modules will be left as import statements in the output.
+   * {@include ./docs/external.md}
+   */
   external?: ExternalOption;
   resolve?: {
     /**
+     * **Example:**
+     * ```js
+     * resolve: {
+     *   alias: {
+     *     '@': '/src',
+     *     'utils': './src/utils',
+     *   }
+     * }
+     * ```
      * > [!WARNING]
      * > `resolve.alias` will not call `resolveId` hooks of other plugin.
      * > If you want to call `resolveId` hooks of other plugin, use `viteAliasPlugin` from `rolldown/experimental` instead.
      * > You could find more discussion in [this issue](https://github.com/rolldown/rolldown/issues/3615)
      */
     alias?: Record<string, string[] | string | false>;
+    /**
+     * Fields in package.json to check for aliased paths.
+     */
     aliasFields?: string[][];
+    /**
+     * Condition names to use when resolving exports in package.json. Defaults based on platform and import kind:
+     * - **Browser platform**: `["import", "browser", "default"]` for import statements, `["require", "browser", "default"]` for require() calls
+     * - **Node platform**: `["import", "node", "default"]` for import statements, `["require", "node", "default"]` for require() calls
+     * - **Neutral platform**: `["import", "default"]` for import statements, `["require", "default"]` for require() calls
+     */
     conditionNames?: string[];
     /**
      * Map of extensions to alternative extensions.
@@ -152,17 +174,46 @@ export interface InputOptions {
      * You can achieve this by setting: `extensionAlias: { '.js': ['.ts', '.js'] }`.
      */
     extensionAlias?: Record<string, string[]>;
+    /**
+     * Fields in package.json to check for exports.
+     */
     exportsFields?: string[][];
+    /**
+     * Extensions to try when resolving files. These are tried in order from first to last.
+     * @default ['.tsx', '.ts', '.jsx', '.js', '.json']
+     */
     extensions?: string[];
+    /**
+     * Fields in package.json to check for entry points. Defaults based on platform:
+     * - **Node**: `['main', 'module']`
+     * - **Browser**: `['browser', 'module', 'main']`
+     * - **Neutral**: `[]` (relies on exports field)
+     */
     mainFields?: string[];
+    /**
+     * Filenames to try when resolving directories.
+     * @default ['index']
+     */
     mainFiles?: string[];
+    /**
+     * Directories to search for modules.
+     * @default ['node_modules']
+     */
     modules?: string[];
+    /**
+     * Whether to follow symlinks when resolving modules.
+     * @default true
+     */
     symlinks?: boolean;
     /**
      * @deprecated Use the top-level `tsconfig` option instead.
      */
     tsconfigFilename?: string;
   };
+  /**
+   * The working directory to use when resolving relative paths in the configuration.
+   * @default process.cwd()
+   */
   cwd?: string;
   /**
    * Expected platform where the code run.
@@ -175,8 +226,14 @@ export interface InputOptions {
    * @default
    * - 'node' if the format is 'cjs'
    * - 'browser' for other formats
+   * {@include ./docs/platform.md}
    */
   platform?: 'node' | 'browser' | 'neutral';
+  /**
+   * When `true`, creates shim variables for missing exports instead of throwing an error.
+   * @default false
+   * {@include ./docs/shimMissingExports.md}
+   */
   shimMissingExports?: boolean;
   treeshake?: boolean | TreeshakingOptions;
   logLevel?: LogLevelOption;

@@ -4583,6 +4583,10 @@ expression: output
 
 - main-!~{000}~.js => main-DgkEm6gV.js
 
+# tests/rolldown/function/post_banner/no_extra_line
+
+- main-!~{000}~.js => main-BxSNAzuf.js
+
 # tests/rolldown/function/post_banner_shebang
 
 - main-!~{000}~.js => main-Df6gnIcd.js

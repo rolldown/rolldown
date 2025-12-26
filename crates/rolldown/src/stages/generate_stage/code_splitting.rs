@@ -397,7 +397,20 @@ impl GenerateStage<'_> {
       for symbol_ref in info
         .namespace_refs
         .iter()
-        .filter(|item| self.link_output.used_symbol_refs.contains(item))
+        .filter_map(|ns| {
+          // We must check statement inclusion here (not in linking stage) because
+          // `include_statements` runs after `reference_needed_symbols` where the
+          // `safely_merge_cjs_ns_map` is populated. At that point, we don't yet
+          // know which statements will be tree-shaken.
+          // related context: https://github.com/rolldown/rolldown/blob/dbd0f6de5d44be2327e7532bb6f0a38bc04a1047/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs#L187-L194
+          let importer = self.link_output.module_table[ns.owner].as_normal()?;
+          let is_stmt_included = importer
+            .stmt_infos
+            .declared_stmts_by_symbol(ns)
+            .iter()
+            .all(|item| self.link_output.metas[importer.idx].stmt_info_included[*item]);
+          is_stmt_included.then_some(ns)
+        })
         // Determine safely merged cjs ns binding should put in where
         // We should put it in the importRecord which first reference the cjs ns binding.
         .sorted_by_key(|item| self.link_output.module_table[item.owner].exec_order())

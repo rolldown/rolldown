@@ -48,7 +48,7 @@ export type TreeshakingOptions = {
    *   moduleSideEffects: [
    *     'lodash',
    *     'react-dom',
-   *   ],
+   *   ]
    * }
    *
    * // Use rules for pattern matching and granular control
@@ -57,15 +57,15 @@ export type TreeshakingOptions = {
    *     { test: /^node:/, sideEffects: true },
    *     { test: /\.css$/, sideEffects: true },
    *     { test: /some-package/, sideEffects: false, external: false },
-   *   ];
+   *   ]
    * }
    *
    * // Custom function to determine side effects
    * treeshake: {
-   *   moduleSideEffects: ((id, external) => {
+   *   moduleSideEffects: (id, external) => {
    *     if (external) return false; // external modules have no side effects
    *     return id.includes('/side-effects/') || id.endsWith('.css');
-   *   });
+   *   }
    * }
    *
    * // Assume no external modules have side effects
@@ -93,7 +93,7 @@ export type TreeshakingOptions = {
    * @example
    * ```js
    * treeshake: {
-   *   manualPureFunctions: ['console.log', 'debug.trace'];
+   *   manualPureFunctions: ['console.log', 'debug.trace']
    * }
    * ```
    * @default []
@@ -130,7 +130,7 @@ export type TreeshakingOptions = {
   propertyReadSideEffects?: false | 'always';
   /**
    * Controls whether writing properties to objects is considered to have side effects. Set to `always` for conservative behavior.
-   * @default always
+   * @default 'always'
    */
   propertyWriteSideEffects?: false | 'always';
 };

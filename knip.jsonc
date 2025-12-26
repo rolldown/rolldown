@@ -20,6 +20,8 @@
         ".vitepress/config.ts", // no Vitepress plugin yet
         ".vitepress/theme/index.ts",
         ".vitepress/theme/components/overrides/VPHero.vue",
+        ".vitepress/theme/components/api.data.ts",
+        ".vitepress/theme/components/ApiIndex.vue", // used in auto-generated index.md
         "data-loading/*.data.{js,ts}",
       ],
       "ignore": [

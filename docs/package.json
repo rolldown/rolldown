@@ -19,7 +19,6 @@
     "@voidzero-dev/vitepress-theme": "^3.2.1"
   },
   "dependencies": {
-    "@vueuse/core": "catalog:",
     "vue": "catalog:"
   }
 }

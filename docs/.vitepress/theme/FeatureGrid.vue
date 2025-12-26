@@ -1,8 +1,8 @@
 <script setup>
-import RiveAnimation from "@components/shared/RiveAnimation.vue";
-import vitePoweredAnimation from '@assets/rolldown/animations/640_x_300_design_for_vite.riv'
-import PerformanceBar from "@components/shared/PerformanceBar.vue";
-import performanceBarBg from '@assets/rolldown/rolldown-rollup-background.jpg';
+import RiveAnimation from "@voidzero-dev/vitepress-theme/src/components/shared/RiveAnimation.vue";
+import vitePoweredAnimation from '@voidzero-dev/vitepress-theme/src/assets/rolldown/animations/640_x_300_design_for_vite.riv'
+import PerformanceBar from "@voidzero-dev/vitepress-theme/src/components/shared/PerformanceBar.vue";
+import performanceBarBg from '@voidzero-dev/vitepress-theme/src/assets/rolldown/rolldown-rollup-background.jpg';
 
 const performanceData = [
   {

@@ -294,47 +294,81 @@ export interface InputOptions {
    * Maps file patterns to module types, controlling how files are processed. This is conceptually similar to esbuild's loader option, allowing you to specify how different file extensions should be handled.
    */
   moduleTypes?: ModuleTypes;
+  /**
+   * Experimental features that may change in future releases and can introduce behavior change without a major version bump.
+   */
   experimental?: {
     /**
      * Lets modules be executed in the order they are declared.
-     *
-     * - Type: `boolean`
-     * - Default: `false`
      *
      * This is done by injecting runtime helpers to ensure that modules are executed in the order they are imported. External modules won't be affected.
      *
      * > [!WARNING]
      * > Enabling this option may negatively increase bundle size. It is recommended to use this option only when absolutely necessary.
+     * @default false
      */
     strictExecutionOrder?: boolean;
+    /**
+     * Disable live bindings for exported variables.
+     * @default false
+     */
     disableLiveBindings?: boolean;
+    /**
+     * Enable Vite compatible mode.
+     * @default false
+     */
     viteMode?: boolean;
+    /**
+     * When enabled, `new URL()` calls will be transformed to a stable asset URL which includes the updated name and content hash.
+     * It is necessary to pass `import.meta.url` as the second argument to the
+     * `new URL` constructor, otherwise no transform will be applied.
+     * :::warning
+     * JavaScript and TypeScript files referenced via `new URL('./file.js', import.meta.url)` or `new URL('./file.ts', import.meta.url)` will **not** be transformed or bundled. The file will be copied as-is, meaning TypeScript files remain untransformed and dependencies are not resolved.
+     *
+     * The expected behavior for JS/TS files is still being discussed and may
+     * change in future releases. See [#7258](https://github.com/rolldown
+     * rolldown/issues/7258) for more context.
+     * :::
+     * @example
+     * ```js
+     * // main.js
+     * const url = new URL('./styles.css', import.meta.url);
+     * console.log(url);
+     *
+     * // Example output after bundling WITHOUT the option (default)
+     * const url = new URL('./styles.css', import.meta.url);
+     * console.log(url);
+     *
+     * // Example output after bundling WITH `experimental.resolveNewUrlToAsset` set to `true`
+     * const url = new URL('assets/styles-CjdrdY7X.css', import.meta.url);
+     * console.log(url);
+     * ```
+     * @default false
+     */
     resolveNewUrlToAsset?: boolean;
     devMode?: DevModeOptions;
     /**
-     * Control which order should use when rendering modules in chunk
+     * Control which order should use when rendering modules in chunk.
      *
-     * - Type: `'exec-order' | 'module-id'
-     * - Default: `'exec-order'`
-     *
+     * Available options:
      * - `exec-order`: Almost equivalent to the topological order of the module graph, but specially handling when module graph has cycle.
      * - `module-id`: This is more friendly for gzip compression, especially for some javascript static asset lib (e.g. icon library)
      * > [!NOTE]
      * > Try to sort the modules by their module id if possible(Since rolldown scope hoist all modules in the chunk, we only try to sort those modules by module id if we could ensure runtime behavior is correct after sorting).
+     * @default 'exec-order'
      */
     chunkModulesOrder?: ChunkModulesOrder;
     /**
      * Attach debug information to the output bundle.
      *
-     * - Type: `'none' | 'simple' | 'full'`
-     * - Default: `'simple'`
-     *
+     * Available modes:
      * - `none`: No debug information is attached.
      * - `simple`: Attach comments indicating which files the bundled code comes from. These comments could be removed by the minifier.
      * - `full`: Attach detailed debug information to the output bundle. These comments are using legal comment syntax, so they won't be removed by the minifier.
      *
      * > [!WARNING]
      * > You shouldn't use `full` in the production build.
+     * @default 'simple'
      */
     attachDebugInfo?: AttachDebugOptions;
     /**
@@ -380,28 +414,35 @@ export interface InputOptions {
      * }
      * ```
      *
-     * > [!NOTE]
+     * > [!TIP]
      * > If you want to learn more, you can check out the example here: [examples/chunk-import-map](https://github.com/rolldown/rolldown/tree/main/examples/chunk-import-map)
+     * @default false
      */
     chunkImportMap?: boolean | { baseUrl?: string; fileName?: string };
+    /**
+     * Enable on-demand wrapping of modules.
+     * @default false
+     */
     onDemandWrapping?: boolean;
     /**
-     * Required to be used with `watch` mode.
+     * Enable incremental build support. Required to be used with `watch` mode.
+     * @default false
      */
     incrementalBuild?: boolean;
+    /**
+     * Enable high-resolution source maps for transform operations.
+     * @default false
+     */
     transformHiresSourcemap?: boolean | 'boundary';
     /**
      * Use native Rust implementation of MagicString for source map generation.
-     *
-     * - Type: `boolean`
-     * - Default: `false`
      *
      * [MagicString](https://github.com/rich-harris/magic-string) is a JavaScript library commonly used by bundlers
      * for string manipulation and source map generation. When enabled, rolldown will use a native Rust
      * implementation of MagicString instead of the JavaScript version, providing significantly better performance
      * during source map generation and code transformation.
      *
-     * ## Benefits
+     * **Benefits**
      *
      * - **Improved Performance**: The native Rust implementation is typically faster than the JavaScript version,
      *   especially for large codebases with extensive source maps.
@@ -411,7 +452,6 @@ export interface InputOptions {
      * - **Better Integration**: Seamless integration with rolldown's native Rust architecture.
      *
      * @example
-     *
      * ```js
      * export default {
      *   experimental: {
@@ -427,6 +467,7 @@ export interface InputOptions {
      * > This is an experimental feature. While it aims to provide identical behavior to the JavaScript
      * > implementation, there may be edge cases. Please report any discrepancies you encounter.
      * > For a complete working example, see [examples/native-magic-string](https://github.com/rolldown/rolldown/tree/main/examples/native-magic-string)
+     * @default false
      */
     nativeMagicString?: boolean;
   };

@@ -128,6 +128,10 @@ export type OnwarnFunction = (
 ) => void;
 
 export interface InputOptions {
+  /**
+   * Defines entries and location(s) of entry modules for the bundle. Relative paths are resolved based on the `cwd` option.
+   * {@include ./docs/input.md}
+   */
   input?: InputOption;
   plugins?: RolldownPluginOption;
   external?: ExternalOption;

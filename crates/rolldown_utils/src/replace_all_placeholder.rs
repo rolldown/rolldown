@@ -1,23 +1,25 @@
 use std::borrow::Cow;
 
+use rolldown_error::SingleBuildResult;
+
 pub trait Replacer {
-  fn get(&mut self, _: Option<usize>) -> anyhow::Result<Cow<'_, str>>;
+  fn get(&mut self, _: Option<usize>) -> SingleBuildResult<Cow<'_, str>>;
 }
 
 impl Replacer for &str {
   #[inline]
-  fn get(&mut self, _: Option<usize>) -> anyhow::Result<Cow<'_, str>> {
+  fn get(&mut self, _: Option<usize>) -> SingleBuildResult<Cow<'_, str>> {
     Ok(Cow::Borrowed(self))
   }
 }
 
 impl<F, S> Replacer for F
 where
-  F: FnMut(Option<usize>) -> anyhow::Result<S>,
+  F: FnMut(Option<usize>) -> SingleBuildResult<S>,
   S: AsRef<str>,
 {
   #[inline]
-  fn get(&mut self, hash_len: Option<usize>) -> anyhow::Result<Cow<'_, str>> {
+  fn get(&mut self, hash_len: Option<usize>) -> SingleBuildResult<Cow<'_, str>> {
     Ok(Cow::Owned((*self)(hash_len)?.as_ref().to_string()))
   }
 }
@@ -30,7 +32,7 @@ pub trait ReplaceAllPlaceholder {
     self,
     placeholder: &str,
     replacer: impl Replacer,
-  ) -> anyhow::Result<String>;
+  ) -> SingleBuildResult<String>;
 }
 
 impl ReplaceAllPlaceholder for String {
@@ -44,7 +46,7 @@ impl ReplaceAllPlaceholder for String {
     self,
     placeholder: &str,
     replacer: impl Replacer,
-  ) -> anyhow::Result<String> {
+  ) -> SingleBuildResult<String> {
     replace_all_placeholder_impl(self, true, placeholder, replacer)
   }
 }
@@ -54,7 +56,7 @@ fn replace_all_placeholder_impl(
   is_len_enabled: bool,
   mut placeholder: &str,
   mut replacer: impl Replacer,
-) -> anyhow::Result<String> {
+) -> SingleBuildResult<String> {
   let offset = placeholder.len() - 1;
 
   if is_len_enabled {

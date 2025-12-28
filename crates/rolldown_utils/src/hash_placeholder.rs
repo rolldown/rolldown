@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::sync::LazyLock;
 
 use memchr::memmem::Finder;
+use rolldown_error::{BuildDiagnostic, InvalidOptionType, SingleBuildResult};
 use rustc_hash::FxHashMap;
 
 use crate::indexmap::FxIndexSet;
@@ -97,13 +98,15 @@ pub struct HashPlaceholderGenerator {
 
 impl HashPlaceholderGenerator {
   // Refer to https://github.com/rollup/rollup/blob/1f2d579ccd4b39f223fed14ac7d031a6c848cd80/src/utils/hashPlaceholders.ts#L16-L17
-  pub fn generate(&mut self, len: Option<usize>, pattern_name: &str) -> anyhow::Result<String> {
+  pub fn generate(&mut self, len: Option<usize>, pattern_name: &str) -> SingleBuildResult<String> {
     let len = len.unwrap_or(DEFAULT_HASH_SIZE);
 
     if len > MAX_HASH_SIZE {
-      return Err(anyhow::anyhow!(
-        "Hashes cannot be longer than {MAX_HASH_SIZE} characters, received {len}. Check the `{pattern_name}` option.",
-      ));
+      return Err(BuildDiagnostic::invalid_option(InvalidOptionType::HashLengthTooLong {
+        pattern_name: pattern_name.to_string(),
+        received: len,
+        max: MAX_HASH_SIZE,
+      }));
     }
 
     let index_in_base64 = to_base64(self.next_index);
@@ -115,11 +118,12 @@ impl HashPlaceholderGenerator {
     // The placeholder format is `!~{index}~`, requiring at least `HASH_PLACEHOLDER_OVERHEAD + index_in_base64.len()` characters.
     // For example, with index 0 the placeholder is `!~{0}~` (6 chars), with index 100_000_000 it's `!~{5Zu40}~` (10 chars).
     if placeholder_size > len {
-      return Err(anyhow::anyhow!(
-        "To generate hashes for this number of chunks (currently {}), you need a minimum hash size of {}, received {len}. Check the `{pattern_name}` option.",
-        self.next_index + 1,
-        placeholder_size,
-      ));
+      return Err(BuildDiagnostic::invalid_option(InvalidOptionType::HashLengthTooShort {
+        pattern_name: pattern_name.to_string(),
+        received: len,
+        min: placeholder_size,
+        chunk_count: self.next_index + 1,
+      }));
     }
 
     placeholder.push_str(HASH_PLACEHOLDER_LEFT);

@@ -3591,6 +3591,7 @@ dependencies = [
  "rayon",
  "regex",
  "regress",
+ "rolldown_error",
  "rolldown_std_utils",
  "rustc-hash",
  "serde_json",

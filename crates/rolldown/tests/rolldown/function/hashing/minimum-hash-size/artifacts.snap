@@ -3,10 +3,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Errors
 
-## UNHANDLEABLE_ERROR
+## INVALID_OPTION
 
 ```text
-[UNHANDLEABLE_ERROR] Error: Something went wrong inside rolldown, please report this problem at https://github.com/rolldown/rolldown/issues.
-To generate hashes for this number of chunks (currently 1), you need a minimum hash size of 6, received 2. Check the `entryFileNames` option.
+[INVALID_OPTION] Error: To generate hashes for this number of chunks (currently 1), you need a minimum hash size of 6, received 2. Check the `entryFileNames` option.
 
 ```

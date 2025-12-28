@@ -33,6 +33,7 @@ export interface NormalizedOutputOptions {
   cssEntryFileNames: string | ChunkFileNamesFunction;
   cssChunkFileNames: string | ChunkFileNamesFunction;
   inlineDynamicImports: boolean;
+  dynamicImportInCjs: boolean;
   externalLiveBindings: boolean;
   banner: AddonFunction;
   footer: AddonFunction;
@@ -139,6 +140,11 @@ export class NormalizedOutputOptionsImpl
   @lazyProp
   get inlineDynamicImports(): boolean {
     return this.inner.inlineDynamicImports;
+  }
+
+  @lazyProp
+  get dynamicImportInCjs(): boolean {
+    return this.inner.dynamicImportInCjs;
   }
 
   @lazyProp

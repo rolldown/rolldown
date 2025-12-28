@@ -401,6 +401,12 @@
             "null"
           ]
         },
+        "dynamicImportInCjs": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "advancedChunks": {
           "anyOf": [
             {
@@ -1629,6 +1635,12 @@
           ]
         },
         "inlineDynamicImports": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "dynamicImportInCjs": {
           "type": [
             "boolean",
             "null"

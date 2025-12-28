@@ -201,6 +201,7 @@ export interface OutputOptions {
   generatedCode?: Partial<GeneratedCodeOptions>;
   externalLiveBindings?: boolean;
   inlineDynamicImports?: boolean;
+  dynamicImportInCjs?: boolean;
   /**
    * - Type: `((moduleId: string, meta: { getModuleInfo: (moduleId: string) => ModuleInfo | null }) => string | NullValue)`
    * - Object form is not supported.

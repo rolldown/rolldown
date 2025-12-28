@@ -721,6 +721,10 @@ const OutputOptionsSchema = v.strictObject({
   ),
   externalLiveBindings: v.pipe(v.optional(v.boolean()), v.description('external live bindings')),
   inlineDynamicImports: v.pipe(v.optional(v.boolean()), v.description('Inline dynamic imports')),
+  dynamicImportInCjs: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Dynamic import in CJS output'),
+  ),
   manualChunks: v.optional(ManualChunksFunctionSchema),
   advancedChunks: v.optional(AdvancedChunksSchema),
   legalComments: v.pipe(

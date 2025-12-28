@@ -109,6 +109,16 @@ impl LinkStage<'_> {
                       }
                     }
                   }
+                  ImportKind::DynamicImport => {
+                    // When format is CJS and dynamicImportInCjs is false, we need __toESM
+                    // to wrap the require call: `Promise.resolve().then(() => __toESM(require("external")))`
+                    if matches!(self.options.format, OutputFormat::Cjs)
+                      && !self.options.dynamic_import_in_cjs
+                    {
+                      depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
+                        .push(stmt_info_idx);
+                    }
+                  }
                   _ => {}
                 }
               }

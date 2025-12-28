@@ -47,6 +47,7 @@ OPTIONS
   --css-entry-file-names <css-entry-file-names>Name pattern for emitted css entry chunks.
   --cwd <cwd>                 Current working directory.
   --devtools.session-id <devtools.session-id>Used to name the build.
+  --dynamic-import-in-cjs     Dynamic import in CJS output.
   --entry-file-names <name>   Name pattern for emitted entry chunks.
   --environment <environment> Pass additional settings to the config file via process.ENV.
   --es-module                 Always generate \`__esModule\` marks in non-ESM formats, defaults to \`if-default-prop\` (use \`--no-esModule\` to always disable).

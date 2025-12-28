@@ -1666,6 +1666,22 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   self.snippet.alloc_string_literal(&import_path, expr.source.span()),
                 );
               }
+              // Convert `import("external")` to `Promise.resolve().then(() => __toESM(require("external")))`
+              // when format is CJS and dynamicImportInCjs is false
+              if matches!(self.ctx.options.format, OutputFormat::Cjs)
+                && !self.ctx.options.dynamic_import_in_cjs
+              {
+                let source = expr.source.take_in(self.alloc);
+                let require_call = self.snippet.call_expr_with_arg_expr_expr("require", source);
+                let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
+                let wrapped = self.snippet.wrap_with_to_esm(
+                  to_esm_fn_name,
+                  require_call,
+                  self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
+                );
+                *node = self.snippet.promise_resolve_then_call_expr(wrapped);
+                return true;
+              }
             }
           }
           if needs_to_esm_helper {

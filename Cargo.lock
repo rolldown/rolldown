@@ -2997,7 +2997,6 @@ dependencies = [
  "oxc",
  "oxc_resolver",
  "rolldown-ariadne",
- "rolldown_utils",
  "ropey",
  "rustc-hash",
  "sugar_path",

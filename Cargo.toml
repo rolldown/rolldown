@@ -164,11 +164,11 @@ itertools = "0.14.0"
 itoa = "1.0.15"
 json-escape-simd = "3"
 json-strip-comments = "3"
-jsonschema = { version = "0.37.0", default-features = false }
+jsonschema = { version = "0.38.0", default-features = false }
 memchr = "2.7.4"
 mimalloc-safe = "0.1.52"
 mime = "0.3.17"
-nodejs-built-in-modules = "0.0.1"
+nodejs-built-in-modules = "1.0.0"
 nom = "8.0.0"
 num-bigint = "0.4.6"
 num-format = "0.4"

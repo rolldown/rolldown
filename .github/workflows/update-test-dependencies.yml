@@ -105,7 +105,7 @@ jobs:
           cache-key: debug-build
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+        uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
 
       - if: steps.check-update.outputs.update_needed == 'true'
         name: Build Native Rolldown
@@ -215,7 +215,7 @@ jobs:
           cache-key: debug-build
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+        uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
 
       - name: Run Test
         if: steps.check-update.outputs.update_needed == 'true'
@@ -324,7 +324,7 @@ jobs:
           cache-key: debug-build
 
       - if: steps.check-update.outputs.update_needed == 'true'
-        uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+        uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
 
       - name: Generate esbuild tests
         if: steps.check-update.outputs.update_needed == 'true'

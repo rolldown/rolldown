@@ -1,3 +1,4 @@
+import { copyFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { Application, type TypeDocOptions } from 'typedoc';
 import type { PluginOptions } from 'typedoc-plugin-markdown';
@@ -6,6 +7,13 @@ console.log('📚 Generating reference...');
 // Generate API documentation
 await runTypedoc();
 console.log('✅ Reference generated successfully!');
+
+await rm('reference/index.md', { force: true });
+await copyFile(
+  '.vitepress/theme/components/api.index.md',
+  'reference/index.md',
+);
+console.log('📚 New index added successfully');
 
 type TypedocVitepressThemeOptions = {
   docsRoot?: string;

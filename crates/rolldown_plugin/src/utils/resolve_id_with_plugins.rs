@@ -2,9 +2,8 @@ use crate::{
   HookResolveIdArgs, PluginDriver,
   types::{custom_field::CustomField, hook_resolve_id_skipped::HookResolveIdSkipped},
 };
-use rolldown_common::{
-  ImportKind, ModuleDefFormat, PackageJson, ResolvedId, is_existing_node_builtin_modules,
-};
+use nodejs_built_in_modules::is_nodejs_builtin_module;
+use rolldown_common::{ImportKind, ModuleDefFormat, PackageJson, ResolvedId};
 use rolldown_resolver::{ResolveError, Resolver};
 use std::{path::Path, sync::Arc};
 use sugar_path::SugarPath;
@@ -150,7 +149,7 @@ fn resolve_id(
       ResolveError::Builtin { resolved, is_runtime_module } => Ok(ResolvedId {
         // `resolved` is always prefixed with "node:" in compliance with the ESM specification.
         // we needs to use `is_runtime_module` to get the original specifier
-        is_external_without_side_effects: is_existing_node_builtin_modules(&resolved),
+        is_external_without_side_effects: is_nodejs_builtin_module(&resolved),
         id: if resolved.starts_with("node:") && !is_runtime_module {
           resolved[5..].into()
         } else {

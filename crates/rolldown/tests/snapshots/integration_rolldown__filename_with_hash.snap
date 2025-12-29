@@ -3774,7 +3774,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/react-like
 
-- main-!~{000}~.js => main-DLSJvZrV.js
+- main-!~{000}~.js => main-Hzewxce5.js
 
 # tests/rolldown/cjs_compat/reexport_commonjs
 
@@ -4583,6 +4583,10 @@ expression: output
 
 - main-!~{000}~.js => main-DgkEm6gV.js
 
+# tests/rolldown/function/post_banner/no_extra_line
+
+- main-!~{000}~.js => main-BxSNAzuf.js
+
 # tests/rolldown/function/post_banner_shebang
 
 - main-!~{000}~.js => main-Df6gnIcd.js
@@ -5074,6 +5078,11 @@ expression: output
 # tests/rolldown/issues/7597
 
 - main-!~{000}~.js => main-Ce2nz_GJ.js
+
+# tests/rolldown/issues/7655
+
+- main-!~{000}~.js => main-QsKk41YI.js
+- a-!~{001}~.js => a-BKgXR6kK.js
 
 # tests/rolldown/issues/duplicate_default_export
 

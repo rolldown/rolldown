@@ -24,6 +24,13 @@ var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 }));
 
 //#endregion
+//#region lib.js
+var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
+function test() {
+	return 1;
+}
+
+//#endregion
 //#region commonjs2.js
 var require_commonjs2 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = require_react();
@@ -31,11 +38,11 @@ var require_commonjs2 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 
 //#endregion
 //#region main.js
-var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
 var import_commonjs2 = require_commonjs2();
 assert.equal(import_commonjs.createReactElement(), "div");
 assert.equal(import_commonjs.version.toString(), "1");
 assert.equal(import_commonjs2.version.toString(), "1");
+assert.equal(test().toString(), "1");
 
 //#endregion
 ```

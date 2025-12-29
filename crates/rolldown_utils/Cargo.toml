@@ -43,6 +43,7 @@ oxc_index = { workspace = true }
 phf = { workspace = true, features = ["macros"] }
 regex = { workspace = true }
 regress = { workspace = true }
+rolldown_error = { workspace = true }
 rolldown_std_utils = { workspace = true }
 rustc-hash = { workspace = true }
 serde_json = { workspace = true }

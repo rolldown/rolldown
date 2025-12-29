@@ -26,7 +26,7 @@ jobs:
           submodules: true # Pull submodules for additional files
           persist-credentials: false
 
-      - uses: oxc-project/setup-node@141eb77546de6702f92d320926403fe3f9f6a6f2 # v1.0.5
+      - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
 
       - name: Download Rolldown with WASI Binding
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0

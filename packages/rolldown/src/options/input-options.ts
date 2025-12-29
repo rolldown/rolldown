@@ -68,7 +68,8 @@ export type OptimizationOptions = {
    *
    * When enabled, constant values from imported modules will be inlined at their usage sites,
    * potentially reducing bundle size and improving runtime performance by eliminating variable lookups.
-   * **options**:
+   *
+   * **Options:**
    * - `true`: equivalent to `{ mode: 'all', pass: 1 }`, enabling constant inlining for all eligible constants with a single pass.
    * - `false`: Disable constant inlining
    * - `{ mode: 'smart' | 'all', pass?: number }`:
@@ -82,7 +83,7 @@ export type OptimizationOptions = {
    *  - `mode: 'all'`: Inline all imported constants wherever they are used.
    *  - `pass`: Number of passes to perform for inlining constants.
    *
-   * **example**
+   * @example
    * ```js
    * // Input files:
    * // constants.js
@@ -128,18 +129,44 @@ export type OnwarnFunction = (
 ) => void;
 
 export interface InputOptions {
+  /**
+   * Defines entries and location(s) of entry modules for the bundle. Relative paths are resolved based on the `cwd` option.
+   * {@include ./docs/input.md}
+   */
   input?: InputOption;
   plugins?: RolldownPluginOption;
+  /**
+   * Specifies which modules should be treated as external and not bundled. External modules will be left as import statements in the output.
+   * {@include ./docs/external.md}
+   */
   external?: ExternalOption;
   resolve?: {
     /**
+     * @example
+     * ```js
+     * resolve: {
+     *   alias: {
+     *     '@': '/src',
+     *     'utils': './src/utils',
+     *   }
+     * }
+     * ```
      * > [!WARNING]
      * > `resolve.alias` will not call `resolveId` hooks of other plugin.
      * > If you want to call `resolveId` hooks of other plugin, use `viteAliasPlugin` from `rolldown/experimental` instead.
      * > You could find more discussion in [this issue](https://github.com/rolldown/rolldown/issues/3615)
      */
     alias?: Record<string, string[] | string | false>;
+    /**
+     * Fields in package.json to check for aliased paths.
+     */
     aliasFields?: string[][];
+    /**
+     * Condition names to use when resolving exports in package.json. Defaults based on platform and import kind:
+     * - **Browser platform**: `["import", "browser", "default"]` for import statements, `["require", "browser", "default"]` for require() calls
+     * - **Node platform**: `["import", "node", "default"]` for import statements, `["require", "node", "default"]` for require() calls
+     * - **Neutral platform**: `["import", "default"]` for import statements, `["require", "default"]` for require() calls
+     */
     conditionNames?: string[];
     /**
      * Map of extensions to alternative extensions.
@@ -148,17 +175,46 @@ export interface InputOptions {
      * You can achieve this by setting: `extensionAlias: { '.js': ['.ts', '.js'] }`.
      */
     extensionAlias?: Record<string, string[]>;
+    /**
+     * Fields in package.json to check for exports.
+     */
     exportsFields?: string[][];
+    /**
+     * Extensions to try when resolving files. These are tried in order from first to last.
+     * @default ['.tsx', '.ts', '.jsx', '.js', '.json']
+     */
     extensions?: string[];
+    /**
+     * Fields in package.json to check for entry points. Defaults based on platform:
+     * - **Node**: `['main', 'module']`
+     * - **Browser**: `['browser', 'module', 'main']`
+     * - **Neutral**: `[]` (relies on exports field)
+     */
     mainFields?: string[];
+    /**
+     * Filenames to try when resolving directories.
+     * @default ['index']
+     */
     mainFiles?: string[];
+    /**
+     * Directories to search for modules.
+     * @default ['node_modules']
+     */
     modules?: string[];
+    /**
+     * Whether to follow symlinks when resolving modules.
+     * @default true
+     */
     symlinks?: boolean;
     /**
      * @deprecated Use the top-level `tsconfig` option instead.
      */
     tsconfigFilename?: string;
   };
+  /**
+   * The working directory to use when resolving relative paths in the configuration.
+   * @default process.cwd()
+   */
   cwd?: string;
   /**
    * Expected platform where the code run.
@@ -171,55 +227,147 @@ export interface InputOptions {
    * @default
    * - 'node' if the format is 'cjs'
    * - 'browser' for other formats
+   * {@include ./docs/platform.md}
    */
   platform?: 'node' | 'browser' | 'neutral';
+  /**
+   * When `true`, creates shim variables for missing exports instead of throwing an error.
+   * @default false
+   * {@include ./docs/shim-missing-exports.md}
+   */
   shimMissingExports?: boolean;
+  /**
+   * Controls tree-shaking (dead code elimination). When `true`, unused code will be removed from the bundle to reduce bundle size.
+   * @default true
+   */
   treeshake?: boolean | TreeshakingOptions;
+  /**
+   * Controls the verbosity of console logging during the build.
+   * @default 'info'
+   */
   logLevel?: LogLevelOption;
+  /**
+   * Custom handler for logs. Called for each log message before it's written to the console.
+   */
   onLog?: OnLogFunction;
+  /**
+   * Custom handler for warnings during the build process.
+   * @deprecated
+   * :::: warning Deprecated
+   * This is a legacy API. Consider using `onLog` instead for better control over all log types.
+   * ::: details Migration to `onLog`
+   * To migrate from `onwarn` to `onLog`, check the `level` parameter to filter for
+   * warnings:
+   * ```js
+   * // Before: Using `onwarn`
+   * export default {
+   *   onwarn(warning, defaultHandler) {
+   *     // Suppress certain warnings
+   *     if (warning.code === 'CIRCULAR_DEPENDENCY') return;
+   *     // Handle other warnings with default behavior
+   *     defaultHandler(warning);
+   *   },
+   * };
+   * ```
+   * ```js
+   * // After: Using `onLog`
+   * export default {
+   *   onLog(level, log, defaultHandler) {
+   *     // Handle only warnings (same behavior as `onwarn`)
+   *     if (level === 'warn') {
+   *       // Suppress certain warnings
+   *       if (log.code === 'CIRCULAR_DEPENDENCY') return;
+   *       // Handle other warnings with default behavior
+   *       defaultHandler(level, log);
+   *     } else {
+   *       // Let other log levels pass through
+   *       defaultHandler(level, log);
+   *     }
+   *   },
+   * };
+   * ```
+   * :::
+   * ::::
+   */
   onwarn?: OnwarnFunction;
+  /**
+   * Maps file patterns to module types, controlling how files are processed. This is conceptually similar to esbuild's loader option, allowing you to specify how different file extensions should be handled.
+   */
   moduleTypes?: ModuleTypes;
+  /**
+   * Experimental features that may change in future releases and can introduce behavior change without a major version bump.
+   */
   experimental?: {
     /**
      * Lets modules be executed in the order they are declared.
-     *
-     * - Type: `boolean`
-     * - Default: `false`
      *
      * This is done by injecting runtime helpers to ensure that modules are executed in the order they are imported. External modules won't be affected.
      *
      * > [!WARNING]
      * > Enabling this option may negatively increase bundle size. It is recommended to use this option only when absolutely necessary.
+     * @default false
      */
     strictExecutionOrder?: boolean;
+    /**
+     * Disable live bindings for exported variables.
+     * @default false
+     */
     disableLiveBindings?: boolean;
+    /**
+     * Enable Vite compatible mode.
+     * @default false
+     */
     viteMode?: boolean;
+    /**
+     * When enabled, `new URL()` calls will be transformed to a stable asset URL which includes the updated name and content hash.
+     * It is necessary to pass `import.meta.url` as the second argument to the
+     * `new URL` constructor, otherwise no transform will be applied.
+     * :::warning
+     * JavaScript and TypeScript files referenced via `new URL('./file.js', import.meta.url)` or `new URL('./file.ts', import.meta.url)` will **not** be transformed or bundled. The file will be copied as-is, meaning TypeScript files remain untransformed and dependencies are not resolved.
+     *
+     * The expected behavior for JS/TS files is still being discussed and may
+     * change in future releases. See [#7258](https://github.com/rolldown/rolldown/issues/7258) for more context.
+     * :::
+     * @example
+     * ```js
+     * // main.js
+     * const url = new URL('./styles.css', import.meta.url);
+     * console.log(url);
+     *
+     * // Example output after bundling WITHOUT the option (default)
+     * const url = new URL('./styles.css', import.meta.url);
+     * console.log(url);
+     *
+     * // Example output after bundling WITH `experimental.resolveNewUrlToAsset` set to `true`
+     * const url = new URL('assets/styles-CjdrdY7X.css', import.meta.url);
+     * console.log(url);
+     * ```
+     * @default false
+     */
     resolveNewUrlToAsset?: boolean;
     devMode?: DevModeOptions;
     /**
-     * Control which order should use when rendering modules in chunk
+     * Control which order should use when rendering modules in chunk.
      *
-     * - Type: `'exec-order' | 'module-id'
-     * - Default: `'exec-order'`
-     *
+     * Available options:
      * - `exec-order`: Almost equivalent to the topological order of the module graph, but specially handling when module graph has cycle.
      * - `module-id`: This is more friendly for gzip compression, especially for some javascript static asset lib (e.g. icon library)
      * > [!NOTE]
      * > Try to sort the modules by their module id if possible(Since rolldown scope hoist all modules in the chunk, we only try to sort those modules by module id if we could ensure runtime behavior is correct after sorting).
+     * @default 'exec-order'
      */
     chunkModulesOrder?: ChunkModulesOrder;
     /**
      * Attach debug information to the output bundle.
      *
-     * - Type: `'none' | 'simple' | 'full'`
-     * - Default: `'simple'`
-     *
+     * Available modes:
      * - `none`: No debug information is attached.
      * - `simple`: Attach comments indicating which files the bundled code comes from. These comments could be removed by the minifier.
      * - `full`: Attach detailed debug information to the output bundle. These comments are using legal comment syntax, so they won't be removed by the minifier.
      *
      * > [!WARNING]
      * > You shouldn't use `full` in the production build.
+     * @default 'simple'
      */
     attachDebugInfo?: AttachDebugOptions;
     /**
@@ -233,8 +381,7 @@ export interface InputOptions {
      * (default `"/"`) can be applied to all paths. The resulting JSON is a valid import map and can be
      * directly injected into HTML via `<script type="importmap">`.
      *
-     * Example configuration snippet:
-     *
+     * @example
      * ```js
      * {
      *   experimental: {
@@ -266,28 +413,35 @@ export interface InputOptions {
      * }
      * ```
      *
-     * > [!NOTE]
+     * > [!TIP]
      * > If you want to learn more, you can check out the example here: [examples/chunk-import-map](https://github.com/rolldown/rolldown/tree/main/examples/chunk-import-map)
+     * @default false
      */
     chunkImportMap?: boolean | { baseUrl?: string; fileName?: string };
+    /**
+     * Enable on-demand wrapping of modules.
+     * @default false
+     */
     onDemandWrapping?: boolean;
     /**
-     * Required to be used with `watch` mode.
+     * Enable incremental build support. Required to be used with `watch` mode.
+     * @default false
      */
     incrementalBuild?: boolean;
+    /**
+     * Enable high-resolution source maps for transform operations.
+     * @default false
+     */
     transformHiresSourcemap?: boolean | 'boundary';
     /**
      * Use native Rust implementation of MagicString for source map generation.
-     *
-     * - Type: `boolean`
-     * - Default: `false`
      *
      * [MagicString](https://github.com/rich-harris/magic-string) is a JavaScript library commonly used by bundlers
      * for string manipulation and source map generation. When enabled, rolldown will use a native Rust
      * implementation of MagicString instead of the JavaScript version, providing significantly better performance
      * during source map generation and code transformation.
      *
-     * ## Benefits
+     * **Benefits**
      *
      * - **Improved Performance**: The native Rust implementation is typically faster than the JavaScript version,
      *   especially for large codebases with extensive source maps.
@@ -296,8 +450,7 @@ export interface InputOptions {
      *   reduce overall build times when working with JavaScript transform hooks.
      * - **Better Integration**: Seamless integration with rolldown's native Rust architecture.
      *
-     * ## Example
-     *
+     * @example
      * ```js
      * export default {
      *   experimental: {
@@ -313,6 +466,7 @@ export interface InputOptions {
      * > This is an experimental feature. While it aims to provide identical behavior to the JavaScript
      * > implementation, there may be edge cases. Please report any discrepancies you encounter.
      * > For a complete working example, see [examples/native-magic-string](https://github.com/rolldown/rolldown/tree/main/examples/native-magic-string)
+     * @default false
      */
     nativeMagicString?: boolean;
   };
@@ -343,32 +497,48 @@ export interface InputOptions {
   debug?: {
     sessionId?: string;
   };
+  /**
+   * Controls how entry chunk exports are preserved. This determines whether Rolldown needs to create facade chunks (additional wrapper chunks) to maintain the exact export signatures of entry modules, or whether it can combine entry modules with other chunks for optimization.
+   * @default 'strict'
+   * {@include ./docs/preserve-entry-signatures.md}
+   */
   preserveEntrySignatures?:
     | false
     | 'strict'
     | 'allow-extension'
     | 'exports-only';
+  /**
+   * Configure optimization features for the bundler.
+   */
   optimization?: OptimizationOptions;
+  /**
+   * The value of `this` at the top level of each output chunk. For IIFE and UMD formats, this defaults to `'window'` or `'global'` depending on the platform.
+   * @example
+   * **Set custom context**
+   * ```js
+   * export default {
+   *   context: 'globalThis',
+   *   output: {
+   *     format: 'iife',
+   *   },
+   * };
+   * ```
+   * **Use window for browser builds**
+   * ```js
+   * export default {
+   *   context: 'window',
+   *   platform: 'browser',
+   *   output: {
+   *     format: 'iife',
+   *   },
+   * };
+   * ```
+   * {@include ./docs/context.md}
+   */
   context?: string;
   /**
    * Configures TypeScript configuration file resolution and usage.
-   *
-   * ## Options
-   *
-   * - `true`: Auto-discovery mode (similar to Vite). For each module, both resolver and transformer
-   *   will find the nearest tsconfig.json. If the tsconfig has `references`, the file extension is
-   *   allowed, and the tsconfig's `include`/`exclude` patterns don't match the file, the referenced
-   *   tsconfigs will be searched for a match. Falls back to the original tsconfig if no match is found.
-   * - `string`: Path to a specific tsconfig.json file (relative to cwd or absolute path).
-   *
-   * ## What's used from tsconfig
-   *
-   * - **Resolver**: Uses `compilerOptions.paths` and `compilerOptions.baseUrl` for path mapping
-   * - **Transformer**: Uses select compiler options (jsx, decorators, typescript, etc.)
-   *
-   * > [!NOTE]
-   * > Priority: Top-level `transform` options always take precedence over tsconfig settings.
-   *
+   * {@include ./docs/tsconfig.md}
    * @default undefined (no tsconfig resolution)
    */
   tsconfig?: true | string;

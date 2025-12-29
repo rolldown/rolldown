@@ -1,0 +1,38 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+const require_main = require('./main.js');
+
+//#region a.js
+var require_a = /* @__PURE__ */ require_main.__commonJSMin(((exports, module) => {
+	module.exports = {
+		value: 42,
+		hello: "world"
+	};
+}));
+
+//#endregion
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return require_a();
+  }
+});
+```
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+//#region main.js
+Promise.resolve().then(() => __toDynamicImportESM()(require("./a.js"))).then((m) => console.log(m.default));
+
+//#endregion
+exports.__commonJSMin = __commonJSMin;
+```

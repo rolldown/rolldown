@@ -1,42 +1,52 @@
 use std::borrow::Cow;
 
+use rolldown_error::SingleBuildResult;
+
 pub trait Replacer {
-  fn get(&mut self, _: Option<usize>) -> Cow<'_, str>;
+  fn get(&mut self, _: Option<usize>) -> SingleBuildResult<Cow<'_, str>>;
 }
 
 impl Replacer for &str {
   #[inline]
-  fn get(&mut self, _: Option<usize>) -> Cow<'_, str> {
-    Cow::Borrowed(self)
+  fn get(&mut self, _: Option<usize>) -> SingleBuildResult<Cow<'_, str>> {
+    Ok(Cow::Borrowed(self))
   }
 }
 
 impl<F, S> Replacer for F
 where
-  F: FnMut(Option<usize>) -> S,
+  F: FnMut(Option<usize>) -> SingleBuildResult<S>,
   S: AsRef<str>,
 {
   #[inline]
-  fn get(&mut self, hash_len: Option<usize>) -> Cow<'_, str> {
-    Cow::Owned((*self)(hash_len).as_ref().to_string())
+  fn get(&mut self, hash_len: Option<usize>) -> SingleBuildResult<Cow<'_, str>> {
+    Ok(Cow::Owned((*self)(hash_len)?.as_ref().to_string()))
   }
 }
 
 /// Replace all `[placeholder]` or `[placeholder:8]` in the pattern
 pub trait ReplaceAllPlaceholder {
-  fn replace_all(self, placeholder: &str, replacer: impl Replacer) -> String;
+  fn replace_all(self, placeholder: &str, replacer: &str) -> String;
 
-  fn replace_all_with_len(self, placeholder: &str, replacer: impl Replacer) -> String;
+  fn replace_all_with_len(
+    self,
+    placeholder: &str,
+    replacer: impl Replacer,
+  ) -> SingleBuildResult<String>;
 }
 
 impl ReplaceAllPlaceholder for String {
   #[inline]
-  fn replace_all(self, placeholder: &str, replacer: impl Replacer) -> String {
-    replace_all_placeholder_impl(self, false, placeholder, replacer)
+  fn replace_all(self, placeholder: &str, replacer: &str) -> String {
+    replace_all_placeholder_impl(self, false, placeholder, replacer).expect("Should not fail")
   }
 
   #[inline]
-  fn replace_all_with_len(self, placeholder: &str, replacer: impl Replacer) -> String {
+  fn replace_all_with_len(
+    self,
+    placeholder: &str,
+    replacer: impl Replacer,
+  ) -> SingleBuildResult<String> {
     replace_all_placeholder_impl(self, true, placeholder, replacer)
   }
 }
@@ -46,7 +56,7 @@ fn replace_all_placeholder_impl(
   is_len_enabled: bool,
   mut placeholder: &str,
   mut replacer: impl Replacer,
-) -> String {
+) -> SingleBuildResult<String> {
   let offset = placeholder.len() - 1;
 
   if is_len_enabled {
@@ -56,7 +66,7 @@ fn replace_all_placeholder_impl(
   let mut iter = pattern.match_indices(placeholder).peekable();
 
   if iter.peek().is_none() {
-    return pattern;
+    return Ok(pattern);
   }
 
   let mut last_end = 0;
@@ -88,7 +98,7 @@ fn replace_all_placeholder_impl(
       (start_offset, None)
     };
 
-    let replacer = replacer.get(len);
+    let replacer = replacer.get(len)?;
 
     result.push_str(&pattern[last_end..start]);
     result.push_str(replacer.as_ref());
@@ -100,7 +110,7 @@ fn replace_all_placeholder_impl(
     result.push_str(&pattern[last_end..]);
   }
 
-  result
+  Ok(result)
 }
 
 #[test]
@@ -110,11 +120,13 @@ fn test_replace_all_placeholder() {
 
   let result = "hello-[hash]-[hash:-]-[hash_name]-[hash:1]-[hash:].js"
     .to_string()
-    .replace_all_with_len("[hash]", "abc");
+    .replace_all_with_len("[hash]", "abc")
+    .unwrap();
   assert_eq!(result, "hello-abc-[hash:-]-[hash_name]-abc-[hash:].js");
 
   let result = "hello-[hash]-[hash:5]-[hash_name]-[hash:o].js"
     .to_string()
-    .replace_all_with_len("[hash]", |n: Option<usize>| &"abcdefgh"[..n.unwrap_or(8)]);
+    .replace_all_with_len("[hash]", |n: Option<usize>| Ok(&"abcdefgh"[..n.unwrap_or(8)]))
+    .unwrap();
   assert_eq!(result, "hello-abcdefgh-abcde-[hash_name]-[hash:o].js");
 }

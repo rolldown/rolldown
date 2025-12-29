@@ -17,6 +17,8 @@ pub enum InvalidOptionType {
   InlineDynamicImportsWithMultipleInputs,
   InlineDynamicImportsWithPreserveModules,
   InlineDynamicImportsWithAdvancedChunks,
+  HashLengthTooLong { pattern_name: String, received: usize, max: usize },
+  HashLengthTooShort { pattern_name: String, received: usize, min: usize, chunk_count: u32 },
 }
 
 #[derive(Debug)]
@@ -91,6 +93,12 @@ impl BuildEvent for InvalidOption {
         }
         InvalidOptionType::InlineDynamicImportsWithAdvancedChunks => {
           "Invalid value \"true\" for option \"output.inlineDynamicImports\" - this option is not supported for \"output.advancedChunks\".".to_string()
+        }
+        InvalidOptionType::HashLengthTooLong { pattern_name, received, max } => {
+          format!("Hashes cannot be longer than {max} characters, received {received}. Check the `{pattern_name}` option.")
+        }
+        InvalidOptionType::HashLengthTooShort { pattern_name, received, min, chunk_count } => {
+          format!("To generate hashes for this number of chunks (currently {chunk_count}), you need a minimum hash size of {min}, received {received}. Check the `{pattern_name}` option.")
         }
     }
   }

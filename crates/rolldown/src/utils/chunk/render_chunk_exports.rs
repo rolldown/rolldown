@@ -155,10 +155,10 @@ pub fn render_chunk_exports(
           let module =
             &link_output.module_table[module].as_normal().expect("should be normal module");
           if !matches!(module.exports_kind, ExportsKind::Esm) {
-            export_items.retain(|(_, export_ref)| {
-              let canonical_ref = link_output.symbol_db.canonical_ref_for(*export_ref);
-              canonical_ref.owner != module.idx
-            });
+            // export_items.retain(|(_, export_ref)| {
+            //   let canonical_ref = link_output.symbol_db.canonical_ref_for(*export_ref);
+            //   canonical_ref.owner != module.idx
+            // });
           }
           if !export_items.is_empty() {
             let rendered_items = export_items

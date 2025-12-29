@@ -34,6 +34,7 @@ pub mod module_table;
 pub mod named_export;
 pub mod named_import;
 pub mod namespace_alias;
+pub mod normalized_id;
 pub mod output;
 pub mod output_chunk;
 pub mod outputs_diagnostics;

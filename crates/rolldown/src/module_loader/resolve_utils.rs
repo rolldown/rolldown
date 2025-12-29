@@ -5,7 +5,7 @@ use futures::future::join_all;
 use oxc_index::IndexVec;
 use rolldown_common::{
   ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleType,
-  NormalizedBundlerOptions, RUNTIME_MODULE_KEY, RawImportRecord, ResolvedId,
+  NormalizedBundlerOptions, NormalizedId, RUNTIME_MODULE_KEY, RawImportRecord, ResolvedId,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosableArcstr, EventKind};
 use rolldown_plugin::{__inner::resolve_id_check_external, PluginDriver, SharedPluginDriver};
@@ -26,7 +26,7 @@ pub async fn resolve_id(
   // Check runtime module
   if specifier == RUNTIME_MODULE_KEY {
     return Ok(Ok(ResolvedId {
-      id: specifier.into(),
+      id: NormalizedId::new(specifier),
       module_def_format: ModuleDefFormat::EsmMjs,
       ..Default::default()
     }));
@@ -91,7 +91,7 @@ pub async fn resolve_dependencies(
                 // Unlike rollup, we also emit errors for absolute path
                 build_errors.push(BuildDiagnostic::resolve_error(
                   source.clone(),
-                  self_resolved_id.id.clone(),
+                  self_resolved_id.id.as_arc_str().clone(),
                   if dep.is_unspanned() || is_css_module {
                     DiagnosableArcstr::String(specifier.as_str().into())
                   } else {
@@ -108,7 +108,7 @@ pub async fn resolve_dependencies(
                 warnings.push(
                   BuildDiagnostic::resolve_error(
                     source.clone(),
-                    self_resolved_id.id.clone(),
+                    self_resolved_id.id.as_arc_str().clone(),
                     if dep.is_unspanned() || is_css_module {
                       DiagnosableArcstr::String(specifier.as_str().into())
                     } else {
@@ -123,7 +123,7 @@ pub async fn resolve_dependencies(
               }
             }
             ret.push(ResolvedId {
-              id: specifier.as_str().into(),
+              id: NormalizedId::new(specifier.as_str()),
               external: true.into(),
               ..Default::default()
             });
@@ -131,7 +131,7 @@ pub async fn resolve_dependencies(
           ResolveError::MatchedAliasNotFound(..) => {
             build_errors.push(BuildDiagnostic::resolve_error(
                 source.clone(),
-                self_resolved_id.id.clone(),
+                self_resolved_id.id.as_arc_str().clone(),
                 if dep.is_unspanned() || is_css_module {
                   DiagnosableArcstr::String(specifier.as_str().into())
                 } else {
@@ -145,7 +145,7 @@ pub async fn resolve_dependencies(
           e => {
             build_errors.push(BuildDiagnostic::resolve_error(
               source.clone(),
-              self_resolved_id.id.clone(),
+              self_resolved_id.id.as_arc_str().clone(),
               if dep.is_unspanned() || is_css_module {
                 DiagnosableArcstr::String(specifier.as_str().into())
               } else {

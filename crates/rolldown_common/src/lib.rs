@@ -179,6 +179,7 @@ pub use crate::{
   types::named_export::LocalExport,
   types::named_import::{NamedImport, Specifier},
   types::namespace_alias::NamespaceAlias,
+  types::normalized_id::NormalizedId,
   types::output::{Output, OutputAsset},
   types::output_chunk::{Modules, OutputChunk},
   types::outputs_diagnostics::OutputsDiagnostics,

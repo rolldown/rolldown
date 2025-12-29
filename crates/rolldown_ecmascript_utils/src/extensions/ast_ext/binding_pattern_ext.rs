@@ -114,9 +114,7 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
 
   fn into_expression(self, snippet: &AstSnippet<'ast>) -> Expression<'ast> {
     match self {
-      BindingPattern::BindingIdentifier(id) => {
-        snippet.builder.expression_identifier(SPAN, id.name)
-      }
+      BindingPattern::BindingIdentifier(id) => snippet.builder.expression_identifier(SPAN, id.name),
       BindingPattern::ObjectPattern(mut obj_pat) => {
         let capacity = obj_pat.properties.len() + usize::from(obj_pat.rest.is_some());
         let mut properties = snippet.builder.vec_with_capacity(capacity);

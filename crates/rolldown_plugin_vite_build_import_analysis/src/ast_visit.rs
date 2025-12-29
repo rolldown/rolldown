@@ -4,9 +4,7 @@ use oxc::{
   allocator::CloneIn as _,
   ast::{
     NONE,
-    ast::{
-      self, BindingPattern, Expression, ImportOrExportKind, Statement, VariableDeclaration,
-    },
+    ast::{self, BindingPattern, Expression, ImportOrExportKind, Statement, VariableDeclaration},
   },
   ast_visit::{VisitMut, walk_mut},
   semantic::ScopeFlags,

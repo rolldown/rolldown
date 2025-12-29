@@ -726,44 +726,45 @@ impl<'a> SideEffectDetector<'a> {
               }
             }
           }
-          detail |=
-            match &declarator.id {
-              // Destructuring the initializer has no side effects if the
-              // initializer is an array, since we assume the iterator is then
-              // the built-in side-effect free array iterator.
-              BindingPattern::ObjectPattern(_) => {
-                // Object destructuring only has side effects when property_read_side_effects is Always
-                if self.flat_options.property_read_side_effects() {
-                  true.into()
-                } else {
-                  declarator
-                    .init
-                    .as_ref()
-                    .map(|init| self.detect_side_effect_of_expr(init))
-                    .unwrap_or(false.into())
-                }
-              }
-              BindingPattern::ArrayPattern(pat) => {
-                for p in &pat.elements {
-                  if p.as_ref().is_some_and(|pat| {
-                    !matches!(pat, BindingPattern::BindingIdentifier(_))
-                  }) {
-                    return true.into();
-                  }
-                }
+          detail |= match &declarator.id {
+            // Destructuring the initializer has no side effects if the
+            // initializer is an array, since we assume the iterator is then
+            // the built-in side-effect free array iterator.
+            BindingPattern::ObjectPattern(_) => {
+              // Object destructuring only has side effects when property_read_side_effects is Always
+              if self.flat_options.property_read_side_effects() {
+                true.into()
+              } else {
                 declarator
                   .init
                   .as_ref()
                   .map(|init| self.detect_side_effect_of_expr(init))
                   .unwrap_or(false.into())
               }
-              BindingPattern::BindingIdentifier(_)
-              | BindingPattern::AssignmentPattern(_) => declarator
+            }
+            BindingPattern::ArrayPattern(pat) => {
+              for p in &pat.elements {
+                if p
+                  .as_ref()
+                  .is_some_and(|pat| !matches!(pat, BindingPattern::BindingIdentifier(_)))
+                {
+                  return true.into();
+                }
+              }
+              declarator
                 .init
                 .as_ref()
                 .map(|init| self.detect_side_effect_of_expr(init))
-                .unwrap_or(false.into()),
-            };
+                .unwrap_or(false.into())
+            }
+            BindingPattern::BindingIdentifier(_) | BindingPattern::AssignmentPattern(_) => {
+              declarator
+                .init
+                .as_ref()
+                .map(|init| self.detect_side_effect_of_expr(init))
+                .unwrap_or(false.into())
+            }
+          };
         }
         detail
       }

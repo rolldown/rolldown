@@ -102,10 +102,9 @@ pub trait HmrAstBuilder<'any, 'ast> {
           self.builder().variable_declarator(
             SPAN,
             ast::VariableDeclarationKind::Const,
-            self.builder().binding_pattern_binding_identifier(
-              SPAN,
-              self.alias_name_for_import_meta_hot(),
-            ),
+            self
+              .builder()
+              .binding_pattern_binding_identifier(SPAN, self.alias_name_for_import_meta_hot()),
             NONE,
             // __rolldown_runtime__.createModuleHotContext($stable_id)
             Some(ast::Expression::CallExpression(

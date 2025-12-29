@@ -1,4 +1,5 @@
 use std::{
+  fmt::Debug,
   ops::{Deref, DerefMut},
   path::{Path, PathBuf},
   sync::Arc,
@@ -7,11 +8,11 @@ use std::{
 use dashmap::Entry;
 use itertools::Either;
 use oxc::transformer::{EngineTargets, TransformOptions as OxcTransformOptions};
-use oxc_resolver::{ResolveOptions, Resolver, TsconfigDiscovery, TsconfigOptions};
+
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_utils::dashmap::FxDashMap;
 
-use crate::{BundlerTransformOptions, JsxOptions, TsConfig};
+use crate::{BundlerTransformOptions, JsxOptions};
 
 #[derive(Debug, Default, Clone)]
 pub enum JsxPreset {
@@ -24,31 +25,30 @@ pub enum JsxPreset {
   Preserve,
 }
 
+/// Trait for resolving tsconfig files. This abstraction allows `rolldown_common`
+/// to use tsconfig discovery without depending on `rolldown_resolver`.
+pub trait TsconfigResolver: Send + Sync + Debug {
+  fn find_tsconfig(
+    &self,
+    path: &Path,
+  ) -> Result<Option<Arc<oxc_resolver::TsConfig>>, oxc_resolver::ResolveError>;
+}
+
 /// Transform options with auto tsconfig discovery and caching
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct RawTransformOptions {
   pub base_options: Arc<BundlerTransformOptions>,
   /// Cache key: tsconfig path, or empty PathBuf for files without tsconfig
   pub cache: FxDashMap<PathBuf, Arc<OxcTransformOptions>>,
-  resolver: Arc<Resolver>,
+  pub resolver: Arc<dyn TsconfigResolver>,
 }
 
 impl RawTransformOptions {
-  pub fn new(base_options: BundlerTransformOptions, tsconfig: TsConfig) -> Self {
-    Self {
-      base_options: Arc::new(base_options),
-      cache: FxDashMap::default(),
-      resolver: Arc::new(Resolver::new(ResolveOptions {
-        tsconfig: Some(match tsconfig {
-          TsConfig::Auto => TsconfigDiscovery::Auto,
-          TsConfig::Manual(config_file) => TsconfigDiscovery::Manual(TsconfigOptions {
-            config_file,
-            references: oxc_resolver::TsconfigReferences::Auto,
-          }),
-        }),
-        ..Default::default()
-      })),
-    }
+  pub fn new<T: TsconfigResolver + 'static>(
+    base_options: BundlerTransformOptions,
+    resolver: Arc<T>,
+  ) -> Self {
+    Self { base_options: Arc::new(base_options), cache: FxDashMap::default(), resolver }
   }
 
   pub fn get_or_create_for_tsconfig(
@@ -72,7 +72,7 @@ impl RawTransformOptions {
   }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum TransformOptionsInner {
   /// Auto tsconfig discovery - each file uses its nearest tsconfig
   Raw(RawTransformOptions),
@@ -80,7 +80,7 @@ pub enum TransformOptionsInner {
   Normal(Arc<OxcTransformOptions>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TransformOptions {
   inner: TransformOptionsInner,
   pub target: EngineTargets,

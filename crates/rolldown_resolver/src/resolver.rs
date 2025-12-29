@@ -12,6 +12,7 @@ use oxc_resolver::{
 };
 use rolldown_common::{
   ImportKind, ModuleDefFormat, PackageJson, Platform, ResolveOptions, ResolvedId, TsConfig,
+  TsconfigResolver,
 };
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_utils::dashmap::FxDashMap;
@@ -235,4 +236,10 @@ fn infer_module_def_format(info: &Resolution) -> ModuleDefFormat {
     }
   }
   ModuleDefFormat::Unknown
+}
+
+impl<Fs: FileSystem + std::fmt::Debug + Send + Sync> TsconfigResolver for Resolver<Fs> {
+  fn find_tsconfig(&self, path: &Path) -> Result<Option<Arc<OxcTsConfig>>, ResolveError> {
+    self.default_resolver.find_tsconfig(path)
+  }
 }

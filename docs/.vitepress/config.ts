@@ -270,7 +270,7 @@ const config = defineConfig({
       'meta',
       {
         property: 'og:image',
-        content: 'https://rolldown.rs/og.jpg',
+        content: '/og.jpg',
       },
     ],
     ['meta', { property: 'og:site_name', content: 'Rolldown' }],

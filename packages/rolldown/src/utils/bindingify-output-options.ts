@@ -88,6 +88,7 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     minify: outputOptions.minify,
     externalLiveBindings: outputOptions.externalLiveBindings,
     inlineDynamicImports: outputOptions.inlineDynamicImports,
+    dynamicImportInCjs: outputOptions.dynamicImportInCjs,
     advancedChunks,
     polyfillRequire: outputOptions.polyfillRequire,
     sanitizeFileName,

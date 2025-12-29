@@ -3642,6 +3642,12 @@ expression: output
 - chunk-!~{001}~.js => chunk-DhkxgLhx.js
 - cjs-!~{003}~.js => cjs-BGgro4pb.js
 
+# tests/rolldown/cjs_compat/dynamic_import_in_cjs
+
+- main-!~{000}~.js => main-D50uPii5.js
+- internal-!~{003}~.js => internal-DiqBI5kB.js
+- internal-cjs-!~{001}~.js => internal-cjs-CAIg6paw.js
+
 # tests/rolldown/cjs_compat/esm_require_cjs
 
 - main-!~{000}~.js => main-CgFAgQJr.js

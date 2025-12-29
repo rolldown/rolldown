@@ -199,6 +199,7 @@ pub struct BundlerOptions {
   pub inject: Option<Vec<InjectImport>>,
   pub external_live_bindings: Option<bool>,
   pub inline_dynamic_imports: Option<bool>,
+  pub dynamic_import_in_cjs: Option<bool>,
   pub advanced_chunks: Option<AdvancedChunksOptions>,
   pub checks: Option<ChecksOptions>,
   #[cfg_attr(

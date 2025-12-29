@@ -20,26 +20,25 @@ export function bindingifySourcemap(
 ): undefined | BindingSourcemap {
   if (map == null) return;
   return {
-    inner: typeof map === 'string'
-      ? map
-      : {
-        file: map.file ?? undefined,
-        mappings: map.mappings,
-        // according to the spec, `sourceRoot: null` is not valid,
-        // but some tools returns a sourcemap with it.
-        // in that case, napi-rs outputs an error which is difficult
-        // to understand by users ("Value is none of these types `String`, `BindingJsonSourcemap`").
-        // we convert it to undefined to skip that error.
-        // note that if `sourceRoot: null` is included in a string sourcemap,
-        // it will be converted to None by serde-json.
-        sourceRoot: 'sourceRoot' in map
-          ? (map.sourceRoot ?? undefined)
-          : undefined,
-        sources: map.sources?.map((s) => s ?? undefined),
-        sourcesContent: map.sourcesContent?.map((s) => s ?? undefined),
-        names: map.names,
-        x_google_ignoreList: map.x_google_ignoreList,
-        debugId: 'debugId' in map ? map.debugId : undefined,
-      },
+    inner:
+      typeof map === 'string'
+        ? map
+        : {
+            file: map.file ?? undefined,
+            mappings: map.mappings,
+            // according to the spec, `sourceRoot: null` is not valid,
+            // but some tools returns a sourcemap with it.
+            // in that case, napi-rs outputs an error which is difficult
+            // to understand by users ("Value is none of these types `String`, `BindingJsonSourcemap`").
+            // we convert it to undefined to skip that error.
+            // note that if `sourceRoot: null` is included in a string sourcemap,
+            // it will be converted to None by serde-json.
+            sourceRoot: 'sourceRoot' in map ? (map.sourceRoot ?? undefined) : undefined,
+            sources: map.sources?.map((s) => s ?? undefined),
+            sourcesContent: map.sourcesContent?.map((s) => s ?? undefined),
+            names: map.names,
+            x_google_ignoreList: map.x_google_ignoreList,
+            debugId: 'debugId' in map ? map.debugId : undefined,
+          },
   };
 }

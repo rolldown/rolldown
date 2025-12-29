@@ -2,9 +2,7 @@ import type { BindingAssetSource } from '../binding.cjs';
 
 export type AssetSource = string | Uint8Array;
 
-export function transformAssetSource(
-  bindingAssetSource: BindingAssetSource,
-): AssetSource {
+export function transformAssetSource(bindingAssetSource: BindingAssetSource): AssetSource {
   return bindingAssetSource.inner;
 }
 

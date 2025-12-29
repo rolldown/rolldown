@@ -20,15 +20,7 @@ type PluginModuleType =
 
 export type FilterExpressionKind = FilterExpression['kind'];
 
-export type FilterExpression =
-  | And
-  | Or
-  | Not
-  | Id
-  | ImporterId
-  | ModuleType
-  | Code
-  | Query;
+export type FilterExpression = And | Or | Not | Id | ImporterId | ModuleType | Code | Query;
 
 export type TopLevelFilterExpression = Include | Exclude;
 
@@ -161,10 +153,7 @@ export function id(pattern: StringOrRegExp, params?: IdParams): Id {
   return new Id(pattern, params);
 }
 
-export function importerId(
-  pattern: StringOrRegExp,
-  params?: IdParams,
-): ImporterId {
+export function importerId(pattern: StringOrRegExp, params?: IdParams): ImporterId {
   return new ImporterId(pattern, params);
 }
 
@@ -268,14 +257,10 @@ export function exprInterpreter(
 ): boolean {
   switch (expr.kind) {
     case 'and': {
-      return expr.args.every((e) =>
-        exprInterpreter(e, code, id, moduleType, importerId, ctx)
-      );
+      return expr.args.every((e) => exprInterpreter(e, code, id, moduleType, importerId, ctx));
     }
     case 'or': {
-      return expr.args.some((e) =>
-        exprInterpreter(e, code, id, moduleType, importerId, ctx)
-      );
+      return expr.args.some((e) => exprInterpreter(e, code, id, moduleType, importerId, ctx));
     }
     case 'not': {
       return !exprInterpreter(expr.expr, code, id, moduleType, importerId, ctx);

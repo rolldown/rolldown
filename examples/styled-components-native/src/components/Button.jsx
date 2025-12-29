@@ -48,9 +48,9 @@ const StyledButton = styled.button`
     z-index: 1;
   }
 
-  ${props =>
-  props.variant === 'primary' &&
-  css`
+  ${(props) =>
+    props.variant === 'primary' &&
+    css`
       background: linear-gradient(45deg, #4299e1, #3182ce);
       color: white;
       box-shadow: 0 4px 14px rgba(66, 153, 225, 0.39);
@@ -65,9 +65,9 @@ const StyledButton = styled.button`
       }
     `}
 
-  ${props =>
-  props.variant === 'secondary' &&
-  css`
+  ${(props) =>
+    props.variant === 'secondary' &&
+    css`
       background: linear-gradient(45deg, #718096, #4a5568);
       color: white;
       box-shadow: 0 4px 14px rgba(113, 128, 150, 0.39);
@@ -82,9 +82,9 @@ const StyledButton = styled.button`
       }
     `}
 
-  ${props =>
-  !props.variant &&
-  css`
+  ${(props) =>
+    !props.variant &&
+    css`
       background: linear-gradient(45deg, #e2e8f0, #cbd5e0);
       color: #2d3748;
       box-shadow: 0 4px 14px rgba(226, 232, 240, 0.39);

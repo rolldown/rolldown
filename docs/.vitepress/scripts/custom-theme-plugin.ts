@@ -18,11 +18,7 @@ class CustomTheme extends MarkdownTheme {
 }
 
 class CustomThemeContext extends MarkdownThemeContext {
-  constructor(
-    theme: MarkdownTheme,
-    page: MarkdownPageEvent<Reflection>,
-    options: any,
-  ) {
+  constructor(theme: MarkdownTheme, page: MarkdownPageEvent<Reflection>, options: any) {
     super(theme, page, options);
     const superPartials = this.partials;
 
@@ -35,17 +31,12 @@ class CustomThemeContext extends MarkdownThemeContext {
           link: source.url,
           linkName: `${source.fileName}:${source.line}`,
         }));
-        return `<DefinedIn :sources="${
-          escapeAttr(JSON.stringify(sources))
-        }" />`;
+        return `<DefinedIn :sources="${escapeAttr(JSON.stringify(sources))}" />`;
       },
       declarationTitle(model) {
         // TODO: improve this to output a better formatted type info
         // https://github.com/typedoc2md/typedoc-plugin-markdown/blob/typedoc-plugin-markdown%404.9.0/packages/typedoc-plugin-markdown/src/theme/context/partials/member.declarationTitle.ts#L6
-        return superPartials.declarationTitle.call(this, model).replace(
-          '>',
-          '- **Type**:',
-        );
+        return superPartials.declarationTitle.call(this, model).replace('>', '- **Type**:');
       },
     };
   }

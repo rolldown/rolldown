@@ -53,39 +53,36 @@ const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
   },
 ];
 
-const sidebarForInDepth: DefaultTheme.SidebarItem[] = [{
-  text: 'In-Depth',
-  items: [
-    { text: 'Why Bundlers', link: '/in-depth/why-bundlers.md' },
-    { text: 'Module Types', link: '/in-depth/module-types.md' },
-    { text: 'Top Level Await', link: '/in-depth/tla-in-rolldown.md' },
-    { text: 'Advanced Chunks', link: '/in-depth/advanced-chunks.md' },
-    { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
-    {
-      text: 'Non ESM Output Formats',
-      link: '/in-depth/non-esm-output-formats.md',
-    },
-    { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
-    {
-      text: 'Why Plugin Hook Filter',
-      link: '/in-depth/why-plugin-hook-filter.md',
-    },
-    // { text: 'Code Splitting', link: '/in-depth/code-splitting.md' },
-    { text: 'Directives', link: '/in-depth/directives.md' },
-  ],
-}];
+const sidebarForInDepth: DefaultTheme.SidebarItem[] = [
+  {
+    text: 'In-Depth',
+    items: [
+      { text: 'Why Bundlers', link: '/in-depth/why-bundlers.md' },
+      { text: 'Module Types', link: '/in-depth/module-types.md' },
+      { text: 'Top Level Await', link: '/in-depth/tla-in-rolldown.md' },
+      { text: 'Advanced Chunks', link: '/in-depth/advanced-chunks.md' },
+      { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
+      {
+        text: 'Non ESM Output Formats',
+        link: '/in-depth/non-esm-output-formats.md',
+      },
+      { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
+      {
+        text: 'Why Plugin Hook Filter',
+        link: '/in-depth/why-plugin-hook-filter.md',
+      },
+      // { text: 'Code Splitting', link: '/in-depth/code-splitting.md' },
+      { text: 'Directives', link: '/in-depth/directives.md' },
+    ],
+  },
+];
 
 function getTypedocSidebar() {
-  const filepath = path.resolve(
-    import.meta.dirname,
-    '../reference/typedoc-sidebar.json',
-  );
+  const filepath = path.resolve(import.meta.dirname, '../reference/typedoc-sidebar.json');
   if (!existsSync(filepath)) return [];
 
   try {
-    return JSON.parse(
-      readFileSync(filepath, 'utf-8'),
-    ) as DefaultTheme.SidebarItem[];
+    return JSON.parse(readFileSync(filepath, 'utf-8')) as DefaultTheme.SidebarItem[];
   } catch (error) {
     console.error('Failed to load typedoc sidebar:', error);
     return [];
@@ -94,22 +91,15 @@ function getTypedocSidebar() {
 
 const typedocSidebar = getTypedocSidebar().map((item) => ({
   ...item,
-  items: item.items?.slice().sort((a, b) =>
-    (a.text ?? '').localeCompare(b.text ?? '')
-  ),
+  items: item.items?.slice().sort((a, b) => (a.text ?? '').localeCompare(b.text ?? '')),
 }));
 
 function getOptionsSidebar() {
-  const filepath = path.resolve(
-    import.meta.dirname,
-    '../reference/options-sidebar.json',
-  );
+  const filepath = path.resolve(import.meta.dirname, '../reference/options-sidebar.json');
   if (!existsSync(filepath)) return [];
 
   try {
-    return JSON.parse(
-      readFileSync(filepath, 'utf-8'),
-    ) as DefaultTheme.SidebarItem[];
+    return JSON.parse(readFileSync(filepath, 'utf-8')) as DefaultTheme.SidebarItem[];
   } catch (error) {
     console.error('Failed to load options sidebar:', error);
     return [];
@@ -176,8 +166,7 @@ const sidebarForDevGuide: DefaultTheme.SidebarItem[] = [
       },
       {
         text: 'Etiquette',
-        link:
-          'https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette',
+        link: 'https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette',
       },
     ],
   },
@@ -240,8 +229,7 @@ const sidebarForResources: DefaultTheme.SidebarItem[] = [
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: 'Rolldown',
-  description:
-    'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
+  description: 'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
   lastUpdated: true,
   cleanUrls: true,
   sitemap: {
@@ -317,8 +305,7 @@ export default defineConfig({
       { text: 'REPL', link: 'https://repl.rolldown.rs/' },
       {
         text: 'Resources',
-        activeMatch:
-          '/(team|acknowledgements|contribution-guide|development-guide)',
+        activeMatch: '/(team|acknowledgements|contribution-guide|development-guide)',
         items: [
           {
             text: 'Team',
@@ -388,21 +375,12 @@ export default defineConfig({
         customIcon: {
           homebrew: 'logos:homebrew',
           cargo: 'vscode-icons:file-type-cargo',
-          rolldown: localIconLoader(
-            import.meta.url,
-            '../public/lightning-down.svg',
-          ),
+          rolldown: localIconLoader(import.meta.url, '../public/lightning-down.svg'),
         },
       }) as any,
       llmstxt({
-        ignoreFiles: [
-          'development-guide/**/*',
-          'index.md',
-          'README.md',
-          'team.md',
-        ],
-        description:
-          'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
+        ignoreFiles: ['development-guide/**/*', 'index.md', 'README.md', 'team.md'],
+        description: 'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
         details: '',
       }),
     ],

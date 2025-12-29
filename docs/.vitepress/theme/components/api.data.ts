@@ -60,9 +60,7 @@ export default {
       new URL('../../../reference/options-sidebar.json', import.meta.url),
     );
 
-    const optionSidebar: OptionSidebar = JSON.parse(
-      fs.readFileSync(optionSidebarPath, 'utf-8'),
-    );
+    const optionSidebar: OptionSidebar = JSON.parse(fs.readFileSync(optionSidebarPath, 'utf-8'));
 
     optionSidebar.forEach((item) => {
       if (item.text === 'output' && 'items' in item) {
@@ -95,9 +93,7 @@ export default {
       new URL('../../../reference/typedoc-sidebar.json', import.meta.url),
     );
 
-    const apiSidebar: TypedocSidebar = JSON.parse(
-      fs.readFileSync(apiSidebarPath, 'utf-8'),
-    );
+    const apiSidebar: TypedocSidebar = JSON.parse(fs.readFileSync(apiSidebarPath, 'utf-8'));
 
     const transformedApiSidebar: APIReference[] = apiSidebar.map((group) => ({
       text: group.text,

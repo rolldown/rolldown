@@ -1,10 +1,7 @@
 import type { RolldownPlugin } from '..';
 import type { BindingNormalizedOptions } from '../binding.cjs';
 import { lazyProp } from '../decorators/lazy';
-import type {
-  SourcemapIgnoreListOption,
-  SourcemapPathTransformOption,
-} from '../types/misc';
+import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
 import { PlainObjectLike } from '../types/plain-object-like';
 import type { StringOrRegExp } from '../types/utils';
 import type {
@@ -49,11 +46,7 @@ export interface NormalizedOutputOptions {
   paths: Record<string, string> | PathsFunction | undefined;
   hashCharacters: 'base64' | 'base36' | 'hex';
   sourcemapDebugIds: boolean;
-  sourcemapIgnoreList:
-    | boolean
-    | SourcemapIgnoreListOption
-    | StringOrRegExp
-    | undefined;
+  sourcemapIgnoreList: boolean | SourcemapIgnoreListOption | StringOrRegExp | undefined;
   sourcemapPathTransform: SourcemapPathTransformOption | undefined;
   minify: false | MinifyOptions | 'dce-only';
   legalComments: 'none' | 'inline';
@@ -66,7 +59,8 @@ export interface NormalizedOutputOptions {
   minifyInternalExports?: boolean;
 }
 
-export class NormalizedOutputOptionsImpl extends PlainObjectLike
+export class NormalizedOutputOptionsImpl
+  extends PlainObjectLike
   implements NormalizedOutputOptions
 {
   constructor(
@@ -119,14 +113,12 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
 
   @lazyProp
   get cssEntryFileNames(): string | ChunkFileNamesFunction {
-    return this.inner.cssEntryFilenames ||
-      this.outputOptions.cssEntryFileNames!;
+    return this.inner.cssEntryFilenames || this.outputOptions.cssEntryFileNames!;
   }
 
   @lazyProp
   get cssChunkFileNames(): string | ChunkFileNamesFunction {
-    return this.inner.cssChunkFilenames ||
-      this.outputOptions.cssChunkFileNames!;
+    return this.inner.cssChunkFilenames || this.outputOptions.cssChunkFileNames!;
   }
 
   @lazyProp
@@ -215,12 +207,7 @@ export class NormalizedOutputOptionsImpl extends PlainObjectLike
   }
 
   @lazyProp
-  get sourcemapIgnoreList():
-    | boolean
-    | SourcemapIgnoreListOption
-    | StringOrRegExp
-    | undefined
-  {
+  get sourcemapIgnoreList(): boolean | SourcemapIgnoreListOption | StringOrRegExp | undefined {
     return this.outputOptions.sourcemapIgnoreList;
   }
 

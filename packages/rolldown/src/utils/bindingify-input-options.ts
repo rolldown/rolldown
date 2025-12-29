@@ -21,11 +21,7 @@ import {
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
-import type {
-  AttachDebugOptions,
-  DevModeOptions,
-  InputOptions,
-} from '../options/input-options';
+import type { AttachDebugOptions, DevModeOptions, InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import type { RolldownPlugin } from '../plugin';
 import { bindingifyPlugin } from '../plugin/bindingify-plugin';
@@ -46,11 +42,7 @@ export function bindingifyInputOptions(
   logLevel: LogLevelOption,
   watchMode: boolean,
 ): BindingInputOptions {
-  const pluginContextData = new PluginContextData(
-    onLog,
-    outputOptions,
-    normalizedOutputPlugins,
-  );
+  const pluginContextData = new PluginContextData(onLog, outputOptions, normalizedOutputPlugins);
 
   const plugins = rawPlugins.map((plugin) => {
     if ('_parallel' in plugin) {
@@ -61,13 +53,7 @@ export function bindingifyInputOptions(
         case 'builtin:vite-css-post':
           return bindingifyCSSPostPlugin(plugin, pluginContextData);
         case 'builtin:vite-html':
-          return bindingifyViteHtmlPlugin(
-            plugin,
-            onLog,
-            logLevel,
-            watchMode,
-            pluginContextData,
-          );
+          return bindingifyViteHtmlPlugin(plugin, onLog, logLevel, watchMode, pluginContextData);
         case 'builtin:vite-manifest':
           return bindingifyManifestPlugin(plugin, pluginContextData);
         default:
@@ -140,9 +126,7 @@ export function bindingifyInputOptions(
   };
 }
 
-function bindingifyDevMode(
-  devMode?: DevModeOptions,
-): BindingExperimentalOptions['devMode'] {
+function bindingifyDevMode(devMode?: DevModeOptions): BindingExperimentalOptions['devMode'] {
   if (devMode) {
     if (typeof devMode === 'boolean') {
       return devMode ? {} : undefined;
@@ -166,9 +150,7 @@ function bindingifyAttachDebugInfo(
   }
 }
 
-function bindingifyExternal(
-  external: InputOptions['external'],
-): BindingInputOptions['external'] {
+function bindingifyExternal(external: InputOptions['external']): BindingInputOptions['external'] {
   if (external) {
     if (typeof external === 'function') {
       return (id, importer, isResolved) => {
@@ -193,9 +175,7 @@ function bindingifyExperimental(
         chunkModulesOrder = BindingChunkModuleOrderBy.ModuleId;
         break;
       default:
-        throw new Error(
-          `Unexpected chunkModulesOrder: ${experimental.chunkModulesOrder}`,
-        );
+        throw new Error(`Unexpected chunkModulesOrder: ${experimental.chunkModulesOrder}`);
     }
   }
   return {
@@ -204,9 +184,7 @@ function bindingifyExperimental(
     viteMode: experimental?.viteMode,
     resolveNewUrlToAsset: experimental?.resolveNewUrlToAsset,
     devMode: bindingifyDevMode(experimental?.devMode),
-    attachDebugInfo: bindingifyAttachDebugInfo(
-      experimental?.attachDebugInfo,
-    ),
+    attachDebugInfo: bindingifyAttachDebugInfo(experimental?.attachDebugInfo),
     chunkModulesOrder,
     chunkImportMap: experimental?.chunkImportMap,
     onDemandWrapping: experimental?.onDemandWrapping,
@@ -215,9 +193,7 @@ function bindingifyExperimental(
   };
 }
 
-function bindingifyResolve(
-  resolve: InputOptions['resolve'],
-): BindingInputOptions['resolve'] {
+function bindingifyResolve(resolve: InputOptions['resolve']): BindingInputOptions['resolve'] {
   // process is undefined for browser build
   const yarnPnp = typeof process === 'object' && !!process.versions?.pnp;
   if (resolve) {
@@ -225,17 +201,15 @@ function bindingifyResolve(
     return {
       alias: alias
         ? Object.entries(alias).map(([name, replacement]) => ({
-          find: name,
-          replacements: replacement === false
-            ? [undefined]
-            : arraify(replacement),
-        }))
+            find: name,
+            replacements: replacement === false ? [undefined] : arraify(replacement),
+          }))
         : undefined,
       extensionAlias: extensionAlias
         ? Object.entries(extensionAlias).map(([name, value]) => ({
-          target: name,
-          replacements: value,
-        }))
+            target: name,
+            replacements: value,
+          }))
         : undefined,
       yarnPnp,
       ...rest,
@@ -252,10 +226,7 @@ function bindingifyInject(
 ): BindingInputOptions['inject'] {
   if (inject) {
     return Object.entries(inject).map(
-      ([alias, item]):
-        | BindingInjectImportNamed
-        | BindingInjectImportNamespace =>
-      {
+      ([alias, item]): BindingInjectImportNamed | BindingInjectImportNamespace => {
         if (Array.isArray(item)) {
           // import * as fs from 'node:fs'
           // fs: ['node:fs', '*' ],
@@ -295,9 +266,7 @@ function bindingifyInject(
   }
 }
 
-function bindingifyLogLevel(
-  logLevel: InputOptions['logLevel'],
-): BindingInputOptions['logLevel'] {
+function bindingifyLogLevel(logLevel: InputOptions['logLevel']): BindingInputOptions['logLevel'] {
   switch (logLevel) {
     case 'silent':
       return BindingLogLevel.Silent;
@@ -312,9 +281,7 @@ function bindingifyLogLevel(
   }
 }
 
-function bindingifyInput(
-  input: InputOptions['input'],
-): BindingInputOptions['input'] {
+function bindingifyInput(input: InputOptions['input']): BindingInputOptions['input'] {
   if (input === undefined) {
     return [];
   }
@@ -332,9 +299,7 @@ function bindingifyInput(
   });
 }
 
-function bindingifyWatch(
-  watch: InputOptions['watch'],
-): BindingInputOptions['watch'] {
+function bindingifyWatch(watch: InputOptions['watch']): BindingInputOptions['watch'] {
   if (watch) {
     return {
       buildDelay: watch.buildDelay,
@@ -368,23 +333,19 @@ function bindingifyTreeshakeOptions(
   };
   switch (config.propertyReadSideEffects) {
     case 'always':
-      normalizedConfig.propertyReadSideEffects =
-        BindingPropertyReadSideEffects.Always;
+      normalizedConfig.propertyReadSideEffects = BindingPropertyReadSideEffects.Always;
       break;
     case false:
-      normalizedConfig.propertyReadSideEffects =
-        BindingPropertyReadSideEffects.False;
+      normalizedConfig.propertyReadSideEffects = BindingPropertyReadSideEffects.False;
       break;
     default:
   }
   switch (config.propertyWriteSideEffects) {
     case 'always':
-      normalizedConfig.propertyWriteSideEffects =
-        BindingPropertyWriteSideEffects.Always;
+      normalizedConfig.propertyWriteSideEffects = BindingPropertyWriteSideEffects.Always;
       break;
     case false:
-      normalizedConfig.propertyWriteSideEffects =
-        BindingPropertyWriteSideEffects.False;
+      normalizedConfig.propertyWriteSideEffects = BindingPropertyWriteSideEffects.False;
       break;
     default:
   }

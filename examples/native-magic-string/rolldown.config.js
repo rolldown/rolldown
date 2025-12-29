@@ -28,14 +28,10 @@ export default defineConfig({
             }
 
             // Example 2: Prepend a comment to each file
-            magicString.prepend(
-              '/* Transformed by example-transform plugin */\n',
-            );
+            magicString.prepend('/* Transformed by example-transform plugin */\n');
 
             // Example 3: Append a timestamp comment
-            magicString.append(
-              `\n/* Transformed at: ${new Date().toISOString()} */`,
-            );
+            magicString.append(`\n/* Transformed at: ${new Date().toISOString()} */`);
 
             // Return the modified magicString
             // The native implementation will generate source maps efficiently
@@ -72,17 +68,11 @@ export default defineConfig({
           walk(ast, {
             enter(node) {
               // Look for CallExpression nodes: fn(...)
-              if (
-                node.type === 'CallExpression' &&
-                node.arguments?.length === 1
-              ) {
+              if (node.type === 'CallExpression' && node.arguments?.length === 1) {
                 const arg = node.arguments[0];
 
                 // Check if the argument is an arrow function: () => ...
-                if (
-                  arg.type === 'ArrowFunctionExpression' &&
-                  arg.params?.length === 0
-                ) {
+                if (arg.type === 'ArrowFunctionExpression' && arg.params?.length === 0) {
                   // Check if the body is an import() call
                   let importCall = null;
                   if (arg.body.type === 'ImportExpression') {

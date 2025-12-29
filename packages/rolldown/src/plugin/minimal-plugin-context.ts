@@ -45,27 +45,9 @@ export class MinimalPluginContextImpl {
     watchMode: boolean,
     private readonly hookName?: string,
   ) {
-    this.debug = getLogHandler(
-      LOG_LEVEL_DEBUG,
-      'PLUGIN_LOG',
-      onLog,
-      pluginName,
-      logLevel,
-    );
-    this.info = getLogHandler(
-      LOG_LEVEL_INFO,
-      'PLUGIN_LOG',
-      onLog,
-      pluginName,
-      logLevel,
-    );
-    this.warn = getLogHandler(
-      LOG_LEVEL_WARN,
-      'PLUGIN_WARNING',
-      onLog,
-      pluginName,
-      logLevel,
-    );
+    this.debug = getLogHandler(LOG_LEVEL_DEBUG, 'PLUGIN_LOG', onLog, pluginName, logLevel);
+    this.info = getLogHandler(LOG_LEVEL_INFO, 'PLUGIN_LOG', onLog, pluginName, logLevel);
+    this.warn = getLogHandler(LOG_LEVEL_WARN, 'PLUGIN_WARNING', onLog, pluginName, logLevel);
 
     this.meta = {
       rollupVersion: '4.23.0',
@@ -75,9 +57,7 @@ export class MinimalPluginContextImpl {
   }
 
   public error(e: RollupError | string): never {
-    return error(
-      logPluginError(normalizeLog(e), this.pluginName, { hook: this.hookName }),
-    );
+    return error(logPluginError(normalizeLog(e), this.pluginName, { hook: this.hookName }));
   }
 }
 

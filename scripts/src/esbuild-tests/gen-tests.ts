@@ -9,12 +9,7 @@ import * as nodeFs from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import * as nodeHttps from 'node:https';
 import * as path from 'node:path';
-import {
-  Language,
-  type Node as SyntaxNode,
-  Parser,
-  Query,
-} from 'web-tree-sitter';
+import { Language, type Node as SyntaxNode, Parser, Query } from 'web-tree-sitter';
 // import Go from 'tree-sitter-go';
 import { ESBUILD_BUNDLER_TESTS_URL } from './urls.js';
 
@@ -23,10 +18,7 @@ const TREE_SITTER_WASM_GO_FILENAME = path.resolve(
   '../../tmp/tree-sitter-go.wasm',
 );
 
-const GO_FILES_DIR = path.resolve(
-  import.meta.dirname,
-  '../../tmp/esbuild-tests',
-);
+const GO_FILES_DIR = path.resolve(import.meta.dirname, '../../tmp/esbuild-tests');
 
 /**
  * Each test suite is represented by a key-value pair where the key is the name of the test suite,
@@ -70,11 +62,14 @@ const suites = {
     name: 'glob',
     sourceFile: 'bundler_glob_test.go',
   },
-} as const satisfies Record<string, {
-  name: string;
-  sourceFile: string;
-  ignoreCases?: string[];
-}>;
+} as const satisfies Record<
+  string,
+  {
+    name: string;
+    sourceFile: string;
+    ignoreCases?: string[];
+  }
+>;
 
 type TestSuiteName = keyof typeof suites;
 type SuiteArg = TestSuiteName | 'all';
@@ -104,23 +99,18 @@ interface Config {
 }
 
 if (process.argv.length < 3) {
-  throw new Error(
-    `Please provide the test suite name: ${Object.keys(suites).join(', ')}`,
-  );
+  throw new Error(`Please provide the test suite name: ${Object.keys(suites).join(', ')}`);
 }
 
 const SUITE_ARG = process.argv[2] as SuiteArg;
 if (SUITE_ARG !== 'all' && !(SUITE_ARG in suites)) {
   throw new Error(
-    `Unknown test suite name: ${SUITE_ARG}. Available suites: ${
-      Object.keys(suites).join(', ')
-    }`,
+    `Unknown test suite name: ${SUITE_ARG}. Available suites: ${Object.keys(suites).join(', ')}`,
   );
 }
 
-const SUITE_NAMES: TestSuiteName[] = SUITE_ARG === 'all'
-  ? (Object.keys(suites) as TestSuiteName[])
-  : [SUITE_ARG];
+const SUITE_NAMES: TestSuiteName[] =
+  SUITE_ARG === 'all' ? (Object.keys(suites) as TestSuiteName[]) : [SUITE_ARG];
 
 console.log(`Processing test suite: ${SUITE_NAMES.join(', ')}`);
 
@@ -149,13 +139,10 @@ const queryString = `
  * ## Panics
  * Performs {@link process.exit} if it cannot find (and then download) .go source file based on test suite name {@link suites}
  */
-async function readTestSuiteSource(
-  testSuiteName: TestSuiteName,
-): Promise<string> {
+async function readTestSuiteSource(testSuiteName: TestSuiteName): Promise<string> {
   const testSuite = suites[testSuiteName];
   const sourcePath = path.join(GO_FILES_DIR, testSuite.sourceFile);
-  const sourceGithubUrl =
-    `${ESBUILD_BUNDLER_TESTS_URL}/${testSuite.sourceFile}`;
+  const sourceGithubUrl = `${ESBUILD_BUNDLER_TESTS_URL}/${testSuite.sourceFile}`;
 
   try {
     return fs.readFileSync(sourcePath).toString();
@@ -176,10 +163,7 @@ async function readTestSuiteSource(
         throw new Error('Unexpected shape of source file');
       }
     } catch (err2) {
-      console.log(
-        'Could not download .go source file. Please download it manually.',
-        err2,
-      );
+      console.log('Could not download .go source file. Please download it manually.', err2);
       console.log(`Download link: ${sourceGithubUrl}`);
       process.exit(1);
     }
@@ -247,10 +231,7 @@ function extractStringLiteral(node: SyntaxNode | null | undefined): string {
   return ret;
 }
 
-function processFiles(
-  node: SyntaxNode,
-  binding: Record<string, SyntaxNode>,
-): FileEntry[] {
+function processFiles(node: SyntaxNode, binding: Record<string, SyntaxNode>): FileEntry[] {
   if (node.firstChild?.type === 'identifier') {
     const name = node.firstChild.text;
     if (binding[name]) {
@@ -286,10 +267,7 @@ function processFiles(
   }
 }
 
-function processEntryPath(
-  node: SyntaxNode,
-  binding: Record<string, SyntaxNode>,
-): string[] {
+function processEntryPath(node: SyntaxNode, binding: Record<string, SyntaxNode>): string[] {
   if (node.firstChild?.type === 'identifier') {
     const name = node.firstChild.text;
     if (binding[name]) {
@@ -362,17 +340,14 @@ function ensureTreeSitterWasmGo(): Promise<void> | undefined {
   }
   fs.ensureDirSync(path.dirname(TREE_SITTER_WASM_GO_FILENAME));
   return new Promise((rsl, rej) => {
-    nodeHttps.get(
-      'https://tree-sitter.github.io/tree-sitter-go.wasm',
-      (resp) => {
-        resp.on('end', () => {
-          console.log('saved', TREE_SITTER_WASM_GO_FILENAME);
-          rsl();
-        });
-        resp.on('error', rej);
-        resp.pipe(nodeFs.createWriteStream(TREE_SITTER_WASM_GO_FILENAME));
-      },
-    );
+    nodeHttps.get('https://tree-sitter.github.io/tree-sitter-go.wasm', (resp) => {
+      resp.on('end', () => {
+        console.log('saved', TREE_SITTER_WASM_GO_FILENAME);
+        rsl();
+      });
+      resp.on('error', rej);
+      resp.pipe(nodeFs.createWriteStream(TREE_SITTER_WASM_GO_FILENAME));
+    });
   });
 }
 
@@ -386,11 +361,7 @@ const query = new Query(Lang, queryString);
 
 for (const suiteName of SUITE_NAMES) {
   console.log(`Processing test suite: ${suiteName}`);
-  const testsRootDir = path.resolve(
-    __dirname,
-    '../../../crates/rolldown/tests/esbuild',
-    suiteName,
-  );
+  const testsRootDir = path.resolve(__dirname, '../../../crates/rolldown/tests/esbuild', suiteName);
 
   const source = await readTestSuiteSource(suiteName);
   const tree = parser.parse(source)!;
@@ -458,12 +429,7 @@ for (const suiteName of SUITE_NAMES) {
           normalizedName = normalizedName.slice(1);
         }
         return {
-          name: normalizedName
-            .split('/')
-            .filter(Boolean)
-            .join('_')
-            .split('.')
-            .join('_'),
+          name: normalizedName.split('/').filter(Boolean).join('_').split('.').join('_'),
           import: normalizedName,
         };
       });

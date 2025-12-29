@@ -21,10 +21,7 @@ export const SNAPSHOT_FILES = [
 
 export type SnapshotFileName = (typeof SNAPSHOT_FILES)[number];
 
-const SNAPSHOTS_DIR = path.resolve(
-  import.meta.dirname,
-  '../../../tmp/esbuild-tests/snapshots',
-);
+const SNAPSHOTS_DIR = path.resolve(import.meta.dirname, '../../../tmp/esbuild-tests/snapshots');
 
 async function downloadSnapshot(filename: SnapshotFileName): Promise<string> {
   const url = `${ESBUILD_SNAPSHOTS_URL}/${filename}`;
@@ -32,9 +29,7 @@ async function downloadSnapshot(filename: SnapshotFileName): Promise<string> {
 
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(
-      `Failed to download ${filename}: ${response.status} ${response.statusText}`,
-    );
+    throw new Error(`Failed to download ${filename}: ${response.status} ${response.statusText}`);
   }
 
   const content = await response.text();

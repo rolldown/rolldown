@@ -14,10 +14,7 @@ export default defineDevConfig({
     experimental: {
       devMode: {},
     },
-    plugins: [
-      waitBundleCompleteUntilAccess(),
-      delayTransformComment(),
-    ],
+    plugins: [waitBundleCompleteUntilAccess(), delayTransformComment()],
   },
 });
 
@@ -32,7 +29,7 @@ function waitBundleCompleteUntilAccess() {
     // Delay bundle generation
     async generateBundle() {
       // Simulate delay for bundle completion timing
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 300));
     },
   };
 }
@@ -47,10 +44,8 @@ function delayTransformComment() {
 
     async transform(code, id) {
       if (code.includes('// @delay-transform')) {
-        console.log(
-          `[delay-transform] Delaying transform for ${id} by 500ms...`,
-        );
-        await new Promise(resolve => setTimeout(resolve, 500));
+        console.log(`[delay-transform] Delaying transform for ${id} by 500ms...`);
+        await new Promise((resolve) => setTimeout(resolve, 500));
         console.log(`[delay-transform] Transform complete for ${id}`);
       }
       return null; // No transformation, just delay

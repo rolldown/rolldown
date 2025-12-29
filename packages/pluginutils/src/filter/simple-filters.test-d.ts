@@ -7,9 +7,7 @@ describe('makeIdFiltersToMatchWithQuery', () => {
     expectTypeOf(makeIdFiltersToMatchWithQuery(input)).toEqualTypeOf<string>();
 
     // string literal should return normal string
-    expectTypeOf(makeIdFiltersToMatchWithQuery('foo')).not.toEqualTypeOf<
-      'foo'
-    >();
+    expectTypeOf(makeIdFiltersToMatchWithQuery('foo')).not.toEqualTypeOf<'foo'>();
     expectTypeOf(makeIdFiltersToMatchWithQuery('foo')).toEqualTypeOf<string>();
   });
 
@@ -19,37 +17,25 @@ describe('makeIdFiltersToMatchWithQuery', () => {
 
   test('single string or regex input', () => {
     const input = 'foo' as string | RegExp;
-    expectTypeOf(makeIdFiltersToMatchWithQuery(input)).toEqualTypeOf<
-      string | RegExp
-    >();
+    expectTypeOf(makeIdFiltersToMatchWithQuery(input)).toEqualTypeOf<string | RegExp>();
   });
 
   test('array string input', () => {
     const input = ['foo'];
-    expectTypeOf(makeIdFiltersToMatchWithQuery(input)).toEqualTypeOf<
-      string[]
-    >();
+    expectTypeOf(makeIdFiltersToMatchWithQuery(input)).toEqualTypeOf<string[]>();
 
     // string literal should return normal string
-    expectTypeOf(makeIdFiltersToMatchWithQuery(['foo'])).not.toEqualTypeOf<
-      'foo'[]
-    >();
-    expectTypeOf(makeIdFiltersToMatchWithQuery(['foo'])).toEqualTypeOf<
-      string[]
-    >();
+    expectTypeOf(makeIdFiltersToMatchWithQuery(['foo'])).not.toEqualTypeOf<'foo'[]>();
+    expectTypeOf(makeIdFiltersToMatchWithQuery(['foo'])).toEqualTypeOf<string[]>();
   });
 
   test('array regex input', () => {
-    expectTypeOf(makeIdFiltersToMatchWithQuery([/foo/])).toEqualTypeOf<
-      RegExp[]
-    >();
+    expectTypeOf(makeIdFiltersToMatchWithQuery([/foo/])).toEqualTypeOf<RegExp[]>();
   });
 
   test('array string or regex input', () => {
     const input = ['foo'] as (string | RegExp)[];
-    expectTypeOf(makeIdFiltersToMatchWithQuery(input)).toEqualTypeOf<
-      (string | RegExp)[]
-    >();
+    expectTypeOf(makeIdFiltersToMatchWithQuery(input)).toEqualTypeOf<(string | RegExp)[]>();
   });
 
   test('mixed input', () => {

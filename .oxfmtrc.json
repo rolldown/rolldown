@@ -1,0 +1,30 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "singleQuote": true,
+  "ignorePatterns": [
+    "**/.pnp.cjs",
+    "rollup",
+    "test262",
+    "CHANGELOG-2024.md",
+    "CHANGELOG.md",
+    "crates/rolldown/src/runtime",
+    "crates/rolldown/tests",
+    "crates/rolldown_plugin_hmr/src/runtime",
+    "crates/rolldown_testing/_config.schema.json",
+    "packages/rolldown/src/binding.cjs",
+    "packages/rolldown/src/binding.d.cts",
+    "packages/rolldown/src/browser.js",
+    "packages/rolldown/src/rolldown-binding.wasi-browser.js",
+    "packages/rolldown/src/rolldown-binding.wasi.cjs",
+    "packages/rolldown/src/wasi-worker-browser.mjs",
+    "packages/rolldown/src/wasi-worker.mjs",
+    "packages/rolldown/tests",
+    "packages/rolldown/tests/fixtures/misc/error/diagnostics",
+    "packages/rollup-tests",
+    "packages/rollup/test",
+    "packages/vite-tests",
+    "scripts/snap-diff/stats",
+    "scripts/snap-diff/summary",
+    "scripts/src/esbuild-tests/snap-diff/**/*.md"
+  ]
+}

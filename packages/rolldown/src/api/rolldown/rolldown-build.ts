@@ -1,8 +1,4 @@
-import {
-  BindingBundler,
-  shutdownAsyncRuntime,
-  startAsyncRuntime,
-} from '../../binding.cjs';
+import { BindingBundler, shutdownAsyncRuntime, startAsyncRuntime } from '../../binding.cjs';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import type { HasProperty, TypeAssert } from '../../types/assert';
@@ -62,17 +58,10 @@ export class RolldownBuild {
     return Promise.resolve(this.#bundler.getWatchFiles());
   }
 
-  async #build(
-    isWrite: boolean,
-    outputOptions: OutputOptions,
-  ): Promise<RolldownOutput> {
+  async #build(isWrite: boolean, outputOptions: OutputOptions): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
     await this.#stopWorkers?.();
-    const option = await createBundlerOptions(
-      this.#inputOptions,
-      outputOptions,
-      false,
-    );
+    const option = await createBundlerOptions(this.#inputOptions, outputOptions, false);
 
     if (RolldownBuild.asyncRuntimeShutdown) {
       startAsyncRuntime();

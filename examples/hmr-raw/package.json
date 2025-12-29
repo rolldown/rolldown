@@ -1,8 +1,8 @@
 {
   "name": "react-hmr",
   "version": "0.0.0",
-  "type": "module",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "serve",
     "dev:new": "USE_NEW_DEV_SERVER=1 serve"

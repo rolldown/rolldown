@@ -1,18 +1,15 @@
-import { description, version } from '../../../package.json' assert {
-  type: 'json',
-};
+import { description, version } from '../../../package.json' assert { type: 'json' };
 import { styleText } from '../../utils/style-text';
 import { options } from '../arguments';
 import { camelCaseToKebabCase } from '../arguments/utils';
 import { logger } from '../logger';
 
-const introduction = `${
-  styleText('gray', `${description} (rolldown v${version})`)
-}
+const introduction = `${styleText('gray', `${description} (rolldown v${version})`)}
 
-${styleText(['bold', 'underline'], 'USAGE')} ${
-  styleText('cyan', 'rolldown -c <config>')
-} or ${styleText('cyan', 'rolldown <input> <options>')}`;
+${styleText(['bold', 'underline'], 'USAGE')} ${styleText(
+  'cyan',
+  'rolldown -c <config>',
+)} or ${styleText('cyan', 'rolldown <input> <options>')}`;
 
 const examples = [
   {
@@ -33,8 +30,7 @@ const examples = [
   },
   {
     title: 'Create self-executing IIFE using external jQuery as `$` and `_`',
-    command:
-      'rolldown src/main.ts -d dist -n bundle -f iife -e jQuery,window._ -g jQuery=$',
+    command: 'rolldown src/main.ts -d dist -n bundle -f iife -e jQuery,window._ -g jQuery=$',
   },
 ];
 

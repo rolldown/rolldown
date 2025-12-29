@@ -5,9 +5,7 @@ import { transformAssetSource } from './asset-source';
 import { unimplemented } from './misc';
 import { transformRenderedChunk } from './transform-rendered-chunk';
 
-export function bindingifyOutputOptions(
-  outputOptions: OutputOptions,
-): BindingOutputOptions {
+export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOutputOptions {
   const {
     dir,
     format,
@@ -54,10 +52,7 @@ export function bindingifyOutputOptions(
     }
   }
 
-  const advancedChunks = bindingifyAdvancedChunks(
-    outputOptions.advancedChunks,
-    manualChunks,
-  );
+  const advancedChunks = bindingifyAdvancedChunks(outputOptions.advancedChunks, manualChunks);
 
   return {
     dir,
@@ -108,9 +103,7 @@ export function bindingifyOutputOptions(
 
 type AddonKeys = 'banner' | 'footer' | 'intro' | 'outro';
 
-function bindingifyAddon(
-  configAddon: OutputOptions[AddonKeys],
-): BindingOutputOptions[AddonKeys] {
+function bindingifyAddon(configAddon: OutputOptions[AddonKeys]): BindingOutputOptions[AddonKeys] {
   if (configAddon == null || configAddon === '') {
     return undefined;
   }
@@ -120,9 +113,7 @@ function bindingifyAddon(
   return configAddon;
 }
 
-function bindingifyFormat(
-  format: OutputOptions['format'],
-): BindingOutputOptions['format'] {
+function bindingifyFormat(format: OutputOptions['format']): BindingOutputOptions['format'] {
   switch (format) {
     case undefined:
     case 'es':
@@ -186,9 +177,7 @@ function bindingifyAdvancedChunks(
   manualChunks: OutputOptions['manualChunks'],
 ): BindingOutputOptions['advancedChunks'] {
   if (manualChunks != null && advancedChunks != null) {
-    console.warn(
-      '`manualChunks` option is ignored due to `advancedChunks` option is specified.',
-    );
+    console.warn('`manualChunks` option is ignored due to `advancedChunks` option is specified.');
   } else if (manualChunks != null) {
     advancedChunks = {
       groups: [
@@ -216,9 +205,8 @@ function bindingifyAdvancedChunks(
 
       return {
         ...restGroup,
-        name: typeof name === 'function'
-          ? (id, ctx) => name(id, new ChunkingContextImpl(ctx))
-          : name,
+        name:
+          typeof name === 'function' ? (id, ctx) => name(id, new ChunkingContextImpl(ctx)) : name,
       };
     }),
   };

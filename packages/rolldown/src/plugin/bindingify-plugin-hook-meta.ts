@@ -1,17 +1,13 @@
 import { type BindingPluginHookMeta, BindingPluginOrder } from '../binding.cjs';
 import type { ObjectHookMeta, PluginOrder } from '.';
 
-export function bindingifyPluginHookMeta(
-  options: ObjectHookMeta,
-): BindingPluginHookMeta {
+export function bindingifyPluginHookMeta(options: ObjectHookMeta): BindingPluginHookMeta {
   return {
     order: bindingPluginOrder(options.order),
   };
 }
 
-function bindingPluginOrder(
-  order?: PluginOrder,
-): BindingPluginOrder | undefined {
+function bindingPluginOrder(order?: PluginOrder): BindingPluginOrder | undefined {
   switch (order) {
     case 'post':
       return BindingPluginOrder.Post;

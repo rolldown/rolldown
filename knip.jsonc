@@ -55,11 +55,7 @@
         "src/plugin/generated/hook-usage.ts",
         "src/browser.js",
       ],
-      "ignoreDependencies": [
-        "@rollup/plugin-json",
-        "buble",
-        "pathe",
-      ],
+      "ignoreDependencies": ["@rollup/plugin-json", "buble", "pathe"],
       "ignoreUnresolved": ["#parallel-plugin-worker"], // target file is unavailable before build
     },
     "packages/rolldown/npm/wasm32-wasi": {

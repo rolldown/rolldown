@@ -1,8 +1,4 @@
-import {
-  BindingBundler,
-  shutdownAsyncRuntime,
-  startAsyncRuntime,
-} from '../binding.cjs';
+import { BindingBundler, shutdownAsyncRuntime, startAsyncRuntime } from '../binding.cjs';
 import type { InputOptions } from '../options/input-options';
 import { PluginDriver } from '../plugin/plugin-driver';
 import { createBundlerOptions } from '../utils/create-bundler-option';
@@ -36,11 +32,7 @@ export const scan = async (
 
   const inputOptions = await PluginDriver.callOptionsHook(rawInputOptions);
 
-  const ret = await createBundlerOptions(
-    inputOptions,
-    rawOutputOptions,
-    false,
-  );
+  const ret = await createBundlerOptions(inputOptions, rawOutputOptions, false);
 
   const bundler = new BindingBundler();
 

@@ -21,9 +21,9 @@ type IndexHtmlTransformResult =
   | string
   | HtmlTagDescriptor[]
   | {
-    html: string;
-    tags: HtmlTagDescriptor[];
-  };
+      html: string;
+      tags: HtmlTagDescriptor[];
+    };
 
 type IndexHtmlTransformHook = (
   this: MinimalPluginContext,
@@ -44,12 +44,10 @@ export interface IndexHtmlTransformContext {
   chunk?: OutputChunk;
 }
 
-export interface ViteHtmlPluginOptions extends
-  Omit<
-    BindingViteHtmlPluginConfig,
-    'transformIndexHtml' | 'setModuleSideEffects'
-  >
-{
+export interface ViteHtmlPluginOptions extends Omit<
+  BindingViteHtmlPluginConfig,
+  'transformIndexHtml' | 'setModuleSideEffects'
+> {
   preHooks: IndexHtmlTransformHook[];
   normalHooks: IndexHtmlTransformHook[];
   postHooks: IndexHtmlTransformHook[];
@@ -61,8 +59,6 @@ export interface ViteHtmlPluginOptions extends
   ) => Promise<string>;
 }
 
-export function viteHtmlPlugin(
-  config: ViteHtmlPluginOptions,
-): BuiltinPlugin {
+export function viteHtmlPlugin(config: ViteHtmlPluginOptions): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-html', config);
 }

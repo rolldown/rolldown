@@ -53,7 +53,7 @@ const ENUMERATED_PLUGIN_HOOK_NAMES: [
  * ```
  */
 export type DefinedHookNames = {
-  readonly [K in typeof ENUMERATED_PLUGIN_HOOK_NAMES[number]]: K;
+  readonly [K in (typeof ENUMERATED_PLUGIN_HOOK_NAMES)[number]]: K;
 };
 
 /**

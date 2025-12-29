@@ -1,16 +1,16 @@
 {
   "name": "@rolldown/test-dev-server",
   "version": "0.0.0",
-  "description": "A implementation of a dev server for demonstrating",
-  "type": "module",
   "private": true,
+  "description": "A implementation of a dev server for demonstrating",
   "bin": {
     "serve": "./bin/cli.js"
   },
+  "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
       "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
       "default": "./dist/index.js"
     }
   },

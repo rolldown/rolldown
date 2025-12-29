@@ -33,20 +33,17 @@ function App() {
     <AppContainer>
       <Title>Styled Components with Rolldown</Title>
       <ComponentsGrid>
-        <Card title='Primary Button'>
-          <Button variant='primary' onClick={() => alert('Primary clicked!')}>
+        <Card title="Primary Button">
+          <Button variant="primary" onClick={() => alert('Primary clicked!')}>
             Primary Button
           </Button>
         </Card>
-        <Card title='Secondary Button'>
-          <Button
-            variant='secondary'
-            onClick={() => alert('Secondary clicked!')}
-          >
+        <Card title="Secondary Button">
+          <Button variant="secondary" onClick={() => alert('Secondary clicked!')}>
             Secondary Button
           </Button>
         </Card>
-        <Card title='Disabled Button'>
+        <Card title="Disabled Button">
           <Button disabled onClick={() => alert('This should not fire')}>
             Disabled Button
           </Button>

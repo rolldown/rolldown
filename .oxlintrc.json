@@ -1,12 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "import",
-    "jsdoc",
-    "unicorn",
-    "typescript",
-    "oxc"
-  ],
+  "plugins": ["import", "jsdoc", "unicorn", "typescript", "oxc"],
   "ignorePatterns": [
     "crates/**",
     "packages/rollup-tests/**",
@@ -54,19 +48,12 @@
   },
   "overrides": [
     {
-      "files": [
-        "**/packages/rolldown/src/**"
-      ],
+      "files": ["**/packages/rolldown/src/**"],
       "rules": {
         "no-console": [
           "warn",
           {
-            "allow": [
-              "warn",
-              "error",
-              "debug",
-              "info"
-            ]
+            "allow": ["warn", "error", "debug", "info"]
           }
         ]
       }

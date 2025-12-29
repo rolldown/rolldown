@@ -1,9 +1,5 @@
 import type { Program } from '@oxc-project/types';
-import type {
-  BindingPluginContext,
-  BindingVitePluginCustom,
-  ParserOptions,
-} from '../binding.cjs';
+import type { BindingPluginContext, BindingVitePluginCustom, ParserOptions } from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
 import { logCycleLoading } from '../log/logs';
@@ -22,12 +18,7 @@ import { type AssetSource, bindingAssetSource } from '../utils/asset-source';
 import { bindingifyPreserveEntrySignatures } from '../utils/bindingify-input-options';
 import { unreachable } from '../utils/misc';
 import { fsModule, type RolldownFsModule } from './fs';
-import type {
-  CustomPluginOptions,
-  ModuleOptions,
-  Plugin,
-  ResolvedId,
-} from './index';
+import type { CustomPluginOptions, ModuleOptions, Plugin, ResolvedId } from './index';
 import type { PluginContextData } from './plugin-context-data';
 
 /** @category Plugin APIs */
@@ -78,11 +69,7 @@ export interface PluginContext extends MinimalPluginContext {
   getModuleInfo: GetModuleInfo;
   addWatchFile(id: string): void;
   load(
-    options:
-      & { id: string; resolveDependencies?: boolean }
-      & Partial<
-        PartialNull<ModuleOptions>
-      >,
+    options: { id: string; resolveDependencies?: boolean } & Partial<PartialNull<ModuleOptions>>,
   ): Promise<ModuleInfo>;
   parse(input: string, options?: ParserOptions | null): Program;
   resolve(
@@ -110,18 +97,11 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
   }
 
   public async load(
-    options:
-      & { id: string; resolveDependencies?: boolean }
-      & Partial<
-        PartialNull<ModuleOptions>
-      >,
+    options: { id: string; resolveDependencies?: boolean } & Partial<PartialNull<ModuleOptions>>,
   ): Promise<ModuleInfo> {
     const id = options.id;
     if (id === this.currentLoadingModule) {
-      this.onLog(
-        LOG_LEVEL_WARN,
-        logCycleLoading(this.pluginName, this.currentLoadingModule),
-      );
+      this.onLog(LOG_LEVEL_WARN, logCycleLoading(this.pluginName, this.currentLoadingModule));
     }
     // resolveDependencies always true at rolldown
     const moduleInfo = this.data.getModuleInfo(id, this.context);
@@ -137,15 +117,13 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
 
     let loadPromise = this.data.loadModulePromiseMap.get(id);
     if (!loadPromise) {
-      loadPromise = this.context.load(
-        id,
-        options.moduleSideEffects ?? undefined,
-        options.packageJsonPath ?? undefined,
-      ).catch(() => {
-        // avoid reusing the promise if it's an error
-        // because the error may happen only in non-supported hooks (e.g. `buildStart` hook)
-        this.data.loadModulePromiseMap.delete(id);
-      });
+      loadPromise = this.context
+        .load(id, options.moduleSideEffects ?? undefined, options.packageJsonPath ?? undefined)
+        .catch(() => {
+          // avoid reusing the promise if it's an error
+          // because the error may happen only in non-supported hooks (e.g. `buildStart` hook)
+          this.data.loadModulePromiseMap.delete(id);
+        });
       this.data.loadModulePromiseMap.set(id, loadPromise);
     }
 
@@ -185,14 +163,12 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     const info = this.data.getModuleOption(res.id) || ({} as ModuleOptions);
     return {
       ...res,
-      external: res.external === 'relative'
-        ? unreachable(
-          `The PluginContext resolve result external couldn't be 'relative'`,
-        )
-        : res.external,
+      external:
+        res.external === 'relative'
+          ? unreachable(`The PluginContext resolve result external couldn't be 'relative'`)
+          : res.external,
       ...info,
-      moduleSideEffects: info.moduleSideEffects ?? res.moduleSideEffects ??
-        null,
+      moduleSideEffects: info.moduleSideEffects ?? res.moduleSideEffects ?? null,
       packageJsonPath: res.packageJsonPath,
     };
   }
@@ -209,9 +185,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     }
     if (file.type === 'chunk') {
       return this.context.emitChunk({
-        preserveEntrySignatures: bindingifyPreserveEntrySignatures(
-          file.preserveSignature,
-        ),
+        preserveEntrySignatures: bindingifyPreserveEntrySignatures(file.preserveSignature),
         ...file,
       });
     }
@@ -256,10 +230,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     this.context.addWatchFile(id);
   }
 
-  public parse(
-    input: string,
-    options?: ParserOptions | null,
-  ): Program {
+  public parse(input: string, options?: ParserOptions | null): Program {
     return parseAst(input, options);
   }
 }

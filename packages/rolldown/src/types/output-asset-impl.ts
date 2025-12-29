@@ -42,9 +42,7 @@ export class OutputAssetImpl extends PlainObjectLike implements OutputAsset {
     return transformAssetSource(this.bindingAsset.getSource());
   }
 
-  __rolldown_external_memory_handle__(
-    keepDataAlive?: boolean,
-  ): ExternalMemoryStatus {
+  __rolldown_external_memory_handle__(keepDataAlive?: boolean): ExternalMemoryStatus {
     if (keepDataAlive) {
       this.#evaluateAllLazyFields();
     }

@@ -32,7 +32,7 @@ jobs:
         with:
           cache-key: debug-build
           save-cache: false
-          tools: just,cargo-insta,typos-cli,cargo-shear,dprint
+          tools: just,cargo-insta,typos-cli,cargo-shear
           components: clippy rust-docs rustfmt
 
       - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6

@@ -9,10 +9,7 @@ await runTypedoc();
 console.log('✅ Reference generated successfully!');
 
 await rm('reference/index.md', { force: true });
-await copyFile(
-  '.vitepress/theme/components/api.index.md',
-  'reference/index.md',
-);
+await copyFile('.vitepress/theme/components/api.index.md', 'reference/index.md');
 console.log('📚 New index added successfully');
 
 type TypedocVitepressThemeOptions = {
@@ -24,38 +21,32 @@ type TypedocVitepressThemeOptions = {
  * Run TypeDoc with the specified tsconfig
  */
 async function runTypedoc(): Promise<void> {
-  const root = path.resolve(
-    import.meta.dirname,
-    '../../..',
-  );
+  const root = path.resolve(import.meta.dirname, '../../..');
 
-  const options: TypeDocOptions & PluginOptions & TypedocVitepressThemeOptions =
-    {
-      tsconfig: path.join(root, 'packages/rolldown/tsconfig.json'),
-      plugin: [
-        'typedoc-plugin-markdown',
-        'typedoc-vitepress-theme',
-        path.join(import.meta.dirname, 'extract-options-plugin.ts'),
-        path.join(import.meta.dirname, 'custom-theme-plugin.ts'),
-      ],
-      theme: 'customTheme',
-      out: './reference',
-      entryPoints: [
-        path.join(root, 'packages/rolldown/src/index.ts').replaceAll('\\', '/'),
-      ],
-      readme: 'none',
-      excludeInternal: true,
+  const options: TypeDocOptions & PluginOptions & TypedocVitepressThemeOptions = {
+    tsconfig: path.join(root, 'packages/rolldown/tsconfig.json'),
+    plugin: [
+      'typedoc-plugin-markdown',
+      'typedoc-vitepress-theme',
+      path.join(import.meta.dirname, 'extract-options-plugin.ts'),
+      path.join(import.meta.dirname, 'custom-theme-plugin.ts'),
+    ],
+    theme: 'customTheme',
+    out: './reference',
+    entryPoints: [path.join(root, 'packages/rolldown/src/index.ts').replaceAll('\\', '/')],
+    readme: 'none',
+    excludeInternal: true,
 
-      hideBreadcrumbs: true,
-      flattenOutputFiles: true,
+    hideBreadcrumbs: true,
+    flattenOutputFiles: true,
 
-      categoryOrder: ['Programmatic APIs', 'Plugin APIs', '*'],
+    categoryOrder: ['Programmatic APIs', 'Plugin APIs', '*'],
 
-      docsRoot: './reference',
-      sidebar: {
-        pretty: true,
-      },
-    };
+    docsRoot: './reference',
+    sidebar: {
+      pretty: true,
+    },
+  };
   const app = await Application.bootstrapWithPlugins(options);
 
   // May be undefined if errors are encountered.

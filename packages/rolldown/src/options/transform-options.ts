@@ -1,20 +1,9 @@
-import type {
-  JsxOptions,
-  TransformOptions as OxcTransformOptions,
-} from '../binding.cjs';
+import type { JsxOptions, TransformOptions as OxcTransformOptions } from '../binding.cjs';
 
-export interface TransformOptions extends
-  Omit<
-    OxcTransformOptions,
-    | 'sourceType'
-    | 'lang'
-    | 'cwd'
-    | 'sourcemap'
-    | 'define'
-    | 'inject'
-    | 'jsx'
-  >
-{
+export interface TransformOptions extends Omit<
+  OxcTransformOptions,
+  'sourceType' | 'lang' | 'cwd' | 'sourcemap' | 'define' | 'inject' | 'jsx'
+> {
   /**
    * Replace global variables or [property accessors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Property_accessors) with the provided values.
    *

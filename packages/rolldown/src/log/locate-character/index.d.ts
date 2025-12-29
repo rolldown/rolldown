@@ -1,10 +1,7 @@
 export function getLocator(
   source: string,
   options?: Options,
-): (
-  search: string | number,
-  index?: number,
-) => Location | undefined;
+): (search: string | number, index?: number) => Location | undefined;
 
 export function locate(
   source: string,

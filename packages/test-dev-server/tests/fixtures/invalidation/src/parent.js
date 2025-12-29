@@ -19,9 +19,6 @@ if (value2 === 'child2-updated') {
     "This change should be handled by child itself. It shouldn't propagate to parent.",
   );
 } else if (value === 'child-unhandleable') {
-  assert.deepStrictEqual(globalThis.records, [
-    'child-handleable',
-    'child-unhandleable',
-  ]);
+  assert.deepStrictEqual(globalThis.records, ['child-handleable', 'child-unhandleable']);
   nodeFs.writeFileSync('./ok-1', '');
 }

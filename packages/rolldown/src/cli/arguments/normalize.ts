@@ -4,11 +4,7 @@
  */
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
-import {
-  getInputCliKeys,
-  getOutputCliKeys,
-  validateCliOptions,
-} from '../../utils/validator';
+import { getInputCliKeys, getOutputCliKeys, validateCliOptions } from '../../utils/validator';
 import { logger } from '../logger';
 import type { CliOptions } from './alias';
 import { setNestedProperty } from './utils';

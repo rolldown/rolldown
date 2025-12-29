@@ -18,12 +18,7 @@ export class PluginDriver {
       'options',
       getObjectPlugins(await normalizePluginOption(inputOptions.plugins)),
     );
-    const logger = getLogger(
-      plugins,
-      getOnLog(inputOptions, logLevel),
-      logLevel,
-      watchMode,
-    );
+    const logger = getLogger(plugins, getOnLog(inputOptions, logLevel), logLevel, watchMode);
 
     for (const plugin of plugins) {
       const name = plugin.name || 'unknown';
@@ -31,13 +26,7 @@ export class PluginDriver {
       if (options) {
         const { handler } = normalizeHook(options);
         const result = await handler.call(
-          new MinimalPluginContextImpl(
-            logger,
-            logLevel,
-            name,
-            watchMode,
-            'onLog',
-          ),
+          new MinimalPluginContextImpl(logger, logLevel, name, watchMode, 'onLog'),
           inputOptions,
         );
 
@@ -57,10 +46,7 @@ export class PluginDriver {
     logLevel: LogLevelOption,
     watchMode: boolean,
   ): OutputOptions {
-    const sortedPlugins = getSortedPlugins(
-      'outputOptions',
-      getObjectPlugins(rawPlugins),
-    );
+    const sortedPlugins = getSortedPlugins('outputOptions', getObjectPlugins(rawPlugins));
 
     for (const plugin of sortedPlugins) {
       const name = plugin.name || 'unknown';

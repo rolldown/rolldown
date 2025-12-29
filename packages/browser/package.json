@@ -2,30 +2,30 @@
   "name": "@rolldown/browser",
   "version": "1.0.0-beta.57",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
+  "keywords": [
+    "bundler",
+    "esbuild",
+    "parcel",
+    "rolldown",
+    "rollup",
+    "webpack"
+  ],
   "homepage": "https://rolldown.rs/",
-  "type": "module",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rolldown/rolldown.git",
     "directory": "packages/browser"
   },
-  "license": "MIT",
-  "keywords": [
-    "webpack",
-    "parcel",
-    "esbuild",
-    "rollup",
-    "bundler",
-    "rolldown"
-  ],
+  "bin": {
+    "rolldown": "./bin/cli.mjs"
+  },
   "files": [
     "bin",
     "dist",
     "!*/.tsbuildinfo"
   ],
-  "bin": {
-    "rolldown": "./bin/cli.mjs"
-  },
+  "type": "module",
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
@@ -49,8 +49,8 @@
     "./package.json": "./package.json"
   },
   "publishConfig": {
-    "registry": "https://registry.npmjs.org/",
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
     "build": "pnpm run build:debug",

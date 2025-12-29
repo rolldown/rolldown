@@ -1,32 +1,32 @@
 {
   "name": "@rolldown/debug",
   "version": "1.0.0-beta.57",
-  "license": "MIT",
-  "type": "module",
   "homepage": "https://rolldown.rs/",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rolldown/rolldown.git",
     "directory": "packages/debug"
   },
-  "publishConfig": {
-    "access": "public"
-  },
-  "devDependencies": {
-    "@oxc-node/cli": "catalog:"
-  },
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
-  },
   "files": [
     "dist"
   ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "gen-action-types": "oxnode ../../scripts/src/gen-debug-action-types.ts",
     "build": "pnpm run gen-action-types && tsc -b",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@oxc-node/cli": "catalog:"
   }
 }

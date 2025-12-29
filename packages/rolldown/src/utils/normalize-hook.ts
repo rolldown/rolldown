@@ -5,22 +5,24 @@ import { unreachable } from './misc';
 export function normalizeHook<Hook extends ObjectHook<AnyFn | string>>(
   hook: Hook,
 ): Hook extends ObjectHook<infer RawHook, infer CustomOptions>
-  ? Hook extends RawHook ? never
-  : {
-    handler: RawHook;
-    options: CustomOptions;
-    meta: ObjectHookMeta;
-  }
-  : never
-{
-  type Return = Hook extends ObjectHook<infer RawHook, infer CustomOptions>
-    ? Hook extends RawHook ? never
+  ? Hook extends RawHook
+    ? never
     : {
-      handler: RawHook;
-      options: CustomOptions;
-      meta: ObjectHookMeta;
-    }
-    : never;
+        handler: RawHook;
+        options: CustomOptions;
+        meta: ObjectHookMeta;
+      }
+  : never {
+  type Return =
+    Hook extends ObjectHook<infer RawHook, infer CustomOptions>
+      ? Hook extends RawHook
+        ? never
+        : {
+            handler: RawHook;
+            options: CustomOptions;
+            meta: ObjectHookMeta;
+          }
+      : never;
 
   if (typeof hook === 'function' || typeof hook === 'string') {
     return {

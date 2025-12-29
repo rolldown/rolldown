@@ -45,30 +45,39 @@ const filtered = computed(() => {
 </script>
 
 <template>
-    <div id="api-index">
-        <div class="header">
-            <h1>Options & APIs Reference</h1>
-            <div class="api-filter">
-                <label for="api-filter">Filter</label>
-                <input ref="search" type="search" placeholder="Enter keyword" id="api-filter" v-model="query" />
-            </div>
-        </div>
-
-        <p>These are the automatically generated references for Rolldown's options and APIs. Use the sidebar navigation to browse specific options and APIs.</p>
-
-        <div v-for="section of filtered" :key="section.text" class="api-section">
-            <h2>{{ section.text }}</h2>
-            <div class="api-references">
-                <a v-for="item of section.items" :key="item.text" :href="item.link" class="api-reference">
-                    <div>{{ item.text }}</div>
-                </a>
-            </div>
-        </div>
-
-        <div v-if="!filtered.length" class="no-match">
-            No API reference matching "{{ query }}" found.
-        </div>
+  <div id="api-index">
+    <div class="header">
+      <h1>Options & APIs Reference</h1>
+      <div class="api-filter">
+        <label for="api-filter">Filter</label>
+        <input
+          ref="search"
+          type="search"
+          placeholder="Enter keyword"
+          id="api-filter"
+          v-model="query"
+        />
+      </div>
     </div>
+
+    <p>
+      These are the automatically generated references for Rolldown's options and APIs. Use the
+      sidebar navigation to browse specific options and APIs.
+    </p>
+
+    <div v-for="section of filtered" :key="section.text" class="api-section">
+      <h2>{{ section.text }}</h2>
+      <div class="api-references">
+        <a v-for="item of section.items" :key="item.text" :href="item.link" class="api-reference">
+          <div>{{ item.text }}</div>
+        </a>
+      </div>
+    </div>
+
+    <div v-if="!filtered.length" class="no-match">
+      No API reference matching "{{ query }}" found.
+    </div>
+  </div>
 </template>
 
 <style scoped>

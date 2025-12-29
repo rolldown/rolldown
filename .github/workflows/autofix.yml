@@ -16,17 +16,12 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
-      - name: Restore dprint plugin cache
-        id: cache-restore
-        uses: actions/cache/restore@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
-        with:
-          key: dprint-${{ hashFiles('dprint.json') }}
-          path: ~/.cache/dprint
+      - uses: oxc-project/setup-node@8958a8e040102244b619c4a94fccb657a44b1c21 # v1.0.6
 
       - uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
         with:
           restore-cache: false
-          tools: dprint,cargo-shear@1.9.0
+          tools: cargo-shear@1.9.0
           components: rustfmt
 
       - name: cargo-shear
@@ -41,7 +36,7 @@ jobs:
         run: cargo check --workspace --all-features --all-targets
         if: ${{ steps.shear.outputs.shear == 'true' }}
 
-      - run: dprint fmt
+      - run: pnpm run fmt
 
       - run: cargo fmt --all
 

@@ -19,26 +19,17 @@ describe('hmr-full-bundle-mode', () => {
   test.sequential('basic HMR', async () => {
     const page = getPage();
 
-    await editFile('hmr.js', (code) =>
-      code.replace(
-        "const foo = 'hello'",
-        "const foo = 'hello1'",
-      ));
+    await editFile('hmr.js', (code) => code.replace("const foo = 'hello'", "const foo = 'hello1'"));
 
     await expect.poll(() => page.textContent('.hmr')).toBe('hello1');
 
-    await editFile(
-      'hmr.js',
-      (code) => code.replace("const foo = 'hello1'", "const foo = 'hello2'"),
+    await editFile('hmr.js', (code) =>
+      code.replace("const foo = 'hello1'", "const foo = 'hello2'"),
     );
 
     await expect.poll(() => page.textContent('.hmr')).toBe('hello2');
 
-    await editFile('hmr.js', (code) =>
-      code.replace(
-        "const foo = 'hello2'",
-        "const foo = 'hello'",
-      ));
+    await editFile('hmr.js', (code) => code.replace("const foo = 'hello2'", "const foo = 'hello'"));
     await expect.poll(() => page.textContent('.hmr')).toBe('hello');
   });
 
@@ -46,23 +37,17 @@ describe('hmr-full-bundle-mode', () => {
   test.sequential('debounce bundle', async () => {
     const page = getPage();
     editFile('main.js', (code) =>
-      code.replace(
-        "text('.app', 'hello')",
-        "text('.app', 'hello1')\n" + '// @delay-transform',
-      ));
+      code.replace("text('.app', 'hello')", "text('.app', 'hello1')\n" + '// @delay-transform'),
+    );
     await setTimeout(100);
-    await editFile(
-      'main.js',
-      (code) =>
-        code.replace("text('.app', 'hello1')", "text('.app', 'hello2')"),
+    await editFile('main.js', (code) =>
+      code.replace("text('.app', 'hello1')", "text('.app', 'hello2')"),
     );
     await expect.poll(() => page.textContent('.app')).toBe('hello2');
 
     await editFile('main.js', (code) =>
-      code.replace(
-        "text('.app', 'hello2')\n" + '// @delay-transform',
-        "text('.app', 'hello')",
-      ));
+      code.replace("text('.app', 'hello2')\n" + '// @delay-transform', "text('.app', 'hello')"),
+    );
     await expect.poll(() => page.textContent('.app')).toBe('hello');
   });
 
@@ -71,22 +56,15 @@ describe('hmr-full-bundle-mode', () => {
     const page = getPage();
 
     await editFile('hmr.js', (code) =>
-      code.replace(
-        "const foo = 'hello'",
-        "const foo = 'hello1'\n" + '// @delay-transform',
-      ));
-    await setTimeout(100);
-    editFile(
-      'hmr.js',
-      (code) => code.replace("const foo = 'hello1'", "const foo = 'hello2'"),
+      code.replace("const foo = 'hello'", "const foo = 'hello1'\n" + '// @delay-transform'),
     );
+    await setTimeout(100);
+    editFile('hmr.js', (code) => code.replace("const foo = 'hello1'", "const foo = 'hello2'"));
     await expect.poll(() => page.textContent('.hmr')).toBe('hello2');
 
     await editFile('hmr.js', (code) =>
-      code.replace(
-        "const foo = 'hello2'\n" + '// @delay-transform',
-        "const foo = 'hello'",
-      ));
+      code.replace("const foo = 'hello2'\n" + '// @delay-transform', "const foo = 'hello'"),
+    );
     await expect.poll(() => page.textContent('.hmr')).toBe('hello');
   });
 });

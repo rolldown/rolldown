@@ -1,14 +1,6 @@
-export default (
-  glob,
-  path,
-  segments,
-) => {
+export default (glob, path, segments) => {
   const query = path.lastIndexOf('?');
-  const v = glob[
-    query === -1 || query < path.lastIndexOf('/')
-      ? path
-      : path.slice(0, query)
-  ];
+  const v = glob[query === -1 || query < path.lastIndexOf('/') ? path : path.slice(0, query)];
   if (v) {
     return typeof v === 'function' ? v() : Promise.resolve(v);
   }

@@ -1,12 +1,16 @@
 {
   "name": "rolldown-docs",
-  "type": "module",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vitepress dev",
     "build": "vitepress build",
     "preview": "vitepress preview",
     "generate": "node .vitepress/scripts/generate-reference.ts"
+  },
+  "dependencies": {
+    "@vueuse/core": "catalog:",
+    "vue": "catalog:"
   },
   "devDependencies": {
     "oxc-minify": "catalog:",
@@ -16,9 +20,5 @@
     "vitepress": "catalog:",
     "vitepress-plugin-group-icons": "catalog:",
     "vitepress-plugin-llms": "catalog:"
-  },
-  "dependencies": {
-    "@vueuse/core": "catalog:",
-    "vue": "catalog:"
   }
 }

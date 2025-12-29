@@ -23,19 +23,15 @@ export function viteModulePreloadPolyfillPlugin(
   return new BuiltinPlugin('builtin:vite-module-preload-polyfill', config);
 }
 
-type DynamicImportVarsPluginConfig =
-  & Omit<
-    BindingViteDynamicImportVarsPluginConfig,
-    'include' | 'exclude'
-  >
-  & {
-    include?: StringOrRegExp | StringOrRegExp[];
-    exclude?: StringOrRegExp | StringOrRegExp[];
-  };
+type DynamicImportVarsPluginConfig = Omit<
+  BindingViteDynamicImportVarsPluginConfig,
+  'include' | 'exclude'
+> & {
+  include?: StringOrRegExp | StringOrRegExp[];
+  exclude?: StringOrRegExp | StringOrRegExp[];
+};
 
-export function viteDynamicImportVarsPlugin(
-  config?: DynamicImportVarsPluginConfig,
-): BuiltinPlugin {
+export function viteDynamicImportVarsPlugin(config?: DynamicImportVarsPluginConfig): BuiltinPlugin {
   if (config) {
     config.include = normalizedStringOrRegex(config.include);
     config.exclude = normalizedStringOrRegex(config.exclude);
@@ -43,21 +39,15 @@ export function viteDynamicImportVarsPlugin(
   return new BuiltinPlugin('builtin:vite-dynamic-import-vars', config);
 }
 
-export function viteImportGlobPlugin(
-  config?: BindingViteImportGlobPluginConfig,
-): BuiltinPlugin {
+export function viteImportGlobPlugin(config?: BindingViteImportGlobPluginConfig): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-import-glob', config);
 }
 
-export function viteReporterPlugin(
-  config: BindingViteReporterPluginConfig,
-): BuiltinPlugin {
+export function viteReporterPlugin(config: BindingViteReporterPluginConfig): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-reporter', config);
 }
 
-export function viteWasmHelperPlugin(
-  config: BindingViteWasmHelperPluginConfig,
-): BuiltinPlugin {
+export function viteWasmHelperPlugin(config: BindingViteWasmHelperPluginConfig): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-wasm-helper', config);
 }
 
@@ -70,9 +60,7 @@ export function viteLoadFallbackPlugin(): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-load-fallback');
 }
 
-export function viteJsonPlugin(
-  config: BindingViteJsonPluginConfig,
-): BuiltinPlugin {
+export function viteJsonPlugin(config: BindingViteJsonPluginConfig): BuiltinPlugin {
   const builtinPlugin = new BuiltinPlugin('builtin:vite-json', config);
   return makeBuiltinPluginCallable(builtinPlugin);
 }
@@ -113,15 +101,13 @@ export function esmExternalRequirePlugin(
   return plugin;
 }
 
-type ViteReactRefreshWrapperPluginConfig =
-  & Omit<
-    BindingViteReactRefreshWrapperPluginConfig,
-    'include' | 'exclude'
-  >
-  & {
-    include?: StringOrRegExp | StringOrRegExp[];
-    exclude?: StringOrRegExp | StringOrRegExp[];
-  };
+type ViteReactRefreshWrapperPluginConfig = Omit<
+  BindingViteReactRefreshWrapperPluginConfig,
+  'include' | 'exclude'
+> & {
+  include?: StringOrRegExp | StringOrRegExp[];
+  exclude?: StringOrRegExp | StringOrRegExp[];
+};
 
 export function viteReactRefreshWrapperPlugin(
   config: ViteReactRefreshWrapperPluginConfig,
@@ -130,10 +116,7 @@ export function viteReactRefreshWrapperPlugin(
     config.include = normalizedStringOrRegex(config.include);
     config.exclude = normalizedStringOrRegex(config.exclude);
   }
-  const builtinPlugin = new BuiltinPlugin(
-    'builtin:vite-react-refresh-wrapper',
-    config,
-  );
+  const builtinPlugin = new BuiltinPlugin('builtin:vite-react-refresh-wrapper', config);
   return makeBuiltinPluginCallable(builtinPlugin);
 }
 

@@ -5079,6 +5079,11 @@ expression: output
 
 - main-!~{000}~.js => main-Ce2nz_GJ.js
 
+# tests/rolldown/issues/7655
+
+- main-!~{000}~.js => main-QsKk41YI.js
+- a-!~{001}~.js => a-BKgXR6kK.js
+
 # tests/rolldown/issues/duplicate_default_export
 
 - main-!~{000}~.js => main-D5owKpO2.js

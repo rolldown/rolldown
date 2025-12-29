@@ -4,8 +4,8 @@ use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleType,
-  NormalizedBundlerOptions, NormalizedId, RUNTIME_MODULE_KEY, RawImportRecord, ResolvedId,
+  ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleId, ModuleType,
+  NormalizedBundlerOptions, RUNTIME_MODULE_KEY, RawImportRecord, ResolvedId,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosableArcstr, EventKind};
 use rolldown_plugin::{__inner::resolve_id_check_external, PluginDriver, SharedPluginDriver};
@@ -26,7 +26,7 @@ pub async fn resolve_id(
   // Check runtime module
   if specifier == RUNTIME_MODULE_KEY {
     return Ok(Ok(ResolvedId {
-      id: NormalizedId::new(specifier),
+      id: ModuleId::new(specifier),
       module_def_format: ModuleDefFormat::EsmMjs,
       ..Default::default()
     }));
@@ -123,7 +123,7 @@ pub async fn resolve_dependencies(
               }
             }
             ret.push(ResolvedId {
-              id: NormalizedId::new(specifier.as_str()),
+              id: ModuleId::new(specifier.as_str()),
               external: true.into(),
               ..Default::default()
             });

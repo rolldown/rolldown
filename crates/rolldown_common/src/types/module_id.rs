@@ -7,6 +7,8 @@ use sugar_path::SugarPath;
 /// `ModuleId` is the unique string identifier for each module.
 /// - It will be used to identify the module in the whole bundle.
 /// - Users could stored the `ModuleId` to track the module in different stages/hooks.
+/// - If the id is an absolute path on Windows, backslashes are converted to forward slashes
+///   (e.g., `C:\path\to\file` → `C:/path/to/file`)
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default)]
 pub struct ModuleId {
   // Id that rolldown uses to call `read_to_string` or `read` to get the content of the module.
@@ -16,7 +18,12 @@ pub struct ModuleId {
 impl ModuleId {
   #[inline]
   pub fn new(value: impl Into<ArcStr>) -> Self {
-    Self::new_arc_str(value.into())
+    let value = value.into();
+    if cfg!(windows) && value.as_path().is_absolute() {
+      Self { resource_id: value.as_path().to_slash_lossy().into() }
+    } else {
+      Self { resource_id: value }
+    }
   }
 
   #[inline]
@@ -25,6 +32,14 @@ impl ModuleId {
   }
 
   pub fn resource_id(&self) -> &ArcStr {
+    &self.resource_id
+  }
+
+  pub fn as_str(&self) -> &str {
+    &self.resource_id
+  }
+
+  pub fn as_arc_str(&self) -> &ArcStr {
     &self.resource_id
   }
 
@@ -62,6 +77,12 @@ impl From<String> for ModuleId {
 impl From<ArcStr> for ModuleId {
   fn from(value: ArcStr) -> Self {
     Self::new(value)
+  }
+}
+
+impl std::fmt::Display for ModuleId {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    std::fmt::Display::fmt(&self.resource_id, f)
   }
 }
 

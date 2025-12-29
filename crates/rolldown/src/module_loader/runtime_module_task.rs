@@ -9,8 +9,8 @@ use rolldown_common::{
   side_effects::DeterminedSideEffects,
 };
 use rolldown_common::{
-  ModuleLoaderMsg, NormalizedId, RUNTIME_MODULE_ID, RUNTIME_MODULE_KEY, ResolvedId,
-  RuntimeModuleBrief, RuntimeModuleTaskResult,
+  ModuleId, ModuleLoaderMsg, RUNTIME_MODULE_ID, RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief,
+  RuntimeModuleTaskResult,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::BuildResult;
@@ -91,7 +91,7 @@ impl RuntimeModuleTask {
     } = scan_result;
 
     let mut resolved_id = ResolvedId::make_dummy();
-    resolved_id.id = NormalizedId::new(RUNTIME_MODULE_ID.resource_id().clone());
+    resolved_id.id = ModuleId::new(RUNTIME_MODULE_ID.resource_id().clone());
     let module_type = ModuleType::Js;
 
     let resolved_deps = resolve_dependencies(

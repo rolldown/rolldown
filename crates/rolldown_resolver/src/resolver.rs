@@ -11,7 +11,7 @@ use oxc_resolver::{
   TsConfig as OxcTsConfig,
 };
 use rolldown_common::{
-  ImportKind, ModuleDefFormat, NormalizedId, PackageJson, Platform, ResolveOptions, ResolvedId,
+  ImportKind, ModuleDefFormat, ModuleId, PackageJson, Platform, ResolveOptions, ResolvedId,
   TsConfig,
 };
 use rolldown_fs::{FileSystem, OsFileSystem};
@@ -78,7 +78,7 @@ pub struct ResolveReturn {
 impl From<ResolveReturn> for ResolvedId {
   fn from(resolved_return: ResolveReturn) -> Self {
     ResolvedId {
-      id: NormalizedId::new(resolved_return.path),
+      id: ModuleId::new(resolved_return.path),
       module_def_format: resolved_return.module_def_format,
       package_json: resolved_return.package_json,
       ..Default::default()

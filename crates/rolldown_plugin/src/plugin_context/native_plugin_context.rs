@@ -8,7 +8,7 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  FilenameTemplate, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleLoaderMsg, NormalizedId,
+  FilenameTemplate, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleId, ModuleLoaderMsg,
   PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
   SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
 };
@@ -64,7 +64,7 @@ impl NativePluginContextImpl {
     };
     sender
       .send(ModuleLoaderMsg::FetchModule(Box::new(ResolvedId {
-        id: NormalizedId::new(specifier),
+        id: ModuleId::new(specifier),
         side_effects,
         module_def_format,
         ..Default::default()
@@ -186,7 +186,7 @@ impl NativePluginContextImpl {
   }
 
   pub fn add_watch_file(&self, file: &str) {
-    self.watch_files.insert(NormalizedId::new(file).as_arc_str().clone());
+    self.watch_files.insert(ModuleId::new(file).as_arc_str().clone());
   }
 
   fn log(&self, level: LogLevel, log: LogWithoutPlugin) {

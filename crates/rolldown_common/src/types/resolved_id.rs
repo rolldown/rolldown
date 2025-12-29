@@ -3,7 +3,7 @@ use std::{path::Path, sync::Arc};
 use arcstr::ArcStr;
 use rolldown_utils::stabilize_id::stabilize_id;
 
-use super::normalized_id::NormalizedId;
+use super::module_id::ModuleId;
 use crate::{ModuleDefFormat, PackageJson, side_effects::HookSideEffects};
 
 #[derive(Debug, Clone, Copy)]
@@ -36,7 +36,7 @@ impl From<bool> for ResolvedExternal {
 
 #[derive(Debug, Default, Clone)]
 pub struct ResolvedId {
-  pub id: NormalizedId,
+  pub id: ModuleId,
   // https://github.com/defunctzombie/package-browser-field-spec/blob/8c4869f6a5cb0de26d208de804ad0a62473f5a03/README.md?plain=1#L62-L77
   pub ignored: bool,
   pub module_def_format: ModuleDefFormat,
@@ -53,7 +53,7 @@ impl ResolvedId {
   /// note: A dummy `ResolvedId` usually used with `DUMMY_MODULE_IDX`
   pub fn make_dummy() -> Self {
     Self {
-      id: NormalizedId::default(),
+      id: ModuleId::default(),
       ignored: false,
       module_def_format: ModuleDefFormat::Unknown,
       external: false.into(),
@@ -78,7 +78,7 @@ impl ResolvedId {
 
   pub fn new_external_without_side_effects(id: ArcStr) -> Self {
     Self {
-      id: NormalizedId::new(id),
+      id: ModuleId::new(id),
       ignored: false,
       module_def_format: ModuleDefFormat::Unknown,
       external: true.into(),

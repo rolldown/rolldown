@@ -77,7 +77,7 @@ pub struct BindingModules {
 impl From<&rolldown_common::Modules> for BindingModules {
   fn from(modules: &rolldown_common::Modules) -> Self {
     let values = modules.values.iter().map(|x| BindingRenderedModule::new(Arc::clone(x))).collect();
-    let keys = modules.keys.iter().map(|x| x.to_string()).collect();
+    let keys = modules.keys.iter().map(ToString::to_string).collect();
     Self { values, keys }
   }
 }

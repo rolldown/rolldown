@@ -3,7 +3,7 @@ use crate::{
   types::{custom_field::CustomField, hook_resolve_id_skipped::HookResolveIdSkipped},
 };
 use nodejs_built_in_modules::is_nodejs_builtin_module;
-use rolldown_common::{ImportKind, ModuleDefFormat, NormalizedId, PackageJson, ResolvedId};
+use rolldown_common::{ImportKind, ModuleDefFormat, ModuleId, PackageJson, ResolvedId};
 use rolldown_resolver::{ResolveError, Resolver};
 use std::{path::Path, sync::Arc};
 use sugar_path::SugarPath;
@@ -82,7 +82,7 @@ pub async fn resolve_id_with_plugins(
         .transpose()?;
       return Ok(Ok(ResolvedId {
         module_def_format: infer_module_def_format(r.id.as_str(), package_json.as_ref()),
-        id: NormalizedId::new(r.id),
+        id: ModuleId::new(r.id),
         external: r.external.unwrap_or_default(),
         normalize_external_id: r.normalize_external_id,
         side_effects: r.side_effects,
@@ -112,7 +112,7 @@ pub async fn resolve_id_with_plugins(
       .transpose()?;
     return Ok(Ok(ResolvedId {
       module_def_format: infer_module_def_format(r.id.as_str(), package_json.as_ref()),
-      id: NormalizedId::new(r.id),
+      id: ModuleId::new(r.id),
       external: r.external.unwrap_or_default(),
       normalize_external_id: r.normalize_external_id,
       side_effects: r.side_effects,
@@ -124,7 +124,7 @@ pub async fn resolve_id_with_plugins(
   // Auto external http url or data url
   if is_http_url(specifier) || is_data_url(specifier) {
     return Ok(Ok(ResolvedId {
-      id: NormalizedId::new(specifier),
+      id: ModuleId::new(specifier),
       external: true.into(),
       ..Default::default()
     }));
@@ -150,7 +150,7 @@ fn resolve_id(
         // `resolved` is always prefixed with "node:" in compliance with the ESM specification.
         // we needs to use `is_runtime_module` to get the original specifier
         is_external_without_side_effects: is_nodejs_builtin_module(&resolved),
-        id: NormalizedId::new(if resolved.starts_with("node:") && !is_runtime_module {
+        id: ModuleId::new(if resolved.starts_with("node:") && !is_runtime_module {
           &resolved[5..]
         } else {
           &resolved
@@ -160,7 +160,7 @@ fn resolve_id(
       }),
       ResolveError::Ignored(p) => Ok(ResolvedId {
         //(hyf0) TODO: This `p` doesn't seem to contains `query` or `fragment` of the input. We need to make sure this is ok
-        id: NormalizedId::new(p.to_str().expect("Should be valid utf8")),
+        id: ModuleId::new(p.to_str().expect("Should be valid utf8")),
         ignored: true,
         ..Default::default()
       }),

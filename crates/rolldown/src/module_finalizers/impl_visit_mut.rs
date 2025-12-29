@@ -7,7 +7,7 @@ use oxc::{
   allocator::{self, IntoIn, TakeIn},
   ast::{
     NONE,
-    ast::{self, BindingPatternKind, Expression, SimpleAssignmentTarget, Statement},
+    ast::{self, BindingPattern, Expression, SimpleAssignmentTarget, Statement},
     match_member_expression,
   },
   ast_visit::{VisitMut, walk_mut},
@@ -234,13 +234,8 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             builder.variable_declarator(
               SPAN,
               ast::VariableDeclarationKind::Var,
-              builder.binding_pattern(
-                BindingPatternKind::BindingIdentifier(
-                  builder.alloc_binding_identifier(SPAN, *var_name),
-                ),
-                NONE,
-                false,
-              ),
+              builder.binding_pattern_binding_identifier(SPAN, *var_name),
+              NONE,
               None,
               false,
             )
@@ -642,8 +637,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     match it {
       ast::Declaration::VariableDeclaration(decl) => {
         for decl in &mut decl.declarations {
-          let (BindingPatternKind::BindingIdentifier(id), Some(init)) =
-            (&decl.id.kind, decl.init.as_mut())
+          let (BindingPattern::BindingIdentifier(id), Some(init)) = (&decl.id, decl.init.as_mut())
           else {
             continue;
           };

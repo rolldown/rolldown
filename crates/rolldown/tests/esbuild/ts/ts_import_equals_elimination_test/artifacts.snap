@@ -8,7 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region entry.ts
 var c = foo.a.b.c;
-foo.x.y;
 let bar = c;
 
 //#endregion

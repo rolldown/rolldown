@@ -71,30 +71,29 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       NONE,
     );
     if self.module.exports_kind.is_commonjs() {
+      params.items.push(
+        self.snippet.builder.formal_parameter(
+          SPAN,
+          self.builder.vec(),
+          self
+            .snippet
+            .builder
+            .binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_EXPORTS_REF_ATOM),
+          NONE,
+          NONE,
+          false,
+          None,
+          false,
+          false,
+        ),
+      );
       params.items.push(self.snippet.builder.formal_parameter(
         SPAN,
         self.builder.vec(),
-        self.snippet.builder.binding_pattern(
-          ast::BindingPatternKind::BindingIdentifier(
-            self.snippet.builder.alloc_binding_identifier(SPAN, CJS_ROLLDOWN_EXPORTS_REF_ATOM),
-          ),
-          NONE,
-          false,
-        ),
-        None,
+        self.snippet.builder.binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_MODULE_REF_ATOM),
+        NONE,
+        NONE,
         false,
-        false,
-      ));
-      params.items.push(self.snippet.builder.formal_parameter(
-        SPAN,
-        self.builder.vec(),
-        self.snippet.builder.binding_pattern(
-          ast::BindingPatternKind::BindingIdentifier(
-            self.snippet.builder.alloc_binding_identifier(SPAN, CJS_ROLLDOWN_MODULE_REF_ATOM),
-          ),
-          NONE,
-          false,
-        ),
         None,
         false,
         false,
@@ -155,16 +154,11 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
         self.snippet.builder.variable_declarator(
           SPAN,
           ast::VariableDeclarationKind::Var,
-          self.snippet.builder.binding_pattern(
-            ast::BindingPatternKind::BindingIdentifier(
-              self
-                .snippet
-                .builder
-                .alloc_binding_identifier(SPAN, self.snippet.builder.atom(init_fn_name)),
-            ),
-            NONE,
-            false,
-          ),
+          self
+            .snippet
+            .builder
+            .binding_pattern_binding_identifier(SPAN, self.snippet.builder.atom(init_fn_name)),
+          NONE,
           Some(ast::Expression::CallExpression(initializer_call)),
           false,
         ),

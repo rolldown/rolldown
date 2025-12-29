@@ -14,7 +14,6 @@ var n6 = /* @__PURE__ */ Symbol((() => Math.random() < 0.5)() ? "x" : "y");
 ```js
 //#region entry.js
 Symbol(x);
-Symbol((() => Math.random() < .5)() ? "x" : "y");
 
 //#endregion
 ```
@@ -23,7 +22,7 @@ Symbol((() => Math.random() < .5)() ? "x" : "y");
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,7 +1,2 @@
+@@ -1,7 +1,1 @@
 -var n0 = Symbol({});
 -var n1 = Symbol(/./);
 -var n2 = Symbol(() => 0);
@@ -32,6 +31,5 @@ Symbol((() => Math.random() < .5)() ? "x" : "y");
 -var n5 = Symbol(1, 2, 3);
 -var n6 = Symbol((() => Math.random() < 0.5)() ? "x" : "y");
 +Symbol(x);
-+Symbol((() => Math.random() < .5)() ? "x" : "y");
 
 ```

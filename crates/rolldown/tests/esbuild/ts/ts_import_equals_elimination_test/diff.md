@@ -14,7 +14,6 @@ export {
 ```js
 //#region entry.ts
 var c = foo.a.b.c;
-foo.x.y;
 let bar = c;
 
 //#endregion
@@ -25,12 +24,11 @@ export { bar };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,5 +1,4 @@
+@@ -1,5 +1,3 @@
 -var a = foo.a;
 -var b = a.b;
 -var c = b.c;
 +var c = foo.a.b.c;
-+foo.x.y;
  var bar = c;
  export {bar};
 

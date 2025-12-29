@@ -237,11 +237,8 @@ impl<'ast> AstSnippet<'ast> {
     let declarations = self.builder.vec1(self.builder.variable_declarator(
       SPAN,
       ast::VariableDeclarationKind::Var,
-      self.builder.binding_pattern(
-        self.builder.binding_pattern_kind_binding_identifier(SPAN, self.builder.atom(name)),
-        NONE,
-        false,
-      ),
+      self.builder.binding_pattern_binding_identifier(SPAN, self.builder.atom(name)),
+      NONE,
       Some(init),
       false,
     ));
@@ -287,11 +284,10 @@ impl<'ast> AstSnippet<'ast> {
       params.items.push(self.builder.formal_parameter(
         SPAN,
         self.builder.vec(),
-        self.builder.binding_pattern(
-          self.builder.binding_pattern_kind_binding_identifier(SPAN, "exports"),
-          NONE,
-          false,
-        ),
+        self.builder.binding_pattern_binding_identifier(SPAN, "exports"),
+        NONE,
+        NONE,
+        false,
         None,
         false,
         false,
@@ -302,11 +298,10 @@ impl<'ast> AstSnippet<'ast> {
       params.items.push(self.builder.formal_parameter(
         SPAN,
         self.builder.vec(),
-        self.builder.binding_pattern(
-          self.builder.binding_pattern_kind_binding_identifier(SPAN, "module"),
-          NONE,
-          false,
-        ),
+        self.builder.binding_pattern_binding_identifier(SPAN, "module"),
+        NONE,
+        NONE,
+        false,
         None,
         false,
         false,
@@ -527,11 +522,8 @@ impl<'ast> AstSnippet<'ast> {
       self.builder.vec1(self.builder.variable_declarator(
         SPAN,
         VariableDeclarationKind::Var,
-        self.builder.binding_pattern(
-          self.builder.binding_pattern_kind_binding_identifier(SPAN, self.builder.atom(assignee)),
-          NONE,
-          false,
-        ),
+        self.builder.binding_pattern_binding_identifier(SPAN, self.builder.atom(assignee)),
+        NONE,
         Some(init),
         false,
       )),
@@ -844,11 +836,10 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.vec1(self.builder.formal_parameter(
           SPAN,
           self.builder.vec(),
-          self.builder.binding_pattern(
-            self.builder.binding_pattern_kind_binding_identifier(SPAN, self.builder.atom("n")),
-            NONE,
-            false,
-          ),
+          self.builder.binding_pattern_binding_identifier(SPAN, self.builder.atom("n")),
+          NONE,
+          NONE,
+          false,
           None,
           false,
           false,

@@ -10,7 +10,7 @@ pub mod side_effect_detector;
 
 use arcstr::ArcStr;
 use const_eval::{ConstEvalCtx, try_extract_const_literal};
-use oxc::ast::ast::{BindingPatternKind, Expression, ImportExpression};
+use oxc::ast::ast::{BindingPattern, Expression, ImportExpression};
 use oxc::ast::{AstKind, ast};
 use oxc::ast_visit::walk;
 use oxc::semantic::{Reference, ScopeFlags, Scoping};
@@ -734,7 +734,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               decl.id.binding_identifiers().into_iter().for_each(|id| {
                 self.add_local_export(&id.name, id.expect_symbol_id(), id.span);
               });
-              if let BindingPatternKind::BindingIdentifier(ref binding) = decl.id.kind {
+              if let BindingPattern::BindingIdentifier(ref binding) = decl.id {
                 let symbol_id = binding.symbol_id();
                 if let Some(value) = self.extract_constant_value_from_expr(decl.init.as_ref()) {
                   self.add_constant_symbol(symbol_id, ConstExportMeta::new(value, false));

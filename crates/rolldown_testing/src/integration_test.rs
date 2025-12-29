@@ -250,7 +250,9 @@ impl IntegrationTest {
         );
         let watched_files = dev_engine.get_watched_files().await.unwrap();
         assert!(
-          changed_files.iter().all(|(file, _)| watched_files.contains(file)),
+          changed_files
+            .iter()
+            .all(|(file, _)| watched_files.contains(&*file.as_path().to_slash_lossy())),
           "All changed files must be in watched files: {changed_files:#?} not in {watched_files:#?}"
         );
         dev_engine

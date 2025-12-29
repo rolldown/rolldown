@@ -77,7 +77,10 @@ impl ModuleTask {
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
   pub async fn run(mut self) {
     if let Err(errs) = self.run_inner().await {
-      self.ctx.plugin_driver.mark_context_load_modules_loaded(ModuleId::new(&self.resolved_id.id));
+      self
+        .ctx
+        .plugin_driver
+        .mark_context_load_modules_loaded(ModuleId::new(self.resolved_id.id.as_str()));
       self
         .ctx
         .tx
@@ -88,7 +91,7 @@ impl ModuleTask {
   }
 
   async fn run_inner(&mut self) -> BuildResult<()> {
-    let id = ModuleId::new(&self.resolved_id.id);
+    let id = ModuleId::new(self.resolved_id.id.as_str());
 
     self.ctx.plugin_driver.set_module_info(
       &id,
@@ -253,7 +256,7 @@ impl ModuleTask {
     if is_read_from_disk {
       // - Only add watch files for files read from disk.
       // - Add watch files as early as possible for we might be able to recover from build errors.
-      self.ctx.plugin_driver.watch_files.insert(self.resolved_id.id.clone());
+      self.ctx.plugin_driver.watch_files.insert(self.resolved_id.id.as_arc_str().clone());
     }
     let (source, mut module_type) = result.map_err(|err| {
       downcast_napi_error_diagnostics(err).unwrap_or_else(|e| {

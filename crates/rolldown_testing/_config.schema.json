@@ -464,10 +464,10 @@
             }
           ]
         },
-        "debug": {
+        "devtools": {
           "anyOf": [
             {
-              "$ref": "#/$defs/DebugOptions"
+              "$ref": "#/$defs/DevtoolsOptions"
             },
             {
               "type": "null"
@@ -1476,7 +1476,7 @@
         }
       ]
     },
-    "DebugOptions": {
+    "DevtoolsOptions": {
       "type": "object",
       "properties": {
         "sessionId": {

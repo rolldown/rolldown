@@ -494,7 +494,7 @@ export interface InputOptions {
    */
   checks?: ChecksOptions;
   makeAbsoluteExternalsRelative?: MakeAbsoluteExternalsRelative;
-  debug?: {
+  devtools?: {
     sessionId?: string;
   };
   /**

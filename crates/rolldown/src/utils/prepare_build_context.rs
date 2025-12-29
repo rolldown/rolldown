@@ -447,7 +447,7 @@ pub fn prepare_build_context(
     }),
     cwd,
     preserve_entry_signatures,
-    debug: raw_options.debug.is_some(),
+    devtools: raw_options.devtools.is_some(),
     optimization: normalize_optimization_option(raw_options.optimization, platform),
     top_level_var: raw_options.top_level_var.unwrap_or(false),
     minify_internal_exports: raw_options

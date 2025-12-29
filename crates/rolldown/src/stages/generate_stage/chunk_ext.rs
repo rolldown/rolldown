@@ -39,7 +39,7 @@ impl ChunkDebugExt for Chunk {
       }
     }
 
-    if !options.experimental.is_attach_debug_info_full() && !options.debug {
+    if !options.experimental.is_attach_debug_info_full() && !options.devtools {
       return;
     }
 

@@ -54,7 +54,7 @@ test(`emit data for devtool`, async () => {
 
   async function runBundle() {
     const bundle = await rolldown({
-      debug: {},
+      devtools: {},
       cwd: import.meta.dirname,
       input: join(import.meta.dirname, 'index.ts'),
       resolve: {

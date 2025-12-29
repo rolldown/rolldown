@@ -129,7 +129,7 @@ export function bindingifyInputOptions(
     makeAbsoluteExternalsRelative: bindingifyMakeAbsoluteExternalsRelative(
       inputOptions.makeAbsoluteExternalsRelative,
     ),
-    debug: inputOptions.debug,
+    devtools: inputOptions.devtools,
     invalidateJsSideCache: pluginContextData.clear.bind(pluginContextData),
     preserveEntrySignatures: bindingifyPreserveEntrySignatures(
       inputOptions.preserveEntrySignatures,

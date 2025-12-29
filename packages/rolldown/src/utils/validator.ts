@@ -579,7 +579,7 @@ const InputOptionsSchema = v.strictObject({
   transform: v.optional(TransformOptionsSchema),
   watch: v.optional(v.union([WatchOptionsSchema, v.literal(false)])),
   checks: v.optional(ChecksOptionsSchema),
-  debug: v.pipe(
+  devtools: v.pipe(
     v.optional(v.object({
       sessionId: v.pipe(
         v.optional(v.string()),

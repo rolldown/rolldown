@@ -1698,10 +1698,6 @@ export interface BindingCompileCssResult {
   modules?: FxHashMap<string, string>
 }
 
-export interface BindingDebugOptions {
-  sessionId?: string
-}
-
 export interface BindingDeferSyncScanData {
   /** ModuleId */
   id: string
@@ -1713,6 +1709,10 @@ export interface BindingDevOptions {
   onOutput?: undefined | ((result: BindingResult<BindingOutputs>) => void | Promise<void>)
   rebuildStrategy?: BindingRebuildStrategy
   watch?: BindingDevWatchOptions
+}
+
+export interface BindingDevtoolsOptions {
+  sessionId?: string
 }
 
 export interface BindingDevWatchOptions {
@@ -1925,7 +1925,7 @@ export interface BindingInputOptions {
   checks?: BindingChecksOptions
   deferSyncScanData?: undefined | (() => BindingDeferSyncScanData[])
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
-  debug?: BindingDebugOptions
+  devtools?: BindingDevtoolsOptions
   invalidateJsSideCache?: () => void
   preserveEntrySignatures?: BindingPreserveEntrySignatures
   optimization?: BindingOptimization

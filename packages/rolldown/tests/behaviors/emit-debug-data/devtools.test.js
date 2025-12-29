@@ -6,7 +6,7 @@ import { expect, test } from 'vitest';
 
 // `.rolldown` dir is generated based on real cwd instead of `InputOptions.cwd`. We might be able to solve this in the future.
 // For now, we just live with it.
-const dotRolldownFileName = join(process.cwd(), '.rolldown');
+const dotRolldownFileName = join(process.cwd(), 'node_modules/.rolldown');
 
 test(`emit data for devtool`, async () => {
   // Clean up previous test data if exists

@@ -186,7 +186,7 @@ pub use crate::{
   types::plugin_idx::PluginIdx,
   types::rendered_module::RenderedModule,
   types::resolved_export::ResolvedExport,
-  types::resolved_request_info::{ResolvedExternal, ResolvedId},
+  types::resolved_id::{ResolvedExternal, ResolvedId},
   types::rollup_pre_rendered_asset::RollupPreRenderedAsset,
   types::rollup_pre_rendered_chunk::RollupPreRenderedChunk,
   types::rollup_rendered_chunk::RollupRenderedChunk,

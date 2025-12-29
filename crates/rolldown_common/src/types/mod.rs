@@ -41,7 +41,7 @@ pub mod package_json;
 pub mod plugin_idx;
 pub mod rendered_module;
 pub mod resolved_export;
-pub mod resolved_request_info;
+pub mod resolved_id;
 pub mod rollup_pre_rendered_asset;
 pub mod rollup_pre_rendered_chunk;
 pub mod rollup_rendered_chunk;

@@ -252,6 +252,7 @@ impl From<&NormalizedTreeshakeOptions> for oxc::minifier::TreeShakeOptions {
       //   PropertyWriteSideEffects::False => oxc::minifier::PropertyWriteSideEffects::None,
       // },
       unknown_global_side_effects: value.unknown_global_side_effects(),
+      invalid_import_side_effects: false
     }
   }
 }

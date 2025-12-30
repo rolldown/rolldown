@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::sync::LazyLock;
 
 use memchr::memmem::Finder;
-use rolldown_error::{BuildDiagnostic, InvalidOptionType, SingleBuildResult};
+use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rustc_hash::FxHashMap;
 
 use crate::indexmap::FxIndexSet;
@@ -98,7 +98,7 @@ pub struct HashPlaceholderGenerator {
 
 impl HashPlaceholderGenerator {
   // Refer to https://github.com/rollup/rollup/blob/1f2d579ccd4b39f223fed14ac7d031a6c848cd80/src/utils/hashPlaceholders.ts#L16-L17
-  pub fn generate(&mut self, len: Option<usize>, pattern_name: &str) -> SingleBuildResult<String> {
+  pub fn generate(&mut self, len: Option<usize>, pattern_name: &str) -> BuildResult<String> {
     let len = len.unwrap_or(DEFAULT_HASH_SIZE);
 
     if len > MAX_HASH_SIZE {
@@ -106,7 +106,7 @@ impl HashPlaceholderGenerator {
         pattern_name: pattern_name.to_string(),
         received: len,
         max: MAX_HASH_SIZE,
-      }));
+      }))?;
     }
 
     let index_in_base64 = to_base64(self.next_index);
@@ -123,7 +123,7 @@ impl HashPlaceholderGenerator {
         received: len,
         min: placeholder_size,
         chunk_count: self.next_index + 1,
-      }));
+      }))?;
     }
 
     placeholder.push_str(HASH_PLACEHOLDER_LEFT);

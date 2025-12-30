@@ -24,15 +24,14 @@ impl crate::PathsMut for NotifyPathsMutAdapter<'_> {
       .0
       .add(path, WatchMode { recursive_mode, target_mode: TargetMode::TrackPath })
       .map_err_to_unhandleable()
-      .map_err(Into::into)
   }
 
   fn remove(&mut self, path: &Path) -> BuildResult<()> {
-    self.0.remove(path).map_err_to_unhandleable().map_err(Into::into)
+    self.0.remove(path).map_err_to_unhandleable()
   }
 
   fn commit(self: Box<Self>) -> BuildResult<()> {
-    self.0.commit().map_err_to_unhandleable().map_err(Into::into)
+    self.0.commit().map_err_to_unhandleable()
   }
 }
 

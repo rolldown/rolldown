@@ -281,7 +281,7 @@ impl<'a> ModuleLoader<'a> {
     &mut self,
     fetch_mode: ScanMode<ResolvedId>,
   ) -> BuildResult<ModuleLoaderOutput> {
-    let mut errors = vec![];
+    let mut errors: Vec<BuildDiagnostic> = vec![];
     let mut all_warnings: Vec<BuildDiagnostic> = vec![];
 
     let user_defined_entries = match fetch_mode {
@@ -576,7 +576,7 @@ impl<'a> ModuleLoader<'a> {
           let resolved_id = match result {
             Ok(result) => result,
             Err(e) => {
-              errors.push(e);
+              e.extend_into(&mut errors);
               continue;
             }
           };

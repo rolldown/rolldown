@@ -1,25 +1,25 @@
 use std::borrow::Cow;
 
-use rolldown_error::SingleBuildResult;
+use rolldown_error::BuildResult;
 
 pub trait Replacer {
-  fn get(&mut self, _: Option<usize>) -> SingleBuildResult<Cow<'_, str>>;
+  fn get(&mut self, _: Option<usize>) -> BuildResult<Cow<'_, str>>;
 }
 
 impl Replacer for &str {
   #[inline]
-  fn get(&mut self, _: Option<usize>) -> SingleBuildResult<Cow<'_, str>> {
+  fn get(&mut self, _: Option<usize>) -> BuildResult<Cow<'_, str>> {
     Ok(Cow::Borrowed(self))
   }
 }
 
 impl<F, S> Replacer for F
 where
-  F: FnMut(Option<usize>) -> SingleBuildResult<S>,
+  F: FnMut(Option<usize>) -> BuildResult<S>,
   S: AsRef<str>,
 {
   #[inline]
-  fn get(&mut self, hash_len: Option<usize>) -> SingleBuildResult<Cow<'_, str>> {
+  fn get(&mut self, hash_len: Option<usize>) -> BuildResult<Cow<'_, str>> {
     Ok(Cow::Owned((*self)(hash_len)?.as_ref().to_string()))
   }
 }
@@ -28,11 +28,7 @@ where
 pub trait ReplaceAllPlaceholder {
   fn replace_all(self, placeholder: &str, replacer: &str) -> String;
 
-  fn replace_all_with_len(
-    self,
-    placeholder: &str,
-    replacer: impl Replacer,
-  ) -> SingleBuildResult<String>;
+  fn replace_all_with_len(self, placeholder: &str, replacer: impl Replacer) -> BuildResult<String>;
 }
 
 impl ReplaceAllPlaceholder for String {
@@ -42,11 +38,7 @@ impl ReplaceAllPlaceholder for String {
   }
 
   #[inline]
-  fn replace_all_with_len(
-    self,
-    placeholder: &str,
-    replacer: impl Replacer,
-  ) -> SingleBuildResult<String> {
+  fn replace_all_with_len(self, placeholder: &str, replacer: impl Replacer) -> BuildResult<String> {
     replace_all_placeholder_impl(self, true, placeholder, replacer)
   }
 }
@@ -56,7 +48,7 @@ fn replace_all_placeholder_impl(
   is_len_enabled: bool,
   mut placeholder: &str,
   mut replacer: impl Replacer,
-) -> SingleBuildResult<String> {
+) -> BuildResult<String> {
   let offset = placeholder.len() - 1;
 
   if is_len_enabled {

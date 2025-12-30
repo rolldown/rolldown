@@ -4,7 +4,7 @@ use crate::SharedResolver;
 use crate::utils::resolve_id::resolve_id;
 use rolldown_common::{ImportKind, ResolvedId};
 use rolldown_error::ResultExt;
-use rolldown_error::{BuildDiagnostic, SingleBuildResult};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_resolver::ResolveError;
 
@@ -13,7 +13,7 @@ pub async fn load_entry_module(
   plugin_driver: &SharedPluginDriver,
   id: &str,
   importer: Option<&str>,
-) -> SingleBuildResult<ResolvedId> {
+) -> BuildResult<ResolvedId> {
   let result = resolve_id(
     resolver,
     plugin_driver,
@@ -30,19 +30,19 @@ pub async fn load_entry_module(
   match result {
     Ok(result) => {
       if result.external.is_external() {
-        Err(BuildDiagnostic::entry_cannot_be_external(result.id.as_str()))
+        Err(BuildDiagnostic::entry_cannot_be_external(result.id.as_str()))?
       } else {
         Ok(result)
       }
     }
     Err(e) => match e {
-      ResolveError::NotFound(_) => Err(BuildDiagnostic::unresolved_entry(id, None)),
+      ResolveError::NotFound(_) => Err(BuildDiagnostic::unresolved_entry(id, None))?,
       ResolveError::PackagePathNotExported {
         subpath: _,
         package_path: _,
         package_json_path: _,
         conditions: _,
-      } => Err(BuildDiagnostic::unresolved_entry(id, Some(e))),
+      } => Err(BuildDiagnostic::unresolved_entry(id, Some(e)))?,
       _ => Err(e).map_err_to_unhandleable()?,
     },
   }

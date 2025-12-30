@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use rolldown_error::{BuildDiagnostic, InvalidOptionType};
+use rolldown_error::{BuildDiagnostic, BuildResult, InvalidOptionType};
 use rolldown_utils::replace_all_placeholder::{ReplaceAllPlaceholder, Replacer};
 
 /// Check if a string is a path fragment (absolute or relative path).
@@ -56,7 +56,7 @@ impl FilenameTemplate {
     format: Option<&str>,
     extension: Option<&str>,
     hash_replacer: Option<impl Replacer>,
-  ) -> Result<String, BuildDiagnostic> {
+  ) -> BuildResult<String> {
     let pattern_name = self.pattern_name;
 
     // Validate the template pattern itself
@@ -64,7 +64,7 @@ impl FilenameTemplate {
       return Err(BuildDiagnostic::invalid_option(InvalidOptionType::InvalidFilenamePattern {
         pattern: self.template,
         pattern_name: pattern_name.to_string(),
-      }));
+      }))?;
     }
 
     let mut tmp = self.template;
@@ -77,7 +77,7 @@ impl FilenameTemplate {
             name: name.to_string(),
             pattern_name: pattern_name.to_string(),
           },
-        ));
+        ))?;
       }
       tmp = tmp.replace_all("[name]", name);
     }

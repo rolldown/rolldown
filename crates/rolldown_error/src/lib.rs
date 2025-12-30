@@ -4,7 +4,6 @@ mod types;
 mod utils;
 
 pub type BuildResult<T> = Result<T, BuildError>;
-pub type SingleBuildResult<T> = std::result::Result<T, BuildDiagnostic>;
 
 pub use crate::{
   build_diagnostic::events::DiagnosableArcstr,

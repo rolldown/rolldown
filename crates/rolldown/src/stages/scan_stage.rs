@@ -53,7 +53,7 @@ pub async fn resolve_user_defined_entries(
       Ok(item) => {
         ret.push(item);
       }
-      Err(e) => errors.push(e),
+      Err(e) => e.extend_into(&mut errors),
     }
   }
 
@@ -351,7 +351,7 @@ impl ScanStage {
         Ok(item) => {
           ret.push(item);
         }
-        Err(e) => errors.push(e),
+        Err(e) => e.extend_into(&mut errors),
       }
     }
 

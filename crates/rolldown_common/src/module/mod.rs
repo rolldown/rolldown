@@ -1,7 +1,6 @@
 pub mod external_module;
 pub mod normal_module;
 
-use arcstr::ArcStr;
 use oxc_index::IndexVec;
 use rolldown_std_utils::OptionExt;
 
@@ -35,13 +34,6 @@ impl Module {
     match self {
       Module::Normal(v) => &v.id,
       Module::External(v) => &v.id,
-    }
-  }
-
-  pub fn id_clone(&self) -> &ArcStr {
-    match self {
-      Module::Normal(v) => v.id.resource_id(),
-      Module::External(v) => v.id.as_arc_str(),
     }
   }
 

@@ -4,8 +4,9 @@ use std::{
 };
 
 use arcstr::ArcStr;
-use rolldown_utils::stabilize_id::stabilize_id;
 use sugar_path::SugarPath;
+
+use super::stable_module_id::StableModuleId;
 
 /// `ModuleId` is the unique string identifier for each module.
 /// - It will be used to identify the module in the whole bundle.
@@ -35,8 +36,8 @@ impl ModuleId {
     &self.inner
   }
 
-  pub fn stabilize(&self, cwd: &Path) -> String {
-    stabilize_id(&self.inner, cwd)
+  pub fn stabilize(&self, cwd: &Path) -> StableModuleId {
+    StableModuleId::new(self, cwd)
   }
 }
 

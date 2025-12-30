@@ -50,6 +50,7 @@ pub mod side_effect_detail;
 pub mod side_effects;
 pub mod source_mutation;
 pub mod sourcemap_chain_element;
+pub mod stable_module_id;
 pub mod stmt_info;
 pub mod str_or_bytes;
 pub mod symbol_or_member_expr_ref;

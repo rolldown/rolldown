@@ -6,7 +6,7 @@ use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaView, ExportsKind, FlatOptions, ModuleDefFormat, ModuleIdx, ModuleType, NormalModule,
-  side_effects::DeterminedSideEffects,
+  StableModuleId, side_effects::DeterminedSideEffects,
 };
 use rolldown_common::{
   ModuleLoaderMsg, RUNTIME_MODULE_ID, RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief,
@@ -109,7 +109,7 @@ impl RuntimeModuleTask {
     let module = NormalModule {
       idx: self.module_idx,
       repr_name: "rolldown_runtime".to_string(),
-      stable_id: RUNTIME_MODULE_KEY.to_string(),
+      stable_id: StableModuleId::new(&RUNTIME_MODULE_ID, &self.ctx.options.cwd),
       id: RUNTIME_MODULE_ID,
 
       debug_id: RUNTIME_MODULE_KEY.to_string(),

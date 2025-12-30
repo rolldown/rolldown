@@ -447,7 +447,7 @@ impl LinkStage<'_> {
                           module.source.clone(),
                           member_expr_ref.span,
                           ArcStr::from(name.as_str()),
-                          canonical_ref_owner.stable_id.clone(),
+                          canonical_ref_owner.stable_id.to_string(),
                         )
                         .with_severity_warning(),
                       );
@@ -606,7 +606,7 @@ impl BindImportsAndExportsContext<'_> {
     for (imported_as_ref, named_import) in &module.named_imports {
       let match_import_span = tracing::trace_span!(
         "MATCH_IMPORT",
-        module_id = module.stable_id,
+        module_id = module.stable_id.as_str(),
         imported_specifier = named_import.imported.to_string()
       );
       let _enter = match_import_span.enter();
@@ -663,7 +663,7 @@ impl BindImportsAndExportsContext<'_> {
               exporter.push(AmbiguousExternalNamespaceModule {
                 source: owner.source.clone(),
                 module_id: owner.id.to_string(),
-                stable_id: owner.stable_id.clone(),
+                stable_id: owner.stable_id.to_string(),
                 span_of_identifier: named_export.span,
               });
             }
@@ -676,7 +676,7 @@ impl BindImportsAndExportsContext<'_> {
               return Some(AmbiguousExternalNamespaceModule {
                 source: normal_module.source.clone(),
                 module_id: normal_module.id.to_string(),
-                stable_id: normal_module.stable_id.clone(),
+                stable_id: normal_module.stable_id.to_string(),
                 span_of_identifier: named_export.span,
               });
             }
@@ -690,7 +690,7 @@ impl BindImportsAndExportsContext<'_> {
             AmbiguousExternalNamespaceModule {
               source: module.source.clone(),
               module_id: module.id.to_string(),
-              stable_id: module.stable_id.clone(),
+              stable_id: module.stable_id.to_string(),
               span_of_identifier: named_import.span_imported,
             },
             exporter,
@@ -722,7 +722,7 @@ impl BindImportsAndExportsContext<'_> {
             ) && matches!(module.module_type, ModuleType::Ts | ModuleType::Tsx);
           let mut diagnostic = BuildDiagnostic::missing_export(
             module.id.to_string(),
-            module.stable_id.clone(),
+            module.stable_id.to_string(),
             importee.id().to_string(),
             importee.stable_id().to_string(),
             module.source.clone(),

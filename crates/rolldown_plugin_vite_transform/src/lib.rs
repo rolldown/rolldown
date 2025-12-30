@@ -9,7 +9,7 @@ use oxc::parser::Parser;
 use oxc::semantic::SemanticBuilder;
 use oxc::transformer::Transformer;
 use rolldown_common::{BundlerTransformOptions, ModuleType};
-use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, Severity};
+use rolldown_error::{BuildDiagnostic, BuildError, Severity};
 use rolldown_plugin::{HookUsage, Plugin, SharedTransformPluginContext};
 use rolldown_utils::{concat_string, pattern_filter::StringOrRegex, url::clean_url};
 
@@ -62,7 +62,7 @@ impl Plugin for ViteTransformPlugin {
     let allocator = oxc::allocator::Allocator::default();
     let ret = Parser::new(&allocator, args.code, source_type).parse();
     if ret.panicked || !ret.errors.is_empty() {
-      return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
+      return Err(BuildError::Multi(BuildDiagnostic::from_oxc_diagnostics(
         ret.errors,
         &ArcStr::from(args.code.as_str()),
         args.id,
@@ -75,7 +75,7 @@ impl Plugin for ViteTransformPlugin {
     let transformer = Transformer::new(&allocator, Path::new(args.id), &transform_options);
     let transformer_return = transformer.build_with_scoping(scoping, &mut program);
     if !transformer_return.errors.is_empty() {
-      return Err(BatchedBuildDiagnostic::new(BuildDiagnostic::from_oxc_diagnostics(
+      return Err(BuildError::Multi(BuildDiagnostic::from_oxc_diagnostics(
         transformer_return.errors,
         &ArcStr::from(args.code.as_str()),
         args.id,

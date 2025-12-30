@@ -110,10 +110,7 @@ impl WatcherTask {
       }
       Err(errs) => {
         self.emitter.emit(WatcherEvent::Event(BundleEvent::Error(BundleErrorEventData {
-          error: OutputsDiagnostics {
-            diagnostics: errs.into_vec(),
-            cwd: bundler.options.cwd.clone(),
-          },
+          error: OutputsDiagnostics { diagnostics: errs.into(), cwd: bundler.options.cwd.clone() },
           result: Arc::clone(&self.bundler),
         })))?;
       }

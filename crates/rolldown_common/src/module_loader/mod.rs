@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::BuildError;
 use runtime_task_result::RuntimeModuleTaskResult;
 use task_result::{ExternalModuleTaskResult, NormalModuleTaskResult};
 
@@ -17,7 +17,7 @@ pub enum ModuleLoaderMsg {
   RuntimeNormalModuleDone(Box<RuntimeModuleTaskResult>),
   FetchModule(Box<ResolvedId>),
   AddEntryModule(Box<AddEntryModuleMsg>),
-  BuildErrors(Box<[BuildDiagnostic]>),
+  BuildErrors(BuildError),
 }
 
 pub struct AddEntryModuleMsg {

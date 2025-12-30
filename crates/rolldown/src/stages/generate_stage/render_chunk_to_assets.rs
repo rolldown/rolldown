@@ -9,7 +9,7 @@ use rolldown_common::{
   SymbolRef,
 };
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
-use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, ParallelIterator},
@@ -32,13 +32,8 @@ use crate::{
 
 use super::GenerateStage;
 
-type ChunkGeneratorFuture<'a> = Pin<
-  Box<
-    dyn Future<Output = Result<Result<GenerateOutput, BatchedBuildDiagnostic>, anyhow::Error>>
-      + 'a
-      + Send,
-  >,
->;
+type ChunkGeneratorFuture<'a> =
+  Pin<Box<dyn Future<Output = Result<BuildResult<GenerateOutput>, anyhow::Error>> + 'a + Send>>;
 
 impl GenerateStage<'_> {
   pub async fn render_chunk_to_assets(
@@ -249,7 +244,7 @@ impl GenerateStage<'_> {
         });
         warnings.extend(generate_output.warnings);
       }
-      Err(e) => errors.extend(e.into_vec()),
+      Err(e) => e.extend_into(errors),
     });
 
     index_chunk_to_instances.iter_mut().for_each(|instances| {

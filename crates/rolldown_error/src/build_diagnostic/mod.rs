@@ -2,10 +2,7 @@ pub mod constructors;
 pub mod diagnostic;
 pub mod events;
 
-use std::{
-  fmt::Display,
-  ops::{Deref, DerefMut},
-};
+use std::fmt::Display;
 
 use crate::{
   build_diagnostic::events::plugin_error::CausedPlugin,
@@ -97,46 +94,80 @@ impl From<anyhow::Error> for BuildDiagnostic {
   }
 }
 
-#[derive(Debug, Default)]
-pub struct BatchedBuildDiagnostic(Vec<BuildDiagnostic>);
-
-impl BatchedBuildDiagnostic {
-  pub fn new(vec: Vec<BuildDiagnostic>) -> Self {
-    Self(vec)
-  }
-
-  pub fn into_vec(self) -> Vec<BuildDiagnostic> {
-    self.0
-  }
+#[derive(Debug)]
+pub enum BuildError {
+  Single(BuildDiagnostic),
+  Multi(Vec<BuildDiagnostic>),
 }
 
-impl std::error::Error for BatchedBuildDiagnostic {}
+impl std::error::Error for BuildError {}
 
-impl Display for BatchedBuildDiagnostic {
+impl Display for BuildError {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    self.0.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join("\n").fmt(f)
+    match self {
+      BuildError::Single(diag) => diag.fmt(f),
+      BuildError::Multi(diags) => {
+        diags.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n").fmt(f)
+      }
+    }
   }
 }
 
-impl From<BuildDiagnostic> for BatchedBuildDiagnostic {
-  fn from(v: BuildDiagnostic) -> Self {
-    Self::new(vec![v])
+impl BuildError {
+  pub fn into_vec(self) -> Vec<BuildDiagnostic> {
+    match self {
+      BuildError::Single(diag) => vec![diag],
+      BuildError::Multi(diags) => diags,
+    }
+  }
+
+  fn as_slice(&self) -> &[BuildDiagnostic] {
+    match self {
+      BuildError::Single(diag) => std::slice::from_ref(diag),
+      BuildError::Multi(diags) => diags,
+    }
+  }
+
+  #[inline]
+  pub fn iter(&self) -> impl Iterator<Item = &BuildDiagnostic> {
+    self.as_slice().iter()
+  }
+
+  #[inline]
+  pub fn extend_into(self, target: &mut Vec<BuildDiagnostic>) {
+    match self {
+      Self::Single(diag) => target.push(diag),
+      Self::Multi(vec) => target.extend(vec),
+    }
+  }
+
+  pub fn is_error_severity_only(&self) -> bool {
+    match self {
+      BuildError::Single(diag) => diag.severity() == Severity::Error,
+      BuildError::Multi(diags) => diags.iter().all(|diag| diag.severity() == Severity::Error),
+    }
   }
 }
 
-impl From<Vec<BuildDiagnostic>> for BatchedBuildDiagnostic {
-  fn from(v: Vec<BuildDiagnostic>) -> Self {
-    Self::new(v)
+impl From<BuildDiagnostic> for BuildError {
+  fn from(err: BuildDiagnostic) -> Self {
+    Self::Single(err)
   }
 }
 
-impl From<anyhow::Error> for BatchedBuildDiagnostic {
+impl From<Vec<BuildDiagnostic>> for BuildError {
+  fn from(errs: Vec<BuildDiagnostic>) -> Self {
+    Self::Multi(errs)
+  }
+}
+
+impl From<anyhow::Error> for BuildError {
   fn from(error: anyhow::Error) -> Self {
     let caused_plugin = error.downcast_ref::<CausedPlugin>().cloned();
     match error.downcast::<Self>() {
       Ok(batched) => {
         if let Some(plugin) = caused_plugin {
-          Self::new(
+          Self::Multi(
             batched
               .into_vec()
               .into_iter()
@@ -155,22 +186,17 @@ impl From<anyhow::Error> for BatchedBuildDiagnostic {
         } else {
           BuildDiagnostic::from(error)
         };
-        Self::new(vec![diagnostic])
+        Self::Single(diagnostic)
       }
     }
   }
 }
 
-impl Deref for BatchedBuildDiagnostic {
-  type Target = Vec<BuildDiagnostic>;
-
-  fn deref(&self) -> &Self::Target {
-    &self.0
-  }
-}
-
-impl DerefMut for BatchedBuildDiagnostic {
-  fn deref_mut(&mut self) -> &mut Self::Target {
-    &mut self.0
+impl From<BuildError> for Vec<BuildDiagnostic> {
+  fn from(err: BuildError) -> Self {
+    match err {
+      BuildError::Single(diag) => vec![diag],
+      BuildError::Multi(diags) => diags,
+    }
   }
 }

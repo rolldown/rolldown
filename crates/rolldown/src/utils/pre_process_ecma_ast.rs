@@ -13,7 +13,7 @@ use oxc::transformer_plugins::{
 
 use rolldown_common::NormalizedBundlerOptions;
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
-use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Severity};
+use rolldown_error::{BuildDiagnostic, BuildError, BuildResult, Severity};
 
 use crate::types::oxc_parse_type::OxcParseType;
 
@@ -113,7 +113,7 @@ impl PreProcessEcmaAst {
             .into_iter()
             .filter(|item| matches!(item.severity, OxcSeverity::Error))
             .collect_vec();
-          return Err(BatchedBuildDiagnostic::from(BuildDiagnostic::from_oxc_diagnostics(
+          return Err(BuildError::Multi(BuildDiagnostic::from_oxc_diagnostics(
             errors,
             &source,
             resolved_id,

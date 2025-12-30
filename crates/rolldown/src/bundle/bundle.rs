@@ -15,7 +15,7 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use rolldown_common::{GetLocalDbMut, Module, ScanMode, SharedFileEmitter, SymbolRefDb};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
-use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver};
 use rolldown_utils::dashmap::FxDashSet;
@@ -103,7 +103,7 @@ impl Bundle {
     {
       Ok(v) => v,
       Err(errs) => {
-        debug_assert!(errs.iter().all(|e| e.severity() == Severity::Error));
+        debug_assert!(errs.is_error_severity_only());
         self
           .plugin_driver
           .build_end(Some(&HookBuildEndArgs { errors: &errs, cwd: &self.options.cwd }))
@@ -246,7 +246,7 @@ impl Bundle {
         .await; // Notice we don't use `?` to break the control flow here.
 
     if let Err(errors) = &bundle_output {
-      debug_assert!(errors.iter().all(|e| e.severity() == Severity::Error));
+      debug_assert!(errors.is_error_severity_only());
       self
         .plugin_driver
         .render_error(&HookRenderErrorArgs { errors, cwd: &self.options.cwd })

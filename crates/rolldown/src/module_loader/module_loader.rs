@@ -609,7 +609,7 @@ impl<'a> ModuleLoader<'a> {
           extra_entry_points.push(entry);
         }
         ModuleLoaderMsg::BuildErrors(e) => {
-          errors.extend(e);
+          e.extend_into(&mut errors);
           self.remaining -= 1;
         }
       }

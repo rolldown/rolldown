@@ -81,7 +81,7 @@ impl ModuleTask {
       self
         .ctx
         .tx
-        .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
+        .send(ModuleLoaderMsg::BuildErrors(errs))
         .await
         .expect("ModuleLoader: failed to send build errors - main thread terminated while processing module errors");
     }

@@ -57,11 +57,7 @@ impl RuntimeModuleTask {
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
   pub async fn run(self) {
     if let Err(errs) = self.run_inner().await {
-      self
-        .ctx
-        .tx
-        .try_send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
-        .expect("Send should not fail");
+      self.ctx.tx.try_send(ModuleLoaderMsg::BuildErrors(errs)).expect("Send should not fail");
     }
   }
 

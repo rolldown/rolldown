@@ -1,8 +1,6 @@
 # Failed Cases
 ## [ts_export_default_type_issue316](../../../../../crates/rolldown/tests/esbuild/ts/ts_export_default_type_issue316/diff.md)
   related to https://github.com/rolldown/rolldown/issues/3048, export pointing to a value declared by `declare var` should be kept
-## [ts_import_equals_elimination_test](../../../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_elimination_test/diff.md)
-  See https://github.com/oxc-project/oxc/issues/16628
 # Passed Cases
 ## [this_inside_function_ts](../../../../../crates/rolldown/tests/esbuild/ts/this_inside_function_ts)
 ## [this_inside_function_ts_no_bundle](../../../../../crates/rolldown/tests/esbuild/ts/this_inside_function_ts_no_bundle)
@@ -35,6 +33,7 @@
 ## [ts_import_cts](../../../../../crates/rolldown/tests/esbuild/ts/ts_import_cts)
 ## [ts_import_empty_namespace](../../../../../crates/rolldown/tests/esbuild/ts/ts_import_empty_namespace)
 ## [ts_import_equals_bundle](../../../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_bundle)
+## [ts_import_equals_elimination_test](../../../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_elimination_test)
 ## [ts_import_equals_tree_shaking_false](../../../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_tree_shaking_false)
 ## [ts_import_equals_tree_shaking_true](../../../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_tree_shaking_true)
 ## [ts_import_equals_undefined_import](../../../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_undefined_import)

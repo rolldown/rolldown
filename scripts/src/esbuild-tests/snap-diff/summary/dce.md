@@ -1,6 +1,6 @@
 # Failed Cases
 ## [dce_of_iife](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_iife/diff.md)
-  sub optimal: IIFEs are not unwrapped
+  https://github.com/oxc-project/oxc/issues/17480 and sub optimal: IIFEs are not unwrapped in some cases
 ## [dce_of_symbol_ctor_call](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_ctor_call/diff.md)
   `new Symbol("abc")` should not be removed as it has side effects
 ## [tree_shaking_lowered_class_static_field](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field/diff.md)

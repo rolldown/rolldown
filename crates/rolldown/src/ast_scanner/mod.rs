@@ -3,8 +3,7 @@ pub mod const_eval;
 pub mod dynamic_import;
 mod hmr;
 pub mod impl_visit;
-mod import_assign_analyzer;
-mod namespace_call_analyzer;
+mod import_analyzer;
 mod new_url;
 pub mod side_effect_detector;
 

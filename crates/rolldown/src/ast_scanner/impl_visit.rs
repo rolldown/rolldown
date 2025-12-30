@@ -428,13 +428,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_call_expression(&mut self, it: &ast::CallExpression<'ast>) {
     self.try_extract_hmr_info_from_hot_accept_call(it);
-    self.check_namespace_call(&it.callee, it.span());
     walk::walk_call_expression(self, it);
-  }
-
-  fn visit_tagged_template_expression(&mut self, it: &ast::TaggedTemplateExpression<'ast>) {
-    self.check_namespace_call(&it.tag, it.span());
-    walk::walk_tagged_template_expression(self, it);
   }
 
   fn visit_export_default_declaration(&mut self, it: &ast::ExportDefaultDeclaration<'ast>) {

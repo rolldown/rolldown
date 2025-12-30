@@ -7,3 +7,6 @@ c()
 new a()
 new b()
 new c()
+
+// case that ident parent is callExpr but not need to report
+test(a);

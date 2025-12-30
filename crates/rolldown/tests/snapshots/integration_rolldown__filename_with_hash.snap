@@ -613,7 +613,7 @@ expression: output
 
 # tests/esbuild/default/call_import_namespace_warning
 
-- js-!~{000}~.js => js-BkmvcWIU.js
+- js-!~{000}~.js => js-BEgFbxW4.js
 - jsx-a-!~{003}~.js => jsx-a-MSjayW4i.js
 - jsx-b-!~{004}~.js => jsx-b-DJnt3XcL.js
 - jsx-c-!~{005}~.js => jsx-c-CrX-9iQz.js

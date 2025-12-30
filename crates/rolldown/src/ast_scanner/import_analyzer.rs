@@ -1,4 +1,5 @@
 use oxc::{
+  allocator::{GetAddress, UnstableAddress},
   ast::{
     AstKind, MemberExpressionKind,
     ast::{Expression, IdentifierReference, UnaryOperator},
@@ -22,6 +23,30 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         .get(&symbol_ref)
         .is_some_and(|import| matches!(import.imported, Specifier::Star));
       if is_namespace {
+        if let Some(parent) = self.visit_path.last() {
+          let expr_span = match parent {
+            AstKind::CallExpression(call_expr) => {
+              (call_expr.callee.address() == ident.unstable_address()).then_some(call_expr.span)
+            }
+            AstKind::TaggedTemplateExpression(call_expr) => {
+              (call_expr.tag.address() == ident.unstable_address()).then_some(call_expr.span)
+            }
+            _ => None,
+          };
+          if let Some(span) = expr_span {
+            let name = self.result.symbol_ref_db.symbol_name(symbol_id);
+            self.result.warnings.push(
+              BuildDiagnostic::cannot_call_namespace(
+                self.immutable_ctx.id.resource_id().clone(),
+                self.immutable_ctx.source.clone(),
+                span,
+                name.into(),
+              )
+              .with_severity_warning(),
+            );
+          }
+        }
+
         if let Some((span, name)) = self.get_span_if_namespace_specifier_updated() {
           self.result.errors.push(BuildDiagnostic::assign_to_import(
             self.immutable_ctx.id.resource_id().clone(),

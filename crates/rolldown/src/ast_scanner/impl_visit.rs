@@ -153,7 +153,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     let is_top_level_await = it.r#await && self.is_valid_tla_scope();
     if is_top_level_await && !self.immutable_ctx.flat_options.keep_esm_import_export_syntax() {
       self.result.errors.push(BuildDiagnostic::unsupported_feature(
-        self.immutable_ctx.id.resource_id().clone(),
+        self.immutable_ctx.id.as_arc_str().clone(),
         self.immutable_ctx.source.clone(),
         it.span(),
         format!(
@@ -173,7 +173,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     let is_top_level_await = self.is_valid_tla_scope();
     if !self.immutable_ctx.flat_options.keep_esm_import_export_syntax() && is_top_level_await {
       self.result.errors.push(BuildDiagnostic::unsupported_feature(
-        self.immutable_ctx.id.resource_id().clone(),
+        self.immutable_ctx.id.as_arc_str().clone(),
         self.immutable_ctx.source.clone(),
         it.span(),
         format!(
@@ -315,7 +315,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
             self
               .immutable_ctx
               .id
-              .resource_id()
+              .as_arc_str()
               .clone()
               .parse()
               .expect("should be a valid resource id"),

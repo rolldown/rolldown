@@ -9,42 +9,37 @@ use sugar_path::SugarPath;
 /// - Users could stored the `ModuleId` to track the module in different stages/hooks.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default)]
 pub struct ModuleId {
-  // Id that rolldown uses to call `read_to_string` or `read` to get the content of the module.
-  resource_id: ArcStr,
+  inner: ArcStr,
 }
 
 impl ModuleId {
   #[inline]
   pub fn new(value: impl Into<ArcStr>) -> Self {
     let value = value.into();
-    Self { resource_id: value }
+    Self { inner: value }
   }
 
   #[inline]
-  pub const fn new_arc_str(resource_id: ArcStr) -> Self {
-    Self { resource_id }
-  }
-
-  pub fn resource_id(&self) -> &ArcStr {
-    &self.resource_id
+  pub const fn new_arc_str(inner: ArcStr) -> Self {
+    Self { inner }
   }
 
   pub fn as_str(&self) -> &str {
-    &self.resource_id
+    &self.inner
   }
 
   pub fn as_arc_str(&self) -> &ArcStr {
-    &self.resource_id
+    &self.inner
   }
 
   pub fn stabilize(&self, cwd: &Path) -> String {
-    stabilize_id(&self.resource_id, cwd)
+    stabilize_id(&self.inner, cwd)
   }
 }
 
 impl AsRef<str> for ModuleId {
   fn as_ref(&self) -> &str {
-    &self.resource_id
+    &self.inner
   }
 }
 
@@ -52,7 +47,7 @@ impl std::ops::Deref for ModuleId {
   type Target = str;
 
   fn deref(&self) -> &Self::Target {
-    &self.resource_id
+    &self.inner
   }
 }
 
@@ -76,13 +71,13 @@ impl From<ArcStr> for ModuleId {
 
 impl std::fmt::Display for ModuleId {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    std::fmt::Display::fmt(&self.resource_id, f)
+    std::fmt::Display::fmt(&self.inner, f)
   }
 }
 
 impl ModuleId {
   pub fn relative_path(&self, root: impl AsRef<Path>) -> PathBuf {
-    let path = self.resource_id.as_path();
+    let path = self.inner.as_path();
     path.relative(root)
   }
 }

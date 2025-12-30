@@ -57,7 +57,7 @@ impl PluginDriver {
   }
 
   pub fn set_module_info(&self, module_id: &ModuleId, module_info: Arc<ModuleInfo>) {
-    self.module_infos.insert(module_id.resource_id().into(), module_info);
+    self.module_infos.insert(module_id.as_arc_str().into(), module_info);
   }
 
   pub async fn set_context_load_modules_tx(

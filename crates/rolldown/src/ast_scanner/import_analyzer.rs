@@ -37,7 +37,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             let name = self.result.symbol_ref_db.symbol_name(symbol_id);
             self.result.warnings.push(
               BuildDiagnostic::cannot_call_namespace(
-                self.immutable_ctx.id.resource_id().clone(),
+                self.immutable_ctx.id.as_arc_str().clone(),
                 self.immutable_ctx.source.clone(),
                 span,
                 name.into(),
@@ -49,7 +49,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
         if let Some((span, name)) = self.get_span_if_namespace_specifier_updated() {
           self.result.errors.push(BuildDiagnostic::assign_to_import(
-            self.immutable_ctx.id.resource_id().clone(),
+            self.immutable_ctx.id.as_arc_str().clone(),
             self.immutable_ctx.source.clone(),
             span,
             name.into(),
@@ -61,7 +61,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         self.result.symbol_ref_db.scoping().get_reference(ident.reference_id()).flags();
       if reference_flag.is_write() {
         self.result.errors.push(BuildDiagnostic::assign_to_import(
-          self.immutable_ctx.id.resource_id().clone(),
+          self.immutable_ctx.id.as_arc_str().clone(),
           self.immutable_ctx.source.clone(),
           ident.span,
           ident.name.as_str().into(),

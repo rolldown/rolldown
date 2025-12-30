@@ -443,7 +443,7 @@ impl LinkStage<'_> {
                     {
                       warnings.push(
                         BuildDiagnostic::import_is_undefined(
-                          module.id.resource_id().clone(),
+                          module.id.as_arc_str().clone(),
                           module.source.clone(),
                           member_expr_ref.span,
                           ArcStr::from(name.as_str()),

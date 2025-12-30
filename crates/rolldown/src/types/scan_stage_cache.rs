@@ -1,7 +1,7 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
-use rolldown_common::{GetLocalDbMut, ImporterRecord, ModuleIdx};
+use rolldown_common::{GetLocalDbMut, ImporterRecord, ModuleId, ModuleIdx};
 use rolldown_error::BuildResult;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -16,9 +16,9 @@ use crate::{
 #[derive(Default, Debug)]
 pub struct ScanStageCache {
   snapshot: Option<NormalizedScanStageOutput>,
-  pub module_id_to_idx: FxHashMap<ArcStr, VisitState>,
+  pub module_id_to_idx: FxHashMap<ModuleId, VisitState>,
   pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
-  pub user_defined_entry: FxHashSet<ArcStr>,
+  pub user_defined_entry: FxHashSet<ModuleId>,
   // Usage: Map file path emitted by watcher to corresponding module index
   pub module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
   // Usage: Map module stable id injected to client code to corresponding module index
@@ -81,7 +81,8 @@ impl ScanStageCache {
     };
     // merge module_table, index_ast_scope, index_ecma_ast
     for (new_idx, new_module) in modules {
-      let idx = self.module_id_to_idx[new_module.id_clone()].idx();
+      // FIXME: hyf0 should get `ModuleId` directly from `Module` instead of calling `ModuleId::new`
+      let idx = self.module_id_to_idx[&ModuleId::new(new_module.id())].idx();
 
       // Update `module_idx_by_abs_path`
       if let rolldown_common::Module::Normal(normal_module) = &new_module {

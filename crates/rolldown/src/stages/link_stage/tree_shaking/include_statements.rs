@@ -618,11 +618,7 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
   tracing::trace!(
     "{}:\n module_meta dependencies: {:#?}",
     module.stable_id,
-    module_meta
-      .dependencies
-      .iter()
-      .map(|idx| { ctx.modules[*idx].id_as_str().to_string() })
-      .collect_vec()
+    module_meta.dependencies.iter().map(|idx| { ctx.modules[*idx].id().to_string() }).collect_vec()
   );
   if module.meta.has_eval() && matches!(module.module_type, ModuleType::Js | ModuleType::Jsx) {
     module.named_imports.keys().for_each(|symbol| {

@@ -403,7 +403,7 @@ impl<'a> HmrStage<'a> {
     // Sorting `modules_to_be_updated` is not strictly necessary, but it:
     // - Makes the snapshot more stable when we change logic that affects the order of modules.
     modules_to_be_updated
-      .sort_by_cached_key(|module_idx| self.module_table().modules[*module_idx].id_as_str());
+      .sort_by_cached_key(|module_idx| self.module_table().modules[*module_idx].id().as_str());
 
     let module_idx_to_init_fn_name = modules_to_be_updated
       .iter()
@@ -412,7 +412,7 @@ impl<'a> HmrStage<'a> {
         let Module::Normal(module) = &self.module_table().modules[*module_idx] else {
           unreachable!(
             "External modules should be removed before. But got {:?}",
-            self.module_table().modules[*module_idx].id_as_str()
+            self.module_table().modules[*module_idx].id().as_str()
           );
         };
         let prefix = if module.exports_kind.is_commonjs() { "require" } else { "init" };
@@ -585,7 +585,7 @@ impl<'a> HmrStage<'a> {
     // Sorting `modules_to_be_updated` is not strictly necessary, but it:
     // - Makes the snapshot more stable when we change logic that affects the order of modules.
     modules_to_be_updated
-      .sort_by_cached_key(|module_idx| self.module_table().modules[*module_idx].id_as_str());
+      .sort_by_cached_key(|module_idx| self.module_table().modules[*module_idx].id().as_str());
 
     let module_idx_to_init_fn_name = modules_to_be_updated
       .iter()
@@ -594,7 +594,7 @@ impl<'a> HmrStage<'a> {
         let Module::Normal(module) = &self.module_table().modules[*module_idx] else {
           unreachable!(
             "External modules should be removed before. But got {:?}",
-            self.module_table().modules[*module_idx].id_as_str()
+            self.module_table().modules[*module_idx].id().as_str()
           );
         };
         let prefix = if module.exports_kind.is_commonjs() { "require" } else { "init" };

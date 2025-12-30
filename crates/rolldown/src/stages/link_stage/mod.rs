@@ -129,7 +129,7 @@ impl<'a> LinkStage<'a> {
       .collect_vec();
 
     rest.sort_by_cached_key(|item| {
-      (item.kind, scan_stage_output.module_table.modules[item.idx].id_as_str())
+      (item.kind, scan_stage_output.module_table.modules[item.idx].id().as_str())
     });
 
     scan_stage_output.entry_points.extend(rest);

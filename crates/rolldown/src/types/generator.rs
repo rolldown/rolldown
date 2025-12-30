@@ -112,7 +112,7 @@ impl GenerateContext<'_> {
           .link_output
           .module_table
           .get(symbol.owner)
-          .map_or("unknown", |module| module.id_as_str())
+          .map_or("unknown", |module| module.id().as_str())
       );
     })
   }

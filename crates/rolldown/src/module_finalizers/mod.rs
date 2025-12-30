@@ -574,7 +574,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               importer_namespace_ref_expr,
               self.snippet.call_expr_with_arg_expr_expr(
                 "require",
-                self.snippet.string_literal_expr(importee.id_as_str(), SPAN),
+                self.snippet.string_literal_expr(importee.id().as_str(), SPAN),
               ),
             );
 

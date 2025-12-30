@@ -81,8 +81,7 @@ impl ScanStageCache {
     };
     // merge module_table, index_ast_scope, index_ecma_ast
     for (new_idx, new_module) in modules {
-      // FIXME: hyf0 should get `ModuleId` directly from `Module` instead of calling `ModuleId::new`
-      let idx = self.module_id_to_idx[&ModuleId::new(new_module.id_as_str())].idx();
+      let idx = self.module_id_to_idx[new_module.id()].idx();
 
       // Update `module_idx_by_abs_path`
       if let rolldown_common::Module::Normal(normal_module) = &new_module {

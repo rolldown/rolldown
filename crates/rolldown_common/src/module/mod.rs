@@ -5,7 +5,9 @@ use arcstr::ArcStr;
 use oxc_index::IndexVec;
 use rolldown_std_utils::OptionExt;
 
-use crate::{ExternalModule, ImportRecordIdx, ModuleIdx, NormalModule, ResolvedImportRecord};
+use crate::{
+  ExternalModule, ImportRecordIdx, ModuleId, ModuleIdx, NormalModule, ResolvedImportRecord,
+};
 
 #[derive(Debug, Clone)]
 pub enum Module {
@@ -29,7 +31,7 @@ impl Module {
     }
   }
 
-  pub fn id_as_str(&self) -> &str {
+  pub fn id(&self) -> &ModuleId {
     match self {
       Module::Normal(v) => &v.id,
       Module::External(v) => &v.id,

@@ -723,7 +723,7 @@ impl BindImportsAndExportsContext<'_> {
           let mut diagnostic = BuildDiagnostic::missing_export(
             module.id.to_string(),
             module.stable_id.clone(),
-            importee.id_as_str().to_string(),
+            importee.id().to_string(),
             importee.stable_id().to_string(),
             module.source.clone(),
             named_import.imported.to_string(),
@@ -826,7 +826,7 @@ impl BindImportsAndExportsContext<'_> {
           && prev_tracker.imported_as == tracker.imported_as
         {
           let importer_module = &index_modules[tracker.importer];
-          let importer_id = importer_module.id_as_str().to_string();
+          let importer_id = importer_module.id().to_string();
           let imported_specifier = tracker.imported.to_string();
           self.errors.push(BuildDiagnostic::circular_reexport(importer_id, imported_specifier));
           return MatchImportKind::Cycle;

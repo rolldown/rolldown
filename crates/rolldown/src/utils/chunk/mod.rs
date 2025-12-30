@@ -25,10 +25,16 @@ pub fn generate_pre_rendered_chunk(
     is_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry)),
     is_dynamic_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if !meta.contains(ChunkMeta::UserDefinedEntry)),
     facade_module_id: match &chunk.kind {
-      ChunkKind::EntryPoint { module, .. } => Some(graph.module_table[*module].id_as_str().into()),
+      ChunkKind::EntryPoint { module, .. } => {
+        Some(graph.module_table[*module].id().as_str().into())
+      }
       ChunkKind::Common => None,
     },
-    module_ids: chunk.modules.iter().map(|id| graph.module_table[*id].id_as_str().into()).collect(),
+    module_ids: chunk
+      .modules
+      .iter()
+      .map(|id| graph.module_table[*id].id().as_str().into())
+      .collect(),
     exports: get_chunk_export_names(chunk, graph),
   }
 }

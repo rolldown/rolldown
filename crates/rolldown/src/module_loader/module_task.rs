@@ -179,13 +179,13 @@ impl ModuleTask {
       for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
         match record.kind {
           ImportKind::Import | ImportKind::Require | ImportKind::NewUrl => {
-            ecma_view.imported_ids.insert(info.id.as_arc_str().clone().into());
+            ecma_view.imported_ids.insert(info.id.clone());
           }
           ImportKind::DynamicImport => {
-            ecma_view.dynamically_imported_ids.insert(info.id.as_arc_str().clone().into());
+            ecma_view.dynamically_imported_ids.insert(info.id.clone());
           }
           ImportKind::HotAccept => {
-            ecma_view.hmr_info.deps.insert(info.id.as_arc_str().clone().into());
+            ecma_view.hmr_info.deps.insert(info.id.clone());
           }
           // for a none css module, we should not have `at-import` or `url-import`
           ImportKind::AtImport | ImportKind::UrlImport => unreachable!(),

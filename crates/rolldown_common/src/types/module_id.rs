@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+  borrow::Borrow,
+  path::{Path, PathBuf},
+};
 
 use arcstr::ArcStr;
 use rolldown_utils::stabilize_id::stabilize_id;
@@ -79,5 +82,12 @@ impl ModuleId {
   pub fn relative_path(&self, root: impl AsRef<Path>) -> PathBuf {
     let path = self.inner.as_path();
     path.relative(root)
+  }
+}
+
+// This allows to use `&str` to lookup `HashMap<ModuleId, V>`. For `&String`, since it could coerce to `&str`, it also works.
+impl Borrow<str> for ModuleId {
+  fn borrow(&self) -> &str {
+    &self.inner
   }
 }

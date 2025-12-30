@@ -224,13 +224,16 @@ impl<'a> ModuleLoader<'a> {
     user_defined_entries: Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
   ) -> ModuleIdx {
     let ctx = Arc::clone(&self.shared_context);
-    let idx = match self.cache.module_id_to_idx.get(&resolved_id.id) {
+    let idx = match self.cache.module_id_to_idx.get(resolved_id.id.as_str()) {
       Some(VisitState::Seen(idx)) => return *idx,
       Some(VisitState::Invalidate(idx)) => {
         // Full scan mode the idx will never be invalidated right?
         let idx = *idx;
         self.intermediate_normal_modules.alloc_ecma_module_idx_sparse(idx);
-        self.cache.module_id_to_idx.insert(resolved_id.id.clone(), VisitState::Seen(idx));
+        self
+          .cache
+          .module_id_to_idx
+          .insert(resolved_id.id.as_arc_str().clone(), VisitState::Seen(idx));
         idx
       }
       None if !self.is_full_scan => {
@@ -238,12 +241,18 @@ impl<'a> ModuleLoader<'a> {
         let len = self.cache.module_id_to_idx.len();
         let idx = self.intermediate_normal_modules.alloc_ecma_module_idx_sparse(len.into());
         self.new_added_modules_from_partial_scan.insert(idx);
-        self.cache.module_id_to_idx.insert(resolved_id.id.clone(), VisitState::Seen(idx));
+        self
+          .cache
+          .module_id_to_idx
+          .insert(resolved_id.id.as_arc_str().clone(), VisitState::Seen(idx));
         idx
       }
       None => {
         let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
-        self.cache.module_id_to_idx.insert(resolved_id.id.clone(), VisitState::Seen(idx));
+        self
+          .cache
+          .module_id_to_idx
+          .insert(resolved_id.id.as_arc_str().clone(), VisitState::Seen(idx));
         idx
       }
     };
@@ -323,10 +332,9 @@ impl<'a> ModuleLoader<'a> {
     }
 
     if self.is_full_scan && self.options.experimental.is_incremental_build_enabled() {
-      self
-        .cache
-        .user_defined_entry
-        .extend(user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.clone()));
+      self.cache.user_defined_entry.extend(
+        user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.as_arc_str().clone()),
+      );
     }
 
     // If it is in partial scan mode, we need to invalidate the changed modules
@@ -334,17 +342,16 @@ impl<'a> ModuleLoader<'a> {
     //
     for resolved_id in fetch_mode.iter() {
       let resolved_id = resolved_id.clone();
-      self
-        .shared_context
-        .plugin_driver
-        .invalidate_context_load_module(&resolved_id.id.clone().into());
-      if let Entry::Occupied(mut occ) = self.cache.module_id_to_idx.entry(resolved_id.id.clone()) {
+      self.shared_context.plugin_driver.invalidate_context_load_module(&resolved_id.id);
+      if let Entry::Occupied(mut occ) =
+        self.cache.module_id_to_idx.entry(resolved_id.id.as_arc_str().clone())
+      {
         let idx = occ.get().idx();
         occ.insert(VisitState::Invalidate(idx));
       }
       // User may update the entry module in incremental mode, so we need to make sure
       // if it is a user defined entry to avoid generate wrong asset file
-      let is_user_defined_entry = self.cache.user_defined_entry.contains(&resolved_id.id);
+      let is_user_defined_entry = self.cache.user_defined_entry.contains(resolved_id.id.as_str());
       // set `Owner` to `None` is safe, since it is used to emit `Unloadable` diagnostic, we know this is
       // exists in fs system, which is loadable.
       // TODO: copy assert_module_type
@@ -799,6 +806,6 @@ impl<'a> ModuleLoader<'a> {
     // module, but since all invalidate files is already processed in https://github.com/rolldown/rolldown/blob/88af0e2a29decd239b5555bff43e6499cae17ddc/crates/rolldown/src/module_loader/module_loader.rs?plain=1#L343
     // we could just skip to invalidate it again.
     // - if it does not need invalidate, we could just return the idx
-    self.cache.module_id_to_idx.get(&resolved_dep.id).map(|state| state.idx())
+    self.cache.module_id_to_idx.get(resolved_dep.id.as_str()).map(|state| state.idx())
   }
 }

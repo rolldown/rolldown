@@ -7,8 +7,8 @@ use std::sync::Arc;
 use sugar_path::SugarPath;
 
 use rolldown_common::{
-  FlatOptions, ImportKind, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType,
-  NormalModule, NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, StrOrBytes,
+  FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType, NormalModule,
+  NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, StrOrBytes,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, UnloadableDependencyContext, downcast_napi_error_diagnostics,
@@ -77,7 +77,7 @@ impl ModuleTask {
   #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
   pub async fn run(mut self) {
     if let Err(errs) = self.run_inner().await {
-      self.ctx.plugin_driver.mark_context_load_modules_loaded(ModuleId::new(&self.resolved_id.id));
+      self.ctx.plugin_driver.mark_context_load_modules_loaded(self.resolved_id.id.clone());
       self
         .ctx
         .tx
@@ -88,7 +88,7 @@ impl ModuleTask {
   }
 
   async fn run_inner(&mut self) -> BuildResult<()> {
-    let id = ModuleId::new(&self.resolved_id.id);
+    let id = self.resolved_id.id.clone();
 
     self.ctx.plugin_driver.set_module_info(
       &id,
@@ -179,13 +179,13 @@ impl ModuleTask {
       for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
         match record.kind {
           ImportKind::Import | ImportKind::Require | ImportKind::NewUrl => {
-            ecma_view.imported_ids.insert(ArcStr::clone(&info.id).into());
+            ecma_view.imported_ids.insert(info.id.as_arc_str().clone().into());
           }
           ImportKind::DynamicImport => {
-            ecma_view.dynamically_imported_ids.insert(ArcStr::clone(&info.id).into());
+            ecma_view.dynamically_imported_ids.insert(info.id.as_arc_str().clone().into());
           }
           ImportKind::HotAccept => {
-            ecma_view.hmr_info.deps.insert(ArcStr::clone(&info.id).into());
+            ecma_view.hmr_info.deps.insert(info.id.as_arc_str().clone().into());
           }
           // for a none css module, we should not have `at-import` or `url-import`
           ImportKind::AtImport | ImportKind::UrlImport => unreachable!(),
@@ -253,7 +253,7 @@ impl ModuleTask {
     if is_read_from_disk {
       // - Only add watch files for files read from disk.
       // - Add watch files as early as possible for we might be able to recover from build errors.
-      self.ctx.plugin_driver.watch_files.insert(self.resolved_id.id.clone());
+      self.ctx.plugin_driver.watch_files.insert(self.resolved_id.id.as_arc_str().clone());
     }
     let (source, mut module_type) = result.map_err(|err| {
       downcast_napi_error_diagnostics(err).unwrap_or_else(|e| {

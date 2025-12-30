@@ -384,8 +384,8 @@ impl GlobImportVisit<'_, '_> {
         }),
       );
       if let Ok(result) = rolldown_utils::futures::block_on(future) {
-        let id = match result {
-          Ok(resolved_id) => resolved_id.id.into(),
+        let id: Cow<'_, str> = match result {
+          Ok(resolved_id) => Cow::Owned(resolved_id.id.to_string()),
           Err(_) => Cow::Borrowed(glob),
         };
         let path = Path::new(id.as_ref());

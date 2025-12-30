@@ -19,13 +19,13 @@ impl BindingModuleInfo {
   pub fn new(inner: Arc<rolldown_common::ModuleInfo>) -> Self {
     Self {
       id: inner.id.to_string(),
-      importers: inner.importers.iter().map(|id| id.to_string()).collect(),
-      dynamic_importers: inner.dynamic_importers.iter().map(|id| id.to_string()).collect(),
-      imported_ids: inner.imported_ids.iter().map(|id| id.to_string()).collect(),
+      importers: inner.importers.iter().map(ToString::to_string).collect(),
+      dynamic_importers: inner.dynamic_importers.iter().map(ToString::to_string).collect(),
+      imported_ids: inner.imported_ids.iter().map(ToString::to_string).collect(),
       dynamically_imported_ids: inner
         .dynamically_imported_ids
         .iter()
-        .map(|id| id.to_string())
+        .map(ToString::to_string)
         .collect(),
       is_entry: inner.is_entry,
       exports: inner.exports.iter().map(ToString::to_string).collect(),

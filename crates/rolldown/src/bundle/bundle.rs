@@ -308,7 +308,7 @@ impl Bundle {
                 })
                 .collect(),
             ),
-            importers: Some(module.importers.iter().map(|i| i.to_string()).collect()),
+            importers: Some(module.importers.iter().map(ToString::to_string).collect()),
           },
           Module::External(module) => action::Module {
             id: module.id.to_string(),

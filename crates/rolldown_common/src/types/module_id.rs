@@ -16,7 +16,8 @@ pub struct ModuleId {
 impl ModuleId {
   #[inline]
   pub fn new(value: impl Into<ArcStr>) -> Self {
-    Self::new_arc_str(value.into())
+    let value = value.into();
+    Self { resource_id: value }
   }
 
   #[inline]
@@ -25,6 +26,14 @@ impl ModuleId {
   }
 
   pub fn resource_id(&self) -> &ArcStr {
+    &self.resource_id
+  }
+
+  pub fn as_str(&self) -> &str {
+    &self.resource_id
+  }
+
+  pub fn as_arc_str(&self) -> &ArcStr {
     &self.resource_id
   }
 
@@ -62,6 +71,12 @@ impl From<String> for ModuleId {
 impl From<ArcStr> for ModuleId {
   fn from(value: ArcStr) -> Self {
     Self::new(value)
+  }
+}
+
+impl std::fmt::Display for ModuleId {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    std::fmt::Display::fmt(&self.resource_id, f)
   }
 }
 

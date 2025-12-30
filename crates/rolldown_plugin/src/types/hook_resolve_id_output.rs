@@ -17,7 +17,7 @@ impl HookResolveIdOutput {
 
   pub fn from_resolved_id(resolved_id: ResolvedId) -> Self {
     Self {
-      id: resolved_id.id,
+      id: resolved_id.id.as_arc_str().clone(),
       external: Some(resolved_id.external),
       side_effects: resolved_id.side_effects,
       normalize_external_id: None,

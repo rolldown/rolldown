@@ -91,7 +91,7 @@ impl RuntimeModuleTask {
     } = scan_result;
 
     let mut resolved_id = ResolvedId::make_dummy();
-    resolved_id.id = RUNTIME_MODULE_ID.resource_id().clone();
+    resolved_id.id = RUNTIME_MODULE_ID;
     let module_type = ModuleType::Js;
 
     let resolved_deps = resolve_dependencies(

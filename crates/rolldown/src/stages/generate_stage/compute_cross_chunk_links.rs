@@ -80,7 +80,7 @@ impl GenerateStage<'_> {
           let mut module_ids = chunk_graph.chunk_table[*chunk_id]
             .modules
             .iter()
-            .map(|id| self.link_output.module_table[*id].id())
+            .map(|id| self.link_output.module_table[*id].id_as_str())
             .collect::<Vec<_>>();
           module_ids.sort_unstable();
           module_ids
@@ -316,7 +316,7 @@ impl GenerateStage<'_> {
             "Symbol: {:?}, {:?} in {:?} should only belong to one chunk. Existed {:?}, new {chunk_id:?}",
             declared.name(symbols),
             declared,
-            self.link_output.module_table[declared.owner].id(),
+            self.link_output.module_table[declared.owner].id_as_str(),
             symbol_data.chunk_id,
           );
         }
@@ -425,7 +425,11 @@ impl GenerateStage<'_> {
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
           let symbol_owner = &self.link_output.module_table[import_ref.owner];
           let symbol_name = import_ref.name(&self.link_output.symbol_db);
-          panic!("Symbol {:?} in {:?} should belong to a chunk", symbol_name, symbol_owner.id())
+          panic!(
+            "Symbol {:?} in {:?} should belong to a chunk",
+            symbol_name,
+            symbol_owner.id_as_str()
+          )
         });
         // Check if the import is from another chunk
         if chunk_id != importee_chunk_id {

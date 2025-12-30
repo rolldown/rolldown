@@ -423,7 +423,7 @@ impl<'a> ModuleLoader<'a> {
             // Dynamic imported module will be considered as an entry
             self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
               kind: raw_rec.kind,
-              importer_path: ModuleId::new(module.id()),
+              importer_path: ModuleId::new(module.id_as_str()),
               importer_idx: module.idx(),
             });
             // defer usage merging, since we only have one consumer, we should keep action during fetching as simple

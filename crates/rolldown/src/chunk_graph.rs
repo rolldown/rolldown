@@ -84,7 +84,7 @@ impl ChunkGraph {
       let mut runtime_related = vec![];
       for &module_idx in &chunk.modules {
         let module = &link_output.module_table[module_idx];
-        if module.id().starts_with("rolldown:") {
+        if module.id_as_str().starts_with("rolldown:") {
           runtime_related.push(module_idx);
           continue;
         }
@@ -97,7 +97,7 @@ impl ChunkGraph {
           rest.push(module_idx);
         }
       }
-      side_effects_free_leaf_modules.sort_by_key(|idx| link_output.module_table[*idx].id());
+      side_effects_free_leaf_modules.sort_by_key(|idx| link_output.module_table[*idx].id_as_str());
       rest.sort_unstable_by_key(|idx| link_output.module_table[*idx].exec_order());
       runtime_related.sort_unstable_by_key(|idx| link_output.module_table[*idx].exec_order());
 

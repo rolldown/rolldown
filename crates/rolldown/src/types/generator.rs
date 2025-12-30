@@ -108,7 +108,11 @@ impl GenerateContext<'_> {
       panic!(
         "canonical name not found for {symbol:?}, original_name: {:?} in module {:?}",
         symbol.name(symbol_db),
-        self.link_output.module_table.get(symbol.owner).map_or("unknown", |module| module.id())
+        self
+          .link_output
+          .module_table
+          .get(symbol.owner)
+          .map_or("unknown", |module| module.id_as_str())
       );
     })
   }

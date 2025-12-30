@@ -290,6 +290,7 @@ impl<'a> GenerateStage<'a> {
   /// Notices:
   /// - Should generate filenames that are stable cross builds and os.
   #[tracing::instrument(level = "debug", skip_all)]
+  #[expect(clippy::too_many_lines)]
   async fn generate_chunk_name_and_preliminary_filenames(
     &self,
     chunk_graph: &mut ChunkGraph,
@@ -316,7 +317,7 @@ impl<'a> GenerateStage<'a> {
           ChunkKind::EntryPoint { module: entry_module_id, meta, .. } => {
             let module = &modules[entry_module_id];
             let generated = if self.options.preserve_modules {
-              let module_id = module.id();
+              let module_id = module.id_as_str();
               let (representative_chunk_name, absolute_chunk_file_name, ext) =
                 representative_file_name_for_preserve_modules(module_id.as_path());
 
@@ -360,7 +361,9 @@ impl<'a> GenerateStage<'a> {
               }
             } else if meta.contains(rolldown_common::ChunkMeta::UserDefinedEntry) {
               // try extract meaningful input name from path
-              if let Some(file_stem) = module.id().as_path().file_stem().and_then(|f| f.to_str()) {
+              if let Some(file_stem) =
+                module.id_as_str().as_path().file_stem().and_then(|f| f.to_str())
+              {
                 let name = sanitize_filename.call(file_stem).await?;
                 PreGeneratedChunkName {
                   chunk_name: name.clone(),
@@ -376,8 +379,9 @@ impl<'a> GenerateStage<'a> {
                 }
               }
             } else {
-              let chunk_name =
-                sanitize_filename.call(&module.id().as_path().representative_file_name()).await?;
+              let chunk_name = sanitize_filename
+                .call(&module.id_as_str().as_path().representative_file_name())
+                .await?;
 
               PreGeneratedChunkName {
                 representative_chunk_name: chunk_name.clone(),
@@ -394,7 +398,7 @@ impl<'a> GenerateStage<'a> {
               chunk.modules.iter().rev().find(|each| **each != self.link_output.runtime.id())
             {
               let module = &modules[*module_id];
-              let module_id = module.id();
+              let module_id = module.id_as_str();
               let name = module_id.as_path().representative_file_name();
               let sanitized_filename = sanitize_filename.call(&name).await?;
               Ok(PreGeneratedChunkName {
@@ -611,11 +615,11 @@ impl<'a> GenerateStage<'a> {
           is_async_entry: chunk.is_async_entry(),
           entry_module: chunk
             .entry_module_idx()
-            .map(|idx| self.link_output.module_table[idx].id().to_string()),
+            .map(|idx| self.link_output.module_table[idx].id_as_str().to_string()),
           modules: chunk
             .modules
             .iter()
-            .map(|idx| self.link_output.module_table[*idx].id().to_string())
+            .map(|idx| self.link_output.module_table[*idx].id_as_str().to_string())
             .collect(),
           reason: chunk.chunk_reason_type.as_static_str(),
           advanced_chunk_group_id: chunk.chunk_reason_type.group_index(),

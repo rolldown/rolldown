@@ -29,7 +29,7 @@ impl Module {
     }
   }
 
-  pub fn id(&self) -> &str {
+  pub fn id_as_str(&self) -> &str {
     match self {
       Module::Normal(v) => &v.id,
       Module::External(v) => &v.id,

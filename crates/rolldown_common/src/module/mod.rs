@@ -39,7 +39,7 @@ impl Module {
   pub fn id_clone(&self) -> &ArcStr {
     match self {
       Module::Normal(v) => v.id.resource_id(),
-      Module::External(v) => &v.id,
+      Module::External(v) => v.id.as_arc_str(),
     }
   }
 

@@ -91,7 +91,7 @@ impl ExternalModuleTask {
     let legitimized_identifier_name = legitimize_identifier_name(&identifier_name);
     let msg = ModuleLoaderMsg::ExternalModuleDone(Box::new(ExternalModuleTaskResult {
       idx: self.module_idx,
-      id: resolved_id.id.as_arc_str().clone(),
+      id: resolved_id.id.clone(),
       name: file_name,
       identifier_name: legitimized_identifier_name.into(),
       side_effects: external_module_side_effects,

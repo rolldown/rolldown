@@ -1,5 +1,5 @@
 use crate::{
-  ImportRecordIdx, Module, ModuleIdx, RawImportRecord, ResolvedId, SymbolRefDbForModule,
+  ImportRecordIdx, Module, ModuleId, ModuleIdx, RawImportRecord, ResolvedId, SymbolRefDbForModule,
   dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 use arcstr::ArcStr;
@@ -18,7 +18,7 @@ pub struct NormalModuleTaskResult {
 
 pub struct ExternalModuleTaskResult {
   pub idx: ModuleIdx,
-  pub id: ArcStr,
+  pub id: ModuleId,
   pub name: ArcStr,
   pub identifier_name: ArcStr,
   pub side_effects: DeterminedSideEffects,

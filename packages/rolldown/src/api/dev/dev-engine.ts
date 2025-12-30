@@ -5,7 +5,7 @@ import {
   type BindingDevOptions,
   BindingRebuildStrategy,
   type BindingResult,
-} from '../../binding.cjs';
+} from '../../../dist/binding.cjs';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import { PluginDriver } from '../../plugin/plugin-driver';

@@ -1,4 +1,4 @@
-import type { BindingAssetSource } from '../binding.cjs';
+import type { BindingAssetSource } from '../../dist/binding.cjs';
 
 export type AssetSource = string | Uint8Array;
 

@@ -1,4 +1,4 @@
-import type { BindingPluginOptions } from '../binding.cjs';
+import type { BindingPluginOptions } from '../../dist/binding.cjs';
 import { normalizeHook } from '../utils/normalize-hook';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
 import {

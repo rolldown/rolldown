@@ -1,4 +1,4 @@
-import type { TransformOptions as OxcTransformOptions } from '../binding.cjs';
+import type { TransformOptions as OxcTransformOptions } from '../../dist/binding.cjs';
 import type { InputOptions } from '../options/input-options';
 
 export interface NormalizedTransformOptions {

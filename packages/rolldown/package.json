@@ -91,7 +91,7 @@
   },
   "scripts": {
     "# Scrips for binding #": "_",
-    "artifacts": "napi artifacts --cwd ./src --package-json-path ../package.json -o=../artifacts --npm-dir ../npm",
+    "artifacts": "napi artifacts --cwd ./dist --package-json-path ../package.json -o=../artifacts --npm-dir ../npm",
     "build-binding": "oxnode ./build-binding.ts",
     "build-binding:release": "pnpm build-binding --release",
     "build-binding:profile": "pnpm build-binding --profile profile",

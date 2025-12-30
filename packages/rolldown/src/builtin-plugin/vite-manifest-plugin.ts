@@ -1,4 +1,4 @@
-import type { BindingViteManifestPluginConfig } from '../binding.cjs';
+import type { BindingViteManifestPluginConfig } from '../../dist/binding.cjs';
 import type { NormalizedOutputOptions } from '../options/normalized-output-options';
 import { BuiltinPlugin } from './utils';
 

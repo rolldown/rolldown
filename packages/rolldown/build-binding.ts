@@ -16,7 +16,7 @@ const argsOptions = buildCommand.getOptions();
 
 const napiArgs = {
   ...argsOptions,
-  outputDir: './src',
+  outputDir: './dist',
   manifestPath: '../../crates/rolldown_binding/Cargo.toml',
   platform: true,
   package: 'rolldown_binding',
@@ -33,14 +33,14 @@ try {
 } catch (error) {
   // remove previous build artifacts
   console.error(error);
-  globSync('src/rolldown-binding.*.node', {
+  globSync('dist/rolldown-binding.*.node', {
     absolute: true,
     cwd: __dirname,
   }).forEach((file) => {
     rmSync(file, { force: true, recursive: true });
   });
 
-  globSync('./src/rolldown-binding.*.wasm', {
+  globSync('./dist/rolldown-binding.*.wasm', {
     absolute: true,
     cwd: __dirname,
   }).forEach((file) => {

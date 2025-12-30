@@ -1,5 +1,5 @@
 import type { Program } from '@oxc-project/types';
-import type { ParseResult, ParserOptions } from './binding.cjs';
+import type { ParseResult, ParserOptions } from '../dist/binding.cjs';
 import { locate } from './log/locate-character';
 import { augmentCodeLocation, error, logParseError } from './log/logs';
 import { getCodeFrame } from './utils/code-frame';

@@ -1,4 +1,4 @@
-import { BindingBundler, shutdownAsyncRuntime, startAsyncRuntime } from '../binding.cjs';
+import { BindingBundler, shutdownAsyncRuntime, startAsyncRuntime } from '../../dist/binding.cjs';
 import type { InputOptions } from '../options/input-options';
 import { PluginDriver } from '../plugin/plugin-driver';
 import { createBundlerOptions } from '../utils/create-bundler-option';

@@ -1,4 +1,4 @@
-import type { BindingRenderedChunk } from '../binding.cjs';
+import type { BindingRenderedChunk } from '../../dist/binding.cjs';
 import type { RenderedChunk } from '../types/rolldown-output';
 import { transformToRenderedModule } from './transform-rendered-module';
 

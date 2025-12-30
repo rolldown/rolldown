@@ -1,4 +1,4 @@
-import type { BindingOutputChunk, ExternalMemoryStatus } from '../binding.cjs';
+import type { BindingOutputChunk, ExternalMemoryStatus } from '../../dist/binding.cjs';
 import { lazyProp } from '../decorators/lazy';
 import { transformChunkModules } from '../utils/transform-rendered-chunk';
 import { transformToRollupSourceMap } from '../utils/transform-to-rollup-output';

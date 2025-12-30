@@ -7,7 +7,7 @@ import {
   type BindingViteCssPostPluginConfig,
   type BindingViteHtmlPluginConfig,
   type BindingViteManifestPluginConfig,
-} from '../binding.cjs';
+} from '../../dist/binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
 import { error, logPluginError } from '../log/logs';

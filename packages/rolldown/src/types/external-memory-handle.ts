@@ -1,4 +1,4 @@
-import type { ExternalMemoryStatus } from '../binding.cjs';
+import type { ExternalMemoryStatus } from '../../dist/binding.cjs';
 
 // - `unique symbol` can't be used in computed properties with `isolatedDeclarations: true`
 // - https://github.com/microsoft/typescript/issues/61892

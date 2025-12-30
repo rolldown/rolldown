@@ -12,7 +12,7 @@ import type {
   BindingViteReporterPluginConfig,
   BindingViteResolvePluginConfig,
   BindingViteWasmHelperPluginConfig,
-} from '../binding.cjs';
+} from '../../dist/binding.cjs';
 import type { StringOrRegExp } from '../types/utils';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
 import { BuiltinPlugin, makeBuiltinPluginCallable } from './utils';

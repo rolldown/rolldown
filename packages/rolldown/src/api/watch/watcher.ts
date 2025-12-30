@@ -1,4 +1,4 @@
-import { BindingWatcher, shutdownAsyncRuntime } from '../../binding.cjs';
+import { BindingWatcher, shutdownAsyncRuntime } from '../../../dist/binding.cjs';
 import { LOG_LEVEL_WARN } from '../../log/logging';
 import { logMultiplyNotifyOption } from '../../log/logs';
 import type { WatchOptions } from '../../options/watch-options';

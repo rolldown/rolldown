@@ -1,4 +1,4 @@
-import type { BindingViteHtmlPluginConfig } from '../binding.cjs';
+import type { BindingViteHtmlPluginConfig } from '../../dist/binding.cjs';
 import type { MinimalPluginContext } from '../plugin/minimal-plugin-context';
 import type { OutputBundle } from '../types/output-bundle';
 import type { OutputChunk } from '../types/rolldown-output';

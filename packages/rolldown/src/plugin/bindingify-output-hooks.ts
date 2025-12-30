@@ -1,4 +1,4 @@
-import type { BindingHookFilter, BindingPluginOptions } from '../binding.cjs';
+import type { BindingHookFilter, BindingPluginOptions } from '../../dist/binding.cjs';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { aggregateBindingErrorsIntoJsError, unwrapBindingResult } from '../utils/error';
 import { normalizeHook } from '../utils/normalize-hook';

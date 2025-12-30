@@ -1,4 +1,4 @@
-import type { BindingOutputAsset, ExternalMemoryStatus } from '../binding.cjs';
+import type { BindingOutputAsset, ExternalMemoryStatus } from '../../dist/binding.cjs';
 import { lazyProp } from '../decorators/lazy';
 import type { AssetSource } from '../utils/asset-source';
 import { transformAssetSource } from '../utils/asset-source';

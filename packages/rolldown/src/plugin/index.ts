@@ -4,7 +4,7 @@ import type {
   BindingHookResolveIdExtraArgs,
   BindingMagicString,
   BindingTransformHookExtraArgs,
-} from '../binding.cjs';
+} from '../../dist/binding.cjs';
 import type { BuiltinPlugin } from '../builtin-plugin/utils';
 import type { DefinedHookNames } from '../constants/plugin';
 import type { DEFINED_HOOK_NAMES } from '../constants/plugin';

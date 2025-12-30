@@ -24,7 +24,7 @@ export {
   type TransformOptions,
   type TransformResult,
   transformSync,
-} from './binding.cjs';
+} from '../dist/binding.cjs';
 
 export { defineParallelPlugin } from './plugin/parallel-plugin';
 export { parse, parseSync } from './utils/parse';
@@ -67,7 +67,7 @@ export { viteHtmlPlugin, type ViteHtmlPluginOptions } from './builtin-plugin/vit
 export { viteManifestPlugin } from './builtin-plugin/vite-manifest-plugin';
 
 // `__volume` and `__fs` only exist in `rolldown-binding.wasi-browser.js`, so we need to use namespace import to prevent static import error.
-import * as binding from './binding.cjs';
+import * as binding from '../dist/binding.cjs';
 /**
  * In-memory file system for browser builds.
  *

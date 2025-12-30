@@ -1,5 +1,5 @@
 import type { RolldownPlugin } from '..';
-import type { BindingNormalizedOptions } from '../binding.cjs';
+import type { BindingNormalizedOptions } from '../../dist/binding.cjs';
 import { lazyProp } from '../decorators/lazy';
 import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
 import { PlainObjectLike } from '../types/plain-object-like';

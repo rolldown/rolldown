@@ -4,7 +4,7 @@ import { rolldown } from './api/rolldown';
 import type { RolldownBuild } from './api/rolldown/rolldown-build';
 import { watch } from './api/watch';
 import type { RolldownWatcher, RolldownWatcherEvent } from './api/watch/watch-emitter';
-import type { PreRenderedChunk } from './binding.cjs';
+import type { PreRenderedChunk } from '../dist/binding.cjs';
 import type { LoggingFunction, WarningHandlerWithDefault } from './log/log-handler';
 import type {
   LogLevel,
@@ -100,7 +100,7 @@ import { defineConfig } from './utils/define-config';
 import { VERSION } from './version';
 
 export { build, defineConfig, rolldown, VERSION, watch };
-export { BindingMagicString } from './binding.cjs';
+export { BindingMagicString } from '../dist/binding.cjs';
 export type {
   AddonFunction,
   AsyncPluginHooks,

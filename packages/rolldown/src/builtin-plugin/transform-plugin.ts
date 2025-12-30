@@ -1,6 +1,6 @@
 import { BuiltinPlugin } from './utils';
 
-import type { BindingViteTransformPluginConfig } from '../binding.cjs';
+import type { BindingViteTransformPluginConfig } from '../../dist/binding.cjs';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
 
 type TransformPattern = string | RegExp | readonly (RegExp | string)[];

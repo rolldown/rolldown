@@ -4,14 +4,14 @@ import {
   BindingLogLevel,
   BindingPropertyReadSideEffects,
   BindingPropertyWriteSideEffects,
-} from '../binding.cjs';
+} from '../../dist/binding.cjs';
 import type {
   BindingDeferSyncScanData,
   BindingExperimentalOptions,
   BindingInjectImportNamed,
   BindingInjectImportNamespace,
   BindingInputOptions,
-} from '../binding.cjs';
+} from '../../dist/binding.cjs';
 import {
   bindingifyCSSPostPlugin,
   bindingifyManifestPlugin,

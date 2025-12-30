@@ -3,7 +3,7 @@ import {
   type ParseResult,
   type ParserOptions,
   parseSync as originalParseSync,
-} from '../binding.cjs';
+} from '../../dist/binding.cjs';
 // @ts-ignore
 import * as oxcParserWrap from 'oxc-parser/src-js/wrap.js';
 

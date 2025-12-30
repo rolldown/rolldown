@@ -1,5 +1,5 @@
 import type { SourceMapInput } from '..';
-import type { BindingUrlResolver, BindingViteCssPluginConfig } from '../binding.cjs';
+import type { BindingUrlResolver, BindingViteCssPluginConfig } from '../../dist/binding.cjs';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { BuiltinPlugin } from './utils';
 

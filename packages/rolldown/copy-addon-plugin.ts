@@ -9,13 +9,13 @@ interface CopyAddonPluginOptions {
   desireWasmFiles: boolean;
 }
 
-const WASM_FILE_LIST = [
+const WASM_BINDING_FILES = [
   'rolldown-binding.wasm32-wasi.wasm',
   'rolldown-binding.wasi-browser.js',
   'rolldown-binding.wasi.cjs',
-  'wasi-worker-browser.mjs',
-  'wasi-worker.mjs',
 ];
+
+const WASM_WORKER_FILES = ['wasi-worker-browser.mjs', 'wasi-worker.mjs'];
 
 export const CopyAddonPlugin = ({
   isCI,
@@ -25,8 +25,17 @@ export const CopyAddonPlugin = ({
   const addonsToEmit = new Map<string, string>();
   let outputDir = '';
   if (desireWasmFiles) {
-    const srcDir = join(fileURLToPath(import.meta.url), '..', 'src');
-    for (const file of WASM_FILE_LIST) {
+    const baseDir = join(fileURLToPath(import.meta.url), '..');
+    const distDir = join(baseDir, 'dist');
+    const srcDir = join(baseDir, 'src');
+
+    // Generated binding files are in dist/
+    for (const file of WASM_BINDING_FILES) {
+      addonsToEmit.set(join(distDir, file), '');
+    }
+
+    // Worker source files are in src/
+    for (const file of WASM_WORKER_FILES) {
       addonsToEmit.set(join(srcDir, file), '');
     }
   }

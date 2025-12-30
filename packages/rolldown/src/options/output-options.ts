@@ -1,4 +1,7 @@
-import type { MinifyOptions as BindingMinifyOptions, PreRenderedChunk } from '../binding.cjs';
+import type {
+  MinifyOptions as BindingMinifyOptions,
+  PreRenderedChunk,
+} from '../../dist/binding.cjs';
 import type { RolldownOutputPluginOption } from '../plugin';
 import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
 import type { ModuleInfo } from '../types/module-info';

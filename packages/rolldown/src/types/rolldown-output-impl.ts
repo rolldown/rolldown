@@ -1,4 +1,4 @@
-import type { BindingOutputs, ExternalMemoryStatus } from '../binding.cjs';
+import type { BindingOutputs, ExternalMemoryStatus } from '../../dist/binding.cjs';
 import { lazyProp } from '../decorators/lazy';
 import { transformToRollupOutput } from '../utils/transform-to-rollup-output';
 import type { ExternalMemoryHandle } from './external-memory-handle';

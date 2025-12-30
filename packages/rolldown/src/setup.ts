@@ -1,5 +1,5 @@
 import { isMainThread } from 'node:worker_threads';
-import { initTraceSubscriber } from './binding.cjs';
+import { initTraceSubscriber } from '../dist/binding.cjs';
 import { onExit } from './utils/signal-exit';
 
 if (!import.meta.browserBuild && isMainThread) {

@@ -1,4 +1,4 @@
-import type { BindingViteAssetPluginConfig } from '../binding.cjs';
+import type { BindingViteAssetPluginConfig } from '../../dist/binding.cjs';
 import { BuiltinPlugin } from './utils';
 
 export function viteAssetPlugin(config: BindingViteAssetPluginConfig): BuiltinPlugin {

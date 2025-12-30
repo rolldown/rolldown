@@ -1,4 +1,4 @@
-import type { BindingBundlerOptions } from '../binding.cjs';
+import type { BindingBundlerOptions } from '../../dist/binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import { getLogger, getOnLog } from '../log/logger';
 import { LOG_LEVEL_INFO } from '../log/logging';

@@ -1,6 +1,6 @@
 // Initialize Tokio runtime as early as possible to avoid wasting time on imports
 
-import { createTokioRuntime } from '../binding.cjs';
+import { createTokioRuntime } from '../../dist/binding.cjs';
 
 let isWatchMode = false;
 

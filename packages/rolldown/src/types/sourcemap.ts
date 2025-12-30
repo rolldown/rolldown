@@ -1,4 +1,4 @@
-import type { BindingSourcemap } from '../binding.cjs';
+import type { BindingSourcemap } from '../../dist/binding.cjs';
 import type { SourceMap } from './rolldown-output';
 
 /** @category Plugin APIs */

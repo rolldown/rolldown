@@ -1,4 +1,4 @@
-import { type BindingWatcherBundler, type BindingWatcherEvent } from '../../binding.cjs';
+import { type BindingWatcherBundler, type BindingWatcherEvent } from '../../../dist/binding.cjs';
 import type { MaybePromise } from '../../types/utils';
 import { aggregateBindingErrorsIntoJsError } from '../../utils/error';
 

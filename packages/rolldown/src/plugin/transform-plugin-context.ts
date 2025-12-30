@@ -2,7 +2,7 @@ import type {
   BindingMagicString,
   BindingPluginContext,
   BindingTransformPluginContext,
-} from '../binding.cjs';
+} from '../../dist/binding.cjs';
 import {
   type LoggingFunctionWithPosition,
   type LogHandler,

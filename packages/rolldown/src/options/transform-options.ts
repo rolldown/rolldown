@@ -1,4 +1,4 @@
-import type { JsxOptions, TransformOptions as OxcTransformOptions } from '../binding.cjs';
+import type { JsxOptions, TransformOptions as OxcTransformOptions } from '../../dist/binding.cjs';
 
 export interface TransformOptions extends Omit<
   OxcTransformOptions,

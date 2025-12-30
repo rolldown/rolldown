@@ -1,4 +1,4 @@
-import type { BindingViteCssPostPluginConfig } from '../binding.cjs';
+import type { BindingViteCssPostPluginConfig } from '../../dist/binding.cjs';
 import type { NormalizedOutputOptions } from '../options/normalized-output-options';
 import { BuiltinPlugin } from './utils';
 

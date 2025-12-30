@@ -5,7 +5,7 @@ import type {
   JsChangedOutputs,
   JsOutputAsset,
   JsOutputChunk,
-} from '../binding.cjs';
+} from '../../dist/binding.cjs';
 import type { MinimalPluginContext } from '../plugin/minimal-plugin-context';
 import { OutputAssetImpl } from '../types/output-asset-impl';
 import type { OutputBundle } from '../types/output-bundle';

@@ -27,6 +27,11 @@ impl StableModuleId {
     Self::with_arc_str(id.as_arc_str().clone(), cwd)
   }
 
+  /// Creates a new `StableModuleId` from an `ArcStr` without stabilization.
+  pub fn from_module_id(module_id: ModuleId) -> Self {
+    Self { inner: module_id.into_inner() }
+  }
+
   #[cfg(test)]
   fn with_str(id: &str, cwd: &Path) -> Self {
     Self::with_arc_str(ArcStr::from(id), cwd)

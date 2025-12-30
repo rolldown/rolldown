@@ -47,7 +47,7 @@ impl Module {
   pub fn stable_id(&self) -> &str {
     match self {
       Module::Normal(v) => &v.stable_id,
-      Module::External(v) => &v.name,
+      Module::External(v) => &v.stable_id,
     }
   }
 

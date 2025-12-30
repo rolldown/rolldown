@@ -80,6 +80,41 @@ describe('Plugin closeBundle hook', async () => {
     expect(closeBundleFn).toHaveBeenCalledTimes(1);
   });
 
+  test('call closeBundle hook with error argument when build fails', async () => {
+    let receivedError: Error | undefined;
+    const error = await buildWithPlugin({
+      name: 'test',
+      load() {
+        throw new Error('load error');
+      },
+      closeBundle(error) {
+        receivedError = error;
+      },
+    });
+    expect(error!.message).toContain('load error');
+    expect(receivedError).toBeDefined();
+    expect(receivedError!.message).toContain('load error');
+  });
+
+  test('call closeBundle hook without error argument when build succeeds', async () => {
+    let receivedError: Error | undefined = new Error('should be cleared');
+    const build = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [
+        {
+          name: 'test',
+          closeBundle(error) {
+            receivedError = error;
+          },
+        },
+      ],
+    });
+    await build.generate();
+    await build.close();
+    expect(receivedError).toBeUndefined();
+  });
+
   test('call closeBundle with bundle close', async () => {
     const closeBundleFn = vi.fn();
     const build = await rolldown({
@@ -137,9 +172,7 @@ test('should print original error if it can not be assigned', async () => {
       structuredClone(proxy);
     },
   });
-  expect(error!.message).toContain(
-    'DataCloneError: #<Object> could not be cloned',
-  );
+  expect(error!.message).toContain('DataCloneError: #<Object> could not be cloned');
 });
 
 describe('Error output format', () => {

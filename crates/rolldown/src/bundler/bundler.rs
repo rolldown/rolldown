@@ -71,7 +71,7 @@ impl Bundler {
     self.closed = true;
     // NOTE: `close_bundle` is not called if no bundle happened: https://github.com/rolldown/rolldown/issues/6910
     if let Some(last_bundle_handle) = &self.last_bundle_handle {
-      last_bundle_handle.plugin_driver.close_bundle().await?;
+      last_bundle_handle.plugin_driver.close_bundle(None).await?;
       last_bundle_handle.plugin_driver.clear();
     }
 

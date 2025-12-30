@@ -160,8 +160,11 @@ pub struct BindingPluginOptions {
   >,
   pub write_bundle_meta: Option<BindingPluginHookMeta>,
 
-  #[napi(ts_type = "(ctx: BindingPluginContext) => MaybePromise<VoidNullable>")]
-  pub close_bundle: Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext,)>>>,
+  #[napi(
+    ts_type = "(ctx: BindingPluginContext, error?: BindingError[]) => MaybePromise<VoidNullable>"
+  )]
+  pub close_bundle:
+    Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, Option<Vec<BindingError>>)>>>,
   pub close_bundle_meta: Option<BindingPluginHookMeta>,
 
   #[napi(

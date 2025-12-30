@@ -231,7 +231,7 @@ export function bindingifyCloseBundle(
   const { handler, meta } = normalizeHook(hook);
 
   return {
-    plugin: async (ctx) => {
+    plugin: async (ctx, err) => {
       await handler.call(
         new PluginContextImpl(
           args.outputOptions,
@@ -242,6 +242,7 @@ export function bindingifyCloseBundle(
           args.logLevel,
           args.watchMode,
         ),
+        err ? aggregateBindingErrorsIntoJsError(err) : undefined,
       );
     },
     meta: bindingifyPluginHookMeta(meta),

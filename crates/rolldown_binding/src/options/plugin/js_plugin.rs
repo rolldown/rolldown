@@ -564,12 +564,25 @@ impl Plugin for JsPlugin {
   async fn close_bundle(
     &self,
     ctx: &rolldown_plugin::PluginContext,
+    args: Option<&rolldown_plugin::HookCloseBundleArgs<'_>>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.close_bundle {
-      cb.await_call(FnArgs { data: (ctx.clone().into(),) })
-        .instrument(debug_span!("close_bundle_hook", plugin_name = self.name))
-        .await
-        .context("closeBundle hook threw an error")?;
+      cb.await_call(
+        (
+          ctx.clone().into(),
+          args.map(|args| {
+            args
+              .errors
+              .iter()
+              .map(|diagnostic| to_binding_error(diagnostic, args.cwd.clone()))
+              .collect()
+          }),
+        )
+          .into(),
+      )
+      .instrument(debug_span!("close_bundle_hook", plugin_name = self.name))
+      .await
+      .context("closeBundle hook threw an error")?;
     }
     Ok(())
   }

@@ -2,6 +2,7 @@ pub mod custom_field;
 pub mod hook_addon_args;
 pub mod hook_build_end_args;
 pub mod hook_build_start_args;
+pub mod hook_close_bundle_args;
 pub mod hook_generate_bundle_args;
 pub mod hook_load_args;
 pub mod hook_load_output;

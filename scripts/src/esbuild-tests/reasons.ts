@@ -2,7 +2,8 @@
  * When a test case is listed here, it will be marked as "failed" in the test summary.
  */
 export const failedReasons: Record<string, string> = {
-  'dce/dce_of_iife': 'sub optimal: IIFEs are not unwrapped',
+  'dce/dce_of_iife':
+    'https://github.com/oxc-project/oxc/issues/17480 and sub optimal: IIFEs are not unwrapped in some cases',
   'dce/dce_of_symbol_ctor_call': '`new Symbol("abc")` should not be removed as it has side effects',
   'dce/tree_shaking_lowered_class_static_field': 'sub optimal: REMOVE_ME class can be removed',
   'dce/tree_shaking_react_elements': 'sub optimal: `React.Fragment` should be removed',
@@ -41,7 +42,6 @@ export const failedReasons: Record<string, string> = {
     'ignored module debug name seems not correct',
   'ts/ts_export_default_type_issue316':
     'related to https://github.com/rolldown/rolldown/issues/3048, export pointing to a value declared by `declare var` should be kept',
-  'ts/ts_import_equals_elimination_test': 'See https://github.com/oxc-project/oxc/issues/16628',
 };
 
 export const notSupportedReasons: Record<string, string> = {

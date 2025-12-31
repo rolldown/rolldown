@@ -563,8 +563,11 @@ impl<'a> HmrStage<'a> {
         .boundaries
         .into_iter()
         .map(|boundary| HmrBoundaryOutput {
-          boundary: self.module_table().modules[boundary.boundary].stable_id().into(),
-          accepted_via: self.module_table().modules[boundary.accepted_via].stable_id().into(),
+          boundary: self.module_table().modules[boundary.boundary].stable_id().as_arc_str().clone(),
+          accepted_via: self.module_table().modules[boundary.accepted_via]
+            .stable_id()
+            .as_arc_str()
+            .clone(),
         })
         .collect(),
     }))
@@ -745,8 +748,11 @@ impl<'a> HmrStage<'a> {
         .boundaries
         .into_iter()
         .map(|boundary| HmrBoundaryOutput {
-          boundary: self.module_table().modules[boundary.boundary].stable_id().into(),
-          accepted_via: self.module_table().modules[boundary.accepted_via].stable_id().into(),
+          boundary: self.module_table().modules[boundary.boundary].stable_id().as_arc_str().clone(),
+          accepted_via: self.module_table().modules[boundary.accepted_via]
+            .stable_id()
+            .as_arc_str()
+            .clone(),
         })
         .collect(),
     }))
@@ -909,7 +915,7 @@ impl<'a> HmrStage<'a> {
             "circular import chain: {}",
             cycle_chain
               .iter()
-              .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
+              .map(|module_idx| self.module_table().modules[*module_idx].stable_id().as_str())
               .collect::<Vec<_>>()
               .join(" -> ")
           ));
@@ -939,7 +945,8 @@ impl<'a> HmrStage<'a> {
       // it means any importer of that module can't hot update. We should fall back to full reload.
       if let Some(first_invalidated_by) = first_invalidated_by.as_ref() {
         if boundaries.iter().any(|boundary| {
-          self.module_table().modules[boundary.accepted_via].stable_id() == *first_invalidated_by
+          self.module_table().modules[boundary.accepted_via].stable_id().as_str()
+            == *first_invalidated_by
         }) {
           require_full_reload = true;
           // full_reload_reason = Some("circular import invalidate".to_string());

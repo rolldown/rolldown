@@ -812,8 +812,8 @@ impl BindImportsAndExportsContext<'_> {
   ) -> MatchImportKind {
     let tracking_span = tracing::trace_span!(
       "TRACKING_MATCH_IMPORT",
-      importer = index_modules[tracker.importer].stable_id(),
-      importee = index_modules[tracker.importee].stable_id(),
+      importer = index_modules[tracker.importer].stable_id().as_str(),
+      importee = index_modules[tracker.importee].stable_id().as_str(),
       imported_specifier = tracker.imported.to_string()
     );
     let _enter = tracking_span.enter();

@@ -6,6 +6,7 @@ use rolldown_std_utils::OptionExt;
 
 use crate::{
   ExternalModule, ImportRecordIdx, ModuleId, ModuleIdx, NormalModule, ResolvedImportRecord,
+  StableModuleId,
 };
 
 #[derive(Debug, Clone)]
@@ -44,7 +45,7 @@ impl Module {
     }
   }
 
-  pub fn stable_id(&self) -> &str {
+  pub fn stable_id(&self) -> &StableModuleId {
     match self {
       Module::Normal(v) => &v.stable_id,
       Module::External(v) => &v.stable_id,

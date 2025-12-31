@@ -51,6 +51,10 @@ impl StableModuleId {
   pub fn as_str(&self) -> &str {
     &self.inner
   }
+
+  pub fn as_arc_str(&self) -> &ArcStr {
+    &self.inner
+  }
 }
 
 impl AsRef<str> for StableModuleId {
@@ -76,6 +80,18 @@ impl std::fmt::Display for StableModuleId {
 impl Borrow<str> for StableModuleId {
   fn borrow(&self) -> &str {
     &self.inner
+  }
+}
+
+impl PartialEq<str> for StableModuleId {
+  fn eq(&self, other: &str) -> bool {
+    self.inner.as_str() == other
+  }
+}
+
+impl PartialEq<&str> for StableModuleId {
+  fn eq(&self, other: &&str) -> bool {
+    self.inner.as_str() == *other
   }
 }
 

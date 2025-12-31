@@ -1,7 +1,7 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
-use rolldown_common::{GetLocalDbMut, ImporterRecord, ModuleId, ModuleIdx};
+use rolldown_common::{GetLocalDbMut, ImporterRecord, ModuleId, ModuleIdx, StableModuleId};
 use rolldown_error::BuildResult;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -22,7 +22,7 @@ pub struct ScanStageCache {
   // Usage: Map file path emitted by watcher to corresponding module index
   pub module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
   // Usage: Map module stable id injected to client code to corresponding module index
-  pub module_idx_by_stable_id: FxHashMap<String, ModuleIdx>,
+  pub module_idx_by_stable_id: FxHashMap<StableModuleId, ModuleIdx>,
 }
 
 impl ScanStageCache {
@@ -90,7 +90,7 @@ impl ScanStageCache {
           .insert(normal_module.id.as_arc_str().to_slash().unwrap().into(), normal_module.idx);
       }
       // Update `module_idx_by_stable_id`
-      self.module_idx_by_stable_id.insert(new_module.stable_id().to_string(), new_module.idx());
+      self.module_idx_by_stable_id.insert(new_module.stable_id().clone(), new_module.idx());
 
       if new_idx.index() >= cache.module_table.modules.len() {
         let new_module_idx = ModuleIdx::from_usize(cache.module_table.modules.len());
@@ -146,7 +146,7 @@ impl ScanStageCache {
         let module_idx = normal_module.idx;
         self.module_idx_by_abs_path.insert(filename, module_idx);
       }
-      self.module_idx_by_stable_id.insert(module.stable_id().to_string(), module.idx());
+      self.module_idx_by_stable_id.insert(module.stable_id().clone(), module.idx());
     }
   }
 

@@ -77,21 +77,10 @@ impl std::fmt::Display for StableModuleId {
   }
 }
 
+// This allows to use `&str` to lookup `HashMap<StableModuleId, V>`. For `&String`, since it could coerce to `&str`, it also works.
 impl Borrow<str> for StableModuleId {
   fn borrow(&self) -> &str {
     &self.inner
-  }
-}
-
-impl PartialEq<str> for StableModuleId {
-  fn eq(&self, other: &str) -> bool {
-    self.inner.as_str() == other
-  }
-}
-
-impl PartialEq<&str> for StableModuleId {
-  fn eq(&self, other: &&str) -> bool {
-    self.inner.as_str() == *other
   }
 }
 

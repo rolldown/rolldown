@@ -94,7 +94,7 @@ impl<'a> HmrStage<'a> {
     let module_idx = self
       .cache
       .module_idx_by_stable_id
-      .get(&invalidate_caller)
+      .get(invalidate_caller.as_str())
       .copied()
       .unwrap_or_else(|| panic!("Not found modules for file: {invalidate_caller}"));
 

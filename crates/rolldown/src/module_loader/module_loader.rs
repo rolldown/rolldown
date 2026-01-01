@@ -2,6 +2,7 @@ use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
+use futures::future::join_all;
 use itertools::Itertools;
 use oxc::semantic::{ScopeId, Scoping};
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
@@ -27,7 +28,6 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use tracing::Instrument;
 
 use crate::module_loader::task_context::TaskContext;
-use crate::stages::scan_stage::resolve_user_defined_entries;
 use crate::types::scan_stage_cache::ScanStageCache;
 use crate::utils::load_entry_module::load_entry_module;
 use crate::{SharedOptions, SharedResolver};
@@ -285,14 +285,7 @@ impl<'a> ModuleLoader<'a> {
     let mut all_warnings: Vec<BuildDiagnostic> = vec![];
 
     let user_defined_entries = match fetch_mode {
-      ScanMode::Full => {
-        resolve_user_defined_entries(
-          &self.options,
-          &self.shared_context.resolver,
-          &self.shared_context.plugin_driver,
-        )
-        .await?
-      }
+      ScanMode::Full => self.resolve_user_defined_entries().await?,
       ScanMode::Partial(_) => vec![],
     };
 
@@ -740,6 +733,43 @@ impl<'a> ModuleLoader<'a> {
       ),
       flat_options: self.flat_options,
     })
+  }
+
+  #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
+  pub async fn resolve_user_defined_entries(
+    &self,
+  ) -> BuildResult<Vec<(Option<ArcStr>, ResolvedId)>> {
+    let resolved_ids = join_all(self.options.input.iter().map(|input_item| async move {
+      let resolved = load_entry_module(
+        &self.shared_context.resolver,
+        &self.shared_context.plugin_driver,
+        &input_item.import,
+        None,
+      )
+      .await;
+
+      resolved.map(|info| (input_item.name.as_ref().map(Into::into), info))
+    }))
+    .await;
+
+    let mut ret = Vec::with_capacity(self.options.input.len());
+
+    let mut errors = vec![];
+
+    for resolve_id in resolved_ids {
+      match resolve_id {
+        Ok(item) => {
+          ret.push(item);
+        }
+        Err(e) => errors.push(e),
+      }
+    }
+
+    if !errors.is_empty() {
+      Err(errors)?;
+    }
+
+    Ok(ret)
   }
 
   /// Traces the import chain from a module back to an entry point.

@@ -30,40 +30,6 @@ type SourcemapChannel = (
   Option<thread::JoinHandle<FxHashMap<ModuleIdx, Vec<SourcemapChainElement>>>>,
 );
 
-/// Resolve `InputOptions.input`
-#[tracing::instrument(target = "devtool", level = "debug", skip_all)]
-pub async fn resolve_user_defined_entries(
-  options: &SharedOptions,
-  resolver: &SharedResolver,
-  plugin_driver: &SharedPluginDriver,
-) -> BuildResult<Vec<(Option<ArcStr>, ResolvedId)>> {
-  let resolved_ids = join_all(options.input.iter().map(|input_item| async move {
-    let resolved = load_entry_module(resolver, plugin_driver, &input_item.import, None).await;
-
-    resolved.map(|info| (input_item.name.as_ref().map(Into::into), info))
-  }))
-  .await;
-
-  let mut ret = Vec::with_capacity(options.input.len());
-
-  let mut errors = vec![];
-
-  for resolve_id in resolved_ids {
-    match resolve_id {
-      Ok(item) => {
-        ret.push(item);
-      }
-      Err(e) => errors.push(e),
-    }
-  }
-
-  if !errors.is_empty() {
-    Err(errors)?;
-  }
-
-  Ok(ret)
-}
-
 pub struct ScanStage {
   options: SharedOptions,
   plugin_driver: SharedPluginDriver,

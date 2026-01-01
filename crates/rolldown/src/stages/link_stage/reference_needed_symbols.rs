@@ -3,7 +3,7 @@ use std::ptr::addr_of;
 use rolldown_common::{
   ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
   OutputFormat, ResolvedImportRecord, RuntimeHelper, StmtInfoMeta, SymbolRefDb, TaggedSymbolRef,
-  WrapKind, side_effects::DeterminedSideEffects,
+  WrapKind,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -27,10 +27,6 @@ fn is_external_dynamic_import(
 
 struct DeferUpdateInfo {
   record_meta_pairs: Vec<(ImportRecordIdx, ImportRecordMeta)>,
-  /// Whether to set this module's side_effects to Analyzed(true).
-  /// This is deferred to avoid race conditions when reading importee.side_effects
-  /// while another thread might be writing to it.
-  set_side_effects_true: bool,
 }
 impl LinkStage<'_> {
   #[expect(clippy::collapsible_if, clippy::too_many_lines)]
@@ -43,43 +39,6 @@ impl LinkStage<'_> {
     let keep_names = self.options.keep_names;
     let commonjs_treeshake = self.options.treeshake.commonjs();
 
-    // Pre-compute which modules need side_effects upgraded to true.
-    // This must be done before the parallel section to avoid race conditions where
-    // one thread reads importee.side_effects while another writes to it.
-    // A module needs upgrade if it has `export * from 'wrapped-module'` where the
-    // wrapped module is CJS or ESM wrapped, or has dynamic exports.
-    let mut side_effects_upgrades: Vec<bool> = vec![false; self.module_table.modules.len()];
-    for module in &self.module_table.modules {
-      let Module::Normal(importer) = module else { continue };
-      for rec in &importer.import_records {
-        if rec.kind != ImportKind::Import {
-          continue;
-        }
-        let is_reexport_all = rec.meta.contains(ImportRecordMeta::IsExportStar);
-        if !is_reexport_all {
-          continue;
-        }
-        let Module::Normal(importee) = &self.module_table[rec.resolved_module] else { continue };
-        let importee_linking_info = &self.metas[importee.idx];
-        let needs_upgrade = match importee_linking_info.wrap_kind() {
-          WrapKind::None => self.metas[importee.idx].has_dynamic_exports,
-          WrapKind::Cjs | WrapKind::Esm => true,
-        };
-        if needs_upgrade {
-          side_effects_upgrades[importer.idx.index()] = true;
-        }
-      }
-    }
-
-    // Build snapshot of side_effects including the upgrades
-    let side_effects_snapshot: Vec<bool> = self
-      .module_table
-      .modules
-      .iter()
-      .enumerate()
-      .map(|(idx, m)| side_effects_upgrades[idx] || m.side_effects().has_side_effects())
-      .collect();
-
     let defer_update_info_list = self
       .module_table
       .modules
@@ -90,7 +49,6 @@ impl LinkStage<'_> {
         let symbol_db =
           symbol_ref_for_module.as_mut().expect("normal module should have symbol db");
         let mut record_meta_pairs: Vec<(ImportRecordIdx, ImportRecordMeta)> = vec![];
-        let mut set_side_effects_true = false;
         let importer_idx = importer.idx;
         // safety: No race conditions here:
         // - Mutating on `stmt_infos` is isolated in threads for each module
@@ -186,7 +144,6 @@ impl LinkStage<'_> {
                         if is_reexport_all {
                           let meta = &self.metas[importee.idx];
                           if meta.has_dynamic_exports {
-                            set_side_effects_true = true;
                             stmt_info.side_effect = true.into();
                             stmt_info.meta.insert(StmtInfoMeta::ReExportDynamicExports);
                             depended_runtime_helper_map[RuntimeHelper::ReExport.bit_index()]
@@ -198,7 +155,6 @@ impl LinkStage<'_> {
                       }
                       WrapKind::Cjs => {
                         if is_reexport_all {
-                          set_side_effects_true = true;
                           stmt_info.side_effect = true.into();
                           // Turn `export * from 'bar_cjs'` into `__reExport(foo_exports, __toESM(require_bar_cjs()))`
                           // Reference to `require_bar_cjs`
@@ -213,9 +169,7 @@ impl LinkStage<'_> {
                             stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                           }
                         } else {
-                          // Use snapshot to avoid race condition with concurrent writes
-                          stmt_info.side_effect =
-                            side_effects_snapshot[importee.idx.index()].into();
+                          stmt_info.side_effect = importee.side_effects.has_side_effects().into();
 
                           // Turn `import * as bar from 'bar_cjs'` into `var import_bar_cjs = __toESM(require_bar_cjs())`
                           // Turn `import foo from 'bar_cjs'; foo;` into `var import_bar_cjs = __toESM(require_bar_cjs()); import_bar_cjs.default;`
@@ -245,20 +199,13 @@ impl LinkStage<'_> {
                       }
                       WrapKind::Esm => {
                         // Turn `import ... from 'bar_esm'` into `init_bar_esm()`
-                        // Use snapshot to avoid race condition with concurrent writes
                         stmt_info.side_effect =
-                          (is_reexport_all || side_effects_snapshot[importee.idx.index()]).into();
+                          (is_reexport_all || importee.side_effects.has_side_effects()).into();
                         // Reference to `init_foo`
                         stmt_info
                           .referenced_symbols
                           .push(importee_linking_info.wrapper_ref.unwrap().into());
 
-                        if is_reexport_all {
-                          // This branch means this module contains code like `export * from './some-wrapped-module.js'`.
-                          // We need to mark this module as having side effects, so it could be included forcefully and
-                          // responsible for generating `init_xxx_dep` calls to ensure deps got initialized correctly.
-                          set_side_effects_true = true;
-                        }
                         if is_reexport_all && importee_linking_info.has_dynamic_exports {
                           // Turn `export * from 'bar_esm'` into `init_bar_esm();__reExport(foo_exports, bar_esm_exports);`
                           // something like `__reExport(foo_exports, other_exports)`
@@ -346,11 +293,10 @@ impl LinkStage<'_> {
         symbols_to_be_declared.into_iter().for_each(|(symbol_ref, idx)| {
           stmt_infos.declare_symbol_for_stmt(idx, TaggedSymbolRef::Normal(symbol_ref));
         });
-        (importer_idx, DeferUpdateInfo { record_meta_pairs, set_side_effects_true })
+        (importer_idx, DeferUpdateInfo { record_meta_pairs })
       })
       .collect::<Vec<_>>();
 
-    // Apply deferred updates after parallel section to avoid race conditions.
     // Since `par_iter + collect` could ensure the order of items is the same as original,
     // we could just push items in order here.
     for (module_idx, defer_update_info) in defer_update_info_list {
@@ -359,11 +305,6 @@ impl LinkStage<'_> {
       };
       for (rec_id, meta) in defer_update_info.record_meta_pairs {
         module.import_records[rec_id].meta |= meta;
-      }
-      // Apply side_effects update. This was deferred to avoid race conditions where
-      // one thread reads importee.side_effects while another writes to it.
-      if defer_update_info.set_side_effects_true {
-        module.side_effects = DeterminedSideEffects::Analyzed(true);
       }
     }
 

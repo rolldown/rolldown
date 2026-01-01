@@ -3,7 +3,7 @@ use std::ptr::addr_of;
 use rolldown_common::{
   ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
   OutputFormat, ResolvedImportRecord, RuntimeHelper, StmtInfoMeta, SymbolRefDb, TaggedSymbolRef,
-  WrapKind, side_effects::DeterminedSideEffects,
+  WrapKind,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -57,7 +57,6 @@ impl LinkStage<'_> {
         let stmt_infos = unsafe { &mut *(addr_of!(importer.stmt_infos).cast_mut()) };
         let depended_runtime_helper_map =
           unsafe { &mut *(addr_of!(importer.depended_runtime_helper).cast_mut()) };
-        let importer_side_effect = unsafe { &mut *(addr_of!(importer.side_effects).cast_mut()) };
         let mut symbols_to_be_declared = vec![];
         stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
           if stmt_info.meta.contains(StmtInfoMeta::HasDummyRecord) {
@@ -145,14 +144,6 @@ impl LinkStage<'_> {
                         if is_reexport_all {
                           let meta = &self.metas[importee.idx];
                           if meta.has_dynamic_exports {
-                            unsafe {
-                              // Avoid rustc false positive dead store optimization, https://cran.r-project.org/web/packages/rco/vignettes/opt-dead-store.html
-                              // same below
-                              std::ptr::write_volatile(
-                                importer_side_effect,
-                                DeterminedSideEffects::Analyzed(true),
-                              );
-                            }
                             stmt_info.side_effect = true.into();
                             stmt_info.meta.insert(StmtInfoMeta::ReExportDynamicExports);
                             depended_runtime_helper_map[RuntimeHelper::ReExport.bit_index()]
@@ -164,12 +155,6 @@ impl LinkStage<'_> {
                       }
                       WrapKind::Cjs => {
                         if is_reexport_all {
-                          unsafe {
-                            std::ptr::write_volatile(
-                              importer_side_effect,
-                              DeterminedSideEffects::Analyzed(true),
-                            );
-                          }
                           stmt_info.side_effect = true.into();
                           // Turn `export * from 'bar_cjs'` into `__reExport(foo_exports, __toESM(require_bar_cjs()))`
                           // Reference to `require_bar_cjs`
@@ -221,18 +206,6 @@ impl LinkStage<'_> {
                           .referenced_symbols
                           .push(importee_linking_info.wrapper_ref.unwrap().into());
 
-                        if is_reexport_all {
-                          // This branch means this module contains code like `export * from './some-wrapped-module.js'`.
-                          // We need to mark this module as having side effects, so it could be included forcefully and
-                          // responsible for generating `init_xxx_dep` calls to ensure deps got initialized correctly.
-
-                          unsafe {
-                            std::ptr::write_volatile(
-                              importer_side_effect,
-                              DeterminedSideEffects::Analyzed(true),
-                            );
-                          }
-                        }
                         if is_reexport_all && importee_linking_info.has_dynamic_exports {
                           // Turn `export * from 'bar_esm'` into `init_bar_esm();__reExport(foo_exports, bar_esm_exports);`
                           // something like `__reExport(foo_exports, other_exports)`
@@ -324,7 +297,6 @@ impl LinkStage<'_> {
       })
       .collect::<Vec<_>>();
 
-    // merge import_record.meta
     // Since `par_iter + collect` could ensure the order of items is the same as original,
     // we could just push items in order here.
     for (module_idx, defer_update_info) in defer_update_info_list {

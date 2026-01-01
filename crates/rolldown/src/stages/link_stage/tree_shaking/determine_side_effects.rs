@@ -1,5 +1,7 @@
 use oxc_index::IndexVec;
-use rolldown_common::{Module, ModuleIdx, side_effects::DeterminedSideEffects};
+use rolldown_common::{
+  ImportKind, ImportRecordMeta, Module, ModuleIdx, WrapKind, side_effects::DeterminedSideEffects,
+};
 
 use crate::stages::link_stage::LinkStage;
 
@@ -55,13 +57,35 @@ impl LinkStage<'_> {
       // this branch means the side effects of the module is analyzed `false`
       DeterminedSideEffects::Analyzed(false) => match module {
         Module::Normal(module) => {
-          let side_effects =
-            DeterminedSideEffects::Analyzed(module.import_records.iter().any(|import_record| {
-              self
-                .determine_side_effects_for_module(import_record.resolved_module, cache)
-                .has_side_effects()
-            }));
+          let has_side_effects = module.import_records.iter().any(|import_record| {
+            if self
+              .determine_side_effects_for_module(import_record.resolved_module, cache)
+              .has_side_effects()
+            {
+              return true;
+            }
 
+            // Check for `export * from 'wrapped-module'` patterns.
+            // These require runtime helpers (__reExport) and must be marked as having side effects
+            // to ensure the module is included and properly initializes its dependencies.
+            if import_record.kind == ImportKind::Import
+              && import_record.meta.contains(ImportRecordMeta::IsExportStar)
+            {
+              if let Module::Normal(importee) = &self.module_table[import_record.resolved_module] {
+                let importee_linking_info = &self.metas[importee.idx];
+                return match importee_linking_info.wrap_kind() {
+                  // If importee has dynamic exports (e.g., re-exports from CJS), we need side effects
+                  WrapKind::None => importee_linking_info.has_dynamic_exports,
+                  // Wrapped modules always need the side effect for proper initialization
+                  WrapKind::Cjs | WrapKind::Esm => true,
+                };
+              }
+            }
+
+            false
+          });
+
+          let side_effects = DeterminedSideEffects::Analyzed(has_side_effects);
           cache[module_idx] = SideEffectCache::Cache(side_effects);
 
           side_effects

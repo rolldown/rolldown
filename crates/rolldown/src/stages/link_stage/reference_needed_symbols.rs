@@ -1,4 +1,5 @@
 use std::ptr::addr_of;
+use std::sync::atomic::{AtomicU8, Ordering};
 
 use rolldown_common::{
   ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
@@ -14,6 +15,14 @@ use rolldown_utils::{
 
 use super::LinkStage;
 use crate::utils::external_import_interop::import_record_needs_interop;
+
+// Debug assertions to detect race conditions on side_effects field.
+// During parallel processing, one thread may write to importer.side_effects while
+// another thread reads from importee.side_effects (which could be the same module).
+#[cfg(debug_assertions)]
+const SIDE_EFFECTS_READ: u8 = 1;
+#[cfg(debug_assertions)]
+const SIDE_EFFECTS_WRITTEN: u8 = 2;
 
 fn is_external_dynamic_import(
   table: &ModuleTable,
@@ -38,6 +47,13 @@ impl LinkStage<'_> {
     let mut symbols_inner = old_symbol_db.into_inner();
     let keep_names = self.options.keep_names;
     let commonjs_treeshake = self.options.treeshake.commonjs();
+
+    // Race condition detection: track which modules have side_effects read vs written.
+    // This will panic if a module's side_effects is both read and written during
+    // parallel processing, proving the existence of a data race.
+    #[cfg(debug_assertions)]
+    let side_effects_access: Vec<AtomicU8> =
+      (0..self.module_table.modules.len()).map(|_| AtomicU8::new(0)).collect();
 
     let defer_update_info_list = self
       .module_table
@@ -145,6 +161,18 @@ impl LinkStage<'_> {
                         if is_reexport_all {
                           let meta = &self.metas[importee.idx];
                           if meta.has_dynamic_exports {
+                            // RACE DETECTION: Mark importer as having side_effects written
+                            #[cfg(debug_assertions)]
+                            {
+                              let prev = side_effects_access[importer_idx.index()]
+                                .fetch_or(SIDE_EFFECTS_WRITTEN, Ordering::SeqCst);
+                              if prev & SIDE_EFFECTS_READ != 0 {
+                                panic!(
+                                  "Race condition detected: module {} had side_effects read before write (WrapKind::None)",
+                                  importer.stable_id
+                                );
+                              }
+                            }
                             unsafe {
                               // Avoid rustc false positive dead store optimization, https://cran.r-project.org/web/packages/rco/vignettes/opt-dead-store.html
                               // same below
@@ -164,6 +192,18 @@ impl LinkStage<'_> {
                       }
                       WrapKind::Cjs => {
                         if is_reexport_all {
+                          // RACE DETECTION: Mark importer as having side_effects written
+                          #[cfg(debug_assertions)]
+                          {
+                            let prev = side_effects_access[importer_idx.index()]
+                              .fetch_or(SIDE_EFFECTS_WRITTEN, Ordering::SeqCst);
+                            if prev & SIDE_EFFECTS_READ != 0 {
+                              panic!(
+                                "Race condition detected: module {} had side_effects read before write (WrapKind::Cjs)",
+                                importer.stable_id
+                              );
+                            }
+                          }
                           unsafe {
                             std::ptr::write_volatile(
                               importer_side_effect,
@@ -184,6 +224,18 @@ impl LinkStage<'_> {
                             stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                           }
                         } else {
+                          // RACE DETECTION: Mark importee as having side_effects read
+                          #[cfg(debug_assertions)]
+                          {
+                            let prev = side_effects_access[importee.idx.index()]
+                              .fetch_or(SIDE_EFFECTS_READ, Ordering::SeqCst);
+                            if prev & SIDE_EFFECTS_WRITTEN != 0 {
+                              panic!(
+                                "Race condition detected: module {} had side_effects written before read (WrapKind::Cjs)",
+                                importee.stable_id
+                              );
+                            }
+                          }
                           stmt_info.side_effect = importee.side_effects.has_side_effects().into();
 
                           // Turn `import * as bar from 'bar_cjs'` into `var import_bar_cjs = __toESM(require_bar_cjs())`
@@ -214,6 +266,18 @@ impl LinkStage<'_> {
                       }
                       WrapKind::Esm => {
                         // Turn `import ... from 'bar_esm'` into `init_bar_esm()`
+                        // RACE DETECTION: Mark importee as having side_effects read (only for non-reexport)
+                        #[cfg(debug_assertions)]
+                        if !is_reexport_all {
+                          let prev = side_effects_access[importee.idx.index()]
+                            .fetch_or(SIDE_EFFECTS_READ, Ordering::SeqCst);
+                          if prev & SIDE_EFFECTS_WRITTEN != 0 {
+                            panic!(
+                              "Race condition detected: module {} had side_effects written before read (WrapKind::Esm)",
+                              importee.stable_id
+                            );
+                          }
+                        }
                         stmt_info.side_effect =
                           (is_reexport_all || importee.side_effects.has_side_effects()).into();
                         // Reference to `init_foo`
@@ -226,6 +290,18 @@ impl LinkStage<'_> {
                           // We need to mark this module as having side effects, so it could be included forcefully and
                           // responsible for generating `init_xxx_dep` calls to ensure deps got initialized correctly.
 
+                          // RACE DETECTION: Mark importer as having side_effects written
+                          #[cfg(debug_assertions)]
+                          {
+                            let prev = side_effects_access[importer_idx.index()]
+                              .fetch_or(SIDE_EFFECTS_WRITTEN, Ordering::SeqCst);
+                            if prev & SIDE_EFFECTS_READ != 0 {
+                              panic!(
+                                "Race condition detected: module {} had side_effects read before write (WrapKind::Esm)",
+                                importer.stable_id
+                              );
+                            }
+                          }
                           unsafe {
                             std::ptr::write_volatile(
                               importer_side_effect,

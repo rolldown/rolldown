@@ -66,7 +66,6 @@ impl LinkStage<'_> {
             }
 
             // Check for `export * from 'wrapped-module'` patterns.
-            // These require runtime helpers (__reExport) and must be marked as having side effects
             // to ensure the module is included and properly initializes its dependencies.
             if import_record.kind == ImportKind::Import
               && import_record.meta.contains(ImportRecordMeta::IsExportStar)
@@ -75,8 +74,20 @@ impl LinkStage<'_> {
                 let importee_linking_info = &self.metas[importee.idx];
                 return match importee_linking_info.wrap_kind() {
                   // If importee has dynamic exports (e.g., re-exports from CJS), we need side effects
+                  // to ensure the __reExport call is preserved.
+                  //  ```js
+                  // // index.js
+                  // export * from './foo'; // importee wrap kind is `none`, but since `foo` has dynamic_export,
+                  //                        // we need to preserve the `__reExport(index_exports, foo_ns)` call
+                  //
+                  // // foo.js
+                  // export * from './bar' // importee wrap kind is `cjs`, preserved by default
+                  //
+                  // // bar.js
+                  // module.exports = 1000
+                  // ```
                   WrapKind::None => importee_linking_info.has_dynamic_exports,
-                  // Wrapped modules always need the side effect for proper initialization
+                  // Wrapped modules always need the side effect(`init_xxx` for esm and `require_xxx` for cjs) for proper initialization
                   WrapKind::Cjs | WrapKind::Esm => true,
                 };
               }

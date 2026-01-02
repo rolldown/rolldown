@@ -4573,6 +4573,14 @@ expression: output
 
 - main-!~{000}~.js => main-DH9x5-FS.js
 
+# tests/rolldown/function/output_freeze/freeze_false
+
+- main-!~{000}~.js => main-C3S6vhYW.js
+
+# tests/rolldown/function/output_freeze/freeze_true
+
+- main-!~{000}~.js => main-C3S6vhYW.js
+
 # tests/rolldown/function/outro/cjs
 
 - main-!~{000}~.js => main-BW0SRVq-.js

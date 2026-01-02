@@ -192,6 +192,12 @@
             }
           ]
         },
+        "freeze": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "exports": {
           "anyOf": [
             {

@@ -707,6 +707,11 @@ const OutputOptionsSchema = v.strictObject({
     v.description('Minify the bundled file'),
   ),
   name: v.pipe(v.optional(v.string()), v.description('Name for UMD / IIFE format outputs')),
+  amd: v.optional(
+    v.object({
+      id: v.optional(v.string()),
+    }),
+  ),
   globals: v.pipe(
     v.optional(v.union([v.record(v.string(), v.string()), GlobalsFunctionSchema])),
     v.description('Global variable of UMD / IIFE dependencies (syntax: `key=value`)'),

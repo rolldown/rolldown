@@ -28,7 +28,7 @@ async function getEnv() {
 var ccc;
 var init_b = __esmMin((async () => {
 	await init_c();
-	ccc = await Promise.resolve().then(() => (init_c(), c_exports));
+	ccc = await Promise.resolve().then(() => (init_c(), /* @__PURE__ */ Object.freeze(c_exports)));
 }));
 
 //#endregion
@@ -45,7 +45,7 @@ var init_a = __esmMin((async () => {
 //#endregion
 //#region main.js
 var main_default = async () => {
-	return await init_a().then(() => a_exports).then(({ buildDevConfig: buildDevConfig$1 }) => buildDevConfig$1());
+	return await init_a().then(() => /* @__PURE__ */ Object.freeze(a_exports)).then(({ buildDevConfig: buildDevConfig$1 }) => buildDevConfig$1());
 };
 
 //#endregion

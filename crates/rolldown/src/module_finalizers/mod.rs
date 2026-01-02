@@ -1042,15 +1042,35 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
               if importee_linking_info.is_tla_or_contains_tla_dependency {
                 // `init_foo().then(function() { return foo_exports })`
+                let namespace_expr = self.snippet.id_ref_expr(importee_namespace_name, SPAN);
+                let frozen_namespace = if self.ctx.options.freeze {
+                  self.snippet.call_expr_with_arg_expr(
+                    self.snippet.literal_prop_access_member_expr_expr("Object", "freeze"),
+                    namespace_expr,
+                    true,
+                  )
+                } else {
+                  namespace_expr
+                };
                 Some(self.snippet.callee_then_call_expr(
                   self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                  self.snippet.id_ref_expr(importee_namespace_name, SPAN),
+                  frozen_namespace,
                 ))
               } else {
                 //  Promise.resolve().then(function() { return (init_foo(), foo_exports) })
+                let namespace_expr = self.snippet.id_ref_expr(importee_namespace_name, SPAN);
+                let frozen_namespace = if self.ctx.options.freeze {
+                  self.snippet.call_expr_with_arg_expr(
+                    self.snippet.literal_prop_access_member_expr_expr("Object", "freeze"),
+                    namespace_expr,
+                    true,
+                  )
+                } else {
+                  namespace_expr
+                };
                 Some(self.snippet.promise_resolve_then_call_expr(self.snippet.seq2_in_paren_expr(
                   self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                  self.snippet.id_ref_expr(importee_namespace_name, SPAN),
+                  frozen_namespace,
                 )))
               }
             }

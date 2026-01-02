@@ -179,36 +179,11 @@ impl ScanStage {
       self.process_sourcemap_handler(handler, &mut module_loader_output);
     }
 
-    let ModuleLoaderOutput {
-      module_table,
-      entry_points,
-      symbol_ref_db,
-      runtime,
-      warnings,
-      index_ecma_ast,
-      dynamic_import_exports_usage_map,
-      new_added_modules_from_partial_scan: _,
-      overrode_preserve_entry_signature_map,
-      entry_point_to_reference_ids,
-      flat_options,
-    } = module_loader_output;
-
     self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;
 
     self.plugin_driver.set_context_load_modules_tx(None).await;
 
-    Ok(ScanStageOutput {
-      entry_points,
-      symbol_ref_db,
-      runtime,
-      warnings,
-      index_ecma_ast,
-      dynamic_import_exports_usage_map,
-      module_table,
-      overrode_preserve_entry_signature_map,
-      entry_point_to_reference_ids,
-      flat_options,
-    })
+    Ok(module_loader_output.into())
   }
 
   fn create_sourcemap_channel(&self) -> SourcemapChannel {

@@ -1020,11 +1020,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let importee_id = rec.resolved_module;
 
     if rec.meta.contains(ImportRecordMeta::DeadDynamicImport) {
-      return Some(
-        self
-          .snippet
-          .promise_resolve_then_call_expr(self.snippet.object_freeze_dynamic_import_polyfill(self.ctx.options.freeze)),
-      );
+      return Some(self.snippet.promise_resolve_then_call_expr(
+        self.snippet.object_freeze_dynamic_import_polyfill(self.ctx.options.freeze),
+      ));
     }
     if self.ctx.options.inline_dynamic_imports {
       match &self.ctx.modules[importee_id] {

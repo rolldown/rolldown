@@ -4575,11 +4575,11 @@ expression: output
 
 # tests/rolldown/function/output_freeze/freeze_false
 
-- main-!~{000}~.js => main-C3S6vhYW.js
+- main-!~{000}~.js => main-CDvTf2iF.js
 
 # tests/rolldown/function/output_freeze/freeze_true
 
-- main-!~{000}~.js => main-C3S6vhYW.js
+- main-!~{000}~.js => main-CLuZQfcB.js
 
 # tests/rolldown/function/outro/cjs
 

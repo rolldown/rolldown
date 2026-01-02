@@ -91,7 +91,7 @@ pub struct BindingOutputOptions<'env> {
   pub external_live_bindings: Option<bool>,
   #[napi(ts_type = "'es' | 'cjs' | 'iife' | 'umd'")]
   pub format: Option<String>,
-  // freeze: boolean;
+  pub freeze: Option<bool>,
   #[napi(ts_type = "BindingGeneratedCodeOptions")]
   pub generated_code: Option<BindingGeneratedCodeOptions>,
   #[debug(skip)]

@@ -1023,7 +1023,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return Some(
         self
           .snippet
-          .promise_resolve_then_call_expr(self.snippet.object_freeze_dynamic_import_polyfill()),
+          .promise_resolve_then_call_expr(self.snippet.object_freeze_dynamic_import_polyfill(self.ctx.options.freeze)),
       );
     }
     if self.ctx.options.inline_dynamic_imports {

@@ -2051,6 +2051,7 @@ export interface BindingOutputOptions {
   extend?: boolean
   externalLiveBindings?: boolean
   format?: 'es' | 'cjs' | 'iife' | 'umd'
+  freeze?: boolean
   generatedCode?: BindingGeneratedCodeOptions
   globals?: Record<string, string> | ((name: string) => string)
   hashCharacters?: 'base64' | 'base36' | 'hex'

@@ -344,6 +344,7 @@ pub fn normalize_binding_options(
         })
       })
       .transpose()?,
+    freeze: output_options.freeze,
     hash_characters: output_options
       .hash_characters
       .map(|format_str| {

@@ -395,6 +395,7 @@ pub fn prepare_build_context(
     out_dir,
     file: raw_options.file,
     format,
+    freeze: raw_options.freeze.unwrap_or(true),
     exports: raw_options.exports.unwrap_or(crate::OutputExports::Auto),
     hash_characters: raw_options.hash_characters.unwrap_or(crate::HashCharacters::Base64),
     globals,

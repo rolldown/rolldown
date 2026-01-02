@@ -797,7 +797,7 @@ impl<'ast> AstSnippet<'ast> {
     self.builder.alloc_call_expression(SPAN, callee, NONE, self.builder.vec(), false)
   }
 
-  pub fn object_freeze_dynamic_import_polyfill(&self) -> Expression<'ast> {
+  pub fn object_freeze_dynamic_import_polyfill(&self, freeze: bool) -> Expression<'ast> {
     let proto = self.builder.object_property_kind_object_property(
       SPAN,
       PropertyKind::Init,
@@ -808,13 +808,19 @@ impl<'ast> AstSnippet<'ast> {
       false,
     );
 
-    self.call_expr_with_arg_expr(
-      self.literal_prop_access_member_expr_expr("Object", "freeze"),
-      ast::Expression::ObjectExpression(
-        self.builder.alloc_object_expression(SPAN, self.builder.vec_from_iter([proto])),
-      ),
-      true,
-    )
+    let obj_expr = ast::Expression::ObjectExpression(
+      self.builder.alloc_object_expression(SPAN, self.builder.vec_from_iter([proto])),
+    );
+
+    if freeze {
+      self.call_expr_with_arg_expr(
+        self.literal_prop_access_member_expr_expr("Object", "freeze"),
+        obj_expr,
+        true,
+      )
+    } else {
+      obj_expr
+    }
   }
 
   /// Creates an arrow function that extracts a property from a namespace object.

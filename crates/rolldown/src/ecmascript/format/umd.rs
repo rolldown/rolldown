@@ -83,7 +83,9 @@ pub async fn render_umd<'code>(
   let iife_export =
     render_iife_export(warnings, ctx, &externals, has_exports, named_exports).await?;
   let amd_define = if let Some(amd_id) = &ctx.options.amd_id {
-    format!("define('{amd_id}', [{amd_dependencies}], factory)")
+    // Escape single quotes and backslashes in amd_id to prevent code injection
+    let escaped_id = amd_id.replace('\\', "\\\\").replace('\'', "\\'");
+    format!("define('{escaped_id}', [{amd_dependencies}], factory)")
   } else {
     format!("define([{amd_dependencies}], factory)")
   };

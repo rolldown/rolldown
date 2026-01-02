@@ -223,10 +223,15 @@ async fn render_iife_export(
         } else { 
           format!(", {deps}") 
         };
+        let init_value = if ctx.options.extend { 
+          format!("{namespace} || {{}}") 
+        } else { 
+          "{}".to_string() 
+        };
         Ok(format!(
           "(function () {{
 \tvar current = {namespace};
-\tvar exports = {stmt}{namespace} = {{}};
+\tvar exports = {stmt}{namespace} = {init_value};
 \tfactory(exports{factory_deps});
 \texports.noConflict = function () {{ {namespace} = current; return exports; }};
 }})()"

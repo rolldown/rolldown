@@ -97,9 +97,7 @@ impl VisitState {
 }
 
 pub struct ModuleLoader<'a> {
-  options: SharedOptions,
-  shared_context: Arc<TaskContext>,
-  pub tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
+  pub shared_context: Arc<TaskContext>,
   rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
   runtime_id: ModuleIdx,
   remaining: u32,
@@ -156,29 +154,24 @@ impl<'a> ModuleLoader<'a> {
     }
 
     let flat_options = FlatOptions::from_shared_options(&options);
+    let symbol_ref_db = SymbolRefDb::new(options.transform_options.is_jsx_preserve());
+    let meta = TaskContextMeta {
+      replace_global_define_config: if options.define.is_empty() {
+        None
+      } else {
+        ReplaceGlobalDefinesConfig::new(&options.define).map(Some).map_err(|errs| {
+          errs
+            .into_iter()
+            .map(|err| BuildDiagnostic::invalid_define_config(err.message.to_string()))
+            .collect::<Vec<BuildDiagnostic>>()
+        })?
+      },
+    };
 
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
     let (tx, rx) = tokio::sync::mpsc::channel(1024);
-    let shared_context = Arc::new(TaskContext {
-      fs,
-      resolver,
-      plugin_driver,
-      options: Arc::clone(&options),
-      tx: tx.clone(),
-      meta: TaskContextMeta {
-        replace_global_define_config: if options.define.is_empty() {
-          None
-        } else {
-          ReplaceGlobalDefinesConfig::new(&options.define).map(Some).map_err(|errs| {
-            errs
-              .into_iter()
-              .map(|err| BuildDiagnostic::invalid_define_config(err.message.to_string()))
-              .collect::<Vec<BuildDiagnostic>>()
-          })?
-        },
-      },
-    });
+    let shared_context = Arc::new(TaskContext { fs, options, resolver, plugin_driver, tx, meta });
 
     let importers = std::mem::take(&mut cache.importers);
     let mut intermediate_normal_modules = IntermediateNormalModules::new(is_full_scan, importers);
@@ -195,13 +188,9 @@ impl<'a> ModuleLoader<'a> {
       0
     };
 
-    let symbol_ref_db = SymbolRefDb::new(options.transform_options.is_jsx_preserve());
-
     Ok(Self {
-      tx,
       rx,
       cache,
-      options,
       remaining,
       runtime_id,
       is_full_scan,
@@ -315,7 +304,8 @@ impl<'a> ModuleLoader<'a> {
       });
     }
 
-    if self.is_full_scan && self.options.experimental.is_incremental_build_enabled() {
+    if self.is_full_scan && self.shared_context.options.experimental.is_incremental_build_enabled()
+    {
       self
         .cache
         .user_defined_entry
@@ -389,7 +379,7 @@ impl<'a> ModuleLoader<'a> {
           for ((rec_idx, mut raw_rec), resolved_id) in
             raw_import_records.into_iter_enumerated().zip(resolved_deps)
           {
-            if self.options.experimental.vite_mode.unwrap_or_default()
+            if self.shared_context.options.experimental.vite_mode.unwrap_or_default()
               && resolved_id.id.as_str().ends_with(".json")
             {
               raw_rec.meta.insert(ImportRecordMeta::JsonModule);
@@ -739,20 +729,21 @@ impl<'a> ModuleLoader<'a> {
   pub async fn resolve_user_defined_entries(
     &self,
   ) -> BuildResult<Vec<(Option<ArcStr>, ResolvedId)>> {
-    let resolved_ids = join_all(self.options.input.iter().map(|input_item| async move {
-      let resolved = load_entry_module(
-        &self.shared_context.resolver,
-        &self.shared_context.plugin_driver,
-        &input_item.import,
-        None,
-      )
+    let resolved_ids =
+      join_all(self.shared_context.options.input.iter().map(|input_item| async move {
+        let resolved = load_entry_module(
+          &self.shared_context.resolver,
+          &self.shared_context.plugin_driver,
+          &input_item.import,
+          None,
+        )
+        .await;
+
+        resolved.map(|info| (input_item.name.as_ref().map(Into::into), info))
+      }))
       .await;
 
-      resolved.map(|info| (input_item.name.as_ref().map(Into::into), info))
-    }))
-    .await;
-
-    let mut ret = Vec::with_capacity(self.options.input.len());
+    let mut ret = Vec::with_capacity(self.shared_context.options.input.len());
 
     let mut errors = vec![];
 
@@ -819,7 +810,7 @@ impl<'a> ModuleLoader<'a> {
   /// If the module is already exists in module graph in partial scan mode, we could
   /// return the module idx directly.
   fn try_spawn_with_cache(&self, resolved_dep: &ResolvedId) -> Option<ModuleIdx> {
-    if !self.options.experimental.is_incremental_build_enabled() {
+    if !self.shared_context.options.experimental.is_incremental_build_enabled() {
       return None;
     }
     // We don't care about if it is invalidate, because

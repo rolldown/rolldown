@@ -162,13 +162,16 @@ impl ScanStage {
     self
       .plugin_driver
       .file_emitter
-      .set_context_load_modules_tx(Some(module_loader.tx.clone()))
+      .set_context_load_modules_tx(Some(module_loader.shared_context.tx.clone()))
       .await;
 
     self.plugin_driver.build_start(&self.options).await?;
 
     // For `await pluginContext.load`, if support it at buildStart hook, it could be caused stuck.
-    self.plugin_driver.set_context_load_modules_tx(Some(module_loader.tx.clone())).await;
+    self
+      .plugin_driver
+      .set_context_load_modules_tx(Some(module_loader.shared_context.tx.clone()))
+      .await;
 
     let mut module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
 

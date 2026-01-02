@@ -415,6 +415,7 @@ pub fn prepare_build_context(
     inject: raw_options.inject.unwrap_or_default(),
     oxc_inject_global_variables_config,
     extend: raw_options.extend.unwrap_or(false),
+    amd_id: raw_options.amd_id,
     external_live_bindings: raw_options.external_live_bindings.unwrap_or(true),
     inline_dynamic_imports,
     dynamic_import_in_cjs: raw_options.dynamic_import_in_cjs.unwrap_or(true),

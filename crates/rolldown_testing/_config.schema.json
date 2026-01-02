@@ -368,6 +368,12 @@
             "null"
           ]
         },
+        "amdId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "profilerNames": {
           "type": [
             "boolean",

@@ -1472,6 +1472,7 @@ export declare class BindingNormalizedOptions {
   get postFooter(): string | undefined | null | undefined
   get externalLiveBindings(): boolean
   get extend(): boolean
+  get amdId(): string | null
   get globals(): Record<string, string> | undefined
   get hashCharacters(): 'base64' | 'base36' | 'hex'
   get sourcemapDebugIds(): boolean
@@ -1614,6 +1615,11 @@ export interface BindingAdvancedChunksOptions {
   maxSize?: number
   minModuleSize?: number
   maxModuleSize?: number
+}
+
+export interface BindingAmdOptions {
+  /** An ID to use for AMD/UMD bundles */
+  id?: string
 }
 
 export interface BindingAssetSource {
@@ -2040,6 +2046,7 @@ export interface BindingOutputOptions {
   cssEntryFileNames?: string | ((chunk: PreRenderedChunk) => string)
   cssChunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
   sanitizeFileName?: boolean | ((name: string) => string)
+  amd?: BindingAmdOptions
   banner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   postBanner?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   footer?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)

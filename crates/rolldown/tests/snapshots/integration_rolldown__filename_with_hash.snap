@@ -4383,6 +4383,10 @@ expression: output
 
 - main-!~{000}~.js => main-Bd98rPpn.js
 
+# tests/rolldown/function/format/umd/amd_id
+
+- main-!~{000}~.js => main-CIA3kAgl.js
+
 # tests/rolldown/function/format/umd/conflict_exports_key
 
 - main-!~{000}~.js => main-D49IFcQQ.js

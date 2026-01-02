@@ -245,6 +245,11 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
+  pub fn amd_id(&self) -> Option<&str> {
+    self.inner.amd_id.as_deref()
+  }
+
+  #[napi(getter)]
   pub fn globals(&self) -> Either<HashMap<String, String, FxBuildHasher>, Undefined> {
     match &self.inner.globals {
       rolldown::GlobalsOutputOption::FxHashMap(globals) => Either::A(globals.clone()),

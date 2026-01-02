@@ -82,10 +82,15 @@ pub async fn render_umd<'code>(
   let iife_end = if need_global { ")" } else { "" };
   let iife_export =
     render_iife_export(warnings, ctx, &externals, has_exports, named_exports).await?;
+  let amd_define = if let Some(amd_id) = &ctx.options.amd_id {
+    format!("define('{amd_id}', [{amd_dependencies}], factory)")
+  } else {
+    format!("define([{amd_dependencies}], factory)")
+  };
   source_joiner.append_source(format!(
     "(function({wrapper_parameters}) {{
   {cjs_intro}
-  typeof define === 'function' && define.amd ? define([{amd_dependencies}], factory) :
+  typeof define === 'function' && define.amd ? {amd_define} :
   {iife_start}{iife_export}{iife_end};
 }})({global_argument}function({factory_parameters}) {{",
   ));

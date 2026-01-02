@@ -83,6 +83,17 @@ export interface ChunkingContext {
   getModuleInfo(moduleId: string): ModuleInfo | null;
 }
 
+/**
+ * Options for AMD/UMD module format.
+ */
+export interface AmdOptions {
+  /**
+   * An ID to use for AMD/UMD bundles.
+   * @see https://rollupjs.org/configuration-options/#output-amd-id
+   */
+  id?: string;
+}
+
 export interface OutputOptions {
   dir?: string;
   file?: string;
@@ -166,6 +177,10 @@ export interface OutputOptions {
    */
   minify?: boolean | 'dce-only' | MinifyOptions;
   name?: string;
+  /**
+   * Options for AMD/UMD module format.
+   */
+  amd?: AmdOptions;
   globals?: Record<string, string> | GlobalsFunction;
   /**
    * Maps external module IDs to paths.

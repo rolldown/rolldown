@@ -403,6 +403,7 @@ pub fn normalize_binding_options(
       })
       .transpose()?,
     extend: output_options.extend,
+    amd_id: output_options.amd.and_then(|amd| amd.id),
     define: input_options.define.map(FxIndexMap::from_iter),
     inject: input_options
       .inject

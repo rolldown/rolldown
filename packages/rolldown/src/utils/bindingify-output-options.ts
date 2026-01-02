@@ -73,6 +73,7 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     intro: bindingifyAddon(intro),
     outro: bindingifyAddon(outro),
     extend: outputOptions.extend,
+    noConflict: outputOptions.noConflict,
     globals,
     paths,
     generatedCode,

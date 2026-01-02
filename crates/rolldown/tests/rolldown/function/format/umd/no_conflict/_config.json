@@ -1,0 +1,8 @@
+{
+  "config": {
+    "format": "umd",
+    "name": "MyLib",
+    "noConflict": true
+  },
+  "expectExecuted": false
+}

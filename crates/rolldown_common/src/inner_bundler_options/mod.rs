@@ -194,6 +194,7 @@ pub struct BundlerOptions {
   )]
   pub define: Option<FxIndexMap<String, String>>,
   pub extend: Option<bool>,
+  pub no_conflict: Option<bool>,
   pub profiler_names: Option<bool>,
   pub keep_names: Option<bool>,
   pub inject: Option<Vec<InjectImport>>,

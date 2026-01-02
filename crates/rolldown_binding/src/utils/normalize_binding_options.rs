@@ -403,6 +403,7 @@ pub fn normalize_binding_options(
       })
       .transpose()?,
     extend: output_options.extend,
+    no_conflict: output_options.no_conflict,
     define: input_options.define.map(FxIndexMap::from_iter),
     inject: input_options
       .inject

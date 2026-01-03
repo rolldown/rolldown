@@ -472,6 +472,7 @@ const InputOptionsSchema = v.strictObject({
         ]),
       ),
       nativeMagicString: v.optional(v.boolean()),
+      chunkOptimization: v.optional(v.boolean()),
     }),
   ),
   transform: v.optional(TransformOptionsSchema),

@@ -16,6 +16,7 @@ pub struct BindingExperimentalOptions {
   #[napi(ts_type = "boolean | 'boundary'")]
   pub transform_hires_sourcemap: Option<Either<bool, String>>,
   pub native_magic_string: Option<bool>,
+  pub chunk_optimization: Option<bool>,
 }
 
 impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
@@ -54,6 +55,7 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
         Some(rolldown_common::SourcemapHires::Boundary)
       },
       native_magic_string: value.native_magic_string,
+      chunk_optimization: value.chunk_optimization,
     })
   }
 }

@@ -8,5 +8,11 @@
         }
       ]
     }
-  }
+  },
+  "configVariants": [
+    {
+      "_configName": "disableChunkOptimization",
+      "chunkOptimization": false
+    }
+  ]
 }

@@ -33,6 +33,7 @@ pub struct ConfigVariant {
   pub footer: Option<String>,
   pub intro: Option<String>,
   pub outro: Option<String>,
+  pub chunk_optimization: Option<bool>,
   // --- non-bundler options are start with `_`
   /// Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]
@@ -122,6 +123,12 @@ impl ConfigVariant {
     if let Some(outro) = &self.outro {
       config.outro = Some(AddonOutputOption::String(Some(outro.clone())));
     }
+    if let Some(chunk_optimization) = &self.chunk_optimization {
+      config.experimental = Some(ExperimentalOptions {
+        chunk_optimization: Some(*chunk_optimization),
+        ..config.experimental.unwrap_or_default()
+      });
+    }
     config
   }
 
@@ -177,6 +184,9 @@ impl ConfigVariant {
     }
     if let Some(minify) = &self.minify {
       fields.push(format!("minify: {minify:?}"));
+    }
+    if let Some(chunk_optimization) = &self.chunk_optimization {
+      fields.push(format!("chunk_optimization: {chunk_optimization:?}"));
     }
     let mut result = String::new();
     self.config_name.as_ref().inspect(|config_name| {

@@ -1792,6 +1792,7 @@ export interface BindingExperimentalOptions {
   incrementalBuild?: boolean
   transformHiresSourcemap?: boolean | 'boundary'
   nativeMagicString?: boolean
+  chunkOptimization?: boolean
 }
 
 export interface BindingFilterToken {

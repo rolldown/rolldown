@@ -43,7 +43,79 @@ const load = async () => {
 		assert.strictEqual(m.imp2, 2);
 	});
 	import("./imp.js").then((n) => n.r).then((m) => {
-		assert.deepEqual(m, {
+		assert.deepEqual(JSON.parse(JSON.stringify(m)), {
+			imp3: 3,
+			imp33: 33
+		});
+	});
+};
+load();
+
+//#endregion
+```
+
+# Variant: disableChunkOptimization: [chunk_optimization: false]
+
+## Assets
+
+### imp.js
+
+```js
+//#region imp1.js
+const imp1 = 1;
+
+//#endregion
+//#region imp2.js
+const imp2 = 2;
+
+//#endregion
+//#region imp3.js
+const imp3 = 3;
+const imp33 = 33;
+
+//#endregion
+export { imp1 as i, imp33 as n, imp2 as r, imp3 as t };
+```
+
+### imp1.js
+
+```js
+import { i as imp1 } from "./imp.js";
+
+export { imp1 };
+```
+
+### imp2.js
+
+```js
+import { r as imp2 } from "./imp.js";
+
+export { imp2 };
+```
+
+### imp3.js
+
+```js
+import { n as imp33, t as imp3 } from "./imp.js";
+
+export { imp3, imp33 };
+```
+
+### main.js
+
+```js
+import assert from "node:assert";
+
+//#region main.js
+const load = async () => {
+	import("./imp1.js").then((m) => {
+		assert.strictEqual(m.imp1, 1);
+	});
+	import("./imp2.js").then((m) => {
+		assert.strictEqual(m.imp2, 2);
+	});
+	import("./imp3.js").then((m) => {
+		assert.deepEqual(JSON.parse(JSON.stringify(m)), {
 			imp3: 3,
 			imp33: 33
 		});

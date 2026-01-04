@@ -6,6 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+import assert from "node:assert";
+
 //#region share.js
 var share_default$1 = "shared";
 
@@ -15,9 +17,17 @@ var share_default = {};
 
 //#endregion
 //#region main.js
+assert.strictEqual(share_default$1, "shared");
+assert.deepStrictEqual(share_default, {});
 console.log(share_default$1, share_default);
-import("./share.js").then(console.log);
-import("./share2.js").then(console.log);
+import("./share.js").then((mod) => {
+	assert.deepEqual(JSON.parse(JSON.stringify(mod)), { default: "shared" });
+	console.log(mod);
+});
+import("./share2.js").then((mod) => {
+	assert.deepEqual(JSON.parse(JSON.stringify(mod)), { default: {} });
+	console.log(mod);
+});
 
 //#endregion
 export { share_default$1 as n, share_default as t };

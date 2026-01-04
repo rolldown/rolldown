@@ -14,6 +14,8 @@ export { foo };
 ## main.js
 
 ```js
+import assert from "node:assert";
+
 // HIDDEN [rolldown:runtime]
 //#region foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
@@ -21,8 +23,10 @@ const foo = 1;
 
 //#endregion
 //#region main.js
-import("./foo.js").then(console.log);
-console.log(foo_exports);
+assert.deepEqual(foo_exports, { foo: 1 });
+import("./foo.js").then((mod) => {
+	assert.deepEqual(JSON.parse(JSON.stringify(mod)), foo_exports);
+});
 
 //#endregion
 export { foo as t };

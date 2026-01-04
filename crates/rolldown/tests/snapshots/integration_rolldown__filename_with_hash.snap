@@ -3227,13 +3227,13 @@ expression: output
 
 # tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_common_js_into_es6
 
-- entry-!~{000}~.js => entry-DsDwlLzc.js
-- foo-!~{001}~.js => foo-Zcch9Zsu.js
+- entry-!~{000}~.js => entry-BIuzO3gc.js
+- foo-!~{001}~.js => foo-D6ZpYFx4.js
 
 # tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_es6_into_es6
 
-- entry-!~{000}~.js => entry-HL_DagOc.js
-- foo-!~{001}~.js => foo-CQXqzJUL.js
+- entry-!~{000}~.js => entry-9U8sSCdQ.js
+- foo-!~{001}~.js => foo-q6H4gk-R.js
 
 # tests/esbuild/splitting/splitting_dynamic_common_js_into_es6
 
@@ -3821,8 +3821,8 @@ expression: output
 
 # tests/rolldown/code_splitting/dynamic_import_and_static_import_one_file
 
-- main-!~{000}~.js => main-NIEFUZip.js
-- foo-!~{001}~.js => foo-Uv9gr96M.js
+- main-!~{000}~.js => main-B8ZEutxn.js
+- foo-!~{001}~.js => foo-BbjvKwqj.js
 
 # tests/rolldown/code_splitting/ensure_safe_identifier
 
@@ -3861,9 +3861,9 @@ expression: output
 
 # tests/rolldown/code_splitting/issue_2786
 
-- main-!~{000}~.js => main-BbxOV0vg.js
-- share-!~{001}~.js => share-DjQjC9mY.js
-- share-!~{003}~.js => share-wzwYn-nJ.js
+- main-!~{000}~.js => main-un2AmPj4.js
+- share-!~{003}~.js => share-BkbnSPG1.js
+- share-!~{001}~.js => share-C3TASj2N.js
 
 # tests/rolldown/code_splitting/issue_5276
 
@@ -4286,8 +4286,8 @@ expression: output
 
 # tests/rolldown/function/external/splitting_indirect_external_symbol
 
-- main-!~{000}~.js => main-EFjNd84_.js
-- indirect-!~{001}~.js => indirect-mBi_xyt4.js
+- main-!~{000}~.js => main-FqQaVwEC.js
+- indirect-!~{001}~.js => indirect-zX0bmQNV.js
 
 # tests/rolldown/function/external/splitting_with_external_module
 

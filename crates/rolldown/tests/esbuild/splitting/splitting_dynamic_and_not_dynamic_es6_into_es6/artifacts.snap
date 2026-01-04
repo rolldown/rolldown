@@ -6,12 +6,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+import assert from "node:assert";
+
 //#region foo.js
 let bar = 123;
 
 //#endregion
 //#region entry.js
-import("./foo.js").then(({ bar: b }) => console.log(bar, b));
+import("./foo.js").then(({ bar: b }) => {
+	assert.strictEqual(b, 123);
+	assert.strictEqual(bar, 123);
+});
 
 //#endregion
 export { bar as t };

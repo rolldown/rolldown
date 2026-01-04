@@ -15,14 +15,18 @@ export { read };
 
 ```js
 import { read } from "node:fs";
+import assert from "node:assert";
 
 //#region read.js
 console.log(1);
 
 //#endregion
 //#region main.js
-console.log(read);
-import("./indirect.js").then(console.log);
+assert.strictEqual(typeof read, "function");
+import("./indirect.js").then((mod) => {
+	assert.strictEqual(typeof mod.read, "function");
+	console.log(mod);
+});
 
 //#endregion
 export { read as t };

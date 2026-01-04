@@ -15,8 +15,8 @@ exports.__toESM = __toESM;
 ## entry.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
-const require_rule$1 = require('./rule.js');
+const require_rolldown_runtime = require("./_virtual/rolldown_runtime.js");
+const require_rule$1 = require("./rule.js");
 let node_assert = require("node:assert");
 node_assert = require_rolldown_runtime.__toESM(node_assert);
 
@@ -33,7 +33,7 @@ module.exports = main_default;
 ## lib.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+const require_rolldown_runtime = require("./_virtual/rolldown_runtime.js");
 
 //#region lib.js
 var require_lib = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports, module) => {
@@ -52,8 +52,8 @@ Object.defineProperty(exports, 'default', {
 ## rule.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
-const require_lib$1 = require('./lib.js');
+const require_rolldown_runtime = require("./_virtual/rolldown_runtime.js");
+const require_lib$1 = require("./lib.js");
 
 //#region rule.js
 var require_rule = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports, module) => {

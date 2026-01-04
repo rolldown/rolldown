@@ -47,7 +47,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-const require_chunk = require('./chunk.js');
+const require_chunk = require("./chunk.js");
 let external = require("external");
 external = require_chunk.__toESM(external);
 
@@ -60,7 +60,7 @@ console.log(external[foo](), new external[foo]());
 ## b.js
 
 ```js
-const require_chunk = require('./chunk.js');
+const require_chunk = require("./chunk.js");
 let external = require("external");
 external = require_chunk.__toESM(external);
 
@@ -73,7 +73,7 @@ console.log(external.foo(), new external.foo());
 ## c.js
 
 ```js
-const require_chunk = require('./chunk.js');
+const require_chunk = require("./chunk.js");
 let external = require("external");
 external = require_chunk.__toESM(external);
 

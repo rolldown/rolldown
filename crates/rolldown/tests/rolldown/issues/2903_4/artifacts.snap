@@ -19,7 +19,7 @@ Object.defineProperty(exports, '__commonJSMin', {
 ## main.js
 
 ```js
-const require_chunk = require('./chunk.js');
+const require_chunk = require("./chunk.js");
 
 //#region cjs-dep.js
 var require_cjs_dep = /* @__PURE__ */ require_chunk.__commonJSMin(((exports, module) => {
@@ -36,7 +36,7 @@ var import_cjs_dep = require_cjs_dep();
 ## main2.js
 
 ```js
-const require_chunk = require('./chunk.js');
+const require_chunk = require("./chunk.js");
 
 //#region cjs-dep2.js
 var require_cjs_dep2 = /* @__PURE__ */ require_chunk.__commonJSMin(((exports, module) => {

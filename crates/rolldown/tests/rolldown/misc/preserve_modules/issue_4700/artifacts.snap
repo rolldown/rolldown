@@ -19,7 +19,7 @@ exports.childFn = childFn;
 ## main.js
 
 ```js
-const require_child = require('./child.js');
+const require_child = require("./child.js");
 
 //#region main.js
 require_child.childFn();

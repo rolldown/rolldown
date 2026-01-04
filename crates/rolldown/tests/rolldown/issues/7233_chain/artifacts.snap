@@ -15,8 +15,8 @@ exports.__reExport = __reExport;
 ## index.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
-require('./middle.js');
+const require_rolldown_runtime = require("./_virtual/rolldown_runtime.js");
+require("./middle.js");
 let zod = require("zod");
 
 //#region index.ts
@@ -50,8 +50,8 @@ Object.keys(zod).forEach(function (k) {
 ## middle.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
-require('./server.js');
+const require_rolldown_runtime = require("./_virtual/rolldown_runtime.js");
+require("./server.js");
 let zod = require("zod");
 
 

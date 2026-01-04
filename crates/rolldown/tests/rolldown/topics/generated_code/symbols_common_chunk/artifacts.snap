@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-const require_shared = require('./shared.js');
+const require_shared = require("./shared.js");
 
 //#region entry1.js
 const a = require_shared.shared + 1;
@@ -20,7 +20,7 @@ exports.a = a;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-const require_shared = require('./shared.js');
+const require_shared = require("./shared.js");
 
 //#region entry2.js
 const b = require_shared.shared + 2;

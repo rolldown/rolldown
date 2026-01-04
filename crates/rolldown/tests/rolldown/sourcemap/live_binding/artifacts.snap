@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main1.js
 
 ```js
-const require_shared = require('./shared.js');
+const require_shared = require("./shared.js");
 
 //#region main1.js
 function main() {
@@ -21,7 +21,7 @@ main();
 ## main2.js
 
 ```js
-const require_shared = require('./shared.js');
+const require_shared = require("./shared.js");
 
 exports.shared = require_shared.shared;
 ```

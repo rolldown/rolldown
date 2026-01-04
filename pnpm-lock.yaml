@@ -170,7 +170,7 @@ catalogs:
       version: 11.0.0
     remeda:
       specifier: ^2.10.0
-      version: 2.32.0
+      version: 2.33.0
     rolldown-plugin-dts:
       specifier: ^0.20.0
       version: 0.20.0
@@ -227,7 +227,7 @@ catalogs:
       version: 1.6.5
     vitepress-plugin-llms:
       specifier: ^1.1.0
-      version: 1.9.3
+      version: 1.10.0
     vitest:
       specifier: ^4.0.15
       version: 4.0.16
@@ -268,7 +268,7 @@ importers:
         version: 9.1.7
       knip:
         specifier: ^5.61.3
-        version: 5.77.1(@types/node@24.10.3)(typescript@5.9.3)
+        version: 5.78.0(@types/node@24.10.3)(typescript@5.9.3)
       lint-staged:
         specifier: ^16.1.2
         version: 16.2.7
@@ -335,7 +335,7 @@ importers:
         version: 1.6.5(rolldown-vite@7.3.0(@types/node@24.10.3)(esbuild@0.27.2)(jiti@2.6.1)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.2))
       vitepress-plugin-llms:
         specifier: 'catalog:'
-        version: 1.9.3
+        version: 1.10.0
 
   examples/basic-typescript:
     devDependencies:
@@ -560,7 +560,7 @@ importers:
         version: 2.0.3
       remeda:
         specifier: 'catalog:'
-        version: 2.32.0
+        version: 2.33.0
       rolldown:
         specifier: workspace:*
         version: 'link:'
@@ -4506,8 +4506,8 @@ packages:
     resolution: {integrity: sha512-dcS1ul+9tmeD95T+x28/ehLgd9mENa3LsvDTtzm3vyBEO7RPptvAD+t44WVXaUjTBRcrpFeFlC8WCruUR456hw==}
     engines: {node: '>=0.10.0'}
 
-  knip@5.77.1:
-    resolution: {integrity: sha512-+yA/vfQUDEFUOcR0XRn/dOZmNEsS10pIMztS5JbKUhk9zvQiAFvr3Mcc3zC7Dn9gBG8LeImhaXA6/D3uhzwZvg==}
+  knip@5.78.0:
+    resolution: {integrity: sha512-nB7i/fgiJl7WVxdv5lX4ZPfDt9/zrw/lOgZtyioy988xtFhKuFJCRdHWT1Zg9Avc0yaojvnmEuAXU8SeMblKww==}
     engines: {node: '>=18.18.0'}
     hasBin: true
     peerDependencies:
@@ -5023,8 +5023,8 @@ packages:
     resolution: {integrity: sha512-cMMJTAZlion/RWRRC48UbrDymEIt+/YSD/l8NqjneyDw2rDOBQcP5yRkMB4CYGn47KMhZvbblBP7Z79OsMw72w==}
     engines: {node: '>=8.15'}
 
-  path-to-regexp@8.3.0:
-    resolution: {integrity: sha512-7jdwVIRtsP8MYpdXSwOS0YdD0Du+qOoF/AEPIt88PcCFrZCzx41oxku1jD88hZBwbNUIEfpqvuhjFaMAqMTWnA==}
+  path-to-regexp@6.3.0:
+    resolution: {integrity: sha512-Yhpw4T9C6hPpgPeA28us07OJeqZ5EzQTkbfwuhsUg0c237RomFoETJgmp2sa3F/41gfLE6G5cqcYwznmeEeOlQ==}
 
   pathe@2.0.3:
     resolution: {integrity: sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==}
@@ -5222,8 +5222,8 @@ packages:
   remark@15.0.1:
     resolution: {integrity: sha512-Eht5w30ruCXgFmxVUSlNWQ9iiimq07URKeFS3hNc8cUWy1llX4KDWfyEDZRycMc+znsN9Ux5/tJ/BFdgdOwA3A==}
 
-  remeda@2.32.0:
-    resolution: {integrity: sha512-BZx9DsT4FAgXDTOdgJIc5eY6ECIXMwtlSPQoPglF20ycSWigttDDe88AozEsPPT4OWk5NujroGSBC1phw5uU+w==}
+  remeda@2.33.0:
+    resolution: {integrity: sha512-10g+LXHpn3qG/sa7Yi3/eJUk6iFoPnfB1/l5Avj4BaGTIcQT7qQd4UblsoqqJvBsiMD5GIWv5TfNKh/x4Yj5hQ==}
 
   remove-unused-vars@0.0.11:
     resolution: {integrity: sha512-N2ebJCxI/SRu8hjLAj/Ntkq1dNvhLXAebamcVJSg3BgPuV1IjV0GISSjxMsQOLg+98UE39C/VgX+lpGpTTVeeg==}
@@ -5653,10 +5653,6 @@ packages:
     resolution: {integrity: sha512-q+MB8nYR1KDLrgr4G5yemftpMC7/QLqVndBmEEdqzmNj5dcFOO4Oo8qlwZE3ULT3+Zim1F8Kq4cBnikNhlCMlg==}
     engines: {node: '>=8'}
 
-  type-fest@4.41.0:
-    resolution: {integrity: sha512-TeTSQ6H5YHvpqVwBRcnLDCBnDOHWYu7IvGbHT6N8AOymcr9PJGjc1GTtiWZTYg0NCgYwvnYWEkVChQAr9bjfwA==}
-    engines: {node: '>=16'}
-
   type-level-regexp@0.1.17:
     resolution: {integrity: sha512-wTk4DH3cxwk196uGLK/E9pE45aLfeKJacKmcEgEOA/q5dnPGNxXt0cfYdFxb57L+sEpf1oJH4Dnx/pnRcku9jg==}
 
@@ -5866,8 +5862,8 @@ packages:
       vite:
         optional: true
 
-  vitepress-plugin-llms@1.9.3:
-    resolution: {integrity: sha512-iU6LQVGS35urNGW/RXHTtt9gj6kprV9ptJDX7ZiC+kgFtqiBMDo2bdXh2YG+KUGU3geKZWkWZcurhnrNCmofsA==}
+  vitepress-plugin-llms@1.10.0:
+    resolution: {integrity: sha512-dgD5KV8D9vXlQtAf/KUjSgr3QymH1fHT7XkQ/UuIqvIjnKdzZI+0gT3puGxUBuqgvlFjYWA6f8k80tXl6gwWkw==}
 
   vitepress@2.0.0-alpha.15:
     resolution: {integrity: sha512-jhjSYd10Z6RZiKOa7jy0xMVf5NB5oSc/lS3bD/QoUc6V8PrvQR5JhC9104NEt6+oTGY/ftieVWxY9v7YI+1IjA==}
@@ -6034,8 +6030,8 @@ packages:
     resolution: {integrity: sha512-CzhO+pFNo8ajLM2d2IW/R93ipy99LWjtwblvC1RsoSUMZgyLbYFr221TnSNT7GjGdYui6P459mw9JH/g/zW2ug==}
     engines: {node: '>=18'}
 
-  zod@4.2.1:
-    resolution: {integrity: sha512-0wZ1IRqGGhMP76gLqz8EyfBXKk0J2qo2+H3fi4mcUP/KtTocoX08nmIAHl1Z2kJIZbZee8KOpBCSNPRgauucjw==}
+  zod@4.3.5:
+    resolution: {integrity: sha512-k7Nwx6vuWx1IJ9Bjuf4Zt1PEllcwe7cls3VNzm4CQ1/hgtFUK2bRNG3rvnpPUhFjmqJKAKtjV576KnUkHocg/g==}
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
@@ -9320,7 +9316,7 @@ snapshots:
 
   kind-of@6.0.3: {}
 
-  knip@5.77.1(@types/node@24.10.3)(typescript@5.9.3):
+  knip@5.78.0(@types/node@24.10.3)(typescript@5.9.3):
     dependencies:
       '@nodelib/fs.walk': 1.2.8
       '@types/node': 24.10.3
@@ -9335,7 +9331,7 @@ snapshots:
       smol-toml: 1.6.0
       strip-json-comments: 5.0.3
       typescript: 5.9.3
-      zod: 4.2.1
+      zod: 4.3.5
 
   kolorist@1.8.0: {}
 
@@ -10049,7 +10045,7 @@ snapshots:
     dependencies:
       unique-string: 2.0.0
 
-  path-to-regexp@8.3.0: {}
+  path-to-regexp@6.3.0: {}
 
   pathe@2.0.3: {}
 
@@ -10253,9 +10249,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  remeda@2.32.0:
-    dependencies:
-      type-fest: 4.41.0
+  remeda@2.33.0: {}
 
   remove-unused-vars@0.0.11:
     dependencies:
@@ -10671,8 +10665,6 @@ snapshots:
 
   type-fest@0.6.0: {}
 
-  type-fest@4.41.0: {}
-
   type-level-regexp@0.1.17: {}
 
   typedoc-plugin-markdown@4.9.0(typedoc@0.28.15(typescript@5.9.3)):
@@ -10855,7 +10847,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  vitepress-plugin-llms@1.9.3:
+  vitepress-plugin-llms@1.10.0:
     dependencies:
       gray-matter: 4.0.3
       markdown-it: 14.1.0
@@ -10863,7 +10855,7 @@ snapshots:
       mdast-util-from-markdown: 2.0.2
       millify: 6.1.0
       minimatch: 10.1.1
-      path-to-regexp: 8.3.0
+      path-to-regexp: 6.3.0
       picocolors: 1.1.1
       pretty-bytes: 7.1.0
       remark: 15.0.1
@@ -11069,7 +11061,7 @@ snapshots:
 
   yoctocolors@2.1.2: {}
 
-  zod@4.2.1: {}
+  zod@4.3.5: {}
 
   zwitch@2.0.4: {}
 

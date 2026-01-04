@@ -16,6 +16,6 @@ console.log("share");
 ## entry2.js
 
 ```js
-require('./entry1.js');
+require("./entry1.js");
 
 ```

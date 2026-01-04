@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## internal-cjs.js
 
 ```js
-const require_main = require('./main.js');
+const require_main = require("./main.js");
 
 //#region internal-cjs.js
 var require_internal_cjs = /* @__PURE__ */ require_main.__commonJSMin(((exports, module) => {

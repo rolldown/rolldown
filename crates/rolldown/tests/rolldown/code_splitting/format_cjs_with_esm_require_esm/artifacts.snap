@@ -31,7 +31,7 @@ Object.defineProperty(exports, '__toESM', {
 ## main1.js
 
 ```js
-const require_chunk = require('./chunk.js');
+const require_chunk = require("./chunk.js");
 require("node:assert");
 
 ```
@@ -39,7 +39,7 @@ require("node:assert");
 ## main2.js
 
 ```js
-const require_chunk = require('./chunk.js');
+const require_chunk = require("./chunk.js");
 
 //#region esm.js
 var esm_exports = /* @__PURE__ */ require_chunk.__exportAll({ share: () => share });

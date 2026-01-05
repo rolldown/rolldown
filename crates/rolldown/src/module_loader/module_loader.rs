@@ -486,11 +486,9 @@ impl<'a> ModuleLoader<'a> {
             raw_import_records,
             resolved_deps,
           } = *task_result;
-          let mut import_records = IndexVec::with_capacity(raw_import_records.len());
 
-          for ((rec_idx, raw_rec), info) in
-            raw_import_records.into_iter_enumerated().zip(resolved_deps)
-          {
+          let mut import_records = IndexVec::with_capacity(raw_import_records.len());
+          for (raw_rec, info) in raw_import_records.into_iter().zip(resolved_deps) {
             let id = self.try_spawn_new_task(
               info,
               None,
@@ -498,42 +496,22 @@ impl<'a> ModuleLoader<'a> {
               raw_rec.asserted_module_type.clone(),
               Arc::clone(&user_defined_entries),
             );
-            // Dynamic imported module will be considered as an entry
             self.intermediate_normal_modules.importers[id].push(ImporterRecord {
               kind: raw_rec.kind,
               importer_path: module.id.clone(),
               importer_idx: module.idx,
             });
-
-            if matches!(raw_rec.kind, ImportKind::DynamicImport)
-              && !user_defined_entry_ids.contains(&id)
-            {
-              match dynamic_import_entry_ids.entry(id) {
-                Entry::Vacant(vac) => match raw_rec.dynamic_import_expr_info.as_ref() {
-                  Some(info) => {
-                    vac.insert(vec![(module.idx, info.stmt_info_idx, info.address, rec_idx)]);
-                  }
-                  None => {
-                    vac.insert(vec![]);
-                  }
-                },
-                Entry::Occupied(mut occ) => {
-                  if let Some(info) = raw_rec.dynamic_import_expr_info.as_ref() {
-                    occ.get_mut().push((module.idx, info.stmt_info_idx, info.address, rec_idx));
-                  }
-                }
-              }
-            }
-
             import_records.push(raw_rec.into_resolved(id));
           }
           module.import_records = import_records;
+
           *self.intermediate_normal_modules.modules.get_mut(self.runtime_id) = Some(module.into());
           *self.intermediate_normal_modules.index_ecma_ast.get_mut(self.runtime_id) = Some(ast);
 
           self.symbol_ref_db.store_local_db(self.runtime_id, local_symbol_ref_db);
-          runtime_brief = Some(runtime);
           self.remaining -= 1;
+
+          runtime_brief = Some(runtime);
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {
           self.try_spawn_new_task(

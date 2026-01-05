@@ -10,7 +10,7 @@ use arcstr::ArcStr;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
   ClientHmrInput, ClientHmrUpdate, HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, Module,
-  ModuleIdx, ModuleTable, ResolvedId, ScanMode, WatcherChangeKind,
+  ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_ecmascript_utils::AstSnippet;
@@ -322,8 +322,8 @@ impl<'a> HmrStage<'a> {
   /// # Returns
   /// The compiled JavaScript code as a string
   ///
-  /// # Panics
-  /// - If the module is not found in the cache
+  /// # Errors
+  /// - If the module is not found in the cache (should be present from initial build)
   /// - If the partial scan fails
   /// - If code generation fails
   pub async fn compile_lazy_entry(
@@ -342,8 +342,24 @@ impl<'a> HmrStage<'a> {
     // The proxy has been marked as fetched, so the lazy compilation plugin's load hook
     // will return the fetched template which imports the real module.
 
-    // 1. Create a ResolvedId for the proxy module to trigger re-compilation
-    let resolved_id = ResolvedId { id: module_id.into(), ..Default::default() };
+    // 1. Get the originative resolved_id from the cached module
+    // The proxy module should already be in the cache from the initial build.
+    let (entry_module_idx, resolved_id) = self
+      .cache
+      .module_id_to_idx
+      .get(module_id)
+      .and_then(|state| {
+        let idx = state.idx();
+        let module = &self.module_table().modules[idx];
+        if let Module::Normal(module) = module {
+          Some((idx, module.originative_resolved_id.clone()))
+        } else {
+          None
+        }
+      })
+      .ok_or_else(|| {
+        vec![anyhow::anyhow!("Lazy entry module not found in cache. module_id={module_id}").into()]
+      })?;
 
     // 2. Trigger a partial scan to fetch the module and its dependencies
     let fetch_mode = ScanMode::Partial(vec![resolved_id]);
@@ -377,13 +393,6 @@ impl<'a> HmrStage<'a> {
     let options = Arc::clone(&self.options);
     let resolver = Arc::clone(&self.resolver);
     self.cache.update_defer_sync_data(&options, &resolver).await?;
-
-    // 3. Get the entry module idx after merge
-    // The module should now be in the cache
-    let entry_module_idx =
-      self.cache.module_id_to_idx.get(module_id).map(|state| state.idx()).unwrap_or_else(|| {
-        panic!("Lazy entry module not found after partial scan. module_id={module_id}")
-      });
 
     // 4. Render the lazy-compiled modules
     // Note: This is NOT an HMR update - it's initial module loading

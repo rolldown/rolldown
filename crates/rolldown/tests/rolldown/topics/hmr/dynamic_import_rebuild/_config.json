@@ -1,0 +1,10 @@
+{
+  "config": {
+    "experimental": {
+      "hmr": {}
+    }
+  },
+  "dev": {
+    "ensureLatestBuildOutputForEachStep": true
+  }
+}

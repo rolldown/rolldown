@@ -10,7 +10,7 @@ use arcstr::ArcStr;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
   ClientHmrInput, ClientHmrUpdate, HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, Module,
-  ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
+  ModuleIdx, ModuleTable, ResolvedId, ScanMode, WatcherChangeKind,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_ecmascript_utils::AstSnippet;
@@ -79,7 +79,7 @@ impl<'a> HmrStage<'a> {
   /// Compute hmr update caused by `import.meta.hot.invalidate()`.
   pub async fn compute_update_for_calling_invalidate(
     &mut self,
-    // The parameter is the stable id of the module that called `import.meta.hot.invalidate()`.
+    // The parameter is the stable module ID of the module that called `import.meta.hot.invalidate()`.
     invalidate_caller: String,
     first_invalidated_by: Option<String>,
     client_id: &str,
@@ -91,6 +91,7 @@ impl<'a> HmrStage<'a> {
       invalidate_caller,
       first_invalidated_by,
     );
+    // Look up by stable_id (matches what client sends from createModuleHotContext)
     let module_idx = self
       .cache
       .module_idx_by_stable_id
@@ -307,6 +308,235 @@ impl<'a> HmrStage<'a> {
     Ok(client_updates)
   }
 
+  /// Compile a lazy entry module and return compiled code.
+  ///
+  /// This is called when a dynamically imported module is first requested at runtime.
+  /// The module was previously stubbed with a proxy, and now we need to compile the
+  /// actual module and its dependencies.
+  ///
+  /// # Arguments
+  /// * `module_id` - The proxy module ID (e.g., "/path/to/module.js?rolldown-lazy=1")
+  /// * `client_id` - The client ID requesting this compilation
+  /// * `executed_modules` - Set of module IDs already executed on the client
+  ///
+  /// # Returns
+  /// The compiled JavaScript code as a string
+  ///
+  /// # Panics
+  /// - If the module is not found in the cache
+  /// - If the partial scan fails
+  /// - If code generation fails
+  pub async fn compile_lazy_entry(
+    &mut self,
+    module_id: &str,
+    _client_id: &str,
+    _executed_modules: &FxHashSet<String>,
+  ) -> BuildResult<String> {
+    tracing::debug!(
+      target: "hmr",
+      "compile_lazy_entry: module_id: {:?}",
+      module_id,
+    );
+
+    // module_id is the proxy module ID (e.g., "/abs/path/async-entry-a.js?rolldown-lazy=1")
+    // The proxy has been marked as fetched, so the lazy compilation plugin's load hook
+    // will return the fetched template which imports the real module.
+
+    // 1. Create a ResolvedId for the proxy module to trigger re-compilation
+    let resolved_id = ResolvedId { id: module_id.into(), ..Default::default() };
+
+    // 2. Trigger a partial scan to fetch the module and its dependencies
+    let fetch_mode = ScanMode::Partial(vec![resolved_id]);
+
+    let mut module_loader = ModuleLoader::new(
+      self.fs.clone(),
+      Arc::clone(&self.options),
+      Arc::clone(&self.resolver),
+      Arc::clone(&self.plugin_driver),
+      self.cache,
+      fetch_mode.is_full(),
+      None,
+    )?;
+
+    let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
+    drop(module_loader);
+
+    let new_added_modules = module_loader_output.new_added_modules_from_partial_scan.clone();
+
+    tracing::debug!(
+      target: "hmr",
+      "compile_lazy_entry: New added modules: {:?}",
+      new_added_modules
+        .iter()
+        .map(|module_idx| module_loader_output.module_table.get(*module_idx).stable_id())
+        .collect::<Vec<_>>(),
+    );
+
+    self.cache.merge(module_loader_output.into()).map_err(|e| vec![anyhow::anyhow!(e).into()])?;
+
+    let options = Arc::clone(&self.options);
+    let resolver = Arc::clone(&self.resolver);
+    self.cache.update_defer_sync_data(&options, &resolver).await?;
+
+    // 3. Get the entry module idx after merge
+    // The module should now be in the cache
+    let entry_module_idx =
+      self.cache.module_id_to_idx.get(module_id).map(|state| state.idx()).unwrap_or_else(|| {
+        panic!("Lazy entry module not found after partial scan. module_id={module_id}")
+      });
+
+    // 4. Render the lazy-compiled modules
+    // Note: This is NOT an HMR update - it's initial module loading
+    // We duplicate the rendering logic here to avoid HMR-specific boundary handling
+
+    let mut modules_to_be_updated = FxIndexSet::default();
+    modules_to_be_updated.insert(entry_module_idx);
+    modules_to_be_updated.extend(new_added_modules.iter().copied());
+
+    // Remove external modules - no way to "compile" them
+    modules_to_be_updated.retain(|idx| self.module_table().modules[*idx].is_normal());
+
+    // Sort for stable output
+    modules_to_be_updated
+      .sort_by_cached_key(|module_idx| self.module_table().modules[*module_idx].id());
+
+    // Generate init function names
+    let module_idx_to_init_fn_name = modules_to_be_updated
+      .iter()
+      .enumerate()
+      .map(|(index, module_idx)| {
+        let Module::Normal(module) = &self.module_table().modules[*module_idx] else {
+          unreachable!(
+            "External modules should be removed before. But got {:?}",
+            self.module_table().modules[*module_idx].id()
+          );
+        };
+        let prefix = if module.exports_kind.is_commonjs() { "require" } else { "init" };
+        (*module_idx, format!("{}_{}_{}", prefix, module.repr_name, index))
+      })
+      .collect::<FxHashMap<_, _>>();
+
+    // Prepare module render inputs
+    let index_ecma_ast = self.index_ecma_ast();
+    let module_render_inputs = modules_to_be_updated
+      .iter()
+      .copied()
+      .map(|affected_module_idx| {
+        let affected_module = &self.module_table().modules[affected_module_idx];
+        let Module::Normal(affected_module) = affected_module else {
+          unreachable!("Only normal modules should be rendered");
+        };
+
+        debug_assert_eq!(affected_module_idx, affected_module.idx);
+        let ecma_ast =
+          index_ecma_ast[affected_module_idx].as_ref().expect("Normal module should have an AST");
+
+        ModuleRenderInput {
+          idx: affected_module.idx,
+          ecma_ast: ecma_ast.clone_with_another_arena(),
+        }
+      })
+      .collect::<Vec<_>>();
+
+    // Render all modules
+    let mut source_joiner = SourceJoiner::default();
+    let rendered_sources = module_render_inputs
+      .into_par_iter()
+      .enumerate()
+      .flat_map(|(index, render_input)| {
+        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: mut ast } = render_input;
+
+        let affected_module = &self.module_table().modules[affected_module_idx];
+        let Module::Normal(affected_module) = affected_module else {
+          unreachable!("Only normal modules should be rendered");
+        };
+
+        let enable_sourcemap = self.options.sourcemap.is_some() && !affected_module.is_virtual();
+        let use_pife_for_module_wrappers =
+          self.options.optimization.is_pife_for_module_wrappers_enabled();
+        let modules = &self.module_table().modules;
+
+        ast.program.with_mut(|fields| {
+          let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
+
+          let mut finalizer = HmrAstFinalizer {
+            modules,
+            alloc: fields.allocator,
+            snippet: AstSnippet::new(fields.allocator),
+            builder: &oxc::ast::AstBuilder::new(fields.allocator),
+            import_bindings: FxHashMap::default(),
+            module: affected_module,
+            exports: oxc::allocator::Vec::new_in(fields.allocator),
+            affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
+            use_pife_for_module_wrappers,
+            dependencies: FxIndexSet::default(),
+            imports: FxHashSet::default(),
+            generated_static_import_infos: FxHashMap::default(),
+            re_export_all_dependencies: FxIndexSet::default(),
+            generated_static_import_stmts_from_external: FxIndexMap::default(),
+            unique_index: index,
+            named_exports: FxHashMap::default(),
+          };
+
+          traverse_mut(&mut finalizer, fields.allocator, fields.program, scoping, ());
+        });
+
+        let codegen = EcmaCompiler::print_with(
+          &ast,
+          PrintOptions {
+            sourcemap: enable_sourcemap,
+            filename: affected_module.id.to_string(),
+            print_legal_comments: false,
+            initial_indent: 0,
+          },
+        );
+
+        let intro_comment: Box<dyn Source + Send> =
+          Box::new(concat_string!("//#region ", affected_module.debug_id));
+        let outro_comment: Box<dyn Source + Send> = Box::new(concat_string!("//#endregion"));
+
+        let code_source: Box<dyn Source + Send> = if let Some(map) = codegen.map {
+          Box::new(SourceMapSource::new(codegen.code, map))
+        } else {
+          Box::new(codegen.code)
+        };
+
+        [intro_comment, code_source, outro_comment]
+      })
+      .collect::<Vec<_>>();
+
+    for source in rendered_sources {
+      source_joiner.append_source_dyn(source);
+    }
+
+    // Call the init function for the entry module automatically
+    // This is NOT HMR boundary handling - just executing the lazy-loaded module
+    let entry_init_fn_name = &module_idx_to_init_fn_name[&entry_module_idx];
+    source_joiner.append_source(format!("{entry_init_fn_name}()"));
+
+    let (mut code, mut map) = source_joiner.join();
+
+    let lazy_patch_id = self.next_hmr_patch_id.fetch_add(1, Ordering::Relaxed);
+    let filename = format!("lazy_compile_{lazy_patch_id}.js");
+
+    let file_dir = self.options.cwd.as_path().join(&self.options.out_dir);
+
+    if let Some(map) = map.as_mut() {
+      process_code_and_sourcemap(
+        &self.options,
+        &mut code,
+        map,
+        &file_dir,
+        filename.as_str(),
+        0,
+        /*is_css*/ false,
+      )
+      .await?;
+    }
+
+    Ok(code)
+  }
+
   // Kept for backwards compatibility - this method is no longer used but kept in case
   // it's needed for other use cases
   #[expect(dead_code, clippy::too_many_lines)]
@@ -518,6 +748,7 @@ impl<'a> HmrStage<'a> {
       source_joiner.append_source(format!("{init_fn_name}()"));
     });
 
+    // Use stable module IDs for consistent runtime lookup (in compute_hmr_update_single)
     source_joiner.append_source(format!(
       "__rolldown_runtime__.applyUpdates([{}]);",
       hmr_prerequisites
@@ -559,6 +790,7 @@ impl<'a> HmrStage<'a> {
       filename,
       sourcemap_filename: sourcemap_asset.as_ref().map(|asset| asset.filename.to_string()),
       sourcemap: sourcemap_asset.map(|asset| asset.source.try_into_string()).transpose()?,
+      // Use stable module IDs for hmr_boundaries output
       hmr_boundaries: hmr_prerequisites
         .boundaries
         .into_iter()
@@ -703,6 +935,7 @@ impl<'a> HmrStage<'a> {
       source_joiner.append_source(format!("{init_fn_name}()"));
     });
 
+    // Use stable module IDs for consistent runtime lookup (in render_hmr_patch_from_prerequisites)
     source_joiner.append_source(format!(
       "__rolldown_runtime__.applyUpdates([{}]);",
       hmr_prerequisites
@@ -739,6 +972,7 @@ impl<'a> HmrStage<'a> {
       None
     };
 
+    // Use stable module IDs for hmr_boundaries output
     Ok(HmrUpdate::Patch(HmrPatch {
       code,
       filename,
@@ -821,7 +1055,7 @@ impl<'a> HmrStage<'a> {
         tracing::trace!(
           "[HmrStage] skip importer module since it's not executed\n - importer: {}, importee: {}, client: {}",
           self.module_table().modules[importer_idx].stable_id(),
-          module.stable_id,
+          module.stable_id.as_ref(),
           client.client_id,
         );
         // If this module is not registered, we simply ignore it.

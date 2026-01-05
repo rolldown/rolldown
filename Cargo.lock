@@ -3110,6 +3110,7 @@ dependencies = [
 name = "rolldown_plugin_lazy_compilation"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "arcstr",
  "rolldown_common",
  "rolldown_plugin",

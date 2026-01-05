@@ -205,6 +205,20 @@ impl BindingDevEngine {
       .map_err(|_e| napi::Error::from_reason("Failed to close dev engine"))?;
     Ok(())
   }
+
+  /// Compile a lazy entry module and return HMR-style patch code.
+  ///
+  /// This is called when a dynamically imported module is first requested at runtime.
+  /// The module was previously stubbed with a proxy, and now we need to compile the
+  /// actual module and its dependencies.
+  #[napi]
+  pub async fn compile_entry(&self, module_id: String, client_id: String) -> napi::Result<String> {
+    self
+      .inner
+      .compile_lazy_entry(module_id, client_id)
+      .await
+      .map_err(|e| napi::Error::from_reason(format!("Failed to compile lazy entry: {e:#?}")))
+  }
 }
 
 #[napi]

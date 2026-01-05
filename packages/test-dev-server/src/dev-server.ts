@@ -10,7 +10,11 @@ import { WebSocket, WebSocketServer } from 'ws';
 import type { HmrInvalidateMessage } from './types/client-message.js';
 import { ClientSession } from './types/client-session.js';
 import type { NormalizedDevOptions } from './types/normalized-dev-options.js';
-import type { HmrReloadMessage, HmrUpdateMessage } from './types/server-message.js';
+import type {
+  ConnectedMessage,
+  HmrReloadMessage,
+  HmrUpdateMessage,
+} from './types/server-message.js';
 import { createDevServerPlugin } from './utils/create-dev-server-plugin.js';
 import { decodeClientMessage } from './utils/decode-client-message.js';
 import { getDevWatchOptionsForCi } from './utils/get-dev-watch-options-for-ci.js';
@@ -45,7 +49,10 @@ class DevServer {
 
   constructor() {}
 
-  #sendMessage(socket: WebSocket, message: HmrUpdateMessage | HmrReloadMessage): void {
+  #sendMessage(
+    socket: WebSocket,
+    message: HmrUpdateMessage | HmrReloadMessage | ConnectedMessage,
+  ): void {
     if (socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify(message));
     }
@@ -121,6 +128,10 @@ class DevServer {
     this.wsServer.on('connection', (ws, _req) => {
       const clientSession = new ClientSession(ws);
       this.#clients.set(clientSession.id, clientSession);
+
+      // Send the client its assigned ID so it can use it for lazy compilation requests
+      this.#sendMessage(ws, { type: 'connected', clientId: clientSession.id });
+
       ws.on('error', console.error);
       ws.on('close', () => {
         this.#clients.delete(clientSession.id);
@@ -158,6 +169,32 @@ class DevServer {
       } else {
         next();
       }
+    });
+    this.connectServer.use(async (req, res, next) => {
+      if (req.url?.startsWith('/lazy?')) {
+        try {
+          const url = new URL(req.url, `http://localhost:${this.#port}`);
+          const moduleId = url.searchParams.get('id');
+          const clientId = url.searchParams.get('clientId');
+          console.log(`Lazy compile request for module ${moduleId} from client ${clientId}`);
+
+          if (moduleId && clientId) {
+            const moduleCode = await devEngine.compileEntry(moduleId, clientId);
+            if (moduleCode != null) {
+              res!.setHeader('Content-Type', 'application/javascript');
+              res!.end(moduleCode);
+              return;
+            }
+          }
+        } catch (err) {
+          // Return server error response
+          res!.statusCode = 500;
+          res!.end('Internal Server Error during lazy compilation');
+          console.error('Error handling lazy compile request:', err);
+          return;
+        }
+      }
+      next();
     });
     this.connectServer.use(
       serveStatic(nodePath.join(process.cwd(), 'dist'), {

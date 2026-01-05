@@ -24,11 +24,11 @@ trustPolicyExclude:
 # Define a catalog of version ranges.
 catalog:
   # --- OXC related ---
-  '@oxc-project/runtime': '=0.106.0'
-  '@oxc-project/types': '=0.106.0'
-  'oxc-parser': '=0.106.0'
-  'oxc-transform': '=0.106.0'
-  'oxc-minify': '=0.106.0'
+  '@oxc-project/runtime': '=0.107.0'
+  '@oxc-project/types': '=0.107.0'
+  'oxc-parser': '=0.107.0'
+  'oxc-transform': '=0.107.0'
+  'oxc-minify': '=0.107.0'
 
   # --- NAPI-RS related ---
   '@napi-rs/cli': '^3.4.1'

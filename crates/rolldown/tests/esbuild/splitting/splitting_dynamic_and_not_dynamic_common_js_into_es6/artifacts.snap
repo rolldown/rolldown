@@ -17,20 +17,11 @@ var require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
 //#endregion
 //#region entry.js
 var import_foo = require_foo();
-import("./foo.js").then((m) => /* @__PURE__ */ __toESM(m.default)).then(({ default: { bar: b } }) => {
+Promise.resolve().then(() => __toESM(require_foo())).then(({ default: { bar: b } }) => {
 	assert.strictEqual(b, 123);
 	assert.strictEqual(import_foo.bar, 123);
 });
 
 //#endregion
 export { require_foo as t };
-```
-
-## foo.js
-
-```js
-import { t as require_foo } from "./entry.js";
-
-export default require_foo();
-
 ```

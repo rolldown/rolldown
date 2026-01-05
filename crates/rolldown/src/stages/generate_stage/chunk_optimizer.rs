@@ -366,10 +366,12 @@ impl GenerateStage<'_> {
         continue;
       };
       let target_chunk = &chunk_graph.chunk_table[target_chunk_idx];
-      if !matches!(target_chunk.kind, ChunkKind::Common) {
-        continue;
-      }
-      if !matches!(target_chunk.chunk_reason_type.as_ref(), ChunkReasonType::AdvancedChunks { .. })
+      // 1. dynamic entry chunk that also capatured by a advanced chunk group
+      // 2. dynamic entry module are already merged into  user defined entry chunk in previous round optimization
+      if !(matches!(
+        target_chunk.chunk_reason_type.as_ref(),
+        ChunkReasonType::AdvancedChunks { .. }
+      ) || matches!(target_chunk.kind, ChunkKind::EntryPoint { meta, bit, module } if meta.is_pure_user_defined_entry()))
       {
         continue;
       }

@@ -3227,13 +3227,11 @@ expression: output
 
 # tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_common_js_into_es6
 
-- entry-!~{000}~.js => entry-GF1_PXWz.js
-- foo-!~{001}~.js => foo-D2Fmh016.js
+- entry-!~{000}~.js => entry-YfblYvsf.js
 
 # tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_es6_into_es6
 
-- entry-!~{000}~.js => entry-9U8sSCdQ.js
-- foo-!~{001}~.js => foo-q6H4gk-R.js
+- entry-!~{000}~.js => entry-ExIzbYAG.js
 
 # tests/esbuild/splitting/splitting_dynamic_common_js_into_es6
 
@@ -3821,8 +3819,7 @@ expression: output
 
 # tests/rolldown/code_splitting/dynamic_import_and_static_import_one_file
 
-- main-!~{000}~.js => main-B8ZEutxn.js
-- foo-!~{001}~.js => foo-BbjvKwqj.js
+- main-!~{000}~.js => main-BvQdWiUn.js
 
 # tests/rolldown/code_splitting/ensure_safe_identifier
 
@@ -3861,9 +3858,7 @@ expression: output
 
 # tests/rolldown/code_splitting/issue_2786
 
-- main-!~{000}~.js => main-un2AmPj4.js
-- share-!~{003}~.js => share-BkbnSPG1.js
-- share-!~{001}~.js => share-C3TASj2N.js
+- main-!~{000}~.js => main-Dy0EFWHi.js
 
 # tests/rolldown/code_splitting/issue_5276
 
@@ -4286,8 +4281,7 @@ expression: output
 
 # tests/rolldown/function/external/splitting_indirect_external_symbol
 
-- main-!~{000}~.js => main-FqQaVwEC.js
-- indirect-!~{001}~.js => indirect-zX0bmQNV.js
+- main-!~{000}~.js => main-BltaIWAw.js
 
 # tests/rolldown/function/external/splitting_with_external_module
 
@@ -5343,6 +5337,14 @@ expression: output
 - dep-!~{001}~.js => dep-DNFy2xKJ.js
 - main-!~{000}~.js => main-DoomfFj7.js
 
+# tests/rolldown/optimization/chunk_merging/dynamic_import_cjs_same_chunk
+
+- main-!~{000}~.js => main-cLnL0EF5.js
+
+# tests/rolldown/optimization/chunk_merging/issue_4905
+
+- main-!~{000}~.js => main-4O-955YB.js
+
 # tests/rolldown/optimization/inline_const/5197
 
 - main-!~{000}~.js => main-DlSsvnGL.js
@@ -5517,13 +5519,11 @@ expression: output
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/12
 
-- entry-!~{000}~.js => entry-j1V3k2Xx.js
-- foo-!~{001}~.js => foo-DwnWFX0l.js
+- entry-!~{000}~.js => entry-DQMlFeQJ.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/13
 
-- entry-!~{000}~.js => entry-B0ssMZSG.js
-- foo-!~{001}~.js => foo-aGY5MWt8.js
+- entry-!~{000}~.js => entry-w8w8VxwE.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/14
 
@@ -6321,9 +6321,8 @@ expression: output
 
 # tests/rolldown/tree_shaking/issue_4682
 
-- main-!~{000}~.js => main-DXSgrfFn.js
-- dynamic-!~{003}~.js => dynamic-DMbJfHVz.js
-- static-!~{001}~.js => static-ikTkxIsd.js
+- main-!~{000}~.js => main-DfW3c0hF.js
+- dynamic-!~{003}~.js => dynamic-B0UI9oTX.js
 
 # tests/rolldown/tree_shaking/json_default_import
 

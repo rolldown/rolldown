@@ -8,11 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
+// HIDDEN [rolldown:runtime]
 //#region share.js
+var share_exports$1 = /* @__PURE__ */ __exportAll({ default: () => share_default$1 });
 var share_default$1 = "shared";
 
 //#endregion
 //#region share.json
+var share_exports = /* @__PURE__ */ __exportAll({ default: () => share_default });
 var share_default = {};
 
 //#endregion
@@ -20,31 +23,15 @@ var share_default = {};
 assert.strictEqual(share_default$1, "shared");
 assert.deepStrictEqual(share_default, {});
 console.log(share_default$1, share_default);
-import("./share.js").then((mod) => {
+Promise.resolve().then(() => share_exports$1).then((mod) => {
 	assert.deepEqual(JSON.parse(JSON.stringify(mod)), { default: "shared" });
 	console.log(mod);
 });
-import("./share2.js").then((mod) => {
+Promise.resolve().then(() => share_exports).then((mod) => {
 	assert.deepEqual(JSON.parse(JSON.stringify(mod)), { default: {} });
 	console.log(mod);
 });
 
 //#endregion
 export { share_default$1 as n, share_default as t };
-```
-
-## share.js
-
-```js
-import { n as share_default } from "./main.js";
-
-export { share_default as default };
-```
-
-## share2.js
-
-```js
-import { t as share_default } from "./main.js";
-
-export { share_default as default };
 ```

@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use oxc::ast::ast::ObjectPropertyKind;
+use oxc::ast::ast::{Argument, ObjectPropertyKind};
 use oxc::semantic::{ReferenceId, ScopeFlags, SymbolId};
 use oxc::{
   allocator::{self, Allocator, Box as ArenaBox, CloneIn, Dummy, IntoIn, TakeIn},
@@ -13,10 +13,11 @@ use oxc::{
   span::{Atom, GetSpan, GetSpanMut, SPAN},
 };
 use rolldown_common::{
-  AstScopes, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx, ImportRecordMeta,
-  InlineConstMode, MemberExprRefResolution, Module, ModuleIdx, ModuleNamespaceIncludedReason,
-  ModuleType, NamespaceAlias, OutputExports, OutputFormat, Platform,
-  RenderedConcatenatedModuleParts, Specifier, SymbolIdExt, SymbolRef, WrapKind,
+  AstScopes, Chunk, ChunkIdx, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx,
+  ImportRecordMeta, InlineConstMode, MemberExprRefResolution, Module, ModuleIdx,
+  ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule, OutputExports,
+  OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier, SymbolIdExt, SymbolRef,
+  WrapKind,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
@@ -1013,7 +1014,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   fn try_rewrite_inline_dynamic_import_expr(
     &self,
-    import_expr: &ImportExpression<'ast>,
+    import_expr: &mut oxc::allocator::Box<'ast, ImportExpression<'ast>>,
   ) -> Option<Expression<'ast>> {
     let rec_id = self.ctx.module.imports.get(&import_expr.span)?;
     let rec = &self.ctx.module.import_records[*rec_id];
@@ -1026,6 +1027,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           .promise_resolve_then_call_expr(self.snippet.object_freeze_dynamic_import_polyfill()),
       );
     }
+
     if self.ctx.options.inline_dynamic_imports {
       match &self.ctx.modules[importee_id] {
         Module::Normal(importee) => {
@@ -1095,6 +1097,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let importee_chunk_id = self.ctx.chunk_graph.entry_module_to_entry_chunk[&importee_id];
           let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
           let import_path = self.ctx.chunk.import_path_for(importee_chunk);
+
+          if let Some(rewrite_expr) = self.rewrite_dynamic_import_for_merged_entry(
+            import_expr,
+            importee,
+            importee_id,
+            importee_chunk,
+            importee_chunk_id,
+          ) {
+            return Some(rewrite_expr);
+          }
 
           // require('foo.mjs')
           let mut require_call_expr =
@@ -1581,6 +1593,99 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
+  /// Rewrites a dynamic import expression when the importee is a merged user defined chunk or a common chunk.
+  ///
+  /// This handles two cases:
+  /// 1. If the importer and importee are in the same chunk:
+  ///    Convert `import('./some-module.js')` to `Promise.resolve().then(() => importee_namespace)`
+  /// 2. If the importee is in a different chunk:
+  ///    Convert `import('./some-module.js')` to `import('./some-module.js').then(n => n.ns)`
+  ///
+  /// Returns `Some(Expression)` if the import was rewritten, `None` otherwise.
+  fn rewrite_dynamic_import_for_merged_entry(
+    &self,
+    expr: &mut ast::ImportExpression<'ast>,
+    importee: &NormalModule,
+    importee_id: ModuleIdx,
+    importee_chunk: &Chunk,
+    importee_chunk_id: ChunkIdx,
+  ) -> Option<Expression<'ast>> {
+    // to make sure the semantic is correct after chunk merging optimization.
+    let needs_namespace_extraction = self
+      .ctx
+      .chunk_graph
+      .common_chunk_exported_facade_chunk_namespace
+      .get(&importee_chunk_id)
+      .is_some_and(|set| set.contains(&importee_id));
+
+    if !needs_namespace_extraction {
+      return None;
+    }
+
+    let is_importer_importee_in_same_chunk = importee_chunk.modules.contains(&self.ctx.id);
+    if is_importer_importee_in_same_chunk {
+      let importee_meta = &self.ctx.linking_infos[importee.idx];
+
+      let finalized_expr = if matches!(importee_meta.wrap_kind(), WrapKind::Cjs) {
+        let importee_wrapper_ref = self.ctx.linking_infos[importee.idx].wrapper_ref.unwrap();
+
+        let (finalized_importee_wrapper_ref, _) =
+          self.finalized_expr_for_symbol_ref(importee_wrapper_ref, false, false);
+
+        let finalized_to_esm = self.finalized_expr_for_runtime_symbol("__toESM");
+
+        // require_xxx()
+        let wrapper_ref_call_expr = self.snippet.builder.expression_call(
+          SPAN,
+          finalized_importee_wrapper_ref,
+          NONE,
+          self.snippet.builder.vec(),
+          false,
+        );
+        // __toESM(require_xxx())
+        self.snippet.builder.expression_call(
+          SPAN,
+          finalized_to_esm,
+          NONE,
+          self.snippet.builder.vec1(Argument::from(wrapper_ref_call_expr)),
+          false,
+        )
+      } else {
+        let (finalized_expr, _) =
+          self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
+        finalized_expr
+      };
+
+      Some(self.snippet.promise_resolve_then_call_expr(finalized_expr))
+    } else {
+      // TODO: CJS format
+      // If the dynamic entry point is merged into another common chunk, we should
+      // convert `import('./some-module.js')` to `import('./some-module.js').then(n => n.ns)`
+      //                                                                                 ^^ points to the dynamic entry module namespace
+      match importee_chunk
+        .exports_to_other_chunks
+        .get(&SymbolId::module_namespace_symbol_ref(importee_id))
+        .and_then(|names| names.first())
+      {
+        Some(name) => {
+          let import_expr = expr.take_in_box(self.builder().allocator);
+          let call_expr = self.snippet.import_then_extract_property(import_expr, name);
+          Some(Expression::CallExpression(call_expr))
+        }
+        None => {
+          tracing::warn!(
+            "Merged dynamic entry module {:?} in chunk {:?} has no export name in exports_to_other_chunks. \
+            This indicates an inconsistent state in the chunk graph where the module is marked as merged \
+            but its namespace export is not properly tracked.",
+            importee_id,
+            importee_chunk_id
+          );
+          None
+        }
+      }
+    }
+  }
+
   fn try_rewrite_import_expression(&self, node: &mut ast::Expression<'ast>) -> bool {
     if let ast::Expression::ImportExpression(expr) = node {
       if expr.options.is_none()
@@ -1604,40 +1709,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     self.snippet.alloc_string_literal(&import_path, expr.source.span()),
                   );
 
-                  // If the dynamic entry point is merged into another common chunk, we should
-                  // convert `import('./some-module.js')` to `import('./some-module.js').then(n => n.ns)`
-                  //                                                                                 ^^ points to the dynamic entry module namespace
-                  // to make sure the semantic is correct after chunk merging optimization.
-                  let is_merged_dynamic_entry = self
-                    .ctx
-                    .chunk_graph
-                    .common_chunk_exported_facade_chunk_namespace
-                    .get(&importee_chunk_id)
-                    .is_some_and(|set| set.contains(&importee_id));
-                  if is_merged_dynamic_entry {
-                    match importee_chunk
-                      .exports_to_other_chunks
-                      .get(&SymbolId::module_namespace_symbol_ref(importee_id))
-                      .and_then(|names| names.first())
-                    {
-                      Some(name) => {
-                        let import_expr = expr.take_in_box(self.builder().allocator);
-                        let call_expr =
-                          self.snippet.import_then_extract_property(import_expr, name);
-                        *node = Expression::CallExpression(call_expr);
-                      }
-                      None => {
-                        tracing::warn!(
-                          "Merged dynamic entry module {:?} in chunk {:?} has no export name in exports_to_other_chunks. \
-                          This indicates an inconsistent state in the chunk graph where the module is marked as merged \
-                          but its namespace export is not properly tracked.",
-                          importee_id,
-                          importee_chunk_id
-                        );
-                      }
-                    }
+                  if let Some(rewritten_expr) = self.rewrite_dynamic_import_for_merged_entry(
+                    expr,
+                    importee,
+                    importee_id,
+                    importee_chunk,
+                    importee_chunk_id,
+                  ) {
+                    // the `toESM` is properly handled inside `rewrite_dynamic_import_for_merged_entry`
+                    *node = rewritten_expr;
+                  } else {
+                    needs_to_esm_helper = importee.exports_kind.is_commonjs();
                   }
-                  needs_to_esm_helper = importee.exports_kind.is_commonjs();
                 }
               } else {
                 // TODO: probably we should add the reason why it is replaced with `void 0` when upstream support codegen with specific operation

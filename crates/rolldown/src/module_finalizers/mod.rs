@@ -1101,7 +1101,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           if let Some(rewrite_expr) = self.rewrite_dynamic_import_for_merged_entry(
             import_expr,
             importee,
-            importee_id,
             importee_chunk,
             importee_chunk_id,
           ) {
@@ -1606,17 +1605,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &self,
     expr: &mut ast::ImportExpression<'ast>,
     importee: &NormalModule,
-    importee_id: ModuleIdx,
     importee_chunk: &Chunk,
     importee_chunk_id: ChunkIdx,
   ) -> Option<Expression<'ast>> {
+    let importee_idx = importee.idx;
     // to make sure the semantic is correct after chunk merging optimization.
     let needs_namespace_extraction = self
       .ctx
       .chunk_graph
       .common_chunk_exported_facade_chunk_namespace
       .get(&importee_chunk_id)
-      .is_some_and(|set| set.contains(&importee_id));
+      .is_some_and(|set| set.contains(&importee_idx));
 
     if !needs_namespace_extraction {
       return None;
@@ -1664,7 +1663,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       //                                                                                 ^^ points to the dynamic entry module namespace
       match importee_chunk
         .exports_to_other_chunks
-        .get(&SymbolId::module_namespace_symbol_ref(importee_id))
+        .get(&SymbolId::module_namespace_symbol_ref(importee_idx))
         .and_then(|names| names.first())
       {
         Some(name) => {
@@ -1677,7 +1676,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             "Merged dynamic entry module {:?} in chunk {:?} has no export name in exports_to_other_chunks. \
             This indicates an inconsistent state in the chunk graph where the module is marked as merged \
             but its namespace export is not properly tracked.",
-            importee_id,
+            importee_idx,
             importee_chunk_id
           );
           None
@@ -1687,163 +1686,164 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   fn try_rewrite_import_expression(&self, node: &mut ast::Expression<'ast>) -> bool {
-    if let ast::Expression::ImportExpression(expr) = node {
-      if expr.options.is_none()
-        && let Some(rec_id) = self.ctx.module.imports.get(&expr.span)
-      {
-        // Make sure the import expression is in correct form. If it's not, we should leave it as it is.
-        if let Some(str) = expr.source.as_static_module_request() {
-          let mut needs_to_esm_helper = false;
-          let rec = &self.ctx.module.import_records[*rec_id];
-          let importee_id = rec.resolved_module;
-          match &self.ctx.modules[importee_id] {
-            Module::Normal(importee) => {
-              if let Some(&importee_chunk_id) =
-                self.ctx.chunk_graph.entry_module_to_entry_chunk.get(&rec.resolved_module)
-              {
-                if let Some(importee_chunk) =
-                  self.ctx.chunk_graph.chunk_table.get(importee_chunk_id)
-                {
-                  let import_path = self.ctx.chunk.import_path_for(importee_chunk);
-                  expr.source = Expression::StringLiteral(
-                    self.snippet.alloc_string_literal(&import_path, expr.source.span()),
-                  );
+    let ast::Expression::ImportExpression(expr) = node else {
+      return false;
+    };
+    if expr.options.is_some() {
+      return false;
+    }
+    let Some(rec_id) = self.ctx.module.imports.get(&expr.span) else {
+      return false;
+    };
+    // Make sure the import expression is in correct form. If it's not, we should leave it as it is.
+    let Some(str) = expr.source.as_static_module_request() else {
+      return false;
+    };
 
-                  if let Some(rewritten_expr) = self.rewrite_dynamic_import_for_merged_entry(
-                    expr,
-                    importee,
-                    importee_id,
-                    importee_chunk,
-                    importee_chunk_id,
-                  ) {
-                    // the `toESM` is properly handled inside `rewrite_dynamic_import_for_merged_entry`
-                    *node = rewritten_expr;
-                  } else {
-                    needs_to_esm_helper = importee.exports_kind.is_commonjs();
-                  }
-                }
-              } else {
-                // TODO: probably we should add the reason why it is replaced with `void 0` when upstream support codegen with specific operation
-                *node = self.snippet.builder.void_0(SPAN);
-                return true;
-              }
-            }
-            Module::External(importee) => {
-              let import_path =
-                importee.get_import_path(self.ctx.chunk, self.ctx.options.paths.as_ref());
-              if str != import_path {
-                expr.source = Expression::StringLiteral(
-                  self.snippet.alloc_string_literal(&import_path, expr.source.span()),
-                );
-              }
-              // Convert `import("external")` to `Promise.resolve().then(() => __toESM(require("external")))`
-              // when format is CJS and dynamicImportInCjs is false
-              if matches!(self.ctx.options.format, OutputFormat::Cjs)
-                && !self.ctx.options.dynamic_import_in_cjs
-              {
-                let source = expr.source.take_in(self.alloc);
-                let require_call = self.snippet.call_expr_with_arg_expr_expr("require", source);
-                let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
-                let wrapped = self.snippet.wrap_with_to_esm(
-                  to_esm_fn_name,
-                  require_call,
-                  self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
-                );
-                *node = self.snippet.promise_resolve_then_call_expr(wrapped);
-                return true;
-              }
-            }
-          }
-          if needs_to_esm_helper {
-            // Turn `import('./some-cjs-module.js')` into `import('./some-cjs-module.js').then((m) => __toESM(m.default, isNodeMode))`
-            // Inline __toDynamicImportESM
+    let mut needs_to_esm_helper = false;
+    let rec = &self.ctx.module.import_records[*rec_id];
+    let importee_id = rec.resolved_module;
 
-            // `import('./some-cjs-module.js')`
-            let original_import_expr = node.take_in(self.alloc);
+    match &self.ctx.modules[importee_id] {
+      Module::Normal(importee) => {
+        let Some(&importee_chunk_id) =
+          self.ctx.chunk_graph.entry_module_to_entry_chunk.get(&rec.resolved_module)
+        else {
+          // TODO: probably we should add the reason why it is replaced with `void 0` when upstream support codegen with specific operation
+          *node = self.snippet.builder.void_0(SPAN);
+          return true;
+        };
+        let Some(importee_chunk) = self.ctx.chunk_graph.chunk_table.get(importee_chunk_id) else {
+          return false;
+        };
 
-            // __toESM
-            let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
+        let import_path = self.ctx.chunk.import_path_for(importee_chunk);
+        expr.source = Expression::StringLiteral(
+          self.snippet.alloc_string_literal(&import_path, expr.source.span()),
+        );
 
-            // Build arrow function: (m) => __toESM(m.default, isNodeMode)
-            // m.default
-            let m_default_expr = ast::Expression::StaticMemberExpression(
-              self.snippet.builder.alloc_static_member_expression(
-                SPAN,
-                self.snippet.builder.expression_identifier(SPAN, "m"),
-                self.snippet.builder.identifier_name(SPAN, "default"),
-                false,
-              ),
-            );
-
-            // __toESM(m.default, isNodeMode)
-            let to_esm_call = self.snippet.wrap_with_to_esm(
-              to_esm_fn_name,
-              m_default_expr,
-              self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
-            );
-
-            // (m) => __toESM(m.default, isNodeMode)
-            let arrow_fn = self.snippet.builder.alloc_arrow_function_expression(
-              SPAN,
-              true,  // expression
-              false, // async
-              NONE,
-              self.snippet.builder.formal_parameters(
-                SPAN,
-                ast::FormalParameterKind::ArrowFormalParameters,
-                self.snippet.builder.vec1(
-                  self.snippet.builder.formal_parameter(
-                    SPAN,
-                    self.snippet.builder.vec(),
-                    self
-                      .snippet
-                      .builder
-                      .binding_pattern_binding_identifier(SPAN, self.snippet.builder.atom("m")),
-                    NONE,
-                    NONE,
-                    false,
-                    None,
-                    false,
-                    false,
-                  ),
-                ),
-                NONE,
-              ),
-              NONE,
-              self.snippet.builder.function_body(
-                SPAN,
-                self.snippet.builder.vec(),
-                self
-                  .snippet
-                  .builder
-                  .vec1(self.snippet.builder.statement_expression(SPAN, to_esm_call)),
-              ),
-            );
-
-            // `import('./some-cjs-module.js').then
-            let callee = self.snippet.builder.alloc_static_member_expression(
-              SPAN,
-              original_import_expr,
-              self.snippet.builder.identifier_name(SPAN, "then"),
-              false,
-            );
-
-            // `import('./some-cjs-module.js').then((m) => __toESM(m.default, isNodeMode))`
-            let call_expr = self.snippet.builder.alloc_call_expression(
-              SPAN,
-              ast::Expression::StaticMemberExpression(callee),
-              NONE,
-              self.snippet.builder.vec1(ast::Argument::ArrowFunctionExpression(arrow_fn)),
-              false,
-            );
-
-            *node = ast::Expression::CallExpression(call_expr);
-          }
+        if let Some(rewritten_expr) = self.rewrite_dynamic_import_for_merged_entry(
+          expr,
+          importee,
+          importee_chunk,
+          importee_chunk_id,
+        ) {
+          // the `toESM` is properly handled inside `rewrite_dynamic_import_for_merged_entry`
+          *node = rewritten_expr;
+        } else {
+          needs_to_esm_helper = importee.exports_kind.is_commonjs();
+        }
+      }
+      Module::External(importee) => {
+        let import_path = importee.get_import_path(self.ctx.chunk, self.ctx.options.paths.as_ref());
+        if str != import_path {
+          expr.source = Expression::StringLiteral(
+            self.snippet.alloc_string_literal(&import_path, expr.source.span()),
+          );
+        }
+        // Convert `import("external")` to `Promise.resolve().then(() => __toESM(require("external")))`
+        // when format is CJS and dynamicImportInCjs is false
+        if matches!(self.ctx.options.format, OutputFormat::Cjs)
+          && !self.ctx.options.dynamic_import_in_cjs
+        {
+          let source = expr.source.take_in(self.alloc);
+          let require_call = self.snippet.call_expr_with_arg_expr_expr("require", source);
+          let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
+          let wrapped = self.snippet.wrap_with_to_esm(
+            to_esm_fn_name,
+            require_call,
+            self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
+          );
+          *node = self.snippet.promise_resolve_then_call_expr(wrapped);
           return true;
         }
       }
     }
-    false
+
+    if needs_to_esm_helper {
+      // Turn `import('./some-cjs-module.js')` into `import('./some-cjs-module.js').then((m) => __toESM(m.default, isNodeMode))`
+      // Inline __toDynamicImportESM
+
+      // `import('./some-cjs-module.js')`
+      let original_import_expr = node.take_in(self.alloc);
+
+      // __toESM
+      let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
+
+      // Build arrow function: (m) => __toESM(m.default, isNodeMode)
+      // m.default
+      let m_default_expr = ast::Expression::StaticMemberExpression(
+        self.snippet.builder.alloc_static_member_expression(
+          SPAN,
+          self.snippet.builder.expression_identifier(SPAN, "m"),
+          self.snippet.builder.identifier_name(SPAN, "default"),
+          false,
+        ),
+      );
+
+      // __toESM(m.default, isNodeMode)
+      let to_esm_call = self.snippet.wrap_with_to_esm(
+        to_esm_fn_name,
+        m_default_expr,
+        self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
+      );
+
+      // (m) => __toESM(m.default, isNodeMode)
+      let arrow_fn = self.snippet.builder.alloc_arrow_function_expression(
+        SPAN,
+        true,  // expression
+        false, // async
+        NONE,
+        self.snippet.builder.formal_parameters(
+          SPAN,
+          ast::FormalParameterKind::ArrowFormalParameters,
+          self.snippet.builder.vec1(
+            self.snippet.builder.formal_parameter(
+              SPAN,
+              self.snippet.builder.vec(),
+              self
+                .snippet
+                .builder
+                .binding_pattern_binding_identifier(SPAN, self.snippet.builder.atom("m")),
+              NONE,
+              NONE,
+              false,
+              None,
+              false,
+              false,
+            ),
+          ),
+          NONE,
+        ),
+        NONE,
+        self.snippet.builder.function_body(
+          SPAN,
+          self.snippet.builder.vec(),
+          self.snippet.builder.vec1(self.snippet.builder.statement_expression(SPAN, to_esm_call)),
+        ),
+      );
+
+      // `import('./some-cjs-module.js').then
+      let callee = self.snippet.builder.alloc_static_member_expression(
+        SPAN,
+        original_import_expr,
+        self.snippet.builder.identifier_name(SPAN, "then"),
+        false,
+      );
+
+      // `import('./some-cjs-module.js').then((m) => __toESM(m.default, isNodeMode))`
+      let call_expr = self.snippet.builder.alloc_call_expression(
+        SPAN,
+        ast::Expression::StaticMemberExpression(callee),
+        NONE,
+        self.snippet.builder.vec1(ast::Argument::ArrowFunctionExpression(arrow_fn)),
+        false,
+      );
+
+      *node = ast::Expression::CallExpression(call_expr);
+    }
+
+    true
   }
 
   /// if the json module prop needs to inline, we would just rewrite the inlined prop to

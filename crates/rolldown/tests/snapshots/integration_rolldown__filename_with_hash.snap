@@ -85,7 +85,7 @@ expression: output
 
 # tests/esbuild/dce/dce_of_experimental_decorators
 
-- keep-these-!~{000}~.js => keep-these-BKT5Y2hJ.js
+- keep-these-!~{000}~.js => keep-these-Dn-5KVfL.js
 
 # tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195
 
@@ -106,7 +106,7 @@ expression: output
 
 # tests/esbuild/dce/dce_of_symbol_ctor_call
 
-- entry-!~{000}~.js => entry-K-1GXS8f.js
+- entry-!~{000}~.js => entry-fDKjG8eT.js
 
 # tests/esbuild/dce/dce_of_symbol_for_call
 
@@ -533,7 +533,7 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field
 
-- entry-!~{000}~.js => entry-Cd6YsOyT.js
+- entry-!~{000}~.js => entry-BBsgeY7n.js
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment
 
@@ -2603,11 +2603,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-BECix6Tj.js
+- entry-!~{000}~.js => entry-DlAJhiKz.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-BECix6Tj.js
+- entry-!~{000}~.js => entry-DlAJhiKz.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2670,7 +2670,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-CTpkYmBq.js
+- entry-!~{000}~.js => entry-BimAA0Kp.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -2848,7 +2848,7 @@ expression: output
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
-- entry-!~{000}~.js => entry-CWN--EV1.js
+- entry-!~{000}~.js => entry-CDFr_x6l.js
 
 # tests/esbuild/lower/static_class_block_es2021
 
@@ -3346,15 +3346,15 @@ expression: output
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_false
 
-- entry-!~{000}~.js => entry-BIkr61pL.js
+- entry-!~{000}~.js => entry-DmvSOMmk.js
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_true
 
-- entry-!~{000}~.js => entry-CSm9pIuD.js
+- entry-!~{000}~.js => entry-BZP-Rfdl.js
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_true_lower
 
-- entry-!~{000}~.js => entry-DfhYO5-t.js
+- entry-!~{000}~.js => entry-CT0M2BGh.js
 
 # tests/esbuild/ts/ts_const_enum_comments
 
@@ -3362,7 +3362,7 @@ expression: output
 
 # tests/esbuild/ts/ts_declare_class_fields
 
-- entry-!~{000}~.js => entry-CNLlP9vX.js
+- entry-!~{000}~.js => entry-CTjwigVp.js
 
 # tests/esbuild/ts/ts_declare_namespace
 
@@ -3424,27 +3424,27 @@ expression: output
 
 # tests/esbuild/ts/ts_experimental_decorator_scope_issue2147
 
-- entry-!~{000}~.js => entry-D_9J46p4.js
+- entry-!~{000}~.js => entry-B8nvXosT.js
 
 # tests/esbuild/ts/ts_experimental_decorators
 
-- entry-!~{000}~.js => entry-B5G9ohd7.js
+- entry-!~{000}~.js => entry-CAVa8YAW.js
 
 # tests/esbuild/ts/ts_experimental_decorators_keep_names
 
-- entry-!~{000}~.js => entry-Box-0yYF.js
+- entry-!~{000}~.js => entry-DBEJEm3O.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_assign_semantics
 
-- entry-!~{000}~.js => entry-DzDXk_uL.js
+- entry-!~{000}~.js => entry-BIsMhGPW.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_define_semantics
 
-- entry-!~{000}~.js => entry-Bp1jg0AK.js
+- entry-!~{000}~.js => entry-C3EspZdo.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_methods
 
-- entry-!~{000}~.js => entry-bVynnZR9.js
+- entry-!~{000}~.js => entry-CPPA63H4.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_assign_semantics
 
@@ -3452,11 +3452,11 @@ expression: output
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_define_semantics
 
-- entry-!~{000}~.js => entry-c1i5OGst.js
+- entry-!~{000}~.js => entry-3rJS1ZNf.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_methods
 
-- entry-!~{000}~.js => entry-CfhEvvHi.js
+- entry-!~{000}~.js => entry-CA61LDWf.js
 
 # tests/esbuild/ts/ts_experimental_decorators_no_config
 
@@ -3540,7 +3540,7 @@ expression: output
 
 # tests/esbuild/ts/ts_minify_derived_class
 
-- entry-!~{000}~.js => entry-B50Md36C.js
+- entry-!~{000}~.js => entry-CGTilTJl.js
 
 # tests/esbuild/ts/ts_minify_enum
 
@@ -5432,11 +5432,11 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_merge_decorator_metadata
 
-- main-!~{000}~.js => main-2no4FNoK.js
+- main-!~{000}~.js => main-B7sLnwZJ.js
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-B6ZJM3od.js
+- main-!~{000}~.js => main-UK9xra9A.js
 
 # tests/rolldown/resolve/wildcard_alias
 
@@ -5932,7 +5932,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/issue_7481_2
 
-- main-!~{000}~.js => main-BVkr-ydv.js
+- main-!~{000}~.js => main-Bk0Y9rox.js
 
 # tests/rolldown/topics/keep_names/issue_7507/src
 

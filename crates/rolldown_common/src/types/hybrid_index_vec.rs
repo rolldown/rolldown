@@ -61,6 +61,18 @@ impl<I: Idx, T> HybridIndexVec<I, T> {
     }
   }
 
+  /// Update the value at index `i`.
+  /// # Panic
+  /// Caller should ensure the index exists in container.
+  pub fn update(&mut self, i: I, value: T) {
+    match self {
+      HybridIndexVec::IndexVec(index_vec) => index_vec[i] = value,
+      HybridIndexVec::Map(map) => {
+        *map.get_mut(&i).expect("should have idx") = value;
+      }
+    }
+  }
+
   /// # Panic
   /// Caller should ensure the index is exists in container.
   pub fn get(&self, i: I) -> &T {

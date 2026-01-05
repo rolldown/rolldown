@@ -444,8 +444,8 @@ impl<'a> ModuleLoader<'a> {
             normal_module.is_user_defined_entry = true;
           }
 
-          *self.intermediate_normal_modules.index_ecma_ast.get_mut(module_idx) = Some(ast);
-          *self.intermediate_normal_modules.modules.get_mut(module_idx) = Some(module);
+          self.intermediate_normal_modules.index_ecma_ast.update(module_idx, Some(ast));
+          self.intermediate_normal_modules.modules.update(module_idx, Some(module));
           self.symbol_ref_db.store_local_db(module_idx, symbols);
           self.remaining -= 1;
         }
@@ -460,11 +460,11 @@ impl<'a> ModuleLoader<'a> {
           } = *task_result;
 
           self.symbol_ref_db.store_local_db(
-            task_result.idx,
-            SymbolRefDbForModule::new(Scoping::default(), task_result.idx, ScopeId::new(0)),
+            idx,
+            SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0)),
           );
           let symbol_ref = self.symbol_ref_db.create_facade_root_symbol_ref(idx, &identifier_name);
-          let ext = ExternalModule::new(
+          let external_module = Module::External(Box::new(ExternalModule::new(
             idx,
             id,
             name,
@@ -472,9 +472,9 @@ impl<'a> ModuleLoader<'a> {
             side_effects,
             symbol_ref,
             need_renormalize_render_path,
-          );
-          *self.intermediate_normal_modules.modules.get_mut(task_result.idx) = Some(ext.into());
+          )));
 
+          self.intermediate_normal_modules.modules.update(idx, Some(external_module));
           self.remaining -= 1;
         }
         ModuleLoaderMsg::RuntimeNormalModuleDone(task_result) => {
@@ -505,9 +505,8 @@ impl<'a> ModuleLoader<'a> {
           }
           module.import_records = import_records;
 
-          *self.intermediate_normal_modules.modules.get_mut(self.runtime_id) = Some(module.into());
-          *self.intermediate_normal_modules.index_ecma_ast.get_mut(self.runtime_id) = Some(ast);
-
+          self.intermediate_normal_modules.modules.update(self.runtime_id, Some(module.into()));
+          self.intermediate_normal_modules.index_ecma_ast.update(self.runtime_id, Some(ast));
           self.symbol_ref_db.store_local_db(self.runtime_id, local_symbol_ref_db);
           self.remaining -= 1;
 

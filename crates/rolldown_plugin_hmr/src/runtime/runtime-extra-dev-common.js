@@ -3,7 +3,6 @@ import {
   __exportAll,
   __reExport,
   __toCommonJS,
-  __toDynamicImportESM,
   __toESM,
   // @ts-expect-error
 } from 'rolldown:runtime';
@@ -88,24 +87,28 @@ export class DevRuntime {
    * @type {<T>(fn: any, res: T) => () => T}
    * @internal
    */
-  createEsmInitializer = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
+  createEsmInitializer = (fn, res) => () => (fn && (res = fn((fn = 0))), res);
   /**
    * __commonJSMin
    *
    * @type {<T extends { exports: any }>(cb: any, mod: { exports: any }) => () => T}
    * @internal
    */
-  createCjsInitializer =
-    (cb, mod) =>
-    () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
+  createCjsInitializer = (cb, mod) => () => (
+    mod || cb((mod = { exports: {} }).exports, mod), mod.exports
+  );
   /** @internal */
   __toESM = __toESM;
   /** @internal */
   __toCommonJS = __toCommonJS;
   /** @internal */
   __exportAll = __exportAll;
-  /** @internal */
-  __toDynamicImportESM = __toDynamicImportESM;
+  /**
+   * @param {boolean} [isNodeMode]
+   * @returns {(mod: any) => any}
+   * @internal
+   */
+  __toDynamicImportESM = (isNodeMode) => (mod) => __toESM(mod.default, isNodeMode);
   /** @internal */
   __reExport = __reExport;
 

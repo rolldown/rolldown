@@ -46,7 +46,7 @@ exports.value = value;
 //#region main.js
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("external"))).then(console.log);
 Promise.resolve().then(() => require("./internal.js")).then(console.log);
-Promise.resolve().then(() => __toDynamicImportESM()(require("./internal-cjs.js"))).then(console.log);
+Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./internal-cjs.js").default)).then(console.log);
 
 //#endregion
 exports.__commonJSMin = __commonJSMin;

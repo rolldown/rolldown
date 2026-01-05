@@ -1109,38 +1109,25 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             ));
 
           if importee.exports_kind.is_commonjs() {
-            // __toDynamicImportESM
-            let to_dynamic_import_esm_fn_name =
-              self.finalized_expr_for_runtime_symbol("__toDynamicImportESM");
+            // Inline __toDynamicImportESM: __toESM(require('foo.mjs').default, isNodeMode)
+            let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
 
-            let mut arguments = self.snippet.builder.vec();
-            if self.ctx.module.should_consider_node_esm_spec_for_dynamic_import() {
-              arguments.push(ast::Argument::from(self.snippet.builder.expression_numeric_literal(
+            // require('foo.mjs').default
+            let require_default_expr = ast::Expression::StaticMemberExpression(
+              self.snippet.builder.alloc_static_member_expression(
                 SPAN,
-                1.0,
-                None,
-                NumberBase::Decimal,
-              )));
-            }
-            // __toDynamicImportESM(isNodeMode)
-            let to_dynamic_import_esm_fn_call =
-              ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-                SPAN,
-                to_dynamic_import_esm_fn_name,
-                NONE,
-                arguments,
+                require_call_expr,
+                self.snippet.builder.identifier_name(SPAN, "default"),
                 false,
-              ));
+              ),
+            );
 
-            // __toDynamicImportESM(isNodeMode)(require('foo.mjs'))
-            require_call_expr =
-              ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-                SPAN,
-                to_dynamic_import_esm_fn_call,
-                NONE,
-                self.snippet.builder.vec1(ast::Argument::from(require_call_expr)),
-                false,
-              ));
+            // __toESM(require('foo.mjs').default, isNodeMode)
+            require_call_expr = self.snippet.wrap_with_to_esm(
+              to_esm_fn_name,
+              require_default_expr,
+              self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
+            );
           }
 
           let new_expr = self.snippet.promise_resolve_then_call_expr(require_call_expr);
@@ -1685,33 +1672,70 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             }
           }
           if needs_to_esm_helper {
-            // Turn `import('./some-cjs-module.js')` into `import('./some-cjs-module.js').then(__toDynamicImportESM(isNodeMode))`
+            // Turn `import('./some-cjs-module.js')` into `import('./some-cjs-module.js').then((m) => __toESM(m.default, isNodeMode))`
+            // Inline __toDynamicImportESM
 
             // `import('./some-cjs-module.js')`
             let original_import_expr = node.take_in(self.alloc);
 
-            // __toDynamicImportESM
-            let to_dynamic_import_esm_fn_name =
-              self.finalized_expr_for_runtime_symbol("__toDynamicImportESM");
+            // __toESM
+            let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
 
-            let mut arguments = self.snippet.builder.vec();
-            if self.ctx.module.should_consider_node_esm_spec_for_dynamic_import() {
-              arguments.push(ast::Argument::from(self.snippet.builder.expression_numeric_literal(
+            // Build arrow function: (m) => __toESM(m.default, isNodeMode)
+            // m.default
+            let m_default_expr = ast::Expression::StaticMemberExpression(
+              self.snippet.builder.alloc_static_member_expression(
                 SPAN,
-                1.0,
-                None,
-                NumberBase::Decimal,
-              )));
-            }
-            // __toDynamicImportESM(isNodeMode)
-            let to_dynamic_import_esm_fn_call =
-              ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-                SPAN,
-                to_dynamic_import_esm_fn_name,
-                NONE,
-                arguments,
+                self.snippet.builder.expression_identifier(SPAN, "m"),
+                self.snippet.builder.identifier_name(SPAN, "default"),
                 false,
-              ));
+              ),
+            );
+
+            // __toESM(m.default, isNodeMode)
+            let to_esm_call = self.snippet.wrap_with_to_esm(
+              to_esm_fn_name,
+              m_default_expr,
+              self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
+            );
+
+            // (m) => __toESM(m.default, isNodeMode)
+            let arrow_fn = self.snippet.builder.alloc_arrow_function_expression(
+              SPAN,
+              true,  // expression
+              false, // async
+              NONE,
+              self.snippet.builder.formal_parameters(
+                SPAN,
+                ast::FormalParameterKind::ArrowFormalParameters,
+                self.snippet.builder.vec1(
+                  self.snippet.builder.formal_parameter(
+                    SPAN,
+                    self.snippet.builder.vec(),
+                    self
+                      .snippet
+                      .builder
+                      .binding_pattern_binding_identifier(SPAN, self.snippet.builder.atom("m")),
+                    NONE,
+                    NONE,
+                    false,
+                    None,
+                    false,
+                    false,
+                  ),
+                ),
+                NONE,
+              ),
+              NONE,
+              self.snippet.builder.function_body(
+                SPAN,
+                self.snippet.builder.vec(),
+                self
+                  .snippet
+                  .builder
+                  .vec1(self.snippet.builder.statement_expression(SPAN, to_esm_call)),
+              ),
+            );
 
             // `import('./some-cjs-module.js').then
             let callee = self.snippet.builder.alloc_static_member_expression(
@@ -1721,14 +1745,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               false,
             );
 
-            // `import('./some-cjs-module.js').then(__toDynamicImportESM(isNodeMode))`
+            // `import('./some-cjs-module.js').then((m) => __toESM(m.default, isNodeMode))`
             let call_expr = self.snippet.builder.alloc_call_expression(
               SPAN,
-              // ast::Expression::from(callee),
-              // callee.into(),
               ast::Expression::StaticMemberExpression(callee),
               NONE,
-              self.snippet.builder.vec1(ast::Argument::from(to_dynamic_import_esm_fn_call)),
+              self.snippet.builder.vec1(ast::Argument::ArrowFunctionExpression(arrow_fn)),
               false,
             );
 

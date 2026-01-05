@@ -17,7 +17,7 @@ var require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
 //#endregion
 //#region entry.js
 var import_foo = require_foo();
-import("./foo.js").then(__toDynamicImportESM()).then(({ default: { bar: b } }) => {
+import("./foo.js").then((m) => /* @__PURE__ */ __toESM(m.default)).then(({ default: { bar: b } }) => {
 	assert.strictEqual(b, 123);
 	assert.strictEqual(import_foo.bar, 123);
 });

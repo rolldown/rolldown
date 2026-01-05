@@ -187,9 +187,9 @@ After successful lazy compilation:
 
 ### Known Limitations
 
-#### Multiple Execution of Shared Modules
+#### Race Condition in Shared Module Deduplication
 
-When multiple lazy entries share common dependencies, those dependencies may execute multiple times:
+When multiple lazy entries share common dependencies, the server filters out modules the client has already executed using `executed_modules` (populated via `hmr:module-registered` messages from the browser).
 
 ```
 Entry
@@ -199,16 +199,36 @@ Entry
     └── shared.js (sync dep)
 ```
 
-**What happens:**
+**Normal flow (works correctly):**
 
 1. Browser requests `/lazy?id=lazy-a` → Server returns patch with `lazy-a` + `shared.js`
-2. Browser executes patch → `shared.js` runs (first time)
-3. Browser requests `/lazy?id=lazy-b` → Server returns patch with `lazy-b` + `shared.js`
-4. Browser executes patch → `shared.js` runs **again** (duplicate!)
+2. Browser executes patch → `shared.js` runs, sends `hmr:module-registered`
+3. Server updates `executed_modules` with `shared.js`
+4. Browser requests `/lazy?id=lazy-b` → Server filters out `shared.js`
+5. Server returns patch with `lazy-b` only → No duplicate execution ✓
 
-Each lazy compilation patch is self-contained and includes all sync dependencies, even if they were already included in a previous patch.
+**Race condition (edge case):**
 
-**Status**: Known issue for POC. Future work needed to deduplicate modules across lazy patches.
+If the browser sends two `/lazy` requests in rapid succession (before the `hmr:module-registered` message from the first patch arrives), the server may not know about executed modules yet:
+
+1. Browser requests `/lazy?id=lazy-a`
+2. Browser immediately requests `/lazy?id=lazy-b` (before `lazy-a` patch executes)
+3. Server returns both patches with `shared.js` included
+4. Browser executes both → `shared.js` runs twice ✗
+
+**Potential future enhancement:** Add a runtime guard in generated init functions to check if a module is already registered before executing:
+
+```javascript
+function init_shared_0() {
+  // Guard: skip if already initialized
+  if (__rolldown_runtime__.modules["shared.js"]) {
+    return;
+  }
+  // ... module code
+}
+```
+
+This would provide defense-in-depth against the race condition.
 
 ## Implementation Details
 

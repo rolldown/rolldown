@@ -714,28 +714,30 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     let is_importee_cjs = importee.exports_kind == rolldown_common::ExportsKind::CommonJs;
 
-    let init_fn_name = &self.affected_module_idx_to_init_fn_name[importee_idx];
-
     // Use stable module ID for consistent runtime lookup
-    if is_importee_cjs {
-      *it = self.snippet.seq2_in_paren_expr(
-        self.snippet.call_expr_expr(init_fn_name),
-        self.snippet.call_expr_with_arg_expr(
-          self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports"),
-          self.snippet.string_literal_expr(&importee.stable_id, SPAN),
-          false,
-        ),
-      );
+    let load_exports_call = self.snippet.call_expr_with_arg_expr(
+      self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports"),
+      self.snippet.string_literal_expr(&importee.stable_id, SPAN),
+      false,
+    );
+
+    if let Some(init_fn_name) = self.affected_module_idx_to_init_fn_name.get(importee_idx) {
+      // If the importee is in the current patch, call init before loading exports
+      // Turn `require('./foo.js')` into `(init_foo(), __rolldown_runtime__.loadExports('./foo.js'))`
+      if is_importee_cjs {
+        *it = self
+          .snippet
+          .seq2_in_paren_expr(self.snippet.call_expr_expr(init_fn_name), load_exports_call);
+      } else {
+        // hyf0 TODO: handle esm importee
+        *it = self
+          .snippet
+          .seq2_in_paren_expr(self.snippet.call_expr_expr(init_fn_name), load_exports_call);
+      }
     } else {
-      // hyf0 TODO: handle esm importee
-      *it = self.snippet.seq2_in_paren_expr(
-        self.snippet.call_expr_expr(init_fn_name),
-        self.snippet.call_expr_with_arg_expr(
-          self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports"),
-          self.snippet.string_literal_expr(&importee.stable_id, SPAN),
-          false,
-        ),
-      );
+      // Importee is not in current patch (already executed by client), just load its exports
+      // Turn `require('./foo.js')` into `__rolldown_runtime__.loadExports('./foo.js')`
+      *it = load_exports_call;
     }
   }
 }

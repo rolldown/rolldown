@@ -330,7 +330,7 @@ impl<'a> HmrStage<'a> {
     &mut self,
     module_id: &str,
     _client_id: &str,
-    _executed_modules: &FxHashSet<String>,
+    executed_modules: &FxHashSet<String>,
   ) -> BuildResult<String> {
     tracing::debug!(
       target: "hmr",
@@ -395,6 +395,25 @@ impl<'a> HmrStage<'a> {
 
     // Remove external modules - no way to "compile" them
     modules_to_be_updated.retain(|idx| self.module_table().modules[*idx].is_normal());
+
+    // Filter out modules the client has already executed.
+    // This prevents duplicate module execution when multiple lazy entries share dependencies.
+    // Note: There's a potential race condition if the client sends multiple /lazy requests
+    // before the hmr:module-registered message arrives. In that case, the server may still
+    // send duplicate modules. A future enhancement could add runtime guards in init functions.
+    //
+    // IMPORTANT: Always keep the entry module - we need it to call the init function
+    // that triggers the lazy load chain. Without it, dependencies wouldn't be initialized.
+    modules_to_be_updated.retain(|&idx| {
+      // Always keep the entry module
+      if idx == entry_module_idx {
+        return true;
+      }
+      let Module::Normal(normal_module) = &self.module_table().modules[idx] else {
+        return true;
+      };
+      !executed_modules.contains(normal_module.stable_id.as_str())
+    });
 
     // Sort for stable output
     modules_to_be_updated

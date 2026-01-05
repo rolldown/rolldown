@@ -19,7 +19,7 @@ exports.foo = foo;
 ## entry2.js
 
 ```js
-const require_entry = require('./entry.js');
+const require_entry = require("./entry.js");
 
 exports.default = require_entry.default;
 exports.foo = require_entry.foo;

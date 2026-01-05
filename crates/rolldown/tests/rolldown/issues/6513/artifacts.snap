@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-const require_main = require('./main.js');
+const require_main = require("./main.js");
 
 //#region dynamic.js
 var ddd;

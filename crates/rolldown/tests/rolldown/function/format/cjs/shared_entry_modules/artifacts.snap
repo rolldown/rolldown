@@ -17,7 +17,7 @@ exports.value = value;
 ## entry2.js
 
 ```js
-const require_entry1 = require('./entry1.js');
+const require_entry1 = require("./entry1.js");
 
 exports.value = require_entry1.value;
 ```

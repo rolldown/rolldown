@@ -14,7 +14,7 @@ exports.__commonJSMin = __commonJSMin;
 ## config.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+const require_rolldown_runtime = require("./_virtual/rolldown_runtime.js");
 
 //#region config.json
 var require_config = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports, module) => {
@@ -33,7 +33,7 @@ Object.defineProperty(exports, 'default', {
 ## main.js
 
 ```js
-const require_config$1 = require('./config.js');
+const require_config$1 = require("./config.js");
 
 //#region main.js
 const assert = require("assert");

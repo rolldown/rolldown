@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-const require_main = require('./main.js');
+const require_main = require("./main.js");
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 

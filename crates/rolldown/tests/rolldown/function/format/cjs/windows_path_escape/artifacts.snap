@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+require("C:\\Users\\Test\\project\\node_modules\\external-lib");
+
+//#region init-logger.js
+console.log("Logger initialized");
+
+//#endregion
+//#region main.js
+console.log("Application started");
+
+//#endregion
+```

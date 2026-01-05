@@ -17,7 +17,7 @@ module.exports = dep_default;
 ## main.js
 
 ```js
-const require_dep = require('./dep.js');
+const require_dep = require("./dep.js");
 
 exports.value = require_dep;
 ```
@@ -41,7 +41,7 @@ exports.default = dep_default;
 ### main.js
 
 ```js
-const require_dep = require('./dep.js');
+const require_dep = require("./dep.js");
 
 exports.value = require_dep.default;
 ```

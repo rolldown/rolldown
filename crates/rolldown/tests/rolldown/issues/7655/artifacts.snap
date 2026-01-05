@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-const require_main = require('./main.js');
+const require_main = require("./main.js");
 
 //#region a.js
 var require_a = /* @__PURE__ */ require_main.__commonJSMin(((exports, module) => {

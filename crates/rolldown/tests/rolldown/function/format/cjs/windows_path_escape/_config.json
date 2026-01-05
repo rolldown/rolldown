@@ -1,0 +1,12 @@
+{
+  "config": {
+    "format": "cjs",
+    "external": [
+      "C:\\Users\\Test\\project\\node_modules\\external-lib"
+    ],
+    "treeshake": {
+      "moduleSideEffects": true
+    }
+  },
+  "expectExecuted": false
+}

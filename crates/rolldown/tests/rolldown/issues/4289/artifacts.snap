@@ -72,7 +72,7 @@ export { __commonJSMin as t };
 ### lib.js
 
 ```js
-const require_main = require('./main.js');
+const require_main = require("./main.js");
 
 //#region lib.js
 var require_lib = /* @__PURE__ */ require_main.__commonJSMin(((exports) => {

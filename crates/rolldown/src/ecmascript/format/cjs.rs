@@ -7,6 +7,7 @@ use crate::{
   utils::chunk::render_chunk_exports::render_chunk_exports,
   utils::external_import_interop::external_import_needs_interop,
 };
+use json_escape_simd::escape;
 use rolldown_common::{AddonRenderContext, OutputExports};
 use rolldown_error::BuildDiagnostic;
 use rolldown_sourcemap::SourceJoiner;
@@ -102,8 +103,8 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
   // render imports from other chunks
   ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
     let importee_chunk = &ctx.chunk_graph.chunk_table[*exporter_id];
-    let require_path_str =
-      concat_string!("require('", ctx.chunk.import_path_for(importee_chunk), "');\n");
+    let import_path = ctx.chunk.import_path_for(importee_chunk);
+    let require_path_str = concat_string!("require(", &escape(&import_path), ");\n");
     if items.is_empty() {
       s.push_str(&require_path_str);
     } else {
@@ -127,11 +128,8 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         .as_external()
         .expect("Should be external module here");
 
-      let require_path_str = concat_string!(
-        "require(\"",
-        &importee.get_import_path(ctx.chunk, ctx.options.paths.as_ref()),
-        "\")"
-      );
+      let import_path = importee.get_import_path(ctx.chunk, ctx.options.paths.as_ref());
+      let require_path_str = concat_string!("require(", &escape(&import_path), ")");
 
       if ctx.link_output.used_symbol_refs.contains(&importee.namespace_ref) {
         let external_module_symbol_name = &ctx.chunk.canonical_names[&importee.namespace_ref];

@@ -21,7 +21,7 @@ Object.keys(node_fs).forEach(function (k) {
 ## entry2.js
 
 ```js
-require('./entry.js');
+require("./entry.js");
 
 
 var node_fs = require("node:fs");

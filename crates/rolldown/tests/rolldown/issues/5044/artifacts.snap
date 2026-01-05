@@ -13,7 +13,7 @@ let preact = require("preact");
 ## lib.js
 
 ```js
-require('./cube.js');
+require("./cube.js");
 let preact = require("preact");
 
 ```
@@ -21,7 +21,7 @@ let preact = require("preact");
 ## main.js
 
 ```js
-require('./lib.js');
+require("./lib.js");
 let preact = require("preact");
 
 Object.defineProperty(exports, 'createContext', {

@@ -19,7 +19,7 @@ Object.defineProperty(exports, '__toESM', {
 ## main.js
 
 ```js
-const require_chunk = require('./chunk.js');
+const require_chunk = require("./chunk.js");
 let node_path = require("node:path");
 node_path = require_chunk.__toESM(node_path);
 
@@ -33,7 +33,7 @@ module.exports = main_default;
 ## main2.js
 
 ```js
-const require_chunk = require('./chunk.js');
+const require_chunk = require("./chunk.js");
 let node_fs = require("node:fs");
 node_fs = require_chunk.__toESM(node_fs);
 

@@ -353,14 +353,21 @@ impl<'a> ModuleLoader<'a> {
           } = *task_result;
           all_warnings.extend(warnings);
 
+          // Make this.emitFile generated module as user defined entry if needed
+          let module_idx = module.idx();
+          if user_defined_entry_ids.contains(&module_idx) {
+            let normal_module = module.as_normal_mut().expect("should be normal module");
+            normal_module.is_user_defined_entry = true;
+          }
+
           // remove importers from previous scan
           if !self.is_full_scan
             && let Some(previous_module) =
-              self.cache.get_snapshot().module_table.modules.get(module.idx())
+              self.cache.get_snapshot().module_table.modules.get(module_idx)
           {
             for rec in previous_module.import_records() {
               self.intermediate_normal_modules.importers[rec.resolved_module]
-                .retain(|v| v.importer_idx != module.idx());
+                .retain(|v| v.importer_idx != module_idx);
             }
           }
 
@@ -396,7 +403,7 @@ impl<'a> ModuleLoader<'a> {
             self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
               kind: raw_rec.kind,
               importer_path: module.id().clone(),
-              importer_idx: module.idx(),
+              importer_idx: module_idx,
             });
             // defer usage merging, since we only have one consumer, we should keep action during fetching as simple
             // as possible
@@ -409,7 +416,7 @@ impl<'a> ModuleLoader<'a> {
               match dynamic_import_entry_ids.entry(idx) {
                 Entry::Vacant(vac) => match raw_rec.dynamic_import_expr_info.as_ref() {
                   Some(info) => {
-                    vac.insert(vec![(module.idx(), info.stmt_info_idx, info.address, rec_idx)]);
+                    vac.insert(vec![(module_idx, info.stmt_info_idx, info.address, rec_idx)]);
                   }
                   None => {
                     vac.insert(vec![]);
@@ -417,7 +424,7 @@ impl<'a> ModuleLoader<'a> {
                 },
                 Entry::Occupied(mut occ) => {
                   if let Some(info) = raw_rec.dynamic_import_expr_info.as_ref() {
-                    occ.get_mut().push((module.idx(), info.stmt_info_idx, info.address, rec_idx));
+                    occ.get_mut().push((module_idx, info.stmt_info_idx, info.address, rec_idx));
                   }
                 }
               }
@@ -426,12 +433,6 @@ impl<'a> ModuleLoader<'a> {
           }
 
           module.set_import_records(import_records);
-
-          let module_idx = module.idx();
-          if user_defined_entry_ids.contains(&module_idx) {
-            let normal_module = module.as_normal_mut().expect("should be normal module");
-            normal_module.is_user_defined_entry = true;
-          }
 
           *self.intermediate_normal_modules.index_ecma_ast.get_mut(module_idx) = Some(ast);
           *self.intermediate_normal_modules.modules.get_mut(module_idx) = Some(module);
@@ -514,15 +515,29 @@ impl<'a> ModuleLoader<'a> {
             data.importer.as_deref(),
           )
           .await;
-          let resolved_id = match result {
-            Ok(result) => result,
+
+          let module_idx = match result {
+            Ok(resolved_id) => {
+              let idx =
+                self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries);
+              // Make this.emitFile generated module as user defined entry if needed
+              if let Some(module) = self
+                .intermediate_normal_modules
+                .modules
+                .get_mut(idx)
+                .as_mut()
+                .and_then(|module| module.as_normal_mut())
+              {
+                module.is_user_defined_entry = true;
+              }
+              idx
+            }
             Err(e) => {
               errors.push(e);
               continue;
             }
           };
-          let module_idx =
-            self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries);
+
           if let Some(preserve_entry_signatures) = data.preserve_entry_signatures {
             overrode_preserve_entry_signature_map.insert(module_idx, preserve_entry_signatures);
           }

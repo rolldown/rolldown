@@ -13,6 +13,16 @@ console.log("after preload dynamic");
 //#endregion
 ```
 
+## before-preload-dynamic.js
+
+```js
+//#region src/before-preload-dynamic.js
+import("./dynamic-foo.js");
+console.log("before preload dynamic");
+
+//#endregion
+```
+
 ## dynamic-foo.js
 
 ```js
@@ -25,6 +35,7 @@ console.log("dynamic-foo");
 ## entry.js
 
 ```js
+import "./before-preload-dynamic.js";
 import "./after-preload-dynamic.js";
 
 ```

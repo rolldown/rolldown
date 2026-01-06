@@ -20,7 +20,7 @@ export default {
   resolve: {
     alias: {
       '@': '/src',
-      'utils': './src/utils',
+      utils: './src/utils',
     },
   },
 };

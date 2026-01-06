@@ -145,10 +145,7 @@ export default defineConfig({
 
         // Example transformation: Add debug comments
         if (code.includes('console.log')) {
-          magicString.replace(
-            /console\.log\(/g,
-            'console.log("[DEBUG]", ',
-          );
+          magicString.replace(/console\.log\(/g, 'console.log("[DEBUG]", ');
         }
 
         // Example: Add file header
@@ -200,7 +197,7 @@ This feature is Rolldown-specific and not available in Rollup. For plugins that 
 
 ```javascript [plugin.js]
 function createTransform() {
-  return function(code, id, meta) {
+  return function (code, id, meta) {
     if (meta?.magicString) {
       // Rolldown with native MagicString
       return transformWithNativeMagicString(code, id, meta);

@@ -187,9 +187,8 @@ When importing a default export from a CJS module, we recommend to write a code 
 
 ```js
 import rawFoo from './importee.cjs';
-const foo = typeof rawFoo === 'object' && rawFoo !== null && rawFoo.__esModule
-  ? rawFoo.default
-  : rawFoo;
+const foo =
+  typeof rawFoo === 'object' && rawFoo !== null && rawFoo.__esModule ? rawFoo.default : rawFoo;
 console.log(foo);
 ```
 

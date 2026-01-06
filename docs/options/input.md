@@ -28,9 +28,9 @@ export default defineConfig({
 ```js
 export default defineConfig({
   input: {
-    'index': 'src/index.js',
-    'utils': 'src/utils/index.js',
-    'components': 'src/components/index.js',
+    index: 'src/index.js',
+    utils: 'src/utils/index.js',
+    components: 'src/components/index.js',
   },
 });
 ```

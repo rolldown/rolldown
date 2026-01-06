@@ -22,9 +22,7 @@ Let's take a look at the following example:
 import * as ReactDom from 'react-dom';
 import App from './App.jsx';
 
-ReactDom.createRoot(document.getElementById('root')).render(
-  <App />,
-);
+ReactDom.createRoot(document.getElementById('root')).render(<App />);
 
 // App.jsx
 import * as React from 'react';

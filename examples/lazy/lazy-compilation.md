@@ -96,9 +96,7 @@ Returns the **stub template** that fetches via `/lazy` endpoint:
 // proxy-module-template.js
 const lazyExports = (async () => {
   await import(
-    `/lazy?id=${
-      encodeURIComponent($PROXY_MODULE_ID)
-    }&clientId=${__rolldown_runtime__.clientId}`
+    `/lazy?id=${encodeURIComponent($PROXY_MODULE_ID)}&clientId=${__rolldown_runtime__.clientId}`
   );
   return __rolldown_runtime__.loadExports($MODULE_ID);
 })();
@@ -221,7 +219,7 @@ If the browser sends two `/lazy` requests in rapid succession (before the `hmr:m
 ```javascript
 function init_shared_0() {
   // Guard: skip if already initialized
-  if (__rolldown_runtime__.modules["shared.js"]) {
+  if (__rolldown_runtime__.modules['shared.js']) {
     return;
   }
   // ... module code

@@ -240,7 +240,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             false,
           ));
 
-        if self.ctx.linking_info.is_tla_or_contains_tla_dependency {
+        if importee_linking_info.is_tla_or_contains_tla_dependency {
           // `await init_foo()`
           *stmt = self.snippet.builder.statement_expression(
             SPAN,

@@ -4149,7 +4149,7 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/top_level_await_syntax_minify
 
-- main-!~{000}~.js => main-vqRlgn7i.js
+- main-!~{000}~.js => main-CHXj1Oy6.js
 
 # tests/rolldown/function/export_mode/cjs/auto/default
 
@@ -6079,11 +6079,15 @@ expression: output
 
 # tests/rolldown/topics/tla/inline_dynamic_import
 
-- main-!~{000}~.js => main-BSOsT-XK.js
+- main-!~{000}~.js => main-wgCosmg6.js
 
 # tests/rolldown/topics/tla/inside_try_block
 
 - main-!~{000}~.js => main-WOWNPsrk.js
+
+# tests/rolldown/topics/tla/on_demand_await_call
+
+- main-!~{000}~.js => main-B2_Q_TMp.js
 
 # tests/rolldown/topics/tla/transitive_dep
 

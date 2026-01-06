@@ -651,8 +651,6 @@ impl<'a> ModuleLoader<'a> {
         .set_module_info(&module.id, Arc::new(module.to_module_info(None)));
     });
 
-    // if `inline_dynamic_imports` is set to be true, here we should not put dynamic imports to entries
-    let dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
     entry_points.extend(dynamic_import_entry_ids.into_iter().map(|(idx, related_stmt_infos)| {
       EntryPoint {
         name: None,

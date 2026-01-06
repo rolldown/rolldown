@@ -103,6 +103,7 @@ pub struct BundlerOptions {
   pub dir: Option<String>,
   pub file: Option<String>,
   pub format: Option<OutputFormat>,
+  pub freeze: Option<bool>,
   pub exports: Option<OutputExports>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",

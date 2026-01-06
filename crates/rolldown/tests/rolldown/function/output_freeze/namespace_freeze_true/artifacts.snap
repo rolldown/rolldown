@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region lib.js
+var lib_exports = /* @__PURE__ */ __exportAll({
+	bar: () => bar,
+	foo: () => foo
+});
+const foo = "foo";
+const bar = "bar";
+
+//#endregion
+//#region main.js
+console.log(lib_exports);
+
+//#endregion
+```

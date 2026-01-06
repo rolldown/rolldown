@@ -1690,7 +1690,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_allowed_import_without_splitting
 
-- entry-!~{000}~.js => entry-2MDmpQWu.js
+- entry-!~{000}~.js => entry-Ce_GNsIR.js
 
 # tests/esbuild/default/top_level_await_cjs_dead_branch
 
@@ -3184,7 +3184,7 @@ expression: output
 
 # tests/esbuild/splitting/edge_case_issue2793_without_splitting
 
-- index-!~{000}~.js => index-DUCag6zs.js
+- index-!~{000}~.js => index-CWnsv5eu.js
 
 # tests/esbuild/splitting/splitting_assign_to_local
 
@@ -4562,6 +4562,22 @@ expression: output
 # tests/rolldown/function/module_types/txt/escape_quote
 
 - main-!~{000}~.js => main-DH9x5-FS.js
+
+# tests/rolldown/function/output_freeze/freeze_false
+
+- main-!~{000}~.js => main-CDvTf2iF.js
+
+# tests/rolldown/function/output_freeze/freeze_true
+
+- main-!~{000}~.js => main-CLuZQfcB.js
+
+# tests/rolldown/function/output_freeze/namespace_freeze_false
+
+- main-!~{000}~.js => main-B8KspzW8.js
+
+# tests/rolldown/function/output_freeze/namespace_freeze_true
+
+- main-!~{000}~.js => main-B8KspzW8.js
 
 # tests/rolldown/function/outro/cjs
 
@@ -6079,7 +6095,7 @@ expression: output
 
 # tests/rolldown/topics/tla/inline_dynamic_import
 
-- main-!~{000}~.js => main-BSOsT-XK.js
+- main-!~{000}~.js => main-BzCHmGd-.js
 
 # tests/rolldown/topics/tla/inside_try_block
 
@@ -6327,7 +6343,7 @@ expression: output
 
 # tests/rolldown/warnings/invalid_option/unsupported_inline_dynamic_format
 
-- main-!~{000}~.js => main-DYafMd5P.js
+- main-!~{000}~.js => main-DAAgtg1H.js
 
 # tests/rolldown/warnings/minified-with-eval
 

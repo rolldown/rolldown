@@ -98,6 +98,15 @@ export interface OutputOptions {
    * @default 'esm'
    */
   format?: ModuleFormat;
+  /**
+   * Whether to Object.freeze() namespace import objects that are accessed dynamically.
+   *
+   * When enabled, dynamically imported namespace objects (e.g., `import('./module')`)
+   * will be frozen using `Object.freeze()`, preventing modifications to the namespace object.
+   *
+   * @default true
+   */
+  freeze?: boolean;
   sourcemap?: boolean | 'inline' | 'hidden';
   sourcemapBaseUrl?: string;
   sourcemapDebugIds?: boolean;

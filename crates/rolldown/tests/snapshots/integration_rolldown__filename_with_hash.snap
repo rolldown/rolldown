@@ -3227,7 +3227,7 @@ expression: output
 
 # tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_common_js_into_es6
 
-- entry-!~{000}~.js => entry-YfblYvsf.js
+- entry-!~{000}~.js => entry-CS1oueUX.js
 
 # tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_es6_into_es6
 
@@ -5331,7 +5331,7 @@ expression: output
 
 # tests/rolldown/optimization/chunk_merging/dynamic_import_cjs_same_chunk
 
-- main-!~{000}~.js => main-cLnL0EF5.js
+- main-!~{000}~.js => main-8BBJThoK.js
 
 # tests/rolldown/optimization/chunk_merging/issue_4905
 

@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use oxc::ast::ast::{Argument, ObjectPropertyKind};
+use oxc::ast::ast::ObjectPropertyKind;
 use oxc::semantic::{ReferenceId, ScopeFlags, SymbolId};
 use oxc::{
   allocator::{self, Allocator, Box as ArenaBox, CloneIn, Dummy, IntoIn, TakeIn},
@@ -1641,13 +1641,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.snippet.builder.vec(),
           false,
         );
-        // __toESM(require_xxx())
-        self.snippet.builder.expression_call(
-          SPAN,
+
+        // __toESM(require_xxx(), isNodeMode)
+        self.snippet.wrap_with_to_esm(
           finalized_to_esm,
-          NONE,
-          self.snippet.builder.vec1(Argument::from(wrapper_ref_call_expr)),
-          false,
+          wrapper_ref_call_expr,
+          self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
         )
       } else {
         let (finalized_expr, _) =

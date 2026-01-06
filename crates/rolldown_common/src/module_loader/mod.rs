@@ -5,7 +5,7 @@ use rolldown_error::BuildDiagnostic;
 use runtime_task_result::RuntimeModuleTaskResult;
 use task_result::{ExternalModuleTaskResult, NormalModuleTaskResult};
 
-use crate::{EmittedChunk, PreserveEntrySignatures, ResolvedId};
+use crate::{EmittedChunk, ResolvedId};
 
 pub mod runtime_module_brief;
 pub mod runtime_task_result;
@@ -23,5 +23,4 @@ pub enum ModuleLoaderMsg {
 pub struct AddEntryModuleMsg {
   pub chunk: Arc<EmittedChunk>,
   pub reference_id: ArcStr,
-  pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
 }

@@ -1014,7 +1014,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   fn try_rewrite_inline_dynamic_import_expr(
     &self,
-    import_expr: &mut oxc::allocator::Box<'ast, ImportExpression<'ast>>,
+    import_expr: &oxc::allocator::Box<'ast, ImportExpression<'ast>>,
   ) -> Option<Expression<'ast>> {
     let rec_id = self.ctx.module.imports.get(&import_expr.span)?;
     let rec = &self.ctx.module.import_records[*rec_id];
@@ -1087,66 +1087,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         Module::External(_) => {
           // iife format doesn't support external module
-        }
-      }
-    }
-    if matches!(self.ctx.options.format, OutputFormat::Cjs) {
-      // Convert `import('./foo.mjs')` to `Promise.resolve().then(function() { return require('foo.mjs') })`
-      match &self.ctx.modules[importee_id] {
-        Module::Normal(importee) => {
-          let importee_chunk_id = self.ctx.chunk_graph.entry_module_to_entry_chunk[&importee_id];
-          let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
-          let import_path = self.ctx.chunk.import_path_for(importee_chunk);
-
-          if let Some(rewrite_expr) = self.rewrite_dynamic_import_for_merged_entry(
-            import_expr,
-            importee,
-            importee_chunk,
-            importee_chunk_id,
-          ) {
-            return Some(rewrite_expr);
-          }
-
-          // require('foo.mjs')
-          let mut require_call_expr =
-            ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-              SPAN,
-              self.snippet.builder.expression_identifier(SPAN, "require"),
-              NONE,
-              self.snippet.builder.vec1(ast::Argument::StringLiteral(
-                self.snippet.alloc_string_literal(&import_path, import_expr.span),
-              )),
-              false,
-            ));
-
-          if importee.exports_kind.is_commonjs() {
-            // Inline __toDynamicImportESM: __toESM(require('foo.mjs').default, isNodeMode)
-            let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
-
-            // require('foo.mjs').default
-            let require_default_expr = ast::Expression::StaticMemberExpression(
-              self.snippet.builder.alloc_static_member_expression(
-                SPAN,
-                require_call_expr,
-                self.snippet.builder.identifier_name(SPAN, "default"),
-                false,
-              ),
-            );
-
-            // __toESM(require('foo.mjs').default, isNodeMode)
-            require_call_expr = self.snippet.wrap_with_to_esm(
-              to_esm_fn_name,
-              require_default_expr,
-              self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
-            );
-          }
-
-          let new_expr = self.snippet.promise_resolve_then_call_expr(require_call_expr);
-
-          return Some(new_expr);
-        }
-        Module::External(_) => {
-          // For `import('external')`, we just keep it as it is to preserve user's intention
         }
       }
     }
@@ -1656,18 +1596,36 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
       Some(self.snippet.promise_resolve_then_call_expr(finalized_expr))
     } else {
-      // TODO: CJS format
       // If the dynamic entry point is merged into another common chunk, we should
       // convert `import('./some-module.js')` to `import('./some-module.js').then(n => n.ns)`
       //                                                                                 ^^ points to the dynamic entry module namespace
+      // For CJS format, convert to `Promise.resolve().then(() => require('./some-module.js')).then(n => n.ns)`
       match importee_chunk
         .exports_to_other_chunks
         .get(&SymbolId::module_namespace_symbol_ref(importee_idx))
         .and_then(|names| names.first())
       {
         Some(name) => {
-          let import_expr = expr.take_in_box(self.builder().allocator);
-          let call_expr = self.snippet.import_then_extract_property(import_expr, name);
+          let base_expr = if matches!(self.ctx.options.format, OutputFormat::Cjs) {
+            let import_path = self.ctx.chunk.import_path_for(importee_chunk);
+            // require('./some-module.js')
+            let require_call_expr =
+              ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+                SPAN,
+                self.snippet.builder.expression_identifier(SPAN, "require"),
+                NONE,
+                self.snippet.builder.vec1(ast::Argument::StringLiteral(
+                  self.snippet.alloc_string_literal(&import_path, expr.span),
+                )),
+                false,
+              ));
+            // Promise.resolve().then(() => require('./some-module.js'))
+            self.snippet.promise_resolve_then_call_expr(require_call_expr)
+          } else {
+            let import_expr = expr.take_in_box(self.builder().allocator);
+            Expression::ImportExpression(import_expr)
+          };
+          let call_expr = self.snippet.then_extract_property(base_expr, name);
           Some(Expression::CallExpression(call_expr))
         }
         None => {
@@ -1729,9 +1687,51 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         ) {
           // the `toESM` is properly handled inside `rewrite_dynamic_import_for_merged_entry`
           *node = rewritten_expr;
-        } else {
-          needs_to_esm_helper = importee.exports_kind.is_commonjs();
+          return true;
         }
+
+        // Convert `import('./foo.mjs')` to `Promise.resolve().then(function() { return require('foo.mjs') })`
+        // when format is CJS
+        if matches!(self.ctx.options.format, OutputFormat::Cjs) {
+          // require('foo.mjs')
+          let mut require_call_expr =
+            ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+              SPAN,
+              self.snippet.builder.expression_identifier(SPAN, "require"),
+              NONE,
+              self.snippet.builder.vec1(ast::Argument::StringLiteral(
+                self.snippet.alloc_string_literal(&import_path, expr.span),
+              )),
+              false,
+            ));
+
+          if importee.exports_kind.is_commonjs() {
+            // Inline __toDynamicImportESM: __toESM(require('foo.mjs').default, isNodeMode)
+            let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
+
+            // require('foo.mjs').default
+            let require_default_expr = ast::Expression::StaticMemberExpression(
+              self.snippet.builder.alloc_static_member_expression(
+                SPAN,
+                require_call_expr,
+                self.snippet.builder.identifier_name(SPAN, "default"),
+                false,
+              ),
+            );
+
+            // __toESM(require('foo.mjs').default, isNodeMode)
+            require_call_expr = self.snippet.wrap_with_to_esm(
+              to_esm_fn_name,
+              require_default_expr,
+              self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
+            );
+          }
+
+          *node = self.snippet.promise_resolve_then_call_expr(require_call_expr);
+          return true;
+        }
+
+        needs_to_esm_helper = importee.exports_kind.is_commonjs();
       }
       Module::External(importee) => {
         let import_path = importee.get_import_path(self.ctx.chunk, self.ctx.options.paths.as_ref());

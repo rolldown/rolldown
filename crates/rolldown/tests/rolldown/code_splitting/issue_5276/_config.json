@@ -13,6 +13,9 @@
     {
       "_configName": "disableChunkOptimization",
       "chunkOptimization": false
+    },
+    {
+      "format": "cjs"
     }
   ]
 }

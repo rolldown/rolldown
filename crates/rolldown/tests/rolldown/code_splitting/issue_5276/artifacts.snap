@@ -125,3 +125,121 @@ load();
 
 //#endregion
 ```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### imp.js
+
+```js
+const require_rolldown_runtime = require('./rolldown-runtime.js');
+
+//#region imp1.js
+var imp1_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ imp1: () => imp1 });
+const imp1 = 1;
+
+//#endregion
+//#region imp2.js
+var imp2_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ imp2: () => imp2 });
+const imp2 = 2;
+
+//#endregion
+//#region imp3.js
+var imp3_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
+	imp3: () => imp3,
+	imp33: () => imp33
+});
+const imp3 = 3;
+const imp33 = 33;
+
+//#endregion
+Object.defineProperty(exports, 'imp1', {
+  enumerable: true,
+  get: function () {
+    return imp1;
+  }
+});
+Object.defineProperty(exports, 'imp1_exports', {
+  enumerable: true,
+  get: function () {
+    return imp1_exports;
+  }
+});
+Object.defineProperty(exports, 'imp2', {
+  enumerable: true,
+  get: function () {
+    return imp2;
+  }
+});
+Object.defineProperty(exports, 'imp2_exports', {
+  enumerable: true,
+  get: function () {
+    return imp2_exports;
+  }
+});
+Object.defineProperty(exports, 'imp3', {
+  enumerable: true,
+  get: function () {
+    return imp3;
+  }
+});
+Object.defineProperty(exports, 'imp33', {
+  enumerable: true,
+  get: function () {
+    return imp33;
+  }
+});
+Object.defineProperty(exports, 'imp3_exports', {
+  enumerable: true,
+  get: function () {
+    return imp3_exports;
+  }
+});
+```
+
+### main.js
+
+```js
+const require_rolldown_runtime = require('./rolldown-runtime.js');
+let node_assert = require("node:assert");
+node_assert = require_rolldown_runtime.__toESM(node_assert);
+
+//#region main.js
+const load = async () => {
+	Promise.resolve().then(() => require("./imp.js")).then((n) => n.imp1_exports).then((m) => {
+		node_assert.default.strictEqual(m.imp1, 1);
+	});
+	Promise.resolve().then(() => require("./imp.js")).then((n) => n.imp2_exports).then((m) => {
+		node_assert.default.strictEqual(m.imp2, 2);
+	});
+	Promise.resolve().then(() => require("./imp.js")).then((n) => n.imp3_exports).then((m) => {
+		node_assert.default.deepEqual(JSON.parse(JSON.stringify(m)), {
+			imp3: 3,
+			imp33: 33
+		});
+	});
+};
+load();
+
+//#endregion
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+Object.defineProperty(exports, '__exportAll', {
+  enumerable: true,
+  get: function () {
+    return __exportAll;
+  }
+});
+Object.defineProperty(exports, '__toESM', {
+  enumerable: true,
+  get: function () {
+    return __toESM;
+  }
+});
+```

@@ -868,14 +868,26 @@ impl<'ast> AstSnippet<'ast> {
   /// Creates a call expression that transforms a dynamic import to extract a specific property.
   /// Generates: `import_expr.then(n => n.property_name)`
   /// This is used to transform dynamic imports to extract a specific export from the module namespace.
+  #[inline]
   pub fn import_then_extract_property(
     &self,
     import_expr: allocator::Box<'ast, ast::ImportExpression<'ast>>,
     property_name: &str,
   ) -> allocator::Box<'ast, ast::CallExpression<'ast>> {
+    self.then_extract_property(Expression::ImportExpression(import_expr), property_name)
+  }
+
+  /// Creates a call expression that chains `.then(n => n.property_name)` to any expression.
+  /// Generates: `expr.then(n => n.property_name)`
+  /// This is used to extract a specific export from a promise that resolves to a module namespace.
+  pub fn then_extract_property(
+    &self,
+    expr: Expression<'ast>,
+    property_name: &str,
+  ) -> allocator::Box<'ast, ast::CallExpression<'ast>> {
     let callee = self.builder.alloc_static_member_expression(
       SPAN,
-      Expression::ImportExpression(import_expr),
+      expr,
       self.builder.identifier_name(SPAN, "then"),
       false,
     );

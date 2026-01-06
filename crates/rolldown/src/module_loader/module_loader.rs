@@ -8,14 +8,13 @@ use oxc::semantic::{ScopeId, Scoping};
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
 use oxc_allocator::Address;
 use oxc_index::IndexVec;
-use rolldown_common::SourceMapGenMsg;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::{
   EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult, FlatOptions,
   HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImporterRecord, Module, ModuleId,
   ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult, PreserveEntrySignatures,
   RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, ScanMode,
-  StmtInfoIdx, SymbolRefDb, SymbolRefDbForModule,
+  SourceMapGenMsg, StmtInfoIdx, SymbolRefDb, SymbolRefDbForModule,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosableResolveError};
@@ -210,7 +209,7 @@ impl<'a> ModuleLoader<'a> {
     owner: Option<ModuleTaskOwner>,
     is_user_defined_entry: bool,
     assert_module_type: Option<ModuleType>,
-    user_defined_entries: Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
+    user_defined_entries: &Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
   ) -> ModuleIdx {
     let ctx = Arc::clone(&self.shared_context);
     let idx = match self.cache.module_id_to_idx.get(&resolved_id.id) {
@@ -237,7 +236,7 @@ impl<'a> ModuleLoader<'a> {
       }
     };
     if resolved_id.external.is_external() {
-      let task = ExternalModuleTask::new(ctx, idx, resolved_id, user_defined_entries);
+      let task = ExternalModuleTask::new(ctx, idx, resolved_id, Arc::clone(user_defined_entries));
       tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task")));
     } else {
       let task = ModuleTask::new(
@@ -263,7 +262,6 @@ impl<'a> ModuleLoader<'a> {
   /// - Full scan mode in watch mode, scan all modules from user defined entries, it maybe first
   /// time build in watch mode or edgecase in HMR(User update `node_modules` too much modules are
   /// updated at same time, patch them one by one is not efficient, so we do full scan directly)
-  ///
   #[tracing::instrument(level = "debug", skip_all)]
   #[expect(clippy::too_many_lines)]
   pub async fn fetch_modules(
@@ -271,12 +269,12 @@ impl<'a> ModuleLoader<'a> {
     fetch_mode: ScanMode<ResolvedId>,
   ) -> BuildResult<ModuleLoaderOutput> {
     let mut errors = vec![];
-    let mut all_warnings: Vec<BuildDiagnostic> = vec![];
+    let mut all_warnings = vec![];
 
-    let user_defined_entries = match fetch_mode {
+    let user_defined_entries = Arc::new(match fetch_mode {
       ScanMode::Full => self.resolve_user_defined_entries().await?,
       ScanMode::Partial(_) => vec![],
-    };
+    });
 
     let entries_count = user_defined_entries.len() + /* runtime */ 1;
     self.intermediate_normal_modules.modules.reserve(entries_count);
@@ -285,19 +283,12 @@ impl<'a> ModuleLoader<'a> {
     // Store the already consider as entry module
     let mut entry_points = FxIndexSet::default();
     let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
-    let user_defined_entries = Arc::new(user_defined_entries);
-    for (defined_name, resolved_id) in user_defined_entries.iter() {
-      let idx = self.try_spawn_new_task(
-        resolved_id.clone(),
-        None,
-        true,
-        None,
-        Arc::clone(&user_defined_entries),
-      );
+    for (name, resolved_id) in user_defined_entries.iter().cloned() {
+      let idx = self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries);
       user_defined_entry_ids.insert(idx);
       entry_points.insert(EntryPoint {
-        name: defined_name.clone(),
         idx,
+        name,
         kind: EntryPointKind::UserDefined,
         file_name: None,
         related_stmt_infos: vec![],
@@ -314,9 +305,7 @@ impl<'a> ModuleLoader<'a> {
 
     // If it is in partial scan mode, we need to invalidate the changed modules
     // and re-fetch them, do nothing in full scan mode
-    //
-    for resolved_id in fetch_mode.iter() {
-      let resolved_id = resolved_id.clone();
+    for resolved_id in fetch_mode.iter().cloned() {
       self.shared_context.plugin_driver.invalidate_context_load_module(&resolved_id.id);
       if let Entry::Occupied(mut occ) = self.cache.module_id_to_idx.entry(resolved_id.id.clone()) {
         let idx = occ.get().idx();
@@ -325,15 +314,15 @@ impl<'a> ModuleLoader<'a> {
       // User may update the entry module in incremental mode, so we need to make sure
       // if it is a user defined entry to avoid generate wrong asset file
       let is_user_defined_entry = self.cache.user_defined_entry.contains(&resolved_id.id);
-      // set `Owner` to `None` is safe, since it is used to emit `Unloadable` diagnostic, we know this is
-      // exists in fs system, which is loadable.
+      // Setting `Owner` to `None` is safe here since `Owner` is only used to emit
+      // `Unloadable` diagnostics, and we know this module exists in the filesystem.
       // TODO: copy assert_module_type
       self.try_spawn_new_task(
         resolved_id,
         None,
         is_user_defined_entry,
         None,
-        Arc::clone(&user_defined_entries),
+        &user_defined_entries,
       );
     }
 
@@ -399,7 +388,7 @@ impl<'a> ModuleLoader<'a> {
                 Some(owner),
                 false,
                 raw_rec.asserted_module_type.clone(),
-                Arc::clone(&user_defined_entries),
+                &user_defined_entries,
               )
             };
 
@@ -460,11 +449,11 @@ impl<'a> ModuleLoader<'a> {
           } = *task_result;
 
           self.symbol_ref_db.store_local_db(
-            task_result.idx,
-            SymbolRefDbForModule::new(Scoping::default(), task_result.idx, ScopeId::new(0)),
+            idx,
+            SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0)),
           );
           let symbol_ref = self.symbol_ref_db.create_facade_root_symbol_ref(idx, &identifier_name);
-          let ext = ExternalModule::new(
+          let external_module = Module::External(Box::new(ExternalModule::new(
             idx,
             id,
             name,
@@ -472,9 +461,9 @@ impl<'a> ModuleLoader<'a> {
             side_effects,
             symbol_ref,
             need_renormalize_render_path,
-          );
-          *self.intermediate_normal_modules.modules.get_mut(task_result.idx) = Some(ext.into());
+          )));
 
+          *self.intermediate_normal_modules.modules.get_mut(idx) = Some(external_module);
           self.remaining -= 1;
         }
         ModuleLoaderMsg::RuntimeNormalModuleDone(task_result) => {
@@ -494,7 +483,7 @@ impl<'a> ModuleLoader<'a> {
               None,
               false,
               raw_rec.asserted_module_type.clone(),
-              Arc::clone(&user_defined_entries),
+              &user_defined_entries,
             );
             self.intermediate_normal_modules.importers[id].push(ImporterRecord {
               kind: raw_rec.kind,
@@ -514,13 +503,7 @@ impl<'a> ModuleLoader<'a> {
           runtime_brief = Some(runtime);
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {
-          self.try_spawn_new_task(
-            *resolve_id,
-            None,
-            false,
-            None,
-            Arc::clone(&user_defined_entries),
-          );
+          self.try_spawn_new_task(*resolve_id, None, false, None, &user_defined_entries);
         }
         ModuleLoaderMsg::AddEntryModule(msg) => {
           let data = msg.chunk;
@@ -538,13 +521,8 @@ impl<'a> ModuleLoader<'a> {
               continue;
             }
           };
-          let module_idx = self.try_spawn_new_task(
-            resolved_id,
-            None,
-            true,
-            None,
-            Arc::clone(&user_defined_entries),
-          );
+          let module_idx =
+            self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries);
           if let Some(preserve_entry_signatures) = data.preserve_entry_signatures {
             overrode_preserve_entry_signature_map.insert(module_idx, preserve_entry_signatures);
           }

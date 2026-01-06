@@ -98,7 +98,7 @@ impl VisitState {
 pub struct ModuleLoader<'a> {
   pub shared_context: Arc<TaskContext>,
   rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
-  runtime_id: ModuleIdx,
+  runtime_idx: ModuleIdx,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
   symbol_ref_db: SymbolRefDb,
@@ -175,11 +175,11 @@ impl<'a> ModuleLoader<'a> {
     let importers = std::mem::take(&mut cache.importers);
     let mut intermediate_normal_modules = IntermediateNormalModules::new(is_full_scan, importers);
 
-    let runtime_id = intermediate_normal_modules.alloc_ecma_module_idx();
+    let runtime_idx = intermediate_normal_modules.alloc_ecma_module_idx();
     let remaining = if let Entry::Vacant(e) = cache.module_id_to_idx.entry(RUNTIME_MODULE_ID) {
-      let task = RuntimeModuleTask::new(runtime_id, Arc::clone(&shared_context), flat_options);
+      let task = RuntimeModuleTask::new(runtime_idx, Arc::clone(&shared_context), flat_options);
       tokio::spawn(task.run());
-      e.insert(VisitState::Seen(runtime_id));
+      e.insert(VisitState::Seen(runtime_idx));
       1
     } else {
       // the first alloc just want to allocate the runtime module id
@@ -191,7 +191,7 @@ impl<'a> ModuleLoader<'a> {
       rx,
       cache,
       remaining,
-      runtime_id,
+      runtime_idx,
       is_full_scan,
       shared_context,
       symbol_ref_db,
@@ -495,10 +495,10 @@ impl<'a> ModuleLoader<'a> {
           }
           module.import_records = import_records;
 
-          *self.intermediate_normal_modules.modules.get_mut(self.runtime_id) = Some(module.into());
-          *self.intermediate_normal_modules.index_ecma_ast.get_mut(self.runtime_id) = Some(ast);
+          *self.intermediate_normal_modules.modules.get_mut(self.runtime_idx) = Some(module.into());
+          *self.intermediate_normal_modules.index_ecma_ast.get_mut(self.runtime_idx) = Some(ast);
 
-          self.symbol_ref_db.store_local_db(self.runtime_id, local_symbol_ref_db);
+          self.symbol_ref_db.store_local_db(self.runtime_idx, local_symbol_ref_db);
           self.remaining -= 1;
 
           runtime_brief = Some(runtime);

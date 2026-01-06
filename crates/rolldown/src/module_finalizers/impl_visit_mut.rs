@@ -300,7 +300,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
   fn visit_binding_identifier(&mut self, ident: &mut ast::BindingIdentifier<'ast>) {
     if let Some(symbol_id) = ident.symbol_id.get() {
-      let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
+      let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
 
       let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
       let symbol = self.ctx.symbol_db.get(canonical_ref);
@@ -379,7 +379,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             .get()
             .and_then(|ref_id| self.scope.scoping().get_reference(ref_id).symbol_id())
             .map(|id| {
-              let symbol_ref = self.ctx.symbol_db.canonical_ref_for((self.ctx.id, id).into());
+              let symbol_ref = self.ctx.symbol_db.canonical_ref_for((self.ctx.idx, id).into());
               self.ctx.side_effect_free_function_symbols.contains(&symbol_ref)
             })
             .unwrap_or(false);

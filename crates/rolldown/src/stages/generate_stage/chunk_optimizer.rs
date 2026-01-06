@@ -412,7 +412,7 @@ impl GenerateStage<'_> {
       is_included_vec: &mut stmt_info_included_vec,
       is_module_included_vec: &mut module_included_vec,
       tree_shaking: self.options.treeshake.is_some(),
-      runtime_id: self.link_output.runtime.id(),
+      runtime_idx: self.link_output.runtime.id(),
       metas: &self.link_output.metas,
       used_symbol_refs: &mut self.link_output.used_symbol_refs,
       constant_symbol_map: &self.link_output.global_constant_symbol_map,

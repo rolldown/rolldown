@@ -60,8 +60,8 @@ impl GenerateContext<'_> {
 
     match self.options.format {
       rolldown_common::OutputFormat::Cjs => {
-        let chunk_idx_of_canonical_symbol = canonical_symbol.chunk_id.unwrap_or_else(|| {
-          // Scoped symbols don't get assigned a `ChunkId`. There are skipped for performance reason, because they are surely
+        let chunk_idx_of_canonical_symbol = canonical_symbol.chunk_idx.unwrap_or_else(|| {
+          // Scoped symbols don't get assigned a `ChunkIdx`. There are skipped for performance reason, because they are surely
           // belong to the chunk they are declared in and won't link to other chunks.
           let symbol_name = canonical_ref.name(symbol_db);
           panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which isn't unexpected");

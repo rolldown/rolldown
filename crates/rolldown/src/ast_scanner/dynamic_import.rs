@@ -36,8 +36,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // a[b] // dynamic
     let partial_name =
       parent.as_member_expression_kind().and_then(|expr| expr.static_property_name());
-    let rec_idx =
-      *self.dynamic_import_usage_info.dynamic_import_binding_to_import_record_id.get(&symbol_id)?;
+    let rec_idx = *self
+      .dynamic_import_usage_info
+      .dynamic_import_binding_to_import_record_idx
+      .get(&symbol_id)?;
 
     match self.dynamic_import_usage_info.dynamic_import_exports_usage.entry(rec_idx) {
       std::collections::hash_map::Entry::Occupied(mut occ) => match partial_name {
@@ -152,7 +154,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &mut self,
     parent: &MemberExpressionKind<'ast>,
     ancestor_len: usize,
-    import_record_id: ImportRecordIdx,
+    import_record_idx: ImportRecordIdx,
   ) -> Option<FxHashSet<CompactStr>> {
     let MemberExpressionKind::Static(parent) = parent else {
       return None;
@@ -178,7 +180,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // ```
     self.update_dynamic_import_usage_info_from_binding_pattern(
       &dynamic_import_binding.pattern,
-      import_record_id,
+      import_record_idx,
       false,
     )
   }
@@ -186,7 +188,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn update_dynamic_import_usage_info_from_binding_pattern(
     &mut self,
     binding_pattern: &ast::BindingPattern<'_>,
-    import_record_id: ImportRecordIdx,
+    import_record_idx: ImportRecordIdx,
     is_exported: bool,
   ) -> Option<FxHashSet<CompactStr>> {
     let symbol_id = match binding_pattern {
@@ -231,8 +233,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               let symbol_id = id.symbol_id();
               self
                 .dynamic_import_usage_info
-                .dynamic_import_binding_to_import_record_id
-                .insert(symbol_id, import_record_id);
+                .dynamic_import_binding_to_import_record_idx
+                .insert(symbol_id, import_record_idx);
               self
                 .dynamic_import_usage_info
                 .dynamic_import_binding_reference_id
@@ -253,8 +255,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
     self
       .dynamic_import_usage_info
-      .dynamic_import_binding_to_import_record_id
-      .insert(symbol_id, import_record_id);
+      .dynamic_import_binding_to_import_record_idx
+      .insert(symbol_id, import_record_idx);
     self
       .dynamic_import_usage_info
       .dynamic_import_binding_reference_id

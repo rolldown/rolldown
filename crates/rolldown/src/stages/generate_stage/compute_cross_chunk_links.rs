@@ -210,7 +210,7 @@ impl GenerateStage<'_> {
             });
 
           module.named_imports.iter().for_each(|(_, import)| {
-            let rec = &module.import_records[import.record_id];
+            let rec = &module.import_records[import.record_idx];
             if let Module::External(importee) = &self.link_output.module_table[rec.resolved_module]
             {
               imports_from_external_modules
@@ -306,23 +306,23 @@ impl GenerateStage<'_> {
     );
     // shadowing previous immutable borrow
     let symbols = &mut self.link_output.symbol_db;
-    for (chunk_id, symbol_list) in chunk_id_to_symbols_vec {
+    for (chunk_idx, symbol_list) in chunk_id_to_symbols_vec {
       for declared in symbol_list {
         let declared = declared.inner();
         if cfg!(debug_assertions) {
           let symbol_data = symbols.get(declared);
           debug_assert!(
-            symbol_data.chunk_id.unwrap_or(chunk_id) == chunk_id,
-            "Symbol: {:?}, {:?} in {:?} should only belong to one chunk. Existed {:?}, new {chunk_id:?}",
+            symbol_data.chunk_idx.unwrap_or(chunk_idx) == chunk_idx,
+            "Symbol: {:?}, {:?} in {:?} should only belong to one chunk. Existed {:?}, new {chunk_idx:?}",
             declared.name(symbols),
             declared,
             self.link_output.module_table[declared.owner].id().as_str(),
-            symbol_data.chunk_id,
+            symbol_data.chunk_idx,
           );
         }
 
         let symbol_data = symbols.get_mut(declared);
-        symbol_data.chunk_id = Some(chunk_id);
+        symbol_data.chunk_idx = Some(chunk_idx);
       }
     }
   }
@@ -410,7 +410,7 @@ impl GenerateStage<'_> {
           // For named-only imports, we don't use __toESM, so we should not try to resolve it.
           // Check if __toESM is actually used before trying to resolve it.
           let to_esm_ref = self.link_output.runtime.resolve_symbol("__toESM");
-          if self.link_output.symbol_db.get(to_esm_ref).chunk_id.is_some() {
+          if self.link_output.symbol_db.get(to_esm_ref).chunk_idx.is_some() {
             // __toESM is in a chunk, so it's being used
             to_esm_ref
           } else {
@@ -422,7 +422,7 @@ impl GenerateStage<'_> {
           import_ref
         };
         let import_symbol = self.link_output.symbol_db.get(import_ref);
-        let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
+        let importee_chunk_idx = import_symbol.chunk_idx.unwrap_or_else(|| {
           let symbol_owner = &self.link_output.module_table[import_ref.owner];
           let symbol_name = import_ref.name(&self.link_output.symbol_db);
           panic!(
@@ -432,14 +432,14 @@ impl GenerateStage<'_> {
           )
         });
         // Check if the import is from another chunk
-        if chunk_id != importee_chunk_id {
-          index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);
+        if chunk_id != importee_chunk_idx {
+          index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
           let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
           imports_from_other_chunks
-            .entry(importee_chunk_id)
+            .entry(importee_chunk_idx)
             .or_default()
             .push(CrossChunkImportItem { import_ref });
-          index_chunk_exported_symbols[importee_chunk_id].entry(import_ref).or_default();
+          index_chunk_exported_symbols[importee_chunk_idx].entry(import_ref).or_default();
         }
       }
 

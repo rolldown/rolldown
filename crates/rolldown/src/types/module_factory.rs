@@ -10,7 +10,7 @@ use crate::SharedOptions;
 
 pub struct CreateModuleContext<'a> {
   pub stable_id: &'a str,
-  pub module_index: ModuleIdx,
+  pub module_idx: ModuleIdx,
   pub plugin_driver: &'a SharedPluginDriver,
   pub resolved_id: &'a ResolvedId,
   pub options: &'a SharedOptions,

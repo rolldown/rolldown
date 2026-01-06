@@ -106,7 +106,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         "canonical name not found for {symbol:?}, original_name: {:?} in module {:?} when finalizing module {:?} in chunk {:?}",
         symbol.name(self.ctx.symbol_db),
         self.ctx.modules.get(symbol.owner).map_or("unknown", |module| module.stable_id()),
-        self.ctx.modules.get(self.ctx.id).map_or("unknown", |module| module.stable_id()),
+        self.ctx.modules.get(self.ctx.idx).map_or("unknown", |module| module.stable_id()),
         self.ctx.chunk.create_reasons.join(";")
       );
     })
@@ -132,9 +132,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   fn transform_or_remove_import_export_stmt(
     &mut self,
     stmt: &mut Statement<'ast>,
-    rec_id: ImportRecordIdx,
+    rec_idx: ImportRecordIdx,
   ) -> bool {
-    let rec = &self.ctx.module.import_records[rec_id];
+    let rec = &self.ctx.module.import_records[rec_idx];
     let Module::Normal(importee) = &self.ctx.modules[rec.resolved_module] else {
       return true;
     };
@@ -152,7 +152,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // import React from './node_modules/react/index.js';
         // ```
         if merge_info.is_some() {
-          let chunk_idx = self.ctx.chunk_id;
+          let chunk_idx = self.ctx.chunk_idx;
           if let Some(symbol_ref_to_be_merged) =
             self.ctx.chunk_graph.finalized_cjs_ns_map_idx_vec[chunk_idx].get(&rec.namespace_ref)
           {
@@ -188,7 +188,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let needs_toesm = if let Some(info) = merge_info {
           info.needs_interop
         } else {
-          import_record_needs_interop(self.ctx.module, rec_id)
+          import_record_needs_interop(self.ctx.module, rec_idx)
         };
         let init_expr = if needs_toesm {
           // `__toESM`
@@ -206,8 +206,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
         *stmt = self.snippet.var_decl_stmt(binding_name_for_wrapper_call_ret, init_expr);
 
-        if self.transferred_import_record.contains_key(&rec_id) {
-          self.transferred_import_record.insert(rec_id, stmt.to_source_string());
+        if self.transferred_import_record.contains_key(&rec_idx) {
+          self.transferred_import_record.insert(rec_idx, stmt.to_source_string());
           return true;
         }
         return false;
@@ -253,8 +253,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           *stmt = self.snippet.builder.statement_expression(SPAN, init_call);
         }
 
-        if self.transferred_import_record.contains_key(&rec_id) {
-          self.transferred_import_record.insert(rec_id, stmt.to_source_string());
+        if self.transferred_import_record.contains_key(&rec_idx) {
+          self.transferred_import_record.insert(rec_idx, stmt.to_source_string());
           return true;
         }
         return false;
@@ -307,8 +307,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       match self.ctx.options.format {
         rolldown_common::OutputFormat::Cjs => {
           let chunk_idx_of_canonical_symbol =
-            canonical_symbol.chunk_id.unwrap_or_else(|| {
-              // Scoped symbols don't get assigned a `ChunkId`. There are skipped for performance reason, because they are surely
+            canonical_symbol.chunk_idx.unwrap_or_else(|| {
+              // Scoped symbols don't get assigned a `ChunkIdx`. There are skipped for performance reason, because they are surely
               // belong to the chunk they are declared in and won't link to other chunks.
               let symbol_name = canonical_ref.name(self.ctx.symbol_db);
               eprintln!(
@@ -316,7 +316,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               );
               panic!("{canonical_ref:?} {symbol_name:?} is not in any chunk, which is unexpected");
             });
-          let cur_chunk_idx = self.ctx.chunk_graph.module_to_chunk[self.ctx.id]
+          let cur_chunk_idx = self.ctx.chunk_graph.module_to_chunk[self.ctx.idx]
             .expect("This module should be in a chunk");
           let is_symbol_in_other_chunk = cur_chunk_idx != chunk_idx_of_canonical_symbol;
           if is_symbol_in_other_chunk {
@@ -385,7 +385,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return None;
     }
 
-    let import_record = &self.ctx.module.import_records[named_import.record_id];
+    let import_record = &self.ctx.module.import_records[named_import.record_idx];
     let importee = &self.ctx.modules[import_record.resolved_module].as_normal()?;
 
     let resolved_export =
@@ -810,10 +810,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   fn get_conflicted_info(&self, id: KeepNameId) -> Option<(&str, &CompactStr)> {
     let symbol_ref: SymbolRef = match id {
-      KeepNameId::SymbolId(symbol_id) => (self.ctx.id, symbol_id).into(),
+      KeepNameId::SymbolId(symbol_id) => (self.ctx.idx, symbol_id).into(),
       KeepNameId::ReferenceId(reference_id) => {
         let symbol_id = self.scope.symbol_id_for(reference_id)?;
-        (self.ctx.id, symbol_id).into()
+        (self.ctx.idx, symbol_id).into()
       }
       KeepNameId::CompactStr(_) => {
         // CompactStr variant doesn't need conflict resolution - it's already a direct name
@@ -845,7 +845,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // class T { static a = new T(); }
         // needs to rewrite to `var T = class T { static a = new T(); }`
         let mut id = id.clone();
-        let new_name = self.canonical_name_for((self.ctx.id, symbol_id).into());
+        let new_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
         id.name = self.snippet.atom(new_name);
         class.id = Some(id);
       }
@@ -875,8 +875,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if call_expr.is_global_require_call(self.scope) && !call_expr.span.is_unspanned() {
       //  `require` calls that can't be recognized by rolldown are ignored in scanning, so they were not stored in `NormalModule#imports`.
       //  we just keep these `require` calls as it is
-      if let Some(rec_id) = self.ctx.module.imports.get(&call_expr.span).copied() {
-        let rec = &self.ctx.module.import_records[rec_id];
+      if let Some(rec_idx) = self.ctx.module.imports.get(&call_expr.span).copied() {
+        let rec = &self.ctx.module.import_records[rec_idx];
         // use `__require` instead of `require`
         if rec.meta.contains(ImportRecordMeta::CallRuntimeRequire) {
           *call_expr.callee.get_inner_expression_mut() =
@@ -1016,8 +1016,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &self,
     import_expr: &oxc::allocator::Box<'ast, ImportExpression<'ast>>,
   ) -> Option<Expression<'ast>> {
-    let rec_id = self.ctx.module.imports.get(&import_expr.span)?;
-    let rec = &self.ctx.module.import_records[*rec_id];
+    let rec_idx = self.ctx.module.imports.get(&import_expr.span)?;
+    let rec = &self.ctx.module.import_records[*rec_idx];
     let importee_id = rec.resolved_module;
 
     if rec.meta.contains(ImportRecordMeta::DeadDynamicImport) {
@@ -1113,8 +1113,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
         if let Some(import_decl) = top_stmt.as_import_declaration() {
           let span = import_decl.span;
-          let rec_id = self.ctx.module.imports[&import_decl.span];
-          if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_id) {
+          let rec_idx = self.ctx.module.imports[&import_decl.span];
+          if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
             for comment in &mut program.comments {
               if comment.attached_to == span.start {
                 comment.attached_to = 0;
@@ -1126,15 +1126,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             return;
           }
         } else if let Some(export_all_decl) = top_stmt.as_export_all_declaration() {
-          let rec_id = self.ctx.module.imports[&export_all_decl.span];
+          let rec_idx = self.ctx.module.imports[&export_all_decl.span];
           // "export * as ns from 'path'"
           if let Some(_alias) = &export_all_decl.exported {
-            if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_id) {
+            if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
               return;
             }
           } else {
             // "export * from 'path'"
-            let rec = &self.ctx.module.import_records[rec_id];
+            let rec = &self.ctx.module.import_records[rec_idx];
             match &self.ctx.modules[rec.resolved_module] {
               Module::Normal(importee) => {
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
@@ -1370,8 +1370,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             }
           } else {
             // `export { foo } from 'path'`
-            let rec_id = self.ctx.module.imports[&named_decl.span];
-            if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_id) {
+            let rec_idx = self.ctx.module.imports[&named_decl.span];
+            if self.transform_or_remove_import_export_stmt(&mut top_stmt, rec_idx) {
               return;
             }
           }
@@ -1419,7 +1419,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     expr: &mut ast::Expression<'ast>,
   ) {
     // Don't rewrite `__name` runtime helper itself.
-    if !self.ctx.options.keep_names || self.ctx.runtime.id() == self.ctx.id {
+    if !self.ctx.options.keep_names || self.ctx.runtime.id() == self.ctx.idx {
       return;
     }
 
@@ -1546,7 +1546,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     expr: &mut ast::ImportExpression<'ast>,
     importee: &NormalModule,
     importee_chunk: &Chunk,
-    importee_chunk_id: ChunkIdx,
+    importee_chunk_idx: ChunkIdx,
   ) -> Option<Expression<'ast>> {
     let importee_idx = importee.idx;
     // to make sure the semantic is correct after chunk merging optimization.
@@ -1554,14 +1554,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       .ctx
       .chunk_graph
       .common_chunk_exported_facade_chunk_namespace
-      .get(&importee_chunk_id)
+      .get(&importee_chunk_idx)
       .is_some_and(|set| set.contains(&importee_idx));
 
     if !needs_namespace_extraction {
       return None;
     }
 
-    let is_importer_importee_in_same_chunk = importee_chunk.modules.contains(&self.ctx.id);
+    let is_importer_importee_in_same_chunk = importee_chunk.modules.contains(&self.ctx.idx);
     if is_importer_importee_in_same_chunk {
       let importee_meta = &self.ctx.linking_infos[importee.idx];
 
@@ -1634,7 +1634,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             This indicates an inconsistent state in the chunk graph where the module is marked as merged \
             but its namespace export is not properly tracked.",
             importee_idx,
-            importee_chunk_id
+            importee_chunk_idx
           );
           None
         }
@@ -1649,7 +1649,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if expr.options.is_some() {
       return false;
     }
-    let Some(rec_id) = self.ctx.module.imports.get(&expr.span) else {
+    let Some(rec_idx) = self.ctx.module.imports.get(&expr.span) else {
       return false;
     };
     // Make sure the import expression is in correct form. If it's not, we should leave it as it is.
@@ -1658,19 +1658,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     };
 
     let mut needs_to_esm_helper = false;
-    let rec = &self.ctx.module.import_records[*rec_id];
+    let rec = &self.ctx.module.import_records[*rec_idx];
     let importee_id = rec.resolved_module;
 
     match &self.ctx.modules[importee_id] {
       Module::Normal(importee) => {
-        let Some(&importee_chunk_id) =
+        let Some(&importee_chunk_idx) =
           self.ctx.chunk_graph.entry_module_to_entry_chunk.get(&rec.resolved_module)
         else {
           // TODO: probably we should add the reason why it is replaced with `void 0` when upstream support codegen with specific operation
           *node = self.snippet.builder.void_0(SPAN);
           return true;
         };
-        let Some(importee_chunk) = self.ctx.chunk_graph.chunk_table.get(importee_chunk_id) else {
+        let Some(importee_chunk) = self.ctx.chunk_graph.chunk_table.get(importee_chunk_idx) else {
           return false;
         };
 
@@ -1683,7 +1683,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           expr,
           importee,
           importee_chunk,
-          importee_chunk_id,
+          importee_chunk_idx,
         ) {
           // the `toESM` is properly handled inside `rewrite_dynamic_import_for_merged_entry`
           *node = rewritten_expr;
@@ -1860,7 +1860,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let id = first_decl.id.get_binding_identifier()?.symbol_id.get();
     match id {
       Some(id) => {
-        let symbol_ref: SymbolRef = (self.ctx.id, id).into();
+        let symbol_ref: SymbolRef = (self.ctx.idx, id).into();
         if !self
           .ctx
           .module

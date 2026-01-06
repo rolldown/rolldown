@@ -18,9 +18,9 @@ pub fn external_import_needs_interop(
 /// Check if an import record from a module needs the `__toESM` helper.
 /// Only namespace imports (`import * as foo`) and default imports (`import foo`)
 /// need the `__toESM` helper. Named imports (`import { foo }`) do not need it.
-pub fn import_record_needs_interop(module: &NormalModule, rec_id: ImportRecordIdx) -> bool {
+pub fn import_record_needs_interop(module: &NormalModule, rec_idx: ImportRecordIdx) -> bool {
   module
     .named_imports
     .values()
-    .any(|import| import.record_id == rec_id && specifier_needs_interop(&import.imported))
+    .any(|import| import.record_idx == rec_idx && specifier_needs_interop(&import.imported))
 }

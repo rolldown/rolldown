@@ -209,7 +209,11 @@ function createTransform() {
 }
 ```
 
-For easier compatibility between Rolldown's native MagicString and the standard JavaScript MagicString API, you can use [`rolldown-string`](https://github.com/sxzz/rolldown-string), which provides a unified interface that works with both implementations.
+::: tip
+
+You can use [`rolldown-string`](https://github.com/sxzz/rolldown-string), which provides a unified interface that works with both bundlers.
+
+:::
 
 ## When to Use Native MagicString
 

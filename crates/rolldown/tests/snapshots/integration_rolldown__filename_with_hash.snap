@@ -6197,7 +6197,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/dynamic_import_then_empty_param
 
-- main-!~{000}~.js => main-COY2HGfN.js
+- main-!~{000}~.js => main-f8JnC_f1.js
 
 # tests/rolldown/tree_shaking/dynamic_require_unused_by_function
 

@@ -171,15 +171,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         return None;
       }
     };
-    // Handle different cases:
-    // 1. import('mod').then(mod => { mod.a; }) - parameter is used, track usage
-    // 2. import('mod').then(({a, b}) => { a; }) - destructured params, track which properties are used
-    // 3. import('mod').then(() => {}) - no parameters, treat as empty set (nothing is used)
     let Some(dynamic_import_binding) = dynamic_import_binding else {
-      // If there are no parameters, return an empty set indicating nothing is used from the import
       return Some(FxHashSet::default());
     };
-    // If there's a parameter, analyze its usage to determine which exports are needed
     self.update_dynamic_import_usage_info_from_binding_pattern(
       &dynamic_import_binding.pattern,
       import_record_idx,

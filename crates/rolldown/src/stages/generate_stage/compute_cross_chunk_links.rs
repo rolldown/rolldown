@@ -383,9 +383,33 @@ impl GenerateStage<'_> {
           if let Some(set) = chunk_graph.common_chunk_exported_facade_chunk_namespace.get(&chunk_id)
           {
             for dynamic_entry_module in set {
-              index_chunk_exported_symbols[chunk_id]
-                .entry(SymbolId::module_namespace_symbol_ref(*dynamic_entry_module))
-                .or_default();
+              let meta = &self.link_output.metas[*dynamic_entry_module];
+              match meta.wrap_kind() {
+                WrapKind::Cjs => {
+                  // For CJS modules, export only wrapper_ref (require_xxx)
+                  // Generated code: `import('./chunk.js').then((n) => __toESM(n.require_xxx()))`
+                  if let Some(wrapper_ref) = meta.wrapper_ref {
+                    index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
+                  }
+                }
+                WrapKind::Esm => {
+                  // For ESM modules, export both wrapper_ref (init_xxx) and namespace
+                  // Generated code: `import('./chunk.js').then((n) => (n.init_xxx(), n.namespace))`
+                  if let Some(wrapper_ref) = meta.wrapper_ref {
+                    index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
+                  }
+                  index_chunk_exported_symbols[chunk_id]
+                    .entry(SymbolId::module_namespace_symbol_ref(*dynamic_entry_module))
+                    .or_default();
+                }
+                WrapKind::None => {
+                  // For non-wrapped modules, export only namespace
+                  // Generated code: `import('./chunk.js').then((n) => n.namespace)`
+                  index_chunk_exported_symbols[chunk_id]
+                    .entry(SymbolId::module_namespace_symbol_ref(*dynamic_entry_module))
+                    .or_default();
+                }
+              }
             }
           }
         }

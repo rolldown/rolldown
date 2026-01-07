@@ -1600,11 +1600,32 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // convert `import('./some-module.js')` to `import('./some-module.js').then(n => n.ns)`
       //                                                                                 ^^ points to the dynamic entry module namespace
       // For CJS format, convert to `Promise.resolve().then(() => require('./some-module.js')).then(n => n.ns)`
-      match importee_chunk
-        .exports_to_other_chunks
-        .get(&SymbolId::module_namespace_symbol_ref(importee_idx))
-        .and_then(|names| names.first())
-      {
+      // For CJS modules with wrap_kind Cjs, convert to `import('./chunk.js').then(n => __toESM(n.require_xxx()))`
+      // For ESM modules with wrap_kind Esm, convert to `import('./chunk.js').then(n => (n.init_xxx(), n.namespace))`
+      let importee_meta = &self.ctx.linking_infos[importee_idx];
+      let wrap_kind = importee_meta.wrap_kind();
+
+      // For wrapped modules (CJS/ESM), look up the wrapper_ref; for others, look up the namespace symbol
+      let primary_export_symbol = match wrap_kind {
+        WrapKind::Cjs | WrapKind::Esm => importee_meta.wrapper_ref,
+        WrapKind::None => Some(SymbolId::module_namespace_symbol_ref(importee_idx)),
+      };
+
+      let primary_export_name = primary_export_symbol.and_then(|sym| {
+        importee_chunk.exports_to_other_chunks.get(&sym).and_then(|names| names.first())
+      });
+
+      // For ESM wrapped modules, we also need the namespace symbol
+      let namespace_export_name = if matches!(wrap_kind, WrapKind::Esm) {
+        importee_chunk
+          .exports_to_other_chunks
+          .get(&SymbolId::module_namespace_symbol_ref(importee_idx))
+          .and_then(|names| names.first())
+      } else {
+        None
+      };
+
+      match primary_export_name {
         Some(name) => {
           let base_expr = if matches!(self.ctx.options.format, OutputFormat::Cjs) {
             let import_path = self.ctx.chunk.import_path_for(importee_chunk);
@@ -1625,8 +1646,39 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let import_expr = expr.take_in_box(self.builder().allocator);
             Expression::ImportExpression(import_expr)
           };
-          let call_expr = self.snippet.then_extract_property(base_expr, name);
-          Some(Expression::CallExpression(call_expr))
+
+          match wrap_kind {
+            WrapKind::Cjs => {
+              // For CJS modules: import('./chunk.js').then(n => __toESM(n.require_xxx()))
+              let finalized_to_esm = self.finalized_expr_for_runtime_symbol("__toESM");
+              let call_expr = self.snippet.then_call_cjs_wrapper_with_to_esm(
+                base_expr,
+                name,
+                finalized_to_esm,
+                self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
+              );
+              Some(Expression::CallExpression(call_expr))
+            }
+            WrapKind::Esm => {
+              // For ESM modules: import('./chunk.js').then(n => (n.init_xxx(), n.namespace))
+              if let Some(ns_name) = namespace_export_name {
+                let call_expr =
+                  self.snippet.then_call_esm_wrapper_with_namespace(base_expr, name, ns_name);
+                Some(Expression::CallExpression(call_expr))
+              } else {
+                tracing::warn!(
+                  "ESM wrapped module {:?} in chunk {:?} has wrapper but no namespace export.",
+                  importee_idx,
+                  importee_chunk_idx
+                );
+                None
+              }
+            }
+            WrapKind::None => {
+              let call_expr = self.snippet.then_extract_property(base_expr, name);
+              Some(Expression::CallExpression(call_expr))
+            }
+          }
         }
         None => {
           tracing::warn!(

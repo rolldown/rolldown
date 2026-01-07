@@ -3227,7 +3227,7 @@ expression: output
 
 # tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_common_js_into_es6
 
-- entry-!~{000}~.js => entry-CS1oueUX.js
+- entry-!~{000}~.js => entry-B7YkKTSu.js
 
 # tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_es6_into_es6
 
@@ -5329,9 +5329,21 @@ expression: output
 - dep-!~{001}~.js => dep-DNFy2xKJ.js
 - main-!~{000}~.js => main-DoomfFj7.js
 
+# tests/rolldown/optimization/chunk_merging/dynamic_entry_merged_in_common_chunk
+
+- main-!~{000}~.js => main-Tfxzzbre.js
+- imp-!~{005}~.js => imp-CtvrU1WX.js
+- rolldown-runtime-!~{001}~.js => rolldown-runtime-B8KAVcZC.js
+
+# tests/rolldown/optimization/chunk_merging/dynamic_entry_merged_in_common_chunk2
+
+- main-!~{000}~.js => main-C8zRIaBG.js
+- imp-!~{005}~.js => imp-DbKOs7Vv.js
+- rolldown-runtime-!~{001}~.js => rolldown-runtime-HJ3UrVuY.js
+
 # tests/rolldown/optimization/chunk_merging/dynamic_import_cjs_same_chunk
 
-- main-!~{000}~.js => main-8BBJThoK.js
+- main-!~{000}~.js => main-BLg_1yBI.js
 
 # tests/rolldown/optimization/chunk_merging/issue_4905
 

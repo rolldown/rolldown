@@ -165,19 +165,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let parent_parent = self.visit_path.get(ancestor_len - 2)?.as_call_expression()?;
     let first_arg = parent_parent.arguments.first()?;
     let dynamic_import_binding = match first_arg {
-      Argument::FunctionExpression(func) => func.params.items.first()?,
-      Argument::ArrowFunctionExpression(func) => func.params.items.first()?,
+      Argument::FunctionExpression(func) => func.params.items.first(),
+      Argument::ArrowFunctionExpression(func) => func.params.items.first(),
       _ => {
         return None;
       }
     };
-    // for now only handle
-    // ```js
-    // import('mod').then(mod => {
-    //   mod.a;
-    //   mod;
-    // })
-    // ```
+    let Some(dynamic_import_binding) = dynamic_import_binding else {
+      return Some(FxHashSet::default());
+    };
     self.update_dynamic_import_usage_info_from_binding_pattern(
       &dynamic_import_binding.pattern,
       import_record_idx,

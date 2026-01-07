@@ -6195,6 +6195,10 @@ expression: output
 - main-!~{000}~.js => main-Cmb07HoY.js
 - lib-!~{001}~.js => lib-UjfVFCv8.js
 
+# tests/rolldown/tree_shaking/dynamic_import_then_empty_param
+
+- main-!~{000}~.js => main-f8JnC_f1.js
+
 # tests/rolldown/tree_shaking/dynamic_require_unused_by_function
 
 - main-!~{000}~.js => main-CBm9wgkW.js

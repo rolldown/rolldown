@@ -4,7 +4,6 @@
 export const failedReasons: Record<string, string> = {
   'dce/dce_of_iife':
     'https://github.com/oxc-project/oxc/issues/17480 and sub optimal: IIFEs are not unwrapped in some cases',
-  'dce/dce_of_symbol_ctor_call': '`new Symbol("abc")` should not be removed as it has side effects',
   'dce/tree_shaking_lowered_class_static_field': 'sub optimal: REMOVE_ME class can be removed',
   'dce/tree_shaking_react_elements': 'sub optimal: `React.Fragment` should be removed',
   'dce/tree_shaking_unary_operators':

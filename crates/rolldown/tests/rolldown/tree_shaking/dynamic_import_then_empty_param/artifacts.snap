@@ -1,0 +1,14 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null })).then(() => {});
+Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null })).then(({}) => {});
+
+//#endregion
+```

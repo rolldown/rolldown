@@ -165,8 +165,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let parent_parent = self.visit_path.get(ancestor_len - 2)?.as_call_expression()?;
     let first_arg = parent_parent.arguments.first()?;
     let dynamic_import_binding = match first_arg {
-      Argument::FunctionExpression(func) => func.params.items.first()?,
-      Argument::ArrowFunctionExpression(func) => func.params.items.first()?,
+      Argument::FunctionExpression(func) => func.params.items.first(),
+      Argument::ArrowFunctionExpression(func) => func.params.items.first(),
       _ => {
         return None;
       }
@@ -177,12 +177,17 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     //   mod.a;
     //   mod;
     // })
+    // import('mod').then(() => {}) // no parameters - treat as empty set
     // ```
-    self.update_dynamic_import_usage_info_from_binding_pattern(
-      &dynamic_import_binding.pattern,
-      import_record_idx,
-      false,
-    )
+    match dynamic_import_binding {
+      Some(binding) => self.update_dynamic_import_usage_info_from_binding_pattern(
+        &binding.pattern,
+        import_record_idx,
+        false,
+      ),
+      // If there are no parameters, treat it as an empty set (nothing is used from the import)
+      None => Some(FxHashSet::default()),
+    }
   }
 
   fn update_dynamic_import_usage_info_from_binding_pattern(

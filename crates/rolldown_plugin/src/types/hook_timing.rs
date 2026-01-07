@@ -57,11 +57,14 @@ impl HookTimingCollector {
   /// Returns `true` if plugin time (total - link stage) is more than 100x the link stage time.
   /// This works because plugins primarily run during the scan and generate stages, not the link stage.
   /// This 100x threshold was determined by studying plugin impact on real-world projects.
+  ///
+  /// To avoid noisy warnings for fast builds, the warning only triggers when total build time exceeds 3 seconds.
   #[expect(clippy::cast_precision_loss)]
   pub(crate) fn plugins_are_slow(&self) -> bool {
+    const MIN_BUILD_TIME_MICROS: u64 = 3_000_000;
     let total = self.total_build_micros.load(Ordering::Relaxed);
     let link = self.link_stage_micros.load(Ordering::Relaxed);
-    if total == 0 || link == 0 || link > total {
+    if total == 0 || link == 0 || link > total || total < MIN_BUILD_TIME_MICROS {
       return false;
     }
     (total - link) as f64 / link as f64 > 100.0

@@ -97,7 +97,7 @@ When enabled, Rolldown measures time spent in each plugin hook. If plugins signi
 
 2. **Detection threshold**: A warning is triggered when plugin time (total build time minus link stage time) exceeds 100x the link stage time. This threshold was determined by studying plugin impact on real-world projects.
 
-3. **Identifying plugins**: When the threshold is exceeded, Rolldown reports up to 5 plugins that take longer than the average plugin time, sorted by duration. Each plugin shows its percentage of total plugin time.
+3. **Identifying plugins**: When the threshold is exceeded, Rolldown reports up to 5 plugins that take longer than the average plugin time, sorted by duration. Each plugin shows its percentage of total plugin time. Only plugins with total duration of at least 1 second are included in the report.
 
 > [!WARNING]
 > For hooks using `ctx.resolve()` or `ctx.load()`, the reported time includes waiting for other plugins, which may overestimate that plugin's actual cost.

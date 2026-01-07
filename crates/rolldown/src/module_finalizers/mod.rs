@@ -1565,33 +1565,54 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if is_importer_importee_in_same_chunk {
       let importee_meta = &self.ctx.linking_infos[importee.idx];
 
-      let finalized_expr = if matches!(importee_meta.wrap_kind(), WrapKind::Cjs) {
-        let importee_wrapper_ref = self.ctx.linking_infos[importee.idx].wrapper_ref.unwrap();
+      let finalized_expr = match importee_meta.wrap_kind() {
+        WrapKind::Cjs => {
+          let importee_wrapper_ref = self.ctx.linking_infos[importee.idx].wrapper_ref.unwrap();
 
-        let (finalized_importee_wrapper_ref, _) =
-          self.finalized_expr_for_symbol_ref(importee_wrapper_ref, false, false);
+          let (finalized_importee_wrapper_ref, _) =
+            self.finalized_expr_for_symbol_ref(importee_wrapper_ref, false, false);
 
-        let finalized_to_esm = self.finalized_expr_for_runtime_symbol("__toESM");
+          let finalized_to_esm = self.finalized_expr_for_runtime_symbol("__toESM");
 
-        // require_xxx()
-        let wrapper_ref_call_expr = self.snippet.builder.expression_call(
-          SPAN,
-          finalized_importee_wrapper_ref,
-          NONE,
-          self.snippet.builder.vec(),
-          false,
-        );
+          // require_xxx()
+          let wrapper_ref_call_expr = self.snippet.builder.expression_call(
+            SPAN,
+            finalized_importee_wrapper_ref,
+            NONE,
+            self.snippet.builder.vec(),
+            false,
+          );
 
-        // __toESM(require_xxx(), isNodeMode)
-        self.snippet.wrap_with_to_esm(
-          finalized_to_esm,
-          wrapper_ref_call_expr,
-          self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
-        )
-      } else {
-        let (finalized_expr, _) =
-          self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
-        finalized_expr
+          // __toESM(require_xxx(), isNodeMode)
+          self.snippet.wrap_with_to_esm(
+            finalized_to_esm,
+            wrapper_ref_call_expr,
+            self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
+          )
+        }
+        WrapKind::Esm => {
+          // (init_xxx(), namespace_exports)
+          let importee_wrapper_ref = self.ctx.linking_infos[importee.idx].wrapper_ref.unwrap();
+
+          let (finalized_importee_wrapper_ref, _) =
+            self.finalized_expr_for_symbol_ref(importee_wrapper_ref, false, false);
+
+          let (finalized_namespace, _) =
+            self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
+
+          // init_xxx()
+          let wrapper_call_expr = ast::Expression::CallExpression(
+            self.snippet.alloc_simple_call_expr(finalized_importee_wrapper_ref),
+          );
+
+          // (init_xxx(), namespace_exports)
+          self.snippet.seq2_in_paren_expr(wrapper_call_expr, finalized_namespace)
+        }
+        WrapKind::None => {
+          let (finalized_expr, _) =
+            self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
+          finalized_expr
+        }
       };
 
       Some(self.snippet.promise_resolve_then_call_expr(finalized_expr))
@@ -1718,7 +1739,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let Some(&importee_chunk_idx) =
           self.ctx.chunk_graph.entry_module_to_entry_chunk.get(&rec.resolved_module)
         else {
-          // TODO: probably we should add the reason why it is replaced with `void 0` when upstream support codegen with specific operation
+          // TODO: probably we should add the reason why it is replaced with `void 0`(just like webpack) when upstream support codegen with specific operation
           *node = self.snippet.builder.void_0(SPAN);
           return true;
         };

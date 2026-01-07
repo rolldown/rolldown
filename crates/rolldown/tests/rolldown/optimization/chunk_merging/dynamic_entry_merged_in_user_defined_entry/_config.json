@@ -1,0 +1,18 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "entry.js"
+      }
+    ],
+    "experimental": {
+      "strictExecutionOrder": true
+    }
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

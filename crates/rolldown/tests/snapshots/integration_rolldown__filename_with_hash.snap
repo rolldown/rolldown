@@ -5345,6 +5345,10 @@ expression: output
 - imp-!~{005}~.js => imp-DbKOs7Vv.js
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-HJ3UrVuY.js
 
+# tests/rolldown/optimization/chunk_merging/dynamic_entry_merged_in_user_defined_entry
+
+- entry-!~{000}~.js => entry-DcfLMtJN.js
+
 # tests/rolldown/optimization/chunk_merging/dynamic_import_cjs_same_chunk
 
 - main-!~{000}~.js => main-BLg_1yBI.js
@@ -5527,11 +5531,11 @@ expression: output
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/12
 
-- entry-!~{000}~.js => entry-DQMlFeQJ.js
+- entry-!~{000}~.js => entry-BJEMNO8S.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/13
 
-- entry-!~{000}~.js => entry-w8w8VxwE.js
+- entry-!~{000}~.js => entry-12WaWIyG.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/14
 

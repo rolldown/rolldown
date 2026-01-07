@@ -18,13 +18,15 @@ impl BuildEvent for PluginTimings {
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
+    const DOC_LINK: &str = "https://rolldown.rs/options/checks#plugintimings";
+
     match self.plugins.len() {
       0 => unreachable!("PluginTimings should have at least one plugin"),
       1 => {
         let p = &self.plugins[0];
         format!(
-          "Your build spent significant time in plugins. Here is a breakdown:\n  - {} ({}%)",
-          p.name, p.percent
+          "Your build spent significant time in plugin `{}`. See {DOC_LINK} for more details.",
+          p.name
         )
       }
       _ => {
@@ -34,9 +36,8 @@ impl BuildEvent for PluginTimings {
           .map(|p| format!("  - {} ({}%)", p.name, p.percent))
           .collect::<Vec<_>>()
           .join("\n");
-
         format!(
-          "Your build spent significant time in plugins. Here is a breakdown:\n{plugins_list}"
+          "Your build spent significant time in plugins. Here is a breakdown:\n{plugins_list}\nSee {DOC_LINK} for more details."
         )
       }
     }

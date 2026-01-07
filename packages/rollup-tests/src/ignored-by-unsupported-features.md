@@ -116,15 +116,11 @@
  - rollup@function@adds-timings-to-bundle-when-codesplitting: Adds timing information to bundle when bundling with perf=true
  - rollup@function@adds-timings-to-bundle: Adds timing information to bundle when bundling with perf=true
 
-### `output.dynamicImportInCjs` is not supported
+### `output.dynamicImportInCjs` is not compatible yet
  - rollup@function@dynamic-import-this-function: uses correct "this" in dynamic imports when not using arrow functions
  - rollup@function@dynamic-import-this-arrow: uses correct "this" in dynamic imports when using arrow functions
  - rollup@function@dynamic-import-expression: Dynamic import expression replacement
- - rollup@function@external-dynamic-import-live-binding-compact: supports external dynamic imports with live bindings in compact mode
- - rollup@function@external-dynamic-import-live-binding: supports external dynamic imports with live bindings
- - rollup@function@no-external-live-bindings: Allows omitting the code that handles external live bindings
- - rollup@function@no-external-live-bindings-compact: Allows omitting the code that handles external live bindings
-  
+
 ### The `input.moduleContext` is not supported
  - rollup@form@custom-module-context-function: allows custom module-specific context with a function option
  - rollup@form@custom-module-context: allows custom module-specific context@generates es
@@ -320,6 +316,10 @@
  - rollup@function@dynamic-import-default-mode-facade: handles dynamic imports from facades using default export mode
  - rollup@function@chunking-duplicate-reexport: handles duplicate reexports when using dynamic imports
  - rollup@function@namespace-tostring@interop-property-descriptor: generated interop namespaces should have correct Symbol.toStringTag
+ - rollup@function@external-dynamic-import-live-binding-compact: supports external dynamic imports with live bindings in compact mode
+ - rollup@function@external-dynamic-import-live-binding: supports external dynamic imports with live bindings
+ - rollup@function@no-external-live-bindings: Allows omitting the code that handles external live bindings
+ - rollup@function@no-external-live-bindings-compact: Allows omitting the code that handles external live bindings
 
 ### `hasOwnProperty` export is not handled properly
  - rollup@function@re-export-own: avoid using export.hasOwnProperty (hasOwnProperty behavior differs)

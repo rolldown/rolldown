@@ -40,6 +40,14 @@ bitflags::bitflags! {
         const EmittedChunk = 1 << 2;
     }
 }
+
+impl ChunkMeta {
+  #[inline]
+  pub fn is_pure_user_defined_entry(&self) -> bool {
+    *self == ChunkMeta::UserDefinedEntry
+  }
+}
+
 #[derive(Debug, Default)]
 pub struct Chunk {
   pub exec_order: u32,

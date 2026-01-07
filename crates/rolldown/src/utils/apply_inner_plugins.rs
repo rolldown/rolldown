@@ -2,6 +2,13 @@ use std::sync::Arc;
 
 use rolldown_common::NormalizedBundlerOptions;
 use rolldown_plugin::__inner::SharedPluginable;
+use rolldown_plugin_lazy_compilation::LazyCompilationContext;
+
+/// Result of applying inner plugins, containing optional contexts for features
+pub struct ApplyInnerPluginsReturn {
+  /// Context for lazy compilation, if enabled
+  pub lazy_compilation_context: Option<LazyCompilationContext>,
+}
 
 /// Some builtin features of rolldown is implemented via builtin plugins. However, though these
 /// features are implemented via plugins, users could not feel the existence of these plugins. And
@@ -13,15 +20,18 @@ use rolldown_plugin::__inner::SharedPluginable;
 pub fn apply_inner_plugins(
   options: &NormalizedBundlerOptions,
   user_plugins: &mut Vec<SharedPluginable>,
-) {
+) -> ApplyInnerPluginsReturn {
   let mut before_user_plugins: Vec<SharedPluginable> =
     vec![Arc::new(rolldown_plugin_oxc_runtime::OxcRuntimePlugin)];
+
+  let mut lazy_compilation_context = None;
 
   if let Some(dev_mode) = &options.experimental.dev_mode {
     before_user_plugins.push(Arc::new(rolldown_plugin_hmr::HmrPlugin));
     if dev_mode.lazy == Some(true) {
-      before_user_plugins
-        .push(Arc::new(rolldown_plugin_lazy_compilation::LazyCompilationPlugin::new()));
+      let plugin = rolldown_plugin_lazy_compilation::LazyCompilationPlugin::new();
+      lazy_compilation_context = Some(plugin.context());
+      before_user_plugins.push(Arc::new(plugin));
     }
   }
 
@@ -38,4 +48,6 @@ pub fn apply_inner_plugins(
   }
 
   user_plugins.push(Arc::new(rolldown_plugin_data_uri::DataUriPlugin::default()));
+
+  ApplyInnerPluginsReturn { lazy_compilation_context }
 }

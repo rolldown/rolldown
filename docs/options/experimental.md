@@ -218,3 +218,19 @@ For a complete working example, see [examples/native-magic-string](https://githu
 
 For comprehensive documentation including API compatibility, performance benchmarks, usage examples, and common pitfalls, see [Native MagicString In-Depth Guide](/in-depth/native-magic-string).
 :::
+
+## chunkOptimization
+
+- **Type:** `boolean`
+- **Default:** `true`
+- **Path:** `experimental.chunkOptimization`
+
+Control whether to optimize chunks by allowing entry chunks to have different exports than the underlying entry module.
+
+### In-depth
+
+When enabled, Rolldown will try to insert common modules directly into existing chunks rather than creating separate chunks for them. This optimization can reduce the number of generated chunks, resulting in fewer output files and better performance.
+
+:::warning
+This optimization is automatically disabled when any module uses top-level await (TLA) or contains TLA dependencies, as it could affect execution order guarantees.
+:::

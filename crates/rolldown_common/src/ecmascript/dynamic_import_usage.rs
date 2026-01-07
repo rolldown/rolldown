@@ -18,7 +18,7 @@ pub struct DynamicImportUsageInfo {
   /// record all these dynamic import binding reference id
   /// used for analyze how dynamic import binding is used (partially or fully used),
   pub dynamic_import_binding_reference_id: FxHashSet<ReferenceId>,
-  pub dynamic_import_binding_to_import_record_id: FxHashMap<SymbolId, ImportRecordIdx>,
+  pub dynamic_import_binding_to_import_record_idx: FxHashMap<SymbolId, ImportRecordIdx>,
   pub dynamic_import_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
 }
 

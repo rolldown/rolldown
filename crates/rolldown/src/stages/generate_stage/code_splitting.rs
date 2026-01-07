@@ -746,8 +746,8 @@ impl GenerateStage<'_> {
     // If it is allow to allow that entry chunks have the different exports as the underlying entry module.
     // This is used to generate less chunks when possible.
     // TODO: maybe we could bailout peer chunk?
-    let allow_optimize_chunk =
-      !self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
+    let allow_chunk_optimization = self.options.experimental.is_chunk_optimization_enabled()
+      && !self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for idx in &self.link_output.sorted_modules {
@@ -776,7 +776,7 @@ impl GenerateStage<'_> {
           chunk_id,
           self.link_output.metas[normal_module.idx].depended_runtime_helper,
         );
-      } else if allow_optimize_chunk {
+      } else if allow_chunk_optimization {
         pending_common_chunks.entry(bits.clone()).or_default().push(normal_module.idx);
       } else {
         let mut chunk =
@@ -795,21 +795,21 @@ impl GenerateStage<'_> {
       }
     }
 
-    if allow_optimize_chunk {
+    if allow_chunk_optimization {
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,
         bits_to_chunk,
         input_base,
         pending_common_chunks,
       );
-    }
 
-    self.optimize_facade_dynamic_entry_chunks(
-      chunk_graph,
-      index_splitting_info,
-      input_base,
-      &mut module_to_assigned,
-    );
+      self.optimize_facade_dynamic_entry_chunks(
+        chunk_graph,
+        index_splitting_info,
+        input_base,
+        &mut module_to_assigned,
+      );
+    }
 
     Ok(())
   }

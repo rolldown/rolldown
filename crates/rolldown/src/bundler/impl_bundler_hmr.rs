@@ -62,4 +62,31 @@ impl Bundler {
       )
       .await
   }
+
+  /// Compile a lazy entry module and return compiled code.
+  ///
+  /// This is called when a dynamically imported module is first requested at runtime.
+  /// The module was previously stubbed with a proxy, and now we need to compile the
+  /// actual module and its dependencies.
+  #[cfg(feature = "experimental")]
+  pub async fn compile_lazy_entry(
+    &mut self,
+    module_id: String,
+    client_id: &str,
+    executed_modules: &FxHashSet<String>,
+    next_hmr_patch_id: Arc<AtomicU32>,
+  ) -> BuildResult<String> {
+    let Some(plugin_driver) = self.last_bundle_handle.as_ref().map(|ctx| &ctx.plugin_driver) else {
+      panic!("Lazy compilation requires at least one bundle to be built first");
+    };
+    let mut hmr_stage = HmrStage::new(HmrStageInput {
+      fs: self.bundle_factory.fs.clone(),
+      options: Arc::clone(&self.bundle_factory.options),
+      resolver: Arc::clone(&self.bundle_factory.resolver),
+      plugin_driver: Arc::clone(plugin_driver),
+      cache: &mut self.cache,
+      next_hmr_patch_id,
+    });
+    hmr_stage.compile_lazy_entry(&module_id, client_id, executed_modules).await
+  }
 }

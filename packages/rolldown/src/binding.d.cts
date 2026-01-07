@@ -1410,6 +1410,14 @@ export declare class BindingDevEngine {
   registerModules(clientId: string, modules: Array<string>): Promise<void>
   removeClient(clientId: string): Promise<void>
   close(): Promise<void>
+  /**
+   * Compile a lazy entry module and return HMR-style patch code.
+   *
+   * This is called when a dynamically imported module is first requested at runtime.
+   * The module was previously stubbed with a proxy, and now we need to compile the
+   * actual module and its dependencies.
+   */
+  compileEntry(moduleId: string, clientId: string): Promise<string>
 }
 
 export declare class BindingMagicString {
@@ -1792,6 +1800,7 @@ export interface BindingExperimentalOptions {
   incrementalBuild?: boolean
   transformHiresSourcemap?: boolean | 'boundary'
   nativeMagicString?: boolean
+  chunkOptimization?: boolean
 }
 
 export interface BindingFilterToken {

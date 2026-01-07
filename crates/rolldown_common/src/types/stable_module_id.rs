@@ -27,6 +27,11 @@ impl StableModuleId {
     Self::with_arc_str(id.as_arc_str().clone(), cwd)
   }
 
+  /// Creates a new `StableModuleId` from an `ArcStr` without stabilization.
+  pub fn from_module_id(module_id: ModuleId) -> Self {
+    Self { inner: module_id.into_inner() }
+  }
+
   #[cfg(test)]
   fn with_str(id: &str, cwd: &Path) -> Self {
     Self::with_arc_str(ArcStr::from(id), cwd)
@@ -44,6 +49,10 @@ impl StableModuleId {
   }
 
   pub fn as_str(&self) -> &str {
+    &self.inner
+  }
+
+  pub fn as_arc_str(&self) -> &ArcStr {
     &self.inner
   }
 }
@@ -68,6 +77,7 @@ impl std::fmt::Display for StableModuleId {
   }
 }
 
+// This allows to use `&str` to lookup `HashMap<StableModuleId, V>`. For `&String`, since it could coerce to `&str`, it also works.
 impl Borrow<str> for StableModuleId {
   fn borrow(&self) -> &str {
     &self.inner

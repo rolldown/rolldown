@@ -6,6 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+import assert from "node:assert";
+
 // HIDDEN [rolldown:runtime]
 //#region foo.js
 var require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
@@ -15,17 +17,11 @@ var require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
 //#endregion
 //#region entry.js
 var import_foo = require_foo();
-import("./foo.js").then(__toDynamicImportESM()).then(({ default: { bar: b } }) => console.log(import_foo.bar, b));
+Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_foo())).then(({ default: { bar: b } }) => {
+	assert.strictEqual(b, 123);
+	assert.strictEqual(import_foo.bar, 123);
+});
 
 //#endregion
 export { require_foo as t };
-```
-
-## foo.js
-
-```js
-import { t as require_foo } from "./entry.js";
-
-export default require_foo();
-
 ```

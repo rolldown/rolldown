@@ -103,7 +103,7 @@ Parse failed, got: "Duplicated export 'f'"
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Duplicated default export"
+Parse failed, got: "A module cannot have multiple default exports."
 ---
 
 # language/module-code/early-dup-export-dflt.js
@@ -131,7 +131,7 @@ Parse failed, got: "Duplicated export 'x'"
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Duplicated default export"
+Parse failed, got: "A module cannot have multiple default exports."
 ---
 
 # language/module-code/early-dup-lables.js

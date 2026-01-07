@@ -73,7 +73,7 @@ impl SymbolRef {
       return false;
     };
 
-    let rec = &owner.import_records[named_import.record_id];
+    let rec = &owner.import_records[named_import.record_idx];
 
     match &modules[rec.resolved_module] {
       Module::Normal(_) => {

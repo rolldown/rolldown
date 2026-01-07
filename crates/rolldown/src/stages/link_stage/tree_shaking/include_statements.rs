@@ -55,7 +55,7 @@ pub struct IncludeContext<'a> {
   pub is_module_included_vec: &'a mut ModuleInclusionVec,
   pub tree_shaking: bool,
   pub inline_const_smart: bool,
-  pub runtime_id: ModuleIdx,
+  pub runtime_idx: ModuleIdx,
   pub metas: &'a LinkingMetadataVec,
   pub used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
   pub constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
@@ -76,7 +76,7 @@ impl<'a> IncludeContext<'a> {
     symbols: &'a SymbolRefDb,
     is_included_vec: &'a mut StmtInclusionVec,
     is_module_included_vec: &'a mut ModuleInclusionVec,
-    runtime_id: ModuleIdx,
+    runtime_idx: ModuleIdx,
     metas: &'a LinkingMetadataVec,
     used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
     constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
@@ -91,7 +91,7 @@ impl<'a> IncludeContext<'a> {
       is_module_included_vec,
       tree_shaking: options.treeshake.is_some(),
       inline_const_smart: options.optimization.is_inline_const_smart_mode(),
-      runtime_id,
+      runtime_idx,
       metas,
       used_symbol_refs,
       constant_symbol_map,
@@ -559,7 +559,7 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
 
   ctx.is_module_included_vec[module.idx] = true;
 
-  if module.idx == ctx.runtime_id {
+  if module.idx == ctx.runtime_idx {
     // runtime module has no side effects and it's statements should be included
     // by other modules's references.
     return;
@@ -632,7 +632,7 @@ pub fn include_module(ctx: &mut IncludeContext, module: &NormalModule) {
 
   // With enabling HMR, rolldown will register included esm module's namespace object to the runtime.
   if ctx.options.is_dev_mode_enabled()
-    && module.idx != ctx.runtime_id
+    && module.idx != ctx.runtime_idx
     && matches!(module.exports_kind, ExportsKind::Esm)
   {
     include_statement(ctx, module, StmtInfos::NAMESPACE_STMT_IDX);
@@ -759,15 +759,15 @@ pub fn include_symbol(
 pub fn include_statement(
   ctx: &mut IncludeContext,
   module: &NormalModule,
-  stmt_info_id: StmtInfoIdx,
+  stmt_info_idx: StmtInfoIdx,
 ) {
-  let is_included = &mut ctx.is_included_vec[module.idx][stmt_info_id];
+  let is_included = &mut ctx.is_included_vec[module.idx][stmt_info_idx];
 
   if *is_included {
     return;
   }
 
-  let stmt_info = module.stmt_infos.get(stmt_info_id);
+  let stmt_info = module.stmt_infos.get(stmt_info_idx);
 
   // include the statement itself
   *is_included = true;

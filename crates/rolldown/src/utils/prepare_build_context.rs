@@ -14,6 +14,7 @@ use rolldown_fs::{OsFileSystem, OxcResolverFileSystem as _};
 use rolldown_resolver::Resolver;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rustc_hash::{FxHashMap, FxHashSet};
+use sugar_path::SugarPath;
 
 use crate::{SharedResolver, utils::determine_minify_internal_exports_default};
 
@@ -440,11 +441,7 @@ pub fn prepare_build_context(
       .unwrap_or_else(|| arcstr::literal!("_virtual")),
     preserve_modules_root: raw_options.preserve_modules_root.map(|preserve_modules_root| {
       let p = Path::new(&preserve_modules_root);
-      if p.is_absolute() {
-        preserve_modules_root
-      } else {
-        cwd.join(p).to_string_lossy().to_string()
-      }
+      cwd.join(p).normalize().to_string_lossy().to_string()
     }),
     cwd,
     preserve_entry_signatures,

@@ -1,0 +1,70 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+//#region cjs-module.js
+var require_cjs_module = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = 42;
+}));
+
+//#endregion
+//#region main.js
+var import_cjs_module = /* @__PURE__ */ __toESM(require_cjs_module());
+assert.strictEqual(import_cjs_module.value, 42);
+Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs_module())).then((mod) => {
+	assert.strictEqual(mod.value, 42);
+	assert.strictEqual(mod.default.value, 42);
+});
+
+//#endregion
+export { require_cjs_module as t };
+```
+
+# Output Stats
+
+- main.js, is_entry true, is_dynamic_entry false, exports ["t"]
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+
+//#region cjs-module.js
+var require_cjs_module = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.value = 42;
+}));
+
+//#endregion
+//#region main.js
+var import_cjs_module = /* @__PURE__ */ __toESM(require_cjs_module());
+node_assert.default.strictEqual(import_cjs_module.value, 42);
+Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs_module())).then((mod) => {
+	node_assert.default.strictEqual(mod.value, 42);
+	node_assert.default.strictEqual(mod.default.value, 42);
+});
+
+//#endregion
+Object.defineProperty(exports, 'require_cjs_module', {
+  enumerable: true,
+  get: function () {
+    return require_cjs_module;
+  }
+});
+```
+
+## Output Stats
+
+- main.js, is_entry true, is_dynamic_entry false, exports ["require_cjs_module"]

@@ -7,6 +7,7 @@ use rolldown_common::{
 use rolldown_error::{BuildDiagnostic, BuildResult, EventKindSwitcher};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{__inner::SharedPluginable, PluginDriverFactory};
+use rolldown_plugin_lazy_compilation::LazyCompilationContext;
 use rustc_hash::FxHashMap;
 
 use crate::{
@@ -46,6 +47,9 @@ pub struct BundleFactory {
 
   // Used to generate unique id for each bundle process
   bundle_id_seed: u32,
+
+  /// Context for lazy compilation, if enabled
+  pub lazy_compilation_context: Option<LazyCompilationContext>,
 }
 
 impl BundleFactory {
@@ -60,7 +64,7 @@ impl BundleFactory {
 
     Self::check_prefer_builtin_feature(opts.plugins.as_slice(), &options, &mut warnings);
 
-    apply_inner_plugins(&options, &mut opts.plugins);
+    let inner_plugins_result = apply_inner_plugins(&options, &mut opts.plugins);
 
     let file_emitter = Arc::new(FileEmitter::new(Arc::clone(&options)));
 
@@ -78,6 +82,7 @@ impl BundleFactory {
       bundle_id_seed: 0,
       last_bundle_handle: None,
       module_infos_for_incremental_build: Arc::default(),
+      lazy_compilation_context: inner_plugins_result.lazy_compilation_context,
     })
   }
 

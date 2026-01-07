@@ -54,6 +54,12 @@ class ModuleHotContext {
 
 class DefaultDevRuntime extends BaseDevRuntime {
   /**
+   * Client ID assigned by the dev server, used for lazy compilation requests.
+   * @type {string | null}
+   */
+  clientId = null;
+
+  /**
    * @param {WebSocket} socket
    */
   constructor(socket) {
@@ -148,7 +154,12 @@ const socket = new WebSocket(addr);
 socket.onmessage = function(event) {
   const data = JSON.parse(event.data);
   console.debug('Received message:', data);
-  if (data.type === 'hmr:update') {
+  if (data.type === 'connected') {
+    // Store the client ID for use in lazy compilation requests
+    (/** @type {any} */ (globalThis)).__rolldown_runtime__.clientId =
+      data.clientId;
+    console.debug('[hmr]: Connected with client ID:', data.clientId);
+  } else if (data.type === 'hmr:update') {
     if (typeof process === 'object') {
       import(data.path);
       console.debug(`[hmr]: Importing HMR patch: ${data.path}`);

@@ -1026,6 +1026,12 @@
             "boolean",
             "null"
           ]
+        },
+        "chunkOptimization": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -1739,6 +1745,12 @@
         "outro": {
           "type": [
             "string",
+            "null"
+          ]
+        },
+        "chunkOptimization": {
+          "type": [
+            "boolean",
             "null"
           ]
         },

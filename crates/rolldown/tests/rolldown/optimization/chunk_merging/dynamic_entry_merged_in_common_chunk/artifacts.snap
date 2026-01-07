@@ -1,0 +1,102 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## imp2.js
+
+```js
+import { t as __commonJSMin } from "./rolldown-runtime.js";
+
+//#region imp.js
+var require_imp = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.imp = 1;
+}));
+
+//#endregion
+export { require_imp as t };
+```
+
+## main.js
+
+```js
+import { n as __toESM } from "./rolldown-runtime.js";
+import assert from "node:assert";
+
+//#region main.js
+const load = async () => {
+	import("./imp2.js").then((n) => /* @__PURE__ */ __toESM(n.t())).then((m) => {
+		assert.strictEqual(m.imp, 1);
+	});
+};
+load();
+
+//#endregion
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [rolldown:runtime]
+export { __toESM as n, __commonJSMin as t };
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### imp2.js
+
+```js
+const require_rolldown_runtime = require('./rolldown-runtime.js');
+
+//#region imp.js
+var require_imp = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports) => {
+	exports.imp = 1;
+}));
+
+//#endregion
+Object.defineProperty(exports, 'require_imp', {
+  enumerable: true,
+  get: function () {
+    return require_imp;
+  }
+});
+```
+
+### main.js
+
+```js
+const require_rolldown_runtime = require('./rolldown-runtime.js');
+let node_assert = require("node:assert");
+node_assert = require_rolldown_runtime.__toESM(node_assert);
+
+//#region main.js
+const load = async () => {
+	Promise.resolve().then(() => require("./imp2.js")).then((n) => /* @__PURE__ */ require_rolldown_runtime.__toESM(n.require_imp())).then((m) => {
+		node_assert.default.strictEqual(m.imp, 1);
+	});
+};
+load();
+
+//#endregion
+```
+
+### rolldown-runtime.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+Object.defineProperty(exports, '__commonJSMin', {
+  enumerable: true,
+  get: function () {
+    return __commonJSMin;
+  }
+});
+Object.defineProperty(exports, '__toESM', {
+  enumerable: true,
+  get: function () {
+    return __toESM;
+  }
+});
+```

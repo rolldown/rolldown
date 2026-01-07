@@ -466,6 +466,19 @@ export interface InputOptions {
      * @default false
      */
     nativeMagicString?: boolean;
+    /**
+     * Control whether to optimize chunks by allowing entry chunks to have different exports than the underlying entry module.
+     * This optimization can reduce the number of generated chunks.
+     *
+     * When enabled, rolldown will try to insert common modules directly into existing chunks rather than creating
+     * separate chunks for them, which can result in fewer output files and better performance.
+     *
+     * This optimization is automatically disabled when any module uses top-level await (TLA) or contains TLA dependencies,
+     * as it could affect execution order guarantees.
+     *
+     * @default true
+     */
+    chunkOptimization?: boolean;
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.

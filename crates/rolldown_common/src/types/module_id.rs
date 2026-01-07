@@ -39,6 +39,10 @@ impl ModuleId {
   pub fn stabilize(&self, cwd: &Path) -> StableModuleId {
     StableModuleId::new(self, cwd)
   }
+
+  pub fn into_inner(self) -> ArcStr {
+    self.inner
+  }
 }
 
 impl AsRef<str> for ModuleId {

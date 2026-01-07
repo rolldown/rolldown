@@ -19,7 +19,7 @@ pub struct SymbolRefDataClassic {
   /// The symbol that this symbol is linked to.
   pub link: Option<SymbolRef>,
   /// The chunk that this symbol is defined in.
-  pub chunk_id: Option<ChunkIdx>,
+  pub chunk_idx: Option<ChunkIdx>,
 }
 
 bitflags::bitflags! {
@@ -208,10 +208,10 @@ impl SymbolRefDb {
     &self.inner
   }
 
-  pub fn store_local_db(&mut self, module_id: ModuleIdx, local_db: SymbolRefDbForModule) {
-    self.ensure_exact_capacity(module_id);
+  pub fn store_local_db(&mut self, module_idx: ModuleIdx, local_db: SymbolRefDbForModule) {
+    self.ensure_exact_capacity(module_idx);
 
-    self.inner[module_id] = Some(local_db);
+    self.inner[module_idx] = Some(local_db);
   }
 
   pub fn create_facade_root_symbol_ref(&mut self, owner: ModuleIdx, name: &str) -> SymbolRef {

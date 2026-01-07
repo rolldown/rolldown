@@ -1,27 +1,27 @@
 <script setup lang="ts">
 // Based on https://github.com/vuejs/vitepress/blob/1ec84c15040bc3865461c61b651e487f72c3c271/src/client/theme-default/components/VPHero.vue
-import { type Ref, inject } from 'vue'
-import { VPButton, VPImage, type DefaultTheme } from 'vitepress/theme'
-import RolldownVideoModal from '../RolldownVideoModal.vue'
+import { type Ref, inject } from 'vue';
+import { VPButton, VPImage, type DefaultTheme } from 'vitepress/theme';
+import RolldownVideoModal from '../RolldownVideoModal.vue';
 
 export interface HeroAction {
-  theme?: 'brand' | 'alt'
-  openVideoModal?: boolean
-  text: string
-  link: string
-  target?: string
-  rel?: string
+  theme?: 'brand' | 'alt';
+  openVideoModal?: boolean;
+  text: string;
+  link: string;
+  target?: string;
+  rel?: string;
 }
 
 defineProps<{
-  name?: string
-  text?: string
-  tagline?: string
-  image?: DefaultTheme.ThemeableImage
-  actions?: HeroAction[]
-}>()
+  name?: string;
+  text?: string;
+  tagline?: string;
+  image?: DefaultTheme.ThemeableImage;
+  actions?: HeroAction[];
+}>();
 
-const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
+const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>;
 </script>
 
 <template>

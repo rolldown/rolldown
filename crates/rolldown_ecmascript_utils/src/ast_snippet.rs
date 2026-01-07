@@ -868,14 +868,26 @@ impl<'ast> AstSnippet<'ast> {
   /// Creates a call expression that transforms a dynamic import to extract a specific property.
   /// Generates: `import_expr.then(n => n.property_name)`
   /// This is used to transform dynamic imports to extract a specific export from the module namespace.
+  #[inline]
   pub fn import_then_extract_property(
     &self,
     import_expr: allocator::Box<'ast, ast::ImportExpression<'ast>>,
     property_name: &str,
   ) -> allocator::Box<'ast, ast::CallExpression<'ast>> {
+    self.then_extract_property(Expression::ImportExpression(import_expr), property_name)
+  }
+
+  /// Creates a call expression that chains `.then(n => n.property_name)` to any expression.
+  /// Generates: `expr.then(n => n.property_name)`
+  /// This is used to extract a specific export from a promise that resolves to a module namespace.
+  pub fn then_extract_property(
+    &self,
+    expr: Expression<'ast>,
+    property_name: &str,
+  ) -> allocator::Box<'ast, ast::CallExpression<'ast>> {
     let callee = self.builder.alloc_static_member_expression(
       SPAN,
-      Expression::ImportExpression(import_expr),
+      expr,
       self.builder.identifier_name(SPAN, "then"),
       false,
     );
@@ -892,5 +904,125 @@ impl<'ast> AstSnippet<'ast> {
       ),
       false,
     )
+  }
+
+  /// Creates a call expression that chains `.then(n => return_expr)` to any expression.
+  /// Generates: `expr.then(n => return_expr)`
+  /// The `build_return_expr` callback receives the parameter name "n" and should return the expression to use as the arrow function body.
+  fn then_with_arrow_callback(
+    &self,
+    expr: Expression<'ast>,
+    return_expr: Expression<'ast>,
+  ) -> allocator::Box<'ast, ast::CallExpression<'ast>> {
+    // Create arrow function: n => return_expr
+    let arrow_fn = self.builder.alloc_arrow_function_expression(
+      SPAN,
+      true,  // expression
+      false, // async
+      NONE,
+      self.builder.formal_parameters(
+        SPAN,
+        ast::FormalParameterKind::ArrowFormalParameters,
+        self.builder.vec1(self.builder.formal_parameter(
+          SPAN,
+          self.builder.vec(),
+          self.builder.binding_pattern_binding_identifier(SPAN, self.builder.atom("n")),
+          NONE,
+          NONE,
+          false,
+          None,
+          false,
+          false,
+        )),
+        NONE,
+      ),
+      NONE,
+      self.builder.function_body(
+        SPAN,
+        self.builder.vec(),
+        self.builder.vec1(ast::Statement::ExpressionStatement(
+          self.builder.alloc_expression_statement(SPAN, return_expr),
+        )),
+      ),
+    );
+
+    // expr.then(n => return_expr)
+    let callee = self.builder.alloc_static_member_expression(
+      SPAN,
+      expr,
+      self.builder.identifier_name(SPAN, "then"),
+      false,
+    );
+    self.builder.alloc_call_expression(
+      SPAN,
+      Expression::StaticMemberExpression(callee),
+      NONE,
+      self.builder.vec1(ast::Expression::ArrowFunctionExpression(arrow_fn).into()),
+      false,
+    )
+  }
+
+  /// Creates a call expression that chains `.then(n => __toESM(n.property_name()))` to any expression.
+  /// Generates: `expr.then(n => __toESM(n.property_name()))`
+  /// This is used for CJS modules merged into common chunks where we need to call the wrapper and wrap the result.
+  pub fn then_call_cjs_wrapper_with_to_esm(
+    &self,
+    expr: Expression<'ast>,
+    property_name: &str,
+    to_esm_fn_expr: Expression<'ast>,
+    node_mode: bool,
+  ) -> allocator::Box<'ast, ast::CallExpression<'ast>> {
+    // n.property_name
+    let member_expr =
+      Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
+        SPAN,
+        self.builder.expression_identifier(SPAN, "n"),
+        self.builder.identifier_name(SPAN, self.builder.atom(property_name)),
+        false,
+      ));
+    // n.property_name()
+    let wrapper_call =
+      self.builder.expression_call(SPAN, member_expr, NONE, self.builder.vec(), false);
+
+    // __toESM(n.property_name()) or __toESM(n.property_name(), 1)
+    let to_esm_call = self.wrap_with_to_esm(to_esm_fn_expr, wrapper_call, node_mode);
+
+    self.then_with_arrow_callback(expr, to_esm_call)
+  }
+
+  /// Creates a call expression that chains `.then(n => (n.wrapper_name(), n.namespace_name))` to any expression.
+  /// Generates: `expr.then(n => (n.init_xxx(), n.namespace))`
+  /// This is used for ESM modules merged into common chunks where we need to call the wrapper and return the namespace.
+  pub fn then_call_esm_wrapper_with_namespace(
+    &self,
+    expr: Expression<'ast>,
+    wrapper_name: &str,
+    namespace_name: &str,
+  ) -> allocator::Box<'ast, ast::CallExpression<'ast>> {
+    // n.wrapper_name
+    let wrapper_member =
+      Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
+        SPAN,
+        self.builder.expression_identifier(SPAN, "n"),
+        self.builder.identifier_name(SPAN, self.builder.atom(wrapper_name)),
+        false,
+      ));
+    // n.wrapper_name()
+    let wrapper_call =
+      self.builder.expression_call(SPAN, wrapper_member, NONE, self.builder.vec(), false);
+
+    // n.namespace_name
+    let namespace_member =
+      Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
+        SPAN,
+        self.builder.expression_identifier(SPAN, "n"),
+        self.builder.identifier_name(SPAN, self.builder.atom(namespace_name)),
+        false,
+      ));
+
+    // (n.wrapper_name(), n.namespace_name)
+    let seq_expr = self.seq2_in_paren_expr(wrapper_call, namespace_member);
+
+    self.then_with_arrow_callback(expr, seq_expr)
   }
 }

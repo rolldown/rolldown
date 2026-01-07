@@ -122,4 +122,19 @@ export class DevEngine {
   async close(): Promise<void> {
     await this.#inner.close();
   }
+
+  /**
+   * Compile a lazy entry module and return HMR-style patch code.
+   *
+   * This is called when a dynamically imported module is first requested at runtime.
+   * The module was previously stubbed with a proxy, and now we need to compile the
+   * actual module and its dependencies.
+   *
+   * @param moduleId - The absolute file path of the module to compile
+   * @param clientId - The client ID requesting this compilation
+   * @returns The compiled JavaScript code as a string (HMR patch format)
+   */
+  async compileEntry(moduleId: string, clientId: string): Promise<string> {
+    return this.#inner.compileEntry(moduleId, clientId);
+  }
 }

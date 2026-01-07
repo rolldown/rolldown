@@ -54,6 +54,7 @@ impl DevEngine {
       .with_options(config.options)
       .with_plugins(config.plugins)
       .build()?;
+
     let bundler = Arc::new(Mutex::new(bundler));
 
     let normalized_options = normalize_dev_options(options);
@@ -280,6 +281,69 @@ impl DevEngine {
     }
 
     Ok(updates)
+  }
+
+  /// Compile a lazy entry module and return compiled code.
+  ///
+  /// This is called when a dynamically imported module is first requested at runtime.
+  /// The module was previously stubbed with a proxy, and now we need to compile the
+  /// actual module and its dependencies.
+  ///
+  /// # Arguments
+  /// * `proxy_module_id` - The proxy module ID (with ?rolldown-lazy=1 suffix)
+  /// * `client_id` - The client ID requesting this compilation
+  ///
+  /// # Returns
+  /// The compiled JavaScript code as a string
+  ///
+  /// # Panics
+  /// - If lazy compilation is not enabled
+  /// - If the module is not found
+  /// - If compilation fails
+  pub async fn compile_lazy_entry(
+    &self,
+    proxy_module_id: String,
+    client_id: String,
+  ) -> BuildResult<String> {
+    self.create_error_if_closed()?;
+
+    // Get executed modules for this client
+    let executed_modules =
+      self.clients.get(&client_id).map(|c| c.executed_modules.clone()).unwrap_or_default();
+
+    // Mark the proxy module as fetched BEFORE compilation.
+    // This changes the content returned by the lazy compilation plugin's load hook
+    // from a stub (fetches via /lazy endpoint) to actual code that imports the real module.
+    let mut bundler = self.bundler.lock().await;
+    if let Some(lazy_ctx) = &bundler.lazy_compilation_context {
+      lazy_ctx.mark_as_fetched(&proxy_module_id);
+    }
+
+    // Compile starting from the proxy module.
+    // The plugin will return new content (fetched template) that imports the real module,
+    // which triggers compilation of the actual module and its dependencies.
+    let result = bundler
+      .compile_lazy_entry(
+        proxy_module_id.clone(),
+        &client_id,
+        &executed_modules,
+        Arc::clone(&self.next_invalidate_patch_id),
+      )
+      .await;
+
+    // Notify that the proxy module has changed so build output gets updated.
+    // This ensures future page loads get the fetched template directly.
+    if result.is_ok() {
+      self.notify_module_changed(proxy_module_id);
+    }
+
+    result
+  }
+
+  /// Notify the coordinator that a module has changed programmatically.
+  /// This triggers a rebuild to update the build output.
+  fn notify_module_changed(&self, module_id: String) {
+    let _ = self.coordinator_sender.send(CoordinatorMsg::ModuleChanged { module_id });
   }
 
   pub async fn close(&self) -> BuildResult<()> {

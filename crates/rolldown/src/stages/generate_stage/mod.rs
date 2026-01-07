@@ -186,13 +186,13 @@ impl<'a> GenerateStage<'a> {
           };
           let module = self.link_output.module_table[idx].as_normal().unwrap();
           let ast_scope = &self.link_output.symbol_db[idx].as_ref().unwrap().ast_scopes;
-          let chunk_id = chunk_graph.module_to_chunk[idx].unwrap();
-          let chunk = &chunk_graph.chunk_table[chunk_id];
+          let chunk_idx = chunk_graph.module_to_chunk[idx].unwrap();
+          let chunk = &chunk_graph.chunk_table[chunk_idx];
           let linking_info = &self.link_output.metas[module.idx];
           let ctx = ScopeHoistingFinalizerContext {
-            id: idx,
+            idx,
             chunk,
-            chunk_id,
+            chunk_idx,
             symbol_db: &self.link_output.symbol_db,
             linking_info,
             module,

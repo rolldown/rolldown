@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { onKeyStroke, } from '@vueuse/core';
+import { onKeyStroke } from '@vueuse/core';
 
 const VIDEO_ID = 'RRjfm8cMveQ';
 
@@ -9,15 +9,17 @@ const emit = defineEmits(['close']);
 const isModalVisible = ref(false);
 
 // Scroll lock
-watch(isModalVisible, (value) => {
-  if(typeof document === 'undefined') {
-    return
-  }
+watch(
+  isModalVisible,
+  (value) => {
+    if (typeof document === 'undefined') {
+      return;
+    }
 
-  const newOverflowValue = value ? 'hidden' : 'auto';
-  document.documentElement.style.overflow = newOverflowValue;
-},
-  { immediate: true }
+    const newOverflowValue = value ? 'hidden' : 'auto';
+    document.documentElement.style.overflow = newOverflowValue;
+  },
+  { immediate: true },
 );
 
 const openModal = () => {
@@ -179,9 +181,13 @@ onKeyStroke('Escape', () => {
   text-align: center;
   white-space: nowrap;
   border: 1px solid transparent;
-  background: linear-gradient(var(--vp-c-bg), var(--vp-c-bg)) padding-box,
+  background:
+    linear-gradient(var(--vp-c-bg), var(--vp-c-bg)) padding-box,
     linear-gradient(45deg, #ff5d13, #f0db4f) border-box;
-  transition: color 0.25s, border-color 0.25s, background-color 0.25s;
+  transition:
+    color 0.25s,
+    border-color 0.25s,
+    background-color 0.25s;
 
   &:hover {
     border-color: var(--vp-c-brand-3);

@@ -13,7 +13,7 @@ var require_file = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 }));
 
 //#endregion
-export { __toDynamicImportESM as n, require_file as t };
+export { __toESM as n, require_file as t };
 ```
 
 ## file2.js
@@ -28,12 +28,12 @@ export default require_file();
 ## main.js
 
 ```js
-import { n as __toDynamicImportESM, t as require_file } from "./file.js";
+import { n as __toESM, t as require_file } from "./file.js";
 import assert from "node:assert";
 
 //#region main.js
 const required = require_file();
-const dynamicRes = await import("./file2.js").then(__toDynamicImportESM());
+const dynamicRes = await import("./file2.js").then((m) => /* @__PURE__ */ __toESM(m.default));
 assert.strictEqual(required.foo, "bar");
 assert.strictEqual(dynamicRes.default.foo, "bar");
 

@@ -1,0 +1,77 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+//#region lib.js
+var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a });
+var a;
+var init_lib = __esmMin((() => {
+	a = 123;
+}));
+
+//#endregion
+//#region entry.js
+var init_entry = __esmMin((() => {
+	init_lib();
+	Promise.resolve().then(() => (init_lib(), lib_exports)).then((mod) => {
+		assert.strictEqual(mod.a, 123);
+		assert.strictEqual(a, 123);
+	});
+}));
+
+//#endregion
+init_entry();
+export { init_lib as n, a as t };
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### entry.js
+
+```js
+// HIDDEN [rolldown:runtime]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+
+//#region lib.js
+var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a });
+var a;
+var init_lib = __esmMin((() => {
+	a = 123;
+}));
+
+//#endregion
+//#region entry.js
+var init_entry = __esmMin((() => {
+	init_lib();
+	Promise.resolve().then(() => (init_lib(), lib_exports)).then((mod) => {
+		node_assert.default.strictEqual(mod.a, 123);
+		node_assert.default.strictEqual(a, 123);
+	});
+}));
+
+//#endregion
+init_entry();
+exports.a = a;
+Object.defineProperty(exports, 'init_lib', {
+  enumerable: true,
+  get: function () {
+    return init_lib;
+  }
+});
+Object.defineProperty(exports, 'lib_exports', {
+  enumerable: true,
+  get: function () {
+    return lib_exports;
+  }
+});
+```

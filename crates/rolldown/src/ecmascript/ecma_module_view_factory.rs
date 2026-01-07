@@ -37,7 +37,7 @@ pub async fn create_ecma_view(
   let repr_name = legitimize_identifier_name(&repr_name);
 
   let scanner = AstScanner::new(
-    ctx.module_index,
+    ctx.module_idx,
     scoping,
     &repr_name,
     ctx.resolved_id.module_def_format,

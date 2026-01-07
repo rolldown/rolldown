@@ -1,4 +1,137 @@
 
+## [1.0.0-beta.59] - 2026-01-07
+
+### 🚀 Features
+
+- plugin_timings: add 3s threshold and doc link to warning message (#7741) by @shulaoda
+- improve treeshaking logic to handle empty parameter list in dynamic import .then() callbacks (#7781) by @Copilot
+- dev/lazy: don't include already executed modules (#7745) by @hyf0
+- dev/lazy: support dynamic `import(..)` (#7726) by @hyf0
+- inline dynamic imports that imports statically imported modules (#7742) by @IWANABETHATGUY
+- option: add experimental option to control chunk optimization (#7738) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- inline dynamic entry to user defined entry with esm wrap kind (#7783) by @IWANABETHATGUY
+- use canonical namespace reference for property access (#7777) by @IWANABETHATGUY
+- dynamic entry merged into common chunk with cjs and esm wrap kind (#7771) by @IWANABETHATGUY
+- tla: should not await non-tla-related modules (#7768) by @hyf0
+- dynamic entry captured by common chunk with CJS format (#7757) by @IWANABETHATGUY
+- module_loader: mark emitted chunks as user-defined entry when already loaded (#7765) by @shulaoda
+- normalize preserveModulesRoot path (#7737) by @IWANABETHATGUY
+- linker: resolve race condition in side effects computation for export-star (#7728) by @camc314
+
+### 🚜 Refactor
+
+- plugin_timings: filter out plugins with duration < 1s from timing warnings (#7785) by @shulaoda
+- module_loader: remove unnecessary collect before extend (#7769) by @shulaoda
+- rename _id suffixes to _idx for oxc_index types (#7767) by @IWANABETHATGUY
+- remove duplicate `preserve_entry_signatures` from `AddEntryModuleMsg` (#7762) by @shulaoda
+- module_loader: pass `user_defined_entries` by reference (#7756) by @shulaoda
+- dev/lazy: get proxy entry's `ResolvedId` correctly (#7746) by @hyf0
+- simplify try_rewrite_import_expression control flow (#7753) by @IWANABETHATGUY
+- module_loader: remove unnecessary dynamic import handling for runtime module (#7754) by @shulaoda
+- inline __toDynamicImportESM  (#7747) by @IWANABETHATGUY
+- use From impl for ModuleLoaderOutput conversion (#7732) by @shulaoda
+- remove duplicate fields from `ModuleLoader` (#7731) by @shulaoda
+- tweak `resolve_user_defined_entries` (#7727) by @shulaoda
+
+### 📚 Documentation
+
+- add rolldown-string reference to native MagicString compatibility section (#7778) by @Copilot
+- improve comments for export star side effects handling (#7730) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- use assertion instead of console.log for some testcase (#7744) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- tweak some `output.dynamicImportInCjs` related rollup test results (#7776) by @sapphi-red
+- mark esbuild/dce/dce_of_symbol_ctor_call as passed (#7775) by @sapphi-red
+- deps: update oxc apps (#7772) by @renovate[bot]
+- vite-tests: allow running on PRs with `test: vite-tests` label (#7770) by @shulaoda
+- deps: update oxc apps (#7760) by @renovate[bot]
+- deps: update rollup submodule for tests to v4.55.1 (#7763) by @sapphi-red
+- deps: update test262 submodule for tests (#7764) by @sapphi-red
+- deps: update oxc to v0.107.0 (#7758) by @camc314
+- deps: update taiki-e/install-action action to v2.65.13 (#7751) by @renovate[bot]
+- deps: update rust crates (#7750) by @renovate[bot]
+- deps: update npm packages (#7749) by @renovate[bot]
+- deps: update github-actions (#7748) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.10.1 (#7729) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.41.0 (#7725) by @renovate[bot]
+
+
+## [1.0.0-beta.58] - 2025-12-31
+
+### 💥 BREAKING CHANGES
+
+- experimental/devtools: rename InputOptions#debug to InputOptions#devtools (#7686) by @Copilot
+
+### 🚀 Features
+
+- implement target feature check in `should_transform_js` for raw options (#7697) by @shulaoda
+- support `output.dynamicImportInCjs` option (#7677) by @shulaoda
+- types: expose `ChecksOptions` type (#7653) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- export runtime helpers for cross-chunk access (#7658) by @shulaoda
+- cjs namespace merging regression (#7665) by @IWANABETHATGUY
+- replace panic with proper error handling for hash placeholder generation (#7661) by @shulaoda
+- remove the blank line between shebang and postBanner (#7643) by @btea
+- rolldown_plugin_vite_reporter: apply padding before ANSI coloring for proper size column alignment (#7649) by @shulaoda
+
+### 🚜 Refactor
+
+- rust: use `StableModuleId` as the map key if possible (#7718) by @hyf0
+- rust: return `StableModuleId` instead of `&str` from `Module#stable_id()` (#7717) by @hyf0
+- rust: return correct stable id of external module from `Module#stable_id()` (#7716) by @hyf0
+- rust: introduce `StableModuleId` type (#7715) by @hyf0
+- rust: reduce unnecessary `id.as_arc_str().clone().into()` (#7714) by @hyf0
+- rust: remove `ModuleId#resource_id` and use `as_arc_str` directly (#7710) by @hyf0
+- rust: remove unused `Module#id_clone` (#7709) by @hyf0
+- rust: remove `Module#id_as_str` and use `Module#id` directly (#7708) by @hyf0
+- consolidate namespace call analysis into import analyzer (#7657) by @IWANABETHATGUY
+- rust: make `ExternalModule#id` have the type `ModuleId` (#7707) by @hyf0
+- rust: rename `Module#id` to `Module#id_as_str` (#7706) by @hyf0
+- rust: use `ModuleId` instead of raw `ArcStr` for `ScanStageCache` (#7701) by @hyf0
+- simplify error propagation in cache merge (#7702) by @shulaoda
+- use `ModuleId` as the type of `ResolvedId#id` (#7694) by @hyf0
+- types: rename `resolved_request_info.rs` to `resolved_id.rs` and move its contents (#7687) by @hyf0
+- devtools: emit data to `<CWD>/node_modules/.rolldown` (#7692) by @hyf0
+- use `InvalidOption` for hash placeholder generation errors (#7674) by @shulaoda
+- rolldown_error: remove dependency on rolldown_utils (#7672) by @shulaoda
+- use nodejs-built-in-modules v1.0.0 directly in callsites (#7667) by @Boshen
+
+### 📚 Documentation
+
+- migrate input options content from options to auto gen docs (#7663) by @mdong1909
+- create reference index page (#7659) by @mdong1909
+- tweak auto-generated reference output (#7654) by @sapphi-red
+- initialize auto-gen docs (#7252) by @mdong1909
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update napi (#7705) by @renovate[bot]
+- pin Node.js version to 24.12.0 LTS in .node-version file (#7713) by @Copilot
+- update esbuild test reasons (#7703) by @sapphi-red
+- deps: update crate-ci/typos action to v1.40.1 (#7696) by @renovate[bot]
+- deps: update oxc to v0.106.0 (#7512) by @renovate[bot]
+- js: replace dprint with oxfmt (#7214) by @Boshen
+- deps: update dependency oxlint to v1.36.0 (#7691) by @renovate[bot]
+- deps: update github-actions (#7679) by @renovate[bot]
+- deps: update npm packages (#7680) by @renovate[bot]
+- deps: update rust crates (#7678) by @renovate[bot]
+- deps: update oxc resolver to v11.16.2 (#7668) by @renovate[bot]
+- add API reference files to knip entry points (#7669) by @Copilot
+- deps: update notify (#7651) by @sapphi-red
+- add `homepage` field to package.json (#7648) by @trivikr
+- deps: update oxc resolver to v11.16.1 (#7647) by @renovate[bot]
+- deps: update rolldown-plugin-dts to 0.20.0 (#7645) by @shulaoda
+
+
 ## [1.0.0-beta.57] - 2025-12-24
 
 ### 💥 BREAKING CHANGES

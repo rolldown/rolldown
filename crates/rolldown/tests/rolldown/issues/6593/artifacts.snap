@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __toDynamicImportESM as n, __commonJSMin as t };
+export { __toESM as n, __commonJSMin as t };
 ```
 
 ## lib.js
@@ -40,11 +40,11 @@ export default require_lib();
 ## main.js
 
 ```js
-import { n as __toDynamicImportESM } from "./chunk.js";
+import { n as __toESM } from "./chunk.js";
 import assert from "node:assert";
 
 //#region entry.js
-const mod = await import("./lib.js").then(__toDynamicImportESM());
+const mod = await import("./lib.js").then((m) => /* @__PURE__ */ __toESM(m.default));
 assert.strictEqual(mod.default().name, "plugin");
 
 //#endregion

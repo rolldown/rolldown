@@ -1,0 +1,11 @@
+{
+  "config": {
+    "format": "cjs"
+  },
+  "configVariants": [
+    {
+      "format": "umd",
+      "name": "test"
+    }
+  ]
+}

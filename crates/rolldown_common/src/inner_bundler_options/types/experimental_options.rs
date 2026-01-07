@@ -52,6 +52,7 @@ pub struct ExperimentalOptions {
   pub on_demand_wrapping: Option<bool>,
   pub transform_hires_sourcemap: Option<SourcemapHires>,
   pub native_magic_string: Option<bool>,
+  pub chunk_optimization: Option<bool>,
 }
 
 impl ExperimentalOptions {
@@ -86,5 +87,9 @@ impl ExperimentalOptions {
 
   pub fn is_native_magic_string_enabled(&self) -> bool {
     self.native_magic_string.unwrap_or(false)
+  }
+
+  pub fn is_chunk_optimization_enabled(&self) -> bool {
+    self.chunk_optimization.unwrap_or(true)
   }
 }

@@ -27,7 +27,7 @@ import nodeAssert from "node:assert";
 // HIDDEN [rolldown:runtime]
 //#region non-node-mode.js
 async function main$1() {
-	const exports = await import("./lib.js").then(__toDynamicImportESM());
+	const exports = await import("./lib.js").then((m) => /* @__PURE__ */ __toESM(m.default));
 	nodeAssert.deepEqual(Object.keys(exports).sort(), ["parse"]);
 	nodeAssert.strictEqual(exports.parse, "parse", "Expected export exists and is correct");
 	nodeAssert.strictEqual(exports.default, void 0, "Target has __esModule, so no auto-generated default export");
@@ -37,7 +37,7 @@ main$1();
 //#endregion
 //#region node-mode-by-mjs-extension.mjs
 async function main() {
-	const exports = await import("./lib.js").then(__toDynamicImportESM(1));
+	const exports = await import("./lib.js").then((m) => /* @__PURE__ */ __toESM(m.default, 1));
 	nodeAssert.deepEqual(Object.keys(exports).sort(), ["default", "parse"]);
 	nodeAssert.strictEqual(exports.parse, "parse", "Expected export exists and is correct");
 	nodeAssert.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
@@ -48,7 +48,7 @@ main();
 //#region node-mode-by-cjs-extension.cjs
 var require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	async function main() {
-		const exports = await import("./lib.js").then(__toDynamicImportESM(1));
+		const exports = await import("./lib.js").then((m) => /* @__PURE__ */ __toESM(m.default, 1));
 		nodeAssert.deepEqual(Object.keys(exports).sort(), ["default", "parse"]);
 		nodeAssert.strictEqual(exports.parse, "parse", "Expected export exists and is correct");
 		nodeAssert.strictEqual(exports.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
@@ -98,7 +98,7 @@ node_assert = __toESM(node_assert);
 
 //#region non-node-mode.js
 async function main$1() {
-	const exports$1 = await Promise.resolve().then(() => __toDynamicImportESM()(require("./lib.js")));
+	const exports$1 = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./lib.js").default));
 	node_assert.default.deepEqual(Object.keys(exports$1).sort(), ["parse"]);
 	node_assert.default.strictEqual(exports$1.parse, "parse", "Expected export exists and is correct");
 	node_assert.default.strictEqual(exports$1.default, void 0, "Target has __esModule, so no auto-generated default export");
@@ -108,7 +108,7 @@ main$1();
 //#endregion
 //#region node-mode-by-mjs-extension.mjs
 async function main() {
-	const exports$1 = await Promise.resolve().then(() => __toDynamicImportESM(1)(require("./lib.js")));
+	const exports$1 = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./lib.js").default, 1));
 	node_assert.default.deepEqual(Object.keys(exports$1).sort(), ["default", "parse"]);
 	node_assert.default.strictEqual(exports$1.parse, "parse", "Expected export exists and is correct");
 	node_assert.default.strictEqual(exports$1.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
@@ -119,7 +119,7 @@ main();
 //#region node-mode-by-cjs-extension.cjs
 var require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	async function main() {
-		const exports$1 = await Promise.resolve().then(() => __toDynamicImportESM(1)(require("./lib.js")));
+		const exports$1 = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./lib.js").default, 1));
 		node_assert.default.deepEqual(Object.keys(exports$1).sort(), ["default", "parse"]);
 		node_assert.default.strictEqual(exports$1.parse, "parse", "Expected export exists and is correct");
 		node_assert.default.strictEqual(exports$1.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");

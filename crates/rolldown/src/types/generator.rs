@@ -48,7 +48,8 @@ impl GenerateContext<'_> {
     let canonical_symbol = symbol_db.get(canonical_ref);
     let namespace_alias = &canonical_symbol.namespace_alias;
     if let Some(ns_alias) = namespace_alias {
-      let canonical_ns_name = &canonical_names[&ns_alias.namespace_ref];
+      let canonical_ns_ref = symbol_db.canonical_ref_for(ns_alias.namespace_ref);
+      let canonical_ns_name = &canonical_names[&canonical_ns_ref];
       let property_name = &ns_alias.property_name;
       return property_access_str(canonical_ns_name, property_name);
     }

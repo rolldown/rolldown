@@ -1,4 +1,59 @@
 
+## [1.0.0-beta.59] - 2026-01-07
+
+### 🚀 Features
+
+- dev/lazy: don't include already executed modules (#7745) by @hyf0
+- dev/lazy: support dynamic `import(..)` (#7726) by @hyf0
+- inline dynamic imports that imports statically imported modules (#7742) by @IWANABETHATGUY
+- option: add experimental option to control chunk optimization (#7738) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- tla: should not await non-tla-related modules (#7768) by @hyf0
+- dynamic entry captured by common chunk with CJS format (#7757) by @IWANABETHATGUY
+- module_loader: mark emitted chunks as user-defined entry when already loaded (#7765) by @shulaoda
+- normalize preserveModulesRoot path (#7737) by @IWANABETHATGUY
+- linker: resolve race condition in side effects computation for export-star (#7728) by @camc314
+
+### 🚜 Refactor
+
+- module_loader: remove unnecessary collect before extend (#7769) by @shulaoda
+- rename _id suffixes to _idx for oxc_index types (#7767) by @IWANABETHATGUY
+- remove duplicate `preserve_entry_signatures` from `AddEntryModuleMsg` (#7762) by @shulaoda
+- module_loader: pass `user_defined_entries` by reference (#7756) by @shulaoda
+- dev/lazy: get proxy entry's `ResolvedId` correctly (#7746) by @hyf0
+- simplify try_rewrite_import_expression control flow (#7753) by @IWANABETHATGUY
+- module_loader: remove unnecessary dynamic import handling for runtime module (#7754) by @shulaoda
+- inline __toDynamicImportESM  (#7747) by @IWANABETHATGUY
+- use From impl for ModuleLoaderOutput conversion (#7732) by @shulaoda
+- remove duplicate fields from `ModuleLoader` (#7731) by @shulaoda
+- tweak `resolve_user_defined_entries` (#7727) by @shulaoda
+
+### 📚 Documentation
+
+- improve comments for export star side effects handling (#7730) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- use assertion instead of console.log for some testcase (#7744) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update oxc apps (#7772) by @renovate[bot]
+- vite-tests: allow running on PRs with `test: vite-tests` label (#7770) by @shulaoda
+- deps: update oxc apps (#7760) by @renovate[bot]
+- deps: update rollup submodule for tests to v4.55.1 (#7763) by @sapphi-red
+- deps: update test262 submodule for tests (#7764) by @sapphi-red
+- deps: update oxc to v0.107.0 (#7758) by @camc314
+- deps: update taiki-e/install-action action to v2.65.13 (#7751) by @renovate[bot]
+- deps: update rust crates (#7750) by @renovate[bot]
+- deps: update npm packages (#7749) by @renovate[bot]
+- deps: update github-actions (#7748) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.10.1 (#7729) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.41.0 (#7725) by @renovate[bot]
+
+
 ## [1.0.0-beta.58] - 2025-12-31
 
 ### 💥 BREAKING CHANGES

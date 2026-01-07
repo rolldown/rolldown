@@ -13,7 +13,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MIXED_EXPORTS
 
 ```text
-[MIXED_EXPORTS] Warning: Entry module "test" is using named (including "default", "invalid-identifier", "test") and default exports together. Consumers of your bundle will have to use `test.json.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
+[MIXED_EXPORTS] Warning: Entry module "test.json" is using named (including "default", "invalid-identifier", "test") and default exports together. Consumers of your bundle will have to use `chunk.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
 
 ```
 

@@ -48,12 +48,12 @@ pub fn determine_export_mode(
       } else {
         let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
         if has_default_export {
-          let name = ctx.chunk.name.as_ref().map(arcstr::ArcStr::to_string);
+          let name = ctx.options.name.as_ref().map(|n| ArcStr::from(n.as_str())).unwrap_or_else(|| ArcStr::from("chunk"));
           warnings.push(
             BuildDiagnostic::mixed_export(
               module.id.to_string(),
-              ArcStr::from(module.stable_id.as_str()),
-              name.unwrap_or_else(|| String::from("chunk")),
+              name,
+              module.stable_id.to_string(),
               export_names.iter().map(|name| name.as_str().into()).collect(),
             )
             .with_severity_warning(),

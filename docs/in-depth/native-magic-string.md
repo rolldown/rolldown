@@ -209,6 +209,12 @@ function createTransform() {
 }
 ```
 
+::: tip
+
+You can use [`rolldown-string`](https://github.com/sxzz/rolldown-string), which provides a unified interface that works with both bundlers.
+
+:::
+
 ## When to Use Native MagicString
 
 ### Recommended Scenarios

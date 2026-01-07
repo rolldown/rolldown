@@ -6,6 +6,7 @@ use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, ModuleTable, PreserveEntrySignatures, RuntimeHelper, StmtInfos,
+  WrapKind,
 };
 use rolldown_utils::{BitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -386,20 +387,26 @@ impl GenerateStage<'_> {
     // To preserve dynamic import tree shaking, we should only include symbols that were actually used during the linking stage.
     // This ensures that including a namespace symbol doesn't inadvertently add unused exported symbols.
     for &entry_module in rewrite_entry_to_chunk.keys() {
+      let wrap_kind = self.link_output.metas[entry_module].wrap_kind();
       let Some(module) = self.link_output.module_table[entry_module].as_normal_mut() else {
         continue;
       };
-      // Filter in place to avoid cloning
-      module.stmt_infos[StmtInfos::NAMESPACE_STMT_IDX].referenced_symbols.retain(
-        |item| match item {
-          rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
-            // module namespace symbol requires `__exportAll` runtime helper
-            self.link_output.used_symbol_refs.contains(symbol_ref)
-              || symbol_ref.owner == runtime_module_idx
-          }
-          rolldown_common::SymbolOrMemberExprRef::MemberExpr(_member_expr_ref) => true,
-        },
-      );
+      // For CJS modules, we don't need to include `__exportAll` and the namespace symbols.
+      // Instead, we should include the wrapper_ref (`require_xxx`), which will be handled
+      // in the include_symbol call below.
+      if !matches!(wrap_kind, WrapKind::Cjs) {
+        // Filter in place to avoid cloning
+        module.stmt_infos[StmtInfos::NAMESPACE_STMT_IDX].referenced_symbols.retain(
+          |item| match item {
+            rolldown_common::SymbolOrMemberExprRef::Symbol(symbol_ref) => {
+              // module namespace symbol requires `__exportAll` runtime helper
+              self.link_output.used_symbol_refs.contains(symbol_ref)
+                || symbol_ref.owner == runtime_module_idx
+            }
+            rolldown_common::SymbolOrMemberExprRef::MemberExpr(_member_expr_ref) => true,
+          },
+        );
+      }
     }
 
     let (mut stmt_info_included_vec, mut module_included_vec, mut module_namespace_reason_vec) =
@@ -427,7 +434,14 @@ impl GenerateStage<'_> {
 
     let mut optimized_common_chunks = FxHashSet::default();
 
-    include_runtime_symbol(context, runtime, RuntimeHelper::ExportAll);
+    // Check if we have any non-CJS modules that need ExportAll
+    let has_non_cjs_modules = rewrite_entry_to_chunk.keys().any(|&entry_module| {
+      !matches!(self.link_output.metas[entry_module].wrap_kind(), WrapKind::Cjs)
+    });
+
+    if has_non_cjs_modules {
+      include_runtime_symbol(context, runtime, RuntimeHelper::ExportAll);
+    }
 
     for (&entry_module, &(from_chunk_idx, target_chunk_idx)) in &rewrite_entry_to_chunk {
       // Point the entry module to related common chunk
@@ -437,6 +451,8 @@ impl GenerateStage<'_> {
         continue;
       };
 
+      let wrap_kind = self.link_output.metas[entry_module].wrap_kind();
+
       chunk_graph.entry_module_to_entry_chunk.insert(entry_module, target_chunk_idx);
       chunk_graph.removed_chunk_idx.insert(from_chunk_idx);
       chunk_graph
@@ -445,16 +461,27 @@ impl GenerateStage<'_> {
         .or_default()
         .insert(entry_module);
 
-      include_symbol(
-        context,
-        module.namespace_object_ref,
-        SymbolIncludeReason::SimulatedFacadeChunk,
-      );
-      context.module_namespace_included_reason[entry_module]
-        .insert(ModuleNamespaceIncludedReason::SimulateFacadeChunk);
-      let target_chunk = &mut chunk_graph.chunk_table[target_chunk_idx];
-      target_chunk.depended_runtime_helper.insert(RuntimeHelper::ExportAll);
-      optimized_common_chunks.insert(target_chunk_idx);
+      // For CJS modules, include the wrapper_ref (require_xxx) instead of namespace
+      // and use ToEsm runtime helper instead of ExportAll
+      if matches!(wrap_kind, WrapKind::Cjs | WrapKind::Esm) {
+        if let Some(wrapper_ref) = self.link_output.metas[entry_module].wrapper_ref {
+          include_symbol(context, wrapper_ref, SymbolIncludeReason::SimulatedFacadeChunk);
+        }
+        optimized_common_chunks.insert(target_chunk_idx);
+      }
+
+      if matches!(wrap_kind, WrapKind::Esm | WrapKind::None) {
+        include_symbol(
+          context,
+          module.namespace_object_ref,
+          SymbolIncludeReason::SimulatedFacadeChunk,
+        );
+        context.module_namespace_included_reason[entry_module]
+          .insert(ModuleNamespaceIncludedReason::SimulateFacadeChunk);
+        let target_chunk = &mut chunk_graph.chunk_table[target_chunk_idx];
+        target_chunk.depended_runtime_helper.insert(RuntimeHelper::ExportAll);
+        optimized_common_chunks.insert(target_chunk_idx);
+      }
     }
 
     // Ensure runtime module is properly assigned to chunk graph

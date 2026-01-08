@@ -1,6 +1,13 @@
-import type { ConfigExport } from '../types/config-export';
 import type { RolldownOptions } from '../types/rolldown-options';
-import type { RolldownOptionsFunction } from '../types/rolldown-options-function';
+import type { MaybePromise } from '../types/utils';
+
+/**
+ * Type for `default export` of `rolldown.config.js` file.
+ */
+export type ConfigExport = RolldownOptions | RolldownOptions[] | RolldownOptionsFunction;
+export type RolldownOptionsFunction = (
+  commandLineArguments: Record<string, any>,
+) => MaybePromise<RolldownOptions | RolldownOptions[]>;
 
 export function defineConfig(config: RolldownOptions): RolldownOptions;
 export function defineConfig(config: RolldownOptions[]): RolldownOptions[];

@@ -315,6 +315,12 @@ importers:
         specifier: 'catalog:'
         version: 3.5.26(typescript@5.9.3)
     devDependencies:
+      '@hpcc-js/wasm-graphviz':
+        specifier: ^1.8.0
+        version: 1.17.0
+      '@types/markdown-it':
+        specifier: ^14.1.2
+        version: 14.1.2
       oxc-minify:
         specifier: 'catalog:'
         version: 0.107.0
@@ -1558,6 +1564,9 @@ packages:
   '@gwhitney/detect-indent@7.0.1':
     resolution: {integrity: sha512-7bQW+gkKa2kKZPeJf6+c6gFK9ARxQfn+FKy9ScTBppyKRWH2KzsmweXUoklqeEiHiNVWaeP5csIdsNq6w7QhzA==}
     engines: {node: '>=12.20'}
+
+  '@hpcc-js/wasm-graphviz@1.17.0':
+    resolution: {integrity: sha512-EeQUvc41JrFU7AWkh3//KdgRT9waJrBxFA7H9m3uI/zAHzbvTgbw05tik+fxuDPD0sXRxc8g2kXqC5jMobWUQA==}
 
   '@iconify-json/logos@1.2.10':
     resolution: {integrity: sha512-qxaXKJ6fu8jzTMPQdHtNxlfx6tBQ0jXRbHZIYy5Ilh8Lx9US9FsAdzZWUR8MXV8PnWTKGDFO4ZZee9VwerCyMA==}
@@ -6857,6 +6866,8 @@ snapshots:
       '@shikijs/vscode-textmate': 10.0.2
 
   '@gwhitney/detect-indent@7.0.1': {}
+
+  '@hpcc-js/wasm-graphviz@1.17.0': {}
 
   '@iconify-json/logos@1.2.10':
     dependencies:

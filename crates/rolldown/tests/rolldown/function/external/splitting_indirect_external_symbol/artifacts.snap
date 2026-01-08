@@ -26,5 +26,4 @@ Promise.resolve().then(() => indirect_exports).then((mod) => {
 });
 
 //#endregion
-export { read as t };
 ```

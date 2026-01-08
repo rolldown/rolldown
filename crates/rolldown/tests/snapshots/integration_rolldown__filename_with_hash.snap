@@ -3227,11 +3227,11 @@ expression: output
 
 # tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_common_js_into_es6
 
-- entry-!~{000}~.js => entry-B7YkKTSu.js
+- entry-!~{000}~.js => entry-B6CN2YNI.js
 
 # tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_es6_into_es6
 
-- entry-!~{000}~.js => entry-ExIzbYAG.js
+- entry-!~{000}~.js => entry-DFyR4Vrv.js
 
 # tests/esbuild/splitting/splitting_dynamic_common_js_into_es6
 
@@ -3819,7 +3819,7 @@ expression: output
 
 # tests/rolldown/code_splitting/dynamic_import_and_static_import_one_file
 
-- main-!~{000}~.js => main-BvQdWiUn.js
+- main-!~{000}~.js => main-BYdUJMok.js
 
 # tests/rolldown/code_splitting/ensure_safe_identifier
 
@@ -3858,12 +3858,17 @@ expression: output
 
 # tests/rolldown/code_splitting/issue_2786
 
-- main-!~{000}~.js => main-Dy0EFWHi.js
+- main-!~{000}~.js => main-JjNfKQ3W.js
 
 # tests/rolldown/code_splitting/issue_5276
 
-- main-!~{000}~.js => main-CQ0zHuQV.js
-- imp-!~{001}~.js => imp-D2u5-7HD.js
+- main-!~{000}~.js => main-B6YWjK7m.js
+- imp-!~{001}~.js => imp-BRmtGyuP.js
+
+# tests/rolldown/code_splitting/issue_5276_2
+
+- main-!~{000}~.js => main-C_JQXq7h.js
+- imp-!~{001}~.js => imp-CdA-oVqI.js
 
 # tests/rolldown/dce/conditional_exports
 
@@ -4277,7 +4282,7 @@ expression: output
 
 # tests/rolldown/function/external/splitting_indirect_external_symbol
 
-- main-!~{000}~.js => main-BltaIWAw.js
+- main-!~{000}~.js => main-D46g0Eri.js
 
 # tests/rolldown/function/external/splitting_with_external_module
 
@@ -5341,21 +5346,21 @@ expression: output
 
 # tests/rolldown/optimization/chunk_merging/dynamic_entry_merged_in_common_chunk2
 
-- main-!~{000}~.js => main-C8zRIaBG.js
-- imp-!~{005}~.js => imp-DbKOs7Vv.js
+- main-!~{000}~.js => main-DwbFJsvM.js
+- imp-!~{005}~.js => imp-CoD1i-rZ.js
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-HJ3UrVuY.js
 
 # tests/rolldown/optimization/chunk_merging/dynamic_entry_merged_in_user_defined_entry
 
-- entry-!~{000}~.js => entry-DcfLMtJN.js
+- entry-!~{000}~.js => entry-CEANyBgQ.js
 
 # tests/rolldown/optimization/chunk_merging/dynamic_import_cjs_same_chunk
 
-- main-!~{000}~.js => main-BLg_1yBI.js
+- main-!~{000}~.js => main-xXu5us-8.js
 
 # tests/rolldown/optimization/chunk_merging/issue_4905
 
-- main-!~{000}~.js => main-4O-955YB.js
+- main-!~{000}~.js => main-yZs-Mq7e.js
 
 # tests/rolldown/optimization/inline_const/5197
 
@@ -5531,11 +5536,11 @@ expression: output
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/12
 
-- entry-!~{000}~.js => entry-BJEMNO8S.js
+- entry-!~{000}~.js => entry-BMvQKGNA.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/13
 
-- entry-!~{000}~.js => entry-12WaWIyG.js
+- entry-!~{000}~.js => entry-CG_H5vLu.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/14
 

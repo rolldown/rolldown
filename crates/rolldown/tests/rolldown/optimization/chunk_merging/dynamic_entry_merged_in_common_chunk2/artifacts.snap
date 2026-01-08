@@ -22,7 +22,7 @@ var require_imp = /* @__PURE__ */ __commonJSMin(((exports) => {
 }));
 
 //#endregion
-export { init_imp2 as i, imp2 as n, imp2_exports as r, require_imp as t };
+export { imp2_exports as n, init_imp2 as r, require_imp as t };
 ```
 
 ## main.js
@@ -36,7 +36,7 @@ const load = async () => {
 	import("./imp.js").then((n) => /* @__PURE__ */ __toESM(n.t())).then((m) => {
 		assert.strictEqual(m.imp, 1);
 	});
-	import("./imp.js").then((n) => (n.i(), n.r)).then((m) => {
+	import("./imp.js").then((n) => (n.r(), n.n)).then((m) => {
 		assert.strictEqual(m.imp2, 2);
 	});
 };
@@ -75,12 +75,6 @@ var require_imp = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((expor
 }));
 
 //#endregion
-Object.defineProperty(exports, 'imp2', {
-  enumerable: true,
-  get: function () {
-    return imp2;
-  }
-});
 Object.defineProperty(exports, 'imp2_exports', {
   enumerable: true,
   get: function () {

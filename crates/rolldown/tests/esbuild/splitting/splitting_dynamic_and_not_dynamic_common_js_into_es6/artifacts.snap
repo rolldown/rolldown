@@ -23,5 +23,4 @@ Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_foo())).then(({ def
 });
 
 //#endregion
-export { require_foo as t };
 ```

@@ -26,7 +26,7 @@ const imp3 = 3;
 const imp33 = 33;
 
 //#endregion
-export { imp2_exports as a, imp2 as i, imp33 as n, imp1 as o, imp3_exports as r, imp1_exports as s, imp3 as t };
+export { imp2_exports as n, imp1_exports as r, imp3_exports as t };
 ```
 
 ## main.js
@@ -36,13 +36,13 @@ import assert from "node:assert";
 
 //#region main.js
 const load = async () => {
-	import("./imp.js").then((n) => n.s).then((m) => {
+	import("./imp.js").then((n) => n.r).then((m) => {
 		assert.strictEqual(m.imp1, 1);
 	});
-	import("./imp.js").then((n) => n.a).then((m) => {
+	import("./imp.js").then((n) => n.n).then((m) => {
 		assert.strictEqual(m.imp2, 2);
 	});
-	import("./imp.js").then((n) => n.r).then((m) => {
+	import("./imp.js").then((n) => n.t).then((m) => {
 		assert.deepEqual(JSON.parse(JSON.stringify(m)), {
 			imp3: 3,
 			imp33: 33
@@ -154,40 +154,16 @@ const imp3 = 3;
 const imp33 = 33;
 
 //#endregion
-Object.defineProperty(exports, 'imp1', {
-  enumerable: true,
-  get: function () {
-    return imp1;
-  }
-});
 Object.defineProperty(exports, 'imp1_exports', {
   enumerable: true,
   get: function () {
     return imp1_exports;
   }
 });
-Object.defineProperty(exports, 'imp2', {
-  enumerable: true,
-  get: function () {
-    return imp2;
-  }
-});
 Object.defineProperty(exports, 'imp2_exports', {
   enumerable: true,
   get: function () {
     return imp2_exports;
-  }
-});
-Object.defineProperty(exports, 'imp3', {
-  enumerable: true,
-  get: function () {
-    return imp3;
-  }
-});
-Object.defineProperty(exports, 'imp33', {
-  enumerable: true,
-  get: function () {
-    return imp33;
   }
 });
 Object.defineProperty(exports, 'imp3_exports', {

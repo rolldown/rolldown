@@ -21,7 +21,6 @@ Promise.resolve().then(() => foo_exports).then(({ bar: b }) => {
 });
 
 //#endregion
-export { bar as t };
 ```
 
 # Variant: [format: Cjs]
@@ -47,11 +46,4 @@ Promise.resolve().then(() => foo_exports).then(({ bar: b }) => {
 });
 
 //#endregion
-exports.bar = bar;
-Object.defineProperty(exports, 'foo_exports', {
-  enumerable: true,
-  get: function () {
-    return foo_exports;
-  }
-});
 ```

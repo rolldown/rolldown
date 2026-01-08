@@ -33,5 +33,4 @@ Promise.resolve().then(() => share_exports).then((mod) => {
 });
 
 //#endregion
-export { share_default$1 as n, share_default as t };
 ```

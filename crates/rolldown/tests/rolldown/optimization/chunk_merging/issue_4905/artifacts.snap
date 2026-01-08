@@ -21,7 +21,6 @@ Promise.resolve().then(() => foo_exports).then((mod) => {
 });
 
 //#endregion
-export { foo as t };
 ```
 
 # Variant: [format: Cjs]
@@ -46,11 +45,4 @@ Promise.resolve().then(() => foo_exports).then((mod) => {
 });
 
 //#endregion
-exports.foo = foo;
-Object.defineProperty(exports, 'foo_exports', {
-  enumerable: true,
-  get: function () {
-    return foo_exports;
-  }
-});
 ```

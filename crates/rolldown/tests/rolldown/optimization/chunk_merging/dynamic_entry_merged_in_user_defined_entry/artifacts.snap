@@ -28,7 +28,6 @@ var init_entry = __esmMin((() => {
 
 //#endregion
 init_entry();
-export { init_lib as n, a as t };
 ```
 
 # Variant: [format: Cjs]
@@ -61,17 +60,4 @@ var init_entry = __esmMin((() => {
 
 //#endregion
 init_entry();
-exports.a = a;
-Object.defineProperty(exports, 'init_lib', {
-  enumerable: true,
-  get: function () {
-    return init_lib;
-  }
-});
-Object.defineProperty(exports, 'lib_exports', {
-  enumerable: true,
-  get: function () {
-    return lib_exports;
-  }
-});
 ```

@@ -21,9 +21,8 @@ Promise.resolve().then(() => foo_exports).then((mod) => {
 });
 
 //#endregion
-export { foo as t };
 ```
 
 # Output Stats
 
-- main.js, is_entry true, is_dynamic_entry false, exports ["t"]
+- main.js, is_entry true, is_dynamic_entry false, exports []

@@ -24,12 +24,11 @@ Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs_module())).then
 });
 
 //#endregion
-export { require_cjs_module as t };
 ```
 
 # Output Stats
 
-- main.js, is_entry true, is_dynamic_entry false, exports ["t"]
+- main.js, is_entry true, is_dynamic_entry false, exports []
 
 # Variant: [format: Cjs]
 
@@ -57,14 +56,8 @@ Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs_module())).then
 });
 
 //#endregion
-Object.defineProperty(exports, 'require_cjs_module', {
-  enumerable: true,
-  get: function () {
-    return require_cjs_module;
-  }
-});
 ```
 
 ## Output Stats
 
-- main.js, is_entry true, is_dynamic_entry false, exports ["require_cjs_module"]
+- main.js, is_entry true, is_dynamic_entry false, exports []

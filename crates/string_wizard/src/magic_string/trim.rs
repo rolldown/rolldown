@@ -9,7 +9,9 @@ use crate::MagicString;
 /// Maximum allowed length for regex patterns to prevent DoS attacks
 const MAX_PATTERN_LENGTH: usize = 100;
 
-/// Global cache for compiled regex patterns
+/// Global cache for compiled regex patterns.
+/// Cache size is naturally bounded by MAX_PATTERN_LENGTH and the limited set of
+/// trim patterns used in practice (typically just whitespace and newline patterns).
 static REGEX_CACHE: OnceLock<Mutex<HashMap<String, regex::Regex>>> = OnceLock::new();
 
 /// Get or create a cached regex from the pattern
@@ -23,9 +25,8 @@ fn get_cached_regex(regex_pattern: &str) -> Option<regex::Regex> {
 
   match regex::Regex::new(regex_pattern) {
     Ok(compiled) => {
-      let re_clone = compiled.clone();
-      cache_guard.insert(regex_pattern.to_string(), compiled);
-      Some(re_clone)
+      cache_guard.insert(regex_pattern.to_string(), compiled.clone());
+      Some(compiled)
     }
     Err(_) => None,
   }
@@ -228,6 +229,11 @@ fn trim_deque_end<'a>(deque: &mut VecDeque<Cow<'a, str>>, pattern: &str) -> bool
 /// - "\\s" -> whitespace
 /// - "[\\r\\n]" -> newlines only
 /// - Any other valid regex pattern
+///
+/// # Security Note
+/// Pattern length is validated to mitigate ReDoS attacks, but complex nested
+/// patterns (e.g., `(?:a+)+`) may still cause performance issues within the limit.
+/// Callers should validate pattern sources in security-sensitive contexts.
 fn trim_start_pattern<'a>(s: &'a str, pattern: &str) -> &'a str {
   // Fast path for common patterns
   match pattern {
@@ -256,6 +262,11 @@ fn trim_start_pattern<'a>(s: &'a str, pattern: &str) -> &'a str {
 /// - "\\s" -> whitespace
 /// - "[\\r\\n]" -> newlines only
 /// - Any other valid regex pattern
+///
+/// # Security Note
+/// Pattern length is validated to mitigate ReDoS attacks, but complex nested
+/// patterns (e.g., `(?:a+)+`) may still cause performance issues within the limit.
+/// Callers should validate pattern sources in security-sensitive contexts.
 fn trim_end_pattern<'a>(s: &'a str, pattern: &str) -> &'a str {
   // Fast path for common patterns
   match pattern {

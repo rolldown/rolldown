@@ -12,24 +12,24 @@
  *
  * BindingMagicString API (supported methods):
  *   - constructor(source: string)
- *   - replace(from: string, to: string): void
- *   - replaceAll(from: string, to: string): void
- *   - prepend(content: string): void
- *   - append(content: string): void
- *   - prependLeft(index: number, content: string): void
- *   - prependRight(index: number, content: string): void
- *   - appendLeft(index: number, content: string): void
- *   - appendRight(index: number, content: string): void
- *   - overwrite(start: number, end: number, content: string): void
+ *   - replace(from: string, to: string): this
+ *   - replaceAll(from: string, to: string): this
+ *   - prepend(content: string): this
+ *   - append(content: string): this
+ *   - prependLeft(index: number, content: string): this
+ *   - prependRight(index: number, content: string): this
+ *   - appendLeft(index: number, content: string): this
+ *   - appendRight(index: number, content: string): this
+ *   - overwrite(start: number, end: number, content: string): this
  *   - toString(): string
  *   - hasChanged(): boolean
  *   - length(): number
  *   - isEmpty(): boolean
- *   - remove(start: number, end: number): void
- *   - update(start: number, end: number, content: string): void
- *   - relocate(start: number, end: number, to: number): void
- *   - move(start: number, end: number, index: number): void (alias for relocate)
- *   - indent(indentor?: string | undefined | null): void
+ *   - remove(start: number, end: number): this
+ *   - update(start: number, end: number, content: string): this
+ *   - relocate(start: number, end: number, to: number): this
+ *   - move(start: number, end: number, index: number): this (alias for relocate)
+ *   - indent(indentor?: string | undefined | null): this
  *
  * NOT supported (will be skipped):
  *   - constructor options (filename, ignoreList, indentExclusionRanges)
@@ -38,7 +38,7 @@
  *   - trim, trimStart, trimEnd, trimLines
  *   - lastChar, lastLine
  *   - original property
- *   - Method chaining (methods return void, not this)
+ *   - replace/replaceAll with regex or function replacer
  */
 
 import { writeFileSync } from 'node:fs';
@@ -70,14 +70,11 @@ const SKIP_DESCRIBE_BLOCKS = [
   'trimEnd',
   'trimLines',
   'insert', // deprecated, causes errors
-  'hasChanged', // uses clone which is not supported
-  'replace', // replace with function/regex not fully supported
-  'replaceAll', // replaceAll with function/regex not fully supported
-  'overwrite', // complex overwrite scenarios cause panics
-  'update', // complex update scenarios cause panics
+  'overwrite', // complex overwrite scenarios cause panics - many tests cause "Cannot split a chunk"
+  'update', // complex update scenarios cause panics - many tests cause "Cannot split a chunk"
   'remove', // complex remove scenarios cause panics
-  'isEmpty', // uses remove which affects length differently
-  'length', // length() returns original length, not current length after modifications
+  // Note: hasChanged, replace, replaceAll, isEmpty, length
+  // are now enabled with individual test skips for problematic cases
 ];
 
 // Individual tests to skip (by partial match of test name)
@@ -107,6 +104,22 @@ const SKIP_TESTS = [
   'should replace then remove', // causes split chunk panic
   'preserves intended order', // uses slice which is not supported
   'excluded characters', // indent exclude option not supported
+  // hasChanged tests that use clone
+  'should not report change if content is identical', // uses clone
+  'should works', // uses clone
+  // replace/replaceAll tests that use regex or function replacer
+  'works with global regex replace', // regex not supported
+  'works with global regex replace $$', // regex not supported
+  'works with global regex replace function', // function replacer not supported
+  'replace function offset', // function replacer not supported
+  'works with string replace and function replacer', // function replacer not supported
+  'should ignore non-changed replacements', // uses function replacer
+  'global regex result the same as .replace', // regex not supported
+  'rejects with non-global regexp', // regex not supported
+  'with offset', // uses offset option not supported
+  // length/isEmpty tests that rely on modified length
+  'should support length', // length returns original length
+  'should support isEmpty', // isEmpty behavior differs
 ];
 
 async function downloadFile(filename) {

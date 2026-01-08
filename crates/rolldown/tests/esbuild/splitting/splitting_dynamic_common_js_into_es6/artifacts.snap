@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region entry.js
-import("./foo.js").then(__toDynamicImportESM()).then(({ default: { bar } }) => console.log(bar));
+import("./foo.js").then((m) => /* @__PURE__ */ __toESM(m.default)).then(({ default: { bar } }) => console.log(bar));
 
 //#endregion
 export { __commonJSMin as t };

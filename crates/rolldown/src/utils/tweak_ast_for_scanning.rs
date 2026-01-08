@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use oxc::allocator::{Address, Allocator, GetAddress, TakeIn};
 use oxc::ast::NONE;
-use oxc::ast::ast::{self, BindingPatternKind, Declaration, ImportOrExportKind, Statement};
+use oxc::ast::ast::{self, BindingPattern, Declaration, ImportOrExportKind, Statement};
 use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::span::{GetSpanMut, SPAN, Span};
 use rolldown_ecmascript_utils::{AstSnippet, StatementExt};
@@ -197,7 +197,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
         .iter()
         // TODO: support nested destructuring tree shake, `export const {a, b} = obj; export const
         // [a, b] = arr;`
-        .any(|declarator| matches!(declarator.id.kind, BindingPatternKind::BindingIdentifier(_)))
+        .any(|declarator| matches!(declarator.id, BindingPattern::BindingIdentifier(_)))
     {
       let rewritten = self.split_var_declaration(var_decl, Some(named_decl.span));
       self.statement_replace_map.insert(self.statement_stack.last().copied().unwrap(), rewritten);

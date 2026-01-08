@@ -250,9 +250,9 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
     // TODO: Warning same import record has different import attributes. https://tinyurl.com/2ddnbbc8
     named_imports.iter().for_each(|(idx, named_import)| {
       let module = ctx.link_output.module_table[*idx].as_normal().unwrap();
-      if module.import_attribute_map.contains_key(&named_import.record_id) {
+      if module.import_attribute_map.contains_key(&named_import.record_idx) {
         if import_attribute.is_none() {
-          import_attribute = Some((module.idx, named_import.record_id));
+          import_attribute = Some((module.idx, named_import.record_idx));
         }
       }
     });

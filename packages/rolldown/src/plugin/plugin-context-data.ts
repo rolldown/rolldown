@@ -99,9 +99,7 @@ export class PluginContextData {
     return index;
   }
 
-  getSavedResolveOptions(
-    receipt: number,
-  ): PluginContextResolveOptions | undefined {
+  getSavedResolveOptions(receipt: number): PluginContextResolveOptions | undefined {
     return this.resolveOptionsMap.get(receipt);
   }
 
@@ -118,10 +116,7 @@ export class PluginContextData {
   }
 
   getInputOptions(opts: BindingNormalizedOptions): NormalizedInputOptions {
-    this.normalizedInputOptions ??= new NormalizedInputOptionsImpl(
-      opts,
-      this.onLog,
-    );
+    this.normalizedInputOptions ??= new NormalizedInputOptionsImpl(opts, this.onLog);
     return this.normalizedInputOptions;
   }
 

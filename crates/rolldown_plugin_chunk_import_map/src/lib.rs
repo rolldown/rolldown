@@ -50,7 +50,7 @@ impl Plugin for ChunkImportMapPlugin {
         let hasher = match &chunk.facade_module_id {
           Some(module_id) => {
             let mut hasher = Xxh3::with_seed(0);
-            module_id.resource_id().as_str().hash(&mut hasher);
+            module_id.as_str().hash(&mut hasher);
             hasher
           }
           None => {
@@ -59,7 +59,7 @@ impl Plugin for ChunkImportMapPlugin {
             if used_names.contains(&chunk.name) {
               // Reduce the impact factor
               let Some(module_id) = chunk.module_ids.iter().min() else { continue };
-              module_id.resource_id().as_str().hash(&mut hasher);
+              module_id.as_str().hash(&mut hasher);
             } else {
               used_names.insert(chunk.name.clone());
               chunk.name.hash(&mut hasher);

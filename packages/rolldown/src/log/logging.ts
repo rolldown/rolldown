@@ -36,10 +36,7 @@ export interface RollupError extends RollupLog {
   watchFiles?: string[];
 }
 
-export type LogOrStringHandler = (
-  level: LogLevelWithError,
-  log: RollupLogWithString,
-) => void;
+export type LogOrStringHandler = (level: LogLevelWithError, log: RollupLogWithString) => void;
 
 const LOG_LEVEL_SILENT: LogLevelOption = 'silent';
 export const LOG_LEVEL_ERROR = 'error';

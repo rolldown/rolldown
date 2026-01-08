@@ -35,16 +35,12 @@ const buildMeta = (function makeBuildMeta() {
         case 'rolldown-wasi':
           return 'rolldown-pkg-wasi';
         default:
-          console.warn(
-            `Unknown target: ${process.env.TARGET}, defaulting to 'rolldown-pkg'`,
-          );
+          console.warn(`Unknown target: ${process.env.TARGET}, defaulting to 'rolldown-pkg'`);
           return 'rolldown-pkg';
       }
     })();
 
-  const pkgRoot = target === 'browser-pkg'
-    ? nodePath.resolve(__dirname, '../browser')
-    : __dirname;
+  const pkgRoot = target === 'browser-pkg' ? nodePath.resolve(__dirname, '../browser') : __dirname;
 
   return {
     isCI: !!process.env.CI,
@@ -52,18 +48,14 @@ const buildMeta = (function makeBuildMeta() {
     target,
     pkgRoot,
     buildOutputDir: nodePath.resolve(pkgRoot, 'dist'),
-    pkgJson: JSON.parse(
-      fs.readFileSync(nodePath.resolve(pkgRoot, 'package.json'), 'utf-8'),
-    ),
+    pkgJson: JSON.parse(fs.readFileSync(nodePath.resolve(pkgRoot, 'package.json'), 'utf-8')),
     desireWasmFiles: target === 'browser-pkg' || target === 'rolldown-pkg-wasi',
   };
 })();
 
 const bindingFile = nodePath.resolve('src/binding.cjs');
 const bindingFileWasi = nodePath.resolve('src/rolldown-binding.wasi.cjs');
-const bindingFileWasiBrowser = nodePath.resolve(
-  'src/rolldown-binding.wasi-browser.js',
-);
+const bindingFileWasiBrowser = nodePath.resolve('src/rolldown-binding.wasi-browser.js');
 
 const configs: BuildOptions[] = [
   withShared({
@@ -93,9 +85,7 @@ if (buildMeta.target === 'browser-pkg') {
     // But in browser build, we don't have `process.`, so we polyfill them
     'process.env.ROLLDOWN_TEST': 'false',
   };
-  configs.push(
-    init,
-  );
+  configs.push(init);
 }
 
 (async () => {
@@ -109,28 +99,27 @@ if (buildMeta.target === 'browser-pkg') {
   generateRuntimeTypes();
 })();
 
-function withShared(
-  { browserBuild: isBrowserBuild, ...options }:
-    & { browserBuild?: boolean }
-    & BuildOptions,
-): BuildOptions {
+function withShared({
+  browserBuild: isBrowserBuild,
+  ...options
+}: { browserBuild?: boolean } & BuildOptions): BuildOptions {
   return {
     input: {
       index: './src/index',
       'plugins-index': './src/plugins-index',
       'experimental-index': './src/experimental-index',
-      ...!isBrowserBuild
+      ...(!isBrowserBuild
         ? {
-          'cli-setup': './src/cli/setup-index',
-          cli: './src/cli/index',
-          config: './src/config',
-          'parallel-plugin': './src/parallel-plugin',
-          'parallel-plugin-worker': './src/parallel-plugin-worker',
-          'filter-index': './src/filter-index',
-          'parse-ast-index': './src/parse-ast-index',
-          'get-log-filter': './src/get-log-filter',
-        }
-        : {},
+            'cli-setup': './src/cli/setup-index',
+            cli: './src/cli/index',
+            config: './src/config',
+            'parallel-plugin': './src/parallel-plugin',
+            'parallel-plugin-worker': './src/parallel-plugin-worker',
+            'filter-index': './src/filter-index',
+            'parse-ast-index': './src/parse-ast-index',
+            'get-log-filter': './src/get-log-filter',
+          }
+        : {}),
     },
     platform: isBrowserBuild ? 'browser' : 'node',
     resolve: {
@@ -144,8 +133,7 @@ function withShared(
     // Do not move this line up or down, it's here for a reason
     ...options,
     plugins: [
-      buildMeta.desireWasmFiles &&
-      resolveWasiBinding(isBrowserBuild),
+      buildMeta.desireWasmFiles && resolveWasiBinding(isBrowserBuild),
       CopyAddonPlugin({
         isCI: buildMeta.isCI,
         isReleasingPkgInCI: buildMeta.isReleasingPkgInCI,
@@ -155,9 +143,7 @@ function withShared(
       options.plugins,
     ],
     treeshake: {
-      moduleSideEffects: [
-        { test: /\/signal-exit\//, sideEffects: false },
-      ],
+      moduleSideEffects: [{ test: /\/signal-exit\//, sideEffects: false }],
     },
     transform: {
       target: 'node22',
@@ -183,9 +169,7 @@ function resolveWasiBinding(isBrowserBuild?: boolean): Plugin {
         const resolution = await this.resolve(id, importer, options);
 
         if (resolution?.id === bindingFile) {
-          const id = isBrowserBuild
-            ? bindingFileWasiBrowser
-            : bindingFileWasi;
+          const id = isBrowserBuild ? bindingFileWasiBrowser : bindingFileWasi;
           return { id, external: 'relative' };
         }
 
@@ -205,8 +189,11 @@ function removeBuiltModules(): Plugin {
           return this.resolve('pathe');
         }
         if (
-          id === 'node:os' || id === 'node:worker_threads' ||
-          id === 'node:url' || id === 'node:fs/promises' || id === 'node:fs' ||
+          id === 'node:os' ||
+          id === 'node:worker_threads' ||
+          id === 'node:url' ||
+          id === 'node:fs/promises' ||
+          id === 'node:fs' ||
           id === 'node:util'
         ) {
           // conditional import
@@ -253,16 +240,9 @@ function generateRuntimeTypes() {
     __dirname,
     '../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js',
   );
-  const outputFile = nodePath.resolve(
-    buildMeta.buildOutputDir,
-    'experimental-runtime-types.d.ts',
-  );
+  const outputFile = nodePath.resolve(buildMeta.buildOutputDir, 'experimental-runtime-types.d.ts');
 
-  console.log(
-    styleText('green', '[build:done]'),
-    'Generating dts from',
-    inputFile,
-  );
+  console.log(styleText('green', '[build:done]'), 'Generating dts from', inputFile);
 
   const jsCode = fs.readFileSync(inputFile, 'utf-8');
   const result = ts.transpileDeclaration(jsCode, {
@@ -282,22 +262,15 @@ function generateRuntimeTypes() {
 }
 
 function getTsconfigCompilerOptionsForFile(file: string) {
-  const tsconfigPath = ts.findConfigFile(
-    file,
-    (path) => ts.sys.fileExists(path),
-  );
+  const tsconfigPath = ts.findConfigFile(file, (path) => ts.sys.fileExists(path));
   let compilerOptions = ts.getDefaultCompilerOptions();
   if (tsconfigPath) {
-    const parsedConfig = ts.getParsedCommandLineOfConfigFile(
-      tsconfigPath,
-      undefined,
-      {
-        ...ts.sys,
-        onUnRecoverableConfigFileDiagnostic(diag) {
-          console.error(diag);
-        },
+    const parsedConfig = ts.getParsedCommandLineOfConfigFile(tsconfigPath, undefined, {
+      ...ts.sys,
+      onUnRecoverableConfigFileDiagnostic(diag) {
+        console.error(diag);
       },
-    );
+    });
     if (!parsedConfig) throw new Error();
     if (parsedConfig.errors.length > 0) {
       throw new AggregateError(parsedConfig.errors);

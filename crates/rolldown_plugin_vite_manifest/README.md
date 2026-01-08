@@ -19,10 +19,12 @@ export default defineConfig({
   input: {
     entry: './main.ts',
   },
-  plugins: [viteManifestPlugin({
-    root: path.resolve(import.meta.dirname),
-    outPath: path.resolve(import.meta.dirname, 'dist/manifest.json'),
-  })],
+  plugins: [
+    viteManifestPlugin({
+      root: path.resolve(import.meta.dirname),
+      outPath: path.resolve(import.meta.dirname, 'dist/manifest.json'),
+    }),
+  ],
 });
 ```
 

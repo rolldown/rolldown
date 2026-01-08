@@ -80,7 +80,7 @@ impl GenerateStage<'_> {
           let mut module_ids = chunk_graph.chunk_table[*chunk_id]
             .modules
             .iter()
-            .map(|id| self.link_output.module_table[*id].id())
+            .map(|id| self.link_output.module_table[*id].id().as_str())
             .collect::<Vec<_>>();
           module_ids.sort_unstable();
           module_ids
@@ -210,7 +210,7 @@ impl GenerateStage<'_> {
             });
 
           module.named_imports.iter().for_each(|(_, import)| {
-            let rec = &module.import_records[import.record_id];
+            let rec = &module.import_records[import.record_idx];
             if let Module::External(importee) = &self.link_output.module_table[rec.resolved_module]
             {
               imports_from_external_modules
@@ -306,23 +306,23 @@ impl GenerateStage<'_> {
     );
     // shadowing previous immutable borrow
     let symbols = &mut self.link_output.symbol_db;
-    for (chunk_id, symbol_list) in chunk_id_to_symbols_vec {
+    for (chunk_idx, symbol_list) in chunk_id_to_symbols_vec {
       for declared in symbol_list {
         let declared = declared.inner();
         if cfg!(debug_assertions) {
           let symbol_data = symbols.get(declared);
           debug_assert!(
-            symbol_data.chunk_id.unwrap_or(chunk_id) == chunk_id,
-            "Symbol: {:?}, {:?} in {:?} should only belong to one chunk. Existed {:?}, new {chunk_id:?}",
+            symbol_data.chunk_idx.unwrap_or(chunk_idx) == chunk_idx,
+            "Symbol: {:?}, {:?} in {:?} should only belong to one chunk. Existed {:?}, new {chunk_idx:?}",
             declared.name(symbols),
             declared,
-            self.link_output.module_table[declared.owner].id(),
-            symbol_data.chunk_id,
+            self.link_output.module_table[declared.owner].id().as_str(),
+            symbol_data.chunk_idx,
           );
         }
 
         let symbol_data = symbols.get_mut(declared);
-        symbol_data.chunk_id = Some(chunk_id);
+        symbol_data.chunk_idx = Some(chunk_idx);
       }
     }
   }
@@ -338,155 +338,192 @@ impl GenerateStage<'_> {
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
     index_chunk_indirect_imports_from_external_modules: &mut IndexChunkAllImportsFromExternalModules,
   ) {
-    chunk_graph.chunk_table.iter_enumerated().for_each(|(chunk_id, chunk)| {
-      match chunk.kind {
-        ChunkKind::EntryPoint { module: module_idx, meta, .. } => {
-          let is_dynamic_imported = meta.contains(ChunkMeta::DynamicImported);
-          let is_user_defined = meta.contains(ChunkMeta::UserDefinedEntry);
+    chunk_graph
+      .chunk_table
+      .iter_enumerated()
+      // Skip removed chunks - they have been merged into other chunks
+      .filter(|(chunk_id, _)| !chunk_graph.removed_chunk_idx.contains(chunk_id))
+      .for_each(|(chunk_id, chunk)| {
+        match chunk.kind {
+          ChunkKind::EntryPoint { module: module_idx, meta, .. } => {
+            let is_dynamic_imported = meta.contains(ChunkMeta::DynamicImported);
+            let is_user_defined = meta.contains(ChunkMeta::UserDefinedEntry);
 
-          let normalized_entry_signatures = normalize_preserve_entry_signature(
-            &self.link_output.overrode_preserve_entry_signature_map,
-            self.options,
-            module_idx,
-          );
-          let needs_export_entry_signatures = if self.options.preserve_modules {
-            if is_user_defined {
-              !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
+            let normalized_entry_signatures = normalize_preserve_entry_signature(
+              &self.link_output.overrode_preserve_entry_signature_map,
+              self.options,
+              module_idx,
+            );
+            let needs_export_entry_signatures = if self.options.preserve_modules {
+              if is_user_defined {
+                !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
+              } else {
+                is_dynamic_imported
+              }
             } else {
               is_dynamic_imported
-            }
-          } else {
-            is_dynamic_imported
-              || !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
-          };
-          if needs_export_entry_signatures {
-            // If the entry point is external, we don't need to compute exports.
-            let meta = &self.link_output.metas[module_idx];
-            for (name, symbol) in meta
-              .referenced_canonical_exports_symbols(
-                module_idx,
-                if is_user_defined {
-                  EntryPointKind::UserDefined
-                } else {
-                  EntryPointKind::DynamicImport
-                },
-                &self.link_output.dynamic_import_exports_usage_map,
-                false,
-              )
-              .map(|(name, export)| (name, export.symbol_ref))
-            {
-              index_chunk_exported_symbols[chunk_id].entry(symbol).or_default().push(name.clone());
-            }
-          }
-        }
-        ChunkKind::Common => {
-          if let Some(set) = chunk_graph.common_chunk_exported_facade_chunk_namespace.get(&chunk_id)
-          {
-            for dynamic_entry_module in set {
-              index_chunk_exported_symbols[chunk_id]
-                .entry(SymbolId::module_namespace_symbol_ref(*dynamic_entry_module))
-                .or_default();
-            }
-          }
-        }
-      }
-
-      let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
-      for import_ref in chunk_meta_imports.iter().copied() {
-        if !self.link_output.used_symbol_refs.contains(&import_ref) {
-          continue;
-        }
-        // If the symbol from external module and the format is commonjs, we might need to insert runtime
-        // symbol ref `__toESM` if it's being used (for namespace or default imports)
-        // related to https://github.com/rolldown/rolldown/blob/c100a53c6cfc67b4f92e230da072eef8494862ef/crates/rolldown/src/ecmascript/format/cjs.rs?plain=1#L120-L124
-        let import_ref = if self.link_output.module_table[import_ref.owner].is_external() {
-          index_chunk_indirect_imports_from_external_modules[chunk_id].insert(import_ref.owner);
-          if matches!(self.options.format, OutputFormat::Esm) {
-            continue;
-          }
-
-          // Note: the `__toESM` might have been referenced during `collect_depended_symbols` phase
-          // for namespace or default imports from external modules.
-          // For named-only imports, we don't use __toESM, so we should not try to resolve it.
-          // Check if __toESM is actually used before trying to resolve it.
-          let to_esm_ref = self.link_output.runtime.resolve_symbol("__toESM");
-          if self.link_output.symbol_db.get(to_esm_ref).chunk_id.is_some() {
-            // __toESM is in a chunk, so it's being used
-            to_esm_ref
-          } else {
-            // __toESM is not being used, so skip this import
-            // This happens for named-only imports from external modules where we don't need interop
-            continue;
-          }
-        } else {
-          import_ref
-        };
-        let import_symbol = self.link_output.symbol_db.get(import_ref);
-        let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
-          let symbol_owner = &self.link_output.module_table[import_ref.owner];
-          let symbol_name = import_ref.name(&self.link_output.symbol_db);
-          panic!("Symbol {:?} in {:?} should belong to a chunk", symbol_name, symbol_owner.id())
-        });
-        // Check if the import is from another chunk
-        if chunk_id != importee_chunk_id {
-          index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);
-          let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
-          imports_from_other_chunks
-            .entry(importee_chunk_id)
-            .or_default()
-            .push(CrossChunkImportItem { import_ref });
-          index_chunk_exported_symbols[importee_chunk_id].entry(import_ref).or_default();
-        }
-      }
-
-      // If this is an entry point, make sure we import all chunks belonging to this entry point, even if there are no imports. We need to make sure these chunks are evaluated for their side effects too.
-      if let ChunkKind::EntryPoint { bit: importer_chunk_bit, .. } = &chunk.kind {
-        if self.options.preserve_modules {
-          let entry_module =
-            chunk.entry_module(&self.link_output.module_table).expect("Should have entry module");
-          entry_module
-            .import_records
-            .iter()
-            .filter(|rec| rec.kind != ImportKind::DynamicImport)
-            .for_each(|item| {
-              if !self.link_output.module_table[item.resolved_module]
-                .side_effects()
-                .has_side_effects()
+                || !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
+            };
+            if needs_export_entry_signatures {
+              // If the entry point is external, we don't need to compute exports.
+              let meta = &self.link_output.metas[module_idx];
+              for (name, symbol) in meta
+                .referenced_canonical_exports_symbols(
+                  module_idx,
+                  if is_user_defined {
+                    EntryPointKind::UserDefined
+                  } else {
+                    EntryPointKind::DynamicImport
+                  },
+                  &self.link_output.dynamic_import_exports_usage_map,
+                  false,
+                )
+                .map(|(name, export)| (name, export.symbol_ref))
               {
-                return;
+                index_chunk_exported_symbols[chunk_id]
+                  .entry(symbol)
+                  .or_default()
+                  .push(name.clone());
               }
-              let Some(importee_chunk_idx) = chunk_graph.module_to_chunk[item.resolved_module]
-              else {
-                return;
-              };
-              index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
-              let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
-              imports_from_other_chunks.entry(importee_chunk_idx).or_default();
-            });
-        } else {
-          chunk_graph
-            .chunk_table
-            .iter_enumerated()
-            .filter(|(id, _)| *id != chunk_id)
-            .filter(|(_, importee_chunk)| {
-              if self.options.experimental.is_strict_execution_order_enabled() {
-                // With strict_execution_order/wrapping, modules aren't executed in loading but on-demand.
-                // So we don't need to do plain imports to address the side effects. It would be ensured
-                // by those `init_xxx()` calls.
-                false
-              } else {
-                importee_chunk.bits.has_bit(*importer_chunk_bit)
-                  && importee_chunk.has_side_effect(&self.link_output.module_table)
+            }
+          }
+          ChunkKind::Common => {
+            if let Some(set) =
+              chunk_graph.common_chunk_exported_facade_chunk_namespace.get(&chunk_id)
+            {
+              for dynamic_entry_module in set {
+                let meta = &self.link_output.metas[*dynamic_entry_module];
+                match meta.wrap_kind() {
+                  WrapKind::Cjs => {
+                    // For CJS modules, export only wrapper_ref (require_xxx)
+                    // Generated code: `import('./chunk.js').then((n) => __toESM(n.require_xxx()))`
+                    if let Some(wrapper_ref) = meta.wrapper_ref {
+                      index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
+                    }
+                  }
+                  WrapKind::Esm => {
+                    // For ESM modules, export both wrapper_ref (init_xxx) and namespace
+                    // Generated code: `import('./chunk.js').then((n) => (n.init_xxx(), n.namespace))`
+                    if let Some(wrapper_ref) = meta.wrapper_ref {
+                      index_chunk_exported_symbols[chunk_id].entry(wrapper_ref).or_default();
+                    }
+                    index_chunk_exported_symbols[chunk_id]
+                      .entry(SymbolId::module_namespace_symbol_ref(*dynamic_entry_module))
+                      .or_default();
+                  }
+                  WrapKind::None => {
+                    // For non-wrapped modules, export only namespace
+                    // Generated code: `import('./chunk.js').then((n) => n.namespace)`
+                    index_chunk_exported_symbols[chunk_id]
+                      .entry(SymbolId::module_namespace_symbol_ref(*dynamic_entry_module))
+                      .or_default();
+                  }
+                }
               }
-            })
-            .for_each(|(importee_chunk_id, _)| {
-              index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);
-              let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
-              imports_from_other_chunks.entry(importee_chunk_id).or_default();
-            });
+            }
+          }
         }
-      }
-    });
+
+        let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
+        for import_ref in chunk_meta_imports.iter().copied() {
+          if !self.link_output.used_symbol_refs.contains(&import_ref) {
+            continue;
+          }
+          // If the symbol from external module and the format is commonjs, we might need to insert runtime
+          // symbol ref `__toESM` if it's being used (for namespace or default imports)
+          // related to https://github.com/rolldown/rolldown/blob/c100a53c6cfc67b4f92e230da072eef8494862ef/crates/rolldown/src/ecmascript/format/cjs.rs?plain=1#L120-L124
+          let import_ref = if self.link_output.module_table[import_ref.owner].is_external() {
+            index_chunk_indirect_imports_from_external_modules[chunk_id].insert(import_ref.owner);
+            if matches!(self.options.format, OutputFormat::Esm) {
+              continue;
+            }
+
+            // Note: the `__toESM` might have been referenced during `collect_depended_symbols` phase
+            // for namespace or default imports from external modules.
+            // For named-only imports, we don't use __toESM, so we should not try to resolve it.
+            // Check if __toESM is actually used before trying to resolve it.
+            let to_esm_ref = self.link_output.runtime.resolve_symbol("__toESM");
+            if self.link_output.symbol_db.get(to_esm_ref).chunk_idx.is_some() {
+              // __toESM is in a chunk, so it's being used
+              to_esm_ref
+            } else {
+              // __toESM is not being used, so skip this import
+              // This happens for named-only imports from external modules where we don't need interop
+              continue;
+            }
+          } else {
+            import_ref
+          };
+          let import_symbol = self.link_output.symbol_db.get(import_ref);
+          let importee_chunk_idx = import_symbol.chunk_idx.unwrap_or_else(|| {
+            let symbol_owner = &self.link_output.module_table[import_ref.owner];
+            let symbol_name = import_ref.name(&self.link_output.symbol_db);
+            panic!(
+              "Symbol {:?} in {:?} should belong to a chunk",
+              symbol_name,
+              symbol_owner.id().as_str()
+            )
+          });
+          // Check if the import is from another chunk
+          if chunk_id != importee_chunk_idx {
+            index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
+            let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
+            imports_from_other_chunks
+              .entry(importee_chunk_idx)
+              .or_default()
+              .push(CrossChunkImportItem { import_ref });
+            index_chunk_exported_symbols[importee_chunk_idx].entry(import_ref).or_default();
+          }
+        }
+
+        // If this is an entry point, make sure we import all chunks belonging to this entry point, even if there are no imports. We need to make sure these chunks are evaluated for their side effects too.
+        if let ChunkKind::EntryPoint { bit: importer_chunk_bit, .. } = &chunk.kind {
+          if self.options.preserve_modules {
+            let entry_module =
+              chunk.entry_module(&self.link_output.module_table).expect("Should have entry module");
+            entry_module
+              .import_records
+              .iter()
+              .filter(|rec| rec.kind != ImportKind::DynamicImport)
+              .for_each(|item| {
+                if !self.link_output.module_table[item.resolved_module]
+                  .side_effects()
+                  .has_side_effects()
+                {
+                  return;
+                }
+                let Some(importee_chunk_idx) = chunk_graph.module_to_chunk[item.resolved_module]
+                else {
+                  return;
+                };
+                index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
+                let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
+                imports_from_other_chunks.entry(importee_chunk_idx).or_default();
+              });
+          } else {
+            chunk_graph
+              .chunk_table
+              .iter_enumerated()
+              .filter(|(id, _)| *id != chunk_id)
+              .filter(|(_, importee_chunk)| {
+                if self.options.experimental.is_strict_execution_order_enabled() {
+                  // With strict_execution_order/wrapping, modules aren't executed in loading but on-demand.
+                  // So we don't need to do plain imports to address the side effects. It would be ensured
+                  // by those `init_xxx()` calls.
+                  false
+                } else {
+                  importee_chunk.bits.has_bit(*importer_chunk_bit)
+                    && importee_chunk.has_side_effect(&self.link_output.module_table)
+                }
+              })
+              .for_each(|(importee_chunk_id, _)| {
+                index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);
+                let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
+                imports_from_other_chunks.entry(importee_chunk_id).or_default();
+              });
+          }
+        }
+      });
   }
 
   fn deconflict_exported_names(

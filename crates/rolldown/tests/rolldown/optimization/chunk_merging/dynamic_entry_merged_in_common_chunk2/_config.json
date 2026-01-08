@@ -1,0 +1,17 @@
+{
+  "config": {
+    "advancedChunks": {
+      "groups": [
+        {
+          "name": "imp",
+          "test": "imp"
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ]
+}

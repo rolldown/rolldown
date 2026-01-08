@@ -185,7 +185,7 @@ impl Plugin for ViteCSSPostPlugin {
     let mut is_pure_css_chunk = args.chunk.exports.is_empty();
     let mut css_chunk: Option<String> = None;
     for module_id in &args.chunk.module_ids {
-      let id = module_id.resource_id().as_str();
+      let id = module_id.as_str();
       if let Some(css) = styles.inner.get(id) {
         // `?transform-only` is used for ?url and shouldn't be included in normal CSS chunks
         if find_special_query(id, b"transform-only").is_some() {
@@ -210,7 +210,7 @@ impl Plugin for ViteCSSPostPlugin {
               .keys
               .iter()
               .zip(chunk.modules.values.iter())
-              .find(|(key, _)| key.resource_id().as_str() == importer_id)
+              .find(|(key, _)| key.as_str() == importer_id)
               .is_some_and(|(_, importer)| {
                 exp
                   .as_ref()

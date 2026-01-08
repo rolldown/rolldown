@@ -19,6 +19,8 @@ on:
       - 'pnpm-workspace.yaml'
       - '!packages/bench/**'
       - '!packages/debug/**'
+  pull_request:
+    types: [labeled, synchronize]
   workflow_dispatch:
 
 concurrency:
@@ -28,6 +30,9 @@ concurrency:
 jobs:
   vite-tests:
     name: Vite Tests
+    if: >
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'test: vite-tests')
     strategy:
       matrix:
         target: [ubuntu-latest, windows-latest]

@@ -1,10 +1,6 @@
 import picomatch from 'picomatch';
 import { describe, expect, test } from 'vitest';
-import {
-  exactRegex,
-  makeIdFiltersToMatchWithQuery,
-  prefixRegex,
-} from './simple-filters.js';
+import { exactRegex, makeIdFiltersToMatchWithQuery, prefixRegex } from './simple-filters.js';
 
 describe('exactRegex', () => {
   test('supports without flag parameter', () => {
@@ -69,11 +65,7 @@ describe('prefixRegex', () => {
 });
 
 describe('makeIdFiltersToMatchWithQuery', () => {
-  function expectWithAnyQuery(
-    matcher: (path: string) => boolean,
-    path: string,
-    expected: boolean,
-  ) {
+  function expectWithAnyQuery(matcher: (path: string) => boolean, path: string, expected: boolean) {
     expect(matcher(path), path).toBe(expected);
     expect(matcher(`${path}?foo`), `${path}?foo`).toBe(expected);
     expect(matcher(`${path}?foo=bar`), `${path}?foo=bar`).toBe(expected);

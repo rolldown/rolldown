@@ -1,9 +1,6 @@
 import type { BindingHookFilter, BindingPluginOptions } from '../binding.cjs';
 import { bindingifySourcemap } from '../types/sourcemap';
-import {
-  aggregateBindingErrorsIntoJsError,
-  unwrapBindingResult,
-} from '../utils/error';
+import { aggregateBindingErrorsIntoJsError, unwrapBindingResult } from '../utils/error';
 import { normalizeHook } from '../utils/normalize-hook';
 import { transformRenderedChunk } from '../utils/transform-rendered-chunk';
 import {
@@ -49,10 +46,7 @@ export function bindingifyRenderStart(
 }
 export function bindingifyRenderChunk(
   args: BindingifyPluginArgs,
-): PluginHookWithBindingExt<
-  BindingPluginOptions['renderChunk'],
-  BindingHookFilter | undefined
-> {
+): PluginHookWithBindingExt<BindingPluginOptions['renderChunk'], BindingHookFilter | undefined> {
   const hook = args.plugin.renderChunk;
   if (!hook) {
     return {};
@@ -65,10 +59,7 @@ export function bindingifyRenderChunk(
       if (args.pluginContextData.getRenderChunkMeta() == null) {
         args.pluginContextData.setRenderChunkMeta({
           chunks: Object.fromEntries(
-            Object.entries(meta.chunks).map(([key, value]) => [
-              key,
-              transformRenderedChunk(value),
-            ]),
+            Object.entries(meta.chunks).map(([key, value]) => [key, transformRenderedChunk(value)]),
           ),
         });
       }
@@ -190,17 +181,8 @@ export function bindingifyGenerateBundle(
         args.logLevel,
         args.watchMode,
       );
-      const output = transformToOutputBundle(
-        context,
-        unwrapBindingResult(bundle),
-        changed,
-      );
-      await handler.call(
-        context,
-        args.pluginContextData.getOutputOptions(opts),
-        output,
-        isWrite,
-      );
+      const output = transformToOutputBundle(context, unwrapBindingResult(bundle), changed);
+      await handler.call(context, args.pluginContextData.getOutputOptions(opts), output, isWrite);
       return collectChangedBundle(changed, output);
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -231,16 +213,8 @@ export function bindingifyWriteBundle(
         args.logLevel,
         args.watchMode,
       );
-      const output = transformToOutputBundle(
-        context,
-        unwrapBindingResult(bundle),
-        changed,
-      );
-      await handler.call(
-        context,
-        args.pluginContextData.getOutputOptions(opts),
-        output,
-      );
+      const output = transformToOutputBundle(context, unwrapBindingResult(bundle), changed);
+      await handler.call(context, args.pluginContextData.getOutputOptions(opts), output);
       return collectChangedBundle(changed, output);
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -257,7 +231,7 @@ export function bindingifyCloseBundle(
   const { handler, meta } = normalizeHook(hook);
 
   return {
-    plugin: async (ctx) => {
+    plugin: async (ctx, err) => {
       await handler.call(
         new PluginContextImpl(
           args.outputOptions,
@@ -268,6 +242,7 @@ export function bindingifyCloseBundle(
           args.logLevel,
           args.watchMode,
         ),
+        err ? aggregateBindingErrorsIntoJsError(err) : undefined,
       );
     },
     meta: bindingifyPluginHookMeta(meta),

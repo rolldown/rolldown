@@ -1,12 +1,6 @@
-import type {
-  MinifyOptions as BindingMinifyOptions,
-  PreRenderedChunk,
-} from '../binding.cjs';
+import type { MinifyOptions as BindingMinifyOptions, PreRenderedChunk } from '../binding.cjs';
 import type { RolldownOutputPluginOption } from '../plugin';
-import type {
-  SourcemapIgnoreListOption,
-  SourcemapPathTransformOption,
-} from '../types/misc';
+import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '../types/misc';
 import type { ModuleInfo } from '../types/module-info';
 import type { RenderedChunk } from '../types/rolldown-output';
 import type { NullValue, StringOrRegExp } from '../types/utils';
@@ -47,14 +41,7 @@ export interface GeneratedCodeOptions {
   profilerNames?: boolean;
 }
 
-export type ModuleFormat =
-  | 'es'
-  | 'cjs'
-  | 'esm'
-  | 'module'
-  | 'commonjs'
-  | 'iife'
-  | 'umd';
+export type ModuleFormat = 'es' | 'cjs' | 'esm' | 'module' | 'commonjs' | 'iife' | 'umd';
 
 export type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>;
 
@@ -88,9 +75,7 @@ export type AdvancedChunksNameFunction = (
   ctx: ChunkingContext,
 ) => string | NullValue;
 
-export type AdvancedChunksTestFunction = (
-  id: string,
-) => boolean | undefined | void;
+export type AdvancedChunksTestFunction = (id: string) => boolean | undefined | void;
 
 export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap'>;
 
@@ -216,6 +201,7 @@ export interface OutputOptions {
   generatedCode?: Partial<GeneratedCodeOptions>;
   externalLiveBindings?: boolean;
   inlineDynamicImports?: boolean;
+  dynamicImportInCjs?: boolean;
   /**
    * - Type: `((moduleId: string, meta: { getModuleInfo: (moduleId: string) => ModuleInfo | null }) => string | NullValue)`
    * - Object form is not supported.
@@ -364,9 +350,7 @@ export interface OutputOptions {
        * Constraints like `minSize`, `maxSize`, etc. are applied separately for different names returned by the function.
        * :::
        */
-      name:
-        | string
-        | AdvancedChunksNameFunction;
+      name: string | AdvancedChunksNameFunction;
       /**
        * - Type: `string | RegExp | ((id: string) => boolean | undefined | void);`
        *
@@ -507,11 +491,8 @@ interface OverwriteOutputOptionsForCli {
   };
 }
 
-export type OutputCliOptions =
-  & Omit<
-    OutputOptions,
-    | keyof OverwriteOutputOptionsForCli
-    | 'sourcemapIgnoreList'
-    | 'sourcemapPathTransform'
-  >
-  & OverwriteOutputOptionsForCli;
+export type OutputCliOptions = Omit<
+  OutputOptions,
+  keyof OverwriteOutputOptionsForCli | 'sourcemapIgnoreList' | 'sourcemapPathTransform'
+> &
+  OverwriteOutputOptionsForCli;

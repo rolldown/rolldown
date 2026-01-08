@@ -7,7 +7,7 @@ use oxc::{
   allocator::{self, IntoIn, TakeIn},
   ast::{
     NONE,
-    ast::{self, BindingPatternKind, Expression, SimpleAssignmentTarget, Statement},
+    ast::{self, BindingPattern, Expression, SimpleAssignmentTarget, Statement},
     match_member_expression,
   },
   ast_visit::{VisitMut, walk_mut},
@@ -234,13 +234,8 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             builder.variable_declarator(
               SPAN,
               ast::VariableDeclarationKind::Var,
-              builder.binding_pattern(
-                BindingPatternKind::BindingIdentifier(
-                  builder.alloc_binding_identifier(SPAN, *var_name),
-                ),
-                NONE,
-                false,
-              ),
+              builder.binding_pattern_binding_identifier(SPAN, *var_name),
+              NONE,
               None,
               false,
             )
@@ -305,7 +300,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
   fn visit_binding_identifier(&mut self, ident: &mut ast::BindingIdentifier<'ast>) {
     if let Some(symbol_id) = ident.symbol_id.get() {
-      let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
+      let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
 
       let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
       let symbol = self.ctx.symbol_db.get(canonical_ref);
@@ -384,7 +379,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             .get()
             .and_then(|ref_id| self.scope.scoping().get_reference(ref_id).symbol_id())
             .map(|id| {
-              let symbol_ref = self.ctx.symbol_db.canonical_ref_for((self.ctx.id, id).into());
+              let symbol_ref = self.ctx.symbol_db.canonical_ref_for((self.ctx.idx, id).into());
               self.ctx.side_effect_free_function_symbols.contains(&symbol_ref)
             })
             .unwrap_or(false);
@@ -642,8 +637,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     match it {
       ast::Declaration::VariableDeclaration(decl) => {
         for decl in &mut decl.declarations {
-          let (BindingPatternKind::BindingIdentifier(id), Some(init)) =
-            (&decl.id.kind, decl.init.as_mut())
+          let (BindingPattern::BindingIdentifier(id), Some(init)) = (&decl.id, decl.init.as_mut())
           else {
             continue;
           };

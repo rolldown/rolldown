@@ -3,17 +3,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## foo.js
-
-```js
-import { t as foo } from "./main.js";
-
-export { foo };
-```
-
 ## main.js
 
 ```js
+import assert from "node:assert";
+
 // HIDDEN [rolldown:runtime]
 //#region foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
@@ -21,14 +15,14 @@ const foo = 1;
 
 //#endregion
 //#region main.js
-import("./foo.js").then(console.log);
-console.log(foo_exports);
+assert.deepEqual(foo_exports, { foo: 1 });
+Promise.resolve().then(() => foo_exports).then((mod) => {
+	assert.deepEqual(JSON.parse(JSON.stringify(mod)), foo_exports);
+});
 
 //#endregion
-export { foo as t };
 ```
 
 # Output Stats
 
-- foo.js, is_entry false, is_dynamic_entry true, exports ["foo"]
-- main.js, is_entry true, is_dynamic_entry false, exports ["t"]
+- main.js, is_entry true, is_dynamic_entry false, exports []

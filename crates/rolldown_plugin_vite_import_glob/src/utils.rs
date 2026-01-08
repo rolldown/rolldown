@@ -262,11 +262,10 @@ impl<'ast> GlobImportVisit<'ast, '_> {
                       self.ast_builder.vec1(self.ast_builder.formal_parameter(
                         SPAN,
                         self.ast_builder.vec(),
-                        self.ast_builder.binding_pattern(
-                          self.ast_builder.binding_pattern_kind_binding_identifier(SPAN, "m"),
-                          NONE,
-                          false,
-                        ),
+                        self.ast_builder.binding_pattern_binding_identifier(SPAN, "m"),
+                        NONE,
+                        Option::<Expression<'ast>>::None,
+                        false,
                         None,
                         false,
                         false,
@@ -385,8 +384,8 @@ impl GlobImportVisit<'_, '_> {
         }),
       );
       if let Ok(result) = rolldown_utils::futures::block_on(future) {
-        let id = match result {
-          Ok(resolved_id) => resolved_id.id.into(),
+        let id: Cow<'_, str> = match result {
+          Ok(resolved_id) => Cow::Owned(resolved_id.id.to_string()),
           Err(_) => Cow::Borrowed(glob),
         };
         let path = Path::new(id.as_ref());

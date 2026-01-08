@@ -45,7 +45,7 @@ class TestDevRuntime extends DevRuntime {
         if (Array.isArray(deps)) {
           if (deps.includes(acceptedVia)) {
             const mods = deps.map((id) =>
-              id === acceptedVia ? this.loadExports(acceptedVia) : undefined
+              id === acceptedVia ? this.loadExports(acceptedVia) : undefined,
             );
             cb(mods);
           }
@@ -59,4 +59,4 @@ class TestDevRuntime extends DevRuntime {
   }
 }
 
-(/** @type {any} */ (globalThis)).__rolldown_runtime__ ??= new TestDevRuntime();
+/** @type {any} */ (globalThis).__rolldown_runtime__ ??= new TestDevRuntime();

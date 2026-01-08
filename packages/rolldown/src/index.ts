@@ -3,15 +3,9 @@ import { build, type BuildOptions } from './api/build';
 import { rolldown } from './api/rolldown';
 import type { RolldownBuild } from './api/rolldown/rolldown-build';
 import { watch } from './api/watch';
-import type {
-  RolldownWatcher,
-  RolldownWatcherEvent,
-} from './api/watch/watch-emitter';
+import type { RolldownWatcher, RolldownWatcherEvent } from './api/watch/watch-emitter';
 import type { PreRenderedChunk } from './binding.cjs';
-import type {
-  LoggingFunction,
-  WarningHandlerWithDefault,
-} from './log/log-handler';
+import type { LoggingFunction, WarningHandlerWithDefault } from './log/log-handler';
 import type {
   LogLevel,
   LogLevelOption,
@@ -74,15 +68,8 @@ import type {
   RolldownFileStats,
   RolldownFsModule,
 } from './plugin/fs';
-import type {
-  GeneralHookFilter,
-  HookFilter,
-  ModuleTypeFilter,
-} from './plugin/hook-filter';
-import type {
-  MinimalPluginContext,
-  PluginContextMeta,
-} from './plugin/minimal-plugin-context';
+import type { GeneralHookFilter, HookFilter, ModuleTypeFilter } from './plugin/hook-filter';
+import type { MinimalPluginContext, PluginContextMeta } from './plugin/minimal-plugin-context';
 import type { DefineParallelPluginResult } from './plugin/parallel-plugin';
 import type {
   EmittedAsset,

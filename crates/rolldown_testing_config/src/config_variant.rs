@@ -17,6 +17,7 @@ pub struct ConfigVariant {
   pub strict_execution_order: Option<bool>,
   pub entry_filenames: Option<String>,
   pub inline_dynamic_imports: Option<bool>,
+  pub dynamic_import_in_cjs: Option<bool>,
   pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
   pub treeshake: Option<TreeshakeOptions>,
   pub minify_internal_exports: Option<bool>,
@@ -32,6 +33,7 @@ pub struct ConfigVariant {
   pub footer: Option<String>,
   pub intro: Option<String>,
   pub outro: Option<String>,
+  pub chunk_optimization: Option<bool>,
   // --- non-bundler options are start with `_`
   /// Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]
@@ -64,6 +66,9 @@ impl ConfigVariant {
     }
     if let Some(inline_dynamic_imports) = &self.inline_dynamic_imports {
       config.inline_dynamic_imports = Some(*inline_dynamic_imports);
+    }
+    if let Some(dynamic_import_in_cjs) = &self.dynamic_import_in_cjs {
+      config.dynamic_import_in_cjs = Some(*dynamic_import_in_cjs);
     }
     if let Some(preserve_entry_signatures) = &self.preserve_entry_signatures {
       config.preserve_entry_signatures = Some(*preserve_entry_signatures);
@@ -118,6 +123,12 @@ impl ConfigVariant {
     if let Some(outro) = &self.outro {
       config.outro = Some(AddonOutputOption::String(Some(outro.clone())));
     }
+    if let Some(chunk_optimization) = &self.chunk_optimization {
+      config.experimental = Some(ExperimentalOptions {
+        chunk_optimization: Some(*chunk_optimization),
+        ..config.experimental.unwrap_or_default()
+      });
+    }
     config
   }
 
@@ -140,6 +151,9 @@ impl ConfigVariant {
     }
     if let Some(inline_dynamic_imports) = &self.inline_dynamic_imports {
       fields.push(format!("inline_dynamic_imports: {inline_dynamic_imports:?}"));
+    }
+    if let Some(dynamic_import_in_cjs) = &self.dynamic_import_in_cjs {
+      fields.push(format!("dynamic_import_in_cjs: {dynamic_import_in_cjs:?}"));
     }
     if let Some(preserve_entry_signatures) = &self.preserve_entry_signatures {
       fields.push(format!("preserve_entry_signatures: {preserve_entry_signatures:?}"));
@@ -170,6 +184,9 @@ impl ConfigVariant {
     }
     if let Some(minify) = &self.minify {
       fields.push(format!("minify: {minify:?}"));
+    }
+    if let Some(chunk_optimization) = &self.chunk_optimization {
+      fields.push(format!("chunk_optimization: {chunk_optimization:?}"));
     }
     let mut result = String::new();
     self.config_name.as_ref().inspect(|config_name| {

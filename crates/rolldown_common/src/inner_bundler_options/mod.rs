@@ -2,7 +2,7 @@ use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::FxHashMap;
 use std::{fmt::Debug, path::PathBuf};
 use types::advanced_chunks_options::AdvancedChunksOptions;
-use types::debug_options::DebugOptions;
+use types::devtools_options::DevtoolsOptions;
 use types::generated_code_options::GeneratedCodeOptions;
 use types::inject_import::InjectImport;
 use types::invalidate_js_side_cache::InvalidateJsSideCache;
@@ -199,6 +199,7 @@ pub struct BundlerOptions {
   pub inject: Option<Vec<InjectImport>>,
   pub external_live_bindings: Option<bool>,
   pub inline_dynamic_imports: Option<bool>,
+  pub dynamic_import_in_cjs: Option<bool>,
   pub advanced_chunks: Option<AdvancedChunksOptions>,
   pub checks: Option<ChecksOptions>,
   #[cfg_attr(
@@ -217,7 +218,7 @@ pub struct BundlerOptions {
   )]
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
   pub make_absolute_externals_relative: Option<MakeAbsoluteExternalsRelative>,
-  pub debug: Option<DebugOptions>,
+  pub devtools: Option<DevtoolsOptions>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, skip_deserializing),

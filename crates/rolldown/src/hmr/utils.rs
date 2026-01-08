@@ -63,6 +63,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
     };
 
     // ...(moduleId, module)
+    // Use stable module ID for consistent lookup in runtime
     let arguments = self.builder().vec_from_array([
       ast::Argument::StringLiteral(self.builder().alloc_string_literal(
         SPAN,
@@ -93,6 +94,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
   /// `var $hot_name = __rolldown_runtime__.createModuleHotContext($stable_id);`
   fn create_module_hot_context_initializer_stmt(&self) -> ast::Statement<'ast> {
     // var $hot_name = __rolldown_runtime__.createModuleHotContext($stable_id);
+    // Use stable module ID for consistent lookup
     ast::Statement::VariableDeclaration(
       self.builder().alloc_variable_declaration(
         SPAN,
@@ -102,14 +104,10 @@ pub trait HmrAstBuilder<'any, 'ast> {
           self.builder().variable_declarator(
             SPAN,
             ast::VariableDeclarationKind::Const,
-            self.builder().binding_pattern(
-              self.builder().binding_pattern_kind_binding_identifier(
-                SPAN,
-                self.alias_name_for_import_meta_hot(),
-              ),
-              NONE,
-              false,
-            ),
+            self
+              .builder()
+              .binding_pattern_binding_identifier(SPAN, self.alias_name_for_import_meta_hot()),
+            NONE,
             // __rolldown_runtime__.createModuleHotContext($stable_id)
             Some(ast::Expression::CallExpression(
               self.builder().alloc_call_expression(

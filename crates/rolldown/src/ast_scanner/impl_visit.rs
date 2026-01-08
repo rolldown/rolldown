@@ -2,7 +2,7 @@ use oxc::allocator::{GetAddress, UnstableAddress};
 use oxc::{
   ast::{
     AstKind,
-    ast::{self, BindingPatternKind, Declaration, Expression, IdentifierReference},
+    ast::{self, BindingPattern, Declaration, Expression, IdentifierReference},
   },
   ast_visit::{Visit, walk},
   semantic::{ScopeFlags, SymbolId},
@@ -153,7 +153,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     let is_top_level_await = it.r#await && self.is_valid_tla_scope();
     if is_top_level_await && !self.immutable_ctx.flat_options.keep_esm_import_export_syntax() {
       self.result.errors.push(BuildDiagnostic::unsupported_feature(
-        self.immutable_ctx.id.resource_id().clone(),
+        self.immutable_ctx.id.as_arc_str().clone(),
         self.immutable_ctx.source.clone(),
         it.span(),
         format!(
@@ -173,7 +173,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     let is_top_level_await = self.is_valid_tla_scope();
     if !self.immutable_ctx.flat_options.keep_esm_import_export_syntax() && is_top_level_await {
       self.result.errors.push(BuildDiagnostic::unsupported_feature(
-        self.immutable_ctx.id.resource_id().clone(),
+        self.immutable_ctx.id.as_arc_str().clone(),
         self.immutable_ctx.source.clone(),
         it.span(),
         format!(
@@ -315,7 +315,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
             self
               .immutable_ctx
               .id
-              .resource_id()
+              .as_arc_str()
               .clone()
               .parse()
               .expect("should be a valid resource id"),
@@ -364,9 +364,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   fn visit_variable_declaration(&mut self, decl: &ast::VariableDeclaration<'ast>) {
     match decl.declarations.as_slice() {
       [decl] => {
-        if let (BindingPatternKind::BindingIdentifier(binding), Some(init)) =
-          (&decl.id.kind, &decl.init)
-        {
+        if let (BindingPattern::BindingIdentifier(binding), Some(init)) = (&decl.id, &decl.init) {
           // Extract constant value for top-level variable declarations
           if self.is_root_symbol(binding.symbol_id()) {
             if let Some(value) = self.extract_constant_value_from_expr(Some(init)) {
@@ -378,7 +376,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       _ => {
         if self.immutable_ctx.flat_options.inline_const_enabled() && self.is_root_scope() {
           for var_decl in &decl.declarations {
-            if let BindingPatternKind::BindingIdentifier(binding) = &var_decl.id.kind {
+            if let BindingPattern::BindingIdentifier(binding) = &var_decl.id {
               if let Some(init) = &var_decl.init {
                 if let Some(value) = self.extract_constant_value_from_expr(Some(init)) {
                   self.add_constant_symbol(binding.symbol_id(), ConstExportMeta::new(value, false));
@@ -430,13 +428,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_call_expression(&mut self, it: &ast::CallExpression<'ast>) {
     self.try_extract_hmr_info_from_hot_accept_call(it);
-    self.check_namespace_call(&it.callee, it.span());
     walk::walk_call_expression(self, it);
-  }
-
-  fn visit_tagged_template_expression(&mut self, it: &ast::TaggedTemplateExpression<'ast>) {
-    self.check_namespace_call(&it.tag, it.span());
-    walk::walk_tagged_template_expression(self, it);
   }
 
   fn visit_export_default_declaration(&mut self, it: &ast::ExportDefaultDeclaration<'ast>) {

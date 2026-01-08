@@ -186,6 +186,15 @@ export interface TreeShakeOptions {
    * @default true
    */
   unknownGlobalSideEffects?: boolean
+  /**
+   * Whether invalid import statements have side effects.
+   *
+   * Accessing a non-existing import name will throw an error.
+   * Also import statements that cannot be resolved will throw an error.
+   *
+   * @default true
+   */
+  invalidImportSideEffects?: boolean
 }
 export interface Comment {
   type: 'Line' | 'Block'
@@ -1401,6 +1410,14 @@ export declare class BindingDevEngine {
   registerModules(clientId: string, modules: Array<string>): Promise<void>
   removeClient(clientId: string): Promise<void>
   close(): Promise<void>
+  /**
+   * Compile a lazy entry module and return HMR-style patch code.
+   *
+   * This is called when a dynamically imported module is first requested at runtime.
+   * The module was previously stubbed with a proxy, and now we need to compile the
+   * actual module and its dependencies.
+   */
+  compileEntry(moduleId: string, clientId: string): Promise<string>
 }
 
 export declare class BindingMagicString {
@@ -1452,6 +1469,7 @@ export declare class BindingNormalizedOptions {
   get exports(): 'default' | 'named' | 'none' | 'auto'
   get esModule(): boolean | 'if-default-prop'
   get inlineDynamicImports(): boolean
+  get dynamicImportInCjs(): boolean
   get sourcemap(): boolean | 'inline' | 'hidden'
   get sourcemapBaseUrl(): string | null
   get banner(): string | undefined | null | undefined
@@ -1698,10 +1716,6 @@ export interface BindingCompileCssResult {
   modules?: FxHashMap<string, string>
 }
 
-export interface BindingDebugOptions {
-  sessionId?: string
-}
-
 export interface BindingDeferSyncScanData {
   /** ModuleId */
   id: string
@@ -1713,6 +1727,10 @@ export interface BindingDevOptions {
   onOutput?: undefined | ((result: BindingResult<BindingOutputs>) => void | Promise<void>)
   rebuildStrategy?: BindingRebuildStrategy
   watch?: BindingDevWatchOptions
+}
+
+export interface BindingDevtoolsOptions {
+  sessionId?: string
 }
 
 export interface BindingDevWatchOptions {
@@ -1782,6 +1800,7 @@ export interface BindingExperimentalOptions {
   incrementalBuild?: boolean
   transformHiresSourcemap?: boolean | 'boundary'
   nativeMagicString?: boolean
+  chunkOptimization?: boolean
 }
 
 export interface BindingFilterToken {
@@ -1925,7 +1944,7 @@ export interface BindingInputOptions {
   checks?: BindingChecksOptions
   deferSyncScanData?: undefined | (() => BindingDeferSyncScanData[])
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
-  debug?: BindingDebugOptions
+  devtools?: BindingDevtoolsOptions
   invalidateJsSideCache?: () => void
   preserveEntrySignatures?: BindingPreserveEntrySignatures
   optimization?: BindingOptimization
@@ -2045,6 +2064,7 @@ export interface BindingOutputOptions {
   globals?: Record<string, string> | ((name: string) => string)
   hashCharacters?: 'base64' | 'base36' | 'hex'
   inlineDynamicImports?: boolean
+  dynamicImportInCjs?: boolean
   intro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   outro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   paths?: Record<string, string> | ((id: string) => string)
@@ -2132,7 +2152,7 @@ export interface BindingPluginOptions {
   generateBundleMeta?: BindingPluginHookMeta
   writeBundle?: (ctx: BindingPluginContext, bundle: BindingErrorsOr<BindingOutputs>, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
   writeBundleMeta?: BindingPluginHookMeta
-  closeBundle?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
+  closeBundle?: (ctx: BindingPluginContext, error?: BindingError[]) => MaybePromise<VoidNullable>
   closeBundleMeta?: BindingPluginHookMeta
   watchChange?: (ctx: BindingPluginContext, path: string, event: string) => MaybePromise<VoidNullable>
   watchChangeMeta?: BindingPluginHookMeta

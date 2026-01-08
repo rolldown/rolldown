@@ -1,4 +1,4 @@
-mod binding_debug_options;
+mod binding_devtools_options;
 mod binding_experimental_options;
 mod binding_input_item;
 mod binding_make_absolute_externals_relative;
@@ -9,7 +9,7 @@ mod binding_watch_option;
 
 pub mod binding_inject_import;
 
-use binding_debug_options::BindingDebugOptions;
+use binding_devtools_options::BindingDevtoolsOptions;
 use binding_make_absolute_externals_relative::BindingMakeAbsoluteExternalsRelative;
 use binding_optimization::BindingOptimization;
 use derive_more::Debug;
@@ -99,7 +99,7 @@ pub struct BindingInputOptions<'env> {
   #[napi(ts_type = "undefined | (() => BindingDeferSyncScanData[])")]
   pub defer_sync_scan_data: Option<JsCallback<(), Vec<BindingDeferSyncScanData>>>,
   pub make_absolute_externals_relative: Option<BindingMakeAbsoluteExternalsRelative>,
-  pub debug: Option<BindingDebugOptions>,
+  pub devtools: Option<BindingDevtoolsOptions>,
   #[debug(skip)]
   #[napi(ts_type = "() => void")]
   pub invalidate_js_side_cache: Option<JsCallback>,

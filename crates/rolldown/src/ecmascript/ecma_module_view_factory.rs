@@ -1,6 +1,6 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleId, ModuleType,
+  EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleType,
   RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions, SideEffectDetail,
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
@@ -31,13 +31,13 @@ pub async fn create_ecma_view(
 
   ctx.warnings.extend(warnings);
 
-  let module_id = ModuleId::new(&ctx.resolved_id.id);
+  let module_id = ctx.resolved_id.id.clone();
 
   let repr_name = module_id.as_path().representative_file_name();
   let repr_name = legitimize_identifier_name(&repr_name);
 
   let scanner = AstScanner::new(
-    ctx.module_index,
+    ctx.module_idx,
     scoping,
     &repr_name,
     ctx.resolved_id.module_def_format,

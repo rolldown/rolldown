@@ -122,7 +122,7 @@ impl ClassicBundler {
     async move {
       if let Some(handle) = last_bundle_handle {
         let plugin_driver = handle.plugin_driver();
-        plugin_driver.close_bundle().await?;
+        plugin_driver.close_bundle(None).await?;
       }
       Ok(())
     }
@@ -133,7 +133,7 @@ impl ClassicBundler {
   }
 
   fn enable_debug_tracing_if_needed(&mut self, options: &BundlerOptions) {
-    if self.debug_tracer.is_none() && options.debug.is_some() {
+    if self.debug_tracer.is_none() && options.devtools.is_some() {
       self.debug_tracer = Some(rolldown_devtools::DebugTracer::init(Arc::clone(&self.session_id)));
       // Caveat: `Span` must be created after initialization of `DebugTracer`, we need it to inject data to the tracking system.
       let session_span =

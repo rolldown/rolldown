@@ -44,9 +44,7 @@ class Watcher {
 
   start(): void {
     // run first build after listener is attached
-    process.nextTick(() =>
-      this.inner.start(this.emitter.onEvent.bind(this.emitter))
-    );
+    process.nextTick(() => this.inner.start(this.emitter.onEvent.bind(this.emitter)));
   }
 }
 
@@ -61,7 +59,7 @@ export async function createWatcher(
         arraify(option.output || {}).map(async (output) => {
           const inputOptions = await PluginDriver.callOptionsHook(option, true);
           return createBundlerOptions(inputOptions, output, true);
-        })
+        }),
       )
       .flat(),
   );

@@ -15,12 +15,7 @@ import type { ModuleInfo } from '../types/module-info';
 import type { OutputBundle } from '../types/output-bundle';
 import type { RenderedChunk } from '../types/rolldown-output';
 import type { SourceMapInput } from '../types/sourcemap';
-import type {
-  MakeAsync,
-  MaybePromise,
-  NullValue,
-  PartialNull,
-} from '../types/utils';
+import type { MakeAsync, MaybePromise, NullValue, PartialNull } from '../types/utils';
 import type {
   GeneralHookFilter,
   HookFilter,
@@ -128,10 +123,7 @@ export interface FunctionPluginHooks {
 
   // --- Build hooks ---
 
-  [DEFINED_HOOK_NAMES.buildStart]: (
-    this: PluginContext,
-    options: NormalizedInputOptions,
-  ) => void;
+  [DEFINED_HOOK_NAMES.buildStart]: (this: PluginContext, options: NormalizedInputOptions) => void;
 
   [DEFINED_HOOK_NAMES.resolveId]: (
     this: PluginContext,
@@ -150,10 +142,7 @@ export interface FunctionPluginHooks {
     importer: string | undefined,
   ) => ResolveIdResult;
 
-  [DEFINED_HOOK_NAMES.load]: (
-    this: PluginContext,
-    id: string,
-  ) => MaybePromise<LoadResult>;
+  [DEFINED_HOOK_NAMES.load]: (this: PluginContext, id: string) => MaybePromise<LoadResult>;
 
   [DEFINED_HOOK_NAMES.transform]: (
     this: TransformPluginContext,
@@ -166,10 +155,7 @@ export interface FunctionPluginHooks {
     },
   ) => TransformResult;
 
-  [DEFINED_HOOK_NAMES.moduleParsed]: (
-    this: PluginContext,
-    moduleInfo: ModuleInfo,
-  ) => void;
+  [DEFINED_HOOK_NAMES.moduleParsed]: (this: PluginContext, moduleInfo: ModuleInfo) => void;
 
   [DEFINED_HOOK_NAMES.buildEnd]: (this: PluginContext, err?: Error) => void;
 
@@ -191,9 +177,9 @@ export interface FunctionPluginHooks {
     | NullValue
     | string
     | {
-      code: string;
-      map?: SourceMapInput;
-    };
+        code: string;
+        map?: SourceMapInput;
+      };
 
   [DEFINED_HOOK_NAMES.augmentChunkHash]: (
     this: PluginContext,
@@ -215,7 +201,7 @@ export interface FunctionPluginHooks {
     bundle: OutputBundle,
   ) => void;
 
-  [DEFINED_HOOK_NAMES.closeBundle]: (this: PluginContext) => void;
+  [DEFINED_HOOK_NAMES.closeBundle]: (this: PluginContext, error?: Error) => void;
 
   // --- watch hooks ---
   [DEFINED_HOOK_NAMES.watchChange]: (
@@ -235,28 +221,20 @@ export type ObjectHookMeta = { order?: PluginOrder };
 
 /** @category Plugin APIs */
 export type ObjectHook<T, O = {}> = T | ({ handler: T } & ObjectHookMeta & O);
-type SyncPluginHooks = DefinedHookNames[
-  | 'augmentChunkHash'
-  | 'onLog'
-  | 'outputOptions'
-];
+type SyncPluginHooks = DefinedHookNames['augmentChunkHash' | 'onLog' | 'outputOptions'];
 // | 'renderDynamicImport'
 // | 'resolveFileUrl'
 // | 'resolveImportMeta'
 
 /** @category Plugin APIs */
-export type AsyncPluginHooks = Exclude<
-  keyof FunctionPluginHooks,
-  SyncPluginHooks
->;
+export type AsyncPluginHooks = Exclude<keyof FunctionPluginHooks, SyncPluginHooks>;
 
 type FirstPluginHooks = DefinedHookNames[
   | 'load'
   // | 'renderDynamicImport'
   | 'resolveDynamicImport'
   // | 'resolveFileUrl'
-  | 'resolveId'
-];
+  | 'resolveId'];
 // | 'resolveImportMeta'
 // | 'shouldTransformCachedModule'
 
@@ -267,8 +245,7 @@ type SequentialPluginHooks = DefinedHookNames[
   | 'options'
   | 'outputOptions'
   | 'renderChunk'
-  | 'transform'
-];
+  | 'transform'];
 
 type AddonHooks = DefinedHookNames['banner' | 'footer' | 'intro' | 'outro'];
 
@@ -282,8 +259,7 @@ type OutputPluginHooks = DefinedHookNames[
   | 'renderStart'
   // | 'resolveFileUrl'
   // | 'resolveImportMeta'
-  | 'writeBundle'
-];
+  | 'writeBundle'];
 
 /** @internal */
 export type ParallelPluginHooks = Exclude<
@@ -292,59 +268,53 @@ export type ParallelPluginHooks = Exclude<
 >;
 
 /** @category Plugin APIs */
-export type HookFilterExtension<K extends keyof FunctionPluginHooks> = K extends
-  'transform' ? { filter?: TUnionWithTopLevelFilterExpressionArray<HookFilter> }
-  : K extends 'load' ? {
-      filter?: TUnionWithTopLevelFilterExpressionArray<
-        Pick<HookFilter, 'id'>
-      >;
-    }
-  : K extends 'resolveId' ? {
-      filter?: TUnionWithTopLevelFilterExpressionArray<{
-        id?: GeneralHookFilter<RegExp>;
-      }>;
-    }
-  : K extends 'renderChunk' ? {
-      filter?: TUnionWithTopLevelFilterExpressionArray<
-        Pick<HookFilter, 'code'>
-      >;
-    }
-  : {};
+export type HookFilterExtension<K extends keyof FunctionPluginHooks> = K extends 'transform'
+  ? { filter?: TUnionWithTopLevelFilterExpressionArray<HookFilter> }
+  : K extends 'load'
+    ? {
+        filter?: TUnionWithTopLevelFilterExpressionArray<Pick<HookFilter, 'id'>>;
+      }
+    : K extends 'resolveId'
+      ? {
+          filter?: TUnionWithTopLevelFilterExpressionArray<{
+            id?: GeneralHookFilter<RegExp>;
+          }>;
+        }
+      : K extends 'renderChunk'
+        ? {
+            filter?: TUnionWithTopLevelFilterExpressionArray<Pick<HookFilter, 'code'>>;
+          }
+        : {};
 
 export type PluginHooks = {
   [K in keyof FunctionPluginHooks]: ObjectHook<
-    K extends AsyncPluginHooks ? MakeAsync<FunctionPluginHooks[K]>
-      : FunctionPluginHooks[K],
-    & HookFilterExtension<K>
-    & (K extends ParallelPluginHooks ? {
-        /**
-         * @deprecated
-         * this is only for rollup Plugin type compatibility.
-         * hooks always work as `sequential: true`.
-         */
-        sequential?: boolean;
-      }
-      : {})
+    K extends AsyncPluginHooks ? MakeAsync<FunctionPluginHooks[K]> : FunctionPluginHooks[K],
+    HookFilterExtension<K> &
+      (K extends ParallelPluginHooks
+        ? {
+            /**
+             * @deprecated
+             * this is only for rollup Plugin type compatibility.
+             * hooks always work as `sequential: true`.
+             */
+            sequential?: boolean;
+          }
+        : {})
   >;
 };
 
-type AddonHookFunction = (
-  this: PluginContext,
-  chunk: RenderedChunk,
-) => string | Promise<string>;
+type AddonHookFunction = (this: PluginContext, chunk: RenderedChunk) => string | Promise<string>;
 
 type AddonHook = string | AddonHookFunction;
 
-interface OutputPlugin extends
-  Partial<
-    {
+interface OutputPlugin
+  extends
+    Partial<{
       // Use key remapping pattern to provide better  "go to definition" experience.
       // https://github.com/rolldown/rolldown/pull/7610
       [K in keyof PluginHooks as K & OutputPluginHooks]: PluginHooks[K];
-    }
-  >,
-  Partial<{ [K in AddonHooks]: ObjectHook<AddonHook> }>
-{
+    }>,
+    Partial<{ [K in AddonHooks]: ObjectHook<AddonHook> }> {
   // cacheKey?: string
   name: string;
   // version?: string
@@ -356,10 +326,7 @@ export interface Plugin<A = any> extends OutputPlugin, Partial<PluginHooks> {
   api?: A;
 }
 
-export type RolldownPlugin<A = any> =
-  | Plugin<A>
-  | BuiltinPlugin
-  | ParallelPlugin;
+export type RolldownPlugin<A = any> = Plugin<A> | BuiltinPlugin | ParallelPlugin;
 export type RolldownPluginOption<A = any> = MaybePromise<
   | NullValue<RolldownPlugin<A>>
   | { name: string } // for rollup plugin compatibility

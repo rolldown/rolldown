@@ -1,5 +1,5 @@
-use arcstr::ArcStr;
 use rolldown_common::ImportKind;
+use rolldown_common::ModuleId;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_error::BuildResult;
 use rustc_hash::FxHashMap;
@@ -11,7 +11,7 @@ use crate::{SharedOptions, SharedResolver, stages::scan_stage::NormalizedScanSta
 pub async fn defer_sync_scan_data(
   options: &SharedOptions,
   resolver: &SharedResolver,
-  module_id_to_idx: &FxHashMap<ArcStr, VisitState>,
+  module_id_to_idx: &FxHashMap<ModuleId, VisitState>,
   scan_stage_output: &mut NormalizedScanStageOutput,
 ) -> BuildResult<()> {
   let Some(ref func) = options.defer_sync_scan_data else {
@@ -19,7 +19,7 @@ pub async fn defer_sync_scan_data(
   };
 
   for data in func.exec().await? {
-    let source_id = arcstr::ArcStr::from(data.id);
+    let source_id = ModuleId::new(data.id.as_str());
     let Some(state) = module_id_to_idx.get(&source_id) else {
       continue;
     };

@@ -1,8 +1,6 @@
 # Failed Cases
 ## [dce_of_iife](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_iife/diff.md)
-  sub optimal: IIFEs are not unwrapped
-## [dce_of_symbol_ctor_call](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_ctor_call/diff.md)
-  `new Symbol("abc")` should not be removed as it has side effects
+  https://github.com/oxc-project/oxc/issues/17480 and sub optimal: IIFEs are not unwrapped in some cases
 ## [tree_shaking_lowered_class_static_field](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field/diff.md)
   sub optimal: REMOVE_ME class can be removed
 ## [tree_shaking_react_elements](../../../../../crates/rolldown/tests/esbuild/dce/tree_shaking_react_elements/diff.md)
@@ -26,6 +24,7 @@
 ## [dce_of_expr_after_keep_names_issue3195](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195)
 ## [dce_of_iterator_superclass_issue4310](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_iterator_superclass_issue4310)
 ## [dce_of_negated_bigints](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_negated_bigints)
+## [dce_of_symbol_ctor_call](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_ctor_call)
 ## [dce_of_symbol_for_call](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_for_call)
 ## [dce_of_symbol_instances](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_instances)
 ## [dce_of_using_declarations](../../../../../crates/rolldown/tests/esbuild/dce/dce_of_using_declarations)

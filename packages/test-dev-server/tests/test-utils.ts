@@ -22,7 +22,7 @@ export async function editFile(
   nodeFs.writeFileSync(filePath, newContent, 'utf-8');
 
   // Small delay to ensure file system events are picked up
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 
   console.log(`[editFile] Updated ${filename}`);
 }
@@ -33,9 +33,7 @@ export async function editFile(
 export function getPage() {
   const page = (global as any).__page;
   if (!page) {
-    throw new Error(
-      'Playwright page not initialized. Check vitest-setup-playwright.ts',
-    );
+    throw new Error('Playwright page not initialized. Check vitest-setup-playwright.ts');
   }
   return page;
 }

@@ -1,35 +1,38 @@
 {
   "name": "rolldown",
-  "version": "1.0.0-beta.57",
+  "version": "1.0.0-beta.59",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
-  "type": "module",
+  "keywords": [
+    "bundler",
+    "esbuild",
+    "parcel",
+    "rolldown",
+    "rollup",
+    "webpack"
+  ],
   "homepage": "https://rolldown.rs/",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rolldown/rolldown.git",
     "directory": "packages/rolldown"
   },
-  "license": "MIT",
-  "keywords": [
-    "webpack",
-    "parcel",
-    "esbuild",
-    "rollup",
-    "bundler",
-    "rolldown"
-  ],
+  "bin": {
+    "rolldown": "./bin/cli.mjs"
+  },
   "files": [
     "bin",
     "cli",
     "dist",
     "!dist/*.node"
   ],
-  "bin": {
-    "rolldown": "./bin/cli.mjs"
-  },
+  "type": "module",
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
+  "imports": {
+    "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs"
+  },
   "exports": {
     ".": {
       "dev": "./src/index.ts",
@@ -68,11 +71,7 @@
       "default": "./dist/plugins-index.mjs"
     }
   },
-  "imports": {
-    "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs"
-  },
   "publishConfig": {
-    "registry": "https://registry.npmjs.org/",
     "access": "public",
     "exports": {
       ".": "./dist/index.mjs",
@@ -87,7 +86,8 @@
       "./parseAst": "./dist/parse-ast-index.mjs",
       "./package.json": "./package.json",
       "./plugins": "./dist/plugins-index.mjs"
-    }
+    },
+    "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
     "# Scrips for binding #": "_",
@@ -112,33 +112,6 @@
     "# Scrips for docs #": "_",
     "prepublishOnly": "napi pre-publish -t npm --no-gh-release"
   },
-  "napi": {
-    "binaryName": "rolldown-binding",
-    "packageName": "@rolldown/binding",
-    "targets": [
-      "x86_64-apple-darwin",
-      "x86_64-pc-windows-msvc",
-      "x86_64-unknown-linux-gnu",
-      "x86_64-unknown-linux-musl",
-      "x86_64-unknown-freebsd",
-      "armv7-unknown-linux-gnueabihf",
-      "aarch64-unknown-linux-gnu",
-      "aarch64-apple-darwin",
-      "aarch64-unknown-linux-musl",
-      "aarch64-unknown-linux-ohos",
-      "aarch64-pc-windows-msvc",
-      "aarch64-linux-android",
-      "wasm32-wasip1-threads"
-    ],
-    "wasm": {
-      "initialMemory": 16384,
-      "browser": {
-        "fs": true,
-        "asyncInit": true
-      }
-    },
-    "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\ntype BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T\n\n"
-  },
   "dependencies": {
     "@oxc-project/types": "catalog:",
     "@rolldown/pluginutils": "workspace:*"
@@ -162,6 +135,33 @@
     "source-map": "catalog:",
     "typescript": "catalog:",
     "valibot": "catalog:"
+  },
+  "napi": {
+    "binaryName": "rolldown-binding",
+    "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\ntype BindingResult<T> = { errors: BindingError[], isBindingErrors: boolean } | T\n\n",
+    "packageName": "@rolldown/binding",
+    "targets": [
+      "x86_64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl",
+      "x86_64-unknown-freebsd",
+      "armv7-unknown-linux-gnueabihf",
+      "aarch64-unknown-linux-gnu",
+      "aarch64-apple-darwin",
+      "aarch64-unknown-linux-musl",
+      "aarch64-unknown-linux-ohos",
+      "aarch64-pc-windows-msvc",
+      "aarch64-linux-android",
+      "wasm32-wasip1-threads"
+    ],
+    "wasm": {
+      "initialMemory": 16384,
+      "browser": {
+        "fs": true,
+        "asyncInit": true
+      }
+    }
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

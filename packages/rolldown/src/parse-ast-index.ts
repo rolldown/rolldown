@@ -5,11 +5,7 @@ import { augmentCodeLocation, error, logParseError } from './log/logs';
 import { getCodeFrame } from './utils/code-frame';
 import { parse, parseSync } from './utils/parse';
 
-function wrap(
-  result: ParseResult,
-  filename: string | undefined,
-  sourceText: string,
-) {
+function wrap(result: ParseResult, filename: string | undefined, sourceText: string) {
   if (result.errors.length > 0) {
     return normalizeParseError(filename, sourceText, result.errors);
   }
@@ -21,9 +17,7 @@ function normalizeParseError(
   sourceText: string,
   errors: ParseResult['errors'],
 ) {
-  let message = `Parse failed with ${errors.length} error${
-    errors.length < 2 ? '' : 's'
-  }:\n`;
+  let message = `Parse failed with ${errors.length} error${errors.length < 2 ? '' : 's'}:\n`;
   // Get pos from the first error's first label if available
   const pos = errors[0]?.labels?.[0]?.start;
   for (let i = 0; i < errors.length; i++) {
@@ -32,7 +26,8 @@ function normalizeParseError(
       break;
     }
     const e = errors[i];
-    message += e.message +
+    message +=
+      e.message +
       '\n' +
       e.labels
         .map((label: any) => {
@@ -68,11 +63,7 @@ export function parseAst(
     ...defaultParserOptions,
     ...options,
   });
-  return wrap(
-    ast,
-    filename,
-    sourceText,
-  );
+  return wrap(ast, filename, sourceText);
 }
 
 export async function parseAstAsync(

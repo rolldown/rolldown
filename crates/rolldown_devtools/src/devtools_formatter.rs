@@ -82,7 +82,7 @@ where
     let session_id =
       found_context_fields.get("session_id").map(String::as_str).unwrap_or(DEFAULT_SESSION_ID);
 
-    std::fs::create_dir_all(format!(".rolldown/{session_id}")).ok();
+    std::fs::create_dir_all(format!("node_modules/.rolldown/{session_id}")).ok();
 
     let is_session_meta = action_value
       .as_object()
@@ -91,9 +91,9 @@ where
       .is_some_and(|v| v == "SessionMeta");
 
     let log_filename: Arc<str> = if is_session_meta {
-      format!(".rolldown/{session_id}/meta.json").into()
+      format!("node_modules/.rolldown/{session_id}/meta.json").into()
     } else {
-      format!(".rolldown/{session_id}/logs.json").into()
+      format!("node_modules/.rolldown/{session_id}/logs.json").into()
     };
 
     if !OPENED_FILE_HANDLES.contains_key(&log_filename) {

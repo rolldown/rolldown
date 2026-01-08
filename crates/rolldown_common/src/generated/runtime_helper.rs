@@ -23,8 +23,7 @@ bitflags! {
     const ToCommonJs = 1 << 15;
     const ToBinaryNode = 1 << 16;
     const ToBinary = 1 << 17;
-    const ToDynamicImportEsm = 1 << 18;
-    const Require = 1 << 19;
+    const Require = 1 << 18;
   }
 }
 
@@ -56,7 +55,7 @@ impl DependedRuntimeHelperMapExt for DependedRuntimeHelperMap {
   }
 }
 
-pub const RUNTIME_HELPER_NAMES: [&str; 20] = [
+pub const RUNTIME_HELPER_NAMES: [&str; 19] = [
   "__create",
   "__defProp",
   "__name",
@@ -75,6 +74,5 @@ pub const RUNTIME_HELPER_NAMES: [&str; 20] = [
   "__toCommonJS",
   "__toBinaryNode",
   "__toBinary",
-  "__toDynamicImportESM",
   "__require",
 ];

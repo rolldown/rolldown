@@ -57,7 +57,7 @@ impl PluginDriver {
   }
 
   pub fn set_module_info(&self, module_id: &ModuleId, module_info: Arc<ModuleInfo>) {
-    self.module_infos.insert(module_id.resource_id().into(), module_info);
+    self.module_infos.insert(module_id.as_arc_str().into(), module_info);
   }
 
   pub async fn set_context_load_modules_tx(
@@ -142,27 +142,31 @@ impl PluginDriver {
 
   /// Get plugin timings summary if timing collection is enabled and plugins are taking significant time.
   /// Returns a list of (plugin_name, percentage) pairs for plugins at or above average time.
+  /// Only plugins with total duration >= 1 second are included.
   #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
   pub fn get_plugin_timings_info(&self) -> Option<Vec<rolldown_error::PluginTimingInfo>> {
     const MAX_PLUGINS: usize = 5;
+    const ONE_SECOND_MICROS: u64 = 1_000_000;
     let collector = self.hook_timing_collector.as_ref()?;
     if !collector.plugins_are_slow() {
       return None;
     }
     let summary = collector.get_summary();
     let total_micros: u64 = summary.iter().map(|s| s.total_duration_micros).sum();
-    (total_micros != 0).then(|| {
-      let avg = total_micros / summary.len() as u64;
-      summary
-        .iter()
-        .filter(|s| s.total_duration_micros >= avg)
-        .take(MAX_PLUGINS)
-        .map(|s| rolldown_error::PluginTimingInfo {
-          name: s.plugin_name.to_string(),
-          percent: (s.total_duration_micros as f64 / total_micros as f64 * 100.0).round() as u8,
-        })
-        .collect::<Vec<_>>()
-    })
+    if total_micros == 0 {
+      return None;
+    }
+    let threshold = (total_micros / summary.len() as u64).max(ONE_SECOND_MICROS);
+    let result = summary
+      .iter()
+      .filter(|s| s.total_duration_micros >= threshold)
+      .take(MAX_PLUGINS)
+      .map(|s| rolldown_error::PluginTimingInfo {
+        name: s.plugin_name.to_string(),
+        percent: (s.total_duration_micros as f64 / total_micros as f64 * 100.0).round() as u8,
+      })
+      .collect::<Vec<_>>();
+    if result.is_empty() { None } else { Some(result) }
   }
 }
 

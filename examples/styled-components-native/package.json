@@ -6,12 +6,12 @@
     "build": "rolldown --config ./rolldown.config.js",
     "dev": "rolldown --config ./rolldown.config.js --watch"
   },
-  "devDependencies": {
-    "rolldown": "workspace:*"
-  },
   "dependencies": {
     "react": "catalog:",
     "react-dom": "catalog:",
     "styled-components": "^6.1.8"
+  },
+  "devDependencies": {
+    "rolldown": "workspace:*"
   }
 }

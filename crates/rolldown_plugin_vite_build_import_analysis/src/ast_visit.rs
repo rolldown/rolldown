@@ -4,9 +4,7 @@ use oxc::{
   allocator::CloneIn as _,
   ast::{
     NONE,
-    ast::{
-      self, BindingPatternKind, Expression, ImportOrExportKind, Statement, VariableDeclaration,
-    },
+    ast::{self, BindingPattern, Expression, ImportOrExportKind, Statement, VariableDeclaration},
   },
   ast_visit::{VisitMut, walk_mut},
   semantic::ScopeFlags,
@@ -78,7 +76,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
   fn visit_variable_declaration(&mut self, decl: &mut VariableDeclaration<'a>) {
     if self.insert_preload {
       for decl in &mut decl.declarations {
-        if matches!(decl.id.kind, BindingPatternKind::ObjectPattern(_))
+        if matches!(decl.id, BindingPattern::ObjectPattern(_))
           && matches!(
             &decl.init,
             Some(Expression::AwaitExpression(expr)) if matches!(expr.argument, Expression::ImportExpression(_))
@@ -87,11 +85,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
           decl.init = Some(self.snippet.builder.expression_await(
             SPAN,
             self.construct_vite_preload_call(
-              self.snippet.builder.binding_pattern(
-                decl.id.kind.clone_in(self.snippet.alloc()),
-                NONE,
-                false,
-              ),
+              decl.id.clone_in(self.snippet.alloc()),
               decl.init.take().unwrap(),
             ),
           ));
@@ -108,7 +102,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
   fn visit_variable_declarator(&mut self, it: &mut oxc::ast::ast::VariableDeclarator<'a>) {
     // Only check if there needs to insert helper function
     if self.insert_preload && self.is_top_level() {
-      if let BindingPatternKind::BindingIdentifier(id) = &it.id.kind {
+      if let BindingPattern::BindingIdentifier(id) = &it.id {
         self.has_inserted_helper = id.name == PRELOAD_METHOD;
       }
     }

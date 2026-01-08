@@ -401,6 +401,12 @@
             "null"
           ]
         },
+        "dynamicImportInCjs": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "advancedChunks": {
           "anyOf": [
             {
@@ -464,10 +470,10 @@
             }
           ]
         },
-        "debug": {
+        "devtools": {
           "anyOf": [
             {
-              "$ref": "#/$defs/DebugOptions"
+              "$ref": "#/$defs/DevtoolsOptions"
             },
             {
               "type": "null"
@@ -1020,6 +1026,12 @@
             "boolean",
             "null"
           ]
+        },
+        "chunkOptimization": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -1476,7 +1488,7 @@
         }
       ]
     },
-    "DebugOptions": {
+    "DevtoolsOptions": {
       "type": "object",
       "properties": {
         "sessionId": {
@@ -1634,6 +1646,12 @@
             "null"
           ]
         },
+        "dynamicImportInCjs": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "preserveEntrySignatures": {
           "anyOf": [
             {
@@ -1727,6 +1745,12 @@
         "outro": {
           "type": [
             "string",
+            "null"
+          ]
+        },
+        "chunkOptimization": {
+          "type": [
+            "boolean",
             "null"
           ]
         },

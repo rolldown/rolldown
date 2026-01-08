@@ -4,7 +4,8 @@ use crate::{
 };
 use arcstr::ArcStr;
 use rolldown_common::{
-  ImportKind, MakeAbsoluteExternalsRelative, NormalizedBundlerOptions, ResolvedExternal, ResolvedId,
+  ImportKind, MakeAbsoluteExternalsRelative, ModuleId, NormalizedBundlerOptions, ResolvedExternal,
+  ResolvedId,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use std::{path::Path, sync::Arc};
@@ -116,7 +117,7 @@ async fn resolve_external(
       ResolvedExternal::Absolute
     };
 
-  Ok(Some(ResolvedId { id, external, ..Default::default() }))
+  Ok(Some(ResolvedId { id: ModuleId::new(id), external, ..Default::default() }))
 }
 
 fn is_not_absolute_external(

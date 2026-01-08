@@ -63,10 +63,7 @@ export { viteAssetPlugin } from './builtin-plugin/asset-plugin';
 export { viteTransformPlugin } from './builtin-plugin/transform-plugin';
 export { viteCSSPlugin } from './builtin-plugin/vite-css-plugin';
 export { viteCSSPostPlugin } from './builtin-plugin/vite-css-post-plugin';
-export {
-  viteHtmlPlugin,
-  type ViteHtmlPluginOptions,
-} from './builtin-plugin/vite-html-plugin';
+export { viteHtmlPlugin, type ViteHtmlPluginOptions } from './builtin-plugin/vite-html-plugin';
 export { viteManifestPlugin } from './builtin-plugin/vite-manifest-plugin';
 
 // `__volume` and `__fs` only exist in `rolldown-binding.wasi-browser.js`, so we need to use namespace import to prevent static import error.
@@ -98,8 +95,7 @@ import * as binding from './binding.cjs';
  *
  * @see {@link https://github.com/streamich/memfs} for more information on the memfs API.
  */
-export const memfs: { fs: any; volume: any } | undefined =
-  import.meta.browserBuild
-    // @ts-expect-error - __fs and __volume are only available in browser builds
-    ? { fs: binding.__fs, volume: binding.__volume }
-    : undefined;
+export const memfs: { fs: any; volume: any } | undefined = import.meta.browserBuild
+  ? // @ts-expect-error - __fs and __volume are only available in browser builds
+    { fs: binding.__fs, volume: binding.__volume }
+  : undefined;

@@ -20,7 +20,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     // we will hit this branch if the reference points to a global variable
     let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
-    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
+    let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
     let (mut expr, _) = self.finalized_expr_for_symbol_ref(symbol_ref, is_callee, false);
 
     // See https://github.com/oxc-project/oxc/issues/4606
@@ -56,7 +56,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     // we will hit this branch if the reference points to a global variable
     let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
-    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
+    let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
     let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
     let symbol = self.ctx.symbol_db.get(canonical_ref);
 
@@ -106,7 +106,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       let reference_id = target_id_ref.reference_id.get()?;
       let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
-      let symbol_ref = (self.ctx.id, symbol_id).into();
+      let symbol_ref = (self.ctx.idx, symbol_id).into();
       let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
       let symbol = self.ctx.symbol_db.get(canonical_ref);
 
@@ -128,12 +128,12 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
 
   pub fn rewrite_object_pat_shorthand(&self, pat: &mut ast::ObjectPattern<'ast>) {
     for prop in &mut pat.properties {
-      match &mut prop.value.kind {
+      match &mut prop.value {
         // Ensure `const { a } = ...;` will be rewritten to `const { a: a } = ...` instead of `const { a } = ...`
         // Ensure `function foo({ a }) {}` will be rewritten to `function foo({ a: a }) {}` instead of `function foo({ a }) {}`
-        ast::BindingPatternKind::BindingIdentifier(ident) if prop.shorthand => {
+        ast::BindingPattern::BindingIdentifier(ident) if prop.shorthand => {
           if let Some(symbol_id) = ident.symbol_id.get() {
-            let canonical_name = self.canonical_name_for((self.ctx.id, symbol_id).into());
+            let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
             if ident.name != canonical_name.as_str() {
               ident.name = self.snippet.atom(canonical_name);
               prop.shorthand = false;
@@ -143,12 +143,12 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
         }
         // Ensure `const { a = 1 } = ...;` will be rewritten to `const { a: a = 1 } = ...` instead of `const { a = 1 } = ...`
         // Ensure `function foo({ a = 1 }) {}` will be rewritten to `function foo({ a: a = 1 }) {}` instead of `function foo({ a = 1 }) {}`
-        ast::BindingPatternKind::AssignmentPattern(assign_pat) if prop.shorthand => {
-          let ast::BindingPatternKind::BindingIdentifier(ident) = &mut assign_pat.left.kind else {
+        ast::BindingPattern::AssignmentPattern(assign_pat) if prop.shorthand => {
+          let ast::BindingPattern::BindingIdentifier(ident) = &mut assign_pat.left else {
             continue;
           };
           if let Some(symbol_id) = ident.symbol_id.get() {
-            let canonical_name = self.canonical_name_for((self.ctx.id, symbol_id).into());
+            let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
             if ident.name != canonical_name.as_str() {
               ident.name = self.snippet.atom(canonical_name);
               prop.shorthand = false;

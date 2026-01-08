@@ -1,17 +1,14 @@
 {
   "name": "monorepo",
-  "description": "Rollup in Rust",
-  "type": "module",
   "private": true,
-  "packageManager": "pnpm@10.23.0",
-  "engines": {
-    "node": "^20.19.0 || >=22.12.0"
-  },
+  "description": "Rollup in Rust",
+  "license": "MIT",
+  "type": "module",
   "scripts": {
     "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings --type-aware",
     "lint-knip": "knip",
-    "fmt": "dprint fmt",
-    "fmt-check": "dprint check",
+    "fmt": "oxfmt",
+    "fmt-check": "oxfmt --check",
     "build": "echo \"Use just build\"",
     "build:release": "echo \"Use just build native release\"",
     "test": "echo \"Use just test-node\"",
@@ -23,41 +20,41 @@
     "prepare": "husky",
     "preinstall": "npx only-allow pnpm"
   },
-  "license": "MIT",
   "devDependencies": {
     "@oxc-node/core": "catalog:",
     "@oxc-project/runtime": "catalog:",
     "@types/node": "catalog:",
     "cjs-module-lexer": "^2.1.0",
-    "dprint": "^0.50.1",
     "husky": "^9.1.7",
     "knip": "^5.61.3",
     "lint-staged": "^16.1.2",
+    "oxfmt": "^0.23.0",
     "oxlint": "^1.31.0",
-    "oxlint-tsgolint": "0.10.0",
+    "oxlint-tsgolint": "0.10.1",
+    "playwright-chromium": "^1.56.1",
     "remove-unused-vars": "^0.0.11",
     "rolldown": "workspace:*",
-    "playwright-chromium": "^1.56.1",
     "typescript": "catalog:"
   },
+  "lint-staged": {
+    "*": "oxfmt --no-error-on-unmatched-pattern",
+    "*.@(js|ts|tsx)": [
+      "pnpm lint-code -- --fix"
+    ]
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "packageManager": "pnpm@10.23.0",
   "pnpm": {
     "overrides": {
       "vitepress>vite": "npm:rolldown-vite@latest"
     },
     "onlyBuiltDependencies": [
       "@parcel/watcher",
-      "dprint",
       "esbuild",
       "oxc-resolver",
       "tree-sitter"
-    ]
-  },
-  "lint-staged": {
-    "*.@(js|ts|tsx|yml|yaml|md|json|html|toml)": [
-      "dprint fmt --staged"
-    ],
-    "*.@(js|ts|tsx)": [
-      "pnpm lint-code -- --fix"
     ]
   }
 }

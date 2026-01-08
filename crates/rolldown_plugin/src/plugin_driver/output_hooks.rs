@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::types::hook_close_bundle_args::HookCloseBundleArgs;
 use crate::types::hook_render_error::HookRenderErrorArgs;
 use crate::{HookAddonArgs, PluginDriver};
 use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
@@ -217,12 +218,12 @@ impl PluginDriver {
     Ok(())
   }
 
-  pub async fn close_bundle(&self) -> HookNoopReturn {
+  pub async fn close_bundle(&self, args: Option<&HookCloseBundleArgs<'_>>) -> HookNoopReturn {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_close_bundle_meta)
     {
       let start = self.start_timing();
-      let result = plugin.call_close_bundle(ctx).await;
+      let result = plugin.call_close_bundle(ctx, args).await;
       self.record_timing(plugin_idx, start);
       result.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }

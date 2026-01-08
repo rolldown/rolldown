@@ -24,10 +24,7 @@ function withFilterImpl<A, T extends RolldownPluginOption<A>>(
   }
   // TODO: check builtin plugin and parallel plugin
   let plugin = pluginOption as Plugin<A>;
-  let filterObjectIndex = findMatchedFilterObject(
-    plugin.name,
-    filterObjectList,
-  );
+  let filterObjectIndex = findMatchedFilterObject(plugin.name, filterObjectList);
   if (filterObjectIndex === -1) {
     return plugin as T;
   }
@@ -80,11 +77,7 @@ function findMatchedFilterObject(
   }
 
   for (let i = 0; i < overrideFilterObjectList.length; i++) {
-    for (
-      let j = 0;
-      j < (overrideFilterObjectList[i].pluginNamePattern ?? []).length;
-      j++
-    ) {
+    for (let j = 0; j < (overrideFilterObjectList[i].pluginNamePattern ?? []).length; j++) {
       let pattern = overrideFilterObjectList[i].pluginNamePattern![j];
       if (typeof pattern === 'string' && pattern === pluginName) {
         return i;

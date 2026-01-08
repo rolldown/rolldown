@@ -515,7 +515,7 @@ export default {
     format: 'iife',
     name: 'MyApp',
     globals: {
-      'react': 'React',
+      react: 'React',
       'react-dom': 'ReactDOM',
     },
   },
@@ -537,8 +537,8 @@ export default {
   external: ['d3', 'lodash'],
   output: {
     paths: {
-      'd3': 'https://cdn.jsdelivr.net/npm/d3@7',
-      'lodash': 'https://cdn.jsdelivr.net/npm/lodash@4',
+      d3: 'https://cdn.jsdelivr.net/npm/d3@7',
+      lodash: 'https://cdn.jsdelivr.net/npm/lodash@4',
     },
   },
 };

@@ -1,7 +1,4 @@
-import {
-  type BindingWatcherBundler,
-  type BindingWatcherEvent,
-} from '../../binding.cjs';
+import { type BindingWatcherBundler, type BindingWatcherEvent } from '../../binding.cjs';
 import type { MaybePromise } from '../../types/utils';
 import { aggregateBindingErrorsIntoJsError } from '../../utils/error';
 
@@ -16,27 +13,24 @@ type RolldownWatchBuild = BindingWatcherBundler;
 export type RolldownWatcherEvent =
   | { code: 'START' }
   | {
-    code: 'BUNDLE_START'; /* input?: InputOption; output: readonly string[] */
-  }
+      code: 'BUNDLE_START' /* input?: InputOption; output: readonly string[] */;
+    }
   | {
-    code: 'BUNDLE_END';
-    duration: number;
-    // input?: InputOption
-    output: readonly string[];
-    result: RolldownWatchBuild;
-  }
+      code: 'BUNDLE_END';
+      duration: number;
+      // input?: InputOption
+      output: readonly string[];
+      result: RolldownWatchBuild;
+    }
   | { code: 'END' }
   | {
-    code: 'ERROR';
-    error: Error; /* the error is not compilable with rollup */
-    result: RolldownWatchBuild;
-  };
+      code: 'ERROR';
+      error: Error /* the error is not compilable with rollup */;
+      result: RolldownWatchBuild;
+    };
 
 export class WatcherEmitter {
-  listeners: Map<
-    WatcherEvent,
-    Array<(...parameters: any[]) => MaybePromise<void>>
-  > = new Map();
+  listeners: Map<WatcherEvent, Array<(...parameters: any[]) => MaybePromise<void>>> = new Map();
 
   timer: any;
 
@@ -48,20 +42,11 @@ export class WatcherEmitter {
 
   on(
     event: 'change',
-    listener: (
-      id: string,
-      change: { event: ChangeEvent },
-    ) => MaybePromise<void>,
+    listener: (id: string, change: { event: ChangeEvent }) => MaybePromise<void>,
   ): this;
-  on(
-    event: 'event',
-    listener: (data: RolldownWatcherEvent) => MaybePromise<void>,
-  ): this;
+  on(event: 'event', listener: (data: RolldownWatcherEvent) => MaybePromise<void>): this;
   on(event: 'restart' | 'close', listener: () => MaybePromise<void>): this;
-  on(
-    event: WatcherEvent,
-    listener: (...parameters: any[]) => MaybePromise<void>,
-  ): this {
+  on(event: WatcherEvent, listener: (...parameters: any[]) => MaybePromise<void>): this {
     const listeners = this.listeners.get(event);
     if (listeners) {
       listeners.push(listener);
@@ -71,10 +56,7 @@ export class WatcherEmitter {
     return this;
   }
 
-  off(
-    event: WatcherEvent,
-    listener: (...parameters: any[]) => MaybePromise<void>,
-  ): this {
+  off(event: WatcherEvent, listener: (...parameters: any[]) => MaybePromise<void>): this {
     const listeners = this.listeners.get(event);
     if (listeners) {
       const index = listeners.indexOf(listener);

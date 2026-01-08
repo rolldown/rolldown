@@ -1,7 +1,7 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
-use rolldown_common::{GetLocalDbMut, ImporterRecord, ModuleIdx};
+use rolldown_common::{GetLocalDbMut, ImporterRecord, ModuleId, ModuleIdx, StableModuleId};
 use rolldown_error::BuildResult;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -16,13 +16,13 @@ use crate::{
 #[derive(Default, Debug)]
 pub struct ScanStageCache {
   snapshot: Option<NormalizedScanStageOutput>,
-  pub module_id_to_idx: FxHashMap<ArcStr, VisitState>,
+  pub module_id_to_idx: FxHashMap<ModuleId, VisitState>,
   pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
-  pub user_defined_entry: FxHashSet<ArcStr>,
+  pub user_defined_entry: FxHashSet<ModuleId>,
   // Usage: Map file path emitted by watcher to corresponding module index
   pub module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
   // Usage: Map module stable id injected to client code to corresponding module index
-  pub module_idx_by_stable_id: FxHashMap<String, ModuleIdx>,
+  pub module_idx_by_stable_id: FxHashMap<StableModuleId, ModuleIdx>,
 }
 
 impl ScanStageCache {
@@ -81,16 +81,16 @@ impl ScanStageCache {
     };
     // merge module_table, index_ast_scope, index_ecma_ast
     for (new_idx, new_module) in modules {
-      let idx = self.module_id_to_idx[new_module.id_clone()].idx();
+      let idx = self.module_id_to_idx[new_module.id()].idx();
 
       // Update `module_idx_by_abs_path`
       if let rolldown_common::Module::Normal(normal_module) = &new_module {
         self
           .module_idx_by_abs_path
-          .insert(normal_module.id.resource_id().to_slash().unwrap().into(), normal_module.idx);
+          .insert(normal_module.id.as_arc_str().to_slash().unwrap().into(), normal_module.idx);
       }
       // Update `module_idx_by_stable_id`
-      self.module_idx_by_stable_id.insert(new_module.stable_id().to_string(), new_module.idx());
+      self.module_idx_by_stable_id.insert(new_module.stable_id().clone(), new_module.idx());
 
       if new_idx.index() >= cache.module_table.modules.len() {
         let new_module_idx = ModuleIdx::from_usize(cache.module_table.modules.len());
@@ -142,11 +142,11 @@ impl ScanStageCache {
 
     for module in &build_snapshot.module_table.modules {
       if let rolldown_common::Module::Normal(normal_module) = module {
-        let filename = normal_module.id.resource_id().to_slash().unwrap().into();
+        let filename = normal_module.id.as_arc_str().to_slash().unwrap().into();
         let module_idx = normal_module.idx;
         self.module_idx_by_abs_path.insert(filename, module_idx);
       }
-      self.module_idx_by_stable_id.insert(module.stable_id().to_string(), module.idx());
+      self.module_idx_by_stable_id.insert(module.stable_id().clone(), module.idx());
     }
   }
 

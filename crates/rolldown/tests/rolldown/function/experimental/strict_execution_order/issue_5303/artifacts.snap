@@ -40,7 +40,7 @@ import assert from "node:assert";
 //#region foo_inner.js
 var foo_inner_default;
 var init_foo_inner = __esmMin((() => {
-	foo_inner_default = { foo: /* @__PURE__ */ (() => globalValue)() };
+	foo_inner_default = { foo: globalValue };
 }));
 
 //#endregion

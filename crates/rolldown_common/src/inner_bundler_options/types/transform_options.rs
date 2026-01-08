@@ -6,7 +6,7 @@ use std::{
 
 use dashmap::Entry;
 use itertools::Either;
-use oxc::transformer::{EngineTargets, TransformOptions as OxcTransformOptions};
+use oxc::transformer::{ESFeature, EngineTargets, TransformOptions as OxcTransformOptions};
 use oxc_resolver::{ResolveOptions, Resolver, TsconfigDiscovery, TsconfigOptions};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_utils::dashmap::FxDashMap;
@@ -125,10 +125,7 @@ impl TransformOptions {
   pub fn should_transform_js(&self) -> bool {
     match &self.inner {
       TransformOptionsInner::Normal(opts) => opts.env.regexp.set_notation,
-      TransformOptionsInner::Raw(_) => {
-        // TODO: self.target.has_feature(..)
-        false
-      }
+      TransformOptionsInner::Raw(_) => self.target.has_feature(ESFeature::ES2024UnicodeSetsRegex),
     }
   }
 

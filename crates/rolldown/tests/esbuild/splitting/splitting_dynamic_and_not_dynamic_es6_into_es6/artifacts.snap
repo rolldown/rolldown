@@ -6,21 +6,44 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
 //#region foo.js
+var foo_exports = /* @__PURE__ */ __exportAll({ bar: () => bar });
 let bar = 123;
 
 //#endregion
 //#region entry.js
-import("./foo.js").then(({ bar: b }) => console.log(bar, b));
+Promise.resolve().then(() => foo_exports).then(({ bar: b }) => {
+	assert.strictEqual(b, 123);
+	assert.strictEqual(bar, 123);
+});
 
 //#endregion
-export { bar as t };
 ```
 
-## foo.js
+# Variant: [format: Cjs]
+
+## Assets
+
+### entry.js
 
 ```js
-import { t as bar } from "./entry.js";
+// HIDDEN [rolldown:runtime]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
 
-export { bar };
+//#region foo.js
+var foo_exports = /* @__PURE__ */ __exportAll({ bar: () => bar });
+let bar = 123;
+
+//#endregion
+//#region entry.js
+Promise.resolve().then(() => foo_exports).then(({ bar: b }) => {
+	node_assert.default.strictEqual(b, 123);
+	node_assert.default.strictEqual(bar, 123);
+});
+
+//#endregion
 ```

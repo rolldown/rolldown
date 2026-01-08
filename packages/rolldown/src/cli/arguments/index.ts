@@ -18,11 +18,10 @@ export const options: {
     environment?: string | string[];
   };
 } = Object.fromEntries(
-  Object.entries(schemaInfo).filter(([_key, info]) => info.type !== 'never')
+  Object.entries(schemaInfo)
+    .filter(([_key, info]) => info.type !== 'never')
     .map(([key, info]) => {
-      const config = Object.getOwnPropertyDescriptor(alias, key)?.value as
-        | OptionConfig
-        | undefined;
+      const config = Object.getOwnPropertyDescriptor(alias, key)?.value as OptionConfig | undefined;
 
       const type = info.type;
 
@@ -93,8 +92,7 @@ export function parseCliArguments(): NormalizedCliOptions & {
       if (type === 'string' && typeof option.value !== 'string') {
         let opt = option as { name: string };
         // We should use the default value.
-        let defaultValue = Object.getOwnPropertyDescriptor(alias, opt.name)
-          ?.value as OptionConfig;
+        let defaultValue = Object.getOwnPropertyDescriptor(alias, opt.name)?.value as OptionConfig;
         Object.defineProperty(values, opt.name, {
           value: defaultValue.default ?? '',
           enumerable: true,
@@ -157,7 +155,8 @@ export function parseCliArguments(): NormalizedCliOptions & {
           writable: true,
         });
       }
-    }).filter((item) => {
+    })
+    .filter((item) => {
       return item !== undefined;
     });
 
@@ -168,11 +167,9 @@ export function parseCliArguments(): NormalizedCliOptions & {
   if (invalid_options.length !== 0) {
     let single = invalid_options.length === 1;
     logger.warn(
-      `Option \`${invalid_options.map(item => item.name).join(',')}\` ${
+      `Option \`${invalid_options.map((item) => item.name).join(',')}\` ${
         single ? 'is' : 'are'
-      } unrecognized. We will ignore ${single ? 'this' : 'those'} option${
-        single ? '' : 's'
-      }.`,
+      } unrecognized. We will ignore ${single ? 'this' : 'those'} option${single ? '' : 's'}.`,
     );
   }
 
@@ -183,9 +180,6 @@ export function parseCliArguments(): NormalizedCliOptions & {
       return acc;
     }, Object.create(null)),
   };
-  const normalizedOptions = normalizeCliOptions(
-    values,
-    positionals as string[],
-  );
+  const normalizedOptions = normalizeCliOptions(values, positionals as string[]);
   return { ...normalizedOptions, rawArgs };
 }

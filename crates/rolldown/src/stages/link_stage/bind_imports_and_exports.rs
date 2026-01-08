@@ -282,7 +282,7 @@ impl LinkStage<'_> {
         let mut named_import_to_cjs_module = FxHashMap::default();
         let mut import_record_ns_to_cjs_module = FxHashMap::default();
         module.named_imports.iter().for_each(|(_, named_import)| {
-          let rec = &module.import_records[named_import.record_id];
+          let rec = &module.import_records[named_import.record_idx];
           if relation_with_commonjs_map.contains_key(&rec.resolved_module) {
             named_import_to_cjs_module.insert(named_import.imported_as, rec.resolved_module);
           }
@@ -307,16 +307,16 @@ impl LinkStage<'_> {
   fn add_exports_for_export_star(
     normal_modules: &IndexModules,
     resolve_exports: &mut FxHashMap<CompactStr, ResolvedExport>,
-    module_id: ModuleIdx,
+    module_idx: ModuleIdx,
     module_stack: &mut Vec<ModuleIdx>,
   ) {
-    if module_stack.contains(&module_id) {
+    if module_stack.contains(&module_idx) {
       return;
     }
 
-    module_stack.push(module_id);
+    module_stack.push(module_idx);
 
-    let Module::Normal(module) = &normal_modules[module_id] else {
+    let Module::Normal(module) = &normal_modules[module_idx] else {
       return;
     };
 
@@ -443,11 +443,11 @@ impl LinkStage<'_> {
                     {
                       warnings.push(
                         BuildDiagnostic::import_is_undefined(
-                          module.id.resource_id().clone(),
+                          module.id.as_arc_str().clone(),
                           module.source.clone(),
                           member_expr_ref.span,
                           ArcStr::from(name.as_str()),
-                          canonical_ref_owner.stable_id.clone(),
+                          canonical_ref_owner.stable_id.to_string(),
                         )
                         .with_severity_warning(),
                       );
@@ -598,20 +598,20 @@ struct BindImportsAndExportsContext<'a> {
 }
 
 impl BindImportsAndExportsContext<'_> {
-  fn match_imports_with_exports(&mut self, module_id: ModuleIdx) {
-    let Module::Normal(module) = &self.index_modules[module_id] else {
+  fn match_imports_with_exports(&mut self, module_idx: ModuleIdx) {
+    let Module::Normal(module) = &self.index_modules[module_idx] else {
       return;
     };
     let is_esm = matches!(self.options.format, OutputFormat::Esm);
     for (imported_as_ref, named_import) in &module.named_imports {
       let match_import_span = tracing::trace_span!(
         "MATCH_IMPORT",
-        module_id = module.stable_id,
+        module_id = module.stable_id.as_str(),
         imported_specifier = named_import.imported.to_string()
       );
       let _enter = match_import_span.enter();
 
-      let rec = &module.import_records[named_import.record_id];
+      let rec = &module.import_records[named_import.record_idx];
       let is_external = matches!(self.index_modules[rec.resolved_module], Module::External(_));
 
       if is_esm && is_external {
@@ -624,7 +624,7 @@ impl BindImportsAndExportsContext<'_> {
               .insert(*imported_as_ref);
           }
           Specifier::Literal(ref name)
-            if self.metas[module_id]
+            if self.metas[module_idx]
               .resolved_exports
               .iter()
               .all(|(_, resolved_export)| resolved_export.symbol_ref != *imported_as_ref) =>
@@ -644,7 +644,7 @@ impl BindImportsAndExportsContext<'_> {
         self.index_modules,
         &mut MatchingContext { tracker_stack: Vec::default() },
         ImportTracker {
-          importer: module_id,
+          importer: module_idx,
           importee: rec.resolved_module,
           imported: named_import.imported.clone(),
           imported_as: *imported_as_ref,
@@ -663,7 +663,7 @@ impl BindImportsAndExportsContext<'_> {
               exporter.push(AmbiguousExternalNamespaceModule {
                 source: owner.source.clone(),
                 module_id: owner.id.to_string(),
-                stable_id: owner.stable_id.clone(),
+                stable_id: owner.stable_id.to_string(),
                 span_of_identifier: named_export.span,
               });
             }
@@ -676,7 +676,7 @@ impl BindImportsAndExportsContext<'_> {
               return Some(AmbiguousExternalNamespaceModule {
                 source: normal_module.source.clone(),
                 module_id: normal_module.id.to_string(),
-                stable_id: normal_module.stable_id.clone(),
+                stable_id: normal_module.stable_id.to_string(),
                 span_of_identifier: named_export.span,
               });
             }
@@ -690,7 +690,7 @@ impl BindImportsAndExportsContext<'_> {
             AmbiguousExternalNamespaceModule {
               source: module.source.clone(),
               module_id: module.id.to_string(),
-              stable_id: module.stable_id.clone(),
+              stable_id: module.stable_id.to_string(),
               span_of_identifier: named_import.span_imported,
             },
             exporter,
@@ -699,7 +699,7 @@ impl BindImportsAndExportsContext<'_> {
         MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports }) => {
           for r in &reexports {
             if self.side_effects_modules.contains(&r.owner) {
-              self.metas[module_id].dependencies.insert(r.owner);
+              self.metas[module_idx].dependencies.insert(r.owner);
             }
           }
           self.normal_symbol_exports_chain_map.insert(*imported_as_ref, reexports);
@@ -722,7 +722,7 @@ impl BindImportsAndExportsContext<'_> {
             ) && matches!(module.module_type, ModuleType::Ts | ModuleType::Tsx);
           let mut diagnostic = BuildDiagnostic::missing_export(
             module.id.to_string(),
-            module.stable_id.clone(),
+            module.stable_id.to_string(),
             importee.id().to_string(),
             importee.stable_id().to_string(),
             module.source.clone(),
@@ -749,7 +749,7 @@ impl BindImportsAndExportsContext<'_> {
     let named_import = &importer.named_imports[&tracker.imported_as];
 
     // Is this an external file?
-    let importee_id = importer.import_records[named_import.record_id].resolved_module;
+    let importee_id = importer.import_records[named_import.record_idx].resolved_module;
     let importee = match &self.index_modules[importee_id] {
       Module::Normal(importee) => importee.as_ref(),
       Module::External(external) => return ImportStatus::External(external.namespace_ref),
@@ -812,8 +812,8 @@ impl BindImportsAndExportsContext<'_> {
   ) -> MatchImportKind {
     let tracking_span = tracing::trace_span!(
       "TRACKING_MATCH_IMPORT",
-      importer = index_modules[tracker.importer].stable_id(),
-      importee = index_modules[tracker.importee].stable_id(),
+      importer = index_modules[tracker.importer].stable_id().as_str(),
+      importee = index_modules[tracker.importee].stable_id().as_str(),
       imported_specifier = tracker.imported.to_string()
     );
     let _enter = tracking_span.enter();
@@ -837,7 +837,7 @@ impl BindImportsAndExportsContext<'_> {
       tracing::trace!("Got import_status {:?}", import_status);
       let importer = &self.index_modules[tracker.importer];
       let named_import = &importer.as_normal().unwrap().named_imports[&tracker.imported_as];
-      let importer_record = &importer.as_normal().unwrap().import_records[named_import.record_id];
+      let importer_record = &importer.as_normal().unwrap().import_records[named_import.record_idx];
 
       let kind = match import_status {
         ImportStatus::CommonJS => match &tracker.imported {
@@ -873,7 +873,7 @@ impl BindImportsAndExportsContext<'_> {
             match ambiguous_ref_owner.as_normal().unwrap().named_imports.get(ambiguous_ref) {
               Some(another_named_import) => {
                 let rec = &ambiguous_ref_owner.as_normal().unwrap().import_records
-                  [another_named_import.record_id];
+                  [another_named_import.record_idx];
                 let ambiguous_result = self.match_import_with_export(
                   index_modules,
                   &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
@@ -900,7 +900,7 @@ impl BindImportsAndExportsContext<'_> {
           let owner = &index_modules[symbol.owner];
           if let Some(another_named_import) = owner.as_normal().unwrap().named_imports.get(&symbol)
           {
-            let rec = &owner.as_normal().unwrap().import_records[another_named_import.record_id];
+            let rec = &owner.as_normal().unwrap().import_records[another_named_import.record_idx];
             match &self.index_modules[rec.resolved_module] {
               Module::External(_) => {
                 break MatchImportKind::Normal(MatchImportKindNormal {

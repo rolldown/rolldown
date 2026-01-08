@@ -1,5 +1,5 @@
 {
-    "config": {
-        "external": ["node:fs"]
-    }
+  "config": {
+    "external": ["node:fs", "node:assert"]
+  }
 }

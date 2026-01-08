@@ -27,7 +27,7 @@ async function getEnv() {
 }
 var ccc;
 var init_b = __esmMin((async () => {
-	await init_c();
+	init_c();
 	ccc = await Promise.resolve().then(() => (init_c(), c_exports));
 }));
 

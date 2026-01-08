@@ -9,6 +9,6 @@ use serde::Deserialize;
   derive(Deserialize, JsonSchema),
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
-pub struct DebugOptions {
+pub struct DevtoolsOptions {
   pub session_id: Option<String>,
 }

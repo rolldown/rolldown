@@ -194,12 +194,7 @@ impl ViteCSSPostPlugin {
         // that means a JS entry file imports a CSS file.
         // in this case, only use the filename for the CSS chunk name like JS chunks.
         let css_asset_name = if ctx.args.chunk.is_entry
-          && ctx
-            .args
-            .chunk
-            .facade_module_id
-            .as_ref()
-            .is_none_or(|id| !is_css_request(id.resource_id().as_str()))
+          && ctx.args.chunk.facade_module_id.as_ref().is_none_or(|id| !is_css_request(id.as_str()))
         {
           css_asset_path.file_name().map(|v| v.to_string_lossy().into_owned()).unwrap()
         } else {

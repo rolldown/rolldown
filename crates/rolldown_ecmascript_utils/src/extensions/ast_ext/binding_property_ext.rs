@@ -3,7 +3,7 @@ use oxc::{
   ast::ast::{
     ArrayAssignmentTarget, AssignmentTargetMaybeDefault, AssignmentTargetProperty,
     AssignmentTargetPropertyIdentifier, AssignmentTargetPropertyProperty, AssignmentTargetRest,
-    AssignmentTargetWithDefault, BindingPatternKind, BindingProperty, IdentifierReference,
+    AssignmentTargetWithDefault, BindingPattern, BindingProperty, IdentifierReference,
     ObjectAssignmentTarget,
   },
 };
@@ -22,8 +22,8 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
     self,
     alloc: &'ast Allocator,
   ) -> AssignmentTargetProperty<'ast> {
-    match self.value.kind {
-      BindingPatternKind::AssignmentPattern(assign_pat) => {
+    match self.value {
+      BindingPattern::AssignmentPattern(assign_pat) => {
         let assign_pat = assign_pat.unbox();
         if self.shorthand {
           let binding_id = assign_pat.left.get_binding_identifier().unwrap();
@@ -59,7 +59,7 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
           .into_in(alloc)
         }
       }
-      BindingPatternKind::BindingIdentifier(ref id) => {
+      BindingPattern::BindingIdentifier(ref id) => {
         if self.shorthand {
           AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(
             AssignmentTargetPropertyIdentifier {
@@ -86,7 +86,7 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
           .into_in(alloc)
         }
       }
-      BindingPatternKind::ArrayPattern(arr_pat) => {
+      BindingPattern::ArrayPattern(arr_pat) => {
         let mut arr_pat = arr_pat.unbox();
         let mut elements = oxc::allocator::Vec::with_capacity_in(arr_pat.elements.len(), alloc);
         arr_pat.elements.take_in(alloc).into_iter().for_each(|element| {
@@ -120,7 +120,7 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
         )
         .into_in(alloc)
       }
-      BindingPatternKind::ObjectPattern(obj_pat) => {
+      BindingPattern::ObjectPattern(obj_pat) => {
         let mut obj_pat = obj_pat.unbox();
         let mut properties = oxc::allocator::Vec::with_capacity_in(obj_pat.properties.len(), alloc);
         obj_pat.properties.take_in(alloc).into_iter().for_each(|property| {

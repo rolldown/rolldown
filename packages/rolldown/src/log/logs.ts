@@ -10,11 +10,7 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   PARSE_ERROR = 'PARSE_ERROR',
   NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER';
 
-export function logParseError(
-  message: string,
-  id: string | undefined,
-  pos?: number,
-): RollupLog {
+export function logParseError(message: string, id: string | undefined, pos?: number): RollupLog {
   return {
     code: PARSE_ERROR,
     id,
@@ -26,46 +22,35 @@ export function logParseError(
 export function logInvalidLogPosition(pluginName: string): RollupLog {
   return {
     code: INVALID_LOG_POSITION,
-    message:
-      `Plugin "${pluginName}" tried to add a file position to a log or warning. This is only supported in the "transform" hook at the moment and will be ignored.`,
+    message: `Plugin "${pluginName}" tried to add a file position to a log or warning. This is only supported in the "transform" hook at the moment and will be ignored.`,
   };
 }
 
-export function logInputHookInOutputPlugin(
-  pluginName: string,
-  hookName: string,
-): RollupLog {
+export function logInputHookInOutputPlugin(pluginName: string, hookName: string): RollupLog {
   return {
     code: INPUT_HOOK_IN_OUTPUT_PLUGIN,
-    message:
-      `The "${hookName}" hook used by the output plugin ${pluginName} is a build time hook and will not be run for that plugin. Either this plugin cannot be used as an output plugin, or it should have an option to configure it as an output plugin.`,
+    message: `The "${hookName}" hook used by the output plugin ${pluginName} is a build time hook and will not be run for that plugin. Either this plugin cannot be used as an output plugin, or it should have an option to configure it as an output plugin.`,
   };
 }
 
-export function logCycleLoading(
-  pluginName: string,
-  moduleId: string,
-): RollupLog {
+export function logCycleLoading(pluginName: string, moduleId: string): RollupLog {
   return {
     code: CYCLE_LOADING,
-    message:
-      `Found the module "${moduleId}" cycle loading at ${pluginName} plugin, it maybe blocking fetching modules.`,
+    message: `Found the module "${moduleId}" cycle loading at ${pluginName} plugin, it maybe blocking fetching modules.`,
   };
 }
 
 export function logMultiplyNotifyOption(): RollupLog {
   return {
     code: MULTIPLY_NOTIFY_OPTION,
-    message:
-      `Found multiply notify option at watch options, using first one to start notify watcher.`,
+    message: `Found multiply notify option at watch options, using first one to start notify watcher.`,
   };
 }
 
 export function logNoFileSystemInBrowser(method: string): RollupLog {
   return {
     code: NO_FS_IN_BROWSER,
-    message:
-      `Cannot access the file system (via "${method}") when using the browser build of Rolldown.`,
+    message: `Cannot access the file system (via "${method}") when using the browser build of Rolldown.`,
   };
 }
 

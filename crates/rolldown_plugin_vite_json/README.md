@@ -18,11 +18,13 @@ export default defineConfig({
   input: {
     entry: './main.ts',
   },
-  plugins: [viteJsonPlugin({
-    minify: false,
-    namedExports: false,
-    stringify: 'auto',
-  })],
+  plugins: [
+    viteJsonPlugin({
+      minify: false,
+      namedExports: false,
+      stringify: 'auto',
+    }),
+  ],
 });
 ```
 

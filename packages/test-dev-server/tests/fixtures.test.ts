@@ -6,11 +6,7 @@ import nodeFs from 'node:fs';
 import nodePath from 'node:path';
 import { afterAll, describe, test } from 'vitest';
 import { CONFIG } from './src/config';
-import {
-  isDirectoryExists,
-  removeDirSync,
-  sensibleTimeoutInMs,
-} from './src/utils';
+import { isDirectoryExists, removeDirSync, sensibleTimeoutInMs } from './src/utils';
 
 function main() {
   const fixturesPath = nodePath.resolve(__dirname, 'fixtures');
@@ -33,59 +29,35 @@ function main() {
     let testIndex = 0;
     for (const fixtureName of fixtureNames) {
       // Skip if it's not a valid fixture
-      if (
-        !nodeFs.existsSync(
-          nodePath.join(fixturesPath, fixtureName, 'package.json'),
-        )
-      ) {
+      if (!nodeFs.existsSync(nodePath.join(fixturesPath, fixtureName, 'package.json'))) {
         continue;
       }
       test(`fixture: ${fixtureName}`, async () => {
         const port = 3000 + testIndex;
         testIndex++;
 
-        let tmpProjectPath = nodePath.join(
-          tmpFixturesPath,
-          fixtureName,
-        );
-        while (
-          await isDirectoryExists(
-            tmpProjectPath,
-          )
-        ) {
-          tmpProjectPath = nodePath.join(
-            tmpFixturesPath,
-            fixtureName + '-retry',
-          );
+        let tmpProjectPath = nodePath.join(tmpFixturesPath, fixtureName);
+        while (await isDirectoryExists(tmpProjectPath)) {
+          tmpProjectPath = nodePath.join(tmpFixturesPath, fixtureName + '-retry');
         }
 
         console.log(
-          `🔄 - Copying ${
-            nodePath.join(fixturesPath, fixtureName)
-          } to ${tmpProjectPath}...`,
+          `🔄 - Copying ${nodePath.join(fixturesPath, fixtureName)} to ${tmpProjectPath}...`,
         );
         // Remove fixture's dist directory before copying to prevent stale artifacts
-        const fixtureDistPath = nodePath.join(
-          fixturesPath,
-          fixtureName,
-          'dist',
-        );
+        const fixtureDistPath = nodePath.join(fixturesPath, fixtureName, 'dist');
         removeDirSync(fixtureDistPath);
         await nodeFs.promises.mkdir(tmpProjectPath, { recursive: true });
-        await nodeFs.promises.cp(
-          nodePath.join(fixturesPath, fixtureName),
-          tmpProjectPath,
-          { recursive: true },
-        );
+        await nodeFs.promises.cp(nodePath.join(fixturesPath, fixtureName), tmpProjectPath, {
+          recursive: true,
+        });
 
         console.log(`🔄 - Killing any process running on port 3000...`);
 
         try {
           await killPort(port);
         } catch (err) {
-          if (
-            err instanceof Error && err.message.includes('No process running')
-          ) {
+          if (err instanceof Error && err.message.includes('No process running')) {
             console.log(`🔄 - No process running on port ${port}`);
           } else {
             throw err;
@@ -108,18 +80,17 @@ function main() {
 
         await waitForPathExists(nodeScriptPath);
 
-        let runningArtifactProcess = await runArtifactProcess(
-          nodeScriptPath,
-          tmpProjectPath,
-        );
+        let runningArtifactProcess = await runArtifactProcess(nodeScriptPath, tmpProjectPath);
 
         const hmrEditFiles = await collectHmrEditFiles(tmpProjectPath);
 
         for (const [index, [step, hmrEdits]] of hmrEditFiles.entries()) {
           console.log(
-            `🔄 Processing HMR edit files for step ${step} with edits: ${
-              JSON.stringify(hmrEdits, null, 2)
-            }`,
+            `🔄 Processing HMR edit files for step ${step} with edits: ${JSON.stringify(
+              hmrEdits,
+              null,
+              2,
+            )}`,
           );
 
           // Refer to `packages/test-dev-server/src/utils/get-dev-watch-options-for-ci.ts`
@@ -129,8 +100,7 @@ function main() {
           // - Make sure changes in the same step are detected together
           if (index !== 0) {
             await sensibleTimeoutInMs(
-              CONFIG.watch.debounceDuration + CONFIG.watch.debounceTickRate +
-                100,
+              CONFIG.watch.debounceDuration + CONFIG.watch.debounceTickRate + 100,
             );
           }
 
@@ -138,12 +108,10 @@ function main() {
             ...e,
             content: nodeFs.readFileSync(e.replacementPath, 'utf-8'),
           }));
-          const needRestart = hmrEditsWithContent.some(e =>
-            /^\s*\/\/\s*@restart/.test(e.content)
+          const needRestart = hmrEditsWithContent.some((e) =>
+            /^\s*\/\/\s*@restart/.test(e.content),
           );
-          const needReload = hmrEditsWithContent.some(e =>
-            /^\s*\/\/\s*@reload/.test(e.content)
-          );
+          const needReload = hmrEditsWithContent.some((e) => /^\s*\/\/\s*@reload/.test(e.content));
           let currentArtifactContent!: Buffer;
           if (needRestart || needReload) {
             currentArtifactContent = nodeFs.readFileSync(nodeScriptPath);
@@ -154,9 +122,7 @@ function main() {
             nodeFs.writeFileSync(hmrEdit.targetPath, hmrEdit.content);
           }
 
-          console.log(
-            `⏳ Waiting for HMR to be triggered for step ${step}`,
-          );
+          console.log(`⏳ Waiting for HMR to be triggered for step ${step}`);
 
           if (needRestart || needReload) {
             // Waiting Reload hmr update to be triggered. If we close the process too fast, dev engine will think there're no clients.
@@ -167,27 +133,16 @@ function main() {
               devServeProcess.stdin.write('r');
             }
             await runningArtifactProcess.close();
-            await waitForFileToBeModified(
-              nodeScriptPath,
-              currentArtifactContent,
-            );
-            runningArtifactProcess = await runArtifactProcess(
-              nodeScriptPath,
-              tmpProjectPath,
-            );
+            await waitForFileToBeModified(nodeScriptPath, currentArtifactContent);
+            runningArtifactProcess = await runArtifactProcess(nodeScriptPath, tmpProjectPath);
           }
-          await waitForPathExists(
-            nodePath.join(tmpProjectPath, `ok-${index}`),
-            10 * 1000,
-          );
+          await waitForPathExists(nodePath.join(tmpProjectPath, `ok-${index}`), 10 * 1000);
           console.log(`✅ HMR triggered for step ${step}`);
         }
 
-        const catchDevServeProcess = devServeProcess.catch(err => {
+        const catchDevServeProcess = devServeProcess.catch((err) => {
           if (err instanceof ExecaError && err.signal === 'SIGTERM') {
-            console.log(
-              'Process killed normally with SIGTERM, ignoring error.',
-            );
+            console.log('Process killed normally with SIGTERM, ignoring error.');
           } else {
             throw err;
           }
@@ -204,18 +159,17 @@ function main() {
 
 let id = 0;
 
-async function runArtifactProcess(
-  artifactPath: string,
-  tmpProjectPath: string,
-) {
+async function runArtifactProcess(artifactPath: string, tmpProjectPath: string) {
   const thisId = id;
   id++;
 
   const initOkFilePath = nodePath.join(tmpProjectPath, `ok-init-${thisId}`);
-  const injectCode = encodeURIComponent(`
+  const injectCode = encodeURIComponent(
+    `
     import __nodeFs__ from 'node:fs';
     __nodeFs__.writeFileSync('ok-init-${thisId}', '');
-  `.trim());
+  `.trim(),
+  );
 
   console.log(`🔄 Starting Node.js process: ${artifactPath}`);
   const artifactProcess = execa(
@@ -232,17 +186,13 @@ async function runArtifactProcess(
   return {
     process: artifactProcess,
     async close() {
-      const catchRunningArtifactProcess = artifactProcess.catch(
-        err => {
-          if (err instanceof ExecaError && err.signal === 'SIGTERM') {
-            console.log(
-              'Process killed normally with SIGTERM, ignoring error.',
-            );
-          } else {
-            throw err;
-          }
-        },
-      );
+      const catchRunningArtifactProcess = artifactProcess.catch((err) => {
+        if (err instanceof ExecaError && err.signal === 'SIGTERM') {
+          console.log('Process killed normally with SIGTERM, ignoring error.');
+        } else {
+          throw err;
+        }
+      });
       artifactProcess.kill('SIGTERM');
       await catchRunningArtifactProcess;
     },
@@ -263,19 +213,15 @@ async function waitForPathExists(path: string, timeout = 6 * 1000) {
       listedFiles = nodeFs.readdirSync(parentDir);
     }
     throw new Error(
-      `Path ${path} does not exist after ${timeout}ms. Parent directory contents: ${
-        listedFiles?.join(', ')
-      }`,
+      `Path ${path} does not exist after ${timeout}ms. Parent directory contents: ${listedFiles?.join(
+        ', ',
+      )}`,
       { cause: err },
     );
   }
 }
 
-async function waitForFileToBeModified(
-  path: string,
-  previousContent: Buffer,
-  timeout = 6 * 1000,
-) {
+async function waitForFileToBeModified(path: string, previousContent: Buffer, timeout = 6 * 1000) {
   console.log(`🔄 - Waiting for path ${path} to be modified...`);
   await waitFor(() => {
     const newContent = nodeFs.readFileSync(path);
@@ -314,12 +260,9 @@ interface HmrEditFile {
   step: number;
 }
 
-async function collectHmrEditFiles(
-  projectPath: string,
-) {
+async function collectHmrEditFiles(projectPath: string) {
   const hmrEditFiles = await glob(
-    glob.convertPathToPattern(nodePath.join(projectPath, './src')) +
-      '/**/*.hmr-*.*',
+    glob.convertPathToPattern(nodePath.join(projectPath, './src')) + '/**/*.hmr-*.*',
     {
       ignore: ['**/node_modules/**', '**/dist/**'],
       absolute: true,
@@ -335,20 +278,12 @@ async function collectHmrEditFiles(
     const basenameWithoutExt = nodePath.basename(replacementPath, ext);
 
     // 1
-    const step = parseInt(basenameWithoutExt.slice(
-      basenameWithoutExt.lastIndexOf('-') + 1,
-    ));
+    const step = parseInt(basenameWithoutExt.slice(basenameWithoutExt.lastIndexOf('-') + 1));
 
-    const originalBasename = basenameWithoutExt.slice(
-      0,
-      basenameWithoutExt.lastIndexOf('.'),
-    );
+    const originalBasename = basenameWithoutExt.slice(0, basenameWithoutExt.lastIndexOf('.'));
 
     // /xxx/xxx/example.js
-    const targetPath = nodePath.join(
-      nodePath.dirname(replacementPath),
-      originalBasename,
-    ) + ext;
+    const targetPath = nodePath.join(nodePath.dirname(replacementPath), originalBasename) + ext;
 
     return {
       replacementPath,

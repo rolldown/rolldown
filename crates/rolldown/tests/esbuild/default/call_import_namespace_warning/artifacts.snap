@@ -201,6 +201,7 @@ c();
 new a();
 new b();
 new c();
+test(a);
 
 //#endregion
 ```

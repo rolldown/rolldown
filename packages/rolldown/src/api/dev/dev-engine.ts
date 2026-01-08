@@ -24,18 +24,11 @@ export class DevEngine {
     devOptions: DevOptions = {},
   ): Promise<DevEngine> {
     inputOptions = await PluginDriver.callOptionsHook(inputOptions);
-    const options = await createBundlerOptions(
-      inputOptions,
-      outputOptions,
-      false,
-    );
+    const options = await createBundlerOptions(inputOptions, outputOptions, false);
 
     const userOnHmrUpdates = devOptions.onHmrUpdates;
-    const bindingOnHmrUpdates: BindingDevOptions['onHmrUpdates'] =
-      userOnHmrUpdates
-        ? function(
-          rawResult: BindingResult<[BindingClientHmrUpdate[], string[]]>,
-        ) {
+    const bindingOnHmrUpdates: BindingDevOptions['onHmrUpdates'] = userOnHmrUpdates
+      ? function (rawResult: BindingResult<[BindingClientHmrUpdate[], string[]]>) {
           const result = normalizeBindingResult(rawResult);
           if (result instanceof Error) {
             userOnHmrUpdates(result);
@@ -47,18 +40,18 @@ export class DevEngine {
             changedFiles,
           });
         }
-        : undefined;
+      : undefined;
 
     const userOnOutput = devOptions.onOutput;
     const bindingOnOutput: BindingDevOptions['onOutput'] = userOnOutput
-      ? function(rawResult) {
-        const result = normalizeBindingResult(rawResult);
-        if (result instanceof Error) {
-          userOnOutput(result);
-          return;
+      ? function (rawResult) {
+          const result = normalizeBindingResult(rawResult);
+          if (result instanceof Error) {
+            userOnOutput(result);
+            return;
+          }
+          userOnOutput(transformToRollupOutput(result));
         }
-        userOnOutput(transformToRollupOutput(result));
-      }
       : undefined;
 
     const bindingDevOptions: BindingDevOptions = {
@@ -68,8 +61,8 @@ export class DevEngine {
         ? devOptions.rebuildStrategy === 'always'
           ? BindingRebuildStrategy.Always
           : devOptions.rebuildStrategy === 'auto'
-          ? BindingRebuildStrategy.Auto
-          : BindingRebuildStrategy.Never
+            ? BindingRebuildStrategy.Auto
+            : BindingRebuildStrategy.Never
         : undefined,
       watch: devOptions.watch && {
         skipWrite: devOptions.watch.skipWrite,
@@ -82,10 +75,7 @@ export class DevEngine {
       },
     };
 
-    const inner = new BindingDevEngine(
-      options.bundlerOptions,
-      bindingDevOptions,
-    );
+    const inner = new BindingDevEngine(options.bundlerOptions, bindingDevOptions);
 
     return new DevEngine(inner);
   }
@@ -102,10 +92,9 @@ export class DevEngine {
     if (this.#cachedBuildFinishPromise) {
       return this.#cachedBuildFinishPromise;
     }
-    const promise = this.#inner.ensureCurrentBuildFinish()
-      .then(() => {
-        this.#cachedBuildFinishPromise = null;
-      });
+    const promise = this.#inner.ensureCurrentBuildFinish().then(() => {
+      this.#cachedBuildFinishPromise = null;
+    });
     this.#cachedBuildFinishPromise = promise;
     return promise;
   }
@@ -118,10 +107,7 @@ export class DevEngine {
     await this.#inner.ensureLatestBuildOutput();
   }
 
-  async invalidate(
-    file: string,
-    firstInvalidatedBy?: string,
-  ): Promise<BindingClientHmrUpdate[]> {
+  async invalidate(file: string, firstInvalidatedBy?: string): Promise<BindingClientHmrUpdate[]> {
     return this.#inner.invalidate(file, firstInvalidatedBy);
   }
 
@@ -135,5 +121,20 @@ export class DevEngine {
 
   async close(): Promise<void> {
     await this.#inner.close();
+  }
+
+  /**
+   * Compile a lazy entry module and return HMR-style patch code.
+   *
+   * This is called when a dynamically imported module is first requested at runtime.
+   * The module was previously stubbed with a proxy, and now we need to compile the
+   * actual module and its dependencies.
+   *
+   * @param moduleId - The absolute file path of the module to compile
+   * @param clientId - The client ID requesting this compilation
+   * @returns The compiled JavaScript code as a string (HMR patch format)
+   */
+  async compileEntry(moduleId: string, clientId: string): Promise<string> {
+    return this.#inner.compileEntry(moduleId, clientId);
   }
 }

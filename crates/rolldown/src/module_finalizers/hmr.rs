@@ -57,6 +57,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           .module
           .hmr_info
           .module_request_to_import_record_idx[string_literal.value.as_str()]];
+        // Use stable module ID for consistent runtime lookup
         string_literal.value =
           self.snippet.builder.atom(self.ctx.modules[import_record.resolved_module].stable_id());
       }
@@ -69,6 +70,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
               .module
               .hmr_info
               .module_request_to_import_record_idx[string_literal.value.as_str()]];
+            // Use stable module ID for consistent runtime lookup
             string_literal.value = self
               .snippet
               .builder

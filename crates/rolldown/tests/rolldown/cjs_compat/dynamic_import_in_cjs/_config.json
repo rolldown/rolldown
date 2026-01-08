@@ -1,0 +1,8 @@
+{
+  "config": {
+    "external": ["external"],
+    "format": "cjs",
+    "dynamicImportInCjs": false
+  },
+  "expectExecuted": false
+}

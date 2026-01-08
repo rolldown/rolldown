@@ -2,8 +2,7 @@ use std::{path::Path, sync::Arc};
 
 use arcstr::ArcStr;
 use rolldown_common::{
-  ExternalModuleTaskResult, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ResolvedExternal,
-  ResolvedId,
+  ExternalModuleTaskResult, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ResolvedExternal, ResolvedId,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
@@ -50,7 +49,7 @@ impl ExternalModuleTask {
     let external_module_side_effects =
       normalize_side_effects(&self.ctx.options, resolved_id, None, None, resolved_id.side_effects)
         .await?;
-    let id = ModuleId::new(&resolved_id.id);
+    let id = resolved_id.id.clone();
     self.ctx.plugin_driver.set_module_info(
       &id.clone(),
       Arc::new(ModuleInfo {
@@ -68,7 +67,7 @@ impl ExternalModuleTask {
     let need_renormalize_render_path = !matches!(resolved_id.external, ResolvedExternal::Absolute)
       && Path::new(resolved_id.id.as_str()).is_absolute();
 
-    let file_name = if need_renormalize_render_path {
+    let file_name: ArcStr = if need_renormalize_render_path {
       let entries_common_dir = commondir::CommonDir::try_new(
         self.user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.as_str()),
       )
@@ -77,17 +76,17 @@ impl ExternalModuleTask {
         Path::new(resolved_id.id.as_str()).relative(entries_common_dir.common_root());
       relative_path.to_slash_lossy().into()
     } else {
-      resolved_id.id.clone()
+      resolved_id.id.as_arc_str().clone()
     };
 
-    let identifier_name = if need_renormalize_render_path {
+    let identifier_name: ArcStr = if need_renormalize_render_path {
       Path::new(resolved_id.id.as_str())
         .relative(&self.ctx.options.cwd)
         .normalize()
         .to_slash_lossy()
         .into()
     } else {
-      resolved_id.id.clone()
+      resolved_id.id.as_arc_str().clone()
     };
     let legitimized_identifier_name = legitimize_identifier_name(&identifier_name);
     let msg = ModuleLoaderMsg::ExternalModuleDone(Box::new(ExternalModuleTaskResult {

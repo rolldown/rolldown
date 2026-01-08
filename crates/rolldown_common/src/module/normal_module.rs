@@ -5,7 +5,7 @@ use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
   AssetView, DebugStmtInfoForTreeShaking, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx,
   ImportRecordMeta, LegalComments, ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions,
-  RawImportRecord, ResolvedId, StmtInfoIdx,
+  RawImportRecord, ResolvedId, StableModuleId, StmtInfoIdx,
 };
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -25,7 +25,7 @@ pub struct NormalModule {
   pub is_user_defined_entry: bool,
   pub id: ModuleId,
   /// `stable_id` is calculated based on `id` to be stable across machine and os.
-  pub stable_id: String,
+  pub stable_id: StableModuleId,
   // Pretty resource id for debug
   pub debug_id: String,
   pub repr_name: String,

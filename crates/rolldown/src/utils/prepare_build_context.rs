@@ -14,6 +14,7 @@ use rolldown_fs::{OsFileSystem, OxcResolverFileSystem as _};
 use rolldown_resolver::Resolver;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rustc_hash::{FxHashMap, FxHashSet};
+use sugar_path::SugarPath;
 
 use crate::{SharedResolver, utils::determine_minify_internal_exports_default};
 
@@ -417,6 +418,7 @@ pub fn prepare_build_context(
     extend: raw_options.extend.unwrap_or(false),
     external_live_bindings: raw_options.external_live_bindings.unwrap_or(true),
     inline_dynamic_imports,
+    dynamic_import_in_cjs: raw_options.dynamic_import_in_cjs.unwrap_or(true),
     advanced_chunks: raw_options.advanced_chunks,
     checks: raw_options.checks.unwrap_or_default().into(),
     watch: raw_options.watch.unwrap_or_default(),
@@ -439,15 +441,11 @@ pub fn prepare_build_context(
       .unwrap_or_else(|| arcstr::literal!("_virtual")),
     preserve_modules_root: raw_options.preserve_modules_root.map(|preserve_modules_root| {
       let p = Path::new(&preserve_modules_root);
-      if p.is_absolute() {
-        preserve_modules_root
-      } else {
-        cwd.join(p).to_string_lossy().to_string()
-      }
+      cwd.join(p).normalize().to_string_lossy().to_string()
     }),
     cwd,
     preserve_entry_signatures,
-    debug: raw_options.debug.is_some(),
+    devtools: raw_options.devtools.is_some(),
     optimization: normalize_optimization_option(raw_options.optimization, platform),
     top_level_var: raw_options.top_level_var.unwrap_or(false),
     minify_internal_exports: raw_options

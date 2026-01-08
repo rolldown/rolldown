@@ -13,14 +13,8 @@ export const CONFIG = {
     testsDir,
     playgroundDir: nodePath.join(testsDir, 'playground'),
     tmpPlaygroundDir: nodePath.join(testsDir, 'tmp-playground'),
-    hmrFullBundleModeDir: nodePath.join(
-      testsDir,
-      'playground/hmr-full-bundle-mode',
-    ),
-    tmpFullBundleModeDir: nodePath.join(
-      testsDir,
-      'tmp-playground/hmr-full-bundle-mode',
-    ),
+    hmrFullBundleModeDir: nodePath.join(testsDir, 'playground/hmr-full-bundle-mode'),
+    tmpFullBundleModeDir: nodePath.join(testsDir, 'tmp-playground/hmr-full-bundle-mode'),
   },
   watch: getDevWatchOptionsForCi(),
 };

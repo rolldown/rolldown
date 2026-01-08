@@ -13,11 +13,7 @@ pnpm add @rolldown/pluginutils
 ### Simple Filters
 
 ```ts
-import {
-  exactRegex,
-  makeIdFiltersToMatchWithQuery,
-  prefixRegex,
-} from '@rolldown/pluginutils';
+import { exactRegex, makeIdFiltersToMatchWithQuery, prefixRegex } from '@rolldown/pluginutils';
 
 // Match exactly 'foo.js'
 const filter = exactRegex('foo.js');
@@ -49,11 +45,7 @@ const myPlugin = {
 import { and, id, include, moduleType, query } from '@rolldown/pluginutils';
 
 // Build a filter expression
-const filterExpr = and(
-  id(/\.ts$/),
-  moduleType('ts'),
-  query('foo', true),
-);
+const filterExpr = and(id(/\.ts$/), moduleType('ts'), query('foo', true));
 
 // Usage in a plugin to define a hook filter
 const myPlugin = {

@@ -409,6 +409,7 @@ pub fn normalize_binding_options(
       .map(|inner| inner.into_iter().map(normalize_binding_inject_import).collect()),
     external_live_bindings: output_options.external_live_bindings,
     inline_dynamic_imports: output_options.inline_dynamic_imports,
+    dynamic_import_in_cjs: output_options.dynamic_import_in_cjs,
     advanced_chunks: output_options.advanced_chunks.map(|inner| AdvancedChunksOptions {
       min_size: inner.min_size,
       min_share_count: inner.min_share_count,
@@ -481,7 +482,7 @@ pub fn normalize_binding_options(
     make_absolute_externals_relative: input_options
       .make_absolute_externals_relative
       .map(Into::into),
-    debug: input_options.debug.map(|inner| rolldown::DebugOptions { session_id: inner.session_id }),
+    devtools: input_options.devtools.map(|inner| rolldown::DevtoolsOptions { session_id: inner.session_id }),
     invalidate_js_side_cache,
     log_level: Some(input_options.log_level.into()),
     on_log,

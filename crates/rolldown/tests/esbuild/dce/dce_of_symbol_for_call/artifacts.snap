@@ -9,7 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 Symbol.for(x);
 new Symbol.for("abc");
-Symbol.for((() => Math.random() < .5)() ? "x" : "y");
 
 //#endregion
 ```

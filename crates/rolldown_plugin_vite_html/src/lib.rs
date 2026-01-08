@@ -519,7 +519,7 @@ impl Plugin for ViteHtmlPlugin {
           && chunk
             .facade_module_id
             .as_ref()
-            .is_some_and(|facade_module_id| facade_module_id.resource_id() == id))
+            .is_some_and(|facade_module_id| facade_module_id.as_arc_str() == id))
         .then_some(chunk),
         rolldown_common::Output::Asset(_) => None,
       });

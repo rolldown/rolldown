@@ -1,22 +1,17 @@
 {
   "name": "@rolldown/pluginutils",
-  "version": "1.0.0-beta.57",
-  "license": "MIT",
-  "type": "module",
+  "version": "1.0.0-beta.59",
   "homepage": "https://rolldown.rs/",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rolldown/rolldown.git",
     "directory": "packages/pluginutils"
   },
-  "publishConfig": {
-    "access": "public",
-    "exports": {
-      ".": "./dist/index.js",
-      "./filter": "./dist/filter/index.js",
-      "./package.json": "./package.json"
-    }
-  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -31,9 +26,14 @@
     },
     "./package.json": "./package.json"
   },
-  "files": [
-    "dist"
-  ],
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": "./dist/index.js",
+      "./filter": "./dist/filter/index.js",
+      "./package.json": "./package.json"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "test": "vitest --typecheck"

@@ -2,11 +2,7 @@ import * as diff from 'diff';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { isRegExp } from 'node:util/types';
-import {
-  defaultRewriteConfig,
-  rewriteEsbuild,
-  rewriteRolldown,
-} from './rewrite.js';
+import { defaultRewriteConfig, rewriteEsbuild, rewriteRolldown } from './rewrite.js';
 import type { DebugConfig } from './types.js';
 
 type Resolver = (
@@ -22,10 +18,7 @@ function defaultResolveFunction(
   rolldownFilename: string,
   resolver?: Resolver,
 ) {
-  if (
-    typeof resolver === 'function' &&
-    resolver(esbuildFilename, rolldownFilename)
-  ) {
+  if (typeof resolver === 'function' && resolver(esbuildFilename, rolldownFilename)) {
     return true;
   }
   if (resolver && typeof resolver === 'object') {
@@ -59,12 +52,12 @@ export async function diffCase(
   debugConfig?: DebugConfig,
 ): Promise<
   | {
-    esbuildName: string;
-    rolldownName: string;
-    esbuild: string;
-    rolldown: string;
-    diff: string;
-  }[]
+      esbuildName: string;
+      rolldownName: string;
+      esbuild: string;
+      rolldown: string;
+      diff: string;
+    }[]
   | 'bypass'
   | 'missing'
   | 'same'
@@ -85,13 +78,7 @@ export async function diffCase(
       } catch {}
     }
     let matchedSource = rolldownSnap.find((rolldownSource) => {
-      if (
-        defaultResolveFunction(
-          esbuildSource.name,
-          rolldownSource.filename,
-          customResolver,
-        )
-      ) {
+      if (defaultResolveFunction(esbuildSource.name, rolldownSource.filename, customResolver)) {
         return true;
       }
       return rolldownSnap.find((snap) => {
@@ -111,8 +98,7 @@ export async function diffCase(
       console.error(esbuildSource.name);
       if (
         debugConfig?.debug &&
-        (esbuildSource.name.endsWith('.mjs') ||
-          esbuildSource.name.endsWith('.js'))
+        (esbuildSource.name.endsWith('.mjs') || esbuildSource.name.endsWith('.js'))
       ) {
         console.error(`err: `, err);
       }

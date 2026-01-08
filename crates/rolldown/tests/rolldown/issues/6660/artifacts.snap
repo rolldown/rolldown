@@ -52,7 +52,7 @@ init_e();
 //#region b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.defaultProvider = async function test() {
-		const { fromIni } = await import("./c.js").then(__toDynamicImportESM());
+		const { fromIni } = await import("./c.js").then((m) => /* @__PURE__ */ __toESM(m.default));
 		console.log(fromIni);
 	};
 }));

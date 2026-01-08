@@ -86,14 +86,12 @@ if (!inputVersion) {
   throw new Error('You must pass a version to bump');
 }
 
-const newVersion = await (async function() {
+const newVersion = await (async function () {
   if (isPresetArg(inputVersion)) {
     return await genVersionByPreset(inputVersion);
   } else {
     if (!semver.valid(inputVersion)) {
-      throw new Error(
-        `You must pass a valid semver version instead of '${inputVersion}'`,
-      );
+      throw new Error(`You must pass a valid semver version instead of '${inputVersion}'`);
     }
     return inputVersion;
   }
@@ -102,8 +100,5 @@ const newVersion = await (async function() {
 await bumpVersion(newVersion);
 if (process.env.CI) {
   // Write the version to a file for later we can use it in the release process.
-  fsExtra.writeFileSync(
-    path.resolve(REPO_ROOT, 'rolldown-version.txt'),
-    newVersion,
-  );
+  fsExtra.writeFileSync(path.resolve(REPO_ROOT, 'rolldown-version.txt'), newVersion);
 }

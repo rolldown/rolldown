@@ -7,3 +7,8 @@ export interface HmrUpdateMessage {
 export interface HmrReloadMessage {
   type: 'hmr:reload';
 }
+
+export interface ConnectedMessage {
+  type: 'connected';
+  clientId: string;
+}

@@ -22,4 +22,8 @@ rustc-hash = { workspace = true }
 serde = { workspace = true, features = ["derive", "rc"] }
 serde_json = { workspace = true }
 tracing = { workspace = true }
-tracing-subscriber = { workspace = true, default-features = false, features = ["std", "fmt", "json"] }
+tracing-subscriber = { workspace = true, default-features = false, features = [
+  "std",
+  "fmt",
+  "json",
+] }

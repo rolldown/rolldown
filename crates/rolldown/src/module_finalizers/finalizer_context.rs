@@ -33,9 +33,9 @@ use crate::{
 };
 
 pub struct ScopeHoistingFinalizerContext<'me> {
-  pub id: ModuleIdx,
+  pub idx: ModuleIdx,
   pub chunk: &'me Chunk,
-  pub chunk_id: ChunkIdx,
+  pub chunk_idx: ChunkIdx,
   pub module: &'me NormalModule,
   pub modules: &'me IndexModules,
   pub linking_info: &'me LinkingMetadata,

@@ -5,19 +5,19 @@
   },
   "[toml]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "dprint.dprint"
+    "editor.defaultFormatter": "oxc.oxc-vscode"
   },
   "[json]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "dprint.dprint"
+    "editor.defaultFormatter": "oxc.oxc-vscode"
   },
   "[javascript]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "dprint.dprint"
+    "editor.defaultFormatter": "oxc.oxc-vscode"
   },
   "[typescript]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "dprint.dprint"
+    "editor.defaultFormatter": "oxc.oxc-vscode"
   },
   "files.associations": {
     "*.snap": "markdown",

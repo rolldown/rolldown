@@ -13,7 +13,10 @@ use rolldown_common::{
 };
 use rolldown_ecmascript::CJS_REQUIRE_REF_ATOM;
 use rolldown_ecmascript_utils::{AstSnippet, BindingIdentifierExt, ExpressionExt};
-use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
+use rolldown_utils::{
+  ecmascript::is_validate_identifier_name,
+  indexmap::{FxIndexMap, FxIndexSet},
+};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::hmr::utils::{HmrAstBuilder, MODULE_EXPORTS_NAME_FOR_ESM};
@@ -429,6 +432,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         // `import.meta.hot.accept('./dep.js', ...)`
         let import_record = &self.module.import_records
           [self.module.hmr_info.module_request_to_import_record_idx[string_literal.value.as_str()]];
+        // Use stable module ID for consistent runtime lookup
         string_literal.value =
           self.snippet.builder.atom(self.modules[import_record.resolved_module].stable_id());
       }
@@ -439,6 +443,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             let import_record =
               &self.module.import_records[self.module.hmr_info.module_request_to_import_record_idx
                 [string_literal.value.as_str()]];
+            // Use stable module ID for consistent runtime lookup
             string_literal.value =
               self.snippet.builder.atom(self.modules[import_record.resolved_module].stable_id());
           }
@@ -466,7 +471,8 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     }
     self.imports.insert(importee.idx());
 
-    let id = &importee.stable_id();
+    // Use stable module ID for consistent runtime lookup
+    let id = importee.stable_id();
     let interop = match importee {
       Module::Normal(importee) => self.module.interop(importee),
       Module::External(_) => None,
@@ -548,7 +554,9 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         let name = scoping.symbol_name(named_export.local_binding);
         self.snippet.id_ref_expr(name, SPAN)
       };
-      self.snippet.object_property_kind_object_property(exported, expr, false)
+      // Use computed property syntax for non-identifier export names (e.g., 'rolldown:exports')
+      let computed = !is_validate_identifier_name(exported.as_str());
+      self.snippet.object_property_kind_object_property(exported, expr, computed)
     }));
 
     // construct `__export(ns_name, { prop_name: () => returned, ... })`
@@ -589,6 +597,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let is_importee_cjs = importee.exports_kind == rolldown_common::ExportsKind::CommonJs;
 
     // __rolldown_runtime__.loadExports('./foo.js')
+    // Use stable module ID for consistent runtime lookup
     let mut load_exports_call_expr =
       ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
         SPAN,
@@ -705,27 +714,30 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     let is_importee_cjs = importee.exports_kind == rolldown_common::ExportsKind::CommonJs;
 
-    let init_fn_name = &self.affected_module_idx_to_init_fn_name[importee_idx];
+    // Use stable module ID for consistent runtime lookup
+    let load_exports_call = self.snippet.call_expr_with_arg_expr(
+      self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports"),
+      self.snippet.string_literal_expr(&importee.stable_id, SPAN),
+      false,
+    );
 
-    if is_importee_cjs {
-      *it = self.snippet.seq2_in_paren_expr(
-        self.snippet.call_expr_expr(init_fn_name),
-        self.snippet.call_expr_with_arg_expr(
-          self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports"),
-          self.snippet.string_literal_expr(&importee.stable_id, SPAN),
-          false,
-        ),
-      );
+    if let Some(init_fn_name) = self.affected_module_idx_to_init_fn_name.get(importee_idx) {
+      // If the importee is in the current patch, call init before loading exports
+      // Turn `require('./foo.js')` into `(init_foo(), __rolldown_runtime__.loadExports('./foo.js'))`
+      if is_importee_cjs {
+        *it = self
+          .snippet
+          .seq2_in_paren_expr(self.snippet.call_expr_expr(init_fn_name), load_exports_call);
+      } else {
+        // hyf0 TODO: handle esm importee
+        *it = self
+          .snippet
+          .seq2_in_paren_expr(self.snippet.call_expr_expr(init_fn_name), load_exports_call);
+      }
     } else {
-      // hyf0 TODO: handle esm importee
-      *it = self.snippet.seq2_in_paren_expr(
-        self.snippet.call_expr_expr(init_fn_name),
-        self.snippet.call_expr_with_arg_expr(
-          self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports"),
-          self.snippet.string_literal_expr(&importee.stable_id, SPAN),
-          false,
-        ),
-      );
+      // Importee is not in current patch (already executed by client), just load its exports
+      // Turn `require('./foo.js')` into `__rolldown_runtime__.loadExports('./foo.js')`
+      *it = load_exports_call;
     }
   }
 }

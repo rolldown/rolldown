@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## internal-cjs.js
+
+```js
+const require_main = require('./main.js');
+
+//#region internal-cjs.js
+var require_internal_cjs = /* @__PURE__ */ require_main.__commonJSMin(((exports, module) => {
+	module.exports = {
+		value: 42,
+		hello: "world"
+	};
+}));
+
+//#endregion
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function () {
+    return require_internal_cjs();
+  }
+});
+```
+
+## internal.js
+
+```js
+
+//#region internal.js
+const value = 42;
+var internal_default = "hello";
+
+//#endregion
+exports.default = internal_default;
+exports.value = value;
+```
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+//#region main.js
+Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("external"))).then(console.log);
+Promise.resolve().then(() => require("./internal.js")).then(console.log);
+Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./internal-cjs.js").default)).then(console.log);
+
+//#endregion
+exports.__commonJSMin = __commonJSMin;
+```

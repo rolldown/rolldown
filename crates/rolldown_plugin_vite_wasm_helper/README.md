@@ -14,7 +14,7 @@ It uses a virtual helper module (`\0vite/wasm-helper.js`) to handle the instanti
 
 ```ts
 import init from './module.wasm?init';
-init().then(instance => {
+init().then((instance) => {
   // use instance.exports...
 });
 ```
@@ -23,7 +23,7 @@ Will be transformed to something like:
 
 ```ts
 import initWasm from '\0vite/wasm-helper.js';
-export default opts => initWasm(opts, 'assets/module-HASH.wasm');
+export default (opts) => initWasm(opts, 'assets/module-HASH.wasm');
 ```
 
 ## 🚀 Debug Usage

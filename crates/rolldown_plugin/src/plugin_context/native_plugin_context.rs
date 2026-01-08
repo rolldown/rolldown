@@ -8,8 +8,8 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  FilenameTemplate, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleLoaderMsg, PackageJson,
-  PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
+  FilenameTemplate, LogLevel, LogWithoutPlugin, ModuleDefFormat, ModuleId, ModuleLoaderMsg,
+  PackageJson, PluginIdx, ResolvedId, SharedFileEmitter, SharedModuleInfoDashMap,
   SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
@@ -64,7 +64,7 @@ impl NativePluginContextImpl {
     };
     sender
       .send(ModuleLoaderMsg::FetchModule(Box::new(ResolvedId {
-        id: specifier.into(),
+        id: ModuleId::new(specifier),
         side_effects,
         module_def_format,
         ..Default::default()

@@ -36,8 +36,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // a[b] // dynamic
     let partial_name =
       parent.as_member_expression_kind().and_then(|expr| expr.static_property_name());
-    let rec_idx =
-      *self.dynamic_import_usage_info.dynamic_import_binding_to_import_record_id.get(&symbol_id)?;
+    let rec_idx = *self
+      .dynamic_import_usage_info
+      .dynamic_import_binding_to_import_record_idx
+      .get(&symbol_id)?;
 
     match self.dynamic_import_usage_info.dynamic_import_exports_usage.entry(rec_idx) {
       std::collections::hash_map::Entry::Occupied(mut occ) => match partial_name {
@@ -152,7 +154,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &mut self,
     parent: &MemberExpressionKind<'ast>,
     ancestor_len: usize,
-    import_record_id: ImportRecordIdx,
+    import_record_idx: ImportRecordIdx,
   ) -> Option<FxHashSet<CompactStr>> {
     let MemberExpressionKind::Static(parent) = parent else {
       return None;
@@ -163,22 +165,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let parent_parent = self.visit_path.get(ancestor_len - 2)?.as_call_expression()?;
     let first_arg = parent_parent.arguments.first()?;
     let dynamic_import_binding = match first_arg {
-      Argument::FunctionExpression(func) => func.params.items.first()?,
-      Argument::ArrowFunctionExpression(func) => func.params.items.first()?,
+      Argument::FunctionExpression(func) => func.params.items.first(),
+      Argument::ArrowFunctionExpression(func) => func.params.items.first(),
       _ => {
         return None;
       }
     };
-    // for now only handle
-    // ```js
-    // import('mod').then(mod => {
-    //   mod.a;
-    //   mod;
-    // })
-    // ```
+    let Some(dynamic_import_binding) = dynamic_import_binding else {
+      return Some(FxHashSet::default());
+    };
     self.update_dynamic_import_usage_info_from_binding_pattern(
       &dynamic_import_binding.pattern,
-      import_record_id,
+      import_record_idx,
       false,
     )
   }
@@ -186,18 +184,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn update_dynamic_import_usage_info_from_binding_pattern(
     &mut self,
     binding_pattern: &ast::BindingPattern<'_>,
-    import_record_id: ImportRecordIdx,
+    import_record_idx: ImportRecordIdx,
     is_exported: bool,
   ) -> Option<FxHashSet<CompactStr>> {
-    let symbol_id = match &binding_pattern.kind {
-      ast::BindingPatternKind::BindingIdentifier(id) => {
+    let symbol_id = match binding_pattern {
+      ast::BindingPattern::BindingIdentifier(id) => {
         if is_exported {
           return None;
         }
         id.symbol_id()
       }
       // only care about first level destructuring, if it is nested just assume it is used
-      ast::BindingPatternKind::ObjectPattern(obj) => {
+      ast::BindingPattern::ObjectPattern(obj) => {
         let mut set = FxHashSet::default();
         for binding in &obj.properties {
           let binding_name = match &binding.key {
@@ -205,8 +203,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             ast::PropertyKey::StaticIdentifier(id) => id.name.as_str(),
             _ => return None,
           };
-          let binding_symbol_id = match &binding.value.kind {
-            ast::BindingPatternKind::BindingIdentifier(id) => id.symbol_id(),
+          let binding_symbol_id = match &binding.value {
+            ast::BindingPattern::BindingIdentifier(id) => id.symbol_id(),
             _ => {
               // for complex alias pattern, assume the key is used
               // import('mod').then(({a: {b: {c: d}}}) => {})
@@ -226,13 +224,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         }
 
         if let Some(rest) = &obj.rest {
-          match &rest.argument.kind {
-            ast::BindingPatternKind::BindingIdentifier(id) => {
+          match &rest.argument {
+            ast::BindingPattern::BindingIdentifier(id) => {
               let symbol_id = id.symbol_id();
               self
                 .dynamic_import_usage_info
-                .dynamic_import_binding_to_import_record_id
-                .insert(symbol_id, import_record_id);
+                .dynamic_import_binding_to_import_record_idx
+                .insert(symbol_id, import_record_idx);
               self
                 .dynamic_import_usage_info
                 .dynamic_import_binding_reference_id
@@ -246,15 +244,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
         return Some(set);
       }
-      ast::BindingPatternKind::ArrayPattern(_) | ast::BindingPatternKind::AssignmentPattern(_) => {
+      ast::BindingPattern::ArrayPattern(_) | ast::BindingPattern::AssignmentPattern(_) => {
         // TODO: handle advance pattern
         return None;
       }
     };
     self
       .dynamic_import_usage_info
-      .dynamic_import_binding_to_import_record_id
-      .insert(symbol_id, import_record_id);
+      .dynamic_import_binding_to_import_record_idx
+      .insert(symbol_id, import_record_idx);
     self
       .dynamic_import_usage_info
       .dynamic_import_binding_reference_id

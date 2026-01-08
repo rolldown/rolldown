@@ -7,10 +7,7 @@ import { rolldown } from '../api/rolldown';
 import type { ConfigExport } from '../types/config-export';
 import type { OutputChunk } from '../types/rolldown-output';
 
-async function bundleTsConfig(
-  configFile: string,
-  isEsm: boolean,
-): Promise<string> {
+async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<string> {
   const dirnameVarName = 'injected_original_dirname';
   const filenameVarName = 'injected_original_filename';
   const importMetaUrlVarName = 'injected_original_import_meta_url';
@@ -40,11 +37,7 @@ async function bundleTsConfig(
             const injectValues =
               `const ${dirnameVarName} = ${JSON.stringify(path.dirname(id))};` +
               `const ${filenameVarName} = ${JSON.stringify(id)};` +
-              `const ${importMetaUrlVarName} = ${
-                JSON.stringify(
-                  pathToFileURL(id).href,
-                )
-              };`;
+              `const ${importMetaUrlVarName} = ${JSON.stringify(pathToFileURL(id).href)};`;
             return { code: injectValues + code, map: null };
           },
         },
@@ -58,9 +51,7 @@ async function bundleTsConfig(
     sourcemap: 'inline',
     // respect the original file extension, mts -> mjs, cts -> cjs
     // mts should be generate mjs, it avoid add `type: module` at package.json
-    entryFileNames: `rolldown.config.[hash]${
-      path.extname(configFile).replace('ts', 'js')
-    }`,
+    entryFileNames: `rolldown.config.[hash]${path.extname(configFile).replace('ts', 'js')}`,
   });
   const fileName = result.output.find(
     (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,
@@ -70,10 +61,7 @@ async function bundleTsConfig(
 
 const SUPPORTED_JS_CONFIG_FORMATS = ['.js', '.mjs', '.cjs'];
 const SUPPORTED_TS_CONFIG_FORMATS = ['.ts', '.mts', '.cts'];
-const SUPPORTED_CONFIG_FORMATS = [
-  ...SUPPORTED_JS_CONFIG_FORMATS,
-  ...SUPPORTED_TS_CONFIG_FORMATS,
-];
+const SUPPORTED_CONFIG_FORMATS = [...SUPPORTED_JS_CONFIG_FORMATS, ...SUPPORTED_TS_CONFIG_FORMATS];
 
 const DEFAULT_CONFIG_BASE = 'rolldown.config';
 
@@ -139,9 +127,7 @@ function tryStatSync(file: string): fs.Stats | undefined {
 }
 
 export async function loadConfig(configPath: string): Promise<ConfigExport> {
-  const ext = path.extname(
-    configPath = configPath || (await findConfigFileNameInCwd()),
-  );
+  const ext = path.extname((configPath = configPath || (await findConfigFileNameInCwd())));
 
   try {
     if (
@@ -155,9 +141,9 @@ export async function loadConfig(configPath: string): Promise<ConfigExport> {
       return await loadTsConfig(rawConfigPath);
     } else {
       throw new Error(
-        `Unsupported config format. Expected: \`${
-          SUPPORTED_CONFIG_FORMATS.join(',')
-        }\` but got \`${ext}\``,
+        `Unsupported config format. Expected: \`${SUPPORTED_CONFIG_FORMATS.join(
+          ',',
+        )}\` but got \`${ext}\``,
       );
     }
   } catch (err) {

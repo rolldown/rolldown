@@ -1,11 +1,13 @@
 pub mod external_module;
 pub mod normal_module;
 
-use arcstr::ArcStr;
 use oxc_index::IndexVec;
 use rolldown_std_utils::OptionExt;
 
-use crate::{ExternalModule, ImportRecordIdx, ModuleIdx, NormalModule, ResolvedImportRecord};
+use crate::{
+  ExternalModule, ImportRecordIdx, ModuleId, ModuleIdx, NormalModule, ResolvedImportRecord,
+  StableModuleId,
+};
 
 #[derive(Debug, Clone)]
 pub enum Module {
@@ -29,16 +31,9 @@ impl Module {
     }
   }
 
-  pub fn id(&self) -> &str {
+  pub fn id(&self) -> &ModuleId {
     match self {
       Module::Normal(v) => &v.id,
-      Module::External(v) => &v.id,
-    }
-  }
-
-  pub fn id_clone(&self) -> &ArcStr {
-    match self {
-      Module::Normal(v) => v.id.resource_id(),
       Module::External(v) => &v.id,
     }
   }
@@ -50,10 +45,10 @@ impl Module {
     }
   }
 
-  pub fn stable_id(&self) -> &str {
+  pub fn stable_id(&self) -> &StableModuleId {
     match self {
       Module::Normal(v) => &v.stable_id,
-      Module::External(v) => &v.name,
+      Module::External(v) => &v.stable_id,
     }
   }
 

@@ -24,7 +24,7 @@ diff --git a/apps/10000/rolldown.config.mjs b/apps/10000/rolldown.config.mjs
  const sourceMap = !!process.env.SOURCE_MAP;
  const m = !!process.env.MINIFY;
 +const transformPluginCount = process.env.PLUGIN_COUNT || 0;
- 
+
 +let transformCssPlugin = Array.from({ length: transformPluginCount }, (_, i) => {
 +  let index = i + 1;
 +  return {
@@ -79,7 +79,7 @@ diff --git a/apps/10000/src/index.jsx b/apps/10000/src/index.jsx
 +import './foo8.css'
 +import './foo9.css'
 +import './foo10.css'
- 
+
  ReactDom.createRoot(document.getElementById("root")).render(
  	<React.StrictMode>
 ```
@@ -97,23 +97,23 @@ diff --git a/apps/10000/src/index.jsx b/apps/10000/src/index.jsx
 Benchmark 1: PLUGIN_COUNT=0 node --run build:rolldown
   Time (mean ± σ):     745.6 ms ±  11.8 ms    [User: 2298.0 ms, System: 1161.3 ms]
   Range (min … max):   732.1 ms … 753.6 ms    3 runs
- 
+
 Benchmark 2: PLUGIN_COUNT=1 node --run build:rolldown
   Time (mean ± σ):     862.6 ms ±  61.3 ms    [User: 2714.1 ms, System: 1192.6 ms]
   Range (min … max):   808.3 ms … 929.2 ms    3 runs
- 
+
 Benchmark 3: PLUGIN_COUNT=2 node --run build:rolldown
   Time (mean ± σ):      1.106 s ±  0.020 s    [User: 3.287 s, System: 1.382 s]
   Range (min … max):    1.091 s …  1.130 s    3 runs
- 
+
 Benchmark 4: PLUGIN_COUNT=5 node --run build:rolldown
   Time (mean ± σ):      1.848 s ±  0.022 s    [User: 4.398 s, System: 1.728 s]
   Range (min … max):    1.825 s …  1.869 s    3 runs
- 
+
 Benchmark 5: PLUGIN_COUNT=10 node --run build:rolldown
   Time (mean ± σ):      2.792 s ±  0.065 s    [User: 6.013 s, System: 2.198 s]
   Range (min … max):    2.722 s … 2.850 s    3 runs
- 
+
 Summary
  'PLUGIN_COUNT=0 node --run build:rolldown' ran
     1.16 ± 0.08 times faster than 'PLUGIN_COUNT=1 node --run build:rolldown'
@@ -175,23 +175,23 @@ index 822af995..dee07e68 100644
 Benchmark 1: PLUGIN_COUNT=0 node --run build:rolldown
   Time (mean ± σ):     739.1 ms ±   6.8 ms    [User: 2312.5 ms, System: 1153.0 ms]
   Range (min … max):   733.0 ms … 746.5 ms    3 runs
- 
+
 Benchmark 2: PLUGIN_COUNT=1 node --run build:rolldown
   Time (mean ± σ):     760.6 ms ±  18.3 ms    [User: 2422.1 ms, System: 1107.4 ms]
   Range (min … max):   739.7 ms … 773.6 ms    3 runs
- 
+
 Benchmark 3: PLUGIN_COUNT=2 node --run build:rolldown
   Time (mean ± σ):     731.2 ms ±  11.1 ms    [User: 2461.3 ms, System: 1141.4 ms]
   Range (min … max):   723.9 ms … 744.0 ms    3 runs
- 
+
 Benchmark 4: PLUGIN_COUNT=5 node --run build:rolldown
   Time (mean ± σ):     741.5 ms ±   9.3 ms    [User: 2621.6 ms, System: 1111.3 ms]
   Range (min … max):   734.0 ms … 751.9 ms    3 runs
- 
+
 Benchmark 5: PLUGIN_COUNT=10 node --run build:rolldown
   Time (mean ± σ):     747.3 ms ±   2.1 ms    [User: 2900.9 ms, System: 1120.0 ms]
   Range (min … max):   745.0 ms … 749.2 ms    3 runs
- 
+
 Summary
   'PLUGIN_COUNT=2 node --run build:rolldown' ran
     1.01 ± 0.02 times faster than 'PLUGIN_COUNT=0 node --run build:rolldown'

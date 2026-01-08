@@ -17,7 +17,9 @@ use rolldown_common::{GetLocalDbMut, Module, ScanMode, SharedFileEmitter, Symbol
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 use rolldown_fs::{FileSystem, OsFileSystem};
-use rolldown_plugin::{HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver};
+use rolldown_plugin::{
+  HookBuildEndArgs, HookCloseBundleArgs, HookRenderErrorArgs, SharedPluginDriver,
+};
 use rolldown_utils::dashmap::FxDashSet;
 use std::sync::Arc;
 
@@ -108,7 +110,10 @@ impl Bundle {
           .plugin_driver
           .build_end(Some(&HookBuildEndArgs { errors: &errs, cwd: &self.options.cwd }))
           .await?;
-        self.plugin_driver.close_bundle().await?;
+        self
+          .plugin_driver
+          .close_bundle(Some(&HookCloseBundleArgs { errors: &errs, cwd: &self.options.cwd }))
+          .await?;
         return Err(errs);
       }
     };
@@ -308,7 +313,7 @@ impl Bundle {
                 })
                 .collect(),
             ),
-            importers: Some(module.importers.iter().map(|i| i.to_string()).collect()),
+            importers: Some(module.importers.iter().map(ToString::to_string).collect()),
           },
           Module::External(module) => action::Module {
             id: module.id.to_string(),

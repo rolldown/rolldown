@@ -45,7 +45,7 @@ var hmr_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 async function foo() {
-	await import("./exist-dep-cjs.js").then(__toDynamicImportESM()).then(console.log);
+	await import("./exist-dep-cjs.js").then((m) => /* @__PURE__ */ __toESM(m.default)).then(console.log);
 	await import("./exist-dep-esm.js").then(console.log);
 }
 hmr_hot.accept((mod) => {

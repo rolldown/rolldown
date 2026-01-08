@@ -21,10 +21,7 @@ import {
   transformToRollupOutputChunk,
 } from '../utils/transform-to-rollup-output';
 import type { ViteCssPostPluginConfig } from './vite-css-post-plugin';
-import type {
-  IndexHtmlTransformContext,
-  ViteHtmlPluginOptions,
-} from './vite-html-plugin';
+import type { IndexHtmlTransformContext, ViteHtmlPluginOptions } from './vite-html-plugin';
 import type { ViteManifestPluginConfig } from './vite-manifest-plugin';
 
 type BindingCallableBuiltinPluginLike = {
@@ -40,23 +37,18 @@ export class BuiltinPlugin {
     public name: BindingBuiltinPluginName,
     // NOTE: has `_` to avoid conflict with `options` hook
     public _options?: unknown,
-  ) {
-  }
+  ) {}
 }
 
 export function makeBuiltinPluginCallable(
   plugin: BuiltinPlugin,
 ): BuiltinPlugin & BindingCallableBuiltinPluginLike {
-  let callablePlugin = new BindingCallableBuiltinPlugin(
-    bindingifyBuiltInPlugin(plugin),
-  );
+  let callablePlugin = new BindingCallableBuiltinPlugin(bindingifyBuiltInPlugin(plugin));
 
-  const wrappedPlugin:
-    & Partial<BindingCallableBuiltinPluginLike>
-    & BuiltinPlugin = plugin;
+  const wrappedPlugin: Partial<BindingCallableBuiltinPluginLike> & BuiltinPlugin = plugin;
   for (const key in callablePlugin) {
     // @ts-expect-error
-    wrappedPlugin[key] = async function(...args) {
+    wrappedPlugin[key] = async function (...args) {
       try {
         // @ts-expect-error
         return await callablePlugin[key](...args);
@@ -80,9 +72,7 @@ export function makeBuiltinPluginCallable(
   return wrappedPlugin as BuiltinPlugin & BindingCallableBuiltinPluginLike;
 }
 
-export function bindingifyBuiltInPlugin(
-  plugin: BuiltinPlugin,
-): BindingBuiltinPlugin {
+export function bindingifyBuiltInPlugin(plugin: BuiltinPlugin): BindingBuiltinPlugin {
   return {
     __name: plugin.name,
     options: plugin._options,
@@ -93,18 +83,16 @@ export function bindingifyManifestPlugin(
   plugin: BuiltinPlugin,
   pluginContextData: PluginContextData,
 ): BindingBuiltinPlugin {
-  const { isOutputOptionsForLegacyChunks, ...options } = plugin
-    ._options as ViteManifestPluginConfig;
+  const { isOutputOptionsForLegacyChunks, ...options } =
+    plugin._options as ViteManifestPluginConfig;
   return {
     __name: plugin.name,
     options: {
       ...options,
       isLegacy: isOutputOptionsForLegacyChunks
         ? (opts) => {
-          return isOutputOptionsForLegacyChunks(
-            pluginContextData.getOutputOptions(opts),
-          );
-        }
+            return isOutputOptionsForLegacyChunks(pluginContextData.getOutputOptions(opts));
+          }
         : undefined,
     } as BindingViteManifestPluginConfig,
   };
@@ -114,24 +102,18 @@ export function bindingifyCSSPostPlugin(
   plugin: BuiltinPlugin,
   pluginContextData: PluginContextData,
 ): BindingBuiltinPlugin {
-  const { isOutputOptionsForLegacyChunks, ...options } = plugin
-    ._options as ViteCssPostPluginConfig;
+  const { isOutputOptionsForLegacyChunks, ...options } = plugin._options as ViteCssPostPluginConfig;
   return {
     __name: plugin.name,
     options: {
       ...options,
       isLegacy: isOutputOptionsForLegacyChunks
         ? (opts) => {
-          return isOutputOptionsForLegacyChunks(
-            pluginContextData.getOutputOptions(opts),
-          );
-        }
+            return isOutputOptionsForLegacyChunks(pluginContextData.getOutputOptions(opts));
+          }
         : undefined,
       cssScopeTo() {
-        const cssScopeTo: Record<
-          string,
-          readonly [string, string | undefined]
-        > = {};
+        const cssScopeTo: Record<string, readonly [string, string | undefined]> = {};
         for (const [id, opts] of pluginContextData.moduleOptionMap.entries()) {
           if (opts?.meta.vite?.cssScopeTo) {
             cssScopeTo[id] = opts.meta.vite.cssScopeTo;
@@ -151,8 +133,7 @@ export function bindingifyViteHtmlPlugin(
   pluginContextData: PluginContextData,
 ): BindingBuiltinPlugin {
   const { preHooks, normalHooks, postHooks, applyHtmlTransforms, ...options } =
-    plugin
-      ._options as ViteHtmlPluginOptions;
+    plugin._options as ViteHtmlPluginOptions;
   if (preHooks.length + normalHooks.length + postHooks.length > 0) {
     return {
       __name: plugin.name,
@@ -179,21 +160,16 @@ export function bindingifyViteHtmlPlugin(
             filename,
             bundle: output
               ? transformToOutputBundle(pluginContext, output, {
-                updated: new Set(),
-                deleted: new Set(),
-              })
+                  updated: new Set(),
+                  deleted: new Set(),
+                })
               : undefined,
             chunk: chunk ? transformToRollupOutputChunk(chunk) : undefined,
           };
 
           switch (hook) {
             case 'transform':
-              return await applyHtmlTransforms(
-                html,
-                preHooks,
-                pluginContext,
-                context,
-              );
+              return await applyHtmlTransforms(html, preHooks, pluginContext, context);
             case 'generateBundle':
               return await applyHtmlTransforms(
                 html,

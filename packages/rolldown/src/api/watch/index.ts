@@ -4,9 +4,7 @@ import { createWatcher } from './watcher';
 
 // Compat to `rollup.watch`
 /** @category Programmatic APIs */
-export const watch = (
-  input: WatchOptions | WatchOptions[],
-): RolldownWatcher => {
+export const watch = (input: WatchOptions | WatchOptions[]): RolldownWatcher => {
   const emitter = new WatcherEmitter();
   createWatcher(emitter, input);
   return emitter;

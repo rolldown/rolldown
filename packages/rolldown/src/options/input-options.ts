@@ -19,10 +19,7 @@ export type ExternalOptionFunction = (
   isResolved: boolean,
 ) => NullValue<boolean>;
 
-export type ExternalOption =
-  | StringOrRegExp
-  | StringOrRegExp[]
-  | ExternalOptionFunction;
+export type ExternalOption = StringOrRegExp | StringOrRegExp[] | ExternalOptionFunction;
 
 export type ModuleTypes = Record<
   string,
@@ -55,12 +52,14 @@ export interface WatcherOptions {
 
 type MakeAbsoluteExternalsRelative = boolean | 'ifRelativeSource';
 
-export type DevModeOptions = boolean | {
-  host?: string;
-  port?: number;
-  implement?: string;
-  lazy?: boolean;
-};
+export type DevModeOptions =
+  | boolean
+  | {
+      host?: string;
+      port?: number;
+      implement?: string;
+      lazy?: boolean;
+    };
 
 export type OptimizationOptions = {
   /**
@@ -123,9 +122,7 @@ export type OnLogFunction = (
 
 export type OnwarnFunction = (
   warning: RollupLog,
-  defaultHandler: (
-    warning: RollupLogWithString | (() => RollupLogWithString),
-  ) => void,
+  defaultHandler: (warning: RollupLogWithString | (() => RollupLogWithString)) => void,
 ) => void;
 
 export interface InputOptions {
@@ -469,6 +466,19 @@ export interface InputOptions {
      * @default false
      */
     nativeMagicString?: boolean;
+    /**
+     * Control whether to optimize chunks by allowing entry chunks to have different exports than the underlying entry module.
+     * This optimization can reduce the number of generated chunks.
+     *
+     * When enabled, rolldown will try to insert common modules directly into existing chunks rather than creating
+     * separate chunks for them, which can result in fewer output files and better performance.
+     *
+     * This optimization is automatically disabled when any module uses top-level await (TLA) or contains TLA dependencies,
+     * as it could affect execution order guarantees.
+     *
+     * @default true
+     */
+    chunkOptimization?: boolean;
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.
@@ -494,7 +504,7 @@ export interface InputOptions {
    */
   checks?: ChecksOptions;
   makeAbsoluteExternalsRelative?: MakeAbsoluteExternalsRelative;
-  debug?: {
+  devtools?: {
     sessionId?: string;
   };
   /**
@@ -502,11 +512,7 @@ export interface InputOptions {
    * @default 'strict'
    * {@include ./docs/preserve-entry-signatures.md}
    */
-  preserveEntrySignatures?:
-    | false
-    | 'strict'
-    | 'allow-extension'
-    | 'exports-only';
+  preserveEntrySignatures?: false | 'strict' | 'allow-extension' | 'exports-only';
   /**
    * Configure optimization features for the bundler.
    */
@@ -550,16 +556,15 @@ interface OverwriteInputOptionsForCli {
   treeshake?: boolean;
 }
 
-export type InputCliOptions =
-  & Omit<
-    InputOptions,
-    | keyof OverwriteInputOptionsForCli
-    | 'input'
-    | 'plugins'
-    | 'onwarn'
-    | 'onLog'
-    | 'resolve'
-    | 'experimental'
-    | 'watch'
-  >
-  & OverwriteInputOptionsForCli;
+export type InputCliOptions = Omit<
+  InputOptions,
+  | keyof OverwriteInputOptionsForCli
+  | 'input'
+  | 'plugins'
+  | 'onwarn'
+  | 'onLog'
+  | 'resolve'
+  | 'experimental'
+  | 'watch'
+> &
+  OverwriteInputOptionsForCli;

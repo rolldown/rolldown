@@ -3,14 +3,13 @@ pub mod const_eval;
 pub mod dynamic_import;
 mod hmr;
 pub mod impl_visit;
-mod import_assign_analyzer;
-mod namespace_call_analyzer;
+mod import_analyzer;
 mod new_url;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
 use const_eval::{ConstEvalCtx, try_extract_const_literal};
-use oxc::ast::ast::{BindingPatternKind, Expression, ImportExpression};
+use oxc::ast::ast::{BindingPattern, Expression, ImportExpression};
 use oxc::ast::{AstKind, ast};
 use oxc::ast_visit::walk;
 use oxc::semantic::{Reference, ScopeFlags, Scoping};
@@ -482,7 +481,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &mut self,
     local: SymbolId,
     imported: &str,
-    record_id: ImportRecordIdx,
+    record_idx: ImportRecordIdx,
     span_imported: Span,
   ) {
     self.result.named_imports.insert(
@@ -491,18 +490,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         imported: CompactStr::new(imported).into(),
         imported_as: (self.immutable_ctx.idx, local).into(),
         span_imported,
-        record_id,
+        record_idx,
       },
     );
   }
 
-  fn add_star_import(&mut self, local: SymbolId, record_id: ImportRecordIdx, span_imported: Span) {
+  fn add_star_import(&mut self, local: SymbolId, record_idx: ImportRecordIdx, span_imported: Span) {
     self.result.named_imports.insert(
       (self.immutable_ctx.idx, local).into(),
       NamedImport {
         imported: Specifier::Star,
         imported_as: (self.immutable_ctx.idx, local).into(),
-        record_id,
+        record_idx,
         span_imported,
       },
     );
@@ -574,13 +573,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &mut self,
     export_name: &str,
     imported: &str,
-    record_id: ImportRecordIdx,
+    record_idx: ImportRecordIdx,
     span_imported: Span,
   ) {
     // We will pretend `export { [imported] as [export_name] }` to be `import `
     let ident = if export_name == "default" {
       let importee_repr =
-        self.result.import_records[record_id].module_request.as_path().representative_file_name();
+        self.result.import_records[record_idx].module_request.as_path().representative_file_name();
       let importee_repr = legitimize_identifier_name(&importee_repr);
       Cow::Owned(concat_string!(importee_repr, "_default"))
     } else {
@@ -597,7 +596,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let name_import = NamedImport {
       imported: imported.into(),
       imported_as: generated_imported_as_ref,
-      record_id,
+      record_idx,
       span_imported,
     };
     self.result.named_exports.insert(
@@ -614,7 +613,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn add_star_re_export(
     &mut self,
     export_name: &str,
-    record_id: ImportRecordIdx,
+    record_idx: ImportRecordIdx,
     span_for_export_name: Span,
   ) {
     let generated_imported_as_ref = self
@@ -629,7 +628,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       imported: Specifier::Star,
       span_imported: span_for_export_name,
       imported_as: generated_imported_as_ref,
-      record_id,
+      record_idx,
     };
 
     self.result.named_exports.insert(
@@ -684,7 +683,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration<'ast>) {
     if let Some(source) = &decl.source {
-      let record_id = self.add_import_record(
+      let record_idx = self.add_import_record(
         source.value.as_str(),
         ImportKind::Import,
         source.span(),
@@ -699,7 +698,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         self.add_re_export(
           spec.exported.name().as_str(),
           spec.local.name().as_str(),
-          record_id,
+          record_idx,
           spec.local.span(),
         );
       });
@@ -707,12 +706,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         self
           .result
           .import_attribute_map
-          .insert(record_id, ImportAttribute::from_with_clause(with_clause));
+          .insert(record_idx, ImportAttribute::from_with_clause(with_clause));
       }
-      self.result.imports.insert(decl.span, record_id);
+      self.result.imports.insert(decl.span, record_idx);
       // `export {} from '...'`
       if decl.specifiers.is_empty() {
-        self.result.import_records[record_id].meta.insert(ImportRecordMeta::IsPlainImport);
+        self.result.import_records[record_idx].meta.insert(ImportRecordMeta::IsPlainImport);
       }
     } else {
       decl.specifiers.iter().for_each(|spec| {
@@ -734,7 +733,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               decl.id.binding_identifiers().into_iter().for_each(|id| {
                 self.add_local_export(&id.name, id.expect_symbol_id(), id.span);
               });
-              if let BindingPatternKind::BindingIdentifier(ref binding) = decl.id.kind {
+              if let BindingPattern::BindingIdentifier(ref binding) = decl.id {
                 let symbol_id = binding.symbol_id();
                 if let Some(value) = self.extract_constant_value_from_expr(decl.init.as_ref()) {
                   self.add_constant_symbol(symbol_id, ConstExportMeta::new(value, false));

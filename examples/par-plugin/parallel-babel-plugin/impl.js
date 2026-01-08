@@ -6,10 +6,7 @@ import nodePath from 'node:path';
 /** @returns {import('rolldown').Plugin} */
 export const babelPlugin = () => {
   const partialConfig = babel.loadPartialConfig({
-    presets: [
-      ['@babel/preset-env', { bugfixes: true }],
-      '@babel/preset-typescript',
-    ],
+    presets: [['@babel/preset-env', { bugfixes: true }], '@babel/preset-typescript'],
     targets: 'chrome >= 80',
     sourceMaps: true,
     configFile: false,

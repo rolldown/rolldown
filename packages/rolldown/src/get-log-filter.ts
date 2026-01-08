@@ -14,7 +14,7 @@ const getLogFilter: GetLogFilter = (filters) => {
         key: key.split('.'),
         parts: value.join(':').split('*'),
       };
-    })
+    }),
   );
   return (log: RollupLog): boolean => {
     nextIntersectedFilter: for (const intersectedFilters of normalizedFilters) {
@@ -30,11 +30,7 @@ const getLogFilter: GetLogFilter = (filters) => {
   };
 };
 
-const testFilter = (
-  log: RollupLog,
-  key: string[],
-  parts: string[],
-): boolean => {
+const testFilter = (log: RollupLog, key: string[], parts: string[]): boolean => {
   let rawValue: any = log;
   for (let index = 0; index < key.length; index++) {
     if (!rawValue) {
@@ -46,9 +42,7 @@ const testFilter = (
     }
     rawValue = rawValue[part];
   }
-  let value = typeof rawValue === 'object'
-    ? JSON.stringify(rawValue)
-    : String(rawValue);
+  let value = typeof rawValue === 'object' ? JSON.stringify(rawValue) : String(rawValue);
   if (parts.length === 1) {
     return value === parts[0];
   }

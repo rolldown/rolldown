@@ -8,6 +8,7 @@ import {
   localIconLoader,
 } from 'vitepress-plugin-group-icons';
 import llmstxt from 'vitepress-plugin-llms';
+import { hooksGraphPlugin } from './markdown-hooks-graph.ts';
 
 const CONFIG_LINK = '/options/input.md';
 
@@ -396,8 +397,9 @@ export default defineConfig({
     },
   },
   markdown: {
-    config(md) {
+    async config(md) {
       md.use(groupIconMdPlugin);
+      await hooksGraphPlugin(md);
     },
   },
   transformPageData(pageData) {

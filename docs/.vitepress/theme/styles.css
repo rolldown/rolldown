@@ -15,3 +15,16 @@
 :root[data-theme='light'][data-variant='rolldown'] {
   --color-brand: #d44803;
 }
+
+/* For markdown-hooks-graph diagrams */
+:root.dark .light-only {
+  display: none !important;
+}
+
+:root:not(.dark) .dark-only {
+  display: none !important;
+}
+
+a text {
+  text-decoration: underline;
+}

@@ -1422,23 +1422,29 @@ export declare class BindingDevEngine {
 
 export declare class BindingMagicString {
   constructor(source: string)
-  replace(from: string, to: string): void
-  replaceAll(from: string, to: string): void
-  prepend(content: string): void
-  append(content: string): void
-  prependLeft(index: number, content: string): void
-  prependRight(index: number, content: string): void
-  appendLeft(index: number, content: string): void
-  appendRight(index: number, content: string): void
-  overwrite(start: number, end: number, content: string): void
+  replace(from: string, to: string): this
+  replaceAll(from: string, to: string): this
+  prepend(content: string): this
+  append(content: string): this
+  prependLeft(index: number, content: string): this
+  prependRight(index: number, content: string): this
+  appendLeft(index: number, content: string): this
+  appendRight(index: number, content: string): this
+  overwrite(start: number, end: number, content: string): this
   toString(): string
   hasChanged(): boolean
   length(): number
   isEmpty(): boolean
-  remove(start: number, end: number): void
-  update(start: number, end: number, content: string): void
-  relocate(start: number, end: number, to: number): void
-  indent(indentor?: string | undefined | null): void
+  remove(start: number, end: number): this
+  update(start: number, end: number, content: string): this
+  relocate(start: number, end: number, to: number): this
+  /**
+   * Alias for `relocate` to match the original magic-string API.
+   * Moves the characters from `start` to `end` to `index`.
+   * Returns `this` for method chaining.
+   */
+  move(start: number, end: number, index: number): this
+  indent(indentor?: string | undefined | null): this
 }
 
 export declare class BindingModuleInfo {

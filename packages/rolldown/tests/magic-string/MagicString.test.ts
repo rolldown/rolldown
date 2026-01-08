@@ -31,7 +31,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'abcdefghijklxyzxyz');
     });
 
-    it.skip('should return this', () => {
+    it('should return this', () => {
       const s = new MagicString('abcdefghijkl');
       assert.strictEqual(s.append('xyz'), s);
     });
@@ -121,14 +121,14 @@ describe('MagicString', () => {
   });
 
   describe('appendLeft', () => {
-    it.skip('should return this', () => {
+    it('should return this', () => {
       const s = new MagicString('abcdefghijkl');
       assert.strictEqual(s.appendLeft(0, 'a'), s);
     });
   });
 
   describe('appendRight', () => {
-    it.skip('should return this', () => {
+    it('should return this', () => {
       const s = new MagicString('abcdefghijkl');
       assert.strictEqual(s.appendRight(0, 'a'), s);
     });
@@ -727,12 +727,12 @@ describe('MagicString', () => {
       assert.equal(s.toString(), '\tclass Foo extends Baz {}');
     });
 
-    it.skip('should return this', () => {
+    it('should return this', () => {
       const s = new MagicString('abcdefghijkl');
       assert.strictEqual(s.indent(), s);
     });
 
-    it.skip('should return this on noop', () => {
+    it('should return this on noop', () => {
       const s = new MagicString('abcdefghijkl');
       assert.strictEqual(s.indent(''), s);
     });
@@ -789,7 +789,7 @@ describe('MagicString', () => {
     // });
   });
 
-  describe.skip('move', () => {
+  describe('move', () => {
     it('moves content from the start', () => {
       const s = new MagicString('abcdefghijkl');
       s.move(0, 3, 6);
@@ -862,7 +862,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'cfabdeghijkl');
     });
 
-    it('refuses to move a selection to inside itself', () => {
+    it.skip('refuses to move a selection to inside itself', () => {
       const s = new MagicString('abcdefghijkl');
 
       assert.throws(() => s.move(3, 6, 3), /Cannot move a selection inside itself/);
@@ -991,7 +991,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'abcDEfGHijkl');
     });
 
-    it.skip('should return this', () => {
+    it('should return this', () => {
       const s = new MagicString('abcdefghijkl');
       assert.strictEqual(s.overwrite(3, 4, 'D'), s);
     });
@@ -1132,7 +1132,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'abcDEfGHijkl');
     });
 
-    it.skip('should return this', () => {
+    it('should return this', () => {
       const s = new MagicString('abcdefghijkl');
       assert.strictEqual(s.update(3, 4, 'D'), s);
     });
@@ -1215,21 +1215,21 @@ describe('MagicString', () => {
       assert.equal(s.toString(), '123xyzabcdefghijkl');
     });
 
-    it.skip('should return this', () => {
+    it('should return this', () => {
       const s = new MagicString('abcdefghijkl');
       assert.strictEqual(s.prepend('xyz'), s);
     });
   });
 
   describe('prependLeft', () => {
-    it.skip('should return this', () => {
+    it('should return this', () => {
       const s = new MagicString('abcdefghijkl');
       assert.strictEqual(s.prependLeft(0, 'a'), s);
     });
   });
 
   describe('prependRight', () => {
-    it.skip('should return this', () => {
+    it('should return this', () => {
       const s = new MagicString('abcdefghijkl');
       assert.strictEqual(s.prependRight(0, 'a'), s);
     });
@@ -1324,7 +1324,7 @@ describe('MagicString', () => {
       assert.throws(() => s.remove(4, 6), /Cannot split a chunk that has already been edited/);
     });
 
-    it.skip('should return this', () => {
+    it('should return this', () => {
       const s = new MagicString('abcdefghijkl');
       assert.strictEqual(s.remove(3, 4), s);
     });
@@ -1460,7 +1460,7 @@ describe('MagicString', () => {
       assert.throws(() => s.reset(4, 6), /Cannot split a chunk that has already been edited/);
     });
 
-    it.skip('should return this', () => {
+    it('should return this', () => {
       const s = new MagicString('abcdefghijkl');
       s.remove(2, 5);
       assert.strictEqual(s.reset(3, 4), s);
@@ -1703,7 +1703,7 @@ describe('MagicString', () => {
       assert.equal(s.trim().toString(), '');
     });
 
-    it.skip('should return this', () => {
+    it('should return this', () => {
       const s = new MagicString('  abcdefghijkl  ');
       assert.strictEqual(s.trim(), s);
     });

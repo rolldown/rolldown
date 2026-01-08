@@ -28,6 +28,7 @@
  *   - remove(start: number, end: number): void
  *   - update(start: number, end: number, content: string): void
  *   - relocate(start: number, end: number, to: number): void
+ *   - move(start: number, end: number, index: number): void (alias for relocate)
  *   - indent(indentor?: string | undefined | null): void
  *
  * NOT supported (will be skipped):
@@ -36,7 +37,6 @@
  *   - generateMap, generateDecodedMap, addSourcemapLocation
  *   - trim, trimStart, trimEnd, trimLines
  *   - lastChar, lastLine
- *   - move (use relocate instead)
  *   - original property
  *   - Method chaining (methods return void, not this)
  */
@@ -61,7 +61,6 @@ const SKIP_DESCRIBE_BLOCKS = [
   'getIndentString', // not supported
   'lastChar',
   'lastLine',
-  'move', // use relocate instead
   'original',
   'reset',
   'slice',
@@ -83,7 +82,6 @@ const SKIP_DESCRIBE_BLOCKS = [
 
 // Individual tests to skip (by partial match of test name)
 const SKIP_TESTS = [
-  'should return this', // methods return void, not this
   'should throw when given non-string content', // error handling differs
   'should throw', // error handling differs
   'should disallow', // error handling differs (causes panic)
@@ -101,6 +99,7 @@ const SKIP_TESTS = [
   'storeName', // storeName option not supported
   'contentOnly', // contentOnly option not supported
   'overlapping', // overlapping replacements cause panic
+  'refuses to move a selection to inside itself', // causes panic instead of throwing error
   'already been edited', // Cannot split a chunk that has already been edited
   'non-zero-length inserts inside', // causes split chunk panic
   'should remove modified ranges', // causes split chunk panic

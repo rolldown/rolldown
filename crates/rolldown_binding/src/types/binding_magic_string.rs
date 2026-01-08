@@ -1,4 +1,5 @@
 #![expect(clippy::inherent_to_string)]
+use napi::bindgen_prelude::This;
 use napi_derive::napi;
 use string_wizard::MagicString;
 
@@ -40,55 +41,69 @@ impl BindingMagicString<'_> {
   }
 
   #[napi]
-  pub fn replace(&mut self, from: String, to: String) {
+  pub fn replace<'s>(&'s mut self, this: This<'s>, from: String, to: String) -> This<'s> {
     self.inner.replace(&from, to);
+    this
   }
 
   #[napi]
-  pub fn replace_all(&mut self, from: String, to: String) {
+  pub fn replace_all<'s>(&'s mut self, this: This<'s>, from: String, to: String) -> This<'s> {
     self.inner.replace_all(&from, to);
+    this
   }
 
   #[napi]
-  pub fn prepend(&mut self, content: String) {
+  pub fn prepend<'s>(&'s mut self, this: This<'s>, content: String) -> This<'s> {
     self.inner.prepend(content);
+    this
   }
 
   #[napi]
-  pub fn append(&mut self, content: String) {
+  pub fn append<'s>(&'s mut self, this: This<'s>, content: String) -> This<'s> {
     self.inner.append(content);
+    this
   }
 
   #[napi]
-  pub fn prepend_left(&mut self, index: u32, content: String) {
+  pub fn prepend_left<'s>(&'s mut self, this: This<'s>, index: u32, content: String) -> This<'s> {
     let byte_index =
       self.char_to_byte_mapper.char_to_byte(index as usize).expect("Invalid character index");
     self.inner.prepend_left(byte_index, content);
+    this
   }
 
   #[napi]
-  pub fn prepend_right(&mut self, index: u32, content: String) {
+  pub fn prepend_right<'s>(&'s mut self, this: This<'s>, index: u32, content: String) -> This<'s> {
     let byte_index =
       self.char_to_byte_mapper.char_to_byte(index as usize).expect("Invalid character index");
     self.inner.prepend_right(byte_index, content);
+    this
   }
 
   #[napi]
-  pub fn append_left(&mut self, index: u32, content: String) {
+  pub fn append_left<'s>(&'s mut self, this: This<'s>, index: u32, content: String) -> This<'s> {
     let byte_index =
       self.char_to_byte_mapper.char_to_byte(index as usize).expect("Invalid character index");
     self.inner.append_left(byte_index, content);
+    this
   }
 
   #[napi]
-  pub fn append_right(&mut self, index: u32, content: String) {
+  pub fn append_right<'s>(&'s mut self, this: This<'s>, index: u32, content: String) -> This<'s> {
     let byte_index =
       self.char_to_byte_mapper.char_to_byte(index as usize).expect("Invalid character index");
     self.inner.append_right(byte_index, content);
+    this
   }
 
   #[napi]
-  pub fn overwrite(&mut self, start: u32, end: u32, content: String) {
+  pub fn overwrite<'s>(
+    &'s mut self,
+    this: This<'s>,
+    start: u32,
+    end: u32,
+    content: String,
+  ) -> This<'s> {
     let start_byte =
       self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
     let end_byte =
@@ -99,6 +114,7 @@ impl BindingMagicString<'_> {
       content,
       string_wizard::UpdateOptions { overwrite: true, keep_original: false },
     );
+    this
   }
 
   #[napi]
@@ -126,25 +142,33 @@ impl BindingMagicString<'_> {
   }
 
   #[napi]
-  pub fn remove(&mut self, start: u32, end: u32) {
+  pub fn remove<'s>(&'s mut self, this: This<'s>, start: u32, end: u32) -> This<'s> {
     let start_byte =
       self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
     let end_byte =
       self.char_to_byte_mapper.char_to_byte(end as usize).expect("Invalid end character index");
     self.inner.remove(start_byte, end_byte);
+    this
   }
 
   #[napi]
-  pub fn update(&mut self, start: u32, end: u32, content: String) {
+  pub fn update<'s>(
+    &'s mut self,
+    this: This<'s>,
+    start: u32,
+    end: u32,
+    content: String,
+  ) -> This<'s> {
     let start_byte =
       self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
     let end_byte =
       self.char_to_byte_mapper.char_to_byte(end as usize).expect("Invalid end character index");
     self.inner.update(start_byte, end_byte, content);
+    this
   }
 
   #[napi]
-  pub fn relocate(&mut self, start: u32, end: u32, to: u32) {
+  pub fn relocate<'s>(&'s mut self, this: This<'s>, start: u32, end: u32, to: u32) -> This<'s> {
     let start_byte =
       self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
     let end_byte =
@@ -152,10 +176,19 @@ impl BindingMagicString<'_> {
     let to_byte =
       self.char_to_byte_mapper.char_to_byte(to as usize).expect("Invalid to character index");
     self.inner.relocate(start_byte, end_byte, to_byte);
+    this
+  }
+
+  /// Alias for `relocate` to match the original magic-string API.
+  /// Moves the characters from `start` to `end` to `index`.
+  /// Returns `this` for method chaining.
+  #[napi(js_name = "move")]
+  pub fn move_<'s>(&'s mut self, this: This<'s>, start: u32, end: u32, index: u32) -> This<'s> {
+    self.relocate(this, start, end, index)
   }
 
   #[napi]
-  pub fn indent(&mut self, indentor: Option<String>) {
+  pub fn indent<'s>(&'s mut self, this: This<'s>, indentor: Option<String>) -> This<'s> {
     if let Some(indentor) = indentor {
       self
         .inner
@@ -163,5 +196,6 @@ impl BindingMagicString<'_> {
     } else {
       self.inner.indent();
     }
+    this
   }
 }

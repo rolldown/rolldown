@@ -1477,8 +1477,8 @@ describe('MagicString', () => {
     });
   });
 
-  describe.skip('slice', () => {
-    it('should return the generated content between the specified original characters', () => {
+  describe('slice', () => {
+    it.skip('should return the generated content between the specified original characters', () => {
       const s = new MagicString('abcdefghijkl');
 
       assert.equal(s.slice(3, 9), 'defghi');
@@ -1518,7 +1518,7 @@ describe('MagicString', () => {
       assert.equal(s.slice(3, 6), 'fghij');
     });
 
-    it('supports characters moved outward', () => {
+    it.skip('supports characters moved outward', () => {
       const s = new MagicString('abcdEFghIJklmn');
 
       s.move(4, 6, 2);
@@ -1533,7 +1533,7 @@ describe('MagicString', () => {
       assert.equal(s.slice(6, -6), 'gh');
     });
 
-    it('supports characters moved inward', () => {
+    it.skip('supports characters moved inward', () => {
       const s = new MagicString('abCDefghijKLmn');
 
       s.move(2, 4, 6);
@@ -1548,7 +1548,7 @@ describe('MagicString', () => {
       assert.equal(s.slice(6, -6), 'gh');
     });
 
-    it('supports characters moved opposing', () => {
+    it.skip('supports characters moved opposing', () => {
       const s = new MagicString('abCDefghIJkl');
 
       s.move(2, 4, 8);

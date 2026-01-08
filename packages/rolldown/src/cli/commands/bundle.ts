@@ -23,12 +23,6 @@ export async function bundleWithConfig(
   }
 
   const config = await loadConfig(configPath);
-
-  if (!config) {
-    logger.error(`No configuration found at ${configPath}`);
-    process.exit(1);
-  }
-
   // If config is a function, call it with raw command line arguments
   const resolvedConfig = typeof config === 'function' ? await config(rawArgs) : config;
 

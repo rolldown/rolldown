@@ -1445,6 +1445,14 @@ export declare class BindingMagicString {
    */
   move(start: number, end: number, index: number): this
   indent(indentor?: string | undefined | null): this
+  /** Trims whitespace or specified characters from the start and end. */
+  trim(charType?: string | undefined | null): this
+  /** Trims whitespace or specified characters from the start. */
+  trimStart(charType?: string | undefined | null): this
+  /** Trims whitespace or specified characters from the end. */
+  trimEnd(charType?: string | undefined | null): this
+  /** Trims newlines from the start and end. */
+  trimLines(): this
 }
 
 export declare class BindingModuleInfo {

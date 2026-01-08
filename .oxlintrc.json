@@ -6,6 +6,7 @@
     "packages/rollup-tests/**",
     "packages/rolldown/tests/fixtures/**",
     "packages/rolldown/tests/stability/**",
+    "packages/rolldown/tests/magic-string/*.test.ts",
     "packages/rolldown/src/binding.*",
     "packages/test-dev-server/tests/fixtures/**",
     "packages/vite-tests/repo/**",

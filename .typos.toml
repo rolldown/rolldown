@@ -10,6 +10,7 @@ extend-exclude = [
   "/CHANGELOG.md",
   "/packages/rollup-tests/test",
   "/crates/rolldown/tests/esbuild/splitting/ignore-test.md",
+  "/packages/rolldown/tests/magic-string/**.test.ts",
   "/packages/rollup-tests/src/ignored-by-unsupported-features.md",
   "/packages/rollup-tests/src/ignored-passed-snapshot-different-tests.js",
   "/packages/rollup-tests/src/ignored-tests.js",

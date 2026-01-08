@@ -66,14 +66,7 @@ export function normalizeCliOptions(
 
   const keysOfInput = getInputCliKeys();
   const keysOfOutput = getOutputCliKeys();
-  const reservedKeys = [
-    'help',
-    'version',
-    'config',
-    'watch',
-    'environment',
-    'silent',
-  ];
+  const reservedKeys = ['help', 'version', 'config', 'watch', 'environment', 'silent'];
 
   for (let [key, value] of Object.entries(options)) {
     const keys = key.split('.');

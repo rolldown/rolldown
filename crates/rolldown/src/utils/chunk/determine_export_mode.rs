@@ -48,7 +48,8 @@ pub fn determine_export_mode(
       } else {
         let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
         if has_default_export {
-          let name = ctx.options.name.as_deref().map(ArcStr::from).unwrap_or_else(|| ArcStr::from("chunk"));
+          let name =
+            ctx.options.name.as_deref().map(ArcStr::from).unwrap_or_else(|| ArcStr::from("chunk"));
           warnings.push(
             BuildDiagnostic::mixed_export(
               module.id.to_string(),

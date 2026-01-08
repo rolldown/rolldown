@@ -3911,6 +3911,7 @@ dependencies = [
  "memchr",
  "oxc_index",
  "oxc_sourcemap",
+ "regex",
  "rustc-hash",
  "serde",
 ]

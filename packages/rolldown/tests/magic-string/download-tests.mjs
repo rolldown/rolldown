@@ -35,7 +35,6 @@
  *   - constructor options (filename, ignoreList, indentExclusionRanges)
  *   - slice, snip, clone, reset
  *   - generateMap, generateDecodedMap, addSourcemapLocation
- *   - trim, trimStart, trimEnd, trimLines
  *   - lastChar, lastLine
  *   - original property
  *   - replace/replaceAll with regex or function replacer
@@ -65,15 +64,8 @@ const SKIP_DESCRIBE_BLOCKS = [
   'reset',
   'slice',
   'snip',
-  'trim',
-  'trimStart',
-  'trimEnd',
-  'trimLines',
   'insert', // deprecated, causes errors
-  'overwrite', // complex overwrite scenarios cause panics - many tests cause "Cannot split a chunk"
-  'update', // complex update scenarios cause panics - many tests cause "Cannot split a chunk"
-  'remove', // complex remove scenarios cause panics
-  // Note: hasChanged, replace, replaceAll, isEmpty, length
+  // Note: hasChanged, replace, replaceAll, isEmpty, length, remove, update, overwrite
   // are now enabled with individual test skips for problematic cases
 ];
 
@@ -84,13 +76,14 @@ const SKIP_TESTS = [
   'should disallow', // error handling differs (causes panic)
   'indentExclusionRanges', // not supported
   'sourcemapLocations', // not supported
-  'intro and outro', // clone-related
+  'should return cloned content', // clone-related
   'should noop', // edge cases that may differ
   'negative indices', // may not be supported
   'should split original chunk', // internal behavior
   'out of upper bound', // out of bounds indices cause panic
   'out of bounds', // out of bounds indices cause panic
-  'empty string', // edge cases with empty strings may differ
+  'replaces an empty string', // empty string edge case
+  'empty string should be movable', // empty string edge case
   'zero-length', // zero-length operations cause panic
   'split point', // split point errors cause panic
   'storeName', // storeName option not supported
@@ -104,6 +97,22 @@ const SKIP_TESTS = [
   'should replace then remove', // causes split chunk panic
   'preserves intended order', // uses slice which is not supported
   'excluded characters', // indent exclude option not supported
+  // remove-specific skips
+  'should remove everything', // edge case
+  'should adjust other removals', // complex removal interaction
+  // update/overwrite-specific skips
+  'inserts inside', // causes split chunk panic
+  'disallows overwriting partially', // causes panic
+  'disallows updating partially', // causes panic
+  'disallows overwriting fully', // causes panic
+  'disallows updating fully', // causes panic
+  'replaces interior inserts', // causes split chunk panic
+  'allows later insertions at the end', // causes split chunk panic
+  // remove-specific complex cases
+  'removes across moved content', // causes panic
+  'should not remove content inserted', // complex interaction
+  'should remove interior inserts', // causes panic
+  'should provide a useful error', // expects throw but gets panic
   // hasChanged tests that use clone
   'should not report change if content is identical', // uses clone
   'should works', // uses clone

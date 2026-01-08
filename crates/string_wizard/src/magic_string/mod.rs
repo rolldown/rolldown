@@ -5,6 +5,7 @@ pub mod prepend;
 pub mod replace;
 #[cfg(feature = "sourcemap")]
 pub mod source_map;
+pub mod trim;
 pub mod update;
 
 use std::{borrow::Cow, collections::VecDeque, sync::OnceLock};

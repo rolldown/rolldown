@@ -198,4 +198,32 @@ impl BindingMagicString<'_> {
     }
     this
   }
+
+  /// Trims whitespace or specified characters from the start and end.
+  #[napi]
+  pub fn trim<'s>(&'s mut self, this: This<'s>, char_type: Option<String>) -> This<'s> {
+    self.inner.trim(char_type.as_deref());
+    this
+  }
+
+  /// Trims whitespace or specified characters from the start.
+  #[napi]
+  pub fn trim_start<'s>(&'s mut self, this: This<'s>, char_type: Option<String>) -> This<'s> {
+    self.inner.trim_start(char_type.as_deref());
+    this
+  }
+
+  /// Trims whitespace or specified characters from the end.
+  #[napi]
+  pub fn trim_end<'s>(&'s mut self, this: This<'s>, char_type: Option<String>) -> This<'s> {
+    self.inner.trim_end(char_type.as_deref());
+    this
+  }
+
+  /// Trims newlines from the start and end.
+  #[napi]
+  pub fn trim_lines<'s>(&'s mut self, this: This<'s>) -> This<'s> {
+    self.inner.trim_lines();
+    this
+  }
 }

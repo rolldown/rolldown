@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use parking_lot::Mutex;
 
@@ -12,21 +12,22 @@ const MAX_PATTERN_LENGTH: usize = 100;
 /// Global cache for compiled regex patterns.
 /// Cache size is naturally bounded by MAX_PATTERN_LENGTH and the limited set of
 /// trim patterns used in practice (typically just whitespace and newline patterns).
-static REGEX_CACHE: OnceLock<Mutex<HashMap<String, regex::Regex>>> = OnceLock::new();
+static REGEX_CACHE: OnceLock<Mutex<HashMap<String, Arc<regex::Regex>>>> = OnceLock::new();
 
 /// Get or create a cached regex from the pattern
-fn get_cached_regex(regex_pattern: &str) -> Option<regex::Regex> {
+fn get_cached_regex(regex_pattern: &str) -> Option<Arc<regex::Regex>> {
   let cache = REGEX_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
   let mut cache_guard = cache.lock();
 
   if let Some(cached_re) = cache_guard.get(regex_pattern) {
-    return Some(cached_re.clone());
+    return Some(Arc::clone(cached_re));
   }
 
   match regex::Regex::new(regex_pattern) {
     Ok(compiled) => {
-      cache_guard.insert(regex_pattern.to_string(), compiled.clone());
-      Some(compiled)
+      let arc_regex = Arc::new(compiled);
+      cache_guard.insert(regex_pattern.to_string(), Arc::clone(&arc_regex));
+      Some(arc_regex)
     }
     Err(_) => None,
   }

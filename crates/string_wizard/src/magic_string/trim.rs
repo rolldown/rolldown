@@ -1,7 +1,35 @@
 use std::borrow::Cow;
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
+use std::sync::OnceLock;
+
+use parking_lot::Mutex;
 
 use crate::MagicString;
+
+/// Maximum allowed length for regex patterns to prevent DoS attacks
+const MAX_PATTERN_LENGTH: usize = 100;
+
+/// Global cache for compiled regex patterns
+static REGEX_CACHE: OnceLock<Mutex<HashMap<String, regex::Regex>>> = OnceLock::new();
+
+/// Get or create a cached regex from the pattern
+fn get_cached_regex(regex_pattern: &str) -> Option<regex::Regex> {
+  let cache = REGEX_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+  let mut cache_guard = cache.lock();
+
+  if let Some(cached_re) = cache_guard.get(regex_pattern) {
+    return Some(cached_re.clone());
+  }
+
+  match regex::Regex::new(regex_pattern) {
+    Ok(compiled) => {
+      let re_clone = compiled.clone();
+      cache_guard.insert(regex_pattern.to_string(), compiled);
+      Some(re_clone)
+    }
+    Err(_) => None,
+  }
+}
 
 impl<'text> MagicString<'text> {
   /// Trims whitespace from the start and end of the string.
@@ -208,17 +236,18 @@ fn trim_start_pattern<'a>(s: &'a str, pattern: &str) -> &'a str {
     _ => {}
   }
 
-  // Use regex for custom patterns
+  // Validate pattern length to prevent DoS attacks
+  if pattern.len() > MAX_PATTERN_LENGTH {
+    return s.trim_start(); // Fallback for overly complex patterns
+  }
+
+  // Use cached regex for custom patterns
   let regex_pattern = format!("^({pattern})+");
-  match regex::Regex::new(&regex_pattern) {
-    Ok(re) => {
-      if let Some(m) = re.find(s) {
-        &s[m.end()..]
-      } else {
-        s
-      }
-    }
-    Err(_) => s.trim_start(), // Fallback to whitespace on invalid regex
+
+  if let Some(re) = get_cached_regex(&regex_pattern) {
+    if let Some(m) = re.find(s) { &s[m.end()..] } else { s }
+  } else {
+    s.trim_start() // Fallback on invalid regex
   }
 }
 
@@ -235,16 +264,17 @@ fn trim_end_pattern<'a>(s: &'a str, pattern: &str) -> &'a str {
     _ => {}
   }
 
-  // Use regex for custom patterns
+  // Validate pattern length to prevent DoS attacks
+  if pattern.len() > MAX_PATTERN_LENGTH {
+    return s.trim_end(); // Fallback for overly complex patterns
+  }
+
+  // Use cached regex for custom patterns
   let regex_pattern = format!("({pattern})+$");
-  match regex::Regex::new(&regex_pattern) {
-    Ok(re) => {
-      if let Some(m) = re.find(s) {
-        &s[..m.start()]
-      } else {
-        s
-      }
-    }
-    Err(_) => s.trim_end(), // Fallback to whitespace on invalid regex
+
+  if let Some(re) = get_cached_regex(&regex_pattern) {
+    if let Some(m) = re.find(s) { &s[..m.start()] } else { s }
+  } else {
+    s.trim_end() // Fallback on invalid regex
   }
 }

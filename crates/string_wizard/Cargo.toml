@@ -12,6 +12,7 @@ description = "manipulate string like a wizard"
 memchr = { workspace = true }
 oxc_index = { workspace = true }
 oxc_sourcemap = { workspace = true, optional = true }
+parking_lot = { workspace = true }
 regex = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, optional = true }

@@ -1722,11 +1722,25 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if expr.options.is_some() {
       return false;
     }
-    let Some(rec_idx) = self.ctx.module.imports.get(&expr.span) else {
-      return false;
-    };
-    // Make sure the import expression is in correct form. If it's not, we should leave it as it is.
-    let Some(str) = expr.source.as_static_module_request() else {
+
+    let (Some(str), Some(rec_idx)) =
+      (expr.source.as_static_module_request(), self.ctx.module.imports.get(&expr.span))
+    else {
+      if matches!(self.ctx.options.format, OutputFormat::Cjs)
+        && !self.ctx.options.dynamic_import_in_cjs
+      {
+        // Transform `import(expr)` to `Promise.resolve().then(() => __toESM(require(expr)))`
+        let source = expr.source.take_in(self.alloc);
+        let require_call = self.snippet.call_expr_with_arg_expr_expr("require", source);
+        let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
+        let wrapped = self.snippet.wrap_with_to_esm(
+          to_esm_fn_name,
+          require_call,
+          self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
+        );
+        *node = self.snippet.promise_resolve_then_call_expr(wrapped);
+        return true;
+      }
       return false;
     };
 

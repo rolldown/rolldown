@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+//#region main.js
+Promise.resolve().then(() => /* @__PURE__ */ __toESM(require(moduleName))).then(console.log);
+Promise.resolve().then(() => /* @__PURE__ */ __toESM(require(
+	/* @vite-ignore */
+	"./ignored.js"
+))).then(console.log);
+
+//#endregion
+```

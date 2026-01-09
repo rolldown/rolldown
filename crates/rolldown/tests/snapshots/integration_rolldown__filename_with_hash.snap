@@ -3646,6 +3646,10 @@ expression: output
 - internal-!~{003}~.js => internal-DiqBI5kB.js
 - internal-cjs-!~{001}~.js => internal-cjs-Dclx_OsA.js
 
+# tests/rolldown/cjs_compat/dynamic_import_in_cjs_non_static
+
+- main-!~{000}~.js => main-afWhV-a6.js
+
 # tests/rolldown/cjs_compat/esm_require_cjs
 
 - main-!~{000}~.js => main-CgFAgQJr.js

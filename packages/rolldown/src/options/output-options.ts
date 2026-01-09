@@ -166,6 +166,25 @@ export interface OutputOptions {
    */
   minify?: boolean | 'dce-only' | MinifyOptions;
   name?: string;
+  /**
+   * Generate a `noConflict` method for UMD globals.
+   *
+   * When enabled in UMD format, generates an additional `noConflict` export that:
+   * - Returns the bundle exports
+   * - Restores the global variable to its previous value
+   *
+   * This is useful when multiple versions of a library need to coexist on the same page.
+   *
+   * @example
+   * ```js
+   * // With noConflict: true
+   * var myLib = window.MyLib.noConflict();
+   * // window.MyLib is restored to its previous value
+   * ```
+   *
+   * @default false
+   */
+  noConflict?: boolean;
   globals?: Record<string, string> | GlobalsFunction;
   /**
    * Maps external module IDs to paths.

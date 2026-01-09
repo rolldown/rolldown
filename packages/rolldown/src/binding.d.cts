@@ -1509,6 +1509,7 @@ export declare class BindingNormalizedOptions {
   get postFooter(): string | undefined | null | undefined
   get externalLiveBindings(): boolean
   get extend(): boolean
+  get noConflict(): boolean
   get globals(): Record<string, string> | undefined
   get hashCharacters(): 'base64' | 'base36' | 'hex'
   get sourcemapDebugIds(): boolean
@@ -2098,6 +2099,7 @@ export interface BindingOutputOptions {
   inlineDynamicImports?: boolean
   dynamicImportInCjs?: boolean
   intro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
+  noConflict?: boolean
   outro?: string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)
   paths?: Record<string, string> | ((id: string) => string)
   plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]

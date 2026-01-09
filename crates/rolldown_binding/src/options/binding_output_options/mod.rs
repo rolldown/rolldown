@@ -112,7 +112,7 @@ pub struct BindingOutputOptions<'env> {
   // manualChunks: ManualChunksOption;
   // minifyInternalExports: boolean;
   // namespaceToStringTag: boolean;
-  // noConflict: boolean;
+  pub no_conflict: Option<bool>,
   #[debug(skip)]
   #[napi(
     ts_type = "string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)"

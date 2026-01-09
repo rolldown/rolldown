@@ -4398,6 +4398,14 @@ expression: output
 
 - main-!~{000}~.js => main-CbRrEbie.js
 
+# tests/rolldown/function/format/umd/no_conflict
+
+- main-!~{000}~.js => main-CbgwSvMG.js
+
+# tests/rolldown/function/format/umd/no_conflict_default
+
+- main-!~{000}~.js => main-CwyBSuzv.js
+
 # tests/rolldown/function/inject
 
 - main-!~{000}~.js => main-Bz6bTHfJ.js

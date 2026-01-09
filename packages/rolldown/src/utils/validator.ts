@@ -707,6 +707,10 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Extend global variable defined by name in IIFE / UMD formats'),
   ),
+  noConflict: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Generate a noConflict method for UMD globals'),
+  ),
   esModule: v.optional(v.union([v.boolean(), v.literal('if-default-prop')])),
   assetFileNames: v.optional(AssetFileNamesSchema),
   entryFileNames: v.optional(ChunkFileNamesSchema),

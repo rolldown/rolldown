@@ -368,6 +368,12 @@
             "null"
           ]
         },
+        "noConflict": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "profilerNames": {
           "type": [
             "boolean",

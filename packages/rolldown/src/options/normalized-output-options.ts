@@ -43,6 +43,7 @@ export interface NormalizedOutputOptions {
   outro: AddonFunction;
   esModule: boolean | 'if-default-prop';
   extend: boolean;
+  noConflict: boolean;
   globals: Record<string, string> | GlobalsFunction;
   paths: Record<string, string> | PathsFunction | undefined;
   hashCharacters: 'base64' | 'base36' | 'hex';
@@ -190,6 +191,11 @@ export class NormalizedOutputOptionsImpl
   @lazyProp
   get extend(): boolean {
     return this.inner.extend;
+  }
+
+  @lazyProp
+  get noConflict(): boolean {
+    return this.inner.noConflict ?? false;
   }
 
   @lazyProp

@@ -245,6 +245,11 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
+  pub fn no_conflict(&self) -> bool {
+    self.inner.no_conflict
+  }
+
+  #[napi(getter)]
   pub fn globals(&self) -> Either<HashMap<String, String, FxBuildHasher>, Undefined> {
     match &self.inner.globals {
       rolldown::GlobalsOutputOption::FxHashMap(globals) => Either::A(globals.clone()),

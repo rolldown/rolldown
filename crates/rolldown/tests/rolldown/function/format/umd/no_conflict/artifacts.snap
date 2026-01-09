@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+(function(global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (function () {
+	var current = global.MyLib;
+	var exports = global.MyLib = {};
+	factory(exports);
+	exports.noConflict = function () { global.MyLib = current; return exports; };
+})());
+})(this, function(exports) {
+
+//#region main.js
+	const x = 42;
+
+//#endregion
+exports.x = x;
+});
+```

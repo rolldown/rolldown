@@ -214,14 +214,48 @@ async fn render_iife_export(
       "global",
       ",",
     );
-    if named_exports {
-      Ok(format!(
-        "factory(({stmt}{namespace} = {}){})",
-        if ctx.options.extend { format!("{namespace} || {{}}") } else { "{}".to_string() },
-        if dependencies.is_empty() { String::new() } else { format!(", {deps}") }
-      ))
+    
+    if ctx.options.no_conflict {
+      // Generate noConflict wrapper
+      if named_exports {
+        let factory_deps = if dependencies.is_empty() { 
+          String::new() 
+        } else { 
+          format!(", {deps}") 
+        };
+        let init_value = if ctx.options.extend { 
+          format!("{namespace} || {{}}") 
+        } else { 
+          "{}".to_string() 
+        };
+        Ok(format!(
+          "(function () {{
+\tvar current = {namespace};
+\tvar exports = {stmt}{namespace} = {init_value};
+\tfactory(exports{factory_deps});
+\texports.noConflict = function () {{ {namespace} = current; return exports; }};
+}})()"
+        ))
+      } else {
+        Ok(format!(
+          "(function () {{
+\tvar current = {namespace};
+\tvar exports = {stmt}{namespace} = factory({deps});
+\texports.noConflict = function () {{ {namespace} = current; return exports; }};
+}})()"
+        ))
+      }
     } else {
-      Ok(format!("({stmt}{namespace} = factory({deps}))"))
+      // Original behavior without noConflict
+      if named_exports {
+        Ok(format!(
+          "factory(({stmt}{namespace} = {}){})",
+          if ctx.options.extend { format!("{namespace} || {{}}") } else { "{}".to_string() },
+          if dependencies.is_empty() { String::new() } else { format!(", {deps}") }
+        ))
+      } else {
+        Ok(format!("({stmt}{namespace} = factory({deps}))"))
+      }
     }
   } else {
     Ok(format!("factory({deps})"))

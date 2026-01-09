@@ -30,7 +30,7 @@
     "lint-staged": "^16.1.2",
     "oxfmt": "^0.23.0",
     "oxlint": "^1.31.0",
-    "oxlint-tsgolint": "0.10.1",
+    "oxlint-tsgolint": "0.11.0",
     "playwright-chromium": "^1.56.1",
     "remove-unused-vars": "^0.0.11",
     "rolldown": "workspace:*",

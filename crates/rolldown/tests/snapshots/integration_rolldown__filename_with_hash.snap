@@ -5085,6 +5085,17 @@ expression: output
 
 - main-!~{000}~.js => main-CjVLk02l.js
 
+# tests/rolldown/issues/7804
+
+- main-!~{000}~.js => main-Cr5yJKGv.js
+- _virtual/rolldown_runtime-!~{001}~.js => _virtual/rolldown_runtime-FcpX8sWx.js
+- boolean-!~{009}~.js => boolean-D17Xkufq.js
+- data-!~{003}~.js => data-BfzdUrpK.js
+- null-!~{00b}~.js => null-ssaWT1on.js
+- number-!~{007}~.js => number-BUouSWoC.js
+- string-!~{005}~.js => string-DPwn78yK.js
+- text-!~{00d}~.js => text-CggBgD_k.js
+
 # tests/rolldown/issues/duplicate_default_export
 
 - main-!~{000}~.js => main-BatCM-9U.js

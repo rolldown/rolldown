@@ -1421,7 +1421,8 @@ export declare class BindingDevEngine {
 }
 
 export declare class BindingMagicString {
-  constructor(source: string)
+  constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
+  get filename(): string | null
   replace(from: string, to: string): this
   replaceAll(from: string, to: string): this
   prepend(content: string): this
@@ -2024,6 +2025,10 @@ export interface BindingLogLocation {
   /** 0-based position in the line in UTF-16 code units */
   column: number
   file?: string
+}
+
+export interface BindingMagicStringOptions {
+  filename?: string
 }
 
 export type BindingMakeAbsoluteExternalsRelative =

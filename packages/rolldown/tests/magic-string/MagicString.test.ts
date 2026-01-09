@@ -4,7 +4,7 @@ import { BindingMagicString as MagicString } from 'rolldown';
 import { describe, it } from 'vitest';
 
 describe('MagicString', () => {
-  describe.skip('options', () => {
+  describe('options', () => {
     it('stores source file information', () => {
       const s = new MagicString('abc', {
         filename: 'foo.js',
@@ -13,7 +13,7 @@ describe('MagicString', () => {
       assert.equal(s.filename, 'foo.js');
     });
 
-    it('stores ignore-list hint', () => {
+    it.skip('stores ignore-list hint', () => {
       const s = new MagicString('abc', { ignoreList: true });
 
       assert.equal(s.ignoreList, true);
@@ -145,7 +145,7 @@ describe('MagicString', () => {
       assert.equal(c.toString(), 'abcXYZjkl');
     });
 
-    it.skip('should clone filename info', () => {
+    it('should clone filename info', () => {
       const s = new MagicString('abcdefghijkl', { filename: 'foo.js' });
       const c = s.clone();
 

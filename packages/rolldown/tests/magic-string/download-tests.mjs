@@ -55,7 +55,6 @@ const BASE_URL = 'https://raw.githubusercontent.com/Rich-Harris/magic-string/mas
 
 // Describe blocks to skip entirely (unsupported features)
 const SKIP_DESCRIBE_BLOCKS = [
-  'options', // constructor options not supported
   'addSourcemapLocation',
   'generateDecodedMap',
   'generateMap',
@@ -65,6 +64,7 @@ const SKIP_DESCRIBE_BLOCKS = [
   'original',
   'reset',
   'snip',
+  // Note: 'options' is now partially supported (filename works, ignoreList doesn't)
   // Note: 'insert' is now supported (throws deprecated error as expected)
   // Note: 'slice' is now supported
   // Note: 'clone' is now supported (some individual tests skipped)
@@ -77,6 +77,8 @@ const SKIP_TESTS = [
   'should throw when given non-string content', // error handling differs
   'should throw', // error handling differs
   'should disallow', // error handling differs (causes panic)
+  // options-specific skips
+  'stores ignore-list hint', // ignoreList option not supported
   'indentExclusionRanges', // not supported
   'sourcemapLocations', // not supported
   'should return cloned content', // clone-related
@@ -120,7 +122,7 @@ const SKIP_TESTS = [
   'should return the generated content between the specified original characters', // nested overwrites + slice
   'supports characters moved', // complex move + slice interaction
   // clone-specific skips (tests that use unsupported constructor options)
-  'should clone filename info', // uses filename constructor option
+  // Note: 'should clone filename info' now works since filename is supported
   'should clone indentExclusionRanges', // uses indentExclusionRanges constructor option
   'should clone complex indentExclusionRanges', // uses indentExclusionRanges constructor option
   'should clone sourcemapLocations', // uses sourcemapLocations

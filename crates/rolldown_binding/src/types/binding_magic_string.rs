@@ -1,7 +1,7 @@
 #![expect(clippy::inherent_to_string)]
 use napi::bindgen_prelude::This;
 use napi_derive::napi;
-use string_wizard::MagicString;
+use string_wizard::{MagicString, MagicStringOptions};
 
 #[derive(Clone)]
 struct CharToByteMapper {
@@ -27,6 +27,12 @@ impl CharToByteMapper {
   }
 }
 
+#[napi(object)]
+#[derive(Default)]
+pub struct BindingMagicStringOptions {
+  pub filename: Option<String>,
+}
+
 #[napi]
 pub struct BindingMagicString<'a> {
   pub(crate) inner: MagicString<'a>,
@@ -36,9 +42,16 @@ pub struct BindingMagicString<'a> {
 #[napi]
 impl BindingMagicString<'_> {
   #[napi(constructor)]
-  pub fn new(source: String) -> Self {
+  pub fn new(source: String, options: Option<BindingMagicStringOptions>) -> Self {
     let char_to_byte_mapper = CharToByteMapper::new(&source);
-    Self { inner: MagicString::new(source), char_to_byte_mapper }
+    let opts = options.unwrap_or_default();
+    let magic_string_options = MagicStringOptions { filename: opts.filename };
+    Self { inner: MagicString::with_options(source, magic_string_options), char_to_byte_mapper }
+  }
+
+  #[napi(getter)]
+  pub fn filename(&self) -> Option<String> {
+    self.inner.filename().map(String::from)
   }
 
   #[napi]

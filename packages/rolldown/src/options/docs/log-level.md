@@ -1,0 +1,1 @@
+The default logLevel of "info" means that info and warnings logs will be processed while debug logs will be swallowed, which means that they are neither passed to plugin `onLog` hooks nor the `onLog` option or printed to the console.

@@ -2,7 +2,7 @@
 
 ##### `'exports-only'`
 
-Follows `'strict'` behavior for entry modules that have exports, but allows `'allow-extension'` behavior for entry modules without exports. This provides a good balance between maintaining export signatures and optimization flexibility.
+Follows `'strict'` behavior for entry modules that have exports, but allows `'allow-extension'` behavior for entry modules without exports.
 
 ##### `'strict'`
 
@@ -17,6 +17,8 @@ Entry chunks can expose all exports from the corresponding entry module, and may
 ##### `false`
 
 Provides maximum flexibility. Entry chunks can be merged freely with other chunks regardless of export signatures. This can lead to better optimization but may change the exposed exports significantly.
+
+**Use case:** This is the recommended setting for **application** where you don't need guaranteed, stable export signatures.
 
 #### Understanding Facade Chunks
 

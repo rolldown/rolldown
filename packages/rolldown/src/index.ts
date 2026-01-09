@@ -16,6 +16,7 @@ import type {
 } from './log/logging';
 import type { ChecksOptions } from './options/generated/checks-options';
 import type {
+  ExternalOptionFunction,
   ExternalOption,
   InputOption,
   InputOptions,
@@ -23,6 +24,7 @@ import type {
   OptimizationOptions,
   WatcherOptions,
 } from './options/input-options';
+import type { TransformOptions } from './options/transform-options';
 import type { NormalizedInputOptions } from './options/normalized-input-options';
 import type {
   InternalModuleFormat,
@@ -118,6 +120,7 @@ export type {
   EmittedFile,
   EmittedPrebuiltChunk,
   ExistingRawSourceMap,
+  ExternalOptionFunction,
   ExternalOption,
   FunctionPluginHooks,
   GeneralHookFilter,
@@ -125,6 +128,7 @@ export type {
   GeneratedCodePreset,
   GetModuleInfo,
   GlobalsFunction,
+  TransformOptions,
   HookFilter,
   HookFilterExtension,
   ImportKind,

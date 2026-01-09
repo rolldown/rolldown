@@ -24,7 +24,7 @@
     "jsdoc/check-tag-names": [
       "error",
       {
-        "definedTags": ["category", "include"]
+        "definedTags": ["category", "include", "experimental", "inline", "hidden"]
       }
     ],
     "no-unused-expressions": [

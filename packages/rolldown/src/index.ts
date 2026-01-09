@@ -31,6 +31,7 @@ import type {
   NormalizedOutputOptions,
 } from './options/normalized-output-options';
 import type {
+  AdvancedChunksGroup,
   AddonFunction,
   ChunkFileNamesFunction,
   ChunkingContext,
@@ -107,6 +108,7 @@ export { build, defineConfig, rolldown, VERSION, watch };
 export { BindingMagicString } from './binding.cjs';
 export type {
   AddonFunction,
+  AdvancedChunksGroup,
   AsyncPluginHooks,
   BufferEncoding,
   BuildOptions,

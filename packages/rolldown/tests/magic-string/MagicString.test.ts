@@ -1588,7 +1588,7 @@ describe('MagicString', () => {
     });
   });
 
-  describe.skip('snip', () => {
+  describe('snip', () => {
     it('should return a clone with content outside `start` and `end` removed', () => {
       const s = new MagicString('abcdefghijkl', {
         filename: 'foo.js',

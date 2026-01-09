@@ -83,4 +83,19 @@ impl MagicString<'_> {
 
     self
   }
+
+  /// Returns a clone with content outside the specified range removed.
+  /// This is equivalent to `clone().remove(0, start).remove(end, original.len())`.
+  #[must_use]
+  pub fn snip(&self, start: usize, end: usize) -> Self {
+    let mut clone = self.clone();
+    if start > 0 {
+      clone.remove(0, start);
+    }
+    let original_len = self.source.len();
+    if end < original_len {
+      clone.remove(end, original_len);
+    }
+    clone
+  }
 }

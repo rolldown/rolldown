@@ -33,10 +33,11 @@
  *   - slice(start?: number, end?: number): string
  *   - insert(index: number, content: string): throws Error (deprecated)
  *   - clone(): BindingMagicString
+ *   - snip(start: number, end: number): BindingMagicString
  *
  * NOT supported (will be skipped):
  *   - constructor options (filename, ignoreList, indentExclusionRanges)
- *   - snip, reset
+ *   - reset
  *   - generateMap, generateDecodedMap, addSourcemapLocation
  *   - lastChar, lastLine
  *   - original property
@@ -63,7 +64,7 @@ const SKIP_DESCRIBE_BLOCKS = [
   'lastLine',
   'original',
   'reset',
-  'snip',
+  // Note: 'snip' is now supported
   // Note: 'options' is now partially supported (filename works, ignoreList doesn't)
   // Note: 'insert' is now supported (throws deprecated error as expected)
   // Note: 'slice' is now supported

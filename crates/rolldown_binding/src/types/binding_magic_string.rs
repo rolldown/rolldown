@@ -257,6 +257,20 @@ impl BindingMagicString<'_> {
     Self { inner: self.inner.clone(), char_to_byte_mapper: self.char_to_byte_mapper.clone() }
   }
 
+  /// Returns a clone with content outside the specified range removed.
+  #[napi]
+  #[must_use]
+  pub fn snip(&self, start: u32, end: u32) -> Self {
+    let start_byte =
+      self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
+    let end_byte =
+      self.char_to_byte_mapper.char_to_byte(end as usize).expect("Invalid end character index");
+    Self {
+      inner: self.inner.snip(start_byte, end_byte),
+      char_to_byte_mapper: self.char_to_byte_mapper.clone(),
+    }
+  }
+
   /// Returns the content between the specified original character positions.
   /// Supports negative indices (counting from the end).
   #[napi]

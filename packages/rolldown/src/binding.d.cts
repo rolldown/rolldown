@@ -1461,6 +1461,8 @@ export declare class BindingMagicString {
   insert(index: number, content: string): void
   /** Returns a clone of the MagicString instance. */
   clone(): BindingMagicString
+  /** Returns a clone with content outside the specified range removed. */
+  snip(start: number, end: number): BindingMagicString
   /**
    * Returns the content between the specified original character positions.
    * Supports negative indices (counting from the end).

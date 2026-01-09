@@ -4,6 +4,8 @@ import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '..
 import type { ModuleInfo } from '../types/module-info';
 import type { RenderedChunk } from '../types/rolldown-output';
 import type { NullValue, StringOrRegExp } from '../types/utils';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { InputOptions } from './input-options';
 
 export type GeneratedCodePreset = 'es5' | 'es2015';
 
@@ -99,7 +101,7 @@ export interface OutputOptions {
   /**
    * The directory in which all generated chunks are placed.
    *
-   * The [`file`](https://rolldown.rs/reference/OutputOptions.file) option should be used instead if only a single chunk is generated.
+   * The {@linkcode file | output.file} option should be used instead if only a single chunk is generated.
    *
    * @default 'dist'
    */
@@ -107,7 +109,7 @@ export interface OutputOptions {
   /**
    * The file path for the single generated chunk.
    *
-   * The [`dir`](https://rolldown.rs/reference/OutputOptions.dir) option should be used instead if multiple chunks are generated.
+   * The {@linkcode dir | output.dir} option should be used instead if multiple chunks are generated.
    */
   file?: string;
   /**
@@ -217,7 +219,7 @@ export interface OutputOptions {
   /**
    * A string to prepend to the bundle before `renderChunk` hook.
    *
-   * See [`output.intro`](https://rolldown.rs/reference/OutputOptions.intro), [`output.postBanner`](https://rolldown.rs/reference/OutputOptions.postBanner) as well.
+   * See {@linkcode intro | output.intro}, {@linkcode postBanner | output.postBanner} as well.
    *
    * {@include ./docs/output-banner.md}
    */
@@ -225,7 +227,7 @@ export interface OutputOptions {
   /**
    * A string to append to the bundle before `renderChunk` hook.
    *
-   * See [`output.outro`](https://rolldown.rs/reference/OutputOptions.outro), [`output.postFooter`](https://rolldown.rs/reference/OutputOptions.postFooter) as well.
+   * See {@linkcode outro | output.outro}, {@linkcode postFooter | output.postFooter} as well.
    *
    * {@include ./docs/output-footer.md}
    */
@@ -233,29 +235,29 @@ export interface OutputOptions {
   /**
    * A string to prepend to the bundle after `renderChunk` hook and minification.
    *
-   * See [`output.banner`](https://rolldown.rs/reference/OutputOptions.banner), [`output.intro`](https://rolldown.rs/reference/OutputOptions.intro) as well.
+   * See {@linkcode banner | output.banner}, {@linkcode intro | output.intro} as well.
    */
   postBanner?: string | AddonFunction;
   /**
    * A string to append to the bundle after `renderChunk` hook and minification.
    *
-   * See [`output.footer`](https://rolldown.rs/reference/OutputOptions.footer), [`output.outro`](https://rolldown.rs/reference/OutputOptions.outro) as well.
+   * See {@linkcode footer | output.footer}, {@linkcode outro | output.outro} as well.
    */
   postFooter?: string | AddonFunction;
   /**
    * A string to prepend inside any format-specific wrapper.
    *
-   * See [`output.banner`](https://rolldown.rs/reference/OutputOptions.banner), [`output.postBanner`](https://rolldown.rs/reference/OutputOptions.postBanner) as well.
+   * See {@linkcode banner | output.banner}, {@linkcode postBanner | output.postBanner} as well.
    */
   intro?: string | AddonFunction;
   /**
    * A string to append inside any format-specific wrapper.
    *
-   * See [`output.footer`](https://rolldown.rs/reference/OutputOptions.footer), [`output.postFooter`](https://rolldown.rs/reference/OutputOptions.postFooter) as well.
+   * See {@linkcode footer | output.footer}, {@linkcode postFooter | output.postFooter} as well.
    */
   outro?: string | AddonFunction;
   /**
-   * Whether to extend the global variable defined by the name option in `umd` or `iife` formats.
+   * Whether to extend the global variable defined by the {@linkcode OutputOptions.name | name} option in `umd` or `iife` formats.
    *
    * When `true`, the global variable will be defined as `global.name = global.name || {}`.
    * When `false`, the global defined by name will be overwritten like `global.name = {}`.
@@ -281,12 +283,12 @@ export interface OutputOptions {
    * Patterns support the following placeholders:
    * - `[extname]`: The file extension of the asset including a leading dot, e.g. `.css`.
    * - `[ext]`: The file extension without a leading dot, e.g. css.
-   * - `[hash]`: A hash based on the content of the asset. You can also set a specific hash length via e.g. `[hash:10]`. By default, it will create a base-64 hash. If you need a reduced character set, see [`output.hashCharacters`](https://rolldown.rs/reference/OutputOptions.hashCharacters).
+   * - `[hash]`: A hash based on the content of the asset. You can also set a specific hash length via e.g. `[hash:10]`. By default, it will create a base-64 hash. If you need a reduced character set, see {@linkcode hashCharacters | output.hashCharacters}.
    * - `[name]`: The file name of the asset excluding any extension.
    *
    * Forward slashes (`/`) can be used to place files in sub-directories.
    *
-   * See also [`output.chunkFileNames`](https://rolldown.rs/reference/OutputOptions.chunkFileNames), [`output.entryFileNames`](https://rolldown.rs/reference/OutputOptions.entryFileNames).
+   * See also {@linkcode chunkFileNames | output.chunkFileNames}, {@linkcode entryFileNames | output.entryFileNames}.
    *
    * @default 'assets/[name]-[hash][extname]'
    */
@@ -296,12 +298,12 @@ export interface OutputOptions {
    *
    * Patterns support the following placeholders:
    * - `[format]`: The rendering format defined in the output options, e.g. `es` or `cjs`.
-   * - `[hash]`: A hash based only on the content of the final generated chunk, including transformations in `renderChunk` and any referenced file hashes. You can also set a specific hash length via e.g. `[hash:10]`. By default, it will create a base-64 hash. If you need a reduced character set, see [`output.hashCharacters`](https://rolldown.rs/reference/OutputOptions.hashCharacters).
+   * - `[hash]`: A hash based only on the content of the final generated chunk, including transformations in `renderChunk` and any referenced file hashes. You can also set a specific hash length via e.g. `[hash:10]`. By default, it will create a base-64 hash. If you need a reduced character set, see {@linkcode hashCharacters | output.hashCharacters}.
    * - `[name]`: The file name (without extension) of the entry point, unless the object form of input was used to define a different name.
    *
-   * Forward slashes (`/`) can be used to place files in sub-directories. This pattern will also be used for every file when setting the [`output.preserveModules`](https://rolldown.rs/reference/OutputOptions.preserveModules) option.
+   * Forward slashes (`/`) can be used to place files in sub-directories. This pattern will also be used for every file when setting the {@linkcode preserveModules | output.preserveModules} option.
    *
-   * See also [`output.assetFileNames`](https://rolldown.rs/reference/OutputOptions.assetFileNames), [`output.chunkFileNames`](https://rolldown.rs/reference/OutputOptions.chunkFileNames).
+   * See also {@linkcode assetFileNames | output.assetFileNames}, {@linkcode chunkFileNames | output.chunkFileNames}.
    *
    * @default '[name].js'
    */
@@ -311,12 +313,12 @@ export interface OutputOptions {
    *
    * Patterns support the following placeholders:
    * - `[format]`: The rendering format defined in the output options, e.g. `es` or `cjs`.
-   * - `[hash]`: A hash based only on the content of the final generated chunk, including transformations in `renderChunk` and any referenced file hashes. You can also set a specific hash length via e.g. `[hash:10]`. By default, it will create a base-64 hash. If you need a reduced character set, see [`output.hashCharacters`](https://rolldown.rs/reference/OutputOptions.hashCharacters).
-   * - `[name]`: The name of the chunk. This can be explicitly set via the [`output.advancedChunks`](https://rolldown.rs/reference/OutputOptions.advancedChunks) option or when the chunk is created by a plugin via `this.emitFile`. Otherwise, it will be derived from the chunk contents.
+   * - `[hash]`: A hash based only on the content of the final generated chunk, including transformations in `renderChunk` and any referenced file hashes. You can also set a specific hash length via e.g. `[hash:10]`. By default, it will create a base-64 hash. If you need a reduced character set, see {@linkcode hashCharacters | output.hashCharacters}.
+   * - `[name]`: The name of the chunk. This can be explicitly set via the {@linkcode advancedChunks | output.advancedChunks} option or when the chunk is created by a plugin via `this.emitFile`. Otherwise, it will be derived from the chunk contents.
    *
    * Forward slashes (`/`) can be used to place files in sub-directories.
    *
-   * See also [`output.assetFileNames`](https://rolldown.rs/reference/OutputOptions.assetFileNames), [`output.entryFileNames`](https://rolldown.rs/reference/OutputOptions.entryFileNames).
+   * See also {@linkcode assetFileNames | output.assetFileNames}, {@linkcode entryFileNames | output.entryFileNames}.
    *
    * @default '[name]-[hash].js'
    */
@@ -507,7 +509,7 @@ export interface OutputOptions {
    * Note that unlike Rollup, object form is not supported.
    *
    * @deprecated
-   * Please use `advancedChunks` instead.
+   * Please use {@linkcode advancedChunks | output.advancedChunks} instead.
    *
    * :::warning
    * If `manualChunks` and `advancedChunks` are both specified, `manualChunks` option will be ignored.
@@ -541,8 +543,8 @@ export interface OutputOptions {
      * By default, each group will also include captured modules' dependencies. This reduces the chance of generating circular chunks.
      *
      * If you want to disable this behavior, it's recommended to both set
-     * - `preserveEntrySignatures: false | 'allow-extension'`
-     * - `strictExecutionOrder: true`
+     * - {@linkcode InputOptions.preserveEntrySignatures | preserveEntrySignatures}: `false | 'allow-extension'`
+     * - `experimental.strictExecutionOrder`: `true`
      *
      * to avoid generating invalid chunks.
      *
@@ -550,23 +552,23 @@ export interface OutputOptions {
      */
     includeDependenciesRecursively?: boolean;
     /**
-     * Global fallback of {@link AdvancedChunksGroup.minSize | `group.minSize`}, if it's not specified in the group.
+     * Global fallback of {@linkcode AdvancedChunksGroup.minSize | group.minSize}, if it's not specified in the group.
      */
     minSize?: number;
     /**
-     * Global fallback of {@link AdvancedChunksGroup.maxSize | `group.maxSize`}, if it's not specified in the group.
+     * Global fallback of {@linkcode AdvancedChunksGroup.maxSize | group.maxSize}, if it's not specified in the group.
      */
     maxSize?: number;
     /**
-     * Global fallback of {@link AdvancedChunksGroup.maxModuleSize | `group.maxModuleSize`}, if it's not specified in the group.
+     * Global fallback of {@linkcode AdvancedChunksGroup.maxModuleSize | group.maxModuleSize}, if it's not specified in the group.
      */
     maxModuleSize?: number;
     /**
-     * Global fallback of {@link AdvancedChunksGroup.minModuleSize | `group.minModuleSize`}, if it's not specified in the group.
+     * Global fallback of {@linkcode AdvancedChunksGroup.minModuleSize | group.minModuleSize}, if it's not specified in the group.
      */
     minModuleSize?: number;
     /**
-     * Global fallback of {@link AdvancedChunksGroup.minShareCount | `group.minShareCount`}, if it's not specified in the group.
+     * Global fallback of {@linkcode AdvancedChunksGroup.minShareCount | group.minShareCount}, if it's not specified in the group.
      */
     minShareCount?: number;
     /**
@@ -613,7 +615,7 @@ export interface OutputOptions {
    */
   virtualDirname?: string;
   /**
-   * A directory path to input modules that should be stripped away from [`output.dir`](https://rolldown.rs/reference/OutputOptions.dir) when using preserve modules mode.
+   * A directory path to input modules that should be stripped away from {@linkcode dir | output.dir} when using preserve modules mode.
    *
    * {@include ./docs/output-preserve-modules-root.md}
    */
@@ -638,7 +640,7 @@ export interface OutputOptions {
    */
   minifyInternalExports?: boolean;
   /**
-   * Clean output directory ([`output.dir`](https://rolldown.rs/reference/OutputOptions.dir)) before emitting output.
+   * Clean output directory ({@linkcode dir | output.dir}) before emitting output.
    *
    * @default false
    *
@@ -659,7 +661,7 @@ export interface OutputOptions {
 
 export type AdvancedChunksGroup = {
   /**
-   * Name of the group. It will be also used as the name of the chunk and replace the `[name]` placeholder in the `chunkFileNames` option.
+   * Name of the group. It will be also used as the name of the chunk and replace the `[name]` placeholder in the {@linkcode OutputOptions.chunkFileNames | output.chunkFileNames} option.
    *
    * For example,
    *

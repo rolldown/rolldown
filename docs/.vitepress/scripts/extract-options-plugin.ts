@@ -6,7 +6,12 @@ function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function extractPropertySection(contents: string, propertyName: string): string | undefined {
+function extractPropertySection(
+  contents: string,
+  propertyName: string,
+  parentName: string,
+  propertyNameMap: Map<string, string>,
+): string | undefined {
   if (!contents) return undefined;
   const namePattern = escapeRegex(propertyName);
   const headingRe = new RegExp(
@@ -47,6 +52,13 @@ function extractPropertySection(contents: string, propertyName: string): string 
       .replace(/^# (.+)\?\n?/m, '# $1')
       // Remove trailing horizontal separator
       .replace(/\*\*\*$/, '')
+      // Transform in-page anchor links to cross-file links
+      // e.g., [`output.file`](#file) -> [`output.file`](./OutputOptions.file)
+      // Uses propertyNameMap to get correct casing (anchors are always lowercase)
+      .replace(/\[([^\]]+)\]\(#([a-z][a-z0-9]*)\)/gi, (_, linkText, anchor) => {
+        const propertyName = propertyNameMap.get(anchor.toLowerCase()) ?? anchor;
+        return `[${linkText}](./${parentName}.${propertyName})`;
+      })
   );
 }
 
@@ -60,6 +72,11 @@ export function load(app: td.Application) {
 
       const parentContents = page.contents ?? '';
 
+      const propertyNameMap = new Map<string, string>();
+      for (const prop of parentReflection.children) {
+        propertyNameMap.set(prop.name.toLowerCase(), prop.name);
+      }
+
       for (const property of parentReflection.children) {
         const newPage = new td.PageEvent(property);
 
@@ -67,7 +84,12 @@ export function load(app: td.Application) {
         newPage.filename = `${parentReflection.name}.${property.name}.md`;
         newPage.url = `${parentReflection.name}.${property.name}.md`;
 
-        const extracted = extractPropertySection(parentContents, property.name);
+        const extracted = extractPropertySection(
+          parentContents,
+          property.name,
+          parentReflection.name,
+          propertyNameMap,
+        );
         newPage.contents = extracted;
 
         const outDir = app.options.getValue('out');

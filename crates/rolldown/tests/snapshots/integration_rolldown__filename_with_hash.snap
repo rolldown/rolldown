@@ -4052,10 +4052,6 @@ expression: output
 
 - main-!~{000}~.js => main-CKealTHV.js
 
-# tests/rolldown/function/experimental/disable_live_bindings
-
-- main-!~{000}~.js => main-iGXOFHWU.js
-
 # tests/rolldown/function/experimental/strict_execution_order/concatenate_basic
 
 - main-!~{000}~.js => main-D3FESYBf.js

@@ -1818,7 +1818,6 @@ export interface BindingExperimentalDevModeOptions {
 
 export interface BindingExperimentalOptions {
   strictExecutionOrder?: boolean
-  disableLiveBindings?: boolean
   viteMode?: boolean
   resolveNewUrlToAsset?: boolean
   devMode?: BindingExperimentalDevModeOptions

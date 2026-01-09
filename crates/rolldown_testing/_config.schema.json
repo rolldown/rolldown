@@ -941,12 +941,6 @@
             "null"
           ]
         },
-        "disableLiveBindings": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
         "viteMode": {
           "type": [
             "boolean",

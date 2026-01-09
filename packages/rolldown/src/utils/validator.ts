@@ -462,7 +462,6 @@ const InputOptionsSchema = v.strictObject({
   ),
   experimental: v.optional(
     v.strictObject({
-      disableLiveBindings: v.optional(v.boolean()),
       enableComposingJsPlugins: v.optional(v.boolean()),
       viteMode: v.optional(v.boolean()),
       resolveNewUrlToAsset: v.optional(v.boolean()),

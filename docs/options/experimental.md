@@ -19,14 +19,6 @@ Lets modules be executed in the order they are declared. This is done by injecti
 Enabling this option may negatively impact bundle size. It is recommended to use this option only when absolutely necessary.
 :::
 
-## disableLiveBindings
-
-- **Type:** `boolean`
-- **Default:** `false`
-- **Path:** `experimental.disableLiveBindings`
-
-Disable live bindings for exported variables.
-
 ## viteMode
 
 - **Type:** `boolean`

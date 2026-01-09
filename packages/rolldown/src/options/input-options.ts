@@ -447,14 +447,6 @@ export interface InputOptions {
      */
     strictExecutionOrder?: boolean;
     /**
-     * Disable live bindings for exported variables.
-     *
-     * Related: [`output.externalLiveBindings`](https://rollupjs.org/configuration-options/#output-externallivebindings), [rollupjs/rollup#3214](https://github.com/rollup/rollup/issues/3214)
-     *
-     * @default false
-     */
-    disableLiveBindings?: boolean;
-    /**
      * Enable Vite compatible mode.
      * @default false
      * @hidden This option is only meant to be used by Vite. It is not recommended to use this option directly.

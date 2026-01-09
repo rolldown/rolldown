@@ -41,7 +41,6 @@ impl From<SourcemapHires> for string_wizard::Hires {
 )]
 pub struct ExperimentalOptions {
   pub strict_execution_order: Option<bool>,
-  pub disable_live_bindings: Option<bool>,
   pub vite_mode: Option<bool>,
   pub resolve_new_url_to_asset: Option<bool>,
   pub incremental_build: Option<bool>,
@@ -58,10 +57,6 @@ pub struct ExperimentalOptions {
 impl ExperimentalOptions {
   pub fn is_strict_execution_order_enabled(&self) -> bool {
     self.strict_execution_order.unwrap_or(false)
-  }
-
-  pub fn is_disable_live_bindings_enabled(&self) -> bool {
-    self.disable_live_bindings.unwrap_or(false)
   }
 
   pub fn is_on_demand_wrapping_enabled(&self) -> bool {

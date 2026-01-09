@@ -1,0 +1,9 @@
+{
+  "config": {
+    "format": "umd",
+    "external": ["external"],
+    "name": "MyBundle",
+    "amdId": "my-bundle"
+  },
+  "expectExecuted": false
+}

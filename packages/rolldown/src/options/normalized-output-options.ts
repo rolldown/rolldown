@@ -6,6 +6,7 @@ import { PlainObjectLike } from '../types/plain-object-like';
 import type { StringOrRegExp } from '../types/utils';
 import type {
   AddonFunction,
+  AmdOptions,
   AssetFileNamesFunction,
   ChunkFileNamesFunction,
   GlobalsFunction,
@@ -50,6 +51,7 @@ export interface NormalizedOutputOptions {
   sourcemapIgnoreList: boolean | SourcemapIgnoreListOption | StringOrRegExp | undefined;
   sourcemapPathTransform: SourcemapPathTransformOption | undefined;
   minify: false | MinifyOptions | 'dce-only';
+  amd: AmdOptions;
   legalComments: 'none' | 'inline';
   polyfillRequire: boolean;
   plugins: RolldownPlugin[];
@@ -232,6 +234,11 @@ export class NormalizedOutputOptionsImpl
       delete ret['sourcemap'];
     }
     return ret;
+  }
+
+  @lazyProp
+  get amd(): AmdOptions {
+    return this.outputOptions.amd ?? {};
   }
 
   @lazyProp

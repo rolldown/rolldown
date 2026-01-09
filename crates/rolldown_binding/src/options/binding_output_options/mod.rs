@@ -1,4 +1,5 @@
 pub mod binding_advanced_chunks_options;
+mod binding_amd_options;
 mod binding_generated_code_options;
 mod binding_pre_rendered_asset;
 mod binding_pre_rendered_chunk;
@@ -9,6 +10,7 @@ use napi::bindgen_prelude::{Either3, FnArgs};
 use rustc_hash::FxHashMap;
 
 use binding_advanced_chunks_options::BindingAdvancedChunksOptions;
+pub use binding_amd_options::BindingAmdOptions;
 pub use binding_generated_code_options::BindingGeneratedCodeOptions;
 use binding_pre_rendered_chunk::PreRenderedChunk;
 
@@ -59,7 +61,8 @@ pub struct BindingOutputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "boolean | ((name: string) => string)")]
   pub sanitize_file_name: Option<SanitizeFileName>,
-  // amd: NormalizedAmdOptions;
+  #[napi(ts_type = "BindingAmdOptions")]
+  pub amd: Option<BindingAmdOptions>,
   #[debug(skip)]
   #[napi(
     ts_type = "string | ((chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>)"

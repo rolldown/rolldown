@@ -26,6 +26,8 @@ export interface GeneratedCodeOptions {
    *   }
    * };
    * ```
+   *
+   * @default 'es2015'
    */
   preset?: GeneratedCodePreset;
   /**
@@ -34,9 +36,9 @@ export interface GeneratedCodeOptions {
    * When enabled, generated code will use descriptive variable names that correspond
    * to the original module names, making it easier to profile and debug the bundled code.
    *
-   * Note: Enabling this option makes the output more difficult to minify effectively.
-   *
    * @default false
+   *
+   * {@include ./docs/output-generated-code-profiler-names.md}
    */
   profilerNames?: boolean;
 }
@@ -140,9 +142,10 @@ export interface OutputOptions {
   /**
    * Whether to generate sourcemaps.
    *
-   * When `true`, a separate sourcemap file will be generated.
-   * When `'inline'`, the sourcemap will be appended to the output file as a data URL.
-   * When `'hidden'`, a separate sourcemap file will be generated, but the link to the sourcemap will not be included in the output file.
+   * - `false`: No sourcemap will be generated.
+   * - `true`: A separate sourcemap file will be generated.
+   * - `'inline'`: The sourcemap will be appended to the output file as a data URL.
+   * - `'hidden'`: A separate sourcemap file will be generated, but the link to the sourcemap (`//# sourceMappingURL` comment) will not be included in the output file.
    *
    * @default false
    */
@@ -150,7 +153,7 @@ export interface OutputOptions {
   /**
    * The base URL for the links to the sourcemap file in the output file.
    *
-   * By default, relative URLs are generated. If this option is set, an absolute URL with that base URL will be generated.
+   * By default, relative URLs are generated. If this option is set, an absolute URL with that base URL will be generated. This is useful when deploying source maps to a different location than your code, such as a CDN or separate debugging server.
    */
   sourcemapBaseUrl?: string;
   /**
@@ -196,18 +199,35 @@ export interface OutputOptions {
   sourcemapIgnoreList?: boolean | SourcemapIgnoreListOption | StringOrRegExp;
   /**
    * A transformation to apply to each path in a sourcemap.
+   *
+   * @example
+   * ```js
+   * export default defineConfig({
+   *   output: {
+   *     sourcemap: true,
+   *     sourcemapPathTransform: (source, sourcemapPath) => {
+   *       // Remove 'src/' prefix from all source paths
+   *       return source.replace(/^src\//, '');
+   *     },
+   *   },
+   * });
+   * ```
    */
   sourcemapPathTransform?: SourcemapPathTransformOption;
   /**
    * A string to prepend to the bundle before `renderChunk` hook.
    *
    * See [`output.intro`](https://rolldown.rs/reference/OutputOptions.intro), [`output.postBanner`](https://rolldown.rs/reference/OutputOptions.postBanner) as well.
+   *
+   * {@include ./docs/output-banner.md}
    */
   banner?: string | AddonFunction;
   /**
    * A string to append to the bundle before `renderChunk` hook.
    *
    * See [`output.outro`](https://rolldown.rs/reference/OutputOptions.outro), [`output.postFooter`](https://rolldown.rs/reference/OutputOptions.postFooter) as well.
+   *
+   * {@include ./docs/output-footer.md}
    */
   footer?: string | AddonFunction;
   /**
@@ -267,6 +287,8 @@ export interface OutputOptions {
    * Forward slashes (`/`) can be used to place files in sub-directories.
    *
    * See also [`output.chunkFileNames`](https://rolldown.rs/reference/OutputOptions.chunkFileNames), [`output.entryFileNames`](https://rolldown.rs/reference/OutputOptions.entryFileNames).
+   *
+   * @default 'assets/[name]-[hash][extname]'
    */
   assetFileNames?: string | AssetFileNamesFunction;
   /**
@@ -280,6 +302,8 @@ export interface OutputOptions {
    * Forward slashes (`/`) can be used to place files in sub-directories. This pattern will also be used for every file when setting the [`output.preserveModules`](https://rolldown.rs/reference/OutputOptions.preserveModules) option.
    *
    * See also [`output.assetFileNames`](https://rolldown.rs/reference/OutputOptions.assetFileNames), [`output.chunkFileNames`](https://rolldown.rs/reference/OutputOptions.chunkFileNames).
+   *
+   * @default '[name].js'
    */
   entryFileNames?: string | ChunkFileNamesFunction;
   /**
@@ -293,14 +317,18 @@ export interface OutputOptions {
    * Forward slashes (`/`) can be used to place files in sub-directories.
    *
    * See also [`output.assetFileNames`](https://rolldown.rs/reference/OutputOptions.assetFileNames), [`output.entryFileNames`](https://rolldown.rs/reference/OutputOptions.entryFileNames).
+   *
+   * @default '[name]-[hash].js'
    */
   chunkFileNames?: string | ChunkFileNamesFunction;
   /**
+   * @default '[name].css'
    * @experimental
    * @hidden not ready for public usage yet
    */
   cssEntryFileNames?: string | ChunkFileNamesFunction;
   /**
+   * @default '[name]-[hash].css'
    * @experimental
    * @hidden not ready for public usage yet
    */
@@ -488,6 +516,25 @@ export interface OutputOptions {
   manualChunks?: ManualChunksFunction;
   /**
    * Allows you to do manual chunking. For deeper understanding, please refer to the in-depth [documentation](https://rolldown.rs/in-depth/advanced-chunks).
+   *
+   * @example
+   * **Basic vendor chunk**
+   * ```js
+   * export default defineConfig({
+   *   output: {
+   *     advancedChunks: {
+   *       minSize: 20000,
+   *       groups: [
+   *         {
+   *           name: 'vendor',
+   *           test: /node_modules/,
+   *         },
+   *       ],
+   *     },
+   *   },
+   * });
+   * ```
+   * {@include ./docs/output-advanced-chunks.md}
    */
   advancedChunks?: {
     /**
@@ -594,6 +641,8 @@ export interface OutputOptions {
    * Clean output directory ([`output.dir`](https://rolldown.rs/reference/OutputOptions.dir)) before emitting output.
    *
    * @default false
+   *
+   * {@include ./docs/output-clean-dir.md}
    */
   cleanDir?: boolean;
   /**
@@ -680,8 +729,7 @@ export type AdvancedChunksGroup = {
    *
    * If two groups have the same priority, the group whose index is smaller will be chosen.
    *
-   * For example,
-   *
+   * @example
    * ```js
    * import { defineConfig } from 'rolldown';
    *
@@ -691,18 +739,16 @@ export type AdvancedChunksGroup = {
    *      {
    *        name: 'react',
    *        test: /node_modules[\\/]react/,
-   *        priority: 1,
+   *        priority: 2,
    *      },
    *      {
    *        name: 'other-libs',
    *        test: /node_modules/,
-   *        priority: 2,
+   *        priority: 1,
    *      },
    *   ],
    * });
    * ```
-   *
-   * This is a clearly __incorrect__ example. Though `react` group is defined before `other-libs`, it has a lower priority, so the modules in `react` group will be captured in `other-libs` group.
    *
    * @default 0
    */

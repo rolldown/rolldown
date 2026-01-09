@@ -364,8 +364,8 @@ export interface InputOptions {
    *    - The conditions setting does not automatically include any platform-specific values.
    *
    * @default
-   * - 'node' if the format is 'cjs'
-   * - 'browser' for other formats
+   * - `'node'` if the format is `'cjs'`
+   * - `'browser'` for other formats
    * {@include ./docs/platform.md}
    */
   platform?: 'node' | 'browser' | 'neutral';

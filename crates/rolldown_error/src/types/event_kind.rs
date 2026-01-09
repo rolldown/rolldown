@@ -7,6 +7,7 @@ pub enum EventKind {
   // --- These kinds are copied from rollup: https://github.com/rollup/rollup/blob/0b665c31833525c923c0fc20f43ebfca748c6670/src/utils/logs.ts#L102-L179
   AmbiguousExternalNamespaceError = 0,
   /// Whether to emit warning when detecting circular dependency
+  AmbiguousReexportError = 37,
   CircularDependency = 1,
   CircularReexportError = 2,
   Eval = 3,
@@ -55,6 +56,7 @@ impl Display for EventKind {
     match self {
       // --- Copied from rollup
       EventKind::AmbiguousExternalNamespaceError => write!(f, "AMBIGUOUS_EXTERNAL_NAMESPACES"),
+      EventKind::AmbiguousReexportError => write!(f, "AMBIGUOUS_REEXPORT"),
       EventKind::CircularDependency => write!(f, "CIRCULAR_DEPENDENCY"),
       EventKind::CircularReexportError => write!(f, "CIRCULAR_REEXPORT"),
       EventKind::Eval => write!(f, "EVAL"),

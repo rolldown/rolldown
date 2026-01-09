@@ -6,6 +6,7 @@ bitflags! {
   #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
   pub struct EventKindSwitcher: u64 {
     const AmbiguousExternalNamespaceError = 1 << 0;
+    const AmbiguousReexportError = 1 << 37;
     const CircularDependency = 1 << 1;
     const CircularReexportError = 1 << 2;
     const Eval = 1 << 3;

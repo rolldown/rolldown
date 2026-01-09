@@ -3878,6 +3878,10 @@ expression: output
 
 - main-!~{000}~.js => main-B-6QqlpX.js
 
+# tests/rolldown/errors/ambiguous_reexport
+
+- main-!~{000}~.js => main-BTVONCL2.js
+
 # tests/rolldown/errors/missing_export_reexport_type
 
 - main-!~{000}~.js => main-Cwb0sONg.js

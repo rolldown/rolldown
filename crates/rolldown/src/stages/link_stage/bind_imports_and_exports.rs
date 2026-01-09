@@ -10,7 +10,7 @@ use rolldown_common::{
   MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
   OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
 };
-use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
+use rolldown_error::{AmbiguousExternalNamespaceModule, AmbiguousReexportModule, BuildDiagnostic};
 use rolldown_utils::{
   ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
   index_vec_ext::{IndexVecExt, IndexVecRefExt},
@@ -650,6 +650,7 @@ impl BindImportsAndExportsContext<'_> {
           imported_as: *imported_as_ref,
         },
       );
+
       tracing::trace!("Got match result {:?}", ret);
       match ret {
         MatchImportKind::_Ignore | MatchImportKind::Cycle => {}
@@ -738,6 +739,11 @@ impl BindImportsAndExportsContext<'_> {
           }
         }
       }
+    }
+
+    let resolved_exports = self.metas[module_id].resolved_exports.clone();
+    if module.named_imports.is_empty() && !resolved_exports.is_empty() {
+      self.detect_ambiguous_reexport(module.as_ref(), &resolved_exports);
     }
   }
 
@@ -992,5 +998,90 @@ impl BindImportsAndExportsContext<'_> {
     }
 
     ret
+  }
+
+  fn detect_ambiguous_reexport(
+    &mut self,
+    module: &NormalModule,
+    resolved_export: &FxHashMap<CompactStr, ResolvedExport>,
+  ) {
+    for (export_name, resolved) in resolved_export {
+      if let Some(potentially_ambiguous_symbol_refs) = &resolved.potentially_ambiguous_symbol_refs {
+        if !potentially_ambiguous_symbol_refs.is_empty() {
+          let defined_symbols: FxHashSet<ModuleIdx> = std::iter::once(resolved.symbol_ref)
+            .chain(potentially_ambiguous_symbol_refs.iter().copied())
+            .filter_map(|symbol_ref| self.get_symbol_definition_module_id(symbol_ref))
+            .collect();
+
+          if defined_symbols.len() > 1 {
+            let mut exporter = Vec::with_capacity(potentially_ambiguous_symbol_refs.len() + 1);
+            if let Some(module) = self.index_modules[resolved.symbol_ref.owner].as_normal() {
+              let named_export = module.named_exports[export_name];
+              exporter.push(AmbiguousReexportModule {
+                source: module.source.clone(),
+                module_id: module.id.to_string(),
+                stable_id: module.stable_id.clone(),
+                span_of_identifier: named_export.span,
+              });
+            }
+
+            for symbol in potentially_ambiguous_symbol_refs {
+              if let Some(module) = self.index_modules[symbol.owner].as_normal() {
+                let named_export = module.named_exports[export_name];
+                exporter.push(AmbiguousReexportModule {
+                  source: module.source.clone(),
+                  module_id: module.id.to_string(),
+                  stable_id: module.stable_id.clone(),
+                  span_of_identifier: named_export.span,
+                });
+              }
+            }
+
+            self.warnings.push(
+              BuildDiagnostic::ambiguous_reexport(
+                export_name.to_string(),
+                module.stable_id.clone(),
+                AmbiguousReexportModule {
+                  source: module.source.clone(),
+                  module_id: module.id.to_string(),
+                  stable_id: module.stable_id.clone(),
+                  span_of_identifier: oxc::span::Span::default(),
+                },
+                exporter,
+              )
+              .with_severity_warning(),
+            );
+          }
+        }
+      }
+    }
+  }
+
+  // Get the module id where the symbol is originally defined
+  // This traces through imports to find the actual defining module
+  fn get_symbol_definition_module_id(&self, symbol_ref: SymbolRef) -> Option<ModuleIdx> {
+    if let Module::Normal(module) = &self.index_modules[symbol_ref.owner] {
+      if let Some(named_import) = module.named_imports.get(&symbol_ref) {
+        let rec = &module.import_records[named_import.record_id];
+        let resolved_module_id = rec.resolved_module;
+        if matches!(self.index_modules[resolved_module_id], Module::External(_)) {
+          return Some(resolved_module_id);
+        }
+        if let Module::Normal(module) = &self.index_modules[resolved_module_id] {
+          match &named_import.imported {
+            Specifier::Star => return Some(resolved_module_id),
+            Specifier::Literal(name) => {
+              if let Some(export) = module.named_exports.get(name) {
+                return self.get_symbol_definition_module_id(export.referenced);
+              }
+            }
+          }
+        }
+      } else {
+        return Some(symbol_ref.owner);
+      }
+    }
+
+    Some(symbol_ref.owner)
   }
 }

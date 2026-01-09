@@ -1,6 +1,33 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## AMBIGUOUS_REEXPORT
+
+```text
+[AMBIGUOUS_REEXPORT] Warning: Found ambiguous export.
+   ╭─[ re-export.ts:1:1 ]
+   │
+ 1 │ export * from './types1'
+   │ │ 
+   │ ╰─ "re-export.ts" re-exports "Foo"
+   │
+   ├─[ types2.ts:2:9 ]
+   │
+ 2 │ export {Foo}
+   │         ─┬─  
+   │          ╰─── One matching export is here.
+   │
+   ├─[ types3.ts:1:9 ]
+   │
+ 1 │ export {Foo} from "./type"
+   │         ─┬─  
+   │          ╰─── One matching export is here.
+───╯
+
+```
+
 # Assets
 
 ## entry.js

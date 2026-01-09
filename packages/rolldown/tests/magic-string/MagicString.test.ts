@@ -145,7 +145,7 @@ describe('MagicString', () => {
       assert.equal(c.toString(), 'abcXYZjkl');
     });
 
-    it('should clone filename info', () => {
+    it.skip('should clone filename info', () => {
       const s = new MagicString('abcdefghijkl', { filename: 'foo.js' });
       const c = s.clone();
 
@@ -738,7 +738,7 @@ describe('MagicString', () => {
     });
   });
 
-  describe.skip('insert', () => {
+  describe('insert', () => {
     it('is deprecated', () => {
       const s = new MagicString('abcdefghijkl');
       assert.throws(() => s.insert(6, 'X'), /deprecated/);

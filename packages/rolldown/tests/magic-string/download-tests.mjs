@@ -30,10 +30,12 @@
  *   - relocate(start: number, end: number, to: number): this
  *   - move(start: number, end: number, index: number): this (alias for relocate)
  *   - indent(indentor?: string | undefined | null): this
+ *   - slice(start?: number, end?: number): string
+ *   - insert(index: number, content: string): throws Error (deprecated)
  *
  * NOT supported (will be skipped):
  *   - constructor options (filename, ignoreList, indentExclusionRanges)
- *   - slice, snip, clone, reset
+ *   - snip, clone, reset
  *   - generateMap, generateDecodedMap, addSourcemapLocation
  *   - lastChar, lastLine
  *   - original property
@@ -63,7 +65,8 @@ const SKIP_DESCRIBE_BLOCKS = [
   'original',
   'reset',
   'snip',
-  'insert', // deprecated, causes errors
+  // Note: 'insert' is now supported (throws deprecated error as expected)
+  // Note: 'slice' is now supported
   // Note: hasChanged, replace, replaceAll, isEmpty, length, remove, update, overwrite
   // are now enabled with individual test skips for problematic cases
 ];
@@ -94,7 +97,7 @@ const SKIP_TESTS = [
   'should remove modified ranges', // causes split chunk panic
   'removed ranges', // causes split chunk panic
   'should replace then remove', // causes split chunk panic
-  'preserves intended order', // uses slice which is not supported
+  'preserves intended order', // complex append/prepend ordering with slice
   'excluded characters', // indent exclude option not supported
   // remove-specific skips
   'should remove everything', // edge case
@@ -113,8 +116,7 @@ const SKIP_TESTS = [
   'should remove interior inserts', // causes panic
   'should provide a useful error', // expects throw but gets panic
   // slice-specific skips
-  'should return the generated content between the specified original characters', // overlapping overwrites
-  'errors if replaced characters are used as slice anchors', // error message format differs
+  'should return the generated content between the specified original characters', // nested overwrites + slice
   'supports characters moved', // complex move + slice interaction
   // hasChanged tests that use clone
   'should not report change if content is identical', // uses clone

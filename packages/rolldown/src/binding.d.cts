@@ -1454,6 +1454,11 @@ export declare class BindingMagicString {
   /** Trims newlines from the start and end. */
   trimLines(): this
   /**
+   * Deprecated method that throws an error directing users to use prependRight or appendLeft.
+   * This matches the original magic-string API which deprecated this method.
+   */
+  insert(index: number, content: string): void
+  /**
    * Returns the content between the specified original character positions.
    * Supports negative indices (counting from the end).
    */

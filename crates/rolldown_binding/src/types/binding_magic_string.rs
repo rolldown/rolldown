@@ -227,6 +227,15 @@ impl BindingMagicString<'_> {
     this
   }
 
+  /// Deprecated method that throws an error directing users to use prependRight or appendLeft.
+  /// This matches the original magic-string API which deprecated this method.
+  #[napi]
+  pub fn insert(&self, _index: u32, _content: String) -> napi::Result<()> {
+    Err(napi::Error::from_reason(
+      "magicString.insert(...) is deprecated. Use prependRight(...) or appendLeft(...)",
+    ))
+  }
+
   /// Returns the content between the specified original character positions.
   /// Supports negative indices (counting from the end).
   #[napi]

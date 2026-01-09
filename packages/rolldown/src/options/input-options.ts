@@ -545,9 +545,9 @@ export interface InputOptions {
   /**
    * Configures TypeScript configuration file resolution and usage.
    * {@include ./docs/tsconfig.md}
-   * @default undefined (no tsconfig resolution)
+   * @default true
    */
-  tsconfig?: true | string;
+  tsconfig?: boolean | string;
 }
 
 interface OverwriteInputOptionsForCli {

@@ -511,7 +511,7 @@ const InputOptionsSchema = v.strictObject({
     ),
   ),
   tsconfig: v.pipe(
-    v.optional(v.union([v.literal(true), v.string()])),
+    v.optional(v.union([v.boolean(), v.string()])),
     v.description('Path to the tsconfig.json file.'),
   ),
 }) satisfies v.GenericSchema<InputOptions>;

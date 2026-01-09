@@ -2547,19 +2547,19 @@ expression: output
 # tests/esbuild/lower/java_script_auto_accessor_es2021
 
 - js-define-!~{000}~.js => js-define-rG1Qxxq0.js
-- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-CQ82SXVS.js
-- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-HO61xnVg.js
+- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-DvSzK-W5.js
+- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-BJASBgYf.js
 
 # tests/esbuild/lower/java_script_auto_accessor_es2022
 
 - js-define-!~{000}~.js => js-define-rG1Qxxq0.js
-- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-CQ82SXVS.js
+- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-C559Q6L9.js
 - ts-define_ts-define-!~{001}~.js => ts-define_ts-define-HO61xnVg.js
 
 # tests/esbuild/lower/java_script_auto_accessor_es_next
 
 - js-define-!~{000}~.js => js-define-rG1Qxxq0.js
-- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-CQ82SXVS.js
+- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-C559Q6L9.js
 - ts-define_ts-define-!~{001}~.js => ts-define_ts-define-HO61xnVg.js
 
 # tests/esbuild/lower/java_script_decorators_bundle_issue3768
@@ -2860,15 +2860,15 @@ expression: output
 
 # tests/esbuild/lower/ts_lower_class_field2020_no_bundle
 
-- entry-!~{000}~.js => entry-CMXZovLt.js
+- entry-!~{000}~.js => entry-CRJGI-Os.js
 
 # tests/esbuild/lower/ts_lower_class_field_strict_tsconfig_json2020
 
-- entry-!~{000}~.js => entry-lFxcubmW.js
+- entry-!~{000}~.js => entry-J8d0KIG4.js
 
 # tests/esbuild/lower/ts_lower_class_private_field_next_no_bundle
 
-- entry-!~{000}~.js => entry-CMXZovLt.js
+- entry-!~{000}~.js => entry-PI8Xv8bX.js
 
 # tests/esbuild/lower/ts_lower_object_rest2017_no_bundle
 
@@ -3362,7 +3362,7 @@ expression: output
 
 # tests/esbuild/ts/ts_declare_class_fields
 
-- entry-!~{000}~.js => entry-CTjwigVp.js
+- entry-!~{000}~.js => entry-DD2zAV-z.js
 
 # tests/esbuild/ts/ts_declare_namespace
 
@@ -3460,11 +3460,11 @@ expression: output
 
 # tests/esbuild/ts/ts_experimental_decorators_no_config
 
-- entry-!~{000}~.js => entry-B7hHkHEF.js
+- entry-!~{000}~.js => entry-Cm6MBWMe.js
 
 # tests/esbuild/ts/ts_export_default_type_issue316
 
-- entry-!~{000}~.js => entry-dPKBPQvB.js
+- entry-!~{000}~.js => entry-URQZqfoz.js
 
 # tests/esbuild/ts/ts_export_equals
 
@@ -3540,7 +3540,7 @@ expression: output
 
 # tests/esbuild/ts/ts_minify_derived_class
 
-- entry-!~{000}~.js => entry-CGTilTJl.js
+- entry-!~{000}~.js => entry-x_7-qkkM.js
 
 # tests/esbuild/ts/ts_minify_enum
 

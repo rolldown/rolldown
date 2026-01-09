@@ -1458,6 +1458,8 @@ export declare class BindingMagicString {
    * This matches the original magic-string API which deprecated this method.
    */
   insert(index: number, content: string): void
+  /** Returns a clone of the MagicString instance. */
+  clone(): BindingMagicString
   /**
    * Returns the content between the specified original character positions.
    * Supports negative indices (counting from the end).

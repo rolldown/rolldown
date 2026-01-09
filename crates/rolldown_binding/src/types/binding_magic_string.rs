@@ -3,6 +3,7 @@ use napi::bindgen_prelude::This;
 use napi_derive::napi;
 use string_wizard::MagicString;
 
+#[derive(Clone)]
 struct CharToByteMapper {
   char_to_byte: Vec<usize>,
 }
@@ -234,6 +235,13 @@ impl BindingMagicString<'_> {
     Err(napi::Error::from_reason(
       "magicString.insert(...) is deprecated. Use prependRight(...) or appendLeft(...)",
     ))
+  }
+
+  /// Returns a clone of the MagicString instance.
+  #[napi(js_name = "clone")]
+  #[must_use]
+  pub fn clone_instance(&self) -> Self {
+    Self { inner: self.inner.clone(), char_to_byte_mapper: self.char_to_byte_mapper.clone() }
   }
 
   /// Returns the content between the specified original character positions.

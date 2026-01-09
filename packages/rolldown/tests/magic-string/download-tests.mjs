@@ -32,10 +32,11 @@
  *   - indent(indentor?: string | undefined | null): this
  *   - slice(start?: number, end?: number): string
  *   - insert(index: number, content: string): throws Error (deprecated)
+ *   - clone(): BindingMagicString
  *
  * NOT supported (will be skipped):
  *   - constructor options (filename, ignoreList, indentExclusionRanges)
- *   - snip, clone, reset
+ *   - snip, reset
  *   - generateMap, generateDecodedMap, addSourcemapLocation
  *   - lastChar, lastLine
  *   - original property
@@ -56,7 +57,6 @@ const BASE_URL = 'https://raw.githubusercontent.com/Rich-Harris/magic-string/mas
 const SKIP_DESCRIBE_BLOCKS = [
   'options', // constructor options not supported
   'addSourcemapLocation',
-  'clone',
   'generateDecodedMap',
   'generateMap',
   'getIndentString', // not supported
@@ -67,6 +67,7 @@ const SKIP_DESCRIBE_BLOCKS = [
   'snip',
   // Note: 'insert' is now supported (throws deprecated error as expected)
   // Note: 'slice' is now supported
+  // Note: 'clone' is now supported (some individual tests skipped)
   // Note: hasChanged, replace, replaceAll, isEmpty, length, remove, update, overwrite
   // are now enabled with individual test skips for problematic cases
 ];
@@ -118,6 +119,11 @@ const SKIP_TESTS = [
   // slice-specific skips
   'should return the generated content between the specified original characters', // nested overwrites + slice
   'supports characters moved', // complex move + slice interaction
+  // clone-specific skips (tests that use unsupported constructor options)
+  'should clone filename info', // uses filename constructor option
+  'should clone indentExclusionRanges', // uses indentExclusionRanges constructor option
+  'should clone complex indentExclusionRanges', // uses indentExclusionRanges constructor option
+  'should clone sourcemapLocations', // uses sourcemapLocations
   // hasChanged tests that use clone
   'should not report change if content is identical', // uses clone
   'should works', // uses clone

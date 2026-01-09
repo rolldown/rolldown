@@ -134,7 +134,7 @@ describe('MagicString', () => {
     });
   });
 
-  describe.skip('clone', () => {
+  describe('clone', () => {
     it('should clone a magic string', () => {
       const s = new MagicString('abcdefghijkl');
 

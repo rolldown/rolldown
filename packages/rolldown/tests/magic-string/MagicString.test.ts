@@ -1762,7 +1762,7 @@ describe('MagicString', () => {
     });
   });
 
-  describe.skip('lastLine', () => {
+  describe('lastLine', () => {
     it('should support lastLine', () => {
       const s = new MagicString(' abcde\nfghijkl ');
 

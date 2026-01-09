@@ -257,6 +257,18 @@ impl BindingMagicString<'_> {
     Self { inner: self.inner.clone(), char_to_byte_mapper: self.char_to_byte_mapper.clone() }
   }
 
+  /// Returns the last character of the generated string, or an empty string if empty.
+  #[napi]
+  pub fn last_char(&self) -> String {
+    self.inner.last_char().map(|c| c.to_string()).unwrap_or_default()
+  }
+
+  /// Returns the content after the last newline in the generated string.
+  #[napi]
+  pub fn last_line(&self) -> String {
+    self.inner.last_line()
+  }
+
   /// Returns a clone with content outside the specified range removed.
   #[napi]
   #[must_use]

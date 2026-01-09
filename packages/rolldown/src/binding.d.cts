@@ -1461,6 +1461,10 @@ export declare class BindingMagicString {
   insert(index: number, content: string): void
   /** Returns a clone of the MagicString instance. */
   clone(): BindingMagicString
+  /** Returns the last character of the generated string, or an empty string if empty. */
+  lastChar(): string
+  /** Returns the content after the last newline in the generated string. */
+  lastLine(): string
   /** Returns a clone with content outside the specified range removed. */
   snip(start: number, end: number): BindingMagicString
   /**

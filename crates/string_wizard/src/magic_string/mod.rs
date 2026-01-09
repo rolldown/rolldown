@@ -100,6 +100,116 @@ impl<'text> MagicString<'text> {
     self.source.len() != self.len() || self.source.as_ref() != self.to_string()
   }
 
+  /// Returns the last character of the generated string, or `None` if empty.
+  pub fn last_char(&self) -> Option<char> {
+    // Check outro first (last in output order)
+    if let Some(last_outro) = self.outro.back() {
+      if let Some(c) = last_outro.chars().last() {
+        return Some(c);
+      }
+    }
+
+    // Traverse chunks from last to first
+    let mut chunk_idx = Some(self.last_chunk_idx);
+    while let Some(idx) = chunk_idx {
+      let chunk = &self.chunks[idx];
+
+      // Check chunk outro
+      if let Some(last_outro) = chunk.outro.back() {
+        if let Some(c) = last_outro.chars().last() {
+          return Some(c);
+        }
+      }
+
+      // Check chunk content (edited or original)
+      let content = chunk
+        .edited_content
+        .as_ref()
+        .map(|s| s.as_ref())
+        .unwrap_or_else(|| chunk.span.text(&self.source));
+      if let Some(c) = content.chars().last() {
+        return Some(c);
+      }
+
+      // Check chunk intro
+      if let Some(last_intro) = chunk.intro.back() {
+        if let Some(c) = last_intro.chars().last() {
+          return Some(c);
+        }
+      }
+
+      chunk_idx = chunk.prev;
+    }
+
+    // Check intro last (first in output order, but we're going backwards)
+    if let Some(last_intro) = self.intro.back() {
+      if let Some(c) = last_intro.chars().last() {
+        return Some(c);
+      }
+    }
+
+    None
+  }
+
+  /// Returns the content after the last newline in the generated string.
+  pub fn last_line(&self) -> String {
+    // Check outro first (last in output order)
+    for outro_part in self.outro.iter().rev() {
+      if let Some(line_index) = memchr::memrchr(b'\n', outro_part.as_bytes()) {
+        return outro_part[line_index + 1..].to_string();
+      }
+    }
+
+    let mut line_str = self.outro.iter().map(|s| s.as_ref()).collect::<String>();
+
+    // Traverse chunks from last to first
+    let mut chunk_idx = Some(self.last_chunk_idx);
+    while let Some(idx) = chunk_idx {
+      let chunk = &self.chunks[idx];
+
+      // Check chunk outro
+      for outro_part in chunk.outro.iter().rev() {
+        if let Some(line_index) = memchr::memrchr(b'\n', outro_part.as_bytes()) {
+          return outro_part[line_index + 1..].to_string() + &line_str;
+        }
+      }
+      let chunk_outro: String = chunk.outro.iter().map(|s| s.as_ref()).collect();
+      line_str = chunk_outro + &line_str;
+
+      // Check chunk content (edited or original)
+      let content = chunk
+        .edited_content
+        .as_ref()
+        .map(|s| s.as_ref())
+        .unwrap_or_else(|| chunk.span.text(&self.source));
+      if let Some(line_index) = memchr::memrchr(b'\n', content.as_bytes()) {
+        return content[line_index + 1..].to_string() + &line_str;
+      }
+      line_str = content.to_string() + &line_str;
+
+      // Check chunk intro
+      for intro_part in chunk.intro.iter().rev() {
+        if let Some(line_index) = memchr::memrchr(b'\n', intro_part.as_bytes()) {
+          return intro_part[line_index + 1..].to_string() + &line_str;
+        }
+      }
+      let chunk_intro: String = chunk.intro.iter().map(|s| s.as_ref()).collect();
+      line_str = chunk_intro + &line_str;
+
+      chunk_idx = chunk.prev;
+    }
+
+    // Check intro last (first in output order, but we're going backwards)
+    for intro_part in self.intro.iter().rev() {
+      if let Some(line_index) = memchr::memrchr(b'\n', intro_part.as_bytes()) {
+        return intro_part[line_index + 1..].to_string() + &line_str;
+      }
+    }
+
+    let intro_str: String = self.intro.iter().map(|s| s.as_ref()).collect();
+    intro_str + &line_str
+  }
+
   fn prepend_intro(&mut self, content: impl Into<CowStr<'text>>) {
     self.intro.push_front(content.into());
   }

@@ -498,13 +498,10 @@ pub fn normalize_binding_options(
     minify_internal_exports: output_options.minify_internal_exports,
     clean_dir: output_options.clean_dir,
     context: input_options.context,
-    tsconfig: input_options.tsconfig.and_then(|v| {
-      Some(match v {
-        Either::A(false) => return None,
-        Either::A(true) => TsConfig::Auto,
-        Either::B(s) => TsConfig::Manual(s.into()),
-      })
-    }),
+    tsconfig: input_options.tsconfig.map(|v| match v {
+      Either::A(v) => TsConfig::Auto(v),
+      Either::B(s) => TsConfig::Manual(s.into()),
+    })
   };
 
   #[cfg(not(target_family = "wasm"))]

@@ -19,11 +19,15 @@ three(), six();
 three(), six();
 var StaticNormal = class {
 	static accessor a = b;
-	static c = d;
+	static {
+		this.c = d;
+	}
 };
 var StaticPrivate = class {
 	static accessor #a = b;
-	static c = d;
+	static {
+		this.c = d;
+	}
 };
 
 //#endregion

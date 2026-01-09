@@ -39,13 +39,13 @@ impl RawTransformOptions {
       base_options: Arc::new(base_options),
       cache: FxDashMap::default(),
       resolver: Arc::new(Resolver::new(ResolveOptions {
-        tsconfig: Some(match tsconfig {
-          TsConfig::Auto => TsconfigDiscovery::Auto,
-          TsConfig::Manual(config_file) => TsconfigDiscovery::Manual(TsconfigOptions {
+        tsconfig: match tsconfig {
+          TsConfig::Auto(v) => v.then_some(TsconfigDiscovery::Auto),
+          TsConfig::Manual(config_file) => Some(TsconfigDiscovery::Manual(TsconfigOptions {
             config_file,
             references: oxc_resolver::TsconfigReferences::Auto,
-          }),
-        }),
+          })),
+        },
         ..Default::default()
       })),
     }

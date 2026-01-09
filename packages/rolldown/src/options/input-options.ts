@@ -236,7 +236,7 @@ export type OnwarnFunction = (
 
 export interface InputOptions {
   /**
-   * Defines entries and location(s) of entry modules for the bundle. Relative paths are resolved based on the `cwd` option.
+   * Defines entries and location(s) of entry modules for the bundle. Relative paths are resolved based on the {@linkcode cwd} option.
    * {@include ./docs/input.md}
    */
   input?: InputOption;
@@ -346,7 +346,7 @@ export interface InputOptions {
      */
     symlinks?: boolean;
     /**
-     * @deprecated Use the top-level `tsconfig` option instead.
+     * @deprecated Use the top-level {@linkcode tsconfig} option instead.
      */
     tsconfigFilename?: string;
   };
@@ -420,7 +420,7 @@ export interface InputOptions {
    * {@include ./docs/on-warn.md}
    *
    * @deprecated
-   * This is a legacy API. Consider using `onLog` instead for better control over all log types.
+   * This is a legacy API. Consider using {@linkcode onLog} instead for better control over all log types.
    *
    * {@include ./docs/on-warn-deprecation.md}
    */

@@ -7,12 +7,13 @@ const entry = path.join(__dirname, './main.js');
 const resolveIdFn = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     input: entry,
     plugins: [
       {
         name: 'test-plugin',
-        resolveId: function(id, importer, options) {
+        resolveId: function (id, importer, options) {
           resolveIdFn();
           if (id === 'external') {
             expect(importer).toStrictEqual(entry);

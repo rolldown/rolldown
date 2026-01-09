@@ -7,6 +7,7 @@ const transformFn2 = vi.fn();
 const transformFn3 = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     plugins: [
       withFilter(

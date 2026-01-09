@@ -2,6 +2,7 @@ import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
 export default defineTest({
+  sequential: true,
   afterTest: (output) => {
     let code = output.output[0].code;
 

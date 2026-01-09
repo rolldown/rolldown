@@ -7,6 +7,7 @@ const renderStartFn = vi.fn();
 const onLogFn = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     output: {
       plugins: [
@@ -14,7 +15,7 @@ export default defineTest({
           name: 'test-plugin',
           // @ts-expect-error test warning
           buildStart: () => {},
-          outputOptions: function(options) {
+          outputOptions: function (options) {
             expect(options.banner).toBeUndefined();
             options.banner = '/* banner */';
             fn();

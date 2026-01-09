@@ -4,6 +4,7 @@ import { SourceMapConsumer } from 'source-map';
 import { expect } from 'vitest';
 
 export default defineTest({
+  sequential: true,
   config: {
     output: {
       sourcemap: 'inline',
@@ -28,9 +29,7 @@ export default defineTest({
     const smc = await new SourceMapConsumer(chunk.map!);
     expect([
       smc.originalPositionFor(getLocation(code, code.indexOf(`dep1-test`))),
-      smc.originalPositionFor(
-        getLocation(code, code.indexOf(`dep2-generated`)),
-      ),
+      smc.originalPositionFor(getLocation(code, code.indexOf(`dep2-generated`))),
       smc.originalPositionFor(getLocation(code, code.indexOf(`dep3-test`))),
     ]).toMatchInlineSnapshot(`
       [

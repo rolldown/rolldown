@@ -1,27 +1,31 @@
 import type { OutputOptions, RolldownOptions, RolldownOutput } from 'rolldown';
 
 export type WithoutValue = 0;
-type OutputOptsToOutputInner<
-  OutputOpts extends undefined | OutputOptions | OutputOptions[],
-> = OutputOpts extends OutputOptions[]
-  ? OutputOpts extends undefined | OutputOptions
-    ? RolldownOutput[] | RolldownOutput
-  : RolldownOutput[]
-  : RolldownOutput;
+type OutputOptsToOutputInner<OutputOpts extends undefined | OutputOptions | OutputOptions[]> =
+  OutputOpts extends OutputOptions[]
+    ? OutputOpts extends undefined | OutputOptions
+      ? RolldownOutput[] | RolldownOutput
+      : RolldownOutput[]
+    : RolldownOutput;
 type OutputOptsToOutput<
   OutputOpts extends WithoutValue | undefined | OutputOptions | OutputOptions[],
-> = [WithoutValue] extends [OutputOpts] ? RolldownOutput
+> = [WithoutValue] extends [OutputOpts]
+  ? RolldownOutput
   : OutputOptsToOutputInner<Exclude<OutputOpts, WithoutValue>>;
 
 export interface TestConfig<
-  OutputOpts extends
-    | WithoutValue
+  OutputOpts extends WithoutValue | undefined | OutputOptions | OutputOptions[] =
     | undefined
     | OutputOptions
-    | OutputOptions[] = undefined | OutputOptions | OutputOptions[],
+    | OutputOptions[],
 > {
   skip?: boolean;
   retry?: number;
+  /**
+   * Mark this test to run sequentially instead of concurrently.
+   * Use this for tests that have shared state (e.g., module-level vi.fn()).
+   */
+  sequential?: boolean;
   config?: RolldownOptions & { output?: OutputOpts };
   beforeTest?: () => Promise<void> | void;
   afterTest?: (output: OutputOptsToOutput<OutputOpts>) => Promise<void> | void;

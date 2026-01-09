@@ -8,6 +8,7 @@ const emittedChunkPreliminaryFilenames: string[] = [],
   emittedChunkFilenames: string[] = [];
 
 export default defineTest({
+  sequential: true,
   config: {
     output: {
       entryFileNames: '[name].[hash].js',
@@ -26,29 +27,19 @@ export default defineTest({
             fileName: 'main-with-fileName.js',
             id: './main.js',
           });
-          expect(this.getFileName(mainWithFileNameChunkReferenceId)).toBe(
-            'main-with-fileName.js',
-          );
+          expect(this.getFileName(mainWithFileNameChunkReferenceId)).toBe('main-with-fileName.js');
         },
         renderChunk() {
           if (runOnceRenderChunk) {
             return;
           }
           runOnceRenderChunk = true;
-          emittedChunkPreliminaryFilenames.push(
-            this.getFileName(mainWithNameChunkReferenceId),
-          );
-          emittedChunkPreliminaryFilenames.push(
-            this.getFileName(mainWithFileNameChunkReferenceId),
-          );
+          emittedChunkPreliminaryFilenames.push(this.getFileName(mainWithNameChunkReferenceId));
+          emittedChunkPreliminaryFilenames.push(this.getFileName(mainWithFileNameChunkReferenceId));
         },
         generateBundle() {
-          emittedChunkFilenames.push(
-            this.getFileName(mainWithNameChunkReferenceId),
-          );
-          emittedChunkFilenames.push(
-            this.getFileName(mainWithFileNameChunkReferenceId),
-          );
+          emittedChunkFilenames.push(this.getFileName(mainWithNameChunkReferenceId));
+          emittedChunkFilenames.push(this.getFileName(mainWithFileNameChunkReferenceId));
         },
       },
     ],

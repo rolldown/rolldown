@@ -5,11 +5,10 @@ import { isolatedDeclarationPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
+  sequential: true,
   config: {
     input: 'main.ts',
-    plugins: [
-      isolatedDeclarationPlugin(),
-    ],
+    plugins: [isolatedDeclarationPlugin()],
   },
   async catchError(err: any) {
     await expect(stripAnsi(err.toString())).toMatchFileSnapshot(

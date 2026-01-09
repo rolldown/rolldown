@@ -4,6 +4,7 @@ import { expect } from 'vitest';
 
 // TODO It is much better if defineTest can be an array of testsConfigs. Thus we can reuse same input for multiple tests.
 export default defineTest({
+  sequential: true,
   config: {
     input: ['main.js'],
     output: {
@@ -11,11 +12,8 @@ export default defineTest({
       sourcemapBaseUrl: 'https://example.com/foo/bar',
     },
   },
-  afterTest: function(output) {
-    expect(getOutputFileNames(output)).toStrictEqual([
-      'main.js',
-      'main.js.map',
-    ]);
+  afterTest: function (output) {
+    expect(getOutputFileNames(output)).toStrictEqual(['main.js', 'main.js.map']);
     // include map comment
     expect(output.output[0].code).contains(
       '//# sourceMappingURL=https://example.com/foo/bar/main.js.map',
@@ -26,9 +24,7 @@ export default defineTest({
     if (output.output[1].type === 'asset') {
       const map = JSON.parse(output.output[1].source.toString());
       expect(map.file).toMatch('main.js');
-      expect(map.mappings).toMatchInlineSnapshot(
-        `";AAAA,MAAa,MAAM;;;;ACEnB,QAAQ,IAAI,IAAI"`,
-      );
+      expect(map.mappings).toMatchInlineSnapshot(`";AAAA,MAAa,MAAM;;;;ACEnB,QAAQ,IAAI,IAAI"`);
     }
   },
 });

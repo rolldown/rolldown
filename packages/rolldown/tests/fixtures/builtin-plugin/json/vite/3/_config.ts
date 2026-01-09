@@ -4,6 +4,7 @@ import { viteJsonPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
+  sequential: true,
   config: {
     input: 'main.js',
     plugins: [

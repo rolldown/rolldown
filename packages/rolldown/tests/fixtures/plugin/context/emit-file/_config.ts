@@ -10,6 +10,7 @@ let referenceId: string;
 const ORIGINAL_FILE_NAME = 'original.txt';
 
 export default defineTest({
+  sequential: true,
   config: {
     output: {
       assetFileNames: '[name]-[hash].[ext]',
@@ -28,9 +29,7 @@ export default defineTest({
           testEmitFileThis(this.emitFile);
         },
         generateBundle() {
-          expect(this.getFileName(referenceId)).toMatchInlineSnapshot(
-            `"_emitted-C6bBH0W1.txt"`,
-          );
+          expect(this.getFileName(referenceId)).toMatchInlineSnapshot(`"_emitted-C6bBH0W1.txt"`);
           // emit asset buffer source
           this.emitFile({
             type: 'asset',
@@ -47,9 +46,7 @@ export default defineTest({
       switch (asset.name) {
         case '+emitted.txt':
           expect(asset.names).toStrictEqual(['+emitted.txt']);
-          expect(asset.fileName).toMatchInlineSnapshot(
-            `"_emitted-C6bBH0W1.txt"`,
-          );
+          expect(asset.fileName).toMatchInlineSnapshot(`"_emitted-C6bBH0W1.txt"`);
           expect(asset.originalFileName).toBe(ORIGINAL_FILE_NAME);
           expect(asset.originalFileNames).toStrictEqual([ORIGINAL_FILE_NAME]);
           break;

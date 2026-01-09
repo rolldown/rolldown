@@ -5,6 +5,7 @@ import { expect, vi } from 'vitest';
 const onLogFn = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     input: './main.js',
     plugins: [
@@ -15,9 +16,7 @@ export default defineTest({
     onLog(level, log) {
       expect(level).toBe('warn');
       expect(log.code).toBe('UNRESOLVED_IMPORT');
-      expect(log.message).toContain(
-        "Could not resolve 'rolldownlib.js' in main.js",
-      );
+      expect(log.message).toContain("Could not resolve 'rolldownlib.js' in main.js");
       expect(log.plugin).toBeUndefined();
       onLogFn();
     },
@@ -28,9 +27,7 @@ export default defineTest({
     try {
       await import('./assert.mjs');
     } catch (err: any) {
-      expect(err.toString()).contains(
-        `Cannot find package 'rolldownlib.js'`,
-      );
+      expect(err.toString()).contains(`Cannot find package 'rolldownlib.js'`);
     }
   },
 });

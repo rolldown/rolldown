@@ -1453,6 +1453,11 @@ export declare class BindingMagicString {
   trimEnd(charType?: string | undefined | null): this
   /** Trims newlines from the start and end. */
   trimLines(): this
+  /**
+   * Returns the content between the specified original character positions.
+   * Supports negative indices (counting from the end).
+   */
+  slice(start?: number | undefined | null, end?: number | undefined | null): string
 }
 
 export declare class BindingModuleInfo {

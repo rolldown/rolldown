@@ -116,6 +116,8 @@ export interface ChecksOptions {
 
   /**
    * Whether to emit warnings when plugins take significant time during the build process
+   *
+   * {@include ../docs/checks-plugin-timings.md}
    * @default true
    * */
   pluginTimings?: boolean;

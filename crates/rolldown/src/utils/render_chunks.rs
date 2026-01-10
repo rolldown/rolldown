@@ -76,8 +76,12 @@ pub async fn render_chunks(
         if !plugin_names.is_empty() {
           plugin_names.iter().for_each(|plugin_name| {
             warnings.push(
-              BuildDiagnostic::sourcemap_broken(plugin_name.as_str(), "load", sourcemap_type)
-                .with_severity_warning(),
+              BuildDiagnostic::sourcemap_broken(
+                plugin_name.as_str(),
+                "render_chunk",
+                sourcemap_type,
+              )
+              .with_severity_warning(),
             );
           });
         }

@@ -10,9 +10,8 @@ pub struct SourceMapBroken {
 
 impl BuildEvent for SourceMapBroken {
   fn kind(&self) -> EventKind {
-    EventKind::PluginTimings
+    EventKind::SourceMapBroken
   }
-
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!(
       "Sourcemap is likely to be incorrect: options.sourcemap  is {}, a plugin {} for  {} didn't generate a sourcemap.",

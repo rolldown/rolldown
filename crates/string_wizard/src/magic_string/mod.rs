@@ -103,10 +103,10 @@ impl<'text> MagicString<'text> {
   /// Returns the last character of the generated string, or `None` if empty.
   pub fn last_char(&self) -> Option<char> {
     // Check outro first (last in output order)
-    if let Some(last_outro) = self.outro.back() {
-      if let Some(c) = last_outro.chars().last() {
-        return Some(c);
-      }
+    if let Some(last_outro) = self.outro.back()
+      && let Some(c) = last_outro.chars().last()
+    {
+      return Some(c);
     }
 
     // Traverse chunks from last to first
@@ -115,10 +115,10 @@ impl<'text> MagicString<'text> {
       let chunk = &self.chunks[idx];
 
       // Check chunk outro
-      if let Some(last_outro) = chunk.outro.back() {
-        if let Some(c) = last_outro.chars().last() {
-          return Some(c);
-        }
+      if let Some(last_outro) = chunk.outro.back()
+        && let Some(c) = last_outro.chars().last()
+      {
+        return Some(c);
       }
 
       // Check chunk content (edited or original)
@@ -132,20 +132,20 @@ impl<'text> MagicString<'text> {
       }
 
       // Check chunk intro
-      if let Some(last_intro) = chunk.intro.back() {
-        if let Some(c) = last_intro.chars().last() {
-          return Some(c);
-        }
+      if let Some(last_intro) = chunk.intro.back()
+        && let Some(c) = last_intro.chars().last()
+      {
+        return Some(c);
       }
 
       chunk_idx = chunk.prev;
     }
 
     // Check intro last (first in output order, but we're going backwards)
-    if let Some(last_intro) = self.intro.back() {
-      if let Some(c) = last_intro.chars().last() {
-        return Some(c);
-      }
+    if let Some(last_intro) = self.intro.back()
+      && let Some(c) = last_intro.chars().last()
+    {
+      return Some(c);
     }
 
     None

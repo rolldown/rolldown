@@ -253,32 +253,31 @@ impl Plugin for ViteResolvePlugin {
       }
     };
 
-    if args.specifier.starts_with('#') {
-      if let Some(resolved_imports) =
+    if args.specifier.starts_with('#')
+      && let Some(resolved_imports) =
         (self.resolve_subpath_imports)(&id, args.importer, args.kind == ImportKind::Require, scan)
           .await?
+    {
+      id = Cow::Owned(resolved_imports);
+      if args
+        .custom
+        .get(&rolldown_plugin_utils::constants::ViteImportGlob)
+        .is_some_and(|v| v.is_sub_imports_pattern())
       {
-        id = Cow::Owned(resolved_imports);
-        if args
-          .custom
-          .get(&rolldown_plugin_utils::constants::ViteImportGlob)
-          .is_some_and(|v| v.is_sub_imports_pattern())
-        {
-          let path = Path::new(&self.resolve_options.root).join(id.as_ref()).normalize();
-          let package_json_path = (!self.legacy_inconsistent_cjs_interop)
-            .then(|| {
-              self
-                .resolvers
-                .get_nearest_package_json(path.to_str().unwrap())
-                .map(|pj| pj.realpath().to_str().unwrap().to_string())
-            })
-            .flatten();
-          return Ok(Some(HookResolveIdOutput {
-            id: path.to_slash_lossy().into(),
-            package_json_path,
-            ..Default::default()
-          }));
-        }
+        let path = Path::new(&self.resolve_options.root).join(id.as_ref()).normalize();
+        let package_json_path = (!self.legacy_inconsistent_cjs_interop)
+          .then(|| {
+            self
+              .resolvers
+              .get_nearest_package_json(path.to_str().unwrap())
+              .map(|pj| pj.realpath().to_str().unwrap().to_string())
+          })
+          .flatten();
+        return Ok(Some(HookResolveIdOutput {
+          id: path.to_slash_lossy().into(),
+          package_json_path,
+          ..Default::default()
+        }));
       }
     }
 
@@ -288,10 +287,10 @@ impl Plugin for ViteResolvePlugin {
       // We don't need to resolve these paths since they are already resolved
       // always return here even if res doesn't exist since /@fs/ is explicit
       // if the file doesn't exist it should be a 404.
-      if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
-        if let Some(finalized) = finalize_other_specifiers(&res, &id).await? {
-          res = finalized.into();
-        }
+      if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers
+        && let Some(finalized) = finalize_other_specifiers(&res, &id).await?
+      {
+        res = finalized.into();
       }
       self.debug_log(|| format!("[@fs] {} -> {}", id.cyan(), res.dimmed())).await?;
       return Ok(Some(HookResolveIdOutput { id: res.into(), ..Default::default() }));
@@ -301,10 +300,10 @@ impl Plugin for ViteResolvePlugin {
     if id.starts_with("file://") {
       let (path, postfix) = file_url_str_to_path_and_postfix(&id)?;
       let mut res = normalize_path(&path).into_owned() + &postfix;
-      if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
-        if let Some(finalized) = finalize_other_specifiers(&res, &id).await? {
-          res = finalized;
-        }
+      if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers
+        && let Some(finalized) = finalize_other_specifiers(&res, &id).await?
+      {
+        res = finalized;
       }
       let package_json_path = (!self.legacy_inconsistent_cjs_interop)
         .then(|| {
@@ -346,14 +345,15 @@ impl Plugin for ViteResolvePlugin {
         self.legacy_inconsistent_cjs_interop,
       )?;
       if let Some(mut result) = result {
-        if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier {
-          if !scan && rolldown_plugin_utils::is_in_node_modules(Path::new(result.id.as_str())) {
-            let finalized = finalize_bare_specifier(&result.id, &id, args.importer)
-              .await?
-              .map(Into::into)
-              .unwrap_or(result.id);
-            result.id = finalized;
-          }
+        if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier
+          && !scan
+          && rolldown_plugin_utils::is_in_node_modules(Path::new(result.id.as_str()))
+        {
+          let finalized = finalize_bare_specifier(&result.id, &id, args.importer)
+            .await?
+            .map(Into::into)
+            .unwrap_or(result.id);
+          result.id = finalized;
         }
 
         self.debug_log(|| format!("[bare] {} -> {}", id.cyan(), result.id.dimmed())).await?;
@@ -458,12 +458,11 @@ impl Plugin for ViteResolvePlugin {
       &resolver.resolve_raw(specifier, args.importer, false),
     )?;
     if let Some(mut resolved) = resolved {
-      if !scan {
-        if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
-          if let Some(finalized) = finalize_other_specifiers(&resolved.id, &id).await? {
-            resolved.id = finalized.into();
-          }
-        }
+      if !scan
+        && let Some(finalize_other_specifiers) = &self.finalize_other_specifiers
+        && let Some(finalized) = finalize_other_specifiers(&resolved.id, &id).await?
+      {
+        resolved.id = finalized.into();
       }
       self.debug_log(|| format!("[other] {} -> {}", id.cyan(), resolved.id.dimmed())).await?;
       return Ok(Some(resolved));

@@ -1,7 +1,7 @@
 [package]
 name = "string_wizard"
 version = "0.0.27"
-edition = "2021"
+edition.workspace = true
 license = "MIT"
 publish = true
 description = "manipulate string like a wizard"

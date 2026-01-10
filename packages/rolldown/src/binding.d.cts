@@ -1602,10 +1602,6 @@ export declare class BindingTransformPluginContext {
   sendMagicString(magicString: BindingMagicString): string | null
 }
 
-export declare class BindingUrlResolver {
-  call(url: string, importer?: string): Promise<[string, string | undefined]>
-}
-
 export declare class BindingWatcher {
   constructor(options: Array<BindingBundlerOptions>, notifyOption?: BindingNotifyOption | undefined | null)
   close(): Promise<void>
@@ -1672,14 +1668,8 @@ export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:isolated-declaration'|
 'builtin:replace'|
 'builtin:vite-alias'|
-'builtin:vite-asset'|
-'builtin:vite-asset-import-meta-url'|
 'builtin:vite-build-import-analysis'|
-'builtin:vite-css'|
-'builtin:vite-css-post'|
 'builtin:vite-dynamic-import-vars'|
-'builtin:vite-html'|
-'builtin:vite-html-inline-proxy'|
 'builtin:vite-import-glob'|
 'builtin:vite-json'|
 'builtin:vite-load-fallback'|
@@ -1737,13 +1727,6 @@ export declare enum BindingChunkModuleOrderBy {
 export interface BindingClientHmrUpdate {
   clientId: string
   update: BindingHmrUpdate
-}
-
-export interface BindingCompileCssResult {
-  code: string
-  map?: BindingSourcemap
-  deps?: FxHashSet<string>
-  modules?: FxHashMap<string, string>
 }
 
 export interface BindingDeferSyncScanData {
@@ -2318,30 +2301,6 @@ export interface BindingViteAliasPluginConfig {
   entries: Array<BindingViteAliasPluginAlias>
 }
 
-export interface BindingViteAssetImportMetaUrlPluginConfig {
-  root: string
-  isLib: boolean
-  publicDir: string
-  clientEntry: string
-  tryFsResolve: (id: string) => string | undefined
-  assetResolver: (id: string, importer: string) => Promise<string | undefined>
-  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
-}
-
-export interface BindingViteAssetPluginConfig {
-  root: string
-  isLib: boolean
-  isSsr: boolean
-  isWorker: boolean
-  urlBase: string
-  publicDir: string
-  decodedBase: string
-  isSkipAssets: boolean
-  assetsInclude: Array<BindingStringOrRegex>
-  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
-  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
-}
-
 export interface BindingViteBuildImportAnalysisPluginConfig {
   preloadCode: string
   insertPreload: boolean
@@ -2359,38 +2318,6 @@ export interface BindingViteBuildImportAnalysisPluginV2Config {
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
 }
 
-export interface BindingViteCssPluginConfig {
-  root: string
-  isLib: boolean
-  publicDir: string
-  compileCSS: (url: string, importer: string, resolver: BindingUrlResolver) => Promise<{
-    code: string
-    map?: BindingSourcemap
-    modules?: Record<string, string>
-    deps?: Set<string>
-    }>
-    resolveUrl: (url: string, importer?: string) => MaybePromise<string | undefined>
-    assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
-  }
-
-export interface BindingViteCssPostPluginConfig {
-  root: string
-  isLib: boolean
-  isSsr: boolean
-  isWorker: boolean
-  isClient: boolean
-  cssCodeSplit: boolean
-  sourcemap: boolean
-  assetsDir: string
-  urlBase: string
-  decodedBase: string
-  libCssFilename?: string
-  isLegacy?: (args: BindingNormalizedOptions) => boolean
-  cssMinify?: (css: string, inline: boolean) => Promise<string>
-  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
-  cssScopeTo: () => Record<string, readonly [string, string | undefined]>
-}
-
 export interface BindingViteDynamicImportVarsPluginConfig {
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
@@ -2400,25 +2327,6 @@ export interface BindingViteDynamicImportVarsPluginConfig {
 
 export interface BindingViteDynamicImportVarsPluginV2Config {
   sourcemap: boolean
-}
-
-export interface BindingViteHtmlInlineProxyPluginConfig {
-  root: string
-}
-
-export interface BindingViteHtmlPluginConfig {
-  root: string
-  isLib: boolean
-  isSsr: boolean
-  urlBase: string
-  publicDir: string
-  decodedBase: string
-  cssCodeSplit: boolean
-  modulePreload: false | BindingModulePreloadOptions
-  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
-  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => undefined | string | BindingRenderBuiltUrlRet
-  transformIndexHtml: (html: string, path: string, filename: string, hook: 'transform' | 'generateBundle', output?: BindingOutputs, chunk?: BindingOutputChunk) => Promise<string>
-  setModuleSideEffects: (id: string) => void
 }
 
 export interface BindingViteImportGlobPluginConfig {

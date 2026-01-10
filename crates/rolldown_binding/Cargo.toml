@@ -42,14 +42,8 @@ rolldown_plugin_isolated_declaration = { workspace = true }
 rolldown_plugin_replace = { workspace = true }
 rolldown_plugin_utils = { workspace = true }
 rolldown_plugin_vite_alias = { workspace = true }
-rolldown_plugin_vite_asset = { workspace = true }
-rolldown_plugin_vite_asset_import_meta_url = { workspace = true }
 rolldown_plugin_vite_build_import_analysis = { workspace = true }
-rolldown_plugin_vite_css = { workspace = true }
-rolldown_plugin_vite_css_post = { workspace = true }
 rolldown_plugin_vite_dynamic_import_vars = { workspace = true }
-rolldown_plugin_vite_html = { workspace = true }
-rolldown_plugin_vite_html_inline_proxy = { workspace = true }
 rolldown_plugin_vite_import_glob = { workspace = true }
 rolldown_plugin_vite_json = { workspace = true }
 rolldown_plugin_vite_load_fallback = { workspace = true }

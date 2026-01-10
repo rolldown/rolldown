@@ -12,12 +12,7 @@ import type {
   BindingInjectImportNamespace,
   BindingInputOptions,
 } from '../binding.cjs';
-import {
-  bindingifyCSSPostPlugin,
-  bindingifyManifestPlugin,
-  bindingifyViteHtmlPlugin,
-  BuiltinPlugin,
-} from '../builtin-plugin/utils';
+import { bindingifyManifestPlugin, BuiltinPlugin } from '../builtin-plugin/utils';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
@@ -50,10 +45,6 @@ export function bindingifyInputOptions(
     }
     if (plugin instanceof BuiltinPlugin) {
       switch (plugin.name) {
-        case 'builtin:vite-css-post':
-          return bindingifyCSSPostPlugin(plugin, pluginContextData);
-        case 'builtin:vite-html':
-          return bindingifyViteHtmlPlugin(plugin, onLog, logLevel, watchMode, pluginContextData);
         case 'builtin:vite-manifest':
           return bindingifyManifestPlugin(plugin, pluginContextData);
         default:

@@ -31,10 +31,8 @@ export { parse, parseSync } from './utils/parse';
 // Builtin plugin factory
 export {
   isolatedDeclarationPlugin,
-  viteAssetImportMetaUrlPlugin,
   viteBuildImportAnalysisPlugin,
   viteDynamicImportVarsPlugin,
-  viteHtmlInlineProxyPlugin,
   viteImportGlobPlugin,
   viteJsonPlugin,
   viteLoadFallbackPlugin,
@@ -59,11 +57,7 @@ export {
 } from './builtin-plugin/constructors';
 
 export { viteAliasPlugin } from './builtin-plugin/alias-plugin';
-export { viteAssetPlugin } from './builtin-plugin/asset-plugin';
 export { viteTransformPlugin } from './builtin-plugin/transform-plugin';
-export { viteCSSPlugin } from './builtin-plugin/vite-css-plugin';
-export { viteCSSPostPlugin } from './builtin-plugin/vite-css-post-plugin';
-export { viteHtmlPlugin, type ViteHtmlPluginOptions } from './builtin-plugin/vite-html-plugin';
 export { viteManifestPlugin } from './builtin-plugin/vite-manifest-plugin';
 
 // `__volume` and `__fs` only exist in `rolldown-binding.wasi-browser.js`, so we need to use namespace import to prevent static import error.

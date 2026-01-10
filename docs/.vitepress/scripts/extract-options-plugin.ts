@@ -6,6 +6,45 @@ function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/**
+ * Parses a type reference from the option content's Type line only.
+ * Matches patterns like: [`ChecksOptions`](Interface.ChecksOptions.md)
+ * or [`TreeshakingOptions`](TypeAlias.TreeshakingOptions.md)
+ */
+function parseTypeReference(
+  contents: string,
+): { prefix: string; name: string; fullPath: string } | undefined {
+  const typeLineMatch = contents.match(/^- \*\*Type\*\*: .+$/m);
+  if (!typeLineMatch) return undefined;
+
+  const typeLine = typeLineMatch[0];
+  const match = typeLine.match(/\[`(\w+)`\]\((Interface|TypeAlias)\.\1\.md\)/);
+  if (!match) return undefined;
+
+  return {
+    prefix: match[2],
+    name: match[1],
+    fullPath: `${match[2]}.${match[1]}.md`,
+  };
+}
+
+/**
+ * Extracts the Properties section from a Type or Interface markdown file.
+ * Returns undefined if no Properties section exists.
+ */
+function extractPropertiesSection(contents: string): string | undefined {
+  const match = contents.match(/^## Properties\n([\s\S]*)/m);
+  if (!match) return undefined;
+
+  let section = match[0];
+  // Adjust heading levels: ### -> ##, #### -> ###
+  section = section.replace(/^### /gm, '## ');
+  section = section.replace(/^#### /gm, '### ');
+  // Remove the "## Properties" heading itself since we'll integrate properties directly
+  section = section.replace(/^## Properties\n+/m, '');
+  return section.trim();
+}
+
 function extractPropertySection(
   contents: string,
   propertyName: string,
@@ -64,6 +103,11 @@ function extractPropertySection(
 
 export function load(app: td.Application) {
   const generatedPage: Record<string, Array<{ text: string; link: string }>> = {};
+  // Track which types were inlined and where they redirect to
+  const inlinedTypes: Map<
+    string,
+    { typeFile: string; optionFile: string; optionName: string; parentName: string }
+  > = new Map();
 
   app.renderer.on(td.Renderer.EVENT_END_PAGE, (page) => {
     if (page.model?.name === 'InputOptions' || page.model?.name === 'OutputOptions') {
@@ -92,6 +136,27 @@ export function load(app: td.Application) {
         );
         newPage.contents = extracted;
 
+        // Check if this option references a TypeAlias or Interface with properties
+        if (extracted) {
+          const typeRef = parseTypeReference(extracted);
+          if (typeRef) {
+            if (inlinedTypes.has(typeRef.name)) {
+              throw new Error(
+                `Type reference "${typeRef.name}" is referenced by option "${parentReflection.name}.${property.name}" but it is also referenced by another option.`,
+              );
+            }
+
+            // Track the type for later inlining in EVENT_END
+            // (the type file might not exist yet if processed before the type page)
+            inlinedTypes.set(typeRef.name, {
+              typeFile: typeRef.fullPath,
+              optionFile: newPage.url,
+              optionName: property.name,
+              parentName: parentReflection.name,
+            });
+          }
+        }
+
         const outDir = app.options.getValue('out');
         const abs = path.resolve(outDir, newPage.url);
         fs.mkdirSync(path.dirname(abs), { recursive: true });
@@ -109,6 +174,53 @@ export function load(app: td.Application) {
 
   app.renderer.on(td.Renderer.EVENT_END, () => {
     const outDir = app.options.getValue('out');
+
+    // Inline types
+    const inlinedTypeNames: string[] = [];
+    for (const [typeName, info] of inlinedTypes) {
+      const typeFilePath = path.resolve(outDir, info.typeFile);
+      if (!fs.existsSync(typeFilePath)) continue;
+
+      const typeContents = fs.readFileSync(typeFilePath, 'utf8');
+      const propertiesSection = extractPropertiesSection(typeContents);
+      if (!propertiesSection) continue;
+
+      const optionFilePath = path.resolve(outDir, info.optionFile);
+      let optionContents = fs.readFileSync(optionFilePath, 'utf8');
+
+      // Replace the type reference with "object with the properties below"
+      // Preserves any prefix like `boolean` \| before the type reference
+      // Matches patterns like: - **Type**: [`TypeName`](Interface.TypeName.md)
+      // or: - **Type**: `boolean` \| [`TypeName`](TypeAlias.TypeName.md)
+      // Use the specific type name to avoid matching nested type references
+      const escapedTypeName = escapeRegex(typeName);
+      optionContents = optionContents.replace(
+        new RegExp(
+          `^(- \\*\\*Type\\*\\*: )(.*?)\\[\`${escapedTypeName}\`\\]\\((Interface|TypeAlias)\\.${escapedTypeName}\\.md\\)(.*)$`,
+          'm',
+        ),
+        (_, prefix, before, _typePrefix, after) => {
+          return `${prefix}${before}object with the properties below${after}`;
+        },
+      );
+
+      const updatedContents = optionContents.trimEnd() + '\n\n' + propertiesSection + '\n';
+      fs.writeFileSync(optionFilePath, updatedContents, 'utf8');
+
+      // Determine if it's an Interface or TypeAlias for the redirect heading
+      const isInterface = info.typeFile.startsWith('Interface.');
+      const typeLabel = isInterface ? 'Interface' : 'Type Alias';
+
+      // Create redirect file for the type
+      const redirectContents = `# ${typeLabel}: ${typeName}
+
+See [${info.parentName}.${info.optionName}](${info.optionFile})
+`;
+      fs.writeFileSync(typeFilePath, redirectContents, 'utf8');
+
+      inlinedTypeNames.push(typeName);
+    }
+
     const optionsPath = path.resolve(outDir, 'options-sidebar.json');
 
     const sidebarArray = [];
@@ -128,11 +240,12 @@ export function load(app: td.Application) {
 
     fs.writeFileSync(optionsPath, JSON.stringify(sidebarArray, null, 2), 'utf8');
 
-    // Remove InputOptions and OutputOptions from typedoc-sidebar.json
+    // Remove InputOptions, OutputOptions, and inlined types from typedoc-sidebar.json
     const typedocSidebarPath = path.resolve(outDir, 'typedoc-sidebar.json');
     if (fs.existsSync(typedocSidebarPath)) {
       const sidebar = JSON.parse(fs.readFileSync(typedocSidebarPath, 'utf8'));
-      const filtered = filterSidebarEntries(sidebar, ['InputOptions', 'OutputOptions']);
+      const namesToRemove = ['InputOptions', 'OutputOptions', ...inlinedTypeNames];
+      const filtered = filterSidebarEntries(sidebar, namesToRemove);
       fs.writeFileSync(typedocSidebarPath, JSON.stringify(filtered, null, 2), 'utf8');
     }
   });

@@ -42,11 +42,11 @@ pub mod plugin_error;
 pub mod plugin_timings;
 pub mod prefer_builtin_feature;
 pub mod resolve_error;
+pub mod sourcemap_broken;
 pub mod unhandleable_error;
 pub mod unloadable_dependency;
 pub mod unresolved_entry;
 pub mod unsupported_feature;
-
 pub trait BuildEvent: Debug + Sync + Send + AsAnyMut {
   fn kind(&self) -> EventKind;
 

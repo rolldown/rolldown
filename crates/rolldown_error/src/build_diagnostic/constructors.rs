@@ -47,6 +47,7 @@ use super::events::{
   missing_export::MissingExport,
   mixed_exports::MixedExports,
   parse_error::ParseError,
+  sourcemap_broken::SourceMapBroken,
   unresolved_entry::UnresolvedEntry,
 };
 
@@ -363,5 +364,13 @@ impl BuildDiagnostic {
 
   pub fn plugin_timings(plugins: Vec<PluginTimingInfo>) -> Self {
     Self::new_inner(PluginTimings { plugins })
+  }
+
+  pub fn sourcemap_broken(plugin_name: &str, hook_name: &str, sourcemap_type: &str) -> Self {
+    Self::new_inner(SourceMapBroken {
+      plugin_name: plugin_name.to_string(),
+      sourcemap_type: sourcemap_type.to_string(),
+      hook_name: hook_name.to_string(),
+    })
   }
 }

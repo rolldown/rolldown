@@ -21,3 +21,13 @@ impl From<String> for SourceMapType {
     }
   }
 }
+
+impl SourceMapType {
+  pub fn as_str(&self) -> &str {
+    match self {
+      SourceMapType::File => "file",
+      SourceMapType::Inline => "inline",
+      SourceMapType::Hidden => "hidden",
+    }
+  }
+}

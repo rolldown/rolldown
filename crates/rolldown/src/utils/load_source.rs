@@ -4,6 +4,7 @@ use rolldown_common::{
   ModuleType, NormalizedBundlerOptions, ResolvedId, SourcemapChainElement, StrOrBytes,
   side_effects::HookSideEffects,
 };
+use rolldown_error::BuildDiagnostic;
 use rolldown_fs::FileSystem;
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rustc_hash::FxHashMap;
@@ -19,11 +20,30 @@ pub async fn load_source<Fs: FileSystem + 'static>(
   options: &NormalizedBundlerOptions,
   asserted_module_type: Option<&ModuleType>,
   is_read_from_disk: &mut bool,
+  warnings: &mut Vec<BuildDiagnostic>,
 ) -> anyhow::Result<(StrOrBytes, ModuleType)> {
+  let mut plugin_names = vec![];
   let (maybe_source, maybe_module_type) =
-    match plugin_driver.load(&HookLoadArgs { id: &resolved_id.id }).await? {
+    match plugin_driver.load(&HookLoadArgs { id: &resolved_id.id }, &mut plugin_names).await? {
       Some(load_hook_output) => {
-        sourcemap_chain.extend(load_hook_output.map.map(SourcemapChainElement::Load));
+        if load_hook_output.map.is_some() {
+          sourcemap_chain.extend(load_hook_output.map.map(SourcemapChainElement::Load));
+        } else if options.sourcemap.is_some() {
+          let sourcemap_type =
+            options.sourcemap.as_ref().map(rolldown_common::SourceMapType::as_str).unwrap();
+
+          if sourcemap_type == "file" || sourcemap_type == "inline" {
+            if !plugin_names.is_empty() {
+              plugin_names.iter().for_each(|plugin_name| {
+                warnings.push(
+                  BuildDiagnostic::sourcemap_broken(plugin_name.as_str(), "load", sourcemap_type)
+                    .with_severity_warning(),
+                );
+              });
+            }
+          }
+        }
+
         if let Some(v) = load_hook_output.side_effects {
           *side_effects = Some(v);
         }

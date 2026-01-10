@@ -50,7 +50,8 @@ impl GenerateStage<'_> {
     let (mut instantiated_chunks, index_chunk_to_instances) =
       self.instantiate_chunks(chunk_graph, &mut errors, &mut warnings).await?;
 
-    render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await?;
+    render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options, &mut warnings)
+      .await?;
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
 

@@ -104,6 +104,8 @@ impl ModuleTask {
       }),
     );
 
+    let mut warnings = vec![];
+
     let mut sourcemap_chain = vec![];
     let mut hook_side_effects = self.resolved_id.side_effects.take();
     let (mut source, module_type) = self
@@ -111,6 +113,7 @@ impl ModuleTask {
         &mut sourcemap_chain,
         &mut hook_side_effects,
         self.magic_string_tx.clone(),
+        &mut warnings,
       )
       .await?;
 
@@ -133,8 +136,6 @@ impl ModuleTask {
       }
       _ => (None, None),
     };
-
-    let mut warnings = vec![];
 
     let ret = create_ecma_view(
       &mut CreateModuleContext {
@@ -237,6 +238,7 @@ impl ModuleTask {
     sourcemap_chain: &mut Vec<SourcemapChainElement>,
     hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,
     magic_string_tx: Option<std::sync::Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
+    warnings: &mut Vec<BuildDiagnostic>,
   ) -> BuildResult<(StrOrBytes, ModuleType)> {
     let mut is_read_from_disk = true;
     let result = load_source(
@@ -248,6 +250,7 @@ impl ModuleTask {
       &self.ctx.options,
       self.asserted_module_type.as_ref(),
       &mut is_read_from_disk,
+      warnings,
     )
     .await;
     if is_read_from_disk {
@@ -275,8 +278,10 @@ impl ModuleTask {
       _ if self.resolved_id.id.starts_with("rolldown:") => source,
       StrOrBytes::Str(source) => {
         // Run plugin transform.
+
         let source = transform_source(
           &self.ctx.plugin_driver,
+          &self.ctx.options,
           &self.resolved_id,
           self.module_idx,
           source,
@@ -284,6 +289,7 @@ impl ModuleTask {
           hook_side_effects,
           &mut module_type,
           magic_string_tx,
+          warnings,
         )
         .await?;
         source.into()

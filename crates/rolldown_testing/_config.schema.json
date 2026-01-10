@@ -1404,6 +1404,12 @@
             "boolean",
             "null"
           ]
+        },
+        "sourceMapBroken": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

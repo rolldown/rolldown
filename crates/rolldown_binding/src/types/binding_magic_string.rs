@@ -25,6 +25,25 @@ impl CharToByteMapper {
   fn char_to_byte(&self, char_offset: usize) -> Option<usize> {
     self.char_to_byte.get(char_offset).copied()
   }
+
+  /// Returns the character count (number of characters in the string).
+  fn char_count(&self) -> i64 {
+    // The vector has N+1 elements for N characters (stores byte offset after each char)
+    #[expect(clippy::cast_possible_wrap)]
+    let count = (self.char_to_byte.len() - 1) as i64;
+    count
+  }
+
+  /// Normalizes a potentially negative index to a positive index.
+  /// Negative indices count from the end of the string (matching original magic-string behavior).
+  fn normalize_index(&self, index: i64) -> i64 {
+    let char_count = self.char_count();
+    if char_count > 0 && index < 0 {
+      ((index % char_count) + char_count) % char_count
+    } else {
+      index
+    }
+  }
 }
 
 #[napi(object)]
@@ -283,28 +302,44 @@ impl BindingMagicString<'_> {
     }
   }
 
+  /// Resets the portion of the string from `start` to `end` to its original content.
+  /// This undoes any modifications made to that range.
+  /// Supports negative indices (counting from the end).
+  #[napi]
+  pub fn reset<'s>(&'s mut self, this: This<'s>, start: i64, end: i64) -> napi::Result<This<'s>> {
+    // Handle negative indices (matching original magic-string behavior)
+    let start = self.char_to_byte_mapper.normalize_index(start);
+    let end = self.char_to_byte_mapper.normalize_index(end);
+
+    // Convert character indices to byte indices
+    #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+    let start_byte = self
+      .char_to_byte_mapper
+      .char_to_byte(start as usize)
+      .ok_or_else(|| napi::Error::from_reason("Character is out of bounds"))?;
+
+    #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+    let end_byte = self
+      .char_to_byte_mapper
+      .char_to_byte(end as usize)
+      .ok_or_else(|| napi::Error::from_reason("Character is out of bounds"))?;
+
+    self.inner.reset(start_byte, end_byte).map_err(napi::Error::from_reason)?;
+    Ok(this)
+  }
+
   /// Returns the content between the specified original character positions.
   /// Supports negative indices (counting from the end).
   #[napi]
   pub fn slice(&self, start: Option<i64>, end: Option<i64>) -> napi::Result<String> {
-    let mut start = start.unwrap_or(0);
-
-    // char_count: the vector has N+1 elements for N characters (stores byte offset after each char)
-    #[expect(clippy::cast_possible_wrap)]
-    let char_count = (self.char_to_byte_mapper.char_to_byte.len() - 1) as i64;
+    let start = start.unwrap_or(0);
 
     // Default end to char_count (original string length in characters)
-    let mut end = end.unwrap_or(char_count);
+    let end = end.unwrap_or(self.char_to_byte_mapper.char_count());
 
     // Handle negative indices (matching original magic-string behavior)
-    if char_count > 0 {
-      if start < 0 {
-        start = ((start % char_count) + char_count) % char_count;
-      }
-      if end < 0 {
-        end = ((end % char_count) + char_count) % char_count;
-      }
-    }
+    let start = self.char_to_byte_mapper.normalize_index(start);
+    let end = self.char_to_byte_mapper.normalize_index(end);
 
     // Convert character indices to byte indices
     #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]

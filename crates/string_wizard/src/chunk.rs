@@ -66,10 +66,9 @@ impl<'str> Chunk<'str> {
   }
 
   pub fn split<'a>(&'a mut self, text_index: usize) -> Chunk<'str> {
-    if !(text_index > self.start() && text_index < self.end()) {
-      panic!("Cannot split chunk at {text_index} between {:?}", self.span);
-    }
-    if self.edited_content.is_some() {
+    if let Some(ref content) = self.edited_content
+      && !content.is_empty()
+    {
       panic!("Cannot split a chunk that has already been edited")
     }
     let first_half_slice = Span(self.start(), text_index);
@@ -106,5 +105,16 @@ impl<'str> Chunk<'str> {
 
   pub fn is_edited(&self) -> bool {
     self.edited_content.is_some()
+  }
+
+  /// Resets the chunk to its original state.
+  /// Clears intro and outro, and if the chunk was edited, restores the original content.
+  pub fn reset(&mut self) {
+    self.intro.clear();
+    self.outro.clear();
+    if self.is_edited() {
+      self.edited_content = None;
+      self.keep_in_mappings = false;
+    }
   }
 }

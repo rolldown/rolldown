@@ -1468,6 +1468,12 @@ export declare class BindingMagicString {
   /** Returns a clone with content outside the specified range removed. */
   snip(start: number, end: number): BindingMagicString
   /**
+   * Resets the portion of the string from `start` to `end` to its original content.
+   * This undoes any modifications made to that range.
+   * Supports negative indices (counting from the end).
+   */
+  reset(start: number, end: number): this
+  /**
    * Returns the content between the specified original character positions.
    * Supports negative indices (counting from the end).
    */

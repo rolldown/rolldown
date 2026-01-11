@@ -3,6 +3,7 @@ pub mod indent;
 pub mod movement;
 pub mod prepend;
 pub mod replace;
+pub mod reset;
 pub mod slice;
 #[cfg(feature = "sourcemap")]
 pub mod source_map;

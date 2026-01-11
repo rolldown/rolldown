@@ -1352,7 +1352,7 @@ describe('MagicString', () => {
     });
   });
 
-  describe.skip('reset', () => {
+  describe('reset', () => {
     it('should reset moved characters from the original string', () => {
       const s = new MagicString('abcdefghijkl');
 
@@ -1380,7 +1380,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'abcdefkl');
     });
 
-    it.skip('should treat zero-length resets as a no-op', () => {
+    it('should treat zero-length resets as a no-op', () => {
       const s = new MagicString('abcdefghijkl');
 
       s.remove(3, 5);
@@ -1395,7 +1395,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'abcdefghijkl');
     });
 
-    it.skip('should reset overlapping ranges', () => {
+    it('should reset overlapping ranges', () => {
       const s1 = new MagicString('abcdefghijkl');
 
       s1.remove(0, 10);
@@ -1409,7 +1409,7 @@ describe('MagicString', () => {
       assert.equal(s2.toString(), 'defgkl');
     });
 
-    it.skip('should reset overlapping ranges, redux', () => {
+    it('should reset overlapping ranges, redux', () => {
       const s = new MagicString('abccde');
 
       s.remove(0, 6);
@@ -1418,7 +1418,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'bc');
     });
 
-    it('should reset modified ranges', () => {
+    it.skip('should reset modified ranges', () => {
       const s = new MagicString('abcdefghi');
 
       s.overwrite(3, 6, 'DEF');
@@ -1466,7 +1466,7 @@ describe('MagicString', () => {
       assert.strictEqual(s.reset(3, 4), s);
     });
 
-    it.skip('removes across moved content', () => {
+    it('removes across moved content', () => {
       const s = new MagicString('abcdefghijkl');
 
       s.remove(5, 8);

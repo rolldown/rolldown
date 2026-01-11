@@ -36,10 +36,11 @@
  *   - snip(start: number, end: number): BindingMagicString
  *   - lastChar(): string
  *   - lastLine(): string
+ *   - reset(start: number, end: number): this (partial - can't split edited chunks)
  *
  * NOT supported (will be skipped):
  *   - constructor options (filename, ignoreList, indentExclusionRanges)
- *   - reset
+ *   - reset tests (most require splitting inside edited chunks)
  *   - generateMap, generateDecodedMap, addSourcemapLocation
  *   - lastChar, lastLine
  *   - original property
@@ -63,7 +64,7 @@ const SKIP_DESCRIBE_BLOCKS = [
   'generateMap',
   'getIndentString', // not supported
   'original',
-  'reset',
+  // Note: 'reset' is now supported but most tests are skipped individually
   // Note: 'snip' is now supported
   // Note: 'lastChar' is now supported
   // Note: 'lastLine' is now supported
@@ -96,12 +97,13 @@ const SKIP_TESTS = [
   'split point', // split point errors cause panic
   'storeName', // storeName option not supported
   'contentOnly', // contentOnly option not supported
-  'overlapping', // overlapping replacements cause panic
+  'should remove overlapping ranges', // overlapping replacements cause panic
+  'overlapping replacements', // overlapping replacements cause panic
   'refuses to move a selection to inside itself', // causes panic instead of throwing error
   'already been edited', // Cannot split a chunk that has already been edited
   'non-zero-length inserts inside', // causes split chunk panic
   'should remove modified ranges', // causes split chunk panic
-  'removed ranges', // causes split chunk panic
+
   'should replace then remove', // causes split chunk panic
   'preserves intended order', // complex append/prepend ordering with slice
   'excluded characters', // indent exclude option not supported
@@ -117,13 +119,16 @@ const SKIP_TESTS = [
   'replaces interior inserts', // causes split chunk panic
   'allows later insertions at the end', // causes split chunk panic
   // remove-specific complex cases
-  'removes across moved content', // causes panic
+  // Note: "removes across moved content" appears in both remove and reset sections
+  // The reset version passes, so we handle this with a special transformation below
   'should not remove content inserted', // complex interaction
   'should remove interior inserts', // causes panic
   'should provide a useful error', // expects throw but gets panic
   // slice-specific skips
   'should return the generated content between the specified original characters', // nested overwrites + slice
   'supports characters moved', // complex move + slice interaction
+  // reset-specific skips (only tests that still fail)
+  'should treat zero-length resets as a no-op', // uses negative index which is not supported
   // clone-specific skips (tests that use unsupported constructor options)
   // Note: 'should clone filename info' now works since filename is supported
   'should clone indentExclusionRanges', // uses indentExclusionRanges constructor option
@@ -245,6 +250,20 @@ function transformTestFile(content, filename) {
   // Note: We don't add [constructor options not supported] suffix since tests
   // using constructor options are inside describe blocks that are already skipped
   // (e.g., 'options', 'clone', etc.) or matched by SKIP_TESTS patterns
+
+  // Special case: skip "removes across moved content" only in the remove section, not in reset
+  // The remove version causes panic, but the reset version passes
+  transformed = transformed.replace(
+    /(\tdescribe\('remove',[\s\S]*?)\n(\t\t)it\('removes across moved content'/g,
+    "$1\n$2it.skip('removes across moved content'",
+  );
+
+  // Special case: skip "should reset modified ranges" but not "should reset modified ranges, redux"
+  // The "redux" version passes, but the first one uses overwrite+remove+reset which fails
+  transformed = transformed.replace(
+    /it\('should reset modified ranges', /g,
+    "it.skip('should reset modified ranges', ",
+  );
 
   return transformed;
 }

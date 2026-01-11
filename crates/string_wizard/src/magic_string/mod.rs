@@ -248,9 +248,9 @@ impl<'text> MagicString<'text> {
   ///
   /// Chunk{span: (0, 3)} => "abc"
   /// Chunk{span: (3, 7)} => "defg"
-  fn split_at(&mut self, at_index: usize) {
+  fn split_at(&mut self, at_index: usize) -> Result<(), String> {
     if at_index == 0 || at_index >= self.source.len() || self.chunk_by_end.contains_key(&at_index) {
-      return;
+      return Ok(());
     }
 
     let (mut candidate, mut candidate_idx, search_right) = {
@@ -270,7 +270,7 @@ impl<'text> MagicString<'text> {
       candidate_idx = next_idx;
     }
 
-    let second_half_chunk = self.chunks[candidate_idx].split(at_index);
+    let second_half_chunk = self.chunks[candidate_idx].split(at_index)?;
     let second_half_span = second_half_chunk.span;
     let second_half_idx = self.chunks.push(second_half_chunk);
     let first_half_idx = candidate_idx;
@@ -293,25 +293,26 @@ impl<'text> MagicString<'text> {
     if first_half_idx == self.last_chunk_idx {
       self.last_chunk_idx = second_half_idx
     }
+    Ok(())
   }
 
-  fn by_start_mut(&mut self, text_index: usize) -> Option<&mut Chunk<'text>> {
+  fn by_start_mut(&mut self, text_index: usize) -> Result<Option<&mut Chunk<'text>>, String> {
     if text_index == self.source.len() {
-      None
+      Ok(None)
     } else {
-      self.split_at(text_index);
-      let idx = self.chunk_by_start.get(&text_index)?;
-      self.chunks.get_mut(*idx)
+      self.split_at(text_index)?;
+      let idx = self.chunk_by_start.get(&text_index);
+      Ok(idx.map(|idx| &mut self.chunks[*idx]))
     }
   }
 
-  fn by_end_mut(&mut self, text_index: usize) -> Option<&mut Chunk<'text>> {
+  fn by_end_mut(&mut self, text_index: usize) -> Result<Option<&mut Chunk<'text>>, String> {
     if text_index == 0 {
-      None
+      Ok(None)
     } else {
-      self.split_at(text_index);
-      let idx = self.chunk_by_end.get(&text_index)?;
-      self.chunks.get_mut(*idx)
+      self.split_at(text_index)?;
+      let idx = self.chunk_by_end.get(&text_index);
+      Ok(idx.map(|idx| &mut self.chunks[*idx]))
     }
   }
 }

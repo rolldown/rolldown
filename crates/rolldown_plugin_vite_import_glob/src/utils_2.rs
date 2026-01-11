@@ -253,11 +253,11 @@ impl<'ast> GlobImportVisit<'_> {
       ),
     };
 
-    self.magic_string.get_or_insert_with(|| string_wizard::MagicString::new(self.code)).update(
-      span.start as usize,
-      span.end as usize,
-      replacement,
-    );
+    self
+      .magic_string
+      .get_or_insert_with(|| string_wizard::MagicString::new(self.code))
+      .update(span.start as usize, span.end as usize, replacement)
+      .expect("update should not fail in import glob plugin");
   }
 }
 

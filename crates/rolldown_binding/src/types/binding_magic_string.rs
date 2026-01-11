@@ -74,15 +74,25 @@ impl BindingMagicString<'_> {
   }
 
   #[napi]
-  pub fn replace<'s>(&'s mut self, this: This<'s>, from: String, to: String) -> This<'s> {
-    self.inner.replace(&from, to);
-    this
+  pub fn replace<'s>(
+    &'s mut self,
+    this: This<'s>,
+    from: String,
+    to: String,
+  ) -> napi::Result<This<'s>> {
+    self.inner.replace(&from, to).map_err(napi::Error::from_reason)?;
+    Ok(this)
   }
 
   #[napi]
-  pub fn replace_all<'s>(&'s mut self, this: This<'s>, from: String, to: String) -> This<'s> {
-    self.inner.replace_all(&from, to);
-    this
+  pub fn replace_all<'s>(
+    &'s mut self,
+    this: This<'s>,
+    from: String,
+    to: String,
+  ) -> napi::Result<This<'s>> {
+    self.inner.replace_all(&from, to).map_err(napi::Error::from_reason)?;
+    Ok(this)
   }
 
   #[napi]
@@ -136,18 +146,21 @@ impl BindingMagicString<'_> {
     start: u32,
     end: u32,
     content: String,
-  ) -> This<'s> {
+  ) -> napi::Result<This<'s>> {
     let start_byte =
       self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
     let end_byte =
       self.char_to_byte_mapper.char_to_byte(end as usize).expect("Invalid end character index");
-    self.inner.update_with(
-      start_byte,
-      end_byte,
-      content,
-      string_wizard::UpdateOptions { overwrite: true, keep_original: false },
-    );
-    this
+    self
+      .inner
+      .update_with(
+        start_byte,
+        end_byte,
+        content,
+        string_wizard::UpdateOptions { overwrite: true, keep_original: false },
+      )
+      .map_err(napi::Error::from_reason)?;
+    Ok(this)
   }
 
   #[napi]
@@ -175,13 +188,13 @@ impl BindingMagicString<'_> {
   }
 
   #[napi]
-  pub fn remove<'s>(&'s mut self, this: This<'s>, start: u32, end: u32) -> This<'s> {
+  pub fn remove<'s>(&'s mut self, this: This<'s>, start: u32, end: u32) -> napi::Result<This<'s>> {
     let start_byte =
       self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
     let end_byte =
       self.char_to_byte_mapper.char_to_byte(end as usize).expect("Invalid end character index");
-    self.inner.remove(start_byte, end_byte);
-    this
+    self.inner.remove(start_byte, end_byte).map_err(napi::Error::from_reason)?;
+    Ok(this)
   }
 
   #[napi]
@@ -191,32 +204,44 @@ impl BindingMagicString<'_> {
     start: u32,
     end: u32,
     content: String,
-  ) -> This<'s> {
+  ) -> napi::Result<This<'s>> {
     let start_byte =
       self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
     let end_byte =
       self.char_to_byte_mapper.char_to_byte(end as usize).expect("Invalid end character index");
-    self.inner.update(start_byte, end_byte, content);
-    this
+    self.inner.update(start_byte, end_byte, content).map_err(napi::Error::from_reason)?;
+    Ok(this)
   }
 
   #[napi]
-  pub fn relocate<'s>(&'s mut self, this: This<'s>, start: u32, end: u32, to: u32) -> This<'s> {
+  pub fn relocate<'s>(
+    &'s mut self,
+    this: This<'s>,
+    start: u32,
+    end: u32,
+    to: u32,
+  ) -> napi::Result<This<'s>> {
     let start_byte =
       self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
     let end_byte =
       self.char_to_byte_mapper.char_to_byte(end as usize).expect("Invalid end character index");
     let to_byte =
       self.char_to_byte_mapper.char_to_byte(to as usize).expect("Invalid to character index");
-    self.inner.relocate(start_byte, end_byte, to_byte);
-    this
+    self.inner.relocate(start_byte, end_byte, to_byte).map_err(napi::Error::from_reason)?;
+    Ok(this)
   }
 
   /// Alias for `relocate` to match the original magic-string API.
   /// Moves the characters from `start` to `end` to `index`.
   /// Returns `this` for method chaining.
   #[napi(js_name = "move")]
-  pub fn move_<'s>(&'s mut self, this: This<'s>, start: u32, end: u32, index: u32) -> This<'s> {
+  pub fn move_<'s>(
+    &'s mut self,
+    this: This<'s>,
+    start: u32,
+    end: u32,
+    index: u32,
+  ) -> napi::Result<This<'s>> {
     self.relocate(this, start, end, index)
   }
 
@@ -290,16 +315,15 @@ impl BindingMagicString<'_> {
 
   /// Returns a clone with content outside the specified range removed.
   #[napi]
-  #[must_use]
-  pub fn snip(&self, start: u32, end: u32) -> Self {
+  pub fn snip(&self, start: u32, end: u32) -> napi::Result<Self> {
     let start_byte =
       self.char_to_byte_mapper.char_to_byte(start as usize).expect("Invalid start character index");
     let end_byte =
       self.char_to_byte_mapper.char_to_byte(end as usize).expect("Invalid end character index");
-    Self {
-      inner: self.inner.snip(start_byte, end_byte),
+    Ok(Self {
+      inner: self.inner.snip(start_byte, end_byte).map_err(napi::Error::from_reason)?,
       char_to_byte_mapper: self.char_to_byte_mapper.clone(),
-    }
+    })
   }
 
   /// Resets the portion of the string from `start` to `end` to its original content.

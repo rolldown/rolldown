@@ -16,7 +16,7 @@ impl<'text> MagicString<'text> {
     start: usize,
     end: usize,
     content: impl Into<CowStr<'text>>,
-  ) -> &mut Self {
+  ) -> Result<&mut Self, String> {
     self.update_with(start, end, content, Default::default())
   }
 
@@ -26,9 +26,8 @@ impl<'text> MagicString<'text> {
     end: usize,
     content: impl Into<CowStr<'text>>,
     opts: UpdateOptions,
-  ) -> &mut Self {
-    self.inner_update_with(start, end, content.into(), opts, true);
-    self
+  ) -> Result<&mut Self, String> {
+    self.inner_update_with(start, end, content.into(), opts, true)
   }
 
   // --- private
@@ -39,14 +38,18 @@ impl<'text> MagicString<'text> {
     end: usize,
     content: CowStr<'text>,
     opts: UpdateOptions,
-    panic_if_start_equal_end: bool,
-  ) -> &mut Self {
-    if panic_if_start_equal_end && start == end {
-      panic!("Cannot overwrite a zero-length range – use append_left or prepend_right instead")
+    error_if_start_equal_end: bool,
+  ) -> Result<&mut Self, String> {
+    if error_if_start_equal_end && start == end {
+      return Err(
+        "Cannot overwrite a zero-length range – use appendLeft or prependRight instead".to_string(),
+      );
     }
-    assert!(start < end);
-    self.split_at(start);
-    self.split_at(end);
+    if start >= end {
+      return Err(format!("end must be greater than start, got start: {start}, end: {end}"));
+    }
+    self.split_at(start)?;
+    self.split_at(end)?;
 
     let start_idx = self.chunk_by_start.get(&start).copied().unwrap();
     let end_idx = self.chunk_by_end.get(&end).copied().unwrap();
@@ -58,7 +61,7 @@ impl<'text> MagicString<'text> {
     let mut rest_chunk_idx = if start_idx != end_idx {
       start_chunk.next.unwrap()
     } else {
-      return self;
+      return Ok(self);
     };
 
     while rest_chunk_idx != end_idx {
@@ -66,6 +69,6 @@ impl<'text> MagicString<'text> {
       rest_chunk.edit("".into(), Default::default());
       rest_chunk_idx = rest_chunk.next.unwrap();
     }
-    self
+    Ok(self)
   }
 }

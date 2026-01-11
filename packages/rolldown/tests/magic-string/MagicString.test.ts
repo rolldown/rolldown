@@ -862,7 +862,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'cfabdeghijkl');
     });
 
-    it.skip('refuses to move a selection to inside itself', () => {
+    it('refuses to move a selection to inside itself', () => {
       const s = new MagicString('abcdefghijkl');
 
       assert.throws(() => s.move(3, 6, 3), /Cannot move a selection inside itself/);
@@ -996,7 +996,7 @@ describe('MagicString', () => {
       assert.strictEqual(s.overwrite(3, 4, 'D'), s);
     });
 
-    it.skip('should disallow overwriting zero-length ranges', () => {
+    it('should disallow overwriting zero-length ranges', () => {
       const s = new MagicString('x');
       assert.throws(
         () => s.overwrite(0, 0, 'anything'),
@@ -1137,7 +1137,7 @@ describe('MagicString', () => {
       assert.strictEqual(s.update(3, 4, 'D'), s);
     });
 
-    it.skip('should disallow updating zero-length ranges', () => {
+    it('should disallow updating zero-length ranges', () => {
       const s = new MagicString('x');
       assert.throws(
         () => s.update(0, 0, 'anything'),

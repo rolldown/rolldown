@@ -3,28 +3,26 @@ use crate::MagicString;
 use super::update::UpdateOptions;
 
 impl MagicString<'_> {
-  pub fn remove(&mut self, start: usize, end: usize) -> &mut Self {
+  pub fn remove(&mut self, start: usize, end: usize) -> Result<&mut Self, String> {
     self.inner_update_with(
       start,
       end,
       "".into(),
       UpdateOptions { keep_original: false, overwrite: true },
       false,
-    );
-
-    self
+    )
   }
 
   /// Moves the characters from start and end to index. Returns this.
   // `move` is reserved keyword in Rust, so we use `relocate` instead.
-  pub fn relocate(&mut self, start: usize, end: usize, to: usize) -> &mut Self {
+  pub fn relocate(&mut self, start: usize, end: usize, to: usize) -> Result<&mut Self, String> {
     if to >= start && to <= end {
-      panic!("Cannot relocate a selection inside itself")
+      return Err("Cannot move a selection inside itself".to_string());
     }
 
-    self.split_at(start);
-    self.split_at(end);
-    self.split_at(to);
+    self.split_at(start)?;
+    self.split_at(end)?;
+    self.split_at(to)?;
 
     let first_idx = self.chunk_by_start[&start];
     let last_idx = self.chunk_by_end[&end];
@@ -37,7 +35,7 @@ impl MagicString<'_> {
     // `new_right_idx` is `None` means that the `to` index is at the end of the string.
     // Moving chunks which contain the last chunk to the end is meaningless.
     if new_right_idx.is_none() && last_idx == self.last_chunk_idx {
-      return self;
+      return Ok(self);
     }
 
     let new_left_idx = new_right_idx
@@ -81,21 +79,20 @@ impl MagicString<'_> {
     self.chunks[first_idx].prev = new_left_idx;
     self.chunks[last_idx].next = new_right_idx;
 
-    self
+    Ok(self)
   }
 
   /// Returns a clone with content outside the specified range removed.
   /// This is equivalent to `clone().remove(0, start).remove(end, original.len())`.
-  #[must_use]
-  pub fn snip(&self, start: usize, end: usize) -> Self {
+  pub fn snip(&self, start: usize, end: usize) -> Result<Self, String> {
     let mut clone = self.clone();
     if start > 0 {
-      clone.remove(0, start);
+      clone.remove(0, start)?;
     }
     let original_len = self.source.len();
     if end < original_len {
-      clone.remove(end, original_len);
+      clone.remove(end, original_len)?;
     }
-    clone
+    Ok(clone)
   }
 }

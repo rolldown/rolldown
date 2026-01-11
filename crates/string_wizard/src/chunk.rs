@@ -65,11 +65,11 @@ impl<'str> Chunk<'str> {
     self.intro.push_front(content)
   }
 
-  pub fn split<'a>(&'a mut self, text_index: usize) -> Chunk<'str> {
+  pub fn split<'a>(&'a mut self, text_index: usize) -> Result<Chunk<'str>, String> {
     if let Some(ref content) = self.edited_content
       && !content.is_empty()
     {
-      panic!("Cannot split a chunk that has already been edited")
+      return Err("Cannot split a chunk that has already been edited".to_string());
     }
     let first_half_slice = Span(self.start(), text_index);
     let second_half_slice = Span(text_index, self.end());
@@ -80,7 +80,7 @@ impl<'str> Chunk<'str> {
     }
     std::mem::swap(&mut new_chunk.outro, &mut self.outro);
     self.span = first_half_slice;
-    new_chunk
+    Ok(new_chunk)
   }
 
   pub fn fragments(&'str self, original_source: &'str str) -> impl Iterator<Item = &'str str> {

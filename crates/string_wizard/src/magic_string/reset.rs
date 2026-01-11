@@ -20,8 +20,8 @@ impl<'text> MagicString<'text> {
       return Err("Character is out of bounds".to_string());
     }
 
-    self.split_at(start);
-    self.split_at(end);
+    self.split_at(start)?;
+    self.split_at(end)?;
 
     let mut chunk_idx = self.chunk_by_start.get(&start).copied();
 

@@ -17,7 +17,10 @@ impl<'text> MagicString<'text> {
   /// assert_eq!(s.to_string(), "01ab234")
   ///```
   pub fn append_left(&mut self, text_index: usize, content: impl Into<CowStr<'text>>) -> &mut Self {
-    match self.by_end_mut(text_index) {
+    // Note: by_end_mut only errors when splitting an already-edited chunk,
+    // but append operations don't require splitting edited chunks in practice.
+    // We use expect here as this is an internal invariant.
+    match self.by_end_mut(text_index).expect("append_left: unexpected split error") {
       Some(chunk) => {
         chunk.append_outro(content.into());
       }
@@ -41,7 +44,10 @@ impl<'text> MagicString<'text> {
     text_index: usize,
     content: impl Into<CowStr<'text>>,
   ) -> &mut Self {
-    match self.by_start_mut(text_index) {
+    // Note: by_start_mut only errors when splitting an already-edited chunk,
+    // but append operations don't require splitting edited chunks in practice.
+    // We use expect here as this is an internal invariant.
+    match self.by_start_mut(text_index).expect("append_right: unexpected split error") {
       Some(chunk) => {
         chunk.append_intro(content.into());
       }

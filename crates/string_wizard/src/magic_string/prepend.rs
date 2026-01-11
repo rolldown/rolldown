@@ -13,7 +13,10 @@ impl<'text> MagicString<'text> {
     text_index: usize,
     content: impl Into<CowStr<'text>>,
   ) -> &mut Self {
-    match self.by_end_mut(text_index) {
+    // Note: by_end_mut only errors when splitting an already-edited chunk,
+    // but prepend operations don't require splitting edited chunks in practice.
+    // We use expect here as this is an internal invariant.
+    match self.by_end_mut(text_index).expect("prepend_left: unexpected split error") {
       Some(chunk) => chunk.prepend_outro(content.into()),
       None => self.prepend_intro(content.into()),
     }
@@ -25,7 +28,10 @@ impl<'text> MagicString<'text> {
     text_index: usize,
     content: impl Into<CowStr<'text>>,
   ) -> &mut Self {
-    match self.by_start_mut(text_index) {
+    // Note: by_start_mut only errors when splitting an already-edited chunk,
+    // but prepend operations don't require splitting edited chunks in practice.
+    // We use expect here as this is an internal invariant.
+    match self.by_start_mut(text_index).expect("prepend_right: unexpected split error") {
       Some(chunk) => {
         chunk.prepend_intro(content.into());
       }

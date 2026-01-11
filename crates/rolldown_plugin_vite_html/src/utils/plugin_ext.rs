@@ -85,7 +85,7 @@ impl ViteHtmlPlugin {
     if is_style_attribute {
       super::overwrite_check_public_file(s, span.start..span.end, value)?;
     } else {
-      s.update(span.start, span.end, value);
+      s.update(span.start, span.end, value).expect("update should not fail in html plugin");
     }
 
     Ok(())
@@ -244,7 +244,8 @@ impl ViteHtmlPlugin {
 
       let cache = ctx.meta().get::<HTMLProxyResult>().expect("HTMLProxyResult missing");
       let css_transformed_code = cache.inner.get(scoped_name).unwrap();
-      s.update(start, match_end, css_transformed_code.to_string());
+      s.update(start, match_end, css_transformed_code.to_string())
+        .expect("update should not fail in html plugin");
     }
     s
   }

@@ -19,11 +19,15 @@ impl Default for ReplaceOptions {
 }
 
 impl<'text> MagicString<'text> {
-  pub fn replace(&mut self, from: &str, to: impl Into<CowStr<'text>>) -> &mut Self {
+  pub fn replace(&mut self, from: &str, to: impl Into<CowStr<'text>>) -> Result<&mut Self, String> {
     self.replace_with(from, to, Default::default())
   }
 
-  pub fn replace_all(&mut self, from: &str, to: impl Into<CowStr<'text>>) -> &mut Self {
+  pub fn replace_all(
+    &mut self,
+    from: &str,
+    to: impl Into<CowStr<'text>>,
+  ) -> Result<&mut Self, String> {
     self.replace_with(from, to, ReplaceOptions { count: usize::MAX, ..Default::default() })
   }
 
@@ -32,7 +36,7 @@ impl<'text> MagicString<'text> {
     from: &str,
     to: impl Into<CowStr<'text>>,
     options: ReplaceOptions,
-  ) -> &mut Self {
+  ) -> Result<&mut Self, String> {
     let to: CowStr<'text> = to.into();
     let matches = memchr::memmem::find_iter(self.source.as_bytes(), from.as_bytes())
       .take(options.count)
@@ -44,9 +48,9 @@ impl<'text> MagicString<'text> {
         end,
         to.clone(),
         UpdateOptions { overwrite: true, keep_original: options.store_original_in_sourcemap },
-      );
+      )?;
     }
 
-    self
+    Ok(self)
   }
 }

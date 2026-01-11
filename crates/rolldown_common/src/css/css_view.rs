@@ -28,18 +28,20 @@ pub struct CssAssetNameReplacer {
 impl SourceMutation for CssRenderer {
   fn apply(&self, magic_string: &mut string_wizard::MagicString<'_>) {
     for range in &self.at_import_ranges {
-      magic_string.remove(range.0, range.1);
+      magic_string.remove(range.0, range.1).expect("remove should not fail for CSS import ranges");
     }
   }
 }
 
 impl SourceMutation for CssAssetNameReplacer {
   fn apply(&self, magic_string: &mut string_wizard::MagicString<'_>) {
-    magic_string.update_with(
-      self.span.start as usize,
-      self.span.end as usize,
-      self.asset_name.clone(),
-      string_wizard::UpdateOptions { keep_original: true, overwrite: true },
-    );
+    magic_string
+      .update_with(
+        self.span.start as usize,
+        self.span.end as usize,
+        self.asset_name.clone(),
+        string_wizard::UpdateOptions { keep_original: true, overwrite: true },
+      )
+      .expect("update_with should not fail for CSS asset name replacement");
   }
 }

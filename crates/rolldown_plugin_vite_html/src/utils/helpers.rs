@@ -26,7 +26,8 @@ pub fn overwrite_check_public_file(
   };
   let pos = src[start - span.start];
   let wrap_offset = usize::from(pos == b'"' || pos == b'\'');
-  s.update(start + wrap_offset, span.end - wrap_offset, value);
+  s.update(start + wrap_offset, span.end - wrap_offset, value)
+    .expect("update should not fail in html plugin");
   Ok(())
 }
 

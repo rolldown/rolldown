@@ -129,7 +129,8 @@ impl Plugin for ViteAssetImportMetaUrlPlugin {
       };
 
       s.get_or_insert_with(|| string_wizard::MagicString::new(args.code))
-        .update(span.start, span.end, built_url);
+        .update(span.start, span.end, built_url)
+        .expect("update should not fail in asset import meta url plugin");
     }
 
     // TODO: generate source map

@@ -5974,6 +5974,10 @@ expression: output
 
 - index-!~{000}~.js => index-pA0WPiFF.js
 
+# tests/rolldown/topics/keep_names/issue_7852
+
+- main-!~{000}~.js => main-CkTekG0F.js
+
 # tests/rolldown/topics/keep_names/parenthesized_default_export
 
 - main-!~{000}~.js => main-DgH0nPHk.js

@@ -1287,7 +1287,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 };
 
                 if let Some(binding) = binding {
-                  let insert_position = self.cur_stmt_index + 1;
+                  // current statement will be pushed to program.body, so the insert position is program.body.len() + 1
+                  let insert_position = program.body.len() + 1;
                   self.keep_name_statement_to_insert.push((
                     insert_position,
                     binding,

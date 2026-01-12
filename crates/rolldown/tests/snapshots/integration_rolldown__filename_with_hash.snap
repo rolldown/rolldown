@@ -5893,6 +5893,56 @@ expression: output
 - main-!~{000}~.js => main-CeFjogtc.js
 - main-CeFjogtc.js.map
 
+# tests/rolldown/topics/exports/common_cjs_named_default
+
+- main-!~{000}~.js => main-D6rxsIlX.js
+- rolldown-runtime-!~{001}~.js => rolldown-runtime-3FTwN-96.js
+- shared-!~{003}~.js => shared-DRQgRJfK.js
+
+# tests/rolldown/topics/exports/common_esm_named_named
+
+- main-!~{000}~.js => main-BHn6Up4r.js
+- rolldown-runtime-!~{001}~.js => rolldown-runtime-mWdtXGW-.js
+- shared-!~{003}~.js => shared-Xc0hNaUb.js
+
+# tests/rolldown/topics/exports/entry_cjs_default_default
+
+- lib-!~{001}~.js => lib-BW6_kuNx.js
+- main-!~{000}~.js => main-DEURYZ6t.js
+
+# tests/rolldown/topics/exports/entry_cjs_named_default
+
+- lib-!~{001}~.js => lib-BBrptxjO.js
+- main-!~{000}~.js => main-WzK6-4yf.js
+
+# tests/rolldown/topics/exports/entry_cjs_named_named
+
+- lib-!~{001}~.js => lib-C0fXHNYz.js
+- main-!~{000}~.js => main-gHop2WPi.js
+- lib-!~{002}~.js => lib-B6ImgDSc.js
+
+# tests/rolldown/topics/exports/entry_esm_named_default
+
+- lib-!~{001}~.js => lib-CJPmTEFW.js
+- main-!~{000}~.js => main-DftzedCv.js
+- lib-!~{002}~.js => lib-DOoXVbVu.js
+
+# tests/rolldown/topics/exports/entry_esm_named_named
+
+- lib-!~{001}~.js => lib-DLl_zaLU.js
+- main-!~{000}~.js => main-Ls5CJH0_.js
+- lib-!~{002}~.js => lib-D-SnpJv5.js
+
+# tests/rolldown/topics/exports/entry_none_named_default
+
+- lib-!~{001}~.js => lib-DxVMVZnn.js
+- main-!~{000}~.js => main-CjIVNZec.js
+
+# tests/rolldown/topics/exports/entry_none_named_named
+
+- lib-!~{001}~.js => lib-BUNQ6UJ4.js
+- main-!~{000}~.js => main-DuafnD-Y.js
+
 # tests/rolldown/topics/generated_code/reexports_esm_dynamic
 
 - main-!~{000}~.js => main-x6vvwZtY.js

@@ -4,7 +4,7 @@ use rolldown_common::{
   GetLocalDb, ModuleIdx, OutputFormat, SymbolRef, SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags,
 };
 use rolldown_utils::concat_string;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use std::collections::hash_map::Entry;
 
 /// Information about a canonical name used in the top-level scope.
@@ -50,10 +50,6 @@ pub struct Renamer<'name> {
   /// Reference to the entry module's symbol database.
   /// Used to preserve entry module's root binding names and check for name conflicts.
   entry_module: Option<&'name SymbolRefDbForModule>,
-
-  /// Names that have been used during the renaming process.
-  /// Tracks which names have been assigned to avoid duplicates.
-  used_names: FxHashSet<CompactStr>,
 }
 
 impl<'name> Renamer<'name> {
@@ -85,7 +81,6 @@ impl<'name> Renamer<'name> {
         .collect(),
       entry_module_idx: base_module_index,
       entry_module,
-      used_names: FxHashSet::default(),
     }
   }
 
@@ -143,12 +138,7 @@ impl<'name> Renamer<'name> {
     symbol_ref: SymbolRef,
     is_original_name: bool,
   ) -> bool {
-    // Check 1: Not already used during this renaming pass
-    if self.used_names.contains(candidate_name) {
-      return false;
-    }
-
-    // Check 2: For non-entry-module symbols, ensure they don't use names that exist
+    // Check 1: For non-entry-module symbols, ensure they don't use names that exist
     // in entry module's nested scopes (which would cause accidental capture).
     // Entry module symbols can use any name - their own nested scope shadowing is intentional.
     if let Some(entry_idx) = self.entry_module_idx {
@@ -157,7 +147,7 @@ impl<'name> Renamer<'name> {
       }
     }
 
-    // Check 3: For RENAMED candidates (not original names), check against own module's
+    // Check 2: For RENAMED candidates (not original names), check against own module's
     // nested scopes. This prevents renaming `a` to `a$1` when there's already a parameter
     // named `a$1`. For original names, shadowing is intentional and expected.
     if !is_original_name && self.has_nested_scope_binding(symbol_ref.owner, candidate_name) {
@@ -210,9 +200,12 @@ impl<'name> Renamer<'name> {
       {
         self.used_canonical_names.insert(
           original_name.clone(),
-          CanonicalNameInfo { conflict_index: 0, owner: Some(canonical_ref.owner), was_renamed: false },
+          CanonicalNameInfo {
+            conflict_index: 0,
+            owner: Some(canonical_ref.owner),
+            was_renamed: false,
+          },
         );
-        self.used_names.insert(original_name.clone());
         self.canonical_names.insert(canonical_ref, original_name);
         return;
       }
@@ -248,9 +241,12 @@ impl<'name> Renamer<'name> {
       // Name is available - use it
       self.used_canonical_names.insert(
         candidate_name.clone(),
-        CanonicalNameInfo { conflict_index: 0, owner: Some(canonical_ref.owner), was_renamed: true },
+        CanonicalNameInfo {
+          conflict_index: 0,
+          owner: Some(canonical_ref.owner),
+          was_renamed: true,
+        },
       );
-      self.used_names.insert(candidate_name.clone());
       self.canonical_names.insert(canonical_ref, candidate_name);
       break;
     }
@@ -309,9 +305,7 @@ impl<'name> Renamer<'name> {
       let mut count = 1u32;
       let mut candidate_name: CompactStr =
         concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();
-      while self.used_canonical_names.contains_key(&candidate_name)
-        || self.used_names.contains(&candidate_name)
-      {
+      while self.used_canonical_names.contains_key(&candidate_name) {
         count += 1;
         candidate_name =
           concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();

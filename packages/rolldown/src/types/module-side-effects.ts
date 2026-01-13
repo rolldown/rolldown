@@ -79,16 +79,22 @@ export type TreeshakingOptions = {
    * - **Polyfills**: Add specific polyfill modules to the array
    * - **Plugins**: Modules that register themselves globally on import
    * - **Library development**: Set to `false` for libraries where unused exports should be removed
+   *
    * @default true
    */
   moduleSideEffects?: ModuleSideEffectsOption;
   /**
    * Whether to respect `/*@__PURE__*\/` annotations and other tree-shaking hints in the code.
+   *
+   * See [related Oxc documentation](https://oxc.rs/docs/guide/usage/minifier/dead-code-elimination#pure-annotations) for more details.
+   *
    * @default true
    */
   annotations?: boolean;
   /**
-   * Array of function names that should be considered pure (no side effects) even if they can't be automatically detected as pure
+   * Array of function names that should be considered pure (no side effects) even if they can't be automatically detected as pure.
+   *
+   * See [related Oxc documentation](https://oxc.rs/docs/guide/usage/minifier/dead-code-elimination#define-pure-functions) for more details.
    *
    * @example
    * ```js
@@ -101,6 +107,9 @@ export type TreeshakingOptions = {
   manualPureFunctions?: readonly string[];
   /**
    * Whether to assume that accessing unknown global properties might have side effects.
+   *
+   * See [related Oxc documentation](https://oxc.rs/docs/guide/usage/minifier/dead-code-elimination#ignoring-global-variable-access-side-effects) for more details.
+   *
    * @default true
    */
   unknownGlobalSideEffects?: boolean;
@@ -124,12 +133,20 @@ export type TreeshakingOptions = {
    */
   commonjs?: boolean;
   /**
-   * Controls whether reading properties from objects is considered to have side effects. Set to `always` for more conservative behavior.
-   * @default false
+   * Controls whether reading properties from objects is considered to have side effects.
+   *
+   * Set to `false` for more aggressive tree-shaking behavior.
+   *
+   * See [related Oxc documentation](https://oxc.rs/docs/guide/usage/minifier/dead-code-elimination#ignoring-property-read-side-effects) for more details.
+   *
+   * @default 'always'
    */
   propertyReadSideEffects?: false | 'always';
   /**
-   * Controls whether writing properties to objects is considered to have side effects. Set to `always` for conservative behavior.
+   * Controls whether writing properties to objects is considered to have side effects.
+   *
+   * Set to `false` for more aggressive behavior.
+   *
    * @default 'always'
    */
   propertyWriteSideEffects?: false | 'always';

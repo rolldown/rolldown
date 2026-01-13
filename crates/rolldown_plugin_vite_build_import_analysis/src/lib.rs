@@ -372,7 +372,8 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
                   render_deps.into_iter().map(|u| u.to_string()).join(",")
                 )
               },
-            );
+            )
+            .expect("update should not fail in build import analysis plugin");
 
             rewrote_marker_start_pos.insert(marker_start);
           }
@@ -402,7 +403,8 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
         // all the markers regardless
         for (start, _) in chunk.code.match_indices("__VITE_PRELOAD__") {
           if !rewrote_marker_start_pos.contains(&start) {
-            s.update(start, start + 16, "void 0");
+            s.update(start, start + 16, "void 0")
+              .expect("update should not fail in build import analysis plugin");
           }
         }
 

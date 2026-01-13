@@ -1,3 +1,10 @@
+The matched IDs should be either:
+
+1. the name of an external dependency, exactly the way it is written in the import statement. I.e. to mark `import "dependency.js"` as external, use `"dependency.js"` while to mark `import "dependency"` as external, use `"dependency"`.
+1. a resolved ID (like an absolute path to a file).
+
+When creating an `iife` or `umd` bundle, you will need to provide global variable names to replace your external imports via the [`output.globals`](/reference/OutputOptions.globals) option.
+
 #### Examples
 
 ##### String pattern

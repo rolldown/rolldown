@@ -7,28 +7,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region define-false/index.ts
-c;
-C;
-var Foo = class {};
+var Foo = class {
+	static {
+		c, d, C, D;
+	}
+};
 new Foo();
 
 //#endregion
-// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
-// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
-// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
-// HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 //#region define-true/index.ts
-let _ref, _ref2;
-_ref = c;
-_ref2 = C;
 var Bar = class {
-	constructor() {
-		_defineProperty(this, "a", void 0);
-		_defineProperty(this, _ref, void 0);
-	}
+	a;
+	[c];
+	static A;
+	static [C];
 };
-_defineProperty(Bar, "A", void 0);
-_defineProperty(Bar, _ref2, void 0);
 new Bar();
 
 //#endregion

@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region main.js
+const baseFontSize = 16;
+var main_default = (px) => parseFloat(px) / baseFontSize;
+__name(main_default, "default");
+
+//#endregion
+export { main_default as default };
+```

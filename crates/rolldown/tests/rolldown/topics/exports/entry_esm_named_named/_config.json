@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "lib", "import": "./lib.js" }
+    ],
+    "format": "cjs",
+    "exports": "named",
+    "experimental": {
+      "strictExecutionOrder": true
+    }
+  },
+  "_comment": "Tests Entry + Esm WrapKind + Named OutputExports + named export access"
+}

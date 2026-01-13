@@ -36,7 +36,14 @@ export interface RenderedModule {
   renderedExports: string[];
 }
 
-/** @category Plugin APIs */
+/**
+ * The information about the chunk being rendered.
+ *
+ * Unlike {@link OutputChunk}, `code` and `map` are not set as the chunk has not been rendered yet.
+ * All referenced chunk file names in each property that would contain hashes will contain hash placeholders instead.
+ *
+ * @category Plugin APIs
+ */
 export interface RenderedChunk extends Omit<BindingRenderedChunk, 'modules'> {
   type: 'chunk';
   modules: {

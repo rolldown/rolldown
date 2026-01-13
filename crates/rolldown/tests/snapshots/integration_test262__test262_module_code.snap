@@ -2337,28 +2337,28 @@ Parse failed, got: "Private identifier '#f' is not allowed outside class bodies"
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private field 'x' must be declared in an enclosing class"
+Parse failed, got: "Private field '#x' must be declared in an enclosing class"
 ---
 
 # language/module-code/privatename-not-valid-earlyerr-module-2.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private field 'x' must be declared in an enclosing class"
+Parse failed, got: "Private field '#x' must be declared in an enclosing class"
 ---
 
 # language/module-code/privatename-not-valid-earlyerr-module-3.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private field 'x' must be declared in an enclosing class"
+Parse failed, got: "Private field '#x' must be declared in an enclosing class"
 ---
 
 # language/module-code/privatename-not-valid-earlyerr-module-4.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private field 'x' must be declared in an enclosing class"
+Parse failed, got: "Private field '#x' must be declared in an enclosing class"
 ---
 
 # language/module-code/privatename-not-valid-earlyerr-module-5.js

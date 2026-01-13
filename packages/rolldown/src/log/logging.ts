@@ -1,5 +1,8 @@
+/** @inline */
 export type LogLevel = 'info' | 'debug' | 'warn';
+/** @inline */
 export type LogLevelOption = LogLevel | 'silent';
+/** @inline */
 type LogLevelWithError = LogLevel | 'error';
 
 export interface RollupLog {
@@ -27,6 +30,7 @@ export interface RollupLog {
   url?: string;
 }
 
+/** @inline */
 export type RollupLogWithString = RollupLog | string;
 
 /** @category Plugin APIs */

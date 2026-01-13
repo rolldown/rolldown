@@ -1,0 +1,78 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lib.js
+
+```js
+Object.defineProperty(exports, '__esModule', { value: true });
+const require_lib = require('./lib2.js');
+
+require_lib.init_lib();
+exports.default = require_lib.lib_default;
+exports.named = require_lib.named;
+```
+
+## lib2.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+//#region lib.js
+var lib_default, named;
+var init_lib = __esmMin((() => {
+	lib_default = { value: 42 };
+	named = "named_value";
+}));
+
+//#endregion
+Object.defineProperty(exports, '__esmMin', {
+  enumerable: true,
+  get: function () {
+    return __esmMin;
+  }
+});
+Object.defineProperty(exports, '__toESM', {
+  enumerable: true,
+  get: function () {
+    return __toESM;
+  }
+});
+Object.defineProperty(exports, 'init_lib', {
+  enumerable: true,
+  get: function () {
+    return init_lib;
+  }
+});
+Object.defineProperty(exports, 'lib_default', {
+  enumerable: true,
+  get: function () {
+    return lib_default;
+  }
+});
+Object.defineProperty(exports, 'named', {
+  enumerable: true,
+  get: function () {
+    return named;
+  }
+});
+```
+
+## main.js
+
+```js
+const require_lib = require('./lib2.js');
+let node_assert = require("node:assert");
+node_assert = require_lib.__toESM(node_assert);
+
+//#region main.js
+var init_main = require_lib.__esmMin((() => {
+	require_lib.init_lib();
+	node_assert.default.strictEqual(require_lib.lib_default.value, 42);
+}));
+
+//#endregion
+init_main();
+exports.lib = require_lib.lib_default;
+```

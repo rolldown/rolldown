@@ -3,6 +3,7 @@ import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
 export default defineTest({
+  sequential: true,
   config: {
     output: {
       preserveModules: true,
@@ -37,8 +38,6 @@ export default defineTest({
       //#endregion
       export { a };"
     `);
-    expect(output.output[4].fileName).toMatch(
-      /^src\/module-[a-zA-Z0-9]+\.css$/,
-    );
+    expect(output.output[4].fileName).toMatch(/^src\/module-[a-zA-Z0-9]+\.css$/);
   },
 });

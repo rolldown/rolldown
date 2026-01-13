@@ -16,6 +16,7 @@ import type {
 } from './log/logging';
 import type { ChecksOptions } from './options/generated/checks-options';
 import type {
+  ExternalOptionFunction,
   ExternalOption,
   InputOption,
   InputOptions,
@@ -23,12 +24,14 @@ import type {
   OptimizationOptions,
   WatcherOptions,
 } from './options/input-options';
+import type { TransformOptions } from './options/transform-options';
 import type { NormalizedInputOptions } from './options/normalized-input-options';
 import type {
   InternalModuleFormat,
   NormalizedOutputOptions,
 } from './options/normalized-output-options';
 import type {
+  AdvancedChunksGroup,
   AddonFunction,
   ChunkFileNamesFunction,
   ChunkingContext,
@@ -79,13 +82,11 @@ import type {
   PluginContext,
 } from './plugin/plugin-context';
 import type { TransformPluginContext } from './plugin/transform-plugin-context';
-import type { ConfigExport } from './types/config-export';
 import type { SourcemapIgnoreListOption } from './types/misc';
 import type { ModuleInfo } from './types/module-info';
 import type { TreeshakingOptions } from './types/module-side-effects';
 import type { OutputBundle } from './types/output-bundle';
 import type { RolldownOptions } from './types/rolldown-options';
-import type { RolldownOptionsFunction } from './types/rolldown-options-function';
 import type {
   OutputAsset,
   OutputChunk,
@@ -96,13 +97,18 @@ import type {
 } from './types/rolldown-output';
 import type { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap';
 import type { PartialNull } from './types/utils';
-import { defineConfig } from './utils/define-config';
+import {
+  defineConfig,
+  type ConfigExport,
+  type RolldownOptionsFunction,
+} from './utils/define-config';
 import { VERSION } from './version';
 
 export { build, defineConfig, rolldown, VERSION, watch };
 export { BindingMagicString } from './binding.cjs';
 export type {
   AddonFunction,
+  AdvancedChunksGroup,
   AsyncPluginHooks,
   BufferEncoding,
   BuildOptions,
@@ -116,6 +122,7 @@ export type {
   EmittedFile,
   EmittedPrebuiltChunk,
   ExistingRawSourceMap,
+  ExternalOptionFunction,
   ExternalOption,
   FunctionPluginHooks,
   GeneralHookFilter,
@@ -123,6 +130,7 @@ export type {
   GeneratedCodePreset,
   GetModuleInfo,
   GlobalsFunction,
+  TransformOptions,
   HookFilter,
   HookFilterExtension,
   ImportKind,

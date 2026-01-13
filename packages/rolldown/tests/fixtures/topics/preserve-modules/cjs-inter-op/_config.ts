@@ -3,6 +3,7 @@ import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
 export default defineTest({
+  sequential: true,
   config: {
     output: {
       preserveModules: true,
@@ -29,8 +30,6 @@ export default defineTest({
       export { require_lib };"
     `);
 
-    expect(output.output[3].fileName.replace(/\\/g, '/')).toMatchInlineSnapshot(
-      `"src/index.js"`,
-    );
+    expect(output.output[3].fileName.replace(/\\/g, '/')).toMatchInlineSnapshot(`"src/index.js"`);
   },
 });

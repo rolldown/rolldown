@@ -59,7 +59,10 @@ impl AddDeps<'_, '_> {
           }
         }
       }
-      self.s.update(self.expr_range.start, self.expr_range.end, "Promise.resolve({})");
+      self
+        .s
+        .update(self.expr_range.start, self.expr_range.end, "Promise.resolve({})")
+        .expect("update should not fail in build import analysis plugin");
     }
   }
 }

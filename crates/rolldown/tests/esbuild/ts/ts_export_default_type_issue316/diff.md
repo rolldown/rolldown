@@ -103,7 +103,9 @@ let bar$11 = 123;
 //#endregion
 //#region keep/interface-merged.ts
 var foo$3 = class foo$3 {
-	static x = new foo$3();
+	static {
+		this.x = new foo$3();
+	}
 };
 var interface_merged_default = foo$3;
 let bar$10 = 123;
@@ -193,19 +195,19 @@ export { entry_default as default };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,37 +1,31 @@
+@@ -1,37 +1,33 @@
 -var declare_class_default = foo;
 -var bar = 123;
 -var declare_let_default = foo;
 -var bar2 = 123;
 -var foo2 = class _foo {
--    static {
--        this.x = new _foo();
--    }
 +var bar$12 = 123;
 +var bar$11 = 123;
 +var foo$3 = class foo$3 {
-+    static x = new foo$3();
+     static {
+-        this.x = new _foo();
++        this.x = new foo$3();
+     }
  };
 -var interface_merged_default = foo2;
 -var bar3 = 123;

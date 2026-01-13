@@ -24,7 +24,100 @@ to = "/in-depth/"
 
 [[redirects]]
 from = "/apis/config-options/"
-to = "/options/input/"
+to = "/reference/"
+
+[[redirects]]
+from = "/options/"
+to = "/reference"
+
+# Redirect old /options/ paths to /reference/
+[[redirects]]
+from = "/options/input"
+to = "/reference/InputOptions.input"
+
+[[redirects]]
+from = "/options/external"
+to = "/reference/InputOptions.external"
+
+[[redirects]]
+from = "/options/resolve"
+to = "/reference/InputOptions.resolve"
+
+[[redirects]]
+from = "/options/cwd"
+to = "/reference/InputOptions.cwd"
+
+[[redirects]]
+from = "/options/platform"
+to = "/reference/InputOptions.platform"
+
+[[redirects]]
+from = "/options/shim-missing-exports"
+to = "/reference/InputOptions.shimMissingExports"
+
+[[redirects]]
+from = "/options/treeshake"
+to = "/reference/InputOptions.treeshake"
+
+[[redirects]]
+from = "/options/log-level"
+to = "/reference/InputOptions.logLevel"
+
+[[redirects]]
+from = "/options/on-log"
+to = "/reference/InputOptions.onLog"
+
+[[redirects]]
+from = "/options/onwarn"
+to = "/reference/InputOptions.onwarn"
+
+[[redirects]]
+from = "/options/module-types"
+to = "/reference/InputOptions.moduleTypes"
+
+[[redirects]]
+from = "/options/preserve-entry-signatures"
+to = "/reference/InputOptions.preserveEntrySignatures"
+
+[[redirects]]
+from = "/options/optimization"
+to = "/reference/InputOptions.optimization"
+
+[[redirects]]
+from = "/options/context"
+to = "/reference/InputOptions.context"
+
+[[redirects]]
+from = "/options/tsconfig"
+to = "/reference/InputOptions.tsconfig"
+
+[[redirects]]
+from = "/options/checks"
+to = "/reference/InputOptions.checks"
+
+[[redirects]]
+from = "/options/experimental"
+to = "/reference/InputOptions.experimental"
+
+[[redirects]]
+from = "/options/output"
+to = "/reference/Interface.OutputOptions"
+
+[[redirects]]
+from = "/options/output-sourcemap"
+to = "/reference/OutputOptions.sourcemap"
+
+[[redirects]]
+from = "/options/output-generated-code"
+to = "/reference/OutputOptions.generatedCode"
+
+[[redirects]]
+from = "/options/output-advanced-chunks"
+to = "/reference/OutputOptions.advancedChunks"
+
+[[redirects]]
+from = "/options/output-clean-dir"
+to = "/reference/OutputOptions.cleanDir"
 
 # https://github.com/okineadev/vitepress-plugin-llms#netlify
 [[redirects]]

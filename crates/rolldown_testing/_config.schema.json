@@ -941,12 +941,6 @@
             "null"
           ]
         },
-        "disableLiveBindings": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
         "viteMode": {
           "type": [
             "boolean",
@@ -1584,8 +1578,7 @@
     "TsConfig": {
       "anyOf": [
         {
-          "type": "boolean",
-          "const": true
+          "type": "boolean"
         },
         {
           "type": "string"

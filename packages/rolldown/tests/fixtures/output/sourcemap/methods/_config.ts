@@ -2,13 +2,14 @@ import { defineTest } from 'rolldown-tests';
 import { expect } from 'vitest';
 
 export default defineTest({
+  sequential: true,
   config: {
     input: ['main.js'],
     output: {
       sourcemap: true,
     },
   },
-  afterTest: function(output) {
+  afterTest: function (output) {
     expect(output.output[0].map).toBeDefined();
     expect(output.output[0].map!.toString()).toMatchInlineSnapshot(
       `"{"version":3,"file":"main.js","names":[],"sources":["../main.js"],"sourcesContent":["console.log(foo);\\n"],"mappings":";AAAA,QAAQ,IAAI,IAAI"}"`,

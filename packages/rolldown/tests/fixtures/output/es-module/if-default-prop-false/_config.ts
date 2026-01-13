@@ -5,6 +5,7 @@ import { expect, vi } from 'vitest';
 const onLogFn = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     output: {
       exports: 'named',

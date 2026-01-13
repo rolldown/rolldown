@@ -2,9 +2,14 @@ use std::path::PathBuf;
 use std::sync::{Arc, OnceLock};
 
 use arcstr::ArcStr;
+use oxc::ast_visit::VisitMut;
 use rolldown_common::{ImportKind, ModuleId};
 use rolldown_plugin::{HookResolveIdOutput, HookUsage, Plugin, PluginContextResolveOptions};
 use rolldown_utils::dashmap::FxDashSet;
+
+use crate::runtime_injector::{
+  LazyCompilationRuntimeInjector, create_unwrap_lazy_compilation_entry_helper,
+};
 
 /// Shared type for lazy entries set
 pub type SharedLazyEntries = Arc<FxDashSet<ArcStr>>;
@@ -62,7 +67,7 @@ impl Plugin for LazyCompilationPlugin {
   }
 
   fn register_hook_usage(&self) -> rolldown_plugin::HookUsage {
-    HookUsage::BuildStart | HookUsage::ResolveId | HookUsage::Load
+    HookUsage::BuildStart | HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst
   }
 
   async fn build_start(
@@ -163,5 +168,39 @@ impl Plugin for LazyCompilationPlugin {
     }
 
     Ok(None)
+  }
+
+  async fn transform_ast(
+    &self,
+    _ctx: &rolldown_plugin::PluginContext,
+    mut args: rolldown_plugin::HookTransformAstArgs<'_>,
+  ) -> rolldown_plugin::HookTransformAstReturn {
+    // Skip proxy modules (they have their own structure)
+    if args.id.contains("?rolldown-lazy=1") {
+      return Ok(args.ast);
+    }
+
+    args.ast.program.with_mut(|fields| {
+      let mut visitor = LazyCompilationRuntimeInjector::new(fields.allocator);
+      visitor.visit_program(fields.program);
+
+      // Inject helper after directive prologues (e.g., "use strict")
+      if visitor.transformed_count > 0 {
+        let helper = create_unwrap_lazy_compilation_entry_helper(fields.allocator);
+        // Find insertion point after directive prologues
+        let insert_idx = fields
+          .program
+          .body
+          .iter()
+          .take_while(|stmt| {
+            matches!(stmt, oxc::ast::ast::Statement::ExpressionStatement(expr_stmt)
+              if matches!(&expr_stmt.expression, oxc::ast::ast::Expression::StringLiteral(_)))
+          })
+          .count();
+        fields.program.body.insert(insert_idx, helper);
+      }
+    });
+
+    Ok(args.ast)
   }
 }

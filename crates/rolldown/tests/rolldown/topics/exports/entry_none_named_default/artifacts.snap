@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lib.js
+
+```js
+Object.defineProperty(exports, '__esModule', { value: true });
+
+//#region lib.js
+var lib_default = { value: 42 };
+const named = "named_value";
+
+//#endregion
+exports.default = lib_default;
+exports.named = named;
+```
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+const require_lib = require('./lib.js');
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+
+//#region main.js
+node_assert.default.strictEqual(require_lib.default.value, 42);
+
+//#endregion
+exports.lib = require_lib.default;
+```

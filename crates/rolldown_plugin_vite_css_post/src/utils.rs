@@ -111,7 +111,9 @@ impl ViteCSSPostPlugin {
         };
 
         if let Some(url) = url_cache.inner.get(&id) {
-          magic_string.update(index, start + pos + 2, url.clone());
+          magic_string
+            .update(index, start + pos + 2, url.clone())
+            .expect("update should not fail in css post plugin");
           continue;
         }
 
@@ -161,7 +163,9 @@ impl ViteCSSPostPlugin {
           .to_asset_url_in_js()?;
 
         url_cache.inner.insert(id, url.clone());
-        magic_string.update(index, start + pos + 2, url);
+        magic_string
+          .update(index, start + pos + 2, url)
+          .expect("update should not fail in css post plugin");
       }
     }
     Ok(())
@@ -355,7 +359,8 @@ impl ViteCSSPostPlugin {
                 .await?
                 .to_asset_url_in_css_or_html(),
             ),
-          );
+          )
+          .expect("update should not fail in css post plugin");
         }
         AssetUrlItem::PublicAsset((range, hash)) => {
           let cache = ctx
@@ -396,7 +401,8 @@ impl ViteCSSPostPlugin {
                 .await?
                 .to_asset_url_in_css_or_html(),
             ),
-          );
+          )
+          .expect("update should not fail in css post plugin");
         }
       }
     }
@@ -438,13 +444,13 @@ impl ViteCSSPostPlugin {
 
     let mut s = string_wizard::MagicString::new(css);
     for matched in AT_IMPORT_RE.find_iter(&css_without_comments) {
-      s.remove(matched.start(), matched.end());
+      s.remove(matched.start(), matched.end()).expect("remove should not fail in css post plugin");
       s.append_left(0, matched.as_str());
     }
 
     let mut found_charset = false;
     for matched in AT_CHARSET_RE.find_iter(&css_without_comments) {
-      s.remove(matched.start(), matched.end());
+      s.remove(matched.start(), matched.end()).expect("remove should not fail in css post plugin");
       if !found_charset {
         s.prepend(matched.as_str());
         found_charset = true;

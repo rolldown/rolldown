@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+const require_rolldown_runtime = require('./rolldown-runtime.js');
+const require_shared$1 = require('./shared.js');
+let node_assert = require("node:assert");
+node_assert = require_rolldown_runtime.__toESM(node_assert);
+
+//#region main.js
+var import_shared = /* @__PURE__ */ require_rolldown_runtime.__toESM(require_shared$1.require_shared());
+node_assert.default.strictEqual(import_shared.default.value, 42);
+
+//#endregion
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+Object.defineProperty(exports, '__commonJSMin', {
+  enumerable: true,
+  get: function () {
+    return __commonJSMin;
+  }
+});
+Object.defineProperty(exports, '__toESM', {
+  enumerable: true,
+  get: function () {
+    return __toESM;
+  }
+});
+```
+
+## shared.js
+
+```js
+const require_rolldown_runtime = require('./rolldown-runtime.js');
+
+//#region shared.js
+var require_shared = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports, module) => {
+	module.exports = { value: 42 };
+}));
+
+//#endregion
+Object.defineProperty(exports, 'require_shared', {
+  enumerable: true,
+  get: function () {
+    return require_shared;
+  }
+});
+```

@@ -4,6 +4,7 @@ import { viteManifestPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
+  sequential: true,
   config: {
     output: {
       chunkFileNames: '[name].js',
@@ -13,7 +14,7 @@ export default defineTest({
       viteManifestPlugin({
         root: path.resolve(import.meta.dirname),
         outPath: path.resolve(import.meta.dirname, 'dist/manifest.json'),
-        cssEntries: () => (Object.fromEntries(new Map().entries())),
+        cssEntries: () => Object.fromEntries(new Map().entries()),
       }),
       {
         name: 'test',

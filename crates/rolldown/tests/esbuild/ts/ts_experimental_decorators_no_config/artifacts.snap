@@ -8,15 +8,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region entry.ts
 var Foo = @x.y() @(new y.x()) class Foo {
-	@x @y mUndef;
-	@x @y mDef = 1;
+	constructor() {
+		this.mDef = 1;
+	}
 	@x @y method() {
 		return new Foo();
 	}
 	@x @y accessor aUndef;
 	@x @y accessor aDef = 1;
-	@x @y static sUndef;
-	@x @y static sDef = new Foo();
+	static {
+		this.sDef = new Foo();
+	}
 	@x @y static sMethod() {
 		return new Foo();
 	}

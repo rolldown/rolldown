@@ -107,7 +107,8 @@ impl<'ast> VisitMut<'ast> for NewUrlVisitor<'_, '_, 'ast> {
                 pure_url,
                 "`]"
               ),
-            );
+            )
+            .expect("update should not fail in asset import meta url plugin");
             return;
           }
         }

@@ -10,8 +10,6 @@ import {
 import llmstxt from 'vitepress-plugin-llms';
 import { hooksGraphPlugin } from './markdown-hooks-graph.ts';
 
-const CONFIG_LINK = '/options/input.md';
-
 const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
   {
     text: 'Guide',
@@ -28,7 +26,7 @@ const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
   {
     text: 'APIs',
     items: [
-      { text: 'Configuration Options', link: CONFIG_LINK },
+      { text: 'Configuration Options', link: '/reference' },
       { text: 'Bundler API', link: '/apis/bundler-api.md' },
       { text: 'Plugin API', link: '/apis/plugin-api.md' },
       { text: 'Plugin Hook Filters', link: '/apis/plugin-hook-filters.md' },
@@ -110,51 +108,6 @@ function getOptionsSidebar() {
 const sidebarForReference: DefaultTheme.SidebarItem[] = [
   { text: 'Option Reference', base: '/reference', items: getOptionsSidebar() },
   { text: 'API Reference', base: '/reference', items: typedocSidebar },
-];
-
-const sidebarForOptions: DefaultTheme.SidebarItem[] = [
-  {
-    text: 'Rolldown Options',
-    items: [
-      { text: 'input', link: '/options/input.md' },
-      { text: 'external', link: '/options/external.md' },
-      { text: 'resolve', link: '/options/resolve.md' },
-      { text: 'cwd', link: '/options/cwd.md' },
-      { text: 'platform', link: '/options/platform.md' },
-      { text: 'shimMissingExports', link: '/options/shim-missing-exports.md' },
-      { text: 'treeshake', link: '/options/treeshake.md' },
-      { text: 'logLevel', link: '/options/log-level.md' },
-      { text: 'onLog', link: '/options/on-log.md' },
-      { text: 'onwarn', link: '/options/onwarn.md' },
-      { text: 'moduleTypes', link: '/options/module-types.md' },
-      {
-        text: 'preserveEntrySignatures',
-        link: '/options/preserve-entry-signatures.md',
-      },
-      { text: 'optimization', link: '/options/optimization.md' },
-      { text: 'context', link: '/options/context.md' },
-      { text: 'tsconfig', link: '/options/tsconfig.md' },
-      { text: 'checks', link: '/options/checks.md' },
-      { text: 'experimental', link: '/options/experimental.md' },
-      { text: 'output', link: '/options/output.md' },
-      {
-        text: 'output.sourcemap',
-        link: '/options/output-sourcemap.md',
-      },
-      {
-        text: 'output.generatedCode',
-        link: '/options/output-generated-code.md',
-      },
-      {
-        text: 'output.advancedChunks',
-        link: '/options/output-advanced-chunks.md',
-      },
-      {
-        text: 'output.cleanDir',
-        link: '/options/output-clean-dir.md',
-      },
-    ],
-  },
 ];
 
 const sidebarForDevGuide: DefaultTheme.SidebarItem[] = [
@@ -302,7 +255,7 @@ const config = defineConfig({
           },
         ],
       },
-      { text: 'Options & APIs', activeMatch: '/options', link: CONFIG_LINK },
+      { text: 'Options & APIs', link: '/reference' },
       { text: 'REPL', link: 'https://repl.rolldown.rs/' },
       {
         text: 'Resources',
@@ -335,8 +288,6 @@ const config = defineConfig({
       '/builtin-plugins/': sidebarForUserGuide,
       // --- In-Depth ---
       '/in-depth/': sidebarForInDepth,
-      // --- Options ---
-      '/options/': sidebarForOptions,
       // --- Reference ---
       '/reference/': sidebarForReference,
       // --- Glossary ---
@@ -366,7 +317,7 @@ const config = defineConfig({
           title: 'Rolldown',
           items: [
             { text: 'Guide', link: '/guide/getting-started' },
-            { text: 'Reference', link: '/options/input' },
+            { text: 'Options & APIs', link: '/reference' },
             { text: 'Plugins', link: '/builtin-plugins/' },
             { text: 'Contribute', link: '/contribution-guide/' },
             { text: 'REPL', link: 'https://repl.rolldown.rs/' },
@@ -382,17 +333,6 @@ const config = defineConfig({
             { text: 'Team', link: '/team' },
           ],
         },
-        /*{
-          title: 'Legal',
-          items: [
-            {
-              text: 'Terms & Conditions',
-              link: 'https://voidzero.dev/terms',
-            },
-            { text: 'Privacy Policy', link: 'https://voidzero.dev/privacy' },
-            { text: 'Cookie Policy', link: 'https://voidzero.dev/cookies' },
-          ],
-        },*/
       ],
       social: [
         { icon: 'github', link: 'https://github.com/rolldown/rolldown' },

@@ -6,7 +6,7 @@ fn works_with_string_replace() {
   let code = "1 2 1 2";
   let mut s = MagicString::new(code);
 
-  s.replace("2", "3");
+  s.replace("2", "3").unwrap();
 
   assert_eq!(s.to_string(), "1 3 1 2");
 }
@@ -16,7 +16,7 @@ fn should_not_search_back() {
   let code = "122121";
   let mut s = MagicString::new(code);
 
-  s.replace("12", "21");
+  s.replace("12", "21").unwrap();
 
   assert_eq!(s.to_string(), "212121");
 }
@@ -29,7 +29,7 @@ mod replace_all {
     let code = "1212";
     let mut s = MagicString::new(code);
 
-    s.replace_all("2", "3");
+    s.replace_all("2", "3").unwrap();
 
     assert_eq!(s.to_string(), "1313");
   }
@@ -39,7 +39,7 @@ mod replace_all {
     let code = "121212";
     let mut s = MagicString::new(code);
 
-    s.replace_all("12", "21");
+    s.replace_all("12", "21").unwrap();
 
     assert_eq!(s.to_string(), "212121");
   }
@@ -54,7 +54,8 @@ fn replace_sourcemap_with_chinese() {
     "测",
     "试",
     ReplaceOptions { count: usize::MAX, store_original_in_sourcemap: true },
-  );
+  )
+  .unwrap();
 
   let output = s.to_string();
   let sourcemap = s.source_map(SourceMapOptions {
@@ -74,7 +75,8 @@ fn replace_sourcemap() {
   let code = "* 2 * 4";
   let mut s = MagicString::new(code);
 
-  s.replace_with("*", "#", ReplaceOptions { count: usize::MAX, store_original_in_sourcemap: true });
+  s.replace_with("*", "#", ReplaceOptions { count: usize::MAX, store_original_in_sourcemap: true })
+    .unwrap();
 
   let output = s.to_string();
   let sourcemap = s.source_map(SourceMapOptions {

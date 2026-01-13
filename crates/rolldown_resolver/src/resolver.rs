@@ -43,7 +43,7 @@ impl<Fs: FileSystem + Clone> Resolver<Fs> {
     fs: Fs,
     cwd: PathBuf,
     platform: Platform,
-    tsconfig: Option<&TsConfig>,
+    tsconfig: &TsConfig,
     resolve_options: ResolveOptions,
   ) -> Self {
     let config = ResolverConfig::build(&cwd, platform, tsconfig, resolve_options);

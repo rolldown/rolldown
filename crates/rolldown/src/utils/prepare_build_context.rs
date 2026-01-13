@@ -270,10 +270,9 @@ pub fn prepare_build_context(
     raw_treeshake = TreeshakeOptions::Boolean(false);
   }
 
-  let tsconfig = raw_options.tsconfig.clone().map(|tsconfig| tsconfig.with_base(&cwd));
+  let tsconfig = raw_options.tsconfig.map(|tsconfig| tsconfig.with_base(&cwd)).unwrap_or_default();
   let fs = OsFileSystem::new(raw_resolve.yarn_pnp.is_some_and(|b| b));
-  let resolver =
-    Arc::new(Resolver::new(fs.clone(), cwd.clone(), platform, tsconfig.as_ref(), raw_resolve));
+  let resolver = Arc::new(Resolver::new(fs.clone(), cwd.clone(), platform, &tsconfig, raw_resolve));
 
   let transform_options = {
     let mut raw_transform_options = raw_options.transform.unwrap_or_default();
@@ -325,7 +324,7 @@ pub fn prepare_build_context(
     // - Auto: Create Raw mode (will resolve tsconfig per file)
     // - None/Manual: Create Normal mode (resolve tsconfig once now)
     match tsconfig {
-      Some(ref v @ TsConfig::Manual(ref path)) => {
+      ref v @ TsConfig::Manual(ref path) => {
         // Manual mode: Resolve tsconfig now and create Normal mode
         let resolved_tsconfig = resolver.resolve_tsconfig(&path).map_err(|err| {
           anyhow::anyhow!("Failed to resolve `tsconfig` option: {}", path.display()).context(err)
@@ -348,20 +347,23 @@ pub fn prepare_build_context(
           )
         })
       }
-      Some(v @ TsConfig::Auto) => {
-        // Auto mode: Create Raw mode TransformOptions
-        // Each file will find its nearest tsconfig during compilation
-        Box::new(TransformOptions::new_raw(
-          RawTransformOptions::new(raw_transform_options, v),
-          target,
-          jsx_preset,
-        ))
+      v @ TsConfig::Auto(is_auto) => {
+        Box::new(if is_auto {
+          // Auto mode: Create Raw mode TransformOptions
+          // Each file will find its nearest tsconfig during compilation
+          TransformOptions::new_raw(
+            RawTransformOptions::new(raw_transform_options, v),
+            target,
+            jsx_preset,
+          )
+        } else {
+          TransformOptions::new(
+            merge_transform_options_with_tsconfig(raw_transform_options, None, &mut warnings)?,
+            target,
+            jsx_preset,
+          )
+        })
       }
-      None => Box::new(TransformOptions::new(
-        merge_transform_options_with_tsconfig(raw_transform_options, None, &mut warnings)?,
-        target,
-        jsx_preset,
-      )),
     }
   };
 

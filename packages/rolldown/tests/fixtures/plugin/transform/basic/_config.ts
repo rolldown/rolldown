@@ -4,11 +4,12 @@ import { expect, vi } from 'vitest';
 const transformFn = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     plugins: [
       {
         name: 'test-plugin',
-        transform: function(code, id, meta) {
+        transform: function (code, id, meta) {
           transformFn();
           if (id.endsWith('foo.js')) {
             expect(code).toStrictEqual('');

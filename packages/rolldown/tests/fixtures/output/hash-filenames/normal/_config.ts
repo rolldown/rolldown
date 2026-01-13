@@ -7,6 +7,7 @@ import { expect } from 'vitest';
 const renderChunks: RenderedChunk[] = [];
 
 export default defineTest({
+  sequential: true,
   config: {
     input: ['main.js', 'entry.js'],
     output: {
@@ -52,9 +53,7 @@ export default defineTest({
     for (const chunk of chunks) {
       switch (chunk.facadeModuleId) {
         case path.join(__dirname, 'main.js'):
-          expect(chunk.preliminaryFileName).toMatchInlineSnapshot(
-            `"main-!~{000}~.js"`,
-          );
+          expect(chunk.preliminaryFileName).toMatchInlineSnapshot(`"main-!~{000}~.js"`);
           expect(chunk.fileName).toMatchInlineSnapshot(`"main-BKJjLIpN.js"`);
           expect(chunk.imports).toMatchInlineSnapshot(
             `

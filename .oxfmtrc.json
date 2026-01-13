@@ -11,6 +11,7 @@
     "crates/rolldown/tests",
     "crates/rolldown_plugin_hmr/src/runtime",
     "crates/rolldown_testing/_config.schema.json",
+    "crates/rolldown/tests/esbuild/**/*.md",
     "packages/rolldown/src/binding.cjs",
     "packages/rolldown/src/binding.d.cts",
     "packages/rolldown/src/browser.js",

@@ -6,29 +6,55 @@ use std::fmt::Display;
 pub enum EventKind {
   // --- These kinds are copied from rollup: https://github.com/rollup/rollup/blob/0b665c31833525c923c0fc20f43ebfca748c6670/src/utils/logs.ts#L102-L179
   AmbiguousExternalNamespaceError = 0,
-  /// Whether to emit warning when detecting circular dependency
+  /// Whether to emit warnings when detecting circular dependency
+  ///
+  /// Circular dependencies lead to a bigger bundle size and sometimes cause execution order issues and are better to avoid.
   CircularDependency = 1,
   CircularReexportError = 2,
+  /// Whether to emit warnings when detecting uses of direct `eval`s
+  ///
+  /// See [Avoiding Direct `eval` in Troubleshooting page](https://rolldown.rs/guide/troubleshooting#avoiding-direct-eval) for more details.
   Eval = 3,
   IllegalIdentifierAsNameError = 4,
   InvalidExportOptionError = 5,
   InvalidOptionError = 6,
   MissingExportError = 7,
+  /// Whether to emit warnings when the `output.globals` option is missing when needed
+  ///
+  /// See [`output.globals`](https://rolldown.rs/reference/OutputOptions.globals).
   MissingGlobalName = 8,
+  /// Whether to emit warnings when the `output.name` option is missing when needed
+  ///
+  /// See [`output.name`](https://rolldown.rs/reference/OutputOptions.name).
   MissingNameOptionForIifeExport = 9,
+  /// Whether to emit warnings when the way to export values is ambiguous
+  ///
+  /// See [`output.exports`](https://rolldown.rs/reference/OutputOptions.exports).
   MixedExports = 11,
   ParseError = 12,
+  /// Whether to emit warnings when an entrypoint cannot be resolved
   UnresolvedEntry = 13,
+  /// Whether to emit warnings when an import cannot be resolved
   UnresolvedImport = 14,
+  /// Whether to emit warnings when files generated have the same name with different contents
   FilenameConflict = 15,
   // !! Only add new kind if it's not covered by the kinds from rollup !!
 
   // --- These kinds are derived from esbuild
   AssignToImportError = 16,
+  /// Whether to emit warnings when a CommonJS variable is used in an ES module
+  ///
+  /// CommonJS variables like `module` and `exports` are treated as global variables in ES modules and may not work as expected.
   CommonJsVariableInEsm = 17,
   ExportUndefinedVariableError = 18,
+  /// Whether to emit warnings when an imported variable is not exported
+  ///
+  /// If the code is importing a variable that is not exported by the imported module, the value will always be `undefined`. This might be a mistake in the code.
   ImportIsUndefined = 19,
   UnsupportedFeatureError = 20,
+  /// Whether to emit warnings when `import.meta` is not supported with the output format and is replaced with an empty object (`{}`)
+  ///
+  /// See [`import.meta` in Non-ESM Output Formats page](https://rolldown.rs/in-depth/non-esm-output-formats#import-meta) for more details.
   EmptyImportMeta = 21,
 
   // --- These kinds are rolldown specific
@@ -40,13 +66,26 @@ pub enum EventKind {
   UnloadableDependencyError = 27,
 
   NapiError = 28,
+  /// Whether to emit warnings when a namespace is called as a function
+  ///
+  /// A module namespace object is an object and not a function. Calling it as a function will cause a runtime error.
   CannotCallNamespace = 29,
+  /// Whether to emit warnings when a config value is overridden by another config value with a higher priority
   ConfigurationFieldConflict = 30,
+  /// Whether to emit warnings when a plugin that is covered by a built-in feature is used
+  ///
+  /// Using built-in features is generally more performant than using plugins.
   PreferBuiltinFeature = 31,
   BundlerInitializeError = 32,
   PluginError = 33,
   AlreadyClosedError = 34,
+  /// Whether to emit warnings when Rolldown could not clean the output directory
+  ///
+  /// See [`output.cleanDir`](https://rolldown.rs/reference/OutputOptions.cleanDir).
   CouldNotCleanDirectory = 35,
+  /// Whether to emit warnings when plugins take significant time during the build process
+  ///
+  /// {@include ../docs/checks-plugin-timings.md}
   PluginTimings = 36,
 }
 

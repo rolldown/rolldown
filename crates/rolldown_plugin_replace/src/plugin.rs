@@ -120,7 +120,9 @@ impl ReplacePlugin {
         break;
       };
       changed = true;
-      magic_string.update(matched.start(), matched.end(), replacement);
+      magic_string
+        .update(matched.start(), matched.end(), replacement)
+        .expect("update should not fail in replace plugin");
     }
 
     changed
@@ -167,7 +169,9 @@ impl ReplacePlugin {
         break;
       };
       changed = true;
-      magic_string.update(matched.start, matched.end, replacement);
+      magic_string
+        .update(matched.start, matched.end, replacement)
+        .expect("update should not fail in replace plugin");
     }
     changed
   }

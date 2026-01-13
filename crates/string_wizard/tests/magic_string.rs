@@ -23,7 +23,9 @@ impl<'text> MagicStringExt<'text> for MagicString<'text> {
     end: usize,
     content: impl Into<Cow<'text, str>>,
   ) -> &mut Self {
-    self.update_with(start, end, content, UpdateOptions { overwrite: true, ..Default::default() })
+    self
+      .update_with(start, end, content, UpdateOptions { overwrite: true, ..Default::default() })
+      .unwrap()
   }
   /// Shortcut for `indent_with(IndentOptions { indent_str: Some(indent_str), ..Default::default() })`
   fn indent_str(&mut self, indent_str: &str) -> &mut Self {
@@ -151,28 +153,28 @@ mod relocate {
   #[test]
   fn moves_content_from_the_start() {
     let mut s = MagicString::new("abcdefghijkl");
-    s.relocate(0, 3, 6);
+    s.relocate(0, 3, 6).unwrap();
     assert_eq!(s.to_string(), "defabcghijkl");
   }
 
   #[test]
   fn moves_content_to_the_start() {
     let mut s = MagicString::new("abcdefghijkl");
-    s.relocate(3, 6, 0);
+    s.relocate(3, 6, 0).unwrap();
     assert_eq!(s.to_string(), "defabcghijkl");
   }
 
   #[test]
   fn moves_content_from_the_end() {
     let mut s = MagicString::new("abcdefghijkl");
-    s.relocate(9, 12, 6);
+    s.relocate(9, 12, 6).unwrap();
     assert_eq!(s.to_string(), "abcdefjklghi");
   }
 
   #[test]
   fn moves_content_to_the_end() {
     let mut s = MagicString::new("abcdefghijkl");
-    s.relocate(6, 9, 12);
+    s.relocate(6, 9, 12).unwrap();
     assert_eq!(s.to_string(), "abcdefjklghi");
   }
 
@@ -181,9 +183,11 @@ mod relocate {
     let mut s = MagicString::new("abcdefghijkl");
     s.prepend_right(9, "X")
       .relocate(9, 12, 6)
+      .unwrap()
       .append_left(12, "Y")
       // this is redundant – [6,9] is already after [9,12]
-      .relocate(6, 9, 12);
+      .relocate(6, 9, 12)
+      .unwrap();
 
     assert_eq!(s.to_string(), "abcdefXjklYghi");
   }
@@ -191,7 +195,7 @@ mod relocate {
   #[test]
   fn moves_content_to_the_middle() {
     let mut s = MagicString::new("abcdefghijkl");
-    s.relocate(3, 6, 9);
+    s.relocate(3, 6, 9).unwrap();
     assert_eq!(s.to_string(), "abcghidefjkl");
   }
 
@@ -199,10 +203,10 @@ mod relocate {
   fn handles_multiple_moves_of_the_same_snippet() {
     let mut s = MagicString::new("abcdefghijkl");
 
-    s.relocate(0, 3, 6);
+    s.relocate(0, 3, 6).unwrap();
     assert_eq!(s.to_string(), "defabcghijkl");
 
-    s.relocate(0, 3, 9);
+    s.relocate(0, 3, 9).unwrap();
     assert_eq!(s.to_string(), "defghiabcjkl");
   }
 
@@ -210,46 +214,43 @@ mod relocate {
   fn handles_moves_of_adjacent_snippets() {
     let mut s = MagicString::new("abcdefghijkl");
 
-    s.relocate(0, 2, 6);
+    s.relocate(0, 2, 6).unwrap();
     assert_eq!(s.to_string(), "cdefabghijkl");
-    s.relocate(2, 4, 6);
+    s.relocate(2, 4, 6).unwrap();
     assert_eq!(s.to_string(), "efabcdghijkl");
   }
 
   #[test]
   fn handles_moves_to_same_index() {
     let mut s = MagicString::new("abcdefghijkl");
-    s.relocate(0, 2, 6).relocate(3, 5, 6);
+    s.relocate(0, 2, 6).unwrap().relocate(3, 5, 6).unwrap();
     assert_eq!(s.to_string(), "cfabdeghijkl");
   }
 
   #[test]
-  #[should_panic]
   fn refuses_to_move_a_selection_to_inside_itself() {
     let mut s = MagicString::new("abcdefghijkl");
-    s.relocate(3, 6, 3);
+    assert!(s.relocate(3, 6, 3).is_err());
   }
   #[test]
-  #[should_panic]
   fn refuses_to_move_a_selection_to_inside_itself2() {
     let mut s = MagicString::new("abcdefghijkl");
-    s.relocate(3, 6, 4);
+    assert!(s.relocate(3, 6, 4).is_err());
   }
   #[test]
-  #[should_panic]
   fn refuses_to_move_a_selection_to_inside_itself3() {
     let mut s = MagicString::new("abcdefghijkl");
-    s.relocate(3, 6, 6);
+    assert!(s.relocate(3, 6, 6).is_err());
   }
 
   #[test]
   fn allows_edits_of_moved_content() {
     let mut s1 = MagicString::new("abcdefghijkl");
-    s1.relocate(3, 6, 9);
+    s1.relocate(3, 6, 9).unwrap();
     s1.overwrite(3, 6, "DEF");
     assert_eq!(s1.to_string(), "abcghiDEFjkl");
     let mut s2 = MagicString::new("abcdefghijkl");
-    s2.relocate(3, 6, 9);
+    s2.relocate(3, 6, 9).unwrap();
     s2.overwrite(4, 5, "E");
     assert_eq!(s2.to_string(), "abcghidEfjkl");
   }
@@ -257,7 +258,7 @@ mod relocate {
   #[test]
   fn moves_content_inserted_at_end_of_range() {
     let mut s = MagicString::new("abcdefghijkl");
-    s.append_left(6, "X").relocate(3, 6, 9);
+    s.append_left(6, "X").relocate(3, 6, 9).unwrap();
     assert_eq!(s.to_string(), "abcghidefXjkl");
   }
 }
@@ -353,7 +354,7 @@ mod indent {
   fn should_indent_content_with_removals() {
     let mut s = MagicString::new("/* remove this line */\nvar foo = 1;");
     // remove `/* remove this line */\n`
-    s.remove(0, 23);
+    s.remove(0, 23).unwrap();
     s.indent();
     assert_eq!(s.to_string(), "\tvar foo = 1;");
   }
@@ -392,8 +393,10 @@ mod misc {
   fn remove() {
     // should append content
     let mut s = MagicString::new("0123456");
-    assert_eq!(s.remove(0, 3).to_string(), "3456");
-    assert_eq!(s.remove(3, 7).to_string(), "");
+    s.remove(0, 3).unwrap();
+    assert_eq!(s.to_string(), "3456");
+    s.remove(3, 7).unwrap();
+    assert_eq!(s.to_string(), "");
   }
 
   #[test]
@@ -410,7 +413,7 @@ mod misc {
     let mut s = MagicString::new(" abcde   fghijkl ");
     assert!(s.clone().prepend("  ").has_changed());
     assert!(s.clone().overwrite(1, 2, "b").has_changed());
-    assert!(s.clone().remove(1, 6).has_changed());
+    assert!(s.clone().remove(1, 6).unwrap().has_changed());
     s.indent();
     assert!(s.has_changed());
   }

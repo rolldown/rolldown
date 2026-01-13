@@ -368,27 +368,27 @@ impl Resolver {
       Err(oxc_resolver::ResolveError::NotFound(id)) => {
         // if import can't be found, check if it's an optional peer dep.
         // if so, we can resolve to a special id that errors only when imported.
-        if is_bare_import(id) && !self.built_in_checker.is_builtin(id) && !id.contains('\0') {
-          if let Some(pkg_name) = get_npm_package_name(id) {
-            let resolved_importer_dir = should_use_importer(id, importer, dedupe)
-              .then(|| {
-                importer.map(|importer| {
-                  Path::new(importer).parent().map(|i| i.to_str().unwrap()).unwrap_or(importer)
-                })
+        if is_bare_import(id)
+          && !self.built_in_checker.is_builtin(id)
+          && !id.contains('\0')
+          && let Some(pkg_name) = get_npm_package_name(id)
+        {
+          let resolved_importer_dir = should_use_importer(id, importer, dedupe)
+            .then(|| {
+              importer.map(|importer| {
+                Path::new(importer).parent().map(|i| i.to_str().unwrap()).unwrap_or(importer)
               })
-              .flatten();
-            if resolved_importer_dir.is_some_and(|dir| dir != self.root.to_str().unwrap()) {
-              if let Some(package_json) =
-                self.get_nearest_package_json_optional_peer_deps(importer.unwrap())
-              {
-                if package_json.optional_peer_dependencies.contains(pkg_name) {
-                  return Ok(Some(HookResolveIdOutput {
-                    id: format!("{OPTIONAL_PEER_DEP_ID}:{id}:{}", package_json.name).into(),
-                    ..Default::default()
-                  }));
-                }
-              }
-            }
+            })
+            .flatten();
+          if resolved_importer_dir.is_some_and(|dir| dir != self.root.to_str().unwrap())
+            && let Some(package_json) =
+              self.get_nearest_package_json_optional_peer_deps(importer.unwrap())
+            && package_json.optional_peer_dependencies.contains(pkg_name)
+          {
+            return Ok(Some(HookResolveIdOutput {
+              id: format!("{OPTIONAL_PEER_DEP_ID}:{id}:{}", package_json.name).into(),
+              ..Default::default()
+            }));
           }
         }
         Ok(None)
@@ -450,15 +450,16 @@ impl Resolver {
 
       let id = specifier;
       let mut resolved_id = id;
-      if is_deep_import(id) && get_extension(id) != get_extension(&resolved.id) {
-        if let Some(pkg_json) = oxc_resolved_result.unwrap().package_json() {
-          let has_exports_field = pkg_json.exports().is_some();
-          if !has_exports_field {
-            // id date-fns/locale
-            // resolve.id ...date-fns/esm/locale/index.js
-            if let Some(index) = resolved.id.find(id) {
-              resolved_id = &resolved.id[index..];
-            }
+      if is_deep_import(id)
+        && get_extension(id) != get_extension(&resolved.id)
+        && let Some(pkg_json) = oxc_resolved_result.unwrap().package_json()
+      {
+        let has_exports_field = pkg_json.exports().is_some();
+        if !has_exports_field {
+          // id date-fns/locale
+          // resolve.id ...date-fns/esm/locale/index.js
+          if let Some(index) = resolved.id.find(id) {
+            resolved_id = &resolved.id[index..];
           }
         }
       }

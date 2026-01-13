@@ -1,1 +1,1 @@
-export default 'async-lib-b.js';
+export default '[async-lib-b.js]';

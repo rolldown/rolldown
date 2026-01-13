@@ -11,14 +11,24 @@ import type { NullValue, StringOrRegExp } from '../types/utils';
 import type { ChecksOptions } from './generated/checks-options';
 import type { TransformOptions } from './transform-options';
 
+/**
+ * @inline
+ */
 export type InputOption = string | string[] | Record<string, string>;
 
+/**
+ * @param id The id of the module being checked.
+ * @param parentId The id of the module importing the id being checked.
+ * @param isResolved Whether the id has been resolved.
+ * @returns Whether the module should be treated as external.
+ */
 export type ExternalOptionFunction = (
   id: string,
   parentId: string | undefined,
   isResolved: boolean,
 ) => NullValue<boolean>;
 
+/** @inline */
 export type ExternalOption = StringOrRegExp | StringOrRegExp[] | ExternalOptionFunction;
 
 export type ModuleTypes = Record<
@@ -38,18 +48,107 @@ export type ModuleTypes = Record<
 >;
 
 export interface WatcherOptions {
+  /**
+   * Whether to skip the `bundle.write()` step when a rebuild is triggered.
+   * @default false
+   */
   skipWrite?: boolean;
+  /**
+   * Configures how long Rolldown will wait for further changes until it triggers
+   * a rebuild in milliseconds.
+   *
+   * Even if this value is set to 0, there's a small debounce timeout configured
+   * in the file system watcher. Setting this to a value greater than 0 will mean
+   * that Rolldown will only trigger a rebuild if there was no change for the
+   * configured number of milliseconds. If several configurations are watched,
+   * Rolldown will use the largest configured build delay.
+   *
+   * @default 0
+   */
   buildDelay?: number;
+  /**
+   * An optional object of options that will be passed to the [notify](https://github.com/rolldown/notify) file watcher.
+   */
   notify?: {
+    /**
+     * Interval between each re-scan attempt in milliseconds.
+     *
+     * This option is only used when polling backend is used.
+     *
+     * @default 30_000
+     */
     pollInterval?: number;
+    /**
+     * Whether to compare file contents when checking for changes.
+     *
+     * This is especially important for pseudo filesystems like those on Linux
+     * under `/sys` and `/proc` which are not obligated to respect any other
+     * filesystem norms such as modification timestamps, file sizes, etc. By
+     * enabling this feature, performance will be significantly impacted as
+     * all files will need to be read and hashed at each interval.
+     *
+     * This option is only used when polling backend is used.
+     *
+     * @default false
+     */
     compareContents?: boolean;
   };
+  /**
+   * Filter to limit the file-watching to certain files.
+   *
+   * Strings are treated as glob patterns.
+   * Note that this only filters the module graph but does not allow adding
+   * additional watch files.
+   *
+   * @example
+   * ```js
+   * export default defineConfig({
+   *   watch: {
+   *     include: 'src/**',
+   *   },
+   * })
+   * ```
+   * @default []
+   */
   include?: StringOrRegExp | StringOrRegExp[];
+  /**
+   * Filter to prevent files from being watched.
+   *
+   * Strings are treated as glob patterns.
+   *
+   * @example
+   * ```js
+   * export default defineConfig({
+   *   watch: {
+   *     exclude: 'node_modules/**',
+   *   },
+   * })
+   * ```
+   * @default []
+   */
   exclude?: StringOrRegExp | StringOrRegExp[];
+  /**
+   * An optional function that will be called immediately every time
+   * a module changes that is part of the build.
+   *
+   * This is different from the `watchChange` plugin hook, which is
+   * only called once the running build has finished. This may for
+   * instance be used to prevent additional steps from being performed
+   * if we know another build will be started anyway once the current
+   * build finished. This callback may be called multiple times per
+   * build as it tracks every change.
+   *
+   * @param id The id of the changed module.
+   */
   onInvalidate?: (id: string) => void;
+  /**
+   * Whether to clear the screen when a rebuild is triggered.
+   * @default true
+   */
   clearScreen?: boolean;
 }
 
+/** @inline */
 type MakeAbsoluteExternalsRelative = boolean | 'ifRelativeSource';
 
 export type DevModeOptions =
@@ -105,21 +204,31 @@ export type OptimizationOptions = {
   inlineConst?: boolean | { mode?: 'all' | 'smart'; pass?: number };
 
   /**
-   * Use PIFE pattern for module wrappers
+   * Use PIFE pattern for module wrappers.
+   *
+   * Enabling this option improves the start up performance of the generated bundle with the cost of a slight increase in bundle size.
+   *
+   * {@include ./docs/optimization-pife-for-module-wrappers.md}
+   *
+   * @default true
    */
   pifeForModuleWrappers?: boolean;
 };
 
+/** @inline */
 export type AttachDebugOptions = 'none' | 'simple' | 'full';
 
+/** @inline */
 type ChunkModulesOrder = 'exec-order' | 'module-id';
 
+/** @inline */
 export type OnLogFunction = (
   level: LogLevel,
   log: RollupLog,
   defaultHandler: LogOrStringHandler,
 ) => void;
 
+/** @inline */
 export type OnwarnFunction = (
   warning: RollupLog,
   defaultHandler: (warning: RollupLogWithString | (() => RollupLogWithString)) => void,
@@ -127,18 +236,30 @@ export type OnwarnFunction = (
 
 export interface InputOptions {
   /**
-   * Defines entries and location(s) of entry modules for the bundle. Relative paths are resolved based on the `cwd` option.
+   * Defines entries and location(s) of entry modules for the bundle. Relative paths are resolved based on the {@linkcode cwd} option.
    * {@include ./docs/input.md}
    */
   input?: InputOption;
+  /**
+   * The list of plugins to use.
+   *
+   * Falsy plugins will be ignored, which can be used to easily activate or deactivate plugins. Nested plugins will be flattened. Async plugins will be awaited and resolved.
+   */
   plugins?: RolldownPluginOption;
   /**
    * Specifies which modules should be treated as external and not bundled. External modules will be left as import statements in the output.
    * {@include ./docs/external.md}
    */
   external?: ExternalOption;
+  /**
+   * Options for built-in module resolution feature.
+   */
   resolve?: {
     /**
+     * Substitute one package for another.
+     *
+     * One use case for this feature is replacing a node-only package with a browser-friendly package in third-party code that you don't control.
+     *
      * @example
      * ```js
      * resolve: {
@@ -156,13 +277,28 @@ export interface InputOptions {
     alias?: Record<string, string[] | string | false>;
     /**
      * Fields in package.json to check for aliased paths.
+     *
+     * This option is expected to be used for `browser` field support.
+     *
+     * @default
+     * - `[['browser']]` for `browser` platform
+     * - `[]` for other platforms
      */
     aliasFields?: string[][];
     /**
-     * Condition names to use when resolving exports in package.json. Defaults based on platform and import kind:
-     * - **Browser platform**: `["import", "browser", "default"]` for import statements, `["require", "browser", "default"]` for require() calls
-     * - **Node platform**: `["import", "node", "default"]` for import statements, `["require", "node", "default"]` for require() calls
-     * - **Neutral platform**: `["import", "default"]` for import statements, `["require", "default"]` for require() calls
+     * Condition names to use when resolving exports in package.json.
+     *
+     * @default
+     * Defaults based on platform and import kind:
+     * - `browser` platform
+     *   - `["import", "browser", "default"]` for import statements
+     *   - `["require", "browser", "default"]` for require() calls
+     * - `node` platform
+     *   - `["import", "node", "default"]` for import statements
+     *   - `["require", "node", "default"]` for require() calls
+     * - `neutral` platform
+     *   - `["import", "default"]` for import statements
+     *   - `["require", "default"]` for require() calls
      */
     conditionNames?: string[];
     /**
@@ -174,18 +310,24 @@ export interface InputOptions {
     extensionAlias?: Record<string, string[]>;
     /**
      * Fields in package.json to check for exports.
+     *
+     * @default `[['exports']]`
      */
     exportsFields?: string[][];
     /**
      * Extensions to try when resolving files. These are tried in order from first to last.
-     * @default ['.tsx', '.ts', '.jsx', '.js', '.json']
+     *
+     * @default `['.tsx', '.ts', '.jsx', '.js', '.json']`
      */
     extensions?: string[];
     /**
-     * Fields in package.json to check for entry points. Defaults based on platform:
-     * - **Node**: `['main', 'module']`
-     * - **Browser**: `['browser', 'module', 'main']`
-     * - **Neutral**: `[]` (relies on exports field)
+     * Fields in package.json to check for entry points.
+     *
+     * @default
+     * Defaults based on platform:
+     * - `node` platform: `['main', 'module']`
+     * - `browser` platform: `['browser', 'module', 'main']`
+     * - `neutral` platform: `[]`
      */
     mainFields?: string[];
     /**
@@ -204,7 +346,7 @@ export interface InputOptions {
      */
     symlinks?: boolean;
     /**
-     * @deprecated Use the top-level `tsconfig` option instead.
+     * @deprecated Use the top-level {@linkcode tsconfig} option instead.
      */
     tsconfigFilename?: string;
   };
@@ -222,8 +364,8 @@ export interface InputOptions {
    *    - The conditions setting does not automatically include any platform-specific values.
    *
    * @default
-   * - 'node' if the format is 'cjs'
-   * - 'browser' for other formats
+   * - `'node'` if the format is `'cjs'`
+   * - `'browser'` for other formats
    * {@include ./docs/platform.md}
    */
   platform?: 'node' | 'browser' | 'neutral';
@@ -234,65 +376,64 @@ export interface InputOptions {
    */
   shimMissingExports?: boolean;
   /**
-   * Controls tree-shaking (dead code elimination). When `true`, unused code will be removed from the bundle to reduce bundle size.
+   * Controls tree-shaking (dead code elimination).
+   *
+   * When `false`, tree-shaking will be disabled.
+   * When `true`, it is equivalent to setting each options to the default value.
+   *
    * @default true
    */
   treeshake?: boolean | TreeshakingOptions;
   /**
    * Controls the verbosity of console logging during the build.
+   *
+   * {@include ./docs/log-level.md}
+   *
    * @default 'info'
    */
   logLevel?: LogLevelOption;
   /**
-   * Custom handler for logs. Called for each log message before it's written to the console.
+   * A function that intercepts log messages. If not supplied, logs are printed to the console.
+   *
+   * {@include ./docs/on-log.md}
+   *
+   * @example
+   * ```js
+   * export default defineConfig({
+   *   onLog(level, log, defaultHandler) {
+   *     if (log.code === 'CIRCULAR_DEPENDENCY') {
+   *       return; // Ignore circular dependency warnings
+   *     }
+   *     if (level === 'warn') {
+   *       defaultHandler('error', log); // turn other warnings into errors
+   *     } else {
+   *       defaultHandler(level, log); // otherwise, just print the log
+   *     }
+   *   }
+   * })
+   * ```
    */
   onLog?: OnLogFunction;
   /**
-   * Custom handler for warnings during the build process.
+   * A function that will intercept warning messages.
+   *
+   * {@include ./docs/on-warn.md}
+   *
    * @deprecated
-   * :::: warning Deprecated
-   * This is a legacy API. Consider using `onLog` instead for better control over all log types.
-   * ::: details Migration to `onLog`
-   * To migrate from `onwarn` to `onLog`, check the `level` parameter to filter for
-   * warnings:
-   * ```js
-   * // Before: Using `onwarn`
-   * export default {
-   *   onwarn(warning, defaultHandler) {
-   *     // Suppress certain warnings
-   *     if (warning.code === 'CIRCULAR_DEPENDENCY') return;
-   *     // Handle other warnings with default behavior
-   *     defaultHandler(warning);
-   *   },
-   * };
-   * ```
-   * ```js
-   * // After: Using `onLog`
-   * export default {
-   *   onLog(level, log, defaultHandler) {
-   *     // Handle only warnings (same behavior as `onwarn`)
-   *     if (level === 'warn') {
-   *       // Suppress certain warnings
-   *       if (log.code === 'CIRCULAR_DEPENDENCY') return;
-   *       // Handle other warnings with default behavior
-   *       defaultHandler(level, log);
-   *     } else {
-   *       // Let other log levels pass through
-   *       defaultHandler(level, log);
-   *     }
-   *   },
-   * };
-   * ```
-   * :::
-   * ::::
+   * This is a legacy API. Consider using {@linkcode onLog} instead for better control over all log types.
+   *
+   * {@include ./docs/on-warn-deprecation.md}
    */
   onwarn?: OnwarnFunction;
   /**
-   * Maps file patterns to module types, controlling how files are processed. This is conceptually similar to esbuild's loader option, allowing you to specify how different file extensions should be handled.
+   * Maps file patterns to module types, controlling how files are processed.
+   *
+   * This is conceptually similar to esbuild's loader option, allowing you to specify how different file extensions should be handled.
    */
   moduleTypes?: ModuleTypes;
   /**
    * Experimental features that may change in future releases and can introduce behavior change without a major version bump.
+   * @experimental
    */
   experimental?: {
     /**
@@ -306,13 +447,9 @@ export interface InputOptions {
      */
     strictExecutionOrder?: boolean;
     /**
-     * Disable live bindings for exported variables.
-     * @default false
-     */
-    disableLiveBindings?: boolean;
-    /**
      * Enable Vite compatible mode.
      * @default false
+     * @hidden This option is only meant to be used by Vite. It is not recommended to use this option directly.
      */
     viteMode?: boolean;
     /**
@@ -342,15 +479,21 @@ export interface InputOptions {
      * @default false
      */
     resolveNewUrlToAsset?: boolean;
+    /**
+     * Dev mode related options.
+     * @hidden not ready for public usage yet
+     */
     devMode?: DevModeOptions;
     /**
-     * Control which order should use when rendering modules in chunk.
+     * Control which order should be used when rendering modules in a chunk.
      *
      * Available options:
      * - `exec-order`: Almost equivalent to the topological order of the module graph, but specially handling when module graph has cycle.
      * - `module-id`: This is more friendly for gzip compression, especially for some javascript static asset lib (e.g. icon library)
+     *
      * > [!NOTE]
-     * > Try to sort the modules by their module id if possible(Since rolldown scope hoist all modules in the chunk, we only try to sort those modules by module id if we could ensure runtime behavior is correct after sorting).
+     * > Try to sort the modules by their module id if possible (Since rolldown scope hoist all modules in the chunk, we only try to sort those modules by module id if we could ensure runtime behavior is correct after sorting).
+     *
      * @default 'exec-order'
      */
     chunkModulesOrder?: ChunkModulesOrder;
@@ -362,8 +505,6 @@ export interface InputOptions {
      * - `simple`: Attach comments indicating which files the bundled code comes from. These comments could be removed by the minifier.
      * - `full`: Attach detailed debug information to the output bundle. These comments are using legal comment syntax, so they won't be removed by the minifier.
      *
-     * > [!WARNING]
-     * > You shouldn't use `full` in the production build.
      * @default 'simple'
      */
     attachDebugInfo?: AttachDebugOptions;
@@ -412,12 +553,14 @@ export interface InputOptions {
      *
      * > [!TIP]
      * > If you want to learn more, you can check out the example here: [examples/chunk-import-map](https://github.com/rolldown/rolldown/tree/main/examples/chunk-import-map)
+     *
      * @default false
      */
     chunkImportMap?: boolean | { baseUrl?: string; fileName?: string };
     /**
      * Enable on-demand wrapping of modules.
      * @default false
+     * @hidden not ready for public usage yet
      */
     onDemandWrapping?: boolean;
     /**
@@ -483,8 +626,8 @@ export interface InputOptions {
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.
    *
-   * To transpile [legacy decorators](https://github.com/tc39/proposal-decorators/tree/4ac0f4cd31bd0f2e8170cb4c5136e51671e46c8d), you could use
-   *
+   * @example
+   * **Enable legacy decorators**
    * ```js
    * export default defineConfig({
    *   transform: {
@@ -494,22 +637,42 @@ export interface InputOptions {
    *   },
    * })
    * ```
+   * Note that if you have correct `tsconfig.json` file, Rolldown will automatically detect and enable legacy decorators support.
    *
-   * For latest decorators proposal, rolldown is able to bundle them but doesn't support transpiling them yet.
+   * {@include ./docs/transform.md}
    */
   transform?: TransformOptions;
+  /**
+   * Watch mode related options.
+   *
+   * These options only take effect when running with the `--watch` flag, or using `rolldown.watch()` API.
+   */
   watch?: WatcherOptions | false;
   /**
    * Controls which warnings are emitted during the build process. Each option can be set to `true` (emit warning) or `false` (suppress warning).
    */
   checks?: ChecksOptions;
+  /**
+   * Determines if absolute external paths should be converted to relative paths in the output.
+   *
+   * This does not only apply to paths that are absolute in the source but also to paths that are resolved to an absolute path by either a plugin or Rolldown core.
+   *
+   * {@include ./docs/make-absolute-externals-relative.md}
+   */
   makeAbsoluteExternalsRelative?: MakeAbsoluteExternalsRelative;
+  /**
+   * Devtools integration options.
+   * @experimental
+   */
   devtools?: {
     sessionId?: string;
   };
   /**
-   * Controls how entry chunk exports are preserved. This determines whether Rolldown needs to create facade chunks (additional wrapper chunks) to maintain the exact export signatures of entry modules, or whether it can combine entry modules with other chunks for optimization.
-   * @default 'strict'
+   * Controls how entry chunk exports are preserved.
+   *
+   * This determines whether Rolldown needs to create facade chunks (additional wrapper chunks) to maintain the exact export signatures of entry modules, or whether it can combine entry modules with other chunks for optimization.
+   *
+   * @default `'exports-only'`
    * {@include ./docs/preserve-entry-signatures.md}
    */
   preserveEntrySignatures?: false | 'strict' | 'allow-extension' | 'exports-only';
@@ -518,22 +681,13 @@ export interface InputOptions {
    */
   optimization?: OptimizationOptions;
   /**
-   * The value of `this` at the top level of each output chunk. For IIFE and UMD formats, this defaults to `'window'` or `'global'` depending on the platform.
+   * The value of `this` at the top level of each module. **Normally, you don't need to set this option.**
+   * @default undefined
    * @example
    * **Set custom context**
    * ```js
    * export default {
    *   context: 'globalThis',
-   *   output: {
-   *     format: 'iife',
-   *   },
-   * };
-   * ```
-   * **Use window for browser builds**
-   * ```js
-   * export default {
-   *   context: 'window',
-   *   platform: 'browser',
    *   output: {
    *     format: 'iife',
    *   },
@@ -545,9 +699,9 @@ export interface InputOptions {
   /**
    * Configures TypeScript configuration file resolution and usage.
    * {@include ./docs/tsconfig.md}
-   * @default undefined (no tsconfig resolution)
+   * @default true
    */
-  tsconfig?: true | string;
+  tsconfig?: boolean | string;
 }
 
 interface OverwriteInputOptionsForCli {

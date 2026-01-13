@@ -4,7 +4,7 @@ This page documents some notable features in Rolldown that do not have built-in 
 
 ## Platform presets
 
-- Configurable via the [`platform`](/options/platform) option.
+- Configurable via the [`platform`](/reference/InputOptions.platform) option.
 - Default: `'node'` for `cjs` output, `'browser'` otherwise
 - Possible values: `browser | node | neutral`
 
@@ -26,7 +26,7 @@ The transform is configurable via the `transform` option.
 The following transforms are supported:
 
 - TypeScript
-  - Sets configurations based on the `tsconfig.json` when the [`tsconfig`](/options/tsconfig) option is provided.
+  - Sets configurations based on the `tsconfig.json` when the [`tsconfig`](/reference/InputOptions.tsconfig) option is provided.
   - Supported legacy decorators and decorator metadata.
 - JSX
 - Syntax lowering
@@ -41,12 +41,12 @@ See [Bundling CJS](/in-depth/bundling-cjs) for more details.
 
 ## Module resolution
 
-- Configurable via the [`resolve`](/options/resolve) option
+- Configurable via the [`resolve`](/reference/InputOptions.resolve) option
 - Powered by [oxc-resolver](https://github.com/oxc-project/oxc-resolver), aligned with webpack's [enhanced-resolve](https://github.com/webpack/enhanced-resolve)
 
 Rolldown resolves modules based on TypeScript and Node.js' behavior by default, without the need for `@rollup/plugin-node-resolve`.
 
-When top-level [`tsconfig`](/options/tsconfig) option is provided, Rolldown will respect `compilerOptions.paths` in the specified `tsconfig.json`.
+When top-level [`tsconfig`](/reference/InputOptions.tsconfig) option is provided, Rolldown will respect `compilerOptions.paths` in the specified `tsconfig.json`.
 
 ## Define
 
@@ -75,7 +75,7 @@ Rolldown supports bundling CSS imported from JS out of the box. Note this featur
 ## Advanced Chunks
 
 - ⚠️ Experimental
-- Configurable via [`output.advancedChunks`](/options/output-advanced-chunks) option.
+- Configurable via [`output.advancedChunks`](/reference/OutputOptions.advancedChunks) option.
 
 Rolldown allows controlling the chunking behavior granularly, similar to webpack's [`optimization.splitChunks`](https://webpack.js.org/plugins/split-chunks-plugin/#optimizationsplitchunks) feature.
 
@@ -90,7 +90,7 @@ This is conceptually similar to [esbuild's `loader` option](https://esbuild.gith
 ## Minification
 
 - ⚠️ Experimental
-- Configurable via the [`output.minify`](/options/output#minify) option.
+- Configurable via the [`output.minify`](/reference/OutputOptions.minify) option.
 
 The minification is powered by [`oxc-minifier`](https://github.com/oxc-project/oxc/tree/main/crates/oxc_minifier), which is currently in alpha and can still have bugs. We recommend thoroughly testing your output in production environments.
 

@@ -7,8 +7,11 @@ fn basic() {
   let mut s = MagicString::new(input);
   let update_options = UpdateOptions { keep_original: true, ..Default::default() };
   s.update_with(1, 2, "v", update_options.clone())
+    .unwrap()
     .update_with(3, 4, "d", update_options.clone())
-    .update_with(input.len() - 4, input.len() - 1, "h1", update_options.clone());
+    .unwrap()
+    .update_with(input.len() - 4, input.len() - 1, "h1", update_options.clone())
+    .unwrap();
 
   let sm = s.source_map(SourceMapOptions { include_content: true, ..Default::default() });
   insta::assert_snapshot!("basic1", sm.to_json_string());
@@ -35,8 +38,8 @@ function test() {
 "#;
   let mut s = MagicString::new(code);
 
-  s.replace_with("foo", "hello", ReplaceOptions::default());
-  s.replace_with("bar", "world", ReplaceOptions::default());
+  s.replace_with("foo", "hello", ReplaceOptions::default()).unwrap();
+  s.replace_with("bar", "world", ReplaceOptions::default()).unwrap();
   let output = s.to_string();
   assert_eq!(
     s.to_string(),

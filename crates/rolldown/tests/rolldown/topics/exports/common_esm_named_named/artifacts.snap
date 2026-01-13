@@ -1,0 +1,67 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+const require_rolldown_runtime = require('./rolldown-runtime.js');
+const require_shared = require('./shared.js');
+let node_assert = require("node:assert");
+node_assert = require_rolldown_runtime.__toESM(node_assert);
+
+//#region main.js
+var init_main = require_rolldown_runtime.__esmMin((() => {
+	require_shared.init_shared();
+	node_assert.default.strictEqual(require_shared.value, 42);
+}));
+
+//#endregion
+init_main();
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+Object.defineProperty(exports, '__esmMin', {
+  enumerable: true,
+  get: function () {
+    return __esmMin;
+  }
+});
+Object.defineProperty(exports, '__toESM', {
+  enumerable: true,
+  get: function () {
+    return __toESM;
+  }
+});
+```
+
+## shared.js
+
+```js
+const require_rolldown_runtime = require('./rolldown-runtime.js');
+
+//#region shared.js
+var value;
+var init_shared = require_rolldown_runtime.__esmMin((() => {
+	value = 42;
+}));
+
+//#endregion
+Object.defineProperty(exports, 'init_shared', {
+  enumerable: true,
+  get: function () {
+    return init_shared;
+  }
+});
+Object.defineProperty(exports, 'value', {
+  enumerable: true,
+  get: function () {
+    return value;
+  }
+});
+```

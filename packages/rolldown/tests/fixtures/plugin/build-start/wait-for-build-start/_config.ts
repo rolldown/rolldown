@@ -3,10 +3,10 @@ import { expect, vi } from 'vitest';
 
 const buildStartFn = vi.fn();
 const buildStartFn2 = vi.fn();
-const sleepAsync = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+const sleepAsync = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default defineTest({
+  sequential: true,
   config: {
     plugins: [
       {

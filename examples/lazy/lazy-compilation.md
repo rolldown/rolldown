@@ -70,19 +70,26 @@ export { lazyExports as 'rolldown:exports' };
 ```
 
 - `'rolldown:exports'` is a promise that resolves to the real module's exports
-- **POC**: User code uses `lazyMagic` helper to unwrap:
+- Rolldown's `transform_ast` hook automatically wraps all dynamic imports with an unwrapping helper:
 
   ```js
-  async function lazyMagic(proxyModule) {
-    const exports = proxyModule['rolldown:exports'];
-    if (exports) return await exports;
-    return proxyModule;
-  }
+  // User code (unchanged)
+  const mod = await import('./lazy.js');
 
-  const mod = await import('./lazy.js').then(lazyMagic);
+  // Transformed by lazy compilation plugin
+  const mod = await import('./lazy.js').then(__unwrap_lazy_compilation_entry);
   ```
 
-- **Future**: Rolldown injects runtime code to unwrap automatically (transparent UX)
+- The helper is injected into each module that has dynamic imports:
+
+  ```js
+  function __unwrap_lazy_compilation_entry(m) {
+    var e = m['rolldown:exports'];
+    return e ? e : m;
+  }
+  ```
+
+- This is safe for ALL dynamic imports: lazy modules return the promise, non-lazy modules pass through unchanged
 
 ### 3. Proxy Module States
 
@@ -500,27 +507,38 @@ The flow is:
 6. Both proxy (fetched) and actual module are in the output
 7. `loadExports("/abs/path/module.js")` finds and returns the exports
 
+## Implementation Notes
+
+### Naming Convention for Injected Helpers
+
+The lazy compilation plugin injects helper functions with double-underscore prefix (e.g., `__unwrap_lazy_compilation_entry`). This is a standard convention for internal/reserved identifiers in JavaScript bundlers and should not conflict with user code.
+
+### Directive Prologue Handling
+
+The injected helper function is inserted **after** any directive prologues (e.g., `"use strict"`) to preserve their semantics. The plugin counts leading string literal expression statements and inserts the helper after them.
+
 ## Files Changed (Reference)
 
 For future debugging, these files handle lazy compilation:
 
 ### Core Plugin
 
-1. **`crates/rolldown_plugin_lazy_compilation/src/lazy_compilation_plugin.rs`** - Plugin with `resolve_id` and `load` hooks, `LazyCompilationContext` with fetched state tracking
-2. **`crates/rolldown_plugin_lazy_compilation/src/proxy-module-template.js`** - Stub template (not fetched)
-3. **`crates/rolldown_plugin_lazy_compilation/src/proxy-module-template-fetched.js`** - Fetched template
+1. **`crates/rolldown_plugin_lazy_compilation/src/lazy_compilation_plugin.rs`** - Plugin with `resolve_id`, `load`, and `transform_ast` hooks, `LazyCompilationContext` with fetched state tracking
+2. **`crates/rolldown_plugin_lazy_compilation/src/runtime_injector.rs`** - AST visitor for transforming dynamic imports and helper function generation
+3. **`crates/rolldown_plugin_lazy_compilation/src/proxy-module-template.js`** - Stub template (not fetched)
+4. **`crates/rolldown_plugin_lazy_compilation/src/proxy-module-template-fetched.js`** - Fetched template
 
 ### Dev Engine
 
-4. **`crates/rolldown_dev/src/dev_engine.rs`** - `compile_lazy_entry()`, `notify_module_changed()`
-5. **`crates/rolldown_dev/src/types/coordinator_msg.rs`** - `ModuleChanged` message variant
-6. **`crates/rolldown_dev/src/bundle_coordinator.rs`** - Handles `ModuleChanged`, triggers rebuild
+5. **`crates/rolldown_dev/src/dev_engine.rs`** - `compile_lazy_entry()`, `notify_module_changed()`
+6. **`crates/rolldown_dev/src/types/coordinator_msg.rs`** - `ModuleChanged` message variant
+7. **`crates/rolldown_dev/src/bundle_coordinator.rs`** - Handles `ModuleChanged`, triggers rebuild
 
 ### HMR/Build
 
-7. **`crates/rolldown/src/hmr/hmr_stage.rs`** - `compile_lazy_entry()` partial scan logic
-8. **`crates/rolldown/src/hmr/hmr_ast_finalizer.rs`** - Export generation with computed property support
-9. **`crates/rolldown/src/hmr/utils.rs`** - `create_register_module_stmt()`, `create_module_hot_context_initializer_stmt()`
+8. **`crates/rolldown/src/hmr/hmr_stage.rs`** - `compile_lazy_entry()` partial scan logic
+9. **`crates/rolldown/src/hmr/hmr_ast_finalizer.rs`** - Export generation with computed property support
+10. **`crates/rolldown/src/hmr/utils.rs`** - `create_register_module_stmt()`, `create_module_hot_context_initializer_stmt()`
 
 ## References
 

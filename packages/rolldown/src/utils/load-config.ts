@@ -4,7 +4,7 @@ import path from 'node:path';
 import { cwd } from 'node:process';
 import { pathToFileURL } from 'node:url';
 import { rolldown } from '../api/rolldown';
-import type { ConfigExport } from '../types/config-export';
+import type { ConfigExport } from './define-config';
 import type { OutputChunk } from '../types/rolldown-output';
 
 async function bundleTsConfig(configFile: string, isEsm: boolean): Promise<string> {

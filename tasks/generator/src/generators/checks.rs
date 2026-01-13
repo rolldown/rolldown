@@ -222,14 +222,17 @@ fn generate_check_options(
       continue;
     }
     let camel_case = variant.to_lower_camel_case();
-    let related_comments = doc_comments.clone().unwrap_or(format!(
-      "Whether to emit warning when detecting {}",
-      variant.to_title_case().to_lowercase()
-    ));
+    let related_comments = doc_comments
+      .clone()
+      .unwrap_or(format!(
+        "Whether to emit warnings when detecting {}",
+        variant.to_title_case().to_lowercase()
+      ))
+      .replace('\n', "\n     *");
     let default_value = !generator.disabled_event.contains(&variant.as_str());
     fields.push(format!(
       r"
-    /**  
+    /**
      * {related_comments}
      * @default {default_value}
      * */
@@ -259,11 +262,14 @@ fn generate_validate_check_options(
     }
 
     let camel_case = variant.to_lower_camel_case();
-    let related_comments = doc_comments.clone().unwrap_or(format!(
-      "Whether to emit warning when detecting {}",
+    let mut related_comments = doc_comments.clone().unwrap_or(format!(
+      "Whether to emit warnings when detecting {}",
       variant.to_title_case().to_lowercase()
     ));
-    let quote_kind = if related_comments.contains('\n') { '`' } else { '"' };
+    if let Some(pos) = related_comments.find('\n') {
+      related_comments.truncate(pos);
+    }
+    let quote_kind = '"';
     fields.push(format!(
       r"{camel_case}: v.pipe(
     v.optional(v.boolean()),

@@ -65,12 +65,11 @@ impl<'str> Chunk<'str> {
     self.intro.push_front(content)
   }
 
-  pub fn split<'a>(&'a mut self, text_index: usize) -> Chunk<'str> {
-    if !(text_index > self.start() && text_index < self.end()) {
-      panic!("Cannot split chunk at {text_index} between {:?}", self.span);
-    }
-    if self.edited_content.is_some() {
-      panic!("Cannot split a chunk that has already been edited")
+  pub fn split<'a>(&'a mut self, text_index: usize) -> Result<Chunk<'str>, String> {
+    if let Some(ref content) = self.edited_content
+      && !content.is_empty()
+    {
+      return Err("Cannot split a chunk that has already been edited".to_string());
     }
     let first_half_slice = Span(self.start(), text_index);
     let second_half_slice = Span(text_index, self.end());
@@ -81,7 +80,7 @@ impl<'str> Chunk<'str> {
     }
     std::mem::swap(&mut new_chunk.outro, &mut self.outro);
     self.span = first_half_slice;
-    new_chunk
+    Ok(new_chunk)
   }
 
   pub fn fragments(&'str self, original_source: &'str str) -> impl Iterator<Item = &'str str> {
@@ -106,5 +105,16 @@ impl<'str> Chunk<'str> {
 
   pub fn is_edited(&self) -> bool {
     self.edited_content.is_some()
+  }
+
+  /// Resets the chunk to its original state.
+  /// Clears intro and outro, and if the chunk was edited, restores the original content.
+  pub fn reset(&mut self) {
+    self.intro.clear();
+    self.outro.clear();
+    if self.is_edited() {
+      self.edited_content = None;
+      self.keep_in_mappings = false;
+    }
   }
 }

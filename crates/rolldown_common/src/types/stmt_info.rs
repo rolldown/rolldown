@@ -122,6 +122,8 @@ bitflags! {
         const HasDummyRecord = 1 << 1;
         /// see `has_dynamic_exports` in https://github.com/rolldown/rolldown/blob/8bc7dca5a09047b6b494e3fa7b6b7564aa465372/crates/rolldown/src/types/linking_metadata.rs?plain=1#L49
         const ReExportDynamicExports = 1 << 2;
+        /// Statement contains non-static dynamic import like `import(foo)` or `import('a' + 'b')`
+        const NonStaticDynamicImport = 1 << 3;
     }
 }
 

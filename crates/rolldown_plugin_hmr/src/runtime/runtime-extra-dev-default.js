@@ -38,19 +38,17 @@ class ModuleHotContext {
         deps: [acceptingPath],
         fn: cb,
       });
-    } else if (args.length === 0) {
-    } else {
+    } else if (args.length === 0) {}
+    else {
       throw new Error('Invalid arguments for `import.meta.hot.accept`');
     }
   }
 
   invalidate() {
-    socket.send(
-      JSON.stringify({
-        type: 'hmr:invalidate',
-        moduleId: this.moduleId,
-      }),
-    );
+    socket.send(JSON.stringify({
+      type: 'hmr:invalidate',
+      moduleId: this.moduleId,
+    }));
   }
 }
 
@@ -138,7 +136,7 @@ function loadScript(url) {
   var script = document.createElement('script');
   script.src = url;
   script.type = 'module';
-  script.onerror = function () {
+  script.onerror = function() {
     console.error('Failed to load script: ' + url);
   };
   document.body.appendChild(script);
@@ -149,15 +147,17 @@ const addr = new URL('ws://$ADDR');
 
 const socket = new WebSocket(addr);
 
-/** @type {any} */ (globalThis).__rolldown_runtime__ ??= new DefaultDevRuntime(socket);
+(/** @type {any} */ (globalThis)).__rolldown_runtime__ ??=
+  new DefaultDevRuntime(socket);
 
 /** @param {MessageEvent} event */
-socket.onmessage = function (event) {
+socket.onmessage = function(event) {
   const data = JSON.parse(event.data);
   console.debug('Received message:', data);
   if (data.type === 'connected') {
     // Store the client ID for use in lazy compilation requests
-    /** @type {any} */ (globalThis).__rolldown_runtime__.clientId = data.clientId;
+    (/** @type {any} */ (globalThis)).__rolldown_runtime__.clientId =
+      data.clientId;
     console.debug('[hmr]: Connected with client ID:', data.clientId);
   } else if (data.type === 'hmr:update') {
     if (typeof process === 'object') {

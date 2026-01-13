@@ -180,7 +180,6 @@ function bindingifyExperimental(
   }
   return {
     strictExecutionOrder: experimental?.strictExecutionOrder,
-    disableLiveBindings: experimental?.disableLiveBindings,
     viteMode: experimental?.viteMode,
     resolveNewUrlToAsset: experimental?.resolveNewUrlToAsset,
     devMode: bindingifyDevMode(experimental?.devMode),

@@ -211,67 +211,79 @@ const WatchOptionsSchema = v.strictObject({
 const ChecksOptionsSchema = v.strictObject({
   circularDependency: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting circular dependency'),
+    v.description('Whether to emit warnings when detecting circular dependency'),
   ),
   eval: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting eval'),
+    v.description('Whether to emit warnings when detecting uses of direct `eval`s'),
   ),
   missingGlobalName: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting missing global name'),
+    v.description(
+      'Whether to emit warnings when the `output.globals` option is missing when needed',
+    ),
   ),
   missingNameOptionForIifeExport: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting missing name option for iife export'),
+    v.description('Whether to emit warnings when the `output.name` option is missing when needed'),
   ),
   mixedExports: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting mixed exports'),
+    v.description('Whether to emit warnings when the way to export values is ambiguous'),
   ),
   unresolvedEntry: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting unresolved entry'),
+    v.description('Whether to emit warnings when an entrypoint cannot be resolved'),
   ),
   unresolvedImport: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting unresolved import'),
+    v.description('Whether to emit warnings when an import cannot be resolved'),
   ),
   filenameConflict: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting filename conflict'),
+    v.description(
+      'Whether to emit warnings when files generated have the same name with different contents',
+    ),
   ),
   commonJsVariableInEsm: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting common js variable in esm'),
+    v.description('Whether to emit warnings when a CommonJS variable is used in an ES module'),
   ),
   importIsUndefined: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting import is undefined'),
+    v.description('Whether to emit warnings when an imported variable is not exported'),
   ),
   emptyImportMeta: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting empty import meta'),
+    v.description(
+      'Whether to emit warnings when `import.meta` is not supported with the output format and is replaced with an empty object (`{}`)',
+    ),
   ),
   cannotCallNamespace: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting cannot call namespace'),
+    v.description('Whether to emit warnings when a namespace is called as a function'),
   ),
   configurationFieldConflict: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting configuration field conflict'),
+    v.description(
+      'Whether to emit warnings when a config value is overridden by another config value with a higher priority',
+    ),
   ),
   preferBuiltinFeature: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting prefer builtin feature'),
+    v.description(
+      'Whether to emit warnings when a plugin that is covered by a built-in feature is used',
+    ),
   ),
   couldNotCleanDirectory: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting could not clean directory'),
+    v.description('Whether to emit warnings when Rolldown could not clean the output directory'),
   ),
   pluginTimings: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting plugin timings'),
+    v.description(
+      'Whether to emit warnings when plugins take significant time during the build process',
+    ),
   ),
 });
 
@@ -450,7 +462,6 @@ const InputOptionsSchema = v.strictObject({
   ),
   experimental: v.optional(
     v.strictObject({
-      disableLiveBindings: v.optional(v.boolean()),
       enableComposingJsPlugins: v.optional(v.boolean()),
       viteMode: v.optional(v.boolean()),
       resolveNewUrlToAsset: v.optional(v.boolean()),
@@ -499,7 +510,7 @@ const InputOptionsSchema = v.strictObject({
     ),
   ),
   tsconfig: v.pipe(
-    v.optional(v.union([v.literal(true), v.string()])),
+    v.optional(v.union([v.boolean(), v.string()])),
     v.description('Path to the tsconfig.json file.'),
   ),
 }) satisfies v.GenericSchema<InputOptions>;

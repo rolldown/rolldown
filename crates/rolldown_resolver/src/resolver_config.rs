@@ -20,7 +20,7 @@ impl ResolverConfig {
   pub fn build(
     cwd: &Path,
     platform: Platform,
-    tsconfig: Option<&TsConfig>,
+    tsconfig: &TsConfig,
     resolve_options: ResolveOptions,
   ) -> Self {
     // Build condition names
@@ -97,15 +97,15 @@ impl ResolverConfig {
     // Build base options
     let default_options = OxcResolverOptions {
       cwd: Some(cwd.to_path_buf()),
-      tsconfig: tsconfig.map(|tsconfig| match tsconfig {
-        TsConfig::Auto => oxc_resolver::TsconfigDiscovery::Auto,
+      tsconfig: match tsconfig {
+        TsConfig::Auto(v) => v.then_some(oxc_resolver::TsconfigDiscovery::Auto),
         TsConfig::Manual(config_file) => {
-          oxc_resolver::TsconfigDiscovery::Manual(oxc_resolver::TsconfigOptions {
+          Some(oxc_resolver::TsconfigDiscovery::Manual(oxc_resolver::TsconfigOptions {
             config_file: config_file.clone(),
             references: oxc_resolver::TsconfigReferences::Auto,
-          })
+          }))
         }
-      }),
+      },
       alias: alias.unwrap_or_default(),
       imports_fields: vec![vec!["imports".to_string()]],
       alias_fields,

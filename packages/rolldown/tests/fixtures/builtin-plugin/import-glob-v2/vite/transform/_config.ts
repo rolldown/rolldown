@@ -4,12 +4,10 @@ import { defineTest } from 'rolldown-tests';
 import { viteImportGlobPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
-const root = path.join(
-  path.dirname(path.resolve(import.meta.dirname)),
-  'fixtures',
-);
+const root = path.join(path.dirname(path.resolve(import.meta.dirname)), 'fixtures');
 
 export default defineTest({
+  sequential: true,
   config: {
     input: '../fixtures/a/index.ts',
     output: {

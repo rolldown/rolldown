@@ -62,6 +62,10 @@ impl LinkStage<'_> {
           if stmt_info.meta.contains(StmtInfoMeta::HasDummyRecord) {
             depended_runtime_helper_map[RuntimeHelper::Require.bit_index()].push(stmt_info_idx);
           }
+          // Handle non-static dynamic imports like `import(foo)` or `import('a' + 'b')`
+          if stmt_info.meta.intersects(StmtInfoMeta::NonStaticDynamicImport) {
+            depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()].push(stmt_info_idx);
+          }
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
             let rec_resolved_module = &self.module_table[rec.resolved_module];

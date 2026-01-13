@@ -362,10 +362,6 @@ fn must_keep_live_binding(
   options: &NormalizedBundlerOptions,
   modules: &IndexModules,
 ) -> bool {
-  if options.experimental.is_disable_live_bindings_enabled() {
-    return false;
-  }
-
   let canonical_ref = symbol_db.canonical_ref_for(export_ref);
 
   if canonical_ref.is_declared_by_const(symbol_db).unwrap_or(false) {

@@ -111,7 +111,11 @@ class DevServer {
       })
       .unref();
     this.#prepareHttpServerAfterCreateDevEngine(devEngine);
+    const initialBuildStart = Date.now();
+    console.log('Starting initial build...');
     await devEngine.run();
+    const initialBuildEnd = Date.now();
+    console.log(`Initial build completed in ${initialBuildEnd - initialBuildStart}ms`);
     this.#readyHttpServer();
   }
 

@@ -1,0 +1,12 @@
+{
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "lib", "import": "./lib.js" }
+    ],
+    "format": "cjs",
+    "exports": "default"
+  },
+  "_comment": "Tests Entry + Cjs WrapKind + Default OutputExports + default export access. BUG: lib.js generates two module.exports= statements, second overwrites runtime helpers.",
+  "expectExecuted": false
+}

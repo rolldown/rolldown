@@ -1421,24 +1421,63 @@ export declare class BindingDevEngine {
 }
 
 export declare class BindingMagicString {
-  constructor(source: string)
-  replace(from: string, to: string): void
-  replaceAll(from: string, to: string): void
-  prepend(content: string): void
-  append(content: string): void
-  prependLeft(index: number, content: string): void
-  prependRight(index: number, content: string): void
-  appendLeft(index: number, content: string): void
-  appendRight(index: number, content: string): void
-  overwrite(start: number, end: number, content: string): void
+  constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
+  get filename(): string | null
+  replace(from: string, to: string): this
+  replaceAll(from: string, to: string): this
+  prepend(content: string): this
+  append(content: string): this
+  prependLeft(index: number, content: string): this
+  prependRight(index: number, content: string): this
+  appendLeft(index: number, content: string): this
+  appendRight(index: number, content: string): this
+  overwrite(start: number, end: number, content: string): this
   toString(): string
   hasChanged(): boolean
   length(): number
   isEmpty(): boolean
-  remove(start: number, end: number): void
-  update(start: number, end: number, content: string): void
-  relocate(start: number, end: number, to: number): void
-  indent(indentor?: string | undefined | null): void
+  remove(start: number, end: number): this
+  update(start: number, end: number, content: string): this
+  relocate(start: number, end: number, to: number): this
+  /**
+   * Alias for `relocate` to match the original magic-string API.
+   * Moves the characters from `start` to `end` to `index`.
+   * Returns `this` for method chaining.
+   */
+  move(start: number, end: number, index: number): this
+  indent(indentor?: string | undefined | null): this
+  /** Trims whitespace or specified characters from the start and end. */
+  trim(charType?: string | undefined | null): this
+  /** Trims whitespace or specified characters from the start. */
+  trimStart(charType?: string | undefined | null): this
+  /** Trims whitespace or specified characters from the end. */
+  trimEnd(charType?: string | undefined | null): this
+  /** Trims newlines from the start and end. */
+  trimLines(): this
+  /**
+   * Deprecated method that throws an error directing users to use prependRight or appendLeft.
+   * This matches the original magic-string API which deprecated this method.
+   */
+  insert(index: number, content: string): void
+  /** Returns a clone of the MagicString instance. */
+  clone(): BindingMagicString
+  /** Returns the last character of the generated string, or an empty string if empty. */
+  lastChar(): string
+  /** Returns the content after the last newline in the generated string. */
+  lastLine(): string
+  /** Returns a clone with content outside the specified range removed. */
+  snip(start: number, end: number): BindingMagicString
+  /**
+   * Resets the portion of the string from `start` to `end` to its original content.
+   * This undoes any modifications made to that range.
+   * Supports negative indices (counting from the end).
+   */
+  reset(start: number, end: number): this
+  /**
+   * Returns the content between the specified original character positions.
+   * Supports negative indices (counting from the end).
+   */
+  slice(start?: number | undefined | null, end?: number | undefined | null): string
 }
 
 export declare class BindingModuleInfo {
@@ -1789,7 +1828,6 @@ export interface BindingExperimentalDevModeOptions {
 
 export interface BindingExperimentalOptions {
   strictExecutionOrder?: boolean
-  disableLiveBindings?: boolean
   viteMode?: boolean
   resolveNewUrlToAsset?: boolean
   devMode?: BindingExperimentalDevModeOptions
@@ -1949,7 +1987,7 @@ export interface BindingInputOptions {
   preserveEntrySignatures?: BindingPreserveEntrySignatures
   optimization?: BindingOptimization
   context?: string
-  tsconfig?: true | string
+  tsconfig?: boolean | string
 }
 
 export interface BindingIsolatedDeclarationPluginConfig {
@@ -1998,6 +2036,10 @@ export interface BindingLogLocation {
   /** 0-based position in the line in UTF-16 code units */
   column: number
   file?: string
+}
+
+export interface BindingMagicStringOptions {
+  filename?: string
 }
 
 export type BindingMakeAbsoluteExternalsRelative =

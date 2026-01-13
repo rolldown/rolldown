@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      { "name": "main", "import": "./main.js" },
+      { "name": "lib", "import": "./lib.js" }
+    ],
+    "format": "cjs",
+    "exports": "named"
+  },
+  "_comment": "Tests Entry + Cjs WrapKind + Named OutputExports + default export access"
+}

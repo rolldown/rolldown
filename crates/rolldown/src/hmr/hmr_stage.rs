@@ -9,8 +9,8 @@ use std::{
 use arcstr::ArcStr;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
-  ClientHmrInput, ClientHmrUpdate, HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, Module,
-  ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
+  ClientHmrInput, ClientHmrUpdate, HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, ImportKind,
+  Module, ModuleIdx, ModuleTable, ScanMode, WatcherChangeKind,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_ecmascript_utils::AstSnippet;
@@ -377,52 +377,24 @@ impl<'a> HmrStage<'a> {
     let module_loader_output = module_loader.fetch_modules(fetch_mode).await?;
     drop(module_loader);
 
-    let new_added_modules = module_loader_output.new_added_modules_from_partial_scan.clone();
-
-    tracing::debug!(
-      target: "hmr",
-      "compile_lazy_entry: New added modules: {:?}",
-      new_added_modules
-        .iter()
-        .map(|module_idx| module_loader_output.module_table.get(*module_idx).stable_id())
-        .collect::<Vec<_>>(),
-    );
-
     self.cache.merge(module_loader_output.into()).map_err(|e| vec![anyhow::anyhow!(e).into()])?;
 
     let options = Arc::clone(&self.options);
     let resolver = Arc::clone(&self.resolver);
     self.cache.update_defer_sync_data(&options, &resolver).await?;
 
-    // 4. Render the lazy-compiled modules
-    // Note: This is NOT an HMR update - it's initial module loading
-    // We duplicate the rendering logic here to avoid HMR-specific boundary handling
-
+    // Collect all sync dependencies, stopping at already-executed modules.
+    // This ensures each client gets exactly the modules they need, regardless of what other clients have loaded (session-scoped cache vs client-scoped state).
+    // TODO: Race condition might exist if client sends multiple /lazy requests before reporting executed modules via WebSocket. Client runtime should handle duplicates.
     let mut modules_to_be_updated = FxIndexSet::default();
-    modules_to_be_updated.insert(entry_module_idx);
-    modules_to_be_updated.extend(new_added_modules.iter().copied());
+    self.collect_sync_dependencies_for_client(
+      entry_module_idx,
+      &mut modules_to_be_updated,
+      executed_modules,
+    );
 
     // Remove external modules - no way to "compile" them
     modules_to_be_updated.retain(|idx| self.module_table().modules[*idx].is_normal());
-
-    // Filter out modules the client has already executed.
-    // This prevents duplicate module execution when multiple lazy entries share dependencies.
-    // Note: There's a potential race condition if the client sends multiple /lazy requests
-    // before the hmr:module-registered message arrives. In that case, the server may still
-    // send duplicate modules. A future enhancement could add runtime guards in init functions.
-    //
-    // IMPORTANT: Always keep the entry module - we need it to call the init function
-    // that triggers the lazy load chain. Without it, dependencies wouldn't be initialized.
-    modules_to_be_updated.retain(|&idx| {
-      // Always keep the entry module
-      if idx == entry_module_idx {
-        return true;
-      }
-      let Module::Normal(normal_module) = &self.module_table().modules[idx] else {
-        return true;
-      };
-      !executed_modules.contains(normal_module.stable_id.as_str())
-    });
 
     // Sort for stable output
     modules_to_be_updated
@@ -1251,4 +1223,44 @@ impl PropagateUpdateStatus {
 struct ModuleRenderInput {
   pub idx: ModuleIdx,
   pub ecma_ast: EcmaAst,
+}
+
+impl HmrStage<'_> {
+  fn collect_sync_dependencies_for_client(
+    &self,
+    proxy_entry_idx: ModuleIdx,
+    result: &mut FxIndexSet<ModuleIdx>,
+    executed_modules: &FxHashSet<String>,
+  ) {
+    let modules = &self.module_table().modules;
+    let mut stack = vec![proxy_entry_idx];
+
+    while let Some(module_idx) = stack.pop() {
+      if !result.insert(module_idx) {
+        continue;
+      }
+
+      let Module::Normal(module) = &modules[module_idx] else {
+        continue;
+      };
+
+      for rec in &module.import_records {
+        // For the proxy entry module, also follow dynamic imports.
+        // The proxy's fetched template has `import($MODULE_ID)` pointing to the real module.
+        // We need to include the real module and its sync dependencies in the patch.
+        let should_follow = rec.kind.is_static()
+          || (module_idx == proxy_entry_idx && rec.kind == ImportKind::DynamicImport);
+
+        if should_follow {
+          let dep_idx = rec.resolved_module;
+          if let Module::Normal(normal_dep) = &modules[dep_idx] {
+            if executed_modules.contains(normal_dep.stable_id.as_str()) {
+              continue;
+            }
+          }
+          stack.push(dep_idx);
+        }
+      }
+    }
+  }
 }

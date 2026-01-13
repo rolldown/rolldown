@@ -1,0 +1,14 @@
+{
+  "config": {
+    "format": "cjs",
+    "advancedChunks": {
+      "groups": [
+        {
+          "name": "shared",
+          "test": "shared"
+        }
+      ]
+    }
+  },
+  "_comment": "Tests Common chunk + Cjs WrapKind + Named OutputExports + default export access"
+}

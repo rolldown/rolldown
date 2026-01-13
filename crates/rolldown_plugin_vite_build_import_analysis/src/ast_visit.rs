@@ -148,7 +148,8 @@ impl VisitMut<'_> for DynamicImportVisitor<'_, '_> {
             "",
             width = (it.span.end - it.span.start).saturating_sub(19) as usize
           ),
-        );
+        )
+        .expect("update should not fail in build import analysis plugin");
         return;
       }
     }

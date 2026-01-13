@@ -1,0 +1,17 @@
+{
+  "config": {
+    "format": "cjs",
+    "experimental": {
+      "strictExecutionOrder": true
+    },
+    "advancedChunks": {
+      "groups": [
+        {
+          "name": "shared",
+          "test": "shared"
+        }
+      ]
+    }
+  },
+  "_comment": "Tests Common chunk + Esm WrapKind + Named OutputExports + named export access"
+}

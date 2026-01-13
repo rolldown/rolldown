@@ -5,6 +5,7 @@ const fn = vi.fn();
 import { getOutputChunkNames } from 'rolldown-tests/utils';
 
 export default defineTest({
+  sequential: true,
   config: {
     input: ['main.js', 'entry.js'],
     plugins: [
@@ -25,8 +26,7 @@ export default defineTest({
     ],
   },
   afterTest(output) {
-    expect(JSON.stringify(getOutputChunkNames(output), null, 2))
-      .toMatchInlineSnapshot(`
+    expect(JSON.stringify(getOutputChunkNames(output), null, 2)).toMatchInlineSnapshot(`
       "[
         "entry.js",
         "main.js",

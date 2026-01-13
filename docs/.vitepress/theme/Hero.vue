@@ -60,6 +60,8 @@
       >
         <img
           src="@assets/rolldown/hero-terminal.svg"
+          width="587"
+          height="405"
           alt="Rolldown terminal"
           class="w-full h-full object-contain"
         />
@@ -72,7 +74,7 @@
         <img
           src="@assets/rolldown/rolldown-thumbnail.png"
           alt="Video thumbnail"
-          class="h-16 group-hover:opacity-75 group-hover:scale-105 transition-[scale,opacity]"
+          class="h-16 aspect-[244/144] group-hover:opacity-75 group-hover:scale-105 transition-[scale,opacity]"
         />
         <div>
           <h5 class="text-white">What is Rolldown</h5>
@@ -89,6 +91,7 @@
 <style scoped>
 .hero-background {
   background-image: url('@assets/rolldown/hero-background.jpg');
+  background-color: #ed4d01;
   background-size: cover;
   background-position: center;
 }

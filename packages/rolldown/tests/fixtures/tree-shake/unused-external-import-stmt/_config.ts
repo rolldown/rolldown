@@ -5,6 +5,7 @@ import { expect, vi } from 'vitest';
 const onLogFn = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     treeshake: {
       moduleSideEffects: false,
@@ -13,9 +14,7 @@ export default defineTest({
     onLog(level, log) {
       expect(level).toBe('warn');
       expect(log.code).toBe('UNRESOLVED_IMPORT');
-      expect(log.message).toContain(
-        "Could not resolve 'unused-external-module' in main.js",
-      );
+      expect(log.message).toContain("Could not resolve 'unused-external-module' in main.js");
       expect(log.plugin).toBeUndefined();
       onLogFn();
     },

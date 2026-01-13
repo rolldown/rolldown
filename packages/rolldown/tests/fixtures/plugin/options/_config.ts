@@ -6,12 +6,13 @@ import { expect, vi } from 'vitest';
 const fn = vi.fn();
 
 export default defineTest({
+  sequential: true,
   config: {
     input: [],
     plugins: [
       {
         name: 'test-plugin',
-        options: function(opts) {
+        options: function (opts) {
           expect(opts.input?.length).toBe(0);
           opts.input = [path.join(__dirname, 'main.js')];
           fn();

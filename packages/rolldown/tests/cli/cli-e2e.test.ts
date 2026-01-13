@@ -33,10 +33,7 @@ describe('basic arguments', () => {
     expect(
       cleanStdout(
         // Prevent snapshot from breaking when version changes
-        ret.stdout.replace(
-          /* Match `rolldown v*)` */ /rolldown\sv.*\)/,
-          'rolldown VERSION)',
-        ),
+        ret.stdout.replace(/* Match `rolldown v*)` */ /rolldown\sv.*\)/, 'rolldown VERSION)'),
       ),
     ).toMatchSnapshot();
   });
@@ -293,6 +290,26 @@ describe('config', () => {
       expect(err).not.toBeUndefined();
     }
   });
+
+  it('should error when config exports null', async () => {
+    const cwd = cliFixturesDir('config-invalid-export');
+    try {
+      await $({ cwd })`rolldown -c rolldown.config.js`;
+      expect.unreachable();
+    } catch (error: any) {
+      expect(error.stdout).toContain('expected object or array, got null');
+    }
+  });
+
+  it('should error when config function returns non-object', async () => {
+    const cwd = cliFixturesDir('config-invalid-export');
+    try {
+      await $({ cwd })`rolldown -c rolldown.config.ts`;
+      expect.unreachable();
+    } catch (error: any) {
+      expect(error.stdout).toContain('expected object or array, got 123');
+    }
+  });
 });
 
 describe('watch cli', () => {
@@ -327,12 +344,8 @@ describe('watch cli', () => {
       cancelSignal: controller.signal,
     })`rolldown -c rolldown.config.ts -d watch-dist-options -w`;
     await waitUtil(() => {
-      expect(fs.existsSync(path.join(cwd, 'watch-dist-options/esm.js'))).toBe(
-        true,
-      );
-      expect(fs.existsSync(path.join(cwd, 'watch-dist-options/cjs.js'))).toBe(
-        true,
-      );
+      expect(fs.existsSync(path.join(cwd, 'watch-dist-options/esm.js'))).toBe(true);
+      expect(fs.existsSync(path.join(cwd, 'watch-dist-options/cjs.js'))).toBe(true);
     });
     controller.abort();
   });
@@ -346,12 +359,8 @@ describe('watch cli', () => {
       cancelSignal: controller.signal,
     })`rolldown -c rolldown.config.ts -d watch-dist-output -w`;
     await waitUtil(() => {
-      expect(fs.existsSync(path.join(cwd, 'watch-dist-output/esm.js'))).toBe(
-        true,
-      );
-      expect(fs.existsSync(path.join(cwd, 'watch-dist-output/cjs.js'))).toBe(
-        true,
-      );
+      expect(fs.existsSync(path.join(cwd, 'watch-dist-output/esm.js'))).toBe(true);
+      expect(fs.existsSync(path.join(cwd, 'watch-dist-output/cjs.js'))).toBe(true);
     });
     controller.abort();
   });

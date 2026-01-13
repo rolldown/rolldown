@@ -23,14 +23,15 @@ export async function bundleWithConfig(
   }
 
   const config = await loadConfig(configPath);
-
-  if (!config) {
-    logger.error(`No configuration found at ${configPath}`);
-    process.exit(1);
-  }
-
   // If config is a function, call it with raw command line arguments
   const resolvedConfig = typeof config === 'function' ? await config(rawArgs) : config;
+
+  if (typeof resolvedConfig !== 'object' || resolvedConfig === null) {
+    logger.error(
+      `Invalid configuration from ${configPath}: expected object or array, got ${resolvedConfig}`,
+    );
+    process.exit(1);
+  }
 
   // TODO: Could add more validation/diagnostics here to emit a nice error message
   if (cliOptions.watch) {

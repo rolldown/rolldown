@@ -155,11 +155,11 @@ impl<'ast> DynamicImportVarsVisit<'ast, '_> {
           .unwrap_or_default()
       );
 
-      self.magic_string.get_or_insert_with(|| MagicString::new(self.source_text)).update(
-        import_expr.span.start as usize,
-        import_expr.span.end as usize,
-        replacement,
-      );
+      self
+        .magic_string
+        .get_or_insert_with(|| MagicString::new(self.source_text))
+        .update(import_expr.span.start as usize, import_expr.span.end as usize, replacement)
+        .expect("update should not fail in dynamic import vars plugin");
 
       self.need_helper = true;
       return false;

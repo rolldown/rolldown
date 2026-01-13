@@ -86,6 +86,12 @@ impl LinkStage<'_> {
         };
         *stmt = snippet.export_default_expr_stmt(expr);
       });
+
+      // Ensure exports_kind is set to Esm for all modules that generate ESM export syntax.
+      // This is needed for proper CJS export rendering in preserveModules mode.
+      let module = &mut self.module_table[module_idx];
+      let module = module.as_normal_mut().unwrap();
+      module.exports_kind = ExportsKind::Esm;
     }
   }
 }

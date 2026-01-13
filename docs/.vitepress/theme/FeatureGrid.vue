@@ -71,10 +71,19 @@ const performanceData = [
         <h5 class="text-white">Rollup Compatible</h5>
         <p class="max-w-[30rem] text-pretty">Familiar API & options with a rich plugin ecosystem</p>
       </div>
-      <div class="card-bg px-5 sm:px-20 pt-5 sm:pt-10 flex justify-center">
+      <div class="relative px-5 sm:px-20 pt-5 sm:pt-10 flex justify-center bg-[#ed4d01]">
+        <img
+          class="absolute inset-0 h-full w-full object-cover"
+          src="@assets/rolldown/rolldown-rollup-background.jpg"
+          alt=""
+          inert
+          loading="lazy"
+        />
         <img
           src="@assets/rolldown/rolldown-rollup.png"
-          class="-mb-[60px]"
+          width="892"
+          height="555"
+          class="-mb-[60px] z-1"
           inert
           loading="lazy"
           alt="rollup compatible"
@@ -92,9 +101,11 @@ const performanceData = [
       <div class="flex-1 flex items-center justify-center p-8 sm:p-15 sm:pt-10">
         <img
           src="@assets/rolldown/rolldown-esbuild-parity.png"
+          width="742"
+          height="493"
           inert
           loading="lazy"
-          alt="jest compatible"
+          alt="esbuild feature parity"
           class="w-full max-h-60 object-contain"
         />
       </div>
@@ -114,11 +125,3 @@ const performanceData = [
     </div>
   </section>
 </template>
-
-<style scoped>
-.card-bg {
-  background-image: url('@assets/rolldown/rolldown-rollup-background.jpg');
-  background-size: cover;
-  background-position: center;
-}
-</style>

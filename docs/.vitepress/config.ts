@@ -333,17 +333,6 @@ const config = defineConfig({
             { text: 'Team', link: '/team' },
           ],
         },
-        /*{
-          title: 'Legal',
-          items: [
-            {
-              text: 'Terms & Conditions',
-              link: 'https://voidzero.dev/terms',
-            },
-            { text: 'Privacy Policy', link: 'https://voidzero.dev/privacy' },
-            { text: 'Cookie Policy', link: 'https://voidzero.dev/cookies' },
-          ],
-        },*/
       ],
       social: [
         { icon: 'github', link: 'https://github.com/rolldown/rolldown' },

@@ -1076,7 +1076,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       );
     }
 
-    if self.ctx.options.inline_dynamic_imports {
+    if self.ctx.options.code_splitting.is_disabled() {
       match &self.ctx.modules[importee_id] {
         Module::Normal(importee) => {
           let importee_linking_info = &self.ctx.linking_infos[importee_id];

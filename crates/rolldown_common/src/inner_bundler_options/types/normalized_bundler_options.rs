@@ -10,6 +10,7 @@ use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_error::EventKindSwitcher;
 use rustc_hash::{FxHashMap, FxHashSet};
 
+use super::code_splitting_mode::CodeSplittingMode;
 use super::experimental_options::ExperimentalOptions;
 use super::generated_code_options::GeneratedCodeOptions;
 use super::legal_comments::LegalComments;
@@ -86,7 +87,7 @@ pub struct NormalizedBundlerOptions {
   pub inject: Vec<InjectImport>,
   pub oxc_inject_global_variables_config: InjectGlobalVariablesConfig,
   pub external_live_bindings: bool,
-  pub inline_dynamic_imports: bool,
+  pub code_splitting: CodeSplittingMode,
   pub dynamic_import_in_cjs: bool,
   pub manual_code_splitting: Option<ManualCodeSplittingOptions>,
   pub checks: EventKindSwitcher,
@@ -161,7 +162,7 @@ impl Default for NormalizedBundlerOptions {
       inject: Default::default(),
       oxc_inject_global_variables_config: InjectGlobalVariablesConfig::new(vec![]),
       external_live_bindings: Default::default(),
-      inline_dynamic_imports: Default::default(),
+      code_splitting: CodeSplittingMode::default(),
       dynamic_import_in_cjs: true,
       manual_code_splitting: Default::default(),
       checks: Default::default(),

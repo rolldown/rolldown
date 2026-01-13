@@ -4,7 +4,7 @@
       { "import": "main.js" },
       { "import": "entry.js" }
     ],
-    "inlineDynamicImports": true
+    "codeSplitting": false
   },
   "expectError": true
 }

@@ -120,7 +120,7 @@ impl Plugin for ViteReporterPlugin {
     args: &rolldown_plugin::HookRenderChunkArgs<'_>,
   ) -> rolldown_plugin::HookRenderChunkReturn {
     // TODO(shulaoda): Consider moving the following logic into core
-    if !args.options.inline_dynamic_imports {
+    if !args.options.code_splitting.is_disabled() {
       for id in &args.chunk.module_ids {
         let Some(module) = ctx.get_module_info(id) else {
           continue;

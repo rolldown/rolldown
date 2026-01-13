@@ -192,28 +192,21 @@ pub fn deconflict_chunk_symbols(
   // Since we now avoid conflicting names during root scope renaming, most nested scope
   // symbols can keep their original names, but we still need to handle shadowing cases.
   for module_idx in chunk.modules.iter().copied() {
-    let Some(module) = link_output.module_table[module_idx].as_normal() else {
-      continue;
-    };
-    let Some(db) = &link_output.symbol_db[module.idx] else {
+    let Some(db) = &link_output.symbol_db[module_idx] else {
       continue;
     };
     let scoping = db.ast_scopes.scoping();
-    let root_scope_id = scoping.root_scope_id();
 
     // Check if this module is CJS wrapped - if so, nested scopes should avoid
     // shadowing `exports` and `module` which are synthetic parameters
-    let is_cjs_wrapped = matches!(link_output.metas[module.idx].wrap_kind(), WrapKind::Cjs);
+    let is_cjs_wrapped = matches!(link_output.metas[module_idx].wrap_kind(), WrapKind::Cjs);
 
-    for symbol_id in scoping.symbol_ids() {
-      let scope_id = scoping.symbol_scope_id(symbol_id);
-      // Skip root scope symbols - they're already handled
-      if scope_id == root_scope_id {
-        continue;
+    // Skip the first binding which is the root scope itself - they're already handled
+    for (_, bindings) in scoping.iter_bindings().skip(1) {
+      for (name, symbol_id) in bindings {
+        let symbol_ref = (module_idx, *symbol_id).into();
+        renamer.register_nested_scope_symbols(symbol_ref, name, is_cjs_wrapped);
       }
-      let symbol_ref = (module.idx, symbol_id).into();
-      let original_name = scoping.symbol_name(symbol_id);
-      renamer.register_nested_scope_symbols(symbol_ref, original_name, is_cjs_wrapped);
     }
   }
 

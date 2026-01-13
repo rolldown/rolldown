@@ -214,15 +214,18 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
       .iter()
       .filter_map(|item| {
         let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(item.import_ref);
-        let imported = &ctx.chunk.canonical_names[&canonical_ref];
+        let imported = ctx
+          .link_output
+          .symbol_db
+          .canonical_name_for_or_original(canonical_ref, &ctx.chunk.canonical_names);
         let alias = &ctx.render_export_items_index_vec[*exporter_id]
           .get(&item.import_ref)
           .expect("should have export item index")[0];
-        if alias == imported {
+        if alias.as_str() == imported {
           Some(to_module_import_export_name(alias.as_str()))
         } else {
           if alias.as_str() == "default" {
-            default_alias.push(imported.as_str().into());
+            default_alias.push(imported.into());
             return None;
           }
           Some(concat_string!(to_module_import_export_name(alias), " as ", imported))
@@ -333,11 +336,14 @@ where
   let mut default_alias = vec![];
   let specifiers = named_imports
     .filter_map(|(_importer, named_import)| {
-      let canonical_ref = &ctx.link_output.symbol_db.canonical_ref_for(named_import.imported_as);
-      if !ctx.link_output.used_symbol_refs.contains(canonical_ref) {
+      let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(named_import.imported_as);
+      if !ctx.link_output.used_symbol_refs.contains(&canonical_ref) {
         return None;
       }
-      let alias = &ctx.chunk.canonical_names[canonical_ref];
+      let alias = ctx
+        .link_output
+        .symbol_db
+        .canonical_name_for_or_original(canonical_ref, &ctx.chunk.canonical_names);
       match &named_import.imported {
         Specifier::Star => {
           if rendered_external_import_namespace_modules.contains(&importee.idx) {
@@ -353,11 +359,11 @@ where
           None
         }
         Specifier::Literal(imported) => {
-          if alias == imported {
-            Some(alias.as_str().into())
+          if alias == imported.as_str() {
+            Some(alias.into())
           } else {
             if imported.as_str() == "default" {
-              default_alias.push(alias.as_str().into());
+              default_alias.push(alias.into());
               return None;
             }
             let imported = to_module_import_export_name(imported);

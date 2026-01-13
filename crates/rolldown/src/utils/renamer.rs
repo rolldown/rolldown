@@ -298,6 +298,8 @@ impl<'name> Renamer<'name> {
     // Check if this name would shadow CJS wrapper parameters
     let shadows_cjs_param = is_cjs_wrapped && Self::CJS_WRAPPER_NAMES.contains(&original_name);
 
+    // Only store in canonical_names if we need to rename.
+    // Symbols keeping their original name can be looked up via symbol_db.name()
     if shadows_renamed_symbol || shadows_cjs_param {
       // Generate a unique name
       let mut count = 1u32;
@@ -309,10 +311,8 @@ impl<'name> Renamer<'name> {
           concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();
       }
       self.canonical_names.insert(symbol_ref, candidate_name);
-    } else {
-      // Use original name
-      self.canonical_names.insert(symbol_ref, CompactStr::new(original_name));
     }
+    // else: symbol keeps original name, no need to store
   }
 
   #[inline]

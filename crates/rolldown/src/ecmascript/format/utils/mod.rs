@@ -15,10 +15,13 @@ pub fn render_factory_parameters(
   externals: &[&ExternalModule],
   has_exports: bool,
 ) -> String {
-  let mut parameters = if has_exports { vec!["exports"] } else { vec![] };
+  let mut parameters: Vec<&str> = if has_exports { vec!["exports"] } else { vec![] };
   externals.iter().for_each(|external| {
-    let symbol_name = &ctx.chunk.canonical_names[&external.namespace_ref];
-    parameters.push(symbol_name.as_str());
+    let symbol_name = ctx
+      .link_output
+      .symbol_db
+      .canonical_name_for_or_original(external.namespace_ref, &ctx.chunk.canonical_names);
+    parameters.push(symbol_name);
   });
   parameters.join(", ")
 }
@@ -37,16 +40,19 @@ pub fn render_chunk_external_imports<'a>(
         .as_external()
         .expect("Should be external module here");
 
-      let external_module_symbol_name = &ctx.chunk.canonical_names[&importee.namespace_ref];
+      let external_module_symbol_name = ctx
+        .link_output
+        .symbol_db
+        .canonical_name_for_or_original(importee.namespace_ref, &ctx.chunk.canonical_names);
 
       if ctx.link_output.used_symbol_refs.contains(&importee.namespace_ref) {
         // Check if this import needs __toESM
         let needs_interop = external_import_needs_interop(named_imports);
         if needs_interop {
-          let to_esm_fn_name = &ctx.chunk.canonical_names[&ctx
-            .link_output
-            .symbol_db
-            .canonical_ref_for(ctx.link_output.runtime.resolve_symbol("__toESM"))];
+          let to_esm_fn_name = ctx.link_output.symbol_db.canonical_name_for_or_original(
+            ctx.link_output.runtime.resolve_symbol("__toESM"),
+            &ctx.chunk.canonical_names,
+          );
 
           import_code.push_str(external_module_symbol_name);
           import_code.push_str(" = ");

@@ -272,7 +272,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           self.rendered_concatenated_wrapped_module_parts.rendered_esm_runtime_expr =
             Some(self.builder().expression_statement(SPAN, esm_ref_expr).to_source_string());
           self.rendered_concatenated_wrapped_module_parts.wrap_ref_name =
-            Some(wrap_ref_name.clone());
+            Some(CompactStr::new(wrap_ref_name));
           program.body.extend(stmts_inside_closure);
           return;
         }
@@ -306,7 +306,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       let symbol = self.ctx.symbol_db.get(canonical_ref);
       assert!(symbol.namespace_alias.is_none());
       let canonical_name = self.canonical_name_for(symbol_ref);
-      if ident.name != canonical_name.as_str() {
+      if ident.name != canonical_name {
         ident.name = self.snippet.atom(canonical_name);
       }
       ident.symbol_id.get_mut().take();

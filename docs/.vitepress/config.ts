@@ -189,6 +189,7 @@ const config = defineConfig({
   sitemap: {
     hostname: 'https://rolldown.rs',
   },
+  appearance: 'dark',
   head: [
     [
       'link',

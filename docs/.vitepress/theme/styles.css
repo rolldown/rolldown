@@ -28,3 +28,8 @@
 a text {
   text-decoration: underline;
 }
+
+/** * Dark to light theme transition * Smooths the transition when navigating from dark-themed home page to light-themed pages */
+body {
+  transition: background-color 0.45s ease-in;
+}

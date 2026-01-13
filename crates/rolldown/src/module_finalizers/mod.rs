@@ -1267,10 +1267,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               let mut init_expr = expr.take_in(self.alloc);
               if self.ctx.options.keep_names {
                 let inner_expr = init_expr.without_parentheses_mut();
-                let binding = match inner_expr {
-                  ast::Expression::FunctionExpression(func) if func.id.is_none() => {
-                    Some(CompactStr::from("default"))
-                  }
+                let needs_inline_name = match inner_expr {
+                  ast::Expression::FunctionExpression(func) if func.id.is_none() => true,
                   ast::Expression::ClassExpression(class_expression)
                     if class_expression.id.is_none() =>
                   {
@@ -1280,20 +1278,24 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     ) {
                       class_expression.body.body.insert(0, element);
                     }
-                    None
+                    false
                   }
-                  ast::Expression::ArrowFunctionExpression(_) => Some(CompactStr::from("default")),
-                  _ => None,
+                  ast::Expression::ArrowFunctionExpression(_) => true,
+                  _ => false,
                 };
 
-                if let Some(binding) = binding {
-                  // current statement will be pushed to program.body, so the insert position is program.body.len() + 1
-                  let insert_position = program.body.len() + 1;
-                  self.keep_name_statement_to_insert.push((
-                    insert_position,
-                    binding,
-                    canonical_name_for_default_export_ref.clone(),
-                  ));
+                if needs_inline_name {
+                  // Wrap the expression inline: `__name(<expr>, "default")`
+                  // This matches esbuild's output and allows tree-shaking with PURE annotation
+                  let name_ref = self.canonical_ref_for_runtime("__name");
+                  let (finalized_callee, _) =
+                    self.finalized_expr_for_symbol_ref(name_ref, false, false);
+                  init_expr = self.snippet.keep_name_call_expr(
+                    "default",
+                    init_expr,
+                    finalized_callee,
+                    true, // pure annotation for tree-shaking
+                  );
                 }
               }
 

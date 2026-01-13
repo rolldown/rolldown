@@ -6038,11 +6038,11 @@ expression: output
 
 # tests/rolldown/topics/keep_names/issue_7852
 
-- main-!~{000}~.js => main-CkTekG0F.js
+- main-!~{000}~.js => main-BLYZq5mg.js
 
 # tests/rolldown/topics/keep_names/parenthesized_default_export
 
-- main-!~{000}~.js => main-DgH0nPHk.js
+- main-!~{000}~.js => main-Dn3lIuCt.js
 
 # tests/rolldown/topics/live_bindings/default_export_binding
 

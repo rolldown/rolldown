@@ -9,8 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 //#region main.js
 const baseFontSize = 16;
-var main_default = (px) => parseFloat(px) / baseFontSize;
-__name(main_default, "default");
+var main_default = /* @__PURE__ */ __name((px) => parseFloat(px) / baseFontSize, "default");
 
 //#endregion
 export { main_default as default };

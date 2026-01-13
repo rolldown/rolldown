@@ -52,7 +52,11 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     }
   }
 
-  const advancedChunks = bindingifyAdvancedChunks(outputOptions.advancedChunks, manualChunks);
+  const advancedChunks = bindingifyAdvancedChunks(
+    outputOptions.codeSplitting,
+    outputOptions.advancedChunks,
+    manualChunks,
+  );
 
   return {
     dir,
@@ -174,13 +178,25 @@ function bindingifyAssetFilenames(
 }
 
 function bindingifyAdvancedChunks(
+  codeSplitting: OutputOptions['codeSplitting'],
   advancedChunks: OutputOptions['advancedChunks'],
   manualChunks: OutputOptions['manualChunks'],
 ): BindingOutputOptions['advancedChunks'] {
-  if (manualChunks != null && advancedChunks != null) {
-    console.warn('`manualChunks` option is ignored due to `advancedChunks` option is specified.');
+  // Determine the effective option with priority: codeSplitting > advancedChunks > manualChunks
+  let effectiveOption = codeSplitting;
+
+  if (codeSplitting != null && advancedChunks != null) {
+    console.warn('`advancedChunks` option is ignored due to `codeSplitting` option is specified.');
+  } else if (codeSplitting == null && advancedChunks != null) {
+    console.warn('`advancedChunks` option is deprecated, please use `codeSplitting` instead.');
+    effectiveOption = advancedChunks;
+  }
+
+  // Handle manualChunks migration
+  if (manualChunks != null && effectiveOption != null) {
+    console.warn('`manualChunks` option is ignored due to `codeSplitting` option is specified.');
   } else if (manualChunks != null) {
-    advancedChunks = {
+    effectiveOption = {
       groups: [
         {
           name(moduleId, ctx) {
@@ -193,14 +209,14 @@ function bindingifyAdvancedChunks(
     };
   }
 
-  if (advancedChunks == null) {
+  if (effectiveOption == null) {
     return undefined;
   }
 
-  const { groups, ...restAdvancedChunks } = advancedChunks;
+  const { groups, ...restOptions } = effectiveOption;
 
   return {
-    ...restAdvancedChunks,
+    ...restOptions,
     groups: groups?.map((group) => {
       const { name, ...restGroup } = group;
 

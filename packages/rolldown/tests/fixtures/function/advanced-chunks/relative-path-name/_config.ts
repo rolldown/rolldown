@@ -8,7 +8,7 @@ export default defineTest({
   config: {
     input: './entry.js',
     output: {
-      advancedChunks: {
+      codeSplitting: {
         groups: [
           {
             name: (file) => {

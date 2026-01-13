@@ -38,7 +38,8 @@ class ModuleHotContext {
         deps: [acceptingPath],
         fn: cb,
       });
-    } else if (args.length === 0) {} else {
+    } else if (args.length === 0) {}
+    else {
       throw new Error('Invalid arguments for `import.meta.hot.accept`');
     }
   }

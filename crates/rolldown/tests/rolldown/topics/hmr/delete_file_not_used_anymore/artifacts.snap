@@ -26,8 +26,8 @@ const parentValue = "parent";
 assert.strictEqual(parentValue, "parent");
 assert.strictEqual(value, "child");
 parent_hot.accept((newMod) => {
-	const { childValue, parentValue: parentValue$1 } = newMod;
-	assert.strictEqual(parentValue$1, "parent");
+	const { childValue, parentValue } = newMod;
+	assert.strictEqual(parentValue, "parent");
 	assert.strictEqual(childValue, "not-child");
 });
 

@@ -15,10 +15,7 @@ var _MyClass;
 function MyDecorator() {
 	return (target) => {};
 }
-let MyClass = _MyClass = class MyClass$1 {
-	static {
-		__name(this, "MyClass");
-	}
+let MyClass = _MyClass = class MyClass {
 	constructor() {
 		this.myName = _MyClass.name;
 	}

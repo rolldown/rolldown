@@ -94,8 +94,8 @@ const requiredUmdLib = require_umd_lib();
 assert.strictEqual(requiredUmdLib(), "exports");
 assert.strictEqual(requiredUmdLib.foo, "foo");
 {
-	const require$1 = () => 1;
-	assert.strictEqual(require$1(), 1);
+	const require = () => 1;
+	assert.strictEqual(require(), 1);
 }
 
 //#endregion

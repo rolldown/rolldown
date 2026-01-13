@@ -60,8 +60,8 @@ var main_exports = {};
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 text(".app", "hello");
-function text(el, text$1) {
-	console.log(el, text$1);
+function text(el, text) {
+	console.log(el, text);
 }
 
 //#endregion

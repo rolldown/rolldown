@@ -713,13 +713,13 @@ import { jsxDEV } from "react/jsx-dev-runtime";
 
 //#region typescript-enum.tsx
 var _jsxFileName = "typescript-enum.tsx";
-let Foo = /* @__PURE__ */ function(Foo$1) {
-	Foo$1[Foo$1["foo"] = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+let Foo = /* @__PURE__ */ function(Foo) {
+	Foo[Foo["foo"] = /* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
 		fileName: _jsxFileName,
 		lineNumber: 1,
 		columnNumber: 25
 	}, this)] = "foo";
-	return Foo$1;
+	return Foo;
 }({});
 
 //#endregion
@@ -736,8 +736,8 @@ export { Foo };
 -    Foo2[Foo2["foo"] = jsxDEV("div", {}, void 0, false, {
 -        fileName: "typescript-enum.tsx",
 +var _jsxFileName = "typescript-enum.tsx";
-+var Foo = (function (Foo$1) {
-+    Foo$1[Foo$1["foo"] = jsxDEV("div", {}, void 0, false, {
++var Foo = (function (Foo) {
++    Foo[Foo["foo"] = jsxDEV("div", {}, void 0, false, {
 +        fileName: _jsxFileName,
          lineNumber: 1,
          columnNumber: 25
@@ -745,7 +745,7 @@ export { Foo };
 -    return Foo2;
 -})(Foo || ({}));
 +    }, this)] = "foo";
-+    return Foo$1;
++    return Foo;
 +})({});
  export {Foo};
 

@@ -49,19 +49,19 @@ expression: output
 # tests/esbuild/dce/cross_module_constant_folding_computed_property_name
 
 - const-entry_js-!~{001}~.js => const-entry_js-D6lMIPDN.js
-- enum-entry_ts-!~{000}~.js => enum-entry_ts-CwpNaWQ4.js
+- enum-entry_ts-!~{000}~.js => enum-entry_ts-eyGQ6uy9.js
 
 # tests/esbuild/dce/cross_module_constant_folding_number
 
 - const-entry-!~{001}~.js => const-entry-XmFaKKz7.js
-- enum-entry-!~{000}~.js => enum-entry-DFp7lncK.js
-- nested-entry-!~{002}~.js => nested-entry-BGhTmhBo.js
+- enum-entry-!~{000}~.js => enum-entry-Bo_kq8uj.js
+- nested-entry-!~{002}~.js => nested-entry-CwKPpGcx.js
 
 # tests/esbuild/dce/cross_module_constant_folding_string
 
 - const-entry-!~{001}~.js => const-entry-BApYwAdm.js
-- enum-entry-!~{000}~.js => enum-entry-lw4GUAbQ.js
-- nested-entry-!~{002}~.js => nested-entry-CHMytYBT.js
+- enum-entry-!~{000}~.js => enum-entry-CFNoX59k.js
+- nested-entry-!~{002}~.js => nested-entry-CPefn1w6.js
 
 # tests/esbuild/dce/data_url_loader_remove_unused
 
@@ -85,7 +85,7 @@ expression: output
 
 # tests/esbuild/dce/dce_of_experimental_decorators
 
-- keep-these-!~{000}~.js => keep-these-GAw0tzvM.js
+- keep-these-!~{000}~.js => keep-these-ia7gRvzs.js
 
 # tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195
 
@@ -573,7 +573,7 @@ expression: output
 
 # tests/esbuild/default/arrow_fn_scope
 
-- entry-!~{000}~.js => entry-DT7gOATv.js
+- entry-!~{000}~.js => entry-8P0QSw_R.js
 
 # tests/esbuild/default/auto_external
 
@@ -650,7 +650,7 @@ expression: output
 
 # tests/esbuild/default/conditional_require
 
-- a-!~{000}~.js => a-DxLCNwbV.js
+- a-!~{000}~.js => a-Cpr9iNPL.js
 
 # tests/esbuild/default/conditional_require_resolve
 
@@ -1025,7 +1025,7 @@ expression: output
 - top-level-this-cjs-!~{009}~.js => top-level-this-cjs-Dxq2dud4.js
 - top-level-this-esm-!~{00a}~.js => top-level-this-esm-BWlB-Fqz.js
 - tsconfig-!~{00b}~.js => tsconfig-LxWeM9SG.js
-- typescript-enum-!~{00c}~.js => typescript-enum-BcM9_iSU.js
+- typescript-enum-!~{00c}~.js => typescript-enum-CMtkqWzm.js
 - typescript-namespace-!~{00d}~.js => typescript-namespace-CsxnWI1q.js
 
 # tests/esbuild/default/jsx_import_meta_property
@@ -1072,7 +1072,7 @@ expression: output
 
 # tests/esbuild/default/keep_names_class_static_name
 
-- entry-!~{000}~.js => entry-BbXlDK5H.js
+- entry-!~{000}~.js => entry-B1xHfs4v.js
 
 # tests/esbuild/default/keep_names_tree_shaking
 
@@ -1264,8 +1264,8 @@ expression: output
 
 # tests/esbuild/default/mangle_props_type_script_features
 
-- enum-values-!~{002}~.js => enum-values-CPQKvSM8.js
-- namespace-exports-!~{001}~.js => namespace-exports-MkCnXJ9F.js
+- enum-values-!~{002}~.js => enum-values-ZVmF0TWU.js
+- namespace-exports-!~{001}~.js => namespace-exports-D_CUjSp9.js
 - parameter-properties-!~{000}~.js => parameter-properties-DkrTMqNf.js
 
 # tests/esbuild/default/mangle_quoted_props
@@ -1436,7 +1436,7 @@ expression: output
 
 # tests/esbuild/default/node_annotation_false_positive_issue3544
 
-- entry-!~{000}~.js => entry-5VzC-1pQ.js
+- entry-!~{000}~.js => entry-B0FcqYtb.js
 
 # tests/esbuild/default/node_annotation_invalid_identifier_issue4100
 
@@ -1531,7 +1531,7 @@ expression: output
 
 # tests/esbuild/default/require_and_dynamic_import_invalid_template
 
-- entry-!~{000}~.js => entry-CV1Nuyei.js
+- entry-!~{000}~.js => entry-gKRJLjeD.js
 
 # tests/esbuild/default/require_bad_argument_count
 
@@ -1657,7 +1657,7 @@ expression: output
 
 # tests/esbuild/default/switch_scope_no_bundle
 
-- entry-!~{000}~.js => entry-Dpto5Nmb.js
+- entry-!~{000}~.js => entry-DLzh95xG.js
 
 # tests/esbuild/default/this_inside_function
 
@@ -2603,11 +2603,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-C_uqmKUj.js
+- entry-!~{000}~.js => entry-BsVQT4Ta.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-C_uqmKUj.js
+- entry-!~{000}~.js => entry-BsVQT4Ta.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2651,11 +2651,11 @@ expression: output
 
 # tests/esbuild/lower/lower_for_await2015
 
-- entry-!~{000}~.js => entry-wmIgor_5.js
+- entry-!~{000}~.js => entry-CFrXzieP.js
 
 # tests/esbuild/lower/lower_for_await2017
 
-- entry-!~{000}~.js => entry-wmIgor_5.js
+- entry-!~{000}~.js => entry-CFrXzieP.js
 
 # tests/esbuild/lower/lower_nested_function_direct_eval
 
@@ -2848,7 +2848,7 @@ expression: output
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
-- entry-!~{000}~.js => entry-Dz1ovqdm.js
+- entry-!~{000}~.js => entry-DTbuJjHh.js
 
 # tests/esbuild/lower/static_class_block_es2021
 
@@ -2872,11 +2872,11 @@ expression: output
 
 # tests/esbuild/lower/ts_lower_object_rest2017_no_bundle
 
-- entry-!~{000}~.js => entry-BBtkFZX3.js
+- entry-!~{000}~.js => entry-CDdQZdBP.js
 
 # tests/esbuild/lower/ts_lower_object_rest2018_no_bundle
 
-- entry-!~{000}~.js => entry-BBtkFZX3.js
+- entry-!~{000}~.js => entry-CDdQZdBP.js
 
 # tests/esbuild/lower/ts_lower_private_field_and_method_avoid_name_collision2015
 
@@ -3309,8 +3309,8 @@ expression: output
 
 # tests/esbuild/ts/enum_rules_from_type_script_5_0
 
-- not-supported-!~{001}~.js => not-supported-BslC2gdM.js
-- supported-!~{000}~.js => supported-gWLBl1oC.js
+- not-supported-!~{001}~.js => not-supported-C1Ey3dwA.js
+- supported-!~{000}~.js => supported-PzEdu41G.js
 
 # tests/esbuild/ts/export_type_issue379
 
@@ -3346,19 +3346,19 @@ expression: output
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_false
 
-- entry-!~{000}~.js => entry-CmkJ44pp.js
+- entry-!~{000}~.js => entry-GqmJrSrg.js
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_true
 
-- entry-!~{000}~.js => entry-BR3xRdUE.js
+- entry-!~{000}~.js => entry-BKeCscPG.js
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_true_lower
 
-- entry-!~{000}~.js => entry-B-PMwu3E.js
+- entry-!~{000}~.js => entry-VnCDU9C2.js
 
 # tests/esbuild/ts/ts_const_enum_comments
 
-- foo-!~{000}~.js => foo-CrRNLthH.js
+- foo-!~{000}~.js => foo-IEOMOteu.js
 
 # tests/esbuild/ts/ts_declare_class_fields
 
@@ -3370,23 +3370,23 @@ expression: output
 
 # tests/esbuild/ts/ts_enum_cross_module_inlining_access
 
-- entry-!~{000}~.js => entry-g46lllk1.js
+- entry-!~{000}~.js => entry-ccuTqjIw.js
 
 # tests/esbuild/ts/ts_enum_cross_module_inlining_definitions
 
-- entry-!~{000}~.js => entry-CGBZVsPF.js
+- entry-!~{000}~.js => entry-BxVhXNg3.js
 
 # tests/esbuild/ts/ts_enum_cross_module_inlining_minify_index_into_dot
 
-- entry-!~{000}~.js => entry-DGu8bM74.js
+- entry-!~{000}~.js => entry-Bc_APe03.js
 
 # tests/esbuild/ts/ts_enum_cross_module_inlining_re_export
 
-- entry-!~{000}~.js => entry-nDxwjrcP.js
+- entry-!~{000}~.js => entry-DsFzWMmz.js
 
 # tests/esbuild/ts/ts_enum_cross_module_tree_shaking
 
-- entry-!~{000}~.js => entry-B6U1h1p5.js
+- entry-!~{000}~.js => entry-D9WrSOlu.js
 
 # tests/esbuild/ts/ts_enum_define
 
@@ -3394,45 +3394,45 @@ expression: output
 
 # tests/esbuild/ts/ts_enum_export_clause
 
-- entry-!~{000}~.js => entry-C2AGqjHJ.js
+- entry-!~{000}~.js => entry-kJ6cJWC2.js
 
 # tests/esbuild/ts/ts_enum_jsx
 
-- element-!~{000}~.js => element-CAD1k5Si.js
-- fragment-!~{001}~.js => fragment-CS35dv3c.js
+- element-!~{000}~.js => element-C03LFsP0.js
+- fragment-!~{001}~.js => fragment-D7S22hUM.js
 - nested-element-!~{002}~.js => nested-element-D-tQUfLY.js
-- nested-fragment-!~{003}~.js => nested-fragment-BY4UD5QJ.js
+- nested-fragment-!~{003}~.js => nested-fragment-lSXYV799.js
 
 # tests/esbuild/ts/ts_enum_same_module_inlining_access
 
-- entry-!~{000}~.js => entry-DhhXKdLV.js
+- entry-!~{000}~.js => entry-CpWnDfbL.js
 
 # tests/esbuild/ts/ts_enum_tree_shaking
 
-- namespace-after-!~{007}~.js => namespace-after-MlWNmV5s.js
-- namespace-before-!~{006}~.js => namespace-before-DIePO9Zy.js
-- sibling-enum-after-!~{005}~.js => sibling-enum-after-13iQl_0x.js
-- sibling-enum-before-!~{003}~.js => sibling-enum-before-iT1bdzzQ.js
-- sibling-enum-middle-!~{004}~.js => sibling-enum-middle-CTqyaYsb.js
-- sibling-member-!~{002}~.js => sibling-member-D9m218aA.js
-- simple-enum-!~{001}~.js => simple-enum-DCE6x-bG.js
-- simple-member-!~{000}~.js => simple-member-Dv9f5r1U.js
+- namespace-after-!~{007}~.js => namespace-after-DrMNOvpv.js
+- namespace-before-!~{006}~.js => namespace-before-MUfd5sNz.js
+- sibling-enum-after-!~{005}~.js => sibling-enum-after-RkZ5wMHW.js
+- sibling-enum-before-!~{003}~.js => sibling-enum-before-BTegXP13.js
+- sibling-enum-middle-!~{004}~.js => sibling-enum-middle-C-s7_R_C.js
+- sibling-member-!~{002}~.js => sibling-member-CNXLV1kq.js
+- simple-enum-!~{001}~.js => simple-enum-dDBYuu6a.js
+- simple-member-!~{000}~.js => simple-member-CnzJKb-h.js
 
 # tests/esbuild/ts/ts_enum_use_before_declare
 
-- entry-!~{000}~.js => entry-Bn2J82SK.js
+- entry-!~{000}~.js => entry-DQW0vfWr.js
 
 # tests/esbuild/ts/ts_experimental_decorator_scope_issue2147
 
-- entry-!~{000}~.js => entry-GbrpxTRG.js
+- entry-!~{000}~.js => entry-DAZXSP4a.js
 
 # tests/esbuild/ts/ts_experimental_decorators
 
-- entry-!~{000}~.js => entry-DpUieuuj.js
+- entry-!~{000}~.js => entry-B_IyD-Ju.js
 
 # tests/esbuild/ts/ts_experimental_decorators_keep_names
 
-- entry-!~{000}~.js => entry-DHmMpwI4.js
+- entry-!~{000}~.js => entry-d1zFYQyS.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_assign_semantics
 
@@ -3545,15 +3545,15 @@ expression: output
 # tests/esbuild/ts/ts_minify_enum
 
 - a-!~{000}~.js => a-CAdl1r5_.js
-- b-!~{001}~.js => b-DbpBDEIx.js
+- b-!~{001}~.js => b-BE9srUbi.js
 
 # tests/esbuild/ts/ts_minify_enum_cross_file_inline_strings_into_templates
 
-- entry-!~{000}~.js => entry-BvStYszD.js
+- entry-!~{000}~.js => entry-ChQRZSZE.js
 
 # tests/esbuild/ts/ts_minify_enum_property_names
 
-- entry-!~{000}~.js => entry-XMvhL2CK.js
+- entry-!~{000}~.js => entry-CS2KLgiH.js
 
 # tests/esbuild/ts/ts_minify_namespace
 
@@ -3600,19 +3600,19 @@ expression: output
 # tests/esbuild/ts/ts_sibling_enum
 
 - nested-number-!~{003}~.js => nested-number-DLH8hYPf.js
-- nested-propagation-!~{005}~.js => nested-propagation-DDUrZ-5l.js
+- nested-propagation-!~{005}~.js => nested-propagation-DFOAIh78.js
 - nested-string-!~{004}~.js => nested-string-Ps50hETK.js
-- number-!~{000}~.js => number-g5xi5YVV.js
-- propagation-!~{002}~.js => propagation-Cpu4cy-2.js
-- string-!~{001}~.js => string-DMGoF9zj.js
+- number-!~{000}~.js => number-DIyQ3HSb.js
+- propagation-!~{002}~.js => propagation-TL1Suq9u.js
+- string-!~{001}~.js => string-BM0d_USs.js
 
 # tests/esbuild/ts/ts_sibling_namespace
 
-- class-!~{002}~.js => class-Rb-DAxpl.js
-- enum-!~{004}~.js => enum-DQoLKfJE.js
-- function-!~{001}~.js => function-B5SS3LWN.js
+- class-!~{002}~.js => class-DKbw0nQl.js
+- enum-!~{004}~.js => enum-DKhjbIsp.js
+- function-!~{001}~.js => function-C2mhSotE.js
 - let-!~{000}~.js => let-0nl87mRa.js
-- namespace-!~{003}~.js => namespace-CKkTYV36.js
+- namespace-!~{003}~.js => namespace-DQT6VZO_.js
 
 # tests/esbuild/ts/ts_side_effects_false_warning_type_declarations
 
@@ -4704,7 +4704,7 @@ expression: output
 
 # tests/rolldown/issues/2669
 
-- main-!~{000}~.js => main-BNGo0qGh.js
+- main-!~{000}~.js => main-JhYKosWc.js
 
 # tests/rolldown/issues/2685
 
@@ -4813,8 +4813,8 @@ expression: output
 
 # tests/rolldown/issues/4289
 
-- main-!~{000}~.js => main-DNKP2R5u.js
-- lib-!~{001}~.js => lib-BWGrTXJs.js
+- main-!~{000}~.js => main-BeGmI0Bj.js
+- lib-!~{001}~.js => lib-BJMZAbXn.js
 
 # tests/rolldown/issues/4324
 
@@ -4854,8 +4854,8 @@ expression: output
 
 # tests/rolldown/issues/4782
 
-- main-!~{000}~.js => main-oJwE-hb5.js
-- lib-!~{001}~.js => lib-DgD0Di8m.js
+- main-!~{000}~.js => main-B399Kz2k.js
+- lib-!~{001}~.js => lib-CGyRj87B.js
 
 # tests/rolldown/issues/4904
 
@@ -4903,7 +4903,7 @@ expression: output
 
 # tests/rolldown/issues/5531
 
-- main-!~{000}~.js => main-Bshljdxv.js
+- main-!~{000}~.js => main-koZcVn6x.js
 
 # tests/rolldown/issues/5557
 
@@ -5883,6 +5883,18 @@ expression: output
 
 - entry-!~{000}~.js => entry-Bs_dfXP-.js
 
+# tests/rolldown/topics/deconflict/issue_6586
+
+- main-!~{000}~.js => main-DzCSsV1P.js
+
+# tests/rolldown/topics/deconflict/issue_6586_generated_name_conflict
+
+- main-!~{000}~.js => main-wQwf-Fck.js
+
+# tests/rolldown/topics/deconflict/issue_same_module_shadowing
+
+- main-!~{000}~.js => main-DQtJkR4j.js
+
 # tests/rolldown/topics/deconflict/wrapped_esm_default_function
 
 - main-!~{000}~.js => main-DFd_1436.js
@@ -6018,7 +6030,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/issue_7481_2
 
-- main-!~{000}~.js => main-CE9gjO9_.js
+- main-!~{000}~.js => main-HBrQpTKE.js
 
 # tests/rolldown/topics/keep_names/issue_7507/src
 
@@ -6461,7 +6473,7 @@ expression: output
 
 # tests/rollup/catch-scope-shadowing
 
-- main-!~{000}~.js => main-B1ZAHt4N.js
+- main-!~{000}~.js => main-oo4bBiZb.js
 
 # tests/rollup/jsx/preserves-jsx-attributes
 

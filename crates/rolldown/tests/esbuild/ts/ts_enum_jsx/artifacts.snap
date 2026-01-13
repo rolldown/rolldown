@@ -7,9 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region element.tsx
-let Foo = /* @__PURE__ */ function(Foo$1) {
-	Foo$1["Div"] = "div";
-	return Foo$1;
+let Foo = /* @__PURE__ */ function(Foo) {
+	Foo["Div"] = "div";
+	return Foo;
 }({});
 console.log(/* @__PURE__ */ React.createElement(Foo.Div, null));
 
@@ -21,9 +21,9 @@ export { Foo };
 
 ```js
 //#region fragment.tsx
-let React = /* @__PURE__ */ function(React$1) {
-	React$1["Fragment"] = "div";
-	return React$1;
+let React = /* @__PURE__ */ function(React) {
+	React["Fragment"] = "div";
+	return React;
 }({});
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null, "test"));
 
@@ -63,9 +63,9 @@ let x;
 (function(_x) {
 	let y;
 	(function(_y) {
-		_y.React = /* @__PURE__ */ function(React$1) {
-			React$1["Fragment"] = "div";
-			return React$1;
+		_y.React = /* @__PURE__ */ function(React) {
+			React["Fragment"] = "div";
+			return React;
 		}({});
 	})(y || (y = _x.y || (_x.y = {})));
 })(x || (x = {}));

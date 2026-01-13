@@ -9,8 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region class.ts
 let x;
 (function(_x) {
-	class y$1 {}
-	_x.y = y$1;
+	class y {}
+	_x.y = y;
 })(x || (x = {}));
 (function(_x2) {
 	_x2.z = y;
@@ -26,8 +26,8 @@ export { x };
 //#region enum.ts
 let x;
 (function(_x) {
-	_x.y = /* @__PURE__ */ function(y$1) {
-		return y$1;
+	_x.y = /* @__PURE__ */ function(y) {
+		return y;
 	}({});
 })(x || (x = {}));
 (function(_x2) {
@@ -44,8 +44,8 @@ export { x };
 //#region function.ts
 let x;
 (function(_x) {
-	function y$1() {}
-	_x.y = y$1;
+	function y() {}
+	_x.y = y;
 })(x || (x = {}));
 (function(_x2) {
 	_x2.z = y;
@@ -77,8 +77,8 @@ export { x };
 //#region namespace.ts
 let x;
 (function(_x) {
-	let y$1;
-	(function(_y) {})(y$1 || (y$1 = _x.y || (_x.y = {})));
+	let y;
+	(function(_y) {})(y || (y = _x.y || (_x.y = {})));
 })(x || (x = {}));
 (function(_x2) {
 	_x2.z = y;

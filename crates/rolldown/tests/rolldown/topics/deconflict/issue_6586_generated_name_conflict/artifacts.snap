@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "assert";
+
+//#region a.js
+const a$1 = "from-a-module";
+
+//#endregion
+//#region main.js
+const a = "from-main";
+function testGeneratedNameConflict(a$1$1) {
+	return {
+		param: a$1$1,
+		topLevelA: a,
+		importedA: a$1
+	};
+}
+const result = testGeneratedNameConflict("param-value");
+console.log(`aFromModule: `, a$1);
+assert.strictEqual(result.param, "param-value");
+assert.strictEqual(result.topLevelA, "from-main");
+assert.strictEqual(result.importedA, "from-a-module");
+
+//#endregion
+export { a, testGeneratedNameConflict };
+```

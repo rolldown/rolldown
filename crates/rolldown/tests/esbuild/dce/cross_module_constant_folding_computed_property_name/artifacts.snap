@@ -24,13 +24,13 @@ console.log({
 
 ```js
 //#region enum-constants.ts
-let x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["a"] = 123] = "a";
-	x$1["b"] = "abc";
-	x$1["proto"] = "__proto__";
-	x$1["ptype"] = "prototype";
-	x$1["ctor"] = "constructor";
-	return x$1;
+let x = /* @__PURE__ */ function(x) {
+	x[x["a"] = 123] = "a";
+	x["b"] = "abc";
+	x["proto"] = "__proto__";
+	x["ptype"] = "prototype";
+	x["ctor"] = "constructor";
+	return x;
 }({});
 
 //#endregion

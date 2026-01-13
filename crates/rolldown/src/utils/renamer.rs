@@ -202,49 +202,53 @@ impl<'name> Renamer<'name> {
       return;
     }
 
-    let mut candidate_name = original_name.clone();
-    let mut was_renamed = false;
-    let mut conflict_index = 0u32;
+    // Fast path: try original name first without cloning
+    if !self.used_canonical_names.contains_key(&original_name) {
+      // Check if it's an entry root binding or available
+      if self.is_entry_root_binding(&original_name, canonical_ref)
+        || self.is_name_available(&original_name, canonical_ref, true)
+      {
+        self.used_canonical_names.insert(
+          original_name.clone(),
+          CanonicalNameInfo { conflict_index: 0, owner: Some(canonical_ref.owner), was_renamed: false },
+        );
+        self.used_names.insert(original_name.clone());
+        self.canonical_names.insert(canonical_ref, original_name);
+        return;
+      }
+    }
+
+    // Slow path: need to find an alternative name
+    let mut conflict_index = self
+      .used_canonical_names
+      .get_mut(&original_name)
+      .map(|info| {
+        info.conflict_index += 1;
+        info.conflict_index
+      })
+      .unwrap_or(1);
 
     loop {
-      // Check 1: Is this name already used by another top-level symbol or reserved?
-      // If so, we must rename to avoid conflicts.
+      let candidate_name: CompactStr =
+        concat_string!(original_name, "$", itoa::Buffer::new().format(conflict_index)).into();
+
+      // Check if this renamed candidate is available
       if let Some(info) = self.used_canonical_names.get_mut(&candidate_name) {
         conflict_index = info.conflict_index + 1;
         info.conflict_index = conflict_index;
-        candidate_name =
-          concat_string!(original_name, "$", itoa::Buffer::new().format(conflict_index)).into();
-        was_renamed = true;
         continue;
       }
 
-      // Check 2: Is this a root binding in the entry module for this symbol?
-      // If so, we can use this name directly (it's not in used_canonical_names yet).
-      if self.is_entry_root_binding(&candidate_name, canonical_ref) {
-        // Mark as used in used_canonical_names
-        self.used_canonical_names.insert(
-          candidate_name.clone(),
-          CanonicalNameInfo { conflict_index: 0, owner: Some(canonical_ref.owner), was_renamed },
-        );
-        self.used_names.insert(candidate_name.clone());
-        self.canonical_names.insert(canonical_ref, candidate_name);
-        return;
-      }
-
-      // Check 3: Is this name available (not conflicting with nested scope symbols)?
-      // Pass !was_renamed to indicate if this is the original name
-      if !self.is_name_available(&candidate_name, canonical_ref, !was_renamed) {
+      // For renamed candidates, check nested scope conflicts
+      if !self.is_name_available(&candidate_name, canonical_ref, false) {
         conflict_index += 1;
-        candidate_name =
-          concat_string!(original_name, "$", itoa::Buffer::new().format(conflict_index)).into();
-        was_renamed = true;
         continue;
       }
 
       // Name is available - use it
       self.used_canonical_names.insert(
         candidate_name.clone(),
-        CanonicalNameInfo { conflict_index: 0, owner: Some(canonical_ref.owner), was_renamed },
+        CanonicalNameInfo { conflict_index: 0, owner: Some(canonical_ref.owner), was_renamed: true },
       );
       self.used_names.insert(candidate_name.clone());
       self.canonical_names.insert(canonical_ref, candidate_name);

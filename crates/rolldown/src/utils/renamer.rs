@@ -21,7 +21,7 @@ use crate::stages::link_stage::LinkStageOutput;
 struct CanonicalNameInfo {
   /// The conflict index used for generating unique names (e.g., `a$1`, `a$2`).
   conflict_index: u32,
-  /// The module that owns this top-level symbol, if any.
+  /// The module that owns this top-level symbol, if any..
   /// `None` for reserved names (keywords, global objects, or manually reserved).
   owner: Option<ModuleIdx>,
   /// Whether this symbol was renamed during deconflicting.

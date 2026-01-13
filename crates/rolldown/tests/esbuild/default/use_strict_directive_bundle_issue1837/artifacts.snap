@@ -22,10 +22,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-(function(process$1, node_assert) {
+(function(process, node_assert) {
 
 // HIDDEN [rolldown:runtime]
-process$1 = __toESM(process$1);
+process = __toESM(process);
 node_assert = __toESM(node_assert);
 
 //#region shims.js
@@ -35,13 +35,13 @@ node_assert = __toESM(node_assert);
 //#region cjs.js
 	var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 		init_shims();
-		exports.foo = process$1.default;
+		exports.foo = process.default;
 	}));
 
 //#endregion
 //#region entry.js
 	init_shims();
-	node_assert.default.deepEqual(require_cjs(), { foo: process$1.default });
+	node_assert.default.deepEqual(require_cjs(), { foo: process.default });
 
 //#endregion
 })(process, node_assert);

@@ -108,7 +108,7 @@ __decorate([x, y], Foo, null, void 0);
 //#endregion
 //#region a.ts
 var _a_class;
-let a_class$1 = class a_class {
+let a_class = class a_class {
 	static {
 		_a_class = this;
 	}
@@ -119,13 +119,13 @@ let a_class$1 = class a_class {
 		this.z = new _a_class();
 	}
 };
-a_class$1 = _a_class = __decorate([x(() => 0), y(() => 1)], a_class$1);
-let a = a_class$1;
+a_class = _a_class = __decorate([x(() => 0), y(() => 1)], a_class);
+let a = a_class;
 
 //#endregion
 //#region b.ts
 var _b_class;
-let b_class$1 = class b_class {
+let b_class = class b_class {
 	static {
 		_b_class = this;
 	}
@@ -136,8 +136,8 @@ let b_class$1 = class b_class {
 		this.z = new _b_class();
 	}
 };
-b_class$1 = _b_class = __decorate([x(() => 0), y(() => 1)], b_class$1);
-let b = b_class$1;
+b_class = _b_class = __decorate([x(() => 0), y(() => 1)], b_class);
+let b = b_class;
 
 //#endregion
 //#region c.ts
@@ -180,7 +180,7 @@ var e_default = _default$2;
 //#endregion
 //#region f.ts
 var _f;
-let f$1 = class f {
+let f = class f {
 	static {
 		_f = this;
 	}
@@ -191,8 +191,8 @@ let f$1 = class f {
 		this.z = new _f();
 	}
 };
-f$1 = _f = __decorate([x(() => 0), y(() => 1)], f$1);
-var f_default = f$1;
+f = _f = __decorate([x(() => 0), y(() => 1)], f);
+var f_default = f;
 
 //#endregion
 //#region g.ts
@@ -203,7 +203,7 @@ var g_default = _default$1;
 //#endregion
 //#region h.ts
 var _h;
-let h$1 = class h {
+let h = class h {
 	static {
 		_h = this;
 	}
@@ -214,8 +214,8 @@ let h$1 = class h {
 		this.z = new _h();
 	}
 };
-h$1 = _h = __decorate([x(() => 0), y(() => 1)], h$1);
-var h_default = h$1;
+h = _h = __decorate([x(() => 0), y(() => 1)], h);
+var h_default = h;
 
 //#endregion
 //#region i.ts

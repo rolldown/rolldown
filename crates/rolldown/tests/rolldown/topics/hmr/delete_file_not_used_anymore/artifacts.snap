@@ -18,12 +18,12 @@ const value = "child";
 //#region parent.js
 var parent_exports = /* @__PURE__ */ __exportAll({
 	childValue: () => value,
-	parentValue: () => parentValue$1
+	parentValue: () => parentValue
 });
 const parent_hot = __rolldown_runtime__.createModuleHotContext("parent.js");
 __rolldown_runtime__.registerModule("parent.js", { exports: parent_exports });
-const parentValue$1 = "parent";
-assert.strictEqual(parentValue$1, "parent");
+const parentValue = "parent";
+assert.strictEqual(parentValue, "parent");
 assert.strictEqual(value, "child");
 parent_hot.accept((newMod) => {
 	const { childValue, parentValue } = newMod;

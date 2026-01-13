@@ -171,11 +171,7 @@ impl PreProcessEcmaAst {
     Ok(ParseToEcmaAstResult { ast, scoping, has_lazy_export, warnings })
   }
 
-  fn recreate_scoping(
-    &mut self,
-    scoping: &mut Option<Scoping>,
-    program: &Program<'_>,
-  ) -> Scoping {
+  fn recreate_scoping(&mut self, scoping: &mut Option<Scoping>, program: &Program<'_>) -> Scoping {
     if let Some(scoping) = scoping.take() {
       return scoping;
     }

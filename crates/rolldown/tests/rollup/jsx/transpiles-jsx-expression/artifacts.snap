@@ -12,18 +12,18 @@ console.log(element$2);
 
 //#endregion
 //#region dep2.js
-const element = "element 2";
-console.log(element);
+const element$1 = "element 2";
+console.log(element$1);
 
 //#endregion
 //#region dep3.js
-const element$1 = "element 3";
-console.log(element$1);
+const element = "element 3";
+console.log(element);
 
 //#endregion
 //#region main.js
 const Foo = () => {};
-const result = /* @__PURE__ */ React.createElement(Foo, null, "test" + element);
+const result = /* @__PURE__ */ React.createElement(Foo, null, "test" + element$1);
 
 //#endregion
 export { result };

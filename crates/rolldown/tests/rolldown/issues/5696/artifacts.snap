@@ -7,8 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region bar.jsx
-const Bar$1 = () => <div>Bar</div>;
-var Bar_default = Bar$1;
+const Bar = () => <div>Bar</div>;
+var Bar_default = Bar;
 
 //#endregion
 //#region foo.jsx

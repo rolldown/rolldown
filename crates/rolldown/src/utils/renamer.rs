@@ -51,10 +51,6 @@ pub struct Renamer<'name> {
   /// Used to preserve entry module's root binding names and check for name conflicts.
   entry_module: Option<&'name SymbolRefDbForModule>,
 
-  /// Cache of non-root symbol names per module.
-  /// Used to avoid renaming root symbols to names that would conflict with nested scope symbols.
-  module_used_names: FxHashMap<ModuleIdx, FxHashSet<&'name str>>,
-
   /// Names that have been used during the renaming process.
   /// Tracks which names have been assigned to avoid duplicates.
   used_names: FxHashSet<CompactStr>,
@@ -78,18 +74,6 @@ impl<'name> Renamer<'name> {
     // Get entry module reference if provided
     let entry_module = base_module_index.map(|idx| symbol_db.local_db(idx));
 
-    // For entry module, pre-cache all symbol names (both root and non-root)
-    // to ensure we don't rename other symbols to names that exist in the entry module
-    let module_used_names = base_module_index
-      .map(|idx| {
-        let entry_db = symbol_db.local_db(idx);
-        let scoping = entry_db.ast_scopes.scoping();
-        let all_names: FxHashSet<&str> =
-          scoping.symbol_ids().map(|id| scoping.symbol_name(id)).collect();
-        FxHashMap::from_iter([(idx, all_names)])
-      })
-      .unwrap_or_default();
-
     Self {
       canonical_names: FxHashMap::default(),
       symbol_db,
@@ -101,7 +85,6 @@ impl<'name> Renamer<'name> {
         .collect(),
       entry_module_idx: base_module_index,
       entry_module,
-      module_used_names,
       used_names: FxHashSet::default(),
     }
   }
@@ -112,96 +95,85 @@ impl<'name> Renamer<'name> {
 
   /// Check if the candidate name is a root binding in the entry module that matches the symbol.
   /// If so, we can use this name directly without further checks.
+  ///
+  /// This only checks for DIRECT matches (the symbol IS the entry module's binding).
+  /// It does NOT check canonical matches, so linked symbols from other modules
+  /// will use first-come-first-served naming via the normal conflict resolution.
   fn is_entry_root_binding(&self, candidate_name: &str, symbol_ref: SymbolRef) -> bool {
     match (self.entry_module_idx, self.entry_module) {
       (Some(entry_idx), Some(module)) => {
         let scoping = module.ast_scopes.scoping();
         scoping.get_root_binding(candidate_name).is_some_and(|symbol_id| {
           let entry_symbol = SymbolRef::from((entry_idx, symbol_id));
-          // The candidate is valid if it's the same symbol or links to it
-          entry_symbol == symbol_ref || entry_symbol.canonical_ref(self.symbol_db) == symbol_ref
+          // Only match if this is exactly the entry module's binding
+          entry_symbol == symbol_ref
         })
       }
       _ => false,
     }
   }
 
+  /// Check if a name exists as a non-root binding in a module.
+  /// Checks directly against scoping without caching.
+  fn has_nested_scope_binding(&self, module_idx: ModuleIdx, name: &str) -> bool {
+    // Runtime module (index 0) has no nested scope bindings
+    const RUNTIME_MODULE_INDEX: ModuleIdx = ModuleIdx::from_usize_unchecked(0);
+    if module_idx == RUNTIME_MODULE_INDEX {
+      return false;
+    }
+
+    let db = self.symbol_db.local_db(module_idx);
+    let scoping = db.ast_scopes.scoping();
+    if scoping.symbols_len() == 0 {
+      return false;
+    }
+
+    let root_scope_id = scoping.root_scope_id();
+    // Check if name exists as a non-root binding by iterating symbols
+    scoping
+      .symbol_ids()
+      .any(|id| scoping.symbol_scope_id(id) != root_scope_id && scoping.symbol_name(id) == name)
+  }
+
   /// Check if a candidate name is available for use (doesn't conflict with existing names).
-  fn is_name_available(&self, candidate_name: &str, symbol_ref: SymbolRef) -> bool {
+  /// The `is_original_name` flag indicates if this is the symbol's original name (not a renamed candidate).
+  fn is_name_available(
+    &self,
+    candidate_name: &str,
+    symbol_ref: SymbolRef,
+    is_original_name: bool,
+  ) -> bool {
     // Check 1: Not already used during this renaming pass
     if self.used_names.contains(candidate_name) {
       return false;
     }
 
-    // Check 2: Not used in the entry module's scope tree (if entry module exists)
+    // Check 2: For non-entry-module symbols, ensure they don't use names that exist
+    // in entry module's nested scopes (which would cause accidental capture).
+    // Entry module symbols can use any name - their own nested scope shadowing is intentional.
     if let Some(entry_idx) = self.entry_module_idx {
-      if let Some(entry_names) = self.module_used_names.get(&entry_idx) {
-        if entry_names.contains(candidate_name) {
-          return false;
-        }
+      if symbol_ref.owner != entry_idx && self.has_nested_scope_binding(entry_idx, candidate_name) {
+        return false;
       }
     }
 
-    // Check 3: Not used in the symbol's own module's non-root scope
-    // (only for symbols from modules other than the entry module)
-    if let Some(entry_idx) = self.entry_module_idx {
-      if symbol_ref.owner != entry_idx {
-        if let Some(module_names) = self.module_used_names.get(&symbol_ref.owner) {
-          if module_names.contains(candidate_name) {
-            return false;
-          }
-        }
-      }
-    } else {
-      // No entry module, check against the symbol's own module
-      if let Some(module_names) = self.module_used_names.get(&symbol_ref.owner) {
-        if module_names.contains(candidate_name) {
-          return false;
-        }
-      }
+    // Check 3: For RENAMED candidates (not original names), check against own module's
+    // nested scopes. This prevents renaming `a` to `a$1` when there's already a parameter
+    // named `a$1`. For original names, shadowing is intentional and expected.
+    if !is_original_name && self.has_nested_scope_binding(symbol_ref.owner, candidate_name) {
+      return false;
     }
 
     true
   }
 
-  /// Get or compute the set of non-root symbol names for a module.
-  fn get_or_create_module_used_names(&mut self, module_idx: ModuleIdx) -> &FxHashSet<&'name str> {
-    self.module_used_names.entry(module_idx).or_insert_with(|| {
-      // For runtime module (index 0), return empty set
-      const RUNTIME_MODULE_INDEX: ModuleIdx = ModuleIdx::from_usize_unchecked(0);
-      if module_idx == RUNTIME_MODULE_INDEX {
-        return FxHashSet::default();
-      }
-
-      let db = self.symbol_db.local_db(module_idx);
-      let scoping = db.ast_scopes.scoping();
-      if scoping.symbols_len() == 0 {
-        return FxHashSet::default();
-      }
-
-      let root_scope_id = scoping.root_scope_id();
-      let root_bindings: FxHashSet<_> =
-        scoping.get_bindings(root_scope_id).values().copied().collect();
-
-      // Collect all non-root symbol names
-      scoping
-        .symbol_ids()
-        .filter(|id| !root_bindings.contains(id))
-        .map(|id| scoping.symbol_name(id))
-        .collect()
-    })
-  }
-
   /// Assigns a canonical name to a symbol, checking for conflicts with both
   /// top-level names and nested scope names.
   ///
-  /// This method is aware of:
+  /// This method checks:
   /// 1. Names already used by other top-level symbols (`used_canonical_names`)
-  /// 2. Names used in the entry module's scope tree (`module_used_names`)
-  /// 3. Names used in the symbol's own module's nested scopes (`module_used_names`)
-  ///
-  /// By checking all these during root scope renaming, we can avoid the expensive
-  /// `rename_non_root_symbol` pass that iterates through all nested scopes.
+  /// 2. Names used in the entry module's nested scopes (to prevent capture)
+  /// 3. Names used in the symbol's own module's nested scopes (for renamed candidates)
   pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef, needs_deconflict: bool) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     let canonical_name = canonical_ref.name(self.symbol_db);
@@ -225,13 +197,6 @@ impl<'name> Renamer<'name> {
       return;
     }
 
-    // Pre-compute module used names for the symbol's owner module (if not entry module)
-    // This ensures we don't rename to a name that would conflict with nested scope symbols
-    if self.entry_module_idx.is_none_or(|entry_idx| canonical_ref.owner != entry_idx) {
-      // Force computation of module_used_names for this module
-      let _ = self.get_or_create_module_used_names(canonical_ref.owner);
-    }
-
     // Check if already renamed
     if self.canonical_names.contains_key(&canonical_ref) {
       return;
@@ -243,22 +208,10 @@ impl<'name> Renamer<'name> {
 
     loop {
       // Check 1: Is this name already used by another top-level symbol or reserved?
-      if let Some(info) = self.used_canonical_names.get(&candidate_name) {
-        // If this is a reserved name (owner: None) or belongs to another module, we must rename.
-        // But if this is a root binding in the entry module for this symbol AND not reserved,
-        // we can use this name directly.
-        let is_reserved = info.owner.is_none();
-        if !is_reserved && self.is_entry_root_binding(&candidate_name, canonical_ref) {
-          // The name is owned by this module's entry binding, use it directly
-          self.used_names.insert(candidate_name.clone());
-          self.canonical_names.insert(canonical_ref, candidate_name);
-          return;
-        }
-        // Name is reserved or conflicts - generate a new name
+      // If so, we must rename to avoid conflicts.
+      if let Some(info) = self.used_canonical_names.get_mut(&candidate_name) {
         conflict_index = info.conflict_index + 1;
-        if let Some(existing) = self.used_canonical_names.get_mut(&candidate_name) {
-          existing.conflict_index = conflict_index;
-        }
+        info.conflict_index = conflict_index;
         candidate_name =
           concat_string!(original_name, "$", itoa::Buffer::new().format(conflict_index)).into();
         was_renamed = true;
@@ -279,7 +232,8 @@ impl<'name> Renamer<'name> {
       }
 
       // Check 3: Is this name available (not conflicting with nested scope symbols)?
-      if !self.is_name_available(&candidate_name, canonical_ref) {
+      // Pass !was_renamed to indicate if this is the original name
+      if !self.is_name_available(&candidate_name, canonical_ref, !was_renamed) {
         conflict_index += 1;
         candidate_name =
           concat_string!(original_name, "$", itoa::Buffer::new().format(conflict_index)).into();

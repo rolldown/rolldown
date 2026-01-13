@@ -10,7 +10,7 @@
         "import": "./b.js"
       }
     ],
-    "advancedChunks": {
+    "manualCodeSplitting": {
       "groups": [
         {
           "test": "[ab]\\.js",

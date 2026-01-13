@@ -4046,9 +4046,9 @@ expression: output
 
 # tests/rolldown/function/experimental/attach_debug_info/full
 
-- A-!~{000}~.js => A-BgXOerCN.js
-- B-!~{001}~.js => B-Dn8nRiS7.js
-- Splitted-!~{004}~.js => Splitted-CYdnxWY9.js
+- A-!~{000}~.js => A-Dg0npFc7.js
+- B-!~{001}~.js => B-DF0UcPoG.js
+- Splitted-!~{004}~.js => Splitted-CTFInIpB.js
 - dyn-entry-!~{006}~.js => dyn-entry-DRif6-yu.js
 - shared-!~{002}~.js => shared-DDQk-Tql.js
 

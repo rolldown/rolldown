@@ -1,6 +1,6 @@
 {
   "config": {
-    "advancedChunks": {
+    "manualCodeSplitting": {
       "groups": [
         {
           // `size-15.js`, `size-20` and `size-41.js` will be captured

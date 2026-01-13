@@ -739,7 +739,12 @@ impl GenerateStage<'_> {
       oxc_index::index_vec![false; self.link_output.module_table.modules.len()];
 
     self
-      .apply_advanced_chunks(index_splitting_info, &mut module_to_assigned, chunk_graph, input_base)
+      .apply_manual_code_splitting(
+        index_splitting_info,
+        &mut module_to_assigned,
+        chunk_graph,
+        input_base,
+      )
       .await?;
 
     let mut pending_common_chunks: FxIndexMap<BitSet, Vec<ModuleIdx>> = FxIndexMap::default();

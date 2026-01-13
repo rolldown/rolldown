@@ -6,7 +6,7 @@
         "import": "main.js"
       }
     ],
-    "advancedChunks": {
+    "manualCodeSplitting": {
       "minShareCount": 2,
       "minSize": 1000,
       "maxSize": 5000,

@@ -10,7 +10,7 @@
         "import": "./b.cjs"
       }
     ],
-    "advancedChunks": {
+    "manualCodeSplitting": {
       "groups": [
         {
           "test": "[ab]\\.cjs",

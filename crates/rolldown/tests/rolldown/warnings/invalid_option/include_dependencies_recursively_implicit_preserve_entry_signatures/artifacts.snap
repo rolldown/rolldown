@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```text
 [INVALID_OPTION] Warning: `preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown
 
-- `advancedChunks.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
+- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'
 
 To fix:
 

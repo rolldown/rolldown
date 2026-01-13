@@ -1,7 +1,7 @@
 {
   // Should not process trreeshaked modules
   "config": {
-    "advancedChunks": {
+    "manualCodeSplitting": {
       "groups": [
         {
           "test": "lib\\.js",

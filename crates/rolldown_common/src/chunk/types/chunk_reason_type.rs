@@ -1,6 +1,6 @@
 #[derive(Debug, Default)]
 pub enum ChunkReasonType {
-  AdvancedChunks {
+  ManualCodeSplitting {
     group_index: u32,
   },
   PreserveModules,
@@ -18,14 +18,14 @@ impl std::fmt::Display for ChunkReasonType {
 impl ChunkReasonType {
   pub fn group_index(&self) -> Option<u32> {
     match self {
-      ChunkReasonType::AdvancedChunks { group_index } => Some(*group_index),
+      ChunkReasonType::ManualCodeSplitting { group_index } => Some(*group_index),
       _ => None,
     }
   }
 
   pub fn as_static_str(&self) -> &'static str {
     match self {
-      ChunkReasonType::AdvancedChunks { .. } => "advanced-chunks",
+      ChunkReasonType::ManualCodeSplitting { .. } => "manual-code-splitting",
       ChunkReasonType::PreserveModules => "preserve-modules",
       ChunkReasonType::Entry => "entry",
       ChunkReasonType::Common => "common",

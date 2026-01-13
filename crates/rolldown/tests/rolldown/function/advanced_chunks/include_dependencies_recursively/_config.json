@@ -3,7 +3,7 @@
     "experimental": {
       "strictExecutionOrder": true
     },
-    "advancedChunks": {
+    "manualCodeSplitting": {
       "groups": [
         {
           "test": "foo\\.js",

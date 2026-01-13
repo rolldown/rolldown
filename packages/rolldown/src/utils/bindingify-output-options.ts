@@ -1,4 +1,4 @@
-import type { BindingOutputOptions } from '../binding.cjs';
+import type { BindingChunkingContext, BindingOutputOptions } from '../binding.cjs';
 import type { OutputOptions } from '../options/output-options';
 import { ChunkingContextImpl } from '../types/chunking-context';
 import { transformAssetSource } from './asset-source';
@@ -93,7 +93,7 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     externalLiveBindings: outputOptions.externalLiveBindings,
     inlineDynamicImports: outputOptions.inlineDynamicImports,
     dynamicImportInCjs: outputOptions.dynamicImportInCjs,
-    advancedChunks,
+    manualCodeSplitting: advancedChunks,
     polyfillRequire: outputOptions.polyfillRequire,
     sanitizeFileName,
     preserveModules,
@@ -181,7 +181,7 @@ function bindingifyAdvancedChunks(
   codeSplitting: OutputOptions['codeSplitting'],
   advancedChunks: OutputOptions['advancedChunks'],
   manualChunks: OutputOptions['manualChunks'],
-): BindingOutputOptions['advancedChunks'] {
+): BindingOutputOptions['manualCodeSplitting'] {
   // Determine the effective option with priority: codeSplitting > advancedChunks > manualChunks
   let effectiveOption = codeSplitting;
 
@@ -223,7 +223,9 @@ function bindingifyAdvancedChunks(
       return {
         ...restGroup,
         name:
-          typeof name === 'function' ? (id, ctx) => name(id, new ChunkingContextImpl(ctx)) : name,
+          typeof name === 'function'
+            ? (id: string, ctx: BindingChunkingContext) => name(id, new ChunkingContextImpl(ctx))
+            : name,
       };
     }),
   };

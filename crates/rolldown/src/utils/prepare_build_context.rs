@@ -72,40 +72,40 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
         InvalidOptionType::InlineDynamicImportsWithPreserveModules,
       ));
     }
-    if raw_options.advanced_chunks.is_some() {
+    if raw_options.manual_code_splitting.is_some() {
       errors.push(BuildDiagnostic::invalid_option(
-        InvalidOptionType::InlineDynamicImportsWithAdvancedChunks,
+        InvalidOptionType::InlineDynamicImportsWithManualCodeSplitting,
       ));
     }
   }
 
-  if let Some(advanced_chunks) = &raw_options.advanced_chunks {
-    let has_groups = advanced_chunks.groups.as_ref().is_some_and(|groups| !groups.is_empty());
+  if let Some(manual_code_splitting) = &raw_options.manual_code_splitting {
+    let has_groups = manual_code_splitting.groups.as_ref().is_some_and(|groups| !groups.is_empty());
 
     if !has_groups {
       let mut specified_options = Vec::new();
-      if advanced_chunks.min_share_count.is_some() {
+      if manual_code_splitting.min_share_count.is_some() {
         specified_options.push("minShareCount".to_string());
       }
-      if advanced_chunks.min_size.is_some() {
+      if manual_code_splitting.min_size.is_some() {
         specified_options.push("minSize".to_string());
       }
-      if advanced_chunks.max_size.is_some() {
+      if manual_code_splitting.max_size.is_some() {
         specified_options.push("maxSize".to_string());
       }
-      if advanced_chunks.min_module_size.is_some() {
+      if manual_code_splitting.min_module_size.is_some() {
         specified_options.push("minModuleSize".to_string());
       }
-      if advanced_chunks.max_module_size.is_some() {
+      if manual_code_splitting.max_module_size.is_some() {
         specified_options.push("maxModuleSize".to_string());
       }
-      if advanced_chunks.include_dependencies_recursively.is_some() {
+      if manual_code_splitting.include_dependencies_recursively.is_some() {
         specified_options.push("includeDependenciesRecursively".to_string());
       }
 
       if !specified_options.is_empty() {
         warnings.push(
-          BuildDiagnostic::invalid_option(InvalidOptionType::AdvancedChunksWithoutGroups(
+          BuildDiagnostic::invalid_option(InvalidOptionType::ManualCodeSplittingWithoutGroups(
             specified_options,
           ))
           .with_severity_warning(),
@@ -113,8 +113,8 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
       }
     }
 
-    // Check if `advancedChunks.include_dependencies_recursively` conflict with `preserveEntrySignatures`
-    if matches!(advanced_chunks.include_dependencies_recursively, Some(false)) {
+    // Check if `codeSplitting.include_dependencies_recursively` conflict with `preserveEntrySignatures`
+    if matches!(manual_code_splitting.include_dependencies_recursively, Some(false)) {
       if let Some(preserve_signatures) = &raw_options.preserve_entry_signatures {
         if matches!(
           preserve_signatures,
@@ -141,8 +141,9 @@ pub fn prepare_build_context(
 
   let format = raw_options.format.unwrap_or(crate::OutputFormat::Esm);
 
-  let preserve_entry_signatures = if let Some(advanced_chunks) = &raw_options.advanced_chunks
-    && matches!(advanced_chunks.include_dependencies_recursively, Some(false))
+  let preserve_entry_signatures = if let Some(manual_code_splitting) =
+    &raw_options.manual_code_splitting
+    && matches!(manual_code_splitting.include_dependencies_recursively, Some(false))
     && raw_options.preserve_entry_signatures.is_none()
   {
     warnings.push(
@@ -421,7 +422,7 @@ pub fn prepare_build_context(
     external_live_bindings: raw_options.external_live_bindings.unwrap_or(true),
     inline_dynamic_imports,
     dynamic_import_in_cjs: raw_options.dynamic_import_in_cjs.unwrap_or(true),
-    advanced_chunks: raw_options.advanced_chunks,
+    manual_code_splitting: raw_options.manual_code_splitting,
     checks: raw_options.checks.unwrap_or_default().into(),
     watch: raw_options.watch.unwrap_or_default(),
     legal_comments: raw_options.legal_comments.unwrap_or(LegalComments::Inline),

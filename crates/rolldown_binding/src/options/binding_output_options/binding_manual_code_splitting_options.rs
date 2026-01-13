@@ -9,7 +9,7 @@ use crate::types::{
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug)]
-pub struct BindingAdvancedChunksOptions {
+pub struct BindingManualCodeSplittingOptions {
   pub include_dependencies_recursively: Option<bool>,
   pub min_size: Option<f64>,
   pub min_share_count: Option<u32>,

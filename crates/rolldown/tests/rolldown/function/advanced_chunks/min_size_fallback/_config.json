@@ -1,6 +1,6 @@
 {
   "config": {
-    "advancedChunks": {
+    "manualCodeSplitting": {
       "minSize": 1024,
       "groups": [
         {

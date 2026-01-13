@@ -57,11 +57,11 @@ use crate::{
   },
 };
 
-mod advanced_chunks;
 mod chunk_ext;
 mod chunk_optimizer;
 mod code_splitting;
 mod compute_cross_chunk_links;
+mod manual_code_splitting;
 mod minify_chunks;
 mod on_demand_wrapping;
 mod post_banner_footer;

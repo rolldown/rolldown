@@ -28,9 +28,6 @@ pub mod bundler_options {
   pub use crate::inner_bundler_options::{
     BundlerOptions,
     types::{
-      advanced_chunks_options::{
-        AdvancedChunksOptions, ChunkingContext, MatchGroup, MatchGroupName, MatchGroupTest,
-      },
       attach_debug_info::AttachDebugInfo,
       chunk_import_map::ChunkImportMap,
       chunk_modules_order::ChunkModulesOrderBy,
@@ -49,6 +46,9 @@ pub mod bundler_options {
       legal_comments::LegalComments,
       log_level::LogLevel,
       make_absolute_externals_relative::MakeAbsoluteExternalsRelative,
+      manual_code_splitting_options::{
+        ChunkingContext, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, MatchGroupTest,
+      },
       minify_options::{MinifyOptions, RawMinifyOptions, RawMinifyOptionsDetailed},
       module_type::ModuleType,
       normalized_bundler_options::{NormalizedBundlerOptions, SharedNormalizedBundlerOptions},

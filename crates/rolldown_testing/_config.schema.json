@@ -407,10 +407,10 @@
             "null"
           ]
         },
-        "advancedChunks": {
+        "manualCodeSplitting": {
           "anyOf": [
             {
-              "$ref": "#/$defs/AdvancedChunksOptions"
+              "$ref": "#/$defs/ManualCodeSplittingOptions"
             },
             {
               "type": "null"
@@ -1187,7 +1187,7 @@
         }
       ]
     },
-    "AdvancedChunksOptions": {
+    "ManualCodeSplittingOptions": {
       "type": "object",
       "properties": {
         "minShareCount": {

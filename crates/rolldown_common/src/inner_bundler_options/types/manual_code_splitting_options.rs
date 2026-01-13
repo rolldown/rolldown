@@ -15,7 +15,7 @@ use crate::{ModuleInfo, SharedModuleInfoDashMap};
   derive(Deserialize, JsonSchema),
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
-pub struct AdvancedChunksOptions {
+pub struct ManualCodeSplittingOptions {
   pub min_share_count: Option<u32>,
   pub min_size: Option<f64>,
   pub max_size: Option<f64>,

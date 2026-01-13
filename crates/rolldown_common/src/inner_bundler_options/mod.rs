@@ -1,7 +1,6 @@
 use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::FxHashMap;
 use std::{fmt::Debug, path::PathBuf};
-use types::advanced_chunks_options::AdvancedChunksOptions;
 use types::devtools_options::DevtoolsOptions;
 use types::generated_code_options::GeneratedCodeOptions;
 use types::inject_import::InjectImport;
@@ -9,6 +8,7 @@ use types::invalidate_js_side_cache::InvalidateJsSideCache;
 use types::legal_comments::LegalComments;
 use types::log_level::LogLevel;
 use types::make_absolute_externals_relative::MakeAbsoluteExternalsRelative;
+use types::manual_code_splitting_options::ManualCodeSplittingOptions;
 use types::minify_options::RawMinifyOptions;
 use types::on_log::OnLog;
 use types::optimization::OptimizationOption;
@@ -200,7 +200,7 @@ pub struct BundlerOptions {
   pub external_live_bindings: Option<bool>,
   pub inline_dynamic_imports: Option<bool>,
   pub dynamic_import_in_cjs: Option<bool>,
-  pub advanced_chunks: Option<AdvancedChunksOptions>,
+  pub manual_code_splitting: Option<ManualCodeSplittingOptions>,
   pub checks: Option<ChecksOptions>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",

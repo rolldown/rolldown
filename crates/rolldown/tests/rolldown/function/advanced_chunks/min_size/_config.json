@@ -1,6 +1,6 @@
 {
   "config": {
-    "advancedChunks": {
+    "manualCodeSplitting": {
       "groups": [
         {
           // Should split failed

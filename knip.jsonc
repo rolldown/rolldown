@@ -20,7 +20,6 @@
         ".vitepress/config.ts", // no Vitepress plugin yet
         ".vitepress/theme/index.ts",
         ".vitepress/theme/Home.vue",
-        ".vitepress/theme/components/overrides/VPHero.vue",
         ".vitepress/theme/components/api.index.md", // API reference index page
         ".vitepress/theme/components/ApiIndex.vue", // Used by api.index.md (with path relative to reference/index.md)
         "data-loading/*.data.{js,ts}",

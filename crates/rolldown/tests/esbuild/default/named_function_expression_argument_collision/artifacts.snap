@@ -7,9 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.js
-let x = function foo(foo$1) {
-	var foo$1;
-	return foo$1;
+let x = function foo(foo) {
+	var foo;
+	return foo;
 };
 
 //#endregion

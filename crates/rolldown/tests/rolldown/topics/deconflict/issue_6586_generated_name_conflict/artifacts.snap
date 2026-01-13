@@ -9,20 +9,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "assert";
 
 //#region a.js
-const a$1 = "from-a-module";
+const a$1$1 = "from-a-module";
 
 //#endregion
 //#region main.js
 const a = "from-main";
-function testGeneratedNameConflict(a$1$1) {
+function testGeneratedNameConflict(a$1) {
 	return {
-		param: a$1$1,
+		param: a$1,
 		topLevelA: a,
-		importedA: a$1
+		importedA: a$1$1
 	};
 }
 const result = testGeneratedNameConflict("param-value");
-console.log(`aFromModule: `, a$1);
+console.log(`aFromModule: `, a$1$1);
 assert.strictEqual(result.param, "param-value");
 assert.strictEqual(result.topLevelA, "from-main");
 assert.strictEqual(result.importedA, "from-a-module");

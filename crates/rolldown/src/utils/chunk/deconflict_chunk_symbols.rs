@@ -3,8 +3,7 @@ use oxc::span::CompactStr;
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use arcstr::ArcStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleScopeSymbolIdMap, OutputFormat, TaggedSymbolRef,
-  WrapKind,
+  Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
@@ -15,10 +14,8 @@ pub fn deconflict_chunk_symbols(
   link_output: &LinkStageOutput,
   format: OutputFormat,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
-  map: &ModuleScopeSymbolIdMap<'_>,
 ) {
-  let mut renamer =
-    Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, format);
+  let mut renamer = Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, format);
 
   chunk
     .modules
@@ -191,8 +188,34 @@ pub fn deconflict_chunk_symbols(
     })
     .collect();
 
-  // rename non-top-level names
-  renamer.rename_non_root_symbol(&chunk.modules, link_output, map);
+  // Register nested scope symbols with their canonical names.
+  // Since we now avoid conflicting names during root scope renaming, most nested scope
+  // symbols can keep their original names, but we still need to handle shadowing cases.
+  for module_idx in chunk.modules.iter().copied() {
+    let Some(module) = link_output.module_table[module_idx].as_normal() else {
+      continue;
+    };
+    let Some(db) = &link_output.symbol_db[module.idx] else {
+      continue;
+    };
+    let scoping = db.ast_scopes.scoping();
+    let root_scope_id = scoping.root_scope_id();
+
+    // Check if this module is CJS wrapped - if so, nested scopes should avoid
+    // shadowing `exports` and `module` which are synthetic parameters
+    let is_cjs_wrapped = matches!(link_output.metas[module.idx].wrap_kind(), WrapKind::Cjs);
+
+    for symbol_id in scoping.symbol_ids() {
+      let scope_id = scoping.symbol_scope_id(symbol_id);
+      // Skip root scope symbols - they're already handled
+      if scope_id == root_scope_id {
+        continue;
+      }
+      let symbol_ref = (module.idx, symbol_id).into();
+      let original_name = scoping.symbol_name(symbol_id);
+      renamer.register_nested_scope_symbols(symbol_ref, original_name, is_cjs_wrapped);
+    }
+  }
 
   chunk.canonical_names = renamer.into_canonical_names();
 }

@@ -50,8 +50,8 @@ assert.equal(String(lib_exports), "[object Module]");
 
 ```js
 // HIDDEN [rolldown:runtime]
-let assert = require("assert");
-assert = __toESM(assert);
+let assert$1 = require("assert");
+assert$1 = __toESM(assert$1);
 
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a }, 1);
@@ -63,10 +63,10 @@ var a_exports = /* @__PURE__ */ __exportAll({ ns: () => lib_exports }, 1);
 
 //#endregion
 //#region main.js
-assert.default.deepStrictEqual(Object.getOwnPropertyNames(a_exports), ["ns"]);
-assert.default.deepStrictEqual(Object.getOwnPropertyNames(lib_exports), ["a"]);
-assert.default.equal(String(a_exports), "[object Module]");
-assert.default.equal(String(lib_exports), "[object Module]");
+assert$1.default.deepStrictEqual(Object.getOwnPropertyNames(a_exports), ["ns"]);
+assert$1.default.deepStrictEqual(Object.getOwnPropertyNames(lib_exports), ["a"]);
+assert$1.default.equal(String(a_exports), "[object Module]");
+assert$1.default.equal(String(lib_exports), "[object Module]");
 
 //#endregion
 ```
@@ -100,10 +100,10 @@ assert.default.equal(String(lib_exports), "[object Module]");
 ### main.js
 
 ```js
-(function(assert) {
+(function(assert$1) {
 
 // HIDDEN [rolldown:runtime]
-assert = __toESM(assert);
+assert$1 = __toESM(assert$1);
 
 //#region lib.js
 	var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a }, 1);
@@ -115,10 +115,10 @@ assert = __toESM(assert);
 
 //#endregion
 //#region main.js
-	assert.default.deepStrictEqual(Object.getOwnPropertyNames(a_exports), ["ns"]);
-	assert.default.deepStrictEqual(Object.getOwnPropertyNames(lib_exports), ["a"]);
-	assert.default.equal(String(a_exports), "[object Module]");
-	assert.default.equal(String(lib_exports), "[object Module]");
+	assert$1.default.deepStrictEqual(Object.getOwnPropertyNames(a_exports), ["ns"]);
+	assert$1.default.deepStrictEqual(Object.getOwnPropertyNames(lib_exports), ["a"]);
+	assert$1.default.equal(String(a_exports), "[object Module]");
+	assert$1.default.equal(String(lib_exports), "[object Module]");
 
 //#endregion
 })(assert);

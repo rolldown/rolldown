@@ -9,13 +9,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "assert";
 
 //#region a.js
-const conflict$1 = 1;
+const conflict$2 = 1;
 function getA(x) {
-	let conflict$1$1 = x + 1;
+	let conflict$1 = x + 1;
 	function inner() {
-		return conflict$1$1;
+		return conflict$1;
 	}
-	return conflict$1 + inner() - x;
+	return conflict$2 + inner() - x;
 }
 
 //#endregion
@@ -27,7 +27,7 @@ function getB() {
 
 //#endregion
 //#region main.js
-assert.equal(conflict$1, 1);
+assert.equal(conflict$2, 1);
 assert.equal(conflict, 3);
 assert.equal(getA(1), 2);
 assert.equal(getB(), 3);

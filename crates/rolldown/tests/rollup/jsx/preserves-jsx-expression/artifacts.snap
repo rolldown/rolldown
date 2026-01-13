@@ -12,18 +12,18 @@ console.log(element$2);
 
 //#endregion
 //#region dep2.js
-const element$1 = "element 2";
-console.log(element$1);
+const element = "element 2";
+console.log(element);
 
 //#endregion
 //#region dep3.js
-const element = "element 3";
-console.log(element);
+const element$1 = "element 3";
+console.log(element$1);
 
 //#endregion
 //#region main.js
 const Foo = () => {};
-const result = <Foo>{"test" + element$1}</Foo>;
+const result = <Foo>{"test" + element}</Foo>;
 
 //#endregion
 export { result };

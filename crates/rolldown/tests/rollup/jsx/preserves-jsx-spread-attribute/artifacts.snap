@@ -12,20 +12,20 @@ console.log(obj$2);
 
 //#endregion
 //#region dep2.js
-const obj$1 = { value2: true };
-console.log(obj$1);
+const obj = { value2: true };
+console.log(obj);
 
 //#endregion
 //#region dep3.js
-const obj = { value3: true };
-console.log(obj);
+const obj$1 = { value3: true };
+console.log(obj$1);
 
 //#endregion
 //#region main.js
 const Foo = () => {};
-const result1 = <Foo {...obj$1} />;
-const result2 = <Foo {...obj$1} prop />;
-const result3 = <Foo prop1 prop2 {...obj$1} {...obj$1} />;
+const result1 = <Foo {...obj} />;
+const result2 = <Foo {...obj} prop />;
+const result3 = <Foo prop1 prop2 {...obj} {...obj} />;
 
 //#endregion
 export { result1, result2, result3 };

@@ -61,11 +61,11 @@ exports.foo = foo;
 
 ```js
 // HIDDEN [rolldown:runtime]
-let assert = require("assert");
-assert = __toESM(assert);
+let assert$1 = require("assert");
+assert$1 = __toESM(assert$1);
 
 //#region main.js
-Promise.resolve().then(() => require("./lib.js")).then((exports) => assert.default.deepStrictEqual({ ...exports }, {
+Promise.resolve().then(() => require("./lib.js")).then((exports) => assert$1.default.deepStrictEqual({ ...exports }, {
 	foo: "foo",
 	bar: "bar",
 	default: "default"

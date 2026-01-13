@@ -18,8 +18,8 @@ var A = class {
 		_classPrivateFieldInitSpec(this, _a, void 0);
 	}
 	f() {
-		var _classPrivateFieldGet2$1;
-		(_classPrivateFieldGet2$1 = _classPrivateFieldGet2(_a, this)) !== null && _classPrivateFieldGet2$1 !== void 0 || _classPrivateFieldSet2(_a, this, 1);
+		var _classPrivateFieldGet2;
+		(_classPrivateFieldGet2 = _classPrivateFieldGet2$1(_a, this)) !== null && _classPrivateFieldGet2 !== void 0 || _classPrivateFieldSet2(_a, this, 1);
 	}
 };
 

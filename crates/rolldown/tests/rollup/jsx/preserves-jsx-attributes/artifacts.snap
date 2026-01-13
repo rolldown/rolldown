@@ -13,19 +13,19 @@ console.log(Foo$2, value$2);
 
 //#endregion
 //#region dep2.js
-const Foo$1 = () => {};
-const value$1 = "value 2";
-console.log(Foo$1, value$1);
-
-//#endregion
-//#region dep3.js
 const Foo = () => {};
-const value = "value 3";
+const value = "value 2";
 console.log(Foo, value);
 
 //#endregion
+//#region dep3.js
+const Foo$1 = () => {};
+const value$1 = "value 3";
+console.log(Foo$1, value$1);
+
+//#endregion
 //#region main.js
-const result = <Foo$1 bar baz:foo="string" quux-nix={value$1} element=<Foo$1 /> fragment=<></> />;
+const result = <Foo bar baz:foo="string" quux-nix={value} element=<Foo /> fragment=<></> />;
 
 //#endregion
 export { result };

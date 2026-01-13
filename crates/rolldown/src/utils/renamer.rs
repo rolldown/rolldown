@@ -1,20 +1,11 @@
-use oxc::semantic::ScopeId;
 use oxc::span::CompactStr;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{
-  AstScopes, GetLocalDb, ModuleIdx, ModuleScopeSymbolIdMap, NormalModule, OutputFormat, SymbolRef,
-  SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags, WrapKind,
+  GetLocalDb, ModuleIdx, OutputFormat, SymbolRef, SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags,
 };
-use rolldown_utils::rustc_hash::FxHashMapExt;
-use rolldown_utils::{
-  concat_string,
-  rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
-};
+use rolldown_utils::concat_string;
 use rustc_hash::{FxHashMap, FxHashSet};
-use std::borrow::Cow;
 use std::collections::hash_map::Entry;
-
-use crate::stages::link_stage::LinkStageOutput;
 
 /// Information about a canonical name used in the top-level scope.
 #[derive(Debug, Clone, Default)]
@@ -93,7 +84,8 @@ impl<'name> Renamer<'name> {
       .map(|idx| {
         let entry_db = symbol_db.local_db(idx);
         let scoping = entry_db.ast_scopes.scoping();
-        let all_names: FxHashSet<&str> = scoping.symbol_ids().map(|id| scoping.symbol_name(id)).collect();
+        let all_names: FxHashSet<&str> =
+          scoping.symbol_ids().map(|id| scoping.symbol_name(id)).collect();
         FxHashMap::from_iter([(idx, all_names)])
       })
       .unwrap_or_default();
@@ -250,22 +242,19 @@ impl<'name> Renamer<'name> {
     let mut conflict_index = 0u32;
 
     loop {
-      // Check 1: Is this a root binding in the entry module for this symbol?
-      // If so, we can use this name directly.
-      if self.is_entry_root_binding(&candidate_name, canonical_ref) {
-        // Mark as used in used_canonical_names
-        self.used_canonical_names.entry(candidate_name.clone()).or_insert(CanonicalNameInfo {
-          conflict_index: 0,
-          owner: Some(canonical_ref.owner),
-          was_renamed,
-        });
-        self.used_names.insert(candidate_name.clone());
-        self.canonical_names.insert(canonical_ref, candidate_name);
-        return;
-      }
-
-      // Check 2: Is this name already used by another top-level symbol?
+      // Check 1: Is this name already used by another top-level symbol or reserved?
       if let Some(info) = self.used_canonical_names.get(&candidate_name) {
+        // If this is a reserved name (owner: None) or belongs to another module, we must rename.
+        // But if this is a root binding in the entry module for this symbol AND not reserved,
+        // we can use this name directly.
+        let is_reserved = info.owner.is_none();
+        if !is_reserved && self.is_entry_root_binding(&candidate_name, canonical_ref) {
+          // The name is owned by this module's entry binding, use it directly
+          self.used_names.insert(candidate_name.clone());
+          self.canonical_names.insert(canonical_ref, candidate_name);
+          return;
+        }
+        // Name is reserved or conflicts - generate a new name
         conflict_index = info.conflict_index + 1;
         if let Some(existing) = self.used_canonical_names.get_mut(&candidate_name) {
           existing.conflict_index = conflict_index;
@@ -274,6 +263,19 @@ impl<'name> Renamer<'name> {
           concat_string!(original_name, "$", itoa::Buffer::new().format(conflict_index)).into();
         was_renamed = true;
         continue;
+      }
+
+      // Check 2: Is this a root binding in the entry module for this symbol?
+      // If so, we can use this name directly (it's not in used_canonical_names yet).
+      if self.is_entry_root_binding(&candidate_name, canonical_ref) {
+        // Mark as used in used_canonical_names
+        self.used_canonical_names.insert(
+          candidate_name.clone(),
+          CanonicalNameInfo { conflict_index: 0, owner: Some(canonical_ref.owner), was_renamed },
+        );
+        self.used_names.insert(candidate_name.clone());
+        self.canonical_names.insert(canonical_ref, candidate_name);
+        return;
       }
 
       // Check 3: Is this name available (not conflicting with nested scope symbols)?
@@ -315,151 +317,52 @@ impl<'name> Renamer<'name> {
     conflictless_name.to_string()
   }
 
-  // non-top-level symbols won't be linked cross-module. So the canonical `SymbolRef` for them are themselves.
-  #[tracing::instrument(level = "trace", skip_all)]
-  pub fn rename_non_root_symbol(
+  /// CJS wrapper parameter names that nested scopes should avoid shadowing.
+  const CJS_WRAPPER_NAMES: [&'static str; 2] = ["exports", "module"];
+
+  /// Register nested scope symbols with their original names.
+  ///
+  /// Since `add_symbol_in_root_scope` now avoids names that would conflict with nested scope
+  /// symbols, most nested scope symbols can keep their original names. However, we still need
+  /// to handle the case where nested scope symbols shadow top-level symbols that were renamed,
+  /// or CJS wrapper parameters.
+  pub fn register_nested_scope_symbols(
     &mut self,
-    modules_in_chunk: &[ModuleIdx],
-    link_stage_output: &LinkStageOutput,
-    map: &ModuleScopeSymbolIdMap<'_>,
+    symbol_ref: SymbolRef,
+    original_name: &str,
+    is_cjs_wrapped: bool,
   ) {
-    #[tracing::instrument(level = "trace", skip_all)]
-    fn rename_symbols_of_nested_scopes<'name>(
-      module: &'name NormalModule,
-      scope_id: ScopeId,
-      stack: &mut Vec<Cow<'_, FxHashMap<CompactStr, CanonicalNameInfo>>>,
-      canonical_names: &mut FxHashMap<SymbolRef, CompactStr>,
-      ast_scope: &'name AstScopes,
-      map: &ModuleScopeSymbolIdMap<'_>,
-    ) {
-      let bindings = map.get(&module.idx).map(|vec| &vec[scope_id]).unwrap();
-      let mut used_canonical_names_for_this_scope = FxHashMap::with_capacity(bindings.len());
-
-      bindings.iter().for_each(|&(symbol_id, binding_name)| {
-        let binding_ref: SymbolRef = (module.idx, symbol_id).into();
-
-        let mut count = 1;
-        let mut candidate_name = Cow::Borrowed(binding_name);
-        match canonical_names.entry(binding_ref) {
-          Entry::Vacant(slot) => loop {
-            let is_shadowed =
-              stack.iter().enumerate().any(|(i, used_canonical_names)| match used_canonical_names
-                .get(candidate_name.as_ref())
-              {
-                Some(info) => {
-                  // top-level names that this module's nested scopes should avoid
-                  // shadowing. The rules are:
-                  //
-                  // 1. Cross-module symbols: ALWAYS avoid - nested scopes shouldn't accidentally
-                  //    capture a symbol from another module.
-                  //    See: crates/rolldown/tests/rolldown/topics/deconflict/issue_6586_generated_name_conflict
-                  //
-                  // 2. Same-module symbols that were RENAMED: avoid - the nested scope variable
-                  //    might have the same name as the NEW name, which would be an accidental
-                  //    collision (the programmer didn't know the symbol would be renamed).
-                  //    See: crates/rolldown/tests/rolldown/topics/deconflict/issue_same_module_shadowing
-                  //
-                  // 3. Same-module symbols that were NOT renamed: allow shadowing - this preserves
-                  //    the original JavaScript scoping semantics where inner scopes can shadow outer.
-                  //    See: crates/rolldown/tests/rolldown/topics/deconflict/issue_6586
-                  if i == 0 {
-                    info.owner.is_some_and(|owner| owner != module.idx || info.was_renamed)
-                  } else {
-                    true
-                  }
-                }
-                None => false,
-              }) || used_canonical_names_for_this_scope.contains_key(candidate_name.as_ref());
-
-            if is_shadowed {
-              candidate_name =
-                Cow::Owned(concat_string!(&binding_name, "$", itoa::Buffer::new().format(count)));
-              count += 1;
-            } else {
-              let name = CompactStr::new(candidate_name.as_ref());
-              used_canonical_names_for_this_scope
-                .insert(name.clone(), CanonicalNameInfo::default());
-              slot.insert(name);
-              break;
-            }
-          },
-          Entry::Occupied(_) => {
-            // The symbol is already renamed
-          }
-        }
-      });
-
-      stack.push(Cow::Owned(used_canonical_names_for_this_scope));
-      let child_scopes = ast_scope.scoping().get_scope_child_ids(scope_id);
-      child_scopes.iter().for_each(|scope_id| {
-        rename_symbols_of_nested_scopes(module, *scope_id, stack, canonical_names, ast_scope, map);
-      });
-      stack.pop();
+    // Skip if already registered (e.g., as a top-level symbol)
+    if self.canonical_names.contains_key(&symbol_ref) {
+      return;
     }
 
-    // CJS wrapper parameters that nested scopes should avoid shadowing.
-    // These are synthetic names injected by the __commonJS wrapper.
-    // see crates\rolldown\tests\rolldown\topics\hmr\runtime_correctness as an example
-    let cjs_wrapper_names: FxHashMap<CompactStr, CanonicalNameInfo> = ["exports", "module"]
-      .into_iter()
-      .map(|s| (CompactStr::new(s), CanonicalNameInfo::default()))
-      .collect();
+    // Check if this name would shadow a top-level symbol that was renamed
+    // (from a different module or renamed in the same module)
+    let shadows_renamed_symbol = self.used_canonical_names.get(original_name).is_some_and(|info| {
+      info.owner.is_some_and(|owner| owner != symbol_ref.owner || info.was_renamed)
+    });
 
-    let modules = &link_stage_output.module_table.modules;
-    let used_canonical_names = &self.used_canonical_names;
-    let cjs_wrapper_names_ref = &cjs_wrapper_names;
-    let copied_scope_iter =
-      modules_in_chunk.par_iter().copied().filter_map(|id| modules[id].as_normal()).flat_map(
-        |module| {
-          let ast_scope = &link_stage_output.symbol_db[module.idx].as_ref().unwrap().ast_scopes;
-          let child_scopes: &[ScopeId] =
-            ast_scope.scoping().get_scope_child_ids(ast_scope.scoping().root_scope_id());
+    // Check if this name would shadow CJS wrapper parameters
+    let shadows_cjs_param = is_cjs_wrapped && Self::CJS_WRAPPER_NAMES.contains(&original_name);
 
-          // Check if this module is CJS wrapped
-          let is_cjs_wrapped =
-            matches!(link_stage_output.metas[module.idx].wrap_kind(), WrapKind::Cjs);
-
-          child_scopes.into_par_iter().map(move |child_scope_id| {
-            // Include names_to_avoid in the initial stack.
-            // This ensures nested scope symbols are renamed when they would incorrectly
-            // shadow a cross-module symbol or a same-module symbol that was renamed.
-            //
-            // For CJS wrapped modules, also include `exports` and `module` since these
-            // are synthetic parameters injected by the __commonJS wrapper that nested
-            // scopes should not shadow.
-            let mut stack = vec![Cow::Borrowed(used_canonical_names)];
-            if is_cjs_wrapped {
-              stack.push(Cow::Borrowed(cjs_wrapper_names_ref));
-            }
-            let mut canonical_names = FxHashMap::default();
-            rename_symbols_of_nested_scopes(
-              module,
-              *child_scope_id,
-              &mut stack,
-              &mut canonical_names,
-              ast_scope,
-              map,
-            );
-            canonical_names
-          })
-        },
-      );
-
-    #[cfg(not(target_family = "wasm"))]
-    let canonical_names_of_nested_scopes =
-      copied_scope_iter.reduce(FxHashMap::default, |mut acc, canonical_names| {
-        acc.extend(canonical_names);
-        acc
-      });
-    #[cfg(target_family = "wasm")]
-    let canonical_names_of_nested_scopes = copied_scope_iter
-      .reduce(|mut acc, canonical_names| {
-        acc.extend(canonical_names);
-        acc
-      })
-      .unwrap_or_default();
-
-    self.canonical_names.extend(canonical_names_of_nested_scopes);
+    if shadows_renamed_symbol || shadows_cjs_param {
+      // Generate a unique name
+      let mut count = 1u32;
+      let mut candidate_name: CompactStr =
+        concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();
+      while self.used_canonical_names.contains_key(&candidate_name)
+        || self.used_names.contains(&candidate_name)
+      {
+        count += 1;
+        candidate_name =
+          concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();
+      }
+      self.canonical_names.insert(symbol_ref, candidate_name);
+    } else {
+      // Use original name
+      self.canonical_names.insert(symbol_ref, CompactStr::new(original_name));
+    }
   }
 
   #[inline]

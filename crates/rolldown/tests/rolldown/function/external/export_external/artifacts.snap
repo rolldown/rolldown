@@ -15,8 +15,8 @@ console.log(a1$1);
 
 //#endregion
 //#region main.js
-console.log(ext1, a1, b1, ext1, a$1, b$1);
+console.log(ext1, a1, b1, ext1, a, b);
 
 //#endregion
-export { a, b };
+export { a$1 as a, b$1 as b };
 ```

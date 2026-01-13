@@ -29,8 +29,8 @@ assert.equal(String(import_exports), "[object Module]");
 
 ```js
 // HIDDEN [rolldown:runtime]
-let assert = require("assert");
-assert = __toESM(assert);
+let assert$1 = require("assert");
+assert$1 = __toESM(assert$1);
 
 //#region import.js
 var import_exports = /* @__PURE__ */ __exportAll({ default: () => import_default }, 1);
@@ -38,8 +38,8 @@ var import_default = "hi";
 
 //#endregion
 //#region main.js
-assert.default.deepStrictEqual(Object.getOwnPropertyNames(import_exports), ["default"]);
-assert.default.equal(String(import_exports), "[object Module]");
+assert$1.default.deepStrictEqual(Object.getOwnPropertyNames(import_exports), ["default"]);
+assert$1.default.equal(String(import_exports), "[object Module]");
 
 //#endregion
 ```
@@ -60,10 +60,10 @@ assert.default.equal(String(import_exports), "[object Module]");
 ### main.js
 
 ```js
-(function(assert) {
+(function(assert$1) {
 
 // HIDDEN [rolldown:runtime]
-assert = __toESM(assert);
+assert$1 = __toESM(assert$1);
 
 //#region import.js
 	var import_exports = /* @__PURE__ */ __exportAll({ default: () => import_default }, 1);
@@ -71,8 +71,8 @@ assert = __toESM(assert);
 
 //#endregion
 //#region main.js
-	assert.default.deepStrictEqual(Object.getOwnPropertyNames(import_exports), ["default"]);
-	assert.default.equal(String(import_exports), "[object Module]");
+	assert$1.default.deepStrictEqual(Object.getOwnPropertyNames(import_exports), ["default"]);
+	assert$1.default.equal(String(import_exports), "[object Module]");
 
 //#endregion
 })(assert);

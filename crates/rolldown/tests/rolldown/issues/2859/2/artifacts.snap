@@ -41,15 +41,15 @@ export { bar, main_default as default, foo };
 ```js
 Object.defineProperty(exports, '__esModule', { value: true });
 // HIDDEN [rolldown:runtime]
-let assert = require("assert");
-assert = __toESM(assert);
+let assert$1 = require("assert");
+assert$1 = __toESM(assert$1);
 
 //#region main.js
 const foo = "foo";
 let bar = "";
 bar = "bar";
 var main_default = "default";
-Promise.resolve().then(() => require("./main.js")).then((exports) => assert.default.deepStrictEqual({ ...exports }, {
+Promise.resolve().then(() => require("./main.js")).then((exports) => assert$1.default.deepStrictEqual({ ...exports }, {
 	foo: "foo",
 	bar: "bar",
 	default: "default"

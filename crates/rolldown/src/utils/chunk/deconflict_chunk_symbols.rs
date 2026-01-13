@@ -17,7 +17,8 @@ pub fn deconflict_chunk_symbols(
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
   map: &ModuleScopeSymbolIdMap<'_>,
 ) {
-  let mut renamer = Renamer::new(&link_output.symbol_db, format);
+  let mut renamer =
+    Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, format);
 
   chunk
     .modules

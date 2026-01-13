@@ -2,15 +2,15 @@ use oxc::semantic::ScopeId;
 use oxc::span::CompactStr;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{
-  AstScopes, ModuleIdx, ModuleScopeSymbolIdMap, NormalModule, OutputFormat, SymbolRef, SymbolRefDb,
-  SymbolRefFlags, WrapKind,
+  AstScopes, GetLocalDb, ModuleIdx, ModuleScopeSymbolIdMap, NormalModule, OutputFormat, SymbolRef,
+  SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags, WrapKind,
 };
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rolldown_utils::{
   concat_string,
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use std::borrow::Cow;
 use std::collections::hash_map::Entry;
 
@@ -52,10 +52,29 @@ pub struct Renamer<'name> {
   used_canonical_names: FxHashMap<CompactStr, CanonicalNameInfo>,
   canonical_names: FxHashMap<SymbolRef, CompactStr>,
   symbol_db: &'name SymbolRefDb,
+
+  /// The entry module index, if this chunk has an entry point.
+  entry_module_idx: Option<ModuleIdx>,
+
+  /// Reference to the entry module's symbol database.
+  /// Used to preserve entry module's root binding names and check for name conflicts.
+  entry_module: Option<&'name SymbolRefDbForModule>,
+
+  /// Cache of non-root symbol names per module.
+  /// Used to avoid renaming root symbols to names that would conflict with nested scope symbols.
+  module_used_names: FxHashMap<ModuleIdx, FxHashSet<&'name str>>,
+
+  /// Names that have been used during the renaming process.
+  /// Tracks which names have been assigned to avoid duplicates.
+  used_names: FxHashSet<CompactStr>,
 }
 
 impl<'name> Renamer<'name> {
-  pub fn new(symbols: &'name SymbolRefDb, format: OutputFormat) -> Self {
+  pub fn new(
+    base_module_index: Option<ModuleIdx>,
+    symbol_db: &'name SymbolRefDb,
+    format: OutputFormat,
+  ) -> Self {
     // Port from https://github.com/rollup/rollup/blob/master/src/Chunk.ts#L1377-L1394.
     let mut manual_reserved = match format {
       OutputFormat::Esm => vec![],
@@ -64,20 +83,121 @@ impl<'name> Renamer<'name> {
     };
     // https://github.com/rollup/rollup/blob/bfbea66569491f5466fbba99de2ba6a0225f851b/src/Chunk.ts#L1359
     manual_reserved.extend(["Object", "Promise"]);
+
+    // Get entry module reference if provided
+    let entry_module = base_module_index.map(|idx| symbol_db.local_db(idx));
+
+    // For entry module, pre-cache all symbol names (both root and non-root)
+    // to ensure we don't rename other symbols to names that exist in the entry module
+    let module_used_names = base_module_index
+      .map(|idx| {
+        let entry_db = symbol_db.local_db(idx);
+        let scoping = entry_db.ast_scopes.scoping();
+        let all_names: FxHashSet<&str> = scoping.symbol_ids().map(|id| scoping.symbol_name(id)).collect();
+        FxHashMap::from_iter([(idx, all_names)])
+      })
+      .unwrap_or_default();
+
     Self {
       canonical_names: FxHashMap::default(),
-      symbol_db: symbols,
+      symbol_db,
       used_canonical_names: manual_reserved
         .iter()
         .chain(RESERVED_KEYWORDS.iter())
         .chain(GLOBAL_OBJECTS.iter())
         .map(|s| (CompactStr::new(s), CanonicalNameInfo::default()))
         .collect(),
+      entry_module_idx: base_module_index,
+      entry_module,
+      module_used_names,
+      used_names: FxHashSet::default(),
     }
   }
 
   pub fn reserve(&mut self, name: CompactStr) {
     self.used_canonical_names.insert(name, CanonicalNameInfo::default());
+  }
+
+  /// Check if the candidate name is a root binding in the entry module that matches the symbol.
+  /// If so, we can use this name directly without further checks.
+  fn is_entry_root_binding(&self, candidate_name: &str, symbol_ref: SymbolRef) -> bool {
+    match (self.entry_module_idx, self.entry_module) {
+      (Some(entry_idx), Some(module)) => {
+        let scoping = module.ast_scopes.scoping();
+        scoping.get_root_binding(candidate_name).is_some_and(|symbol_id| {
+          let entry_symbol = SymbolRef::from((entry_idx, symbol_id));
+          // The candidate is valid if it's the same symbol or links to it
+          entry_symbol == symbol_ref || entry_symbol.canonical_ref(self.symbol_db) == symbol_ref
+        })
+      }
+      _ => false,
+    }
+  }
+
+  /// Check if a candidate name is available for use (doesn't conflict with existing names).
+  fn is_name_available(&self, candidate_name: &str, symbol_ref: SymbolRef) -> bool {
+    // Check 1: Not already used during this renaming pass
+    if self.used_names.contains(candidate_name) {
+      return false;
+    }
+
+    // Check 2: Not used in the entry module's scope tree (if entry module exists)
+    if let Some(entry_idx) = self.entry_module_idx {
+      if let Some(entry_names) = self.module_used_names.get(&entry_idx) {
+        if entry_names.contains(candidate_name) {
+          return false;
+        }
+      }
+    }
+
+    // Check 3: Not used in the symbol's own module's non-root scope
+    // (only for symbols from modules other than the entry module)
+    if let Some(entry_idx) = self.entry_module_idx {
+      if symbol_ref.owner != entry_idx {
+        if let Some(module_names) = self.module_used_names.get(&symbol_ref.owner) {
+          if module_names.contains(candidate_name) {
+            return false;
+          }
+        }
+      }
+    } else {
+      // No entry module, check against the symbol's own module
+      if let Some(module_names) = self.module_used_names.get(&symbol_ref.owner) {
+        if module_names.contains(candidate_name) {
+          return false;
+        }
+      }
+    }
+
+    true
+  }
+
+  /// Get or compute the set of non-root symbol names for a module.
+  fn get_or_create_module_used_names(&mut self, module_idx: ModuleIdx) -> &FxHashSet<&'name str> {
+    self.module_used_names.entry(module_idx).or_insert_with(|| {
+      // For runtime module (index 0), return empty set
+      const RUNTIME_MODULE_INDEX: ModuleIdx = ModuleIdx::from_usize_unchecked(0);
+      if module_idx == RUNTIME_MODULE_INDEX {
+        return FxHashSet::default();
+      }
+
+      let db = self.symbol_db.local_db(module_idx);
+      let scoping = db.ast_scopes.scoping();
+      if scoping.symbols_len() == 0 {
+        return FxHashSet::default();
+      }
+
+      let root_scope_id = scoping.root_scope_id();
+      let root_bindings: FxHashSet<_> =
+        scoping.get_bindings(root_scope_id).values().copied().collect();
+
+      // Collect all non-root symbol names
+      scoping
+        .symbol_ids()
+        .filter(|id| !root_bindings.contains(id))
+        .map(|id| scoping.symbol_name(id))
+        .collect()
+    })
   }
 
   /// Assigns a canonical name to a symbol without checking for conflicts.

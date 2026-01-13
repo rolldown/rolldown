@@ -4,7 +4,7 @@
       "strictExecutionOrder": true,
       "onDemandWrapping": true
     },
-    "advancedChunks": {
+    "manualCodeSplitting": {
       "groups": [
         {
           "name": "test",

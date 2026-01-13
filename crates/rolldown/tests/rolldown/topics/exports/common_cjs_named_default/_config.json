@@ -1,7 +1,7 @@
 {
   "config": {
     "format": "cjs",
-    "advancedChunks": {
+    "manualCodeSplitting": {
       "groups": [
         {
           "name": "shared",

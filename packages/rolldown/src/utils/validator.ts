@@ -738,6 +738,7 @@ const OutputOptionsSchema = v.strictObject({
     v.description('Dynamic import in CJS output'),
   ),
   manualChunks: v.optional(ManualChunksFunctionSchema),
+  codeSplitting: v.optional(AdvancedChunksSchema),
   advancedChunks: v.optional(AdvancedChunksSchema),
   legalComments: v.pipe(
     v.optional(v.union([v.literal('none'), v.literal('inline')])),
@@ -824,6 +825,18 @@ const OutputCliOverrideSchema = v.strictObject({
     v.optional(v.record(v.string(), v.string())),
     v.description('Global variable of UMD / IIFE dependencies (syntax: `key=value`)'),
   ),
+  codeSplitting: v.pipe(
+    v.optional(
+      v.strictObject({
+        minSize: v.pipe(v.optional(v.number()), v.description('Minimum size of the chunk')),
+        minShareCount: v.pipe(
+          v.optional(v.number()),
+          v.description('Minimum share count of the chunk'),
+        ),
+      }),
+    ),
+    v.description('Code splitting options'),
+  ),
   advancedChunks: v.pipe(
     v.optional(
       v.strictObject({
@@ -834,7 +847,7 @@ const OutputCliOverrideSchema = v.strictObject({
         ),
       }),
     ),
-    v.description('Global variable of UMD / IIFE dependencies (syntax: `key=value`)'),
+    v.description('Deprecated: use codeSplitting instead'),
   ),
   minify: v.pipe(v.optional(v.boolean()), v.description('Minify the bundled file')),
 });

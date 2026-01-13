@@ -1,6 +1,6 @@
 use super::normalize_binding_transform_options;
 use crate::options::BindingGeneratedCodeOptions;
-use crate::options::binding_advanced_chunks_options::BindingChunkingContext;
+use crate::options::binding_manual_code_splitting_options::BindingChunkingContext;
 use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption, SanitizeFileName};
 use crate::types::binding_string_or_regex::bindingify_string_or_regex_array;
 use crate::{
@@ -14,10 +14,11 @@ use crate::{
 };
 use napi::bindgen_prelude::{Either, Either3, FnArgs};
 use rolldown::{
-  AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerConfig,
-  BundlerOptions, ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal,
-  MatchGroup, MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat,
-  Platform, RawMinifyOptions, RawMinifyOptionsDetailed, SanitizeFilename, TsConfig,
+  AddonOutputOption, AssetFilenamesOutputOption, BundlerConfig, BundlerOptions,
+  ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal,
+  ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType, OptimizationOption,
+  OutputExports, OutputFormat, Platform, RawMinifyOptions, RawMinifyOptionsDetailed,
+  SanitizeFilename, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -410,7 +411,7 @@ pub fn normalize_binding_options(
     external_live_bindings: output_options.external_live_bindings,
     inline_dynamic_imports: output_options.inline_dynamic_imports,
     dynamic_import_in_cjs: output_options.dynamic_import_in_cjs,
-    advanced_chunks: output_options.advanced_chunks.map(|inner| AdvancedChunksOptions {
+    manual_code_splitting: output_options.manual_code_splitting.map(|inner| ManualCodeSplittingOptions {
       min_size: inner.min_size,
       min_share_count: inner.min_share_count,
       min_module_size: inner.min_module_size,

@@ -10,10 +10,10 @@ use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_error::EventKindSwitcher;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use super::advanced_chunks_options::AdvancedChunksOptions;
 use super::experimental_options::ExperimentalOptions;
 use super::generated_code_options::GeneratedCodeOptions;
 use super::legal_comments::LegalComments;
+use super::manual_code_splitting_options::ManualCodeSplittingOptions;
 use super::minify_options::MinifyOptions;
 use super::output_option::{
   AssetFilenamesOutputOption, ChunkFilenamesOutputOption, PathsOutputOption,
@@ -88,7 +88,7 @@ pub struct NormalizedBundlerOptions {
   pub external_live_bindings: bool,
   pub inline_dynamic_imports: bool,
   pub dynamic_import_in_cjs: bool,
-  pub advanced_chunks: Option<AdvancedChunksOptions>,
+  pub manual_code_splitting: Option<ManualCodeSplittingOptions>,
   pub checks: EventKindSwitcher,
   pub profiler_names: bool,
   pub watch: WatchOption,
@@ -163,7 +163,7 @@ impl Default for NormalizedBundlerOptions {
       external_live_bindings: Default::default(),
       inline_dynamic_imports: Default::default(),
       dynamic_import_in_cjs: true,
-      advanced_chunks: Default::default(),
+      manual_code_splitting: Default::default(),
       checks: Default::default(),
       profiler_names: Default::default(),
       watch: Default::default(),

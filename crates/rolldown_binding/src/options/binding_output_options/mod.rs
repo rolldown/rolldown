@@ -1,5 +1,5 @@
-pub mod binding_advanced_chunks_options;
 mod binding_generated_code_options;
+pub mod binding_manual_code_splitting_options;
 mod binding_pre_rendered_asset;
 mod binding_pre_rendered_chunk;
 use binding_pre_rendered_asset::BindingPreRenderedAsset;
@@ -8,8 +8,8 @@ use napi::Either;
 use napi::bindgen_prelude::{Either3, FnArgs};
 use rustc_hash::FxHashMap;
 
-use binding_advanced_chunks_options::BindingAdvancedChunksOptions;
 pub use binding_generated_code_options::BindingGeneratedCodeOptions;
+use binding_manual_code_splitting_options::BindingManualCodeSplittingOptions;
 use binding_pre_rendered_chunk::PreRenderedChunk;
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
@@ -146,7 +146,7 @@ pub struct BindingOutputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "boolean | 'dce-only' | MinifyOptions")]
   pub minify: Option<Either3<bool, String, oxc_minify_napi::MinifyOptions>>,
-  pub advanced_chunks: Option<BindingAdvancedChunksOptions>,
+  pub manual_code_splitting: Option<BindingManualCodeSplittingOptions>,
   #[napi(ts_type = "'none' | 'inline'")]
   pub legal_comments: Option<String>,
   pub polyfill_require: Option<bool>,

@@ -10,7 +10,7 @@
         "import": "./entry-b.js"
       }
     ],
-    "advancedChunks": {
+    "manualCodeSplitting": {
       "groups": [
         {
           "name": "Splitted",

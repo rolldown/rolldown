@@ -1653,16 +1653,6 @@ export interface AliasItem {
   replacements: Array<string | undefined | null>
 }
 
-export interface BindingAdvancedChunksOptions {
-  includeDependenciesRecursively?: boolean
-  minSize?: number
-  minShareCount?: number
-  groups?: Array<BindingMatchGroup>
-  maxSize?: number
-  minModuleSize?: number
-  maxModuleSize?: number
-}
-
 export interface BindingAssetSource {
   inner: string | Uint8Array
 }
@@ -2046,6 +2036,16 @@ export type BindingMakeAbsoluteExternalsRelative =
   | { type: 'Bool', field0: boolean }
   | { type: 'IfRelativeSource' }
 
+export interface BindingManualCodeSplittingOptions {
+  includeDependenciesRecursively?: boolean
+  minSize?: number
+  minShareCount?: number
+  groups?: Array<BindingMatchGroup>
+  maxSize?: number
+  minModuleSize?: number
+  maxModuleSize?: number
+}
+
 export interface BindingMatchGroup {
   name: string | ((id: string, ctx: BindingChunkingContext) => VoidNullable<string>)
   test?: string | RegExp | ((id: string) => VoidNullable<boolean>)
@@ -2117,7 +2117,7 @@ export interface BindingOutputOptions {
   sourcemapDebugIds?: boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
   minify?: boolean | 'dce-only' | MinifyOptions
-  advancedChunks?: BindingAdvancedChunksOptions
+  manualCodeSplitting?: BindingManualCodeSplittingOptions
   legalComments?: 'none' | 'inline'
   polyfillRequire?: boolean
   preserveModules?: boolean

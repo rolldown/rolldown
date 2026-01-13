@@ -4,7 +4,7 @@
     "experimental": {
       "strictExecutionOrder": true
     },
-    "advancedChunks": {
+    "manualCodeSplitting": {
       "groups": [
         {
           "name": "shared",

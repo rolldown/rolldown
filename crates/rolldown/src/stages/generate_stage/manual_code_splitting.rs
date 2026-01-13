@@ -54,14 +54,14 @@ impl GenerateStage<'_> {
     clippy::cast_sign_loss,
     clippy::cast_possible_wrap
   )] // TODO(hyf0): refactor
-  pub async fn apply_advanced_chunks(
+  pub async fn apply_manual_code_splitting(
     &self,
     index_splitting_info: &IndexSplittingInfo,
     module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
     chunk_graph: &mut ChunkGraph,
     input_base: &ArcStr,
   ) -> BuildResult<()> {
-    let Some(chunking_options) = &self.options.advanced_chunks else {
+    let Some(chunking_options) = &self.options.manual_code_splitting else {
       return Ok(());
     };
 
@@ -318,7 +318,7 @@ impl GenerateStage<'_> {
         None,
       );
       chunk.add_creation_reason(
-        ChunkCreationReason::AdvancedChunkGroup(
+        ChunkCreationReason::ManualCodeSplittingGroup(
           &this_module_group.name,
           this_module_group.match_group_index.try_into().unwrap(),
         ),

@@ -8,7 +8,7 @@ pub enum InvalidOptionType {
   InvalidOutputFile,
   InvalidOutputDirOption,
   NoEntryPoint,
-  AdvancedChunksWithoutGroups(Vec<String>),
+  ManualCodeSplittingWithoutGroups(Vec<String>),
   InvalidContext(String),
   IncludeDependenciesRecursivelyWithConflictPreserveEntrySignatures(String),
   IncludeDependenciesRecursivelyWithImplicitPreserveEntrySignatures,
@@ -16,7 +16,7 @@ pub enum InvalidOptionType {
   InvalidFilenameSubstitution { name: String, pattern_name: String },
   InlineDynamicImportsWithMultipleInputs,
   InlineDynamicImportsWithPreserveModules,
-  InlineDynamicImportsWithAdvancedChunks,
+  InlineDynamicImportsWithManualCodeSplitting,
   HashLengthTooLong { pattern_name: String, received: usize, max: usize },
   HashLengthTooShort { pattern_name: String, received: usize, min: usize, chunk_count: u32 },
 }
@@ -42,9 +42,9 @@ impl BuildEvent for InvalidOption {
         InvalidOptionType::InvalidOutputFile => "Invalid value for option \"output.file\" - When building multiple chunks, the \"output.dir\" option must be used, not \"output.file\". You may set `output.inlineDynamicImports` to `true` when using dynamic imports.".to_string(),
         InvalidOptionType::InvalidOutputDirOption => "Invalid value for option \"output.dir\" - you must set either \"output.file\" for a single-file build or \"output.dir\" when generating multiple chunks.".to_string(),
         InvalidOptionType::NoEntryPoint =>"You must supply `options.input` to rolldown, you should at least provide one entrypoint via `options.input` or `this.emitFile({type: 'chunk', ...})` (https://rollupjs.org/plugin-development/#this-emitfile)".to_string(),
-        InvalidOptionType::AdvancedChunksWithoutGroups(options) => {
+        InvalidOptionType::ManualCodeSplittingWithoutGroups(options) => {
           let options_list = options.join(", ");
-          format!("Advanced chunks options ({options_list}) specified without groups. These options have no effect without groups - you should either add groups to use advanced chunking or remove these options.")
+          format!("Manual code splitting options ({options_list}) specified without groups. These options have no effect without groups - you should either add groups to use manual code splitting or remove these options.")
         }
         InvalidOptionType::InvalidContext(options) => {
             format!("\"{options}\" is an illegitimate identifier for option \"context\". You may use a legitimate context identifier instead.")
@@ -53,7 +53,7 @@ impl BuildEvent for InvalidOption {
           [
             "Invalid option combination detected:",
             "",
-            "- advancedChunks.includeDependenciesRecursively = false",
+            "- codeSplitting.includeDependenciesRecursively = false",
             &format!("- preserveEntrySignatures = \"{value}\""),
             "",
             "To fix:",
@@ -65,7 +65,7 @@ impl BuildEvent for InvalidOption {
           [
             "`preserveEntrySignatures: 'allow-extension'` is set implicitly by Rolldown",
             "",
-            "- `advancedChunks.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'",
+            "- `codeSplitting.includeDependenciesRecursively = false` requires `preserveEntrySignatures` to be either `false` or 'allow-extension'",
             "",
             "To fix:",
             "",
@@ -91,8 +91,8 @@ impl BuildEvent for InvalidOption {
         InvalidOptionType::InlineDynamicImportsWithPreserveModules => {
           "Invalid value \"true\" for option \"output.inlineDynamicImports\" - this option is not supported for \"output.preserveModules\".".to_string()
         }
-        InvalidOptionType::InlineDynamicImportsWithAdvancedChunks => {
-          "Invalid value \"true\" for option \"output.inlineDynamicImports\" - this option is not supported for \"output.advancedChunks\".".to_string()
+        InvalidOptionType::InlineDynamicImportsWithManualCodeSplitting => {
+          "Invalid value \"true\" for option \"output.inlineDynamicImports\" - this option is not supported for \"output.codeSplitting\".".to_string()
         }
         InvalidOptionType::HashLengthTooLong { pattern_name, received, max } => {
           format!("Hashes cannot be longer than {max} characters, received {received}. Check the `{pattern_name}` option.")

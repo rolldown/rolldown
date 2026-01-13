@@ -33,7 +33,7 @@ console.log("entry-b");
 ## Splitted.js
 
 ```js
-//! AdvancedChunks: [Group-Name: Splitted]
+//! ManualCodeSplitting: [Group-Name: Splitted]
 //#region share-splitted.js
 console.log("share-splitted");
 

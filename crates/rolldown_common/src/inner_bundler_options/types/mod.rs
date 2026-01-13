@@ -1,4 +1,3 @@
-pub mod advanced_chunks_options;
 pub mod attach_debug_info;
 pub mod chunk_import_map;
 pub mod chunk_modules_order;
@@ -17,6 +16,7 @@ pub mod is_external;
 pub mod legal_comments;
 pub mod log_level;
 pub mod make_absolute_externals_relative;
+pub mod manual_code_splitting_options;
 pub mod minify_options;
 pub mod module_type;
 pub mod normalized_bundler_options;

@@ -14,7 +14,7 @@
         "import": "./c.js"
       }
     ],
-    "advancedChunks": {
+    "manualCodeSplitting": {
       "groups": [
         {
           "minShareCount": 2,

@@ -314,7 +314,7 @@ export interface OutputOptions {
    * Patterns support the following placeholders:
    * - `[format]`: The rendering format defined in the output options, e.g. `es` or `cjs`.
    * - `[hash]`: A hash based only on the content of the final generated chunk, including transformations in `renderChunk` and any referenced file hashes. You can also set a specific hash length via e.g. `[hash:10]`. By default, it will create a base-64 hash. If you need a reduced character set, see {@linkcode hashCharacters | output.hashCharacters}.
-   * - `[name]`: The name of the chunk. This can be explicitly set via the {@linkcode advancedChunks | output.advancedChunks} option or when the chunk is created by a plugin via `this.emitFile`. Otherwise, it will be derived from the chunk contents.
+   * - `[name]`: The name of the chunk. This can be explicitly set via the {@linkcode codeSplitting | output.codeSplitting} option or when the chunk is created by a plugin via `this.emitFile`. Otherwise, it will be derived from the chunk contents.
    *
    * Forward slashes (`/`) can be used to place files in sub-directories.
    *
@@ -490,7 +490,7 @@ export interface OutputOptions {
    *
    * ```js
    * {
-   *   advancedChunks: {
+   *   codeSplitting: {
    *     groups: [
    *       {
    *         name(moduleId) {
@@ -509,10 +509,10 @@ export interface OutputOptions {
    * Note that unlike Rollup, object form is not supported.
    *
    * @deprecated
-   * Please use {@linkcode advancedChunks | output.advancedChunks} instead.
+   * Please use {@linkcode codeSplitting | output.codeSplitting} instead.
    *
    * :::warning
-   * If `manualChunks` and `advancedChunks` are both specified, `manualChunks` option will be ignored.
+   * If `manualChunks` and `codeSplitting` are both specified, `manualChunks` option will be ignored.
    * :::
    */
   manualChunks?: ManualChunksFunction;
@@ -524,7 +524,7 @@ export interface OutputOptions {
    * ```js
    * export default defineConfig({
    *   output: {
-   *     advancedChunks: {
+   *     codeSplitting: {
    *       minSize: 20000,
    *       groups: [
    *         {
@@ -538,7 +538,7 @@ export interface OutputOptions {
    * ```
    * {@include ./docs/output-advanced-chunks.md}
    */
-  advancedChunks?: {
+  codeSplitting?: {
     /**
      * By default, each group will also include captured modules' dependencies. This reduces the chance of generating circular chunks.
      *
@@ -552,29 +552,47 @@ export interface OutputOptions {
      */
     includeDependenciesRecursively?: boolean;
     /**
-     * Global fallback of {@linkcode AdvancedChunksGroup.minSize | group.minSize}, if it's not specified in the group.
+     * Global fallback of {@linkcode CodeSplittingGroup.minSize | group.minSize}, if it's not specified in the group.
      */
     minSize?: number;
     /**
-     * Global fallback of {@linkcode AdvancedChunksGroup.maxSize | group.maxSize}, if it's not specified in the group.
+     * Global fallback of {@linkcode CodeSplittingGroup.maxSize | group.maxSize}, if it's not specified in the group.
      */
     maxSize?: number;
     /**
-     * Global fallback of {@linkcode AdvancedChunksGroup.maxModuleSize | group.maxModuleSize}, if it's not specified in the group.
+     * Global fallback of {@linkcode CodeSplittingGroup.maxModuleSize | group.maxModuleSize}, if it's not specified in the group.
      */
     maxModuleSize?: number;
     /**
-     * Global fallback of {@linkcode AdvancedChunksGroup.minModuleSize | group.minModuleSize}, if it's not specified in the group.
+     * Global fallback of {@linkcode CodeSplittingGroup.minModuleSize | group.minModuleSize}, if it's not specified in the group.
      */
     minModuleSize?: number;
     /**
-     * Global fallback of {@linkcode AdvancedChunksGroup.minShareCount | group.minShareCount}, if it's not specified in the group.
+     * Global fallback of {@linkcode CodeSplittingGroup.minShareCount | group.minShareCount}, if it's not specified in the group.
      */
     minShareCount?: number;
     /**
-     * Groups to be used for advanced chunking.
+     * Groups to be used for code splitting.
      */
-    groups?: AdvancedChunksGroup[];
+    groups?: CodeSplittingGroup[];
+  };
+  /**
+   * @deprecated Please use {@linkcode codeSplitting | output.codeSplitting} instead.
+   *
+   * Allows you to do manual chunking.
+   *
+   * :::warning
+   * If `advancedChunks` and `codeSplitting` are both specified, `advancedChunks` option will be ignored.
+   * :::
+   */
+  advancedChunks?: {
+    includeDependenciesRecursively?: boolean;
+    minSize?: number;
+    maxSize?: number;
+    maxModuleSize?: number;
+    minModuleSize?: number;
+    minShareCount?: number;
+    groups?: CodeSplittingGroup[];
   };
   /**
    * Control comments in the output.
@@ -659,7 +677,7 @@ export interface OutputOptions {
   keepNames?: boolean;
 }
 
-export type AdvancedChunksGroup = {
+export type CodeSplittingGroup = {
   /**
    * Name of the group. It will be also used as the name of the chunk and replace the `[name]` placeholder in the {@linkcode OutputOptions.chunkFileNames | output.chunkFileNames} option.
    *
@@ -787,6 +805,11 @@ export type AdvancedChunksGroup = {
   minModuleSize?: number;
 };
 
+/**
+ * Alias for {@linkcode CodeSplittingGroup}. Use this type for the `codeSplitting.groups` option.
+ */
+export type AdvancedChunksGroup = CodeSplittingGroup;
+
 interface OverwriteOutputOptionsForCli {
   banner?: string;
   footer?: string;
@@ -796,6 +819,10 @@ interface OverwriteOutputOptionsForCli {
   outro?: string;
   esModule?: boolean;
   globals?: Record<string, string>;
+  codeSplitting?: {
+    minSize?: number;
+    minShareCount?: number;
+  };
   advancedChunks?: {
     minSize?: number;
     minShareCount?: number;

@@ -3,7 +3,7 @@ import { defineTest } from 'rolldown-tests';
 export default defineTest({
   config: {
     output: {
-      advancedChunks: {
+      codeSplitting: {
         groups: [
           {
             test: /[\\/]node_modules/,

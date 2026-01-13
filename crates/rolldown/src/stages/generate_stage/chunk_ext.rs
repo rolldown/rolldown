@@ -12,7 +12,7 @@ pub trait ChunkDebugExt {
   );
 }
 pub enum ChunkCreationReason<'a> {
-  AdvancedChunkGroup(&'a str, u32),
+  ManualCodeSplittingGroup(&'a str, u32),
   PreserveModules { is_user_defined_entry: bool, module_stable_id: &'a str },
   Entry { is_user_defined_entry: bool, entry_module_id: &'a str, name: Option<&'a ArcStr> },
   CommonChunk { bits: &'a BitSet, link_output: &'a LinkStageOutput },
@@ -25,8 +25,8 @@ impl ChunkDebugExt for Chunk {
     options: &NormalizedBundlerOptions,
   ) {
     match reason {
-      ChunkCreationReason::AdvancedChunkGroup(_name, group_index) => {
-        *self.chunk_reason_type = ChunkReasonType::AdvancedChunks { group_index };
+      ChunkCreationReason::ManualCodeSplittingGroup(_name, group_index) => {
+        *self.chunk_reason_type = ChunkReasonType::ManualCodeSplitting { group_index };
       }
       ChunkCreationReason::PreserveModules { .. } => {
         *self.chunk_reason_type = ChunkReasonType::PreserveModules;
@@ -44,8 +44,8 @@ impl ChunkDebugExt for Chunk {
     }
 
     let reason = match reason {
-      ChunkCreationReason::AdvancedChunkGroup(name, _group_index) => {
-        format!("AdvancedChunks: [Group-Name: {name}]")
+      ChunkCreationReason::ManualCodeSplittingGroup(name, _group_index) => {
+        format!("ManualCodeSplitting: [Group-Name: {name}]")
       }
       ChunkCreationReason::PreserveModules { is_user_defined_entry, module_stable_id } => {
         format!(

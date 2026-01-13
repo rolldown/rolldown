@@ -6,7 +6,7 @@
         "import": "main.js"
       }
     ],
-    "advancedChunks": {
+    "manualCodeSplitting": {
       "includeDependenciesRecursively": false,
       "groups": [
         {

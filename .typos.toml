@@ -5,6 +5,7 @@
 [files]
 extend-exclude = [
   "*.snap",
+  "*.svg",
   "*.json",
   "/CHANGELOG-*.md",
   "/CHANGELOG.md",

@@ -1,6 +1,6 @@
+import { extendConfig } from '@voidzero-dev/vitepress-theme/config';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { type DefaultTheme, defineConfig } from 'vitepress';
 import {
   groupIconMdPlugin,
@@ -181,7 +181,7 @@ const sidebarForResources: DefaultTheme.SidebarItem[] = [
 ];
 
 // https://vitepress.dev/reference/site-config
-export default defineConfig({
+const config = defineConfig({
   title: 'Rolldown',
   description: 'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
   lastUpdated: true,
@@ -195,7 +195,7 @@ export default defineConfig({
       {
         rel: 'icon',
         type: 'image/svg+xml',
-        href: '/lightning-down.svg',
+        href: '/logo-without-border.svg',
       },
     ],
     ['meta', { name: 'theme-color', content: '#ff7e17' }],
@@ -212,7 +212,7 @@ export default defineConfig({
       'meta',
       {
         property: 'og:image',
-        content: 'https://rolldown.rs/og-image.png',
+        content: 'https://rolldown.rs/og.jpg',
       },
     ],
     ['meta', { property: 'og:site_name', content: 'Rolldown' }],
@@ -222,6 +222,7 @@ export default defineConfig({
   ],
 
   themeConfig: {
+    variant: 'rolldown',
     search: {
       provider: 'algolia',
       options: {
@@ -230,7 +231,6 @@ export default defineConfig({
         indexName: 'rolldown',
       },
     },
-    logo: { src: '/lightning-down.svg', width: 24, height: 24 },
 
     // https://vitepress.dev/reference/default-theme-config
     nav: [
@@ -311,8 +311,35 @@ export default defineConfig({
     ],
 
     footer: {
-      message: 'Released under the MIT License.',
-      copyright: 'Copyright © 2023-present VoidZero Inc.',
+      copyright: `© 2025 VoidZero Inc. and Rolldown contributors.`,
+      nav: [
+        {
+          title: 'Rolldown',
+          items: [
+            { text: 'Guide', link: '/guide/getting-started' },
+            { text: 'Options & APIs', link: '/reference' },
+            { text: 'Plugins', link: '/builtin-plugins/' },
+            { text: 'Contribute', link: '/contribution-guide/' },
+            { text: 'REPL', link: 'https://repl.rolldown.rs/' },
+          ],
+        },
+        {
+          title: 'Resources',
+          items: [
+            {
+              text: 'Roadmap',
+              link: 'https://github.com/rolldown/rolldown/discussions/153',
+            },
+            { text: 'Team', link: '/team' },
+          ],
+        },
+      ],
+      social: [
+        { icon: 'github', link: 'https://github.com/rolldown/rolldown' },
+        { icon: 'discord', link: 'https://chat.rolldown.rs' },
+        { icon: 'bluesky', link: 'https://bsky.app/profile/rolldown.rs' },
+        { icon: 'x', link: 'https://x.com/rolldown_rs' },
+      ],
     },
 
     editLink: {
@@ -322,12 +349,15 @@ export default defineConfig({
   },
 
   vite: {
+    optimizeDeps: {
+      exclude: ['@docsearch/css'],
+    },
     plugins: [
       groupIconVitePlugin({
         customIcon: {
           homebrew: 'logos:homebrew',
           cargo: 'vscode-icons:file-type-cargo',
-          rolldown: localIconLoader(import.meta.url, '../public/lightning-down.svg'),
+          rolldown: localIconLoader(import.meta.url, '../public/logo-without-border.svg'),
         },
       }) as any,
       llmstxt({
@@ -336,16 +366,6 @@ export default defineConfig({
         details: '',
       }),
     ],
-    resolve: {
-      alias: [
-        {
-          find: /^.*\/VPHero\.vue$/,
-          replacement: fileURLToPath(
-            new URL('./theme/components/overrides/VPHero.vue', import.meta.url),
-          ),
-        },
-      ],
-    },
   },
   markdown: {
     async config(md) {
@@ -360,3 +380,5 @@ export default defineConfig({
     }
   },
 });
+
+export default extendConfig(config);

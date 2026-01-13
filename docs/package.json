@@ -9,12 +9,12 @@
     "generate": "node .vitepress/scripts/generate-reference.ts"
   },
   "dependencies": {
-    "@vueuse/core": "catalog:",
     "vue": "catalog:"
   },
   "devDependencies": {
     "@hpcc-js/wasm-graphviz": "^1.8.0",
     "@types/markdown-it": "^14.1.2",
+    "@voidzero-dev/vitepress-theme": "^4.0.4",
     "oxc-minify": "catalog:",
     "typedoc": "^0.28.14",
     "typedoc-plugin-markdown": "^4.9.0",

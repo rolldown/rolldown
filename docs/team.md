@@ -3,7 +3,7 @@ outline: false
 ---
 
 <script setup>
-import { VPTeamMembers } from 'vitepress/theme'
+import { VPTeamMembers } from '@voidzero-dev/vitepress-theme'
 
 const members = [
   {

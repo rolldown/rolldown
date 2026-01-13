@@ -13,4 +13,5 @@ packages/rolldown/tests/stability/**/*.js -linguist-detectable
 # https://github.com/rolldown/rolldown/issues/1354
 * text eol=lf
 *.png -text
+*.jpg -text
 *.md text eol=lf

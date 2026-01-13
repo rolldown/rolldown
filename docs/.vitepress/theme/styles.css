@@ -1,0 +1,45 @@
+@import "@voidzero-dev/vitepress-theme/src/styles/index.css";
+
+@source "./**/*.vue";
+
+/* Rolldown */
+:root[data-variant="rolldown"] {
+  --color-brand: #D44803;
+}
+
+:root.dark:not([data-theme])[data-variant="rolldown"],
+:root[data-theme="dark"][data-variant="rolldown"] {
+  --color-brand: #ff712a;
+}
+
+:root[data-theme="light"][data-variant="rolldown"] {
+  --color-brand: #D44803;
+}
+
+/**
+ * Dark to light theme transition
+ * Smooths the transition when navigating from dark-themed home page to light-themed pages
+ */
+html,
+html.dark {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+body {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+.VPNav,
+.VPSidebar,
+.VPContent,
+.VPFooter,
+.VPDoc {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
+}

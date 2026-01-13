@@ -123,11 +123,9 @@ impl<'name> Renamer<'name> {
       return false;
     }
 
-    let root_scope_id = scoping.root_scope_id();
     // Check if name exists as a non-root binding by iterating symbols
-    scoping
-      .symbol_ids()
-      .any(|id| scoping.symbol_scope_id(id) != root_scope_id && scoping.symbol_name(id) == name)
+    // starting from the second scope (skip root)
+    scoping.iter_bindings().skip(1).any(|bindings| bindings.1.contains_key(name))
   }
 
   /// Check if a candidate name is available for use (doesn't conflict with existing names).

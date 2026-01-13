@@ -65,6 +65,9 @@ pub struct Chunk {
   pub asset_preliminary_filenames: FxIndexMap<ModuleIdx, PreliminaryFilename>,
   pub asset_absolute_preliminary_filenames: FxIndexMap<ModuleIdx, String>,
   pub canonical_names: FxHashMap<SymbolRef, CompactStr>,
+  /// Metadata about top-level canonical names, used for on-the-fly nested scope renaming.
+  /// Key is the canonical name, value is (owner_module_idx, was_renamed).
+  pub used_top_level_names: FxHashMap<CompactStr, (Option<ModuleIdx>, bool)>,
   // Sorted by Module#stable_id of modules in the chunk
   pub cross_chunk_imports: Vec<ChunkIdx>,
   pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,

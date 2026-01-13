@@ -171,13 +171,13 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast
 
   fn binding_name_for_namespace_object_ref_atom(&self) -> ast::Atom<'ast> {
     let name = self.canonical_name_for(self.ctx.module.namespace_object_ref);
-    self.builder().atom(name)
+    self.builder().atom(name.as_ref())
   }
 
   fn alias_name_for_import_meta_hot(&self) -> ast::Atom<'ast> {
     let name =
       self.canonical_name_for(self.ctx.module.hmr_hot_ref.expect("HMR hot ref should be set"));
-    self.builder().atom(name)
+    self.builder().atom(name.as_ref())
   }
 
   fn cjs_module_name() -> &'static str {

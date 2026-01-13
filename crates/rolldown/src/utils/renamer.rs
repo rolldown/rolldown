@@ -269,54 +269,19 @@ impl<'name> Renamer<'name> {
     conflictless_name.to_string()
   }
 
-  /// CJS wrapper parameter names that nested scopes should avoid shadowing.
-  const CJS_WRAPPER_NAMES: [&'static str; 2] = ["exports", "module"];
-
-  /// Register nested scope symbols with their original names.
-  ///
-  /// Since `add_symbol_in_root_scope` now avoids names that would conflict with nested scope
-  /// symbols, most nested scope symbols can keep their original names. However, we still need
-  /// to handle the case where nested scope symbols shadow top-level symbols that were renamed,
-  /// or CJS wrapper parameters.
-  pub fn register_nested_scope_symbols(
-    &mut self,
-    symbol_ref: SymbolRef,
-    original_name: &str,
-    is_cjs_wrapped: bool,
-  ) {
-    // Skip if already registered (e.g., as a top-level symbol)
-    if self.canonical_names.contains_key(&symbol_ref) {
-      return;
-    }
-
-    // Check if this name would shadow a top-level symbol that was renamed
-    // (from a different module or renamed in the same module)
-    let shadows_renamed_symbol = self.used_canonical_names.get(original_name).is_some_and(|info| {
-      info.owner.is_some_and(|owner| owner != symbol_ref.owner || info.was_renamed)
-    });
-
-    // Check if this name would shadow CJS wrapper parameters
-    let shadows_cjs_param = is_cjs_wrapped && Self::CJS_WRAPPER_NAMES.contains(&original_name);
-
-    // Only store in canonical_names if we need to rename.
-    // Symbols keeping their original name can be looked up via symbol_db.name()
-    if shadows_renamed_symbol || shadows_cjs_param {
-      // Generate a unique name
-      let mut count = 1u32;
-      let mut candidate_name: CompactStr =
-        concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();
-      while self.used_canonical_names.contains_key(&candidate_name) {
-        count += 1;
-        candidate_name =
-          concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();
-      }
-      self.canonical_names.insert(symbol_ref, candidate_name);
-    }
-    // else: symbol keeps original name, no need to store
-  }
-
   #[inline]
-  pub fn into_canonical_names(self) -> FxHashMap<SymbolRef, CompactStr> {
-    self.canonical_names
+  pub fn into_canonical_names(
+    self,
+  ) -> (FxHashMap<SymbolRef, CompactStr>, FxHashMap<CompactStr, TopLevelNameInfo>) {
+    let used_top_level_names: FxHashMap<_, _> = self
+      .used_canonical_names
+      .into_iter()
+      .map(|(name, info)| (name, (info.owner, info.was_renamed)))
+      .collect();
+    (self.canonical_names, used_top_level_names)
   }
 }
+
+/// Metadata about a top-level name, used for on-the-fly nested scope renaming.
+/// (owner_module_idx, was_renamed)
+pub type TopLevelNameInfo = (Option<ModuleIdx>, bool);

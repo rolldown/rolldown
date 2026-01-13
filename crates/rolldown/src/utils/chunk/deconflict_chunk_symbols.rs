@@ -188,27 +188,10 @@ pub fn deconflict_chunk_symbols(
     })
     .collect();
 
-  // Register nested scope symbols with their canonical names.
-  // Since we now avoid conflicting names during root scope renaming, most nested scope
-  // symbols can keep their original names, but we still need to handle shadowing cases.
-  for module_idx in chunk.modules.iter().copied() {
-    let Some(db) = &link_output.symbol_db[module_idx] else {
-      continue;
-    };
-    let scoping = db.ast_scopes.scoping();
-
-    // Check if this module is CJS wrapped - if so, nested scopes should avoid
-    // shadowing `exports` and `module` which are synthetic parameters
-    let is_cjs_wrapped = matches!(link_output.metas[module_idx].wrap_kind(), WrapKind::Cjs);
-
-    // Skip the first binding which is the root scope itself - they're already handled
-    for (_, bindings) in scoping.iter_bindings().skip(1) {
-      for (name, symbol_id) in bindings {
-        let symbol_ref = (module_idx, *symbol_id).into();
-        renamer.register_nested_scope_symbols(symbol_ref, name, is_cjs_wrapped);
-      }
-    }
-  }
-
-  chunk.canonical_names = renamer.into_canonical_names();
+  // Store both canonical names and top-level name metadata.
+  // Nested scope symbol renaming is now deferred to code generation time
+  // for better performance (eliminates iteration over all nested symbols).
+  let (canonical_names, used_top_level_names) = renamer.into_canonical_names();
+  chunk.canonical_names = canonical_names;
+  chunk.used_top_level_names = used_top_level_names;
 }

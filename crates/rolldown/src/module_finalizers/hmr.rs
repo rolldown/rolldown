@@ -29,7 +29,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     if expr.is_import_meta_hot() {
       if let Some(hmr_hot_ref) = self.ctx.module.ecma_view.hmr_hot_ref {
         let hot_name = self.canonical_name_for(hmr_hot_ref);
-        *expr = self.snippet.id_ref_expr(hot_name, SPAN);
+        *expr = self.snippet.id_ref_expr(hot_name.as_ref(), SPAN);
       }
     }
   }

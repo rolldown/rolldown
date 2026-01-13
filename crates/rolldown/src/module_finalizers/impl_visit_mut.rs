@@ -138,7 +138,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         .any(|id| self.ctx.linking_info.stmt_info_included[*id]);
       if is_included {
         let canonical_name = self.canonical_name_for(*symbol_ref);
-        program.body.push(self.snippet.var_decl_stmt(canonical_name, self.snippet.void_zero()));
+        program
+          .body
+          .push(self.snippet.var_decl_stmt(canonical_name.as_ref(), self.snippet.void_zero()));
       }
     });
 
@@ -174,7 +176,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         stmts_inside_closure.append(&mut program.body);
 
         program.body.push(self.snippet.commonjs_wrapper_stmt(
-          wrap_ref_name,
+          wrap_ref_name.as_ref(),
           commonjs_ref_expr,
           stmts_inside_closure,
           self.ctx.module.ast_usage,
@@ -272,13 +274,13 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           self.rendered_concatenated_wrapped_module_parts.rendered_esm_runtime_expr =
             Some(self.builder().expression_statement(SPAN, esm_ref_expr).to_source_string());
           self.rendered_concatenated_wrapped_module_parts.wrap_ref_name =
-            Some(CompactStr::new(wrap_ref_name));
+            Some(CompactStr::new(wrap_ref_name.as_ref()));
           program.body.extend(stmts_inside_closure);
           return;
         }
 
         program.body.push(self.snippet.esm_wrapper_stmt(
-          wrap_ref_name,
+          wrap_ref_name.as_ref(),
           esm_ref_expr,
           stmts_inside_closure,
           self.ctx.options.profiler_names,
@@ -306,8 +308,8 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       let symbol = self.ctx.symbol_db.get(canonical_ref);
       assert!(symbol.namespace_alias.is_none());
       let canonical_name = self.canonical_name_for(symbol_ref);
-      if ident.name != canonical_name {
-        ident.name = self.snippet.atom(canonical_name);
+      if ident.name != canonical_name.as_ref() {
+        ident.name = self.snippet.atom(canonical_name.as_ref());
       }
       ident.symbol_id.get_mut().take();
     } else {

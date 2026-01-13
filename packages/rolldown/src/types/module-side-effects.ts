@@ -135,11 +135,11 @@ export type TreeshakingOptions = {
   /**
    * Controls whether reading properties from objects is considered to have side effects.
    *
-   * Set to `"always"` for more conservative behavior.
+   * Set to `false` for more aggressive tree-shaking behavior.
    *
    * See [related Oxc documentation](https://oxc.rs/docs/guide/usage/minifier/dead-code-elimination#ignoring-property-read-side-effects) for more details.
    *
-   * @default false
+   * @default 'always'
    */
   propertyReadSideEffects?: false | 'always';
   /**

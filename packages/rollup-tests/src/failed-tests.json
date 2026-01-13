@@ -5,5 +5,7 @@
   "rollup@form@namespace-optimization-in-operator: it does static optimization of internal namespaces when checking whether an export exists",
   "rollup@function@catch-scope-nested-deconflicting: deconflicts nested catch scope parameters correctly",
   "rollup@function@emit-file@no-input: It is not necessary to provide an input if a dynamic entry is emitted",
-  "rollup@function@resolveid-recursive-call: skipSelf: true option in resolveId hook option should skip the plugin if it has been called before with the same id and importer, see #5768 for more details"
+  "rollup@function@resolveid-recursive-call: skipSelf: true option in resolveId hook option should skip the plugin if it has been called before with the same id and importer, see #5768 for more details",
+  "rollup@sourcemaps@combined-sourcemap-2: get correct combined sourcemap by calling getCombinedSourcemap@generates es",
+  "rollup@sourcemaps@excludes-plugin-helpers: excludes plugin helpers from sources@generates es"
 ]

@@ -200,10 +200,16 @@ impl<'name> Renamer<'name> {
     })
   }
 
-  /// Assigns a canonical name to a symbol without checking for conflicts.
+  /// Assigns a canonical name to a symbol, checking for conflicts with both
+  /// top-level names and nested scope names.
   ///
-  /// This is used when a top-level symbol becomes non-top-level after transformations,
-  /// such as a Commonjs module may be wrapped with a runtime helper function
+  /// This method is aware of:
+  /// 1. Names already used by other top-level symbols (`used_canonical_names`)
+  /// 2. Names used in the entry module's scope tree (`module_used_names`)
+  /// 3. Names used in the symbol's own module's nested scopes (`module_used_names`)
+  ///
+  /// By checking all these during root scope renaming, we can avoid the expensive
+  /// `rename_non_root_symbol` pass that iterates through all nested scopes.
   pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef, needs_deconflict: bool) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     let canonical_name = canonical_ref.name(self.symbol_db);
@@ -227,35 +233,66 @@ impl<'name> Renamer<'name> {
       return;
     }
 
-    match self.canonical_names.entry(canonical_ref) {
-      Entry::Vacant(vacant) => {
-        let mut candidate_name = original_name.clone();
-        let mut was_renamed = false;
-        loop {
-          match self.used_canonical_names.entry(candidate_name.clone()) {
-            Entry::Occupied(mut occ) => {
-              let next_conflict_index = occ.get().conflict_index + 1;
-              occ.get_mut().conflict_index = next_conflict_index;
-              candidate_name =
-                concat_string!(original_name, "$", itoa::Buffer::new().format(next_conflict_index))
-                  .into();
-              was_renamed = true;
-            }
-            Entry::Vacant(vac) => {
-              vac.insert(CanonicalNameInfo {
-                conflict_index: 0,
-                owner: Some(canonical_ref.owner),
-                was_renamed,
-              });
-              break;
-            }
-          }
+    // Pre-compute module used names for the symbol's owner module (if not entry module)
+    // This ensures we don't rename to a name that would conflict with nested scope symbols
+    if self.entry_module_idx.is_none_or(|entry_idx| canonical_ref.owner != entry_idx) {
+      // Force computation of module_used_names for this module
+      let _ = self.get_or_create_module_used_names(canonical_ref.owner);
+    }
+
+    // Check if already renamed
+    if self.canonical_names.contains_key(&canonical_ref) {
+      return;
+    }
+
+    let mut candidate_name = original_name.clone();
+    let mut was_renamed = false;
+    let mut conflict_index = 0u32;
+
+    loop {
+      // Check 1: Is this a root binding in the entry module for this symbol?
+      // If so, we can use this name directly.
+      if self.is_entry_root_binding(&candidate_name, canonical_ref) {
+        // Mark as used in used_canonical_names
+        self.used_canonical_names.entry(candidate_name.clone()).or_insert(CanonicalNameInfo {
+          conflict_index: 0,
+          owner: Some(canonical_ref.owner),
+          was_renamed,
+        });
+        self.used_names.insert(candidate_name.clone());
+        self.canonical_names.insert(canonical_ref, candidate_name);
+        return;
+      }
+
+      // Check 2: Is this name already used by another top-level symbol?
+      if let Some(info) = self.used_canonical_names.get(&candidate_name) {
+        conflict_index = info.conflict_index + 1;
+        if let Some(existing) = self.used_canonical_names.get_mut(&candidate_name) {
+          existing.conflict_index = conflict_index;
         }
-        vacant.insert(candidate_name);
+        candidate_name =
+          concat_string!(original_name, "$", itoa::Buffer::new().format(conflict_index)).into();
+        was_renamed = true;
+        continue;
       }
-      Entry::Occupied(_) => {
-        // The symbol is already renamed
+
+      // Check 3: Is this name available (not conflicting with nested scope symbols)?
+      if !self.is_name_available(&candidate_name, canonical_ref) {
+        conflict_index += 1;
+        candidate_name =
+          concat_string!(original_name, "$", itoa::Buffer::new().format(conflict_index)).into();
+        was_renamed = true;
+        continue;
       }
+
+      // Name is available - use it
+      self.used_canonical_names.insert(
+        candidate_name.clone(),
+        CanonicalNameInfo { conflict_index: 0, owner: Some(canonical_ref.owner), was_renamed },
+      );
+      self.used_names.insert(candidate_name.clone());
+      self.canonical_names.insert(canonical_ref, candidate_name);
+      break;
     }
   }
 

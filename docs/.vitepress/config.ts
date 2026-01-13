@@ -317,7 +317,7 @@ const config = defineConfig({
           title: 'Rolldown',
           items: [
             { text: 'Guide', link: '/guide/getting-started' },
-            { text: 'Reference', link: '/options/input' },
+            { text: 'Reference', link: '/reference' },
             { text: 'Plugins', link: '/builtin-plugins/' },
             { text: 'Contribute', link: '/contribution-guide/' },
             { text: 'REPL', link: 'https://repl.rolldown.rs/' },

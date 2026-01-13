@@ -54,10 +54,6 @@ pub struct Renamer<'name> {
   /// Names that have been used during the renaming process.
   /// Tracks which names have been assigned to avoid duplicates.
   used_names: FxHashSet<CompactStr>,
-
-  /// Lazy cache of nested scope symbol names per module.
-  /// Computed on first access, then O(1) lookups.
-  nested_scope_names: FxHashMap<ModuleIdx, FxHashSet<&'name str>>,
 }
 
 impl<'name> Renamer<'name> {
@@ -90,7 +86,6 @@ impl<'name> Renamer<'name> {
       entry_module_idx: base_module_index,
       entry_module,
       used_names: FxHashSet::default(),
-      nested_scope_names: FxHashMap::default(),
     }
   }
 
@@ -118,38 +113,32 @@ impl<'name> Renamer<'name> {
     }
   }
 
-  /// Get or compute the set of nested scope symbol names for a module.
-  /// Lazily computed on first access, then O(1) lookups.
-  fn get_nested_scope_names(&mut self, module_idx: ModuleIdx) -> &FxHashSet<&'name str> {
-    self.nested_scope_names.entry(module_idx).or_insert_with(|| {
-      // Runtime module (index 0) has no nested scope bindings
-      const RUNTIME_MODULE_INDEX: ModuleIdx = ModuleIdx::from_usize_unchecked(0);
-      if module_idx == RUNTIME_MODULE_INDEX {
-        return FxHashSet::default();
-      }
-
-      let db = self.symbol_db.local_db(module_idx);
-      let scoping = db.ast_scopes.scoping();
-      if scoping.symbols_len() == 0 {
-        return FxHashSet::default();
-      }
-
-      // Skip root scope (index 0), collect all binding names from nested scopes
-      scoping.iter_bindings().skip(1).flat_map(|(_, bindings)| bindings.keys().copied()).collect()
-    })
-  }
-
   /// Check if a name exists as a non-root binding in a module.
-  /// Uses lazy caching for O(1) lookups after first access.
-  #[inline]
-  fn has_nested_scope_binding(&mut self, module_idx: ModuleIdx, name: &str) -> bool {
-    self.get_nested_scope_names(module_idx).contains(name)
+  /// Checks directly against scoping without caching.
+  fn has_nested_scope_binding(&self, module_idx: ModuleIdx, name: &str) -> bool {
+    // Runtime module (index 0) has no nested scope bindings
+    const RUNTIME_MODULE_INDEX: ModuleIdx = ModuleIdx::from_usize_unchecked(0);
+    if module_idx == RUNTIME_MODULE_INDEX {
+      return false;
+    }
+
+    let db = self.symbol_db.local_db(module_idx);
+    let scoping = db.ast_scopes.scoping();
+    if scoping.symbols_len() == 0 {
+      return false;
+    }
+
+    let root_scope_id = scoping.root_scope_id();
+    // Check if name exists as a non-root binding by iterating symbols
+    scoping
+      .symbol_ids()
+      .any(|id| scoping.symbol_scope_id(id) != root_scope_id && scoping.symbol_name(id) == name)
   }
 
   /// Check if a candidate name is available for use (doesn't conflict with existing names).
   /// The `is_original_name` flag indicates if this is the symbol's original name (not a renamed candidate).
   fn is_name_available(
-    &mut self,
+    &self,
     candidate_name: &str,
     symbol_ref: SymbolRef,
     is_original_name: bool,
@@ -221,11 +210,7 @@ impl<'name> Renamer<'name> {
       {
         self.used_canonical_names.insert(
           original_name.clone(),
-          CanonicalNameInfo {
-            conflict_index: 0,
-            owner: Some(canonical_ref.owner),
-            was_renamed: false,
-          },
+          CanonicalNameInfo { conflict_index: 0, owner: Some(canonical_ref.owner), was_renamed: false },
         );
         self.used_names.insert(original_name.clone());
         self.canonical_names.insert(canonical_ref, original_name);
@@ -263,11 +248,7 @@ impl<'name> Renamer<'name> {
       // Name is available - use it
       self.used_canonical_names.insert(
         candidate_name.clone(),
-        CanonicalNameInfo {
-          conflict_index: 0,
-          owner: Some(canonical_ref.owner),
-          was_renamed: true,
-        },
+        CanonicalNameInfo { conflict_index: 0, owner: Some(canonical_ref.owner), was_renamed: true },
       );
       self.used_names.insert(candidate_name.clone());
       self.canonical_names.insert(canonical_ref, candidate_name);

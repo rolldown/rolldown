@@ -1,7 +1,7 @@
 use oxc::span::CompactStr;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{
-  GetLocalDb, ModuleIdx, OutputFormat, SymbolRef, SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags,
+  GetLocalDb, ModuleIdx, OutputFormat, SymbolRef, SymbolRefDb, SymbolRefFlags,
 };
 use rolldown_utils::concat_string;
 use rustc_hash::FxHashMap;
@@ -46,10 +46,6 @@ pub struct Renamer<'name> {
 
   /// The entry module index, if this chunk has an entry point.
   entry_module_idx: Option<ModuleIdx>,
-
-  /// Reference to the entry module's symbol database.
-  /// Used to preserve entry module's root binding names and check for name conflicts.
-  entry_module: Option<&'name SymbolRefDbForModule>,
 }
 
 impl<'name> Renamer<'name> {
@@ -67,9 +63,6 @@ impl<'name> Renamer<'name> {
     // https://github.com/rollup/rollup/blob/bfbea66569491f5466fbba99de2ba6a0225f851b/src/Chunk.ts#L1359
     manual_reserved.extend(["Object", "Promise"]);
 
-    // Get entry module reference if provided
-    let entry_module = base_module_index.map(|idx| symbol_db.local_db(idx));
-
     Self {
       canonical_names: FxHashMap::default(),
       symbol_db,
@@ -80,32 +73,11 @@ impl<'name> Renamer<'name> {
         .map(|s| (CompactStr::new(s), CanonicalNameInfo::default()))
         .collect(),
       entry_module_idx: base_module_index,
-      entry_module,
     }
   }
 
   pub fn reserve(&mut self, name: CompactStr) {
     self.used_canonical_names.insert(name, CanonicalNameInfo::default());
-  }
-
-  /// Check if the candidate name is a root binding in the entry module that matches the symbol.
-  /// If so, we can use this name directly without further checks.
-  ///
-  /// This only checks for DIRECT matches (the symbol IS the entry module's binding).
-  /// It does NOT check canonical matches, so linked symbols from other modules
-  /// will use first-come-first-served naming via the normal conflict resolution.
-  fn is_entry_root_binding(&self, candidate_name: &str, symbol_ref: SymbolRef) -> bool {
-    match (self.entry_module_idx, self.entry_module) {
-      (Some(entry_idx), Some(module)) => {
-        let scoping = module.ast_scopes.scoping();
-        scoping.get_root_binding(candidate_name).is_some_and(|symbol_id| {
-          let entry_symbol = SymbolRef::from((entry_idx, symbol_id));
-          // Only match if this is exactly the entry module's binding
-          entry_symbol == symbol_ref
-        })
-      }
-      _ => false,
-    }
   }
 
   /// Check if a name exists as a non-root binding in a module.
@@ -191,22 +163,19 @@ impl<'name> Renamer<'name> {
     }
 
     // Fast path: try original name first without cloning
-    if !self.used_canonical_names.contains_key(&original_name) {
-      // Check if it's an entry root binding or available
-      if self.is_entry_root_binding(&original_name, canonical_ref)
-        || self.is_name_available(&original_name, canonical_ref, true)
-      {
-        self.used_canonical_names.insert(
-          original_name.clone(),
-          CanonicalNameInfo {
-            conflict_index: 0,
-            owner: Some(canonical_ref.owner),
-            was_renamed: false,
-          },
-        );
-        self.canonical_names.insert(canonical_ref, original_name);
-        return;
-      }
+    if !self.used_canonical_names.contains_key(&original_name)
+      && self.is_name_available(&original_name, canonical_ref, true)
+    {
+      self.used_canonical_names.insert(
+        original_name.clone(),
+        CanonicalNameInfo {
+          conflict_index: 0,
+          owner: Some(canonical_ref.owner),
+          was_renamed: false,
+        },
+      );
+      self.canonical_names.insert(canonical_ref, original_name);
+      return;
     }
 
     // Slow path: need to find an alternative name

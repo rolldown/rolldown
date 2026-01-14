@@ -129,12 +129,30 @@ class DevServer {
       }
     });
 
-    this.wsServer.on('connection', (ws, _req) => {
-      const clientSession = new ClientSession(ws);
+    this.wsServer.on('connection', (ws, req) => {
+      // Parse client ID from WebSocket URL query parameter
+      const url = new URL(req.url ?? '', `http://localhost:${this.#port}`);
+      const clientId = url.searchParams.get('clientId');
+
+      if (!clientId) {
+        console.warn('WebSocket connection without clientId, closing');
+        ws.close(1008, 'Missing clientId');
+        return;
+      }
+
+      // Handle duplicate client ID (could be a reconnect)
+      if (this.#clients.has(clientId)) {
+        console.warn(`Client ${clientId} reconnecting, replacing existing session`);
+        const oldSession = this.#clients.get(clientId)!;
+        oldSession.ws.close(1000, 'Replaced by new connection');
+        this.#clients.delete(clientId);
+      }
+
+      const clientSession = new ClientSession(ws, clientId);
       this.#clients.set(clientSession.id, clientSession);
 
-      // Send the client its assigned ID so it can use it for lazy compilation requests
-      this.#sendMessage(ws, { type: 'connected', clientId: clientSession.id });
+      // Acknowledge the connection
+      this.#sendMessage(ws, { type: 'connected' });
 
       ws.on('error', console.error);
       ws.on('close', () => {

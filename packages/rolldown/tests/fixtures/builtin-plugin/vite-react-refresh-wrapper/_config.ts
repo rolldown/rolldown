@@ -16,11 +16,25 @@ export default defineTest({
         jsxImportSource: 'react',
         reactRefreshHost: '',
       }),
+      {
+        name: 'assert-module-type-updated',
+        transform(code, id, meta) {
+          if (id.endsWith('main.jsx')) {
+            // The vite-react-refresh-wrapper plugin outputs JS code, so moduleType
+            // should be 'js', not the original 'jsx' from the file extension.
+            // This check catches the bug where HookTransformOutput.module_type is None,
+            // causing the moduleType to incorrectly remain as the input type.
+            if (code.includes('RefreshRuntime')) {
+              expect(meta.moduleType, 'moduleType should be updated to js after transform').toBe('js');
+            }
+          }
+          return null;
+        },
+      },
     ],
   },
   afterTest: (output) => {
     // Verify the transform succeeded and includes refresh wrapper code
-    // This test would fail with "Missing field moduleType" before the fix
     const code = output.output[0].code;
     expect(code).toContain('RefreshRuntime');
     expect(code).toContain('import.meta.hot');

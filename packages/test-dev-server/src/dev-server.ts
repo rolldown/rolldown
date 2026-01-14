@@ -193,7 +193,7 @@ class DevServer {
       }
     });
     this.connectServer.use(async (req, res, next) => {
-      if (req.url?.startsWith('/lazy?')) {
+      if (req.url?.startsWith('/@vite/lazy?')) {
         try {
           const url = new URL(req.url, `http://localhost:${this.#port}`);
           const moduleId = url.searchParams.get('id');

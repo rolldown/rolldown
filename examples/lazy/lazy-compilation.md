@@ -62,7 +62,7 @@ Proxy modules export a special named export `'rolldown:exports'`:
 ```js
 // Proxy module for lazy ./foo.js (NOT EXECUTED state)
 const lazyExports = (async () => {
-  await import(`/lazy?id=${encodeURIComponent($PROXY_MODULE_ID)}&clientId=...`);
+  await import(`/@vite/lazy?id=${encodeURIComponent($PROXY_MODULE_ID)}&clientId=...`);
   return __rolldown_runtime__.loadExports($MODULE_ID);
 })();
 
@@ -103,7 +103,7 @@ Returns the **stub template** that fetches via `/lazy` endpoint:
 // proxy-module-template.js
 const lazyExports = (async () => {
   await import(
-    `/lazy?id=${encodeURIComponent($PROXY_MODULE_ID)}&clientId=${__rolldown_runtime__.clientId}`
+    `/@vite/lazy?id=${encodeURIComponent($PROXY_MODULE_ID)}&clientId=${__rolldown_runtime__.clientId}`
   );
   return __rolldown_runtime__.loadExports($MODULE_ID);
 })();
@@ -129,7 +129,7 @@ The state transition is managed by `LazyCompilationContext.mark_as_fetched()`.
 
 ### 4. Dev Server Integration
 
-The dev server handles `/lazy?id=...&clientId=...` requests:
+The dev server handles `/@vite/lazy?id=...&clientId=...` requests:
 
 1. Receive request with **proxy module ID** (e.g., `/abs/path/foo.js?rolldown-lazy=1`)
 2. Call `DevEngine.compile_lazy_entry(proxyModuleId, clientId)` (Rust) / `DevEngine.compileEntry(moduleId, clientId)` (TS)
@@ -206,18 +206,18 @@ Entry
 
 **Normal flow (works correctly):**
 
-1. Browser requests `/lazy?id=lazy-a` → Server returns patch with `lazy-a` + `shared.js`
+1. Browser requests `/@vite/lazy?id=lazy-a` → Server returns patch with `lazy-a` + `shared.js`
 2. Browser executes patch → `shared.js` runs, sends `hmr:module-registered`
 3. Server updates `executed_modules` with `shared.js`
-4. Browser requests `/lazy?id=lazy-b` → Server filters out `shared.js`
+4. Browser requests `/@vite/lazy?id=lazy-b` → Server filters out `shared.js`
 5. Server returns patch with `lazy-b` only → No duplicate execution ✓
 
 **Race condition (edge case):**
 
-If the browser sends two `/lazy` requests in rapid succession (before the `hmr:module-registered` message from the first patch arrives), the server may not know about executed modules yet:
+If the browser sends two `/@vite/lazy` requests in rapid succession (before the `hmr:module-registered` message from the first patch arrives), the server may not know about executed modules yet:
 
-1. Browser requests `/lazy?id=lazy-a`
-2. Browser immediately requests `/lazy?id=lazy-b` (before `lazy-a` patch executes)
+1. Browser requests `/@vite/lazy?id=lazy-a`
+2. Browser immediately requests `/@vite/lazy?id=lazy-b` (before `lazy-a` patch executes)
 3. Server returns both patches with `shared.js` included
 4. Browser executes both → `shared.js` runs twice ✗
 
@@ -251,7 +251,7 @@ This ensures consistency between:
 
 The lazy compilation plugin computes the stable ID in-place using the `cwd` obtained from the `build_start` hook.
 
-Note: The proxy module's `/lazy?id=...` request still uses the absolute path (with `?rolldown-lazy=1`), and the fetched template's `import($MODULE_ID)` also uses the absolute path for module resolution.
+Note: The proxy module's `/@vite/lazy?id=...` request still uses the absolute path (with `?rolldown-lazy=1`), and the fetched template's `import($MODULE_ID)` also uses the absolute path for module resolution.
 
 ### Fetched State Tracking
 
@@ -332,7 +332,7 @@ Note: the current implementation notifies with the proxy module ID (includes `?r
 │ 3. USER CODE HITS: import('./lazy-module')                              │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  - Proxy module executes (stub template)                                │
-│  - Fetches: /lazy?id=/abs/path/lazy-module.js?rolldown-lazy=1&clientId=xxx
+│  - Fetches: /@vite/lazy?id=/abs/path/lazy-module.js?rolldown-lazy=1&clientId=xxx
 │  - Browser waits on the promise                                         │
 └─────────────────────────────────────────────────────────────────────────┘
                                     ↓
@@ -500,7 +500,7 @@ The lazy compilation plugin creates two distinct module IDs:
 The flow is:
 
 1. Initial build creates proxy at `module.js?rolldown-lazy=1` with stub template
-2. User triggers lazy load → `/lazy?id=...?rolldown-lazy=1`
+2. User triggers lazy load → `/@vite/lazy?id=...?rolldown-lazy=1`
 3. DevEngine marks proxy as fetched
 4. Partial scan from proxy → plugin returns fetched template
 5. Fetched template imports actual module → triggers compilation

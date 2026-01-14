@@ -120,7 +120,7 @@ impl PreProcessEcmaAst {
             &source,
             resolved_id,
             &Severity::Error,
-            EventKind::ParseError,
+            EventKind::TransformError,
           )));
         }
         warnings.extend(BuildDiagnostic::from_oxc_diagnostics(
@@ -128,7 +128,7 @@ impl PreProcessEcmaAst {
           &source,
           resolved_id,
           &Severity::Warning,
-          EventKind::ParseError,
+          EventKind::ToleratedTransform,
         ));
         Ok(())
       })?;

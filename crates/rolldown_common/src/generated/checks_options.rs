@@ -23,6 +23,7 @@ pub struct ChecksOptions {
   pub common_js_variable_in_esm: Option<bool>,
   pub import_is_undefined: Option<bool>,
   pub empty_import_meta: Option<bool>,
+  pub tolerated_transform: Option<bool>,
   pub cannot_call_namespace: Option<bool>,
   pub configuration_field_conflict: Option<bool>,
   pub prefer_builtin_feature: Option<bool>,
@@ -69,6 +70,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
     flag.set(
       rolldown_error::EventKindSwitcher::EmptyImportMeta,
       value.empty_import_meta.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::ToleratedTransform,
+      value.tolerated_transform.unwrap_or(true),
     );
     flag.set(
       rolldown_error::EventKindSwitcher::CannotCallNamespace,

@@ -1716,6 +1716,7 @@ export interface BindingChecksOptions {
   commonJsVariableInEsm?: boolean
   importIsUndefined?: boolean
   emptyImportMeta?: boolean
+  toleratedTransform?: boolean
   cannotCallNamespace?: boolean
   configurationFieldConflict?: boolean
   preferBuiltinFeature?: boolean

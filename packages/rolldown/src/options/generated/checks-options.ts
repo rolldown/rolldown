@@ -85,6 +85,12 @@ export interface ChecksOptions {
   emptyImportMeta?: boolean;
 
   /**
+   * Whether to emit warnings when detecting tolerated transform
+   * @default true
+   * */
+  toleratedTransform?: boolean;
+
+  /**
    * Whether to emit warnings when a namespace is called as a function
    *
    * A module namespace object is an object and not a function. Calling it as a function will cause a runtime error.

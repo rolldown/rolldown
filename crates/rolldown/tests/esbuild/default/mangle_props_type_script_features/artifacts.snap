@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
    ╭─[ namespace-exports.ts:2:13 ]
    │
  2 │     export var MANGLE_VAR_ = 1
@@ -16,10 +16,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
    ╭─[ namespace-exports.ts:3:13 ]
    │
  3 │     export let MANGLE_LET_ = 2
@@ -29,10 +29,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
    ╭─[ namespace-exports.ts:5:13 ]
    │
  5 │     export let { NESTED_: { DESTRUCTURING_ } } = 4

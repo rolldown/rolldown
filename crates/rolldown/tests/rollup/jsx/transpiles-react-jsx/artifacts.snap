@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # warnings
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
+[TOLERATED_TRANSFORM] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
     ╭─[ jsx.js:15:18 ]
     │
  15 │ console.log(<Foo key {...obj} />);
@@ -16,10 +16,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
+[TOLERATED_TRANSFORM] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
     ╭─[ jsx.js:18:24 ]
     │
  18 │ console.log(<Foo x="1" key y="1" {...obj} {...obj} />);
@@ -29,10 +29,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
+[TOLERATED_TRANSFORM] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
     ╭─[ jsx.js:23:18 ]
     │
  23 │ console.log(<Foo key></Foo>);
@@ -42,10 +42,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
+[TOLERATED_TRANSFORM] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
     ╭─[ jsx.js:28:18 ]
     │
  28 │ console.log(<Foo key><Foo/></Foo>);
@@ -55,10 +55,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
+[TOLERATED_TRANSFORM] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
     ╭─[ jsx.js:32:18 ]
     │
  32 │ console.log(<Foo key {...obj} ><Foo/></Foo>);
@@ -68,10 +68,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
+[TOLERATED_TRANSFORM] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
     ╭─[ jsx.js:35:24 ]
     │
  35 │ console.log(<Foo x="1" key y="1" {...obj} {...obj} ><Foo/></Foo>);
@@ -81,10 +81,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
+[TOLERATED_TRANSFORM] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
     ╭─[ jsx.js:46:18 ]
     │
  46 │ console.log(<Foo key><Foo/><Foo/></Foo>);
@@ -94,10 +94,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
+[TOLERATED_TRANSFORM] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
     ╭─[ jsx.js:50:18 ]
     │
  50 │ console.log(<Foo key {...obj} ><Foo/><Foo/></Foo>);
@@ -107,10 +107,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
+[TOLERATED_TRANSFORM] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
     ╭─[ jsx.js:53:24 ]
     │
  53 │ console.log(<Foo x="1" key y="1" {...obj} {...obj} ><Foo/><Foo/></Foo>);
@@ -120,10 +120,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
+[TOLERATED_TRANSFORM] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
     ╭─[ jsx.js:59:27 ]
     │
  59 │ console.log(<Foo {...obj} key />);
@@ -133,10 +133,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
+[TOLERATED_TRANSFORM] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
     ╭─[ jsx.js:61:42 ]
     │
  61 │ console.log(<Foo {...obj} {...obj} x="1" key y="1" />);
@@ -146,10 +146,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
+[TOLERATED_TRANSFORM] Warning: Please provide an explicit key value. Using "key" as a shorthand for "key={true}" is not allowed.
    ╭─[ jsx.js:9:18 ]
    │
  9 │ console.log(<Foo key />);

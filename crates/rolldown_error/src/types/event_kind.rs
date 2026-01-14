@@ -64,29 +64,31 @@ pub enum EventKind {
   ResolveError = 25,
   UnhandleableError = 26,
   UnloadableDependencyError = 27,
+  TransformError = 28,
+  ToleratedTransform = 29,
 
-  NapiError = 28,
+  NapiError = 30,
   /// Whether to emit warnings when a namespace is called as a function
   ///
   /// A module namespace object is an object and not a function. Calling it as a function will cause a runtime error.
-  CannotCallNamespace = 29,
+  CannotCallNamespace = 31,
   /// Whether to emit warnings when a config value is overridden by another config value with a higher priority
-  ConfigurationFieldConflict = 30,
+  ConfigurationFieldConflict = 32,
   /// Whether to emit warnings when a plugin that is covered by a built-in feature is used
   ///
   /// Using built-in features is generally more performant than using plugins.
-  PreferBuiltinFeature = 31,
-  BundlerInitializeError = 32,
-  PluginError = 33,
-  AlreadyClosedError = 34,
+  PreferBuiltinFeature = 33,
+  BundlerInitializeError = 34,
+  PluginError = 35,
+  AlreadyClosedError = 36,
   /// Whether to emit warnings when Rolldown could not clean the output directory
   ///
   /// See [`output.cleanDir`](https://rolldown.rs/reference/OutputOptions.cleanDir).
-  CouldNotCleanDirectory = 35,
+  CouldNotCleanDirectory = 37,
   /// Whether to emit warnings when plugins take significant time during the build process
   ///
   /// {@include ../docs/checks-plugin-timings.md}
-  PluginTimings = 36,
+  PluginTimings = 38,
 }
 
 impl Display for EventKind {
@@ -124,6 +126,8 @@ impl Display for EventKind {
       EventKind::ResolveError => write!(f, "RESOLVE_ERROR"),
       EventKind::UnhandleableError => write!(f, "UNHANDLEABLE_ERROR"),
       EventKind::UnloadableDependencyError => write!(f, "UNLOADABLE_DEPENDENCY"),
+      EventKind::TransformError => write!(f, "TRANSFORM_ERROR"),
+      EventKind::ToleratedTransform => write!(f, "TOLERATED_TRANSFORM"),
 
       EventKind::NapiError => write!(f, "NAPI_ERROR"),
       EventKind::CannotCallNamespace => write!(f, "CANNOT_CALL_NAMESPACE"),

@@ -259,6 +259,10 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when `import.meta` is not supported with the output format and is replaced with an empty object (`{}`)',
     ),
   ),
+  toleratedTransform: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warnings when detecting tolerated transform'),
+  ),
   cannotCallNamespace: v.pipe(
     v.optional(v.boolean()),
     v.description('Whether to emit warnings when a namespace is called as a function'),

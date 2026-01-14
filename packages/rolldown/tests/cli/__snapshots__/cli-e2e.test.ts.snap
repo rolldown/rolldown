@@ -38,6 +38,7 @@ OPTIONS
   --checks.mixed-exports      Whether to emit warnings when the way to export values is ambiguous.
   --checks.plugin-timings     Whether to emit warnings when plugins take significant time during the build process.
   --checks.prefer-builtin-feature Whether to emit warnings when a plugin that is covered by a built-in feature is used.
+  --checks.tolerated-transform Whether to emit warnings when detecting tolerated transform.
   --checks.unresolved-entry   Whether to emit warnings when an entrypoint cannot be resolved.
   --checks.unresolved-import  Whether to emit warnings when an import cannot be resolved.
   --chunk-file-names <name>   Name pattern for emitted secondary chunks.

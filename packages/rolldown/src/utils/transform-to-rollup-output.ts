@@ -32,7 +32,7 @@ export function transformToRollupSourceMap(map: string): SourceMap {
   return obj;
 }
 
-export function transformToRollupOutputChunk(bindingChunk: BindingOutputChunk): OutputChunk {
+function transformToRollupOutputChunk(bindingChunk: BindingOutputChunk): OutputChunk {
   return new OutputChunkImpl(bindingChunk);
 }
 

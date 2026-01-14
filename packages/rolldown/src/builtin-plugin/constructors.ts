@@ -1,10 +1,8 @@
 import type {
   BindingEsmExternalRequirePluginConfig,
   BindingIsolatedDeclarationPluginConfig,
-  BindingViteAssetImportMetaUrlPluginConfig,
   BindingViteBuildImportAnalysisPluginConfig,
   BindingViteDynamicImportVarsPluginConfig,
-  BindingViteHtmlInlineProxyPluginConfig,
   BindingViteImportGlobPluginConfig,
   BindingViteJsonPluginConfig,
   BindingViteModulePreloadPolyfillPluginConfig,
@@ -118,16 +116,4 @@ export function viteReactRefreshWrapperPlugin(
   }
   const builtinPlugin = new BuiltinPlugin('builtin:vite-react-refresh-wrapper', config);
   return makeBuiltinPluginCallable(builtinPlugin);
-}
-
-export function viteHtmlInlineProxyPlugin(
-  config: BindingViteHtmlInlineProxyPluginConfig,
-): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:vite-html-inline-proxy', config);
-}
-
-export function viteAssetImportMetaUrlPlugin(
-  config: BindingViteAssetImportMetaUrlPluginConfig,
-): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:vite-asset-import-meta-url', config);
 }

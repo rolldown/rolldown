@@ -101,14 +101,8 @@ rolldown_plugin_oxc_runtime = { version = "0.1.0", path = "crates/rolldown_plugi
 rolldown_plugin_replace = { version = "0.1.0", path = "crates/rolldown_plugin_replace" }
 rolldown_plugin_utils = { version = "0.1.0", path = "crates/rolldown_plugin_utils" }
 rolldown_plugin_vite_alias = { version = "0.1.0", path = "crates/rolldown_plugin_vite_alias" }
-rolldown_plugin_vite_asset = { version = "0.1.0", path = "crates/rolldown_plugin_vite_asset" }
-rolldown_plugin_vite_asset_import_meta_url = { version = "0.1.0", path = "crates/rolldown_plugin_vite_asset_import_meta_url" }
 rolldown_plugin_vite_build_import_analysis = { version = "0.1.0", path = "crates/rolldown_plugin_vite_build_import_analysis" }
-rolldown_plugin_vite_css = { version = "0.1.0", path = "crates/rolldown_plugin_vite_css" }
-rolldown_plugin_vite_css_post = { version = "0.1.0", path = "crates/rolldown_plugin_vite_css_post" }
 rolldown_plugin_vite_dynamic_import_vars = { version = "0.1.0", path = "crates/rolldown_plugin_vite_dynamic_import_vars" }
-rolldown_plugin_vite_html = { version = "0.1.0", path = "crates/rolldown_plugin_vite_html" }
-rolldown_plugin_vite_html_inline_proxy = { version = "0.1.0", path = "crates/rolldown_plugin_vite_html_inline_proxy" }
 rolldown_plugin_vite_import_glob = { version = "0.1.0", path = "crates/rolldown_plugin_vite_import_glob" }
 rolldown_plugin_vite_json = { version = "0.1.0", path = "crates/rolldown_plugin_vite_json" }
 rolldown_plugin_vite_load_fallback = { version = "0.1.0", path = "crates/rolldown_plugin_vite_load_fallback" }

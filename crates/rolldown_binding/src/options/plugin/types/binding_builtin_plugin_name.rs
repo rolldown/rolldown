@@ -11,22 +11,10 @@ pub enum BindingBuiltinPluginName {
   Replace,
   #[napi(value = "builtin:vite-alias")]
   ViteAlias,
-  #[napi(value = "builtin:vite-asset")]
-  ViteAsset,
-  #[napi(value = "builtin:vite-asset-import-meta-url")]
-  ViteAssetImportMetaUrl,
   #[napi(value = "builtin:vite-build-import-analysis")]
   ViteBuildImportAnalysis,
-  #[napi(value = "builtin:vite-css")]
-  ViteCSS,
-  #[napi(value = "builtin:vite-css-post")]
-  ViteCSSPost,
   #[napi(value = "builtin:vite-dynamic-import-vars")]
   ViteDynamicImportVars,
-  #[napi(value = "builtin:vite-html")]
-  ViteHtml,
-  #[napi(value = "builtin:vite-html-inline-proxy")]
-  ViteHtmlInlineProxy,
   #[napi(value = "builtin:vite-import-glob")]
   ViteImportGlob,
   #[napi(value = "builtin:vite-json")]

@@ -614,7 +614,6 @@ module.exports.BindingRenderedChunk = nativeBinding.BindingRenderedChunk
 module.exports.BindingRenderedChunkMeta = nativeBinding.BindingRenderedChunkMeta
 module.exports.BindingRenderedModule = nativeBinding.BindingRenderedModule
 module.exports.BindingTransformPluginContext = nativeBinding.BindingTransformPluginContext
-module.exports.BindingUrlResolver = nativeBinding.BindingUrlResolver
 module.exports.BindingWatcher = nativeBinding.BindingWatcher
 module.exports.BindingWatcherBundler = nativeBinding.BindingWatcherBundler
 module.exports.BindingWatcherChangeData = nativeBinding.BindingWatcherChangeData

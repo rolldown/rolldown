@@ -8,7 +8,7 @@ use oxc::{
   isolated_declarations::{IsolatedDeclarations, IsolatedDeclarationsOptions},
 };
 use rolldown_common::{ModuleType, ResolvedExternal};
-use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, Severity};
+use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, EventKind, Severity};
 use rolldown_plugin::{HookUsage, Plugin, PluginHookMeta, PluginOrder};
 use sugar_path::SugarPath;
 use type_import_visitor::TypeImportVisitor;
@@ -58,6 +58,7 @@ impl Plugin for IsolatedDeclarationPlugin {
           &ArcStr::from(ret.program.source_text),
           args.id,
           &Severity::Error,
+          EventKind::ParseError,
         )))?;
       }
 

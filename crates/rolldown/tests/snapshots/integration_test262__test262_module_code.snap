@@ -68,206 +68,206 @@ Actual: Runtime execution succeeded
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Unexpected token"
+Unexpected token
 ---
 
 # language/module-code/comment-single-line-html-close.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Unexpected token"
+Unexpected token
 ---
 
 # language/module-code/comment-single-line-html-open.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Unexpected token"
+Unexpected token
 ---
 
 # language/module-code/early-dup-export-as-star-as.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Duplicated export 'z'"
+Duplicated export 'z'
 ---
 
 # language/module-code/early-dup-export-decl.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Duplicated export 'f'"
+Duplicated export 'f'
 ---
 
 # language/module-code/early-dup-export-dflt-id.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "A module cannot have multiple default exports."
+A module cannot have multiple default exports.
 ---
 
 # language/module-code/early-dup-export-dflt.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Unexpected token"
+Unexpected token
 ---
 
 # language/module-code/early-dup-export-id-as.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Duplicated export 'z'"
+Duplicated export 'z'
 ---
 
 # language/module-code/early-dup-export-id.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Duplicated export 'x'"
+Duplicated export 'x'
 ---
 
 # language/module-code/early-dup-export-star-as-dflt.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "A module cannot have multiple default exports."
+A module cannot have multiple default exports.
 ---
 
 # language/module-code/early-dup-lables.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Label `label` has already been declared"
+Label `label` has already been declared
 ---
 
 # language/module-code/early-dup-lex.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Identifier `x` has already been declared"
+Identifier `x` has already been declared
 ---
 
 # language/module-code/early-dup-top-function-async-generator.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Identifier `x` has already been declared"
+Identifier `x` has already been declared
 ---
 
 # language/module-code/early-dup-top-function-async.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Identifier `x` has already been declared"
+Identifier `x` has already been declared
 ---
 
 # language/module-code/early-dup-top-function-generator.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Identifier `x` has already been declared"
+Identifier `x` has already been declared
 ---
 
 # language/module-code/early-dup-top-function.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Identifier `x` has already been declared"
+Identifier `x` has already been declared
 ---
 
 # language/module-code/early-export-global.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Export 'Number' is not defined"
+Export 'Number' is not defined
 ---
 
 # language/module-code/early-export-ill-formed-string.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "An export name cannot include a unicode lone surrogate"
-Parse failed, got: "An export name cannot include a unicode lone surrogate"
-Parse failed, got: "An export name cannot include a unicode lone surrogate"
-Parse failed, got: "Duplicated export '�d83c'"
+An export name cannot include a unicode lone surrogate
+An export name cannot include a unicode lone surrogate
+An export name cannot include a unicode lone surrogate
+Duplicated export '�d83c'
 ---
 
 # language/module-code/early-export-unresolvable.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Export 'unresolvable' is not defined"
+Export 'unresolvable' is not defined
 ---
 
 # language/module-code/early-import-arguments.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Cannot assign to 'arguments' in strict mode"
+Cannot assign to 'arguments' in strict mode
 ---
 
 # language/module-code/early-import-as-arguments.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Cannot assign to 'arguments' in strict mode"
+Cannot assign to 'arguments' in strict mode
 ---
 
 # language/module-code/early-import-as-eval.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Cannot assign to 'eval' in strict mode"
+Cannot assign to 'eval' in strict mode
 ---
 
 # language/module-code/early-import-eval.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Cannot assign to 'eval' in strict mode"
+Cannot assign to 'eval' in strict mode
 ---
 
 # language/module-code/early-lex-and-var.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Identifier `x` has already been declared"
+Identifier `x` has already been declared
 ---
 
 # language/module-code/early-new-target.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Unexpected new.target expression"
+Unexpected new.target expression
 ---
 
 # language/module-code/early-strict-mode.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "The keyword 'public' is reserved"
+The keyword 'public' is reserved
 ---
 
 # language/module-code/early-super.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'super' can only be used with function calls or in property accesses"
+'super' can only be used with function calls or in property accesses
 ---
 
 # language/module-code/early-undef-break.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Use of undefined label"
+Use of undefined label
 ---
 
 # language/module-code/early-undef-continue.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Use of undefined label"
+Use of undefined label
 ---
 
 # language/module-code/eval-export-cls-semi.js
@@ -494,7 +494,7 @@ Actual: Runtime execution succeeded
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Identifier `A` has already been declared"
+Identifier `A` has already been declared
 ---
 
 # language/module-code/export-default-asyncfunction-declaration-binding.js
@@ -507,7 +507,7 @@ Actual: Runtime execution succeeded
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Identifier `AG` has already been declared"
+Identifier `AG` has already been declared
 ---
 
 # language/module-code/export-default-asyncgenerator-declaration-binding.js
@@ -520,7 +520,7 @@ Actual: Runtime execution succeeded
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Identifier `F` has already been declared"
+Identifier `F` has already been declared
 ---
 
 # language/module-code/export-default-function-declaration-binding.js
@@ -533,7 +533,7 @@ Actual: Runtime execution succeeded
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Identifier `G` has already been declared"
+Identifier `G` has already been declared
 ---
 
 # language/module-code/export-default-generator-declaration-binding.js
@@ -562,7 +562,7 @@ Actual: Runtime execution succeeded
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "An export name cannot include a unicode lone surrogate"
+An export name cannot include a unicode lone surrogate
 ---
 
 # language/module-code/export-expname-from-binding-string.js
@@ -581,7 +581,7 @@ Actual: Runtime execution succeeded
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Unexpected token"
+Unexpected token
 ---
 
 # language/module-code/export-expname-from-star.js
@@ -612,7 +612,7 @@ Actual: Runtime execution succeeded
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "An export name cannot include a unicode lone surrogate"
+An export name cannot include a unicode lone surrogate
 ---
 
 # language/module-code/export-expname-import-string-binding.js
@@ -625,21 +625,21 @@ Actual: Runtime execution succeeded
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "An export name cannot include a unicode lone surrogate"
+An export name cannot include a unicode lone surrogate
 ---
 
 # language/module-code/export-expname-string-binding.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "A string literal cannot be used as an exported binding without `from`"
+A string literal cannot be used as an exported binding without `from`
 ---
 
 # language/module-code/export-expname-unpaired-surrogate.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "An export name cannot include a unicode lone surrogate"
+An export name cannot include a unicode lone surrogate
 ---
 
 # language/module-code/export-star-as-dflt.js
@@ -659,21 +659,21 @@ Actual:
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Identifier `type` has already been declared"
+Identifier `type` has already been declared
 ---
 
 # language/module-code/import-attributes/early-dup-attribute-key-import-nobinding.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Identifier `type` has already been declared"
+Identifier `type` has already been declared
 ---
 
 # language/module-code/import-attributes/early-dup-attribute-key-import-withbinding.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Identifier `type` has already been declared"
+Identifier `type` has already been declared
 ---
 
 # language/module-code/import-attributes/import-attribute-empty.js
@@ -1162,44 +1162,44 @@ Actual: Runtime execution succeeded
 Result: PASS
 Expected: error (type: SyntaxError, phase: resolution)
 Actual:
-Parse failed, got: "Cannot assign to this expression"
+Cannot assign to this expression
 ---
 
 # language/module-code/instn-resolve-empty-import.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: resolution)
 Actual:
-Parse failed, got: "Cannot assign to this expression"
+Cannot assign to this expression
 ---
 
 # language/module-code/instn-resolve-err-syntax-1.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: resolution)
 Actual:
-Parse failed, got: "Illegal break statement"
+Illegal break statement
 ---
 
 # language/module-code/instn-resolve-err-syntax-2.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: resolution)
 Actual:
-Parse failed, got: "Cannot assign to this expression"
+Cannot assign to this expression
 ---
 
 # language/module-code/instn-resolve-order-depth.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: resolution)
 Actual:
-Parse failed, got: "Cannot assign to this expression"
-Parse failed, got: "Illegal break statement"
+Cannot assign to this expression
+Illegal break statement
 ---
 
 # language/module-code/instn-resolve-order-src.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: resolution)
 Actual:
-Parse failed, got: "Cannot assign to this expression"
-Parse failed, got: "Illegal break statement"
+Cannot assign to this expression
+Illegal break statement
 ---
 
 # language/module-code/instn-same-global.js
@@ -1293,28 +1293,28 @@ Actual: Runtime execution succeeded
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private identifier '#x' is not allowed outside class bodies"
+Private identifier '#x' is not allowed outside class bodies
 ---
 
 # language/module-code/invalid-private-names-call-expression-this.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private identifier '#x' is not allowed outside class bodies"
+Private identifier '#x' is not allowed outside class bodies
 ---
 
 # language/module-code/invalid-private-names-member-expression-bad-reference.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private identifier '#x' is not allowed outside class bodies"
+Private identifier '#x' is not allowed outside class bodies
 ---
 
 # language/module-code/invalid-private-names-member-expression-this.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private identifier '#x' is not allowed outside class bodies"
+Private identifier '#x' is not allowed outside class bodies
 ---
 
 # language/module-code/namespace/Symbol.iterator.js
@@ -1603,658 +1603,658 @@ Cannot assign to import 'renamed'
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-block-stmt-list.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-block-stmt.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-class-decl-meth-static.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-class-decl-meth.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-class-decl-method-gen-static.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-class-decl-method-gen.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-class-expr-meth-gen-static.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-class-expr-meth-gen.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-class-expr-meth-static.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-class-expr-meth.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-do-while.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-for-const.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-for-in-const.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-for-in-let.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-for-in-lhs.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-for-in-var.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-for-let.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-for-lhs.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-for-of-const.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-for-of-let.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-for-of-lhs.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-for-of-var.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-for-var.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-function-decl.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-function-expr.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-generator-decl.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-generator-expr.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-if-else.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-if-if.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-labeled.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-object-gen-method.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-object-getter.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-object-method.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-object-setter.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-switch-case-dflt.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-switch-case.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-switch-dftl.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-try-catch-finally.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-try-catch.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-try-finally.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-try-try.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-export-while.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'export statement' declaration can only be used at the top level of a module"
+'export statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-arrow-function.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-block-stmt-list.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-block-stmt.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-class-decl-meth-static.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-class-decl-meth.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-class-decl-method-gen-static.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-class-decl-method-gen.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-class-expr-meth-gen-static.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-class-expr-meth-gen.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-class-expr-meth-static.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-class-expr-meth.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-do-while.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-for-const.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-for-in-const.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-for-in-let.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-for-in-lhs.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-for-in-var.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-for-let.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-for-lhs.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-for-of-const.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-for-of-let.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-for-of-lhs.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-for-of-var.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-for-var.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-function-decl.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-function-expr.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-generator-decl.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-generator-expr.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-if-else.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-if-if.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-labeled.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-object-gen-method.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-object-getter.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-object-method.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-object-setter.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-switch-case-dflt.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-switch-case.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-switch-dftl.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-try-catch-finally.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-try-catch.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-try-finally.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-try-try.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-decl-pos-import-while.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "'import statement' declaration can only be used at the top level of a module"
+'import statement' declaration can only be used at the top level of a module
 ---
 
 # language/module-code/parse-err-export-dflt-const.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Unexpected token"
+Unexpected token
 ---
 
 # language/module-code/parse-err-export-dflt-expr.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Expected a semicolon or an implicit semicolon after a statement, but found none"
+Expected a semicolon or an implicit semicolon after a statement, but found none
 ---
 
 # language/module-code/parse-err-export-dflt-let.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Expected a semicolon or an implicit semicolon after a statement, but found none"
+Expected a semicolon or an implicit semicolon after a statement, but found none
 ---
 
 # language/module-code/parse-err-export-dflt-var.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Unexpected token"
+Unexpected token
 ---
 
 # language/module-code/parse-err-hoist-lex-fun.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Identifier `f` has already been declared"
+Identifier `f` has already been declared
 ---
 
 # language/module-code/parse-err-hoist-lex-gen.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Identifier `g` has already been declared"
+Identifier `g` has already been declared
 ---
 
 # language/module-code/parse-err-invoke-anon-fun-decl.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Empty parenthesized expression"
+Empty parenthesized expression
 ---
 
 # language/module-code/parse-err-invoke-anon-gen-decl.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Empty parenthesized expression"
+Empty parenthesized expression
 ---
 
 # language/module-code/parse-err-return.js
@@ -2268,56 +2268,56 @@ Actual: 1 chunk(s) generated
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Expected a semicolon or an implicit semicolon after a statement, but found none"
+Expected a semicolon or an implicit semicolon after a statement, but found none
 ---
 
 # language/module-code/parse-err-semi-export-star.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Expected a semicolon or an implicit semicolon after a statement, but found none"
+Expected a semicolon or an implicit semicolon after a statement, but found none
 ---
 
 # language/module-code/parse-err-semi-name-space-export.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Expected a semicolon or an implicit semicolon after a statement, but found none"
+Expected a semicolon or an implicit semicolon after a statement, but found none
 ---
 
 # language/module-code/parse-err-semi-named-export-from.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Expected a semicolon or an implicit semicolon after a statement, but found none"
+Expected a semicolon or an implicit semicolon after a statement, but found none
 ---
 
 # language/module-code/parse-err-semi-named-export.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Expected a semicolon or an implicit semicolon after a statement, but found none"
+Expected a semicolon or an implicit semicolon after a statement, but found none
 ---
 
 # language/module-code/parse-err-syntax-1.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Unexpected token"
+Unexpected token
 ---
 
 # language/module-code/parse-err-syntax-2.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Cannot assign to this expression"
+Cannot assign to this expression
 ---
 
 # language/module-code/parse-err-yield.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "The keyword 'yield' is reserved"
+The keyword 'yield' is reserved
 ---
 
 # language/module-code/parse-export-empty.js
@@ -2330,63 +2330,63 @@ Actual: Runtime execution succeeded
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private identifier '#f' is not allowed outside class bodies"
+Private identifier '#f' is not allowed outside class bodies
 ---
 
 # language/module-code/privatename-not-valid-earlyerr-module-1.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private field '#x' must be declared in an enclosing class"
+Private field '#x' must be declared in an enclosing class
 ---
 
 # language/module-code/privatename-not-valid-earlyerr-module-2.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private field '#x' must be declared in an enclosing class"
+Private field '#x' must be declared in an enclosing class
 ---
 
 # language/module-code/privatename-not-valid-earlyerr-module-3.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private field '#x' must be declared in an enclosing class"
+Private field '#x' must be declared in an enclosing class
 ---
 
 # language/module-code/privatename-not-valid-earlyerr-module-4.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private field '#x' must be declared in an enclosing class"
+Private field '#x' must be declared in an enclosing class
 ---
 
 # language/module-code/privatename-not-valid-earlyerr-module-5.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private identifier '#x' is not allowed outside class bodies"
+Private identifier '#x' is not allowed outside class bodies
 ---
 
 # language/module-code/privatename-not-valid-earlyerr-module-6.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private identifier '#x' is not allowed outside class bodies"
+Private identifier '#x' is not allowed outside class bodies
 ---
 
 # language/module-code/privatename-not-valid-earlyerr-module-7.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private identifier '#x' is not allowed outside class bodies"
+Private identifier '#x' is not allowed outside class bodies
 ---
 
 # language/module-code/privatename-not-valid-earlyerr-module-8.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Private identifier '#x' is not allowed outside class bodies"
+Private identifier '#x' is not allowed outside class bodies
 ---
 
 # language/module-code/privatename-valid-no-earlyerr.js
@@ -2512,7 +2512,7 @@ Actual: Async test completed successfully
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Cannot assign to this expression"
+Cannot assign to this expression
 ---
 
 # language/module-code/top-level-await/fulfillment-order.js
@@ -2601,23 +2601,23 @@ Result: FAIL
 Reason: Rolldown treats files as ESM by default
 Expected: success
 Actual:
-Parse failed, got: "Cannot use `await` as an identifier in an async context"
-Parse failed, got: "Cannot use `await` as an identifier in an async context"
-Parse failed, got: "Unexpected token"
+Cannot use `await` as an identifier in an async context
+Cannot use `await` as an identifier in an async context
+Unexpected token
 ---
 
 # language/module-code/top-level-await/new-await.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Cannot use `await` as an identifier in an async context"
+Cannot use `await` as an identifier in an async context
 ---
 
 # language/module-code/top-level-await/no-operand.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Unexpected token"
+Unexpected token
 ---
 
 # language/module-code/top-level-await/pending-async-dep-from-cycle.js
@@ -2722,35 +2722,35 @@ Actual: Runtime execution succeeded
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "`await` is only allowed within async functions and at the top levels of modules"
+`await` is only allowed within async functions and at the top levels of modules
 ---
 
 # language/module-code/top-level-await/syntax/early-does-not-propagate-to-fn-declaration-params.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "`await` is only allowed within async functions and at the top levels of modules"
+`await` is only allowed within async functions and at the top levels of modules
 ---
 
 # language/module-code/top-level-await/syntax/early-does-not-propagate-to-fn-expr-body.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "`await` is only allowed within async functions and at the top levels of modules"
+`await` is only allowed within async functions and at the top levels of modules
 ---
 
 # language/module-code/top-level-await/syntax/early-does-not-propagate-to-fn-expr-params.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "`await` is only allowed within async functions and at the top levels of modules"
+`await` is only allowed within async functions and at the top levels of modules
 ---
 
 # language/module-code/top-level-await/syntax/early-no-escaped-await.js
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Parse failed, got: "Keywords cannot contain escape characters"
+Keywords cannot contain escape characters
 ---
 
 # language/module-code/top-level-await/syntax/export-class-decl-await-expr-array-literal.js

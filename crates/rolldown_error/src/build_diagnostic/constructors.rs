@@ -5,6 +5,7 @@ use oxc::diagnostics::OxcDiagnostic;
 use oxc::{diagnostics::LabeledSpan, span::Span};
 use oxc_resolver::ResolveError;
 
+use crate::types::event_kind::EventKind;
 use crate::utils::ByteLocator;
 
 #[cfg(feature = "napi")]
@@ -46,7 +47,7 @@ use super::events::{
   invalid_export_option::InvalidExportOption,
   missing_export::MissingExport,
   mixed_exports::MixedExports,
-  parse_error::ParseError,
+  oxc_error::OxcError,
   unresolved_entry::UnresolvedEntry,
 };
 
@@ -223,14 +224,15 @@ impl BuildDiagnostic {
 
   // --- Rolldown related
 
-  pub fn oxc_parse_error(
+  pub fn oxc_error(
     source: ArcStr,
     id: String,
     error_help: String,
     error_message: String,
     error_labels: Vec<LabeledSpan>,
+    event_kind: EventKind,
   ) -> Self {
-    Self::new_inner(ParseError { source, id, error_help, error_message, error_labels })
+    Self::new_inner(OxcError { source, id, error_help, error_message, error_labels, event_kind })
   }
 
   pub fn from_oxc_diagnostics<T>(
@@ -238,6 +240,7 @@ impl BuildDiagnostic {
     source: &ArcStr,
     id: &str,
     severity: &Severity,
+    event_kind: EventKind,
   ) -> Vec<Self>
   where
     T: IntoIterator<Item = OxcDiagnostic>,
@@ -245,12 +248,13 @@ impl BuildDiagnostic {
     diagnostics
       .into_iter()
       .map(|mut error| {
-        let diagnostic = BuildDiagnostic::oxc_parse_error(
+        let diagnostic = BuildDiagnostic::oxc_error(
           source.clone(),
           id.to_string(),
           error.help.take().unwrap_or_default().into(),
           error.message.to_string(),
           error.labels.take().unwrap_or_default(),
+          event_kind,
         );
         if matches!(severity, Severity::Warning) {
           diagnostic.with_severity_warning()

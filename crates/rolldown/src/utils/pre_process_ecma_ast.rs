@@ -12,7 +12,7 @@ use oxc::transformer_plugins::{
 
 use rolldown_common::NormalizedBundlerOptions;
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
-use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, Severity};
+use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
 
 use crate::types::oxc_parse_type::OxcParseType;
 
@@ -66,13 +66,20 @@ impl PreProcessEcmaAst {
       semantic_ret.errors.into_iter().partition(|w| w.severity == OxcSeverity::Error);
 
     let mut warnings = if errors.is_empty() {
-      BuildDiagnostic::from_oxc_diagnostics(warnings, &source, resolved_id, &Severity::Warning)
+      BuildDiagnostic::from_oxc_diagnostics(
+        warnings,
+        &source,
+        resolved_id,
+        &Severity::Warning,
+        EventKind::ParseError,
+      )
     } else {
       return Err(BuildDiagnostic::from_oxc_diagnostics(
         errors,
         &source,
         resolved_id,
         &Severity::Error,
+        EventKind::ParseError,
       ))?;
     };
 
@@ -113,6 +120,7 @@ impl PreProcessEcmaAst {
             &source,
             resolved_id,
             &Severity::Error,
+            EventKind::ParseError,
           )));
         }
         warnings.extend(BuildDiagnostic::from_oxc_diagnostics(
@@ -120,6 +128,7 @@ impl PreProcessEcmaAst {
           &source,
           resolved_id,
           &Severity::Warning,
+          EventKind::ParseError,
         ));
         Ok(())
       })?;

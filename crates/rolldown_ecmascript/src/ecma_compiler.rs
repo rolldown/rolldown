@@ -10,7 +10,7 @@ use oxc::{
   span::{SPAN, SourceType},
 };
 use oxc_sourcemap::SourceMap;
-use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
+use rolldown_error::{BuildDiagnostic, BuildResult, EventKind, Severity};
 
 use crate::ecma_ast::{
   EcmaAst,
@@ -35,6 +35,7 @@ impl EcmaCompiler {
             &source.clone(),
             id,
             &Severity::Error,
+            EventKind::ParseError,
           ))
         } else {
           Ok(ProgramCellDependent { program: ret.program })
@@ -73,6 +74,7 @@ impl EcmaCompiler {
             &source.clone(),
             id,
             &Severity::Error,
+            EventKind::ParseError,
           )),
         }
       })?;

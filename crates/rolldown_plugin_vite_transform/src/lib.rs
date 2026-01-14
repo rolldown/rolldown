@@ -9,7 +9,7 @@ use oxc::parser::Parser;
 use oxc::semantic::SemanticBuilder;
 use oxc::transformer::Transformer;
 use rolldown_common::{BundlerTransformOptions, ModuleType};
-use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, Severity};
+use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, EventKind, Severity};
 use rolldown_plugin::{HookUsage, Plugin, SharedTransformPluginContext};
 use rolldown_utils::{concat_string, pattern_filter::StringOrRegex, url::clean_url};
 
@@ -67,6 +67,7 @@ impl Plugin for ViteTransformPlugin {
         &ArcStr::from(args.code.as_str()),
         args.id,
         &Severity::Error,
+        EventKind::ParseError,
       )))?;
     }
 
@@ -80,6 +81,7 @@ impl Plugin for ViteTransformPlugin {
         &ArcStr::from(args.code.as_str()),
         args.id,
         &Severity::Error,
+        EventKind::ParseError,
       )))?;
     }
 

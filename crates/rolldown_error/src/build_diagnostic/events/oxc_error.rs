@@ -2,23 +2,26 @@ use arcstr::ArcStr;
 use oxc::diagnostics::LabeledSpan;
 
 use crate::{
-  build_diagnostic::diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions,
+  build_diagnostic::diagnostic::Diagnostic,
+  types::{diagnostic_options::DiagnosticOptions, event_kind::EventKind},
 };
 
 use super::BuildEvent;
 
-#[derive(Debug)]
-pub struct ParseError {
+#[derive(derive_more::Debug)]
+pub struct OxcError {
   pub(crate) source: ArcStr,
   pub(crate) id: String,
   pub(crate) error_help: String,
   pub(crate) error_message: String,
   pub(crate) error_labels: Vec<LabeledSpan>,
+  #[debug(skip)]
+  pub(crate) event_kind: EventKind,
 }
 
-impl BuildEvent for ParseError {
-  fn kind(&self) -> crate::types::event_kind::EventKind {
-    crate::types::event_kind::EventKind::ParseError
+impl BuildEvent for OxcError {
+  fn kind(&self) -> EventKind {
+    self.event_kind
   }
 
   fn id(&self) -> Option<String> {
@@ -26,7 +29,7 @@ impl BuildEvent for ParseError {
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
-    format!("Parse failed, got: {:?}", self.error_message)
+    self.error_message.clone()
   }
 
   fn on_diagnostic(&self, diagnostic: &mut Diagnostic, opts: &DiagnosticOptions) {

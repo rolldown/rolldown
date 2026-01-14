@@ -25,26 +25,25 @@ pub struct Renamer<'name> {
   /// Tracks all canonical names used in the top-level scope.
   ///
   /// Key is the canonical name, value contains:
-  /// - `conflict_index`: How many same-named variables exist, used to generate unique names
-  /// - `owner`: The module that owns this symbol (None for reserved names)
-  /// - `was_renamed`: Whether the symbol was renamed during deconflicting
+  /// - `conflict_index`: Counter for generating unique names (`a$1`, `a$2`, ...)
+  /// - `owner`: Module that owns this symbol (`None` for reserved names)
+  /// - `was_renamed`: Whether this symbol was renamed during deconflicting
   ///
   /// Example:
   /// ```js
   /// // index.js
   /// import {a as b} from './a.js'
-  /// const a = 1; // {a => {conflict_index: 0, ...}}
-  /// const a$1 = 1000; // {a => {conflict_index: 0, ...}, a$1 => {conflict_index: 0, ...}}
+  /// const a = 1;      // used_canonical_names: {a: {conflict_index: 0, ...}}
+  /// const a$1 = 1000; // used_canonical_names: {a: ..., a$1: {conflict_index: 0, ...}}
   ///
   /// // a.js
-  /// export const a = 100; // First try `a` (used), then `a$1` (used), then `a$2` (available)
-  ///                       // Result: rename `a` to `a$2`
+  /// export const a = 100; // Try `a` (used), `a$1` (used), `a$2` (available) → rename to `a$2`
   /// ```
   used_canonical_names: FxHashMap<CompactStr, CanonicalNameInfo>,
+  /// Final symbol → name mappings. Only stores renamed symbols; originals use symbol_db.
   canonical_names: FxHashMap<SymbolRef, CompactStr>,
   symbol_db: &'name SymbolRefDb,
-
-  /// The entry module index, if this chunk has an entry point.
+  /// Entry module index for this chunk, if any.
   entry_module_idx: Option<ModuleIdx>,
 }
 
@@ -58,7 +57,7 @@ impl<'name> Renamer<'name> {
     let mut manual_reserved = match format {
       OutputFormat::Esm => vec![],
       OutputFormat::Cjs => vec!["module", "require", "__filename", "__dirname", "exports"],
-      OutputFormat::Iife | OutputFormat::Umd => vec!["exports"], // Also for  AMD, but we don't support them yet.
+      OutputFormat::Iife | OutputFormat::Umd => vec!["exports"], // Also for AMD, but we don't support it yet.
     };
     // https://github.com/rollup/rollup/blob/bfbea66569491f5466fbba99de2ba6a0225f851b/src/Chunk.ts#L1359
     manual_reserved.extend(["Object", "Promise"]);
@@ -80,46 +79,38 @@ impl<'name> Renamer<'name> {
     self.used_canonical_names.insert(name, CanonicalNameInfo::default());
   }
 
-  /// Check if a name exists as a non-root binding in a module.
-  /// Checks directly against scoping without caching.
+  /// Returns true if `name` exists in any nested (non-root) scope of the module.
   fn has_nested_scope_binding(&self, module_idx: ModuleIdx, name: &str) -> bool {
-    // Runtime module (index 0) has no nested scope bindings
     const RUNTIME_MODULE_INDEX: ModuleIdx = ModuleIdx::from_usize_unchecked(0);
     if module_idx == RUNTIME_MODULE_INDEX {
       return false;
     }
 
-    let db = self.symbol_db.local_db(module_idx);
-    let scoping = db.ast_scopes.scoping();
+    let scoping = self.symbol_db.local_db(module_idx).ast_scopes.scoping();
     if scoping.symbols_len() == 0 {
       return false;
     }
 
-    // Check if name exists as a non-root binding by iterating symbols
-    // starting from the second scope (skip root)
-    scoping.iter_bindings().skip(1).any(|bindings| bindings.1.contains_key(name))
+    // Skip root scope (index 0), check nested scopes only
+    scoping.iter_bindings().skip(1).any(|(_, bindings)| bindings.contains_key(name))
   }
 
-  /// Check if a candidate name is available for use (doesn't conflict with existing names).
-  /// The `is_original_name` flag indicates if this is the symbol's original name (not a renamed candidate).
+  /// Check if a name is available for a symbol (no nested scope conflicts).
   fn is_name_available(
     &self,
     candidate_name: &str,
     symbol_ref: SymbolRef,
     is_original_name: bool,
   ) -> bool {
-    // Check 1: For non-entry-module symbols, ensure they don't use names that exist
-    // in entry module's nested scopes (which would cause accidental capture).
-    // Entry module symbols can use any name - their own nested scope shadowing is intentional.
+    // Non-entry symbols must not capture entry module's nested bindings
     if let Some(entry_idx) = self.entry_module_idx {
       if symbol_ref.owner != entry_idx && self.has_nested_scope_binding(entry_idx, candidate_name) {
         return false;
       }
     }
 
-    // Check 2: For RENAMED candidates (not original names), check against own module's
-    // nested scopes. This prevents renaming `a` to `a$1` when there's already a parameter
-    // named `a$1`. For original names, shadowing is intentional and expected.
+    // Renamed candidates must not conflict with own module's nested bindings
+    // (original names are allowed to shadow - that's intentional)
     if !is_original_name && self.has_nested_scope_binding(symbol_ref.owner, candidate_name) {
       return false;
     }
@@ -127,13 +118,8 @@ impl<'name> Renamer<'name> {
     true
   }
 
-  /// Assigns a canonical name to a symbol, checking for conflicts with both
-  /// top-level names and nested scope names.
-  ///
-  /// This method checks:
-  /// 1. Names already used by other top-level symbols (`used_canonical_names`)
-  /// 2. Names used in the entry module's nested scopes (to prevent capture)
-  /// 3. Names used in the symbol's own module's nested scopes (for renamed candidates)
+  /// Assign a canonical name to a top-level symbol, avoiding conflicts with
+  /// other top-level names and nested scope names that could cause capture.
   pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef, needs_deconflict: bool) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     let canonical_name = canonical_ref.name(self.symbol_db);
@@ -157,12 +143,11 @@ impl<'name> Renamer<'name> {
       return;
     }
 
-    // Check if already renamed
     if self.canonical_names.contains_key(&canonical_ref) {
       return;
     }
 
-    // Fast path: try original name first without cloning
+    // Fast path: original name is available
     if !self.used_canonical_names.contains_key(&original_name)
       && self.is_name_available(&original_name, canonical_ref, true)
     {
@@ -178,7 +163,7 @@ impl<'name> Renamer<'name> {
       return;
     }
 
-    // Slow path: need to find an alternative name
+    // Slow path: find alternative name (original$1, original$2, ...)
     let mut conflict_index = self
       .used_canonical_names
       .get_mut(&original_name)
@@ -192,20 +177,17 @@ impl<'name> Renamer<'name> {
       let candidate_name: CompactStr =
         concat_string!(original_name, "$", itoa::Buffer::new().format(conflict_index)).into();
 
-      // Check if this renamed candidate is available
       if let Some(info) = self.used_canonical_names.get_mut(&candidate_name) {
         conflict_index = info.conflict_index + 1;
         info.conflict_index = conflict_index;
         continue;
       }
 
-      // For renamed candidates, check nested scope conflicts
       if !self.is_name_available(&candidate_name, canonical_ref, false) {
         conflict_index += 1;
         continue;
       }
 
-      // Name is available - use it
       self.used_canonical_names.insert(
         candidate_name.clone(),
         CanonicalNameInfo {
@@ -241,47 +223,82 @@ impl<'name> Renamer<'name> {
   /// CJS wrapper parameter names that nested scopes should avoid shadowing.
   const CJS_WRAPPER_NAMES: [&'static str; 2] = ["exports", "module"];
 
-  /// Register nested scope symbols with their original names.
+  /// Rename nested scope symbols when they would conflict with top-level symbols.
   ///
-  /// Since `add_symbol_in_root_scope` now avoids names that would conflict with nested scope
-  /// symbols, most nested scope symbols can keep their original names. However, we still need
-  /// to handle the case where nested scope symbols shadow top-level symbols that were renamed,
-  /// or CJS wrapper parameters.
+  /// Most nested symbols keep their original names. Renaming is required when:
+  /// 1. Symbol shadows a top-level name from a *different* module (would cause capture)
+  /// 2. Symbol shadows a top-level name that was *renamed* (should shadow original)
+  /// 3. Symbol is `exports`/`module` in a CJS wrapped module (would shadow wrapper params)
+  ///
+  /// ## Example: Avoiding duplicate declarations
+  ///
+  /// ```js
+  /// // other.js
+  /// export const a = 'from-other';
+  ///
+  /// // nested.js - has both `a` and `a$1` as parameters
+  /// export function test(a, a$1) { return [a, a$1]; }
+  ///
+  /// // main.js
+  /// import { a } from './other.js';
+  /// import { test } from './nested.js';
+  /// ```
+  ///
+  /// Bundled output:
+  /// ```js
+  /// const a = "from-other";
+  /// function test(a$2, a$1) { return [a$2, a$1]; }  // `a` → `a$2`, skipping `a$1`
+  /// ```
+  ///
+  /// The nested `a` is renamed to `a$2` (not `a$1`) because `a$1` already exists
+  /// in the same scope - using it would create duplicate declarations.
   pub fn register_nested_scope_symbols(
     &mut self,
     symbol_ref: SymbolRef,
     original_name: &str,
     is_cjs_wrapped: bool,
   ) {
-    // Skip if already registered (e.g., as a top-level symbol)
     if self.canonical_names.contains_key(&symbol_ref) {
       return;
     }
 
-    // Check if this name would shadow a top-level symbol that was renamed
-    // (from a different module or renamed in the same module)
+    // Check if renaming is needed:
+    // - Shadows top-level from different module, OR shadows a renamed symbol
     let shadows_renamed_symbol = self.used_canonical_names.get(original_name).is_some_and(|info| {
       info.owner.is_some_and(|owner| owner != symbol_ref.owner || info.was_renamed)
     });
-
-    // Check if this name would shadow CJS wrapper parameters
+    // - Would shadow CJS wrapper params (`exports`, `module`)
     let shadows_cjs_param = is_cjs_wrapped && Self::CJS_WRAPPER_NAMES.contains(&original_name);
 
-    // Only store in canonical_names if we need to rename.
-    // Symbols keeping their original name can be looked up via symbol_db.name()
     if shadows_renamed_symbol || shadows_cjs_param {
-      // Generate a unique name
+      let scoping = self.symbol_db.local_db(symbol_ref.owner).ast_scopes.scoping();
+
+      // Find unique name: skip candidates that conflict with top-level or module symbols
       let mut count = 1u32;
-      let mut candidate_name: CompactStr =
-        concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();
-      while self.used_canonical_names.contains_key(&candidate_name) {
-        count += 1;
-        candidate_name =
+      let candidate_name = loop {
+        let name: CompactStr =
           concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();
-      }
+
+        let conflicts_with_top_level = self.used_canonical_names.contains_key(&name);
+
+        if conflicts_with_top_level {
+          count += 1;
+          continue;
+        }
+
+        let conflicts_with_module_symbol = scoping.symbol_names().any(|n| name.as_str() == n);
+
+        if conflicts_with_module_symbol {
+          count += 1;
+          continue;
+        }
+
+        break name;
+      };
+
       self.canonical_names.insert(symbol_ref, candidate_name);
     }
-    // else: symbol keeps original name, no need to store
+    // else: keeps original name, looked up via symbol_db during code generation
   }
 
   #[inline]

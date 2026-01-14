@@ -421,10 +421,8 @@ impl LinkStage<'_> {
     // and they are all connected, the performance may be impacted. But this seems rare in real world,
     // we could optimize it later if needed.
     for entry in dynamic_entries.iter() {
-      let mut entry_module_idx = entry.idx;
-      let cur = entry_module_idx;
       let mut visited = FxHashSet::default();
-      self.construct_dynamic_entry_graph(&mut graph, &mut visited, &mut entry_module_idx, cur);
+      self.construct_dynamic_entry_graph(&mut graph, &mut visited, entry.idx);
     }
     let mut cycled_dynamic_entries = FxHashSet::default();
     // https://docs.rs/petgraph/latest/petgraph/algo/fn.tarjan_scc.html
@@ -453,7 +451,6 @@ impl LinkStage<'_> {
     &self,
     g: &mut DiGraphMap<ModuleIdx, ()>,
     visited: &mut FxHashSet<ModuleIdx>,
-    root_node: &mut ModuleIdx,
     cur_node: ModuleIdx,
   ) -> Option<()> {
     if visited.contains(&cur_node) {
@@ -464,21 +461,18 @@ impl LinkStage<'_> {
     for rec in &module.import_records {
       if rec.kind == ImportKind::DynamicImport {
         let seen = g.contains_node(rec.resolved_module);
-        if *root_node != rec.resolved_module {
-          g.add_edge(*root_node, rec.resolved_module, ());
+        if cur_node != rec.resolved_module {
+          g.add_edge(cur_node, rec.resolved_module, ());
           // Even it is visited before, we still needs to connect the edge
           if seen {
             continue;
           }
         }
-        let previous = *root_node;
-        *root_node = rec.resolved_module;
-        self.construct_dynamic_entry_graph(g, visited, root_node, rec.resolved_module);
-        *root_node = previous;
+        self.construct_dynamic_entry_graph(g, visited, rec.resolved_module);
         continue;
       }
       // Can't put it at the beginning of the loop,
-      self.construct_dynamic_entry_graph(g, visited, root_node, rec.resolved_module);
+      self.construct_dynamic_entry_graph(g, visited, cur_node);
     }
     Some(())
   }

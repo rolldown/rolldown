@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## SOURCE_MAP_BROKEN
+
+```text
+[SOURCE_MAP_BROKEN] Warning: Sourcemap is likely to be incorrect: options.sourcemap  is file, a plugin test-load-plugin for  load didn't generate a sourcemap.
+
+```
+
+## SOURCE_MAP_BROKEN
+
+```text
+[SOURCE_MAP_BROKEN] Warning: Sourcemap is likely to be incorrect: options.sourcemap  is file, a plugin test-render-chunk-plugin for  render_chunk didn't generate a sourcemap.
+
+```
+
+## SOURCE_MAP_BROKEN
+
+```text
+[SOURCE_MAP_BROKEN] Warning: Sourcemap is likely to be incorrect: options.sourcemap  is file, a plugin test-transform-plugin for  transform didn't generate a sourcemap.
+
+```
+
+# Assets
+
+## main.js
+
+```js
+
+```

@@ -20,6 +20,7 @@ pub struct BindingChecksOptions {
   pub prefer_builtin_feature: Option<bool>,
   pub could_not_clean_directory: Option<bool>,
   pub plugin_timings: Option<bool>,
+  pub source_map_broken: Option<bool>,
 }
 impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
   fn from(value: BindingChecksOptions) -> Self {
@@ -40,6 +41,7 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       prefer_builtin_feature: value.prefer_builtin_feature,
       could_not_clean_directory: value.could_not_clean_directory,
       plugin_timings: value.plugin_timings,
+      source_map_broken: value.source_map_broken,
     }
   }
 }

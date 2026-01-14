@@ -121,4 +121,10 @@ export interface ChecksOptions {
    * @default true
    * */
   pluginTimings?: boolean;
+
+  /**
+   * Whether to emit warnings when detecting source map broken
+   * @default true
+   * */
+  sourceMapBroken?: boolean;
 }

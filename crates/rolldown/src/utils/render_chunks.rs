@@ -6,6 +6,7 @@ use futures::future::try_join_all;
 use rolldown_common::{
   InsChunkIdx, InstantiationKind, RollupRenderedChunk, SharedNormalizedBundlerOptions,
 };
+use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
 use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
 use rustc_hash::FxHashMap;
@@ -17,6 +18,7 @@ pub async fn render_chunks(
   plugin_driver: &SharedPluginDriver,
   assets: &mut IndexInstantiatedChunks,
   options: &SharedNormalizedBundlerOptions,
+  warnings: &mut Vec<BuildDiagnostic>,
 ) -> Result<()> {
   let chunks = Arc::new(
     assets
@@ -45,15 +47,16 @@ pub async fn render_chunks(
             chunks,
           })
           .await?;
+
         return Ok(Some((index.into(), render_chunk_ret)));
       }
 
-      Ok::<Option<(InsChunkIdx, (String, Vec<SourceMap>))>, anyhow::Error>(None)
+      Ok::<Option<(InsChunkIdx, (String, Vec<SourceMap>, Vec<String>))>, anyhow::Error>(None)
     }
   }))
   .await?;
 
-  for (index, (code, sourcemaps)) in result.into_iter().flatten() {
+  for (index, (code, sourcemaps, plugin_names)) in result.into_iter().flatten() {
     let asset = &mut assets[index];
     asset.content = code.into();
     if !sourcemaps.is_empty() {
@@ -62,6 +65,26 @@ pub async fn render_chunks(
         sourcemap_chain.push(asset_map);
         sourcemap_chain.extend(sourcemaps.iter());
         asset.map = Some(collapse_sourcemaps(&sourcemap_chain));
+      }
+    }
+
+    if options.sourcemap.is_some() {
+      let sourcemap_type =
+        options.sourcemap.as_ref().map(rolldown_common::SourceMapType::as_str).unwrap();
+
+      if sourcemap_type == "file" || sourcemap_type == "inline" {
+        if !plugin_names.is_empty() {
+          plugin_names.iter().for_each(|plugin_name| {
+            warnings.push(
+              BuildDiagnostic::sourcemap_broken(
+                plugin_name.as_str(),
+                "render_chunk",
+                sourcemap_type,
+              )
+              .with_severity_warning(),
+            );
+          });
+        }
       }
     }
   }

@@ -100,7 +100,8 @@ impl PluginDriver {
   pub async fn render_chunk(
     &self,
     mut args: HookRenderChunkArgs<'_>,
-  ) -> Result<(String, Vec<SourceMap>)> {
+  ) -> Result<(String, Vec<SourceMap>, Vec<String>)> {
+    let mut plugin_names = vec![];
     let mut sourcemap_chain = vec![];
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_render_chunk_meta)
@@ -120,6 +121,8 @@ impl PluginDriver {
           args.code = r.code;
           if let Some(map) = r.map {
             sourcemap_chain.push(map);
+          } else {
+            plugin_names.push(plugin.call_name().to_string());
           }
           trace_action!(action::HookRenderChunkEnd {
             action: "HookRenderChunkEnd",
@@ -146,7 +149,7 @@ impl PluginDriver {
       ))
       .await?;
     }
-    Ok((args.code, sourcemap_chain))
+    Ok((args.code, sourcemap_chain, plugin_names))
   }
 
   pub async fn augment_chunk_hash(

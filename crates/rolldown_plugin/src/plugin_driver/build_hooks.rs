@@ -164,7 +164,11 @@ impl PluginDriver {
     Ok(None)
   }
 
-  pub async fn load(&self, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  pub async fn load(
+    &self,
+    args: &HookLoadArgs<'_>,
+    plugin_names: &mut Vec<String>,
+  ) -> HookLoadReturn {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_load_meta)
     {
@@ -188,6 +192,9 @@ impl PluginDriver {
             plugin_id: plugin_idx.raw(),
             call_id: "${call_id}",
           });
+          if r.map.is_none() {
+            plugin_names.push(plugin.call_name().to_string());
+          }
           anyhow::Ok(Some(r))
         } else {
           trace_action!(action::HookLoadCallEnd {
@@ -225,6 +232,7 @@ impl PluginDriver {
     side_effects: &mut Option<HookSideEffects>,
     module_type: &mut ModuleType,
     magic_string_tx: Option<Arc<std::sync::mpsc::Sender<rolldown_common::SourceMapGenMsg>>>,
+    plugin_names: &mut Vec<String>,
   ) -> Result<String> {
     let mut code = original_code;
     let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
@@ -262,6 +270,8 @@ impl PluginDriver {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
         if let Some(map) = self.normalize_transform_sourcemap(r.map, id, &code, r.code.as_ref()) {
           original_sourcemap_chain.push(SourcemapChainElement::Transform((plugin_idx, map)));
+        } else {
+          plugin_names.push(plugin.call_name().to_string());
         }
         plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
         if let Some(v) = r.side_effects {

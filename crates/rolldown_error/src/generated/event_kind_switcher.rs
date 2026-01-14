@@ -41,5 +41,6 @@ bitflags! {
     const AlreadyClosedError = 1 << 34;
     const CouldNotCleanDirectory = 1 << 35;
     const PluginTimings = 1 << 36;
+    const SourceMapBroken = 1 << 39;
   }
 }

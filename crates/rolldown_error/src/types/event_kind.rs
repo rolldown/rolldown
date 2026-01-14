@@ -87,6 +87,7 @@ pub enum EventKind {
   ///
   /// {@include ../docs/checks-plugin-timings.md}
   PluginTimings = 36,
+  SourceMapBroken = 39,
 }
 
 impl Display for EventKind {
@@ -134,6 +135,7 @@ impl Display for EventKind {
       EventKind::AlreadyClosedError => write!(f, "ALREADY_CLOSED"),
       EventKind::CouldNotCleanDirectory => write!(f, "COULD_NOT_CLEAN_DIRECTORY"),
       EventKind::PluginTimings => write!(f, "PLUGIN_TIMINGS"),
+      EventKind::SourceMapBroken => write!(f, "SOURCE_MAP_BROKEN"),
     }
   }
 }

@@ -285,6 +285,10 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when plugins take significant time during the build process',
     ),
   ),
+  sourceMapBroken: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warnings when detecting source map broken'),
+  ),
 });
 
 const CompressOptionsKeepNamesSchema = v.strictObject({

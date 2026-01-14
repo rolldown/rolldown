@@ -279,6 +279,7 @@ impl<'name> Renamer<'name> {
         let name: CompactStr =
           concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();
 
+        // Check if conflicts with top-level or renamed symbols
         let conflicts_with_top_level = self.used_canonical_names.contains_key(&name);
 
         if conflicts_with_top_level {
@@ -286,6 +287,7 @@ impl<'name> Renamer<'name> {
           continue;
         }
 
+        // Check if conflicts with own module's nested bindings
         let conflicts_with_module_symbol = scoping.symbol_names().any(|n| name.as_str() == n);
 
         if conflicts_with_module_symbol {

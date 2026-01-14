@@ -201,7 +201,7 @@ pub fn deconflict_chunk_symbols(
     // shadowing `exports` and `module` which are synthetic parameters
     let is_cjs_wrapped = matches!(link_output.metas[module_idx].wrap_kind(), WrapKind::Cjs);
 
-    // Skip the first binding which is the root scope itself - they're already handled
+    // Skip root scope (index 0) - already handled via `add_symbol_in_root_scope` above
     for (_, bindings) in scoping.iter_bindings().skip(1) {
       for (name, symbol_id) in bindings {
         let symbol_ref = (module_idx, *symbol_id).into();

@@ -54,12 +54,6 @@ class ModuleHotContext {
 
 class DefaultDevRuntime extends BaseDevRuntime {
   /**
-   * Client ID generated at runtime initialization, used for lazy compilation requests.
-   * @type {string}
-   */
-  clientId;
-
-  /**
    * @param {WebSocket} socket
    * @param {string} clientId
    */
@@ -85,8 +79,7 @@ class DefaultDevRuntime extends BaseDevRuntime {
       socket.onopen = null;
     };
 
-    super(messenger);
-    this.clientId = clientId;
+    super(messenger, clientId);
   }
 
   /**

@@ -180,13 +180,9 @@ impl GenerateStage<'_> {
           let Module::Normal(module) = &self.link_output.module_table[module_id] else {
             return;
           };
-          module
-            .import_records
-            .iter()
-            .inspect(|rec| {
-              if let Module::Normal(importee_module) =
-                &self.link_output.module_table[rec.resolved_module]
-              {
+          module.import_records.iter().for_each(|rec| {
+            match &self.link_output.module_table[rec.resolved_module] {
+              Module::Normal(importee_module) => {
                 // the the resolved module is not included in module graph, skip
                 // TODO: Is that possible that the module of the record is a external module?
                 if !self.link_output.metas[importee_module.idx].is_included {
@@ -198,16 +194,16 @@ impl GenerateStage<'_> {
                   cross_chunk_dynamic_imports.insert(importee_chunk);
                 }
               }
-            })
-            .filter(|rec| {
-              matches!(rec.kind, ImportKind::Import)
-                && !rec.meta.contains(ImportRecordMeta::IsExportStar)
-            })
-            .filter_map(|rec| self.link_output.module_table[rec.resolved_module].as_external())
-            .for_each(|importee| {
-              // Ensure the external module is imported in case it has side effects.
-              imports_from_external_modules.entry(importee.idx).or_default();
-            });
+              Module::External(_) => {
+                // Ensure the external module is imported in case it has side effects.
+                if matches!(rec.kind, ImportKind::Import)
+                  && !rec.meta.contains(ImportRecordMeta::IsExportStar)
+                {
+                  imports_from_external_modules.entry(rec.resolved_module).or_default();
+                }
+              }
+            }
+          });
 
           module.named_imports.iter().for_each(|(_, import)| {
             let rec = &module.import_records[import.record_idx];

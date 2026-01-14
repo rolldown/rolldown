@@ -10,5 +10,4 @@ export interface HmrReloadMessage {
 
 export interface ConnectedMessage {
   type: 'connected';
-  clientId: string;
 }

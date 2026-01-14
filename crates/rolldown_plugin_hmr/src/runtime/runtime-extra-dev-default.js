@@ -54,15 +54,16 @@ class ModuleHotContext {
 
 class DefaultDevRuntime extends BaseDevRuntime {
   /**
-   * Client ID assigned by the dev server, used for lazy compilation requests.
-   * @type {string | null}
+   * Client ID generated at runtime initialization, used for lazy compilation requests.
+   * @type {string}
    */
-  clientId = null;
+  clientId;
 
   /**
    * @param {WebSocket} socket
+   * @param {string} clientId
    */
-  constructor(socket) {
+  constructor(socket, clientId) {
     /** @type {string[]} */
     const queuedMessages = [];
     /** @type {Messenger} */
@@ -85,6 +86,7 @@ class DefaultDevRuntime extends BaseDevRuntime {
     };
 
     super(messenger);
+    this.clientId = clientId;
   }
 
   /**
@@ -143,22 +145,24 @@ function loadScript(url) {
 }
 
 console.debug('HMR runtime loaded', '$ADDR');
+// Generate client ID immediately at runtime initialization
+// This ensures the client ID is available before any lazy imports
+const clientId = crypto.randomUUID();
 const addr = new URL('ws://$ADDR');
+addr.searchParams.set('clientId', clientId);
 
 const socket = new WebSocket(addr);
 
 (/** @type {any} */ (globalThis)).__rolldown_runtime__ ??=
-  new DefaultDevRuntime(socket);
+  new DefaultDevRuntime(socket, clientId);
 
 /** @param {MessageEvent} event */
 socket.onmessage = function(event) {
   const data = JSON.parse(event.data);
   console.debug('Received message:', data);
   if (data.type === 'connected') {
-    // Store the client ID for use in lazy compilation requests
-    (/** @type {any} */ (globalThis)).__rolldown_runtime__.clientId =
-      data.clientId;
-    console.debug('[hmr]: Connected with client ID:', data.clientId);
+    // Server acknowledged the connection
+    console.debug('[hmr]: Connection established with server');
   } else if (data.type === 'hmr:update') {
     if (typeof process === 'object') {
       import(data.path);

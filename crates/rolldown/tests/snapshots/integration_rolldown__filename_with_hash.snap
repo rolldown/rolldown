@@ -3702,6 +3702,11 @@ expression: output
 
 - main-!~{000}~.js => main-lczLaht1.js
 
+# tests/rolldown/cjs_compat/issue_7833
+
+- config-!~{001}~.js => config-B_kOONiv.js
+- main-!~{000}~.js => main-BcyiY5Pq.js
+
 # tests/rolldown/cjs_compat/mix-cjs-esm
 
 - main-!~{000}~.js => main-BHieYZNg.js

@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## config.js
+
+```js
+
+//#region config.js
+var config_default = { name: "example" };
+
+//#endregion
+module.exports = config_default;
+```
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+const require_config = require('./config.js');
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+
+//#region main.js
+node_assert.default.deepStrictEqual(require_config, { name: "example" });
+
+//#endregion
+```

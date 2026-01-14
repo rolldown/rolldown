@@ -1375,6 +1375,12 @@
             "null"
           ]
         },
+        "toleratedTransform": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "cannotCallNamespace": {
           "type": [
             "boolean",

@@ -32,14 +32,16 @@ bitflags! {
     const ResolveError = 1 << 25;
     const UnhandleableError = 1 << 26;
     const UnloadableDependencyError = 1 << 27;
-    const NapiError = 1 << 28;
-    const CannotCallNamespace = 1 << 29;
-    const ConfigurationFieldConflict = 1 << 30;
-    const PreferBuiltinFeature = 1 << 31;
-    const BundlerInitializeError = 1 << 32;
-    const PluginError = 1 << 33;
-    const AlreadyClosedError = 1 << 34;
-    const CouldNotCleanDirectory = 1 << 35;
-    const PluginTimings = 1 << 36;
+    const TransformError = 1 << 28;
+    const ToleratedTransform = 1 << 29;
+    const NapiError = 1 << 30;
+    const CannotCallNamespace = 1 << 31;
+    const ConfigurationFieldConflict = 1 << 32;
+    const PreferBuiltinFeature = 1 << 33;
+    const BundlerInitializeError = 1 << 34;
+    const PluginError = 1 << 35;
+    const AlreadyClosedError = 1 << 36;
+    const CouldNotCleanDirectory = 1 << 37;
+    const PluginTimings = 1 << 38;
   }
 }

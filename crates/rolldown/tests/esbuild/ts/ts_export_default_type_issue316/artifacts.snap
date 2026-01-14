@@ -33,10 +33,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
    ╭─[ keep/value-namespace-merged.ts:5:13 ]
    │
  5 │     export let num = 0
@@ -46,10 +46,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```
 
-## PARSE_ERROR
+## TOLERATED_TRANSFORM
 
 ```text
-[PARSE_ERROR] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
    ╭─[ keep/value-namespace.ts:2:13 ]
    │
  2 │     export let num = 0

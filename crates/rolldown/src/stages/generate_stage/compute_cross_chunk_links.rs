@@ -183,8 +183,7 @@ impl GenerateStage<'_> {
           module.import_records.iter().for_each(|rec| {
             match &self.link_output.module_table[rec.resolved_module] {
               Module::Normal(importee_module) => {
-                // the the resolved module is not included in module graph, skip
-                // TODO: Is that possible that the module of the record is a external module?
+                // The the resolved module is not included in module graph, skip it.
                 if !self.link_output.metas[importee_module.idx].is_included {
                   return;
                 }

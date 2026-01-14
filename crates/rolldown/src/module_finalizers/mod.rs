@@ -320,30 +320,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             .expect("This module should be in a chunk");
           let is_symbol_in_other_chunk = cur_chunk_idx != chunk_idx_of_canonical_symbol;
           if is_symbol_in_other_chunk {
-            // In cjs output, we need convert the `import { foo } from 'foo'; console.log(foo);`;
-            // If `foo` is split into another chunk, we need to convert the code `console.log(foo);` to `console.log(require_xxxx.foo);`
-            // instead of keeping `console.log(foo)` as we did in esm output. The reason here is we need to keep live binding in cjs output.
-
-            let require_binding = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
-              .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
-
-            let chunk = &self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol];
-            if chunk.entry_module_idx() == Some(canonical_ref.owner)
-              && matches!(self.ctx.linking_infos[canonical_ref.owner].wrap_kind(), WrapKind::Cjs)
-            {
-              hint.insert(FinalizedExprProcessHint::FromCjsWrapKindEntry);
-              // see https://github.com/rolldown/rolldown/blob/16349a4efa8d841d3b5ca8e2ebabf24a1e1c406f/crates/rolldown/src/utils/chunk/render_chunk_exports.rs?plain=1#L159-L182
-              if matches!(chunk.output_exports, OutputExports::Default) {
-                self.snippet.id_ref_expr(require_binding, SPAN)
-              } else {
-                self.snippet.literal_prop_access_member_expr_expr(require_binding, "default")
-              }
-            } else {
-              let exported_name = &self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
-                .exports_to_other_chunks[&canonical_ref][0];
-
-              self.snippet.literal_prop_access_member_expr_expr(require_binding, exported_name)
-            }
+            let (expr, extra_hint) = self.finalized_expr_for_cross_chunk_symbol(
+              cur_chunk_idx,
+              chunk_idx_of_canonical_symbol,
+              canonical_ref,
+            );
+            hint.insert(extra_hint);
+            expr
           } else {
             self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
           }
@@ -370,6 +353,79 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
 
     (expr, hint)
+  }
+
+  /// Generates the expression for accessing a symbol from another chunk in CJS output.
+  ///
+  /// In CJS output, cross-chunk symbol access uses `require()` bindings:
+  /// - `import { foo } from 'foo'; console.log(foo);` becomes `console.log(require_foo.foo);`
+  ///
+  /// Returns the expression and any additional hints for processing.
+  ///
+  /// ## Cross-Chunk Symbol Resolution Matrix
+  ///
+  /// See `crates/rolldown/tests/rolldown/topics/exports/README.md` for the full test matrix.
+  ///
+  /// | # | Chunk Type | WrapKind | OutputExports | Export Name | Result |
+  /// |---|------------|----------|---------------|-------------|--------|
+  /// | 1 | Entry | Cjs | Default | default | `require_binding` |
+  /// | 2 | Entry | Cjs | Named | default | `require_binding.default` |
+  /// | 3 | Entry | Cjs | Named | named | `require_binding.default` (access wrapped module) |
+  /// | 4 | Entry | Esm | Default | default | N/A (invalid: ESM wrap adds extra exports) |
+  /// | 5 | Entry | Esm | Named | default | `require_binding.default` |
+  /// | 6 | Entry | Esm | Named | named | `require_binding.exportName` |
+  /// | 7 | Entry | None | Default | default | `require_binding` |
+  /// | 8 | Entry | None | Named | default | `require_binding.default` |
+  /// | 9 | Entry | None | Named | named | `require_binding.exportName` |
+  /// | 10-15 | Common | * | Named | * | `require_binding.exportName` |
+  fn finalized_expr_for_cross_chunk_symbol(
+    &self,
+    cur_chunk_idx: ChunkIdx,
+    target_chunk_idx: ChunkIdx,
+    canonical_ref: SymbolRef,
+  ) -> (ast::Expression<'ast>, FinalizedExprProcessHint) {
+    let require_binding = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
+      .require_binding_names_for_other_chunks[&target_chunk_idx];
+
+    let chunk = &self.ctx.chunk_graph.chunk_table[target_chunk_idx];
+
+    // Determine chunk type: Entry (symbol owner is entry module) vs Common
+    let is_entry_chunk_for_symbol = chunk.entry_module_idx() == Some(canonical_ref.owner);
+
+    // Get wrap kind for entry chunks
+    let wrap_kind = self.ctx.linking_infos[canonical_ref.owner].wrap_kind();
+
+    // For CJS-wrapped entry chunks, we access the wrapped module directly via `require_binding`
+    // or `require_binding.default` depending on OutputExports.
+    // See https://github.com/rolldown/rolldown/blob/16349a4efa8d841d3b5ca8e2ebabf24a1e1c406f/crates/rolldown/src/utils/chunk/render_chunk_exports.rs?plain=1#L159-L182
+    if is_entry_chunk_for_symbol && matches!(wrap_kind, WrapKind::Cjs) {
+      // Cases #1-3: Entry + Cjs
+      let expr = match chunk.output_exports {
+        // Case #1: Entry + Cjs + Default + default → require_binding
+        OutputExports::Default => self.snippet.id_ref_expr(require_binding, SPAN),
+        // Cases #2-3: Entry + Cjs + Named → require_binding.default (the wrapped module)
+        _ => self.snippet.literal_prop_access_member_expr_expr(require_binding, "default"),
+      };
+      return (expr, FinalizedExprProcessHint::FromCjsWrapKindEntry);
+    }
+
+    // All other cases: Entry with Esm/None WrapKind, or Common chunks
+    // These use the exported name from exports_to_other_chunks
+    let exported_name = &self.ctx.chunk_graph.chunk_table[target_chunk_idx].exports_to_other_chunks
+      [&canonical_ref][0];
+    let is_default_export = exported_name.as_str() == "default";
+
+    // When OutputExports::Default, the entire module.exports IS the default value directly.
+    // See https://github.com/rolldown/rolldown/issues/7833
+    let expr = match (&chunk.output_exports, is_default_export) {
+      // Case #7: Entry + None + Default + default → require_binding
+      (OutputExports::Default, true) => self.snippet.id_ref_expr(require_binding, SPAN),
+      // Cases #5, #8, #10, #12, #14: Named + default → require_binding.default
+      // Cases #6, #9, #11, #13, #15: Named + named → require_binding.exportName
+      _ => self.snippet.literal_prop_access_member_expr_expr(require_binding, exported_name),
+    };
+
+    (expr, FinalizedExprProcessHint::empty())
   }
 
   fn try_inline_constant_from_namespace_alias(

@@ -1335,13 +1335,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 };
 
                 if needs_inline_name {
-                  // current statement will be pushed to program.body, so the insert position is program.body.len() + 1
-                  let insert_position = program.body.len() + 1;
-                  self.keep_name_statement_to_insert.push((
-                    insert_position,
-                    CompactStr::from("default"),
-                    CompactStr::new(canonical_name_for_default_export_ref),
-                  ));
+                  // Wrap the expression inline: `__name(<expr>, "default")`
+                  // This matches esbuild's output and allows tree-shaking with PURE annotation
+                  let name_ref = self.canonical_ref_for_runtime("__name");
+                  let (finalized_callee, _) =
+                    self.finalized_expr_for_symbol_ref(name_ref, false, false);
+                  init_expr = self.snippet.keep_name_call_expr(
+                    "default",
+                    init_expr,
+                    finalized_callee,
+                    true, // pure annotation for tree-shaking
+                  );
                 }
               }
 

@@ -36,10 +36,18 @@ class Module {
 
 export class DevRuntime {
   /**
-   * @param {Messenger} messenger
+   * Client ID generated at runtime initialization, used for lazy compilation requests.
+   * @type {string}
    */
-  constructor(messenger) {
+  clientId;
+
+  /**
+   * @param {Messenger} messenger
+   * @param {string} clientId
+   */
+  constructor(messenger, clientId) {
     this.messenger = messenger;
+    this.clientId = clientId;
   }
 
   /**

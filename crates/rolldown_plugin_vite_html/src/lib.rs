@@ -11,7 +11,7 @@ use std::{
 use cow_utils::CowUtils as _;
 use html5gum::Span;
 use oxc::ast_visit::Visit;
-use rolldown_common::side_effects::HookSideEffects;
+use rolldown_common::{ModuleType, side_effects::HookSideEffects};
 use rolldown_plugin::{HookTransformOutput, HookUsage, LogWithoutPlugin, Plugin};
 use rolldown_plugin_utils::{
   AssetUrlResult, ModulePreload, RenderBuiltUrl, ToOutputFilePathEnv, UsizeOrFunction,
@@ -495,6 +495,7 @@ impl Plugin for ViteHtmlPlugin {
     Ok(Some(HookTransformOutput {
       code: js.into(),
       side_effects: Some(HookSideEffects::NoTreeshake),
+      module_type: Some(ModuleType::Js),
       ..Default::default()
     }))
   }

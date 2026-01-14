@@ -132,6 +132,7 @@ impl Plugin for ViteCSSPostPlugin {
       cache.inner.insert(rolldown_utils::concat_string!(hash, "_", index), css.into_owned());
       return Ok(Some(HookTransformOutput {
         code: Some("export default ''".to_owned()),
+        module_type: Some(ModuleType::Js),
         ..Default::default()
       }));
     }

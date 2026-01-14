@@ -1,15 +1,27 @@
-// @ts-nocheck FIXME(hyf0): Enable type check
+// @ts-check
 
-/// <reference path="../../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js" />
+/** @import { DevRuntime } from "../../rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js" */
+
+/** @type {typeof DevRuntime} */
+// @ts-expect-error -- there's no way to declare a variable by JSDoc
+var BaseDevRuntime = DevRuntime;
 
 class TestHotContext {
   moduleId;
+  /** @type {{ deps: string, cb: Function }[]} */
   callbacks = [];
 
+  /**
+   * @param {string} moduleId
+   */
   constructor(moduleId) {
     this.moduleId = moduleId;
   }
 
+  /**
+   * @param {...any} args
+   * @returns {void}
+   */
   accept(...args) {
     if (args.length === 0) return;
     if (args.length === 1) {
@@ -20,7 +32,7 @@ class TestHotContext {
   }
 }
 
-class TestDevRuntime extends DevRuntime {
+class TestDevRuntime extends BaseDevRuntime {
   contexts = new Map();
 
   /**
@@ -59,4 +71,8 @@ class TestDevRuntime extends DevRuntime {
   }
 }
 
-/** @type {any} */ (globalThis).__rolldown_runtime__ ??= new TestDevRuntime();
+/** @type {any} */
+const messenger = undefined;
+const clientId = crypto.randomUUID();
+
+/** @type {any} */ (globalThis).__rolldown_runtime__ ??= new TestDevRuntime(messenger, clientId);

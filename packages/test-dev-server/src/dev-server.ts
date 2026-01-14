@@ -202,11 +202,9 @@ class DevServer {
 
           if (moduleId && clientId) {
             const moduleCode = await devEngine.compileEntry(moduleId, clientId);
-            if (moduleCode != null) {
-              res!.setHeader('Content-Type', 'application/javascript');
-              res!.end(moduleCode);
-              return;
-            }
+            res!.setHeader('Content-Type', 'application/javascript');
+            res!.end(moduleCode);
+            return;
           }
         } catch (err) {
           // Return server error response

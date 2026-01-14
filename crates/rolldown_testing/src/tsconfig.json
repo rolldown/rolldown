@@ -1,0 +1,12 @@
+{
+  "extends": "../../../tsconfig.json",
+  "include": ["./**/*", "../../rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js"],
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "isolatedDeclarations": false,
+    "allowJs": true
+  }
+}

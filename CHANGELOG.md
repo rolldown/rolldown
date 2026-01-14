@@ -1,4 +1,83 @@
 
+## [1.0.0-beta.60] - 2026-01-14
+
+### 💥 BREAKING CHANGES
+
+- tsconfig: enable auto-discovery by default (#7817) by @shulaoda
+
+### 🚀 Features
+
+- node: add `output.codeSplitting` option and deprecate `output.advancedChunks` (#7855) by @hyf0
+- nativeMagicString reset (#7828) by @IWANABETHATGUY
+- nativeMagicString lastChar (#7819) by @IWANABETHATGUY
+- dev/lazy: inject lazy compilation runtime automatically (#7816) by @hyf0
+- nativeMagicString snip (#7818) by @IWANABETHATGUY
+- nativeMagicString construct with options (#7814) by @IWANABETHATGUY
+- nativeMagicString clone (#7813) by @IWANABETHATGUY
+- nativeMagicString `insert` (#7812) by @IWANABETHATGUY
+- nativeMagicString `slice` (#7807) by @IWANABETHATGUY
+- nativeMagicString trim methods (#7800) by @IWANABETHATGUY
+- make closeBundle hook receive the last error (#7278) by @Copilot
+
+### 🐛 Bug Fixes
+
+- inline __name calls for default exports  (#7862) by @IWANABETHATGUY
+- improve variable renaming to avoid unnecessary shadowing in nested scopes (#7859) by @IWANABETHATGUY
+- use correct index when inserting keepNames statements during export default transformation (#7853) by @IWANABETHATGUY
+- transform non-static dynamic imports when `dynamicImportInCjs` is `false` (#7823) by @shulaoda
+- dev/lazy: should include imported and non-executed modules in the patch (#7815) by @hyf0
+- set ExportsKind to Esm when json is none object literal  (#7808) by @IWANABETHATGUY
+- nativeMagicString move api (#7796) by @IWANABETHATGUY
+- remove unnecessary exports after merging into commong and user defined entry (#7789) by @IWANABETHATGUY
+- use output.name instead of chunk.name in mixed export warning (#7788) by @Copilot
+
+### 🚜 Refactor
+
+- rust: rename `advanced_chunks` to `manual_code_splitting` (#7856) by @hyf0
+- string_wizard error hanlding (#7830) by @IWANABETHATGUY
+- remove `experimental.disableLiveBindings` option (#7820) by @sapphi-red
+- node/test: run fixture tests in concurrent (#7790) by @hyf0
+- move ConfigExport and RolldownOptionsFunction types to define-config (#7799) by @shulaoda
+- cli: validate config after resolving and improve error message (#7798) by @shulaoda
+
+### 📚 Documentation
+
+- rebrand (#7670) by @yyx990803
+- fix incorrect default value for propertyReadSideEffects (#7847) by @Copilot
+- remove options pages and redirect to reference pages (#7834) by @sapphi-red
+- options: inline types to option property pages (#7831) by @sapphi-red
+- options: port checks.pluginTimings content from options page to reference page (#7832) by @sapphi-red
+- options: use `@linkcode` where possible (#7824) by @sapphi-red
+- options: port content from options page to reference page (#7822) by @sapphi-red
+- options: add descriptions for output options (#7821) by @sapphi-red
+- options: add description for input options (#7802) by @sapphi-red
+- options: add description for `checks.*` (#7801) by @sapphi-red
+- apis: add hook graph (#7671) by @sapphi-red
+
+### 🧪 Testing
+
+- add all valid combination of chunk exports related test (#7851) by @IWANABETHATGUY
+- enable MagicString test after api return type alignment (#7797) by @IWANABETHATGUY
+- init magic-string test (#7794) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- rolldown_binding: allow crate-type as lib (#7866) by @Brooooooklyn
+- README.md: adjust position and size of rolldown logo (#7861) by @hyf0
+- deps: update test262 submodule for tests (#7857) by @sapphi-red
+- deps: update oxc to v0.108.0 (#7845) by @renovate[bot]
+- deps: update dependency oxlint to v1.39.0 (#7849) by @renovate[bot]
+- deps: update dependency oxfmt to ^0.24.0 (#7844) by @renovate[bot]
+- deps: update npm packages (#7841) by @renovate[bot]
+- deps: update rust crates (#7839) by @renovate[bot]
+- deps: update github-actions (#7840) by @renovate[bot]
+- use workspace edition for all crates (#7829) by @IWANABETHATGUY
+- deps: update dependency oxlint-tsgolint to v0.11.0 (#7827) by @renovate[bot]
+- deps: update napi to v3.8.2 (#7810) by @renovate[bot]
+- remove outdated snapshot files (#7806) by @shulaoda
+- deps: update crate-ci/typos action to v1.42.0 (#7792) by @renovate[bot]
+
+
 ## [1.0.0-beta.59] - 2026-01-07
 
 ### 🚀 Features

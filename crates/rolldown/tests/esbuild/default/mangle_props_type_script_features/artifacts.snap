@@ -81,8 +81,8 @@ let ns;
 	_ns.MANGLE_CLASS_ = MANGLE_CLASS_;
 	let MANGLE_NAMESPACE_;
 	(function(_MANGLE_NAMESPACE_) {})(MANGLE_NAMESPACE_ || (MANGLE_NAMESPACE_ = _ns.MANGLE_NAMESPACE_ || (_ns.MANGLE_NAMESPACE_ = {})));
-	let MANGLE_ENUM_ = /* @__PURE__ */ function(MANGLE_ENUM_$1) {
-		return MANGLE_ENUM_$1;
+	let MANGLE_ENUM_ = /* @__PURE__ */ function(MANGLE_ENUM_) {
+		return MANGLE_ENUM_;
 	}({});
 	_ns.MANGLE_ENUM_ = MANGLE_ENUM_;
 	console.log({

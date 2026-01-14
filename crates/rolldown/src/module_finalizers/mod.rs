@@ -100,19 +100,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     self.scope.is_unresolved(reference_id)
   }
 
-  pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me CompactStr {
-    self.ctx.symbol_db.canonical_name_for(symbol, &self.ctx.chunk.canonical_names).unwrap_or_else(|| {
-      panic!(
-        "canonical name not found for {symbol:?}, original_name: {:?} in module {:?} when finalizing module {:?} in chunk {:?}",
-        symbol.name(self.ctx.symbol_db),
-        self.ctx.modules.get(symbol.owner).map_or("unknown", |module| module.stable_id()),
-        self.ctx.modules.get(self.ctx.idx).map_or("unknown", |module| module.stable_id()),
-        self.ctx.chunk.create_reasons.join(";")
-      );
-    })
+  pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me str {
+    self.ctx.symbol_db.canonical_name_for_or_original(symbol, &self.ctx.chunk.canonical_names)
   }
 
-  pub fn canonical_name_for_runtime(&self, name: &str) -> &CompactStr {
+  pub fn canonical_name_for_runtime(&self, name: &str) -> &'me str {
     let sym_ref = self.ctx.runtime.resolve_symbol(name);
     self.canonical_name_for(sym_ref)
   }
@@ -864,7 +856,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  fn get_conflicted_info(&self, id: KeepNameId) -> Option<(&str, &CompactStr)> {
+  fn get_conflicted_info(&self, id: KeepNameId) -> Option<(&'me str, &'me str)> {
     let symbol_ref: SymbolRef = match id {
       KeepNameId::SymbolId(symbol_id) => (self.ctx.idx, symbol_id).into(),
       KeepNameId::ReferenceId(reference_id) => {
@@ -879,7 +871,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let original_name = symbol_ref.name(self.ctx.symbol_db);
     let canonical_name = self.canonical_name_for(symbol_ref);
-    (original_name != canonical_name.as_str()).then_some((original_name, canonical_name))
+    (original_name != canonical_name).then_some((original_name, canonical_name))
   }
 
   /// rewrite toplevel `class ClassName {}` to `var ClassName = class {}`
@@ -1119,16 +1111,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
               let importee_wrapper_ref_name =
                 self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-              Some(self.snippet.promise_resolve_then_call_expr(
-                self.snippet.wrap_with_to_esm(
-                  self.snippet.builder.expression_identifier(
-                    SPAN,
-                    self.snippet.builder.atom(to_esm_fn_name.as_str()),
+              Some(
+                self.snippet.promise_resolve_then_call_expr(
+                  self.snippet.wrap_with_to_esm(
+                    self
+                      .snippet
+                      .builder
+                      .expression_identifier(SPAN, self.snippet.builder.atom(to_esm_fn_name)),
+                    self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                    self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
                   ),
-                  self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                  self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
                 ),
-              ))
+              )
             }
             WrapKind::None => {
               // The nature of `import()` is to load the module dynamically/lazily, so imported modules would
@@ -1373,7 +1367,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   self.keep_name_statement_to_insert.push((
                     insert_position,
                     CompactStr::new("default"),
-                    canonical_name_for_default_export_ref.clone(),
+                    CompactStr::new(canonical_name_for_default_export_ref),
                   ));
                 }
               }
@@ -1467,7 +1461,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let (original_name, _) = self.get_conflicted_info(name_binding_id?)?;
     let (_, canonical_name) = self.get_conflicted_info(symbol_binding_id?)?;
     let original_name: CompactStr = CompactStr::new(original_name);
-    let new_name = canonical_name.clone();
+    let new_name = CompactStr::new(canonical_name);
     let insert_position = self.cur_stmt_index + 1;
     Some((insert_position, original_name, new_name))
   }

@@ -134,7 +134,10 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
       );
 
       if ctx.link_output.used_symbol_refs.contains(&importee.namespace_ref) {
-        let external_module_symbol_name = &ctx.chunk.canonical_names[&importee.namespace_ref];
+        let external_module_symbol_name = ctx
+          .link_output
+          .symbol_db
+          .canonical_name_for_or_original(importee.namespace_ref, &ctx.chunk.canonical_names);
         // Check if this import needs __toESM
         let needs_interop =
           named_imports.is_some_and(|imports| external_import_needs_interop(imports));

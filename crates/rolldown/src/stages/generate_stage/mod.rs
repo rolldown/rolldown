@@ -2,7 +2,6 @@ use std::{path::PathBuf, sync::Arc};
 
 use arcstr::ArcStr;
 use futures::future::try_join_all;
-use oxc::semantic::{ScopeId, SymbolId};
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
@@ -21,7 +20,7 @@ use rolldown_std_utils::{PathBufExt, PathExt, representative_file_name_for_prese
 use rolldown_utils::{
   dashmap::FxDashMap,
   hash_placeholder::HashPlaceholderGenerator,
-  index_vec_ext::{IndexVecExt, IndexVecRefExt},
+  index_vec_ext::IndexVecExt,
   indexmap::FxIndexMap,
   make_unique_name::make_unique_name,
   rayon::{IntoParallelRefMutIterator, ParallelIterator},
@@ -115,36 +114,12 @@ impl<'a> GenerateStage<'a> {
     set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);
 
     debug_span!("deconflict_chunk_symbols").in_scope(|| {
-      let module_scope_symbol_id_map = self
-        .link_output
-        .symbol_db
-        .inner()
-        .par_iter_enumerated()
-        .filter_map(|(idx, db)| {
-          let Some(db) = db else {
-            return None;
-          };
-          let root_scope_id = db.ast_scopes.scoping().root_scope_id();
-          let mut vec: IndexVec<ScopeId, Vec<(SymbolId, &str)>> =
-            IndexVec::from_vec(vec![vec![]; db.ast_scopes.scoping().scopes_len()]);
-          for symbol_id in db.scoping().symbol_ids() {
-            let scope_id = db.scoping().symbol_scope_id(symbol_id);
-            if scope_id == root_scope_id {
-              continue;
-            }
-            vec[scope_id].push((symbol_id, db.scoping().symbol_name(symbol_id)));
-          }
-          Some((idx, vec))
-        })
-        .collect::<FxHashMap<ModuleIdx, IndexVec<ScopeId, Vec<(SymbolId, &str)>>>>();
-
       chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
         deconflict_chunk_symbols(
           chunk,
           self.link_output,
           self.options.format,
           &index_chunk_id_to_name,
-          &module_scope_symbol_id_map,
         );
       });
     });

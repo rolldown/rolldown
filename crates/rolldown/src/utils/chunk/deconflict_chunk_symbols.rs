@@ -3,8 +3,7 @@ use oxc::span::CompactStr;
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use arcstr::ArcStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleScopeSymbolIdMap, OutputFormat, TaggedSymbolRef,
-  WrapKind,
+  Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
@@ -15,9 +14,8 @@ pub fn deconflict_chunk_symbols(
   link_output: &LinkStageOutput,
   format: OutputFormat,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
-  map: &ModuleScopeSymbolIdMap<'_>,
 ) {
-  let mut renamer = Renamer::new(&link_output.symbol_db, format);
+  let mut renamer = Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, format);
 
   chunk
     .modules
@@ -190,8 +188,27 @@ pub fn deconflict_chunk_symbols(
     })
     .collect();
 
-  // rename non-top-level names
-  renamer.rename_non_root_symbol(&chunk.modules, link_output, map);
+  // Register nested scope symbols with their canonical names.
+  // Since we now avoid conflicting names during root scope renaming, most nested scope
+  // symbols can keep their original names, but we still need to handle shadowing cases.
+  for module_idx in chunk.modules.iter().copied() {
+    let Some(db) = &link_output.symbol_db[module_idx] else {
+      continue;
+    };
+    let scoping = db.ast_scopes.scoping();
+
+    // Check if this module is CJS wrapped - if so, nested scopes should avoid
+    // shadowing `exports` and `module` which are synthetic parameters
+    let is_cjs_wrapped = matches!(link_output.metas[module_idx].wrap_kind(), WrapKind::Cjs);
+
+    // Skip root scope (index 0) - already handled via `add_symbol_in_root_scope` above
+    for (_, bindings) in scoping.iter_bindings().skip(1) {
+      for (name, symbol_id) in bindings {
+        let symbol_ref = (module_idx, *symbol_id).into();
+        renamer.register_nested_scope_symbols(symbol_ref, name, is_cjs_wrapped);
+      }
+    }
+  }
 
   chunk.canonical_names = renamer.into_canonical_names();
 }

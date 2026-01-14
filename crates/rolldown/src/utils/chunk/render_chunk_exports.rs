@@ -113,15 +113,13 @@ pub fn render_chunk_exports(
         .map(|(exported_name, export_ref)| {
           let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
           let symbol = link_output.symbol_db.get(canonical_ref);
-          let canonical_name = &chunk.canonical_names.get(&canonical_ref).unwrap_or_else(|| {
-            panic!(
-              "Canonical name not found for {:?} in chunk {:?} kind: {:?} for name {}",
-              canonical_ref, chunk.name, chunk.kind, exported_name
-            )
-          });
+          let canonical_name = link_output
+            .symbol_db
+            .canonical_name_for_or_original(canonical_ref, &chunk.canonical_names);
           if let Some(ns_alias) = &symbol.namespace_alias {
-            let canonical_ns_ref = link_output.symbol_db.canonical_ref_for(ns_alias.namespace_ref);
-            let canonical_ns_name = &chunk.canonical_names[&canonical_ns_ref];
+            let canonical_ns_name = link_output
+              .symbol_db
+              .canonical_name_for_or_original(ns_alias.namespace_ref, &chunk.canonical_names);
             let property_name = &ns_alias.property_name;
             s.push_str(&concat_string!(
               "var ",
@@ -134,8 +132,8 @@ pub fn render_chunk_exports(
             ));
           }
 
-          if canonical_name == &&exported_name {
-            Cow::Borrowed(canonical_name.as_str())
+          if canonical_name == exported_name {
+            Cow::Borrowed(canonical_name)
           } else {
             Cow::Owned(concat_string!(
               canonical_name,
@@ -238,8 +236,10 @@ pub fn render_chunk_exports(
             .collect();
           external_modules.iter().for_each(|idx| {
           let external = &ctx.link_output.module_table[*idx].as_external().expect("Should be external module here");
-          let binding_ref_name =
-          &ctx.chunk.canonical_names[&external.namespace_ref];
+          let binding_ref_name = ctx
+            .link_output
+            .symbol_db
+            .canonical_name_for_or_original(external.namespace_ref, &ctx.chunk.canonical_names);
           let import_stmt = concat_string!(
             "Object.keys(",binding_ref_name, ").forEach(function (k) {\n",
             "  if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {\n",
@@ -263,11 +263,15 @@ pub fn render_chunk_exports(
             .map(|(exported_name, export_ref)| {
               let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
               let symbol = link_output.symbol_db.get(canonical_ref);
-              let canonical_name = &chunk.canonical_names[&canonical_ref];
+              let canonical_name = link_output
+                .symbol_db
+                .canonical_name_for_or_original(canonical_ref, &chunk.canonical_names);
 
               match &symbol.namespace_alias {
                 Some(ns_alias) => {
-                  let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
+                  let canonical_ns_name = link_output
+                    .symbol_db
+                    .canonical_name_for_or_original(ns_alias.namespace_ref, &chunk.canonical_names);
                   let property_name = &ns_alias.property_name;
                   render_object_define_property(
                     &exported_name,

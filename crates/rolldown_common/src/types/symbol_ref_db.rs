@@ -246,6 +246,20 @@ impl SymbolRefDb {
     canonical_names.get(&canonical_ref)
   }
 
+  /// Get the canonical name for a symbol, falling back to the original name if not renamed.
+  /// This is more efficient than storing original names in canonical_names map.
+  pub fn canonical_name_for_or_original<'a>(
+    &'a self,
+    refer: SymbolRef,
+    canonical_names: &'a FxHashMap<SymbolRef, CompactStr>,
+  ) -> &'a str {
+    let canonical_ref = self.canonical_ref_for(refer);
+    canonical_names
+      .get(&canonical_ref)
+      .map(CompactStr::as_str)
+      .unwrap_or_else(|| canonical_ref.name(self))
+  }
+
   pub fn get(&self, refer: SymbolRef) -> &SymbolRefDataClassic {
     self.inner[refer.owner].unpack_ref().get_classic_data(refer.symbol)
   }

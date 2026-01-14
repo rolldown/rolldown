@@ -48,14 +48,14 @@ impl GenerateContext<'_> {
     let canonical_symbol = symbol_db.get(canonical_ref);
     let namespace_alias = &canonical_symbol.namespace_alias;
     if let Some(ns_alias) = namespace_alias {
-      let canonical_ns_ref = symbol_db.canonical_ref_for(ns_alias.namespace_ref);
-      let canonical_ns_name = &canonical_names[&canonical_ns_ref];
+      let canonical_ns_name =
+        symbol_db.canonical_name_for_or_original(ns_alias.namespace_ref, canonical_names);
       let property_name = &ns_alias.property_name;
       return property_access_str(canonical_ns_name, property_name);
     }
 
     if self.link_output.module_table[canonical_ref.owner].is_external() {
-      let namespace = &canonical_names[&canonical_ref];
+      let namespace = symbol_db.canonical_name_for_or_original(canonical_ref, canonical_names);
       return namespace.to_string();
     }
 
@@ -100,22 +100,12 @@ impl GenerateContext<'_> {
   }
 
   fn canonical_name_for<'name>(
-    &self,
+    &'name self,
     canonical_names: &'name FxHashMap<SymbolRef, CompactStr>,
     symbol: SymbolRef,
-  ) -> &'name CompactStr {
+  ) -> &'name str {
     let symbol_db = &self.link_output.symbol_db;
-    symbol_db.canonical_name_for(symbol, canonical_names).unwrap_or_else(|| {
-      panic!(
-        "canonical name not found for {symbol:?}, original_name: {:?} in module {:?}",
-        symbol.name(symbol_db),
-        self
-          .link_output
-          .module_table
-          .get(symbol.owner)
-          .map_or("unknown", |module| module.id().as_str())
-      );
-    })
+    symbol_db.canonical_name_for_or_original(symbol, canonical_names)
   }
 }
 

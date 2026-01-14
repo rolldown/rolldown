@@ -11,13 +11,13 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 //#region foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ default: () => foo$1 });
-function foo$1(a$1$1) {
-	assert.equal(a$1$1, a$1$1);
-	assert.equal(a$1, 1);
+function foo$1(a$1) {
+	assert.equal(a$1, a$1);
+	assert.equal(a$2, 1);
 }
-var a$1;
+var a$2;
 var init_foo = __esmMin((() => {
-	a$1 = 1;
+	a$2 = 1;
 }));
 
 //#endregion
@@ -42,19 +42,19 @@ init_foo();
 - ../foo.js
 (4:0) "export default function " --> (22:0) "function "
 (4:24) "foo(" --> (22:9) "foo$1("
-(4:28) "a$1) " --> (22:15) "a$1$1) "
-(4:33) "{\n" --> (22:22) "{\n"
+(4:28) "a$1) " --> (22:15) "a$1) "
+(4:33) "{\n" --> (22:20) "{\n"
 (5:2) "assert." --> (23:0) "\tassert."
 (5:9) "equal(" --> (23:8) "equal("
-(5:15) "a$1, " --> (23:14) "a$1$1, "
-(5:20) "a$1)" --> (23:21) "a$1$1)"
-(5:24) "\n" --> (23:27) ";\n"
+(5:15) "a$1, " --> (23:14) "a$1, "
+(5:20) "a$1)" --> (23:19) "a$1)"
+(5:24) "\n" --> (23:23) ";\n"
 (6:2) "assert." --> (24:0) "\tassert."
 (6:9) "equal(" --> (24:8) "equal("
-(6:15) "a, " --> (24:14) "a$1, "
+(6:15) "a, " --> (24:14) "a$2, "
 (6:18) "1)" --> (24:19) "1)"
 (6:20) "\n" --> (24:21) ";\n"
-(2:6) "a = " --> (28:1) "a$1 = "
+(2:6) "a = " --> (28:1) "a$2 = "
 (2:10) "1;\n" --> (28:7) "1;\n"
 - ../bar.js
 (0:23) "\n" --> (33:10) ";\n"

@@ -54,9 +54,9 @@ let n;
 	}({});
 })(n || (n = {}));
 (function(_n3) {
-	let x = /* @__PURE__ */ function(x$1) {
-		x$1[x$1["g"] = x$1.f >> 4] = "g";
-		return x$1;
+	let x = /* @__PURE__ */ function(x) {
+		x[x["g"] = x.f >> 4] = "g";
+		return x;
 	}({});
 	_n3.x = x;
 	console.log(a.b, n.a.b, n["a"]["b"], x.g, n.x.g, n["x"]["g"]);

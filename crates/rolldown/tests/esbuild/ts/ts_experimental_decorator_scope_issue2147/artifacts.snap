@@ -22,11 +22,11 @@ var Bar = class {
 			static {
 				this.y = () => {
 					let bar = 1;
-					let Baz = class Baz$1 {
+					let Baz = class Baz {
 						method1() {}
 						method2() {}
-						method3(bar$1) {}
-						method4(bar$1) {}
+						method3(bar) {}
+						method4(bar) {}
 					};
 					__decorate([dec(bar)], Baz.prototype, "method1", null);
 					__decorate([dec(() => bar)], Baz.prototype, "method2", null);

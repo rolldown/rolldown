@@ -9,31 +9,31 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "assert";
 
 //#region other.js
-const bar = "bar";
-const baz = "baz";
-const x = "x";
-const items = "items";
-const p = "p";
-const q = "q";
-const r = "r";
-const s = "s";
+const bar$1 = "bar";
+const baz$1 = "baz";
+const x$1 = "x";
+const items$1 = "items";
+const p$1 = "p";
+const q$1 = "q";
+const r$1 = "r";
+const s$1 = "s";
 
 //#endregion
 //#region main.js
-function foo(bar$1 = 1, { baz: baz$1 } = { baz: 2 }, [[[, x$1 = 3] = []] = []] = [], ...items$1) {
-	bar$1 += 1;
-	baz$1 += 1;
-	x$1 += 1;
-	let { p: p$1, q: q$1 } = {
+function foo(bar = 1, { baz } = { baz: 2 }, [[[, x = 3] = []] = []] = [], ...items) {
+	bar += 1;
+	baz += 1;
+	x += 1;
+	let { p, q } = {
 		p: 4,
 		q: 5
 	};
-	let [r$1, s$1] = [6, 7];
-	p$1++;
-	q$1 += 1;
-	r$1 = 7;
-	s$1 = 6;
-	return bar$1 + baz$1 + x$1 + items$1.length + p$1 + q$1 + r$1 + s$1;
+	let [r, s] = [6, 7];
+	p++;
+	q += 1;
+	r = 7;
+	s = 6;
+	return bar + baz + x + items.length + p + q + r + s;
 }
 assert.equal(foo(), 33);
 assert.equal(foo(2), 34);

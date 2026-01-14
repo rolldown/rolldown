@@ -1,6 +1,34 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+   ╭─[ b.ts:3:13 ]
+   │
+ 3 │     export let foo = 1
+   │                ───┬───  
+   │                   ╰───── 
+───╯
+
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+   ╭─[ b.ts:6:13 ]
+   │
+ 6 │     export let bar = 2
+   │                ───┬───  
+   │                   ╰───── 
+───╯
+
+```
+
 # Assets
 
 ## a.js

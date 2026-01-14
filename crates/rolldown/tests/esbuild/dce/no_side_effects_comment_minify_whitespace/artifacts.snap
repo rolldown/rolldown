@@ -1,6 +1,112 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+   ╭─[ ns-export-local.ts:2:40 ]
+   │
+ 2 │     /* #__NO_SIDE_EFFECTS__ */ export var v0 = function() {}, v1 = function() {}
+   │                                           ─────────┬────────  
+   │                                                    ╰────────── 
+───╯
+
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+   ╭─[ ns-export-local.ts:2:60 ]
+   │
+ 2 │     /* #__NO_SIDE_EFFECTS__ */ export var v0 = function() {}, v1 = function() {}
+   │                                                               ─────────┬────────  
+   │                                                                        ╰────────── 
+───╯
+
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+   ╭─[ ns-export-local.ts:3:40 ]
+   │
+ 3 │     /* #__NO_SIDE_EFFECTS__ */ export let l0 = function() {}, l1 = function() {}
+   │                                           ─────────┬────────  
+   │                                                    ╰────────── 
+───╯
+
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+   ╭─[ ns-export-local.ts:3:60 ]
+   │
+ 3 │     /* #__NO_SIDE_EFFECTS__ */ export let l0 = function() {}, l1 = function() {}
+   │                                                               ─────────┬────────  
+   │                                                                        ╰────────── 
+───╯
+
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+   ╭─[ ns-export-local.ts:5:40 ]
+   │
+ 5 │     /* #__NO_SIDE_EFFECTS__ */ export var v2 = () => {}, v3 = () => {}
+   │                                           ──────┬──────  
+   │                                                 ╰──────── 
+───╯
+
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+   ╭─[ ns-export-local.ts:5:55 ]
+   │
+ 5 │     /* #__NO_SIDE_EFFECTS__ */ export var v2 = () => {}, v3 = () => {}
+   │                                                          ──────┬──────  
+   │                                                                ╰──────── 
+───╯
+
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+   ╭─[ ns-export-local.ts:6:40 ]
+   │
+ 6 │     /* #__NO_SIDE_EFFECTS__ */ export let l2 = () => {}, l3 = () => {}
+   │                                           ──────┬──────  
+   │                                                 ╰──────── 
+───╯
+
+```
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+   ╭─[ ns-export-local.ts:6:55 ]
+   │
+ 6 │     /* #__NO_SIDE_EFFECTS__ */ export let l2 = () => {}, l3 = () => {}
+   │                                                          ──────┬──────  
+   │                                                                ╰──────── 
+───╯
+
+```
+
 # Assets
 
 ## expr-arrow.js

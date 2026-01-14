@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use itertools::Itertools;
 use oxc::ast::ast::Program;
 use oxc::ast_visit::VisitMut;
 use oxc::diagnostics::Severity as OxcSeverity;
@@ -105,14 +104,10 @@ impl PreProcessEcmaAst {
         let scoping = self.recreate_scoping(&mut scoping, program, false);
         let ret = Transformer::new(allocator, Path::new(stable_id), &transform_options)
           .build_with_scoping(scoping, program);
-        // TODO: emit diagnostic, aiming to pass more tests,
-        // we ignore warning for now
-        if ret.errors.iter().any(|error| error.severity == OxcSeverity::Error) {
-          let errors = ret
-            .errors
-            .into_iter()
-            .filter(|item| matches!(item.severity, OxcSeverity::Error))
-            .collect_vec();
+
+        let (errors, transformer_warnings): (Vec<_>, Vec<_>) =
+          ret.errors.into_iter().partition(|error| error.severity == OxcSeverity::Error);
+        if !errors.is_empty() {
           return Err(BatchedBuildDiagnostic::from(BuildDiagnostic::from_oxc_diagnostics(
             errors,
             &source,
@@ -120,6 +115,12 @@ impl PreProcessEcmaAst {
             &Severity::Error,
           )));
         }
+        warnings.extend(BuildDiagnostic::from_oxc_diagnostics(
+          transformer_warnings,
+          &source,
+          resolved_id,
+          &Severity::Warning,
+        ));
         Ok(())
       })?;
     }

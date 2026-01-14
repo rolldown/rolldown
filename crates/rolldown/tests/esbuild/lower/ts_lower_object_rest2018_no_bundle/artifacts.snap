@@ -1,6 +1,21 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+    ╭─[ entry.ts:10:27 ]
+    │
+ 10 │ namespace ns { export let { ...x } = {} }
+    │                           ──────┬──────  
+    │                                 ╰──────── 
+────╯
+
+```
+
 # Assets
 
 ## entry.js

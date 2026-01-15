@@ -287,8 +287,7 @@ impl<'name> Renamer<'name> {
         }
 
         // Check if conflicts with own module's nested bindings
-        let conflicts_with_module_symbol =
-          scoping.symbol_names().any(|n| n == name.as_str());
+        let conflicts_with_module_symbol = scoping.symbol_names().any(|n| n == name.as_str());
 
         if conflicts_with_module_symbol {
           count += 1;

@@ -43,8 +43,7 @@ OPTIONS
   --checks.unresolved-import  Whether to emit warnings when an import cannot be resolved.
   --chunk-file-names <name>   Name pattern for emitted secondary chunks.
   --clean-dir                 Clean output directory before emitting output.
-  --code-splitting.min-share-count <code-splitting.min-share-count>Minimum share count of the chunk.
-  --code-splitting.min-size <code-splitting.min-size>Minimum size of the chunk.
+  --code-splitting <code-splitting>Code splitting options (true, false, or object).
   --context <context>         The entity top-level \`this\` represents.
   --css-chunk-file-names <css-chunk-file-names>Name pattern for emitted css secondary chunks.
   --css-entry-file-names <css-entry-file-names>Name pattern for emitted css entry chunks.

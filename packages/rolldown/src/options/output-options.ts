@@ -454,6 +454,8 @@ export interface OutputOptions {
    */
   externalLiveBindings?: boolean;
   /**
+   * @deprecated Please use `codeSplitting: false` instead.
+   *
    * Whether to inline dynamic imports instead of creating new chunks to create a single bundle.
    *
    * This option can be used only when a single input is provided.
@@ -517,7 +519,13 @@ export interface OutputOptions {
    */
   manualChunks?: ManualChunksFunction;
   /**
-   * Allows you to do manual chunking. For deeper understanding, please refer to the in-depth [documentation](https://rolldown.rs/in-depth/advanced-chunks).
+   * Controls how code splitting is performed.
+   *
+   * - `true`: Default behavior, automatic code splitting. **(default)**
+   * - `false`: Inline all dynamic imports into a single bundle (equivalent to deprecated `inlineDynamicImports: true`).
+   * - `object`: Advanced manual code splitting configuration.
+   *
+   * For deeper understanding, please refer to the in-depth [documentation](https://rolldown.rs/in-depth/advanced-chunks).
    *
    * @example
    * **Basic vendor chunk**
@@ -537,45 +545,10 @@ export interface OutputOptions {
    * });
    * ```
    * {@include ./docs/output-advanced-chunks.md}
+   *
+   * @default true
    */
-  codeSplitting?: {
-    /**
-     * By default, each group will also include captured modules' dependencies. This reduces the chance of generating circular chunks.
-     *
-     * If you want to disable this behavior, it's recommended to both set
-     * - {@linkcode InputOptions.preserveEntrySignatures | preserveEntrySignatures}: `false | 'allow-extension'`
-     * - `experimental.strictExecutionOrder`: `true`
-     *
-     * to avoid generating invalid chunks.
-     *
-     * @default true
-     */
-    includeDependenciesRecursively?: boolean;
-    /**
-     * Global fallback of {@linkcode CodeSplittingGroup.minSize | group.minSize}, if it's not specified in the group.
-     */
-    minSize?: number;
-    /**
-     * Global fallback of {@linkcode CodeSplittingGroup.maxSize | group.maxSize}, if it's not specified in the group.
-     */
-    maxSize?: number;
-    /**
-     * Global fallback of {@linkcode CodeSplittingGroup.maxModuleSize | group.maxModuleSize}, if it's not specified in the group.
-     */
-    maxModuleSize?: number;
-    /**
-     * Global fallback of {@linkcode CodeSplittingGroup.minModuleSize | group.minModuleSize}, if it's not specified in the group.
-     */
-    minModuleSize?: number;
-    /**
-     * Global fallback of {@linkcode CodeSplittingGroup.minShareCount | group.minShareCount}, if it's not specified in the group.
-     */
-    minShareCount?: number;
-    /**
-     * Groups to be used for code splitting.
-     */
-    groups?: CodeSplittingGroup[];
-  };
+  codeSplitting?: boolean | CodeSplittingOptions;
   /**
    * @deprecated Please use {@linkcode codeSplitting | output.codeSplitting} instead.
    *
@@ -810,6 +783,53 @@ export type CodeSplittingGroup = {
  */
 export type AdvancedChunksGroup = CodeSplittingGroup;
 
+/**
+ * Configuration options for advanced code splitting.
+ */
+export type CodeSplittingOptions = {
+  /**
+   * By default, each group will also include captured modules' dependencies. This reduces the chance of generating circular chunks.
+   *
+   * If you want to disable this behavior, it's recommended to both set
+   * - {@linkcode InputOptions.preserveEntrySignatures | preserveEntrySignatures}: `false | 'allow-extension'`
+   * - `experimental.strictExecutionOrder`: `true`
+   *
+   * to avoid generating invalid chunks.
+   *
+   * @default true
+   */
+  includeDependenciesRecursively?: boolean;
+  /**
+   * Global fallback of {@linkcode CodeSplittingGroup.minSize | group.minSize}, if it's not specified in the group.
+   */
+  minSize?: number;
+  /**
+   * Global fallback of {@linkcode CodeSplittingGroup.maxSize | group.maxSize}, if it's not specified in the group.
+   */
+  maxSize?: number;
+  /**
+   * Global fallback of {@linkcode CodeSplittingGroup.maxModuleSize | group.maxModuleSize}, if it's not specified in the group.
+   */
+  maxModuleSize?: number;
+  /**
+   * Global fallback of {@linkcode CodeSplittingGroup.minModuleSize | group.minModuleSize}, if it's not specified in the group.
+   */
+  minModuleSize?: number;
+  /**
+   * Global fallback of {@linkcode CodeSplittingGroup.minShareCount | group.minShareCount}, if it's not specified in the group.
+   */
+  minShareCount?: number;
+  /**
+   * Groups to be used for code splitting.
+   */
+  groups?: CodeSplittingGroup[];
+};
+
+/**
+ * Alias for {@linkcode CodeSplittingOptions}. Use this type for the `codeSplitting` option.
+ */
+export type AdvancedChunksOptions = CodeSplittingOptions;
+
 interface OverwriteOutputOptionsForCli {
   banner?: string;
   footer?: string;
@@ -819,10 +839,12 @@ interface OverwriteOutputOptionsForCli {
   outro?: string;
   esModule?: boolean;
   globals?: Record<string, string>;
-  codeSplitting?: {
-    minSize?: number;
-    minShareCount?: number;
-  };
+  codeSplitting?:
+    | boolean
+    | {
+        minSize?: number;
+        minShareCount?: number;
+      };
   advancedChunks?: {
     minSize?: number;
     minShareCount?: number;

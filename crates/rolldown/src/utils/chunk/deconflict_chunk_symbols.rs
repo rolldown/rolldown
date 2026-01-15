@@ -214,7 +214,7 @@ pub fn deconflict_chunk_symbols(
     let top_level_canonical_names: FxHashSet<CompactStr> = top_level_bindings
       .iter()
       .filter_map(|(_, symbol_id)| {
-        // Unreferenced symbols are likely tree-shaken and won't be in canonical_names
+        // Skip symbols with no references as they won't need deconflicting
         if scoping.get_resolved_reference_ids(*symbol_id).is_empty() {
           return None;
         }

@@ -6,7 +6,7 @@ use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::ecmascript::legitimize_identifier_name;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn deconflict_chunk_symbols(
@@ -202,10 +202,34 @@ pub fn deconflict_chunk_symbols(
     let is_cjs_wrapped = matches!(link_output.metas[module_idx].wrap_kind(), WrapKind::Cjs);
 
     // Skip root scope (index 0) - already handled via `add_symbol_in_root_scope` above
-    for (_, bindings) in scoping.iter_bindings().skip(1) {
-      for (name, symbol_id) in bindings {
+    let mut iter_bindings = scoping.iter_bindings();
+    let Some((_, top_level_bindings)) = iter_bindings.next() else {
+      continue;
+    };
+
+    // Collect canonical names of top-level symbols that have references.
+    // We only process nested symbols whose name matches a top-level canonical name,
+    // because nested symbols with other names can safely shadow cross-module
+    // top-level symbols via JavaScript's natural scoping rules.
+    let top_level_canonical_names: FxHashSet<CompactStr> = top_level_bindings
+      .iter()
+      .filter_map(|(_, symbol_id)| {
+        // Unreferenced symbols are likely tree-shaken and won't be in canonical_names
+        if scoping.get_resolved_reference_ids(*symbol_id).is_empty() {
+          return None;
+        }
         let symbol_ref = (module_idx, *symbol_id).into();
-        renamer.register_nested_scope_symbols(symbol_ref, name, is_cjs_wrapped);
+        renamer.get_canonical_name(&symbol_ref).cloned()
+      })
+      .collect();
+
+    for (_, bindings) in iter_bindings {
+      for (name, symbol_id) in bindings {
+        // CompactStr implements Borrow<str>, allowing &str lookup without allocation
+        if is_cjs_wrapped || top_level_canonical_names.contains(*name) {
+          let symbol_ref = (module_idx, *symbol_id).into();
+          renamer.register_nested_scope_symbols(symbol_ref, *name, is_cjs_wrapped);
+        }
       }
     }
   }

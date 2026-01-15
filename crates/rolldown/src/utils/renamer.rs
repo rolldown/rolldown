@@ -75,17 +75,20 @@ impl<'name> Renamer<'name> {
     }
   }
 
+  /// Returns the canonical name for a symbol if it exists in the renamer.
+  /// Returns `None` if the symbol was not processed or kept its original name
+  /// (original names are looked up via `symbol_db` during code generation).
+  pub fn get_canonical_name(&self, symbol_ref: &SymbolRef) -> Option<&CompactStr> {
+    let canonical_ref = self.symbol_db.canonical_ref_for(*symbol_ref);
+    self.canonical_names.get(&canonical_ref)
+  }
+
   pub fn reserve(&mut self, name: CompactStr) {
     self.used_canonical_names.insert(name, CanonicalNameInfo::default());
   }
 
   /// Returns true if `name` exists in any nested (non-root) scope of the module.
   fn has_nested_scope_binding(&self, module_idx: ModuleIdx, name: &str) -> bool {
-    const RUNTIME_MODULE_INDEX: ModuleIdx = ModuleIdx::from_usize_unchecked(0);
-    if module_idx == RUNTIME_MODULE_INDEX {
-      return false;
-    }
-
     let scoping = self.symbol_db.local_db(module_idx).ast_scopes.scoping();
     if scoping.symbols_len() == 0 {
       return false;
@@ -258,10 +261,6 @@ impl<'name> Renamer<'name> {
     original_name: &str,
     is_cjs_wrapped: bool,
   ) {
-    if self.canonical_names.contains_key(&symbol_ref) {
-      return;
-    }
-
     // Check if renaming is needed:
     // - Shadows top-level from different module, OR shadows a renamed symbol
     let shadows_renamed_symbol = self.used_canonical_names.get(original_name).is_some_and(|info| {
@@ -289,7 +288,7 @@ impl<'name> Renamer<'name> {
 
         // Check if conflicts with own module's nested bindings
         let conflicts_with_module_symbol =
-          scoping.iter_bindings().any(|(_, bindings)| bindings.contains_key(name.as_str()));
+          scoping.symbol_names().any(|n| n == name.as_str());
 
         if conflicts_with_module_symbol {
           count += 1;

@@ -76,6 +76,15 @@ const sidebarForInDepth: DefaultTheme.SidebarItem[] = [
   },
 ];
 
+const importantAPIs: (string | undefined)[] = [
+  '/Function.build.md',
+  '/Function.rolldown.md',
+  '/Function.watch.md',
+  '/Interface.Plugin.md',
+  '/Variable.VERSION.md',
+  '/Function.defineConfig.md',
+];
+
 function getTypedocSidebar() {
   const filepath = path.resolve(import.meta.dirname, '../reference/typedoc-sidebar.json');
   if (!existsSync(filepath)) return [];
@@ -88,10 +97,20 @@ function getTypedocSidebar() {
   }
 }
 
-const typedocSidebar = getTypedocSidebar().map((item) => ({
-  ...item,
-  items: item.items?.slice().sort((a, b) => (a.text ?? '').localeCompare(b.text ?? '')),
-}));
+const typedocSidebar = getTypedocSidebar().map((item) => {
+  const stringifyForSort = (item: DefaultTheme.SidebarItem) =>
+    (importantAPIs.includes(item.link) ? '0' : '1') + (item.text ?? '');
+  return {
+    ...item,
+    base: '/reference',
+    items: item.items
+      ?.map((item) => ({
+        ...item,
+        text: (importantAPIs.includes(item.link) ? '★ ' : '') + item.text,
+      }))
+      .toSorted((a, b) => stringifyForSort(a).localeCompare(stringifyForSort(b))),
+  };
+});
 
 function getOptionsSidebar() {
   const filepath = path.resolve(import.meta.dirname, '../reference/options-sidebar.json');
@@ -106,8 +125,13 @@ function getOptionsSidebar() {
 }
 
 const sidebarForReference: DefaultTheme.SidebarItem[] = [
-  { text: 'Option Reference', base: '/reference', items: getOptionsSidebar() },
-  { text: 'API Reference', base: '/reference', items: typedocSidebar },
+  {
+    text: 'Options',
+    base: '/reference',
+    items: getOptionsSidebar(),
+    collapsed: false,
+  },
+  ...typedocSidebar,
 ];
 
 const sidebarForDevGuide: DefaultTheme.SidebarItem[] = [

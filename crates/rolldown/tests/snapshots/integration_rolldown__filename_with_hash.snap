@@ -650,7 +650,7 @@ expression: output
 
 # tests/esbuild/default/conditional_require
 
-- a-!~{000}~.js => a-Cpr9iNPL.js
+- a-!~{000}~.js => a-uCpil3S6.js
 
 # tests/esbuild/default/conditional_require_resolve
 
@@ -940,12 +940,12 @@ expression: output
 
 # tests/esbuild/default/indirect_require_message
 
-- array-!~{000}~.js => array-BpeofdYH.js
-- assign-!~{001}~.js => assign-B15cS0L2.js
-- dot-!~{002}~.js => dot-3avhlUvM.js
-- ident-!~{003}~.js => ident-Cuf3oj35.js
-- index-!~{004}~.js => index-DM96mymD.js
-- chunk-!~{005}~.js => chunk-kMfLYBFW.js
+- array-!~{000}~.js => array-p4q9IdOs.js
+- assign-!~{001}~.js => assign-D2S6Zlcr.js
+- dot-!~{002}~.js => dot-_px5ipuJ.js
+- ident-!~{003}~.js => ident-CFcAkhqK.js
+- index-!~{004}~.js => index-BXCedOcI.js
+- chunk-!~{005}~.js => chunk-yoAz33B4.js
 
 # tests/esbuild/default/inject
 
@@ -1200,7 +1200,7 @@ expression: output
 
 # tests/esbuild/default/mangle_props_import_export
 
-- cjs-!~{001}~.js => cjs-DYdmZ6md.js
+- cjs-!~{001}~.js => cjs-DBe591F-.js
 - esm-!~{000}~.js => esm-C-hv133d.js
 
 # tests/esbuild/default/mangle_props_import_export_bundled
@@ -1328,14 +1328,14 @@ expression: output
 
 # tests/esbuild/default/metafile_no_bundle
 
-- entry-!~{000}~.js => entry-BZAAYL7y.js
+- entry-!~{000}~.js => entry-CM-wyRBN.js
 - entry-!~{001}~.js => entry-DC4KoLXg.js
 - entry2.css
 
 # tests/esbuild/default/metafile_various_cases
 
 - entry-!~{001}~.js => entry-C8lVrsYF.js
-- entry-!~{000}~.js => entry-DA1vO8rv.js
+- entry-!~{000}~.js => entry-jyCnN9IT.js
 - copy-!~{002}~.js => copy-DDA5F9k1.js
 - dynamic-!~{005}~.js => dynamic-BHpZ7YgO.js
 - assets/file-C2vEMN7j.file
@@ -1531,11 +1531,11 @@ expression: output
 
 # tests/esbuild/default/require_and_dynamic_import_invalid_template
 
-- entry-!~{000}~.js => entry-gKRJLjeD.js
+- entry-!~{000}~.js => entry-B01Kazt3.js
 
 # tests/esbuild/default/require_bad_argument_count
 
-- entry-!~{000}~.js => entry-D3crykJr.js
+- entry-!~{000}~.js => entry-Csco1MEF.js
 
 # tests/esbuild/default/require_child_dir_common_js
 
@@ -1547,7 +1547,7 @@ expression: output
 
 # tests/esbuild/default/require_fs_browser
 
-- entry-!~{000}~.js => entry-D0nKq0C9.js
+- entry-!~{000}~.js => entry-BpQS_jtk.js
 
 # tests/esbuild/default/require_fs_node
 
@@ -1583,7 +1583,7 @@ expression: output
 
 # tests/esbuild/default/require_shim_substitution
 
-- entry-!~{000}~.js => entry-Ck9XXI4A.js
+- entry-!~{000}~.js => entry-CTIL53dY.js
 
 # tests/esbuild/default/require_txt
 
@@ -1591,7 +1591,7 @@ expression: output
 
 # tests/esbuild/default/require_with_call_inside_try
 
-- entry-!~{000}~.js => entry-Dq-2xOg6.js
+- entry-!~{000}~.js => entry-C2u7MOgY.js
 
 # tests/esbuild/default/require_with_template
 
@@ -1603,7 +1603,7 @@ expression: output
 
 # tests/esbuild/default/require_without_call_inside_try
 
-- entry-!~{000}~.js => entry-BKgRu_0I.js
+- entry-!~{000}~.js => entry-hL1AnbO8.js
 
 # tests/esbuild/default/reserve_props
 
@@ -1827,15 +1827,15 @@ expression: output
 
 # tests/esbuild/glob/glob_wildcard_slash
 
-- entry-!~{000}~.js => entry-CtoA-AVY.js
+- entry-!~{000}~.js => entry-BRoJLOhg.js
 
 # tests/esbuild/glob/ts_glob_basic_no_splitting
 
-- entry-!~{000}~.js => entry-D35Y9RIv.js
+- entry-!~{000}~.js => entry-CY01mwbB.js
 
 # tests/esbuild/glob/ts_glob_basic_splitting
 
-- entry-!~{000}~.js => entry-D35Y9RIv.js
+- entry-!~{000}~.js => entry-CY01mwbB.js
 
 # tests/esbuild/importstar/export_other_as_namespace_common_js
 
@@ -2908,7 +2908,7 @@ expression: output
 
 # tests/esbuild/packagejson/package_json_browser_issue2002_b
 
-- entry-!~{000}~.js => entry-B99w8xRf.js
+- entry-!~{000}~.js => entry-BD2wyrSs.js
 
 # tests/esbuild/packagejson/package_json_browser_issue2002_c
 
@@ -4667,7 +4667,7 @@ expression: output
 
 # tests/rolldown/issues/1443
 
-- main-!~{000}~.js => main-5j-qEjVT.js
+- main-!~{000}~.js => main-rbSBNv-r.js
 
 # tests/rolldown/issues/1722/1
 
@@ -5314,7 +5314,7 @@ expression: output
 
 # tests/rolldown/misc/require_deconflict
 
-- main-!~{000}~.js => main-D-msnSKp.js
+- main-!~{000}~.js => main-8dL9L9uO.js
 
 # tests/rolldown/misc/top_level_this_substitution
 
@@ -6377,7 +6377,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/require_module_determined_in_runtime
 
-- main-!~{000}~.js => main-BQczKiZR.js
+- main-!~{000}~.js => main-BOluI_OG.js
 
 # tests/rolldown/tree_shaking/side_effect_free_dynamic_importee
 

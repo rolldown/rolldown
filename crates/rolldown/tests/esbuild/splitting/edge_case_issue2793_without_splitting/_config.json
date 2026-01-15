@@ -6,6 +6,6 @@
         "import": "index.js"
       }
     ],
-    "inlineDynamicImports": true
+    "codeSplitting": false
   }
 }

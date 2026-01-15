@@ -247,7 +247,7 @@ impl LinkStage<'_> {
     // update entries with lived only.
     self.entries = user_defined_entries
       .into_iter()
-      .chain(if self.options.inline_dynamic_imports {
+      .chain(if self.options.code_splitting.is_disabled() {
         itertools::Either::Left(std::iter::empty())
       } else {
         itertools::Either::Right(dynamic_entries.into_iter())

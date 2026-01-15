@@ -229,7 +229,7 @@ impl LinkStage<'_> {
                     }
                   },
                   ImportKind::DynamicImport => {
-                    if self.options.inline_dynamic_imports {
+                    if self.options.code_splitting.is_disabled() {
                       match importee_linking_info.wrap_kind() {
                         WrapKind::None => {}
                         WrapKind::Cjs => {

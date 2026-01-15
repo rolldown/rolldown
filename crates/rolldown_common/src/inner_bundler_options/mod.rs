@@ -1,6 +1,7 @@
 use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::FxHashMap;
 use std::{fmt::Debug, path::PathBuf};
+use types::code_splitting_mode::CodeSplittingMode;
 use types::devtools_options::DevtoolsOptions;
 use types::generated_code_options::GeneratedCodeOptions;
 use types::inject_import::InjectImport;
@@ -198,7 +199,7 @@ pub struct BundlerOptions {
   pub keep_names: Option<bool>,
   pub inject: Option<Vec<InjectImport>>,
   pub external_live_bindings: Option<bool>,
-  pub inline_dynamic_imports: Option<bool>,
+  pub code_splitting: Option<CodeSplittingMode>,
   pub dynamic_import_in_cjs: Option<bool>,
   pub manual_code_splitting: Option<ManualCodeSplittingOptions>,
   pub checks: Option<ChecksOptions>,

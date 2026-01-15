@@ -15,10 +15,10 @@ use crate::{
 use napi::bindgen_prelude::{Either, Either3, FnArgs};
 use rolldown::{
   AddonOutputOption, AssetFilenamesOutputOption, BundlerConfig, BundlerOptions,
-  ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal,
-  ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType, OptimizationOption,
-  OutputExports, OutputFormat, Platform, RawMinifyOptions, RawMinifyOptionsDetailed,
-  SanitizeFilename, TsConfig,
+  ChunkFilenamesOutputOption, CodeSplittingMode, DeferSyncScanDataOption, HashCharacters,
+  IsExternal, ManualCodeSplittingOptions, MatchGroup, MatchGroupName, ModuleType,
+  OptimizationOption, OutputExports, OutputFormat, Platform, RawMinifyOptions,
+  RawMinifyOptionsDetailed, SanitizeFilename, TsConfig,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_common::GeneratedCodeOptions;
@@ -409,7 +409,11 @@ pub fn normalize_binding_options(
       .inject
       .map(|inner| inner.into_iter().map(normalize_binding_inject_import).collect()),
     external_live_bindings: output_options.external_live_bindings,
-    inline_dynamic_imports: output_options.inline_dynamic_imports,
+    code_splitting: match output_options.inline_dynamic_imports {
+      Some(true) => Some(CodeSplittingMode::Bool(false)),
+      Some(false) => Some(CodeSplittingMode::Bool(true)),
+      None => None,
+    },
     dynamic_import_in_cjs: output_options.dynamic_import_in_cjs,
     manual_code_splitting: output_options.manual_code_splitting.map(|inner| ManualCodeSplittingOptions {
       min_size: inner.min_size,

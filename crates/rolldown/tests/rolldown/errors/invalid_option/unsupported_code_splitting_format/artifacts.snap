@@ -6,6 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INVALID_OPTION
 
 ```text
-[INVALID_OPTION] Error: Invalid value "iife" for option "output.format" - UMD and IIFE are not supported for code-splitting builds.
+[INVALID_OPTION] Error: Invalid value "iife" for option "output.format" - UMD and IIFE are not supported for code-splitting builds. For single entry builds, you can set `output.codeSplitting` to `false` to disable code-splitting.
 
 ```

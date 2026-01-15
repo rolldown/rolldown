@@ -58,14 +58,6 @@ impl LinkStage<'_> {
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
             let rec_resolved_module = &self.module_table[rec.resolved_module];
-            if rec_resolved_module.is_external()
-              && rec.kind == ImportKind::Require
-              && self.options.format.should_call_runtime_require()
-              && self.options.polyfill_require_for_esm_format_with_node_platform()
-            {
-              stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__require").into());
-              record_meta_pairs.push((*rec_id, ImportRecordMeta::CallRuntimeRequire));
-            }
             match rec_resolved_module {
               Module::External(importee) => {
                 // Make sure symbols from external modules are included and de_conflicted
@@ -91,6 +83,16 @@ impl LinkStage<'_> {
                             .push(stmt_info_idx);
                         }
                       }
+                    }
+                  }
+                  ImportKind::Require => {
+                    if self.options.format.should_call_runtime_require()
+                      && self.options.polyfill_require_for_esm_format_with_node_platform()
+                    {
+                      stmt_info
+                        .referenced_symbols
+                        .push(self.runtime.resolve_symbol("__require").into());
+                      record_meta_pairs.push((*rec_id, ImportRecordMeta::CallRuntimeRequire));
                     }
                   }
                   ImportKind::DynamicImport => {

@@ -5908,6 +5908,10 @@ expression: output
 
 - main-!~{000}~.js => main-BhFYWpr2.js
 
+# tests/rolldown/topics/deconflict/unreferenced_renamed_conflict
+
+- main-!~{000}~.js => main-C6eEZObh.js
+
 # tests/rolldown/topics/deconflict/wrapped_esm_default_function
 
 - main-!~{000}~.js => main-zvRHTHSF.js

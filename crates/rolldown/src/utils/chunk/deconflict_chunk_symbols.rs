@@ -201,7 +201,6 @@ pub fn deconflict_chunk_symbols(
     // shadowing `exports` and `module` which are synthetic parameters
     let is_cjs_wrapped = matches!(link_output.metas[module_idx].wrap_kind(), WrapKind::Cjs);
 
-    // Skip root scope (index 0) - already handled via `add_symbol_in_root_scope` above
     let mut iter_bindings = scoping.iter_bindings();
     let Some((_, top_level_bindings)) = iter_bindings.next() else {
       continue;
@@ -223,6 +222,8 @@ pub fn deconflict_chunk_symbols(
       })
       .collect();
 
+    // Process nested scopes only - root scope was already handled by `add_symbol_in_root_scope`
+    // and consumed above to build `top_level_canonical_names`
     for (_, bindings) in iter_bindings {
       for (&name, symbol_id) in bindings {
         // CompactStr implements Borrow<str>, allowing &str lookup without allocation

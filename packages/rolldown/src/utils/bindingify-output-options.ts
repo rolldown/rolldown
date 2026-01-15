@@ -41,6 +41,7 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     manualChunks,
     topLevelVar,
     cleanDir,
+    strictExecutionOrder,
   } = outputOptions;
 
   // Handle codeSplitting and inlineDynamicImports
@@ -96,6 +97,7 @@ export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOu
     topLevelVar,
     minifyInternalExports: outputOptions.minifyInternalExports,
     cleanDir,
+    strictExecutionOrder,
   };
 }
 

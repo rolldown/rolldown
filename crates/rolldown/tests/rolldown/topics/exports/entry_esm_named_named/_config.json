@@ -6,9 +6,7 @@
     ],
     "format": "cjs",
     "exports": "named",
-    "experimental": {
-      "strictExecutionOrder": true
-    }
+    "strictExecutionOrder": true
   },
   "_comment": "Tests Entry + Esm WrapKind + Named OutputExports + named export access"
 }

@@ -1,8 +1,6 @@
 {
   "config": {
-    "experimental": {
-      "strictExecutionOrder": true
-    },
+    "strictExecutionOrder": true,
     "manualCodeSplitting": {
       "includeDependenciesRecursively": false,
       "groups": [

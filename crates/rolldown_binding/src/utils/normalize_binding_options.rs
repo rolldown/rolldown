@@ -502,6 +502,7 @@ pub fn normalize_binding_options(
     top_level_var: output_options.top_level_var,
     minify_internal_exports: output_options.minify_internal_exports,
     clean_dir: output_options.clean_dir,
+    strict_execution_order: output_options.strict_execution_order,
     context: input_options.context,
     tsconfig: input_options.tsconfig.map(|v| match v {
       Either::A(v) => TsConfig::Auto(v),

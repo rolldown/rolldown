@@ -6,9 +6,7 @@
         "import": "entry.js"
       }
     ],
-    "experimental": {
-      "strictExecutionOrder": true
-    }
+    "strictExecutionOrder": true
   },
   "configVariants": [
     {

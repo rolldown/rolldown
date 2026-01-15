@@ -15,7 +15,7 @@ impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn on_demand_wrapping(&mut self, chunk_graph: &mut ChunkGraph) {
     // Currently, hmr is strongly rely on wrapping function to update module exports
-    if !self.options.experimental.strict_execution_order.unwrap_or_default()
+    if !self.options.is_strict_execution_order_enabled()
       || !self.options.experimental.is_on_demand_wrapping_enabled()
       || self.options.is_dev_mode_enabled()
     {

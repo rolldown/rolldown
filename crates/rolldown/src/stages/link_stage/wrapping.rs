@@ -105,8 +105,7 @@ impl LinkStage<'_> {
 
     let mut cjs_exports_kind_modules = FxHashSet::default();
 
-    let is_strict_execution_order_enabled =
-      self.options.experimental.is_strict_execution_order_enabled();
+    let is_strict_execution_order_enabled = self.options.is_strict_execution_order_enabled();
     let on_demand_wrapping = self.options.experimental.is_on_demand_wrapping_enabled();
 
     for module in self.module_table.modules.iter().filter_map(Module::as_normal) {

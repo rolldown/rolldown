@@ -1801,7 +1801,6 @@ export interface BindingExperimentalDevModeOptions {
 }
 
 export interface BindingExperimentalOptions {
-  strictExecutionOrder?: boolean
   viteMode?: boolean
   resolveNewUrlToAsset?: boolean
   devMode?: BindingExperimentalDevModeOptions
@@ -2110,6 +2109,7 @@ export interface BindingOutputOptions {
   topLevelVar?: boolean
   minifyInternalExports?: boolean
   cleanDir?: boolean
+  strictExecutionOrder?: boolean
 }
 
 export interface BindingOutputs {

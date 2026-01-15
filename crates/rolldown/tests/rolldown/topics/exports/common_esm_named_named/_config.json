@@ -1,9 +1,7 @@
 {
   "config": {
     "format": "cjs",
-    "experimental": {
-      "strictExecutionOrder": true
-    },
+    "strictExecutionOrder": true,
     "manualCodeSplitting": {
       "groups": [
         {

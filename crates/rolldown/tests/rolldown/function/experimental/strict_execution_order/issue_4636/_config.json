@@ -1,9 +1,9 @@
 {
   "config": {
     "external": ["node:assert"],
+    "strictExecutionOrder": true,
     "experimental": {
-      "devMode": {},
-      "strictExecutionOrder": true
+      "devMode": {}
     }
   }
 }

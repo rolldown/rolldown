@@ -59,8 +59,7 @@ impl ConfigVariant {
       config.name = Some(name.clone());
     }
     if let Some(strict_execution_order) = &self.strict_execution_order {
-      config.experimental.get_or_insert_default().strict_execution_order =
-        Some(*strict_execution_order);
+      config.strict_execution_order = Some(*strict_execution_order);
     }
     if let Some(entry_filenames) = &self.entry_filenames {
       config.entry_filenames = Some(entry_filenames.clone().into());

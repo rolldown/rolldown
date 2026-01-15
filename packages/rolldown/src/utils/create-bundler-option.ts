@@ -56,6 +56,13 @@ export async function createBundlerOptions(
     ? undefined
     : await initializeParallelPlugins(plugins);
 
+  // Warn if deprecated experimental.strictExecutionOrder is used
+  if ((inputOptions.experimental as any)?.strictExecutionOrder !== undefined) {
+    console.warn(
+      '`experimental.strictExecutionOrder` has been stabilized and moved to `output.strictExecutionOrder`. Please update your configuration.',
+    );
+  }
+
   try {
     // Convert `InputOptions` to `BindingInputOptions`
     const bindingInputOptions = bindingifyInputOptions(

@@ -437,16 +437,6 @@ export interface InputOptions {
    */
   experimental?: {
     /**
-     * Lets modules be executed in the order they are declared.
-     *
-     * This is done by injecting runtime helpers to ensure that modules are executed in the order they are imported. External modules won't be affected.
-     *
-     * > [!WARNING]
-     * > Enabling this option may negatively increase bundle size. It is recommended to use this option only when absolutely necessary.
-     * @default false
-     */
-    strictExecutionOrder?: boolean;
-    /**
      * Enable Vite compatible mode.
      * @default false
      * @hidden This option is only meant to be used by Vite. It is not recommended to use this option directly.

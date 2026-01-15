@@ -10,8 +10,8 @@
         ]
       ]
     },
+    "strictExecutionOrder": true,
     "experimental": {
-      "strictExecutionOrder": true,
       "onDemandWrapping": true
     }
   }

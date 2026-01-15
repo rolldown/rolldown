@@ -6,8 +6,6 @@
         "import": "./main.js"
       }
     ],
-    "experimental": {
-      "strictExecutionOrder": true
-    }
+    "strictExecutionOrder": true
   }
 }

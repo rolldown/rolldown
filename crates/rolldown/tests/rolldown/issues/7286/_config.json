@@ -1,7 +1,5 @@
 {
   "config": {
-    "experimental": {
-      "strictExecutionOrder": true
-    }
+    "strictExecutionOrder": true
   }
 }

@@ -226,7 +226,6 @@ pub fn deconflict_chunk_symbols(
     // and consumed above to build `top_level_canonical_names`
     for (_, bindings) in iter_bindings {
       for (&name, symbol_id) in bindings {
-        // CompactStr implements Borrow<str>, allowing &str lookup without allocation
         if is_cjs_wrapped || top_level_canonical_names.contains(name) {
           let symbol_ref = (module_idx, *symbol_id).into();
           renamer.register_nested_scope_symbols(symbol_ref, name, is_cjs_wrapped);

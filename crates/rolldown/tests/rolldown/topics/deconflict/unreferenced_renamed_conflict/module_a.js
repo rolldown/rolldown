@@ -5,7 +5,7 @@ export const unused = 'from-module-a';
 
 // Parameter `unused$1` is preserved because:
 // 1. The renamer skips `unused$1` when renaming top-level `unused`
-// 2. The nested `unused$1` doesn't match top_level_canonical_names = {"unused$2", "test"}
+// 2. The nested `unused$1` doesn't match any top-level canonical name tracked for renaming
 export function test(unused$1) {
   return unused$1 + '-test';
 }

@@ -18,7 +18,7 @@ struct DeferUpdateInfo {
   record_meta_pairs: Vec<(ImportRecordIdx, ImportRecordMeta)>,
 }
 impl LinkStage<'_> {
-  #[expect(clippy::collapsible_if, clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn reference_needed_symbols(&mut self) {
     // Since each module only access its own symbol ref db, we use zip rather than a Mutex to
@@ -59,22 +59,12 @@ impl LinkStage<'_> {
             let rec = &importer.import_records[*rec_id];
             let rec_resolved_module = &self.module_table[rec.resolved_module];
             if rec_resolved_module.is_external()
-              || (rec.kind == ImportKind::DynamicImport
-                && importer.is_user_defined_entry
-                && rec.resolved_module != importer_idx)
+              && rec.kind == ImportKind::Require
+              && self.options.format.should_call_runtime_require()
+              && self.options.polyfill_require_for_esm_format_with_node_platform()
             {
-              if matches!(rec.kind, ImportKind::Require)
-                || !self.options.format.keep_esm_import_export_syntax()
-              {
-                if self.options.format.should_call_runtime_require()
-                  && self.options.polyfill_require_for_esm_format_with_node_platform()
-                {
-                  stmt_info
-                    .referenced_symbols
-                    .push(self.runtime.resolve_symbol("__require").into());
-                  record_meta_pairs.push((*rec_id, ImportRecordMeta::CallRuntimeRequire));
-                }
-              }
+              stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__require").into());
+              record_meta_pairs.push((*rec_id, ImportRecordMeta::CallRuntimeRequire));
             }
             match rec_resolved_module {
               Module::External(importee) => {

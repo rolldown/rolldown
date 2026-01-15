@@ -156,8 +156,10 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
-  pub fn inline_dynamic_imports(&self) -> bool {
-    self.inner.inline_dynamic_imports
+  pub fn code_splitting(&self) -> bool {
+    match self.inner.code_splitting {
+      rolldown_common::CodeSplittingMode::Bool(v) => v,
+    }
   }
 
   #[napi(getter)]

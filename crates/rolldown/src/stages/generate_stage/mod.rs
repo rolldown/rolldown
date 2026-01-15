@@ -156,9 +156,7 @@ impl<'a> GenerateStage<'a> {
             .is_some_and(|m| self.link_output.metas[m.idx].is_included)
         })
         .filter_map(|(idx, ast)| {
-          let Some(ast) = ast else {
-            return None;
-          };
+          let ast = ast.as_mut()?;
           let module = self.link_output.module_table[idx].as_normal().unwrap();
           let ast_scope = &self.link_output.symbol_db[idx].as_ref().unwrap().ast_scopes;
           let chunk_idx = chunk_graph.module_to_chunk[idx].unwrap();

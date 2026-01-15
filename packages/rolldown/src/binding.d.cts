@@ -1507,7 +1507,7 @@ export declare class BindingNormalizedOptions {
   get format(): 'es' | 'cjs' | 'iife' | 'umd'
   get exports(): 'default' | 'named' | 'none' | 'auto'
   get esModule(): boolean | 'if-default-prop'
-  get inlineDynamicImports(): boolean
+  get codeSplitting(): boolean
   get dynamicImportInCjs(): boolean
   get sourcemap(): boolean | 'inline' | 'hidden'
   get sourcemapBaseUrl(): string | null

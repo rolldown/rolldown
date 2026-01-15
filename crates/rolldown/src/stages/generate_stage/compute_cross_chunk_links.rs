@@ -180,15 +180,10 @@ impl GenerateStage<'_> {
           let Module::Normal(module) = &self.link_output.module_table[module_id] else {
             return;
           };
-          module
-            .import_records
-            .iter()
-            .inspect(|rec| {
-              if let Module::Normal(importee_module) =
-                &self.link_output.module_table[rec.resolved_module]
-              {
-                // the the resolved module is not included in module graph, skip
-                // TODO: Is that possible that the module of the record is a external module?
+          module.import_records.iter().for_each(|rec| {
+            match &self.link_output.module_table[rec.resolved_module] {
+              Module::Normal(importee_module) => {
+                // The the resolved module is not included in module graph, skip it.
                 if !self.link_output.metas[importee_module.idx].is_included {
                   return;
                 }
@@ -198,16 +193,16 @@ impl GenerateStage<'_> {
                   cross_chunk_dynamic_imports.insert(importee_chunk);
                 }
               }
-            })
-            .filter(|rec| {
-              matches!(rec.kind, ImportKind::Import)
-                && !rec.meta.contains(ImportRecordMeta::IsExportStar)
-            })
-            .filter_map(|rec| self.link_output.module_table[rec.resolved_module].as_external())
-            .for_each(|importee| {
-              // Ensure the external module is imported in case it has side effects.
-              imports_from_external_modules.entry(importee.idx).or_default();
-            });
+              Module::External(_) => {
+                // Ensure the external module is imported in case it has side effects.
+                if matches!(rec.kind, ImportKind::Import)
+                  && !rec.meta.contains(ImportRecordMeta::IsExportStar)
+                {
+                  imports_from_external_modules.entry(rec.resolved_module).or_default();
+                }
+              }
+            }
+          });
 
           module.named_imports.iter().for_each(|(_, import)| {
             let rec = &module.import_records[import.record_idx];
@@ -500,21 +495,17 @@ impl GenerateStage<'_> {
                 let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
                 imports_from_other_chunks.entry(importee_chunk_idx).or_default();
               });
-          } else {
+          } else if !self.options.experimental.is_strict_execution_order_enabled() {
+            // With strict_execution_order/wrapping, modules aren't executed in loading but on-demand.
+            // So we don't need to do plain imports to address the side effects. It would be ensured
+            // by those `init_xxx()` calls.
             chunk_graph
               .chunk_table
               .iter_enumerated()
               .filter(|(id, _)| *id != chunk_id)
               .filter(|(_, importee_chunk)| {
-                if self.options.experimental.is_strict_execution_order_enabled() {
-                  // With strict_execution_order/wrapping, modules aren't executed in loading but on-demand.
-                  // So we don't need to do plain imports to address the side effects. It would be ensured
-                  // by those `init_xxx()` calls.
-                  false
-                } else {
-                  importee_chunk.bits.has_bit(*importer_chunk_bit)
-                    && importee_chunk.has_side_effect(&self.link_output.module_table)
-                }
+                importee_chunk.bits.has_bit(*importer_chunk_bit)
+                  && importee_chunk.has_side_effect(&self.link_output.module_table)
               })
               .for_each(|(importee_chunk_id, _)| {
                 index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);

@@ -651,18 +651,25 @@ impl<'a> ModuleLoader<'a> {
         .set_module_info(&module.id, Arc::new(module.to_module_info(None)));
     });
 
-    entry_points.extend(dynamic_import_entry_ids.into_iter().map(|(idx, related_stmt_infos)| {
-      EntryPoint {
-        name: None,
-        idx,
-        kind: EntryPointKind::DynamicImport,
-        file_name: None,
-        related_stmt_infos,
+    // Collect module indices from emitted entries to filter dynamic imports
+    // When a module is both dynamically imported AND emitted via this.emitFile,
+    // the emitted entry takes priority (it has user-specified name, fileName, preserveSignature)
+    let emitted_entry_indices: FxHashSet<ModuleIdx> =
+      extra_entry_points.iter().map(|e| e.idx).collect();
+
+    for (idx, related_stmt_infos) in dynamic_import_entry_ids {
+      if !emitted_entry_indices.contains(&idx) {
+        entry_points.insert(EntryPoint {
+          name: None,
+          idx,
+          kind: EntryPointKind::DynamicImport,
+          file_name: None,
+          related_stmt_infos,
+        });
       }
-    }));
+    }
 
     entry_points.extend(extra_entry_points);
-
     if entry_points.is_empty() && self.is_full_scan {
       Err(BuildDiagnostic::invalid_option(rolldown_error::InvalidOptionType::NoEntryPoint))?;
     }

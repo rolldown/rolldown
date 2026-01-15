@@ -6,6 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INVALID_OPTION
 
 ```text
-[INVALID_OPTION] Error: Invalid value "true" for option "output.inlineDynamicImports" - multiple inputs are not supported when "output.inlineDynamicImports" is true.
+[INVALID_OPTION] Error: Invalid value "false" for option "output.codeSplitting" - multiple inputs are not supported when "output.codeSplitting" is false.
 
 ```

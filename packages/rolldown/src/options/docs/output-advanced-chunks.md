@@ -3,7 +3,7 @@
 ```js
 export default defineConfig({
   output: {
-    advancedChunks: {
+    codeSplitting: {
       groups: [
         {
           name: 'react-vendor',
@@ -37,7 +37,7 @@ export default defineConfig({
 ```js
 export default defineConfig({
   output: {
-    advancedChunks: {
+    codeSplitting: {
       groups: [
         {
           name: 'large-libs',

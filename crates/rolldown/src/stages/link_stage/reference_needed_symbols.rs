@@ -1,9 +1,8 @@
 use std::ptr::addr_of;
 
 use rolldown_common::{
-  ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
-  OutputFormat, ResolvedImportRecord, RuntimeHelper, StmtInfoMeta, SymbolRefDb, TaggedSymbolRef,
-  WrapKind,
+  ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, OutputFormat, RuntimeHelper,
+  StmtInfoMeta, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -15,21 +14,11 @@ use rolldown_utils::{
 use super::LinkStage;
 use crate::utils::external_import_interop::import_record_needs_interop;
 
-fn is_external_dynamic_import(
-  table: &ModuleTable,
-  record: &ResolvedImportRecord,
-  module_idx: ModuleIdx,
-) -> bool {
-  record.kind == ImportKind::DynamicImport
-    && table.modules[module_idx].as_normal().is_some_and(|module| module.is_user_defined_entry)
-    && record.resolved_module != module_idx
-}
-
 struct DeferUpdateInfo {
   record_meta_pairs: Vec<(ImportRecordIdx, ImportRecordMeta)>,
 }
 impl LinkStage<'_> {
-  #[expect(clippy::collapsible_if, clippy::too_many_lines)]
+  #[expect(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn reference_needed_symbols(&mut self) {
     // Since each module only access its own symbol ref db, we use zip rather than a Mutex to
@@ -69,22 +58,6 @@ impl LinkStage<'_> {
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
             let rec_resolved_module = &self.module_table[rec.resolved_module];
-            if !rec_resolved_module.is_normal()
-              || is_external_dynamic_import(&self.module_table, rec, importer_idx)
-            {
-              if matches!(rec.kind, ImportKind::Require)
-                || !self.options.format.keep_esm_import_export_syntax()
-              {
-                if self.options.format.should_call_runtime_require()
-                  && self.options.polyfill_require_for_esm_format_with_node_platform()
-                {
-                  stmt_info
-                    .referenced_symbols
-                    .push(self.runtime.resolve_symbol("__require").into());
-                  record_meta_pairs.push((*rec_id, ImportRecordMeta::CallRuntimeRequire));
-                }
-              }
-            }
             match rec_resolved_module {
               Module::External(importee) => {
                 // Make sure symbols from external modules are included and de_conflicted
@@ -110,6 +83,16 @@ impl LinkStage<'_> {
                             .push(stmt_info_idx);
                         }
                       }
+                    }
+                  }
+                  ImportKind::Require => {
+                    if self.options.format.should_call_runtime_require()
+                      && self.options.polyfill_require_for_esm_format_with_node_platform()
+                    {
+                      stmt_info
+                        .referenced_symbols
+                        .push(self.runtime.resolve_symbol("__require").into());
+                      record_meta_pairs.push((*rec_id, ImportRecordMeta::CallRuntimeRequire));
                     }
                   }
                   ImportKind::DynamicImport => {
@@ -246,7 +229,7 @@ impl LinkStage<'_> {
                     }
                   },
                   ImportKind::DynamicImport => {
-                    if self.options.inline_dynamic_imports {
+                    if self.options.code_splitting.is_disabled() {
                       match importee_linking_info.wrap_kind() {
                         WrapKind::None => {}
                         WrapKind::Cjs => {

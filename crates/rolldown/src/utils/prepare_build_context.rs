@@ -4,8 +4,8 @@ use arcstr::ArcStr;
 use itertools::Either;
 use oxc::{transformer::EngineTargets, transformer_plugins::InjectGlobalVariablesConfig};
 use rolldown_common::{
-  AttachDebugInfo, GlobalsOutputOption, InjectImport, JsxOptions, JsxPreset, LegalComments,
-  MinifyOptions, ModuleType, NormalizedBundlerOptions, OutputFormat, Platform,
+  AttachDebugInfo, CodeSplittingMode, GlobalsOutputOption, InjectImport, JsxOptions, JsxPreset,
+  LegalComments, MinifyOptions, ModuleType, NormalizedBundlerOptions, OutputFormat, Platform,
   PreserveEntrySignatures, RawTransformOptions, TransformOptions, TreeshakeOptions, TsConfig,
   merge_transform_options_with_tsconfig, normalize_optimization_option,
 };
@@ -47,9 +47,9 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
 
   match raw_options.format {
     Some(format @ (OutputFormat::Umd | OutputFormat::Iife)) => {
-      if matches!(raw_options.inline_dynamic_imports, Some(false)) {
+      if matches!(raw_options.code_splitting, Some(CodeSplittingMode::Bool(true))) {
         warnings.push(
-          BuildDiagnostic::invalid_option(InvalidOptionType::UnsupportedInlineDynamicFormat(
+          BuildDiagnostic::invalid_option(InvalidOptionType::UnsupportedCodeSplittingFormat(
             format.to_string(),
           ))
           .with_severity_warning(),
@@ -59,22 +59,22 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     _ => {}
   }
 
-  if matches!(raw_options.inline_dynamic_imports, Some(true)) {
+  if matches!(raw_options.code_splitting, Some(CodeSplittingMode::Bool(false))) {
     if let Some(input) = &raw_options.input
       && input.len() > 1
     {
       errors.push(BuildDiagnostic::invalid_option(
-        InvalidOptionType::InlineDynamicImportsWithMultipleInputs,
+        InvalidOptionType::CodeSplittingDisabledWithMultipleInputs,
       ));
     }
     if matches!(raw_options.preserve_modules, Some(true)) {
       errors.push(BuildDiagnostic::invalid_option(
-        InvalidOptionType::InlineDynamicImportsWithPreserveModules,
+        InvalidOptionType::CodeSplittingDisabledWithPreserveModules,
       ));
     }
     if raw_options.manual_code_splitting.is_some() {
       errors.push(BuildDiagnostic::invalid_option(
-        InvalidOptionType::InlineDynamicImportsWithManualCodeSplitting,
+        InvalidOptionType::CodeSplittingDisabledWithManualCodeSplitting,
       ));
     }
   }
@@ -246,9 +246,9 @@ pub fn prepare_build_context(
     experimental.attach_debug_info = Some(AttachDebugInfo::Simple);
   }
 
-  let inline_dynamic_imports = match format {
-    OutputFormat::Umd | OutputFormat::Iife => true,
-    _ => raw_options.inline_dynamic_imports.unwrap_or(false),
+  let code_splitting = match format {
+    OutputFormat::Umd | OutputFormat::Iife => CodeSplittingMode::Bool(false),
+    _ => raw_options.code_splitting.unwrap_or_default(),
   };
 
   // If the `file` is provided, use the parent directory of the file as the `out_dir`.
@@ -420,7 +420,7 @@ pub fn prepare_build_context(
     oxc_inject_global_variables_config,
     extend: raw_options.extend.unwrap_or(false),
     external_live_bindings: raw_options.external_live_bindings.unwrap_or(true),
-    inline_dynamic_imports,
+    code_splitting,
     dynamic_import_in_cjs: raw_options.dynamic_import_in_cjs.unwrap_or(true),
     manual_code_splitting: raw_options.manual_code_splitting,
     checks: raw_options.checks.unwrap_or_default().into(),

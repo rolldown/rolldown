@@ -2,6 +2,6 @@
   "config": {
     "name": "bundle",
     "format": "iife",
-    "inlineDynamicImports": false
+    "codeSplitting": true
   }
 }

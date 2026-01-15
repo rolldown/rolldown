@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## imp.js
+
+```js
+//#region imp.js
+const imp = 1;
+const imp2 = 2;
+
+//#endregion
+export { imp, imp2 };
+```
+
+## main.js
+
+```js
+//#region main.js
+const load = async () => {
+	const result = await import("./imp.js");
+	console.log(result.imp);
+};
+load();
+
+//#endregion
+```

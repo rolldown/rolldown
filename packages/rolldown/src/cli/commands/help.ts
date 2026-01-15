@@ -4,13 +4,6 @@ import { options } from '../arguments';
 import { camelCaseToKebabCase } from '../arguments/utils';
 import { logger } from '../logger';
 
-const introduction = `${styleText('gray', `${description} (rolldown v${version})`)}
-
-${styleText(['bold', 'underline'], 'USAGE')} ${styleText(
-  'cyan',
-  'rolldown -c <config>',
-)} or ${styleText('cyan', 'rolldown <input> <options>')}`;
-
 const examples = [
   {
     title: 'Bundle with a config file `rolldown.config.mjs`',
@@ -41,12 +34,24 @@ const notes = [
   'For more information, please visit https://rolldown.rs/.',
 ];
 
-export function showHelp(): void {
-  logger.log(introduction);
-  logger.log('');
-  logger.log(`${styleText(['bold', 'underline'], 'OPTIONS')}`);
-  logger.log('');
-  logger.log(
+/**
+ * Generates the CLI help text as a string.
+ */
+export function generateHelpText(): string {
+  const lines: string[] = [];
+
+  // Introduction
+  lines.push(`${styleText('gray', `${description} (rolldown v${version})`)}`);
+  lines.push('');
+  lines.push(
+    `${styleText(['bold', 'underline'], 'USAGE')} ${styleText('cyan', 'rolldown -c <config>')} or ${styleText('cyan', 'rolldown <input> <options>')}`,
+  );
+
+  // Options
+  lines.push('');
+  lines.push(`${styleText(['bold', 'underline'], 'OPTIONS')}`);
+  lines.push('');
+  lines.push(
     Object.entries(options)
       .sort(([a], [b]) => {
         // 1. If one of them has a short option, prioritize it.
@@ -83,17 +88,27 @@ export function showHelp(): void {
       })
       .join('\n'),
   );
-  logger.log('');
-  logger.log(`${styleText(['bold', 'underline'], 'EXAMPLES')}`);
-  logger.log('');
+
+  // Examples
+  lines.push('');
+  lines.push(`${styleText(['bold', 'underline'], 'EXAMPLES')}`);
+  lines.push('');
   examples.forEach(({ title, command }, ord) => {
-    logger.log(`  ${ord + 1}. ${title}:`);
-    logger.log(`    ${styleText('cyan', command)}`);
-    logger.log('');
+    lines.push(`  ${ord + 1}. ${title}:`);
+    lines.push(`    ${styleText('cyan', command)}`);
+    lines.push('');
   });
-  logger.log(`${styleText(['bold', 'underline'], 'NOTES')}`);
-  logger.log('');
+
+  // Notes
+  lines.push(`${styleText(['bold', 'underline'], 'NOTES')}`);
+  lines.push('');
   notes.forEach((note) => {
-    logger.log(`  * ${styleText('gray', note)}`);
+    lines.push(`  * ${styleText('gray', note)}`);
   });
+
+  return lines.join('\n');
+}
+
+export function showHelp(): void {
+  logger.log(generateHelpText());
 }

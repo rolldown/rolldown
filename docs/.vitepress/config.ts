@@ -219,6 +219,15 @@ const config = defineConfig({
     ['meta', { property: 'og:url', content: 'https://rolldown.rs/' }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
     ['meta', { name: 'twitter:site', content: '@rolldown_rs' }],
+    [
+      'script',
+      {
+        src: 'https://cdn.usefathom.com/script.js',
+        'data-site': 'RBMPDFTV',
+        'data-spa': 'auto',
+        defer: '',
+      },
+    ],
   ],
 
   themeConfig: {

@@ -70,7 +70,7 @@ impl GenerateStage<'_> {
       let mut bailout_importer = false;
       for rec in &normal_module.import_records {
         if chunk_modules_set.contains(&rec.resolved_module) {
-          // 1. `import('./esm.js')` when `inline_dynamic_imports` is enabled
+          // 1. `import('./esm.js')` when `code_splitting` is disabled
           // 2. `require('./esm.js')`
           if rec.kind == ImportKind::Require || rec.kind == ImportKind::DynamicImport {
             boundary_module.insert(rec.resolved_module);

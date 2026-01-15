@@ -14,9 +14,9 @@ pub enum InvalidOptionType {
   IncludeDependenciesRecursivelyWithImplicitPreserveEntrySignatures,
   InvalidFilenamePattern { pattern: String, pattern_name: String },
   InvalidFilenameSubstitution { name: String, pattern_name: String },
-  InlineDynamicImportsWithMultipleInputs,
-  InlineDynamicImportsWithPreserveModules,
-  InlineDynamicImportsWithManualCodeSplitting,
+  CodeSplittingDisabledWithMultipleInputs,
+  CodeSplittingDisabledWithPreserveModules,
+  CodeSplittingDisabledWithManualCodeSplitting,
   HashLengthTooLong { pattern_name: String, received: usize, max: usize },
   HashLengthTooShort { pattern_name: String, received: usize, min: usize, chunk_count: u32 },
 }
@@ -34,12 +34,12 @@ impl BuildEvent for InvalidOption {
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     match &self.invalid_option_type {
         InvalidOptionType::UnsupportedInlineDynamicFormat(format) => {
-          format!("Invalid value \"{format}\" for option \"output.format\" - UMD and IIFE are not supported for code-splitting builds. You may set `output.inlineDynamicImports` to `true` when using dynamic imports.")
+          format!("Invalid value \"{format}\" for option \"output.format\" - UMD and IIFE are not supported for code-splitting builds. You may set `output.codeSplitting` to `false` when using dynamic imports.")
         }
         InvalidOptionType::UnsupportedCodeSplittingFormat(format) => {
-          format!("Invalid value \"{format}\" for option \"output.format\" - UMD and IIFE are not supported for code-splitting builds.")
+          format!("Invalid value \"{format}\" for option \"output.format\" - UMD and IIFE are not supported for code-splitting builds. For single entry builds, you can set `output.codeSplitting` to `false` to disable code-splitting.")
         }
-        InvalidOptionType::InvalidOutputFile => "Invalid value for option \"output.file\" - When building multiple chunks, the \"output.dir\" option must be used, not \"output.file\". You may set `output.inlineDynamicImports` to `true` when using dynamic imports.".to_string(),
+        InvalidOptionType::InvalidOutputFile => "Invalid value for option \"output.file\" - When building multiple chunks, the \"output.dir\" option must be used, not \"output.file\". You may set `output.codeSplitting` to `false` when using dynamic imports.".to_string(),
         InvalidOptionType::InvalidOutputDirOption => "Invalid value for option \"output.dir\" - you must set either \"output.file\" for a single-file build or \"output.dir\" when generating multiple chunks.".to_string(),
         InvalidOptionType::NoEntryPoint =>"You must supply `options.input` to rolldown, you should at least provide one entrypoint via `options.input` or `this.emitFile({type: 'chunk', ...})` (https://rollupjs.org/plugin-development/#this-emitfile)".to_string(),
         InvalidOptionType::ManualCodeSplittingWithoutGroups(options) => {
@@ -85,14 +85,14 @@ impl BuildEvent for InvalidOption {
              can be neither absolute nor relative paths."
           )
         }
-        InvalidOptionType::InlineDynamicImportsWithMultipleInputs => {
-          "Invalid value \"true\" for option \"output.inlineDynamicImports\" - multiple inputs are not supported when \"output.inlineDynamicImports\" is true.".to_string()
+        InvalidOptionType::CodeSplittingDisabledWithMultipleInputs => {
+          "Invalid value \"false\" for option \"output.codeSplitting\" - multiple inputs are not supported when \"output.codeSplitting\" is false.".to_string()
         }
-        InvalidOptionType::InlineDynamicImportsWithPreserveModules => {
-          "Invalid value \"true\" for option \"output.inlineDynamicImports\" - this option is not supported for \"output.preserveModules\".".to_string()
+        InvalidOptionType::CodeSplittingDisabledWithPreserveModules => {
+          "Invalid value \"false\" for option \"output.codeSplitting\" - this option is not supported for \"output.preserveModules\".".to_string()
         }
-        InvalidOptionType::InlineDynamicImportsWithManualCodeSplitting => {
-          "Invalid value \"true\" for option \"output.inlineDynamicImports\" - this option is not supported for \"output.codeSplitting\".".to_string()
+        InvalidOptionType::CodeSplittingDisabledWithManualCodeSplitting => {
+          "Invalid value \"false\" for option \"output.codeSplitting\" - this option is not supported with manual code splitting groups.".to_string()
         }
         InvalidOptionType::HashLengthTooLong { pattern_name, received, max } => {
           format!("Hashes cannot be longer than {max} characters, received {received}. Check the `{pattern_name}` option.")

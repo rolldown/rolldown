@@ -6,6 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INVALID_OPTION
 
 ```text
-[INVALID_OPTION] Error: Invalid value "true" for option "output.inlineDynamicImports" - this option is not supported for "output.preserveModules".
+[INVALID_OPTION] Error: Invalid value "false" for option "output.codeSplitting" - this option is not supported for "output.preserveModules".
 
 ```

@@ -50,7 +50,7 @@ impl LinkStage<'_> {
             }
           },
           ImportKind::DynamicImport => {
-            if self.options.inline_dynamic_imports {
+            if self.options.code_splitting.is_disabled() {
               // For iife, then import() is just a require() that
               // returns a promise, so the imported file must also be wrapped
               match importee.exports_kind {

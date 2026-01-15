@@ -1,6 +1,7 @@
 use rolldown_common::{
-  AddonOutputOption, BundlerOptions, ExperimentalOptions, InlineConstOption, OptimizationOption,
-  OutputExports, OutputFormat, PreserveEntrySignatures, TreeshakeOptions, deserialize_inline_const,
+  AddonOutputOption, BundlerOptions, CodeSplittingMode, ExperimentalOptions, InlineConstOption,
+  OptimizationOption, OutputExports, OutputFormat, PreserveEntrySignatures, TreeshakeOptions,
+  deserialize_inline_const,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -65,7 +66,7 @@ impl ConfigVariant {
       config.entry_filenames = Some(entry_filenames.clone().into());
     }
     if let Some(inline_dynamic_imports) = &self.inline_dynamic_imports {
-      config.inline_dynamic_imports = Some(*inline_dynamic_imports);
+      config.code_splitting = Some(CodeSplittingMode::Bool(!*inline_dynamic_imports));
     }
     if let Some(dynamic_import_in_cjs) = &self.dynamic_import_in_cjs {
       config.dynamic_import_in_cjs = Some(*dynamic_import_in_cjs);

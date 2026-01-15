@@ -32,6 +32,8 @@ export interface NormalizedOutputOptions {
   sourcemapBaseUrl: string | undefined;
   cssEntryFileNames: string | ChunkFileNamesFunction;
   cssChunkFileNames: string | ChunkFileNamesFunction;
+  codeSplitting: boolean;
+  /** @deprecated Use `codeSplitting` instead. */
   inlineDynamicImports: boolean;
   dynamicImportInCjs: boolean;
   externalLiveBindings: boolean;
@@ -138,8 +140,16 @@ export class NormalizedOutputOptionsImpl
   }
 
   @lazyProp
+  get codeSplitting(): boolean {
+    return this.inner.codeSplitting;
+  }
+
+  /**
+   * @deprecated Use `codeSplitting` instead.
+   */
+  @lazyProp
   get inlineDynamicImports(): boolean {
-    return this.inner.inlineDynamicImports;
+    return !this.inner.codeSplitting;
   }
 
   @lazyProp

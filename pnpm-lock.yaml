@@ -107,7 +107,7 @@ catalogs:
       version: 1.7.1
     diff:
       specifier: ^8.0.0
-      version: 8.0.2
+      version: 8.0.3
     esbuild:
       specifier: ^0.27.0
       version: 0.27.2
@@ -841,7 +841,7 @@ importers:
         version: 1.9.0
       diff:
         specifier: 'catalog:'
-        version: 8.0.2
+        version: 8.0.3
       estree-toolkit:
         specifier: 'catalog:'
         version: 1.7.13
@@ -4196,8 +4196,8 @@ packages:
     resolution: {integrity: sha512-PJWHUb1RFevKCwaFA9RlG5tCd+FO5iRh9A8HEtkmBH2Li03iJriB6m6JIN4rGz3K3JLawI7/veA1xzRKP6ISBw==}
     engines: {node: '>=0.3.1'}
 
-  diff@8.0.2:
-    resolution: {integrity: sha512-sSuxWU5j5SR9QQji/o2qMvqRNYRDOcBTgsJ/DeCf4iSN4gW+gNMXM7wFIP+fdXZxoNiAnHUTGjCr+TSWXdRDKg==}
+  diff@8.0.3:
+    resolution: {integrity: sha512-qejHi7bcSD4hQAZE0tNAawRK1ZtafHDmMTMkrrIGgSLl7hTnQHmKCeB45xAcbfTqK2zowkM3j3bHt/4b/ARbYQ==}
     engines: {node: '>=0.3.1'}
 
   dts-resolver@2.1.3:
@@ -9272,7 +9272,7 @@ snapshots:
 
   diff@7.0.0: {}
 
-  diff@8.0.2: {}
+  diff@8.0.3: {}
 
   dts-resolver@2.1.3(oxc-resolver@11.16.2):
     optionalDependencies:

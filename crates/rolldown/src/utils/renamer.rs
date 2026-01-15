@@ -75,9 +75,13 @@ impl<'name> Renamer<'name> {
     }
   }
 
-  /// Returns the canonical name for a symbol if it exists in the renamer.
-  /// Returns `None` if the symbol was not processed or kept its original name
-  /// (original names are looked up via `symbol_db` during code generation).
+  /// Returns the canonical name for a symbol if it has an explicit entry in this renamer.
+  ///
+  /// Returns `None` when no explicit canonical name has been recorded for the symbol.
+  /// This covers both symbols that have not yet been processed and symbols that were
+  /// processed but kept their original name. Callers must treat all `None` cases
+  /// identically and fall back to `symbol_db` to determine the effective name during
+  /// code generation.
   pub fn get_canonical_name(&self, symbol_ref: SymbolRef) -> Option<&CompactStr> {
     let canonical_ref = self.symbol_db.canonical_ref_for(symbol_ref);
     self.canonical_names.get(&canonical_ref)

@@ -3,7 +3,12 @@ import type { OutputOptions } from '../options/output-options';
 import type { RolldownOutput } from '../types/rolldown-output';
 import { rolldown } from './rolldown';
 
-export interface BuildOptions extends InputOptions {
+/**
+ * The options for {@linkcode build} function.
+ *
+ * @category Programmatic APIs
+ */
+export type BuildOptions = InputOptions & {
   /**
    * Write the output to the file system
    *
@@ -11,14 +16,40 @@ export interface BuildOptions extends InputOptions {
    */
   write?: boolean;
   output?: OutputOptions;
-}
+};
 
-/** @category Programmatic APIs */
+/**
+ * Build a single output.
+ *
+ * @param options The build options.
+ * @returns A Promise that resolves to the build output.
+ */
 async function build(options: BuildOptions): Promise<RolldownOutput>;
 /**
  * Build multiple outputs __sequentially__.
+ *
+ * @param options The build options.
+ * @returns A Promise that resolves to the build outputs for each option.
  */
 async function build(options: BuildOptions[]): Promise<RolldownOutput[]>;
+/**
+ * The API similar to esbuild's `build` function.
+ *
+ * @example
+ * ```js
+ * import { build } from 'rolldown';
+ *
+ * const result = await build({
+ *   input: 'src/main.js',
+ *   output: {
+ *     file: 'bundle.js',
+ *   },
+ * });
+ * console.log(result);
+ * ```
+ *
+ * @category Programmatic APIs
+ */
 async function build(
   options: BuildOptions | BuildOptions[],
 ): Promise<RolldownOutput | RolldownOutput[]> {

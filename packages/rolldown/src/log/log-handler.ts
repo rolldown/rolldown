@@ -4,11 +4,13 @@ import {
   type LogLevel,
   type LogLevelOption,
   logLevelPriority,
-  type RollupLog,
+  type RolldownLog,
 } from './logging';
 import { logInvalidLogPosition } from './logs';
 
-export const normalizeLog = (log: RollupLog | string | (() => RollupLog | string)): RollupLog =>
+export const normalizeLog = (
+  log: RolldownLog | string | (() => RolldownLog | string),
+): RolldownLog =>
   typeof log === 'string'
     ? { message: log }
     : typeof log === 'function'
@@ -39,16 +41,16 @@ export function getLogHandler(
   };
 }
 
-export type LoggingFunction = (log: RollupLog | string | (() => RollupLog | string)) => void;
+export type LoggingFunction = (log: RolldownLog | string | (() => RolldownLog | string)) => void;
 
 export type LoggingFunctionWithPosition = (
-  log: RollupLog | string | (() => RollupLog | string),
+  log: RolldownLog | string | (() => RolldownLog | string),
   pos?: number | { column: number; line: number },
 ) => void;
 
-export type LogHandler = (level: LogLevel, log: RollupLog) => void;
+export type LogHandler = (level: LogLevel, log: RolldownLog) => void;
 
 export type WarningHandlerWithDefault = (
-  warning: RollupLog,
+  warning: RolldownLog,
   defaultHandler: LoggingFunction,
 ) => void;

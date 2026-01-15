@@ -3,15 +3,19 @@ import { build, type BuildOptions } from './api/build';
 import { rolldown } from './api/rolldown';
 import type { RolldownBuild } from './api/rolldown/rolldown-build';
 import { watch } from './api/watch';
-import type { RolldownWatcher, RolldownWatcherEvent } from './api/watch/watch-emitter';
+import type {
+  RolldownWatcher,
+  RolldownWatcherEvent,
+  RolldownWatcherWatcherEventMap,
+} from './api/watch/watch-emitter';
 import type { PreRenderedChunk } from './binding.cjs';
 import type { LoggingFunction, WarningHandlerWithDefault } from './log/log-handler';
 import type {
   LogLevel,
   LogLevelOption,
   LogOrStringHandler,
-  RollupError,
-  RollupLog,
+  RolldownError,
+  RolldownLog,
   RollupLogWithString,
 } from './log/logging';
 import type { ChecksOptions } from './options/generated/checks-options';
@@ -188,8 +192,11 @@ export type {
   RolldownPluginOption,
   RolldownWatcher,
   RolldownWatcherEvent,
-  RollupError,
-  RollupLog,
+  RolldownWatcherWatcherEventMap,
+  RolldownError,
+  RolldownError as RollupError,
+  RolldownLog,
+  RolldownLog as RollupLog,
   RollupLogWithString,
   SourceDescription,
   SourceMap,

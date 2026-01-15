@@ -9,7 +9,7 @@ import {
   LOG_LEVEL_INFO,
   LOG_LEVEL_WARN,
   type LogLevelOption,
-  type RollupError,
+  type RolldownError,
 } from '../log/logging';
 import { error, logPluginError } from '../log/logs';
 import type { Extends, TypeAssert } from '../types/assert';
@@ -25,7 +25,7 @@ export interface PluginContextMeta {
 /** @category Plugin APIs */
 export interface MinimalPluginContext {
   readonly pluginName: string;
-  error: (e: RollupError | string) => never;
+  error: (e: RolldownError | string) => never;
   info: LoggingFunction;
   warn: LoggingFunction;
   debug: LoggingFunction;
@@ -56,7 +56,7 @@ export class MinimalPluginContextImpl {
     };
   }
 
-  public error(e: RollupError | string): never {
+  public error(e: RolldownError | string): never {
     return error(logPluginError(normalizeLog(e), this.pluginName, { hook: this.hookName }));
   }
 }

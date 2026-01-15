@@ -1,6 +1,6 @@
-import type { RollupLog } from './log/logging';
+import type { RolldownLog } from './log/logging';
 
-export type GetLogFilter = (filters: string[]) => (log: RollupLog) => boolean;
+export type GetLogFilter = (filters: string[]) => (log: RolldownLog) => boolean;
 
 const getLogFilter: GetLogFilter = (filters) => {
   if (filters.length === 0) return () => true;
@@ -16,7 +16,7 @@ const getLogFilter: GetLogFilter = (filters) => {
       };
     }),
   );
-  return (log: RollupLog): boolean => {
+  return (log: RolldownLog): boolean => {
     nextIntersectedFilter: for (const intersectedFilters of normalizedFilters) {
       for (const { inverted, key, parts } of intersectedFilters) {
         const isFilterSatisfied = testFilter(log, key, parts);
@@ -30,7 +30,7 @@ const getLogFilter: GetLogFilter = (filters) => {
   };
 };
 
-const testFilter = (log: RollupLog, key: string[], parts: string[]): boolean => {
+const testFilter = (log: RolldownLog, key: string[], parts: string[]): boolean => {
   let rawValue: any = log;
   for (let index = 0; index < key.length; index++) {
     if (!rawValue) {
@@ -62,4 +62,4 @@ const testFilter = (log: RollupLog, key: string[], parts: string[]): boolean => 
 };
 
 export default getLogFilter;
-export type { RollupLog };
+export type { RolldownLog, RolldownLog as RollupLog };

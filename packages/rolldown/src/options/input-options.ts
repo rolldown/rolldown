@@ -2,7 +2,7 @@ import type {
   LogLevel,
   LogLevelOption,
   LogOrStringHandler,
-  RollupLog,
+  RolldownLog,
   RollupLogWithString,
 } from '../log/logging';
 import type { RolldownPluginOption } from '../plugin';
@@ -224,13 +224,13 @@ type ChunkModulesOrder = 'exec-order' | 'module-id';
 /** @inline */
 export type OnLogFunction = (
   level: LogLevel,
-  log: RollupLog,
+  log: RolldownLog,
   defaultHandler: LogOrStringHandler,
 ) => void;
 
 /** @inline */
 export type OnwarnFunction = (
-  warning: RollupLog,
+  warning: RolldownLog,
   defaultHandler: (warning: RollupLogWithString | (() => RollupLogWithString)) => void,
 ) => void;
 

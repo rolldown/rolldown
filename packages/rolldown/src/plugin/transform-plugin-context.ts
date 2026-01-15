@@ -8,7 +8,7 @@ import {
   type LogHandler,
   normalizeLog,
 } from '../log/log-handler';
-import type { LogLevelOption, RollupError } from '../log/logging';
+import type { LogLevelOption, RolldownError } from '../log/logging';
 import { augmentCodeLocation, error, logPluginError } from '../log/logs';
 import type { OutputOptions } from '../options/output-options';
 import type { Extends, TypeAssert } from '../types/assert';
@@ -22,7 +22,7 @@ export interface TransformPluginContext extends PluginContext {
   debug: LoggingFunctionWithPosition;
   info: LoggingFunctionWithPosition;
   warn: LoggingFunctionWithPosition;
-  error(e: RollupError | string, pos?: number | { column: number; line: number }): never;
+  error(e: RolldownError | string, pos?: number | { column: number; line: number }): never;
   getCombinedSourcemap(): SourceMap;
 }
 
@@ -55,7 +55,7 @@ export class TransformPluginContextImpl extends PluginContextImpl {
     this.info = getLogHandler(this.info);
   }
 
-  error(e: RollupError | string, pos?: number | { column: number; line: number }): never {
+  error(e: RolldownError | string, pos?: number | { column: number; line: number }): never {
     if (typeof e === 'string') e = { message: e };
     if (pos) augmentCodeLocation(e, pos, this.moduleSource, this.moduleId);
     e.id = this.moduleId;

@@ -8,7 +8,7 @@ import type {
 import type { BuiltinPlugin } from '../builtin-plugin/utils';
 import type { DefinedHookNames } from '../constants/plugin';
 import type { DEFINED_HOOK_NAMES } from '../constants/plugin';
-import type { LogLevel, RollupLog } from '../log/logging';
+import type { LogLevel, RolldownLog } from '../log/logging';
 import type { NormalizedInputOptions } from '../options/normalized-input-options';
 import type { NormalizedOutputOptions } from '../options/normalized-output-options';
 import type { ModuleInfo } from '../types/module-info';
@@ -107,7 +107,7 @@ export interface FunctionPluginHooks {
   [DEFINED_HOOK_NAMES.onLog]: (
     this: MinimalPluginContext,
     level: LogLevel,
-    log: RollupLog,
+    log: RolldownLog,
   ) => NullValue | boolean;
 
   [DEFINED_HOOK_NAMES.options]: (

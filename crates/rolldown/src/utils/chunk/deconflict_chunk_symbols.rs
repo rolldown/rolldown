@@ -16,23 +16,24 @@ pub fn deconflict_chunk_symbols(
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
 ) {
   let mut renamer = Renamer::new(chunk.entry_module_idx(), &link_output.symbol_db, format);
-
+  // Reserve global scope symbols (unresolved references) to prevent generating conflicting names.
+  // These are identifiers referenced but not defined in the module's scope (e.g., `console`, `window`).
   chunk
     .modules
     .iter()
     .copied()
-    .filter_map(|id| link_output.module_table[id].as_normal())
-    .flat_map(|m| {
-      link_output.symbol_db[m.idx]
-        .as_ref()
-        .unwrap()
-        .ast_scopes
-        .scoping()
-        .root_unresolved_references()
-        .keys()
+    .filter_map(|idx| {
+      Some(
+        link_output.symbol_db[idx]
+          .as_ref()?
+          .ast_scopes
+          .scoping()
+          .root_unresolved_references()
+          .keys(),
+      )
     })
+    .flatten()
     .for_each(|name| {
-      // global names should be reserved
       renamer.reserve(CompactStr::new(name));
     });
 

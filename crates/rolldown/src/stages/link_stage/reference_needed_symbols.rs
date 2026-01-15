@@ -1,8 +1,8 @@
 use std::ptr::addr_of;
 
 use rolldown_common::{
-  ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, OutputFormat, RuntimeHelper,
-  StmtInfoMeta, SymbolRefDb, TaggedSymbolRef, WrapKind,
+  ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, OutputFormat,
+  ResolvedImportRecord, RuntimeHelper, StmtInfoMeta, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
@@ -13,6 +13,18 @@ use rolldown_utils::{
 
 use super::LinkStage;
 use crate::utils::external_import_interop::import_record_needs_interop;
+
+fn is_external_dynamic_import(
+  rec: &ResolvedImportRecord,
+  rec_resolved_module: &Module,
+  importer_is_user_defined_entry: bool,
+  importer_idx: ModuleIdx,
+) -> bool {
+  rec_resolved_module.is_external()
+    || (rec.kind == ImportKind::DynamicImport
+      && importer_is_user_defined_entry
+      && rec.resolved_module != importer_idx)
+}
 
 struct DeferUpdateInfo {
   record_meta_pairs: Vec<(ImportRecordIdx, ImportRecordMeta)>,
@@ -58,11 +70,7 @@ impl LinkStage<'_> {
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
             let rec_resolved_module = &self.module_table[rec.resolved_module];
-            if rec_resolved_module.is_external()
-              || (rec.kind == ImportKind::DynamicImport
-                && importer.is_user_defined_entry
-                && rec.resolved_module != importer_idx)
-            {
+            if is_external_dynamic_import(rec, rec_resolved_module, importer.is_user_defined_entry, importer_idx) {
               if matches!(rec.kind, ImportKind::Require)
                 || !self.options.format.keep_esm_import_export_syntax()
               {

@@ -495,21 +495,17 @@ impl GenerateStage<'_> {
                 let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
                 imports_from_other_chunks.entry(importee_chunk_idx).or_default();
               });
-          } else {
+          } else if !self.options.experimental.is_strict_execution_order_enabled() {
+            // With strict_execution_order/wrapping, modules aren't executed in loading but on-demand.
+            // So we don't need to do plain imports to address the side effects. It would be ensured
+            // by those `init_xxx()` calls.
             chunk_graph
               .chunk_table
               .iter_enumerated()
               .filter(|(id, _)| *id != chunk_id)
               .filter(|(_, importee_chunk)| {
-                if self.options.experimental.is_strict_execution_order_enabled() {
-                  // With strict_execution_order/wrapping, modules aren't executed in loading but on-demand.
-                  // So we don't need to do plain imports to address the side effects. It would be ensured
-                  // by those `init_xxx()` calls.
-                  false
-                } else {
-                  importee_chunk.bits.has_bit(*importer_chunk_bit)
-                    && importee_chunk.has_side_effect(&self.link_output.module_table)
-                }
+                importee_chunk.bits.has_bit(*importer_chunk_bit)
+                  && importee_chunk.has_side_effect(&self.link_output.module_table)
               })
               .for_each(|(importee_chunk_id, _)| {
                 index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);

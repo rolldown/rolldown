@@ -39,7 +39,7 @@ export interface RolldownLog {
 }
 
 /** @inline */
-export type RollupLogWithString = RolldownLog | string;
+export type RolldownLogWithString = RolldownLog | string;
 
 /** @category Plugin APIs */
 export interface RolldownError extends RolldownLog {
@@ -48,7 +48,7 @@ export interface RolldownError extends RolldownLog {
   watchFiles?: string[];
 }
 
-export type LogOrStringHandler = (level: LogLevelWithError, log: RollupLogWithString) => void;
+export type LogOrStringHandler = (level: LogLevelWithError, log: RolldownLogWithString) => void;
 
 const LOG_LEVEL_SILENT: LogLevelOption = 'silent';
 export const LOG_LEVEL_ERROR = 'error';

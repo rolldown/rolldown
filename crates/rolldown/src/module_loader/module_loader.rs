@@ -26,15 +26,14 @@ use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use tracing::Instrument;
 
-use crate::module_loader::task_context::TaskContext;
 use crate::types::scan_stage_cache::ScanStageCache;
 use crate::utils::load_entry_module::load_entry_module;
 use crate::{SharedOptions, SharedResolver};
 
 use super::external_module_task::ExternalModuleTask;
-use super::module_task::{ModuleTask, ModuleTaskOwner};
+use super::module_task::{ModuleTask, ModuleTaskOwnerRef};
 use super::runtime_module_task::RuntimeModuleTask;
-use super::task_context::TaskContextMeta;
+use super::task_context::{TaskContext, TaskContextMeta};
 
 pub struct IntermediateNormalModules {
   pub modules: HybridIndexVec<ModuleIdx, Option<Module>>,
@@ -206,12 +205,11 @@ impl<'a> ModuleLoader<'a> {
   fn try_spawn_new_task(
     &mut self,
     resolved_id: ResolvedId,
-    owner: Option<ModuleTaskOwner>,
+    owner: Option<ModuleTaskOwnerRef<'_>>,
     is_user_defined_entry: bool,
-    assert_module_type: Option<ModuleType>,
+    assert_module_type: Option<&ModuleType>,
     user_defined_entries: &Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
   ) -> ModuleIdx {
-    let ctx = Arc::clone(&self.shared_context);
     let idx = match self.cache.module_id_to_idx.get(&resolved_id.id) {
       Some(VisitState::Seen(idx)) => return *idx,
       Some(VisitState::Invalidate(idx)) => {
@@ -235,6 +233,7 @@ impl<'a> ModuleLoader<'a> {
         idx
       }
     };
+    let ctx = Arc::clone(&self.shared_context);
     if resolved_id.external.is_external() {
       let task = ExternalModuleTask::new(ctx, idx, resolved_id, Arc::clone(user_defined_entries));
       tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task")));
@@ -243,9 +242,9 @@ impl<'a> ModuleLoader<'a> {
         ctx,
         idx,
         resolved_id,
-        owner,
+        owner.map(Into::into),
         is_user_defined_entry,
-        assert_module_type,
+        assert_module_type.cloned(),
         self.flat_options,
         self.magic_string_tx.clone(),
       );
@@ -371,6 +370,7 @@ impl<'a> ModuleLoader<'a> {
             }
           }
 
+          let normal_module = module.as_normal().unwrap();
           let mut import_records = IndexVec::with_capacity(raw_import_records.len());
           for ((rec_idx, mut raw_rec), resolved_id) in
             raw_import_records.into_iter_enumerated().zip(resolved_deps)
@@ -381,17 +381,11 @@ impl<'a> ModuleLoader<'a> {
               raw_rec.meta.insert(ImportRecordMeta::JsonModule);
             }
 
-            let normal_module = module.as_normal().unwrap();
-            let owner = ModuleTaskOwner::new(
-              normal_module.source.clone(),
-              normal_module.stable_id.as_str().into(),
-              raw_rec.span,
-            );
             let idx = self.try_spawn_new_task(
               resolved_id,
-              Some(owner),
+              Some(ModuleTaskOwnerRef::new(normal_module, raw_rec.span)),
               false,
-              raw_rec.asserted_module_type.clone(),
+              raw_rec.asserted_module_type.as_ref(),
               &user_defined_entries,
             );
 
@@ -479,7 +473,7 @@ impl<'a> ModuleLoader<'a> {
               info,
               None,
               false,
-              raw_rec.asserted_module_type.clone(),
+              raw_rec.asserted_module_type.as_ref(),
               &user_defined_entries,
             );
             self.intermediate_normal_modules.importers[id].push(ImporterRecord {

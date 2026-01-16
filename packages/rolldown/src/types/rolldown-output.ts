@@ -52,17 +52,26 @@ export interface RenderedModule {
  */
 export interface RenderedChunk extends Omit<BindingRenderedChunk, 'modules'> {
   type: 'chunk';
+  /** Information about the modules included in this chunk. */
   modules: {
     [id: string]: RenderedModule;
   };
+  /** The name of this chunk, which is used in naming patterns. */
   name: string;
+  /** Whether this chunk is a static entry point. */
   isEntry: boolean;
+  /** Whether this chunk is a dynamic entry point. */
   isDynamicEntry: boolean;
+  /** The id of a module that this chunk corresponds to. */
   facadeModuleId: string | null;
   moduleIds: Array<string>;
+  /** Exported variable names from this chunk. */
   exports: Array<string>;
+  /** The preliminary file name of this chunk with hash placeholders. */
   fileName: string;
+  /** External modules imported statically by this chunk. */
   imports: Array<string>;
+  /** External modules imported dynamically by this chunk. */
   dynamicImports: Array<string>;
 }
 

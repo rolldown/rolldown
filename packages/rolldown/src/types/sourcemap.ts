@@ -13,6 +13,7 @@ export interface ExistingRawSourceMap {
   x_google_ignoreList?: number[];
 }
 
+/** @inline */
 export type SourceMapInput = ExistingRawSourceMap | string | null;
 
 export function bindingifySourcemap(

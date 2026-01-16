@@ -1,4 +1,4 @@
-# Plugin hook filters
+# Plugin Hook Filters
 
 > [!note]
 > For more details about **why you need plugin hook filter** please refer [why-plugin-hook-filter](/in-depth/why-plugin-hook-filter)
@@ -66,47 +66,7 @@ In addition to `id`, you can also filter based on `moduleType` and the module's 
   }
   ```
 
-Full `HookFilter` interface for the `filter` property:
-
-````ts
-interface HookFilter {
-  /**
-   * This filter is used to do a pre-test to determine whether the hook should be called.
-   *
-   * @example
-   * Include all `id`s that contain `node_modules` in the path.
-   * ```js
-   * { id: '**'+'/node_modules/**' }
-   * ```
-   * @example
-   * Include all `id`s that contain `node_modules` or `src` in the path.
-   * ```js
-   * { id: ['**'+'/node_modules/**', '**'+'/src/**'] }
-   * ```
-   * @example
-   * Include all `id`s that start with `http`
-   * ```js
-   * { id: /^http/ }
-   * ```
-   * @example
-   * Exclude all `id`s that contain `node_modules` in the path.
-   * ```js
-   * { id: { exclude: '**'+'/node_modules/**' } }
-   * ```
-   * @example
-   * Formal pattern to define includes and excludes.
-   * ```
-   * { id : {
-   *   include: ['**'+'/foo/**', /bar/],
-   *   exclude: ['**'+'/baz/**', /qux/]
-   * }}
-   * ```
-   */
-  id?: StringFilter;
-  moduleType?: ModuleTypeFilter;
-  code?: StringFilter;
-}
-````
+See [`HookFilter`](/reference/Interface.HookFilter) for more details.
 
 The following properties are supported by each hook:
 

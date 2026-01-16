@@ -1328,14 +1328,14 @@ expression: output
 
 # tests/esbuild/default/metafile_no_bundle
 
-- entry-!~{000}~.js => entry-CM-wyRBN.js
 - entry-!~{001}~.js => entry-DC4KoLXg.js
+- entry-!~{000}~.js => entry-DVbjja6A.js
 - entry2.css
 
 # tests/esbuild/default/metafile_various_cases
 
 - entry-!~{001}~.js => entry-C8lVrsYF.js
-- entry-!~{000}~.js => entry-jyCnN9IT.js
+- entry-!~{000}~.js => entry-DVd3u0B0.js
 - copy-!~{002}~.js => copy-DDA5F9k1.js
 - dynamic-!~{005}~.js => dynamic-BHpZ7YgO.js
 - assets/file-C2vEMN7j.file
@@ -3428,7 +3428,7 @@ expression: output
 
 # tests/esbuild/ts/ts_experimental_decorators
 
-- entry-!~{000}~.js => entry-B_IyD-Ju.js
+- entry-!~{000}~.js => entry-tNqPuCpr.js
 
 # tests/esbuild/ts/ts_experimental_decorators_keep_names
 
@@ -3757,11 +3757,11 @@ expression: output
 
 # tests/rolldown/cjs_compat/optimize_interop_default_with_cjs_bailout
 
-- main-!~{000}~.js => main-DaKUUiLf.js
+- main-!~{000}~.js => main-8ZYRGaT0.js
 
 # tests/rolldown/cjs_compat/optimize_interop_default_with_cjs_bailout2
 
-- main-!~{000}~.js => main-DP_sbWyy.js
+- main-!~{000}~.js => main-KrY4p1VK.js
 
 # tests/rolldown/cjs_compat/optimize_interop_default_with_none_default_ns_property_name
 
@@ -3817,7 +3817,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/unnecessary_compat_default_property_access
 
-- main-!~{000}~.js => main-YTdv71ce.js
+- main-!~{000}~.js => main-COfDkeir.js
 
 # tests/rolldown/code_splitting/basic
 
@@ -4941,7 +4941,7 @@ expression: output
 
 # tests/rolldown/issues/5930
 
-- main-!~{000}~.js => main-1K0--uDT.js
+- main-!~{000}~.js => main-3d4q_L17.js
 
 # tests/rolldown/issues/5930_1
 
@@ -5113,7 +5113,7 @@ expression: output
 
 # tests/rolldown/issues/rolldown_vite_289
 
-- main-!~{000}~.js => main-VI1JWvhJ.js
+- main-!~{000}~.js => main-C3t1M8qi.js
 
 # tests/rolldown/issues/rolldown_vite_446
 
@@ -5346,8 +5346,8 @@ expression: output
 
 # tests/rolldown/misc/wrapped_esm
 
-- main-!~{000}~.js => main-BraiWUCf.js
-- main-BraiWUCf.js.map
+- main-!~{000}~.js => main-hIIRsBHo.js
+- main-hIIRsBHo.js.map
 
 # tests/rolldown/optimization/chunk_merging/cjs_format
 
@@ -5519,8 +5519,8 @@ expression: output
 
 # tests/rolldown/sourcemap/issue_6099
 
-- main-!~{000}~.js => main-U-H198AL.js
-- main-U-H198AL.js.map
+- main-!~{000}~.js => main-CjopHq4J.js
+- main-CjopHq4J.js.map
 
 # tests/rolldown/sourcemap/live_binding
 
@@ -5746,11 +5746,11 @@ expression: output
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/56
 
-- entry-!~{000}~.js => entry-DnXgDnsz.js
+- entry-!~{000}~.js => entry-BbZkx51X.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/57
 
-- entry-!~{000}~.js => entry-Bqe4sFqZ.js
+- entry-!~{000}~.js => entry-CTTzIBOg.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/58
 
@@ -5766,19 +5766,19 @@ expression: output
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/60
 
-- entry-!~{000}~.js => entry-D42lbi0n.js
+- entry-!~{000}~.js => entry-Dex7jVqM.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/61
 
-- entry-!~{000}~.js => entry-Br-SCGJ-.js
+- entry-!~{000}~.js => entry-BcgtSW77.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/62
 
-- entry-!~{000}~.js => entry-CGupefW9.js
+- entry-!~{000}~.js => entry-CMNaULQH.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/63
 
-- entry-!~{000}~.js => entry-CE1ksMvW.js
+- entry-!~{000}~.js => entry-VnzzQ14n.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/64
 
@@ -5902,7 +5902,15 @@ expression: output
 
 # tests/rolldown/topics/deconflict/nested_scope_rename_counter
 
-- main-!~{000}~.js => main-Dthi-Npz.js
+- main-!~{000}~.js => main-NrkxWCZ4.js
+
+# tests/rolldown/topics/deconflict/nested_scope_same_module_conflict
+
+- main-!~{000}~.js => main-BhFYWpr2.js
+
+# tests/rolldown/topics/deconflict/unreferenced_renamed_conflict
+
+- main-!~{000}~.js => main-C6eEZObh.js
 
 # tests/rolldown/topics/deconflict/wrapped_esm_default_function
 
@@ -6017,7 +6025,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/expression
 
-- main-!~{000}~.js => main-DouU07fz.js
+- main-!~{000}~.js => main-BDUc19Gw.js
 
 # tests/rolldown/topics/keep_names/if_stmt
 
@@ -6226,7 +6234,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/commonjs_5546
 
-- main-!~{000}~.js => main-Dc8VYrtQ.js
+- main-!~{000}~.js => main-BtOdm6hw.js
 
 # tests/rolldown/tree_shaking/commonjs_inline_const
 

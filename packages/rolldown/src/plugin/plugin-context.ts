@@ -140,7 +140,7 @@ export interface PluginContextResolveOptions {
   /**
    * Plugin-specific options.
    *
-   * See [Custom resolver options section](https://rolldown.rs/apis/plugin-api#custom-resolver-options) for more details.
+   * See [Custom resolver options section](https://rolldown.rs/apis/plugin-api/inter-plugin-communication#custom-resolver-options) for more details.
    */
   custom?: CustomPluginOptions;
 }

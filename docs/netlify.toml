@@ -30,6 +30,10 @@ to = "/reference/"
 from = "/options/"
 to = "/reference"
 
+[[redirects]]
+from = "/apis/plugin-hook-filters"
+to = "/apis/plugin-api/hook-filters"
+
 # Redirect old /options/ paths to /reference/
 [[redirects]]
 from = "/options/input"

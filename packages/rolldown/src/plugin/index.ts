@@ -60,7 +60,7 @@ export interface CustomPluginOptions {
 /** @category Plugin APIs */
 export interface ModuleOptions {
   moduleSideEffects: ModuleSideEffects;
-  /** See [Custom module meta-data section](https://rolldown.rs/apis/plugin-api#custom-module-meta-data) for more details. */
+  /** See [Custom module meta-data section](https://rolldown.rs/apis/plugin-api/inter-plugin-communication#custom-module-meta-data) for more details. */
   meta: CustomPluginOptions;
   // flag used to check if user directly modified the `ModuleInfo`
   // this is used to sync state between Rust and JavaScript
@@ -123,7 +123,7 @@ export interface SourceDescription
    *
    * If the transformation does not move code, you can preserve existing sourcemaps by setting this to `null`.
    *
-   * See [Source Code Transformations section](https://rolldown.rs/apis/plugin-api#source-code-transformations) for more details.
+   * See [Source Code Transformations section](https://rolldown.rs/apis/plugin-api/transformations#source-code-transformations) for more details.
    */
   map?: SourceMapInput;
   moduleType?: ModuleType;
@@ -369,7 +369,7 @@ export interface FunctionPluginHooks {
   /**
    * Can be used to transform individual chunks. Called for each Rolldown output chunk file.
    *
-   * Returning null will apply no transformations. If you change code in this hook and want to support source maps, you need to return a map describing your changes, see [Source Code Transformations section](https://rolldown.rs/apis/plugin-api#source-code-transformations).
+   * Returning null will apply no transformations. If you change code in this hook and want to support source maps, you need to return a map describing your changes, see [Source Code Transformations section](https://rolldown.rs/apis/plugin-api/transformations#source-code-transformations).
    *
    * `chunk` is mutable and changes applied in this hook will propagate to other plugins and
    * to the generated bundle.

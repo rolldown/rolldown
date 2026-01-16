@@ -614,6 +614,12 @@ export interface InputOptions {
      * @default true
      */
     chunkOptimization?: boolean;
+    /**
+     * Control whether to enable lazy barrel optimization.
+     *
+     * @default false
+     */
+    lazyBarrel?: boolean;
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.

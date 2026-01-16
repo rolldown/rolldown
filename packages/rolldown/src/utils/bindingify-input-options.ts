@@ -180,6 +180,7 @@ function bindingifyExperimental(
     incrementalBuild: experimental?.incrementalBuild,
     nativeMagicString: experimental?.nativeMagicString,
     chunkOptimization: experimental?.chunkOptimization,
+    lazyBarrel: experimental?.lazyBarrel,
   };
 }
 

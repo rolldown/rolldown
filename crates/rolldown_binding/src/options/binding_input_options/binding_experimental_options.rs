@@ -15,6 +15,7 @@ pub struct BindingExperimentalOptions {
   pub transform_hires_sourcemap: Option<Either<bool, String>>,
   pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<bool>,
+  pub lazy_barrel: Option<bool>,
 }
 
 impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
@@ -52,6 +53,7 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
       },
       native_magic_string: value.native_magic_string,
       chunk_optimization: value.chunk_optimization,
+      lazy_barrel: value.lazy_barrel,
     })
   }
 }

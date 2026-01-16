@@ -1036,6 +1036,12 @@
             "boolean",
             "null"
           ]
+        },
+        "lazyBarrel": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

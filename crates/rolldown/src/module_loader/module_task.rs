@@ -26,16 +26,31 @@ use crate::{
 
 use super::{resolve_utils::resolve_dependencies, task_context::TaskContext};
 
+pub struct ModuleTaskOwnerRef<'a> {
+  module: &'a NormalModule,
+  importee_span: Span,
+}
+
+impl<'a> ModuleTaskOwnerRef<'a> {
+  pub fn new(module: &'a NormalModule, importee_span: Span) -> Self {
+    Self { module, importee_span }
+  }
+}
+
+impl From<ModuleTaskOwnerRef<'_>> for ModuleTaskOwner {
+  fn from(owner: ModuleTaskOwnerRef) -> Self {
+    ModuleTaskOwner {
+      source: owner.module.source.clone(),
+      importer_id: owner.module.stable_id.as_str().into(),
+      importee_span: owner.importee_span,
+    }
+  }
+}
+
 pub struct ModuleTaskOwner {
   source: ArcStr,
   importer_id: CompactStr,
   importee_span: Span,
-}
-
-impl ModuleTaskOwner {
-  pub fn new(source: ArcStr, importer_id: CompactStr, importee_span: Span) -> Self {
-    ModuleTaskOwner { source, importer_id, importee_span }
-  }
 }
 
 pub struct ModuleTask {

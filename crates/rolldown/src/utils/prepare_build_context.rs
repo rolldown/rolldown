@@ -456,6 +456,7 @@ pub fn prepare_build_context(
       .unwrap_or_else(|| determine_minify_internal_exports_default(Some(format), &raw_minify)),
     clean_dir: raw_options.clean_dir.unwrap_or(false),
     context: raw_options.context.unwrap_or_default(),
+    strict_execution_order: raw_options.strict_execution_order.unwrap_or(false),
   };
 
   normalized.minify = raw_minify.normalize(&normalized);

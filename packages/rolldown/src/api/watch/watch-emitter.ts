@@ -1,6 +1,8 @@
 import { type BindingWatcherBundler, type BindingWatcherEvent } from '../../binding.cjs';
 import type { MaybePromise } from '../../types/utils';
 import { aggregateBindingErrorsIntoJsError } from '../../utils/error';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { OutputOptions } from '../../options/output-options';
 
 type WatcherEvent = 'close' | 'event' | 'restart' | 'change';
 
@@ -9,9 +11,24 @@ type ChangeEvent = 'create' | 'update' | 'delete';
 // TODO: find a way use `RolldownBuild` instead of `Bundler`.
 type RolldownWatchBuild = BindingWatcherBundler;
 
-/** @category Programmatic APIs */
+/**
+ * - `START`: the watcher is (re)starting
+ * - `BUNDLE_START`: building an individual bundle
+ * - `BUNDLE_END`: finished building a bundle
+ *   - `duration`: the build duration in milliseconds
+ *   - `output`: an array of the {@linkcode OutputOptions.file | file} or {@linkcode OutputOptions.dir | dir} option values of the generated outputs
+ *   - `result`: the bundle object that can be used to generate additional outputs. This is especially important when the watch.skipWrite option is used. You should call `event.result.close()` once you are done generating outputs, or if you do not generate outputs. This will allow plugins to clean up resources via the `closeBundle` hook.
+ * - `END`: finished building all bundles
+ * - `ERROR`: encountered an error while bundling
+ *   - `error`: the error that was thrown
+ *   - `result`: the bundle object
+ *
+ * @category Programmatic APIs
+ */
 export type RolldownWatcherEvent =
-  | { code: 'START' }
+  | {
+      code: 'START';
+    }
   | {
       code: 'BUNDLE_START' /* input?: InputOption; output: readonly string[] */;
     }
@@ -29,7 +46,37 @@ export type RolldownWatcherEvent =
       result: RolldownWatchBuild;
     };
 
-export class WatcherEmitter {
+/**
+ *
+ * @category Programmatic APIs
+ */
+export type RolldownWatcherWatcherEventMap = {
+  event: [data: RolldownWatcherEvent];
+  /** a file was modified */
+  change: [id: string, change: { event: ChangeEvent }];
+  /** a new run was triggered */
+  restart: [];
+  /** the watcher was closed */
+  close: [];
+};
+
+/**
+ * @category Programmatic APIs
+ */
+export type RolldownWatcher = {
+  on<E extends keyof RolldownWatcherWatcherEventMap>(
+    event: E,
+    listener: (...args: RolldownWatcherWatcherEventMap[E]) => MaybePromise<void>,
+  ): void;
+  off<E extends keyof RolldownWatcherWatcherEventMap>(
+    event: E,
+    listener: (...args: RolldownWatcherWatcherEventMap[E]) => MaybePromise<void>,
+  ): void;
+  clear<E extends keyof RolldownWatcherWatcherEventMap>(event: E): void;
+  close(): Promise<void>;
+};
+
+export class WatcherEmitter implements RolldownWatcher {
   listeners: Map<WatcherEvent, Array<(...parameters: any[]) => MaybePromise<void>>> = new Map();
 
   timer: any;
@@ -40,12 +87,6 @@ export class WatcherEmitter {
     this.timer = setInterval(() => {}, 1e9 /* Low power usage */);
   }
 
-  on(
-    event: 'change',
-    listener: (id: string, change: { event: ChangeEvent }) => MaybePromise<void>,
-  ): this;
-  on(event: 'event', listener: (data: RolldownWatcherEvent) => MaybePromise<void>): this;
-  on(event: 'restart' | 'close', listener: () => MaybePromise<void>): this;
   on(event: WatcherEvent, listener: (...parameters: any[]) => MaybePromise<void>): this {
     const listeners = this.listeners.get(event);
     if (listeners) {
@@ -129,6 +170,3 @@ export class WatcherEmitter {
     clearInterval(this.timer);
   }
 }
-
-/** @category Programmatic APIs */
-export type RolldownWatcher = WatcherEmitter;

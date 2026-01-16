@@ -565,6 +565,12 @@
               "type": "null"
             }
           ]
+        },
+        "strictExecutionOrder": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -939,12 +945,6 @@
     "ExperimentalOptions": {
       "type": "object",
       "properties": {
-        "strictExecutionOrder": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
         "viteMode": {
           "type": [
             "boolean",

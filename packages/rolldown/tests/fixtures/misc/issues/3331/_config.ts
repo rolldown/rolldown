@@ -2,7 +2,7 @@ import { defineTest } from 'rolldown-tests';
 
 export default defineTest({
   config: {
-    experimental: {
+    output: {
       strictExecutionOrder: true,
     },
   },

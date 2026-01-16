@@ -17,8 +17,8 @@ import {
   type LogLevel,
   type LogLevelOption,
   logLevelPriority,
-  type RollupError,
-  type RollupLog,
+  type RolldownError,
+  type RolldownLog,
 } from './logging';
 import { error } from './logs';
 
@@ -29,7 +29,7 @@ export function getLogger(
   watchMode: boolean,
 ): LogHandler {
   const minimalPriority = logLevelPriority[logLevel];
-  const logger = (level: LogLevel, log: RollupLog, skipped: ReadonlySet<Plugin> = new Set()) => {
+  const logger = (level: LogLevel, log: RolldownLog, skipped: ReadonlySet<Plugin> = new Set()) => {
     const logPriority = logLevelPriority[level];
     if (logPriority < minimalPriority) {
       return;
@@ -52,7 +52,7 @@ export function getLogger(
           handler.call(
             {
               debug: getLogHandler(LOG_LEVEL_DEBUG),
-              error: (log: RollupError | string): never => error(normalizeLog(log)),
+              error: (log: RolldownError | string): never => error(normalizeLog(log)),
               info: getLogHandler(LOG_LEVEL_INFO),
               meta: {
                 rollupVersion: '4.23.0',
@@ -109,7 +109,7 @@ const getDefaultOnLog = (printLog: LogHandler, onwarn?: WarningHandlerWithDefaul
       }
     : printLog;
 
-const addLogToString = (log: RollupLog): RollupLog => {
+const addLogToString = (log: RolldownLog): RolldownLog => {
   Object.defineProperty(log, 'toString', {
     value: () => getExtendedLogMessage(log),
     writable: true,
@@ -132,7 +132,7 @@ const defaultPrintLog: LogHandler = (level, log) => {
   }
 };
 
-const getExtendedLogMessage = (log: RollupLog): string => {
+const getExtendedLogMessage = (log: RolldownLog): string => {
   let prefix = '';
 
   if (log.plugin) {

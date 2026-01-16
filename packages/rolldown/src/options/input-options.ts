@@ -2,7 +2,7 @@ import type {
   LogLevel,
   LogLevelOption,
   LogOrStringHandler,
-  RollupLog,
+  RolldownLog,
   RollupLogWithString,
 } from '../log/logging';
 import type { RolldownPluginOption } from '../plugin';
@@ -224,13 +224,13 @@ type ChunkModulesOrder = 'exec-order' | 'module-id';
 /** @inline */
 export type OnLogFunction = (
   level: LogLevel,
-  log: RollupLog,
+  log: RolldownLog,
   defaultHandler: LogOrStringHandler,
 ) => void;
 
 /** @inline */
 export type OnwarnFunction = (
-  warning: RollupLog,
+  warning: RolldownLog,
   defaultHandler: (warning: RollupLogWithString | (() => RollupLogWithString)) => void,
 ) => void;
 
@@ -436,16 +436,6 @@ export interface InputOptions {
    * @experimental
    */
   experimental?: {
-    /**
-     * Lets modules be executed in the order they are declared.
-     *
-     * This is done by injecting runtime helpers to ensure that modules are executed in the order they are imported. External modules won't be affected.
-     *
-     * > [!WARNING]
-     * > Enabling this option may negatively increase bundle size. It is recommended to use this option only when absolutely necessary.
-     * @default false
-     */
-    strictExecutionOrder?: boolean;
     /**
      * Enable Vite compatible mode.
      * @default false

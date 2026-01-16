@@ -381,23 +381,19 @@ impl<'a> ModuleLoader<'a> {
               raw_rec.meta.insert(ImportRecordMeta::JsonModule);
             }
 
-            let idx = if let Some(idx) = self.try_spawn_with_cache(&resolved_id) {
-              idx
-            } else {
-              let normal_module = module.as_normal().unwrap();
-              let owner = ModuleTaskOwner::new(
-                normal_module.source.clone(),
-                normal_module.stable_id.as_str().into(),
-                raw_rec.span,
-              );
-              self.try_spawn_new_task(
-                resolved_id,
-                Some(owner),
-                false,
-                raw_rec.asserted_module_type.clone(),
-                &user_defined_entries,
-              )
-            };
+            let normal_module = module.as_normal().unwrap();
+            let owner = ModuleTaskOwner::new(
+              normal_module.source.clone(),
+              normal_module.stable_id.as_str().into(),
+              raw_rec.span,
+            );
+            let idx = self.try_spawn_new_task(
+              resolved_id,
+              Some(owner),
+              false,
+              raw_rec.asserted_module_type.clone(),
+              &user_defined_entries,
+            );
 
             // Dynamic imported module will be considered as an entry
             self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
@@ -781,19 +777,5 @@ impl<'a> ModuleLoader<'a> {
         .and_then(|importers| importers.first().map(|rec| rec.importer_idx));
     }
     chain
-  }
-
-  /// If the module is already exists in module graph in partial scan mode, we could
-  /// return the module idx directly.
-  fn try_spawn_with_cache(&self, resolved_dep: &ResolvedId) -> Option<ModuleIdx> {
-    if !self.shared_context.options.experimental.is_incremental_build_enabled() {
-      return None;
-    }
-    // We don't care about if it is invalidate, because
-    // - if it needs invalidate, which means one invalidate module depends on another invalidate
-    // module, but since all invalidate files is already processed in https://github.com/rolldown/rolldown/blob/88af0e2a29decd239b5555bff43e6499cae17ddc/crates/rolldown/src/module_loader/module_loader.rs?plain=1#L343
-    // we could just skip to invalidate it again.
-    // - if it does not need invalidate, we could just return the idx
-    self.cache.module_id_to_idx.get(&resolved_dep.id).map(|state| state.idx())
   }
 }

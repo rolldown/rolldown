@@ -1,83 +1,187 @@
 # Command Line Interface
 
-:::warning 🚧 Under Construction
-For now this is just the output of `rolldown --help`.
+Rolldown can be used from the command line. You can provide an optional Rolldown configuration file to simplify command line usage and enable advanced Rolldown functionality.
+
+## Configuration Files
+
+Rolldown configuration files are optional, but they are powerful and convenient and thus **recommended**.
+A config file is an ES module that exports a default object with the desired options.
+Typically, it is called `rolldown.config.js` and sits in the root directory of your project.
+You can also use CJS syntax in CJS files, which uses `module.exports` instead of `export default`.
+Rolldown also natively supports TypeScript configuration files.
+
+Consult the [reference](/reference/) for a comprehensive list of options you can include in your config file.
+
+```js [rolldown.config.js]
+export default {
+  input: 'src/main.js',
+  output: {
+    file: 'bundle.js',
+    format: 'cjs',
+  },
+};
+```
+
+To use a config file with Rolldown, pass the `-c` (or `--config`) flag:
+
+```shell
+rolldown -c                 # use rolldown.config.{js,mjs,cjs,ts,mts,cts}
+rolldown --config           # same as above
+rolldown -c my.config.js    # use a custom config file
+```
+
+If you don't pass a file name, Rolldown will try to load `rolldown.config.{js,mjs,cjs,ts,mts,cts}` in the working directory.
+If no config file is found, Rolldown will show an error.
+
+You can also export a function from your config file. The function will be called with command line arguments so you can dynamically adapt your configuration:
+
+```js [rolldown.config.js]
+import { defineConfig } from 'rolldown';
+
+export default defineConfig((commandLineArgs) => {
+  if (commandLineArgs.watch) {
+    // watch-specific config
+  }
+  return {
+    input: 'src/main.js',
+  };
+});
+```
+
+### Config Intellisense
+
+Since Rolldown ships with TypeScript typings, you can leverage your IDE's intellisense with JSDoc type hints:
+
+```js [rolldown.config.js]
+/** @type {import('rolldown').RolldownOptions} */
+export default {
+  // ...
+};
+```
+
+Alternatively you can use the `defineConfig` helper, which provides intellisense without the need for JSDoc annotations:
+
+```js [rolldown.config.js]
+import { defineConfig } from 'rolldown';
+
+export default defineConfig({
+  // ...
+});
+```
+
+### Configuration Arrays
+
+To build different bundles from different inputs, you can supply an array of configuration objects:
+
+```js [rolldown.config.js]
+import { defineConfig } from 'rolldown';
+
+export default defineConfig([
+  {
+    input: 'src/main.js',
+    output: { format: 'esm', entryFileNames: 'bundle.esm.js' },
+  },
+  {
+    input: 'src/main.js',
+    output: { format: 'cjs', entryFileNames: 'bundle.cjs.js' },
+  },
+]);
+```
+
+::: tip Different outputs with same inputs
+
+You can also supply an array for the `output` option to generate multiple outputs from the same input:
+
+```js [rolldown.config.js]
+import { defineConfig } from 'rolldown';
+
+export default defineConfig({
+  input: 'src/main.js',
+  output: [
+    { format: 'esm', entryFileNames: 'bundle.esm.js' },
+    { format: 'cjs', entryFileNames: 'bundle.cjs.js' },
+  ],
+});
+```
+
 :::
 
-```sh
-USAGE rolldown -c <config> or rolldown <input> <options>
+## Command Line Flags
 
-OPTIONS
+Flags can be passed as `--foo`, `--foo <value>`, or `--foo=<value>`. Boolean flags like `--minify` don't need a value, while key-value options like `--define` use comma-separated syntax: `--define key=value,key2=value2`. Many flags have short aliases (e.g., `-m` for `--minify`, `-f` for `--format`).
 
-  --config -c, <filename>     Path to the config file (default: rolldown.config.js).
-  --dir -d, <dir>             Output directory, defaults to dist if file is not set.
-  --external -e, <external>   Comma-separated list of module ids to exclude from the bundle <module-id>,....
-  --format -f, <format>       Output format of the generated bundle (supports esm, cjs, and iife).
-  --globals -g, <globals>     Global variable of UMD / IIFE dependencies (syntax: key=value).
-  --help -h,                  Show help.
-  --minify -m,                Minify the bundled file.
-  --name -n, <name>           Name for UMD / IIFE format outputs.
-  --file -o, <file>           Single output file.
-  --platform -p, <platform>   Platform for which the code should be generated (node, browser, neutral).
-  --sourcemap -s, <sourcemap> Generate sourcemap (-s inline for inline, or pass the -s on the last argument if you want to generate .map file).
-  --version -v,               Show version number.
-  --watch -w,                 Watch files in bundle and rebuild on changes.
-  --advanced-chunks.min-share-count <advanced-chunks.min-share-count>Minimum share count of the chunk.
-  --advanced-chunks.min-size <advanced-chunks.min-size>Minimum size of the chunk.
-  --asset-file-names <name>   Name pattern for asset files.
-  --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
-  --checks.circular-dependency Whether to emit warnings when detecting circular dependencies.
-  --chunk-file-names <name>   Name pattern for emitted secondary chunks.
-  --comments <comments>       Control comments in the output.
-  --css-chunk-file-names <css-chunk-file-names>Name pattern for emitted css secondary chunks.
-  --css-entry-file-names <css-entry-file-names>Name pattern for emitted css entry chunks.
-  --cwd <cwd>                 Current working directory.
-  --define <define>           Define global variables.
-  --drop-labels <drop-labels> Remove labeled statements with these label names.
-  --entry-file-names <name>   Name pattern for emitted entry chunks.
-  --es-module                 Always generate __esModule marks in non-ESM formats, defaults to if-default-prop (use --no-esModule to always disable).
-  --exports <exports>         Specify a export mode (auto, named, default, none).
-  --extend                    Extend global variable defined by name in IIFE / UMD formats.
-  --footer <footer>           Code to insert the bottom of the bundled file (outside the wrapper function).
-  --hash-characters <hash-characters>Use the specified character set for file hashes.
-  --inject <inject>           Inject import statements on demand.
-  --inline-dynamic-imports    Inline dynamic imports.
-  --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
-  --jsx.development           Development specific information.
-  --jsx.factory <jsx.factory> Jsx element transformation.
-  --jsx.fragment <jsx.fragment>Jsx fragment transformation.
-  --jsx.import-source <jsx.import-source>Import the factory of element and fragment if mode is classic.
-  --jsx.jsx-import-source <jsx.jsx-import-source>Import the factory of element and fragment if mode is automatic.
-  --jsx.mode <jsx.mode>       Jsx transformation mode.
-  --jsx.refresh               React refresh transformation.
-  --log-level <log-level>     Log level (silent, info, debug, warn).
-  --module-types <types>      Module types for customized extensions.
-  --no-external-live-bindings Disable external live bindings.
-  --no-treeshake              Disable treeshaking.
-  --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
-  --shim-missing-exports      Create shim variables for missing exports.
+::: info Integration into other tools
 
-EXAMPLES
+Note that your shell interprets arguments before Rolldown sees them—quotes and wildcards may behave unexpectedly. For advanced build processes or integration into other tools, consider using the [JavaScript API](/apis/bundler-api) instead. Key differences when switching from config files to the API:
 
-  1. Bundle with a config file rolldown.config.mjs:
-    rolldown -c rolldown.config.mjs
+- Configuration must be an object (not a Promise or function)
+- Run [`rolldown.rolldown`](/reference/Function.rolldown) separately for each set of `inputOptions` (no config arrays)
+- Use [`bundle.generate(outputOptions)`](/reference/Interface.RolldownBuild#generate) or [`bundle.write(outputOptions)`](/reference/Interface.RolldownBuild#write) instead of the `output` option
 
-  2. Bundle the src/main.ts to dist with cjs format:
-    rolldown src/main.ts -d dist -f cjs
+:::
 
-  3. Bundle the src/main.ts and handle the .png assets to Data URL:
-    rolldown src/main.ts -d dist --moduleTypes .png=dataurl
+Many options have command line flag equivalents.
+See the [reference](/reference/) for details of those flags.
+In those cases, any arguments passed here will override the config file, if you're using one.
+This is a list of all supported flags:
 
-  4. Bundle the src/main.tsx and minify the output with sourcemap:
-    rolldown src/main.tsx -d dist -m -s
+<script setup>
+import { data } from '../data-loading/cli-help.data'
+</script>
 
-  5. Create self-executing IIFE using external jQuery as $ and _:
-    rolldown src/main.ts -d dist -n bundle -f iife -e jQuery,window._ -g jQuery=$
-
-NOTES
-
-  * Due to the API limitation, you need to pass -s for .map sourcemap file as the last argument.
-  * If you are using the configuration, please pass the -c as the last argument if you ignore the default configuration file.
-  * CLI options will override the configuration file.
-  * For more information, please visit https://rolldown.rs/.
+```sh-vue
+{{ data.help }}
 ```
+
+The flags listed below are only available via the command line interface.
+
+### `-c, --config <filename>`
+
+Use the specified config file. If the argument is used but no filename is specified, Rolldown will look for a default config file. See [Configuration Files](#configuration-files) for more details.
+
+### `-h` / `--help`
+
+Show the help message.
+
+### `-v` / `--version`
+
+Show the installed version number.
+
+### `-w` / `--watch`
+
+Rebuild the bundle when source files change on disk.
+
+::: info `ROLLDOWN_WATCH` env
+While in watch mode, the `ROLLDOWN_WATCH` and `ROLLUP_WATCH` environment variable will be set to `true` by Rolldown's command line interface and can be checked by other processes. Plugins should instead check [`this.meta.watchMode`](/reference/Interface.PluginContextMeta#watchmode), which is independent of the command line interface.
+:::
+
+### `--environment <values>`
+
+Pass additional settings to the config file via `process.env`.
+Values are comma-separated key-value pairs, where a value of `true` can be omitted.
+
+For example:
+
+```shell
+rolldown -c --environment INCLUDE_DEPS,BUILD:production
+```
+
+This will set `process.env.INCLUDE_DEPS = 'true'` and `process.env.BUILD = 'production'`.
+
+You can invoke this option multiple times.
+In that case, subsequently set variables will overwrite previous definitions.
+
+::: tip Overwriting the values
+If you have `package.json` scripts:
+
+```json
+{
+  "scripts": {
+    "build": "rolldown -c --environment BUILD:production"
+  }
+}
+```
+
+you can call this script with `npm run build -- --environment BUILD:development` to set `process.env.BUILD="development"`.
+
+:::

@@ -3,7 +3,6 @@ use napi::bindgen_prelude::Either;
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingExperimentalOptions {
-  pub strict_execution_order: Option<bool>,
   pub vite_mode: Option<bool>,
   pub resolve_new_url_to_asset: Option<bool>,
   pub dev_mode: Option<BindingExperimentalDevModeOptions>,
@@ -23,7 +22,6 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
 
   fn try_from(value: BindingExperimentalOptions) -> Result<Self, Self::Error> {
     Ok(Self {
-      strict_execution_order: value.strict_execution_order,
       vite_mode: value.vite_mode,
       resolve_new_url_to_asset: value.resolve_new_url_to_asset,
       incremental_build: value.incremental_build,

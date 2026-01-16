@@ -165,9 +165,9 @@ export default defineConfig({
 });
 ```
 
-Rolldown supports most of the [Rollup config options](https://rollupjs.org/configuration-options), with some [notable additional features](./notable-features).
+Rolldown supports most of the [Rollup config options](https://rollupjs.org/configuration-options), with some [notable additional features](./notable-features). See the [reference](/reference/) for the full list of options.
 
-While exporting a plain object also works, it is recommended to utilize the `defineConfig` helper method to get options intellisense and auto-completion. This helper is provided purely for the types and returns the options as-is.
+While exporting a plain object also works, it is recommended to utilize the [`defineConfig`](/reference/Function.defineConfig) helper method to get options intellisense and auto-completion. This helper is provided purely for the types and returns the options as-is.
 
 Next, in the npm script, we can instruct Rolldown to use the config file with the `--config` CLI option (`-c` for short):
 

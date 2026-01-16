@@ -1,6 +1,6 @@
 import { getCodeFrame } from '../utils/code-frame';
 import { locate } from './locate-character';
-import type { RollupLog } from './logging';
+import type { RolldownLog } from './logging';
 
 const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   PLUGIN_ERROR = 'PLUGIN_ERROR',
@@ -10,7 +10,7 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   PARSE_ERROR = 'PARSE_ERROR',
   NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER';
 
-export function logParseError(message: string, id: string | undefined, pos?: number): RollupLog {
+export function logParseError(message: string, id: string | undefined, pos?: number): RolldownLog {
   return {
     code: PARSE_ERROR,
     id,
@@ -19,35 +19,35 @@ export function logParseError(message: string, id: string | undefined, pos?: num
   };
 }
 
-export function logInvalidLogPosition(pluginName: string): RollupLog {
+export function logInvalidLogPosition(pluginName: string): RolldownLog {
   return {
     code: INVALID_LOG_POSITION,
     message: `Plugin "${pluginName}" tried to add a file position to a log or warning. This is only supported in the "transform" hook at the moment and will be ignored.`,
   };
 }
 
-export function logInputHookInOutputPlugin(pluginName: string, hookName: string): RollupLog {
+export function logInputHookInOutputPlugin(pluginName: string, hookName: string): RolldownLog {
   return {
     code: INPUT_HOOK_IN_OUTPUT_PLUGIN,
     message: `The "${hookName}" hook used by the output plugin ${pluginName} is a build time hook and will not be run for that plugin. Either this plugin cannot be used as an output plugin, or it should have an option to configure it as an output plugin.`,
   };
 }
 
-export function logCycleLoading(pluginName: string, moduleId: string): RollupLog {
+export function logCycleLoading(pluginName: string, moduleId: string): RolldownLog {
   return {
     code: CYCLE_LOADING,
     message: `Found the module "${moduleId}" cycle loading at ${pluginName} plugin, it maybe blocking fetching modules.`,
   };
 }
 
-export function logMultiplyNotifyOption(): RollupLog {
+export function logMultiplyNotifyOption(): RolldownLog {
   return {
     code: MULTIPLY_NOTIFY_OPTION,
     message: `Found multiply notify option at watch options, using first one to start notify watcher.`,
   };
 }
 
-export function logNoFileSystemInBrowser(method: string): RollupLog {
+export function logNoFileSystemInBrowser(method: string): RolldownLog {
   return {
     code: NO_FS_IN_BROWSER,
     message: `Cannot access the file system (via "${method}") when using the browser build of Rolldown.`,
@@ -55,10 +55,10 @@ export function logNoFileSystemInBrowser(method: string): RollupLog {
 }
 
 export function logPluginError(
-  error: Omit<RollupLog, 'code'> & { code?: unknown },
+  error: Omit<RolldownLog, 'code'> & { code?: unknown },
   plugin: string,
   { hook, id }: { hook?: string; id?: string } = {},
-): RollupLog {
+): RolldownLog {
   try {
     const code = error.code;
     if (
@@ -81,11 +81,11 @@ export function logPluginError(
     // Ignore error, maybe the error can't be assigned.
   } finally {
     // eslint-disable-next-line no-unsafe-finally
-    return error as RollupLog;
+    return error as RolldownLog;
   }
 }
 
-export function error(base: Error | RollupLog): never {
+export function error(base: Error | RolldownLog): never {
   if (!(base instanceof Error)) {
     base = Object.assign(new Error(base.message), base);
     Object.defineProperty(base, 'name', {
@@ -97,7 +97,7 @@ export function error(base: Error | RollupLog): never {
 }
 
 export function augmentCodeLocation(
-  properties: RollupLog,
+  properties: RolldownLog,
   pos: number | { column: number; line: number },
   source: string,
   id: string,

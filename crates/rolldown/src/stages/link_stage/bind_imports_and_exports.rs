@@ -88,9 +88,7 @@ pub enum MatchImportKind {
 #[derive(Debug)]
 pub enum ImportStatus {
   /// The imported file has no matching export
-  NoMatch {
-    // importee_id: NormalModuleId,
-  },
+  NoMatch,
 
   /// The imported file has a matching export
   Found {
@@ -796,7 +794,7 @@ impl BindImportsAndExportsContext<'_> {
             if self.metas[importee_id].has_dynamic_exports {
               ImportStatus::DynamicFallback { namespace_ref: importee.namespace_object_ref }
             } else {
-              ImportStatus::NoMatch {}
+              ImportStatus::NoMatch
             }
           }
         }
@@ -864,7 +862,7 @@ impl BindImportsAndExportsContext<'_> {
             }
           }
         }
-        ImportStatus::NoMatch { .. } => {
+        ImportStatus::NoMatch => {
           break MatchImportKind::NoMatch;
         }
         ImportStatus::Found { symbol, potentially_ambiguous_export_star_refs } => {

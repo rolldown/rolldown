@@ -170,7 +170,6 @@ function bindingifyExperimental(
     }
   }
   return {
-    strictExecutionOrder: experimental?.strictExecutionOrder,
     viteMode: experimental?.viteMode,
     resolveNewUrlToAsset: experimental?.resolveNewUrlToAsset,
     devMode: bindingifyDevMode(experimental?.devMode),

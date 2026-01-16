@@ -10,9 +10,7 @@
         "import": "./entry2.js"
       }
     ],
-    "experimental": {
-      "strictExecutionOrder": true
-    }
+    "strictExecutionOrder": true
   },
   "expectExecuted": false
 }

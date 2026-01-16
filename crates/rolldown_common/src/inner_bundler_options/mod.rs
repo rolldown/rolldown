@@ -243,6 +243,7 @@ pub struct BundlerOptions {
   pub clean_dir: Option<bool>,
   pub context: Option<String>,
   pub tsconfig: Option<TsConfig>,
+  pub strict_execution_order: Option<bool>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

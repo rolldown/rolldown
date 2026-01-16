@@ -124,6 +124,8 @@ bitflags! {
         const ReExportDynamicExports = 1 << 2;
         /// Statement contains non-static dynamic import like `import(foo)` or `import('a' + 'b')`
         const NonStaticDynamicImport = 1 << 3;
+        /// Statement is a re-export: `export { ... } from '...'` or `export * from '...'`
+        const IsPotentialBarrelExport = 1 << 4;
     }
 }
 

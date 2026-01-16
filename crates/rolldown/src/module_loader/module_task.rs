@@ -1,13 +1,15 @@
 use arcstr::ArcStr;
+use oxc::span::CompactStr;
 use oxc::span::Span;
 use oxc_index::IndexVec;
 use rolldown_common::SourcemapChainElement;
+use rolldown_common::SymbolRef;
 use std::sync::Arc;
 use sugar_path::SugarPath;
 
 use rolldown_common::{
-  FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType, NormalModule,
-  NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, StrOrBytes,
+  BarrelInfo, FlatOptions, ImportKind, ImportRecordMeta, ModuleIdx, ModuleInfo, ModuleLoaderMsg,
+  ModuleType, NormalModule, NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, StrOrBytes,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, UnloadableDependencyContext, downcast_napi_error_diagnostics,
@@ -50,6 +52,12 @@ pub struct ModuleTaskOwner {
   source: ArcStr,
   importer_id: ArcStr,
   importee_span: Span,
+}
+
+impl ModuleTaskOwner {
+  pub fn new(source: ArcStr, importer_id: ArcStr, importee_span: Span) -> Self {
+    Self { source, importer_id, importee_span }
+  }
 }
 
 pub struct ModuleTask {
@@ -210,6 +218,9 @@ impl ModuleTask {
     let repr_name = self.resolved_id.id.as_path().representative_file_name();
     let repr_name = legitimize_identifier_name(&repr_name).into_owned();
 
+    // Build BarrelInfo for barrel module optimization
+    let barrel_info = Self::build_barrel_info(&ecma_view, &raw_import_records);
+
     let module = NormalModule {
       repr_name,
       stable_id,
@@ -236,6 +247,7 @@ impl ModuleTask {
       resolved_deps,
       raw_import_records,
       warnings,
+      barrel_info,
     }));
 
     self.ctx.tx.send(result).await.expect(
@@ -314,5 +326,68 @@ impl ModuleTask {
       ))?;
     }
     Ok((source, module_type))
+  }
+
+  /// Build BarrelInfo from EcmaView for barrel module optimization.
+  /// This extracts re-export information to enable lazy loading of barrel modules.
+  ///
+  /// A module is considered a barrel module if:
+  /// 1. It has no side effects
+  /// 2. All statements (except namespace stmt) are re-export statements
+  fn build_barrel_info(
+    ecma_view: &rolldown_common::EcmaView,
+    raw_import_records: &IndexVec<
+      rolldown_common::ImportRecordIdx,
+      rolldown_common::RawImportRecord,
+    >,
+  ) -> Option<BarrelInfo> {
+    use rolldown_common::StmtInfoMeta;
+    use rustc_hash::{FxHashMap, FxHashSet};
+
+    // Check if module has side effects - barrel modules must be side-effect free
+    if ecma_view.side_effects.has_side_effects() || raw_import_records.is_empty() {
+      return None;
+    }
+
+    // Check if all statements (except namespace stmt at index 0) are re-export statements
+    for stmt_info in ecma_view.stmt_infos.iter().skip(1) {
+      if !stmt_info.meta.contains(StmtInfoMeta::IsPotentialBarrelExport) {
+        return None;
+      }
+    }
+
+    // Build a map from symbol ref to export name
+    let mut symbol_to_export_name: FxHashMap<SymbolRef, CompactStr> = FxHashMap::default();
+    for (export_name, local_export) in &ecma_view.named_exports {
+      symbol_to_export_name.insert(local_export.referenced, export_name.clone());
+    }
+
+    let mut export_to_record: FxHashMap<CompactStr, rolldown_common::ImportRecordIdx> =
+      FxHashMap::default();
+    let mut star_export_records: Vec<rolldown_common::ImportRecordIdx> = Vec::new();
+    let mut remaining_records: FxHashSet<rolldown_common::ImportRecordIdx> = FxHashSet::default();
+
+    // Find re-exports from named_imports
+    for named_import in ecma_view.named_imports.values() {
+      if let Some(export_name) = symbol_to_export_name.get(&named_import.imported_as) {
+        export_to_record.insert(export_name.clone(), named_import.record_idx);
+        remaining_records.insert(named_import.record_idx);
+      }
+    }
+
+    // Find star exports from import records
+    for (rec_idx, record) in raw_import_records.iter_enumerated() {
+      if record.meta.contains(ImportRecordMeta::IsExportStar) {
+        star_export_records.push(rec_idx);
+        remaining_records.insert(rec_idx);
+      }
+    }
+
+    // Only return Some if there are any re-exports
+    if remaining_records.is_empty() {
+      None
+    } else {
+      Some(BarrelInfo { export_to_record, star_export_records, remaining_records })
+    }
   }
 }

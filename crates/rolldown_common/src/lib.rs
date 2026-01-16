@@ -144,6 +144,10 @@ pub use crate::{
   types::asset_meta::{InstantiationKind, SourcemapAssetMeta},
   types::ast_scope_idx::AstScopeIdx,
   types::ast_scopes::AstScopes,
+  types::barrel_state::{
+    BarrelInfo, BarrelModuleState, BarrelState, ImportedExports, PendingBarrelRecord,
+    get_record_imported_exports,
+  },
   types::bundle_mode::BundleMode,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,

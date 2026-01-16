@@ -319,7 +319,7 @@ impl From<ModuleLoaderOutput> for ScanStageOutput {
       dynamic_import_exports_usage_map,
       new_added_modules_from_partial_scan: _,
       overrode_preserve_entry_signature_map,
-      entry_point_to_reference_ids,
+      emitted_entry_point_to_reference_ids: entry_point_to_reference_ids,
       flat_options,
     } = module_loader_output;
     ScanStageOutput {

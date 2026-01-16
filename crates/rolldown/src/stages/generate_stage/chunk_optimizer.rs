@@ -40,12 +40,13 @@ impl GenerateStage<'_> {
       .chunk_table
       .iter_enumerated()
       .filter_map(|(idx, chunk)| match chunk.kind {
-        ChunkKind::EntryPoint { meta, module, .. } => {
-          (!meta.contains(ChunkMeta::UserDefinedEntry)).then_some((module, idx))
-        }
+        ChunkKind::EntryPoint { meta, module, .. } => (!meta
+          .intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk))
+        .then_some((module, idx)),
         ChunkKind::Common => None,
       })
       .collect::<FxHashMap<ModuleIdx, ChunkIdx>>();
+
     for entry in self.link_output.entries.iter().filter(|item| item.kind.is_user_defined()) {
       let Some(entry_chunk_idx) = chunk_graph.module_to_chunk[entry.idx] else {
         continue;
@@ -102,7 +103,6 @@ impl GenerateStage<'_> {
         // refer https://github.com/rolldown/rolldown/blob/d373794f5ce5b793ac751bbfaf101cc9cdd261d9/crates/rolldown/src/stages/generate_stage/code_splitting.rs?plain=1#L311-L313
         .filter(|idx| entry_chunk_idx.contains(idx))
         .collect_vec();
-
       let merge_target = Self::try_insert_into_existing_chunk(
         &chunk_idxs,
         &static_entry_chunk_reference,
@@ -238,7 +238,7 @@ impl GenerateStage<'_> {
       };
       match chunk.kind {
         ChunkKind::EntryPoint { meta, .. } => {
-          if meta.contains(ChunkMeta::UserDefinedEntry) {
+          if meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk) {
             user_defined_entry.push(idx);
           } else {
             dynamic_entry.push(idx);

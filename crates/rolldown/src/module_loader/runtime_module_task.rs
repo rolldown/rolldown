@@ -5,8 +5,8 @@ use oxc::ast_visit::VisitMut;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaView, ExportsKind, FlatOptions, ModuleDefFormat, ModuleIdx, ModuleType, NormalModule,
-  StableModuleId, side_effects::DeterminedSideEffects,
+  EcmaView, EntryMeta, ExportsKind, FlatOptions, ModuleDefFormat, ModuleIdx, ModuleType,
+  NormalModule, StableModuleId, side_effects::DeterminedSideEffects,
 };
 use rolldown_common::{
   ModuleLoaderMsg, RUNTIME_MODULE_ID, RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief,
@@ -114,7 +114,7 @@ impl RuntimeModuleTask {
 
       debug_id: RUNTIME_MODULE_KEY.to_string(),
       exec_order: u32::MAX,
-      is_user_defined_entry: false,
+      entry_meta: EntryMeta::empty(),
       module_type,
 
       ecma_view: EcmaView {

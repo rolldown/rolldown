@@ -7,8 +7,8 @@ use std::sync::Arc;
 use sugar_path::SugarPath;
 
 use rolldown_common::{
-  FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType, NormalModule,
-  NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, StrOrBytes,
+  EntryMeta, FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType,
+  NormalModule, NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, StrOrBytes,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, UnloadableDependencyContext, downcast_napi_error_diagnostics,
@@ -43,7 +43,7 @@ pub struct ModuleTask {
   module_idx: ModuleIdx,
   resolved_id: ResolvedId,
   owner: Option<ModuleTaskOwner>,
-  is_user_defined_entry: bool,
+  entry_meta: EntryMeta,
   /// The module is asserted to be this specific module type.
   asserted_module_type: Option<ModuleType>,
   flat_options: FlatOptions,
@@ -57,7 +57,7 @@ impl ModuleTask {
     idx: ModuleIdx,
     resolved_id: ResolvedId,
     owner: Option<ModuleTaskOwner>,
-    is_user_defined_entry: bool,
+    entry_meta: EntryMeta,
     assert_module_type: Option<ModuleType>,
     flat_options: FlatOptions,
     magic_string_tx: Option<std::sync::Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
@@ -67,7 +67,7 @@ impl ModuleTask {
       module_idx: idx,
       resolved_id,
       owner,
-      is_user_defined_entry,
+      entry_meta,
       asserted_module_type: assert_module_type,
       flat_options,
       magic_string_tx,
@@ -95,7 +95,7 @@ impl ModuleTask {
       Arc::new(ModuleInfo {
         code: None,
         id: id.clone(),
-        is_entry: self.is_user_defined_entry,
+        is_entry: self.entry_meta.is_entry(),
         importers: FxIndexSet::default(),
         dynamic_importers: FxIndexSet::default(),
         imported_ids: FxIndexSet::default(),
@@ -146,7 +146,7 @@ impl ModuleTask {
         warnings: &mut warnings,
         module_type: module_type.clone(),
         replace_global_define_config: self.ctx.meta.replace_global_define_config.clone(),
-        is_user_defined_entry: self.is_user_defined_entry,
+        is_user_defined_entry: self.entry_meta.is_entry(),
         flat_options: self.flat_options,
       },
       CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects },
@@ -203,7 +203,7 @@ impl ModuleTask {
       debug_id: self.resolved_id.debug_id(&self.ctx.options.cwd),
       idx: self.module_idx,
       exec_order: u32::MAX,
-      is_user_defined_entry: self.is_user_defined_entry,
+      entry_meta: self.entry_meta,
       module_type: module_type.clone(),
       ecma_view,
       css_view,

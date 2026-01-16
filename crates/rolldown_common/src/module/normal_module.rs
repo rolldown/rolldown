@@ -18,11 +18,39 @@ use rolldown_sourcemap::collapse_sourcemaps;
 use rustc_hash::FxHashSet;
 use string_wizard::SourceMapOptions;
 
+bitflags::bitflags! {
+  #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+  pub struct EntryMeta: u8 {
+    /// `true` if the module is a user-defined entry point.
+    const UserDefinedEntry = 1;
+    /// `true` if the module was emitted via `this.emitFile({ type: 'chunk' })`.
+    const EmittedChunk = 1 << 1;
+  }
+}
+
+impl EntryMeta {
+  /// Returns `true` if the module is any kind of entry (user-defined or emitted chunk).
+  #[inline]
+  pub fn is_entry(self) -> bool {
+    !self.is_empty()
+  }
+
+  #[inline]
+  pub fn is_user_defined_entry(self) -> bool {
+    self.contains(EntryMeta::UserDefinedEntry)
+  }
+
+  #[inline]
+  pub fn is_emitted_chunk(self) -> bool {
+    self.contains(EntryMeta::EmittedChunk)
+  }
+}
+
 #[derive(Debug, Clone)]
 pub struct NormalModule {
   pub exec_order: u32,
   pub idx: ModuleIdx,
-  pub is_user_defined_entry: bool,
+  pub entry_meta: EntryMeta,
   pub id: ModuleId,
   /// `stable_id` is calculated based on `id` to be stable across machine and os.
   pub stable_id: StableModuleId,
@@ -37,6 +65,22 @@ pub struct NormalModule {
 }
 
 impl NormalModule {
+  /// Returns `true` if the module is any kind of entry (user-defined or emitted chunk).
+  #[inline]
+  pub fn is_entry(&self) -> bool {
+    self.entry_meta.is_entry()
+  }
+
+  #[inline]
+  pub fn is_user_defined_entry(&self) -> bool {
+    self.entry_meta.is_user_defined_entry()
+  }
+
+  #[inline]
+  pub fn is_emitted_chunk(&self) -> bool {
+    self.entry_meta.is_emitted_chunk()
+  }
+
   pub fn star_export_module_ids(&self) -> impl Iterator<Item = ModuleIdx> + '_ {
     if self.has_star_export() {
       itertools::Either::Left(
@@ -80,7 +124,7 @@ impl NormalModule {
     ModuleInfo {
       code: Some(self.ecma_view.source.clone()),
       id: self.id.clone(),
-      is_entry: self.is_user_defined_entry,
+      is_entry: self.is_entry(),
       importers: {
         let mut value = self.ecma_view.importers.clone();
         value.sort_unstable();

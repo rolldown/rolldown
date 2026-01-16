@@ -130,7 +130,7 @@ pub use crate::{
   module::{
     Module,
     external_module::ExternalModule,
-    normal_module::{ModuleRenderArgs, NormalModule},
+    normal_module::{EntryMeta, ModuleRenderArgs, NormalModule},
   },
   module_loader::{
     AddEntryModuleMsg, ModuleLoaderMsg,

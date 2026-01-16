@@ -3,7 +3,7 @@ import type {
   LogLevelOption,
   LogOrStringHandler,
   RolldownLog,
-  RollupLogWithString,
+  RolldownLogWithString,
 } from '../log/logging';
 import type { RolldownPluginOption } from '../plugin';
 import type { TreeshakingOptions } from '../types/module-side-effects';
@@ -231,7 +231,7 @@ export type OnLogFunction = (
 /** @inline */
 export type OnwarnFunction = (
   warning: RolldownLog,
-  defaultHandler: (warning: RollupLogWithString | (() => RollupLogWithString)) => void,
+  defaultHandler: (warning: RolldownLogWithString | (() => RolldownLogWithString)) => void,
 ) => void;
 
 export interface InputOptions {

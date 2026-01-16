@@ -20,58 +20,224 @@ import { unreachable } from '../utils/misc';
 import { fsModule, type RolldownFsModule } from './fs';
 import type { CustomPluginOptions, ModuleOptions, Plugin, ResolvedId } from './index';
 import type { PluginContextData } from './plugin-context-data';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { InputOptions } from '../options/input-options';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { PreRenderedAsset } from '../options/output-options';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { OutputAsset } from '../types/rolldown-output';
 
-/** @category Plugin APIs */
+/**
+ * Either a {@linkcode name} or a {@linkcode fileName} can be supplied.
+ * If a {@linkcode fileName} is provided, it will be used unmodified as the name
+ * of the generated file, throwing an error if this causes a conflict.
+ * Otherwise, if a {@linkcode name} is supplied, this will be used as substitution
+ * for `[name]` in the corresponding
+ * {@linkcode OutputOptions.assetFileNames | output.assetFileNames} pattern, possibly
+ * adding a unique number to the end of the file name to avoid conflicts.
+ * If neither a {@linkcode name} nor {@linkcode fileName} is supplied, a default name will be used.
+ *
+ * @category Plugin APIs
+ */
 export interface EmittedAsset {
   type: 'asset';
   name?: string;
   fileName?: string;
+  /**
+   * An absolute path to the original file if this asset corresponds to a file on disk.
+   *
+   * This property will be passed on to subsequent plugin hooks that receive a
+   * {@linkcode PreRenderedAsset} or an {@linkcode OutputAsset} like
+   * {@linkcode Plugin.generateBundle | generateBundle}.
+   * In watch mode, Rolldown will also automatically watch this file for changes and
+   * trigger a rebuild if it changes. Therefore, it is not necessary to call
+   * {@linkcode PluginContext.addWatchFile | this.addWatchFile} for this file.
+   */
   originalFileName?: string;
   source: AssetSource;
 }
 
-interface EmittedChunk {
+/**
+ * Either a {@linkcode name} or a {@linkcode fileName} can be supplied.
+ * If a {@linkcode fileName} is provided, it will be used unmodified as the name
+ * of the generated file, throwing an error if this causes a conflict.
+ * Otherwise, if a {@linkcode name} is supplied, this will be used as substitution
+ * for `[name]` in the corresponding
+ * {@linkcode OutputOptions.chunkFileNames | output.chunkFileNames} pattern, possibly
+ * adding a unique number to the end of the file name to avoid conflicts.
+ * If neither a {@linkcode name} nor {@linkcode fileName} is supplied, a default name will be used.
+ *
+ * @category Plugin APIs
+ */
+export interface EmittedChunk {
   type: 'chunk';
   name?: string;
   fileName?: string;
+  /**
+   * When provided, this will override
+   * {@linkcode InputOptions.preserveEntrySignatures | preserveEntrySignatures} for this particular
+   * chunk.
+   */
   preserveSignature?: 'strict' | 'allow-extension' | 'exports-only' | false;
+  /**
+   * The module id of the entry point of the chunk.
+   *
+   * It will be passed through build hooks just like regular entry points,
+   * starting with {@linkcode Plugin.resolveId | resolveId}.
+   */
   id: string;
+  /**
+   * The value to be passed to {@linkcode Plugin.resolveId | resolveId}'s {@linkcode importer} parameter when resolving the entry point.
+   * This is important to properly resolve relative paths. If it is not provided,
+   * paths will be resolved relative to the current working directory.
+   */
   importer?: string;
 }
 
+/** @category Plugin APIs */
 export interface EmittedPrebuiltChunk {
   type: 'prebuilt-chunk';
   fileName: string;
+  /**
+   * The code of this chunk.
+   */
   code: string;
+  /**
+   * The list of exported variable names from this chunk.
+   *
+   * This should be provided if the chunk exports any variables.
+   */
   exports?: string[];
+  /**
+   * The corresponding source map for this chunk.
+   */
   map?: SourceMap;
   sourcemapFileName?: string;
 }
 
-/** @category Plugin APIs */
+/** @inline */
 export type EmittedFile = EmittedAsset | EmittedChunk | EmittedPrebuiltChunk;
 
+/** @category Plugin APIs */
 export interface PluginContextResolveOptions {
+  /**
+   * The value for {@linkcode ResolveIdExtraOptions.isEntry | isEntry} passed to
+   * {@linkcode Plugin.resolveId | resolveId} hooks.
+   *
+   * @default `false` if there's an importer, `true` otherwise.
+   */
   isEntry?: boolean;
+  /**
+   * Whether the {@linkcode Plugin.resolveId | resolveId} hook of the plugin from
+   * which {@linkcode PluginContext.resolve | this.resolve} is called will be skipped
+   * when resolving.
+   *
+   * {@include ./docs/plugin-context-resolve-skipself.md}
+   *
+   * @default true
+   */
   skipSelf?: boolean;
+  /**
+   * Plugin-specific options.
+   *
+   * See [Custom resolver options section](https://rolldown.rs/apis/plugin-api#custom-resolver-options) for more details.
+   */
   custom?: CustomPluginOptions;
 }
 
-/** @category Plugin APIs */
+/** @inline */
 export type GetModuleInfo = (moduleId: string) => ModuleInfo | null;
 
 /** @category Plugin APIs */
 export interface PluginContext extends MinimalPluginContext {
+  /**
+   * Provides abstract access to the file system.
+   */
   fs: RolldownFsModule;
+  /**
+   * Emits a new file that is included in the build output.
+   * You can emit chunks, prebuilt chunks or assets.
+   *
+   * {@include ./docs/plugin-context-emitfile.md}
+   *
+   * @returns A `referenceId` for the emitted file that can be used in various places to reference the emitted file.
+   */
   emitFile(file: EmittedFile): string;
+  /**
+   * Get the file name of a chunk or asset that has been emitted via
+   * {@linkcode emitFile | this.emitFile}.
+   *
+   * @returns The file name of the emitted file. Relative to {@linkcode OutputOptions.dir | output.dir}.
+   */
   getFileName(referenceId: string): string;
+  /**
+   * Get all module ids in the current module graph.
+   *
+   * @returns
+   * An iterator of module ids. It can be iterated via
+   * ```js
+   * for (const moduleId of this.getModuleIds()) {
+   *   // ...
+   * }
+   * ```
+   * or converted into an array via `Array.from(this.getModuleIds())`.
+   */
   getModuleIds(): IterableIterator<string>;
+  /**
+   * Get additional information about the module in question.
+   *
+   * {@include ./docs/plugin-context-getmoduleinfo.md}
+   *
+   * @returns Module information for that module. `null` if the module could not be found.
+   * @group Methods
+   */
   getModuleInfo: GetModuleInfo;
-  addWatchFile(id: string): void;
+  /**
+   * Adds additional files to be monitored in watch mode so that changes to these files will trigger rebuilds.
+   *
+   * {@include ./docs/plugin-context-addwatchfile.md}
+   */
+  addWatchFile(
+    /**
+     * The path to be monitored.
+     *
+     * This can be an absolute path to a file or directory or a path relative to the current working directory.
+     */
+    id: string,
+  ): void;
+  /**
+   * Loads and parses the module corresponding to the given id, attaching additional
+   * meta information to the module if provided. This will trigger the same
+   * {@linkcode Plugin.load | load}, {@linkcode Plugin.transform | transform} and
+   * {@linkcode Plugin.moduleParsed | moduleParsed} hooks as if the module was imported
+   * by another module.
+   *
+   * {@include ./docs/plugin-context-load.md}
+   */
   load(
     options: { id: string; resolveDependencies?: boolean } & Partial<PartialNull<ModuleOptions>>,
   ): Promise<ModuleInfo>;
+  /**
+   * Use Rolldown's internal parser to parse code to an [ESTree-compatible](https://github.com/estree/estree) AST.
+   */
   parse(input: string, options?: ParserOptions | null): Program;
+  /**
+   * Resolve imports to module ids (i.e. file names) using the same plugins that Rolldown uses,
+   * and determine if an import should be external.
+   *
+   * When calling this function from a {@linkcode Plugin.resolveId | resolveId} hook, you should
+   * always check if it makes sense for you to pass along the
+   * {@link PluginContextResolveOptions | options}.
+   *
+   * @returns
+   * If `Promise<null>` is returned, the import could not be resolved by Rolldown or any plugin
+   * but was not explicitly marked as external by the user.
+   * If an absolute external id is returned that should remain absolute in the output either
+   * via the
+   * {@linkcode InputOptions.makeAbsoluteExternalsRelative | makeAbsoluteExternalsRelative}
+   * option or by explicit plugin choice in the {@linkcode Plugin.resolveId | resolveId} hook,
+   * `external` will be `"absolute"` instead of `true`.
+   */
   resolve(
     source: string,
     importer?: string,

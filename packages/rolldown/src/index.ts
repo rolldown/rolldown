@@ -16,7 +16,7 @@ import type {
   LogOrStringHandler,
   RolldownError,
   RolldownLog,
-  RollupLogWithString,
+  RolldownLogWithString,
 } from './log/logging';
 import type { ChecksOptions } from './options/generated/checks-options';
 import type {
@@ -83,9 +83,11 @@ import type { MinimalPluginContext, PluginContextMeta } from './plugin/minimal-p
 import type { DefineParallelPluginResult } from './plugin/parallel-plugin';
 import type {
   EmittedAsset,
+  EmittedChunk,
   EmittedFile,
   EmittedPrebuiltChunk,
   GetModuleInfo,
+  PluginContextResolveOptions,
   PluginContext,
 } from './plugin/plugin-context';
 import type { TransformPluginContext } from './plugin/transform-plugin-context';
@@ -129,6 +131,7 @@ export type {
   CustomPluginOptions,
   DefineParallelPluginResult,
   EmittedAsset,
+  EmittedChunk,
   EmittedFile,
   EmittedPrebuiltChunk,
   ExistingRawSourceMap,
@@ -172,6 +175,7 @@ export type {
   PartialNull,
   PartialResolvedId,
   Plugin,
+  PluginContextResolveOptions,
   PluginContext,
   PluginContextMeta,
   PreRenderedAsset,
@@ -197,7 +201,8 @@ export type {
   RolldownError as RollupError,
   RolldownLog,
   RolldownLog as RollupLog,
-  RollupLogWithString,
+  RolldownLogWithString,
+  RolldownLogWithString as RollupLogWithString,
   SourceDescription,
   SourceMap,
   SourcemapIgnoreListOption,

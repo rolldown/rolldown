@@ -81,6 +81,7 @@ const importantAPIs: (string | undefined)[] = [
   '/Function.rolldown.md',
   '/Function.watch.md',
   '/Interface.Plugin.md',
+  '/Interface.PluginContext.md',
   '/Variable.VERSION.md',
   '/Function.defineConfig.md',
 ];

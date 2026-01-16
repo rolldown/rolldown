@@ -39,6 +39,7 @@ async function runTypedoc(): Promise<void> {
 
     hideBreadcrumbs: true,
     flattenOutputFiles: true,
+    expandObjects: true,
 
     categoryOrder: ['Programmatic APIs', 'Plugin APIs', '*'],
 

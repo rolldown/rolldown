@@ -42,7 +42,7 @@ Rolldown also has a few concepts that have close equivalents in esbuild, but do 
 
 Finally, Rolldown provides some features that esbuild and Rollup do not (and may not intend to) implement:
 
-- [Advanced chunk splitting control](./notable-features#advanced-chunks) (Experimental)
+- [Manual code splitting](./notable-features#manual-code-splitting)
 - HMR support (WIP)
 - Module Federation (planned)
 

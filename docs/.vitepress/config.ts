@@ -70,7 +70,8 @@ const sidebarForInDepth: DefaultTheme.SidebarItem[] = [
       { text: 'Why Bundlers', link: '/in-depth/why-bundlers.md' },
       { text: 'Module Types', link: '/in-depth/module-types.md' },
       { text: 'Top Level Await', link: '/in-depth/tla-in-rolldown.md' },
-      { text: 'Advanced Chunks', link: '/in-depth/advanced-chunks.md' },
+      { text: 'Automatic Code Splitting', link: '/in-depth/automatic-code-splitting.md' },
+      { text: 'Manual Code Splitting', link: '/in-depth/manual-code-splitting.md' },
       { text: 'Bundling CJS', link: '/in-depth/bundling-cjs.md' },
       {
         text: 'Non ESM Output Formats',
@@ -81,7 +82,6 @@ const sidebarForInDepth: DefaultTheme.SidebarItem[] = [
         text: 'Why Plugin Hook Filter',
         link: '/in-depth/why-plugin-hook-filter.md',
       },
-      // { text: 'Code Splitting', link: '/in-depth/code-splitting.md' },
       { text: 'Directives', link: '/in-depth/directives.md' },
     ],
   },

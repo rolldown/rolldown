@@ -72,14 +72,13 @@ This feature provides a way to shim global variables with a specific value expor
 
 Rolldown supports bundling CSS imported from JS out of the box. Note this feature currently does not support CSS Modules and minification.
 
-## Advanced Chunks
+## Manual Code Splitting
 
-- ⚠️ Experimental
-- Configurable via [`output.advancedChunks`](/reference/OutputOptions.advancedChunks) option.
+- Configurable via [`output.codeSplitting`](/reference/OutputOptions.codeSplitting) option.
 
 Rolldown allows controlling the chunking behavior granularly, similar to webpack's [`optimization.splitChunks`](https://webpack.js.org/plugins/split-chunks-plugin/#optimizationsplitchunks) feature.
 
-See [Advanced Chunks](/in-depth/advanced-chunks) for more details.
+See [Manual Code Splitting](/in-depth/manual-code-splitting) for more details.
 
 ## Module types
 

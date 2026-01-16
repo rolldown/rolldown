@@ -1,19 +1,19 @@
-# Advanced Chunks
+# Manual Code Splitting
 
-`advancedChunks` is a powerful feature that allows you to do `manual chunking` to complement the `automatic chunking` done by [code splitting](./code-splitting.md). This is useful when you want to optimize the loading performance of your application by splitting it into smaller, more manageable pieces.
+Manual code splitting is a powerful feature that allows you to do manual code splitting to complement the [automatic code splitting](./automatic-code-splitting.md). This is useful when you want to optimize the loading performance of your application by splitting it into smaller, more manageable pieces.
 
-Before reading this guide, you should first understand the [code splitting](./code-splitting.md) feature of Rolldown. This guide will explain how `advancedChunks` works and how to use it effectively.
+Before reading this guide, you should first understand the [automatic code splitting](./automatic-code-splitting.md) feature of Rolldown. This guide will explain how manual code splitting works and how to use it effectively.
 
 Before we dive into the details, let's clarify some things first.
 
-- `automatic chunking` and `manual chunking` are not contradictory. Using `manual chunking` does not mean disabling `automatic chunking`.
-  A module will be either captured by `automatic chunking` or `manual chunking` depending on your configuration, but not both. If a module is not captured by `manual chunking`, it will still be put into a chunk which is created by `automatic chunking` while respecting the rules we explained in the [code splitting](./code-splitting.md) guide.
+- Automatic code splitting and manual code splitting are not contradictory. Using manual code splitting does not mean disabling automatic code splitting.
+  A module will be either captured by automatic code splitting or manual code splitting depending on your configuration, but not both. If a module is not captured by manual code splitting, it will still be put into a chunk which is created by automatic code splitting while respecting the rules we explained in the [automatic code splitting](./automatic-code-splitting.md) guide.
 
-## Why use `advancedChunks`?
+## Why use manual code splitting?
 
-The `automatic chunking` doesn't take loading performance or cache invalidation into account. It simply groups modules based on their static imports. This can lead to suboptimal chunking, where large chunks are created that may not be performant for loading or cause cache invalidation for every deployment.
+The automatic code splitting doesn't take loading performance or cache invalidation into account. It simply groups modules based on their static imports. This can lead to suboptimal chunking, where large chunks are created that may not be performant for loading or cause cache invalidation for every deployment.
 
-## How to use `advancedChunks`?
+## How to use manual code splitting?
 
 Let's take a look at the following example:
 
@@ -78,23 +78,25 @@ then naturally, you get a `output-hash1.js` file with the same content as `outpu
 
 Now, if you deploy this new version of your application, the browser will need to download the entire `output-hash1.js` file, even though only a small part of it has changed. This is because the hash of the file has changed, and the browser will treat it as a new file.
 
-To solve this problem, we can use `advancedChunks` to split output libraries into separate chunks, because they don't change frequently compared to application code.
+To solve this problem, we can use the codeSplitting option to split output libraries into separate chunks, because they don't change frequently compared to application code.
 
 ```js [rolldown.config.js]
 export default {
   // ... other configurations
-  advancedChunks: {
-    groups: [
-      {
-        test: /node_modules/,
-        name: 'libs',
-      },
-    ],
+  output: {
+    codeSplitting: {
+      groups: [
+        {
+          test: /node_modules/,
+          name: 'libs',
+        },
+      ],
+    },
   },
 };
 ```
 
-By using the above `advancedChunks` option, the output will look like this:
+By using the above codeSplitting option, the output will look like this:
 
 :::code-group
 
@@ -170,35 +172,37 @@ export { ... };
 
 ### Improve loading performance
 
-`advancedChunks` can also be used to improve the loading performance of your application by splitting it into a practical number of chunks and taking advantage of browser's parallel loading capabilities.
+Manual code splitting can also be used to improve the loading performance of your application by splitting it into a practical number of chunks and taking advantage of browser's parallel loading capabilities.
 
 In the previous example, we put all the libraries into a single chunk, which is not optimal for loading performance. If the libraries are too large, the browser will spend a long time downloading the chunk, which can lead to a poor user experience.
 
-To solve this problem, we can use `advancedChunks` to split the libraries into separate chunks, so that the browser can download them in parallel.
+To solve this problem, we can use the codeSplitting option to split the libraries into separate chunks, so that the browser can download them in parallel.
 
 ```js [rolldown.config.js]
 export default {
   // ... other configurations
-  advancedChunks: {
-    groups: [
-      {
-        test: /node_modules\/react/,
-        name: 'react',
-      },
-      {
-        test: /node_modules\/react-dom/,
-        name: 'react-dom',
-      },
-      {
-        test: /node_modules\/ui-lib/,
-        name: 'ui-lib',
-      },
-    ],
+  output: {
+    codeSplitting: {
+      groups: [
+        {
+          test: /node_modules\/react/,
+          name: 'react',
+        },
+        {
+          test: /node_modules\/react-dom/,
+          name: 'react-dom',
+        },
+        {
+          test: /node_modules\/ui-lib/,
+          name: 'ui-lib',
+        },
+      ],
+    },
   },
 };
 ```
 
-By using the above `advancedChunks` option, the output will look like this:
+By using the above codeSplitting option, the output will look like this:
 :::code-group
 
 ```js [output-hash0.js]
@@ -236,11 +240,11 @@ Now, the libraries are split into separate chunks, and the browser can download 
 
 ### Why there's always a `runtime.js` chunk?
 
-tl;dr: If you used `advancedChunks` option, rolldown will forcefully generate a `runtime.js` chunk to ensure that the runtime code is always executed before any other chunks.
+tl;dr: If you used manual code splitting with groups, rolldown will forcefully generate a `runtime.js` chunk to ensure that the runtime code is always executed before any other chunks.
 
 The `runtime.js` chunk is a special chunk that **only** contains the runtime code necessary for loading and executing your application. It is generated forcefully by the bundler to ensure that the runtime code is always executed before any other chunks.
 
-Since advanced chunks allows you to move modules between chunks, it's easily to create a circular import in the output code. This can lead to a situation where the runtime code is not executed before the other chunks, causing errors in your application.
+Since manual code splitting allows you to move modules between chunks, it's easily to create a circular import in the output code. This can lead to a situation where the runtime code is not executed before the other chunks, causing errors in your application.
 
 A example output code with circular import:
 
@@ -346,7 +350,7 @@ export const value = 'a' + value;
 
 You could see, to make `a.js` work, we have to change the export signature of the entry chunk `entry.js` and add an additional export `value`. This totally violates the original intention of the code, which is to only export `foo` from `entry.js`.
 
-If you don't want this behavior, you could use [`advancedChunks.includeDependenciesRecursively: false`](/reference/OutputOptions.advancedChunks#includedependenciesrecursively) to disable it.
+If you don't want this behavior, you could use [`codeSplitting.includeDependenciesRecursively: false`](/reference/OutputOptions.codeSplitting#includedependenciesrecursively) to disable it.
 
 :::warning Caveats
 
@@ -356,7 +360,7 @@ With `includeDependenciesRecursively: false`, depended modules of a group might 
 
 `includeDependenciesRecursively: false` increases the chance of generating invalid output code. If you encounter issues due to execution order or circular dependencies, consider enabling:
 
-- [`experimental.strictExecutionOrder: true`](/reference/InputOptions.experimental#strictexecutionorder)
+- [`strictExecutionOrder: true`](/reference/OutputOptions.strictExecutionOrder)
 
 :::
 

@@ -525,7 +525,7 @@ export interface OutputOptions {
    * - `false`: Inline all dynamic imports into a single bundle (equivalent to deprecated `inlineDynamicImports: true`).
    * - `object`: Advanced manual code splitting configuration.
    *
-   * For deeper understanding, please refer to the in-depth [documentation](https://rolldown.rs/in-depth/advanced-chunks).
+   * For deeper understanding, please refer to the in-depth [documentation](https://rolldown.rs/in-depth/manual-code-splitting).
    *
    * @example
    * **Basic vendor chunk**
@@ -544,7 +544,7 @@ export interface OutputOptions {
    *   },
    * });
    * ```
-   * {@include ./docs/output-advanced-chunks.md}
+   * {@include ./docs/output-code-splitting.md}
    *
    * @default true
    */
@@ -802,7 +802,7 @@ export type CodeSplittingOptions = {
    *
    * If you want to disable this behavior, it's recommended to both set
    * - {@linkcode InputOptions.preserveEntrySignatures | preserveEntrySignatures}: `false | 'allow-extension'`
-   * - `experimental.strictExecutionOrder`: `true`
+   * - {@linkcode OutputOptions.strictExecutionOrder | strictExecutionOrder}: `true`
    *
    * to avoid generating invalid chunks.
    *

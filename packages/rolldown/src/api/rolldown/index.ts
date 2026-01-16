@@ -20,7 +20,7 @@ import { RolldownBuild } from './rolldown-build';
  *   bundle = await rolldown({
  *     input: 'src/main.js',
  *   });
- *   await bundle.generate({
+ *   await bundle.write({
  *     format: 'esm',
  *   });
  * } catch (e) {

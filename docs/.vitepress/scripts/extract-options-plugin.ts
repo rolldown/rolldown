@@ -42,6 +42,8 @@ function extractPropertiesSection(contents: string): string | undefined {
   section = section.replace(/^#### /gm, '### ');
   // Remove the "## Properties" heading itself since we'll integrate properties directly
   section = section.replace(/^## Properties\n+/m, '');
+  // Remove horizontal separators between properties
+  section = section.replace(/^\*\*\*$/gm, '');
   return section.trim();
 }
 

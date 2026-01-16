@@ -244,6 +244,8 @@ export interface InputOptions {
    * The list of plugins to use.
    *
    * Falsy plugins will be ignored, which can be used to easily activate or deactivate plugins. Nested plugins will be flattened. Async plugins will be awaited and resolved.
+   *
+   * See [Plugin API document](https://rolldown.rs/apis/plugin-api) for more details about creating plugins.
    */
   plugins?: RolldownPluginOption;
   /**

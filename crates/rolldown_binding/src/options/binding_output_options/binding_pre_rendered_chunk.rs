@@ -1,11 +1,17 @@
 #[napi_derive::napi(object, object_from_js = false)]
 #[derive(Default, Debug)]
 pub struct PreRenderedChunk {
+  /// The name of this chunk, which is used in naming patterns.
   pub name: String,
+  /// Whether this chunk is a static entry point.
   pub is_entry: bool,
+  /// Whether this chunk is a dynamic entry point.
   pub is_dynamic_entry: bool,
+  /// The id of a module that this chunk corresponds to.
   pub facade_module_id: Option<String>,
+  /// The list of ids of modules included in this chunk.
   pub module_ids: Vec<String>,
+  /// Exported variable names from this chunk.
   pub exports: Vec<String>,
 }
 

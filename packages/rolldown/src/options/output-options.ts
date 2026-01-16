@@ -4,6 +4,7 @@ import type { SourcemapIgnoreListOption, SourcemapPathTransformOption } from '..
 import type { ModuleInfo } from '../types/module-info';
 import type { RenderedChunk } from '../types/rolldown-output';
 import type { NullValue, StringOrRegExp } from '../types/utils';
+import type { AssetSource } from '../utils/asset-source';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { InputOptions } from './input-options';
 
@@ -60,11 +61,15 @@ export type SanitizeFileNameFunction = (name: string) => string;
 /** @category Plugin APIs */
 export interface PreRenderedAsset {
   type: 'asset';
+  /** @deprecated Use {@linkcode names} instead. */
   name?: string;
   names: string[];
+  /** @deprecated Use {@linkcode originalFileNames} instead. */
   originalFileName?: string;
+  /** The list of the absolute paths to the original file of this asset. */
   originalFileNames: string[];
-  source: string | Uint8Array;
+  /** The content of this asset. */
+  source: AssetSource;
 }
 
 /** @inline */
@@ -82,17 +87,18 @@ export type ManualChunksFunction = (
 /** @inline */
 export type GlobalsFunction = (name: string) => string;
 
-/** @inline */
-export type AdvancedChunksNameFunction = (
+/** @category Plugin APIs */
+export type CodeSplittingNameFunction = (
   moduleId: string,
   ctx: ChunkingContext,
 ) => string | NullValue;
 
 /** @inline */
-export type AdvancedChunksTestFunction = (id: string) => boolean | undefined | void;
+export type CodeSplittingTestFunction = (id: string) => boolean | undefined | void;
 
 export type MinifyOptions = Omit<BindingMinifyOptions, 'module' | 'sourcemap'>;
 
+/** @inline */
 export interface ChunkingContext {
   getModuleInfo(moduleId: string): ModuleInfo | null;
 }
@@ -278,7 +284,7 @@ export interface OutputOptions {
    */
   esModule?: boolean | 'if-default-prop';
   /**
-   * The pattern to use for naming custom emitted assets to include in the build output, or a function that is called per asset to return such a pattern.
+   * The pattern to use for naming custom emitted assets to include in the build output, or a function that is called per asset with {@linkcode PreRenderedAsset} to return such a pattern.
    *
    * Patterns support the following placeholders:
    * - `[extname]`: The file extension of the asset including a leading dot, e.g. `.css`.
@@ -294,7 +300,7 @@ export interface OutputOptions {
    */
   assetFileNames?: string | AssetFileNamesFunction;
   /**
-   * The pattern to use for chunks created from entry points, or a function that is called per entry chunk to return such a pattern.
+   * The pattern to use for chunks created from entry points, or a function that is called per entry chunk with {@linkcode PreRenderedChunk} to return such a pattern.
    *
    * Patterns support the following placeholders:
    * - `[format]`: The rendering format defined in the output options, e.g. `es` or `cjs`.
@@ -309,7 +315,7 @@ export interface OutputOptions {
    */
   entryFileNames?: string | ChunkFileNamesFunction;
   /**
-   * The pattern to use for naming shared chunks created when code-splitting, or a function that is called per chunk to return such a pattern.
+   * The pattern to use for naming shared chunks created when code-splitting, or a function that is called per chunk with {@linkcode PreRenderedChunk} to return such a pattern.
    *
    * Patterns support the following placeholders:
    * - `[format]`: The rendering format defined in the output options, e.g. `es` or `cjs`.
@@ -670,13 +676,15 @@ export type CodeSplittingGroup = {
    * import { defineConfig } from 'rolldown';
    *
    * export default defineConfig({
-   *   advancedChunks: {
-   *     groups: [
-   *       {
-   *         name: 'libs',
-   *         test: /node_modules/,
-   *       },
-   *     ],
+   *   output: {
+   *     codeSplitting: {
+   *       groups: [
+   *         {
+   *           name: 'libs',
+   *           test: /node_modules/,
+   *         },
+   *       ],
+   *     },
    *   },
    * });
    * ```
@@ -696,13 +704,15 @@ export type CodeSplittingGroup = {
    * import { defineConfig } from 'rolldown';
    *
    * export default defineConfig({
-   *   advancedChunks: {
-   *     groups: [
-   *       {
-   *         name: (moduleId) => moduleId.includes('node_modules') ? 'libs' : 'app',
-   *         minSize: 100 * 1024,
-   *       },
-   *     ],
+   *   output: {
+   *     codeSplitting: {
+   *       groups: [
+   *         {
+   *           name: (moduleId) => moduleId.includes('node_modules') ? 'libs' : 'app',
+   *           minSize: 100 * 1024,
+   *         },
+   *       ],
+   *     },
    *   },
    * });
    * ```
@@ -711,7 +721,7 @@ export type CodeSplittingGroup = {
    * Constraints like `minSize`, `maxSize`, etc. are applied separately for different names returned by the function.
    * :::
    */
-  name: string | AdvancedChunksNameFunction;
+  name: string | CodeSplittingNameFunction;
   /**
    * Controls which modules are captured in this group.
    *
@@ -726,7 +736,7 @@ export type CodeSplittingGroup = {
    * - ❌ Not recommended: `/node_modules/react/`
    * :::
    */
-  test?: StringOrRegExp | AdvancedChunksTestFunction;
+  test?: StringOrRegExp | CodeSplittingTestFunction;
   /**
    * Priority of the group. Group with higher priority will be chosen first to match modules and create chunks. When converting the group to a chunk, modules of that group will be removed from other groups.
    *
@@ -737,19 +747,22 @@ export type CodeSplittingGroup = {
    * import { defineConfig } from 'rolldown';
    *
    * export default defineConfig({
-   *  advancedChunks: {
-   *   groups: [
-   *      {
-   *        name: 'react',
-   *        test: /node_modules[\\/]react/,
-   *        priority: 2,
-   *      },
-   *      {
-   *        name: 'other-libs',
-   *        test: /node_modules/,
-   *        priority: 1,
-   *      },
-   *   ],
+   *   output: {
+   *     codeSplitting: {
+   *       groups: [
+   *         {
+   *           name: 'react',
+   *           test: /node_modules[\\/]react/,
+   *           priority: 2,
+   *         },
+   *         {
+   *           name: 'other-libs',
+   *           test: /node_modules/,
+   *           priority: 1,
+   *         },
+   *       ],
+   *     },
+   *   },
    * });
    * ```
    *
@@ -790,6 +803,8 @@ export type CodeSplittingGroup = {
 
 /**
  * Alias for {@linkcode CodeSplittingGroup}. Use this type for the `codeSplitting.groups` option.
+ *
+ * @deprecated Please use {@linkcode CodeSplittingGroup} instead.
  */
 export type AdvancedChunksGroup = CodeSplittingGroup;
 
@@ -837,6 +852,8 @@ export type CodeSplittingOptions = {
 
 /**
  * Alias for {@linkcode CodeSplittingOptions}. Use this type for the `codeSplitting` option.
+ *
+ * @deprecated Please use {@linkcode CodeSplittingOptions} instead.
  */
 export type AdvancedChunksOptions = CodeSplittingOptions;
 

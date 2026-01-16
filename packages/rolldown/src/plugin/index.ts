@@ -141,13 +141,13 @@ export interface ResolveIdExtraOptions {
   kind: BindingHookResolveIdExtraArgs['kind'];
 }
 
-/** @inline */
+/** @inline @category Plugin APIs */
 export type ResolveIdResult = string | NullValue | false | PartialResolvedId;
 
-/** @inline */
+/** @inline @category Plugin APIs */
 export type LoadResult = NullValue | string | SourceDescription;
 
-/** @inline */
+/** @inline @category Plugin APIs */
 export type TransformResult =
   | NullValue
   | string

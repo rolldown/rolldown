@@ -2522,11 +2522,17 @@ export interface NativeError {
 }
 
 export interface PreRenderedChunk {
+  /** The name of this chunk, which is used in naming patterns. */
   name: string
+  /** Whether this chunk is a static entry point. */
   isEntry: boolean
+  /** Whether this chunk is a dynamic entry point. */
   isDynamicEntry: boolean
+  /** The id of a module that this chunk corresponds to. */
   facadeModuleId?: string
+  /** The list of ids of modules included in this chunk. */
   moduleIds: Array<string>
+  /** Exported variable names from this chunk. */
   exports: Array<string>
 }
 

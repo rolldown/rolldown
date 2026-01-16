@@ -17,8 +17,8 @@ import type {
 } from '../options/input-options';
 import type {
   AddonFunction,
-  AdvancedChunksNameFunction,
-  AdvancedChunksTestFunction,
+  CodeSplittingNameFunction,
+  CodeSplittingTestFunction,
   AssetFileNamesFunction,
   ChunkFileNamesFunction,
   GlobalsFunction,
@@ -608,16 +608,16 @@ const ManualChunksFunctionSchema = v.pipe(
 ) satisfies v.GenericSchema<ManualChunksFunction>;
 
 const AdvancedChunksNameFunctionSchema = v.pipe(
-  vFunction<AdvancedChunksNameFunction>(),
+  vFunction<CodeSplittingNameFunction>(),
   v.args(v.tuple([v.string(), v.object({})])),
   v.returns(v.nullish(v.string())),
-) satisfies v.GenericSchema<AdvancedChunksNameFunction>;
+) satisfies v.GenericSchema<CodeSplittingNameFunction>;
 
 const AdvancedChunksTestFunctionSchema = v.pipe(
-  vFunction<AdvancedChunksTestFunction>(),
+  vFunction<CodeSplittingTestFunction>(),
   v.args(v.tuple([v.string()])),
   v.returns(v.union([v.boolean(), v.void(), v.undefined()])),
-) satisfies v.GenericSchema<AdvancedChunksTestFunction>;
+) satisfies v.GenericSchema<CodeSplittingTestFunction>;
 
 const AdvancedChunksSchema = v.strictObject({
   includeDependenciesRecursively: v.optional(v.boolean()),

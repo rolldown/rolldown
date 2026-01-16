@@ -6,10 +6,15 @@ import { PlainObjectLike } from '../types/plain-object-like';
 
 /** @category Plugin APIs */
 export interface NormalizedInputOptions {
+  /** @see {@linkcode InputOptions.input | input} */
   input: string[] | Record<string, string>;
+  /** @see {@linkcode InputOptions.cwd | cwd} */
   cwd: string;
+  /** @see {@linkcode InputOptions.platform | platform} */
   platform: InputOptions['platform'];
+  /** @see {@linkcode InputOptions.shimMissingExports | shimMissingExports} */
   shimMissingExports: boolean;
+  /** @see {@linkcode InputOptions.context | context} */
   context: string;
 }
 

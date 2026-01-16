@@ -20,45 +20,83 @@ export type InternalModuleFormat = 'es' | 'cjs' | 'iife' | 'umd';
 
 /** @category Plugin APIs */
 export interface NormalizedOutputOptions {
+  /** @see {@linkcode OutputOptions.name | name} */
   name: string | undefined;
+  /** @see {@linkcode OutputOptions.file | file} */
   file: string | undefined;
+  /** @see {@linkcode OutputOptions.dir | dir} */
   dir: string | undefined;
+  /** @see {@linkcode OutputOptions.entryFileNames | entryFileNames} */
   entryFileNames: string | ChunkFileNamesFunction;
+  /** @see {@linkcode OutputOptions.chunkFileNames | chunkFileNames} */
   chunkFileNames: string | ChunkFileNamesFunction;
+  /** @see {@linkcode OutputOptions.assetFileNames | assetFileNames} */
   assetFileNames: string | AssetFileNamesFunction;
+  /** @see {@linkcode OutputOptions.format | format} */
   format: InternalModuleFormat;
+  /** @see {@linkcode OutputOptions.exports | exports} */
   exports: NonNullable<OutputOptions['exports']>;
+  /** @see {@linkcode OutputOptions.sourcemap | sourcemap} */
   sourcemap: boolean | 'inline' | 'hidden';
+  /** @see {@linkcode OutputOptions.sourcemapBaseUrl | sourcemapBaseUrl} */
   sourcemapBaseUrl: string | undefined;
+  /** @see {@linkcode OutputOptions.cssEntryFileNames | cssEntryFileNames} */
   cssEntryFileNames: string | ChunkFileNamesFunction;
+  /** @see {@linkcode OutputOptions.cssChunkFileNames | cssChunkFileNames} */
   cssChunkFileNames: string | ChunkFileNamesFunction;
+  /** @see {@linkcode OutputOptions.codeSplitting | codeSplitting} */
   codeSplitting: boolean;
   /** @deprecated Use `codeSplitting` instead. */
   inlineDynamicImports: boolean;
+  /** @see {@linkcode OutputOptions.dynamicImportInCjs | dynamicImportInCjs} */
   dynamicImportInCjs: boolean;
+  /** @see {@linkcode OutputOptions.externalLiveBindings | externalLiveBindings} */
   externalLiveBindings: boolean;
+  /** @see {@linkcode OutputOptions.banner | banner} */
   banner: AddonFunction;
+  /** @see {@linkcode OutputOptions.footer | footer} */
   footer: AddonFunction;
+  /** @see {@linkcode OutputOptions.postBanner | postBanner} */
   postBanner: AddonFunction;
+  /** @see {@linkcode OutputOptions.postFooter | postFooter} */
   postFooter: AddonFunction;
+  /** @see {@linkcode OutputOptions.intro | intro} */
   intro: AddonFunction;
+  /** @see {@linkcode OutputOptions.outro | outro} */
   outro: AddonFunction;
+  /** @see {@linkcode OutputOptions.esModule | esModule} */
   esModule: boolean | 'if-default-prop';
+  /** @see {@linkcode OutputOptions.extend | extend} */
   extend: boolean;
+  /** @see {@linkcode OutputOptions.globals | globals} */
   globals: Record<string, string> | GlobalsFunction;
+  /** @see {@linkcode OutputOptions.paths | paths} */
   paths: Record<string, string> | PathsFunction | undefined;
+  /** @see {@linkcode OutputOptions.hashCharacters | hashCharacters} */
   hashCharacters: 'base64' | 'base36' | 'hex';
+  /** @see {@linkcode OutputOptions.sourcemapDebugIds | sourcemapDebugIds} */
   sourcemapDebugIds: boolean;
+  /** @see {@linkcode OutputOptions.sourcemapIgnoreList | sourcemapIgnoreList} */
   sourcemapIgnoreList: boolean | SourcemapIgnoreListOption | StringOrRegExp | undefined;
+  /** @see {@linkcode OutputOptions.sourcemapPathTransform | sourcemapPathTransform} */
   sourcemapPathTransform: SourcemapPathTransformOption | undefined;
+  /** @see {@linkcode OutputOptions.minify | minify} */
   minify: false | MinifyOptions | 'dce-only';
+  /** @see {@linkcode OutputOptions.legalComments | legalComments} */
   legalComments: 'none' | 'inline';
+  /** @see {@linkcode OutputOptions.polyfillRequire | polyfillRequire} */
   polyfillRequire: boolean;
+  /** @see {@linkcode OutputOptions.plugins | plugins} */
   plugins: RolldownPlugin[];
+  /** @see {@linkcode OutputOptions.preserveModules | preserveModules} */
   preserveModules: boolean;
+  /** @see {@linkcode OutputOptions.virtualDirname | virtualDirname} */
   virtualDirname: string;
+  /** @see {@linkcode OutputOptions.preserveModulesRoot | preserveModulesRoot} */
   preserveModulesRoot?: string;
+  /** @see {@linkcode OutputOptions.topLevelVar | topLevelVar} */
   topLevelVar?: boolean;
+  /** @see {@linkcode OutputOptions.minifyInternalExports | minifyInternalExports} */
   minifyInternalExports?: boolean;
 }
 

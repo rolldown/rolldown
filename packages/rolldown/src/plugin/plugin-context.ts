@@ -115,7 +115,7 @@ export interface EmittedPrebuiltChunk {
   sourcemapFileName?: string;
 }
 
-/** @inline */
+/** @inline @category Plugin APIs */
 export type EmittedFile = EmittedAsset | EmittedChunk | EmittedPrebuiltChunk;
 
 /** @category Plugin APIs */

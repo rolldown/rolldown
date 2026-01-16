@@ -11,12 +11,13 @@ export interface OutputAsset extends ExternalMemoryHandle {
   type: 'asset';
   /** The file name of this asset. */
   fileName: string;
-  /** @deprecated Use "originalFileNames" instead. */
+  /** @deprecated Use {@linkcode originalFileNames} instead. */
   originalFileName: string | null;
+  /** The list of the absolute paths to the original file of this asset. */
   originalFileNames: string[];
   /** The content of this asset. */
   source: AssetSource;
-  /** @deprecated Use "names" instead. */
+  /** @deprecated Use {@linkcode names} instead. */
   name: string | undefined;
   names: string[];
 }
@@ -64,6 +65,7 @@ export interface RenderedChunk extends Omit<BindingRenderedChunk, 'modules'> {
   isDynamicEntry: boolean;
   /** The id of a module that this chunk corresponds to. */
   facadeModuleId: string | null;
+  /** The list of ids of modules included in this chunk. */
   moduleIds: Array<string>;
   /** Exported variable names from this chunk. */
   exports: Array<string>;
@@ -118,5 +120,11 @@ export interface OutputChunk extends ExternalMemoryHandle {
  * @category Programmatic APIs
  */
 export interface RolldownOutput extends ExternalMemoryHandle {
+  /**
+   * The list of chunks and assets in the generated bundle.
+   *
+   * This includes at least one {@linkcode OutputChunk}. It may also include more
+   * {@linkcode OutputChunk} and/or {@linkcode OutputAsset}s.
+   */
   output: [OutputChunk, ...(OutputChunk | OutputAsset)[]];
 }

@@ -1,5 +1,4 @@
 use arcstr::ArcStr;
-use oxc::span::CompactStr;
 use oxc::span::Span;
 use oxc_index::IndexVec;
 use rolldown_common::SourcemapChainElement;
@@ -41,7 +40,7 @@ impl From<ModuleTaskOwnerRef<'_>> for ModuleTaskOwner {
   fn from(owner: ModuleTaskOwnerRef) -> Self {
     ModuleTaskOwner {
       source: owner.module.source.clone(),
-      importer_id: owner.module.stable_id.as_str().into(),
+      importer_id: owner.module.stable_id.as_arc_str().clone(),
       importee_span: owner.importee_span,
     }
   }
@@ -49,7 +48,7 @@ impl From<ModuleTaskOwnerRef<'_>> for ModuleTaskOwner {
 
 pub struct ModuleTaskOwner {
   source: ArcStr,
-  importer_id: CompactStr,
+  importer_id: ArcStr,
   importee_span: Span,
 }
 
@@ -275,9 +274,9 @@ impl ModuleTask {
         BuildDiagnostic::unloadable_dependency(
           self.resolved_id.debug_id(self.ctx.options.cwd.as_path()).into(),
           self.owner.as_ref().map(|owner| UnloadableDependencyContext {
-            importer_id: owner.importer_id.as_str().into(),
-            importee_span: owner.importee_span,
             source: owner.source.clone(),
+            importer_id: owner.importer_id.clone(),
+            importee_span: owner.importee_span,
           }),
           e.to_string().into(),
         )

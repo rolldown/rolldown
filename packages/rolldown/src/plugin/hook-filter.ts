@@ -19,6 +19,9 @@ export type ModuleTypeFilter = ModuleType[] | FormalModuleTypeFilter;
 
 /**
  * A filter to be used to do a pre-test to determine whether the hook should be called.
+ *
+ * See [Plugin Hook Filters page](https://rolldown.rs/apis/plugin-api/hook-filters) for more details.
+ *
  * @category Plugin APIs
  */
 export interface HookFilter {
@@ -60,6 +63,8 @@ export interface HookFilter {
   id?: GeneralHookFilter;
   /**
    * A filter based on the module's `moduleType`.
+   *
+   * Only available for {@linkcode Plugin.transform | transform} hook.
    */
   moduleType?: ModuleTypeFilter;
   /**

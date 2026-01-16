@@ -2,7 +2,7 @@
 
 If the `type` is `'chunk'`, this emits a new chunk with the given module `id` as entry point. This will not result in duplicate modules in the graph, instead if necessary, existing chunks will be split or a facade chunk with reexports will be created. Chunks with a specified [`fileName`](/reference/Interface.EmittedChunk#filename) will always generate separate chunks while other emitted chunks may be deduplicated with existing chunks even if the name does not match. If such a chunk is not deduplicated, the [`output.chunkFileNames`](/reference/OutputOptions.chunkFileNames) pattern will be used.
 
-You can reference the URL of an emitted file in any code returned by a [`load`](/reference/Interface.Plugin#load) or [`transform`](/reference/Interface.Plugin#transform) plugin hook via `import.meta.ROLLUP_FILE_URL_referenceId` (returns a string). See [File URLs](/apis/plugin-api#file-urls) for more details and an example.
+You can reference the URL of an emitted file in any code returned by a [`load`](/reference/Interface.Plugin#load) or [`transform`](/reference/Interface.Plugin#transform) plugin hook via `import.meta.ROLLUP_FILE_URL_referenceId` (returns a string). See [File URLs](/apis/plugin-api/file-urls) for more details and an example.
 
 You can use [`this.getFileName(referenceId)`](/reference/Interface.PluginContext#getfilename) to determine the file name as soon as it is available. If the file name is not set explicitly, then:
 

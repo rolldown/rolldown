@@ -28,8 +28,19 @@ const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
     items: [
       { text: 'Configuration Options', link: '/reference' },
       { text: 'Bundler API', link: '/apis/bundler-api.md' },
-      { text: 'Plugin API', link: '/apis/plugin-api.md' },
-      { text: 'Plugin Hook Filters', link: '/apis/plugin-hook-filters.md' },
+      {
+        text: 'Plugin API',
+        link: '/apis/plugin-api.md',
+        items: [
+          { text: 'Hook Filters', link: '/apis/plugin-api/hook-filters.md' },
+          { text: 'File URLs', link: '/apis/plugin-api/file-urls.md' },
+          { text: 'Source Code Transformations', link: '/apis/plugin-api/transformations.md' },
+          {
+            text: 'Inter-plugin communication',
+            link: '/apis/plugin-api/inter-plugin-communication.md',
+          },
+        ],
+      },
       { text: 'Command Line Interface', link: '/apis/cli.md' },
     ],
   },

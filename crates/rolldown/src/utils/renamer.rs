@@ -1,8 +1,6 @@
 use oxc::span::CompactStr;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
-use rolldown_common::{
-  GetLocalDb, ModuleIdx, OutputFormat, SymbolRef, SymbolRefDb, SymbolRefFlags,
-};
+use rolldown_common::{ModuleIdx, OutputFormat, SymbolRef, SymbolRefDb, SymbolRefFlags};
 use rolldown_utils::concat_string;
 use rustc_hash::FxHashMap;
 use std::collections::hash_map::Entry;
@@ -93,31 +91,31 @@ impl<'name> Renamer<'name> {
   }
 
   /// Returns true if `name` exists in any nested (non-root) scope of the module.
+  /// Returns false for modules without AST (external modules).
   fn has_nested_scope_binding(&self, module_idx: ModuleIdx, name: &str) -> bool {
-    const RUNTIME_MODULE_INDEX: ModuleIdx = ModuleIdx::from_usize_unchecked(0);
-    if module_idx == RUNTIME_MODULE_INDEX {
+    let Some(db) = &self.symbol_db[module_idx] else {
       return false;
-    }
-
-    let scoping = self.symbol_db.local_db(module_idx).ast_scopes.scoping();
-    if scoping.symbols_len() == 0 {
-      return false;
-    }
+    };
+    let module_scoping = db.ast_scopes.scoping();
 
     // Skip root scope (index 0), check nested scopes only
-    scoping.iter_bindings().skip(1).any(|(_, bindings)| bindings.contains_key(name))
+    module_scoping.iter_bindings().skip(1).any(|(_, bindings)| bindings.contains_key(name))
   }
 
   /// Check if a name is available for a symbol (no nested scope conflicts).
-  fn is_name_available(
-    &self,
-    candidate_name: &str,
-    symbol_ref: SymbolRef,
-    is_original_name: bool,
-  ) -> bool {
-    // Non-entry symbols must not capture entry module's nested bindings
+  fn is_name_available(&self, candidate_name: &str, symbol_ref: SymbolRef, is_original_name: bool) -> bool {
     if let Some(entry_idx) = self.entry_module_idx {
-      if symbol_ref.owner != entry_idx && self.has_nested_scope_binding(entry_idx, candidate_name) {
+      if symbol_ref.owner == entry_idx {
+        // Entry module symbols can use their original names freely - shadowing is
+        // handled by reference-based renaming of nested bindings later
+        return true;
+      }
+
+      // For facade symbols (e.g., external module namespaces), check entry module's nested
+      // scopes to avoid shadowing. Internal modules use reference-based renaming instead.
+      if self.symbol_db.is_facade_symbol(symbol_ref)
+        && self.has_nested_scope_binding(entry_idx, candidate_name)
+      {
         return false;
       }
     }
@@ -160,7 +158,6 @@ impl<'name> Renamer<'name> {
       return;
     }
 
-    // Fast path: original name is available
     if !self.used_canonical_names.contains_key(&original_name)
       && self.is_name_available(&original_name, canonical_ref, true)
     {
@@ -233,88 +230,29 @@ impl<'name> Renamer<'name> {
     conflictless_name.to_string()
   }
 
-  /// CJS wrapper parameter names that nested scopes should avoid shadowing.
-  const CJS_WRAPPER_NAMES: [&'static str; 2] = ["exports", "module"];
-
-  /// Rename nested scope symbols when they would conflict with top-level symbols.
-  ///
-  /// Most nested symbols keep their original names. Renaming is required when:
-  /// 1. Symbol shadows a top-level name from a *different* module (would cause capture)
-  /// 2. Symbol shadows a top-level name that was *renamed* (should shadow original)
-  /// 3. Symbol is `exports`/`module` in a CJS wrapped module (would shadow wrapper params)
-  ///
-  /// ## Example: Avoiding duplicate declarations
-  ///
-  /// ```js
-  /// // other.js
-  /// export const a = 'from-other';
-  ///
-  /// // nested.js - has both `a` and `a$1` as parameters
-  /// export function test(a, a$1) { return [a, a$1]; }
-  ///
-  /// // main.js
-  /// import { a } from './other.js';
-  /// import { test } from './nested.js';
-  /// ```
-  ///
-  /// Bundled output:
-  /// ```js
-  /// const a = "from-other";
-  /// function test(a$2, a$1) { return [a$2, a$1]; }  // `a` → `a$2`, skipping `a$1`
-  /// ```
-  ///
-  /// The nested `a` is renamed to `a$2` (not `a$1`) because `a$1` already exists
-  /// in the same scope - using it would create duplicate declarations.
-  pub fn register_nested_scope_symbols(
-    &mut self,
-    symbol_ref: SymbolRef,
-    original_name: &str,
-    is_cjs_wrapped: bool,
-  ) {
-    if self.canonical_names.contains_key(&symbol_ref) {
+  pub fn register_nested_scope_symbols(&mut self, symbol_ref: SymbolRef, original_name: &str) {
+    let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
+    if self.canonical_names.contains_key(&canonical_ref) {
       return;
     }
 
-    // Check if renaming is needed:
-    // - Shadows top-level from different module, OR shadows a renamed symbol
-    let shadows_renamed_symbol = self.used_canonical_names.get(original_name).is_some_and(|info| {
-      info.owner.is_some_and(|owner| owner != symbol_ref.owner || info.was_renamed)
-    });
-    // - Would shadow CJS wrapper params (`exports`, `module`)
-    let shadows_cjs_param = is_cjs_wrapped && Self::CJS_WRAPPER_NAMES.contains(&original_name);
+    // Find unique name: skip candidates that conflict with top-level or module symbols
+    let mut count = 1;
+    let candidate_name = loop {
+      let name: CompactStr =
+        concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();
 
-    if shadows_renamed_symbol || shadows_cjs_param {
-      let scoping = self.symbol_db.local_db(symbol_ref.owner).ast_scopes.scoping();
+      // Check if conflicts with top-level or renamed symbols
+      if self.used_canonical_names.contains_key(&name) {
+        count += 1;
+        continue;
+      }
 
-      // Find unique name: skip candidates that conflict with top-level or module symbols
-      let mut count = 1u32;
-      let candidate_name = loop {
-        let name: CompactStr =
-          concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();
+      break name;
+    };
 
-        // Check if conflicts with top-level or renamed symbols
-        let conflicts_with_top_level = self.used_canonical_names.contains_key(&name);
-
-        if conflicts_with_top_level {
-          count += 1;
-          continue;
-        }
-
-        // Check if conflicts with own module's nested bindings
-        let conflicts_with_module_symbol =
-          scoping.iter_bindings().any(|(_, bindings)| bindings.contains_key(name.as_str()));
-
-        if conflicts_with_module_symbol {
-          count += 1;
-          continue;
-        }
-
-        break name;
-      };
-
-      self.canonical_names.insert(symbol_ref, candidate_name);
-    }
-    // else: keeps original name, looked up via symbol_db during code generation
+    self.used_canonical_names.insert(candidate_name.clone(), CanonicalNameInfo::default());
+    self.canonical_names.insert(symbol_ref, candidate_name);
   }
 
   #[inline]

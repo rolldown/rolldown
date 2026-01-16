@@ -166,26 +166,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bincode"
-version = "2.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36eaf5d7b090263e8150820482d5d93cd964a81e4019913c972f4edcc6edb740"
-dependencies = [
- "bincode_derive",
- "serde",
- "unty",
-]
-
-[[package]]
-name = "bincode_derive"
-version = "2.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf95709a440f45e986983918d0e8a1f30a9b1df04918fc828670606804ac3c09"
-dependencies = [
- "virtue",
-]
-
-[[package]]
 name = "bit-set"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -366,13 +346,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "cobs"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fa961b519f0b462e3a3b4a34b64d119eeaca1d59af726fe450bbba07a9fc0a1"
+dependencies = [
+ "thiserror 2.0.17",
+]
+
+[[package]]
 name = "codspeed"
 version = "3.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "35584c5fcba8059780748866387fb97c5a203bcfc563fc3d0790af406727a117"
 dependencies = [
  "anyhow",
- "bincode 1.3.3",
+ "bincode",
  "colored 2.2.0",
  "glob",
  "libc",
@@ -656,9 +645,9 @@ dependencies = [
 
 [[package]]
 name = "dragonbox_ecma"
-version = "0.0.5"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d742b56656e8b14d63e7ea9806597b1849ae25412584c8adf78c0f67bd985e66"
+checksum = "6a5577f010d4e1bb3f3c4d6081e05718eb6992cf20119cab4d3abadff198b5ae"
 
 [[package]]
 name = "dtor"
@@ -701,6 +690,18 @@ checksum = "e079f19b08ca6239f47f8ba8509c11cf3ea30095831f7fed61441475edd8c449"
 dependencies = [
  "serde",
 ]
+
+[[package]]
+name = "embedded-io"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef1a6892d9eef45c8fa6b9e0086428a2cca8491aca8f787c534a3d6d0bcb3ced"
+
+[[package]]
+name = "embedded-io"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "edd0f118536f44f5ccd48bcb8b111bdc3de888b58c74639dfb034a357d0f206d"
 
 [[package]]
 name = "encode_unicode"
@@ -1782,8 +1783,7 @@ dependencies = [
 [[package]]
 name = "oxc"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88bc240e07b45f0d2746e56db4eab367eb68252c454f1a1fa34b5cbe85ff71f8"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "oxc_allocator",
  "oxc_ast",
@@ -1805,13 +1805,13 @@ dependencies = [
 
 [[package]]
 name = "oxc-browserslist"
-version = "2.1.4"
+version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9bd39c45e1d6bd2abfbd4b89cbcaba34bd315cd3cee23aad623fd075acc1ea01"
+checksum = "23d55ecaab3af16fee2d0195f2e7d26f27cab0044d0b6d74073514c7feee6beb"
 dependencies = [
- "bincode 2.0.1",
  "flate2",
  "nom",
+ "postcard",
  "rustc-hash",
  "serde",
  "serde_json",
@@ -1848,8 +1848,7 @@ dependencies = [
 [[package]]
 name = "oxc_allocator"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78958640bcae9b5b42f9eaafe4995b5460195e961439c236095547bb78952f8d"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "allocator-api2",
  "bumpalo",
@@ -1863,8 +1862,7 @@ dependencies = [
 [[package]]
 name = "oxc_ast"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0d1a3c841ad6204dcdba2e584efbff30ec7a5a2c88851108dd39a2ed4be3af3"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "bitflags 2.10.0",
  "oxc_allocator",
@@ -1880,8 +1878,7 @@ dependencies = [
 [[package]]
 name = "oxc_ast_macros"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fc4d7eb802fc2bfc49fdc004e875a4009c17657f53372af111eb9d98dc4a15f"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "phf",
  "proc-macro2",
@@ -1892,8 +1889,7 @@ dependencies = [
 [[package]]
 name = "oxc_ast_visit"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "561ace6525ddc90b36103764a959eb261ff7f92a76172a34ac2d24d579f1260d"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "oxc_allocator",
  "oxc_ast",
@@ -1904,8 +1900,7 @@ dependencies = [
 [[package]]
 name = "oxc_cfg"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d38997b36d3ad179b672110080c42ab9bf5c1761767754be148c5cbf8982947"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "bitflags 2.10.0",
  "itertools",
@@ -1918,8 +1913,7 @@ dependencies = [
 [[package]]
 name = "oxc_codegen"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a075130a060ebc4bcf09a55fcf521243527a820937dccda4af92524d4c3def2"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "bitflags 2.10.0",
  "cow-utils",
@@ -1939,8 +1933,7 @@ dependencies = [
 [[package]]
 name = "oxc_compat"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4df14ee33385dff8fc347c6ddb62b8c7168c4abf6957deec8415575e0f0f2e3"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "cow-utils",
  "oxc-browserslist",
@@ -1952,8 +1945,7 @@ dependencies = [
 [[package]]
 name = "oxc_data_structures"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "397842ac155f7c3f707232cc8758c0e67919ac7f75ec3bc34680ae176aca8b61"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "ropey",
 ]
@@ -1961,8 +1953,7 @@ dependencies = [
 [[package]]
 name = "oxc_diagnostics"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2739661b22eb7abe3966ebbe1eb236337f940eed7e9598bdb089c3353aa2c15f"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "cow-utils",
  "oxc-miette",
@@ -1972,8 +1963,7 @@ dependencies = [
 [[package]]
 name = "oxc_ecmascript"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef913bdaae2ed48335b500a25ecc6a9f186ca855968b5edfc6d1ebad4d0b2124"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "cow-utils",
  "num-bigint",
@@ -1987,8 +1977,7 @@ dependencies = [
 [[package]]
 name = "oxc_estree"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a61584ac8cd52d6b6c05a7a5d4b883d5666ea4612ddfe3429f28f7bcd1e93a14"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "dragonbox_ecma",
  "itoa",
@@ -2009,8 +1998,7 @@ dependencies = [
 [[package]]
 name = "oxc_isolated_declarations"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04ddf2f1f37acbea0f3a7bc5b40b3e5e5a83a9ea845e48fbddf0e6da591994cc"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "bitflags 2.10.0",
  "oxc_allocator",
@@ -2026,8 +2014,7 @@ dependencies = [
 [[package]]
 name = "oxc_mangler"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dedab0866f3106cbc831c79e522c5f5ca33412562f79cfecdbb600bbbd896261"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "itertools",
  "oxc_allocator",
@@ -2043,8 +2030,7 @@ dependencies = [
 [[package]]
 name = "oxc_minifier"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69b6f6e96160888f73125b7345d3934fb0027c3e27cdfa99a3dd042ae033a77d"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "cow-utils",
  "oxc_allocator",
@@ -2068,8 +2054,7 @@ dependencies = [
 [[package]]
 name = "oxc_minify_napi"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59c0f15b6db541145cbc2a4e7d938f846b747604da94b863b22e14fb918838c0"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "napi",
  "napi-build",
@@ -2088,8 +2073,7 @@ dependencies = [
 [[package]]
 name = "oxc_napi"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d34f41e34a6c041224301d42db935c0f6996741cc6d0233fc19cd291dd46578f"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "napi",
  "napi-build",
@@ -2104,8 +2088,7 @@ dependencies = [
 [[package]]
 name = "oxc_parser"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06898c992b263f8e4dfcc338528445492a8d61292ad78a0ad7863a265e7beda2"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "bitflags 2.10.0",
  "cow-utils",
@@ -2127,8 +2110,7 @@ dependencies = [
 [[package]]
 name = "oxc_parser_napi"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5a3756a25722b901cec5a6fd06d0533535fa3b6d7c13a8543703b554b767950"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "napi",
  "napi-build",
@@ -2143,8 +2125,7 @@ dependencies = [
 [[package]]
 name = "oxc_regular_expression"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c658b8d107d9534816312d1fd4b77311df648d07ac8af0417355a8cbb09749b"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "bitflags 2.10.0",
  "oxc_allocator",
@@ -2200,8 +2181,7 @@ dependencies = [
 [[package]]
 name = "oxc_semantic"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ef9534d21d00ac38ca4eab91e7b7f4fa0f1c7f0279d07865074c05357366d5c"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "itertools",
  "memchr",
@@ -2239,8 +2219,7 @@ dependencies = [
 [[package]]
 name = "oxc_span"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3416e347dd4837cdfbffc49bd2ef106ba592133268a962381cc82d24e8593e40"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "compact_str",
  "oxc-miette",
@@ -2253,8 +2232,7 @@ dependencies = [
 [[package]]
 name = "oxc_syntax"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c44aa646ecb431595b3255b6eee2a7f9f292422b76cf5c156a825bd042073453"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "bitflags 2.10.0",
  "cow-utils",
@@ -2274,8 +2252,7 @@ dependencies = [
 [[package]]
 name = "oxc_transform_napi"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01a4edb53ee1dbee968ce95d33675d3077914110c60c4157af7e88871036064b"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "napi",
  "napi-build",
@@ -2289,8 +2266,7 @@ dependencies = [
 [[package]]
 name = "oxc_transformer"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "118d7149205362a9ab9de91112f36c13e4192db5036d5cad7cc083a849146450"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "base64",
  "compact_str",
@@ -2318,8 +2294,7 @@ dependencies = [
 [[package]]
 name = "oxc_transformer_plugins"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4f8bc0f738f2fa6703560466f3f45e811d1738be86ed50f1e68ea9a9204e9b6"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "cow-utils",
  "itoa",
@@ -2340,8 +2315,7 @@ dependencies = [
 [[package]]
 name = "oxc_traverse"
 version = "0.108.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b0c8dc012307ff62260d1f9f3073d4933c5f7e0a01e479f52f6ddd2a487154b"
+source = "git+https://github.com/oxc-project/oxc?branch=01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_#7c4f44fcdbeaaf00cd92edb8899c65c32b28e86d"
 dependencies = [
  "itoa",
  "oxc_allocator",
@@ -2510,6 +2484,18 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.17",
+]
+
+[[package]]
+name = "postcard"
+version = "1.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6764c3b5dd454e283a30e6dfe78e9b31096d9e32036b5d1eaac7a6119ccb9a24"
+dependencies = [
+ "cobs",
+ "embedded-io 0.4.0",
+ "embedded-io 0.6.1",
+ "serde",
 ]
 
 [[package]]
@@ -4291,12 +4277,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
 
 [[package]]
-name = "unty"
-version = "0.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d49784317cd0d1ee7ec5c716dd598ec5b4483ea832a2dced265471cc0f690ae"
-
-[[package]]
 name = "url"
 version = "2.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4373,12 +4353,6 @@ checksum = "9e723b9e1c02a3cf9f9d0de6a4ddb8cdc1df859078902fe0ae0589d615711ae6"
 dependencies = [
  "filetime",
 ]
-
-[[package]]
-name = "virtue"
-version = "0.0.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "051eb1abcf10076295e815102942cc58f9d5e3b4560e46e53c21e8ff6f3af7b1"
 
 [[package]]
 name = "vsimd"

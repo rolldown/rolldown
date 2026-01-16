@@ -553,7 +553,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           {
             if !span.is_unspanned() {
               is_inserted_before = true;
-              self.add_member_expr_reference(root_symbol_id, props, span, ty);
+              self.add_member_expr_reference(
+                root_symbol_id,
+                props,
+                span,
+                ty,
+                ident_ref.reference_id.get(),
+              );
             }
           }
         }

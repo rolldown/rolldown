@@ -39,14 +39,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 let ns;
 (function(_ns) {
 	try {
-		var _usingCtx = _usingCtx$1();
+		var _usingCtx$1 = _usingCtx();
 		_ns.a = b;
-		const c = _usingCtx.u(d);
+		const c = _usingCtx$1.u(d);
 		_ns.e = f;
 	} catch (_) {
-		_usingCtx.e = _;
+		_usingCtx$1.e = _;
 	} finally {
-		_usingCtx.d();
+		_usingCtx$1.d();
 	}
 })(ns || (ns = {}));
 

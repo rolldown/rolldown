@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region lib.js
+const Client = [];
+
+//#endregion
+//#region main.js
+const Config = (Client) => {
+	console.log(Client);
+};
+console.log(`Client: `, Client);
+Config();
+
+//#endregion
+```

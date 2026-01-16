@@ -1,4 +1,7 @@
-use oxc::span::{CompactStr, Span};
+use oxc::{
+  semantic::ReferenceId,
+  span::{CompactStr, Span},
+};
 
 use crate::{MemberExprRefResolution, SymbolRef, type_aliases::MemberExprRefResolutionMap};
 
@@ -14,6 +17,8 @@ pub struct MemberExprRef {
   /// related discussion: https://github.com/rolldown/rolldown/pull/1818#discussion_r1699374441
   pub span: Span,
   pub object_ref_type: MemberExprObjectReferencedType,
+  /// TODO:
+  pub reference_id: Option<ReferenceId>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -29,12 +34,14 @@ impl MemberExprRef {
     prop_and_span_list: Vec<(CompactStr, Span)>,
     span: Span,
     obj_ref_type: MemberExprObjectReferencedType,
+    reference_id: Option<ReferenceId>,
   ) -> Self {
     Self {
       object_ref,
       prop_and_span_list: Box::new(prop_and_span_list),
       span,
       object_ref_type: obj_ref_type,
+      reference_id,
     }
   }
 

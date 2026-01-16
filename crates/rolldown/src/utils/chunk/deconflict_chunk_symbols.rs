@@ -1,4 +1,4 @@
-use oxc::span::CompactStr;
+use oxc::{span::CompactStr, syntax::symbol};
 
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use arcstr::ArcStr;
@@ -6,7 +6,7 @@ use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::ecmascript::legitimize_identifier_name;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn deconflict_chunk_symbols(
@@ -171,9 +171,9 @@ pub fn deconflict_chunk_symbols(
 
   // Similarly, symbols in `exports_to_other_chunks` need canonical names because they are rendered
   // in the chunk's export statements. We add them to the renamer to ensure they have canonical names.
-  chunk.exports_to_other_chunks.keys().for_each(|export_ref| {
-    renamer.add_symbol_in_root_scope(*export_ref, true);
-  });
+  // chunk.exports_to_other_chunks.keys().for_each(|export_ref| {
+  //   renamer.add_symbol_in_root_scope(*export_ref, true);
+  // });
 
   chunk.require_binding_names_for_other_chunks = chunk
     .imports_from_other_chunks
@@ -191,45 +191,115 @@ pub fn deconflict_chunk_symbols(
 
   // Register nested scope symbols with their canonical names.
   // Since we now avoid conflicting names during root scope renaming, most nested scope
-  // symbols can keep their original names, but we still need to handle shadowing cases.
+  // symbols can keep their original names, but we still need to handle shadowing cases
+  // where a nested binding would capture a reference to a top-level symbol.
   for module_idx in chunk.modules.iter().copied() {
+    let Some(module) = link_output.module_table[module_idx].as_normal() else {
+      continue;
+    };
     let Some(db) = &link_output.symbol_db[module_idx] else {
       continue;
     };
     let scoping = db.ast_scopes.scoping();
 
+    // Handle member expression references (e.g., `foo.bar` where `foo` is an import)
+    link_output.metas[module_idx].resolved_member_expr_refs.values().for_each(|member_expr_ref| {
+      let Some(resolved_symbol) = member_expr_ref.resolved else {
+        return;
+      };
+
+      let Some(reference_id) = member_expr_ref.reference_id else {
+        return;
+      };
+
+      let current_reference = scoping.get_reference(reference_id);
+
+      let Some(symbol) = current_reference.symbol_id() else {
+        return;
+      };
+
+      let Some(resolved_symbol) = member_expr_ref.resolved else {
+        return;
+      };
+
+      let symbol_name = link_output.symbol_db.local_db(module_idx).symbol_name(symbol);
+
+      let canonical_name =
+        renamer.get_canonical_name(resolved_symbol).map_or_else(|| symbol_name, |n| n.as_str());
+
+      let bindings = scoping
+        .scope_ancestors(current_reference.scope_id())
+        .filter_map(|scope_id| {
+          if let Some(binding) = scoping.get_binding(scope_id, &canonical_name)
+            && binding != symbol
+          {
+            Some(binding)
+          } else {
+            None
+          }
+        })
+        .collect::<Vec<_>>();
+
+      for binding in bindings {
+        let symbol_ref = (module_idx, binding).into();
+        let binding_name = scoping.symbol_name(binding);
+        renamer.register_nested_scope_symbols(symbol_ref, &binding_name)
+      }
+    });
+
+    // Handle named imports: if a nested binding would capture a reference to an import,
+    // rename the nested binding to avoid shadowing.
+    for (symbol_ref, _named_import) in &module.named_imports {
+      if db.is_facade_symbol(symbol_ref.symbol) {
+        continue;
+      }
+
+      // Get the canonical name - either explicitly set or fall back to original name
+      let canonical_ref = link_output.symbol_db.canonical_ref_for(*symbol_ref);
+      let canonical_name = renamer
+        .get_canonical_name(*symbol_ref)
+        .map(|s| s.as_str())
+        .unwrap_or_else(|| canonical_ref.name(&link_output.symbol_db));
+
+      let references = scoping.get_resolved_references(symbol_ref.symbol);
+
+      let bindings = references
+        .map(|reference| {
+          scoping.scope_ancestors(reference.scope_id()).filter_map(|scope_id| {
+            if let Some(binding) = scoping.get_binding(scope_id, canonical_name)
+              && binding != symbol_ref.symbol
+            {
+              Some(binding)
+            } else {
+              None
+            }
+          })
+        })
+        .flatten()
+        .collect::<Vec<_>>();
+
+      for binding in bindings {
+        let symbol_ref = (module_idx, binding).into();
+        let binding_name = scoping.symbol_name(binding);
+        renamer.register_nested_scope_symbols(symbol_ref, &binding_name)
+      }
+    }
+
     // Check if this module is CJS wrapped - if so, nested scopes should avoid
     // shadowing `exports` and `module` which are synthetic parameters
     let is_cjs_wrapped = matches!(link_output.metas[module_idx].wrap_kind(), WrapKind::Cjs);
 
-    let mut iter_bindings = scoping.iter_bindings();
-    let Some((_, top_level_bindings)) = iter_bindings.next() else {
-      continue;
-    };
+    if is_cjs_wrapped {
+      /// CJS wrapper parameter names that nested scopes should avoid shadowing.
+      const CJS_WRAPPER_NAMES: [&str; 2] = ["exports", "module"];
 
-    // Collect canonical names of top-level symbols that have references.
-    // We only process nested symbols whose name matches a top-level canonical name,
-    // because nested symbols with other names can safely shadow cross-module
-    // top-level symbols via JavaScript's natural scoping rules.
-    let top_level_canonical_names: FxHashSet<CompactStr> = top_level_bindings
-      .iter()
-      .filter_map(|(_, symbol_id)| {
-        // Skip symbols with no references as they won't need deconflicting
-        if scoping.get_resolved_reference_ids(*symbol_id).is_empty() {
-          return None;
-        }
-        let symbol_ref = (module_idx, *symbol_id).into();
-        renamer.get_canonical_name(symbol_ref).cloned()
-      })
-      .collect();
-
-    // Process nested scopes only - root scope was already handled by `add_symbol_in_root_scope`
-    // and consumed above to build `top_level_canonical_names`
-    for (_, bindings) in iter_bindings {
-      for (&name, symbol_id) in bindings {
-        if is_cjs_wrapped || top_level_canonical_names.contains(name) {
-          let symbol_ref = (module_idx, *symbol_id).into();
-          renamer.register_nested_scope_symbols(symbol_ref, name, is_cjs_wrapped);
+      // Skip root scope (index 0), check nested scopes only
+      for (_, bindings) in scoping.iter_bindings().skip(1) {
+        for (&name, symbol_id) in bindings {
+          if CJS_WRAPPER_NAMES.contains(&name) {
+            let symbol_ref = (module_idx, *symbol_id).into();
+            renamer.register_nested_scope_symbols(symbol_ref, name);
+          }
         }
       }
     }

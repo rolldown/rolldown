@@ -5,40 +5,25 @@ use rolldown_utils::concat_string;
 use rustc_hash::FxHashMap;
 use std::collections::hash_map::Entry;
 
-/// Information about a canonical name used in the top-level scope.
-#[derive(Debug, Clone, Default)]
-struct CanonicalNameInfo {
-  /// The conflict index used for generating unique names (e.g., `a$1`, `a$2`).
-  conflict_index: u32,
-  /// The module that owns this top-level symbol, if any.
-  /// `None` for reserved names (keywords, global objects, or manually reserved).
-  owner: Option<ModuleIdx>,
-  /// Whether this symbol was renamed during deconflicting.
-  /// Used to determine if nested scopes should avoid shadowing this name.
-  was_renamed: bool,
-}
-
 #[derive(Debug)]
 pub struct Renamer<'name> {
   /// Tracks all canonical names used in the top-level scope.
   ///
-  /// Key is the canonical name, value contains:
-  /// - `conflict_index`: Counter for generating unique names (`a$1`, `a$2`, ...)
-  /// - `owner`: Module that owns this symbol (`None` for reserved names)
-  /// - `was_renamed`: Whether this symbol was renamed during deconflicting
+  /// Key is the canonical name, value is the conflict index for generating unique names.
+  /// When we need a unique name like `foo$1`, we increment the conflict index stored here.
   ///
   /// Example:
   /// ```js
   /// // index.js
   /// import {a as b} from './a.js'
-  /// const a = 1;      // used_canonical_names: {a: {conflict_index: 0, ...}}
-  /// const a$1 = 1000; // used_canonical_names: {a: ..., a$1: {conflict_index: 0, ...}}
+  /// const a = 1;      // used_canonical_names: {a: 0}
+  /// const a$1 = 1000; // used_canonical_names: {a: 0, a$1: 0}
   ///
   /// // a.js
   /// export const a = 100; // Try `a` (used), `a$1` (used), `a$2` (available) → rename to `a$2`
   /// ```
-  used_canonical_names: FxHashMap<CompactStr, CanonicalNameInfo>,
-  /// Final symbol → name mappings. Only stores renamed symbols; originals use symbol_db.
+  used_canonical_names: FxHashMap<CompactStr, u32>,
+  /// Final symbol → name mappings.
   canonical_names: FxHashMap<SymbolRef, CompactStr>,
   symbol_db: &'name SymbolRefDb,
   /// Entry module index for this chunk, if any.
@@ -67,7 +52,7 @@ impl<'name> Renamer<'name> {
         .iter()
         .chain(RESERVED_KEYWORDS.iter())
         .chain(GLOBAL_OBJECTS.iter())
-        .map(|s| (CompactStr::new(s), CanonicalNameInfo::default()))
+        .map(|s| (CompactStr::new(s), 0))
         .collect(),
       entry_module_idx: base_module_index,
     }
@@ -87,7 +72,7 @@ impl<'name> Renamer<'name> {
   }
 
   pub fn reserve(&mut self, name: CompactStr) {
-    self.used_canonical_names.insert(name, CanonicalNameInfo::default());
+    self.used_canonical_names.entry(name).or_insert(0);
   }
 
   /// Returns true if `name` exists in any nested (non-root) scope of the module.
@@ -96,14 +81,17 @@ impl<'name> Renamer<'name> {
     let Some(db) = &self.symbol_db[module_idx] else {
       return false;
     };
-    let module_scoping = db.ast_scopes.scoping();
-
     // Skip root scope (index 0), check nested scopes only
-    module_scoping.iter_bindings().skip(1).any(|(_, bindings)| bindings.contains_key(name))
+    db.ast_scopes.scoping().iter_bindings().skip(1).any(|(_, bindings)| bindings.contains_key(name))
   }
 
   /// Check if a name is available for a symbol (no nested scope conflicts).
-  fn is_name_available(&self, candidate_name: &str, symbol_ref: SymbolRef, is_original_name: bool) -> bool {
+  fn is_name_available(
+    &self,
+    candidate_name: &str,
+    symbol_ref: SymbolRef,
+    is_original_name: bool,
+  ) -> bool {
     if let Some(entry_idx) = self.entry_module_idx {
       if symbol_ref.owner == entry_idx {
         // Entry module symbols can use their original names freely - shadowing is
@@ -158,17 +146,11 @@ impl<'name> Renamer<'name> {
       return;
     }
 
+    // Fast path: original name is available
     if !self.used_canonical_names.contains_key(&original_name)
       && self.is_name_available(&original_name, canonical_ref, true)
     {
-      self.used_canonical_names.insert(
-        original_name.clone(),
-        CanonicalNameInfo {
-          conflict_index: 0,
-          owner: Some(canonical_ref.owner),
-          was_renamed: false,
-        },
-      );
+      self.used_canonical_names.insert(original_name.clone(), 0);
       self.canonical_names.insert(canonical_ref, original_name);
       return;
     }
@@ -177,9 +159,9 @@ impl<'name> Renamer<'name> {
     let mut conflict_index = self
       .used_canonical_names
       .get_mut(&original_name)
-      .map(|info| {
-        info.conflict_index += 1;
-        info.conflict_index
+      .map(|idx| {
+        *idx += 1;
+        *idx
       })
       .unwrap_or(1);
 
@@ -187,9 +169,9 @@ impl<'name> Renamer<'name> {
       let candidate_name: CompactStr =
         concat_string!(original_name, "$", itoa::Buffer::new().format(conflict_index)).into();
 
-      if let Some(info) = self.used_canonical_names.get_mut(&candidate_name) {
-        conflict_index = info.conflict_index + 1;
-        info.conflict_index = conflict_index;
+      if let Some(idx) = self.used_canonical_names.get_mut(&candidate_name) {
+        *idx += 1;
+        conflict_index = *idx;
         continue;
       }
 
@@ -198,36 +180,31 @@ impl<'name> Renamer<'name> {
         continue;
       }
 
-      self.used_canonical_names.insert(
-        candidate_name.clone(),
-        CanonicalNameInfo {
-          conflict_index: 0,
-          owner: Some(canonical_ref.owner),
-          was_renamed: true,
-        },
-      );
+      self.used_canonical_names.insert(candidate_name.clone(), 0);
       self.canonical_names.insert(canonical_ref, candidate_name);
       break;
     }
   }
 
   pub fn create_conflictless_name(&mut self, hint: &str) -> String {
-    let mut conflictless_name = CompactStr::new(hint);
-    loop {
-      match self.used_canonical_names.entry(conflictless_name.clone()) {
-        Entry::Occupied(mut occ) => {
-          let next_conflict_index = occ.get().conflict_index + 1;
-          occ.get_mut().conflict_index = next_conflict_index;
-          conflictless_name =
-            concat_string!(hint, "$", itoa::Buffer::new().format(next_conflict_index)).into();
-        }
-        Entry::Vacant(vac) => {
-          vac.insert(CanonicalNameInfo::default());
-          break;
-        }
+    // Try the hint directly first
+    if let Entry::Vacant(entry) = self.used_canonical_names.entry(CompactStr::new(hint)) {
+      entry.insert(0);
+      return hint.to_string();
+    }
+
+    // Find alternative: hint$1, hint$2, ...
+    for count in 1u32.. {
+      let name: CompactStr =
+        concat_string!(hint, "$", itoa::Buffer::new().format(count)).into();
+
+      if let Entry::Vacant(entry) = self.used_canonical_names.entry(name) {
+        let result = entry.key().to_string();
+        entry.insert(0);
+        return result;
       }
     }
-    conflictless_name.to_string()
+    unreachable!()
   }
 
   pub fn register_nested_scope_symbols(&mut self, symbol_ref: SymbolRef, original_name: &str) {
@@ -236,23 +213,18 @@ impl<'name> Renamer<'name> {
       return;
     }
 
-    // Find unique name: skip candidates that conflict with top-level or module symbols
-    let mut count = 1;
-    let candidate_name = loop {
+    // Find unique name: skip candidates that conflict with top-level symbols
+    for count in 1u32.. {
       let name: CompactStr =
         concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into();
 
-      // Check if conflicts with top-level or renamed symbols
-      if self.used_canonical_names.contains_key(&name) {
-        count += 1;
-        continue;
+      if let Entry::Vacant(entry) = self.used_canonical_names.entry(name) {
+        let candidate_name = entry.key().clone();
+        entry.insert(0);
+        self.canonical_names.insert(symbol_ref, candidate_name);
+        return;
       }
-
-      break name;
-    };
-
-    self.used_canonical_names.insert(candidate_name.clone(), CanonicalNameInfo::default());
-    self.canonical_names.insert(symbol_ref, candidate_name);
+    }
   }
 
   #[inline]

@@ -1,4 +1,4 @@
-use oxc::{span::CompactStr, syntax::symbol};
+use oxc::span::CompactStr;
 
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use arcstr::ArcStr;
@@ -203,49 +203,36 @@ pub fn deconflict_chunk_symbols(
     let scoping = db.ast_scopes.scoping();
 
     // Handle member expression references (e.g., `foo.bar` where `foo` is an import)
-    link_output.metas[module_idx].resolved_member_expr_refs.values().for_each(|member_expr_ref| {
-      let Some(resolved_symbol) = member_expr_ref.resolved else {
-        return;
-      };
-
+    for member_expr_ref in link_output.metas[module_idx].resolved_member_expr_refs.values() {
       let Some(reference_id) = member_expr_ref.reference_id else {
-        return;
+        continue;
       };
-
       let current_reference = scoping.get_reference(reference_id);
-
       let Some(symbol) = current_reference.symbol_id() else {
-        return;
+        continue;
       };
-
       let Some(resolved_symbol) = member_expr_ref.resolved else {
-        return;
+        continue;
       };
 
-      let symbol_name = link_output.symbol_db.local_db(module_idx).symbol_name(symbol);
+      // Get owned canonical name to avoid borrow conflict with renamer mutation below
+      let canonical_name: CompactStr = match renamer.get_canonical_name(resolved_symbol) {
+        Some(name) => name.clone(),
+        None => {
+          let symbol_name = link_output.symbol_db.local_db(module_idx).symbol_name(symbol);
+          CompactStr::new(symbol_name)
+        }
+      };
 
-      let canonical_name =
-        renamer.get_canonical_name(resolved_symbol).map_or_else(|| symbol_name, |n| n.as_str());
-
-      let bindings = scoping
-        .scope_ancestors(current_reference.scope_id())
-        .filter_map(|scope_id| {
-          if let Some(binding) = scoping.get_binding(scope_id, &canonical_name)
-            && binding != symbol
-          {
-            Some(binding)
-          } else {
-            None
-          }
-        })
-        .collect::<Vec<_>>();
-
-      for binding in bindings {
-        let symbol_ref = (module_idx, binding).into();
-        let binding_name = scoping.symbol_name(binding);
-        renamer.register_nested_scope_symbols(symbol_ref, &binding_name)
+      for scope_id in scoping.scope_ancestors(current_reference.scope_id()) {
+        if let Some(binding) = scoping.get_binding(scope_id, &canonical_name)
+          && binding != symbol
+        {
+          let symbol_ref = (module_idx, binding).into();
+          renamer.register_nested_scope_symbols(symbol_ref, scoping.symbol_name(binding));
+        }
       }
-    });
+    }
 
     // Handle named imports: if a nested binding would capture a reference to an import,
     // rename the nested binding to avoid shadowing.
@@ -254,34 +241,24 @@ pub fn deconflict_chunk_symbols(
         continue;
       }
 
-      // Get the canonical name - either explicitly set or fall back to original name
-      let canonical_ref = link_output.symbol_db.canonical_ref_for(*symbol_ref);
-      let canonical_name = renamer
-        .get_canonical_name(*symbol_ref)
-        .map(|s| s.as_str())
-        .unwrap_or_else(|| canonical_ref.name(&link_output.symbol_db));
+      // Get owned canonical name to avoid borrow conflict with renamer mutation below
+      let canonical_name: CompactStr = match renamer.get_canonical_name(*symbol_ref) {
+        Some(name) => name.clone(),
+        None => {
+          let canonical_ref = link_output.symbol_db.canonical_ref_for(*symbol_ref);
+          CompactStr::new(canonical_ref.name(&link_output.symbol_db))
+        }
+      };
 
-      let references = scoping.get_resolved_references(symbol_ref.symbol);
-
-      let bindings = references
-        .map(|reference| {
-          scoping.scope_ancestors(reference.scope_id()).filter_map(|scope_id| {
-            if let Some(binding) = scoping.get_binding(scope_id, canonical_name)
-              && binding != symbol_ref.symbol
-            {
-              Some(binding)
-            } else {
-              None
-            }
-          })
-        })
-        .flatten()
-        .collect::<Vec<_>>();
-
-      for binding in bindings {
-        let symbol_ref = (module_idx, binding).into();
-        let binding_name = scoping.symbol_name(binding);
-        renamer.register_nested_scope_symbols(symbol_ref, &binding_name)
+      for reference in scoping.get_resolved_references(symbol_ref.symbol) {
+        for scope_id in scoping.scope_ancestors(reference.scope_id()) {
+          if let Some(binding) = scoping.get_binding(scope_id, &canonical_name)
+            && binding != symbol_ref.symbol
+          {
+            let nested_symbol_ref = (module_idx, binding).into();
+            renamer.register_nested_scope_symbols(nested_symbol_ref, scoping.symbol_name(binding));
+          }
+        }
       }
     }
 

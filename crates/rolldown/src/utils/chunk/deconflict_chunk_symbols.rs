@@ -169,12 +169,6 @@ pub fn deconflict_chunk_symbols(
     renamer.add_symbol_in_root_scope(item.import_ref, true);
   });
 
-  // Similarly, symbols in `exports_to_other_chunks` need canonical names because they are rendered
-  // in the chunk's export statements. We add them to the renamer to ensure they have canonical names.
-  // chunk.exports_to_other_chunks.keys().for_each(|export_ref| {
-  //   renamer.add_symbol_in_root_scope(*export_ref, true);
-  // });
-
   chunk.require_binding_names_for_other_chunks = chunk
     .imports_from_other_chunks
     .iter()

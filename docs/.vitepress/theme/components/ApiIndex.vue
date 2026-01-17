@@ -4,43 +4,85 @@
 // named import "data" is the resolved static data
 // can also import types for type consistency
 import { data as apiIndex } from './api.data';
-import type { APIReference } from './api.data';
 import { ref, computed, onMounted } from 'vue';
 
 const search = ref<HTMLInputElement>();
 const query = ref('');
-const normalize = (s: string) => s.toLowerCase().replace(/-/g, ' ');
+
+// Normalize: lowercase, replace hyphens with spaces, collapse whitespace, trim
+const normalize = (s: string) => s.toLowerCase().replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
+
+// Split camelCase into words for matching, e.g. "codeSplitting" → ["code", "splitting"]
+const splitCamelCase = (s: string): string[] =>
+  s
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .toLowerCase()
+    .split(/\s+/);
+
+// Score match quality for ranking results
+const scoreMatch = (text: string, query: string): number => {
+  const normalizedText = normalize(text);
+  const normalizedQuery = normalize(query);
+
+  if (!normalizedQuery) return 100; // Empty query shows all
+
+  // Exact match (highest priority)
+  if (normalizedText === normalizedQuery) return 100;
+
+  // Prefix match
+  if (normalizedText.startsWith(normalizedQuery)) return 80;
+
+  // Word boundary match (camelCase aware)
+  const words = splitCamelCase(text);
+  if (words.some((w) => w.startsWith(normalizedQuery))) return 60;
+
+  // Contains match
+  if (normalizedText.includes(normalizedQuery)) return 40;
+
+  // Multi-word query: all words must match
+  const queryWords = normalizedQuery.split(/\s+/).filter(Boolean);
+  if (queryWords.length > 1 && queryWords.every((qw) => normalizedText.includes(qw))) return 20;
+
+  return 0; // No match
+};
 
 onMounted(() => {
   search.value?.focus();
 });
 
 const filtered = computed(() => {
-  const q = normalize(query.value);
-  const matches = (text: string) => normalize(text).includes(q);
+  const q = query.value;
 
   return apiIndex
     .map((section) => {
-      // section title match
-      if (matches(section.text)) {
-        return section;
+      const sectionScore = scoreMatch(section.text, q);
+
+      // Section title match - include all items with consistent score structure
+      if (sectionScore > 0) {
+        return {
+          ...section,
+          items: section.items.map((item) => ({ ...item, score: 100 })),
+          score: sectionScore,
+        };
       }
 
-      // filter references
-      const matchedReferences = section.items
-        .map((item) => {
-          // reference title match
-          if (matches(item.text)) {
-            return item;
-          }
-        })
-        .filter((i) => !!i);
+      // Filter and score individual items
+      const scoredItems = section.items
+        .map((item) => ({ ...item, score: scoreMatch(item.text, q) }))
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score);
 
-      return matchedReferences.length
-        ? ({ text: section.text, items: matchedReferences } satisfies Partial<APIReference>)
+      return scoredItems.length
+        ? {
+            text: section.text,
+            items: scoredItems,
+            score: scoredItems[0].score,
+          }
         : null;
     })
-    .filter((i) => !!i);
+    .filter((i): i is NonNullable<typeof i> => !!i)
+    .sort((a, b) => b.score - a.score);
 });
 </script>
 

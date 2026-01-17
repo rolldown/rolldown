@@ -17,7 +17,9 @@ pub struct MemberExprRef {
   /// related discussion: https://github.com/rolldown/rolldown/pull/1818#discussion_r1699374441
   pub span: Span,
   pub object_ref_type: MemberExprObjectReferencedType,
-  /// TODO:
+  /// The semantic reference ID for the object identifier of this member expression.
+  /// Used during symbol renaming to find the scope where the reference occurs,
+  /// enabling detection of potential shadowing by nested scope bindings.
   pub reference_id: Option<ReferenceId>,
 }
 

@@ -31,6 +31,8 @@ pub struct MemberExprRefResolution {
   /// code as esbuild
   /// ```
   pub target_commonjs_exported_symbol: Option<(SymbolRef, bool)>,
-  /// TODO:
+  /// Propagated from `MemberExprRef::reference_id`. Used during symbol renaming
+  /// to find the scope where the member expression's object is referenced,
+  /// enabling detection of potential shadowing by nested scope bindings.
   pub reference_id: Option<ReferenceId>,
 }

@@ -183,10 +183,21 @@ pub fn deconflict_chunk_symbols(
     })
     .collect();
 
-  // Register nested scope symbols with their canonical names.
-  // Since we now avoid conflicting names during root scope renaming, most nested scope
-  // symbols can keep their original names, but we still need to handle shadowing cases
-  // where a nested binding would capture a reference to a top-level symbol.
+  rename_shadowing_symbols_in_nested_scopes(chunk, link_output, &mut renamer);
+
+  chunk.canonical_names = renamer.into_canonical_names();
+}
+
+/// Rename nested scope symbols that would shadow top-level symbols.
+///
+/// Since we avoid conflicting names during root scope renaming, most nested scope
+/// symbols can keep their original names. However, we still need to handle cases
+/// where a nested binding would capture a reference to a top-level symbol.
+fn rename_shadowing_symbols_in_nested_scopes(
+  chunk: &Chunk,
+  link_output: &LinkStageOutput,
+  renamer: &mut Renamer,
+) {
   for module_idx in chunk.modules.iter().copied() {
     let Some(module) = link_output.module_table[module_idx].as_normal() else {
       continue;
@@ -267,6 +278,4 @@ pub fn deconflict_chunk_symbols(
       }
     }
   }
-
-  chunk.canonical_names = renamer.into_canonical_names();
 }

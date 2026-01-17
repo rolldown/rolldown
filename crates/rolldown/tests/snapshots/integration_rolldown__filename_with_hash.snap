@@ -5908,7 +5908,7 @@ expression: output
 
 - main-!~{000}~.js => main-BhFYWpr2.js
 
-# tests/rolldown/topics/deconflict/not_good_rename
+# tests/rolldown/topics/deconflict/preserve_shadowing_param_name
 
 - main-!~{000}~.js => main-Cys6YG2P.js
 

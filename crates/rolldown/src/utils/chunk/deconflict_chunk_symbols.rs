@@ -215,13 +215,9 @@ pub fn deconflict_chunk_symbols(
         continue;
       };
 
-      // Get owned canonical name to avoid borrow conflict with renamer mutation below
-      let canonical_name: CompactStr = match renamer.get_canonical_name(resolved_symbol) {
-        Some(name) => name.clone(),
-        None => {
-          let symbol_name = link_output.symbol_db.local_db(module_idx).symbol_name(symbol);
-          CompactStr::new(symbol_name)
-        }
+      // Only check for shadowing if the symbol was renamed (has an entry in renamer)
+      let Some(canonical_name) = renamer.get_canonical_name(resolved_symbol).cloned() else {
+        continue;
       };
 
       for scope_id in scoping.scope_ancestors(current_reference.scope_id()) {
@@ -241,13 +237,9 @@ pub fn deconflict_chunk_symbols(
         continue;
       }
 
-      // Get owned canonical name to avoid borrow conflict with renamer mutation below
-      let canonical_name: CompactStr = match renamer.get_canonical_name(*symbol_ref) {
-        Some(name) => name.clone(),
-        None => {
-          let canonical_ref = link_output.symbol_db.canonical_ref_for(*symbol_ref);
-          CompactStr::new(canonical_ref.name(&link_output.symbol_db))
-        }
+      // Only check for shadowing if the symbol was renamed (has an entry in renamer)
+      let Some(canonical_name) = renamer.get_canonical_name(*symbol_ref).cloned() else {
+        continue;
       };
 
       for reference in scoping.get_resolved_references(symbol_ref.symbol) {

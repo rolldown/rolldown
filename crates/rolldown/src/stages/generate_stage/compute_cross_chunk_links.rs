@@ -342,7 +342,8 @@ impl GenerateStage<'_> {
         match chunk.kind {
           ChunkKind::EntryPoint { module: module_idx, meta, .. } => {
             let is_dynamic_imported = meta.contains(ChunkMeta::DynamicImported);
-            let is_user_defined = meta.contains(ChunkMeta::UserDefinedEntry);
+            let is_user_defined =
+              meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk);
 
             let normalized_entry_signatures = normalize_preserve_entry_signature(
               &self.link_output.overrode_preserve_entry_signature_map,

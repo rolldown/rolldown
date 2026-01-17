@@ -238,7 +238,7 @@ impl GenerateStage<'_> {
       };
       match chunk.kind {
         ChunkKind::EntryPoint { meta, .. } => {
-          if meta.contains(ChunkMeta::UserDefinedEntry) {
+          if meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk) {
             user_defined_entry.push(idx);
           } else {
             dynamic_entry.push(idx);

@@ -20,10 +20,13 @@ pub fn generate_pre_rendered_chunk(
   chunk_name: &ArcStr,
   graph: &LinkStageOutput,
 ) -> RollupPreRenderedChunk {
+  let is_entry = matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk));
+  let is_dynamic_entry = matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if !meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk));
+
   RollupPreRenderedChunk {
     name: chunk_name.clone(),
-    is_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry)),
-    is_dynamic_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if !meta.contains(ChunkMeta::UserDefinedEntry)),
+    is_entry,
+    is_dynamic_entry,
     facade_module_id: match &chunk.kind {
       ChunkKind::EntryPoint { module, .. } => {
         Some(graph.module_table[*module].id().as_str().into())

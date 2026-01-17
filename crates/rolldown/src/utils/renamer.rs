@@ -195,8 +195,7 @@ impl<'name> Renamer<'name> {
 
     // Find alternative: hint$1, hint$2, ...
     for count in 1u32.. {
-      let name: CompactStr =
-        concat_string!(hint, "$", itoa::Buffer::new().format(count)).into();
+      let name: CompactStr = concat_string!(hint, "$", itoa::Buffer::new().format(count)).into();
 
       if let Entry::Vacant(entry) = self.used_canonical_names.entry(name) {
         let result = entry.key().to_string();

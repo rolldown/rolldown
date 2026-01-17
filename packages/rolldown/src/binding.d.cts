@@ -1665,6 +1665,7 @@ export interface BindingBuiltinPlugin {
 }
 
 export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
+'builtin:fake-js'|
 'builtin:isolated-declaration'|
 'builtin:replace'|
 'builtin:vite-alias'|
@@ -1812,6 +1813,12 @@ export interface BindingExperimentalOptions {
   transformHiresSourcemap?: boolean | 'boundary'
   nativeMagicString?: boolean
   chunkOptimization?: boolean
+}
+
+export interface BindingFakeJsPluginConfig {
+  sourcemap?: boolean
+  cjsDefault?: boolean
+  sideEffects?: boolean
 }
 
 export interface BindingFilterToken {

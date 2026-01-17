@@ -3,6 +3,7 @@ use std::sync::Arc;
 use napi::{Unknown, bindgen_prelude::FromNapiValue};
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
+use rolldown_plugin_fake_js::{FakeJsOptions, FakeJsRolldownPlugin};
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
 use rolldown_plugin_replace::ReplacePlugin;
 use rolldown_plugin_vite_alias::ViteAliasPlugin;
@@ -22,8 +23,9 @@ use rolldown_plugin_vite_wasm_helper::ViteWasmHelperPlugin;
 use rolldown_plugin_vite_web_worker_post::ViteWebWorkerPostPlugin;
 
 use crate::options::plugin::config::{
-  BindingEsmExternalRequirePluginConfig, BindingViteModulePreloadPolyfillPluginConfig,
-  BindingViteReactRefreshWrapperPluginConfig, BindingViteWasmHelperPluginConfig,
+  BindingEsmExternalRequirePluginConfig, BindingFakeJsPluginConfig,
+  BindingViteModulePreloadPolyfillPluginConfig, BindingViteReactRefreshWrapperPluginConfig,
+  BindingViteWasmHelperPluginConfig,
 };
 
 use super::{
@@ -64,6 +66,14 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           BindingEsmExternalRequirePluginConfig::from_unknown(options)?.into()
         } else {
           EsmExternalRequirePlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::FakeJs => {
+        let plugin = if let Some(options) = plugin.options {
+          FakeJsRolldownPlugin::new(BindingFakeJsPluginConfig::from_unknown(options)?.into())
+        } else {
+          FakeJsRolldownPlugin::new(FakeJsOptions::default())
         };
         Arc::new(plugin)
       }

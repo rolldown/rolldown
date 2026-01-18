@@ -1,0 +1,88 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//! User-defined Entry: [Entry-Module-Id: main.js] [Name: Some("main")]
+//! Eliminated Facade Chunk: [Chunk-Name: unnamed] [Entry-Module-Id: dynamic-b.js]
+//! Eliminated Facade Chunk: [Chunk-Name: unnamed] [Entry-Module-Id: dynamic-a.js]
+// HIDDEN [rolldown:runtime]
+//#region dynamic-a.js
+var dynamic_a_exports = /* @__PURE__ */ __exportAll({ a: () => a });
+const a = "dynamic-a";
+
+//#endregion
+//#region dynamic-b.js
+var dynamic_b_exports = /* @__PURE__ */ __exportAll({ b: () => b });
+const b = "dynamic-b";
+
+//#endregion
+//#region main.js
+Promise.resolve().then(() => dynamic_a_exports).then(console.log);
+Promise.resolve().then(() => dynamic_b_exports).then(console.log);
+console.log(a, b);
+
+//#endregion
+```
+
+# Variant: [chunk_optimization: false]
+
+## Assets
+
+### dynamic-a.js
+
+```js
+//! Dynamic Entry: [Entry-Module-Id: dynamic-a.js] [Name: None]
+import { t as a } from "./dynamic-a2.js";
+
+export { a };
+```
+
+### dynamic-a2.js
+
+```js
+//! Common Chunk: [Shared-By: main.js, dynamic-a.js]
+//#region dynamic-a.js
+const a = "dynamic-a";
+
+//#endregion
+export { a as t };
+```
+
+### dynamic-b.js
+
+```js
+//! Dynamic Entry: [Entry-Module-Id: dynamic-b.js] [Name: None]
+import { t as b } from "./dynamic-b2.js";
+
+export { b };
+```
+
+### dynamic-b2.js
+
+```js
+//! Common Chunk: [Shared-By: main.js, dynamic-b.js]
+//#region dynamic-b.js
+const b = "dynamic-b";
+
+//#endregion
+export { b as t };
+```
+
+### main.js
+
+```js
+//! User-defined Entry: [Entry-Module-Id: main.js] [Name: Some("main")]
+import { t as a } from "./dynamic-a2.js";
+import { t as b } from "./dynamic-b2.js";
+
+//#region main.js
+import("./dynamic-a.js").then(console.log);
+import("./dynamic-b.js").then(console.log);
+console.log(a, b);
+
+//#endregion
+```

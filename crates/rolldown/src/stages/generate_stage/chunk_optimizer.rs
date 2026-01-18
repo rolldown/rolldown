@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType, Module, ModuleIdx,
+  Chunk, ChunkDebugInfo, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, ModuleTable, PreserveEntrySignatures, RuntimeHelper, StmtInfos,
   WrapKind,
 };
@@ -460,6 +460,21 @@ impl GenerateStage<'_> {
         .entry(target_chunk_idx)
         .or_default()
         .insert(entry_module);
+
+      // Add debug info about eliminated facade chunk to target chunk
+      if self.options.experimental.is_attach_debug_info_full() || self.options.devtools {
+        let eliminated_chunk_name = chunk_graph.chunk_table[from_chunk_idx]
+          .name
+          .as_ref()
+          .map_or_else(|| "unnamed".to_string(), ArcStr::to_string);
+        let module_stable_id = module.stable_id.to_string();
+        chunk_graph.chunk_table[target_chunk_idx].debug_info.push(
+          ChunkDebugInfo::EliminatedFacadeChunk {
+            chunk_name: eliminated_chunk_name,
+            entry_module_id: module_stable_id,
+          },
+        );
+      }
 
       // For CJS modules, include the wrapper_ref (require_xxx) instead of namespace
       // and use ToEsm runtime helper instead of ExportAll

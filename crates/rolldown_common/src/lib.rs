@@ -97,7 +97,7 @@ pub use crate::{
     Chunk, ChunkMeta,
     chunk_table::ChunkTable,
     types::{
-      AddonRenderContext, chunk_reason_type::ChunkReasonType,
+      AddonRenderContext, chunk_debug_info::ChunkDebugInfo, chunk_reason_type::ChunkReasonType,
       cross_chunk_import_item::CrossChunkImportItem, module_group::ModuleGroup,
       preliminary_filename::PreliminaryFilename,
     },

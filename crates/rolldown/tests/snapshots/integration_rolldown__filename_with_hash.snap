@@ -4049,6 +4049,10 @@ expression: output
 
 - main-!~{000}~.js => main-BtfNOhnu.js
 
+# tests/rolldown/function/experimental/attach_debug_info/eliminated_facade_chunk
+
+- main-!~{000}~.js => main-oZHjdmRw.js
+
 # tests/rolldown/function/experimental/attach_debug_info/full
 
 - A-!~{000}~.js => A-Dg0npFc7.js

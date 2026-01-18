@@ -7,7 +7,9 @@ use crate::{
   ChunkIdx, ChunkKind, FilenameTemplate, ImportRecordIdx, ModuleIdx, ModuleTable, NamedImport,
   NormalModule, NormalizedBundlerOptions, OutputExports, PreserveEntrySignatures,
   RenderedConcatenatedModuleParts, RollupPreRenderedChunk, RuntimeHelper, SymbolRef,
-  chunk::types::{chunk_reason_type::ChunkReasonType, module_group::ModuleGroup},
+  chunk::types::{
+    chunk_debug_info::ChunkDebugInfo, chunk_reason_type::ChunkReasonType, module_group::ModuleGroup,
+  },
 };
 pub mod chunk_table;
 pub mod types;
@@ -82,7 +84,7 @@ pub struct Chunk {
   pub import_symbol_from_external_modules: FxIndexSet<ModuleIdx>,
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Vec<CompactStr>>,
   pub input_base: ArcStr,
-  pub create_reasons: Vec<String>,
+  pub debug_info: Vec<ChunkDebugInfo>,
   pub chunk_reason_type: Box<ChunkReasonType>,
   pub preserve_entry_signature: Option<PreserveEntrySignatures>,
   pub depended_runtime_helper: RuntimeHelper,

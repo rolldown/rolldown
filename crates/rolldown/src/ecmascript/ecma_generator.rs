@@ -202,9 +202,10 @@ impl Generator for EcmaGenerator {
 
     ctx.warnings.extend(warnings);
 
-    if ctx.options.experimental.is_attach_debug_info_full() && !ctx.chunk.create_reasons.is_empty()
-    {
-      source_joiner.prepend_source(format!("//! {}", ctx.chunk.create_reasons.join("\n//! ")));
+    if ctx.options.experimental.is_attach_debug_info_full() && !ctx.chunk.debug_info.is_empty() {
+      let debug_info_str =
+        ctx.chunk.debug_info.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n//! ");
+      source_joiner.prepend_source(format!("//! {debug_info_str}"));
     }
 
     let (content, map) = source_joiner.join();

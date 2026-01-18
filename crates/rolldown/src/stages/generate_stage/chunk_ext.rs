@@ -1,6 +1,6 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
-use rolldown_common::{Chunk, ChunkReasonType, NormalizedBundlerOptions};
+use rolldown_common::{Chunk, ChunkDebugInfo, ChunkReasonType, NormalizedBundlerOptions};
 use rolldown_utils::BitSet;
 
 use crate::stages::link_stage::LinkStageOutput;
@@ -81,6 +81,6 @@ impl ChunkDebugExt for Chunk {
       }
     };
 
-    self.create_reasons.push(reason);
+    self.debug_info.push(ChunkDebugInfo::CreateReason(reason));
   }
 }

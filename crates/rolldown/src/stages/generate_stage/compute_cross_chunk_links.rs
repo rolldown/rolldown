@@ -10,8 +10,8 @@ use oxc::span::CompactStr;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
-  ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PreserveEntrySignatures,
-  RUNTIME_HELPER_NAMES, SymbolIdExt, SymbolRef, WrapKind,
+  ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
+  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, SymbolIdExt, SymbolRef, WrapKind,
 };
 use rolldown_utils::concat_string;
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
@@ -336,8 +336,16 @@ impl GenerateStage<'_> {
     chunk_graph
       .chunk_table
       .iter_enumerated()
-      // Skip removed chunks - they have been merged into other chunks
-      .filter(|(chunk_id, _)| !chunk_graph.removed_chunk_idx.contains(chunk_id))
+      // Skip chunks that are purely removed (merged into other chunks without preserving exports).
+      // Chunks with PreserveExports flag (e.g., emitted chunks merged into common chunks) are kept
+      // because their exports still need to be computed.
+      .filter(|(chunk_id, _)| {
+        !chunk_graph
+          .post_chunk_optimization_operations
+          .get(chunk_id)
+          .map(|flag| *flag == PostChunkOptimizationOperation::Removed)
+          .unwrap_or(false)
+      })
       .for_each(|(chunk_id, chunk)| {
         match chunk.kind {
           ChunkKind::EntryPoint { module: module_idx, meta, .. } => {

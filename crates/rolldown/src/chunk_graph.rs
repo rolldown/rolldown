@@ -2,8 +2,8 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx, RuntimeHelper,
-  SymbolRef,
+  Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx,
+  PostChunkOptimizationOperation, RuntimeHelper, SymbolRef,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -28,7 +28,7 @@ pub struct ChunkGraph {
   /// 2. Keep them in place and mark them as dead
   ///
   /// We use the second approach to avoid the overhead of re-indexing at the cost of some extra memory.
-  pub removed_chunk_idx: FxHashSet<ChunkIdx>,
+  pub post_chunk_optimization_operations: FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
 }
 
 impl ChunkGraph {
@@ -41,7 +41,7 @@ impl ChunkGraph {
       finalized_cjs_ns_map_idx_vec: index_vec![],
       chunk_idx_to_reference_ids: FxHashMap::default(),
       common_chunk_exported_facade_chunk_namespace: FxHashMap::default(),
-      removed_chunk_idx: FxHashSet::default(),
+      post_chunk_optimization_operations: FxHashMap::default(),
     }
   }
 

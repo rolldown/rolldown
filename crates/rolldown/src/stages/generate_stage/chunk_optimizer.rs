@@ -1,12 +1,12 @@
-use std::collections::VecDeque;
+use std::collections::{VecDeque, hash_map::Entry};
 
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkDebugInfo, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType, Module, ModuleIdx,
-  ModuleNamespaceIncludedReason, ModuleTable, PreserveEntrySignatures, RuntimeHelper, StmtInfos,
-  WrapKind,
+  ModuleNamespaceIncludedReason, ModuleTable, PostChunkOptimizationOperation,
+  PreserveEntrySignatures, RuntimeHelper, StmtInfos, WrapKind,
 };
 use rolldown_utils::{BitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -338,6 +338,112 @@ impl GenerateStage<'_> {
     })
   }
 
+  /// Finds empty dynamic entry chunks that should be merged with their target common chunks.
+  /// Returns a tuple of (merge_entry_to_chunk, emitted_chunk_groups).
+  #[expect(clippy::type_complexity)]
+  fn find_facade_chunk_merge_candidates(
+    chunk_graph: &ChunkGraph,
+  ) -> (FxHashMap<ModuleIdx, (ChunkIdx, ChunkIdx)>, FxHashMap<ChunkIdx, Vec<ChunkIdx>>) {
+    let mut merge_entry_to_chunk = FxHashMap::default();
+    let mut emitted_chunk_groups: FxHashMap<ChunkIdx, Vec<ChunkIdx>> = FxHashMap::default();
+    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+      let ChunkKind::EntryPoint { meta, bit: _, module } = chunk.kind else {
+        continue;
+      };
+      if meta.intersects(ChunkMeta::UserDefinedEntry) {
+        continue;
+      }
+      let is_emitted_from_chunk = if meta.contains(ChunkMeta::EmittedChunk) {
+        if matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::AllowExtension)) {
+          true
+        } else {
+          // If an emitted chunk has other `preserveEntrySignatures` values, we can't optimize it.
+          // The facade chunk needs to be preserved.
+          continue;
+        }
+      } else {
+        false
+      };
+      if !chunk.modules.is_empty() {
+        continue;
+      }
+      // Check if the entry module is included in a common chunk
+      let Some(target_chunk_idx) = chunk_graph.module_to_chunk[module] else {
+        continue;
+      };
+      let target_chunk = &chunk_graph.chunk_table[target_chunk_idx];
+      let is_manual_to_chunk = matches!(
+        target_chunk.chunk_reason_type.as_ref(),
+        ChunkReasonType::ManualCodeSplitting { .. }
+      );
+      let is_pure_user_defined_to_entry_chunk = matches!(target_chunk.kind, ChunkKind::EntryPoint { meta, bit: _, module: _ } if meta.is_pure_user_defined_entry());
+      // Three optimization scenarios:
+      // 1. Emitted chunk (AllowExtension) merged into manual code splitting group
+      //    → Group by target chunk to detect export name conflicts before merging
+      // 2. Dynamic entry chunk merged into manual code splitting group
+      //    → Directly merge, the facade chunk can be removed
+      // 3. Dynamic entry chunk merged into user-defined entry chunk
+      //    → Directly merge, the facade chunk can be removed
+      if is_manual_to_chunk && is_emitted_from_chunk {
+        emitted_chunk_groups.entry(target_chunk_idx).or_default().push(chunk_idx);
+      } else if !is_emitted_from_chunk
+        && (is_manual_to_chunk || is_pure_user_defined_to_entry_chunk)
+      {
+        merge_entry_to_chunk.insert(module, (chunk_idx, target_chunk_idx));
+      }
+    }
+    (merge_entry_to_chunk, emitted_chunk_groups)
+  }
+
+  /// Batch process emitted chunk groups to detect export name conflicts.
+  /// Chunks with conflicting export names need to keep their facade chunks.
+  fn process_emitted_chunk_groups(
+    &self,
+    chunk_graph: &ChunkGraph,
+    emitted_chunk_groups: FxHashMap<ChunkIdx, Vec<ChunkIdx>>,
+    merge_entry_to_chunk: &mut FxHashMap<ModuleIdx, (ChunkIdx, ChunkIdx)>,
+  ) {
+    for (target_chunk_idx, chunk_indices) in emitted_chunk_groups {
+      let Some(_target_chunk) = chunk_graph.chunk_table.get(target_chunk_idx) else {
+        continue;
+      };
+      let mut chunk_entry_module_idxs: Vec<(ChunkIdx, ModuleIdx)> = chunk_indices
+        .iter()
+        .filter_map(|item| {
+          let chunk = chunk_graph.chunk_table.get(*item)?;
+          let entry_module_idx = chunk.entry_module_idx()?;
+          Some((*item, entry_module_idx))
+        })
+        .collect_vec();
+      // Sort by execution order to ensure deterministic output
+      chunk_entry_module_idxs.sort_by_cached_key(|(_idx, module_idx)| {
+        self.link_output.module_table[*module_idx].exec_order()
+      });
+
+      let mut allocated_export_symbol = FxHashMap::default();
+      // If an emitted chunk exports a name that conflicts with an already allocated export,
+      // its facade chunk cannot be removed.
+      for (chunk_idx, entry_module_idx) in chunk_entry_module_idxs {
+        let module_meta = &self.link_output.metas[entry_module_idx];
+        let needs_facade =
+          module_meta.resolved_exports.iter().any(|(export_name, resolved_export)| {
+            let canonical_ref =
+              resolved_export.symbol_ref.canonical_ref(&self.link_output.symbol_db);
+            match allocated_export_symbol.entry(export_name) {
+              Entry::Occupied(occupied_entry) => canonical_ref != *occupied_entry.get(),
+              Entry::Vacant(vacant_entry) => {
+                vacant_entry.insert(canonical_ref);
+                false
+              }
+            }
+          });
+        if !needs_facade {
+          merge_entry_to_chunk.insert(entry_module_idx, (chunk_idx, target_chunk_idx));
+        }
+      }
+    }
+  }
+
   /// This optimization handles the case where a dynamic entry chunk has no modules of its own
   /// because all of its modules were moved to a common chunk (when dynamic entry modules are captured by `advancedChunks`).
   /// Instead of keeping an empty entry chunk, we rewrite references to point directly to the common chunk
@@ -350,43 +456,20 @@ impl GenerateStage<'_> {
     module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
   ) {
     // Find empty dynamic entry chunks that should be merged with their target common chunks
-    let mut rewrite_entry_to_chunk = FxHashMap::default();
-    let runtime_module_idx = self.link_output.runtime.id();
-    for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
-      let ChunkKind::EntryPoint { meta, bit: _, module } = chunk.kind else {
-        continue;
-      };
-      if meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk) {
-        continue;
-      }
-      if !chunk.modules.is_empty() {
-        continue;
-      }
-      // Check if the entry module is included in a common chunk
-      let Some(target_chunk_idx) = chunk_graph.module_to_chunk[module] else {
-        continue;
-      };
-      let target_chunk = &chunk_graph.chunk_table[target_chunk_idx];
-      // 1. dynamic entry chunk that also captured by a manual code splitting group
-      // 2. dynamic entry module are already merged into  user defined entry chunk in previous round optimization
-      if !(matches!(
-        target_chunk.chunk_reason_type.as_ref(),
-        ChunkReasonType::ManualCodeSplitting { .. }
-      ) || matches!(target_chunk.kind, ChunkKind::EntryPoint { meta, bit: _, module: _ } if meta.is_pure_user_defined_entry()))
-      {
-        continue;
-      }
-      rewrite_entry_to_chunk.insert(module, (chunk_idx, target_chunk_idx));
-    }
+    let (mut merge_entry_to_chunk, emitted_chunk_groups) =
+      Self::find_facade_chunk_merge_candidates(chunk_graph);
 
-    if rewrite_entry_to_chunk.is_empty() {
+    if merge_entry_to_chunk.is_empty() && emitted_chunk_groups.is_empty() {
       return;
     }
+
+    let runtime_module_idx = self.link_output.runtime.id();
+    self.process_emitted_chunk_groups(chunk_graph, emitted_chunk_groups, &mut merge_entry_to_chunk);
 
     // Namespace symbols by default reference all exported symbols from the module.
     // To preserve dynamic import tree shaking, we should only include symbols that were actually used during the linking stage.
     // This ensures that including a namespace symbol doesn't inadvertently add unused exported symbols.
-    for &entry_module in rewrite_entry_to_chunk.keys() {
+    for &entry_module in merge_entry_to_chunk.keys() {
       let wrap_kind = self.link_output.metas[entry_module].wrap_kind();
       let Some(module) = self.link_output.module_table[entry_module].as_normal_mut() else {
         continue;
@@ -434,16 +517,8 @@ impl GenerateStage<'_> {
 
     let mut optimized_common_chunks = FxHashSet::default();
 
-    // Check if we have any non-CJS modules that need ExportAll
-    let has_non_cjs_modules = rewrite_entry_to_chunk.keys().any(|&entry_module| {
-      !matches!(self.link_output.metas[entry_module].wrap_kind(), WrapKind::Cjs)
-    });
-
-    if has_non_cjs_modules {
-      include_runtime_symbol(context, runtime, RuntimeHelper::ExportAll);
-    }
-
-    for (&entry_module, &(from_chunk_idx, target_chunk_idx)) in &rewrite_entry_to_chunk {
+    let mut needs_export_all_runtime = false;
+    for (&entry_module, &(from_chunk_idx, target_chunk_idx)) in &merge_entry_to_chunk {
       // Point the entry module to related common chunk
       chunk_graph.entry_module_to_entry_chunk.remove(&entry_module);
 
@@ -454,7 +529,25 @@ impl GenerateStage<'_> {
       let wrap_kind = self.link_output.metas[entry_module].wrap_kind();
 
       chunk_graph.entry_module_to_entry_chunk.insert(entry_module, target_chunk_idx);
-      chunk_graph.removed_chunk_idx.insert(from_chunk_idx);
+      let from_chunk = &chunk_graph.chunk_table[from_chunk_idx];
+      let ChunkKind::EntryPoint { meta: chunk_meta, .. } = from_chunk.kind else {
+        // We don't have any optimization to merge common chunks into other chunks.
+        continue;
+      };
+
+      chunk_graph.post_chunk_optimization_operations.insert(from_chunk_idx, {
+        let mut meta = PostChunkOptimizationOperation::Removed;
+        meta.set(
+          PostChunkOptimizationOperation::PreserveExports,
+          chunk_meta.contains(ChunkMeta::EmittedChunk),
+        );
+        meta
+      });
+
+      // If a chunk is not dynamically imported, we don't need to simulate a facade chunk.
+      if !chunk_meta.contains(ChunkMeta::DynamicImported) {
+        continue;
+      }
       chunk_graph
         .common_chunk_exported_facade_chunk_namespace
         .entry(target_chunk_idx)
@@ -496,7 +589,12 @@ impl GenerateStage<'_> {
         let target_chunk = &mut chunk_graph.chunk_table[target_chunk_idx];
         target_chunk.depended_runtime_helper.insert(RuntimeHelper::ExportAll);
         optimized_common_chunks.insert(target_chunk_idx);
+        needs_export_all_runtime = true;
       }
+    }
+
+    if needs_export_all_runtime {
+      include_runtime_symbol(context, runtime, RuntimeHelper::ExportAll);
     }
 
     // Ensure runtime module is properly assigned to chunk graph

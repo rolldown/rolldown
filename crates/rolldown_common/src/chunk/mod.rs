@@ -43,6 +43,21 @@ bitflags::bitflags! {
     }
 }
 
+bitflags::bitflags! {
+  /// Tracks post-optimization operations applied to chunks during code splitting.
+  #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+    pub struct PostChunkOptimizationOperation: u8 {
+        /// The chunk has been removed and merged into another chunk.
+        /// e.g., a dynamic chunk merged into a common chunk or user-defined entry chunk.
+        const Removed = 1;
+        /// The chunk's exports should be preserved in the target chunk.
+        /// e.g., an emitted chunk with `preserveEntrySignatures: 'allow-extension'` merged into
+        /// a manual chunks group - all exports should be preserved even though the original
+        /// emitted chunk is removed.
+        const PreserveExports = 1 << 1;
+    }
+}
+
 impl ChunkMeta {
   #[inline]
   pub fn is_pure_user_defined_entry(&self) -> bool {

@@ -1,0 +1,37 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## index.js
+
+```js
+import { n as value1, r as bar, t as value2 } from "./libs.js";
+import assert from "node:assert";
+
+//#region index.js
+assert.strictEqual(value1, "lib1-value");
+assert.strictEqual(bar, "vendor-bar");
+assert.strictEqual(value2, "lib2-value");
+assert.strictEqual(bar, "vendor-bar");
+
+//#endregion
+```
+
+## libs.js
+
+```js
+//#region vendor.js
+const bar = "vendor-bar";
+
+//#endregion
+//#region lib1.js
+const value1 = "lib1-value";
+
+//#endregion
+//#region lib2.js
+const value2 = "lib2-value";
+
+//#endregion
+export { value1 as n, bar as r, value2 as t };
+```

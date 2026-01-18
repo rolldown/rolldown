@@ -104,10 +104,16 @@ export function bindingifyRenderChunk(
       // Handle MagicString return value directly
       if (ret instanceof BindingMagicString) {
         const normalizedCode = ret.toString();
-        const map = ret.generateMap();
+        const generatedMap = ret.generateMap();
         return {
           code: normalizedCode,
-          map: bindingifySourcemap(map),
+          map: bindingifySourcemap({
+            file: generatedMap.file,
+            mappings: generatedMap.mappings,
+            names: generatedMap.names,
+            sources: generatedMap.sources,
+            sourcesContent: generatedMap.sourcesContent.map((s) => s ?? null),
+          }),
         };
       }
 
@@ -124,10 +130,22 @@ export function bindingifyRenderChunk(
         if (ret.map === null) {
           return { code: normalizedCode };
         }
-        const map = ret.map === undefined ? magicString.generateMap() : ret.map;
+        if (ret.map === undefined) {
+          const generatedMap = magicString.generateMap();
+          return {
+            code: normalizedCode,
+            map: bindingifySourcemap({
+              file: generatedMap.file,
+              mappings: generatedMap.mappings,
+              names: generatedMap.names,
+              sources: generatedMap.sources,
+              sourcesContent: generatedMap.sourcesContent.map((s) => s ?? null),
+            }),
+          };
+        }
         return {
           code: normalizedCode,
-          map: bindingifySourcemap(map),
+          map: bindingifySourcemap(ret.map),
         };
       }
 

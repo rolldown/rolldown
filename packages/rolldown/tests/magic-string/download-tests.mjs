@@ -37,12 +37,15 @@
  *   - lastChar(): string
  *   - lastLine(): string
  *   - reset(start: number, end: number): this (partial - can't split edited chunks)
+ *   - generateMap(options?): BindingSourceMap (returns object with version, file, sources, etc.)
+ *   - generateDecodedMap(options?): BindingDecodedMap (returns object with decoded mappings array)
  *
  * NOT supported (will be skipped):
  *   - constructor options (filename, ignoreList, indentExclusionRanges)
  *   - reset tests (most require splitting inside edited chunks)
- *   - generateMap, generateDecodedMap, addSourcemapLocation
- *   - lastChar, lastLine
+ *   - addSourcemapLocation (not in string_wizard)
+ *   - storeName option in overwrite (not in string_wizard)
+ *   - x_google_ignoreList / ignoreList (not in string_wizard)
  *   - original property
  *   - replace/replaceAll with regex or function replacer
  */
@@ -60,11 +63,11 @@ const BASE_URL = 'https://raw.githubusercontent.com/Rich-Harris/magic-string/mas
 
 // Describe blocks to skip entirely (unsupported features)
 const SKIP_DESCRIBE_BLOCKS = [
-  'addSourcemapLocation', // not implemented in string_wizard
-  'generateDecodedMap', // not implemented yet
-  'generateMap', // not implemented yet
+  'addSourcemapLocation', // not in string_wizard
   'getIndentString', // not supported
   'original', // not supported
+  // Note: 'generateMap' is now supported (returns BindingSourceMap object)
+  // Note: 'generateDecodedMap' is now supported (returns BindingDecodedMap object)
   // Note: 'reset' is now supported but most tests are skipped individually
   // Note: 'snip' is now supported
   // Note: 'lastChar' is now supported
@@ -147,6 +150,15 @@ const SKIP_TESTS = [
   // length/isEmpty tests that rely on modified length
   'should support length', // length returns original length
   'should support isEmpty', // isEmpty behavior differs
+  // generateMap-specific skips (features not in string_wizard)
+  'should generate a correct sourcemap including correct lines', // uses generateDecodedMap which has different mappings count
+  'should generate a sourcemap using specified locations', // addSourcemapLocation not implemented
+  'should recover original names', // storeName option not implemented
+  'generates a map with trimmed content', // trim sourcemap behavior differs
+  'generates x_google_ignoreList', // ignoreList not implemented
+  'generates segments per word boundary with hires "boundary" in the next line', // multiline boundary mappings differ
+  'generates a correct source map with update using a content containing a new line', // multiline update mappings differ
+  'generates a correct source map with update using content ending with a new line', // multiline update mappings differ
 ];
 
 async function downloadFile(filename) {
@@ -188,11 +200,8 @@ function transformTestFile(content, filename) {
     '// SourceMap class is not supported in BindingMagicString\nconst SourceMap = null;',
   );
 
-  // Remove SourceMapConsumer import
-  transformed = transformed.replace(
-    /import \{ SourceMapConsumer \} from ['"]source-map-js['"];?\n?/g,
-    '',
-  );
+  // Keep SourceMapConsumer import for generateMap tests
+  // (source-map-js package needs to be installed in the tests package)
 
   // Fix assert import
   transformed = transformed.replace(

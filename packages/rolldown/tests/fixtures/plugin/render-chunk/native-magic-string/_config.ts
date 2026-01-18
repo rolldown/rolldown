@@ -30,17 +30,18 @@ export default defineTest({
           expect(meta.magicString.hasChanged()).toBe(true);
 
           // Test 4: Verify generateMap() works with options
-          const mapJson = meta.magicString.generateMap({
+          const map = meta.magicString.generateMap({
             source: 'main.js',
             includeContent: true,
             hires: false,
           });
-          const map = JSON.parse(mapJson);
           expect(map.version).toBe(3);
           expect(map.sources).toContain('main.js');
           expect(map.sourcesContent).toBeDefined();
           expect(map.mappings).toBeDefined();
           expect(map.mappings.length).toBeGreaterThan(0);
+          // Verify toString() returns valid JSON
+          expect(() => JSON.parse(map.toString())).not.toThrow();
 
           // Return the MagicString instance directly
           return meta.magicString;

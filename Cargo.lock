@@ -2857,6 +2857,8 @@ dependencies = [
  "rolldown_tracing",
  "rolldown_utils",
  "rustc-hash",
+ "serde",
+ "serde_json",
  "string_wizard",
  "sugar_path",
  "tracing",

@@ -184,7 +184,7 @@ catalogs:
       specifier: 4.1.0
       version: 4.1.0
     source-map:
-      specifier: ^0.7.6
+      specifier: 0.7.6
       version: 0.7.6
     source-map-support:
       specifier: ^0.5.21
@@ -616,6 +616,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.3
+      source-map-js:
+        specifier: ^1.2.1
+        version: 1.2.1
       tsx:
         specifier: 'catalog:'
         version: 4.21.0

@@ -59,6 +59,8 @@ rolldown_plugin_vite_web_worker_post = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_tracing = { workspace = true }
 rolldown_utils = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 rustc-hash = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }

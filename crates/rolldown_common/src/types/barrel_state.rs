@@ -44,25 +44,20 @@ impl ImportedExports {
     }
   }
 
-  /// Check if empty (only meaningful for Partial)
-  pub fn is_empty(&self) -> bool {
-    match self {
-      ImportedExports::All => false,
-      ImportedExports::Partial(set) => set.is_empty(),
-    }
-  }
-
-  /// Returns the difference: self - other (elements in self but not in other)
-  #[must_use]
-  pub fn subtract(self, other: &Self) -> Self {
+  pub fn subtract_and_merge_into(self, other: &mut Self) -> Option<Self> {
     match (self, other) {
-      (ImportedExports::All, _) => ImportedExports::All,
-      (ImportedExports::Partial(_), ImportedExports::All) => {
-        ImportedExports::Partial(FxHashSet::default())
+      (_, Self::All) => None,
+      (Self::All, other @ Self::Partial(_)) => {
+        *other = Self::All;
+        Some(Self::All)
       }
-      (ImportedExports::Partial(mut a), ImportedExports::Partial(b)) => {
+      (Self::Partial(mut a), Self::Partial(b)) => {
         a.retain(|x| !b.contains(x));
-        ImportedExports::Partial(a)
+        if a.is_empty() {
+          return None;
+        }
+        b.extend(a.iter().cloned());
+        Some(Self::Partial(a))
       }
     }
   }
@@ -166,8 +161,8 @@ impl BarrelInfo {
 pub struct BarrelState {
   /// Barrel module info (ModuleIdx -> Option<BarrelModuleState>)
   pub barrel_infos: FxHashMap<ModuleIdx, Option<BarrelModuleState>>,
-  /// What's needed from each barrel module during processing
-  pub initial_imported_exports: FxHashMap<ModuleIdx, ImportedExports>,
+  /// Requested exports for barrel modules
+  pub requested_exports: FxHashMap<ModuleIdx, ImportedExports>,
 }
 
 /// Wrapper for BarrelInfo with pending records
@@ -215,5 +210,5 @@ pub fn take_imported_specifiers(
     }
     result
   });
-  cache.remove(&rec_idx).unwrap_or_else(|| ImportedExports::Partial(FxHashSet::default()))
+  cache.remove(&rec_idx).unwrap_or(ImportedExports::Partial(FxHashSet::default()))
 }

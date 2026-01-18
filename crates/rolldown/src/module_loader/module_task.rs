@@ -1,16 +1,15 @@
-use std::{collections::hash_map::Entry, sync::Arc};
+use std::sync::Arc;
 
 use arcstr::ArcStr;
 use oxc::span::Span;
 use oxc_index::IndexVec;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use sugar_path::SugarPath as _;
 
 use rolldown_common::{
-  BarrelInfo, EcmaRelated, EcmaView, FlatOptions, ImportKind, ImportRecordIdx, ImportRecordMeta,
-  ImportedExports, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType, NormalModule,
-  NormalModuleTaskResult, RawImportRecord, ResolvedId, SourceMapGenMsg, SourcemapChainElement,
-  Specifier, StrOrBytes,
+  BarrelInfo, EcmaView, FlatOptions, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleIdx,
+  ModuleInfo, ModuleLoaderMsg, ModuleType, NormalModule, NormalModuleTaskResult, RawImportRecord,
+  ResolvedId, SourceMapGenMsg, SourcemapChainElement, StrOrBytes,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, UnloadableDependencyContext, downcast_napi_error_diagnostics,
@@ -214,7 +213,7 @@ impl ModuleTask {
     let repr_name = legitimize_identifier_name(&repr_name).into_owned();
 
     // Build BarrelInfo for barrel module optimization
-    let barrel_info = self.build_barrel_info(&ecma_view, &ecma_related, &raw_import_records);
+    let barrel_info = self.build_barrel_info(&ecma_view, &raw_import_records);
 
     let module = NormalModule {
       repr_name,
@@ -327,7 +326,6 @@ impl ModuleTask {
   fn build_barrel_info(
     &self,
     ecma_view: &EcmaView,
-    ecma_related: &EcmaRelated,
     raw_import_records: &IndexVec<ImportRecordIdx, RawImportRecord>,
   ) -> Option<BarrelInfo> {
     if !self.ctx.options.experimental.is_lazy_barrel_enabled() {
@@ -339,37 +337,19 @@ impl ModuleTask {
       return None;
     }
 
-    let mut immediate_imported_specifiers = FxHashMap::default();
-    for named_import in ecma_view.named_imports.values() {
-      match &named_import.imported {
-        Specifier::Star => {
-          immediate_imported_specifiers.insert(named_import.record_idx, ImportedExports::All);
-        }
-        Specifier::Literal(name) => {
-          match immediate_imported_specifiers.entry(named_import.record_idx) {
-            Entry::Occupied(mut occ) => {
-              if let ImportedExports::Partial(set) = occ.get_mut() {
-                set.insert(name.clone());
-              }
-            }
-            Entry::Vacant(vac) => {
-              vac.insert(ImportedExports::Partial(FxHashSet::from_iter([name.clone()])));
-            }
-          }
-        }
-      }
-    }
-
     let mut star_export_records = Vec::new();
     let mut export_to_record = FxHashMap::default();
 
     // Find re-exports from named_imports
-    // `export { c as d } from './x'`: export_name="d", imported=Literal("c")
     // `export * as ns from './x'`: export_name="ns", imported=Star
+    // `export { c as d } from './x'`: export_name="d", imported=Literal("c")
     for (export_name, local_export) in &ecma_view.named_exports {
       if let Some(named_import) = ecma_view.named_imports.get(&local_export.referenced) {
-        export_to_record
-          .insert(export_name.clone(), (named_import.record_idx, named_import.imported.clone()));
+        // We only care about re-exports here
+        if raw_import_records[named_import.record_idx].meta.contains(ImportRecordMeta::IsReExport) {
+          export_to_record
+            .insert(export_name.clone(), (named_import.record_idx, named_import.imported.clone()));
+        }
       }
     }
 
@@ -381,11 +361,10 @@ impl ModuleTask {
     }
 
     // Only return Some if there are any re-exports
-    let info = BarrelInfo { export_to_record, star_export_records };
-    if info.export_to_record.is_empty() && info.star_export_records.is_empty() {
+    if export_to_record.is_empty() && star_export_records.is_empty() {
       None
     } else {
-      Some(info)
+      Some(BarrelInfo { export_to_record, star_export_records })
     }
   }
 }

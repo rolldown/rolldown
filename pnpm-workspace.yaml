@@ -92,7 +92,7 @@ catalog:
   'ws': '^8.18.1'
   '@types/ws': '^8.18.0'
   'vitepress': '^2.0.0-alpha.15'
-  'vitepress-plugin-group-icons': '^1.0.0'
+  'vitepress-plugin-group-icons': '^1.7.0'
   'vitepress-plugin-llms': '^1.1.0'
   'zx': '^8.1.2'
   '@rollup/plugin-commonjs': '^29.0.0'

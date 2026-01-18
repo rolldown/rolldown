@@ -145,8 +145,7 @@ pub use crate::{
   types::ast_scope_idx::AstScopeIdx,
   types::ast_scopes::AstScopes,
   types::barrel_state::{
-    BarrelInfo, BarrelModuleState, BarrelState, ImportedExports, PendingBarrelRecord,
-    get_record_imported_exports,
+    BarrelInfo, BarrelModuleState, BarrelState, ImportedExports, take_imported_specifiers,
   },
   types::bundle_mode::BundleMode,
   types::chunk_idx::ChunkIdx,
@@ -166,7 +165,8 @@ pub use crate::{
   types::import_attribute::ImportAttribute,
   types::import_kind::ImportKind,
   types::import_record::{
-    DynamicImportExprInfo, ImportRecordIdx, ImportRecordMeta, RawImportRecord, ResolvedImportRecord,
+    DynamicImportExprInfo, ImportRecordIdx, ImportRecordMeta, ImportRecordStateInit,
+    RawImportRecord, ResolvedImportRecord,
   },
   types::importer_record::ImporterRecord,
   types::ins_chunk_idx::InsChunkIdx,

@@ -883,17 +883,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         self.scan_import_decl(decl);
       }
       ast::ModuleDeclaration::ExportAllDeclaration(decl) => {
-        self.current_stmt_info.meta.insert(StmtInfoMeta::IsPotentialBarrelExport);
         self.set_esm_export_keyword(Span::new(decl.span.start, decl.span.start + 6));
         self.scan_export_all_decl(decl);
       }
       ast::ModuleDeclaration::ExportNamedDeclaration(decl) => {
-        self.current_stmt_info.meta.insert(StmtInfoMeta::IsPotentialBarrelExport);
         self.set_esm_export_keyword(Span::new(decl.span.start, decl.span.start + 6));
         self.scan_export_named_decl(decl);
       }
       ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => {
-        self.current_stmt_info.meta.insert(StmtInfoMeta::IsPotentialBarrelExport);
         self.set_esm_export_keyword(Span::new(decl.span.start, decl.span.start + 6));
         self.scan_export_default_decl(decl);
         match &decl.declaration {

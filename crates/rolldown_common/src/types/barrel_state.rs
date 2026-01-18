@@ -1,4 +1,4 @@
-use std::ops::{Deref, DerefMut};
+use std::{collections::hash_map::Entry, ops::Deref};
 
 use oxc::span::CompactStr;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -18,8 +18,14 @@ pub enum ImportedExports {
 }
 
 impl ImportedExports {
+  #[inline]
   pub fn is_all(&self) -> bool {
     matches!(self, Self::All)
+  }
+
+  #[inline]
+  pub fn is_partial(&self) -> bool {
+    matches!(self, Self::Partial(_))
   }
 
   pub fn merge(&mut self, other: &Self) {
@@ -29,77 +35,129 @@ impl ImportedExports {
       (Self::Partial(lhs), Self::Partial(rhs)) => lhs.extend(rhs.clone()),
     }
   }
+
+  pub fn is_subset_of(&self, other: &Self) -> bool {
+    match (self, other) {
+      (_, ImportedExports::All) => true,
+      (ImportedExports::All, ImportedExports::Partial(_)) => false,
+      (ImportedExports::Partial(a), ImportedExports::Partial(b)) => a.iter().all(|x| b.contains(x)),
+    }
+  }
+
+  /// Check if empty (only meaningful for Partial)
+  pub fn is_empty(&self) -> bool {
+    match self {
+      ImportedExports::All => false,
+      ImportedExports::Partial(set) => set.is_empty(),
+    }
+  }
+
+  /// Returns the difference: self - other (elements in self but not in other)
+  #[must_use]
+  pub fn subtract(self, other: &Self) -> Self {
+    match (self, other) {
+      (ImportedExports::All, _) => ImportedExports::All,
+      (ImportedExports::Partial(_), ImportedExports::All) => {
+        ImportedExports::Partial(FxHashSet::default())
+      }
+      (ImportedExports::Partial(mut a), ImportedExports::Partial(b)) => {
+        a.retain(|x| !b.contains(x));
+        ImportedExports::Partial(a)
+      }
+    }
+  }
 }
 
 /// Information about a barrel module's re-exports
 #[derive(Debug, Default)]
 pub struct BarrelInfo {
-  /// `export { a } from './a'` → "a" => ImportRecordIdx
-  pub export_to_record: FxHashMap<CompactStr, ImportRecordIdx>,
+  /// `export { a as b } from './x'` → "b" => (ImportRecordIdx, Literal("a"))
+  /// `export * as ns from './x'` → "ns" => (ImportRecordIdx, Star)
+  pub export_to_record: FxHashMap<CompactStr, (ImportRecordIdx, Specifier)>,
   /// `export * from './x'`
   pub star_export_records: Vec<ImportRecordIdx>,
-  /// Remaining unprocessed import records
-  pub remaining_records: FxHashSet<ImportRecordIdx>,
 }
 
 impl BarrelInfo {
-  /// Check if all import records have been processed
-  #[inline]
-  pub fn is_fully_processed(&self) -> bool {
-    self.remaining_records.is_empty()
-  }
-
-  /// Mark an import record as processed
-  #[inline]
-  pub fn mark_record_as_processed(&mut self, record: ImportRecordIdx) {
-    self.remaining_records.remove(&record);
-  }
-
-  #[inline]
-  pub fn mark_records_as_processed(&mut self, records: &[PendingBarrelRecord]) {
-    for r in records {
-      self.remaining_records.remove(&r.rec_idx);
-    }
-  }
-
-  /// Get the import records needed based on the imported exports (excluding processed)
-  pub fn get_needed_records(&self, imports: &ImportedExports) -> FxHashSet<ImportRecordIdx> {
-    let mut records = FxHashSet::default();
-
+  /// Get the import records needed based on the imported exports.
+  /// If `tracked_records` is None, all records are considered needed.
+  /// If `tracked_records` is Some, only records in the map are considered.
+  pub fn get_needed_records<T>(
+    &self,
+    imports: &ImportedExports,
+    tracked_records: Option<&FxHashMap<ImportRecordIdx, T>>,
+  ) -> FxHashMap<ImportRecordIdx, ImportedExports> {
+    let mut records = FxHashMap::default();
     match imports {
       ImportedExports::All => {
-        return self.remaining_records.clone();
-      }
-      ImportedExports::Partial(names) => {
-        let mut has_missing = false;
-        for name in names {
-          if let Some(&rec_idx) = self.export_to_record.get(name) {
-            if self.remaining_records.contains(&rec_idx) {
-              records.insert(rec_idx);
-            }
-          } else {
-            has_missing = true;
+        if let Some(tr) = tracked_records {
+          records.reserve(tr.len());
+          for &rec_idx in tr.keys() {
+            records.insert(rec_idx, ImportedExports::All);
+          }
+        } else {
+          records.reserve(self.export_to_record.len() + self.star_export_records.len());
+          for &(rec_idx, _) in self.export_to_record.values() {
+            records.insert(rec_idx, ImportedExports::All);
+          }
+          for &rec_idx in &self.star_export_records {
+            records.insert(rec_idx, ImportedExports::All);
           }
         }
-        if has_missing {
-          // Include remaining star export records
+      }
+      ImportedExports::Partial(names) => {
+        records.reserve(names.len());
+        let mut missing_names = FxHashSet::default();
+        for name in names {
+          if let Some(&(rec_idx, ref imported)) = self.export_to_record.get(name) {
+            if tracked_records.is_none_or(|tr| tr.contains_key(&rec_idx)) {
+              match imported {
+                // `export * as ns from './x'` - request All from source
+                Specifier::Star => {
+                  records.insert(rec_idx, ImportedExports::All);
+                }
+                // `export { c as d } from './x'` - use imported_name "c", not export name "d"
+                Specifier::Literal(imported_name) => match records.entry(rec_idx) {
+                  Entry::Occupied(mut occ) => {
+                    if let ImportedExports::Partial(set) = occ.get_mut() {
+                      set.insert(imported_name.clone());
+                    }
+                  }
+                  Entry::Vacant(vac) => {
+                    vac.insert(ImportedExports::Partial(FxHashSet::from_iter([
+                      imported_name.clone()
+                    ])));
+                  }
+                },
+              }
+            }
+          } else {
+            missing_names.insert(name.clone());
+          }
+        }
+        if !missing_names.is_empty() {
+          let missing = ImportedExports::Partial(missing_names);
           for &rec_idx in &self.star_export_records {
-            if self.remaining_records.contains(&rec_idx) {
-              records.insert(rec_idx);
+            if tracked_records.is_none_or(|tr| tr.contains_key(&rec_idx)) {
+              match records.entry(rec_idx) {
+                Entry::Occupied(mut occ) => occ.get_mut().merge(&missing),
+                Entry::Vacant(vac) => {
+                  vac.insert(missing.clone());
+                }
+              }
             }
           }
         }
       }
     }
-
     records
   }
 
   pub fn into_barrel_module_state(
     self,
-    pending_records: Vec<PendingBarrelRecord>,
+    tracked_records: FxHashMap<ImportRecordIdx, (ImportRecordStateInit, ResolvedId)>,
   ) -> BarrelModuleState {
-    BarrelModuleState { info: self, pending_records }
+    BarrelModuleState { info: self, tracked_records }
   }
 }
 
@@ -112,20 +170,11 @@ pub struct BarrelState {
   pub initial_imported_exports: FxHashMap<ModuleIdx, ImportedExports>,
 }
 
-/// Pending import record that was skipped during barrel module processing
-#[derive(Debug, Clone)]
-pub struct PendingBarrelRecord {
-  pub resolved_id: ResolvedId,
-  pub rec_idx: ImportRecordIdx,
-  pub raw_rec_state: ImportRecordStateInit,
-}
-
 /// Wrapper for BarrelInfo with pending records
 #[derive(Debug, Default)]
 pub struct BarrelModuleState {
   pub info: BarrelInfo,
-  /// Import records that were skipped and need to be processed later
-  pub pending_records: Vec<PendingBarrelRecord>,
+  pub tracked_records: FxHashMap<ImportRecordIdx, (ImportRecordStateInit, ResolvedId)>,
 }
 
 impl Deref for BarrelModuleState {
@@ -135,30 +184,36 @@ impl Deref for BarrelModuleState {
   }
 }
 
-impl DerefMut for BarrelModuleState {
-  fn deref_mut(&mut self) -> &mut Self::Target {
-    &mut self.info
-  }
-}
-
-pub fn get_record_imported_exports(
+#[expect(clippy::implicit_hasher)]
+pub fn take_imported_specifiers(
   rec_idx: ImportRecordIdx,
   normal_module: &NormalModule,
+  needed_records: Option<&FxHashMap<ImportRecordIdx, ImportedExports>>,
+  all_imported_specifiers: &mut Option<FxHashMap<ImportRecordIdx, ImportedExports>>,
 ) -> ImportedExports {
-  let mut is_all = false;
-  let mut names = FxHashSet::default();
-  for named_import in normal_module.named_imports.values() {
-    if named_import.record_idx == rec_idx {
+  if let Some(imported_exports) = needed_records.and_then(|m| m.get(&rec_idx)) {
+    return imported_exports.clone();
+  }
+  let cache = all_imported_specifiers.get_or_insert_with(|| {
+    let mut result = FxHashMap::default();
+    for named_import in normal_module.named_imports.values() {
       match &named_import.imported {
         Specifier::Star => {
-          is_all = true;
-          break;
+          result.insert(named_import.record_idx, ImportedExports::All);
         }
-        Specifier::Literal(name) => {
-          names.insert(name.clone());
-        }
+        Specifier::Literal(name) => match result.entry(named_import.record_idx) {
+          Entry::Occupied(mut occ) => {
+            if let ImportedExports::Partial(set) = occ.get_mut() {
+              set.insert(name.clone());
+            }
+          }
+          Entry::Vacant(vac) => {
+            vac.insert(ImportedExports::Partial(FxHashSet::from_iter([name.clone()])));
+          }
+        },
       }
     }
-  }
-  if is_all || names.is_empty() { ImportedExports::All } else { ImportedExports::Partial(names) }
+    result
+  });
+  cache.remove(&rec_idx).unwrap_or_else(|| ImportedExports::Partial(FxHashSet::default()))
 }

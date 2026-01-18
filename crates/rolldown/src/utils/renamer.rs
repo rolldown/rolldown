@@ -231,3 +231,175 @@ impl<'name> Renamer<'name> {
     self.canonical_names
   }
 }
+
+/// Context for renaming nested scope symbols that would shadow top-level symbols.
+pub struct NestedScopeRenamer<'a, 'r> {
+  pub module_idx: ModuleIdx,
+  pub module: &'a rolldown_common::NormalModule,
+  pub db: &'a rolldown_common::SymbolRefDbForModule,
+  pub scoping: &'a oxc::semantic::Scoping,
+  pub link_output: &'a crate::stages::link_stage::LinkStageOutput,
+  pub renamer: &'r mut Renamer<'a>,
+}
+
+impl<'a, 'r> NestedScopeRenamer<'a, 'r> {
+  /// Rename nested bindings that would capture star import member references.
+  ///
+  /// When a star import member (like `ns.foo`) is referenced inside a function,
+  /// and a nested binding would capture that reference, the nested binding must be renamed.
+  ///
+  /// # Example (`argument-treeshaking-parameter-conflict`)
+  ///
+  /// ```js
+  /// // dep.js
+  /// export const mutate = () => value++;
+  ///
+  /// // main.js
+  /// import * as dep from './dep';
+  /// function test(mutate) {    // Parameter 'mutate' would capture dep.mutate
+  ///   dep.mutate('hello');     // After bundling becomes: mutate("hello")
+  /// }
+  /// ```
+  ///
+  /// Output:
+  /// ```js
+  /// const mutate = () => value++;
+  /// function test(mutate$1) {  // Parameter renamed to avoid capturing
+  ///   mutate("hello");         // Correctly calls top-level mutate
+  /// }
+  /// ```
+  pub fn rename_bindings_shadowing_star_imports(&mut self) {
+    for member_expr_ref in
+      self.link_output.metas[self.module_idx].resolved_member_expr_refs.values()
+    {
+      let Some(reference_id) = member_expr_ref.reference_id else {
+        continue;
+      };
+      let current_reference = self.scoping.get_reference(reference_id);
+      let Some(symbol) = current_reference.symbol_id() else {
+        continue;
+      };
+      let Some(resolved_symbol) = member_expr_ref.resolved else {
+        continue;
+      };
+
+      // Only check for shadowing if the symbol was renamed (has an entry in renamer)
+      let Some(canonical_name) = self.renamer.get_canonical_name(resolved_symbol).cloned() else {
+        continue;
+      };
+
+      for scope_id in self.scoping.scope_ancestors(current_reference.scope_id()) {
+        if let Some(binding) = self.scoping.get_binding(scope_id, &canonical_name)
+          && binding != symbol
+        {
+          let symbol_ref = (self.module_idx, binding).into();
+          self.renamer.register_nested_scope_symbols(symbol_ref, self.scoping.symbol_name(binding));
+        }
+      }
+    }
+  }
+
+  /// Rename nested bindings that would capture renamed named imports.
+  ///
+  /// When a named import is renamed due to a top-level conflict, and a nested binding
+  /// has the same name as the renamed import, that nested binding must be renamed
+  /// to avoid capturing references.
+  ///
+  /// # Example (`basic_scoped`)
+  ///
+  /// ```js
+  /// // a.js
+  /// export const a = 'a.js';
+  ///
+  /// // main.js
+  /// import { a as aJs } from './a';
+  /// const a = 'main.js';       // Takes priority, so import renamed to a$1
+  /// function foo(a$1) {        // Parameter would capture reference to aJs
+  ///   return [a$1, a, aJs];
+  /// }
+  /// ```
+  ///
+  /// Output:
+  /// ```js
+  /// const a$1 = "a.js";        // Import renamed due to conflict
+  /// const a = "main.js";
+  /// function foo(a$1$1) {      // Parameter renamed to avoid capturing
+  ///   return [a$1$1, a, a$1];  // aJs correctly resolves to a$1
+  /// }
+  /// ```
+  pub fn rename_bindings_shadowing_named_imports(&mut self) {
+    for (symbol_ref, _named_import) in &self.module.named_imports {
+      if self.db.is_facade_symbol(symbol_ref.symbol) {
+        continue;
+      }
+
+      // Only check for shadowing if the symbol was renamed (has an entry in renamer)
+      let Some(canonical_name) = self.renamer.get_canonical_name(*symbol_ref).cloned() else {
+        continue;
+      };
+
+      for reference in self.scoping.get_resolved_references(symbol_ref.symbol) {
+        for scope_id in self.scoping.scope_ancestors(reference.scope_id()) {
+          if let Some(binding) = self.scoping.get_binding(scope_id, &canonical_name)
+            && binding != symbol_ref.symbol
+          {
+            let nested_symbol_ref = (self.module_idx, binding).into();
+            self
+              .renamer
+              .register_nested_scope_symbols(nested_symbol_ref, self.scoping.symbol_name(binding));
+          }
+        }
+      }
+    }
+  }
+
+  /// Rename nested bindings that would shadow CJS wrapper parameters.
+  ///
+  /// For CommonJS wrapped modules, nested scopes must avoid shadowing the synthetic
+  /// `exports` and `module` parameters injected by the CJS wrapper.
+  ///
+  /// # Example
+  ///
+  /// ```js
+  /// // cjs-module.js (detected as CommonJS)
+  /// function helper() {
+  ///   const exports = {};  // Would shadow CJS wrapper's exports parameter
+  ///   return exports;
+  /// }
+  /// module.exports = helper;
+  /// ```
+  ///
+  /// Output:
+  /// ```js
+  /// var require_cjs = __commonJS((exports, module) => {
+  ///   function helper() {
+  ///     const exports$1 = {};  // Renamed to avoid shadowing
+  ///     return exports$1;
+  ///   }
+  ///   module.exports = helper;
+  /// });
+  /// ```
+  pub fn rename_bindings_shadowing_cjs_params(&mut self) {
+    use rolldown_common::WrapKind;
+
+    let is_cjs_wrapped =
+      matches!(self.link_output.metas[self.module_idx].wrap_kind(), WrapKind::Cjs);
+
+    if !is_cjs_wrapped {
+      return;
+    }
+
+    /// CJS wrapper parameter names that nested scopes should avoid shadowing.
+    const CJS_WRAPPER_NAMES: [&str; 2] = ["exports", "module"];
+
+    // Skip root scope (index 0), check nested scopes only
+    for (_, bindings) in self.scoping.iter_bindings().skip(1) {
+      for (&name, symbol_id) in bindings {
+        if CJS_WRAPPER_NAMES.contains(&name) {
+          let symbol_ref = (self.module_idx, *symbol_id).into();
+          self.renamer.register_nested_scope_symbols(symbol_ref, name);
+        }
+      }
+    }
+  }
+}

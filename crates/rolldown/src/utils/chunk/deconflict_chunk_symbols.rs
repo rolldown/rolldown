@@ -1,6 +1,9 @@
 use oxc::span::CompactStr;
 
-use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
+use crate::{
+  stages::link_stage::LinkStageOutput,
+  utils::renamer::{NestedScopeRenamer, Renamer},
+};
 use arcstr::ArcStr;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, TaggedSymbolRef, WrapKind,
@@ -193,10 +196,10 @@ pub fn deconflict_chunk_symbols(
 /// Since we avoid conflicting names during root scope renaming, most nested scope
 /// symbols can keep their original names. However, we still need to handle cases
 /// where a nested binding would capture a reference to a top-level symbol.
-fn rename_shadowing_symbols_in_nested_scopes(
+fn rename_shadowing_symbols_in_nested_scopes<'a>(
   chunk: &Chunk,
-  link_output: &LinkStageOutput,
-  renamer: &mut Renamer,
+  link_output: &'a LinkStageOutput,
+  renamer: &mut Renamer<'a>,
 ) {
   for module_idx in chunk.modules.iter().copied() {
     let Some(module) = link_output.module_table[module_idx].as_normal() else {
@@ -205,77 +208,18 @@ fn rename_shadowing_symbols_in_nested_scopes(
     let Some(db) = &link_output.symbol_db[module_idx] else {
       continue;
     };
-    let scoping = db.ast_scopes.scoping();
 
-    // Handle member expression references (e.g., `foo.bar` where `foo` is an import)
-    for member_expr_ref in link_output.metas[module_idx].resolved_member_expr_refs.values() {
-      let Some(reference_id) = member_expr_ref.reference_id else {
-        continue;
-      };
-      let current_reference = scoping.get_reference(reference_id);
-      let Some(symbol) = current_reference.symbol_id() else {
-        continue;
-      };
-      let Some(resolved_symbol) = member_expr_ref.resolved else {
-        continue;
-      };
+    let mut ctx = NestedScopeRenamer {
+      module_idx,
+      module,
+      db,
+      scoping: db.ast_scopes.scoping(),
+      link_output,
+      renamer,
+    };
 
-      // Only check for shadowing if the symbol was renamed (has an entry in renamer)
-      let Some(canonical_name) = renamer.get_canonical_name(resolved_symbol).cloned() else {
-        continue;
-      };
-
-      for scope_id in scoping.scope_ancestors(current_reference.scope_id()) {
-        if let Some(binding) = scoping.get_binding(scope_id, &canonical_name)
-          && binding != symbol
-        {
-          let symbol_ref = (module_idx, binding).into();
-          renamer.register_nested_scope_symbols(symbol_ref, scoping.symbol_name(binding));
-        }
-      }
-    }
-
-    // Handle named imports: if a nested binding would capture a reference to an import,
-    // rename the nested binding to avoid shadowing.
-    for (symbol_ref, _named_import) in &module.named_imports {
-      if db.is_facade_symbol(symbol_ref.symbol) {
-        continue;
-      }
-
-      // Only check for shadowing if the symbol was renamed (has an entry in renamer)
-      let Some(canonical_name) = renamer.get_canonical_name(*symbol_ref).cloned() else {
-        continue;
-      };
-
-      for reference in scoping.get_resolved_references(symbol_ref.symbol) {
-        for scope_id in scoping.scope_ancestors(reference.scope_id()) {
-          if let Some(binding) = scoping.get_binding(scope_id, &canonical_name)
-            && binding != symbol_ref.symbol
-          {
-            let nested_symbol_ref = (module_idx, binding).into();
-            renamer.register_nested_scope_symbols(nested_symbol_ref, scoping.symbol_name(binding));
-          }
-        }
-      }
-    }
-
-    // Check if this module is CJS wrapped - if so, nested scopes should avoid
-    // shadowing `exports` and `module` which are synthetic parameters
-    let is_cjs_wrapped = matches!(link_output.metas[module_idx].wrap_kind(), WrapKind::Cjs);
-
-    if is_cjs_wrapped {
-      /// CJS wrapper parameter names that nested scopes should avoid shadowing.
-      const CJS_WRAPPER_NAMES: [&str; 2] = ["exports", "module"];
-
-      // Skip root scope (index 0), check nested scopes only
-      for (_, bindings) in scoping.iter_bindings().skip(1) {
-        for (&name, symbol_id) in bindings {
-          if CJS_WRAPPER_NAMES.contains(&name) {
-            let symbol_ref = (module_idx, *symbol_id).into();
-            renamer.register_nested_scope_symbols(symbol_ref, name);
-          }
-        }
-      }
-    }
+    ctx.rename_bindings_shadowing_star_imports();
+    ctx.rename_bindings_shadowing_named_imports();
+    ctx.rename_bindings_shadowing_cjs_params();
   }
 }

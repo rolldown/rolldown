@@ -962,7 +962,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'ABCDEFGHIJKL');
     });
 
-    it.skip('does not replace zero-length inserts at overwrite start location', () => {
+    it('does not replace zero-length inserts at overwrite start location', () => {
       const s = new MagicString('abcdefghijkl');
 
       s.remove(0, 6);
@@ -1103,7 +1103,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'ABCDEFGHIJKL');
     });
 
-    it.skip('does not replace zero-length inserts at update start location', () => {
+    it('does not replace zero-length inserts at update start location', () => {
       const s = new MagicString('abcdefghijkl');
 
       s.remove(0, 6);

@@ -11,9 +11,9 @@ use oxc_allocator::Address;
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::{
-  BarrelState, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult,
-  FlatOptions, HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImportedExports,
-  ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult,
+  EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult, FlatOptions,
+  HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImportedExports, ImporterRecord,
+  Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult,
   PreserveEntrySignatures, RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief,
   RuntimeModuleTaskResult, ScanMode, SourceMapGenMsg, StmtInfoIdx, SymbolRefDb,
   SymbolRefDbForModule, take_imported_specifiers,
@@ -106,7 +106,6 @@ pub struct ModuleLoader<'a> {
   is_full_scan: bool,
   new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
   cache: &'a mut ScanStageCache,
-  pub barrel_state: BarrelState,
   pub flat_options: FlatOptions,
   pub magic_string_tx: Option<Arc<std::sync::mpsc::Sender<SourceMapGenMsg>>>,
 }
@@ -199,7 +198,6 @@ impl<'a> ModuleLoader<'a> {
       symbol_ref_db,
       intermediate_normal_modules,
       new_added_modules_from_partial_scan: FxIndexSet::default(),
-      barrel_state: BarrelState::default(),
       flat_options,
       magic_string_tx,
     })
@@ -217,7 +215,7 @@ impl<'a> ModuleLoader<'a> {
     let idx = match self.cache.module_id_to_idx.get(&resolved_id.id).copied() {
       Some(VisitState::Seen(idx)) => {
         if self.shared_context.options.experimental.is_lazy_barrel_enabled() && owner.is_none() {
-          if let Some(barrel_module_state) = self.barrel_state.barrel_infos.get(&idx) {
+          if let Some(barrel_module_state) = self.cache.barrel_state.barrel_infos.get(&idx) {
             // If the module is already a barrel module, we need to process its import records again
             if barrel_module_state.is_some() {
               self.process_barrel_import_record(
@@ -226,7 +224,7 @@ impl<'a> ModuleLoader<'a> {
               );
             }
           } else {
-            self.barrel_state.requested_exports.insert(idx, ImportedExports::All);
+            self.cache.barrel_state.requested_exports.insert(idx, ImportedExports::All);
           }
         }
         return idx;
@@ -327,7 +325,7 @@ impl<'a> ModuleLoader<'a> {
       if let Entry::Occupied(mut occ) = self.cache.module_id_to_idx.entry(resolved_id.id.clone()) {
         let idx = occ.get().idx();
         occ.insert(VisitState::Invalidate(idx));
-        self.barrel_state.barrel_infos.remove(&idx);
+        self.cache.barrel_state.barrel_infos.remove(&idx);
       }
       // User may update the entry module in incremental mode, so we need to make sure
       // if it is a user defined entry to avoid generate wrong asset file
@@ -394,8 +392,12 @@ impl<'a> ModuleLoader<'a> {
           }
 
           let normal_module = module.as_normal().unwrap();
-          let initial_needed_records =
-            self.barrel_state.requested_exports.get(&module_idx).and_then(|imported_exports| {
+          let initial_needed_records = self
+            .cache
+            .barrel_state
+            .requested_exports
+            .get(&module_idx)
+            .and_then(|imported_exports| {
               barrel_info.as_ref().map(|info| info.get_needed_records::<()>(imported_exports, None))
             });
 
@@ -484,7 +486,7 @@ impl<'a> ModuleLoader<'a> {
           *self.intermediate_normal_modules.modules.get_mut(module_idx) = Some(module);
 
           if self.shared_context.options.experimental.is_lazy_barrel_enabled() {
-            self.barrel_state.barrel_infos.insert(
+            self.cache.barrel_state.barrel_infos.insert(
               module_idx,
               barrel_info.map(|info| info.into_barrel_module_state(tracked_records)),
             );
@@ -846,8 +848,8 @@ impl<'a> ModuleLoader<'a> {
   ) {
     while let Some((idx, imported_exports)) = work_queue.pop_front() {
       // If the module hasn't been loaded yet, just record the needed exports
-      let Some(barrel_module_state) = self.barrel_state.barrel_infos.get_mut(&idx) else {
-        match self.barrel_state.requested_exports.entry(idx) {
+      let Some(barrel_module_state) = self.cache.barrel_state.barrel_infos.get_mut(&idx) else {
+        match self.cache.barrel_state.requested_exports.entry(idx) {
           Entry::Occupied(mut occ) => {
             let existing = occ.get_mut();
             if imported_exports.is_subset_of(existing) {
@@ -864,7 +866,7 @@ impl<'a> ModuleLoader<'a> {
 
       // Not a barrel module, clean up and skip
       let Some(barrel_module_state) = barrel_module_state else {
-        self.barrel_state.requested_exports.remove(&idx);
+        self.cache.barrel_state.requested_exports.remove(&idx);
         continue;
       };
 
@@ -874,7 +876,7 @@ impl<'a> ModuleLoader<'a> {
       }
 
       // Calculate new exports to process (subtract already processed)
-      let new_exports = match self.barrel_state.requested_exports.entry(idx) {
+      let new_exports = match self.cache.barrel_state.requested_exports.entry(idx) {
         Entry::Occupied(mut occ) => {
           let Some(diff) = imported_exports.subtract_and_merge_into(occ.get_mut()) else {
             continue;
@@ -924,10 +926,11 @@ impl<'a> ModuleLoader<'a> {
             new_idx
           }
         };
-        let keep_tracking = match self.barrel_state.barrel_infos.get(&target_idx) {
+        let keep_tracking = match self.cache.barrel_state.barrel_infos.get(&target_idx) {
           Some(Some(s)) => {
             !s.tracked_records.is_empty()
               && self
+                .cache
                 .barrel_state
                 .requested_exports
                 .get(&target_idx)
@@ -943,8 +946,16 @@ impl<'a> ModuleLoader<'a> {
       });
 
       *self.intermediate_normal_modules.modules.get_mut(idx) = Some(barrel_module);
-      self.barrel_state.barrel_infos.get_mut(&idx).unwrap().as_mut().unwrap().tracked_records =
-        tracked_records;
+
+      self
+        .cache
+        .barrel_state
+        .barrel_infos
+        .get_mut(&idx)
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .tracked_records = tracked_records;
     }
   }
 }

@@ -85,7 +85,51 @@ impl<'name> Renamer<'name> {
     db.ast_scopes.scoping().iter_bindings().skip(1).any(|(_, bindings)| bindings.contains_key(name))
   }
 
-  /// Check if a name is available for a symbol (no nested scope conflicts).
+  /// Check if a candidate name is available for a top-level symbol without causing
+  /// unintended variable capture in nested scopes.
+  ///
+  /// This function prevents a top-level symbol from being renamed to a name that
+  /// already exists in a nested scope, which would cause the nested binding to
+  /// "capture" references meant for the top-level symbol.
+  ///
+  /// # Rules
+  ///
+  /// 1. **Entry module symbols**: Always available. Shadowing conflicts are resolved
+  ///    later by `NestedScopeRenamer` which renames the nested bindings instead.
+  ///
+  /// 2. **Facade symbols** (e.g., external module namespaces): Must not conflict with
+  ///    entry module's nested scopes, since facade symbols can't be traced via references.
+  ///
+  /// 3. **Renamed candidates**: Must not conflict with the symbol's own module's nested
+  ///    bindings. Original names are allowed to shadow (that's intentional by the author).
+  ///
+  /// # Example: Why renamed candidates must avoid nested bindings
+  ///
+  /// ```js
+  /// // entry.js
+  /// import { foo } from './dep.js';  // Suppose 'foo' conflicts, try renaming to 'foo$1'
+  /// function bar(foo$1) {            // Nested binding 'foo$1' exists!
+  ///   console.log(foo$1);            // Would capture the wrong value
+  /// }
+  /// console.log(foo);                // Should reference the import
+  /// ```
+  ///
+  /// If we renamed the import to `foo$1`, the nested parameter would capture it.
+  /// So `is_name_available("foo$1", ...)` returns `false`, and we try `foo$2` instead.
+  ///
+  /// # Example: Why original names are allowed to shadow
+  ///
+  /// ```js
+  /// // entry.js
+  /// import { value } from './dep.js';  // Original name is 'value'
+  /// function helper(value) {           // Nested 'value' intentionally shadows
+  ///   return value * 2;                // Author intended to use parameter
+  /// }
+  /// console.log(value);                // Uses the import
+  /// ```
+  ///
+  /// Here the author intentionally wrote a parameter named `value` that shadows the import.
+  /// We allow this (`is_original_name = true`), so the import keeps its name `value`.
   fn is_name_available(
     &self,
     candidate_name: &str,

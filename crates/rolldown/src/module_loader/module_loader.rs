@@ -216,7 +216,7 @@ impl<'a> ModuleLoader<'a> {
   ) -> ModuleIdx {
     let idx = match self.cache.module_id_to_idx.get(&resolved_id.id).copied() {
       Some(VisitState::Seen(idx)) => {
-        if owner.is_none() {
+        if self.shared_context.options.experimental.is_lazy_barrel_enabled() && owner.is_none() {
           if let Some(barrel_module_state) = self.barrel_state.barrel_infos.get(&idx) {
             // If the module is already a barrel module, we need to process its import records again
             if barrel_module_state.is_some() {
@@ -412,10 +412,10 @@ impl<'a> ModuleLoader<'a> {
             }
 
             // If current module is a barrel module, we need to handle it's initial needed records
-            if raw_rec.kind == ImportKind::Import
-              && let Some(ref initial_needed_records) = initial_needed_records
-            {
-              if raw_rec.meta.contains(ImportRecordMeta::IsReExport) {
+            if let Some(ref initial_needed_records) = initial_needed_records {
+              if raw_rec.kind == ImportKind::Import
+                && raw_rec.meta.contains(ImportRecordMeta::IsReExport)
+              {
                 tracked_records.insert(rec_idx, (raw_rec.state.clone(), resolved_id.clone()));
                 if !initial_needed_records.contains_key(&rec_idx) {
                   import_records.push(raw_rec.into_resolved(None));
@@ -432,17 +432,19 @@ impl<'a> ModuleLoader<'a> {
               &user_defined_entries,
             );
 
-            let imported_exports = if raw_rec.kind == ImportKind::Import {
-              take_imported_specifiers(
-                rec_idx,
-                normal_module,
-                initial_needed_records.as_ref(),
-                &mut all_imported_specifiers,
-              )
-            } else {
-              ImportedExports::All
-            };
-            work_queue.push_back((idx, imported_exports));
+            if self.shared_context.options.experimental.is_lazy_barrel_enabled() {
+              let imported_exports = if raw_rec.kind == ImportKind::Import {
+                take_imported_specifiers(
+                  rec_idx,
+                  normal_module,
+                  initial_needed_records.as_ref(),
+                  &mut all_imported_specifiers,
+                )
+              } else {
+                ImportedExports::All
+              };
+              work_queue.push_back((idx, imported_exports));
+            }
 
             // Dynamic imported module will be considered as an entry
             self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
@@ -481,11 +483,14 @@ impl<'a> ModuleLoader<'a> {
           *self.intermediate_normal_modules.index_ecma_ast.get_mut(module_idx) = Some(ast);
           *self.intermediate_normal_modules.modules.get_mut(module_idx) = Some(module);
 
-          self.barrel_state.barrel_infos.insert(
-            module_idx,
-            barrel_info.map(|info| info.into_barrel_module_state(tracked_records)),
-          );
-          self.process_barrel_import_record(&mut work_queue, &user_defined_entries);
+          if self.shared_context.options.experimental.is_lazy_barrel_enabled() {
+            self.barrel_state.barrel_infos.insert(
+              module_idx,
+              barrel_info.map(|info| info.into_barrel_module_state(tracked_records)),
+            );
+            self.process_barrel_import_record(&mut work_queue, &user_defined_entries);
+          }
+
           self.symbol_ref_db.store_local_db(module_idx, symbols);
           self.remaining -= 1;
         }

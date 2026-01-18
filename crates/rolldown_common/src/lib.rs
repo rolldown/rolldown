@@ -146,6 +146,7 @@ pub use crate::{
   types::ast_scopes::AstScopes,
   types::barrel_state::{
     BarrelInfo, BarrelModuleState, BarrelState, ImportedExports, take_imported_specifiers,
+    try_extract_barrel_info,
   },
   types::bundle_mode::BundleMode,
   types::chunk_idx::ChunkIdx,

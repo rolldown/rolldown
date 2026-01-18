@@ -1,11 +1,12 @@
 use std::{collections::hash_map::Entry, ops::Deref};
 
 use oxc::span::CompactStr;
+use oxc_index::IndexVec;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  ImportRecordIdx, ModuleIdx, NormalModule, ResolvedId, Specifier,
-  types::import_record::ImportRecordStateInit,
+  EcmaView, ImportRecordIdx, ImportRecordMeta, ModuleIdx, NormalModule, RawImportRecord,
+  ResolvedId, Specifier, types::import_record::ImportRecordStateInit,
 };
 
 /// What exports are needed from a barrel module
@@ -211,4 +212,45 @@ pub fn take_imported_specifiers(
     result
   });
   cache.remove(&rec_idx).unwrap_or(ImportedExports::Partial(FxHashSet::default()))
+}
+
+/// Build BarrelInfo from EcmaView for lazy barrel optimization.
+pub fn try_extract_barrel_info(
+  ecma_view: &EcmaView,
+  raw_import_records: &IndexVec<ImportRecordIdx, RawImportRecord>,
+) -> Option<BarrelInfo> {
+  // Check if module has side effects - barrel modules must be side-effect free
+  if ecma_view.side_effects.has_side_effects() || raw_import_records.is_empty() {
+    return None;
+  }
+
+  let mut star_export_records = Vec::new();
+  let mut export_to_record = FxHashMap::default();
+
+  // Find re-exports from named_imports
+  // `export * as ns from './x'`: export_name="ns", imported=Star
+  // `export { c as d } from './x'`: export_name="d", imported=Literal("c")
+  for (export_name, local_export) in &ecma_view.named_exports {
+    if let Some(named_import) = ecma_view.named_imports.get(&local_export.referenced) {
+      // We only care about re-exports here
+      if raw_import_records[named_import.record_idx].meta.contains(ImportRecordMeta::IsReExport) {
+        export_to_record
+          .insert(export_name.clone(), (named_import.record_idx, named_import.imported.clone()));
+      }
+    }
+  }
+
+  // Find star exports from import records
+  for (rec_idx, record) in raw_import_records.iter_enumerated() {
+    if record.meta.contains(ImportRecordMeta::IsExportStar) {
+      star_export_records.push(rec_idx);
+    }
+  }
+
+  // Only return Some if there are any re-exports
+  if export_to_record.is_empty() && star_export_records.is_empty() {
+    None
+  } else {
+    Some(BarrelInfo { export_to_record, star_export_records })
+  }
 }

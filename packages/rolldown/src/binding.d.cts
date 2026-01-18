@@ -1478,6 +1478,11 @@ export declare class BindingMagicString {
    * Supports negative indices (counting from the end).
    */
   slice(start?: number | undefined | null, end?: number | undefined | null): string
+  /**
+   * Generates a source map for the transformations applied to this MagicString.
+   * Returns the source map as a JSON string.
+   */
+  generateMap(options?: BindingSourceMapOptions | undefined | null): string
 }
 
 export declare class BindingModuleInfo {
@@ -2276,6 +2281,18 @@ export interface BindingResolveOptions {
 
 export interface BindingSourcemap {
   inner: string | BindingJsonSourcemap
+}
+
+export interface BindingSourceMapOptions {
+  source?: string
+  includeContent?: boolean
+  /**
+   * Accepts boolean or string: true, false, "boundary"
+   * - true: high-resolution sourcemaps (character-level)
+   * - false: low-resolution sourcemaps (line-level) - default
+   * - "boundary": high-resolution only at word boundaries
+   */
+  hires?: boolean | string
 }
 
 export interface BindingTransformHookExtraArgs {

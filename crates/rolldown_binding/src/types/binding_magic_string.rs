@@ -1,7 +1,7 @@
 #![expect(clippy::inherent_to_string)]
-use napi::bindgen_prelude::This;
+use napi::bindgen_prelude::{Either, This};
 use napi_derive::napi;
-use string_wizard::{MagicString, MagicStringOptions};
+use string_wizard::{MagicString, MagicStringOptions, SourceMapOptions};
 
 #[derive(Clone)]
 struct CharToByteMapper {
@@ -50,6 +50,18 @@ impl CharToByteMapper {
 #[derive(Default)]
 pub struct BindingMagicStringOptions {
   pub filename: Option<String>,
+}
+
+#[napi(object)]
+#[derive(Default)]
+pub struct BindingSourceMapOptions {
+  pub source: Option<String>,
+  pub include_content: Option<bool>,
+  /// Accepts boolean or string: true, false, "boundary"
+  /// - true: high-resolution sourcemaps (character-level)
+  /// - false: low-resolution sourcemaps (line-level) - default
+  /// - "boundary": high-resolution only at word boundaries
+  pub hires: Option<Either<bool, String>>,
 }
 
 #[napi]
@@ -375,5 +387,25 @@ impl BindingMagicString<'_> {
       self.char_to_byte_mapper.char_to_byte(end as usize).unwrap_or(self.inner.source().len());
 
     self.inner.slice(start_byte, Some(end_byte)).map_err(napi::Error::from_reason)
+  }
+
+  /// Generates a source map for the transformations applied to this MagicString.
+  /// Returns the source map as a JSON string.
+  #[napi]
+  pub fn generate_map(&self, options: Option<BindingSourceMapOptions>) -> String {
+    let opts = options.unwrap_or_default();
+    let hires = match &opts.hires {
+      Some(Either::A(true)) => string_wizard::Hires::True,
+      Some(Either::B(s)) if s == "boundary" => string_wizard::Hires::Boundary,
+      _ => string_wizard::Hires::False,
+    };
+    self
+      .inner
+      .source_map(SourceMapOptions {
+        source: opts.source.map(Into::into).unwrap_or_else(|| "".into()),
+        include_content: opts.include_content.unwrap_or(false),
+        hires,
+      })
+      .to_json_string()
   }
 }

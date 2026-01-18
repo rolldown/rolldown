@@ -1,4 +1,5 @@
 import type { BindingHookFilter, BindingPluginOptions } from '../binding.cjs';
+import { BindingMagicString } from '../binding.cjs';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { aggregateBindingErrorsIntoJsError, unwrapBindingResult } from '../utils/error';
 import { normalizeHook } from '../utils/normalize-hook';
@@ -63,6 +64,23 @@ export function bindingifyRenderChunk(
           ),
         });
       }
+      const renderChunkMeta = args.pluginContextData.getRenderChunkMeta()!;
+
+      // Add lazy-loaded magicString if nativeMagicString is enabled
+      let magicStringInstance: BindingMagicString;
+      if (args.options.experimental?.nativeMagicString) {
+        Object.defineProperty(renderChunkMeta, 'magicString', {
+          get() {
+            if (magicStringInstance) {
+              return magicStringInstance;
+            }
+            magicStringInstance = new BindingMagicString(code);
+            return magicStringInstance;
+          },
+          configurable: true,
+        });
+      }
+
       const ret = await handler.call(
         new PluginContextImpl(
           args.outputOptions,
@@ -76,15 +94,41 @@ export function bindingifyRenderChunk(
         code,
         transformRenderedChunk(chunk),
         args.pluginContextData.getOutputOptions(opts),
-        args.pluginContextData.getRenderChunkMeta()!,
+        renderChunkMeta,
       );
 
       if (ret == null) {
         return;
       }
 
+      // Handle MagicString return value directly
+      if (ret instanceof BindingMagicString) {
+        const normalizedCode = ret.toString();
+        const map = ret.generateMap();
+        return {
+          code: normalizedCode,
+          map: bindingifySourcemap(map),
+        };
+      }
+
       if (typeof ret === 'string') {
         return { code: ret };
+      }
+
+      // Handle object return with code as MagicString
+      if (ret.code instanceof BindingMagicString) {
+        const magicString = ret.code as BindingMagicString;
+        const normalizedCode = magicString.toString();
+        // If map is explicitly null, don't generate sourcemap (opt-out)
+        // If map is undefined, auto-generate from MagicString
+        if (ret.map === null) {
+          return { code: normalizedCode };
+        }
+        const map = ret.map === undefined ? magicString.generateMap() : ret.map;
+        return {
+          code: normalizedCode,
+          map: bindingifySourcemap(map),
+        };
       }
 
       if (!ret.map) {

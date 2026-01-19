@@ -1,7 +1,8 @@
-use std::{collections::hash_map::Entry, ops::Deref};
+use std::collections::hash_map::Entry;
 
 use oxc::span::CompactStr;
 use oxc_index::IndexVec;
+use rolldown_utils::rustc_hash::FxHashMapExt as _;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -9,39 +10,19 @@ use crate::{
   ResolvedId, Specifier, types::import_record::ImportRecordStateInit,
 };
 
-/// What exports are needed from a barrel module
+/// What exports are needed from a module
 #[derive(Debug, Clone)]
 pub enum ImportedExports {
-  /// `import * as x` or `import 'barrel'`
   All,
-  /// `import { a, b }` or `import { a }`
   Partial(FxHashSet<CompactStr>),
 }
 
 impl ImportedExports {
-  #[inline]
-  pub fn is_all(&self) -> bool {
-    matches!(self, Self::All)
-  }
-
-  #[inline]
-  pub fn is_partial(&self) -> bool {
-    matches!(self, Self::Partial(_))
-  }
-
   pub fn merge(&mut self, other: &Self) {
     match (&mut *self, other) {
       (Self::All, _) => {}
       (_, Self::All) => *self = Self::All,
       (Self::Partial(lhs), Self::Partial(rhs)) => lhs.extend(rhs.clone()),
-    }
-  }
-
-  pub fn is_subset_of(&self, other: &Self) -> bool {
-    match (self, other) {
-      (_, ImportedExports::All) => true,
-      (ImportedExports::All, ImportedExports::Partial(_)) => false,
-      (ImportedExports::Partial(a), ImportedExports::Partial(b)) => a.iter().all(|x| b.contains(x)),
     }
   }
 
@@ -75,56 +56,56 @@ pub struct BarrelInfo {
 }
 
 impl BarrelInfo {
-  /// Get the import records needed based on the imported exports.
-  /// If `tracked_records` is None, all records are considered needed.
-  /// If `tracked_records` is Some, only records in the map are considered.
-  pub fn get_needed_records<T>(
-    &self,
+  pub fn get_needed_records(
+    &mut self,
     imports: &ImportedExports,
-    tracked_records: Option<&FxHashMap<ImportRecordIdx, T>>,
-  ) -> FxHashMap<ImportRecordIdx, ImportedExports> {
-    let mut records = FxHashMap::default();
+    all_imported_specifiers: &mut FxHashMap<ImportRecordIdx, ImportedExports>,
+  ) -> Option<FxHashMap<ImportRecordIdx, ImportedExports>> {
     match imports {
-      ImportedExports::All => {
-        if let Some(tr) = tracked_records {
-          records.reserve(tr.len());
-          for &rec_idx in tr.keys() {
-            records.insert(rec_idx, ImportedExports::All);
-          }
-        } else {
-          records.reserve(self.export_to_record.len() + self.star_export_records.len());
-          for &(rec_idx, _) in self.export_to_record.values() {
-            records.insert(rec_idx, ImportedExports::All);
-          }
-          for &rec_idx in &self.star_export_records {
-            records.insert(rec_idx, ImportedExports::All);
-          }
-        }
-      }
+      ImportedExports::All => None,
       ImportedExports::Partial(names) => {
-        records.reserve(names.len());
+        let mut needs_records = FxHashMap::with_capacity(names.len());
         let mut missing_names = FxHashSet::default();
         for name in names {
-          if let Some(&(rec_idx, ref imported)) = self.export_to_record.get(name) {
-            if tracked_records.is_none_or(|tr| tr.contains_key(&rec_idx)) {
-              match imported {
-                // `export * as ns from './x'` - request All from source
-                Specifier::Star => {
-                  records.insert(rec_idx, ImportedExports::All);
-                }
-                // `export { c as d } from './x'` - use imported_name "c", not export name "d"
-                Specifier::Literal(imported_name) => match records.entry(rec_idx) {
+          if let Some((rec_idx, ref imported)) = self.export_to_record.remove(name) {
+            match imported {
+              // `export * as ns from './x'` - request All from source
+              Specifier::Star => {
+                needs_records.insert(rec_idx, ImportedExports::All);
+                all_imported_specifiers.remove(&rec_idx);
+              }
+              // `export { c as d } from './x'` - use imported_name "c", not export name "d"
+              Specifier::Literal(imported_name) => {
+                match all_imported_specifiers.entry(rec_idx) {
                   Entry::Occupied(mut occ) => {
-                    if let ImportedExports::Partial(set) = occ.get_mut() {
-                      set.insert(imported_name.clone());
+                    let ImportedExports::Partial(set) = occ.get_mut() else {
+                      unreachable!(
+                        "If specifier is Literal, the imported specifiers must be Partial"
+                      );
+                    };
+                    if set.len() <= 1 {
+                      occ.remove();
+                    } else {
+                      set.remove(imported_name);
                     }
+                  }
+                  Entry::Vacant(_) => {}
+                }
+                match needs_records.entry(rec_idx) {
+                  Entry::Occupied(mut occ) => {
+                    let ImportedExports::Partial(set) = occ.get_mut() else {
+                      unreachable!(
+                        "If specifier is Literal, the imported specifiers must be Partial"
+                      );
+                    };
+                    set.insert(imported_name.clone());
                   }
                   Entry::Vacant(vac) => {
                     vac.insert(ImportedExports::Partial(FxHashSet::from_iter([
                       imported_name.clone()
                     ])));
                   }
-                },
+                }
               }
             }
           } else {
@@ -133,71 +114,56 @@ impl BarrelInfo {
         }
         if !missing_names.is_empty() {
           let missing = ImportedExports::Partial(missing_names);
-          for &rec_idx in &self.star_export_records {
-            if tracked_records.is_none_or(|tr| tr.contains_key(&rec_idx)) {
-              match records.entry(rec_idx) {
-                Entry::Occupied(mut occ) => occ.get_mut().merge(&missing),
-                Entry::Vacant(vac) => {
-                  vac.insert(missing.clone());
-                }
+          for rec_idx in &self.star_export_records {
+            match needs_records.entry(*rec_idx) {
+              Entry::Occupied(mut occ) => occ.get_mut().merge(&missing),
+              Entry::Vacant(vac) => {
+                vac.insert(missing.clone());
               }
             }
           }
         }
+        Some(needs_records)
       }
     }
-    records
   }
 
   pub fn into_barrel_module_state(
     self,
     tracked_records: FxHashMap<ImportRecordIdx, (ImportRecordStateInit, ResolvedId)>,
+    remaining_imported_specifiers: FxHashMap<ImportRecordIdx, ImportedExports>,
   ) -> BarrelModuleState {
-    BarrelModuleState { info: self, tracked_records }
+    assert!(
+      tracked_records.len() == remaining_imported_specifiers.len(),
+      "Tracked records and remaining specifiers must have the same length"
+    );
+    BarrelModuleState { info: self, tracked_records, remaining_imported_specifiers }
   }
 }
 
 /// State for lazy barrel optimization
 #[derive(Debug, Default)]
 pub struct BarrelState {
-  /// Barrel module info (ModuleIdx -> Option<BarrelModuleState>)
   pub barrel_infos: FxHashMap<ModuleIdx, Option<BarrelModuleState>>,
-  /// Requested exports for barrel modules
   pub requested_exports: FxHashMap<ModuleIdx, ImportedExports>,
 }
 
-/// Wrapper for BarrelInfo with pending records
-#[derive(Debug, Default)]
-pub struct BarrelModuleState {
-  pub info: BarrelInfo,
-  pub tracked_records: FxHashMap<ImportRecordIdx, (ImportRecordStateInit, ResolvedId)>,
-}
-
-impl Deref for BarrelModuleState {
-  type Target = BarrelInfo;
-  fn deref(&self) -> &Self::Target {
-    &self.info
-  }
-}
-
-#[expect(clippy::implicit_hasher)]
-pub fn take_imported_specifiers(
-  rec_idx: ImportRecordIdx,
-  normal_module: &NormalModule,
-  needed_records: Option<&FxHashMap<ImportRecordIdx, ImportedExports>>,
-  all_imported_specifiers: &mut Option<FxHashMap<ImportRecordIdx, ImportedExports>>,
-) -> ImportedExports {
-  if let Some(imported_exports) = needed_records.and_then(|m| m.get(&rec_idx)) {
-    return imported_exports.clone();
-  }
-  let cache = all_imported_specifiers.get_or_insert_with(|| {
-    let mut result = FxHashMap::default();
-    for named_import in normal_module.named_imports.values() {
+impl BarrelState {
+  pub fn initialize_barrel_tracking(
+    &mut self,
+    module: &NormalModule,
+    barrel_info: &mut Option<BarrelInfo>,
+  ) -> (
+    FxHashMap<ImportRecordIdx, ImportedExports>,
+    Option<FxHashMap<ImportRecordIdx, ImportedExports>>,
+  ) {
+    let mut all_imported_specifiers = FxHashMap::default();
+    for named_import in module.named_imports.values() {
       match &named_import.imported {
         Specifier::Star => {
-          result.insert(named_import.record_idx, ImportedExports::All);
+          all_imported_specifiers.insert(named_import.record_idx, ImportedExports::All);
         }
-        Specifier::Literal(name) => match result.entry(named_import.record_idx) {
+        Specifier::Literal(name) => match all_imported_specifiers.entry(named_import.record_idx) {
           Entry::Occupied(mut occ) => {
             if let ImportedExports::Partial(set) = occ.get_mut() {
               set.insert(name.clone());
@@ -209,9 +175,24 @@ pub fn take_imported_specifiers(
         },
       }
     }
-    result
-  });
-  cache.remove(&rec_idx).unwrap_or(ImportedExports::Partial(FxHashSet::default()))
+
+    let initial_needed_records =
+      self.requested_exports.get(&module.idx).and_then(|imported_exports| {
+        barrel_info
+          .as_mut()
+          .and_then(|info| info.get_needed_records(imported_exports, &mut all_imported_specifiers))
+      });
+
+    (all_imported_specifiers, initial_needed_records)
+  }
+}
+
+/// Wrapper for BarrelInfo with pending records
+#[derive(Debug, Default)]
+pub struct BarrelModuleState {
+  pub info: BarrelInfo,
+  pub tracked_records: FxHashMap<ImportRecordIdx, (ImportRecordStateInit, ResolvedId)>,
+  pub remaining_imported_specifiers: FxHashMap<ImportRecordIdx, ImportedExports>,
 }
 
 /// Build BarrelInfo from EcmaView for lazy barrel optimization.

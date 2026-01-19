@@ -537,6 +537,8 @@ impl GenerateStage<'_> {
     // Generate cross-chunk exports. These must be computed before cross-chunk
     // imports because of export alias renaming, which must consider all export
     // aliases simultaneously to avoid collisions.
+    let preserve_export_names_modules =
+      std::mem::take(&mut chunk_graph.common_chunk_preserve_export_names_modules);
     for (chunk_id, chunk) in chunk_graph.chunk_table.iter_mut_enumerated() {
       if allow_to_minify_internal_exports {
         // Reference: https://github.com/rollup/rollup/blob/f76339428586620ff3e4c32fce48f923e7be7b05/src/utils/exportNames.ts#L5
@@ -560,6 +562,29 @@ impl GenerateStage<'_> {
             chunk.exports_to_other_chunks.entry(export_ref).or_default().push(name.clone());
             processed_entry_exports.insert(export_ref);
           });
+        }
+        // Also preserve exports from AllowExtension emitted chunks that were merged into this chunk
+        if let Some(modules) = preserve_export_names_modules.get(&chunk_id) {
+          let exported_chunk_symbols = &index_chunk_exported_symbols[chunk_id];
+          for &module_idx in modules {
+            let module_meta = &self.link_output.metas[module_idx];
+            module_meta.canonical_exports(false).for_each(|(name, export)| {
+              let export_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
+              // Use canonical ref for lookup since that's the key in exported_chunk_symbols
+              if !exported_chunk_symbols.contains_key(&export_ref)
+                || !self.link_output.used_symbol_refs.contains(&export_ref)
+              {
+                return;
+              }
+              // Skip if already processed (e.g., same symbol re-exported from multiple modules)
+              if processed_entry_exports.contains(&export_ref) {
+                return;
+              }
+              used_names.insert(name.clone());
+              chunk.exports_to_other_chunks.entry(export_ref).or_default().push(name.clone());
+              processed_entry_exports.insert(export_ref);
+            });
+          }
         }
         for (chunk_export, _predefined_names) in index_chunk_exported_symbols[chunk_id]
           .iter()

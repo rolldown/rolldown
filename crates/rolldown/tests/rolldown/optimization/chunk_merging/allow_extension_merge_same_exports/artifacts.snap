@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## index.js
 
 ```js
-import { n as value1, r as bar, t as value2 } from "./libs.js";
+import { bar, value1, value2 } from "./libs.js";
 import assert from "node:assert";
 
 //#region index.js
@@ -33,5 +33,5 @@ const value1 = "lib1-value";
 const value2 = "lib2-value";
 
 //#endregion
-export { value1 as n, bar as r, value2 as t };
+export { bar, value1, value2 };
 ```

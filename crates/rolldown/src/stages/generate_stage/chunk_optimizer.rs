@@ -415,9 +415,9 @@ impl GenerateStage<'_> {
           Some((*item, entry_module_idx))
         })
         .collect_vec();
-      // Sort by execution order to ensure deterministic output
+      // Sort by reverse execution order to match the naming order in deconflict_chunk_symbol
       chunk_entry_module_idxs.sort_by_cached_key(|(_idx, module_idx)| {
-        self.link_output.module_table[*module_idx].exec_order()
+        std::cmp::Reverse(self.link_output.module_table[*module_idx].exec_order())
       });
 
       let mut allocated_export_symbol = FxHashMap::default();
@@ -543,6 +543,15 @@ impl GenerateStage<'_> {
         );
         meta
       });
+
+      // Track emitted chunks so their export names are preserved (not minified)
+      if chunk_meta.contains(ChunkMeta::EmittedChunk) {
+        chunk_graph
+          .common_chunk_preserve_export_names_modules
+          .entry(target_chunk_idx)
+          .or_default()
+          .insert(entry_module);
+      }
 
       // If a chunk is not dynamically imported, we don't need to simulate a facade chunk.
       if !chunk_meta.contains(ChunkMeta::DynamicImported) {

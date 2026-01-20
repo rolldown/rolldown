@@ -10,8 +10,8 @@ use oxc::span::CompactStr;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
-  ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PreserveEntrySignatures,
-  RUNTIME_HELPER_NAMES, SymbolIdExt, SymbolRef, WrapKind,
+  ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
+  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, SymbolIdExt, SymbolRef, WrapKind,
 };
 use rolldown_utils::concat_string;
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
@@ -336,13 +336,22 @@ impl GenerateStage<'_> {
     chunk_graph
       .chunk_table
       .iter_enumerated()
-      // Skip removed chunks - they have been merged into other chunks
-      .filter(|(chunk_id, _)| !chunk_graph.removed_chunk_idx.contains(chunk_id))
+      // Skip chunks that are purely removed (merged into other chunks without preserving exports).
+      // Chunks with PreserveExports flag (e.g., emitted chunks merged into common chunks) are kept
+      // because their exports still need to be computed.
+      .filter(|(chunk_id, _)| {
+        !chunk_graph
+          .post_chunk_optimization_operations
+          .get(chunk_id)
+          .map(|flag| *flag == PostChunkOptimizationOperation::Removed)
+          .unwrap_or(false)
+      })
       .for_each(|(chunk_id, chunk)| {
         match chunk.kind {
           ChunkKind::EntryPoint { module: module_idx, meta, .. } => {
             let is_dynamic_imported = meta.contains(ChunkMeta::DynamicImported);
-            let is_user_defined = meta.contains(ChunkMeta::UserDefinedEntry);
+            let is_user_defined =
+              meta.intersects(ChunkMeta::UserDefinedEntry | ChunkMeta::EmittedChunk);
 
             let normalized_entry_signatures = normalize_preserve_entry_signature(
               &self.link_output.overrode_preserve_entry_signature_map,
@@ -528,6 +537,8 @@ impl GenerateStage<'_> {
     // Generate cross-chunk exports. These must be computed before cross-chunk
     // imports because of export alias renaming, which must consider all export
     // aliases simultaneously to avoid collisions.
+    let preserve_export_names_modules =
+      std::mem::take(&mut chunk_graph.common_chunk_preserve_export_names_modules);
     for (chunk_id, chunk) in chunk_graph.chunk_table.iter_mut_enumerated() {
       if allow_to_minify_internal_exports {
         // Reference: https://github.com/rollup/rollup/blob/f76339428586620ff3e4c32fce48f923e7be7b05/src/utils/exportNames.ts#L5
@@ -551,6 +562,29 @@ impl GenerateStage<'_> {
             chunk.exports_to_other_chunks.entry(export_ref).or_default().push(name.clone());
             processed_entry_exports.insert(export_ref);
           });
+        }
+        // Also preserve exports from AllowExtension emitted chunks that were merged into this chunk
+        if let Some(modules) = preserve_export_names_modules.get(&chunk_id) {
+          let exported_chunk_symbols = &index_chunk_exported_symbols[chunk_id];
+          for &module_idx in modules {
+            let module_meta = &self.link_output.metas[module_idx];
+            module_meta.canonical_exports(false).for_each(|(name, export)| {
+              let export_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
+              // Use canonical ref for lookup since that's the key in exported_chunk_symbols
+              if !exported_chunk_symbols.contains_key(&export_ref)
+                || !self.link_output.used_symbol_refs.contains(&export_ref)
+              {
+                return;
+              }
+              // Skip if already processed (e.g., same symbol re-exported from multiple modules)
+              if processed_entry_exports.contains(&export_ref) {
+                return;
+              }
+              used_names.insert(name.clone());
+              chunk.exports_to_other_chunks.entry(export_ref).or_default().push(name.clone());
+              processed_entry_exports.insert(export_ref);
+            });
+          }
         }
         for (chunk_export, _predefined_names) in index_chunk_exported_symbols[chunk_id]
           .iter()

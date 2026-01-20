@@ -8,7 +8,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ExportsKind, ImportKind, ImportRecordIdx,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason,
   PreserveEntrySignatures, SymbolRef, WrapKind,
 };
@@ -83,8 +83,19 @@ impl GenerateStage<'_> {
           ChunkKind::EntryPoint {
             meta: {
               let mut meta = ChunkMeta::default();
-              meta.set(ChunkMeta::UserDefinedEntry, module.is_user_defined_entry);
+              meta.set(
+                ChunkMeta::UserDefinedEntry,
+                matched_entry
+                  .map(|entry_point| matches!(entry_point.kind, EntryPointKind::UserDefined))
+                  .unwrap_or(false),
+              );
               meta.set(ChunkMeta::DynamicImported, !module.dynamic_importers.is_empty());
+              meta.set(
+                ChunkMeta::EmittedChunk,
+                matched_entry
+                  .map(|entry_point| entry_point.kind.is_emitted_user_defined())
+                  .unwrap_or(false),
+              );
               meta
             },
             bit: count,
@@ -690,7 +701,10 @@ impl GenerateStage<'_> {
         ChunkKind::EntryPoint {
           meta: {
             let mut meta = ChunkMeta::default();
-            meta.set(ChunkMeta::UserDefinedEntry, module.is_user_defined_entry);
+            meta.set(
+              ChunkMeta::UserDefinedEntry,
+              matches!(entry_point.kind, EntryPointKind::UserDefined),
+            );
             meta.set(ChunkMeta::DynamicImported, !module.dynamic_importers.is_empty());
             meta.set(ChunkMeta::EmittedChunk, entry_point.kind.is_emitted_user_defined());
             meta

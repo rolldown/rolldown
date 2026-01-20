@@ -19,6 +19,7 @@
     "@rolldown/test-side-effects-field": "link:./package-fixtures/test-side-effects-field",
     "@rolldown/test-side-effects-field-glob": "file:./package-fixtures/test-side-effects-field-glob",
     "@types/node": "catalog:",
+    "source-map-js": "^1.2.1",
     "tsx": "catalog:"
   },
   "exports": {

@@ -53,7 +53,7 @@ export default defineTest({
     `);
     expect(emittedChunkFilenames).toMatchInlineSnapshot(`
       [
-        "main-with-name-C87_COi0.js",
+        "main-with-name-CKJu0JRS.js",
         "main-with-fileName.js",
       ]
     `);

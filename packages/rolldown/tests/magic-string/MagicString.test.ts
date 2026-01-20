@@ -1,5 +1,6 @@
 // @ts-nocheck
 import assert from 'node:assert';
+import { SourceMapConsumer } from 'source-map-js';
 import { BindingMagicString as MagicString } from 'rolldown';
 import { describe, it } from 'vitest';
 
@@ -206,7 +207,7 @@ describe('MagicString', () => {
     });
   });
 
-  describe.skip('generateMap', () => {
+  describe('generateMap', () => {
     it('should generate a sourcemap', () => {
       const s = new MagicString('abcdefghijkl').remove(3, 9);
 
@@ -279,7 +280,7 @@ describe('MagicString', () => {
       assert.equal(originLoc.column, 0);
     });
 
-    it('should generate a correct sourcemap including correct lines', () => {
+    it.skip('should generate a correct sourcemap including correct lines', () => {
       const s = new MagicString('var answer = 42;\nconsole.log("the answer is %s", answer);');
       s.append('\n\n\n\n}).call(global);');
       assert.equal(
@@ -290,7 +291,7 @@ describe('MagicString', () => {
       );
     });
 
-    it('should generate a sourcemap using specified locations', () => {
+    it.skip('should generate a sourcemap using specified locations', () => {
       const s = new MagicString('abcdefghijkl');
 
       s.addSourcemapLocation(0);
@@ -365,7 +366,7 @@ describe('MagicString', () => {
       assert.deepEqual(m1, m2);
     });
 
-    it('should recover original names', () => {
+    it.skip('should recover original names', () => {
       const s = new MagicString('function Foo () {}');
 
       s.overwrite(9, 12, 'Bar', { storeName: true });
@@ -423,7 +424,7 @@ describe('MagicString', () => {
       });
     });
 
-    it('generates a map with trimmed content (#53)', () => {
+    it.skip('generates a map with trimmed content (#53)', () => {
       const s1 = new MagicString('abcdefghijkl ').trim();
       const map1 = s1.generateMap({
         file: 'output',
@@ -470,7 +471,7 @@ describe('MagicString', () => {
       assert.equal(map.mappings, 'IAAA');
     });
 
-    it('generates x_google_ignoreList', () => {
+    it.skip('generates x_google_ignoreList', () => {
       const s = new MagicString('function foo(){}', {
         ignoreList: true,
       });
@@ -518,7 +519,7 @@ describe('MagicString', () => {
       assert.equal(loc.column, 33);
     });
 
-    it('generates segments per word boundary with hires "boundary" in the next line', () => {
+    it.skip('generates segments per word boundary with hires "boundary" in the next line', () => {
       const s = new MagicString('// foo\nconsole.log("bar")');
 
       // rename bar to hello
@@ -545,7 +546,7 @@ describe('MagicString', () => {
       assert.equal(loc.column, 12);
     });
 
-    it('generates a correct source map with update using a content containing a new line', () => {
+    it.skip('generates a correct source map with update using a content containing a new line', () => {
       const s = new MagicString('foobar');
       s.update(3, 4, '\nbb');
       assert.equal(s.toString(), 'foo\nbbar');
@@ -567,7 +568,7 @@ describe('MagicString', () => {
       assert.equal(loc4.column, 4);
     });
 
-    it('generates a correct source map with update using content ending with a new line', () => {
+    it.skip('generates a correct source map with update using content ending with a new line', () => {
       const s = new MagicString('foobar');
       s.update(2, 3, 'od\n');
       s.update(4, 5, 'a\nnd\n');
@@ -962,7 +963,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'ABCDEFGHIJKL');
     });
 
-    it.skip('does not replace zero-length inserts at overwrite start location', () => {
+    it('does not replace zero-length inserts at overwrite start location', () => {
       const s = new MagicString('abcdefghijkl');
 
       s.remove(0, 6);
@@ -1103,7 +1104,7 @@ describe('MagicString', () => {
       assert.equal(s.toString(), 'ABCDEFGHIJKL');
     });
 
-    it.skip('does not replace zero-length inserts at update start location', () => {
+    it('does not replace zero-length inserts at update start location', () => {
       const s = new MagicString('abcdefghijkl');
 
       s.remove(0, 6);

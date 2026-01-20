@@ -6,6 +6,7 @@ import { rolldown } from './rolldown';
 /**
  * The options for {@linkcode build} function.
  *
+ * @experimental
  * @category Programmatic APIs
  */
 export type BuildOptions = InputOptions & {
@@ -48,6 +49,7 @@ async function build(options: BuildOptions[]): Promise<RolldownOutput[]>;
  * console.log(result);
  * ```
  *
+ * @experimental
  * @category Programmatic APIs
  */
 async function build(

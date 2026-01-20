@@ -38,6 +38,27 @@ class CustomThemeContext extends MarkdownThemeContext {
         // Remove the `**`Experimental`**` text that comes from `@experimental` tag
         return result.replace(/\*\*`Experimental`\*\*/g, '');
       },
+      signatureTitle: (model, _options) => {
+        const md: string[] = [];
+
+        const params = (model.parameters || [])
+          .map((param: any) => {
+            const optional = param.flags?.isOptional ? '?' : '';
+            const type = this.partials.someType(param.type);
+            return `\`${param.name}${optional}\`: ${type}`;
+          })
+          .join(', ');
+
+        const returnType = model.type ? this.partials.someType(model.type) : '`void`';
+
+        md.push(`- **Type**: (${params}) => ${returnType}`);
+
+        if (model.comment?.modifierTags?.has('@experimental')) {
+          md.push('- **Experimental**');
+        }
+
+        return md.join('\n');
+      },
       declarationTitle: (model) => {
         // https://github.com/typedoc2md/typedoc-plugin-markdown/blob/typedoc-plugin-markdown%404.9.0/packages/typedoc-plugin-markdown/src/theme/context/partials/member.declarationTitle.ts#L6
         const md: string[] = [];

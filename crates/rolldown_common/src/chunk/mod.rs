@@ -7,7 +7,9 @@ use crate::{
   ChunkIdx, ChunkKind, FilenameTemplate, ImportRecordIdx, ModuleIdx, ModuleTable, NamedImport,
   NormalModule, NormalizedBundlerOptions, OutputExports, PreserveEntrySignatures,
   RenderedConcatenatedModuleParts, RollupPreRenderedChunk, RuntimeHelper, SymbolRef,
-  chunk::types::{chunk_reason_type::ChunkReasonType, module_group::ModuleGroup},
+  chunk::types::{
+    chunk_debug_info::ChunkDebugInfo, chunk_reason_type::ChunkReasonType, module_group::ModuleGroup,
+  },
 };
 pub mod chunk_table;
 pub mod types;
@@ -38,6 +40,21 @@ bitflags::bitflags! {
         const UserDefinedEntry = 1 << 1;
         /// `true` if the chunk was emitted via `this.emitFile({ type: 'chunk' })`
         const EmittedChunk = 1 << 2;
+    }
+}
+
+bitflags::bitflags! {
+  /// Tracks post-optimization operations applied to chunks during code splitting.
+  #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+    pub struct PostChunkOptimizationOperation: u8 {
+        /// The chunk has been removed and merged into another chunk.
+        /// e.g., a dynamic chunk merged into a common chunk or user-defined entry chunk.
+        const Removed = 1;
+        /// The chunk's exports should be preserved in the target chunk.
+        /// e.g., an emitted chunk with `preserveEntrySignatures: 'allow-extension'` merged into
+        /// a manual chunks group - all exports should be preserved even though the original
+        /// emitted chunk is removed.
+        const PreserveExports = 1 << 1;
     }
 }
 
@@ -82,7 +99,7 @@ pub struct Chunk {
   pub import_symbol_from_external_modules: FxIndexSet<ModuleIdx>,
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Vec<CompactStr>>,
   pub input_base: ArcStr,
-  pub create_reasons: Vec<String>,
+  pub debug_info: Vec<ChunkDebugInfo>,
   pub chunk_reason_type: Box<ChunkReasonType>,
   pub preserve_entry_signature: Option<PreserveEntrySignatures>,
   pub depended_runtime_helper: RuntimeHelper,

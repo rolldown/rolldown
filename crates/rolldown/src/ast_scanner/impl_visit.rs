@@ -318,22 +318,10 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       if should_warn && it.meta.name == "import" && it.property.name == "meta" {
         self.result.warnings.push(
           BuildDiagnostic::empty_import_meta(
-            self
-              .immutable_ctx
-              .id
-              .as_arc_str()
-              .clone()
-              .parse()
-              .expect("should be a valid resource id"),
+            self.immutable_ctx.id.to_string(),
             self.immutable_ctx.source.clone(),
             it.span(),
-            self
-              .immutable_ctx
-              .options
-              .format
-              .to_string()
-              .parse()
-              .expect("should be a valid format"),
+            self.immutable_ctx.options.format.as_str().into(),
             parent.as_member_expression_kind().is_some_and(|member_expr| {
               member_expr.static_property_name().is_some_and(|static_name| static_name == "url")
             }),

@@ -2,24 +2,6 @@
 
 Rolldown provides three main API functions for bundling your code programmatically.
 
-## `build()`
-
-`build()` is the simplest option for most use cases. The API is similar to esbuild's `build` function. It bundles and writes in a single call with automatic cleanup.
-
-```js
-import { build } from 'rolldown';
-
-const result = await build({
-  input: 'src/main.js',
-  output: {
-    file: 'bundle.js',
-  },
-});
-console.log(result);
-```
-
-See [its reference](/reference/Function.build) for more details.
-
 ## `rolldown()`
 
 `rolldown()` is the API compatible with Rollup's `rollup` function.
@@ -70,3 +52,27 @@ watcher.close();
 ```
 
 See [its reference](/reference/Function.watch) for more details.
+
+## `build()`
+
+::: warning Experimental
+
+This API is experimental and may change in patch releases.
+
+:::
+
+`build()` is the simplest option for most use cases. The API is similar to esbuild's `build` function. It bundles and writes in a single call with automatic cleanup.
+
+```js
+import { build } from 'rolldown';
+
+const result = await build({
+  input: 'src/main.js',
+  output: {
+    file: 'bundle.js',
+  },
+});
+console.log(result);
+```
+
+See [its reference](/reference/Function.build) for more details.

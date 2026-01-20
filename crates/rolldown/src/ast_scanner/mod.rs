@@ -709,10 +709,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           .insert(record_idx, ImportAttribute::from_with_clause(with_clause));
       }
       self.result.imports.insert(decl.span, record_idx);
-      // `export {} from '...'`
-      if decl.specifiers.is_empty() {
-        self.result.import_records[record_idx].meta.insert(ImportRecordMeta::IsPlainImport);
-      }
     } else {
       decl.specifiers.iter().for_each(|spec| {
         if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {
@@ -862,10 +858,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         .insert(rec_id, ImportAttribute::from_with_clause(with_clause));
     }
     self.result.imports.insert(decl.span, rec_id);
-    // // `import '...'` or `import {} from '...'`
-    if decl.specifiers.as_ref().is_none_or(|s| s.is_empty()) {
-      self.result.import_records[rec_id].meta.insert(ImportRecordMeta::IsPlainImport);
-    }
 
     let Some(specifiers) = &decl.specifiers else { return };
     specifiers.iter().for_each(|spec| match spec {

@@ -159,6 +159,12 @@ export type RenderedChunkMeta = {
    * This is useful to explore the entire chunk graph.
    */
   chunks: Record<string, RenderedChunk>;
+  /**
+   * A lazily-created MagicString instance for the chunk's code.
+   * Use this to perform string transformations with automatic source map support.
+   * This is only available when `experimental.nativeMagicString` is enabled.
+   */
+  magicString?: BindingMagicString;
 };
 
 /** @category Plugin APIs */
@@ -387,8 +393,9 @@ export interface FunctionPluginHooks {
   ) =>
     | NullValue
     | string
+    | BindingMagicString
     | {
-        code: string;
+        code: string | BindingMagicString;
         map?: SourceMapInput;
       };
 

@@ -39,18 +39,16 @@ pub struct ImportRecordStateResolved {
 bitflags::bitflags! {
   #[derive(Debug, Clone, Copy)]
   pub struct ImportRecordMeta: u16 {
-    /// If it is `import {} from '...'` or `import '...'`
-    const IsPlainImport = 1;
     /// the import is inserted during ast transformation, can't get source slice from the original source file
-    const IsUnspannedImport = 1 << 1;
+    const IsUnspannedImport = 1 << 0;
     /// `export * from 'mod'` only
-    const IsExportStar = 1 << 2;
+    const IsExportStar = 1 << 1;
     ///  Tell the finalizer to use the runtime "__require()" instead of "require()"
-    const CallRuntimeRequire = 1 << 3;
+    const CallRuntimeRequire = 1 << 2;
     ///  `require('mod')` is used to load the module only
-    const IsRequireUnused = 1 << 4;
+    const IsRequireUnused = 1 << 3;
     /// if the import record is in a try-catch block
-    const InTryCatchBlock = 1 << 5;
+    const InTryCatchBlock = 1 << 4;
     /// Whether it is a pure dynamic import, aka a dynamic import only reference a module without using
     /// its exports e.g.
     /// ```js
@@ -58,15 +56,15 @@ bitflags::bitflags! {
     /// import('mod').then(mod => {});
     /// const a = await import('mod'); // the a is never be referenced
     /// ```
-    const PureDynamicImport = 1 << 6;
+    const PureDynamicImport = 1 << 5;
     /// Whether it is a pure dynamic import referenced a side effect free module
-    const DeadDynamicImport = 1 << 7;
+    const DeadDynamicImport = 1 << 6;
     /// Whether the import is a top level import
-    const IsTopLevel = 1 << 8;
-    const JsonModule = 1 << 9;
+    const IsTopLevel = 1 << 7;
+    const JsonModule = 1 << 8;
     /// If a record is a re-export-all from an external module, and that re-export-all chain continues uninterrupted to the entry point,
     /// we can reuse the original re-export-all declaration instead of generating complex interoperability code.
-    const EntryLevelExternal = 1 << 10;
+    const EntryLevelExternal = 1 << 9;
 
     const TopLevelPureDynamicImport = Self::IsTopLevel.bits() | Self::PureDynamicImport.bits();
   }

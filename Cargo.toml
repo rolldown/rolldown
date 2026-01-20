@@ -145,7 +145,7 @@ dashmap = "6.1.0"
 derive_more = { version = "2.0.1", features = ["debug"] }
 dunce = "1.0.5" # Normalize Windows paths to the most compatible format, avoiding UNC where possible
 fast-glob = "1.0.0"
-flate2 = { version = "=1.1.5", features = ["zlib-rs"] }
+flate2 = { version = "=1.1.8", features = ["zlib-rs"] }
 form_urlencoded = "1.2.1"
 futures = "0.3.31"
 glob = "0.3.2"
@@ -158,7 +158,7 @@ itertools = "0.14.0"
 itoa = "1.0.15"
 json-escape-simd = "3"
 json-strip-comments = "3"
-jsonschema = { version = "0.38.0", default-features = false }
+jsonschema = { version = "0.40.0", default-features = false }
 memchr = "2.7.4"
 mimalloc-safe = "0.1.52"
 mime = "0.3.17"
@@ -214,7 +214,7 @@ napi-build = { version = "2.2.2" }
 napi-derive = { version = "3.0.0", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-oxc = { version = "0.108.0", features = [
+oxc = { version = "0.110.0", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -226,12 +226,12 @@ oxc = { version = "0.108.0", features = [
   "regular_expression",
   "cfg",
 ] }
-oxc_allocator = { version = "0.108.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.108.0" }
-oxc_minify_napi = { version = "0.108.0" }
-oxc_parser_napi = { version = "0.108.0" }
-oxc_transform_napi = { version = "0.108.0" }
-oxc_traverse = { version = "0.108.0" }
+oxc_allocator = { version = "0.110.0", features = ["pool"] }
+oxc_ecmascript = { version = "0.110.0" }
+oxc_minify_napi = { version = "0.110.0" }
+oxc_parser_napi = { version = "0.110.0" }
+oxc_transform_napi = { version = "0.110.0" }
+oxc_traverse = { version = "0.110.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

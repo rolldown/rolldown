@@ -83,6 +83,7 @@ const sidebarForInDepth: DefaultTheme.SidebarItem[] = [
         link: '/in-depth/why-plugin-hook-filter.md',
       },
       { text: 'Directives', link: '/in-depth/directives.md' },
+      { text: 'Lazy Barrel', link: '/in-depth/lazy-barrel.md' },
     ],
   },
 ];

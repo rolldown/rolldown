@@ -3416,6 +3416,7 @@ dependencies = [
  "owo-colors",
  "oxc_resolver",
  "parking_lot",
+ "pnp",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_plugin_utils",

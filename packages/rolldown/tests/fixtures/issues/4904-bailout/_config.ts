@@ -8,7 +8,7 @@ export default defineTest({
   },
   afterTest(output) {
     let o = output.output;
-    // no merging optimization applied
-    expect(o.length).toBe(4);
+    // Entry modules stay in their entry chunk, so dynamic import of mod1 reuses the entry chunk
+    expect(o.length).toBe(3);
   },
 });

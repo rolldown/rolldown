@@ -19,7 +19,7 @@ export * as fromB from "./b";
 ```
 ### rolldown
 ```js
-import { n as b_exports } from "./b2.js";
+import { t as b_exports } from "./b.js";
 
 //#region a.js
 var a_default = 123;
@@ -51,7 +51,7 @@ export { Class, Class as Cls, Class2 as Cls2, Func2 as Fn2, Func, constName, a_d
 -export class Class {}
 -export * from "./a";
 -export * as fromB from "./b";
-+import {n as b_exports} from "./b2.js";
++import {t as b_exports} from "./b.js";
 +var a_default = 123;
 +var varName = 234;
 +var letName = 234;
@@ -71,19 +71,28 @@ export default function() {
 ```
 ### rolldown
 ```js
-import { t as b_default } from "./b2.js";
+import { t as __exportAll } from "./chunk.js";
 
-export { b_default as default };
+//#region b.js
+var b_exports = /* @__PURE__ */ __exportAll({ default: () => b_default });
+function b_default() {}
+
+//#endregion
+export { b_default as default, b_exports as t };
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/b.js
 +++ rolldown	b.js
-@@ -1,1 +1,2 @@
+@@ -1,1 +1,6 @@
 -export default function () {}
-+import {t as b_default} from "./b2.js";
-+export {b_default as default};
++import {t as __exportAll} from "./chunk.js";
++var b_exports = __exportAll({
++    default: () => b_default
++});
++function b_default() {}
++export {b_default as default, b_exports as t};
 
 ```
 ## /out/c.js

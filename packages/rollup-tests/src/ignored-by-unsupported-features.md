@@ -209,6 +209,7 @@
  - rollup@function@circular-namespace-reexport-manual-chunks: correctly handles namespace reexports with circular dependencies when using manual chunks
  - rollup@function@emit-chunk-manual-asset-source: supports setting asset sources as side effect of the manual chunks option
  - rollup@function@emit-chunk-manual: supports emitting chunks as side effect of the manual chunks option
+ - rollup@function@manual-chunks-order: sorts manual chunks by entry index
 
 ### The `format: amd` not supported
  - rollup@function@amd-auto-id-id: throws when using both the amd.autoId and the amd.id option

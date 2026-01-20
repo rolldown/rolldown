@@ -19,8 +19,8 @@ var init_json = __esmMin((() => {
 //#endregion
 //#region commonjs.js
 var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports) => {
-	var __importDefault = exports && exports.__importDefault || function(mod$1) {
-		return mod$1 && mod$1.__esModule ? mod$1 : { "default": mod$1 };
+	var __importDefault = exports && exports.__importDefault || function(mod) {
+		return mod && mod.__esModule ? mod : { "default": mod };
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
 	const timezones_json_1 = __importDefault((init_json(), __toCommonJS(json_exports)));

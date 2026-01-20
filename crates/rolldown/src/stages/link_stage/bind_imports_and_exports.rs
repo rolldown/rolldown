@@ -433,6 +433,7 @@ impl LinkStage<'_> {
                             .to_vec(),
                           depended_refs: vec![],
                           target_commonjs_exported_symbol: None,
+                          reference_id: member_expr_ref.reference_id,
                         },
                       );
                     }
@@ -464,6 +465,7 @@ impl LinkStage<'_> {
                           .to_vec(),
                         depended_refs: vec![],
                         target_commonjs_exported_symbol: None,
+                        reference_id: member_expr_ref.reference_id,
                       },
                     );
                     return;
@@ -557,6 +559,7 @@ impl LinkStage<'_> {
                         .to_vec(),
                       depended_refs,
                       target_commonjs_exported_symbol,
+                      reference_id: member_expr_ref.reference_id,
                     },
                   );
                 }

@@ -33,11 +33,11 @@ var init_b = __esmMin((async () => {
 
 //#endregion
 //#region a.js
-var a_exports = /* @__PURE__ */ __exportAll({ buildDevConfig: () => buildDevConfig$1 });
-var buildDevConfig$1;
+var a_exports = /* @__PURE__ */ __exportAll({ buildDevConfig: () => buildDevConfig });
+var buildDevConfig;
 var init_a = __esmMin((async () => {
 	await init_b();
-	buildDevConfig$1 = async () => {
+	buildDevConfig = async () => {
 		return await getEnv();
 	};
 }));

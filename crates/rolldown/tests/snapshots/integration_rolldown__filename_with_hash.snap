@@ -2603,11 +2603,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-CrauLHte.js
+- entry-!~{000}~.js => entry-tEtg6B_q.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-CrauLHte.js
+- entry-!~{000}~.js => entry-tEtg6B_q.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2670,7 +2670,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-B7_l_3oi.js
+- entry-!~{000}~.js => entry-CqUtdBOy.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -2848,7 +2848,7 @@ expression: output
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
-- entry-!~{000}~.js => entry-CXRi4Jru.js
+- entry-!~{000}~.js => entry-4X9_mU74.js
 
 # tests/esbuild/lower/static_class_block_es2021
 
@@ -3757,7 +3757,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/optimize_interop_default_with_cjs_bailout
 
-- main-!~{000}~.js => main-8ZYRGaT0.js
+- main-!~{000}~.js => main-C3sXF3iC.js
 
 # tests/rolldown/cjs_compat/optimize_interop_default_with_cjs_bailout2
 
@@ -5843,8 +5843,8 @@ expression: output
 
 # tests/rolldown/topics/deconflict/basic_scoped
 
-- main-!~{000}~.js => main-BykqzF8f.js
-- main-BykqzF8f.js.map
+- main-!~{000}~.js => main-DSjWo8hf.js
+- main-DSjWo8hf.js.map
 
 # tests/rolldown/topics/deconflict/cjs
 
@@ -5852,8 +5852,8 @@ expression: output
 
 # tests/rolldown/topics/deconflict/complex_params_patterns
 
-- main-!~{000}~.js => main-DlJgORpB.js
-- main-DlJgORpB.js.map
+- main-!~{000}~.js => main-D6zZDeU_.js
+- main-D6zZDeU_.js.map
 
 # tests/rolldown/topics/deconflict/conflict_between_global_and_local_binding
 
@@ -5898,7 +5898,7 @@ expression: output
 
 # tests/rolldown/topics/deconflict/issue_6586_generated_name_conflict
 
-- main-!~{000}~.js => main-ws3xCbUh.js
+- main-!~{000}~.js => main-wQwf-Fck.js
 
 # tests/rolldown/topics/deconflict/issue_same_module_shadowing
 
@@ -5911,6 +5911,10 @@ expression: output
 # tests/rolldown/topics/deconflict/nested_scope_same_module_conflict
 
 - main-!~{000}~.js => main-BhFYWpr2.js
+
+# tests/rolldown/topics/deconflict/preserve_shadowing_param_name
+
+- main-!~{000}~.js => main-Cys6YG2P.js
 
 # tests/rolldown/topics/deconflict/unreferenced_renamed_conflict
 
@@ -6202,7 +6206,7 @@ expression: output
 
 # tests/rolldown/topics/tla/inline_dynamic_import
 
-- main-!~{000}~.js => main-2KQy6duY.js
+- main-!~{000}~.js => main-CwmTCtKS.js
 
 # tests/rolldown/topics/tla/inside_try_block
 
@@ -6484,9 +6488,13 @@ expression: output
 
 - main-!~{000}~.js => main-CbomYEvm.js
 
+# tests/rollup/argument-treeshaking-parameter-conflict
+
+- main-!~{000}~.js => main-CJ0Q65zA.js
+
 # tests/rollup/assignment-patterns
 
-- main-!~{000}~.js => main-DIFcGTUW.js
+- main-!~{000}~.js => main-DOePhWmr.js
 
 # tests/rollup/catch-block-scope
 

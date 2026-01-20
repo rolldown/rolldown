@@ -239,23 +239,22 @@ impl<'name> Renamer<'name> {
   }
 
   pub fn create_conflictless_name(&mut self, hint: &str) -> String {
-    // Try the hint directly first
-    if let Entry::Vacant(entry) = self.used_canonical_names.entry(CompactStr::new(hint)) {
-      entry.insert(0);
-      return hint.to_string();
-    }
-
-    // Find alternative: hint$1, hint$2, ...
-    for count in 1u32.. {
-      let name: CompactStr = concat_string!(hint, "$", itoa::Buffer::new().format(count)).into();
-
-      if let Entry::Vacant(entry) = self.used_canonical_names.entry(name) {
-        let result = entry.key().to_string();
-        entry.insert(0);
-        return result;
+    let mut conflictless_name = CompactStr::new(hint);
+    loop {
+      match self.used_canonical_names.entry(conflictless_name.clone()) {
+        Entry::Occupied(mut occ) => {
+          let next_conflict_index = occ.get() + 1;
+          *occ.get_mut() = next_conflict_index;
+          conflictless_name =
+            concat_string!(hint, "$", itoa::Buffer::new().format(next_conflict_index)).into();
+        }
+        Entry::Vacant(vac) => {
+          vac.insert(CanonicalNameInfo::default());
+          break;
+        }
       }
     }
-    unreachable!()
+    conflictless_name.to_string()
   }
 
   pub fn register_nested_scope_symbols(&mut self, symbol_ref: SymbolRef, original_name: &str) {

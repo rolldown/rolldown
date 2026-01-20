@@ -83,6 +83,7 @@ const sidebarForInDepth: DefaultTheme.SidebarItem[] = [
         link: '/in-depth/why-plugin-hook-filter.md',
       },
       { text: 'Directives', link: '/in-depth/directives.md' },
+      { text: 'Lazy Barrel Optimization', link: '/in-depth/lazy-barrel-optimization.md' },
     ],
   },
 ];
@@ -197,6 +198,7 @@ const sidebarForGlossary: DefaultTheme.SidebarItem[] = [
   {
     text: 'Glossary',
     items: [
+      { text: 'Barrel Module', link: '/glossary/barrel-module.md' },
       { text: 'Entry', link: '/glossary/entry.md' },
       { text: 'Entry Chunk', link: '/glossary/entry-chunk.md' },
       { text: 'Entry Name', link: '/glossary/entry-name.md' },

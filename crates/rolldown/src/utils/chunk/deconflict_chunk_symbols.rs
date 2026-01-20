@@ -201,7 +201,8 @@ fn rename_shadowing_symbols_in_nested_scopes<'a>(
   link_output: &'a LinkStageOutput,
   renamer: &mut Renamer<'a>,
 ) {
-  for module_idx in chunk.modules.iter().copied() {
+  // Same as above, starts with entry module to give entry module symbols naming priority.
+  for module_idx in chunk.modules.iter().copied().rev() {
     let Some(module) = link_output.module_table[module_idx].as_normal() else {
       continue;
     };

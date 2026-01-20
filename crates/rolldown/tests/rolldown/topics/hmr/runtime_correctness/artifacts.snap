@@ -46,7 +46,7 @@ var require_cjs_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	};
 	console.log(Noop);
 	{
-		const exports$1 = {};
+		const exports$2 = {};
 		exports.qux = "qux";
 	}
 }));
@@ -68,11 +68,11 @@ var require_umd_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			root.umdLib = umdLib();
 		}
 	})(exports, function() {
-		const exports$2 = function() {
+		const exports$1 = function() {
 			return "exports";
 		};
-		exports$2.foo = "foo";
-		return exports$2;
+		exports$1.foo = "foo";
+		return exports$1;
 	});
 }));
 

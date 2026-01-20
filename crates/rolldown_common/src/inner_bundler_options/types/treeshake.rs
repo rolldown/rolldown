@@ -69,6 +69,10 @@ impl NormalizedTreeshakeOptions {
     self.as_ref().and_then(|item| item.unknown_global_side_effects).unwrap_or(true)
   }
 
+  pub fn invalid_import_side_effects(&self) -> bool {
+    self.as_ref().and_then(|item| item.invalid_import_side_effects).unwrap_or(true)
+  }
+
   pub fn commonjs(&self) -> bool {
     self.as_ref().and_then(|item| item.commonjs).unwrap_or(true)
   }
@@ -206,6 +210,7 @@ pub struct InnerOptions {
   pub commonjs: Option<bool>,
   pub property_read_side_effects: Option<PropertyReadSideEffects>,
   pub property_write_side_effects: Option<PropertyWriteSideEffects>,
+  pub invalid_import_side_effects: Option<bool>,
 }
 
 impl Default for InnerOptions {
@@ -218,6 +223,7 @@ impl Default for InnerOptions {
       commonjs: None,
       property_read_side_effects: None,
       property_write_side_effects: None,
+      invalid_import_side_effects: None,
     }
   }
 }
@@ -252,7 +258,7 @@ impl From<&NormalizedTreeshakeOptions> for oxc::minifier::TreeShakeOptions {
       //   PropertyWriteSideEffects::False => oxc::minifier::PropertyWriteSideEffects::None,
       // },
       unknown_global_side_effects: value.unknown_global_side_effects(),
-      invalid_import_side_effects: true,
+      invalid_import_side_effects: value.invalid_import_side_effects(),
     }
   }
 }

@@ -924,6 +924,12 @@
               "type": "null"
             }
           ]
+        },
+        "invalidImportSideEffects": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

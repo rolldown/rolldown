@@ -351,6 +351,7 @@ where
         commonjs: Some(true),
         property_read_side_effects: None,
         property_write_side_effects: None,
+        invalid_import_side_effects: None,
       }))
     }
     Some(Value::Object(obj)) => {
@@ -375,12 +376,21 @@ where
           _ => Err(serde::de::Error::custom("commonjs should be a `true` or `false`")),
         },
       )?;
-      let unknown_global_side_effects = obj.get("unknown_global_side_effects").map_or_else(
+      let unknown_global_side_effects = obj.get("unknownGlobalSideEffects").map_or_else(
+        || Ok(Some(true)),
+        |v| match v {
+          Value::Bool(b) => Ok(Some(*b)),
+          _ => {
+            Err(serde::de::Error::custom("unknownGlobalSideEffects should be a `true` or `false`"))
+          }
+        },
+      )?;
+      let invalid_import_side_effects = obj.get("invalidImportSideEffects").map_or_else(
         || Ok(Some(true)),
         |v| match v {
           Value::Bool(b) => Ok(Some(*b)),
           _ => Err(serde::de::Error::custom(
-            "unknown_global_side_effects should be a `true` or `false`",
+            "invalid_import_side_effects should be a `true` or `false`",
           )),
         },
       )?;
@@ -434,6 +444,7 @@ where
         commonjs,
         property_read_side_effects,
         property_write_side_effects,
+        invalid_import_side_effects,
       }))
     }
     _ => Err(serde::de::Error::custom("treeshake should be a boolean or an object")),

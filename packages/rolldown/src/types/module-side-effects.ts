@@ -114,6 +114,14 @@ export type TreeshakingOptions = {
    */
   unknownGlobalSideEffects?: boolean;
   /**
+   * Whether to assume that invalid import statements might have side effects.
+   *
+   * See [related Oxc documentation](https://oxc.rs/docs/guide/usage/minifier/dead-code-elimination#ignoring-invalid-import-statement-side-effects) for more details.
+   *
+   * @default true
+   */
+  invalidImportSideEffects?: boolean;
+  /**
    * Whether to enable tree-shaking for CommonJS modules. When `true`, unused exports from CommonJS modules can be eliminated from the bundle, similar to ES modules. When disabled, CommonJS modules will always be included in their entirety.
    *
    * This option allows rolldown to analyze `exports.property` assignments in CommonJS modules and remove unused exports while preserving the module's side effects.

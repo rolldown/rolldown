@@ -2351,6 +2351,7 @@ export interface BindingTreeshake {
   annotations?: boolean
   manualPureFunctions?: ReadonlyArray<string>
   unknownGlobalSideEffects?: boolean
+  invalidImportSideEffects?: boolean
   commonjs?: boolean
   propertyReadSideEffects?: BindingPropertyReadSideEffects
   propertyWriteSideEffects?: BindingPropertyWriteSideEffects

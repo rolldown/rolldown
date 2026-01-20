@@ -2,8 +2,8 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx, RuntimeHelper,
-  SymbolRef,
+  Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx,
+  PostChunkOptimizationOperation, RuntimeHelper, SymbolRef,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -21,6 +21,9 @@ pub struct ChunkGraph {
   pub finalized_cjs_ns_map_idx_vec: IndexVec<ChunkIdx, FxHashMap<SymbolRef, SymbolRef>>,
   pub chunk_idx_to_reference_ids: FxHashMap<ChunkIdx, Vec<ArcStr>>,
   pub common_chunk_exported_facade_chunk_namespace: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>>,
+  /// Modules from emitted chunks with AllowExtension that were merged into common chunks.
+  /// Their export names should be preserved (not minified).
+  pub common_chunk_preserve_export_names_modules: FxHashMap<ChunkIdx, FxHashSet<ModuleIdx>>,
   /// Tracks chunks that have been removed during post-optimization of code splitting.
   ///
   /// Since chunks are stored in an `IndexVec`, we have two options when removing chunks:
@@ -28,7 +31,7 @@ pub struct ChunkGraph {
   /// 2. Keep them in place and mark them as dead
   ///
   /// We use the second approach to avoid the overhead of re-indexing at the cost of some extra memory.
-  pub removed_chunk_idx: FxHashSet<ChunkIdx>,
+  pub post_chunk_optimization_operations: FxHashMap<ChunkIdx, PostChunkOptimizationOperation>,
 }
 
 impl ChunkGraph {
@@ -41,7 +44,8 @@ impl ChunkGraph {
       finalized_cjs_ns_map_idx_vec: index_vec![],
       chunk_idx_to_reference_ids: FxHashMap::default(),
       common_chunk_exported_facade_chunk_namespace: FxHashMap::default(),
-      removed_chunk_idx: FxHashSet::default(),
+      common_chunk_preserve_export_names_modules: FxHashMap::default(),
+      post_chunk_optimization_operations: FxHashMap::default(),
     }
   }
 

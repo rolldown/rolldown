@@ -1,7 +1,26 @@
 #![expect(clippy::inherent_to_string)]
-use napi::bindgen_prelude::This;
+use std::sync::Arc;
+
+use napi::bindgen_prelude::{Either, This};
 use napi_derive::napi;
-use string_wizard::{MagicString, MagicStringOptions};
+use rolldown_sourcemap::{JSONSourceMap, SourceMap};
+use rolldown_utils::base64::to_standard_base64;
+use serde::Serialize;
+use string_wizard::{MagicString, MagicStringOptions, SourceMapOptions};
+
+/// Serializable source map matching the SourceMap V3 specification.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SerializableSourceMap<'a> {
+  version: u32,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  file: Option<&'a String>,
+  sources: &'a Vec<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  sources_content: Option<&'a Vec<Option<String>>>,
+  names: &'a Vec<String>,
+  mappings: &'a String,
+}
 
 #[derive(Clone)]
 struct CharToByteMapper {
@@ -50,6 +69,160 @@ impl CharToByteMapper {
 #[derive(Default)]
 pub struct BindingMagicStringOptions {
   pub filename: Option<String>,
+}
+
+#[napi(object)]
+#[derive(Default)]
+pub struct BindingSourceMapOptions {
+  /// The filename for the generated file (goes into `map.file`)
+  pub file: Option<String>,
+  /// The filename of the original source (goes into `map.sources`)
+  pub source: Option<String>,
+  pub include_content: Option<bool>,
+  /// Accepts boolean or string: true, false, "boundary"
+  /// - true: high-resolution sourcemaps (character-level)
+  /// - false: low-resolution sourcemaps (line-level) - default
+  /// - "boundary": high-resolution only at word boundaries
+  pub hires: Option<Either<bool, String>>,
+}
+
+/// A source map object with properties matching the SourceMap V3 specification.
+#[napi]
+pub struct BindingSourceMap {
+  json: JSONSourceMap,
+}
+
+/// A decoded source map with mappings as an array of arrays instead of VLQ-encoded string.
+#[napi]
+pub struct BindingDecodedMap {
+  inner: SourceMap,
+  json: JSONSourceMap,
+}
+
+#[napi]
+impl BindingSourceMap {
+  /// The source map version (always 3).
+  #[napi(getter)]
+  pub fn version(&self) -> u32 {
+    3
+  }
+
+  /// The generated file name.
+  #[napi(getter)]
+  pub fn file(&self) -> Option<String> {
+    self.json.file.clone()
+  }
+
+  /// The list of original source files.
+  #[napi(getter)]
+  pub fn sources(&self) -> Vec<String> {
+    self.json.sources.clone()
+  }
+
+  /// The original source contents (if `includeContent` was true).
+  #[napi(getter)]
+  pub fn sources_content(&self) -> Vec<Option<String>> {
+    self.json.sources_content.clone().unwrap_or_default()
+  }
+
+  /// The list of symbol names used in mappings.
+  #[napi(getter)]
+  pub fn names(&self) -> Vec<String> {
+    self.json.names.clone()
+  }
+
+  /// The VLQ-encoded mappings string.
+  #[napi(getter)]
+  pub fn mappings(&self) -> String {
+    self.json.mappings.clone()
+  }
+
+  /// Returns the source map as a JSON string.
+  #[napi]
+  pub fn to_string(&self) -> String {
+    let serializable = SerializableSourceMap {
+      version: 3,
+      file: self.json.file.as_ref(),
+      sources: &self.json.sources,
+      sources_content: self.json.sources_content.as_ref(),
+      names: &self.json.names,
+      mappings: &self.json.mappings,
+    };
+    serde_json::to_string(&serializable).expect("should be able to serialize source map")
+  }
+
+  /// Returns the source map as a base64-encoded data URL.
+  #[napi]
+  pub fn to_url(&self) -> String {
+    let json = self.to_string();
+    let base64 = to_standard_base64(&json);
+    format!("data:application/json;charset=utf-8;base64,{base64}")
+  }
+}
+
+#[napi]
+impl BindingDecodedMap {
+  /// The source map version (always 3).
+  #[napi(getter)]
+  pub fn version(&self) -> u32 {
+    3
+  }
+
+  /// The generated file name.
+  #[napi(getter)]
+  pub fn file(&self) -> Option<String> {
+    self.json.file.clone()
+  }
+
+  /// The list of original source files.
+  #[napi(getter)]
+  pub fn sources(&self) -> Vec<String> {
+    self.json.sources.clone()
+  }
+
+  /// The original source contents (if `includeContent` was true).
+  #[napi(getter)]
+  pub fn sources_content(&self) -> Vec<Option<String>> {
+    self.json.sources_content.clone().unwrap_or_default()
+  }
+
+  /// The list of symbol names used in mappings.
+  #[napi(getter)]
+  pub fn names(&self) -> Vec<String> {
+    self.json.names.clone()
+  }
+
+  /// The decoded mappings as an array of line arrays.
+  /// Each line is an array of segments, where each segment is [generatedColumn, sourceIndex, originalLine, originalColumn, nameIndex?].
+  #[napi(getter)]
+  pub fn mappings(&self) -> Vec<Vec<Vec<i64>>> {
+    let mut lines: Vec<Vec<Vec<i64>>> = Vec::new();
+
+    for token in self.inner.get_tokens() {
+      // Fill in empty lines if needed
+      while lines.len() <= token.get_dst_line() as usize {
+        lines.push(Vec::new());
+      }
+
+      let current_line = token.get_dst_line();
+
+      let mut segment: Vec<i64> = vec![i64::from(token.get_dst_col())];
+
+      if let Some(source_id) = token.get_source_id() {
+        segment.push(i64::from(source_id));
+        segment.push(i64::from(token.get_src_line()));
+        segment.push(i64::from(token.get_src_col()));
+
+        if let Some(name_id) = token.get_name_id() {
+          segment.push(i64::from(name_id));
+        }
+      }
+
+      lines[current_line as usize].push(segment);
+    }
+
+    lines
+  }
 }
 
 #[napi]
@@ -375,5 +548,77 @@ impl BindingMagicString<'_> {
       self.char_to_byte_mapper.char_to_byte(end as usize).unwrap_or(self.inner.source().len());
 
     self.inner.slice(start_byte, Some(end_byte)).map_err(napi::Error::from_reason)
+  }
+
+  /// Generates a source map for the transformations applied to this MagicString.
+  /// Returns a BindingSourceMap object with version, file, sources, sourcesContent, names, mappings.
+  #[napi]
+  pub fn generate_map(&self, options: Option<BindingSourceMapOptions>) -> BindingSourceMap {
+    let opts = options.unwrap_or_default();
+    let hires = match &opts.hires {
+      Some(Either::A(true)) => string_wizard::Hires::True,
+      Some(Either::B(s)) if s == "boundary" => string_wizard::Hires::Boundary,
+      _ => string_wizard::Hires::False,
+    };
+    let source_map = self.inner.source_map(SourceMapOptions {
+      source: opts.source.map(Into::into).unwrap_or_else(|| "".into()),
+      include_content: opts.include_content.unwrap_or(false),
+      hires,
+    });
+
+    // If file option is provided, reconstruct the source map with the file field
+    let source_map = if let Some(file) = opts.file {
+      SourceMap::new(
+        Some(Arc::from(file)),
+        source_map.get_names().map(Arc::clone).collect(),
+        None,
+        source_map.get_sources().map(Arc::clone).collect(),
+        source_map.get_source_contents().map(|x| x.map(Arc::clone)).collect(),
+        source_map.get_tokens().collect::<Vec<_>>().into_boxed_slice(),
+        None,
+      )
+    } else {
+      source_map
+    };
+
+    BindingSourceMap { json: source_map.to_json() }
+  }
+
+  /// Generates a decoded source map for the transformations applied to this MagicString.
+  /// Returns a BindingDecodedMap object with mappings as an array of arrays.
+  #[napi]
+  pub fn generate_decoded_map(
+    &self,
+    options: Option<BindingSourceMapOptions>,
+  ) -> BindingDecodedMap {
+    let opts = options.unwrap_or_default();
+    let hires = match &opts.hires {
+      Some(Either::A(true)) => string_wizard::Hires::True,
+      Some(Either::B(s)) if s == "boundary" => string_wizard::Hires::Boundary,
+      _ => string_wizard::Hires::False,
+    };
+    let source_map = self.inner.source_map(SourceMapOptions {
+      source: opts.source.map(Into::into).unwrap_or_else(|| "".into()),
+      include_content: opts.include_content.unwrap_or(false),
+      hires,
+    });
+
+    // If file option is provided, reconstruct the source map with the file field
+    let source_map = if let Some(file) = opts.file {
+      SourceMap::new(
+        Some(Arc::from(file)),
+        source_map.get_names().map(Arc::clone).collect(),
+        None,
+        source_map.get_sources().map(Arc::clone).collect(),
+        source_map.get_source_contents().map(|x| x.map(Arc::clone)).collect(),
+        source_map.get_tokens().collect::<Vec<_>>().into_boxed_slice(),
+        None,
+      )
+    } else {
+      source_map
+    };
+
+    let json = source_map.to_json();
+    BindingDecodedMap { inner: source_map, json }
   }
 }

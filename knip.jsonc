@@ -96,5 +96,8 @@
     "packages/test-dev-server/tests/playground/hmr-full-bundle-mode": {
       "entry": ["dev.config.mjs", "main.js", "hmr.js"], // Playwright test with dev config and source files
     },
+    "packages/test-dev-server/tests/playground/lazy-compilation": {
+      "entry": ["dev.config.mjs", "main.js", "lazy-module.js"], // Playwright test with dev config and source files
+    },
   },
 }

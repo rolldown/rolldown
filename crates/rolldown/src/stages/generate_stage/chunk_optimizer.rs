@@ -208,7 +208,7 @@ impl GenerateStage<'_> {
       );
       if !self.options.code_splitting.is_disabled() {
         Self::check_ineffective_dynamic_import_for_module(
-          &module_idx,
+          module_idx,
           target_chunk_idx,
           chunk_graph,
           module_table,
@@ -671,7 +671,7 @@ impl GenerateStage<'_> {
   }
 
   fn check_ineffective_dynamic_import_for_module(
-    module_idx: &ModuleIdx,
+    module_idx: ModuleIdx,
     chunk_idx: ChunkIdx,
     chunk_graph: &ChunkGraph,
     module_table: &rolldown_common::ModuleTable,
@@ -691,7 +691,7 @@ impl GenerateStage<'_> {
       })
     };
 
-    if let Some(normal_module) = module_table[*module_idx].as_normal() {
+    if let Some(normal_module) = module_table[module_idx].as_normal() {
       // When a dynamic importer shares a chunk with the imported module,
       // warn that the dynamic imported module will not be moved to another chunk (#12850).
       // Filter out the intersection of dynamic importers and sibling modules in

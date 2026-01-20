@@ -300,7 +300,7 @@ const config = defineConfig({
           },
         ],
       },
-      { text: 'Options & APIs', link: '/reference' },
+      { text: 'Options & APIs', activeMatch: '/reference', link: '/reference' },
       { text: 'REPL', link: 'https://repl.rolldown.rs/' },
       {
         text: 'Resources',

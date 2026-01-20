@@ -152,6 +152,7 @@ lint-node:
   pnpm lint-code
   pnpm type-check
   pnpm lint-knip
+  pnpm lint-publint
 
 lint-repo:
   typos # Check if the spelling is correct.

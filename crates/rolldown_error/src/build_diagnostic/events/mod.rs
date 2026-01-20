@@ -29,6 +29,7 @@ pub mod filename_conflict;
 pub mod forbid_const_assign;
 pub mod illegal_identifier_as_name;
 pub mod import_is_undefined;
+pub mod ineffective_dynamic_import;
 pub mod invalid_define_config;
 pub mod invalid_export_option;
 pub mod invalid_option;
@@ -46,7 +47,6 @@ pub mod unhandleable_error;
 pub mod unloadable_dependency;
 pub mod unresolved_entry;
 pub mod unsupported_feature;
-
 pub trait BuildEvent: Debug + Sync + Send + AsAnyMut {
   fn kind(&self) -> EventKind;
 

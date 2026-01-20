@@ -2729,6 +2729,7 @@ dependencies = [
  "rolldown_plugin_hmr",
  "rolldown_plugin_lazy_compilation",
  "rolldown_plugin_oxc_runtime",
+ "rolldown_plugin_utils",
  "rolldown_resolver",
  "rolldown_sourcemap",
  "rolldown_std_utils",
@@ -3397,7 +3398,6 @@ dependencies = [
  "rayon",
  "rolldown_common",
  "rolldown_plugin",
- "rolldown_plugin_utils",
  "sugar_path",
  "terminal_size",
 ]

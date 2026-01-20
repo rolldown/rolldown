@@ -8,6 +8,7 @@ use rolldown_common::{
   ModuleNamespaceIncludedReason, ModuleTable, PostChunkOptimizationOperation,
   PreserveEntrySignatures, RuntimeHelper, StmtInfos, WrapKind,
 };
+use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{BitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -85,6 +86,7 @@ impl GenerateStage<'_> {
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
     pending_common_chunks: FxIndexMap<BitSet, Vec<ModuleIdx>>,
+    ineffective_warnings: &mut Vec<BuildDiagnostic>,
   ) {
     let static_entry_chunk_reference: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> =
       self.construct_static_entry_to_reached_dynamic_entries_map(chunk_graph);
@@ -109,7 +111,6 @@ impl GenerateStage<'_> {
         chunk_graph,
         &self.link_output.module_table,
       );
-
       self.assign_modules_to_chunk(
         merge_target,
         &chunk_idxs,
@@ -118,6 +119,7 @@ impl GenerateStage<'_> {
         chunk_graph,
         bits_to_chunk,
         input_base,
+        ineffective_warnings,
       );
     }
   }
@@ -136,6 +138,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
+    ineffective_warnings: &mut Vec<BuildDiagnostic>,
   ) {
     match merge_target {
       Some(chunk_idx) => {
@@ -147,12 +150,24 @@ impl GenerateStage<'_> {
           // modules will not change the entry signature after merge into it, we can still merge them.
           if is_async_entry_only || self.can_merge_without_changing_entry_signature(chunk, &modules)
           {
-            self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, modules, chunk_graph);
+            self.merge_modules_into_existing_chunk(
+              chunk_idx,
+              chunk_idxs,
+              modules,
+              chunk_graph,
+              ineffective_warnings,
+            );
           } else {
             self.create_common_chunk(modules, bits, chunk_graph, bits_to_chunk, input_base);
           }
         } else {
-          self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, modules, chunk_graph);
+          self.merge_modules_into_existing_chunk(
+            chunk_idx,
+            chunk_idxs,
+            modules,
+            chunk_graph,
+            ineffective_warnings,
+          );
         }
       }
       _ => {
@@ -171,6 +186,7 @@ impl GenerateStage<'_> {
     chunk_idxs: &[ChunkIdx],
     modules: Vec<ModuleIdx>,
     chunk_graph: &mut ChunkGraph,
+    ineffective_warnings: &mut Vec<BuildDiagnostic>,
   ) {
     for idx in chunk_idxs.iter().copied().filter(|idx| *idx != target_chunk_idx) {
       let Some(chunk) = chunk_graph.chunk_table.get_mut(idx) else {
@@ -183,11 +199,20 @@ impl GenerateStage<'_> {
       chunk.imports_from_other_chunks.entry(target_chunk_idx).or_default();
     }
 
+    let module_table = &self.link_output.module_table;
     for module_idx in modules {
       chunk_graph.add_module_to_chunk(
         module_idx,
         target_chunk_idx,
         self.link_output.metas[module_idx].depended_runtime_helper,
+      );
+    }
+    if !self.options.code_splitting.is_disabled() {
+      Self::check_ineffective_dynamic_import_for_module(
+        target_chunk_idx,
+        chunk_graph,
+        module_table,
+        ineffective_warnings,
       );
     }
   }
@@ -642,5 +667,60 @@ impl GenerateStage<'_> {
       &module_included_vec,
       &module_namespace_reason_vec,
     );
+  }
+
+  fn check_ineffective_dynamic_import_for_module(
+    chunk_idx: ChunkIdx,
+    chunk_graph: &ChunkGraph,
+    module_table: &rolldown_common::ModuleTable,
+    ineffective_warnings: &mut Vec<BuildDiagnostic>,
+  ) {
+    use rolldown_common::ModuleId;
+    use rolldown_plugin_utils::is_in_node_modules;
+
+    let chunk = &chunk_graph.chunk_table[chunk_idx];
+
+    let contains_module_id = |module_id: &ModuleId| {
+      chunk.modules.iter().any(|id| {
+        let Some(module) = module_table[*id].as_normal() else {
+          return false;
+        };
+        module.id == *module_id
+      })
+    };
+
+    for id in &chunk.modules {
+      let Some(normal_module) = module_table[*id].as_normal() else {
+        continue;
+      };
+
+      // When a dynamic importer shares a chunk with the imported module,
+      // warn that the dynamic imported module will not be moved to another chunk (#12850).
+      // Filter out the intersection of dynamic importers and sibling modules in
+      // the same chunk. The intersecting dynamic importers' dynamic import is not
+      // expected to work. Note we're only detecting the direct ineffective dynamic import here.
+      if !normal_module.dynamic_importers.is_empty() && !normal_module.importers.is_empty() {
+        let detected_ineffective_dynamic_import =
+          normal_module.dynamic_importers.iter().any(|id| {
+            !is_in_node_modules(std::path::Path::new(id.as_ref())) && contains_module_id(id)
+          });
+
+        if detected_ineffective_dynamic_import {
+          let dynamic_importers_list: Vec<arcstr::ArcStr> =
+            normal_module.dynamic_importers.iter().map(|id| id.as_arc_str().clone()).collect();
+          let importers_list: Vec<arcstr::ArcStr> =
+            normal_module.importers.iter().map(|id| id.as_arc_str().clone()).collect();
+
+          ineffective_warnings.push(
+            BuildDiagnostic::ineffective_dynamic_import(
+              normal_module.id.as_arc_str().clone(),
+              dynamic_importers_list,
+              importers_list,
+            )
+            .with_severity_warning(),
+          );
+        }
+      }
+    }
   }
 }

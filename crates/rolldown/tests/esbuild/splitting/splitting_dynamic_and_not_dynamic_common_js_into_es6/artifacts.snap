@@ -1,6 +1,17 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) /root/program/rolldown/crates/rolldown/tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_common_js_into_es6/foo.js is dynamically imported by /root/program/rolldown/crates/rolldown/tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_common_js_into_es6/entry.js but also statically imported by /root/program/rolldown/crates/rolldown/tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_common_js_into_es6/entry.js, dynamic import will not move module into another chunk.
+
+
+```
+
 # Assets
 
 ## entry.js

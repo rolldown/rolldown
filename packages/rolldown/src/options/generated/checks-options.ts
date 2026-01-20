@@ -127,4 +127,10 @@ export interface ChecksOptions {
    * @default true
    * */
   pluginTimings?: boolean;
+
+  /**
+   * Whether to emit warnings when detecting ineffective dynamic import
+   * @default true
+   * */
+  ineffectiveDynamicImport?: boolean;
 }

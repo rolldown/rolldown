@@ -12,7 +12,7 @@ use rolldown_common::{
   ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason,
   PreserveEntrySignatures, SymbolRef, WrapKind,
 };
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_utils::{
   BitSet, commondir,
   index_vec_ext::IndexVecRefExt,
@@ -829,13 +829,19 @@ impl GenerateStage<'_> {
       }
     }
 
+    let mut ineffective_warnings: Vec<BuildDiagnostic> = Vec::new();
+
     if allow_chunk_optimization {
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,
         bits_to_chunk,
         input_base,
         pending_common_chunks,
+        &mut ineffective_warnings,
       );
+      if !ineffective_warnings.is_empty() {
+        self.link_output.warnings.extend(ineffective_warnings);
+      }
 
       self.optimize_facade_dynamic_entry_chunks(
         chunk_graph,

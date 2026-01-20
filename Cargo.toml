@@ -213,7 +213,8 @@ napi = { version = "3.0.0", features = ["async", "anyhow", "tracing"] }
 napi-build = { version = "2.2.2" }
 napi-derive = { version = "3.0.0", default-features = false, features = ["type-def", "tracing"] }
 
-oxc = { git = "https://github.com/oxc-project/oxc", branch = "01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_", features = [
+# oxc crates with the same version
+oxc = { version = "0.108.0", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -224,15 +225,13 @@ oxc = { git = "https://github.com/oxc-project/oxc", branch = "01-16-refactor_lin
   "isolated_declarations",
   "regular_expression",
   "cfg",
-] } # oxc crates with the same version
-oxc_allocator = { git = "https://github.com/oxc-project/oxc", branch = "01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_", features = [
-  "pool",
 ] }
-oxc_ecmascript = { git = "https://github.com/oxc-project/oxc", branch = "01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_" }
-oxc_minify_napi = { git = "https://github.com/oxc-project/oxc", branch = "01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_" }
-oxc_parser_napi = { git = "https://github.com/oxc-project/oxc", branch = "01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_" }
-oxc_transform_napi = { git = "https://github.com/oxc-project/oxc", branch = "01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_" }
-oxc_traverse = { git = "https://github.com/oxc-project/oxc", branch = "01-16-refactor_linter_mangler_get_reference_scope_by_reference.scope_id_" }
+oxc_allocator = { version = "0.108.0", features = ["pool"] }
+oxc_ecmascript = { version = "0.108.0" }
+oxc_minify_napi = { version = "0.108.0" }
+oxc_parser_napi = { version = "0.108.0" }
+oxc_transform_napi = { version = "0.108.0" }
+oxc_traverse = { version = "0.108.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

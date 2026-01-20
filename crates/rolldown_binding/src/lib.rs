@@ -104,3 +104,15 @@ pub fn start_async_runtime() {
     ACTIVE_TASK_COUNT.fetch_add(1, Ordering::Relaxed);
   }
 }
+
+#[napi_derive::module_init]
+fn init() {
+  let default_hook = std::panic::take_hook();
+  std::panic::set_hook(Box::new(move |info| {
+    eprintln!("Rolldown panicked. This is a bug in Rolldown, not your code.");
+    default_hook(info);
+    eprintln!(
+      "\nPlease report this issue at: https://github.com/rolldown/rolldown/issues/new?template=panic_report.yml"
+    );
+  }));
+}

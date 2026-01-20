@@ -33,7 +33,14 @@ pub struct ImportRecordStateInit {
 
 #[derive(Debug, Clone, Copy)]
 pub struct ImportRecordStateResolved {
-  pub resolved_module: ModuleIdx,
+  pub resolved_module: Option<ModuleIdx>,
+}
+
+impl ImportRecordStateResolved {
+  /// We are extremely sure the import record is resolved when calling this method.
+  pub fn into_resolved_module(self) -> ModuleIdx {
+    self.resolved_module.expect("ImportRecordStateResolved: module not resolved")
+  }
 }
 
 bitflags::bitflags! {
@@ -134,7 +141,7 @@ impl RawImportRecord {
     self
   }
 
-  pub fn into_resolved(self, resolved_module: ModuleIdx) -> ResolvedImportRecord {
+  pub fn into_resolved(self, resolved_module: Option<ModuleIdx>) -> ResolvedImportRecord {
     ResolvedImportRecord {
       state: ImportRecordStateResolved { resolved_module },
       module_request: self.module_request,

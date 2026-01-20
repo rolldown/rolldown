@@ -127,7 +127,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     rec_idx: ImportRecordIdx,
   ) -> bool {
     let rec = &self.ctx.module.import_records[rec_idx];
-    let Module::Normal(importee) = &self.ctx.modules[rec.resolved_module] else {
+    let Some(resolved_module_idx) = rec.resolved_module else { return true };
+    let Module::Normal(importee) = &self.ctx.modules[resolved_module_idx] else {
       return true;
     };
     let importee_linking_info = &self.ctx.linking_infos[importee.idx];
@@ -137,7 +138,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
       WrapKind::Cjs => {
         // Check if this CJS module's namespace can be merged with other imports
-        let merge_info = self.ctx.safely_merge_cjs_ns_map.get(&rec.resolved_module);
+        let merge_info = self.ctx.safely_merge_cjs_ns_map.get(&resolved_module_idx);
 
         // Consider user reference a module use relative path e.g.
         // ```js
@@ -434,7 +435,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
 
     let import_record = &self.ctx.module.import_records[named_import.record_idx];
-    let importee = &self.ctx.modules[import_record.resolved_module].as_normal()?;
+    let importee = import_record
+      .resolved_module
+      .and_then(|module_idx| self.ctx.modules[module_idx].as_normal())?;
 
     let resolved_export =
       self.ctx.linking_infos[importee.idx].resolved_exports.get(&namespace_alias.property_name)?;
@@ -582,8 +585,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             }
             // importee_exports
             let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
-            let m = self.ctx.modules.get(rec.resolved_module);
-            let Some(Module::External(module)) = m else {
+            let Some(Module::External(module)) =
+              rec.resolved_module.and_then(|module_idx| self.ctx.modules.get(module_idx))
+            else {
               return vec![];
             };
             let importee_name =
@@ -606,7 +610,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           re_export_external_stmts = Some(stmts.collect::<Vec<_>>());
         }
         OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {
-          let stmts = export_all_externals_rec_ids.iter().copied().map(|idx| {
+          let stmts = export_all_externals_rec_ids.iter().copied().filter_map(|idx| {
             // Insert `__reExport(importer_exports, require('ext'))`
             let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
             // importer_exports
@@ -616,7 +620,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               false,
             );
             let rec = &self.ctx.module.import_records[idx];
-            let importee = &self.ctx.modules[rec.resolved_module];
+            let importee = rec.resolved_module.map(|module_idx| &self.ctx.modules[module_idx])?;
 
             let re_export_call_expr = self.snippet.re_export_call_expr(
               re_export_fn_ref.clone_in(self.alloc),
@@ -627,10 +631,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               ),
             );
 
-            self.snippet.builder.statement_expression(
+            Some(self.snippet.builder.statement_expression(
               SPAN,
               Expression::CallExpression(re_export_call_expr.into_in(self.alloc)),
-            )
+            ))
           });
           re_export_external_stmts = Some(stmts.collect());
         }
@@ -796,7 +800,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       _ => None,
     })?;
 
-    let importee = &self.ctx.modules[rec.resolved_module].as_normal()?;
+    let importee =
+      rec.resolved_module.and_then(|module_idx| self.ctx.modules[module_idx].as_normal())?;
+
     let chunk_idx = &self.ctx.chunk_graph.module_to_chunk[importee.idx]?;
     let chunk = &self.ctx.chunk_graph.chunk_table[*chunk_idx];
     let asset_filename = &chunk.asset_absolute_preliminary_filenames[&importee.idx];
@@ -925,12 +931,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       //  we just keep these `require` calls as it is
       if let Some(rec_idx) = self.ctx.module.imports.get(&call_expr.span).copied() {
         let rec = &self.ctx.module.import_records[rec_idx];
+        let module_idx = rec.resolved_module?;
         // use `__require` instead of `require`
         if rec.meta.contains(ImportRecordMeta::CallRuntimeRequire) {
           *call_expr.callee.get_inner_expression_mut() =
             self.finalized_expr_for_runtime_symbol("__require");
         }
-        let rewrite_ast = match &self.ctx.modules[rec.resolved_module] {
+        let rewrite_ast = match &self.ctx.modules[module_idx] {
           Module::Normal(importee) => {
             match importee.module_type {
               ModuleType::Json => {
@@ -1066,7 +1073,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) -> Option<Expression<'ast>> {
     let rec_idx = self.ctx.module.imports.get(&import_expr.span)?;
     let rec = &self.ctx.module.import_records[*rec_idx];
-    let importee_id = rec.resolved_module;
+    let importee_id = rec.resolved_module?;
 
     if rec.meta.contains(ImportRecordMeta::DeadDynamicImport) {
       return Some(
@@ -1185,7 +1192,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           } else {
             // "export * from 'path'"
             let rec = &self.ctx.module.import_records[rec_idx];
-            match &self.ctx.modules[rec.resolved_module] {
+            let Some(module_idx) = rec.resolved_module else { return };
+            match &self.ctx.modules[module_idx] {
               Module::Normal(importee) => {
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
                 if matches!(importee_linking_info.wrap_kind(), WrapKind::Esm)
@@ -1799,12 +1807,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let mut needs_to_esm_helper = false;
     let rec = &self.ctx.module.import_records[*rec_idx];
-    let importee_id = rec.resolved_module;
+    let Some(importee_idx) = rec.resolved_module else { return true };
 
-    match &self.ctx.modules[importee_id] {
+    match &self.ctx.modules[importee_idx] {
       Module::Normal(importee) => {
         let Some(&importee_chunk_idx) =
-          self.ctx.chunk_graph.entry_module_to_entry_chunk.get(&rec.resolved_module)
+          self.ctx.chunk_graph.entry_module_to_entry_chunk.get(&importee_idx)
         else {
           // TODO: probably we should add the reason why it is replaced with `void 0`(just like webpack) when upstream support codegen with specific operation
           *node = self.snippet.builder.void_0(SPAN);

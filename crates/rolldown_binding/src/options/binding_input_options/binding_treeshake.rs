@@ -45,6 +45,7 @@ pub struct BindingTreeshake {
   #[napi(ts_type = "ReadonlyArray<string>")]
   pub manual_pure_functions: Option<FxHashSet<String>>,
   pub unknown_global_side_effects: Option<bool>,
+  pub invalid_import_side_effects: Option<bool>,
   pub commonjs: Option<bool>,
   pub property_read_side_effects: Option<BindingPropertyReadSideEffects>,
   pub property_write_side_effects: Option<BindingPropertyWriteSideEffects>,
@@ -106,6 +107,7 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
       annotations: value.annotations,
       manual_pure_functions: value.manual_pure_functions,
       unknown_global_side_effects: value.unknown_global_side_effects,
+      invalid_import_side_effects: value.invalid_import_side_effects,
       commonjs: value.commonjs,
       property_read_side_effects,
       property_write_side_effects,

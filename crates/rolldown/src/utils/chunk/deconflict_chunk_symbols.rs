@@ -67,7 +67,7 @@ pub fn deconflict_chunk_symbols(
         link_output.metas[entry_module.idx].star_exports_from_external_modules.iter().for_each(
           |rec_idx| {
             let rec = &entry_module.ecma_view.import_records[*rec_idx];
-            let external_module = &link_output.module_table[rec.resolved_module]
+            let external_module = &link_output.module_table[rec.into_resolved_module()]
               .as_external()
               .expect("Should be external module here");
             renamer.add_symbol_in_root_scope(external_module.namespace_ref, true);
@@ -152,8 +152,9 @@ pub fn deconflict_chunk_symbols(
               // 2. Since we merge external module symbols, external symbol declared in a cjs module also needs to be deconflicted
               link_output.symbol_db.is_facade_symbol(canonical_ref)
                 || stmt_info.import_records.iter().any(|import_rec_idx| {
-                  link_output.module_table[module.import_records[*import_rec_idx].resolved_module]
-                    .is_external()
+                  module.import_records[*import_rec_idx]
+                    .resolved_module
+                    .is_some_and(|module_idx| link_output.module_table[module_idx].is_external())
                 })
             } else {
               true

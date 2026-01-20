@@ -319,6 +319,7 @@ function bindingifyTreeshakeOptions(
     annotations: config.annotations,
     manualPureFunctions: config.manualPureFunctions,
     unknownGlobalSideEffects: config.unknownGlobalSideEffects,
+    invalidImportSideEffects: config.invalidImportSideEffects,
     commonjs: config.commonjs,
   };
   switch (config.propertyReadSideEffects) {

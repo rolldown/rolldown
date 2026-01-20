@@ -57,8 +57,8 @@ impl LinkStage<'_> {
           }
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
-            let rec_resolved_module = &self.module_table[rec.resolved_module];
-            match rec_resolved_module {
+            let Some(module_idx) = rec.state.resolved_module else { return };
+            match &self.module_table[module_idx] {
               Module::External(importee) => {
                 // Make sure symbols from external modules are included and de_conflicted
                 match rec.kind {
@@ -166,13 +166,12 @@ impl LinkStage<'_> {
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           // Only reference __toESM if this import needs interop (namespace or default import)
-                          let needs_toesm = if let Some(info) =
-                            self.safely_merge_cjs_ns_map.get(&rec.resolved_module)
-                          {
-                            info.needs_interop
-                          } else {
-                            import_record_needs_interop(importer, *rec_id)
-                          };
+                          let needs_toesm =
+                            if let Some(info) = self.safely_merge_cjs_ns_map.get(&importee.idx) {
+                              info.needs_interop
+                            } else {
+                              import_record_needs_interop(importer, *rec_id)
+                            };
                           if needs_toesm {
                             depended_runtime_helper_map[RuntimeHelper::ToEsm.bit_index()]
                               .push(stmt_info_idx);

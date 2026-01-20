@@ -364,8 +364,10 @@ impl<'a> ModuleLoader<'a> {
             && let Some(previous_module) =
               self.cache.get_snapshot().module_table.modules.get(module_idx)
           {
-            for rec in previous_module.import_records() {
-              self.intermediate_normal_modules.importers[rec.resolved_module]
+            let resolved_deps =
+              previous_module.import_records().into_iter().filter_map(|r| r.resolved_module);
+            for dep_idx in resolved_deps {
+              self.intermediate_normal_modules.importers[dep_idx]
                 .retain(|v| v.importer_idx != module_idx);
             }
           }
@@ -419,7 +421,7 @@ impl<'a> ModuleLoader<'a> {
                 }
               }
             }
-            import_records.push(raw_rec.into_resolved(idx));
+            import_records.push(raw_rec.into_resolved(Some(idx)));
           }
 
           module.set_import_records(import_records);
@@ -469,19 +471,19 @@ impl<'a> ModuleLoader<'a> {
 
           let mut import_records = IndexVec::with_capacity(raw_import_records.len());
           for (raw_rec, info) in raw_import_records.into_iter().zip(resolved_deps) {
-            let id = self.try_spawn_new_task(
+            let idx = self.try_spawn_new_task(
               info,
               None,
               false,
               raw_rec.asserted_module_type.as_ref(),
               &user_defined_entries,
             );
-            self.intermediate_normal_modules.importers[id].push(ImporterRecord {
+            self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
               kind: raw_rec.kind,
               importer_path: module.id.clone(),
               importer_idx: module.idx,
             });
-            import_records.push(raw_rec.into_resolved(id));
+            import_records.push(raw_rec.into_resolved(Some(idx)));
           }
           module.import_records = import_records;
 

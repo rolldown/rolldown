@@ -180,43 +180,52 @@ impl GenerateStage<'_> {
           let Module::Normal(module) = &self.link_output.module_table[module_id] else {
             return;
           };
-          module.import_records.iter().for_each(|rec| {
-            match &self.link_output.module_table[rec.resolved_module] {
-              Module::Normal(importee_module) => {
-                // The the resolved module is not included in module graph, skip it.
-                if !self.link_output.metas[importee_module.idx].is_included {
-                  return;
+          module
+            .import_records
+            .iter()
+            .filter_map(|rec| rec.resolved_module.map(|module_idx| (rec, module_idx)))
+            .for_each(|(rec, module_idx)| {
+              match &self.link_output.module_table[module_idx] {
+                Module::Normal(_) => {
+                  // The the resolved module is not included in module graph, skip it.
+                  if !self.link_output.metas[module_idx].is_included {
+                    return;
+                  }
+                  if matches!(rec.kind, ImportKind::DynamicImport) {
+                    let importee_chunk =
+                      chunk_graph.module_to_chunk[module_idx].expect("importee chunk should exist");
+                    cross_chunk_dynamic_imports.insert(importee_chunk);
+                  }
                 }
-                if matches!(rec.kind, ImportKind::DynamicImport) {
-                  let importee_chunk = chunk_graph.module_to_chunk[importee_module.idx]
-                    .expect("importee chunk should exist");
-                  cross_chunk_dynamic_imports.insert(importee_chunk);
+                Module::External(_) => {
+                  // Ensure the external module is imported in case it has side effects.
+                  if matches!(rec.kind, ImportKind::Import)
+                    && !rec.meta.contains(ImportRecordMeta::IsExportStar)
+                  {
+                    imports_from_external_modules.entry(module_idx).or_default();
+                  }
                 }
               }
-              Module::External(_) => {
-                // Ensure the external module is imported in case it has side effects.
-                if matches!(rec.kind, ImportKind::Import)
-                  && !rec.meta.contains(ImportRecordMeta::IsExportStar)
-                {
-                  imports_from_external_modules.entry(rec.resolved_module).or_default();
-                }
-              }
-            }
-          });
+            });
 
-          module.named_imports.iter().for_each(|(_, import)| {
-            let rec = &module.import_records[import.record_idx];
-            if let Module::External(importee) = &self.link_output.module_table[rec.resolved_module]
-            {
-              imports_from_external_modules
-                .entry(importee.idx)
-                .or_default()
-                .push((module.idx, import.clone()));
-            }
-          });
-          let linking_info = &self.link_output.metas[module.idx];
+          module
+            .named_imports
+            .iter()
+            .filter_map(|(_, import)| {
+              module.import_records[import.record_idx]
+                .resolved_module
+                .map(|module_idx| (import, module_idx))
+            })
+            .for_each(|(import, module_idx)| {
+              if let Module::External(importee) = &self.link_output.module_table[module_idx] {
+                imports_from_external_modules
+                  .entry(importee.idx)
+                  .or_default()
+                  .push((module.idx, import.clone()));
+              }
+            });
           module.stmt_infos.iter_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
-            if !linking_info.stmt_info_included[stmt_info_idx] {
+            if !self.link_output.metas[module.idx].stmt_info_included[stmt_info_idx] {
               return;
             }
             stmt_info.declared_symbols.iter().for_each(|declared| {
@@ -489,15 +498,12 @@ impl GenerateStage<'_> {
               .import_records
               .iter()
               .filter(|rec| rec.kind != ImportKind::DynamicImport)
-              .for_each(|item| {
-                if !self.link_output.module_table[item.resolved_module]
-                  .side_effects()
-                  .has_side_effects()
-                {
+              .filter_map(|r| r.resolved_module)
+              .for_each(|module_idx| {
+                if !self.link_output.module_table[module_idx].side_effects().has_side_effects() {
                   return;
                 }
-                let Some(importee_chunk_idx) = chunk_graph.module_to_chunk[item.resolved_module]
-                else {
+                let Some(importee_chunk_idx) = chunk_graph.module_to_chunk[module_idx] else {
                   return;
                 };
                 index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);

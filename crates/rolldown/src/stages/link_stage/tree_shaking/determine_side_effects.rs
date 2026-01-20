@@ -57,44 +57,45 @@ impl LinkStage<'_> {
       // this branch means the side effects of the module is analyzed `false`
       DeterminedSideEffects::Analyzed(false) => match module {
         Module::Normal(module) => {
-          let has_side_effects = module.import_records.iter().any(|import_record| {
-            if self
-              .determine_side_effects_for_module(import_record.resolved_module, cache)
-              .has_side_effects()
-            {
-              return true;
-            }
-
-            // Check for `export * from 'wrapped-module'` patterns.
-            // to ensure the module is included and properly initializes its dependencies.
-            if import_record.kind == ImportKind::Import
-              && import_record.meta.contains(ImportRecordMeta::IsExportStar)
-            {
-              if let Module::Normal(importee) = &self.module_table[import_record.resolved_module] {
-                let importee_linking_info = &self.metas[importee.idx];
-                return match importee_linking_info.wrap_kind() {
-                  // If importee has dynamic exports (e.g., re-exports from CJS), we need side effects
-                  // to ensure the __reExport call is preserved.
-                  //  ```js
-                  // // index.js
-                  // export * from './foo'; // importee wrap kind is `none`, but since `foo` has dynamic_export,
-                  //                        // we need to preserve the `__reExport(index_exports, foo_ns)` call
-                  //
-                  // // foo.js
-                  // export * from './bar' // importee wrap kind is `cjs`, preserved by default
-                  //
-                  // // bar.js
-                  // module.exports = 1000
-                  // ```
-                  WrapKind::None => importee_linking_info.has_dynamic_exports,
-                  // Wrapped modules always need the side effect(`init_xxx` for esm and `require_xxx` for cjs) for proper initialization
-                  WrapKind::Cjs | WrapKind::Esm => true,
-                };
+          let has_side_effects = module
+            .import_records
+            .iter()
+            .filter_map(|rec| rec.resolved_module.map(|module_idx| (rec, module_idx)))
+            .any(|(import_record, module_idx)| {
+              if self.determine_side_effects_for_module(module_idx, cache).has_side_effects() {
+                return true;
               }
-            }
 
-            false
-          });
+              // Check for `export * from 'wrapped-module'` patterns.
+              // to ensure the module is included and properly initializes its dependencies.
+              if import_record.kind == ImportKind::Import
+                && import_record.meta.contains(ImportRecordMeta::IsExportStar)
+              {
+                if let Module::Normal(importee) = &self.module_table[module_idx] {
+                  let importee_linking_info = &self.metas[importee.idx];
+                  return match importee_linking_info.wrap_kind() {
+                    // If importee has dynamic exports (e.g., re-exports from CJS), we need side effects
+                    // to ensure the __reExport call is preserved.
+                    //  ```js
+                    // // index.js
+                    // export * from './foo'; // importee wrap kind is `none`, but since `foo` has dynamic_export,
+                    //                        // we need to preserve the `__reExport(index_exports, foo_ns)` call
+                    //
+                    // // foo.js
+                    // export * from './bar' // importee wrap kind is `cjs`, preserved by default
+                    //
+                    // // bar.js
+                    // module.exports = 1000
+                    // ```
+                    WrapKind::None => importee_linking_info.has_dynamic_exports,
+                    // Wrapped modules always need the side effect(`init_xxx` for esm and `require_xxx` for cjs) for proper initialization
+                    WrapKind::Cjs | WrapKind::Esm => true,
+                  };
+                }
+              }
+
+              false
+            });
 
           let side_effects = DeterminedSideEffects::Analyzed(has_side_effects);
           cache[module_idx] = SideEffectCache::Cache(side_effects);

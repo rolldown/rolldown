@@ -7,7 +7,8 @@ use oxc::span::CompactStr;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 
 use rolldown_common::{
-  ModuleIdx, NormalModule, OutputFormat, SymbolRef, SymbolRefDb, SymbolRefFlags, WrapKind,
+  ModuleIdx, NormalModule, OutputFormat, SymbolRef, SymbolRefDb, SymbolRefDbForModule,
+  SymbolRefFlags, WrapKind,
 };
 use rolldown_utils::concat_string;
 
@@ -334,7 +335,8 @@ impl NestedScopeRenamer<'_, '_> {
         continue;
       };
 
-      // Only check for shadowing if the symbol was renamed (has an entry in renamer)
+      // Only check for shadowing if the symbol was processed by the renamer
+      // (i.e. it has a canonical name entry and is rendered at the chunk's root scope).
       let Some(canonical_name) = self.renamer.get_canonical_name(resolved_symbol).cloned() else {
         continue;
       };
@@ -384,7 +386,8 @@ impl NestedScopeRenamer<'_, '_> {
         continue;
       }
 
-      // Only check for shadowing if the symbol was renamed (has an entry in renamer)
+      // Only check for shadowing if the symbol was processed by the renamer
+      // (i.e. it has a canonical name entry and is rendered at the chunk's root scope).
       let Some(canonical_name) = self.renamer.get_canonical_name(*symbol_ref).cloned() else {
         continue;
       };

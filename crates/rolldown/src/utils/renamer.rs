@@ -1,9 +1,17 @@
+use rustc_hash::FxHashMap;
+
+use std::collections::hash_map::Entry;
+
+use oxc::semantic::Scoping;
 use oxc::span::CompactStr;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
-use rolldown_common::{ModuleIdx, OutputFormat, SymbolRef, SymbolRefDb, SymbolRefFlags};
+
+use rolldown_common::{
+  ModuleIdx, NormalModule, OutputFormat, SymbolRef, SymbolRefDb, SymbolRefFlags, WrapKind,
+};
 use rolldown_utils::concat_string;
-use rustc_hash::FxHashMap;
-use std::collections::hash_map::Entry;
+
+use crate::stages::link_stage::LinkStageOutput;
 
 #[derive(Debug)]
 pub struct Renamer<'name> {
@@ -279,14 +287,14 @@ impl<'name> Renamer<'name> {
 /// Context for renaming nested scope symbols that would shadow top-level symbols.
 pub struct NestedScopeRenamer<'a, 'r> {
   pub module_idx: ModuleIdx,
-  pub module: &'a rolldown_common::NormalModule,
-  pub db: &'a rolldown_common::SymbolRefDbForModule,
-  pub scoping: &'a oxc::semantic::Scoping,
-  pub link_output: &'a crate::stages::link_stage::LinkStageOutput,
+  pub module: &'a NormalModule,
+  pub db: &'a SymbolRefDbForModule,
+  pub scoping: &'a Scoping,
+  pub link_output: &'a LinkStageOutput,
   pub renamer: &'r mut Renamer<'a>,
 }
 
-impl<'a, 'r> NestedScopeRenamer<'a, 'r> {
+impl NestedScopeRenamer<'_, '_> {
   /// Rename nested bindings that would capture star import member references.
   ///
   /// When a star import member (like `ns.foo`) is referenced inside a function,
@@ -424,7 +432,8 @@ impl<'a, 'r> NestedScopeRenamer<'a, 'r> {
   /// });
   /// ```
   pub fn rename_bindings_shadowing_cjs_params(&mut self) {
-    use rolldown_common::WrapKind;
+    /// CJS wrapper parameter names that nested scopes should avoid shadowing.
+    const CJS_WRAPPER_NAMES: [&str; 2] = ["exports", "module"];
 
     let is_cjs_wrapped =
       matches!(self.link_output.metas[self.module_idx].wrap_kind(), WrapKind::Cjs);
@@ -432,9 +441,6 @@ impl<'a, 'r> NestedScopeRenamer<'a, 'r> {
     if !is_cjs_wrapped {
       return;
     }
-
-    /// CJS wrapper parameter names that nested scopes should avoid shadowing.
-    const CJS_WRAPPER_NAMES: [&str; 2] = ["exports", "module"];
 
     // Skip root scope (index 0), check nested scopes only
     for (_, bindings) in self.scoping.iter_bindings().skip(1) {

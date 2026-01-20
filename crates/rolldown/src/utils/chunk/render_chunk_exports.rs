@@ -211,7 +211,7 @@ pub fn render_chunk_exports(
           let external_modules = meta
             .star_exports_from_external_modules
             .iter()
-            .map(|rec_idx| module.ecma_view.import_records[*rec_idx].resolved_module)
+            .filter_map(|rec_idx| module.ecma_view.import_records[*rec_idx].resolved_module)
             .chain(ctx.chunk.entry_level_external_module_idx.iter().copied())
             .collect::<FxIndexSet<ModuleIdx>>();
 

@@ -58,8 +58,10 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           .hmr_info
           .module_request_to_import_record_idx[string_literal.value.as_str()]];
         // Use stable module ID for consistent runtime lookup
-        string_literal.value =
-          self.snippet.builder.atom(self.ctx.modules[import_record.resolved_module].stable_id());
+        string_literal.value = self
+          .snippet
+          .builder
+          .atom(self.ctx.modules[import_record.into_resolved_module()].stable_id());
       }
       ast::Argument::ArrayExpression(array_expression) => {
         // `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
@@ -74,7 +76,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
             string_literal.value = self
               .snippet
               .builder
-              .atom(self.ctx.modules[import_record.resolved_module].stable_id());
+              .atom(self.ctx.modules[import_record.into_resolved_module()].stable_id());
           }
         });
       }

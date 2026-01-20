@@ -88,10 +88,10 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             // ```
             let rec_id = self.module.imports[&import_decl.span];
             let rec = &self.module.import_records[rec_id];
-            let importee = &self.modules[rec.resolved_module];
-            self.dependencies.insert(rec.resolved_module);
-            let binding_name =
-              self.ensure_static_import_info(rec.resolved_module, rec_id).to_string();
+            let Some(importee_idx) = rec.resolved_module else { return };
+            let importee = &self.modules[importee_idx];
+            self.dependencies.insert(importee_idx);
+            let binding_name = self.ensure_static_import_info(importee_idx, rec_id).to_string();
             import_decl.specifiers.as_ref().inspect(|specifiers| {
               specifiers.iter().for_each(|spec| match spec {
                 ast::ImportDeclarationSpecifier::ImportSpecifier(import_specifier) => {
@@ -140,11 +140,10 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
               // export {} from '...'
               let rec_id = self.module.imports[&decl.span];
               let rec = &self.module.import_records[rec_id];
-              let importee = &self.modules[rec.resolved_module];
-              self.dependencies.insert(rec.resolved_module);
-
-              let binding_name =
-                self.ensure_static_import_info(rec.resolved_module, rec_id).to_string();
+              let Some(importee_idx) = rec.resolved_module else { return };
+              let importee = &self.modules[importee_idx];
+              self.dependencies.insert(importee_idx);
+              let binding_name = self.ensure_static_import_info(importee_idx, rec_id).to_string();
               self.exports.extend(decl.specifiers.iter().map(|specifier| {
                         self.snippet.object_property_kind_object_property(
                           &specifier.exported.name(),
@@ -293,10 +292,10 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           ast::ModuleDeclaration::ExportAllDeclaration(export_all_decl) => {
             let rec_id = self.module.imports[&export_all_decl.span];
             let rec = &self.module.import_records[rec_id];
-            let importee = &self.modules[rec.resolved_module];
-            self.dependencies.insert(rec.resolved_module);
-            let binding_name =
-              self.ensure_static_import_info(rec.resolved_module, rec_id).to_string();
+            let Some(importee_idx) = rec.resolved_module else { return };
+            let importee = &self.modules[importee_idx];
+            self.dependencies.insert(importee_idx);
+            let binding_name = self.ensure_static_import_info(importee_idx, rec_id).to_string();
             if let Some(stmt) =
               self.create_load_exports_call_stmt(importee, &binding_name, export_all_decl.span)
             {
@@ -432,9 +431,9 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         // `import.meta.hot.accept('./dep.js', ...)`
         let import_record = &self.module.import_records
           [self.module.hmr_info.module_request_to_import_record_idx[string_literal.value.as_str()]];
+        let Some(module_idx) = import_record.resolved_module else { return };
         // Use stable module ID for consistent runtime lookup
-        string_literal.value =
-          self.snippet.builder.atom(self.modules[import_record.resolved_module].stable_id());
+        string_literal.value = self.snippet.builder.atom(self.modules[module_idx].stable_id());
       }
       ast::Argument::ArrayExpression(array_expression) => {
         // `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
@@ -443,9 +442,9 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             let import_record =
               &self.module.import_records[self.module.hmr_info.module_request_to_import_record_idx
                 [string_literal.value.as_str()]];
+            let Some(module_idx) = import_record.resolved_module else { return };
             // Use stable module ID for consistent runtime lookup
-            string_literal.value =
-              self.snippet.builder.atom(self.modules[import_record.resolved_module].stable_id());
+            string_literal.value = self.snippet.builder.atom(self.modules[module_idx].stable_id());
           }
         });
       }
@@ -587,9 +586,11 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       return;
     };
 
-    let importee_idx = &self.module.import_records[*rec_idx].resolved_module;
+    let Some(importee_idx) = self.module.import_records[*rec_idx].resolved_module else {
+      return;
+    };
 
-    let Module::Normal(importee) = &self.modules[*importee_idx] else {
+    let Module::Normal(importee) = &self.modules[importee_idx] else {
       // Not a normal module, skip
       return;
     };
@@ -636,7 +637,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       );
     }
 
-    if let Some(init_fn_name) = self.affected_module_idx_to_init_fn_name.get(importee_idx) {
+    if let Some(init_fn_name) = self.affected_module_idx_to_init_fn_name.get(&importee_idx) {
       // If the importee is in the propagation chain, we need to call the init function to re-execute the module.
       // Turn `import('./foo.js')` into `(init_foo(), Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js')))`
 
@@ -705,9 +706,11 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       return;
     };
 
-    let importee_idx = &self.module.import_records[*rec_idx].resolved_module;
+    let Some(importee_idx) = self.module.import_records[*rec_idx].resolved_module else {
+      return;
+    };
 
-    let Module::Normal(importee) = &self.modules[*importee_idx] else {
+    let Module::Normal(importee) = &self.modules[importee_idx] else {
       // Not a normal module, skip
       return;
     };
@@ -721,7 +724,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       false,
     );
 
-    if let Some(init_fn_name) = self.affected_module_idx_to_init_fn_name.get(importee_idx) {
+    if let Some(init_fn_name) = self.affected_module_idx_to_init_fn_name.get(&importee_idx) {
       // If the importee is in the current patch, call init before loading exports
       // Turn `require('./foo.js')` into `(init_foo(), __rolldown_runtime__.loadExports('./foo.js'))`
       if is_importee_cjs {

@@ -306,10 +306,12 @@ impl Bundle {
               module
                 .import_records
                 .iter()
-                .map(|r| action::ModuleImport {
-                  module_id: scan_stage_output.module_table[r.resolved_module].id().to_string(),
-                  kind: r.kind.to_string(),
-                  module_request: r.module_request.to_string(),
+                .filter_map(|r| {
+                  r.resolved_module.map(|module_idx| action::ModuleImport {
+                    module_id: scan_stage_output.module_table[module_idx].id().to_string(),
+                    kind: r.kind.to_string(),
+                    module_request: r.module_request.to_string(),
+                  })
                 })
                 .collect(),
             ),

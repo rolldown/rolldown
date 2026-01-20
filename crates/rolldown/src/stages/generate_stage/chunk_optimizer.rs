@@ -61,12 +61,12 @@ impl GenerateStage<'_> {
           continue;
         };
 
-        for rec in &module.import_records {
+        for dep_idx in module.import_records.iter().filter_map(|r| r.resolved_module) {
           // Can't put it at the beginning of the loop,
-          if let Some(chunk_idx) = dynamic_entry_modules.get(&rec.resolved_module) {
+          if let Some(chunk_idx) = dynamic_entry_modules.get(&dep_idx) {
             ret.entry(entry_chunk_idx).or_default().insert(*chunk_idx);
           }
-          q.push_back(rec.resolved_module);
+          q.push_back(dep_idx);
         }
       }
     }

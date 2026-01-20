@@ -324,7 +324,7 @@ export interface ParserOptions {
   /** Treat the source text as `js`, `jsx`, `ts`, `tsx` or `dts`. */
   lang?: 'js' | 'jsx' | 'ts' | 'tsx' | 'dts'
   /** Treat the source text as `script` or `module` code. */
-  sourceType?: 'script' | 'module' | 'unambiguous' | undefined
+  sourceType?: 'script' | 'module' | 'commonjs' | 'unambiguous' | undefined
   /**
    * Return an AST which includes TypeScript-related properties, or excludes them.
    *
@@ -1181,7 +1181,7 @@ export interface TransformOptions {
   /** Treat the source text as `js`, `jsx`, `ts`, `tsx`, or `dts`. */
   lang?: 'js' | 'jsx' | 'ts' | 'tsx' | 'dts'
   /** Treat the source text as `script` or `module` code. */
-  sourceType?: 'script' | 'module' | 'unambiguous' | undefined
+  sourceType?: 'script' | 'module' | 'commonjs' | 'unambiguous' | undefined
   /**
    * The current working directory. Used to resolve relative paths in other
    * options.

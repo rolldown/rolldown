@@ -1,6 +1,17 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/dynamic_import_cjs_same_chunk/cjs-module.js is dynamically imported by /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/dynamic_import_cjs_same_chunk/main.js but also statically imported by /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/dynamic_import_cjs_same_chunk/main.js, dynamic import will not move module into another chunk.
+
+
+```
+
 # Assets
 
 ## main.js
@@ -31,6 +42,17 @@ Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs_module())).then
 - main.js, is_entry true, is_dynamic_entry false, exports []
 
 # Variant: [format: Cjs]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/dynamic_import_cjs_same_chunk/cjs-module.js is dynamically imported by /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/dynamic_import_cjs_same_chunk/main.js but also statically imported by /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/dynamic_import_cjs_same_chunk/main.js, dynamic import will not move module into another chunk.
+
+
+```
 
 ## Assets
 

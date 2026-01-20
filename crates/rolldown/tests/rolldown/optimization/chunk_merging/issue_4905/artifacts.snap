@@ -1,6 +1,17 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/issue_4905/foo.js is dynamically imported by /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/issue_4905/main.js but also statically imported by /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/issue_4905/main.js, dynamic import will not move module into another chunk.
+
+
+```
+
 # Assets
 
 ## main.js
@@ -24,6 +35,17 @@ Promise.resolve().then(() => foo_exports).then((mod) => {
 ```
 
 # Variant: [format: Cjs]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/issue_4905/foo.js is dynamically imported by /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/issue_4905/main.js but also statically imported by /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/issue_4905/main.js, dynamic import will not move module into another chunk.
+
+
+```
 
 ## Assets
 

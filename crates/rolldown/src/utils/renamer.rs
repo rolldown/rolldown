@@ -116,8 +116,8 @@ impl<'name> Renamer<'name> {
   ///
   /// ```js
   /// // entry.js
-  /// import { foo } from './dep.js';  // Suppose 'foo' conflicts, try renaming to 'foo$1'
-  /// function bar(foo$1) {            // Nested binding 'foo$1' exists!
+  /// import { foo } from './dep.js';  // Suppose `foo` conflicts, try renaming to `foo$1`
+  /// function bar(foo$1) {            // Nested binding `foo$1` exists!
   ///   console.log(foo$1);            // Would capture the wrong value
   /// }
   /// console.log(foo);                // Should reference the import
@@ -130,8 +130,8 @@ impl<'name> Renamer<'name> {
   ///
   /// ```js
   /// // entry.js
-  /// import { value } from './dep.js';  // Original name is 'value'
-  /// function helper(value) {           // Nested 'value' intentionally shadows
+  /// import { value } from './dep.js';  // Original name is `value`
+  /// function helper(value) {           // Nested `value` intentionally shadows
   ///   return value * 2;                // Author intended to use parameter
   /// }
   /// console.log(value);                // Uses the import
@@ -250,7 +250,7 @@ impl<'name> Renamer<'name> {
             concat_string!(hint, "$", itoa::Buffer::new().format(next_conflict_index)).into();
         }
         Entry::Vacant(vac) => {
-          vac.insert(CanonicalNameInfo::default());
+          vac.insert(0);
           break;
         }
       }
@@ -377,7 +377,7 @@ impl NestedScopeRenamer<'_, '_> {
   /// const a$1 = "a.js";        // Import renamed due to conflict
   /// const a = "main.js";
   /// function foo(a$1$1) {      // Parameter renamed to avoid capturing
-  ///   return [a$1$1, a, a$1];  // aJs correctly resolves to a$1
+  ///   return [a$1$1, a, a$1];  // aJs correctly resolves to `a$1`
   /// }
   /// ```
   pub fn rename_bindings_shadowing_named_imports(&mut self) {

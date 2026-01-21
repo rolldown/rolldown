@@ -18,7 +18,7 @@ export default defineTest({
       },
     ],
   },
-  afterTest: () => {
+  afterTest: (output) => {
     const relativeIds = transformedIds.map((id) =>
       path.relative(import.meta.dirname, id).replace(/\\/g, '/'),
     )
@@ -28,5 +28,15 @@ export default defineTest({
     expect(relativeIds).toContain('barrel/index.js')
     expect(relativeIds).toContain('barrel/a.js')
     expect(transformedIds.length).toBe(3)
+    expect(output.output[0].code).toMatchInlineSnapshot(`
+      "//#region barrel/a.js
+      const a = "a";
+
+      //#endregion
+      //#region main.js
+      console.log(a);
+
+      //#endregion"
+    `)
   },
 })

@@ -4051,7 +4051,7 @@ expression: output
 
 # tests/rolldown/function/experimental/attach_debug_info/eliminated_facade_chunk
 
-- main-!~{000}~.js => main-oZHjdmRw.js
+- main-!~{000}~.js => main-DZW8KQfJ.js
 
 # tests/rolldown/function/experimental/attach_debug_info/full
 

@@ -259,13 +259,15 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
               self.declare_link_only_symbol_ref(exported_symbol.symbol);
 
               if let Some(value) = self.extract_constant_value_from_expr(Some(&node.right)) {
-                self
-                  .add_constant_symbol(exported_symbol.symbol, ConstExportMeta::new(value, true));
+                self.add_constant_symbol(exported_symbol.symbol, ConstExportMeta::new(value, true));
               }
 
-              self.result.commonjs_exports.entry(export_name.into()).or_default().push(
-                LocalExport { referenced: exported_symbol, span, came_from_commonjs: true },
-              );
+              self
+                .result
+                .commonjs_exports
+                .entry(export_name.into())
+                .or_default()
+                .push(LocalExport { referenced: exported_symbol, span, came_from_commonjs: true });
             }
           }
         }

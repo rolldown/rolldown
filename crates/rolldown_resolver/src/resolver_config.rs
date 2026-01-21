@@ -144,6 +144,6 @@ impl ResolverConfig {
     let css_options = default_options.clone().with_prefer_relative(true);
     let new_url_options = default_options.clone().with_prefer_relative(true);
 
-    Self { default_options, import_options, require_options, css_options, new_url_options }
+    Self { default_options, import_options, require_options, new_url_options, css_options }
   }
 }

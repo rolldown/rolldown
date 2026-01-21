@@ -105,7 +105,7 @@ impl BuildDiagnostic {
     context: Option<UnloadableDependencyContext>,
     reason: ArcStr,
   ) -> Self {
-    Self::new_inner(UnloadableDependency { resolved, context, reason })
+    Self::new_inner(UnloadableDependency { reason, resolved, context })
   }
 
   pub fn circular_dependency(paths: Vec<String>) -> Self {
@@ -165,7 +165,7 @@ impl BuildDiagnostic {
     entry_module: ArcStr,
     export_keys: Vec<ArcStr>,
   ) -> Self {
-    Self::new_inner(InvalidExportOption { export_mode, export_keys, entry_module })
+    Self::new_inner(InvalidExportOption { export_mode, entry_module, export_keys })
   }
 
   pub fn filename_conflict(filename: ArcStr) -> Self {
@@ -203,7 +203,7 @@ impl BuildDiagnostic {
     span: Span,
     error_message: String,
   ) -> Self {
-    Self::new_inner(UnsupportedFeature { filename, source, span, error_message })
+    Self::new_inner(UnsupportedFeature { source, filename, span, error_message })
   }
 
   pub fn empty_import_meta(
@@ -284,7 +284,7 @@ impl BuildDiagnostic {
   }
 
   pub fn eval(filename: String, source: ArcStr, span: Span) -> Self {
-    Self::new_inner(Eval { filename, span, source })
+    Self::new_inner(Eval { span, source, filename })
   }
 
   pub fn configuration_field_conflict(

@@ -58,6 +58,7 @@ pub async fn render_umd<'code>(
 
   // It is similar to CJS.
   let (import_code, externals) = render_chunk_external_imports(ctx);
+  let externals: Vec<_> = externals.iter().map(super::utils::ExternalImportKind::module).collect();
 
   // The function argument and the external imports are passed as arguments to the wrapper function.
   let need_global = has_exports || named_exports || !externals.is_empty();

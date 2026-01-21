@@ -4,9 +4,9 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  Chunk, ChunkDebugInfo, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType, Module, ModuleIdx,
-  ModuleNamespaceIncludedReason, ModuleTable, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RuntimeHelper, StmtInfos, WrapKind,
+  Chunk, ChunkDebugInfo, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType,
+  FacadeChunkEliminationReason, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleTable,
+  PostChunkOptimizationOperation, PreserveEntrySignatures, RuntimeHelper, StmtInfos, WrapKind,
 };
 use rolldown_utils::{BitSet, indexmap::FxIndexMap};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -25,6 +25,10 @@ use super::{
   GenerateStage, chunk_ext::ChunkCreationReason, chunk_ext::ChunkDebugExt,
   code_splitting::IndexSplittingInfo,
 };
+
+/// Information about a facade chunk merge operation.
+/// Contains (source_chunk_idx, target_chunk_idx, elimination_reason).
+type FacadeChunkMergeInfo = (ChunkIdx, ChunkIdx, FacadeChunkEliminationReason);
 
 impl GenerateStage<'_> {
   /// Constructs a mapping from static entry chunks to the dynamic entry chunks they can reach.
@@ -61,12 +65,12 @@ impl GenerateStage<'_> {
           continue;
         };
 
-        for rec in &module.import_records {
+        for dep_idx in module.import_records.iter().filter_map(|r| r.resolved_module) {
           // Can't put it at the beginning of the loop,
-          if let Some(chunk_idx) = dynamic_entry_modules.get(&rec.resolved_module) {
+          if let Some(chunk_idx) = dynamic_entry_modules.get(&dep_idx) {
             ret.entry(entry_chunk_idx).or_default().insert(*chunk_idx);
           }
-          q.push_back(rec.resolved_module);
+          q.push_back(dep_idx);
         }
       }
     }
@@ -340,10 +344,9 @@ impl GenerateStage<'_> {
 
   /// Finds empty dynamic entry chunks that should be merged with their target common chunks.
   /// Returns a tuple of (merge_entry_to_chunk, emitted_chunk_groups).
-  #[expect(clippy::type_complexity)]
   fn find_facade_chunk_merge_candidates(
     chunk_graph: &ChunkGraph,
-  ) -> (FxHashMap<ModuleIdx, (ChunkIdx, ChunkIdx)>, FxHashMap<ChunkIdx, Vec<ChunkIdx>>) {
+  ) -> (FxHashMap<ModuleIdx, FacadeChunkMergeInfo>, FxHashMap<ChunkIdx, Vec<ChunkIdx>>) {
     let mut merge_entry_to_chunk = FxHashMap::default();
     let mut emitted_chunk_groups: FxHashMap<ChunkIdx, Vec<ChunkIdx>> = FxHashMap::default();
     for (chunk_idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
@@ -386,10 +389,15 @@ impl GenerateStage<'_> {
       //    → Directly merge, the facade chunk can be removed
       if is_manual_to_chunk && is_emitted_from_chunk {
         emitted_chunk_groups.entry(target_chunk_idx).or_default().push(chunk_idx);
-      } else if !is_emitted_from_chunk
-        && (is_manual_to_chunk || is_pure_user_defined_to_entry_chunk)
-      {
-        merge_entry_to_chunk.insert(module, (chunk_idx, target_chunk_idx));
+      } else if !is_emitted_from_chunk {
+        let reason = if is_manual_to_chunk {
+          FacadeChunkEliminationReason::DynamicEntryMergedIntoManualGroup
+        } else if is_pure_user_defined_to_entry_chunk {
+          FacadeChunkEliminationReason::DynamicEntryMergedIntoUserDefinedEntry
+        } else {
+          continue;
+        };
+        merge_entry_to_chunk.insert(module, (chunk_idx, target_chunk_idx, reason));
       }
     }
     (merge_entry_to_chunk, emitted_chunk_groups)
@@ -401,7 +409,7 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &ChunkGraph,
     emitted_chunk_groups: FxHashMap<ChunkIdx, Vec<ChunkIdx>>,
-    merge_entry_to_chunk: &mut FxHashMap<ModuleIdx, (ChunkIdx, ChunkIdx)>,
+    merge_entry_to_chunk: &mut FxHashMap<ModuleIdx, FacadeChunkMergeInfo>,
   ) {
     for (target_chunk_idx, chunk_indices) in emitted_chunk_groups {
       let Some(_target_chunk) = chunk_graph.chunk_table.get(target_chunk_idx) else {
@@ -438,7 +446,14 @@ impl GenerateStage<'_> {
             }
           });
         if !needs_facade {
-          merge_entry_to_chunk.insert(entry_module_idx, (chunk_idx, target_chunk_idx));
+          merge_entry_to_chunk.insert(
+            entry_module_idx,
+            (
+              chunk_idx,
+              target_chunk_idx,
+              FacadeChunkEliminationReason::EmittedChunkMergedIntoManualGroup,
+            ),
+          );
         }
       }
     }
@@ -518,7 +533,9 @@ impl GenerateStage<'_> {
     let mut optimized_common_chunks = FxHashSet::default();
 
     let mut needs_export_all_runtime = false;
-    for (&entry_module, &(from_chunk_idx, target_chunk_idx)) in &merge_entry_to_chunk {
+    for (&entry_module, &(from_chunk_idx, target_chunk_idx, elimination_reason)) in
+      &merge_entry_to_chunk
+    {
       // Point the entry module to related common chunk
       chunk_graph.entry_module_to_entry_chunk.remove(&entry_module);
 
@@ -574,6 +591,7 @@ impl GenerateStage<'_> {
           ChunkDebugInfo::EliminatedFacadeChunk {
             chunk_name: eliminated_chunk_name,
             entry_module_id: module_stable_id,
+            reason: elimination_reason,
           },
         );
       }

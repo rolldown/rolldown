@@ -172,6 +172,7 @@ parking_lot = "0.12.5"
 percent-encoding = "2.3.1"
 petgraph = "0.8.1"
 phf = "0.13.0"
+pnp = "0.12.7"
 rayon = "1.10.0"
 regex = "1.11.1"
 regress = "0.10.3"
@@ -214,7 +215,7 @@ napi-build = { version = "2.2.2" }
 napi-derive = { version = "3.0.0", default-features = false, features = ["type-def", "tracing"] }
 
 # oxc crates with the same version
-oxc = { version = "0.108.0", features = [
+oxc = { version = "0.110.0", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -226,12 +227,12 @@ oxc = { version = "0.108.0", features = [
   "regular_expression",
   "cfg",
 ] }
-oxc_allocator = { version = "0.108.0", features = ["pool"] }
-oxc_ecmascript = { version = "0.108.0" }
-oxc_minify_napi = { version = "0.108.0" }
-oxc_parser_napi = { version = "0.108.0" }
-oxc_transform_napi = { version = "0.108.0" }
-oxc_traverse = { version = "0.108.0" }
+oxc_allocator = { version = "0.110.0", features = ["pool"] }
+oxc_ecmascript = { version = "0.110.0" }
+oxc_minify_napi = { version = "0.110.0" }
+oxc_parser_napi = { version = "0.110.0" }
+oxc_transform_napi = { version = "0.110.0" }
+oxc_traverse = { version = "0.110.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

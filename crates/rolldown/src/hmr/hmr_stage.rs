@@ -1251,8 +1251,7 @@ impl HmrStage<'_> {
         let should_follow = rec.kind.is_static()
           || (module_idx == proxy_entry_idx && rec.kind == ImportKind::DynamicImport);
 
-        if should_follow {
-          let dep_idx = rec.resolved_module;
+        if should_follow && let Some(dep_idx) = rec.resolved_module {
           if let Module::Normal(normal_dep) = &modules[dep_idx] {
             if executed_modules.contains(normal_dep.stable_id.as_str()) {
               continue;

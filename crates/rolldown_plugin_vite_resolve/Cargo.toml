@@ -21,6 +21,7 @@ nodejs-built-in-modules = { workspace = true }
 owo-colors = { workspace = true }
 oxc_resolver = { workspace = true }
 parking_lot = { workspace = true }
+pnp = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_plugin_utils = { workspace = true }

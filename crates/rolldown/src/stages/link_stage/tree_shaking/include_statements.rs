@@ -462,23 +462,26 @@ impl LinkStage<'_> {
     visited.insert(cur_node);
     let module = self.module_table[cur_node].as_normal()?;
     for rec in &module.import_records {
+      let Some(module_idx) = rec.resolved_module else {
+        continue;
+      };
       if rec.kind == ImportKind::DynamicImport {
-        let seen = g.contains_node(rec.resolved_module);
-        if *root_node != rec.resolved_module {
-          g.add_edge(*root_node, rec.resolved_module, ());
+        let seen = g.contains_node(module_idx);
+        if *root_node != module_idx {
+          g.add_edge(*root_node, module_idx, ());
           // Even it is visited before, we still needs to connect the edge
           if seen {
             continue;
           }
         }
         let previous = *root_node;
-        *root_node = rec.resolved_module;
-        self.construct_dynamic_entry_graph(g, visited, root_node, rec.resolved_module);
+        *root_node = module_idx;
+        self.construct_dynamic_entry_graph(g, visited, root_node, module_idx);
         *root_node = previous;
         continue;
       }
       // Can't put it at the beginning of the loop,
-      self.construct_dynamic_entry_graph(g, visited, root_node, rec.resolved_module);
+      self.construct_dynamic_entry_graph(g, visited, root_node, module_idx);
     }
     Some(())
   }
@@ -511,8 +514,9 @@ impl LinkStage<'_> {
               &self.module_table[*module_idx].as_normal().expect("should be a normal module");
             let all_dead_pure_dynamic_import = {
               let import_record = &module.import_records[*import_record_idx];
-              let importee_side_effects =
-                self.module_table[import_record.resolved_module].side_effects().has_side_effects();
+              let importee_side_effects = self.module_table[import_record.into_resolved_module()]
+                .side_effects()
+                .has_side_effects();
 
               // Only consider it is unused if it is a top level pure dynamic import and the
               // importee module has no side effects.
@@ -777,21 +781,27 @@ pub fn include_statement(
   // ```js
   // const cjs = require('./cjs.js')
   // ```
-  stmt_info.import_records.iter().for_each(|import_record_idx| {
-    let import_record = &module.import_records[*import_record_idx];
-    let module_idx = import_record.resolved_module;
-    let Some(m) = ctx.modules[module_idx].as_normal() else {
-      // If the import record is not a normal module, we don't need to include it.
-      return;
-    };
-    if !matches!(m.exports_kind, ExportsKind::CommonJs) || import_record.kind == ImportKind::Import
-    {
-      return;
-    }
-    if !module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
-      ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
-    }
-  });
+  stmt_info
+    .import_records
+    .iter()
+    .filter_map(|import_record_idx| {
+      let rec = &module.import_records[*import_record_idx];
+      rec.resolved_module.map(|module_idx| (rec, module_idx))
+    })
+    .for_each(|(import_record, module_idx)| {
+      let Some(m) = ctx.modules[module_idx].as_normal() else {
+        // If the import record is not a normal module, we don't need to include it.
+        return;
+      };
+      if !matches!(m.exports_kind, ExportsKind::CommonJs)
+        || import_record.kind == ImportKind::Import
+      {
+        return;
+      }
+      if !module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
+        ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
+      }
+    });
   let mut include_kind = if stmt_info.meta.contains(StmtInfoMeta::ReExportDynamicExports) {
     SymbolIncludeReason::ReExportDynamicExports
   } else {

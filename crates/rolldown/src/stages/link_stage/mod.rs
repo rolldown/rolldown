@@ -150,7 +150,7 @@ impl<'a> LinkStage<'a> {
               // Dynamically imported modules are included automatically by `include_statements`
               // when `inlineDynamicImports` is enabled.
               ImportKind::DynamicImport | ImportKind::Require => None,
-              _ => Some(rec.resolved_module),
+              _ => rec.resolved_module,
             })
             .collect();
           meta.star_exports_from_external_modules = module.as_normal().map_or(vec![], |inner| {

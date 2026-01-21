@@ -9,14 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "assert";
 
 //#region other.js
-const bar$1 = "bar";
-const baz$1 = "baz";
-const x$1 = "x";
-const items$1 = "items";
-const p$1 = "p";
-const q$1 = "q";
-const r$1 = "r";
-const s$1 = "s";
+const bar = "bar";
+const baz = "baz";
+const x = "x";
+const items = "items";
+const p = "p";
+const q = "q";
+const r = "r";
+const s = "s";
 
 //#endregion
 //#region main.js

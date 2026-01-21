@@ -281,13 +281,13 @@ impl LinkStage<'_> {
         let mut import_record_ns_to_cjs_module = FxHashMap::default();
         module.named_imports.iter().for_each(|(_, named_import)| {
           let rec = &module.import_records[named_import.record_idx];
-          if relation_with_commonjs_map.contains_key(&rec.resolved_module) {
-            named_import_to_cjs_module.insert(named_import.imported_as, rec.resolved_module);
+          if let Some(module_idx) = rec.resolved_module && relation_with_commonjs_map.contains_key(&module_idx) {
+            named_import_to_cjs_module.insert(named_import.imported_as, module_idx);
           }
         });
         module.import_records.iter().for_each(|item| {
-          if let Some(RelationWithCommonjs::Commonjs) = relation_with_commonjs_map.get(&item.resolved_module) {
-            import_record_ns_to_cjs_module.insert(item.namespace_ref, item.resolved_module);
+          if let Some(module_idx) = item.resolved_module && let Some(RelationWithCommonjs::Commonjs) = relation_with_commonjs_map.get(&module_idx) {
+            import_record_ns_to_cjs_module.insert(item.namespace_ref, module_idx);
           }
         });
         (!named_import_to_cjs_module.is_empty() || !import_record_ns_to_cjs_module.is_empty()).then_some((idx, (named_import_to_cjs_module, import_record_ns_to_cjs_module)))
@@ -321,7 +321,7 @@ impl LinkStage<'_> {
     let is_cjsreexports = module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport);
 
     let cjs_reexport_module =
-      is_cjsreexports.then(|| module.import_records.first().unwrap().resolved_module);
+      is_cjsreexports.then(|| module.import_records.first().unwrap().into_resolved_module());
 
     for dep_id in module.star_export_module_ids().chain(cjs_reexport_module) {
       let Module::Normal(dep_module) = &normal_modules[dep_id] else {
@@ -433,6 +433,7 @@ impl LinkStage<'_> {
                             .to_vec(),
                           depended_refs: vec![],
                           target_commonjs_exported_symbol: None,
+                          reference_id: member_expr_ref.reference_id,
                         },
                       );
                     }
@@ -464,6 +465,7 @@ impl LinkStage<'_> {
                           .to_vec(),
                         depended_refs: vec![],
                         target_commonjs_exported_symbol: None,
+                        reference_id: member_expr_ref.reference_id,
                       },
                     );
                     return;
@@ -557,6 +559,7 @@ impl LinkStage<'_> {
                         .to_vec(),
                       depended_refs,
                       target_commonjs_exported_symbol,
+                      reference_id: member_expr_ref.reference_id,
                     },
                   );
                 }
@@ -610,14 +613,15 @@ impl BindImportsAndExportsContext<'_> {
       let _enter = match_import_span.enter();
 
       let rec = &module.import_records[named_import.record_idx];
-      let is_external = matches!(self.index_modules[rec.resolved_module], Module::External(_));
+      let Some(resolved_module_idx) = rec.resolved_module else { continue };
+      let is_external = matches!(self.index_modules[resolved_module_idx], Module::External(_));
 
       if is_esm && is_external {
         match named_import.imported {
           Specifier::Star => {
             self
               .external_import_namespace_merger
-              .entry(rec.resolved_module)
+              .entry(resolved_module_idx)
               .or_default()
               .insert(*imported_as_ref);
           }
@@ -629,7 +633,7 @@ impl BindImportsAndExportsContext<'_> {
           {
             self
               .external_import_binding_merger
-              .entry(rec.resolved_module)
+              .entry(resolved_module_idx)
               .or_default()
               .entry(name.clone())
               .or_default()
@@ -643,7 +647,7 @@ impl BindImportsAndExportsContext<'_> {
         &mut MatchingContext { tracker_stack: Vec::default() },
         ImportTracker {
           importer: module_idx,
-          importee: rec.resolved_module,
+          importee: resolved_module_idx,
           imported: named_import.imported.clone(),
           imported_as: *imported_as_ref,
         },
@@ -652,7 +656,7 @@ impl BindImportsAndExportsContext<'_> {
       match ret {
         MatchImportKind::_Ignore | MatchImportKind::Cycle => {}
         MatchImportKind::Ambiguous { symbol_ref, potentially_ambiguous_symbol_refs } => {
-          let importee = self.index_modules[rec.resolved_module].stable_id().to_string();
+          let importee = self.index_modules[resolved_module_idx].stable_id().to_string();
 
           let mut exporter = Vec::with_capacity(potentially_ambiguous_symbol_refs.len() + 1);
           if let Some(owner) = self.index_modules[symbol_ref.owner].as_normal() {
@@ -712,7 +716,7 @@ impl BindImportsAndExportsContext<'_> {
             Some(NamespaceAlias { property_name: alias, namespace_ref });
         }
         MatchImportKind::NoMatch => {
-          let importee = &self.index_modules[rec.resolved_module];
+          let importee = &self.index_modules[resolved_module_idx];
           let is_ts_like_importing_ts_like =
             matches!(
               importee.as_normal().map(|m| &m.module_type),
@@ -747,7 +751,10 @@ impl BindImportsAndExportsContext<'_> {
     let named_import = &importer.named_imports[&tracker.imported_as];
 
     // Is this an external file?
-    let importee_id = importer.import_records[named_import.record_idx].resolved_module;
+    let Some(importee_id) = importer.import_records[named_import.record_idx].resolved_module else {
+      return ImportStatus::NoMatch {};
+    };
+
     let importee = match &self.index_modules[importee_id] {
       Module::Normal(importee) => importee.as_ref(),
       Module::External(external) => return ImportStatus::External(external.namespace_ref),
@@ -872,17 +879,19 @@ impl BindImportsAndExportsContext<'_> {
               Some(another_named_import) => {
                 let rec = &ambiguous_ref_owner.as_normal().unwrap().import_records
                   [another_named_import.record_idx];
-                let ambiguous_result = self.match_import_with_export(
-                  index_modules,
-                  &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
-                  ImportTracker {
-                    importer: ambiguous_ref_owner.idx(),
-                    importee: rec.resolved_module,
-                    imported: another_named_import.imported.clone(),
-                    imported_as: another_named_import.imported_as,
-                  },
-                );
-                ambiguous_results.push(ambiguous_result);
+                if let Some(resolved_module_idx) = rec.resolved_module {
+                  let ambiguous_result = self.match_import_with_export(
+                    index_modules,
+                    &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
+                    ImportTracker {
+                      importer: ambiguous_ref_owner.idx(),
+                      importee: resolved_module_idx,
+                      imported: another_named_import.imported.clone(),
+                      imported_as: another_named_import.imported_as,
+                    },
+                  );
+                  ambiguous_results.push(ambiguous_result);
+                }
               }
               _ => {
                 ambiguous_results.push(MatchImportKind::Normal(MatchImportKindNormal {
@@ -899,20 +908,22 @@ impl BindImportsAndExportsContext<'_> {
           if let Some(another_named_import) = owner.as_normal().unwrap().named_imports.get(&symbol)
           {
             let rec = &owner.as_normal().unwrap().import_records[another_named_import.record_idx];
-            match &self.index_modules[rec.resolved_module] {
-              Module::External(_) => {
-                break MatchImportKind::Normal(MatchImportKindNormal {
-                  symbol: another_named_import.imported_as,
-                  reexports: vec![],
-                });
-              }
-              Module::Normal(importee) => {
-                tracker.importee = importee.idx;
-                tracker.importer = owner.idx();
-                tracker.imported = another_named_import.imported.clone();
-                tracker.imported_as = another_named_import.imported_as;
-                reexports.push(another_named_import.imported_as);
-                continue;
+            if let Some(resolved_module_idx) = rec.resolved_module {
+              match &self.index_modules[resolved_module_idx] {
+                Module::External(_) => {
+                  break MatchImportKind::Normal(MatchImportKindNormal {
+                    symbol: another_named_import.imported_as,
+                    reexports: vec![],
+                  });
+                }
+                Module::Normal(importee) => {
+                  tracker.importee = importee.idx;
+                  tracker.importer = owner.idx();
+                  tracker.imported = another_named_import.imported.clone();
+                  tracker.imported_as = another_named_import.imported_as;
+                  reexports.push(another_named_import.imported_as);
+                  continue;
+                }
               }
             }
           }

@@ -1,6 +1,7 @@
 use crate::{
-  ImportRecordIdx, Module, ModuleId, ModuleIdx, RawImportRecord, ResolvedId, SymbolRefDbForModule,
-  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
+  BarrelInfo, ImportRecordIdx, Module, ModuleId, ModuleIdx, RawImportRecord, ResolvedId,
+  SymbolRefDbForModule, dynamic_import_usage::DynamicImportExportsUsage,
+  side_effects::DeterminedSideEffects,
 };
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
@@ -14,6 +15,7 @@ pub struct NormalModuleTaskResult {
   pub resolved_deps: IndexVec<ImportRecordIdx, ResolvedId>,
   pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub warnings: Vec<BuildDiagnostic>,
+  pub barrel_info: Option<BarrelInfo>,
 }
 
 pub struct ExternalModuleTaskResult {

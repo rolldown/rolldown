@@ -66,16 +66,17 @@ impl SymbolRef {
     modules: &IndexModules,
   ) -> bool {
     let canonical_ref = db.canonical_ref_for(*self);
-
     let Module::Normal(owner) = &modules[canonical_ref.owner] else { return false };
 
-    let Some(named_import) = owner.named_imports.get(self) else {
+    let Some(module_idx) = owner
+      .named_imports
+      .get(self)
+      .and_then(|named_import| owner.import_records[named_import.record_idx].resolved_module)
+    else {
       return false;
     };
 
-    let rec = &owner.import_records[named_import.record_idx];
-
-    match &modules[rec.resolved_module] {
+    match &modules[module_idx] {
       Module::Normal(_) => {
         // This branch should be unreachable. By `par_canonical_ref_for`, we should get the canonical ref.
         // An canonical ref is either declared by the module itself or a `import { foo } from 'bar'` statement.

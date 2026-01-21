@@ -329,6 +329,7 @@ impl Resolver {
 
   pub fn normalize_oxc_resolver_result(
     &self,
+    id: &str,
     importer: Option<&str>,
     dedupe: &FxHashSet<String>,
     legacy_inconsistent_cjs_interop: bool,
@@ -365,7 +366,15 @@ impl Resolver {
           ..Default::default()
         }))
       }
-      Err(oxc_resolver::ResolveError::NotFound(id)) => {
+      Err(
+        oxc_resolver::ResolveError::YarnPnpError(
+          pnp::Error::BadSpecifier(_)
+          | pnp::Error::MissingPeerDependency(_)
+          | pnp::Error::UndeclaredDependency(_)
+          | pnp::Error::MissingDependency(_),
+        )
+        | oxc_resolver::ResolveError::NotFound(_),
+      ) => {
         // if import can't be found, check if it's an optional peer dep.
         // if so, we can resolve to a special id that errors only when imported.
         if is_bare_import(id)
@@ -438,6 +447,7 @@ impl Resolver {
       external,
     );
     let resolved = self.normalize_oxc_resolver_result(
+      specifier,
       importer,
       dedupe,
       legacy_inconsistent_cjs_interop,

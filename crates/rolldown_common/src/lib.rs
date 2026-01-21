@@ -97,8 +97,11 @@ pub use crate::{
     Chunk, ChunkMeta, PostChunkOptimizationOperation,
     chunk_table::ChunkTable,
     types::{
-      AddonRenderContext, chunk_debug_info::ChunkDebugInfo, chunk_reason_type::ChunkReasonType,
-      cross_chunk_import_item::CrossChunkImportItem, module_group::ModuleGroup,
+      AddonRenderContext,
+      chunk_debug_info::{ChunkDebugInfo, FacadeChunkEliminationReason},
+      chunk_reason_type::ChunkReasonType,
+      cross_chunk_import_item::CrossChunkImportItem,
+      module_group::ModuleGroup,
       preliminary_filename::PreliminaryFilename,
     },
   },
@@ -144,6 +147,9 @@ pub use crate::{
   types::asset_meta::{InstantiationKind, SourcemapAssetMeta},
   types::ast_scope_idx::AstScopeIdx,
   types::ast_scopes::AstScopes,
+  types::barrel_state::{
+    BarrelInfo, BarrelModuleState, BarrelState, ImportedExports, try_extract_barrel_info,
+  },
   types::bundle_mode::BundleMode,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
@@ -162,7 +168,8 @@ pub use crate::{
   types::import_attribute::ImportAttribute,
   types::import_kind::ImportKind,
   types::import_record::{
-    DynamicImportExprInfo, ImportRecordIdx, ImportRecordMeta, RawImportRecord, ResolvedImportRecord,
+    DynamicImportExprInfo, ImportRecordIdx, ImportRecordMeta, ImportRecordStateInit,
+    RawImportRecord, ResolvedImportRecord,
   },
   types::importer_record::ImporterRecord,
   types::ins_chunk_idx::InsChunkIdx,

@@ -12,7 +12,7 @@ use const_eval::{ConstEvalCtx, try_extract_const_literal};
 use oxc::ast::ast::{BindingPattern, Expression, ImportExpression};
 use oxc::ast::{AstKind, ast};
 use oxc::ast_visit::walk;
-use oxc::semantic::{Reference, ScopeFlags, Scoping};
+use oxc::semantic::{Reference, ReferenceId, ScopeFlags, Scoping};
 use oxc::span::SPAN;
 use oxc::{
   ast::{
@@ -663,6 +663,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.result.ecma_view_meta.insert(EcmaViewMeta::HasStarExport);
     }
     self.result.imports.insert(decl.span, id);
+    self.result.import_records[id].meta.insert(ImportRecordMeta::IsReExport);
     if let Some(ref with_clause) = decl.with_clause {
       self.result.import_attribute_map.insert(id, ImportAttribute::from_with_clause(with_clause));
     }
@@ -709,6 +710,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           .insert(record_idx, ImportAttribute::from_with_clause(with_clause));
       }
       self.result.imports.insert(decl.span, record_idx);
+      self.result.import_records[record_idx].meta.insert(ImportRecordMeta::IsReExport);
     } else {
       decl.specifiers.iter().for_each(|spec| {
         if let Some(local_symbol_id) = self.get_root_binding(spec.local.name().as_str()) {
@@ -918,11 +920,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     prop_and_span_list: Vec<(CompactStr, Span)>,
     span: Span,
     obj_ref_type: MemberExprObjectReferencedType,
+    reference_id: Option<ReferenceId>,
   ) {
-    self
-      .current_stmt_info
-      .referenced_symbols
-      .push(MemberExprRef::new(object_ref, prop_and_span_list, span, obj_ref_type).into());
+    self.current_stmt_info.referenced_symbols.push(
+      MemberExprRef::new(object_ref, prop_and_span_list, span, obj_ref_type, reference_id).into(),
+    );
   }
 
   fn is_root_symbol(&self, symbol_id: SymbolId) -> bool {

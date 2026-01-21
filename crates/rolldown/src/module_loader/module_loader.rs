@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
@@ -11,10 +12,11 @@ use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::{
   EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult, FlatOptions,
-  HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImporterRecord, Module, ModuleId,
-  ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult, PreserveEntrySignatures,
-  RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, ScanMode,
-  SourceMapGenMsg, StmtInfoIdx, SymbolRefDb, SymbolRefDbForModule,
+  HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImportedExports, ImporterRecord,
+  Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult,
+  PreserveEntrySignatures, RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief,
+  RuntimeModuleTaskResult, ScanMode, SourceMapGenMsg, StmtInfoIdx, SymbolRefDb,
+  SymbolRefDbForModule,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosableResolveError};
@@ -205,16 +207,30 @@ impl<'a> ModuleLoader<'a> {
   fn try_spawn_new_task(
     &mut self,
     resolved_id: ResolvedId,
-    owner: Option<ModuleTaskOwnerRef<'_>>,
+    owner: Option<ModuleTaskOwnerRef>,
     is_user_defined_entry: bool,
     assert_module_type: Option<&ModuleType>,
     user_defined_entries: &Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
   ) -> ModuleIdx {
-    let idx = match self.cache.module_id_to_idx.get(&resolved_id.id) {
-      Some(VisitState::Seen(idx)) => return *idx,
+    let idx = match self.cache.module_id_to_idx.get(&resolved_id.id).copied() {
+      Some(VisitState::Seen(idx)) => {
+        if self.flat_options.is_lazy_barrel_enabled() && owner.is_none() {
+          if let Some(barrel_module_state) = self.cache.barrel_state.barrel_infos.get(&idx) {
+            // If the module is already a barrel module, we need to load its remaining re-export import records
+            if barrel_module_state.is_some() {
+              self.process_barrel_import_record(
+                &mut VecDeque::from_iter([(idx, ImportedExports::All)]),
+                user_defined_entries,
+              );
+            }
+          } else {
+            self.cache.barrel_state.requested_exports.insert(idx, ImportedExports::All);
+          }
+        }
+        return idx;
+      }
       Some(VisitState::Invalidate(idx)) => {
         // Full scan mode the idx will never be invalidated right?
-        let idx = *idx;
         self.intermediate_normal_modules.alloc_ecma_module_idx_sparse(idx);
         self.cache.module_id_to_idx.insert(resolved_id.id.clone(), VisitState::Seen(idx));
         idx
@@ -309,6 +325,7 @@ impl<'a> ModuleLoader<'a> {
       if let Entry::Occupied(mut occ) = self.cache.module_id_to_idx.entry(resolved_id.id.clone()) {
         let idx = occ.get().idx();
         occ.insert(VisitState::Invalidate(idx));
+        self.cache.barrel_state.barrel_infos.remove(&idx);
       }
       // User may update the entry module in incremental mode, so we need to make sure
       // if it is a user defined entry to avoid generate wrong asset file
@@ -325,6 +342,7 @@ impl<'a> ModuleLoader<'a> {
       );
     }
 
+    let mut work_queue: VecDeque<(ModuleIdx, ImportedExports)> = VecDeque::new();
     let mut dynamic_import_entry_ids: FxHashMap<
       ModuleIdx,
       Vec<(ModuleIdx, StmtInfoIdx, Address, ImportRecordIdx)>,
@@ -345,6 +363,7 @@ impl<'a> ModuleLoader<'a> {
         ModuleLoaderMsg::NormalModuleDone(task_result) => {
           let NormalModuleTaskResult {
             mut module,
+            mut barrel_info,
             ecma_related: EcmaRelated { ast, symbols, mut dynamic_import_rec_exports_usage },
             resolved_deps,
             raw_import_records,
@@ -364,13 +383,19 @@ impl<'a> ModuleLoader<'a> {
             && let Some(previous_module) =
               self.cache.get_snapshot().module_table.modules.get(module_idx)
           {
-            for rec in previous_module.import_records() {
-              self.intermediate_normal_modules.importers[rec.resolved_module]
+            let resolved_deps =
+              previous_module.import_records().into_iter().filter_map(|r| r.resolved_module);
+            for dep_idx in resolved_deps {
+              self.intermediate_normal_modules.importers[dep_idx]
                 .retain(|v| v.importer_idx != module_idx);
             }
           }
 
           let normal_module = module.as_normal().unwrap();
+          let (mut all_imported_specifiers, mut initial_needed_records) =
+            self.cache.barrel_state.initialize_barrel_tracking(normal_module, &mut barrel_info);
+
+          let mut tracked_records = FxHashMap::default();
           let mut import_records = IndexVec::with_capacity(raw_import_records.len());
           for ((rec_idx, mut raw_rec), resolved_id) in
             raw_import_records.into_iter_enumerated().zip(resolved_deps)
@@ -381,6 +406,29 @@ impl<'a> ModuleLoader<'a> {
               raw_rec.meta.insert(ImportRecordMeta::JsonModule);
             }
 
+            // If `initial_needed_records` exists, we only need to load partial re-export import records
+            if let Some(ref initial_needed_records) = initial_needed_records
+              && raw_rec.meta.contains(ImportRecordMeta::IsReExport)
+            {
+              // For `export * from`, its specifier is always `All`.
+              // Since it's not in `named_imports`, it wasn't added to `all_imported_specifiers`
+              // in `initialize_barrel_tracking`, so we handle it here.
+              if raw_rec.meta.contains(ImportRecordMeta::IsExportStar) {
+                all_imported_specifiers.insert(rec_idx, ImportedExports::All);
+              }
+              // If this re-export still exists in `all_imported_specifiers`,
+              // some of its specifiers are needed and may be imported by other modules,
+              // so it needs to be tracked.
+              if all_imported_specifiers.contains_key(&rec_idx) {
+                tracked_records.insert(rec_idx, (raw_rec.state.clone(), resolved_id.clone()));
+              }
+              // If this re-export is not in `initial_needed_records`, we don't need to load it
+              if !initial_needed_records.contains_key(&rec_idx) {
+                import_records.push(raw_rec.into_resolved(None));
+                continue;
+              }
+            }
+
             let idx = self.try_spawn_new_task(
               resolved_id,
               Some(ModuleTaskOwnerRef::new(normal_module, raw_rec.span)),
@@ -389,14 +437,42 @@ impl<'a> ModuleLoader<'a> {
               &user_defined_entries,
             );
 
+            if self.shared_context.options.experimental.is_lazy_barrel_enabled() {
+              // Only distinguish specific imported symbols for `import` statements;
+              // otherwise, treat as importing all.
+              let imported_exports = if raw_rec.kind == ImportKind::Import {
+                // If exists in `initial_needed_records`, take the needed specifiers from it first.
+                // Only when `initial_needed_records` is `None` will we fall through to the branches below.
+                // `None` means we need to load all imported specifiers.
+                // Note: we already continued above via `!initial_needed_records.contains_key(&rec_idx)` above.
+                if let Some(imported_exports) =
+                  initial_needed_records.as_mut().and_then(|r| r.remove(&rec_idx))
+                {
+                  imported_exports
+                } else if let Some(imported_exports) = all_imported_specifiers.remove(&rec_idx) {
+                  // This is `import { a } from '..'` form, all its specifiers need to be recorded
+                  imported_exports
+                } else if raw_rec.meta.contains(ImportRecordMeta::IsExportStar) {
+                  // `export * from '..'` form, its specifier is always `All`
+                  ImportedExports::All
+                } else {
+                  // `import '..'` form, no symbols need to be recorded
+                  ImportedExports::Partial(FxHashSet::default())
+                }
+              } else {
+                ImportedExports::All
+              };
+              work_queue.push_back((idx, imported_exports));
+            }
+
             // Dynamic imported module will be considered as an entry
             self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
               kind: raw_rec.kind,
               importer_path: module.id().clone(),
               importer_idx: module_idx,
             });
-            // defer usage merging, since we only have one consumer, we should keep action during fetching as simple
-            // as possible
+
+            // Defer usage merging - with only one consumer, keep fetch actions simple
             if let Some(usage) = dynamic_import_rec_exports_usage.remove(&rec_idx) {
               dynamic_import_exports_usage_pairs.push((idx, usage));
             }
@@ -419,13 +495,26 @@ impl<'a> ModuleLoader<'a> {
                 }
               }
             }
-            import_records.push(raw_rec.into_resolved(idx));
+            import_records.push(raw_rec.into_resolved(Some(idx)));
           }
 
           module.set_import_records(import_records);
-
           *self.intermediate_normal_modules.index_ecma_ast.get_mut(module_idx) = Some(ast);
           *self.intermediate_normal_modules.modules.get_mut(module_idx) = Some(module);
+
+          if self.shared_context.options.experimental.is_lazy_barrel_enabled() {
+            self.cache.barrel_state.barrel_infos.insert(
+              module_idx,
+              barrel_info.map(|info| {
+                // `tracked_records` and `all_imported_specifiers` have the same length and matching keys.
+                // `all_imported_specifiers` only contains the remaining specifiers for import records in `tracked_records`,
+                // after being filtered above and in `get_needed_records`.
+                info.into_barrel_module_state(tracked_records, all_imported_specifiers)
+              }),
+            );
+            self.process_barrel_import_record(&mut work_queue, &user_defined_entries);
+          }
+
           self.symbol_ref_db.store_local_db(module_idx, symbols);
           self.remaining -= 1;
         }
@@ -469,19 +558,19 @@ impl<'a> ModuleLoader<'a> {
 
           let mut import_records = IndexVec::with_capacity(raw_import_records.len());
           for (raw_rec, info) in raw_import_records.into_iter().zip(resolved_deps) {
-            let id = self.try_spawn_new_task(
+            let idx = self.try_spawn_new_task(
               info,
               None,
               false,
               raw_rec.asserted_module_type.as_ref(),
               &user_defined_entries,
             );
-            self.intermediate_normal_modules.importers[id].push(ImporterRecord {
+            self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
               kind: raw_rec.kind,
               importer_path: module.id.clone(),
               importer_idx: module.idx,
             });
-            import_records.push(raw_rec.into_resolved(id));
+            import_records.push(raw_rec.into_resolved(Some(idx)));
           }
           module.import_records = import_records;
 
@@ -771,5 +860,118 @@ impl<'a> ModuleLoader<'a> {
         .and_then(|importers| importers.first().map(|rec| rec.importer_idx));
     }
     chain
+  }
+
+  #[expect(clippy::rc_buffer)]
+  fn process_barrel_import_record(
+    &mut self,
+    work_queue: &mut VecDeque<(ModuleIdx, ImportedExports)>,
+    user_defined_entries: &Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
+  ) {
+    while let Some((idx, imported_exports)) = work_queue.pop_front() {
+      // No entry in `barrel_infos` means this module hasn't been loaded and processed yet.
+      // Record it for now and process later when loading is complete.
+      let Some(barrel_module_state) = self.cache.barrel_state.barrel_infos.get_mut(&idx) else {
+        match self.cache.barrel_state.requested_exports.entry(idx) {
+          Entry::Occupied(mut occ) => {
+            imported_exports.subtract_and_merge_into(occ.get_mut());
+          }
+          Entry::Vacant(vac) => {
+            vac.insert(imported_exports);
+          }
+        }
+        continue;
+      };
+
+      // Not a barrel module, clean up and skip
+      let Some(barrel_module_state) = barrel_module_state else {
+        self.cache.barrel_state.requested_exports.remove(&idx);
+        continue;
+      };
+
+      // No tracked records, skip
+      if barrel_module_state.tracked_records.is_empty() {
+        continue;
+      }
+
+      // Calculate new exports to process (subtract already processed)
+      let new_exports = match self.cache.barrel_state.requested_exports.entry(idx) {
+        Entry::Occupied(mut occ) => {
+          let Some(diff) = imported_exports.subtract_and_merge_into(occ.get_mut()) else {
+            continue;
+          };
+          diff
+        }
+        Entry::Vacant(vac) => {
+          vac.insert(imported_exports.clone());
+          imported_exports
+        }
+      };
+
+      let mut barrel_module = self
+        .intermediate_normal_modules
+        .modules
+        .get_mut(idx)
+        .take()
+        .expect("barrel module should exist");
+
+      let mut tracked_records = std::mem::take(&mut barrel_module_state.tracked_records);
+      let mut remaining_imported_specifiers =
+        std::mem::take(&mut barrel_module_state.remaining_imported_specifiers);
+
+      // Below repeats the post-module-load processing logic, but only for the remaining `tracked_records`.
+      // Additionally, we check whether each record in `tracked_records` still needs to be retained.
+      let mut needed_records = barrel_module_state
+        .info
+        .get_needed_records(&new_exports, &mut remaining_imported_specifiers);
+
+      let barrel_normal_module = barrel_module.as_normal_mut().unwrap();
+      tracked_records.retain(|&rec_idx, (import_record_state, resolved_id)| {
+        if let Some(ref needed_records) = needed_records {
+          if !needed_records.contains_key(&rec_idx) {
+            return true;
+          }
+        }
+        let target_idx = match barrel_normal_module.import_records[rec_idx].resolved_module {
+          Some(existing_idx) => existing_idx,
+          None => {
+            let new_idx = self.try_spawn_new_task(
+              resolved_id.clone(),
+              Some(ModuleTaskOwnerRef::new(barrel_normal_module, import_record_state.span)),
+              false,
+              import_record_state.asserted_module_type.as_ref(),
+              user_defined_entries,
+            );
+            barrel_normal_module.import_records[rec_idx].resolved_module = Some(new_idx);
+            self.intermediate_normal_modules.importers[new_idx].push(ImporterRecord {
+              kind: barrel_normal_module.import_records[rec_idx].kind,
+              importer_path: barrel_normal_module.id.clone(),
+              importer_idx: barrel_normal_module.idx,
+            });
+            new_idx
+          }
+        };
+        let keep_tracking = match self.cache.barrel_state.barrel_infos.get(&target_idx) {
+          Some(Some(s)) => target_idx == idx || !s.tracked_records.is_empty(),
+          Some(None) => false,
+          None => true,
+        };
+        if let Some(imported_exports) = needed_records.as_mut().and_then(|r| r.remove(&rec_idx)) {
+          work_queue.push_back((target_idx, imported_exports));
+          return keep_tracking && remaining_imported_specifiers.contains_key(&rec_idx);
+        } else if let Some(imported_exports) = remaining_imported_specifiers.remove(&rec_idx) {
+          work_queue.push_back((target_idx, imported_exports));
+          return false;
+        }
+        keep_tracking
+      });
+
+      let barrel_module_state =
+        self.cache.barrel_state.barrel_infos.get_mut(&idx).unwrap().as_mut().unwrap();
+      barrel_module_state.tracked_records = tracked_records;
+      barrel_module_state.remaining_imported_specifiers = remaining_imported_specifiers;
+
+      *self.intermediate_normal_modules.modules.get_mut(idx) = Some(barrel_module);
+    }
   }
 }

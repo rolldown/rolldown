@@ -452,6 +452,7 @@ impl Plugin for ViteResolvePlugin {
 
     let specifier = normalize_leading_slashes(&id);
     let resolved = resolver.normalize_oxc_resolver_result(
+      specifier,
       args.importer,
       &self.dedupe,
       self.legacy_inconsistent_cjs_interop,

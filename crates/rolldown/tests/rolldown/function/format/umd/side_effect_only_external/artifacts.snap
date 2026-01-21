@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## MISSING_GLOBAL_NAME
+
+```text
+[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "external" in "output.globals" – guessing "external".
+
+```
+
+# Assets
+
+## main.js
+
+```js
+(function(global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(require('external')) :
+  typeof define === 'function' && define.amd ? define(['external'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.external));
+})(this, function(external) {
+
+//#region main.js
+	console.log("foo");
+
+//#endregion
+});
+```

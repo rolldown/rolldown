@@ -33,7 +33,14 @@ pub struct ImportRecordStateInit {
 
 #[derive(Debug, Clone, Copy)]
 pub struct ImportRecordStateResolved {
-  pub resolved_module: ModuleIdx,
+  pub resolved_module: Option<ModuleIdx>,
+}
+
+impl ImportRecordStateResolved {
+  /// We are extremely sure the import record is resolved when calling this method.
+  pub fn into_resolved_module(self) -> ModuleIdx {
+    self.resolved_module.expect("ImportRecordStateResolved: module not resolved")
+  }
 }
 
 bitflags::bitflags! {
@@ -65,6 +72,8 @@ bitflags::bitflags! {
     /// If a record is a re-export-all from an external module, and that re-export-all chain continues uninterrupted to the entry point,
     /// we can reuse the original re-export-all declaration instead of generating complex interoperability code.
     const EntryLevelExternal = 1 << 9;
+    /// `export { .. } from 'mod'` or `export * as ns from 'mod'`
+    const IsReExport = 1 << 10;
 
     const TopLevelPureDynamicImport = Self::IsTopLevel.bits() | Self::PureDynamicImport.bits();
   }
@@ -134,7 +143,7 @@ impl RawImportRecord {
     self
   }
 
-  pub fn into_resolved(self, resolved_module: ModuleIdx) -> ResolvedImportRecord {
+  pub fn into_resolved(self, resolved_module: Option<ModuleIdx>) -> ResolvedImportRecord {
     ResolvedImportRecord {
       state: ImportRecordStateResolved { resolved_module },
       module_request: self.module_request,

@@ -924,6 +924,12 @@
               "type": "null"
             }
           ]
+        },
+        "invalidImportSideEffects": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -1026,6 +1032,12 @@
           ]
         },
         "chunkOptimization": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "lazyBarrel": {
           "type": [
             "boolean",
             "null"

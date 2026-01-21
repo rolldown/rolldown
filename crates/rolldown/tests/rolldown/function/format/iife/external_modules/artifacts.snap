@@ -6,13 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MISSING_GLOBAL_NAME
 
 ```text
-[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "node:fs" in "output.globals" – guessing "node_fs".
-
-```
-
-## MISSING_GLOBAL_NAME
-
-```text
 [MISSING_GLOBAL_NAME] Warning: No name was provided for external module "node:path" in "output.globals" – guessing "node_path".
 
 ```
@@ -22,7 +15,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-(function(node_path, node_fs) {
+(function(node_path) {
 
 // HIDDEN [rolldown:runtime]
 node_path = __toESM(node_path);
@@ -31,5 +24,5 @@ node_path = __toESM(node_path);
 	console.log(node_path.default);
 
 //#endregion
-})(node_path, node_fs);
+})(node_path);
 ```

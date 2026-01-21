@@ -36,7 +36,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "vitest --typecheck"
+    "test": "vitest --typecheck",
+    "publint": "publint ."
   },
   "devDependencies": {
     "@types/picomatch": "catalog:",

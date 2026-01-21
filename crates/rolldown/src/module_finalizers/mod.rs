@@ -862,6 +862,108 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
+  /// Try to rewrite a static member expression assignment target when the object is a default import from CJS.
+  /// For `import_src.log = value`, if `import_src` is from a CJS module, we need to rewrite to
+  /// `import_src.default.log = value` because __toESM creates getter-only properties.
+  fn try_rewrite_cjs_member_expr_assignment_target(
+    &self,
+    member_expr: &ast::StaticMemberExpression<'ast>,
+  ) -> Option<ast::SimpleAssignmentTarget<'ast>> {
+    // Check if the object is an identifier reference
+    let ast::Expression::Identifier(id_ref) = &member_expr.object else {
+      return None;
+    };
+
+    // Get the symbol for this identifier
+    let reference_id = id_ref.reference_id.get()?;
+    let symbol_id = self.scope.symbol_id_for(reference_id)?;
+    let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+    let symbol = self.ctx.symbol_db.get(canonical_ref);
+
+    // Check if this symbol has a namespace_alias with property_name "default"
+    // This indicates it's a default import from a CJS module
+    let ns_alias = symbol.namespace_alias.as_ref()?;
+    if ns_alias.property_name.as_str() != "default" {
+      return None;
+    }
+
+    // Build the new member expression: object.default.property
+    // First get the canonical name for the namespace
+    let ns_name = self.canonical_name_for(ns_alias.namespace_ref);
+    let property_name = member_expr.property.name.as_str();
+
+    // Create: ns_name.default.property
+    // IMPORTANT: Use SPAN (0-0) for the new member expression to avoid being matched
+    // by resolved_member_expr_refs lookup which uses span as key
+    let ns_id_ref = self.snippet.id_ref_expr(ns_name, SPAN);
+    let default_access =
+      ast::Expression::StaticMemberExpression(self.snippet.builder.alloc_static_member_expression(
+        SPAN,
+        ns_id_ref,
+        self.snippet.id_name("default", SPAN),
+        false,
+      ));
+    let final_access = self.snippet.builder.alloc_static_member_expression(
+      SPAN,
+      default_access,
+      self.snippet.id_name(property_name, SPAN),
+      false,
+    );
+
+    Some(ast::SimpleAssignmentTarget::StaticMemberExpression(final_access))
+  }
+
+  /// Try to rewrite a computed member expression assignment target when the object is a default import from CJS.
+  fn try_rewrite_cjs_computed_member_expr_assignment_target(
+    &self,
+    member_expr: &ast::ComputedMemberExpression<'ast>,
+  ) -> Option<ast::SimpleAssignmentTarget<'ast>> {
+    // Check if the object is an identifier reference
+    let ast::Expression::Identifier(id_ref) = &member_expr.object else {
+      return None;
+    };
+
+    // Get the symbol for this identifier
+    let reference_id = id_ref.reference_id.get()?;
+    let symbol_id = self.scope.symbol_id_for(reference_id)?;
+    let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+    let symbol = self.ctx.symbol_db.get(canonical_ref);
+
+    // Check if this symbol has a namespace_alias with property_name "default"
+    let ns_alias = symbol.namespace_alias.as_ref()?;
+    if ns_alias.property_name.as_str() != "default" {
+      return None;
+    }
+
+    // Build the new member expression: object.default[expression]
+    let ns_name = self.canonical_name_for(ns_alias.namespace_ref);
+
+    // Create: ns_name.default[expression]
+    // IMPORTANT: Use SPAN (0-0) for the new member expression to avoid being matched
+    // by resolved_member_expr_refs lookup which uses span as key
+    let ns_id_ref = self.snippet.id_ref_expr(ns_name, SPAN);
+    let default_access =
+      ast::Expression::StaticMemberExpression(self.snippet.builder.alloc_static_member_expression(
+        SPAN,
+        ns_id_ref,
+        self.snippet.id_name("default", SPAN),
+        false,
+      ));
+
+    // Clone the expression for the computed property
+    let expr_clone = member_expr.expression.clone_in(self.alloc);
+    let final_access = self.snippet.builder.alloc_computed_member_expression(
+      SPAN,
+      default_access,
+      expr_clone,
+      false,
+    );
+
+    Some(ast::SimpleAssignmentTarget::ComputedMemberExpression(final_access))
+  }
+
   fn get_conflicted_info(&self, id: KeepNameId) -> Option<(&'me str, &'me str)> {
     let symbol_ref: SymbolRef = match id {
       KeepNameId::SymbolId(symbol_id) => (self.ctx.idx, symbol_id).into(),

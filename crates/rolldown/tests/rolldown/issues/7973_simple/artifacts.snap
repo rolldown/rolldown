@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+//#region cjs.js
+var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.a = "original";
+}));
+
+//#endregion
+//#region main.js
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
+assert.strictEqual(import_cjs.a, "original");
+import_cjs.default.a = "new value";
+assert.strictEqual(import_cjs.a, "new value");
+
+//#endregion
+export {  };
+```

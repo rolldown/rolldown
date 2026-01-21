@@ -1,5 +1,10 @@
 import type { Program } from '@oxc-project/types';
-import type { BindingPluginContext, BindingVitePluginCustom, ParserOptions } from '../binding.cjs';
+import type {
+  BindingPluginContext,
+  BindingPluginContextResolveOptions,
+  BindingVitePluginCustom,
+  ParserOptions,
+} from '../binding.cjs';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
 import { logCycleLoading } from '../log/logs';
@@ -26,6 +31,8 @@ import type { InputOptions } from '../options/input-options';
 import type { PreRenderedAsset } from '../options/output-options';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { OutputAsset } from '../types/rolldown-output';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { ResolveIdExtraOptions } from '../index';
 
 /**
  * Either a {@linkcode name} or a {@linkcode fileName} can be supplied.
@@ -120,6 +127,11 @@ export type EmittedFile = EmittedAsset | EmittedChunk | EmittedPrebuiltChunk;
 
 /** @category Plugin APIs */
 export interface PluginContextResolveOptions {
+  /**
+   * The value for {@linkcode ResolveIdExtraOptions.kind | kind} passed to
+   * {@linkcode Plugin.resolveId | resolveId} hooks.
+   */
+  kind?: BindingPluginContextResolveOptions['importKind'];
   /**
    * The value for {@linkcode ResolveIdExtraOptions.isEntry | isEntry} passed to
    * {@linkcode Plugin.resolveId | resolveId} hooks.
@@ -316,11 +328,12 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       undefined as BindingVitePluginCustom | undefined,
     );
     const res = await this.context.resolve(source, importer, {
+      importKind: options?.kind,
       custom: receipt,
       isEntry: options?.isEntry,
       skipSelf: options?.skipSelf,
       vitePluginCustom,
-    });
+    } satisfies Record<keyof BindingPluginContextResolveOptions, unknown>);
     if (receipt != null) {
       this.data.removeSavedResolveOptions(receipt);
     }

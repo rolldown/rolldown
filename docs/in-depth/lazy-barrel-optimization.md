@@ -185,7 +185,7 @@ export default {
 
 ## Requirements
 
-For lazy barrel optimization to work effectively, barrel modules should be side-effect-free. Rolldown enables tree-shaking by default and performs smart side-effect analysis. For cases where automatic detection isn't sufficient, you can explicitly declare side-effect-free modules through:
+For lazy barrel optimization to work, barrel modules needs to be marked as side-effect-free explicitly. While Rolldown performs side-effect analysis, it requires to read the modules imported from the barrel files. By marking the barrel modules as side-effect-free, Rolldown can rely on that fact and apply the optimization:
 
 1. **Package declaration**: Adding `"sideEffects": false` to `package.json`
 

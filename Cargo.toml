@@ -44,7 +44,6 @@ similar_names = "allow"
 # These would require breaking API changes. See clippy.toml for why we don't care about breaking changes.
 trivially_copy_pass_by_ref = "allow"
 struct_field_names = "allow"
-unnecessary_wraps = "allow"
 unused_self = "allow"
 wrong_self_convention = "allow"
 

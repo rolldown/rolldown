@@ -302,7 +302,7 @@ impl GenerateStage<'_> {
               } else {
                 0
               };
-              module.render(self.options, &ModuleRenderArgs::Ecma { ast }, initial_indent)
+              Some(module.render(self.options, &ModuleRenderArgs::Ecma { ast }, initial_indent))
             }
             _ => None,
           })

@@ -193,7 +193,7 @@ impl NormalModule {
     options: &NormalizedBundlerOptions,
     args: &ModuleRenderArgs,
     initial_indent: u32,
-  ) -> Option<ModuleRenderOutput> {
+  ) -> ModuleRenderOutput {
     match args {
       ModuleRenderArgs::Ecma { ast } => {
         let enable_sourcemap = options.sourcemap.is_some() && !self.is_virtual();
@@ -225,9 +225,9 @@ impl NormalModule {
           });
           let map =
             render_output.map.map(|original| collapse_sourcemaps(&[&original, &mutated_map]));
-          return Some(ModuleRenderOutput { code, map });
+          return ModuleRenderOutput { code, map };
         }
-        Some(ModuleRenderOutput { code: render_output.code, map: render_output.map })
+        ModuleRenderOutput { code: render_output.code, map: render_output.map }
       }
     }
   }

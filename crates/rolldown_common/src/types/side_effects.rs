@@ -29,12 +29,12 @@ pub enum SideEffects {
 }
 
 impl SideEffects {
-  pub fn from_resolver(value: &oxc_resolver::SideEffects) -> Option<Self> {
+  pub fn from_resolver(value: &oxc_resolver::SideEffects) -> Self {
     match value {
-      oxc_resolver::SideEffects::Bool(v) => Some(SideEffects::Bool(*v)),
-      oxc_resolver::SideEffects::String(v) => Some(SideEffects::String((*v).to_string())),
+      oxc_resolver::SideEffects::Bool(v) => SideEffects::Bool(*v),
+      oxc_resolver::SideEffects::String(v) => SideEffects::String((*v).to_string()),
       oxc_resolver::SideEffects::Array(v) => {
-        Some(SideEffects::Array(v.iter().map(ToString::to_string).collect_vec()))
+        SideEffects::Array(v.iter().map(ToString::to_string).collect_vec())
       }
     }
   }

@@ -171,7 +171,7 @@ impl<'a> ModuleLoader<'a> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
     let (tx, rx) = tokio::sync::mpsc::channel(1024);
-    let shared_context = Arc::new(TaskContext { fs, options, resolver, plugin_driver, tx, meta });
+    let shared_context = Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta });
 
     let importers = std::mem::take(&mut cache.importers);
     let mut intermediate_normal_modules = IntermediateNormalModules::new(is_full_scan, importers);

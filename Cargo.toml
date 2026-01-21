@@ -41,6 +41,16 @@ module_inception = "allow"
 module_name_repetitions = "allow"
 similar_names = "allow"
 
+# These would require breaking API changes. See clippy.toml for why we don't care about breaking changes.
+trivially_copy_pass_by_ref = "allow"
+struct_field_names = "allow"
+unnecessary_wraps = "allow"
+unused_self = "allow"
+enum_variant_names = "allow"
+box_collection = "allow"
+upper_case_acronyms = "allow"
+wrong_self_convention = "allow"
+
 # Forwarding `Result` is a common pattern, this rule is too pedantic.
 missing_errors_doc = "allow"
 
@@ -63,10 +73,10 @@ inconsistent_struct_constructor = "allow"
 single_match = "allow"
 single_match_else = "allow"
 
-# Though the following are nursery rules, they’re still useful.
+# Though the following are nursery rules, they're still useful.
 debug_assert_with_mut_call = "warn"
 iter_on_single_items = "warn"
-needless_pass_by_ref_mut = "warn"
+needless_pass_by_ref_mut = "allow" # Would require breaking API changes
 redundant_clone = "warn"
 redundant_pub_crate = "warn"
 significant_drop_in_scrutinee = "warn"

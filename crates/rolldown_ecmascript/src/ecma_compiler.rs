@@ -34,7 +34,7 @@ impl EcmaCompiler {
             ret.errors,
             &source.clone(),
             id,
-            &Severity::Error,
+            Severity::Error,
             EventKind::ParseError,
           ))
         } else {
@@ -73,7 +73,7 @@ impl EcmaCompiler {
             errors,
             &source.clone(),
             id,
-            &Severity::Error,
+            Severity::Error,
             EventKind::ParseError,
           )),
         }

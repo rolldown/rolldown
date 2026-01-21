@@ -1,1 +1,5 @@
 too-many-lines-threshold = 200
+
+# We don't have any downstream users, we don't care about external API changes,
+# and this makes the codebase cleaner
+avoid-breaking-exported-api = false

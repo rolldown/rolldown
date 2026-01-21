@@ -204,7 +204,7 @@ impl Chunk {
   }
 
   pub async fn generate_preliminary_filename(
-    &mut self,
+    &self,
     options: &NormalizedBundlerOptions,
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
     chunk_name: &ArcStr,

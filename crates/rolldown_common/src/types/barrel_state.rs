@@ -151,7 +151,7 @@ pub struct BarrelState {
 
 impl BarrelState {
   pub fn initialize_barrel_tracking(
-    &mut self,
+    &self,
     module: &NormalModule,
     barrel_info: &mut Option<BarrelInfo>,
   ) -> (

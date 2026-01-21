@@ -540,7 +540,7 @@ impl ViteCSSPostPlugin {
   pub async fn emit_non_codesplit_css_bundle(
     &self,
     ctx: &PluginContext,
-    bundle: &mut [Output],
+    bundle: &[Output],
   ) -> anyhow::Result<()> {
     if !self.css_code_split && !self.has_emitted.load(Ordering::Relaxed) {
       fn collect(
@@ -590,7 +590,7 @@ impl ViteCSSPostPlugin {
       let mut dynamic_imports = FxIndexSet::default();
       // The bundle is guaranteed to be deterministic, if not then we have a bug in rollup.
       // So we use it to ensure a deterministic order of styles
-      for output in bundle.iter() {
+      for output in bundle {
         if let Output::Chunk(chunk) = output
           && chunk.is_entry
         {

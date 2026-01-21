@@ -72,7 +72,6 @@ single_match_else = "allow"
 # Though the following are nursery rules, they're still useful.
 debug_assert_with_mut_call = "warn"
 iter_on_single_items = "warn"
-needless_pass_by_ref_mut = "allow" # Would require breaking API changes
 redundant_clone = "warn"
 redundant_pub_crate = "warn"
 significant_drop_in_scrutinee = "warn"

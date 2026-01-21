@@ -125,8 +125,7 @@ impl Plugin for ViteHtmlPlugin {
       let dom = html::parser::parse_html(&html);
       let mut stack = vec![dom.document];
       while let Some(node) = stack.pop() {
-        match &node.data {
-          html::sink::NodeData::Element { name, attrs, span } => {
+        if let html::sink::NodeData::Element { name, attrs, span } = &node.data {
             let elem_span = span.get();
             let mut should_remove = false;
             if &**name == "script" {
@@ -364,8 +363,6 @@ impl Plugin for ViteHtmlPlugin {
               s.remove(elem_span.start, elem_span.end)
                 .expect("remove should not fail in html plugin");
             }
-          }
-          _ => {}
         }
         for child in node.children.borrow().iter() {
           stack.push(Rc::clone(child));

@@ -45,18 +45,15 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> BuildResult<Vec<Bu
     }
   }
 
-  match raw_options.format {
-    Some(format @ (OutputFormat::Umd | OutputFormat::Iife)) => {
-      if matches!(raw_options.code_splitting, Some(CodeSplittingMode::Bool(true))) {
-        warnings.push(
-          BuildDiagnostic::invalid_option(InvalidOptionType::UnsupportedCodeSplittingFormat(
-            format.to_string(),
-          ))
-          .with_severity_warning(),
-        );
-      }
+  if let Some(format @ (OutputFormat::Umd | OutputFormat::Iife)) = raw_options.format {
+    if matches!(raw_options.code_splitting, Some(CodeSplittingMode::Bool(true))) {
+      warnings.push(
+        BuildDiagnostic::invalid_option(InvalidOptionType::UnsupportedCodeSplittingFormat(
+          format.to_string(),
+        ))
+        .with_severity_warning(),
+      );
     }
-    _ => {}
   }
 
   if matches!(raw_options.code_splitting, Some(CodeSplittingMode::Bool(false))) {

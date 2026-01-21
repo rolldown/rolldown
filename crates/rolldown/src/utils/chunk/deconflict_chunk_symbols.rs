@@ -60,21 +60,18 @@ pub fn deconflict_chunk_symbols(
       .for_each(|external_module| {
         renamer.add_symbol_in_root_scope(external_module.namespace_ref, true);
       });
-    match chunk.entry_module_idx() {
-      Some(module) => {
-        let entry_module =
-          link_output.module_table[module].as_normal().expect("should be normal module");
-        link_output.metas[entry_module.idx].star_exports_from_external_modules.iter().for_each(
-          |rec_idx| {
-            let rec = &entry_module.ecma_view.import_records[*rec_idx];
-            let external_module = &link_output.module_table[rec.into_resolved_module()]
-              .as_external()
-              .expect("Should be external module here");
-            renamer.add_symbol_in_root_scope(external_module.namespace_ref, true);
-          },
-        );
-      }
-      None => {}
+    if let Some(module) = chunk.entry_module_idx() {
+      let entry_module =
+        link_output.module_table[module].as_normal().expect("should be normal module");
+      link_output.metas[entry_module.idx].star_exports_from_external_modules.iter().for_each(
+        |rec_idx| {
+          let rec = &entry_module.ecma_view.import_records[*rec_idx];
+          let external_module = &link_output.module_table[rec.into_resolved_module()]
+            .as_external()
+            .expect("Should be external module here");
+          renamer.add_symbol_in_root_scope(external_module.namespace_ref, true);
+        },
+      );
     }
   }
 

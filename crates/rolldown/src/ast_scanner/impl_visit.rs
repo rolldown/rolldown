@@ -239,52 +239,51 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_assignment_expression(&mut self, node: &ast::AssignmentExpression<'ast>) {
-    match node.left.as_member_expression() {
-      Some(member_expr) => {
-        match member_expr.object() {
-          Expression::Identifier(id) => {
+    if let Some(member_expr) = node.left.as_member_expression() {
+      match member_expr.object() {
+        Expression::Identifier(id) => {
+          if id.name == "module"
+            && self.is_global_identifier_reference(id)
+            && member_expr.static_property_name() == Some("exports")
+          {
+            self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
+          }
+          if id.name == "exports" && self.is_global_identifier_reference(id) {
+            self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
+
+            if let Some((span, export_name)) = member_expr.static_property_info() {
+              // `exports.test = ...`
+              let exported_symbol =
+                self.result.symbol_ref_db.create_facade_root_symbol_ref(export_name);
+
+              self.declare_link_only_symbol_ref(exported_symbol.symbol);
+
+              if let Some(value) = self.extract_constant_value_from_expr(Some(&node.right)) {
+                self.add_constant_symbol(exported_symbol.symbol, ConstExportMeta::new(value, true));
+              }
+
+              self
+                .result
+                .commonjs_exports
+                .entry(export_name.into())
+                .or_default()
+                .push(LocalExport { referenced: exported_symbol, span, came_from_commonjs: true });
+            }
+          }
+        }
+        // `module.exports.test` is also considered as commonjs keyword
+        Expression::StaticMemberExpression(member_expr) => {
+          if let Expression::Identifier(ref id) = member_expr.object {
             if id.name == "module"
               && self.is_global_identifier_reference(id)
-              && member_expr.static_property_name() == Some("exports")
+              && member_expr.property.name == "exports"
             {
               self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
             }
-            if id.name == "exports" && self.is_global_identifier_reference(id) {
-              self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
-
-              if let Some((span, export_name)) = member_expr.static_property_info() {
-                // `exports.test = ...`
-                let exported_symbol =
-                  self.result.symbol_ref_db.create_facade_root_symbol_ref(export_name);
-
-                self.declare_link_only_symbol_ref(exported_symbol.symbol);
-
-                if let Some(value) = self.extract_constant_value_from_expr(Some(&node.right)) {
-                  self
-                    .add_constant_symbol(exported_symbol.symbol, ConstExportMeta::new(value, true));
-                }
-
-                self.result.commonjs_exports.entry(export_name.into()).or_default().push(
-                  LocalExport { referenced: exported_symbol, span, came_from_commonjs: true },
-                );
-              }
-            }
           }
-          // `module.exports.test` is also considered as commonjs keyword
-          Expression::StaticMemberExpression(member_expr) => {
-            if let Expression::Identifier(ref id) = member_expr.object {
-              if id.name == "module"
-                && self.is_global_identifier_reference(id)
-                && member_expr.property.name == "exports"
-              {
-                self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
-              }
-            }
-          }
-          _ => {}
         }
+        _ => {}
       }
-      None => {}
     }
 
     walk::walk_assignment_expression(self, node);

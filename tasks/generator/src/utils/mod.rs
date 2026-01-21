@@ -117,12 +117,9 @@ impl<'a> Visit<'a> for ExtractTargetSpan<'a> {
     let symbol_id = it.symbol_id();
     if symbol_id == self.symbol_id.unwrap() {
       for p in self.visit_path.iter().rev() {
-        match p {
-          AstKind::VariableDeclaration(decl) => {
-            self.ret_span = Some(decl.span);
-            break;
-          }
-          _ => {}
+        if let AstKind::VariableDeclaration(decl) = p {
+          self.ret_span = Some(decl.span);
+          break;
         }
       }
     }

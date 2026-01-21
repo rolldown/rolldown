@@ -1,4 +1,91 @@
 
+## [1.0.0-beta.61] - 2026-01-21
+
+### 🚀 Features
+
+- add custom panic hook for better crash reporting (#7752) by @shulaoda
+- treeshake: add `invalidImportSideEffects` option (#7958) by @shulaoda
+- merge allow-extension emitted chunks (#7940) by @IWANABETHATGUY
+- nativeMagicString generateMap (#7944) by @IWANABETHATGUY
+- Include meta.magicString in RenderChunkMeta (#7943) by @IWANABETHATGUY
+- debug_info: add debug info for eliminated facade chunks (#7946) by @IWANABETHATGUY
+- stablize `strictExecutionOrder` and move to `output.strictExecutionOrder` from `experimental.strictExecutionOrder` (#7901) by @sapphi-red
+- add documentation link to require() error message (#7898) by @Copilot
+- add `codeSplitting: boolean` and deprecate `inlineDynamicImports` (#7870) by @hyf0
+- dev: change lazy module URL to `/@vite/lazy` from `/lazy` (#7884) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_vite_resolve: ignore yarn resolution errors and fallback to other resolvers (#7968) by @sapphi-red
+- renamer: prevent renaming symbols when there no conflicts (#7936) by @Dunqing
+- correct minifyInterExports when emitted chunk got merged (#7941) by @IWANABETHATGUY
+- deduplicate entry points when module is both emitted and dynamically imported (#7885) by @IWANABETHATGUY
+- dev: add `@vite-ignore` to lazy compilation proxy module import (#7883) by @sapphi-red
+
+### 🚜 Refactor
+
+- import_record: make resolved_module optional (#7907) by @shulaoda
+- remove unnecessary `.parse` (#7966) by @sapphi-red
+- remove unused `ImportRecordMeta::IsPlainImport` (#7948) by @shulaoda
+- proper set chunk meta (#7939) by @IWANABETHATGUY
+- module_loader: remove `try_spawn_with_cache` (#7920) by @shulaoda
+- link_stage: simplify `ImportStatus::NoMatch` to unit variant (#7909) by @shulaoda
+- improve global scope symbol reservation in chunk deconfliction (#7906) by @IWANABETHATGUY
+- simplify ast unwrapping in generate stage (#7900) by @IWANABETHATGUY
+- generate_stage: optimize cross-chunk imports computation (#7889) by @shulaoda
+- link_stage: move runtime require logic into match branch (#7892) by @shulaoda
+- link_stage: simplify runtime require reference conditions (#7891) by @shulaoda
+- link_stage: inline and simplify external dynamic import check (#7890) by @shulaoda
+- generate_stage: simplify external module import collection logic (#7887) by @shulaoda
+- avoid redundant module lookup in TLA computation (#7886) by @shulaoda
+- dev: `devEngine.compileEntry` does not return null (#7882) by @sapphi-red
+- dev: fix type errors for test HMR runtime (#7881) by @sapphi-red
+- dev: move `clientId` property to `DevRuntime` base class (#7880) by @sapphi-red
+- dev: generate client id in browser (#7878) by @hyf0
+
+### 📚 Documentation
+
+- bump theme & update activeMatch for reference (#7963) by @mdong1909
+- mark `build()` API as experimental (#7954) by @sapphi-red
+- enhance search functionality with improved scoring and filtering logic (#7935) by @hyf0
+- add minor comments to multiple types (#7930) by @sapphi-red
+- refactor advanedChunks related content to adapt manual code splitting concept (#7925) by @hyf0
+- apis: add content to Bundler API page (#7926) by @sapphi-red
+- apis: restructure plugin API related docs (#7924) by @sapphi-red
+- add plugin API docs (#7923) by @sapphi-red
+- apis: add docs to important APIs (#7913) by @sapphi-red
+- move the important APIs to the top of the sidebar (#7912) by @sapphi-red
+- apis: add more content to CLI documentation (#7911) by @sapphi-red
+- apis: generate CLI docs from --help output (#7910) by @sapphi-red
+- add fathom analytics (#7896) by @mdong1909
+
+### ⚡ Performance
+
+- renamer: skip unnecessary nested scope symbol processing (#7899) by @Dunqing
+- module_loader: use ArcStr for importer_id to avoid string copy (#7922) by @shulaoda
+- module_loader: defer `ModuleTaskOwner` construction until needed (#7921) by @shulaoda
+- renamer: optimize symbol renaming by eliminating `rename_non_root_symbol` pass (#7867) by @Dunqing
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update oxc to v0.110.0 (#7964) by @renovate[bot]
+- deps: update oxc apps (#7962) by @renovate[bot]
+- ai: add upgrade-oxc Claude skill (#7957) by @Boshen
+- deps: update rollup submodule for tests to v4.55.2 (#7959) by @sapphi-red
+- deps: update test262 submodule for tests (#7960) by @sapphi-red
+- deps: update crate-ci/typos action to v1.42.1 (#7961) by @renovate[bot]
+- deps: update rust crates (#7951) by @renovate[bot]
+- deps: update npm packages (#7953) by @renovate[bot]
+- deps: update github-actions (#7952) by @renovate[bot]
+- deps: update npm packages (#7950) by @renovate[bot]
+- format magic-string test before write to disk (#7945) by @IWANABETHATGUY
+- deps: update dependency rolldown-plugin-dts to ^0.21.0 (#7915) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.11.1 (#7914) by @renovate[bot]
+- deps: update dependency diff to v8.0.3 [security] (#7904) by @renovate[bot]
+- remove outdated TODO comment in `collect_depended_symbols` (#7888) by @shulaoda
+- deps: update oxc resolver to v11.16.3 (#7876) by @renovate[bot]
+
+
 ## [1.0.0-beta.60] - 2026-01-14
 
 ### 💥 BREAKING CHANGES

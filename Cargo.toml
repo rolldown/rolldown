@@ -47,7 +47,6 @@ struct_field_names = "allow"
 unnecessary_wraps = "allow"
 unused_self = "allow"
 enum_variant_names = "allow"
-box_collection = "allow"
 upper_case_acronyms = "allow"
 wrong_self_convention = "allow"
 

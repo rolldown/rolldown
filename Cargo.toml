@@ -46,7 +46,6 @@ trivially_copy_pass_by_ref = "allow"
 struct_field_names = "allow"
 unnecessary_wraps = "allow"
 unused_self = "allow"
-enum_variant_names = "allow"
 wrong_self_convention = "allow"
 
 # Forwarding `Result` is a common pattern, this rule is too pedantic.

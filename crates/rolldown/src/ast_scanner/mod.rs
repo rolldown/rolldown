@@ -306,7 +306,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     } else {
       // TODO(hyf0): Should add warnings if the module type doesn't satisfy the exports kind.
       match self.immutable_ctx.module_type {
-        ModuleDefFormat::CJS | ModuleDefFormat::CjsPackageJson | ModuleDefFormat::Cts => {
+        ModuleDefFormat::Cjs | ModuleDefFormat::CjsPackageJson | ModuleDefFormat::Cts => {
           exports_kind = ExportsKind::CommonJs;
         }
         ModuleDefFormat::EsmMjs | ModuleDefFormat::EsmPackageJson | ModuleDefFormat::EsmMts => {

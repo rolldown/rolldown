@@ -110,7 +110,8 @@
     "build-browser-pkg:debug": "TARGET='browser' pnpm run --sequential '/^build-(binding|binding:wasi|node)$/'",
     "build-browser-pkg:release": "TARGET='browser' pnpm run --sequential '/^build-(binding|binding:wasi:release|node)$/'",
     "# Scrips for docs #": "_",
-    "prepublishOnly": "napi pre-publish -t npm --no-gh-release"
+    "prepublishOnly": "napi pre-publish -t npm --no-gh-release",
+    "publint": "publint ."
   },
   "dependencies": {
     "@oxc-project/types": "catalog:",

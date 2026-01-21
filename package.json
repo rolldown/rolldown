@@ -7,6 +7,7 @@
   "scripts": {
     "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings --type-aware",
     "lint-knip": "knip",
+    "lint-publint": "pnpm run -r --aggregate-output publint",
     "fmt": "oxfmt",
     "fmt-check": "oxfmt --check",
     "build": "echo \"Use just build\"",
@@ -32,6 +33,7 @@
     "oxlint": "^1.31.0",
     "oxlint-tsgolint": "0.11.1",
     "playwright-chromium": "^1.56.1",
+    "publint": "^0.3.16",
     "remove-unused-vars": "^0.0.12",
     "rolldown": "workspace:*",
     "typescript": "catalog:"

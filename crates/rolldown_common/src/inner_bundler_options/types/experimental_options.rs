@@ -3,9 +3,8 @@ use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::Deserialize;
 
-use crate::inner_bundler_options::types::chunk_import_map::ChunkImportMap;
-
 use super::attach_debug_info::AttachDebugInfo;
+use super::chunk_import_map::ChunkImportMap;
 use super::chunk_modules_order::ChunkModulesOrderBy;
 use super::dev_mode_options::DevModeOptions;
 
@@ -51,6 +50,7 @@ pub struct ExperimentalOptions {
   pub transform_hires_sourcemap: Option<SourcemapHires>,
   pub native_magic_string: Option<bool>,
   pub chunk_optimization: Option<bool>,
+  pub lazy_barrel: Option<bool>,
 }
 
 impl ExperimentalOptions {
@@ -81,5 +81,9 @@ impl ExperimentalOptions {
 
   pub fn is_chunk_optimization_enabled(&self) -> bool {
     self.chunk_optimization.unwrap_or(true)
+  }
+
+  pub fn is_lazy_barrel_enabled(&self) -> bool {
+    self.lazy_barrel.unwrap_or(false)
   }
 }

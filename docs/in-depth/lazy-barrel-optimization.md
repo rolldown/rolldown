@@ -15,7 +15,7 @@ Button;
 
 | Metric               | Without lazy barrel | With lazy barrel |
 | -------------------- | ------------------- | ---------------- |
-| Modules compiled     | 2986                | 300              |
+| Modules compiled     | 2986                | 302              |
 | Build time (macOS)   | ~65ms               | ~28ms            |
 | Build time (Windows) | ~210ms              | ~50ms            |
 
@@ -79,6 +79,18 @@ However, if the import is not found in named exports, all star re-exports will b
 
 ## Advanced scenarios
 
+### Plain imports
+
+The following patterns are plain imports that don't contribute to exports:
+
+```js
+import './module'; // side-effect import
+import {} from './module'; // empty import
+export {} from './module'; // empty re-export
+```
+
+In **side-effect-free** modules, these plain imports are skipped. Otherwise, they are loaded normally.
+
 ### Self re-export
 
 Lazy barrel correctly handles barrel modules that re-export from themselves:
@@ -134,18 +146,6 @@ export function helper() {
 
 However, if `./a` is also a barrel module, lazy barrel optimization still applies to it, only loading the exports that are actually used (`a` in this case).
 
-### Side-effect imports
-
-The following patterns are treated as having side effects, so the target module will always be loaded:
-
-```js
-import './module'; // side-effect import
-import {} from './module'; // empty import
-export {} from './module'; // empty re-export
-```
-
-If the target module is a barrel module, the barrel itself is loaded but its re-exported modules are **not** loaded.
-
 ### Unused import specifiers
 
 By default, even if an imported specifier is not used, its corresponding module will still be loaded:
@@ -189,7 +189,25 @@ For lazy barrel optimization to work, barrel modules needs to be marked as side-
 
 1. **Package declaration**: Adding `"sideEffects": false` to `package.json`
 
-2. **Bundler configuration**: Using the `treeshake.moduleSideEffects` option
+2. **Plugin hooks**: Returning `moduleSideEffects: false` from `resolveId`, `load`, or `transform` hooks
+
+```js
+// rolldown.config.js
+export default {
+  plugins: [
+    {
+      name: 'mark-barrel-side-effect-free',
+      transform(code, id) {
+        if (id.includes('/barrel/')) {
+          return { moduleSideEffects: false };
+        }
+      },
+    },
+  ],
+};
+```
+
+3. **Bundler configuration**: Using the `treeshake.moduleSideEffects` option
 
 ```js
 // rolldown.config.js

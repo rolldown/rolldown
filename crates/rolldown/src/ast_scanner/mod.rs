@@ -695,6 +695,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         },
         None,
       );
+      if decl.specifiers.is_empty() {
+        self.result.import_records[record_idx].meta.insert(ImportRecordMeta::IsPlainImport);
+      }
       decl.specifiers.iter().for_each(|spec| {
         self.add_re_export(
           spec.exported.name().as_str(),
@@ -860,6 +863,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         .insert(rec_id, ImportAttribute::from_with_clause(with_clause));
     }
     self.result.imports.insert(decl.span, rec_id);
+    if decl.specifiers.as_ref().is_none_or(|s| s.is_empty()) {
+      self.result.import_records[rec_id].meta.insert(ImportRecordMeta::IsPlainImport);
+    }
 
     let Some(specifiers) = &decl.specifiers else { return };
     specifiers.iter().for_each(|spec| match spec {

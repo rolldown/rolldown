@@ -10,6 +10,7 @@ use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
 use oxc_allocator::Address;
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
+use rolldown_common::side_effects::DeterminedSideEffects;
 use rolldown_common::{
   EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult, FlatOptions,
   HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImportedExports, ImporterRecord,
@@ -406,26 +407,36 @@ impl<'a> ModuleLoader<'a> {
               raw_rec.meta.insert(ImportRecordMeta::JsonModule);
             }
 
-            // If `initial_needed_records` exists, we only need to load partial re-export import records
-            if let Some(ref initial_needed_records) = initial_needed_records
-              && raw_rec.meta.contains(ImportRecordMeta::IsReExport)
-            {
-              // For `export * from`, its specifier is always `All`.
-              // Since it's not in `named_imports`, it wasn't added to `all_imported_specifiers`
-              // in `initialize_barrel_tracking`, so we handle it here.
-              if raw_rec.meta.contains(ImportRecordMeta::IsExportStar) {
-                all_imported_specifiers.insert(rec_idx, ImportedExports::All);
-              }
-              // If this re-export still exists in `all_imported_specifiers`,
-              // some of its specifiers are needed and may be imported by other modules,
-              // so it needs to be tracked.
-              if all_imported_specifiers.contains_key(&rec_idx) {
-                tracked_records.insert(rec_idx, (raw_rec.state.clone(), resolved_id.clone()));
-              }
-              // If this re-export is not in `initial_needed_records`, we don't need to load it
-              if !initial_needed_records.contains_key(&rec_idx) {
+            if self.flat_options.is_lazy_barrel_enabled() {
+              // Plain import records (e.g., `import '..'`) are not needed when `barrel_info` exists,
+              // since `barrel_info` implies the module is side-effect-free.
+              if matches!(normal_module.side_effects, DeterminedSideEffects::UserDefined(false))
+                && raw_rec.meta.contains(ImportRecordMeta::IsPlainImport)
+              {
                 import_records.push(raw_rec.into_resolved(None));
                 continue;
+              }
+              // If `initial_needed_records` exists, we only need to load partial re-export import records
+              if let Some(ref initial_needed_records) = initial_needed_records {
+                if raw_rec.meta.contains(ImportRecordMeta::IsReExport) {
+                  // For `export * from`, its specifier is always `All`.
+                  // Since it's not in `named_imports`, it wasn't added to `all_imported_specifiers`
+                  // in `initialize_barrel_tracking`, so we handle it here.
+                  if raw_rec.meta.contains(ImportRecordMeta::IsExportStar) {
+                    all_imported_specifiers.insert(rec_idx, ImportedExports::All);
+                  }
+                  // If this re-export still exists in `all_imported_specifiers`,
+                  // some of its specifiers are needed and may be imported by other modules,
+                  // so it needs to be tracked.
+                  if all_imported_specifiers.contains_key(&rec_idx) {
+                    tracked_records.insert(rec_idx, (raw_rec.state.clone(), resolved_id.clone()));
+                  }
+                  // If this re-export is not in `initial_needed_records`, we don't need to load it
+                  if !initial_needed_records.contains_key(&rec_idx) {
+                    import_records.push(raw_rec.into_resolved(None));
+                    continue;
+                  }
+                }
               }
             }
 
@@ -437,7 +448,7 @@ impl<'a> ModuleLoader<'a> {
               &user_defined_entries,
             );
 
-            if self.shared_context.options.experimental.is_lazy_barrel_enabled() {
+            if self.flat_options.is_lazy_barrel_enabled() {
               // Only distinguish specific imported symbols for `import` statements;
               // otherwise, treat as importing all.
               let imported_exports = if raw_rec.kind == ImportKind::Import {
@@ -456,7 +467,7 @@ impl<'a> ModuleLoader<'a> {
                   // `export * from '..'` form, its specifier is always `All`
                   ImportedExports::All
                 } else {
-                  // `import '..'` form, no symbols need to be recorded
+                  // Plain import, no symbols need to be recorded
                   ImportedExports::Partial(FxHashSet::default())
                 }
               } else {
@@ -502,14 +513,16 @@ impl<'a> ModuleLoader<'a> {
           *self.intermediate_normal_modules.index_ecma_ast.get_mut(module_idx) = Some(ast);
           *self.intermediate_normal_modules.modules.get_mut(module_idx) = Some(module);
 
-          if self.shared_context.options.experimental.is_lazy_barrel_enabled() {
+          if self.flat_options.is_lazy_barrel_enabled() {
             self.cache.barrel_state.barrel_infos.insert(
               module_idx,
-              barrel_info.map(|info| {
-                // `tracked_records` and `all_imported_specifiers` have the same length and matching keys.
-                // `all_imported_specifiers` only contains the remaining specifiers for import records in `tracked_records`,
-                // after being filtered above and in `get_needed_records`.
-                info.into_barrel_module_state(tracked_records, all_imported_specifiers)
+              initial_needed_records.and_then(|_| {
+                barrel_info.map(|info| {
+                  // `tracked_records` and `all_imported_specifiers` have the same length and matching keys.
+                  // `all_imported_specifiers` only contains the remaining specifiers for import records in `tracked_records`,
+                  // after being filtered above and in `get_needed_records`.
+                  info.into_barrel_module_state(tracked_records, all_imported_specifiers)
+                })
               }),
             );
             self.process_barrel_import_record(&mut work_queue, &user_defined_entries);

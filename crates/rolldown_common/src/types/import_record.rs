@@ -72,8 +72,10 @@ bitflags::bitflags! {
     /// If a record is a re-export-all from an external module, and that re-export-all chain continues uninterrupted to the entry point,
     /// we can reuse the original re-export-all declaration instead of generating complex interoperability code.
     const EntryLevelExternal = 1 << 9;
-    /// `export { .. } from 'mod'` or `export * as ns from 'mod'`
+    /// `export { .. } from 'mod'` or `export * as ns from 'mod'` or `export * from 'mod'`
     const IsReExport = 1 << 10;
+    /// `import 'mod'` or `import { } from 'mod'` or `export { } from 'mod'`
+    const IsPlainImport = 1 << 11;
 
     const TopLevelPureDynamicImport = Self::IsTopLevel.bits() | Self::PureDynamicImport.bits();
   }

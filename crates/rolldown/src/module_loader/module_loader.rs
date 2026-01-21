@@ -408,8 +408,8 @@ impl<'a> ModuleLoader<'a> {
             }
 
             if self.flat_options.is_lazy_barrel_enabled() {
-              // Plain import records (e.g., `import '..'`) are not needed when `barrel_info` exists,
-              // since `barrel_info` implies the module is side-effect-free.
+              // Plain import records (e.g., `import '..'`) are skipped in side-effect-free modules
+              // during lazy barrel optimization.
               if matches!(normal_module.side_effects, DeterminedSideEffects::UserDefined(false))
                 && raw_rec.meta.contains(ImportRecordMeta::IsPlainImport)
               {

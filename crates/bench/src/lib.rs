@@ -50,7 +50,7 @@ pub fn derive_benchmark_items(
     ret.push(BenchItem {
       name: format!("{name}-minify-sourcemap"),
       options: {
-        let mut options = options.clone();
+        let mut options = options;
         options.sourcemap = Some(rolldown::SourceMapType::File);
         options.minify = Some(true.into());
         options

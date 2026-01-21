@@ -18,7 +18,7 @@ fn criterion_benchmark(c: &mut Criterion) {
   let derive_options = DeriveOptions { sourcemap: false, minify: false };
   items()
     .into_iter()
-    .flat_map(|(name, options)| derive_benchmark_items(&derive_options, name, options.clone()))
+    .flat_map(|(name, options)| derive_benchmark_items(&derive_options, name, options))
     .for_each(|item| {
       group.bench_function(format!("scan@{}", item.name), move |b| {
         b.to_async(

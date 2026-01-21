@@ -5,6 +5,7 @@ import { type DefaultTheme, defineConfig } from 'vitepress';
 import { groupIconMdPlugin, groupIconVitePlugin } from 'vitepress-plugin-group-icons';
 import llmstxt from 'vitepress-plugin-llms';
 import { hooksGraphPlugin } from './markdown-hooks-graph.ts';
+import { buildEnd } from './buildEnd.config.js';
 
 const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
   {
@@ -232,6 +233,7 @@ const config = defineConfig({
         href: '/logo-without-border.svg',
       },
     ],
+    ['link', { rel: 'alternate', type: 'application/rss+xml', href: '/blog.rss' }],
     ['meta', { name: 'theme-color', content: '#ff7e17' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:locale', content: 'en' }],
@@ -315,6 +317,7 @@ const config = defineConfig({
 
             link: '/contribution-guide/',
           },
+          { text: 'Blog', link: '/blog' },
 
           {
             text: 'Roadmap',
@@ -373,6 +376,7 @@ const config = defineConfig({
               text: 'Roadmap',
               link: 'https://github.com/rolldown/rolldown/discussions/153',
             },
+            { text: 'Blog', link: '/blog' },
             { text: 'Team', link: '/team' },
           ],
         },
@@ -403,7 +407,14 @@ const config = defineConfig({
         },
       }) as any,
       llmstxt({
-        ignoreFiles: ['development-guide/**/*', 'index.md', 'README.md', 'team.md'],
+        ignoreFiles: [
+          'development-guide/**/*',
+          'index.md',
+          'README.md',
+          'team.md',
+          'blog/*',
+          'blog.md',
+        ],
         description: 'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
         details: '',
       }),
@@ -421,6 +432,7 @@ const config = defineConfig({
       pageData.frontmatter.editLink = false;
     }
   },
+  buildEnd,
 });
 
 export default extendConfig(config);

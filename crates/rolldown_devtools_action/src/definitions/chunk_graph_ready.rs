@@ -9,7 +9,7 @@ pub struct ChunkGraphReady {
 #[derive(ts_rs::TS, serde::Serialize)]
 #[ts(export)]
 pub struct Chunk {
-  pub chunk_id: u32,
+  pub id: u32,
   /// ```js
   /// import { defineConfig } from 'rolldown';
   /// export default defineConfig({

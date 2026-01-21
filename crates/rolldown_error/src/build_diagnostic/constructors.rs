@@ -239,7 +239,7 @@ impl BuildDiagnostic {
     diagnostics: T,
     source: &ArcStr,
     id: &str,
-    severity: &Severity,
+    severity: Severity,
     event_kind: EventKind,
   ) -> Vec<Self>
   where

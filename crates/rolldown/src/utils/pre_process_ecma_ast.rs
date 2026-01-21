@@ -70,7 +70,7 @@ impl PreProcessEcmaAst {
         warnings,
         &source,
         resolved_id,
-        &Severity::Warning,
+        Severity::Warning,
         EventKind::ParseError,
       )
     } else {
@@ -78,7 +78,7 @@ impl PreProcessEcmaAst {
         errors,
         &source,
         resolved_id,
-        &Severity::Error,
+        Severity::Error,
         EventKind::ParseError,
       ))?;
     };
@@ -119,7 +119,7 @@ impl PreProcessEcmaAst {
             errors,
             &source,
             resolved_id,
-            &Severity::Error,
+            Severity::Error,
             EventKind::TransformError,
           )));
         }
@@ -127,7 +127,7 @@ impl PreProcessEcmaAst {
           transformer_warnings,
           &source,
           resolved_id,
-          &Severity::Warning,
+          Severity::Warning,
           EventKind::ToleratedTransform,
         ));
         Ok(())

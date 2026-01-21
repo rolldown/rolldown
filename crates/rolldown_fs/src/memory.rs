@@ -49,26 +49,20 @@ impl MemoryFileSystem {
 
 impl FileSystem for MemoryFileSystem {
   fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
-    self
-      .fs
-      .remove_dir(&path.to_string_lossy())
-      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
+    self.fs.remove_dir(&path.to_string_lossy()).map_err(io::Error::other)
   }
 
   fn create_dir_all(&self, path: &Path) -> io::Result<()> {
-    self
-      .fs
-      .create_dir(&path.to_string_lossy())
-      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
+    self.fs.create_dir(&path.to_string_lossy()).map_err(io::Error::other)
   }
 
   fn write(&self, path: &Path, content: &[u8]) -> io::Result<()> {
     _ = self
       .fs
       .create_file(&path.to_string_lossy())
-      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?
+      .map_err(io::Error::other)?
       .write(content)
-      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
+      .map_err(io::Error::other)?;
     Ok(())
   }
 
@@ -92,10 +86,7 @@ impl FileSystem for MemoryFileSystem {
   }
 
   fn remove_file(&self, path: &Path) -> io::Result<()> {
-    self
-      .fs
-      .remove_file(&path.to_string_lossy())
-      .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
+    self.fs.remove_file(&path.to_string_lossy()).map_err(io::Error::other)
   }
 }
 

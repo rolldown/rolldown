@@ -1,18 +1,19 @@
+use std::sync::Arc;
+
 use arcstr::ArcStr;
 use oxc::span::Span;
 use oxc_index::IndexVec;
-use rolldown_common::SourcemapChainElement;
-use std::sync::Arc;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use rolldown_common::{
   FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType, NormalModule,
-  NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, StrOrBytes,
+  NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, SourcemapChainElement, StrOrBytes,
+  try_extract_barrel_info,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, UnloadableDependencyContext, downcast_napi_error_diagnostics,
 };
-use rolldown_std_utils::PathExt;
+use rolldown_std_utils::PathExt as _;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 
 use crate::{
@@ -210,6 +211,13 @@ impl ModuleTask {
     let repr_name = self.resolved_id.id.as_path().representative_file_name();
     let repr_name = legitimize_identifier_name(&repr_name).into_owned();
 
+    // Build BarrelInfo for lazy barrel optimization
+    let barrel_info = if self.ctx.options.experimental.is_lazy_barrel_enabled() {
+      try_extract_barrel_info(&ecma_view, &raw_import_records)
+    } else {
+      None
+    };
+
     let module = NormalModule {
       repr_name,
       stable_id,
@@ -236,6 +244,7 @@ impl ModuleTask {
       resolved_deps,
       raw_import_records,
       warnings,
+      barrel_info,
     }));
 
     self.ctx.tx.send(result).await.expect(

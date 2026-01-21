@@ -30,6 +30,9 @@ bitflags! {
     /// If set, inline const optimization is enabled.
     /// Usage: `self.options.optimization.is_inline_const_enabled()`
     const InlineConstEnabled = 1 << 9;
+    /// If set, lazy barrel optimization is enabled.
+    /// Usage: `self.options.experimental.is_lazy_barrel_enabled()`
+    const LazyBarrelEnabled = 1 << 10;
   }
 }
 
@@ -65,6 +68,7 @@ impl FlatOptions {
       options.experimental.is_resolve_new_url_to_asset_enabled(),
     );
     flags.set(Self::InlineConstEnabled, options.optimization.is_inline_const_enabled());
+    flags.set(Self::LazyBarrelEnabled, options.experimental.is_lazy_barrel_enabled());
     flags
   }
 
@@ -116,5 +120,10 @@ impl FlatOptions {
   #[inline]
   pub fn inline_const_enabled(self) -> bool {
     self.contains(Self::InlineConstEnabled)
+  }
+
+  #[inline]
+  pub fn is_lazy_barrel_enabled(self) -> bool {
+    self.contains(Self::LazyBarrelEnabled)
   }
 }

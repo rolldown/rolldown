@@ -1,7 +1,9 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
-use rolldown_common::{GetLocalDbMut, ImporterRecord, ModuleId, ModuleIdx, StableModuleId};
+use rolldown_common::{
+  BarrelState, GetLocalDbMut, ImporterRecord, ModuleId, ModuleIdx, StableModuleId,
+};
 use rolldown_error::BuildResult;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -16,6 +18,7 @@ use crate::{
 #[derive(Default, Debug)]
 pub struct ScanStageCache {
   snapshot: Option<NormalizedScanStageOutput>,
+  pub barrel_state: BarrelState,
   pub module_id_to_idx: FxHashMap<ModuleId, VisitState>,
   pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
   pub user_defined_entry: FxHashSet<ModuleId>,

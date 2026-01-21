@@ -4365,7 +4365,7 @@ expression: output
 
 # tests/rolldown/function/format/iife/external_modules
 
-- main-!~{000}~.js => main-lEnI27u2.js
+- main-!~{000}~.js => main-CAyhMpiz.js
 
 # tests/rolldown/function/format/iife/external_modules_with_globals
 
@@ -4386,6 +4386,10 @@ expression: output
 # tests/rolldown/function/format/iife/namespaced_name_reserved
 
 - main-!~{000}~.js => main-Bd98rPpn.js
+
+# tests/rolldown/function/format/iife/side_effect_only_external
+
+- main-!~{000}~.js => main-Ba2JX_kz.js
 
 # tests/rolldown/function/format/umd/conflict_exports_key
 
@@ -4410,6 +4414,10 @@ expression: output
 # tests/rolldown/function/format/umd/namespaced_name_reserved
 
 - main-!~{000}~.js => main-CbRrEbie.js
+
+# tests/rolldown/function/format/umd/side_effect_only_external
+
+- main-!~{000}~.js => main-DlxOG_is.js
 
 # tests/rolldown/function/inject
 

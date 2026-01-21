@@ -10,6 +10,27 @@ use crate::{
 
 pub mod namespace;
 
+/// Categorizes an external import by how it's used in the chunk.
+#[derive(Clone, Copy)]
+pub enum ExternalImportKind<'a> {
+  /// Exports from this external are actually used in the code.
+  Used(&'a ExternalModule),
+  /// External is only imported for side effects (no exports used).
+  SideEffectOnly(&'a ExternalModule),
+}
+
+impl<'a> ExternalImportKind<'a> {
+  pub fn module(&self) -> &'a ExternalModule {
+    match self {
+      ExternalImportKind::Used(m) | ExternalImportKind::SideEffectOnly(m) => m,
+    }
+  }
+
+  pub fn is_used(&self) -> bool {
+    matches!(self, ExternalImportKind::Used(_))
+  }
+}
+
 pub fn render_factory_parameters(
   ctx: &GenerateContext<'_>,
   externals: &[&ExternalModule],
@@ -28,7 +49,7 @@ pub fn render_factory_parameters(
 
 pub fn render_chunk_external_imports<'a>(
   ctx: &'a GenerateContext<'_>,
-) -> (String, Vec<&'a ExternalModule>) {
+) -> (String, Vec<ExternalImportKind<'a>>) {
   let mut import_code = String::new();
 
   let externals = ctx
@@ -61,9 +82,9 @@ pub fn render_chunk_external_imports<'a>(
           import_code.push_str(external_module_symbol_name);
           import_code.push_str(");\n");
         }
-        Some(importee)
+        Some(ExternalImportKind::Used(importee))
       } else if importee.side_effects.has_side_effects() {
-        Some(importee)
+        Some(ExternalImportKind::SideEffectOnly(importee))
       } else {
         None
       }

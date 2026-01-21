@@ -7,7 +7,7 @@
   "scripts": {
     "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings --type-aware",
     "lint-knip": "knip",
-    "lint-publint": "publint ./packages/rolldown && publint ./packages/browser && publint ./packages/debug && publint ./packages/pluginutils",
+    "lint-publint": "pnpm run -r --aggregate-output publint",
     "fmt": "oxfmt",
     "fmt-check": "oxfmt --check",
     "build": "echo \"Use just build\"",

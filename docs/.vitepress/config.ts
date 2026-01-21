@@ -2,11 +2,7 @@ import { extendConfig } from '@voidzero-dev/vitepress-theme/config';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { type DefaultTheme, defineConfig } from 'vitepress';
-import {
-  groupIconMdPlugin,
-  groupIconVitePlugin,
-  localIconLoader,
-} from 'vitepress-plugin-group-icons';
+import { groupIconMdPlugin, groupIconVitePlugin } from 'vitepress-plugin-group-icons';
 import llmstxt from 'vitepress-plugin-llms';
 import { hooksGraphPlugin } from './markdown-hooks-graph.ts';
 
@@ -404,7 +400,6 @@ const config = defineConfig({
         customIcon: {
           homebrew: 'logos:homebrew',
           cargo: 'vscode-icons:file-type-cargo',
-          rolldown: localIconLoader(import.meta.url, '../public/logo-without-border.svg'),
         },
       }) as any,
       llmstxt({

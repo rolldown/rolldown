@@ -3,7 +3,7 @@ use crate::MagicString;
 use super::update::UpdateOptions;
 
 impl MagicString<'_> {
-  pub fn remove(&mut self, start: usize, end: usize) -> Result<&mut Self, String> {
+  pub fn remove(&mut self, start: u32, end: u32) -> Result<&mut Self, String> {
     self.inner_update_with(
       start,
       end,
@@ -15,7 +15,7 @@ impl MagicString<'_> {
 
   /// Moves the characters from start and end to index. Returns this.
   // `move` is reserved keyword in Rust, so we use `relocate` instead.
-  pub fn relocate(&mut self, start: usize, end: usize, to: usize) -> Result<&mut Self, String> {
+  pub fn relocate(&mut self, start: u32, end: u32, to: u32) -> Result<&mut Self, String> {
     if to >= start && to <= end {
       return Err("Cannot move a selection inside itself".to_string());
     }
@@ -84,12 +84,12 @@ impl MagicString<'_> {
 
   /// Returns a clone with content outside the specified range removed.
   /// This is equivalent to `clone().remove(0, start).remove(end, original.len())`.
-  pub fn snip(&self, start: usize, end: usize) -> Result<Self, String> {
+  pub fn snip(&self, start: u32, end: u32) -> Result<Self, String> {
     let mut clone = self.clone();
     if start > 0 {
       clone.remove(0, start)?;
     }
-    let original_len = self.source.len();
+    let original_len = self.source.len() as u32;
     if end < original_len {
       clone.remove(end, original_len)?;
     }

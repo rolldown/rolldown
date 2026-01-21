@@ -59,9 +59,10 @@ impl AddDeps<'_, '_> {
           }
         }
       }
+      #[expect(clippy::cast_possible_truncation)]
       self
         .s
-        .update(self.expr_range.start, self.expr_range.end, "Promise.resolve({})")
+        .update(self.expr_range.start as u32, self.expr_range.end as u32, "Promise.resolve({})")
         .expect("update should not fail in build import analysis plugin");
     }
   }

@@ -14,7 +14,7 @@ pub struct RenderAssetUrlInJsEnv<'a> {
 
 impl RenderAssetUrlInJsEnv<'_> {
   pub async fn render_asset_url_in_js(&self) -> anyhow::Result<Option<String>> {
-    let mut last = 0;
+    let mut last = 0u32;
     let mut code = None;
     for item in AssetUrlIter::from(self.code).into_asset_url_iter() {
       let (range, filename, is_public_asset) = match item {
@@ -38,7 +38,10 @@ impl RenderAssetUrlInJsEnv<'_> {
             self.ctx.meta().get::<PublicAssetUrlCache>().expect("PublicAssetUrlCache missing");
 
           let url = cache.0.get(hash).ok_or_else(|| {
-            anyhow::anyhow!("Can't find the cache of {}", &self.code[range.start..range.end])
+            anyhow::anyhow!(
+              "Can't find the cache of {}",
+              &self.code[(range.start as usize)..(range.end as usize)]
+            )
           })?;
 
           (range, url[1..].to_owned(), true)
@@ -59,14 +62,14 @@ impl RenderAssetUrlInJsEnv<'_> {
         .await?;
 
       let code = code.get_or_insert_with(|| String::with_capacity(self.code.len()));
-      code.push_str(&self.code[last..range.start]);
+      code.push_str(&self.code[(last as usize)..(range.start as usize)]);
       code.push_str(&url.to_asset_url_in_js()?);
       last = range.end;
     }
 
     if let Some(code) = &mut code {
-      if last < self.code.len() {
-        code.push_str(&self.code[last..]);
+      if (last as usize) < self.code.len() {
+        code.push_str(&self.code[(last as usize)..]);
       }
     }
 

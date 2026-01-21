@@ -141,8 +141,8 @@ impl VisitMut<'_> for DynamicImportVisitor<'_, '_> {
       if self.removed_pure_css_files.inner.contains_key(normalized.to_slash_lossy().as_ref()) {
         let s = self.s.get_or_insert_with(|| string_wizard::MagicString::new(self.code));
         s.update(
-          it.span.start as usize,
-          it.span.end as usize,
+          it.span.start,
+          it.span.end,
           format!(
             "Promise.resolve({{{:width$}}})",
             "",

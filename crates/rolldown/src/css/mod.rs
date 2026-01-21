@@ -34,16 +34,16 @@ pub fn create_css_view(
           None,
         ));
         record_idx_to_span.push(Span::new(range.start, range.end));
-        let mut range_end = range.end as usize;
-        if source.is_char_boundary(range_end) {
-          if source[range_end..].starts_with("\r\n") {
+        let mut range_end = range.end;
+        if source.is_char_boundary(range_end as usize) {
+          if source[range_end as usize..].starts_with("\r\n") {
             range_end += 2;
           }
-          if source[range_end..].starts_with('\n') {
+          if source[range_end as usize..].starts_with('\n') {
             range_end += 1;
           }
         }
-        css_renderer.at_import_ranges.push((range.start as usize, range_end));
+        css_renderer.at_import_ranges.push((range.start, range_end));
       }
       css_module_lexer::Dependency::Url { request, range, kind } => {
         // css_module_lexer return span of `request` if kind is `string`, return whole span of `url(dep)`, if the kind is function

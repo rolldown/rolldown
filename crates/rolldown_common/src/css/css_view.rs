@@ -16,7 +16,7 @@ pub struct CssView {
 
 #[derive(Debug, Default)]
 pub struct CssRenderer {
-  pub at_import_ranges: Vec<(usize, usize)>,
+  pub at_import_ranges: Vec<(u32, u32)>,
 }
 
 #[derive(Debug)]
@@ -37,8 +37,8 @@ impl SourceMutation for CssAssetNameReplacer {
   fn apply(&self, magic_string: &mut string_wizard::MagicString<'_>) {
     magic_string
       .update_with(
-        self.span.start as usize,
-        self.span.end as usize,
+        self.span.start,
+        self.span.end,
         self.asset_name.clone(),
         string_wizard::UpdateOptions { keep_original: true, overwrite: true },
       )

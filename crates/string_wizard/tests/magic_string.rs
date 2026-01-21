@@ -6,23 +6,13 @@ use string_wizard::MagicStringOptions;
 use string_wizard::UpdateOptions;
 
 trait MagicStringExt<'text> {
-  fn overwrite(
-    &mut self,
-    start: usize,
-    end: usize,
-    content: impl Into<Cow<'text, str>>,
-  ) -> &mut Self;
+  fn overwrite(&mut self, start: u32, end: u32, content: impl Into<Cow<'text, str>>) -> &mut Self;
 
   fn indent_str(&mut self, indent_str: &str) -> &mut Self;
 }
 
 impl<'text> MagicStringExt<'text> for MagicString<'text> {
-  fn overwrite(
-    &mut self,
-    start: usize,
-    end: usize,
-    content: impl Into<Cow<'text, str>>,
-  ) -> &mut Self {
+  fn overwrite(&mut self, start: u32, end: u32, content: impl Into<Cow<'text, str>>) -> &mut Self {
     self
       .update_with(start, end, content, UpdateOptions { overwrite: true, ..Default::default() })
       .unwrap()

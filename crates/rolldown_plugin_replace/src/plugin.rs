@@ -120,8 +120,9 @@ impl ReplacePlugin {
         break;
       };
       changed = true;
+      #[expect(clippy::cast_possible_truncation)]
       magic_string
-        .update(matched.start(), matched.end(), replacement)
+        .update(matched.start() as u32, matched.end() as u32, replacement)
         .expect("update should not fail in replace plugin");
     }
 
@@ -169,8 +170,9 @@ impl ReplacePlugin {
         break;
       };
       changed = true;
+      #[expect(clippy::cast_possible_truncation)]
       magic_string
-        .update(matched.start, matched.end, replacement)
+        .update(matched.start as u32, matched.end as u32, replacement)
         .expect("update should not fail in replace plugin");
     }
     changed

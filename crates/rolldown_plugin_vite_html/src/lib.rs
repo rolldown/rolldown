@@ -70,7 +70,8 @@ impl Plugin for ViteHtmlPlugin {
     Ok(())
   }
 
-  #[expect(clippy::too_many_lines)]
+  // html5gum::Span uses usize for start/end, but we know HTML files are < 4GB
+  #[expect(clippy::too_many_lines, clippy::cast_possible_truncation)]
   async fn transform(
     &self,
     ctx: rolldown_plugin::SharedTransformPluginContext,
@@ -148,7 +149,7 @@ impl Plugin for ViteHtmlPlugin {
                 }
                 "vite-ignore" => {
                   is_ignored = true;
-                  s.remove(attr.span.start, attr.span.end)
+                  s.remove(attr.span.start as u32, attr.span.end as u32)
                     .expect("remove should not fail in html plugin");
                 }
                 _ => {}
@@ -261,7 +262,7 @@ impl Plugin for ViteHtmlPlugin {
           ) {
             let attrs_borrowed = attrs.borrow();
             if let Some(attr) = attrs_borrowed.iter().find(|a| &*a.name == "vite-ignore") {
-              s.remove(attr.span.start, attr.span.end)
+              s.remove(attr.span.start as u32, attr.span.end as u32)
                 .expect("remove should not fail in html plugin");
             } else {
               // Collect all attributes into a map for filtering
@@ -359,7 +360,7 @@ impl Plugin for ViteHtmlPlugin {
           }
 
           if should_remove {
-            s.remove(elem_span.start, elem_span.end)
+            s.remove(elem_span.start as u32, elem_span.end as u32)
               .expect("remove should not fail in html plugin");
           }
         }
@@ -419,7 +420,7 @@ impl Plugin for ViteHtmlPlugin {
       } else {
         continue;
       };
-      s.update(range.start, range.end, partial_encode_url_path(&url).into_owned())
+      s.update(range.start as u32, range.end as u32, partial_encode_url_path(&url).into_owned())
         .expect("update should not fail in html plugin");
     }
 
@@ -434,7 +435,8 @@ impl Plugin for ViteHtmlPlugin {
     for (url, span, resolved) in resolved_style_urls {
       match resolved?.ok() {
         Some(_) => {
-          s.remove(span.start, span.end).expect("remove should not fail in html plugin");
+          s.remove(span.start as u32, span.end as u32)
+            .expect("remove should not fail in html plugin");
         }
         None => {
           ctx.warn(LogWithoutPlugin {

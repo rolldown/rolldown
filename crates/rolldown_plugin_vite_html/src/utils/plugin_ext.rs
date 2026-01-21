@@ -85,7 +85,9 @@ impl ViteHtmlPlugin {
     if is_style_attribute {
       super::overwrite_check_public_file(s, span.start..span.end, value)?;
     } else {
-      s.update(span.start, span.end, value).expect("update should not fail in html plugin");
+      #[expect(clippy::cast_possible_truncation)]
+      s.update(span.start as u32, span.end as u32, value)
+        .expect("update should not fail in html plugin");
     }
 
     Ok(())
@@ -244,7 +246,8 @@ impl ViteHtmlPlugin {
 
       let cache = ctx.meta().get::<HTMLProxyResult>().expect("HTMLProxyResult missing");
       let css_transformed_code = cache.inner.get(scoped_name).unwrap();
-      s.update(start, match_end, css_transformed_code.to_string())
+      #[expect(clippy::cast_possible_truncation)]
+      s.update(start as u32, match_end as u32, css_transformed_code.to_string())
         .expect("update should not fail in html plugin");
     }
     s
@@ -289,7 +292,7 @@ impl ViteHtmlPlugin {
     relative_url_path: &str,
   ) -> anyhow::Result<Option<String>> {
     let mut s = None;
-    let mut end = 0;
+    let mut end = 0u32;
     for item in AssetUrlIter::from(html).into_asset_url_iter() {
       let s = s.get_or_insert_with(|| String::with_capacity(html.len()));
       match item {
@@ -308,7 +311,7 @@ impl ViteHtmlPlugin {
           let uri =
             self.to_output_file_path(&filename, assets_base, false, relative_url_path).await?;
 
-          s.push_str(&html[end..range.start]);
+          s.push_str(&html[(end as usize)..(range.start as usize)]);
           s.push_str(&encode_uri_path(uri));
           if let Some(postfix) = postfix {
             s.push_str(postfix);
@@ -325,16 +328,16 @@ impl ViteHtmlPlugin {
           let uri =
             self.to_output_file_path(&filename, assets_base, true, relative_url_path).await?;
 
-          s.push_str(&html[end..range.start]);
+          s.push_str(&html[(end as usize)..(range.start as usize)]);
           s.push_str(&encode_uri_path(normalize_path(&uri).into_owned()));
           end = range.end;
         }
       }
     }
     if let Some(s) = &mut s
-      && end < html.len()
+      && (end as usize) < html.len()
     {
-      s.push_str(&html[end..]);
+      s.push_str(&html[(end as usize)..]);
     }
     Ok(s)
   }

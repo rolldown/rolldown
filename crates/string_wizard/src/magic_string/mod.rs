@@ -35,8 +35,8 @@ pub struct MagicString<'s> {
   chunks: IndexChunks<'s>,
   first_chunk_idx: ChunkIdx,
   last_chunk_idx: ChunkIdx,
-  chunk_by_start: FxHashMap<usize, ChunkIdx>,
-  chunk_by_end: FxHashMap<usize, ChunkIdx>,
+  chunk_by_start: FxHashMap<u32, ChunkIdx>,
+  chunk_by_end: FxHashMap<u32, ChunkIdx>,
   guessed_indentor: OnceLock<String>,
 
   // This is used to speed up the search for the chunk that contains a given index.
@@ -56,7 +56,11 @@ impl<'text> MagicString<'text> {
 
   pub fn with_options(source: impl Into<Cow<'text, str>>, options: MagicStringOptions) -> Self {
     let source = source.into();
-    let source_len = source.len();
+    debug_assert!(
+      source.len() <= u32::MAX as usize,
+      "MagicString does not support sources larger than 4GB"
+    );
+    let source_len = source.len() as u32;
     let initial_chunk = Chunk::new(Span(0, source_len));
     let mut chunks = IndexChunks::with_capacity(1);
     let initial_chunk_idx = chunks.push(initial_chunk);
@@ -248,8 +252,11 @@ impl<'text> MagicString<'text> {
   ///
   /// Chunk{span: (0, 3)} => "abc"
   /// Chunk{span: (3, 7)} => "defg"
-  fn split_at(&mut self, at_index: usize) -> Result<(), String> {
-    if at_index == 0 || at_index >= self.source.len() || self.chunk_by_end.contains_key(&at_index) {
+  fn split_at(&mut self, at_index: u32) -> Result<(), String> {
+    if at_index == 0
+      || (at_index as usize) >= self.source.len()
+      || self.chunk_by_end.contains_key(&at_index)
+    {
       return Ok(());
     }
 
@@ -296,8 +303,8 @@ impl<'text> MagicString<'text> {
     Ok(())
   }
 
-  fn by_start_mut(&mut self, text_index: usize) -> Result<Option<&mut Chunk<'text>>, String> {
-    if text_index == self.source.len() {
+  fn by_start_mut(&mut self, text_index: u32) -> Result<Option<&mut Chunk<'text>>, String> {
+    if text_index as usize == self.source.len() {
       Ok(None)
     } else {
       self.split_at(text_index)?;
@@ -306,7 +313,7 @@ impl<'text> MagicString<'text> {
     }
   }
 
-  fn by_end_mut(&mut self, text_index: usize) -> Result<Option<&mut Chunk<'text>>, String> {
+  fn by_end_mut(&mut self, text_index: u32) -> Result<Option<&mut Chunk<'text>>, String> {
     if text_index == 0 {
       Ok(None)
     } else {

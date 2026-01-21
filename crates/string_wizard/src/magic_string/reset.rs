@@ -7,7 +7,7 @@ impl<'text> MagicString<'text> {
   /// # Errors
   /// - If `start` is greater than to `end`
   /// - If the range is out of bounds
-  pub fn reset(&mut self, start: usize, end: usize) -> Result<&mut Self, String> {
+  pub fn reset(&mut self, start: u32, end: u32) -> Result<&mut Self, String> {
     if start == end {
       return Ok(self);
     }
@@ -16,7 +16,7 @@ impl<'text> MagicString<'text> {
       return Err("end must be greater than start".to_string());
     }
 
-    if end > self.source.len() {
+    if (end as usize) > self.source.len() {
       return Err("Character is out of bounds".to_string());
     }
 

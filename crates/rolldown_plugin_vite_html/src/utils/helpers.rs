@@ -26,7 +26,8 @@ pub fn overwrite_check_public_file(
   };
   let pos = src[start - span.start];
   let wrap_offset = usize::from(pos == b'"' || pos == b'\'');
-  s.update(start + wrap_offset, span.end - wrap_offset, value)
+  #[expect(clippy::cast_possible_truncation)]
+  s.update((start + wrap_offset) as u32, (span.end - wrap_offset) as u32, value)
     .expect("update should not fail in html plugin");
   Ok(())
 }

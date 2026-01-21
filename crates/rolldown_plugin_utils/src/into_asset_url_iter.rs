@@ -4,8 +4,8 @@ pub struct AssetUrlIter<'a>(&'a str);
 
 #[derive(Debug)]
 pub enum AssetUrlItem<'a> {
-  Asset((Range<usize>, &'a str, Option<&'a str>)),
-  PublicAsset((Range<usize>, &'a str)),
+  Asset((Range<u32>, &'a str, Option<&'a str>)),
+  PublicAsset((Range<u32>, &'a str)),
 }
 
 impl<'a> From<&'a str> for AssetUrlIter<'a> {
@@ -15,6 +15,7 @@ impl<'a> From<&'a str> for AssetUrlIter<'a> {
 }
 
 impl<'a> AssetUrlIter<'a> {
+  #[expect(clippy::cast_possible_truncation)]
   pub fn into_asset_url_iter(&self) -> impl Iterator<Item = AssetUrlItem<'a>> {
     self.0.match_indices("__VITE_ASSET_").filter_map(|(start, _)| {
       if self.0[start + 13..].starts_with('_') {
@@ -32,7 +33,7 @@ impl<'a> AssetUrlIter<'a> {
             v
           })
         });
-        return Some(AssetUrlItem::Asset((start..end, reference_id, postfix)));
+        return Some(AssetUrlItem::Asset(((start as u32)..(end as u32), reference_id, postfix)));
       }
       if self.0[start + 13..].starts_with("PUBLIC__") {
         let hash_s = start + 21;
@@ -44,7 +45,7 @@ impl<'a> AssetUrlIter<'a> {
         return hash
           .bytes()
           .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-          .then_some(AssetUrlItem::PublicAsset((start..hash_e + 2, hash)));
+          .then_some(AssetUrlItem::PublicAsset(((start as u32)..((hash_e + 2) as u32), hash)));
       }
       None
     })
@@ -64,6 +65,10 @@ fn test_into_asset_url_iter() {
   .collect();
   assert_eq!(
     result,
-    vec![(0..27, "adwA22929_$", None), (28..55, "333", Some("?666")), (56..87, "12345678", None)]
+    vec![
+      (0u32..27, "adwA22929_$", None),
+      (28u32..55, "333", Some("?666")),
+      (56u32..87, "12345678", None)
+    ]
   );
 }

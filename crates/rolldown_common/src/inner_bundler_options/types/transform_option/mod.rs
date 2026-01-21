@@ -83,7 +83,7 @@ impl TryFrom<TransformOptions> for oxc::transformer::TransformOptions {
       // helper_loader: options
       //   .helpers
       //   .map_or_else(HelperLoaderOptions::default, HelperLoaderOptions::from),
-      plugins: options.plugins.map(oxc::transformer::PluginsOptions::from).unwrap_or_default(),
+      plugins: oxc::transformer::PluginsOptions::from(options.plugins.unwrap_or_default()),
       ..Default::default()
     })
   }

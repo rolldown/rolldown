@@ -100,7 +100,12 @@ impl PreProcessEcmaAst {
     // Step 3: Transform TypeScript and jsx.
     // Note: Currently, oxc_transform supports es syntax up to ES2024 (unicode-sets-regex).
     let is_not_js = !matches!(parsed_type, OxcParseType::Js);
-    if is_not_js || bundle_options.transform_options.should_transform_js() {
+
+    if is_not_js
+      || bundle_options.transform_options.should_transform_js()
+      // Run transformer on JS files containing `</script` to handle tagged template literals.
+      || memchr::memmem::find(ast.source().as_bytes(), "</script".as_bytes()).is_some()
+    {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
         // Pass file path only for non-JS modules (TS/TSX/JSX) to enable tsconfig discovery.
         // For plain JS files, we skip tsconfig lookup since they don't need TS-specific transformations.

@@ -5014,10 +5014,6 @@ expression: output
 - main-!~{000}~.js => main-D7G5mb2I.js
 - dynamic-!~{001}~.js => dynamic-BMZTHQfH.js
 
-# tests/rolldown/issues/6829
-
-- main-!~{000}~.js => main-vaEeLWmo.js
-
 # tests/rolldown/issues/6879
 
 - main-!~{000}~.js => main-9vfNU47B.js

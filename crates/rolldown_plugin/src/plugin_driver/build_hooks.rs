@@ -340,18 +340,18 @@ impl PluginDriver {
     for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_ast_meta)
     {
+      // Reconstructing the struct is necessary because `args.ast` is moved and reassigned each iteration
+      #[expect(clippy::unnecessary_struct_initialization)]
+      let transform_args = HookTransformAstArgs {
+        cwd: args.cwd,
+        ast: args.ast,
+        id: args.id,
+        stable_id: args.stable_id,
+        is_user_defined_entry: args.is_user_defined_entry,
+        module_type: args.module_type,
+      };
       args.ast = plugin
-        .call_transform_ast(
-          ctx,
-          HookTransformAstArgs {
-            cwd: args.cwd,
-            ast: args.ast,
-            id: args.id,
-            stable_id: args.stable_id,
-            is_user_defined_entry: args.is_user_defined_entry,
-            module_type: args.module_type,
-          },
-        )
+        .call_transform_ast(ctx, transform_args)
         .instrument(debug_span!("transform_ast_hook", plugin_name = plugin.call_name().as_ref()))
         .await
         .with_context(|| CausedPlugin::new(plugin.call_name()))?;

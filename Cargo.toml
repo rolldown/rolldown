@@ -41,7 +41,6 @@ module_inception = "allow"
 module_name_repetitions = "allow"
 similar_names = "allow"
 
-# These would require breaking API changes. See clippy.toml for why we don't care about breaking changes.
 trivially_copy_pass_by_ref = "allow"
 struct_field_names = "allow"
 unused_self = "allow"
@@ -56,31 +55,43 @@ missing_errors_doc = "allow"
 must_use_candidate = "allow"
 
 doc_markdown = "allow"
-missing_const_for_fn = "allow"
 needless_for_each = "allow"
 new_without_default = "allow"
 # TODO: should review this rule.
 missing_panics_doc = "allow"
 
-# Order doesn't really matter https://rust-lang.github.io/rust-clippy/master/index.html#/inconsistent_struct_constructor
-inconsistent_struct_constructor = "allow"
-
-# Single match is equally readable as if/else. https://rust-lang.github.io/rust-clippy/master/index.html#/single_match
-single_match = "allow"
-single_match_else = "allow"
-
-# Though the following are nursery rules, they're still useful.
-debug_assert_with_mut_call = "warn"
-iter_on_single_items = "warn"
-redundant_clone = "warn"
-redundant_pub_crate = "warn"
-significant_drop_in_scrutinee = "warn"
-unused_peekable = "warn"
-
-# Rewriting `unwrap_or` to `map_or` requires to annotate type explicitly which is cumbersome
-map_unwrap_or = "allow"
-
+# --- nursery https://doc.rust-lang.org/clippy/usage.html#clippynursery
+# We should only disable rules globally if they are either false positives, chaotic, or does not make sense.
+nursery = { level = "warn", priority = -1 }
+# `const` functions do not make sense for our project because this is not a `const` library.
+# This rule also confuses newcomers and forces them to add `const` blindlessly without any reason.
+missing_const_for_fn = "allow"
+option_if_let_else = "allow"
+or_fun_call = "allow"
+cognitive_complexity = "allow"
+non_send_fields_in_send_ty = "allow"
+use_self = "allow"
+significant_drop_tightening = "allow"
+branches_sharing_code = "allow"
+fallible_impl_from = "allow"
+useless_let_if_seq = "allow"
+impl_trait_in_params = "allow"
+# FIXME https://github.com/rust-lang/rust-clippy/issues/15429 - False positive with serde skip_serializing
+zero_sized_map_values = "allow"
+# False positive with derive_more debug attribute syntax
+literal_string_with_formatting_args = "allow"
+# Too many changes required across the codebase
 collapsible_if = "allow"
+too_long_first_doc_paragraph = "allow"
+single_match_else = "allow"
+single_option_map = "allow"
+map_unwrap_or = "allow"
+equatable_if_let = "allow"
+string_lit_as_bytes = "allow"
+needless_collect = "allow"
+iter_with_drain = "allow"
+unnecessary_struct_initialization = "allow"
+trivial_regex = "allow"
 
 [workspace.dependencies]
 # publish = true

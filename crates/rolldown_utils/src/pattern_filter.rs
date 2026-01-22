@@ -121,7 +121,7 @@ pub fn normalize_path(path: &str) -> Cow<'_, str> {
   }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum FilterResult {
   /// `Match(true)` means it is matched by `included`,
   /// `Match(false)` means it is matched by `excluded`

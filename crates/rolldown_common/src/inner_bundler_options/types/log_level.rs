@@ -9,7 +9,7 @@ use std::fmt::{self, Display, Formatter};
   derive(Deserialize, JsonSchema),
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
-#[derive(Debug, PartialEq, Clone, Copy, Default)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum LogLevel {
   Silent,
   Warn,

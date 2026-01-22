@@ -1,7 +1,7 @@
 use napi_derive::napi;
 use std::fmt::{self, Display, Formatter};
 
-#[derive(Debug, PartialEq, Clone, Copy, Default)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 #[napi]
 pub enum BindingLogLevel {
   Silent,

@@ -273,15 +273,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;
 
-    if self.esm_export_keyword.is_some() {
+    if let Some(esm_export_keyword) = self.esm_export_keyword {
       exports_kind = ExportsKind::Esm;
       if let Some(start) = self.cjs_module_ident {
         self.result.warnings.push(
           BuildDiagnostic::commonjs_variable_in_esm(
             self.immutable_ctx.id.to_string(),
             self.immutable_ctx.source.clone(),
-            // SAFETY: we checked at the beginning
-            self.esm_export_keyword.expect("should have start offset"),
+            esm_export_keyword,
             CjsExportSpan::Module(start),
           )
           .with_severity_warning(),
@@ -292,8 +291,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           BuildDiagnostic::commonjs_variable_in_esm(
             self.immutable_ctx.id.to_string(),
             self.immutable_ctx.source.clone(),
-            // SAFETY: we checked at the beginning
-            self.esm_export_keyword.expect("should have start offset"),
+            esm_export_keyword,
             CjsExportSpan::Exports(start),
           )
           .with_severity_warning(),

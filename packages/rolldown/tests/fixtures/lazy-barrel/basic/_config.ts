@@ -15,7 +15,7 @@ export default defineTest({
         transform(_, id) {
           transformedIds.push(id);
           return {
-            moduleSideEffects: id.includes('non-barrel')
+            moduleSideEffects: id.includes('non-barrel') || id.replaceAll(/\\/g, '/').includes('barrel/c.js')
           }
         },
       },
@@ -27,16 +27,17 @@ export default defineTest({
     )
     // With lazy barrel optimization:
     // - main.js: entry point, all imports and re-exports are loaded even if side-effect-free
-    // - barrel: only 'a.js' is loaded (b.js is skipped due to side-effect-free)
+    // - barrel: 'a.js' is loaded as it's used, b.js is skipped due to side-effect-free, c.js is loaded due to side-effect
     // - non-barrel: all modules are loaded (has side effects)
     // - other.js: loaded because it's re-exported from entry
     expect(relativeIds).toContain('main.js')
     expect(relativeIds).toContain('barrel/index.js')
     expect(relativeIds).toContain('barrel/a.js')
+    expect(relativeIds).toContain('barrel/c.js')
     expect(relativeIds).toContain('non-barrel/index.js')
     expect(relativeIds).toContain('non-barrel/c.js')
     expect(relativeIds).toContain('non-barrel/d.js')
     expect(relativeIds).toContain('other.js')
-    expect(transformedIds.length).toBe(7)
+    expect(transformedIds.length).toBe(8)
   },
 })

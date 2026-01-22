@@ -21,7 +21,7 @@ head:
 
 # Announcing Rolldown 1.0 RC
 
-_January 21, 2026_
+_January 22, 2026_
 
 Today we are thrilled to announce the Release Candidate for Rolldown 1.0.
 

@@ -15,7 +15,7 @@ export default defineTest({
         transform(_, id) {
           transformedIds.push(id)
           return {
-            moduleSideEffects: false,
+            moduleSideEffects: id.replaceAll('\\', '/').includes('barrel/e.js'),
           }
         },
       },
@@ -25,10 +25,11 @@ export default defineTest({
     const relativeIds = transformedIds.map((id) =>
       path.relative(import.meta.dirname, id).replace(/\\/g, '/'),
     )
-    // When barrel module is side-effect-free, plain imports are skipped
+    // When the imported module is side-effect-free, plain imports are skipped
     expect(relativeIds).toContain('main.js')
     expect(relativeIds).toContain('barrel/index.js')
     expect(relativeIds).toContain('barrel/d.js')
-    expect(transformedIds.length).toBe(3)
+    expect(relativeIds).toContain('barrel/e.js')
+    expect(transformedIds.length).toBe(4)
   },
 })

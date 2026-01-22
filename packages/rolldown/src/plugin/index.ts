@@ -87,8 +87,8 @@ interface SpecifiedModuleOptions {
    * 1. {@linkcode Plugin.transform | transform} hook's returned `moduleSideEffects` option
    * 2. {@linkcode Plugin.load | load} hook's returned `moduleSideEffects` option
    * 3. {@linkcode Plugin.resolveId | resolveId} hook's returned `moduleSideEffects` option
-   * 4. `sideEffects` field in the `package.json` file
-   * 5. {@linkcode TreeshakingOptions.moduleSideEffects | treeshake.moduleSideEffects} option
+   * 4. {@linkcode TreeshakingOptions.moduleSideEffects | treeshake.moduleSideEffects} option
+   * 5. `sideEffects` field in the `package.json` file
    * 6. `true` (default)
    */
   moduleSideEffects?: ModuleSideEffects | null;

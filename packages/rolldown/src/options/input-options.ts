@@ -648,6 +648,8 @@ export interface InputOptions {
    * Watch mode related options.
    *
    * These options only take effect when running with the `--watch` flag, or using `rolldown.watch()` API.
+   *
+   * @experimental
    */
   watch?: WatcherOptions | false;
   /**

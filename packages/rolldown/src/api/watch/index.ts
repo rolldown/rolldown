@@ -29,6 +29,7 @@ import { createWatcher } from './watcher';
  * watcher.close();
  * ```
  *
+ * @experimental
  * @category Programmatic APIs
  */
 export const watch = (input: WatchOptions | WatchOptions[]): RolldownWatcher => {

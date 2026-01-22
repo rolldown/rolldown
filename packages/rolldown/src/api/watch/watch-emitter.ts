@@ -63,18 +63,18 @@ export type RolldownWatcherWatcherEventMap = {
 /**
  * @category Programmatic APIs
  */
-export type RolldownWatcher = {
+export interface RolldownWatcher {
   on<E extends keyof RolldownWatcherWatcherEventMap>(
     event: E,
     listener: (...args: RolldownWatcherWatcherEventMap[E]) => MaybePromise<void>,
-  ): void;
+  ): this;
   off<E extends keyof RolldownWatcherWatcherEventMap>(
     event: E,
     listener: (...args: RolldownWatcherWatcherEventMap[E]) => MaybePromise<void>,
-  ): void;
+  ): this;
   clear<E extends keyof RolldownWatcherWatcherEventMap>(event: E): void;
   close(): Promise<void>;
-};
+}
 
 export class WatcherEmitter implements RolldownWatcher {
   listeners: Map<WatcherEvent, Array<(...parameters: any[]) => MaybePromise<void>>> = new Map();

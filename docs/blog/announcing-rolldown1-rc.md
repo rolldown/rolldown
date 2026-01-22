@@ -168,7 +168,7 @@ Our path forward:
 2. **Vite 8**: Ships with Rolldown as the default bundler, replacing both esbuild and Rollup
 3. **Rolldown 1.0**: Stable release with production-ready core features
 
-The integration into Vite will unify the build pipeline, eliminating the current two-bundler architecture and providing consistent behavior between development and production.
+The integration into Vite will unify the build pipeline, eliminating the current two-bundler architecture and providing consistent behavior between development and production. Vite 8 will not wait for Rolldown 1.0 as some features and fixes for 1.0 won't be required for it.
 
 ## Acknowledgements
 

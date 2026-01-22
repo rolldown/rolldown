@@ -73,13 +73,14 @@ const sidebarForInDepth: DefaultTheme.SidebarItem[] = [
         text: 'Non ESM Output Formats',
         link: '/in-depth/non-esm-output-formats.md',
       },
+      { text: 'Dead Code Elimination', link: '/in-depth/dead-code-elimination.md' },
+      { text: 'Lazy Barrel Optimization', link: '/in-depth/lazy-barrel-optimization.md' },
       { text: 'Native MagicString', link: '/in-depth/native-magic-string.md' },
       {
         text: 'Why Plugin Hook Filter',
         link: '/in-depth/why-plugin-hook-filter.md',
       },
       { text: 'Directives', link: '/in-depth/directives.md' },
-      { text: 'Lazy Barrel Optimization', link: '/in-depth/lazy-barrel-optimization.md' },
     ],
   },
 ];

@@ -34,8 +34,8 @@ jobs:
         run: |
           VERSION=$(node -e "
             const pkg = require('./packages/rolldown/package.json');
-            const [, base, beta] = pkg.version.match(/^(\d+\.\d+\.\d+)-beta\.(\d+)$/);
-            console.log(\`\${base}-beta.\${parseInt(beta) + 1}\`);
+            const [, base, rc] = pkg.version.match(/^(\d+\.\d+\.\d+)-rc\.(\d+)$/);
+            console.log(\`\${base}-rc.\${parseInt(rc) + 1}\`);
           ")
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 

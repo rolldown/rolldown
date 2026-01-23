@@ -6153,6 +6153,11 @@ expression: output
 
 - main-!~{000}~.js => main--plqeEzE.js
 
+# tests/rolldown/topics/new_url/binary_asset
+
+- main-!~{000}~.js => main-G6NNQIbI.js
+- assets/foo-D14wgUZU.bin
+
 # tests/rolldown/topics/new_url/dataurl
 
 - main-!~{000}~.js => main-BMN75q1d.js

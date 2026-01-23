@@ -291,9 +291,6 @@ impl ModuleTask {
         )
       })
     })?;
-    if let Some(asserted) = &self.asserted_module_type {
-      module_type = asserted.clone();
-    }
     let source = match source {
       _ if self.resolved_id.id.starts_with("rolldown:") => source,
       StrOrBytes::Str(source) => {

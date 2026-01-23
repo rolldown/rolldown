@@ -470,7 +470,6 @@ const InputOptionsSchema = v.strictObject({
       enableComposingJsPlugins: v.optional(v.boolean()),
       viteMode: v.optional(v.boolean()),
       resolveNewUrlToAsset: v.optional(v.boolean()),
-      strictExecutionOrder: v.optional(v.boolean()),
       onDemandWrapping: v.optional(v.boolean()),
       incrementalBuild: v.optional(v.boolean()),
       devMode: v.optional(DevModeSchema),
@@ -774,6 +773,10 @@ const OutputOptionsSchema = v.strictObject({
   keepNames: v.pipe(
     v.optional(v.boolean()),
     v.description('Keep function and class names after bundling'),
+  ),
+  strictExecutionOrder: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Lets modules be executed in the order they are declared.'),
   ),
 }) satisfies v.GenericSchema<OutputOptions>;
 

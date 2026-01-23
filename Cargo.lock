@@ -2483,14 +2483,15 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "pnp"
-version = "0.12.7"
+version = "0.12.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6e38320d5a8e386647f622067588bdb338c9e6e43eb32cf6f8991dd0e8f0046"
+checksum = "5401c5598b8244888870c2f1e84bb7bc1976f01c0043f1a4070a268409276840"
 dependencies = [
  "byteorder",
  "concurrent_lru",
  "fancy-regex",
  "flate2",
+ "indexmap",
  "nodejs-built-in-modules",
  "pathdiff",
  "radix_trie",

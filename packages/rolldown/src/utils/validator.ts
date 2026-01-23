@@ -101,13 +101,22 @@ const JsxOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Toggles whether to throw an error when a tag name uses an XML namespace'),
   ),
+  pure: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Mark JSX elements and top-level React method calls as pure for tree shaking.'),
+  ),
   importSource: v.pipe(
     v.optional(v.string()),
     v.description('Import the factory of element and fragment if mode is classic'),
   ),
   pragma: v.pipe(v.optional(v.string()), v.description('Jsx element transformation')),
   pragmaFrag: v.pipe(v.optional(v.string()), v.description('Jsx fragment transformation')),
-  refresh: v.pipe(v.optional(v.boolean()), v.description('Enable react fast refresh')),
+  refresh: v.pipe(
+    v.optional(v.union([v.boolean(), v.any()])),
+    v.description('Enable react fast refresh'),
+  ),
+  useBuiltIns: v.pipe(v.optional(v.any()), v.description('Deprecated')),
+  useSpread: v.pipe(v.optional(v.any()), v.description('Deprecated')),
 });
 
 const HelperModeSchema = v.union([v.literal('Runtime'), v.literal('External')]);
@@ -132,6 +141,7 @@ const TypescriptSchema = v.object({
   onlyRemoveTypeImports: v.optional(v.boolean()),
   allowNamespaces: v.optional(v.boolean()),
   allowDeclareFields: v.optional(v.boolean()),
+  removeClassFieldsWithoutInitializer: v.optional(v.boolean()),
   declaration: v.optional(
     v.object({
       stripInternal: v.optional(v.boolean()),
@@ -147,11 +157,17 @@ const AssumptionsSchema = v.object({
   pureGetters: v.optional(v.boolean()),
   setPublicClassFields: v.optional(v.boolean()),
 });
+
+const TransformPluginsSchema = v.object({
+  styledComponents: v.optional(v.any()),
+  taggedTemplateEscape: v.optional(v.boolean()),
+});
+
 const TransformOptionsSchema = v.object({
   assumptions: v.optional(AssumptionsSchema),
   typescript: v.optional(TypescriptSchema),
   helpers: v.optional(HelpersSchema),
-  decorators: v.optional(DecoratorOptionSchema),
+  decorator: v.optional(DecoratorOptionSchema),
   jsx: v.optional(
     v.union([
       v.literal(false),
@@ -177,6 +193,7 @@ const TransformOptionsSchema = v.object({
     v.optional(v.array(v.string())),
     v.description('Remove labeled statements with these label names'),
   ),
+  plugins: v.pipe(v.optional(TransformPluginsSchema), v.description('Third-party plugins to use')),
 });
 
 const WatchOptionsSchema = v.strictObject({
@@ -296,26 +313,25 @@ const CompressOptionsKeepNamesSchema = v.strictObject({
   class: v.boolean(),
 });
 
+const CompressTreeshakeOptionsSchema = v.strictObject({
+  annotations: v.optional(v.boolean()),
+  manualPureFunctions: v.optional(v.array(v.string())),
+  propertyReadSideEffects: v.optional(v.union([v.boolean(), v.literal('always')])),
+  unknownGlobalSideEffects: v.optional(v.boolean()),
+  invalidImportSideEffects: v.optional(v.boolean()),
+});
+
 const CompressOptionsSchema = v.strictObject({
-  target: v.optional(
-    v.union([
-      v.literal('esnext'),
-      v.literal('es2015'),
-      v.literal('es2016'),
-      v.literal('es2017'),
-      v.literal('es2018'),
-      v.literal('es2019'),
-      v.literal('es2020'),
-      v.literal('es2021'),
-      v.literal('es2022'),
-      v.literal('es2023'),
-      v.literal('es2024'),
-    ]),
-  ),
+  target: v.optional(v.union([v.string(), v.array(v.string())])),
   dropConsole: v.optional(v.boolean()),
   dropDebugger: v.optional(v.boolean()),
   keepNames: v.optional(CompressOptionsKeepNamesSchema),
   unused: v.optional(v.union([v.boolean(), v.literal('keep_assign')])),
+  joinVars: v.optional(v.boolean()),
+  sequences: v.optional(v.boolean()),
+  dropLabels: v.optional(v.array(v.string())),
+  maxIterations: v.optional(v.number()),
+  treeshake: v.optional(CompressTreeshakeOptionsSchema),
 }) satisfies v.GenericSchema<CompressOptions>;
 
 const MangleOptionsKeepNamesSchema = v.strictObject({
@@ -352,22 +368,23 @@ const ResolveOptionsSchema = v.strictObject({
   mainFiles: v.optional(v.array(v.string())),
   modules: v.optional(v.array(v.string())),
   symlinks: v.optional(v.boolean()),
-  yarnPnp: v.optional(v.boolean()),
+  tsconfigFilename: v.optional(v.string()),
 });
 
-// TODO: moduleSideEffects
-const TreeshakingOptionsSchema = v.union([
-  v.boolean(),
-  v.looseObject({
-    annotations: v.optional(v.boolean()),
-    manualPureFunctions: v.optional(v.array(v.string())),
-    unknownGlobalSideEffects: v.optional(v.boolean()),
-    invalidImportSideEffects: v.optional(v.boolean()),
-    commonjs: v.optional(v.boolean()),
-    propertyReadSideEffects: v.optional(v.union([v.literal(false), v.literal('always')])),
-    propertyWriteSideEffects: v.optional(v.union([v.literal(false), v.literal('always')])),
-  }),
-]);
+const TreeshakingOptionsSchema = v.strictObject({
+  // TODO: stricter typing
+  moduleSideEffects: v.optional(v.any()),
+  annotations: v.optional(v.boolean()),
+  // valibot does not infer readonly arrays
+  manualPureFunctions: v.optional(
+    v.custom<readonly string[]>((input) => v.is(v.array(v.string()), input), 'string array'),
+  ),
+  unknownGlobalSideEffects: v.optional(v.boolean()),
+  invalidImportSideEffects: v.optional(v.boolean()),
+  commonjs: v.optional(v.boolean()),
+  propertyReadSideEffects: v.optional(v.union([v.literal(false), v.literal('always')])),
+  propertyWriteSideEffects: v.optional(v.union([v.literal(false), v.literal('always')])),
+});
 
 const OptimizationOptionsSchema = v.strictObject({
   inlineConst: v.pipe(
@@ -448,7 +465,7 @@ const InputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Create shim variables for missing exports'),
   ),
-  treeshake: v.optional(TreeshakingOptionsSchema),
+  treeshake: v.optional(v.union([v.boolean(), TreeshakingOptionsSchema])),
   optimization: v.optional(OptimizationOptionsSchema),
   logLevel: v.pipe(
     v.optional(LogLevelOptionSchema),
@@ -467,16 +484,13 @@ const InputOptionsSchema = v.strictObject({
   ),
   experimental: v.optional(
     v.strictObject({
-      enableComposingJsPlugins: v.optional(v.boolean()),
       viteMode: v.optional(v.boolean()),
       resolveNewUrlToAsset: v.optional(v.boolean()),
-      onDemandWrapping: v.optional(v.boolean()),
-      incrementalBuild: v.optional(v.boolean()),
       devMode: v.optional(DevModeSchema),
+      chunkModulesOrder: v.optional(v.union([v.literal('module-id'), v.literal('exec-order')])),
       attachDebugInfo: v.optional(
         v.union([v.literal('none'), v.literal('simple'), v.literal('full')]),
       ),
-      chunkModulesOrder: v.optional(v.union([v.literal('module-id'), v.literal('exec-order')])),
       chunkImportMap: v.optional(
         v.union([
           v.boolean(),
@@ -486,6 +500,9 @@ const InputOptionsSchema = v.strictObject({
           }),
         ]),
       ),
+      onDemandWrapping: v.optional(v.boolean()),
+      incrementalBuild: v.optional(v.boolean()),
+      transformHiresSourcemap: v.optional(v.union([v.boolean(), v.literal('boundary')])),
       nativeMagicString: v.optional(v.boolean()),
       chunkOptimization: v.optional(v.boolean()),
       // lazyBarrel: v.optional(v.boolean()),
@@ -513,6 +530,10 @@ const InputOptionsSchema = v.strictObject({
         v.literal(false),
       ]),
     ),
+  ),
+  context: v.pipe(
+    v.optional(v.string()),
+    v.description('The value of `this` at the top level of each module.'),
   ),
   tsconfig: v.pipe(
     v.optional(v.union([v.boolean(), v.string()])),
@@ -650,7 +671,7 @@ const GeneratedCodeOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Whether to use Symbol.toStringTag for namespace objects'),
   ),
-  preset: GeneratedCodePresetSchema,
+  preset: v.optional(GeneratedCodePresetSchema),
   profilerNames: v.pipe(
     v.optional(v.boolean()),
     v.description('Whether to add readable names to internal variables for profiling purposes'),

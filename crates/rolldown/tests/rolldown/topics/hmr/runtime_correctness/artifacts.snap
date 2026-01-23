@@ -40,6 +40,7 @@ var require_cjs_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	exports.foo = "foo";
 	exports.bar = "bar";
 	var Noop = class {
+		static baz2 = this.baz3 = "wrong";
 		static {
 			this.baz = "bar";
 		}
@@ -89,6 +90,7 @@ const requireCjsLib = require_cjs_lib();
 assert.strictEqual(requireCjsLib.foo, "foo");
 assert.strictEqual(requireCjsLib.bar, "bar");
 assert.strictEqual(requireCjsLib.baz, undefined);
+assert.strictEqual(requireCjsLib.baz3, undefined);
 assert.strictEqual(requireCjsLib.qux, "qux");
 const requiredUmdLib = require_umd_lib();
 assert.strictEqual(requiredUmdLib(), "exports");
@@ -292,6 +294,7 @@ var require_cjs_lib_7 = __rolldown_runtime__.createCjsInitializer((function(__ro
 		__rolldown_exports__.foo = "foo";
 		__rolldown_exports__.bar = "bar";
 		class Noop {
+			static baz2 = this.baz3 = "wrong";
 			static {
 				this.baz = "bar";
 			}
@@ -321,6 +324,7 @@ var init_require_8 = __rolldown_runtime__.createEsmInitializer((function() {
 		import_node_assert_80.default.strictEqual(requireCjsLib.foo, "foo");
 		import_node_assert_80.default.strictEqual(requireCjsLib.bar, "bar");
 		import_node_assert_80.default.strictEqual(requireCjsLib.baz, undefined);
+		import_node_assert_80.default.strictEqual(requireCjsLib.baz3, undefined);
 		import_node_assert_80.default.strictEqual(requireCjsLib.qux, "qux");
 		const requiredUmdLib = (require_umd_lib_9(), __rolldown_runtime__.loadExports("cases/require/umd-lib.js"));
 		import_node_assert_80.default.strictEqual(requiredUmdLib(), "exports");

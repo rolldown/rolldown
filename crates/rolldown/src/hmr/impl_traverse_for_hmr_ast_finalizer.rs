@@ -182,14 +182,14 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     node: &mut oxc::ast::ast::Expression<'ast>,
     ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
   ) {
-    if matches!(node, ast::Expression::ThisExpression(_)) && ctx.is_current_scope_valid_for_tla() {
-      // Rewrite this to `undefined` or `exports`
-      if self.module.exports_kind.is_commonjs() {
-        // Rewrite this to `exports`
-        *node = self.snippet.id_ref_expr(CJS_ROLLDOWN_EXPORTS_REF, SPAN);
-      } else {
-        // Rewrite this to `undefined`
-        *node = self.snippet.void_zero();
+    // Rewrite top-level `this` to `exports` for CommonJS modules
+    // Use `this_expr_replace_map` from scanning to avoid rewriting `this` inside classes
+    if let ast::Expression::ThisExpression(this_expr) = node {
+      if self.module.ecma_view.this_expr_replace_map.contains_key(&this_expr.span) {
+        if self.module.exports_kind.is_commonjs() {
+          *node = self.snippet.id_ref_expr(CJS_ROLLDOWN_EXPORTS_REF, SPAN);
+          return;
+        }
       }
     }
 
@@ -214,19 +214,5 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     self.try_rewrite_dynamic_import(node);
     self.try_rewrite_require(node, ctx);
     self.rewrite_import_meta_hot(node);
-  }
-}
-
-trait TraverseCtxExt<'ast> {
-  fn is_current_scope_valid_for_tla(&self) -> bool;
-}
-
-impl<'ast> TraverseCtxExt<'ast> for oxc_traverse::TraverseCtx<'ast, ()> {
-  fn is_current_scope_valid_for_tla(&self) -> bool {
-    let scoping = self.scoping();
-    scoping
-      .scope_ancestors(self.current_scope_id())
-      .map(|scope_id| scoping.scope_flags(scope_id))
-      .all(|scope_flags| scope_flags.is_block() || scope_flags.is_top())
   }
 }

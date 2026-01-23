@@ -5912,6 +5912,10 @@ expression: output
 
 - main-!~{000}~.js => main-DDt32RbE.js
 
+# tests/rolldown/topics/deconflict/module_id_with_dots
+
+- main-!~{000}~.js => main-KQvqE9CZ.js
+
 # tests/rolldown/topics/deconflict/nested_scope_rename_counter
 
 - main-!~{000}~.js => main-NrkxWCZ4.js

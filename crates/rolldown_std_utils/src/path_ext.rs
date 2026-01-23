@@ -37,7 +37,7 @@ impl PathExt for Path {
       // "mod": https://docs.deno.com/runtime/manual/references/contributing/style_guide#do-not-use-the-filename-indextsindexjs.
       "index" | "mod" => {
         if let Some(parent_dir_name) =
-          self.parent().and_then(Path::file_stem).map(OsStr::to_string_lossy)
+          self.parent().and_then(Path::file_name).map(OsStr::to_string_lossy)
         {
           parent_dir_name
         } else {
@@ -70,6 +70,9 @@ fn test_representative_file_name() {
 
   let path = cwd.join("vue").join("mod.ts");
   assert_eq!(path.representative_file_name(), "vue");
+
+  let path = cwd.join("foo.bar").join("index.js");
+  assert_eq!(path.representative_file_name(), "foo.bar");
 
   let path = cwd.join("x.jsx");
   let (_, ab_path, _) = representative_file_name_for_preserve_modules(&path);

@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region hmr.js
-var hmr_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+var hmr_exports = /* @__PURE__ */ __exportAll({ foo: () => foo }, 1);
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 const foo = "hello";
@@ -25,7 +25,7 @@ hmr_hot.accept((mod) => {
 
 //#endregion
 //#region sub.js
-var sub_exports = {};
+var sub_exports = /* @__PURE__ */ __exportAll({}, 1);
 const sub_hot = __rolldown_runtime__.createModuleHotContext("sub.js");
 __rolldown_runtime__.registerModule("sub.js", { exports: sub_exports });
 text(".app", "hello");
@@ -35,7 +35,7 @@ function text(el, text) {
 
 //#endregion
 //#region main.js
-var main_exports = {};
+var main_exports = /* @__PURE__ */ __exportAll({}, 1);
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 

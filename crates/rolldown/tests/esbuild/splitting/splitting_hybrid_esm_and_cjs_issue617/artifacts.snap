@@ -17,7 +17,7 @@ export { foo };
 ```js
 // HIDDEN [rolldown:runtime]
 //#region a.js
-var a_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+var a_exports = /* @__PURE__ */ __exportAll({ foo: () => foo }, 1);
 var foo;
 var init_a = __esmMin((() => {
 	;

@@ -47,7 +47,7 @@ fn normalize_generated_code_option(
     }
     None => GeneratedCodeOptions::default(),
   };
-  Ok(GeneratedCodeOptions { symbols: value.symbols.unwrap_or(v.symbols), ..v })
+  Ok(GeneratedCodeOptions { symbols: value.symbols.unwrap_or(v.symbols) })
 }
 
 fn normalize_addon_option(

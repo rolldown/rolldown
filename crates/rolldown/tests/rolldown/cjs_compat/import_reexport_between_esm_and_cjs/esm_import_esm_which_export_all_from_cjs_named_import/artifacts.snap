@@ -16,7 +16,7 @@ var require_commonjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 
 //#endregion
 //#region proxy.js
-var proxy_exports = {};
+var proxy_exports = /* @__PURE__ */ __exportAll({}, 1);
 __reExport(proxy_exports, /* @__PURE__ */ __toESM(require_commonjs()));
 
 //#endregion

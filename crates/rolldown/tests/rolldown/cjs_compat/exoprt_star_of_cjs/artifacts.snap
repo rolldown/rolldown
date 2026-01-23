@@ -14,17 +14,17 @@ var require_c = /* @__PURE__ */ __commonJSMin(((exports) => {
 
 //#endregion
 //#region b.js
-var b_exports = {};
+var b_exports = /* @__PURE__ */ __exportAll({}, 1);
 __reExport(b_exports, /* @__PURE__ */ __toESM(require_c()));
 
 //#endregion
 //#region a.js
-var a_exports = {};
+var a_exports = /* @__PURE__ */ __exportAll({}, 1);
 __reExport(a_exports, b_exports);
 
 //#endregion
 //#region main.js
-var main_exports = {};
+var main_exports = /* @__PURE__ */ __exportAll({}, 1);
 __reExport(main_exports, a_exports);
 
 //#endregion

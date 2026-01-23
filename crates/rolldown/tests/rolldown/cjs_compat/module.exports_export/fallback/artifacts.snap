@@ -14,7 +14,7 @@ var esm_exports = /* @__PURE__ */ __exportAll({
 	bar: () => bar,
 	default: () => esm_default,
 	foo: () => foo
-});
+}, 1);
 var foo, bar, esm_default;
 var init_esm = __esmMin((() => {
 	foo = "foo";

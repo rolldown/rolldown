@@ -14,7 +14,7 @@ var esm_exports = /* @__PURE__ */ __exportAll({
 	default: () => esm_default,
 	"module.exports": () => moduleExports,
 	namedExport: () => namedExport
-});
+}, 1);
 var namedExport, esm_default, moduleExports;
 var init_esm = __esmMin((() => {
 	namedExport = "named";

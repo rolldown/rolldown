@@ -19,7 +19,7 @@ var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 
 //#endregion
 //#region main.js
-var main_exports = {};
+var main_exports = /* @__PURE__ */ __exportAll({}, 1);
 var import_foo, main_hot;
 var init_main = __esmMin((() => {
 	init_rolldown_hmr();

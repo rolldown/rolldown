@@ -6,10 +6,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 // HIDDEN [rolldown:runtime]
 
 //#region baz.js
-var baz_exports = /* @__PURE__ */ __exportAll({ baz: () => baz });
+var baz_exports = /* @__PURE__ */ __exportAll({ baz: () => baz }, 1);
 const baz = "baz";
 
 //#endregion

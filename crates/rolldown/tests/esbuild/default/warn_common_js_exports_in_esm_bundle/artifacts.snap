@@ -41,6 +41,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## cjs-in-esm.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#region cjs-in-esm.js
 let foo = 1;

@@ -29,7 +29,7 @@ var foo_exports = /* @__PURE__ */ __exportAll({
 	x: () => x,
 	y: () => y,
 	z: () => z
-});
+}, 1);
 function foo$1() {}
 var a, b, c, d, e, g, x, y, z, k, bar, baz, a1, a2, index, a3, destructuring;
 var init_foo = __esmMin((() => {

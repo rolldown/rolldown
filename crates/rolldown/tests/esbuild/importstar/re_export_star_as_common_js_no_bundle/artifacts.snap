@@ -21,6 +21,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 // HIDDEN [rolldown:runtime]
 let foo = require("foo");
 foo = __toESM(foo);

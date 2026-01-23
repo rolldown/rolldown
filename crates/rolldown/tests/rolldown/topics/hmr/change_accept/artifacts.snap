@@ -11,14 +11,14 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region child.js
-var child_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+var child_exports = /* @__PURE__ */ __exportAll({ foo: () => foo }, 1);
 const child_hot = __rolldown_runtime__.createModuleHotContext("child.js");
 __rolldown_runtime__.registerModule("child.js", { exports: child_exports });
 const foo = 0;
 
 //#endregion
 //#region parent.js
-var parent_exports = {};
+var parent_exports = /* @__PURE__ */ __exportAll({}, 1);
 const parent_hot = __rolldown_runtime__.createModuleHotContext("parent.js");
 __rolldown_runtime__.registerModule("parent.js", { exports: parent_exports });
 parent_hot.accept("child.js", () => {
@@ -31,7 +31,7 @@ process.on("beforeExit", (code) => {
 
 //#endregion
 //#region main.js
-var main_exports = {};
+var main_exports = /* @__PURE__ */ __exportAll({}, 1);
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 main_hot.accept("parent.js", () => {});

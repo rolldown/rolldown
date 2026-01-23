@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 
+exports.__exportAll = __exportAll;
 exports.__reExport = __reExport;
 ```
 
@@ -18,7 +19,7 @@ const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
 require('./server.js');
 
 //#region main.js
-var main_exports = {};
+var main_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({}, 1);
 
 //#endregion
 

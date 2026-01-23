@@ -8,13 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region second.js
-var second_exports = {};
+var second_exports = /* @__PURE__ */ __exportAll({}, 1);
 import * as import_external from "external";
 __reExport(second_exports, import_external);
 
 //#endregion
 //#region first.js
-var first_exports = {};
+var first_exports = /* @__PURE__ */ __exportAll({}, 1);
 __reExport(first_exports, second_exports);
 
 //#endregion

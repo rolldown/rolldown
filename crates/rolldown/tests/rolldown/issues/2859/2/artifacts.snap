@@ -39,7 +39,7 @@ export { bar, main_default as default, foo };
 ### main.js
 
 ```js
-Object.defineProperty(exports, '__esModule', { value: true });
+Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });
 // HIDDEN [rolldown:runtime]
 let assert = require("assert");
 assert = __toESM(assert);

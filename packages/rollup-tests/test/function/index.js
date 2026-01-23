@@ -140,7 +140,9 @@ runTestSuiteWithSamples(
 							.generate({
 								exports: 'auto',
 								format: 'cjs',
-								...(config.options || {}).output
+								...(config.options || {}).output,
+								// Rolldown uses `generatedCode.preset: 'es2015'` by default
+								generatedCode: { preset: 'es5', ...config.options?.output?.generatedCode },
 							})
 							.then(({ output }) => {
 								if (config.error || config.generateError) {

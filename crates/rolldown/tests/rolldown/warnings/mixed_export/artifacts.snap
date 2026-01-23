@@ -17,7 +17,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 var bundle = (function(exports) {
 
-Object.defineProperty(exports, '__esModule', { value: true });
+Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });
 
 //#region main.js
 	var main_default = 1;

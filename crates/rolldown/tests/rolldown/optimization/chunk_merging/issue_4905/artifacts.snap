@@ -10,7 +10,7 @@ import { strictEqual } from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo }, 1);
 const foo = "foo";
 
 //#endregion
@@ -34,7 +34,7 @@ Promise.resolve().then(() => foo_exports).then((mod) => {
 let node_assert = require("node:assert");
 
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo }, 1);
 const foo = "foo";
 
 //#endregion

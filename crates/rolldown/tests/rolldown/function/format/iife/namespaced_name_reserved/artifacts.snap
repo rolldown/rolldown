@@ -12,6 +12,7 @@ class A {
 this["1"] = this["1"] || {};
 this["1"]["2"] = (function(exports) {
 
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#region foo.js
 	const value = 1;

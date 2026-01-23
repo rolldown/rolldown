@@ -8,14 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 var module = (function(exports) {
 
-Object.defineProperty(exports, '__esModule', { value: true });
+Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });
 // HIDDEN [rolldown:runtime]
 
 //#region mod.js
 	var named_exports = /* @__PURE__ */ __exportAll({
 		add: () => add,
 		subtract: () => subtract
-	});
+	}, 1);
 	function add(a, b) {
 		return a + b;
 	}

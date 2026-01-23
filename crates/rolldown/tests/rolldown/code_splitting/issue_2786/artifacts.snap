@@ -10,12 +10,12 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region share.js
-var share_exports$1 = /* @__PURE__ */ __exportAll({ default: () => share_default$1 });
+var share_exports$1 = /* @__PURE__ */ __exportAll({ default: () => share_default$1 }, 1);
 var share_default$1 = "shared";
 
 //#endregion
 //#region share.json
-var share_exports = /* @__PURE__ */ __exportAll({ default: () => share_default });
+var share_exports = /* @__PURE__ */ __exportAll({ default: () => share_default }, 1);
 var share_default = {};
 
 //#endregion

@@ -10,17 +10,23 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region bar.js
-var bar_exports = /* @__PURE__ */ __exportAll({ bar: () => bar });
+var bar_exports = /* @__PURE__ */ __exportAll({ bar: () => bar }, 1);
 const bar = 123;
 
 //#endregion
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({ bar_ns: () => bar_exports });
+var foo_exports = /* @__PURE__ */ __exportAll({ bar_ns: () => bar_exports }, 1);
 
 //#endregion
 //#region entry.js
 console.log(foo_exports);
-assert.deepEqual(foo_exports, { bar_ns: { bar: 123 } });
+assert.deepEqual(foo_exports, {
+	[Symbol.toStringTag]: "Module",
+	bar_ns: {
+		[Symbol.toStringTag]: "Module",
+		bar: 123
+	}
+});
 
 //#endregion
 ```

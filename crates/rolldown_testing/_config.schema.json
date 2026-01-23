@@ -629,29 +629,12 @@
     "GeneratedCodeOptions": {
       "type": "object",
       "properties": {
-        "preset": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/GeneratedCodePreset"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "symbols": {
           "type": "boolean"
         }
       },
       "required": [
         "symbols"
-      ]
-    },
-    "GeneratedCodePreset": {
-      "type": "string",
-      "enum": [
-        "es5",
-        "es2015"
       ]
     },
     "SourceMapType": {

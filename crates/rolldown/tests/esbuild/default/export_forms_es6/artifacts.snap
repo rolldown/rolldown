@@ -12,7 +12,7 @@ const abc = void 0;
 
 //#endregion
 //#region b.js
-var b_exports = /* @__PURE__ */ __exportAll({ xyz: () => xyz });
+var b_exports = /* @__PURE__ */ __exportAll({ xyz: () => xyz }, 1);
 const xyz = null;
 
 //#endregion

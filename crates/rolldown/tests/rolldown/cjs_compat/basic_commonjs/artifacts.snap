@@ -13,7 +13,7 @@ var esm_exports = /* @__PURE__ */ __exportAll({
 	esm_named_class: () => esm_named_class,
 	esm_named_fn: () => esm_named_fn,
 	esm_named_var: () => esm_named_var
-});
+}, 1);
 function esm_default_fn$1() {}
 function esm_named_fn() {}
 function hoisted_fn() {

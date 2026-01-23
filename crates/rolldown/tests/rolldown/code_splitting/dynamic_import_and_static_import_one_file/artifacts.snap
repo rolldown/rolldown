@@ -10,14 +10,17 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo }, 1);
 const foo = 1;
 
 //#endregion
 //#region main.js
-assert.deepEqual(foo_exports, { foo: 1 });
+assert.deepEqual(foo_exports, {
+	[Symbol.toStringTag]: "Module",
+	foo: 1
+});
 Promise.resolve().then(() => foo_exports).then((mod) => {
-	assert.deepEqual(JSON.parse(JSON.stringify(mod)), foo_exports);
+	assert.deepEqual(mod, foo_exports);
 });
 
 //#endregion

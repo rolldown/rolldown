@@ -11,7 +11,7 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region trigger-dep.js
-var trigger_dep_exports = {};
+var trigger_dep_exports = /* @__PURE__ */ __exportAll({}, 1);
 var trigger_dep_hot;
 var init_trigger_dep = __esmMin((() => {
 	trigger_dep_hot = __rolldown_runtime__.createModuleHotContext("trigger-dep.js");
@@ -78,7 +78,7 @@ var require_umd_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 
 //#endregion
 //#region cases/require/index.js
-var require_exports = {};
+var require_exports = /* @__PURE__ */ __exportAll({}, 1);
 init_trigger_dep();
 const require_hot = __rolldown_runtime__.createModuleHotContext("cases/require/index.js");
 __rolldown_runtime__.registerModule("cases/require/index.js", { exports: require_exports });
@@ -103,7 +103,7 @@ assert.strictEqual(requiredUmdLib.foo, "foo");
 var lib_exports = /* @__PURE__ */ __exportAll({
 	Globals: () => Globals,
 	value: () => value
-});
+}, 1);
 init_trigger_dep();
 const lib_hot = __rolldown_runtime__.createModuleHotContext("cases/manual_reexport/lib.js");
 __rolldown_runtime__.registerModule("cases/manual_reexport/lib.js", { exports: lib_exports });
@@ -115,14 +115,14 @@ const value = "lib";
 var barrel_exports = /* @__PURE__ */ __exportAll({
 	Globals: () => Globals,
 	value: () => value
-});
+}, 1);
 init_trigger_dep();
 const barrel_hot = __rolldown_runtime__.createModuleHotContext("cases/manual_reexport/barrel.js");
 __rolldown_runtime__.registerModule("cases/manual_reexport/barrel.js", { exports: barrel_exports });
 
 //#endregion
 //#region cases/manual_reexport/index.js
-var manual_reexport_exports = {};
+var manual_reexport_exports = /* @__PURE__ */ __exportAll({}, 1);
 init_trigger_dep();
 const manual_reexport_hot = __rolldown_runtime__.createModuleHotContext("cases/manual_reexport/index.js");
 __rolldown_runtime__.registerModule("cases/manual_reexport/index.js", { exports: manual_reexport_exports });
@@ -131,7 +131,7 @@ assert.strictEqual(Globals, Object);
 
 //#endregion
 //#region cases/deconflict_import_bindings/foo.mjs
-var foo_exports$1 = /* @__PURE__ */ __exportAll({ foo: () => foo$1 });
+var foo_exports$1 = /* @__PURE__ */ __exportAll({ foo: () => foo$1 }, 1);
 init_trigger_dep();
 const foo_hot$1 = __rolldown_runtime__.createModuleHotContext("cases/deconflict_import_bindings/foo.mjs");
 __rolldown_runtime__.registerModule("cases/deconflict_import_bindings/foo.mjs", { exports: foo_exports$1 });
@@ -139,7 +139,7 @@ const foo$1 = "foo";
 
 //#endregion
 //#region cases/deconflict_import_bindings/foo/index.mjs
-var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
+var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo }, 1);
 init_trigger_dep();
 const foo_hot = __rolldown_runtime__.createModuleHotContext("cases/deconflict_import_bindings/foo/index.mjs");
 __rolldown_runtime__.registerModule("cases/deconflict_import_bindings/foo/index.mjs", { exports: foo_exports });
@@ -147,7 +147,7 @@ const foo = "foo-index";
 
 //#endregion
 //#region cases/deconflict_import_bindings/index.js
-var deconflict_import_bindings_exports = {};
+var deconflict_import_bindings_exports = /* @__PURE__ */ __exportAll({}, 1);
 init_trigger_dep();
 const deconflict_import_bindings_hot = __rolldown_runtime__.createModuleHotContext("cases/deconflict_import_bindings/index.js");
 __rolldown_runtime__.registerModule("cases/deconflict_import_bindings/index.js", { exports: deconflict_import_bindings_exports });
@@ -156,7 +156,7 @@ assert.strictEqual(foo, "foo-index");
 
 //#endregion
 //#region main.js
-var main_exports = {};
+var main_exports = /* @__PURE__ */ __exportAll({}, 1);
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 if (main_hot) {

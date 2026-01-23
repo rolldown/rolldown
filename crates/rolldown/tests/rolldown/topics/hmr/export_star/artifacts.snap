@@ -12,7 +12,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var foo_exports = /* @__PURE__ */ __exportAll({
 	foo: () => foo,
 	named: () => named$2
-});
+}, 1);
 const foo_hot = __rolldown_runtime__.createModuleHotContext("sub/foo.js");
 __rolldown_runtime__.registerModule("sub/foo.js", { exports: foo_exports });
 const foo = "foo";
@@ -23,7 +23,7 @@ const named$2 = "foo";
 var bar_exports = /* @__PURE__ */ __exportAll({
 	bar: () => bar,
 	named: () => named$1
-});
+}, 1);
 const bar_hot = __rolldown_runtime__.createModuleHotContext("sub/bar.js");
 __rolldown_runtime__.registerModule("sub/bar.js", { exports: bar_exports });
 const bar = "bar";
@@ -31,7 +31,7 @@ const named$1 = "bar";
 
 //#endregion
 //#region sub/named.js
-var named_exports = /* @__PURE__ */ __exportAll({ named: () => named });
+var named_exports = /* @__PURE__ */ __exportAll({ named: () => named }, 1);
 const named_hot = __rolldown_runtime__.createModuleHotContext("sub/named.js");
 __rolldown_runtime__.registerModule("sub/named.js", { exports: named_exports });
 const named = "named";
@@ -42,13 +42,13 @@ var sub_exports = /* @__PURE__ */ __exportAll({
 	bar: () => bar,
 	foo: () => foo,
 	named: () => named
-});
+}, 1);
 const sub_hot = __rolldown_runtime__.createModuleHotContext("sub/index.js");
 __rolldown_runtime__.registerModule("sub/index.js", { exports: sub_exports });
 
 //#endregion
 //#region hmr.js
-var hmr_exports = {};
+var hmr_exports = /* @__PURE__ */ __exportAll({}, 1);
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 console.log(foo, bar);
@@ -56,7 +56,7 @@ hmr_hot.accept();
 
 //#endregion
 //#region main.js
-var main_exports = {};
+var main_exports = /* @__PURE__ */ __exportAll({}, 1);
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 text(".app", "hello");

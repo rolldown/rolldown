@@ -27,6 +27,7 @@ exports.__toESM = __toESM;
 ## main.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 const require_lib$1 = require('./lib.js');
 let node_assert = require("node:assert");
 node_assert = require_lib$1.__toESM(node_assert);

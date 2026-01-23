@@ -15,6 +15,7 @@ exports.__reExport = __reExport;
 ## index.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
 require('./middle.js');
 let zod = require("zod");
@@ -23,7 +24,7 @@ let zod = require("zod");
 var _7233_chain_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
 	object: () => zod.object,
 	string: () => zod.string
-});
+}, 1);
 
 //#endregion
 Object.defineProperty(exports, 'object', {

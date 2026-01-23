@@ -28,6 +28,7 @@ node_assert.default.strictEqual(require_main.count, require_main.count);
 ## main.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#region shared.js
 let count = 0;

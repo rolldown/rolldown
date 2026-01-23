@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { n as __esmMin, r as __exportAll, t as __commonJSMin } from "./rolldown-runtime.js";
 
 //#region imp2.js
-var imp2_exports = /* @__PURE__ */ __exportAll({ imp2: () => imp2 });
+var imp2_exports = /* @__PURE__ */ __exportAll({ imp2: () => imp2 }, 1);
 var imp2;
 var init_imp2 = __esmMin((() => {
 	imp2 = 2;
@@ -62,7 +62,7 @@ export { __toESM as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
 const require_rolldown_runtime = require('./rolldown-runtime.js');
 
 //#region imp2.js
-var imp2_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ imp2: () => imp2 });
+var imp2_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({ imp2: () => imp2 }, 1);
 var imp2;
 var init_imp2 = require_rolldown_runtime.__esmMin((() => {
 	imp2 = 2;

@@ -15,7 +15,7 @@ var lib_exports = /* @__PURE__ */ __exportAll({
 	b: () => b,
 	c: () => c,
 	default: () => lib_default
-});
+}, 1);
 var a = 1;
 var b = 2;
 var c = "example";

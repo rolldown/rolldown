@@ -21,11 +21,12 @@ const z = 4;
 var common_exports = /* @__PURE__ */ __exportAll({
 	x: () => x,
 	z: () => z
-});
+}, 1);
 
 //#endregion
 //#region entry.js
 assert.deepEqual(common_exports, {
+	[Symbol.toStringTag]: "Module",
 	x: 1,
 	z: 4
 });

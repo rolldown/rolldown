@@ -21,6 +21,7 @@ let preact = require("preact");
 ## main.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 require('./lib.js');
 let preact = require("preact");
 

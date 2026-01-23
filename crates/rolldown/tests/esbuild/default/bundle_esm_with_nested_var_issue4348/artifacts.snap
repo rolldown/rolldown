@@ -19,7 +19,7 @@ var foo_exports = /* @__PURE__ */ __exportAll({
 	h: () => h,
 	i: () => i,
 	j: () => j
-});
+}, 1);
 var a, b, c, d, e, x, f, g, h, i, j;
 var init_foo = __esmMin((() => {
 	a = "a";

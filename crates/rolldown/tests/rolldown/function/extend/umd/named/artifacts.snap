@@ -11,6 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
   typeof define === 'function' && define.amd ? define(['exports'], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.module = global.module || {})));
 })(this, function(exports) {
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#region main.js
 	const a = 1;

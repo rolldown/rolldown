@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var imp_exports = /* @__PURE__ */ __exportAll({
 	imp2: () => imp2,
 	imp22: () => imp22
-});
+}, 1);
 const imp2 = 2;
 const imp22 = 22;
 
@@ -51,7 +51,7 @@ const require_rolldown_runtime = require('./rolldown-runtime.js');
 var imp_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
 	imp2: () => imp2,
 	imp22: () => imp22
-});
+}, 1);
 const imp2 = 2;
 const imp22 = 22;
 

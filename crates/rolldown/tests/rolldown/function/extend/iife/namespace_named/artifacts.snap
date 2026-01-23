@@ -12,6 +12,7 @@ class A {
 this.test = this.test || {};
 (function(exports) {
 
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#region main.js
 	const a = 1;

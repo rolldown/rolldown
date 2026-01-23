@@ -13,7 +13,7 @@ import assert from "node:assert";
 var esm_exports = /* @__PURE__ */ __exportAll({
 	default: () => myFunction,
 	"module.exports": () => moduleExports
-});
+}, 1);
 function myFunction() {
 	return "function value";
 }

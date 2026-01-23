@@ -68,7 +68,9 @@ runTestSuiteWithSamples(
 								format: defaultFormat,
 								validate: true,
 								keepNames: directory.includes('assignment-to-exports-class-declaration') ? true : false,
-								...(config.options || {}).output
+								...(config.options || {}).output,
+								// Rolldown uses `generatedCode.preset: 'es2015'` by default
+								generatedCode: { preset: 'es5', ...config.options?.output?.generatedCode },
 							},
 							bundleFile,
 							config

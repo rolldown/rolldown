@@ -19,7 +19,7 @@ let nested$1 = 2;
 var nested_exports = /* @__PURE__ */ __exportAll({
 	"nested name": () => nested,
 	"very nested name": () => nested$1
-});
+}, 1);
 let nested = 1;
 
 //#endregion

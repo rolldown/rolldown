@@ -23,7 +23,7 @@ const value = 1;
 var foo_exports = /* @__PURE__ */ __exportAll({
 	bar: () => import_commonjs.bar,
 	value: () => value
-});
+}, 1);
 __reExport(foo_exports, /* @__PURE__ */ __toESM(require_commonjs()));
 var import_commonjs = require_commonjs();
 

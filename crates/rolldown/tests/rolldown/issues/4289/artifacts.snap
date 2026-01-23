@@ -92,6 +92,7 @@ Object.defineProperty(exports, 'default', {
 ### main.js
 
 ```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 // HIDDEN [rolldown:runtime]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);

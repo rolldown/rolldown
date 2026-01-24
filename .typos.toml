@@ -27,6 +27,10 @@ extend-exclude = [
   "**/NUL",
 ]
 
+# ref: typos ignore comments https://github.com/crate-ci/typos/pull/1342/changes
+[default]
+extend-ignore-re = ["(#|//)\\s*spellchecker:ignore-next-line\\r?\\n.*"]
+
 [default.extend-words]
 splitted = "splitted"
 styl = "styl"

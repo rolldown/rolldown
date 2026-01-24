@@ -12,6 +12,7 @@ use oxc::transformer_plugins::{
 
 use rolldown_common::NormalizedBundlerOptions;
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
+use rolldown_ecmascript_utils::contains_script_closing_tag;
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult, EventKind, Severity};
 
 use crate::types::oxc_parse_type::OxcParseType;
@@ -104,7 +105,7 @@ impl PreProcessEcmaAst {
     if is_not_js
       || bundle_options.transform_options.should_transform_js()
       // Run transformer on JS files containing `</script` to handle tagged template literals.
-      || memchr::memmem::find(ast.source().as_bytes(), "</script".as_bytes()).is_some()
+      || contains_script_closing_tag(ast.source().as_bytes())
     {
       ast.program.with_mut(|WithMutFields { program, allocator, .. }| {
         // Pass file path only for non-JS modules (TS/TSX/JSX) to enable tsconfig discovery.

@@ -24,7 +24,7 @@ let zod = require("zod");
 var _7233_chain_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({
 	object: () => zod.object,
 	string: () => zod.string
-}, 1);
+});
 
 //#endregion
 Object.defineProperty(exports, 'object', {

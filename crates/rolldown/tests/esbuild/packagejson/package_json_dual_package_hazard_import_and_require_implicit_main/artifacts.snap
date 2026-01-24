@@ -10,7 +10,7 @@ import assert, { deepEqual } from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region node_modules/demo-pkg/module.js
-var module_exports = /* @__PURE__ */ __exportAll({ default: () => module_default }, 1);
+var module_exports = /* @__PURE__ */ __exportAll({ default: () => module_default });
 var module_default;
 var init_module = __esmMin((() => {
 	module_default = "module";

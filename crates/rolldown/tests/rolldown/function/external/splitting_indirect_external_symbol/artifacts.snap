@@ -11,7 +11,7 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region indirect.js
-var indirect_exports = /* @__PURE__ */ __exportAll({ read: () => read }, 1);
+var indirect_exports = /* @__PURE__ */ __exportAll({ read: () => read });
 
 //#endregion
 //#region read.js

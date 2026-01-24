@@ -29,7 +29,7 @@ console.log("static no-treeshake");
 
 //#endregion
 //#region static.js
-var static_exports = /* @__PURE__ */ __exportAll({}, 1);
+var static_exports = /* @__PURE__ */ __exportAll({});
 
 //#endregion
 //#region main.js

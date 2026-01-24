@@ -10,7 +10,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 // HIDDEN [rolldown:runtime]
 
 //#region main.js
-var main_exports = /* @__PURE__ */ __exportAll({ main: () => main }, 1);
+var main_exports = /* @__PURE__ */ __exportAll({ main: () => main });
 __reExport(main_exports, require("node:fs"));
 var main;
 var init_main = __esmMin((() => {

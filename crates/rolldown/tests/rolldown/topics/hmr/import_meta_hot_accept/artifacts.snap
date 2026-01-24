@@ -11,7 +11,7 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region self_accept.js
-var self_accept_exports = /* @__PURE__ */ __exportAll({ foo: () => foo$1 }, 1);
+var self_accept_exports = /* @__PURE__ */ __exportAll({ foo: () => foo$1 });
 const self_accept_hot = __rolldown_runtime__.createModuleHotContext("self_accept.js");
 __rolldown_runtime__.registerModule("self_accept.js", { exports: self_accept_exports });
 const foo$1 = "foo";
@@ -21,14 +21,14 @@ self_accept_hot.accept((mod) => {
 
 //#endregion
 //#region single_accept/child.js
-var child_exports$1 = /* @__PURE__ */ __exportAll({ count: () => count$3 }, 1);
+var child_exports$1 = /* @__PURE__ */ __exportAll({ count: () => count$3 });
 const child_hot$1 = __rolldown_runtime__.createModuleHotContext("single_accept/child.js");
 __rolldown_runtime__.registerModule("single_accept/child.js", { exports: child_exports$1 });
 const count$3 = 0;
 
 //#endregion
 //#region single_accept/parent.js
-var parent_exports$1 = /* @__PURE__ */ __exportAll({}, 1);
+var parent_exports$1 = /* @__PURE__ */ __exportAll({});
 const parent_hot$1 = __rolldown_runtime__.createModuleHotContext("single_accept/parent.js");
 __rolldown_runtime__.registerModule("single_accept/parent.js", { exports: parent_exports$1 });
 globalThis.singleAcceptAcceptCount ??= 0;
@@ -48,14 +48,14 @@ process.on("beforeExit", (code) => {
 
 //#endregion
 //#region array_accept/child.js
-var child_exports = /* @__PURE__ */ __exportAll({ count: () => count$1 }, 1);
+var child_exports = /* @__PURE__ */ __exportAll({ count: () => count$1 });
 const child_hot = __rolldown_runtime__.createModuleHotContext("array_accept/child.js");
 __rolldown_runtime__.registerModule("array_accept/child.js", { exports: child_exports });
 const count$1 = 0;
 
 //#endregion
 //#region array_accept/parent.js
-var parent_exports = /* @__PURE__ */ __exportAll({}, 1);
+var parent_exports = /* @__PURE__ */ __exportAll({});
 const parent_hot = __rolldown_runtime__.createModuleHotContext("array_accept/parent.js");
 __rolldown_runtime__.registerModule("array_accept/parent.js", { exports: parent_exports });
 globalThis.arrayAcceptAcceptCount ??= 0;
@@ -75,7 +75,7 @@ process.on("beforeExit", (code) => {
 
 //#endregion
 //#region optional_chaining.js
-var optional_chaining_exports = /* @__PURE__ */ __exportAll({ foo: () => foo }, 1);
+var optional_chaining_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 const optional_chaining_hot = __rolldown_runtime__.createModuleHotContext("optional_chaining.js");
 __rolldown_runtime__.registerModule("optional_chaining.js", { exports: optional_chaining_exports });
 const foo = "foo";
@@ -85,7 +85,7 @@ optional_chaining_hot?.accept((mod) => {
 
 //#endregion
 //#region main.js
-var main_exports = /* @__PURE__ */ __exportAll({}, 1);
+var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 

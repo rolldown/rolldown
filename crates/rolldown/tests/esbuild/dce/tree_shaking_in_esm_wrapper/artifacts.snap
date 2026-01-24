@@ -18,7 +18,7 @@ var init_lib = __esmMin((() => {
 
 //#endregion
 //#region cjs.js
-var cjs_exports = /* @__PURE__ */ __exportAll({ default: () => cjs_default }, 1);
+var cjs_exports = /* @__PURE__ */ __exportAll({ default: () => cjs_default });
 var cjs_default;
 var init_cjs = __esmMin((() => {
 	init_lib();

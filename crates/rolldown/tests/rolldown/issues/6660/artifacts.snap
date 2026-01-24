@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { i as __toCommonJS, n as __esmMin, r as __exportAll, t as __commonJSMin } from "./index.js";
 
 //#region d.js
-var d_exports = /* @__PURE__ */ __exportAll({ loadEventStreamCapability: () => loadEventStreamCapability }, 1);
+var d_exports = /* @__PURE__ */ __exportAll({ loadEventStreamCapability: () => loadEventStreamCapability });
 async function loadEventStreamCapability() {
 	const { EventStreamSerde } = await import("./e.js");
 	console.log(`EventStreamSerde: `, EventStreamSerde);

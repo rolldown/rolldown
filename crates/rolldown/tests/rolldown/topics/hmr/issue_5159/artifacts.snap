@@ -10,7 +10,7 @@ import { t as __exportAll } from "./main.js";
 import { t as trim } from "./string.js";
 
 //#region bar.js
-var bar_exports = /* @__PURE__ */ __exportAll({ default: () => bar_default }, 1);
+var bar_exports = /* @__PURE__ */ __exportAll({ default: () => bar_default });
 const bar_hot = __rolldown_runtime__.createModuleHotContext("bar.js");
 __rolldown_runtime__.registerModule("bar.js", { exports: bar_exports });
 function bar_default() {
@@ -31,13 +31,13 @@ import { n as unused, t as trim } from "./string.js";
 var utils_exports = /* @__PURE__ */ __exportAll({
 	trim: () => trim,
 	unused: () => unused
-}, 1);
+});
 const utils_hot = __rolldown_runtime__.createModuleHotContext("utils/index.js");
 __rolldown_runtime__.registerModule("utils/index.js", { exports: utils_exports });
 
 //#endregion
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({ default: () => foo_default }, 1);
+var foo_exports = /* @__PURE__ */ __exportAll({ default: () => foo_default });
 const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.js");
 __rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
 function foo_default() {
@@ -54,7 +54,7 @@ export { foo_default as default };
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region main.js
-var main_exports = /* @__PURE__ */ __exportAll({}, 1);
+var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 const routes = {
@@ -75,7 +75,7 @@ import { t as __exportAll } from "./main.js";
 var string_exports = /* @__PURE__ */ __exportAll({
 	trim: () => trim,
 	unused: () => unused
-}, 1);
+});
 const string_hot = __rolldown_runtime__.createModuleHotContext("utils/string.js");
 __rolldown_runtime__.registerModule("utils/string.js", { exports: string_exports });
 function trim(s) {

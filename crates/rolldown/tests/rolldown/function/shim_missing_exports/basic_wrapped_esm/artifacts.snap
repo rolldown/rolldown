@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({}, 1);
+var foo_exports = /* @__PURE__ */ __exportAll({});
 var missing;
 var init_foo = __esmMin((() => {
 	missing = void 0;

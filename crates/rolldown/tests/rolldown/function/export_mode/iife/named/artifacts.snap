@@ -15,7 +15,7 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 	var named_exports = /* @__PURE__ */ __exportAll({
 		add: () => add,
 		subtract: () => subtract
-	}, 1);
+	});
 	function add(a, b) {
 		return a + b;
 	}

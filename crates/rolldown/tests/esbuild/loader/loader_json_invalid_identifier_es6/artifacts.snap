@@ -15,7 +15,7 @@ var invalid_identifier$1 = true;
 var test2_exports = /* @__PURE__ */ __exportAll({
 	default: () => test2_default,
 	"invalid-identifier": () => invalid_identifier
-}, 1);
+});
 var invalid_identifier = true;
 var test2_default = { "invalid-identifier": invalid_identifier };
 

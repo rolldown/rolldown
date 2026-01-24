@@ -58,7 +58,7 @@ console.log(bar());
 ```js
 // HIDDEN [rolldown:runtime]
 //#region empty.js
-var empty_exports = /* @__PURE__ */ __exportAll({}, 1);
+var empty_exports = /* @__PURE__ */ __exportAll({});
 
 //#endregion
 //#region common.js

@@ -25,7 +25,7 @@ var init_b = __esmMin((() => {
 var edge_case_issue2793_without_splitting_exports = /* @__PURE__ */ __exportAll({
 	A: () => A,
 	B: () => B
-}, 1);
+});
 var init_edge_case_issue2793_without_splitting = __esmMin((() => {
 	init_a();
 	init_b();

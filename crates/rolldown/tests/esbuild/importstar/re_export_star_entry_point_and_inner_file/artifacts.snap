@@ -10,7 +10,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 // HIDDEN [rolldown:runtime]
 
 //#region inner.js
-var inner_exports = /* @__PURE__ */ __exportAll({}, 1);
+var inner_exports = /* @__PURE__ */ __exportAll({});
 __reExport(inner_exports, require("b"));
 
 //#endregion

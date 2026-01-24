@@ -10,7 +10,7 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region b.empty
-var b_exports = /* @__PURE__ */ __exportAll({}, 1);
+var b_exports = /* @__PURE__ */ __exportAll({});
 
 //#endregion
 //#region c.empty

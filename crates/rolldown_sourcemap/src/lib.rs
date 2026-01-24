@@ -19,14 +19,14 @@ use rolldown_utils::rustc_hash::FxHashMapExt;
 ///
 /// # Arguments
 /// * `sourcemap` - The source map to shift
-/// * `line_offset` - The number of lines to subtract from generated line numbers (must be negative or zero)
+/// * `line_offset` - The number of lines to shift (negative to shift down, positive to shift up)
 ///
 /// # Returns
 /// A new source map with adjusted generated line numbers
 ///
 /// # Example
 /// If a shebang line was removed from the beginning of the content, the source map's
-/// generated line numbers need to be shifted down by 1 to account for the missing line.
+/// generated line numbers need to be shifted down by -1 to account for the missing line.
 pub fn shift_sourcemap_lines(sourcemap: &SourceMap, line_offset: i32) -> SourceMap {
   if line_offset == 0 {
     return sourcemap.clone();

@@ -596,7 +596,7 @@ impl<'a> GenerateStage<'a> {
             .collect(),
           reason: chunk.chunk_reason_type.as_static_str(),
           advanced_chunk_group_id: chunk.chunk_reason_type.group_index(),
-          id: idx.raw(),
+          chunk_id: idx.raw(),
           name: chunk.name.as_ref().map(ArcStr::to_string),
           // TODO(hyf0): add dynamic importees
           imports: chunk

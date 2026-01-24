@@ -265,6 +265,9 @@ jobs:
       - name: Build @rolldown/debug
         run: just build-rolldown-debug
 
+      - name: Make sure generated code of `@rolldown/debug` is up-to-date
+        run: git diff --exit-code
+
       - name: Build @rolldown/pluginutils
         run: just build-pluginutils
 

@@ -18,7 +18,7 @@ use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookUsage, Plugin, PluginContext, typedmap::TypedMapKey,
 };
-use rolldown_utils::pattern_filter::StringOrRegex;
+use rolldown_utils::{dataurl::is_data_url, pattern_filter::StringOrRegex};
 use rustc_hash::FxHashSet;
 use std::{
   borrow::Cow,
@@ -321,7 +321,7 @@ impl Plugin for ViteResolvePlugin {
     }
 
     // data uri: pass through (this only happens during build and will be handled by rolldown)
-    if id.trim_start().starts_with("data:") {
+    if is_data_url(&id) {
       return Ok(None);
     }
 

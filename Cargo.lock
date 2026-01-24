@@ -3347,6 +3347,7 @@ version = "0.1.0"
 dependencies = [
  "memchr",
  "rolldown_plugin",
+ "rolldown_utils",
 ]
 
 [[package]]

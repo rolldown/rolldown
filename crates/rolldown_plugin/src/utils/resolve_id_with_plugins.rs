@@ -5,15 +5,12 @@ use crate::{
 use nodejs_built_in_modules::is_nodejs_builtin_module;
 use rolldown_common::{ImportKind, ModuleDefFormat, ModuleId, PackageJson, ResolvedId};
 use rolldown_resolver::{ResolveError, Resolver};
+use rolldown_utils::dataurl::is_data_url;
 use std::{path::Path, sync::Arc};
 use sugar_path::SugarPath;
 
 fn is_http_url(s: &str) -> bool {
   s.starts_with("http://") || s.starts_with("https://") || s.starts_with("//")
-}
-
-pub fn is_data_url(s: &str) -> bool {
-  s.trim_start().starts_with("data:")
 }
 
 /// Infers ModuleDefFormat from file path and optional package.json.

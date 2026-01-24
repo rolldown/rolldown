@@ -48,8 +48,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return;
     }
 
-    let idx =
-      self.add_import_record(path, ImportKind::NewUrl, expr.span, ImportRecordMeta::empty(), None);
+    let idx = self.add_import_record(
+      path,
+      ImportKind::NewUrl,
+      first_arg_string_literal.span,
+      ImportRecordMeta::empty(),
+      None,
+    );
     self.result.import_records[idx].asserted_module_type = Some(ModuleType::Asset);
     self.result.new_url_references.insert(expr.span, idx);
   }

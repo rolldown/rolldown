@@ -1,0 +1,6 @@
+{
+  "visualizeSourcemap": true,
+  "config": {
+    "postBanner": "/* This is a banner */"
+  }
+}

@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+#!/usr/bin/env node
+/* This is a banner */
+//#region main.js
+console.log("Hello, World!");
+const value = 42;
+
+//#endregion
+export { value };
+//# sourceMappingURL=main.js.map
+```
+
+# Sourcemap Visualizer
+
+```
+- ../main.js
+(2:0) "console." --> (3:0) "console."
+(2:8) "log(message);\n" --> (3:8) "log("
+(1:16) "\"Hello, World!\";\n" --> (3:12) "\"Hello, World!\")"
+(2:20) ";\n" --> (3:28) ";\n"
+(3:0) "const " --> (4:0) "const "
+(3:6) "value = " --> (4:6) "value = "
+(3:14) "42;\n" --> (4:14) "42;\n"
+```

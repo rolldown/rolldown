@@ -5542,6 +5542,11 @@ expression: output
 - main1-DuhB17iW.js.map
 - shared-Bisfm5lw.js.map
 
+# tests/rolldown/sourcemap/shebang_with_post_banner
+
+- main-!~{000}~.js => main-BDu_HhTh.js
+- main-BDu_HhTh.js.map
+
 # tests/rolldown/topics/allow_different_variant_unit_test
 
 - main-!~{000}~.js => main-BFTacv6h.js

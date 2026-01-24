@@ -13,6 +13,52 @@ pub use crate::source::{Source, SourceMapSource};
 
 use rolldown_utils::rustc_hash::FxHashMapExt;
 
+/// Shifts all generated line numbers in a source map by the specified offset.
+/// This is useful when content has been removed from the beginning of the generated output,
+/// and the source map needs to be adjusted to reflect the new line positions.
+///
+/// # Arguments
+/// * `sourcemap` - The source map to shift
+/// * `line_offset` - The number of lines to subtract from generated line numbers (must be negative or zero)
+///
+/// # Returns
+/// A new source map with adjusted generated line numbers
+///
+/// # Example
+/// If a shebang line was removed from the beginning of the content, the source map's
+/// generated line numbers need to be shifted down by 1 to account for the missing line.
+#[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+pub fn shift_sourcemap_lines(sourcemap: &SourceMap, line_offset: i32) -> SourceMap {
+  if line_offset == 0 {
+    return sourcemap.clone();
+  }
+
+  let tokens = sourcemap
+    .get_source_view_tokens()
+    .map(|token| {
+      let new_dst_line = (token.get_dst_line() as i32 + line_offset).max(0) as u32;
+      Token::new(
+        new_dst_line,
+        token.get_dst_col(),
+        token.get_src_line(),
+        token.get_src_col(),
+        token.get_source_id(),
+        token.get_name_id(),
+      )
+    })
+    .collect::<Vec<_>>();
+
+  SourceMap::new(
+    sourcemap.get_file().map(Arc::clone),
+    sourcemap.get_names().map(Arc::clone).collect::<Vec<_>>(),
+    None,
+    sourcemap.get_sources().map(Arc::clone).collect::<Vec<_>>(),
+    sourcemap.get_source_contents().map(|x| x.map(Arc::clone)).collect::<Vec<_>>(),
+    tokens.into_boxed_slice(),
+    None,
+  )
+}
+
 // <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>
 #[expect(clippy::cast_possible_truncation)]
 pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {

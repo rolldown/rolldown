@@ -1,5 +1,5 @@
 use rolldown_error::BuildResult;
-use rolldown_sourcemap::{SourceJoiner, SourceMapSource};
+use rolldown_sourcemap::{shift_sourcemap_lines, SourceJoiner, SourceMapSource};
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::type_alias::IndexInstantiatedChunks;
@@ -41,7 +41,18 @@ impl GenerateStage<'_> {
         let rest_content = &content[shebang_end..];
         // Add the rest of the content
         if let Some(source_map) = chunk.map.take() {
-          source_joiner.append_source(SourceMapSource::new(rest_content.to_string(), source_map));
+          // If we extracted a shebang, we need to adjust the source map's generated line numbers
+          // because the source map was generated for the full content (including shebang),
+          // but we're now treating rest_content as if it starts at line 0.
+          // We need to shift the generated line numbers down by the number of lines in the shebang.
+          let adjusted_source_map = if has_shebang {
+            // Count the number of lines in the shebang portion
+            let shebang_lines = content[..shebang_end].matches('\n').count() as i32;
+            shift_sourcemap_lines(&source_map, -shebang_lines)
+          } else {
+            source_map
+          };
+          source_joiner.append_source(SourceMapSource::new(rest_content.to_string(), adjusted_source_map));
         } else {
           source_joiner.append_source(rest_content);
         }

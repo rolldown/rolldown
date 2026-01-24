@@ -223,7 +223,9 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             } else {
               // export { foo, bar as bar2 }
               decl.specifiers.iter().for_each(|specifier| {
-                if let Some(symbol_id) = scoping.get_root_binding(&specifier.local.name()) {
+                if let Some(symbol_id) =
+                  scoping.get_root_binding_by_name(specifier.local.name().as_str())
+                {
                   self
                     .named_exports
                     .insert(specifier.exported.name(), NamedExport { local_binding: symbol_id });
@@ -619,16 +621,19 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             SPAN,
             ast::TemplateElementValue { raw: self.builder.atom("/@vite/lazy?id="), cooked: None },
             false,
+            false,
           ),
           self.builder.template_element(
             SPAN,
             ast::TemplateElementValue { raw: self.builder.atom("&clientId="), cooked: None },
+            false,
             false,
           ),
           self.builder.template_element(
             SPAN,
             ast::TemplateElementValue { raw: self.builder.atom(""), cooked: None },
             true,
+            false,
           ),
         ]);
         let expressions = self.builder.vec_from_iter([

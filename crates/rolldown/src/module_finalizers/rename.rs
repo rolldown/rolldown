@@ -118,7 +118,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       } else {
         let canonical_name = self.canonical_name_for(canonical_ref);
         if target_id_ref.name != canonical_name {
-          target_id_ref.name = self.snippet.atom(canonical_name);
+          target_id_ref.name = self.snippet.atom(canonical_name).into();
         }
         target_id_ref.reference_id.take();
       }
@@ -135,7 +135,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           if let Some(symbol_id) = ident.symbol_id.get() {
             let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
             if ident.name != canonical_name {
-              ident.name = self.snippet.atom(canonical_name);
+              ident.name = self.snippet.atom(canonical_name).into();
               prop.shorthand = false;
             }
             ident.symbol_id.get_mut().take();
@@ -150,7 +150,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           if let Some(symbol_id) = ident.symbol_id.get() {
             let canonical_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
             if ident.name != canonical_name {
-              ident.name = self.snippet.atom(canonical_name);
+              ident.name = self.snippet.atom(canonical_name).into();
               prop.shorthand = false;
             }
             ident.symbol_id.get_mut().take();

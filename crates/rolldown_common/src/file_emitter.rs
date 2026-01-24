@@ -104,7 +104,7 @@ impl FileEmitter {
     )?
     .send(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg { chunk: Arc::clone(&chunk), reference_id: reference_id.clone() })))
     .await
-    .context("FileEmitter: failed to send AddEntryModule message - module loader shut down during file emission")?;
+    .map_err(|e| anyhow::anyhow!("FileEmitter: failed to send AddEntryModule message - module loader shut down during file emission: {e}"))?;
     self.chunks.insert(reference_id.clone(), chunk);
     Ok(reference_id)
   }

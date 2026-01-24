@@ -57,21 +57,6 @@ pub struct JsxOptions {
   /// @default 'React.Fragment'
   pub pragma_frag: Option<String>,
 
-  /// When spreading props, use `Object.assign` directly instead of an extend helper.
-  ///
-  /// Only used for `classic` {@link runtime}.
-  ///
-  /// @default false
-  pub use_built_ins: Option<bool>,
-
-  /// When spreading props, use inline object with spread elements directly
-  /// instead of an extend helper or Object.assign.
-  ///
-  /// Only used for `classic` {@link runtime}.
-  ///
-  /// @default false
-  pub use_spread: Option<bool>,
-
   /// Enable React Fast Refresh .
   ///
   /// Conforms to the implementation in {@link https://github.com/facebook/react/tree/v18.3.1/packages/react-refresh}
@@ -120,8 +105,6 @@ impl From<JsxOptions> for oxc::transformer::JsxOptions {
       import_source: options.import_source,
       pragma: options.pragma,
       pragma_frag: options.pragma_frag,
-      use_built_ins: options.use_built_ins,
-      use_spread: options.use_spread,
       refresh: options.refresh.and_then(|value| match value {
         Either::Left(b) => b.then(oxc::transformer::ReactRefreshOptions::default),
         Either::Right(options) => Some(oxc::transformer::ReactRefreshOptions::from(options)),

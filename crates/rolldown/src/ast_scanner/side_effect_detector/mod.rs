@@ -190,7 +190,7 @@ impl<'a> SideEffectDetector<'a> {
 
     let mut side_effects_detail = SideEffectDetail::empty();
     let max_len = 3;
-    let mut chains = vec![expr.property.name];
+    let mut chains = vec![expr.property.name.as_atom()];
     let cur = &expr.object;
     self.common_member_chain_processing(
       property_access_side_effects,
@@ -236,7 +236,7 @@ impl<'a> SideEffectDetector<'a> {
       match cur {
         ast::Expression::StaticMemberExpression(expr) => {
           cur = &expr.object;
-          chains.push(expr.property.name);
+          chains.push(expr.property.name.as_atom());
         }
         ast::Expression::ComputedMemberExpression(computed_expr) => {
           if let ast::Expression::StringLiteral(ref str) = computed_expr.expression {
@@ -247,7 +247,7 @@ impl<'a> SideEffectDetector<'a> {
           cur = &computed_expr.object;
         }
         ast::Expression::Identifier(ident_ref) => {
-          chains.push(ident_ref.name);
+          chains.push(ident_ref.name.as_atom());
           chains.reverse();
           side_effects_detail
             .set(SideEffectDetail::GlobalVarAccess, self.is_unresolved_reference(ident_ref));

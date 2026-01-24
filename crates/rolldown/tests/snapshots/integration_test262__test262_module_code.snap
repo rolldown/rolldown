@@ -82,7 +82,7 @@ Unexpected token
 Result: PASS
 Expected: error (type: SyntaxError, phase: parse)
 Actual:
-Unexpected token
+HTML comments are not allowed in modules
 ---
 
 # language/module-code/early-dup-export-as-star-as.js

@@ -295,3 +295,12 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+[patch.crates-io]
+oxc = { git = "https://github.com/oxc-project/oxc", branch = "perf-all" }
+oxc_allocator = { git = "https://github.com/oxc-project/oxc", branch = "perf-all" }
+oxc_ecmascript = { git = "https://github.com/oxc-project/oxc", branch = "perf-all" }
+oxc_minify_napi = { git = "https://github.com/oxc-project/oxc", branch = "perf-all" }
+oxc_parser_napi = { git = "https://github.com/oxc-project/oxc", branch = "perf-all" }
+oxc_transform_napi = { git = "https://github.com/oxc-project/oxc", branch = "perf-all" }
+oxc_traverse = { git = "https://github.com/oxc-project/oxc", branch = "perf-all" }

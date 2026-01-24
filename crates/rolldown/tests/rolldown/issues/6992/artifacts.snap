@@ -19,7 +19,7 @@ import "./server/index.js";
 export * from "@sentry/node"
 
 //#region main.js
-var main_exports = /* @__PURE__ */ __exportAll({}, 1);
+var main_exports = /* @__PURE__ */ __exportAll({});
 
 //#endregion
 ```

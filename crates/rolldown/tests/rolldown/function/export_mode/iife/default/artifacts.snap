@@ -14,7 +14,7 @@ var module = (function() {
 	var default_exports = /* @__PURE__ */ __exportAll({
 		add: () => add,
 		subtract: () => subtract
-	}, 1);
+	});
 	function add(a, b) {
 		return a + b;
 	}

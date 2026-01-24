@@ -537,7 +537,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         Expression::ObjectExpression(self.builder().alloc(arg_obj_expr))
       } else {
         let obj_expr = ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc));
-        let args = if self.ctx.options.generated_code.symbols {
+        let args = if !self.ctx.options.generated_code.symbols {
           self.snippet.builder.vec_from_iter([
             obj_expr,
             ast::Argument::NumericLiteral(self.snippet.builder.alloc_numeric_literal(

@@ -11,28 +11,28 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region c.js
-var c_exports = /* @__PURE__ */ __exportAll({ c: () => c }, 1);
+var c_exports = /* @__PURE__ */ __exportAll({ c: () => c });
 const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
 __rolldown_runtime__.registerModule("c.js", { exports: c_exports });
 const c = "c";
 
 //#endregion
 //#region b.js
-var b_exports = /* @__PURE__ */ __exportAll({ b: () => b }, 1);
+var b_exports = /* @__PURE__ */ __exportAll({ b: () => b });
 const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
 __rolldown_runtime__.registerModule("b.js", { exports: b_exports });
 const b = { c };
 
 //#endregion
 //#region a.js
-var a_exports = /* @__PURE__ */ __exportAll({ a: () => a }, 1);
+var a_exports = /* @__PURE__ */ __exportAll({ a: () => a });
 const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
 __rolldown_runtime__.registerModule("a.js", { exports: a_exports });
 const a = { b };
 
 //#endregion
 //#region main.js
-var main_exports = /* @__PURE__ */ __exportAll({}, 1);
+var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 assert.strictEqual(a.b.c, "c");
@@ -59,28 +59,28 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region c.js
-var c_exports = /* @__PURE__ */ __exportAll({ c: () => c }, 1);
+var c_exports = /* @__PURE__ */ __exportAll({ c: () => c });
 const c_hot = __rolldown_runtime__.createModuleHotContext("c.js");
 __rolldown_runtime__.registerModule("c.js", { exports: c_exports });
 const c = "cc";
 
 //#endregion
 //#region b.js
-var b_exports = /* @__PURE__ */ __exportAll({ b: () => b }, 1);
+var b_exports = /* @__PURE__ */ __exportAll({ b: () => b });
 const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
 __rolldown_runtime__.registerModule("b.js", { exports: b_exports });
 const b = { c };
 
 //#endregion
 //#region a.js
-var a_exports = /* @__PURE__ */ __exportAll({ a: () => a }, 1);
+var a_exports = /* @__PURE__ */ __exportAll({ a: () => a });
 const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
 __rolldown_runtime__.registerModule("a.js", { exports: a_exports });
 const a = { b };
 
 //#endregion
 //#region main.js
-var main_exports = /* @__PURE__ */ __exportAll({}, 1);
+var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 assert.strictEqual(a.b.c, "c");

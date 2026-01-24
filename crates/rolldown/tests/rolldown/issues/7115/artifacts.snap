@@ -19,7 +19,7 @@ const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
 require('./server.js');
 
 //#region main.js
-var main_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({}, 1);
+var main_exports = /* @__PURE__ */ require_rolldown_runtime.__exportAll({});
 
 //#endregion
 

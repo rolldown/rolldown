@@ -18,7 +18,7 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 
 //#endregion
 //#region esm.js
-var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value }, 1);
+var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 var value;
 var init_esm = __esmMin((() => {
 	value = 1;
@@ -53,7 +53,7 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 
 //#endregion
 //#region esm.js
-var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value }, 1);
+var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 var value;
 var init_esm = __esmMin((() => {
 	value = 1;
@@ -90,7 +90,7 @@ Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }))
 
 //#endregion
 //#region esm.js
-	var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value }, 1);
+	var esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 	var value;
 	var init_esm = __esmMin((() => {
 		value = 1;

@@ -13,7 +13,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 var entry_exports = /* @__PURE__ */ __exportAll({
 	foo: () => foo,
 	ns: () => entry_exports
-}, 1);
+});
 const foo = 123;
 
 //#endregion

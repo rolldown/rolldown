@@ -10,7 +10,7 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({ bar: () => bar }, 1);
+var foo_exports = /* @__PURE__ */ __exportAll({ bar: () => bar });
 let bar = 123;
 
 //#endregion
@@ -35,7 +35,7 @@ let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({ bar: () => bar }, 1);
+var foo_exports = /* @__PURE__ */ __exportAll({ bar: () => bar });
 let bar = 123;
 
 //#endregion

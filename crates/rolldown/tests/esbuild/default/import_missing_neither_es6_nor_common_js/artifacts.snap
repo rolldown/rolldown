@@ -60,7 +60,7 @@ init_foo();
 ```js
 // HIDDEN [rolldown:runtime]
 //#region foo.js
-var foo_exports = /* @__PURE__ */ __exportAll({}, 1);
+var foo_exports = /* @__PURE__ */ __exportAll({});
 var default$1, x, y;
 var init_foo = __esmMin((() => {
 	console.log("no exports here");

@@ -21,7 +21,7 @@ const z = 4;
 var common_exports = /* @__PURE__ */ __exportAll({
 	x: () => x,
 	z: () => z
-}, 1);
+});
 
 //#endregion
 //#region entry.js

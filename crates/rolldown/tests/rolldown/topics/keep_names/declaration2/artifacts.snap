@@ -13,7 +13,7 @@ import assert from "node:assert";
 var a_exports = /* @__PURE__ */ __exportAll({
 	delay: () => delay$1,
 	random64: () => random64$1
-}, 1);
+});
 var delay$1 = /* @__PURE__ */ __name(function(time) {}, "delay");
 function random64$1() {
 	return BigInt(Math.random() * 4294967295 & 4294967295) << 32n & BigInt(Math.random() * 4294967295 & 4294967295);

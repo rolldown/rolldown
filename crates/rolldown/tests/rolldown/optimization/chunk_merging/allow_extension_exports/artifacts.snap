@@ -46,7 +46,7 @@ const value1 = "conflict-value";
 var lib3_exports = /* @__PURE__ */ __exportAll({
 	value3: () => value3,
 	value4: () => value4
-}, 1);
+});
 const value3 = "lib3-value";
 const value4 = "lib3-value4";
 

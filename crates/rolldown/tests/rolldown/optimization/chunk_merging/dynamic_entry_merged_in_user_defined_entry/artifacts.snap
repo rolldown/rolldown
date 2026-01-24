@@ -10,7 +10,7 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region lib.js
-var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a }, 1);
+var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a });
 var a;
 var init_lib = __esmMin((() => {
 	a = 123;
@@ -42,7 +42,7 @@ let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 
 //#region lib.js
-var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a }, 1);
+var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a });
 var a;
 var init_lib = __esmMin((() => {
 	a = 123;

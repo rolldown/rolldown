@@ -10,7 +10,7 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region types.mjs
-var types_exports = /* @__PURE__ */ __exportAll({}, 1);
+var types_exports = /* @__PURE__ */ __exportAll({});
 var init_types = __esmMin((() => {}));
 
 //#endregion

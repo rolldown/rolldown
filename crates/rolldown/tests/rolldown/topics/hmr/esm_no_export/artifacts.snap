@@ -9,21 +9,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region a.js
-var a_exports = /* @__PURE__ */ __exportAll({}, 1);
+var a_exports = /* @__PURE__ */ __exportAll({});
 const a_hot = __rolldown_runtime__.createModuleHotContext("a.js");
 __rolldown_runtime__.registerModule("a.js", { exports: a_exports });
 console.log("a");
 
 //#endregion
 //#region b.js
-var b_exports = /* @__PURE__ */ __exportAll({}, 1);
+var b_exports = /* @__PURE__ */ __exportAll({});
 const b_hot = __rolldown_runtime__.createModuleHotContext("b.js");
 __rolldown_runtime__.registerModule("b.js", { exports: b_exports });
 console.log("b");
 
 //#endregion
 //#region main.js
-var main_exports = /* @__PURE__ */ __exportAll({}, 1);
+var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 

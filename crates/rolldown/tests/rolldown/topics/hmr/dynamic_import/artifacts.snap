@@ -26,7 +26,7 @@ export default require_exist_dep_cjs();
 import { n as __exportAll } from "./main.js";
 
 //#region exist-dep-esm.js
-var exist_dep_esm_exports = /* @__PURE__ */ __exportAll({ value: () => value }, 1);
+var exist_dep_esm_exports = /* @__PURE__ */ __exportAll({ value: () => value });
 const exist_dep_esm_hot = __rolldown_runtime__.createModuleHotContext("exist-dep-esm.js");
 __rolldown_runtime__.registerModule("exist-dep-esm.js", { exports: exist_dep_esm_exports });
 const value = "exist-esm";
@@ -41,7 +41,7 @@ export { value };
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region hmr.js
-var hmr_exports = /* @__PURE__ */ __exportAll({ foo: () => foo }, 1);
+var hmr_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 async function foo() {
@@ -56,7 +56,7 @@ hmr_hot.accept((mod) => {
 
 //#endregion
 //#region main.js
-var main_exports = /* @__PURE__ */ __exportAll({}, 1);
+var main_exports = /* @__PURE__ */ __exportAll({});
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 

@@ -13,7 +13,7 @@ Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toString
 var main_exports = /* @__PURE__ */ __exportAll({
 	default: () => main_default,
 	foo: () => foo
-}, 1);
+});
 var foo, main_default;
 var init_main = __esmMin((() => {
 	foo = "foo";

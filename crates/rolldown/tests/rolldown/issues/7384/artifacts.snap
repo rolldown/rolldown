@@ -13,7 +13,7 @@ let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 
 //#region mod.js
-var _7384_exports = /* @__PURE__ */ __exportAll({ t: () => _babel_types }, 1);
+var _7384_exports = /* @__PURE__ */ __exportAll({ t: () => _babel_types });
 
 //#endregion
 //#region a.js
@@ -39,7 +39,7 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region mod.js
-var _7384_exports = /* @__PURE__ */ __exportAll({ t: () => t$1 }, 1);
+var _7384_exports = /* @__PURE__ */ __exportAll({ t: () => t$1 });
 
 //#endregion
 //#region a.js

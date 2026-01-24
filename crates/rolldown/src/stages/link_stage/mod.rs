@@ -12,7 +12,7 @@ use rolldown_error::BuildDiagnostic;
 #[cfg(target_family = "wasm")]
 use rolldown_utils::rayon::IteratorExt as _;
 use rolldown_utils::{
-  indexmap::FxIndexSet,
+  indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefMutIterator, ParallelIterator},
 };
 
@@ -57,7 +57,7 @@ pub struct SafelyMergeCjsNsInfo {
 #[derive(Debug)]
 pub struct LinkStageOutput {
   pub module_table: ModuleTable,
-  pub entries: Vec<EntryPoint>,
+  pub entries: FxIndexMap<ModuleIdx, Vec<EntryPoint>>,
   pub ast_table: IndexEcmaAst,
   pub sorted_modules: Vec<ModuleIdx>,
   pub metas: LinkingMetadataVec,
@@ -80,7 +80,7 @@ pub struct LinkStageOutput {
 #[derive(Debug)]
 pub struct LinkStage<'a> {
   pub module_table: ModuleTable,
-  pub entries: Vec<EntryPoint>,
+  pub entries: FxIndexMap<ModuleIdx, Vec<EntryPoint>>,
   pub symbols: SymbolRefDb,
   pub runtime: RuntimeModuleBrief,
   pub sorted_modules: Vec<ModuleIdx>,
@@ -162,7 +162,13 @@ impl<'a> LinkStage<'a> {
         })
         .collect::<IndexVec<ModuleIdx, _>>(),
       module_table: scan_stage_output.module_table,
-      entries: scan_stage_output.entry_points,
+      entries: {
+        let mut entries: FxIndexMap<ModuleIdx, Vec<EntryPoint>> = FxIndexMap::default();
+        for entry in scan_stage_output.entry_points {
+          entries.entry(entry.idx).or_default().push(entry);
+        }
+        entries
+      },
       symbols: scan_stage_output.symbol_ref_db,
       runtime: scan_stage_output.runtime,
       warnings: scan_stage_output.warnings,

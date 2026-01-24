@@ -50,11 +50,16 @@ impl GenerateStage<'_> {
         ChunkKind::Common => None,
       })
       .collect::<FxHashMap<ModuleIdx, ChunkIdx>>();
-    for entry in self.link_output.entries.iter().filter(|item| item.kind.is_user_defined()) {
-      let Some(entry_chunk_idx) = chunk_graph.module_to_chunk[entry.idx] else {
+    for (&module_idx, _entry_points) in self
+      .link_output
+      .entries
+      .iter()
+      .filter(|(_, entries)| entries.iter().any(|e| e.kind.is_user_defined()))
+    {
+      let Some(entry_chunk_idx) = chunk_graph.module_to_chunk[module_idx] else {
         continue;
       };
-      let mut q = VecDeque::from_iter([entry.idx]);
+      let mut q = VecDeque::from_iter([module_idx]);
       let mut visited = FxHashSet::default();
       while let Some(cur) = q.pop_front() {
         if visited.contains(&cur) {

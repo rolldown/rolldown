@@ -34,9 +34,9 @@ impl LinkStage<'_> {
     // The runtime module should always be the first module to be executed
     let mut execution_stack = self
       .entries
-      .iter()
+      .keys()
       .rev()
-      .map(|entry| Status::ToBeExecuted(entry.idx))
+      .map(|&module_idx| Status::ToBeExecuted(module_idx))
       .chain(iter::once(Status::ToBeExecuted(self.runtime.id())))
       .collect::<Vec<_>>();
 

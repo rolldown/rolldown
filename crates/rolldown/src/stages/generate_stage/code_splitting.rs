@@ -35,19 +35,26 @@ pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate_chunks(&mut self) -> BuildResult<ChunkGraph> {
-    let entries_len: u32 =
-      self.link_output.entries.len().try_into().expect("Too many entries, u32 overflowed.");
+    // Count total entry points (not unique modules) to handle duplicates correctly
+    let entries_len: u32 = self
+      .link_output
+      .entries
+      .values()
+      .map(Vec::len)
+      .sum::<usize>()
+      .try_into()
+      .expect("Too many entries, u32 overflowed.");
     // If we are in test environment, to make the runtime module always fall into a standalone chunk,
     // we create a facade entry point for it.
 
     let mut chunk_graph = ChunkGraph::new(self.link_output.module_table.modules.len());
-    chunk_graph.chunk_table.chunks.reserve(self.link_output.entries.len());
+    chunk_graph.chunk_table.chunks.reserve(entries_len as usize);
 
     let mut index_splitting_info: IndexSplittingInfo = oxc_index::index_vec![SplittingInfo {
         bits: BitSet::new(entries_len),
         share_count: 0
       }; self.link_output.module_table.modules.len()];
-    let mut bits_to_chunk = FxHashMap::with_capacity(self.link_output.entries.len());
+    let mut bits_to_chunk = FxHashMap::with_capacity(entries_len as usize);
 
     let input_base = ArcStr::from(
       self
@@ -67,7 +74,7 @@ impl GenerateStage<'_> {
           continue;
         };
         let matched_entry =
-          self.link_output.entries.iter().find(|entry_point| entry_point.idx == module.idx);
+          self.link_output.entries.get(&module.idx).and_then(|entries| entries.first());
         if !self.link_output.metas[module.idx].is_included {
           continue;
         }
@@ -113,9 +120,15 @@ impl GenerateStage<'_> {
           self.options,
         );
         let chunk_idx = chunk_graph.add_chunk(chunk);
-        if let Some(entry) = matched_entry {
-          if let Some(reference_ids) = self.link_output.entry_point_to_reference_ids.get(entry) {
-            chunk_graph.chunk_idx_to_reference_ids.insert(chunk_idx, reference_ids.clone());
+        if let Some(entries) = self.link_output.entries.get(&module.idx) {
+          for entry in entries {
+            if let Some(reference_ids) = self.link_output.entry_point_to_reference_ids.get(entry) {
+              chunk_graph
+                .chunk_idx_to_reference_ids
+                .entry(chunk_idx)
+                .or_default()
+                .extend(reference_ids.iter().cloned());
+            }
           }
         }
         chunk_graph.add_module_to_chunk(
@@ -124,7 +137,7 @@ impl GenerateStage<'_> {
           self.link_output.metas[module.idx].depended_runtime_helper,
         );
         // bits_to_chunk.insert(bits, chunk); // This line is intentionally commented out because `bits_to_chunk` is not used in this loop. It is updated elsewhere in the `init_entry_point` and `split_chunks` methods.
-        chunk_graph.entry_module_to_entry_chunk.insert(module.idx, chunk_idx);
+        chunk_graph.entry_module_to_entry_chunk.entry(module.idx).or_insert(chunk_idx);
       }
     } else {
       self.init_entry_point(&mut chunk_graph, &mut bits_to_chunk, entries_len, &input_base);
@@ -675,13 +688,20 @@ impl GenerateStage<'_> {
     input_base: &ArcStr,
   ) {
     // Create chunk for each static and dynamic entry
-    for (entry_index, entry_point) in self.link_output.entries.iter().enumerate() {
+    for (entry_index, (&module_idx, entry_point)) in self
+      .link_output
+      .entries
+      .iter()
+      .flat_map(|(idx, entries)| entries.iter().map(move |e| (idx, e)))
+      .enumerate()
+    {
+      let Module::Normal(module) = &self.link_output.module_table[module_idx] else {
+        continue;
+      };
+
       let count: u32 = entry_index.try_into().expect("Too many entries, u32 overflowed.");
       let mut bits = BitSet::new(entries_len);
       bits.set_bit(count);
-      let Module::Normal(module) = &self.link_output.module_table[entry_point.idx] else {
-        continue;
-      };
 
       // Override `preserve_entry_signatures` if the entry point emitted by `this.emitFile({})` has
       // specified `preserveSignatures`.
@@ -725,7 +745,7 @@ impl GenerateStage<'_> {
             meta
           },
           bit: count,
-          module: entry_point.idx,
+          module: module_idx,
         },
         input_base.clone(),
         preserve_entry_signature,
@@ -744,7 +764,8 @@ impl GenerateStage<'_> {
       }
 
       bits_to_chunk.insert(bits, chunk_idx);
-      chunk_graph.entry_module_to_entry_chunk.insert(entry_point.idx, chunk_idx);
+      // Use or_insert to keep the first entry's chunk when multiple entry points share the same module
+      chunk_graph.entry_module_to_entry_chunk.entry(module_idx).or_insert(chunk_idx);
     }
   }
 
@@ -756,13 +777,19 @@ impl GenerateStage<'_> {
     input_base: &ArcStr,
   ) -> BuildResult<()> {
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
-    self.link_output.entries.iter().enumerate().for_each(|(i, entry_point)| {
+    for (entry_index, (&module_idx, _)) in self
+      .link_output
+      .entries
+      .iter()
+      .flat_map(|(idx, entries)| entries.iter().map(move |e| (idx, e)))
+      .enumerate()
+    {
       self.determine_reachable_modules_for_entry(
-        entry_point.idx,
-        i.try_into().expect("Too many entries, u32 overflowed."),
+        module_idx,
+        entry_index.try_into().expect("Too many entries, u32 overflowed."),
         index_splitting_info,
       );
-    });
+    }
 
     let mut module_to_assigned: IndexVec<ModuleIdx, bool> =
       oxc_index::index_vec![false; self.link_output.module_table.modules.len()];

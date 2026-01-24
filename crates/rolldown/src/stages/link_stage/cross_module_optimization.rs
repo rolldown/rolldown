@@ -121,7 +121,7 @@ impl LinkStage<'_> {
     // collect all modules that has dynamic import record
     // two dimension map module_idx -> stmt_idx -> dynamic_import_expression_address
     let mut module_idx_and_stmt_idx_to_dynamic_import_expr_addr_map = FxHashMap::default();
-    self.entries.iter().for_each(|entry| {
+    self.entries.values().flatten().for_each(|entry| {
       entry.related_stmt_infos.iter().for_each(
         |(module_idx, stmt_idx, address, _import_record_idx)| {
           module_idx_and_stmt_idx_to_dynamic_import_expr_addr_map

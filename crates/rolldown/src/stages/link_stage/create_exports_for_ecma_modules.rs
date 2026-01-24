@@ -55,7 +55,8 @@ impl LinkStage<'_> {
       |ecma_module| {
         let linking_info = &mut self.metas[ecma_module.idx];
 
-        if let Some(entry) = self.entries.iter().find(|entry| entry.idx == ecma_module.idx) {
+        if let Some(entry) = self.entries.get(&ecma_module.idx).and_then(|entries| entries.first())
+        {
           init_entry_point_stmt_info(
             linking_info,
             entry,

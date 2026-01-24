@@ -27,7 +27,6 @@ use rolldown_utils::rustc_hash::FxHashMapExt;
 /// # Example
 /// If a shebang line was removed from the beginning of the content, the source map's
 /// generated line numbers need to be shifted down by 1 to account for the missing line.
-#[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 pub fn shift_sourcemap_lines(sourcemap: &SourceMap, line_offset: i32) -> SourceMap {
   if line_offset == 0 {
     return sourcemap.clone();
@@ -36,7 +35,7 @@ pub fn shift_sourcemap_lines(sourcemap: &SourceMap, line_offset: i32) -> SourceM
   let tokens = sourcemap
     .get_source_view_tokens()
     .map(|token| {
-      let new_dst_line = (token.get_dst_line() as i32 + line_offset).max(0) as u32;
+      let new_dst_line = (token.get_dst_line().cast_signed() + line_offset).max(0).cast_unsigned();
       Token::new(
         new_dst_line,
         token.get_dst_col(),

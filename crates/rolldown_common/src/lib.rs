@@ -215,3 +215,5 @@ pub use crate::{
   types::wrap_kind::WrapKind,
 };
 pub use bundler_options::*;
+#[cfg(debug_assertions)]
+pub use types::idx_ext::IdxDebugExt;

@@ -371,6 +371,10 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when plugins take significant time during the build process',
     ),
   ),
+  ineffectiveDynamicImport: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warnings when detecting ineffective dynamic import'),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 

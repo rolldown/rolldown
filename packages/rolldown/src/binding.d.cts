@@ -1761,6 +1761,7 @@ export interface BindingChecksOptions {
   preferBuiltinFeature?: boolean
   couldNotCleanDirectory?: boolean
   pluginTimings?: boolean
+  ineffectiveDynamicImport?: boolean
 }
 
 export interface BindingChunkImportMap {

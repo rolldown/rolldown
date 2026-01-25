@@ -1417,6 +1417,12 @@
             "boolean",
             "null"
           ]
+        },
+        "ineffectiveDynamicImport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

@@ -1,6 +1,17 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/dynamic_entry_merged_in_user_defined_entry/lib.js is dynamically imported by /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/dynamic_entry_merged_in_user_defined_entry/entry.js but also statically imported by /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/dynamic_entry_merged_in_user_defined_entry/entry.js, dynamic import will not move module into another chunk.
+
+
+```
+
 # Assets
 
 ## entry.js
@@ -31,6 +42,17 @@ init_entry();
 ```
 
 # Variant: [format: Cjs]
+
+## warnings
+
+### INEFFECTIVE_DYNAMIC_IMPORT
+
+```text
+[INEFFECTIVE_DYNAMIC_IMPORT] Warning: 
+(!) /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/dynamic_entry_merged_in_user_defined_entry/lib.js is dynamically imported by /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/dynamic_entry_merged_in_user_defined_entry/entry.js but also statically imported by /root/program/rolldown/crates/rolldown/tests/rolldown/optimization/chunk_merging/dynamic_entry_merged_in_user_defined_entry/entry.js, dynamic import will not move module into another chunk.
+
+
+```
 
 ## Assets
 

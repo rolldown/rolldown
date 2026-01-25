@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookUsage, Plugin, PluginContext,
 };
+use rolldown_utils::dataurl::is_data_url;
 
 #[derive(Debug)]
 pub struct ViteLoadFallbackPlugin;
@@ -13,7 +14,7 @@ impl Plugin for ViteLoadFallbackPlugin {
   }
 
   async fn load(&self, ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    if args.id.trim_start().starts_with("data:") {
+    if is_data_url(args.id) {
       return Ok(None);
     }
 

@@ -8,12 +8,11 @@ use rolldown_common::{
   ResolvedId,
 };
 use rolldown_resolver::{ResolveError, Resolver};
+use rolldown_utils::dataurl::is_data_url;
 use std::{path::Path, sync::Arc};
 use sugar_path::SugarPath;
 
 use crate::__inner::resolve_id_with_plugins;
-
-use super::resolve_id_with_plugins::is_data_url;
 
 #[expect(clippy::too_many_arguments)]
 pub async fn resolve_id_check_external(

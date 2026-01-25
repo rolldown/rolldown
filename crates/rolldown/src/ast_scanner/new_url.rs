@@ -1,6 +1,7 @@
 use oxc::ast::{Comment, ast::NewExpression};
 use rolldown_common::{ImportKind, ImportRecordMeta, ModuleType, get_leading_comment};
 use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_utils::dataurl::is_data_url;
 
 use super::AstScanner;
 
@@ -43,7 +44,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
     let path = &first_arg_string_literal.value;
 
-    if path.starts_with("data:") {
+    if is_data_url(path) {
       return;
     }
 

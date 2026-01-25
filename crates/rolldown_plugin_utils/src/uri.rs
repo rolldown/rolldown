@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use percent_encoding::{AsciiSet, CONTROLS, percent_decode, utf8_percent_encode};
-use rolldown_utils::url::clean_url;
+use rolldown_utils::{dataurl::is_data_url, url::clean_url};
 
 const ENCODE_URI_SET: &AsciiSet = &CONTROLS
   .add(b'%')
@@ -28,7 +28,7 @@ const ENCODE_URI_SET: &AsciiSet = &CONTROLS
   .remove(b'~');
 
 pub fn encode_uri_path(uri: String) -> String {
-  if uri.starts_with("data:") {
+  if is_data_url(&uri) {
     uri
   } else {
     let path = clean_url(&uri);

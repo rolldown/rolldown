@@ -46,7 +46,20 @@ impl GenerateStage<'_> {
 
           // Add shebang first if it exists
           if has_shebang {
-            source_joiner.append_source(content[..shebang_end].trim_end()); // Trim to avoid extra newlines
+            // Exclude the newline from the shebang since SourceJoiner adds newlines between sources
+            // Handle both LF and CRLF line endings
+            let shebang_content = if shebang_end < content.len() {
+              // Shebang has a newline - exclude it
+              if shebang_end >= 2 && content.as_bytes()[shebang_end - 2] == b'\r' {
+                &content[..shebang_end - 2] // CRLF: exclude \r\n
+              } else {
+                &content[..shebang_end - 1] // LF: exclude \n
+              }
+            } else {
+              // Shebang has no newline - use the whole content
+              content
+            };
+            source_joiner.append_source(shebang_content);
           }
 
           // Then add post_banner

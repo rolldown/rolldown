@@ -139,4 +139,12 @@ export interface ChecksOptions {
    * @default true
    * */
   pluginTimings?: boolean;
+
+  /**
+   * Whether to emit warnings when both the code and postBanner contain shebang
+   *
+   * Having multiple shebangs in a file is a syntax error.
+   * @default true
+   * */
+  duplicateShebang?: boolean;
 }

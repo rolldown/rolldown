@@ -29,6 +29,7 @@ OPTIONS
   --checks.common-js-variable-in-esm Whether to emit warnings when a CommonJS variable is used in an ES module.
   --checks.configuration-field-conflict Whether to emit warnings when a config value is overridden by another config value with a higher priority.
   --checks.could-not-clean-directory Whether to emit warnings when Rolldown could not clean the output directory.
+  --checks.duplicate-shebang  Whether to emit warnings when both the code and postBanner contain shebang.
   --checks.empty-import-meta  Whether to emit warnings when \`import.meta\` is not supported with the output format and is replaced with an empty object (\`{}\`).
   --checks.eval               Whether to emit warnings when detecting uses of direct \`eval\`s.
   --checks.filename-conflict  Whether to emit warnings when files generated have the same name with different contents.

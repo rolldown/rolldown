@@ -101,6 +101,10 @@ pub enum EventKind {
   ///
   /// {@include ../docs/checks-plugin-timings.md}
   PluginTimings = 38,
+  /// Whether to emit warnings when both the code and postBanner contain shebang
+  ///
+  /// Having multiple shebangs in a file is a syntax error.
+  DuplicateShebang = 39,
 }
 
 impl Display for EventKind {
@@ -150,6 +154,7 @@ impl Display for EventKind {
       EventKind::AlreadyClosedError => write!(f, "ALREADY_CLOSED"),
       EventKind::CouldNotCleanDirectory => write!(f, "COULD_NOT_CLEAN_DIRECTORY"),
       EventKind::PluginTimings => write!(f, "PLUGIN_TIMINGS"),
+      EventKind::DuplicateShebang => write!(f, "DUPLICATE_SHEBANG"),
     }
   }
 }

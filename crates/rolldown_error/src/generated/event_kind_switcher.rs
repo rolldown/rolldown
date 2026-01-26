@@ -43,5 +43,6 @@ bitflags! {
     const AlreadyClosedError = 1 << 36;
     const CouldNotCleanDirectory = 1 << 37;
     const PluginTimings = 1 << 38;
+    const DuplicateShebang = 1 << 39;
   }
 }

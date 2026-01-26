@@ -1385,6 +1385,12 @@
             "boolean",
             "null"
           ]
+        },
+        "duplicateShebang": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

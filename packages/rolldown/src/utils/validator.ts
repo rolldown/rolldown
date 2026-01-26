@@ -371,6 +371,10 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when plugins take significant time during the build process',
     ),
   ),
+  duplicateShebang: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warnings when both the code and postBanner contain shebang'),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 

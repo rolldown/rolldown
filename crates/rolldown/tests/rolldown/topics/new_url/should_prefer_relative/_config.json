@@ -3,5 +3,6 @@
     "experimental": {
       "resolveNewUrlToAsset": true
     }
-  }
+  },
+  "snapshotBytes": true
 }

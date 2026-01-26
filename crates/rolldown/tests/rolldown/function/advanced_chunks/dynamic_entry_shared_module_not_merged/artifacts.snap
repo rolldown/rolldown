@@ -1,0 +1,41 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+import("./shared.js").then(({ func }) => {
+	func();
+});
+
+//#endregion
+```
+
+## other.js
+
+```js
+
+```
+
+## shared.js
+
+```js
+import { t as func } from "./shared2.js";
+
+export { func };
+```
+
+## shared2.js
+
+```js
+//#region shared.js
+function func() {
+	return "This is a shared function";
+}
+
+//#endregion
+export { func as t };
+```

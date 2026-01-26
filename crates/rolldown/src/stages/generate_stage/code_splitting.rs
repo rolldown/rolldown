@@ -24,6 +24,20 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{GenerateStage, chunk_ext::ChunkCreationReason};
 
+bitflags::bitflags! {
+  #[derive(Debug, Clone, Copy, Default)]
+  pub struct PendingCommonChunkMeta: u8 {
+    // Empty for now, will be extended as needed
+  }
+}
+
+#[derive(Debug, Default)]
+pub struct PendingCommonChunkInfo {
+  pub modules: Vec<ModuleIdx>,
+  #[expect(dead_code, reason = "Reserved for future use")]
+  pub meta: PendingCommonChunkMeta,
+}
+
 #[derive(Clone, Debug)]
 pub struct SplittingInfo {
   pub bits: BitSet,
@@ -803,7 +817,8 @@ impl GenerateStage<'_> {
       )
       .await?;
 
-    let mut pending_common_chunks: FxIndexMap<BitSet, Vec<ModuleIdx>> = FxIndexMap::default();
+    let mut pending_common_chunks: FxIndexMap<BitSet, PendingCommonChunkInfo> =
+      FxIndexMap::default();
     // If it is allow to allow that entry chunks have the different exports as the underlying entry module.
     // This is used to generate less chunks when possible.
     // TODO: maybe we could bailout peer chunk?
@@ -838,7 +853,7 @@ impl GenerateStage<'_> {
           self.link_output.metas[normal_module.idx].depended_runtime_helper,
         );
       } else if allow_chunk_optimization {
-        pending_common_chunks.entry(bits.clone()).or_default().push(normal_module.idx);
+        pending_common_chunks.entry(bits.clone()).or_default().modules.push(normal_module.idx);
       } else {
         let mut chunk =
           Chunk::new(None, None, bits.clone(), vec![], ChunkKind::Common, input_base.clone(), None);

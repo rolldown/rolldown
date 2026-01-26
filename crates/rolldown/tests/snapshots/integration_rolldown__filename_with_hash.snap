@@ -3908,6 +3908,13 @@ expression: output
 - common-!~{004}~.js => common-CVRK5TUp.js
 - rolldown-runtime-!~{002}~.js => rolldown-runtime-ntFOhXPQ.js
 
+# tests/rolldown/function/advanced_chunks/dynamic_entry_shared_module_not_merged
+
+- main-!~{000}~.js => main-K27wQ6cE.js
+- other-!~{001}~.js => other-B3P9919W.js
+- shared-!~{004}~.js => shared-CclkS2J7.js
+- shared-!~{002}~.js => shared-Cm3wnSX5.js
+
 # tests/rolldown/function/advanced_chunks/include_dependencies_recursively
 
 - main-!~{000}~.js => main-D4MNl3Sj.js
@@ -6361,8 +6368,10 @@ expression: output
 
 # tests/rolldown/tree_shaking/issue_4682
 
-- main-!~{000}~.js => main-CEjIU1Yi.js
-- dynamic-!~{003}~.js => dynamic-YC0iu9Gc.js
+- main-!~{000}~.js => main-B9FlAHGI.js
+- dynamic-!~{005}~.js => dynamic-C1dXXjI-.js
+- static-!~{003}~.js => static-BP37ah8X.js
+- static-!~{001}~.js => static-CE4ZR3EF.js
 
 # tests/rolldown/tree_shaking/json_default_import
 

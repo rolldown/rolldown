@@ -1823,10 +1823,14 @@ export interface BindingEmittedChunk {
 
 export interface BindingEmittedPrebuiltChunk {
   fileName: string
+  name?: string
   code: string
   exports?: Array<string>
   map?: BindingSourcemap
   sourcemapFileName?: string
+  facadeModuleId?: string
+  isEntry?: boolean
+  isDynamicEntry?: boolean
 }
 
 export type BindingError =

@@ -1,6 +1,6 @@
 use crate::{
-  AddEntryModuleMsg, FilenameTemplate, ModuleLoaderMsg, Modules, NormalizedBundlerOptions, Output,
-  OutputAsset, OutputChunk, PreserveEntrySignatures, StrOrBytes,
+  AddEntryModuleMsg, FilenameTemplate, ModuleId, ModuleLoaderMsg, Modules,
+  NormalizedBundlerOptions, Output, OutputAsset, OutputChunk, PreserveEntrySignatures, StrOrBytes,
 };
 use anyhow::Context;
 use arcstr::ArcStr;
@@ -47,10 +47,14 @@ pub struct EmittedChunkInfo {
 #[derive(Debug, Clone)]
 pub struct EmittedPrebuiltChunk {
   pub file_name: ArcStr,
+  pub name: Option<ArcStr>,
   pub code: String,
   pub exports: Vec<String>,
   pub map: Option<rolldown_sourcemap::SourceMap>,
   pub sourcemap_filename: Option<String>,
+  pub facade_module_id: Option<ArcStr>,
+  pub is_entry: bool,
+  pub is_dynamic_entry: bool,
 }
 
 #[derive(Debug)]
@@ -284,10 +288,10 @@ impl FileEmitter {
       }
 
       bundle.push(Output::Chunk(Arc::new(OutputChunk {
-        name: value.file_name.clone(),
-        is_entry: false,
-        is_dynamic_entry: false,
-        facade_module_id: None,
+        name: value.name.clone().unwrap_or_else(|| value.file_name.clone()),
+        is_entry: value.is_entry,
+        is_dynamic_entry: value.is_dynamic_entry,
+        facade_module_id: value.facade_module_id.clone().map(ModuleId::from),
         module_ids: vec![],
         exports: value.exports.iter().map(|s| s.as_str().into()).collect(),
         filename: value.file_name.clone(),

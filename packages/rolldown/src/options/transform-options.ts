@@ -7,9 +7,11 @@ export interface TransformOptions extends Omit<
   /**
    * Replace global variables or [property accessors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Property_accessors) with the provided values.
    *
+   * See Oxc's [`define` option](https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement.html#define) for more details.
+   *
    * @example
    * **Replace the global variable `IS_PROD` with `true`**
-   * ```js rolldown.config.js
+   * ```js [rolldown.config.js]
    * export default defineConfig({
    *   transform: { define: { IS_PROD: 'true' } }
    * })
@@ -28,7 +30,7 @@ export interface TransformOptions extends Omit<
    * ```
    *
    * **Replace the property accessor `process.env.NODE_ENV` with `'production'`**
-   * ```js rolldown.config.js
+   * ```js [rolldown.config.js]
    * export default defineConfig({
    *   transform: { define: { 'process.env.NODE_ENV': "'production'" } }
    * })
@@ -37,12 +39,12 @@ export interface TransformOptions extends Omit<
    * ```js
    * // Input
    * if (process.env.NODE_ENV === 'production') {
-   *  console.log('Production mode')
+   *   console.log('Production mode')
    * }
    *
    * // After bundling
    * if ('production' === 'production') {
-   * console.log('Production mode')
+   *   console.log('Production mode')
    * }
    * ```
    */
@@ -51,6 +53,8 @@ export interface TransformOptions extends Omit<
    * Inject import statements on demand.
    *
    * The API is aligned with `@rollup/plugin-inject`.
+   *
+   * See Oxc's [`inject` option](https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement.html#inject) for more details.
    *
    * #### Supported patterns
    * ```js

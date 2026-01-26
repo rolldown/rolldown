@@ -12,10 +12,15 @@ import type {
   MinifyOptions,
   OutputOptions,
 } from './output-options';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { ModuleFormat } from './output-options';
 
 type PathsFunction = (id: string) => string;
 
-/** @category Plugin APIs */
+/**
+ * A normalized version of {@linkcode ModuleFormat}.
+ * @category Plugin APIs
+ */
 export type InternalModuleFormat = 'es' | 'cjs' | 'iife' | 'umd';
 
 /** @category Plugin APIs */

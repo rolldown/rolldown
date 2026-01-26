@@ -12,3 +12,32 @@ When using `output.banner` with minification enabled, the banner content may be 
 The latter way's behavior is controlled by the [`output.legalComments`](/reference/OutputOptions.legalComments) option, which defaults to `'inline'` and preserves these special comment formats.
 
 :::
+
+#### Examples
+
+##### Adding shebang for CLI tools
+
+```js
+export default {
+  output: {
+    banner: (chunk) => {
+      // Add shebang only to the CLI entry point
+      if (chunk.name === 'cli') {
+        return '#!/usr/bin/env node';
+      }
+      return '';
+    },
+  },
+};
+```
+
+##### Adding "use strict" directive
+
+```js
+export default {
+  output: {
+    format: 'cjs',
+    banner: '"use strict";',
+  },
+};
+```

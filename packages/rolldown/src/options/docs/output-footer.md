@@ -12,3 +12,25 @@ When using `output.footer` with minification enabled, the footer content may be 
 The latter way's behavior is controlled by the [`output.legalComments`](/reference/OutputOptions.legalComments) option, which defaults to `'inline'` and preserves these special comment formats.
 
 :::
+
+#### Examples
+
+##### Expose the default export as `module.exports` for CJS output with all named exports as properties
+
+```js
+export default {
+  output: {
+    format: 'cjs',
+    exports: 'named',
+    footer: (chunk) => {
+      if (chunk.isEntry) {
+        return `
+module.exports = exports.default;
+module.exports.default = module.exports;
+module.exports.foo = module.exports.default.foo;`;
+      }
+      return '';
+    },
+  },
+};
+```

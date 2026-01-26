@@ -43,6 +43,10 @@ export default function myPlugin() {
 
 Rolldown evaluates the filter on the Rust side and only calls your handler when the filter matches.
 
+::: tip
+[`@rolldown/pluginutils`](https://www.npmjs.com/package/@rolldown/pluginutils) exports some utilities for hook filters like `exactRegex` and `prefixRegex`.
+:::
+
 ## Filter Properties
 
 In addition to `id`, you can also filter based on `moduleType` and the module's source code. The `filter` property works similarly to [`createFilter` from `@rollup/pluginutils`](https://github.com/rollup/plugins/blob/master/packages/pluginutils/README.md#createfilter).

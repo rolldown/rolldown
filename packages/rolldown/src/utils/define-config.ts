@@ -11,7 +11,23 @@ export type RolldownOptionsFunction = (
   commandLineArguments: Record<string, any>,
 ) => MaybePromise<RolldownOptions | RolldownOptions[]>;
 
-/** @category Config */
+/**
+ * A helper to define a rolldown configuration with type hints.
+ *
+ * @example
+ * ```js [rolldown.config.js]
+ * import { defineConfig } from 'rolldown';
+ *
+ * export default defineConfig({
+ *   input: 'src/main.js',
+ *   output: {
+ *     file: 'bundle.js',
+ *   },
+ * });
+ * ```
+ *
+ * @category Config
+ */
 export function defineConfig(config: RolldownOptions): RolldownOptions;
 export function defineConfig(config: RolldownOptions[]): RolldownOptions[];
 export function defineConfig(config: RolldownOptionsFunction): RolldownOptionsFunction;

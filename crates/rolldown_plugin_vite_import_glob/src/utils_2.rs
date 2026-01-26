@@ -560,7 +560,7 @@ impl GlobImportVisit<'_> {
 
               let key = match &p.key {
                 PropertyKey::StringLiteral(key) => key.value,
-                PropertyKey::StaticIdentifier(ident) => ident.name,
+                PropertyKey::StaticIdentifier(ident) => ident.name.as_atom(),
                 _ => continue,
               };
 

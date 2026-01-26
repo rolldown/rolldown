@@ -91,7 +91,11 @@ impl<'name> Renamer<'name> {
       return false;
     };
     // Skip root scope (index 0), check nested scopes only
-    db.ast_scopes.scoping().iter_bindings().skip(1).any(|(_, bindings)| bindings.contains_key(name))
+    db.ast_scopes
+      .scoping()
+      .iter_bindings()
+      .skip(1)
+      .any(|(_, bindings)| bindings.keys().any(|k| k.as_str() == name))
   }
 
   /// Check if a candidate name is available for a top-level symbol without causing
@@ -342,7 +346,7 @@ impl NestedScopeRenamer<'_, '_> {
       };
 
       for scope_id in self.scoping.scope_ancestors(current_reference.scope_id()) {
-        if let Some(binding) = self.scoping.get_binding(scope_id, &canonical_name)
+        if let Some(binding) = self.scoping.get_binding_by_name(scope_id, &canonical_name)
           && binding != symbol
         {
           let symbol_ref = (self.module_idx, binding).into();
@@ -394,7 +398,7 @@ impl NestedScopeRenamer<'_, '_> {
 
       for reference in self.scoping.get_resolved_references(symbol_ref.symbol) {
         for scope_id in self.scoping.scope_ancestors(reference.scope_id()) {
-          if let Some(binding) = self.scoping.get_binding(scope_id, &canonical_name)
+          if let Some(binding) = self.scoping.get_binding_by_name(scope_id, &canonical_name)
             && binding != symbol_ref.symbol
           {
             let nested_symbol_ref = (self.module_idx, binding).into();
@@ -446,10 +450,11 @@ impl NestedScopeRenamer<'_, '_> {
 
     // Skip root scope (index 0), check nested scopes only
     for (_, bindings) in self.scoping.iter_bindings().skip(1) {
-      for (&name, symbol_id) in bindings {
-        if CJS_WRAPPER_NAMES.contains(&name) {
+      for (name, symbol_id) in bindings {
+        let name_str = name.as_str();
+        if CJS_WRAPPER_NAMES.contains(&name_str) {
           let symbol_ref = (self.module_idx, *symbol_id).into();
-          self.renamer.register_nested_scope_symbols(symbol_ref, name);
+          self.renamer.register_nested_scope_symbols(symbol_ref, name_str);
         }
       }
     }

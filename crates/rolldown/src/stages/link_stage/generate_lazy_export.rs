@@ -238,8 +238,10 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   let mut all_declared_symbols =
     stmt_info.flat_map(|info| info.referenced_symbols).collect::<Vec<_>>();
   for (local, (exported, _)) in &declaration_binding_names {
-    let symbol_id =
-      symbol_ref_db.scoping().get_root_binding(local.as_str()).expect("should have binding");
+    let symbol_id = symbol_ref_db
+      .scoping()
+      .get_root_binding_by_name(local.as_str())
+      .expect("should have binding");
     let symbol_ref: SymbolRef = (module_idx, symbol_id).into();
     all_declared_symbols.push(SymbolOrMemberExprRef::from(symbol_ref));
     let stmt_info =

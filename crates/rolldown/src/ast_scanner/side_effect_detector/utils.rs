@@ -221,7 +221,7 @@ pub fn extract_member_expr_chain<'a>(
       &computed_expr.object
     }
     MemberExpression::StaticMemberExpression(static_expr) => {
-      chain.push(static_expr.property.name);
+      chain.push(static_expr.property.name.as_atom());
       &static_expr.object
     }
     MemberExpression::PrivateFieldExpression(_) => return None,
@@ -232,7 +232,7 @@ pub fn extract_member_expr_chain<'a>(
     match cur {
       Expression::StaticMemberExpression(expr) => {
         cur = &expr.object;
-        chain.push(expr.property.name);
+        chain.push(expr.property.name.as_atom());
       }
       Expression::ComputedMemberExpression(expr) => {
         let Expression::StringLiteral(ref str) = expr.expression else {
@@ -242,7 +242,7 @@ pub fn extract_member_expr_chain<'a>(
         cur = &expr.object;
       }
       Expression::Identifier(ident) => {
-        chain.push(ident.name);
+        chain.push(ident.name.as_atom());
         let ref_id = ident.reference_id.get().expect("should have reference_id");
         chain.reverse();
         return Some((ref_id, chain));

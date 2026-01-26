@@ -203,10 +203,10 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
           }
         } else if ident.name == CJS_EXPORTS_REF_ATOM {
           // Rewrite `exports` to `__rolldown_exports__`
-          ident.name = CJS_ROLLDOWN_EXPORTS_REF_ATOM;
+          ident.name = CJS_ROLLDOWN_EXPORTS_REF_ATOM.into();
         } else if ident.name == CJS_MODULE_REF_ATOM {
           // Rewrite `module` to `__rolldown_module__`
-          ident.name = CJS_ROLLDOWN_MODULE_REF_ATOM;
+          ident.name = CJS_ROLLDOWN_MODULE_REF_ATOM.into();
         }
       }
     }

@@ -469,7 +469,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
     let mut ret = vec![];
     let exprs = decl.declarations.iter_mut().filter_map(|var_decl| {
-      ret.extend(var_decl.id.binding_identifiers().iter().map(|item| item.name));
+      ret.extend(var_decl.id.binding_identifiers().iter().map(|item| item.name.as_atom()));
       // Turn `var ... = ...` to `... = ...`
       if let Some(ref mut init_expr) = var_decl.init {
         let left = var_decl.id.take_in(self.alloc).into_assignment_target(self.alloc);
@@ -900,7 +900,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // needs to rewrite to `var T = class T { static a = new T(); }`
         let mut id = id.clone();
         let new_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
-        id.name = self.snippet.atom(new_name);
+        id.name = self.snippet.atom(new_name).into();
         class.id = Some(id);
       }
     }

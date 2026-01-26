@@ -48,7 +48,10 @@ impl GenerateStage<'_> {
           if has_shebang {
             // Exclude the newline from the shebang since SourceJoiner adds newlines between sources
             // Handle both LF and CRLF line endings
-            let shebang_content = if shebang_end < content.len() {
+            let shebang_content = if shebang_end > 0
+              && shebang_end <= content.len()
+              && content.as_bytes().get(shebang_end - 1).copied() == Some(b'\n')
+            {
               // Shebang has a newline - exclude it
               if shebang_end >= 2 && content.as_bytes()[shebang_end - 2] == b'\r' {
                 &content[..shebang_end - 2] // CRLF: exclude \r\n

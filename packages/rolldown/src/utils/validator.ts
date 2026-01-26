@@ -589,7 +589,6 @@ const InputOptionsSchema = v.strictObject({
       ),
       onDemandWrapping: v.optional(v.boolean()),
       incrementalBuild: v.optional(v.boolean()),
-      transformHiresSourcemap: v.optional(v.union([v.boolean(), v.literal('boundary')])),
       nativeMagicString: v.optional(v.boolean()),
       chunkOptimization: v.optional(v.boolean()),
       // lazyBarrel: v.optional(v.boolean()),

@@ -604,11 +604,6 @@ export interface InputOptions {
      */
     incrementalBuild?: boolean;
     /**
-     * Enable high-resolution source maps for transform operations.
-     * @default false
-     */
-    transformHiresSourcemap?: boolean | 'boundary';
-    /**
      * Use native Rust implementation of MagicString for source map generation.
      *
      * [MagicString](https://github.com/rich-harris/magic-string) is a JavaScript library commonly used by bundlers

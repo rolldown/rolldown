@@ -101,7 +101,6 @@ impl PluginDriverFactory {
         transform_dependencies: Arc::new(DashMap::default()),
         context_load_completion_manager: ContextLoadCompletionManager::default(),
         tx,
-        options: Arc::clone(options),
         hook_timing_collector: hook_timing_collector.clone(),
       }
     })

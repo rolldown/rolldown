@@ -1858,7 +1858,6 @@ export interface BindingExperimentalOptions {
   chunkImportMap?: boolean | BindingChunkImportMap
   onDemandWrapping?: boolean
   incrementalBuild?: boolean
-  transformHiresSourcemap?: boolean | 'boundary'
   nativeMagicString?: boolean
   chunkOptimization?: boolean
   lazyBarrel?: boolean

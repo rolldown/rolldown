@@ -12,7 +12,7 @@ use arcstr::ArcStr;
 use dashmap::DashMap;
 use rolldown_common::{
   ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, PluginIdx, SharedFileEmitter,
-  SharedModuleInfoDashMap, SharedNormalizedBundlerOptions,
+  SharedModuleInfoDashMap,
 };
 use rolldown_utils::dashmap::FxDashSet;
 use sugar_path::SugarPath;
@@ -32,7 +32,6 @@ pub struct PluginDriver {
   plugins: IndexPluginable,
   contexts: IndexPluginContext,
   hook_orders: PluginHookOrders,
-  options: SharedNormalizedBundlerOptions,
   pub file_emitter: SharedFileEmitter,
   pub watch_files: Arc<FxDashSet<ArcStr>>,
   pub module_infos: SharedModuleInfoDashMap,

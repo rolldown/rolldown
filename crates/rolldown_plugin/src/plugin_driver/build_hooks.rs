@@ -11,7 +11,7 @@ use crate::{
 use anyhow::{Context, Result};
 use rolldown_common::{
   ModuleInfo, ModuleType, NormalModule, PluginIdx, SharedNormalizedBundlerOptions,
-  SourcemapChainElement, SourcemapHires, side_effects::HookSideEffects,
+  SourcemapChainElement, side_effects::HookSideEffects,
 };
 use rolldown_devtools::{action, trace_action};
 use rolldown_error::CausedPlugin;
@@ -323,10 +323,8 @@ impl PluginDriver {
       } else {
         // If sourcemap is empty and code has changed, need to create one remapping original code.
         let magic_string = MagicString::new(original_code);
-        let hires =
-          self.options.experimental.transform_hires_sourcemap.unwrap_or(SourcemapHires::Boundary);
         Some(magic_string.source_map(SourceMapOptions {
-          hires: hires.into(),
+          hires: string_wizard::Hires::Boundary,
           include_content: true,
           source: id.into(),
         }))

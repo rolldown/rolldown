@@ -998,16 +998,6 @@
             "null"
           ]
         },
-        "transformHiresSourcemap": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SourcemapHires"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "nativeMagicString": {
           "type": [
             "boolean",
@@ -1097,28 +1087,6 @@
       "enum": [
         "execOrder",
         "moduleId"
-      ]
-    },
-    "SourcemapHires": {
-      "oneOf": [
-        {
-          "type": "string",
-          "enum": [
-            "boundary"
-          ]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "boolean": {
-              "type": "boolean"
-            }
-          },
-          "required": [
-            "boolean"
-          ],
-          "additionalProperties": false
-        }
       ]
     },
     "SimpleMinifyOptions": {

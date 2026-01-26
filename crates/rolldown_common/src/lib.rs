@@ -36,7 +36,7 @@ pub mod bundler_options {
       dev_mode_options::DevModeOptions,
       devtools_options::DevtoolsOptions,
       es_module_flag::EsModuleFlag,
-      experimental_options::{ExperimentalOptions, SourcemapHires},
+      experimental_options::ExperimentalOptions,
       filename_template::FilenameTemplate,
       generated_code_options::GeneratedCodeOptions,
       hash_characters::HashCharacters,

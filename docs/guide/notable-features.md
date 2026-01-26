@@ -22,7 +22,7 @@ Rolldown does not polyfill Node built-ins when targeting the browser. You can op
 ## Built-in transforms
 
 Rolldown supports the following transforms out of the box, powered by [Oxc](https://oxc.rs/docs/guide/usage/transformer).
-The transform is configurable via the `transform` option.
+The transform is configurable via the [`transform`](/reference/InputOptions.transform) option.
 The following transforms are supported:
 
 - TypeScript
@@ -50,7 +50,7 @@ When top-level [`tsconfig`](/reference/InputOptions.tsconfig) option is provided
 
 ## Define
 
-- Configurable via the `define` option.
+- Configurable via the [`transform.define`](/reference/InputOptions.transform#define) option.
 
 This feature provides a way to replace global identifiers with constant expressions. Aligns with the respective options in [Vite](https://vite.dev/config/shared-options.html#define) and [esbuild](https://esbuild.github.io/api/#define).
 
@@ -62,7 +62,7 @@ Note it behaves differently from [`@rollup/plugin-replace`](https://github.com/r
 
 ## Inject
 
-- Configurable via the `inject` option.
+- Configurable via the [`transform.inject`](/reference/InputOptions.transform#inject) option.
 
 This feature provides a way to shim global variables with a specific value exported from a module. This feature is equivalent of [esbuild's `inject` option](https://esbuild.github.io/api/#inject) and [`@rollup/plugin-inject`](https://github.com/rollup/plugins/tree/master/packages/inject).
 
@@ -84,7 +84,7 @@ See [Manual Code Splitting](/in-depth/manual-code-splitting) for more details.
 
 - ⚠️ Experimental
 
-This is conceptually similar to [esbuild's `loader` option](https://esbuild.github.io/api/#loader), allowing users to globally associate file extensions to built-in module types via the `moduleTypes` option, or specify module type of a specific module in plugin hooks. It is discussed in more details [here](/in-depth/module-types).
+This is conceptually similar to [esbuild's `loader` option](https://esbuild.github.io/api/#loader), allowing users to globally associate file extensions to built-in module types via the [`moduleTypes`](/reference/InputOptions.moduleTypes) option, or specify module type of a specific module in plugin hooks. It is discussed in more details [here](/in-depth/module-types).
 
 ## Minification
 

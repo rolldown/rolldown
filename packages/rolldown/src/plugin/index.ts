@@ -131,6 +131,11 @@ export interface SourceDescription
 
 /** @inline */
 export interface ResolveIdExtraOptions {
+  /**
+   * Plugin-specific options.
+   *
+   * See [Custom resolver options section](https://rolldown.rs/apis/plugin-api/inter-plugin-communication#custom-resolver-options) for more details.
+   */
   custom?: CustomPluginOptions;
   /**
    * Whether this is resolution for an entry point.
@@ -138,6 +143,17 @@ export interface ResolveIdExtraOptions {
    * {@include ./docs/plugin-hooks-resolveid-isentry.md}
    */
   isEntry: boolean;
+  /**
+   * The kind of import being resolved.
+   *
+   * - `import-statement`: `import { foo } from './lib.js';`
+   * - `dynamic-import`: `import('./lib.js')`
+   * - `require-call`: `require('./lib.js')`
+   * - `import-rule`: `@import 'bg-color.css'` (experimental)
+   * - `url-token`: `url('./icon.png')` (experimental)
+   * - `new-url`: `new URL('./worker.js', import.meta.url)` (experimental)
+   * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})` (experimental)
+   */
   kind: BindingHookResolveIdExtraArgs['kind'];
 }
 

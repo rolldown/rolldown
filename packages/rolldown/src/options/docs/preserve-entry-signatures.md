@@ -36,7 +36,7 @@ If you have two entry points that share code, and `preserveEntrySignatures` is s
 
 ##### Override per Entry Point
 
-The `preserveEntrySignatures` option is a global setting. The only way to override it for individual entry chunks is to use the plugin API and emit those chunks via `this.emitFile` instead of using the `input` option.
+The `preserveEntrySignatures` option is a global setting. The only way to override it for individual entry chunks is to use the plugin API and emit those chunks via [`this.emitFile`](/reference/Interface.PluginContext#emitfile) instead of using the [`input`](/reference/InputOptions.input) option.
 
 ###### Practical Example: Mixed Library and Application Build
 

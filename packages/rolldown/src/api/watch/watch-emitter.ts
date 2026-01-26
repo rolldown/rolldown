@@ -64,15 +64,27 @@ export type RolldownWatcherWatcherEventMap = {
  * @category Programmatic APIs
  */
 export interface RolldownWatcher {
+  /**
+   * Register a listener for events defined in {@linkcode RolldownWatcherWatcherEventMap}.
+   */
   on<E extends keyof RolldownWatcherWatcherEventMap>(
     event: E,
     listener: (...args: RolldownWatcherWatcherEventMap[E]) => MaybePromise<void>,
   ): this;
+  /**
+   * Unregister a listener for events defined in {@linkcode RolldownWatcherWatcherEventMap}.
+   */
   off<E extends keyof RolldownWatcherWatcherEventMap>(
     event: E,
     listener: (...args: RolldownWatcherWatcherEventMap[E]) => MaybePromise<void>,
   ): this;
+  /**
+   * Unregister all listeners for a specific event defined in {@linkcode RolldownWatcherWatcherEventMap}.
+   */
   clear<E extends keyof RolldownWatcherWatcherEventMap>(event: E): void;
+  /**
+   * Close the watcher and stop listening for file changes.
+   */
   close(): Promise<void>;
 }
 

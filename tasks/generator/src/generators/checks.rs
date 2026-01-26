@@ -225,7 +225,7 @@ fn generate_check_options(
     let related_comments = doc_comments
       .clone()
       .unwrap_or(format!(
-        "Whether to emit warnings when detecting {}",
+        "Whether to emit warnings when detecting {}.",
         variant.to_title_case().to_lowercase()
       ))
       .replace('\n', "\n     *");
@@ -269,6 +269,7 @@ fn generate_validate_check_options(
     if let Some(pos) = related_comments.find('\n') {
       related_comments.truncate(pos);
     }
+    related_comments = related_comments.trim_end_matches('.').to_string();
     let quote_kind = '"';
     fields.push(format!(
       r"{camel_case}: v.pipe(

@@ -5,7 +5,7 @@
 [ES modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules) (ESM) are the official JavaScript module standard. When `output.format: 'esm'` is used, the bundle will use `export` syntax like this:
 
 ```js
-function exportedFunction { /* ... */ }
+function exportedFunction () { /* ... */ }
 let exportedValue = '/* ... */'
 
 export { exportedFunction, exportedValue };
@@ -20,7 +20,7 @@ ES modules are the recommended format for most use cases. They are part of the J
 [CommonJS](https://nodejs.org/docs/latest/api/modules.html#modules-commonjs-modules) is the module format that Node.js originally supported before ES modules. When `output.format: 'cjs'` is used, the bundle will use `exports` variable like this:
 
 ```js
-function exportedFunction { /* ... */ }
+function exportedFunction () { /* ... */ }
 let exportedValue = '/* ... */'
 
 exports.exportedFunction = exportedFunction;
@@ -37,7 +37,7 @@ IIFE stands for ["immediately-invoked function expression"](https://developer.mo
 
 ```js
 var MyLibrary = (function () {
-  function exportedFunction { /* ... */ }
+  function exportedFunction () { /* ... */ }
   let exportedValue = '/* ... */'
 
   return { exportedFunction, exportedValue };
@@ -58,7 +58,7 @@ IIFE is useful for drop-in scripts and widgets that need to work anywhere with a
   typeof define === 'function' && define.amd ? define(['exports'], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.myBundle = {})));
 })(this, (function (exports) {
-  function exportedFunction { /* ... */ }
+  function exportedFunction () { /* ... */ }
   let exportedValue = '/* ... */'
 
   exports.exportedFunction = exportedFunction;

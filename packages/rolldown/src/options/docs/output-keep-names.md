@@ -47,7 +47,7 @@ var Test$1 = class {
 console.log(Test$1.name); // "Test" - preserved!
 function test$1() {}
 __name(test$1, 'test');
-console.log(test$1.name); // "Test" - preserved!
+console.log(test$1.name); // "test" - preserved!
 
 var Test = class extends Test$1 {};
 function test() {}

@@ -5115,6 +5115,10 @@ expression: output
 - string-!~{005}~.js => string-DPwn78yK.js
 - text-!~{00d}~.js => text-CggBgD_k.js
 
+# tests/rolldown/issues/7973
+
+- main-!~{000}~.js => main-CpkS1SyJ.js
+
 # tests/rolldown/issues/duplicate_default_export
 
 - main-!~{000}~.js => main-BatCM-9U.js

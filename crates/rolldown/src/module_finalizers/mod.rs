@@ -39,6 +39,12 @@ use crate::utils::external_import_interop::import_record_needs_interop;
 mod hmr;
 mod rename;
 
+/// Helper enum for `try_rewrite_cjs_member_expr_assignment_target` to handle both static and computed member properties.
+enum CjsMemberProperty<'a, 'ast> {
+  Static(&'a str),
+  Computed(&'a ast::Expression<'ast>),
+}
+
 bitflags! {
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub struct TraverseState: u8 {
@@ -858,6 +864,80 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           return None;
         };
         self.try_rewrite_import_meta_prop_expr(static_member_expr)
+      }
+    }
+  }
+
+  /// Try to rewrite a member expression assignment target when the object is a default import from CJS.
+  /// For `import_src.log = value`, if `import_src` is from a CJS module, we need to rewrite to
+  /// `import_src.default.log = value` because __toESM creates getter-only properties.
+  fn try_rewrite_cjs_member_expr_assignment_target(
+    &self,
+    target: &ast::SimpleAssignmentTarget<'ast>,
+  ) -> Option<ast::SimpleAssignmentTarget<'ast>> {
+    let (id_ref, property) = match target {
+      ast::SimpleAssignmentTarget::StaticMemberExpression(member_expr) => {
+        let ast::Expression::Identifier(id_ref) = &member_expr.object else {
+          return None;
+        };
+        (id_ref, CjsMemberProperty::Static(member_expr.property.name.as_str()))
+      }
+      ast::SimpleAssignmentTarget::ComputedMemberExpression(member_expr) => {
+        let ast::Expression::Identifier(id_ref) = &member_expr.object else {
+          return None;
+        };
+        (id_ref, CjsMemberProperty::Computed(&member_expr.expression))
+      }
+      _ => return None,
+    };
+
+    // Resolve the identifier to check if it's a CJS default import
+    let reference_id = id_ref.reference_id.get()?;
+    let symbol_id = self.scope.symbol_id_for(reference_id)?;
+    let symbol_ref: SymbolRef = (self.ctx.idx, symbol_id).into();
+    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+    let symbol = self.ctx.symbol_db.get(canonical_ref);
+
+    // Check if this symbol has a namespace_alias with property_name "default"
+    // This indicates it's a default import from a CJS module
+    let ns_alias = symbol.namespace_alias.as_ref()?;
+    if ns_alias.property_name.as_str() != "default" {
+      return None;
+    }
+
+    // Build: ns_name.default
+    // IMPORTANT: Use SPAN (0-0) for the new member expression to avoid being matched
+    // by resolved_member_expr_refs lookup which uses span as key
+    let ns_name = self.canonical_name_for(ns_alias.namespace_ref);
+    let ns_id_ref = self.snippet.id_ref_expr(ns_name, SPAN);
+    let default_access =
+      ast::Expression::StaticMemberExpression(self.snippet.builder.alloc_static_member_expression(
+        SPAN,
+        ns_id_ref,
+        self.snippet.id_name("default", SPAN),
+        false,
+      ));
+
+    // Create: ns_name.default.property or ns_name.default[expression]
+    match property {
+      CjsMemberProperty::Static(property_name) => {
+        let final_access = self.snippet.builder.alloc_static_member_expression(
+          SPAN,
+          default_access,
+          self.snippet.id_name(property_name, SPAN),
+          false,
+        );
+        Some(ast::SimpleAssignmentTarget::StaticMemberExpression(final_access))
+      }
+      CjsMemberProperty::Computed(expr) => {
+        let expr_clone = expr.clone_in(self.alloc);
+        let final_access = self.snippet.builder.alloc_computed_member_expression(
+          SPAN,
+          default_access,
+          expr_clone,
+          false,
+        );
+        Some(ast::SimpleAssignmentTarget::ComputedMemberExpression(final_access))
       }
     }
   }

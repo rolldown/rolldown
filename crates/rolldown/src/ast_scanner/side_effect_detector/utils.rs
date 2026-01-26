@@ -466,6 +466,40 @@ pub enum InvocationKind {
   New,
 }
 
+/// Checks if a BigInt argument is safe (won't throw at runtime).
+/// BigInt() throws for:
+/// - Non-integer numbers (1.5, NaN, Infinity, -Infinity)
+/// - Non-numeric strings ("abc")
+///
+/// We can only confidently say BigInt() is safe for:
+/// - Integer numeric literals
+/// - Boolean literals (true -> 1n, false -> 0n)
+/// - BigInt literals
+fn is_safe_bigint_argument(arg: &Expression) -> bool {
+  match arg {
+    // Boolean literals are always safe for BigInt (true -> 1n, false -> 0n)
+    // BigInt literals are always safe
+    Expression::BooleanLiteral(_) | Expression::BigIntLiteral(_) => true,
+    // Numeric literals are safe only if they are integers (no decimal, not NaN, not Infinity)
+    Expression::NumericLiteral(num) => {
+      let value = num.value;
+      // Check if it's a finite integer
+      value.is_finite() && value.fract() == 0.0
+    }
+    // Unary expressions like -1 or +1
+    Expression::UnaryExpression(unary) => {
+      matches!(
+        unary.operator,
+        oxc::syntax::operator::UnaryOperator::UnaryNegation
+          | oxc::syntax::operator::UnaryOperator::UnaryPlus
+      ) && matches!(unary.argument, Expression::NumericLiteral(ref num) if num.value.is_finite() && num.value.fract() == 0.0)
+    }
+    // String literals could be numeric but we can't easily validate, so consider them unsafe
+    // For example, BigInt("123") is safe but BigInt("abc") or BigInt("1.5") throws
+    _ => false,
+  }
+}
+
 /// Checks if the arguments for a global free constructor/function are safe (side-effect free).
 /// This function validates that all arguments are primitive types appropriate for the given symbol.
 ///
@@ -485,9 +519,31 @@ pub fn check_global_free_constructor_args<'a>(
 ) -> bool {
   // Note: `_kind` is reserved for future use to differentiate between Call and New expression logic
   match symbol_name {
+    // BigInt() is special - it throws for non-integer numbers and non-numeric strings
+    // We need to be more conservative and only allow proven-safe arguments
+    "BigInt" => {
+      if matches!(kind, InvocationKind::New) {
+        // new BigInt() always throws TypeError
+        return false;
+      }
+      // BigInt() requires at least one argument - BigInt() with no args throws TypeError
+      if arguments.is_empty() {
+        return false;
+      }
+      // BigInt() as a function call is only safe with proven-safe arguments
+      arguments.iter().all(|arg| {
+        if matches!(arg, ast::Argument::SpreadElement(_)) {
+          return false;
+        }
+        is_safe_bigint_argument(arg.to_expression())
+      })
+    }
+    // RegExp() and new RegExp() - validate using oxc's regex parser
+    // Invalid patterns or flags throw SyntaxError at runtime
+    "RegExp" => oxc_ecmascript::side_effects::is_valid_regexp(arguments),
     // Symbol() is side-effect-free only when arguments are primitive types
     // Calling toString() on an object can have side effects
-    "Symbol" | "String" | "Number" | "Boolean" | "BigInt" | "Object" => {
+    "Symbol" | "String" | "Number" | "Boolean" | "Object" => {
       // Check if all arguments are safe (primitives or no arguments)
       let is_side_effect_free = arguments.iter().all(|arg| {
         if matches!(arg, ast::Argument::SpreadElement(_)) {
@@ -495,25 +551,15 @@ pub fn check_global_free_constructor_args<'a>(
         }
         let arg_expr = arg.to_expression();
         let prim_type = known_primitive_type(scope, arg_expr);
-        if symbol_name == "BigInt" {
-          matches!(
-            prim_type,
-            PrimitiveType::Boolean
-              | PrimitiveType::Number
-              | PrimitiveType::String
-              | PrimitiveType::BigInt
-          )
-        } else {
-          matches!(
-            prim_type,
-            PrimitiveType::Null
-              | PrimitiveType::Undefined
-              | PrimitiveType::Boolean
-              | PrimitiveType::Number
-              | PrimitiveType::String
-              | PrimitiveType::BigInt
-          )
-        }
+        matches!(
+          prim_type,
+          PrimitiveType::Null
+            | PrimitiveType::Undefined
+            | PrimitiveType::Boolean
+            | PrimitiveType::Number
+            | PrimitiveType::String
+            | PrimitiveType::BigInt
+        )
       });
 
       if matches!(kind, InvocationKind::New) {

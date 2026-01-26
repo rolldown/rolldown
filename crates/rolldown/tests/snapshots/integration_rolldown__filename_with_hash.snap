@@ -5436,6 +5436,10 @@ expression: output
 - pageb-!~{001}~.js => pageb-BFCQ4ggL.js
 - foo-!~{002}~.js => foo-CUa9ehQs.js
 
+# tests/rolldown/optimization/inline_const/multi_pass_filtering
+
+- main-!~{000}~.js => main-jzXyUv2k.js
+
 # tests/rolldown/optimization/inline_const/ns_chain
 
 - main-!~{000}~.js => main-Brb9u1JP.js

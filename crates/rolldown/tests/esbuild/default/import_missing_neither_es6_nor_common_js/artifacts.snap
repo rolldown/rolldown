@@ -73,19 +73,11 @@ var init_foo = __esmMin((() => {
 export { y as a, x as i, foo_exports as n, __toCommonJS as o, init_foo as r, default$1 as t };
 ```
 
-## foo2.js
-
-```js
-import { r as init_foo } from "./foo.js";
-
-init_foo();
-```
-
 ## import.js
 
 ```js
 //#region import.js
-console.log(import("./foo2.js"));
+console.log(import("./foo.js").then((n) => (n.r(), n.n)));
 
 //#endregion
 ```

@@ -18,68 +18,67 @@ var main_default = [
 	clear$2,
 	clear$1$2,
 	clear$2$1,
-	() => import("./repro1.js").then(console.log),
-	() => import("./repro2.js").then(console.log),
-	() => import("./repro3.js").then(console.log)
+	() => import("./repro12.js").then((n) => n.n).then(console.log),
+	() => import("./repro22.js").then((n) => n.r).then(console.log),
+	() => import("./repro32.js").then((n) => n.i).then(console.log)
 ];
 
 //#endregion
 export { main_default as default };
 ```
 
-## repro1.js
-
-```js
-import { t as clear } from "./repro12.js";
-
-export { clear };
-```
-
 ## repro12.js
 
 ```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+
 //#region repro1.js
+var repro1_exports = /* @__PURE__ */ __exportAll({ clear: () => clear });
 const clear = "repro1_clear";
 
 //#endregion
-export { clear as t };
-```
-
-## repro2.js
-
-```js
-import { n as clear$1, t as clear } from "./repro22.js";
-
-export { clear, clear$1 };
+export { repro1_exports as n, clear as t };
 ```
 
 ## repro22.js
 
 ```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+
 //#region repro2.js
+var repro2_exports = /* @__PURE__ */ __exportAll({
+	clear: () => clear,
+	clear$1: () => clear$1
+});
 const clear$1 = "repro2_clear$1";
 const clear = "repro2_clear";
 
 //#endregion
-export { clear$1 as n, clear as t };
-```
-
-## repro3.js
-
-```js
-import { n as clear$1, r as clear$2, t as clear } from "./repro32.js";
-
-export { clear, clear$1, clear$2 };
+export { clear$1 as n, repro2_exports as r, clear as t };
 ```
 
 ## repro32.js
 
 ```js
+import { t as __exportAll } from "./rolldown-runtime.js";
+
 //#region repro3.js
+var repro3_exports = /* @__PURE__ */ __exportAll({
+	clear: () => clear,
+	clear$1: () => clear$1,
+	clear$2: () => clear$2
+});
 const clear$2 = "repro3_clear$2";
 const clear$1 = "repro3_clear$1";
 const clear = "repro3_clear";
 
 //#endregion
-export { clear$1 as n, clear$2 as r, clear as t };
+export { repro3_exports as i, clear$1 as n, clear$2 as r, clear as t };
+```
+
+## rolldown-runtime.js
+
+```js
+// HIDDEN [rolldown:runtime]
+export { __exportAll as t };
 ```

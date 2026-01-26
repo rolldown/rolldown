@@ -431,11 +431,15 @@ impl GenerateStage<'_> {
         ChunkReasonType::ManualCodeSplitting { .. }
       );
       let is_pure_user_defined_to_entry_chunk = matches!(target_chunk.kind, ChunkKind::EntryPoint { meta, bit: _, module: _ } if meta.is_pure_user_defined_entry());
+      let is_common_chunk = matches!(target_chunk.kind, ChunkKind::Common);
+      // Four optimization scenarios:
       // 1. Emitted chunk (AllowExtension) merged into manual code splitting group
       //    → Group by target chunk to detect export name conflicts before merging
       // 2. Dynamic entry chunk merged into manual code splitting group
       //    → Directly merge, the facade chunk can be removed
       // 3. Dynamic entry chunk merged into user-defined entry chunk
+      //    → Directly merge, the facade chunk can be removed
+      // 4. Dynamic entry chunk merged into common chunk
       //    → Directly merge, the facade chunk can be removed
       if is_manual_to_chunk && is_emitted_from_chunk {
         emitted_chunk_groups.entry(target_chunk_idx).or_default().push(chunk_idx);
@@ -444,6 +448,8 @@ impl GenerateStage<'_> {
           FacadeChunkEliminationReason::DynamicEntryMergedIntoManualGroup
         } else if is_pure_user_defined_to_entry_chunk {
           FacadeChunkEliminationReason::DynamicEntryMergedIntoUserDefinedEntry
+        } else if is_common_chunk {
+          FacadeChunkEliminationReason::DynamicEntryMergedIntoCommonChunk
         } else {
           continue;
         };

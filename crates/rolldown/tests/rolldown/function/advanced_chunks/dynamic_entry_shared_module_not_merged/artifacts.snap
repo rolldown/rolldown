@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region main.js
-import("./shared.js").then(({ func }) => {
+import("./shared.js").then((n) => n.t).then(({ func }) => {
 	func();
 });
 
@@ -23,19 +23,13 @@ import("./shared.js").then(({ func }) => {
 ## shared.js
 
 ```js
-import { t as func } from "./shared2.js";
-
-export { func };
-```
-
-## shared2.js
-
-```js
+// HIDDEN [rolldown:runtime]
 //#region shared.js
+var shared_exports = /* @__PURE__ */ __exportAll({ func: () => func });
 function func() {
 	return "This is a shared function";
 }
 
 //#endregion
-export { func as t };
+export { shared_exports as t };
 ```

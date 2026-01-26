@@ -1,14 +1,14 @@
 import { n as name, t as a_exports } from "./a2.js";
 import { n as name$1, t as b_exports } from "./b2.js";
-import { n as modules_exports, r as name$2 } from "./modules2.js";
+import { n as name$2, t as modules_exports } from "./modules2.js";
 import { t as a_default } from "./a4.js";
 import { t as b_default } from "./b4.js";
 
 //#region ../fixtures/a/index.ts
 const basic = /* @__PURE__ */ Object.assign({
-	"./modules/a.ts": () => import("./a.js"),
-	"./modules/b.ts": () => import("./b.js"),
-	"./modules/index.ts": () => import("./modules.js")
+	"./modules/a.ts": () => import("./a2.js").then((n) => n.t),
+	"./modules/b.ts": () => import("./b2.js").then((n) => n.t),
+	"./modules/index.ts": () => import("./modules2.js").then((n) => n.t)
 });
 const basicWithObjectKeys = Object.keys({
 	"./modules/a.ts": 0,
@@ -16,9 +16,9 @@ const basicWithObjectKeys = Object.keys({
 	"./modules/index.ts": 0
 });
 const basicWithObjectValues = Object.values([
-	() => import("./a.js"),
-	() => import("./b.js"),
-	() => import("./modules.js")
+	() => import("./a2.js").then((n) => n.t),
+	() => import("./b2.js").then((n) => n.t),
+	() => import("./modules2.js").then((n) => n.t)
 ]);
 const basicEager = /* @__PURE__ */ Object.assign({
 	"./modules/a.ts": a_exports,
@@ -36,14 +36,14 @@ const basicEagerWithObjectValues = Object.values([
 	modules_exports
 ]);
 const ignore = /* @__PURE__ */ Object.assign({
-	"./modules/a.ts": () => import("./a.js"),
-	"./modules/b.ts": () => import("./b.js")
+	"./modules/a.ts": () => import("./a2.js").then((n) => n.t),
+	"./modules/b.ts": () => import("./b2.js").then((n) => n.t)
 });
 const ignoreWithObjectKeys = Object.keys({
 	"./modules/a.ts": 0,
 	"./modules/b.ts": 0
 });
-const ignoreWithObjectValues = Object.values([() => import("./a.js"), () => import("./b.js")]);
+const ignoreWithObjectValues = Object.values([() => import("./a2.js").then((n) => n.t), () => import("./b2.js").then((n) => n.t)]);
 const namedEager = /* @__PURE__ */ Object.assign({
 	"./modules/a.ts": name,
 	"./modules/b.ts": name$1,
@@ -60,9 +60,9 @@ const namedEagerWithObjectValues = Object.values([
 	name$2
 ]);
 const namedDefault = /* @__PURE__ */ Object.assign({
-	"./modules/a.ts": () => import("./a.js").then((m) => m["default"]),
-	"./modules/b.ts": () => import("./b.js").then((m) => m["default"]),
-	"./modules/index.ts": () => import("./modules.js").then((m) => m["default"])
+	"./modules/a.ts": () => import("./a2.js").then((n) => n.t).then((m) => m["default"]),
+	"./modules/b.ts": () => import("./b2.js").then((n) => n.t).then((m) => m["default"]),
+	"./modules/index.ts": () => import("./modules2.js").then((n) => n.t).then((m) => m["default"])
 });
 const namedDefaultWithObjectKeys = Object.keys({
 	"./modules/a.ts": 0,
@@ -70,17 +70,17 @@ const namedDefaultWithObjectKeys = Object.keys({
 	"./modules/index.ts": 0
 });
 const namedDefaultWithObjectValues = Object.values([
-	() => import("./a.js").then((m) => m["default"]),
-	() => import("./b.js").then((m) => m["default"]),
-	() => import("./modules.js").then((m) => m["default"])
+	() => import("./a2.js").then((n) => n.t).then((m) => m["default"]),
+	() => import("./b2.js").then((n) => n.t).then((m) => m["default"]),
+	() => import("./modules2.js").then((n) => n.t).then((m) => m["default"])
 ]);
 const eagerAs = /* @__PURE__ */ Object.assign({
 	"./modules/a.ts": a_default,
 	"./modules/b.ts": b_default
 });
 const rawImportModule = /* @__PURE__ */ Object.assign({
-	"./modules/a.ts": () => import("./a3.js"),
-	"./modules/b.ts": () => import("./b3.js")
+	"./modules/a.ts": () => import("./a4.js").then((n) => n.n),
+	"./modules/b.ts": () => import("./b4.js").then((n) => n.n)
 });
 const excludeSelf = /* @__PURE__ */ Object.assign({ "./sibling.ts": () => import("./sibling.js") });
 const excludeSelfRaw = /* @__PURE__ */ Object.assign({ "./sibling.ts": () => import("./sibling3.js") });
@@ -93,15 +93,15 @@ const rootMixedRelative = /* @__PURE__ */ Object.assign({
 });
 const cleverCwd1 = /* @__PURE__ */ Object.assign({ "./node_modules/framework/pages/hello.page.js": () => import("./hello.page.js") });
 const cleverCwd2 = /* @__PURE__ */ Object.assign({
-	"./modules/a.ts": () => import("./a.js"),
-	"./modules/b.ts": () => import("./b.js"),
+	"./modules/a.ts": () => import("./a2.js").then((n) => n.t),
+	"./modules/b.ts": () => import("./b2.js").then((n) => n.t),
 	"../b/a.ts": () => import("./a5.js"),
 	"../b/b.ts": () => import("./b5.js")
 });
 const customBase = /* @__PURE__ */ Object.assign({
-	"./modules/a.ts": () => import("./a.js"),
-	"./modules/b.ts": () => import("./b.js"),
-	"./modules/index.ts": () => import("./modules.js"),
+	"./modules/a.ts": () => import("./a2.js").then((n) => n.t),
+	"./modules/b.ts": () => import("./b2.js").then((n) => n.t),
+	"./modules/index.ts": () => import("./modules2.js").then((n) => n.t),
 	"./sibling.ts": () => import("./sibling.js")
 });
 const customRootBase = /* @__PURE__ */ Object.assign({

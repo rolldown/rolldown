@@ -59,6 +59,6 @@ impl ExperimentalOptions {
   }
 
   pub fn is_lazy_barrel_enabled(&self) -> bool {
-    self.lazy_barrel.unwrap_or(false)
+    self.lazy_barrel.unwrap_or(true)
   }
 }

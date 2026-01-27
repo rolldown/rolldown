@@ -8,7 +8,7 @@ use sugar_path::SugarPath as _;
 use rolldown_common::{
   FlatOptions, ImportKind, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleType, NormalModule,
   NormalModuleTaskResult, ResolvedId, SourceMapGenMsg, SourcemapChainElement, StrOrBytes,
-  try_extract_barrel_info,
+  try_extract_lazy_barrel_info,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, UnloadableDependencyContext, downcast_napi_error_diagnostics,
@@ -211,9 +211,9 @@ impl ModuleTask {
     let repr_name = self.resolved_id.id.as_path().representative_file_name();
     let repr_name = legitimize_identifier_name(&repr_name).into_owned();
 
-    // Build BarrelInfo for lazy barrel optimization
+    // Build lazy barrel info if the experimental flag is enabled
     let barrel_info = if self.ctx.options.experimental.is_lazy_barrel_enabled() {
-      try_extract_barrel_info(&ecma_view, &raw_import_records)
+      try_extract_lazy_barrel_info(&ecma_view, &raw_import_records)
     } else {
       None
     };

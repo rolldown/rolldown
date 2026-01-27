@@ -147,9 +147,6 @@ pub use crate::{
   types::asset_meta::{InstantiationKind, SourcemapAssetMeta},
   types::ast_scope_idx::AstScopeIdx,
   types::ast_scopes::AstScopes,
-  types::barrel_state::{
-    BarrelInfo, BarrelModuleState, BarrelState, ImportedExports, try_extract_barrel_info,
-  },
   types::bundle_mode::BundleMode,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
@@ -175,6 +172,10 @@ pub use crate::{
   types::ins_chunk_idx::InsChunkIdx,
   types::instantiated_chunk::InstantiatedChunk,
   types::interop::Interop,
+  types::lazy_barrel::{
+    BarrelInfo, BarrelState, ExportSource, ImportedExports, LazyBarrelInfo,
+    try_extract_lazy_barrel_info,
+  },
   types::member_expr_ref::{MemberExprObjectReferencedType, MemberExprRef},
   types::member_expr_ref_resolution::MemberExprRefResolution,
   types::module_def_format::ModuleDefFormat,

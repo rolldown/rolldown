@@ -392,11 +392,19 @@ impl<'a> ModuleLoader<'a> {
           }
 
           let normal_module = module.as_normal().unwrap();
-          let (mut all_imported_specifiers, mut initial_needed_records) =
-            self.cache.barrel_state.initialize_barrel_tracking(normal_module, &mut barrel_info);
+          let mut import_records = IndexVec::with_capacity(raw_import_records.len());
 
           let mut tracked_records = FxHashMap::default();
-          let mut import_records = IndexVec::with_capacity(raw_import_records.len());
+          let mut initialized_barrel_tracking = if self.flat_options.is_lazy_barrel_enabled() {
+            Some(self.cache.barrel_state.initialize_barrel_tracking(
+              normal_module,
+              &raw_import_records,
+              &mut barrel_info,
+            ))
+          } else {
+            None
+          };
+
           for ((rec_idx, mut raw_rec), resolved_id) in
             raw_import_records.into_iter_enumerated().zip(resolved_deps)
           {
@@ -406,23 +414,18 @@ impl<'a> ModuleLoader<'a> {
               raw_rec.meta.insert(ImportRecordMeta::JsonModule);
             }
 
-            // If `initial_needed_records` exists, we only need to load partial re-export import records
-            if let Some(ref initial_needed_records) = initial_needed_records
-              && raw_rec.meta.contains(ImportRecordMeta::IsReExport)
+            // Lazy barrel optimization: skip loading modules that are not needed yet.
+            // - `imported_exports_per_record`: maps all import records to their required imported exports
+            // - `initial_needed_records`: subset of records that need to be loaded initially
+            if let Some((ref imported_exports_per_record, ref initial_needed_records)) =
+              initialized_barrel_tracking
+              && raw_rec.kind == ImportKind::Import
             {
-              // For `export * from`, its specifier is always `All`.
-              // Since it's not in `named_imports`, it wasn't added to `all_imported_specifiers`
-              // in `initialize_barrel_tracking`, so we handle it here.
-              if raw_rec.meta.contains(ImportRecordMeta::IsExportStar) {
-                all_imported_specifiers.insert(rec_idx, ImportedExports::All);
-              }
-              // If this re-export still exists in `all_imported_specifiers`,
-              // some of its specifiers are needed and may be imported by other modules,
-              // so it needs to be tracked.
-              if all_imported_specifiers.contains_key(&rec_idx) {
+              // Track remaining import records for later on-demand loading
+              if imported_exports_per_record.contains_key(&rec_idx) {
                 tracked_records.insert(rec_idx, (raw_rec.state.clone(), resolved_id.clone()));
               }
-              // If this re-export is not in `initial_needed_records`, we don't need to load it
+              // Skip records not in initial_needed_records - they may be loaded later if needed
               if !initial_needed_records.contains_key(&rec_idx) {
                 import_records.push(raw_rec.into_resolved(None));
                 continue;
@@ -437,28 +440,11 @@ impl<'a> ModuleLoader<'a> {
               &user_defined_entries,
             );
 
-            if self.shared_context.options.experimental.is_lazy_barrel_enabled() {
-              // Only distinguish specific imported symbols for `import` statements;
-              // otherwise, treat as importing all.
+            if let Some((_, ref mut initial_needed_records)) = initialized_barrel_tracking {
               let imported_exports = if raw_rec.kind == ImportKind::Import {
-                // If exists in `initial_needed_records`, take the needed specifiers from it first.
-                // Only when `initial_needed_records` is `None` will we fall through to the branches below.
-                // `None` means we need to load all imported specifiers.
-                // Note: we already continued above via `!initial_needed_records.contains_key(&rec_idx)` above.
-                if let Some(imported_exports) =
-                  initial_needed_records.as_mut().and_then(|r| r.remove(&rec_idx))
-                {
-                  imported_exports
-                } else if let Some(imported_exports) = all_imported_specifiers.remove(&rec_idx) {
-                  // This is `import { a } from '..'` form, all its specifiers need to be recorded
-                  imported_exports
-                } else if raw_rec.meta.contains(ImportRecordMeta::IsExportStar) {
-                  // `export * from '..'` form, its specifier is always `All`
-                  ImportedExports::All
-                } else {
-                  // `import '..'` form, no symbols need to be recorded
-                  ImportedExports::Partial(FxHashSet::default())
-                }
+                initial_needed_records.remove(&rec_idx).expect(
+                  "If initial_needed_records does not contain the record idx, it should have been skipped above"
+                )
               } else {
                 ImportedExports::All
               };
@@ -502,15 +488,16 @@ impl<'a> ModuleLoader<'a> {
           *self.intermediate_normal_modules.index_ecma_ast.get_mut(module_idx) = Some(ast);
           *self.intermediate_normal_modules.modules.get_mut(module_idx) = Some(module);
 
-          if self.shared_context.options.experimental.is_lazy_barrel_enabled() {
+          if let Some((imported_exports_per_record, _)) = initialized_barrel_tracking {
             self.cache.barrel_state.barrel_infos.insert(
               module_idx,
-              barrel_info.map(|info| {
-                // `tracked_records` and `all_imported_specifiers` have the same length and matching keys.
-                // `all_imported_specifiers` only contains the remaining specifiers for import records in `tracked_records`,
-                // after being filtered above and in `get_needed_records`.
-                info.into_barrel_module_state(tracked_records, all_imported_specifiers)
-              }),
+              if tracked_records.is_empty() {
+                None
+              } else {
+                barrel_info.map(|info| {
+                  info.into_barrel_module_state(tracked_records, imported_exports_per_record)
+                })
+              },
             );
             self.process_barrel_import_record(&mut work_queue, &user_defined_entries);
           }
@@ -923,14 +910,12 @@ impl<'a> ModuleLoader<'a> {
       // Additionally, we check whether each record in `tracked_records` still needs to be retained.
       let mut needed_records = barrel_module_state
         .info
-        .get_needed_records(&new_exports, &mut remaining_imported_specifiers);
+        .take_needed_records(&new_exports, &mut remaining_imported_specifiers);
 
       let barrel_normal_module = barrel_module.as_normal_mut().unwrap();
       tracked_records.retain(|&rec_idx, (import_record_state, resolved_id)| {
-        if let Some(ref needed_records) = needed_records {
-          if !needed_records.contains_key(&rec_idx) {
-            return true;
-          }
+        if !needed_records.contains_key(&rec_idx) {
+          return true;
         }
         let target_idx = match barrel_normal_module.import_records[rec_idx].resolved_module {
           Some(existing_idx) => existing_idx,
@@ -956,14 +941,18 @@ impl<'a> ModuleLoader<'a> {
           Some(None) => false,
           None => true,
         };
-        if let Some(imported_exports) = needed_records.as_mut().and_then(|r| r.remove(&rec_idx)) {
-          work_queue.push_back((target_idx, imported_exports));
-          return keep_tracking && remaining_imported_specifiers.contains_key(&rec_idx);
-        } else if let Some(imported_exports) = remaining_imported_specifiers.remove(&rec_idx) {
-          work_queue.push_back((target_idx, imported_exports));
-          return false;
+        work_queue.push_back((
+          target_idx,
+          needed_records.remove(&rec_idx).expect(
+            "If needed_records does not contain the record idx, it should have been skipped above",
+          ),
+        ));
+        if keep_tracking {
+          remaining_imported_specifiers.contains_key(&rec_idx)
+        } else {
+          remaining_imported_specifiers.remove(&rec_idx);
+          false
         }
-        keep_tracking
       });
 
       let barrel_module_state =

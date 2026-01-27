@@ -1,4 +1,4 @@
-use oxc::span::Atom;
+use oxc::span::Ident;
 
 static GLOBAL_IDENT: phf::Set<&str> = phf::phf_set![
   // Rolldown specific, because oxc treated them as identifiers, esbuild did not
@@ -798,7 +798,7 @@ pub fn is_global_ident_ref(ident: &str) -> bool {
   GLOBAL_IDENT.contains(ident)
 }
 
-pub fn is_side_effect_free_member_expr_of_len_two(member_expr: &[Atom]) -> bool {
+pub fn is_side_effect_free_member_expr_of_len_two(member_expr: &[Ident]) -> bool {
   match member_expr {
     [first, second] => {
       let second = second.as_str();
@@ -816,7 +816,7 @@ pub fn is_side_effect_free_member_expr_of_len_two(member_expr: &[Atom]) -> bool 
   }
 }
 
-pub fn is_side_effect_free_member_expr_of_len_three(member_expr: &[Atom]) -> bool {
+pub fn is_side_effect_free_member_expr_of_len_three(member_expr: &[Ident]) -> bool {
   match member_expr {
     [first, second, third] => {
       first == "Object"

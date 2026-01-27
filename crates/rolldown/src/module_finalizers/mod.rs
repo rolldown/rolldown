@@ -10,7 +10,7 @@ use oxc::{
       NumberBase, Statement, VariableDeclarationKind,
     },
   },
-  span::{Atom, GetSpan, GetSpanMut, SPAN},
+  span::{GetSpan, GetSpanMut, SPAN},
 };
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx,
@@ -27,7 +27,7 @@ use rolldown_ecmascript_utils::{
 mod finalizer_context;
 mod impl_visit_mut;
 pub use finalizer_context::{FinalizerMutableState, ScopeHoistingFinalizerContext};
-use oxc::span::CompactStr;
+use oxc::span::{CompactStr, Ident};
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -86,7 +86,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub generated_init_esm_importee_ids: FxHashSet<ModuleIdx>,
   pub scope_stack: Vec<ScopeFlags>,
   pub state: TraverseState,
-  pub top_level_var_bindings: FxIndexSet<Atom<'ast>>,
+  pub top_level_var_bindings: FxIndexSet<Ident<'ast>>,
   pub cur_stmt_index: usize,
   pub keep_name_statement_to_insert: Vec<(usize, CompactStr, CompactStr)>,
   pub needs_hosted_top_level_binding: bool,
@@ -467,7 +467,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &self,
     decl: &mut ast::VariableDeclaration<'ast>,
     traverse_state: TraverseState,
-  ) -> Option<(Expression<'ast>, Vec<Atom<'ast>>)> {
+  ) -> Option<(Expression<'ast>, Vec<Ident<'ast>>)> {
     let should_hoist = (decl.kind.is_var() && traverse_state.contains(TraverseState::TopLevel))
       || (decl.kind.is_lexical() && traverse_state.contains(TraverseState::IsRootLevel));
     if !should_hoist {
@@ -980,7 +980,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // needs to rewrite to `var T = class T { static a = new T(); }`
         let mut id = id.clone();
         let new_name = self.canonical_name_for((self.ctx.idx, symbol_id).into());
-        id.name = self.snippet.atom(new_name);
+        id.name = self.snippet.atom(new_name).into();
         class.id = Some(id);
       }
     }

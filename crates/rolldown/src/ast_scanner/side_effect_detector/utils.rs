@@ -1,7 +1,7 @@
 use oxc::{
   ast::ast::{self, Expression, MemberExpression},
   semantic::ReferenceId,
-  span::Atom,
+  span::Ident,
   syntax::operator::{BinaryOperator, LogicalOperator, UnaryOperator, UpdateOperator},
 };
 use rolldown_common::AstScopes;
@@ -206,7 +206,7 @@ pub fn is_primitive_literal(scope: &AstScopes, expr: &Expression) -> bool {
 pub fn extract_member_expr_chain<'a>(
   expr: &'a MemberExpression,
   max_len: usize,
-) -> Option<(ReferenceId, Vec<Atom<'a>>)> {
+) -> Option<(ReferenceId, Vec<Ident<'a>>)> {
   if max_len == 0 {
     return None;
   }
@@ -217,7 +217,7 @@ pub fn extract_member_expr_chain<'a>(
       let Expression::StringLiteral(ref str) = computed_expr.expression else {
         return None;
       };
-      chain.push(str.value);
+      chain.push(str.value.into());
       &computed_expr.object
     }
     MemberExpression::StaticMemberExpression(static_expr) => {
@@ -238,7 +238,7 @@ pub fn extract_member_expr_chain<'a>(
         let Expression::StringLiteral(ref str) = expr.expression else {
           break;
         };
-        chain.push(str.value);
+        chain.push(str.value.into());
         cur = &expr.object;
       }
       Expression::Identifier(ident) => {

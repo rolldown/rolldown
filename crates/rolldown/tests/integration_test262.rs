@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::Write as _;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -572,6 +573,9 @@ async fn test262_module_code() {
   }
   eprintln!("Running {} test(s)", test_files.len());
 
+  let test262_package_json_path = test262_root.join("test/package.json");
+  std::fs::write(&test262_package_json_path, r#"{"type":"module"}"#).unwrap();
+
   let tasks: Vec<_> = test_files
     .into_iter()
     .map(|test_file| {
@@ -632,6 +636,8 @@ async fn test262_module_code() {
     .map(|r| r.unwrap())
     .collect::<Result<Vec<TestResult>, anyhow::Error>>()
     .unwrap();
+
+  fs::remove_file(test262_package_json_path).unwrap();
 
   if filter.is_some() {
     let snapshot = generate_snapshot(&results);

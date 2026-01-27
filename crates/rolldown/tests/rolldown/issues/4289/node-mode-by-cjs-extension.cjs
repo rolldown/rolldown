@@ -1,6 +1,5 @@
-import nodeAssert from 'node:assert';
-
 async function main() {
+  const nodeAssert = await import('node:assert');
   const exports = await import('./lib.js');
 
   nodeAssert.deepEqual(Object.keys(exports).sort(), ['default', 'parse']);

@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 // HIDDEN [\0rolldown/runtime.js]
-//#region bar.cjs
+//#region bar.js
 var test$1;
 var init_bar = __esmMin((() => {
 	test$1 = /* @__PURE__ */ __name(() => {
@@ -18,14 +18,14 @@ var init_bar = __esmMin((() => {
 }));
 
 //#endregion
-//#region foo.cjs
+//#region foo.js
 function test() {
 	return { test: "foo" };
 }
 var init_foo = __esmMin((() => {}));
 
 //#endregion
-//#region index.cjs
+//#region index.js
 var require_src = /* @__PURE__ */ __commonJSMin((() => {
 	init_bar();
 	init_foo();

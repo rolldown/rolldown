@@ -7,8 +7,8 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::DashMap;
 use oxc_resolver::{
-  ModuleType, PackageJson as OxcPackageJson, Resolution, ResolveError, ResolverGeneric,
-  TsConfig as OxcTsConfig,
+  ModuleType, PackageJson as OxcPackageJson, PackageType, Resolution, ResolveError,
+  ResolverGeneric, TsConfig as OxcTsConfig,
 };
 use rolldown_common::{
   ImportKind, ModuleDefFormat, ModuleId, PackageJson, Platform, ResolveOptions, ResolvedId,
@@ -222,18 +222,32 @@ fn infer_module_def_format(info: &Resolution) -> ModuleDefFormat {
   if !matches!(fmt, ModuleDefFormat::Unknown) {
     return fmt;
   }
-  let is_js_like_extension = info
-    .path()
-    .extension()
-    .is_some_and(|ext| matches!(ext.to_str(), Some("js" | "jsx" | "ts" | "tsx")));
-  if is_js_like_extension {
-    if let Some(module_type) = info.module_type() {
-      return match module_type {
-        ModuleType::CommonJs => ModuleDefFormat::CjsPackageJson,
-        ModuleType::Module => ModuleDefFormat::EsmPackageJson,
-        ModuleType::Json | ModuleType::Wasm | ModuleType::Addon => ModuleDefFormat::Unknown,
-      };
+  let Some(extension) = info.path().extension().and_then(|item| item.to_str()) else {
+    return ModuleDefFormat::Unknown;
+  };
+  match extension {
+    "js" | "ts" => {
+      if let Some(module_type) = info.module_type() {
+        return match module_type {
+          ModuleType::CommonJs => ModuleDefFormat::CjsPackageJson,
+          ModuleType::Module => ModuleDefFormat::EsmPackageJson,
+          ModuleType::Json | ModuleType::Wasm | ModuleType::Addon => ModuleDefFormat::Unknown,
+        };
+      }
     }
+    "jsx" | "tsx" => {
+      // for `.jsx` and `.tsx`, we should check package.json type field on our own, since it is
+      // not part of Node.js module type resolution algorithm.
+      if let Some(package_json_module_type) =
+        info.package_json().and_then(|package_json| package_json.r#type())
+      {
+        return match package_json_module_type {
+          PackageType::CommonJs => ModuleDefFormat::CjsPackageJson,
+          PackageType::Module => ModuleDefFormat::EsmPackageJson,
+        };
+      }
+    }
+    _ => {}
   }
   ModuleDefFormat::Unknown
 }

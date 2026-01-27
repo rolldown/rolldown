@@ -1,9 +1,11 @@
 use std::{borrow::Cow, path::Path};
 
+use arcstr::ArcStr;
 use json_escape_simd::escape;
 use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
 use rolldown_common::{
-  ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes, json_value_to_ecma_ast,
+  ModuleDefFormat, ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes,
+  json_value_to_ecma_ast,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -16,14 +18,19 @@ use super::pre_process_ecma_ast::PreProcessEcmaAst;
 use crate::types::{module_factory::CreateModuleContext, oxc_parse_type::OxcParseType};
 
 #[inline]
-fn pure_esm_js_oxc_source_type() -> OxcSourceType {
-  let pure_esm_js = OxcSourceType::default().with_module(true);
-  debug_assert!(pure_esm_js.is_javascript());
-  debug_assert!(!pure_esm_js.is_jsx());
-  debug_assert!(pure_esm_js.is_module());
-  debug_assert!(pure_esm_js.is_strict());
-
-  pure_esm_js
+fn source_type_with_parse_type(
+  source_type: OxcSourceType,
+  parsed_type: OxcParseType,
+  options: &NormalizedBundlerOptions,
+) -> OxcSourceType {
+  match parsed_type {
+    OxcParseType::Js => source_type,
+    OxcParseType::Jsx => source_type.with_jsx(!options.transform_options.is_jsx_disabled()),
+    OxcParseType::Ts => source_type.with_typescript(true),
+    OxcParseType::Tsx => {
+      source_type.with_typescript(true).with_jsx(!options.transform_options.is_jsx_disabled())
+    }
+  }
 }
 
 pub struct ParseToEcmaAstResult {
@@ -53,18 +60,6 @@ pub async fn parse_to_ecma_ast(
   let (has_lazy_export, source, parsed_type) =
     pre_process_source(path, source, module_type, is_user_defined_entry, options)?;
 
-  let oxc_source_type = {
-    let default = pure_esm_js_oxc_source_type();
-    match parsed_type {
-      OxcParseType::Js => default,
-      OxcParseType::Jsx => default.with_jsx(!options.transform_options.is_jsx_disabled()),
-      OxcParseType::Ts => default.with_typescript(true),
-      OxcParseType::Tsx => {
-        default.with_typescript(true).with_jsx(!options.transform_options.is_jsx_disabled())
-      }
-    }
-  };
-
   let mut ecma_ast = match module_type {
     ModuleType::Json => {
       let json_value: serde_json::Value = serde_json::from_str(&source).map_err(|e| {
@@ -83,9 +78,37 @@ pub async fn parse_to_ecma_ast(
       json_value_to_ecma_ast(&json_value)
     }
     ModuleType::Dataurl | ModuleType::Base64 | ModuleType::Text => {
-      EcmaCompiler::parse_expr_as_program(resolved_id.id.as_str(), source, oxc_source_type)?
+      EcmaCompiler::parse_expr_as_program(resolved_id.id.as_str(), source, OxcSourceType::mjs())?
     }
-    _ => EcmaCompiler::parse(resolved_id.id.as_str(), source, oxc_source_type)?,
+    _ => match resolved_id.module_def_format {
+      ModuleDefFormat::Cjs | ModuleDefFormat::Cts => EcmaCompiler::parse(
+        resolved_id.id.as_str(),
+        source,
+        source_type_with_parse_type(OxcSourceType::cjs(), parsed_type, options),
+      )?,
+      ModuleDefFormat::EsmPackageJson | ModuleDefFormat::EsmMjs | ModuleDefFormat::EsmMts => {
+        EcmaCompiler::parse(
+          resolved_id.id.as_str(),
+          source,
+          source_type_with_parse_type(OxcSourceType::mjs(), parsed_type, options),
+        )?
+      }
+      ModuleDefFormat::CjsPackageJson | ModuleDefFormat::Unknown => {
+        let source = ArcStr::from(source);
+        EcmaCompiler::parse(
+          resolved_id.id.as_str(),
+          ArcStr::clone(&source),
+          source_type_with_parse_type(OxcSourceType::mjs(), parsed_type, options),
+        )
+        .or_else(|_| {
+          EcmaCompiler::parse(
+            resolved_id.id.as_str(),
+            source,
+            source_type_with_parse_type(OxcSourceType::cjs(), parsed_type, options),
+          )
+        })?
+      }
+    },
   };
 
   ecma_ast = plugin_driver

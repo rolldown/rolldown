@@ -4832,8 +4832,8 @@ expression: output
 
 # tests/rolldown/issues/4289
 
-- main-!~{000}~.js => main-d6x-NxY7.js
-- lib-!~{001}~.js => lib-jm3gYqNp.js
+- main-!~{000}~.js => main-Dp-mRUGO.js
+- lib-!~{001}~.js => lib-DEL9fozX.js
 
 # tests/rolldown/issues/4324
 
@@ -6080,7 +6080,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/issue_7507/src
 
-- index-!~{000}~.js => index-EsnM9fHZ.js
+- index-!~{000}~.js => index-BW3_fmTF.js
 
 # tests/rolldown/topics/keep_names/issue_7852
 

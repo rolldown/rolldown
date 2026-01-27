@@ -1,5 +1,6 @@
 use rolldown_common::ModuleType;
 
+#[derive(Debug, Clone, Copy)]
 pub enum OxcParseType {
   Js,
   Jsx,

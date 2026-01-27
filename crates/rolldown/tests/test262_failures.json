@@ -135,7 +135,7 @@
     "reason": "Rolldown does not support preserving TLA semantics perfectly"
   },
   "language/module-code/top-level-await/new-await-script-code.js": {
-    "reason": "Rolldown treats files as ESM by default"
+    "reason": "Rolldown treats files in `type: module` package.json as ESM by default"
   },
   "language/module-code/top-level-await/rejection-order.js": {
     "reason": "Rolldown does not support preserving TLA semantics perfectly"

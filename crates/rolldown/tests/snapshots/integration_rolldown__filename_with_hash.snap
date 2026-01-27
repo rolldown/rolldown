@@ -6591,6 +6591,10 @@ expression: output
 
 - main-!~{000}~.js => main-PV-ILZCG.js
 
+# tests/rollup/jsx/react-jsx-declarations-with-key-attribute
+
+- main-!~{000}~.js => main-BQtphSU6.js
+
 # tests/rollup/jsx/transpiles-automatic-with-defaults
 
 - main-!~{000}~.js => main-ByzzWcd8.js

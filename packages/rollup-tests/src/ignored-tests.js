@@ -21,6 +21,7 @@ const ignoreTests = [
   "rollup@form@jsx@preserves-react: preserves React variable when preserving JSX output",
   "rollup@form@jsx@preserves-react-global: preserves React variable when preserving JSX output",
   "rollup@form@jsx@preserves-react-internal: preserves internal React variable when preserving JSX output",
+  "rollup@form@jsx@react-jsx-declarations-with-key-attribute: JSX with react-jsx uses correct semicolon positions in variable declarations with key attributes",
   "rollup@form@jsx@transpiles-automatic-with-defaults: transpiles JSX for react",
   "rollup@form@jsx@transpiles-classic-with-defaults: transpiles JSX for react",
   "rollup@form@jsx@transpiles-empty-fragment: transpiles JSX for react",
@@ -122,6 +123,7 @@ const ignoreTests = [
   "rollup@function@jsx@unnecessary-import-source: throws when preserving JSX syntax with an unnecessary import source", // `jsx.importSource` cannot be set with `jsx: 'preserve'`
   "rollup@function@catch-rust-panic: Catch Rust panics and then throw them in Node", // specific to Rollup's implementation
   "rollup@function@exports-are-not-defined: Throw descriptive error message for used export is not defined", // the input code triggers a different error in rolldown
+  "rollup@function@dynamic-import-call-method-with-this-await: includes the correct \"this\" context when calling a method on a dynamically imported module via \"await\"" // Rolldown does not necessarily keep the `this` value for exported functions
 ]
 
 module.exports = {

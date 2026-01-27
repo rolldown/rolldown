@@ -1,0 +1,29 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { jsx } from "react/jsx-runtime";
+
+//#region main.js
+Foo;
+const b = /* @__PURE__ */ jsx(Foo, {}, 123);
+Foo;
+const d = /* @__PURE__ */ jsx(Foo, {
+	a: "1",
+	b: "2"
+}, 123);
+Foo;
+const f = /* @__PURE__ */ jsx(Foo, {}, 123);
+Foo;
+const h = /* @__PURE__ */ jsx(Foo, {
+	a: "1",
+	b: "2"
+}, 123);
+console.log(b, d, f, h);
+
+//#endregion
+```

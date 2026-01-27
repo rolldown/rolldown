@@ -6,7 +6,7 @@ use oxc::{
 use oxc_traverse::Traverse;
 use rolldown_ecmascript::{
   CJS_EXPORTS_REF_ATOM, CJS_MODULE_REF_ATOM, CJS_ROLLDOWN_EXPORTS_REF,
-  CJS_ROLLDOWN_EXPORTS_REF_ATOM, CJS_ROLLDOWN_MODULE_REF_ATOM,
+  CJS_ROLLDOWN_EXPORTS_REF_IDENT, CJS_ROLLDOWN_MODULE_REF_IDENT,
 };
 use rolldown_ecmascript_utils::ExpressionExt;
 
@@ -78,7 +78,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
           self
             .snippet
             .builder
-            .binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_EXPORTS_REF_ATOM),
+            .binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_EXPORTS_REF_IDENT),
           NONE,
           NONE,
           false,
@@ -87,17 +87,22 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
           false,
         ),
       );
-      params.items.push(self.snippet.builder.formal_parameter(
-        SPAN,
-        self.builder.vec(),
-        self.snippet.builder.binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_MODULE_REF_ATOM),
-        NONE,
-        NONE,
-        false,
-        None,
-        false,
-        false,
-      ));
+      params.items.push(
+        self.snippet.builder.formal_parameter(
+          SPAN,
+          self.builder.vec(),
+          self
+            .snippet
+            .builder
+            .binding_pattern_binding_identifier(SPAN, CJS_ROLLDOWN_MODULE_REF_IDENT),
+          NONE,
+          NONE,
+          false,
+          None,
+          false,
+          false,
+        ),
+      );
     }
     // function () { [user code] }
     let mut user_code_wrapper = self.snippet.builder.alloc_function(
@@ -203,10 +208,10 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
           }
         } else if ident.name == CJS_EXPORTS_REF_ATOM {
           // Rewrite `exports` to `__rolldown_exports__`
-          ident.name = CJS_ROLLDOWN_EXPORTS_REF_ATOM;
+          ident.name = CJS_ROLLDOWN_EXPORTS_REF_IDENT;
         } else if ident.name == CJS_MODULE_REF_ATOM {
           // Rewrite `module` to `__rolldown_module__`
-          ident.name = CJS_ROLLDOWN_MODULE_REF_ATOM;
+          ident.name = CJS_ROLLDOWN_MODULE_REF_IDENT;
         }
       }
     }

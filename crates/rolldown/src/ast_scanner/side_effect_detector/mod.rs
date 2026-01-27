@@ -8,6 +8,7 @@ use oxc::ast::ast::{
   VariableDeclarationKind,
 };
 use oxc::ast::{match_expression, match_member_expression};
+use oxc::span::Ident;
 use oxc_allocator::{Address, UnstableAddress};
 use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, SideEffectDetail};
 use rolldown_utils::global_reference::{
@@ -159,7 +160,7 @@ impl<'a> SideEffectDetector<'a> {
     let max_len = 3;
     let mut chains = vec![];
     if let ast::Expression::StringLiteral(ref str) = expr.expression {
-      chains.push(str.value);
+      chains.push(str.value.into());
     } else {
       side_effects_detail |= self.detect_side_effect_of_expr(&expr.expression);
     }
@@ -228,7 +229,7 @@ impl<'a> SideEffectDetector<'a> {
     property_access_side_effects: bool,
     side_effects_detail: &mut SideEffectDetail,
     max_len: usize,
-    chains: &mut Vec<ast::Atom<'a>>,
+    chains: &mut Vec<Ident<'a>>,
     mut cur: &Expression<'a>,
     property_access_flag: PropertyAccessFlag,
   ) {
@@ -240,7 +241,7 @@ impl<'a> SideEffectDetector<'a> {
         }
         ast::Expression::ComputedMemberExpression(computed_expr) => {
           if let ast::Expression::StringLiteral(ref str) = computed_expr.expression {
-            chains.push(str.value);
+            chains.push(str.value.into());
           } else {
             *side_effects_detail |= self.detect_side_effect_of_expr(&computed_expr.expression);
           }

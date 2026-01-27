@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 let _babel_types = require("@babel/types");
 _babel_types = __toESM(_babel_types);
 let node_assert = require("node:assert");
@@ -37,7 +37,7 @@ node_assert.default.strictEqual(t.t, 1);
 import * as t$1 from "@babel/types";
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region mod.js
 var _7384_exports = /* @__PURE__ */ __exportAll({ t: () => t$1 });
 

@@ -3,17 +3,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## _virtual/rolldown_runtime.js
+## _virtual/_rolldown/runtime.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 export { __exportAll, __reExport };
 ```
 
 ## main.js
 
 ```js
-import { __exportAll, __reExport } from "./_virtual/rolldown_runtime.js";
+import { __exportAll, __reExport } from "./_virtual/_rolldown/runtime.js";
 import "./server/index.js";
 
 export * from "@sentry/node"
@@ -27,7 +27,7 @@ var main_exports = /* @__PURE__ */ __exportAll({});
 ## server/index.js
 
 ```js
-import { __exportAll, __reExport } from "../_virtual/rolldown_runtime.js";
+import { __exportAll, __reExport } from "../_virtual/_rolldown/runtime.js";
 
 export * from "@sentry/node"
 

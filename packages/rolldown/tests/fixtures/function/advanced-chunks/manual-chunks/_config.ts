@@ -5,7 +5,7 @@ export default defineTest({
   config: {
     output: {
       manualChunks(id, meta) {
-        if (id != 'rolldown:runtime') {
+        if (id != '\0rolldown/runtime.js') {
           expect(meta.getModuleInfo(id), id).not.toBeNull();
         }
         if (/node_modules[\\/]+lib-ui/.test(id)) {

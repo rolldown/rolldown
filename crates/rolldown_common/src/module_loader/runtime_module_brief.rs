@@ -3,7 +3,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{AstScopes, ModuleId, ModuleIdx, SymbolRef};
 
-pub const RUNTIME_MODULE_KEY: &str = "rolldown:runtime";
+pub const RUNTIME_MODULE_KEY: &str = "\0rolldown/runtime.js";
 pub const RUNTIME_MODULE_ID: ModuleId = ModuleId::new_arc_str(arcstr::literal!(RUNTIME_MODULE_KEY));
 
 #[derive(Debug, Clone)]

@@ -60,7 +60,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## empty.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region empty.cjs
 var require_empty = /* @__PURE__ */ __commonJSMin((() => {}));
 

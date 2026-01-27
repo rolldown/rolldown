@@ -51,7 +51,7 @@ export { foo_default as default };
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 // HIDDEN [rolldown:hmr]
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => __proto__ });
 const __proto__ = 123;
@@ -23,7 +23,7 @@ export { lib_exports as lib };
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => __proto__ });
@@ -48,7 +48,7 @@ Object.defineProperty(exports, 'lib', {
 var bundle = (function(exports) {
 
 Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
 	var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => __proto__ });
@@ -79,7 +79,7 @@ globalThis.bundle = bundle;
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.bundle = {})));
 })(this, function(exports) {
 Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
 	var lib_exports = /* @__PURE__ */ __exportAll({ ["__proto__"]: () => __proto__ });

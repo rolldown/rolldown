@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -41,7 +41,7 @@ Object.defineProperty(exports, 'dayjs2', {
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.test = {})));
 })(this, function(exports) {
 Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
 	var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {

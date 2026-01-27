@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lib.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports, module) => {

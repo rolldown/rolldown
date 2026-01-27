@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region lib.js
 var lib_exports = /* @__PURE__ */ __exportAll({ a: () => a });
 const a = 1e3;
@@ -49,7 +49,7 @@ assert.equal(String(lib_exports), "[object Module]");
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 let assert = require("assert");
 assert = __toESM(assert);
 
@@ -102,7 +102,7 @@ assert.default.equal(String(lib_exports), "[object Module]");
 ```js
 (function(assert) {
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 assert = __toESM(assert);
 
 //#region lib.js

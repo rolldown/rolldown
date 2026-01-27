@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region react.ts
 var require_react = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = {};

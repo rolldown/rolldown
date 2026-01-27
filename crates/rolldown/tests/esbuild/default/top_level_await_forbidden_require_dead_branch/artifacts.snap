@@ -17,7 +17,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 (function() {
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region c.js
 	var require_c = /* @__PURE__ */ __commonJSMin((() => {}));

@@ -23,7 +23,7 @@ import("./shared.js").then((n) => n.t).then(({ func }) => {
 ## shared.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region shared.js
 var shared_exports = /* @__PURE__ */ __exportAll({ func: () => func });
 function func() {

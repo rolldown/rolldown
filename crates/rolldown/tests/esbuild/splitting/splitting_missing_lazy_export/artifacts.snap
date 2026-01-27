@@ -56,7 +56,7 @@ console.log(bar());
 ## common.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region empty.js
 var empty_exports = /* @__PURE__ */ __exportAll({});
 

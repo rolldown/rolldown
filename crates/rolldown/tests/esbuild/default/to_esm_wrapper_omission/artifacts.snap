@@ -151,7 +151,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 require("a_nowrap");
 let b_nowrap = require("b_nowrap");
 let d_WRAP = require("d_WRAP");

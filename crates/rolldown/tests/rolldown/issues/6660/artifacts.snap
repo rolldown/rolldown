@@ -48,7 +48,7 @@ init_e();
 ## index.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region b.js
 var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.defaultProvider = async function test() {

@@ -78,7 +78,7 @@ export { dynamic_default as default };
 import { n as file_default, t as default$1 } from "./copy.js";
 import a from "extern-esm";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region esm.js
 var esm_default = 1;
 

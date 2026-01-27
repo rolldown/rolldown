@@ -17,7 +17,7 @@ exports.foo = require_lib.foo;
 ## lib2.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
 var foo, bar;

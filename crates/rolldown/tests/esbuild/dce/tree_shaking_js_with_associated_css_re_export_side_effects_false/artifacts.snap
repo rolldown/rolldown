@@ -13,7 +13,7 @@ button { color: red }
 ## test.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region node_modules/pkg/button.css
 var require_button = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = {};

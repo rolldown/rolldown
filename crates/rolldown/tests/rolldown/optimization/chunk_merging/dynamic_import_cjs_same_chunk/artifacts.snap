@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region cjs-module.js
 var require_cjs_module = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.value = 42;
@@ -37,7 +37,7 @@ Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs_module())).then
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 

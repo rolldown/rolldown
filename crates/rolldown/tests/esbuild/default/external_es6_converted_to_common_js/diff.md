@@ -66,7 +66,7 @@ init_e();
 import * as ns$1 from "x";
 import { ns } from "x";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region a.js
 var a_exports = /* @__PURE__ */ __exportAll({ ns: () => ns$1 });
 var init_a = __esmMin((() => {}));

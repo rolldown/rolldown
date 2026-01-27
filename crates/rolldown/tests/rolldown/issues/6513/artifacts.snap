@@ -23,7 +23,7 @@ exports.ddd = ddd;
 
 ```js
 Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 

@@ -23,7 +23,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region bar.js
 var bar_exports = /* @__PURE__ */ __exportAll({ x: () => x });
 const x = 123;

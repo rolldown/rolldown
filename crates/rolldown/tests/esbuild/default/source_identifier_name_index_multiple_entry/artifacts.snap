@@ -23,7 +23,7 @@ export default require_about();
 ## common.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region node_modules/pkg/index.js
 var require_pkg = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.pkg = true;

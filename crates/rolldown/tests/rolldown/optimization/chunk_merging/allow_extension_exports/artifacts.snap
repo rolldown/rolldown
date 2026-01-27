@@ -32,7 +32,7 @@ export { value1 };
 ## libs.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region lib1.js
 const value1$1 = "lib1-value";
 

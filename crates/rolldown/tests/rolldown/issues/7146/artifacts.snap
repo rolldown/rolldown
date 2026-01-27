@@ -3,10 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## _virtual/rolldown_runtime.js
+## _virtual/_rolldown/runtime.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 exports.__commonJSMin = __commonJSMin;
 ```
@@ -14,10 +14,10 @@ exports.__commonJSMin = __commonJSMin;
 ## config.js
 
 ```js
-const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+const require_runtime = require('./_virtual/_rolldown/runtime.js');
 
 //#region config.json
-var require_config = /* @__PURE__ */ require_rolldown_runtime.__commonJSMin(((exports, module) => {
+var require_config = /* @__PURE__ */ require_runtime.__commonJSMin(((exports, module) => {
 	module.exports = { "foo": 1 };
 }));
 
@@ -47,19 +47,19 @@ assert.deepEqual(config, { foo: 1 });
 
 ## Assets
 
-### _virtual/rolldown_runtime.js
+### _virtual/_rolldown/runtime.js
 
 ```js
 import { createRequire } from "node:module";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 export { __commonJSMin, __require };
 ```
 
 ### config.js
 
 ```js
-import { __commonJSMin } from "./_virtual/rolldown_runtime.js";
+import { __commonJSMin } from "./_virtual/_rolldown/runtime.js";
 
 //#region config.json
 var require_config = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -75,7 +75,7 @@ export { require_config };
 ### main.js
 
 ```js
-import { __require } from "./_virtual/rolldown_runtime.js";
+import { __require } from "./_virtual/_rolldown/runtime.js";
 import { require_config } from "./config.js";
 
 //#region main.js

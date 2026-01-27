@@ -18,7 +18,7 @@ test
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region a/test.txt
 var require_test$1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = "assets/test-BrHGE6Cv.txt";

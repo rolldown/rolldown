@@ -5,7 +5,7 @@ import {
   __toCommonJS,
   __toESM,
   // @ts-expect-error
-} from 'rolldown:runtime';
+} from '\0rolldown/runtime.js';
 
 class Module {
   /**

@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 // HIDDEN [rolldown:hmr]
 //#region trigger-dep.js
 var trigger_dep_exports = /* @__PURE__ */ __exportAll({});

@@ -18,7 +18,7 @@ y
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region y.txt
 var y_default = "assets/y-DBJZ7rtI.txt";
 

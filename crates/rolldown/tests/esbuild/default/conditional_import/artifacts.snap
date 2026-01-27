@@ -28,7 +28,7 @@ x ? y ? import("a") : import("./import.js").then((m) => /* @__PURE__ */ __toESM(
 ## chunk.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 export { __toESM as n, __commonJSMin as t };
 ```
 

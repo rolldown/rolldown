@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bar.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region bar.mjs
 var bar_exports = /* @__PURE__ */ __exportAll({ default: () => "bar" });
 var bar_default = "bar";

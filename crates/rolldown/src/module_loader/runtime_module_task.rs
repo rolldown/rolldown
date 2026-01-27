@@ -16,6 +16,7 @@ use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::BuildResult;
 use rolldown_utils::concat_string;
 use rolldown_utils::indexmap::FxIndexSet;
+use rolldown_utils::stabilize_id::stabilize_id;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -112,7 +113,7 @@ impl RuntimeModuleTask {
       stable_id: StableModuleId::new(&RUNTIME_MODULE_ID, &self.ctx.options.cwd),
       id: RUNTIME_MODULE_ID,
 
-      debug_id: RUNTIME_MODULE_KEY.to_string(),
+      debug_id: stabilize_id(RUNTIME_MODULE_KEY, &self.ctx.options.cwd),
       exec_order: u32::MAX,
       is_user_defined_entry: false,
       module_type,

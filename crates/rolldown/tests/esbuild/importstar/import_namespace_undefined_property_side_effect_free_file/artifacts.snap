@@ -84,7 +84,7 @@ console.log(void 0, void 0, import_no_side_effects.nope);
 ## no-side-effects.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region foo/no-side-effects.cjs
 var require_no_side_effects = /* @__PURE__ */ __commonJSMin((() => {
 	console.log("cjs");

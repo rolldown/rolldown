@@ -24,7 +24,7 @@ export { value };
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region tla.js
 var value$1;
 var init_tla = __esmMin((async () => {

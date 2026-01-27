@@ -48,7 +48,7 @@ load();
 ## rolldown-runtime.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 export { __toESM as i, __esmMin as n, __exportAll as r, __commonJSMin as t };
 ```
 
@@ -119,7 +119,7 @@ load();
 ### rolldown-runtime.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 Object.defineProperty(exports, '__commonJSMin', {
   enumerable: true,

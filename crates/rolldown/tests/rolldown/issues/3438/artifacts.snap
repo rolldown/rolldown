@@ -79,6 +79,6 @@ export { repro3_exports as i, clear$1 as n, clear$2 as r, clear as t };
 ## rolldown-runtime.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 export { __exportAll as t };
 ```

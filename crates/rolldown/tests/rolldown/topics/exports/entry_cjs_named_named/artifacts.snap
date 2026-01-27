@@ -19,7 +19,7 @@ Object.defineProperty(exports, 'default', {
 ## lib2.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region lib.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {

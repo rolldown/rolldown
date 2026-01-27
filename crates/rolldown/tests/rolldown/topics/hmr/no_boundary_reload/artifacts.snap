@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 // HIDDEN [rolldown:hmr]
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});
@@ -31,7 +31,7 @@ console.log(1);
 #### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 // HIDDEN [rolldown:hmr]
 //#region main.js
 var main_exports = /* @__PURE__ */ __exportAll({});

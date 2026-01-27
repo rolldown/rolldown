@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region cjs_esmodule_flag1.js
 var require_cjs_esmodule_flag1 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.foo = 1e3;

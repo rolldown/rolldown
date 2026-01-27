@@ -19,7 +19,7 @@ console.log(WWWWWWWWWWXXXXXXXXXXYYYYYYYYYYZZZZZZZZZZ_default, "no identifier in 
 ## require.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD.js
 var require_AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports = 123;

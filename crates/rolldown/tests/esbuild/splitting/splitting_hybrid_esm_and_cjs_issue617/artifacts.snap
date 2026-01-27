@@ -15,7 +15,7 @@ export { foo };
 ## a2.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region a.js
 var a_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 var foo;

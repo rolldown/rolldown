@@ -28,7 +28,7 @@ Object.defineProperty(exports, 'default', {
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region main.js
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("./a.js").default)).then((m) => console.log(m.default));

@@ -10,7 +10,7 @@
         },
         {
           "name": "second",
-          "test": "second|rolldown:runtime"
+          "test": "second|\\0rolldown/runtime\\.js"
         }
       ]
     }

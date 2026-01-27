@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { read } from "node:fs";
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region indirect.js
 var indirect_exports = /* @__PURE__ */ __exportAll({ read: () => read });
 

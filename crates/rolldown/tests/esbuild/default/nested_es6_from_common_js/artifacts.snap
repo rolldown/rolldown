@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
 var require_foo = /* @__PURE__ */ __commonJSMin(((exports) => {
 	exports.fn = function() {

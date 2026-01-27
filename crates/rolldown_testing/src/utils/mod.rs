@@ -21,7 +21,7 @@ macro_rules! abs_file_dir {
 }
 
 pub(crate) static RUNTIME_MODULE_OUTPUT_RE: LazyLock<Regex> = LazyLock::new(|| {
-  Regex::new(r"(//#region rolldown:runtime[\s\S]*?//#endregion)")
+  Regex::new(r"(//#region \\0rolldown/runtime\.js[\s\S]*?//#endregion)")
     .expect("invalid runtime module output regex")
 });
 
@@ -48,8 +48,9 @@ pub fn tweak_snapshot(
   let mut result = content.to_string();
 
   if hide_runtime_module {
-    result =
-      RUNTIME_MODULE_OUTPUT_RE.replace_all(&result, "// HIDDEN [rolldown:runtime]").into_owned();
+    result = RUNTIME_MODULE_OUTPUT_RE
+      .replace_all(&result, "// HIDDEN [\\0rolldown/runtime.js]")
+      .into_owned();
   }
 
   if hide_hmr_runtime {

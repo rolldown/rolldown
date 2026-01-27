@@ -40,7 +40,7 @@ export { bar, main_default as default, foo };
 
 ```js
 Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 let assert = require("assert");
 assert = __toESM(assert);
 

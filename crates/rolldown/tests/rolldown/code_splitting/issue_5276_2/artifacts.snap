@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## imp.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region imp.js
 var imp_exports = /* @__PURE__ */ __exportAll({
 	imp2: () => imp2,
@@ -100,7 +100,7 @@ load();
 ### rolldown-runtime.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 Object.defineProperty(exports, '__exportAll', {
   enumerable: true,

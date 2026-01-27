@@ -8,7 +8,7 @@ export default defineTest({
         groups: [
           {
             name(id, ctx) {
-              if (id != 'rolldown:runtime') {
+              if (id != '\0rolldown/runtime.js') {
                 expect(ctx.getModuleInfo(id), id).not.toBeNull();
               }
               if (/node_modules[\\/]+lib-ui/.test(id)) {

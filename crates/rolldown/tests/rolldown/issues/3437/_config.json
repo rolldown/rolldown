@@ -6,7 +6,7 @@
       "groups": [
         {
           "name": "rolldown",
-          "test": "rolldown:runtime",
+          "test": "\\0rolldown/runtime\\.js",
           "priority": 100
         }
       ]

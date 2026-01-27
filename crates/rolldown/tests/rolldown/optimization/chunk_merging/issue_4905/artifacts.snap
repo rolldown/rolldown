@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import { strictEqual } from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
 var foo_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });
 const foo = "foo";
@@ -30,7 +30,7 @@ Promise.resolve().then(() => foo_exports).then((mod) => {
 ### main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 
 //#region foo.js

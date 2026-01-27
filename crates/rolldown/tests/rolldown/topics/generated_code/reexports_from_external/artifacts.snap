@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 let node_assert = require("node:assert");
 node_assert = __toESM(node_assert);
 
@@ -30,7 +30,7 @@ node_assert.default.equal(String(reexports_exports), "[object Module]");
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region reexports.mjs
 var reexports_exports = /* @__PURE__ */ __exportAll({});
 import * as import_foo from "foo";

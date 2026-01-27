@@ -24,7 +24,7 @@ init_main();
 ## rolldown-runtime.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 Object.defineProperty(exports, '__esmMin', {
   enumerable: true,

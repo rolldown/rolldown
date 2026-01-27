@@ -24,7 +24,7 @@ export { foo };
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region foo.js
 var require_foo = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports.foo = "foo";

@@ -17,7 +17,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 (function(node_path) {
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 node_path = __toESM(node_path);
 
 //#region main.js

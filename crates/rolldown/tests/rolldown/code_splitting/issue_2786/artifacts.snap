@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region share.js
 var share_exports$1 = /* @__PURE__ */ __exportAll({ default: () => share_default$1 });
 var share_default$1 = "shared";

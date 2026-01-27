@@ -23,7 +23,7 @@ init_dynamic();
 ```js
 import nodeAssert from "node:assert";
 
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region setup.js
 var setup;
 var init_setup = __esmMin((() => {

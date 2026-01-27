@@ -24,7 +24,7 @@ export { main, sub };
 ## main2.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region sub.cjs
 var require_sub = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	module.exports.sub = "sub";

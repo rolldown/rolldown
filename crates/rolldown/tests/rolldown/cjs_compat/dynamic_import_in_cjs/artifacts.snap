@@ -41,7 +41,7 @@ exports.value = value;
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 
 //#region main.js
 Promise.resolve().then(() => /* @__PURE__ */ __toESM(require("external"))).then(console.log);

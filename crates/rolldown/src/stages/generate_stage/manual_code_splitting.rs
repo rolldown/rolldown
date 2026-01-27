@@ -174,11 +174,11 @@ impl GenerateStage<'_> {
       return Ok(());
     }
 
-    // Manually pull out the module `rolldown:runtime` into a standalone chunk.
+    // Manually pull out the runtime module into a standalone chunk.
     let runtime_module_idx = self.link_output.runtime.id();
     assert!(
       matches!(&self.link_output.module_table[runtime_module_idx], Module::Normal(_)),
-      "`rolldown:runtime` is always a normal module"
+      "rolldown runtime is always a normal module"
     );
 
     if metas[runtime_module_idx].is_included {

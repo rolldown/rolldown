@@ -36,7 +36,7 @@ import("./dynamic.js").then(async ({ lazyLoad }) => {
 ## static.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 //#region static.no-treeshake.js
 console.log("static no-treeshake");
 

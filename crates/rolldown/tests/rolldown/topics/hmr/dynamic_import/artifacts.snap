@@ -38,7 +38,7 @@ export { value };
 ## main.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 // HIDDEN [rolldown:hmr]
 //#region hmr.js
 var hmr_exports = /* @__PURE__ */ __exportAll({ foo: () => foo });

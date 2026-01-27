@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-// HIDDEN [rolldown:runtime]
+// HIDDEN [\0rolldown/runtime.js]
 // HIDDEN [\0@oxc-project+runtime@0.0.0/file.js]
 //#region entry.ts
 let Foo = class Foo {};

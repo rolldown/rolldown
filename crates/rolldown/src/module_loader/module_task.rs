@@ -292,11 +292,7 @@ impl ModuleTask {
       })
     })?;
     let source = match source {
-      _ if self.resolved_id.id.starts_with("rolldown:")
-        || self.resolved_id.id.starts_with("\0rolldown/") =>
-      {
-        source
-      }
+      _ if self.resolved_id.id.starts_with("rolldown:") => source,
       StrOrBytes::Str(source) => {
         // Run plugin transform.
         let source = transform_source(

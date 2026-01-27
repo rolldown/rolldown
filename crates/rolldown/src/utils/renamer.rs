@@ -37,8 +37,6 @@ pub struct Renamer<'name> {
   symbol_db: &'name SymbolRefDb,
   /// Entry module index for this chunk, if any.
   entry_module_idx: Option<ModuleIdx>,
-  /// Whether external modules become factory parameters (IIFE/UMD/CJS formats).
-  has_factory_params: bool,
 }
 
 impl<'name> Renamer<'name> {
@@ -66,10 +64,6 @@ impl<'name> Renamer<'name> {
         .map(|s| (CompactStr::new(s), 0))
         .collect(),
       entry_module_idx: base_module_index,
-      has_factory_params: matches!(
-        format,
-        OutputFormat::Iife | OutputFormat::Umd | OutputFormat::Cjs
-      ),
     }
   }
 
@@ -459,7 +453,7 @@ impl NestedScopeRenamer<'_, '_> {
   ///   }
   /// })
   /// ```
-  pub fn rename_bindings_shadowing_wrapper_params(&mut self) {
+  pub fn rename_bindings_shadowing_wrapper_params(&mut self, has_factory_params: bool) {
     /// CJS wrapper parameter names that nested scopes should avoid shadowing.
     const CJS_WRAPPER_NAMES: [&str; 2] = ["exports", "module"];
 
@@ -475,7 +469,7 @@ impl NestedScopeRenamer<'_, '_> {
     }
 
     // Add external module factory param names
-    if self.renamer.has_factory_params {
+    if has_factory_params {
       wrapper_param_names.extend(self.module.import_records.iter().filter_map(|rec| {
         let resolved_module = rec.resolved_module?;
         let external_module = self.link_output.module_table[resolved_module].as_external()?;

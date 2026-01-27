@@ -1,0 +1,101 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lazy-a.js
+
+```js
+import { t as import_lodash } from "./main.js";
+import assert from "node:assert";
+
+//#region lazy-a.js
+assert(typeof import_lodash.debounce === "function");
+assert(typeof import_lodash.noop === "function");
+
+//#endregion
+```
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [\0rolldown/runtime.js]
+//#region lodash.cjs
+var require_lodash = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.noop = function noop() {};
+	exports.debounce = function debounce() {};
+}));
+
+//#endregion
+//#region utils.js
+var import_lodash = require_lodash();
+
+//#endregion
+//#region main.js
+assert(typeof import_lodash.debounce === "function");
+assert(typeof import_lodash.noop === "function");
+import("./lazy-a.js");
+
+//#endregion
+export { import_lodash as n, import_lodash as t };
+```
+
+# Variant: [format: Cjs]
+
+## Assets
+
+### lazy-a.js
+
+```js
+const require_main = require('./main.js');
+let node_assert = require("node:assert");
+node_assert = require_main.__toESM(node_assert);
+
+//#region lazy-a.js
+(0, node_assert.default)(typeof require_main.import_lodash.debounce === "function");
+(0, node_assert.default)(typeof require_main.import_lodash$1.noop === "function");
+
+//#endregion
+```
+
+### main.js
+
+```js
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+// HIDDEN [\0rolldown/runtime.js]
+let node_assert = require("node:assert");
+node_assert = __toESM(node_assert);
+
+//#region lodash.cjs
+var require_lodash = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.noop = function noop() {};
+	exports.debounce = function debounce() {};
+}));
+
+//#endregion
+//#region utils.js
+var import_lodash = require_lodash();
+
+//#endregion
+//#region main.js
+(0, node_assert.default)(typeof import_lodash.debounce === "function");
+(0, node_assert.default)(typeof import_lodash.noop === "function");
+Promise.resolve().then(() => require("./lazy-a.js"));
+
+//#endregion
+exports.__toESM = __toESM;
+Object.defineProperty(exports, 'import_lodash', {
+  enumerable: true,
+  get: function () {
+    return import_lodash;
+  }
+});
+Object.defineProperty(exports, 'import_lodash$1', {
+  enumerable: true,
+  get: function () {
+    return import_lodash;
+  }
+});
+```

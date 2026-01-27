@@ -2,7 +2,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use rolldown_common::{
   AddonRenderContext, ExportsKind, ExternalModule, ImportRecordIdx, ModuleIdx, ModuleTable,
-  Specifier,
+  Specifier, SymbolRef,
 };
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::to_module_import_export_name};
@@ -210,10 +210,18 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
   ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
     let importee_chunk = &ctx.chunk_graph.chunk_table[*exporter_id];
     let mut default_alias = vec![];
+    // Track seen canonical refs to avoid duplicate imports.
+    // Multiple import_refs can resolve to the same canonical_ref (e.g., re-exports from CJS modules),
+    // and we only need to import once per unique canonical symbol.
+    let mut seen_canonical_refs: FxHashSet<SymbolRef> = FxHashSet::default();
     let mut specifiers = items
       .iter()
       .filter_map(|item| {
         let canonical_ref = ctx.link_output.symbol_db.canonical_ref_for(item.import_ref);
+        // Skip if we've already processed this canonical symbol
+        if !seen_canonical_refs.insert(canonical_ref) {
+          return None;
+        }
         let imported = ctx
           .link_output
           .symbol_db

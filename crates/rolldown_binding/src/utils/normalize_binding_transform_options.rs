@@ -25,8 +25,6 @@ pub fn normalize_binding_transform_options(options: TransformOptions) -> Bundler
         import_source: jsx.import_source,
         pragma: jsx.pragma,
         pragma_frag: jsx.pragma_frag,
-        use_built_ins: None,
-        use_spread: None,
         refresh,
       })
     }

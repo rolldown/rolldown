@@ -156,8 +156,6 @@ const JsxOptionsSchema = v.strictObject({
     v.optional(v.union([v.boolean(), v.any()])),
     v.description('Enable react fast refresh'),
   ),
-  useBuiltIns: v.pipe(v.optional(v.any()), v.description('Deprecated')),
-  useSpread: v.pipe(v.optional(v.any()), v.description('Deprecated')),
 });
 isTypeTrue<
   IsSchemaSubType<

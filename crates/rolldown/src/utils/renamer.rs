@@ -1,4 +1,4 @@
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use std::collections::hash_map::Entry;
 
@@ -150,14 +150,6 @@ impl<'name> Renamer<'name> {
         // Entry module symbols can use their original names freely - shadowing is
         // handled by reference-based renaming of nested bindings later
         return true;
-      }
-
-      // For facade symbols (e.g., external module namespaces), check entry module's nested
-      // scopes to avoid shadowing. Internal modules use reference-based renaming instead.
-      if self.symbol_db.is_facade_symbol(symbol_ref)
-        && self.has_nested_scope_binding(entry_idx, candidate_name)
-      {
-        return false;
       }
     }
 
@@ -433,21 +425,66 @@ impl NestedScopeRenamer<'_, '_> {
   ///   module.exports = helper;
   /// });
   /// ```
-  pub fn rename_bindings_shadowing_cjs_params(&mut self) {
+  /// Rename nested bindings that would shadow wrapper/factory parameters.
+  ///
+  /// This handles two cases:
+  /// 1. CJS wrapper params ("exports", "module") for CJS-wrapped modules
+  /// 2. External module factory params for IIFE/UMD/CJS formats
+  ///
+  /// # Example (external module)
+  ///
+  /// ```js
+  /// // entry.js
+  /// import Quill from 'quill';
+  /// export class Editor {
+  ///   constructor(quill) {     // Would shadow factory param 'quill'
+  ///     console.log(Quill);    // After bundling: quill.default (shadowed!)
+  ///   }
+  /// }
+  /// ```
+  ///
+  /// Output (fixed):
+  /// ```js
+  /// (function(exports, quill) {
+  ///   class Editor {
+  ///     constructor(quill$1) {   // Renamed to avoid shadowing
+  ///       console.log(quill.default);  // Correctly references factory param
+  ///     }
+  ///   }
+  /// })
+  /// ```
+  pub fn rename_bindings_shadowing_wrapper_params(&mut self, has_factory_params: bool) {
     /// CJS wrapper parameter names that nested scopes should avoid shadowing.
     const CJS_WRAPPER_NAMES: [&str; 2] = ["exports", "module"];
 
     let is_cjs_wrapped =
       matches!(self.link_output.metas[self.module_idx].wrap_kind(), WrapKind::Cjs);
 
-    if !is_cjs_wrapped {
+    // Collect all wrapper/factory param names to check against
+    let mut wrapper_param_names: FxHashSet<CompactStr> = FxHashSet::default();
+
+    // Add CJS wrapper names if module is CJS wrapped
+    if is_cjs_wrapped {
+      wrapper_param_names.extend(CJS_WRAPPER_NAMES.iter().map(|s| CompactStr::new(s)));
+    }
+
+    // Add external module factory param names
+    if has_factory_params {
+      wrapper_param_names.extend(self.module.import_records.iter().filter_map(|rec| {
+        let resolved_module = rec.resolved_module?;
+        let external_module = self.link_output.module_table[resolved_module].as_external()?;
+        self.renamer.get_canonical_name(external_module.namespace_ref).cloned()
+      }));
+    }
+
+    if wrapper_param_names.is_empty() {
       return;
     }
 
     // Skip root scope (index 0), check nested scopes only
     for (_, bindings) in self.scoping.iter_bindings().skip(1) {
       for (&name, symbol_id) in bindings {
-        if CJS_WRAPPER_NAMES.contains(&name) {
+        if wrapper_param_names.contains(name) {
           let symbol_ref = (self.module_idx, *symbol_id).into();
           self.renamer.register_nested_scope_symbols(symbol_ref, name);
         }

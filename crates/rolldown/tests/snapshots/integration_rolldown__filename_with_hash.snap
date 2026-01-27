@@ -5942,6 +5942,10 @@ expression: output
 
 - main-!~{000}~.js => main-Cys6YG2P.js
 
+# tests/rolldown/topics/deconflict/umd_external_namespace_shadowing
+
+- main-!~{000}~.js => main-DCmABhd5.js
+
 # tests/rolldown/topics/deconflict/unreferenced_renamed_conflict
 
 - main-!~{000}~.js => main-C6eEZObh.js

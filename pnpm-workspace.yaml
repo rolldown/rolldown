@@ -21,8 +21,8 @@ catalog:
   '@napi-rs/wasm-runtime': ^1.0.0
   '@oxc-node/cli': ^0.0.35
   '@oxc-node/core': ^0.0.35
-  '@oxc-project/runtime': '=0.110.0'
-  '@oxc-project/types': '=0.110.0'
+  '@oxc-project/runtime': '=0.111.0'
+  '@oxc-project/types': '=0.111.0'
   '@pnpm/find-workspace-packages': ^6.0.9
   '@rollup/plugin-commonjs': ^29.0.0
   '@rollup/plugin-json': ^6.1.0
@@ -59,9 +59,9 @@ catalog:
   lodash-es: ^4.17.21
   micromatch: ^4.0.8
   mocha: ^11.7.5
-  oxc-minify: '=0.110.0'
-  oxc-parser: '=0.110.0'
-  oxc-transform: '=0.110.0'
+  oxc-minify: '=0.111.0'
+  oxc-parser: '=0.111.0'
+  oxc-transform: '=0.111.0'
   pathe: ^2.0.3
   picomatch: ^4.0.2
   react: ^19.0.0

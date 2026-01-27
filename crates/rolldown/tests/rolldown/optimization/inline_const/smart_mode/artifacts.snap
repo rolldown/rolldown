@@ -8,12 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region constants.js
 const mode = "production";
-const one = 1;
-const bool = true;
-const primitiveUndefined = void 0;
-const primitiveNull = null;
 const longString = "1234";
-const shortString = "123";
 
 //#endregion
 //#region main.js

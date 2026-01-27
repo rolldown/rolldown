@@ -662,11 +662,12 @@ pub fn include_symbol(
 
   if let Some(v) = ctx.constant_symbol_map.get(&canonical_ref)
     && !include_reason.contains(SymbolIncludeReason::EntryExport)
-    && !ctx.inline_const_smart
+    && (!ctx.inline_const_smart || v.safe_to_inline)
     && !v.commonjs_export
   {
-    // If the symbol is a constant value and it is not a commonjs module export , we don't need to include it since it would be always inline
-    // We don't need to add anyflag since if `inlineConst` is disabled, the test expr will always
+    // If the symbol is a constant value and it is not a commonjs module export, we don't need to include it since it would be always inlined.
+    // In smart mode, we only skip if `safe_to_inline` is true (meaning it will be inlined regardless of context).
+    // We don't need to add any flag since if `inlineConst` is disabled, the test expr will always
     // return `false`
     return;
   }

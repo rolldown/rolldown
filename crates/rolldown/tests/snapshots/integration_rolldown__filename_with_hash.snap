@@ -5455,7 +5455,12 @@ expression: output
 
 # tests/rolldown/optimization/inline_const/smart_mode
 
-- main-!~{000}~.js => main-mRt7JHUp.js
+- main-!~{000}~.js => main-Ba43qeSj.js
+
+# tests/rolldown/optimization/inline_const/smart_mode_import_removal
+
+- main-!~{000}~.js => main-HMoY18ts.js
+- main2-!~{001}~.js => main2-C3W9je7R.js
 
 # tests/rolldown/optimization/inline_empty_function_call/basic
 

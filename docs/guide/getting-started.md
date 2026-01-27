@@ -212,6 +212,10 @@ export default defineConfig([
 
 Rolldown's plugin API is identical to that of Rollup's, so you can reuse most of the existing Rollup plugins when using Rolldown. That said, Rolldown provides many [built-in features](./notable-features) that make it unnecessary to use plugins.
 
+Also Rolldown provides some builtin plugins that can be used for some use cases. See [Builtin Plugins](/builtin-plugins/) for more information.
+
+Community plugins that are published to npm are listed in [Vite Plugin Registry](https://registry.vite.dev/plugins).
+
 ## Using the API
 
 Rolldown provides a JavaScript API that is compatible with [Rollup's](https://rollupjs.org/javascript-api/), which separates `input` and `output` options:

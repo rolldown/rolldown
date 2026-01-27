@@ -5,11 +5,10 @@ import { defineTest } from 'rolldown-tests'
 const transformedIds: string[] = []
 
 export default defineTest({
-  skip: true,
   config: {
-    // experimental: {
-    //   lazyBarrel: true,
-    // },
+    experimental: {
+      lazyBarrel: true,
+    },
     plugins: [
       {
         name: 'track-transforms',

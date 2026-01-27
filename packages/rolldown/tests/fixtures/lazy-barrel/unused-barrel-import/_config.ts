@@ -5,11 +5,10 @@ import { defineTest } from 'rolldown-tests'
 const transformedIds: string[] = []
 
 export default defineTest({
-  skip: true,
   config: {
-    // experimental: {
-    //   lazyBarrel: true,
-    // },
+    experimental: {
+      lazyBarrel: true,
+    },
     plugins: [
       {
         name: 'track-transforms',
@@ -28,13 +27,11 @@ export default defineTest({
     const relativeIds = transformedIds.map((id) =>
       path.relative(import.meta.dirname, id).replace(/\\/g, '/'),
     )
-    // Side-effect import: main.js does `import './barrel'`
-    // barrel/index.js has `import { b }`, so b.js is loaded
-    // b.js has `export { c }` but c is not used, so c.js should NOT be loaded
-    // a.js is only re-exported, not used in side-effect import
+    // main.js does `import './barrel'` without requesting any bindings.
+    // Since barrel is side-effect-free, its dependencies (a.js, b.js) are skipped.
+    // Only main.js and barrel/index.js are loaded.
     expect(relativeIds).toContain('main.js')
     expect(relativeIds).toContain('barrel/index.js')
-    expect(relativeIds).toContain('barrel/b.js')
-    expect(transformedIds.length).toBe(3)
+    expect(transformedIds.length).toBe(2)
   },
 })

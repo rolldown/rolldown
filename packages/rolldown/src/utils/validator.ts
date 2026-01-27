@@ -593,7 +593,7 @@ const InputOptionsSchema = v.strictObject({
       incrementalBuild: v.optional(v.boolean()),
       nativeMagicString: v.optional(v.boolean()),
       chunkOptimization: v.optional(v.boolean()),
-      // lazyBarrel: v.optional(v.boolean()),
+      lazyBarrel: v.optional(v.boolean()),
     }),
   ),
   transform: v.optional(TransformOptionsSchema),

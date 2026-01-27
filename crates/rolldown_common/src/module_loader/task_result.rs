@@ -1,7 +1,7 @@
 use crate::{
-  BarrelInfo, ImportRecordIdx, Module, ModuleId, ModuleIdx, RawImportRecord, ResolvedId,
-  SymbolRefDbForModule, dynamic_import_usage::DynamicImportExportsUsage,
-  side_effects::DeterminedSideEffects,
+  ImportRecordIdx, Module, ModuleId, ModuleIdx, RawImportRecord, ResolvedId, SymbolRefDbForModule,
+  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
+  types::lazy_barrel::BarrelInfo,
 };
 use arcstr::ArcStr;
 use oxc_index::IndexVec;

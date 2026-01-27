@@ -652,6 +652,16 @@ export interface InputOptions {
      * @default true
      */
     chunkOptimization?: boolean;
+    /**
+     * Control whether to enable lazy barrel optimization.
+     *
+     * Lazy barrel optimization avoids compiling unused re-export modules in side-effect-free barrel modules,
+     * significantly improving build performance for large codebases with many barrel modules.
+     *
+     * @see {@link https://rolldown.rs/in-depth/lazy-barrel-optimization | Lazy Barrel Documentation}
+     * @default false
+     */
+    lazyBarrel?: boolean;
   };
   /**
    * Configure how the code is transformed. This process happens after the `transform` hook.

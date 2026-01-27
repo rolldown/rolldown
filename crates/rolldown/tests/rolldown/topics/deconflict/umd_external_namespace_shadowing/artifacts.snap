@@ -1,0 +1,46 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## MISSING_GLOBAL_NAME
+
+```text
+[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "mod" in "output.globals" – guessing "mod".
+
+```
+
+## MISSING_GLOBAL_NAME
+
+```text
+[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "quill" in "output.globals" – guessing "quill".
+
+```
+
+# Assets
+
+## main.js
+
+```js
+(function(global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ?  factory(exports, require('quill'), require('mod')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'quill', 'mod'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.EditorLib = {}), global.quill,global.mod));
+})(this, function(exports, quill, mod) {
+Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+// HIDDEN [\0rolldown/runtime.js]
+quill = __toESM(quill);
+
+//#region test.js
+	var Editor = class {
+		constructor(quill$1) {
+			if (typeof quill.default != "undefined") throw new Error("Quill should not be shadowed by local quill");
+			console.log(quill.default, quill$1);
+		}
+	};
+	new Editor({ default: "quill" });
+
+//#endregion
+exports.Editor = Editor;
+});
+```

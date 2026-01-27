@@ -60,19 +60,6 @@ pub fn deconflict_chunk_symbols(
       .for_each(|external_module| {
         renamer.add_symbol_in_root_scope(external_module.namespace_ref, true);
       });
-    if let Some(module) = chunk.entry_module_idx() {
-      let entry_module =
-        link_output.module_table[module].as_normal().expect("should be normal module");
-      link_output.metas[entry_module.idx].star_exports_from_external_modules.iter().for_each(
-        |rec_idx| {
-          let rec = &entry_module.ecma_view.import_records[*rec_idx];
-          let external_module = &link_output.module_table[rec.into_resolved_module()]
-            .as_external()
-            .expect("Should be external module here");
-          renamer.add_symbol_in_root_scope(external_module.namespace_ref, true);
-        },
-      );
-    }
   }
 
   match chunk.kind {
@@ -219,6 +206,6 @@ fn rename_shadowing_symbols_in_nested_scopes<'a>(
 
     ctx.rename_bindings_shadowing_star_imports();
     ctx.rename_bindings_shadowing_named_imports();
-    ctx.rename_bindings_shadowing_cjs_params();
+    ctx.rename_bindings_shadowing_wrapper_params();
   }
 }

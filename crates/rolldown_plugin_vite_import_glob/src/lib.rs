@@ -1,36 +1,28 @@
 mod utils;
-mod utils_2;
 
 use std::{borrow::Cow, path::PathBuf};
 
-use oxc::{
-  ast::AstBuilder,
-  ast_visit::{Visit, VisitMut},
-};
+use oxc::ast_visit::Visit;
 use rolldown_common::ModuleType;
-use rolldown_plugin::{
-  HookTransformAstArgs, HookTransformAstReturn, HookTransformOutput, HookUsage, Plugin,
-  PluginContext,
-};
-use sugar_path::SugarPath;
-
-#[derive(Debug, Default)]
-pub struct ViteImportGlobPluginV2Config {
-  pub sourcemap: bool,
-}
+use rolldown_plugin::{HookTransformOutput, HookUsage, Plugin};
+use sugar_path::SugarPath as _;
 
 #[derive(Debug, Default)]
 pub struct ViteImportGlobPlugin {
   /// vite also support `source_map` config, but we can't support it now.
   /// Since the source map now follow the codegen option.
   pub root: Option<String>,
+  pub sourcemap: bool,
   pub restore_query_extension: bool,
-  pub is_v2: Option<ViteImportGlobPluginV2Config>,
 }
 
 impl Plugin for ViteImportGlobPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:vite-import-glob")
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::Transform
   }
 
   async fn transform(
@@ -64,7 +56,7 @@ impl Plugin for ViteImportGlobPlugin {
       let id = args.id.to_slash_lossy();
       let root = self.root.as_ref().map(PathBuf::from);
       let root = root.as_ref().unwrap_or(ctx.cwd());
-      let mut visitor = utils_2::GlobImportVisit {
+      let mut visitor = utils::GlobImportVisit {
         ctx: &ctx,
         root,
         id: &id,
@@ -78,13 +70,11 @@ impl Plugin for ViteImportGlobPlugin {
       if let Some(magic_string) = visitor.magic_string {
         return Ok(Some(HookTransformOutput {
           code: Some(magic_string.to_string()),
-          map: self.is_v2.as_ref().and_then(|config| {
-            config.sourcemap.then(|| {
-              magic_string.source_map(string_wizard::SourceMapOptions {
-                hires: string_wizard::Hires::Boundary,
-                source: args.id.into(),
-                ..Default::default()
-              })
+          map: self.sourcemap.then(|| {
+            magic_string.source_map(string_wizard::SourceMapOptions {
+              hires: string_wizard::Hires::Boundary,
+              source: args.id.into(),
+              ..Default::default()
             })
           }),
           ..Default::default()
@@ -92,36 +82,5 @@ impl Plugin for ViteImportGlobPlugin {
       }
     }
     Ok(None)
-  }
-
-  async fn transform_ast(
-    &self,
-    ctx: &PluginContext,
-    mut args: HookTransformAstArgs<'_>,
-  ) -> HookTransformAstReturn {
-    args.ast.program.with_mut(|fields| {
-      let id = args.id.to_slash_lossy();
-      let root = self.root.as_ref().map(PathBuf::from);
-      let root = root.as_ref().unwrap_or(args.cwd);
-      let ast_builder = AstBuilder::new(fields.allocator);
-      let mut visitor = utils::GlobImportVisit {
-        ctx,
-        root,
-        id: &id,
-        ast_builder,
-        current: 0,
-        import_decls: ast_builder.vec(),
-        restore_query_extension: self.restore_query_extension,
-      };
-      visitor.visit_program(fields.program);
-      if !visitor.import_decls.is_empty() {
-        fields.program.body.extend(visitor.import_decls);
-      }
-    });
-    Ok(args.ast)
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    if self.is_v2.is_some() { HookUsage::Transform } else { HookUsage::TransformAst }
   }
 }

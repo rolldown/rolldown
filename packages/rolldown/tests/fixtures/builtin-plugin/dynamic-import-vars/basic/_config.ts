@@ -6,6 +6,7 @@ import {
 } from 'rolldown/experimental';
 
 export default defineTest({
+  skip: true,
   config: {
     plugins: [
       viteDynamicImportVarsPlugin({

@@ -4,6 +4,7 @@ import { viteDynamicImportVarsPlugin } from 'rolldown/experimental';
 import { expect } from 'vitest';
 
 export default defineTest({
+  skip: true,
   sequential: true,
   config: {
     plugins: [

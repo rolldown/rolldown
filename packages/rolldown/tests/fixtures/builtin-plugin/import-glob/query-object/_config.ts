@@ -9,7 +9,7 @@ export default defineTest({
   sequential: true,
   config: {
     plugins: [
-      viteImportGlobPlugin({}),
+      viteImportGlobPlugin(),
       {
         name: 'load-file-with-query',
         load(id: string) {

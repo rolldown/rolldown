@@ -14,7 +14,10 @@ export default defineTest({
       chunkFileNames: '[name].js',
     },
     plugins: [
-      viteImportGlobPlugin({ root, restoreQueryExtension: true }),
+      viteImportGlobPlugin({
+        root,
+        restoreQueryExtension: true,
+      }),
       {
         name: 'load-file-with-query',
         resolveId(id) {

@@ -2401,12 +2401,8 @@ export interface BindingViteDynamicImportVarsPluginV2Config {
 
 export interface BindingViteImportGlobPluginConfig {
   root?: string
-  restoreQueryExtension?: boolean
-  isV2?: BindingViteImportGlobPluginV2Config
-}
-
-export interface BindingViteImportGlobPluginV2Config {
   sourcemap?: boolean
+  restoreQueryExtension?: boolean
 }
 
 export interface BindingViteJsonPluginConfig {

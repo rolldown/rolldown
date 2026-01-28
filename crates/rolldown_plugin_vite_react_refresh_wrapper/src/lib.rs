@@ -2,6 +2,7 @@ use std::{borrow::Cow, fmt::Write, sync::LazyLock};
 
 use arcstr::ArcStr;
 use regex::Regex;
+use rolldown_common::ModuleType;
 use rolldown_plugin::{
   HookResolveIdOutput, HookTransformOutput, HookUsage, Plugin, PluginHookMeta, PluginOrder,
 };
@@ -137,7 +138,12 @@ impl Plugin for ViteReactRefreshWrapperPlugin {
     let Some(new_code) = self.add_refresh_wrapper(args.code, args.id) else {
       return Ok(None);
     };
-    Ok(Some(HookTransformOutput { code: Some(new_code), map: None, ..Default::default() }))
+    Ok(Some(HookTransformOutput {
+      code: Some(new_code),
+      map: None,
+      module_type: Some(ModuleType::Js),
+      ..Default::default()
+    }))
   }
 
   fn register_hook_usage(&self) -> HookUsage {

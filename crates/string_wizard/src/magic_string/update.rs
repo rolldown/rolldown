@@ -64,9 +64,12 @@ impl<'text> MagicString<'text> {
       return Ok(self);
     };
 
-    while rest_chunk_idx != end_idx {
+    loop {
       let rest_chunk = &mut self.chunks[rest_chunk_idx];
       rest_chunk.edit("".into(), Default::default());
+      if rest_chunk_idx == end_idx {
+        break;
+      }
       rest_chunk_idx = rest_chunk.next.unwrap();
     }
     Ok(self)

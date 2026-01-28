@@ -390,6 +390,24 @@ mod misc {
   }
 
   #[test]
+  fn remove_with_overlapping_ranges() {
+    // Regression test for https://github.com/rolldown/rolldown/issues/8090
+    // When two remove() calls have overlapping ranges, the second call should
+    // still correctly remove its portion of the content.
+    //
+    // "export { Foo, Bar }"
+    //  0       89  12 1417
+    // remove(9, 14) removes "Foo, " → "export { Bar }"
+    // remove(12, 17) removes ", Bar" (overlaps with previous at 12-14)
+    // Expected result: "export {  }" (space at 8 and space at 17)
+    let mut s = MagicString::new("export { Foo, Bar }");
+    s.remove(9, 14).unwrap();
+    assert_eq!(s.to_string(), "export { Bar }");
+    s.remove(12, 17).unwrap();
+    assert_eq!(s.to_string(), "export {  }");
+  }
+
+  #[test]
   fn allow_empty_input() {
     let mut s = MagicString::new("");
     s.append("xyz");

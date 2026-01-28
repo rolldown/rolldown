@@ -156,11 +156,12 @@ pub fn normalize_binding_options(
   #[cfg(not(target_family = "wasm"))] worker_manager: Option<WorkerManager>,
 ) -> napi::Result<BundlerConfig> {
   // Normalize the cwd path to handle Windows volume GUID paths
-  #[cfg(windows)]
-  let cwd = normalize_windows_path(&input_options.cwd)
-    .map_err(|e| napi::Error::new(napi::Status::GenericFailure, format!("Failed to normalize cwd path: {e}")))?;
-  #[cfg(not(windows))]
-  let cwd = normalize_windows_path(&input_options.cwd);
+  let cwd = normalize_windows_path(&input_options.cwd).map_err(|e| {
+    napi::Error::new(
+      napi::Status::GenericFailure,
+      format!("Failed to normalize cwd path '{}': {e}", input_options.cwd),
+    )
+  })?;
 
   let external = input_options.external.map(|external| match external {
     Either::A(patterns) => IsExternal::StringOrRegex(bindingify_string_or_regex_array(patterns)),
@@ -262,18 +263,23 @@ pub fn normalize_binding_options(
     .input
     .into_iter()
     .map(|item| {
-      #[cfg(windows)]
-      let import = normalize_windows_path(&item.import)
-        .map_err(|e| {
-          napi::Error::new(
-            napi::Status::GenericFailure,
-            format!("Failed to normalize input path '{}': {e}", item.import),
-          )
-        })?
-        .to_string_lossy()
-        .to_string();
-      #[cfg(not(windows))]
-      let import = normalize_windows_path(&item.import).to_string_lossy().to_string();
+      let normalized = normalize_windows_path(&item.import).map_err(|e| {
+        napi::Error::new(
+          napi::Status::GenericFailure,
+          format!("Failed to normalize input path '{}': {e}", item.import),
+        )
+      })?;
+      // Convert path to string, failing if it contains invalid UTF-8
+      let import = normalized.into_os_string().into_string().map_err(|invalid_path| {
+        napi::Error::new(
+          napi::Status::GenericFailure,
+          format!(
+            "Input path '{}' contains invalid UTF-8 after normalization: {}",
+            item.import,
+            std::path::PathBuf::from(invalid_path).display()
+          ),
+        )
+      })?;
       Ok(rolldown::InputItem { name: item.name, import })
     })
     .collect::<napi::Result<Vec<_>>>()?;

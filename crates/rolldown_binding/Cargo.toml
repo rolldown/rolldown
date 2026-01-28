@@ -21,6 +21,7 @@ arcstr = { workspace = true }
 async-channel = { workspace = true }
 dashmap = { workspace = true }
 derive_more = { workspace = true }
+dunce = { workspace = true }
 futures = { workspace = true }
 itertools = { workspace = true }
 napi = { workspace = true }

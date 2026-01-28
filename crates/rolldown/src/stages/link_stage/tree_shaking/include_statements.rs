@@ -722,7 +722,7 @@ pub fn include_symbol(
         .insert(ModuleNamespaceIncludedReason::Unknown);
     } else if include_reason.contains(SymbolIncludeReason::ReExportDynamicExports) {
       ctx.module_namespace_included_reason[canonical_ref.owner]
-        .insert(ModuleNamespaceIncludedReason::ReExportExternalModule);
+        .insert(ModuleNamespaceIncludedReason::ReExportDynamicExports);
     }
     include_reason.intersects(SymbolIncludeReason::SimulatedFacadeChunk)
   } else {

@@ -524,7 +524,7 @@ impl GenerateStage<'_> {
           ) {
             true
           } else if module_namespace_included_reason
-            .contains(ModuleNamespaceIncludedReason::ReExportExternalModule)
+            .contains(ModuleNamespaceIncludedReason::ReExportDynamicExports)
           {
             // If the module namespace is only used to reexport external module,
             // then we need to ensure if it is still has dynamic exports after flatten entry level

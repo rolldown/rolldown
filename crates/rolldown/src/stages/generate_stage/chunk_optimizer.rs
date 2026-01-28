@@ -128,7 +128,7 @@ impl GenerateStage<'_> {
     };
     // extract entry chunk module relation
     // this means `key_chunk` also referenced all entry module in value `vec`
-    for (bits, PendingCommonChunkInfo { modules, meta: _ }) in pending_common_chunks {
+    for (bits, info) in pending_common_chunks {
       let chunk_idxs = bits
         .index_of_one()
         .into_iter()
@@ -144,13 +144,13 @@ impl GenerateStage<'_> {
         chunk_graph,
         &self.link_output.module_table,
         &dynamic_entry_to_dynamic_importers,
-        &modules,
+        &info,
       );
 
       self.assign_modules_to_chunk(
         merge_target,
         &chunk_idxs,
-        modules,
+        info,
         bits,
         chunk_graph,
         bits_to_chunk,
@@ -168,7 +168,7 @@ impl GenerateStage<'_> {
     &self,
     merge_target: Option<ChunkIdx>,
     chunk_idxs: &[ChunkIdx],
-    modules: Vec<ModuleIdx>,
+    info: PendingCommonChunkInfo,
     bits: BitSet,
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
@@ -182,18 +182,24 @@ impl GenerateStage<'_> {
           // 1. If the target chunk is an async entry, we can merge safely.
           // 2. If the user defined entry chunk has strict preserve entry signature, but all pending
           // modules will not change the entry signature after merge into it, we can still merge them.
-          if is_async_entry_only || self.can_merge_without_changing_entry_signature(chunk, &modules)
+          if is_async_entry_only
+            || self.can_merge_without_changing_entry_signature(chunk, &info.modules)
           {
-            self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, modules, chunk_graph);
+            self.merge_modules_into_existing_chunk(
+              chunk_idx,
+              chunk_idxs,
+              info.modules,
+              chunk_graph,
+            );
           } else {
-            self.create_common_chunk(modules, bits, chunk_graph, bits_to_chunk, input_base);
+            self.create_common_chunk(info, bits, chunk_graph, bits_to_chunk, input_base);
           }
         } else {
-          self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, modules, chunk_graph);
+          self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, info.modules, chunk_graph);
         }
       }
       _ => {
-        self.create_common_chunk(modules, bits, chunk_graph, bits_to_chunk, input_base);
+        self.create_common_chunk(info, bits, chunk_graph, bits_to_chunk, input_base);
       }
     }
   }
@@ -232,7 +238,7 @@ impl GenerateStage<'_> {
   /// Creates a new common chunk and assigns modules to it.
   fn create_common_chunk(
     &self,
-    modules: Vec<ModuleIdx>,
+    info: PendingCommonChunkInfo,
     bits: BitSet,
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
@@ -245,7 +251,7 @@ impl GenerateStage<'_> {
       self.options,
     );
     let chunk_id = chunk_graph.add_chunk(chunk);
-    for module_idx in modules {
+    for module_idx in info.modules {
       chunk_graph.add_module_to_chunk(
         module_idx,
         chunk_id,
@@ -267,7 +273,7 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
     module_table: &ModuleTable,
     dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
-    modules: &[ModuleIdx],
+    info: &PendingCommonChunkInfo,
   ) -> Option<ChunkIdx> {
     let mut user_defined_entry = vec![];
     let mut dynamic_entry = vec![];
@@ -305,17 +311,29 @@ impl GenerateStage<'_> {
       if !all_dynamic_entries_reachable {
         return None;
       }
-      let merged_entry_module = chunk.entry_module(module_table)?;
+      let modules_set = chunk
+        .modules
+        .iter()
+        .copied()
+        .chain(
+          info
+            .modules
+            .iter()
+            .filter(|idx| !dynamic_entry_to_dynamic_importers.contains_key(idx))
+            .copied(),
+        )
+        .collect::<FxHashSet<_>>();
       // For each module in the shared modules, if it is a dynamic entry module,
-      // all its dynamic importers must also statically import the entry module of the merged chunk.
+      // all its dynamic importers must be in the current chunk (including modules to be merged).
       // This ensures that when a dynamic import occurs, the merged entry chunk (containing the
       // dynamic entry module) is already loaded, preventing missing module errors at runtime.
-      let all_dynamic_entry_importers_valid = modules.iter().all(|&module_idx| {
+      let all_dynamic_entry_importers_valid = info.modules.iter().all(|&module_idx| {
         let Some(importers) = dynamic_entry_to_dynamic_importers.get(&module_idx) else {
           // Not a dynamic entry module, no constraint
           return true;
         };
-        importers.iter().all(|importer| *importer == merged_entry_module.idx)
+        // all importer are in current chunk (includes those modules will be merged)
+        importers.iter().all(|importer| modules_set.contains(importer))
       });
       all_dynamic_entry_importers_valid.then_some(chunk_idx)
     }
@@ -660,7 +678,6 @@ impl GenerateStage<'_> {
         }
         optimized_common_chunks.insert(target_chunk_idx);
       }
-
       if matches!(wrap_kind, WrapKind::Esm | WrapKind::None) {
         include_symbol(
           context,

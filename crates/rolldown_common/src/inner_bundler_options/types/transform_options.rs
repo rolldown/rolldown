@@ -138,9 +138,10 @@ impl TransformOptions {
       TransformOptionsInner::Normal(opts) => Ok(Arc::clone(opts)),
       TransformOptionsInner::Raw(raw) => {
         let tsconfig = match file_path {
-          Some(path) => raw.resolver.find_tsconfig(path).map_err(|err| {
-            anyhow::anyhow!("Failed to find tsconfig for file: {}", path.display()).context(err)
-          })?,
+          Some(path) => raw
+            .resolver
+            .find_tsconfig(path)
+            .map_err(|err| BuildDiagnostic::tsconfig_error(path.display().to_string(), err))?,
           None => None,
         };
         raw.get_or_create_for_tsconfig(tsconfig.as_deref(), warnings)

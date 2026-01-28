@@ -34,6 +34,7 @@ use super::events::plugin_error::{CausedPlugin, PluginError};
 use super::events::plugin_timings::{PluginTimingInfo, PluginTimings};
 use super::events::prefer_builtin_feature::PreferBuiltinFeature;
 use super::events::resolve_error::DiagnosableResolveError;
+use super::events::tsconfig_error::TsConfigError;
 use super::events::unhandleable_error::UnhandleableError;
 use super::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
 use super::events::unsupported_feature::UnsupportedFeature;
@@ -372,5 +373,9 @@ impl BuildDiagnostic {
 
   pub fn duplicate_shebang(filename: String) -> Self {
     Self::new_inner(DuplicateShebang { filename })
+  }
+
+  pub fn tsconfig_error(file_path: String, reason: ResolveError) -> Self {
+    Self::new_inner(TsConfigError { file_path, reason })
   }
 }

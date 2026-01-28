@@ -23,6 +23,7 @@ pub use crate::{
   utils::ResultExt,
   utils::downcast_napi_error_diagnostics,
   utils::filter_out_disabled_diagnostics,
+  utils::resolve_error_to_message,
 };
 
 fn _usage_should_able_to_auto_convert_outside_errors() -> BuildResult<()> {

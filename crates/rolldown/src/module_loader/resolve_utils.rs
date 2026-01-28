@@ -151,7 +151,7 @@ pub async fn resolve_dependencies(
               } else {
                 DiagnosableArcstr::Span(dep.state.span)
               },
-              rolldown_resolver::error::resolve_error_to_message(e),
+              rolldown_error::resolve_error_to_message(e),
               EventKind::ResolveError,
               None,
             ));

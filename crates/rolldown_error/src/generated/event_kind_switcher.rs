@@ -44,5 +44,6 @@ bitflags! {
     const CouldNotCleanDirectory = 1 << 37;
     const PluginTimings = 1 << 38;
     const DuplicateShebang = 1 << 39;
+    const TsConfigError = 1 << 40;
   }
 }

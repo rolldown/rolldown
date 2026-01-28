@@ -105,6 +105,7 @@ pub enum EventKind {
   ///
   /// Having multiple shebangs in a file is a syntax error.
   DuplicateShebang = 39,
+  TsConfigError = 40,
 }
 
 impl Display for EventKind {
@@ -155,6 +156,7 @@ impl Display for EventKind {
       EventKind::CouldNotCleanDirectory => write!(f, "COULD_NOT_CLEAN_DIRECTORY"),
       EventKind::PluginTimings => write!(f, "PLUGIN_TIMINGS"),
       EventKind::DuplicateShebang => write!(f, "DUPLICATE_SHEBANG"),
+      EventKind::TsConfigError => write!(f, "TSCONFIG_ERROR"),
     }
   }
 }

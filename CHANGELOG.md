@@ -1,4 +1,97 @@
 
+## [1.0.0-rc.2] - 2026-01-28
+
+### 💥 BREAKING CHANGES
+
+- expose `\0rolldown/runtime` in transform hook (#8068) by @hyf0
+- rename `rolldown:runtime` to `\0rolldown/runtime.js` (#8067) by @hyf0
+
+### 🚀 Features
+
+- remove inlined constants in smart mode (#8085) by @sapphi-red
+- allow more options for `this.emitFile` with `type: 'prebuilt-chunk'` (#8062) by @sapphi-red
+- warn when both code and postBanner contain shebang (#8039) by @Copilot
+
+### 🐛 Bug Fixes
+
+- update the links to Rolldown docs in the error messages (#8103) by @sapphi-red
+- handle tsconfig.json load errors (#8105) by @sapphi-red
+- include inlined constants in namespace object (#8099) by @sapphi-red
+- vite test ci (#8084) by @IWANABETHATGUY
+- renamer: nested binding shadowing external module namespace in UMD/IIFE formats (#8083) by @Dunqing
+- deduplicate ESM chunk imports by canonical symbol (#8059) by @IWANABETHATGUY
+- refine side-effect detection for BigInt and RegExp (#8060) by @IWANABETHATGUY
+- rust: use string literal span for `new URL` error diagnostic (#8043) by @valadaptive
+- rust: use ModuleType::Asset for `new URL` imports (#8035) by @valadaptive
+- CJS-ESM interop - property assignment on CJS module exports (#8006) by @IWANABETHATGUY
+- eliminate the facade chunk if the dynamic entry module has been merged into common chunk (#8046) by @IWANABETHATGUY
+- Inlining dynamic imports broken with multiple entry points (#8037) by @IWANABETHATGUY
+- devtools: revert `Chunk#id` to `Chunk#chunk_id` (#8040) by @hyf0
+- invert `__exportAll` parameter logic to reduce default output size (#8036) by @Copilot
+- `</script` tag search should be case insensitive (#8033) by @IWANABETHATGUY
+- use directory name as-is for the variable name even if the name contained `.` (#8029) by @Copilot
+- dev/lazy: remove unnecessary rewrite from top level `this` to `undefined` (#8020) by @hyf0
+- dev/lazy: should keep lazy entries imports for patch file (#8019) by @hyf0
+- `output.generatedCode.preset: 'es2015'` was not set by default (#8026) by @sapphi-red
+- node: align option validator to types (#8023) by @sapphi-red
+- node: allow `output.strictExecutionOrder` by the option validator (#8022) by @sapphi-red
+- types: return `this` from on / off methods of `RolldownWatcher` (#8015) by @sapphi-red
+
+### 🚜 Refactor
+
+- rolldown_plugin_vite_dynamic_import_vars: remove v1 implementation (#8096) by @shulaoda
+- rolldown_plugin_vite_import_glob: remove v1 implementation (#8095) by @shulaoda
+- lazy-barrel: restructure lazy barrel implementation (#8070) by @shulaoda
+- remove `use_built_ins` and `use_spread` from internal JSX options (#8079) by @sapphi-red
+- remove `experimental.transformHiresSourcemap` (#8055) by @Copilot
+- rust: use `is_data_url` more consistently (#8042) by @valadaptive
+- use `FxIndexMap` to store EntryPoint (#8032) by @IWANABETHATGUY
+- node: add type checks that ensures validator schema is up to date with types (#8024) by @sapphi-red
+
+### 📚 Documentation
+
+- link to vite plugin registry (#8086) by @sapphi-red
+- lazy-barrel: improve documentation and enable in sidebar (#8072) by @shulaoda
+- add more examples and details (#8054) by @sapphi-red
+- in-depth: add dead code elimination page (#8007) by @sapphi-red
+- update status from beta to release candidate (#8012) by @shulaoda
+
+### ⚡ Performance
+
+- run inline-const pass for modules that are affected by inlining (#8064) by @sapphi-red
+
+### 🧪 Testing
+
+- lazy-barrel: use package.json sideEffects instead of plugin hook (#8077) by @shulaoda
+- lazy-barrel: enable tests and add treeshake-behavior cases (#8071) by @shulaoda
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update crate-ci/typos action to v1.42.3 (#8087) by @renovate[bot]
+- deps: update rollup submodule for tests to v4.56.0 (#8073) by @sapphi-red
+- deps: update oxc to v0.111.0 (#8063) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.21.6 (#8076) by @renovate[bot]
+- deps: update test262 submodule for tests (#8074) by @sapphi-red
+- deps: update crate-ci/typos action to v1.42.2 (#8069) by @renovate[bot]
+- deps: update oxc apps (#8066) by @renovate[bot]
+- remove `{@include ./foo.md}` from d.ts files (#8056) by @sapphi-red
+- deps: update dependency oxlint-tsgolint to v0.11.2 (#8057) by @renovate[bot]
+- deps: update github-actions (#8050) by @renovate[bot]
+- deps: update npm packages (#8051) by @renovate[bot]
+- deps: update rust crates (#8049) by @renovate[bot]
+- debug: add IdxExt debug trait for human-readable index debugging (#8045) by @IWANABETHATGUY
+- deps: update dependency rolldown-plugin-dts to v0.21.5 (#8034) by @renovate[bot]
+- deps: update oxc resolver to v11.16.4 (#8031) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.21.4 (#8030) by @renovate[bot]
+- deps: update dependency rust to v1.93.0 (#8018) by @renovate[bot]
+- archive 2025 beta changelog (#8014) by @shulaoda
+- update release workflow version pattern from beta to rc (#8013) by @shulaoda
+
+### ❤️ New Contributors
+
+* @valadaptive made their first contribution in [#8043](https://github.com/rolldown/rolldown/pull/8043)
+
+
 ## [1.0.0-rc.1] - 2026-01-22
 
 ### 🚀 Features

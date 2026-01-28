@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use napi::Env;
 use napi_derive::napi;
+use rolldown_common::is_path_fragment;
 use sugar_path::SugarPath;
 
 use rolldown_plugin::__inner::infer_module_def_format;
@@ -81,6 +82,16 @@ impl BindingPluginContext {
     asset_filename: Option<String>,
     fn_sanitized_file_name: Option<String>,
   ) -> napi::Result<napi::JsString<'env>> {
+    // Validate that fileName and name are not absolute or relative paths
+    let validated_name = file.file_name.as_deref().or(file.name.as_deref());
+    if let Some(name) = validated_name {
+      if is_path_fragment(name) {
+        return Err(napi::Error::from_reason(format!(
+          "The \"fileName\" or \"name\" properties of emitted files must be strings that are neither absolute nor relative paths, received \"{name}\"."
+        )));
+      }
+    }
+
     let reference_id = self
       .inner
       .emit_file(file.into(), asset_filename, fn_sanitized_file_name)

@@ -13,6 +13,7 @@ use std::ffi::OsStr;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
 #[derive(Debug, Default)]
@@ -216,14 +217,25 @@ impl FileEmitter {
     if file.file_name.is_none() {
       let sanitized_file_name = sanitized_file_name.expect("should has sanitized file name");
       let path = Path::new(sanitized_file_name.as_str());
-      let name = path.file_stem().and_then(OsStr::to_str);
+      // Extract extension from the filename only
       let extension = path.extension().and_then(OsStr::to_str);
+      // Extract name including directory path, but without extension
+      // e.g., "foo/bar.txt" -> "foo/bar", "bar.txt" -> "bar"
+      // Security: normalize path and filter out dangerous components
+      let name = path.file_stem().and_then(OsStr::to_str).map(|stem| {
+        if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
+          // Normalize to resolve ".." and "." where possible, then convert to forward slashes
+          parent.join(stem).normalize().to_slash_lossy().into_owned()
+        } else {
+          stem.to_string()
+        }
+      });
       let filename_template =
         filename_template.expect("should has filename template without filename");
 
       let mut filename = filename_template
         .render(
-          name,
+          name.as_deref(),
           None,
           Some(extension.unwrap_or_default()),
           Some(|len: Option<usize>| Ok(&hash[..len.map_or(8, |len| len.clamp(1, 21))])),

@@ -6,6 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## TSCONFIG_ERROR
 
 ```text
-[TSCONFIG_ERROR] Error: Failed to load tsconfig for 'main.ts': JSON parse error
+[TSCONFIG_ERROR] Error: Failed to load tsconfig for 'main.ts': JSON parse error in 'tsconfig.json'
 
 ```

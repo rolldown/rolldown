@@ -156,8 +156,11 @@ pub fn normalize_binding_options(
   #[cfg(not(target_family = "wasm"))] worker_manager: Option<WorkerManager>,
 ) -> napi::Result<BundlerConfig> {
   // Normalize the cwd path to handle Windows volume GUID paths
+  #[cfg(windows)]
   let cwd = normalize_windows_path(&input_options.cwd)
     .map_err(|e| napi::Error::new(napi::Status::GenericFailure, format!("Failed to normalize cwd path: {e}")))?;
+  #[cfg(not(windows))]
+  let cwd = normalize_windows_path(&input_options.cwd);
 
   let external = input_options.external.map(|external| match external {
     Either::A(patterns) => IsExternal::StringOrRegex(bindingify_string_or_regex_array(patterns)),
@@ -259,6 +262,7 @@ pub fn normalize_binding_options(
     .input
     .into_iter()
     .map(|item| {
+      #[cfg(windows)]
       let import = normalize_windows_path(&item.import)
         .map_err(|e| {
           napi::Error::new(
@@ -268,6 +272,8 @@ pub fn normalize_binding_options(
         })?
         .to_string_lossy()
         .to_string();
+      #[cfg(not(windows))]
+      let import = normalize_windows_path(&item.import).to_string_lossy().to_string();
       Ok(rolldown::InputItem { name: item.name, import })
     })
     .collect::<napi::Result<Vec<_>>>()?;

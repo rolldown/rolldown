@@ -10,6 +10,9 @@ use std::path::{Path, PathBuf};
 ///
 /// On non-Windows platforms, this is a no-op that returns the path unchanged.
 ///
+/// # Errors
+/// On Windows, returns an `io::Error` if path canonicalization fails (e.g., path doesn't exist).
+///
 /// # Examples
 /// ```
 /// # use std::path::PathBuf;
@@ -18,19 +21,16 @@ use std::path::{Path, PathBuf};
 /// // normalize_windows_path("\\\\?\\Volume{b91e17d5-0f25-4590-af8c-3b0508620c31}\\foo\\bar")
 /// // -> "D:\\foo\\bar" (if the volume is mounted as D:)
 /// ```
+#[cfg(windows)]
 #[inline]
 pub fn normalize_windows_path(path: impl AsRef<Path>) -> std::io::Result<PathBuf> {
-  let path = path.as_ref();
+  normalize_windows_path_impl(path.as_ref())
+}
 
-  #[cfg(not(windows))]
-  {
-    Ok(path.to_path_buf())
-  }
-
-  #[cfg(windows)]
-  {
-    normalize_windows_path_impl(path)
-  }
+#[cfg(not(windows))]
+#[inline]
+pub fn normalize_windows_path(path: impl AsRef<Path>) -> PathBuf {
+  path.as_ref().to_path_buf()
 }
 
 #[cfg(windows)]
@@ -71,7 +71,7 @@ mod tests {
   #[cfg(not(windows))]
   fn test_normalize_windows_path_noop_on_unix() {
     let path = Path::new("/foo/bar");
-    assert_eq!(normalize_windows_path(path).unwrap(), path);
+    assert_eq!(normalize_windows_path(path), path);
   }
 
   #[test]

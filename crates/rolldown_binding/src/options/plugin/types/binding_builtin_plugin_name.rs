@@ -5,6 +5,8 @@ use napi_derive::napi;
 pub enum BindingBuiltinPluginName {
   #[napi(value = "builtin:esm-external-require")]
   EsmExternalRequire,
+  #[napi(value = "builtin:fake-js")]
+  FakeJs,
   #[napi(value = "builtin:isolated-declaration")]
   IsolatedDeclaration,
   #[napi(value = "builtin:replace")]

@@ -5445,6 +5445,10 @@ expression: output
 
 - main-!~{000}~.js => main-jzXyUv2k.js
 
+# tests/rolldown/optimization/inline_const/namespace_object_export
+
+- main-!~{000}~.js => main-_gmHMUS3.js
+
 # tests/rolldown/optimization/inline_const/ns_chain
 
 - main-!~{000}~.js => main-Brb9u1JP.js

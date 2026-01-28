@@ -509,7 +509,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     // https://github.com/rolldown/rolldown/blob/d6d65f9080e427cd9feef56eb7a110fbcf6c1414/crates/rolldown/src/stages/generate_stage/chunk_optimizer.rs#L347-L354
     arg_obj_expr.properties.extend(self.ctx.linking_info.canonical_exports(false).filter_map(
       |(export, resolved_export)| {
-        if !self.ctx.used_symbol_refs.contains(&resolved_export.symbol_ref) {
+        // Even if the symbol is not marked as used (generated inside module),
+        // it should be included in the namespace export.
+        let is_inlinable_constant = self
+          .ctx
+          .constant_value_map
+          .get(&self.ctx.symbol_db.canonical_ref_for(resolved_export.symbol_ref))
+          .is_some_and(|meta| !meta.commonjs_export);
+        if !self.ctx.used_symbol_refs.contains(&resolved_export.symbol_ref)
+          && !is_inlinable_constant
+        {
           return None;
         }
         // prop_name: () => returned

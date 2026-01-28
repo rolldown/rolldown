@@ -2389,14 +2389,10 @@ export interface BindingViteBuildImportAnalysisPluginV2Config {
 }
 
 export interface BindingViteDynamicImportVarsPluginConfig {
+  sourcemap?: boolean
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   resolver?: (id: string, importer: string) => MaybePromise<string | undefined>
-  isV2?: BindingViteDynamicImportVarsPluginV2Config
-}
-
-export interface BindingViteDynamicImportVarsPluginV2Config {
-  sourcemap: boolean
 }
 
 export interface BindingViteImportGlobPluginConfig {

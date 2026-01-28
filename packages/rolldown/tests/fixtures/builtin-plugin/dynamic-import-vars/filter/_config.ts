@@ -1,4 +1,3 @@
-import path from 'node:path';
 import { defineTest } from 'rolldown-tests';
 import {
   viteDynamicImportVarsPlugin,
@@ -6,15 +5,12 @@ import {
 } from 'rolldown/experimental';
 
 export default defineTest({
-  skip: true,
   config: {
     plugins: [
       viteDynamicImportVarsPlugin({
         exclude: [/main\.js$/],
       }),
-      viteImportGlobPlugin({
-        root: path.resolve(import.meta.dirname),
-      }),
+      viteImportGlobPlugin(),
     ],
   },
   async afterTest() {

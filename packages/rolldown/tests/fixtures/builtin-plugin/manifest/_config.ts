@@ -13,7 +13,7 @@ export default defineTest({
     plugins: [
       viteManifestPlugin({
         root: path.resolve(import.meta.dirname),
-        outPath: path.resolve(import.meta.dirname, 'dist/manifest.json'),
+        outPath: 'manifest.json',
         cssEntries: () => Object.fromEntries(new Map().entries()),
       }),
       {

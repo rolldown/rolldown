@@ -1,4 +1,5 @@
 use super::normalize_binding_transform_options;
+use super::normalize_path::normalize_windows_path;
 use crate::options::BindingGeneratedCodeOptions;
 use crate::options::binding_manual_code_splitting_options::BindingChunkingContext;
 use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption, SanitizeFileName};
@@ -26,7 +27,6 @@ use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::FxHashMap;
-use std::path::PathBuf;
 use url::Url;
 
 #[cfg(not(target_family = "wasm"))]
@@ -155,7 +155,9 @@ pub fn normalize_binding_options(
   >,
   #[cfg(not(target_family = "wasm"))] worker_manager: Option<WorkerManager>,
 ) -> napi::Result<BundlerConfig> {
-  let cwd = PathBuf::from(input_options.cwd);
+  // Normalize the cwd path to handle Windows volume GUID paths
+  let cwd = normalize_windows_path(&input_options.cwd)
+    .map_err(|e| napi::Error::new(napi::Status::GenericFailure, format!("Failed to normalize cwd path: {e}")))?;
 
   let external = input_options.external.map(|external| match external {
     Either::A(patterns) => IsExternal::StringOrRegex(bindingify_string_or_regex_array(patterns)),
@@ -252,8 +254,26 @@ pub fn normalize_binding_options(
 
   let transform_options = input_options.transform.map(normalize_binding_transform_options);
 
+  // Normalize input paths to handle Windows volume GUID paths
+  let input = input_options
+    .input
+    .into_iter()
+    .map(|item| {
+      let import = normalize_windows_path(&item.import)
+        .map_err(|e| {
+          napi::Error::new(
+            napi::Status::GenericFailure,
+            format!("Failed to normalize input path '{}': {e}", item.import),
+          )
+        })?
+        .to_string_lossy()
+        .to_string();
+      Ok(rolldown::InputItem { name: item.name, import })
+    })
+    .collect::<napi::Result<Vec<_>>>()?;
+
   let bundler_options = BundlerOptions {
-    input: Some(input_options.input.into_iter().map(Into::into).collect()),
+    input: Some(input),
     cwd: cwd.into(),
     external,
     treeshake: match input_options.treeshake {

@@ -13,7 +13,7 @@ use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::{
   EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult, FlatOptions,
   HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImportedExports, ImporterRecord,
-  Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult,
+  Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModule, NormalModuleTaskResult,
   PreserveEntrySignatures, RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief,
   RuntimeModuleTaskResult, ScanMode, SourceMapGenMsg, StmtInfoIdx, SymbolRefDb,
   SymbolRefDbForModule,
@@ -894,13 +894,6 @@ impl<'a> ModuleLoader<'a> {
         }
       };
 
-      let mut barrel_module = self
-        .intermediate_normal_modules
-        .modules
-        .get_mut(idx)
-        .take()
-        .expect("barrel module should exist");
-
       let mut tracked_records = std::mem::take(&mut barrel_module_state.tracked_records);
       let mut remaining_imported_specifiers =
         std::mem::take(&mut barrel_module_state.remaining_imported_specifiers);
@@ -911,11 +904,40 @@ impl<'a> ModuleLoader<'a> {
         .info
         .take_needed_records(&new_exports, &mut remaining_imported_specifiers);
 
-      let barrel_normal_module = barrel_module.as_normal_mut().unwrap();
+      let mut is_module_from_cache_snapshot = false;
+      let barrel_module_ptr: *mut NormalModule = match &mut self.intermediate_normal_modules.modules
+      {
+        HybridIndexVec::IndexVec(modules) => modules[idx]
+          .as_mut()
+          .expect("Barrel module should exists in full build")
+          .as_normal_mut()
+          .unwrap(),
+        HybridIndexVec::Map(modules) => {
+          if let Some(module) = modules.get_mut(&idx) {
+            module
+              .as_mut()
+              .expect("Barrel module should exists in partial build")
+              .as_normal_mut()
+              .unwrap()
+          } else {
+            is_module_from_cache_snapshot = true;
+            self
+              .cache
+              .get_snapshot_mut()
+              .module_table
+              .get_mut(idx)
+              .expect("Barrel module should exist in cache snapshot in partial scan mode")
+              .as_normal_mut()
+              .unwrap()
+          }
+        }
+      };
+
       tracked_records.retain(|&rec_idx, (import_record_state, resolved_id)| {
         if !needed_records.contains_key(&rec_idx) {
           return true;
         }
+        let barrel_normal_module = unsafe { &mut *barrel_module_ptr };
         let target_idx = match barrel_normal_module.import_records[rec_idx].resolved_module {
           Some(existing_idx) => existing_idx,
           None => {
@@ -926,7 +948,18 @@ impl<'a> ModuleLoader<'a> {
               import_record_state.asserted_module_type.as_ref(),
               user_defined_entries,
             );
-            barrel_normal_module.import_records[rec_idx].resolved_module = Some(new_idx);
+            // Update resolved module in either cache snapshot or intermediate modules
+            if is_module_from_cache_snapshot {
+              self
+                .cache
+                .barrel_state
+                .resolved_barrel_modules
+                .entry(idx)
+                .or_default()
+                .push((rec_idx, new_idx));
+            } else {
+              barrel_normal_module.import_records[rec_idx].resolved_module = Some(new_idx);
+            }
             self.intermediate_normal_modules.importers[new_idx].push(ImporterRecord {
               kind: barrel_normal_module.import_records[rec_idx].kind,
               importer_path: barrel_normal_module.id.clone(),
@@ -958,8 +991,6 @@ impl<'a> ModuleLoader<'a> {
         self.cache.barrel_state.barrel_infos.get_mut(&idx).unwrap().as_mut().unwrap();
       barrel_module_state.tracked_records = tracked_records;
       barrel_module_state.remaining_imported_specifiers = remaining_imported_specifiers;
-
-      *self.intermediate_normal_modules.modules.get_mut(idx) = Some(barrel_module);
     }
   }
 }

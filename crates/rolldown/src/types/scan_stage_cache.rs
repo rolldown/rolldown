@@ -2,7 +2,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  BarrelState, GetLocalDbMut, ImporterRecord, ModuleId, ModuleIdx, StableModuleId,
+  BarrelState, GetLocalDbMut, ImporterRecord, Module, ModuleId, ModuleIdx, StableModuleId,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
@@ -136,6 +136,18 @@ impl ScanStageCache {
         cache.entry_points.push(entry_point);
       }
     }
+
+    // Update barrel module resolved import records
+    let resolved_barrel_modules = std::mem::take(&mut self.barrel_state.resolved_barrel_modules);
+    for (barrel_module_idx, resolved_imports) in resolved_barrel_modules {
+      let barrel_module = &mut cache.module_table[barrel_module_idx];
+      if let Module::Normal(normal_module) = barrel_module {
+        resolved_imports.into_iter().for_each(|(rec_idx, new_idx)| {
+          normal_module.import_records[rec_idx].resolved_module = Some(new_idx);
+        });
+      }
+    }
+
     Ok(())
   }
 

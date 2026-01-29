@@ -15,6 +15,8 @@ use crate::{
 pub struct BarrelState {
   pub barrel_infos: FxHashMap<ModuleIdx, Option<LazyBarrelInfo>>,
   pub requested_exports: FxHashMap<ModuleIdx, ImportedExports>,
+  // Used for incremental updates to track which barrel modules have had their imports resolved
+  pub resolved_barrel_modules: FxHashMap<ModuleIdx, Vec<(ImportRecordIdx, ModuleIdx)>>,
 }
 
 impl BarrelState {

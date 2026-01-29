@@ -51,6 +51,11 @@ bitflags::bitflags! {
     ///   when no explicit name exists (e.g. `export default 42` has no declared
     ///   identifier, so the bundler creates one)
     const IsFacade = 1 << 5;
+    /// Root identifier of a JSX member expression (e.g. `obj` in `<obj.Foo>`).
+    /// Unlike `MustStartWithCapitalLetterForJSX`, this only triggers uppercasing
+    /// for facade (generated) symbols — user-defined names are left unchanged
+    /// because `<obj.Foo>` is already a valid component reference in JSX.
+    const UsedAsJSXMemberExprRoot = 1 << 6;
   }
 }
 
@@ -283,12 +288,14 @@ impl SymbolRefDb {
       return;
     }
     self.get_mut(base_root).link = Some(target_root);
-    if self.has_module_preserve_jsx
-      && base_root
-        .flags(self)
-        .is_some_and(|flags| flags.contains(SymbolRefFlags::MustStartWithCapitalLetterForJSX))
-    {
-      *target_root.flags_mut(self) |= SymbolRefFlags::MustStartWithCapitalLetterForJSX;
+    if self.has_module_preserve_jsx {
+      let jsx_mask = SymbolRefFlags::MustStartWithCapitalLetterForJSX
+        | SymbolRefFlags::UsedAsJSXMemberExprRoot;
+      if let Some(jsx_flags) =
+        base_root.flags(self).map(|f| *f & jsx_mask).filter(|f| !f.is_empty())
+      {
+        *target_root.flags_mut(self) |= jsx_flags;
+      }
     }
   }
 

@@ -4806,7 +4806,7 @@ expression: output
 
 # tests/rolldown/issues/6036
 
-- main-!~{000}~.js => main-Ds11wQzB.js
+- main-!~{000}~.js => main-BaZrzl0P.js
 
 # tests/rolldown/issues/6097
 

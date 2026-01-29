@@ -761,12 +761,12 @@ expression: output
 
 # tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle
 
-- a-!~{000}~.js => a-CpDAQlp9.js
-- b-!~{001}~.js => b-BS8icH4l.js
+- a-!~{000}~.js => a-mALZYjWR.js
+- b-!~{001}~.js => b-DR3Jp0zR.js
 - c-!~{002}~.js => c-DbAYnqxj.js
 - d-!~{003}~.js => d-erhulghW.js
 - e-!~{004}~.js => e-BluWtRWc.js
-- b-!~{005}~.js => b-WEHixoCp.js
+- chunk-!~{005}~.js => chunk-CCMGRua-.js
 
 # tests/esbuild/default/export_fs_browser
 
@@ -3198,8 +3198,8 @@ expression: output
 
 # tests/esbuild/splitting/splitting_circular_reference_issue251
 
-- a-!~{000}~.js => a-Cg-4jZHa.js
-- b-!~{001}~.js => b-ChRetgD2.js
+- a-!~{000}~.js => a-ihDTYBUr.js
+- b-!~{001}~.js => b-B789AAGM.js
 
 # tests/esbuild/splitting/splitting_cross_chunk_assignment_dependencies
 
@@ -4933,6 +4933,11 @@ expression: output
 # tests/rolldown/issues/5696
 
 - main-!~{000}~.js => main-DOD2BqGQ.js
+
+# tests/rolldown/issues/5726
+
+- counter-!~{001}~.js => counter-DlaRpy5U.js
+- main-!~{000}~.js => main-BVl9pi0K.js
 
 # tests/rolldown/issues/5778
 

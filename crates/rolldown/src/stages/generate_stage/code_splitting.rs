@@ -852,6 +852,32 @@ impl GenerateStage<'_> {
           chunk_id,
           self.link_output.metas[normal_module.idx].depended_runtime_helper,
         );
+      } else if normal_module.is_user_defined_entry
+        && self.link_output.metas[normal_module.idx].wrap_kind().is_none()
+        // Don't apply this optimization when multiple entries point to the same module
+        // (duplicate entries). In that case, we need the normal chunk optimization to
+        // ensure the second entry properly imports from the first.
+        && self
+          .link_output
+          .entries
+          .get(&normal_module.idx)
+          .is_none_or(|entries| entries.len() <= 1)
+      {
+        // User-defined entry modules that are NOT wrapped should stay in their own entry chunk,
+        // even when reachable from multiple entries. This avoids creating unnecessary
+        // common chunks that would turn the entry into a facade.
+        //
+        // Wrapped modules (CJS or ESM wrapping for circular dependencies) need to go through
+        // the normal chunk optimization to ensure proper execution semantics.
+        if let Some(&entry_chunk_idx) =
+          chunk_graph.entry_module_to_entry_chunk.get(&normal_module.idx)
+        {
+          chunk_graph.add_module_to_chunk(
+            normal_module.idx,
+            entry_chunk_idx,
+            self.link_output.metas[normal_module.idx].depended_runtime_helper,
+          );
+        }
       } else if allow_chunk_optimization {
         pending_common_chunks.entry(bits.clone()).or_default().modules.push(normal_module.idx);
       } else {

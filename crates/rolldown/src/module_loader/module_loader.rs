@@ -13,7 +13,7 @@ use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::{
   EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult, FlatOptions,
   HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImportedExports, ImporterRecord,
-  Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModule, NormalModuleTaskResult,
+  Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult,
   PreserveEntrySignatures, RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief,
   RuntimeModuleTaskResult, ScanMode, SourceMapGenMsg, StmtInfoIdx, SymbolRefDb,
   SymbolRefDbForModule,
@@ -849,37 +849,6 @@ impl<'a> ModuleLoader<'a> {
     chain
   }
 
-  fn get_barrel_normal_module(&self, idx: ModuleIdx) -> (&NormalModule, bool) {
-    let mut is_module_from_cache_snapshot = false;
-    let normal_module = match &self.intermediate_normal_modules.modules {
-      HybridIndexVec::IndexVec(modules) => modules[idx]
-        .as_ref()
-        .expect("Barrel module should exists in full build")
-        .as_normal()
-        .unwrap(),
-      HybridIndexVec::Map(modules) => {
-        if let Some(module) = modules.get(&idx) {
-          module
-            .as_ref()
-            .expect("Barrel module should exists in partial build")
-            .as_normal()
-            .unwrap()
-        } else {
-          is_module_from_cache_snapshot = true;
-          self
-            .cache
-            .get_snapshot()
-            .module_table
-            .get(idx)
-            .expect("Barrel module should exist in cache snapshot in partial scan mode")
-            .as_normal()
-            .unwrap()
-        }
-      }
-    };
-    (normal_module, is_module_from_cache_snapshot)
-  }
-
   #[expect(clippy::rc_buffer)]
   fn process_barrel_import_record(
     &mut self,
@@ -941,12 +910,42 @@ impl<'a> ModuleLoader<'a> {
           return true;
         }
 
-        let (barrel_normal_module, is_module_from_cache_snapshot) =
-          self.get_barrel_normal_module(idx);
+        let mut is_module_from_cache_snapshot = false;
+        let barrel_normal_module = match &self.intermediate_normal_modules.modules {
+          HybridIndexVec::IndexVec(modules) => modules[idx]
+            .as_ref()
+            .expect("Barrel module should exists in full build")
+            .as_normal()
+            .unwrap(),
+          HybridIndexVec::Map(modules) => {
+            if let Some(module) = modules.get(&idx) {
+              module
+                .as_ref()
+                .expect("Barrel module should exists in partial build")
+                .as_normal()
+                .unwrap()
+            } else {
+              is_module_from_cache_snapshot = true;
+              self
+                .cache
+                .get_snapshot()
+                .module_table
+                .get(idx)
+                .expect("Barrel module should exist in cache snapshot in partial scan mode")
+                .as_normal()
+                .unwrap()
+            }
+          }
+        };
 
         let target_idx = match barrel_normal_module.import_records[rec_idx].resolved_module {
           Some(existing_idx) => existing_idx,
           None => {
+            let importer_record = ImporterRecord {
+              kind: barrel_normal_module.import_records[rec_idx].kind,
+              importer_path: barrel_normal_module.id.clone(),
+              importer_idx: barrel_normal_module.idx,
+            };
             let new_idx = self.try_spawn_new_task(
               resolved_id.clone(),
               Some(ModuleTaskOwner::new(barrel_normal_module, import_record_state.span)),
@@ -954,6 +953,7 @@ impl<'a> ModuleLoader<'a> {
               import_record_state.asserted_module_type.as_ref(),
               user_defined_entries,
             );
+            self.intermediate_normal_modules.importers[new_idx].push(importer_record);
             // Update resolved module in either cache snapshot or intermediate modules
             if is_module_from_cache_snapshot {
               self
@@ -975,13 +975,6 @@ impl<'a> ModuleLoader<'a> {
                 .import_records[rec_idx]
                 .resolved_module = Some(new_idx);
             }
-            let (barrel_normal_module, _) = self.get_barrel_normal_module(idx);
-            let importer_record = ImporterRecord {
-              kind: barrel_normal_module.import_records[rec_idx].kind,
-              importer_path: barrel_normal_module.id.clone(),
-              importer_idx: barrel_normal_module.idx,
-            };
-            self.intermediate_normal_modules.importers[new_idx].push(importer_record);
             new_idx
           }
         };

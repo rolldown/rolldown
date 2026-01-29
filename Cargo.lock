@@ -2830,6 +2830,7 @@ dependencies = [
  "async-channel",
  "dashmap",
  "derive_more",
+ "dunce",
  "futures",
  "itertools",
  "mimalloc-safe",

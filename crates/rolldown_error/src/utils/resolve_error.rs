@@ -18,6 +18,9 @@ pub fn resolve_error_to_message(error: &ResolveError) -> String {
     ResolveError::TsconfigSelfReference(_) => {
       "Tsconfig's project reference path points to itself".to_string()
     }
+    ResolveError::TsconfigCircularExtend(_) => {
+      "Circular reference detected in tsconfig 'extends'".to_string()
+    }
     ResolveError::IOError(_) => "I/O error occurred".to_string(),
     ResolveError::Builtin { .. } => "Builtin module".to_string(),
     ResolveError::ExtensionAlias { .. } => "None of the aliased extensions were found".to_string(),
@@ -41,6 +44,6 @@ pub fn resolve_error_to_message(error: &ResolveError) -> String {
     ResolveError::Unimplemented(_) => "Feature not yet implemented".to_string(),
     ResolveError::Recursion => "Circular dependency detected during resolution".to_string(),
     ResolveError::MatchedAliasNotFound(..) => "Matched alias target not found".to_string(),
-    _ => "Unknown resolve error".to_string(),
+    _ => error.to_string(),
   }
 }

@@ -725,7 +725,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1262,7 +1262,7 @@ checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
 dependencies = [
  "hermit-abi",
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1613,7 +1613,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -2146,9 +2146,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "11.16.4"
+version = "11.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b903284699f550838a491118e58e9d9adb4941c2514f148aedff1ce4b4fbd578"
+checksum = "88c8cd25f7fd929d2d13ef85051d75240d2e4219e36547b4085e63e668e253d7"
 dependencies = [
  "cfg-if",
  "fast-glob",
@@ -2174,9 +2174,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver_napi"
-version = "11.16.4"
+version = "11.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef026395511c5322f821310d8b7260a0e2d76e327a445af61834c3e97826b843"
+checksum = "d2303a50a894d54dc9071baa08c26ed13f1b801ca2e32ae80624cece9b3a582b"
 dependencies = [
  "fancy-regex",
  "napi",
@@ -3647,7 +3647,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -3709,7 +3709,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b55fb86dfd3a2f5f76ea78310a88f96c4ea21a3031f8d212443d56123fd0521"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -3995,7 +3995,7 @@ dependencies = [
  "getrandom",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4469,7 +4469,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]

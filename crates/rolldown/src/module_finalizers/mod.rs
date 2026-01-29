@@ -1894,7 +1894,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let mut needs_to_esm_helper = false;
     let rec = &self.ctx.module.import_records[*rec_idx];
-    
+
     // If the dynamic import is dead (side-effect-free module not used), replace with minimal Promise
     // that resolves to an empty object (to support destructuring in .then() callbacks)
     if rec.meta.contains(ImportRecordMeta::DeadDynamicImport) {
@@ -1916,7 +1916,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       );
       return true;
     }
-    
+
     let Some(importee_idx) = rec.resolved_module else { return true };
 
     match &self.ctx.modules[importee_idx] {

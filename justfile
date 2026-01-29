@@ -141,6 +141,8 @@ lint: lint-rust lint-node lint-repo
 lint-rust: clippy
   cargo fmt --all --check
   cargo check --workspace --all-features --all-targets --locked
+  # Ensure `rolldown` crate builds with default features (without `experimental`)
+  cargo check -p rolldown --locked
 
 # For the most of the time, code is automatically formatted on save in the editor.
 # Also, clippy already cover compiler error.

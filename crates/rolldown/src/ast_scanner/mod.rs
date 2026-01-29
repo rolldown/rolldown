@@ -343,12 +343,16 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // This allows them to be tree-shaken when the variable is not used.
     // The pattern `new URL(stringLiteral, import.meta.url)` is used for asset loading and
     // should not prevent tree-shaking.
+    // Note: We only remove the Unknown flag - if the statement has other side effects
+    // (like GlobalVarAccess), it will still be kept.
     if !self.result.new_url_references.is_empty() {
       let new_url_import_records: FxHashSet<ImportRecordIdx> =
         self.result.new_url_references.values().copied().collect();
       for stmt_info in self.result.stmt_infos.iter_mut() {
         // Check if this statement contains any new URL import records
-        if stmt_info.import_records.iter().any(|rec_idx| new_url_import_records.contains(rec_idx))
+        // and only remove Unknown flag if it's set
+        if stmt_info.side_effect.contains(SideEffectDetail::Unknown)
+          && stmt_info.import_records.iter().any(|rec_idx| new_url_import_records.contains(rec_idx))
         {
           // Remove the Unknown side effect flag, which is what prevents tree-shaking
           stmt_info.side_effect.remove(SideEffectDetail::Unknown);

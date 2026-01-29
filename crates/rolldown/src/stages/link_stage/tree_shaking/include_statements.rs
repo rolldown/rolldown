@@ -806,7 +806,7 @@ pub fn include_statement(
         }
         return;
       }
-      
+
       let Some(m) = ctx.modules[module_idx].as_normal() else {
         // If the import record is not a normal module, we don't need to include it.
         return;

@@ -4,7 +4,7 @@ import { expect, test, vi, beforeEach, afterEach } from 'vitest';
 let consoleSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
-  consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 });
 
 afterEach(() => {

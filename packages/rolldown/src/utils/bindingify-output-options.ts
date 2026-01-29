@@ -4,6 +4,7 @@ import { ChunkingContextImpl } from '../types/chunking-context';
 import { transformAssetSource } from './asset-source';
 import { unimplemented } from './misc';
 import { transformRenderedChunk } from './transform-rendered-chunk';
+import { logger } from '../cli/logger';
 
 export function bindingifyOutputOptions(outputOptions: OutputOptions): BindingOutputOptions {
   const {
@@ -188,7 +189,7 @@ function bindingifyCodeSplitting(
   if (codeSplitting === false) {
     // Warn if inlineDynamicImports is also set
     if (inlineDynamicImportsOption != null) {
-      console.warn(
+      logger.warn(
         '`inlineDynamicImports` option is ignored because `codeSplitting: false` is set.',
       );
     }
@@ -200,7 +201,7 @@ function bindingifyCodeSplitting(
     }
     // When code splitting is disabled, ignore advancedChunks
     if (advancedChunks != null) {
-      console.warn('`advancedChunks` option is ignored because `codeSplitting` is set to `false`.');
+      logger.warn('`advancedChunks` option is ignored because `codeSplitting` is set to `false`.');
     }
     // Return early - no advanced chunks when code splitting is disabled
     return {
@@ -210,15 +211,13 @@ function bindingifyCodeSplitting(
   } else if (codeSplitting === true) {
     // Explicit code splitting enabled - ignore deprecated inlineDynamicImports
     if (inlineDynamicImportsOption != null) {
-      console.warn(
-        '`inlineDynamicImports` option is ignored because `codeSplitting: true` is set.',
-      );
+      logger.warn('`inlineDynamicImports` option is ignored because `codeSplitting: true` is set.');
     }
   } else if (codeSplitting == null) {
     // Default behavior: no inlining, automatic code splitting
     // Check if deprecated inlineDynamicImports is used
     if (inlineDynamicImportsOption != null) {
-      console.warn(
+      logger.warn(
         '`inlineDynamicImports` option is deprecated, please use `codeSplitting: false` instead.',
       );
       inlineDynamicImports = inlineDynamicImportsOption;
@@ -228,7 +227,7 @@ function bindingifyCodeSplitting(
     effectiveChunksOption = codeSplitting;
     // Ignore inlineDynamicImports if codeSplitting object is specified
     if (inlineDynamicImportsOption != null) {
-      console.warn(
+      logger.warn(
         '`inlineDynamicImports` option is ignored because the `codeSplitting` option is specified.',
       );
     }
@@ -244,18 +243,18 @@ function bindingifyCodeSplitting(
   // Handle advancedChunks deprecation (only if codeSplitting is not set to object)
   if (effectiveChunksOption == null) {
     if (advancedChunks != null) {
-      console.warn('`advancedChunks` option is deprecated, please use `codeSplitting` instead.');
+      logger.warn('`advancedChunks` option is deprecated, please use `codeSplitting` instead.');
       effectiveChunksOption = advancedChunks;
     }
   } else if (advancedChunks != null) {
-    console.warn(
+    logger.warn(
       '`advancedChunks` option is ignored because the `codeSplitting` option is specified.',
     );
   }
 
   // Handle manualChunks migration
   if (manualChunks != null && effectiveChunksOption != null) {
-    console.warn(
+    logger.warn(
       '`manualChunks` option is ignored because the `codeSplitting` option is specified.',
     );
   } else if (manualChunks != null) {

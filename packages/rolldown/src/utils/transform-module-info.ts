@@ -4,6 +4,13 @@ import type { ModuleInfo } from '../types/module-info';
 import { unsupported } from './misc';
 
 export function transformModuleInfo(info: BindingModuleInfo, option: ModuleOptions): ModuleInfo {
+  // Ensure meta.commonjs.isCommonJS is set for backward compatibility with Rollup
+  const meta = option.meta || {};
+  if (!meta.commonjs) {
+    meta.commonjs = {};
+  }
+  meta.commonjs.isCommonJS = info.isCommonjs;
+
   return {
     get ast() {
       return unsupported('ModuleInfo#ast');
@@ -20,5 +27,6 @@ export function transformModuleInfo(info: BindingModuleInfo, option: ModuleOptio
     isEntry: info.isEntry,
     isCommonJS: info.isCommonjs,
     ...option,
+    meta,
   };
 }

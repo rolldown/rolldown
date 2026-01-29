@@ -906,9 +906,9 @@ impl<'a> ModuleLoader<'a> {
         .take_needed_records(&new_exports, &mut remaining_imported_specifiers);
 
       tracked_records.retain(|&rec_idx, (import_record_state, resolved_id)| {
-        if !needed_records.contains_key(&rec_idx) {
+        let Some(needed_record) = needed_records.remove(&rec_idx) else {
           return true;
-        }
+        };
 
         let mut is_module_from_cache_snapshot = false;
         let barrel_normal_module = match &self.intermediate_normal_modules.modules {
@@ -983,12 +983,7 @@ impl<'a> ModuleLoader<'a> {
           Some(None) => false,
           None => true,
         };
-        work_queue.push_back((
-          target_idx,
-          needed_records.remove(&rec_idx).expect(
-            "If needed_records does not contain the record idx, it should have been skipped above",
-          ),
-        ));
+        work_queue.push_back((target_idx, needed_record));
         if keep_tracking {
           remaining_imported_specifiers.contains_key(&rec_idx)
         } else {

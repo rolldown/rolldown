@@ -28,7 +28,7 @@ console.log(void 0);
 
 //#endregion
 //#region es6-import-dynamic.js
-Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+Promise.resolve({});
 console.log(void 0);
 
 //#endregion
@@ -37,7 +37,7 @@ console.log(void 0);
 
 //#endregion
 //#region es6-expr-import-dynamic.js
-Promise.resolve().then(() => /* @__PURE__ */ Object.freeze({ __proto__: null }));
+Promise.resolve({});
 console.log(void 0);
 
 //#endregion

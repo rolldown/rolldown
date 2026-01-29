@@ -1672,7 +1672,7 @@ expression: output
 
 # tests/esbuild/default/this_with_es6_syntax
 
-- entry-!~{000}~.js => entry-CBvv5XJg.js
+- entry-!~{000}~.js => entry-BbeBFYtM.js
 
 # tests/esbuild/default/to_esm_wrapper_omission
 
@@ -4433,7 +4433,7 @@ expression: output
 
 # tests/rolldown/function/inline_dynamic_imports/basic
 
-- main-!~{000}~.js => main-Bi9d2SEl.js
+- main-!~{000}~.js => main-Dypql6lC.js
 
 # tests/rolldown/function/inline_dynamic_imports/issue-6935
 
@@ -6348,7 +6348,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/dynamic_import_then_destructur
 
-- main-!~{000}~.js => main-BBze83cI.js
+- main-!~{000}~.js => main-CfOUp9X6.js
 
 # tests/rolldown/tree_shaking/dynamic_import_then_destructur_unused
 
@@ -6357,7 +6357,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/dynamic_import_then_empty_param
 
-- main-!~{000}~.js => main-f8JnC_f1.js
+- main-!~{000}~.js => main-DPuaq8xe.js
 
 # tests/rolldown/tree_shaking/dynamic_require_unused_by_function
 
@@ -6447,7 +6447,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/side_effect_free_dynamic_importee
 
-- main-!~{000}~.js => main-Cjd6Ep5g.js
+- main-!~{000}~.js => main-t7pjSTg5.js
 
 # tests/rolldown/tree_shaking/unused_dynamic_imported_chunk
 

@@ -1165,11 +1165,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let importee_id = rec.resolved_module?;
 
     if rec.meta.contains(ImportRecordMeta::DeadDynamicImport) {
-      return Some(
-        self
-          .snippet
-          .promise_resolve_then_call_expr(self.snippet.object_freeze_dynamic_import_polyfill()),
-      );
+      // Don't inline dead dynamic imports here, let try_rewrite_import_expression handle them
+      // by replacing with void 0 to completely remove the side-effect-free import
+      return None;
     }
 
     if self.ctx.options.code_splitting.is_disabled() {
@@ -1896,6 +1894,29 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let mut needs_to_esm_helper = false;
     let rec = &self.ctx.module.import_records[*rec_idx];
+    
+    // If the dynamic import is dead (side-effect-free module not used), replace with minimal Promise
+    // that resolves to an empty object (to support destructuring in .then() callbacks)
+    if rec.meta.contains(ImportRecordMeta::DeadDynamicImport) {
+      *node = self.snippet.builder.expression_call(
+        SPAN,
+        ast::Expression::StaticMemberExpression(
+          self.snippet.builder.alloc_static_member_expression(
+            SPAN,
+            self.snippet.builder.expression_identifier(SPAN, "Promise"),
+            self.snippet.builder.identifier_name(SPAN, "resolve"),
+            false,
+          ),
+        ),
+        NONE,
+        self.snippet.builder.vec1(ast::Argument::ObjectExpression(
+          self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec()),
+        )),
+        false,
+      );
+      return true;
+    }
+    
     let Some(importee_idx) = rec.resolved_module else { return true };
 
     match &self.ctx.modules[importee_idx] {

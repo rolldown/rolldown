@@ -9,6 +9,7 @@ use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, IndexModules, MemberExprObjectReferencedType,
   MemberExprRefResolution, Module, ModuleIdx, ModuleType, NamespaceAlias, NormalModule,
   OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  SymbolRefFlags,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_utils::{
@@ -722,6 +723,21 @@ impl BindImportsAndExportsContext<'_> {
         MatchImportKind::NormalAndNamespace { namespace_ref, alias } => {
           self.symbol_db.get_mut(*imported_as_ref).namespace_alias =
             Some(NamespaceAlias { property_name: alias, namespace_ref });
+
+          // Propagate the MustStartWithCapitalLetterForJSX flag from the imported symbol
+          // to its namespace_ref. When we have a namespace alias like:
+          //   import React from './cjs-module';
+          //   <React.Fragment>...</React.Fragment>
+          // The `React` symbol has the JSX flag, but the actual binding rendered is
+          // the namespace_ref (e.g., `import_react`). We need to ensure the namespace_ref
+          // also has the uppercase first letter in JSX preserve mode.
+          if imported_as_ref
+            .flags(self.symbol_db)
+            .is_some_and(|flags| flags.contains(SymbolRefFlags::MustStartWithCapitalLetterForJSX))
+          {
+            let ns_flags = namespace_ref.flags_mut(self.symbol_db);
+            *ns_flags |= SymbolRefFlags::MustStartWithCapitalLetterForJSX;
+          }
         }
         MatchImportKind::NoMatch => {
           let importee = &self.index_modules[resolved_module_idx];

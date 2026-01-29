@@ -4976,7 +4976,7 @@ expression: output
 
 # tests/rolldown/issues/6036
 
-- main-!~{000}~.js => main-D7hd2p9R.js
+- main-!~{000}~.js => main-BCR7h3kX.js
 
 # tests/rolldown/issues/6097
 
@@ -6593,7 +6593,7 @@ expression: output
 
 # tests/rollup/jsx/preserves-jsx-member-expression
 
-- main-!~{000}~.js => main-BkutsFDO.js
+- main-!~{000}~.js => main-BeqOBba_.js
 
 # tests/rollup/jsx/preserves-jsx-self-closing
 

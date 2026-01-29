@@ -7,12 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region main.js
-const obj = {
+const Obj = {
 	Foo: () => {},
 	bar: { Baz: () => {} }
 };
-const result1 = <obj.Foo></obj.Foo>;
-const result2 = <obj.bar.Baz></obj.bar.Baz>;
+const result1 = <Obj.Foo></Obj.Foo>;
+const result2 = <Obj.bar.Baz></Obj.bar.Baz>;
 
 //#endregion
 export { result1, result2 };

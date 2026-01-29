@@ -170,7 +170,7 @@ catalogs:
       version: 2.33.4
     rolldown-plugin-dts:
       specifier: ^0.21.0
-      version: 0.21.6
+      version: 0.21.7
     rollup:
       specifier: ^4.18.0
       version: 4.56.0
@@ -581,7 +581,7 @@ importers:
         version: 'link:'
       rolldown-plugin-dts:
         specifier: 'catalog:'
-        version: 0.21.6(oxc-resolver@11.16.4)(rolldown@packages+rolldown)(typescript@5.9.3)
+        version: 0.21.7(oxc-resolver@11.16.4)(rolldown@packages+rolldown)(typescript@5.9.3)
       rollup:
         specifier: 'catalog:'
         version: 4.56.0
@@ -5560,8 +5560,8 @@ packages:
     engines: {node: 20 || >=22}
     hasBin: true
 
-  rolldown-plugin-dts@0.21.6:
-    resolution: {integrity: sha512-gePhzvZJRB0JIb/NyngEsMt3FPQtM4BXCLkxz7u1ggge2PmlZ7uOwmHjeBEsBiBRjOY12SdtEl7BmI3T1779ZA==}
+  rolldown-plugin-dts@0.21.7:
+    resolution: {integrity: sha512-u6mHPTxLzC/eU3hbFqu1Hd47if1zXITvNtbro5PRVqMe3tLzUkdeur87wRg8Y/bX5PYUUtPuGO815uHp8zi9uQ==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@ts-macro/tsc': ^0.3.6
@@ -10867,7 +10867,7 @@ snapshots:
       glob: 13.0.0
       package-json-from-dist: 1.0.1
 
-  rolldown-plugin-dts@0.21.6(oxc-resolver@11.16.4)(rolldown@packages+rolldown)(typescript@5.9.3):
+  rolldown-plugin-dts@0.21.7(oxc-resolver@11.16.4)(rolldown@packages+rolldown)(typescript@5.9.3):
     dependencies:
       '@babel/generator': 8.0.0-beta.4
       '@babel/parser': 8.0.0-beta.4

@@ -40,4 +40,8 @@ export interface ModuleInfo extends ModuleOptions {
    * Whether this module is a user- or plugin-defined entry point.
    */
   isEntry: boolean;
+  /**
+   * Whether this module is a CommonJS module.
+   */
+  isCommonJS: boolean;
 }

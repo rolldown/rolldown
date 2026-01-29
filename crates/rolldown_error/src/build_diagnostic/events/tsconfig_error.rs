@@ -22,7 +22,7 @@ impl BuildEvent for TsConfigError {
     format!(
       "Failed to load tsconfig for '{}': {}",
       opts.stabilize_path(&self.file_path),
-      resolve_error_to_message(&self.reason)
+      resolve_error_to_message(&self.reason, opts)
     )
   }
 

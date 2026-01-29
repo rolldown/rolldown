@@ -799,6 +799,14 @@ pub fn include_statement(
       rec.resolved_module.map(|module_idx| (rec, module_idx))
     })
     .for_each(|(import_record, module_idx)| {
+      // Include asset modules referenced by `new URL(stringLiteral, import.meta.url)`
+      if import_record.kind == ImportKind::NewUrl {
+        if let Some(asset_module) = ctx.modules[module_idx].as_normal() {
+          include_module(ctx, asset_module);
+        }
+        return;
+      }
+      
       let Some(m) = ctx.modules[module_idx].as_normal() else {
         // If the import record is not a normal module, we don't need to include it.
         return;

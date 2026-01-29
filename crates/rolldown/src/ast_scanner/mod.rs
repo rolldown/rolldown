@@ -339,6 +339,23 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
     self.result.exports_kind = exports_kind;
 
+    // Mark statements containing `new URL(stringLiteral, import.meta.url)` as side-effect-free.
+    // This allows them to be tree-shaken when the variable is not used.
+    // The pattern `new URL(stringLiteral, import.meta.url)` is used for asset loading and
+    // should not prevent tree-shaking.
+    if !self.result.new_url_references.is_empty() {
+      let new_url_import_records: FxHashSet<ImportRecordIdx> =
+        self.result.new_url_references.values().copied().collect();
+      for stmt_info in self.result.stmt_infos.iter_mut() {
+        // Check if this statement contains any new URL import records
+        if stmt_info.import_records.iter().any(|rec_idx| new_url_import_records.contains(rec_idx))
+        {
+          // Remove the Unknown side effect flag, which is what prevents tree-shaking
+          stmt_info.side_effect.remove(SideEffectDetail::Unknown);
+        }
+      }
+    }
+
     // If some commonjs module facade exports was used locally, we need to explicitly mark them as
     // has side effects, so that they should not be removed in linking stage.
     let mut bailout_inlined_cjs_exports_symbol_ids = FxHashSet::default();

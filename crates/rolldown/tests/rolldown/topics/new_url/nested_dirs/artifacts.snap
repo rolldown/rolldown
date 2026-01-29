@@ -9,11 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 foo
 ```
 
-## chunks/dep-DGfnxe7V.js
+## chunks/dep-DlTHxRHY.js
 
 ```js
-import "./foo-GNO-ZiAj.js";
-
 //#region dep.js
 const url = new URL("../assets/foo-DX_UVeUe.txt", import.meta.url);
 
@@ -33,11 +31,9 @@ var foo_default = "assets/foo-DX_UVeUe.txt";
 ## main.js
 
 ```js
-import "./chunks/foo-GNO-ZiAj.js";
-
 //#region main.js
 const url = new URL("assets/foo-DX_UVeUe.txt", import.meta.url);
-const dep = import("./chunks/dep-DGfnxe7V.js");
+const dep = import("./chunks/dep-DlTHxRHY.js");
 
 //#endregion
 export { dep, url };

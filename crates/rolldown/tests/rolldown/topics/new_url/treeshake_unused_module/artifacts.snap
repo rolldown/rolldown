@@ -3,22 +3,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/foo-B1-u1gTW.txt
-
-```txt
-foo
-
-```
-
 ## main.js
 
 ```js
-//#region foo.txt
-var foo_default = "assets/foo-B1-u1gTW.txt";
-
-//#endregion
 //#region dep.js
-const unused = new URL("assets/foo-B1-u1gTW.txt", import.meta.url);
 const used = "used";
 
 //#endregion

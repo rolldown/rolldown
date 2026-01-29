@@ -1174,7 +1174,7 @@ expression: output
 # tests/esbuild/default/line_limit_not_minified
 
 - script-!~{000}~.js => script-BvhlB48x.js
-- style-!~{001}~.js => style--PNW2bZZ.js
+- style-!~{001}~.js => style-ewHi_Rg6.js
 - x-!~{002}~.js => x-u4pDCUSC.js
 - assets/x-3IosnrVQ.file
 - assets/x-DYoL-ZzY.copy
@@ -1344,11 +1344,10 @@ expression: output
 
 - bytesInOutput should be at least 99 (1)-!~{000}~.js => bytesInOutput should be at least 99 (1)-DclVTQmJ.js
 - bytesInOutput should be at least 99 (2)-!~{002}~.js => bytesInOutput should be at least 99 (2)-C1dmrv4X.js
-- bytesInOutput should be at least 99 (3)-!~{003}~.js => bytesInOutput should be at least 99 (3)-BXK8AoIB.js
-- bytesInOutput should be at least 99-!~{004}~.js => bytesInOutput should be at least 99-DkNbQH6H.js
-- 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-!~{006}~.js => 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-BT4URTuB.js
+- bytesInOutput should be at least 99 (3)-!~{003}~.js => bytesInOutput should be at least 99 (3)-7x28W1lu.js
+- bytesInOutput should be at least 99-!~{004}~.js => bytesInOutput should be at least 99-BhfqL9Fk.js
+- 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-!~{005}~.js => 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-_2gw6WCE.js
 - assets/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111-Dnygiwvn.file
-- assets/444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444-BDtJkR0u.file
 - bytesInOutput should be at least 99.css
 
 # tests/esbuild/default/minified_bundle_common_js
@@ -2305,8 +2304,7 @@ expression: output
 
 # tests/esbuild/loader/loader_copy_with_bundle_from_css
 
-- src_entry-!~{000}~.js => src_entry-CBhomylh.js
-- assets/some-C_XH274v.file
+- src_entry-!~{000}~.js => src_entry-Beih42Mx.js
 - src_entry.css
 
 # tests/esbuild/loader/loader_copy_with_format
@@ -2402,11 +2400,10 @@ expression: output
 
 # tests/esbuild/loader/loader_file_one_source_two_different_output_paths_css
 
-- entries_entry-!~{000}~.js => entries_entry-DQU8DgDM.js
-- entries_other_entry-!~{001}~.js => entries_other_entry-CZZwsQqx.js
-- common-!~{002}~.js => common-DW_Sz7VT.js
-- assets/common-DRmw-xSi.png
-- common-CYCQ3zN8.css
+- entries_entry-!~{000}~.js => entries_entry-Da_KFCmi.js
+- entries_other_entry-!~{001}~.js => entries_other_entry-BBXSMJxt.js
+- common-!~{002}~.js => common-Cpjr9D_i.js
+- common-DqJNgWuP.css
 - entries_entry.css
 - entries_other_entry.css
 
@@ -2419,8 +2416,7 @@ expression: output
 
 # tests/esbuild/loader/loader_file_public_path_asset_names_css
 
-- entries/entry-!~{000}~.js => entries/entry-DpoBBbNJ.js
-- assets/image-7R51b9Yh.png
+- entries/entry-!~{000}~.js => entries/entry-DQd_BCxV.js
 - entries/entry.css
 
 # tests/esbuild/loader/loader_file_public_path_asset_names_js
@@ -2430,8 +2426,7 @@ expression: output
 
 # tests/esbuild/loader/loader_file_public_path_css
 
-- entries/entry-!~{000}~.js => entries/entry-DpoBBbNJ.js
-- assets/image-7R51b9Yh.png
+- entries/entry-!~{000}~.js => entries/entry-DQd_BCxV.js
 - entries/entry.css
 
 # tests/esbuild/loader/loader_file_public_path_js
@@ -2441,8 +2436,7 @@ expression: output
 
 # tests/esbuild/loader/loader_file_relative_path_asset_names_css
 
-- entries/entry-!~{000}~.js => entries/entry-DpoBBbNJ.js
-- assets/image-7R51b9Yh.png
+- entries/entry-!~{000}~.js => entries/entry-DQd_BCxV.js
 - entries/entry.css
 
 # tests/esbuild/loader/loader_file_relative_path_asset_names_js
@@ -2452,9 +2446,8 @@ expression: output
 
 # tests/esbuild/loader/loader_file_relative_path_css
 
-- entries/entry-!~{000}~.js => entries/entry-DG22QWWP.js
+- entries/entry-!~{000}~.js => entries/entry-DQd_BCxV.js
 - entries/entry.css
-- image-DzFdYDYb.png
 
 # tests/esbuild/loader/loader_file_relative_path_js
 
@@ -5864,8 +5857,7 @@ expression: output
 
 # tests/rolldown/topics/css/basic
 
-- main-!~{000}~.js => main-Css_tiXh.js
-- assets/test-DE53Xtiu.png
+- main-!~{000}~.js => main-Fv4vYntb.js
 - main.css
 
 # tests/rolldown/topics/css/css_entries
@@ -6191,8 +6183,8 @@ expression: output
 
 # tests/rolldown/topics/new_url/nested_dirs
 
-- main-!~{000}~.js => main-DvSIyMBH.js
-- chunks/dep-!~{004}~.js => chunks/dep-hG8MVcAZ.js
+- main-!~{000}~.js => main-WVizxcQO.js
+- chunks/dep-!~{004}~.js => chunks/dep-MHHkPnP3.js
 - chunks/foo-!~{001}~.js => chunks/foo-C1IWJA8i.js
 - assets/foo-BEmL3U_T.txt
 
@@ -6212,6 +6204,10 @@ expression: output
 # tests/rolldown/topics/new_url/template_literal_with_expression
 
 - main-!~{000}~.js => main-DKeORYFY.js
+
+# tests/rolldown/topics/new_url/treeshake_unused_module
+
+- main-!~{000}~.js => main-DU58kC57.js
 
 # tests/rolldown/topics/npm_packages/util_deprecate
 

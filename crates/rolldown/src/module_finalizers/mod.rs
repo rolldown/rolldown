@@ -1166,7 +1166,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     if rec.meta.contains(ImportRecordMeta::DeadDynamicImport) {
       // Don't inline dead dynamic imports here, let try_rewrite_import_expression handle them
-      // by replacing with void 0 to completely remove the side-effect-free import
+      // by replacing with Promise.resolve({}) to minimize the side-effect-free import
       return None;
     }
 

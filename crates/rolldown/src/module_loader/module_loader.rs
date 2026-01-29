@@ -28,12 +28,13 @@ use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use tracing::Instrument;
 
+use crate::module_loader::module_task::ModuleTaskOwner;
 use crate::types::scan_stage_cache::ScanStageCache;
 use crate::utils::load_entry_module::load_entry_module;
 use crate::{SharedOptions, SharedResolver};
 
 use super::external_module_task::ExternalModuleTask;
-use super::module_task::{ModuleTask, ModuleTaskOwnerRef};
+use super::module_task::ModuleTask;
 use super::runtime_module_task::RuntimeModuleTask;
 use super::task_context::{TaskContext, TaskContextMeta};
 
@@ -207,7 +208,7 @@ impl<'a> ModuleLoader<'a> {
   fn try_spawn_new_task(
     &mut self,
     resolved_id: ResolvedId,
-    owner: Option<ModuleTaskOwnerRef>,
+    owner: Option<ModuleTaskOwner>,
     is_user_defined_entry: bool,
     assert_module_type: Option<&ModuleType>,
     user_defined_entries: &Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
@@ -258,7 +259,7 @@ impl<'a> ModuleLoader<'a> {
         ctx,
         idx,
         resolved_id,
-        owner.map(Into::into),
+        owner,
         is_user_defined_entry,
         assert_module_type.cloned(),
         self.flat_options,
@@ -433,7 +434,7 @@ impl<'a> ModuleLoader<'a> {
 
             let idx = self.try_spawn_new_task(
               resolved_id,
-              Some(ModuleTaskOwnerRef::new(normal_module, raw_rec.span)),
+              Some(ModuleTaskOwner::new(normal_module, raw_rec.span)),
               false,
               raw_rec.asserted_module_type.as_ref(),
               &user_defined_entries,
@@ -921,7 +922,7 @@ impl<'a> ModuleLoader<'a> {
           None => {
             let new_idx = self.try_spawn_new_task(
               resolved_id.clone(),
-              Some(ModuleTaskOwnerRef::new(barrel_normal_module, import_record_state.span)),
+              Some(ModuleTaskOwner::new(barrel_normal_module, import_record_state.span)),
               false,
               import_record_state.asserted_module_type.as_ref(),
               user_defined_entries,

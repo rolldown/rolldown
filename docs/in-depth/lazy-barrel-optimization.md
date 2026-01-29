@@ -63,6 +63,7 @@ export * from './components';
 export { Component } from './Component';
 export { helper as utils } from './helper';
 export { default as Button } from './Button';
+export { Button as default } from './Button';
 ```
 
 ### Namespace re-exports
@@ -77,6 +78,10 @@ export * as ns from './module';
 // Equivalent to `export { a } from './a'`
 import { a } from './a';
 export { a };
+
+// Equivalent to `export { a as default } from './a'`
+import { a } from './a';
+export { a as default };
 
 // Equivalent to `export * as ns from './module'`
 import * as ns from './module';
@@ -99,6 +104,14 @@ export * from './more';
 When an import can be found in named exports, star exports are not searched, avoiding unnecessary module loading.
 
 However, if the import is not found in named exports, all star re-exports will be loaded to resolve it. If those star re-exported modules are also barrel modules, only the specific import specifier will be loaded from them.
+
+::: warning Re-export vs Own export for default
+`export { Button as default } from './Button'` and `import { Button } from './Button'; export default Button` are **not equivalent** for lazy barrel optimization.
+
+The first is a re-export — only `./Button` is loaded when `default` is imported.
+
+The second is an own export — `export default Button` references a local binding, making `default` an own export of the barrel. When `default` is imported, all of the barrel's import records must be loaded (see [Own exports](#own-exports-non-pure-re-export-barrels)).
+:::
 
 ## Advanced scenarios
 
@@ -180,9 +193,11 @@ export { d } from './d';
 console.log(b);
 
 export const index = 'index'; // own export
+export default b; // `default` is an own export
 
 // main.js
 import { index, c } from './barrel';
+// or import b, { c } from './barrel';
 ```
 
 In this case, when `index` is imported: `a.js`, `b.js`, `c.js`, and `d.js` are all loaded:

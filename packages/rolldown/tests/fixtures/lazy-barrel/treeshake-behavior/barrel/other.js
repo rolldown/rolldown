@@ -11,4 +11,4 @@ import { gg } from './g.js';
 console.log('./index.js', gg);
 
 export const index = 'index';
-export default gg;
+export { gg as default };

@@ -34,12 +34,11 @@ function test$1() {
 function test() {
 	return import_cjs.default;
 }
-var b_default = test;
 
 //#endregion
 //#region main.js
 const aa = test$1();
-const bb = b_default();
+const bb = test();
 
 //#endregion
 export { aa, bb };

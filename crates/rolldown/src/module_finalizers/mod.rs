@@ -1405,6 +1405,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           use ast::ExportDefaultDeclarationKind;
           let default_decl_span = default_decl.span;
           match &mut default_decl.declaration {
+            // Special case: when exporting an identifier that's already the default export symbol
+            ast::ExportDefaultDeclarationKind::Identifier(id)
+              if self.scope.scoping().get_reference(id.reference_id()).symbol_id().is_some_and(
+                |symbol_id| symbol_id == self.ctx.module.default_export_ref.symbol,
+              ) =>
+            {
+              // "let a = ..;export default a" => "let a = ..;" (no transformation needed)
+              return;
+            }
             decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
               let expr = decl.to_expression_mut();
               let canonical_name_for_default_export_ref =

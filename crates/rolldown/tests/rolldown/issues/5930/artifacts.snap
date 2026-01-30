@@ -32,10 +32,9 @@ var require_rule = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 var import_rule = /* @__PURE__ */ __toESM(require_rule());
 const plugin = { mod: import_rule.default };
 node_assert.default.strictEqual(plugin.mod.meta, 19);
-var main_default = plugin;
 
 //#endregion
-module.exports = main_default;
+module.exports = plugin;
 ```
 
 # Variant: [preserve_modules: true]
@@ -82,10 +81,9 @@ node_assert = require_runtime.__toESM(node_assert);
 var import_rule = /* @__PURE__ */ require_runtime.__toESM(require_rule$1.default);
 const plugin = { mod: import_rule.default };
 node_assert.default.strictEqual(plugin.mod.meta, 19);
-var main_default = plugin;
 
 //#endregion
-module.exports = main_default;
+module.exports = plugin;
 ```
 
 ### rule.js

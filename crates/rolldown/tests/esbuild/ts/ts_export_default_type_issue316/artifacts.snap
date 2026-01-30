@@ -78,7 +78,6 @@ var foo$3 = class foo$3 {
 		this.x = new foo$3();
 	}
 };
-var interface_merged_default = foo$3;
 let bar$10 = 123;
 
 //#endregion
@@ -140,7 +139,7 @@ var entry_default = [
 	bar$12,
 	dl_def,
 	bar$11,
-	interface_merged_default,
+	foo$3,
 	bar$10,
 	interface_nested_default,
 	bar$9,

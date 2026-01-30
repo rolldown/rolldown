@@ -798,7 +798,32 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
     use oxc::ast::ast::ExportDefaultDeclarationKind;
     let local_binding_for_default_export = match &decl.declaration {
-      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
+      ast::ExportDefaultDeclarationKind::Identifier(id) => {
+        if let Some(symbol_id) = self.resolve_symbol_from_reference(id) {
+          let scoping = self.result.symbol_ref_db.ast_scopes.scoping();
+          let symbol_id_span = scoping.symbol_span(symbol_id);
+
+          // We can only reuse the symbol if all the following conditions are met:
+          // 1. Declaration is before `export default` (not: `export default foo; const foo = 1;`)
+          // 2. Symbol is not an imported binding (not: `import { foo } from './other'; export default foo;`)
+          // 3. Symbol has no redeclarations (not: `var foo = 1; var foo = 2; export default foo;`)
+          // 4. Symbol has no write references (not: `let foo = 1; foo = 2; export default foo;`)
+          // See https://github.com/rollup/rollup/blob/061a0387/test/function/samples/default-export-before-declaration
+          let cannot_reuse_symbol = (id.span.is_unspanned()
+            || symbol_id_span.is_unspanned()
+            || symbol_id_span.start > id.span.start)
+            || self
+              .result
+              .named_imports
+              .contains_key(&SymbolRef::from((self.immutable_ctx.idx, symbol_id)))
+            || !scoping.symbol_redeclarations(symbol_id).is_empty()
+            || scoping.get_resolved_references(symbol_id).any(Reference::is_write);
+          if !cannot_reuse_symbol {
+            self.result.default_export_ref.symbol = symbol_id;
+          }
+        }
+        None
+      }
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
         if fn_decl.is_side_effect_free() || fn_decl.pure {
           self.result.ecma_view_meta.insert(EcmaViewMeta::TopExportedSideEffectsFreeFunction);
@@ -824,6 +849,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         })
       }
       ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
+      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
     };
     let (reference, span) = local_binding_for_default_export
       .unwrap_or((self.result.default_export_ref.symbol, Span::default()));

@@ -49,7 +49,7 @@ pub mod unloadable_dependency;
 pub mod unresolved_entry;
 pub mod unsupported_feature;
 
-pub trait BuildEvent: Debug + Sync + Send + AsAnyMut {
+pub trait BuildEvent: Debug + Sync + Send + AsAny + AsAnyMut {
   fn kind(&self) -> EventKind;
 
   fn message(&self, opts: &DiagnosticOptions) -> String;
@@ -82,6 +82,16 @@ where
 {
   fn from(e: T) -> Self {
     Box::new(e)
+  }
+}
+
+pub trait AsAny {
+  fn as_any(&self) -> &dyn Any;
+}
+
+impl<T: 'static + BuildEvent> AsAny for T {
+  fn as_any(&self) -> &dyn Any {
+    self
   }
 }
 

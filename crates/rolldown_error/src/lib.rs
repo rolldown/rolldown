@@ -7,6 +7,7 @@ pub type BuildResult<T> = Result<T, BatchedBuildDiagnostic>;
 pub type SingleBuildResult<T> = std::result::Result<T, BuildDiagnostic>;
 
 pub use crate::{
+  build_diagnostic::consolidate_diagnostics,
   build_diagnostic::events::DiagnosableArcstr,
   build_diagnostic::events::ambiguous_external_namespace::AmbiguousExternalNamespaceModule,
   build_diagnostic::events::bundler_initialize_error::BundlerInitializeError,

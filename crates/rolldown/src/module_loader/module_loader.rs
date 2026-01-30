@@ -19,7 +19,9 @@ use rolldown_common::{
   SymbolRefDbForModule,
 };
 use rolldown_ecmascript::EcmaAst;
-use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosableResolveError};
+use rolldown_error::{
+  BuildDiagnostic, BuildResult, DiagnosableResolveError, consolidate_diagnostics,
+};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::indexmap::FxIndexSet;
@@ -644,6 +646,7 @@ impl<'a> ModuleLoader<'a> {
         }
       }
 
+      let errors = consolidate_diagnostics(errors);
       return Err(errors.into());
     }
     if let Some(tx) = self.magic_string_tx.as_ref() {

@@ -1,0 +1,11 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## TSCONFIG_ERROR
+
+```text
+[TSCONFIG_ERROR] Error: Failed to load tsconfig for 'main1.ts', 'main2.ts': Tsconfig not found
+
+```

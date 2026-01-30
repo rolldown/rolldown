@@ -376,6 +376,6 @@ impl BuildDiagnostic {
   }
 
   pub fn tsconfig_error(file_path: String, reason: ResolveError) -> Self {
-    Self::new_inner(TsConfigError { file_path, reason })
+    Self::new_inner(TsConfigError { file_paths: vec![file_path], reason })
   }
 }

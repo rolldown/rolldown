@@ -2,6 +2,7 @@ pub mod constructors;
 pub mod diagnostic;
 pub mod events;
 
+use rustc_hash::FxHashMap;
 use std::{
   fmt::Display,
   ops::{Deref, DerefMut},
@@ -12,7 +13,7 @@ use crate::{
   types::diagnostic_options::DiagnosticOptions, utils::downcast_napi_error_diagnostics,
 };
 
-use self::{diagnostic::Diagnostic, events::BuildEvent};
+use self::{diagnostic::Diagnostic, events::BuildEvent, events::tsconfig_error::TsConfigError};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Severity {
@@ -86,6 +87,11 @@ impl BuildDiagnostic {
   }
 
   /// Attempt to downcast the inner event to a specific type.
+  pub fn downcast_ref<T: 'static + BuildEvent>(&self) -> Option<&T> {
+    self.inner.as_any().downcast_ref()
+  }
+
+  /// Attempt to downcast the inner event to a specific type (mutable).
   pub fn downcast_mut<T: 'static + BuildEvent>(&mut self) -> Option<&mut T> {
     self.inner.as_any_mut().downcast_mut()
   }
@@ -173,4 +179,31 @@ impl DerefMut for BatchedBuildDiagnostic {
   fn deref_mut(&mut self) -> &mut Self::Target {
     &mut self.0
   }
+}
+
+/// Consolidates diagnostics by merging those that can be grouped together.
+///
+/// Currently consolidates:
+/// - `TsConfigError` diagnostics with the same reason into a single diagnostic
+///   listing all affected files
+pub fn consolidate_diagnostics(diagnostics: Vec<BuildDiagnostic>) -> Vec<BuildDiagnostic> {
+  let mut tsconfig_map = FxHashMap::<String, usize>::default();
+  let mut result: Vec<BuildDiagnostic> = Vec::new();
+  for mut diag in diagnostics {
+    if let Some(tsconfig_err) = diag.downcast_mut::<TsConfigError>() {
+      let reason_key = tsconfig_err.reason.to_string();
+
+      if let Some(&idx) = tsconfig_map.get(&reason_key) {
+        if let Some(existing_tsconfig) = result[idx].downcast_mut::<TsConfigError>() {
+          existing_tsconfig.merge(std::mem::take(&mut tsconfig_err.file_paths));
+        }
+      } else {
+        tsconfig_map.insert(reason_key, result.len());
+        result.push(diag);
+      }
+    } else {
+      result.push(diag);
+    }
+  }
+  result
 }

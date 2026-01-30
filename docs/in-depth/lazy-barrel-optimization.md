@@ -117,30 +117,32 @@ This example shows the difference:
 ::: code-group
 
 ```js [main.js]
-import { Button, increment } from './Button.js'
-import ExportDefaultButton, { ReExportedButton } from './re-exporter.js'
+import { Button, increment } from './Button.js';
+import ExportDefaultButton, { ReExportedButton } from './re-exporter.js';
 
-console.log(Button) // 1
-console.log(ReExportedButton) // 1
-console.log(ExportDefaultButton) // 1
+console.log(Button); // 1
+console.log(ReExportedButton); // 1
+console.log(ExportDefaultButton); // 1
 
-increment()
+increment();
 
-console.log(Button) // 2
-console.log(ReExportedButton) // 2
-console.log(ExportDefaultButton) // 1
+console.log(Button); // 2
+console.log(ReExportedButton); // 2
+console.log(ExportDefaultButton); // 1
 ```
+
 ```js [re-exporter.js]
-import { Button } from './Button.js'
-export default Button
+import { Button } from './Button.js';
+export default Button;
 
-export { Button as ReExportedButton } from './Button.js'
+export { Button as ReExportedButton } from './Button.js';
 ```
+
 ```js [Button.js]
-export let Button = 1
+export let Button = 1;
 export const increment = () => {
-  Button++
-}
+  Button++;
+};
 ```
 
 :::

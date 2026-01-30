@@ -34,6 +34,7 @@ indexmap = { workspace = true }
 itertools = { workspace = true }
 itoa = { workspace = true }
 json-escape-simd = { workspace = true }
+json-strip-comments = { workspace = true }
 memchr = { workspace = true }
 oxc = { workspace = true }
 oxc_allocator = { workspace = true }

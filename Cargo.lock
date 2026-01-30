@@ -2719,6 +2719,7 @@ dependencies = [
  "itertools",
  "itoa",
  "json-escape-simd",
+ "json-strip-comments",
  "memchr",
  "oxc",
  "oxc_allocator",

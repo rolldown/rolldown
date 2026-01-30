@@ -24,7 +24,7 @@ pub fn render_esm<'code>(
   module_sources: &'code RenderedModuleSources,
 ) -> SourceJoiner<'code> {
   let mut source_joiner = SourceJoiner::default();
-  let AddonRenderContext { hashbang, banner, intro, outro, footer, directives } =
+  let AddonRenderContext { hashbang, banner, intro, outro, footer, directives, always_strict: _ } =
     addon_render_context;
 
   if let Some(hashbang) = hashbang {

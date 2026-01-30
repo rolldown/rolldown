@@ -22,7 +22,7 @@ pub fn render_cjs<'code>(
   _warnings: &mut Vec<BuildDiagnostic>,
 ) -> SourceJoiner<'code> {
   let mut source_joiner = SourceJoiner::default();
-  let AddonRenderContext { hashbang, banner, intro, outro, footer, directives } =
+  let AddonRenderContext { hashbang, banner, intro, outro, footer, directives, always_strict } =
     addon_render_context;
 
   if let Some(hashbang) = hashbang {
@@ -30,6 +30,17 @@ pub fn render_cjs<'code>(
   }
   if let Some(banner) = banner {
     source_joiner.append_source(banner);
+  }
+
+  // Check if "use strict" is already present in directives
+  let has_use_strict = directives.iter().any(|d| {
+    let normalized = d.trim_start_matches(['\'', '"']).trim_end_matches(['\'', '"', ';']);
+    normalized == "use strict"
+  });
+
+  // Inject "use strict" if alwaysStrict is true and not already present
+  if always_strict && !has_use_strict {
+    source_joiner.append_source("\"use strict\";\n");
   }
 
   if !directives.is_empty() {

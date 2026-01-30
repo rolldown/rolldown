@@ -11,4 +11,5 @@ pub struct AddonRenderContext<'code> {
   pub outro: Option<&'code str>,
   pub footer: Option<&'code str>,
   pub directives: &'code [&'code str],
+  pub always_strict: bool,
 }

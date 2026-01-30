@@ -17,8 +17,60 @@ use rolldown_sourcemap::Source;
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
+use std::path::Path;
 
 use super::format::{cjs::render_cjs, esm::render_esm, iife::render_iife, umd::render_umd};
+
+/// Find and parse alwaysStrict option from tsconfig.json
+/// Searches for tsconfig.json starting from the module's directory upwards
+fn find_and_parse_always_strict(module_id: &ModuleId, cwd: &Path) -> Option<bool> {
+  // Convert ModuleId to PathBuf
+  let module_path = Path::new(module_id.as_str());
+  
+  // Get the directory of the module
+  let mut current_dir = if module_path.is_absolute() {
+    module_path.parent()?.to_path_buf()
+  } else {
+    cwd.join(module_path).parent()?.to_path_buf()
+  };
+
+  // Search for tsconfig.json upwards
+  loop {
+    let tsconfig_path = current_dir.join("tsconfig.json");
+    if tsconfig_path.exists() {
+      if let Some(always_strict) = parse_always_strict_from_tsconfig(&tsconfig_path) {
+        return Some(always_strict);
+      }
+    }
+    
+    // Move to parent directory
+    if let Some(parent) = current_dir.parent() {
+      current_dir = parent.to_path_buf();
+    } else {
+      break;
+    }
+  }
+  
+  None
+}
+
+/// Parse alwaysStrict option from tsconfig.json
+/// Returns Some(true) if alwaysStrict is explicitly set to true
+fn parse_always_strict_from_tsconfig(tsconfig_path: &Path) -> Option<bool> {
+  let content = std::fs::read_to_string(tsconfig_path).ok()?;
+  
+  // Strip comments using json_strip_comments
+  let mut bytes = content.into_bytes();
+  json_strip_comments::strip_slice(&mut bytes).ok()?;
+  
+  // Parse JSON
+  let json: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
+  
+  // Extract compilerOptions.alwaysStrict
+  json.get("compilerOptions")
+    .and_then(|opts| opts.get("alwaysStrict"))
+    .and_then(|v| v.as_bool())
+}
 
 pub type RenderedModuleSources = Vec<RenderedModuleSource>;
 
@@ -97,7 +149,7 @@ impl Generator for EcmaGenerator {
       },
     );
 
-    let directives: Vec<_> = ctx
+    let entry_or_first_module = ctx
       .chunk
       .user_defined_entry_module(&ctx.link_output.module_table)
       .or_else(|| {
@@ -105,7 +157,9 @@ impl Generator for EcmaGenerator {
           let first_idx = *ctx.chunk.modules.first()?;
           ctx.link_output.module_table[first_idx].as_normal()?
         })
-      })
+      });
+
+    let directives: Vec<_> = entry_or_first_module
       .map(|normal_module| {
         normal_module
           .ecma_view
@@ -115,6 +169,13 @@ impl Generator for EcmaGenerator {
           .collect::<_>()
       })
       .unwrap_or_default();
+
+    // Check if tsconfig has alwaysStrict enabled for this entry module
+    let always_strict = entry_or_first_module
+      .and_then(|normal_module| {
+        find_and_parse_always_strict(&normal_module.id, &ctx.options.cwd)
+      })
+      .unwrap_or(false);
 
     let banner = {
       let injection = match ctx.options.banner.as_ref() {
@@ -179,6 +240,7 @@ impl Generator for EcmaGenerator {
       outro: outro.as_deref(),
       footer: footer.as_deref(),
       directives: &directives,
+      always_strict,
     };
     let mut source_joiner = match ctx.options.format {
       OutputFormat::Esm => render_esm(ctx, addon_render_context, &rendered_module_sources),

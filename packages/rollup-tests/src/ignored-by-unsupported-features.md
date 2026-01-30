@@ -14,7 +14,6 @@
  - rollup@function@validate-resolved-by-logic: validate resolvedBy logic
 
 ### The `shouldTransformCachedModule` hook is not supported
- - rollup@function@dynamic-import-expression: Dynamic import expression replacement
  - rollup@function@plugin-error-should-transform: errors in shouldTransformCachedModule abort the build
 
 ### The `resolveDynamicImport` hook `specifier: AstNode` not supported

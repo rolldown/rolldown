@@ -304,7 +304,19 @@ export interface FunctionPluginHooks {
    */
   [DEFINED_HOOK_NAMES.resolveDynamicImport]: (
     this: PluginContext,
+    /**
+     * The importee exactly as it is written in the import statement.
+     *
+     * For example, given `import('./foo.js')`, the `source` will be `"./foo.js"`.
+     *
+     * In Rollup, this parameter can also be an AST node. But Rolldown always provides a string.
+     */
     source: string,
+    /**
+     * The fully resolved id of the importing module.
+     *
+     * This will be `undefined` when {@linkcode PluginContext.resolve | this.resolve(source, undefined, { kind: 'dynamic-import' })} is called.
+     */
     importer: string | undefined,
   ) => ResolveIdResult;
 

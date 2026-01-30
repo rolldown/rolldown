@@ -18,11 +18,8 @@
  - rollup@function@plugin-error-should-transform: errors in shouldTransformCachedModule abort the build
 
 ### The `resolveDynamicImport` hook `specifier: AstNode` not supported
-- rollup@function@plugin-error-should-transform: errors in shouldTransformCachedModule abort the build
-
-### The `resolveDynamicImport` hook `specifier: AstNode` not supported
-- rollup@form@dynamic-import-unresolvable: Returns the raw AST nodes for unresolvable dynamic imports@generates es
-- rollup@function@dynamic-import-expression: Dynamic import expression replacement
+ - rollup@form@dynamic-import-unresolvable: Returns the raw AST nodes for unresolvable dynamic imports@generates es
+ - rollup@function@dynamic-import-expression: Dynamic import expression replacement
 
 ### The plugin `sequential` is not supported
  - rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks

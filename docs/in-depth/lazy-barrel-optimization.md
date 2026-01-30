@@ -105,7 +105,7 @@ When an import can be found in named exports, star exports are not searched, avo
 
 However, if the import is not found in named exports, all star re-exports will be loaded to resolve it. If those star re-exported modules are also barrel modules, only the specific import specifier will be loaded from them.
 
-::: warning Re-export vs Own export for default
+:::: warning Re-export vs Own export for default
 `export { Button as default } from './Button.js'` and `import { Button } from './Button.js'; export default Button` are **not equivalent**.
 
 In the former case, the value exported is synced with the value in `Button.js`. This is because it points to the same variable.
@@ -148,7 +148,7 @@ export const increment = () => {
 :::
 
 For this reason, `export default ...` is considered an own export and may prevent the optimization (see [Own exports](#own-exports-non-pure-re-export-barrels)).
-:::
+::::
 
 ## Advanced scenarios
 

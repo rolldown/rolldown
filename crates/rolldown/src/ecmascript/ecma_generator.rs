@@ -38,9 +38,12 @@ fn find_and_parse_always_strict(module_id: &ModuleId, cwd: &Path) -> Option<bool
   loop {
     let tsconfig_path = current_dir.join("tsconfig.json");
     if tsconfig_path.exists() {
+      // Try to parse alwaysStrict from this tsconfig
       if let Some(always_strict) = parse_always_strict_from_tsconfig(&tsconfig_path) {
+        // Found a tsconfig with alwaysStrict setting, return it
         return Some(always_strict);
       }
+      // If tsconfig exists but doesn't have alwaysStrict, continue searching upwards
     }
     
     // Move to parent directory

@@ -5369,6 +5369,10 @@ expression: output
 
 - main-!~{000}~.js => main-DkCK3_v6.js
 
+# tests/rolldown/misc/use_strict/always_strict_with_existing_directive
+
+- main-!~{000}~.js => main-DkCK3_v6.js
+
 # tests/rolldown/misc/use_strict/emit_use_strict_with_strict_cjs_in_cjs_format
 
 - main-!~{000}~.js => main-dzoJfjKW.js

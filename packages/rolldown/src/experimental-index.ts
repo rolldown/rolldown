@@ -10,10 +10,6 @@ export {
   type IsolatedDeclarationsOptions,
   type IsolatedDeclarationsResult,
   isolatedDeclarationSync,
-  minify,
-  type MinifyOptions,
-  type MinifyResult,
-  minifySync,
   moduleRunnerTransform,
   type NapiResolveOptions as ResolveOptions,
   type ParseResult,
@@ -28,6 +24,7 @@ export {
 
 export { defineParallelPlugin } from './plugin/parallel-plugin';
 export { parse, parseSync } from './utils/parse';
+export { minify, type MinifyOptions, type MinifyResult, minifySync } from './utils/minify';
 // Builtin plugin factory
 export {
   isolatedDeclarationPlugin,

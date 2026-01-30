@@ -2513,6 +2513,8 @@ export interface BindingWatchOption {
   onInvalidate?: ((id: string) => void) | undefined
 }
 
+export declare function collapseSourcemaps(sourcemapChain: Array<BindingSourcemap>): BindingJsonSourcemap
+
 export declare function createTokioRuntime(blockingThreads?: number | undefined | null): void
 
 export interface ExtensionAliasItem {

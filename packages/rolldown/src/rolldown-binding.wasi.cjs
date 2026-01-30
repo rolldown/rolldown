@@ -163,6 +163,7 @@ module.exports.BindingPluginOrder = __napiModule.exports.BindingPluginOrder
 module.exports.BindingPropertyReadSideEffects = __napiModule.exports.BindingPropertyReadSideEffects
 module.exports.BindingPropertyWriteSideEffects = __napiModule.exports.BindingPropertyWriteSideEffects
 module.exports.BindingRebuildStrategy = __napiModule.exports.BindingRebuildStrategy
+module.exports.collapseSourcemaps = __napiModule.exports.collapseSourcemaps
 module.exports.createTokioRuntime = __napiModule.exports.createTokioRuntime
 module.exports.FilterTokenKind = __napiModule.exports.FilterTokenKind
 module.exports.initTraceSubscriber = __napiModule.exports.initTraceSubscriber

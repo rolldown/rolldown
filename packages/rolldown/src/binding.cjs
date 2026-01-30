@@ -631,6 +631,7 @@ module.exports.BindingPluginOrder = nativeBinding.BindingPluginOrder
 module.exports.BindingPropertyReadSideEffects = nativeBinding.BindingPropertyReadSideEffects
 module.exports.BindingPropertyWriteSideEffects = nativeBinding.BindingPropertyWriteSideEffects
 module.exports.BindingRebuildStrategy = nativeBinding.BindingRebuildStrategy
+module.exports.collapseSourcemaps = nativeBinding.collapseSourcemaps
 module.exports.createTokioRuntime = nativeBinding.createTokioRuntime
 module.exports.FilterTokenKind = nativeBinding.FilterTokenKind
 module.exports.initTraceSubscriber = nativeBinding.initTraceSubscriber

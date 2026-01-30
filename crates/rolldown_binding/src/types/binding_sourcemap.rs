@@ -64,19 +64,23 @@ impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
   }
 }
 
-impl From<rolldown_sourcemap::JSONSourceMap> for BindingSourcemap {
+impl From<rolldown_sourcemap::JSONSourceMap> for BindingJsonSourcemap {
   fn from(value: rolldown_sourcemap::JSONSourceMap) -> Self {
     Self {
-      inner: Either::B(BindingJsonSourcemap {
-        file: value.file,
-        mappings: Some(value.mappings),
-        source_root: value.source_root,
-        sources: Some(value.sources.into_iter().map(Some).collect()),
-        sources_content: value.sources_content,
-        names: Some(value.names),
-        debug_id: value.debug_id,
-        x_google_ignore_list: value.x_google_ignore_list,
-      }),
+      file: value.file,
+      mappings: Some(value.mappings),
+      source_root: value.source_root,
+      sources: Some(value.sources.into_iter().map(Some).collect()),
+      sources_content: value.sources_content,
+      names: Some(value.names),
+      debug_id: value.debug_id,
+      x_google_ignore_list: value.x_google_ignore_list,
     }
+  }
+}
+
+impl From<rolldown_sourcemap::JSONSourceMap> for BindingSourcemap {
+  fn from(value: rolldown_sourcemap::JSONSourceMap) -> Self {
+    Self { inner: Either::B(value.into()) }
   }
 }

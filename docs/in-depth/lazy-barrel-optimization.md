@@ -147,7 +147,7 @@ export const increment = () => {
 
 :::
 
-For this reason, `export default ...` is considered as a own export and may prevent the optimization (see [Own exports](#own-exports-non-pure-re-export-barrels)).
+For this reason, `export default ...` is considered an own export and may prevent the optimization (see [Own exports](#own-exports-non-pure-re-export-barrels)).
 :::
 
 ## Advanced scenarios

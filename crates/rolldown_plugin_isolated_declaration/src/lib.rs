@@ -2,15 +2,15 @@ use std::{borrow::Cow, path::Path};
 
 use arcstr::ArcStr;
 use oxc::{
-  allocator::IntoIn,
-  ast_visit::VisitMut,
+  allocator::IntoIn as _,
+  ast_visit::VisitMut as _,
   codegen::Codegen,
   isolated_declarations::{IsolatedDeclarations, IsolatedDeclarationsOptions},
 };
 use rolldown_common::{ModuleType, ResolvedExternal};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, EventKind, Severity};
 use rolldown_plugin::{HookUsage, Plugin, PluginHookMeta, PluginOrder};
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 use type_import_visitor::TypeImportVisitor;
 
 mod type_import_visitor;

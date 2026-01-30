@@ -2,7 +2,7 @@ use oxc::ast::AstKind;
 use oxc::ast::ast::{Expression, Program};
 use oxc::ast_visit::Visit;
 use oxc::cfg::graph::adj::NodeIndex;
-use oxc::cfg::graph::visit::{Control, DfsEvent, EdgeRef};
+use oxc::cfg::graph::visit::{Control, DfsEvent, EdgeRef as _};
 use oxc::cfg::visit::set_depth_first_search;
 use oxc::cfg::{EdgeType, InstructionKind};
 use oxc::semantic::Semantic;

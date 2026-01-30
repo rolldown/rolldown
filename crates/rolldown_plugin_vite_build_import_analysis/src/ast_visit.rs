@@ -12,7 +12,7 @@ use oxc::{
 };
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_plugin_utils::constants::RemovedPureCSSFilesCache;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use super::PRELOAD_HELPER_ID;
 

@@ -18,6 +18,7 @@ repository = "https://github.com/rolldown/rolldown"
 allow_attributes = "deny"
 dbg_macro = "deny"
 print_stdout = "deny"
+unused_trait_names = "deny"
 
 # I like the explicitness of this rule as it removes confusion around `clone`.
 # This increases readability, avoids `clone` mindlessly and heap allocating on accident.

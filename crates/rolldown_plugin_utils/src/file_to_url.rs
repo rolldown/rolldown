@@ -11,7 +11,7 @@ use rolldown_utils::concat_string;
 use rolldown_utils::dashmap::FxDashMap;
 use rolldown_utils::mime::guess_mime_skip_utf8_check;
 use rolldown_utils::url::clean_url;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use crate::{PublicFileToBuiltUrlEnv, remove_special_query};
 

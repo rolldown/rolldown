@@ -3,7 +3,7 @@ use crate::{
   utils::{NotifyEventHandlerAdapter, NotifyPathsMutAdapter},
 };
 use notify::{PollWatcher as NotifyPollWatcher, Watcher as NotifyWatcherTrait};
-use rolldown_error::{BuildResult, ResultExt};
+use rolldown_error::{BuildResult, ResultExt as _};
 
 /// A non-debounced polling-based filesystem watcher that checks for file changes at regular intervals.
 pub struct PollFsWatcher(NotifyPollWatcher);

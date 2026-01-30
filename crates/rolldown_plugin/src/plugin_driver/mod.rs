@@ -15,7 +15,7 @@ use rolldown_common::{
   SharedModuleInfoDashMap,
 };
 use rolldown_utils::dashmap::FxDashSet;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 use tokio::sync::{Mutex, broadcast};
 
 use crate::{

@@ -114,7 +114,7 @@ fn binary_expr_to_glob<'a>(node: &'a BinaryExpression) -> anyhow::Result<Cow<'a,
 
 #[cfg(test)]
 mod tests {
-  use cow_utils::CowUtils;
+  use cow_utils::CowUtils as _;
   use oxc::{allocator::Allocator, parser::Parser, span::SourceType};
 
   use super::*;

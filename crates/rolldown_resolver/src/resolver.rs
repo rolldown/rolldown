@@ -3,7 +3,7 @@ use std::{
   sync::Arc,
 };
 
-use anyhow::Context;
+use anyhow::Context as _;
 use arcstr::ArcStr;
 use dashmap::DashMap;
 use oxc_resolver::{

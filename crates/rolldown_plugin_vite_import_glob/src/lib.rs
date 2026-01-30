@@ -2,7 +2,7 @@ mod utils;
 
 use std::{borrow::Cow, path::PathBuf};
 
-use oxc::ast_visit::Visit;
+use oxc::ast_visit::Visit as _;
 use rolldown_common::ModuleType;
 use rolldown_plugin::{HookTransformOutput, HookUsage, Plugin};
 use sugar_path::SugarPath as _;

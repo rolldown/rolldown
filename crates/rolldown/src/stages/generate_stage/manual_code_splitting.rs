@@ -12,7 +12,7 @@ use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec
 
 use super::{
   GenerateStage,
-  chunk_ext::{ChunkCreationReason, ChunkDebugExt},
+  chunk_ext::{ChunkCreationReason, ChunkDebugExt as _},
   code_splitting::IndexSplittingInfo,
 };
 

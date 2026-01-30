@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx,

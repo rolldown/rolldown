@@ -5,7 +5,7 @@ use std::{
   sync::{Arc, LazyLock, atomic::Ordering},
 };
 
-use anyhow::Context;
+use anyhow::Context as _;
 use arcstr::ArcStr;
 use regex::Regex;
 use rolldown_common::{
@@ -28,7 +28,7 @@ use rolldown_plugin_utils::{
 use rolldown_utils::{indexmap::FxIndexSet, url::clean_url};
 use rustc_hash::{FxHashMap, FxHashSet};
 use string_wizard::MagicString;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use crate::ViteCSSPostPlugin;
 

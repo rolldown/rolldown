@@ -1,4 +1,4 @@
-use oxc::allocator::{GetAddress, UnstableAddress};
+use oxc::allocator::{GetAddress as _, UnstableAddress as _};
 use oxc::{
   ast::{
     AstKind,
@@ -15,10 +15,10 @@ use rolldown_common::{
   SymbolRefFlags, dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
-use rolldown_ecmascript::ToSourceString;
-use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
+use rolldown_ecmascript::ToSourceString as _;
+use rolldown_ecmascript_utils::{ExpressionExt as _, is_top_level};
 use rolldown_error::BuildDiagnostic;
-use rolldown_std_utils::OptionExt;
+use rolldown_std_utils::OptionExt as _;
 
 use crate::ast_scanner::{TraverseState, cjs_export_analyzer::CommonJsAstType};
 

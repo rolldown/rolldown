@@ -1,4 +1,4 @@
-use std::{ops::Deref, pin::Pin, sync::Arc};
+use std::{ops::Deref as _, pin::Pin, sync::Arc};
 
 use futures::future::try_join_all;
 use oxc::span::CompactStr;
@@ -12,7 +12,7 @@ use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BatchedBuildDiagnostic, BuildDiagnostic, BuildResult};
 use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
-  rayon::{IntoParallelRefIterator, ParallelIterator},
+  rayon::{IntoParallelRefIterator as _, ParallelIterator as _},
 };
 
 use crate::{
@@ -22,7 +22,7 @@ use crate::{
   css::css_generator::CssGenerator,
   ecmascript::ecma_generator::EcmaGenerator,
   type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
-  types::generator::{GenerateContext, GenerateOutput, Generator},
+  types::generator::{GenerateContext, GenerateOutput, Generator as _},
   utils::{
     augment_chunk_hash::augment_chunk_hash,
     chunk::{finalize_chunks::finalize_assets, render_chunk_exports::get_export_items},

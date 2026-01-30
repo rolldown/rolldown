@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use futures::future::join_all;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use oxc::semantic::{ScopeId, Scoping};
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
 use oxc_allocator::Address;
@@ -25,10 +25,10 @@ use rolldown_error::{
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::indexmap::FxIndexSet;
-use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
-use rolldown_utils::rustc_hash::FxHashSetExt;
+use rolldown_utils::rayon::{IntoParallelIterator as _, ParallelIterator as _};
+use rolldown_utils::rustc_hash::FxHashSetExt as _;
 use rustc_hash::{FxHashMap, FxHashSet};
-use tracing::Instrument;
+use tracing::Instrument as _;
 
 use crate::module_loader::module_task::ModuleTaskOwner;
 use crate::types::scan_stage_cache::ScanStageCache;

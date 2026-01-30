@@ -1,7 +1,7 @@
 use super::AstScanner;
 use oxc::ast::ast;
 use rolldown_common::{EcmaModuleAstUsage, ImportKind, ImportRecordMeta};
-use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_ecmascript_utils::ExpressionExt as _;
 use rustc_hash::FxHashMap;
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {

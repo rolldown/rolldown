@@ -1,6 +1,6 @@
 use std::cmp::Reverse;
 
-use itertools::Itertools;
+use itertools::Itertools as _;
 use oxc_allocator::Address;
 use oxc_index::IndexVec;
 use petgraph::prelude::DiGraphMap;
@@ -9,13 +9,14 @@ use rolldown_common::{
   ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
   RUNTIME_HELPER_NAMES, RUNTIME_MODULE_ID, RuntimeHelper, RuntimeModuleBrief, SideEffectDetail,
-  StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolIdExt, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
-  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
+  StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolIdExt as _, SymbolOrMemberExprRef, SymbolRef,
+  SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
+  side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
-use rolldown_utils::rayon::IndexedParallelIterator;
+use rolldown_utils::rayon::IndexedParallelIterator as _;
 use rolldown_utils::rayon::{
-  IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+  IntoParallelRefIterator as _, IntoParallelRefMutIterator as _, ParallelIterator as _,
 };
 
 use rolldown_utils::indexmap::FxIndexMap;

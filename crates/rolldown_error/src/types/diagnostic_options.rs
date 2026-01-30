@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 pub struct DiagnosticOptions {
   pub cwd: PathBuf,

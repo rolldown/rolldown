@@ -1,11 +1,11 @@
 use oxc::{
   ast::ast::Expression,
   minifier::PropertyReadSideEffects,
-  semantic::{IsGlobalReference, ReferenceId, Scoping, SymbolId},
+  semantic::{IsGlobalReference as _, ReferenceId, Scoping, SymbolId},
 };
 use oxc_ecmascript::{
   GlobalContext,
-  constant_evaluation::{ConstantEvaluation, ConstantEvaluationCtx},
+  constant_evaluation::{ConstantEvaluation as _, ConstantEvaluationCtx},
   side_effects::MayHaveSideEffectsContext,
 };
 use rolldown_common::{ConstExportMeta, ConstantValue};

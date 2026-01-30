@@ -1,10 +1,10 @@
 use oxc::{
-  allocator::{Allocator, Box as ArenaBox, IntoIn, TakeIn},
+  allocator::{Allocator, Box as ArenaBox, IntoIn as _, TakeIn as _},
   ast::{
     AstBuilder, NONE,
     ast::{self, ExportDefaultDeclarationKind, Expression, ObjectPropertyKind, Statement},
   },
-  semantic::{IsGlobalReference, Scoping, SymbolId},
+  semantic::{IsGlobalReference as _, Scoping, SymbolId},
   span::{Atom, SPAN, Span},
 };
 
@@ -12,14 +12,14 @@ use rolldown_common::{
   ExternalModule, ImportRecordIdx, IndexModules, Module, ModuleIdx, NormalModule,
 };
 use rolldown_ecmascript::CJS_REQUIRE_REF_ATOM;
-use rolldown_ecmascript_utils::{AstSnippet, BindingIdentifierExt, ExpressionExt};
+use rolldown_ecmascript_utils::{AstSnippet, BindingIdentifierExt as _, ExpressionExt as _};
 use rolldown_utils::{
   ecmascript::is_validate_identifier_name,
   indexmap::{FxIndexMap, FxIndexSet},
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::hmr::utils::{HmrAstBuilder, MODULE_EXPORTS_NAME_FOR_ESM};
+use crate::hmr::utils::{HmrAstBuilder as _, MODULE_EXPORTS_NAME_FOR_ESM};
 
 pub struct HmrAstFinalizer<'me, 'ast> {
   // Outside input

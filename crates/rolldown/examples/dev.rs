@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use rolldown::{BundlerOptions, ExperimentalOptions};
 use rolldown_dev::{BundlerConfig, DevEngine, DevOptions, RebuildStrategy};
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 // RD_LOG=rolldown::dev=trace cargo run --example dev
 

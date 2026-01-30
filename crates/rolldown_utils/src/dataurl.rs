@@ -1,5 +1,5 @@
 use nom::{
-  IResult, Parser,
+  IResult, Parser as _,
   bytes::complete::{tag, take_till, take_while},
   character::complete::char,
   combinator::{map, opt, recognize},

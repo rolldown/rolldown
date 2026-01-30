@@ -11,9 +11,9 @@ use std::{
   time::{Duration, Instant},
 };
 
-use cow_utils::CowUtils;
-use owo_colors::{OwoColorize, Stream};
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use cow_utils::CowUtils as _;
+use owo_colors::{OwoColorize as _, Stream};
+use rayon::iter::{IntoParallelRefIterator as _, ParallelIterator as _};
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_plugin_utils::is_in_node_modules;
 use sugar_path::SugarPath as _;

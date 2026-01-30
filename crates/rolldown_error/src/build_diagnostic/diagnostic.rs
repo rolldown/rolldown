@@ -1,7 +1,7 @@
 use std::{fmt::Display, fmt::Write as _, ops::Range};
 
 use arcstr::ArcStr;
-use ariadne::{Config, Label, Report, ReportBuilder, ReportKind, Span, sources};
+use ariadne::{Config, Label, Report, ReportBuilder, ReportKind, Span as _, sources};
 use rustc_hash::FxHashMap;
 
 use crate::utils::is_context_too_long;

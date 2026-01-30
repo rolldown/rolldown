@@ -19,14 +19,14 @@ use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_sourcemap::{Source, SourceJoiner, SourceMapSource};
 #[cfg(not(target_family = "wasm"))]
-use rolldown_utils::rayon::IndexedParallelIterator;
+use rolldown_utils::rayon::IndexedParallelIterator as _;
 use rolldown_utils::{
   concat_string,
   indexmap::{FxIndexMap, FxIndexSet},
-  rayon::{IntoParallelIterator, ParallelIterator},
+  rayon::{IntoParallelIterator as _, ParallelIterator as _},
 };
 use rustc_hash::{FxHashMap, FxHashSet};
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use crate::{
   SharedOptions, SharedResolver, hmr::hmr_ast_finalizer::HmrAstFinalizer,

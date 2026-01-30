@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use cow_utils::CowUtils;
+use cow_utils::CowUtils as _;
 
 pub const BROWSER_EXTERNAL_ID: &str = "__vite-browser-external";
 pub const OPTIONAL_PEER_DEP_ID: &str = "__vite-optional-peer-dep";

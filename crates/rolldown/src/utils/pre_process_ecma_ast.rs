@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use oxc::ast::ast::Program;
-use oxc::ast_visit::VisitMut;
+use oxc::ast_visit::VisitMut as _;
 use oxc::diagnostics::Severity as OxcSeverity;
 use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
 use oxc::semantic::{Scoping, SemanticBuilder, Stats};

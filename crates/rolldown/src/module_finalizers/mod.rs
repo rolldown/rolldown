@@ -2,7 +2,9 @@ use bitflags::bitflags;
 use oxc::ast::ast::ObjectPropertyKind;
 use oxc::semantic::{ReferenceId, ScopeFlags, SymbolId};
 use oxc::{
-  allocator::{self, Allocator, Box as ArenaBox, CloneIn, Dummy, IntoIn, TakeIn},
+  allocator::{
+    self, Allocator, Box as ArenaBox, CloneIn as _, Dummy as _, IntoIn as _, TakeIn as _,
+  },
   ast::{
     AstBuilder, NONE,
     ast::{
@@ -10,18 +12,18 @@ use oxc::{
       NumberBase, Statement, VariableDeclarationKind,
     },
   },
-  span::{GetSpan, GetSpanMut, SPAN},
+  span::{GetSpan as _, GetSpanMut as _, SPAN},
 };
 use rolldown_common::{
   AstScopes, Chunk, ChunkIdx, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx,
   ImportRecordMeta, InlineConstMode, MemberExprRefResolution, Module, ModuleIdx,
   ModuleNamespaceIncludedReason, ModuleType, NamespaceAlias, NormalModule, OutputExports,
-  OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier, SymbolIdExt, SymbolRef,
+  OutputFormat, Platform, RenderedConcatenatedModuleParts, Specifier, SymbolIdExt as _, SymbolRef,
   WrapKind,
 };
-use rolldown_ecmascript::ToSourceString;
+use rolldown_ecmascript::ToSourceString as _;
 use rolldown_ecmascript_utils::{
-  AstSnippet, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
+  AstSnippet, BindingPatternExt as _, CallExpressionExt as _, ExpressionExt, StatementExt as _,
 };
 
 mod finalizer_context;
@@ -31,9 +33,9 @@ use oxc::span::{CompactStr, Ident};
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
-use crate::hmr::utils::HmrAstBuilder;
+use crate::hmr::utils::HmrAstBuilder as _;
 use crate::utils::external_import_interop::import_record_needs_interop;
 
 mod hmr;

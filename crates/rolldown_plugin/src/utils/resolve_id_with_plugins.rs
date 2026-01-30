@@ -7,7 +7,7 @@ use rolldown_common::{ImportKind, ModuleDefFormat, ModuleId, PackageJson, Resolv
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dataurl::is_data_url;
 use std::{path::Path, sync::Arc};
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 fn is_http_url(s: &str) -> bool {
   s.starts_with("http://") || s.starts_with("https://") || s.starts_with("//")

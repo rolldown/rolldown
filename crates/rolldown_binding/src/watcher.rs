@@ -10,7 +10,7 @@ use crate::types::binding_watcher_event::BindingWatcherEvent;
 use crate::utils::create_bundler_config_from_binding_options::create_bundler_config_from_binding_options;
 use crate::utils::handle_result;
 
-use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt};
+use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _};
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]

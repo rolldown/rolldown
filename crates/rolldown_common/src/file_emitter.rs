@@ -1,21 +1,24 @@
+use std::ffi::OsStr;
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+use anyhow::Context as _;
+use arcstr::ArcStr;
+use dashmap::{DashMap, DashSet, Entry};
+use sugar_path::SugarPath as _;
+use tokio::sync::Mutex;
+
+use rolldown_error::{BuildDiagnostic, InvalidOptionType};
+use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
+use rolldown_utils::make_unique_name::make_unique_name;
+use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
+
 use crate::{
   AddEntryModuleMsg, FilenameTemplate, ModuleId, ModuleLoaderMsg, Modules,
   NormalizedBundlerOptions, Output, OutputAsset, OutputChunk, PreserveEntrySignatures, StrOrBytes,
   is_path_fragment,
 };
-use anyhow::Context;
-use arcstr::ArcStr;
-use dashmap::{DashMap, DashSet, Entry};
-use rolldown_error::{BuildDiagnostic, InvalidOptionType};
-use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
-use rolldown_utils::make_unique_name::make_unique_name;
-use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
-use std::ffi::OsStr;
-use std::path::Path;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use sugar_path::SugarPath;
-use tokio::sync::Mutex;
 
 #[derive(Debug, Default)]
 pub struct EmittedAsset {

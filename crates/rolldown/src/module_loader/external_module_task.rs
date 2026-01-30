@@ -6,7 +6,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 

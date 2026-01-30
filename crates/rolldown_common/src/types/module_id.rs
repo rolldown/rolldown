@@ -4,7 +4,7 @@ use std::{
 };
 
 use arcstr::ArcStr;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use super::stable_module_id::StableModuleId;
 

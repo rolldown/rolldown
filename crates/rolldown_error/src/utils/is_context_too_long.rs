@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use ariadne::{Label, Span};
+use ariadne::{Label, Span as _};
 use rustc_hash::FxHashMap;
 
 use crate::build_diagnostic::diagnostic::{DiagnosticFileId, RolldownLabelSpan};

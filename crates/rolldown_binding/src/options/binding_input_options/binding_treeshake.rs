@@ -8,7 +8,7 @@ use rolldown::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule};
 use rolldown_utils::js_regex::HybridRegex;
 
 use crate::{
-  types::js_callback::{JsCallback, JsCallbackExt},
+  types::js_callback::{JsCallback, JsCallbackExt as _},
   types::js_regex::JsRegExp,
 };
 

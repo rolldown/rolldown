@@ -1,7 +1,7 @@
 use crate::watch::event::{BundleEvent, WatcherChangeData, WatcherEvent};
-use anyhow::Context;
+use anyhow::Context as _;
 use arcstr::ArcStr;
-use itertools::Itertools;
+use itertools::Itertools as _;
 #[cfg(not(target_family = "wasm"))]
 use notify::Watcher as _;
 use notify::{
@@ -13,7 +13,7 @@ use rolldown_common::{NotifyOption, WatcherChangeKind};
 use rolldown_error::BuildResult;
 use rolldown_utils::dashmap::FxDashSet;
 use std::{
-  ops::Deref,
+  ops::Deref as _,
   sync::{
     Arc,
     atomic::{AtomicBool, Ordering},

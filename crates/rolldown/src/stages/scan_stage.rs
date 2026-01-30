@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc_index::IndexVec;
 #[cfg(not(target_os = "macos"))]
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IntoParallelRefIterator as _, ParallelIterator as _};
 use rolldown_common::SourceMapGenMsg;
 use rolldown_common::{
   EntryPoint, FlatOptions, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures,

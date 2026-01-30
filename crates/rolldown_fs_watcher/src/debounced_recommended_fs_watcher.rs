@@ -4,7 +4,7 @@ use crate::{
 };
 use notify::RecommendedWatcher;
 use notify_debouncer_full::{Debouncer, RecommendedCache, new_debouncer_opt};
-use rolldown_error::{BuildResult, ResultExt};
+use rolldown_error::{BuildResult, ResultExt as _};
 
 // We have to use newtype pattern because when we implement `FsWatcher` for `Debouncer<RecommendedWatcher, RecommendedCache>`.
 // `RecommendedWatcher` might be `PollWatcher` in some platforms and this will cause a compile error of duplicate implementation.

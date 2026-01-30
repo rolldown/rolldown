@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::{Allocator, Box, Dummy as _, IntoIn as _, TakeIn},
+  allocator::{Allocator, Box, Dummy as _, IntoIn as _, TakeIn as _},
   ast::ast::{
     ArrayAssignmentTarget, AssignmentTargetMaybeDefault, AssignmentTargetProperty,
     AssignmentTargetPropertyIdentifier, AssignmentTargetPropertyProperty, AssignmentTargetRest,

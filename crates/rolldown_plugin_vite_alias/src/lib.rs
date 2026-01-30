@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::{borrow::Cow, path::Path};
 
-use cow_utils::CowUtils;
+use cow_utils::CowUtils as _;
 use rolldown_plugin::{
   HookResolveIdOutput, HookUsage, Plugin, PluginContext, PluginContextResolveOptions,
 };

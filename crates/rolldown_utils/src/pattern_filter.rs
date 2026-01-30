@@ -112,7 +112,7 @@ fn get_matcher_string<'a>(glob: &'a str, cwd: &'a str) -> Cow<'a, str> {
 pub fn normalize_path(path: &str) -> Cow<'_, str> {
   #[cfg(windows)]
   {
-    use cow_utils::CowUtils;
+    use cow_utils::CowUtils as _;
     path.cow_replace('\\', "/")
   }
   #[cfg(not(windows))]

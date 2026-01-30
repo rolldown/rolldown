@@ -2,7 +2,7 @@ use std::ffi::OsStr;
 
 use arcstr::ArcStr;
 use dashmap::Entry;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use crate::{concat_string, dashmap::FxDashMap};
 

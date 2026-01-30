@@ -3,13 +3,13 @@ use std::sync::{
   atomic::{AtomicBool, AtomicU32},
 };
 
-use anyhow::Context;
-use futures::{FutureExt, future::Shared};
+use anyhow::Context as _;
+use futures::{FutureExt as _, future::Shared};
 use rolldown_common::ClientHmrUpdate;
 #[cfg(feature = "testing")]
 use rolldown_common::WatcherChangeKind;
-use rolldown_error::{BuildResult, ResultExt};
-use rolldown_fs_watcher::{FsWatcher, FsWatcherConfig, FsWatcherExt, NoopFsWatcher};
+use rolldown_error::{BuildResult, ResultExt as _};
+use rolldown_fs_watcher::{FsWatcher as _, FsWatcherConfig, FsWatcherExt as _, NoopFsWatcher};
 #[cfg(feature = "testing")]
 use rustc_hash::FxHashSet;
 use tokio::sync::{Mutex, mpsc::unbounded_channel};

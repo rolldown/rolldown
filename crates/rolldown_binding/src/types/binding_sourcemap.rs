@@ -1,4 +1,4 @@
-use anyhow::Context;
+use anyhow::Context as _;
 use napi::Either;
 
 // This struct is used to both pass to JS and receive from JS:

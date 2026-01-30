@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, OnceLock};
 
 use arcstr::ArcStr;
-use oxc::ast_visit::VisitMut;
+use oxc::ast_visit::VisitMut as _;
 use rolldown_common::{ImportKind, ModuleId};
 use rolldown_plugin::{HookResolveIdOutput, HookUsage, Plugin, PluginContextResolveOptions};
 use rolldown_utils::dashmap::FxDashSet;

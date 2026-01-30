@@ -10,7 +10,7 @@ use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
 use rolldown_utils::url::clean_url;
 use rustc_hash::FxHashSet;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use crate::{
   builtin::BuiltinChecker,

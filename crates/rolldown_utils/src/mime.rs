@@ -1,6 +1,6 @@
 use crate::light_guess::{self, RawMimeExt};
 use mime::Mime;
-use std::{fmt::Display, path::Path, str::FromStr};
+use std::{fmt::Display, path::Path, str::FromStr as _};
 
 #[inline]
 fn is_valid_utf8(data: &[u8]) -> bool {

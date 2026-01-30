@@ -5,7 +5,7 @@ use oxc::{
   syntax::operator::{BinaryOperator, LogicalOperator, UnaryOperator, UpdateOperator},
 };
 use rolldown_common::AstScopes;
-use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_ecmascript_utils::ExpressionExt as _;
 
 #[derive(PartialEq, Eq, Copy, Clone)]
 pub enum PrimitiveType {

@@ -7,7 +7,7 @@ use rolldown_common::{
 use rolldown_fs::FileSystem;
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rustc_hash::FxHashMap;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 #[expect(clippy::too_many_arguments)]
 pub async fn load_source<Fs: FileSystem + 'static>(

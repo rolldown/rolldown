@@ -3,7 +3,7 @@ use crate::{
   utils::{NotifyEventHandlerAdapter, NotifyPathsMutAdapter},
 };
 use notify::{RecommendedWatcher as NotifyRecommendedWatcher, Watcher as NotifyWatcherTrait};
-use rolldown_error::{BuildResult, ResultExt};
+use rolldown_error::{BuildResult, ResultExt as _};
 
 /// Will use the ideal filesystem watcher under the hood based on the platform.
 pub struct RecommendedFsWatcher(NotifyRecommendedWatcher);

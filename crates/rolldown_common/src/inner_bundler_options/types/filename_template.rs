@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
-use rolldown_utils::replace_all_placeholder::{ReplaceAllPlaceholder, Replacer};
+use rolldown_utils::replace_all_placeholder::{ReplaceAllPlaceholder as _, Replacer};
 
 /// Check if a string is a path fragment (absolute or relative path).
 /// Patterns can be neither absolute nor relative paths.

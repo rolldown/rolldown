@@ -14,8 +14,8 @@ use rolldown_error::BuildResult;
 use rolldown_plugin::HookAddonArgs;
 use rolldown_sourcemap::Source;
 #[cfg(not(target_family = "wasm"))]
-use rolldown_utils::rayon::IndexedParallelIterator;
-use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
+use rolldown_utils::rayon::IndexedParallelIterator as _;
+use rolldown_utils::rayon::{IntoParallelRefIterator as _, ParallelIterator as _};
 use rustc_hash::FxHashMap;
 
 use super::format::{cjs::render_cjs, esm::render_esm, iife::render_iife, umd::render_umd};

@@ -1,5 +1,5 @@
 use rolldown::{BundlerConfig, BundlerOptions, ExperimentalOptions, Watcher};
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 // cargo run --example watch
 

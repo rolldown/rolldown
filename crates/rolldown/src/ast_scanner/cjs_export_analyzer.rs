@@ -1,11 +1,11 @@
-use oxc::allocator::{GetAddress, UnstableAddress};
+use oxc::allocator::{GetAddress as _, UnstableAddress as _};
 use oxc::ast::{
   AstKind, MemberExpressionKind,
   ast::{self, AssignmentExpression, Expression, IdentifierReference, PropertyKey},
 };
 use oxc::span::CompactStr;
 use rolldown_common::{AstScopes, EcmaModuleAstUsage};
-use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_ecmascript_utils::ExpressionExt as _;
 
 use crate::ast_scanner::IdentifierReferenceKind;
 

@@ -12,9 +12,9 @@ use crate::SharedOptions;
 use super::{emitter::SharedWatcherEmitter, event::BundleErrorEventData};
 use crate::watch::event::{BundleEndEventData, BundleEvent, WatcherEvent};
 use arcstr::ArcStr;
-use notify::{RecommendedWatcher, WatchMode, Watcher};
+use notify::{RecommendedWatcher, WatchMode, Watcher as _};
 use rolldown_common::{OutputsDiagnostics, WatcherChangeKind};
-use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
+use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt as _};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
 use tokio::sync::Mutex;
 

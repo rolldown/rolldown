@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use rolldown_common::{Chunk, ChunkDebugInfo, ChunkReasonType, NormalizedBundlerOptions};
 use rolldown_utils::BitSet;
 

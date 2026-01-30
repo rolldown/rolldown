@@ -1,6 +1,6 @@
 use std::{fs, io, path::Path};
 
-use cow_utils::CowUtils;
+use cow_utils::CowUtils as _;
 use oxc::span::Span;
 use proc_macro2::TokenStream;
 

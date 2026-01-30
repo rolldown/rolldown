@@ -13,9 +13,9 @@ use rolldown_common::{
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_utils::{
   ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
-  index_vec_ext::{IndexVecExt, IndexVecRefExt},
+  index_vec_ext::{IndexVecExt as _, IndexVecRefExt as _},
   indexmap::{FxIndexMap, FxIndexSet},
-  rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
+  rayon::{IntoParallelRefIterator as _, IntoParallelRefMutIterator as _, ParallelIterator as _},
 };
 
 use rustc_hash::{FxHashMap, FxHashSet};

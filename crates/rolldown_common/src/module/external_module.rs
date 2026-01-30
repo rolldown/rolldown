@@ -8,7 +8,7 @@ use crate::{
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
 use rolldown_utils::concat_string;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 #[derive(Debug, Clone)]
 pub struct ExternalModule {

@@ -3,7 +3,7 @@ use std::{borrow::Cow, fs, sync::Arc};
 use rolldown::{BundlerOptions, DevModeOptions, ExperimentalOptions, InputItem};
 use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 #[derive(Debug)]
 struct TestPlugin;
 

@@ -9,7 +9,7 @@ use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::HookTransformAstArgs;
 use rolldown_utils::mime::guess_mime;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use super::pre_process_ecma_ast::PreProcessEcmaAst;
 

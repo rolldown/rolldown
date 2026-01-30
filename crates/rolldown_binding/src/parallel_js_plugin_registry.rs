@@ -2,10 +2,12 @@ use crate::options::plugin::{BindingPluginOptions, BindingPluginWithIndex};
 use dashmap::DashMap;
 use napi::{
   Env, Unknown,
-  bindgen_prelude::{FromNapiValue, JavaScriptClassExt, JsObjectValue, Object, ObjectFinalize},
+  bindgen_prelude::{
+    FromNapiValue, JavaScriptClassExt as _, JsObjectValue as _, Object, ObjectFinalize,
+  },
 };
 use napi_derive::napi;
-use rolldown_utils::{dashmap::FxDashMap, rustc_hash::FxHashMapExt};
+use rolldown_utils::{dashmap::FxDashMap, rustc_hash::FxHashMapExt as _};
 use rustc_hash::FxHashMap;
 use std::sync::LazyLock;
 use std::sync::atomic::{self, AtomicU16};

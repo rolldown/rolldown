@@ -14,7 +14,7 @@ use rolldown_fs::{OsFileSystem, OxcResolverFileSystem as _};
 use rolldown_resolver::Resolver;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rustc_hash::{FxHashMap, FxHashSet};
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use crate::{SharedResolver, utils::determine_minify_internal_exports_default};
 

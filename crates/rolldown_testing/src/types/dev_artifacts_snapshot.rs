@@ -4,7 +4,7 @@ use rolldown::BundleOutput;
 use rolldown_common::HmrUpdate;
 use rolldown_error::BuildResult;
 use rolldown_testing_config::TestMeta;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use super::{DevRoundOutput, SnapshotSection};
 use crate::types::build_artifacts_snapshot::BuildArtifactsSnapshot;

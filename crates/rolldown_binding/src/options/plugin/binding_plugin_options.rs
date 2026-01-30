@@ -1,4 +1,4 @@
-use itertools::Itertools;
+use itertools::Itertools as _;
 use napi::bindgen_prelude::{Either, FnArgs};
 use rolldown_utils::filter_expression::{self, FilterExprKind};
 use std::fmt::Debug;

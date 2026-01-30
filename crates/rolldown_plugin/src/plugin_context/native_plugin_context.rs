@@ -4,7 +4,7 @@ use std::{
   sync::{Arc, Weak},
 };
 
-use anyhow::Context;
+use anyhow::Context as _;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
@@ -15,7 +15,7 @@ use rolldown_common::{
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::FxDashSet;
 use tokio::sync::Mutex;
-use tracing::Instrument;
+use tracing::Instrument as _;
 
 use crate::{
   PluginDriver,

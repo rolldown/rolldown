@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::{self, Allocator, Box, IntoIn, TakeIn},
+  allocator::{self, Allocator, Box, IntoIn as _, TakeIn as _},
   ast::{
     AstBuilder, NONE,
     ast::{
@@ -7,7 +7,7 @@ use oxc::{
       ObjectPropertyKind, PropertyKind, Statement, VariableDeclarationKind,
     },
   },
-  span::{Atom, CompactStr, GetSpanMut, SPAN, Span},
+  span::{Atom, CompactStr, GetSpanMut as _, SPAN, Span},
   syntax::identifier,
 };
 use rolldown_common::{EcmaModuleAstUsage, Interop};

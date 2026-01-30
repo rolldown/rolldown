@@ -5,7 +5,7 @@ use rolldown_plugin::{
   HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, HookUsage, Plugin, PluginContext,
 };
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 #[derive(Debug)]
 struct ExternalCss;

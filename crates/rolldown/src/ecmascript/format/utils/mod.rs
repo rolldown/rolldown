@@ -1,4 +1,4 @@
-use itertools::Itertools;
+use itertools::Itertools as _;
 use rolldown_common::ExternalModule;
 use rolldown_sourcemap::SourceJoiner;
 

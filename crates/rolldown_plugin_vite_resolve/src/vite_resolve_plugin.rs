@@ -12,7 +12,7 @@ use crate::{
 use anyhow::anyhow;
 use arcstr::ArcStr;
 use derive_more::Debug;
-use owo_colors::OwoColorize;
+use owo_colors::OwoColorize as _;
 use rolldown_common::{ImportKind, WatcherChangeKind, side_effects::HookSideEffects};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -28,7 +28,7 @@ use std::{
   pin::Pin,
   sync::Arc,
 };
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 const FS_PREFIX: &str = "/@fs/";
 

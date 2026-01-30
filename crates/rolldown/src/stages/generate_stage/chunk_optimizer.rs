@@ -1,7 +1,7 @@
 use std::collections::{VecDeque, hash_map::Entry};
 
 use arcstr::ArcStr;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkDebugInfo, ChunkIdx, ChunkKind, ChunkMeta, ChunkReasonType,
@@ -24,7 +24,7 @@ use crate::{
 use super::{
   GenerateStage,
   chunk_ext::ChunkCreationReason,
-  chunk_ext::ChunkDebugExt,
+  chunk_ext::ChunkDebugExt as _,
   code_splitting::{IndexSplittingInfo, PendingCommonChunkInfo},
 };
 

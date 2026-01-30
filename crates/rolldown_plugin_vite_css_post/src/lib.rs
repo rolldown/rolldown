@@ -10,7 +10,7 @@ use std::{
   },
 };
 
-use cow_utils::CowUtils;
+use cow_utils::CowUtils as _;
 use rolldown_common::{
   ModuleType, NormalizedBundlerOptions, Output, StrOrBytes, side_effects::HookSideEffects,
 };

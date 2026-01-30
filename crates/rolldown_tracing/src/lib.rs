@@ -5,7 +5,7 @@
 /// - Using `RD_LOG=trace RD_LOG_OUTPUT=chrome-json` to collect tracing events into a json file.
 ///   - Using `RD_LOG_OUTPUT_STYLE=async` to record traces as a group of asynchronous operations.
 use std::sync::atomic::AtomicBool;
-use std::{any::Any, str::FromStr};
+use std::{any::Any, str::FromStr as _};
 
 use tracing_chrome::ChromeLayerBuilder;
 use tracing_chrome::TraceStyle;

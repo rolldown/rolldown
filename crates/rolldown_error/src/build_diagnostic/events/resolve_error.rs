@@ -1,7 +1,7 @@
 use crate::{types::diagnostic_options::DiagnosticOptions, types::event_kind::EventKind};
 use arcstr::ArcStr;
 use derive_more::Debug;
-use std::fmt::Write;
+use std::fmt::Write as _;
 
 use super::{BuildEvent, DiagnosableArcstr};
 

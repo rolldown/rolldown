@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use oxc::ast_visit::VisitMut;
+use oxc::ast_visit::VisitMut as _;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{

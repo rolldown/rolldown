@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use itertools::Itertools;
+use itertools::Itertools as _;
 use oxc_resolver::{EnforceExtension, ResolveOptions as OxcResolverOptions};
 use rolldown_common::{Platform, ResolveOptions, TsConfig};
 use rolldown_utils::indexmap::FxIndexMap;

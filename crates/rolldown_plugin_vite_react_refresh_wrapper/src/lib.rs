@@ -1,4 +1,4 @@
-use std::{borrow::Cow, fmt::Write, sync::LazyLock};
+use std::{borrow::Cow, fmt::Write as _, sync::LazyLock};
 
 use arcstr::ArcStr;
 use regex::Regex;

@@ -1,11 +1,11 @@
-use heck::{ToLowerCamelCase, ToUpperCamelCase};
+use heck::{ToLowerCamelCase as _, ToUpperCamelCase as _};
 
 use crate::{
   define_generator,
   output::{add_header, output_path, rust_output_path},
 };
 
-use super::{Context, Generator, Runner};
+use super::{Context, Generator, Runner as _};
 
 pub struct HookUsageGenerator;
 

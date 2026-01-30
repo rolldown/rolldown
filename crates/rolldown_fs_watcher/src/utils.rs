@@ -1,6 +1,6 @@
 use crate::{FsEventHandler, fs_event::FsEvent};
 use notify::{RecursiveMode, TargetMode, WatchMode};
-use rolldown_error::{BuildResult, ResultExt};
+use rolldown_error::{BuildResult, ResultExt as _};
 use std::{path::Path, time::Instant};
 
 #[cfg(not(target_family = "wasm"))]

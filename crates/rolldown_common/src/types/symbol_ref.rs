@@ -1,5 +1,5 @@
 use oxc::semantic::SymbolId;
-use rolldown_std_utils::OptionExt;
+use rolldown_std_utils::OptionExt as _;
 
 use crate::{IndexModules, Module, ModuleIdx, SymbolRefDb, SymbolRefFlags};
 

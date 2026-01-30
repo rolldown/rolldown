@@ -9,7 +9,7 @@ use oxc::ast::ast::{
 };
 use oxc::ast::{match_expression, match_member_expression};
 use oxc::span::Ident;
-use oxc_allocator::{Address, UnstableAddress};
+use oxc_allocator::{Address, UnstableAddress as _};
 use rolldown_common::{AstScopes, FlatOptions, SharedNormalizedBundlerOptions, SideEffectDetail};
 use rolldown_utils::global_reference::{
   is_global_ident_ref, is_side_effect_free_member_expr_of_len_three,
@@ -969,7 +969,7 @@ impl<'a> SideEffectDetector<'a> {
 mod test {
   use std::sync::Arc;
 
-  use itertools::Itertools;
+  use itertools::Itertools as _;
   use oxc::{parser::Parser, span::SourceType};
   use rolldown_common::{AstScopes, NormalizedBundlerOptions, SideEffectDetail};
   use rolldown_ecmascript::{EcmaAst, EcmaCompiler};

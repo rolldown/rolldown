@@ -1,6 +1,6 @@
 use std::{
   fs::OpenOptions,
-  io::Write,
+  io::Write as _,
   sync::Arc,
   time::{SystemTime, UNIX_EPOCH},
 };
@@ -12,7 +12,7 @@ use crate::{
   types::{ContextData, DevtoolsActionFieldExtractor},
 };
 use rustc_hash::{FxHashMap, FxHashSet};
-use serde::ser::{SerializeMap, Serializer as _};
+use serde::ser::{SerializeMap as _, Serializer as _};
 use tracing::{Event, Subscriber};
 use tracing_subscriber::{
   fmt::{FmtContext, FormatEvent, FormatFields, format::Writer},

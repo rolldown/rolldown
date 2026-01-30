@@ -5,12 +5,14 @@ use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption, San
 use crate::types::binding_string_or_regex::bindingify_string_or_regex_array;
 use crate::{
   options::binding_inject_import::normalize_binding_inject_import,
-  types::js_callback::JsCallbackExt,
+  types::js_callback::JsCallbackExt as _,
 };
 #[cfg_attr(target_family = "wasm", allow(unused))]
 use crate::{
   options::plugin::JsPlugin,
-  types::{binding_rendered_chunk::BindingRenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
+  types::{
+    binding_rendered_chunk::BindingRenderedChunk, js_callback::MaybeAsyncJsCallbackExt as _,
+  },
 };
 use napi::bindgen_prelude::{Either, Either3, FnArgs};
 use rolldown::{

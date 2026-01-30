@@ -1,8 +1,8 @@
-use std::{borrow::Cow, hash::Hash, mem};
+use std::{borrow::Cow, hash::Hash as _, mem};
 
 use arcstr::ArcStr;
 use futures::future::try_join_all;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use oxc_index::IndexVec;
 use rolldown_common::{
   Asset, HashCharacters, InsChunkIdx, InstantiationKind, NormalizedBundlerOptions, SourceMapType,
@@ -10,7 +10,7 @@ use rolldown_common::{
 };
 use rolldown_error::BuildResult;
 #[cfg(not(target_family = "wasm"))]
-use rolldown_utils::rayon::IndexedParallelIterator;
+use rolldown_utils::rayon::IndexedParallelIterator as _;
 use rolldown_utils::{
   concat_string,
   hash_placeholder::{
@@ -18,7 +18,8 @@ use rolldown_utils::{
   },
   indexmap::FxIndexSet,
   rayon::{
-    IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+    IntoParallelIterator as _, IntoParallelRefIterator as _, IntoParallelRefMutIterator as _,
+    ParallelIterator as _,
   },
   xxhash::{xxhash_base64_url, xxhash_with_base},
 };

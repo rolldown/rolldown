@@ -4,7 +4,7 @@ mod utils;
 
 use std::{borrow::Cow, path::PathBuf, pin::Pin, sync::Arc};
 
-use oxc::ast_visit::VisitMut;
+use oxc::ast_visit::VisitMut as _;
 use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_plugin_utils::{FileToUrlEnv, UsizeOrFunction};
 use rolldown_utils::dataurl::is_data_url;

@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use crate::EcmaCompiler;
 use arcstr::ArcStr;
 use oxc::{
-  allocator::{Allocator, CloneIn},
+  allocator::{Allocator, CloneIn as _},
   ast::ast::{Comment, Program},
   span::SourceType,
 };

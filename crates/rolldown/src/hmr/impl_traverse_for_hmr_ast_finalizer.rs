@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::TakeIn,
+  allocator::TakeIn as _,
   ast::{NONE, ast},
   span::SPAN,
 };
@@ -8,9 +8,9 @@ use rolldown_ecmascript::{
   CJS_EXPORTS_REF_ATOM, CJS_MODULE_REF_ATOM, CJS_ROLLDOWN_EXPORTS_REF,
   CJS_ROLLDOWN_EXPORTS_REF_IDENT, CJS_ROLLDOWN_MODULE_REF_IDENT,
 };
-use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_ecmascript_utils::ExpressionExt as _;
 
-use crate::hmr::{hmr_ast_finalizer::HmrAstFinalizer, utils::HmrAstBuilder};
+use crate::hmr::{hmr_ast_finalizer::HmrAstFinalizer, utils::HmrAstBuilder as _};
 
 impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
   fn enter_program(

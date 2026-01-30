@@ -2,12 +2,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::{
   fs,
-  io::{Read, Write},
+  io::{Read as _, Write as _},
   path::Path,
   process::Command,
 };
 
-use anyhow::Context;
+use anyhow::Context as _;
 use oxc::parser::{ParseOptions, Parser};
 use oxc::span::SourceType;
 use rolldown::{
@@ -20,7 +20,7 @@ use rolldown_dev::{BundlerConfig, DevEngine, DevOptions, DevWatchOptions};
 use rolldown_error::BuildResult;
 use rolldown_testing_config::TestMeta;
 use serde_json::{Map, Value};
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use crate::hmr_files::{
   apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,

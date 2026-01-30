@@ -1,7 +1,7 @@
 use std::{ffi::OsString, sync::Arc};
 
 use arcstr::ArcStr;
-use cow_utils::CowUtils;
+use cow_utils::CowUtils as _;
 use rolldown_common::{Output, OutputAsset, OutputChunk};
 use rolldown_plugin_utils::constants::ChunkMetadata;
 use rolldown_utils::pattern_filter::normalize_path;

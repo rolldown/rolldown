@@ -2,7 +2,7 @@ mod ast_visitor;
 
 use std::borrow::Cow;
 
-use oxc::ast_visit::VisitMut;
+use oxc::ast_visit::VisitMut as _;
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_plugin::{HookUsage, Plugin, PluginHookMeta, PluginOrder};
 

@@ -11,7 +11,7 @@ pub use source_joiner::SourceJoiner;
 
 pub use crate::source::{Source, SourceMapSource};
 
-use rolldown_utils::rustc_hash::FxHashMapExt;
+use rolldown_utils::rustc_hash::FxHashMapExt as _;
 
 // <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>
 #[expect(clippy::cast_possible_truncation)]

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use napi::{Unknown, bindgen_prelude::FromNapiValue};
+use napi::{Unknown, bindgen_prelude::FromNapiValue as _};
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;

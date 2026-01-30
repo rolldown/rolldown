@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use heck::ToUpperCamelCase;
+use heck::ToUpperCamelCase as _;
 use oxc::span::Span;
 
 use crate::{

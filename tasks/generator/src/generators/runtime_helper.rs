@@ -1,4 +1,4 @@
-use heck::ToUpperCamelCase;
+use heck::ToUpperCamelCase as _;
 
 use crate::{
   define_generator,
@@ -6,7 +6,7 @@ use crate::{
   utils::extract_toplevel_bindings_name,
 };
 
-use super::{Context, Generator, Runner};
+use super::{Context, Generator, Runner as _};
 
 pub struct RuntimeHelperGenerator;
 

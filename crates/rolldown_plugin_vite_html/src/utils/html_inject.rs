@@ -1,6 +1,6 @@
 use std::{borrow::Cow, sync::LazyLock};
 
-use cow_utils::CowUtils;
+use cow_utils::CowUtils as _;
 use regex::Regex;
 use rustc_hash::FxHashSet;
 

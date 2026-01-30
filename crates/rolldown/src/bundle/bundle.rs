@@ -11,12 +11,12 @@ use super::super::{
   types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
   utils::fs_utils::clean_dir,
 };
-use anyhow::Context;
+use anyhow::Context as _;
 use arcstr::ArcStr;
-use rolldown_common::{GetLocalDbMut, Module, ScanMode, SharedFileEmitter, SymbolRefDb};
+use rolldown_common::{GetLocalDbMut as _, Module, ScanMode, SharedFileEmitter, SymbolRefDb};
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
-use rolldown_fs::{FileSystem, OsFileSystem};
+use rolldown_fs::{FileSystem as _, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookCloseBundleArgs, HookRenderErrorArgs, SharedPluginDriver,
 };

@@ -5,7 +5,7 @@ use std::str::FromStr;
 use std::sync::LazyLock;
 
 use anyhow::anyhow;
-use cow_utils::CowUtils;
+use cow_utils::CowUtils as _;
 use regex::Regex;
 use rolldown::BundlerOptions;
 use rolldown_error::{BuildDiagnostic, DiagnosticOptions, EventKind};
@@ -13,7 +13,7 @@ use rolldown_testing::integration_test::IntegrationTest;
 use rolldown_testing::test_config::TestMeta;
 use rustc_hash::FxHashSet;
 use serde::{Deserialize, Serialize};
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 use walkdir::WalkDir;
 
 // Match paths like /home/user/rolldown/test262/... or /home/runner/work/rolldown/rolldown/test262/... or C:\path\to\rolldown\test262\...
@@ -337,7 +337,7 @@ globalThis.$DONE = function(error) {
   /// Evaluates a bundled test by running it with Node.js
   fn evaluate(&self, test_file: &Path, output: &rolldown::BundleOutput) -> TestOutcome {
     let unique_id = {
-      use std::hash::{DefaultHasher, Hash, Hasher};
+      use std::hash::{DefaultHasher, Hash as _, Hasher as _};
       let mut hasher = DefaultHasher::new();
       test_file.to_string_lossy().hash(&mut hasher);
       hasher.finish().to_string()

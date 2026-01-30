@@ -1,13 +1,13 @@
 use arcstr::ArcStr;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  BarrelState, GetLocalDbMut, ImporterRecord, Module, ModuleId, ModuleIdx, StableModuleId,
+  BarrelState, GetLocalDbMut as _, ImporterRecord, Module, ModuleId, ModuleIdx, StableModuleId,
 };
 use rolldown_error::BuildResult;
-use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
+use rolldown_utils::rayon::{IntoParallelRefIterator as _, ParallelIterator as _};
 use rustc_hash::{FxHashMap, FxHashSet};
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use crate::{
   SharedOptions, SharedResolver,

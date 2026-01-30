@@ -16,7 +16,7 @@ pub mod types;
 
 use arcstr::ArcStr;
 use oxc::span::CompactStr;
-use rolldown_std_utils::PathExt;
+use rolldown_std_utils::PathExt as _;
 use rolldown_utils::{
   BitSet,
   dashmap::FxDashMap,
@@ -25,7 +25,7 @@ use rolldown_utils::{
   make_unique_name::make_unique_name,
 };
 use rustc_hash::FxHashMap;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use self::types::{
   cross_chunk_import_item::CrossChunkImportItem, preliminary_filename::PreliminaryFilename,

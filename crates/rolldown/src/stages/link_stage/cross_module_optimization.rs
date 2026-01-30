@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::{Address, GetAddress, UnstableAddress},
+  allocator::{Address, GetAddress as _, UnstableAddress as _},
   ast::{
     AstBuilder, AstKind,
     ast::{
@@ -11,12 +11,12 @@ use oxc::{
   semantic::ScopeFlags,
 };
 use rolldown_common::{
-  AstScopes, ConstExportMeta, EcmaViewMeta, FlatOptions, GetLocalDb, ModuleIdx,
+  AstScopes, ConstExportMeta, EcmaViewMeta, FlatOptions, GetLocalDb as _, ModuleIdx,
   SharedNormalizedBundlerOptions, SideEffectDetail, StmtInfoIdx, SymbolRef, SymbolRefDb,
   SymbolRefFlags,
 };
-use rolldown_ecmascript_utils::{ExpressionExt, is_top_level};
-use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
+use rolldown_ecmascript_utils::{ExpressionExt as _, is_top_level};
+use rolldown_utils::rayon::{IntoParallelRefIterator as _, ParallelIterator as _};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{

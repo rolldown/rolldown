@@ -5,16 +5,16 @@ use crate::{
     binding_normalized_options::BindingNormalizedOptions,
     binding_outputs::{JsChangedOutputs, to_binding_error},
     binding_rendered_chunk::BindingRenderedChunk,
-    js_callback::MaybeAsyncJsCallbackExt,
+    js_callback::MaybeAsyncJsCallbackExt as _,
   },
 };
-use anyhow::Context;
+use anyhow::Context as _;
 use napi::bindgen_prelude::FnArgs;
 use rolldown_common::NormalModule;
 use rolldown_plugin::{__inner::SharedPluginable, HookUsage, Plugin, typedmap::TypedMapKey};
 use rolldown_utils::filter_expression::filter_exprs_interpreter;
 use std::{borrow::Cow, ops::Deref, sync::Arc};
-use tracing::{Instrument, debug_span};
+use tracing::{Instrument as _, debug_span};
 
 use super::{
   BindingPluginOptions, FilterExprCache,

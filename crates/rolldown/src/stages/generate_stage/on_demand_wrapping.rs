@@ -4,7 +4,7 @@ use rolldown_common::{
   Chunk, ChunkKind, ConcatenateWrappedModuleKind, EcmaViewMeta, ImportKind, ModuleGroup, ModuleIdx,
   WrapKind,
 };
-use rolldown_utils::rustc_hash::FxHashMapExt;
+use rolldown_utils::rustc_hash::FxHashMapExt as _;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::chunk_graph::ChunkGraph;

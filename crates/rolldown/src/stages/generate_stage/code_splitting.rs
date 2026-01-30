@@ -1,11 +1,11 @@
 use std::{cmp::Ordering, collections::VecDeque, path::Path};
 
 use crate::{
-  chunk_graph::ChunkGraph, stages::generate_stage::chunk_ext::ChunkDebugExt,
+  chunk_graph::ChunkGraph, stages::generate_stage::chunk_ext::ChunkDebugExt as _,
   types::linking_metadata::LinkingMetadataVec, utils::chunk::normalize_preserve_entry_signature,
 };
 use arcstr::ArcStr;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
@@ -15,10 +15,10 @@ use rolldown_common::{
 use rolldown_error::BuildResult;
 use rolldown_utils::{
   BitSet, commondir,
-  index_vec_ext::IndexVecRefExt,
+  index_vec_ext::IndexVecRefExt as _,
   indexmap::FxIndexMap,
-  rayon::ParallelIterator,
-  rustc_hash::{FxHashMapExt, FxHashSetExt},
+  rayon::ParallelIterator as _,
+  rustc_hash::{FxHashMapExt as _, FxHashSetExt as _},
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 

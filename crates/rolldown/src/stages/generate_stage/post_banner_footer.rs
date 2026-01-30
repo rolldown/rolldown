@@ -1,6 +1,6 @@
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::{SourceJoiner, SourceMapSource};
-use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
+use rolldown_utils::rayon::{IntoParallelRefMutIterator as _, ParallelIterator as _};
 
 use crate::type_alias::IndexInstantiatedChunks;
 use crate::utils::shebang::find_shebang_end;

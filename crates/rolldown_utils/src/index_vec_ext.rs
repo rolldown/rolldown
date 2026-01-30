@@ -29,7 +29,8 @@ pub use wasm_shims::*;
 mod none_wasm {
   use oxc_index::{Idx, IndexVec};
   use rayon::iter::{
-    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefMutIterator, ParallelIterator,
+    IndexedParallelIterator as _, IntoParallelIterator as _, IntoParallelRefMutIterator as _,
+    ParallelIterator,
   };
   pub trait IndexVecExt<'data, I: Idx + Send, T: Send + 'data> {
     fn par_iter_mut_enumerated(&'data mut self) -> impl ParallelIterator<Item = (I, &'data mut T)>;

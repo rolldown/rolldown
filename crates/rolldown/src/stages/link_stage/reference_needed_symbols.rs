@@ -5,10 +5,10 @@ use rolldown_common::{
   StmtInfoMeta, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 #[cfg(not(target_family = "wasm"))]
-use rolldown_utils::rayon::IndexedParallelIterator;
+use rolldown_utils::rayon::IndexedParallelIterator as _;
 use rolldown_utils::{
   concat_string,
-  rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
+  rayon::{IntoParallelRefIterator as _, IntoParallelRefMutIterator as _, ParallelIterator as _},
 };
 
 use super::LinkStage;

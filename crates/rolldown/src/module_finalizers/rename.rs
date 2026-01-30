@@ -1,6 +1,6 @@
 use oxc::ast::ast::{self, Expression, IdentifierReference};
 use rolldown_common::SymbolRef;
-use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_ecmascript_utils::ExpressionExt as _;
 
 use super::ScopeHoistingFinalizer;
 

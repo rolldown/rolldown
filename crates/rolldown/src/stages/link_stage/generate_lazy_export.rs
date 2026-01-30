@@ -1,13 +1,13 @@
 use indexmap::map::Entry;
 use oxc::span::CompactStr;
 use oxc::{
-  allocator::TakeIn,
+  allocator::TakeIn as _,
   ast::ast::{self, Expression},
   semantic::{SemanticBuilder, Stats},
   span::SPAN,
 };
 use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, GetLocalDbMut, LocalExport, Module, ModuleIdx, ModuleType,
+  EcmaModuleAstUsage, ExportsKind, GetLocalDbMut as _, LocalExport, Module, ModuleIdx, ModuleType,
   NormalModule, StmtInfo, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDbForModule,
   TaggedSymbolRef, WrapKind,
 };
@@ -15,7 +15,7 @@ use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_utils::ecmascript::legitimize_json_local_binding_name;
 use rolldown_utils::{
   indexmap::FxIndexMap,
-  rayon::{IntoParallelRefMutIterator, ParallelIterator},
+  rayon::{IntoParallelRefMutIterator as _, ParallelIterator as _},
 };
 
 use super::LinkStage;

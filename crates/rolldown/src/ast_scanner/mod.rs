@@ -22,9 +22,9 @@ use oxc::{
       ImportDeclaration, ModuleDeclaration, Program,
     },
   },
-  ast_visit::Visit,
+  ast_visit::Visit as _,
   semantic::SymbolId,
-  span::{CompactStr, GetSpan, Span},
+  span::{CompactStr, GetSpan as _, Span},
 };
 use oxc_allocator::Address;
 use oxc_index::IndexVec;
@@ -37,15 +37,17 @@ use rolldown_common::{
   StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
   TaggedSymbolRef, ThisExprReplaceKind, generate_replace_this_expr_map,
 };
-use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt, FunctionExt};
+use rolldown_ecmascript_utils::{
+  BindingIdentifierExt as _, BindingPatternExt as _, FunctionExt as _,
+};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
-use rolldown_std_utils::PathExt;
+use rolldown_std_utils::PathExt as _;
 use rolldown_utils::concat_string;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::borrow::Cow;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use crate::SharedOptions;
 use crate::ast_scanner::cjs_export_analyzer::CommonjsExportSymbolUsage;

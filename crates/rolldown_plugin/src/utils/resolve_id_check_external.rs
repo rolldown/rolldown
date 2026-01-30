@@ -10,7 +10,7 @@ use rolldown_common::{
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dataurl::is_data_url;
 use std::{path::Path, sync::Arc};
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use crate::__inner::resolve_id_with_plugins;
 

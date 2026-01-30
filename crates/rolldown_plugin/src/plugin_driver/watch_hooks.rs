@@ -1,6 +1,6 @@
 use crate::HookNoopReturn;
 use crate::PluginDriver;
-use anyhow::Context;
+use anyhow::Context as _;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::CausedPlugin;
 

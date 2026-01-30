@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use oxc_transform_napi::TransformOptions;
 use rolldown_plugin_vite_transform::ViteTransformPlugin;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use crate::{
   types::binding_string_or_regex::{BindingStringOrRegex, bindingify_string_or_regex_array},

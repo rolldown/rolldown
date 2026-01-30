@@ -7,11 +7,11 @@ use oxc::ast::ast::{
   self, Argument, ArrayExpressionElement, Expression, ObjectPropertyKind, PropertyKey, PropertyKind,
 };
 use oxc::ast_visit::{Visit, walk};
-use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_ecmascript_utils::ExpressionExt as _;
 use rolldown_plugin::{LogWithoutPlugin, PluginContext};
 use rolldown_plugin_utils::constants::{ViteImportGlob, ViteImportGlobValue};
 use string_wizard::MagicString;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 pub struct GlobImportVisit<'a> {
   pub ctx: &'a PluginContext,

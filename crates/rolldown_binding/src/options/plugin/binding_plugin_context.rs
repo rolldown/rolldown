@@ -1,7 +1,7 @@
-use itertools::Itertools;
+use itertools::Itertools as _;
 use napi::Env;
 use napi_derive::napi;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use rolldown_plugin::__inner::infer_module_def_format;
 use rolldown_plugin::{PluginContext, SharedNativePluginContext};

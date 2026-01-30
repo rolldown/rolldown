@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use globset::{Glob, GlobMatcher, GlobSetBuilder};
-use heck::{ToKebabCase, ToSnakeCase};
+use heck::{ToKebabCase as _, ToSnakeCase as _};
 use ignore::WalkBuilder;
 use rolldown_workspace::root_dir;
 use serde::Deserialize;

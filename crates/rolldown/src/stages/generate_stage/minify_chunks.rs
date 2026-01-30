@@ -4,7 +4,7 @@ use rolldown_common::{LegalComments, MinifyOptions, NormalizedBundlerOptions};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::BuildResult;
 use rolldown_sourcemap::collapse_sourcemaps;
-use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
+use rolldown_utils::rayon::{IntoParallelRefMutIterator as _, ParallelIterator as _};
 
 use crate::type_alias::IndexInstantiatedChunks;
 

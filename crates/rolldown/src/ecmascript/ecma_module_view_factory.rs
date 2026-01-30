@@ -5,9 +5,9 @@ use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_error::BuildResult;
-use rolldown_std_utils::PathExt;
+use rolldown_std_utils::PathExt as _;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use crate::{
   ast_scanner::{AstScanner, ScanResult},

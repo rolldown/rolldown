@@ -3,7 +3,7 @@ use crate::types::generator::{GenerateContext, GenerateOutput, Generator};
 use anyhow::Result;
 use rolldown_common::{InstantiatedChunk, InstantiationKind};
 use rolldown_error::BuildResult;
-use rolldown_std_utils::OptionExt;
+use rolldown_std_utils::OptionExt as _;
 
 pub struct AssetGenerator;
 

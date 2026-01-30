@@ -9,7 +9,7 @@ use crate::{
   output::{add_header, output_path},
 };
 
-use super::{Context, Generator, Runner};
+use super::{Context, Generator, Runner as _};
 
 pub struct OxcRuntimeHelperGenerator;
 

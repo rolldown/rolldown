@@ -5,7 +5,7 @@ use rolldown_common::{
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
-use std::fmt::Write;
+use std::fmt::Write as _;
 
 #[derive(Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

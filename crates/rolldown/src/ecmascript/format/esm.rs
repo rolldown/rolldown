@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use rolldown_common::{
   AddonRenderContext, ExportsKind, ExternalModule, ImportRecordIdx, ModuleIdx, ModuleTable,
   Specifier, SymbolRef,

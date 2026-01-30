@@ -10,7 +10,7 @@ use crate::{
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
 
-use itertools::Itertools;
+use itertools::Itertools as _;
 use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};

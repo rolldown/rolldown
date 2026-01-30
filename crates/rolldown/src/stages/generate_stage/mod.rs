@@ -6,7 +6,7 @@ use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_devtools::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_std_utils::OptionExt;
+use rolldown_std_utils::OptionExt as _;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use rolldown_common::{
@@ -16,16 +16,18 @@ use rolldown_common::{
   RollupPreRenderedAsset, SymbolRef, SymbolRefFlags,
 };
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_std_utils::{PathBufExt, PathExt, representative_file_name_for_preserve_modules};
+use rolldown_std_utils::{
+  PathBufExt as _, PathExt as _, representative_file_name_for_preserve_modules,
+};
 use rolldown_utils::{
   dashmap::FxDashMap,
   hash_placeholder::HashPlaceholderGenerator,
-  index_vec_ext::IndexVecExt,
+  index_vec_ext::IndexVecExt as _,
   indexmap::FxIndexMap,
   make_unique_name::make_unique_name,
-  rayon::{IntoParallelRefMutIterator, ParallelIterator},
+  rayon::{IntoParallelRefMutIterator as _, ParallelIterator as _},
 };
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 use tracing::debug_span;
 
 const COMMON_JS_EXTENSIONS: &[&str] = &["js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts"];

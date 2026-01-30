@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{Context as _, Result};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 

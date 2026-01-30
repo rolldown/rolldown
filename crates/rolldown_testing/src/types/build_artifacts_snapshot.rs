@@ -6,7 +6,7 @@ use rolldown_common::Output;
 use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
 use rolldown_sourcemap::SourcemapVisualizer;
 use rolldown_testing_config::TestMeta;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 use super::{BuildRoundOutput, SnapshotSection};
 use crate::utils::{snapshot as snapshot_utils, tweak_snapshot};

@@ -5,13 +5,13 @@ use std::{
 };
 
 use arcstr::ArcStr;
-use futures::FutureExt;
+use futures::FutureExt as _;
 use notify::EventKind;
 use rolldown_common::WatcherChangeKind;
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::{DynFsWatcher, FsEventResult, RecursiveMode};
 use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap};
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 use tokio::sync::Mutex;
 
 use rolldown::Bundler;

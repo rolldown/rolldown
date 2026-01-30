@@ -1,6 +1,6 @@
 use rolldown::{Bundler, BundlerOptions, DevModeOptions, ExperimentalOptions};
 use rolldown_workspace as workspace;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 // cargo run --example lazy
 

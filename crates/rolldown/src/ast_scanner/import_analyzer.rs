@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::{GetAddress, UnstableAddress},
+  allocator::{GetAddress as _, UnstableAddress as _},
   ast::{
     AstKind, MemberExpressionKind,
     ast::{Expression, IdentifierReference, UnaryOperator},

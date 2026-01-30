@@ -2,9 +2,9 @@ use oxc::{
   ast::ast::{self},
   span::SPAN,
 };
-use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_ecmascript_utils::ExpressionExt as _;
 
-use crate::hmr::utils::HmrAstBuilder;
+use crate::hmr::utils::HmrAstBuilder as _;
 
 use super::ScopeHoistingFinalizer;
 

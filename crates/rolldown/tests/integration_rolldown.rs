@@ -8,7 +8,7 @@ use rolldown_testing::{
   integration_test::IntegrationTest,
   test_config::{TestConfig, TestMeta, read_test_config},
 };
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 use testing_macros::fixture;
 
 mod rolldown;

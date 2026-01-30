@@ -1,6 +1,6 @@
 use std::{borrow::Cow, path::Path};
 
-use cow_utils::CowUtils;
+use cow_utils::CowUtils as _;
 use oxc::{
   ast::{Comment, ast::Expression},
   ast_visit::{Visit, walk},

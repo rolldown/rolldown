@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use napi::{
   Env, Error, Status, Unknown,
   bindgen_prelude::{
-    FromNapiValue, Function, JsObjectValue, JsValue, Object, TypeName, ValidateNapiValue,
+    FromNapiValue, Function, JsObjectValue as _, JsValue as _, Object, TypeName, ValidateNapiValue,
   },
   sys,
 };

@@ -4,20 +4,20 @@ use std::cmp::Reverse;
 use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
 use crate::utils::chunk::normalize_preserve_entry_signature;
-use itertools::{Itertools, multizip};
+use itertools::{Itertools as _, multizip};
 use oxc::semantic::SymbolId;
 use oxc::span::CompactStr;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PostChunkOptimizationOperation,
-  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, SymbolIdExt, SymbolRef, WrapKind,
+  PreserveEntrySignatures, RUNTIME_HELPER_NAMES, SymbolIdExt as _, SymbolRef, WrapKind,
 };
 use rolldown_utils::concat_string;
 use rolldown_utils::index_vec_ext::IndexVecRefExt as _;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
-use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
-use rolldown_utils::rustc_hash::FxHashMapExt;
+use rolldown_utils::rayon::{ParallelBridge as _, ParallelIterator as _};
+use rolldown_utils::rustc_hash::FxHashMapExt as _;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxIndexSet<SymbolRef>>;

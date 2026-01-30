@@ -4,7 +4,7 @@ mod utils;
 
 use std::{borrow::Cow, pin::Pin, sync::Arc};
 
-use oxc::ast_visit::Visit;
+use oxc::ast_visit::Visit as _;
 use rolldown_common::ModuleType;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,

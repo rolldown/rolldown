@@ -6,7 +6,7 @@ use crate::{
 };
 use arcstr::ArcStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat, TaggedSymbolRef, WrapKind,
+  Chunk, ChunkIdx, ChunkKind, GetLocalDb as _, OutputFormat, TaggedSymbolRef, WrapKind,
 };
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::FxHashMap;

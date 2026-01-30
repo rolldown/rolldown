@@ -1,10 +1,10 @@
-use itertools::Itertools;
-use oxc::allocator::FromIn;
+use itertools::Itertools as _;
+use oxc::allocator::FromIn as _;
 use oxc::ast::AstType;
 use oxc::ast::ast::{AssignmentTarget, JSXMemberExpression};
 use oxc::span::{Atom, CompactStr};
 use oxc::{
-  allocator::{self, IntoIn, TakeIn},
+  allocator::{self, IntoIn as _, TakeIn as _},
   ast::{
     NONE,
     ast::{self, BindingPattern, Expression, SimpleAssignmentTarget, Statement},
@@ -15,10 +15,10 @@ use oxc::{
   span::{SPAN, Span},
 };
 use rolldown_common::{ConcatenateWrappedModuleKind, SymbolRef, ThisExprReplaceKind, WrapKind};
-use rolldown_ecmascript::ToSourceString;
-use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
+use rolldown_ecmascript::ToSourceString as _;
+use rolldown_ecmascript_utils::{ExpressionExt as _, JsxExt as _};
 
-use crate::hmr::utils::HmrAstBuilder;
+use crate::hmr::utils::HmrAstBuilder as _;
 use crate::module_finalizers::{KeepNameId, TraverseState};
 
 use super::ScopeHoistingFinalizer;

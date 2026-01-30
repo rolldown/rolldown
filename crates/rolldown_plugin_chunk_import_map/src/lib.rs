@@ -1,6 +1,6 @@
 use std::{
   borrow::Cow,
-  hash::Hash,
+  hash::Hash as _,
   sync::atomic::{AtomicBool, Ordering},
 };
 

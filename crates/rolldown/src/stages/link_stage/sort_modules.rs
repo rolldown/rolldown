@@ -2,7 +2,7 @@ use std::iter;
 
 use rolldown_common::{Module, ModuleIdx};
 use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
-use rolldown_utils::rustc_hash::FxHashSetExt;
+use rolldown_utils::rustc_hash::FxHashSetExt as _;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::LinkStage;

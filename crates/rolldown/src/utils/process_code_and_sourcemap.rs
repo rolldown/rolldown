@@ -3,9 +3,9 @@ use std::path::Path;
 use futures::future::try_join_all;
 use oxc::ast::CommentKind;
 use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
-use rolldown_error::{BuildResult, ResultExt};
+use rolldown_error::{BuildResult, ResultExt as _};
 use rolldown_sourcemap::SourceMap;
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 use url::Url;
 
 use super::uuid::uuid_v4_string_from_u128;

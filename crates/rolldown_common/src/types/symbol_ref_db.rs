@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 use oxc::semantic::{ScopeId, Scoping, SymbolId};
 use oxc::span::CompactStr;
 use oxc_index::IndexVec;
-use rolldown_std_utils::OptionExt;
+use rolldown_std_utils::OptionExt as _;
 use rustc_hash::FxHashMap;
 
 use crate::{AstScopes, ChunkIdx, ModuleIdx, SymbolRef};

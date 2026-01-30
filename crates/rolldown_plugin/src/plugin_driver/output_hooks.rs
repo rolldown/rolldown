@@ -4,12 +4,12 @@ use crate::types::hook_close_bundle_args::HookCloseBundleArgs;
 use crate::types::hook_render_error::HookRenderErrorArgs;
 use crate::{HookAddonArgs, PluginDriver};
 use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
-use anyhow::{Context, Ok, Result};
+use anyhow::{Context as _, Ok, Result};
 use rolldown_common::{Output, RollupRenderedChunk, SharedNormalizedBundlerOptions};
 use rolldown_devtools::{action, trace_action};
 use rolldown_error::{BuildDiagnostic, CausedPlugin};
 use rolldown_sourcemap::SourceMap;
-use tracing::Instrument;
+use tracing::Instrument as _;
 
 impl PluginDriver {
   pub async fn render_start(&self, opts: &SharedNormalizedBundlerOptions) -> HookNoopReturn {

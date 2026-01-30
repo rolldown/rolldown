@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
@@ -13,7 +13,7 @@ use rolldown_error::BuildDiagnostic;
 use rolldown_utils::rayon::IteratorExt as _;
 use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
-  rayon::{IntoParallelRefMutIterator, ParallelIterator},
+  rayon::{IntoParallelRefMutIterator as _, ParallelIterator as _},
 };
 
 use rustc_hash::{FxHashMap, FxHashSet};

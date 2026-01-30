@@ -1,4 +1,4 @@
-use heck::{ToLowerCamelCase, ToSnakeCase, ToTitleCase, ToUpperCamelCase};
+use heck::{ToLowerCamelCase as _, ToSnakeCase as _, ToTitleCase as _, ToUpperCamelCase as _};
 use oxc::span::Span;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -10,7 +10,7 @@ use crate::{
   utils::{extract_toplevel_item_span, syn_utils::extract_doc_comments},
 };
 
-use super::{Context, Generator, Runner};
+use super::{Context, Generator, Runner as _};
 
 #[derive(Debug)]
 struct EventKindInfo {

@@ -1,10 +1,10 @@
-use itertools::Itertools;
-use oxc::allocator::{Address, Allocator, GetAddress, TakeIn};
+use itertools::Itertools as _;
+use oxc::allocator::{Address, Allocator, GetAddress as _, TakeIn as _};
 use oxc::ast::NONE;
 use oxc::ast::ast::{self, BindingPattern, Declaration, ImportOrExportKind, Statement};
 use oxc::ast_visit::{VisitMut, walk_mut};
-use oxc::span::{GetSpanMut, SPAN, Span};
-use rolldown_ecmascript_utils::{AstSnippet, StatementExt};
+use oxc::span::{GetSpanMut as _, SPAN, Span};
+use rolldown_ecmascript_utils::{AstSnippet, StatementExt as _};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.

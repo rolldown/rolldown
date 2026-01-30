@@ -5134,6 +5134,10 @@ expression: output
 - main-!~{000}~.js => main-DwRFkntP.js
 - lazy-a-!~{001}~.js => lazy-a-Be4D309x.js
 
+# tests/rolldown/issues/8120
+
+- main-!~{000}~.js => main-8iRAOpBT.js
+
 # tests/rolldown/issues/duplicate_default_export
 
 - main-!~{000}~.js => main-D8FPxBSA.js

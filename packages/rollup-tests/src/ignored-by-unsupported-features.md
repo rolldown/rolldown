@@ -18,6 +18,7 @@
 
 ### The `resolveDynamicImport` hook `specifier: AstNode` not supported
  - rollup@form@dynamic-import-unresolvable: Returns the raw AST nodes for unresolvable dynamic imports@generates es
+ - rollup@function@dynamic-import-expression: Dynamic import expression replacement
 
 ### The plugin `sequential` is not supported
  - rollup@function@enforce-sequential-plugin-order: allows to enforce sequential plugin hook order for parallel plugin hooks
@@ -115,11 +116,6 @@
 ### The `input.perf` and `bundle.getTimings()` is not supported
  - rollup@function@adds-timings-to-bundle-when-codesplitting: Adds timing information to bundle when bundling with perf=true
  - rollup@function@adds-timings-to-bundle: Adds timing information to bundle when bundling with perf=true
-
-### `output.dynamicImportInCjs` is not compatible yet
- - rollup@function@dynamic-import-this-function: uses correct "this" in dynamic imports when not using arrow functions
- - rollup@function@dynamic-import-this-arrow: uses correct "this" in dynamic imports when using arrow functions
- - rollup@function@dynamic-import-expression: Dynamic import expression replacement
 
 ### The `input.moduleContext` is not supported
  - rollup@form@custom-module-context-function: allows custom module-specific context with a function option

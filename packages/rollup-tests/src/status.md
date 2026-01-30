@@ -3,7 +3,7 @@
 | failed | 0 |
 | skipFailed | 7 |
 | ignored | 95 |
-| ignored(unsupported features) | 311 |
+| ignored(unsupported features) | 309 |
 | ignored(treeshaking) | 324 |
 | ignored(behavior passed, snapshot different) | 157 |
-| passed | 912 |
+| passed | 914 |

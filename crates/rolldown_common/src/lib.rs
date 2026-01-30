@@ -37,7 +37,7 @@ pub mod bundler_options {
       devtools_options::DevtoolsOptions,
       es_module_flag::EsModuleFlag,
       experimental_options::ExperimentalOptions,
-      filename_template::FilenameTemplate,
+      filename_template::{FilenameTemplate, is_path_fragment},
       generated_code_options::GeneratedCodeOptions,
       hash_characters::HashCharacters,
       inject_import::InjectImport,

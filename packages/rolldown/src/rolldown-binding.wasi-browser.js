@@ -29,6 +29,17 @@ const __sharedMemory = new WebAssembly.Memory({
 
 const __wasmFile = await fetch(__wasmUrl).then((res) => res.arrayBuffer())
 
+// Check if WebAssembly.Module can be cloned (Safari doesn't support this)
+let __supportsModuleClone = false
+try {
+  const testModule = new WebAssembly.Module(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]))
+  new MessageChannel().port1.postMessage(testModule)
+  __supportsModuleClone = true
+} catch {
+  // Safari throws DataCloneError
+  __supportsModuleClone = false
+}
+
 const {
   instance: __napiInstance,
   module: __wasiModule,
@@ -42,6 +53,10 @@ const {
       type: 'module',
     })
     worker.addEventListener('message', __wasmCreateOnMessageForFsProxy(__fs))
+    
+    // Store info about module clone support on worker
+    worker.__supportsModuleClone = __supportsModuleClone
+    worker.__wasmFile = __wasmFile
 
     return worker
   },
@@ -62,6 +77,41 @@ const {
     }
   },
 })
+
+// Patch PThread.loadWasmModuleToWorker to send raw bytes on Safari
+if (!__supportsModuleClone && __napiModule.PThread) {
+  const originalLoadWasmModuleToWorker = __napiModule.PThread.loadWasmModuleToWorker
+  __napiModule.PThread.loadWasmModuleToWorker = function(worker, sab) {
+    // Intercept and send raw bytes instead of module
+    const originalPostMessage = worker.postMessage
+    worker.postMessage = function(message) {
+      if (message && message.__emnapi__ && message.__emnapi__.type === 'load') {
+        // Replace wasmModule with raw bytes
+        const modifiedMessage = {
+          ...message,
+          __emnapi__: {
+            ...message.__emnapi__,
+            payload: {
+              ...message.__emnapi__.payload,
+              wasmModule: null,
+              wasmBytes: worker.__wasmFile,
+              wasmMemory: message.__emnapi__.payload.wasmMemory
+            }
+          }
+        }
+        return originalPostMessage.call(this, modifiedMessage)
+      }
+      return originalPostMessage.apply(this, arguments)
+    }
+    
+    const result = originalLoadWasmModuleToWorker.call(this, worker, sab)
+    
+    // Restore original postMessage after load
+    worker.postMessage = originalPostMessage
+    
+    return result
+  }
+}
 export default __napiModule.exports
 export const minify = __napiModule.exports.minify
 export const minifySync = __napiModule.exports.minifySync

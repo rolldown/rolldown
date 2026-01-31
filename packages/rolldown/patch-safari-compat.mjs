@@ -31,6 +31,7 @@ const safariDetectionCode = `
 // Check if WebAssembly.Module can be cloned (Safari doesn't support this)
 let __supportsModuleClone = false
 try {
+  // Test with minimal valid WASM module (magic number: 0x00 0x61 0x73 0x6D, version: 0x01 0x00 0x00 0x00)
   const testModule = new WebAssembly.Module(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]))
   new MessageChannel().port1.postMessage(testModule)
   __supportsModuleClone = true
@@ -167,6 +168,10 @@ if (instantiateIndex === -1) {
 const moduleCompilationCode = `
     
     // If we received raw bytes instead of a module (Safari fallback), compile it
+    // At least one of wasmModule or wasmBytes must be provided
+    if (!wasmModule && !wasmBytes) {
+      throw new TypeError('Either wasmModule or wasmBytes must be provided')
+    }
     const moduleToUse = wasmModule || new WebAssembly.Module(wasmBytes)
     
     return instantiateNapiModuleSync(moduleToUse,`;

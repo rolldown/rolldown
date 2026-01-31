@@ -4,7 +4,7 @@ import { memfsExported as __memfsExported } from '@napi-rs/wasm-runtime/fs'
 const fs = createFsProxy(__memfsExported)
 
 const handler = new MessageHandler({
-  onLoad({ wasmModule, wasmBytes, wasmMemory }) {
+  onLoad({ wasmModule, wasmMemory }) {
     const wasi = new WASI({
       fs,
       preopens: {
@@ -19,10 +19,7 @@ const handler = new MessageHandler({
         console.error.apply(console, arguments)
       },
     })
-    // If we received raw bytes instead of a module (Safari fallback), compile it
-    const moduleToUse = wasmModule || new WebAssembly.Module(wasmBytes)
-    
-    return instantiateNapiModuleSync(moduleToUse, {
+    return instantiateNapiModuleSync(wasmModule, {
       childThread: true,
       wasi,
       overwriteImports(importObject) {

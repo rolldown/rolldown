@@ -19,7 +19,6 @@ const handler = new MessageHandler({
         console.error.apply(console, arguments)
       },
     })
-    
     // If we received raw bytes instead of a module (Safari fallback), compile it
     const moduleToUse = wasmModule || new WebAssembly.Module(wasmBytes)
     

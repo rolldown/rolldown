@@ -40,6 +40,7 @@ try {
   __supportsModuleClone = false
 }
 
+
 const {
   instance: __napiInstance,
   module: __wasiModule,
@@ -112,6 +113,7 @@ if (!__supportsModuleClone && __napiModule.PThread) {
     return result
   }
 }
+
 export default __napiModule.exports
 export const minify = __napiModule.exports.minify
 export const minifySync = __napiModule.exports.minifySync

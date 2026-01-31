@@ -57,7 +57,7 @@ export default defineTest({
   },
   afterTest: () => {
     expect(transformFn).toHaveBeenCalledTimes(1);
-    expect(transformFn2).toHaveBeenCalledTimes(2);
+    expect(transformFn2).toHaveBeenCalledTimes(3);
     expect(transformFn3).toHaveBeenCalledTimes(0);
   },
 });

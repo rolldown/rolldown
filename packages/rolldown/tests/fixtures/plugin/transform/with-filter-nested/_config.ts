@@ -11,7 +11,7 @@ const nestedPlugin: RolldownPluginOption = [
   {
     name: 'test-plugin-1',
     transform: {
-      handler(_, _id) {
+      handler() {
         transformFn();
       },
     },
@@ -48,7 +48,7 @@ export default defineTest({
     ],
   },
   afterTest: () => {
-    expect(transformFn).toHaveBeenCalledTimes(3);
+    expect(transformFn).toHaveBeenCalledTimes(4);
     expect(transformFn1).toHaveBeenCalledTimes(0);
     expect(transformFn2).toHaveBeenCalledTimes(0);
   },

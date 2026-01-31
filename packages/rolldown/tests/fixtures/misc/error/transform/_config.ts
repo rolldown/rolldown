@@ -7,7 +7,11 @@ export default defineTest({
     plugins: [
       {
         name: 'my-plugin',
-        async transform() {
+        async transform(_, id) {
+          // Skip virtual modules (like \0rolldown/runtime.js)
+          if (id.startsWith('\0')) {
+            return;
+          }
           await errorFn1();
         },
       },

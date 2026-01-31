@@ -68,10 +68,16 @@ impl TransformPluginContext {
   ///
   /// * file - The file to add as a watch dependency. This should be a normalized absolute path.
   pub fn add_watch_file(&self, file: &str) {
-    // Call the parent method to add to global watch files
+    // Skip all operations for virtual modules (starting with \0)
+    // Virtual modules can't be refetched from disk during HMR
+    if self.id.starts_with('\0') {
+      return;
+    }
+
+    // Add to global watch files
     self.inner.add_watch_file(file);
 
-    // Also add to this module's transform dependencies
+    // Add to this module's transform dependencies
     if let crate::PluginContext::Native(ctx) = &self.inner {
       if let Some(plugin_driver) = ctx.plugin_driver.upgrade() {
         plugin_driver.add_transform_dependency(self.module_idx, file);

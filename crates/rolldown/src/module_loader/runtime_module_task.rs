@@ -6,7 +6,7 @@ use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaView, ExportsKind, FlatOptions, ModuleDefFormat, ModuleIdx, ModuleType, NormalModule,
-  StableModuleId, side_effects::DeterminedSideEffects,
+  StableModuleId, side_effects::DeterminedSideEffects, side_effects::HookSideEffects,
 };
 use rolldown_common::{
   ModuleLoaderMsg, RUNTIME_MODULE_ID, RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief,
@@ -67,11 +67,31 @@ impl RuntimeModuleTask {
   }
 
   async fn run_inner(&self) -> BuildResult<()> {
-    let source = if self.ctx.options.is_esm_format_with_node_platform() {
-      get_runtime_js_with_node_platform().into()
+    let source: String = if self.ctx.options.is_esm_format_with_node_platform() {
+      get_runtime_js_with_node_platform()
     } else {
-      get_runtime_js().into()
+      get_runtime_js()
     };
+
+    // Call transform hook on runtime module
+    let mut sourcemap_chain = vec![];
+    let mut side_effects: Option<HookSideEffects> = None;
+    let mut module_type = ModuleType::Js;
+
+    let source: ArcStr = self
+      .ctx
+      .plugin_driver
+      .transform(
+        RUNTIME_MODULE_KEY,
+        self.module_idx,
+        source,
+        &mut sourcemap_chain,
+        &mut side_effects,
+        &mut module_type,
+        None,
+      )
+      .await?
+      .into();
 
     let (ast, scan_result) = self.make_ecma_ast(RUNTIME_MODULE_KEY, &source)?;
 
@@ -122,7 +142,7 @@ impl RuntimeModuleTask {
         source,
 
         import_records: IndexVec::default(),
-        sourcemap_chain: vec![],
+        sourcemap_chain,
         // The internal runtime module `importers/imported` should be skip.
         importers: FxIndexSet::default(),
         importers_idx: FxIndexSet::default(),

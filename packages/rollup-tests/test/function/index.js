@@ -9,6 +9,7 @@ const {
 	compareError,
 	compareLogs,
 	runTestSuiteWithSamples,
+	wrapPluginWithRuntimeFilter
 	// verifyAstPlugin
 } = require('../utils.js');
 
@@ -91,7 +92,8 @@ runTestSuiteWithSamples(
 				process.chdir(directory);
 				const logs = [];
 				const warnings = [];
-				const plugins = config.options?.plugins
+				// Wrap plugins to filter out rolldown runtime from transform hooks
+				const plugins = wrapPluginWithRuntimeFilter(config.options?.plugins);
 					// config.verifyAst === false
 						//? config.options?.plugins
 						// : config.options?.plugins === undefined

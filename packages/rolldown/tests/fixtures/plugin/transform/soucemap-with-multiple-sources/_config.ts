@@ -12,7 +12,11 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin',
-        transform() {
+        transform(_, id) {
+          // Skip virtual modules (like \0rolldown/runtime.js)
+          if (id.startsWith('\0')) {
+            return null;
+          }
           return {
             code: `
 console.log('bar');

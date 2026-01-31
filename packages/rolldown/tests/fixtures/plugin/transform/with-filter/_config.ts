@@ -46,7 +46,7 @@ export default defineTest({
       withFilter(
         {
           name: 'test-plugin3',
-          // should have no effects
+          // should have no effects on resolveId but transform still called
           transform() {
             transformFn3();
           },
@@ -62,6 +62,6 @@ export default defineTest({
   afterTest: () => {
     expect(transformFn).toHaveBeenCalledTimes(0);
     expect(transformFn2).toHaveBeenCalledTimes(0);
-    expect(transformFn3).toHaveBeenCalledTimes(3);
+    expect(transformFn3).toHaveBeenCalledTimes(4);
   },
 });

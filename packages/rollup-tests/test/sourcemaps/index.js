@@ -5,7 +5,7 @@ const path = require('node:path');
 // @ts-expect-error not included in types
 const rollup = require('../../dist/rollup');
 // @ts-expect-error not included in types
-const { compareLogs, runTestSuiteWithSamples } = require('../utils.js');
+const { compareLogs, runTestSuiteWithSamples, wrapPluginWithRuntimeFilter } = require('../utils.js');
 
 // TODO more formats
 // const FORMATS = ['amd', 'cjs', 'system', 'es', 'iife', 'umd'];
@@ -25,6 +25,8 @@ runTestSuiteWithSamples(
 					it('generates ' + format, async () => {
 						process.chdir(directory);
 						const warnings = [];
+						// Wrap plugins to filter out rolldown runtime from transform hooks
+						const plugins = wrapPluginWithRuntimeFilter(config.options?.plugins);
 						const inputOptions = {
 							input: directory + '/main.js',
               onLog: (level, log) => {
@@ -33,7 +35,8 @@ runTestSuiteWithSamples(
                 }
               },
 							strictDeprecations: true,
-							...config.options
+							...config.options,
+							plugins
 						};
 						let customOutputOptions = (config.options || {}).output || {};
 						const outputOptions = {

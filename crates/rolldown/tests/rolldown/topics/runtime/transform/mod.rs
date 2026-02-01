@@ -43,10 +43,9 @@ impl Plugin for RuntimeTransformPlugin {
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     if args.id == RUNTIME_MODULE_KEY {
-      let state = ctx
-        .meta()
-        .get::<RuntimeTransformState>()
-        .expect("RuntimeTransformState should be initialized in build_start");
+      let state = ctx.meta().get::<RuntimeTransformState>().ok_or_else(|| {
+        anyhow::anyhow!("RuntimeTransformState not found - build_start may not have been called")
+      })?;
       state.transform_called.store(true, Ordering::SeqCst);
     }
     Ok(None)

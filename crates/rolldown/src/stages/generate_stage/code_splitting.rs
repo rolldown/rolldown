@@ -872,7 +872,7 @@ impl GenerateStage<'_> {
           );
         }
       } else if allow_chunk_optimization {
-        temp_chunk_graph.init_module(normal_module.idx, bits);
+        temp_chunk_graph.init_module_assignment(normal_module.idx, bits);
       } else {
         let mut chunk =
           Chunk::new(None, None, bits.clone(), vec![], ChunkKind::Common, input_base.clone(), None);
@@ -891,11 +891,13 @@ impl GenerateStage<'_> {
     }
 
     if allow_chunk_optimization {
+      temp_chunk_graph.calc_chunk_dependencies(&self.link_output.metas);
+
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,
         bits_to_chunk,
         input_base,
-        &temp_chunk_graph,
+        &mut temp_chunk_graph,
       );
 
       self.optimize_facade_dynamic_entry_chunks(

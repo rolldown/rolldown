@@ -17,7 +17,7 @@ use crate::{
     IncludeContext, SymbolIncludeReason, include_runtime_symbol, include_symbol,
   },
   types::linking_metadata::{
-    included_info_to_linking_metadata_vec, linking_metadata_vec_to_included_info,
+    LinkingMetadata, included_info_to_linking_metadata_vec, linking_metadata_vec_to_included_info,
   },
 };
 
@@ -32,6 +32,7 @@ struct TempChunk {
   modules: Vec<ModuleIdx>,
   /// Whether this chunk needs to be created in the final chunk graph.
   needs_creation: bool,
+  dependencies: FxHashSet<ChunkIdx>,
 }
 
 type TempIndexChunks = IndexVec<ChunkIdx, TempChunk>;
@@ -42,6 +43,8 @@ type TempIndexChunks = IndexVec<ChunkIdx, TempChunk>;
 pub struct TempChunkGraph {
   chunks: TempIndexChunks,
   bits_to_chunk_idx: FxIndexMap<BitSet, ChunkIdx>,
+  /// Mapping from module index to the chunk it belongs to.
+  module_to_chunk: FxHashMap<ModuleIdx, ChunkIdx>,
 }
 
 impl TempChunkGraph {
@@ -56,26 +59,128 @@ impl TempChunkGraph {
     // These initial chunks already exist in the chunk graph, including:
     // - entry chunks
     // - manual code splitting chunks
+    let mut module_to_chunk = FxHashMap::default();
     let chunks = chunk_graph
       .chunk_table
-      .iter()
-      .map(|item| TempChunk { modules: item.modules.clone(), needs_creation: false })
+      .iter_enumerated()
+      .map(|(chunk_idx, item)| {
+        for &module_idx in &item.modules {
+          module_to_chunk.insert(module_idx, chunk_idx);
+        }
+        TempChunk {
+          modules: item.modules.clone(),
+          needs_creation: false,
+          dependencies: FxHashSet::default(),
+        }
+      })
       .collect();
-    Self {
-      chunks,
-      bits_to_chunk_idx: bits_to_chunk_idx.iter().map(|(k, v)| (k.clone(), *v)).collect(),
+    Self { chunks, bits_to_chunk_idx: bits_to_chunk_idx.iter().map(|(k, v)| (k.clone(), *v)).collect(), module_to_chunk }
+  }
+
+  /// Assigns a module to a temporary chunk based on its reachability bits.
+  ///
+  /// If a chunk already exists for the given bit pattern, the module is added to it.
+  /// Otherwise, a new temporary chunk is created and marked as `needs_created: true`,
+  /// indicating it will need to be materialized in the final chunk graph.
+  pub fn init_module_assignment(&mut self, module_idx: ModuleIdx, bits: &BitSet) {
+    if let Some(&chunk_idx) = self.bits_to_chunk_idx.get(bits) {
+      self.chunks[chunk_idx].modules.push(module_idx);
+      self.module_to_chunk.insert(module_idx, chunk_idx);
+    } else {
+      let temp_chunk = TempChunk {
+        modules: vec![module_idx],
+        needs_creation: true,
+        dependencies: FxHashSet::default(),
+      };
+      let chunk_idx = self.chunks.push(temp_chunk);
+      self.bits_to_chunk_idx.insert(bits.clone(), chunk_idx);
+      self.module_to_chunk.insert(module_idx, chunk_idx);
     }
   }
 
-  /// Assigns a module to its corresponding chunk slot based on the given bits.
-  pub fn init_module(&mut self, module_idx: ModuleIdx, bits: &BitSet) {
-    if let Some(idx) = self.bits_to_chunk_idx.get(bits) {
-      self.chunks[*idx].modules.push(module_idx);
-    } else {
-      let temp_chunk = TempChunk { modules: vec![module_idx], needs_creation: true };
-      let chunk_idx = self.chunks.push(temp_chunk);
-      self.bits_to_chunk_idx.insert(bits.clone(), chunk_idx);
+  /// Calculates chunk dependencies based on module dependencies.
+  ///
+  /// For each chunk, iterates through its modules and their dependencies.
+  /// If a module dependency belongs to a different chunk, that chunk is added
+  /// as a dependency of the current chunk.
+  ///
+  /// This is similar to Rollup's `addChunkDependenciesAndGetExternalSideEffectAtoms`.
+  pub fn calc_chunk_dependencies(&mut self, metas: &IndexVec<ModuleIdx, LinkingMetadata>) {
+    for chunk_idx in self.chunks.indices() {
+      let modules = std::mem::take(&mut self.chunks[chunk_idx].modules);
+      for module_idx in modules.iter() {
+        let module_dependencies = &metas[*module_idx].dependencies;
+        for &dep_module_idx in module_dependencies {
+          if let Some(&dep_chunk_idx) = self.module_to_chunk.get(&dep_module_idx) {
+            // Only add if dependency is in a different chunk
+            if dep_chunk_idx != chunk_idx {
+              self.chunks[chunk_idx].dependencies.insert(dep_chunk_idx);
+            }
+          }
+        }
+      }
+      self.chunks[chunk_idx].modules = modules;
     }
+  }
+
+  /// Checks if merging `source_chunk` into `target_chunk` would create a circular dependency.
+  ///
+  /// Returns `true` if the merge would create a cycle, `false` if it's safe to merge.
+  ///
+  /// A circular dependency would occur if `target_chunk` is a transitive dependency of `source_chunk`.
+  /// This is similar to Rollup's check in `getAdditionalSizeIfNoTransitiveDependencyOrNonCorrelatedSideEffect`.
+  pub fn would_create_circular_dependency(
+    &self,
+    source_chunk_idx: ChunkIdx,
+    target_chunk_idx: ChunkIdx,
+  ) -> bool {
+    // BFS to check if target_chunk is reachable from source_chunk's dependencies
+    let mut chunks_to_check: VecDeque<ChunkIdx> =
+      self.chunks[source_chunk_idx].dependencies.iter().copied().collect();
+    let mut visited = FxHashSet::default();
+
+    while let Some(dep_chunk_idx) = chunks_to_check.pop_front() {
+      if dep_chunk_idx == target_chunk_idx {
+        // Found target_chunk in the transitive dependencies of source_chunk
+        // Merging would create a circular dependency
+        return true;
+      }
+
+      if visited.contains(&dep_chunk_idx) {
+        continue;
+      }
+      visited.insert(dep_chunk_idx);
+
+      // Add this chunk's dependencies to the queue
+      for &next_dep in &self.chunks[dep_chunk_idx].dependencies {
+        if !visited.contains(&next_dep) {
+          chunks_to_check.push_back(next_dep);
+        }
+      }
+    }
+
+    false
+  }
+
+  /// Merges the dependencies of source chunk into target chunk.
+  ///
+  /// When modules from one chunk are merged into another chunk, the dependencies
+  /// of the source chunk should also be merged into the target chunk.
+  /// Additionally, removes the target chunk from its own dependencies (self-reference).
+  pub fn merge_chunk_dependencies(
+    &mut self,
+    target_chunk_idx: ChunkIdx,
+    source_chunk_idx: ChunkIdx,
+  ) {
+    let source_dependencies = std::mem::take(&mut self.chunks[source_chunk_idx].dependencies);
+    for dep_chunk_idx in source_dependencies {
+      // Don't add self-reference
+      if dep_chunk_idx != target_chunk_idx {
+        self.chunks[target_chunk_idx].dependencies.insert(dep_chunk_idx);
+      }
+    }
+    // Remove self-reference if it exists (source might have depended on target)
+    self.chunks[target_chunk_idx].dependencies.remove(&target_chunk_idx);
   }
 }
 
@@ -146,7 +251,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
-    temp_chunk_graph: &TempChunkGraph,
+    temp_chunk_graph: &mut TempChunkGraph,
   ) {
     let static_entry_chunk_reference: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> =
       self.construct_static_entry_to_reached_dynamic_entries_map(chunk_graph);
@@ -177,41 +282,65 @@ impl GenerateStage<'_> {
       }
       map
     };
-    // extract entry chunk module relation
-    // this means `key_chunk` also referenced all entry module in value `vec`
-    for (bits, temp_chunk_idx) in &temp_chunk_graph.bits_to_chunk_idx {
-      let temp_chunk = &temp_chunk_graph.chunks[*temp_chunk_idx];
-      // Skip those chunks that are already created in chunk graph
-      if !temp_chunk.needs_creation {
-        continue;
-      }
-      let chunk_idxs = bits
-        .index_of_one()
-        .into_iter()
-        .map(ChunkIdx::from_raw)
-        // Some of the bits maybe not created yet, so filter it out.
-        // refer https://github.com/rolldown/rolldown/blob/d373794f5ce5b793ac751bbfaf101cc9cdd261d9/crates/rolldown/src/stages/generate_stage/code_splitting.rs?plain=1#L311-L313
-        .filter(|idx| entry_chunk_idx.contains(idx))
-        .collect_vec();
+    // First pass: collect chunk assignment decisions
+    // (bits, temp_chunk_idx, chunk_idxs, merge_target)
+    let assignments: Vec<_> = temp_chunk_graph
+      .bits_to_chunk_idx
+      .iter()
+      .filter_map(|(bits, temp_chunk_idx)| {
+        let temp_chunk = &temp_chunk_graph.chunks[*temp_chunk_idx];
+        // Skip those chunks that are already created in chunk graph
+        if !temp_chunk.needs_creation {
+          return None;
+        }
+        let chunk_idxs: Vec<_> = bits
+          .index_of_one()
+          .into_iter()
+          .map(ChunkIdx::from_raw)
+          // Some of the bits maybe not created yet, so filter it out.
+          // refer https://github.com/rolldown/rolldown/blob/d373794f5ce5b793ac751bbfaf101cc9cdd261d9/crates/rolldown/src/stages/generate_stage/code_splitting.rs?plain=1#L311-L313
+          .filter(|idx| entry_chunk_idx.contains(idx))
+          .collect();
 
-      let merge_target = Self::try_insert_into_existing_chunk(
-        &chunk_idxs,
-        &static_entry_chunk_reference,
-        chunk_graph,
-        &self.link_output.module_table,
-        &dynamic_entry_to_dynamic_importers,
-        temp_chunk,
-      );
+        let merge_target = Self::try_insert_into_existing_chunk(
+          &chunk_idxs,
+          &static_entry_chunk_reference,
+          chunk_graph,
+          &self.link_output.module_table,
+          &dynamic_entry_to_dynamic_importers,
+          temp_chunk,
+        );
 
-      self.assign_modules_to_chunk(
+        Some((bits.clone(), *temp_chunk_idx, chunk_idxs, merge_target))
+      })
+      .collect();
+
+    // Second pass: apply chunk assignments
+    for (bits, temp_chunk_idx, chunk_idxs, merge_target) in assignments {
+      // Check if merging would create a circular dependency
+      let merge_target = match merge_target {
+        Some(target_chunk_idx)
+          if temp_chunk_graph.would_create_circular_dependency(temp_chunk_idx, target_chunk_idx) =>
+        {
+          // Skip merge if it would create a circular dependency
+          None
+        }
+        other => other,
+      };
+
+      let temp_chunk = &temp_chunk_graph.chunks[temp_chunk_idx];
+      if let Some(target_chunk_idx) = self.assign_modules_to_chunk(
         merge_target,
         &chunk_idxs,
         temp_chunk,
-        bits,
+        &bits,
         chunk_graph,
         bits_to_chunk,
         input_base,
-      );
+      ) {
+        // Merge chunk dependencies immediately after successful merge
+        temp_chunk_graph.merge_chunk_dependencies(target_chunk_idx, temp_chunk_idx);
+      }
     }
   }
 
@@ -219,6 +348,9 @@ impl GenerateStage<'_> {
   ///
   /// If a valid merge target is found (and it doesn't have strict entry signature preservation),
   /// modules are merged into that existing chunk. Otherwise, a new common chunk is created.
+  ///
+  /// Returns `Some(target_chunk_idx)` if modules were merged into an existing chunk,
+  /// `None` if a new common chunk was created.
   #[expect(clippy::too_many_arguments)]
   fn assign_modules_to_chunk(
     &self,
@@ -229,7 +361,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
-  ) {
+  ) -> Option<ChunkIdx> {
     match merge_target {
       Some(chunk_idx) => {
         let chunk = &chunk_graph.chunk_table[chunk_idx];
@@ -248,15 +380,19 @@ impl GenerateStage<'_> {
               &info.modules,
               chunk_graph,
             );
+            Some(chunk_idx)
           } else {
             self.create_common_chunk(info, bits, chunk_graph, bits_to_chunk, input_base);
+            None
           }
         } else {
           self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, &info.modules, chunk_graph);
+          Some(chunk_idx)
         }
       }
       _ => {
         self.create_common_chunk(info, bits, chunk_graph, bits_to_chunk, input_base);
+        None
       }
     }
   }

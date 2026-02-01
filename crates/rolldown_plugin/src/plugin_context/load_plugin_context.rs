@@ -6,11 +6,11 @@ use rolldown_common::ModuleIdx;
 #[derive(Debug)]
 pub struct LoadPluginContext {
   pub inner: PluginContext,
-  module_idx: ModuleIdx,
+  module_idx: Option<ModuleIdx>,
 }
 
 impl LoadPluginContext {
-  pub fn new(inner: PluginContext, module_idx: ModuleIdx) -> Self {
+  pub fn new(inner: PluginContext, module_idx: Option<ModuleIdx>) -> Self {
     Self { inner, module_idx }
   }
 
@@ -22,9 +22,12 @@ impl LoadPluginContext {
     self.inner.add_watch_file(file);
 
     // Also add to this module's transform dependencies for HMR invalidation
-    if let crate::PluginContext::Native(ctx) = &self.inner {
-      if let Some(plugin_driver) = ctx.plugin_driver.upgrade() {
-        plugin_driver.add_transform_dependency(self.module_idx, file);
+    // Only track dependencies if we have a valid module index
+    if let Some(module_idx) = self.module_idx {
+      if let crate::PluginContext::Native(ctx) = &self.inner {
+        if let Some(plugin_driver) = ctx.plugin_driver.upgrade() {
+          plugin_driver.add_transform_dependency(module_idx, file);
+        }
       }
     }
   }

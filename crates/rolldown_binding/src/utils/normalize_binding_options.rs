@@ -535,12 +535,12 @@ pub fn normalize_binding_options(
           Either::B(builtin) => {
             // Needs to save the name, since `try_into` will consume the ownership
             let name = format!("{:?}", builtin.__name);
-            builtin
-              .try_into()
-              .map_err(|err| napi::Error::new(
+            builtin.try_into().map_err(|err| {
+              napi::Error::new(
                 napi::Status::InvalidArg,
-                format!("Failed to convert builtin plugin '{name}': {err}")
-              ))
+                format!("Failed to convert builtin plugin '{name}': {err}"),
+              )
+            })
           }
         },
       )
@@ -558,12 +558,12 @@ pub fn normalize_binding_options(
         Either::B(builtin) => {
           // Needs to save the name, since `try_into` will consume the ownership
           let name = format!("{:?}", builtin.__name);
-          builtin
-            .try_into()
-            .map_err(|err| napi::Error::new(
+          builtin.try_into().map_err(|err| {
+            napi::Error::new(
               napi::Status::InvalidArg,
-              format!("Failed to convert builtin plugin '{name}': {err}")
-            ))
+              format!("Failed to convert builtin plugin '{name}': {err}"),
+            )
+          })
         }
       })
     })

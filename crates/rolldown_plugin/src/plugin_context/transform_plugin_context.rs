@@ -14,7 +14,7 @@ pub struct TransformPluginContext {
   sourcemap_chain: WeakRef<Vec<SourcemapChainElement>>,
   original_code: ArcStr,
   id: ArcStr,
-  module_idx: ModuleIdx,
+  module_idx: Option<ModuleIdx>,
   plugin_idx: PluginIdx,
   magic_string_tx: Option<Arc<mpsc::Sender<SourceMapGenMsg>>>,
 }
@@ -25,7 +25,7 @@ impl TransformPluginContext {
     sourcemap_chain: WeakRef<Vec<SourcemapChainElement>>,
     original_code: ArcStr,
     id: ArcStr,
-    module_idx: ModuleIdx,
+    module_idx: Option<ModuleIdx>,
     plugin_idx: PluginIdx,
     magic_string_tx: Option<Arc<mpsc::Sender<SourceMapGenMsg>>>,
   ) -> Self {
@@ -72,9 +72,12 @@ impl TransformPluginContext {
     self.inner.add_watch_file(file);
 
     // Also add to this module's transform dependencies
-    if let crate::PluginContext::Native(ctx) = &self.inner {
-      if let Some(plugin_driver) = ctx.plugin_driver.upgrade() {
-        plugin_driver.add_transform_dependency(self.module_idx, file);
+    // Only track dependencies if we have a valid module index
+    if let Some(module_idx) = self.module_idx {
+      if let crate::PluginContext::Native(ctx) = &self.inner {
+        if let Some(plugin_driver) = ctx.plugin_driver.upgrade() {
+          plugin_driver.add_transform_dependency(module_idx, file);
+        }
       }
     }
   }
@@ -83,13 +86,10 @@ impl TransformPluginContext {
     &self,
     magic_string: MagicString<'static>,
   ) -> Result<Option<String>, mpsc::SendError<SourceMapGenMsg>> {
-    if let Some(tx) = self.magic_string_tx.as_ref() {
-      tx.send(SourceMapGenMsg::MagicString(Box::new((
-        self.module_idx,
-        self.plugin_idx,
-        magic_string,
-      ))))
-      .map(|()| None)
+    // Only send to the channel if we have both a valid module index and a sender
+    if let (Some(module_idx), Some(tx)) = (self.module_idx, self.magic_string_tx.as_ref()) {
+      tx.send(SourceMapGenMsg::MagicString(Box::new((module_idx, self.plugin_idx, magic_string))))
+        .map(|()| None)
     } else {
       Ok(Some(magic_string.source_map(string_wizard::SourceMapOptions::default()).to_json_string()))
     }

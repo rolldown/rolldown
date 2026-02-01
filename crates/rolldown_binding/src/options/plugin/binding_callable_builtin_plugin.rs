@@ -47,7 +47,7 @@ impl BindingCallableBuiltinPlugin {
         UniqueArc::new(vec![]).weak_ref(),
         ArcStr::default(),
         ArcStr::default(),
-        rolldown_common::ModuleIdx::new(0),
+        None, // NAPI contexts don't have a valid module index for dependency tracking
         PluginIdx::new(0),
         None,
       )),
@@ -98,8 +98,10 @@ impl BindingCallableBuiltinPlugin {
     let context = Arc::clone(&self.context);
     crate::start_async_runtime();
     AsyncBlockBuilder::with(async move {
+      // NAPI contexts don't have a valid module index for dependency tracking
+      let load_ctx = Arc::new(LoadPluginContext::new(context.inner.clone(), None));
+      // Use a placeholder module_idx for HookLoadArgs (passed to plugins but not used for dependency tracking)
       let module_idx = rolldown_common::ModuleIdx::new(0);
-      let load_ctx = Arc::new(LoadPluginContext::new(context.inner.clone(), module_idx));
       plugin
         .call_load(load_ctx, &HookLoadArgs { id: &id, module_idx })
         .await

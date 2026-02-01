@@ -177,7 +177,7 @@ impl PluginDriver {
           plugin_id: plugin_idx.raw(),
           call_id: "${call_id}",
         });
-        let load_ctx = Arc::new(LoadPluginContext::new(ctx.clone(), args.module_idx));
+        let load_ctx = Arc::new(LoadPluginContext::new(ctx.clone(), Some(args.module_idx)));
         let start = self.start_timing();
         let result = plugin.call_load(load_ctx, args).await;
         self.record_timing(plugin_idx, start);
@@ -252,7 +252,7 @@ impl PluginDriver {
             plugin_sourcemap_chain.weak_ref(),
             code.as_str().into(),
             id.into(),
-            module_idx,
+            Some(module_idx),
             plugin_idx,
             magic_string_tx.clone(),
           )),

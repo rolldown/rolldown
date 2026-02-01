@@ -160,19 +160,20 @@ impl GenerateStage<'_> {
     }
 
     let mut module_groups = index_module_groups.raw;
-    module_groups.sort_by_cached_key(|item| {
-      Reverse((Reverse(item.priority), item.match_group_index, item.name.clone()))
-    });
-    // - Higher priority group goes first.
-    // - If two groups have the same priority, the one with the lower index goes first.
-    // - If two groups have the same priority and index, we use dictionary order to sort them.
-    // Outer `Reverse` is due to we're gonna use `pop` consume the vector.
 
     module_groups.retain(|group| !group.modules.is_empty());
     if module_groups.is_empty() {
       // If no module group is found, we just return instead of creating a unnecessary runtime chunk.
       return Ok(());
     }
+
+    // - Higher priority group goes first.
+    // - If two groups have the same priority, the one with the lower index goes first.
+    // - If two groups have the same priority and index, we use dictionary order to sort them.
+    // Outer `Reverse` is due to we're gonna use `pop` consume the vector.
+    module_groups.sort_by_cached_key(|item| {
+      Reverse((Reverse(item.priority), item.match_group_index, item.name.clone()))
+    });
 
     // Manually pull out the runtime module into a standalone chunk.
     let runtime_module_idx = self.link_output.runtime.id();

@@ -320,7 +320,8 @@ impl GenerateStage<'_> {
       // Check if merging would create a circular dependency
       let merge_target = match merge_target {
         Some(target_chunk_idx)
-          if temp_chunk_graph.would_create_circular_dependency(temp_chunk_idx, target_chunk_idx) =>
+          if temp_chunk_graph
+            .would_create_circular_dependency(temp_chunk_idx, target_chunk_idx) =>
         {
           // Skip merge if it would create a circular dependency
           None

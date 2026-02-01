@@ -44,7 +44,11 @@ impl Plugin for ViteWasmHelperPlugin {
     }))
   }
 
-  async fn load(&self, ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  async fn load(
+    &self,
+    ctx: rolldown_plugin::SharedLoadPluginContext,
+    args: &HookLoadArgs<'_>,
+  ) -> HookLoadReturn {
     if args.id == WASM_HELPER_ID {
       return Ok(Some(HookLoadOutput {
         code: arcstr::literal!(include_str!("wasm-runtime.js")),
@@ -55,7 +59,7 @@ impl Plugin for ViteWasmHelperPlugin {
     if args.id.ends_with(".wasm?init") {
       let url = if let Some(v2) = &self.v2 {
         let env = FileToUrlEnv {
-          ctx,
+          ctx: &ctx,
           root: &v2.root,
           is_lib: v2.is_lib,
           public_dir: &v2.public_dir,

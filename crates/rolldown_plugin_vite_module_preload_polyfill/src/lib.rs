@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use rolldown_common::{OutputFormat, side_effects::HookSideEffects};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookUsage, Plugin, PluginContext,
+  HookResolveIdReturn, HookUsage, Plugin, PluginContext, SharedLoadPluginContext,
 };
 
 const MODULE_PRELOAD_POLYFILL: &str = "vite/modulepreload-polyfill";
@@ -31,7 +31,7 @@ impl Plugin for ViteModulePreloadPolyfillPlugin {
     }))
   }
 
-  async fn load(&self, ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  async fn load(&self, ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     Ok((args.id == RESOLVED_MODULE_PRELOAD_POLYFILL_ID).then(|| {
       if self.is_server || !matches!(ctx.options().format, OutputFormat::Esm) {
         HookLoadOutput { code: ArcStr::new(), ..Default::default() }

@@ -1439,6 +1439,11 @@ export declare class BindingDevEngine {
   compileEntry(moduleId: string, clientId: string): Promise<string>
 }
 
+export declare class BindingLoadPluginContext {
+  inner(): BindingPluginContext
+  addWatchFile(file: string): void
+}
+
 export declare class BindingMagicString {
   constructor(source: string, options?: BindingMagicStringOptions | undefined | null)
   get filename(): string | null
@@ -2209,7 +2214,7 @@ export interface BindingPluginOptions {
   resolveIdFilter?: BindingHookFilter
   resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveDynamicImportMeta?: BindingPluginHookMeta
-  load?: (ctx: BindingPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
+  load?: (ctx: BindingLoadPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   loadMeta?: BindingPluginHookMeta
   loadFilter?: BindingHookFilter
   transform?: (ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>

@@ -10,7 +10,8 @@ use rolldown::ModuleType;
 use rolldown_common::WatcherChangeKind;
 use rolldown_plugin::{
   CustomField, HookLoadArgs, HookLoadOutput, HookResolveIdArgs, HookResolveIdOutput,
-  HookTransformArgs, PluginIdx, Pluginable, SharedTransformPluginContext, TransformPluginContext,
+  HookTransformArgs, LoadPluginContext, PluginIdx, Pluginable, SharedTransformPluginContext,
+  TransformPluginContext,
 };
 use rolldown_plugin_vite_resolve::ResolveIdOptionsScan;
 use rolldown_utils::unique_arc::UniqueArc;
@@ -97,8 +98,10 @@ impl BindingCallableBuiltinPlugin {
     let context = Arc::clone(&self.context);
     crate::start_async_runtime();
     AsyncBlockBuilder::with(async move {
+      let module_idx = rolldown_common::ModuleIdx::new(0);
+      let load_ctx = Arc::new(LoadPluginContext::new(context.inner.clone(), module_idx));
       plugin
-        .call_load(&context.inner, &HookLoadArgs { id: &id })
+        .call_load(load_ctx, &HookLoadArgs { id: &id, module_idx })
         .await
         .map_err(AnyHowMaybeNapiError::into_napi_error)
         .map(|result| result.map(Into::into))

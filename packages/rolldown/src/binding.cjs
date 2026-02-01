@@ -605,6 +605,7 @@ module.exports.BindingCallableBuiltinPlugin = nativeBinding.BindingCallableBuilt
 module.exports.BindingChunkingContext = nativeBinding.BindingChunkingContext
 module.exports.BindingDecodedMap = nativeBinding.BindingDecodedMap
 module.exports.BindingDevEngine = nativeBinding.BindingDevEngine
+module.exports.BindingLoadPluginContext = nativeBinding.BindingLoadPluginContext
 module.exports.BindingMagicString = nativeBinding.BindingMagicString
 module.exports.BindingModuleInfo = nativeBinding.BindingModuleInfo
 module.exports.BindingNormalizedOptions = nativeBinding.BindingNormalizedOptions

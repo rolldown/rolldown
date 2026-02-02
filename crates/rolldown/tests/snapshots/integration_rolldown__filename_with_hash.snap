@@ -3877,6 +3877,14 @@ expression: output
 - main-!~{000}~.js => main-BlBfj5uG.js
 - imp-!~{001}~.js => imp-D8LKqvng.js
 
+# tests/rolldown/code_splitting/issue_8184
+
+- dbp-1-!~{000}~.js => dbp-1-BwpUDZQ8.js
+- dbp-activity-showcase-!~{001}~.js => dbp-activity-showcase-DD_Jgnvw.js
+- a-!~{002}~.js => a-2rMTlc6C.js
+- a-!~{004}~.js => a-Cth2Ajcb.js
+- dbp-2-!~{006}~.js => dbp-2-DLoK7iE_.js
+
 # tests/rolldown/dce/conditional_exports
 
 - main-!~{000}~.js => main-B-9hzRYa.js

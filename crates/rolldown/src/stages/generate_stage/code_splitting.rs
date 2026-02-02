@@ -810,7 +810,6 @@ impl GenerateStage<'_> {
     // TODO: maybe we could bailout peer chunk?
     let allow_chunk_optimization = self.options.experimental.is_chunk_optimization_enabled()
       && !self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
-
     let mut temp_chunk_graph =
       TempChunkGraph::new(allow_chunk_optimization, chunk_graph, bits_to_chunk);
 
@@ -842,6 +841,9 @@ impl GenerateStage<'_> {
           chunk_id,
           self.link_output.metas[normal_module.idx].depended_runtime_helper,
         );
+        if allow_chunk_optimization {
+          temp_chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
+        }
       } else if normal_module.is_user_defined_entry
         && self.link_output.metas[normal_module.idx].wrap_kind().is_none()
         // Don't apply this optimization when multiple entries point to the same module
@@ -870,6 +872,10 @@ impl GenerateStage<'_> {
             entry_chunk_idx,
             self.link_output.metas[normal_module.idx].depended_runtime_helper,
           );
+
+          if allow_chunk_optimization {
+            temp_chunk_graph.add_module_to_chunk(normal_module.idx, entry_chunk_idx);
+          }
         }
       } else if allow_chunk_optimization {
         temp_chunk_graph.init_module_assignment(normal_module.idx, bits);
@@ -905,6 +911,7 @@ impl GenerateStage<'_> {
         index_splitting_info,
         input_base,
         &mut module_to_assigned,
+        &temp_chunk_graph,
       );
     }
 

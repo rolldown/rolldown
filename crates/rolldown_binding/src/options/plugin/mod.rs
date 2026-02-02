@@ -1,5 +1,6 @@
 mod binding_builtin_plugin;
 mod binding_callable_builtin_plugin;
+mod binding_load_context;
 mod binding_plugin_hook_meta;
 mod binding_plugin_options;
 mod binding_transform_context;

@@ -482,7 +482,11 @@ impl Plugin for ViteResolvePlugin {
     Ok(None)
   }
 
-  async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  async fn load(
+    &self,
+    _ctx: rolldown_plugin::SharedLoadPluginContext,
+    args: &HookLoadArgs<'_>,
+  ) -> HookLoadReturn {
     if let Some(id_without_prefix) = args.id.strip_prefix(BROWSER_EXTERNAL_ID) {
       if self.resolve_options.is_build {
         if self.resolve_options.is_production {

@@ -69,7 +69,7 @@ impl Plugin for OxcRuntimePlugin {
 
   async fn load(
     &self,
-    _ctx: &rolldown_plugin::PluginContext,
+    _ctx: rolldown_plugin::SharedLoadPluginContext,
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> HookLoadReturn {
     Ok(args.id.strip_prefix('\0').and_then(|id| {

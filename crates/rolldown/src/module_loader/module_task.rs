@@ -260,6 +260,7 @@ impl ModuleTask {
       &self.ctx.options,
       self.asserted_module_type.as_ref(),
       &mut is_read_from_disk,
+      self.module_idx,
     )
     .await;
     if is_read_from_disk {

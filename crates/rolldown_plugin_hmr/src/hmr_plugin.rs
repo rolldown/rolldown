@@ -46,7 +46,7 @@ impl Plugin for HmrPlugin {
 
   async fn load(
     &self,
-    ctx: &rolldown_plugin::PluginContext,
+    ctx: rolldown_plugin::SharedLoadPluginContext,
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
     if args.id == HMR_RUNTIME_MODULE_SPECIFIER {

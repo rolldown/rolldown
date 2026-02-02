@@ -124,7 +124,7 @@ impl Plugin for LazyCompilationPlugin {
 
   async fn load(
     &self,
-    _ctx: &rolldown_plugin::PluginContext,
+    _ctx: rolldown_plugin::SharedLoadPluginContext,
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
     if args.id.contains("rolldown-lazy=1") {

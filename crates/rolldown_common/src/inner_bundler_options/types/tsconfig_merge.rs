@@ -167,20 +167,23 @@ pub fn merge_transform_options_with_tsconfig(
       let preserve_value_imports = compiler_options.preserve_value_imports.unwrap_or(false);
       let imports_not_used_as_values =
         compiler_options.imports_not_used_as_values.as_deref().unwrap_or("remove");
-      typescript.only_remove_type_imports =
-        if !preserve_value_imports && imports_not_used_as_values == "remove" {
-          Some(true)
-        } else if preserve_value_imports
-          && (imports_not_used_as_values == "preserve" || imports_not_used_as_values == "error")
-        {
-          Some(false)
-        } else {
-          // warnings.push(
-          //   `preserveValueImports=${preserveValueImports} + importsNotUsedAsValues=${importsNotUsedAsValues} is not supported by oxc.` +
-          //     'Please migrate to the new verbatimModuleSyntax option.',
-          // )
-          Some(false)
-        };
+      typescript.only_remove_type_imports = if !preserve_value_imports
+        && imports_not_used_as_values == "remove"
+      {
+        Some(true)
+      } else if preserve_value_imports
+        && (imports_not_used_as_values == "preserve" || imports_not_used_as_values == "error")
+      {
+        Some(false)
+      } else {
+        warnings.push(
+            BuildDiagnostic::unsupported_tsconfig_option(format!(
+              "preserveValueImports={preserve_value_imports} + importsNotUsedAsValues={imports_not_used_as_values} in tsconfig.json is not supported. Please migrate to the verbatimModuleSyntax option."
+            ))
+            .with_severity_warning(),
+          );
+        Some(false)
+      };
     }
   } else if warn_on_conflict && compiler_options.verbatim_module_syntax.is_some() {
     warnings.push(

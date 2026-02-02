@@ -106,6 +106,8 @@ pub enum EventKind {
   /// Having multiple shebangs in a file is a syntax error.
   DuplicateShebang = 39,
   TsConfigError = 40,
+  /// Whether to emit warnings when a tsconfig option or combination of options is not supported.
+  UnsupportedTsconfigOption = 41,
 }
 
 impl Display for EventKind {
@@ -157,6 +159,7 @@ impl Display for EventKind {
       EventKind::PluginTimings => write!(f, "PLUGIN_TIMINGS"),
       EventKind::DuplicateShebang => write!(f, "DUPLICATE_SHEBANG"),
       EventKind::TsConfigError => write!(f, "TSCONFIG_ERROR"),
+      EventKind::UnsupportedTsconfigOption => write!(f, "UNSUPPORTED_TSCONFIG_OPTION"),
     }
   }
 }

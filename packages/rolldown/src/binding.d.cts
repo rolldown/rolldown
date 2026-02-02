@@ -1767,6 +1767,7 @@ export interface BindingChecksOptions {
   couldNotCleanDirectory?: boolean
   pluginTimings?: boolean
   duplicateShebang?: boolean
+  unsupportedTsconfigOption?: boolean
 }
 
 export interface BindingChunkImportMap {

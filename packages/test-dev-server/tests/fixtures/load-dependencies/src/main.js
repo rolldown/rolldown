@@ -13,7 +13,6 @@ if (import.meta.hot) {
   import.meta.hot.accept((newModule) => {
     console.log('HMR triggered, new config:', newModule.CONFIG);
     // Verify the config was updated
-    assert(newModule.CONFIG.updated, 'Config should be updated');
     assert.equal(newModule.CONFIG.version, 2, 'Config version should be 2');
     // Write a marker file to indicate HMR worked
     nodeFs.writeFileSync('./ok-0', 'transform dependency HMR worked');

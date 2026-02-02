@@ -22,11 +22,8 @@ use rolldown_plugin_vite_wasm_fallback::ViteWasmFallbackPlugin;
 use rolldown_plugin_vite_web_worker_post::ViteWebWorkerPostPlugin;
 
 use crate::options::plugin::config::{
-  BindingEsmExternalRequirePluginConfig, BindingViteModulePreloadPolyfillPluginConfig,
-  BindingViteReactRefreshWrapperPluginConfig,
   BindingChunkVisualizePluginConfig, BindingEsmExternalRequirePluginConfig,
   BindingViteModulePreloadPolyfillPluginConfig, BindingViteReactRefreshWrapperPluginConfig,
-  BindingViteWasmHelperPluginConfig,
 };
 
 use super::{

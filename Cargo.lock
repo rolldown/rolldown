@@ -2740,7 +2740,6 @@ dependencies = [
  "rolldown_fs",
  "rolldown_plugin",
  "rolldown_plugin_chunk_import_map",
- "rolldown_plugin_chunk_visualize",
  "rolldown_plugin_data_uri",
  "rolldown_plugin_hmr",
  "rolldown_plugin_lazy_compilation",

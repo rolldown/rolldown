@@ -37,4 +37,5 @@ pub mod transform_option;
 pub mod transform_options;
 pub mod treeshake;
 pub mod tsconfig;
+pub mod tsconfig_merge;
 pub mod watch_option;

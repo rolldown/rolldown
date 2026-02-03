@@ -87,6 +87,7 @@ catalog:
   vitepress: ^2.0.0-alpha.15
   vitepress-plugin-group-icons: ^1.7.1
   vitepress-plugin-llms: ^1.1.0
+  vitepress-plugin-og: ^0.0.5
   vitest: ^4.0.15
   vue: ^3.5.13
   web-tree-sitter: ^0.26.0

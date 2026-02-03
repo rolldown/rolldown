@@ -21,6 +21,7 @@
     "typedoc-vitepress-theme": "^1.1.2",
     "vitepress": "catalog:",
     "vitepress-plugin-group-icons": "catalog:",
-    "vitepress-plugin-llms": "catalog:"
+    "vitepress-plugin-llms": "catalog:",
+    "vitepress-plugin-og": "catalog:"
   }
 }

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { type DefaultTheme, defineConfig } from 'vitepress';
 import { groupIconMdPlugin, groupIconVitePlugin } from 'vitepress-plugin-group-icons';
 import llmstxt from 'vitepress-plugin-llms';
+import { addOgImage } from 'vitepress-plugin-og';
 import { hooksGraphPlugin } from './markdown-hooks-graph.ts';
 
 const sidebarForUserGuide: DefaultTheme.SidebarItem[] = [
@@ -416,10 +417,18 @@ const config = defineConfig({
       await hooksGraphPlugin(md);
     },
   },
-  transformPageData(pageData) {
+  async transformPageData(pageData, ctx) {
     // Disable "Edit this page on GitHub" for auto-generated reference docs
     if (pageData.relativePath.startsWith('reference/')) {
       pageData.frontmatter.editLink = false;
+    }
+
+    // Automatically handle OG images for all markdown files.
+    if (!pageData.frontmatter.image && pageData.relativePath !== 'index.md') {
+      await addOgImage(pageData, ctx, {
+        domain: 'https://rolldown.rs',
+        maxTitleSizePerLine: 16,
+      });
     }
   },
 });

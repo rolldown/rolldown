@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use crate::{
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
-  HookResolveIdReturn, HookTransformArgs, PluginContext, PluginDriver, TransformPluginContext,
+  HookResolveIdReturn, HookTransformArgs, LoadPluginContext, PluginContext, PluginDriver,
+  TransformPluginContext,
   pluginable::HookTransformAstReturn,
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped, hook_transform_ast_args::HookTransformAstArgs,
@@ -176,8 +177,9 @@ impl PluginDriver {
           plugin_id: plugin_idx.raw(),
           call_id: "${call_id}",
         });
+        let load_ctx = Arc::new(LoadPluginContext::new(ctx.clone(), args.module_idx));
         let start = self.start_timing();
-        let result = plugin.call_load(ctx, args).await;
+        let result = plugin.call_load(load_ctx, args).await;
         self.record_timing(plugin_idx, start);
         if let Some(r) = result? {
           trace_action!(action::HookLoadCallEnd {

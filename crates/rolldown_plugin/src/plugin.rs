@@ -5,7 +5,7 @@ use crate::{
   HookAddonArgs, HookBuildEndArgs, HookCloseBundleArgs, HookGenerateBundleArgs, HookLoadArgs,
   HookLoadOutput, HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs,
   HookResolveIdOutput, HookTransformArgs, HookUsage, HookWriteBundleArgs, PluginHookMeta,
-  SharedTransformPluginContext,
+  SharedLoadPluginContext, SharedTransformPluginContext,
   types::{
     hook_build_start_args::HookBuildStartArgs, hook_render_error::HookRenderErrorArgs,
     hook_render_start_args::HookRenderStartArgs, hook_transform_ast_args::HookTransformAstArgs,
@@ -73,7 +73,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
 
   fn load(
     &self,
-    _ctx: &PluginContext,
+    _ctx: SharedLoadPluginContext,
     _args: &HookLoadArgs<'_>,
   ) -> impl std::future::Future<Output = HookLoadReturn> + Send {
     async { Ok(None) }

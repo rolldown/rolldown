@@ -4,7 +4,7 @@ use super::plugin_context::PluginContext;
 use crate::{
   HookAddonArgs, HookBuildEndArgs, HookBuildStartArgs, HookCloseBundleArgs, HookGenerateBundleArgs,
   HookInjectionOutputReturn, HookLoadArgs, HookRenderChunkArgs, HookRenderStartArgs,
-  HookResolveIdArgs, HookTransformArgs, HookUsage, Plugin, PluginHookMeta,
+  HookResolveIdArgs, HookTransformArgs, HookUsage, Plugin, PluginHookMeta, SharedLoadPluginContext,
   SharedTransformPluginContext,
   types::{
     hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs,
@@ -64,7 +64,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
 
   fn call_resolve_dynamic_import_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_load(&self, _ctx: &PluginContext, _args: &HookLoadArgs) -> HookLoadReturn;
+  async fn call_load(&self, _ctx: SharedLoadPluginContext, _args: &HookLoadArgs) -> HookLoadReturn;
 
   fn call_load_meta(&self) -> Option<PluginHookMeta>;
 
@@ -258,7 +258,7 @@ impl<T: Plugin> Pluginable for T {
     Plugin::resolve_dynamic_import_meta(self)
   }
 
-  async fn call_load(&self, ctx: &PluginContext, args: &HookLoadArgs) -> HookLoadReturn {
+  async fn call_load(&self, ctx: SharedLoadPluginContext, args: &HookLoadArgs) -> HookLoadReturn {
     Plugin::load(self, ctx, args).await
   }
 

@@ -9,6 +9,7 @@ use rolldown_common::ModuleType;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookTransformOutput, HookUsage, Plugin, PluginContext,
+  SharedLoadPluginContext,
 };
 use rolldown_utils::{
   futures::{block_on, block_on_spawn_all},
@@ -51,7 +52,7 @@ impl Plugin for ViteDynamicImportVarsPlugin {
     }))
   }
 
-  async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  async fn load(&self, _ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     Ok((args.id == DYNAMIC_IMPORT_HELPER).then_some(HookLoadOutput {
       code: arcstr::literal!(include_str!("dynamic-import-helper.js")),
       ..Default::default()

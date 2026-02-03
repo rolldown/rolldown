@@ -92,6 +92,7 @@ export const BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallable
 export const BindingChunkingContext = __napiModule.exports.BindingChunkingContext
 export const BindingDecodedMap = __napiModule.exports.BindingDecodedMap
 export const BindingDevEngine = __napiModule.exports.BindingDevEngine
+export const BindingLoadPluginContext = __napiModule.exports.BindingLoadPluginContext
 export const BindingMagicString = __napiModule.exports.BindingMagicString
 export const BindingModuleInfo = __napiModule.exports.BindingModuleInfo
 export const BindingNormalizedOptions = __napiModule.exports.BindingNormalizedOptions

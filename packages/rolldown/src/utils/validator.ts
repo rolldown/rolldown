@@ -373,6 +373,12 @@ const ChecksOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Whether to emit warnings when both the code and postBanner contain shebang'),
   ),
+  unsupportedTsconfigOption: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when a tsconfig option or combination of options is not supported',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 

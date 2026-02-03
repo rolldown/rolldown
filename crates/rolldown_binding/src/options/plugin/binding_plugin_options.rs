@@ -14,6 +14,7 @@ use crate::types::{
 
 use super::{
   binding_builtin_plugin::BindingBuiltinPlugin,
+  binding_load_context::BindingLoadPluginContext,
   binding_plugin_context::BindingPluginContext,
   binding_plugin_hook_meta::BindingPluginHookMeta,
   binding_transform_context::BindingTransformPluginContext,
@@ -69,10 +70,10 @@ pub struct BindingPluginOptions {
   pub resolve_dynamic_import_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>"
+    ts_type = "(ctx: BindingLoadPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>"
   )]
   pub load: Option<
-    MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, String)>, Option<BindingHookLoadOutput>>,
+    MaybeAsyncJsCallback<FnArgs<(BindingLoadPluginContext, String)>, Option<BindingHookLoadOutput>>,
   >,
   pub load_meta: Option<BindingPluginHookMeta>,
   pub load_filter: Option<BindingHookFilter>,

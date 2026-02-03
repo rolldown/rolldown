@@ -1,7 +1,7 @@
 use std::{borrow::Cow, path::Path};
 
 use rolldown_common::{
-  ModuleType, NormalizedBundlerOptions, ResolvedId, SourcemapChainElement, StrOrBytes,
+  ModuleIdx, ModuleType, NormalizedBundlerOptions, ResolvedId, SourcemapChainElement, StrOrBytes,
   side_effects::HookSideEffects,
 };
 use rolldown_fs::FileSystem;
@@ -19,9 +19,10 @@ pub async fn load_source<Fs: FileSystem + 'static>(
   options: &NormalizedBundlerOptions,
   asserted_module_type: Option<&ModuleType>,
   is_read_from_disk: &mut bool,
+  module_idx: ModuleIdx,
 ) -> anyhow::Result<(StrOrBytes, ModuleType)> {
   let (maybe_source, mut maybe_module_type) =
-    match plugin_driver.load(&HookLoadArgs { id: &resolved_id.id }).await? {
+    match plugin_driver.load(&HookLoadArgs { id: &resolved_id.id, module_idx }).await? {
       Some(load_hook_output) => {
         sourcemap_chain.extend(load_hook_output.map.map(SourcemapChainElement::Load));
         if let Some(v) = load_hook_output.side_effects {

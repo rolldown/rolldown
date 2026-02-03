@@ -294,6 +294,10 @@
  - rollup@form@import-attributes@keeps-static-attributes-key-assert: keeps any import attributes on input using import attributes with "with" key@generates es
  - rollup@form@import-attributes@keeps-static-attributes-key-default: keeps any import attributes on input using import attributes with "with" key@generates es
  - rollup@form@import-attributes@keeps-static-attributes-key-with: keeps any import attributes on input using import attributes with "with" key@generates es
+ - rollup@form@resolve-file-url-import-meta-attributes: adds attributes to file resolveFileUrl and resolveImportMeta hooks@generates es
+ - rollup@function@deprecated@load-attributes: does not allow returning attributes from the "load" hook
+ - rollup@function@deprecated@transform-attributes: does not allow returning attributes from the "transform" hook
+ - rollup@function@extend-more-hooks-to-include-import-attributes: extend load, transform and renderDynamicImport to include import attributes
 
 ### watch behavior is not compatible yet
  - rollup@hooks@allows to enforce plugin hook order in watch mode

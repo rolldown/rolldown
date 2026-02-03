@@ -35,7 +35,7 @@ pub struct PluginDriver {
   pub file_emitter: SharedFileEmitter,
   pub watch_files: Arc<FxDashSet<ArcStr>>,
   pub module_infos: SharedModuleInfoDashMap,
-  /// Transform dependencies per module, tracked during transform hooks
+  /// Module dependencies tracked during load/transform hooks for HMR invalidation
   pub transform_dependencies: Arc<DashMap<ModuleIdx, Arc<FxDashSet<ArcStr>>>>,
   context_load_completion_manager: ContextLoadCompletionManager,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,

@@ -9,6 +9,8 @@ import type { AssetSource } from '../utils/asset-source';
 import type { InputOptions } from './input-options';
 // oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
 import type { InternalModuleFormat } from './normalized-output-options';
+// oxlint-disable-next-line no-unused-vars -- this is used in JSDoc links
+import type { Plugin } from '../plugin';
 
 export type GeneratedCodePreset = 'es5' | 'es2015';
 
@@ -229,7 +231,7 @@ export interface OutputOptions {
    */
   sourcemapPathTransform?: SourcemapPathTransformOption;
   /**
-   * A string to prepend to the bundle before `renderChunk` hook.
+   * A string to prepend to the bundle before {@linkcode Plugin.renderChunk | renderChunk} hook.
    *
    * See {@linkcode intro | output.intro}, {@linkcode postBanner | output.postBanner} as well.
    *
@@ -237,7 +239,7 @@ export interface OutputOptions {
    */
   banner?: string | AddonFunction;
   /**
-   * A string to append to the bundle before `renderChunk` hook.
+   * A string to append to the bundle before {@linkcode Plugin.renderChunk | renderChunk} hook.
    *
    * See {@linkcode outro | output.outro}, {@linkcode postFooter | output.postFooter} as well.
    *
@@ -245,7 +247,7 @@ export interface OutputOptions {
    */
   footer?: string | AddonFunction;
   /**
-   * A string to prepend to the bundle after `renderChunk` hook and minification.
+   * A string to prepend to the bundle after {@linkcode Plugin.renderChunk | renderChunk} hook and minification.
    *
    * See {@linkcode banner | output.banner}, {@linkcode intro | output.intro} as well.
    *
@@ -253,7 +255,7 @@ export interface OutputOptions {
    */
   postBanner?: string | AddonFunction;
   /**
-   * A string to append to the bundle after `renderChunk` hook and minification.
+   * A string to append to the bundle after {@linkcode Plugin.renderChunk | renderChunk} hook and minification.
    *
    * See {@linkcode footer | output.footer}, {@linkcode outro | output.outro} as well.
    *
@@ -261,7 +263,7 @@ export interface OutputOptions {
    */
   postFooter?: string | AddonFunction;
   /**
-   * A string to prepend inside any format-specific wrapper.
+   * A string to prepend inside any {@link OutputOptions.format | format}-specific wrapper.
    *
    * See {@linkcode banner | output.banner}, {@linkcode postBanner | output.postBanner} as well.
    *
@@ -269,7 +271,7 @@ export interface OutputOptions {
    */
   intro?: string | AddonFunction;
   /**
-   * A string to append inside any format-specific wrapper.
+   * A string to append inside any {@link OutputOptions.format | format}-specific wrapper.
    *
    * See {@linkcode footer | output.footer}, {@linkcode postFooter | output.postFooter} as well.
    *
@@ -277,7 +279,7 @@ export interface OutputOptions {
    */
   outro?: string | AddonFunction;
   /**
-   * Whether to extend the global variable defined by the {@linkcode OutputOptions.name | name} option in `umd` or `iife` formats.
+   * Whether to extend the global variable defined by the {@linkcode OutputOptions.name | name} option in `umd` or `iife` {@link OutputOptions.format | formats}.
    *
    * When `true`, the global variable will be defined as `global.name = global.name || {}`.
    * When `false`, the global defined by name will be overwritten like `global.name = {}`.
@@ -286,12 +288,12 @@ export interface OutputOptions {
    */
   extend?: boolean;
   /**
-   * Whether to add a `__esModule: true` property when generating exports for non-ES formats.
+   * Whether to add a `__esModule: true` property when generating exports for non-ES {@link OutputOptions.format | formats}.
    *
    * This property signifies that the exported value is the namespace of an ES module and that the default export of this module corresponds to the `.default` property of the exported object.
    *
-   * - `true`: Always add the property when using named exports mode, which is similar to what other tools do.
-   * - `"if-default-prop"`: Only add the property when using named exports mode and there also is a default export. The subtle difference is that if there is no default export, consumers of the CommonJS version of your library will get all named exports as default export instead of an error or `undefined`.
+   * - `true`: Always add the property when using {@link OutputOptions.exports | named exports mode}, which is similar to what other tools do.
+   * - `"if-default-prop"`: Only add the property when using {@link OutputOptions.exports | named exports mode} and there also is a default export. The subtle difference is that if there is no default export, consumers of the CommonJS version of your library will get all named exports as default export instead of an error or `undefined`.
    * - `false`: Never add the property even if the default export would become a property `.default`.
    *
    * @default 'if-default-prop'
@@ -379,7 +381,7 @@ export interface OutputOptions {
    */
   minify?: boolean | 'dce-only' | MinifyOptions;
   /**
-   * Specifies the global variable name that contains the exports of `umd` / `iife` bundles.
+   * Specifies the global variable name that contains the exports of `umd` / `iife` {@link OutputOptions.format | formats}.
    *
    * @example
    * ```js
@@ -401,7 +403,7 @@ export interface OutputOptions {
    */
   name?: string;
   /**
-   * Specifies `id: variableName` pairs necessary for external imports in `umd` / `iife` bundles.
+   * Specifies `id: variableName` pairs necessary for {@link InputOptions.external | external} imports in `umd` / `iife` {@link OutputOptions.format | formats}.
    *
    * @example
    * ```js
@@ -429,7 +431,7 @@ export interface OutputOptions {
    */
   globals?: Record<string, string> | GlobalsFunction;
   /**
-   * Maps external module IDs to paths.
+   * Maps {@link InputOptions.external | external} module IDs to paths.
    *
    * Allows customizing the path used when importing external dependencies.
    * This is particularly useful for loading dependencies from CDNs or custom locations.
@@ -466,7 +468,7 @@ export interface OutputOptions {
    */
   generatedCode?: Partial<GeneratedCodeOptions>;
   /**
-   * Whether to generate code to support live bindings for external imports.
+   * Whether to generate code to support live bindings for {@link InputOptions.external | external} imports.
    *
    * With the default value of `true`, Rolldown will generate code to support live bindings for external imports.
    *
@@ -626,13 +628,13 @@ export interface OutputOptions {
    */
   preserveModules?: boolean;
   /**
-   * Specifies the directory name for "virtual" files that might be emitted by plugins when using preserve modules mode.
+   * Specifies the directory name for "virtual" files that might be emitted by plugins when using {@link OutputOptions.preserveModules | preserve modules mode}.
    *
    * @default '_virtual'
    */
   virtualDirname?: string;
   /**
-   * A directory path to input modules that should be stripped away from {@linkcode dir | output.dir} when using preserve modules mode.
+   * A directory path to input modules that should be stripped away from {@linkcode dir | output.dir} when using {@link OutputOptions.preserveModules | preserve modules mode}.
    *
    * {@include ./docs/output-preserve-modules-root.md}
    */

@@ -78,11 +78,6 @@ impl IntermediateNormalModules {
     }
     i
   }
-
-  pub fn reset_ecma_module_idx(&mut self) {
-    self.modules.clear();
-    self.index_ecma_ast.clear();
-  }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -102,7 +97,6 @@ impl VisitState {
 pub struct ModuleLoader<'a> {
   pub shared_context: Arc<TaskContext>,
   rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
-  runtime_idx: ModuleIdx,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
   symbol_ref_db: SymbolRefDb,
@@ -177,25 +171,12 @@ impl<'a> ModuleLoader<'a> {
     let shared_context = Arc::new(TaskContext { options, tx, resolver, fs, plugin_driver, meta });
 
     let importers = std::mem::take(&mut cache.importers);
-    let mut intermediate_normal_modules = IntermediateNormalModules::new(is_full_scan, importers);
-
-    let runtime_idx = intermediate_normal_modules.alloc_ecma_module_idx();
-    let remaining = if let Entry::Vacant(e) = cache.module_id_to_idx.entry(RUNTIME_MODULE_ID) {
-      let task = RuntimeModuleTask::new(runtime_idx, Arc::clone(&shared_context), flat_options);
-      tokio::spawn(task.run());
-      e.insert(VisitState::Seen(runtime_idx));
-      1
-    } else {
-      // the first alloc just want to allocate the runtime module id
-      intermediate_normal_modules.reset_ecma_module_idx();
-      0
-    };
+    let intermediate_normal_modules = IntermediateNormalModules::new(is_full_scan, importers);
 
     Ok(Self {
       rx,
       cache,
-      remaining,
-      runtime_idx,
+      remaining: 0,
       is_full_scan,
       shared_context,
       symbol_ref_db,
@@ -288,6 +269,15 @@ impl<'a> ModuleLoader<'a> {
   ) -> BuildResult<ModuleLoaderOutput> {
     let mut errors = vec![];
     let mut all_warnings = vec![];
+
+    // Initialize runtime module task if not yet started
+    if let Entry::Vacant(e) = self.cache.module_id_to_idx.entry(RUNTIME_MODULE_ID) {
+      let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
+      let task = RuntimeModuleTask::new(idx, Arc::clone(&self.shared_context), self.flat_options);
+      tokio::spawn(task.run().instrument(tracing::info_span!("runtime_module_task")));
+      e.insert(VisitState::Seen(idx));
+      self.remaining += 1;
+    }
 
     let user_defined_entries = Arc::new(match fetch_mode {
       ScanMode::Full => self.resolve_user_defined_entries().await?,
@@ -563,10 +553,10 @@ impl<'a> ModuleLoader<'a> {
           }
           module.import_records = import_records;
 
-          *self.intermediate_normal_modules.modules.get_mut(self.runtime_idx) = Some(module.into());
-          *self.intermediate_normal_modules.index_ecma_ast.get_mut(self.runtime_idx) = Some(ast);
+          *self.intermediate_normal_modules.modules.get_mut(runtime.id()) = Some(module.into());
+          *self.intermediate_normal_modules.index_ecma_ast.get_mut(runtime.id()) = Some(ast);
 
-          self.symbol_ref_db.store_local_db(self.runtime_idx, local_symbol_ref_db);
+          self.symbol_ref_db.store_local_db(runtime.id(), local_symbol_ref_db);
           self.remaining -= 1;
 
           runtime_brief = Some(runtime);

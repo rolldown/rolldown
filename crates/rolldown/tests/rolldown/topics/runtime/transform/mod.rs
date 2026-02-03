@@ -72,7 +72,6 @@ impl Plugin for RuntimeTransformPlugin {
   }
 }
 
-#[ignore = "Flaky test"]
 #[tokio::test(flavor = "multi_thread")]
 async fn transform_runtime_module() {
   let plugin = Arc::new(RuntimeTransformPlugin);

@@ -25,6 +25,7 @@ impl RuntimeModuleBrief {
     }
   }
 
+  #[inline]
   pub fn id(&self) -> ModuleIdx {
     self.id
   }

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## TOLERATED_TRANSFORM
 
 ```text
-[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
    ╭─[ namespace-exports.ts:2:13 ]
    │
  2 │     export var MANGLE_VAR_ = 1
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## TOLERATED_TRANSFORM
 
 ```text
-[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
    ╭─[ namespace-exports.ts:3:13 ]
    │
  3 │     export let MANGLE_LET_ = 2
@@ -32,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## TOLERATED_TRANSFORM
 
 ```text
-[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
    ╭─[ namespace-exports.ts:5:13 ]
    │
  5 │     export let { NESTED_: { DESTRUCTURING_ } } = 4

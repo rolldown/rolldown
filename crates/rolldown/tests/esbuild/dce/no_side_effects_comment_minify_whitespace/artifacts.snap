@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## TOLERATED_TRANSFORM
 
 ```text
-[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
    ╭─[ ns-export-local.ts:2:40 ]
    │
  2 │     /* #__NO_SIDE_EFFECTS__ */ export var v0 = function() {}, v1 = function() {}
@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## TOLERATED_TRANSFORM
 
 ```text
-[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
    ╭─[ ns-export-local.ts:2:60 ]
    │
  2 │     /* #__NO_SIDE_EFFECTS__ */ export var v0 = function() {}, v1 = function() {}
@@ -32,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## TOLERATED_TRANSFORM
 
 ```text
-[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
    ╭─[ ns-export-local.ts:3:40 ]
    │
  3 │     /* #__NO_SIDE_EFFECTS__ */ export let l0 = function() {}, l1 = function() {}
@@ -45,7 +45,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## TOLERATED_TRANSFORM
 
 ```text
-[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
    ╭─[ ns-export-local.ts:3:60 ]
    │
  3 │     /* #__NO_SIDE_EFFECTS__ */ export let l0 = function() {}, l1 = function() {}
@@ -58,7 +58,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## TOLERATED_TRANSFORM
 
 ```text
-[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
    ╭─[ ns-export-local.ts:5:40 ]
    │
  5 │     /* #__NO_SIDE_EFFECTS__ */ export var v2 = () => {}, v3 = () => {}
@@ -71,7 +71,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## TOLERATED_TRANSFORM
 
 ```text
-[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
    ╭─[ ns-export-local.ts:5:55 ]
    │
  5 │     /* #__NO_SIDE_EFFECTS__ */ export var v2 = () => {}, v3 = () => {}
@@ -84,7 +84,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## TOLERATED_TRANSFORM
 
 ```text
-[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
    ╭─[ ns-export-local.ts:6:40 ]
    │
  6 │     /* #__NO_SIDE_EFFECTS__ */ export let l2 = () => {}, l3 = () => {}
@@ -97,7 +97,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## TOLERATED_TRANSFORM
 
 ```text
-[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Babel. Change to const or see: https://babeljs.io/docs/en/babel-plugin-transform-typescript
+[TOLERATED_TRANSFORM] Warning: Namespaces exporting non-const are not supported by Oxc. Change to const or see: https://oxc.rs/docs/guide/usage/transformer/typescript.html#partial-namespace-support
    ╭─[ ns-export-local.ts:6:55 ]
    │
  6 │     /* #__NO_SIDE_EFFECTS__ */ export let l2 = () => {}, l3 = () => {}

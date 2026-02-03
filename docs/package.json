@@ -5,27 +5,8 @@
   "scripts": {
     "dev": "vitepress dev",
     "build": "vitepress build",
-<<<<<<< HEAD
     "preview": "vitepress preview",
     "generate": "node .vitepress/scripts/generate-reference.ts"
-=======
-    "preview": "vitepress preview"
-  },
-  "devDependencies": {
-    "oxc-minify": "catalog:",
-    "vitepress": "catalog:",
-    "vitepress-plugin-group-icons": "catalog:",
-<<<<<<< HEAD
-    "vitepress-plugin-llms": "catalog:"
->>>>>>> 222beaba9 (docs: add dynamic og)
-=======
-    "vitepress-plugin-llms": "catalog:",
-<<<<<<< HEAD
-    "vitepress-plugin-og": "^0.0.1"
->>>>>>> e43f8d79e (docs: migrate to plugin)
-=======
-    "vitepress-plugin-og": "catalog:"
->>>>>>> ecd6796d1 (chore: deps)
   },
   "dependencies": {
     "vue": "catalog:"

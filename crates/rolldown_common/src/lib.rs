@@ -85,6 +85,7 @@ pub mod bundler_options {
         PropertyWriteSideEffects, TreeshakeOptions,
       },
       tsconfig::TsConfig,
+      tsconfig_merge::merge_transform_options_with_tsconfig as merge_tsconfig,
       watch_option::{NotifyOption, OnInvalidate, WatchOption},
     },
   };

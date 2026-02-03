@@ -147,4 +147,10 @@ export interface ChecksOptions {
    * @default true
    * */
   duplicateShebang?: boolean;
+
+  /**
+   * Whether to emit warnings when a tsconfig option or combination of options is not supported.
+   * @default true
+   * */
+  unsupportedTsconfigOption?: boolean;
 }

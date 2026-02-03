@@ -42,6 +42,7 @@ OPTIONS
   --checks.tolerated-transform Whether to emit warnings when detecting tolerated transform.
   --checks.unresolved-entry   Whether to emit warnings when an entrypoint cannot be resolved.
   --checks.unresolved-import  Whether to emit warnings when an import cannot be resolved.
+  --checks.unsupported-tsconfig-option Whether to emit warnings when a tsconfig option or combination of options is not supported.
   --chunk-file-names <name>   Name pattern for emitted secondary chunks.
   --clean-dir                 Clean output directory before emitting output.
   --code-splitting <code-splitting>Code splitting options (true, false, or object).

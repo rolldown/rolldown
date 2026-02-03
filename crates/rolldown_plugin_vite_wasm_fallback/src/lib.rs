@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use rolldown_plugin::{HookLoadArgs, HookLoadReturn, HookUsage, Plugin, PluginContext};
+use rolldown_plugin::{HookLoadArgs, HookLoadReturn, HookUsage, Plugin, SharedLoadPluginContext};
 
 #[derive(Debug)]
 pub struct ViteWasmFallbackPlugin;
@@ -10,7 +10,7 @@ impl Plugin for ViteWasmFallbackPlugin {
     Cow::Borrowed("builtin:vite-wasm-fallback")
   }
 
-  async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  async fn load(&self, _ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if args.id.ends_with(".wasm") {
       // TODO: Replace the link here after rolldown's document is ready
       Err(anyhow::anyhow!(

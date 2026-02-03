@@ -1,12 +1,9 @@
-use crate::{
-  options::plugin::binding_plugin_context::BindingPluginContext,
-  types::{
-    binding_module_info::BindingModuleInfo,
-    binding_normalized_options::BindingNormalizedOptions,
-    binding_outputs::{JsChangedOutputs, to_binding_error},
-    binding_rendered_chunk::BindingRenderedChunk,
-    js_callback::MaybeAsyncJsCallbackExt,
-  },
+use crate::types::{
+  binding_module_info::BindingModuleInfo,
+  binding_normalized_options::BindingNormalizedOptions,
+  binding_outputs::{JsChangedOutputs, to_binding_error},
+  binding_rendered_chunk::BindingRenderedChunk,
+  js_callback::MaybeAsyncJsCallbackExt,
 };
 use anyhow::Context;
 use napi::bindgen_prelude::FnArgs;
@@ -18,6 +15,7 @@ use tracing::{Instrument, debug_span};
 
 use super::{
   BindingPluginOptions, FilterExprCache,
+  binding_load_context::BindingLoadPluginContext,
   binding_transform_context::BindingTransformPluginContext,
   types::{
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
@@ -173,7 +171,7 @@ impl Plugin for JsPlugin {
 
   async fn load(
     &self,
-    ctx: &rolldown_plugin::PluginContext,
+    ctx: rolldown_plugin::SharedLoadPluginContext,
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
     let Some(cb) = &self.load else { return Ok(None) };
@@ -191,8 +189,8 @@ impl Plugin for JsPlugin {
       }
     }
 
-    let ctx: BindingPluginContext = ctx.clone().into();
-    cb.await_call((ctx, args.id.to_string()).into())
+    let binding_ctx = BindingLoadPluginContext::new(Arc::clone(&ctx));
+    cb.await_call((binding_ctx, args.id.to_string()).into())
       .instrument(debug_span!("load_hook", plugin_name = self.name))
       .await?
       .map(TryInto::try_into)

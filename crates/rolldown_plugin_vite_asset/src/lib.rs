@@ -71,7 +71,7 @@ impl Plugin for ViteAssetPlugin {
 
   async fn load(
     &self,
-    ctx: &rolldown_plugin::PluginContext,
+    ctx: rolldown_plugin::SharedLoadPluginContext,
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
     if args.id.starts_with('\0') {
@@ -105,7 +105,7 @@ impl Plugin for ViteAssetPlugin {
 
     let id = rolldown_plugin_utils::remove_special_query(args.id, b"url");
     let env = FileToUrlEnv {
-      ctx,
+      ctx: &ctx,
       root: &self.root,
       is_lib: self.is_lib,
       public_dir: &self.public_dir,

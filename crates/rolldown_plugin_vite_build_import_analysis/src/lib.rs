@@ -16,7 +16,7 @@ use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookRenderChunkOutput, HookResolveIdArgs,
   HookResolveIdOutput, HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn,
-  HookUsage, Plugin, PluginContext,
+  HookUsage, Plugin, PluginContext, SharedLoadPluginContext,
 };
 use rolldown_plugin_utils::{
   AssetUrlResult, ModulePreload, RenderBuiltUrl, ToOutputFilePathEnv,
@@ -82,7 +82,7 @@ impl Plugin for ViteBuildImportAnalysisPlugin {
     )
   }
 
-  async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  async fn load(&self, _ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     Ok((args.id == PRELOAD_HELPER_ID).then_some(HookLoadOutput {
       code: self.preload_code.clone(),
       side_effects: Some(HookSideEffects::False),

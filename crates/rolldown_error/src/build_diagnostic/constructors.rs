@@ -38,6 +38,7 @@ use super::events::tsconfig_error::TsConfigError;
 use super::events::unhandleable_error::UnhandleableError;
 use super::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
 use super::events::unsupported_feature::UnsupportedFeature;
+use super::events::unsupported_tsconfig_option::UnsupportedTsconfigOption;
 use super::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
@@ -377,5 +378,9 @@ impl BuildDiagnostic {
 
   pub fn tsconfig_error(file_path: String, reason: ResolveError) -> Self {
     Self::new_inner(TsConfigError { file_paths: vec![file_path], reason })
+  }
+
+  pub fn unsupported_tsconfig_option(message: String) -> Self {
+    Self::new_inner(UnsupportedTsconfigOption { message })
   }
 }

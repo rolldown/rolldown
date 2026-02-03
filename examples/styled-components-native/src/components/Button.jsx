@@ -54,12 +54,12 @@ const StyledButton = styled.button`
       background: linear-gradient(45deg, #4299e1, #3182ce);
       color: white;
       box-shadow: 0 4px 14px rgba(66, 153, 225, 0.39);
-      
+
       &:hover:not(:disabled) {
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(66, 153, 225, 0.6);
       }
-      
+
       &:active:not(:disabled) {
         transform: translateY(0);
       }
@@ -71,12 +71,12 @@ const StyledButton = styled.button`
       background: linear-gradient(45deg, #718096, #4a5568);
       color: white;
       box-shadow: 0 4px 14px rgba(113, 128, 150, 0.39);
-      
+
       &:hover:not(:disabled) {
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(113, 128, 150, 0.6);
       }
-      
+
       &:active:not(:disabled) {
         transform: translateY(0);
       }
@@ -88,12 +88,12 @@ const StyledButton = styled.button`
       background: linear-gradient(45deg, #e2e8f0, #cbd5e0);
       color: #2d3748;
       box-shadow: 0 4px 14px rgba(226, 232, 240, 0.39);
-      
+
       &:hover:not(:disabled) {
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(226, 232, 240, 0.6);
       }
-      
+
       &:active:not(:disabled) {
         transform: translateY(0);
       }

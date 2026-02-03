@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use rolldown_plugin::{
-  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookUsage, Plugin, PluginContext,
+  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookUsage, Plugin, SharedLoadPluginContext,
 };
 use rolldown_utils::dataurl::is_data_url;
 
@@ -13,7 +13,7 @@ impl Plugin for ViteLoadFallbackPlugin {
     Cow::Borrowed("builtin:vite-load-fallback")
   }
 
-  async fn load(&self, ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+  async fn load(&self, ctx: SharedLoadPluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if is_data_url(args.id) {
       return Ok(None);
     }

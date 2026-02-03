@@ -48,6 +48,7 @@ pub mod unhandleable_error;
 pub mod unloadable_dependency;
 pub mod unresolved_entry;
 pub mod unsupported_feature;
+pub mod unsupported_tsconfig_option;
 
 pub trait BuildEvent: Debug + Sync + Send + AsAny + AsAnyMut {
   fn kind(&self) -> EventKind;

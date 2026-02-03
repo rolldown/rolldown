@@ -3,7 +3,11 @@
   "rollup@form@decorator: parsing decorators successfully",
   "rollup@form@external-namespace-optimzation-in-operator: disables optimization for external namespace when using the in operator",
   "rollup@form@namespace-optimization-in-operator: it does static optimization of internal namespaces when checking whether an export exists",
+  "rollup@form@resolve-file-url-import-meta-attributes: adds attributes to file resolveFileUrl and resolveImportMeta hooks@generates es",
   "rollup@function@catch-scope-nested-deconflicting: deconflicts nested catch scope parameters correctly",
+  "rollup@function@deprecated@load-attributes: does not allow returning attributes from the \"load\" hook",
+  "rollup@function@deprecated@transform-attributes: does not allow returning attributes from the \"transform\" hook",
   "rollup@function@emit-file@no-input: It is not necessary to provide an input if a dynamic entry is emitted",
+  "rollup@function@extend-more-hooks-to-include-import-attributes: extend load, transform and renderDynamicImport to include import attributes",
   "rollup@function@resolveid-recursive-call: skipSelf: true option in resolveId hook option should skip the plugin if it has been called before with the same id and importer, see #5768 for more details"
 ]

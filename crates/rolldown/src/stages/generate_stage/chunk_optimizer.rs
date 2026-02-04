@@ -22,11 +22,62 @@ use crate::{
 };
 
 use super::{
-  GenerateStage,
-  chunk_ext::ChunkCreationReason,
-  chunk_ext::ChunkDebugExt,
-  code_splitting::{IndexSplittingInfo, PendingCommonChunkInfo},
+  GenerateStage, chunk_ext::ChunkCreationReason, chunk_ext::ChunkDebugExt,
+  code_splitting::IndexSplittingInfo,
 };
+
+#[derive(Debug, Default)]
+/// A lightweight representation of a chunk used during optimization passes.
+struct TempChunk {
+  modules: Vec<ModuleIdx>,
+  /// Whether this chunk needs to be created in the final chunk graph.
+  needs_creation: bool,
+}
+
+type TempIndexChunks = IndexVec<ChunkIdx, TempChunk>;
+
+/// A temporary structure for managing chunk graph optimizations.
+/// Only store simplified information needed during optimization passes.
+#[derive(Debug, Default)]
+pub struct TempChunkGraph {
+  chunks: TempIndexChunks,
+  bits_to_chunk_idx: FxIndexMap<BitSet, ChunkIdx>,
+}
+
+impl TempChunkGraph {
+  pub fn new(
+    chunk_optimization: bool,
+    chunk_graph: &ChunkGraph,
+    bits_to_chunk_idx: &FxHashMap<BitSet, ChunkIdx>,
+  ) -> Self {
+    if !chunk_optimization {
+      return Self::default();
+    }
+    // These initial chunks already exist in the chunk graph, including:
+    // - entry chunks
+    // - manual code splitting chunks
+    let chunks = chunk_graph
+      .chunk_table
+      .iter()
+      .map(|item| TempChunk { modules: item.modules.clone(), needs_creation: false })
+      .collect();
+    Self {
+      chunks,
+      bits_to_chunk_idx: bits_to_chunk_idx.iter().map(|(k, v)| (k.clone(), *v)).collect(),
+    }
+  }
+
+  /// Assigns a module to its corresponding chunk slot based on the given bits.
+  pub fn init_module(&mut self, module_idx: ModuleIdx, bits: &BitSet) {
+    if let Some(idx) = self.bits_to_chunk_idx.get(bits) {
+      self.chunks[*idx].modules.push(module_idx);
+    } else {
+      let temp_chunk = TempChunk { modules: vec![module_idx], needs_creation: true };
+      let chunk_idx = self.chunks.push(temp_chunk);
+      self.bits_to_chunk_idx.insert(bits.clone(), chunk_idx);
+    }
+  }
+}
 
 /// Information about a facade chunk merge operation.
 /// Contains (source_chunk_idx, target_chunk_idx, elimination_reason).
@@ -95,7 +146,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
-    pending_common_chunks: FxIndexMap<BitSet, PendingCommonChunkInfo>,
+    temp_chunk_graph: &TempChunkGraph,
   ) {
     let static_entry_chunk_reference: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> =
       self.construct_static_entry_to_reached_dynamic_entries_map(chunk_graph);
@@ -128,7 +179,12 @@ impl GenerateStage<'_> {
     };
     // extract entry chunk module relation
     // this means `key_chunk` also referenced all entry module in value `vec`
-    for (bits, info) in pending_common_chunks {
+    for (bits, temp_chunk_idx) in &temp_chunk_graph.bits_to_chunk_idx {
+      let temp_chunk = &temp_chunk_graph.chunks[*temp_chunk_idx];
+      // Skip those chunks that are already created in chunk graph
+      if !temp_chunk.needs_creation {
+        continue;
+      }
       let chunk_idxs = bits
         .index_of_one()
         .into_iter()
@@ -144,13 +200,13 @@ impl GenerateStage<'_> {
         chunk_graph,
         &self.link_output.module_table,
         &dynamic_entry_to_dynamic_importers,
-        &info,
+        temp_chunk,
       );
 
       self.assign_modules_to_chunk(
         merge_target,
         &chunk_idxs,
-        info,
+        temp_chunk,
         bits,
         chunk_graph,
         bits_to_chunk,
@@ -168,8 +224,8 @@ impl GenerateStage<'_> {
     &self,
     merge_target: Option<ChunkIdx>,
     chunk_idxs: &[ChunkIdx],
-    info: PendingCommonChunkInfo,
-    bits: BitSet,
+    info: &TempChunk,
+    bits: &BitSet,
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
@@ -179,23 +235,24 @@ impl GenerateStage<'_> {
         let chunk = &chunk_graph.chunk_table[chunk_idx];
         let is_async_entry_only = matches!(chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta == ChunkMeta::DynamicImported);
         if matches!(chunk.preserve_entry_signature, Some(PreserveEntrySignatures::Strict)) {
-          // 1. If the target chunk is an async entry, we can merge safely.
-          // 2. If the user defined entry chunk has strict preserve entry signature, but all pending
-          // modules will not change the entry signature after merge into it, we can still merge them.
+          // We can safely merge into this chunk in two scenarios:
+          // 1. The target chunk is an async entry - dynamic chunks are not restricted by `PreserveEntrySignatures`.
+          // 2. The target chunk has strict signature preservation, but the modules being merged won't alter
+          //    the entry's exported interface (they either have no exports or only re-export existing entry symbols).
           if is_async_entry_only
             || self.can_merge_without_changing_entry_signature(chunk, &info.modules)
           {
             self.merge_modules_into_existing_chunk(
               chunk_idx,
               chunk_idxs,
-              info.modules,
+              &info.modules,
               chunk_graph,
             );
           } else {
             self.create_common_chunk(info, bits, chunk_graph, bits_to_chunk, input_base);
           }
         } else {
-          self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, info.modules, chunk_graph);
+          self.merge_modules_into_existing_chunk(chunk_idx, chunk_idxs, &info.modules, chunk_graph);
         }
       }
       _ => {
@@ -212,7 +269,7 @@ impl GenerateStage<'_> {
     &self,
     target_chunk_idx: ChunkIdx,
     chunk_idxs: &[ChunkIdx],
-    modules: Vec<ModuleIdx>,
+    modules: &[ModuleIdx],
     chunk_graph: &mut ChunkGraph,
   ) {
     for idx in chunk_idxs.iter().copied().filter(|idx| *idx != target_chunk_idx) {
@@ -226,7 +283,7 @@ impl GenerateStage<'_> {
       chunk.imports_from_other_chunks.entry(target_chunk_idx).or_default();
     }
 
-    for module_idx in modules {
+    for &module_idx in modules {
       chunk_graph.add_module_to_chunk(
         module_idx,
         target_chunk_idx,
@@ -238,8 +295,8 @@ impl GenerateStage<'_> {
   /// Creates a new common chunk and assigns modules to it.
   fn create_common_chunk(
     &self,
-    info: PendingCommonChunkInfo,
-    bits: BitSet,
+    info: &TempChunk,
+    bits: &BitSet,
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
@@ -247,18 +304,18 @@ impl GenerateStage<'_> {
     let mut chunk =
       Chunk::new(None, None, bits.clone(), vec![], ChunkKind::Common, input_base.clone(), None);
     chunk.add_creation_reason(
-      ChunkCreationReason::CommonChunk { bits: &bits, link_output: self.link_output },
+      ChunkCreationReason::CommonChunk { bits, link_output: self.link_output },
       self.options,
     );
     let chunk_id = chunk_graph.add_chunk(chunk);
-    for module_idx in info.modules {
+    for &module_idx in &info.modules {
       chunk_graph.add_module_to_chunk(
         module_idx,
         chunk_id,
         self.link_output.metas[module_idx].depended_runtime_helper,
       );
     }
-    bits_to_chunk.insert(bits, chunk_id);
+    bits_to_chunk.insert(bits.clone(), chunk_id);
   }
 
   /// Attempts to find an existing entry chunk that can absorb modules shared between multiple entries.
@@ -273,7 +330,7 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
     module_table: &ModuleTable,
     dynamic_entry_to_dynamic_importers: &FxHashMap<ModuleIdx, FxHashSet<ModuleIdx>>,
-    info: &PendingCommonChunkInfo,
+    info: &TempChunk,
   ) -> Option<ChunkIdx> {
     let mut user_defined_entry = vec![];
     let mut dynamic_entry = vec![];

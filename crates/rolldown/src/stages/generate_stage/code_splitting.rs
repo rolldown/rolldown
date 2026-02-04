@@ -1,8 +1,10 @@
 use std::{cmp::Ordering, collections::VecDeque, path::Path};
 
 use crate::{
-  chunk_graph::ChunkGraph, stages::generate_stage::chunk_ext::ChunkDebugExt,
-  types::linking_metadata::LinkingMetadataVec, utils::chunk::normalize_preserve_entry_signature,
+  chunk_graph::ChunkGraph,
+  stages::generate_stage::{chunk_ext::ChunkDebugExt, chunk_optimizer::TempChunkGraph},
+  types::linking_metadata::LinkingMetadataVec,
+  utils::chunk::normalize_preserve_entry_signature,
 };
 use arcstr::ArcStr;
 use itertools::Itertools;
@@ -23,20 +25,6 @@ use rolldown_utils::{
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{GenerateStage, chunk_ext::ChunkCreationReason};
-
-bitflags::bitflags! {
-  #[derive(Debug, Clone, Copy, Default)]
-  pub struct PendingCommonChunkMeta: u8 {
-    // Empty for now, will be extended as needed
-  }
-}
-
-#[derive(Debug, Default)]
-pub struct PendingCommonChunkInfo {
-  pub modules: Vec<ModuleIdx>,
-  #[expect(dead_code, reason = "Reserved for future use")]
-  pub meta: PendingCommonChunkMeta,
-}
 
 #[derive(Clone, Debug)]
 pub struct SplittingInfo {
@@ -817,13 +805,15 @@ impl GenerateStage<'_> {
       )
       .await?;
 
-    let mut pending_common_chunks: FxIndexMap<BitSet, PendingCommonChunkInfo> =
-      FxIndexMap::default();
     // If it is allow to allow that entry chunks have the different exports as the underlying entry module.
     // This is used to generate less chunks when possible.
     // TODO: maybe we could bailout peer chunk?
     let allow_chunk_optimization = self.options.experimental.is_chunk_optimization_enabled()
       && !self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
+
+    let mut temp_chunk_graph =
+      TempChunkGraph::new(allow_chunk_optimization, chunk_graph, bits_to_chunk);
+
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for idx in &self.link_output.sorted_modules {
@@ -882,17 +872,7 @@ impl GenerateStage<'_> {
           );
         }
       } else if allow_chunk_optimization {
-        if let Some(info) = pending_common_chunks.get_mut(bits) {
-          info.modules.push(normal_module.idx);
-        } else {
-          pending_common_chunks.insert(
-            bits.clone(),
-            PendingCommonChunkInfo {
-              modules: vec![normal_module.idx],
-              meta: PendingCommonChunkMeta::empty(),
-            },
-          );
-        }
+        temp_chunk_graph.init_module(normal_module.idx, bits);
       } else {
         let mut chunk =
           Chunk::new(None, None, bits.clone(), vec![], ChunkKind::Common, input_base.clone(), None);
@@ -915,7 +895,7 @@ impl GenerateStage<'_> {
         chunk_graph,
         bits_to_chunk,
         input_base,
-        pending_common_chunks,
+        &temp_chunk_graph,
       );
 
       self.optimize_facade_dynamic_entry_chunks(

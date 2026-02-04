@@ -112,10 +112,9 @@ import {
   type ConfigExport,
   type RolldownOptionsFunction,
 } from './utils/define-config';
-import { VERSION } from './version';
 
-export { RUNTIME_MODULE_ID } from './constants';
-export { build, defineConfig, rolldown, VERSION, watch };
+export { RUNTIME_MODULE_ID, VERSION } from './constants';
+export { build, defineConfig, rolldown, watch };
 export { BindingMagicString } from './binding.cjs';
 export type {
   AddonFunction,

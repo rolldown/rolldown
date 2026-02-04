@@ -338,6 +338,8 @@ export interface FunctionPluginHooks {
    *
    * You can use {@linkcode PluginContext.getModuleInfo | this.getModuleInfo()} to find out the previous values of `meta`, `moduleSideEffects` inside this hook.
    *
+   * {@include ./docs/plugin-hooks-transform.md}
+   *
    * @group Build Hooks
    */
   [DEFINED_HOOK_NAMES.transform]: (

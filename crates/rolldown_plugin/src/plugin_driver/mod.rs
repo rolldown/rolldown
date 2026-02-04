@@ -47,7 +47,8 @@ impl PluginDriver {
   pub fn clear(&self) {
     self.watch_files.clear();
     self.module_infos.clear();
-    self.transform_dependencies.clear();
+    // Note: transform_dependencies is NOT cleared here - it's preserved across incremental builds
+    // by BundleFactory which manages its lifecycle (reset on full builds only)
     self.context_load_completion_manager.clear();
     self.file_emitter.clear();
     if let Some(collector) = &self.hook_timing_collector {

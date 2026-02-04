@@ -2711,6 +2711,7 @@ dependencies = [
  "commondir",
  "cow-utils",
  "css-module-lexer",
+ "dashmap",
  "dunce",
  "futures",
  "glob",

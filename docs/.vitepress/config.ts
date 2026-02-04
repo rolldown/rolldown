@@ -423,7 +423,7 @@ const config = defineConfig({
       pageData.frontmatter.editLink = false;
     }
 
-    // Automatically handle OG images for all markdown files
+    // Automatically handle OG images for all markdown files.
     if (!pageData.frontmatter.image && pageData.relativePath !== 'index.md') {
       await addOgImage(pageData, ctx, {
         domain: 'https://rolldown.rs',

@@ -812,10 +812,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           let cannot_reuse_symbol = (id.span.is_unspanned()
             || symbol_id_span.is_unspanned()
             || symbol_id_span.start > id.span.start)
-            || self
-              .result
-              .named_imports
-              .contains_key(&SymbolRef::from((self.immutable_ctx.idx, symbol_id)))
+            || scoping.symbol_flags(symbol_id).is_import()
             || !scoping.symbol_redeclarations(symbol_id).is_empty()
             || scoping.get_resolved_references(symbol_id).any(Reference::is_write);
           if !cannot_reuse_symbol {

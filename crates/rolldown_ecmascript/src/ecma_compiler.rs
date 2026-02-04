@@ -109,10 +109,11 @@ impl EcmaCompiler {
     enable_sourcemap: bool,
     filename: &str,
     compress: bool,
-    minify_options: MinifierOptions,
+    mut minify_options: MinifierOptions,
     codegen_options: CodegenOptions,
   ) -> (String, Option<SourceMap>) {
     let mut program = Parser::new(allocator, source_text, source_type).parse().program;
+    minify_options.compress.get_or_insert_default().treeshake.invalid_import_side_effects = false;
     let minifier = Minifier::new(minify_options);
     let ret = if compress {
       minifier.minify(allocator, &mut program)

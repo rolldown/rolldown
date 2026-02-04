@@ -1,4 +1,95 @@
 
+## [1.0.0-rc.3] - 2026-02-04
+
+### 🚀 Features
+
+- expose `RUNTIME_MODULE_ID` constant for plugin authors (#8199) by @shulaoda
+- warn unsupported combination of `preserveValueImports` and `importsNotUsedAsValues` in tsconfig.json (#8169) by @sapphi-red
+- sophisticated watch tracking for load dependencies (#8092) by @sapphi-red
+- add `inputMap` option to `minify` / `minifySync` functions (#8138) by @sapphi-red
+- consolidate same tsconfig errors (#8119) by @sapphi-red
+- include tsconfig file path in error messages (#8107) by @Copilot
+- lazy-barrel: support incremental build mode (#8114) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- rust: preserve dependencies added by `this.addWatchFile` (#8198) by @hyf0
+- spawn `RuntimeModuleTask` after `build_start` to avoid race condition (#8182) by @shulaoda
+- rust/dev: only close after the ongoing task finished (#8147) by @hyf0
+- ensure `\0rolldown/runtime.js` will go through transform hook and add test (#8093) by @hyf0
+- `[name]` in `assetFileNames` does not include the directory part (#8098) by @IWANABETHATGUY
+- handle external module properties in namespace imports (#8124) by @IWANABETHATGUY
+- keep user-defined entry modules in their own chunks (#8047) by @IWANABETHATGUY
+- avoid `Unknown resolve error` error message (#8111) by @sapphi-red
+
+### 💼 Other
+
+- remove warnings  for building rolldown with `not(feature = "experimental")` (#8110) by @coolreader18
+
+### 🚜 Refactor
+
+- move `VERSION` to `constants` directory (#8200) by @shulaoda
+- simplify import symbol check using `SymbolFlags` (#8193) by @shulaoda
+- extract tsconfig option and transform options merging logic (#8168) by @sapphi-red
+- filter empty module_groups before sorting (#8149) by @ShroXd
+- lazy-barrel: use single `remove` instead of `contains_key` + `remove` (#8123) by @shulaoda
+- lazy-barrel: avoid redundant call and inline `get_barrel_normal_module` (#8122) by @shulaoda
+- use logger instead of console.log for warnings (#8117) by @IWANABETHATGUY
+- module-loader: remove intermediate ModuleTaskOwnerRef type (#8113) by @shulaoda
+- rename ReExportExternalModule to ReExportDynamicExports (#8104) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- add dynamic OG image generation (#8192) by @sapphi-red
+- add dynamic OG image generation (#8191) by @sapphi-red
+- add dynamic OG image generation (#8179) by @Copilot
+- apis: add links to option descriptions in JSDoc comments (#8167) by @sapphi-red
+- apis: clarify parameters of `resolveDynamicImport` hook (#8137) by @sapphi-red
+- lazy-barrel: clarify default export behavior (#8128) by @shulaoda
+
+### ⚡ Performance
+
+- remove unnecessary assignment for default export (#8127) by @shulaoda
+
+### 🧪 Testing
+
+- dev: `this.addWatchFile` dependency should be preserved after reload (#8165) by @sapphi-red
+- mark flaky `transform_runtime_module` test as ignored (#8178) by @Copilot
+- rolldown_sourcemap: add test for coarse segments (#8166) by @sapphi-red
+- dev: correctly assert file change (#8164) by @sapphi-red
+- rust: `transform_runtime_module` test shouldn't panic inside (#8151) by @hyf0
+- rust: fix flakiness of rust tests (#8150) by @hyf0
+- mark `output.dynamicImportInCjs` tests as passed (#8125) by @shulaoda
+- lazy-barrel: add test cases for default export (#8129) by @shulaoda
+- rolldown_plugin_vite_manifest: use relative path for outPath (#8101) by @shulaoda
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update crate-ci/typos action to v1.43.1 (#8188) by @renovate[bot]
+- deps: update rust crate ts-rs to v12 (#8160) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.43.0 (#8175) by @renovate[bot]
+- deps: update rust crates (#8157) by @renovate[bot]
+- deps: update oxc to v0.112.0 (#8171) by @renovate[bot]
+- deps: update rollup submodule for tests to v4.57.1 (#8176) by @sapphi-red
+- deps: update test262 submodule for tests (#8177) by @sapphi-red
+- deps: update dependency oxlint to v1.43.0 (#8173) by @renovate[bot]
+- deps: update dependency oxfmt to ^0.28.0 (#8170) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.21.8 (#8163) by @renovate[bot]
+- deps: update dependency vue-router to v5 (#8159) by @renovate[bot]
+- deps: update github-actions (#8158) by @renovate[bot]
+- deps: update npm packages (#8156) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.11.4 (#8140) by @renovate[bot]
+- fix clippy replacement typo (#8136) by @IWANABETHATGUY
+- disallow `HashMap::new` and `HashSet::new` by clippy (#8135) by @sapphi-red
+- deps: update dependency rolldown-plugin-dts to v0.21.7 (#8126) by @renovate[bot]
+- deps: update oxc resolver to v11.17.0 (#8121) by @renovate[bot]
+- deps: update dependency oxlint-tsgolint to v0.11.3 (#8109) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @coolreader18 made their first contribution in [#8110](https://github.com/rolldown/rolldown/pull/8110)
+
+
 ## [1.0.0-rc.2] - 2026-01-28
 
 ### 💥 BREAKING CHANGES

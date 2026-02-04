@@ -790,6 +790,22 @@ impl GenerateStage<'_> {
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
   ) -> BuildResult<()> {
+    let dynamic_entry_points: Vec<ModuleIdx> = chunk_graph
+      .chunk_table
+      .iter()
+      .filter_map(|chunk| {
+        Some(match &chunk.kind {
+          ChunkKind::EntryPoint { module, .. } if chunk.is_async_entry() => {
+            if self.link_output.metas[*module].is_tla_or_contains_tla_dependency {
+              *module
+            } else {
+              return None;
+            }
+          }
+          _ => return None,
+        })
+      })
+      .collect();
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
     for (entry_index, (&module_idx, _)) in self
       .link_output
@@ -802,6 +818,7 @@ impl GenerateStage<'_> {
         module_idx,
         entry_index.try_into().expect("Too many entries, u32 overflowed."),
         index_splitting_info,
+        &dynamic_entry_points,
       );
     }
 
@@ -934,6 +951,7 @@ impl GenerateStage<'_> {
     entry_module_idx: ModuleIdx,
     entry_index: u32,
     index_splitting_info: &mut IndexSplittingInfo,
+    dynamic_entry_points: &[ModuleIdx],
   ) {
     let mut q = VecDeque::from([entry_module_idx]);
     while let Some(module_idx) = q.pop_front() {
@@ -948,6 +966,10 @@ impl GenerateStage<'_> {
       }
 
       if index_splitting_info[module_idx].bits.has_bit(entry_index) {
+        continue;
+      }
+      if dynamic_entry_points.contains(&module_idx) && module_idx != entry_module_idx {
+        // Don't traverse other dynamic entry points
         continue;
       }
 

@@ -114,6 +114,7 @@ import {
 } from './utils/define-config';
 import { VERSION } from './version';
 
+export { RUNTIME_MODULE_ID } from './constants';
 export { build, defineConfig, rolldown, VERSION, watch };
 export { BindingMagicString } from './binding.cjs';
 export type {

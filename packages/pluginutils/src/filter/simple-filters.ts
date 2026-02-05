@@ -46,7 +46,7 @@ export function exactRegex(str: string, flags?: string): RegExp {
  * ```
  */
 export function matchExt(ext: string): RegExp {
-  return new RegExp(`^[^?#]*\\.${escapeRegex(ext)}(?=$|[?#])`);
+  return new RegExp(`^[^?#]*\\.${ext}(?=$|[?#])`);
 }
 
 /**

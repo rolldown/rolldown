@@ -70,6 +70,42 @@ describe('matchExt', () => {
     expect(regex.test(`app/foo.js.js.ts?x=foo.js.js`)).toBe(false);
     expect(regex.test(`app/foo.ts#section.js`)).toBe(false);
   });
+
+  test('does not match query/hash-only extensions', () => {
+    const regex = matchExt('js');
+
+    expect(regex.test('app/foo?x=.js')).toBe(false);
+    expect(regex.test('app/foo#x=.js')).toBe(false);
+  });
+
+  test('is case-sensitive by default', () => {
+    const regex = matchExt('js');
+
+    expect(regex.test('app/foo.JS')).toBe(false);
+    expect(regex.test('app/foo.Js')).toBe(false);
+  });
+
+  test('supports escaped extension characters', () => {
+    const cxx = matchExt('c++');
+    const dts = matchExt('d.ts');
+
+    expect(cxx.test('app/foo.c++')).toBe(true);
+    expect(cxx.test('app/foo.c++?x=1')).toBe(true);
+    expect(cxx.test('app/foo.c++11')).toBe(false);
+
+    expect(dts.test('app/foo.d.ts')).toBe(true);
+    expect(dts.test('app/foo.d.ts?x=1')).toBe(true);
+    expect(dts.test('app/foo.ts')).toBe(false);
+    expect(dts.test('app/foo.d.ts.js')).toBe(false);
+  });
+
+  test('matches dotfiles when extension matches', () => {
+    const regex = matchExt('env');
+
+    expect(regex.test('.env')).toBe(true);
+    expect(regex.test('config/.env')).toBe(true);
+    expect(regex.test('config/.env.local')).toBe(false);
+  });
 });
 
 describe('prefixRegex', () => {

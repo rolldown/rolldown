@@ -1,6 +1,11 @@
 import picomatch from 'picomatch';
 import { describe, expect, test } from 'vitest';
-import { matchExt, exactRegex, makeIdFiltersToMatchWithQuery, prefixRegex } from './simple-filters.js';
+import {
+  matchExt,
+  exactRegex,
+  makeIdFiltersToMatchWithQuery,
+  prefixRegex,
+} from './simple-filters.js';
 
 describe('exactRegex', () => {
   test('supports without flag parameter', () => {
@@ -46,7 +51,7 @@ describe('matchExt', () => {
     expect(regex.test(`app/foo.js.js?f=foo.js`)).toBe(true);
     expect(regex.test(`app/js/foo.js`)).toBe(true);
     expect(regex.test(`app/js/foo.js#t=ts`)).toBe(true);
-  })
+  });
 
   test('non-matches: js', () => {
     const regex = matchExt('js');

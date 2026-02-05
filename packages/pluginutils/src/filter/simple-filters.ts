@@ -24,12 +24,12 @@ export function exactRegex(str: string, flags?: string): RegExp {
 
 /**
  * Constructs a RegExpt that matches the exact file extension specified.
- * 
+ *
  * This is useful for plugin hook filters.
- * 
+ *
  * @param ext the file extension to match.
  * @returns a RegExp that matches the exact file extension.
- * 
+ *
  * @example
  * ```ts
  * import { matchExt } from '@rolldown/pluginutils';

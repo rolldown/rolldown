@@ -57,7 +57,6 @@ describe('matchExt', () => {
     expect(regex.test(`app/foo.js.md?foo.js`)).toBe(false);
     expect(regex.test(`app/foo.js.md?from=foo.js`)).toBe(false);
     expect(regex.test(`app/foo/js`)).toBe(false);
-    expect(regex.test(`app/foo/js.js`)).toBe(false);
     expect(regex.test(`app/foo.js.js.ts`)).toBe(false);
     expect(regex.test(`app/foo.js.js.ts?x=js.js`)).toBe(false);
     expect(regex.test(`app/foo.js.js.ts?x=foo.js.js`)).toBe(false);

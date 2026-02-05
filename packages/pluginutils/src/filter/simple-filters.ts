@@ -22,7 +22,27 @@ export function exactRegex(str: string, flags?: string): RegExp {
   return new RegExp(`^${escapeRegex(str)}$`, flags);
 }
 
-export function matchExt(ext: string) {
+/**
+ * Constructs a RegExpt that matches the exact file extension specified.
+ * 
+ * This is useful for plugin hook filters.
+ * 
+ * @param ext the file extension to match.
+ * @returns a RegExp that matches the exact file extension.
+ * 
+ * @example
+ * ```ts
+ * import { matchExt } from '@rolldown/pluginutils';
+ * const plugin = {
+ *   name: 'plugin',
+ *   load: {
+ *     filter: { id: matchExt('js') },
+ *     handler(id) {} // will only be called for IDs ending with `.js`, even if query params or hash are present
+ *   }
+ * }
+ * ```
+ */
+export function matchExt(ext: string): RegExp {
   return exactRegex(`\.${ext}(?=($|[?#]))`);
 }
 

@@ -39,7 +39,9 @@ describe('exactRegex', () => {
 });
 
 describe('matchExt', () => {
+  const hardExpect = expect;
   test('matches: js', () => {
+    const expect = hardExpect.soft;
     const regex = matchExt('js');
 
     expect(regex.test(`foo.js`)).toBe(true);
@@ -54,6 +56,7 @@ describe('matchExt', () => {
   });
 
   test('non-matches: js', () => {
+    const expect = hardExpect.soft;
     const regex = matchExt('js');
 
     expect(regex.test(`app/foo.js.ts`)).toBe(false);

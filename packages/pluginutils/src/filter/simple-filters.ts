@@ -22,6 +22,10 @@ export function exactRegex(str: string, flags?: string): RegExp {
   return new RegExp(`^${escapeRegex(str)}$`, flags);
 }
 
+export function matchExt(ext: string) {
+  return exactRegex(`\.${ext}(?=($|[?#]))`);
+}
+
 /**
  * Constructs a RegExp that matches a value that has the specified prefix.
  *

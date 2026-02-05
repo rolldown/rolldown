@@ -1,6 +1,6 @@
 import picomatch from 'picomatch';
 import { describe, expect, test } from 'vitest';
-import { exactRegex, makeIdFiltersToMatchWithQuery, prefixRegex } from './simple-filters.js';
+import { matchExt, exactRegex, makeIdFiltersToMatchWithQuery, prefixRegex } from './simple-filters.js';
 
 describe('exactRegex', () => {
   test('supports without flag parameter', () => {
@@ -30,6 +30,38 @@ describe('exactRegex', () => {
     expect(regex.test('foo(bar\\)')).toBe(false);
     expect(regex.test('foo(bar)a')).toBe(false);
     expect(regex.test('afoo(bar)')).toBe(false);
+  });
+});
+
+describe('matchExt', () => {
+  test('matches: js', () => {
+    const regex = matchExt('js');
+
+    expect(regex.test(`foo.js`)).toBeTruthy();
+    expect(regex.test(`app/foo.js`)).toBeTruthy();
+    expect(regex.test(`app/foo.js`)).toBeTruthy();
+    expect(regex.test(`app/foo.js.js`)).toBeTruthy();
+    expect(regex.test(`app/foo.ts.js`)).toBeTruthy();
+    expect(regex.test(`app/foo.js?t=123`)).toBeTruthy();
+    expect(regex.test(`app/foo.js?f=foo.js`)).toBeTruthy();
+    expect(regex.test(`app/foo.js.js?f=foo.js`)).toBeTruthy();
+    expect(regex.test(`app/js/foo.js`)).toBeTruthy();
+    expect(regex.test(`app/js/foo.js`)).toBeTruthy();
+  })
+
+  test('non-matches: js', () => {
+    const regex = matchExt('js');
+
+    expect(regex.test(`app/foo.js.js`)).toBeFalsy();
+    expect(regex.test(`app/foo.js.js?pretend.js`)).toBeFalsy();
+    expect(regex.test(`app/foo.js.md`)).toBeFalsy();
+    expect(regex.test(`app/foo.js.md?foo.js`)).toBeFalsy();
+    expect(regex.test(`app/foo.js.md?from=foo.js`)).toBeFalsy();
+    expect(regex.test(`app/foo/js`)).toBeFalsy();
+    expect(regex.test(`app/foo/js.js`)).toBeFalsy();
+    expect(regex.test(`app/foo.js.js.ts`)).toBeFalsy();
+    expect(regex.test(`app/foo.js.js.ts?x=js.js`)).toBeFalsy();
+    expect(regex.test(`app/foo.js.js.ts?x=foo.js.js`)).toBeFalsy();
   });
 });
 

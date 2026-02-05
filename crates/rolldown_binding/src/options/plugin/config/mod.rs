@@ -12,7 +12,6 @@ mod binding_vite_react_refresh_wrapper_plugin_config;
 mod binding_vite_reporter_plugin_config;
 mod binding_vite_resolve_plugin_config;
 mod binding_vite_transform_plugin_config;
-mod binding_vite_wasm_helper_plugin_config;
 
 pub use binding_esm_external_require_plugin_config::BindingEsmExternalRequirePluginConfig;
 pub use binding_isolated_declaration_plugin_config::BindingIsolatedDeclarationPluginConfig;
@@ -28,4 +27,3 @@ pub use binding_vite_react_refresh_wrapper_plugin_config::BindingViteReactRefres
 pub use binding_vite_reporter_plugin_config::BindingViteReporterPluginConfig;
 pub use binding_vite_resolve_plugin_config::BindingViteResolvePluginConfig;
 pub use binding_vite_transform_plugin_config::BindingViteTransformPluginConfig;
-pub use binding_vite_wasm_helper_plugin_config::BindingViteWasmHelperPluginConfig;

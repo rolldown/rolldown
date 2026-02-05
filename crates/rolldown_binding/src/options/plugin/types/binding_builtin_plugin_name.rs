@@ -35,8 +35,6 @@ pub enum BindingBuiltinPluginName {
   ViteTransform,
   #[napi(value = "builtin:vite-wasm-fallback")]
   ViteWasmFallback,
-  #[napi(value = "builtin:vite-wasm-helper")]
-  ViteWasmHelper,
   #[napi(value = "builtin:vite-web-worker-post")]
   ViteWebWorkerPost,
 }

@@ -1763,7 +1763,6 @@ export type BindingBuiltinPluginName =  'builtin:esm-external-require'|
 'builtin:vite-resolve'|
 'builtin:vite-transform'|
 'builtin:vite-wasm-fallback'|
-'builtin:vite-wasm-helper'|
 'builtin:vite-web-worker-post';
 
 export interface BindingBundlerOptions {
@@ -2684,18 +2683,6 @@ export interface BindingViteTransformPluginConfig {
   jsxInject?: string
   transformOptions?: TransformOptions
   yarnPnp?: boolean
-}
-
-export interface BindingViteWasmHelperPluginConfig {
-  decodedBase: string
-  v2?: BindingViteWasmHelperPluginV2Config
-}
-
-export interface BindingViteWasmHelperPluginV2Config {
-  root: string
-  isLib: boolean
-  publicDir: string
-  assetInlineLimit: number | ((file: string, content: Buffer) => boolean | undefined)
 }
 
 export interface BindingWatchOption {

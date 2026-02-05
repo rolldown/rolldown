@@ -9,7 +9,6 @@ import type {
   BindingViteReactRefreshWrapperPluginConfig,
   BindingViteReporterPluginConfig,
   BindingViteResolvePluginConfig,
-  BindingViteWasmHelperPluginConfig,
 } from '../binding.cjs';
 import type { StringOrRegExp } from '../types/utils';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
@@ -43,10 +42,6 @@ export function viteImportGlobPlugin(config?: BindingViteImportGlobPluginConfig)
 
 export function viteReporterPlugin(config: BindingViteReporterPluginConfig): BuiltinPlugin {
   return new BuiltinPlugin('builtin:vite-reporter', config);
-}
-
-export function viteWasmHelperPlugin(config: BindingViteWasmHelperPluginConfig): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:vite-wasm-helper', config);
 }
 
 export function viteWasmFallbackPlugin(): BuiltinPlugin {

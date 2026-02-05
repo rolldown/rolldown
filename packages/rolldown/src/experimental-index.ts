@@ -43,7 +43,6 @@ export {
   viteReporterPlugin,
   viteResolvePlugin,
   viteWasmFallbackPlugin,
-  viteWasmHelperPlugin,
   viteWebWorkerPostPlugin,
 } from './builtin-plugin/constructors';
 

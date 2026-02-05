@@ -2,7 +2,7 @@ use std::{cmp::Ordering, collections::VecDeque, path::Path};
 
 use crate::{
   chunk_graph::ChunkGraph,
-  stages::generate_stage::{chunk_ext::ChunkDebugExt, chunk_optimizer::TempChunkGraph},
+  stages::generate_stage::{chunk_ext::ChunkDebugExt, chunk_optimizer::ChunkOptimizationGraph},
   types::linking_metadata::LinkingMetadataVec,
   utils::chunk::normalize_preserve_entry_signature,
 };
@@ -811,7 +811,7 @@ impl GenerateStage<'_> {
     let allow_chunk_optimization = self.options.experimental.is_chunk_optimization_enabled()
       && !self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
     let mut temp_chunk_graph =
-      TempChunkGraph::new(allow_chunk_optimization, chunk_graph, bits_to_chunk);
+      ChunkOptimizationGraph::new(allow_chunk_optimization, chunk_graph, bits_to_chunk);
 
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.

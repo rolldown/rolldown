@@ -37,33 +37,31 @@ describe('matchExt', () => {
   test('matches: js', () => {
     const regex = matchExt('js');
 
-    expect(regex.test(`foo.js`)).toBeTruthy();
-    expect(regex.test(`app/foo.js`)).toBeTruthy();
-    expect(regex.test(`app/foo.js`)).toBeTruthy();
-    expect(regex.test(`app/foo.js.js`)).toBeTruthy();
-    expect(regex.test(`app/foo.ts.js`)).toBeTruthy();
-    expect(regex.test(`app/foo.js?t=123`)).toBeTruthy();
-    expect(regex.test(`app/foo.js?f=foo.js`)).toBeTruthy();
-    expect(regex.test(`app/foo.js.js?f=foo.js`)).toBeTruthy();
-    expect(regex.test(`app/js/foo.js`)).toBeTruthy();
-    expect(regex.test(`app/js/foo.js`)).toBeTruthy();
-    expect(regex.test(`app/js/foo.js#t=ts`)).toBeTruthy();
+    expect(regex.test(`foo.js`)).toBe(true);
+    expect(regex.test(`app/foo.js`)).toBe(true);
+    expect(regex.test(`app/foo.js.js`)).toBe(true);
+    expect(regex.test(`app/foo.ts.js`)).toBe(true);
+    expect(regex.test(`app/foo.js?t=123`)).toBe(true);
+    expect(regex.test(`app/foo.js?f=foo.js`)).toBe(true);
+    expect(regex.test(`app/foo.js.js?f=foo.js`)).toBe(true);
+    expect(regex.test(`app/js/foo.js`)).toBe(true);
+    expect(regex.test(`app/js/foo.js#t=ts`)).toBe(true);
   })
 
   test('non-matches: js', () => {
     const regex = matchExt('js');
 
-    expect(regex.test(`app/foo.js.js`)).toBeFalsy();
-    expect(regex.test(`app/foo.js.js?pretend.js`)).toBeFalsy();
-    expect(regex.test(`app/foo.js.md`)).toBeFalsy();
-    expect(regex.test(`app/foo.js.md?foo.js`)).toBeFalsy();
-    expect(regex.test(`app/foo.js.md?from=foo.js`)).toBeFalsy();
-    expect(regex.test(`app/foo/js`)).toBeFalsy();
-    expect(regex.test(`app/foo/js.js`)).toBeFalsy();
-    expect(regex.test(`app/foo.js.js.ts`)).toBeFalsy();
-    expect(regex.test(`app/foo.js.js.ts?x=js.js`)).toBeFalsy();
-    expect(regex.test(`app/foo.js.js.ts?x=foo.js.js`)).toBeFalsy();
-    expect(regex.test(`app/foo.ts#section.js`)).toBeFalsy();
+    expect(regex.test(`app/foo.js.js`)).toBe(false);
+    expect(regex.test(`app/foo.js.js?pretend.js`)).toBe(false);
+    expect(regex.test(`app/foo.js.md`)).toBe(false);
+    expect(regex.test(`app/foo.js.md?foo.js`)).toBe(false);
+    expect(regex.test(`app/foo.js.md?from=foo.js`)).toBe(false);
+    expect(regex.test(`app/foo/js`)).toBe(false);
+    expect(regex.test(`app/foo/js.js`)).toBe(false);
+    expect(regex.test(`app/foo.js.js.ts`)).toBe(false);
+    expect(regex.test(`app/foo.js.js.ts?x=js.js`)).toBe(false);
+    expect(regex.test(`app/foo.js.js.ts?x=foo.js.js`)).toBe(false);
+    expect(regex.test(`app/foo.ts#section.js`)).toBe(false);
   });
 });
 

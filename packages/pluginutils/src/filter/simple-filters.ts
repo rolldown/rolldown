@@ -30,7 +30,7 @@ export function exactRegex(str: string, flags?: string): RegExp {
  * or hash (`#`) fragment. This is useful for plugin hook filters that need
  * to restrict IDs by file extension.
  *
- * @param ext the file extension to match.
+ * @param ext the file extension to match, without the leading dot (for example, `'js'` to match `.js` files).
  * @returns a RegExp that matches the exact file extension.
  *
  * @example

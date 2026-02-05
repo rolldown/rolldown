@@ -56,8 +56,8 @@ describe('matchExt', () => {
   test('non-matches: js', () => {
     const regex = matchExt('js');
 
-    expect(regex.test(`app/foo.js.js`)).toBe(false);
-    expect(regex.test(`app/foo.js.js?pretend.js`)).toBe(false);
+    expect(regex.test(`app/foo.js.ts`)).toBe(false);
+    expect(regex.test(`app/foo.js.ts?pretend.js`)).toBe(false);
     expect(regex.test(`app/foo.js.md`)).toBe(false);
     expect(regex.test(`app/foo.js.md?foo.js`)).toBe(false);
     expect(regex.test(`app/foo.js.md?from=foo.js`)).toBe(false);

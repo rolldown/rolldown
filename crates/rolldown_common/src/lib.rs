@@ -11,6 +11,7 @@ mod module_loader;
 mod source_map_gen_msg;
 mod type_aliases;
 mod types;
+mod utils;
 
 /// This module is to help `rolldown` crate could export types related bundler options easily.
 /// `rolldown` crate could use `pub use rolldown_common::bundler_options::*;` to export all types, so we don't need write
@@ -88,6 +89,10 @@ pub mod bundler_options {
       tsconfig_merge::merge_transform_options_with_tsconfig as merge_tsconfig,
       watch_option::{NotifyOption, OnInvalidate, WatchOption},
     },
+  };
+
+  pub use crate::utils::enhanced_transform::{
+    EnhancedTransformOptions, EnhancedTransformResult, TsconfigOption, enhanced_transform,
   };
 }
 

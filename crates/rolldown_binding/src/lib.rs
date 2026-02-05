@@ -37,6 +37,8 @@ pub mod classic_bundler;
 mod generated;
 pub mod options;
 pub mod parallel_js_plugin_registry;
+pub mod transform;
+pub mod transform_cache;
 pub mod types;
 pub mod utils;
 pub mod watcher;
@@ -45,7 +47,6 @@ pub mod worker_manager;
 // --- External NAPI-RS dependencies ---
 pub use oxc_parser_napi;
 pub use oxc_resolver_napi;
-pub use oxc_transform_napi;
 
 #[napi_derive::napi]
 pub fn create_tokio_runtime(blocking_threads: Option<u32>) {

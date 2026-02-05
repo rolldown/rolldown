@@ -4,7 +4,7 @@ mod jsx_options;
 mod plugin_options;
 mod typescript_options;
 
-use oxc::transformer::EnvOptions;
+use oxc::transformer::{EnvOptions, HelperLoaderOptions};
 
 pub use itertools::Either;
 pub use {
@@ -45,6 +45,45 @@ pub struct TransformOptions {
 
   /// Third-party plugins to use.
   pub plugins: Option<PluginsOptions>,
+
+  /// Behaviour for runtime helpers.
+  pub helpers: Option<HelperLoaderOptions>,
+}
+
+impl From<crate::utils::enhanced_transform::EnhancedTransformOptions> for TransformOptions {
+  fn from(options: crate::utils::enhanced_transform::EnhancedTransformOptions) -> Self {
+    Self {
+      jsx: options.jsx,
+      target: options.target,
+      assumptions: options.assumptions,
+      decorator: options.decorator,
+      typescript: options.typescript,
+      plugins: options.plugins,
+      helpers: options.helpers,
+    }
+  }
+}
+
+impl From<TransformOptions> for crate::utils::enhanced_transform::EnhancedTransformOptions {
+  fn from(options: TransformOptions) -> Self {
+    Self {
+      jsx: options.jsx,
+      target: options.target,
+      assumptions: options.assumptions,
+      decorator: options.decorator,
+      typescript: options.typescript,
+      plugins: options.plugins,
+      helpers: options.helpers,
+      // These fields are not present in TransformOptions
+      cwd: None,
+      source_type: None,
+      tsconfig: None,
+      sourcemap: false,
+      input_map: None,
+      define: None,
+      inject: None,
+    }
+  }
 }
 
 impl TryFrom<TransformOptions> for oxc::transformer::TransformOptions {
@@ -80,9 +119,9 @@ impl TryFrom<TransformOptions> for oxc::transformer::TransformOptions {
       },
       env,
       proposals: oxc::transformer::ProposalOptions::default(),
-      // helper_loader: options
-      //   .helpers
-      //   .map_or_else(HelperLoaderOptions::default, HelperLoaderOptions::from),
+      helper_loader: options
+        .helpers
+        .map_or_else(HelperLoaderOptions::default, HelperLoaderOptions::from),
       plugins: oxc::transformer::PluginsOptions::from(options.plugins.unwrap_or_default()),
       ..Default::default()
     })

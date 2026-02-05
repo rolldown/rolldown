@@ -5,7 +5,7 @@ use napi::Either;
 // - Pass to JS: `From<JSONSourceMap>` impl (line 61) used in hook outputs
 // - Receive from JS: `TryFrom<BindingSourcemap>` impl (line 10) used in JsOutputChunk
 #[napi_derive::napi(object)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BindingSourcemap {
   pub inner: Either<String, BindingJsonSourcemap>,
 }
@@ -26,7 +26,7 @@ impl TryFrom<BindingSourcemap> for rolldown_sourcemap::SourceMap {
 // - Part of BindingSourcemap Either type, used in both directions
 // - Pass to JS: Created in From<JSONSourceMap> impl (line 64)
 // - Receive from JS: Converted in TryFrom<BindingSourcemap> impl (line 16)
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 #[napi_derive::napi(object)]
 pub struct BindingJsonSourcemap {
   pub file: Option<String>,

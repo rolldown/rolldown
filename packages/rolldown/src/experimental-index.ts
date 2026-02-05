@@ -16,15 +16,20 @@ export {
   type ParserOptions,
   type ResolveResult,
   ResolverFactory,
-  transform,
-  type TransformOptions,
-  type TransformResult,
-  transformSync,
 } from './binding.cjs';
 
 export { defineParallelPlugin } from './plugin/parallel-plugin';
 export { parse, parseSync } from './utils/parse';
 export { minify, type MinifyOptions, type MinifyResult, minifySync } from './utils/minify';
+export {
+  transform,
+  type TransformOptions,
+  type TransformResult,
+  transformSync,
+  TsconfigCache,
+  type TsconfigRawOptions,
+  type TsconfigCompilerOptions,
+} from './utils/transform';
 // Builtin plugin factory
 export {
   isolatedDeclarationPlugin,

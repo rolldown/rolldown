@@ -245,6 +245,7 @@ oxc = { version = "0.112.0", features = [
 ] }
 oxc_allocator = { version = "0.112.0", features = ["pool"] }
 oxc_ecmascript = { version = "0.112.0" }
+oxc_napi = { version = "0.112.0" }
 oxc_minify_napi = { version = "0.112.0" }
 oxc_parser_napi = { version = "0.112.0" }
 oxc_transform_napi = { version = "0.112.0" }

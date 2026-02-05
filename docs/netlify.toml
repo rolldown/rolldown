@@ -1,6 +1,6 @@
 [build]
 # only build on netlify if there are any change in docs
-ignore = "git diff --quiet $CACHED_COMMIT_REF HEAD ./docs ./packages/rolldown"
+ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ./docs ./packages/rolldown"
 
 [[redirects]]
 from = "/about/"

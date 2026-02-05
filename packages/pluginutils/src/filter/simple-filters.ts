@@ -24,12 +24,12 @@ export function exactRegex(str: string, flags?: string): RegExp {
 
 /**
  * Constructs a RegExp that matches the exact file extension specified.
- * 
+ *
  * The returned RegExp matches the specified extension, preceded by a dot,
  * when it appears at the end of a string or immediately before a query (`?`)
  * or hash (`#`) fragment. This is useful for plugin hook filters that need
  * to restrict IDs by file extension.
- * 
+ *
  * @param ext the file extension to match.
  * @returns a RegExp that matches the exact file extension.
  *

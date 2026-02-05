@@ -23,7 +23,7 @@ export function exactRegex(str: string, flags?: string): RegExp {
 }
 
 /**
- * Constructs a RegExpt that matches the exact file extension specified.
+ * Constructs a RegExp that matches the exact file extension specified.
  * 
  * The returned RegExp matches the specified extension, preceded by a dot,
  * when it appears at the end of a string or immediately before a query (`?`)

@@ -373,7 +373,7 @@ impl Plugin for ViteReporterPlugin {
     }
     if self.warn_large_chunks && has_large_chunks {
       let message = format!(
-        "\n(!) Some chunks are larger than {} kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+        "\n(!) Some chunks are larger than {} kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
         itoa::Buffer::new().format(self.chunk_limit)
       ).if_supports_color(Stream::Stdout, |text| { text.bold().yellow().to_string() }).to_string();
       ctx.warn(rolldown_common::LogWithoutPlugin { message, ..Default::default() });

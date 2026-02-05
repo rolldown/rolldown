@@ -47,6 +47,7 @@ describe('matchExt', () => {
     expect(regex.test(`app/foo.js.js?f=foo.js`)).toBeTruthy();
     expect(regex.test(`app/js/foo.js`)).toBeTruthy();
     expect(regex.test(`app/js/foo.js`)).toBeTruthy();
+    expect(regex.test(`app/js/foo.js#t=ts`)).toBeTruthy();
   })
 
   test('non-matches: js', () => {
@@ -62,6 +63,7 @@ describe('matchExt', () => {
     expect(regex.test(`app/foo.js.js.ts`)).toBeFalsy();
     expect(regex.test(`app/foo.js.js.ts?x=js.js`)).toBeFalsy();
     expect(regex.test(`app/foo.js.js.ts?x=foo.js.js`)).toBeFalsy();
+    expect(regex.test(`app/foo.ts#section.js`)).toBeFalsy();
   });
 });
 

@@ -1,0 +1,21 @@
+[package]
+name = "rolldown_plugin_fake_js"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+publish = true
+repository.workspace = true
+description = "A Rolldown plugin for transforming TypeScript declaration files using OXC"
+
+[lints]
+workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+oxc = { workspace = true }
+regex = { workspace = true }
+anyhow = { workspace = true }
+rolldown_plugin = { workspace = true }

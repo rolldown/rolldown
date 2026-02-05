@@ -2850,6 +2850,7 @@ dependencies = [
  "rolldown_error",
  "rolldown_plugin",
  "rolldown_plugin_esm_external_require",
+ "rolldown_plugin_fake_js",
  "rolldown_plugin_isolated_declaration",
  "rolldown_plugin_replace",
  "rolldown_plugin_utils",
@@ -3094,6 +3095,16 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_utils",
  "rustc-hash",
+]
+
+[[package]]
+name = "rolldown_plugin_fake_js"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oxc",
+ "regex",
+ "rolldown_plugin",
 ]
 
 [[package]]
